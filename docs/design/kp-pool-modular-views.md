@@ -1,7 +1,7 @@
 # lesson-kit Design: Knowledge Pool & Modular Views
 
 **Date:** 2026-06-08
-**Status:** Brainstorming phase — decisions recorded
+**Status:** Schema finalized — all four tables defined. Extraction pipeline and view layer pending.
 
 ## Architecture
 
@@ -121,8 +121,7 @@ CREATE TABLE kp_progress (
                     CHECK (mastery_state IN (
                         'new', 'confused', 'grasping', 'stable', 'faded'
                     )),
-    self_assessment TEXT,  -- optional student note
-    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    self_assessment TEXT  -- optional student note
 );
 ```
 
