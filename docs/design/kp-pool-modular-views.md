@@ -42,10 +42,23 @@ Source Material (PDF/PPT/…)
 - `minimum_mastery_standard`
 - `mcq_viability`
 
-## Question Pool (to be designed)
+## Question Pool Field Definitions
 
-- Questions maintained independently from KPs.
-- KP references questions via `kp_id`.
+| Field | Type | Description |
+|-------|------|-------------|
+| `q_id` | string | Unique question identifier |
+| `question_text` | string | Question body + options (merged into one block; no type-level distinction) |
+| `answer_key` | string | Correct answer |
+| `answer_explanation` | string | One-sentence explanation of the answer |
+| `kp_id` | string | Linked knowledge point ID |
+| `difficulty` | int | 1–5 scale |
+
+`fragile` is inherited from the linked KP (`kp_id` → KP pool), not duplicated here.
+
+### Excluded from Question Pool
+
+- `source_location` / `source_exercise` — not needed; `kp_id` provides sufficient tracing
+- `question_type` — merged into KP pool's `learning_action`
 
 ## Learning Cache Package (Spark)
 
