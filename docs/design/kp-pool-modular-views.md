@@ -107,6 +107,45 @@ CREATE INDEX idx_q_kp        ON questions(kp_id);
 CREATE INDEX idx_q_difficulty ON questions(difficulty);
 ```
 
+## Progress Tables
+
+### Table: `kp_progress`
+
+Tracks the student's absorption → feedback → forgetting cycle per knowledge point.
+One record per KP — overwritten on state change (UPDATE, not INSERT).
+
+```sql
+CREATE TABLE kp_progress (
+    kp_id           TEXT PRIMARY KEY REFERENCES knowledge_points(kp_id),
+    mastery_state   TEXT NOT NULL DEFAULT 'new'
+                    CHECK (mastery_state IN (
+                        'new', 'confused', 'grasping', 'stable', 'faded'
+                    )),
+    self_assessment TEXT,  -- optional student note
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+### Table: `question_progress`
+
+One table, two purposes: log every interaction (INSERT-only), carry current mastery state.
+Query the latest row per `q_id` for current state.
+
+```sql
+CREATE TABLE question_progress (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    q_id          TEXT NOT NULL REFERENCES questions(q_id),
+    note          TEXT NOT NULL,  -- freeform: what the student did / observed / got wrong
+    mastery_state TEXT NOT NULL DEFAULT 'new'
+                  CHECK (mastery_state IN (
+                      'new', 'confused', 'misleaded', 'familiar', 'mastered'
+                  )),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_qp_q_id ON question_progress(q_id);
+```
+
 ### Design notes
 
 - `related_kp_ids` stored as JSON array TEXT — simple to read/write, queryable via `json_each()` when needed. No junction table overhead until the knowledge graph actually exists.
