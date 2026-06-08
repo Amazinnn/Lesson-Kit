@@ -9,14 +9,25 @@
 Source Material (PDF/PPT/…)
     │
     ▼
-  Extraction Layer ──→ pool/knowledge/    Knowledge Point Pool
-                      pool/questions/     Question Pool
+  Extraction Layer ──→ lesson-kit.db     (SQLite)
+                          ├─ knowledge_points
+                          └─ questions
     │
     ▼
   View Layer ──→ First-Pass Overview / In-Depth Lesson / Problem Set / Exam Paper / …
 ```
 
-**Core principle:** Extract once, render in any form. Knowledge points and questions are persistent assets; views are optional consumers.
+**Core principle:** Extract once, render in any form. Knowledge points and questions are persistent assets stored in SQLite; views are optional consumers.
+
+## Storage: SQLite
+
+**Rationale:** The pool is a long-lived knowledge base, not a temporary scratchpad. It requires real CRUD (create, read, update, delete), cross-chapter queries, and algorithmic access — all of which SQLite provides with zero server overhead.
+
+- One `lesson-kit.db` file per chapter directory, alongside source materials
+- Two tables: `knowledge_points` and `questions`
+- Git-tracked alongside source PDFs
+- Python `sqlite3` (stdlib) for scripting; SQL for manual inspection
+- LaTeX formulas stored natively without escaping
 
 ## KP Pool Field Definitions
 
@@ -26,12 +37,13 @@ Source Material (PDF/PPT/…)
 | `knowledge_item` | string | KP name/title |
 | `source_location` | string | Source material location (page/section). Low usage frequency but retained. |
 | `knowledge_type` | enum | Primary type: concept-property / method-modeling / formula-calculation / algorithm-process / code-implementation / system-timing / lab-implementation / memory-recall. Extensible. |
-| `secondary_knowledge_type` | enum | Auxiliary classification index (analogous to non-PK MySQL index). Optional. |
 | `related_kp_ids` | list | Bidirectional links between KPs. Reserved for future knowledge graph use. |
 | `importance` | enum | `core` / `supplementary` / `optional` |
 | `learning_action` | string | Learning action description (distinguish/memorize/apply/analyze…). Used for review guidance. |
 | `difficulty` | int | 1–5 scale |
 | `fragile` | bool | Whether this KP is easily confused or error-prone. |
+| `created_at` | timestamp | Auto-set on creation |
+| `updated_at` | timestamp | Auto-set on creation, update on modification |
 
 ### Excluded from KP Pool (view-layer responsibility)
 
@@ -41,6 +53,65 @@ Source Material (PDF/PPT/…)
 - `estimated_time` — determined by the student
 - `minimum_mastery_standard`
 - `mcq_viability`
+
+## SQLite Schema
+
+### Table: `knowledge_points`
+
+```sql
+CREATE TABLE knowledge_points (
+    kp_id           TEXT PRIMARY KEY,
+    knowledge_item  TEXT NOT NULL,
+    source_location TEXT,
+    knowledge_type  TEXT NOT NULL CHECK (knowledge_type IN (
+                        'concept-property', 'method-modeling',
+                        'formula-calculation', 'algorithm-process',
+                        'code-implementation', 'system-timing',
+                        'lab-implementation', 'memory-recall'
+                    )),
+    related_kp_ids  TEXT,  -- JSON array: ["dld-ch02-kp-003", "dld-ch02-kp-007"]
+    importance      TEXT NOT NULL CHECK (importance IN (
+                        'core', 'supplementary', 'optional'
+                    )),
+    learning_action TEXT,
+    difficulty      INTEGER CHECK (difficulty BETWEEN 1 AND 5),
+    fragile         INTEGER DEFAULT 0,  -- boolean: 0 or 1
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+```
+
+```sql
+CREATE INDEX idx_kp_type       ON knowledge_points(knowledge_type);
+CREATE INDEX idx_kp_importance ON knowledge_points(importance);
+CREATE INDEX idx_kp_difficulty ON knowledge_points(difficulty);
+CREATE INDEX idx_kp_fragile    ON knowledge_points(fragile);
+```
+
+### Table: `questions`
+
+```sql
+CREATE TABLE questions (
+    q_id               TEXT PRIMARY KEY,
+    question_text      TEXT NOT NULL,
+    answer_key         TEXT NOT NULL,
+    answer_explanation TEXT,
+    kp_id              TEXT NOT NULL,
+    difficulty         INTEGER CHECK (difficulty BETWEEN 1 AND 5),
+    FOREIGN KEY (kp_id) REFERENCES knowledge_points(kp_id)
+);
+```
+
+```sql
+CREATE INDEX idx_q_kp        ON questions(kp_id);
+CREATE INDEX idx_q_difficulty ON questions(difficulty);
+```
+
+### Design notes
+
+- `related_kp_ids` stored as JSON array TEXT — simple to read/write, queryable via `json_each()` when needed. No junction table overhead until the knowledge graph actually exists.
+- `fragile` is on `knowledge_points` only — questions inherit it via JOIN on `kp_id`.
+- `kp_id` naming convention: `{course}-{chapter}-kp-{NNN}` (e.g. `dld-ch02-kp-001`).
 
 ## Question Pool Field Definitions
 
