@@ -1,7 +1,7 @@
 # lesson-kit Design: Knowledge Pool & Modular Views
 
 **Date:** 2026-06-08
-**Status:** Schema finalized — all four tables defined. Extraction pipeline and view layer pending.
+**Status:** Schema finalized — knowledge_points table locked. Question pools split into three logical pools (design intent recorded, implementation deferred). Extraction pipeline and view layer design in progress.
 
 ## Architecture
 
@@ -151,23 +151,61 @@ CREATE INDEX idx_qp_q_id ON question_progress(q_id);
 - `fragile` is on `knowledge_points` only — questions inherit it via JOIN on `kp_id`.
 - `kp_id` naming convention: `{course}-{chapter}-kp-{NNN}` (e.g. `dld-ch02-kp-001`).
 
-## Question Pool Field Definitions
+## Question Pools (Design Intent)
+
+The original single `questions` table is being split into three logical pools. This is a **design intent** — the schema is not yet implemented. Current `questions` table is created but left empty (chapter-companion MCQs are generated at view-render time, not stored in the pool).
+
+### Pool 1: Chapter Companion Questions (章节伴生题)
+
+**Storage: NOT in pool.** Generated at view-render time by the `scene-judgment-mcq` skill.
+
+- Scene-judgment MCQs for first-pass overviews
+- Lightweight, single-choice, 4 options
+- Purpose: send student back to source material
+- Each MCQ is linked to one KP but ephemeral — re-generated each view render
+
+### Pool 2: Textbook Exercise Pool (课后习题池)
+
+**Storage: SQLite table `textbook_exercises`** (future)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `q_id` | string | Unique question identifier |
-| `question_text` | string | Question body + options (merged into one block; no type-level distinction) |
-| `answer_key` | string | Correct answer |
-| `answer_explanation` | string | One-sentence explanation of the answer |
-| `kp_id` | string | Linked knowledge point ID |
-| `difficulty` | int | 1–5 scale |
+| `ex_id` | string | Unique exercise identifier |
+| `exercise_text` | string | Exercise body (including sub-questions) |
+| `answer` | string | Answer / solution |
+| `solution` | string | Step-by-step solution (optional) |
+| `kp_ids` | string | JSON array of linked KP IDs |
+| `source_location` | string | Original exercise number in textbook (e.g., "Exercise 2.3") |
+| `difficulty` | int | 1–5 |
+| `exercise_type` | string | calculation / proof / design / analysis / ... |
 
-`fragile` is inherited from the linked KP (`kp_id` → KP pool), not duplicated here.
+### Pool 3: Exam Question Pool (历年卷题目池)
 
-### Excluded from Question Pool
+**Storage: SQLite table `exam_questions`** (future)
 
-- `source_location` / `source_exercise` — not needed; `kp_id` provides sufficient tracing
-- `question_type` — merged into KP pool's `learning_action`
+| Field | Type | Description |
+|-------|------|-------------|
+| `exam_q_id` | string | Unique exam question identifier |
+| `question_text` | string | Question body |
+| `answer` | string | Answer |
+| `solution` | string | Step-by-step solution (optional) |
+| `kp_ids` | string | JSON array of linked KP IDs |
+| `exam_year` | int | Exam year |
+| `exam_type` | string | midterm / final / makeup / ... |
+| `difficulty` | int | 1–5 |
+
+### Why split instead of one table?
+
+Different question types have different:
+- **Granularity**: companion MCQs are per-KP micro-questions; textbook exercises can span multiple KPs; exam questions often test cross-chapter integration
+- **Lifecycle**: companion MCQs are ephemeral (generated per view); textbook exercises are persistent reference; exam questions are curated collections
+- **Metadata**: textbook exercises need source numbering; exam questions need year/type; companion MCQs need none of this
+
+When implementations begins, each pool gets its own CREATE TABLE, INSERT scripts, and query views.
+
+## Original Question Pool Definition (kept for reference; superseded by 3-pool design above)
+
+The following `questions` table remains in the current schema for backward compatibility during development. It will be replaced by the three-pool design when question pools are implemented.
 
 ## Learning Cache Package (Spark)
 
