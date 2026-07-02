@@ -168,15 +168,16 @@ def extract_section(source_location: str) -> str:
 def render_kp_paragraph(kp: Dict[str, Any]) -> str:
     """Render one KP as a single Markdown paragraph.
 
-    Format: **{name}**  {body}
+    Format: **{name}** [[{self-kp-id}]]  {body}
     If fragile is non-NULL, append it as a separate paragraph below the body.
-    No wiki links, no related_kp_ids — knowledge pool is for machines, the
-    view is for reading.
+    The [[kp_id]] is the ONLY wiki link in the output — kept as a machine-
+    parseable anchor for future non-LLM edits. Not visually obtrusive (inline).
     """
     name = kp["knowledge_item"]
+    self_id = kp["kp_id"]
     body = kp["body"] if kp["body"] else "*[正文待补充]*"
 
-    parts: List[str] = [f"**{name}**  {body}"]  # double-space after ** for visual breathing room
+    parts: List[str] = [f"**{name}** [[{self_id}]]  {body}"]
     para = "".join(parts).rstrip()
 
     if kp["fragile"]:
