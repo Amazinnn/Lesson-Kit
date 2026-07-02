@@ -276,6 +276,78 @@
       "body": "**算法**：生成 $\\{1, 2, \\dots, n\\}$ 的所有 $n!$ 个排列，按字典序。\n\n**步骤**（给定当前排列 $a_1 a_2 \\cdots a_n$ 求下一个）：\n1. 找最右的相邻对 $a_j < a_{j+1}$（即从右往左找第一个递增处）。\n2. 在 $a_{j+1}, a_{j+2}, \\dots, a_n$ 中找**大于 $a_j$ 的最小**元素 $a_k$。\n3. 交换 $a_j$ 和 $a_k$。\n4. 将 $a_{j+1}, \\dots, a_n$ 部分按升序排列（即翻转，因为之前是降序）。\n\n**正确性**：这是字典序下一个排列的唯一候选。\n\n例：362541 → 找 $a_3=2 < a_4=5$，选右侧 $>2$ 的最小 = $a_5=4$，交换 → 364251，翻转后三位 → 364125。",
       "difficulty": 3,
       "fragile": null
+    },
+    {
+      "kp_id": "dmath-ch06-kp-023",
+      "knowledge_item": "Stars-and-Bars 可视化模型",
+      "source_location": "Section 6.5.3, FIGURE 1-2",
+      "knowledge_type": "method-modeling",
+      "related_kp_ids": [],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "**Stars-and-Bars** (星与杠) 是组合数学中的经典可视化工具。\n\n将 $r$ 个相同对象分配到 $n$ 个不同类别中，等价于在 $r + (n-1)$ 个位置中选择 $r$ 个放 \"星\"（对象）或 $n-1$ 个放 \"杠\"（分隔线）。\n\n- 星 = 被选中的对象（相同）\n- 杠 = 盒子/类别的分隔线（$n$ 个盒子最多有 $n-1$ 个杠）\n\n**星的个数 = $r$ 个；杠的个数 = $n-1$ 个** → 总位置 = $r + n - 1$\n\n选择哪些位置放星 → $\\binom{r + n - 1}{r}$ = 允许重复的组合数。\n\n**图示**：7 个现金箱 = 6 条分隔线 + 5 颗星 → 11 个位置的排列对应所有选票方案。",
+      "difficulty": 2,
+      "fragile": null
+    },
+    {
+      "kp_id": "dmath-ch06-kp-024",
+      "knowledge_item": "常见鸽巢应用模型表",
+      "source_location": "Section 6.2",
+      "knowledge_type": "method-modeling",
+      "related_kp_ids": [],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "**鸽巢原理的常见应用模板**：以下表格汇总了鸽巢原理在不同题型中的建模方式。\n\n| 题型 | 对象 | 盒子 | 结论 |\n|---|---|---|---|\n| 生日/月份/星期 | 人 | 日期类别 | 某类别人数达到下界 |\n| 分数 | 学生 | 可能分数 | 两人同分或多个人同分 |\n| 同余 | 整数 | 余数类 | 两数同余或差可整除 |\n| 整点中点 | 点对数 | 坐标奇偶类型 | 两点坐标同奇偶，中点为整数坐标 |\n| 连续区间和 | 前缀和 | 取值范围或同余类 | 两前缀差满足目标 |\n| 图中度数 | 顶点 | 可能度数 | 两顶点同度 |\n\n**核心思想**：把每一类对象放入它所属的盒子中，用鸽巢原理逼出结论。",
+      "difficulty": 2,
+      "fragile": null
+    },
+    {
+      "kp_id": "dmath-ch06-kp-025",
+      "knowledge_item": "球盒模型主表 (Ball-Box Master Table)",
+      "source_location": "Section 6.5.5",
+      "knowledge_type": "method-modeling",
+      "related_kp_ids": [],
+      "importance": "core",
+      "learning_action": null,
+      "body": "**球盒模型**总结了所有分配计数问题的框架。区分三个维度：\n\n| 对象是否相同？ | 盒子是否相同？ | 盒子能否为空？ | 计数公式 |\n|---|---|---|---|\n| 不同 | 不同 | 可空 | $k^n$ (每个对象 $k$ 种选择) |\n| 不同 | 不同 | 非空 | $k! \\cdot S(n, k)$ (Stirling 第二类数 × 排列) |\n| 相同 | 不同 | 可空 | $\\binom{n+k-1}{n}$ (Stars-and-Bars) |\n| 相同 | 不同 | 非空 | $\\binom{n-1}{k-1}$ (每个盒子至少 1) |\n| 不同 | 相同 | 可空 | $S(n, 1) + S(n, 2) + \\dots + S(n, k)$ |\n| 不同 | 相同 | 非空 | $S(n, k)$ (Stirling 第二类数) |\n| 相同 | 相同 | 可空 | $p_k(n)$ (整数划分数) |\n| 相同 | 相同 | 非空 | $p_k(n) - p_{k-1}(n)$ (每个盒子至少 1 的划分数) |\n\n**三个关键判断**：① 对象是否相同？ ② 盒子是否相同？ ③ 是否允许空盒？",
+      "difficulty": 3,
+      "fragile": null
+    },
+    {
+      "kp_id": "dmath-ch06-kp-026",
+      "knowledge_item": "指定项系数求法（二项式）",
+      "source_location": "Section 6.4.1, EXAMPLE 4",
+      "knowledge_type": "formula-calculation",
+      "related_kp_ids": [],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "**求 $(ax^p + by^q)^n$ 中 $x^a y^b$ 的系数的方法**：\n\n1. 将表达式写成 $(Ax^p + By^q)^n$ 形式（负号时写成 $+(-B)$）。\n2. 第 $j$ 项的表达式： $\\binom{n}{j} (Ax^p)^{n-j} (By^q)^j = \\binom{n}{j} A^{n-j} B^j x^{p(n-j)} y^{qj}$。\n3. 解指数方程 $a = p(n-j), b = qj$ 得 $j$。\n4. 若无整数解 → 系数为 0。\n5. 若有整数解 $j$ → 系数 = $\\binom{n}{j} A^{n-j} B^j$。\n\n**例**：$(2x-3y)^{25}$ 中 $x^{12}y^{13}$ 的系数：$j=13$, 系数 = $\\binom{25}{13} 2^{12} (-3)^{13} = -\\frac{25!}{13!12!} 2^{12} 3^{13}$.",
+      "difficulty": 2,
+      "fragile": null
+    },
+    {
+      "kp_id": "dmath-ch06-kp-027",
+      "knowledge_item": "重复组合的下界、正整数解与不等式",
+      "source_location": "Section 6.5.3",
+      "knowledge_type": "method-modeling",
+      "related_kp_ids": [],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "**重复组合公式的变体**（基于 Stars-and-Bars 的统一框架）：\n\n**基本形式**（非负整数解）： $x_1 + x_2 + \\dots + x_m = N, x_i \\ge 0$ → $\\binom{N + m - 1}{m - 1}$\n\n**下界替换**：若 $x_i \\ge a_i$，令 $y_i = x_i - a_i \\ge 0$。则方程变为 $y_1 + \\dots + y_m = N - (a_1 + \\dots + a_m)$。若右边为负 → 无解。\n\n**正整数解**：若 $x_i \\ge 1$，令 $y_i = x_i - 1$，解数为 $\\binom{N - 1}{m - 1}$。\n\n**不等式**（$\\le$）：若 $x_1 + \\dots + x_m \\le N$，引入辅助变量 $x_{m+1} = N - (x_1 + \\dots + x_m) \\ge 0$，转化为等式的 $=N$ 形式。\n\n**上界**：若 $x_i \\le b_i$，用容斥/补集（非 Stars-and-Bars 直接处理）。",
+      "difficulty": 3,
+      "fragile": null
+    },
+    {
+      "kp_id": "dmath-ch06-kp-028",
+      "knowledge_item": "计数对象与等价关系（计数四入口）",
+      "source_location": "Section 6.1, introduction",
+      "knowledge_type": "method-modeling",
+      "related_kp_ids": [],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "**计数问题的四个入口问题**（解答任意计数题的系统性前置步骤）：\n\n1. **计数对象**：每一个被数的东西是什么？对象不同则公式不同。\n2. **表示方式**：同一个对象可用字符串、集合、函数、整数解、位串、盒子分配等不同方式表示。每个表示必须唯一（一对一或已知重复表示数）。\n3. **限制条件**：关键词 `distinct` / `repeated` / `at least` / `at most` / `exactly` / `consecutive` / `not exceeding` 会改变选择空间。将英文限制翻译成集合条件、位置条件或变量不等式。\n4. **相同标准**：线性排列、圆排列、镜像等价、多重集、不可区分盒子都会改变'什么时候算同一种'。若未处理相同标准，最容易多算。\n\n**作用**：在应用任何公式前先回答这四问，确保模型匹配问题。",
+      "difficulty": 2,
+      "fragile": null
     }
   ]
 }
