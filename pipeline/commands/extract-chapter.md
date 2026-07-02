@@ -39,17 +39,59 @@ Agent 在执行前必须加载：
 |----|-----|-------|------|-----------|------|
 | 1 | — | Script | `create-tables.py --db pool/{course}.db [--force]` | — | SQLite 4 表 + 6 索引 |
 | 2 | 01 | Agent | 锁定源范围 | source-and-scope, source-material-type-detection, source-section-indexing | `intermediate/{course}/extraction/{chapter}/01_inputs/source-scope.md` |
-| 3 | 02 | Agent | 构建 KP 清单 | first-pass-learning-item-extraction, knowledge-inventory, course-learning-type-detection, type-specific-learning-item-fields, learning-item-granularity, subject-data-structures, subject-math-physics, subject-required-content, learning-evidence-integration | `02_analysis/knowledge-points.md` |
+| 3 | 02 | Agent | **构建 KP 清单（强制覆盖表）** — 见下 | first-pass-learning-item-extraction, knowledge-inventory, course-learning-type-detection, type-specific-learning-item-fields, learning-item-granularity, subject-data-structures, subject-math-physics, subject-required-content, learning-evidence-integration | `02_analysis/knowledge-points.md`（**开头必须有覆盖表**）|
 | 4 | 02 | Agent | 关系分析 + KP 合并 | knowledge-relationship-analysis, kp-consolidation-analysis | `02_analysis/knowledge-relationship-analysis.md` + `kp-consolidation-analysis.md` |
-| 5 | 03 | Agent | 生成速览结构计划 | checkpoint-question-generation | `03_plans/structure-plan.md` |
+| 4.5 | 02 | Agent | **覆盖检查 Gate（新增）** — Agent 基于步骤 3 的覆盖表为每一类输出 PASS/FAIL。FAIL 行 → 阻塞，回步骤 3 重抽 | — | `02_analysis/coverage-check.md` |
 | 6 | 02 | Agent | 生成 pool-insert-manifest.json（桥接） | **pool-field-inference** | `02_analysis/pool-insert-manifest.json` |
 | 7 | — | Script | `insert-knowledge-points.py --db ... --manifest ... [--upsert]` | — | KP 入 SQLite |
 | 8 | — | Script | （跳过 — 章节伴生题不入池） | — | — |
-| 9 | — | Script + Agent | `validate-pool.py --db ... --chapter {chapter} [--json]` 生成报告；ERROR 项必须修复后重跑 7 | — | `04_checks/pool-validation-report.md` |
+| 9 | — | Script + Agent | `validate-pool.py --db ... --chapter {chapter} [--json]` 生成报告；**kp-coverage gate 读 coverage-check.md，有 FAIL → exit 2**；ERROR 项必须修复后重跑 7 | — | `04_checks/pool-validation-report.md` |
 
 > 步骤 8 故意跳过——`pool-insert-manifest.json` 只承载 KP。场景判断 MCQ 由视图层在渲染时按 `scene-judgment-mcq` skill 临时生成，不入池。
 
-### 步骤 6 是关键桥接
+### 步骤 3 强制约束：候选来源覆盖表
+
+**Agent 不能跳过约束。** 在 `knowledge-points.md` 开头，**必须**写出以下「候选来源覆盖表」。8 类来自 `first-pass-learning-item-extraction/SKILL.md` 的 Candidate Sources 清单。
+
+```markdown
+## Candidate Source Coverage Table
+
+| Category | Count | Representative Entries | Status |
+|---|---|---|---|
+| definitions | <N> | <列出 1-3 个代表性条目> | OK / MISSING |
+| formulas | <N> | ... | OK / MISSING |
+| theorems | <N> | ... | OK / MISSING |
+| conditions | <N> | ... | OK / MISSING |
+| models | <N> | ... | OK / MISSING |
+| diagrams / tables | <N> | ... | OK / MISSING |
+| code / pseudocode fields | <N> | ... | OK / MISSING |
+| low-visibility source details | <N> | ... | OK / MISSING |
+```
+
+**Agent 必须分两次填写此表：**
+
+1. **第一遍**：基于源材料的节标题和可见结构建草稿，每类填计数和代表性条目
+2. **第二遍**：细读正文，更新计数和条目（发现新候选 → 加；发现候选错误 → 移除）
+
+**MISSING** 表示该类在源材料中存在但 Agent 尚未抽取到任何 KP。`count = 0` 时填入 MISSING。
+
+此表是步骤 4.5 覆盖检查 Gate 的输入。
+
+### 步骤 4.5 覆盖检查 Gate
+
+**位置：** 步骤 4 之后、步骤 6 之前。
+
+**Agent 产出：** `02_analysis/coverage-check.md` — 上述 8 行 × 3 列 Markdown 表格（跟步骤 3 的覆盖表一致，但状态列已更新为 PASS / FAIL）。
+
+**FAIL 条件：** 任何一类的计数为 0 → FAIL。
+
+**FAIL 时的处理：**
+1. Agent 回步骤 3，重新扫描源材料补充遗漏类别的 KP
+2. 更新 knowledge-points.md 和 coverage-check.md
+3. 重新进行关系分析（步骤 4）
+4. 重新通过 coverage-check gate
+
+**脚本验证：** validate-pool.py 的 `kp-coverage` gate 读此文件。FAIL 行 → exit 2（ERROR）。文件不存在 → WARNING（不阻塞但提示缺少 gate 输出）。
 
 Agent 将 V17 风格的 `knowledge-points.md`（14 列）翻译为符合 SQLite schema 的 JSON manifest。这是 Agent 智能和 Python 机械操作的分界线：
 
