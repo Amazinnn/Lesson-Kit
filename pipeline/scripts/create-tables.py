@@ -39,7 +39,7 @@ CREATE TABLE knowledge_points (
     learning_action TEXT,
     body            TEXT,
     difficulty      INTEGER CHECK (difficulty BETWEEN 1 AND 5),
-    fragile         INTEGER DEFAULT 0,
+    fragile         TEXT,  -- NULL = not fragile; non-NULL = Markdown fragility note
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );

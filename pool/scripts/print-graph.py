@@ -1,19 +1,29 @@
 #!/usr/bin/env python3
 """
-Pipeline Read Step: Print knowledge pool as student-facing Markdown outline.
+Pipeline Read Step: Print knowledge pool as student-facing narrative Markdown.
 
 Reads knowledge_points from the SQLite pool and writes per-chapter Markdown
-files for Obsidian consumption. Strictly mechanical — no synthesis, no
-inference, no LLM. Every character comes from a SQLite field.
+files. Strictly mechanical — no synthesis, no inference, no LLM. Every
+character comes from a SQLite field.
 
-Student-facing output rules:
-  - Show: knowledge_item (heading), body (paragraph), fragile (callout if 1),
-    learning_action (one-liner), related_kp_ids ([[wiki links]])
-  - Hide: kp_id, knowledge_type, importance, difficulty, source_location,
-    created_at, updated_at
-  - Do NOT generate INDEX.md (deferred).
-  - Do NOT auto-derive "本章脉络" or chapter summaries.
-  - Do NOT inject fragile hints into related-link descriptions.
+Output structure (narrative, no meta-labels):
+    # {course_name} — {chapter_code}                H1 (chapter)
+    #### §X-Y {section}                            H4 (section, skip H2/H3)
+    **{name}** [[{self-kp-id}]] {body}             paragraph
+    {fragile}                                      paragraph (if non-NULL)
+    [[related-kp-id-1]] [[related-kp-id-2]] ...    inline at end of paragraph
+
+Display rules:
+  - Show: knowledge_item (bold), kp_id (self + related), body, fragile
+  - Hide: importance, difficulty, knowledge_type, source_location,
+          learning_action, created_at, updated_at
+  - No "KP 索引" / "KP 详情" / "学习动作" / "易错点" labels
+
+Script-parseable invariants (for future non-LLM updates):
+  1. Each KP occupies one paragraph (blank line separated)
+  2. Paragraph starts with: \\*\\*.+?\\*\\*\\s*\\[\\[(?P<self_id>{course}-ch\\d{2}-kp-\\d{3})\\]\\]
+  3. Paragraph ends with:    \\[\\[(?P<rel_id>{course}-ch\\d{2}-kp-\\d{3})\\]\\](\\s+\\[\\[..\\]\\])*
+  4. wiki links use strict kp_id format
 
 Usage:
     python pool/scripts/print-graph.py \\
@@ -32,7 +42,7 @@ import sqlite3
 import sys
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 
 SECTION_PATTERN = re.compile(r"(?:§|Section|Sec\.?)\s*([\w\-\.]+)", re.IGNORECASE)
@@ -40,7 +50,7 @@ SECTION_PATTERN = re.compile(r"(?:§|Section|Sec\.?)\s*([\w\-\.]+)", re.IGNORECA
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Print lesson-kit knowledge pool as student-facing Markdown outline.",
+        description="Print lesson-kit knowledge pool as student-facing narrative Markdown.",
     )
     parser.add_argument("--db", required=True, help="Path to SQLite DB.")
     parser.add_argument(
@@ -56,7 +66,7 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--course-name",
         required=True,
-        help="Chinese course name used in the per-chapter title.",
+        help="Course name used in the H1 chapter title.",
     )
     parser.add_argument(
         "--out",
@@ -71,18 +81,11 @@ def fetch_kps(
     course: str,
     chapter: Optional[str],
 ) -> List[Dict[str, Any]]:
-    """Fetch all KP rows for the course (optionally filtered to a single chapter).
-
-    Returns a list of dicts with keys:
-      kp_id, knowledge_item, source_location, importance, learning_action,
-      body, related_kp_ids (list), fragile (int).
-    """
+    """Fetch all KP rows for the course (optionally filtered to a single chapter)."""
     if chapter:
         prefix = f"{course}-{chapter}-"
-        like_arg = prefix + "%"
     else:
         prefix = f"{course}-"
-        like_arg = prefix + "%"
 
     rows = conn.execute(
         "SELECT kp_id, knowledge_item, source_location, importance, "
@@ -90,7 +93,7 @@ def fetch_kps(
         "FROM knowledge_points "
         "WHERE kp_id LIKE ? "
         "ORDER BY kp_id",
-        (like_arg,),
+        (prefix + "%",),
     ).fetchall()
 
     kps: List[Dict[str, Any]] = []
@@ -113,7 +116,6 @@ def fetch_kps(
                 if isinstance(parsed, list):
                     related = [str(x) for x in parsed]
             except json.JSONDecodeError:
-                # Malformed JSON in pool — pass through as warning
                 print(
                     f"Warning: bad JSON in related_kp_ids for {kp_id}, ignoring",
                     file=sys.stderr,
@@ -127,7 +129,7 @@ def fetch_kps(
             "learning_action": learning_action,
             "body": body,
             "related_kp_ids": related,
-            "fragile": int(fragile) if fragile is not None else 0,
+            "fragile": fragile,  # None or string
         })
 
     return kps
@@ -144,7 +146,6 @@ def group_by_chapter(
         if not kp_id.startswith(prefix):
             continue
         remainder = kp_id[len(prefix):]
-        # remainder like "ch02-kp-001"
         parts = remainder.split("-kp-", 1)
         chapter_code = parts[0] if parts else remainder
         chapters.setdefault(chapter_code, []).append(kp)
@@ -164,59 +165,27 @@ def extract_section(source_location: str) -> str:
     return f"§{match.group(1)}"
 
 
-def slugify(text: str) -> str:
-    """Produce a GitHub-compatible anchor from heading text."""
-    # Strip whitespace, drop punctuation that breaks anchors in Obsidian
-    s = text.strip()
-    s = re.sub(r"\s+", "-", s)
-    s = re.sub(r"[^\w一-鿿\-]", "", s)
-    return s or "kp"
+def render_kp_paragraph(kp: Dict[str, Any]) -> str:
+    """Render one KP as a single Markdown paragraph.
 
-
-def render_index_section(kps: List[Dict[str, Any]]) -> List[str]:
-    """Render the '## KP 索引' section grouped by source_location."""
-    groups: "OrderedDict[str, List[Dict[str, Any]]]" = OrderedDict()
-    for kp in kps:
-        section = extract_section(kp["source_location"])
-        groups.setdefault(section, []).append(kp)
-
-    lines: List[str] = ["## KP 索引", ""]
-    for section, items in groups.items():
-        lines.append(f"### {section}")
-        for kp in items:
-            anchor = slugify(kp["knowledge_item"])
-            lines.append(f"- [{kp['knowledge_item']}](#{anchor})")
-        lines.append("")
-    return lines
-
-
-def render_kp_detail(kp: Dict[str, Any]) -> List[str]:
-    """Render one KP's detail block (heading + fragile callout + body + learning + related)."""
-    lines: List[str] = []
-    anchor = slugify(kp["knowledge_item"])
-    lines.append(f'<a id="{anchor}"></a>')
-    lines.append(f"### {kp['knowledge_item']}")
-    lines.append("")
-
-    if kp["fragile"] == 1:
-        lines.append("> ⚠ 易错点")
-        lines.append("")
-
+    Format: **{name}** [[{self-kp-id}]] {body}{fragile_inline}
+    If fragile is non-NULL, append it as a separate paragraph below the body.
+    """
+    name = kp["knowledge_item"]
+    self_id = kp["kp_id"]
     body = kp["body"] if kp["body"] else "*[正文待补充]*"
-    lines.append(body)
-    lines.append("")
+    related = kp["related_kp_ids"]
 
-    if kp["learning_action"]:
-        lines.append(f"**学习动作：** {kp['learning_action']}")
-        lines.append("")
+    parts: List[str] = [f"**{name}** [[{self_id}]] {body}"]
+    para = "".join(parts).rstrip()
 
-    if kp["related_kp_ids"]:
-        lines.append("**关联知识点：**")
-        for ref in kp["related_kp_ids"]:
-            lines.append(f"- [[{ref}]]")
-        lines.append("")
+    if kp["fragile"]:
+        para += "\n\n" + kp["fragile"].rstrip()
 
-    return lines
+    if related:
+        para += "\n\n" + " ".join(f"[[{r}]]" for r in related)
+
+    return para + "\n"
 
 
 def render_chapter(
@@ -224,18 +193,27 @@ def render_chapter(
     course_name: str,
     kps: List[Dict[str, Any]],
 ) -> str:
-    """Render one chapter Markdown file."""
-    parts: List[str] = []
-    parts.append(f"# {course_name} — {chapter_code}")
-    parts.append("")
-    parts.extend(render_index_section(kps))
-    parts.append("---")
-    parts.append("")
-    parts.append("## KP 详情")
-    parts.append("")
+    """Render one chapter Markdown file with H4 section groups."""
+    groups: "OrderedDict[str, List[Dict[str, Any]]]" = OrderedDict()
     for kp in kps:
-        parts.extend(render_kp_detail(kp))
-    return "\n".join(parts).rstrip() + "\n"
+        section = extract_section(kp["source_location"])
+        groups.setdefault(section, []).append(kp)
+
+    out: List[str] = []
+    out.append(f"# {course_name} — {chapter_code}")
+    out.append("")
+
+    first_section = True
+    for section, items in groups.items():
+        if not first_section:
+            out.append("")
+        first_section = False
+        out.append(f"#### {section}")
+        out.append("")
+        for kp in items:
+            out.append(render_kp_paragraph(kp))
+
+    return "\n".join(out).rstrip() + "\n"
 
 
 def main(argv: Optional[List[str]] = None) -> int:

@@ -160,12 +160,14 @@ def run_gates(conn: sqlite3.Connection, course: str, chapter: str) -> List[Dict[
                 "level": "ERROR",
                 "message": f"{kp_id}: difficulty {difficulty} out of range 1-5",
             })
+        # fragile: NULL or any TEXT (Markdown) is valid; no type-check needed
+        # Note: kp_progress.mastery_state still uses valid-state checks
         fragile = row[5]
-        if fragile is not None and fragile not in (0, 1):
+        if fragile is not None and not isinstance(fragile, str):
             findings.append({
                 "gate": "difficulty-range",
                 "level": "ERROR",
-                "message": f"{kp_id}: fragile {fragile} not 0 or 1",
+                "message": f"{kp_id}: fragile must be null or string, got {type(fragile).__name__}",
             })
 
     # Gate 6: kp-coverage — WARNING only

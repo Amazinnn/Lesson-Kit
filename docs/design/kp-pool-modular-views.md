@@ -41,7 +41,7 @@ Source Material (PDF/PPT/…)
 | `importance` | enum | `core` / `supplementary` / `optional` |
 | `learning_action` | string | Learning action description (distinguish/memorize/apply/analyze…). Used for review guidance. |
 | `difficulty` | int | 1–5 scale |
-| `fragile` | bool | Whether this KP is easily confused or error-prone. |
+| `fragile` | text | NULL = not fragile; non-NULL = Markdown fragility note. **NOT a 0/1 tag.** |
 | `created_at` | timestamp | Auto-set on creation |
 | `updated_at` | timestamp | Auto-set on creation, update on modification |
 
@@ -74,8 +74,9 @@ CREATE TABLE knowledge_points (
                         'core', 'supplementary', 'optional'
                     )),
     learning_action TEXT,
+    body            TEXT,
     difficulty      INTEGER CHECK (difficulty BETWEEN 1 AND 5),
-    fragile         INTEGER DEFAULT 0,  -- boolean: 0 or 1
+    fragile         TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -148,7 +149,7 @@ CREATE INDEX idx_qp_q_id ON question_progress(q_id);
 ### Design notes
 
 - `related_kp_ids` stored as JSON array TEXT — simple to read/write, queryable via `json_each()` when needed. No junction table overhead until the knowledge graph actually exists.
-- `fragile` is on `knowledge_points` only — questions inherit it via JOIN on `kp_id`.
+- `fragile` is on `knowledge_points` as TEXT — NULL means not fragile, non-NULL holds a Markdown note. The note is what gets rendered into the print-graph output; the column itself is not a boolean.
 - `kp_id` naming convention: `{course}-{chapter}-kp-{NNN}` (e.g. `dld-ch02-kp-001`).
 
 ## Question Pools (Design Intent)

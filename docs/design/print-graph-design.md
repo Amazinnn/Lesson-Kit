@@ -1,4 +1,4 @@
-# lesson-kit Print 功能设计（Pool → 学生视角知识提纲）
+# lesson-kit Print 功能设计（Pool → 叙述型 Markdown 提纲）
 
 **Date:** 2026-07-02（修订）
 **Status:** MVP 设计收敛
@@ -10,12 +10,118 @@ Print 是 Pipeline 系统的 **Read** 操作——将 SQLite 池子里的 KP 数
 
 **核心原则：脚本只做机械搬移。** 不推导、不生成、不抽取语义。每个字符都来自 SQLite 已有字段。
 
-| | query-pool.py | print-graph.py |
-|------|------|------|
-| 职责 | 供 Agent 查询（JSON） | 供学生阅读（Markdown 知识提纲） |
-| 消费者 | views/ → Agent | 学生 / Obsidian |
-| 输出 | stdout JSON | 文件夹 + 多个 .md 文件 |
-| 智能程度 | 0（透传） | 0（机械格式化） |
+## 文档结构（叙述型）
+
+```markdown
+# 数字逻辑设计 — ch02
+
+#### §2-3 布尔代数基本定理
+
+**布尔代数基本定理** [[dld-ch02-kp-001]] 由亨廷顿在 1904 年给出公理化定义，包含 0/1 两个值、五条公理（交换律、结合律、分配律、0-1律、补元律）。由公理可推导出 23 条基本定理，包括交换律对偶、分配律展开、吸收律、德摩根律等。这些定理是数字电路设计的代数基础。
+
+**德摩根定理** [[dld-ch02-kp-002]] 两条形式：(AB)' = A' + B' 和 (A+B)' = A'B'。必须同时取反所有变量，且「与」「或」互换。
+
+两条形式容易混淆——必须同时取反所有变量，且「与」「或」互换。
+
+[[dld-ch02-kp-001]]
+
+#### §2-5 卡诺图化简
+
+**卡诺图化简** [[dld-ch02-kp-003]] 是布尔函数化简的几何工具。原则：圈尽可能大的相邻 1 块（2、4、8 个相邻单元），每个 1 必须被至少一个圈覆盖，圈可以重叠。变量数为 2-4 时手工有效，5+ 变量时使用 Quine-McCluskey 算法。
+
+[[dld-ch02-kp-001]] [[dld-ch02-kp-002]] [[dld-ch02-kp-008]]
+```
+
+## 标题层级标准
+
+| 层级 | 用途 |
+|---|---|
+| `#` H1 | 章标识（每章 1 次） |
+| `####` H4 | 节组（按 source_location 分组，跳过 H2/H3 表达「叶节点」） |
+| `**name**` 粗体 | 知识点名（段首） |
+
+**为何跳过 H2/H3**：节组是「具体知识点单位」，没有进一步嵌套子节。H4 直接表达这种「叶节点」地位。H2/H3 留给未来全文框架（不在 MVP 范围）。
+
+## 节点结构（每 KP 占一段）
+
+```
+**{name}** [[{self-kp-id}]] {body}
+
+[如 fragile 非 NULL，独立一段：]{fragile}
+
+[[{related-kp-id-1}]] [[{related-kp-id-2}]] ...
+```
+
+- **段首**：`**name** [[self-kp-id]]` —— 主 KP 自指
+- **段中**：body 正文（可含加粗、引用、列表等任意 Markdown）
+- **段末**：关联 wiki links（不显眼、不换行）
+- **脆弱点**：独立一段，紧跟正文段后
+
+## 显示 vs 隐藏
+
+| 字段 | 显示 |
+|---|---|
+| `knowledge_item` | ✅ 粗体 |
+| `body` | ✅ 正文 |
+| `fragile` (TEXT) | ✅ 独立一段（如非 NULL） |
+| `kp_id` (自身) | ✅ 段首自指 |
+| `kp_id` (关联) | ✅ 段末 wiki links |
+| `learning_action` | ❌ 不显示（学生已经在学习，Agent 元注释） |
+| `importance` | ❌ 不显示（内部字段） |
+| `difficulty` | ❌ 不显示（内部字段） |
+| `knowledge_type` | ❌ 不显示（内部字段） |
+| `source_location` | ❌ 不显示（仅用于节分组） |
+| `created_at/updated_at` | ❌ 不显示 |
+| 「KP 索引」「KP 详情」标签 | ❌ 不显示（元结构） |
+
+## 解析规约（脚本可解析）
+
+每个 KP 节点必须满足：
+
+1. 占**一段**（段间空行）
+2. 段首正则：`^\*\*.+?\*\*\s*\[\[(?P<self_id>{course}-ch\d{2}-kp-\d{3})\]\]`
+3. 段末正则（如有）：`\[\[(?P<rel_id>{course}-ch\d{2}-kp-\d{3})\]\](\s+\[\[(?P<rel_id2>{course}-ch\d{2}-kp-\d{3})\]\])*\s*$`
+4. wiki link 必须是 kp_id 格式 `[[{course}-ch{NN}-kp-{NNN}]]`
+
+**为何这套约束保证可解析**：
+- 段首 `**...**` 粗体短语 + kp_id 在第一行，定位 KP 节点稳定
+- wiki link 格式严格（`{course}-ch{NN}-kp-{NNN}` 三个组件都是固定模式），可精确正则匹配
+- body 和 fragile 内的 `**加粗**`、`[[wiki]]` 等允许出现——但**主 KP 自指的 kp_id 仅出现一次**（段首），不会误匹配
+- 关联 link 在段末单行内聚集，单独的 wiki link 段落不会与 KP 节点混淆
+
+**未来非 LLM 修改脚本示例**（伪代码）：
+```python
+para_re = re.compile(
+    r"^\*\*(?P<name>.+?)\*\*\s*\[\[(?P<self_id>...)\]\]\s*(?P<body>.*?)(?:\n\n|\Z)",
+    re.DOTALL
+)
+link_re = re.compile(r"\[\[(?P<kp_id>{course}-ch\d{{2}}-kp-\d{{3}})\]\]")
+for para in markdown.split("\n\n"):
+    m = para_re.match(para)
+    if m:
+        kp_id = m["self_id"]
+        related = link_re.findall(para.replace(f"[[{m['self_id']}]]", ""))
+        # ... update SQLite
+```
+
+## 数据库字段
+
+### fragile: TEXT (NOT INTEGER)
+
+```sql
+fragile TEXT  -- NULL = 不脆弱；非 NULL = Markdown 格式的脆弱描述
+```
+
+- NULL：KP 不是脆弱点，print 不渲染
+- 非 NULL：Markdown 文本（单行或多行），紧跟正文段后作为独立段落
+
+**绝对不**接受 INTEGER 0/1。
+
+### body: TEXT
+
+```sql
+body TEXT  -- KP 正文（定义、推导、例题）。NULL 时 print 输出 *[正文待补充]*
+```
 
 ## 脚本接口
 
@@ -30,141 +136,48 @@ python pool/scripts/print-graph.py \
 
 参数：
 - `--db` (必填)：整本教材 SQLite 库
-- `--course` (必填)：课程缩写，用于过滤 kp_id 前缀
-- `--chapter` (可选)：仅导出指定章节（如 `ch02`）。省略则导出该课程全部章节
-- `--course-name` (必填)：课程中文名，用于章文件标题
-- `--out` (必填)：输出目录（建议为 Obsidian vault 下的知识笔记目录）
+- `--course` (必填)：课程缩写，用于 kp_id 前缀过滤
+- `--chapter` (可选)：仅导出指定章节
+- `--course-name` (必填)：课程中文名，用于 H1 标题
+- `--out` (必填)：输出目录
 
 ## 输出结构
 
 ```
-知识笔记/{课程}/graph/
+{out}/
 ├── ch02.md
 ├── ch04.md
 └── ...
 ```
 
-**MVP 不生成 INDEX.md。** 暂不做课程级 MOC。
-
-## 数据库字段与展示映射
-
-每个 KP 是一个有完整正文的有机体，不是只有标题的占位。
-
-| Pool 字段 | 展示？ | 展示形式 |
-|---|---|---|
-| `knowledge_item` | ✅ | 三级标题 `### {knowledge_item}` |
-| `body` | ✅ | 正文段落。缺失时写 `*[正文待补充]*` |
-| `fragile` | ✅（条件） | 若 `fragile=1`，标题下方插入 `> ⚠ 易错点` 批注块 |
-| `learning_action` | ✅（可选） | `**学习动作：** {learning_action}` |
-| `related_kp_ids` | ✅ | `- [[{kp_id}]]` 列表（wiki 链接形式） |
-| `kp_id` | ❌ 隐藏 | 仅作为 `[[链接]]` 目标存在 |
-| `knowledge_type` | ❌ 隐藏 | 内部字段 |
-| `importance` | ❌ 隐藏 | 内部字段 |
-| `difficulty` | ❌ 隐藏 | 内部字段 |
-| `source_location` | ❌ 隐藏 | 内部字段（**仅用于分组**，不显示） |
-| `created_at` / `updated_at` | ❌ 隐藏 | 内部字段 |
-
-## 章文件格式
-
-```markdown
-# 数字逻辑设计 — ch02
-
-## KP 索引
-
-### §2-3 布尔代数基本定理
-- [布尔代数基本定理](#布尔代数基本定理)
-- [德摩根定理](#德摩根定理)
-
-### §2-5 卡诺图化简
-- [卡诺图化简](#卡诺图化简)
-
----
-
-## KP 详情
-
-### 布尔代数基本定理
-
-布尔代数由亨廷顿在 1904 年给出公理化定义，包含 0/1 两个值、五条公理（交换律、结合律、分配律、0-1律、补元律）。由公理可推导出 23 条基本定理，包括交换律对偶、分配律展开、吸收律、德摩根律等。
-
-**学习动作：** 区分单变量定理与多变量定理的适用范围
-
-**关联知识点：**
-- [[dld-ch02-kp-002]]
-- [[dld-ch02-kp-008]]
-
-### 德摩根定理
-
-> ⚠ 易错点
-
-德摩根律的两条形式：(AB)' = A' + B' 和 (A+B)' = A'B'。两条形式易混淆——必须同时取反所有变量。
-
-**学习动作：** 区分两条定理的不同形式
-
-**关联知识点：**
-- [[dld-ch02-kp-001]]
-
-...
-```
-
-### KP 索引分组
-
-按 `source_location` 用正则 `§\s*([\w\-]+)` 抽取节号，分组输出。无 `source_location` 的 KP 归到「未分组」。
-
-### 锚点格式
-
-GitHub / Obsidian 兼容：`#知识标题 slug`。`slugify()` 把空格替换为 `-`、去除特殊字符。中文字符保留（Unicode range `一-鿿`）。
-
-### fragile 批注
-
-单独作为批注块（`> ⚠ 易错点`），放在 `###` 标题下、body 上。**不**在 `[[关联]]` 链接后追加提示文案。
-
-学生自己通过 Obsidian 笔记沉淀易错经验，不该由工具代写。
-
-## body 字段要求
-
-`body` 是 KP 的正文（定义、推导、例题），从源材料中提取。**新增 SQLite 列**：
-
-```sql
-ALTER TABLE knowledge_points ADD COLUMN body TEXT;
-```
-
-- 必填：否
-- 默认值：NULL
-- 缺失时 print-graph 输出 `*[正文待补充]*`，不报错
-
-Pipeline `insert-knowledge-points.py` 接受 manifest 中的 `body` 字段。manifest template (`pool-insert-manifest.md`) 已更新。
-
-## 脚本实现
-
-`pool/scripts/print-graph.py`
-
-- 仅 Python stdlib（sqlite3, argparse, os, pathlib, json, re, collections）
-- 单文件，单函数 main
-- 读 knowledge_points 表
-- `related_kp_ids` 从 JSON TEXT 解析
-- `source_location` 用正则抽 `§X-Y` 分组
-- 输出 UTF-8 Markdown 文件
-
-## 与 Obsidian 的集成
-
-- 文件夹被 Obsidian vault 识别
-- `[[kp_id]]` wiki links 自动形成图谱节点
-- 节点不独立成文件（章文件用 `###` 标题），但 wiki 链接仍能被 Obsidian 解析为图谱边
-- 中文锚点通过 slugify 处理，Obsidian 在 Windows / macOS 上都能识别
+**MVP 不生成 INDEX.md**。课程级 MOC 暂不做。
 
 ## MVP 拒绝实现（明示）
 
-- ❌ INDEX.md — 课程级 MOC，用户明确推迟
-- ❌ 「本章脉络」自动生成段 — 脚本不做任何语义推导
-- ❌ fragile 智能提示文案 — 学生自己的经验不该由工具代写
-- ❌ 在 `[[关联]]` 链接后追加 fragile 提示 — fragile 仅作为批注块
-- ❌ 每个 KP 独立文件模式（`--individual`）— 后续可选
-- ❌ 跨课程交叉链接高亮 — 后续可选
+- ❌ INDEX.md — 课程级 MOC
+- ❌ 「本章脉络」自动生成段
+- ❌ 「学习动作」字段
+- ❌ 「易错点」任何标志（引用块、标题、emoji、批注）
+- ❌ 「关联知识点：」列表（靠段末 wiki links + Obsidian 图谱）
+- ❌ 「KP 索引」/「KP 详情」元结构标签
+- ❌ 每个 KP 独立文件
+- ❌ 跨课程交叉链接高亮
 
 ## 后续（不阻塞 MVP）
 
-- INDEX.md 重新启用（用户主动要求时再加）
+- INDEX.md 重新启用
+- 每个 KP 独立文件（与叙述结构并存，按需）
 - across-course 交叉链接高亮
-- 每个 KP 独立文件模式
-- 「本章脉络」从 SQLite 显式字段（如 `chapter_summary`）读取（如果以后需要）
-- 自动按章节顺序对 chXX.md 重命名为「第X章 {中文章名}.md」（需 `--chapter-titles` 参数）
+- 「本章脉络」从 SQLite 显式字段读取
+- Update / Delete CRUD（基于段首正则解析 KP 节点）
+
+## 学生心理学（设计动机）
+
+为什么不做这些「该有的」结构？
+
+- **不要「KP 索引」/「KP 详情」**：学生拿到提纲想直接读，不是先看一份目录。Obsidian 自身的 outline 面板已经能做这件事
+- **不要「学习动作」**：元注释，告诉 Agent「应该怎么学」。学生已经在学了，看到「区分两条定理的不同形式」这种话会觉得被指挥
+- **不要「易错点」标志**：脆弱点跟正文一体最自然。标志（emoji、引用块、标题）反而暗示「这里需要警惕」，破坏了叙述连贯
+- **不要独立「关联」列表**：相关性靠叙述里自然表述（"这条定理与德摩根定理互为对偶"），不靠显式列表。Obsidian 双向链接让图谱自动形成
+- **段末 wiki links 不显眼**：避免视觉干扰，但保留机器可解析性
+- **节组用 H4 而非 H2/H3**：节组是叶节点，没有进一步嵌套。标题层级表达语义而不是装饰

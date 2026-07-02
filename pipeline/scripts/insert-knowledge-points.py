@@ -109,11 +109,9 @@ def validate_kp(
         errors.append(f"{kp_id}: difficulty must be int 1-5, got {difficulty!r}")
         ok = False
 
-    fragile = kp.get("fragile", 0)
-    if fragile is None:
-        fragile = 0
-    if fragile not in (0, 1):
-        errors.append(f"{kp_id}: fragile must be 0 or 1, got {fragile!r}")
+    fragile = kp.get("fragile")  # None or Markdown string; NULL = not fragile
+    if fragile is not None and not isinstance(fragile, str):
+        errors.append(f"{kp_id}: fragile must be a string or null, got {type(fragile).__name__}")
         ok = False
 
     related_kp_ids = kp.get("related_kp_ids", [])
