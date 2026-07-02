@@ -1,69 +1,109 @@
 # lesson-kit
 
-**Modular study material generator.** 从源材料自动抽取知识点和习题，按需组装为多样化的学习格式（速览、深度讲解、习题集……）。
+**模块化学习材料生成器。** 从源材料自动抽取知识资产到 SQLite 池，按需渲染为多样化的学习格式。
 
-核心理念："学海拾贝"——低吸收难度、中知识难度、大广度。
-每份产出应是一份独立的知识组织，和普通教案无外表区别。
+核心理念："**不是帮你跳过源材料，是帮你回到源材料。**"
 
-## 架构
+## 两系统架构
 
 ```
-源材料（PDF/PPT/…）
+源材料（PDF/PPT/Markdown）
     │
     ▼
-  抽取层 ──→ pool/knowledge/   知识点池
-            pool/questions/    题目池
+  Pipeline（抽取层）
+    ├─ commands/extract-chapter.md   ← 9 步工作流编排
+    ├─ skills/                       ← 15 个 V17 提取 skill + pool-field-inference
+    ├─ scripts/create-tables.py      ← schema 创建
+    ├─ scripts/insert-knowledge-points.py ← JSON manifest → SQLite
+    └─ scripts/validate-pool.py      ← 6 个质量 gate（含覆盖 gate）
     │
     ▼
-  视图层 ──→ 速览 / 深度讲解 / 习题集 / …
+  pool/{course}.db     ← SQLite 知识池（整本教材一个库）
+    │
+    ▼
+  View 层（渲染）
+    ├─ views/first-pass/             ← 速览视图（command + skills + gates + templates）
+    ├─ views/common/                 ← 共享 skills / gates
+    ├─ pool/scripts/query-pool.py    ← Agent 用 JSON 查询
+    └─ pool/scripts/print-graph.py   ← 学生用 Markdown 提纲
 ```
 
-**一次抽取，多种呈现。** 知识点和题目是核心资产，视图是可选的消费端。
+**一次抽取，多种呈现。** KP 是池中的原子资产，视图按需消费。Pipeline 和 View 独立演进。
 
-## 项目结构
+## 设计哲学（光谱，非硬性立场）
 
-- `commands/` — 8个命令，每个是一个完整任务流
-- `skills/` — 32 个技能模块（SKILL.md）
-- `gates/` — 门禁检查点
-- `templates/` — 模板文件（中间件 + 视图）
-- `pool/` — 知识点池 + 题目池（运行时填充）
-- `output/` — 生成产物
-- `changelog/` — 版本更新记录
+完整哲学文档：`docs/design/philosophy.md`
 
-核心红线文件：`RED_LINES.md` / `FILE_CONTRACT.md` / `STYLE.md`
+| # | 轴 | 两端 |
+|---|-----|------|
+| 1 | 知识归顺度 | 唤醒自我 ↔ 规训自我 |
+| 2 | 离原材料距离 | 近源 ↔ 远源 |
+| 3 | 接收 ↔ 建构 | 成品交付 ↔ 原料拼装 |
+| 4 | 呈现 ↔ 告知 | 窗户（让你看）↔ 替身（替你加工） |
+| 5 | 无知测绘 ↔ 全知假象 | 标未知 / 争议 / 边界 ↔ 假装完整封闭 |
+| 6 | 静止 ↔ 流动 | 允许停下 ↔ 持续推动 |
+| 7 | 单脉络 ↔ 多脉络 | 一条主线 ↔ 多条视角 |
+| 8 | 难度自主权 | 固定 1-5 ↔ 学生自定 |
+| 9 | 错误价值 | 避免错误 ↔ 拥抱 productive failure |
 
-## 设计哲学
+5 条待工程化轴（工具可弃性、光滑↔纹理、完成感↔未完成感、解构/反学习、消费↔品味）已确认方向，**MVP 后讨论**。
 
-- **反形式主义、反应试导向** — 产出不可读起来像模板、考点总结或考试准备材料
-- **源材料引导** — 产出引导学生回源阅读，不替代源材料
-- **工作流透明** — 内部字段（kp_id、knowledge_type 等）不出现在学生面向的最终产物中
-- **教育理论驱动** — 教学设计基于教育理论原理（先行组织者、测试效应、认知负荷理论等）
-- **分层反馈** — 轻量自检（速览）→ 深度讲解（课程）→ 强化训练（习题+考试）
+## 项目结构（当前）
 
-## 教育家工程师准则
+```
+pipeline/
+├── commands/extract-chapter.md       ← 9 步工作流 + 步骤 3 强制覆盖表 + 步骤 4.5 覆盖 gate
+├── skills/                           ← 15 个 V17 提取 skill + pool-field-inference
+├── scripts/                          ← create-tables, insert-kp, validate-pool
+└── templates/pool-insert-manifest.md ← JSON 桥接格式规范
 
-| 原则 | 体现 |
-|------|------|
-| **低阻力入口** | 学生最小启动成本，不因阅读材料本身产生额外认知负担 |
-| **反馈精确** | 检查点帮助学生精确发现盲区，而非"考倒"学生 |
-| **不说教** | 知识呈现是"邀请探索"，非"灌输定义" |
-| **留白** | 不把一切嚼碎喂给学生，留出自己发现的空间 |
-| **结构可见** | 学生始终知道自己在哪里、下一站在哪 |
+pool/
+├── scripts/query-pool.py             ← Agent 用 JSON 查询
+├── scripts/print-graph.py            ← 学生用 Markdown 提纲（叙述型，无 wiki link）
+├── {course}.db                       ← SQLite 池（运行时，gitignore）
+└── (output 目录不在 repo 内)
 
-## 当前版本状态
+views/
+├── first-pass/                       ← 速览视图（command + 4 skills + 4 gates + 3 templates）
+└── common/                           ← 共享 skills + gates
 
-- **代码基底：** 从 V17（Stage 1 品质升级）迁移 — 核心抽取管线已验证
-- **已完成：**
-  - Stage 1 速览生成完整流程（含 V17.1 阐释+场景判断改进）
-  - 教育理论 skill（27文件）
-  - 习题扩展知识点分析（knowledge-points 独立章节）
-  - kp-consolidation 分析 + scene_judgment 门禁
-- **设计中：** KP 池 / 习题池架构 + 模块化视图层
-- **已推迟：** Stage 3 训练系统（共享引擎设计已记录，算法实现为长期目标）
-- **详细信息：** 见 `changelog/v17-design-summary.md`
+intermediate/{course}/extraction/{chapter}/
+├── 00_source/                        ← MinerU 抽取的源 markdown
+├── 01_inputs/                        ← source-scope.md, source-material-inventory.md
+├── 02_analysis/                      ← knowledge-points.md（含覆盖表）, relationship-analysis, consolidation, coverage-check.md
+├── 03_plans/                         ← structure-plan.md
+└── 04_checks/                        ← validation-report.md
+
+docs/design/                          ← 5 个设计文档
+```
+
+## 抽取流程约束（关键）
+
+1. **步骤 3 强制覆盖表**：`knowledge-points.md` 开头必须有 8 类候选来源覆盖表（definitions/formulas/theorems/conditions/models/diagrams-tables/code-fields/low-visibility-details）。Agent 不可跳过。
+2. **步骤 4.5 覆盖 Gate**：Agent 产出 `coverage-check.md`，8 类二进制覆盖。有 FAIL 行 → 步骤 3 重抽。
+3. **validate-pool.py kp-coverage 升级**：脚本读 coverage-check.md，FAIL 行 → ERROR exit 2。
+4. **题不入池**：章节伴生题由视图层渲染时生成。课后习题 / 历年题 → 独立表（未来实现）。
+5. **body 必填**：KP 正文从源材料提取（脚本自动采集）。fragile 必须人工填，Agent 不给默认值。
+
+## 关键约定
+
+- **kp_id 命名**：`{course}-ch{NN}-kp-{NNN}`（如 `dmath-ch06-kp-001`）
+- **整本教材一个 DB**：`pool/{course}.db`
+- **中间文件全量落地**：不审但留底，后续追溯
+- **所有脚本 stdlib**：仅 Python 标准库，零外部依赖
+- **print-graph.py 叙述型输出**：无 wiki link、无 "KP 索引/详情" 元标签、2 空行 block 间隔
+
+## 当前进度
+
+- ✅ Pipeline Create（schema + insert + validate + extract-chapter 工作流）
+- ✅ 28 KP dmath ch06 池（真实教材 E2E，覆盖 gate PASS）
+- ✅ 9 步工作流加固（步骤 3 覆盖表 + 步骤 4.5 覆盖 gate）
+- ✅ fragile 字段 TEXT 重构
+- ✅ 设计哲学 9 轴光谱锁定
+- ✅ README + 设计文档 5 个
 
 ## 可用 Skill（设计辅助）
 
-- `.claude/skills/educational-theory/SKILL.md` — 教育理论参考手册（教学设计决策的理论支撑）
-  - 目录：`repertoire/`（按教学场景）、`fundamentals/`（基础认知原理）、`aha-moments/`（跨领域洞察）
-  - 用于设计或优化时查阅相关理论指导
+- `pipeline/skills/pool-field-inference/SKILL.md` — importance/difficulty/fragile 推断规则
+- `pipeline/commands/extract-chapter.md` — 9 步抽取工作流
+- `docs/design/philosophy.md` — 设计哲学光谱（9 轴 + 待工程化 5 轴）
