@@ -26,3 +26,7 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# SQLite databases — runtime artifacts, not source
+pool/*.db
+.superpowers/
