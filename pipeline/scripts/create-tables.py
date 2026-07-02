@@ -37,6 +37,7 @@ CREATE TABLE knowledge_points (
                         'core', 'supplementary', 'optional'
                     )),
     learning_action TEXT,
+    body            TEXT,
     difficulty      INTEGER CHECK (difficulty BETWEEN 1 AND 5),
     fragile         INTEGER DEFAULT 0,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),

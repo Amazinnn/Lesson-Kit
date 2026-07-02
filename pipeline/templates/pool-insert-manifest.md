@@ -33,6 +33,7 @@
       "related_kp_ids": ["dld-ch02-kp-002", "dld-ch02-kp-008"],
       "importance": "core",
       "learning_action": "区分单变量定理与多变量定理的适用范围",
+      "body": "布尔代数由亨廷顿在 1904 年给出公理化定义，包含 0/1 两个值、五条公理（交换律、结合律、分配律、0-1律、补元律）。由公理可推导出 23 条基本定理，包括交换律对偶、分配律展开、吸收律、德摩根律等。",
       "difficulty": 2,
       "fragile": 0
     }
@@ -66,6 +67,7 @@
 | `related_kp_ids` | list<string> | ❌ | 数组，可为空 `[]` |
 | `importance` | enum | ✅ | core / supplementary / optional |
 | `learning_action` | string | ❌ | 推荐填 |
+| `body` | string | ❌ | KP 正文（定义、推导、例题）。缺失时 print-graph 输出 `*[正文待补充]*` |
 | `difficulty` | int | ❌ | 1-5，未填或 null 时 insert 脚本填默认 2 |
 | `fragile` | int | ❌ | 0/1，未填时默认 0 |
 

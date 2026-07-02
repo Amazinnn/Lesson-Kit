@@ -57,7 +57,7 @@ def query_knowledge_points(
     try:
         cur = conn.execute(
             "SELECT kp_id, knowledge_item, source_location, knowledge_type, "
-            "related_kp_ids, importance, learning_action, difficulty, fragile "
+            "related_kp_ids, importance, learning_action, body, difficulty, fragile "
             "FROM knowledge_points "
             "WHERE kp_id LIKE ?",
             (f"{chapter}-%",),
@@ -80,6 +80,7 @@ def query_knowledge_points(
             related_kp_ids_raw,
             importance,
             learning_action,
+            body,
             difficulty,
             fragile,
         ) = row
@@ -106,6 +107,7 @@ def query_knowledge_points(
             "difficulty": difficulty,
             "fragile": fragile,
             "learning_action": learning_action,
+            "body": body,
             "related_kp_ids": related_kp_ids,
         })
 

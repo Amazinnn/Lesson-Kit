@@ -137,6 +137,7 @@ def validate_kp(
         "related_kp_ids": json.dumps(related_kp_ids, ensure_ascii=False),
         "importance": importance,
         "learning_action": kp.get("learning_action"),
+        "body": kp.get("body"),
         "difficulty": difficulty,
         "fragile": fragile,
     }
@@ -206,13 +207,13 @@ def main(argv=None) -> int:
         insert_sql = (
             "INSERT OR REPLACE INTO knowledge_points "
             "(kp_id, knowledge_item, source_location, knowledge_type, "
-            "related_kp_ids, importance, learning_action, difficulty, fragile) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "related_kp_ids, importance, learning_action, body, difficulty, fragile) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ) if args.upsert else (
             "INSERT INTO knowledge_points "
             "(kp_id, knowledge_item, source_location, knowledge_type, "
-            "related_kp_ids, importance, learning_action, difficulty, fragile) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "related_kp_ids, importance, learning_action, body, difficulty, fragile) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
 
         inserted = 0
@@ -227,6 +228,7 @@ def main(argv=None) -> int:
                     row["related_kp_ids"],
                     row["importance"],
                     row["learning_action"],
+                    row["body"],
                     row["difficulty"],
                     row["fragile"],
                 ))
