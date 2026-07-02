@@ -193,27 +193,25 @@ def render_chapter(
     course_name: str,
     kps: List[Dict[str, Any]],
 ) -> str:
-    """Render one chapter Markdown file with H4 section groups."""
+    """Render one chapter Markdown file with H4 section groups.
+
+    Spacing convention: two blank lines between any two KP blocks
+    (titles, sections, KP entries). Keeps Obsidian and most readers
+    visually separating each unit clearly.
+    """
     groups: "OrderedDict[str, List[Dict[str, Any]]]" = OrderedDict()
     for kp in kps:
         section = extract_section(kp["source_location"])
         groups.setdefault(section, []).append(kp)
 
-    out: List[str] = []
-    out.append(f"# {course_name} — {chapter_code}")
-    out.append("")
+    blocks: List[str] = [f"# {course_name} — {chapter_code}"]
 
-    first_section = True
     for section, items in groups.items():
-        if not first_section:
-            out.append("")
-        first_section = False
-        out.append(f"#### {section}")
-        out.append("")
+        blocks.append(f"#### {section}")
         for kp in items:
-            out.append(render_kp_paragraph(kp))
+            blocks.append(render_kp_paragraph(kp).rstrip("\n"))
 
-    return "\n".join(out).rstrip() + "\n"
+    return "\n\n".join(blocks) + "\n"
 
 
 def main(argv: Optional[List[str]] = None) -> int:
