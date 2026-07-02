@@ -168,24 +168,22 @@ def extract_section(source_location: str) -> str:
 def render_kp_paragraph(kp: Dict[str, Any]) -> str:
     """Render one KP as a single Markdown paragraph.
 
-    Format: **{name}** [[{self-kp-id}]] {body}{fragile_inline}
+    Format: **{name}**  {body}
     If fragile is non-NULL, append it as a separate paragraph below the body.
+    No wiki links, no related_kp_ids — knowledge pool is for machines, the
+    view is for reading.
     """
     name = kp["knowledge_item"]
-    self_id = kp["kp_id"]
     body = kp["body"] if kp["body"] else "*[正文待补充]*"
-    related = kp["related_kp_ids"]
 
-    parts: List[str] = [f"**{name}** [[{self_id}]] {body}"]
+    parts: List[str] = [f"**{name}**  {body}"]  # double-space after ** for visual breathing room
     para = "".join(parts).rstrip()
 
     if kp["fragile"]:
         para += "\n\n" + kp["fragile"].rstrip()
 
-    if related:
-        para += "\n\n" + " ".join(f"[[{r}]]" for r in related)
-
-    return para + "\n"
+    # Trailing triple-newline = 2 blank lines for clear visual separation
+    return para + "\n\n\n"
 
 
 def render_chapter(
@@ -195,9 +193,9 @@ def render_chapter(
 ) -> str:
     """Render one chapter Markdown file with H4 section groups.
 
-    Spacing convention: two blank lines between any two KP blocks
-    (titles, sections, KP entries). Keeps Obsidian and most readers
-    visually separating each unit clearly.
+    Spacing convention: every block is separated by exactly 2 blank lines
+    (3 newlines). Keeps Obsidian and most readers visually separating each
+    unit clearly.
     """
     groups: "OrderedDict[str, List[Dict[str, Any]]]" = OrderedDict()
     for kp in kps:
@@ -211,7 +209,7 @@ def render_chapter(
         for kp in items:
             blocks.append(render_kp_paragraph(kp).rstrip("\n"))
 
-    return "\n\n".join(blocks) + "\n"
+    return "\n\n\n".join(blocks) + "\n"
 
 
 def main(argv: Optional[List[str]] = None) -> int:
