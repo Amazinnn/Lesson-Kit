@@ -12,6 +12,8 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+!frontend/editable-graph/dist/
+!frontend/editable-graph/dist/**
 
 # OS
 .DS_Store

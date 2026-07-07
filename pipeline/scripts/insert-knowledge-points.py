@@ -110,6 +110,26 @@ def validate_kp(
         errors.append(f"{kp_id}: missing or empty 'knowledge_item'")
         ok = False
 
+    graph_label = kp.get("graph_label")
+    if graph_label is not None:
+        if not isinstance(graph_label, str):
+            errors.append(
+                f"{kp_id}: graph_label must be a short string or null, "
+                f"got {type(graph_label).__name__}"
+            )
+            ok = False
+            graph_label = None
+        else:
+            graph_label = graph_label.strip()
+            if "\n" in graph_label or "\r" in graph_label:
+                errors.append(f"{kp_id}: graph_label must be a single line")
+                ok = False
+            if len(graph_label) > 24:
+                errors.append(f"{kp_id}: graph_label must be 24 characters or fewer")
+                ok = False
+            if not graph_label:
+                graph_label = None
+
     knowledge_type = kp.get("knowledge_type")
     if knowledge_type not in VALID_KNOWLEDGE_TYPES:
         errors.append(
@@ -158,6 +178,7 @@ def validate_kp(
     cleaned = {
         "kp_id": kp_id,
         "knowledge_item": knowledge_item,
+        "graph_label": graph_label,
         "source_location": kp.get("source_location"),
         "knowledge_type": knowledge_type,
         "related_kp_ids": json.dumps(related_kp_ids, ensure_ascii=False),
@@ -232,14 +253,14 @@ def main(argv=None) -> int:
     try:
         insert_sql = (
             "INSERT OR REPLACE INTO knowledge_points "
-            "(kp_id, knowledge_item, source_location, knowledge_type, "
+            "(kp_id, knowledge_item, graph_label, source_location, knowledge_type, "
             "related_kp_ids, importance, learning_action, body, difficulty, fragile) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         ) if args.upsert else (
             "INSERT INTO knowledge_points "
-            "(kp_id, knowledge_item, source_location, knowledge_type, "
+            "(kp_id, knowledge_item, graph_label, source_location, knowledge_type, "
             "related_kp_ids, importance, learning_action, body, difficulty, fragile) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
 
         inserted = 0
@@ -249,6 +270,7 @@ def main(argv=None) -> int:
                 conn.execute(insert_sql, (
                     row["kp_id"],
                     row["knowledge_item"],
+                    row["graph_label"],
                     row["source_location"],
                     row["knowledge_type"],
                     row["related_kp_ids"],

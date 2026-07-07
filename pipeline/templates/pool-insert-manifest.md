@@ -28,6 +28,7 @@
     {
       "kp_id": "dld-ch02-kp-001",
       "knowledge_item": "布尔代数基本定理",
+      "graph_label": "布尔定理",
       "source_location": "Section 2-3, pp. 45-47",
       "knowledge_type": "concept-property",
       "related_kp_ids": ["dld-ch02-kp-002", "dld-ch02-kp-008"],
@@ -62,6 +63,7 @@
 |------|------|------|------|
 | `kp_id` | string | ✅ | 必须符合 `{course}-{chapter}-kp-{NNN}` 格式 |
 | `knowledge_item` | string | ✅ | 非空 |
+| `graph_label` | string | ❌ | 图谱节点短标签，单行，24 字符以内；缺失时图谱机械回退到 `knowledge_item` 短截断 |
 | `source_location` | string | ❌ | 推荐填，缺失不报错 |
 | `knowledge_type` | enum | ✅ | 在合法枚举内（见下） |
 | `related_kp_ids` | list<string> | ❌ | 数组，可为空 `[]` |

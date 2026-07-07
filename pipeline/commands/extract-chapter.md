@@ -97,6 +97,7 @@ Agent 将 V17 风格的 `knowledge-points.md`（14 列）翻译为符合 SQLite 
 
 - V17 字段 → SQLite 列映射：详见 `pool-field-inference` skill
 - 三个 SQLite 独有字段（importance/difficulty/fragile）在这一步推断填入
+- `graph_label` 在这一步或后续修复阶段确定：它是图谱节点短标签，必须短、单行、可审计；渲染阶段不得用 AI 临时改写标签。
 - 输出格式严格遵循 `pool-insert-manifest.md` 模板
 - 文本块排版在此步骤完成：`body`、`fragile`、`learning_action` 中的定义、条件、公式、例子、易错点必须用空行分段（JSON 中写作 `\n\n`），不得把多层内容压成一行。
 

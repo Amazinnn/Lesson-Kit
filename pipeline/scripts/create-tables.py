@@ -2,8 +2,9 @@
 """
 Pipeline Step 1: Create lesson-kit pool SQLite database.
 
-Creates the 5 active tables (knowledge_points, questions, problems,
-kp_progress, question_progress) and indexes defined in the lesson-kit
+Creates the active tables (knowledge_points, questions, problems,
+kp_progress, question_progress, problem_progress, problem_attempts) and
+indexes defined in the lesson-kit
 pool contract.
 
 Usage:
@@ -27,6 +28,7 @@ SCHEMA_SQL = """
 CREATE TABLE knowledge_points (
     kp_id           TEXT PRIMARY KEY,
     knowledge_item  TEXT NOT NULL,
+    graph_label     TEXT,  -- short audited label for map-like graph nodes
     source_location TEXT,
     knowledge_type  TEXT NOT NULL CHECK (knowledge_type IN (
                         'concept-property', 'method-modeling',
@@ -111,6 +113,33 @@ CREATE TABLE problems (
 
 CREATE INDEX idx_problem_source_kind ON problems(source_kind);
 CREATE INDEX idx_problem_type        ON problems(problem_type);
+
+-- problem_progress: current per-problem learning state
+CREATE TABLE problem_progress (
+    problem_id TEXT PRIMARY KEY REFERENCES problems(problem_id),
+    status     TEXT NOT NULL DEFAULT 'new'
+               CHECK (status IN (
+                   'new', 'wrong', 'stuck', 'reviewing', 'mastered'
+               )),
+    note       TEXT,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_problem_progress_status ON problem_progress(status);
+
+-- problem_attempts: append-only per-problem interaction log
+CREATE TABLE problem_attempts (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    problem_id TEXT NOT NULL REFERENCES problems(problem_id),
+    status     TEXT NOT NULL
+               CHECK (status IN (
+                   'new', 'wrong', 'stuck', 'reviewing', 'mastered'
+               )),
+    note       TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_problem_attempts_problem_id ON problem_attempts(problem_id);
 """
 
 
@@ -156,6 +185,8 @@ def main(argv=None) -> int:
             "problems",
             "kp_progress",
             "question_progress",
+            "problem_progress",
+            "problem_attempts",
             # Retired draft tables from the pre-v1 problem-pool design.
             "textbook_exercises",
             "exam_questions",
@@ -182,8 +213,11 @@ def main(argv=None) -> int:
         verb = "Recreated" if any_existing else "Created"
         prefix = "fresh" if not existed_before else "existing"
         print(f"{verb} schema in {prefix} DB: {db_path}")
-        print(f"  - 5 tables: knowledge_points, questions, problems, kp_progress, question_progress")
-        print(f"  - 9 indexes")
+        print(
+            "  - 7 tables: knowledge_points, questions, problems, "
+            "kp_progress, question_progress, problem_progress, problem_attempts"
+        )
+        print(f"  - 11 indexes")
         return 0
     except sqlite3.Error as exc:
         print(f"SQLite error: {exc}", file=sys.stderr)

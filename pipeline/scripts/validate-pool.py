@@ -61,6 +61,7 @@ VALID_SOURCE_KINDS: Set[str] = {
     "makeup",
     "other",
 }
+VALID_PROBLEM_STATES: Set[str] = {"new", "wrong", "stuck", "reviewing", "mastered"}
 
 
 def parse_args(argv=None):
@@ -152,6 +153,8 @@ def run_schema_gate(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
         "kp_progress",
         "question_progress",
         "problems",
+        "problem_progress",
+        "problem_attempts",
     ]
     for table in required_tables:
         if not table_exists(conn, table):
@@ -377,6 +380,62 @@ def run_problem_gates(
     return findings
 
 
+def run_problem_progress_gates(
+    conn: sqlite3.Connection,
+    prefix: str,
+    scoped_problem_ids: Set[str],
+) -> List[Dict[str, Any]]:
+    findings: List[Dict[str, Any]] = []
+    progress_rows = query_rows(
+        conn,
+        "SELECT problem_id, status FROM problem_progress",
+        "SELECT problem_id, status FROM problem_progress WHERE problem_id LIKE ?",
+        prefix,
+    )
+    for problem_id, status in progress_rows:
+        if problem_id not in scoped_problem_ids:
+            findings.append(
+                finding(
+                    "problem-progress",
+                    "ERROR",
+                    f"{problem_id}: progress row references missing problem",
+                )
+            )
+        if status not in VALID_PROBLEM_STATES:
+            findings.append(
+                finding(
+                    "problem-progress",
+                    "ERROR",
+                    f"{problem_id}: status '{status}' not in {sorted(VALID_PROBLEM_STATES)}",
+                )
+            )
+
+    attempt_rows = query_rows(
+        conn,
+        "SELECT problem_id, status FROM problem_attempts",
+        "SELECT problem_id, status FROM problem_attempts WHERE problem_id LIKE ?",
+        prefix,
+    )
+    for problem_id, status in attempt_rows:
+        if problem_id not in scoped_problem_ids:
+            findings.append(
+                finding(
+                    "problem-progress",
+                    "ERROR",
+                    f"{problem_id}: attempt row references missing problem",
+                )
+            )
+        if status not in VALID_PROBLEM_STATES:
+            findings.append(
+                finding(
+                    "problem-progress",
+                    "ERROR",
+                    f"{problem_id}: attempt status '{status}' not in {sorted(VALID_PROBLEM_STATES)}",
+                )
+            )
+    return findings
+
+
 def run_gates(conn: sqlite3.Connection, course: str, chapter: str) -> List[Dict[str, Any]]:
     findings = run_schema_gate(conn)
     if any(f["level"] == "ERROR" and f["gate"] == "schema-conformance" for f in findings):
@@ -402,6 +461,16 @@ def run_gates(conn: sqlite3.Connection, course: str, chapter: str) -> List[Dict[
     if chapter_kp_ids:
         findings.extend(run_legacy_question_gate(conn, prefix, chapter_kp_ids))
         findings.extend(run_problem_gates(conn, prefix, all_kp_ids))
+        scoped_problem_ids = {
+            row[0]
+            for row in query_rows(
+                conn,
+                "SELECT problem_id FROM problems",
+                "SELECT problem_id FROM problems WHERE problem_id LIKE ?",
+                prefix,
+            )
+        }
+        findings.extend(run_problem_progress_gates(conn, prefix, scoped_problem_ids))
 
     return findings
 

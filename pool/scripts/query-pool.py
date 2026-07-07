@@ -3,7 +3,7 @@
 Pool Query Script — lesson-kit SQLite knowledge pool extractor.
 
 Queries knowledge_points, legacy companion questions, problems, kp_progress,
-and question_progress for a given chapter prefix from the SQLite pool
+question_progress, and problem_progress for a given chapter prefix from the SQLite pool
 database. Outputs structured JSON to stdout for downstream Agent rendering
 steps.
 
@@ -12,7 +12,7 @@ Usage:
         --chapter dmath-ch06 --view problem-set --source-kind textbook
 
 The --view flag controls which tables are included:
-  - first-pass: knowledge_points, questions, kp_progress, question_progress
+  - first-pass: knowledge_points, questions, kp_progress, question_progress, problem_progress
   - problem-set: all the above + problems
 """
 
@@ -52,6 +52,20 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def table_exists(conn: sqlite3.Connection, name: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (name,),
+    ).fetchone()
+    return row is not None
+
+
+def column_names(conn: sqlite3.Connection, table: str) -> List[str]:
+    if not table_exists(conn, table):
+        return []
+    return [str(row[1]) for row in conn.execute(f"PRAGMA table_info({table})")]
+
+
 def query_knowledge_points(
     conn: sqlite3.Connection, chapter: str
 ) -> List[Dict[str, Any]]:
@@ -62,9 +76,10 @@ def query_knowledge_points(
     parsed with json.loads() so the output contains native lists.
     Returns an empty list if the table does not exist.
     """
+    graph_label_select = "graph_label" if "graph_label" in column_names(conn, "knowledge_points") else "NULL"
     try:
         cur = conn.execute(
-            "SELECT kp_id, knowledge_item, source_location, knowledge_type, "
+            f"SELECT kp_id, knowledge_item, {graph_label_select} AS graph_label, source_location, knowledge_type, "
             "related_kp_ids, importance, learning_action, body, difficulty, fragile "
             "FROM knowledge_points "
             "WHERE kp_id LIKE ?",
@@ -83,6 +98,7 @@ def query_knowledge_points(
         (
             kp_id,
             knowledge_item,
+            graph_label,
             source_location,
             knowledge_type,
             related_kp_ids_raw,
@@ -109,6 +125,7 @@ def query_knowledge_points(
         kps.append({
             "kp_id": kp_id,
             "knowledge_item": knowledge_item,
+            "graph_label": graph_label,
             "source_location": source_location,
             "knowledge_type": knowledge_type,
             "importance": importance,
@@ -230,6 +247,31 @@ def query_question_progress(
     return question_states
 
 
+def query_problem_progress(conn: sqlite3.Connection, chapter: str) -> Dict[str, Dict[str, Any]]:
+    """Query current progress records for durable problems in the chapter."""
+    if not table_exists(conn, "problem_progress"):
+        return {}
+    try:
+        cur = conn.execute(
+            "SELECT pp.problem_id, pp.status, pp.note, pp.updated_at "
+            "FROM problem_progress pp "
+            "INNER JOIN problems p ON pp.problem_id = p.problem_id "
+            "WHERE p.problem_id LIKE ?",
+            (f"{chapter}-%",),
+        )
+    except sqlite3.OperationalError:
+        return {}
+
+    return {
+        problem_id: {
+            "status": status,
+            "note": note,
+            "updated_at": updated_at,
+        }
+        for problem_id, status, note, updated_at in cur.fetchall()
+    }
+
+
 def query_problems(
     conn: sqlite3.Connection, chapter: str, source_kind: Optional[str] = None
 ) -> List[Dict[str, Any]]:
@@ -288,6 +330,7 @@ def build_output(
     questions: List[Dict[str, Any]],
     kp_states: Dict[str, str],
     question_states: Dict[str, List[Dict[str, Any]]],
+    problem_states: Dict[str, Dict[str, Any]],
     problems: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Assemble the final output dictionary."""
@@ -297,6 +340,7 @@ def build_output(
         "progress": {
             "kp_states": kp_states,
             "question_states": question_states,
+            "problem_states": problem_states,
         },
     }
     if problems is not None:
@@ -339,6 +383,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         questions = query_questions(conn, args.chapter)
         kp_states = query_kp_progress(conn, args.chapter)
         question_states = query_question_progress(conn, args.chapter)
+        problem_states = query_problem_progress(conn, args.chapter)
 
         # problem-set view also queries the durable problem pool.
         problems = None
@@ -364,7 +409,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
 
         output = build_output(
-            kps, questions, kp_states, question_states,
+            kps, questions, kp_states, question_states, problem_states,
             problems,
         )
         json.dump(output, sys.stdout, ensure_ascii=False, indent=2)
