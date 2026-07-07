@@ -328,4 +328,4 @@
 ## Rendering Notes
 
 - Student-facing problem set uses continuous output numbering and does not show source problem numbers as labels.
-- All selected problems have solution = null, so every solution entry renders as `??`.
+- All selected problems have solution = null, so every solution entry renders as `待补`.

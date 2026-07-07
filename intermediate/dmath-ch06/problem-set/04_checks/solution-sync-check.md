@@ -7,4 +7,5 @@ Result: PASS
 - Numbering matches: True
 - Pending solution markers in solution file: 303
 - Pending solution markers in problem set: 0
+- Collapsed subpart markers in problem set: 0
 - Internal field leaks in problem set: none

@@ -66,6 +66,14 @@ intermediate/{course}/problem_extraction/{chapter}/01_inputs/full-problem-bank.m
 This file lists every extracted problem in source order. It is an audit file,
 not the final database manifest.
 
+During this step, normalize text block formatting. The extracted problem bank
+must already show clear Markdown blocks:
+
+- stem, subparts, displayed formulas, and source preambles are separated by
+  blank lines;
+- subparts such as `a)`, `b)`, `c)` start their own paragraphs;
+- no problem is stored as `... a) ... b) ...` collapsed onto one line.
+
 4. Map each problem to one or more existing `kp_id` values.
 
 Do not create new KPs in this command. If a problem cannot be mapped to any
@@ -78,6 +86,10 @@ intermediate/{course}/problem_extraction/{chapter}/02_analysis/problem-insert-ma
 ```
 
 Follow `pipeline/templates/problem-insert-manifest.md`.
+
+`problem_text` and non-null `solution` must preserve the same block formatting
+as JSON strings using `\n\n` between logical blocks. Do not flatten the audit
+file into one-line strings.
 
 6. Insert:
 
@@ -104,6 +116,8 @@ intermediate/{course}/problem_extraction/{chapter}/04_checks/problem-pool-valida
 - No existing KP rows for the chapter.
 - Any problem lacks `kp_ids`.
 - Any problem has invalid `problem_type` or `source_kind`.
+- Any `problem_text` or non-null `solution` collapses multiple subparts or
+  solution steps into one line.
 - `insert-problems.py --strict` reports validation errors.
 
 ## Output Checklist

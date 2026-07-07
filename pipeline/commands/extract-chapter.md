@@ -98,10 +98,12 @@ Agent 将 V17 风格的 `knowledge-points.md`（14 列）翻译为符合 SQLite 
 - V17 字段 → SQLite 列映射：详见 `pool-field-inference` skill
 - 三个 SQLite 独有字段（importance/difficulty/fragile）在这一步推断填入
 - 输出格式严格遵循 `pool-insert-manifest.md` 模板
+- 文本块排版在此步骤完成：`body`、`fragile`、`learning_action` 中的定义、条件、公式、例子、易错点必须用空行分段（JSON 中写作 `\n\n`），不得把多层内容压成一行。
 
 ## Blockers（流程阻塞条件）
 
 - 步骤 2：如果 source-scope.md 标记 BLOCKING gap，**全流程中止**——不可声称 full coverage
+- 步骤 6：如果 manifest 文本字段把多个定义、条件、公式、例子或小问压成一行，**先修 manifest 再入库**
 - 步骤 7：`insert-knowledge-points.py` 报告 ERROR → 修复 manifest 后重跑
 - 步骤 9：`validate-pool.py` exit code = 2（任何 ERROR-level gate 失败）→ **流程未完成**，必须修复
 

@@ -31,6 +31,7 @@ VALID_KNOWLEDGE_TYPES: Set[str] = {
 VALID_IMPORTANCE: Set[str] = {"core", "supplementary", "optional"}
 
 KP_ID_PATTERN = re.compile(r"^[a-z0-9]+-ch\d{2}-kp-\d{3}$")
+COLLAPSED_SUBPART_PATTERN = re.compile(r"[^\n][ \t]+[a-j]\s*\)[ \t]+")
 
 
 def parse_args(argv=None):
@@ -54,6 +55,27 @@ def parse_args(argv=None):
         help="Exit with non-zero status if any validation errors are found.",
     )
     return parser.parse_args(argv)
+
+
+def validate_text_block_format(
+    owner_id: str,
+    field_name: str,
+    value: Any,
+    errors: List[str],
+) -> bool:
+    """
+    Catch extracted Markdown blocks that collapsed subparts into one line.
+    This keeps formatting responsibility in extraction, before rendering.
+    """
+    if value is None or not isinstance(value, str):
+        return True
+    if COLLAPSED_SUBPART_PATTERN.search(value):
+        errors.append(
+            f"{owner_id}: {field_name} has collapsed subparts; put each "
+            "subpart at the start of its own paragraph separated by blank lines"
+        )
+        return False
+    return True
 
 
 def validate_kp(
@@ -113,6 +135,12 @@ def validate_kp(
     if fragile is not None and not isinstance(fragile, str):
         errors.append(f"{kp_id}: fragile must be a string or null, got {type(fragile).__name__}")
         ok = False
+    elif not validate_text_block_format(kp_id, "fragile", fragile, errors):
+        ok = False
+
+    for field_name in ("learning_action", "body"):
+        if not validate_text_block_format(kp_id, field_name, kp.get(field_name), errors):
+            ok = False
 
     related_kp_ids = kp.get("related_kp_ids", [])
     if not isinstance(related_kp_ids, list):

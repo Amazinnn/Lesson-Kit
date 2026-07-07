@@ -13,3 +13,5 @@ Decisions captured:
   live in `solution`, which may be null.
 - Problem-set v1 renders a problem set plus a matching solution file and does
   not generate supplemental problems.
+- Extraction-stage Markdown fields must preserve clear block breaks; problem
+  subparts are stored as separate paragraphs before insertion.

@@ -220,7 +220,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "18. How many 5-element DNA sequences a) end with A? b) start with T and end with G? c) contain only A and T? d) do not contain C?",
+      "problem_text": "18. How many 5-element DNA sequences\n\na) end with A?\n\nb) start with T and end with G?\n\nc) contain only A and T?\n\nd) do not contain C?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -232,7 +232,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "19. How many 6-element RNA sequences a) do not contain U? b) end with GU? c) start with C? d) contain only A or U?",
+      "problem_text": "19. How many 6-element RNA sequences\n\na) do not contain U?\n\nb) end with GU?\n\nc) start with C?\n\nd) contain only A or U?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -244,7 +244,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "20. How many positive integers between 5 and 31 a) are divisible by 3? Which integers are these? b) are divisible by 4? Which integers are these? c) are divisible by 3 and by 4? Which integers are these?",
+      "problem_text": "20. How many positive integers between 5 and 31\n\na) are divisible by 3? Which integers are these?\n\nb) are divisible by 4? Which integers are these?\n\nc) are divisible by 3 and by 4? Which integers are these?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -256,7 +256,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "21. How many positive integers between 50 and 100 a) are divisible by 7? Which integers are these? b) are divisible by 11? Which integers are these?\n\nc) are divisible by both 7 and 11? Which integers are these?",
+      "problem_text": "21. How many positive integers between 50 and 100\n\na) are divisible by 7? Which integers are these?\n\nb) are divisible by 11? Which integers are these?\n\nc) are divisible by both 7 and 11? Which integers are these?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -268,7 +268,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "22. How many positive integers less than 1000 a) are divisible by 7? b) are divisible by 7 but not by 11? c) are divisible by both 7 and 11? d) are divisible by either 7 or 11? e) are divisible by exactly one of 7 and 11? f ) are divisible by neither 7 nor 11? g) have distinct digits? h) have distinct digits and are even?",
+      "problem_text": "22. How many positive integers less than 1000\n\na) are divisible by 7?\n\nb) are divisible by 7 but not by 11?\n\nc) are divisible by both 7 and 11?\n\nd) are divisible by either 7 or 11?\n\ne) are divisible by exactly one of 7 and 11?\n\nf) are divisible by neither 7 nor 11?\n\ng) have distinct digits?\n\nh) have distinct digits and are even?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -280,7 +280,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "23. How many positive integers between 100 and 999 inclusive a) are divisible by 7? b) are odd? c) have the same three decimal digits? d) are not divisible by 4? e) are divisible by 3 or 4? f ) are not divisible by either 3 or 4? g) are divisible by 3 but not by 4? h) are divisible by 3 and 4?",
+      "problem_text": "23. How many positive integers between 100 and 999 inclusive\n\na) are divisible by 7?\n\nb) are odd?\n\nc) have the same three decimal digits?\n\nd) are not divisible by 4?\n\ne) are divisible by 3 or 4?\n\nf) are not divisible by either 3 or 4?\n\ng) are divisible by 3 but not by 4?\n\nh) are divisible by 3 and 4?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -292,7 +292,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "24. How many positive integers between 1000 and 9999 inclusive a) are divisible by 9? b) are even? c) have distinct digits? d) are not divisible by 3? e) are divisible by 5 or 7? f ) are not divisible by either 5 or 7? g) are divisible by 5 but not by 7? h) are divisible by 5 and 7?",
+      "problem_text": "24. How many positive integers between 1000 and 9999 inclusive\n\na) are divisible by 9?\n\nb) are even?\n\nc) have distinct digits?\n\nd) are not divisible by 3?\n\ne) are divisible by 5 or 7?\n\nf) are not divisible by either 5 or 7?\n\ng) are divisible by 5 but not by 7?\n\nh) are divisible by 5 and 7?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -304,7 +304,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "25. How many strings of three decimal digits a) do not contain the same digit three times? b) begin with an odd digit? c) have exactly two digits that are 4s?",
+      "problem_text": "25. How many strings of three decimal digits\n\na) do not contain the same digit three times?\n\nb) begin with an odd digit?\n\nc) have exactly two digits that are 4s?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -316,7 +316,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "26. How many strings of four decimal digits a) do not contain the same digit twice? b) end with an even digit? c) have exactly three digits that are 9s?",
+      "problem_text": "26. How many strings of four decimal digits\n\na) do not contain the same digit twice?\n\nb) end with an even digit?\n\nc) have exactly three digits that are 9s?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -388,7 +388,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "32. How many strings of eight uppercase English letters are there a) if letters can be repeated? b) if no letter can be repeated? c) that start with X, if letters can be repeated? d) that start with X, if no letter can be repeated? e) that start and end with X, if letters can be repeated?\n\nf ) that start with the letters BO (in that order), if letters can be repeated?\n\ng) that start and end with the letters BO (in that order), if letters can be repeated?\n\nh) that start or end with the letters BO (in that order), if letters can be repeated?",
+      "problem_text": "32. How many strings of eight uppercase English letters are there\n\na) if letters can be repeated?\n\nb) if no letter can be repeated?\n\nc) that start with X, if letters can be repeated?\n\nd) that start with X, if no letter can be repeated?\n\ne) that start and end with X, if letters can be repeated?\n\nf) that start with the letters BO (in that order), if letters can be repeated?\n\ng) that start and end with the letters BO (in that order), if letters can be repeated?\n\nh) that start or end with the letters BO (in that order), if letters can be repeated?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -400,7 +400,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "33. How many strings of eight English letters are there a) that contain no vowels, if letters can be repeated? b) that contain no vowels, if letters cannot be repeated? c) that start with a vowel, if letters can be repeated? d) that start with a vowel, if letters cannot be repeated? e) that contain at least one vowel, if letters can be repeated? f ) that contain exactly one vowel, if letters can be repeated? g) that start with X and contain at least one vowel, if letters can be repeated? h) that start and end with X and contain at least one vowel, if letters can be repeated?",
+      "problem_text": "33. How many strings of eight English letters are there\n\na) that contain no vowels, if letters can be repeated?\n\nb) that contain no vowels, if letters cannot be repeated?\n\nc) that start with a vowel, if letters can be repeated?\n\nd) that start with a vowel, if letters cannot be repeated?\n\ne) that contain at least one vowel, if letters can be repeated?\n\nf) that contain exactly one vowel, if letters can be repeated?\n\ng) that start with X and contain at least one vowel, if letters can be repeated?\n\nh) that start and end with X and contain at least one vowel, if letters can be repeated?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -412,7 +412,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "34. How many different functions are there from a set with 10 elements to sets with the following numbers of elements? a) 2 b) 3 c) 4 d) 5",
+      "problem_text": "34. How many different functions are there from a set with 10 elements to sets with the following numbers of elements?\n\na) 2\n\nb) 3\n\nc) 4\n\nd) 5",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -424,7 +424,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "35. How many one-to-one functions are there from a set with five elements to sets with the following number of elements? a) 4 b) 5 c) 6 d) 7",
+      "problem_text": "35. How many one-to-one functions are there from a set with five elements to sets with the following number of elements?\n\na) 4\n\nb) 5\n\nc) 6\n\nd) 7",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -448,7 +448,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "37. How many functions are there from the set {1, 2, … , n}, where n is a positive integer, to the set {0, 1} a) that are one-to-one? b) that assign 0 to both 1 and n? c) that assign 1 to exactly one of the positive integers less than n?",
+      "problem_text": "37. How many functions are there from the set {1, 2, … , n}, where n is a positive integer, to the set {0, 1}\n\na) that are one-to-one?\n\nb) that assign 0 to both 1 and n?\n\nc) that assign 1 to exactly one of the positive integers less than n?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -460,7 +460,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "38. How many partial functions (see Section 2.3) are there from a set with five elements to sets with each of these number of elements? a) 1 b) 2 c) 5 d) 9",
+      "problem_text": "38. How many partial functions (see Section 2.3) are there from a set with five elements to sets with each of these number of elements?\n\na) 1\n\nb) 2\n\nc) 5\n\nd) 9",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -508,7 +508,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "42. How many 4-element DNA sequences a) do not contain the base T? b) contain the sequence ACG?\n\nc) contain all four bases A, T, C, and G?\n\nd) contain exactly three of the four bases A, T, C, and G?",
+      "problem_text": "42. How many 4-element DNA sequences\n\na) do not contain the base T?\n\nb) contain the sequence ACG?\n\nc) contain all four bases A, T, C, and G?\n\nd) contain exactly three of the four bases A, T, C, and G?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -520,7 +520,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "43. How many 4-element RNA sequences a) contain the base U? b) do not contain the sequence CUG? c) do not contain all four bases A, U, C, and G? d) contain exactly two of the four bases A, U, C, and G?",
+      "problem_text": "43. How many 4-element RNA sequences\n\na) contain the base U?\n\nb) do not contain the sequence CUG?\n\nc) do not contain all four bases A, U, C, and G?\n\nd) contain exactly two of the four bases A, U, C, and G?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -578,7 +578,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "48. In how many ways can a photographer at a wedding arrange 6 people in a row from a group of 10 people, where the bride and the groom are among these 10 people, if a) the bride must be in the picture? b) both the bride and groom must be in the picture? c) exactly one of the bride and the groom is in the picture?",
+      "problem_text": "48. In how many ways can a photographer at a wedding arrange 6 people in a row from a group of 10 people, where the bride and the groom are among these 10 people, if\n\na) the bride must be in the picture?\n\nb) both the bride and groom must be in the picture?\n\nc) exactly one of the bride and the groom is in the picture?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -590,7 +590,7 @@
         "dmath-ch06-kp-002",
         "dmath-ch06-kp-028"
       ],
-      "problem_text": "49. In how many ways can a photographer at a wedding arrange six people in a row, including the bride and groom, if a) the bride must be next to the groom? b) the bride is not next to the groom? c) the bride is positioned somewhere to the left of the groom?",
+      "problem_text": "49. In how many ways can a photographer at a wedding arrange six people in a row, including the bride and groom, if\n\na) the bride must be next to the groom?\n\nb) the bride is not next to the groom?\n\nc) the bride is positioned somewhere to the left of the groom?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -841,7 +841,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "70. a) Suppose that a store sells six varieties of soft drinks: cola, ginger ale, orange, root beer, lemonade, and cream soda. Use a tree diagram to determine the number of diferent types of bottles the store must stock to have all varieties available in all size bottles if all varieties are available in 12-ounce bottles, all but lemonade are available in 20-ounce bottles, only cola and ginger ale are available in 32-ounce bottles, and all but lemonade and cream soda are available in 64- ounce bottles?\n\nb) Answer the question in part (a) using counting rules.",
+      "problem_text": "70.\n\na) Suppose that a store sells six varieties of soft drinks: cola, ginger ale, orange, root beer, lemonade, and cream soda. Use a tree diagram to determine the number of diferent types of bottles the store must stock to have all varieties available in all size bottles if all varieties are available in 12-ounce bottles, all but lemonade are available in 20-ounce bottles, only cola and ginger ale are available in 32-ounce bottles, and all but lemonade and cream soda are available in 64- ounce bottles?\n\nb) Answer the question in part (a) using counting rules.",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -853,7 +853,7 @@
         "dmath-ch06-kp-001",
         "dmath-ch06-kp-002"
       ],
-      "problem_text": "71. a) Suppose that a popular style of running shoe is available for both men and women. The woman’s shoe comes in sizes 6, 7, 8, and 9, and the man’s shoe comes in sizes 8, 9, 10, 11, and 12. The man’s shoe comes in white and black, while the woman’s shoe comes in white, red, and black. Use a tree diagram to determine the number of diferent shoes that a store has to stock to have at least one pair of this type of running shoe for all available sizes and colors for both men and women.\n\nb) Answer the question in part (a) using counting rules.",
+      "problem_text": "71.\n\na) Suppose that a popular style of running shoe is available for both men and women. The woman’s shoe comes in sizes 6, 7, 8, and 9, and the man’s shoe comes in sizes 8, 9, 10, 11, and 12. The man’s shoe comes in white and black, while the woman’s shoe comes in white, red, and black. Use a tree diagram to determine the number of diferent shoes that a store has to stock to have at least one pair of this type of running shoe for all available sizes and colors for both men and women.\n\nb) Answer the question in part (a) using counting rules.",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1087,7 +1087,7 @@
         "dmath-ch06-kp-008",
         "dmath-ch06-kp-024"
       ],
-      "problem_text": "14. How many ordered pairs of integers (a, b) are needed to guarantee that there are two ordered pairs $( a _ { 1 } , b _ { 1 } )$ and $( a _ { 2 } , b _ { 2 } )$ such that $a _ { 1 }$ mod $5 = a _ { 2 }$ mod 5 and $b _ { 1 }$ mod $5 = b _ { 2 }$ mod 5?",
+      "problem_text": "14. How many ordered pairs of integers (a,\n\nb) are needed to guarantee that there are two ordered pairs $( a _ { 1 } , b _ { 1 } )$ and $( a _ { 2 } , b _ { 2 } )$ such that $a _ { 1 }$ mod $5 = a _ { 2 }$ mod 5 and $b _ { 1 }$ mod $5 = b _ { 2 }$ mod 5?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1098,7 +1098,7 @@
         "dmath-ch06-kp-008",
         "dmath-ch06-kp-024"
       ],
-      "problem_text": "15. a) Show that if five integers are selected from the first eight positive integers, there must be a pair of these integers with a sum equal to 9.\n\nb) Is the conclusion in part (a) true if four integers are selected rather than five?",
+      "problem_text": "15.\n\na) Show that if five integers are selected from the first eight positive integers, there must be a pair of these integers with a sum equal to 9.\n\nb) Is the conclusion in part (a) true if four integers are selected rather than five?",
       "solution": null,
       "problem_type": "proof",
       "source_kind": "textbook"
@@ -1109,7 +1109,7 @@
         "dmath-ch06-kp-008",
         "dmath-ch06-kp-024"
       ],
-      "problem_text": "16. a) Show that if seven integers are selected from the first 10 positive integers, there must be at least two pairs of these integers with the sum 11.\n\nb) Is the conclusion in part (a) true if six integers are selected rather than seven?",
+      "problem_text": "16.\n\na) Show that if seven integers are selected from the first 10 positive integers, there must be at least two pairs of these integers with the sum 11.\n\nb) Is the conclusion in part (a) true if six integers are selected rather than seven?",
       "solution": null,
       "problem_type": "proof",
       "source_kind": "textbook"
@@ -1417,7 +1417,7 @@
         "dmath-ch06-kp-008",
         "dmath-ch06-kp-024"
       ],
-      "problem_text": "<sup>∗</sup>44. Is the statement in Exercise 43 true if 24 is replaced by a) 2? b) 23? c) 25? d) 30?",
+      "problem_text": "<sup>∗</sup>44. Is the statement in Exercise 43 true if 24 is replaced by\n\na) 2?\n\nb) 23?\n\nc) 25?\n\nd) 30?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1521,7 +1521,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "4. Let S = {1, 2, 3, 4, 5}. a) List all the 3-permutations of S. b) List all the 3-combinations of S.",
+      "problem_text": "4. Let S = {1, 2, 3, 4, 5}.\n\na) List all the 3-permutations of S.\n\nb) List all the 3-combinations of S.",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1533,7 +1533,7 @@
         "dmath-ch06-kp-010",
         "dmath-ch06-kp-011"
       ],
-      "problem_text": "5. Find the value of each of these quantities. a) P(6, 3) b) P(6, 5) c) P(8, 1) d) P(8, 5) e) P(8, 8) f ) P(10, 9)",
+      "problem_text": "5. Find the value of each of these quantities.\n\na) P(6, 3)\n\nb) P(6, 5)\n\nc) P(8, 1)\n\nd) P(8, 5)\n\ne) P(8, 8)\n\nf) P(10, 9)",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1544,7 +1544,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "6. Find the value of each of these quantities. a) C(5, 1) b) C(5, 3) c) C(8, 4) d) C(8, 8) e) C(8, 0) f ) C(12, 6)",
+      "problem_text": "6. Find the value of each of these quantities.\n\na) C(5, 1)\n\nb) C(5, 3)\n\nc) C(8, 4)\n\nd) C(8, 8)\n\ne) C(8, 0)\n\nf) C(12, 6)",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1603,7 +1603,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "11. How many bit strings of length 10 contain a) exactly four 1s? b) at most four 1s? c) at least four 1s? d) an equal number of 0s and 1s?",
+      "problem_text": "11. How many bit strings of length 10 contain\n\na) exactly four 1s?\n\nb) at most four 1s?\n\nc) at least four 1s?\n\nd) an equal number of 0s and 1s?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1614,7 +1614,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "12. How many bit strings of length 12 contain a) exactly three 1s? b) at most three 1s? c) at least three 1s? d) an equal number of 0s and 1s?",
+      "problem_text": "12. How many bit strings of length 12 contain\n\na) exactly three 1s?\n\nb) at most three 1s?\n\nc) at least three 1s?\n\nd) an equal number of 0s and 1s?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1682,7 +1682,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "18. A coin is flipped eight times where each flip comes up either heads or tails. How many possible outcomes a) are there in total? b) contain exactly three heads? c) contain at least three heads? d) contain the same number of heads and tails?",
+      "problem_text": "18. A coin is flipped eight times where each flip comes up either heads or tails. How many possible outcomes\n\na) are there in total?\n\nb) contain exactly three heads?\n\nc) contain at least three heads?\n\nd) contain the same number of heads and tails?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1693,7 +1693,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "19. A coin is flipped 10 times where each flip comes up either heads or tails. How many possible outcomes a) are there in total? b) contain exactly two heads? c) contain at most three tails? d) contain the same number of heads and tails?",
+      "problem_text": "19. A coin is flipped 10 times where each flip comes up either heads or tails. How many possible outcomes\n\na) are there in total?\n\nb) contain exactly two heads?\n\nc) contain at most three tails?\n\nd) contain the same number of heads and tails?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1704,7 +1704,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "20. How many bit strings of length 10 have a) exactly three 0s? b) more 0s than 1s? c) at least seven 1s? d) at least three 1s?",
+      "problem_text": "20. How many bit strings of length 10 have\n\na) exactly three 0s?\n\nb) more 0s than 1s?\n\nc) at least seven 1s?\n\nd) at least three 1s?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1716,7 +1716,7 @@
         "dmath-ch06-kp-010",
         "dmath-ch06-kp-011"
       ],
-      "problem_text": "21. How many permutations of the letters ABCDEFG contain a) the string BCD? b) the string CFGA? c) the strings BA and GF? d) the strings ABC and DE? e) the strings ABC and CDE? f ) the strings CBA and BED?",
+      "problem_text": "21. How many permutations of the letters ABCDEFG contain\n\na) the string BCD?\n\nb) the string CFGA?\n\nc) the strings BA and GF?\n\nd) the strings ABC and DE?\n\ne) the strings ABC and CDE?\n\nf) the strings CBA and BED?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1728,7 +1728,7 @@
         "dmath-ch06-kp-010",
         "dmath-ch06-kp-011"
       ],
-      "problem_text": "22. How many permutations of the letters ABCDEFGH contain a) the string ED? b) the string CDE? c) the strings BA and FGH? d) the strings AB, DE, and GH? e) the strings CAB and BED? f ) the strings BCA and ABF?",
+      "problem_text": "22. How many permutations of the letters ABCDEFGH contain\n\na) the string ED?\n\nb) the string CDE?\n\nc) the strings BA and FGH?\n\nd) the strings AB, DE, and GH?\n\ne) the strings CAB and BED?\n\nf) the strings BCA and ABF?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1767,7 +1767,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "25. How many ways are there for four men and five women to stand in a line so that a) all men stand together? b) all women stand together?",
+      "problem_text": "25. How many ways are there for four men and five women to stand in a line so that\n\na) all men stand together?\n\nb) all women stand together?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1780,7 +1780,7 @@
         "dmath-ch06-kp-012",
         "dmath-ch06-kp-013"
       ],
-      "problem_text": "26. How many ways are there for three penguins and six pufins to stand in a line so that a) all pufins stand together? b) all penguins stand together?",
+      "problem_text": "26. How many ways are there for three penguins and six pufins to stand in a line so that\n\na) all pufins stand together?\n\nb) all penguins stand together?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -1792,7 +1792,7 @@
         "dmath-ch06-kp-010",
         "dmath-ch06-kp-011"
       ],
-      "problem_text": "27. One hundred tickets, numbered 1, 2, 3, … , 100, are sold to 100 diferent people for a drawing. Four diferent prizes are awarded, including a grand prize (a trip to Tahiti). How many ways are there to award the prizes if a) there are no restrictions? b) the person holding ticket 47 wins the grand prize? c) the person holding ticket 47 wins one of the prizes? d) the person holding ticket 47 does not win a prize? e) the people holding tickets 19 and 47 both win prizes? f) the people holding tickets 19, 47, and 73 all win f ) the people holding tickets 19, 47, and 73 all win prizes?\n\ng) the people holding tickets 19, 47, 73, and 97 all win prizes?\n\nh) none of the people holding tickets 19, 47, 73, and 97 wins a prize?\n\ni) the grand prize winner is a person holding ticket 19, 47, 73, or 97?\n\nj) the people holding tickets 19 and 47 win prizes, but the people holding tickets 73 and 97 do not win prizes?",
+      "problem_text": "27. One hundred tickets, numbered 1, 2, 3, … , 100, are sold to 100 diferent people for a drawing. Four diferent prizes are awarded, including a grand prize (a trip to Tahiti). How many ways are there to award the prizes if\n\na) there are no restrictions?\n\nb) the person holding ticket 47 wins the grand prize?\n\nc) the person holding ticket 47 wins one of the prizes?\n\nd) the person holding ticket 47 does not win a prize?\n\ne) the people holding tickets 19 and 47 both win prizes?\n\nf) the people holding tickets 19, 47, and 73 all win\n\nf) the people holding tickets 19, 47, and 73 all win prizes?\n\ng) the people holding tickets 19, 47, 73, and 97 all win prizes?\n\nh) none of the people holding tickets 19, 47, 73, and 97 wins a prize?\n\ni) the grand prize winner is a person holding ticket 19, 47, 73, or 97?\n\nj) the people holding tickets 19 and 47 win prizes, but the people holding tickets 73 and 97 do not win prizes?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -2033,7 +2033,7 @@
         "dmath-ch06-kp-010",
         "dmath-ch06-kp-011"
       ],
-      "problem_text": "<sup>∗</sup>48. This procedure is used to break ties in games in the championship round of the World Cup soccer tournament. Each team selects five players in a prescribed order. Each of these players takes a penalty kick, with a player from the first team followed by a player from the second team and so on, following the order of players specified. If the score is still tied at the end of the 10 penalty kicks, this procedure is repeated. If the score is still tied after 20 penalty kicks, a sudden-death shootout occurs, with the first team scoring an unanswered goal victorious.\n\na) How many diferent scoring scenarios are possible if the game is settled in the first round of 10 penalty kicks, where the round ends once it is impossible for a team to equal the number of goals scored by the other team?\n\nthe game is settled in the second round of 10 penalty kicks?\n\nb) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if c) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?\n\n![](images/72f1ed20e3da77da695f16131a45ff24c6b554e9309682ed865ac6512dcebc78.jpg)",
+      "problem_text": "<sup>∗</sup>48. This procedure is used to break ties in games in the championship round of the World Cup soccer tournament. Each team selects five players in a prescribed order. Each of these players takes a penalty kick, with a player from the first team followed by a player from the second team and so on, following the order of players specified. If the score is still tied at the end of the 10 penalty kicks, this procedure is repeated. If the score is still tied after 20 penalty kicks, a sudden-death shootout occurs, with the first team scoring an unanswered goal victorious.\n\na) How many diferent scoring scenarios are possible if the game is settled in the first round of 10 penalty kicks, where the round ends once it is impossible for a team to equal the number of goals scored by the other team?\n\nthe game is settled in the second round of 10 penalty kicks?\n\nb) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if\n\nc) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?\n\n![](images/72f1ed20e3da77da695f16131a45ff24c6b554e9309682ed865ac6512dcebc78.jpg)",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -2044,7 +2044,7 @@
         "dmath-ch06-kp-014",
         "dmath-ch06-kp-026"
       ],
-      "problem_text": "1. Find the expansion of $( x + y ) ^ { 4 }$ a) using combinatorial reasoning, as in Example 1. b) using the binomial theorem.",
+      "problem_text": "1. Find the expansion of $( x + y ) ^ { 4 }$\n\na) using combinatorial reasoning, as in Example 1.\n\nb) using the binomial theorem.",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -2055,7 +2055,7 @@
         "dmath-ch06-kp-014",
         "dmath-ch06-kp-026"
       ],
-      "problem_text": "2. Find the expansion of $( x + y ) ^ { 5 }$ a) using combinatorial reasoning, as in Example 1. b) using the binomial theorem.",
+      "problem_text": "2. Find the expansion of $( x + y ) ^ { 5 }$\n\na) using combinatorial reasoning, as in Example 1.\n\nb) using the binomial theorem.",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -2165,7 +2165,7 @@
         "dmath-ch06-kp-014",
         "dmath-ch06-kp-026"
       ],
-      "problem_text": "12. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 5 x ^ { 2 } + 2 y ^ { 3 } ) ^ { 6 }$ , where a) $a = 6 , b = 9 .$ b) $a = 2 , b = 1 5 .$ c) $a = 3 , b = 1 2 .$ d) $a = 1 2 , b = 0 .$ e) $a = 8 , b = 9 .$",
+      "problem_text": "12. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 5 x ^ { 2 } + 2 y ^ { 3 } ) ^ { 6 }$ , where\n\na) $a = 6 , b = 9 .$\n\nb) $a = 2 , b = 1 5 .$\n\nc) $a = 3 , b = 1 2 .$\n\nd) $a = 1 2 , b = 0 .$\n\ne) $a = 8 , b = 9 .$",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -2176,7 +2176,7 @@
         "dmath-ch06-kp-014",
         "dmath-ch06-kp-026"
       ],
-      "problem_text": "13. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 2 x ^ { 3 } - 4 y ^ { 2 } ) ^ { 7 }$ , where a) $a = 9 , b = 8 .$ b) $a = 8 , b = 9 .$ c) $a = 0 , b = 1 4 .$ d) $a = 1 2 , b = 6 .$ e) $a = 1 8 , b = 2 .$",
+      "problem_text": "13. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 2 x ^ { 3 } - 4 y ^ { 2 } ) ^ { 7 }$ , where\n\na) $a = 9 , b = 8 .$\n\nb) $a = 8 , b = 9 .$\n\nc) $a = 0 , b = 1 4 .$\n\nd) $a = 1 2 , b = 6 .$\n\ne) $a = 1 8 , b = 2 .$",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -2255,7 +2255,7 @@
         "dmath-ch06-kp-015",
         "dmath-ch06-kp-016"
       ],
-      "problem_text": "20. a) Use Exercise 18 and Corollary 1 to show that if n is an integer greater than 1, then $\\binom { n } { | n / 2 | } \\geq 2 ^ { n } / n$\n\nb) Conclude from part (a) that if n is a positive integer, then ${ \\binom { 2 n } { n } } \\geq 4 ^ { n } / 2 n$",
+      "problem_text": "20.\n\na) Use Exercise 18 and Corollary 1 to show that if n is an integer greater than 1, then $\\binom { n } { | n / 2 | } \\geq 2 ^ { n } / n$\n\nb) Conclude from part (a) that if n is a positive integer, then ${ \\binom { 2 n } { n } } \\geq 4 ^ { n } / 2 n$",
       "solution": null,
       "problem_type": "proof",
       "source_kind": "textbook"
@@ -2401,7 +2401,7 @@
         "dmath-ch06-kp-017",
         "dmath-ch06-kp-026"
       ],
-      "problem_text": "32. Show that if n is a positive integer, then $\\textstyle { \\binom { 2 n } { 2 } } = 2 { \\binom { n } { 2 } } + n ^ { 2 }$ a) using a combinatorial argument. b) by algebraic manipulation.",
+      "problem_text": "32. Show that if n is a positive integer, then $\\textstyle { \\binom { 2 n } { 2 } } = 2 { \\binom { n } { 2 } } + n ^ { 2 }$\n\na) using a combinatorial argument.\n\nb) by algebraic manipulation.",
       "solution": null,
       "problem_type": "proof",
       "source_kind": "textbook"
@@ -2544,7 +2544,7 @@
         "dmath-ch06-kp-017",
         "dmath-ch06-kp-026"
       ],
-      "problem_text": "<sup>∗</sup>43. Determine a formula involving binomial coeficients for the nth term of a sequence if its initial terms are those listed. [Hint: Looking at Pascal’s triangle will be helpful. Although infinitely many sequences start with a specified set of terms, each of the following lists is the start of a sequence of the type desired.]\n\na) 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, …\n\nb) 1, 4, 10, 20, 35, 56, 84, 120, 165, 220, …\n\nc) 1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, …\n\nd) 1, 1, 2, 3, 6, 10, 20, 35, 70, 126, …\n\ne) 1, 1, 1, 3, 1, 5, 15, 35, 1, 9, …\n\nf ) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …\n\n![](images/ad580e473c29f6164955f171fd672862d7d75e17981d43ad0e0f09940061798d.jpg)",
+      "problem_text": "<sup>∗</sup>43. Determine a formula involving binomial coeficients for the nth term of a sequence if its initial terms are those listed. [Hint: Looking at Pascal’s triangle will be helpful. Although infinitely many sequences start with a specified set of terms, each of the following lists is the start of a sequence of the type desired.]\n\na) 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, …\n\nb) 1, 4, 10, 20, 35, 56, 84, 120, 165, 220, …\n\nc) 1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, …\n\nd) 1, 1, 2, 3, 6, 10, 20, 35, 70, 126, …\n\ne) 1, 1, 1, 3, 1, 5, 15, 35, 1, 9, …\n\nf) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …\n\n![](images/ad580e473c29f6164955f171fd672862d7d75e17981d43ad0e0f09940061798d.jpg)",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -2654,7 +2654,7 @@
         "dmath-ch06-kp-023",
         "dmath-ch06-kp-027"
       ],
-      "problem_text": "10. A croissant shop has plain croissants, cherry croissants, chocolate croissants, almond croissants, apple croissants, and broccoli croissants. How many ways are there to choose\n\na) a dozen croissants?\n\nb) three dozen croissants?\n\nc) two dozen croissants with at least two of each kind?\n\nd) two dozen croissants with no more than two broccoli croissants?\n\ne) two dozen croissants with at least five chocolate croissants and at least three almond croissants?\n\nf ) two dozen croissants with at least one plain croissant, at least two cherry croissants, at least three chocolate croissants, at least one almond croissant, at least two apple croissants, and no more than three broccoli croissants?",
+      "problem_text": "10. A croissant shop has plain croissants, cherry croissants, chocolate croissants, almond croissants, apple croissants, and broccoli croissants. How many ways are there to choose\n\na) a dozen croissants?\n\nb) three dozen croissants?\n\nc) two dozen croissants with at least two of each kind?\n\nd) two dozen croissants with no more than two broccoli croissants?\n\ne) two dozen croissants with at least five chocolate croissants and at least three almond croissants?\n\nf) two dozen croissants with at least one plain croissant, at least two cherry croissants, at least three chocolate croissants, at least one almond croissant, at least two apple croissants, and no more than three broccoli croissants?",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -3388,7 +3388,7 @@
       "kp_ids": [
         "dmath-ch06-kp-022"
       ],
-      "problem_text": "5. Find the next larger permutation in lexicographic order after each of these permutations. a) 1432 b) 54123 c) 12453 d) 45231 e) 6714235 f ) 31528764",
+      "problem_text": "5. Find the next larger permutation in lexicographic order after each of these permutations.\n\na) 1432\n\nb) 54123\n\nc) 12453\n\nd) 45231\n\ne) 6714235\n\nf) 31528764",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -3398,7 +3398,7 @@
       "kp_ids": [
         "dmath-ch06-kp-022"
       ],
-      "problem_text": "6. Find the next larger permutation in lexicographic order after each of these permutations. a) 1342 b) 45321 c) 13245 d) 612345 e) 1623547 f ) 23587416",
+      "problem_text": "6. Find the next larger permutation in lexicographic order after each of these permutations.\n\na) 1342\n\nb) 45321\n\nc) 13245\n\nd) 612345\n\ne) 1623547\n\nf) 23587416",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -3478,7 +3478,7 @@
       "kp_ids": [
         "dmath-ch06-kp-022"
       ],
-      "problem_text": "The remaining exercises in this section develop another algorithm for generating the permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ . This algorithm is based on Cantor expansions of integers. Every nonnegative integer less than n! has a unique Cantor expansion\n\n$$\na _ { 1 } 1 ! + a _ { 2 } 2 ! + \\cdots + a _ { n - 1 } ( n - 1 ) !\n$$\n\nwhere $a _ { i }$ is a nonnegative integer not exceeding i, for $i =$ $1 , 2 , \\ldots , n - 1$ . The integers $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ are called the Cantor digits of this integer.\n\nGiven a permutation of $\\{ 1 , 2 , \\ldots , n \\}$ , let $a _ { k - 1 } , k =$ $2 , 3 , \\ldots , n ,$ be the number of integers less than k that follow k in the permutation. For instance, in the permutation 43215, $a _ { 1 }$ is the number of integers less than 2 that follow 2, so $a _ { 1 } = 1$ . Similarly, for this example $a _ { 2 } = 2 , a _ { 3 } = 3$ and $a _ { 4 } = 0$ . Consider the function from the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ to the set of nonnegative integers less than n! that sends a permutation to the integer that has $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ , defined in this way, as its Cantor digits.\n\n14. Find the Cantor digits $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ that correspond to these permutations. a) 246531 b) 12345 c) 654321",
+      "problem_text": "The remaining exercises in this section develop another algorithm for generating the permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ . This algorithm is based on Cantor expansions of integers. Every nonnegative integer less than n! has a unique Cantor expansion\n\n$$\na _ { 1 } 1 ! + a _ { 2 } 2 ! + \\cdots + a _ { n - 1 } ( n - 1 ) !\n$$\n\nwhere $a _ { i }$ is a nonnegative integer not exceeding i, for $i =$ $1 , 2 , \\ldots , n - 1$ . The integers $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ are called the Cantor digits of this integer.\n\nGiven a permutation of $\\{ 1 , 2 , \\ldots , n \\}$ , let $a _ { k - 1 } , k =$ $2 , 3 , \\ldots , n ,$ be the number of integers less than k that follow k in the permutation. For instance, in the permutation 43215, $a _ { 1 }$ is the number of integers less than 2 that follow 2, so $a _ { 1 } = 1$ . Similarly, for this example $a _ { 2 } = 2 , a _ { 3 } = 3$ and $a _ { 4 } = 0$ . Consider the function from the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ to the set of nonnegative integers less than n! that sends a permutation to the integer that has $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ , defined in this way, as its Cantor digits.\n\n14. Find the Cantor digits $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ that correspond to these permutations.\n\na) 246531\n\nb) 12345\n\nc) 654321",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"
@@ -3498,7 +3498,7 @@
       "kp_ids": [
         "dmath-ch06-kp-022"
       ],
-      "problem_text": "16. Find the permutations of {1, 2, 3, 4, 5} that correspond to these integers with respect to the correspondence between Cantor expansions and permutations as described in the preamble to Exercise 14. a) 3 b) 89 c) 111",
+      "problem_text": "16. Find the permutations of {1, 2, 3, 4, 5} that correspond to these integers with respect to the correspondence between Cantor expansions and permutations as described in the preamble to Exercise 14.\n\na) 3\n\nb) 89\n\nc) 111",
       "solution": null,
       "problem_type": "calculation",
       "source_kind": "textbook"

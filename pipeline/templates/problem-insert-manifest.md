@@ -23,8 +23,8 @@ validates and inserts them into SQLite.
     {
       "problem_id": "dmath-ch06-prob-001",
       "kp_ids": ["dmath-ch06-kp-001"],
-      "problem_text": "How many bit strings of length 8 are there?",
-      "solution": "Use the product rule: each position has 2 choices, so the answer is $2^8 = 256$.",
+      "problem_text": "A test contains 10 questions. There are four possible answers for each question.\n\na) In how many ways can a student answer the questions on the test if the student answers every question?\n\nb) In how many ways can a student answer the questions on the test if the student can leave answers blank?",
+      "solution": "a) Each question has 4 choices, so the total is $4^{10}$.\n\nb) Each question has 5 choices, including blank, so the total is $5^{10}$.",
       "problem_type": "calculation",
       "source_kind": "textbook"
     }
@@ -76,3 +76,16 @@ textbook | quiz | midterm | final | makeup | other
 - Keep duplicate-looking problems as separate rows when they come from separate source occurrences.
 - `kp_ids` is required because problem-set views select by knowledge coverage.
 - `solution` may be missing. Problem-set solution files must show missing solution entries as pending.
+
+## Text Block Formatting
+
+Extraction must produce readable Markdown blocks before insertion. Do not rely
+on the rendering stage to repair cramped text.
+
+- `problem_text` and non-null `solution` are block fields, not inline labels.
+- Separate the stem, each subpart, displayed formula, proof step, and final
+  answer with a blank line (`\n\n` in JSON).
+- Put subparts such as `a)`, `b)`, `c)` at the start of their own paragraphs.
+  Never store `... a) ... b) ...` collapsed onto one line.
+- Preserve meaningful source line breaks when they affect mathematical
+  readability; normalize accidental extra blank lines to a single blank line.

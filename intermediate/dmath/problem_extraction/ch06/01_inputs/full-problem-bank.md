@@ -191,7 +191,15 @@ b) In how many ways can a student answer the questions on the test if the studen
 - source_kind: textbook
 - solution: null
 
-18. How many 5-element DNA sequences a) end with A? b) start with T and end with G? c) contain only A and T? d) do not contain C?
+18. How many 5-element DNA sequences
+
+a) end with A?
+
+b) start with T and end with G?
+
+c) contain only A and T?
+
+d) do not contain C?
 
 ### dmath-ch06-prob-019 (source 6.1 Exercise 19)
 
@@ -200,7 +208,15 @@ b) In how many ways can a student answer the questions on the test if the studen
 - source_kind: textbook
 - solution: null
 
-19. How many 6-element RNA sequences a) do not contain U? b) end with GU? c) start with C? d) contain only A or U?
+19. How many 6-element RNA sequences
+
+a) do not contain U?
+
+b) end with GU?
+
+c) start with C?
+
+d) contain only A or U?
 
 ### dmath-ch06-prob-020 (source 6.1 Exercise 20)
 
@@ -209,7 +225,13 @@ b) In how many ways can a student answer the questions on the test if the studen
 - source_kind: textbook
 - solution: null
 
-20. How many positive integers between 5 and 31 a) are divisible by 3? Which integers are these? b) are divisible by 4? Which integers are these? c) are divisible by 3 and by 4? Which integers are these?
+20. How many positive integers between 5 and 31
+
+a) are divisible by 3? Which integers are these?
+
+b) are divisible by 4? Which integers are these?
+
+c) are divisible by 3 and by 4? Which integers are these?
 
 ### dmath-ch06-prob-021 (source 6.1 Exercise 21)
 
@@ -218,7 +240,11 @@ b) In how many ways can a student answer the questions on the test if the studen
 - source_kind: textbook
 - solution: null
 
-21. How many positive integers between 50 and 100 a) are divisible by 7? Which integers are these? b) are divisible by 11? Which integers are these?
+21. How many positive integers between 50 and 100
+
+a) are divisible by 7? Which integers are these?
+
+b) are divisible by 11? Which integers are these?
 
 c) are divisible by both 7 and 11? Which integers are these?
 
@@ -229,7 +255,23 @@ c) are divisible by both 7 and 11? Which integers are these?
 - source_kind: textbook
 - solution: null
 
-22. How many positive integers less than 1000 a) are divisible by 7? b) are divisible by 7 but not by 11? c) are divisible by both 7 and 11? d) are divisible by either 7 or 11? e) are divisible by exactly one of 7 and 11? f ) are divisible by neither 7 nor 11? g) have distinct digits? h) have distinct digits and are even?
+22. How many positive integers less than 1000
+
+a) are divisible by 7?
+
+b) are divisible by 7 but not by 11?
+
+c) are divisible by both 7 and 11?
+
+d) are divisible by either 7 or 11?
+
+e) are divisible by exactly one of 7 and 11?
+
+f) are divisible by neither 7 nor 11?
+
+g) have distinct digits?
+
+h) have distinct digits and are even?
 
 ### dmath-ch06-prob-023 (source 6.1 Exercise 23)
 
@@ -238,7 +280,23 @@ c) are divisible by both 7 and 11? Which integers are these?
 - source_kind: textbook
 - solution: null
 
-23. How many positive integers between 100 and 999 inclusive a) are divisible by 7? b) are odd? c) have the same three decimal digits? d) are not divisible by 4? e) are divisible by 3 or 4? f ) are not divisible by either 3 or 4? g) are divisible by 3 but not by 4? h) are divisible by 3 and 4?
+23. How many positive integers between 100 and 999 inclusive
+
+a) are divisible by 7?
+
+b) are odd?
+
+c) have the same three decimal digits?
+
+d) are not divisible by 4?
+
+e) are divisible by 3 or 4?
+
+f) are not divisible by either 3 or 4?
+
+g) are divisible by 3 but not by 4?
+
+h) are divisible by 3 and 4?
 
 ### dmath-ch06-prob-024 (source 6.1 Exercise 24)
 
@@ -247,7 +305,23 @@ c) are divisible by both 7 and 11? Which integers are these?
 - source_kind: textbook
 - solution: null
 
-24. How many positive integers between 1000 and 9999 inclusive a) are divisible by 9? b) are even? c) have distinct digits? d) are not divisible by 3? e) are divisible by 5 or 7? f ) are not divisible by either 5 or 7? g) are divisible by 5 but not by 7? h) are divisible by 5 and 7?
+24. How many positive integers between 1000 and 9999 inclusive
+
+a) are divisible by 9?
+
+b) are even?
+
+c) have distinct digits?
+
+d) are not divisible by 3?
+
+e) are divisible by 5 or 7?
+
+f) are not divisible by either 5 or 7?
+
+g) are divisible by 5 but not by 7?
+
+h) are divisible by 5 and 7?
 
 ### dmath-ch06-prob-025 (source 6.1 Exercise 25)
 
@@ -256,7 +330,13 @@ c) are divisible by both 7 and 11? Which integers are these?
 - source_kind: textbook
 - solution: null
 
-25. How many strings of three decimal digits a) do not contain the same digit three times? b) begin with an odd digit? c) have exactly two digits that are 4s?
+25. How many strings of three decimal digits
+
+a) do not contain the same digit three times?
+
+b) begin with an odd digit?
+
+c) have exactly two digits that are 4s?
 
 ### dmath-ch06-prob-026 (source 6.1 Exercise 26)
 
@@ -265,7 +345,13 @@ c) are divisible by both 7 and 11? Which integers are these?
 - source_kind: textbook
 - solution: null
 
-26. How many strings of four decimal digits a) do not contain the same digit twice? b) end with an even digit? c) have exactly three digits that are 9s?
+26. How many strings of four decimal digits
+
+a) do not contain the same digit twice?
+
+b) end with an even digit?
+
+c) have exactly three digits that are 9s?
 
 ### dmath-ch06-prob-027 (source 6.1 Exercise 27)
 
@@ -319,9 +405,19 @@ c) are divisible by both 7 and 11? Which integers are these?
 - source_kind: textbook
 - solution: null
 
-32. How many strings of eight uppercase English letters are there a) if letters can be repeated? b) if no letter can be repeated? c) that start with X, if letters can be repeated? d) that start with X, if no letter can be repeated? e) that start and end with X, if letters can be repeated?
+32. How many strings of eight uppercase English letters are there
 
-f ) that start with the letters BO (in that order), if letters can be repeated?
+a) if letters can be repeated?
+
+b) if no letter can be repeated?
+
+c) that start with X, if letters can be repeated?
+
+d) that start with X, if no letter can be repeated?
+
+e) that start and end with X, if letters can be repeated?
+
+f) that start with the letters BO (in that order), if letters can be repeated?
 
 g) that start and end with the letters BO (in that order), if letters can be repeated?
 
@@ -334,7 +430,23 @@ h) that start or end with the letters BO (in that order), if letters can be repe
 - source_kind: textbook
 - solution: null
 
-33. How many strings of eight English letters are there a) that contain no vowels, if letters can be repeated? b) that contain no vowels, if letters cannot be repeated? c) that start with a vowel, if letters can be repeated? d) that start with a vowel, if letters cannot be repeated? e) that contain at least one vowel, if letters can be repeated? f ) that contain exactly one vowel, if letters can be repeated? g) that start with X and contain at least one vowel, if letters can be repeated? h) that start and end with X and contain at least one vowel, if letters can be repeated?
+33. How many strings of eight English letters are there
+
+a) that contain no vowels, if letters can be repeated?
+
+b) that contain no vowels, if letters cannot be repeated?
+
+c) that start with a vowel, if letters can be repeated?
+
+d) that start with a vowel, if letters cannot be repeated?
+
+e) that contain at least one vowel, if letters can be repeated?
+
+f) that contain exactly one vowel, if letters can be repeated?
+
+g) that start with X and contain at least one vowel, if letters can be repeated?
+
+h) that start and end with X and contain at least one vowel, if letters can be repeated?
 
 ### dmath-ch06-prob-034 (source 6.1 Exercise 34)
 
@@ -343,7 +455,15 @@ h) that start or end with the letters BO (in that order), if letters can be repe
 - source_kind: textbook
 - solution: null
 
-34. How many different functions are there from a set with 10 elements to sets with the following numbers of elements? a) 2 b) 3 c) 4 d) 5
+34. How many different functions are there from a set with 10 elements to sets with the following numbers of elements?
+
+a) 2
+
+b) 3
+
+c) 4
+
+d) 5
 
 ### dmath-ch06-prob-035 (source 6.1 Exercise 35)
 
@@ -352,7 +472,15 @@ h) that start or end with the letters BO (in that order), if letters can be repe
 - source_kind: textbook
 - solution: null
 
-35. How many one-to-one functions are there from a set with five elements to sets with the following number of elements? a) 4 b) 5 c) 6 d) 7
+35. How many one-to-one functions are there from a set with five elements to sets with the following number of elements?
+
+a) 4
+
+b) 5
+
+c) 6
+
+d) 7
 
 ### dmath-ch06-prob-036 (source 6.1 Exercise 36)
 
@@ -370,7 +498,13 @@ h) that start or end with the letters BO (in that order), if letters can be repe
 - source_kind: textbook
 - solution: null
 
-37. How many functions are there from the set {1, 2, … , n}, where n is a positive integer, to the set {0, 1} a) that are one-to-one? b) that assign 0 to both 1 and n? c) that assign 1 to exactly one of the positive integers less than n?
+37. How many functions are there from the set {1, 2, … , n}, where n is a positive integer, to the set {0, 1}
+
+a) that are one-to-one?
+
+b) that assign 0 to both 1 and n?
+
+c) that assign 1 to exactly one of the positive integers less than n?
 
 ### dmath-ch06-prob-038 (source 6.1 Exercise 38)
 
@@ -379,7 +513,15 @@ h) that start or end with the letters BO (in that order), if letters can be repe
 - source_kind: textbook
 - solution: null
 
-38. How many partial functions (see Section 2.3) are there from a set with five elements to sets with each of these number of elements? a) 1 b) 2 c) 5 d) 9
+38. How many partial functions (see Section 2.3) are there from a set with five elements to sets with each of these number of elements?
+
+a) 1
+
+b) 2
+
+c) 5
+
+d) 9
 
 ### dmath-ch06-prob-039 (source 6.1 Exercise 39)
 
@@ -415,7 +557,11 @@ h) that start or end with the letters BO (in that order), if letters can be repe
 - source_kind: textbook
 - solution: null
 
-42. How many 4-element DNA sequences a) do not contain the base T? b) contain the sequence ACG?
+42. How many 4-element DNA sequences
+
+a) do not contain the base T?
+
+b) contain the sequence ACG?
 
 c) contain all four bases A, T, C, and G?
 
@@ -428,7 +574,15 @@ d) contain exactly three of the four bases A, T, C, and G?
 - source_kind: textbook
 - solution: null
 
-43. How many 4-element RNA sequences a) contain the base U? b) do not contain the sequence CUG? c) do not contain all four bases A, U, C, and G? d) contain exactly two of the four bases A, U, C, and G?
+43. How many 4-element RNA sequences
+
+a) contain the base U?
+
+b) do not contain the sequence CUG?
+
+c) do not contain all four bases A, U, C, and G?
+
+d) contain exactly two of the four bases A, U, C, and G?
 
 ### dmath-ch06-prob-044 (source 6.1 Exercise 44)
 
@@ -473,7 +627,13 @@ d) contain exactly three of the four bases A, T, C, and G?
 - source_kind: textbook
 - solution: null
 
-48. In how many ways can a photographer at a wedding arrange 6 people in a row from a group of 10 people, where the bride and the groom are among these 10 people, if a) the bride must be in the picture? b) both the bride and groom must be in the picture? c) exactly one of the bride and the groom is in the picture?
+48. In how many ways can a photographer at a wedding arrange 6 people in a row from a group of 10 people, where the bride and the groom are among these 10 people, if
+
+a) the bride must be in the picture?
+
+b) both the bride and groom must be in the picture?
+
+c) exactly one of the bride and the groom is in the picture?
 
 ### dmath-ch06-prob-049 (source 6.1 Exercise 49)
 
@@ -482,7 +642,13 @@ d) contain exactly three of the four bases A, T, C, and G?
 - source_kind: textbook
 - solution: null
 
-49. In how many ways can a photographer at a wedding arrange six people in a row, including the bride and groom, if a) the bride must be next to the groom? b) the bride is not next to the groom? c) the bride is positioned somewhere to the left of the groom?
+49. In how many ways can a photographer at a wedding arrange six people in a row, including the bride and groom, if
+
+a) the bride must be next to the groom?
+
+b) the bride is not next to the groom?
+
+c) the bride is positioned somewhere to the left of the groom?
 
 ### dmath-ch06-prob-050 (source 6.1 Exercise 50)
 
@@ -677,7 +843,9 @@ c) Using your answer to part (a), determine how long it takes a hacker to try ev
 - source_kind: textbook
 - solution: null
 
-70. a) Suppose that a store sells six varieties of soft drinks: cola, ginger ale, orange, root beer, lemonade, and cream soda. Use a tree diagram to determine the number of diferent types of bottles the store must stock to have all varieties available in all size bottles if all varieties are available in 12-ounce bottles, all but lemonade are available in 20-ounce bottles, only cola and ginger ale are available in 32-ounce bottles, and all but lemonade and cream soda are available in 64- ounce bottles?
+70.
+
+a) Suppose that a store sells six varieties of soft drinks: cola, ginger ale, orange, root beer, lemonade, and cream soda. Use a tree diagram to determine the number of diferent types of bottles the store must stock to have all varieties available in all size bottles if all varieties are available in 12-ounce bottles, all but lemonade are available in 20-ounce bottles, only cola and ginger ale are available in 32-ounce bottles, and all but lemonade and cream soda are available in 64- ounce bottles?
 
 b) Answer the question in part (a) using counting rules.
 
@@ -688,7 +856,9 @@ b) Answer the question in part (a) using counting rules.
 - source_kind: textbook
 - solution: null
 
-71. a) Suppose that a popular style of running shoe is available for both men and women. The woman’s shoe comes in sizes 6, 7, 8, and 9, and the man’s shoe comes in sizes 8, 9, 10, 11, and 12. The man’s shoe comes in white and black, while the woman’s shoe comes in white, red, and black. Use a tree diagram to determine the number of diferent shoes that a store has to stock to have at least one pair of this type of running shoe for all available sizes and colors for both men and women.
+71.
+
+a) Suppose that a popular style of running shoe is available for both men and women. The woman’s shoe comes in sizes 6, 7, 8, and 9, and the man’s shoe comes in sizes 8, 9, 10, 11, and 12. The man’s shoe comes in white and black, while the woman’s shoe comes in white, red, and black. Use a tree diagram to determine the number of diferent shoes that a store has to stock to have at least one pair of this type of running shoe for all available sizes and colors for both men and women.
 
 b) Answer the question in part (a) using counting rules.
 
@@ -901,7 +1071,9 @@ b) How many balls must she select to be sure of having at least three blue balls
 - source_kind: textbook
 - solution: null
 
-14. How many ordered pairs of integers (a, b) are needed to guarantee that there are two ordered pairs $( a _ { 1 } , b _ { 1 } )$ and $( a _ { 2 } , b _ { 2 } )$ such that $a _ { 1 }$ mod $5 = a _ { 2 }$ mod 5 and $b _ { 1 }$ mod $5 = b _ { 2 }$ mod 5?
+14. How many ordered pairs of integers (a,
+
+b) are needed to guarantee that there are two ordered pairs $( a _ { 1 } , b _ { 1 } )$ and $( a _ { 2 } , b _ { 2 } )$ such that $a _ { 1 }$ mod $5 = a _ { 2 }$ mod 5 and $b _ { 1 }$ mod $5 = b _ { 2 }$ mod 5?
 
 ### dmath-ch06-prob-093 (source 6.2 Exercise 15)
 
@@ -910,7 +1082,9 @@ b) How many balls must she select to be sure of having at least three blue balls
 - source_kind: textbook
 - solution: null
 
-15. a) Show that if five integers are selected from the first eight positive integers, there must be a pair of these integers with a sum equal to 9.
+15.
+
+a) Show that if five integers are selected from the first eight positive integers, there must be a pair of these integers with a sum equal to 9.
 
 b) Is the conclusion in part (a) true if four integers are selected rather than five?
 
@@ -921,7 +1095,9 @@ b) Is the conclusion in part (a) true if four integers are selected rather than 
 - source_kind: textbook
 - solution: null
 
-16. a) Show that if seven integers are selected from the first 10 positive integers, there must be at least two pairs of these integers with the sum 11.
+16.
+
+a) Show that if seven integers are selected from the first 10 positive integers, there must be at least two pairs of these integers with the sum 11.
 
 b) Is the conclusion in part (a) true if six integers are selected rather than seven?
 
@@ -1183,7 +1359,15 @@ b) Show that there are either at least three freshmen, at least 19 sophomores, o
 - source_kind: textbook
 - solution: null
 
-<sup>∗</sup>44. Is the statement in Exercise 43 true if 24 is replaced by a) 2? b) 23? c) 25? d) 30?
+<sup>∗</sup>44. Is the statement in Exercise 43 true if 24 is replaced by
+
+a) 2?
+
+b) 23?
+
+c) 25?
+
+d) 30?
 
 ### dmath-ch06-prob-123 (source 6.2 Exercise 45)
 
@@ -1274,7 +1458,11 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-4. Let S = {1, 2, 3, 4, 5}. a) List all the 3-permutations of S. b) List all the 3-combinations of S.
+4. Let S = {1, 2, 3, 4, 5}.
+
+a) List all the 3-permutations of S.
+
+b) List all the 3-combinations of S.
 
 ### dmath-ch06-prob-132 (source 6.3 Exercise 5)
 
@@ -1283,7 +1471,19 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-5. Find the value of each of these quantities. a) P(6, 3) b) P(6, 5) c) P(8, 1) d) P(8, 5) e) P(8, 8) f ) P(10, 9)
+5. Find the value of each of these quantities.
+
+a) P(6, 3)
+
+b) P(6, 5)
+
+c) P(8, 1)
+
+d) P(8, 5)
+
+e) P(8, 8)
+
+f) P(10, 9)
 
 ### dmath-ch06-prob-133 (source 6.3 Exercise 6)
 
@@ -1292,7 +1492,19 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-6. Find the value of each of these quantities. a) C(5, 1) b) C(5, 3) c) C(8, 4) d) C(8, 8) e) C(8, 0) f ) C(12, 6)
+6. Find the value of each of these quantities.
+
+a) C(5, 1)
+
+b) C(5, 3)
+
+c) C(8, 4)
+
+d) C(8, 8)
+
+e) C(8, 0)
+
+f) C(12, 6)
 
 ### dmath-ch06-prob-134 (source 6.3 Exercise 7)
 
@@ -1337,7 +1549,15 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-11. How many bit strings of length 10 contain a) exactly four 1s? b) at most four 1s? c) at least four 1s? d) an equal number of 0s and 1s?
+11. How many bit strings of length 10 contain
+
+a) exactly four 1s?
+
+b) at most four 1s?
+
+c) at least four 1s?
+
+d) an equal number of 0s and 1s?
 
 ### dmath-ch06-prob-139 (source 6.3 Exercise 12)
 
@@ -1346,7 +1566,15 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-12. How many bit strings of length 12 contain a) exactly three 1s? b) at most three 1s? c) at least three 1s? d) an equal number of 0s and 1s?
+12. How many bit strings of length 12 contain
+
+a) exactly three 1s?
+
+b) at most three 1s?
+
+c) at least three 1s?
+
+d) an equal number of 0s and 1s?
 
 ### dmath-ch06-prob-140 (source 6.3 Exercise 13)
 
@@ -1400,7 +1628,15 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-18. A coin is flipped eight times where each flip comes up either heads or tails. How many possible outcomes a) are there in total? b) contain exactly three heads? c) contain at least three heads? d) contain the same number of heads and tails?
+18. A coin is flipped eight times where each flip comes up either heads or tails. How many possible outcomes
+
+a) are there in total?
+
+b) contain exactly three heads?
+
+c) contain at least three heads?
+
+d) contain the same number of heads and tails?
 
 ### dmath-ch06-prob-146 (source 6.3 Exercise 19)
 
@@ -1409,7 +1645,15 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-19. A coin is flipped 10 times where each flip comes up either heads or tails. How many possible outcomes a) are there in total? b) contain exactly two heads? c) contain at most three tails? d) contain the same number of heads and tails?
+19. A coin is flipped 10 times where each flip comes up either heads or tails. How many possible outcomes
+
+a) are there in total?
+
+b) contain exactly two heads?
+
+c) contain at most three tails?
+
+d) contain the same number of heads and tails?
 
 ### dmath-ch06-prob-147 (source 6.3 Exercise 20)
 
@@ -1418,7 +1662,15 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-20. How many bit strings of length 10 have a) exactly three 0s? b) more 0s than 1s? c) at least seven 1s? d) at least three 1s?
+20. How many bit strings of length 10 have
+
+a) exactly three 0s?
+
+b) more 0s than 1s?
+
+c) at least seven 1s?
+
+d) at least three 1s?
 
 ### dmath-ch06-prob-148 (source 6.3 Exercise 21)
 
@@ -1427,7 +1679,19 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-21. How many permutations of the letters ABCDEFG contain a) the string BCD? b) the string CFGA? c) the strings BA and GF? d) the strings ABC and DE? e) the strings ABC and CDE? f ) the strings CBA and BED?
+21. How many permutations of the letters ABCDEFG contain
+
+a) the string BCD?
+
+b) the string CFGA?
+
+c) the strings BA and GF?
+
+d) the strings ABC and DE?
+
+e) the strings ABC and CDE?
+
+f) the strings CBA and BED?
 
 ### dmath-ch06-prob-149 (source 6.3 Exercise 22)
 
@@ -1436,7 +1700,19 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-22. How many permutations of the letters ABCDEFGH contain a) the string ED? b) the string CDE? c) the strings BA and FGH? d) the strings AB, DE, and GH? e) the strings CAB and BED? f ) the strings BCA and ABF?
+22. How many permutations of the letters ABCDEFGH contain
+
+a) the string ED?
+
+b) the string CDE?
+
+c) the strings BA and FGH?
+
+d) the strings AB, DE, and GH?
+
+e) the strings CAB and BED?
+
+f) the strings BCA and ABF?
 
 ### dmath-ch06-prob-150 (source 6.3 Exercise 23)
 
@@ -1463,7 +1739,11 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-25. How many ways are there for four men and five women to stand in a line so that a) all men stand together? b) all women stand together?
+25. How many ways are there for four men and five women to stand in a line so that
+
+a) all men stand together?
+
+b) all women stand together?
 
 ### dmath-ch06-prob-153 (source 6.3 Exercise 26)
 
@@ -1472,7 +1752,11 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-26. How many ways are there for three penguins and six pufins to stand in a line so that a) all pufins stand together? b) all penguins stand together?
+26. How many ways are there for three penguins and six pufins to stand in a line so that
+
+a) all pufins stand together?
+
+b) all penguins stand together?
 
 ### dmath-ch06-prob-154 (source 6.3 Exercise 27)
 
@@ -1481,7 +1765,21 @@ c) Use parts (a) and (b) to show that if there is no increasing subsequence of l
 - source_kind: textbook
 - solution: null
 
-27. One hundred tickets, numbered 1, 2, 3, … , 100, are sold to 100 diferent people for a drawing. Four diferent prizes are awarded, including a grand prize (a trip to Tahiti). How many ways are there to award the prizes if a) there are no restrictions? b) the person holding ticket 47 wins the grand prize? c) the person holding ticket 47 wins one of the prizes? d) the person holding ticket 47 does not win a prize? e) the people holding tickets 19 and 47 both win prizes? f) the people holding tickets 19, 47, and 73 all win f ) the people holding tickets 19, 47, and 73 all win prizes?
+27. One hundred tickets, numbered 1, 2, 3, … , 100, are sold to 100 diferent people for a drawing. Four diferent prizes are awarded, including a grand prize (a trip to Tahiti). How many ways are there to award the prizes if
+
+a) there are no restrictions?
+
+b) the person holding ticket 47 wins the grand prize?
+
+c) the person holding ticket 47 wins one of the prizes?
+
+d) the person holding ticket 47 does not win a prize?
+
+e) the people holding tickets 19 and 47 both win prizes?
+
+f) the people holding tickets 19, 47, and 73 all win
+
+f) the people holding tickets 19, 47, and 73 all win prizes?
 
 g) the people holding tickets 19, 47, 73, and 97 all win prizes?
 
@@ -1720,7 +2018,9 @@ a) How many diferent scoring scenarios are possible if the game is settled in th
 
 the game is settled in the second round of 10 penalty kicks?
 
-b) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if c) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?
+b) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if
+
+c) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?
 
 ![](images/72f1ed20e3da77da695f16131a45ff24c6b554e9309682ed865ac6512dcebc78.jpg)
 
@@ -1733,7 +2033,11 @@ b) How many diferent scoring scenarios for the first and second groups of penalt
 - source_kind: textbook
 - solution: null
 
-1. Find the expansion of $( x + y ) ^ { 4 }$ a) using combinatorial reasoning, as in Example 1. b) using the binomial theorem.
+1. Find the expansion of $( x + y ) ^ { 4 }$
+
+a) using combinatorial reasoning, as in Example 1.
+
+b) using the binomial theorem.
 
 ### dmath-ch06-prob-177 (source 6.4 Exercise 2)
 
@@ -1742,7 +2046,11 @@ b) How many diferent scoring scenarios for the first and second groups of penalt
 - source_kind: textbook
 - solution: null
 
-2. Find the expansion of $( x + y ) ^ { 5 }$ a) using combinatorial reasoning, as in Example 1. b) using the binomial theorem.
+2. Find the expansion of $( x + y ) ^ { 5 }$
+
+a) using combinatorial reasoning, as in Example 1.
+
+b) using the binomial theorem.
 
 ### dmath-ch06-prob-178 (source 6.4 Exercise 3)
 
@@ -1832,7 +2140,17 @@ b) How many diferent scoring scenarios for the first and second groups of penalt
 - source_kind: textbook
 - solution: null
 
-12. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 5 x ^ { 2 } + 2 y ^ { 3 } ) ^ { 6 }$ , where a) $a = 6 , b = 9 .$ b) $a = 2 , b = 1 5 .$ c) $a = 3 , b = 1 2 .$ d) $a = 1 2 , b = 0 .$ e) $a = 8 , b = 9 .$
+12. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 5 x ^ { 2 } + 2 y ^ { 3 } ) ^ { 6 }$ , where
+
+a) $a = 6 , b = 9 .$
+
+b) $a = 2 , b = 1 5 .$
+
+c) $a = 3 , b = 1 2 .$
+
+d) $a = 1 2 , b = 0 .$
+
+e) $a = 8 , b = 9 .$
 
 ### dmath-ch06-prob-188 (source 6.4 Exercise 13)
 
@@ -1841,7 +2159,17 @@ b) How many diferent scoring scenarios for the first and second groups of penalt
 - source_kind: textbook
 - solution: null
 
-13. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 2 x ^ { 3 } - 4 y ^ { 2 } ) ^ { 7 }$ , where a) $a = 9 , b = 8 .$ b) $a = 8 , b = 9 .$ c) $a = 0 , b = 1 4 .$ d) $a = 1 2 , b = 6 .$ e) $a = 1 8 , b = 2 .$
+13. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 2 x ^ { 3 } - 4 y ^ { 2 } ) ^ { 7 }$ , where
+
+a) $a = 9 , b = 8 .$
+
+b) $a = 8 , b = 9 .$
+
+c) $a = 0 , b = 1 4 .$
+
+d) $a = 1 2 , b = 6 .$
+
+e) $a = 1 8 , b = 2 .$
 
 ### dmath-ch06-prob-189 (source 6.4 Exercise 14)
 
@@ -1910,7 +2238,9 @@ Use Pascal’s identity to produce the row immediately following this row in Pas
 - source_kind: textbook
 - solution: null
 
-20. a) Use Exercise 18 and Corollary 1 to show that if n is an integer greater than 1, then $\binom { n } { | n / 2 | } \geq 2 ^ { n } / n$
+20.
+
+a) Use Exercise 18 and Corollary 1 to show that if n is an integer greater than 1, then $\binom { n } { | n / 2 | } \geq 2 ^ { n } / n$
 
 b) Conclude from part (a) that if n is a positive integer, then ${ \binom { 2 n } { n } } \geq 4 ^ { n } / 2 n$
 
@@ -2058,7 +2388,11 @@ b) using Pascal’s identity.
 - source_kind: textbook
 - solution: null
 
-32. Show that if n is a positive integer, then $\textstyle { \binom { 2 n } { 2 } } = 2 { \binom { n } { 2 } } + n ^ { 2 }$ a) using a combinatorial argument. b) by algebraic manipulation.
+32. Show that if n is a positive integer, then $\textstyle { \binom { 2 n } { 2 } } = 2 { \binom { n } { 2 } } + n ^ { 2 }$
+
+a) using a combinatorial argument.
+
+b) by algebraic manipulation.
 
 ### dmath-ch06-prob-208 (source 6.4 Exercise 33)
 
@@ -2175,7 +2509,7 @@ d) 1, 1, 2, 3, 6, 10, 20, 35, 70, 126, …
 
 e) 1, 1, 1, 3, 1, 5, 15, 35, 1, 9, …
 
-f ) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …
+f) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …
 
 ![](images/ad580e473c29f6164955f171fd672862d7d75e17981d43ad0e0f09940061798d.jpg)
 
@@ -2291,7 +2625,7 @@ d) two dozen croissants with no more than two broccoli croissants?
 
 e) two dozen croissants with at least five chocolate croissants and at least three almond croissants?
 
-f ) two dozen croissants with at least one plain croissant, at least two cherry croissants, at least three chocolate croissants, at least one almond croissant, at least two apple croissants, and no more than three broccoli croissants?
+f) two dozen croissants with at least one plain croissant, at least two cherry croissants, at least three chocolate croissants, at least one almond croissant, at least two apple croissants, and no more than three broccoli croissants?
 
 ### dmath-ch06-prob-229 (source 6.5 Exercise 11)
 
@@ -2962,7 +3296,19 @@ $$
 - source_kind: textbook
 - solution: null
 
-5. Find the next larger permutation in lexicographic order after each of these permutations. a) 1432 b) 54123 c) 12453 d) 45231 e) 6714235 f ) 31528764
+5. Find the next larger permutation in lexicographic order after each of these permutations.
+
+a) 1432
+
+b) 54123
+
+c) 12453
+
+d) 45231
+
+e) 6714235
+
+f) 31528764
 
 ### dmath-ch06-prob-292 (source 6.6 Exercise 6)
 
@@ -2971,7 +3317,19 @@ $$
 - source_kind: textbook
 - solution: null
 
-6. Find the next larger permutation in lexicographic order after each of these permutations. a) 1342 b) 45321 c) 13245 d) 612345 e) 1623547 f ) 23587416
+6. Find the next larger permutation in lexicographic order after each of these permutations.
+
+a) 1342
+
+b) 45321
+
+c) 13245
+
+d) 612345
+
+e) 1623547
+
+f) 23587416
 
 ### dmath-ch06-prob-293 (source 6.6 Exercise 7)
 
@@ -3053,7 +3411,13 @@ where $a _ { i }$ is a nonnegative integer not exceeding i, for $i =$ $1 , 2 , \
 
 Given a permutation of $\{ 1 , 2 , \ldots , n \}$ , let $a _ { k - 1 } , k =$ $2 , 3 , \ldots , n ,$ be the number of integers less than k that follow k in the permutation. For instance, in the permutation 43215, $a _ { 1 }$ is the number of integers less than 2 that follow 2, so $a _ { 1 } = 1$ . Similarly, for this example $a _ { 2 } = 2 , a _ { 3 } = 3$ and $a _ { 4 } = 0$ . Consider the function from the set of permutations of $\{ 1 , 2 , 3 , \dots , n \}$ to the set of nonnegative integers less than n! that sends a permutation to the integer that has $a _ { 1 } , a _ { 2 } , \ldots , a _ { n - 1 }$ , defined in this way, as its Cantor digits.
 
-14. Find the Cantor digits $a _ { 1 } , a _ { 2 } , \ldots , a _ { n - 1 }$ that correspond to these permutations. a) 246531 b) 12345 c) 654321
+14. Find the Cantor digits $a _ { 1 } , a _ { 2 } , \ldots , a _ { n - 1 }$ that correspond to these permutations.
+
+a) 246531
+
+b) 12345
+
+c) 654321
 
 ### dmath-ch06-prob-301 (source 6.6 Exercise 15)
 
@@ -3071,7 +3435,13 @@ Given a permutation of $\{ 1 , 2 , \ldots , n \}$ , let $a _ { k - 1 } , k =$ $2
 - source_kind: textbook
 - solution: null
 
-16. Find the permutations of {1, 2, 3, 4, 5} that correspond to these integers with respect to the correspondence between Cantor expansions and permutations as described in the preamble to Exercise 14. a) 3 b) 89 c) 111
+16. Find the permutations of {1, 2, 3, 4, 5} that correspond to these integers with respect to the correspondence between Cantor expansions and permutations as described in the preamble to Exercise 14.
+
+a) 3
+
+b) 89
+
+c) 111
 
 ### dmath-ch06-prob-303 (source 6.6 Exercise 17)
 

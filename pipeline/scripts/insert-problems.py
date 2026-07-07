@@ -46,6 +46,8 @@ VALID_SOURCE_KINDS: Set[str] = {
     "other",
 }
 
+COLLAPSED_SUBPART_PATTERN = re.compile(r"[^\n][ \t]+[a-j]\s*\)[ \t]+")
+
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(
@@ -74,6 +76,27 @@ def expected_chapter_from_metadata(chapter: str) -> str:
     if chapter.startswith("ch"):
         return chapter
     return f"ch{chapter}"
+
+
+def validate_text_block_format(
+    owner_id: str,
+    field_name: str,
+    value: Any,
+    errors: List[str],
+) -> bool:
+    """
+    Catch the most common extraction-stage formatting failure: subparts
+    flattened into one line instead of preserved as Markdown paragraphs.
+    """
+    if value is None or not isinstance(value, str):
+        return True
+    if COLLAPSED_SUBPART_PATTERN.search(value):
+        errors.append(
+            f"{owner_id}: {field_name} has collapsed subparts; put each "
+            "subpart at the start of its own paragraph separated by blank lines"
+        )
+        return False
+    return True
 
 
 def validate_problem(
@@ -127,12 +150,16 @@ def validate_problem(
     if not problem_text or not str(problem_text).strip():
         errors.append(f"{problem_id}: missing or empty problem_text")
         ok = False
+    elif not validate_text_block_format(problem_id, "problem_text", problem_text, errors):
+        ok = False
 
     solution = problem.get("solution")
     if solution is not None and not isinstance(solution, str):
         errors.append(
             f"{problem_id}: solution must be a string or null, got {type(solution).__name__}"
         )
+        ok = False
+    elif not validate_text_block_format(problem_id, "solution", solution, errors):
         ok = False
 
     problem_type = problem.get("problem_type")
