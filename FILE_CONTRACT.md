@@ -73,3 +73,28 @@ output/{course}/{chapter}/{chapter}-solutions.md
 - Checks state pass/fail, broken rule, return layer, and repair action.
 - Student-facing problem sets must not show internal IDs, KP mappings, or
   solution text.
+
+## Runtime Guard
+
+`lessonkit.py guard` is the v1 phase guard for this contract. It checks that
+the required files for a command exist and that check files do not contain
+blocking markers such as `Result: FAIL`, `Status: FAIL`, table-cell `FAIL`, or
+non-zero `ERROR` counts.
+
+Guard coverage:
+
+```text
+extract-chapter   -> KP Extraction
+extract-problems  -> Problem Extraction
+problem-set       -> Problem-Set View plus rendered outputs
+```
+
+With `--apply`, the guard writes `.lessonkit/state.yaml`:
+
+- PASS sets `phase: complete`, clears `blocked_reason`, and records
+  `next_action`.
+- FAIL sets `phase: blocked`, records the first missing artifact or blocking
+  marker, and exits with code 2.
+
+Runtime state is a recovery checkpoint for agents. It is not a substitute for
+the intermediate files or for the SQLite pool.

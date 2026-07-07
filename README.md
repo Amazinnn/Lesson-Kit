@@ -18,6 +18,25 @@ Source material
 The pool is the runtime source of truth for generated views. Markdown
 intermediate files remain on disk for audit and repair.
 
+## Runtime State
+
+Lesson-Kit has a lightweight workflow checkpoint at `.lessonkit/state.yaml`.
+It records the active course, chapter, command, phase, required artifacts, last
+guard result, blocker, and next action. It is coordination state for agents;
+it does not replace the SQLite pool as the source of truth for learning data.
+
+Use the root CLI to inspect or update the runtime:
+
+```bash
+python lessonkit.py status
+python lessonkit.py resume
+python lessonkit.py init --course dmath --chapter ch06 --command problem-set
+python lessonkit.py guard problem-set --course dmath --chapter ch06 --apply
+```
+
+The CLI is intentionally dependency-free in v1. It reads and writes a limited
+YAML subset owned by Lesson-Kit.
+
 ## Current Pools
 
 - `knowledge_points`: extracted course knowledge.
@@ -40,6 +59,9 @@ python pipeline/scripts/insert-knowledge-points.py --db pool/dmath.db --manifest
 python pipeline/scripts/insert-problems.py --db pool/dmath.db --manifest <problem-insert-manifest.json>
 python pipeline/scripts/validate-pool.py --db pool/dmath.db --course dmath --chapter ch06
 python pool/scripts/query-pool.py --db pool/dmath.db --chapter dmath-ch06 --view problem-set --source-kind textbook
+python lessonkit.py guard extract-chapter --course dmath --chapter ch06
+python lessonkit.py guard extract-problems --course dmath --chapter ch06
+python lessonkit.py guard problem-set --course dmath --chapter ch06
 ```
 
 ## Versioning
@@ -50,8 +72,8 @@ artifacts, not version records.
 
 ## Status
 
-Pre-release. Knowledge extraction and the knowledge guide view are working.
-The unified problem pool and problem-set view are being added.
+Pre-release. Knowledge extraction, the knowledge guide view, the unified
+problem pool, the problem-set view, and lightweight runtime guards are working.
 
 ## License
 

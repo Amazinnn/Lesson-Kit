@@ -40,3 +40,14 @@ _Avoid_: First-pass, speedrun lesson
 A student-facing practice set rendered from durable problems, with a matching
 solution file.
 _Avoid_: Problem pool, answer key command
+
+**Runtime State**:
+The repo-local `.lessonkit/state.yaml` checkpoint that records the active
+course, chapter, command, phase, required artifacts, last guard result, blocker,
+and next action.
+_Avoid_: Pool data, source of truth
+
+**Phase Guard**:
+A script-enforced check that determines whether a workflow command's required
+artifacts and check files are complete enough to advance.
+_Avoid_: Informal review, final claim

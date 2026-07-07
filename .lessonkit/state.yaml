@@ -1,0 +1,17 @@
+schema_version: 1
+active_course: "dmath"
+active_chapter: "ch06"
+active_command: "extract-problems"
+phase: "complete"
+required_artifacts:
+  - "intermediate/dmath/problem_extraction/ch06/01_inputs/kp-query-result.json"
+  - "intermediate/dmath/problem_extraction/ch06/01_inputs/full-problem-bank.md"
+  - "intermediate/dmath/problem_extraction/ch06/02_analysis/problem-insert-manifest.json"
+  - "intermediate/dmath/problem_extraction/ch06/04_checks/problem-pool-validation-report.md"
+last_gate_name: "extract-problems"
+last_gate_status: "PASS"
+last_gate_report: "intermediate/dmath/problem_extraction/ch06/04_checks/problem-pool-validation-report.md"
+last_gate_checked_at: "2026-07-07T11:06:33+00:00"
+blocked_reason: ""
+next_action: "Render and guard a problem-set view for dmath ch06."
+updated_at: "2026-07-07T11:06:33+00:00"

@@ -10,6 +10,28 @@ packages govern current lesson-kit work.
 | "show me the knowledge guide", "print the chapter guide" | `pool/scripts/print-graph.py` | existing `knowledge_points` rows |
 | "make a problem set", "practice problems" | `views/problem-set/command.md` | existing `problems` rows |
 
+## Runtime First
+
+If `.lessonkit/state.yaml` exists, read it before routing work. Do not infer
+the current workflow state only from directory contents or chat history.
+
+```bash
+python lessonkit.py status
+python lessonkit.py resume
+```
+
+When a command's required artifacts are expected to be complete, run its guard:
+
+```bash
+python lessonkit.py guard extract-chapter --course <course> --chapter <chapter> --apply
+python lessonkit.py guard extract-problems --course <course> --chapter <chapter> --apply
+python lessonkit.py guard problem-set --course <course> --chapter <chapter> --apply
+```
+
+`phase: blocked` means repair the reported artifact or check file before
+continuing. `phase: complete` means use `next_action` to choose the next
+workflow step.
+
 ## Routing Rules
 
 - Run KP extraction before problem extraction.
