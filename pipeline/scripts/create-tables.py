@@ -2,16 +2,18 @@
 """
 Pipeline Step 1: Create lesson-kit pool SQLite database.
 
-Creates the 4 tables (knowledge_points, questions, kp_progress,
-question_progress) and 6 indexes defined in kp-pool-modular-views.md.
+Creates the 5 active tables (knowledge_points, questions, problems,
+kp_progress, question_progress) and indexes defined in the lesson-kit
+pool contract.
 
 Usage:
-    python pipeline/scripts/create-tables.py --db pool/dld-ch02.db [--force]
+    python pipeline/scripts/create-tables.py --db pool/dld.db [--force]
 
 Notes:
     - If the DB file doesn't exist, it is created.
     - If tables already exist, the script exits with code 2 unless --force.
-    - --force drops all 4 tables and recreates them (DESTROYS DATA).
+    - --force drops all active and retired pool tables and recreates them
+      (DESTROYS DATA).
 """
 
 import argparse
@@ -86,6 +88,29 @@ CREATE TABLE question_progress (
 );
 
 CREATE INDEX idx_qp_q_id ON question_progress(q_id);
+
+-- problems: durable problem pool. Source-specific pools are logical filters
+-- over source_kind, not separate physical tables.
+CREATE TABLE problems (
+    problem_id   TEXT PRIMARY KEY,
+    kp_ids       TEXT NOT NULL,  -- JSON array: ["dmath-ch06-kp-001", ...]
+    problem_text TEXT NOT NULL,
+    solution     TEXT,
+    problem_type TEXT NOT NULL CHECK (problem_type IN (
+                     'calculation', 'proof', 'modeling',
+                     'explanation', 'experiment', 'design',
+                     'application', 'counterexample', 'other'
+                 )),
+    source_kind  TEXT NOT NULL CHECK (source_kind IN (
+                     'textbook', 'quiz', 'midterm',
+                     'final', 'makeup', 'other'
+                 )),
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_problem_source_kind ON problems(source_kind);
+CREATE INDEX idx_problem_type        ON problems(problem_type);
 """
 
 
@@ -128,8 +153,12 @@ def main(argv=None) -> int:
         existing_tables = [
             "knowledge_points",
             "questions",
+            "problems",
             "kp_progress",
             "question_progress",
+            # Retired draft tables from the pre-v1 problem-pool design.
+            "textbook_exercises",
+            "exam_questions",
         ]
         any_existing = any(table_exists(conn, t) for t in existing_tables)
 
@@ -153,8 +182,8 @@ def main(argv=None) -> int:
         verb = "Recreated" if any_existing else "Created"
         prefix = "fresh" if not existed_before else "existing"
         print(f"{verb} schema in {prefix} DB: {db_path}")
-        print(f"  - 4 tables: knowledge_points, questions, kp_progress, question_progress")
-        print(f"  - 6 indexes: idx_kp_type/importance/difficulty/fragile, idx_q_kp/difficulty, idx_qp_q_id")
+        print(f"  - 5 tables: knowledge_points, questions, problems, kp_progress, question_progress")
+        print(f"  - 9 indexes")
         return 0
     except sqlite3.Error as exc:
         print(f"SQLite error: {exc}", file=sys.stderr)

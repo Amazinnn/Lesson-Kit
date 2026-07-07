@@ -1,0 +1,413 @@
+﻿{
+  "kps": [
+    {
+      "kp_id": "dmath-ch06-kp-001",
+      "knowledge_item": "乘法规则 (Product Rule)",
+      "source_location": "Section 6.1.2",
+      "knowledge_type": "concept-property",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE PRODUCT RULE** Suppose that a procedure can be broken down into a sequence of two tasks. If there are $n_1$ ways to do the first task and for each of these ways of doing the first task, there are $n_2$ ways to do the second task, then there are $n_1 n_2$ ways to do the procedure.\n\n推广到 m 个任务：若任务 $T_1, T_2, \\dots, T_m$ 顺序执行，每个 $T_i$ 有 $n_i$ 种方式（与之前选择无关），则总方式数为 $n_1 \\cdot n_2 \\cdot \\cdots \\cdot n_m$。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-002",
+        "dmath-ch06-kp-009"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-002",
+      "knowledge_item": "加法规则 (Sum Rule)",
+      "source_location": "Section 6.1.2",
+      "knowledge_type": "concept-property",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE SUM RULE** If a task can be done either in one of $n_1$ ways or in one of $n_2$ ways, where none of the set of $n_1$ ways is the same as any of the set of $n_2$ ways, then there are $n_1 + n_2$ ways to do the task.\n\n**关键条件**：各方式集合两两不相交。集合有交集时不能直接用加法规则（此时用减法规则 / 容斥原理）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-001",
+        "dmath-ch06-kp-003"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-003",
+      "knowledge_item": "减法规则 / 容斥原理（两集合）",
+      "source_location": "Section 6.1.4",
+      "knowledge_type": "method-modeling",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE SUBTRACTION RULE** If a task can be done in either one of two ways, then the number of ways to do the task is the sum of the number of ways to do the task in these two ways minus the number of ways to do the task that are common to both ways.\n\n形式化：$|A \\cup B| = |A| + |B| - |A \\cap B|$\n\n适用场景：两方式有交集，不能用加法规则。通用形式（n 个集合的容斥原理）在 Chapter 8 详细讨论。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-002",
+        "dmath-ch06-kp-001"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-004",
+      "knowledge_item": "除法规则 (Division Rule)",
+      "source_location": "Section 6.1.5",
+      "knowledge_type": "method-modeling",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE DIVISION RULE** There are $n/d$ ways to do a task if it can be done using a procedure that can be carried out in $n$ ways, and for every way $w$, exactly $d$ of the $n$ ways correspond to way $w$.\n\n适用场景：当存在 $d$ 个方式对应同一个结果时（多个过程产生同一结果），用除法去除重复计数。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-003"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-005",
+      "knowledge_item": "树形图 (Tree Diagrams)",
+      "source_location": "Section 6.1.6",
+      "knowledge_type": "method-modeling",
+      "importance": "supplementary",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "树形图是一种可视化计数工具。从根节点出发，每个分支代表一种选择，叶节点对应一个最终结果。结果总数 = 叶节点数 = 各级分支数之积（应用乘法规则）。\n\n适用：过程可分解为多个顺序步骤、每步有有限个选项的计数问题。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-001",
+        "dmath-ch06-kp-002"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-006",
+      "knowledge_item": "鸽巢原理 (Pigeonhole Principle) — Theorem 1",
+      "source_location": "Section 6.2.1, Theorem 1",
+      "knowledge_type": "concept-property",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE PIGEONHOLE PRINCIPLE** If $k$ is a positive integer and $k+1$ or more objects are placed into $k$ boxes, then there is at least one box containing two or more of the objects.\n\n**证明思路**（逆否命题）：若每个盒子至多 1 个对象，则至多 $k$ 个对象。这与 $k+1$ 个对象矛盾。\n\n又称 Dirichlet 抽屉原理。用途：存在性证明——证明某事物必然出现（无需构造）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-007",
+        "dmath-ch06-kp-008"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-007",
+      "knowledge_item": "鸽巢原理推论：非单射函数 (Corollary 1)",
+      "source_location": "Section 6.2.1, Corollary 1",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**COROLLARY 1** A function $f$ from a set with $k+1$ or more elements to a set with $k$ elements is not one-to-one.\n\n即：定义域比值域大 $\\geq 1$ 的函数必然不是单射。\n\n证明：每个像值 $y$ 对应一个「盒子」装所有 $x$ 使 $f(x)=y$。由鸽巢原理，至少一个盒子装 $\\geq 2$ 个 $x$，即存在 $x_1 \\neq x_2$ 但 $f(x_1) = f(x_2)$。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-006"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-008",
+      "knowledge_item": "广义鸽巢原理 (Generalized Pigeonhole Principle) — Theorem 2",
+      "source_location": "Section 6.2.2, Theorem 2",
+      "knowledge_type": "concept-property",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE GENERALIZED PIGEONHOLE PRINCIPLE** If $N$ objects are placed into $k$ boxes, then there is at least one box containing at least $\\lceil N/k \\rceil$ objects.\n\n即：最满的盒子至少装 $\\lceil N/k \\rceil$ 个对象。\n\n当 $N = k+1$ 时退化为 Theorem 1（基础鸽巢原理）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-006"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-009",
+      "knowledge_item": "排列 (Permutation) 与 r-排列 (r-permutation)",
+      "source_location": "Section 6.3.2",
+      "knowledge_type": "concept-property",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**排列 (Permutation)**：集合中所有不同对象的有序排列。\n**r-排列 (r-permutation)**：集合中 $r$ 个元素的有序排列，记为 $P(n, r)$。\n\n例：$S = \\{1, 2, 3\\}$，排列 3,1,2 是 $S$ 的一个 permutation；3,2 是 2-permutation。\n\n注意：每个元素只能被选一次（无重复）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-001",
+        "dmath-ch06-kp-010",
+        "dmath-ch06-kp-012"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-010",
+      "knowledge_item": "r-排列计数公式 P(n,r) = n(n-1)...(n-r+1)",
+      "source_location": "Section 6.3.2, Theorem 1",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THEOREM 1** If $n$ is a positive integer and $r$ is an integer with $1 \\leq r \\leq n$, then there are\n\n$$P(n, r) = n(n-1)(n-2)\\cdots(n-r+1)$$\n\nr-permutations of a set with $n$ distinct elements.\n\n**证明思路**（乘法规则）：第 1 个位置 $n$ 种选择，第 2 个位置 $n-1$ 种，...，第 $r$ 个位置 $n-r+1$ 种，相乘即得。\n\n约定 $P(n, 0) = 1$（空排列）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-011",
+        "dmath-ch06-kp-013"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-011",
+      "knowledge_item": "r-排列的阶乘形式 P(n,r) = n!/(n-r)!",
+      "source_location": "Section 6.3.2, Corollary 1",
+      "knowledge_type": "formula-calculation",
+      "importance": "supplementary",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**COROLLARY 1** If $n$ and $r$ are integers with $0 \\leq r \\leq n$, then $P(n, r) = \\dfrac{n!}{(n-r)!}$.\n\n由 Theorem 1 化简：$n(n-1)\\cdots(n-r+1) = \\dfrac{n!}{(n-r)!}$（分子分母抵消）。\n\n**注意**：此形式仅适用于 $r \\geq 1$ 且 $n \\geq r$。当 $r = 0$ 时，$P(n, 0) = 1$（约定）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-010"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-012",
+      "knowledge_item": "组合 (Combination) 与 r-组合",
+      "source_location": "Section 6.3.3",
+      "knowledge_type": "concept-property",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**r-组合 (r-combination)**：集合中 $r$ 个元素的**无序**选取。\n\n$r$-组合就是大小为 $r$ 的子集。记号 $C(n, r)$ 或 $\\binom{n}{r}$（二项式系数）。\n\n例：$S = \\{1, 2, 3, 4\\}$，$\\{1, 3, 4\\}$ 是 3-combination。注意 $\\{4, 1, 3\\}$ 与 $\\{1, 3, 4\\}$ 是**同一个** 3-combination（顺序无关）。\n\n**与排列的关键区别**：r-组合无序、r-排列有序。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-013"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-013",
+      "knowledge_item": "r-组合计数公式 C(n,r) = n!/(r!(n-r)!)",
+      "source_location": "Section 6.3.3, Theorem 2",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THEOREM 2** The number of $r$-combinations of a set with $n$ elements, where $n$ is a nonnegative integer and $r$ is an integer with $0 \\leq r \\leq n$, equals\n\n$$C(n, r) = \\binom{n}{r} = \\dfrac{n!}{r!(n-r)!}.$$\n\n**证明思路**：r-排列可通过两步得到——先选 r-组合，再对组合内元素排序。即 $P(n, r) = C(n, r) \\cdot P(r, r)$，解出 $C(n, r) = P(n, r) / r!$。\n\n**对称性**：$C(n, r) = C(n, n-r)$。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-010",
+        "dmath-ch06-kp-012",
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-015"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-014",
+      "knowledge_item": "二项式定理 (Binomial Theorem)",
+      "source_location": "Section 6.4.1, Theorem 1",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE BINOMIAL THEOREM** Let $x$ and $y$ be variables, and let $n$ be a nonnegative integer. Then\n\n$$(x + y)^n = \\sum_{j=0}^{n} \\binom{n}{j} x^{n-j} y^{j} = \\binom{n}{0} x^n + \\binom{n}{1} x^{n-1} y + \\cdots + \\binom{n}{n-1} x y^{n-1} + \\binom{n}{n} y^n.$$\n\n**组合证明思路**：展开 $(x+y)^n$ 时，每个 $x^{n-j} y^j$ 项的出现次数等于从 $n$ 个因子中选 $n-j$ 个取 $x$、其余取 $y$ 的方式数，即 $\\binom{n}{n-j} = \\binom{n}{j}$。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-013",
+        "dmath-ch06-kp-015",
+        "dmath-ch06-kp-016"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-015",
+      "knowledge_item": "帕斯卡恒等式 (Pascal's Identity)",
+      "source_location": "Section 6.4.2",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**PASCAL'S IDENTITY** Let $n$ and $k$ be positive integers with $k < n$. Then $\\binom{n}{k} + \\binom{n}{k+1} = \\binom{n+1}{k+1}$.\n\n**组合证明思路**：$\\binom{n+1}{k+1}$ 是从 $n+1$ 个元素中选 $k+1$ 个的方式数。考虑是否包含某个特定元素 $a$：\n- 包含 $a$：从剩下 $n$ 个中选 $k$ 个 = $\\binom{n}{k}$\n- 不包含 $a$：从 $n$ 个中选 $k+1$ 个 = $\\binom{n}{k+1}$\n- 两种情况互不相交，求和 = $\\binom{n+1}{k+1}$\n\n帕斯卡三角形：每行两端为 1，其余位置 = 上一行相邻两数之和。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-013",
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-016",
+        "dmath-ch06-kp-017"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-016",
+      "knowledge_item": "帕斯卡三角形 (Pascal's Triangle)",
+      "source_location": "Section 6.4.2",
+      "knowledge_type": "concept-property",
+      "importance": "supplementary",
+      "difficulty": 1,
+      "fragile": null,
+      "learning_action": null,
+      "body": "帕斯卡三角形是二项式系数 $\\binom{n}{k}$ 的几何排列。\n\n第 $n$ 行（从 $n=0$ 起）依次数值：1; 1 1; 1 2 1; 1 3 3 1; 1 4 6 4 1; 1 5 10 10 5 1; ...\n\n**构造规则**（由帕斯卡恒等式）：每行两端为 1，其余每个位置 = 上一行正上方两数之和。\n\n包含各种二项式恒等式的组合意义：e.g. 行和 = $2^n$（来自 $(1+1)^n$）；偶数位和 = 奇数位和（来自 $(1-1)^n = 0$）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-013",
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-015"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-017",
+      "knowledge_item": "范德蒙德恒等式 (Vandermonde's Identity)",
+      "source_location": "Section 6.4.3",
+      "knowledge_type": "formula-calculation",
+      "importance": "supplementary",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**VANDERMONDE'S IDENTITY** Let $m$, $n$, and $r$ be nonnegative integers with $r$ not exceeding either $m$ or $n$. Then\n\n$$\\binom{m+n}{r} = \\sum_{k=0}^{r} \\binom{m}{r-k} \\binom{n}{k}.$$\n\n**组合证明思路**：从 $m+n$ 个元素中选 $r$ 个。设前 $m$ 个选 $r-k$ 个、后 $n$ 个选 $k$ 个，按 $k$ 求和。\n\n特例 $r=1$：$m+n = \\binom{m}{1} + \\binom{n}{1}$，即基础加法规则。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-013",
+        "dmath-ch06-kp-015"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-018",
+      "knowledge_item": "允许重复的 r-排列数 n^r",
+      "source_location": "Section 6.5.2, Theorem 1",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THEOREM 1** The number of $r$-permutations of a set of $n$ objects with repetition allowed is $n^r$.\n\n**证明**（乘法规则）：$r$ 个位置中每个位置都可以从 $n$ 个对象中选（允许重复使用），故 $n \\cdot n \\cdot \\cdots \\cdot n = n^r$。\n\n例：26 个大写英文字母构成的长度 $r$ 的字符串数 = $26^r$。\n\n**与无重复 r-排列的区别**：无重复是 $P(n, r) = n(n-1)\\cdots(n-r+1)$，但要求 $r \\leq n$；有重复是 $n^r$，$r$ 任意。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-001"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-019",
+      "knowledge_item": "允许重复的 r-组合数 C(n+r-1, r)",
+      "source_location": "Section 6.5.3",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "从 $n$ 种对象中无序选 $r$ 个（允许重复）的方案数 = $\\binom{n+r-1}{r}$。\n\n例：从苹果、橘子、梨中选 4 个（无序）= $\\binom{3+4-1}{4} = \\binom{6}{4} = 15$ 种。\n\n**Stars and Bars 方法**（第 6.5.3 主要方法）：$r$ 颗星（要选的对象）放入 $n$ 个盒子（类型），$n-1$ 个隔板分开盒子。共 $r + (n-1)$ 个位置选 $n-1$ 个放隔板 = $\\binom{r+n-1}{n-1} = \\binom{r+n-1}{r}$。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-012",
+        "dmath-ch06-kp-013"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-020",
+      "knowledge_item": "不可区分对象的排列（多项式系数）",
+      "source_location": "Section 6.5.4",
+      "knowledge_type": "formula-calculation",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**THE MULTINOMIAL COEFFICIENT** The number of ways to arrange $n$ objects of $k$ distinct types, where there are $n_i$ indistinguishable objects of type $i$ ($i = 1, 2, \\dots, k$) and $n_1 + n_2 + \\cdots + n_k = n$, is\n\n$$\\dfrac{n!}{n_1! n_2! \\cdots n_k!}$$\n\n记为 $\\binom{n}{n_1, n_2, \\dots, n_k}$。\n\n例：SUCCESS 中 6 个字母的排列数 = $\\dfrac{6!}{3! 1! 1! 1!} = 120$（3 个 S、1 个 U、1 个 C、1 个 E）。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-010",
+        "dmath-ch06-kp-014"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-021",
+      "knowledge_item": "把对象分配到盒子",
+      "source_location": "Section 6.5.5",
+      "knowledge_type": "algorithm-process",
+      "importance": "supplementary",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**把 $n$ 个不同对象分配到 $k$ 个不同盒子**（盒子可空）= $k^n$（每个对象 $k$ 种选择）。\n\n**把 $n$ 个相同对象分配到 $k$ 个不同盒子**（盒子可空）= $\\binom{n+k-1}{n}$（stars and bars）。\n\n**把 $n$ 个不同对象分配到 $k$ 个不可区分盒子**（盒子非空）= Stirling 数 $S(n, k)$。\n\n**把 $n$ 个不同对象分配到 $k$ 个不同盒子**（盒子非空）= $k! \\cdot S(n, k)$（surjection 数）。\n\n区分：对象是否相同？盒子是否相同？盒子是否可空？",
+      "related_kp_ids": [
+        "dmath-ch06-kp-020"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-022",
+      "knowledge_item": "字典序生成排列算法 (Lexicographic permutation generation)",
+      "source_location": "Section 6.6.2",
+      "knowledge_type": "algorithm-process",
+      "importance": "supplementary",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**算法**：生成 $\\{1, 2, \\dots, n\\}$ 的所有 $n!$ 个排列，按字典序。\n\n**步骤**（给定当前排列 $a_1 a_2 \\cdots a_n$ 求下一个）：\n1. 找最右的相邻对 $a_j < a_{j+1}$（即从右往左找第一个递增处）。\n2. 在 $a_{j+1}, a_{j+2}, \\dots, a_n$ 中找**大于 $a_j$ 的最小**元素 $a_k$。\n3. 交换 $a_j$ 和 $a_k$。\n4. 将 $a_{j+1}, \\dots, a_n$ 部分按升序排列（即翻转，因为之前是降序）。\n\n**正确性**：这是字典序下一个排列的唯一候选。\n\n例：362541 → 找 $a_3=2 < a_4=5$，选右侧 $>2$ 的最小 = $a_5=4$，交换 → 364251，翻转后三位 → 364125。",
+      "related_kp_ids": [
+        "dmath-ch06-kp-009"
+      ]
+    },
+    {
+      "kp_id": "dmath-ch06-kp-023",
+      "knowledge_item": "Stars-and-Bars 可视化模型",
+      "source_location": "Section 6.5.3, FIGURE 1-2",
+      "knowledge_type": "method-modeling",
+      "importance": "supplementary",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**Stars-and-Bars** (星与杠) 是组合数学中的经典可视化工具。\n\n将 $r$ 个相同对象分配到 $n$ 个不同类别中，等价于在 $r + (n-1)$ 个位置中选择 $r$ 个放 \"星\"（对象）或 $n-1$ 个放 \"杠\"（分隔线）。\n\n- 星 = 被选中的对象（相同）\n- 杠 = 盒子/类别的分隔线（$n$ 个盒子最多有 $n-1$ 个杠）\n\n**星的个数 = $r$ 个；杠的个数 = $n-1$ 个** → 总位置 = $r + n - 1$\n\n选择哪些位置放星 → $\\binom{r + n - 1}{r}$ = 允许重复的组合数。\n\n**图示**：7 个现金箱 = 6 条分隔线 + 5 颗星 → 11 个位置的排列对应所有选票方案。",
+      "related_kp_ids": []
+    },
+    {
+      "kp_id": "dmath-ch06-kp-024",
+      "knowledge_item": "常见鸽巢应用模型表",
+      "source_location": "Section 6.2",
+      "knowledge_type": "method-modeling",
+      "importance": "supplementary",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**鸽巢原理的常见应用模板**：以下表格汇总了鸽巢原理在不同题型中的建模方式。\n\n| 题型 | 对象 | 盒子 | 结论 |\n|---|---|---|---|\n| 生日/月份/星期 | 人 | 日期类别 | 某类别人数达到下界 |\n| 分数 | 学生 | 可能分数 | 两人同分或多个人同分 |\n| 同余 | 整数 | 余数类 | 两数同余或差可整除 |\n| 整点中点 | 点对数 | 坐标奇偶类型 | 两点坐标同奇偶，中点为整数坐标 |\n| 连续区间和 | 前缀和 | 取值范围或同余类 | 两前缀差满足目标 |\n| 图中度数 | 顶点 | 可能度数 | 两顶点同度 |\n\n**核心思想**：把每一类对象放入它所属的盒子中，用鸽巢原理逼出结论。",
+      "related_kp_ids": []
+    },
+    {
+      "kp_id": "dmath-ch06-kp-025",
+      "knowledge_item": "球盒模型主表 (Ball-Box Master Table)",
+      "source_location": "Section 6.5.5",
+      "knowledge_type": "method-modeling",
+      "importance": "core",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**球盒模型**总结了所有分配计数问题的框架。区分三个维度：\n\n| 对象是否相同？ | 盒子是否相同？ | 盒子能否为空？ | 计数公式 |\n|---|---|---|---|\n| 不同 | 不同 | 可空 | $k^n$ (每个对象 $k$ 种选择) |\n| 不同 | 不同 | 非空 | $k! \\cdot S(n, k)$ (Stirling 第二类数 × 排列) |\n| 相同 | 不同 | 可空 | $\\binom{n+k-1}{n}$ (Stars-and-Bars) |\n| 相同 | 不同 | 非空 | $\\binom{n-1}{k-1}$ (每个盒子至少 1) |\n| 不同 | 相同 | 可空 | $S(n, 1) + S(n, 2) + \\dots + S(n, k)$ |\n| 不同 | 相同 | 非空 | $S(n, k)$ (Stirling 第二类数) |\n| 相同 | 相同 | 可空 | $p_k(n)$ (整数划分数) |\n| 相同 | 相同 | 非空 | $p_k(n) - p_{k-1}(n)$ (每个盒子至少 1 的划分数) |\n\n**三个关键判断**：① 对象是否相同？ ② 盒子是否相同？ ③ 是否允许空盒？",
+      "related_kp_ids": []
+    },
+    {
+      "kp_id": "dmath-ch06-kp-026",
+      "knowledge_item": "指定项系数求法（二项式）",
+      "source_location": "Section 6.4.1, EXAMPLE 4",
+      "knowledge_type": "formula-calculation",
+      "importance": "supplementary",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**求 $(ax^p + by^q)^n$ 中 $x^a y^b$ 的系数的方法**：\n\n1. 将表达式写成 $(Ax^p + By^q)^n$ 形式（负号时写成 $+(-B)$）。\n2. 第 $j$ 项的表达式： $\\binom{n}{j} (Ax^p)^{n-j} (By^q)^j = \\binom{n}{j} A^{n-j} B^j x^{p(n-j)} y^{qj}$。\n3. 解指数方程 $a = p(n-j), b = qj$ 得 $j$。\n4. 若无整数解 → 系数为 0。\n5. 若有整数解 $j$ → 系数 = $\\binom{n}{j} A^{n-j} B^j$。\n\n**例**：$(2x-3y)^{25}$ 中 $x^{12}y^{13}$ 的系数：$j=13$, 系数 = $\\binom{25}{13} 2^{12} (-3)^{13} = -\\frac{25!}{13!12!} 2^{12} 3^{13}$.",
+      "related_kp_ids": []
+    },
+    {
+      "kp_id": "dmath-ch06-kp-027",
+      "knowledge_item": "重复组合的下界、正整数解与不等式",
+      "source_location": "Section 6.5.3",
+      "knowledge_type": "method-modeling",
+      "importance": "supplementary",
+      "difficulty": 3,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**重复组合公式的变体**（基于 Stars-and-Bars 的统一框架）：\n\n**基本形式**（非负整数解）： $x_1 + x_2 + \\dots + x_m = N, x_i \\ge 0$ → $\\binom{N + m - 1}{m - 1}$\n\n**下界替换**：若 $x_i \\ge a_i$，令 $y_i = x_i - a_i \\ge 0$。则方程变为 $y_1 + \\dots + y_m = N - (a_1 + \\dots + a_m)$。若右边为负 → 无解。\n\n**正整数解**：若 $x_i \\ge 1$，令 $y_i = x_i - 1$，解数为 $\\binom{N - 1}{m - 1}$。\n\n**不等式**（$\\le$）：若 $x_1 + \\dots + x_m \\le N$，引入辅助变量 $x_{m+1} = N - (x_1 + \\dots + x_m) \\ge 0$，转化为等式的 $=N$ 形式。\n\n**上界**：若 $x_i \\le b_i$，用容斥/补集（非 Stars-and-Bars 直接处理）。",
+      "related_kp_ids": []
+    },
+    {
+      "kp_id": "dmath-ch06-kp-028",
+      "knowledge_item": "计数对象与等价关系（计数四入口）",
+      "source_location": "Section 6.1, introduction",
+      "knowledge_type": "method-modeling",
+      "importance": "supplementary",
+      "difficulty": 2,
+      "fragile": null,
+      "learning_action": null,
+      "body": "**计数问题的四个入口问题**（解答任意计数题的系统性前置步骤）：\n\n1. **计数对象**：每一个被数的东西是什么？对象不同则公式不同。\n2. **表示方式**：同一个对象可用字符串、集合、函数、整数解、位串、盒子分配等不同方式表示。每个表示必须唯一（一对一或已知重复表示数）。\n3. **限制条件**：关键词 `distinct` / `repeated` / `at least` / `at most` / `exactly` / `consecutive` / `not exceeding` 会改变选择空间。将英文限制翻译成集合条件、位置条件或变量不等式。\n4. **相同标准**：线性排列、圆排列、镜像等价、多重集、不可区分盒子都会改变'什么时候算同一种'。若未处理相同标准，最容易多算。\n\n**作用**：在应用任何公式前先回答这四问，确保模型匹配问题。",
+      "related_kp_ids": []
+    }
+  ],
+  "questions": [],
+  "progress": {
+    "kp_states": {},
+    "question_states": {}
+  }
+}

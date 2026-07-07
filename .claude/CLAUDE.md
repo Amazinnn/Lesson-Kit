@@ -1,109 +1,71 @@
 # lesson-kit
 
-**模块化学习材料生成器。** 从源材料自动抽取知识资产到 SQLite 池，按需渲染为多样化的学习格式。
+模块化学习材料生成器。源材料先进入课程级 SQLite pool，再由不同 view 渲染成学生材料。
 
-核心理念："**不是帮你跳过源材料，是帮你回到源材料。**"
+核心理念：不是帮学生跳过源材料，而是把源材料整理成可复用的学习资产。
 
-## 两系统架构
+## Runtime Map
 
-```
-源材料（PDF/PPT/Markdown）
-    │
-    ▼
-  Pipeline（抽取层）
-    ├─ commands/extract-chapter.md   ← 9 步工作流编排
-    ├─ skills/                       ← 15 个 V17 提取 skill + pool-field-inference
-    ├─ scripts/create-tables.py      ← schema 创建
-    ├─ scripts/insert-knowledge-points.py ← JSON manifest → SQLite
-    └─ scripts/validate-pool.py      ← 6 个质量 gate（含覆盖 gate）
-    │
-    ▼
-  pool/{course}.db     ← SQLite 知识池（整本教材一个库）
-    │
-    ▼
-  View 层（渲染）
-    ├─ views/first-pass/             ← 速览视图（command + skills + gates + templates）
-    ├─ views/common/                 ← 共享 skills / gates
-    ├─ pool/scripts/query-pool.py    ← Agent 用 JSON 查询
-    └─ pool/scripts/print-graph.py   ← 学生用 Markdown 提纲
-```
-
-**一次抽取，多种呈现。** KP 是池中的原子资产，视图按需消费。Pipeline 和 View 独立演进。
-
-## 设计哲学（光谱，非硬性立场）
-
-完整哲学文档：`docs/design/philosophy.md`
-
-| # | 轴 | 两端 |
-|---|-----|------|
-| 1 | 知识归顺度 | 唤醒自我 ↔ 规训自我 |
-| 2 | 离原材料距离 | 近源 ↔ 远源 |
-| 3 | 接收 ↔ 建构 | 成品交付 ↔ 原料拼装 |
-| 4 | 呈现 ↔ 告知 | 窗户（让你看）↔ 替身（替你加工） |
-| 5 | 无知测绘 ↔ 全知假象 | 标未知 / 争议 / 边界 ↔ 假装完整封闭 |
-| 6 | 静止 ↔ 流动 | 允许停下 ↔ 持续推动 |
-| 7 | 单脉络 ↔ 多脉络 | 一条主线 ↔ 多条视角 |
-| 8 | 难度自主权 | 固定 1-5 ↔ 学生自定 |
-| 9 | 错误价值 | 避免错误 ↔ 拥抱 productive failure |
-
-5 条待工程化轴（工具可弃性、光滑↔纹理、完成感↔未完成感、解构/反学习、消费↔品味）已确认方向，**MVP 后讨论**。
-
-## 项目结构（当前）
-
-```
+```text
 pipeline/
-├── commands/extract-chapter.md       ← 9 步工作流 + 步骤 3 强制覆盖表 + 步骤 4.5 覆盖 gate
-├── skills/                           ← 15 个 V17 提取 skill + pool-field-inference
-├── scripts/                          ← create-tables, insert-kp, validate-pool
-└── templates/pool-insert-manifest.md ← JSON 桥接格式规范
+├── commands/
+│   ├── extract-chapter.md            ← KP 抽取入库
+│   └── extract-problems.md           ← Problem 抽取入库
+├── scripts/
+│   ├── create-tables.py              ← 创建 pool schema
+│   ├── insert-knowledge-points.py    ← KP manifest 入库
+│   ├── insert-problems.py            ← Problem manifest 入库
+│   └── validate-pool.py              ← pool gates
+└── templates/
+    ├── pool-insert-manifest.md       ← KP manifest
+    └── problem-insert-manifest.md    ← Problem manifest
 
 pool/
-├── scripts/query-pool.py             ← Agent 用 JSON 查询
-├── scripts/print-graph.py            ← 学生用 Markdown 提纲（叙述型，无 wiki link）
-├── {course}.db                       ← SQLite 池（运行时，gitignore）
-└── (output 目录不在 repo 内)
+├── {course}.db                       ← 课程级 SQLite pool，gitignored
+└── scripts/
+    ├── query-pool.py                 ← view 查询 JSON
+    └── print-graph.py                ← 知识导览视图输出
 
 views/
-├── first-pass/                       ← 速览视图（command + 4 skills + 4 gates + 3 templates）
-└── common/                           ← 共享 skills + gates
-
-intermediate/{course}/extraction/{chapter}/
-├── 00_source/                        ← MinerU 抽取的源 markdown
-├── 01_inputs/                        ← source-scope.md, source-material-inventory.md
-├── 02_analysis/                      ← knowledge-points.md（含覆盖表）, relationship-analysis, consolidation, coverage-check.md
-├── 03_plans/                         ← structure-plan.md
-└── 04_checks/                        ← validation-report.md
-
-docs/design/                          ← 5 个设计文档
+├── problem-set/                      ← 练习集视图
+├── first-pass/                       ← 历史速览视图目录，待整理
+└── common/                           ← 共享 view skills/gates
 ```
 
-## 抽取流程约束（关键）
+## Current Pool Contract
 
-1. **步骤 3 强制覆盖表**：`knowledge-points.md` 开头必须有 8 类候选来源覆盖表（definitions/formulas/theorems/conditions/models/diagrams-tables/code-fields/low-visibility-details）。Agent 不可跳过。
-2. **步骤 4.5 覆盖 Gate**：Agent 产出 `coverage-check.md`，8 类二进制覆盖。有 FAIL 行 → 步骤 3 重抽。
-3. **validate-pool.py kp-coverage 升级**：脚本读 coverage-check.md，FAIL 行 → ERROR exit 2。
-4. **题不入池**：章节伴生题由视图层渲染时生成。课后习题 / 历年题 → 独立表（未来实现）。
-5. **body 必填**：KP 正文从源材料提取（脚本自动采集）。fragile 必须人工填，Agent 不给默认值。
+- `knowledge_points`: 持久化知识点。
+- `problems`: 持久化题目。不同题目池由 `source_kind` 逻辑区分。
+- `questions`: legacy companion-check 表；不是 v1 题目池核心。
 
-## 关键约定
+`problems` v1 字段：
 
-- **kp_id 命名**：`{course}-ch{NN}-kp-{NNN}`（如 `dmath-ch06-kp-001`）
-- **整本教材一个 DB**：`pool/{course}.db`
-- **中间文件全量落地**：不审但留底，后续追溯
-- **所有脚本 stdlib**：仅 Python 标准库，零外部依赖
-- **print-graph.py 叙述型输出**：无 wiki link、无 "KP 索引/详情" 元标签、2 空行 block 间隔
+```text
+problem_id, kp_ids, problem_text, solution, problem_type, source_kind
+```
 
-## 当前进度
+Rules:
 
-- ✅ Pipeline Create（schema + insert + validate + extract-chapter 工作流）
-- ✅ 28 KP dmath ch06 池（真实教材 E2E，覆盖 gate PASS）
-- ✅ 9 步工作流加固（步骤 3 覆盖表 + 步骤 4.5 覆盖 gate）
-- ✅ fragile 字段 TEXT 重构
-- ✅ 设计哲学 9 轴光谱锁定
-- ✅ README + 设计文档 5 个
+- `problem_id`: `{course}-{chapter}-prob-{NNN}`.
+- `kp_ids`: non-empty JSON array of existing KP IDs.
+- `solution`: optional. Final answers and worked explanations both live here.
+- `source_kind`: `textbook | quiz | midterm | final | makeup | other`.
+- `problem_type`: `calculation | proof | modeling | explanation | experiment | design | application | counterexample | other`.
+- Do not add `answer`, `training_target`, `condition_axes`, or source-location fields to v1.
 
-## 可用 Skill（设计辅助）
+## Current Views
 
-- `pipeline/skills/pool-field-inference/SKILL.md` — importance/difficulty/fragile 推断规则
-- `pipeline/commands/extract-chapter.md` — 9 步抽取工作流
-- `docs/design/philosophy.md` — 设计哲学光谱（9 轴 + 待工程化 5 轴）
+- **知识导览视图**: current first student-facing view, generated by `pool/scripts/print-graph.py`.
+- **Problem-set view**: renders two files from `problems`: a problem set and matching solution file. The problem set hides KP IDs and solution text. Missing solutions render as `待补` in the solution file.
+
+## Versioning
+
+Git commits and tags are the version source of truth. Zip packages may still be created for external review or prompt-level handoff, but they are not independent version records.
+
+## Important Constraints
+
+- One course, one DB: `pool/{course}.db`.
+- Query chapter rows by full prefix, e.g. `dmath-ch06`.
+- Intermediate files are audit artifacts and should not be replaced by private reasoning.
+- Durable problems are ingested by `pipeline/commands/extract-problems.md`; problem-set rendering must not invent new problems in v1.
+- All scripts use Python stdlib only.

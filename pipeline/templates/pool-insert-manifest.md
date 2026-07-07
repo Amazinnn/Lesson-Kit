@@ -112,11 +112,11 @@ core | supplementary | optional
 | `knowledge_type 不在合法枚举内` | 拼写错误（如 `concept_property`） | 改成连字符 `concept-property` |
 | `importance 不在合法枚举内` | 大小写错误或拼写错误 | 严格小写 |
 | `difficulty 超出 1-5` | 填了 0 或 6 | 严格 1-5 |
-| `fragile 不是 0 或 1` | 填了 `true`/`false` | 必须 0/1 整数 |
+| `fragile 类型错误` | 填了 `true`/`false` 或数字 | 必须是 Markdown 字符串或 `null` |
 | `重复的 kp_id` | 两个 KP 用了同一个 id | 重新编号 |
 
 ## 章节伴生题不写入 manifest
 
 `pool-insert-manifest.json` **只承载 KP**。场景判断 MCQ 由视图层在渲染时按 `scene-judgment-mcq` skill 临时生成，不入池。
 
-未来如需「课后习题」/「历年真题」入池，会用**独立的 manifest**（`exercises-manifest.json` / `exam-manifest.json`），不在本模板范围内。
+持久化题目使用独立 manifest：`pipeline/templates/problem-insert-manifest.md`。题目统一写入 `problems` 表，并通过 `source_kind` 区分课本、小测、期中、期末等逻辑题池。

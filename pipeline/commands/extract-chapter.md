@@ -37,17 +37,17 @@ Agent 在执行前必须加载：
 
 | 步 | 层 | Actor | 动作 | 加载 skill | 产出 |
 |----|-----|-------|------|-----------|------|
-| 1 | — | Script | `create-tables.py --db pool/{course}.db [--force]` | — | SQLite 4 表 + 6 索引 |
+| 1 | — | Script | `create-tables.py --db pool/{course}.db [--force]` | — | SQLite pool schema |
 | 2 | 01 | Agent | 锁定源范围 | source-and-scope, source-material-type-detection, source-section-indexing | `intermediate/{course}/extraction/{chapter}/01_inputs/source-scope.md` |
 | 3 | 02 | Agent | **构建 KP 清单（强制覆盖表）** — 见下 | first-pass-learning-item-extraction, knowledge-inventory, course-learning-type-detection, type-specific-learning-item-fields, learning-item-granularity, subject-data-structures, subject-math-physics, subject-required-content, learning-evidence-integration | `02_analysis/knowledge-points.md`（**开头必须有覆盖表**）|
 | 4 | 02 | Agent | 关系分析 + KP 合并 | knowledge-relationship-analysis, kp-consolidation-analysis | `02_analysis/knowledge-relationship-analysis.md` + `kp-consolidation-analysis.md` |
 | 4.5 | 02 | Agent | **覆盖检查 Gate（新增）** — Agent 基于步骤 3 的覆盖表为每一类输出 PASS/FAIL。FAIL 行 → 阻塞，回步骤 3 重抽 | — | `02_analysis/coverage-check.md` |
 | 6 | 02 | Agent | 生成 pool-insert-manifest.json（桥接） | **pool-field-inference** | `02_analysis/pool-insert-manifest.json` |
 | 7 | — | Script | `insert-knowledge-points.py --db ... --manifest ... [--upsert]` | — | KP 入 SQLite |
-| 8 | — | Script | （跳过 — 章节伴生题不入池） | — | — |
+| 8 | — | Script | （跳过 — KP 抽取不写 problems） | — | — |
 | 9 | — | Script + Agent | `validate-pool.py --db ... --chapter {chapter} [--json]` 生成报告；**kp-coverage gate 读 coverage-check.md，有 FAIL → exit 2**；ERROR 项必须修复后重跑 7 | — | `04_checks/pool-validation-report.md` |
 
-> 步骤 8 故意跳过——`pool-insert-manifest.json` 只承载 KP。场景判断 MCQ 由视图层在渲染时按 `scene-judgment-mcq` skill 临时生成，不入池。
+> 步骤 8 故意跳过——`pool-insert-manifest.json` 只承载 KP。持久化题目由 `pipeline/commands/extract-problems.md` 写入 `problems` 表；场景判断 MCQ 属于视图临时自检，不是 v1 durable problem。
 
 ### 步骤 3 强制约束：候选来源覆盖表
 
@@ -124,7 +124,7 @@ intermediate/{course}/extraction/{chapter}/04_checks/pool-validation-report.md
 
 1. **不审但留底**：所有中间文件全量落地，不在生成时审阅。质量控制依赖 SQLite 池子的结构约束（CHECK + gate 验证）。
 2. **信得过**：默认走完全自动。发现问题后再用 Update 修。
-3. **题不入池**：场景判断 MCQ 是视图层职责，**不要** 把题目写进 manifest 或 DB。
+3. **KP 抽取不写题**：本命令只写 `knowledge_points`。持久化题目必须走 `extract-problems.md`。
 4. **单库多章**：整本教材一个 DB，跨章靠 `kp_id` 前缀（`dld-ch02-...` / `dld-ch04-...`）。SQLite 用 `WHERE kp_id LIKE 'dld-ch02-%'` 过滤。
 5. **Agent 即执行者**：此 Command 不需要写新代码。Claude 加载后按步骤执行 → 调 Python 脚本 → 审查报告 → 修复。
 
@@ -161,6 +161,6 @@ V17 是 lesson-kit 的方法论试验田——`skills/` 目录下的提取 skill
 ## 后续（不阻塞 MVP）
 
 - Update / Delete Command：CRUD 后两件
-- `exercises-manifest.json` + `textbook_exercises` 表：课后习题池
-- `exam-manifest.json` + `exam_questions` 表：历年卷题目池
+- Problem-level progress tables
+- Generated supplemental problems
 - 中间文件自动清理策略：成功入库后旧中间文件归档

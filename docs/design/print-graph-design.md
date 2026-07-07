@@ -1,4 +1,4 @@
-# lesson-kit Print 功能设计（Pool → 叙述型 Markdown 提纲）
+# lesson-kit 知识导览视图设计（Pool → 叙述型 Markdown 提纲）
 
 **Date:** 2026-07-02（修订）
 **Status:** MVP 设计收敛
@@ -6,7 +6,7 @@
 
 ## 定位
 
-Print 是 Pipeline 系统的 **Read** 操作——将 SQLite 池子里的 KP 数据导出为学生可直接阅读的 Markdown 知识提纲，供 Obsidian 浏览器消费。
+知识导览视图是 lesson-kit 当前第一视图。`pool/scripts/print-graph.py` 将 SQLite 池子里的 KP 数据导出为学生可直接阅读的 Markdown 知识提纲，供 Obsidian 浏览器消费。
 
 **核心原则：脚本只做机械搬移。** 不推导、不生成、不抽取语义。每个字符都来自 SQLite 已有字段。
 

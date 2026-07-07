@@ -155,7 +155,7 @@ def main(argv=None) -> int:
         return 1
 
     try:
-        with open(args.manifest, "r", encoding="utf-8") as f:
+        with open(args.manifest, "r", encoding="utf-8-sig") as f:
             manifest = json.load(f)
     except json.JSONDecodeError as exc:
         print(f"ERROR: manifest JSON parse error: {exc}", file=sys.stderr)

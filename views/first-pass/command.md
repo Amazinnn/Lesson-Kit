@@ -15,7 +15,7 @@
 - 章节池子不存在或为空（→ 先运行抽取管线）
 
 ## Prerequisites
-- SQLite 池子存在：`pool/{course}-{ch}.db` 包含 `knowledge_points` 和 `questions` 表
+- SQLite 池子存在：`pool/{course}.db` 包含 `knowledge_points` 和 legacy `questions` 表
 - 学生已指定章节和大致需求（可自然语言）
 
 ## Required Load List
@@ -59,7 +59,7 @@ intermediate/{course}-{ch}/first-pass/
 
 查询学生进度：
 ```bash
-python pool/scripts/query-pool.py --db pool/{course}-{ch}.db --chapter {course}-{ch} --view first-pass
+python pool/scripts/query-pool.py --db pool/{course}.db --chapter {course}-{ch} --view first-pass
 ```
 
 解析 `progress.kp_states`，汇总学生状态：
@@ -105,7 +105,7 @@ Agent 基于进度数据生成推荐配置：
 
 执行完整查询，保存结果：
 ```bash
-python pool/scripts/query-pool.py --db pool/{course}-{ch}.db --chapter {course}-{ch} --view first-pass \
+python pool/scripts/query-pool.py --db pool/{course}.db --chapter {course}-{ch} --view first-pass \
   > intermediate/{course}-{ch}/first-pass/02_analysis/kp-query-result.json
 ```
 
