@@ -81,6 +81,12 @@ the required files for a command exist and that check files do not contain
 blocking markers such as `Result: FAIL`, `Status: FAIL`, table-cell `FAIL`, or
 non-zero `ERROR` counts.
 
+By default, guard only depends on tracked intermediate artifacts and rendered
+outputs. For `extract-chapter` and `extract-problems`, passing
+`--db pool/<course>.db` also runs `pipeline/scripts/validate-pool.py` and
+blocks on its non-zero exit codes. This keeps source-only review lightweight
+while allowing stronger local validation when the ignored SQLite pool exists.
+
 Guard coverage:
 
 ```text
@@ -94,7 +100,7 @@ With `--apply`, the guard writes `.lessonkit/state.yaml`:
 - PASS sets `phase: complete`, clears `blocked_reason`, and records
   `next_action`.
 - FAIL sets `phase: blocked`, records the first missing artifact or blocking
-  marker, and exits with code 2.
+  marker, failed pool validation, or missing DB, and exits with code 2.
 
 Runtime state is a recovery checkpoint for agents. It is not a substitute for
 the intermediate files or for the SQLite pool.

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -32,6 +33,7 @@ STATE_FIELDS = [
 ]
 
 PHASES = {"idle", "active", "blocked", "complete"}
+POOL_GUARD_COMMANDS = {"extract-chapter", "extract-problems"}
 
 
 @dataclass(frozen=True)
@@ -246,12 +248,14 @@ def evaluate_guard(
     command: str,
     course: str,
     chapter: str,
-) -> tuple[bool, list[str], list[str]]:
+    db_path: str | None = None,
+) -> tuple[bool, list[str], list[str], list[str]]:
     required, outputs = render_paths(command, course, chapter)
     expected = required + outputs
     missing = [path for path in expected if not (root / path).exists()]
 
     failures: list[str] = []
+    notes: list[str] = []
     for relative in check_paths(command, course, chapter):
         path = root / relative
         if not path.exists():
@@ -260,7 +264,75 @@ def evaluate_guard(
         if marker:
             failures.append(f"{relative}: {marker}")
 
-    return not missing and not failures, missing, failures
+    if db_path:
+        pool_failure = run_pool_validation(root, db_path, course, chapter)
+        if pool_failure:
+            failures.append(pool_failure)
+        else:
+            notes.append(f"Pool validation passed: {db_path}")
+
+    return not missing and not failures, missing, failures, notes
+
+
+def resolve_path(root: Path, path: str) -> Path:
+    candidate = Path(path)
+    if candidate.is_absolute():
+        return candidate
+    return root / candidate
+
+
+def run_pool_validation(root: Path, db_path: str, course: str, chapter: str) -> str | None:
+    db = resolve_path(root, db_path)
+    if not db.exists():
+        return f"pool validation: DB not found: {db_path}"
+
+    script = root / "pipeline" / "scripts" / "validate-pool.py"
+    if not script.exists():
+        return "pool validation: missing pipeline/scripts/validate-pool.py"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--db",
+            str(db),
+            "--course",
+            course,
+            "--chapter",
+            chapter,
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode == 0:
+        return None
+
+    detail = best_failure_line(result.stdout, result.stderr)
+    if detail:
+        return f"pool validation failed (exit {result.returncode}): {detail}"
+    return f"pool validation failed (exit {result.returncode})"
+
+
+def best_failure_line(stdout: str, stderr: str) -> str:
+    combined = stdout.splitlines() + stderr.splitlines()
+    for line in combined:
+        stripped = line.strip()
+        if (
+            stripped.startswith("Result:")
+            or stripped.startswith("SQLite error:")
+            or stripped.startswith("ERROR:")
+            or " ERROR " in f" {stripped} "
+        ):
+            return stripped
+    for line in combined:
+        stripped = line.strip()
+        if stripped:
+            return stripped
+    return ""
 
 
 def guard_report(
@@ -270,6 +342,7 @@ def guard_report(
     passed: bool,
     missing: Iterable[str],
     failures: Iterable[str],
+    notes: Iterable[str],
 ) -> str:
     lines = [
         f"Gate: {command}",
@@ -286,8 +359,13 @@ def guard_report(
         lines.extend(f"- {item}" for item in missing)
     if failures:
         lines.append("")
-        lines.append("Blocking check markers:")
+        lines.append("Blocking issues:")
         lines.extend(f"- {item}" for item in failures)
+    notes = list(notes)
+    if notes:
+        lines.append("")
+        lines.append("Additional checks:")
+        lines.extend(f"- {item}" for item in notes)
     if passed:
         lines.append("")
         lines.append("All required artifacts exist and check files contain no blocking markers.")
@@ -371,13 +449,18 @@ def command_guard(args: argparse.Namespace, root: Path) -> int:
     if not course or not chapter:
         print("Guard requires --course and --chapter, or an initialized runtime state.")
         return 1
+    if args.db and args.command not in POOL_GUARD_COMMANDS:
+        print("--db is only supported for extract-chapter and extract-problems guards.")
+        return 1
 
-    passed, missing, failures = evaluate_guard(root, args.command, course, chapter)
-    print(guard_report(args.command, course, chapter, passed, missing, failures))
+    passed, missing, failures, notes = evaluate_guard(root, args.command, course, chapter, args.db)
+    print(guard_report(args.command, course, chapter, passed, missing, failures, notes))
 
     if args.apply:
         required, outputs = render_paths(args.command, course, chapter)
         report_paths = check_paths(args.command, course, chapter)
+        if args.db:
+            report_paths = report_paths + [f"validate-pool.py --db {args.db}"]
         state.update(
             {
                 "active_course": course,
@@ -451,6 +534,10 @@ def build_parser() -> argparse.ArgumentParser:
     guard_parser.add_argument("command", choices=sorted(CONTRACTS))
     guard_parser.add_argument("--course")
     guard_parser.add_argument("--chapter")
+    guard_parser.add_argument(
+        "--db",
+        help="Optional SQLite pool path for extract-chapter/extract-problems guards.",
+    )
     guard_parser.add_argument("--apply", action="store_true")
     guard_parser.set_defaults(func=command_guard)
 

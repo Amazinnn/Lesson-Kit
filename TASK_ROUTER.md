@@ -28,6 +28,17 @@ python lessonkit.py guard extract-problems --course <course> --chapter <chapter>
 python lessonkit.py guard problem-set --course <course> --chapter <chapter> --apply
 ```
 
+For local extraction work with an available SQLite pool, prefer the stronger
+form:
+
+```bash
+python lessonkit.py guard extract-chapter --course <course> --chapter <chapter> --db pool/<course>.db --apply
+python lessonkit.py guard extract-problems --course <course> --chapter <chapter> --db pool/<course>.db --apply
+```
+
+Do not pass `--db` to `problem-set`; the problem-set guard checks view
+artifacts and rendered outputs.
+
 `phase: blocked` means repair the reported artifact or check file before
 continuing. `phase: complete` means use `next_action` to choose the next
 workflow step.

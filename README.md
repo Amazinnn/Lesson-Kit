@@ -32,10 +32,14 @@ python lessonkit.py status
 python lessonkit.py resume
 python lessonkit.py init --course dmath --chapter ch06 --command problem-set
 python lessonkit.py guard problem-set --course dmath --chapter ch06 --apply
+python lessonkit.py guard extract-problems --course dmath --chapter ch06 --db pool/dmath.db --apply
 ```
 
 The CLI is intentionally dependency-free in v1. It reads and writes a limited
-YAML subset owned by Lesson-Kit.
+YAML subset owned by Lesson-Kit. Guards are lightweight by default: they check
+tracked intermediate artifacts and check reports. For extraction commands,
+pass `--db pool/<course>.db` when you want local SQLite pool validation through
+`pipeline/scripts/validate-pool.py`.
 
 ## Current Pools
 
@@ -61,6 +65,7 @@ python pipeline/scripts/validate-pool.py --db pool/dmath.db --course dmath --cha
 python pool/scripts/query-pool.py --db pool/dmath.db --chapter dmath-ch06 --view problem-set --source-kind textbook
 python lessonkit.py guard extract-chapter --course dmath --chapter ch06
 python lessonkit.py guard extract-problems --course dmath --chapter ch06
+python lessonkit.py guard extract-problems --course dmath --chapter ch06 --db pool/dmath.db
 python lessonkit.py guard problem-set --course dmath --chapter ch06
 ```
 
