@@ -21,13 +21,25 @@ import './styles.css';
 const PROBLEM_STATES = ['wrong', 'stuck', 'reviewing', 'mastered', 'new'];
 const STATUS_OPTIONS = ['new', 'wrong', 'stuck', 'reviewing', 'mastered'];
 const SVG_NS = 'http://www.w3.org/2000/svg';
+const GRAPH_MODE_FULL = 'full';
+const GRAPH_MODE_FOCUS = 'focus';
 
 const app = document.getElementById('app');
 
+let fullGraph = null;
 let graph = null;
+let focusPacket = null;
+let graphMode = GRAPH_MODE_FULL;
+let focusSeeds = new Set();
+let focusTarget = null;
+let focusDepth = 2;
+let focusMaxNodes = 30;
+let focusDirected = false;
+let focusLoading = false;
 let nodes = [];
 let links = [];
 let nodeById = new Map();
+let fullNodeById = new Map();
 let neighbors = new Map();
 let selectedId = null;
 let hoverId = null;
@@ -45,6 +57,9 @@ let statusEl = null;
 let scaleEl = null;
 let toastEl = null;
 let focusEl = null;
+let focusPanelEl = null;
+let modeFullEl = null;
+let modeFocusEl = null;
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -140,6 +155,36 @@ function splitLabel(value) {
   }
   if (line) lines.push(line);
   return lines;
+}
+
+function uniqueValues(values) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function relationNeighbors(relations, nodeId) {
+  const related = [];
+  (relations || []).forEach((relation) => {
+    if (relation.source === nodeId) related.push(relation.target);
+    if (relation.target === nodeId) related.push(relation.source);
+  });
+  return related;
+}
+
+function relationKindLabel(relation) {
+  return [
+    relation.relation_type || 'related',
+    relation.strength || '',
+    relation.direction === 'directed' ? 'directed' : '',
+  ].filter(Boolean).join(' · ');
+}
+
+function focusClass(node) {
+  return [
+    node.is_seed ? 'seed-node' : '',
+    node.is_target ? 'target-node' : '',
+    node.on_path ? 'path-node' : '',
+    node.signals?.length ? 'signal-node' : '',
+  ].filter(Boolean).join(' ');
 }
 
 function nodeRadius(node) {
@@ -293,6 +338,16 @@ async function saveKp(node) {
   }
   node.body = body;
   node.fragile = fragile;
+  const fullNode = fullNodeById.get(node.id);
+  if (fullNode) {
+    fullNode.body = body;
+    fullNode.fragile = fragile;
+  }
+  const activeNode = nodeById.get(node.id);
+  if (activeNode) {
+    activeNode.body = body;
+    activeNode.fragile = fragile;
+  }
   showToast('正文已保存');
 }
 
@@ -309,10 +364,16 @@ async function recordProblem(problemId) {
     throw new Error(payload.error || await response.text() || 'record failed');
   }
   showToast('做题记录已保存');
-  const fresh = await fetchGraph();
-  hydrateGraph(fresh);
-  renderGraph();
-  await selectNode(nodeById.get(selectedId) || nodes[0]);
+  fullGraph = await fetchGraph();
+  fullNodeById = new Map(fullGraph.nodes.map((node) => [node.id, node]));
+  if (graphMode === GRAPH_MODE_FOCUS && focusSeeds.size) {
+    await refreshFocusMap(false);
+  } else {
+    hydrateGraph(fullGraph);
+    updateCounts();
+    renderGraph();
+  }
+  await selectNode(nodeById.get(selectedId) || fullNodeById.get(selectedId) || nodes[0]);
 }
 
 function renderProblemGroups(node) {
@@ -352,6 +413,21 @@ function renderProblemGroups(node) {
 }
 
 function bindDetail(node) {
+  detailEl.querySelector('[data-toggle-seed]')?.addEventListener('click', async () => {
+    if (focusSeeds.has(node.id)) {
+      focusSeeds.delete(node.id);
+      if (focusTarget === node.id) focusTarget = null;
+    } else {
+      focusSeeds.add(node.id);
+    }
+    renderFocusPanel();
+    if (graphMode === GRAPH_MODE_FOCUS) await refreshFocusMap();
+  });
+  detailEl.querySelector('[data-set-target]')?.addEventListener('click', async () => {
+    focusTarget = focusTarget === node.id ? null : node.id;
+    renderFocusPanel();
+    if (graphMode === GRAPH_MODE_FOCUS && focusSeeds.size) await refreshFocusMap();
+  });
   detailEl.querySelector('[data-save-kp]')?.addEventListener('click', async () => {
     try {
       await saveKp(node);
@@ -373,6 +449,30 @@ function bindDetail(node) {
   });
 }
 
+function focusContextHtml(node) {
+  if (graphMode !== GRAPH_MODE_FOCUS) return '';
+  const signals = (node.signals || [])
+    .map((signal) => `<span class="chip signal-chip">${escapeHtml(signal.signal_type)} · ${escapeHtml(signal.weight)}</span>`)
+    .join('');
+  const findings = (focusPacket?.findings || [])
+    .filter((finding) => JSON.stringify(finding).includes(node.id))
+    .map((finding) => `<span class="chip">${escapeHtml(finding.type)}</span>`)
+    .join('');
+  return `
+    <section class="detail-block compact">
+      <h3>Focus Context</h3>
+      <div class="chips">
+        <span class="chip">distance ${node.distance ?? 'n/a'}</span>
+        ${node.is_seed ? '<span class="chip seed-chip">seed</span>' : ''}
+        ${node.is_target ? '<span class="chip target-chip">target</span>' : ''}
+        ${node.on_path ? '<span class="chip path-chip">path</span>' : ''}
+        ${signals}
+        ${findings}
+      </div>
+    </section>
+  `;
+}
+
 async function selectNode(node) {
   if (!node) return;
   selectedId = node.id;
@@ -385,6 +485,8 @@ async function selectNode(node) {
   const states = Object.entries(node.problem_states || {})
     .map(([name, count]) => `<span class="chip">${escapeHtml(name)} ${count}</span>`)
     .join('');
+  const isSeed = focusSeeds.has(node.id);
+  const isTarget = focusTarget === node.id;
   detailEl.innerHTML = `
     <div class="detail-head">
       <div>
@@ -397,6 +499,14 @@ async function selectNode(node) {
       <h3>来源</h3>
       <p>${escapeHtml(node.source_location || node.section || '未分组')}</p>
     </section>
+    <section class="detail-block compact">
+      <h3>Focus</h3>
+      <div class="button-row">
+        <button class="btn secondary" data-toggle-seed type="button">${isSeed ? '移出焦点' : '加入焦点'}</button>
+        <button class="btn secondary" data-set-target type="button">${isTarget ? '清除目标' : '设为目标'}</button>
+      </div>
+    </section>
+    ${focusContextHtml(node)}
     <section class="detail-block">
       <h3>正文</h3>
       <div class="milkdown-host" data-editor-body></div>
@@ -446,7 +556,12 @@ function renderGraph() {
     const line = document.createElementNS(SVG_NS, 'line');
     line.dataset.source = edge.source;
     line.dataset.target = edge.target;
-    line.setAttribute('class', 'edge');
+    line.setAttribute('class', `edge ${edge.on_path ? 'path-edge' : ''} ${edge.signals?.length ? 'signal-edge' : ''}`);
+    if (edge.relation_type) {
+      const title = document.createElementNS(SVG_NS, 'title');
+      title.textContent = relationKindLabel(edge);
+      line.appendChild(title);
+    }
     edgeLayer.appendChild(line);
     return line;
   });
@@ -454,7 +569,7 @@ function renderGraph() {
   const nodeElements = nodes.map((node) => {
     const group = document.createElementNS(SVG_NS, 'g');
     group.dataset.id = node.id;
-    group.setAttribute('class', `node ${node.status || 'neutral'}`);
+    group.setAttribute('class', `node ${node.status || 'neutral'} ${focusClass(node)}`);
     group.setAttribute('tabindex', '0');
     group.setAttribute('role', 'button');
     group.setAttribute('aria-label', node.label);
@@ -518,8 +633,8 @@ function renderGraph() {
 
   const centers = sectionCenters(width, height);
   const simulation = forceSimulation(nodes)
-    .force('link', forceLink(links).id((node) => node.id).distance(170).strength(0.18))
-    .force('charge', forceManyBody().strength(-260))
+    .force('link', forceLink(links).id((node) => node.id).distance(graphMode === GRAPH_MODE_FOCUS ? 210 : 170).strength(0.18))
+    .force('charge', forceManyBody().strength(graphMode === GRAPH_MODE_FOCUS ? -360 : -260))
     .force('center', forceCenter(width / 2, height / 2).strength(0.05))
     .force('x', forceX((node) => centers.get(node.section)?.x ?? width / 2).strength(0.035))
     .force('y', forceY((node) => centers.get(node.section)?.y ?? height / 2).strength(0.035))
@@ -554,10 +669,24 @@ function renderGraph() {
 
 function hydrateGraph(nextGraph) {
   graph = nextGraph;
+  const relations = graph.relations || graph.edges || [];
   nodes = graph.nodes.map((node) => {
-    const radius = nodeRadius(node);
-    return {
+    const fullNode = fullNodeById.get(node.id) || {};
+    const mergedRelated = uniqueValues([
+      ...(fullNode.related || []),
+      ...(node.related || []),
+      ...relationNeighbors(relations, node.id),
+    ]);
+    const merged = {
+      ...fullNode,
       ...node,
+      related: mergedRelated,
+      problem_groups: fullNode.problem_groups || node.problem_groups || {},
+      status: fullNode.status || node.status || 'neutral',
+    };
+    const radius = nodeRadius(merged);
+    return {
+      ...merged,
       radius,
       collisionRadius: 0,
       x: Number(node.x || 800),
@@ -567,7 +696,7 @@ function hydrateGraph(nextGraph) {
   nodes.forEach((node) => {
     node.collisionRadius = collisionRadius(node);
   });
-  links = graph.edges.map((edge) => ({ ...edge }));
+  links = relations.map((edge) => ({ ...edge }));
   nodeById = new Map(nodes.map((node) => [node.id, node]));
   buildNeighbors();
 }
@@ -578,6 +707,188 @@ async function fetchGraph() {
   return response.json();
 }
 
+function emptyFocusGraph() {
+  return {
+    meta: {
+      ...(fullGraph?.meta || {}),
+      view: 'focus-map',
+      node_count: 0,
+      edge_count: 0,
+      relation_count: 0,
+    },
+    nodes: [],
+    relations: [],
+    focus: null,
+  };
+}
+
+function graphFromFocusPacket(packet) {
+  return {
+    meta: {
+      ...(fullGraph?.meta || {}),
+      ...packet.meta,
+      node_count: packet.meta.node_count,
+      edge_count: packet.meta.relation_count,
+      layout: fullGraph?.meta?.layout || packet.meta.layout || { width: 1600, height: 1000 },
+    },
+    nodes: packet.nodes,
+    relations: packet.relations,
+    focus: packet,
+  };
+}
+
+async function fetchFocusMap() {
+  const params = new URLSearchParams();
+  focusSeeds.forEach((seed) => params.append('seed', seed));
+  if (focusTarget) params.set('target', focusTarget);
+  params.set('depth', String(focusDepth));
+  params.set('max_nodes', String(focusMaxNodes));
+  params.set('directed', focusDirected ? '1' : '0');
+  const response = await fetch(`/api/focus-map?${params.toString()}`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error || await response.text() || 'failed to load focus map');
+  }
+  return response.json();
+}
+
+function updateCounts() {
+  document.getElementById('nodeCount').textContent = graph?.meta?.node_count ?? nodes.length;
+  document.getElementById('edgeCount').textContent = graph?.meta?.edge_count ?? links.length;
+  document.getElementById('pageMeta').textContent = graphMode === GRAPH_MODE_FOCUS
+    ? `Focus Map · ${focusSeeds.size} seed${focusSeeds.size === 1 ? '' : 's'}`
+    : 'Editable Graph View';
+}
+
+function updateModeButtons() {
+  modeFullEl?.classList.toggle('active', graphMode === GRAPH_MODE_FULL);
+  modeFocusEl?.classList.toggle('active', graphMode === GRAPH_MODE_FOCUS);
+  document.body.classList.toggle('focus-mode', graphMode === GRAPH_MODE_FOCUS);
+}
+
+async function refreshFocusMap(showEmptyToast = true) {
+  if (focusLoading) return;
+  focusLoading = true;
+  renderFocusPanel();
+  try {
+    if (!focusSeeds.size) {
+      focusPacket = null;
+      hydrateGraph(emptyFocusGraph());
+      renderGraph();
+      updateCounts();
+      if (showEmptyToast) showToast('先加入至少一个焦点节点');
+      return;
+    }
+    focusPacket = await fetchFocusMap();
+    hydrateGraph(graphFromFocusPacket(focusPacket));
+    renderGraph();
+    updateCounts();
+    const nextSelected = nodeById.get(selectedId) || nodeById.get(focusTarget) || nodeById.get(Array.from(focusSeeds)[0]);
+    if (nextSelected) await selectNode(nextSelected);
+  } catch (error) {
+    showToast(error.message || String(error));
+  } finally {
+    focusLoading = false;
+    renderFocusPanel();
+  }
+}
+
+async function setGraphMode(nextMode) {
+  graphMode = nextMode;
+  updateModeButtons();
+  renderFocusPanel();
+  if (graphMode === GRAPH_MODE_FULL) {
+    hydrateGraph(fullGraph);
+    renderGraph();
+    updateCounts();
+    await selectNode(nodeById.get(selectedId) || nodes[0]);
+    return;
+  }
+  await refreshFocusMap();
+}
+
+function focusChip(id, kind) {
+  const node = fullNodeById.get(id) || nodeById.get(id);
+  const label = node?.graph_label || node?.label || id;
+  const action = kind === 'seed' ? 'data-remove-seed' : 'data-clear-target';
+  return `<button class="chip focus-chip ${kind}-chip" ${action}="${escapeHtml(id)}" type="button" title="${escapeHtml(id)}">${escapeHtml(label)} ×</button>`;
+}
+
+function renderFocusPanel() {
+  if (!focusPanelEl) return;
+  const seedHtml = Array.from(focusSeeds).map((id) => focusChip(id, 'seed')).join('');
+  const targetHtml = focusTarget ? focusChip(focusTarget, 'target') : '<span class="empty">未设置目标。</span>';
+  const findingHtml = (focusPacket?.findings || [])
+    .map((finding) => `<span class="chip">${escapeHtml(finding.type)}</span>`)
+    .join('');
+  focusPanelEl.innerHTML = `
+    <div class="focus-head">
+      <span>Focus Map</span>
+      <span>${focusLoading ? 'loading' : graphMode}</span>
+    </div>
+    <div class="focus-block">
+      <div class="focus-label">Seeds</div>
+      <div class="chips">${seedHtml || '<span class="empty">从节点详情加入焦点。</span>'}</div>
+    </div>
+    <div class="focus-block">
+      <div class="focus-label">Target</div>
+      <div class="chips">${targetHtml}</div>
+    </div>
+    <div class="focus-grid">
+      <label class="field mini">
+        <span>Depth</span>
+        <input id="focusDepth" type="number" min="0" max="6" value="${focusDepth}" />
+      </label>
+      <label class="field mini">
+        <span>Max</span>
+        <input id="focusMaxNodes" type="number" min="1" max="120" value="${focusMaxNodes}" />
+      </label>
+    </div>
+    <label class="toggle-line">
+      <input id="focusDirected" type="checkbox" ${focusDirected ? 'checked' : ''} />
+      <span>directed</span>
+    </label>
+    <div class="button-row">
+      <button class="btn" id="refreshFocus" type="button">刷新 Focus</button>
+      <button class="btn secondary" id="clearFocus" type="button">清空</button>
+    </div>
+    ${findingHtml ? `<div class="focus-block"><div class="focus-label">Findings</div><div class="chips">${findingHtml}</div></div>` : ''}
+  `;
+  focusPanelEl.querySelectorAll('[data-remove-seed]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      focusSeeds.delete(button.dataset.removeSeed);
+      if (focusTarget === button.dataset.removeSeed) focusTarget = null;
+      renderFocusPanel();
+      if (graphMode === GRAPH_MODE_FOCUS) await refreshFocusMap();
+    });
+  });
+  focusPanelEl.querySelector('[data-clear-target]')?.addEventListener('click', async () => {
+    focusTarget = null;
+    renderFocusPanel();
+    if (graphMode === GRAPH_MODE_FOCUS && focusSeeds.size) await refreshFocusMap();
+  });
+  focusPanelEl.querySelector('#focusDepth')?.addEventListener('change', async (event) => {
+    focusDepth = Math.max(0, Math.min(6, Number(event.target.value || 2)));
+    if (graphMode === GRAPH_MODE_FOCUS && focusSeeds.size) await refreshFocusMap();
+  });
+  focusPanelEl.querySelector('#focusMaxNodes')?.addEventListener('change', async (event) => {
+    focusMaxNodes = Math.max(1, Math.min(120, Number(event.target.value || 30)));
+    if (graphMode === GRAPH_MODE_FOCUS && focusSeeds.size) await refreshFocusMap();
+  });
+  focusPanelEl.querySelector('#focusDirected')?.addEventListener('change', async (event) => {
+    focusDirected = event.target.checked;
+    if (graphMode === GRAPH_MODE_FOCUS && focusSeeds.size) await refreshFocusMap();
+  });
+  focusPanelEl.querySelector('#refreshFocus')?.addEventListener('click', () => refreshFocusMap());
+  focusPanelEl.querySelector('#clearFocus')?.addEventListener('click', async () => {
+    focusSeeds = new Set();
+    focusTarget = null;
+    focusPacket = null;
+    renderFocusPanel();
+    if (graphMode === GRAPH_MODE_FOCUS) await refreshFocusMap(false);
+  });
+}
+
 function renderShell() {
   app.innerHTML = `
     <main class="graph-app">
@@ -586,6 +897,10 @@ function renderShell() {
           <h1 id="pageTitle">Lesson-Kit</h1>
           <p id="pageMeta">加载中</p>
         </header>
+        <div class="mode-switch" role="group" aria-label="Graph view mode">
+          <button id="modeFull" class="active" type="button">全图</button>
+          <button id="modeFocus" type="button">Focus</button>
+        </div>
         <label class="field">
           <span>搜索</span>
           <input id="search" type="search" placeholder="名称、ID、正文" autocomplete="off" />
@@ -606,6 +921,7 @@ function renderShell() {
           <span><strong id="nodeCount">0</strong> 知识点</span>
           <span><strong id="edgeCount">0</strong> 关系</span>
         </div>
+        <div id="focusPanel" class="focus-panel"></div>
       </aside>
       <section class="graph-stage" aria-label="知识图谱">
         <div class="graph-toolbar">
@@ -628,6 +944,9 @@ function renderShell() {
   scaleEl = document.getElementById('scaleBadge');
   toastEl = document.getElementById('toast');
   focusEl = document.getElementById('focusHint');
+  focusPanelEl = document.getElementById('focusPanel');
+  modeFullEl = document.getElementById('modeFull');
+  modeFocusEl = document.getElementById('modeFocus');
   graphLayer = document.createElementNS(SVG_NS, 'g');
   edgeLayer = document.createElementNS(SVG_NS, 'g');
   nodeLayer = document.createElementNS(SVG_NS, 'g');
@@ -636,6 +955,8 @@ function renderShell() {
 
   searchEl.addEventListener('input', updateState);
   statusEl.addEventListener('change', updateState);
+  modeFullEl.addEventListener('click', () => setGraphMode(GRAPH_MODE_FULL));
+  modeFocusEl.addEventListener('click', () => setGraphMode(GRAPH_MODE_FOCUS));
   document.getElementById('zoomIn').addEventListener('click', () => setZoom(view.scale * 1.16));
   document.getElementById('zoomOut').addEventListener('click', () => setZoom(view.scale / 1.16));
   document.getElementById('fitGraph').addEventListener('click', () => {
@@ -666,16 +987,18 @@ function renderShell() {
     event.preventDefault();
     setZoom(view.scale * (event.deltaY > 0 ? 0.92 : 1.08));
   }, { passive: false });
+  renderFocusPanel();
+  updateModeButtons();
 }
 
 async function boot() {
   renderShell();
   try {
-    hydrateGraph(await fetchGraph());
+    fullGraph = await fetchGraph();
+    fullNodeById = new Map(fullGraph.nodes.map((node) => [node.id, node]));
+    hydrateGraph(fullGraph);
     document.getElementById('pageTitle').textContent = `${graph.meta.course_name} ${graph.meta.chapter}`;
-    document.getElementById('pageMeta').textContent = 'Editable Graph View';
-    document.getElementById('nodeCount').textContent = graph.meta.node_count;
-    document.getElementById('edgeCount').textContent = graph.meta.edge_count;
+    updateCounts();
     renderGraph();
     await selectNode(nodes[0]);
   } catch (error) {

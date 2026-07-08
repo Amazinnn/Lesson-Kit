@@ -131,6 +131,79 @@ select {
   padding: 5px 9px;
 }
 
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(90, 92, 96, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+.mode-switch button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 680;
+}
+
+.mode-switch button.active {
+  background: #202124;
+  color: #fffefb;
+}
+
+.focus-panel {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid rgba(90, 92, 96, 0.14);
+  padding-top: 12px;
+}
+
+.focus-head,
+.focus-label,
+.toggle-line {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 680;
+}
+
+.focus-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.focus-block {
+  display: grid;
+  gap: 6px;
+}
+
+.focus-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.field.mini input {
+  height: 32px;
+}
+
+.toggle-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-line input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
 .graph-toolbar {
   top: 16px;
   left: 50%;
@@ -192,6 +265,15 @@ select {
 .edge.focused {
   stroke: rgba(37, 109, 112, 0.72);
   stroke-width: 2.1;
+}
+
+.edge.path-edge {
+  stroke: rgba(37, 109, 112, 0.88);
+  stroke-width: 2.6;
+}
+
+.edge.signal-edge {
+  stroke-dasharray: 7 5;
 }
 
 .edge.dimmed {
@@ -270,6 +352,26 @@ select {
 .node.pinned .core {
   stroke: #202124;
   stroke-width: 3;
+}
+
+.node.seed-node .core {
+  fill: var(--accent);
+  stroke: #174f52;
+}
+
+.node.target-node .core {
+  fill: var(--wrong);
+  stroke: #7f2b27;
+}
+
+.node.path-node .halo {
+  opacity: 0.18;
+  stroke: var(--accent);
+}
+
+.node.signal-node .core {
+  stroke-width: 3;
+  stroke: var(--reviewing);
 }
 
 .node.dimmed {
@@ -423,6 +525,30 @@ select {
   color: var(--ink);
   padding: 5px 9px;
   font-size: 0.78rem;
+}
+
+.focus-chip {
+  cursor: pointer;
+  text-align: left;
+}
+
+.seed-chip {
+  border-color: rgba(37, 109, 112, 0.32);
+  background: rgba(37, 109, 112, 0.1);
+}
+
+.target-chip {
+  border-color: rgba(182, 64, 58, 0.32);
+  background: rgba(182, 64, 58, 0.1);
+}
+
+.path-chip {
+  border-color: rgba(37, 109, 112, 0.26);
+}
+
+.signal-chip {
+  border-color: rgba(138, 111, 19, 0.34);
+  background: rgba(138, 111, 19, 0.1);
 }
 
 .dot {

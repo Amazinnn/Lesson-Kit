@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sqlite3
 import sys
 import tempfile
@@ -195,6 +196,58 @@ class ProblemProgressTests(unittest.TestCase):
                 "dmath-ch07-prob-001",
                 "wrong",
                 "",
+            )
+
+    def test_server_focus_map_reads_signal_file_without_solution_leakage(self):
+        signal_path = self.root / "signal-map.json"
+        signal_path.write_text(
+            json.dumps(
+                {
+                    "signals": [
+                        {
+                            "signal_id": "sig:001",
+                            "target_type": "node",
+                            "target_id": "dmath-ch06-kp-001",
+                            "signal_type": "weak_node",
+                            "weight": "high",
+                            "note": "needs practice",
+                            "source": "test",
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        packet = serve_graph.load_focus_map(
+            self.db_path,
+            "dmath",
+            "ch06",
+            ["dmath-ch06-kp-001"],
+            None,
+            1,
+            10,
+            False,
+            signal_path,
+        )
+
+        self.assertEqual(packet["meta"]["view"], "focus-map")
+        self.assertEqual(packet["nodes"][0]["id"], "dmath-ch06-kp-001")
+        self.assertEqual(packet["signals"][0]["signal_id"], "sig:001")
+        self.assertNotIn("solution must not leak", json.dumps(packet, ensure_ascii=False))
+
+    def test_server_focus_map_rejects_out_of_scope_seed(self):
+        with self.assertRaisesRegex(ValueError, "seed KP not found"):
+            serve_graph.load_focus_map(
+                self.db_path,
+                "dmath",
+                "ch06",
+                ["dmath-ch07-kp-001"],
+                None,
+                1,
+                10,
+                False,
+                None,
             )
 
 

@@ -11,7 +11,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Optional, Sequence
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -32,6 +32,15 @@ assert RENDER_SPEC.loader is not None
 sys.modules["render_graph_html"] = render_graph_html
 RENDER_SPEC.loader.exec_module(render_graph_html)
 
+FOCUS_SPEC = importlib.util.spec_from_file_location(
+    "query_focus_map",
+    SCRIPT_DIR / "query-focus-map.py",
+)
+query_focus_map = importlib.util.module_from_spec(FOCUS_SPEC)
+assert FOCUS_SPEC.loader is not None
+sys.modules["query_focus_map"] = query_focus_map
+FOCUS_SPEC.loader.exec_module(query_focus_map)
+
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -43,6 +52,11 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument("--course-name", required=True, help="Human-readable course name.")
     parser.add_argument("--host", default="127.0.0.1", help="Bind host. Defaults to 127.0.0.1.")
     parser.add_argument("--port", type=int, default=8765, help="Bind port. Defaults to 8765.")
+    parser.add_argument(
+        "--signals",
+        default=None,
+        help="Optional signal-map JSON file used by /api/focus-map.",
+    )
     return parser.parse_args(argv)
 
 
@@ -62,6 +76,67 @@ def load_graph(db_path: Path, course: str, chapter: str, course_name: str) -> Di
         conn.close()
     graph["meta"]["editable"] = True
     return graph
+
+
+def load_focus_map(
+    db_path: Path,
+    course: str,
+    chapter: str,
+    seed_ids: Sequence[str],
+    target_id: Optional[str],
+    depth: int,
+    max_nodes: int,
+    directed: bool,
+    signals_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    if not seed_ids:
+        raise ValueError("at least one seed is required")
+    signals = query_focus_map.load_signal_map(str(signals_path)) if signals_path else []
+    conn = sqlite3.connect(db_path)
+    try:
+        packet = query_focus_map.build_focus_map(
+            conn,
+            course=course,
+            chapter=chapter,
+            seed_ids=seed_ids,
+            target_id=target_id,
+            depth=depth,
+            max_nodes=max_nodes,
+            signals=signals,
+            directed=directed,
+        )
+    finally:
+        conn.close()
+    packet["meta"]["editable"] = True
+    return packet
+
+
+def query_int(values: Dict[str, list[str]], key: str, default: int, minimum: int, maximum: int) -> int:
+    raw = values.get(key, [str(default)])[-1]
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"{key} must be an integer") from exc
+    if value < minimum or value > maximum:
+        raise ValueError(f"{key} must be between {minimum} and {maximum}")
+    return value
+
+
+def query_bool(values: Dict[str, list[str]], key: str, default: bool = False) -> bool:
+    if key not in values:
+        return default
+    raw = str(values.get(key, [""])[-1]).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def query_seeds(values: Dict[str, list[str]]) -> list[str]:
+    seed_ids: list[str] = []
+    for raw in values.get("seed", []):
+        for item in str(raw).split(","):
+            item = item.strip()
+            if item and item not in seed_ids:
+                seed_ids.append(item)
+    return seed_ids
 
 
 def update_kp_text(
@@ -161,6 +236,7 @@ class GraphHandler(BaseHTTPRequestHandler):
     course: str
     chapter: str
     course_name: str
+    signals_path: Optional[Path]
 
     def log_message(self, format: str, *args: Any) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), format % args))
@@ -224,6 +300,25 @@ class GraphHandler(BaseHTTPRequestHandler):
             graph = load_graph(self.db_path, self.course, self.chapter, self.course_name)
             self.send_json(HTTPStatus.OK, graph)
             return
+        if parsed.path == "/api/focus-map":
+            try:
+                params = parse_qs(parsed.query)
+                target_id = (params.get("target", [""])[-1] or "").strip() or None
+                packet = load_focus_map(
+                    self.db_path,
+                    self.course,
+                    self.chapter,
+                    query_seeds(params),
+                    target_id,
+                    query_int(params, "depth", 2, 0, 6),
+                    query_int(params, "max_nodes", 30, 1, 120),
+                    query_bool(params, "directed", False),
+                    self.signals_path,
+                )
+                self.send_json(HTTPStatus.OK, packet)
+            except (OSError, ValueError, json.JSONDecodeError, sqlite3.Error) as exc:
+                self.send_json(HTTPStatus.BAD_REQUEST, {"ok": False, "error": str(exc)})
+            return
         if parsed.path.startswith("/assets/"):
             if self.send_frontend_file(parsed.path.removeprefix("/")):
                 return
@@ -268,6 +363,9 @@ def serve(args: argparse.Namespace) -> None:
     db_path = Path(args.db)
     if not db_path.is_file():
         raise FileNotFoundError(f"DB not found: {db_path}")
+    signals_path = Path(args.signals) if args.signals else None
+    if signals_path and not signals_path.is_file():
+        raise FileNotFoundError(f"Signal map not found: {signals_path}")
     handler = type(
         "ConfiguredGraphHandler",
         (GraphHandler,),
@@ -276,6 +374,7 @@ def serve(args: argparse.Namespace) -> None:
             "course": args.course,
             "chapter": args.chapter,
             "course_name": args.course_name,
+            "signals_path": signals_path,
         },
     )
     server = ThreadingHTTPServer((args.host, args.port), handler)
