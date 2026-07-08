@@ -19,6 +19,12 @@ from collections import Counter, OrderedDict
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from course_network import fetch_knowledge_relations  # noqa: E402
+
 
 SECTION_PATTERN = re.compile(r"(?:§|Section|Sec\.?)\s*([\w\-\.]+)", re.IGNORECASE)
 PROBLEM_STATES = ("new", "wrong", "stuck", "reviewing", "mastered")
@@ -303,10 +309,10 @@ def fetch_problem_summaries(
     return grouped
 
 
-def build_edges(kps: List[Dict[str, Any]]) -> List[Dict[str, str]]:
+def build_edges(kps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     known = {kp["id"] for kp in kps}
     seen = set()
-    edges: List[Dict[str, str]] = []
+    edges: List[Dict[str, Any]] = []
     for kp in kps:
         source = kp["id"]
         for target in kp["related"]:
@@ -320,7 +326,7 @@ def build_edges(kps: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     return edges
 
 
-def compute_degrees(kps: List[Dict[str, Any]], edges: List[Dict[str, str]]) -> Dict[str, int]:
+def compute_degrees(kps: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> Dict[str, int]:
     neighbors = {kp["id"]: set() for kp in kps}
     for edge in edges:
         source = edge["source"]
@@ -436,11 +442,19 @@ def build_graph_data(
     kp_states = fetch_kp_states(conn, kp_ids)
     problem_groups = fetch_problem_summaries(conn, course, chapter, kp_ids)
     stable_layout(kps, GRAPH_WIDTH, GRAPH_HEIGHT)
-    edges = build_edges(kps)
+    edges = fetch_knowledge_relations(conn, kps)
+    edge_neighbors = {kp_id: set() for kp_id in kp_ids}
+    for edge in edges:
+        source = edge["source"]
+        target = edge["target"]
+        if source in edge_neighbors and target in edge_neighbors:
+            edge_neighbors[source].add(target)
+            edge_neighbors[target].add(source)
     degrees = compute_degrees(kps, edges)
 
     for kp in kps:
         kp_id = kp["id"]
+        kp["related"] = sorted(set(kp.get("related", [])) | edge_neighbors.get(kp_id, set()))
         groups = problem_groups.get(kp_id, {state: [] for state in PROBLEM_STATES})
         problem_counts = {state: len(groups.get(state, [])) for state in PROBLEM_STATES}
         kp["kp_state"] = kp_states.get(kp_id, "")

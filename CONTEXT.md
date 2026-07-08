@@ -15,6 +15,32 @@ A reusable unit of course knowledge extracted from source material and stored
 in the pool.
 _Avoid_: Card, notelet
 
+**Course Learning Network**:
+The course-scoped knowledge-point network made from audited knowledge points,
+audited low-level relations, and query-time graph findings.
+_Avoid_: Generic life map, final ontology
+
+**Knowledge Relation**:
+An audited point-to-point edge between two knowledge points, stored in
+`knowledge_relations`. It is the low-level graph fact layer.
+_Avoid_: Hidden relation, algorithmic discovery
+
+**Graph Finding**:
+A query-time discovery produced from the Course Learning Network, such as a
+shortest path, shared neighbor, bridge node, or dense section. It is not stored
+as a durable relation unless later audited.
+_Avoid_: Source relation, extracted fact
+
+**Signal Map**:
+A lightweight learner-feedback layer that marks weak nodes, confusion,
+transfer failures, missing prerequisites, or suspected relation gaps.
+_Avoid_: Relation manifest, problem record
+
+**Focus Map View**:
+A compact JSON subgraph around seed knowledge points, optional target paths,
+shared neighbors, simple clusters, and learner signals.
+_Avoid_: Full graph preview, generated lesson
+
 **Graph Label**:
 A short, audited label for a knowledge point when it appears as a node in a
 map-like graph.

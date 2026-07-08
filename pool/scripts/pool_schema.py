@@ -5,6 +5,16 @@ from typing import Iterable, List
 
 
 PROBLEM_STATES = ("new", "wrong", "stuck", "reviewing", "mastered")
+VALID_RELATION_TYPES = (
+    "prerequisite",
+    "part_of",
+    "contrasts",
+    "generalizes",
+    "variant_of",
+    "applies_to",
+)
+VALID_RELATION_DIRECTIONS = ("directed", "symmetric")
+VALID_RELATION_STRENGTHS = ("high", "medium", "low")
 
 
 def table_exists(conn: sqlite3.Connection, name: str) -> bool:
@@ -120,5 +130,44 @@ def ensure_learning_state_schema(conn: sqlite3.Connection) -> List[str]:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_problem_attempts_problem_id "
         "ON problem_attempts(problem_id)"
+    )
+    return changes
+
+
+def ensure_course_network_schema(conn: sqlite3.Connection) -> List[str]:
+    """Apply the course learning network relation schema idempotently."""
+    changes: List[str] = []
+    if not table_exists(conn, "knowledge_relations"):
+        conn.execute(
+            """
+            CREATE TABLE knowledge_relations (
+                relation_id  TEXT PRIMARY KEY,
+                source_kp_id TEXT NOT NULL REFERENCES knowledge_points(kp_id),
+                target_kp_id TEXT NOT NULL REFERENCES knowledge_points(kp_id),
+                relation_type TEXT NOT NULL CHECK (relation_type IN (
+                    'prerequisite', 'part_of', 'contrasts',
+                    'generalizes', 'variant_of', 'applies_to'
+                )),
+                direction    TEXT NOT NULL CHECK (direction IN ('directed', 'symmetric')),
+                strength     TEXT NOT NULL CHECK (strength IN ('high', 'medium', 'low')),
+                created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
+                CHECK (source_kp_id <> target_kp_id),
+                UNIQUE (source_kp_id, target_kp_id, relation_type)
+            )
+            """
+        )
+        changes.append("knowledge_relations")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_relations_source "
+        "ON knowledge_relations(source_kp_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_relations_target "
+        "ON knowledge_relations(target_kp_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_relations_type "
+        "ON knowledge_relations(relation_type)"
     )
     return changes

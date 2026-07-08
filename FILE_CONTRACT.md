@@ -40,6 +40,26 @@ Required files:
 04_checks/problem-pool-validation-report.md
 ```
 
+## Course Learning Network
+
+Low-level audited relations may be added after KP extraction.
+
+Optional relation manifest:
+
+```text
+intermediate/{course}/extraction/{chapter}/02_analysis/relation-insert-manifest.json
+```
+
+Optional learner signal map:
+
+```text
+intermediate/{course}/signals/{chapter}/signal-map.json
+```
+
+These files do not replace the required KP extraction files. Relation manifests
+store durable point-to-point graph facts. Signal maps store learner-specific
+attention, confusion, and relation-gap signals for Focus Map queries.
+
 ## Problem-Set View
 
 Path:

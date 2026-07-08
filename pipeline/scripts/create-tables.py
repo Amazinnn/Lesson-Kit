@@ -2,9 +2,9 @@
 """
 Pipeline Step 1: Create lesson-kit pool SQLite database.
 
-Creates the active tables (knowledge_points, questions, problems,
-kp_progress, question_progress, problem_progress, problem_attempts) and
-indexes defined in the lesson-kit
+Creates the active tables (knowledge_points, knowledge_relations, questions,
+problems, kp_progress, question_progress, problem_progress, problem_attempts)
+and indexes defined in the lesson-kit
 pool contract.
 
 Usage:
@@ -52,6 +52,27 @@ CREATE INDEX idx_kp_type       ON knowledge_points(knowledge_type);
 CREATE INDEX idx_kp_importance ON knowledge_points(importance);
 CREATE INDEX idx_kp_difficulty ON knowledge_points(difficulty);
 CREATE INDEX idx_kp_fragile    ON knowledge_points(fragile);
+
+-- knowledge_relations: audited low-level course network edges
+CREATE TABLE knowledge_relations (
+    relation_id   TEXT PRIMARY KEY,
+    source_kp_id  TEXT NOT NULL REFERENCES knowledge_points(kp_id),
+    target_kp_id  TEXT NOT NULL REFERENCES knowledge_points(kp_id),
+    relation_type TEXT NOT NULL CHECK (relation_type IN (
+                      'prerequisite', 'part_of', 'contrasts',
+                      'generalizes', 'variant_of', 'applies_to'
+                  )),
+    direction     TEXT NOT NULL CHECK (direction IN ('directed', 'symmetric')),
+    strength      TEXT NOT NULL CHECK (strength IN ('high', 'medium', 'low')),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at    TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (source_kp_id <> target_kp_id),
+    UNIQUE (source_kp_id, target_kp_id, relation_type)
+);
+
+CREATE INDEX idx_knowledge_relations_source ON knowledge_relations(source_kp_id);
+CREATE INDEX idx_knowledge_relations_target ON knowledge_relations(target_kp_id);
+CREATE INDEX idx_knowledge_relations_type   ON knowledge_relations(relation_type);
 
 -- questions: chapter companion MCQs (kept for design intent; not populated by Create)
 CREATE TABLE questions (
@@ -180,6 +201,7 @@ def main(argv=None) -> int:
     conn = sqlite3.connect(db_path)
     try:
         existing_tables = [
+            "knowledge_relations",
             "knowledge_points",
             "questions",
             "problems",
@@ -214,10 +236,10 @@ def main(argv=None) -> int:
         prefix = "fresh" if not existed_before else "existing"
         print(f"{verb} schema in {prefix} DB: {db_path}")
         print(
-            "  - 7 tables: knowledge_points, questions, problems, "
-            "kp_progress, question_progress, problem_progress, problem_attempts"
+            "  - 8 tables: knowledge_points, knowledge_relations, questions, "
+            "problems, kp_progress, question_progress, problem_progress, problem_attempts"
         )
-        print(f"  - 11 indexes")
+        print(f"  - 14 indexes")
         return 0
     except sqlite3.Error as exc:
         print(f"SQLite error: {exc}", file=sys.stderr)
