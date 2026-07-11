@@ -7,6 +7,7 @@ packages govern current lesson-kit work.
 |---|---|---|
 | "extract this chapter", "build the KP pool" | `pipeline/commands/extract-chapter.md` | `pool-insert-manifest.json` |
 | "extract the exercises/problems", "build the problem pool" | `pipeline/commands/extract-problems.md` | `full-problem-bank.md` |
+| "generate checks", "make remediation practice", "no source problems" | `pipeline/commands/generate-problem-candidates.md` | `candidate-insert-manifest.json` |
 | "show me the knowledge guide", "print the chapter guide" | `pool/scripts/print-graph.py` | existing `knowledge_points` rows |
 | "make a problem set", "practice problems" | `views/problem-set/command.md` | existing `problems` rows |
 
@@ -47,6 +48,8 @@ workflow step.
 
 - Run KP extraction before problem extraction.
 - Run problem extraction before problem-set rendering.
-- Problem-set v1 does not generate new problems; it records gaps.
+- Keep sourced problem extraction separate from candidate generation.
+- Problem-set v1 does not generate new problems; generate and explicitly import
+  candidates before rendering them as durable problems.
 - The student-facing problem set hides KP IDs and solutions.
 - The solution file mirrors problem numbering and marks missing solution text as `待补`.

@@ -30,6 +30,7 @@ from typing import Any, Dict, List, Set
 
 KP_ID_PATTERN = re.compile(r"^[a-z0-9]+-ch\d{2}-kp-\d{3}$")
 PROBLEM_ID_PATTERN = re.compile(r"^[a-z0-9]+-ch\d{2}-prob-\d{3}$")
+CANDIDATE_ID_PATTERN = re.compile(r"^[a-z0-9]+-ch\d{2}-cand-\d{3}$")
 
 VALID_KNOWLEDGE_TYPES: Set[str] = {
     "concept-property",
@@ -155,6 +156,9 @@ def run_schema_gate(conn: sqlite3.Connection) -> List[Dict[str, Any]]:
         "problems",
         "problem_progress",
         "problem_attempts",
+        "candidate_problems",
+        "candidate_attempts",
+        "learner_signals",
     ]
     for table in required_tables:
         if not table_exists(conn, table):
@@ -436,6 +440,173 @@ def run_problem_progress_gates(
     return findings
 
 
+def run_candidate_gates(
+    conn: sqlite3.Connection,
+    prefix: str,
+    all_kp_ids: Set[str],
+    scoped_problem_ids: Set[str],
+) -> List[Dict[str, Any]]:
+    findings: List[Dict[str, Any]] = []
+    if not all(
+        table_exists(conn, table)
+        for table in ("candidate_problems", "candidate_attempts", "learner_signals")
+    ):
+        return findings
+
+    candidate_prefix = f"{prefix}cand-" if prefix else ""
+    rows = query_rows(
+        conn,
+        """
+        SELECT candidate_id, kp_ids, options_json, source_evidence_json,
+               interaction_type, status, structure_gate_status,
+               audit_gate_status, gate_report, imported_problem_id
+        FROM candidate_problems
+        """,
+        """
+        SELECT candidate_id, kp_ids, options_json, source_evidence_json,
+               interaction_type, status, structure_gate_status,
+               audit_gate_status, gate_report, imported_problem_id
+        FROM candidate_problems WHERE candidate_id LIKE ?
+        """,
+        candidate_prefix,
+    )
+    scoped_candidate_ids: Set[str] = set()
+    all_problem_ids = {
+        str(row[0]) for row in conn.execute("SELECT problem_id FROM problems")
+    }
+    for row in rows:
+        (
+            candidate_id,
+            kp_ids_raw,
+            options_raw,
+            evidence_raw,
+            interaction_type,
+            status,
+            structure_status,
+            audit_status,
+            gate_report,
+            imported_problem_id,
+        ) = row
+        scoped_candidate_ids.add(str(candidate_id))
+        if not candidate_id or not CANDIDATE_ID_PATTERN.match(str(candidate_id)):
+            findings.append(
+                finding("candidate-lifecycle", "ERROR", f"{candidate_id}: invalid candidate_id")
+            )
+        try:
+            kp_ids = json.loads(kp_ids_raw)
+        except (TypeError, json.JSONDecodeError):
+            kp_ids = None
+        if not isinstance(kp_ids, list) or not kp_ids:
+            findings.append(
+                finding("candidate-linkage", "ERROR", f"{candidate_id}: kp_ids must be a non-empty JSON array")
+            )
+        else:
+            for kp_id in kp_ids:
+                if kp_id not in all_kp_ids:
+                    findings.append(
+                        finding("candidate-linkage", "ERROR", f"{candidate_id}: kp_id '{kp_id}' not found")
+                    )
+
+        try:
+            evidence = json.loads(evidence_raw)
+        except (TypeError, json.JSONDecodeError):
+            evidence = None
+        if not isinstance(evidence, list) or not evidence:
+            findings.append(
+                finding("candidate-grounding", "ERROR", f"{candidate_id}: source evidence is missing or invalid")
+            )
+
+        if interaction_type == "free_response" and options_raw:
+            findings.append(
+                finding("candidate-structure", "ERROR", f"{candidate_id}: free_response must not store options")
+            )
+        elif interaction_type != "free_response":
+            try:
+                options = json.loads(options_raw) if options_raw else None
+            except json.JSONDecodeError:
+                options = None
+            if not isinstance(options, list) or len(options) < 2:
+                findings.append(
+                    finding("candidate-structure", "ERROR", f"{candidate_id}: choice options are missing or invalid")
+                )
+
+        double_pass = structure_status == "pass" and audit_status == "pass"
+        if status == "gate_passed" and not double_pass:
+            findings.append(
+                finding(
+                    "candidate-lifecycle",
+                    "ERROR",
+                    f"{candidate_id}: gate_passed requires structure and audit PASS",
+                )
+            )
+        if status in {"gate_passed", "imported"} and not gate_report:
+            findings.append(
+                finding("candidate-lifecycle", "ERROR", f"{candidate_id}: passed candidate is missing gate_report")
+            )
+        if status == "imported":
+            if not double_pass:
+                findings.append(
+                    finding("candidate-lifecycle", "ERROR", f"{candidate_id}: imported candidate requires double PASS")
+                )
+            if not imported_problem_id:
+                findings.append(
+                    finding("candidate-lifecycle", "ERROR", f"{candidate_id}: imported candidate is missing imported_problem_id")
+                )
+            elif imported_problem_id not in all_problem_ids:
+                findings.append(
+                    finding(
+                        "candidate-lifecycle",
+                        "ERROR",
+                        f"{candidate_id}: imported_problem_id references missing problem '{imported_problem_id}'",
+                    )
+                )
+        elif imported_problem_id:
+            findings.append(
+                finding("candidate-lifecycle", "ERROR", f"{candidate_id}: non-imported candidate has imported_problem_id")
+            )
+
+    for candidate_id, status in query_rows(
+        conn,
+        "SELECT candidate_id, status FROM candidate_attempts",
+        "SELECT candidate_id, status FROM candidate_attempts WHERE candidate_id LIKE ?",
+        candidate_prefix,
+    ):
+        if candidate_id not in scoped_candidate_ids:
+            findings.append(
+                finding("candidate-attempt", "ERROR", f"{candidate_id}: attempt references missing candidate")
+            )
+        if status not in VALID_PROBLEM_STATES:
+            findings.append(
+                finding("candidate-attempt", "ERROR", f"{candidate_id}: invalid attempt status '{status}'")
+            )
+
+    relation_ids: Set[str] = set()
+    if table_exists(conn, "knowledge_relations"):
+        relation_ids = {
+            str(row[0]) for row in conn.execute("SELECT relation_id FROM knowledge_relations")
+        }
+    for signal_id, target_type, target_id in conn.execute(
+        "SELECT signal_id, target_type, target_id FROM learner_signals"
+    ):
+        if target_type == "node" and target_id not in all_kp_ids:
+            findings.append(
+                finding(
+                    "learner-signal",
+                    "ERROR",
+                    f"{signal_id}: signal target node does not exist: {target_id}",
+                )
+            )
+        if target_type == "relation" and target_id not in relation_ids:
+            findings.append(
+                finding(
+                    "learner-signal",
+                    "ERROR",
+                    f"{signal_id}: signal target relation does not exist: {target_id}",
+                )
+            )
+    return findings
+
+
 def run_gates(conn: sqlite3.Connection, course: str, chapter: str) -> List[Dict[str, Any]]:
     findings = run_schema_gate(conn)
     if any(f["level"] == "ERROR" and f["gate"] == "schema-conformance" for f in findings):
@@ -471,6 +642,9 @@ def run_gates(conn: sqlite3.Connection, course: str, chapter: str) -> List[Dict[
             )
         }
         findings.extend(run_problem_progress_gates(conn, prefix, scoped_problem_ids))
+        findings.extend(
+            run_candidate_gates(conn, prefix, all_kp_ids, scoped_problem_ids)
+        )
 
     return findings
 

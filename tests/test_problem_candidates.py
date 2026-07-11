@@ -597,6 +597,14 @@ class ProblemCandidateWorkflowTests(unittest.TestCase):
             ],
         )
 
+    def test_candidate_cli_normalizes_powershell_bom_input(self):
+        practice = load_script(
+            "practice_candidates_bom_test",
+            Path("pool/scripts/practice-candidates.py"),
+        )
+
+        self.assertEqual(practice.normalize_cli_input("\ufeffA"), "A")
+
     def test_wrong_candidate_attempt_strengthens_default_weak_node_signal(self):
         practice = load_script(
             "practice_candidates_signal_test",
@@ -804,6 +812,86 @@ class ProblemCandidateWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(duplicate[0], [])
         self.assertIn("near-duplicate", "\n".join(duplicate[2]))
+
+    def test_pool_validator_reports_candidate_lifecycle_and_signal_target_errors(self):
+        validate_pool = load_script(
+            "validate_pool_candidates_test",
+            Path("pipeline/scripts/validate-pool.py"),
+        )
+        self.insert_candidate(gate=False)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute(
+                """
+                UPDATE candidate_problems
+                SET status = 'gate_passed', structure_gate_status = 'pending',
+                    audit_gate_status = 'pass'
+                WHERE candidate_id = 'dmath-ch06-cand-001'
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO learner_signals (
+                    signal_id, target_type, target_id, signal_type, weight,
+                    evidence_count, last_practice_kind
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "sig:missing-node",
+                    "node",
+                    "dmath-ch06-kp-999",
+                    "weak_node",
+                    "medium",
+                    1,
+                    "candidate",
+                ),
+            )
+            conn.commit()
+            findings = validate_pool.run_candidate_gates(
+                conn,
+                "dmath-ch06-",
+                {"dmath-ch06-kp-001"},
+                set(),
+            )
+        finally:
+            conn.close()
+
+        messages = "\n".join(item["message"] for item in findings)
+        self.assertIn("gate_passed requires structure and audit PASS", messages)
+        self.assertIn("signal target node does not exist", messages)
+
+    def test_pool_validator_reports_imported_candidate_with_missing_problem(self):
+        validate_pool = load_script(
+            "validate_pool_imported_candidate_test",
+            Path("pipeline/scripts/validate-pool.py"),
+        )
+        self.insert_candidate(gate=False)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("PRAGMA foreign_keys = OFF")
+            conn.execute(
+                """
+                UPDATE candidate_problems
+                SET status = 'imported', structure_gate_status = 'pass',
+                    audit_gate_status = 'pass',
+                    imported_problem_id = 'dmath-ch06-prob-999'
+                WHERE candidate_id = 'dmath-ch06-cand-001'
+                """
+            )
+            conn.commit()
+            findings = validate_pool.run_candidate_gates(
+                conn,
+                "dmath-ch06-",
+                {"dmath-ch06-kp-001"},
+                set(),
+            )
+        finally:
+            conn.close()
+
+        self.assertIn(
+            "imported_problem_id references missing problem",
+            "\n".join(item["message"] for item in findings),
+        )
 
 
 if __name__ == "__main__":

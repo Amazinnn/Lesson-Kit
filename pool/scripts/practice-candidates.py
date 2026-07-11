@@ -19,6 +19,11 @@ from learner_signals import upsert_learner_signal  # noqa: E402
 from pool_schema import PROBLEM_STATES, ensure_problem_candidate_schema  # noqa: E402
 
 
+def normalize_cli_input(value: str) -> str:
+    """Normalize interactive and piped console input on Windows."""
+    return value.strip().lstrip("\ufeff").strip()
+
+
 def record_candidate_attempt(
     db_path: Path | str,
     candidate_id: str,
@@ -165,14 +170,14 @@ def run_session(db_path: Path, candidate_ids: Sequence[str] | None = None) -> in
         if row["interaction_type"] == "free_response":
             input("Write or think through your answer, then press Enter to reveal the solution. ")
             print(f"\nSolution\n{row['solution']}\n")
-            status = input("Status [wrong/stuck/reviewing/mastered]: ").strip()
-            note = input("Note (optional): ").strip()
+            status = normalize_cli_input(input("Status [wrong/stuck/reviewing/mastered]: "))
+            note = normalize_cli_input(input("Note (optional): "))
             record_candidate_attempt(db_path, row["candidate_id"], status, None, note)
             continue
 
-        selected = input("Answer option, or ? if stuck: ").strip()
+        selected = normalize_cli_input(input("Answer option, or ? if stuck: "))
         if selected == "?":
-            note = input("What blocked you? ").strip()
+            note = normalize_cli_input(input("What blocked you? "))
             record_candidate_attempt(db_path, row["candidate_id"], "stuck", None, note)
         else:
             correct = selected == row["correct_option_id"]
@@ -182,7 +187,7 @@ def run_session(db_path: Path, candidate_ids: Sequence[str] | None = None) -> in
             )
             if selected_option:
                 print(selected_option["explanation"])
-            note = input("Note (optional): ").strip()
+            note = normalize_cli_input(input("Note (optional): "))
             record_candidate_attempt(
                 db_path,
                 row["candidate_id"],

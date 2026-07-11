@@ -18,7 +18,8 @@ Do not use this command when:
 
 - The chapter has not been extracted into KPs yet.
 - The user wants a student-facing problem set. Use `views/problem-set/command.md`.
-- The user wants generated supplemental problems. v1 problem extraction stores
+- The user wants generated supplemental practice. Use
+  `pipeline/commands/generate-problem-candidates.md`; problem extraction stores
   sourced problems only.
 
 ## Required Load List
