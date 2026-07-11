@@ -66,7 +66,7 @@
 | `graph_label` | string | ❌ | 图谱节点短标签，单行，24 字符以内；缺失时图谱机械回退到 `knowledge_item` 短截断 |
 | `source_location` | string | ❌ | 推荐填，缺失不报错 |
 | `knowledge_type` | enum | ✅ | 在合法枚举内（见下） |
-| `related_kp_ids` | list<string> | ❌ | 数组，可为空 `[]` |
+| `related_kp_ids` | list<string> | ❌ | 数组，可为空 `[]`；manifest 使用数组，入库脚本负责序列化 |
 | `importance` | enum | ✅ | core / supplementary / optional |
 | `learning_action` | string | ❌ | 推荐填 |
 | `body` | string | ❌ | KP 正文（定义、推导、例题）。缺失时 print-graph 输出 `*[正文待补充]*` |

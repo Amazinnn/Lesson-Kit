@@ -29,3 +29,14 @@ the separate structural half.
 Every check and the top-level status must be `PASS` before the candidate may
 be practiced or imported. A failed or malformed audit moves the candidate to
 `needs_revision`; it never asks the learner to approve the item.
+
+## Check meanings
+
+- `source_grounding`: the stem, options, and solution stay anchored to the
+  cited source evidence.
+- `answer_correctness`: the stated correct answer and solution are correct.
+- `training_usefulness`: the candidate tests a useful learning action for the
+  linked KPs.
+- `option_plausibility`: wrong options are plausible but not ambiguous. For
+  remediation candidates, this also covers whether each `error_lure` matches
+  the misconception implied by the wrong option.

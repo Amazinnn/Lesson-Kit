@@ -37,6 +37,7 @@ skills/problem-model-space/SKILL.md
 - Remediation: six candidates per requested signal; multi-KP candidates are
   allowed when the signal describes confusion between linked KPs.
 - User-specified counts override these defaults.
+- If no purpose is specified, use `first_pass_check`.
 - Scenario policy is `source_anchored`: change the angle, reverse the question,
   split conditions, or compare adjacent concepts without replacing the source's
   core scenario.
@@ -53,6 +54,10 @@ intermediate/{course}/problem_generation/{chapter}/
 ├── 02_analysis/
 └── 04_checks/
 ```
+
+`01_inputs/` stores the query evidence used to author the candidates. At
+minimum, save the relevant `query-pool.py` output. For remediation, also save
+the Focus Map output that supplied learner signals or neighbor relations.
 
 2. Query the requested KPs. For remediation, also query the Focus Map so the
 Agent sees current SQLite learner signals and audited neighbor relations.
@@ -95,6 +100,14 @@ python pool/scripts/practice-candidates.py --db pool/{course}.db --candidate {co
 # Explicitly import eligible candidates into the durable problems table.
 python pipeline/scripts/import-candidates.py --db pool/{course}.db --candidate {course}-{chapter}-cand-001
 ```
+
+`practice-candidates.py` is interactive. For each candidate it prompts for an
+answer or `?` when stuck, then records the attempt and note. Headless smoke
+tests may pipe stdin, but normal learner use is interactive.
+
+Repeat `--candidate` to practice or import multiple explicit candidates. If no
+candidate is supplied, practice lists all `gate_passed` candidates and import
+attempts all eligible `gate_passed` candidates.
 
 Import does not require prior practice. If practice exists, import migrates one
 summary attempt and the final candidate state. Exact or near-duplicate stems

@@ -49,6 +49,23 @@ source-grounded practice candidates.
 }
 ```
 
+For remediation candidates, every wrong option must identify the learner signal
+it is meant to probe:
+
+```json
+{
+  "id": "A",
+  "text": "$3+2$",
+  "explanation": "This adds independent stages instead of multiplying them.",
+  "error_lure": {
+    "signal_type": "weak_node",
+    "target_type": "node",
+    "target_id": "dmath-ch06-kp-001",
+    "note": "Confuses product rule with sum rule."
+  }
+}
+```
+
 ## Enums
 
 - `interaction_type`: `single_choice | true_false | free_response`
@@ -56,13 +73,25 @@ source-grounded practice candidates.
 - `origin_kind`: `source_problem | adapted_problem | generated_grounded`
 - `problem_type`: `calculation | proof | modeling | explanation | experiment | design | application | counterexample | other`
 - `source_kind`: `textbook | quiz | midterm | final | makeup | other`
+- `error_lure.target_type`: `node | relation`
 
 ## Rules
 
 - Every candidate links to one or more existing KPs and has non-empty source evidence.
+- `source_evidence[]` requires `source` and `location`; `basis` is recommended
+  for human audit but is not the stable identity of the source.
+- `origin_kind` describes candidate provenance. `source_kind` still describes
+  the underlying material class; generated candidates normally inherit the
+  source kind of the material they are grounded in.
 - `solution` contains the answer and explanation; do not add `answer`.
 - Choice options require unique IDs, text, and explanations. The correct ID must match one option.
 - Every wrong remediation option requires `error_lure` with `signal_type`, `target_type`, and `target_id`.
 - `error_lure.signal_type` uses `weak_node`, `confusion`, `missing_prerequisite`, `transfer_failure`, or `relation_gap`.
-- `free_response` uses null or absent `options` and `correct_option_id`.
+- `error_lure.target_type=node` points to an existing `kp_id`;
+  `target_type=relation` points to an existing audited `relation_id`.
+- `single_choice` requires at least two options and one matching
+  `correct_option_id`.
+- `true_false` requires exactly two options and one matching `correct_option_id`.
+- `free_response` uses null or absent `options` and null or absent
+  `correct_option_id`.
 - Keep stems, subparts, formulas, and solution steps in blank-line-separated Markdown blocks.
