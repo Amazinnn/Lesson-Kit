@@ -316,6 +316,42 @@ class CourseNetworkTests(unittest.TestCase):
         self.assertIn("dmath-ch06-kp-005", node_ids)
         self.assertIn("sig:005", {signal["signal_id"] for signal in packet["signals"]})
 
+    def test_focus_map_loads_course_scoped_learner_signals_from_db_by_default(self):
+        pool_schema.ensure_problem_candidate_schema(self.conn)
+        self.conn.execute(
+            """
+            INSERT INTO learner_signals (
+                signal_id, target_type, target_id, signal_type, weight,
+                evidence_count, note, last_practice_kind, last_practice_ref
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "sig:db-default",
+                "node",
+                "dmath-ch06-kp-005",
+                "weak_node",
+                "high",
+                2,
+                "repeated miss",
+                "candidate",
+                "dmath-ch06-cand-007",
+            ),
+        )
+        self.conn.commit()
+
+        packet = query_focus_map.build_focus_map(
+            self.conn,
+            course="dmath",
+            chapter="ch06",
+            seed_ids=["dmath-ch06-kp-001"],
+            depth=0,
+            max_nodes=2,
+        )
+
+        self.assertIn("dmath-ch06-kp-005", {node["id"] for node in packet["nodes"]})
+        self.assertEqual(packet["signals"][0]["signal_id"], "sig:db-default")
+        self.assertEqual(packet["signals"][0]["source"], "candidate:dmath-ch06-cand-007")
+
 
 if __name__ == "__main__":
     unittest.main()

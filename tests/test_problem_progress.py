@@ -144,6 +144,52 @@ class ProblemProgressTests(unittest.TestCase):
             ],
         )
 
+    def test_formal_wrong_and_stuck_attempts_strengthen_kp_signal(self):
+        record_problem.record_problem(
+            self.db_path,
+            "dmath-ch06-prob-001",
+            "wrong",
+            "first miss",
+        )
+        record_problem.record_problem(
+            self.db_path,
+            "dmath-ch06-prob-001",
+            "stuck",
+            "still blocked",
+        )
+        record_problem.record_problem(
+            self.db_path,
+            "dmath-ch06-prob-001",
+            "mastered",
+            "later success",
+        )
+
+        conn = self.connect()
+        try:
+            signal = conn.execute(
+                """
+                SELECT target_type, target_id, signal_type, weight,
+                       evidence_count, note, last_practice_kind, last_practice_ref
+                FROM learner_signals
+                """
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertEqual(
+            signal,
+            (
+                "node",
+                "dmath-ch06-kp-001",
+                "weak_node",
+                "high",
+                2,
+                "still blocked",
+                "problem",
+                "dmath-ch06-prob-001",
+            ),
+        )
+
     def test_server_helpers_update_only_scoped_kp_and_problem_state(self):
         serve_graph.update_kp_text(
             self.db_path,
@@ -235,6 +281,30 @@ class ProblemProgressTests(unittest.TestCase):
         self.assertEqual(packet["nodes"][0]["id"], "dmath-ch06-kp-001")
         self.assertEqual(packet["signals"][0]["signal_id"], "sig:001")
         self.assertNotIn("solution must not leak", json.dumps(packet, ensure_ascii=False))
+
+    def test_server_focus_map_reads_sqlite_signals_without_signal_file(self):
+        record_problem.record_problem(
+            self.db_path,
+            "dmath-ch06-prob-001",
+            "wrong",
+            "needs product-rule practice",
+        )
+
+        packet = serve_graph.load_focus_map(
+            self.db_path,
+            "dmath",
+            "ch06",
+            ["dmath-ch06-kp-001"],
+            None,
+            1,
+            10,
+            False,
+            None,
+        )
+
+        self.assertEqual(packet["signals"][0]["target_id"], "dmath-ch06-kp-001")
+        self.assertEqual(packet["signals"][0]["source"], "problem:dmath-ch06-prob-001")
+        self.assertEqual(packet["nodes"][0]["signals"][0]["weight"], "medium")
 
     def test_server_focus_map_rejects_out_of_scope_seed(self):
         with self.assertRaisesRegex(ValueError, "seed KP not found"):

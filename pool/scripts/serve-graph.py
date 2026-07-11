@@ -21,6 +21,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from pool_schema import PROBLEM_STATES, ensure_learning_state_schema, table_exists  # noqa: E402
+from learner_signals import upsert_learner_signal  # noqa: E402
 
 
 RENDER_SPEC = importlib.util.spec_from_file_location(
@@ -91,7 +92,7 @@ def load_focus_map(
 ) -> Dict[str, Any]:
     if not seed_ids:
         raise ValueError("at least one seed is required")
-    signals = query_focus_map.load_signal_map(str(signals_path)) if signals_path else []
+    signals = query_focus_map.load_signal_map(str(signals_path)) if signals_path else None
     conn = sqlite3.connect(db_path)
     try:
         packet = query_focus_map.build_focus_map(
@@ -200,7 +201,7 @@ def record_problem_status(
         if not table_exists(conn, "problems"):
             raise ValueError("problems table missing")
         row = conn.execute(
-            "SELECT 1 FROM problems WHERE problem_id = ?",
+            "SELECT kp_ids FROM problems WHERE problem_id = ?",
             (problem_id,),
         ).fetchone()
         if row is None:
@@ -222,6 +223,21 @@ def record_problem_status(
             "INSERT INTO problem_attempts (problem_id, status, note) VALUES (?, ?, ?)",
             (problem_id, status, clean_note),
         )
+        if status in {"wrong", "stuck"}:
+            try:
+                kp_ids = json.loads(row[0] or "[]")
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"invalid kp_ids for problem {problem_id}") from exc
+            for kp_id in kp_ids:
+                upsert_learner_signal(
+                    conn,
+                    "node",
+                    str(kp_id),
+                    "weak_node",
+                    note,
+                    "problem",
+                    problem_id,
+                )
         conn.commit()
         return {"problem_id": problem_id, "status": str(status), "note": clean_note or ""}
     except Exception:

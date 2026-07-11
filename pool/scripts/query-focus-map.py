@@ -31,6 +31,7 @@ from course_network import (  # noqa: E402
     shortest_path,
 )
 from pool_schema import table_exists  # noqa: E402
+from learner_signals import fetch_learner_signals  # noqa: E402
 
 
 SIGNAL_TYPES = (
@@ -393,7 +394,11 @@ def build_focus_map(
     problem_counts = fetch_problem_counts(conn, course, chapter, node_by_id)
     problem_state_counts = fetch_problem_state_counts(conn, course, chapter, node_by_id)
     kp_progress = fetch_kp_progress(conn, node_by_id)
-    loaded_signals = list(signals or [])
+    loaded_signals = (
+        fetch_learner_signals(conn, course, chapter)
+        if signals is None
+        else list(signals)
+    )
     node_signals, relation_signals, signal_nodes = normalize_signal_targets(loaded_signals, relation_by_id)
 
     distances = bfs_distances(adjacency, seed_ids, depth)
@@ -525,7 +530,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("ERROR: at least one --seed is required", file=sys.stderr)
         return 1
     try:
-        signals = load_signal_map(args.signals)
+        signals = load_signal_map(args.signals) if args.signals else None
         conn = sqlite3.connect(args.db)
         try:
             packet = build_focus_map(

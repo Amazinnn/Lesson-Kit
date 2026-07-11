@@ -12,6 +12,7 @@ from pool_schema import (  # type: ignore
     SIGNAL_TARGET_TYPES,
     SIGNAL_TYPES,
     ensure_problem_candidate_schema,
+    table_exists,
 )
 
 
@@ -69,3 +70,72 @@ def upsert_learner_signal(
         ),
     )
     return signal_id
+
+
+def fetch_learner_signals(
+    conn: sqlite3.Connection,
+    course: str,
+    chapter: str,
+) -> list[dict[str, object]]:
+    """Read signals whose node or audited relation belongs to one chapter."""
+    if not table_exists(conn, "learner_signals"):
+        return []
+    prefix = f"{course}-{chapter}-kp-"
+    relation_ids: set[str] = set()
+    if table_exists(conn, "knowledge_relations"):
+        relation_ids = {
+            str(row[0])
+            for row in conn.execute(
+                """
+                SELECT relation_id FROM knowledge_relations
+                WHERE source_kp_id LIKE ? AND target_kp_id LIKE ?
+                """,
+                (f"{prefix}%", f"{prefix}%"),
+            )
+        }
+
+    signals: list[dict[str, object]] = []
+    rows = conn.execute(
+        """
+        SELECT signal_id, target_type, target_id, signal_type, weight,
+               evidence_count, note, last_practice_kind, last_practice_ref
+        FROM learner_signals
+        ORDER BY CASE weight WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END DESC,
+                 signal_id
+        """
+    ).fetchall()
+    for row in rows:
+        (
+            signal_id,
+            target_type,
+            target_id,
+            signal_type,
+            weight,
+            evidence_count,
+            note,
+            practice_kind,
+            practice_ref,
+        ) = row
+        in_scope = (
+            target_type == "node" and str(target_id).startswith(prefix)
+        ) or (
+            target_type == "relation" and str(target_id) in relation_ids
+        )
+        if not in_scope:
+            continue
+        source = str(practice_kind or "other")
+        if practice_ref:
+            source = f"{source}:{practice_ref}"
+        signals.append(
+            {
+                "signal_id": str(signal_id),
+                "target_type": str(target_type),
+                "target_id": str(target_id),
+                "signal_type": str(signal_type),
+                "weight": str(weight),
+                "evidence_count": int(evidence_count),
+                "note": str(note or ""),
+                "source": source,
+            }
+        )
+    return signals
