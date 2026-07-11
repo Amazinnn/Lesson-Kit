@@ -71,6 +71,8 @@ def gate_candidates(
     if not audit_path.is_file():
         raise FileNotFoundError(f"audit report not found: {audit_path}")
     report = json.loads(audit_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(report, dict):
+        return 0, 0, ["audit report root must be an object"]
     audits = report.get("audits")
     if not isinstance(audits, list):
         return 0, 0, ["audit report requires audits[]"]

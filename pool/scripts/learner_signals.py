@@ -69,7 +69,14 @@ def upsert_learner_signal(
             practice_ref,
         ),
     )
-    return signal_id
+    row = conn.execute(
+        """
+        SELECT signal_id FROM learner_signals
+        WHERE target_type = ? AND target_id = ? AND signal_type = ?
+        """,
+        (target_type, target_id, signal_type),
+    ).fetchone()
+    return str(row[0])
 
 
 def fetch_learner_signals(

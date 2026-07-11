@@ -34,7 +34,11 @@ def insert_candidates(
         raise FileNotFoundError(f"manifest not found: {manifest_path}")
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    if not isinstance(manifest, dict):
+        return 0, 0, ["manifest root must be an object"]
     metadata = manifest.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return 0, 0, ["manifest metadata must be an object"]
     course = str(metadata.get("course", "")).strip()
     chapter = str(metadata.get("chapter", "")).strip()
     candidates = manifest.get("candidates")

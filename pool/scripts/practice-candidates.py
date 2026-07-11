@@ -131,6 +131,8 @@ def record_candidate_attempt(
 
 
 def eligible_candidates(db_path: Path, candidate_ids: Sequence[str] | None) -> list[dict[str, Any]]:
+    if not db_path.is_file():
+        raise FileNotFoundError(f"DB not found: {db_path}")
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
@@ -148,6 +150,11 @@ def eligible_candidates(db_path: Path, candidate_ids: Sequence[str] | None) -> l
                 "ORDER BY candidate_id"
             ).fetchall()
         result = [dict(row) for row in rows]
+        if candidate_ids:
+            found = {row["candidate_id"] for row in result}
+            missing = [item for item in candidate_ids if item not in found]
+            if missing:
+                raise ValueError(f"candidate not found: {', '.join(missing)}")
         ineligible = [row["candidate_id"] for row in result if row["status"] != "gate_passed"]
         if ineligible:
             raise ValueError(f"candidates are not eligible: {', '.join(ineligible)}")

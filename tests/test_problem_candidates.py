@@ -370,6 +370,34 @@ class ProblemCandidateWorkflowTests(unittest.TestCase):
         self.assertEqual(json.loads(row[2])[0]["location"], "Section 6.1, product rule")
         self.assertEqual(row[3:], ("draft", "pending", "pending"))
 
+    def test_candidate_json_entry_points_reject_non_object_roots(self):
+        insert_candidates = load_script(
+            "insert_candidates_root_test", Path("pipeline/scripts/insert-candidates.py")
+        )
+        gate_candidates = load_script(
+            "gate_candidates_root_test", Path("pipeline/scripts/gate-candidates.py")
+        )
+        manifest_path = self.write_json("root-list.json", [])
+        audit_path = self.write_json("audit-root-list.json", [])
+
+        self.assertEqual(
+            insert_candidates.insert_candidates(self.db_path, manifest_path),
+            (0, 0, ["manifest root must be an object"]),
+        )
+        self.assertEqual(
+            gate_candidates.gate_candidates(self.db_path, audit_path),
+            (0, 0, ["audit report root must be an object"]),
+        )
+
+        bad_metadata_path = self.write_json(
+            "bad-metadata.json",
+            {"metadata": [], "candidates": []},
+        )
+        self.assertEqual(
+            insert_candidates.insert_candidates(self.db_path, bad_metadata_path),
+            (0, 0, ["manifest metadata must be an object"]),
+        )
+
     def test_insert_candidates_rejects_bad_ids_links_shapes_and_evidence(self):
         insert_candidates = load_script(
             "insert_candidates_invalid_test", Path("pipeline/scripts/insert-candidates.py")
@@ -604,6 +632,62 @@ class ProblemCandidateWorkflowTests(unittest.TestCase):
         )
 
         self.assertEqual(practice.normalize_cli_input("\ufeffA"), "A")
+
+    def test_candidate_session_rejects_missing_db_and_candidate_ids(self):
+        practice = load_script(
+            "practice_candidates_scope_test",
+            Path("pool/scripts/practice-candidates.py"),
+        )
+        missing_db = Path(self.tmp.name) / "missing.db"
+
+        with self.assertRaises(FileNotFoundError):
+            practice.eligible_candidates(missing_db, None)
+        self.assertFalse(missing_db.exists())
+
+        with self.assertRaisesRegex(ValueError, "candidate not found"):
+            practice.eligible_candidates(
+                self.db_path,
+                ["dmath-ch06-cand-999"],
+            )
+
+    def test_signal_upsert_returns_existing_canonical_signal_id(self):
+        learner_signals = load_script(
+            "learner_signals_existing_id_test",
+            Path("pool/scripts/learner_signals.py"),
+        )
+        conn = self.connect()
+        try:
+            conn.execute(
+                """
+                INSERT INTO learner_signals (
+                    signal_id, target_type, target_id, signal_type,
+                    weight, evidence_count, last_practice_kind
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "sig:human-readable",
+                    "node",
+                    "dmath-ch06-kp-001",
+                    "weak_node",
+                    "medium",
+                    1,
+                    "reflection",
+                ),
+            )
+            returned_id = learner_signals.upsert_learner_signal(
+                conn,
+                "node",
+                "dmath-ch06-kp-001",
+                "weak_node",
+                "practice miss",
+                "candidate",
+                "dmath-ch06-cand-001",
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        self.assertEqual(returned_id, "sig:human-readable")
 
     def test_wrong_candidate_attempt_strengthens_default_weak_node_signal(self):
         practice = load_script(
