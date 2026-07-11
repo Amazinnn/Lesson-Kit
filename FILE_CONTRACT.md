@@ -40,6 +40,31 @@ Required files:
 04_checks/problem-pool-validation-report.md
 ```
 
+## Problem Candidate Generation
+
+Path:
+
+```text
+intermediate/{course}/problem_generation/{chapter}/
+```
+
+Required agent-to-script artifacts for a generation run:
+
+```text
+02_analysis/candidate-insert-manifest.json
+04_checks/candidate-audit-report.json
+```
+
+The candidate manifest contains source-grounded candidate bodies and evidence.
+The audit report supplies the semantic PASS/FAIL decision. Scripts independently
+run structural checks. A candidate becomes `gate_passed` only when both checks
+pass; only `gate_passed` candidates may be practiced or imported.
+
+Candidate rows, attempts, and current learner signals live in the course pool.
+They remain separate from durable `problems` until explicit import. Import
+renders structured options into `problem_text` and answer explanations into
+`solution`; it does not add candidate-only fields to the durable table.
+
 ## Course Learning Network
 
 Low-level audited relations may be added after KP extraction.
@@ -50,15 +75,16 @@ Optional relation manifest:
 intermediate/{course}/extraction/{chapter}/02_analysis/relation-insert-manifest.json
 ```
 
-Optional learner signal map:
+Legacy optional learner signal map:
 
 ```text
 intermediate/{course}/signals/{chapter}/signal-map.json
 ```
 
 These files do not replace the required KP extraction files. Relation manifests
-store durable point-to-point graph facts. Signal maps store learner-specific
-attention, confusion, and relation-gap signals for Focus Map queries.
+store durable point-to-point graph facts. New learner signals are stored in the
+course SQLite pool. Signal-map JSON stays available only as a compatibility or
+handoff input for Focus Map queries.
 
 ## Problem-Set View
 

@@ -36,6 +36,12 @@ A lightweight learner-feedback layer that marks weak nodes, confusion,
 transfer failures, missing prerequisites, or suspected relation gaps.
 _Avoid_: Relation manifest, problem record
 
+**Learner Signal**:
+The current SQLite record for one learner-attention signal targeting a
+knowledge node or audited relation. Repeated wrong or stuck attempts strengthen
+it; later mastery does not erase it automatically.
+_Avoid_: Attempt history, permanent Knowledge Relation, JSON-only signal
+
 **Focus Map View**:
 A compact JSON subgraph around seed knowledge points, optional target paths,
 shared neighbors, simple clusters, and learner signals.
@@ -51,6 +57,29 @@ A durable practice item stored as its own learning asset. A problem has text,
 linked knowledge points, a source kind, a problem type, and optional solution
 text.
 _Avoid_: Exercise, question, task
+
+**Problem Candidate**:
+A source-grounded practice item that has not yet entered the durable problem
+pool. It may be practiced after both candidate gates pass, and it becomes a
+Problem only through explicit import.
+_Avoid_: Generated problem, draft Problem, trusted AI question
+
+**Candidate Practice Session**:
+A learner-facing practice run over gate-passed Problem Candidates. It records
+candidate attempts and learner signals without requiring the learner to audit
+or approve the candidates.
+_Avoid_: Candidate review, Problem-Set View, acceptance session
+
+**Problem Origin**:
+The candidate-level provenance class: source problem, adapted problem, or
+source-grounded generated problem. It is separate from Source Kind and is not
+added to the durable `problems` table in the MVP.
+_Avoid_: Source Kind, AI tag, author
+
+**Interaction Type**:
+The way a Problem Candidate accepts an answer: single choice, true/false, or
+free response. It is independent of whether the item was sourced or generated.
+_Avoid_: Problem Type, source format
 
 **Problem Progress**:
 The current learning state of a durable problem during practice and review.
