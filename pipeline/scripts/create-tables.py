@@ -2,10 +2,8 @@
 """
 Pipeline Step 1: Create lesson-kit pool SQLite database.
 
-Creates the active tables (knowledge_points, knowledge_relations, questions,
-problems, kp_progress, question_progress, problem_progress, problem_attempts)
-and indexes defined in the lesson-kit
-pool contract.
+Creates the active knowledge, problem, candidate, progress, and learner-signal
+tables and indexes defined in the lesson-kit pool contract.
 
 Usage:
     python pipeline/scripts/create-tables.py --db pool/dld.db [--force]
@@ -21,6 +19,14 @@ import argparse
 import os
 import sqlite3
 import sys
+from pathlib import Path
+
+
+POOL_SCRIPT_DIR = Path(__file__).resolve().parents[2] / "pool" / "scripts"
+if str(POOL_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(POOL_SCRIPT_DIR))
+
+from pool_schema import ensure_problem_candidate_schema  # noqa: E402
 
 
 SCHEMA_SQL = """
@@ -201,6 +207,9 @@ def main(argv=None) -> int:
     conn = sqlite3.connect(db_path)
     try:
         existing_tables = [
+            "candidate_attempts",
+            "candidate_problems",
+            "learner_signals",
             "knowledge_relations",
             "knowledge_points",
             "questions",
@@ -230,16 +239,18 @@ def main(argv=None) -> int:
             conn.commit()
 
         conn.executescript(SCHEMA_SQL)
+        ensure_problem_candidate_schema(conn)
         conn.commit()
 
         verb = "Recreated" if any_existing else "Created"
         prefix = "fresh" if not existed_before else "existing"
         print(f"{verb} schema in {prefix} DB: {db_path}")
         print(
-            "  - 8 tables: knowledge_points, knowledge_relations, questions, "
-            "problems, kp_progress, question_progress, problem_progress, problem_attempts"
+            "  - 11 tables: knowledge_points, knowledge_relations, questions, "
+            "problems, kp_progress, question_progress, problem_progress, "
+            "problem_attempts, candidate_problems, candidate_attempts, learner_signals"
         )
-        print(f"  - 14 indexes")
+        print("  - 18 indexes")
         return 0
     except sqlite3.Error as exc:
         print(f"SQLite error: {exc}", file=sys.stderr)

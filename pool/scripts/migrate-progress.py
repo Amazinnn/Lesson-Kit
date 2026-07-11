@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate an existing lesson-kit pool for graph labels and problem progress."""
+"""Migrate an existing pool for learning state, candidates, and signals."""
 
 import argparse
 import os
@@ -13,12 +13,15 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from pool_schema import ensure_learning_state_schema  # noqa: E402
+from pool_schema import (  # noqa: E402
+    ensure_learning_state_schema,
+    ensure_problem_candidate_schema,
+)
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Add graph_label and problem progress tables to an existing lesson-kit pool.",
+        description="Add learning-state, Problem Candidate, and learner-signal tables.",
     )
     parser.add_argument("--db", required=True, help="Path to SQLite DB.")
     return parser.parse_args(argv)
@@ -30,6 +33,7 @@ def migrate_db(db_path: Path) -> list[str]:
     conn = sqlite3.connect(db_path)
     try:
         changes = ensure_learning_state_schema(conn)
+        changes.extend(ensure_problem_candidate_schema(conn))
         conn.commit()
         return changes
     finally:

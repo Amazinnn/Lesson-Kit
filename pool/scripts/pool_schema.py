@@ -5,6 +5,27 @@ from typing import Iterable, List
 
 
 PROBLEM_STATES = ("new", "wrong", "stuck", "reviewing", "mastered")
+CANDIDATE_STATUSES = (
+    "draft",
+    "gate_passed",
+    "needs_revision",
+    "rejected",
+    "imported",
+)
+GATE_STATUSES = ("pending", "pass", "fail")
+INTERACTION_TYPES = ("single_choice", "true_false", "free_response")
+GENERATION_PURPOSES = ("first_pass_check", "remediation")
+ORIGIN_KINDS = ("source_problem", "adapted_problem", "generated_grounded")
+SIGNAL_TYPES = (
+    "weak_node",
+    "confusion",
+    "missing_prerequisite",
+    "transfer_failure",
+    "relation_gap",
+)
+SIGNAL_WEIGHTS = ("low", "medium", "high")
+SIGNAL_TARGET_TYPES = ("node", "relation")
+PRACTICE_KINDS = ("candidate", "problem", "reflection", "other")
 VALID_RELATION_TYPES = (
     "prerequisite",
     "part_of",
@@ -169,5 +190,119 @@ def ensure_course_network_schema(conn: sqlite3.Connection) -> List[str]:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_knowledge_relations_type "
         "ON knowledge_relations(relation_type)"
+    )
+    return changes
+
+
+def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
+    """Apply the Problem Candidate and learner-signal schema idempotently."""
+    changes: List[str] = []
+    if not table_exists(conn, "candidate_problems"):
+        conn.execute(
+            """
+            CREATE TABLE candidate_problems (
+                candidate_id         TEXT PRIMARY KEY,
+                kp_ids               TEXT NOT NULL,
+                problem_text         TEXT NOT NULL,
+                options_json         TEXT,
+                correct_option_id    TEXT,
+                solution             TEXT,
+                problem_type         TEXT NOT NULL CHECK (problem_type IN (
+                    'calculation', 'proof', 'modeling', 'explanation',
+                    'experiment', 'design', 'application',
+                    'counterexample', 'other'
+                )),
+                interaction_type     TEXT NOT NULL CHECK (interaction_type IN (
+                    'single_choice', 'true_false', 'free_response'
+                )),
+                generation_purpose   TEXT NOT NULL CHECK (generation_purpose IN (
+                    'first_pass_check', 'remediation'
+                )),
+                origin_kind          TEXT NOT NULL CHECK (origin_kind IN (
+                    'source_problem', 'adapted_problem', 'generated_grounded'
+                )),
+                source_kind          TEXT NOT NULL CHECK (source_kind IN (
+                    'textbook', 'quiz', 'midterm', 'final', 'makeup', 'other'
+                )),
+                source_evidence_json TEXT NOT NULL,
+                status               TEXT NOT NULL DEFAULT 'draft' CHECK (status IN (
+                    'draft', 'gate_passed', 'needs_revision', 'rejected', 'imported'
+                )),
+                structure_gate_status TEXT NOT NULL DEFAULT 'pending' CHECK (
+                    structure_gate_status IN ('pending', 'pass', 'fail')
+                ),
+                audit_gate_status    TEXT NOT NULL DEFAULT 'pending' CHECK (
+                    audit_gate_status IN ('pending', 'pass', 'fail')
+                ),
+                gate_report          TEXT,
+                imported_problem_id  TEXT UNIQUE REFERENCES problems(problem_id),
+                created_at           TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        changes.append("candidate_problems")
+
+    if not table_exists(conn, "candidate_attempts"):
+        conn.execute(
+            """
+            CREATE TABLE candidate_attempts (
+                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+                candidate_id       TEXT NOT NULL REFERENCES candidate_problems(candidate_id),
+                status             TEXT NOT NULL CHECK (status IN (
+                    'new', 'wrong', 'stuck', 'reviewing', 'mastered'
+                )),
+                selected_option_id TEXT,
+                is_correct         INTEGER CHECK (is_correct IN (0, 1)),
+                note               TEXT,
+                created_at         TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        changes.append("candidate_attempts")
+
+    if not table_exists(conn, "learner_signals"):
+        conn.execute(
+            """
+            CREATE TABLE learner_signals (
+                signal_id          TEXT PRIMARY KEY,
+                target_type        TEXT NOT NULL CHECK (target_type IN ('node', 'relation')),
+                target_id          TEXT NOT NULL,
+                signal_type        TEXT NOT NULL CHECK (signal_type IN (
+                    'weak_node', 'confusion', 'missing_prerequisite',
+                    'transfer_failure', 'relation_gap'
+                )),
+                weight             TEXT NOT NULL DEFAULT 'medium' CHECK (
+                    weight IN ('low', 'medium', 'high')
+                ),
+                evidence_count     INTEGER NOT NULL DEFAULT 1 CHECK (evidence_count >= 1),
+                note               TEXT,
+                last_practice_kind TEXT NOT NULL DEFAULT 'other' CHECK (
+                    last_practice_kind IN ('candidate', 'problem', 'reflection', 'other')
+                ),
+                last_practice_ref  TEXT,
+                created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at         TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE (target_type, target_id, signal_type)
+            )
+            """
+        )
+        changes.append("learner_signals")
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_candidate_status "
+        "ON candidate_problems(status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_candidate_attempts_candidate_id "
+        "ON candidate_attempts(candidate_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_learner_signals_target "
+        "ON learner_signals(target_type, target_id)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_learner_signals_weight "
+        "ON learner_signals(weight)"
     )
     return changes
