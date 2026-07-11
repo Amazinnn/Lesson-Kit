@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sqlite3
 import sys
 import tempfile
@@ -219,6 +220,279 @@ class ProblemCandidateSchemaTests(unittest.TestCase):
         self.assertTrue(expected <= fresh_tables)
         self.assertTrue(expected <= migrated_tables)
         self.assertTrue(expected <= set(changes))
+
+
+class ProblemCandidateWorkflowTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db_path = Path(self.tmp.name) / "pool.db"
+        conn = sqlite3.connect(self.db_path)
+        conn.executescript(
+            """
+            PRAGMA foreign_keys = ON;
+            CREATE TABLE knowledge_points (
+                kp_id TEXT PRIMARY KEY,
+                knowledge_item TEXT NOT NULL
+            );
+            CREATE TABLE problems (
+                problem_id TEXT PRIMARY KEY,
+                kp_ids TEXT NOT NULL,
+                problem_text TEXT NOT NULL,
+                solution TEXT,
+                problem_type TEXT NOT NULL,
+                source_kind TEXT NOT NULL
+            );
+            INSERT INTO knowledge_points VALUES (
+                'dmath-ch06-kp-001', 'Product rule'
+            );
+            """
+        )
+        pool_schema.ensure_problem_candidate_schema(conn)
+        conn.commit()
+        conn.close()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def connect(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
+
+    def write_json(self, name, payload):
+        path = Path(self.tmp.name) / name
+        path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def candidate(self, **overrides):
+        row = {
+            "candidate_id": "dmath-ch06-cand-001",
+            "kp_ids": ["dmath-ch06-kp-001"],
+            "problem_text": "A task has three independent stages.\n\nHow many outcomes are possible?",
+            "options": [
+                {
+                    "id": "A",
+                    "text": "$3$",
+                    "explanation": "This counts stages, not choices.",
+                },
+                {
+                    "id": "B",
+                    "text": "$2^3$",
+                    "explanation": "Each of three stages has two choices.",
+                },
+            ],
+            "correct_option_id": "B",
+            "solution": "The choices are independent, so the product rule gives $2^3=8$.",
+            "problem_type": "calculation",
+            "interaction_type": "single_choice",
+            "generation_purpose": "first_pass_check",
+            "origin_kind": "generated_grounded",
+            "source_kind": "textbook",
+            "source_evidence": [
+                {
+                    "source": "Discrete Mathematics Chapter 6.md",
+                    "location": "Section 6.1, product rule",
+                    "basis": "The source states that independent stage counts multiply.",
+                }
+            ],
+        }
+        row.update(overrides)
+        return row
+
+    def manifest(self, candidates=None):
+        return {
+            "metadata": {"course": "dmath", "chapter": "ch06"},
+            "candidates": candidates or [self.candidate()],
+        }
+
+    def test_insert_candidates_persists_valid_source_grounded_draft(self):
+        insert_candidates = load_script(
+            "insert_candidates_test", Path("pipeline/scripts/insert-candidates.py")
+        )
+        manifest_path = self.write_json("candidates.json", self.manifest())
+
+        result = insert_candidates.insert_candidates(self.db_path, manifest_path)
+
+        self.assertEqual(result, (1, 0, []))
+        conn = self.connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT candidate_id, options_json, source_evidence_json, status,
+                       structure_gate_status, audit_gate_status
+                FROM candidate_problems
+                """
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertEqual(row[0], "dmath-ch06-cand-001")
+        self.assertEqual(json.loads(row[1])[1]["id"], "B")
+        self.assertEqual(json.loads(row[2])[0]["location"], "Section 6.1, product rule")
+        self.assertEqual(row[3:], ("draft", "pending", "pending"))
+
+    def test_insert_candidates_rejects_bad_ids_links_shapes_and_evidence(self):
+        insert_candidates = load_script(
+            "insert_candidates_invalid_test", Path("pipeline/scripts/insert-candidates.py")
+        )
+        invalid = [
+            self.candidate(candidate_id="wrong-id"),
+            self.candidate(
+                candidate_id="dmath-ch06-cand-002",
+                kp_ids=["dmath-ch06-kp-999"],
+            ),
+            self.candidate(
+                candidate_id="dmath-ch06-cand-003",
+                correct_option_id="Z",
+            ),
+            self.candidate(
+                candidate_id="dmath-ch06-cand-004",
+                source_evidence=[],
+            ),
+            self.candidate(
+                candidate_id="dmath-ch06-cand-005",
+                problem_text="Collapsed stem a) first b) second",
+            ),
+        ]
+        manifest_path = self.write_json("invalid.json", self.manifest(invalid))
+
+        inserted, skipped, errors = insert_candidates.insert_candidates(
+            self.db_path, manifest_path
+        )
+
+        self.assertEqual((inserted, skipped), (0, 0))
+        self.assertGreaterEqual(len(errors), 5)
+        joined = "\n".join(errors)
+        self.assertIn("invalid candidate_id", joined)
+        self.assertIn("unknown kp_id", joined)
+        self.assertIn("correct_option_id", joined)
+        self.assertIn("source_evidence", joined)
+        self.assertIn("collapsed subparts", joined)
+
+    def test_remediation_wrong_options_require_structured_error_lures(self):
+        insert_candidates = load_script(
+            "insert_candidates_lure_test", Path("pipeline/scripts/insert-candidates.py")
+        )
+        candidate = self.candidate(
+            generation_purpose="remediation",
+            options=[
+                {
+                    "id": "A",
+                    "text": "$3$",
+                    "explanation": "Counts stages only.",
+                },
+                {
+                    "id": "B",
+                    "text": "$8$",
+                    "explanation": "Uses the product rule.",
+                },
+            ],
+        )
+        manifest_path = self.write_json("lure.json", self.manifest([candidate]))
+
+        _inserted, _skipped, errors = insert_candidates.insert_candidates(
+            self.db_path, manifest_path
+        )
+
+        self.assertIn("error_lure", "\n".join(errors))
+
+    def test_double_gate_is_required_for_gate_passed_status(self):
+        insert_candidates = load_script(
+            "insert_candidates_gate_test", Path("pipeline/scripts/insert-candidates.py")
+        )
+        gate_candidates = load_script(
+            "gate_candidates_test", Path("pipeline/scripts/gate-candidates.py")
+        )
+        manifest_path = self.write_json("candidates.json", self.manifest())
+        self.assertEqual(
+            insert_candidates.insert_candidates(self.db_path, manifest_path),
+            (1, 0, []),
+        )
+        audit_path = self.write_json(
+            "audit.json",
+            {
+                "audits": [
+                    {
+                        "candidate_id": "dmath-ch06-cand-001",
+                        "status": "PASS",
+                        "checks": {
+                            "source_grounding": "PASS",
+                            "answer_correctness": "PASS",
+                            "training_usefulness": "PASS",
+                            "option_plausibility": "PASS",
+                        },
+                        "summary": "Grounded and suitable for a first-pass check.",
+                    }
+                ]
+            },
+        )
+
+        self.assertEqual(
+            gate_candidates.gate_candidates(self.db_path, audit_path),
+            (1, 0, []),
+        )
+
+        conn = self.connect()
+        try:
+            state = conn.execute(
+                """
+                SELECT status, structure_gate_status, audit_gate_status, gate_report
+                FROM candidate_problems WHERE candidate_id = ?
+                """,
+                ("dmath-ch06-cand-001",),
+            ).fetchone()
+        finally:
+            conn.close()
+
+        self.assertEqual(state[:3], ("gate_passed", "pass", "pass"))
+        self.assertEqual(
+            json.loads(state[3])["audit"]["summary"],
+            "Grounded and suitable for a first-pass check.",
+        )
+
+    def test_failed_semantic_audit_marks_candidate_for_revision(self):
+        insert_candidates = load_script(
+            "insert_candidates_failed_gate_test", Path("pipeline/scripts/insert-candidates.py")
+        )
+        gate_candidates = load_script(
+            "gate_candidates_failed_test", Path("pipeline/scripts/gate-candidates.py")
+        )
+        manifest_path = self.write_json("candidates.json", self.manifest())
+        insert_candidates.insert_candidates(self.db_path, manifest_path)
+        audit_path = self.write_json(
+            "audit-fail.json",
+            {
+                "audits": [
+                    {
+                        "candidate_id": "dmath-ch06-cand-001",
+                        "status": "FAIL",
+                        "checks": {
+                            "source_grounding": "PASS",
+                            "answer_correctness": "FAIL",
+                            "training_usefulness": "PASS",
+                            "option_plausibility": "PASS",
+                        },
+                        "summary": "The keyed answer is not justified.",
+                    }
+                ]
+            },
+        )
+
+        self.assertEqual(
+            gate_candidates.gate_candidates(self.db_path, audit_path),
+            (0, 1, []),
+        )
+        conn = self.connect()
+        try:
+            state = conn.execute(
+                """
+                SELECT status, structure_gate_status, audit_gate_status
+                FROM candidate_problems
+                """
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(state, ("needs_revision", "pass", "fail"))
 
 
 if __name__ == "__main__":
