@@ -305,6 +305,45 @@ class ProblemCandidateWorkflowTests(unittest.TestCase):
             "candidates": candidates or [self.candidate()],
         }
 
+    def insert_candidate(self, candidate=None, gate=True):
+        insert_candidates = load_script(
+            f"insert_candidates_helper_{id(self)}", Path("pipeline/scripts/insert-candidates.py")
+        )
+        payload = self.manifest([candidate or self.candidate()])
+        manifest_path = self.write_json("candidate-helper.json", payload)
+        self.assertEqual(
+            insert_candidates.insert_candidates(self.db_path, manifest_path),
+            (1, 0, []),
+        )
+        if not gate:
+            return
+        candidate_id = payload["candidates"][0]["candidate_id"]
+        gate_candidates = load_script(
+            f"gate_candidates_helper_{id(self)}", Path("pipeline/scripts/gate-candidates.py")
+        )
+        audit_path = self.write_json(
+            "audit-helper.json",
+            {
+                "audits": [
+                    {
+                        "candidate_id": candidate_id,
+                        "status": "PASS",
+                        "checks": {
+                            "source_grounding": "PASS",
+                            "answer_correctness": "PASS",
+                            "training_usefulness": "PASS",
+                            "option_plausibility": "PASS",
+                        },
+                        "summary": "Verified for workflow test.",
+                    }
+                ]
+            },
+        )
+        self.assertEqual(
+            gate_candidates.gate_candidates(self.db_path, audit_path),
+            (1, 0, []),
+        )
+
     def test_insert_candidates_persists_valid_source_grounded_draft(self):
         insert_candidates = load_script(
             "insert_candidates_test", Path("pipeline/scripts/insert-candidates.py")
@@ -493,6 +532,278 @@ class ProblemCandidateWorkflowTests(unittest.TestCase):
         finally:
             conn.close()
         self.assertEqual(state, ("needs_revision", "pass", "fail"))
+
+    def test_candidate_attempt_requires_gate_passed_and_is_append_only(self):
+        practice = load_script(
+            "practice_candidates_eligibility_test",
+            Path("pool/scripts/practice-candidates.py"),
+        )
+        self.insert_candidate(gate=False)
+        with self.assertRaisesRegex(ValueError, "not eligible"):
+            practice.record_candidate_attempt(
+                self.db_path,
+                "dmath-ch06-cand-001",
+                "wrong",
+                "A",
+                "counted stages",
+            )
+
+        conn = self.connect()
+        try:
+            conn.execute(
+                """
+                UPDATE candidate_problems
+                SET status = 'gate_passed', structure_gate_status = 'pass',
+                    audit_gate_status = 'pass'
+                WHERE candidate_id = 'dmath-ch06-cand-001'
+                """
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        first = practice.record_candidate_attempt(
+            self.db_path,
+            "dmath-ch06-cand-001",
+            "wrong",
+            "A",
+            "counted stages",
+        )
+        second = practice.record_candidate_attempt(
+            self.db_path,
+            "dmath-ch06-cand-001",
+            "mastered",
+            "B",
+            "clean retry",
+        )
+
+        self.assertFalse(first["is_correct"])
+        self.assertTrue(second["is_correct"])
+        conn = self.connect()
+        try:
+            attempts = conn.execute(
+                """
+                SELECT status, selected_option_id, is_correct, note
+                FROM candidate_attempts ORDER BY id
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+        self.assertEqual(
+            attempts,
+            [
+                ("wrong", "A", 0, "counted stages"),
+                ("mastered", "B", 1, "clean retry"),
+            ],
+        )
+
+    def test_wrong_candidate_attempt_strengthens_default_weak_node_signal(self):
+        practice = load_script(
+            "practice_candidates_signal_test",
+            Path("pool/scripts/practice-candidates.py"),
+        )
+        self.insert_candidate()
+
+        practice.record_candidate_attempt(
+            self.db_path, "dmath-ch06-cand-001", "wrong", "A", "first miss"
+        )
+        practice.record_candidate_attempt(
+            self.db_path, "dmath-ch06-cand-001", "stuck", None, "still unsure"
+        )
+        practice.record_candidate_attempt(
+            self.db_path, "dmath-ch06-cand-001", "mastered", "B", "later success"
+        )
+
+        conn = self.connect()
+        try:
+            signal = conn.execute(
+                """
+                SELECT target_type, target_id, signal_type, weight,
+                       evidence_count, note, last_practice_kind, last_practice_ref
+                FROM learner_signals
+                """
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(signal[:5], (
+            "node", "dmath-ch06-kp-001", "weak_node", "high", 2
+        ))
+        self.assertEqual(signal[5:], (
+            "still unsure", "candidate", "dmath-ch06-cand-001"
+        ))
+
+    def test_selected_remediation_lure_creates_specific_signal(self):
+        practice = load_script(
+            "practice_candidates_lure_signal_test",
+            Path("pool/scripts/practice-candidates.py"),
+        )
+        candidate = self.candidate(
+            generation_purpose="remediation",
+            options=[
+                {
+                    "id": "A",
+                    "text": "$3$",
+                    "explanation": "Counts stages only.",
+                    "error_lure": {
+                        "signal_type": "confusion",
+                        "target_type": "node",
+                        "target_id": "dmath-ch06-kp-001",
+                        "note": "Confuses number of stages with number of outcomes.",
+                    },
+                },
+                {
+                    "id": "B",
+                    "text": "$8$",
+                    "explanation": "Uses the product rule.",
+                },
+            ],
+        )
+        self.insert_candidate(candidate)
+
+        practice.record_candidate_attempt(
+            self.db_path, "dmath-ch06-cand-001", "wrong", "A", "chose stage count"
+        )
+
+        conn = self.connect()
+        try:
+            signals = conn.execute(
+                """
+                SELECT signal_type, weight, evidence_count, note
+                FROM learner_signals ORDER BY signal_type
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+        self.assertEqual(
+            signals,
+            [
+                (
+                    "confusion",
+                    "medium",
+                    1,
+                    "Confuses number of stages with number of outcomes.",
+                ),
+                ("weak_node", "medium", 1, "chose stage count"),
+            ],
+        )
+
+    def test_import_renders_official_problem_and_migrates_attempt_summary(self):
+        practice = load_script(
+            "practice_candidates_import_test",
+            Path("pool/scripts/practice-candidates.py"),
+        )
+        import_candidates = load_script(
+            "import_candidates_test",
+            Path("pipeline/scripts/import-candidates.py"),
+        )
+        self.insert_candidate()
+        practice.record_candidate_attempt(
+            self.db_path, "dmath-ch06-cand-001", "wrong", "A", "counted stages"
+        )
+        practice.record_candidate_attempt(
+            self.db_path, "dmath-ch06-cand-001", "mastered", "B", "clean retry"
+        )
+
+        imported, warnings, errors = import_candidates.import_candidates(
+            self.db_path, ["dmath-ch06-cand-001"]
+        )
+
+        self.assertEqual(imported, ["dmath-ch06-prob-001"])
+        self.assertEqual(warnings, [])
+        self.assertEqual(errors, [])
+        conn = self.connect()
+        try:
+            problem = conn.execute(
+                """
+                SELECT problem_id, kp_ids, problem_text, solution,
+                       problem_type, source_kind
+                FROM problems
+                """
+            ).fetchone()
+            candidate_state = conn.execute(
+                """
+                SELECT status, imported_problem_id FROM candidate_problems
+                WHERE candidate_id = 'dmath-ch06-cand-001'
+                """
+            ).fetchone()
+            progress = conn.execute(
+                "SELECT status, note FROM problem_progress WHERE problem_id = ?",
+                ("dmath-ch06-prob-001",),
+            ).fetchone()
+            attempts = conn.execute(
+                "SELECT status, note FROM problem_attempts WHERE problem_id = ?",
+                ("dmath-ch06-prob-001",),
+            ).fetchall()
+        finally:
+            conn.close()
+
+        self.assertEqual(problem[0], "dmath-ch06-prob-001")
+        self.assertEqual(json.loads(problem[1]), ["dmath-ch06-kp-001"])
+        self.assertIn("\n\nA. $3$\n\nB. $2^3$", problem[2])
+        self.assertIn("Correct answer: B", problem[3])
+        self.assertIn("A. This counts stages, not choices.", problem[3])
+        self.assertEqual(problem[4:], ("calculation", "textbook"))
+        self.assertEqual(candidate_state, ("imported", "dmath-ch06-prob-001"))
+        self.assertEqual(progress[0], "mastered")
+        self.assertIn("2 attempts", progress[1])
+        self.assertIn("wrong/stuck: 1", progress[1])
+        self.assertEqual(attempts, [("mastered", progress[1])])
+
+        second = import_candidates.import_candidates(
+            self.db_path, ["dmath-ch06-cand-001"]
+        )
+        self.assertEqual(second[0], [])
+        self.assertIn("already imported", "\n".join(second[1]))
+        self.assertEqual(second[2], [])
+
+    def test_import_requires_double_pass_and_blocks_same_kp_near_duplicates(self):
+        import_candidates = load_script(
+            "import_candidates_gate_duplicate_test",
+            Path("pipeline/scripts/import-candidates.py"),
+        )
+        self.insert_candidate(gate=False)
+
+        blocked = import_candidates.import_candidates(
+            self.db_path, ["dmath-ch06-cand-001"]
+        )
+        self.assertEqual(blocked[0], [])
+        self.assertIn("double PASS", "\n".join(blocked[2]))
+
+        conn = self.connect()
+        try:
+            conn.execute(
+                """
+                UPDATE candidate_problems
+                SET status = 'gate_passed', structure_gate_status = 'pass',
+                    audit_gate_status = 'pass'
+                WHERE candidate_id = 'dmath-ch06-cand-001'
+                """
+            )
+            conn.execute(
+                """
+                INSERT INTO problems (
+                    problem_id, kp_ids, problem_text, solution,
+                    problem_type, source_kind
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "dmath-ch06-prob-004",
+                    '["dmath-ch06-kp-001"]',
+                    "A task has three independent stages. How many outcomes are possible?",
+                    "Eight.",
+                    "calculation",
+                    "textbook",
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        duplicate = import_candidates.import_candidates(
+            self.db_path, ["dmath-ch06-cand-001"]
+        )
+        self.assertEqual(duplicate[0], [])
+        self.assertIn("near-duplicate", "\n".join(duplicate[2]))
 
 
 if __name__ == "__main__":
