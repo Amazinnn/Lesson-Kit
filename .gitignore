@@ -32,3 +32,4 @@ Thumbs.db
 # SQLite databases — runtime artifacts, not source
 pool/*.db
 .superpowers/
+.worktrees/
