@@ -102,6 +102,9 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         except KeyError as exc:
             self._send_json(404, {"error": f"unknown: {exc}"})
             return
+        except FileNotFoundError as exc:
+            self._send_json(404, {"error": f"unknown: {exc}"})
+            return
         finally:
             pool.close()
         self._send_json(200, result)
@@ -197,7 +200,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         finally:
             pool.close()
         self.send_response(200)
-        self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Type", _content_type(target.suffix))
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

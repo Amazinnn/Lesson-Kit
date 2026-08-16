@@ -10,7 +10,6 @@
   var SESSION_KEY = "wb_session_" + WS;
   var KPS_KEY = "wb_kps_" + WS;
   var CURRENT_KEY = "wb_current_" + WS;
-  var AI_KEY = "wb_ai_" + WS;
 
   /* ---------- helpers ---------- */
 
@@ -57,7 +56,7 @@
   function richText(text) {
     return escapeHtml(text)
       .replace(/\$\$([\s\S]+?)\$\$/g, function (_, m) {
-        return "<span class='math'>" + m + "</span>";
+        return "<span class='math display'>" + m + "</span>";
       })
       .replace(/\$([^$\n]+)\$/g, function (_, m) {
         return "<span class='math'>" + m + "</span>";
@@ -85,7 +84,7 @@
   var startPractice = document.getElementById("start-practice");
   var gotoSessionEnd = document.getElementById("goto-session-end");
 
-  var currentProblem = null;
+  var currentProblem = load(CURRENT_KEY, null);
   var stuckStep = "";
 
   function session() {
@@ -109,12 +108,8 @@
       el.textContent = "上下文：无";
       return;
     }
-    var list = session();
-    var recent = list.slice(-3, -1).map(function (p) { return p.problem_id; });
-    var suffix = recent.length
-      ? "  · 最近：" + recent.join(", ")
-      : "";
-    el.textContent = "当前题：" + currentProblem.problem_id + suffix;
+    el.textContent = "当前题：" + currentProblem.problem_id
+      + "（Agent 可自行检索全部记录）";
   }
 
   function addMessage(html, cls) {
@@ -146,7 +141,7 @@
     api("/pull", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kp_ids: kps, n: 5, mode: "weak" }),
+      body: JSON.stringify({ kp_ids: kps, n: 1, mode: "weak" }),
     }).then(function (result) {
       if (!result.problems.length) {
         addMessage("<p>本组题目已练完。</p>");
@@ -227,12 +222,13 @@
       + "<p class='meta'>反馈（可选）</p>"
       + "<div class='rating'>"
       + [1, 2, 3, 4, 5].map(function (r) {
-        return "<button class='rate sm' data-r='" + r + "'>" + r + "</button>";
+        return "<button class='rate sm' data-r='" + r + "' title='评 " + r + " 分'>" + r + "</button>";
       }).join(" ")
       + "</div>"
       + "<textarea id='feedback-note' rows='2' placeholder='自然语言反馈（薄弱点）'></textarea>"
       + "<div style='margin-top:6px'>"
       + "<button id='mark-stuck' class='outline sm'>标记卡点（先点上面某一步）</button>"
+      + "<button id='next-no-feedback' class='ghost sm'>下一题（不反馈）</button>"
       + "</div></div>";
   }
 
@@ -242,10 +238,18 @@
     if (!feedback) return;
     var blocks = msgEl.querySelectorAll(".solution-block");
     blocks.forEach(function (block) {
+      block.setAttribute("role", "button");
+      block.setAttribute("tabindex", "0");
       block.addEventListener("click", function () {
         blocks.forEach(function (b) { b.classList.remove("stuck"); });
         block.classList.add("stuck");
         stuckStep = block.dataset.idx;
+      });
+      block.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          block.click();
+        }
       });
     });
     feedback.querySelectorAll(".rate").forEach(function (btn) {
@@ -268,6 +272,12 @@
         finishProblem("stuck", stuckNote, "rated");
       });
     }
+    var next = feedback.querySelector("#next-no-feedback");
+    if (next) {
+      next.addEventListener("click", function () {
+        finishProblem("skip", "", "unrated");
+      });
+    }
   }
 
   function finishProblem(result, note, state) {
@@ -286,9 +296,9 @@
         }
       }
       store(SESSION_KEY, list);
-      var recordMsg = result === "skip"
-        ? "已记录：未反馈（不影响进度）"
-        : "已记录：" + result;
+      var recordMsg = state === "rated"
+        ? (result === "stuck" ? "已记录：卡点已标记" : "已记录：评分已入库（信号与进度已更新）")
+        : "已记录：未反馈（不影响进度）";
       addMessage("<div class='meta'>" + recordMsg + "</div>", "user");
       setCurrent(null);
       var kps = currentKps();
@@ -312,7 +322,7 @@
   var pending = document.getElementById("pending-ratings");
   if (pending) {
     var list = session().filter(function (item) {
-      return item.state !== "skipped";
+      return item.state === "unrated";
     });
     if (!list.length) {
       pending.innerHTML = "<p>没有待评的题。</p>";
@@ -323,7 +333,7 @@
           + "<h3>" + escapeHtml(item.problem_id) + "</h3>"
           + "<div class='rating'>"
           + [1, 2, 3, 4, 5].map(function (r) {
-            return "<button class='rate sm' data-r='" + r + "'>" + r + "</button>";
+            return "<button class='rate sm' data-r='" + r + "' title='评 " + r + " 分'>" + r + "</button>";
           }).join(" ")
           + "</div>"
           + "<textarea class='end-note' rows='2' placeholder='可选反馈'></textarea>"
@@ -357,6 +367,7 @@
     var similar = document.getElementById("practice-similar");
     if (similar) {
       similar.addEventListener("click", function () {
+        sessionStorage.removeItem(SESSION_KEY);
         api("/weak?limit=5").then(function (items) {
           store(KPS_KEY, items.map(function (i) { return i.kp_id; }));
           window.location = "practice";
@@ -428,7 +439,10 @@
             });
           }
         }
-      }).catch(function () {
+      }).catch(function (err) {
+        if (err && err.message === "404") {
+          return; /* job record not visible yet — keep polling */
+        }
         clearInterval(timer);
         aiAdd("<p>状态查询失败。</p>");
       });
@@ -455,9 +469,48 @@
   if (send) send.addEventListener("click", function () { aiTask("explain"); });
   if (fresh) fresh.addEventListener("click", function () {
     messages.innerHTML = "";
-    store(AI_KEY, []);
     aiAdd("<p>新会话已开始（记录仍在池中）。</p>");
   });
+
+  /* ---------- page init ---------- */
+
+  var middleRoot = document.getElementById("middle");
+  if (middleRoot) {
+    renderMath(middleRoot);
+    middleRoot.querySelectorAll("img").forEach(function (img) {
+      img.addEventListener("error", function () {
+        var alt = img.getAttribute("alt") || "图";
+        img.outerHTML = "<span class='fig-missing'>（图缺失：" + escapeHtml(alt) + "）</span>";
+      });
+    });
+  }
+
+  var layoutEl = document.getElementById("layout");
+  var aiCollapse = document.getElementById("ai-collapse");
+  var AI_COLLAPSED_KEY = "wb_ai_collapsed_" + WS;
+  if (layoutEl && aiCollapse) {
+    function applyAiCollapsed(collapsed, persist) {
+      if (collapsed) layoutEl.setAttribute("data-ai-collapsed", "1");
+      else layoutEl.removeAttribute("data-ai-collapsed");
+      aiCollapse.textContent = collapsed ? "›" : "‹";
+      aiCollapse.title = collapsed ? "展开" : "折叠";
+      if (persist) {
+        sessionStorage.setItem(AI_COLLAPSED_KEY, collapsed ? "1" : "0");
+      }
+    }
+    var remembered = sessionStorage.getItem(AI_COLLAPSED_KEY) === "1";
+    applyAiCollapsed(window.innerWidth < 1024 || remembered, false);
+    aiCollapse.addEventListener("click", function () {
+      applyAiCollapsed(!layoutEl.hasAttribute("data-ai-collapsed"), true);
+    });
+    window.addEventListener("resize", function () {
+      if (window.innerWidth < 1024) {
+        layoutEl.setAttribute("data-ai-collapsed", "1");
+      } else if (sessionStorage.getItem(AI_COLLAPSED_KEY) !== "1") {
+        layoutEl.removeAttribute("data-ai-collapsed");
+      }
+    });
+  }
 
   updateAiContext();
 })();

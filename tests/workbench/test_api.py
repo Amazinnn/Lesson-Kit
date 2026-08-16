@@ -2,6 +2,7 @@
 
 import json
 import threading
+import time
 import unittest
 import urllib.request
 from urllib.error import HTTPError
@@ -113,8 +114,25 @@ class ApiTests(unittest.TestCase):
         })
         self.assertEqual(status, 200)
         job_id = data["job_id"]
-        status, data = self.get(f"/api/w/dmath/ai/jobs/{job_id}")
-        self.assertEqual(data["state"], "failed")
+        self.assertTrue(job_id.startswith("job-"))
+        state = None
+        for _ in range(50):  # task runs on a worker thread now — let it settle
+            try:
+                _, data = self.get(f"/api/w/dmath/ai/jobs/{job_id}")
+                state = data["state"]
+            except HTTPError:
+                pass  # job record may not be visible yet
+            if state in ("done", "failed"):
+                break
+            time.sleep(0.05)
+        self.assertEqual(state, "failed")
+
+    def test_ai_explain_unknown_problem_404(self):
+        with self.assertRaises(HTTPError) as ctx:
+            self.post("/api/w/dmath/ai/explain", {
+                "problem_id": "dmath-ch06-prob-999",
+            })
+        self.assertEqual(ctx.exception.code, 404)
 
     def test_hub_page(self):
         status, html = self.get_html("/")

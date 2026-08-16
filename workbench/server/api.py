@@ -1,6 +1,8 @@
 """JSON API handlers. Each handler gets (pool, workspace, params, body)."""
 
 import json
+import threading
+import time
 from datetime import date
 from pathlib import Path
 
@@ -99,11 +101,47 @@ def ai_run(pool, workspace, params, body):
     operation = params["operation"]
     if operation not in ("explain", "diagnose"):
         raise ApiError(400, "unknown operation")
-    job_id = runner.run_ai_task(
-        pool, Path(workspace["path"]), operation, body.get("problem_id"),
-        provider_name=body.get("provider"), note=body.get("note"),
-        user_answer=body.get("user_answer"), stuck_step=body.get("stuck_step"),
-    )
+    problem_id = body.get("problem_id")
+    if problem_id is None or pool.problem(problem_id) is None:
+        raise ApiError(404, f"unknown problem: {problem_id}")
+    workspace_path = Path(workspace["path"])
+    provider_name = body.get("provider")
+    note = body.get("note")
+    user_answer = body.get("user_answer")
+    stuck_step = body.get("stuck_step")
+
+    def _run():
+        # Provider runs on its own thread so the HTTP request returns
+        # immediately (a provider run may take minutes). The worker opens
+        # its own Pool — sqlite connections are not shareable across threads.
+        worker_pool = _pool_for(workspace)
+        try:
+            runner.run_ai_task(
+                worker_pool, workspace_path, operation, problem_id,
+                provider_name=provider_name, note=note,
+                user_answer=user_answer, stuck_step=stuck_step,
+            )
+        finally:
+            worker_pool.close()
+
+    threading.Thread(target=_run, daemon=True).start()
+    # Wait briefly for the job record so the response carries a real job id.
+    # Overlapping requests could in theory observe the same newest id; the
+    # client polls tolerantly (404 = keep waiting), so this self-heals.
+    deadline = time.time() + 2.0
+    job_id = ""
+    jobs_dir = pool.jobs_dir()
+    jobs_dir.mkdir(parents=True, exist_ok=True)
+    while time.time() < deadline:
+        existing = [
+            d.name for d in jobs_dir.iterdir()
+            if d.is_dir() and d.name.startswith("job-")
+        ]
+        if existing:
+            job_id = max(existing)
+            if (jobs_dir / job_id / "status.json").is_file():
+                break
+        time.sleep(0.01)
     return {"job_id": job_id}
 
 

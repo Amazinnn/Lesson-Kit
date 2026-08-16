@@ -97,6 +97,18 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("left-column", body)
         self.assertIn("ai-column", body)
         self.assertIn("topbar", body)
+        self.assertIn("<a class='brand' href='/'>lesson-kit</a>", body)
+        self.assertIn("ai-collapse", body)
+
+    def test_hub_page_chinese(self):
+        status, body = self.fetch("/")
+        self.assertEqual(status, 200)
+        self.assertIn("<h1>工作台</h1>", body)
+
+    def test_kp_page_has_no_dead_script(self):
+        status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertEqual(status, 200)
+        self.assertNotIn("wbKpId", body)
 
     def test_left_nav_has_three_entries(self):
         status, body = self.fetch("/w/dmath/practice")

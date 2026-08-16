@@ -2,6 +2,7 @@
 
 import html
 import re
+from datetime import date
 
 from workbench.data import queries
 from workbench.domain import weak
@@ -16,7 +17,7 @@ def hub_page(workspaces):
             f"<p>kp={stats.get('kps')} problems={stats.get('problems')} "
             f"signals={stats.get('signals')} due={stats.get('due')}</p></div>"
         )
-    return _base("lesson-kit", f"<h1>Workbenches</h1>{''.join(cards)}")
+    return _base("lesson-kit 工作台", f"<h1>工作台</h1>{''.join(cards)}")
 
 
 def shell(workspace, workspaces, weak_items, middle_html, active_nav):
@@ -28,7 +29,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav):
     meta += "</span>"
     topbar = (
         "<header id='topbar'>"
-        "<span class='brand'>lesson-kit</span>"
+        "<a class='brand' href='/'>lesson-kit</a>"
         f"{meta}"
         "</header>"
     )
@@ -74,7 +75,7 @@ def kps_page(workspace, workspaces, weak_items, pool):
     prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
     ranked = weak.score_all(
         pool.kps(prefix), pool.signals(), pool.schedule_rows(),
-        pool.relations(), set(), __import__("datetime").date.today(),
+        pool.relations(), set(), date.today(),
     )
     items = "".join(
         f"<li><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>{html.escape(item['kp_id'])}</a>"
@@ -114,7 +115,6 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
         f"<h2>信号</h2><ul>{signals_html or '<li>无</li>'}</ul>"
         f"<h2>关联题目</h2><ul>{problems_html or '<li>无</li>'}</ul>"
         f"<h2>调度</h2><p>{schedule_html}</p>"
-        f"<script>window.wbKpId='{kp_id}';</script>"
     )
     return shell(workspace, workspaces, weak_items, middle, "kps")
 
@@ -192,8 +192,9 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
 
 def _ai_column(workspace_name):
     return (
-        "<h2>AI 教师</h2>"
-        f"<div id='ai-context' data-workspace='{workspace_name}'>上下文：无</div>"
+        "<div id='ai-head'><h2>AI 教师</h2>"
+        "<button id='ai-collapse' class='ghost sm' title='折叠/展开'>‹</button></div>"
+        "<div id='ai-context'>上下文：无</div>"
         "<div id='ai-actions'>"
         "<button id='ai-explain' class='primary sm'>讲解</button>"
         "<button id='ai-diagnose' class='outline sm'>诊断</button>"
@@ -207,7 +208,7 @@ def _ai_column(workspace_name):
     )
 
 
-_MATH_RE = re.compile(r"\$([^$\n]+)\$|^\$\$([\s\S]+?)\$\$", re.MULTILINE)
+_MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)
 
 
 def _render_markdown(text, workspace_name, kp_id):
@@ -265,6 +266,8 @@ def _rich(text, workspace_name):
 
 def _math_replace(match):
     expr = match.group(1) or match.group(2)
+    if match.group(1) is not None:
+        return f"<span class='math display'>{html.escape(expr)}</span>"
     return f"<span class='math'>{html.escape(expr)}</span>"
 
 
