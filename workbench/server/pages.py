@@ -20,12 +20,16 @@ def hub_page(workspaces):
 
 
 def shell(workspace, workspaces, weak_items, middle_html, active_nav):
+    course = workspace.get("active_course") or ""
+    chapter = workspace.get("active_chapter") or ""
+    meta = f"<span class='meta'>{html.escape(workspace['name'])}"
+    if course and chapter:
+        meta += f" · {html.escape(course)} / {html.escape(chapter)}"
+    meta += "</span>"
     topbar = (
         "<header id='topbar'>"
         "<span class='brand'>lesson-kit</span>"
-        f"<span class='meta'>{html.escape(workspace['name'])}"
-        f" · {html.escape(workspace.get('active_course') or '-')}"
-        f" / {html.escape(workspace.get('active_chapter') or '-')}</span>"
+        f"{meta}"
         "</header>"
     )
     left = _left_column(workspace, workspaces, weak_items, active_nav)
@@ -45,6 +49,9 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav):
 def practice_page(workspace, workspaces, weak_items):
     middle = (
         "<h1>练习</h1>"
+        "<div id='start-area'>"
+        "<button id='start-practice' class='primary'>开始练习（弱项优先）</button>"
+        "</div>"
         "<div id='stream'></div>"
         "<div id='composer' class='hidden'>"
         "<div id='composer-row'>"
@@ -53,10 +60,9 @@ def practice_page(workspace, workspaces, weak_items):
         "</div>"
         "<div id='composer-actions' class='hidden'>"
         "<button id='show-answer' class='primary'>看答案</button>"
-        "<button id='no-time'>没时间批改</button>"
-        "<button id='start-practice' class='primary hidden'>开始练习（弱项优先）</button>"
+        "<button id='no-time' class='ghost'>没时间批改</button>"
         "</div>"
-        "<a id='goto-session-end' href='session-end' class='hidden'>去会话末统一自评</a>"
+        "<button id='goto-session-end' class='outline hidden'>去会话末统一自评</button>"
         "</div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "practice")
@@ -114,21 +120,26 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
 def graph_page(workspace, workspaces, weak_items, has_artifact):
     if has_artifact:
         middle = (
+            "<div style='display:flex;flex-direction:column;"
+            "height:calc(100vh - 130px)'>"
             "<h1>知识图谱</h1>"
-            f"<iframe src='/api/w/{workspace['name']}/graph' "
-            "style='width:100%;height:calc(100vh - 140px);border:1px solid "
-            "var(--dsw-border-l2);border-radius:12px'></iframe>"
+            f"<iframe src='/api/w/{workspace['name']}/graph' title='知识图谱' "
+            "style='flex:1;width:100%;border:1px solid var(--dsw-border-l2);"
+            "border-radius:12px'></iframe>"
+            "</div>"
         )
     else:
+        course = workspace.get("active_course", "")
+        chapter = workspace.get("active_chapter", "")
         middle = (
             "<h1>知识图谱</h1>"
             "<div class='card'><p>图谱尚未生成。</p>"
-            "<p>生成命令：</p>"
+            "<p>生成命令（在仓库根目录运行）：</p>"
             "<pre>python pool/scripts/render-graph-html.py --db pool/{course}.db "
-            "--course {course} --chapter {chapter} --course-name \"...\" --out output/{course}/{chapter}</pre>"
+            "--course {course} --chapter {chapter} --course-name \"课程名\" "
+            "--out output/{course}/{chapter}</pre>"
             "<p>生成后刷新本页即可。</p></div>"
-        ).format(course=workspace.get("active_course", ""),
-                 chapter=workspace.get("active_chapter", ""))
+        ).format(course=course, chapter=chapter)
     return shell(workspace, workspaces, weak_items, middle, "graph")
 
 
@@ -164,7 +175,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"<div class='weak-item'><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
         f"<span class='id'>{html.escape(item['kp_id'])}</span></a>"
         f"<span class='score'>{item['score']}</span>"
-        f"<span class='reasons'>{html.escape('; '.join(item['reasons']))}</span></div>"
+        f"<span class='reasons' title='{html.escape('; '.join(item['reasons']))}'>"
+        f"{html.escape('; '.join(item['reasons']))}</span></div>"
         for item in weak_items
     )
     return (
@@ -187,7 +199,7 @@ def _ai_column(workspace_name):
         "</div>"
         "<div id='ai-messages'></div>"
         "<div id='ai-input-row'>"
-        "<input id='ai-input' placeholder='提问（绑定当前题时作为讲解/诊断输入）'>"
+        "<input id='ai-input' placeholder='附加说明（可选）'>"
         "<button id='ai-send' class='primary sm'>发送</button>"
         "</div>"
     )
@@ -272,9 +284,10 @@ def _image_replace(line, workspace_name):
 def _base(title, body):
     return (
         "<!doctype html><html lang='zh'><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         f"<title>{html.escape(title)}</title>"
         "<link rel='stylesheet' href='/static/workbench.css'>"
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"
-        "<script defer src='/static/katex/katex.min.js'></script>"
+        "<script src='/static/katex/katex.min.js'></script>"
         f"</head><body>{body}</body></html>"
     )

@@ -134,6 +134,8 @@
     api("/weak?limit=5").then(function (items) {
       var kps = items.map(function (i) { return i.kp_id; });
       store(KPS_KEY, kps);
+      var startArea = document.getElementById("start-area");
+      if (startArea) startArea.classList.add("hidden");
       loadNext(kps);
     });
   }
@@ -149,11 +151,14 @@
         addMessage("<p>本组题目已练完。</p>");
         showComposer(false);
         gotoSessionEnd.classList.remove("hidden");
+        var startArea = document.getElementById("start-area");
+        if (startArea) startArea.classList.remove("hidden");
         return;
       }
       var problem = result.problems[0];
       var seen = session();
-      seen.push({ problem_id: problem.problem_id, answer_text: "" });
+      seen.push({ problem_id: problem.problem_id, answer_text: "",
+                  state: "unrated" });
       store(SESSION_KEY, seen);
       setCurrent({ problem_id: problem.problem_id, answer_text: "" });
       addMessage(
@@ -199,7 +204,7 @@
         .filter(Boolean);
       var html = "<div class='meta'>解答</div>";
       if (!blocks.length) {
-        html += "<p>（本题无解答文本）</p>";
+        html += "<p>（本题无解答文本，请基于自身作答自评）</p>";
       } else {
         html += blocks.map(function (block, i) {
           return "<div class='solution-block' data-idx='" + (i + 1) + "'>"
@@ -213,7 +218,7 @@
   });
 
   noTime.addEventListener("click", function () {
-    finishProblem("skip", "");
+    finishProblem("skip", "", "skipped");
   });
 
   function feedbackHtml() {
@@ -250,7 +255,7 @@
           item_type: "problem", item_id: currentProblem.problem_id,
           rating: rating, note: note,
         }).then(function () {
-          finishProblem("skip", note);
+          finishProblem("skip", note, "rated");
         });
       });
     });
@@ -259,12 +264,12 @@
       mark.addEventListener("click", function () {
         var note = feedback.querySelector("#feedback-note").value.trim();
         var stuckNote = (stuckStep ? "卡在第" + stuckStep + "步" : "卡住") + " " + note;
-        finishProblem("stuck", stuckNote);
+        finishProblem("stuck", stuckNote, "rated");
       });
     }
   }
 
-  function finishProblem(result, note) {
+  function finishProblem(result, note, state) {
     var body = {
       problem_id: currentProblem.problem_id,
       result: result,
@@ -272,7 +277,18 @@
     };
     if (currentProblem.answer_text) body.answer_text = currentProblem.answer_text;
     post("/practice", body).catch(function () { /* record-only */ }).then(function () {
-      addMessage("<div class='meta'>已记录：" + result + "</div>", "user");
+      var list = session();
+      for (var i = list.length - 1; i >= 0; i--) {
+        if (list[i].problem_id === currentProblem.problem_id) {
+          list[i].state = state || "rated";
+          break;
+        }
+      }
+      store(SESSION_KEY, list);
+      var recordMsg = result === "skip"
+        ? "已记录：未反馈（不影响进度）"
+        : "已记录：" + result;
+      addMessage("<div class='meta'>" + recordMsg + "</div>", "user");
       setCurrent(null);
       var kps = currentKps();
       loadNext(kps);
@@ -283,13 +299,22 @@
     startPractice.addEventListener("click", startSession);
   }
 
+  var gotoBtn = document.getElementById("goto-session-end");
+  if (gotoBtn) {
+    gotoBtn.addEventListener("click", function () {
+      window.location = "session-end";
+    });
+  }
+
   /* ---------- session-end ---------- */
 
   var pending = document.getElementById("pending-ratings");
   if (pending) {
-    var list = session();
+    var list = session().filter(function (item) {
+      return item.state !== "skipped";
+    });
     if (!list.length) {
-      pending.innerHTML = "<p>本会话暂无记录。</p>";
+      pending.innerHTML = "<p>没有待评的题。</p>";
     } else {
       var html = "";
       list.forEach(function (item) {
@@ -331,7 +356,10 @@
     var similar = document.getElementById("practice-similar");
     if (similar) {
       similar.addEventListener("click", function () {
-        window.location = "practice";
+        api("/weak?limit=5").then(function (items) {
+          store(KPS_KEY, items.map(function (i) { return i.kp_id; }));
+          window.location = "practice";
+        });
       });
     }
   }
@@ -352,22 +380,24 @@
 
   function aiTask(operation) {
     var current = load(CURRENT_KEY, null);
-    if (!current) {
+    if (!current || !currentProblem || current.problem_id !== currentProblem.problem_id) {
       aiAdd("<p>先打开一道题再发起讲解/诊断。</p>", "user");
       return;
     }
     var note = aiInput ? aiInput.value.trim() : "";
-    var body = { problem_id: current.problem_id, note: note };
+    var body = { problem_id: currentProblem.problem_id, note: note };
     if (current.answer_text) {
       body.user_answer = current.answer_text;
+    } else {
+      aiAdd("<p>本题尚未作答，将不附作答文本。</p>", "user");
     }
     if (stuckStep) {
       body.stuck_step = stuckStep;
     }
-    aiAdd("<p>已发起：" + operation + " " + current.problem_id + "</p>", "user");
+    aiAdd("<p>已发起：" + operation + " " + currentProblem.problem_id + "</p>", "user");
     if (aiInput) aiInput.value = "";
     post("/ai/" + operation, body).then(function (data) {
-      pollJob(data.job_id, operation, current.problem_id);
+      pollJob(data.job_id, operation, currentProblem.problem_id);
     }).catch(function () {
       aiAdd("<p>桥接不可用：请先配置 provider（wb bridge add）。记录不受影响。</p>");
     });
@@ -388,7 +418,14 @@
           aiAdd("<p>任务失败：" + escapeHtml(status.error || "未知原因") + "</p>");
         } else if (tries > 60) {
           clearInterval(timer);
-          aiAdd("<p>任务超时未完成。</p>");
+          aiAdd("<p>任务尚未完成。<button id='retry-poll' class='outline sm'>"
+            + "重试查询</button></p>");
+          var retry = document.getElementById("retry-poll");
+          if (retry) {
+            retry.addEventListener("click", function () {
+              pollJob(jobId, operation, problemId);
+            });
+          }
         }
       }).catch(function () {
         clearInterval(timer);
