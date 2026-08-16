@@ -1,0 +1,52 @@
+/* workbench — minimal utilitarian shell */
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, "Microsoft YaHei", sans-serif;
+       font-size: 15px; color: #222; background: #fafafa; }
+#layout { display: grid; grid-template-columns: 220px 1fr 320px;
+          height: 100vh; }
+aside, main { overflow-y: auto; }
+#left-column { border-right: 1px solid #ddd; padding: 12px; background: #f4f4f4; }
+#ai-column { border-left: 1px solid #ddd; padding: 12px; background: #f7f7f7;
+             display: flex; flex-direction: column; }
+#middle { padding: 16px 24px; }
+
+h1 { font-size: 18px; margin: 0 0 8px; }
+h2 { font-size: 15px; margin: 14px 0 6px; }
+a { color: #1a5fb4; text-decoration: none; }
+a:hover { text-decoration: underline; }
+select { width: 100%; padding: 4px; margin-bottom: 10px; }
+ul { list-style: none; padding: 0; margin: 0; }
+li { padding: 3px 0; }
+.score { color: #888; font-size: 12px; }
+.reasons { color: #888; font-size: 12px; }
+
+button { padding: 6px 12px; margin: 2px; border: 1px solid #bbb;
+         border-radius: 4px; background: #fff; cursor: pointer; }
+button:hover { background: #eee; }
+button.primary { background: #1a5fb4; color: #fff; border-color: #1a5fb4; }
+
+.card { background: #fff; border: 1px solid #ddd; border-radius: 6px;
+        padding: 14px; margin-bottom: 12px; }
+.feedback { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ccc; }
+.hidden { display: none; }
+.solution-block { border-left: 3px solid #eee; padding: 4px 10px;
+                  margin: 6px 0; cursor: pointer; }
+.solution-block.stuck { border-left-color: #d00; }
+#ai-context { font-size: 13px; color: #555; background: #eee; padding: 6px;
+              border-radius: 4px; margin-bottom: 8px; }
+#ai-messages { flex: 1; overflow-y: auto; font-size: 14px; }
+.msg { margin: 8px 0; padding: 8px; border-radius: 6px; }
+.msg.user { background: #e8f0fe; }
+.msg.ai { background: #fff; border: 1px solid #ddd; }
+.msg .section { margin-top: 8px; }
+.msg .section h4 { margin: 6px 0 2px; font-size: 13px; color: #555; }
+#ai-input-row { display: flex; gap: 4px; margin-top: 8px; }
+#ai-input { flex: 1; padding: 6px; border: 1px solid #bbb; border-radius: 4px; }
+textarea { width: 100%; padding: 6px; border: 1px solid #bbb;
+           border-radius: 4px; font-family: inherit; }
+table { border-collapse: collapse; }
+td, th { border: 1px solid #ddd; padding: 4px 8px; }
+code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }
+pre { background: #f0f0f0; padding: 8px; overflow-x: auto; }
+img { max-width: 100%; }

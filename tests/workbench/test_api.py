@@ -122,7 +122,7 @@ class ApiTests(unittest.TestCase):
 
     def test_workspace_page(self):
         status, html = self.get_html("/w/dmath/")
-        self.assertIn("weak", html)
+        self.assertIn("弱项", html)
 
 
 if __name__ == "__main__":

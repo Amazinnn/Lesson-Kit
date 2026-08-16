@@ -6,12 +6,30 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from workbench import registry
+from workbench.domain import weak
 from workbench.server import api as api_mod
 from workbench.server import pages
 
 FRONTEND_DIST = (
     Path(__file__).resolve().parents[2] / "frontend" / "editable-graph" / "dist"
 )
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+CONTENT_TYPES = {
+    ".js": "application/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".html": "text/html; charset=utf-8",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".svg": "image/svg+xml",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+}
+
+
+def _content_type(suffix):
+    return CONTENT_TYPES.get(suffix, "application/octet-stream")
 
 ROUTES = [
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
@@ -24,6 +42,7 @@ ROUTES = [
     ("GET", "/api/w/{name}/kp/{kp_id}", api_mod.kp_detail),
     ("POST", "/api/w/{name}/ai/{operation}", api_mod.ai_run),
     ("GET", "/api/w/{name}/ai/jobs/{job_id}", api_mod.ai_status),
+    ("GET", "/api/w/{name}/explain/{problem_id}", api_mod.explain_result),
 ]
 
 
@@ -44,8 +63,11 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         if path == "/":
             self._send_html(200, pages.hub_page(self._hub_data()))
             return
-        if path.startswith("/w/") and path.endswith("/"):
-            self._send_workspace_page(path)
+        if path.startswith("/static/"):
+            self._send_static(path)
+            return
+        if path.startswith("/w/"):
+            self._send_page(path)
             return
         if path.startswith("/api/w/") and "/figures/" in path:
             self._send_figure(path)
@@ -83,26 +105,56 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
     def _hub_data(self):
         return api_mod.hub_workspaces(None, None, {}, None)
 
-    def _send_workspace_page(self, path):
-        name = path.split("/")[2]
+    def _send_static(self, path):
+        relative = path[len("/static/"):]
+        for base in (STATIC_DIR, FRONTEND_DIST):
+            target = (base / relative).resolve()
+            if not str(target).startswith(str(base.resolve())):
+                self._send_json(404, {"error": "not found"})
+                return
+            if target.is_file():
+                data = target.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", _content_type(target.suffix))
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+        self._send_json(404, {"error": "not found"})
+
+    def _send_page(self, path):
+        parts = [s for s in path.split("/") if s]
+        # /w/{name}/practice | /w/{name}/session-end | /w/{name}/kp/{kp_id}
+        name = parts[1]
         try:
             workspace = registry.get_workspace(name)
         except KeyError:
-            self._send_html(404, pages._page("not found", "<h1>not found</h1>"))
+            self._send_html(404, pages._base("not found", "<h1>not found</h1>"))
             return
+        workspaces = registry.list_workspaces()
         pool = api_mod._pool_for(workspace)
         try:
-            from datetime import date
-            from workbench.domain import weak
-            prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
-            weak_items = weak.score_all(
-                pool.kps(prefix), pool.signals(), pool.schedule_rows(),
-                pool.relations(), set(), date.today(),
-            )[:20]
-            due_items = api_mod.due_list(pool, workspace, {}, None)
+            weak_items = self._weak_items(workspace, pool)
+            page = parts[2] if len(parts) > 2 else "practice"
+            if page == "kp":
+                kp_id = parts[3] if len(parts) > 3 else ""
+                html_body = pages.kp_page(workspace, workspaces, weak_items,
+                                          pool, kp_id)
+            elif page == "session-end":
+                html_body = pages.session_end_page(workspace, workspaces, weak_items)
+            else:
+                html_body = pages.practice_page(workspace, workspaces, weak_items)
         finally:
             pool.close()
-        self._send_html(200, pages.workspace_page(workspace, weak_items, due_items))
+        self._send_html(200, html_body)
+
+    def _weak_items(self, workspace, pool):
+        from datetime import date
+        prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+        return weak.score_all(
+            pool.kps(prefix), pool.signals(), pool.schedule_rows(),
+            pool.relations(), set(), date.today(),
+        )[:20]
 
     def _send_figure(self, path):
         parts = path.split("/")

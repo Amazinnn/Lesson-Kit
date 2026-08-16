@@ -110,3 +110,13 @@ def ai_run(pool, workspace, params, body):
 def ai_status(pool, workspace, params, body):
     from workbench.bridge import jobs
     return jobs.status(pool.jobs_dir(), params["job_id"])
+
+
+def explain_result(pool, workspace, params, body):
+    path = pool.explain_dir() / f"{params['problem_id']}.md"
+    if not path.is_file():
+        raise ApiError(404, "no explain result yet")
+    return {
+        "problem_id": params["problem_id"],
+        "markdown": path.read_text(encoding="utf-8"),
+    }
