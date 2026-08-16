@@ -116,3 +116,40 @@ be tracked in version control as learning assets.
 
 - **WHEN** an explain task passes contract validation
 - **THEN** the result file is written to `.lessonkit/explain/{course}/{chapter}/{item_id}.md` and the task working files remain under `.lessonkit/jobs/<job-id>/` outside version control
+
+### Requirement: CLI is a data interface, not a teacher
+
+The super CLI SHALL expose only data operations — query pool content, pull
+problems, record attempts and feedback, start bridge tasks, read task status —
+and SHALL carry no teaching semantics. Teaching behavior (how to teach, when to
+ask, how to close a topic) SHALL live in the teaching layer (skills and the
+teacher conduct contract), never in the CLI. The same teaching capability SHALL
+be reachable through the web shell, whose AI panel is a thin conversation
+surface over the same bridge tasks.
+
+#### Scenario: CLI records data without pedagogy
+
+- **WHEN** an agent runs `wb pull` and `wb record` to gather and record practice data
+- **THEN** the CLI returns and stores data only, with no teaching instructions, and the agent's teaching behavior comes from the teaching skill it loaded
+
+### Requirement: Flexible session model
+
+A teaching session SHALL NOT be bound to a single task or a fixed flow: the
+agent SHALL freely use data interfaces to explore problems and materials for
+the conversation, the learner SHALL be able to start a new session at any time,
+and sessions SHALL be recorded as trace artifacts (anchor, exchanges, outcomes)
+rather than enforced as state machines. Process control SHALL follow layered
+adaptation: macro (session purpose anchored to pool items), meso (session
+lifecycle, learner-controlled), micro (turn-level conduct in the teacher
+contract). Anti-derailment SHALL work through anchoring, parking digressions,
+and learner control — never through hard-coded pedagogical transitions.
+
+#### Scenario: A session changes topics freely
+
+- **WHEN** a conversation drifts toward a related but unplanned question
+- **THEN** the agent parks the digression visibly, returns to the session anchor, and the learner can open a new session for the digression at any time
+
+#### Scenario: Session trace is recorded
+
+- **WHEN** a teaching session ends
+- **THEN** a trace artifact records the anchor, the exchanges, and the outcomes under the session's job area, without locking any future session to it

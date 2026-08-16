@@ -43,6 +43,12 @@ context: |
     task files + output contract validation; teacher conduct rules (establish
     baseline, concise explanation, comprehension check, never guess, cite
     source) are part of the task contract. v1 operation: explain only.
+  - CLI is a data interface: wb carries no teaching semantics; teaching lives
+    in the teaching skill + conduct contract (ADR 0020, informed by DeepTutor).
+  - Sessions are flexible: not bound to one task, learner opens new sessions
+    anytime; anti-derailment via anchor + parked digressions + learner control,
+    never hard-coded transitions; sessions leave trace artifacts under
+    .lessonkit/jobs/ (ADR 0020).
   - High-SNR input diet: syllabus, past papers, classic explanations are the
     preferred extraction inputs; test-first and reverse review from wrong
     answers; pool shortages trigger candidate generation, never invented
