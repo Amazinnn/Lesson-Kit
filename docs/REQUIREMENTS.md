@@ -1,0 +1,49 @@
+# Requirements — lesson-kit Review Workbench
+
+> 阶段 0 产物（开工检查清单）。权威需求源：`openspec/changes/review-workbench-v1/`
+> （26+ 条 Requirement + Scenario）。本文件是人话版摘要 + 边界 + 验收标准。
+
+## 一句话
+
+**个人用的趁手学习工具**：把 lesson-kit 池子（28 KP / 303 题 / 信号 / 候选）变成每天打开
+的复习工作台——挠自己痛处（弱项优先），AI 只经外部 agent CLI 当老师，绝不内置 AI 内核。
+
+## 核心需求（已确认）
+
+1. 网页一体工作台 + 超级 CLI（wb），文件夹 = 工作区，用户级注册表。
+2. 日常复习为主；考前突击（`--mode all` 跨章节）、跟课抽取并重。
+3. 挠痛处模型：弱项列表 → 拉题 → 直接练不会的；流程不钉死，永不锁题。
+4. 反馈可选：1–5 打分 + 自然语言，映射信号并影响下次复习；信号永不自动清除。
+5. 遗忘曲线只做排序背景与提醒（SM-2 变体），永不锁题。
+6. AI 转接层：无 AI 内核；任务 + 输出契约 + 外部 agent CLI（cwd=工作区）；架构优于提示词。
+7. 高信噪比输入（大纲/真题/经典解释）；真题覆盖门禁；出题而非总结；错题反向复习。
+8. 教学行为分层：CLI 只是数据接口；教学在 Skill + 教师行为契约；会话弹性、不硬编码流程
+   （ADR 0020，DeepTutor 启示）；Scoropic 苏格拉底对话模式已记录、延期（ADR 0021）。
+9. 判分：可判分自动判；开放题"先作答→揭晓→自评"；没时间批改就只记录。
+10. 图形知识点：`.lessonkit/figures/` 图床，KP 与题目都可挂图，Markdown 双端渲染。
+11. 证明/推导卡点粒度（卡在第几步 + 自然语言）；级联信号（前置/方法 KP 传导）。
+12. 对话中的作答记录进会话痕迹（trace），供未来 AI 教师记忆。
+
+## 明确不做（scope 边界）
+
+- 不做 AI 内核 / Harness Engineering；不做 LLM 接入适配器（v1 只接外部 CLI）。
+- 不做模拟答辩模式（Scoropic 已延期，ADR 0021）；不做 generate 出题桥操作（v1.5）。
+- 不做速成模式专用视图（v1 用 `--mode all` 顶住）。
+- 不做跨对话 AI 教师个性画像消费端（trace 在积累，消费端后置）。
+- 不做图形资产管理工具；不做 Obsidian vault 打包。
+- 不改变现有管线/池子契约：新增全部增量（表/列），`lessonkit.py` 与 pipeline 不动。
+- 不做防御性编程、不用哈希（含 SHA-256），ID 一律可读顺序标识。
+
+## 验收标准（v1 后端"做完"的定义）
+
+- [ ] `pytest tests -q` 全绿（含新增 workbench 领域/桥/API 单测）。
+- [ ] 迁移幂等：新池（create-tables）与旧池升级（migrate-progress）都通过
+      `validate-pool`；现有 28 KP / 303 题数据不变。
+- [ ] `wb` 全命令可用：init/ls/open/weak/due/pull/record/feedback/schedule/ai/bridge/guard。
+- [ ] 服务端 API 全部按 spec 的 WHEN/THEN 场景通过测试（hub/weak/pull/practice/feedback/
+      schedule/figures/ai jobs）。
+- [ ] 桥：explain + diagnose 任务全生命周期（queued→running→done/failed）+ 契约校验
+      （缺节 FAIL）+ 产物落 `.lessonkit/explain/`，任务文件在 `.lessonkit/jobs/`。
+- [ ] 无 provider 时工作台全功能可用，AI 动作显示"不可用"。
+- [ ] `openspec validate review-workbench-v1 --strict` 通过；文档与代码同步。
+- [ ] 真实冒烟：对 `pool/dmath.db` 跑一遍"弱项 → 拉题 → 作答 → 反馈 → 到期提醒"全链路。
