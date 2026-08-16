@@ -41,6 +41,9 @@ tracked intermediate artifacts and check reports. For extraction commands,
 pass `--db pool/<course>.db` when you want local SQLite pool validation through
 `pipeline/scripts/validate-pool.py`.
 
+All `lessonkit.py` commands resolve paths relative to the current working
+directory, so run them from the repository root.
+
 ## Current Pools
 
 - `knowledge_points`: extracted course knowledge.
