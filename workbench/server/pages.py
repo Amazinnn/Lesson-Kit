@@ -140,34 +140,29 @@ def _render_markdown(text, workspace_name, kp_id):
     """Minimal Markdown renderer: math, wiki links, images, headings, lists."""
     if not text:
         return ""
-    lines = text.splitlines()
     out = []
     in_list = False
-    for line in lines:
-        if _MATH_RE.search(line):
-            line = _MATH_RE.sub(_math_replace, line)
-        line = _wiki_replace(line, workspace_name)
-        line = _image_replace(line, workspace_name)
+    for line in text.splitlines():
         if line.startswith("### "):
             if in_list:
                 out.append("</ul>")
                 in_list = False
-            out.append(f"<h4>{html.escape(line[4:])}</h4>")
+            out.append(f"<h4>{_rich(line[4:], workspace_name)}</h4>")
         elif line.startswith("## "):
             if in_list:
                 out.append("</ul>")
                 in_list = False
-            out.append(f"<h3>{html.escape(line[3:])}</h3>")
+            out.append(f"<h3>{_rich(line[3:], workspace_name)}</h3>")
         elif line.startswith("# "):
             if in_list:
                 out.append("</ul>")
                 in_list = False
-            out.append(f"<h2>{html.escape(line[2:])}</h2>")
+            out.append(f"<h2>{_rich(line[2:], workspace_name)}</h2>")
         elif line.startswith("- ") or line.startswith("* "):
             if not in_list:
                 out.append("<ul>")
                 in_list = True
-            out.append(f"<li>{_inline(line[2:])}</li>")
+            out.append(f"<li>{_rich(line[2:], workspace_name)}</li>")
         elif line.strip() == "":
             if in_list:
                 out.append("</ul>")
@@ -177,16 +172,20 @@ def _render_markdown(text, workspace_name, kp_id):
             if in_list:
                 out.append("</ul>")
                 in_list = False
-            out.append(f"<p>{_inline(line)}</p>")
+            out.append(f"<p>{_rich(line, workspace_name)}</p>")
     if in_list:
         out.append("</ul>")
     return "".join(out)
 
 
-def _inline(text):
+def _rich(text, workspace_name):
+    """Escape first, then inject math/wiki/image markup (order matters)."""
     text = html.escape(text)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
+    text = _MATH_RE.sub(_math_replace, text)
+    text = _wiki_replace(text, workspace_name)
+    text = _image_replace(text, workspace_name)
     return text
 
 
