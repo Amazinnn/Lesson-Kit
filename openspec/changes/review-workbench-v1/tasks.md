@@ -26,11 +26,11 @@
 
 ## 5. Bridge (`workbench/bridge/`)
 
-- [ ] 5.1 `jobs.py`: task lifecycle queued→running→done/failed; job dir layout `.lessonkit/jobs/<job-id>/` (task.json/task.md/status.json/stdout.log)
-- [ ] 5.2 `providers.py`: spawn external CLI (cwd=workspace, timeout, capture stdout, non-zero exit → failed with reason)
-- [ ] 5.3 `contracts.py`: `validate(kind, text)` — explain (four sections + source reference) and diagnose (定位/提示/溯源/追问), parseable Markdown
-- [ ] 5.4 `teacher.py`: render task instructions for explain and diagnose with conduct rules (baseline question, concise explanation, comprehension check, never guess, cite source; diagnose: locate-first, hints not full solutions)
-- [ ] 5.5 Tests: contracts validation (missing section → fail), jobs state transitions, teacher instruction contains conduct rules
+- [x] 5.1 `jobs.py`: task lifecycle queued→running→done/failed; job dir layout `.lessonkit/jobs/<job-id>/` (task.json/task.md/status.json/stdout.log)
+- [x] 5.2 `providers.py`: spawn external CLI (cwd=workspace, timeout, capture stdout, non-zero exit → failed with reason)
+- [x] 5.3 `contracts.py`: `validate(kind, text)` — explain (four sections + source reference) and diagnose (定位/提示/溯源/追问), parseable Markdown
+- [x] 5.4 `teacher.py`: render task instructions for explain and diagnose with conduct rules (baseline question, concise explanation, comprehension check, never guess, cite source; diagnose: locate-first, hints not full solutions)
+- [x] 5.5 Tests: contracts validation (missing section → fail), jobs state transitions, teacher instruction contains conduct rules
 
 ## 6. CLI (`workbench/cli/main.py`)
 
