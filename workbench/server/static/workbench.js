@@ -103,8 +103,13 @@
 
   function updateAiContext() {
     var el = document.getElementById("ai-context");
+    var hasCurrent = !!currentProblem;
+    var explainBtn = document.getElementById("ai-explain");
+    var diagnoseBtn = document.getElementById("ai-diagnose");
+    if (explainBtn) explainBtn.disabled = !hasCurrent;
+    if (diagnoseBtn) diagnoseBtn.disabled = !hasCurrent;
     if (!el) return;
-    if (!currentProblem) {
+    if (!hasCurrent) {
       el.textContent = "上下文：无";
       return;
     }
@@ -454,6 +459,7 @@
     markdown.split(/\n## /).forEach(function (section) {
       var lines = section.trim().split("\n");
       var title = lines.shift().replace(/^#+\s*/, "");
+      if (!title) return;
       html += "<div class='section'><h4>" + escapeHtml(title) + "</h4><p>"
         + richText(lines.join("\n")) + "</p></div>";
     });

@@ -112,8 +112,8 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
     middle = (
         f"<h1>{html.escape(kp['knowledge_item'])}</h1>"
         f"<div class='card'>{_render_markdown(kp.get('body') or '', workspace['name'], kp_id)}</div>"
-        f"<h2>信号</h2><ul>{signals_html or '<li>无</li>'}</ul>"
-        f"<h2>关联题目</h2><ul>{problems_html or '<li>无</li>'}</ul>"
+        f"<h2>信号</h2><ul>{signals_html or '<li class="muted">—</li>'}</ul>"
+        f"<h2>关联题目</h2><ul>{problems_html or '<li class="muted">—</li>'}</ul>"
         f"<h2>调度</h2><p>{schedule_html}</p>"
     )
     return shell(workspace, workspaces, weak_items, middle, "kps")

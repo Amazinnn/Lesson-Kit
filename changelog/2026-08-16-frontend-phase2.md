@@ -36,3 +36,11 @@ NaN
 0
 NaN
 NaN
+
+## Post-implementation review fixes (Claude Code read-only round)
+
+- `_send_static`: reject `..` path segments and use component-wise `is_relative_to` containment (the old string-prefix check had a sibling-directory bypass).
+- `renderResult`: skip empty section titles (no more empty `<h4>` when the first chunk is a bare heading).
+- AI 讲解/诊断 buttons disabled while no problem is current (DSH-style affordance), synced in `updateAiContext`.
+- KP detail empty lists render a muted `—` placeholder instead of `无`.
+- Not applied (verified false or design choice): KaTeX is already vendored (static/katex present); hub_stats keys are contractually present; per-workspace session queue is kept on workspace switch (aligns with the user's 巨无霸长对话 ideal); 1024px collapse breakpoint matches DSH's own SIDEBAR_AUTO_COLLAPSE constant.

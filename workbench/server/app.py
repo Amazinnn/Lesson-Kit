@@ -114,9 +114,12 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
     def _send_static(self, path):
         relative = path[len("/static/"):]
+        if ".." in relative.split("/"):
+            self._send_json(404, {"error": "not found"})
+            return
         for base in (STATIC_DIR, FRONTEND_DIST):
             target = (base / relative).resolve()
-            if not str(target).startswith(str(base.resolve())):
+            if not target.is_relative_to(base.resolve()):
                 self._send_json(404, {"error": "not found"})
                 return
             if target.is_file():

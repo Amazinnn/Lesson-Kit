@@ -322,6 +322,7 @@ a { color: var(--dsw-brand-accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 ul { list-style: none; padding: 0; margin: 0; }
 li { padding: 2px 0; }
+li.muted { color: var(--dsw-label-tertiary); font-size: 13px; }
 code { font-family: var(--dsw-font-code); background: var(--dsw-bg-layer-2); padding: 1px 4px; border-radius: 4px; font-size: 12px; }
 pre { background: var(--dsw-bg-layer-2); padding: 8px; border-radius: var(--dsw-radius-sm); overflow-x: auto; }
 table { border-collapse: collapse; margin: 8px 0; }
