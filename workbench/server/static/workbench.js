@@ -105,9 +105,16 @@
   function updateAiContext() {
     var el = document.getElementById("ai-context");
     if (!el) return;
-    el.textContent = currentProblem
-      ? "当前题：" + currentProblem.problem_id
-      : "上下文：无";
+    if (!currentProblem) {
+      el.textContent = "上下文：无";
+      return;
+    }
+    var list = session();
+    var recent = list.slice(-3, -1).map(function (p) { return p.problem_id; });
+    var suffix = recent.length
+      ? "  · 最近：" + recent.join(", ")
+      : "";
+    el.textContent = "当前题：" + currentProblem.problem_id + suffix;
   }
 
   function addMessage(html, cls) {
@@ -351,8 +358,11 @@
     }
     var note = aiInput ? aiInput.value.trim() : "";
     var body = { problem_id: current.problem_id, note: note };
-    if (operation === "diagnose" && current.answer_text) {
+    if (current.answer_text) {
       body.user_answer = current.answer_text;
+    }
+    if (stuckStep) {
+      body.stuck_step = stuckStep;
     }
     aiAdd("<p>已发起：" + operation + " " + current.problem_id + "</p>", "user");
     if (aiInput) aiInput.value = "";
