@@ -1,12 +1,16 @@
 """Run external agent CLIs. Captures stdout to a log file, never a pipe."""
 
+import os
 import subprocess
 
 
-def run_provider(provider, workspace, log_path):
+def run_provider(provider, workspace, log_path, env=None):
     """Run the provider command with cwd=workspace; return exit code or 'timeout'."""
     command = [provider["command"]] + list(provider.get("args", []))
     timeout = provider.get("timeout_s", 300)
+    run_env = dict(os.environ)
+    if env:
+        run_env.update(env)
     with open(log_path, "wb") as log:
         try:
             result = subprocess.run(
@@ -15,6 +19,7 @@ def run_provider(provider, workspace, log_path):
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 timeout=timeout,
+                env=run_env,
             )
             return result.returncode
         except subprocess.TimeoutExpired:
