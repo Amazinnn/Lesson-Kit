@@ -43,6 +43,7 @@ ROUTES = [
     ("POST", "/api/w/{name}/ai/{operation}", api_mod.ai_run),
     ("GET", "/api/w/{name}/ai/jobs/{job_id}", api_mod.ai_status),
     ("GET", "/api/w/{name}/explain/{problem_id}", api_mod.explain_result),
+    ("GET", "/api/w/{name}/graph", api_mod.graph_artifact),
 ]
 
 
@@ -124,7 +125,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
     def _send_page(self, path):
         parts = [s for s in path.split("/") if s]
-        # /w/{name}/practice | /w/{name}/session-end | /w/{name}/kp/{kp_id}
+        # /w/{name}/{practice|kps|kp/{id}|graph|session-end}
         name = parts[1]
         try:
             workspace = registry.get_workspace(name)
@@ -140,6 +141,13 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 kp_id = parts[3] if len(parts) > 3 else ""
                 html_body = pages.kp_page(workspace, workspaces, weak_items,
                                           pool, kp_id)
+            elif page == "kps":
+                html_body = pages.kps_page(workspace, workspaces, weak_items, pool)
+            elif page == "graph":
+                html_body = pages.graph_page(
+                    workspace, workspaces, weak_items,
+                    self._graph_artifact(workspace).is_file(),
+                )
             elif page == "session-end":
                 html_body = pages.session_end_page(workspace, workspaces, weak_items)
             else:
@@ -155,6 +163,12 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             pool.kps(prefix), pool.signals(), pool.schedule_rows(),
             pool.relations(), set(), date.today(),
         )[:20]
+
+    def _graph_artifact(self, workspace):
+        course = workspace.get("active_course", "")
+        chapter = workspace.get("active_chapter", "")
+        return (Path(workspace["path"]) / "output" / course / chapter
+                / f"{chapter}-graph.html")
 
     def _send_figure(self, path):
         parts = path.split("/")

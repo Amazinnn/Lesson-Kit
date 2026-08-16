@@ -1,4 +1,4 @@
-/* workbench — minimal client logic (vanilla JS, no build) */
+/* workbench — DSH-styled client logic (vanilla JS, no build) */
 
 (function () {
   "use strict";
@@ -54,7 +54,7 @@
     return div.innerHTML;
   }
 
-  function problemTextToHtml(text) {
+  function richText(text) {
     return escapeHtml(text)
       .replace(/\$\$([\s\S]+?)\$\$/g, function (_, m) {
         return "<span class='math'>" + m + "</span>";
@@ -74,193 +74,206 @@
     });
   }
 
-  /* ---------- practice flow ---------- */
+  /* ---------- practice message stream ---------- */
 
-  var problemCard = document.getElementById("problem-card");
-  var startButton = document.getElementById("start-practice");
+  var stream = document.getElementById("stream");
+  var composer = document.getElementById("composer");
+  var answerBox = document.getElementById("answer-box");
+  var submitAnswer = document.getElementById("answer-submit");
+  var showAnswer = document.getElementById("show-answer");
+  var noTime = document.getElementById("no-time");
+  var startPractice = document.getElementById("start-practice");
+  var gotoSessionEnd = document.getElementById("goto-session-end");
+
+  var currentProblem = null;
+  var stuckStep = "";
 
   function session() {
     return load(SESSION_KEY, []);
   }
 
   function currentKps() {
-    var stored = load(KPS_KEY, null);
-    if (stored) return stored;
-    return [];
+    return load(KPS_KEY, []);
   }
 
   function setCurrent(problem) {
-    store(CURRENT_KEY, problem || null);
+    currentProblem = problem || null;
+    store(CURRENT_KEY, currentProblem);
     updateAiContext();
   }
 
   function updateAiContext() {
     var el = document.getElementById("ai-context");
     if (!el) return;
-    var current = load(CURRENT_KEY, null);
-    el.textContent = current ? "当前题：" + current.problem_id : "上下文：无";
+    el.textContent = currentProblem
+      ? "当前题：" + currentProblem.problem_id
+      : "上下文：无";
   }
 
-  if (startButton) {
-    startButton.addEventListener("click", function () {
-      api("/weak?limit=5").then(function (items) {
-        var kps = items.map(function (i) { return i.kp_id; });
-        if (!kps.length) kps = [];
-        store(KPS_KEY, kps);
-        loadNext(kps);
-      });
+  function addMessage(html, cls) {
+    var div = document.createElement("div");
+    div.className = "msg " + (cls || "teacher");
+    div.innerHTML = html;
+    stream.appendChild(div);
+    stream.scrollTop = stream.scrollHeight;
+    renderMath(div);
+  }
+
+  function showComposer(show) {
+    composer.classList.toggle("hidden", !show);
+  }
+
+  function startSession() {
+    api("/weak?limit=5").then(function (items) {
+      var kps = items.map(function (i) { return i.kp_id; });
+      store(KPS_KEY, kps);
+      loadNext(kps);
     });
   }
 
-  function loadNext(kps, mode) {
+  function loadNext(kps) {
     var exclude = session().map(function (p) { return p.problem_id; });
     api("/pull", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kp_ids: kps, n: 5, mode: mode || "weak" }),
+      body: JSON.stringify({ kp_ids: kps, n: 5, mode: "weak" }),
     }).then(function (result) {
       if (!result.problems.length) {
-        problemCard.innerHTML =
-          "<p>本组题目已练完。</p>" +
-          "<a href='session-end'>去会话末统一自评</a>";
-        problemCard.classList.remove("hidden");
+        addMessage("<p>本组题目已练完。</p>");
+        showComposer(false);
+        gotoSessionEnd.classList.remove("hidden");
         return;
       }
-      renderProblem(result.problems[0]);
+      var problem = result.problems[0];
+      var seen = session();
+      seen.push({ problem_id: problem.problem_id, answer_text: "" });
+      store(SESSION_KEY, seen);
+      setCurrent({ problem_id: problem.problem_id, answer_text: "" });
+      addMessage(
+        "<div class='meta'>题目 · " + escapeHtml(problem.problem_id) + "</div>"
+        + "<div class='problem-text'>" + richText(problem.problem_text) + "</div>"
+      );
+      stuckStep = "";
+      answerBox.value = "";
+      showComposer(true);
+      var actions = document.getElementById("composer-actions");
+      actions.classList.add("hidden");
+      submitAnswer.classList.remove("hidden");
+      answerBox.focus();
     });
   }
 
-  function renderProblem(problem) {
-    problemCard.classList.remove("hidden");
-    var seen = session();
-    seen.push({ problem_id: problem.problem_id, answer_text: "" });
-    store(SESSION_KEY, seen);
-    setCurrent({ problem_id: problem.problem_id, answer_text: "" });
-
-    var options = "";
-    if (problem.options_json) {
-      try {
-        var opts = JSON.parse(problem.options_json);
-        options = opts.map(function (o, i) {
-          return "<button class='option' data-idx='" + i + "'>"
-            + escapeHtml(o) + "</button>";
-        }).join(" ");
-      } catch (e) { /* no options */ }
-    }
-
-    problemCard.innerHTML =
-      "<h2>" + escapeHtml(problem.problem_id) + "</h2>"
-      + "<div class='problem-text'>" + problemTextToHtml(problem.problem_text) + "</div>"
-      + (options ? "<div class='options'>" + options + "</div>" : "")
-      + "<textarea id='answer-box' rows='3' placeholder='作答（开放题）'></textarea>"
-      + "<div><button id='show-answer' class='primary'>看答案</button></div>"
-      + "<div id='solution-area' class='hidden'></div>";
-    renderMath(problemCard);
-
-    var answerBox = document.getElementById("answer-box");
-    var current = load(CURRENT_KEY, null);
-    if (current && current.answer_text) answerBox.value = current.answer_text;
-    answerBox.addEventListener("input", function () {
-      var cur = load(CURRENT_KEY, {});
-      cur.answer_text = answerBox.value;
-      setCurrent(cur);
-      var list = session();
-      for (var i = list.length - 1; i >= 0; i--) {
-        if (list[i].problem_id === problem.problem_id) {
-          list[i].answer_text = answerBox.value;
-          break;
-        }
+  submitAnswer.addEventListener("click", function () {
+    var text = answerBox.value.trim();
+    addMessage("<div class='meta'>我的作答</div><p>" + richText(text || "（未作答）") + "</p>", "user");
+    var cur = load(CURRENT_KEY, {});
+    cur.answer_text = text;
+    setCurrent(cur);
+    var list = session();
+    for (var i = list.length - 1; i >= 0; i--) {
+      if (list[i].problem_id === cur.problem_id) {
+        list[i].answer_text = text;
+        break;
       }
-      store(SESSION_KEY, list);
-    });
-
-    if (problem.options_json) {
-      problemCard.querySelectorAll(".option").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var idx = parseInt(btn.dataset.idx, 10);
-          var correct = String(idx) === String(problem.correct_option_id);
-          finishProblem(problem, correct ? "correct" : "wrong",
-            "选了选项 " + idx, answerBox.value);
-        });
-      });
-    } else {
-      document.getElementById("show-answer").addEventListener("click", function () {
-        api("/problem/" + problem.problem_id).then(function (detail) {
-          showSolution(detail.problem.solution || "", problem);
-        });
-      });
     }
-  }
+    store(SESSION_KEY, list);
+    submitAnswer.classList.add("hidden");
+    var actions = document.getElementById("composer-actions");
+    actions.classList.remove("hidden");
+    showAnswer.classList.remove("hidden");
+    noTime.classList.remove("hidden");
+    answerBox.disabled = true;
+  });
 
-  function showSolution(solution, problem) {
-    var area = document.getElementById("solution-area");
-    area.classList.remove("hidden");
-    var blocks = solution.split(/\n\s*\n/).map(function (b) { return b.trim(); })
-      .filter(Boolean);
-    var html = blocks.map(function (block, i) {
-      return "<div class='solution-block' data-idx='" + (i + 1) + "'>"
-        + "<b>第 " + (i + 1) + " 步</b> " + problemTextToHtml(block)
-        + "</div>";
-    }).join("");
-    html +=
-      "<div class='feedback'>"
-      + "<p>反馈（可选）</p>"
+  showAnswer.addEventListener("click", function () {
+    api("/problem/" + currentProblem.problem_id).then(function (detail) {
+      var solution = detail.problem.solution || "";
+      var blocks = solution.split(/\n\s*\n/).map(function (b) { return b.trim(); })
+        .filter(Boolean);
+      var html = "<div class='meta'>解答</div>";
+      if (!blocks.length) {
+        html += "<p>（本题无解答文本）</p>";
+      } else {
+        html += blocks.map(function (block, i) {
+          return "<div class='solution-block' data-idx='" + (i + 1) + "'>"
+            + "<b>第 " + (i + 1) + " 步</b> " + richText(block) + "</div>";
+        }).join("");
+      }
+      html += feedbackHtml();
+      addMessage(html, "teacher");
+      bindFeedback();
+    });
+  });
+
+  noTime.addEventListener("click", function () {
+    finishProblem("skip", "");
+  });
+
+  function feedbackHtml() {
+    return "<div class='feedback'>"
+      + "<p class='meta'>反馈（可选）</p>"
       + "<div class='rating'>"
       + [1, 2, 3, 4, 5].map(function (r) {
-        return "<button class='rate' data-r='" + r + "'>" + r + "</button>";
+        return "<button class='rate sm' data-r='" + r + "'>" + r + "</button>";
       }).join(" ")
       + "</div>"
       + "<textarea id='feedback-note' rows='2' placeholder='自然语言反馈（薄弱点）'></textarea>"
-      + "<div><button id='mark-stuck'>标记卡点（点上面某一步）</button>"
-      + "<button id='no-time'>没时间批改</button></div>"
-      + "</div>";
-    area.innerHTML = html;
-    renderMath(area);
+      + "<div style='margin-top:6px'>"
+      + "<button id='mark-stuck' class='outline sm'>标记卡点（先点上面某一步）</button>"
+      + "</div></div>";
+  }
 
-    area.querySelectorAll(".solution-block").forEach(function (block) {
+  function bindFeedback() {
+    var feedback = stream.querySelector(".feedback:last-of-type");
+    if (!feedback) return;
+    feedback.querySelectorAll(".solution-block").forEach(function (block) {
       block.addEventListener("click", function () {
-        area.querySelectorAll(".solution-block").forEach(function (b) {
+        feedback.querySelectorAll(".solution-block").forEach(function (b) {
           b.classList.remove("stuck");
         });
         block.classList.add("stuck");
-        area.dataset.stuck = block.dataset.idx;
+        stuckStep = block.dataset.idx;
       });
     });
-    document.getElementById("mark-stuck").addEventListener("click", function () {
-      var stuck = area.dataset.stuck || "";
-      finishProblem(problem, "stuck",
-        (stuck ? "卡在第" + stuck + "步" : "卡住")
-        + " " + document.getElementById("feedback-note").value.trim(),
-        load(CURRENT_KEY, {}).answer_text || "");
-    });
-    document.getElementById("no-time").addEventListener("click", function () {
-      finishProblem(problem, "skip", "", load(CURRENT_KEY, {}).answer_text || "");
-    });
-    area.querySelectorAll(".rate").forEach(function (btn) {
+    feedback.querySelectorAll(".rate").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var rating = parseInt(btn.dataset.r, 10);
-        var note = document.getElementById("feedback-note").value.trim();
+        var note = feedback.querySelector("#feedback-note").value.trim();
         post("/feedback", {
-          item_type: "problem", item_id: problem.problem_id,
+          item_type: "problem", item_id: currentProblem.problem_id,
           rating: rating, note: note,
         }).then(function () {
-          finishProblem(problem, "skip", note,
-            load(CURRENT_KEY, {}).answer_text || "");
+          finishProblem("skip", note);
         });
       });
     });
+    var mark = feedback.querySelector("#mark-stuck");
+    if (mark) {
+      mark.addEventListener("click", function () {
+        var note = feedback.querySelector("#feedback-note").value.trim();
+        var stuckNote = (stuckStep ? "卡在第" + stuckStep + "步" : "卡住") + " " + note;
+        finishProblem("stuck", stuckNote);
+      });
+    }
   }
 
-  function finishProblem(problem, result, note, answerText) {
-    var body = { problem_id: problem.problem_id, result: result, note: note };
-    if (answerText) body.answer_text = answerText;
-    post("/practice", body).catch(function () { /* record-only fallback */ })
-      .then(function () {
-        setCurrent(null);
-        var kps = currentKps();
-        if (!kps.length) kps = [];
-        loadNext(kps);
-      });
+  function finishProblem(result, note) {
+    var body = {
+      problem_id: currentProblem.problem_id,
+      result: result,
+      note: note,
+    };
+    if (currentProblem.answer_text) body.answer_text = currentProblem.answer_text;
+    post("/practice", body).catch(function () { /* record-only */ }).then(function () {
+      addMessage("<div class='meta'>已记录：" + result + "</div>", "user");
+      setCurrent(null);
+      var kps = currentKps();
+      loadNext(kps);
+    });
+  }
+
+  if (startPractice) {
+    startPractice.addEventListener("click", startSession);
   }
 
   /* ---------- session-end ---------- */
@@ -277,7 +290,7 @@
           + "<h3>" + escapeHtml(item.problem_id) + "</h3>"
           + "<div class='rating'>"
           + [1, 2, 3, 4, 5].map(function (r) {
-            return "<button class='rate' data-r='" + r + "'>" + r + "</button>";
+            return "<button class='rate sm' data-r='" + r + "'>" + r + "</button>";
           }).join(" ")
           + "</div>"
           + "<textarea class='end-note' rows='2' placeholder='可选反馈'></textarea>"
@@ -376,31 +389,27 @@
 
   function renderResult(markdown, operation) {
     var html = "<p><b>" + operation + " 结果</b></p>";
-    var sections = markdown.split(/\n## /);
-    sections.forEach(function (section) {
+    markdown.split(/\n## /).forEach(function (section) {
       var lines = section.trim().split("\n");
       var title = lines.shift().replace(/^#+\s*/, "");
       html += "<div class='section'><h4>" + escapeHtml(title) + "</h4><p>"
-        + problemTextToHtml(lines.join("\n")) + "</p></div>";
+        + richText(lines.join("\n")) + "</p></div>";
     });
     return html;
   }
 
-  function bindAiButtons() {
-    var explain = document.getElementById("ai-explain");
-    var diagnose = document.getElementById("ai-diagnose");
-    var fresh = document.getElementById("ai-new");
-    var send = document.getElementById("ai-send");
-    if (explain) explain.addEventListener("click", function () { aiTask("explain"); });
-    if (diagnose) diagnose.addEventListener("click", function () { aiTask("diagnose"); });
-    if (send) send.addEventListener("click", function () { aiTask("explain"); });
-    if (fresh) fresh.addEventListener("click", function () {
-      messages.innerHTML = "";
-      store(AI_KEY, []);
-      aiAdd("<p>新会话已开始（记录仍在池中）。</p>");
-    });
-  }
+  var explain = document.getElementById("ai-explain");
+  var diagnose = document.getElementById("ai-diagnose");
+  var fresh = document.getElementById("ai-new");
+  var send = document.getElementById("ai-send");
+  if (explain) explain.addEventListener("click", function () { aiTask("explain"); });
+  if (diagnose) diagnose.addEventListener("click", function () { aiTask("diagnose"); });
+  if (send) send.addEventListener("click", function () { aiTask("explain"); });
+  if (fresh) fresh.addEventListener("click", function () {
+    messages.innerHTML = "";
+    store(AI_KEY, []);
+    aiAdd("<p>新会话已开始（记录仍在池中）。</p>");
+  });
 
-  bindAiButtons();
   updateAiContext();
 })();
