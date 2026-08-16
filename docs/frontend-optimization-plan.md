@@ -1,4 +1,4 @@
-# 工作台前端：审查意见与优化方案（v3 · 三方交叉验证收敛：协调方 / Claude Code / 独立顾问）
+# 工作台前端：审查意见与优化方案（v3.1 · 三方交叉验证收敛；2 阶段制：阶段 1 已完成，阶段 2 一次交付）
 
 > 日期：2026-08-16 · 审查方式：只读代码审查（前端实现 + DSH 运行实例实测 + 独立审查顾问交叉验证）
 > 基准：`docs/DISCUSSION-RECORD.md`（专题 14–17、附录 B6）、`openspec/changes/workbench-ui/specs/workbench-ui/spec.md`、DeepSeek Harness 运行实例（http://127.0.0.1:3080/）实测设计系统
@@ -160,32 +160,27 @@
 
 ---
 
-## 七、优化方案（分阶段，每阶段独立交付验证）
+## 七、优化方案（2 阶段制：用户要求不分细碎阶段，一次交付一轮验证）
 
-### 阶段 0：P0 修复（纯 JS/CSS/路由，无新功能，1 个提交）—— ✅ 已实施（2026-08-16，commit `792caeb`，157 测试全绿，冒烟通过，见 changelog/2026-08-16-frontend-phase0.md）
-- F0 定义 `.hidden` 规则（P0-1）
-- F1 `loadNext` 复位 answerBox.disabled（P0-2）
-- F2 bindFeedback 绑定当前消息元素（P0-3）
-- F3 “去会话末统一自评”按钮移出 composer 且常显（P0-4）
-- F4 图谱 iframe 指向原始 HTML 输出（P0-5）
-- 验证：pytest 全绿；冒烟两题连做 / 中途会话末 / 图谱页两态；为 .hidden 规则与 graph 响应 Content-Type 各补一条廉价测试断言（防回归，顾问建议）
+### 阶段 1：P0 修复（纯 JS/CSS/路由，无新功能）—— ✅ 已完成（2026-08-16，commit `792caeb`，157 测试全绿，冒烟通过，见 changelog/2026-08-16-frontend-phase0.md）
+- F0 定义 `.hidden` 规则（P0-1）；F1 复位 answerBox.disabled（P0-2）；F2 bindFeedback 绑定当前消息（P0-3）；F3 会话末入口移出 composer 常显（P0-4）；F4 图谱 raw-HTML 路由（P0-5）
 
-### 阶段 1：P1 契约与逻辑修复
+### 阶段 2：P1 契约与逻辑修复 + 观感对齐 DSH + 收尾（一次实施、一次验证）—— ✅ 已完成（2026-08-16，160 测试全绿，冒烟通过，见 changelog/2026-08-16-frontend-phase2.md）
+
+**2.1 P1 契约与逻辑**
 - KP 页 renderMath 初始化（P1-6）；评分提示与 attempt 语义（P1-7）；会话末过滤 unrated（P1-8）；再练同类清队列（P1-9）
 - api.py 异步化 AI 任务（P1-10）；右栏折叠开关 + 1024 断点（P1-11）；反馈框“下一题（不反馈）”（P1-12）
-- 待协调方决策项：AI 最近题进 context（P1-13）、auto-grade（spec 要求但池内无机器可判题型时留空提示）
-- 验证：冒烟 AI 无 provider 优雅提示、任务轮询、折叠交互
+- AI 最近题进 context（P1-13）：按待确认项 2 的决定执行或标注后置
 
-### 阶段 2：观感对齐 DSH（令牌 + 组件形态）
-- 令牌表按“二、对照表”右列更新（待确认 B6.10 更新）
-- 消息扁平化 + 用户气泡 + 内容列 736 居中（五-1/2）
-- composer 胶囊化（五-3）；主按钮黑底白字（五-5）；消息字号 16（五-6）
+**2.2 观感对齐 DSH（令牌 + 组件形态）**
+- 令牌表按“二、对照表”右列更新（B6.10 按待确认项 1 的决定）
+- 消息扁平化 + 用户气泡 + 内容列 736 居中（五-1/2）；composer 胶囊化（五-3）；主按钮黑底白字（五-5）；消息字号 16（五-6）
 - 滚动条 / focus-visible / transition / reduced-motion（P2-23）
-- 验证：与 3080 实例逐项目测比对
 
-### 阶段 3：收尾（可选、极简）
-- 死代码清理（wbKpId / AI_KEY / data-workspace）；无障碍小项；attempt 语义修正；hub 标题中文化；图床 Content-Type；md 渲染表格
-- 不做任何新功能
+**2.3 收尾（极简，不做任何新功能）**
+- 死代码清理（wbKpId / AI_KEY / data-workspace）；无障碍小项；attempt 语义修正；hub 标题中文化；图床 Content-Type 与缺图占位；md 渲染表格；pull n=1（P2-26）；ai_run ValueError 404（P2-27）；CURRENT_KEY 恢复（P2-28）；`__import__` 修正（P2-25）
+
+**阶段 2 验证**：pytest 全绿（含新增断言）；openspec validate；3099 冒烟（两题连做 / 中途会话末 / 图谱两态 / AI 无 provider 优雅提示 / 任务轮询 / 折叠交互 / 窄窗 <1024）；与 3080 实例逐项目测比对；node --check
 
 ---
 

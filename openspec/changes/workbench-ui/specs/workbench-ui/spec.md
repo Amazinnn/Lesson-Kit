@@ -37,8 +37,10 @@ messages (rendered math), the learner's answer messages, solution-reveal
 messages with the solution split into blocks, and a feedback box that appears
 together with the reveal (1–5 rating, optional note, optional stuck-step
 marker) that is never required. Problems SHALL be pulled from weak knowledge
-points or a selected knowledge point list, auto-graded when the problem has
-machine-gradable structure, and SHALL NOT repeat within the same session.
+points or a selected knowledge point list, and SHALL NOT repeat within the
+same session. (Auto-grading for machine-gradable structures is deferred: the
+pool currently has no machine-gradable problem structure; open problems
+follow answer → reveal → self-rating.)
 
 #### Scenario: Practice with reveal-then-feedback
 

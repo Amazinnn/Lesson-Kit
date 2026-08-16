@@ -358,7 +358,7 @@
 | B6.7 | AI 栏操作 | 讲解/诊断一键（带作答文本/卡点）→任务轮询→四节渲染→新会话；无 provider 优雅提示、断联只记录 | ✅ |
 | B6.8 | 知识点页 | 正文 md 渲染（LaTeX/wiki 链接跳转/图）、信号与级联原因、关联题、调度状态 | ✅ |
 | B6.9 | 知识图谱页 | 复用 `render-graph-html.py` 产物（output/.../ch06-graph.html）或按需生成；v1 只展示不编辑 | ✅ |
-| B6.10 | 视觉照搬 DSH | 令牌：字体栈、bg-base #f9fafb、文本 #0f1115/#61666b/#81858c、品牌 #3964fe、边框 rgb(0 0 0/10%)、pill 按钮（md 高36圆角18/sm 高28圆角14）、输入高32圆角8、卡片圆角12+shadow-lv3、状态色点 | ✅ |
+| B6.10 | 视觉照搬 DSH | 令牌：字体栈、bg-base #ffffff、文本 #0f1115/#61666b/#81858c、品牌 #0f1115（近黑）、accent 蓝 #4176e6、边框 rgb(0 0 0/4%/.10)、pill 按钮（md 高36圆角18/sm 高28圆角14）、输入高32圆角8、气泡/胶囊圆角22、卡片圆角12、shadow-lv1/2/3、状态色点 | ✅（2026-08-16 修正为 DSH 运行实例实测值，用户确认） |
 | B6.11 | 会话状态 | 客户端 sessionStorage（会话内队列）；刷新丢失仅队列，已记录全在池 | 📋 |
 | B6.12 | KaTeX 资产 | vendored 至 `workbench/server/static/katex/`（katex.min.js/css/fonts，零构建） | 📋 |
 | B6.13 | md 渲染管线 | 先转义再注入 math/wiki/image 标记（顺序敏感，含一次 bug 修复记录） | 📋 |
