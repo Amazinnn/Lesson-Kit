@@ -49,6 +49,13 @@ context: |
     anytime; anti-derailment via anchor + parked digressions + learner control,
     never hard-coded transitions; sessions leave trace artifacts under
     .lessonkit/jobs/ (ADR 0020).
+  - Grading input modes: auto-grade machine-gradable items; open problems are
+    reveal-then-rate (answer first, solution revealed, self-rate); "no time to
+    grade" records without grading. Session traces include the learner's own
+    answers from conversations (DeepTutor trace-tree idea).
+  - Deferred: Scoropic dialogue mode — Socratic-questioning-only sessions
+    (吴乐旻 "苏格拉底教学法在 AI Agent 中的应用" idea), recorded as
+    ADR 0021, to be designed only after the v1 loop proves itself.
   - High-SNR input diet: syllabus, past papers, classic explanations are the
     preferred extraction inputs; test-first and reverse review from wrong
     answers; pool shortages trigger candidate generation, never invented

@@ -143,6 +143,9 @@ adaptation: macro (session purpose anchored to pool items), meso (session
 lifecycle, learner-controlled), micro (turn-level conduct in the teacher
 contract). Anti-derailment SHALL work through anchoring, parking digressions,
 and learner control — never through hard-coded pedagogical transitions.
+Session traces SHALL include the learner's own answers given during the
+conversation (DeepTutor-style trace), so conversation answers become recorded
+learning data that can feed signals and later memory features.
 
 #### Scenario: A session changes topics freely
 
@@ -152,4 +155,4 @@ and learner control — never through hard-coded pedagogical transitions.
 #### Scenario: Session trace is recorded
 
 - **WHEN** a teaching session ends
-- **THEN** a trace artifact records the anchor, the exchanges, and the outcomes under the session's job area, without locking any future session to it
+- **THEN** a trace artifact records the anchor, the exchanges including the learner's answers, and the outcomes under the session's job area, without locking any future session to it

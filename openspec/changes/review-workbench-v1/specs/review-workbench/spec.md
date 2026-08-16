@@ -135,6 +135,25 @@ state.
 - **WHEN** the user closes the browser mid-session and later reopens the workspace
 - **THEN** recorded results are intact, the session summary reflects them, and practice can continue from the pool state
 
+### Requirement: Grading input modes
+
+Practice SHALL accept multiple answer and grading modes. Problems with machine-gradable structure (single choice, true/false) SHALL be graded automatically. Open text problems SHALL follow reveal-then-rate: the learner answers first (text or natural language), the solution is revealed, then the learner self-rates. If the learner declares no time to grade, the attempt SHALL be recorded without a grade and without blocking the session.
+
+#### Scenario: Auto-grade a choice problem
+
+- **WHEN** the learner selects an option for a machine-gradable problem
+- **THEN** the system grades it correct or wrong and records the graded attempt
+
+#### Scenario: Reveal-then-rate an open problem
+
+- **WHEN** the learner submits text for an open problem
+- **THEN** the solution is revealed, the learner self-rates, and the attempt records the answer text and the rating
+
+#### Scenario: Record without grading
+
+- **WHEN** the learner chooses "no time to grade"
+- **THEN** the attempt is recorded with no grade and no rating, the schedule does not regress, and the session continues
+
 ### Requirement: Cascade signal boosts
 
 Weak-point ordering SHALL combine evidence signals with query-time derived
