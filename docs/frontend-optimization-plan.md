@@ -162,7 +162,7 @@
 
 ## 七、优化方案（分阶段，每阶段独立交付验证）
 
-### 阶段 0：P0 修复（纯 JS/CSS/路由，无新功能，1 个提交）
+### 阶段 0：P0 修复（纯 JS/CSS/路由，无新功能，1 个提交）—— ✅ 已实施（2026-08-16，commit `792caeb`，157 测试全绿，冒烟通过，见 changelog/2026-08-16-frontend-phase0.md）
 - F0 定义 `.hidden` 规则（P0-1）
 - F1 `loadNext` 复位 answerBox.disabled（P0-2）
 - F2 bindFeedback 绑定当前消息元素（P0-3）
