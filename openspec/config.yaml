@@ -1,0 +1,70 @@
+schema: spec-driven
+
+# Project context — shown to AI when creating OpenSpec artifacts.
+context: |
+  # lesson-kit
+
+  Modular study-material generator plus a web review workbench. Source material
+  enters a course-level SQLite pool (knowledge points, durable problems,
+  candidate problems, learner signals); views render from the pool. The pool is
+  the single source of truth and the durable cross-session memory.
+
+  Core philosophy (see docs/design/philosophy.md): NOT helping the learner skip
+  source material — helping them return to it. Near-source by default, honest
+  about unknown territory, pain-point-first practice.
+
+  ## Confirmed architecture (see docs/adr/0009)
+
+  Five layers, one-way dependencies (shell → learning model → data; content
+  reads data; intelligence is attached, never in the main path):
+
+  - Shell: web workbench + super CLI (wb), two thin entry points over one
+    service layer. Stateless: no business state outside the pool.
+  - Learning model: weakness ordering, problem pull, feedback→signal mapping,
+    forgetting-curve scheduling — pure rules, zero AI dependency, unit-testable.
+  - Content: view rendering (guide, problem set, graph, KP detail, explain).
+    Data-first: render from the pool; Markdown artifacts are print/export
+    outputs.
+  - Data: per-workspace SQLite pool + .lessonkit/state.yaml runtime state.
+  - Intelligence (attached, never in the kernel): AI bridge to an external
+    agent CLI. Tasks + output contracts + validation. The kernel decides WHAT
+    to teach (deterministic); AI decides HOW to teach (pluggable). Without AI
+    the full loop still runs.
+
+  ## Confirmed boundaries (decisions 0010–0014)
+
+  - Pain-point-first: weakness score (signal weight × due boost × in-session
+    repeat penalty) orders practice; the forgetting curve is background
+    reminder only — NEVER locks or hides items.
+  - Flexible feedback: optional 1–5 rating and/or natural-language note, no
+    forced forms; maps to learner signals (weights) + feedback_events log;
+    signals never auto-clear.
+  - AI bridge: no embedded AI kernel; external agent CLI with cwd = workspace;
+    task files + output contract validation; teacher conduct rules (establish
+    baseline, concise explanation, comprehension check, never guess, cite
+    source) are part of the task contract. v1 operation: explain only.
+  - High-SNR input diet: syllabus, past papers, classic explanations are the
+    preferred extraction inputs; test-first and reverse review from wrong
+    answers; pool shortages trigger candidate generation, never invented
+    content.
+  - Data-first views; figures are files referenced by Markdown, viewable in
+    both web and Obsidian.
+
+  ## Engineering constraints (hard rules)
+
+  - Concise, clean code. No defensive-programming sprawl, no speculative
+    abstraction.
+  - NO hash values / SHA-256 anywhere. IDs are readable sequential identifiers
+    (e.g. dmath-ch06-prob-001, job-003).
+  - Python stdlib first (existing pipeline is stdlib-only); frontend is a thin
+    Vite + native JS + KaTeX shell reusing frontend/editable-graph assets.
+  - Single process, single port.
+  - Additive pool schema changes only, via pool/scripts/pool_schema.py
+    ensure_* pattern (idempotent migrations).
+
+  ## Docs to read
+
+  docs/design/philosophy.md (Chinese), CONTEXT.md (terminology), README.md,
+  START_HERE.md, TASK_ROUTER.md, RED_LINES.md, FILE_CONTRACT.md, docs/adr/0001–0014.
+  All lessonkit.py/wb commands resolve paths relative to the current working
+  directory — run them from the repository root.
