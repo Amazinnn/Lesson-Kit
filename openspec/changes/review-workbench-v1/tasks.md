@@ -20,9 +20,9 @@
 
 ## 4. Registry and config
 
-- [ ] 4.1 `registry.py`: `~/.lessonkit-workbench/workspaces.json` load/save/register/list/get; folder validation (pool/*.db or lessonkit.py)
-- [ ] 4.2 bridges config: load/save `bridges.yaml` providers (command/args/cwd_mode/timeout)
-- [ ] 4.3 Tests for registry round-trip and validation
+- [x] 4.1 `registry.py`: `~/.lessonkit-workbench/workspaces.json` load/save/register/list/get; folder validation (pool/*.db or lessonkit.py)
+- [x] 4.2 bridges config: load/save provider config (command/args/cwd_mode/timeout) — JSON, stdlib-only
+- [x] 4.3 Tests for registry round-trip and validation
 
 ## 5. Bridge (`workbench/bridge/`)
 

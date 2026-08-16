@@ -66,7 +66,7 @@ workbench/
   `problem_attempts.answer_text`。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪）、
   `.lessonkit/explain/{course}/{chapter}/{item_id}.md`（跟踪）、`.lessonkit/jobs/<id>/`（gitignored）、
-  `~/.lessonkit-workbench/workspaces.json` + `bridges.yaml`（用户级）。
+  `~/.lessonkit-workbench/workspaces.json` + `bridges.json`（用户级，JSON——stdlib 无 YAML 解析）。
 - ID 一律可读顺序标识（`job-003`），无哈希。
 
 ## 3. 核心接口（模块边界）

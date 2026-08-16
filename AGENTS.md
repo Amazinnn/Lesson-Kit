@@ -42,7 +42,7 @@
 - 所有 `lessonkit.py` / `wb` 命令按 CWD 解析相对路径——在仓库根目录运行。
 - 运行时文件进隐藏点目录（`.lessonkit/`）：figures/ 与 explain/ 跟踪，
   jobs/ 忽略（`.gitignore` 已配）。
-- 工作台注册表与 bridges.yaml 在用户级 `~/.lessonkit-workbench/`。
+- 工作台注册表与 bridges 配置（JSON）在用户级 `~/.lessonkit-workbench/`。
 
 ## 新对话初始化（每次必做）
 
