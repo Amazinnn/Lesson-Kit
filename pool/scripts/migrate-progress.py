@@ -14,6 +14,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from pool_schema import (  # noqa: E402
+    ensure_course_network_schema,
     ensure_learning_state_schema,
     ensure_problem_candidate_schema,
     ensure_workbench_schema,
@@ -22,7 +23,7 @@ from pool_schema import (  # noqa: E402
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Add learning-state, candidate, signal, and workbench tables.",
+        description="Add learning-state, network, candidate, signal, and workbench tables.",
     )
     parser.add_argument("--db", required=True, help="Path to SQLite DB.")
     return parser.parse_args(argv)
@@ -34,6 +35,7 @@ def migrate_db(db_path: Path) -> list[str]:
     conn = sqlite3.connect(db_path)
     try:
         changes = ensure_learning_state_schema(conn)
+        changes.extend(ensure_course_network_schema(conn))
         changes.extend(ensure_problem_candidate_schema(conn))
         changes.extend(ensure_workbench_schema(conn))
         conn.commit()

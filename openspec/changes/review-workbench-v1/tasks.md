@@ -46,6 +46,6 @@
 
 ## 8. Verification and handoff
 
-- [ ] 8.1 Full verification: `python -m pytest tests -q`, `openspec validate review-workbench-v1 --strict`, both guards on dmath
-- [ ] 8.2 End-to-end smoke on dmath: weak → pull → practice → feedback → due → explain task fails gracefully without provider
-- [ ] 8.3 Commit per task group (`feat:`); update changelog with implementation summary
+- [x] 8.1 Full verification: `python -m pytest tests -q`, `openspec validate review-workbench-v1 --strict`, both guards on dmath
+- [x] 8.2 End-to-end smoke on dmath: weak → pull → practice → feedback → due → explain task fails gracefully without provider
+- [x] 8.3 Commit per task group (`feat:`); update changelog with implementation summary

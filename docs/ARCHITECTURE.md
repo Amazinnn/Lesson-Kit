@@ -43,8 +43,9 @@ workbench/
 │   ├── __init__.py
 │   ├── jobs.py        # 任务生命周期（queued/running/done/failed；.lessonkit/jobs/）
 │   ├── contracts.py   # 输出契约校验（explain 四节 / diagnose 定位-提示-溯源-追问）
-│   ├── providers.py   # 外部 CLI 拉起（cwd=工作区，超时，stdout 落日志）
-│   └── teacher.py     # 任务指令渲染（教师行为契约注入，纯数据接口，零教学硬编码）
+│   ├── providers.py   # 外部 CLI 拉起（cwd=工作区，超时，stdout 落日志；环境变量 LESSONKIT_JOB_DIR / LESSONKIT_OUTPUT_PATH 传递任务信息）
+│   ├── teacher.py     # 任务指令渲染（教师行为契约注入，纯数据接口，零教学硬编码）
+│   └── runner.py      # AI 任务编排（建任务→拉 provider→契约校验→done/failed；无 provider 优雅失败）
 ├── cli/
 │   ├── __init__.py
 │   └── main.py        # wb 入口（argparse；纯数据命令，无教学语义）
