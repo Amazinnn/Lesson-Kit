@@ -27,6 +27,7 @@ if str(POOL_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(POOL_SCRIPT_DIR))
 
 from pool_schema import ensure_problem_candidate_schema  # noqa: E402
+from pool_schema import ensure_workbench_schema  # noqa: E402
 
 
 SCHEMA_SQL = """
@@ -240,6 +241,7 @@ def main(argv=None) -> int:
 
         conn.executescript(SCHEMA_SQL)
         ensure_problem_candidate_schema(conn)
+        ensure_workbench_schema(conn)
         conn.commit()
 
         verb = "Recreated" if any_existing else "Created"

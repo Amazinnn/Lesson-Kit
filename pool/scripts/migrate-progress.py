@@ -16,12 +16,13 @@ if str(SCRIPT_DIR) not in sys.path:
 from pool_schema import (  # noqa: E402
     ensure_learning_state_schema,
     ensure_problem_candidate_schema,
+    ensure_workbench_schema,
 )
 
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Add learning-state, Problem Candidate, and learner-signal tables.",
+        description="Add learning-state, candidate, signal, and workbench tables.",
     )
     parser.add_argument("--db", required=True, help="Path to SQLite DB.")
     return parser.parse_args(argv)
@@ -34,6 +35,7 @@ def migrate_db(db_path: Path) -> list[str]:
     try:
         changes = ensure_learning_state_schema(conn)
         changes.extend(ensure_problem_candidate_schema(conn))
+        changes.extend(ensure_workbench_schema(conn))
         conn.commit()
         return changes
     finally:

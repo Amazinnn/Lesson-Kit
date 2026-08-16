@@ -306,3 +306,75 @@ def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
         "ON learner_signals(weight)"
     )
     return changes
+
+
+def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
+    """Apply the workbench review-schedule and feedback-event schema idempotently."""
+    changes: List[str] = []
+
+    if not table_exists(conn, "review_schedule"):
+        conn.execute(
+            """
+            CREATE TABLE review_schedule (
+                item_type        TEXT NOT NULL CHECK (item_type IN ('kp', 'problem')),
+                item_id          TEXT NOT NULL,
+                direction        TEXT NOT NULL DEFAULT '',
+                state            TEXT NOT NULL DEFAULT 'learning'
+                                 CHECK (state IN ('learning', 'review', 'relearning')),
+                repetitions      INTEGER NOT NULL DEFAULT 0,
+                ease             REAL NOT NULL DEFAULT 2.5,
+                interval_days    REAL NOT NULL DEFAULT 0,
+                due_at           TEXT,
+                last_rating      INTEGER CHECK (last_rating BETWEEN 1 AND 5),
+                last_reviewed_at TEXT,
+                PRIMARY KEY (item_type, item_id, direction)
+            )
+            """
+        )
+        changes.append("review_schedule")
+
+    if not table_exists(conn, "feedback_events"):
+        conn.execute(
+            """
+            CREATE TABLE feedback_events (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                item_type  TEXT NOT NULL CHECK (item_type IN ('kp', 'problem')),
+                item_id    TEXT NOT NULL,
+                rating     INTEGER CHECK (rating BETWEEN 1 AND 5),
+                note       TEXT,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        changes.append("feedback_events")
+
+    if table_exists(conn, "knowledge_points"):
+        changes.extend(
+            ensure_columns(
+                conn,
+                "knowledge_points",
+                [("figure_paths", "TEXT")],
+            )
+        )
+    if table_exists(conn, "problems"):
+        changes.extend(
+            ensure_columns(
+                conn,
+                "problems",
+                [("figure_paths", "TEXT")],
+            )
+        )
+    if table_exists(conn, "problem_attempts"):
+        changes.extend(
+            ensure_columns(
+                conn,
+                "problem_attempts",
+                [("answer_text", "TEXT")],
+            )
+        )
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_review_schedule_due "
+        "ON review_schedule(due_at)"
+    )
+    return changes

@@ -1,8 +1,8 @@
 ## 1. Schema migrations (additive)
 
-- [ ] 1.1 Add `ensure_workbench_schema` to `pool/scripts/pool_schema.py`: `review_schedule` table (PK item_type+item_id+direction, SM-2 fields), `feedback_events` table, `knowledge_points.figure_paths`, `problems.figure_paths`, `problem_attempts.answer_text` — idempotent, additive
-- [ ] 1.2 Call `ensure_workbench_schema` from `pool/scripts/migrate-progress.py`
-- [ ] 1.3 Test: migration on a copy of `pool/dmath.db` is idempotent (run twice), existing counts unchanged, `validate-pool.py` still PASS
+- [x] 1.1 Add `ensure_workbench_schema` to `pool/scripts/pool_schema.py`: `review_schedule` table (PK item_type+item_id+direction, SM-2 fields), `feedback_events` table, `knowledge_points.figure_paths`, `problems.figure_paths`, `problem_attempts.answer_text` — idempotent, additive
+- [x] 1.2 Call `ensure_workbench_schema` from `pool/scripts/migrate-progress.py`
+- [x] 1.3 Test: migration on a copy of `pool/dmath.db` is idempotent (run twice), existing counts unchanged, `validate-pool.py` still PASS
 
 ## 2. Data layer (`workbench/data/`)
 
