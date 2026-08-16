@@ -111,6 +111,38 @@ output/{course}/{chapter}/{chapter}-problem-set.md
 output/{course}/{chapter}/{chapter}-solutions.md
 ```
 
+## Workbench Runtime Areas
+
+Runtime assets follow the hidden dot-directory convention and live under
+`.lessonkit/`:
+
+```text
+.lessonkit/
+├── state.yaml                                   # runtime state (tracked)
+├── figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png   # tracked
+├── explain/{course}/{chapter}/{item_id}.md      # validated bridge results (tracked)
+└── jobs/<job-id>/                               # task working files (gitignored)
+```
+
+### Figure Area
+
+- Path: `.lessonkit/figures/{course}/{chapter}/`
+- Naming: `{owner_id}-fig-{NNN}.png`, owner is a knowledge point or problem id.
+- The pool stores only logical paths on `knowledge_points.figure_paths` and
+  `problems.figure_paths`; each display surface resolves them (workbench static
+  service; exported Markdown computes document-relative paths).
+- Problem figures exist because diagrams are often part of the question itself
+  (Karnaugh maps, circuit/force diagrams).
+- The extraction pipeline MUST land figures (knowledge-point figures and
+  problem-embedded figures) during extraction; views never invent figures.
+
+### Explain Area
+
+- Path: `.lessonkit/explain/{course}/{chapter}/{item_id}.md`
+- Only contract-validated bridge results (explain/diagnose) are written here.
+- Task working files stay in `.lessonkit/jobs/<job-id>/` and are excluded from
+  version control.
+
 ## Rules
 
 - Inputs preserve source facts and user intent.

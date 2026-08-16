@@ -83,3 +83,36 @@ scheduling SHALL work identically with or without the bridge.
 
 - **WHEN** no bridge provider is configured and the learner practices problems
 - **THEN** every non-AI feature works unchanged and AI actions are shown as unavailable rather than broken
+
+### Requirement: Diagnose operation
+
+The bridge SHALL support a second operation, `diagnose`, in addition to
+`explain`. A diagnose task SHALL include the learner's own answer text and any
+step-stuck marking in its context, and its teacher conduct SHALL locate the
+specific error or stuck point before explaining, give a next-step hint rather
+than the full solution, and end with a comprehension question. The diagnose
+output contract SHALL require the sections 定位 (location), 提示 (hint), 溯源
+(source reference), and 追问 (follow-up question).
+
+#### Scenario: Diagnose a wrong design
+
+- **WHEN** the learner pastes their own design, marks the result wrong, and starts a diagnose task
+- **THEN** the task context includes the design text and the marked step, and the validated result contains all four required sections with the hint section stopping short of the full solution
+
+#### Scenario: Diagnose output missing a section
+
+- **WHEN** a diagnose result lacks the 溯源 section
+- **THEN** the task fails contract validation and the result is not shown as authoritative
+
+### Requirement: Bridge artifact locations
+
+Task working files SHALL live under the workspace's `.lessonkit/jobs/<job-id>/`
+directory (task, instruction, status, and log files) and SHALL be excluded from
+version control. Validated explain and diagnose results SHALL be written under
+the workspace's `.lessonkit/explain/{course}/{chapter}/{item_id}.md` and SHALL
+be tracked in version control as learning assets.
+
+#### Scenario: Explain result lands in the explain area
+
+- **WHEN** an explain task passes contract validation
+- **THEN** the result file is written to `.lessonkit/explain/{course}/{chapter}/{item_id}.md` and the task working files remain under `.lessonkit/jobs/<job-id>/` outside version control

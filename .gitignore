@@ -33,3 +33,6 @@ Thumbs.db
 pool/*.db
 .superpowers/
 .worktrees/
+
+# AI bridge task working files — transient, not assets
+.lessonkit/jobs/

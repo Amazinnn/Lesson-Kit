@@ -50,6 +50,35 @@ context: |
   - Data-first views; figures are files referenced by Markdown, viewable in
     both web and Obsidian.
 
+  ## Review mechanisms (M1–M6, see ADR 0015–0019)
+
+  - Cascade boosts: weak-point ordering adds query-time derived boosts along
+    prerequisite/applies_to/part_of edges (reverse, depth ≤ 2, ×0.5/hop,
+    strength-weighted); learner_signals stays evidence-only, boosts show their
+    reason.
+  - Step-stuck marking: multi-step solutions split into blocks; "stuck at
+    block N" + optional note goes on the attempt and into explain/diagnose
+    context.
+  - Diagnose operation: bridge op alongside explain; carries user_answer and
+    stuck markers; locates before explaining, hints not full solutions, ends
+    with a question; output sections 定位/提示/溯源/追问.
+  - Directional cards: memory-recall KPs practice as cards with direction;
+    review_schedule keys (item_type, item_id, direction); contrasts/variant_of
+    neighbors shown as compare hints.
+  - Past-paper coverage gate: inputs include past papers; a
+    past-paper-coverage.json maps every exam point to pool items or fails with
+    the unmapped list; gaps feed the candidate-generation path.
+  - Figures: declared area .lessonkit/figures/{course}/{chapter}/; logical
+    paths on knowledge_points.figure_paths AND problems.figure_paths; Markdown
+    references render in web and Obsidian.
+
+  ## Runtime layout (hidden dot-directories)
+
+  All runtime assets live under .lessonkit/: state.yaml and
+  figures/{course}/{chapter}/ and explain/{course}/{chapter}/ are tracked;
+  jobs/<job-id>/ task files are gitignored. The pool stores logical paths;
+  display surfaces resolve them.
+
   ## Engineering constraints (hard rules)
 
   - Concise, clean code. No defensive-programming sprawl, no speculative
