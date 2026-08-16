@@ -34,8 +34,8 @@
 
 ## 6. CLI (`workbench/cli/main.py`)
 
-- [ ] 6.1 `wb` commands: init, ls, open, serve, weak, due, pull, practice, feedback, schedule, ai (explain/diagnose/status), bridge add, guard — all wiring to domain/data/bridge/registry, zero teaching semantics
-- [ ] 6.2 Smoke: `wb ls`, `wb weak`, `wb due`, `wb pull --kp ...`, `wb practice`, `wb feedback`, `wb schedule` against `pool/dmath.db` (repo root as workspace)
+- [x] 6.1 `wb` commands: init, ls, open, serve, weak, due, pull, practice, feedback, schedule, ai (explain/diagnose/status), bridge add, guard — all wiring to domain/data/bridge/registry, zero teaching semantics
+- [x] 6.2 Smoke: `wb ls`, `wb weak`, `wb due`, `wb pull --kp ...`, `wb practice`, `wb feedback`, `wb schedule` against `pool/dmath.db` (repo root as workspace)
 
 ## 7. Server (`workbench/server/`)
 
