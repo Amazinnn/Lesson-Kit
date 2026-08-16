@@ -6,9 +6,9 @@
 
 ## 2. Data layer (`workbench/data/`)
 
-- [ ] 2.1 `pool.py`: `Pool` class — open/close, query helpers, brief write helpers, path resolution for `.lessonkit/figures` and `.lessonkit/explain`
-- [ ] 2.2 `queries.py`: hub stats, weak list (domain-computed ordering applied), due list, problem detail, kp detail, figures listing
-- [ ] 2.3 Tests for pool.py + queries.py against a temp DB seeded with minimal fixtures
+- [x] 2.1 `pool.py`: `Pool` class — open/close, query helpers, brief write helpers, path resolution for `.lessonkit/figures` and `.lessonkit/explain`
+- [x] 2.2 `queries.py`: hub stats, weak list (domain-computed ordering applied), due list, problem detail, kp detail, figures listing
+- [x] 2.3 Tests for pool.py + queries.py against a temp DB seeded with minimal fixtures
 
 ## 3. Domain layer (`workbench/domain/`, pure rules)
 

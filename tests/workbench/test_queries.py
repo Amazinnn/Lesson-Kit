@@ -1,0 +1,182 @@
+"""View-query tests (TDD, red first)."""
+
+import importlib.util
+import sqlite3
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def load_script(name, relative):
+    spec = importlib.util.spec_from_file_location(name, REPO_ROOT / relative)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+pool_schema = load_script("pool_schema", Path("pool/scripts/pool_schema.py"))
+
+
+def build_fixture_db(conn):
+    conn.executescript(
+        """
+        CREATE TABLE knowledge_points (
+            kp_id TEXT PRIMARY KEY,
+            knowledge_item TEXT NOT NULL,
+            body TEXT,
+            knowledge_type TEXT,
+            importance TEXT
+        );
+        CREATE TABLE problems (
+            problem_id TEXT PRIMARY KEY,
+            kp_ids TEXT NOT NULL,
+            problem_text TEXT NOT NULL,
+            solution TEXT,
+            problem_type TEXT,
+            source_kind TEXT
+        );
+        CREATE TABLE problem_progress (
+            problem_id TEXT PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'new',
+            note TEXT,
+            updated_at TEXT
+        );
+        CREATE TABLE problem_attempts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            problem_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            note TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        CREATE TABLE candidate_problems (
+            candidate_id TEXT PRIMARY KEY,
+            kp_ids TEXT NOT NULL,
+            problem_text TEXT NOT NULL,
+            solution TEXT,
+            status TEXT NOT NULL,
+            structure_gate_status TEXT NOT NULL DEFAULT 'pending',
+            audit_gate_status TEXT NOT NULL DEFAULT 'pending'
+        );
+        CREATE TABLE learner_signals (
+            signal_id TEXT PRIMARY KEY,
+            target_type TEXT NOT NULL,
+            target_id TEXT NOT NULL,
+            signal_type TEXT NOT NULL,
+            weight TEXT NOT NULL DEFAULT 'medium',
+            evidence_count INTEGER NOT NULL DEFAULT 1,
+            note TEXT
+        );
+        CREATE TABLE knowledge_relations (
+            relation_id TEXT PRIMARY KEY,
+            source_kp_id TEXT NOT NULL,
+            target_kp_id TEXT NOT NULL,
+            relation_type TEXT NOT NULL,
+            direction TEXT NOT NULL,
+            strength TEXT NOT NULL
+        );
+        """
+    )
+    pool_schema.ensure_workbench_schema(conn)
+    conn.executemany(
+        "INSERT INTO knowledge_points"
+        " (kp_id, knowledge_item, body, knowledge_type, importance)"
+        " VALUES (?, ?, ?, ?, ?)",
+        [
+            ("dmath-ch06-kp-001", "Counting basis", "body", "concept-property", "core"),
+            ("dmath-ch06-kp-002", "Pigeonhole", "body", "method-modeling", "core"),
+        ],
+    )
+    conn.executemany(
+        "INSERT INTO problems"
+        " (problem_id, kp_ids, problem_text, solution, problem_type, source_kind)"
+        " VALUES (?, ?, ?, ?, ?, ?)",
+        [
+            ("dmath-ch06-prob-001", '["dmath-ch06-kp-001"]', "P1", "S1", "calculation", "textbook"),
+            ("dmath-ch06-prob-002", '["dmath-ch06-kp-002"]', "P2", "S2", "proof", "final"),
+        ],
+    )
+    conn.execute(
+        "INSERT INTO learner_signals VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("sig-1", "node", "dmath-ch06-kp-002", "weak_node", "high", 2, "note"),
+    )
+    conn.execute(
+        "INSERT INTO review_schedule"
+        " (item_type, item_id, direction, state, repetitions, ease, interval_days,"
+        " due_at, last_rating, last_reviewed_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ("problem", "dmath-ch06-prob-001", "", "review", 2, 2.5, 5.0,
+         "2026-08-10", 3, "2026-08-05"),
+    )
+    conn.execute(
+        "INSERT INTO problem_attempts (problem_id, status, note, answer_text)"
+        " VALUES (?, ?, ?, ?)",
+        ("dmath-ch06-prob-002", "wrong", "stuck at step 2", "my proof"),
+    )
+    conn.commit()
+
+
+class QueryTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.ws_root = Path(self.tmp.name)
+        self.db_path = self.ws_root / "pool" / "dmath.db"
+        self.db_path.parent.mkdir()
+        conn = sqlite3.connect(self.db_path)
+        build_fixture_db(conn)
+        conn.close()
+        sys.path.insert(0, str(REPO_ROOT / "workbench"))
+        from data import pool as pool_mod
+        from data import queries as queries_mod
+        self.pool = pool_mod.Pool(
+            root=self.ws_root, db_path=self.db_path, course="dmath", chapter="ch06",
+        )
+        self.queries = queries_mod
+
+    def tearDown(self):
+        self.pool.close()
+        self.tmp.cleanup()
+
+    def test_hub_stats(self):
+        stats = self.queries.hub_stats(self.pool)
+        self.assertEqual(stats["kps"], 2)
+        self.assertEqual(stats["problems"], 2)
+        self.assertEqual(stats["candidates"], 0)
+        self.assertEqual(stats["signals"], 1)
+        self.assertEqual(stats["due"], 1)
+
+    def test_due_list(self):
+        items = self.queries.due_list(self.pool)
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["item_id"], "dmath-ch06-prob-001")
+        self.assertEqual(items[0]["label"], "P1")
+
+    def test_problem_detail(self):
+        detail = self.queries.problem_detail(self.pool, "dmath-ch06-prob-002")
+        self.assertEqual(detail["problem"]["problem_id"], "dmath-ch06-prob-002")
+        self.assertEqual(len(detail["attempts"]), 1)
+        self.assertEqual(detail["attempts"][0]["answer_text"], "my proof")
+        self.assertEqual(detail["schedule"], None)
+
+    def test_kp_detail(self):
+        detail = self.queries.kp_detail(self.pool, "dmath-ch06-kp-002")
+        self.assertEqual(detail["kp"]["kp_id"], "dmath-ch06-kp-002")
+        self.assertEqual(len(detail["signals"]), 1)
+        self.assertEqual(len(detail["problems"]), 1)
+        self.assertEqual(detail["problems"][0]["problem_id"], "dmath-ch06-prob-002")
+
+    def test_figures_list(self):
+        figure_dir = self.pool.figures_dir()
+        figure_dir.mkdir(parents=True)
+        (figure_dir / "dmath-ch06-kp-001-fig-001.png").write_bytes(b"x")
+        figures = self.queries.figures_list(self.pool)
+        self.assertEqual(figures, ["dmath/ch06/dmath-ch06-kp-001-fig-001.png"])
+
+
+if __name__ == "__main__":
+    unittest.main()
