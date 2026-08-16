@@ -62,7 +62,9 @@ def practice_page(workspace, workspaces, weak_items):
         "<button id='show-answer' class='primary'>看答案</button>"
         "<button id='no-time' class='ghost'>没时间批改</button>"
         "</div>"
-        "<button id='goto-session-end' class='outline hidden'>去会话末统一自评</button>"
+        "</div>"
+        "<div id='session-end-entry'>"
+        "<button id='goto-session-end' class='outline'>去会话末统一自评</button>"
         "</div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "practice")
@@ -123,7 +125,7 @@ def graph_page(workspace, workspaces, weak_items, has_artifact):
             "<div style='display:flex;flex-direction:column;"
             "height:calc(100vh - 130px)'>"
             "<h1>知识图谱</h1>"
-            f"<iframe src='/api/w/{workspace['name']}/graph' title='知识图谱' "
+            f"<iframe src='/api/w/{workspace['name']}/graph/artifact' title='知识图谱' "
             "style='flex:1;width:100%;border:1px solid var(--dsw-border-l2);"
             "border-radius:12px'></iframe>"
             "</div>"

@@ -73,6 +73,9 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         if path.startswith("/api/w/") and "/figures/" in path:
             self._send_figure(path)
             return
+        if path.startswith("/api/w/") and path.endswith("/graph/artifact"):
+            self._send_graph_artifact(path)
+            return
 
         handler, params = self._match_route(method, path)
         if handler is None:
@@ -195,6 +198,26 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             pool.close()
         self.send_response(200)
         self.send_header("Content-Type", "image/png")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _send_graph_artifact(self, path):
+        parts = path.split("/")
+        # /api/w/{name}/graph/artifact — raw self-contained graph HTML
+        name = parts[3]
+        try:
+            workspace = registry.get_workspace(name)
+        except KeyError:
+            self._send_json(404, {"error": "unknown workspace"})
+            return
+        artifact = self._graph_artifact(workspace)
+        if not artifact.is_file():
+            self._send_json(404, {"error": "graph artifact missing"})
+            return
+        data = artifact.read_bytes()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

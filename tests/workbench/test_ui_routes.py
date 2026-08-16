@@ -38,6 +38,52 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("--dsw-brand-primary", body)
 
+    def test_css_defines_hidden_rule(self):
+        # regression: .hidden was missing, breaking the practice visibility choreography
+        status, body = self.fetch("/static/workbench.css")
+        self.assertEqual(status, 200)
+        self.assertIn(".hidden { display: none !important; }", body)
+
+    def test_practice_page_session_end_entry_always_visible(self):
+        # regression: the session-end entry was inside #composer and became
+        # unreachable; it must live outside and stay visible
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("<div id='session-end-entry'>", body)
+        self.assertIn("<button id='goto-session-end' class='outline'>", body)
+        self.assertNotIn("class='outline hidden'", body)
+
+    def test_graph_page_iframe_points_to_artifact_route(self):
+        graph = (self.fixture.ws / "output" / "dmath" / "ch06"
+                 / "ch06-graph.html")
+        graph.parent.mkdir(parents=True)
+        graph.write_text("<html><body>graph</body></html>", encoding="utf-8")
+        status, body = self.fetch("/w/dmath/graph")
+        self.assertEqual(status, 200)
+        self.assertIn("/api/w/dmath/graph/artifact", body)
+        self.assertNotIn("src='/api/w/dmath/graph'", body)
+
+    def test_graph_artifact_route_serves_raw_html(self):
+        graph = (self.fixture.ws / "output" / "dmath" / "ch06"
+                 / "ch06-graph.html")
+        graph.parent.mkdir(parents=True)
+        graph.write_text("<html><body>graph-artifact</body></html>",
+                         encoding="utf-8")
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{self.port}/api/w/dmath/graph/artifact"
+        ) as resp:
+            body = resp.read().decode("utf-8")
+            self.assertEqual(resp.status, 200)
+            self.assertEqual(resp.headers.get_content_type(), "text/html")
+        self.assertIn("graph-artifact", body)
+
+    def test_graph_artifact_missing_404(self):
+        with self.assertRaises(HTTPError) as ctx:
+            urllib.request.urlopen(
+                f"http://127.0.0.1:{self.port}/api/w/dmath/graph/artifact"
+            )
+        self.assertEqual(ctx.exception.code, 404)
+
     def test_static_path_traversal_blocked(self):
         with self.assertRaises(HTTPError) as ctx:
             urllib.request.urlopen(

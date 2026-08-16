@@ -124,6 +124,7 @@
     stream.appendChild(div);
     stream.scrollTop = stream.scrollHeight;
     renderMath(div);
+    return div;
   }
 
   function showComposer(show) {
@@ -150,7 +151,6 @@
       if (!result.problems.length) {
         addMessage("<p>本组题目已练完。</p>");
         showComposer(false);
-        gotoSessionEnd.classList.remove("hidden");
         var startArea = document.getElementById("start-area");
         if (startArea) startArea.classList.remove("hidden");
         return;
@@ -167,6 +167,7 @@
       );
       stuckStep = "";
       answerBox.value = "";
+      answerBox.disabled = false;
       showComposer(true);
       var actions = document.getElementById("composer-actions");
       actions.classList.add("hidden");
@@ -212,8 +213,8 @@
         }).join("");
       }
       html += feedbackHtml();
-      addMessage(html, "teacher");
-      bindFeedback();
+      var msgEl = addMessage(html, "teacher");
+      bindFeedback(msgEl);
     });
   });
 
@@ -235,14 +236,14 @@
       + "</div></div>";
   }
 
-  function bindFeedback() {
-    var feedback = stream.querySelector(".feedback:last-of-type");
+  function bindFeedback(msgEl) {
+    if (!msgEl) return;
+    var feedback = msgEl.querySelector(".feedback");
     if (!feedback) return;
-    feedback.querySelectorAll(".solution-block").forEach(function (block) {
+    var blocks = msgEl.querySelectorAll(".solution-block");
+    blocks.forEach(function (block) {
       block.addEventListener("click", function () {
-        feedback.querySelectorAll(".solution-block").forEach(function (b) {
-          b.classList.remove("stuck");
-        });
+        blocks.forEach(function (b) { b.classList.remove("stuck"); });
         block.classList.add("stuck");
         stuckStep = block.dataset.idx;
       });

@@ -135,7 +135,14 @@ select:focus { border-color: var(--dsw-brand-primary); outline: none; }
 .weak-item:hover { background: var(--dsw-interactive-bg-hover); }
 .weak-item .id { color: var(--dsw-label-primary); }
 .weak-item .score { color: var(--dsw-label-tertiary); font-size: 12px; }
-.weak-item .reasons { color: var(--dsw-label-dimmed); font-size: 12px; }
+.weak-item .reasons {
+  color: var(--dsw-label-dimmed);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
 
 /* buttons — DSH pill */
 button {
@@ -226,6 +233,7 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   border-top: 1px solid var(--dsw-border-l1);
 }
 #composer-row { display: flex; gap: 6px; align-items: flex-end; }
+#session-end-entry { margin-top: 12px; }
 #answer-box { flex: 1; min-height: 64px; resize: vertical; }
 
 /* misc */
@@ -243,5 +251,8 @@ td, th { border: 1px solid var(--dsw-border-l2); padding: 4px 8px; }
 img { max-width: 100%; }
 .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 .status-dot.ok { background: var(--dsw-state-success); }
+
+/* visibility choreography (practice flow) — was missing, breaking every classList toggle */
+.hidden { display: none !important; }
 .status-dot.warn { background: var(--dsw-state-warn); }
 .status-dot.err { background: var(--dsw-state-error); }
