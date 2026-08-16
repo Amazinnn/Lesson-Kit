@@ -1,7 +1,7 @@
 # Discussion Record — lesson-kit 工作台（逐字级保真记录）
 
 > 本文件记录从"项目迁移"到"前端设计"期间与用户的所有讨论成果。
-> 保真规则：用户原话直接引用（尽量完整段落；确需省略用 […] 标注）；我的方案只记为"提议"，与用户确认的决策分开标注；决策状态：✅已确认 / ❌已否决 / ⏸后置 / ❓待定。
+> 保真规则：用户原话直接引用（尽量完整段落；确需省略用 […] 标注）；我的方案只记为"提议"，与用户确认的决策分开标注；**我方设计只要未被用户否定，均作为方案记录（附录 B）**；决策状态：✅已确认 / ❌已否决 / ⏸后置 / ❓待定。
 > 记录日期：2026-08-16
 
 ---
@@ -283,3 +283,86 @@
 | `AGENTS.md` | 兼容边界 + 开发纪律 + 验证命令 |
 | `changelog/` | 2026-08-16 迁移与恢复 / 后端实现记录 |
 | 后端实现 | `workbench/`（registry/data/domain/bridge/cli/server），148 测试全绿 |
+
+---
+
+## 附录 B · 我方设计方案汇编（未被否定的方案）
+
+> 规则：以下为我方提出的全部设计方案。凡未被用户否定者，一律记录在案（含具体参数）；✅=用户已确认，📋=我方方案保留（未被否定，亦未被明确确认），⏸=已定后置，❌=已被否决（附原因）。
+
+### B1 架构与工程（✅ 已确认为主）
+
+| # | 方案 | 具体内容 | 状态 |
+|---|---|---|---|
+| B1.1 | 五层架构 | Shell（wb CLI+HTTP）→ Domain（纯规则）→ Data（唯一碰 SQLite）；Content 读产物；Intelligence（Bridge）旁挂只被请求；单向依赖禁止反向 | ✅ |
+| B1.2 | 决策分层 | 内核决定"教什么"（确定性规则），AI 决定"怎么教"（可插拔）；AI 缺位全链照跑 | ✅ |
+| B1.3 | 壳无状态 | 会话/业务状态一律落池，浏览器可随时关 | ✅ |
+| B1.4 | 内容数据优先 | 视图直接查池渲染；Markdown 产物降级为打印/导出 | ✅ |
+| B1.5 | 工程约束 | stdlib 优先、单进程单端口、无哈希（ID 用可读顺序标识）、增量迁移（pool_schema ensure_* 模式）、禁防御性编程、代码简洁 | ✅ |
+| B1.6 | 用户级注册表 | `~/.lessonkit-workbench/workspaces.json`（workspaces 列表：name/path/db/active_course/active_chapter）；`LESSONKIT_WB_HOME` 环境变量可覆盖 | ✅ |
+| B1.7 | bridges 配置 | `bridges.json`（provider: command/args/cwd_mode/timeout_s）——JSON 而非 YAML（stdlib 无 YAML 解析） | ✅ |
+
+### B2 数据层（✅ 已确认为主）
+
+| # | 方案 | 具体内容 | 状态 |
+|---|---|---|---|
+| B2.1 | review_schedule | PK `(item_type, item_id, direction)`，direction 默认空串（普通项无方向，卡片按方向独立调度）；字段 state/repetitions/ease/interval_days/due_at/last_rating/last_reviewed_at | ✅ |
+| B2.2 | feedback_events | 追加日志：id/item_type/item_id/rating/note/created_at | ✅ |
+| B2.3 | figure_paths | `knowledge_points.figure_paths` + `problems.figure_paths`（逻辑路径 JSON） | ✅ |
+| B2.4 | answer_text | `problem_attempts.answer_text`（开放题作答文本） | ✅ |
+| B2.5 | 运行时布局 | `.lessonkit/figures/{course}/{chapter}/`（跟踪）、`.lessonkit/explain/{course}/{chapter}/`（跟踪）、`.lessonkit/jobs/<id>/`（gitignored） | ✅ |
+
+### B3 领域规则（✅ 已确认为主）
+
+| # | 方案 | 具体内容 | 状态 |
+|---|---|---|---|
+| B3.1 | 弱项排序 | score = 信号权重 × 到期提升 × 会话内重复惩罚；无信号 0.2 / low 0.5 / medium 1.0 / high 2.0；evidence≥2 ×1.5；到期=1+超期天数、未到期 0.8、无排期 1.0；会话内 ×0.3；只排序不过滤 | ✅ |
+| B3.2 | 级联信号 | 沿 prerequisite/applies_to/part_of 反向传导，深度≤2、×0.5/跳、按 relation strength 加权（high 1.0/medium 0.7/low 0.4）；learner_signals 证据纯净（级联不写行）；contrasts/variant_of/generalizes 不参与；UI 显示原因 | ✅ |
+| B3.3 | 拉题引擎 | problems（多 KP 命中优先）→ gate_passed 候选 → 缺口报告（永不伪造）；exclude_ids 会话去重；mode weak/random/all；source_kind 过滤 | ✅ |
+| B3.4 | 反馈映射 | 1–2→high / 3→medium / 4→low / 5 不清零仅 evidence+1；关键词表（混淆/分不清/区别/搞混→confusion；前置/没学/基础/缺→missing_prerequisite；别的章节/用不上/迁移→transfer_failure；缺联系/关系/连不上→relation_gap；兜底 weak_node）；note 原文保留；problem 反馈传导至关联 KP；信号永不自动清除 | ✅ |
+| B3.5 | SM-2 变体 | correct→q4、wrong/stuck→q2、skip→不变；q≥3：reps+1、interval 1/6/×ease、ease+0.1（上限 3.0）；q<3：reps 归零、interval 0、ease−0.2（下限 1.3）、relearning、立即到期；rating 1–5 直接作 q；skip 永不倒退 | ✅ |
+| B3.6 | 双向回忆卡片 | memory-recall 型 KP 翻卡（正→回忆→反）；方向（英↔中）独立学习动作、独立调度；contrasts/variant_of 邻接作比较提示（不合并且） | ✅ |
+| B3.7 | 卡点粒度 | solution 分块展示；"卡在第 N 步"+自然语言说明落 attempt（note+answer_text）；进 explain/diagnose 上下文 | ✅ |
+| B3.8 | 真题覆盖门禁 | 抽取输入含历年真题；`01_inputs/past-paper-coverage.json` 映射真题考点→池内 KP/题目；未映射→FAIL+清单；缺口走候选生成路径 | ✅ |
+
+### B4 桥层（✅ 已确认为主）
+
+| # | 方案 | 具体内容 | 状态 |
+|---|---|---|---|
+| B4.1 | 任务协议 | job-XXX 顺序 ID（无哈希）；目录含 task.json（operation/context/output_contract）、task.md（指令）、status.json、stdout.log；状态机 queued→running→done/failed | ✅ |
+| B4.2 | provider 执行 | 外部 CLI，cwd=工作区，超时，stdout 落文件（非管道）；非零退出→failed+原因；超时→failed | ✅ |
+| B4.3 | 环境变量传参 | `LESSONKIT_JOB_DIR` / `LESSONKIT_OUTPUT_PATH` 传给 provider（输出路径约定） | 📋 |
+| B4.4 | 契约校验 | explain 四节（结论/逐步拆解/易错点/回源指向）；diagnose 四节（定位/提示/溯源/追问）；缺节/空节→FAIL+原因；不信任模型输出 | ✅ |
+| B4.5 | 教师行为契约 | 先问已知→聚焦简洁讲解（约 200 字）→理解检测→禁猜（对池与源材料校验）→溯源；diagnose 变体：先定位后提示、不给完整答案、结尾追问 | ✅ |
+| B4.6 | 会话 trace | 会话记录锚点/交换/学习者作答/结果，落 `.lessonkit/jobs/<conv-id>/`；不锁未来会话；供未来教师记忆 | ✅ |
+
+### B5 CLI / API（✅ 已确认为主）
+
+| # | 方案 | 具体内容 | 状态 |
+|---|---|---|---|
+| B5.1 | wb 命令集 | init/ls/open/serve/weak/due/pull/practice/feedback/schedule/ai（explain/diagnose/status）/bridge add/guard——纯数据接口零教学语义 | ✅ |
+| B5.2 | HTTP API | hub/weak/due/pull/practice/feedback/problem 详情/kp 详情/figures（越界保护）/ai jobs（创建/状态）/explain 结果读取 | ✅ |
+| B5.3 | 服务生命周期 | 固定端口 3081；`wb serve` 前台运行 Ctrl+C 停；`wb open` 打印 URL | ✅ |
+| B5.4 | 图床服务 | `/api/w/{name}/figures/{course}/{chapter}/{file}` 静态服务；路径越界 403；缺图 404+UI 占位 | ✅ |
+
+### B6 前端（用户确认 + 我方方案）
+
+| # | 方案 | 具体内容 | 状态 |
+|---|---|---|---|
+| B6.1 | 三栏布局 | 左=选择栏（工作区下拉+页面导航+弱项列表）、中=页面区、右=**AI 对话栏**（常驻） | ✅（用户强调 AI 对话=右栏） |
+| B6.2 | 左栏导航 | 页面入口：**练习 / 知识点 / 知识图谱**；弱项 KP 列表（分数+级联原因） | ✅（用户纠正后） |
+| B6.3 | 练习页消息流式 | 题目/作答/揭晓/反馈以消息流呈现（DSH 消息风格）——AI 对话除外（回右栏） | 📋（部分修正：AI 对话移回右栏） |
+| B6.4 | 反馈框随答案出现 | 1–5/文本/卡点标记，纯可选；简单弹窗或题下反馈框 | ✅ |
+| B6.5 | 会话末统一自评 | 极简：未评题+评分控件+跳过全部+再练同类单按钮；不重复拼装 | ✅ |
+| B6.6 | AI 栏上下文 | 只跟随不确认：当前题/最近题为显示优先级；Agent 全知（CLI 可查一切，非访问限制） | ✅ |
+| B6.7 | AI 栏操作 | 讲解/诊断一键（带作答文本/卡点）→任务轮询→四节渲染→新会话；无 provider 优雅提示、断联只记录 | ✅ |
+| B6.8 | 知识点页 | 正文 md 渲染（LaTeX/wiki 链接跳转/图）、信号与级联原因、关联题、调度状态 | ✅ |
+| B6.9 | 知识图谱页 | 复用 `render-graph-html.py` 产物（output/.../ch06-graph.html）或按需生成；v1 只展示不编辑 | ✅ |
+| B6.10 | 视觉照搬 DSH | 令牌：字体栈、bg-base #f9fafb、文本 #0f1115/#61666b/#81858c、品牌 #3964fe、边框 rgb(0 0 0/10%)、pill 按钮（md 高36圆角18/sm 高28圆角14）、输入高32圆角8、卡片圆角12+shadow-lv3、状态色点 | ✅ |
+| B6.11 | 会话状态 | 客户端 sessionStorage（会话内队列）；刷新丢失仅队列，已记录全在池 | 📋 |
+| B6.12 | KaTeX 资产 | vendored 至 `workbench/server/static/katex/`（katex.min.js/css/fonts，零构建） | 📋 |
+| B6.13 | md 渲染管线 | 先转义再注入 math/wiki/image 标记（顺序敏感，含一次 bug 修复记录） | 📋 |
+
+### B7 后置清单（⏸ 全部后置，未经否定）
+
+generate 桥操作（AI 出题补池缺口，题型学含归纳/迁移/推广）；Scoropic 苏格拉底对话模式；教师记忆消费端；速成模式视图；复习页（前端）；记忆卡片页（前端）；Agent 组织面板（贴标签/归类/候选入出库调整）；批量揭晓；扩展摘要；Obsidian vault 打包；图形资产管理工具；CLI 层 agent 准备（教学 Skill/提示词注入/系统化教学流程）。
