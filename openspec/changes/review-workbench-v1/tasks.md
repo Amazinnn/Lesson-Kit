@@ -39,10 +39,10 @@
 
 ## 7. Server (`workbench/server/`)
 
-- [ ] 7.1 `app.py`: BaseHTTPRequestHandler routing, single port, path-containment for figure/static serving, JSON vs HTML dispatch
-- [ ] 7.2 `api.py`: endpoints per spec — hub/workspaces, weak, due, pull, practice, feedback, schedule, problem detail, kp detail, figures, ai jobs (create/status)
-- [ ] 7.3 `pages.py`: minimal server-rendered pages (hub + workspace home) reusing KaTeX assets from `frontend/editable-graph/dist`; AI panel showing explain/diagnose results
-- [ ] 7.4 API tests via ephemeral-port test client covering the WHEN/THEN scenarios (weak order, pull shortage, feedback mapping, schedule update, figure 404, job lifecycle)
+- [x] 7.1 `app.py`: BaseHTTPRequestHandler routing, single port, path-containment for figure/static serving, JSON vs HTML dispatch
+- [x] 7.2 `api.py`: endpoints per spec — hub/workspaces, weak, due, pull, practice, feedback, schedule, problem detail, kp detail, figures, ai jobs (create/status)
+- [x] 7.3 `pages.py`: minimal server-rendered pages (hub + workspace home) reusing KaTeX assets from `frontend/editable-graph/dist`; AI panel showing explain/diagnose results
+- [x] 7.4 API tests via ephemeral-port test client covering the WHEN/THEN scenarios (weak order, pull shortage, feedback mapping, schedule update, figure 404, job lifecycle)
 
 ## 8. Verification and handoff
 
