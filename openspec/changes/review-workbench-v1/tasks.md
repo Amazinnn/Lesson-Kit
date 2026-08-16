@@ -12,11 +12,11 @@
 
 ## 3. Domain layer (`workbench/domain/`, pure rules)
 
-- [ ] 3.1 `weak.py`: weakness score (signal weight × due boost × in-session repeat penalty) + cascade boosts (prerequisite/applies_to/part_of, reverse, depth ≤ 2, ×0.5/hop, strength-weighted) with explainable reasons
-- [ ] 3.2 `pull.py`: pull engine — problems by kp_ids, weakness-ordered, session de-dup, fallback to `gate_passed` candidates, shortage reporting
-- [ ] 3.3 `feedback.py`: 1–5 rating mapping + keyword→signal_type table; writes signals (evidence-only) + feedback_events; never clears signals
-- [ ] 3.4 `schedule.py`: SM-2 variant `after_result(state, result, now)`, due computation, per-direction entries for memory-recall cards
-- [ ] 3.5 Unit tests per domain module (test_weak, test_pull, test_feedback, test_schedule)
+- [x] 3.1 `weak.py`: weakness score (signal weight × due boost × in-session repeat penalty) + cascade boosts (prerequisite/applies_to/part_of, reverse, depth ≤ 2, ×0.5/hop, strength-weighted) with explainable reasons
+- [x] 3.2 `pull.py`: pull engine — problems by kp_ids, weakness-ordered, session de-dup, fallback to `gate_passed` candidates, shortage reporting
+- [x] 3.3 `feedback.py`: 1–5 rating mapping + keyword→signal_type table; writes signals (evidence-only) + feedback_events; never clears signals
+- [x] 3.4 `schedule.py`: SM-2 variant `after_result(state, result, now)`, due computation, per-direction entries for memory-recall cards
+- [x] 3.5 Unit tests per domain module (test_weak, test_pull, test_feedback, test_schedule)
 
 ## 4. Registry and config
 
