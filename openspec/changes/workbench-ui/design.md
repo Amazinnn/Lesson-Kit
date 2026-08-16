@@ -31,26 +31,37 @@ extended summaries, generate op, Scoropic — all deferred (proposal).
 
 1. **Page routes** (server-rendered, added to `app.py` dispatch):
    - `/` hub (existing) → links to workspaces
-   - `/w/{name}/` workspace home: left column + embedded page area; page
-     switching is client-side navigation to `/w/{name}/practice`,
-     `/w/{name}/kp/{kp_id}`, `/w/{name}/session-end`
-   - `/static/*` serves `frontend/editable-graph/dist` (KaTeX js/css/fonts)
-     with path containment
-2. **API consumption**: all existing endpoints; the session-end view composes
-   from `attempts`-rich `problem_detail` responses fetched per problem id —
-   no new endpoint needed (each pending problem's detail includes its
-   attempts and schedule).
-3. **Session tracking client-side**: the practice page keeps a session array
-   of problem ids + answers in memory (and sends exclude_ids on each pull);
-   closing the browser loses only the in-flight session — recorded results
-   are already in the pool (spec R: state in pool).
-4. **Wiki links**: renderer converts `[[kp_id]]` to links to
-   `/w/{name}/kp/{kp_id}`; LaTeX via KaTeX auto-render; figures via the
-   existing figures API path.
-5. **AI column context**: `GET /api/w/{name}/problem/{id}` results of current
-   + last few problems are shown as a priority list; the agent's access is
-   unaffected (CLI data interface). Explain/diagnose posts to the existing
-   ai endpoints; polling via ai/jobs.
+   - `/w/{name}/practice` — practice page (message stream)
+   - `/w/{name}/kps` — knowledge point list page (weak order)
+   - `/w/{name}/kp/{kp_id}` — knowledge point display page
+   - `/w/{name}/graph` — knowledge graph page (iframe of rendered artifact or
+     generation hint)
+   - `/w/{name}/session-end` — session-end unified self-rating
+   - `/static/*` serves `workbench/server/static/` first, then
+     `frontend/editable-graph/dist` (KaTeX) with path containment
+2. **Knowledge graph endpoint**: `GET /api/w/{name}/graph` returns the
+   rendered graph HTML artifact
+   (`output/{course}/{chapter}/{chapter}-graph.html`); when missing it
+   returns 404 with a hint naming the generation command
+   (`render-graph-html.py`). The page renders the artifact in an iframe or the
+   hint. Display-only in v1.
+3. **DSH design tokens** (copied from the live DeepSeek Harness GUI CSS):
+   font stack, bg-base #f9fafb, labels #0f1115/#61666b/#81858c, brand
+   #3964fe, border rgb(0 0 0/10%), pill buttons (md h36 r18 / sm h28 r14),
+   input h32 r8, card r12 + shadow-lv3, state dots — implemented as CSS
+   variables in `workbench/server/static/workbench.css`.
+4. **API consumption**: all existing endpoints; session-end composes from
+   problem_detail per pending problem id (no new endpoint needed).
+5. **Session tracking client-side**: practice page keeps session array
+   (problem ids + answers) in sessionStorage; exclude_ids sent on each pull;
+   closing the browser loses only the in-flight queue — recorded results are
+   in the pool.
+6. **Wiki links**: renderer converts `[[kp_id]]` to `/w/{name}/kp/{kp_id}`;
+   LaTeX via KaTeX; figures via the figures API path.
+7. **AI column context**: current + recent problems shown as a priority list;
+   the agent's access is unaffected (CLI data interface). Explain/diagnose
+   posts to the ai endpoints; polling via ai/jobs; results rendered with the
+   four-section contract.
 
 ## Risks / Trade-offs
 

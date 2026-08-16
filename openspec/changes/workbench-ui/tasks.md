@@ -1,36 +1,25 @@
-﻿## 1. Static assets and shell
+## 1. Visual shell (DSH tokens)
 
-- [x] 1.1 Add `/static/*` route serving `frontend/editable-graph/dist` with path containment
-- [x] 1.2 Three-column shell HTML (left selector: workspace dropdown + nav entries; middle page area; right AI column, collapsible)
-- [x] 1.3 Base CSS (minimal utilitarian style) and shell JS (column collapse, page switching)
-- [x] 1.4 KaTeX auto-render wired from `/static/` assets
+- [ ] 1.1 Rewrite `workbench.css` with DeepSeek Harness design tokens (bg-base, labels, brand #3964fe, borders, pill buttons, radii, shadow-lv3, top bar)
+- [ ] 1.2 Top bar (workspace/course/chapter) + left navigation column (workspace dropdown, practice/knowledge points/knowledge graph entries, weak list)
+- [ ] 1.3 Right AI conversation column restyled (context bar, action buttons, message list, input row)
 
-## 2. Practice page
+## 2. Middle pages
 
-- [x] 2.1 Practice page pulls problems (weak or by kp selection) with session de-dup (exclude_ids)
-- [x] 2.2 Problem card renders LaTeX, answer box for open problems, auto-grade display for option-bearing problems
-- [x] 2.3 "Show answer" reveals solution as blocks; feedback box (1鈥?, note, stuck-step marker) appears with the reveal; skip allowed
-- [x] 2.4 Recording: practice + feedback posts to existing endpoints; session array maintained in memory
+- [ ] 2.1 Practice page as message stream (problem → answer → reveal+feedback box → next; no repeats in session)
+- [ ] 2.2 Knowledge point list page (weak order, links to display pages)
+- [ ] 2.3 Knowledge point display page (Markdown: math/wiki links/figures; signals with cascade reasons; linked problems)
+- [ ] 2.4 Knowledge graph page (rendered artifact via `GET /api/w/{name}/graph`, or generation hint when missing)
+- [ ] 2.5 Session-end unified self-rating (minimal: pending list + rating controls + skip-all + practice-similar)
 
-## 3. Session-end unified self-rating
+## 3. AI column
 
-- [x] 3.1 Session-end view lists only problems without feedback, with rating controls and skip-all
-- [x] 3.2 "Practice similar" single button pulls the same weak KP groups and starts a new round
+- [ ] 3.1 Context follows current problem (display-only priority; agent access unaffected)
+- [ ] 3.2 Explain/diagnose one-click, job polling, four-section result rendering, new conversation
+- [ ] 3.3 Graceful no-provider message; recording unaffected
 
-## 4. AI column
+## 4. Verification
 
-- [x] 4.1 Priority context display (current + recent problems from problem_detail), display-only
-- [x] 4.2 Explain/diagnose one-click with current problem + answer text + stuck marker; job polling; result rendering (four sections); new-session button
-- [x] 4.3 Graceful no-provider message; recording unaffected
-
-## 5. Knowledge point display page
-
-- [x] 5.1 Markdown renderer: LaTeX, wiki links 鈫?kp page navigation, figures, tables, code blocks
-- [x] 5.2 KP page shows body, linked problems, signals with cascade reasons, schedule state
-
-## 6. Verification
-
-- [x] 6.1 Backend tests stay green; add API tests if any endpoint was touched
-- [x] 6.2 Walkthrough: serve on 3081, practice flow with real dmath data, session-end rating, practice similar, AI explain (graceful without provider), kp page wiki navigation
-- [x] 6.3 openspec validate; small commits; archive the change
-
+- [ ] 4.1 Route tests updated (left nav entries, kps list page, graph page, graph endpoint); backend tests stay green
+- [ ] 4.2 Walkthrough: top bar, left nav (practice/kps/graph), practice message flow, session-end rating, practice-similar, AI column, kp list/detail, graph page, DSH visual consistency
+- [ ] 4.3 openspec validate; small commits; archive the change
