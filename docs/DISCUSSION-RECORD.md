@@ -276,8 +276,8 @@
 | 产物 | 内容 |
 |---|---|
 | `docs/adr/0009–0021` | 分层架构 / 挠痛处调度 / 弹性反馈 / AI 转接层 / 高信噪比输入 / 数据优先视图 / 级联信号 / 诊断模式 / 运行时资产布局 / 真题覆盖门禁 / 学习动作扩展 / Agent-Native 教学 / Scoropic（后置） |
-| `openspec/specs/` | review-workbench（14 需求）/ ai-teacher-bridge（10）/ knowledge-figures（5）——已归档 |
-| `openspec/changes/workbench-ui/` | 前端变更（进行中，待按本记录修正） |
+| `openspec/specs/` | review-workbench（14 需求）/ ai-teacher-bridge（10）/ knowledge-figures（5）/ workbench-ui（14）——已归档 |
+| `openspec/changes/archive/2026-08-16-workbench-ui/` | 前端变更（2026-08-16 归档，累积规范见 `openspec/specs/workbench-ui/spec.md`） |
 | `docs/REQUIREMENTS.md` | 需求 + 边界 + 验收标准 |
 | `docs/ARCHITECTURE.md` | 分层模块契约 |
 | `AGENTS.md` | 兼容边界 + 开发纪律 + 验证命令 |

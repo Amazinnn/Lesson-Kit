@@ -1,7 +1,7 @@
 # 工作台前端：审查意见与优化方案（v3.1 · 三方交叉验证收敛；2 阶段制：阶段 1 已完成，阶段 2 一次交付）
 
 > 日期：2026-08-16 · 审查方式：只读代码审查（前端实现 + DSH 运行实例实测 + 独立审查顾问交叉验证）
-> 基准：`docs/DISCUSSION-RECORD.md`（专题 14–17、附录 B6）、`openspec/changes/workbench-ui/specs/workbench-ui/spec.md`、DeepSeek Harness 运行实例（http://127.0.0.1:3080/）实测设计系统
+> 基准：`docs/DISCUSSION-RECORD.md`（专题 14–17、附录 B6）、`openspec/specs/workbench-ui/spec.md`（累积规范）、DeepSeek Harness 运行实例（http://127.0.0.1:3080/）实测设计系统
 > 范围：只评审 `workbench/server/pages.py`、`workbench/server/app.py`、`workbench/server/api.py`、`workbench/server/static/workbench.js`、`workbench/server/static/workbench.css`；不改后端行为契约（domain/data/bridge/cli）。
 
 ---
