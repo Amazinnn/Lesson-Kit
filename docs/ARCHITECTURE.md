@@ -63,6 +63,8 @@ workbench/
   interval_days, due_at, last_rating, last_reviewed_at)`，PK `(item_type, item_id, direction)`，
   direction 默认空串（普通项无方向；卡片按方向独立调度）。
 - 新表 `feedback_events(id, item_type, item_id, rating, note, created_at)` 追加日志。
+- 题目与候选题可增量拥有 `display_title`（可读短标题）与 `topic_label`（单一主题标签）；它们是内容展示字段，不替代稳定 ID。
+- 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
 - 新列：`knowledge_points.figure_paths`、`problems.figure_paths`（逻辑路径 JSON）、
   `problem_attempts.answer_text`。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪）、
@@ -80,6 +82,7 @@ workbench/
 - `domain.feedback.apply(pool, item_type, item_id, rating?, note?) -> changes`——映射规则全在
   feedback.py，单测覆盖关键词表。
 - `domain.schedule.after_result(pool, item, result, now)`——SM-2 变体；`due(pool, days) -> [...]`。
+- 图谱状态动作经 Domain 规则映射到现有调度质量值；Shell 不直接写 SQLite，Data 层执行覆盖式存储。
 - `bridge.jobs`：`create/start/finish/fail/status`；任务文件 schema（operation/context/
   output_contract）固定，新增操作只加 operation 类型。
 - `bridge.contracts.validate(kind, result_text) -> (ok, reasons)`——确定性、可单测。
