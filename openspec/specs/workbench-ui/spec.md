@@ -7,7 +7,7 @@ conversation column whose context display prioritizes the current problem
 without ever limiting what the agent can see. Visual style copies the DeepSeek
 Harness design system.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Three-column shell with navigation
 

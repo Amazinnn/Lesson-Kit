@@ -10,6 +10,7 @@
   var SESSION_KEY = "wb_session_" + WS;
   var KPS_KEY = "wb_kps_" + WS;
   var CURRENT_KEY = "wb_current_" + WS;
+  var SIMILAR_KEY = "wb_similar_round_" + WS;
 
   /* ---------- helpers ---------- */
 
@@ -82,23 +83,14 @@
   var showAnswer = document.getElementById("show-answer");
   var noTime = document.getElementById("no-time");
   var startPractice = document.getElementById("start-practice");
-  var gotoSessionEnd = document.getElementById("goto-session-end");
 
   var currentProblem = load(CURRENT_KEY, null);
   var stuckStep = "";
+  var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
+  if (similarRound) sessionStorage.removeItem(SIMILAR_KEY);
 
   function session() {
     return load(SESSION_KEY, []);
-  }
-
-  function currentKps() {
-    return load(KPS_KEY, []);
-  }
-
-  function setCurrent(problem) {
-    currentProblem = problem || null;
-    store(CURRENT_KEY, currentProblem);
-    updateAiContext();
   }
 
   function updateAiContext() {
@@ -115,6 +107,18 @@
     }
     el.textContent = "当前题：" + currentProblem.problem_id
       + "（Agent 可自行检索全部记录）";
+  }
+
+  if (stream) {
+
+  function currentKps() {
+    return load(KPS_KEY, []);
+  }
+
+  function setCurrent(problem) {
+    currentProblem = problem || null;
+    store(CURRENT_KEY, currentProblem);
+    updateAiContext();
   }
 
   function addMessage(html, cls) {
@@ -148,8 +152,12 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kp_ids: kps, n: 1, mode: "weak" }),
     }).then(function (result) {
+      var exhaustedMessage = similarRound
+        ? "<p>暂无更多同类题。</p>"
+        : "<p>本组题目已练完。</p>";
+      similarRound = false;
       if (!result.problems.length) {
-        addMessage("<p>本组题目已练完。</p>");
+        addMessage(exhaustedMessage);
         showComposer(false);
         var startArea = document.getElementById("start-area");
         if (startArea) startArea.classList.remove("hidden");
@@ -315,11 +323,19 @@
     startPractice.addEventListener("click", startSession);
   }
 
+  if (similarRound) {
+    var returningStartArea = document.getElementById("start-area");
+    if (returningStartArea) returningStartArea.classList.add("hidden");
+    loadNext(currentKps());
+  }
+
   var gotoBtn = document.getElementById("goto-session-end");
   if (gotoBtn) {
     gotoBtn.addEventListener("click", function () {
       window.location = "session-end";
     });
+  }
+
   }
 
   /* ---------- session-end ---------- */
@@ -375,6 +391,7 @@
         sessionStorage.removeItem(SESSION_KEY);
         api("/weak?limit=5").then(function (items) {
           store(KPS_KEY, items.map(function (i) { return i.kp_id; }));
+          sessionStorage.setItem(SIMILAR_KEY, "1");
           window.location = "practice";
         });
       });
@@ -491,13 +508,12 @@
     });
   }
 
-  var layoutEl = document.getElementById("layout");
   var aiCollapse = document.getElementById("ai-collapse");
   var AI_COLLAPSED_KEY = "wb_ai_collapsed_" + WS;
-  if (layoutEl && aiCollapse) {
+  if (layout && aiCollapse) {
     function applyAiCollapsed(collapsed, persist) {
-      if (collapsed) layoutEl.setAttribute("data-ai-collapsed", "1");
-      else layoutEl.removeAttribute("data-ai-collapsed");
+      if (collapsed) layout.setAttribute("data-ai-collapsed", "1");
+      else layout.removeAttribute("data-ai-collapsed");
       aiCollapse.textContent = collapsed ? "›" : "‹";
       aiCollapse.title = collapsed ? "展开" : "折叠";
       if (persist) {
@@ -507,13 +523,13 @@
     var remembered = sessionStorage.getItem(AI_COLLAPSED_KEY) === "1";
     applyAiCollapsed(window.innerWidth < 1024 || remembered, false);
     aiCollapse.addEventListener("click", function () {
-      applyAiCollapsed(!layoutEl.hasAttribute("data-ai-collapsed"), true);
+      applyAiCollapsed(!layout.hasAttribute("data-ai-collapsed"), true);
     });
     window.addEventListener("resize", function () {
       if (window.innerWidth < 1024) {
-        layoutEl.setAttribute("data-ai-collapsed", "1");
+        layout.setAttribute("data-ai-collapsed", "1");
       } else if (sessionStorage.getItem(AI_COLLAPSED_KEY) !== "1") {
-        layoutEl.removeAttribute("data-ai-collapsed");
+        layout.removeAttribute("data-ai-collapsed");
       }
     });
   }

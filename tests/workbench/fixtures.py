@@ -49,6 +49,7 @@ def build_fixture_db(conn):
         CREATE TABLE knowledge_points (
             kp_id TEXT PRIMARY KEY,
             knowledge_item TEXT NOT NULL,
+            body TEXT,
             knowledge_type TEXT,
             importance TEXT
         );
@@ -104,9 +105,9 @@ def build_fixture_db(conn):
     pool_schema = load_script("pool_schema", Path("pool/scripts/pool_schema.py"))
     pool_schema.ensure_workbench_schema(conn)
     conn.execute(
-        "INSERT INTO knowledge_points (kp_id, knowledge_item, knowledge_type, importance)"
-        " VALUES (?, ?, ?, ?)",
-        ("dmath-ch06-kp-001", "Counting", "concept-property", "core"),
+        "INSERT INTO knowledge_points (kp_id, knowledge_item, body, knowledge_type, importance)"
+        " VALUES (?, ?, ?, ?, ?)",
+        ("dmath-ch06-kp-001", "Counting", "", "concept-property", "core"),
     )
     conn.execute(
         "INSERT INTO problems"
@@ -136,3 +137,14 @@ class WorkspaceFixture:
     def cleanup(self):
         os.environ.pop("LESSONKIT_WB_HOME", None)
         self.tmp.cleanup()
+
+    def add_workspace(self, name, course="dmath", chapter="ch06"):
+        """Register another isolated fixture workspace for switching tests."""
+        ws = Path(self.tmp.name) / name
+        (ws / "pool").mkdir(parents=True)
+        conn = sqlite3.connect(ws / "pool" / "dmath.db")
+        build_fixture_db(conn)
+        conn.close()
+        from registry import register
+        register(str(ws), course=course, chapter=chapter)
+        return ws

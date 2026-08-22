@@ -1,6 +1,7 @@
 """UI shell route tests (TDD, red first)."""
 
 import json
+import sqlite3
 import threading
 import unittest
 import urllib.request
@@ -33,6 +34,16 @@ class UiRouteTests(unittest.TestCase):
         ) as resp:
             return resp.status, json.loads(resp.read().decode("utf-8"))
 
+    def post_json(self, path, body):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}{path}",
+            data=json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+
     def test_static_asset_served(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
@@ -49,9 +60,9 @@ class UiRouteTests(unittest.TestCase):
         # unreachable; it must live outside and stay visible
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("<div id='session-end-entry'>", body)
-        self.assertIn("<button id='goto-session-end' class='outline'>", body)
-        self.assertNotIn("class='outline hidden'", body)
+        self.assertIn("id='session-end-entry'", body)
+        self.assertIn("id='goto-session-end'", body)
+        self.assertNotIn("id='session-end-entry' class='hidden'", body)
 
     def test_graph_page_iframe_points_to_artifact_route(self):
         graph = (self.fixture.ws / "output" / "dmath" / "ch06"
@@ -100,10 +111,44 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("<a class='brand' href='/'>lesson-kit</a>", body)
         self.assertIn("ai-collapse", body)
 
+    def test_pages_have_editorial_landmarks(self):
+        for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph",
+                     "/w/dmath/session-end"):
+            status, body = self.fetch(path)
+            self.assertEqual(status, 200)
+            self.assertIn("class='page-header'", body)
+            self.assertIn("class='context-line'", body)
+
+    def test_workspace_switch_target_keeps_original_pool_records(self):
+        self.fixture.add_workspace("algebra")
+        self.post_json("/api/w/dmath/practice", {
+            "problem_id": "dmath-ch06-prob-001", "result": "skip",
+        })
+        self.post_json("/api/w/dmath/feedback", {
+            "item_type": "problem", "item_id": "dmath-ch06-prob-001",
+            "rating": 3, "note": "needs review",
+        })
+        status, body = self.fetch("/w/algebra/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("data-workspace='algebra'", body)
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM problem_attempts").fetchone()[0], 1
+            )
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM feedback_events").fetchone()[0], 1
+            )
+            self.assertGreater(
+                conn.execute("SELECT COUNT(*) FROM learner_signals").fetchone()[0], 0
+            )
+        finally:
+            conn.close()
+
     def test_hub_page_chinese(self):
         status, body = self.fetch("/")
         self.assertEqual(status, 200)
-        self.assertIn("<h1>工作台</h1>", body)
+        self.assertIn("<h1>学习工作台</h1>", body)
 
     def test_kp_page_has_no_dead_script(self):
         status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
@@ -126,6 +171,30 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
         self.assertEqual(status, 200)
         self.assertIn("dmath-ch06-kp-001", body)
+
+    def test_wiki_link_points_to_a_reachable_knowledge_point(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "INSERT INTO knowledge_points "
+                "(kp_id, knowledge_item, body, knowledge_type, importance) "
+                "VALUES (?, ?, ?, ?, ?)",
+                ("dmath-ch06-kp-002", "Permutations", "", "concept-property", "core"),
+            )
+            conn.execute(
+                "UPDATE knowledge_points SET body = ? WHERE kp_id = ?",
+                ("See [[dmath-ch06-kp-002]]", "dmath-ch06-kp-001"),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertEqual(status, 200)
+        target = "/w/dmath/kp/dmath-ch06-kp-002"
+        self.assertIn(f"href='{target}'", body)
+        status, target_body = self.fetch(target)
+        self.assertEqual(status, 200)
+        self.assertIn("Permutations", target_body)
 
     def test_session_end_page_renders(self):
         status, body = self.fetch("/w/dmath/session-end")
