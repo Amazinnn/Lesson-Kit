@@ -3,9 +3,7 @@
 The review workbench is the consumption side of lesson-kit: a browser workbench
 and shared CLI that turn the SQLite pool into weak-point-first daily practice,
 with flexible feedback and a forgetting curve used as background guidance only.
-
 ## Requirements
-
 ### Requirement: Workspace registry
 
 Each lesson-kit folder is a workspace. The registry maps a workspace name to a
@@ -59,19 +57,26 @@ knowledge point instead of inventing content.
 
 ### Requirement: Practice session
 
-A practice session SHALL present one problem at a time with rendered math, record
-a result (correct, wrong, stuck, skip), and persist each result to the pool
-immediately. The schedule SHALL never block a problem from being practiced:
-due dates are reminders, not locks.
+A workbench practice session SHALL present one problem at a time from a weak-point-first, non-repeating session queue. The learner SHALL choose either per-problem self-rating or end-of-session unified self-rating before the first problem is pulled. Showing a problem, drafting an answer, revealing a solution, skipping a problem, or ending a session without an explicit rating SHALL NOT write an attempt, feedback event, signal, progress row, or schedule update. The schedule SHALL never lock a problem.
+
+#### Scenario: Skip a problem without a learning record
+
+- **WHEN** the learner skips the current problem
+- **THEN** the next unseen problem is shown and no learner-state table is changed
+
+#### Scenario: Explicit rating records a learning conclusion
+
+- **WHEN** the learner submits a 1–5 self-rating for a completed problem
+- **THEN** the feedback, derived learner state, and schedule are persisted once
 
 #### Scenario: Answer a problem in a session
 
-- **WHEN** the user submits a result for a problem
-- **THEN** the attempt and updated progress are written to the pool and the next problem is shown
+- **WHEN** the learner completes a problem and explicitly submits a rating
+- **THEN** the next unseen problem is shown after the single feedback write
 
 #### Scenario: Practice an un-due problem
 
-- **WHEN** the user selects a problem that is not yet due
+- **WHEN** the learner selects a problem that is not yet due
 - **THEN** it is shown and practiced normally, with no lock or refusal
 
 ### Requirement: Reverse review from wrong results
@@ -87,25 +92,27 @@ until it yields.
 
 ### Requirement: Flexible feedback
 
-Feedback SHALL be optional and free-form: a 1–5 self-rating, natural-language
-notes, both, or neither. No form completion SHALL be required to continue a
-session. Both forms SHALL be mapped to learner signals that influence future
-weakness ordering, and the original note text SHALL be preserved verbatim.
+Feedback SHALL consist of an optional natural-language note paired with an explicit 1–5 self-rating when the learner chooses to record a learning conclusion. A submitted rating SHALL preserve the note verbatim and update the existing signal and scheduling mechanisms. The workbench SHALL NOT request a feedback log for navigation or unfinished work.
 
 #### Scenario: Rate mastery without text
 
-- **WHEN** the learner gives a rating of 2 for a knowledge point without any note
-- **THEN** the signal for that point is raised to high weight and the event is appended to the feedback log
+- **WHEN** the learner submits a rating of 2 without a note
+- **THEN** the corresponding knowledge-point signal is raised and one feedback event is appended
 
 #### Scenario: Describe a weakness in words
 
-- **WHEN** the learner writes a natural-language note about a confusion
-- **THEN** the note is mapped to a signal type, stored verbatim on the signal, and the event is appended to the feedback log
+- **WHEN** the learner submits a rating with a natural-language note about a confusion
+- **THEN** the note is mapped to a signal type, stored verbatim on the signal, and one event is appended
 
 #### Scenario: Skip feedback entirely
 
-- **WHEN** the learner submits a problem result without rating or note
-- **THEN** the result is recorded and the session continues with no prompt or nag
+- **WHEN** the learner leaves a problem without submitting a rating
+- **THEN** the session continues with no feedback, attempt, signal, progress, or schedule write
+
+#### Scenario: Describe a weakness with a submitted rating
+
+- **WHEN** the learner submits a rating and a natural-language note
+- **THEN** the note is preserved verbatim and mapped through the existing signal rules
 
 ### Requirement: Forgetting-curve scheduling as background
 
@@ -238,3 +245,12 @@ candidate-generation path.
 
 - **WHEN** an exam point has no mapping to any knowledge point or durable problem
 - **THEN** the gate fails, the unmapped point is listed, and the workbench shows it as a pool gap with a candidate-generation entry point
+
+### Requirement: Current learning state
+
+The workbench SHALL maintain one current state for each knowledge point or problem, selected from `needs_work`, `review`, and `mastered`. A submitted rating of 1–2, 3–4, or 5 SHALL respectively set that state. A learner's explicit graph-state edit SHALL replace only the current state and update scheduling through the corresponding rating without appending a feedback event or learner signal.
+
+#### Scenario: Edit a graph state without creating a history event
+
+- **WHEN** the learner changes a knowledge point from review to mastered in the graph
+- **THEN** the current state and schedule are updated and feedback-event and learner-signal counts do not increase

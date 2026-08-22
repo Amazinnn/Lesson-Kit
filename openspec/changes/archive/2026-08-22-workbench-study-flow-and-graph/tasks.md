@@ -18,5 +18,5 @@
 
 ## 4. Verification and handoff
 
-- [ ] 4.1 Run full pytest, JavaScript syntax, OpenSpec strict validation, pool guards, and local smoke checks.
-- [ ] 4.2 Record final evidence in a dated changelog and archive the OpenSpec change after validation.
+- [x] 4.1 Run full pytest, JavaScript syntax, OpenSpec strict validation, pool guards, and local smoke checks.
+- [x] 4.2 Record final evidence in a dated changelog and archive the OpenSpec change after validation.

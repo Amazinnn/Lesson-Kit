@@ -48,6 +48,8 @@ Feedback SHALL consist of an optional natural-language note paired with an expli
 - **WHEN** the learner submits a rating and a natural-language note
 - **THEN** the note is preserved verbatim and mapped through the existing signal rules
 
+## ADDED Requirements
+
 ### Requirement: Current learning state
 
 The workbench SHALL maintain one current state for each knowledge point or problem, selected from `needs_work`, `review`, and `mastered`. A submitted rating of 1–2, 3–4, or 5 SHALL respectively set that state. A learner's explicit graph-state edit SHALL replace only the current state and update scheduling through the corresponding rating without appending a feedback event or learner signal.

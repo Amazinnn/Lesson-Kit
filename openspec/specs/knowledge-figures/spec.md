@@ -4,9 +4,7 @@ Knowledge points and problems with figures need a declared, first-class figure
 area: figures are files under the workspace's hidden runtime directory,
 referenced by logical paths in the pool and by Markdown in text, served by the
 web workbench and rendered by Obsidian.
-
 ## Requirements
-
 ### Requirement: Declared figure area
 
 The figure area SHALL be the workspace's `.lessonkit/figures/{course}/{chapter}/`
@@ -75,3 +73,21 @@ out of scope for v1.
 
 - **WHEN** the extraction pipeline encounters a diagram that must be preserved for a knowledge point or a problem
 - **THEN** it writes the figure file into the figure area and records the logical reference on the owner record
+
+### Requirement: Stable problem identity alongside figures
+
+Problems SHALL expose a concise display title and a single topic label independently of their durable identifier. When a problem body contains a Markdown figure reference, adding those presentation fields SHALL NOT alter the figure path or its rendering in the workbench or Obsidian.
+
+#### Scenario: A titled problem retains its figure
+
+- **WHEN** a problem receives a display title and topic label
+- **THEN** its existing Markdown figure reference resolves to the same logical figure path
+
+### Requirement: Explicit graph content updates preserve learning history
+
+The workbench graph SHALL allow an explicit save of a knowledge point body and fragile note. It SHALL update only those fields and SHALL NOT alter relations, problem content, feedback events, or learner signals.
+
+#### Scenario: Saving a knowledge point does not create learning events
+
+- **WHEN** a learner saves a knowledge point body and fragile note from the graph
+- **THEN** the refreshed graph model shows the new content while relation, feedback-event, and learner-signal counts are unchanged
