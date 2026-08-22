@@ -100,7 +100,7 @@ continues unaffected.
 
 ### Requirement: Knowledge point display page
 
-The knowledge point display page SHALL render linked problems grouped by their topic label. Each row SHALL present a concise problem title as its primary text and may show the raw problem id only as secondary context.
+The knowledge point display page SHALL render linked problems grouped by their topic label. Each row SHALL present a concise problem title as its primary text and a one-line problem summary as secondary text. Raw problem ids SHALL NOT appear in linked-problem rows.
 
 #### Scenario: Browse grouped linked problems
 

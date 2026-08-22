@@ -343,8 +343,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-empty { padding: 24px; }
 .problem-topic { padding: 10px 0; border-bottom: 1px solid var(--dsw-border-l1); }
 .problem-topic summary { cursor: pointer; color: var(--dsw-label-secondary); font-weight: 600; }
-.linked-problem { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0 0; }
-.problem-title { color: var(--dsw-label-primary); font-size: 14px; }
+.linked-problem { padding: 10px 0 0; }
+.problem-title { display: block; color: var(--dsw-label-primary); font-size: 14px; font-weight: 600; }
+.problem-summary { display: block; margin-top: 3px; color: var(--dsw-label-secondary); font-size: 13px; line-height: 1.5; }
 .empty-state { max-width: 640px; }
 .next-step { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 22px 24px; border-top: 1px solid var(--dsw-border-l2); }
 .next-step-actions { display: flex; gap: 8px; flex: none; }

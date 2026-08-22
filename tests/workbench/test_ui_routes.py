@@ -181,11 +181,18 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("class='weak-title'>Counting", body)
 
     def test_kp_page_renders(self):
+        summary = (
+            "选择两类代表并计算所有满足条件的可行方案，并说明每一步的计数理由与"
+            "排列顺序如何影响最终结果，写出完整说明，供复习时快速浏览。"
+        )
         conn = sqlite3.connect(self.fixture.db_path)
         try:
             conn.execute(
-                "UPDATE problems SET display_title=?, topic_label=? WHERE problem_id=?",
-                ("两类代表选择", "乘法规则", "dmath-ch06-prob-001"),
+                "UPDATE problems SET problem_text=?, display_title=?, topic_label=? WHERE problem_id=?",
+                (
+                    summary.replace("两类代表", "<em>两类代表</em>"),
+                    "两类代表选择", "乘法规则", "dmath-ch06-prob-001",
+                ),
             )
             conn.commit()
         finally:
@@ -195,6 +202,9 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("两类代表选择", body)
         self.assertIn("乘法规则", body)
         self.assertIn("dmath-ch06-kp-001", body)
+        self.assertIn(summary[:56] + "…", body)
+        self.assertNotIn("dmath-ch06-prob-001", body)
+        self.assertNotIn("&lt;em&gt;", body)
 
     def test_wiki_link_points_to_a_reachable_knowledge_point(self):
         conn = sqlite3.connect(self.fixture.db_path)

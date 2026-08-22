@@ -289,7 +289,11 @@ def _linked_problems(problems):
         + "".join(
             "<li class='linked-problem'>"
             f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
-            f"<span class='item-id'>{html.escape(problem['problem_id'])}</span></li>"
+            + (
+                f"<span class='problem-summary'>{html.escape(_problem_summary(problem))}</span>"
+                if _problem_summary(problem) else ""
+            )
+            + "</li>"
             for problem in items
         )
         + "</ul></details>"
@@ -303,6 +307,14 @@ def _problem_title(problem):
         return title
     text = " ".join((problem.get("problem_text") or "").split())
     return text[:24] or problem["problem_id"]
+
+
+def _problem_summary(problem):
+    text = re.sub(r"<[^>]+>", "", problem.get("problem_text") or "")
+    text = " ".join(text.split())
+    if not text or text == _problem_title(problem):
+        return ""
+    return text[:56] + ("…" if len(text) > 56 else "")
 
 
 def _ai_column(workspace_name, graph_mode=False):
