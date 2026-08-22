@@ -1,6 +1,7 @@
-"""View queries: hub stats, due list, detail pages, figures."""
+"""View queries: hub stats, due list, detail pages, figures, graph data."""
 
 from datetime import date
+import json
 
 
 def hub_stats(pool):
@@ -46,12 +47,59 @@ def kp_detail(pool, kp_id):
     kp = pool.kp(kp_id)
     signals = [s for s in pool.signals() if s["target_id"] == kp_id]
     problems = [p for p in pool.problems_all() if kp_id in p["kp_ids"]]
+    for problem in problems:
+        problem["current_state"] = pool.current_state("problem", problem["problem_id"])
     return {
         "kp": kp,
         "signals": signals,
         "problems": problems,
         "schedule": pool.schedule_get("kp", kp_id),
+        "current_state": pool.current_state("kp", kp_id),
     }
+
+
+def graph_model(pool):
+    prefix = f"{pool.course}-{pool.chapter}"
+    kps = pool.kps(prefix)
+    ids = {kp["kp_id"] for kp in kps}
+    current = {
+        (row["item_type"], row["item_id"]): row["state"]
+        for row in pool.current_states()
+    }
+    signals = {row["target_id"]: row["weight"] for row in pool.signals()}
+    nodes = [
+        {
+            "id": kp["kp_id"],
+            "title": kp.get("knowledge_item") or kp["kp_id"],
+            "body": kp.get("body") or "",
+            "fragile": kp.get("fragile") or "",
+            "state": current.get(
+                ("kp", kp["kp_id"]), _signal_state(signals.get(kp["kp_id"]))
+            ),
+        }
+        for kp in kps
+    ]
+    edges = []
+    seen = set()
+    for relation in pool.relations():
+        source = relation["source_kp_id"]
+        target = relation["target_kp_id"]
+        if source in ids and target in ids:
+            key = (source, target, relation["relation_type"])
+            seen.add(key)
+            edges.append({
+                "source": source, "target": target,
+                "relation_type": relation["relation_type"],
+            })
+    for kp in kps:
+        for related in json.loads(kp.get("related_kp_ids") or "[]"):
+            key = (kp["kp_id"], related, "related")
+            if related in ids and key not in seen:
+                edges.append({
+                    "source": kp["kp_id"], "target": related,
+                    "relation_type": "related",
+                })
+    return {"nodes": nodes, "edges": edges}
 
 
 def figures_list(pool):
@@ -75,6 +123,14 @@ def _is_due(row, today):
     except ValueError:
         return False
     return due_date <= today
+
+
+def _signal_state(weight):
+    if weight == "high":
+        return "needs_work"
+    if weight:
+        return "review"
+    return None
 
 
 def _item_label(pool, item_type, item_id):

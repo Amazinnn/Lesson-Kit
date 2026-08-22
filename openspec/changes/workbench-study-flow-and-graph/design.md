@@ -15,6 +15,7 @@
 - 既有 `/api/w/{workspace}/feedback` 请求体保持不变。
 - 新增工作台内部 `GET /api/w/{workspace}/graph/model`，返回当前章节节点、边、状态和详情所需的安全字段。
 - 新增工作台内部 `POST /api/w/{workspace}/graph/state`，接收 `item_type`、`item_id`、`state`，覆盖当前状态并更新调度。
+- 新增工作台内部 `POST /api/w/{workspace}/graph/kp`，接收 `kp_id`、`body`、`fragile`，覆盖知识点正文与薄弱说明；它不写 feedback event、learner signal 或关系。
 - 既有路由和 `wb_session_*`、`wb_kps_*`、`wb_current_*` 语义保持；练习会话在现有 session 值中兼容地增加模式、已见题和待评分项。
 
 ## Risks and Migration

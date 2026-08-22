@@ -32,7 +32,7 @@ def hub_page(workspaces):
     return _base("lesson-kit 工作台", body)
 
 
-def shell(workspace, workspaces, weak_items, middle_html, active_nav):
+def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False):
     course = workspace.get("active_course") or ""
     chapter = workspace.get("active_chapter") or ""
     meta = f"<span class='meta'>{html.escape(workspace['name'])}"
@@ -47,7 +47,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav):
         "</header>"
     )
     left = _left_column(workspace, workspaces, weak_items, active_nav)
-    ai = _ai_column(workspace["name"])
+    ai = _ai_column(workspace["name"], graph_mode)
     body = (
         topbar
         + f"<div id='layout' data-workspace='{workspace['name']}'>"
@@ -80,26 +80,38 @@ def practice_page(workspace, workspaces, weak_items):
         + "<div class='page-content practice-content'>"
         "<section id='start-area' class='practice-intro'>"
         "<p class='section-kicker'>本轮练习</p>"
-        "<h2>从薄弱点开始</h2>"
-        "<p>系统会优先找出需要反复打磨的知识点；作答后再决定是否反馈。</p>"
-        "<button id='start-practice' class='primary'>开始练习</button>"
+        "<h2>先选定自评方式</h2>"
+        "<p>本轮会持续练习薄弱项相关题；跳题和草稿不会留下学习记录。</p>"
+        "<fieldset class='practice-mode-choice'><legend>本轮自评方式（必选）</legend>"
+        "<label><input id='practice-mode-immediate' type='radio' name='practice-mode' "
+        "value='immediate'> 每题作答后自评</label>"
+        "<label><input id='practice-mode-batch' type='radio' name='practice-mode' "
+        "value='batch'> 完成后统一自评</label></fieldset>"
+        "<button id='start-practice' class='primary' disabled>开始本轮练习</button>"
         "</section>"
         "<section class='practice-flow' aria-label='练习过程'>"
-        "<div id='stream'></div>"
-        "<div id='composer' class='hidden'>"
+        "<div id='stream' class='practice-card-area'></div>"
+        "<div id='composer' class='practice-answer-card hidden'>"
         "<div id='composer-row'>"
         "<textarea id='answer-box' rows='3' placeholder='写下你的作答'></textarea>"
         "<button id='answer-submit' class='primary'>提交作答</button>"
         "</div>"
         "<div id='composer-actions' class='hidden'>"
-        "<button id='show-answer' class='primary'>看答案</button>"
-        "<button id='no-time' class='ghost'>没时间批改</button>"
+        "<button id='show-answer' class='outline'>查看解析</button>"
+        "</div>"
+        "<div id='feedback-area' class='feedback-card hidden'>"
+        "<label for='rating-input'>自评分（1–5）</label>"
+        "<input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' "
+        "placeholder='输入 1–5'>"
+        "<textarea id='feedback-note' rows='2' placeholder='可选备注'></textarea>"
+        "<button id='save-rating' class='primary'>保存并下一题</button>"
         "</div>"
         "</div>"
         "</section>"
-        "<div id='session-end-entry' class='session-end-entry'>"
-        "<span>想先收束这一轮？</span>"
-        "<button id='goto-session-end' class='outline'>去会话末统一自评</button>"
+        "<div id='session-end-entry' class='session-end-entry hidden'>"
+        "<span>本题未提交的内容只保留在当前会话。</span>"
+        "<div><button id='no-time' class='ghost'>跳到下一道题目</button>"
+        "<button id='goto-session-end' class='outline'>提前结束本次练习</button></div>"
         "</div>"
         "</div>"
     )
@@ -113,7 +125,8 @@ def kps_page(workspace, workspaces, weak_items, pool):
         pool.relations(), set(), date.today(),
     )
     items = "".join(
-        f"<li><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>{html.escape(item['kp_id'])}</a>"
+        f"<li><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>{html.escape(item['knowledge_item'])}</a>"
+        f"<span class='item-id'>{html.escape(item['kp_id'])}</span>"
         f"<span class='score'> {item['score']}</span>"
         f"<span class='reasons'> {html.escape('; '.join(item['reasons']))}</span></li>"
         for item in ranked
@@ -145,11 +158,7 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
         f"<span class='reasons'> {html.escape(s.get('note') or '')}</span></li>"
         for s in detail["signals"]
     )
-    problems_html = "".join(
-        f"<li>{html.escape(p['problem_id'])}"
-        f"<span class='reasons'> {html.escape(p['problem_text'][:60])}</span></li>"
-        for p in detail["problems"]
-    )
+    problems_html = _linked_problems(detail["problems"])
     schedule = detail["schedule"]
     schedule_html = (
         f"state={schedule['state']} reps={schedule['repetitions']} "
@@ -175,42 +184,35 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
         "<div class='section-heading'><div>"
         "<p class='section-kicker'>练习入口</p><h2>关联题目</h2>"
         "</div></div>"
-        f"<ul>{problems_html or '<li class=\"muted\">—</li>'}</ul>"
+        f"{problems_html or '<p class=\"muted\">—</p>'}"
         "</section></div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "kps")
 
 
 def graph_page(workspace, workspaces, weak_items, has_artifact):
-    if has_artifact:
-        middle = (
-            _page_header(
-                "知识网络 / 当前章节", "知识图谱",
-                "查看本章知识点之间的连接；图谱在这里仅供阅读。",
-            )
-            + "<div class='page-content graph-content'>"
-            "<section class='graph-panel'>"
-            f"<iframe src='/api/w/{workspace['name']}/graph/artifact' title='知识图谱' "
-            "class='graph-frame'></iframe>"
-            "</section></div>"
+    middle = (
+        _page_header(
+            "知识网络 / 当前章节", "知识图谱",
+            "搜索、筛选或聚焦一个知识点，查看它与当前学习状态的联系。",
         )
-    else:
-        course = workspace.get("active_course", "")
-        chapter = workspace.get("active_chapter", "")
-        middle = (
-            _page_header(
-                "知识网络 / 当前章节", "知识图谱",
-                "图谱生成后会直接在这里展示。",
-            )
-            + "<div class='page-content'><section class='empty-state card'>"
-            "<p class='section-kicker'>尚无产物</p><h2>图谱尚未生成</h2>"
-            "<p>在仓库根目录运行：</p>"
-            "<pre>python pool/scripts/render-graph-html.py --db pool/{course}.db "
-            "--course {course} --chapter {chapter} --course-name \"课程名\" "
-            "--out output/{course}/{chapter}</pre>"
-            "<p>生成后刷新本页即可。</p></section></div>"
-        ).format(course=course, chapter=chapter)
-    return shell(workspace, workspaces, weak_items, middle, "graph")
+        + "<div class='page-content graph-content'>"
+        "<section class='graph-panel' aria-label='知识图谱'>"
+        "<div class='graph-toolbar'>"
+        "<label class='visually-hidden' for='graph-search'>搜索知识点</label>"
+        "<input id='graph-search' placeholder='搜索知识点'>"
+        "<label class='visually-hidden' for='graph-state-filter'>按状态筛选</label>"
+        "<select id='graph-state-filter'><option value=''>全部状态</option>"
+        "<option value='needs_work'>待攻克</option><option value='review'>待复习</option>"
+        "<option value='mastered'>已掌握</option></select>"
+        "<div class='graph-zoom' aria-label='缩放'>"
+        "<button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button>"
+        "<button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button>"
+        "<button id='graph-fit' class='outline sm'>适应画布</button></div>"
+        "</div><div id='graph-canvas' tabindex='0' aria-label='知识图谱画布'></div>"
+        "</section></div>"
+    )
+    return shell(workspace, workspaces, weak_items, middle, "graph", graph_mode=True)
 
 
 def session_end_page(workspace, workspaces, weak_items):
@@ -223,14 +225,13 @@ def session_end_page(workspace, workspaces, weak_items):
         "<section class='support-section pending-section'>"
         "<div class='section-heading'><div>"
         "<p class='section-kicker'>待补充</p><h2>尚未评分的题目</h2>"
-        "</div><p>评分和文字反馈都是可选的。</p></div>"
+        "</div><p>逐题输入 1–5 分；点击保存前不会写入学习记录。</p></div>"
         "<div id='pending-ratings'></div></section>"
         "<section id='session-end-actions' class='next-step'>"
         "<div><p class='section-kicker'>下一步</p><h2>继续打磨弱项</h2>"
-        "<p>开始新一轮同类练习，或保留本轮记录后稍后再继续。</p></div>"
+        "<p>重新开始时再次选择自评方式。</p></div>"
         "<div class='next-step-actions'>"
         "<button id='practice-similar' class='primary'>再练同类</button>"
-        "<button id='skip-all' class='ghost'>跳过全部</button>"
         "</div></section></div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "session-end")
@@ -254,6 +255,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     )
     weak_html = "".join(
         f"<div class='weak-item'><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
+        f"<span class='weak-title'>{html.escape(item['knowledge_item'])}</span>"
         f"<span class='id'>{html.escape(item['kp_id'])}</span></a>"
         f"<span class='score'>{item['score']}</span>"
         f"<span class='reasons' title='{html.escape('; '.join(item['reasons']))}'>"
@@ -276,8 +278,35 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     )
 
 
-def _ai_column(workspace_name):
-    return (
+def _linked_problems(problems):
+    groups = {}
+    for problem in problems:
+        topic = problem.get("topic_label") or "未分类"
+        groups.setdefault(topic, []).append(problem)
+    return "".join(
+        "<details class='problem-topic' open>"
+        f"<summary>{html.escape(topic)}</summary><ul>"
+        + "".join(
+            "<li class='linked-problem'>"
+            f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
+            f"<span class='item-id'>{html.escape(problem['problem_id'])}</span></li>"
+            for problem in items
+        )
+        + "</ul></details>"
+        for topic, items in groups.items()
+    )
+
+
+def _problem_title(problem):
+    title = problem.get("display_title")
+    if title:
+        return title
+    text = " ".join((problem.get("problem_text") or "").split())
+    return text[:24] or problem["problem_id"]
+
+
+def _ai_column(workspace_name, graph_mode=False):
+    teacher = (
         "<section class='ai-identity'>"
         "<div id='ai-head'><div><p class='side-label'>外部 Agent</p><h2>AI 教师</h2></div>"
         "<button id='ai-collapse' class='ghost sm' title='折叠/展开'>‹</button></div>"
@@ -293,6 +322,21 @@ def _ai_column(workspace_name):
         "<input id='ai-input' placeholder='附加说明（可选）'>"
         "<button id='ai-send' class='primary sm'>发送</button>"
         "</div>"
+    )
+    if not graph_mode:
+        return teacher
+    return (
+        "<div id='right-tabs' role='tablist' aria-label='图谱侧栏'>"
+        "<button id='graph-detail-tab' class='right-tab active' role='tab' "
+        "aria-selected='true'>知识点详情</button>"
+        "<button id='ai-teacher-tab' class='right-tab' role='tab' "
+        "aria-selected='false'>AI 教师</button></div>"
+        "<section id='graph-detail-panel' role='tabpanel'>"
+        "<p class='side-label'>知识点详情</p><h2>选择一个节点</h2>"
+        "<p class='muted'>图谱会读取当前工作区；点击节点查看正文、学习状态与可编辑内容。</p>"
+        "</section>"
+        "<div id='ai-teacher-panel' class='hidden' role='tabpanel'>"
+        f"{teacher}</div>"
     )
 
 

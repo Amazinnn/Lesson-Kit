@@ -1,6 +1,7 @@
 """HTTP API tests (TDD, red first)."""
 
 import json
+import sqlite3
 import threading
 import time
 import unittest
@@ -88,6 +89,52 @@ class ApiTests(unittest.TestCase):
         status, data = self.get("/api/w/dmath/kp/dmath-ch06-kp-001")
         self.assertEqual(status, 200)
         self.assertEqual(data["kp"]["kp_id"], "dmath-ch06-kp-001")
+
+    def test_graph_model_reads_live_workspace_data(self):
+        status, data = self.get("/api/w/dmath/graph/model")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["nodes"][0]["id"], "dmath-ch06-kp-001")
+        self.assertEqual(data["nodes"][0]["title"], "Counting")
+        self.assertIsNone(data["nodes"][0]["state"])
+
+    def test_graph_state_overwrites_without_feedback_history(self):
+        status, data = self.post("/api/w/dmath/graph/state", {
+            "item_type": "kp", "item_id": "dmath-ch06-kp-001",
+            "state": "mastered",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(data["state"], "mastered")
+        _, graph = self.get("/api/w/dmath/graph/model")
+        self.assertEqual(graph["nodes"][0]["state"], "mastered")
+        _, detail = self.get("/api/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertEqual(detail["schedule"]["last_rating"], 5)
+        self.assertEqual(detail["signals"], [])
+
+    def test_graph_kp_save_overwrites_content_without_learning_events(self):
+        try:
+            status, data = self.post("/api/w/dmath/graph/kp", {
+                "kp_id": "dmath-ch06-kp-001", "body": "新的正文", "fragile": "易混概念",
+            })
+        except HTTPError as exc:
+            self.fail(f"graph content save endpoint missing: {exc.code}")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["body"], "新的正文")
+        _, graph = self.get("/api/w/dmath/graph/model")
+        self.assertEqual(graph["nodes"][0]["body"], "新的正文")
+        self.assertEqual(graph["nodes"][0]["fragile"], "易混概念")
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM feedback_events").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM learner_signals").fetchone()[0], 0)
+        finally:
+            conn.close()
+
+    def test_kp_detail_exposes_related_problem_current_state(self):
+        self.post("/api/w/dmath/graph/state", {
+            "item_type": "problem", "item_id": "dmath-ch06-prob-001", "state": "review",
+        })
+        _, detail = self.get("/api/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertEqual(detail["problems"][0]["current_state"]["state"], "review")
 
     def test_figure_missing_returns_404(self):
         with self.assertRaises(HTTPError) as ctx:

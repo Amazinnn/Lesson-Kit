@@ -54,6 +54,13 @@ class Pool:
         ).fetchone()
         return dict(row) if row else None
 
+    def update_kp_content(self, kp_id, body, fragile):
+        self.connect().execute(
+            "UPDATE knowledge_points SET body=?, fragile=? WHERE kp_id=?",
+            (body, fragile, kp_id),
+        )
+        self.commit()
+
     # -- problems ---------------------------------------------------------
 
     def problems_for_kps(self, kp_ids, source_kind=None):
@@ -142,6 +149,29 @@ class Pool:
             " ON CONFLICT(problem_id) DO UPDATE SET status=excluded.status,"
             " note=excluded.note, updated_at=excluded.updated_at",
             (problem_id, status, note),
+        )
+        self.commit()
+
+    def current_state(self, item_type, item_id):
+        row = self.connect().execute(
+            "SELECT * FROM learning_current_state WHERE item_type=? AND item_id=?",
+            (item_type, item_id),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def current_states(self):
+        rows = self.connect().execute(
+            "SELECT * FROM learning_current_state ORDER BY item_type, item_id"
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def upsert_current_state(self, item_type, item_id, state):
+        self.connect().execute(
+            "INSERT INTO learning_current_state (item_type, item_id, state)"
+            " VALUES (?, ?, ?)"
+            " ON CONFLICT(item_type, item_id) DO UPDATE SET"
+            " state=excluded.state, updated_at=datetime('now')",
+            (item_type, item_id, state),
         )
         self.commit()
 

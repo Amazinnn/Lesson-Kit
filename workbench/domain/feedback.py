@@ -2,6 +2,7 @@
 
 from datetime import date
 
+from workbench.domain import learning_state
 from workbench.domain import schedule as schedule_rules
 
 KEYWORD_RULES = [
@@ -55,7 +56,12 @@ def apply(pool, item_type, item_id, rating=None, note=None):
     if item_type == "problem" and rating is not None:
         progress = RATING_PROGRESS[rating]
         pool.upsert_problem_progress(item_id, progress, note)
+        pool.upsert_current_state("problem", item_id, learning_state.for_rating(rating))
         changes.append(f"progress: {progress}")
+
+    if rating is not None:
+        for target_id in targets:
+            pool.upsert_current_state("kp", target_id, learning_state.for_rating(rating))
 
     if rating is not None:
         state = pool.schedule_get(item_type, item_id) or schedule_rules.default_state(

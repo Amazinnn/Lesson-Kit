@@ -30,6 +30,10 @@ class FakeClassList {
     else this.remove(value);
     return force;
   }
+
+  contains(value) {
+    return this.values.has(value);
+  }
 }
 
 class FakeElement {
@@ -37,11 +41,13 @@ class FakeElement {
     this.id = id;
     this.dataset = options.dataset || {};
     this.value = options.value || "";
+    this.checked = options.checked || false;
     this.disabled = false;
     this.listeners = {};
     this.classList = new FakeClassList();
     this.children = [];
     this.attributes = {};
+    this.style = {};
     this.queryAll = options.queryAll || (() => []);
     this.queryOne = options.queryOne || (() => null);
     this._innerHTML = "";
@@ -64,6 +70,11 @@ class FakeElement {
     this.children.push(child);
     this.scrollHeight = this.children.length;
     return child;
+  }
+
+  replaceChildren(...children) {
+    this.children = children;
+    this._innerHTML = "";
   }
 
   querySelectorAll(selector) {
@@ -102,6 +113,7 @@ class FakeElement {
 
   set innerHTML(value) {
     this._innerHTML = String(value);
+    this.children = [];
   }
 
   get innerHTML() {
@@ -184,7 +196,14 @@ function practiceElements() {
     "start-practice": new FakeElement("start-practice"),
     "goto-session-end": new FakeElement("goto-session-end"),
     "composer-actions": new FakeElement("composer-actions"),
+    "feedback-area": new FakeElement("feedback-area"),
+    "feedback-note": new FakeElement("feedback-note"),
+    "rating-input": new FakeElement("rating-input"),
+    "save-rating": new FakeElement("save-rating"),
+    "practice-mode-immediate": new FakeElement("practice-mode-immediate"),
+    "practice-mode-batch": new FakeElement("practice-mode-batch"),
     "start-area": new FakeElement("start-area"),
+    "session-end-entry": new FakeElement("session-end-entry"),
   };
 }
 
@@ -198,73 +217,323 @@ test("workspace selector navigates to the selected workspace practice page", () 
   assert.equal(app.window.location, "/w/beta/practice");
 });
 
-test("session-end rating keeps only unrated work and removes a rated item", async () => {
-  const note = new FakeElement("end-note", { value: "reviewed" });
-  const card = new FakeElement("card", {
-    dataset: { pid: "p-1" },
-    queryOne: (selector) => selector === ".end-note" ? note : null,
-  });
-  const rate = new FakeElement("rate", { dataset: { r: "4" } });
-  rate.card = card;
-  const pending = new FakeElement("pending-ratings", {
-    queryAll: (selector) => selector === ".rate" ? [rate] : [],
-    queryOne: (selector) => selector === ".card" && !card.removed ? card : null,
-  });
+test("practice requires an explicit mode and excludes questions already seen", async () => {
   const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
   const app = runWorkbench({
-    elements: { layout: layout(), "pending-ratings": pending },
-    storage: new FakeStorage({
-      wb_session_alpha: JSON.stringify([
-        { problem_id: "p-1", state: "unrated" },
-        { problem_id: "p-2", state: "rated" },
-      ]),
-    }),
+    elements,
     fetch: (url, options) => {
       calls.push({ url, options });
-      return jsonResponse({});
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [{ problem_id: "p-1", problem_text: "题目一" }] });
     },
   });
-  assert.match(pending.innerHTML, /p-1/);
-  assert.doesNotMatch(pending.innerHTML, /p-2/);
-  rate.trigger("click");
+  assert.equal(elements["start-practice"].disabled, true);
+  assert.equal(calls.length, 0);
+  elements["practice-mode-batch"].checked = true;
+  elements["practice-mode-batch"].trigger("change");
+  assert.equal(elements["start-practice"].disabled, false);
+  elements["start-practice"].click();
   await flush();
-  assert.deepEqual(JSON.parse(calls[0].options.body), {
-    item_type: "problem", item_id: "p-1", rating: 4, note: "reviewed",
+  assert.equal(calls[0].url, "/api/w/alpha/weak?limit=200");
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.deepEqual(JSON.parse(pull.options.body), {
+    kp_ids: ["kp-1"], n: 1, mode: "weak", exclude_ids: [],
   });
-  assert.equal(card.removed, true);
-  assert.match(pending.innerHTML, /全部评完/);
   assert.equal(app.window.location, "");
 });
 
-test("practice similar starts a fresh round and gives its own empty message", async () => {
-  const storage = new FakeStorage({
-    wb_session_alpha: JSON.stringify([{ problem_id: "p-0", state: "unrated" }]),
-  });
-  const similar = new FakeElement("practice-similar");
-  const pending = new FakeElement("pending-ratings");
-  const sessionEnd = runWorkbench({
-    elements: {
-      layout: layout(), "pending-ratings": pending, "practice-similar": similar,
-    },
-    storage,
-    fetch: (url) => jsonResponse(url.includes("/weak?") ? [{ kp_id: "kp-1" }] : {}),
-  });
-  similar.trigger("click");
-  await flush();
-  assert.equal(storage.getItem("wb_session_alpha"), null);
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kps_alpha")), ["kp-1"]);
-  assert.equal(storage.getItem("wb_similar_round_alpha"), "1");
-  assert.equal(sessionEnd.window.location, "practice");
-
+test("skipping a question advances without a practice or feedback write", async () => {
+  const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
   runWorkbench({
     elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      const body = JSON.parse(options && options.body || "{}");
+      return jsonResponse({ problems: [{
+        problem_id: (body.exclude_ids || []).length ? "p-2" : "p-1", problem_text: "题目",
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["no-time"].click();
+  await flush();
+  assert.equal(calls.some((call) => /\/(practice|feedback)$/.test(call.url)), false);
+  const pulls = calls.filter((call) => call.url.endsWith("/pull"));
+  assert.deepEqual(JSON.parse(pulls[1].options.body).exclude_ids, ["p-1"]);
+});
+
+test("immediate self-rating writes only when saving and then moves to the next question", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull")) return jsonResponse({ problems: [{
+        problem_id: "p-1", problem_text: "题目一",
+      }] });
+      if (url.endsWith("/problem/p-1")) return jsonResponse({ problem: { solution: "解析" } });
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["answer-box"].value = "作答";
+  elements["answer-submit"].click();
+  elements["show-answer"].click();
+  await flush();
+  assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
+  elements["rating-input"].value = "4";
+  elements["feedback-note"].value = "复习后会做";
+  elements["save-rating"].click();
+  await flush();
+  const feedback = calls.find((call) => call.url.endsWith("/feedback"));
+  assert.ok(feedback);
+  assert.deepEqual(JSON.parse(feedback.options.body), {
+    item_type: "problem", item_id: "p-1", rating: 4, note: "复习后会做",
+  });
+});
+
+test("practice similar returns to the mode chooser without auto-pulling", async () => {
+  const storage = new FakeStorage({ wb_session_alpha: JSON.stringify([{ problem_id: "p-0" }]) });
+  const similar = new FakeElement("practice-similar");
+  const pending = new FakeElement("pending-ratings");
+  const sessionEnd = runWorkbench({
+    elements: { layout: layout(), "pending-ratings": pending, "practice-similar": similar },
     storage,
-    fetch: (url) => jsonResponse(url.endsWith("/pull") ? { problems: [] } : []),
+    fetch: (url) => jsonResponse(url.includes("/weak?") ? [{ kp_id: "kp-1" }] : {}),
+  });
+  similar.click();
+  await flush();
+  assert.equal(storage.getItem("wb_session_alpha"), null);
+  assert.equal(storage.getItem("wb_practice_mode_alpha"), null);
+  assert.equal(sessionEnd.window.location, "practice");
+
+  const elements = { layout: layout(), ...practiceElements() };
+  const calls = [];
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => { calls.push({ url, options }); return jsonResponse({ problems: [] }); },
   });
   await flush();
-  assert.equal(storage.getItem("wb_similar_round_alpha"), null);
-  assert.ok(elements.stream.children.some((message) =>
-    message.innerHTML.includes("暂无更多同类题。")
-  ));
+  assert.equal(calls.length, 0);
+  assert.equal(elements["start-practice"].disabled, true);
+});
+
+test("an exhausted immediate round returns to a fresh mode choice", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => jsonResponse(url.includes("/weak?") ? [{ kp_id: "kp-1" }] : { problems: [] }),
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.equal(elements["practice-mode-immediate"].checked, false);
+  assert.equal(elements["start-practice"].disabled, true);
+});
+
+test("ending a batch round early opens final review without a learning write", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  const app = runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [{ problem_id: "p-1", problem_text: "题目" }] });
+    },
+  });
+  elements["practice-mode-batch"].checked = true;
+  elements["practice-mode-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["goto-session-end"].click();
+  assert.equal(app.window.location, "session-end");
+  assert.equal(calls.some((call) => /\/(practice|feedback)$/.test(call.url)), false);
+});
+
+test("batch self-rating writes only from its final review card", async () => {
+  const pending = new FakeElement("pending-ratings");
+  const calls = [];
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify([
+      { problem_id: "p-1", answer_text: "我的作答", state: "unrated" },
+    ]),
+  });
+  runWorkbench({
+    elements: { layout: layout(), "pending-ratings": pending }, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/problem/p-1")) {
+        return jsonResponse({ problem: { problem_id: "p-1", problem_text: "题目", solution: "解析" } });
+      }
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
+  assert.equal(pending.children.length, 1);
+  const card = pending.children[0];
+  const rating = card.children.find((child) => child.id === "end-rating");
+  const note = card.children.find((child) => child.id === "end-note");
+  const save = card.children.find((child) => child.id === "end-save");
+  rating.value = "5";
+  note.value = "已掌握";
+  save.click();
+  await flush();
+  const feedback = calls.find((call) => call.url.endsWith("/feedback"));
+  assert.deepEqual(JSON.parse(feedback.options.body), {
+    item_type: "problem", item_id: "p-1", rating: 5, note: "已掌握",
+  });
+});
+
+test("native graph reads the live model and saves a state only after confirmation", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const detail = new FakeElement("graph-detail-panel");
+  const calls = [];
+  const app = runWorkbench({
+    elements: {
+      layout: layout(),
+      "graph-canvas": canvas,
+      "graph-search": new FakeElement("graph-search"),
+      "graph-state-filter": new FakeElement("graph-state-filter"),
+      "graph-zoom-in": new FakeElement("graph-zoom-in"),
+      "graph-zoom-out": new FakeElement("graph-zoom-out"),
+      "graph-fit": new FakeElement("graph-fit"),
+      "graph-detail-tab": new FakeElement("graph-detail-tab"),
+      "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
+      "graph-detail-panel": detail,
+      "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
+    },
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/graph/model")) {
+        return jsonResponse({ nodes: [{
+          id: "kp-1", title: "加法规则", body: "正文", fragile: "易混", state: "review",
+        }], edges: [] });
+      }
+      return jsonResponse({ state: "mastered" });
+    },
+  });
+  await flush();
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "/api/w/alpha/graph/model");
+  assert.equal(canvas.children.length, 1);
+  const node = canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1");
+  assert.equal(node.textContent, "加法规则");
+  node.click();
+  assert.match(detail.innerHTML, /加法规则/);
+  assert.equal(calls.some((call) => call.url.endsWith("/graph/state")), false);
+
+  const select = detail.children.find((child) => child.id === "graph-state");
+  const save = detail.children.find((child) => child.id === "graph-state-save");
+  select.value = "mastered";
+  save.click();
+  await flush();
+  const stateWrite = calls.find((call) => call.url.endsWith("/graph/state"));
+  assert.deepEqual(JSON.parse(stateWrite.options.body), {
+    item_type: "kp", item_id: "kp-1", state: "mastered",
+  });
+  assert.equal(app.window.location, "");
+});
+
+test("native graph saves knowledge content only from its explicit save control", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const detail = new FakeElement("graph-detail-panel");
+  const calls = [];
+  runWorkbench({
+    elements: {
+      layout: layout(), "graph-canvas": canvas,
+      "graph-search": new FakeElement("graph-search"),
+      "graph-state-filter": new FakeElement("graph-state-filter"),
+      "graph-zoom-in": new FakeElement("graph-zoom-in"),
+      "graph-zoom-out": new FakeElement("graph-zoom-out"),
+      "graph-fit": new FakeElement("graph-fit"),
+      "graph-detail-tab": new FakeElement("graph-detail-tab"),
+      "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
+      "graph-detail-panel": detail,
+      "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
+    },
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/graph/model")) return jsonResponse({
+        nodes: [{ id: "kp-1", title: "容斥原理", body: "旧正文", fragile: "旧说明" }], edges: [],
+      });
+      return jsonResponse({ body: "新正文", fragile: "新说明" });
+    },
+  });
+  await flush();
+  const node = canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1");
+  node.click();
+  assert.equal(calls.some((call) => call.url.endsWith("/graph/kp")), false);
+  assert.ok(detail.children.some((child) => child.id === "graph-body"));
+  assert.ok(detail.children.some((child) => child.id === "graph-fragile"));
+  assert.ok(detail.children.some((child) => child.id === "graph-content-save"));
+  const body = detail.children.find((child) => child.id === "graph-body");
+  const fragile = detail.children.find((child) => child.id === "graph-fragile");
+  const save = detail.children.find((child) => child.id === "graph-content-save");
+  body.value = "新正文";
+  fragile.value = "新说明";
+  save.click();
+  await flush();
+  const contentWrite = calls.find((call) => call.url.endsWith("/graph/kp"));
+  assert.deepEqual(JSON.parse(contentWrite.options.body), {
+    kp_id: "kp-1", body: "新正文", fragile: "新说明",
+  });
+});
+
+test("native graph exposes related problem state as an explicit overwrite", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const detail = new FakeElement("graph-detail-panel");
+  const calls = [];
+  runWorkbench({
+    elements: {
+      layout: layout(), "graph-canvas": canvas,
+      "graph-search": new FakeElement("graph-search"),
+      "graph-state-filter": new FakeElement("graph-state-filter"),
+      "graph-zoom-in": new FakeElement("graph-zoom-in"),
+      "graph-zoom-out": new FakeElement("graph-zoom-out"),
+      "graph-fit": new FakeElement("graph-fit"),
+      "graph-detail-tab": new FakeElement("graph-detail-tab"),
+      "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
+      "graph-detail-panel": detail,
+      "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
+    },
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/graph/model")) return jsonResponse({
+        nodes: [{ id: "kp-1", title: "容斥原理", body: "正文", fragile: "" }], edges: [],
+      });
+      if (url.endsWith("/kp/kp-1")) return jsonResponse({ problems: [{
+        problem_id: "p-1", display_title: "整数条件计数", topic_label: "容斥原理", current_state: null,
+      }] });
+      return jsonResponse({ state: "needs_work" });
+    },
+  });
+  await flush();
+  canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1").click();
+  await flush();
+  const problem = detail.children.find((child) => child.id === "graph-problem-p-1");
+  assert.ok(problem);
+  const state = problem.children.find((child) => child.id === "graph-problem-state");
+  const save = problem.children.find((child) => child.id === "graph-problem-save");
+  state.value = "needs_work";
+  save.click();
+  await flush();
+  const write = calls.find((call) => call.url.endsWith("/graph/state"));
+  assert.deepEqual(JSON.parse(write.options.body), {
+    item_type: "problem", item_id: "p-1", state: "needs_work",
+  });
 });

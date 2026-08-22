@@ -42,6 +42,11 @@ def build_old_schema_db(conn):
             problem_type TEXT,
             source_kind TEXT
         );
+        CREATE TABLE candidate_problems (
+            candidate_id TEXT PRIMARY KEY,
+            kp_ids TEXT NOT NULL,
+            problem_text TEXT NOT NULL
+        );
         CREATE TABLE problem_attempts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             problem_id TEXT NOT NULL,
@@ -107,8 +112,17 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
     def test_migration_adds_columns(self):
         pool_schema.ensure_workbench_schema(self.conn)
         self.assertIn("figure_paths", self.columns("knowledge_points"))
+        self.assertIn("fragile", self.columns("knowledge_points"))
         self.assertIn("figure_paths", self.columns("problems"))
         self.assertIn("answer_text", self.columns("problem_attempts"))
+
+    def test_migration_adds_problem_metadata_and_current_state(self):
+        pool_schema.ensure_workbench_schema(self.conn)
+        self.assertIn("display_title", self.columns("problems"))
+        self.assertIn("topic_label", self.columns("problems"))
+        self.assertIn("display_title", self.columns("candidate_problems"))
+        self.assertIn("topic_label", self.columns("candidate_problems"))
+        self.assertIn("learning_current_state", self.table_names())
 
     def test_migration_is_idempotent(self):
         pool_schema.ensure_workbench_schema(self.conn)
@@ -133,6 +147,23 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
             ("dmath-ch06-prob-001",),
         ).fetchone()
         self.assertEqual(row[0], "wrong")
+
+    def test_migration_derives_current_state_without_adding_feedback(self):
+        pool_schema.ensure_workbench_schema(self.conn)
+        self.conn.execute(
+            "INSERT INTO feedback_events (item_type, item_id, rating, note) VALUES (?, ?, ?, ?)",
+            ("problem", "dmath-ch06-prob-001", 2, "old rating"),
+        )
+        self.conn.commit()
+        pool_schema.ensure_workbench_schema(self.conn)
+        state = self.conn.execute(
+            "SELECT state FROM learning_current_state WHERE item_type=? AND item_id=?",
+            ("problem", "dmath-ch06-prob-001"),
+        ).fetchone()
+        self.assertEqual(state[0], "needs_work")
+        self.assertEqual(
+            self.conn.execute("SELECT COUNT(*) FROM feedback_events").fetchone()[0], 1
+        )
 
 
 if __name__ == "__main__":

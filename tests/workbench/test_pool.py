@@ -97,7 +97,9 @@ def build_fixture_db(conn):
         ],
     )
     conn.execute(
-        "INSERT INTO candidate_problems VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO candidate_problems"
+        " (candidate_id, kp_ids, problem_text, solution, status,"
+        " structure_gate_status, audit_gate_status) VALUES (?, ?, ?, ?, ?, ?, ?)",
         ("dmath-ch06-cand-001", '["dmath-ch06-kp-001"]', "C1", "CS1",
          "gate_passed", "pass", "pass"),
     )
@@ -204,6 +206,17 @@ class PoolTests(unittest.TestCase):
         rows = self.pool.feedback_events("kp", "dmath-ch06-kp-002")
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["rating"], 2)
+
+    def test_current_state_overwrites_in_place(self):
+        self.pool.upsert_current_state(
+            "kp", "dmath-ch06-kp-002", "needs_work"
+        )
+        self.pool.upsert_current_state(
+            "kp", "dmath-ch06-kp-002", "mastered"
+        )
+        rows = self.pool.current_states()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["state"], "mastered")
 
     def test_runtime_paths(self):
         self.assertEqual(

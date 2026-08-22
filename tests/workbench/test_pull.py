@@ -81,7 +81,9 @@ def build_fixture_db(conn):
         ],
     )
     conn.execute(
-        "INSERT INTO candidate_problems VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO candidate_problems"
+        " (candidate_id, kp_ids, problem_text, solution, status,"
+        " structure_gate_status, audit_gate_status) VALUES (?, ?, ?, ?, ?, ?, ?)",
         ("dmath-ch06-cand-001", '["dmath-ch06-kp-003"]', "C1", "CS1",
          "gate_passed", "pass", "pass"),
     )

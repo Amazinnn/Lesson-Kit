@@ -122,6 +122,10 @@ class FeedbackTests(unittest.TestCase):
                    if s["target_id"] == "dmath-ch06-kp-001"]
         self.assertEqual(signals[0]["evidence_count"], 2)
         self.assertEqual(signals[0]["weight"], "high")
+        self.assertEqual(
+            self.pool.current_state("kp", "dmath-ch06-kp-001")["state"],
+            "mastered",
+        )
 
     def test_rating_four_downgrades_weight(self):
         self.feedback.apply(self.pool, "kp", "dmath-ch06-kp-001", rating=2)
@@ -129,6 +133,10 @@ class FeedbackTests(unittest.TestCase):
         signals = [s for s in self.pool.signals()
                    if s["target_id"] == "dmath-ch06-kp-001"]
         self.assertEqual(signals[0]["weight"], "low")
+        self.assertEqual(
+            self.pool.current_state("kp", "dmath-ch06-kp-001")["state"],
+            "review",
+        )
 
     def test_event_logged(self):
         self.feedback.apply(self.pool, "kp", "dmath-ch06-kp-001",
@@ -137,6 +145,11 @@ class FeedbackTests(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["rating"], 3)
         self.assertEqual(events[0]["note"], "还行")
+
+    def test_rating_sets_current_knowledge_state(self):
+        self.feedback.apply(self.pool, "kp", "dmath-ch06-kp-001", rating=2)
+        current = self.pool.current_state("kp", "dmath-ch06-kp-001")
+        self.assertEqual(current["state"], "needs_work")
 
 
 if __name__ == "__main__":

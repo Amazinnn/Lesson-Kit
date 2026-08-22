@@ -8,7 +8,9 @@ from pathlib import Path
 
 from workbench.bridge import runner
 from workbench.data import queries
-from workbench.domain import feedback, pull, schedule as schedule_rules, weak
+from workbench.domain import (
+    feedback, learning_state, pull, schedule as schedule_rules, weak,
+)
 
 
 class ApiError(Exception):
@@ -95,6 +97,36 @@ def problem_detail(pool, workspace, params, body):
 
 def kp_detail(pool, workspace, params, body):
     return queries.kp_detail(pool, params["kp_id"])
+
+
+def graph_model(pool, workspace, params, body):
+    return queries.graph_model(pool)
+
+
+def graph_state(pool, workspace, params, body):
+    item_type = body.get("item_type")
+    item_id = body.get("item_id")
+    state = body.get("state")
+    if item_type not in ("kp", "problem") or state not in learning_state.STATE_RATING:
+        raise ApiError(400, "invalid graph state")
+    item = pool.kp(item_id) if item_type == "kp" else pool.problem(item_id)
+    if item is None:
+        raise ApiError(404, f"unknown {item_type}: {item_id}")
+    schedule_row = learning_state.apply(pool, item_type, item_id, state)
+    return {"item_type": item_type, "item_id": item_id, "state": state,
+            "due_at": schedule_row["due_at"]}
+
+
+def graph_kp(pool, workspace, params, body):
+    kp_id = body.get("kp_id")
+    content = body.get("body")
+    fragile = body.get("fragile")
+    if not isinstance(kp_id, str) or not isinstance(content, str) or not isinstance(fragile, str):
+        raise ApiError(400, "invalid knowledge point content")
+    if pool.kp(kp_id) is None:
+        raise ApiError(404, f"unknown knowledge point: {kp_id}")
+    pool.update_kp_content(kp_id, content, fragile)
+    return {"kp_id": kp_id, "body": content, "fragile": fragile}
 
 
 def ai_run(pool, workspace, params, body):

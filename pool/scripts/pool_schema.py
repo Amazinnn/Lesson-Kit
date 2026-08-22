@@ -348,12 +348,47 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         )
         changes.append("feedback_events")
 
+    if not table_exists(conn, "learning_current_state"):
+        conn.execute(
+            """
+            CREATE TABLE learning_current_state (
+                item_type  TEXT NOT NULL CHECK (item_type IN ('kp', 'problem')),
+                item_id    TEXT NOT NULL,
+                state      TEXT NOT NULL CHECK (
+                    state IN ('needs_work', 'review', 'mastered')
+                ),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (item_type, item_id)
+            )
+            """
+        )
+        changes.append("learning_current_state")
+
+    if table_exists(conn, "feedback_events"):
+        ratings = conn.execute(
+            "SELECT item_type, item_id, rating FROM feedback_events "
+            "WHERE rating IS NOT NULL AND id IN ("
+            "SELECT MAX(id) FROM feedback_events WHERE rating IS NOT NULL "
+            "GROUP BY item_type, item_id)"
+        ).fetchall()
+        state_for_rating = {
+            1: "needs_work", 2: "needs_work", 3: "review", 4: "review", 5: "mastered",
+        }
+        conn.executemany(
+            "INSERT INTO learning_current_state (item_type, item_id, state) VALUES (?, ?, ?) "
+            "ON CONFLICT(item_type, item_id) DO NOTHING",
+            [
+                (item_type, item_id, state_for_rating[rating])
+                for item_type, item_id, rating in ratings
+            ],
+        )
+
     if table_exists(conn, "knowledge_points"):
         changes.extend(
             ensure_columns(
                 conn,
                 "knowledge_points",
-                [("figure_paths", "TEXT")],
+                [("figure_paths", "TEXT"), ("fragile", "TEXT")],
             )
         )
     if table_exists(conn, "problems"):
@@ -361,7 +396,19 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             ensure_columns(
                 conn,
                 "problems",
-                [("figure_paths", "TEXT")],
+                [
+                    ("figure_paths", "TEXT"),
+                    ("display_title", "TEXT"),
+                    ("topic_label", "TEXT"),
+                ],
+            )
+        )
+    if table_exists(conn, "candidate_problems"):
+        changes.extend(
+            ensure_columns(
+                conn,
+                "candidate_problems",
+                [("display_title", "TEXT"), ("topic_label", "TEXT")],
             )
         )
     if table_exists(conn, "problem_attempts"):

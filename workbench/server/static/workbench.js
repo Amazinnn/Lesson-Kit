@@ -11,6 +11,7 @@
   var KPS_KEY = "wb_kps_" + WS;
   var CURRENT_KEY = "wb_current_" + WS;
   var SIMILAR_KEY = "wb_similar_round_" + WS;
+  var MODE_KEY = "wb_practice_mode_" + WS;
 
   /* ---------- helpers ---------- */
 
@@ -74,7 +75,211 @@
     });
   }
 
-  /* ---------- practice message stream ---------- */
+  /* ---------- native knowledge graph ---------- */
+
+  var graphCanvas = document.getElementById("graph-canvas");
+  if (graphCanvas) {
+    var graphSearch = document.getElementById("graph-search");
+    var graphFilter = document.getElementById("graph-state-filter");
+    var graphDetail = document.getElementById("graph-detail-panel");
+    var graphDetailTab = document.getElementById("graph-detail-tab");
+    var teacherTab = document.getElementById("ai-teacher-tab");
+    var teacherPanel = document.getElementById("ai-teacher-panel");
+    var graphData = { nodes: [], edges: [] };
+    var graphScale = 1;
+
+    function stateLabel(state) {
+      return {
+        needs_work: "待攻克", review: "待复习", mastered: "已掌握",
+      }[state] || "未标注";
+    }
+
+    function graphPoint(index, count) {
+      var columns = Math.ceil(Math.sqrt(count || 1));
+      var rows = Math.ceil(count / columns);
+      return {
+        x: 12 + (76 * (index % columns) / Math.max(columns - 1, 1)),
+        y: 16 + (68 * Math.floor(index / columns) / Math.max(rows - 1, 1)),
+      };
+    }
+
+    function showGraphPanel(detailOpen) {
+      if (graphDetail) graphDetail.classList.toggle("hidden", !detailOpen);
+      if (teacherPanel) teacherPanel.classList.toggle("hidden", detailOpen);
+      if (graphDetailTab) {
+        graphDetailTab.classList.toggle("active", detailOpen);
+        graphDetailTab.setAttribute("aria-selected", detailOpen ? "true" : "false");
+      }
+      if (teacherTab) {
+        teacherTab.classList.toggle("active", !detailOpen);
+        teacherTab.setAttribute("aria-selected", detailOpen ? "false" : "true");
+      }
+    }
+
+    function renderGraphDetail(node) {
+      if (!graphDetail) return;
+      graphDetail.innerHTML = "<p class='side-label'>知识点详情</p><h2>"
+        + escapeHtml(node.title) + "</h2><p class='item-id'>" + escapeHtml(node.id)
+        + "</p><p class='graph-detail-body'>" + richText(node.body || "暂无正文")
+        + "</p><p class='graph-fragile-summary'>薄弱说明：" + escapeHtml(node.fragile || "—") + "</p>"
+        + "<label for='graph-state'>当前学习状态</label>";
+      var state = document.createElement("select");
+      state.id = "graph-state";
+      state.innerHTML = "<option value='needs_work'>待攻克</option>"
+        + "<option value='review'>待复习</option><option value='mastered'>已掌握</option>";
+      state.value = node.state || "review";
+      var save = document.createElement("button");
+      save.id = "graph-state-save";
+      save.className = "primary sm";
+      save.textContent = "保存状态";
+      save.addEventListener("click", function () {
+        post("/graph/state", {
+          item_type: "kp", item_id: node.id, state: state.value,
+        }).then(function (data) {
+          node.state = data.state;
+          renderGraph();
+          renderGraphDetail(node);
+        });
+      });
+      graphDetail.appendChild(state);
+      graphDetail.appendChild(save);
+      var body = document.createElement("textarea");
+      body.id = "graph-body";
+      body.rows = 5;
+      body.value = node.body || "";
+      body.placeholder = "知识点正文";
+      var fragile = document.createElement("input");
+      fragile.id = "graph-fragile";
+      fragile.value = node.fragile || "";
+      fragile.placeholder = "薄弱说明";
+      var contentSave = document.createElement("button");
+      contentSave.id = "graph-content-save";
+      contentSave.className = "outline sm";
+      contentSave.textContent = "保存内容";
+      contentSave.addEventListener("click", function () {
+        post("/graph/kp", {
+          kp_id: node.id, body: body.value, fragile: fragile.value,
+        }).then(function (data) {
+          node.body = data.body;
+          node.fragile = data.fragile;
+          renderGraphDetail(node);
+        });
+      });
+      graphDetail.appendChild(body);
+      graphDetail.appendChild(fragile);
+      graphDetail.appendChild(contentSave);
+      appendRelatedProblems(node);
+      showGraphPanel(true);
+    }
+
+    function appendRelatedProblems(node) {
+      api("/kp/" + node.id).then(function (detail) {
+        var problems = detail.problems || [];
+        if (!problems.length) return;
+        var heading = document.createElement("p");
+        heading.className = "side-label";
+        heading.textContent = "关联题目状态";
+        graphDetail.appendChild(heading);
+        problems.forEach(function (problem) {
+          var row = document.createElement("section");
+          row.id = "graph-problem-" + problem.problem_id;
+          row.className = "graph-problem-state";
+          row.innerHTML = "<p>" + escapeHtml(problem.display_title || problem.problem_id)
+            + "</p><span class='item-id'>" + escapeHtml(problem.topic_label || "未分类") + " · "
+            + escapeHtml(problem.problem_id) + "</span>";
+          var state = document.createElement("select");
+          state.id = "graph-problem-state";
+          state.innerHTML = "<option value='needs_work'>待攻克</option>"
+            + "<option value='review'>待复习</option><option value='mastered'>已掌握</option>";
+          state.value = problem.current_state ? problem.current_state.state : "review";
+          var save = document.createElement("button");
+          save.id = "graph-problem-save";
+          save.className = "outline sm";
+          save.textContent = "保存状态";
+          save.addEventListener("click", function () {
+            post("/graph/state", {
+              item_type: "problem", item_id: problem.problem_id, state: state.value,
+            }).then(function (data) {
+              problem.current_state = { state: data.state };
+              save.textContent = "已保存";
+            });
+          });
+          row.appendChild(state);
+          row.appendChild(save);
+          graphDetail.appendChild(row);
+        });
+      });
+    }
+
+    function renderGraph() {
+      var search = (graphSearch && graphSearch.value || "").trim().toLowerCase();
+      var state = graphFilter && graphFilter.value;
+      var nodes = graphData.nodes.filter(function (node) {
+        return (!search || (node.title + " " + node.id).toLowerCase().includes(search))
+          && (!state || node.state === state);
+      });
+      var points = {};
+      nodes.forEach(function (node, index) { points[node.id] = graphPoint(index, nodes.length); });
+      var stage = document.createElement("div");
+      stage.className = "graph-stage";
+      stage.style.transform = "scale(" + graphScale + ")";
+      graphData.edges.forEach(function (edge) {
+        var source = points[edge.source];
+        var target = points[edge.target];
+        if (!source || !target) return;
+        var dx = target.x - source.x;
+        var dy = target.y - source.y;
+        var link = document.createElement("span");
+        link.className = "graph-edge";
+        link.style.left = source.x + "%";
+        link.style.top = source.y + "%";
+        link.style.width = Math.sqrt(dx * dx + dy * dy) + "%";
+        link.style.transform = "rotate(" + Math.atan2(dy, dx) + "rad)";
+        stage.appendChild(link);
+      });
+      nodes.forEach(function (node) {
+        var point = points[node.id];
+        var button = document.createElement("button");
+        button.className = "graph-node " + (node.state || "unmarked");
+        button.dataset.kpId = node.id;
+        button.style.left = point.x + "%";
+        button.style.top = point.y + "%";
+        button.textContent = node.title;
+        button.title = node.id + " · " + stateLabel(node.state);
+        button.addEventListener("click", function () { renderGraphDetail(node); });
+        stage.appendChild(button);
+      });
+      if (!nodes.length) {
+        var empty = document.createElement("p");
+        empty.className = "muted graph-empty";
+        empty.textContent = "没有符合条件的知识点。";
+        stage.appendChild(empty);
+      }
+      graphCanvas.replaceChildren(stage);
+    }
+
+    if (graphSearch) graphSearch.addEventListener("input", renderGraph);
+    if (graphFilter) graphFilter.addEventListener("change", renderGraph);
+    var zoomIn = document.getElementById("graph-zoom-in");
+    var zoomOut = document.getElementById("graph-zoom-out");
+    var graphFit = document.getElementById("graph-fit");
+    if (zoomIn) zoomIn.addEventListener("click", function () { graphScale += 0.1; renderGraph(); });
+    if (zoomOut) zoomOut.addEventListener("click", function () {
+      graphScale = Math.max(0.7, graphScale - 0.1); renderGraph();
+    });
+    if (graphFit) graphFit.addEventListener("click", function () { graphScale = 1; renderGraph(); });
+    if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
+    if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
+    showGraphPanel(true);
+    api("/graph/model").then(function (model) {
+      graphData = model;
+      renderGraph();
+    }).catch(function () {
+      graphCanvas.textContent = "图谱暂时无法读取。";
+    });
+  }
+
+  /* ---------- practice session ---------- */
 
   var stream = document.getElementById("stream");
   var composer = document.getElementById("composer");
@@ -83,11 +288,8 @@
   var showAnswer = document.getElementById("show-answer");
   var noTime = document.getElementById("no-time");
   var startPractice = document.getElementById("start-practice");
-
   var currentProblem = load(CURRENT_KEY, null);
-  var stuckStep = "";
   var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
-  if (similarRound) sessionStorage.removeItem(SIMILAR_KEY);
 
   function session() {
     return load(SESSION_KEY, []);
@@ -101,15 +303,10 @@
     if (explainBtn) explainBtn.disabled = !hasCurrent;
     if (diagnoseBtn) diagnoseBtn.disabled = !hasCurrent;
     if (!el) return;
-    if (!hasCurrent) {
-      el.textContent = "上下文：无";
-      return;
-    }
-    el.textContent = "当前题：" + currentProblem.problem_id
-      + "（Agent 可自行检索全部记录）";
+    el.textContent = hasCurrent
+      ? "当前题：" + currentProblem.problem_id + "（Agent 可自行检索全部记录）"
+      : "上下文：无";
   }
-
-  if (stream) {
 
   function currentKps() {
     return load(KPS_KEY, []);
@@ -121,281 +318,245 @@
     updateAiContext();
   }
 
-  function addMessage(html, cls) {
-    var div = document.createElement("div");
-    div.className = "msg " + (cls || "teacher");
-    div.innerHTML = html;
-    stream.appendChild(div);
-    stream.scrollTop = stream.scrollHeight;
-    renderMath(div);
-    return div;
-  }
-
-  function showComposer(show) {
-    composer.classList.toggle("hidden", !show);
-  }
-
-  function startSession() {
-    api("/weak?limit=5").then(function (items) {
-      var kps = items.map(function (i) { return i.kp_id; });
-      store(KPS_KEY, kps);
-      var startArea = document.getElementById("start-area");
-      if (startArea) startArea.classList.add("hidden");
-      loadNext(kps);
+  function updateSession(problemId, values) {
+    var list = session();
+    list.forEach(function (item) {
+      if (item.problem_id === problemId) Object.assign(item, values);
     });
+    store(SESSION_KEY, list);
   }
 
-  function loadNext(kps) {
-    var exclude = session().map(function (p) { return p.problem_id; });
-    api("/pull", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kp_ids: kps, n: 1, mode: "weak" }),
-    }).then(function (result) {
-      var exhaustedMessage = similarRound
-        ? "<p>暂无更多同类题。</p>"
-        : "<p>本组题目已练完。</p>";
+  if (stream) {
+    var modeImmediate = document.getElementById("practice-mode-immediate");
+    var modeBatch = document.getElementById("practice-mode-batch");
+    var actions = document.getElementById("composer-actions");
+    var feedbackArea = document.getElementById("feedback-area");
+    var ratingInput = document.getElementById("rating-input");
+    var feedbackNote = document.getElementById("feedback-note");
+    var saveRating = document.getElementById("save-rating");
+    var sessionEntry = document.getElementById("session-end-entry");
+    var startArea = document.getElementById("start-area");
+
+    function selectedMode() {
+      if (modeImmediate && modeImmediate.checked) return "immediate";
+      if (modeBatch && modeBatch.checked) return "batch";
+      return "";
+    }
+
+    function showComposer(show) {
+      if (composer) composer.classList.toggle("hidden", !show);
+      if (sessionEntry) sessionEntry.classList.toggle("hidden", !show);
+    }
+
+    function renderQuestion(problem) {
+      stream.innerHTML = "<article class='practice-question-card card'>"
+        + "<p class='context-line'>题目 · " + escapeHtml(problem.problem_id) + "</p>"
+        + "<div class='problem-text'>" + richText(problem.problem_text) + "</div></article>";
+      renderMath(stream);
+    }
+
+    function finishExhausted() {
+      var mode = sessionStorage.getItem(MODE_KEY);
+      stream.innerHTML = similarRound
+        ? "<p class='muted'>暂无更多同类题。</p>"
+        : "<p class='muted'>本轮相关题目已练完。</p>";
       similarRound = false;
-      if (!result.problems.length) {
-        addMessage(exhaustedMessage);
-        showComposer(false);
-        var startArea = document.getElementById("start-area");
+      sessionStorage.removeItem(SIMILAR_KEY);
+      setCurrent(null);
+      showComposer(false);
+      if (mode === "batch") window.location = "session-end";
+      else {
+        sessionStorage.removeItem(MODE_KEY);
+        modeImmediate.checked = false;
+        modeBatch.checked = false;
+        startPractice.disabled = true;
         if (startArea) startArea.classList.remove("hidden");
+      }
+    }
+
+    function loadNext() {
+      var kps = currentKps();
+      var exclude = session().map(function (item) { return item.problem_id; });
+      api("/pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kp_ids: kps, n: 1, mode: "weak", exclude_ids: exclude }),
+      }).then(function (result) {
+        if (!result.problems.length) {
+          finishExhausted();
+          return;
+        }
+        var problem = result.problems[0];
+        var seen = session();
+        seen.push({ problem_id: problem.problem_id, answer_text: "", state: "active" });
+        store(SESSION_KEY, seen);
+        setCurrent(problem);
+        renderQuestion(problem);
+        answerBox.value = "";
+        answerBox.disabled = false;
+        submitAnswer.classList.remove("hidden");
+        actions.classList.add("hidden");
+        feedbackArea.classList.add("hidden");
+        ratingInput.value = "";
+        feedbackNote.value = "";
+        showComposer(true);
+        answerBox.focus();
+      });
+    }
+
+    function startSession() {
+      var mode = selectedMode();
+      if (!mode) return;
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(CURRENT_KEY);
+      sessionStorage.setItem(MODE_KEY, mode);
+      api("/weak?limit=200").then(function (items) {
+        store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
+        if (startArea) startArea.classList.add("hidden");
+        loadNext();
+      });
+    }
+
+    function bindMode(mode) {
+      if (mode) mode.addEventListener("change", function () {
+        startPractice.disabled = !selectedMode();
+      });
+    }
+
+    bindMode(modeImmediate);
+    bindMode(modeBatch);
+    if (startPractice) {
+      startPractice.disabled = !selectedMode();
+      startPractice.addEventListener("click", startSession);
+    }
+
+    if (submitAnswer) submitAnswer.addEventListener("click", function () {
+      if (!currentProblem) return;
+      var answer = answerBox.value.trim();
+      currentProblem.answer_text = answer;
+      setCurrent(currentProblem);
+      updateSession(currentProblem.problem_id, { answer_text: answer });
+      if (sessionStorage.getItem(MODE_KEY) === "batch") {
+        updateSession(currentProblem.problem_id, { state: "unrated" });
+        setCurrent(null);
+        loadNext();
         return;
       }
-      var problem = result.problems[0];
-      var seen = session();
-      seen.push({ problem_id: problem.problem_id, answer_text: "",
-                  state: "unrated" });
-      store(SESSION_KEY, seen);
-      setCurrent({ problem_id: problem.problem_id, answer_text: "" });
-      addMessage(
-        "<div class='meta'>题目 · " + escapeHtml(problem.problem_id) + "</div>"
-        + "<div class='problem-text'>" + richText(problem.problem_text) + "</div>"
-      );
-      stuckStep = "";
-      answerBox.value = "";
-      answerBox.disabled = false;
-      showComposer(true);
-      var actions = document.getElementById("composer-actions");
-      actions.classList.add("hidden");
-      submitAnswer.classList.remove("hidden");
-      answerBox.focus();
+      answerBox.disabled = true;
+      submitAnswer.classList.add("hidden");
+      actions.classList.remove("hidden");
     });
-  }
 
-  submitAnswer.addEventListener("click", function () {
-    var text = answerBox.value.trim();
-    addMessage("<div class='meta'>我的作答</div><p>" + richText(text || "（未作答）") + "</p>", "user");
-    var cur = load(CURRENT_KEY, {});
-    cur.answer_text = text;
-    setCurrent(cur);
-    var list = session();
-    for (var i = list.length - 1; i >= 0; i--) {
-      if (list[i].problem_id === cur.problem_id) {
-        list[i].answer_text = text;
-        break;
-      }
-    }
-    store(SESSION_KEY, list);
-    submitAnswer.classList.add("hidden");
-    var actions = document.getElementById("composer-actions");
-    actions.classList.remove("hidden");
-    showAnswer.classList.remove("hidden");
-    noTime.classList.remove("hidden");
-    answerBox.disabled = true;
-  });
-
-  showAnswer.addEventListener("click", function () {
-    api("/problem/" + currentProblem.problem_id).then(function (detail) {
-      var solution = detail.problem.solution || "";
-      var blocks = solution.split(/\n\s*\n/).map(function (b) { return b.trim(); })
-        .filter(Boolean);
-      var html = "<div class='meta'>解答</div>";
-      if (!blocks.length) {
-        html += "<p>（本题无解答文本，请基于自身作答自评）</p>";
-      } else {
-        html += blocks.map(function (block, i) {
-          return "<div class='solution-block' data-idx='" + (i + 1) + "'>"
-            + "<b>第 " + (i + 1) + " 步</b> " + richText(block) + "</div>";
-        }).join("");
-      }
-      html += feedbackHtml();
-      var msgEl = addMessage(html, "teacher");
-      bindFeedback(msgEl);
-    });
-  });
-
-  noTime.addEventListener("click", function () {
-    finishProblem("skip", "", "skipped");
-  });
-
-  function feedbackHtml() {
-    return "<div class='feedback'>"
-      + "<p class='meta'>反馈（可选）</p>"
-      + "<div class='rating'>"
-      + [1, 2, 3, 4, 5].map(function (r) {
-        return "<button class='rate sm' data-r='" + r + "' title='评 " + r + " 分'>" + r + "</button>";
-      }).join(" ")
-      + "</div>"
-      + "<textarea id='feedback-note' rows='2' placeholder='自然语言反馈（薄弱点）'></textarea>"
-      + "<div style='margin-top:6px'>"
-      + "<button id='mark-stuck' class='outline sm'>标记卡点（先点上面某一步）</button>"
-      + "<button id='next-no-feedback' class='ghost sm'>下一题（不反馈）</button>"
-      + "</div></div>";
-  }
-
-  function bindFeedback(msgEl) {
-    if (!msgEl) return;
-    var feedback = msgEl.querySelector(".feedback");
-    if (!feedback) return;
-    var blocks = msgEl.querySelectorAll(".solution-block");
-    blocks.forEach(function (block) {
-      block.setAttribute("role", "button");
-      block.setAttribute("tabindex", "0");
-      block.addEventListener("click", function () {
-        blocks.forEach(function (b) { b.classList.remove("stuck"); });
-        block.classList.add("stuck");
-        stuckStep = block.dataset.idx;
-      });
-      block.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          block.click();
-        }
+    if (showAnswer) showAnswer.addEventListener("click", function () {
+      if (!currentProblem) return;
+      api("/problem/" + currentProblem.problem_id).then(function (detail) {
+        var solution = detail.problem.solution || "（本题无解析，请基于自身作答自评）";
+        stream.innerHTML += "<section class='practice-solution'><p class='section-kicker'>解析</p>"
+          + "<div>" + richText(solution) + "</div></section>";
+        renderMath(stream);
+        showAnswer.classList.add("hidden");
+        feedbackArea.classList.remove("hidden");
       });
     });
-    feedback.querySelectorAll(".rate").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        var rating = parseInt(btn.dataset.r, 10);
-        var note = feedback.querySelector("#feedback-note").value.trim();
-        post("/feedback", {
-          item_type: "problem", item_id: currentProblem.problem_id,
-          rating: rating, note: note,
-        }).then(function () {
-          finishProblem("skip", note, "rated");
-        });
+
+    if (saveRating) saveRating.addEventListener("click", function () {
+      var rating = parseInt(ratingInput.value, 10);
+      if (!currentProblem || rating < 1 || rating > 5) return;
+      post("/feedback", {
+        item_type: "problem", item_id: currentProblem.problem_id,
+        rating: rating, note: feedbackNote.value.trim(),
+      }).then(function () {
+        updateSession(currentProblem.problem_id, { state: "rated" });
+        setCurrent(null);
+        loadNext();
       });
     });
-    var mark = feedback.querySelector("#mark-stuck");
-    if (mark) {
-      mark.addEventListener("click", function () {
-        var note = feedback.querySelector("#feedback-note").value.trim();
-        var stuckNote = (stuckStep ? "卡在第" + stuckStep + "步" : "卡住") + " " + note;
-        finishProblem("stuck", stuckNote, "rated");
-      });
-    }
-    var next = feedback.querySelector("#next-no-feedback");
-    if (next) {
-      next.addEventListener("click", function () {
-        finishProblem("skip", "", "unrated");
-      });
-    }
-  }
 
-  function finishProblem(result, note, state) {
-    var body = {
-      problem_id: currentProblem.problem_id,
-      result: result,
-      note: note,
-    };
-    if (currentProblem.answer_text) body.answer_text = currentProblem.answer_text;
-    post("/practice", body).catch(function () { /* record-only */ }).then(function () {
-      var list = session();
-      for (var i = list.length - 1; i >= 0; i--) {
-        if (list[i].problem_id === currentProblem.problem_id) {
-          list[i].state = state || "rated";
-          break;
-        }
-      }
-      store(SESSION_KEY, list);
-      var recordMsg = state === "rated"
-        ? (result === "stuck" ? "已记录：卡点已标记" : "已记录：评分已入库（信号与进度已更新）")
-        : "已记录：未反馈（不影响进度）";
-      addMessage("<div class='meta'>" + recordMsg + "</div>", "user");
+    if (noTime) noTime.addEventListener("click", function () {
+      if (!currentProblem) return;
+      updateSession(currentProblem.problem_id, { state: "skipped" });
       setCurrent(null);
-      var kps = currentKps();
-      loadNext(kps);
+      loadNext();
     });
-  }
 
-  if (startPractice) {
-    startPractice.addEventListener("click", startSession);
-  }
-
-  if (similarRound) {
-    var returningStartArea = document.getElementById("start-area");
-    if (returningStartArea) returningStartArea.classList.add("hidden");
-    loadNext(currentKps());
-  }
-
-  var gotoBtn = document.getElementById("goto-session-end");
-  if (gotoBtn) {
-    gotoBtn.addEventListener("click", function () {
-      window.location = "session-end";
+    var gotoBtn = document.getElementById("goto-session-end");
+    if (gotoBtn) gotoBtn.addEventListener("click", function () {
+      if (currentProblem) updateSession(currentProblem.problem_id, { state: "skipped" });
+      setCurrent(null);
+      showComposer(false);
+      if (sessionStorage.getItem(MODE_KEY) === "batch") {
+        window.location = "session-end";
+      } else {
+        sessionStorage.removeItem(MODE_KEY);
+        stream.innerHTML = "<p class='muted'>本轮练习已提前结束。</p>";
+        if (startArea) startArea.classList.remove("hidden");
+      }
     });
-  }
-
   }
 
   /* ---------- session-end ---------- */
 
   var pending = document.getElementById("pending-ratings");
   if (pending) {
-    var list = session().filter(function (item) {
-      return item.state === "unrated";
-    });
-    if (!list.length) {
+    var unrated = session().filter(function (item) { return item.state === "unrated"; });
+    if (!unrated.length) {
       pending.innerHTML = "<p>没有待评的题。</p>";
     } else {
-      var html = "";
-      list.forEach(function (item) {
-        html += "<div class='card' data-pid='" + item.problem_id + "'>"
-          + "<h3>" + escapeHtml(item.problem_id) + "</h3>"
-          + "<div class='rating'>"
-          + [1, 2, 3, 4, 5].map(function (r) {
-            return "<button class='rate sm' data-r='" + r + "' title='评 " + r + " 分'>" + r + "</button>";
-          }).join(" ")
-          + "</div>"
-          + "<textarea class='end-note' rows='2' placeholder='可选反馈'></textarea>"
-          + "</div>";
-      });
-      pending.innerHTML = html;
-      pending.querySelectorAll(".rate").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var card = btn.closest(".card");
-          var pid = card.dataset.pid;
-          var rating = parseInt(btn.dataset.r, 10);
-          var note = card.querySelector(".end-note").value.trim();
-          post("/feedback", {
-            item_type: "problem", item_id: pid, rating: rating, note: note,
-          }).then(function () {
-            card.remove();
-            if (!pending.querySelector(".card")) {
-              pending.innerHTML = "<p>全部评完 ✓</p>";
-            }
+      var remaining = unrated.length;
+      unrated.forEach(function (item) {
+        api("/problem/" + item.problem_id).then(function (detail) {
+          var problem = detail.problem;
+          var card = document.createElement("article");
+          card.className = "pending-rating-card card";
+          card.dataset.pid = item.problem_id;
+          card.innerHTML = "<p class='context-line'>题目 · " + escapeHtml(item.problem_id) + "</p>"
+            + "<div class='problem-text'>" + richText(problem.problem_text) + "</div>"
+            + "<p class='section-kicker'>我的作答</p><p>" + richText(item.answer_text || "（未作答）") + "</p>"
+            + "<p class='section-kicker'>解析</p><p>" + richText(problem.solution || "（本题无解析）") + "</p>";
+          var rating = document.createElement("input");
+          rating.id = "end-rating";
+          rating.type = "number";
+          rating.min = "1";
+          rating.max = "5";
+          rating.placeholder = "输入 1–5";
+          var note = document.createElement("textarea");
+          note.id = "end-note";
+          note.placeholder = "可选备注";
+          var save = document.createElement("button");
+          save.id = "end-save";
+          save.className = "primary sm";
+          save.textContent = "保存评分";
+          save.addEventListener("click", function () {
+            var value = parseInt(rating.value, 10);
+            if (value < 1 || value > 5) return;
+            post("/feedback", {
+              item_type: "problem", item_id: item.problem_id,
+              rating: value, note: note.value.trim(),
+            }).then(function () {
+              updateSession(item.problem_id, { state: "rated" });
+              card.remove();
+              remaining -= 1;
+              if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
+            });
           });
+          card.appendChild(rating);
+          card.appendChild(note);
+          card.appendChild(save);
+          pending.appendChild(card);
+          renderMath(card);
         });
-      });
-    }
-    var skipAll = document.getElementById("skip-all");
-    if (skipAll) {
-      skipAll.addEventListener("click", function () {
-        sessionStorage.removeItem(SESSION_KEY);
-        pending.innerHTML = "<p>已跳过，记录保留在池中。</p>";
       });
     }
     var similar = document.getElementById("practice-similar");
-    if (similar) {
-      similar.addEventListener("click", function () {
-        sessionStorage.removeItem(SESSION_KEY);
-        api("/weak?limit=5").then(function (items) {
-          store(KPS_KEY, items.map(function (i) { return i.kp_id; }));
-          sessionStorage.setItem(SIMILAR_KEY, "1");
-          window.location = "practice";
-        });
+    if (similar) similar.addEventListener("click", function () {
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(MODE_KEY);
+      api("/weak?limit=200").then(function (items) {
+        store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
+        sessionStorage.setItem(SIMILAR_KEY, "1");
+        window.location = "practice";
       });
-    }
+    });
   }
 
   /* ---------- AI column ---------- */

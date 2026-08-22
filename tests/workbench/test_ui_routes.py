@@ -55,24 +55,36 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn(".hidden { display: none !important; }", body)
 
-    def test_practice_page_session_end_entry_always_visible(self):
-        # regression: the session-end entry was inside #composer and became
-        # unreachable; it must live outside and stay visible
+    def test_practice_page_session_controls_live_outside_the_answer_card(self):
+        # Session controls must not be nested in the answer card, where a state
+        # transition could make them unreachable.
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("id='session-end-entry'", body)
         self.assertIn("id='goto-session-end'", body)
-        self.assertNotIn("id='session-end-entry' class='hidden'", body)
 
-    def test_graph_page_iframe_points_to_artifact_route(self):
+    def test_practice_page_requires_an_explicit_self_rating_mode(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='practice-mode-immediate'", body)
+        self.assertIn("id='practice-mode-batch'", body)
+        self.assertIn("每题作答后自评", body)
+        self.assertIn("完成后统一自评", body)
+        self.assertIn("id='start-practice' class='primary' disabled", body)
+        self.assertNotIn("标记卡点", body)
+        self.assertNotIn("下一题（不反馈）", body)
+
+    def test_graph_page_uses_native_canvas_not_artifact_iframe(self):
         graph = (self.fixture.ws / "output" / "dmath" / "ch06"
                  / "ch06-graph.html")
         graph.parent.mkdir(parents=True)
         graph.write_text("<html><body>graph</body></html>", encoding="utf-8")
         status, body = self.fetch("/w/dmath/graph")
         self.assertEqual(status, 200)
-        self.assertIn("/api/w/dmath/graph/artifact", body)
-        self.assertNotIn("src='/api/w/dmath/graph'", body)
+        self.assertIn("id='graph-canvas'", body)
+        self.assertIn("id='graph-detail-tab'", body)
+        self.assertIn("id='ai-teacher-tab'", body)
+        self.assertNotIn("<iframe", body)
 
     def test_graph_artifact_route_serves_raw_html(self):
         graph = (self.fixture.ws / "output" / "dmath" / "ch06"
@@ -165,11 +177,23 @@ class UiRouteTests(unittest.TestCase):
     def test_kps_page_lists_knowledge_points(self):
         status, body = self.fetch("/w/dmath/kps")
         self.assertEqual(status, 200)
-        self.assertIn("dmath-ch06-kp-001", body)
+        self.assertIn(">Counting</a>", body)
+        self.assertIn("class='weak-title'>Counting", body)
 
     def test_kp_page_renders(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "UPDATE problems SET display_title=?, topic_label=? WHERE problem_id=?",
+                ("两类代表选择", "乘法规则", "dmath-ch06-prob-001"),
+            )
+            conn.commit()
+        finally:
+            conn.close()
         status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
         self.assertEqual(status, 200)
+        self.assertIn("两类代表选择", body)
+        self.assertIn("乘法规则", body)
         self.assertIn("dmath-ch06-kp-001", body)
 
     def test_wiki_link_points_to_a_reachable_knowledge_point(self):
@@ -199,7 +223,7 @@ class UiRouteTests(unittest.TestCase):
     def test_session_end_page_renders(self):
         status, body = self.fetch("/w/dmath/session-end")
         self.assertEqual(status, 200)
-        self.assertIn("rating", body)
+        self.assertIn("pending-ratings", body)
 
     def test_graph_page_with_artifact(self):
         graph = (self.fixture.ws / "output" / "dmath" / "ch06"
@@ -208,20 +232,18 @@ class UiRouteTests(unittest.TestCase):
         graph.write_text("<html><body>graph</body></html>", encoding="utf-8")
         status, body = self.fetch("/w/dmath/graph")
         self.assertEqual(status, 200)
-        self.assertIn("iframe", body)
-        status, data = self.fetch_json("/api/w/dmath/graph")
+        self.assertIn("id='graph-canvas'", body)
+        status, data = self.fetch_json("/api/w/dmath/graph/model")
         self.assertEqual(status, 200)
-        self.assertIn("graph", data["html"])
+        self.assertIn("nodes", data)
 
-    def test_graph_page_without_artifact_shows_hint(self):
+    def test_graph_page_without_artifact_still_reads_workspace_data(self):
         status, body = self.fetch("/w/dmath/graph")
         self.assertEqual(status, 200)
-        self.assertIn("render-graph-html.py", body)
-        with self.assertRaises(HTTPError) as ctx:
-            urllib.request.urlopen(
-                f"http://127.0.0.1:{self.port}/api/w/dmath/graph"
-            )
-        self.assertEqual(ctx.exception.code, 404)
+        self.assertIn("id='graph-canvas'", body)
+        status, data = self.fetch_json("/api/w/dmath/graph/model")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["nodes"][0]["title"], "Counting")
 
     def test_explain_result_endpoint(self):
         explain_dir = (self.fixture.ws / ".lessonkit" / "explain"
