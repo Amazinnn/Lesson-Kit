@@ -1,0 +1,1871 @@
+{
+  "schema_version": 1,
+  "course": "dmath",
+  "chapter": "ch06",
+  "summary_threshold": 300,
+  "audit": {
+    "reviewed_problem_ids": [
+      "dmath-ch06-prob-001",
+      "dmath-ch06-prob-022",
+      "dmath-ch06-prob-070",
+      "dmath-ch06-prob-081",
+      "dmath-ch06-prob-154",
+      "dmath-ch06-prob-199",
+      "dmath-ch06-prob-227",
+      "dmath-ch06-prob-259",
+      "dmath-ch06-prob-290",
+      "dmath-ch06-prob-003",
+      "dmath-ch06-prob-005",
+      "dmath-ch06-prob-032",
+      "dmath-ch06-prob-033",
+      "dmath-ch06-prob-048",
+      "dmath-ch06-prob-054",
+      "dmath-ch06-prob-057",
+      "dmath-ch06-prob-058",
+      "dmath-ch06-prob-059",
+      "dmath-ch06-prob-060",
+      "dmath-ch06-prob-061",
+      "dmath-ch06-prob-071",
+      "dmath-ch06-prob-077",
+      "dmath-ch06-prob-078",
+      "dmath-ch06-prob-083",
+      "dmath-ch06-prob-084",
+      "dmath-ch06-prob-097",
+      "dmath-ch06-prob-099",
+      "dmath-ch06-prob-104",
+      "dmath-ch06-prob-113",
+      "dmath-ch06-prob-117"
+    ],
+    "topic_coverage": [
+      "基础计数",
+      "容斥原理",
+      "树形图",
+      "抽屉原理",
+      "排列组合",
+      "二项式",
+      "可重复组合",
+      "多项式",
+      "字典序"
+    ]
+  },
+  "problems": [
+    {
+      "problem_id": "dmath-ch06-prob-001",
+      "display_title": "代表选择练习001",
+      "topic_label": "基础计数",
+      "display_summary": "分别计算选两名不同专业代表和选一名代表的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-002",
+      "display_title": "基础计数题练习002",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-003",
+      "display_title": "选择题作答练习003",
+      "topic_label": "基础计数",
+      "display_summary": "计算十道四选一题全部作答或可留空时的答题方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-004",
+      "display_title": "服装组合练习004",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-005",
+      "display_title": "航线组合计数练习005",
+      "topic_label": "基础计数",
+      "display_summary": "计算经丹佛从纽约到旧金山选择两段航空公司的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-006",
+      "display_title": "路线选择计数练习006",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-007",
+      "display_title": "基础计数题练习007",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-008",
+      "display_title": "基础计数题练习008",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-009",
+      "display_title": "基础计数题练习009",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-010",
+      "display_title": "比特串计数练习010",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-011",
+      "display_title": "比特串计数练习011",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-012",
+      "display_title": "比特串计数练习012",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-013",
+      "display_title": "比特串计数练习013",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-014",
+      "display_title": "比特串计数练习014",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-015",
+      "display_title": "字符串计数练习015",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-016",
+      "display_title": "字符串计数练习016",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-017",
+      "display_title": "字符串计数练习017",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-018",
+      "display_title": "DNA序列计数练习018",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-019",
+      "display_title": "RNA序列计数练习019",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-020",
+      "display_title": "整数条件计数练习020",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-021",
+      "display_title": "整数条件计数练习021",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-022",
+      "display_title": "整数条件计数练习022",
+      "topic_label": "容斥原理",
+      "display_summary": "分别统计千以下整数满足7和11整除及数字条件的数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-023",
+      "display_title": "整数条件计数练习023",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-024",
+      "display_title": "整数条件计数练习024",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-025",
+      "display_title": "字符串计数练习025",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-026",
+      "display_title": "字符串计数练习026",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-027",
+      "display_title": "委员会选择练习027",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-028",
+      "display_title": "车牌编号计数练习028",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-029",
+      "display_title": "车牌编号计数练习029",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-030",
+      "display_title": "车牌编号计数练习030",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-031",
+      "display_title": "车牌编号计数练习031",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-032",
+      "display_title": "字符串计数练习032",
+      "topic_label": "基础计数",
+      "display_summary": "计算八位大写字母串在重复、首尾和前缀限制下的数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-033",
+      "display_title": "字符串计数练习033",
+      "topic_label": "基础计数",
+      "display_summary": "计算八位字母串在元音出现、位置和重复限制下的数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-034",
+      "display_title": "函数映射计数练习034",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-035",
+      "display_title": "函数映射计数练习035",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-036",
+      "display_title": "函数映射计数练习036",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-037",
+      "display_title": "函数映射计数练习037",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-038",
+      "display_title": "部分函数计数练习038",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-039",
+      "display_title": "部分函数计数练习039",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-040",
+      "display_title": "子集计数练习040",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-041",
+      "display_title": "比特串计数练习041",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-042",
+      "display_title": "DNA序列计数练习042",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-043",
+      "display_title": "RNA序列计数练习043",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-044",
+      "display_title": "基础计数题练习044",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-045",
+      "display_title": "学生分组计数练习045",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-046",
+      "display_title": "座次安排计数练习046",
+      "topic_label": "除法计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-047",
+      "display_title": "座次安排计数练习047",
+      "topic_label": "除法计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-048",
+      "display_title": "婚礼队列安排练习048",
+      "topic_label": "基础计数",
+      "display_summary": "计算十人中排六人合影时包含新娘新郎的安排数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-049",
+      "display_title": "婚礼队列安排练习049",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-050",
+      "display_title": "比特串计数练习050",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-051",
+      "display_title": "比特串计数练习051",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-052",
+      "display_title": "比特串计数练习052",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-053",
+      "display_title": "比特串计数练习053",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-054",
+      "display_title": "学生分组计数练习054",
+      "topic_label": "容斥原理",
+      "display_summary": "根据计算机、数学及双专业人数求班级总人数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-055",
+      "display_title": "整数条件计数练习055",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-056",
+      "display_title": "基础计数题练习056",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-057",
+      "display_title": "密码组合计数练习057",
+      "topic_label": "基础计数",
+      "display_summary": "计算规定字符和长度的密码数、含特殊字符数及破解时间。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-058",
+      "display_title": "字符串计数练习058",
+      "topic_label": "基础计数",
+      "display_summary": "计算C语言中由前八字符确定的合法变量名数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-059",
+      "display_title": "字符串计数练习059",
+      "topic_label": "基础计数",
+      "display_summary": "计算长度一至65535且首字符非数字的Java变量名数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-060",
+      "display_title": "电话号码计数练习060",
+      "topic_label": "基础计数",
+      "display_summary": "计算满足国家码和号码长度限制的国际电话号码数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-061",
+      "display_title": "电话号码计数练习061",
+      "topic_label": "基础计数",
+      "display_summary": "计算给定国家码和十位本地号格式下的电话号码数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-062",
+      "display_title": "字符串计数练习062",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-063",
+      "display_title": "字符串计数练习063",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-064",
+      "display_title": "整数条件计数练习064",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-065",
+      "display_title": "整数条件计数练习065",
+      "topic_label": "容斥原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-066",
+      "display_title": "比特串计数练习066",
+      "topic_label": "树形图",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-067",
+      "display_title": "除法计数题练习067",
+      "topic_label": "除法计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-068",
+      "display_title": "树形图计数练习068",
+      "topic_label": "树形图",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-069",
+      "display_title": "树形图计数练习069",
+      "topic_label": "树形图",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-070",
+      "display_title": "树形图计数练习070",
+      "topic_label": "树形图",
+      "display_summary": "用树形图和计数规则计算各规格饮料瓶种类数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-071",
+      "display_title": "树形图计数练习071",
+      "topic_label": "树形图",
+      "display_summary": "用树形图和计数规则计算男女跑鞋库存款式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-072",
+      "display_title": "淘汰赛计数练习072",
+      "topic_label": "树形图",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-073",
+      "display_title": "淘汰赛计数练习073",
+      "topic_label": "树形图",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-074",
+      "display_title": "真值表计数练习074",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-075",
+      "display_title": "基础计数题练习075",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-076",
+      "display_title": "基础计数题练习076",
+      "topic_label": "基础计数",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-077",
+      "display_title": "多边形对角线练习077",
+      "topic_label": "基础计数",
+      "display_summary": "求n边凸多边形的对角线数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-078",
+      "display_title": "字符串计数练习078",
+      "topic_label": "基础计数",
+      "display_summary": "计算IP数据报的最大总长、首部长度、数据区容量和数据串数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-079",
+      "display_title": "课堂分配计数练习079",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-080",
+      "display_title": "学生分组计数练习080",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-081",
+      "display_title": "抽屉原理题练习081",
+      "topic_label": "抽屉原理",
+      "display_summary": "求随机摸袜时保证同色一双及两只黑袜所需数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-082",
+      "display_title": "球盒分配练习082",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-083",
+      "display_title": "学生分组计数练习083",
+      "topic_label": "抽屉原理",
+      "display_summary": "求保证两名学生同毕业年且同专业所需的最少学生数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-084",
+      "display_title": "学生分组计数练习084",
+      "topic_label": "抽屉原理",
+      "display_summary": "求保证同教师且期末考试同分所需的最少学生数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-085",
+      "display_title": "整数条件计数练习085",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-086",
+      "display_title": "整数条件计数练习086",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-087",
+      "display_title": "整数条件计数练习087",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-088",
+      "display_title": "函数映射计数练习088",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-089",
+      "display_title": "学生分组计数练习089",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-090",
+      "display_title": "整数条件计数练习090",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-091",
+      "display_title": "整数条件计数练习091",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-092",
+      "display_title": "整数条件计数练习092",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-093",
+      "display_title": "整数条件计数练习093",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-094",
+      "display_title": "整数条件计数练习094",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-095",
+      "display_title": "抽屉原理题练习095",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-096",
+      "display_title": "抽屉原理题练习096",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-097",
+      "display_title": "抽屉原理题练习097",
+      "topic_label": "抽屉原理",
+      "display_summary": "求保证两件产品存入同一仓位所需的最少产品数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-098",
+      "display_title": "学生分组计数练习098",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-099",
+      "display_title": "学生分组计数练习099",
+      "topic_label": "抽屉原理",
+      "display_summary": "证明25名学生的三类年级人数满足给定下界。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-100",
+      "display_title": "抽屉原理题练习100",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-101",
+      "display_title": "整数条件计数练习101",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-102",
+      "display_title": "抽屉原理题练习102",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-103",
+      "display_title": "座次安排计数练习103",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-104",
+      "display_title": "抽屉原理题练习104",
+      "topic_label": "抽屉原理",
+      "display_summary": "证明竞赛中至少有一道题被至少三名女生和三名男生解出。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-105",
+      "display_title": "整数条件计数练习105",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-106",
+      "display_title": "抽屉原理题练习106",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-107",
+      "display_title": "抽屉原理题练习107",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-108",
+      "display_title": "抽屉原理题练习108",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-109",
+      "display_title": "整数条件计数练习109",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-110",
+      "display_title": "整数条件计数练习110",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-111",
+      "display_title": "抽屉原理题练习111",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-112",
+      "display_title": "抽屉原理题练习112",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-113",
+      "display_title": "抽屉原理证明练习113",
+      "topic_label": "抽屉原理",
+      "display_summary": "用抽屉原理证明巴黎至少两人及至少五人头发数相同。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-114",
+      "display_title": "抽屉原理题练习114",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-115",
+      "display_title": "课堂分配计数练习115",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-116",
+      "display_title": "抽屉原理题练习116",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-117",
+      "display_title": "抽屉原理题练习117",
+      "topic_label": "抽屉原理",
+      "display_summary": "证明六台计算机中至少两台直接连接的台数相同。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-118",
+      "display_title": "抽屉原理题练习118",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-119",
+      "display_title": "子集计数练习119",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-120",
+      "display_title": "抽屉原理题练习120",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-121",
+      "display_title": "抽屉原理题练习121",
+      "topic_label": "抽屉原理",
+      "display_summary": "证明摔跤手比赛期间存在连续时段恰有24场比赛。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-122",
+      "display_title": "抽屉原理题练习122",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-123",
+      "display_title": "函数映射计数练习123",
+      "topic_label": "抽屉原理",
+      "display_summary": "证明有限集函数至少有给定数量元素映射到同一值。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-124",
+      "display_title": "整数条件计数练习124",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-125",
+      "display_title": "整数条件计数练习125",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-126",
+      "display_title": "整数条件计数练习126",
+      "topic_label": "抽屉原理",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-127",
+      "display_title": "抽屉原理证明练习127",
+      "topic_label": "抽屉原理",
+      "display_summary": "用广义抽屉原理证明序列含给定长度的递增或递减子序列。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-128",
+      "display_title": "排列生成练习128",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-129",
+      "display_title": "排列生成练习129",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-130",
+      "display_title": "排列生成练习130",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-131",
+      "display_title": "排列生成练习131",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-132",
+      "display_title": "排列组合题练习132",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-133",
+      "display_title": "排列组合题练习133",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-134",
+      "display_title": "排列生成练习134",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-135",
+      "display_title": "排列组合题练习135",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-136",
+      "display_title": "排列组合题练习136",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-137",
+      "display_title": "球盒分配练习137",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-138",
+      "display_title": "比特串计数练习138",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-139",
+      "display_title": "比特串计数练习139",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-140",
+      "display_title": "排列组合题练习140",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-141",
+      "display_title": "整数条件计数练习141",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-142",
+      "display_title": "排列组合题练习142",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-143",
+      "display_title": "子集计数练习143",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-144",
+      "display_title": "子集计数练习144",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-145",
+      "display_title": "排列组合题练习145",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-146",
+      "display_title": "排列组合题练习146",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-147",
+      "display_title": "比特串计数练习147",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-148",
+      "display_title": "排列生成练习148",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-149",
+      "display_title": "排列生成练习149",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-150",
+      "display_title": "排列组合题练习150",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-151",
+      "display_title": "排列组合题练习151",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-152",
+      "display_title": "排列组合题练习152",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-153",
+      "display_title": "排列组合题练习153",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-154",
+      "display_title": "排列组合题练习154",
+      "topic_label": "排列组合",
+      "display_summary": "计算100张彩票发四种奖品在各限制下的颁奖方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-155",
+      "display_title": "球盒分配练习155",
+      "topic_label": "排列组合",
+      "display_summary": "计算13名垒球队员上场选择、位置安排及女性限制下的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-156",
+      "display_title": "委员会选择练习156",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-157",
+      "display_title": "排列组合题练习157",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-158",
+      "display_title": "排列生成练习158",
+      "topic_label": "排列组合",
+      "display_summary": "计算含三个连续整数的四排列在两种位置条件下的数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-159",
+      "display_title": "委员会选择练习159",
+      "topic_label": "排列组合",
+      "display_summary": "计算五人委员会至少含女性或两种性别时的选法数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-160",
+      "display_title": "字符串计数练习160",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-161",
+      "display_title": "字符串计数练习161",
+      "topic_label": "排列组合",
+      "display_summary": "计算含字母a、b及其位置限制的六位字母串数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-162",
+      "display_title": "委员会选择练习162",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-163",
+      "display_title": "委员会选择练习163",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-164",
+      "display_title": "比特串计数练习164",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-165",
+      "display_title": "比特串计数练习165",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-166",
+      "display_title": "比特串计数练习166",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-167",
+      "display_title": "排列组合题练习167",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-168",
+      "display_title": "车牌编号计数练习168",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-169",
+      "display_title": "座次安排计数练习169",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-170",
+      "display_title": "排列生成练习170",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-171",
+      "display_title": "座次安排计数练习171",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-172",
+      "display_title": "排列组合题练习172",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-173",
+      "display_title": "排列组合题练习173",
+      "topic_label": "排列组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-174",
+      "display_title": "排列组合题练习174",
+      "topic_label": "排列组合",
+      "display_summary": "计算六名赛跑者允许并列时颁发三种奖牌的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-175",
+      "display_title": "淘汰赛计数练习175",
+      "topic_label": "排列组合",
+      "display_summary": "计算足球点球在不同决胜阶段下的得分情形数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-176",
+      "display_title": "二项式展开练习176",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-177",
+      "display_title": "二项式展开练习177",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-178",
+      "display_title": "二项式题练习178",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-179",
+      "display_title": "二项式题练习179",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-180",
+      "display_title": "二项式题练习180",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-181",
+      "display_title": "二项式题练习181",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-182",
+      "display_title": "二项式题练习182",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-183",
+      "display_title": "二项式题练习183",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-184",
+      "display_title": "二项式题练习184",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-185",
+      "display_title": "二项式展开练习185",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-186",
+      "display_title": "二项式展开练习186",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-187",
+      "display_title": "二项式展开练习187",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-188",
+      "display_title": "二项式展开练习188",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-189",
+      "display_title": "整数条件计数练习189",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-190",
+      "display_title": "整数条件计数练习190",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-191",
+      "display_title": "二项式展开练习191",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-192",
+      "display_title": "二项式展开练习192",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-193",
+      "display_title": "整数条件计数练习193",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-194",
+      "display_title": "整数条件计数练习194",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-195",
+      "display_title": "整数条件计数练习195",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-196",
+      "display_title": "整数条件计数练习196",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-197",
+      "display_title": "二项式展开练习197",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-198",
+      "display_title": "二项式题练习198",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-199",
+      "display_title": "整数条件计数练习199",
+      "topic_label": "二项式",
+      "display_summary": "证明帕斯卡三角中六边形位置的二项式系数恒等式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-200",
+      "display_title": "子集计数练习200",
+      "topic_label": "二项式",
+      "display_summary": "分别用组合和代数方法证明一个二项式系数恒等式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-201",
+      "display_title": "整数条件计数练习201",
+      "topic_label": "二项式",
+      "display_summary": "分别用组合和公式方法证明嵌套二项式系数恒等式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-202",
+      "display_title": "二项式展开练习202",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-203",
+      "display_title": "整数条件计数练习203",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-204",
+      "display_title": "整数条件计数练习204",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-205",
+      "display_title": "整数条件计数练习205",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-206",
+      "display_title": "整数条件计数练习206",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-207",
+      "display_title": "整数条件计数练习207",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-208",
+      "display_title": "委员会选择练习208",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-209",
+      "display_title": "委员会选择练习209",
+      "topic_label": "二项式",
+      "display_summary": "用组合证明带主席委员会计数的二项式系数恒等式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-210",
+      "display_title": "子集计数练习210",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-211",
+      "display_title": "二项式展开练习211",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-212",
+      "display_title": "字符串计数练习212",
+      "topic_label": "二项式",
+      "display_summary": "将格路径编码为位串并推出其数量的二项式公式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-213",
+      "display_title": "整数条件计数练习213",
+      "topic_label": "二项式",
+      "display_summary": "利用格路径计数证明二项式系数的对称性。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-214",
+      "display_title": "二项式题练习214",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-215",
+      "display_title": "二项式题练习215",
+      "topic_label": "二项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-216",
+      "display_title": "二项式题练习216",
+      "topic_label": "二项式",
+      "display_summary": "利用格路径计数证明曲棍球棒恒等式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-217",
+      "display_title": "子集计数练习217",
+      "topic_label": "二项式",
+      "display_summary": "用组合证明子集及其中两元素计数的恒等式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-218",
+      "display_title": "二项式展开练习218",
+      "topic_label": "二项式",
+      "display_summary": "根据给定初项写出含二项式系数的通项公式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-219",
+      "display_title": "可重复排列题练习219",
+      "topic_label": "可重复排列",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-220",
+      "display_title": "可重复排列题练习220",
+      "topic_label": "可重复排列",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-221",
+      "display_title": "字符串计数练习221",
+      "topic_label": "可重复排列",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-222",
+      "display_title": "学生分组计数练习222",
+      "topic_label": "可重复排列",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-223",
+      "display_title": "可重复排列题练习223",
+      "topic_label": "可重复排列",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-224",
+      "display_title": "可重复组合题练习224",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-225",
+      "display_title": "可重复组合题练习225",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-226",
+      "display_title": "可重复组合题练习226",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-227",
+      "display_title": "可重复组合题练习227",
+      "topic_label": "可重复组合",
+      "display_summary": "计算选购不同数量百吉饼及附加数量限制下的选法数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-228",
+      "display_title": "可重复组合题练习228",
+      "topic_label": "可重复组合",
+      "display_summary": "计算选购羊角面包在多种最低和最高数量限制下的选法数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-229",
+      "display_title": "可重复组合题练习229",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-230",
+      "display_title": "可重复组合题练习230",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-231",
+      "display_title": "可重复组合题练习231",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-232",
+      "display_title": "整数条件计数练习232",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-233",
+      "display_title": "整数条件计数练习233",
+      "topic_label": "可重复组合",
+      "display_summary": "计算和为21的五个非负整数解在多种约束下的数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-234",
+      "display_title": "整数条件计数练习234",
+      "topic_label": "可重复组合",
+      "display_summary": "计算和为29的六个非负整数解在多种约束下的数量。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-235",
+      "display_title": "字符串计数练习235",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-236",
+      "display_title": "字符串计数练习236",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-237",
+      "display_title": "座次安排计数练习237",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-238",
+      "display_title": "整数条件计数练习238",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-239",
+      "display_title": "可重复组合题练习239",
+      "topic_label": "可重复组合",
+      "display_summary": "计算13双彩鞋中选左右鞋在不同颜色规则下的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-240",
+      "display_title": "可重复组合题练习240",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-241",
+      "display_title": "球盒分配练习241",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-242",
+      "display_title": "球盒分配练习242",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-243",
+      "display_title": "球盒分配练习243",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-244",
+      "display_title": "球盒分配练习244",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-245",
+      "display_title": "整数条件计数练习245",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-246",
+      "display_title": "整数条件计数练习246",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-247",
+      "display_title": "可重复组合题练习247",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-248",
+      "display_title": "可重复组合题练习248",
+      "topic_label": "可重复组合",
+      "display_summary": "证明含各类型最低数量限制的无序选择计数公式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-249",
+      "display_title": "比特串计数练习249",
+      "topic_label": "可重复组合",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-250",
+      "display_title": "字符串计数练习250",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-251",
+      "display_title": "字符串计数练习251",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-252",
+      "display_title": "字符串计数练习252",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-253",
+      "display_title": "字符串计数练习253",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-254",
+      "display_title": "字符串计数练习254",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-255",
+      "display_title": "字符串计数练习255",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-256",
+      "display_title": "比特串计数练习256",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-257",
+      "display_title": "学生分组计数练习257",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-258",
+      "display_title": "球盒分配练习258",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-259",
+      "display_title": "多项式题练习259",
+      "topic_label": "多项式",
+      "display_summary": "计算只能沿正坐标方向从原点到指定点的路径数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-260",
+      "display_title": "多项式题练习260",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-261",
+      "display_title": "纸牌选择计数练习261",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-262",
+      "display_title": "纸牌选择计数练习262",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-263",
+      "display_title": "纸牌选择计数练习263",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-264",
+      "display_title": "多项式题练习264",
+      "topic_label": "多项式",
+      "display_summary": "计算12本书放上四个可区分书架在两种条件下的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-265",
+      "display_title": "多项式题练习265",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-266",
+      "display_title": "多项式题练习266",
+      "topic_label": "多项式",
+      "display_summary": "计算一排12本书中选5本且任意两本不相邻的选法数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-267",
+      "display_title": "球盒分配练习267",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-268",
+      "display_title": "排列生成练习268",
+      "topic_label": "多项式",
+      "display_summary": "通过排列与分盒的双射证明多项式系数定理。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-269",
+      "display_title": "多项式题练习269",
+      "topic_label": "多项式",
+      "display_summary": "建立可重复组合与普通组合的双射并推出计数公式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-270",
+      "display_title": "球盒分配练习270",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-271",
+      "display_title": "球盒分配练习271",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-272",
+      "display_title": "多项式题练习272",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-273",
+      "display_title": "多项式题练习273",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-274",
+      "display_title": "球盒分配练习274",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-275",
+      "display_title": "球盒分配练习275",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-276",
+      "display_title": "球盒分配练习276",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-277",
+      "display_title": "球盒分配练习277",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-278",
+      "display_title": "球盒分配练习278",
+      "topic_label": "多项式",
+      "display_summary": "计算五球放入七盒且每盒至多一球在标签条件下的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-279",
+      "display_title": "球盒分配练习279",
+      "topic_label": "多项式",
+      "display_summary": "计算五球放入三盒且每盒至少一球在标签条件下的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-280",
+      "display_title": "球盒分配练习280",
+      "topic_label": "多项式",
+      "display_summary": "计算篮球队按既定对手和场次数安排比赛顺序的方式数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-281",
+      "display_title": "多项式题练习281",
+      "topic_label": "多项式",
+      "display_summary": "计算检查员两访五地且不能连续访问X地的顺序数。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-282",
+      "display_title": "多项式题练习282",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-283",
+      "display_title": "整数条件计数练习283",
+      "topic_label": "多项式",
+      "display_summary": "证明多项式定理及其多项式系数公式。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-284",
+      "display_title": "多项式题练习284",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-285",
+      "display_title": "多项式题练习285",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-286",
+      "display_title": "多项式题练习286",
+      "topic_label": "多项式",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-287",
+      "display_title": "排列生成练习287",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-288",
+      "display_title": "排列生成练习288",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-289",
+      "display_title": "字典序排列练习289",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-290",
+      "display_title": "字典序排列练习290",
+      "topic_label": "字典序",
+      "display_summary": "按字典序列出由指定数字和字母组成的文件名。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-291",
+      "display_title": "排列生成练习291",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-292",
+      "display_title": "排列生成练习292",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-293",
+      "display_title": "排列生成练习293",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-294",
+      "display_title": "子集计数练习294",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-295",
+      "display_title": "字典序题练习295",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-296",
+      "display_title": "排列生成练习296",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-297",
+      "display_title": "字典序排列练习297",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-298",
+      "display_title": "排列生成练习298",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-299",
+      "display_title": "排列生成练习299",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-300",
+      "display_title": "函数映射计数练习300",
+      "topic_label": "字典序",
+      "display_summary": "求给定排列对应的康托尔展开数字。"
+    },
+    {
+      "problem_id": "dmath-ch06-prob-301",
+      "display_title": "排列生成练习301",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-302",
+      "display_title": "排列生成练习302",
+      "topic_label": "字典序",
+      "display_summary": null
+    },
+    {
+      "problem_id": "dmath-ch06-prob-303",
+      "display_title": "排列生成练习303",
+      "topic_label": "字典序",
+      "display_summary": null
+    }
+  ]
+}

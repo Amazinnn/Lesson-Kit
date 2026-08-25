@@ -293,6 +293,8 @@ def _linked_problems(problems):
                 f"<span class='problem-summary'>{html.escape(_problem_summary(problem))}</span>"
                 if _problem_summary(problem) else ""
             )
+            + "<details class='linked-problem-detail'><summary>查看完整题干</summary>"
+            f"<p>{html.escape(_problem_text(problem))}</p></details>"
             + "</li>"
             for problem in items
         )
@@ -310,11 +312,18 @@ def _problem_title(problem):
 
 
 def _problem_summary(problem):
-    text = re.sub(r"<[^>]+>", "", problem.get("problem_text") or "")
-    text = " ".join(text.split())
-    if not text or text == _problem_title(problem):
+    text = _problem_text(problem)
+    summary = " ".join((problem.get("display_summary") or "").split())
+    if len(text) <= 300 or not summary or len(summary) > 48:
         return ""
-    return text[:56] + ("…" if len(text) > 56 else "")
+    if "…" in summary or "..." in summary:
+        return ""
+    return summary
+
+
+def _problem_text(problem):
+    text = re.sub(r"<[^>]+>", "", problem.get("problem_text") or "")
+    return " ".join(text.split())
 
 
 def _ai_column(workspace_name, graph_mode=False):

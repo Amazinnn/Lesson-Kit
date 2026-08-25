@@ -346,6 +346,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .linked-problem { padding: 10px 0 0; }
 .problem-title { display: block; color: var(--dsw-label-primary); font-size: 14px; font-weight: 600; }
 .problem-summary { display: block; margin-top: 3px; color: var(--dsw-label-secondary); font-size: 13px; line-height: 1.5; }
+.linked-problem-detail { margin-top: 7px; color: var(--dsw-label-secondary); font-size: 13px; }
+.linked-problem-detail summary { cursor: pointer; font-weight: 500; }
+.linked-problem-detail p { margin: 7px 0 0; line-height: 1.65; white-space: pre-wrap; }
 .empty-state { max-width: 640px; }
 .next-step { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 22px 24px; border-top: 1px solid var(--dsw-border-l2); }
 .next-step-actions { display: flex; gap: 8px; flex: none; }

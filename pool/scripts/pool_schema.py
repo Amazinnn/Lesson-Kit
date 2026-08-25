@@ -400,6 +400,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     ("figure_paths", "TEXT"),
                     ("display_title", "TEXT"),
                     ("topic_label", "TEXT"),
+                    ("display_summary", "TEXT"),
                 ],
             )
         )
@@ -408,7 +409,11 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             ensure_columns(
                 conn,
                 "candidate_problems",
-                [("display_title", "TEXT"), ("topic_label", "TEXT")],
+                [
+                    ("display_title", "TEXT"),
+                    ("topic_label", "TEXT"),
+                    ("display_summary", "TEXT"),
+                ],
             )
         )
     if table_exists(conn, "problem_attempts"):

@@ -181,17 +181,16 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("class='weak-title'>Counting", body)
 
     def test_kp_page_renders(self):
-        summary = (
-            "选择两类代表并计算所有满足条件的可行方案，并说明每一步的计数理由与"
-            "排列顺序如何影响最终结果，写出完整说明，供复习时快速浏览。"
-        )
+        full_text = "<em>两类代表</em>" + "的组合计数条件。" * 38
+        summary = "分析两类代表选择中的乘法计数与顺序条件。"
         conn = sqlite3.connect(self.fixture.db_path)
         try:
             conn.execute(
-                "UPDATE problems SET problem_text=?, display_title=?, topic_label=? WHERE problem_id=?",
+                "UPDATE problems SET problem_text=?, display_title=?, topic_label=?, "
+                "display_summary=? WHERE problem_id=?",
                 (
-                    summary.replace("两类代表", "<em>两类代表</em>"),
-                    "两类代表选择", "乘法规则", "dmath-ch06-prob-001",
+                    full_text, "两类代表选择", "乘法规则", summary,
+                    "dmath-ch06-prob-001",
                 ),
             )
             conn.commit()
@@ -202,9 +201,32 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("两类代表选择", body)
         self.assertIn("乘法规则", body)
         self.assertIn("dmath-ch06-kp-001", body)
-        self.assertIn(summary[:56] + "…", body)
+        self.assertIn(summary, body)
+        self.assertIn("<details class='linked-problem-detail'>", body)
+        self.assertIn("两类代表", body)
+        self.assertNotIn("…", body)
         self.assertNotIn("dmath-ch06-prob-001", body)
         self.assertNotIn("&lt;em&gt;", body)
+
+    def test_short_linked_problem_does_not_manufacture_a_summary(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "UPDATE problems SET problem_text=?, display_title=?, topic_label=?, "
+                "display_summary=? WHERE problem_id=?",
+                (
+                    "完整短题题干。", "短题标题", "基础计数", "不应显示的摘要。",
+                    "dmath-ch06-prob-001",
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertEqual(status, 200)
+        self.assertIn("短题标题", body)
+        self.assertIn("完整短题题干。", body)
+        self.assertNotIn("不应显示的摘要。", body)
 
     def test_wiki_link_points_to_a_reachable_knowledge_point(self):
         conn = sqlite3.connect(self.fixture.db_path)
