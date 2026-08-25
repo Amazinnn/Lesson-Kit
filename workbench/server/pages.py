@@ -55,6 +55,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<main id='middle'>{middle_html}</main>"
         + f"<aside id='ai-column'>{ai}</aside>"
         + "</div>"
+        + ("<script src='/static/graph-physics.js'></script>" if graph_mode else "")
         + "<script src='/static/workbench.js'></script>"
     )
     return _base(f"workbench {workspace['name']}", body)

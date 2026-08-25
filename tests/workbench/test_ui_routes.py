@@ -84,6 +84,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='graph-canvas'", body)
         self.assertIn("id='graph-detail-tab'", body)
         self.assertIn("id='ai-teacher-tab'", body)
+        self.assertIn("<script src='/static/graph-physics.js'></script>", body)
         self.assertNotIn("<iframe", body)
 
     def test_graph_artifact_route_serves_raw_html(self):

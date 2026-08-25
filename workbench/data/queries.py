@@ -67,39 +67,67 @@ def graph_model(pool):
         for row in pool.current_states()
     }
     signals = {row["target_id"]: row["weight"] for row in pool.signals()}
+    problems = pool.problems_all()
+    problem_count = {kp_id: 0 for kp_id in ids}
+    problem_kps = []
+    for problem in problems:
+        kp_ids = {kp_id for kp_id in problem["kp_ids"] if kp_id in ids}
+        problem_kps.append(kp_ids)
+        for kp_id in kp_ids:
+            problem_count[kp_id] += 1
     nodes = [
         {
             "id": kp["kp_id"],
             "title": kp.get("knowledge_item") or kp["kp_id"],
             "body": kp.get("body") or "",
             "fragile": kp.get("fragile") or "",
+            "problem_count": problem_count[kp["kp_id"]],
             "state": current.get(
                 ("kp", kp["kp_id"]), _signal_state(signals.get(kp["kp_id"]))
             ),
         }
         for kp in kps
     ]
-    edges = []
-    seen = set()
+    edges = {}
     for relation in pool.relations():
         source = relation["source_kp_id"]
         target = relation["target_kp_id"]
         if source in ids and target in ids:
-            key = (source, target, relation["relation_type"])
-            seen.add(key)
-            edges.append({
-                "source": source, "target": target,
-                "relation_type": relation["relation_type"],
-            })
+            _merge_graph_edge(
+                edges, source, target, relation["relation_type"],
+                relation.get("strength") or "medium",
+            )
     for kp in kps:
         for related in json.loads(kp.get("related_kp_ids") or "[]"):
-            key = (kp["kp_id"], related, "related")
-            if related in ids and key not in seen:
-                edges.append({
-                    "source": kp["kp_id"], "target": related,
-                    "relation_type": "related",
-                })
-    return {"nodes": nodes, "edges": edges}
+            if related in ids:
+                _merge_graph_edge(edges, kp["kp_id"], related, "related", "medium")
+    for edge in edges.values():
+        shared = sum(
+            1 for kp_ids in problem_kps
+            if edge["source"] in kp_ids and edge["target"] in kp_ids
+        )
+        edge["shared_problem_count"] = shared
+        coefficient = {"low": 0.75, "medium": 1.0, "high": 1.25}[edge["strength"]]
+        edge["attraction"] = coefficient * min(1.5, 1 + shared * 0.1)
+    return {"nodes": nodes, "edges": list(edges.values())}
+
+
+def _merge_graph_edge(edges, source, target, relation_type, strength):
+    if source == target:
+        return
+    source, target = sorted((source, target))
+    key = (source, target)
+    strength = strength if strength in {"low", "medium", "high"} else "medium"
+    rank = {"low": 0, "medium": 1, "high": 2}
+    current = edges.get(key)
+    if current is None:
+        edges[key] = {
+            "source": source, "target": target,
+            "relation_type": relation_type, "strength": strength,
+        }
+    elif rank[strength] > rank[current["strength"]]:
+        current["strength"] = strength
+        current["relation_type"] = relation_type
 
 
 def figures_list(pool):

@@ -333,10 +333,12 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-toolbar select { width: 118px; }
 .graph-zoom { display: flex; gap: 4px; }
 #graph-canvas { height: calc(100% - 59px); overflow: hidden; background-image: linear-gradient(var(--dsw-border-l1) 1px, transparent 1px), linear-gradient(90deg, var(--dsw-border-l1) 1px, transparent 1px); background-size: 24px 24px; }
-.graph-stage { position: relative; width: 100%; height: 100%; transform-origin: center; transition: transform 120ms ease; }
-.graph-edge { position: absolute; z-index: 1; height: 1px; background: var(--dsw-border-l3); transform-origin: 0 50%; }
-.graph-node { position: absolute; z-index: 2; min-width: 74px; max-width: 144px; height: auto; min-height: 30px; padding: 4px 9px; transform: translate(-50%, -50%); border: 1px solid var(--dsw-border-l2); border-radius: 8px; background: var(--dsw-bg-layer-1); box-shadow: var(--dsw-shadow-lv1); font-size: 12px; line-height: 17px; text-align: left; }
-.graph-node:hover { transform: translate(-50%, -50%) scale(1.03); background: var(--dsw-interactive-bg-hover); }
+.graph-stage { position: relative; width: 100%; height: 100%; transform-origin: 0 0; }
+.graph-edge { position: absolute; z-index: 1; height: 1px; background: var(--dsw-border-l3); pointer-events: none; transform-origin: 0 50%; }
+.graph-node { position: absolute; z-index: 2; padding: 0; transform: translate(-50%, -50%); border: 2px solid var(--dsw-border-l2); border-radius: 50%; background: var(--dsw-bg-layer-1); box-shadow: var(--dsw-shadow-lv1); cursor: grab; }
+.graph-node:hover { transform: translate(-50%, -50%) scale(1.08); background: var(--dsw-interactive-bg-hover); }
+.graph-node:active { cursor: grabbing; }
+.graph-node-label { position: absolute; z-index: 3; max-width: 150px; transform: translateX(-50%); color: var(--dsw-label-primary); font-size: 12px; font-weight: 600; line-height: 16px; text-align: center; pointer-events: none; }
 .graph-node.needs_work { border-color: #df8f89; background: #fff5f4; }
 .graph-node.review { border-color: #d1b46d; background: #fffaf0; }
 .graph-node.mastered { border-color: #8dbb95; background: #f4fbf5; }

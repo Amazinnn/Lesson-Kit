@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
+const GraphPhysics = require("../../workbench/server/static/graph-physics.js");
 
 const SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/workbench.js"),
@@ -48,6 +49,8 @@ class FakeElement {
     this.children = [];
     this.attributes = {};
     this.style = {};
+    this.clientWidth = options.clientWidth || 800;
+    this.clientHeight = options.clientHeight || 600;
     this.queryAll = options.queryAll || (() => []);
     this.queryOne = options.queryOne || (() => null);
     this._innerHTML = "";
@@ -111,6 +114,12 @@ class FakeElement {
 
   focus() {}
 
+  getBoundingClientRect() {
+    return { left: 0, top: 0, width: this.clientWidth, height: this.clientHeight };
+  }
+
+  setPointerCapture() {}
+
   set innerHTML(value) {
     this._innerHTML = String(value);
     this.children = [];
@@ -147,7 +156,9 @@ class FakeStorage {
   }
 }
 
-function runWorkbench({ elements, storage = new FakeStorage(), fetch }) {
+function runWorkbench({
+  elements, storage = new FakeStorage(), fetch, reducedMotion = false, physics = GraphPhysics,
+}) {
   const document = {
     getElementById(id) {
       return elements[id] || null;
@@ -159,17 +170,29 @@ function runWorkbench({ elements, storage = new FakeStorage(), fetch }) {
       return [];
     },
   };
-  const window = { innerWidth: 1280, location: "", addEventListener() {} };
+  let rafCalls = 0;
+  const window = {
+    innerWidth: 1280,
+    location: "",
+    addEventListener() {},
+    matchMedia() { return { matches: reducedMotion }; },
+  };
   vm.runInNewContext(SOURCE, {
     document,
     window,
+    GraphPhysics: physics,
     sessionStorage: storage,
     fetch,
     console,
     setInterval,
     clearInterval,
+    requestAnimationFrame(callback) {
+      rafCalls += 1;
+      return setImmediate(() => callback(0));
+    },
+    cancelAnimationFrame(handle) { clearImmediate(handle); },
   }, { filename: "workbench.js" });
-  return { elements, storage, window };
+  return { elements, storage, window, get rafCalls() { return rafCalls; } };
 }
 
 async function flush() {
@@ -421,6 +444,7 @@ test("native graph reads the live model and saves a state only after confirmatio
       if (url.endsWith("/graph/model")) {
         return jsonResponse({ nodes: [{
           id: "kp-1", title: "加法规则", body: "正文", fragile: "易混", state: "review",
+          problem_count: 4,
         }], edges: [] });
       }
       return jsonResponse({ state: "mastered" });
@@ -432,7 +456,11 @@ test("native graph reads the live model and saves a state only after confirmatio
   assert.equal(calls[0].url, "/api/w/alpha/graph/model");
   assert.equal(canvas.children.length, 1);
   const node = canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1");
-  assert.equal(node.textContent, "加法规则");
+  const label = canvas.children[0].children.find(
+    (child) => child.className === "graph-node-label",
+  );
+  assert.equal(label.textContent, "加法规则");
+  assert.equal(node.style.width, "25.6px");
   node.click();
   assert.match(detail.innerHTML, /加法规则/);
   assert.equal(calls.some((call) => call.url.endsWith("/graph/state")), false);
@@ -447,6 +475,75 @@ test("native graph reads the live model and saves a state only after confirmatio
     item_type: "kp", item_id: "kp-1", state: "mastered",
   });
   assert.equal(app.window.location, "");
+});
+
+test("reduced-motion graph settles without scheduling animation frames", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const app = runWorkbench({
+    elements: { layout: layout(), "graph-canvas": canvas },
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [
+        { id: "kp-1", title: "加法规则", problem_count: 1 },
+        { id: "kp-2", title: "乘法规则", problem_count: 4 },
+      ],
+      edges: [{ source: "kp-1", target: "kp-2", attraction: 1.25 }],
+    }),
+  });
+  await flush();
+  assert.equal(app.rafCalls, 0);
+  assert.equal(canvas.children[0].children.filter(
+    (child) => (child.className || "").startsWith("graph-node "),
+  ).length, 2);
+});
+
+test("graph filtering rebuilds layout and dragging reheats the simulation", async () => {
+  let creates = 0;
+  let reheats = 0;
+  const physics = Object.assign({}, GraphPhysics, {
+    createSimulation(...args) {
+      creates += 1;
+      return GraphPhysics.createSimulation(...args);
+    },
+    reheat(simulation) {
+      reheats += 1;
+      return GraphPhysics.reheat(simulation);
+    },
+  });
+  const canvas = new FakeElement("graph-canvas");
+  const search = new FakeElement("graph-search");
+  const zoomIn = new FakeElement("graph-zoom-in");
+  const fit = new FakeElement("graph-fit");
+  runWorkbench({
+    elements: {
+      layout: layout(), "graph-canvas": canvas, "graph-search": search,
+      "graph-state-filter": new FakeElement("graph-state-filter"),
+      "graph-zoom-in": zoomIn, "graph-fit": fit,
+    },
+    physics,
+    fetch: () => jsonResponse({
+      nodes: [
+        { id: "kp-1", title: "加法规则", problem_count: 1 },
+        { id: "kp-2", title: "乘法规则", problem_count: 2 },
+      ],
+      edges: [{ source: "kp-1", target: "kp-2", attraction: 1 }],
+    }),
+  });
+  await flush();
+  assert.equal(creates, 1);
+  search.value = "加法";
+  search.trigger("input");
+  assert.equal(creates, 2);
+  const stage = canvas.children[0];
+  const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
+  node.trigger("pointerdown", { clientX: 100, clientY: 100, pointerId: 1 });
+  canvas.trigger("pointermove", { clientX: 140, clientY: 130 });
+  canvas.trigger("pointerup", { clientX: 140, clientY: 130 });
+  assert.ok(reheats >= 3);
+  zoomIn.click();
+  assert.match(stage.style.transform, /scale\(1\.1\)/);
+  canvas.trigger("wheel", { deltaY: 1, preventDefault() {} });
+  fit.click();
 });
 
 test("native graph saves knowledge content only from its explicit save control", async () => {

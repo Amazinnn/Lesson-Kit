@@ -163,6 +163,61 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(detail["attempts"][0]["answer_text"], "my proof")
         self.assertEqual(detail["schedule"], None)
 
+    def test_graph_model_counts_formal_problems_and_merges_semantic_edges(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute(
+                "INSERT INTO knowledge_points"
+                " (kp_id, knowledge_item, body, knowledge_type, importance)"
+                " VALUES (?, ?, ?, ?, ?)",
+                ("dmath-ch06-kp-003", "Binomial", "body", "concept-property", "core"),
+            )
+            conn.executemany(
+                "INSERT INTO problems"
+                " (problem_id, kp_ids, problem_text, solution, problem_type, source_kind)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                    ("dmath-ch06-prob-003", '["dmath-ch06-kp-001", "dmath-ch06-kp-002"]',
+                     "P3", "S3", "calculation", "textbook"),
+                    ("dmath-ch06-prob-004", '["dmath-ch06-kp-002", "dmath-ch06-kp-003"]',
+                     "P4", "S4", "calculation", "textbook"),
+                ],
+            )
+            conn.execute(
+                "INSERT INTO candidate_problems"
+                " (candidate_id, kp_ids, problem_text, solution, status)"
+                " VALUES (?, ?, ?, ?, ?)",
+                ("candidate-001", '["dmath-ch06-kp-001"]', "candidate", "", "pending"),
+            )
+            conn.executemany(
+                "INSERT INTO knowledge_relations VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                    ("rel-1", "dmath-ch06-kp-001", "dmath-ch06-kp-002",
+                     "prerequisite", "forward", "high"),
+                    ("rel-2", "dmath-ch06-kp-002", "dmath-ch06-kp-001",
+                     "related", "forward", "low"),
+                ],
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+        model = self.queries.graph_model(self.pool)
+        counts = {node["id"]: node["problem_count"] for node in model["nodes"]}
+        self.assertEqual(counts, {
+            "dmath-ch06-kp-001": 2,
+            "dmath-ch06-kp-002": 3,
+            "dmath-ch06-kp-003": 1,
+        })
+        self.assertEqual(len(model["edges"]), 1)
+        edge = model["edges"][0]
+        self.assertEqual({edge["source"], edge["target"]}, {
+            "dmath-ch06-kp-001", "dmath-ch06-kp-002",
+        })
+        self.assertEqual(edge["strength"], "high")
+        self.assertEqual(edge["shared_problem_count"], 1)
+        self.assertAlmostEqual(edge["attraction"], 1.375)
+
     def test_kp_detail(self):
         detail = self.queries.kp_detail(self.pool, "dmath-ch06-kp-002")
         self.assertEqual(detail["kp"]["kp_id"], "dmath-ch06-kp-002")
