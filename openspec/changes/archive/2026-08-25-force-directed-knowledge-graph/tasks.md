@@ -12,4 +12,4 @@
 ## 3. Delivery
 
 - [x] 3.1 Run target/full tests, JS checks, strict OpenSpec validation, and :3081 graph acceptance.
-- [ ] 3.2 Write changelog, archive the change, commit, and push main.
+- [x] 3.2 Write changelog, archive the change, commit, and push main.
