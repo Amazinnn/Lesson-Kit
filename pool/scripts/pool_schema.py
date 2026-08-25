@@ -364,6 +364,43 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         )
         changes.append("learning_current_state")
 
+    if not table_exists(conn, "content_sequences"):
+        conn.execute(
+            """
+            CREATE TABLE content_sequences (
+                scope       TEXT NOT NULL,
+                entity_type TEXT NOT NULL CHECK (
+                    entity_type IN ('kp', 'problem', 'candidate', 'relation')
+                ),
+                next_value  INTEGER NOT NULL CHECK (next_value > 0),
+                PRIMARY KEY (scope, entity_type)
+            )
+            """
+        )
+        changes.append("content_sequences")
+
+    for entity_type, table, id_column, marker in (
+        ("kp", "knowledge_points", "kp_id", "kp"),
+        ("problem", "problems", "problem_id", "prob"),
+        ("candidate", "candidate_problems", "candidate_id", "cand"),
+        ("relation", "knowledge_relations", "relation_id", "rel"),
+    ):
+        if not table_exists(conn, table):
+            continue
+        maximums = {}
+        for (object_id,) in conn.execute(f"SELECT {id_column} FROM {table}"):
+            parts = str(object_id).split("-")
+            if len(parts) < 3 or parts[-2] != marker or not parts[-1].isdigit():
+                continue
+            scope = "-".join(parts[:-2])
+            maximums[scope] = max(maximums.get(scope, 0), int(parts[-1]))
+        conn.executemany(
+            "INSERT INTO content_sequences (scope, entity_type, next_value) "
+            "VALUES (?, ?, ?) ON CONFLICT(scope, entity_type) DO UPDATE SET "
+            "next_value=MAX(content_sequences.next_value, excluded.next_value)",
+            [(scope, entity_type, value + 1) for scope, value in maximums.items()],
+        )
+
     if table_exists(conn, "feedback_events"):
         ratings = conn.execute(
             "SELECT item_type, item_id, rating FROM feedback_events "

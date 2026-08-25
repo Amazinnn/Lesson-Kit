@@ -108,6 +108,14 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         tables = self.table_names()
         self.assertIn("review_schedule", tables)
         self.assertIn("feedback_events", tables)
+        self.assertIn("content_sequences", tables)
+        self.assertEqual(
+            self.conn.execute(
+                "SELECT next_value FROM content_sequences "
+                "WHERE scope='dmath-ch06' AND entity_type='problem'"
+            ).fetchone()[0],
+            2,
+        )
 
     def test_migration_adds_columns(self):
         pool_schema.ensure_workbench_schema(self.conn)

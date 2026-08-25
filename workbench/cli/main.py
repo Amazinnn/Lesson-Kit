@@ -1,17 +1,21 @@
 """wb — the workbench super CLI. Data-only commands, no teaching semantics."""
 
 import argparse
+import importlib.util
 import json
+import sqlite3
 import subprocess
 import sys
+import tempfile
 from datetime import date
 from pathlib import Path
 
 from workbench import registry
 from workbench.bridge import runner
 from workbench.data import pool as pool_mod
+from workbench.data import content
 from workbench.data import queries
-from workbench.domain import feedback, pull, schedule as schedule_rules, weak
+from workbench.domain import feedback, learning_state, pull, schedule as schedule_rules, weak
 
 
 RESULT_PROGRESS = {"correct": "reviewing", "wrong": "wrong", "stuck": "stuck"}
@@ -176,6 +180,163 @@ def cmd_bridge(args):
     print(f"bridge provider configured: {args.provider}")
 
 
+def _json_input(path):
+    text = sys.stdin.read() if path == "-" else Path(path).read_text(encoding="utf-8-sig")
+    value = json.loads(text)
+    if not isinstance(value, dict):
+        raise ValueError("input must be a JSON object")
+    return value
+
+
+def _pipeline_script(name):
+    path = Path(__file__).resolve().parents[2] / "pipeline" / "scripts" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"workbench_{name.replace('-', '_')}", path)
+    module = importlib.util.module_from_spec(spec)
+    if str(path.parent) not in sys.path:
+        sys.path.insert(0, str(path.parent))
+    spec.loader.exec_module(module)
+    return module
+
+
+def _write_temp_json(folder, name, value):
+    path = Path(folder) / name
+    path.write_text(json.dumps(value, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+def _candidate_payload(row):
+    return {
+        "candidate_id": row["candidate_id"],
+        "kp_ids": row["kp_ids"],
+        "problem_text": row["problem_text"],
+        "options": row.get("options_json"),
+        "correct_option_id": row.get("correct_option_id"),
+        "solution": row.get("solution"),
+        "problem_type": row.get("problem_type"),
+        "interaction_type": row.get("interaction_type"),
+        "generation_purpose": row.get("generation_purpose"),
+        "origin_kind": row.get("origin_kind"),
+        "source_kind": row.get("source_kind"),
+        "source_evidence": row.get("source_evidence_json"),
+    }
+
+
+def _insert_candidate(pool, workspace, data, candidate_id=None):
+    candidate_id = candidate_id or content.next_id(pool, "candidate")
+    payload = dict(data)
+    payload["candidate_id"] = candidate_id
+    manifest = {
+        "metadata": {
+            "course": workspace.get("active_course", ""),
+            "chapter": workspace.get("active_chapter", ""),
+        },
+        "candidates": [payload],
+    }
+    with tempfile.TemporaryDirectory() as folder:
+        path = _write_temp_json(folder, "candidate.json", manifest)
+        inserted, _skipped, errors = _pipeline_script("insert-candidates").insert_candidates(
+            pool.db_path, path, upsert=candidate_id is not None and content.get(pool, "candidate", candidate_id) is not None,
+        )
+    if errors or inserted != 1:
+        raise ValueError("; ".join(errors) or "candidate was not inserted")
+    metadata = {
+        field: data[field]
+        for field in ("display_title", "topic_label", "display_summary")
+        if field in data
+    }
+    if metadata:
+        content.update(pool, "candidate", candidate_id, metadata)
+    return content.get(pool, "candidate", candidate_id)
+
+
+def _update_candidate(pool, workspace, candidate_id, changes):
+    current = content.get(pool, "candidate", candidate_id)
+    if current is None:
+        raise KeyError(candidate_id)
+    payload = _candidate_payload(current)
+    payload.update(changes)
+    return _insert_candidate(pool, workspace, payload, candidate_id=candidate_id)
+
+
+def _gate_candidate(pool, candidate_id, audit_path):
+    passed, failed, errors = _pipeline_script("gate-candidates").gate_candidates(
+        pool.db_path, audit_path, [candidate_id]
+    )
+    if errors or failed or passed != 1:
+        raise ValueError("; ".join(errors) or "candidate gate failed")
+    return content.get(pool, "candidate", candidate_id)
+
+
+def _promote_candidate(pool, candidate_id):
+    expected_id = content.next_id(pool, "problem")
+    imported, _warnings, errors = _pipeline_script("import-candidates").import_candidates(
+        pool.db_path, [candidate_id]
+    )
+    if errors or len(imported) != 1:
+        raise ValueError("; ".join(errors) or "candidate was not promoted")
+    if imported[0] != expected_id:
+        raise ValueError(f"candidate promotion allocated {imported[0]}, expected {expected_id}")
+    return {"candidate_id": candidate_id, "problem_id": imported[0], "action": "promoted"}
+
+
+def cmd_data(args):
+    workspace = _workspace(args.name)
+    pool = _pool(workspace)
+    try:
+        if args.action == "get":
+            result = content.get(pool, args.entity, args.target)
+        elif args.action == "list":
+            result = content.list_items(pool, args.entity)
+        elif args.action == "search":
+            result = content.search(pool, args.entity, args.target)
+        elif args.action == "history":
+            result = content.history(pool, args.entity, args.target)
+        elif args.action == "create":
+            data = _json_input(args.input)
+            result = (
+                _insert_candidate(pool, workspace, data)
+                if args.entity == "candidate"
+                else content.create(pool, args.entity, data)
+            )
+        elif args.action == "update":
+            data = _json_input(args.input)
+            result = (
+                _update_candidate(pool, workspace, args.target, data)
+                if args.entity == "candidate"
+                else content.update(pool, args.entity, args.target, data)
+            )
+        elif args.action == "delete":
+            content.delete(pool, args.entity, args.target)
+            result = {"entity": args.entity, "id": args.target, "action": "deleted"}
+        elif args.action == "state":
+            if args.entity not in ("kp", "problem"):
+                raise ValueError("state is supported only for kp and problem")
+            if content.get(pool, args.entity, args.target) is None:
+                raise KeyError(args.target)
+            schedule = learning_state.apply(pool, args.entity, args.target, args.value)
+            result = {
+                "entity": args.entity, "id": args.target, "state": args.value,
+                "due_at": schedule["due_at"],
+            }
+        elif args.action == "gate":
+            if args.entity != "candidate":
+                raise ValueError("gate is supported only for candidate")
+            result = _gate_candidate(pool, args.target, args.input)
+        else:
+            if args.entity != "candidate":
+                raise ValueError("promote is supported only for candidate")
+            result = _promote_candidate(pool, args.target)
+        if result is None:
+            raise KeyError(args.target)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    except (ValueError, KeyError, OSError, json.JSONDecodeError, sqlite3.Error) as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
+    finally:
+        pool.close()
+
+
 def cmd_guard(args):
     workspace = _workspace(_resolve_name(args))
     cmd = [sys.executable, "lessonkit.py", "guard", args.gate,
@@ -278,6 +439,18 @@ def build_parser():
     p.add_argument("--args", action="append", default=[])
     p.add_argument("--timeout", type=int, default=300)
     p.set_defaults(func=cmd_bridge)
+
+    p = sub.add_parser("data", help="read or explicitly mutate workspace content as JSON")
+    p.add_argument("name")
+    p.add_argument(
+        "action",
+        choices=["get", "list", "search", "history", "create", "update", "delete", "state", "gate", "promote"],
+    )
+    p.add_argument("entity", choices=["kp", "problem", "candidate", "relation"])
+    p.add_argument("target", nargs="?")
+    p.add_argument("value", nargs="?", choices=["needs_work", "review", "mastered"])
+    p.add_argument("--input")
+    p.set_defaults(func=cmd_data)
 
     p = sub.add_parser("guard", help="run a workspace guard")
     p.add_argument("name", nargs="?")

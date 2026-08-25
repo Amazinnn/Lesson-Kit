@@ -5,9 +5,9 @@
 
 ## 2. Governed Agent data plane
 
-- [ ] 2.1 Add readable content sequences and Data-layer CRUD/history/state transactions.
-- [ ] 2.2 Add `wb data` JSON commands, candidate gate delegation, and gate-only promotion.
-- [ ] 2.3 Verify zero-write reads, gate reset, readable IDs, and full physical cascades.
+- [x] 2.1 Add readable content sequences and Data-layer CRUD/history/state transactions.
+- [x] 2.2 Add `wb data` JSON commands, candidate gate delegation, and gate-only promotion.
+- [x] 2.3 Verify zero-write reads, gate reset, readable IDs, and full physical cascades.
 
 ## 3. Provider-native conversation bridge
 
