@@ -39,7 +39,7 @@ def build_command(provider, session_id=None):
     args = list(provider.get("args", []))
     model = provider.get("model")
     if name == "codex":
-        result = [command, "exec"]
+        result = [command, "exec", "--skip-git-repo-check"]
         if session_id:
             result.append("resume")
         result.append("--json")

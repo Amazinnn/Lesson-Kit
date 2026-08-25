@@ -157,7 +157,8 @@ class FakeStorage {
 }
 
 function runWorkbench({
-  elements, storage = new FakeStorage(), fetch, reducedMotion = false, physics = GraphPhysics,
+  elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
+  reducedMotion = false, physics = GraphPhysics, setTimeoutFn = setTimeout,
 }) {
   const document = {
     getElementById(id) {
@@ -182,10 +183,13 @@ function runWorkbench({
     window,
     GraphPhysics: physics,
     sessionStorage: storage,
+    localStorage: local,
     fetch,
     console,
     setInterval,
     clearInterval,
+    setTimeout: setTimeoutFn,
+    clearTimeout,
     requestAnimationFrame(callback) {
       rafCalls += 1;
       return setImmediate(() => callback(0));
@@ -227,6 +231,21 @@ function practiceElements() {
     "practice-mode-batch": new FakeElement("practice-mode-batch"),
     "start-area": new FakeElement("start-area"),
     "session-end-entry": new FakeElement("session-end-entry"),
+  };
+}
+
+function aiElements() {
+  return {
+    "ai-provider": new FakeElement("ai-provider"),
+    "ai-session": new FakeElement("ai-session"),
+    "ai-new": new FakeElement("ai-new"),
+    "ai-daily": new FakeElement("ai-daily"),
+    "ai-messages": new FakeElement("ai-messages"),
+    "ai-input": new FakeElement("ai-input"),
+    "ai-send": new FakeElement("ai-send"),
+    "ai-stop": new FakeElement("ai-stop"),
+    "ai-status": new FakeElement("ai-status"),
+    "ai-context": new FakeElement("ai-context"),
   };
 }
 
@@ -633,4 +652,140 @@ test("native graph exposes related problem state as an explicit overwrite", asyn
   assert.deepEqual(JSON.parse(write.options.body), {
     item_type: "problem", item_id: "p-1", state: "needs_work",
   });
+});
+
+test("AI column discovers providers and restores a recent native conversation", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  const calls = [];
+  runWorkbench({
+    elements,
+    storage: new FakeStorage({ wb_ai_conversation_alpha: JSON.stringify("conv-001") }),
+    fetch: (url) => {
+      calls.push(url);
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex", model: null }]);
+      if (url.endsWith("/ai/sessions")) return jsonResponse([{
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+      }]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+        messages: [
+          { role: "user", content: "什么是乘法规则？" },
+          { role: "assistant", content: "分步选择时相乘。" },
+        ],
+      });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  assert.ok(calls.some((url) => url.endsWith("/ai/providers")));
+  assert.ok(calls.some((url) => url.endsWith("/ai/sessions/conv-001")));
+  assert.equal(elements["ai-provider"].value, "codex");
+  assert.equal(elements["ai-session"].value, "conv-001");
+  assert.equal(elements["ai-messages"].children.length, 2);
+  assert.match(elements["ai-messages"].children[1].innerHTML, /分步选择时相乘/);
+});
+
+test("AI free message sends page identifiers and excludes a draft by default", async () => {
+  const pageLayout = layout();
+  pageLayout.dataset.page = "kp";
+  pageLayout.dataset.objectType = "kp";
+  pageLayout.dataset.objectId = "kp-001";
+  const elements = { layout: pageLayout, ...aiElements() };
+  const calls = [];
+  runWorkbench({
+    elements,
+    setTimeoutFn: (callback) => setImmediate(callback),
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([{
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+      }]);
+      if (url.endsWith("/ai/sessions/conv-001/turns")) return jsonResponse({ turn_id: "turn-001" });
+      if (url.includes("/turns/turn-001")) return jsonResponse({
+        turn: { status: "done" },
+        events: [{ sequence: 1, kind: "text", text: "回答" }, { sequence: 2, kind: "done" }],
+      });
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+        messages: [{ role: "assistant", content: "回答" }],
+      });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  elements["ai-input"].value = "解释当前知识点";
+  elements["ai-send"].click();
+  await flush();
+  await flush();
+  const turn = calls.find((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
+  const body = JSON.parse(turn.options.body);
+  assert.equal(body.message, "解释当前知识点");
+  assert.equal(body.page_type, "kp");
+  assert.equal(body.kp_id, "kp-001");
+  assert.equal(Object.hasOwn(body, "draft_answer"), false);
+});
+
+test("practice draft is attached only after the learner enables it", async () => {
+  const pageLayout = layout();
+  pageLayout.dataset.page = "practice";
+  const draft = new FakeElement("ai-include-draft", { checked: true });
+  const elements = {
+    layout: pageLayout, ...practiceElements(), ...aiElements(),
+    "ai-include-draft": draft,
+  };
+  const storage = new FakeStorage({
+    wb_current_alpha: JSON.stringify({ problem_id: "p-1", answer_text: "" }),
+  });
+  elements["answer-box"].value = "我的草稿";
+  elements["feedback-note"].value = "尚未提交";
+  const calls = [];
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([{
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+      }]);
+      if (url.endsWith("/ai/sessions/conv-001/turns")) return jsonResponse({ turn_id: "turn-001" });
+      return jsonResponse({ conversation_id: "conv-001", provider: "codex", status: "idle", messages: [] });
+    },
+  });
+  await flush();
+  elements["ai-input"].value = "看看我的思路";
+  elements["ai-send"].click();
+  await flush();
+  const turn = calls.find((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
+  const body = JSON.parse(turn.options.body);
+  assert.equal(body.include_draft, true);
+  assert.equal(body.draft_answer, "我的草稿");
+  assert.equal(body.draft_note, "尚未提交");
+});
+
+test("a running native turn exposes stop and calls only its cancel endpoint", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  const calls = [];
+  runWorkbench({
+    elements,
+    storage: new FakeStorage({ wb_ai_conversation_alpha: JSON.stringify("conv-001") }),
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([{
+        conversation_id: "conv-001", provider: "codex", status: "running",
+      }]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "running",
+        current_turn_id: "turn-007", messages: [],
+      });
+      return jsonResponse({ status: "cancelling" });
+    },
+  });
+  await flush();
+  assert.equal(elements["ai-send"].disabled, true);
+  assert.equal(elements["ai-stop"].classList.contains("hidden"), false);
+  elements["ai-stop"].click();
+  await flush();
+  assert.ok(calls.some((call) => call.url.endsWith("/ai/sessions/conv-001/cancel")));
 });

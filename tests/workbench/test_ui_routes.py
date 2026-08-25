@@ -124,6 +124,27 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("<a class='brand' href='/'>lesson-kit</a>", body)
         self.assertIn("ai-collapse", body)
 
+    def test_ai_column_is_free_conversation_not_task_shortcuts(self):
+        for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph"):
+            status, body = self.fetch(path)
+            self.assertEqual(status, 200)
+            self.assertIn("id='ai-provider'", body)
+            self.assertIn("id='ai-session'", body)
+            self.assertIn("id='ai-new'", body)
+            self.assertIn("id='ai-daily'", body)
+            self.assertIn("id='ai-messages'", body)
+            self.assertIn("id='ai-input'", body)
+            self.assertIn("id='ai-send'", body)
+            self.assertIn("id='ai-stop'", body)
+            self.assertNotIn("id='ai-explain'", body)
+            self.assertNotIn("id='ai-diagnose'", body)
+
+    def test_practice_only_offers_explicit_draft_attachment(self):
+        _, practice = self.fetch("/w/dmath/practice")
+        _, kps = self.fetch("/w/dmath/kps")
+        self.assertIn("id='ai-include-draft'", practice)
+        self.assertNotIn("id='ai-include-draft'", kps)
+
     def test_pages_have_editorial_landmarks(self):
         for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph",
                      "/w/dmath/session-end"):

@@ -387,12 +387,21 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   padding: 8px 10px;
 }
 #ai-actions { display: flex; gap: 4px; margin: 12px 0 18px; flex-wrap: wrap; }
+#ai-session-controls { display: grid; gap: 6px; margin: 12px 0 16px; }
+#ai-session-controls label,
+.ai-option { color: var(--dsw-label-secondary); font-size: 12px; }
+#ai-session-controls select { width: 100%; }
+.ai-session-actions { display: flex; gap: 6px; }
+.ai-option { display: flex; align-items: center; gap: 5px; }
+.ai-option input { width: auto; margin: 0; }
 .ai-conversation { display: flex; flex: 1; flex-direction: column; min-height: 0; border-top: 1px solid var(--dsw-border-l1); padding-top: 14px; }
 .ai-conversation .side-label { flex: none; }
 #ai-messages { flex: 1; overflow-y: auto; min-height: 0; font-size: 14px; }
 #ai-messages .msg { font-size: 14px; line-height: 22px; padding: 10px 2px; margin-bottom: 4px; }
-#ai-input-row { display: flex; gap: 6px; margin-top: 12px; }
+#ai-input-row { display: flex; gap: 6px; margin-top: 12px; align-items: flex-end; }
 #ai-input { flex: 1; min-height: 32px; }
+.ai-send-actions { display: flex; gap: 5px; }
+#ai-status { min-height: 18px; margin: 6px 0 0; }
 .msg .section { margin-top: 8px; }
 .msg .section h4 { margin: 6px 0 2px; font-size: 13px; color: var(--dsw-label-secondary); }
 

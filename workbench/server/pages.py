@@ -32,7 +32,8 @@ def hub_page(workspaces):
     return _base("lesson-kit 工作台", body)
 
 
-def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False):
+def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
+          page_type=None, object_id=None):
     course = workspace.get("active_course") or ""
     chapter = workspace.get("active_chapter") or ""
     meta = f"<span class='meta'>{html.escape(workspace['name'])}"
@@ -47,10 +48,16 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         "</header>"
     )
     left = _left_column(workspace, workspaces, weak_items, active_nav)
-    ai = _ai_column(workspace["name"], graph_mode)
+    page_type = page_type or active_nav
+    object_attributes = (
+        f" data-object-type='{page_type}' data-object-id='{html.escape(object_id)}'"
+        if object_id else ""
+    )
+    ai = _ai_column(workspace["name"], graph_mode, page_type)
     body = (
         topbar
-        + f"<div id='layout' data-workspace='{workspace['name']}'>"
+        + f"<div id='layout' data-workspace='{workspace['name']}' "
+        f"data-page='{page_type}'{object_attributes}>"
         + f"<aside id='left-column'>{left}</aside>"
         + f"<main id='middle'>{middle_html}</main>"
         + f"<aside id='ai-column'>{ai}</aside>"
@@ -116,7 +123,7 @@ def practice_page(workspace, workspaces, weak_items):
         "</div>"
         "</div>"
     )
-    return shell(workspace, workspaces, weak_items, middle, "practice")
+    return shell(workspace, workspaces, weak_items, middle, "practice", page_type="practice")
 
 
 def kps_page(workspace, workspaces, weak_items, pool):
@@ -145,14 +152,17 @@ def kps_page(workspace, workspaces, weak_items, pool):
         f"<ul class='knowledge-list'>{items or '<li class="muted">暂无知识点</li>'}</ul>"
         "</section></div>"
     )
-    return shell(workspace, workspaces, weak_items, middle, "kps")
+    return shell(workspace, workspaces, weak_items, middle, "kps", page_type="kps")
 
 
 def kp_page(workspace, workspaces, weak_items, pool, kp_id):
     detail = queries.kp_detail(pool, kp_id)
     kp = detail["kp"]
     if kp is None:
-        return shell(workspace, workspaces, weak_items, "<h1>未知知识点</h1>", "kps")
+        return shell(
+            workspace, workspaces, weak_items, "<h1>未知知识点</h1>", "kps",
+            page_type="kp", object_id=kp_id,
+        )
     signals_html = "".join(
         f"<li>{html.escape(s['signal_type'])} — {html.escape(s['weight'])}"
         f"{'（×' + str(s['evidence_count']) + '）' if s.get('evidence_count', 1) >= 2 else ''}"
@@ -188,7 +198,10 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
         f"{problems_html or '<p class=\"muted\">—</p>'}"
         "</section></div>"
     )
-    return shell(workspace, workspaces, weak_items, middle, "kps")
+    return shell(
+        workspace, workspaces, weak_items, middle, "kps",
+        page_type="kp", object_id=kp_id,
+    )
 
 
 def graph_page(workspace, workspaces, weak_items, has_artifact):
@@ -213,7 +226,8 @@ def graph_page(workspace, workspaces, weak_items, has_artifact):
         "</div><div id='graph-canvas' tabindex='0' aria-label='知识图谱画布'></div>"
         "</section></div>"
     )
-    return shell(workspace, workspaces, weak_items, middle, "graph", graph_mode=True)
+    return shell(workspace, workspaces, weak_items, middle, "graph", graph_mode=True,
+                 page_type="graph")
 
 
 def session_end_page(workspace, workspaces, weak_items):
@@ -235,7 +249,8 @@ def session_end_page(workspace, workspaces, weak_items):
         "<button id='practice-similar' class='primary'>再练同类</button>"
         "</div></section></div>"
     )
-    return shell(workspace, workspaces, weak_items, middle, "session-end")
+    return shell(workspace, workspaces, weak_items, middle, "session-end",
+                 page_type="session-end")
 
 
 def _left_column(workspace, workspaces, weak_items, active_nav):
@@ -327,22 +342,30 @@ def _problem_text(problem):
     return " ".join(text.split())
 
 
-def _ai_column(workspace_name, graph_mode=False):
+def _ai_column(workspace_name, graph_mode=False, page_type=""):
+    draft = (
+        "<label class='ai-option' for='ai-include-draft'>"
+        "<input id='ai-include-draft' type='checkbox'> 附上当前未提交作答</label>"
+        if page_type == "practice" else ""
+    )
     teacher = (
         "<section class='ai-identity'>"
         "<div id='ai-head'><div><p class='side-label'>外部 Agent</p><h2>AI 教师</h2></div>"
         "<button id='ai-collapse' class='ghost sm' title='折叠/展开'>‹</button></div>"
-        "<div id='ai-context'>上下文：无</div></section>"
-        "<section id='ai-actions' class='ai-actions' aria-label='AI 操作'>"
-        "<button id='ai-explain' class='primary sm'>讲解</button>"
-        "<button id='ai-diagnose' class='outline sm'>诊断</button>"
-        "<button id='ai-new' class='ghost sm'>新会话</button>"
-        "</section>"
+        "<div id='ai-context'>当前页面上下文会在发送时读取。</div></section>"
+        "<section id='ai-session-controls' aria-label='Agent 与会话'>"
+        "<label for='ai-provider'>Agent</label><select id='ai-provider' aria-label='选择 Agent'></select>"
+        "<label for='ai-session'>当前对话</label><select id='ai-session' aria-label='最近对话'></select>"
+        "<div class='ai-session-actions'><button id='ai-new' class='outline sm'>新建对话</button></div>"
+        "<label class='ai-option' for='ai-daily'><input id='ai-daily' type='checkbox'> "
+        "每天首次进入时新建对话</label></section>"
         "<section class='ai-conversation'><p class='side-label'>对话</p>"
-        "<div id='ai-messages'></div></section>"
+        "<div id='ai-messages'></div><p id='ai-status' class='muted' aria-live='polite'></p></section>"
+        f"{draft}"
         "<div id='ai-input-row' class='ai-input-row'>"
-        "<input id='ai-input' placeholder='附加说明（可选）'>"
-        "<button id='ai-send' class='primary sm'>发送</button>"
+        "<textarea id='ai-input' rows='2' placeholder='向 AI 教师提问'></textarea>"
+        "<div class='ai-send-actions'><button id='ai-stop' class='outline sm hidden'>停止</button>"
+        "<button id='ai-send' class='primary sm' disabled>发送</button></div>"
         "</div>"
     )
     if not graph_mode:

@@ -44,11 +44,11 @@ class ConversationProviderTests(unittest.TestCase):
 
         self.assertEqual(
             new,
-            ["codex", "exec", "--json", "--model", "gpt-test", "--profile", "teacher", "-"],
+            ["codex", "exec", "--skip-git-repo-check", "--json", "--model", "gpt-test", "--profile", "teacher", "-"],
         )
         self.assertEqual(
             resumed,
-            ["codex", "exec", "resume", "--json", "--model", "gpt-test", "--profile", "teacher", "session-123", "-"],
+            ["codex", "exec", "--skip-git-repo-check", "resume", "--json", "--model", "gpt-test", "--profile", "teacher", "session-123", "-"],
         )
 
     def test_claude_uses_print_stream_json_and_resume(self):

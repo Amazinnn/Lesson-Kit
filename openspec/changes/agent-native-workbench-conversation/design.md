@@ -28,6 +28,7 @@ The current bridge launches configured one-shot commands for `explain` and `diag
 4. The right column removes visible explain/diagnose shortcuts but preserves their APIs. It shows provider/session controls, recent ten conversations, new conversation, messages, optional draft checkbox, input, send, and a temporary stop control.
 5. The optional daily-new-session setting lives in browser local storage and defaults off. When enabled, the first entry on a new browser-local date creates a session only if no turn is currently running.
 6. A successful Agent content mutation ends with a compact object/action/link summary. When it affects the visible anchor, the browser re-reads the relevant model; structural changes may perform a controlled page refresh while preserving the conversation id.
+7. The browser bridge follows the same practical lifecycle pattern as Paseo-like remote Agent clients: discover providers, create or resume one locked native session, stream normalized events, and expose an explicit stop action. Paseo is a reference for lifecycle ergonomics only; lesson-kit remains local-CLI-first and adds no remote service dependency.
 
 ## Compatibility and boundary
 

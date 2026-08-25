@@ -44,7 +44,7 @@ def _read_json(path):
 
 
 def _write_json(path, value):
-    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary = path.with_name(path.name + f".{threading.get_ident()}.tmp")
     temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
     temporary.replace(path)
 
@@ -280,14 +280,14 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
 
 def _finish(folder, conversation_id, turn_id, status, error):
     now = _now()
-    turn_path = folder / f"{turn_id}.json"
-    turn = _read_json(turn_path)
-    turn.update({"status": status, "error": error, "updated_at": now})
-    _write_json(turn_path, turn)
     conversation_path = folder / "conversation.json"
     conversation = _read_json(conversation_path)
     conversation.update({"status": "idle", "current_turn_id": None, "updated_at": now})
     _write_json(conversation_path, conversation)
+    turn_path = folder / f"{turn_id}.json"
+    turn = _read_json(turn_path)
+    turn.update({"status": status, "error": error, "updated_at": now})
+    _write_json(turn_path, turn)
 
 
 def cancel(pool, conversation_id):

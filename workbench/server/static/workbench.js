@@ -12,6 +12,12 @@
   var CURRENT_KEY = "wb_current_" + WS;
   var SIMILAR_KEY = "wb_similar_round_" + WS;
   var MODE_KEY = "wb_practice_mode_" + WS;
+  var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
+  var AI_PROVIDER_KEY = "wb_ai_provider_" + WS;
+  var AI_RECENT_KEY = "wb_ai_recent_" + WS;
+  var AI_DAILY_KEY = "wb_ai_daily_" + WS;
+  var AI_DAILY_DATE_KEY = "wb_ai_daily_date_" + WS;
+  var selectedGraphKpId = null;
 
   /* ---------- helpers ---------- */
 
@@ -64,6 +70,19 @@
         return "<span class='math'>" + m + "</span>";
       })
       .replace(/\n/g, "<br>");
+  }
+
+  function recordRecent(type, id) {
+    if (!type || !id) return;
+    var recent = load(AI_RECENT_KEY, []).filter(function (item) {
+      return !(item.type === type && item.id === id);
+    });
+    recent.unshift({ type: type, id: id });
+    store(AI_RECENT_KEY, recent.slice(0, 3));
+  }
+
+  if (layout.dataset.objectType && layout.dataset.objectId) {
+    recordRecent(layout.dataset.objectType, layout.dataset.objectId);
   }
 
   /* ---------- workspace switch ---------- */
@@ -119,6 +138,8 @@
 
     function renderGraphDetail(node) {
       if (!graphDetail) return;
+      selectedGraphKpId = node.id;
+      recordRecent("kp", node.id);
       graphDetail.innerHTML = "<p class='side-label'>知识点详情</p><h2>"
         + escapeHtml(node.title) + "</h2><p class='item-id'>" + escapeHtml(node.id)
         + "</p><p class='graph-detail-body'>" + richText(node.body || "暂无正文")
@@ -424,15 +445,15 @@
 
   function updateAiContext() {
     var el = document.getElementById("ai-context");
-    var hasCurrent = !!currentProblem;
-    var explainBtn = document.getElementById("ai-explain");
-    var diagnoseBtn = document.getElementById("ai-diagnose");
-    if (explainBtn) explainBtn.disabled = !hasCurrent;
-    if (diagnoseBtn) diagnoseBtn.disabled = !hasCurrent;
     if (!el) return;
-    el.textContent = hasCurrent
-      ? "当前题：" + currentProblem.problem_id + "（Agent 可自行检索全部记录）"
-      : "上下文：无";
+    var pageLabels = {
+      practice: "练习", kp: "知识点", kps: "知识点列表",
+      graph: "知识图谱", "session-end": "统一自评",
+    };
+    var label = pageLabels[layout.dataset.page] || "工作台";
+    if (currentProblem) label += " · 当前题 " + currentProblem.problem_id;
+    else if (layout.dataset.objectId) label += " · " + layout.dataset.objectId;
+    el.textContent = "当前页面：" + label;
   }
 
   function currentKps() {
@@ -442,6 +463,7 @@
   function setCurrent(problem) {
     currentProblem = problem || null;
     store(CURRENT_KEY, currentProblem);
+    if (currentProblem) recordRecent("problem", currentProblem.problem_id);
     updateAiContext();
   }
 
@@ -690,6 +712,18 @@
 
   var messages = document.getElementById("ai-messages");
   var aiInput = document.getElementById("ai-input");
+  var aiProvider = document.getElementById("ai-provider");
+  var aiSession = document.getElementById("ai-session");
+  var aiNew = document.getElementById("ai-new");
+  var aiDaily = document.getElementById("ai-daily");
+  var aiSend = document.getElementById("ai-send");
+  var aiStop = document.getElementById("ai-stop");
+  var aiStatus = document.getElementById("ai-status");
+  var aiDraft = document.getElementById("ai-include-draft");
+  var aiConversation = load(AI_CONVERSATION_KEY, "");
+  var aiTurn = null;
+  var aiPollTimer = null;
+  var aiPollSequence = 0;
 
   function aiAdd(html, cls) {
     var div = document.createElement("div");
@@ -777,11 +811,234 @@
   var send = document.getElementById("ai-send");
   if (explain) explain.addEventListener("click", function () { aiTask("explain"); });
   if (diagnose) diagnose.addEventListener("click", function () { aiTask("diagnose"); });
-  if (send) send.addEventListener("click", function () { aiTask("explain"); });
-  if (fresh) fresh.addEventListener("click", function () {
+  if (false && send) send.addEventListener("click", function () { aiTask("explain"); });
+  if (false && fresh) fresh.addEventListener("click", function () {
     messages.innerHTML = "";
     aiAdd("<p>新会话已开始（记录仍在池中）。</p>");
   });
+
+  function aiSetStatus(text) {
+    if (aiStatus) aiStatus.textContent = text || "";
+  }
+
+  function aiSetRunning(running) {
+    if (aiSend) aiSend.disabled = running || !aiConversation;
+    if (aiStop) aiStop.classList.toggle("hidden", !running);
+    if (aiInput) aiInput.disabled = running;
+  }
+
+  function aiRecordRecent(type, id) {
+    if (!type || !id) return;
+    var recent = load(AI_RECENT_KEY, []).filter(function (item) {
+      return !(item.type === type && item.id === id);
+    });
+    recent.unshift({ type: type, id: id });
+    store(AI_RECENT_KEY, recent.slice(0, 3));
+  }
+
+  function aiRenderConversation(record) {
+    if (!messages) return;
+    messages.innerHTML = "";
+    (record.messages || []).forEach(function (message) {
+      aiAdd(richText(message.content || ""), message.role === "user" ? "user" : "ai");
+    });
+    aiSetRunning(record.status === "running");
+    aiSetStatus(record.status === "running" ? "Agent 正在处理…" : "");
+    if (record.status === "running" && record.current_turn_id) {
+      aiTurn = record.current_turn_id;
+      aiPollConversationTurn();
+    }
+  }
+
+  function aiLoadConversation(conversationId) {
+    if (!conversationId) return Promise.resolve();
+    aiConversation = conversationId;
+    store(AI_CONVERSATION_KEY, conversationId);
+    if (aiSession) aiSession.value = conversationId;
+    return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(aiRenderConversation);
+  }
+
+  function aiPopulateSessions(items) {
+    if (!aiSession) return;
+    aiSession.innerHTML = "";
+    (items || []).forEach(function (item) {
+      var option = document.createElement("option");
+      option.value = item.conversation_id;
+      option.textContent = item.conversation_id + " · " + item.provider;
+      aiSession.appendChild(option);
+    });
+    var preferred = aiConversation || (items && items[0] && items[0].conversation_id);
+    if (preferred) aiLoadConversation(preferred);
+  }
+
+  function aiCreateConversation() {
+    var provider = aiProvider && aiProvider.value;
+    if (!provider) return;
+    post("/ai/sessions", { provider: provider }).then(function (record) {
+      aiConversation = record.conversation_id;
+      store(AI_CONVERSATION_KEY, aiConversation);
+      if (messages) messages.innerHTML = "";
+      aiLoadConversation(aiConversation);
+    }).catch(function (err) {
+      aiSetStatus("无法新建对话：" + (err.message || "未知错误"));
+    });
+  }
+
+  function aiLocalDate() {
+    var now = new Date();
+    return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0")
+      + "-" + String(now.getDate()).padStart(2, "0");
+  }
+
+  function aiContextBody(message) {
+    var body = {
+      message: message,
+      route: window.location.pathname || "",
+      page_type: layout.dataset.page || "unknown",
+      recent_objects: load(AI_RECENT_KEY, []),
+    };
+    if (layout.dataset.objectType) body.object_type = layout.dataset.objectType;
+    if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
+    if (layout.dataset.page === "kp") body.kp_id = layout.dataset.objectId;
+    if (layout.dataset.page === "practice" && currentProblem) {
+      body.problem_id = currentProblem.problem_id;
+      body.practice_mode = sessionStorage.getItem(MODE_KEY) || "";
+      body.progress = { seen: session().length };
+      if (aiDraft && aiDraft.checked) {
+        body.include_draft = true;
+        body.draft_answer = answerBox ? answerBox.value : (currentProblem.answer_text || "");
+        body.draft_note = feedbackNote ? feedbackNote.value : "";
+      }
+    }
+    if (layout.dataset.page === "graph") {
+      body.selected_kp_id = selectedGraphKpId;
+      body.graph_filter = {
+        query: (document.getElementById("graph-search") || {}).value || "",
+        state: (document.getElementById("graph-state-filter") || {}).value || "",
+      };
+    }
+    return body;
+  }
+
+  function aiAppendEvents(data) {
+    (data.events || []).forEach(function (event) {
+      aiPollSequence = Math.max(aiPollSequence, event.sequence || 0);
+      if (event.kind === "text") aiAdd(richText(event.text || ""), "ai");
+      else if (event.kind === "error") aiSetStatus(event.text || "Agent 返回错误");
+      else if (event.kind === "phase" && event.label !== "provider.started") aiSetStatus(event.label || "");
+    });
+    if (!data.turn) return;
+    if (data.turn.status === "done") {
+      aiTurn = null;
+      aiSetRunning(false);
+      aiSetStatus("");
+      aiLoadConversation(aiConversation);
+    } else if (data.turn.status === "failed") {
+      aiTurn = null;
+      aiSetRunning(false);
+      aiSetStatus("Agent 失败：" + (data.turn.error || "未知错误"));
+    } else if (data.turn.status === "cancelled") {
+      aiTurn = null;
+      aiSetRunning(false);
+      aiSetStatus("本轮已停止。");
+    }
+  }
+
+  function aiPollConversationTurn() {
+    if (!aiConversation || !aiTurn) return;
+    if (aiPollTimer) clearTimeout(aiPollTimer);
+    api("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns/"
+      + encodeURIComponent(aiTurn) + "?after=" + aiPollSequence).then(function (data) {
+      aiAppendEvents(data);
+      if (data.turn && (data.turn.status === "running" || data.turn.status === "queued")) {
+        aiPollTimer = setTimeout(aiPollConversationTurn, 350);
+      }
+    }).catch(function () {
+      aiTurn = null;
+      aiSetRunning(false);
+      aiSetStatus("无法读取 Agent 进度。");
+    });
+  }
+
+  function aiSendMessage() {
+    var message = aiInput ? aiInput.value.trim() : "";
+    if (!message || !aiConversation || aiTurn) return;
+    aiAdd(richText(message), "user");
+    aiInput.value = "";
+    aiSetRunning(true);
+    aiSetStatus("正在发送…");
+    post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns", aiContextBody(message))
+      .then(function (turn) {
+        aiTurn = turn.turn_id;
+        aiPollSequence = 0;
+        aiPollConversationTurn();
+      }).catch(function (err) {
+        aiSetRunning(false);
+        aiSetStatus("发送失败：" + (err.message || "未知错误"));
+      });
+  }
+
+  if (aiProvider) {
+    api("/ai/providers").then(function (providers) {
+      aiProvider.innerHTML = "";
+      (providers || []).forEach(function (provider) {
+        var option = document.createElement("option");
+        option.value = provider.name;
+        option.textContent = provider.name + (provider.model ? " · " + provider.model : "");
+        aiProvider.appendChild(option);
+      });
+      var remembered = localStorage.getItem(AI_PROVIDER_KEY);
+      if (remembered && (providers || []).some(function (provider) { return provider.name === remembered; })) {
+        aiProvider.value = remembered;
+      } else if (providers && providers[0]) {
+        aiProvider.value = providers[0].name;
+      }
+      if (aiProvider.value) localStorage.setItem(AI_PROVIDER_KEY, aiProvider.value);
+      api("/ai/sessions").then(function (sessions) {
+        aiPopulateSessions(sessions);
+        var today = aiLocalDate();
+        if (aiDaily && aiDaily.checked && localStorage.getItem(AI_DAILY_DATE_KEY) !== today
+          && !sessions.some(function (item) { return item.status === "running"; })) {
+          localStorage.setItem(AI_DAILY_DATE_KEY, today);
+          aiCreateConversation();
+        }
+      }).catch(function () {
+        aiSetStatus("无法读取最近对话。");
+      });
+    }).catch(function () {
+      aiSetStatus("未发现可用 Agent CLI。");
+    });
+    aiProvider.addEventListener("change", function () {
+      localStorage.setItem(AI_PROVIDER_KEY, aiProvider.value);
+    });
+  }
+  if (aiSession) aiSession.addEventListener("change", function () {
+    aiTurn = null;
+    aiLoadConversation(aiSession.value);
+  });
+  if (aiNew) aiNew.addEventListener("click", aiCreateConversation);
+  if (aiSend) aiSend.addEventListener("click", aiSendMessage);
+  if (aiInput) aiInput.addEventListener("keydown", function (event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      if (event.preventDefault) event.preventDefault();
+      aiSendMessage();
+    }
+  });
+  if (aiStop) aiStop.addEventListener("click", function () {
+    if (!aiConversation || !aiTurn) return;
+    post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/cancel", {})
+      .then(function () { aiSetStatus("正在停止…"); })
+      .catch(function () { aiSetStatus("停止请求失败。"); });
+  });
+  if (aiDaily) {
+    aiDaily.checked = localStorage.getItem(AI_DAILY_KEY) === "1";
+    aiDaily.addEventListener("change", function () {
+      localStorage.setItem(AI_DAILY_KEY, aiDaily.checked ? "1" : "0");
+    });
+  }
+  if (layout.dataset.objectType && layout.dataset.objectId) {
+    aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);
+  }
 
   /* ---------- page init ---------- */
 

@@ -272,7 +272,8 @@ def _delete_kp(conn, kp_id):
     )
 
     for table, id_column in (("problems", "problem_id"), ("candidate_problems", "candidate_id")):
-        for row in conn.execute(f"SELECT {id_column}, kp_ids FROM {table}").fetchall():
+        rows = conn.execute(f"SELECT {id_column}, kp_ids FROM {table}").fetchall()
+        for row in rows:
             kp_ids = json.loads(row[1] or "[]")
             if kp_id not in kp_ids:
                 continue
@@ -287,10 +288,11 @@ def _delete_kp(conn, kp_id):
             else:
                 _delete_candidate(conn, row[0])
 
-    for row in conn.execute(
+    rows = conn.execute(
         "SELECT kp_id, related_kp_ids FROM knowledge_points "
         "WHERE related_kp_ids IS NOT NULL"
-    ).fetchall():
+    ).fetchall()
+    for row in rows:
         related = json.loads(row[1] or "[]")
         if kp_id in related:
             conn.execute(
