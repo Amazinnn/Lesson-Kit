@@ -38,14 +38,17 @@ workbench/
 │   ├── __init__.py
 │   ├── pool.py        # Pool：工作区级只读/写连接 + 查询（weak/due/problem/kp/figures）
 │   ├── migrations.py  # 幂等增量迁移（ensure_* 模式，沿用 pool_schema.py）
-│   └── queries.py     # 视图查询（hub 统计、练习页、复习页数据）
+│   ├── queries.py     # 视图查询（hub 统计、练习页、复习页数据）
+│   └── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联（唯一经 Pool 碰 SQLite）
 ├── bridge/
 │   ├── __init__.py
 │   ├── jobs.py        # 任务生命周期（queued/running/done/failed；.lessonkit/jobs/）
 │   ├── contracts.py   # 输出契约校验（explain 四节 / diagnose 定位-提示-溯源-追问）
 │   ├── providers.py   # 外部 CLI 拉起（cwd=工作区，超时，stdout 落日志；环境变量 LESSONKIT_JOB_DIR / LESSONKIT_OUTPUT_PATH 传递任务信息）
 │   ├── teacher.py     # 任务指令渲染（教师行为契约注入，纯数据接口，零教学硬编码）
-│   └── runner.py      # AI 任务编排（建任务→拉 provider→契约校验→done/failed；无 provider 优雅失败）
+│   ├── runner.py      # AI 任务编排（建任务→拉 provider→契约校验→done/failed；无 provider 优雅失败）
+│   ├── conversation_providers.py # PATH Agent 发现、原生新建/续聊命令与 JSONL 归一化
+│   └── conversations.py # conv-###、串行 turn、取消、成功镜像
 ├── cli/
 │   ├── __init__.py
 │   └── main.py        # wb 入口（argparse；纯数据命令，无教学语义）
@@ -53,6 +56,7 @@ workbench/
 │   ├── __init__.py
 │   ├── app.py         # BaseHTTPRequestHandler 路由（单进程单端口 127.0.0.1）
 │   ├── api.py         # JSON API 处理器（hub/weak/pull/practice/feedback/schedule/figures/ai）
+│   ├── context.py     # 按路由/对象 ID 重建 Agent 权威页面上下文
 │   └── pages.py       # 服务端渲染 HTML（KaTeX 资产静态复用 editable-graph/dist）
 └── tests/             # pytest；tests/test_*.py 与 tests/workbench/ 分开
 ```
@@ -63,12 +67,14 @@ workbench/
   interval_days, due_at, last_rating, last_reviewed_at)`，PK `(item_type, item_id, direction)`，
   direction 默认空串（普通项无方向；卡片按方向独立调度）。
 - 新表 `feedback_events(id, item_type, item_id, rating, note, created_at)` 追加日志。
+- 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
 - 题目与候选题可增量拥有 `display_title`（可读短标题）与 `topic_label`（单一主题标签）；它们是内容展示字段，不替代稳定 ID。
 - 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
 - 新列：`knowledge_points.figure_paths`、`problems.figure_paths`（逻辑路径 JSON）、
   `problem_attempts.answer_text`。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪）、
   `.lessonkit/explain/{course}/{chapter}/{item_id}.md`（跟踪）、`.lessonkit/jobs/<id>/`（gitignored）、
+  `.lessonkit/jobs/conv-###/`（provider 会话指针、运行事件与成功问答镜像）、
   `~/.lessonkit-workbench/workspaces.json` + `bridges.json`（用户级，JSON——stdlib 无 YAML 解析）。
 - ID 一律可读顺序标识（`job-003`），无哈希。
 
@@ -86,6 +92,9 @@ workbench/
 - `bridge.jobs`：`create/start/finish/fail/status`；任务文件 schema（operation/context/
   output_contract）固定，新增操作只加 operation 类型。
 - `bridge.contracts.validate(kind, result_text) -> (ok, reasons)`——确定性、可单测。
+- `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
+- `bridge.conversations`：每工作区 `list/create/get/start/cancel`；同一会话单轮串行，完整上下文留在 provider 原生 store。
+- `server.context`：按浏览器提供的路由与对象 ID 重新读取 Pool，生成权威 Agent 上下文；不接收整页 DOM。
 - `server.api`：handler 注册表 {method, path_pattern, handler(pool, ws, args) -> json}；
   HTML 页面经 pages.py，JSON 经 api.py，二者不混。
 
