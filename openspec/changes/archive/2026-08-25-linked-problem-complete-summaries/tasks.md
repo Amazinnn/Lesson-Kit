@@ -8,4 +8,4 @@
 
 - [x] 2.1 Remove runtime truncation and render title, optional summary, and expandable full text.
 - [x] 2.2 Generate, validate, audit, and apply the dmath metadata sidecar.
-- [ ] 2.3 Run targeted/full verification, write changelog, archive, commit, and push.
+- [x] 2.3 Run targeted/full verification, write changelog, archive, commit, and push.
