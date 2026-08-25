@@ -11,9 +11,9 @@
 
 ## 3. Provider-native conversation bridge
 
-- [ ] 3.1 Add PATH discovery and optional provider overrides.
-- [ ] 3.2 Add provider-locked conversation storage, native new/resume commands, normalized events, cancellation, and successful transcript mirroring.
-- [ ] 3.3 Add authoritative page-context reconstruction and internal conversation HTTP endpoints.
+- [x] 3.1 Add PATH discovery and optional provider overrides.
+- [x] 3.2 Add provider-locked conversation storage, native new/resume commands, normalized events, cancellation, and successful transcript mirroring.
+- [x] 3.3 Add authoritative page-context reconstruction and internal conversation HTTP endpoints.
 
 ## 4. Right-column conversation UI
 

@@ -6,11 +6,12 @@ import time
 from datetime import date
 from pathlib import Path
 
-from workbench.bridge import runner
+from workbench.bridge import conversation_providers, conversations, runner
 from workbench.data import queries
 from workbench.domain import (
     feedback, learning_state, pull, schedule as schedule_rules, weak,
 )
+from workbench.server import context as agent_context
 
 
 class ApiError(Exception):
@@ -180,6 +181,64 @@ def ai_run(pool, workspace, params, body):
 def ai_status(pool, workspace, params, body):
     from workbench.bridge import jobs
     return jobs.status(pool.jobs_dir(), params["job_id"])
+
+
+def ai_providers(pool, workspace, params, body):
+    return [
+        {"name": provider["name"], "model": provider.get("model")}
+        for provider in conversation_providers.discover()
+    ]
+
+
+def ai_sessions_list(pool, workspace, params, body):
+    return conversations.list_sessions(pool, limit=10)
+
+
+def ai_sessions_create(pool, workspace, params, body):
+    provider = body.get("provider")
+    if not isinstance(provider, str) or not provider:
+        raise ApiError(400, "provider is required")
+    try:
+        return conversations.create(pool, provider)
+    except KeyError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def ai_session_get(pool, workspace, params, body):
+    return conversations.get(pool, params["conversation_id"])
+
+
+def ai_turn_start(pool, workspace, params, body):
+    message = body.get("message")
+    if not isinstance(message, str) or not message.strip():
+        raise ApiError(400, "message is required")
+    context = agent_context.build(pool, workspace, body)
+    try:
+        return conversations.start_turn(
+            pool, workspace, params["conversation_id"], message.strip(), context
+        )
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+
+
+def ai_turn_events(pool, workspace, params, body):
+    turn = conversations.get_turn(
+        pool, params["conversation_id"], params["turn_id"]
+    )
+    return {
+        "turn": turn,
+        "events": conversations.events(
+            pool, params["conversation_id"], params["turn_id"],
+            after=int(params.get("after", 0)),
+        ),
+    }
+
+
+def ai_turn_cancel(pool, workspace, params, body):
+    try:
+        return conversations.cancel(pool, params["conversation_id"])
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
 
 
 def explain_result(pool, workspace, params, body):
