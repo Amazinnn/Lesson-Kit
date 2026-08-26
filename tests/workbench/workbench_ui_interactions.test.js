@@ -1049,7 +1049,7 @@ test("rich text renders markdown structure and safe links in native messages", a
       ]);
       return jsonResponse({
         conversation_id: "conv-001", provider: "codex", status: "idle",
-        messages: [{ role: "assistant", content: "# 标题\n\n- **重点**\n\n[危险](javascript:alert(1)) [[kp-1|知识点]]\n\n```js\n<em>原样</em>\n```" }],
+        messages: [{ role: "assistant", content: "# 标题\n\n- **重点**\n\nx<sup>2</sup> <b>原始 HTML</b>\n\n[危险](javascript:alert(1)) [[kp-1|知识点]]\n\n```js\n<em>原样</em>\n```" }],
       });
     },
   });
@@ -1057,6 +1057,8 @@ test("rich text renders markdown structure and safe links in native messages", a
   const html = elements["ai-messages"].children[0].innerHTML;
   assert.match(html, /<h1>标题<\/h1>/);
   assert.match(html, /<ul>[\s\S]*<strong>重点<\/strong>[\s\S]*<\/ul>/);
+  assert.match(html, /x<sup>2<\/sup>/);
+  assert.match(html, /&lt;b&gt;原始 HTML&lt;\/b&gt;/);
   assert.match(html, /href='\/w\/alpha\/kp\/kp-1'/);
   assert.match(html, /<pre><code class=['"]language-js['"]>&lt;em&gt;原样&lt;\/em&gt;<\/code><\/pre>/);
   assert.doesNotMatch(html, /href=['"]javascript:/i);

@@ -65,7 +65,11 @@
       tokens.push(html);
       return key;
     }
-    var value = escapeHtml(text == null ? "" : String(text));
+    var source = text == null ? "" : String(text);
+    source = source.replace(/<(sup|sub)>([^<>]+)<\/\1>/g, function (_, tag, content) {
+      return token("<" + tag + ">" + escapeHtml(content) + "</" + tag + ">");
+    });
+    var value = escapeHtml(source);
     value = value.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function (_, alt, src) {
       if (!/^\/(?:api\/w\/|static\/)|^[\w./-]+$/.test(src)) return alt;
       return token("<img alt='" + alt + "' src='" + src.replace(/'/g, "&#39;") + "'>");

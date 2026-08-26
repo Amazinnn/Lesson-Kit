@@ -247,7 +247,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("class='weak-title'>Counting", body)
 
     def test_kp_page_renders(self):
-        full_text = "*两类代表*" + "的组合计数条件。" * 38
+        full_text = "<sup>∗</sup>*两类代表*<b>原始 HTML</b>" + "的组合计数条件。" * 38
         summary = "分析两类代表选择中的乘法计数与顺序条件。"
         conn = sqlite3.connect(self.fixture.db_path)
         try:
@@ -276,6 +276,8 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("…", body)
         self.assertNotIn("...", body)
         self.assertNotIn("dmath-ch06-prob-001", body)
+        self.assertIn("<sup>∗</sup>", body)
+        self.assertIn("&lt;b&gt;原始 HTML&lt;/b&gt;", body)
         self.assertIn("<em>", body)
 
     def test_short_linked_problem_does_not_manufacture_a_summary(self):

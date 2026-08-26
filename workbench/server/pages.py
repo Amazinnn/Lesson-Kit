@@ -443,6 +443,15 @@ def _render_markdown(text, workspace_name, kp_id):
 
 def _rich(text, workspace_name):
     """Escape first, then inject math/wiki/image markup (order matters)."""
+    tokens = []
+
+    def preserve_script(match):
+        tokens.append(
+            f"<{match.group(1)}>{html.escape(match.group(2))}</{match.group(1)}>"
+        )
+        return f"\x00{len(tokens) - 1}\x00"
+
+    text = re.sub(r"<(sup|sub)>([^<>]+)</\1>", preserve_script, text)
     text = html.escape(text)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", text)
@@ -458,7 +467,7 @@ def _rich(text, workspace_name):
         text,
     )
     text = _image_replace(text, workspace_name)
-    return text
+    return re.sub(r"\x00(\d+)\x00", lambda match: tokens[int(match.group(1))], text)
 
 
 def _math_replace(match):
