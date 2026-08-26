@@ -35,6 +35,9 @@ The existing architecture and record boundary remain fixed: Shell depends on Dom
 - Signals and scheduling are not decorative fields. The original rationale is weak-point-first ordering: explicit ratings or notes create evidence, and due state affects background ordering without locking content.
 - The current knowledge-point page exposes internal vocabulary and raw values directly, including `signal_type`, `weight`, `state`, `repetitions`, `ease`, and `due_at`.
 - The graph dashboard repeats part of the same evidence as “学习信号” and “下次复习”. These mechanisms can remain correct while their current presentation is unnecessary or unintelligible.
+- The implementation currently maintains three overlapping concepts: `learning_current_state` (`needs_work` / `review` / `mastered`), scheduler state (`learning` / `review` / `relearning`), and problem progress (`new` / `wrong` / `stuck` / `reviewing` / `mastered`).
+- `learning_current_state` is overwritten directly from the latest 1–5 self-rating, so one rating of 5 becomes `mastered`. This conflicts with ADR 0008's conservative rule that later mastery does not erase weak evidence and that the system must not infer mastery from one successful attempt.
+- Existing evidence is mixed by nature: machine-gradable outcomes can be observed directly, open responses require reveal-then-self-rate, repeated wrong/stuck results strengthen signals, and spaced results update an SM-2-style schedule. A truthful user-facing state must not present all of these as one equally objective measurement.
 
 ### Problem markup and OCR
 
@@ -54,13 +57,21 @@ The existing architecture and record boundary remain fixed: Shell depends on Dom
 
 ## Decisions
 
-No product decisions have been made in this audit round. Each accepted answer will be added here immediately, with rejected alternatives and rationale.
+### D1. Keep learning mechanics in the background
+
+The student-facing UI will not show raw signal types, weights, weakness scores, scheduler state, repetitions, ease, or other implementation parameters. The primary surface will show only concise information that supports a study action. The complete evidence and scheduler data remain available to deterministic ordering, the CLI, and the Agent.
+
+An excellent future graph expression of learning evidence is not prohibited, but no parameter dashboard or placeholder control will be added in this change. Any later visualization must first demonstrate that it makes a meaningful relationship easier to understand.
+
+**Rationale:** the mechanisms serve weak-point ordering and forgetting reminders, but their current raw presentation asks the learner to interpret the implementation instead of studying.
+
+**Rejected for now:** a default parameter dashboard; an expandable raw-data inspector in the student UI; deleting the underlying signal or scheduling mechanisms.
 
 ## Decision Queue
 
 Questions are resolved one at a time because each answer changes the later specification or task breakdown.
 
-1. Learning-state visibility: hide evidence and schedule completely, expose one concise actionable state, or keep detail available only on deliberate disclosure.
+1. Meaning of learner-facing state: replace the latest-self-rating label with an evidence-derived action state, separate system evidence from learner intent, or use another truthful model.
 2. Graph reading model: always show the complete graph with visual de-cluttering, make focused neighborhoods the default with an explicit full-graph mode, or use another hierarchy.
 3. Mathematical markup boundary: which limited source constructs are trusted at render time, and which must be normalized or rejected before pool insertion.
 4. Content CLI composition: define operation boundaries, intermediate contracts, provenance, gates, and orchestration without forcing one end-to-end route.
