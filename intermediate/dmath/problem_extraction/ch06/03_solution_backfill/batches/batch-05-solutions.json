@@ -1,0 +1,362 @@
+{
+    "kind":  "solutions",
+    "items":  [
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e30. Let n and k be integers with $1 \\leq k \\leq n .$ . Show that\n\n$$\n\\sum _ { k = 1 } ^ { n } { \\binom { n } { k } } { \\binom { n } { k - 1 } } = { \\binom { 2 n + 2 } { n + 1 } } / 2 - { \\binom { 2 n } { n } } .\n$$",
+                      "problem":  "dmath-ch06-prob-205",
+                      "solution":  "Rewrite $\\binom n{k-1}=\\binom n{n-k+1}$. Vandermonde\u0027s identity gives\n$$\\sum_{k=1}^n\\binom nk\\binom n{k-1}=\\binom{2n}{n+1}=\\binom{2n}{n-1}.$$\nAlso,\n$$\\frac12\\binom{2n+2}{n+1}-\\binom{2n}{n}=\\binom{2n}{n}\\left(\\frac{2n+1}{n+1}-1\\right)=\\frac n{n+1}\\binom{2n}{n}=\\binom{2n}{n-1}.$$\nThus the two sides are equal.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e31. Prove the hockeystick identity\n\n$$\n\\sum _ { k = 0 } ^ { r } { \\binom { n + k } { k } } = { \\binom { n + r + 1 } { r } }\n$$\n\nwhenever n and r are positive integers,\n\na) using a combinatorial argument.\n\nb) using Pascal’s identity.",
+                      "problem":  "dmath-ch06-prob-206",
+                      "solution":  "a) Count $(n+1)$-element subsets of $\\{1,2,\\ldots,n+r+1\\}$ by their largest element. If the largest element is $n+k+1$, where $0\\le k\\le r$, the other $n$ elements can be chosen in $\\binom{n+k}{n}=\\binom{n+k}{k}$ ways. Summing gives $\\binom{n+r+1}{n+1}=\\binom{n+r+1}{r}$.\n\nb) Pascal\u0027s identity implies $\\binom{n+k}{k}=\\binom{n+k+1}{k}-\\binom{n+k}{k-1}$. Summing from $k=0$ to $r$ (with $\\binom n{-1}=0$) telescopes to $\\binom{n+r+1}{r}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "32. Show that if n is a positive integer, then $\\textstyle { \\binom { 2 n } { 2 } } = 2 { \\binom { n } { 2 } } + n ^ { 2 }$\n\na) using a combinatorial argument.\n\nb) by algebraic manipulation.",
+                      "problem":  "dmath-ch06-prob-207",
+                      "solution":  "a) Split $2n$ people into two groups of $n$. A pair is either wholly in the first group, wholly in the second, or has one member from each group. These cases contribute $\\binom n2+\\binom n2+n^2$.\n\nb) Directly,\n$$2\\binom n2+n^2=n(n-1)+n^2=n(2n-1)=\\frac{(2n)(2n-1)}2=\\binom{2n}2.$$",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e33. Give a combinatorial proof that $\\begin{array} { r } { \\sum _ { k = 1 } ^ { n } k { \\binom { n } { k } } = n 2 ^ { n - 1 } } \\end{array}$ [Hint: Count in two ways the number of ways to select a committee and to then select a leader of the committee.]",
+                      "problem":  "dmath-ch06-prob-208",
+                      "solution":  "Count nonempty committees from $n$ people together with a chosen leader. If the committee has size $k$, there are $\\binom nk$ choices for the committee and $k$ choices for its leader, giving the left side. Alternatively, choose the leader first in $n$ ways, then choose any subset of the other $n-1$ people as the remaining members, giving $n2^{n-1}$. Hence the identity holds.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e34. Give a combinatorial proof that $\\begin{array} { r } { \\sum _ { k = 1 } ^ { n } k \\binom { n } { k } ^ { 2 } = n \\binom { 2 n - 1 } { n - 1 } } \\end{array}$ [Hint: Count in two ways the number of ways to select a committee, with n members from a group of n mathematics professors and n computer science professors, such that the chairperson of the committee is a mathematics professor.]",
+                      "problem":  "dmath-ch06-prob-209",
+                      "solution":  "Count $n$-member committees from $n$ mathematics and $n$ computer science professors, with a mathematics professor as chair. If exactly $k$ mathematicians are selected, choose them in $\\binom nk$ ways, choose the $n-k$ computer scientists in $\\binom n{n-k}=\\binom nk$ ways, and choose the chair in $k$ ways. This gives the left side. Alternatively, choose the mathematics chair in $n$ ways and the other $n-1$ committee members from the remaining $2n-1$ people, giving $n\\binom{2n-1}{n-1}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "35. Show that a nonempty set has the same number of subsets with an odd number of elements as it does subsets with an even number of elements.",
+                      "problem":  "dmath-ch06-prob-210",
+                      "solution":  "Fix an element $a$ of the nonempty set. Pair every subset $S$ with its symmetric difference $S\\mathbin{\\triangle}\\{a\\}$, which toggles whether $a$ belongs to the subset. The two paired subsets have sizes differing by one, so one has even size and the other odd size. This is a bijection between the even-sized and odd-sized subsets; each class therefore has $2^{n-1}$ members when the set has $n$ elements.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e36. Prove the binomial theorem using mathematical induction.",
+                      "problem":  "dmath-ch06-prob-211",
+                      "solution":  "We prove $(x+y)^n=\\sum_{k=0}^n\\binom nkx^{n-k}y^k$. For $n=0$, both sides equal $1$. Assume the formula holds for $n$. Multiplying by $x+y$ gives\n$$ (x+y)^{n+1}=\\sum_{k=0}^n\\binom nkx^{n+1-k}y^k+\\sum_{k=1}^{n+1}\\binom n{k-1}x^{n+1-k}y^k.$$\nThe endpoint coefficients are $1$, and for $1\\le k\\le n$ the coefficient is $\\binom nk+\\binom n{k-1}=\\binom{n+1}k$ by Pascal\u0027s identity. Hence the formula holds for $n+1$, completing the induction.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "37. In this exercise we will count the number of paths in the xy plane between the origin (0, 0) and point (m, n), where m and n are nonnegative integers, such that each path is made up of a series of steps, where each step is a move one unit to the right or a move one unit upward. (No moves to the left or downward are allowed.) Two such paths from (0, 0) to (5, 3) are illustrated here.\n\n![](images/8cf884c79e92268ca1a3bdaca03a319185cfc095b008c3bf824fa4d71f2debda.jpg)\n\na) Show that each path of the type described can be represented by a bit string consisting of m 0s and n 1s, where a 0 represents a move one unit to the right and a 1 represents a move one unit upward.(\n\nb) Conclude from part (a) that there are $\\widetilde { \\binom { m + n } { n } }$ paths of the desired type.",
+                      "problem":  "dmath-ch06-prob-212",
+                      "solution":  "a) Read the path\u0027s $m+n$ steps in order and write $0$ for each right step and $1$ for each upward step. Reversing this rule reconstructs exactly one path from every string with $m$ zeros and $n$ ones, so this is a bijection.\n\nb) Such a string is determined by choosing the $n$ positions occupied by ones among the $m+n$ positions. Therefore the number of paths is $\\binom{m+n}{n}$ (equivalently $\\binom{m+n}{m}$).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "38. Use Exercise 37 to give an alternative proof of Corol-\u003csub\u003e( ) ( )\u003c/sub\u003e lary 2 in Section 6.3, which states that ${ \\binom { n } { k } } = { \\binom { n } { n - k } }$ whenever k is an integer with $0 \\leq k \\leq n .$ . [Hint: Consider the number of paths of the type described in Exercise 37 from (0, 0) to (n − k, k) and from (0, 0) to (k, n − k).]",
+                      "problem":  "dmath-ch06-prob-213",
+                      "solution":  "A path from $(0,0)$ to $(n-k,k)$ has $n-k$ right steps and $k$ upward steps, so Exercise 37 counts it as $\\binom nk$. Reflecting the path across the line $y=x$ swaps right and upward steps and gives a bijection to paths from $(0,0)$ to $(k,n-k)$, whose number is $\\binom n{n-k}$. Thus $\\binom nk=\\binom n{n-k}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "39. Use Exercise 37 to prove Theorem 4. [Hint: Count the number of paths with n steps of the type described in Exercise 37. Every such path must end at one of the points (n − k, k) for $k = 0 , 1 , 2 , \\ldots , n . ]$",
+                      "problem":  "dmath-ch06-prob-214",
+                      "solution":  "The hint identifies Theorem 4 as the identity $\\sum_{k=0}^n\\binom nk=2^n$. Every path of $n$ right-or-up steps is specified by an arbitrary length-$n$ bit string, so there are $2^n$ paths. If a path has exactly $k$ upward steps, it ends at $(n-k,k)$ and Exercise 37 gives $\\binom nk$ such paths. These endpoint classes are disjoint and exhaustive, so summing them yields $\\sum_{k=0}^n\\binom nk=2^n$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "40. Use Exercise 37 to prove Pascal’s identity. [Hint: Show that a path of the type described in Exercise 37 from (0, 0) to $( n + 1 - k , k )$ passes through either $( n + 1 - k , k - 1 )$ or $( n - k , k )$ , but not through both.]",
+                      "problem":  "dmath-ch06-prob-215",
+                      "solution":  "Exercise 37 counts all paths to $(n+1-k,k)$ as $\\binom{n+1}k$. Each such path has a unique last step. If it is upward, the preceding point is $(n+1-k,k-1)$, and there are $\\binom n{k-1}$ possible prefixes. If it is rightward, the preceding point is $(n-k,k)$, and there are $\\binom nk$ prefixes. The cases are disjoint and exhaustive, so $\\binom{n+1}k=\\binom nk+\\binom n{k-1}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "41. Use Exercise 37 to prove the hockeystick identity from Exercise 31. [Hint: First, note that the number of paths from (0, 0) to (n + 1, r) equals ${ \\binom { n + 1 + r } { r } }$ . Second, count the number of paths by summing the number of these paths that start by going k units upward for $k =$ $0 , 1 , 2 , \\ldots , r . ]$",
+                      "problem":  "dmath-ch06-prob-216",
+                      "solution":  "There are $\\binom{n+r+1}{r}$ paths from $(0,0)$ to $(n+1,r)$. Classify them by the number $k$ of initial upward steps before the first right step, where $0\\le k\\le r$. After that first right step, the remaining path has $n$ right steps and $r-k$ upward steps, so there are $\\binom{n+r-k}{r-k}$ paths in this class. Summing and substituting $j=r-k$ gives\n$$\\binom{n+r+1}{r}=\\sum_{k=0}^r\\binom{n+r-k}{r-k}=\\sum_{j=0}^r\\binom{n+j}{j},$$\nwhich is the hockeystick identity.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "42. Give a combinatorial proof that if n is a positive inte-\u003csub\u003e( )\u003c/sub\u003e ger then $\\begin{array} { r } { \\sum _ { k = 0 } ^ { n } k ^ { 2 } { \\binom { n } { k } } \\stackrel { \\bullet } { = } n ( n + 1 ) 2 ^ { n - 2 } . } \\end{array}$ . [Hint: Show that both sides count the ways to select a subset of a set of n elements together with two not necessarily distinct elements from this subset. Furthermore, express the righthand side as $n ( n - 1 ) 2 ^ { n - 2 } + n 2 ^ { n - 1 } .$ ]",
+                      "problem":  "dmath-ch06-prob-217",
+                      "solution":  "Count triples $(S,a,b)$ where $S$ is a subset of an $n$-element set and $a,b\\in S$ are ordered and may be equal. For $|S|=k$, there are $\\binom nk$ choices for $S$ and $k^2$ choices for $(a,b)$, giving the left side. If $a\\ne b$, choose the ordered pair in $n(n-1)$ ways and choose any subset of the other $n-2$ elements, giving $n(n-1)2^{n-2}$. If $a=b$, choose it in $n$ ways and choose any subset of the other $n-1$ elements, giving $n2^{n-1}$. Their sum is $n(n+1)2^{n-2}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e43. Determine a formula involving binomial coeficients for the nth term of a sequence if its initial terms are those listed. [Hint: Looking at Pascal’s triangle will be helpful. Although infinitely many sequences start with a specified set of terms, each of the following lists is the start of a sequence of the type desired.]\n\na) 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, …\n\nb) 1, 4, 10, 20, 35, 56, 84, 120, 165, 220, …\n\nc) 1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, …\n\nd) 1, 1, 2, 3, 6, 10, 20, 35, 70, 126, …\n\ne) 1, 1, 1, 3, 1, 5, 15, 35, 1, 9, …\n\nf) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …\n\n![](images/ad580e473c29f6164955f171fd672862d7d75e17981d43ad0e0f09940061798d.jpg)",
+                      "problem":  "dmath-ch06-prob-218",
+                      "solution":  "Taking the first displayed term as $a_1$, formulas matching the indicated paths through Pascal\u0027s triangle are:\n\na) $a_n=\\binom{n+1}{2}$.\n\nb) $a_n=\\binom{n+2}{3}$.\n\nc) $a_n=\\binom{2n-2}{n-1}$.\n\nd) $a_n=\\binom{n-1}{\\lfloor(n-1)/2\\rfloor}$.\n\ne) $a_1=1$; for $n\\ge2$, let $j=\\lfloor\\log_2(n-1)\\rfloor$ and set $a_n=\\binom{n-1}{n-1-2^j}$. This reads successive entries from row $2^j$ onward and restarts at the left edge when $n-1$ is a power of two.\n\nf) $a_n=\\binom{3n-3}{n-1}$.\n\nSubstitution of $n=1,2,\\ldots$ reproduces every listed term.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "1. In how many diferent ways can five elements be selected in order from a set with three elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-219",
+                      "solution":  "Each of the five ordered positions can independently contain any of the three elements. By the product rule, the number of selections is $3^5=243$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "2. In how many diferent ways can five elements be selected in order from a set with five elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-220",
+                      "solution":  "Each of the five ordered positions has five independent choices, so the product rule gives $5^5=3125$ selections.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "3. How many strings of six letters are there?",
+                      "problem":  "dmath-ch06-prob-221",
+                      "solution":  "Interpreting letters as the 26 letters of the English alphabet, each of the six positions has 26 choices and repetition is allowed. Thus there are $26^6=308,915,776$ strings.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "4. Every day a student randomly chooses a sandwich for lunch from a pile of wrapped sandwiches. If there are six kinds of sandwiches, how many diferent ways are there for the student to choose sandwiches for the seven days of a week if the order in which the sandwiches are chosen matters?",
+                      "problem":  "dmath-ch06-prob-222",
+                      "solution":  "For each of the seven ordered days there are six choices, independently. Therefore there are $6^7=279,936$ weekly sequences.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "5. How many ways are there to assign three jobs to five employees if each employee can be given more than one job?",
+                      "problem":  "dmath-ch06-prob-223",
+                      "solution":  "Each of the three distinct jobs can be assigned independently to any of five employees. Hence the number of assignments is $5^3=125$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "6. How many ways are there to select five unordered elements from a set with three elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-224",
+                      "solution":  "Let $x_i$ be the number of copies chosen of element $i$. Then $x_1+x_2+x_3=5$ with all $x_i\\ge0$. Stars and bars gives $\\binom{5+3-1}{3-1}=\\binom72=21$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "7. How many ways are there to select three unordered elements from a set with five elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-225",
+                      "solution":  "The multiplicities satisfy $x_1+\\cdots+x_5=3$ with $x_i\\ge0$. Stars and bars gives $\\binom{3+5-1}{5-1}=\\binom74=35$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "8. How many diferent ways are there to choose a dozen donuts from the 21 varieties at a donut shop?",
+                      "problem":  "dmath-ch06-prob-226",
+                      "solution":  "If $x_i$ is the number chosen of variety $i$, then $x_1+\\cdots+x_{21}=12$ with nonnegative integer entries. Stars and bars gives $\\binom{12+21-1}{21-1}=\\binom{32}{20}=\\binom{32}{12}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "9. A bagel shop has onion bagels, poppy seed bagels, egg bagels, salty bagels, pumpernickel bagels, sesame seed bagels, raisin bagels, and plain bagels. How many ways are there to choose\n\na) six bagels?\n\nb) a dozen bagels?\n\nc) two dozen bagels?\n\nd) a dozen bagels with at least one of each kind?\n\ne) a dozen bagels with at least three egg bagels and no more than two salty bagels?",
+                      "problem":  "dmath-ch06-prob-227",
+                      "solution":  "There are eight varieties, and order is irrelevant. Stars and bars gives:\n\na) $\\binom{6+8-1}{7}=\\binom{13}{7}$.\n\nb) $\\binom{12+8-1}{7}=\\binom{19}{7}$.\n\nc) $\\binom{24+8-1}{7}=\\binom{31}{7}$.\n\nd) After reserving one of each kind, distribute the remaining four: $\\binom{4+8-1}{7}=\\binom{11}{7}$.\n\ne) Reserve three egg bagels. If the number $s$ of salty bagels is $0$, $1$, or $2$, distribute the other $9-s$ bagels among the remaining seven varieties. The answer is $\\sum_{s=0}^2\\binom{15-s}{6}=\\binom{15}{6}+\\binom{14}{6}+\\binom{13}{6}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "10. A croissant shop has plain croissants, cherry croissants, chocolate croissants, almond croissants, apple croissants, and broccoli croissants. How many ways are there to choose\n\na) a dozen croissants?\n\nb) three dozen croissants?\n\nc) two dozen croissants with at least two of each kind?\n\nd) two dozen croissants with no more than two broccoli croissants?\n\ne) two dozen croissants with at least five chocolate croissants and at least three almond croissants?\n\nf) two dozen croissants with at least one plain croissant, at least two cherry croissants, at least three chocolate croissants, at least one almond croissant, at least two apple croissants, and no more than three broccoli croissants?",
+                      "problem":  "dmath-ch06-prob-228",
+                      "solution":  "There are six varieties. Using stars and bars:\n\na) $\\binom{12+6-1}{5}=\\binom{17}{5}$.\n\nb) $\\binom{36+6-1}{5}=\\binom{41}{5}$.\n\nc) Reserving two of each leaves 12, so the answer is $\\binom{17}{5}$.\n\nd) Unrestricted choices number $\\binom{29}{5}$. Choices with at least three broccoli croissants, after reserving three, number $\\binom{26}{5}$. The answer is $\\binom{29}{5}-\\binom{26}{5}$.\n\ne) Reserving five chocolate and three almond croissants leaves 16, giving $\\binom{21}{5}$.\n\nf) The stated minima for the first five varieties use nine croissants, leaving 15. Without the broccoli cap there are $\\binom{20}{5}$ choices; choices with at least four broccoli croissants number $\\binom{16}{5}$. The answer is $\\binom{20}{5}-\\binom{16}{5}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "11. How many ways are there to choose eight coins from a piggy bank containing 100 identical pennies and 80 identical nickels?",
+                      "problem":  "dmath-ch06-prob-229",
+                      "solution":  "Let $p+n=8$ be the numbers of pennies and nickels. The supply bounds do not bind because both exceed eight. The nonnegative solutions are $(p,n)=(0,8),(1,7),\\ldots,(8,0)$, so there are $9$ ways.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "12. How many diferent combinations of pennies, nickels, dimes, quarters, and half dollars can a piggy bank contain if it has 20 coins in it?",
+                      "problem":  "dmath-ch06-prob-230",
+                      "solution":  "The five coin counts are nonnegative integers summing to 20. Stars and bars gives $\\binom{20+5-1}{5-1}=\\binom{24}{4}=10,626$ combinations.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "13. A book publisher has 3000 copies of a discrete mathematics book. How many ways are there to store these books in their three warehouses if the copies of the book are indistinguishable?",
+                      "problem":  "dmath-ch06-prob-231",
+                      "solution":  "Let the three warehouse counts be nonnegative integers summing to 3000. Stars and bars gives $\\binom{3000+3-1}{3-1}=\\binom{3002}{2}=4,504,501$ distributions.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "14. How many solutions are there to the equation\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } + x _ { 4 } = 1 7 ,\n$$\n\nwhere $x _ { 1 } , x _ { 2 } , x _ { 3 }$ , and $x _ { 4 }$ are nonnegative integers?",
+                      "problem":  "dmath-ch06-prob-232",
+                      "solution":  "Reading the scanned right-hand side $1 7$ as $17$, stars and bars counts the nonnegative solutions as $\\binom{17+4-1}{4-1}=\\binom{20}{3}=1140$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "15. How many solutions are there to the equation\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } + x _ { 4 } + x _ { 5 } = 2 1 ,\n$$\n\nwhere $x _ { i } , i = 1 , 2 , 3 , 4 , 5 ,$ , is a nonnegative integer such that\n\na) $x _ { 1 } \\geq 1 \\mathrm { 2 }$\n\nb) $x _ { i } \\geq 2 \\mathrm { f o r } i = 1 , 2 , 3 , 4 , 5 ?$\n\nc) $0 \\leq x _ { 1 } \\leq 1 0 ?$\n\nd) $0 \\leq x _ { 1 } \\leq 3 , 1 \\leq x _ { 2 } \u003c 4 , \\mathrm { a n d } x _ { 3 } \\geq 1 5 ?$",
+                      "problem":  "dmath-ch06-prob-233",
+                      "solution":  "Read the spaced scan numerals as $21$, $12$, $10$, and $15$.\n\na) Set $y_1=x_1-12$. Then the five nonnegative variables sum to $9$, giving $\\binom{13}{4}=715$.\n\nb) Subtract 2 from every variable; the remainder sums to $11$, giving $\\binom{15}{4}=1365$.\n\nc) There are $\\binom{25}{4}$ unrestricted solutions. Those with $x_1\\ge11$ are counted after subtracting 11 by $\\binom{14}{4}$. Thus the answer is $\\binom{25}{4}-\\binom{14}{4}=11,649$.\n\nd) Put $y_2=x_2-1$ and $y_3=x_3-15$. The variables sum to $5$, with $x_1\\le3$ and $y_2\\le2$. Inclusion-exclusion gives $\\binom94-\\binom54-\\binom64=126-5-15=106$; the two violations cannot overlap because they would require at least seven units.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "16. How many solutions are there to the equation\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } + x _ { 4 } + x _ { 5 } + x _ { 6 } = 2 9 ,\n$$\n\nwhere $x _ { i } , i = 1 , 2 , 3 , 4 , 5 , 6 .$ , is a nonnegative integer such that\n\na) $x _ { i } \u003e 1$ for i = 1, 2, 3, 4, 5, 6?\n\n$$\nx _ { 1 } \\geq 1 , x _ { 2 } \\geq 2 , x _ { 3 } \\geq 3 , x _ { 4 } \\geq 4 , x _ { 5 } \u003e 5 , { \\mathrm { a n d } } x _ { 6 } \\geq 6 ?\n$$\n\nc) $x _ { 1 } \\leq 5 \\mathrm { ? }$\n\nd) $x _ { 1 } \u003c 8$ and $x _ { 2 } \u003e 8 ?$",
+                      "problem":  "dmath-ch06-prob-234",
+                      "solution":  "Read the spaced right-hand side as $29$. The unlabeled displayed condition between (a) and (c) is most literally part (b).\n\na) Since integer $x_i\u003e1$ means $x_i\\ge2$, subtracting 2 from each variable leaves sum $17$. The count is $\\binom{22}{5}=26,334$.\n\nb) The lower bounds are $1,2,3,4,6,6$, totaling 22. Subtracting them leaves sum $7$, giving $\\binom{12}{5}=792$.\n\nc) From all $\\binom{34}{5}$ solutions, remove those with $x_1\\ge6$, counted by $\\binom{28}{5}$. The answer is $\\binom{34}{5}-\\binom{28}{5}=179,976$.\n\nd) First set $y_2=x_2-9$, leaving sum $20$. There are $\\binom{25}{5}$ solutions before imposing $x_1\\le7$; those with $x_1\\ge8$ number $\\binom{17}{5}$. The answer is $\\binom{25}{5}-\\binom{17}{5}=46,942$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "17. How many strings of 10 ternary digits (0, 1, or 2) are there that contain exactly two 0s, three 1s, and five 2s?",
+                      "problem":  "dmath-ch06-prob-235",
+                      "solution":  "Choose the two positions for 0, then three of the remaining eight positions for 1; the rest are 2. Thus the number is $\\binom{10}{2}\\binom83=\\frac{10!}{2!3!5!}=2520$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "18. How many strings of 20-decimal digits are there that contain two 0s, four 1s, three 2s, one 3, two 4s, three 5s, two $^ { 7 \\mathrm { s } , }$ and three 9s?",
+                      "problem":  "dmath-ch06-prob-236",
+                      "solution":  "The literal list supplies multiplicities $2,4,3,1,2,3,2,3$, which total 20; the corrupted phrase is naturally read as two 7s, while digits 6 and 8 occur zero times. Because these are strings, a leading zero is allowed. The multinomial count is\n$$\\frac{20!}{2!4!3!1!2!3!2!3!}=58,663,725,120,000.$$",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "19. Suppose that a large family has 14 children, including two sets of identical triplets, three sets of identical twins, and two individual children. How many ways are there to seat these children in a row of chairs if the identical triplets or twins cannot be distinguished from one another?",
+                      "problem":  "dmath-ch06-prob-237",
+                      "solution":  "Treat the two triplet sets and three twin sets as five distinct sibling groups, while members within each group are indistinguishable; the two individual children are distinct. Permuting 14 positions and dividing for the repetitions gives\n$$\\frac{14!}{(3!)^2(2!)^3}=302,702,400.$$",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "20. How many solutions are there to the inequality\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } \\leq 1 1 ,\n$$\n\nwhere $x _ { 1 } , x _ { 2 } ,$ and $x _ { 3 }$ are nonnegative integers? [Hint: Introduce an auxiliary variable $x _ { 4 }$ such that $x _ { 1 } + x _ { 2 } + x _ { 3 }$ + $x _ { 4 } = 1 1 . ]$",
+                      "problem":  "dmath-ch06-prob-238",
+                      "solution":  "Read $1 1$ as $11$ and introduce the slack variable $x_4=11-(x_1+x_2+x_3)\\ge0$. This bijects the desired solutions with nonnegative solutions of $x_1+x_2+x_3+x_4=11$. Stars and bars gives $\\binom{14}{3}=364$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "21. A Swedish tour guide has devised a clever way for his clients to recognize him. He owns 13 pairs of shoes of the same style, customized so that each pair has a unique color. How many ways are there for him to choose a left shoe and a right shoe from these 13 pairs\n\na) without restrictions and which color is on which foot matters?\n\nb) so that the colors of the left and right shoe are diferent and which color is on which foot matters?\n\nc) so that the colors of the left and right shoe are diferent but which color is on which foot does not matter?\n\nd) without restrictions, but which color is on which foot does not matter?",
+                      "problem":  "dmath-ch06-prob-239",
+                      "solution":  "Model a choice by the colors selected.\n\na) There are $13$ choices for each foot: $13^2=169$.\n\nb) Choose the left color and then a different right color: $13\\cdot12=156$.\n\nc) Choose an unordered pair of distinct colors: $\\binom{13}{2}=78$.\n\nd) Choose an unordered multiset of two colors from 13: $\\binom{13+2-1}{2}=\\binom{14}{2}=91$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e22. In how many ways can an airplane pilot be scheduled for five days of flying in October if he cannot work on consecutive days?",
+                      "problem":  "dmath-ch06-prob-240",
+                      "solution":  "October has 31 days. If the chosen days are $1\\le d_1\u003c\\cdots\u003cd_5\\le31$ with $d_{i+1}\\ge d_i+2$, define $e_i=d_i-(i-1)$. Then $1\\le e_1\u003c\\cdots\u003ce_5\\le27$, and this transformation is bijective. Therefore the number of schedules is $\\binom{27}{5}=80,730$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "23. How many ways are there to distribute six indistinguishable balls into nine distinguishable bins?",
+                      "problem":  "dmath-ch06-prob-241",
+                      "solution":  "Let $x_i$ be the number of balls in bin $i$. The nonnegative solutions of $x_1+\\cdots+x_9=6$ are counted by stars and bars: $\\binom{6+9-1}{9-1}=\\binom{14}{8}=3003$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "24. How many ways are there to distribute 12 indistinguishable balls into six distinguishable bins?",
+                      "problem":  "dmath-ch06-prob-242",
+                      "solution":  "The six bin occupancies are nonnegative integers summing to 12. Stars and bars gives $\\binom{12+6-1}{6-1}=\\binom{17}{5}=6188$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "25. How many ways are there to distribute 12 distinguishable objects into six distinguishable boxes so that two objects are placed in each box?",
+                      "problem":  "dmath-ch06-prob-243",
+                      "solution":  "Choose two objects for each labeled box in succession. Equivalently, permute all 12 objects and ignore the order of the two objects within every box. The count is $\\frac{12!}{(2!)^6}=7,484,400$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "26. How many ways are there to distribute 15 distinguishable objects into five distinguishable boxes so that the boxes have one, two, three, four, and five objects in them, respectively.",
+                      "problem":  "dmath-ch06-prob-244",
+                      "solution":  "The labeled boxes have prescribed sizes $1,2,3,4,5$. Choosing their contents gives the multinomial coefficient\n$$\\binom{15}{1,2,3,4,5}=\\frac{15!}{1!2!3!4!5!}=37,837,800.$$",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "27. How many positive integers less than 1,000,000 have the sum of their digits equal to 19?",
+                      "problem":  "dmath-ch06-prob-245",
+                      "solution":  "Represent each number by a six-digit string with leading zeros. Count nonnegative solutions of $x_1+\\cdots+x_6=19$ with each $x_i\\le9$. Without the upper bounds there are $\\binom{24}{5}$. If a specified digit is at least 10, subtracting 10 leaves $\\binom{14}{5}$ solutions. Two digits cannot both be at least 10 because the sum is 19. Inclusion-exclusion gives $\\binom{24}{5}-6\\binom{14}{5}=30,492$. The sum 19 already excludes zero.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "28. How many positive integers less than 1,000,000 have exactly one digit equal to 9 and have a sum of digits equal to 13?",
+                      "problem":  "dmath-ch06-prob-246",
+                      "solution":  "Use six-digit strings with leading zeros. Choose the unique position containing 9 in 6 ways. The other five digits must sum to 4, so none can equal 9 and their upper bounds do not bind. Stars and bars gives $\\binom84=70$ choices for them. Hence the answer is $6\\binom84=420$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "29. There are 10 questions on a discrete mathematics final exam. How many ways are there to assign scores to the problems if the sum of the scores is 100 and each question is worth at least 5 points?",
+                      "problem":  "dmath-ch06-prob-247",
+                      "solution":  "Assuming integer point values, let $y_i=x_i-5\\ge0$ for the ten questions. Then $y_1+\\cdots+y_{10}=100-50=50$. Stars and bars gives $\\binom{50+10-1}{10-1}=\\binom{59}{9}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "30. Show that there are $C ( n + r - q _ { 1 } - q _ { 2 } - \\cdots - q _ { r } - 1 , n -$ $q _ { 1 } - q _ { 2 } - \\cdots - q _ { r } )$ diferent unordered selections of n objects of r diferent types that include at least $q _ { 1 }$ objects of type one, $q _ { 2 }$ objects of type two, … , and $q _ { r }$ objects of type r.",
+                      "problem":  "dmath-ch06-prob-248",
+                      "solution":  "Let $x_i$ be the number selected of type $i$, so $x_1+\\cdots+x_r=n$ and $x_i\\ge q_i$. Put $y_i=x_i-q_i\\ge0$. Then\n$$y_1+\\cdots+y_r=n-\\sum_{i=1}^r q_i.$$\nProvided $n\\ge\\sum_iq_i$, stars and bars gives\n$$\\binom{n-\\sum_iq_i+r-1}{r-1}=\\binom{n+r-\\sum_iq_i-1}{n-\\sum_iq_i},$$\nwhich is the stated formula. If $n\u003c\\sum_iq_i$, no selection exists.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "31. How many diferent bit strings can be transmitted if the string must begin with a 1 bit, must include three additional 1 bits (so that a total of four 1 bits is sent), must include a total of 12 0 bits, and must have at least two 0 bits following each 1 bit?",
+                      "problem":  "dmath-ch06-prob-249",
+                      "solution":  "Because the string begins with 1, write it as $1,0^{z_1}1,0^{z_2}1,0^{z_3}1,0^{z_4}$, where each $z_i\\ge2$ and $z_1+z_2+z_3+z_4=12$. Setting $y_i=z_i-2$ gives $y_1+y_2+y_3+y_4=4$. Stars and bars yields $\\binom{7}{3}=35$ strings.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "32. How many diferent strings can be made from the letters in MISSISSIPPI, using all the letters?",
+                      "problem":  "dmath-ch06-prob-250",
+                      "solution":  "MISSISSIPPI has 11 letters with multiplicities $I^4S^4P^2M$. The number of distinct permutations is $\\frac{11!}{4!4!2!}=34,650$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "33. How many diferent strings can be made from the letters in ABRACADABRA, using all the letters?",
+                      "problem":  "dmath-ch06-prob-251",
+                      "solution":  "ABRACADABRA has 11 letters with multiplicities $A^5B^2R^2CD$. Hence the number of distinct permutations is $\\frac{11!}{5!2!2!}=83,160$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "34. How many diferent strings can be made from the letters in AARDVARK, using all the letters, if all three As must be consecutive?",
+                      "problem":  "dmath-ch06-prob-252",
+                      "solution":  "Treat the three consecutive As as one block. The six objects are then $AAA,R,R,D,V,K$, with only the two Rs repeated. Thus the number of strings is $\\frac{6!}{2!}=360$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "35. How many diferent strings can be made from the letters in ORONO, using some or all of the letters?",
+                      "problem":  "dmath-ch06-prob-253",
+                      "solution":  "ORONO contains three Os, one R, and one N. Count nonempty strings by length. The counts for lengths 1 through 5 are respectively $3$, $7$, $13$, $20$, and $20$: for each length, sum $\\ell!/(o!r!n!)$ over $0\\le o\\le3$, $0\\le r,n\\le1$, and $o+r+n=\\ell$. Therefore the total is $3+7+13+20+20=63$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "36. How many strings with five or more characters can be formed from the letters in SEERESS?",
+                      "problem":  "dmath-ch06-prob-254",
+                      "solution":  "SEERESS has three Ss, three Es, and one R. For length 5, the counts with no R and with one R are $20$ and $70$, totaling $90$. For length 6 they are $20$ and $120$, totaling $140$. For length 7 all letters are used, giving $7!/(3!3!)=140$. Thus the requested number is $90+140+140=370$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  },
+                  {
+                      "source":  "37. How many strings with seven or more characters can be formed from the letters in EVERGREEN?",
+                      "problem":  "dmath-ch06-prob-255",
+                      "solution":  "EVERGREEN has four Es, two Rs, and the three distinct letters V, G, N. For a length $\\ell$, choose $t$ of V, G, N and sum $\\binom3t\\ell!/(e!r!)$ over $e+r+t=\\ell$, $0\\le e\\le4$, and $0\\le r\\le2$. This gives $4515$ strings of length 7, $7560$ of length 8, and $7560$ of length 9. Hence the total is $4515+7560+7560=19,635$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b315-7f22-b138-4517a3eb4659"
+                  }
+              ]
+}

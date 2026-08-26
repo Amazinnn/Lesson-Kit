@@ -1,0 +1,362 @@
+{
+    "kind":  "solutions",
+    "items":  [
+                  {
+                      "source":  "27. One hundred tickets, numbered 1, 2, 3, … , 100, are sold to 100 diferent people for a drawing. Four diferent prizes are awarded, including a grand prize (a trip to Tahiti). How many ways are there to award the prizes if\n\na) there are no restrictions?\n\nb) the person holding ticket 47 wins the grand prize?\n\nc) the person holding ticket 47 wins one of the prizes?\n\nd) the person holding ticket 47 does not win a prize?\n\ne) the people holding tickets 19 and 47 both win prizes?\n\nf) the people holding tickets 19, 47, and 73 all win\n\nf) the people holding tickets 19, 47, and 73 all win prizes?\n\ng) the people holding tickets 19, 47, 73, and 97 all win prizes?\n\nh) none of the people holding tickets 19, 47, 73, and 97 wins a prize?\n\ni) the grand prize winner is a person holding ticket 19, 47, 73, or 97?\n\nj) the people holding tickets 19 and 47 win prizes, but the people holding tickets 73 and 97 do not win prizes?",
+                      "problem":  "dmath-ch06-prob-154",
+                      "solution":  "Because the prizes are distinct and winners are distinct:\n\na) \\(P(100,4)=100\\cdot99\\cdot98\\cdot97=94{,}109{,}400\\).\n\nb) Fix ticket 47 as grand-prize winner, then assign the other prizes: \\(P(99,3)=941{,}094\\).\n\nc) Choose which of the four prizes ticket 47 wins, then assign the rest: \\(4P(99,3)=3{,}764{,}376\\).\n\nd) Use four winners from the other 99 people: \\(P(99,4)=90{,}345{,}024\\).\n\ne) Assign distinct prizes to tickets 19 and 47, then the other two: \\(P(4,2)P(98,2)=114{,}072\\).\n\nf) Interpreting the duplicated line literally as the same condition, assign prizes to tickets 19, 47, and 73, then choose the fourth winner: \\(P(4,3)\\cdot97=2{,}328\\).\n\ng) The four specified people can receive the four prizes in \\(4!=24\\) ways.\n\nh) Choose all winners from the other 96 people: \\(P(96,4)=79{,}727{,}040\\).\n\ni) Choose the grand-prize winner from the four specified people, then assign the other prizes: \\(4P(99,3)=3{,}764{,}376\\).\n\nj) Assign prizes to tickets 19 and 47, exclude 73 and 97, and assign the other two prizes among the remaining 96 people: \\(P(4,2)P(96,2)=109{,}440\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "28. Thirteen people on a softball team show up for a game.\n\na) How many ways are there to choose 10 players to take the field?\n\nb) How many ways are there to assign the 10 positions by selecting players from the 13 people who show up?\n\nc) Of the 13 people who show up, three are women. How many ways are there to choose 10 players to take the field if at least one of these players must be a woman?",
+                      "problem":  "dmath-ch06-prob-155",
+                      "solution":  "a) Only the set of players matters, so the count is \\(\\binom{13}{10}=286\\).\n\nb) The ten positions are distinct, so the count is \\(P(13,10)=13!/3!=1{,}037{,}836{,}800\\).\n\nc) Subtract the only selection containing no woman (all ten men): \\(\\binom{13}{10}-\\binom{10}{10}=286-1=285\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "29. A club has 25 members.\n\na) How many ways are there to choose four members of the club to serve on an executive committee?\n\nb) How many ways are there to choose a president, vice president, secretary, and treasurer of the club, where no person can hold more than one ofice?",
+                      "problem":  "dmath-ch06-prob-156",
+                      "solution":  "a) An executive committee is an unordered selection, so there are \\(\\binom{25}{4}=12{,}650\\) choices.\n\nb) The four offices are distinct, so there are \\(P(25,4)=25\\cdot24\\cdot23\\cdot22=303{,}600\\) assignments.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "30. A professor writes 40 discrete mathematics true/false questions. Of the statements in these questions, 17 are true. If the questions can be positioned in any order, how many diferent answer keys are possible?",
+                      "problem":  "dmath-ch06-prob-157",
+                      "solution":  "An answer key is determined by which 17 of the 40 positions have answer True. Hence the number is \\(\\binom{40}{17}=88{,}732{,}378{,}800\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e31. How many 4-permutations of the positive integers not exceeding 100 contain three consecutive integers k, k + 1, k + 2, in the correct order\n\na) where these consecutive integers can perhaps be separated by other integers in the permutation?\n\nb) where they are in consecutive positions in the permutation?",
+                      "problem":  "dmath-ch06-prob-158",
+                      "solution":  "For a fixed \\(k\\), there are 98 possible triples \\((k,k+1,k+2)\\).\n\na) Choose the fourth integer in 97 ways and the three positions of the ordered triple in \\(\\binom43=4\\) ways. A permutation consisting of four consecutive integers in increasing order is counted for each of its two overlapping triples; there are 97 such permutations. Thus the answer is\n\\[\n98\\cdot97\\cdot4-97=37{,}927.\n\\]\n\nb) Treat the triple as an ordered block. It has two possible locations and the fourth integer has 97 choices. Again, each increasing run of four consecutive integers is counted twice, so the answer is\n\\[\n98\\cdot97\\cdot2-97=18{,}915.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "32. Seven women and nine men are on the faculty in the mathematics department at a school.\n\na) How many ways are there to select a committee of five members of the department if at least one woman must be on the committee?\n\nb) How many ways are there to select a committee of five members of the department if at least one woman and at least one man must be on the committee?",
+                      "problem":  "dmath-ch06-prob-159",
+                      "solution":  "There are 16 faculty members total.\n\na) Subtract the all-male committees:\n\\[\n\\binom{16}{5}-\\binom95=4368-126=4242.\n\\]\n\nb) Also subtract the all-female committees:\n\\[\n\\binom{16}{5}-\\binom95-\\binom75=4368-126-21=4221.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "33. The English alphabet contains 21 consonants and five vowels. How many strings of six lowercase letters of the English alphabet contain\n\na) exactly one vowel?\n\nb) exactly two vowels?\n\nc) at least one vowel?\n\nd) at least two vowels?",
+                      "problem":  "dmath-ch06-prob-160",
+                      "solution":  "Choose the vowel positions, fill them with 5 choices each, and fill the other positions with 21 consonant choices each.\n\na) \\(\\binom61 5\\,21^5\\).\n\nb) \\(\\binom62 5^2 21^4\\).\n\nc) By complement, \\(26^6-21^6\\).\n\nd) Subtract strings with zero or one vowel:\n\\[\n26^6-21^6-\\binom61 5\\,21^5.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "34. How many strings of six lowercase letters from the English alphabet contain\n\na) the letter a?\n\nb) the letters a and b?\n\nc) the letters a and b in consecutive positions with a preceding b, with all the letters distinct?\n\nd) the letters a and b, where a is somewhere to the left of b in the string, with all the letters distinct?",
+                      "problem":  "dmath-ch06-prob-161",
+                      "solution":  "Repetition is allowed unless distinctness is stated.\n\na) By complement, \\(26^6-25^6=64{,}775{,}151\\).\n\nb) Inclusion-exclusion gives\n\\[\n26^6-2\\cdot25^6+24^6=11{,}737{,}502.\n\\]\n\nc) Interpreting “a preceding b” as the consecutive block \\(ab\\), choose one of five block positions and arrange four distinct letters selected from the other 24:\n\\[\n5P(24,4)=1{,}275{,}120.\n\\]\n\nd) Choose four other letters, arrange all six, and divide by 2 because exactly half the arrangements put \\(a\\) to the left of \\(b\\):\n\\[\n\\binom{24}{4}\\frac{6!}{2}=3{,}825{,}360.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "35. Suppose that a department contains 10 men and 15 women. How many ways are there to form a committee with six members if it must have the same number of men and women?",
+                      "problem":  "dmath-ch06-prob-162",
+                      "solution":  "The committee must contain three men and three women. Therefore the number is\n\\[\n\\binom{10}{3}\\binom{15}{3}=120\\cdot455=54{,}600.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "36. Suppose that a department contains 10 men and 15 women. How many ways are there to form a committee with six members if it must have more women than men?",
+                      "problem":  "dmath-ch06-prob-163",
+                      "solution":  "For six members, having more women than men allows \\((4,2)\\), \\((5,1)\\), or \\((6,0)\\) women and men. Hence\n\\[\n\\binom{15}{4}\\binom{10}{2}+\\binom{15}{5}\\binom{10}{1}+\\binom{15}{6}\n=61{,}425+30{,}030+5{,}005=96{,}460.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "37. How many bit strings contain exactly eight 0s and 10 1s if every 0 must be immediately followed by a 1?",
+                      "problem":  "dmath-ch06-prob-164",
+                      "solution":  "Pair each 0 with the 1 that must immediately follow it, producing eight identical \\(01\\) blocks. Together with the two remaining 1s, there are ten objects to arrange. Choosing the positions of the eight blocks gives\n\\[\n\\binom{10}{8}=\\binom{10}{2}=45.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "38. How many bit strings contain exactly five 0s and 14 1s if every 0 must be immediately followed by two 1s?",
+                      "problem":  "dmath-ch06-prob-165",
+                      "solution":  "Treat each required \\(011\\) as one block. The five identical blocks and the four remaining 1s form nine objects, so the count is\n\\[\n\\binom95=126.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "39. How many bit strings of length 10 contain at least three 1s and at least three 0s?",
+                      "problem":  "dmath-ch06-prob-166",
+                      "solution":  "There are \\(2^{10}\\) bit strings. Subtract those with at most two 1s and, symmetrically, those with at most two 0s; these cases are disjoint. Thus\n\\[\n2^{10}-2\\left(\\binom{10}{0}+\\binom{10}{1}+\\binom{10}{2}\\right)\n=1024-112=912.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "40. How many ways are there to select 12 countries in the United Nations to serve on a council if 3 are selected from a block of 45, 4 are selected from a block of 57, and the others are selected from the remaining 69 countries?",
+                      "problem":  "dmath-ch06-prob-167",
+                      "solution":  "The selections from the three disjoint blocks are independent. The required number is\n\\[\n\\binom{45}{3}\\binom{57}{4}\\binom{69}{5}\n=62{,}994{,}022{,}035{,}644{,}700.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "41. How many license plates consisting of three letters followed by three digits contain no letter or digit twice?",
+                      "problem":  "dmath-ch06-prob-168",
+                      "solution":  "The letters form an ordered selection of three distinct letters and the digits an ordered selection of three distinct digits. Hence\n\\[\nP(26,3)P(10,3)=(26\\cdot25\\cdot24)(10\\cdot9\\cdot8)=11{,}232{,}000.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "A circular r-permutation of n people is a seating of r of these n people around a circular table, where seatings are considered to be the same if they can be obtained from each other by rotating the table.\n\n42. Find the number of circular 3-permutations of 5 people.",
+                      "problem":  "dmath-ch06-prob-169",
+                      "solution":  "Choose the three people and arrange them around the circle. Rotations are equivalent, so each chosen set has \\((3-1)!\\) seatings:\n\\[\n\\binom53(3-1)!=10\\cdot2=20.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "43. Find a formula for the number of circular r-permutations of n people.",
+                      "problem":  "dmath-ch06-prob-170",
+                      "solution":  "Choose the \\(r\\) people and arrange them around the circle, identifying the \\(r\\) rotations. Thus\n\\[\n\\binom nr(r-1)!=\\frac{P(n,r)}r=\\frac{n!}{r(n-r)!}\n\\]\nfor \\(1\\le r\\le n\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "44. Find a formula for the number of ways to seat r of n people around a circular table, where seatings are considered the same if every person has the same two neighbors without regard to which side these neighbors are sitting on.",
+                      "problem":  "dmath-ch06-prob-171",
+                      "solution":  "For \\(r\\ge3\\), choose the \\(r\\) people, then identify both rotations and reflections because reversing a seating preserves every pair of neighbors. The number is\n\\[\n\\binom nr\\frac{(r-1)!}{2}=\\frac{n!}{2r(n-r)!}.\n\\]\nFor the small degenerate cases, the counts are \\(n\\) when \\(r=1\\) and \\(\\binom n2\\) when \\(r=2\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "45. How many ways are there for a horse race with three horses to finish if ties are possible? [Note: Two or three horses may tie.]",
+                      "problem":  "dmath-ch06-prob-172",
+                      "solution":  "There are \\(3!=6\\) finishes with no tie. If exactly two horses tie, choose the tied pair in 3 ways and choose whether it is ahead of or behind the third horse in 2 ways, giving 6. There is 1 three-way tie. Therefore the total is\n\\[\n6+6+1=13.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e46. How many ways are there for a horse race with four horses to finish if ties are possible? [Note: Any number of the four horses may tie.]",
+                      "problem":  "dmath-ch06-prob-173",
+                      "solution":  "A finish is an ordered partition of the four horses into nonempty tie groups. By the number \\(j\\) of groups, the count is\n\\[\n\\sum_{j=1}^4 j!\\,S(4,j)\n=1+2\\cdot7+6\\cdot6+24\\cdot1=75,\n\\]\nwhere \\(S(4,j)\\) is a Stirling number of the second kind.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e47. There are six runners in the 100-yard dash. How many ways are there for three medals to be awarded if ties are possible? (The runner or runners who finish with the fastest time receive gold medals, the runner or runners who finish with exactly one runner ahead receive silver medals, and the runner or runners who finish with exactly two runners ahead receive bronze medals.)",
+                      "problem":  "dmath-ch06-prob-174",
+                      "solution":  "Classify outcomes by the number \\(g\\) of gold medalists.\n\nIf \\(g=1\\), either there is one silver medalist and a nonempty set of bronze medalists, giving \\(6\\cdot5(2^4-1)=450\\), or at least two silver medalists and therefore no bronze medalist, giving \\(6\\sum_{s=2}^5\\binom5s=156\\).\n\nIf \\(g=2\\), there is no silver medalist and any nonempty subset of the other four can receive bronze: \\(\\binom62(2^4-1)=225\\).\n\nIf \\(g\\ge3\\), no silver or bronze is awarded, giving \\(\\sum_{g=3}^6\\binom6g=42\\).\n\nThus the total number of medal outcomes is \\(450+156+225+42=873\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e48. This procedure is used to break ties in games in the championship round of the World Cup soccer tournament. Each team selects five players in a prescribed order. Each of these players takes a penalty kick, with a player from the first team followed by a player from the second team and so on, following the order of players specified. If the score is still tied at the end of the 10 penalty kicks, this procedure is repeated. If the score is still tied after 20 penalty kicks, a sudden-death shootout occurs, with the first team scoring an unanswered goal victorious.\n\na) How many diferent scoring scenarios are possible if the game is settled in the first round of 10 penalty kicks, where the round ends once it is impossible for a team to equal the number of goals scored by the other team?\n\nthe game is settled in the second round of 10 penalty kicks?\n\nb) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if\n\nc) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?\n\n![](images/72f1ed20e3da77da695f16131a45ff24c6b554e9309682ed865ac6512dcebc78.jpg)",
+                      "problem":  "dmath-ch06-prob-175",
+                      "solution":  "Interpret the displaced scan line as asking in part b for scenarios in which the game is settled in the second round.\n\na) Enumerating legal terminal prefixes of the alternating kicks gives 2 scenarios ending after 6 kicks, 12 after 7, 42 after 8, 112 after 9, and 252 after 10. Hence there are\n\\[\n2+12+42+112+252=420\n\\]\nfirst-round scenarios.\n\nb) A full ten-kick round is tied in\n\\[\n\\sum_{j=0}^5\\binom5j^2=\\binom{10}{5}=252\n\\]\nways. Pairing any tied first round with any of the 420 second-round winning scenarios gives\n\\[\n252\\cdot420=105{,}840.\n\\]\n\nc) Both regular rounds must be tied, giving \\(252^2\\) prefixes. In sudden death, each tied pair has 2 outcomes (both score or both miss), and the decisive pair has 2 outcomes. Settlement within at most 10 additional kicks means within five pairs, so there are\n\\[\n2\\sum_{j=0}^4 2^j=62\n\\]\nsudden-death suffixes. The total is\n\\[\n252^2\\cdot62=3{,}937{,}248.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "1. Find the expansion of $( x + y ) ^ { 4 }$\n\na) using combinatorial reasoning, as in Example 1.\n\nb) using the binomial theorem.",
+                      "problem":  "dmath-ch06-prob-176",
+                      "solution":  "In the product of four factors \\((x+y)\\), choosing \\(y\\) from exactly \\(k\\) factors produces \\(x^{4-k}y^k\\), and this can be done in \\(\\binom4k\\) ways. Thus both combinatorial reasoning and the binomial theorem give\n\\[\n(x+y)^4=x^4+4x^3y+6x^2y^2+4xy^3+y^4.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "2. Find the expansion of $( x + y ) ^ { 5 }$\n\na) using combinatorial reasoning, as in Example 1.\n\nb) using the binomial theorem.",
+                      "problem":  "dmath-ch06-prob-177",
+                      "solution":  "Choosing \\(y\\) from \\(k\\) of the five factors gives coefficient \\(\\binom5k\\). Therefore, by either combinatorial reasoning or the binomial theorem,\n\\[\n(x+y)^5=x^5+5x^4y+10x^3y^2+10x^2y^3+5xy^4+y^5.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "3. Find the expansion of $( x + y ) ^ { 6 }$",
+                      "problem":  "dmath-ch06-prob-178",
+                      "solution":  "The binomial theorem gives\n\\[\n(x+y)^6=\\sum_{k=0}^6\\binom6k x^{6-k}y^k\n=x^6+6x^5y+15x^4y^2+20x^3y^3+15x^2y^4+6xy^5+y^6.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "4. Find the coeficient of $x ^ { 5 } y ^ { 8 } \\mathrm { i n } ( x + y ) ^ { 1 3 }$",
+                      "problem":  "dmath-ch06-prob-179",
+                      "solution":  "The term \\(x^5y^8\\) arises by choosing \\(y\\) from 8 of the 13 factors, so its coefficient is\n\\[\n\\binom{13}{8}=\\binom{13}{5}=1287.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "5. How many terms are there in the expansion of $( x + y ) ^ { 1 0 0 }$ after like terms are collected?",
+                      "problem":  "dmath-ch06-prob-180",
+                      "solution":  "After collecting like terms, the powers of \\(y\\) range from 0 through 100, producing the 101 distinct monomials \\(x^{100-k}y^k\\). Hence there are \\(101\\) terms.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "6. What is the coeficient of $x ^ { 7 } \\mathrm { i n } ( 1 + x ) ^ { 1 1 } \\hat { . }$",
+                      "problem":  "dmath-ch06-prob-181",
+                      "solution":  "In \\((1+x)^{11}\\), the coefficient of \\(x^7\\) is\n\\[\n\\binom{11}{7}=\\binom{11}{4}=330.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "7. What is the coeficient of $x ^ { 9 }$ in $( 2 - x ) ^ { 1 9 } ?$",
+                      "problem":  "dmath-ch06-prob-182",
+                      "solution":  "To obtain \\(x^9\\), choose \\(-x\\) from 9 factors and 2 from the other 10. The coefficient is\n\\[\n\\binom{19}{9}(-1)^9 2^{10}=-94{,}595{,}072.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "8. What is the coeficient of $x ^ { 8 } y ^ { 9 }$ in the expansion of $( 3 x + 2 y ) ^ { 1 7 } ?$",
+                      "problem":  "dmath-ch06-prob-183",
+                      "solution":  "The term \\(x^8y^9\\) uses \\(3x\\) eight times and \\(2y\\) nine times. Its coefficient is\n\\[\n\\binom{17}{8}3^8 2^9=81{,}662{,}929{,}920.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "9. What is the coeficient of $x ^ { 1 0 1 } y ^ { 9 9 }$ in the expansion of $( 2 x - 3 y ) ^ { 2 0 0 } ?$",
+                      "problem":  "dmath-ch06-prob-184",
+                      "solution":  "The desired term uses \\(2x\\) from 101 factors and \\(-3y\\) from 99 factors. Therefore its coefficient is\n\\[\n\\binom{200}{99}2^{101}(-3)^{99}\n=-\\binom{200}{99}2^{101}3^{99}.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "10. Use the binomial theorem to expand $( 3 x - y ^ { 2 } ) ^ { 4 }$ into a sum of terms of the form $c x ^ { a } y ^ { b }$ , where c is a real number and a and b are nonnegative integers.",
+                      "problem":  "dmath-ch06-prob-185",
+                      "solution":  "Using \\(\\sum_{k=0}^4\\binom4k(3x)^{4-k}(-y^2)^k\\) gives\n\\[\n81x^4-108x^3y^2+54x^2y^4-12xy^6+y^8.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "11. Use the binomial theorem to expand $( 3 x ^ { 4 } - 2 y ^ { 3 } ) ^ { 5 }$ into a sum of terms of the form $c x ^ { a } y ^ { b }$ , where c is a real number and a and b are nonnegative integers.",
+                      "problem":  "dmath-ch06-prob-186",
+                      "solution":  "Using \\(\\sum_{k=0}^5\\binom5k(3x^4)^{5-k}(-2y^3)^k\\) gives\n\\[\n243x^{20}-810x^{16}y^3+1080x^{12}y^6-720x^8y^9+240x^4y^{12}-32y^{15}.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "12. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 5 x ^ { 2 } + 2 y ^ { 3 } ) ^ { 6 }$ , where\n\na) $a = 6 , b = 9 .$\n\nb) $a = 2 , b = 1 5 .$\n\nc) $a = 3 , b = 1 2 .$\n\nd) $a = 1 2 , b = 0 .$\n\ne) $a = 8 , b = 9 .$",
+                      "problem":  "dmath-ch06-prob-187",
+                      "solution":  "If \\(j\\) factors contribute \\(2y^3\\), the term has exponents \\(x^{12-2j}y^{3j}\\) and coefficient \\(\\binom6j5^{6-j}2^j\\). Therefore:\n\na) \\(j=3\\), so the coefficient is \\(\\binom635^3 2^3=20{,}000\\).\n\nb) \\(j=5\\), so the coefficient is \\(\\binom655\\,2^5=960\\).\n\nc) No integer \\(j\\) gives \\(x^3y^{12}\\), so the coefficient is \\(0\\).\n\nd) \\(j=0\\), so the coefficient is \\(5^6=15{,}625\\).\n\ne) The required exponents correspond to different values of \\(j\\), so the coefficient is \\(0\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "13. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 2 x ^ { 3 } - 4 y ^ { 2 } ) ^ { 7 }$ , where\n\na) $a = 9 , b = 8 .$\n\nb) $a = 8 , b = 9 .$\n\nc) $a = 0 , b = 1 4 .$\n\nd) $a = 1 2 , b = 6 .$\n\ne) $a = 1 8 , b = 2 .$",
+                      "problem":  "dmath-ch06-prob-188",
+                      "solution":  "If \\(j\\) factors contribute \\(-4y^2\\), the term has exponents \\(x^{21-3j}y^{2j}\\) and coefficient \\(\\binom7j2^{7-j}(-4)^j\\). Therefore:\n\na) \\(j=4\\): \\(\\binom742^3(-4)^4=71{,}680\\).\n\nb) No integer \\(j\\) gives these exponents, so the coefficient is \\(0\\).\n\nc) \\(j=7\\): \\((-4)^7=-16{,}384\\).\n\nd) \\(j=3\\): \\(\\binom732^4(-4)^3=-35{,}840\\).\n\ne) \\(j=1\\): \\(\\binom712^6(-4)=-1{,}792\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e14. Give a formula for the coeficient of $x ^ { k }$ in the expansion of $( x + 1 / x ) ^ { 1 0 0 }$ , where k is an integer.",
+                      "problem":  "dmath-ch06-prob-189",
+                      "solution":  "Choosing \\(1/x\\) from \\(j\\) factors gives \\(\\binom{100}{j}x^{100-2j}\\). Thus\n\\[\n[x^k](x+1/x)^{100}=\n\\begin{cases}\n\\binom{100}{(100-k)/2},\u0026 -100\\le k\\le100\\text{ and }k\\text{ is even},\\\\\n0,\u0026\\text{otherwise}.\n\\end{cases}\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e15. Give a formula for the coeficient of $x ^ { k }$ in the expansion of $( x ^ { 2 } - 1 / x ) ^ { 1 0 0 }$ , where k is an integer.",
+                      "problem":  "dmath-ch06-prob-190",
+                      "solution":  "Choosing \\(-1/x\\) from \\(j\\) factors gives \\((-1)^j\\binom{100}{j}x^{200-3j}\\). Hence, with \\(j=(200-k)/3\\),\n\\[\n[x^k](x^2-1/x)^{100}=\n\\begin{cases}\n(-1)^j\\binom{100}{j},\u0026j\\text{ is an integer with }0\\le j\\le100,\\\\\n0,\u0026\\text{otherwise}.\n\\end{cases}\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "16. The row of Pascal’s triangle containing the binomial coeficients $\\binom { 1 0 } { k } , 0 \\leq k \\leq 1 0 ,$ is:\n\n$$\n1 1 1 4 5 1 2 0 2 1 0 2 5 2 2 1 0 1 2 0 4 5 1 0 1\n$$\n\nUse Pascal’s identity to produce the row immediately following this row in Pascal’s triangle.",
+                      "problem":  "dmath-ch06-prob-191",
+                      "solution":  "The displayed row is scan-corrupted, but its label specifies the \\(n=10\\) row. Adding adjacent entries by Pascal\u0027s identity and placing 1 at each end gives the \\(n=11\\) row:\n\\[\n1,\\ 11,\\ 55,\\ 165,\\ 330,\\ 462,\\ 462,\\ 330,\\ 165,\\ 55,\\ 11,\\ 1.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "17. What is the row of Pascal’s triangle containing the binomial coeficients $\\textstyle { \\binom { 9 } { k } } , 0 \\leq k \\leq 9 ?$",
+                      "problem":  "dmath-ch06-prob-192",
+                      "solution":  "The row for \\(n=9\\) is\n\\[\n\\binom90,\\binom91,\\ldots,\\binom99\n=1,\\ 9,\\ 36,\\ 84,\\ 126,\\ 126,\\ 84,\\ 36,\\ 9,\\ 1.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "18. Show that if n is a positive integer, then $\\begin{array} { r } { 1 = { \\binom { n } { 0 } } \u003c { \\binom { n } { 1 } } \u003c } \\end{array}$ $\\begin{array} { r } { \\cdots \u003c { \\binom { n } { \\lfloor n / 2 \\rfloor } } = { \\binom { n } { \\lceil n / 2 \\rceil } } \u003e \\cdots \u003e { \\binom { n } { n - 1 } } \u003e { \\binom { n } { n } } = \\stackrel { \\cup } { 1 } . } \\end{array}$",
+                      "problem":  "dmath-ch06-prob-193",
+                      "solution":  "For \\(0\\le k\u003cn\\),\n\\[\n\\frac{\\binom n{k+1}}{\\binom nk}=\\frac{n-k}{k+1}.\n\\]\nThis ratio is greater than 1 when \\(k\u003c(n-1)/2\\), equals 1 only for the two middle entries when \\(n\\) is odd, and is less than 1 after the middle. Also \\(\\binom nk=\\binom n{n-k}\\). These facts prove the stated increase toward the central coefficient or coefficients and the symmetric decrease afterward.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "19. Show that ${ \\binom { n } { k } } \\leq 2 ^ { n }$ for all positive integers n and all integers k with $0 \\leq k \\leq n$",
+                      "problem":  "dmath-ch06-prob-194",
+                      "solution":  "By the binomial theorem,\n\\[\n2^n=(1+1)^n=\\sum_{j=0}^n\\binom nj.\n\\]\nEvery summand is nonnegative, so each individual term satisfies \\(\\binom nk\\le2^n\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "20.\n\na) Use Exercise 18 and Corollary 1 to show that if n is an integer greater than 1, then $\\binom { n } { | n / 2 | } \\geq 2 ^ { n } / n$\n\nb) Conclude from part (a) that if n is a positive integer, then ${ \\binom { 2 n } { n } } \\geq 4 ^ { n } / 2 n$",
+                      "problem":  "dmath-ch06-prob-195",
+                      "solution":  "a) Let \\(M=\\binom n{\\lfloor n/2\\rfloor}\\), the largest coefficient by Exercise 18. For \\(n\u003e1\\), the two endpoint coefficients sum to \\(2\\le M\\), and each of the \\(n-1\\) interior coefficients is at most \\(M\\). Therefore\n\\[\n2^n=\\sum_{k=0}^n\\binom nk\\le nM,\n\\]\nso \\(M\\ge2^n/n\\).\n\nb) Apply part (a) with \\(2n\\) in place of \\(n\\). Its central coefficient is \\(\\binom{2n}{n}\\), hence\n\\[\n\\binom{2n}{n}\\ge\\frac{2^{2n}}{2n}=\\frac{4^n}{2n}.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "21. Show that if n and k are integers with $1 \\leq k \\leq n ,$ , then ${ \\binom { n } { k } } \\leq n ^ { k } / 2 ^ { k - 1 }$",
+                      "problem":  "dmath-ch06-prob-196",
+                      "solution":  "Using the factorial formula,\n\\[\n\\binom nk=\\frac{n(n-1)\\cdots(n-k+1)}{k!}\\le\\frac{n^k}{k!}.\n\\]\nFor \\(k\\ge1\\), \\(k!=1\\cdot2\\cdots k\\ge2^{k-1}\\), because each factor from 2 through \\(k\\) is at least 2. Consequently\n\\[\n\\binom nk\\le\\frac{n^k}{2^{k-1}}.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "22. Suppose that b is an integer with $b \\geq 7$ . Use the binomial theorem and the appropriate row of Pascal’s triangle to find the base-b expansion of $( 1 1 ) _ { b } ^ { 4 }$ [that is, the fourth power of the number $( 1 1 ) _ { b }$ in base-b notation].",
+                      "problem":  "dmath-ch06-prob-197",
+                      "solution":  "The base-\\(b\\) number \\((11)_b\\) equals \\(b+1\\). By the binomial theorem,\n\\[\n(b+1)^4=b^4+4b^3+6b^2+4b+1.\n\\]\nBecause \\(b\\ge7\\), all coefficients are valid base-\\(b\\) digits and no carrying occurs. Thus\n\\[\n(11)_b^4=(14641)_b.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "23. Prove Pascal’s identity, using the formula for \u003csup\u003en\u003c/sup\u003e .",
+                      "problem":  "dmath-ch06-prob-198",
+                      "solution":  "Interpreting the scan as requesting the factorial-formula proof of Pascal\u0027s identity, for \\(1\\le k\\le n\\),\n\\[\n\\binom nk+\\binom n{k-1}\n=\\frac{n!}{k!(n-k)!}+\\frac{n!}{(k-1)!(n-k+1)!}\n=\\frac{(n+1)!}{k!(n+1-k)!}\n=\\binom{n+1}k.\n\\]\nThe boundary cases follow using \\(\\binom n0=\\binom nn=1\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "24. Suppose that k and n are integers with $1 \\leq k \u003c n .$ . Prove the hexagon identity\n\n$$\n{ \\binom { n - 1 } { k - 1 } } { \\binom { n } { k + 1 } } { \\binom { n + 1 } { k } } = { \\binom { n - 1 } { k } } { \\binom { n } { k - 1 } } { \\binom { n + 1 } { k + 1 } } ,\n$$\n\nwhich relates terms in Pascal’s triangle that form a hexagon.",
+                      "problem":  "dmath-ch06-prob-199",
+                      "solution":  "Expand all six binomial coefficients using factorials. The left-hand side has denominator\n\\[\n(k-1)!\\,k!\\,(k+1)!\\,(n-k-1)!\\,(n-k)!\\,(n-k+1)!\n\\]\nand numerator \\((n-1)!\\,n!\\,(n+1)!\\). The right-hand side has exactly the same numerator and the same six denominator factors, only reordered. Therefore the two products are equal.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "25. Prove that if n and k are integers with $1 \\leq k \\leq n ,$ , then $\\begin{array} { r } { k \\binom { n } { k } = n \\binom { n - 1 } { k - 1 } } \\end{array}$ ，\n\na) using a combinatorial proof. [Hint: Show that the two sides of the identity count the number of ways to select a subset with k elements from a set with n elements and then an element of this subset.]\n\nb) using an algebraic proof based on the formula for $\\binom { n } { r }$ given in Theorem 2 in Section 6.3.",
+                      "problem":  "dmath-ch06-prob-200",
+                      "solution":  "a) Count pairs \\((S,s)\\), where \\(S\\) is a \\(k\\)-element subset of an \\(n\\)-element set and \\(s\\in S\\). Choosing \\(S\\) first gives \\(k\\binom nk\\). Choosing the distinguished element \\(s\\) first and then the other \\(k-1\\) elements gives \\(n\\binom{n-1}{k-1}\\). Hence the two expressions are equal.\n\nb) Algebraically,\n\\[\nk\\binom nk=k\\frac{n!}{k!(n-k)!}\n=\\frac{n!}{(k-1)!(n-k)!}\n=n\\frac{(n-1)!}{(k-1)!(n-k)!}\n=n\\binom{n-1}{k-1}.\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "26. Prove the identity $\\textstyle { \\binom { n } { r } } { \\binom { r } { k } } = { \\binom { n } { k } } { \\binom { n - k } { r - k } }$ , whenever $n , r ,$ and k are nonnegative integers with $r \\leq n$ and $k \\leq r ,$\n\na) using a combinatorial argument.\n\nb) using an argument based on the formula for the number of r-combinations of a set with n elements.",
+                      "problem":  "dmath-ch06-prob-201",
+                      "solution":  "a) Count pairs \\((R,K)\\) with \\(K\\subseteq R\\), \\(|R|=r\\), and \\(|K|=k\\). Choosing \\(R\\) and then \\(K\\) gives \\(\\binom nr\\binom rk\\). Choosing \\(K\\) first and then the other \\(r-k\\) elements of \\(R\\) gives \\(\\binom nk\\binom{n-k}{r-k}\\).\n\nb) Both sides simplify to\n\\[\n\\frac{n!}{k!(r-k)!(n-r)!},\n\\]\nso they are equal.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "27. Show that if n and k are positive integers, then\n\n$$\n\\binom { n + 1 } { k } = ( n + 1 ) \\binom { n } { k - 1 } \\nearrow\n$$\n\nUse this identity to construct an inductive definition of the binomial coeficients.",
+                      "problem":  "dmath-ch06-prob-202",
+                      "solution":  "The displayed identity is false literally for general \\(k\\); the standard identity evidently intended by the scan is\n\\[\nk\\binom{n+1}{k}=(n+1)\\binom n{k-1},\n\\]\nor equivalently\n\\[\n\\binom{n+1}{k}=\\frac{n+1}{k}\\binom n{k-1}.\n\\]\nIt follows directly from the factorial formulas on both sides.\n\nThis gives the inductive definition\n\\[\n\\binom00=1,\\qquad \\binom{n+1}{0}=1,\\qquad\n\\binom{n+1}{k}=\\frac{n+1}{k}\\binom n{k-1}\n\\quad(1\\le k\\le n+1).\n\\]",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "28. Show that if p is a prime and k is an integer such that $1 \\leq k \\leq p - 1$ , then p divides $\\binom { p } { k }$",
+                      "problem":  "dmath-ch06-prob-203",
+                      "solution":  "From\n\\[\nk\\binom pk=p\\binom{p-1}{k-1},\n\\]\nthe product \\(k\\binom pk\\) is divisible by \\(p\\). Because \\(1\\le k\\le p-1\\) and \\(p\\) is prime, \\(\\gcd(k,p)=1\\). Euclid\u0027s lemma therefore implies that \\(p\\mid\\binom pk\\).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  },
+                  {
+                      "source":  "29. Let n be a positive integer. Show that\n\n$$\n{ \\binom { 2 n } { n + 1 } } + { \\binom { 2 n } { n } } = { \\binom { 2 n + 2 } { n + 1 } } / 2 .\n$$",
+                      "problem":  "dmath-ch06-prob-204",
+                      "solution":  "Pascal\u0027s identity gives\n\\[\n\\binom{2n}{n+1}+\\binom{2n}{n}=\\binom{2n+1}{n+1}.\n\\]\nAlso,\n\\[\n\\binom{2n+2}{n+1}\n=\\frac{2n+2}{n+1}\\binom{2n+1}{n}\n=2\\binom{2n+1}{n}.\n\\]\nBy symmetry \\(\\binom{2n+1}{n}=\\binom{2n+1}{n+1}\\). Dividing the last equation by 2 proves the identity.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b353-7b01-8202-ae96911015af"
+                  }
+              ]
+}

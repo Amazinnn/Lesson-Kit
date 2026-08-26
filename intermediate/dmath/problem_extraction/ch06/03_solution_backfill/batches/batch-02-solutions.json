@@ -1,0 +1,362 @@
+{
+    "kind":  "solutions",
+    "items":  [
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e52. How many bit strings of length 10 contain either five consecutive 0s or five consecutive 1s?",
+                      "problem":  "dmath-ch06-prob-052",
+                      "solution":  "There are $2^{10}=1024$ length-10 bit strings. A string avoiding both five consecutive 0s and five consecutive 1s has every run of equal bits of length at most 4. Such a string is determined by its first bit and a composition of 10 with parts at most 4. If $c_n=c_{n-1}+c_{n-2}+c_{n-3}+c_{n-4}$ with $c_0=1$, then $c_{10}=401$. Hence $2c_{10}=802$ strings avoid both patterns, so the answer is $1024-802=\\mathbf{222}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗∗\u003c/sup\u003e53. How many bit strings of length eight contain either three consecutive 0s or four consecutive 1s?",
+                      "problem":  "dmath-ch06-prob-053",
+                      "solution":  "Count the complement using run lengths: every 0-run must have length at most 2 and every 1-run length at most 3. A five-state recurrence tracking a terminal run $0,00,1,11,111$ gives 109 admissible length-8 strings. Since there are $2^8=256$ total strings, the required number is $256-109=\\mathbf{147}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "54. Every student in a discrete mathematics class is either a computer science or a mathematics major or is a joint major in these two subjects. How many students are in the class if there are 38 computer science majors (including joint majors), 23 mathematics majors (including joint majors), and 7 joint majors?",
+                      "problem":  "dmath-ch06-prob-054",
+                      "solution":  "Let $C$ and $M$ be the sets of computer science and mathematics majors. Every student is in $C\\cup M$, so inclusion-exclusion gives $|C\\cup M|=38+23-7=\\mathbf{54}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "55. How many positive integers not exceeding 100 are divisible either by 4 or by 6?",
+                      "problem":  "dmath-ch06-prob-055",
+                      "solution":  "There are $\\lfloor100/4\\rfloor=25$ multiples of 4 and $\\lfloor100/6\\rfloor=16$ multiples of 6. The $\\lfloor100/12\\rfloor=8$ multiples of both were counted twice. Thus the answer is $25+16-8=\\mathbf{33}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "56. How many diferent initials can someone have if a person has at least two, but no more than five, diferent initials? Assume that each initial is one of the 26 uppercase letters of the English language.",
+                      "problem":  "dmath-ch06-prob-056",
+                      "solution":  "For a sequence of $k$ initials, each position has 26 choices. Summing over the allowed lengths gives $26^2+26^3+26^4+26^5=\\mathbf{12,356,604}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "57. Suppose that a password for a computer system must have at least 8, but no more than 12, characters, where each character in the password is a lowercase English letter, an uppercase English letter, a digit, or one of the six special characters ∗, $\u003e , \\ \u003c , \\ 1 ,$ +, and =.\n\na) How many diferent passwords are available for this computer system?\n\nb) How many of these passwords contain at least one occurrence of at least one of the six special characters?\n\nc) Using your answer to part (a), determine how long it takes a hacker to try every possible password, assuming that it takes one nanosecond for a hacker to check each possible password.",
+                      "problem":  "dmath-ch06-prob-057",
+                      "solution":  "There are $26+26+10+6=68$ permitted characters. (a) The number is $N=\\sum_{k=8}^{12}68^k$. (b) Strings with no special character use only the other 62 characters, so the answer is $\\sum_{k=8}^{12}(68^k-62^k)$. (c) At one nanosecond per trial, all passwords take $N$ nanoseconds, equivalently $N/10^9$ seconds (or $N/(10^9\\cdot60\\cdot60\\cdot24\\cdot365.25)$ years).",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "58. The name of a variable in the C programming language is a string that can contain uppercase letters, lowercase letters, digits, or underscores. Further, the first character in the string must be a letter, either uppercase or lowercase, or an underscore. If the name of a variable is determined by its first eight characters, how many diferent variables can be named in C? (Note that the name of a variable may contain fewer than eight characters.)",
+                      "problem":  "dmath-ch06-prob-058",
+                      "solution":  "The first character has $52+1=53$ choices, and each later character has $52+10+1=63$ choices. Allowing lengths 1 through 8 gives $\\sum_{k=1}^{8}53\\cdot63^{k-1}=\\mathbf{53(63^8-1)/62}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "59. The name of a variable in the JAVA programming language is a string of between 1 and 65,535 characters, inclusive, where each character can be an uppercase or a lowercase letter, a dollar sign, an underscore, or a digit, except that the first character must not be a digit. Determine the number of diferent variable names in JAVA.",
+                      "problem":  "dmath-ch06-prob-059",
+                      "solution":  "There are 64 possible characters in all, and the first character has $64-10=54$ choices because it cannot be a digit. Therefore the number of names is $\\sum_{k=1}^{65535}54\\cdot64^{k-1}=\\mathbf{54(64^{65535}-1)/63}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "60. The International Telecommunications Union (ITU) specifies that a telephone number must consist of a country code with between 1 and 3 digits, except that the code 0 is not available for use as a country code, followed by a number with at most 15 digits. How many available possible telephone numbers are there that satisfy these restrictions?",
+                      "problem":  "dmath-ch06-prob-060",
+                      "solution":  "A 1-, 2-, or 3-digit country code has a nonzero first digit, giving $9+90+900=999$ choices. A following number of length 1 through 15 has $\\sum_{k=1}^{15}10^k$ choices. Hence the total is $\\mathbf{999\\sum_{k=1}^{15}10^k=111(10^{16}-10)}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "61. Suppose that at some future time every telephone in the world is assigned a number that contains a country code 1 to 3 digits long, that is, of the form X, XX, or XXX, followed by a 10-digit telephone number of the form NXX-NXX-XXXX (as described in Example 8). How many diferent telephone numbers would be available worldwide under this numbering plan?",
+                      "problem":  "dmath-ch06-prob-061",
+                      "solution":  "Using the country-code restriction from the preceding numbering plan gives $9+90+900=999$ codes. In an $NXX$ block, $N$ has 8 choices and each $X$ has 10, so an $NXX$-$NXX$-$XXXX number has $8\\cdot10^2\\cdot8\\cdot10^2\\cdot10^4=64\\cdot10^8$ forms. Thus there are $\\mathbf{999\\cdot64\\cdot10^8=639,360,000,000}$ numbers.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "62. A key in the Vigenere cryptosystem is a string of English\\` letters, where the case of the letters does not matter. How many diferent keys for this cryptosystem are there with three, four, five, or six letters?",
+                      "problem":  "dmath-ch06-prob-062",
+                      "solution":  "Case does not matter, so each position has 26 choices. The number of keys is $26^3+26^4+26^5+26^6=\\mathbf{321,271,704}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "63. A wired equivalent privacy (WEP) key for a wireless fidelity (WiFi) network is a string of either 10, 26, or 58 hexadecimal digits. How many diferent WEP keys are there?",
+                      "problem":  "dmath-ch06-prob-063",
+                      "solution":  "Each hexadecimal digit has 16 choices. The allowed lengths are disjoint, so the number of WEP keys is $\\mathbf{16^{10}+16^{26}+16^{58}}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "64. Suppose that p and q are prime numbers and that $n = p q$ Use the principle of inclusion–exclusion to find the number of positive integers not exceeding n that are relatively prime to n.",
+                      "problem":  "dmath-ch06-prob-064",
+                      "solution":  "Assume first that $p$ and $q$ are distinct. Among $1,\\ldots,pq$, there are $q$ multiples of $p$, $p$ multiples of $q$, and one multiple of both. Inclusion-exclusion therefore leaves $pq-q-p+1=\\mathbf{(p-1)(q-1)}$ integers relatively prime to $pq$. If the two primes are equal, then $n=p^2$ and the count is instead $p^2-p$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "65. Use the principle of inclusion–exclusion to find the number of positive integers less than 1,000,000 that are not divisible by either 4 or by 6.",
+                      "problem":  "dmath-ch06-prob-065",
+                      "solution":  "The positive integers below 1,000,000 are $1$ through $999,999$. There are 249,999 multiples of 4, 166,666 multiples of 6, and 83,333 multiples of $\\operatorname{lcm}(4,6)=12$. Thus $249999+166666-83333=333332$ are divisible by 4 or 6, leaving $999999-333332=\\mathbf{666,667}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "66. Use a tree diagram to find the number of bit strings of length four with no three consecutive 0s.",
+                      "problem":  "dmath-ch06-prob-066",
+                      "solution":  "Of the 16 length-4 bit strings, exactly three contain 000: $0000$, $0001$, and $1000$. Therefore $16-3=\\mathbf{13}$ strings have no three consecutive 0s.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "67. How many ways are there to arrange the letters a, b, c, and d such that a is not followed immediately by b?",
+                      "problem":  "dmath-ch06-prob-067",
+                      "solution":  "There are $4!=24$ arrangements in total. If $a$ is immediately followed by $b$, treat $ab$ as one block; the block, $c$, and $d$ can be arranged in $3!=6$ ways. Hence $24-6=\\mathbf{18}$ arrangements satisfy the condition.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "68. Use a tree diagram to find the number of ways that the World Series can occur, where the first team that wins four games out of seven wins the series.",
+                      "problem":  "dmath-ch06-prob-068",
+                      "solution":  "If a specified team wins the series in game $k$, where $4\\le k\\le7$, it wins game $k$ and exactly three of the first $k-1$ games, giving $\\binom{k-1}{3}$ sequences. Either team may win, so the total is $2\\sum_{k=4}^{7}\\binom{k-1}{3}=2(1+4+10+20)=\\mathbf{70}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "69. Use a tree diagram to determine the number of subsets of {3, 7, 9, 11, 24} with the property that the sum of the elements in the subset is less than 28.",
+                      "problem":  "dmath-ch06-prob-069",
+                      "solution":  "Without 24, all 16 subsets of $\\{3,7,9,11\\}$ have sum below 28 except the full set, whose sum is 30; this gives 15 subsets. With 24 included, the remaining elements must sum below 4, so only the empty set or $\\{3\\}$ may accompany it. The total is $15+2=\\mathbf{17}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "70.\n\na) Suppose that a store sells six varieties of soft drinks: cola, ginger ale, orange, root beer, lemonade, and cream soda. Use a tree diagram to determine the number of diferent types of bottles the store must stock to have all varieties available in all size bottles if all varieties are available in 12-ounce bottles, all but lemonade are available in 20-ounce bottles, only cola and ginger ale are available in 32-ounce bottles, and all but lemonade and cream soda are available in 64- ounce bottles?\n\nb) Answer the question in part (a) using counting rules.",
+                      "problem":  "dmath-ch06-prob-070",
+                      "solution":  "(a) The tree has one branch for each size and then one for every available variety: 6 branches at 12 ounces, 5 at 20 ounces, 2 at 32 ounces, and 4 at 64 ounces. It therefore has $6+5+2+4=\\mathbf{17}$ leaves. (b) By the sum rule, these mutually exclusive size-variety types again total $6+5+2+4=\\mathbf{17}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "71.\n\na) Suppose that a popular style of running shoe is available for both men and women. The woman’s shoe comes in sizes 6, 7, 8, and 9, and the man’s shoe comes in sizes 8, 9, 10, 11, and 12. The man’s shoe comes in white and black, while the woman’s shoe comes in white, red, and black. Use a tree diagram to determine the number of diferent shoes that a store has to stock to have at least one pair of this type of running shoe for all available sizes and colors for both men and women.\n\nb) Answer the question in part (a) using counting rules.",
+                      "problem":  "dmath-ch06-prob-071",
+                      "solution":  "(a) The women\u0027s branch has $4\\cdot3=12$ size-color leaves, and the men\u0027s branch has $5\\cdot2=10$, for $\\mathbf{22}$ leaves total. (b) By the product rule within each sex and the sum rule between sexes, the count is $4\\cdot3+5\\cdot2=\\mathbf{22}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "72. Determine the number of matches played in a singleelimination tournament with n players, where for each game between two players the winner goes on, but the loser is eliminated.",
+                      "problem":  "dmath-ch06-prob-072",
+                      "solution":  "Every match eliminates exactly one player. Starting with $n$ players and ending with one champion requires eliminating $n-1$ players, so exactly $\\mathbf{n-1}$ matches are played.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "73. Determine the minimum and the maximum number of matches that can be played in a double-elimination tournament with n players, where after each game between two players, the winner goes on and the loser goes on if and only if this is not a second loss.",
+                      "problem":  "dmath-ch06-prob-073",
+                      "solution":  "Each match produces one loss. Every nonchampion must accumulate two losses, contributing $2(n-1)$ losses. If the champion is undefeated, this is the total and the minimum is $\\mathbf{2n-2}$. If the champion has one loss, there is one additional match, so the maximum is $\\mathbf{2n-1}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e74. Use the product rule to show that there are $2 ^ { 2 ^ { n } }$ diferent truth tables for propositions in n variables.",
+                      "problem":  "dmath-ch06-prob-074",
+                      "solution":  "There are $2^n$ possible truth assignments to $n$ variables, hence $2^n$ rows in a truth table. For each row the proposition\u0027s truth value can independently be either true or false. By the product rule, the number of tables is a product of 2 over all $2^n$ rows, namely $\\mathbf{2^{2^n}}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "75. Use mathematical induction to prove the sum rule for m tasks from the sum rule for two tasks.",
+                      "problem":  "dmath-ch06-prob-075",
+                      "solution":  "Let task $i$ be doable in $n_i$ ways, with no outcome belonging to two tasks. The two-task sum rule is the base case. Assume the rule for $m$ tasks, giving $n_1+\\cdots+n_m$ ways. Regard those $m$ tasks as one combined task and apply the two-task rule with task $m+1$; the result is $(n_1+\\cdots+n_m)+n_{m+1}$. Thus the sum rule holds for $m+1$, and induction proves it for every $m\\ge2$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "76. Use mathematical induction to prove the product rule for m tasks from the product rule for two tasks.",
+                      "problem":  "dmath-ch06-prob-076",
+                      "solution":  "Let task $i$ have $n_i$ possible outcomes. The two-task product rule is the base case. Assume a sequence of $m$ tasks can be performed in $n_1\\cdots n_m$ ways. Treat that sequence as one task and apply the two-task rule with task $m+1$; there are $(n_1\\cdots n_m)n_{m+1}$ outcomes. Hence induction proves the product rule for every $m\\ge2$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "77. How many diagonals does a convex polygon with n sides have? (Recall that a polygon is convex if every line segment connecting two points in the interior or boundary of the polygon lies entirely within this set and that a diagonal of a polygon is a line segment connecting two vertices that are not adjacent.)",
+                      "problem":  "dmath-ch06-prob-077",
+                      "solution":  "Every pair of vertices determines a side or a diagonal, so there are $\\binom n2$ such segments. Exactly $n$ are sides. Therefore the number of diagonals is $\\binom n2-n=\\mathbf{n(n-3)/2}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "78. Data are transmitted over the Internet in datagrams, which are structured blocks of bits. Each datagram contains header information organized into a maximum of 14 diferent fields (specifying many things, including the source and destination addresses) and a data area that contains the actual data that are transmitted. One of the 14 header fields is the header length field (denoted by HLEN), which is specified by the protocol to be 4 bits long and that specifies the header length in terms of 32- bit blocks of bits. For example, if HLEN = 0110, the header is made up of six 32-bit blocks. Another of the 14 header fields is the 16-bit-long total length field (denoted by TOTAL LENGTH), which specifies the length in bits of the entire datagram, including both the header fields and the data area. The length of the data area is the total length of the datagram minus the length of the header.\n\na) The largest possible value of TOTAL LENGTH (which is 16 bits long) determines the maximum total length in octets (blocks of 8 bits) of an Internet datagram. What is this value?\n\nb) The largest possible value of HLEN (which is 4 bits long) determines the maximum total header length in 32-bit blocks. What is this value? What is the maximum total header length in octets?\n\nc) The minimum (and most common) header length is 20 octets. What is the maximum total length in octets of the data area of an Internet datagram?\n\nd) How many diferent strings of octets in the data area can be transmitted if the header length is 20 octets and the total length is as long as possible?\n\n![](images/3d9f6934d96a760745fd62a416dbb67dddaef0ba82c5be69ba62c25ff1d2266e.jpg)\n\n## The Pigeonhole Principle",
+                      "problem":  "dmath-ch06-prob-078",
+                      "solution":  "(a) A 16-bit unsigned field has maximum value $2^{16}-1=\\mathbf{65,535}$, so the maximum total length is 65,535 octets. (b) A 4-bit HLEN has maximum value $2^4-1=\\mathbf{15}$ blocks, or $15\\cdot32/8=\\mathbf{60}$ octets. (c) With a 20-octet header, the data area can contain $65,535-20=\\mathbf{65,515}$ octets. (d) Each octet has 256 possible values, independently, so the number of data strings is $\\mathbf{256^{65515}=2^{524120}}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "1. Show that in any set of six classes, each meeting regularly once a week on a particular day of the week, there must be two that meet on the same day, assuming that no classes are held on weekends.",
+                      "problem":  "dmath-ch06-prob-079",
+                      "solution":  "The five weekdays are the pigeonholes and the six classes are the pigeons. Assign each class to its meeting day. Since $6\u003e5$, the pigeonhole principle guarantees that two classes are assigned to the same weekday.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "2. Show that if there are 30 students in a class, then at least two have last names that begin with the same letter.",
+                      "problem":  "dmath-ch06-prob-080",
+                      "solution":  "There are only 26 possible first letters for a last name. Placing 30 students into these 26 categories forces some category to contain at least two students, so two last names begin with the same letter.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "3. A drawer contains a dozen brown socks and a dozen black socks, all unmatched. A man takes socks out at random in the dark.\n\na) How many socks must he take out to be sure that he has at least two socks of the same color?\n\nb) How many socks must he take out to be sure that he has at least two black socks?",
+                      "problem":  "dmath-ch06-prob-081",
+                      "solution":  "(a) With two colors, two socks could have different colors, but the third must match one of them. Thus $\\mathbf{3}$ socks suffice and are necessary. (b) In the worst case all 12 brown socks are drawn first, followed by one black sock. The next sock must be black, so $\\mathbf{14}$ socks are necessary and sufficient.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "4. A bowl contains 10 red balls and 10 blue balls. A woman selects balls at random without looking at them.\n\na) How many balls must she select to be sure of having at least three balls of the same color?\n\nb) How many balls must she select to be sure of having at least three blue balls?",
+                      "problem":  "dmath-ch06-prob-082",
+                      "solution":  "(a) Four selections could produce two red and two blue balls; the fifth forces one color to appear at least three times. Thus the answer is $\\mathbf{5}$. (b) In the worst case all 10 red balls and then two blue balls are selected. The next selection guarantees a third blue ball, so the answer is $\\mathbf{13}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "5. Undergraduate students at a college belong to one of four groups depending on the year in which they are expected to graduate. Each student must choose one of 21 diferent majors. How many students are needed to assure that there are two students expected to graduate in the same year who have the same major?",
+                      "problem":  "dmath-ch06-prob-083",
+                      "solution":  "A student belongs to one of $4\\cdot21=84$ graduation-year/major categories. At most 84 students can occupy these categories without duplication, so $\\mathbf{85}$ students guarantee two in the same category.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "6. There are six professors teaching the introductory discrete mathematics class at a university. The same final exam is given by all six professors. If the lowest possible score on the final is 0 and the highest possible score is 100, how many students must there be to guarantee that there are two students with the same professor who earned the same final examination score?",
+                      "problem":  "dmath-ch06-prob-084",
+                      "solution":  "There are $6\\cdot101=606$ professor-score categories because scores range from 0 through 100. Therefore $\\mathbf{607}$ students guarantee that two have both the same professor and the same score.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "7. Show that among any group of five (not necessarily consecutive) integers, there are two with the same remainder when divided by 4.",
+                      "problem":  "dmath-ch06-prob-085",
+                      "solution":  "Division by 4 gives only four possible remainders: 0, 1, 2, and 3. Assigning five integers to these four remainder classes forces two into the same class by the pigeonhole principle.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "8. Let d be a positive integer. Show that among any group of d + 1 (not necessarily consecutive) integers there are two with exactly the same remainder when they are divided by d.",
+                      "problem":  "dmath-ch06-prob-086",
+                      "solution":  "There are exactly $d$ possible remainders modulo $d$, namely $0,1,\\ldots,d-1$. Placing $d+1$ integers into these $d$ remainder classes forces two integers to have the same remainder.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "9. Let n be a positive integer. Show that in any set of n consecutive integers there is exactly one divisible by n.",
+                      "problem":  "dmath-ch06-prob-087",
+                      "solution":  "Write the consecutive integers as $a,a+1,\\ldots,a+n-1$. Their residues modulo $n$ are all distinct: equality of two residues would make the positive difference of their indices, which is less than $n$, divisible by $n$. Hence they represent all $n$ residue classes exactly once, including residue 0, so exactly one is divisible by $n$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "10. Show that if f is a function from S to T, where S and T are finite sets with $\\vert S \\vert \u003e \\vert T \\vert$ , then there are elements $s _ { 1 }$ and $s _ { 2 }$ in S such that $f ( s _ { 1 } ) = f ( s _ { 2 } )$ , or in other words, f is not one-to-one.",
+                      "problem":  "dmath-ch06-prob-088",
+                      "solution":  "For each $t\\in T$, regard the fiber $f^{-1}(t)$ as a box. The elements of $S$ are placed into only $|T|$ such boxes. Because $|S|\u003e|T|$, some fiber contains distinct elements $s_1$ and $s_2$. Consequently $f(s_1)=f(s_2)$, so $f$ is not one-to-one.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "11. What is the minimum number of students, each of whom comes from one of the 50 states, who must be enrolled in a university to guarantee that there are at least 100 who come from the same state?",
+                      "problem":  "dmath-ch06-prob-089",
+                      "solution":  "With at most 99 students from each state, there can be $50\\cdot99=4950$ students without 100 sharing a state. One more student forces a state to have at least 100, so the minimum is $\\mathbf{4951}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e12. Let $( x _ { i } , y _ { i } ) , i = 1 , 2 , 3 , 4 , 5 ,$ , be a set of five distinct points with integer coordinates in the xy plane. Show that the midpoint of the line joining at least one pair of these points has integer coordinates.",
+                      "problem":  "dmath-ch06-prob-090",
+                      "solution":  "Classify each point by $(x\\bmod2,y\\bmod2)$. There are four parity classes, so among five points two have the same parity in both coordinates. For those points, both coordinate sums are even, and their midpoint $((x_1+x_2)/2,(y_1+y_2)/2)$ therefore has integer coordinates.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e13. Let $( x _ { i } , y _ { i } , z _ { i } ) , i = 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9$ , be a set of nine distinct points with integer coordinates in xyz space. Show that the midpoint of at least one pair of these points has integer coordinates.",
+                      "problem":  "dmath-ch06-prob-091",
+                      "solution":  "Classify each point by the parity triple $(x\\bmod2,y\\bmod2,z\\bmod2)$. There are $2^3=8$ classes, so among nine points two share a class. Each pair of corresponding coordinates then has even sum, making all three coordinates of the midpoint integers.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "14. How many ordered pairs of integers (a,\n\nb) are needed to guarantee that there are two ordered pairs $( a _ { 1 } , b _ { 1 } )$ and $( a _ { 2 } , b _ { 2 } )$ such that $a _ { 1 }$ mod $5 = a _ { 2 }$ mod 5 and $b _ { 1 }$ mod $5 = b _ { 2 }$ mod 5?",
+                      "problem":  "dmath-ch06-prob-092",
+                      "solution":  "An ordered pair has one of $5\\cdot5=25$ possible residue pairs modulo 5. Therefore $\\mathbf{26}$ ordered pairs guarantee that two have the same residue in both coordinates. Twenty-five do not suffice because one can choose one representative of each residue pair.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "15.\n\na) Show that if five integers are selected from the first eight positive integers, there must be a pair of these integers with a sum equal to 9.\n\nb) Is the conclusion in part (a) true if four integers are selected rather than five?",
+                      "problem":  "dmath-ch06-prob-093",
+                      "solution":  "(a) Partition $\\{1,\\ldots,8\\}$ into the four pairs $\\{1,8\\}$, $\\{2,7\\}$, $\\{3,6\\}$, and $\\{4,5\\}$. Selecting five integers forces both members of some pair to be selected, and their sum is 9. (b) No. Selecting $\\{1,2,3,4\\}$ contains no pair summing to 9.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "16.\n\na) Show that if seven integers are selected from the first 10 positive integers, there must be at least two pairs of these integers with the sum 11.\n\nb) Is the conclusion in part (a) true if six integers are selected rather than seven?",
+                      "problem":  "dmath-ch06-prob-094",
+                      "solution":  "(a) Partition $\\{1,\\ldots,10\\}$ into five pairs summing to 11. If at most one complete pair were selected, one could select at most both members of that pair and one member from each of the other four pairs, totaling 6. Thus any 7 selections contain at least two complete pairs. (b) No. The set $\\{1,2,3,4,5,6\\}$ has only the pair $\\{5,6\\}$ summing to 11.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "17. How many numbers must be selected from the set {1, 2, 3, 4, 5, 6} to guarantee that at least one pair of these numbers add up to 7?",
+                      "problem":  "dmath-ch06-prob-095",
+                      "solution":  "Partition the set into the three pairs $\\{1,6\\}$, $\\{2,5\\}$, and $\\{3,4\\}$. Three selections can take one number from each pair, but four force a complete pair. Hence the minimum is $\\mathbf{4}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "18. How many numbers must be selected from the set {1, 3, 5, 7, 9, 11, 13, 15} to guarantee that at least one pair of these numbers add up to 16?",
+                      "problem":  "dmath-ch06-prob-096",
+                      "solution":  "Partition the set into the four pairs $\\{1,15\\}$, $\\{3,13\\}$, $\\{5,11\\}$, and $\\{7,9\\}$. Four selections can take one member from each pair, whereas five force a complete pair. Thus the minimum is $\\mathbf{5}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "19. A company stores products in a warehouse. Storage bins in this warehouse are specified by their aisle, location in the aisle, and shelf. There are 50 aisles, 85 horizontal locations in each aisle, and 5 shelves throughout the warehouse. What is the least number of products the company can have so that at least two products must be stored in the same bin?",
+                      "problem":  "dmath-ch06-prob-097",
+                      "solution":  "The warehouse has $50\\cdot85\\cdot5=21,250$ bins. One product can occupy each bin without a collision, so the next product forces two into one bin. The least number is $\\mathbf{21,251}$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "20. Suppose that there are nine students in a discrete mathematics class at a small college.\n\na) Show that the class must have at least five male students or at least five female students.\n\nb) Show that the class must have at least three male students or at least seven female students.",
+                      "problem":  "dmath-ch06-prob-098",
+                      "solution":  "(a) If there were at most four male and at most four female students, the class would have at most eight students, contradicting that it has nine. Hence one group has at least five. (b) If there were at most two male and at most six female students, there would again be at most eight. Therefore there are at least three male students or at least seven female students.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "21. Suppose that every student in a discrete mathematics class of 25 students is a freshman, a sophomore, or a junior.\n\na) Show that there are at least nine freshmen, at least nine sophomores, or at least nine juniors in the class.\n\nb) Show that there are either at least three freshmen, at least 19 sophomores, or at least five juniors in the class.",
+                      "problem":  "dmath-ch06-prob-099",
+                      "solution":  "(a) If each of the three years had at most eight students, the class would have at most 24; hence some year has at least nine. (b) If there were at most 2 freshmen, at most 18 sophomores, and at most 4 juniors, there would be at most $2+18+4=24$ students. Therefore at least one stated threshold must hold.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "22. Find an increasing subsequence of maximal length and a decreasing subsequence of maximal length in the sequence 22, 5, 7, 2, 23, 10, 15, 21, 3, 17.",
+                      "problem":  "dmath-ch06-prob-100",
+                      "solution":  "One increasing subsequence of maximal length is $5,7,10,15,21$ (also $5,7,10,15,17$ works), of length 5. One decreasing subsequence of maximal length is $22,7,2$, of length 3. Computing the longest-increasing lengths ending at successive terms gives maximum 5, while the longest-decreasing lengths give maximum 3, verifying maximality.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "23. Construct a sequence of 16 positive integers that has no increasing or decreasing subsequence of five terms.",
+                      "problem":  "dmath-ch06-prob-101",
+                      "solution":  "Use $4,3,2,1,\\ 8,7,6,5,\\ 12,11,10,9,\\ 16,15,14,13$. Any increasing subsequence takes at most one term from each decreasing block, so it has length at most 4. Any decreasing subsequence lies within one block because every term in a later block is larger than every term in an earlier block, so it also has length at most 4.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  },
+                  {
+                      "source":  "24. Show that if there are 101 people of diferent heights standing in a line, it is possible to find 11 people in the order they are standing in the line with heights that are either increasing or decreasing.",
+                      "problem":  "dmath-ch06-prob-102",
+                      "solution":  "For each person, let $I$ and $D$ be the lengths of the longest increasing and decreasing height subsequences ending there. If neither kind had length 11, every person would receive one of only $10\\cdot10=100$ pairs $(I,D)$. But no two people in line order can have the same pair: for the later person, either its height is greater and $I$ increases, or its height is smaller and $D$ increases. Thus 101 distinct pairs would be required, a contradiction. Hence an increasing or decreasing subsequence of length 11 exists.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b303-70e3-a69e-5f2caa03f4b1"
+                  }
+              ]
+}

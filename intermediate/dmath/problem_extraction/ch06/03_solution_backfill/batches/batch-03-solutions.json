@@ -1,0 +1,362 @@
+{
+    "kind":  "solutions",
+    "items":  [
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e25. Show that whenever 25 girls and 25 boys are seated around a circular table there is always a person both of whose neighbors are boys.",
+                      "problem":  "dmath-ch06-prob-103",
+                      "solution":  "Consider the 25 gaps between consecutive girls around the circle, and put each boy in the gap containing him. If no person had two boys as neighbors, then no gap could contain three boys (otherwise the middle boy would have two boy neighbors), and two adjacent gaps could not both be nonempty (otherwise their common girl would have two boy neighbors). Thus at most 12 of the 25 cyclically arranged gaps could be nonempty, and each could contain at most two boys, giving at most 24 boys. This contradicts the presence of 25 boys, so the required person exists.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗∗\u003c/sup\u003e26. Suppose that 21 girls and 21 boys enter a mathematics competition. Furthermore, suppose that each entrant solves at most six questions, and for every boy-girl pair, there is at least one question that they both solved. Show that there is a question that was solved by at least three girls and at least three boys.",
+                      "problem":  "dmath-ch06-prob-104",
+                      "solution":  "Use the following standard cross-intersection form of the pigeonhole principle: if two collections each contain 21 sets, every set has at most six elements, and every set in one collection intersects every set in the other, then some element belongs to at least three sets in each collection. (To prove it, mark one element in each of the $21^2$ intersections; if every element has multiplicity at most two on one side, count the marks by the at most six elements in each set on that side, and then interchange the two sides; the resulting two bounds cannot cover all 441 marked pairs.) For each entrant, let the corresponding set be the questions that entrant solved. The boy sets and girl sets satisfy the lemma because every boy-girl pair has a common solved question, and every set has size at most six. Hence some question belongs to at least three boy sets and at least three girl sets, meaning that at least three boys and three girls solved it.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e27. Describe an algorithm in pseudocode for producing the largest increasing or decreasing subsequence of a sequence of distinct integers.",
+                      "problem":  "dmath-ch06-prob-105",
+                      "solution":  "Dynamic programming produces a longest monotone subsequence. For each position $i$, compute $I[i]=1+\\max\\{I[j]:j\u003ci,\\ a_j\u003ca_i\\}$ and $D[i]=1+\\max\\{D[j]:j\u003ci,\\ a_j\u003ea_i\\}$, using 1 when the relevant set is empty, and store a predecessor attaining each maximum. Pseudocode: `for i = 1..n: I[i]=D[i]=1; piI[i]=piD[i]=NIL; for j = 1..i-1: if a[j]\u003ca[i] and I[j]+1\u003eI[i], update I[i],piI[i]; if a[j]\u003ea[i] and D[j]+1\u003eD[i], update D[i],piD[i]`. Choose the larger of $\\max I[i]$ and $\\max D[i]$, follow its predecessor pointers backward, and reverse the resulting list. Every candidate predecessor is checked, so the recurrence is exhaustive; the algorithm takes $O(n^2)$ time and $O(n)$ space.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "28. Show that in a group of five people (where any two people are either friends or enemies), there are not necessarily three mutual friends or three mutual enemies.",
+                      "problem":  "dmath-ch06-prob-106",
+                      "solution":  "Arrange the five people at the vertices of a pentagon. Declare adjacent vertices friends and nonadjacent vertices enemies. The friendship graph is the 5-cycle $C_5$, which has no triangle. Its complement, the enemy graph, is also a 5-cycle, so it too has no triangle. Therefore this group has neither three mutual friends nor three mutual enemies.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "29. Show that in a group of 10 people (where any two people are either friends or enemies), there are either three mutual friends or four mutual enemies, and there are either three mutual enemies or four mutual friends.",
+                      "problem":  "dmath-ch06-prob-107",
+                      "solution":  "Choose a person $P$. Among the other nine, either at least four are friends of $P$ or at least six are enemies of $P$. In the first case, if two of those four are friends, they and $P$ are three mutual friends; otherwise all four are mutual enemies. In the second case, the theorem $R(3,3)=6$ gives among the six either three mutual friends or three mutual enemies; in the latter case those three together with $P$ are four mutual enemies. Hence there are three mutual friends or four mutual enemies. Interchanging the words friend and enemy proves that there are three mutual enemies or four mutual friends.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "30. Use Exercise 29 to show that among any group of 20 people (where any two people are either friends or enemies), there are either four mutual friends or four mutual enemies.",
+                      "problem":  "dmath-ch06-prob-108",
+                      "solution":  "Choose a person $P$. Of the other 19 people, at least 10 are all friends of $P$ or at least 10 are all enemies of $P$. In the first case, Exercise 29 says that those 10 contain either three mutual friends, which together with $P$ form four mutual friends, or four mutual enemies. In the second case, the color-swapped conclusion of Exercise 29 gives either three mutual enemies, which together with $P$ form four mutual enemies, or four mutual friends. Thus a monochromatic set of four always exists.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "31. Show that if n is an integer with n ≥ 2, then the Ramsey number R(2, n) equals n. (Recall that Ramsey numbers were discussed after Example 13 in Section 6.2.)",
+                      "problem":  "dmath-ch06-prob-109",
+                      "solution":  "In any red-blue coloring of the edges of $K_n$, either there is a red edge, which is a red $K_2$, or there is no red edge, in which case all edges are blue and the entire vertex set is a blue $K_n$. Hence $R(2,n)\\le n$. On $n-1$ vertices, color every edge blue. There is no red $K_2$ and there cannot be a blue $K_n$, so $R(2,n)\u003en-1$. Therefore $R(2,n)=n$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "32. Show that if m and n are integers with m ≥ 2 and n ≥ 2, then the Ramsey numbers R(m, n) and R(n, m) are equal. (Recall that Ramsey numbers were discussed after Example 13 in Section 6.2.)",
+                      "problem":  "dmath-ch06-prob-110",
+                      "solution":  "A coloring that is required to contain either a red $K_m$ or a blue $K_n$ becomes, after swapping the two colors, a coloring required to contain either a red $K_n$ or a blue $K_m$. This color swap is a bijection on all two-colorings of every complete graph, so the least number of vertices that guarantees the first alternative is the same as the least number that guarantees the second. Thus $R(m,n)=R(n,m)$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "33. Show that there are at least six people in California (population: 39 million) with the same three initials who were born on the same day of the year (but not necessarily in the same year). Assume that everyone has three initials.",
+                      "problem":  "dmath-ch06-prob-111",
+                      "solution":  "There are at most $26^3$ triples of initials and, even allowing February 29, at most 366 birthdays in a year. Hence there are at most $26^3\\cdot366=6,432,816$ categories. The generalized pigeonhole principle puts at least $\\lceil39,000,000/6,432,816\\rceil=7$ people in one category. In particular, at least six people have the same three initials and day of birth.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "34. Show that if there are 100,000,000 wage earners in the United States who earn less than 1,000,000 dollars (but at least a penny), then there are two who earned exactly the same amount of money, to the penny, last year.",
+                      "problem":  "dmath-ch06-prob-112",
+                      "solution":  "Measured in cents, a permitted positive income is one of the integers from 1 through 99,999,999, so there are only 99,999,999 possible amounts. Placing 100,000,000 earners into these amount categories, the pigeonhole principle forces two earners into the same category. They earned exactly the same amount to the penny.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "35. In the 17th century, there were more than 800,000 inhabitants of Paris. At the time, it was believed that no one had more than 200,000 hairs on their head. Assuming these numbers are correct and that everyone has at least one hair on their head (that is, no one is completely bald), use the pigeonhole principle to show, as the French writer Pierre Nicole did, that there had to be two Parisians with the same number of hairs on their heads. Then use the generalized pigeonhole principle to show that there had to be at least five Parisians at that time with the same number of hairs on their heads.",
+                      "problem":  "dmath-ch06-prob-113",
+                      "solution":  "The possible hair counts are the 200,000 integers from 1 through 200,000. Because there are more than 800,000 people, there are certainly more people than possible counts, so two share a count. More strongly, there are at least 800,001 people, and the generalized pigeonhole principle gives a shared count for at least $\\lceil800,001/200,000\\rceil=5$ people.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "36. Assuming that no one has more than 1,000,000 hairs on their head and that the population of New York City was 8,537,673 in 2016, show there had to be at least nine people in New York City in 2016 with the same number of hairs on their heads.",
+                      "problem":  "dmath-ch06-prob-114",
+                      "solution":  "Allowing bald people, the possible hair counts are $0,1,\\ldots,1,000,000$, a total of 1,000,001 values. Therefore some value occurs at least $\\lceil8,537,673/1,000,001\\rceil=9$ times by the generalized pigeonhole principle.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "37. There are 38 diferent time periods during which classes at a university can be scheduled. If there are 677 diferent classes, how many diferent rooms will be needed?",
+                      "problem":  "dmath-ch06-prob-115",
+                      "solution":  "Assign each of the 677 classes to one of the 38 periods. Some period must contain at least $\\lceil677/38\\rceil=18$ classes, so at least 18 rooms are required. Conversely, 18 rooms provide $38\\cdot18=684$ room-period slots, enough to schedule all 677 classes. Thus the required number is $18$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "38. A computer network consists of six computers. Each computer is directly connected to at least one of the other computers. Show that there are at least two computers in the network that are directly connected to the same number of other computers.",
+                      "problem":  "dmath-ch06-prob-116",
+                      "solution":  "Each computer has degree between 1 and 5 inclusive. Thus the six computers have degrees drawn from only five possible values. By the pigeonhole principle, two computers have the same degree, meaning they are directly connected to the same number of other computers.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "39. A computer network consists of six computers. Each computer is directly connected to zero or more of the other computers. Show that there are at least two computers in the network that are directly connected to the same number of other computers. [Hint: It is impossible to have a computer linked to none of the others and a computer linked to all the others.]",
+                      "problem":  "dmath-ch06-prob-117",
+                      "solution":  "Degrees could nominally be $0,1,2,3,4,5$, but degrees 0 and 5 cannot both occur: a degree-5 computer would be connected to every other computer, including the purported degree-0 computer. Consequently the six degrees use at most five possible values, so two are equal by the pigeonhole principle.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "40. Find the least number of cables required to connect eight computers to four printers to guarantee that for every choice of four of the eight computers, these four computers can directly access four diferent printers. Justify your answer.",
+                      "problem":  "dmath-ch06-prob-118",
+                      "solution":  "At least 20 cables are necessary. If a printer were connected to at most four computers, at least four of the eight computers would miss it, and those four could not be matched to all four printers. Hence every printer needs at least five cables, for a total of $4\\cdot5=20$. This bound is attainable. Number the computers 1 through 8, and for printers 1 through 4 omit respectively the computer sets $\\{1,2,3\\}$, $\\{1,4,5\\}$, $\\{2,4,6\\}$, and $\\{3,5,6\\}$; connect every other computer-printer pair. There are 20 cables. Any one omission set has size 3, intersections of two have size at most 1, intersections of three are empty, and the intersection of all four is empty. Therefore any set of $s\\le4$ computers collectively reaches at least $s$ printers. Hall\u0027s theorem then gives distinct printers for every chosen four computers. The least number is $20$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "41. Find the least number of cables required to connect 100 computers to 20 printers to guarantee that every subset of 20 computers can directly access 20 diferent printers. (Here, the assumptions about cables and computers are the same as in Example 9.) Justify your answer.",
+                      "problem":  "dmath-ch06-prob-119",
+                      "solution":  "Each printer must be connected to at least $100-19=81$ computers; otherwise 20 computers missing that printer could not be matched to all 20 printers. Thus at least $20\\cdot81=1620$ cables are necessary. To attain this, number computers 1 through 100 and printers 1 through 20. Let printer $j$ omit exactly computers $j,j+1,\\ldots,j+18$ and connect it to the other 81. For any $r$ distinct printers, the intersection of their omission intervals has size at most $20-r$ (it is largest when their starting indices are consecutive). If a set of $s\\le20$ computers reached at most $s-1$ printers, all its members would lie in the omission-set intersection of at least $21-s$ printers, whose size is at most $s-1$, a contradiction. Hall\u0027s theorem therefore supplies distinct printers to every 20 computers. Hence $1620$ is least.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e42. Prove that at a party where there are at least two people, there are two people who know the same number of other people there.",
+                      "problem":  "dmath-ch06-prob-120",
+                      "solution":  "With $n\\ge2$ people, each person knows between 0 and $n-1$ others. However, the values 0 and $n-1$ cannot both occur, because someone who knows everyone would know the person who knows nobody. Thus only $n-1$ possible acquaintance counts are available to $n$ people. The pigeonhole principle gives two people with the same count.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "43. An arm wrestler is the champion for a period of 75 hours. (Here, by an hour, we mean a period starting from an exact hour, such as 1 P.M., until the next hour.) The arm wrestler had at least one match an hour, but no more than 125 total matches. Show that there is a period of consecutive hours during which the arm wrestler had exactly 24 matches.",
+                      "problem":  "dmath-ch06-prob-121",
+                      "solution":  "Let $s_i$ be the total number of matches in the first $i$ hours, with $s_0=0$. The 76 numbers $s_0,\\ldots,s_{75}$ are distinct integers in $[0,125]$, and the 76 numbers $s_0+24,\\ldots,s_{75}+24$ lie in $[24,149]$. These 152 numbers lie among only 150 integers from 0 through 149, so the two lists overlap. Thus $s_j=s_i+24$ for some $i,j$. Since the prefix sums increase, $j\u003ei$, and hours $i+1$ through $j$ contain exactly 24 matches.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e44. Is the statement in Exercise 43 true if 24 is replaced by\n\na) 2?\n\nb) 23?\n\nc) 25?\n\nd) 30?",
+                      "problem":  "dmath-ch06-prob-122",
+                      "solution":  "Yes in all four cases. For a target $k$, the statement fails only if the 76 prefix sums form a subset of $\\{0,1,\\ldots,125\\}$ containing no two numbers differing by $k$. Partition these integers into chains having a common residue modulo $k$; within each chain, selecting two adjacent terms creates difference $k$, so at most every other term can be selected. For $k=2,23,25,30$, the resulting maximum difference-$k$-free subset sizes are respectively $63,69,75,66$, all less than 76. Therefore two prefix sums differ by $k$ in every case, and the hours between them contain exactly (a) 2, (b) 23, (c) 25, or (d) 30 matches.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "45. Show that if f is a function from S to T, where S and T are nonempty finite sets and $m = \\lceil \\left. S \\right. / \\left. T \\right. \\rceil$ , then there are at least m elements of S mapped to the same value of T. That is, show that there are distinct elements $s _ { 1 } , s _ { 2 } , \\ldots , s _ { m }$ of S such that $f ( s _ { 1 } ) = f ( s _ { 2 } ) = \\cdots = f ( s _ { m } )$",
+                      "problem":  "dmath-ch06-prob-123",
+                      "solution":  "Interpreting the scanned quotient as $|S|/|T|$, the fibers $f^{-1}(t)$ for $t\\in T$ are $|T|$ boxes containing all $|S|$ elements of $S$. The generalized pigeonhole principle gives some $t$ with at least $\\lceil |S|/|T|\\rceil=m$ preimages. Choosing $m$ distinct elements of that fiber gives $f(s_1)=\\cdots=f(s_m)=t$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "46. There are 51 houses on a street. Each house has an address between 1000 and 1099, inclusive. Show that at least two houses have addresses that are consecutive integers.",
+                      "problem":  "dmath-ch06-prob-124",
+                      "solution":  "Partition the 100 possible addresses into the 50 consecutive pairs $\\{1000,1001\\},\\{1002,1003\\},\\ldots,\\{1098,1099\\}$. Under the usual convention that distinct houses have distinct addresses, placing 51 house addresses into these 50 pairs forces one pair to contain two used addresses. Those addresses are consecutive integers.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e47. Let x be an irrational number. Show that for some positive integer j not exceeding the positive integer n, the absolute value of the diference between jx and the nearest integer to jx is less than 1/n.",
+                      "problem":  "dmath-ch06-prob-125",
+                      "solution":  "Consider the $n+1$ fractional parts of $0,x,2x,\\ldots,nx$ and partition $[0,1)$ into $n$ half-open intervals of length $1/n$. Two fractional parts, say those of $rx$ and $sx$ with $0\\le r\u003cs\\le n$, lie in the same interval, so their difference has absolute value less than $1/n$. Let $j=s-r$, so $1\\le j\\le n$. The difference of those fractional parts equals $jx$ minus an integer, hence the distance from $jx$ to some integer, and therefore to its nearest integer, is less than $1/n$. Irrationality ensures the fractional parts are distinct, although the strict same-interval bound already supplies the conclusion.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "48. Let $n _ { 1 } , n _ { 2 } , \\ldots , n _ { t }$ be positive integers. Show that if $n _ { 1 } + n _ { 2 } + \\cdots + n _ { t } - t + 1$ objects are placed into t boxes, then for some $i , i = 1 , 2 , \\dots , t ,$ the ith box contains at least $n _ { i }$ objects.",
+                      "problem":  "dmath-ch06-prob-126",
+                      "solution":  "If every box $i$ contained fewer than $n_i$ objects, then, because the counts are integers, box $i$ would contain at most $n_i-1$. The total would then be at most $\\sum_{i=1}^t(n_i-1)=n_1+\\cdots+n_t-t$, one less than the stated number of objects. This contradiction proves that some box $i$ contains at least $n_i$ objects.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e49. An alternative proof of Theorem 3 based on the generalized pigeonhole principle is outlined in this exercise. The notation used is the same as that used in the proof in the text.\n\na) Assume that $i _ { k } \\le n$ for $k = 1 , 2 , \\ldots , n ^ { 2 } + 1$ . Use the generalized pigeonhole principle to show that there are n + 1 terms $a _ { k _ { 1 } } , a _ { k _ { 2 } } , \\ldots , a _ { k _ { n + 1 } }$ with $i _ { k _ { 1 } } = i _ { k _ { 2 } } = \\cdots =$ $i _ { k _ { n + 1 } }$ , where $1 \\leq \\dot { k _ { 1 } } \u003c \\tilde { k } _ { 2 } \u003c \\cdots \u003c k _ { n + 1 }$\n\nb) Show that $a _ { k _ { j } } \u003e a _ { k _ { j + 1 } }$ for $j = 1 , 2 , \\dots , n .$ [Hint: Assume that $a _ { k _ { i } } \u003c a _ { k _ { i + 1 } }$ , and show that this implies that $i _ { k _ { j } } \u003e i _ { k _ { j + 1 } }$ , which is a contradiction.]\n\nc) Use parts (a) and (b) to show that if there is no increasing subsequence of length n + 1, then there must be a decreasing subsequence of this length.\n\n![](images/19cd3f3c0561215cdf1d575a13966edc61c9e02d373f0130b9e68d444f6b0683.jpg)",
+                      "problem":  "dmath-ch06-prob-127",
+                      "solution":  "Interpret $i_k$ as the length of a longest increasing subsequence ending at $a_k$; the decorated index symbols in the scan are read as $1\\le k_1\u003ck_2\u003c\\cdots\u003ck_{n+1}$. (a) If every $i_k\\le n$, the $n^2+1$ values $i_k$ occupy only the $n$ boxes $1,\\ldots,n$. Some value therefore occurs at least $\\lceil(n^2+1)/n\\rceil=n+1$ times; list the corresponding indices increasingly as $k_1,\\ldots,k_{n+1}$. (b) If $a_{k_j}\u003ca_{k_{j+1}}$, an increasing subsequence of length $i_{k_j}$ ending at $a_{k_j}$ could be extended by $a_{k_{j+1}}$, giving $i_{k_{j+1}}\\ge i_{k_j}+1$, contrary to equality. Because the terms are distinct, $a_{k_j}\u003ea_{k_{j+1}}$. (c) Thus these $n+1$ terms form a decreasing subsequence. Hence absence of an increasing subsequence of length $n+1$ forces a decreasing one of that length.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "1. List all the permutations of {a, b, c}.",
+                      "problem":  "dmath-ch06-prob-128",
+                      "solution":  "There are $3!=6$ permutations: $abc, acb, bac, bca, cab, cba$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "2. How many diferent permutations are there of the set {a, b, c, d, e, f, g}?",
+                      "problem":  "dmath-ch06-prob-129",
+                      "solution":  "All seven elements are distinct, so the number of permutations is $7!=5040$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "3. How many permutations of {a, b, c, d, e, f, g} end with a?",
+                      "problem":  "dmath-ch06-prob-130",
+                      "solution":  "Fix $a$ in the last position and permute the other six elements freely. This gives $6!=720$ permutations.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "4. Let S = {1, 2, 3, 4, 5}.\n\na) List all the 3-permutations of S.\n\nb) List all the 3-combinations of S.",
+                      "problem":  "dmath-ch06-prob-131",
+                      "solution":  "(a) The 3-permutations, grouped by first entry, are $123,124,125,132,134,135,142,143,145,152,153,154$; $213,214,215,231,234,235,241,243,245,251,253,254$; $312,314,315,321,324,325,341,342,345,351,352,354$; $412,413,415,421,423,425,431,432,435,451,452,453$; $512,513,514,521,523,524,531,532,534,541,542,543$. There are $P(5,3)=60$. (b) The 3-combinations are $\\{1,2,3\\},\\{1,2,4\\},\\{1,2,5\\},\\{1,3,4\\},\\{1,3,5\\},\\{1,4,5\\},\\{2,3,4\\},\\{2,3,5\\},\\{2,4,5\\},\\{3,4,5\\}$, totaling $\\binom53=10$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "5. Find the value of each of these quantities.\n\na) P(6, 3)\n\nb) P(6, 5)\n\nc) P(8, 1)\n\nd) P(8, 5)\n\ne) P(8, 8)\n\nf) P(10, 9)",
+                      "problem":  "dmath-ch06-prob-132",
+                      "solution":  "Using $P(n,r)=n!/(n-r)!$: (a) $P(6,3)=6\\cdot5\\cdot4=120$; (b) $P(6,5)=6!=720$; (c) $P(8,1)=8$; (d) $P(8,5)=8\\cdot7\\cdot6\\cdot5\\cdot4=6720$; (e) $P(8,8)=8!=40320$; (f) $P(10,9)=10!=3,628,800$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "6. Find the value of each of these quantities.\n\na) C(5, 1)\n\nb) C(5, 3)\n\nc) C(8, 4)\n\nd) C(8, 8)\n\ne) C(8, 0)\n\nf) C(12, 6)",
+                      "problem":  "dmath-ch06-prob-133",
+                      "solution":  "Using $C(n,r)=\\binom nr=n!/[r!(n-r)!]$: (a) $C(5,1)=5$; (b) $C(5,3)=10$; (c) $C(8,4)=70$; (d) $C(8,8)=1$; (e) $C(8,0)=1$; (f) $C(12,6)=924$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "7. Find the number of 5-permutations of a set with nine elements.",
+                      "problem":  "dmath-ch06-prob-134",
+                      "solution":  "The number is $P(9,5)=9\\cdot8\\cdot7\\cdot6\\cdot5=15,120$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "8. In how many diferent orders can five runners finish a race if no ties are allowed?",
+                      "problem":  "dmath-ch06-prob-135",
+                      "solution":  "Every finishing order is a permutation of the five distinct runners, so there are $5!=120$ orders.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "9. How many possibilities are there for the win, place, and show (first, second, and third) positions in a horse race with 12 horses if all orders of finish are possible?",
+                      "problem":  "dmath-ch06-prob-136",
+                      "solution":  "Choose an ordered triple of distinct horses: $P(12,3)=12\\cdot11\\cdot10=1320$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "10. There are six diferent candidates for governor of a state. In how many diferent orders can the names of the candidates be printed on a ballot?",
+                      "problem":  "dmath-ch06-prob-137",
+                      "solution":  "The six distinct names can be arranged in $6!=720$ orders.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "11. How many bit strings of length 10 contain\n\na) exactly four 1s?\n\nb) at most four 1s?\n\nc) at least four 1s?\n\nd) an equal number of 0s and 1s?",
+                      "problem":  "dmath-ch06-prob-138",
+                      "solution":  "Choose the positions of the 1s. (a) $\\binom{10}{4}=210$. (b) $\\sum_{k=0}^4\\binom{10}{k}=1+10+45+120+210=386$. (c) $2^{10}-\\sum_{k=0}^3\\binom{10}{k}=1024-176=848$. (d) Five positions contain 1s, so $\\binom{10}{5}=252$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "12. How many bit strings of length 12 contain\n\na) exactly three 1s?\n\nb) at most three 1s?\n\nc) at least three 1s?\n\nd) an equal number of 0s and 1s?",
+                      "problem":  "dmath-ch06-prob-139",
+                      "solution":  "Choose the positions of the 1s. (a) $\\binom{12}{3}=220$. (b) $\\sum_{k=0}^3\\binom{12}{k}=1+12+66+220=299$. (c) $2^{12}-\\sum_{k=0}^2\\binom{12}{k}=4096-79=4017$. (d) Six positions contain 1s, so $\\binom{12}{6}=924$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "13. A group contains n men and n women. How many ways are there to arrange these people in a row if the men and women alternate?",
+                      "problem":  "dmath-ch06-prob-140",
+                      "solution":  "There are two possible gender patterns, depending on which gender comes first. For either pattern the men can be permuted in $n!$ ways and the women independently in $n!$ ways. The total is $2(n!)^2$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "14. In how many ways can a set of two positive integers less than 100 be chosen?",
+                      "problem":  "dmath-ch06-prob-141",
+                      "solution":  "There are 99 eligible integers, from 1 through 99, and order does not matter. Hence the number is $\\binom{99}{2}=99\\cdot98/2=4851$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "15. In how many ways can a set of five letters be selected from the English alphabet?",
+                      "problem":  "dmath-ch06-prob-142",
+                      "solution":  "Select five of the 26 distinct letters without regard to order: $\\binom{26}{5}=65,780$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "16. How many subsets with an odd number of elements does a set with 10 elements have?",
+                      "problem":  "dmath-ch06-prob-143",
+                      "solution":  "Fix one element and pair every subset not containing it with the subset obtained by adding it. Each pair has one even-sized and one odd-sized subset. Thus exactly half of the $2^{10}$ subsets have odd size, giving $2^9=512$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "17. How many subsets with more than two elements does a set with 100 elements have?",
+                      "problem":  "dmath-ch06-prob-144",
+                      "solution":  "From all $2^{100}$ subsets, remove those of sizes 0, 1, and 2. The answer is $2^{100}-\\binom{100}{0}-\\binom{100}{1}-\\binom{100}{2}=2^{100}-1-100-4950=2^{100}-5051$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "18. A coin is flipped eight times where each flip comes up either heads or tails. How many possible outcomes\n\na) are there in total?\n\nb) contain exactly three heads?\n\nc) contain at least three heads?\n\nd) contain the same number of heads and tails?",
+                      "problem":  "dmath-ch06-prob-145",
+                      "solution":  "(a) Each flip has two outcomes, so there are $2^8=256$. (b) Choose the three head positions: $\\binom83=56$. (c) Subtract outcomes with 0, 1, or 2 heads: $256-(\\binom80+\\binom81+\\binom82)=256-37=219$. (d) Four flips must be heads, so there are $\\binom84=70$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "19. A coin is flipped 10 times where each flip comes up either heads or tails. How many possible outcomes\n\na) are there in total?\n\nb) contain exactly two heads?\n\nc) contain at most three tails?\n\nd) contain the same number of heads and tails?",
+                      "problem":  "dmath-ch06-prob-146",
+                      "solution":  "(a) There are $2^{10}=1024$ outcomes. (b) Choose two head positions: $\\binom{10}{2}=45$. (c) Choose 0, 1, 2, or 3 tail positions: $\\sum_{k=0}^3\\binom{10}{k}=1+10+45+120=176$. (d) Choose five head positions: $\\binom{10}{5}=252$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "20. How many bit strings of length 10 have\n\na) exactly three 0s?\n\nb) more 0s than 1s?\n\nc) at least seven 1s?\n\nd) at least three 1s?",
+                      "problem":  "dmath-ch06-prob-147",
+                      "solution":  "(a) Choose the three zero positions: $\\binom{10}{3}=120$. (b) More zeros means 6 through 10 zeros, so by symmetry the count is $\\sum_{k=0}^4\\binom{10}{k}=386$. (c) The count is $\\sum_{k=7}^{10}\\binom{10}{k}=120+45+10+1=176$. (d) Subtract strings with 0, 1, or 2 ones: $2^{10}-(1+10+45)=968$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "21. How many permutations of the letters ABCDEFG contain\n\na) the string BCD?\n\nb) the string CFGA?\n\nc) the strings BA and GF?\n\nd) the strings ABC and DE?\n\ne) the strings ABC and CDE?\n\nf) the strings CBA and BED?",
+                      "problem":  "dmath-ch06-prob-148",
+                      "solution":  "Treat each required compatible string as one block. (a) `[BCD]`, A, E, F, G give $5!=120$. (b) `[CFGA]`, B, D, E give $4!=24$. (c) `[BA]`, `[GF]`, C, D, E give $5!=120$. (d) `[ABC]`, `[DE]`, F, G give $4!=24$. (e) The two strings must overlap as `[ABCDE]`; with F and G this gives $3!=6$. (f) Both strings would use the unique B, but CBA requires B to be followed by A whereas BED requires it to be followed by E. They are incompatible, so the count is 0.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "22. How many permutations of the letters ABCDEFGH contain\n\na) the string ED?\n\nb) the string CDE?\n\nc) the strings BA and FGH?\n\nd) the strings AB, DE, and GH?\n\ne) the strings CAB and BED?\n\nf) the strings BCA and ABF?",
+                      "problem":  "dmath-ch06-prob-149",
+                      "solution":  "Use blocks for compatible required strings. (a) `[ED]` and six other letters give $7!=5040$. (b) `[CDE]` and five others give $6!=720$. (c) `[BA]`, `[FGH]`, C, D, E give $5!=120$. (d) `[AB]`, `[DE]`, `[GH]`, C, F give $5!=120$. (e) CAB and BED overlap at B as `[CABED]`; together with F, G, H this gives $4!=24$. (f) BCA orders B before A, while ABF requires A immediately before the same B, so the requirements are incompatible and the count is 0.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "23. How many ways are there for eight men and five women to stand in a line so that no two women stand next to each other? [Hint: First position the men and then consider possible positions for the women.]",
+                      "problem":  "dmath-ch06-prob-150",
+                      "solution":  "Arrange the eight distinct men in $8!$ ways. They create nine gaps (including the two ends); choose five gaps for the women and permute the five distinct women in them. Thus the count is $8!\\binom95 5!=609,638,400$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "24. How many ways are there for 10 women and six men to stand in a line so that no two men stand next to each other? [Hint: First position the women and then consider possible positions for the men.]",
+                      "problem":  "dmath-ch06-prob-151",
+                      "solution":  "Arrange the 10 distinct women in $10!$ ways. Their arrangement creates 11 gaps; choose six of them and arrange the six distinct men in the chosen gaps. The count is $10!\\binom{11}{6}6!=1,207,084,032,000$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "25. How many ways are there for four men and five women to stand in a line so that\n\na) all men stand together?\n\nb) all women stand together?",
+                      "problem":  "dmath-ch06-prob-152",
+                      "solution":  "(a) Treat the four men as one block. The block and five distinct women can be ordered in $6!$ ways, and the men within the block in $4!$ ways, giving $6!4!=17,280$. (b) Treat the five women as one block. The block and four distinct men can be ordered in $5!$ ways, and the women within their block in $5!$ ways, giving $5!5!=14,400$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  },
+                  {
+                      "source":  "26. How many ways are there for three penguins and six pufins to stand in a line so that\n\na) all pufins stand together?\n\nb) all penguins stand together?",
+                      "problem":  "dmath-ch06-prob-153",
+                      "solution":  "Assuming all individual animals are distinct: (a) treat the six pufins as one block. The block and three penguins have $4!$ orders, and the pufins have $6!$ internal orders, for $4!6!=17,280$. (b) treat the three penguins as one block. The block and six pufins have $7!$ orders, and the penguins have $3!$ internal orders, for $7!3!=30,240$.",
+                      "provider":  "codex",
+                      "provider_session_id":  "01a03df5-b357-7eb3-8fed-c3773445f9cd"
+                  }
+              ]
+}

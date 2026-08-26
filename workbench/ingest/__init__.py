@@ -302,7 +302,12 @@ def _markup_errors(text):
         match = _TAG.match(text, start)
         if match is None:
             tail = text[start:]
-            if re.match(r"</?[A-Za-z]", tail):
+            complete_tag = re.match(r"</?[A-Za-z][A-Za-z0-9]*\s*>", tail)
+            unterminated_tag = (
+                (start == 0 or text[start - 1].isspace())
+                and re.match(r"</?[A-Za-z][A-Za-z0-9]*\s*$", tail)
+            )
+            if complete_tag or unterminated_tag:
                 errors.append("has unknown or unterminated HTML")
             index = start + 1
             continue

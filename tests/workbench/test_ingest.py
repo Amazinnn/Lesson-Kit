@@ -195,6 +195,10 @@ class IngestTests(unittest.TestCase):
                 self.assertFalse(ingest.gate(self.db_path, solutions, audits, self.root / "bad-gate.json")["ok"])
 
         self.assertEqual(ingest.render_text("x < 3 and <sup>n & m</sup>"), "x &lt; 3 and <sup>n &amp; m</sup>")
+        self.assertEqual(
+            ingest.render_text("j<i, a_j>a_i, and 0\\le k<n"),
+            "j&lt;i, a_j&gt;a_i, and 0\\le k&lt;n",
+        )
 
     def test_render_writes_a_resumable_utf8_artifact(self):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
