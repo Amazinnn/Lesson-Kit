@@ -11,11 +11,14 @@ from datetime import date
 from pathlib import Path
 
 from workbench import registry
+from workbench import ingest
 from workbench.bridge import runner
 from workbench.data import pool as pool_mod
 from workbench.data import content
+from workbench.data import mastery as mastery_data
 from workbench.data import queries
 from workbench.domain import feedback, learning_state, pull, schedule as schedule_rules, weak
+from workbench.domain import mastery as mastery_rules
 
 
 RESULT_PROGRESS = {"correct": "reviewing", "wrong": "wrong", "stuck": "stuck"}
@@ -347,6 +350,73 @@ def cmd_guard(args):
     return subprocess.call(cmd, cwd=workspace["path"])
 
 
+def cmd_ingest(args):
+    workspace = _workspace(args.name)
+    db_path = Path(workspace["path"]) / workspace["db"]
+    try:
+        if args.action == "prepare":
+            output = Path(args.output) / "task.json"
+            result = ingest.prepare(args.operation, args.input, output)
+        elif args.action == "run":
+            task = Path(args.target)
+            output = Path(args.output) if args.output else task / "result.json"
+            result = ingest.run(
+                task / "task.json" if task.is_dir() else task,
+                output, args.provider, workspace["path"],
+            )
+        elif args.action == "gate":
+            if args.entity != "problem":
+                raise ValueError("formal gate currently supports problem artifacts")
+            output = Path(args.output)
+            result = ingest.gate(db_path, args.solutions, args.audit, output)
+        elif args.action == "apply":
+            if args.entity != "problem":
+                raise ValueError("formal apply currently supports problem artifacts")
+            output = Path(args.input)
+            result = ingest.apply(db_path, output, args.backup)
+        elif args.action == "render":
+            output = Path(args.output)
+            result = ingest.render(args.input, output)
+        else:
+            output = Path(args.output) / "recipe.json"
+            result = ingest.recipe(
+                args.recipe, db_path, args.input, args.output,
+                apply_changes=args.apply, backup_path=args.backup,
+            )
+        print(json.dumps({"artifact": str(output), "result": result}, ensure_ascii=False, indent=2))
+        return 0
+    except (ValueError, OSError, RuntimeError, sqlite3.Error, json.JSONDecodeError) as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
+
+
+def cmd_experiment(args):
+    workspace = _workspace(args.name)
+    pool = _pool(workspace)
+    try:
+        result = mastery_rules.evaluate(mastery_data.snapshot(pool.connect()), date.today())
+    finally:
+        pool.close()
+    if args.entity == "problem":
+        result["knowledge_points"] = []
+    elif args.entity == "kp":
+        result["problems"] = []
+    if args.id:
+        key = "knowledge_points" if args.entity == "kp" else "problems"
+        result[key] = [item for item in result[key] if item["id"] == args.id]
+        if not result[key]:
+            print(json.dumps({"error": f"unknown {args.entity}: {args.id}"}, ensure_ascii=False))
+            return 2
+    if args.json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        for item in result["knowledge_points"] + result["problems"]:
+            print(f"{item['entity']} {item['id']} {item['category']}  {item['explanation']}")
+            for reason in item["reasons"]:
+                print(f"  {reason['date'] or '-'}  {reason['evidence']}")
+    return 0
+
+
 def cmd_open(args):
     port = args.port
     print(f"workbench at http://127.0.0.1:{port}/w/{_resolve_name(args)}/")
@@ -457,6 +527,57 @@ def build_parser():
     p.add_argument("gate", choices=["extract-chapter", "extract-problems", "problem-set"])
     p.add_argument("--apply", action="store_true")
     p.set_defaults(func=cmd_guard)
+
+    p = sub.add_parser("ingest", help="prepare, run, gate, and apply UTF-8 content artifacts")
+    p.add_argument("name")
+    ingest_sub = p.add_subparsers(dest="action", required=True)
+
+    action = ingest_sub.add_parser("prepare")
+    action.add_argument("operation", choices=["problem-solutions", "problem-audit"])
+    action.add_argument("--input", required=True)
+    action.add_argument("--output", required=True)
+    action.set_defaults(func=cmd_ingest)
+
+    action = ingest_sub.add_parser("run")
+    action.add_argument("target")
+    action.add_argument("--provider", required=True, choices=["codex", "claude"])
+    action.add_argument("--output")
+    action.set_defaults(func=cmd_ingest)
+
+    action = ingest_sub.add_parser("gate")
+    action.add_argument("entity", choices=["kp", "problem", "candidate", "relation"])
+    action.add_argument("--solutions", required=True)
+    action.add_argument("--audit", required=True)
+    action.add_argument("--output", required=True)
+    action.set_defaults(func=cmd_ingest)
+
+    action = ingest_sub.add_parser("apply")
+    action.add_argument("entity", choices=["kp", "problem", "candidate", "relation"])
+    action.add_argument("--input", required=True)
+    action.add_argument("--backup")
+    action.set_defaults(func=cmd_ingest)
+
+    action = ingest_sub.add_parser("render")
+    action.add_argument("target", choices=["guide", "problem-set", "graph"])
+    action.add_argument("--input", required=True)
+    action.add_argument("--output", required=True)
+    action.set_defaults(func=cmd_ingest)
+
+    action = ingest_sub.add_parser("recipe")
+    action.add_argument("recipe", choices=["knowledge", "problems", "candidates", "views"])
+    action.add_argument("--input", required=True)
+    action.add_argument("--output", required=True)
+    action.add_argument("--apply", action="store_true")
+    action.add_argument("--backup")
+    action.set_defaults(func=cmd_ingest)
+
+    p = sub.add_parser("experiment", help="run a read-only experimental evaluator")
+    p.add_argument("name")
+    p.add_argument("experiment", choices=["mastery"])
+    p.add_argument("--entity", choices=["all", "kp", "problem"], default="all")
+    p.add_argument("--id")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_experiment)
 
     return parser
 

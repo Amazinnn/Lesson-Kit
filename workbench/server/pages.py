@@ -45,6 +45,12 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         "<a class='brand' href='/'>lesson-kit</a>"
         "<span class='topbar-separator'>/</span>"
         f"{meta}"
+        "<div class='mobile-drawer-controls'>"
+        "<button id='mobile-nav-toggle' class='ghost sm icon-only' type='button' "
+        "aria-controls='left-column' aria-expanded='false' aria-label='打开导航' title='打开导航'>☰</button>"
+        "<button id='mobile-ai-toggle' class='ghost sm icon-only' type='button' "
+        "aria-controls='ai-column' aria-expanded='false' aria-label='打开对话' title='打开对话'>◌</button>"
+        "</div>"
         "</header>"
     )
     left = _left_column(workspace, workspaces, weak_items, active_nav)
@@ -98,6 +104,8 @@ def practice_page(workspace, workspaces, weak_items):
         "<button id='start-practice' class='primary' disabled>开始本轮练习</button>"
         "</section>"
         "<section class='practice-flow' aria-label='练习过程'>"
+        "<p id='practice-error' class='inline-error hidden' aria-live='polite'></p>"
+        "<button id='retry-practice' class='outline sm hidden' type='button'>重试</button>"
         "<div id='stream' class='practice-card-area'></div>"
         "<div id='composer' class='practice-answer-card hidden'>"
         "<div id='composer-row'>"
@@ -134,9 +142,7 @@ def kps_page(workspace, workspaces, weak_items, pool):
     )
     items = "".join(
         f"<li><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>{html.escape(item['knowledge_item'])}</a>"
-        f"<span class='item-id'>{html.escape(item['kp_id'])}</span>"
-        f"<span class='score'> {item['score']}</span>"
-        f"<span class='reasons'> {html.escape('; '.join(item['reasons']))}</span></li>"
+        "</li>"
         for item in ranked
     )
     middle = (
@@ -163,35 +169,27 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
             workspace, workspaces, weak_items, "<h1>未知知识点</h1>", "kps",
             page_type="kp", object_id=kp_id,
         )
-    signals_html = "".join(
-        f"<li>{html.escape(s['signal_type'])} — {html.escape(s['weight'])}"
-        f"{'（×' + str(s['evidence_count']) + '）' if s.get('evidence_count', 1) >= 2 else ''}"
-        f"<span class='reasons'> {html.escape(s.get('note') or '')}</span></li>"
-        for s in detail["signals"]
-    )
     problems_html = _linked_problems(detail["problems"], workspace["name"], kp_id)
     schedule = detail["schedule"]
-    schedule_html = (
-        f"state={schedule['state']} reps={schedule['repetitions']} "
-        f"ease={schedule['ease']:.2f} due={schedule.get('due_at') or '—'}"
-        if schedule else "未排期"
+    reminder = "重点练习" if detail["signals"] else (
+        "可以复习" if schedule and schedule.get("due_at")
+        and schedule["due_at"] <= date.today().isoformat() else ""
+    )
+    reminder_html = f"<p class='action-reminder'>{reminder}</p>" if reminder else ""
+    practice_action = (
+        f"<a id='practice-kp' class='primary kp-practice-action' "
+        f"data-practice-kp-id='{html.escape(kp_id)}' "
+        f"href='/w/{workspace['name']}/practice?kp={html.escape(kp_id)}'>练习此知识点</a>"
     )
     middle = (
         _page_header(
             "知识点 / 当前章节", html.escape(kp["knowledge_item"]),
-            "先读正文；需要时再查看掌握线索、关联题和复习安排。",
+            "先读正文，再按需要继续练习相关题目。", practice_action,
         )
         + "<div class='page-content'>"
         f"<article class='knowledge-body card'>{_render_markdown(kp.get('body') or '', workspace['name'], kp_id)}</article>"
-        "<section class='support-section evidence-section'>"
-        "<div class='section-heading'><div>"
-        "<p class='section-kicker'>辅助信息</p><h2>掌握线索</h2>"
-        "</div><p>这些记录只说明下一次该从哪里继续。</p></div>"
-        "<div class='support-grid'>"
-        f"<section class='detail-block'><h3>信号</h3><ul>{signals_html or '<li class=\"muted\">—</li>'}</ul></section>"
-        f"<section class='detail-block'><h3>调度</h3><p>{schedule_html}</p></section>"
-        "</div></section>"
-        "<section class='support-section linked-problems'>"
+        + reminder_html
+        + "<section class='support-section linked-problems'>"
         "<div class='section-heading'><div>"
         "<p class='section-kicker'>练习入口</p><h2>关联题目</h2>"
         "</div></div>"
@@ -215,10 +213,6 @@ def graph_page(workspace, workspaces, weak_items, has_artifact):
         "<div class='graph-toolbar'>"
         "<label class='visually-hidden' for='graph-search'>搜索知识点</label>"
         "<input id='graph-search' placeholder='搜索知识点'>"
-        "<label class='visually-hidden' for='graph-state-filter'>按状态筛选</label>"
-        "<select id='graph-state-filter'><option value=''>全部状态</option>"
-        "<option value='needs_work'>待攻克</option><option value='review'>待复习</option>"
-        "<option value='mastered'>已掌握</option></select>"
         "<div class='graph-zoom' aria-label='缩放'>"
         "<button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button>"
         "<button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button>"
@@ -272,10 +266,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     weak_html = "".join(
         f"<div class='weak-item'><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
         f"<span class='weak-title'>{html.escape(item['knowledge_item'])}</span>"
-        f"<span class='id'>{html.escape(item['kp_id'])}</span></a>"
-        f"<span class='score'>{item['score']}</span>"
-        f"<span class='reasons' title='{html.escape('; '.join(item['reasons']))}'>"
-        f"{html.escape('; '.join(item['reasons']))}</span></div>"
+        "</a></div>"
         for item in weak_items
     )
     return (
@@ -287,9 +278,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<p class='side-label'>页面</p>"
         f"{nav}</nav>"
         "<section class='side-section weak-section'>"
-        "<div class='side-heading'><p class='side-label'>当前薄弱项</p>"
-        "<span>按信号排序</span></div>"
-        f"<div class='weak-list'>{weak_html or '<p class=\"score\">暂无信号</p>'}</div>"
+        "<div class='side-heading'><p class='side-label'>优先回看</p></div>"
+        f"<div class='weak-list'>{weak_html or '<p class=\"score\">暂无提醒</p>'}</div>"
         "</section>"
     )
 
@@ -337,11 +327,6 @@ def _problem_text(problem):
 
 
 def _ai_column(workspace_name, graph_mode=False, page_type=""):
-    draft = (
-        "<label class='ai-option' for='ai-include-draft'>"
-        "<input id='ai-include-draft' type='checkbox'> 附上当前未提交作答</label>"
-        if page_type == "practice" else ""
-    )
     teacher = (
         "<section id='ai-session-controls' aria-label='对话'>"
         "<div id='ai-session-list-view'>"
@@ -362,7 +347,6 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "</div>"
         "<section class='ai-conversation'><div id='ai-messages'></div>"
         "<p id='ai-status' class='muted' aria-live='polite'></p></section>"
-        f"{draft}"
         "<div id='ai-input-row' class='ai-input-row'>"
         "<textarea id='ai-input' rows='2' placeholder='输入问题'></textarea>"
         "<div class='ai-send-actions'><button id='ai-stop' class='outline sm hidden'>停止</button>"

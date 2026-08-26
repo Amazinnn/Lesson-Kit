@@ -145,11 +145,49 @@ class UiRouteTests(unittest.TestCase):
             self.assertNotIn("id='ai-explain'", body)
             self.assertNotIn("id='ai-diagnose'", body)
 
-    def test_practice_only_offers_explicit_draft_attachment(self):
+    def test_chat_never_offers_a_draft_attachment_setting(self):
         _, practice = self.fetch("/w/dmath/practice")
         _, kps = self.fetch("/w/dmath/kps")
-        self.assertIn("id='ai-include-draft'", practice)
+        self.assertNotIn("id='ai-include-draft'", practice)
         self.assertNotIn("id='ai-include-draft'", kps)
+
+    def test_shell_exposes_compact_mobile_drawer_controls(self):
+        _, body = self.fetch("/w/dmath/practice")
+        self.assertIn("id='mobile-nav-toggle'", body)
+        self.assertIn("id='mobile-ai-toggle'", body)
+        self.assertIn("aria-controls='left-column'", body)
+        self.assertIn("aria-controls='ai-column'", body)
+
+    def test_compact_breakpoint_keeps_the_agent_drawer_entry(self):
+        _, css = self.fetch("/static/workbench.css")
+        self.assertIn("@media (max-width: 1023px)", css)
+        self.assertIn(".mobile-drawer-controls { display: flex; }", css)
+
+    def test_kp_with_an_unscheduled_review_row_stays_neutral(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "DELETE FROM learner_signals WHERE target_id=?",
+                ("dmath-ch06-kp-001",),
+            )
+            conn.execute(
+                "INSERT INTO review_schedule (item_type, item_id) VALUES (?, ?)",
+                ("kp", "dmath-ch06-kp-001"),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        _, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertNotIn("重点练习", body)
+        self.assertNotIn("可以复习", body)
+
+    def test_kp_page_has_one_scoped_practice_handoff_and_no_raw_study_parameters(self):
+        _, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertIn("id='practice-kp'", body)
+        self.assertIn("data-practice-kp-id='dmath-ch06-kp-001'", body)
+        self.assertNotIn("<h3>信号</h3>", body)
+        self.assertNotIn("<h3>调度</h3>", body)
+        self.assertNotIn("reps=", body)
 
     def test_pages_have_editorial_landmarks(self):
         for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph",

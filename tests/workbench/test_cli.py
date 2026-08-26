@@ -222,6 +222,82 @@ class CliTests(unittest.TestCase):
         code, out = self.run_cli("ai", "dmath", "status", job_id)
         self.assertIn("failed", out)
 
+    def test_ingest_parser_exposes_atomic_commands(self):
+        parser = self.cli.build_parser()
+        prepared = parser.parse_args([
+            "ingest", "dmath", "prepare", "problem-solutions",
+            "--input", "problems.json", "--output", "job-dir",
+        ])
+        self.assertEqual(prepared.command, "ingest")
+        self.assertEqual(prepared.action, "prepare")
+        self.assertEqual(prepared.operation, "problem-solutions")
+
+        run = parser.parse_args([
+            "ingest", "dmath", "run", "job-dir", "--provider", "codex",
+        ])
+        self.assertEqual(run.action, "run")
+        self.assertEqual(run.provider, "codex")
+
+        recipe = parser.parse_args([
+            "ingest", "dmath", "recipe", "problems",
+            "--input", "problems.json", "--output", "recipe-dir", "--apply",
+        ])
+        self.assertTrue(recipe.apply)
+
+    def test_mastery_experiment_parser_is_explicit_and_read_only(self):
+        args = self.cli.build_parser().parse_args([
+            "experiment", "dmath", "mastery",
+            "--entity", "problem", "--id", "dmath-ch06-prob-001", "--json",
+        ])
+        self.assertEqual(args.command, "experiment")
+        self.assertEqual(args.experiment, "mastery")
+        self.assertEqual(args.entity, "problem")
+        self.assertTrue(args.json)
+
+    def test_ingest_prepare_routes_to_a_resumable_task_artifact(self):
+        source = Path(self.tmp.name) / "source.json"
+        source.write_text(json.dumps({
+            "items": [{"problem_id": "dmath-ch06-prob-001", "problem_text": "P1"}],
+        }), encoding="utf-8")
+        output = Path(self.tmp.name) / "job"
+
+        code, out = self.run_cli(
+            "ingest", "dmath", "prepare", "problem-solutions",
+            "--input", str(source), "--output", str(output),
+        )
+
+        self.assertEqual(code, 0)
+        task = json.loads((output / "task.json").read_text(encoding="utf-8"))
+        self.assertEqual(task["kind"], "ingest-task")
+        self.assertEqual(json.loads(out)["artifact"], str(output / "task.json"))
+
+    def test_mastery_experiment_filters_json_without_writing(self):
+        conn = sqlite3.connect(self.db_path)
+        before = {
+            table: conn.execute(f"SELECT * FROM {table} ORDER BY rowid").fetchall()
+            for table in ("knowledge_points", "problems", "problem_attempts",
+                          "feedback_events", "review_schedule")
+        }
+        conn.close()
+
+        code, out = self.run_cli(
+            "experiment", "dmath", "mastery", "--entity", "problem",
+            "--id", "dmath-ch06-prob-001", "--json",
+        )
+
+        self.assertEqual(code, 0)
+        result = json.loads(out)
+        self.assertEqual(result["version"], "v0")
+        self.assertEqual([item["id"] for item in result["problems"]],
+                         ["dmath-ch06-prob-001"])
+        conn = sqlite3.connect(self.db_path)
+        after = {
+            table: conn.execute(f"SELECT * FROM {table} ORDER BY rowid").fetchall()
+            for table in before
+        }
+        conn.close()
+        self.assertEqual(after, before)
+
 
 if __name__ == "__main__":
     unittest.main()

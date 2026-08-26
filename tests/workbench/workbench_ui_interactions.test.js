@@ -167,6 +167,9 @@ function runWorkbench({
     createElement(tag) {
       return new FakeElement(tag);
     },
+    createElementNS(namespace, tag) {
+      return new FakeElement(tag);
+    },
     querySelectorAll() {
       return [];
     },
@@ -213,7 +216,7 @@ function layout(workspace = "alpha") {
 }
 
 function practiceElements() {
-  return {
+  const elements = {
     stream: new FakeElement("stream"),
     composer: new FakeElement("composer"),
     "answer-box": new FakeElement("answer-box"),
@@ -231,7 +234,11 @@ function practiceElements() {
     "practice-mode-batch": new FakeElement("practice-mode-batch"),
     "start-area": new FakeElement("start-area"),
     "session-end-entry": new FakeElement("session-end-entry"),
+    "practice-error": new FakeElement("practice-error"),
+    "retry-practice": new FakeElement("retry-practice"),
   };
+  elements["retry-practice"].classList.add("hidden");
+  return elements;
 }
 
 function aiElements() {
@@ -436,9 +443,9 @@ test("batch self-rating writes only from its final review card", async () => {
   assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
   assert.equal(pending.children.length, 1);
   const card = pending.children[0];
-  const rating = card.children.find((child) => child.id === "end-rating");
-  const note = card.children.find((child) => child.id === "end-note");
-  const save = card.children.find((child) => child.id === "end-save");
+  const rating = card.children.find((child) => child.id === "end-rating-p-1");
+  const note = card.children.find((child) => child.id === "end-note-p-1");
+  const save = card.children.find((child) => child.id === "end-save-p-1");
   rating.value = "5";
   note.value = "已掌握";
   save.click();
@@ -449,7 +456,7 @@ test("batch self-rating writes only from its final review card", async () => {
   });
 });
 
-test("native graph reads the live model and saves a state only after confirmation", async () => {
+test("native graph dashboard limits student detail to title, reminder, and formal link", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
   const calls = [];
@@ -475,7 +482,7 @@ test("native graph reads the live model and saves a state only after confirmatio
           problem_count: 4,
         }], edges: [] });
       }
-      return jsonResponse({ state: "mastered" });
+      return jsonResponse({});
     },
   });
   await flush();
@@ -491,18 +498,211 @@ test("native graph reads the live model and saves a state only after confirmatio
   assert.equal(node.style.width, "25.6px");
   node.click();
   assert.match(detail.innerHTML, /加法规则/);
+  assert.match(detail.innerHTML, /可以复习/);
   assert.equal(calls.some((call) => call.url.endsWith("/graph/state")), false);
 
-  const select = detail.children.find((child) => child.id === "graph-state");
-  const save = detail.children.find((child) => child.id === "graph-state-save");
-  select.value = "mastered";
-  save.click();
-  await flush();
-  const stateWrite = calls.find((call) => call.url.endsWith("/graph/state"));
-  assert.deepEqual(JSON.parse(stateWrite.options.body), {
-    item_type: "kp", item_id: "kp-1", state: "mastered",
-  });
+  assert.equal(detail.children.some((child) => child.id === "graph-state"), false);
+  assert.equal(detail.children.some((child) => child.id === "graph-state-save"), false);
+  assert.equal(calls.some((call) => call.url.endsWith("/kp/kp-1")), false);
   assert.equal(app.window.location, "");
+});
+
+test("unified rating controls have unique accessible labels and titled cards", async () => {
+  const pending = new FakeElement("pending-ratings");
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify([
+      { problem_id: "p-1", answer_text: "one", state: "unrated" },
+      { problem_id: "p-2", answer_text: "two", state: "unrated" },
+    ]),
+  });
+  runWorkbench({
+    elements: { layout: layout(), "pending-ratings": pending }, storage,
+    fetch: (url) => jsonResponse({ problem: {
+      problem_id: url.endsWith("p-1") ? "p-1" : "p-2",
+      display_title: url.endsWith("p-1") ? "First title" : "Second title",
+      problem_text: "Text", solution: "Solution",
+    } }),
+  });
+  await flush();
+  const cards = pending.children;
+  const ratings = cards.map((card) => card.children.find((child) => /^end-rating-p-/.test(child.id)));
+  const labels = cards.map((card) => card.children.find((child) => /^end-rating-label-/.test(child.id)));
+  assert.deepEqual(ratings.map((item) => item.id), ["end-rating-p-1", "end-rating-p-2"]);
+  assert.deepEqual(labels.map((item) => item.getAttribute("for")), ["end-rating-p-1", "end-rating-p-2"]);
+  assert.match(cards[0].innerHTML, /First title/);
+  assert.match(cards[1].innerHTML, /Second title/);
+});
+
+test("unified rating rejects an invalid value visibly without a feedback write", async () => {
+  const pending = new FakeElement("pending-ratings");
+  const calls = [];
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify([{ problem_id: "p-1", state: "unrated" }]),
+  });
+  runWorkbench({
+    elements: { layout: layout(), "pending-ratings": pending }, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({ problem: { problem_id: "p-1", display_title: "Title", problem_text: "Text", solution: "Solution" } });
+    },
+  });
+  await flush();
+  const card = pending.children[0];
+  card.children.find((child) => child.id === "end-rating-p-1").value = "0";
+  card.children.find((child) => child.id === "end-save-p-1").click();
+  assert.match(card.children.find((child) => child.id === "end-error-p-1").textContent, /1-5/);
+  assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
+});
+
+test("mobile drawer buttons keep the study page mounted while toggling each side", () => {
+  const page = layout();
+  const elements = {
+    layout: page,
+    "mobile-nav-toggle": new FakeElement("mobile-nav-toggle"),
+    "mobile-ai-toggle": new FakeElement("mobile-ai-toggle"),
+    "left-column": new FakeElement("left-column"),
+    "ai-column": new FakeElement("ai-column"),
+  };
+  runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  elements["mobile-nav-toggle"].click();
+  assert.equal(page.classList.contains("left-drawer-open"), true);
+  assert.equal(page.classList.contains("ai-drawer-open"), false);
+  assert.equal(elements["mobile-nav-toggle"].getAttribute("aria-expanded"), "true");
+  elements["mobile-ai-toggle"].click();
+  assert.equal(page.classList.contains("left-drawer-open"), false);
+  assert.equal(page.classList.contains("ai-drawer-open"), true);
+  assert.equal(elements["mobile-nav-toggle"].getAttribute("aria-expanded"), "false");
+  assert.equal(elements["mobile-ai-toggle"].getAttribute("aria-expanded"), "true");
+});
+
+test("practice restores the same tab's titled active card without pulling again", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  const storage = new FakeStorage({
+    wb_practice_mode_alpha: "immediate",
+    wb_kps_alpha: JSON.stringify(["kp-1"]),
+    wb_session_alpha: JSON.stringify([{ problem_id: "p-1", state: "active" }]),
+    wb_current_alpha: JSON.stringify({
+      problem_id: "p-1", display_title: "Restored title", problem_text: "Restored text",
+    }),
+  });
+  const calls = [];
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => { calls.push({ url, options }); return jsonResponse({ problems: [] }); },
+  });
+  await flush();
+  assert.equal(elements["practice-mode-immediate"].checked, true);
+  assert.equal(elements["start-area"].classList.contains("hidden"), true);
+  assert.match(elements.stream.innerHTML, /Restored title/);
+  assert.equal(calls.some((call) => call.url.endsWith("/pull")), false);
+});
+
+test("practice starts a knowledge-point handoff without loading the weak list", async () => {
+  const page = layout();
+  page.dataset.practiceKpId = "kp-1";
+  const elements = { layout: page, ...practiceElements() };
+  const calls = [];
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({ problems: [{ problem_id: "p-1", display_title: "Scoped", problem_text: "Text" }] });
+    },
+  });
+  elements["practice-mode-batch"].checked = true;
+  elements["practice-mode-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.equal(calls.some((call) => call.url.includes("/weak?")), false);
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.deepEqual(JSON.parse(pull.options.body).kp_ids, ["kp-1"]);
+});
+
+test("knowledge-point handoff discards an unrelated restored active card", async () => {
+  const page = layout();
+  page.dataset.practiceKpId = "kp-scoped";
+  const elements = { layout: page, ...practiceElements() };
+  const storage = new FakeStorage({
+    wb_practice_mode_alpha: "immediate",
+    wb_kps_alpha: JSON.stringify(["kp-other"]),
+    wb_session_alpha: JSON.stringify([{ problem_id: "p-other", state: "active" }]),
+    wb_current_alpha: JSON.stringify({ problem_id: "p-other", display_title: "Unrelated", problem_text: "Old" }),
+  });
+  const calls = [];
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({ problems: [{ problem_id: "p-scoped", display_title: "Scoped", problem_text: "New" }] });
+    },
+  });
+  assert.doesNotMatch(elements.stream.innerHTML, /Unrelated/);
+  assert.equal(storage.getItem("wb_current_alpha"), null);
+  elements["practice-mode-batch"].checked = true;
+  elements["practice-mode-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.deepEqual(JSON.parse(pull.options.body).kp_ids, ["kp-scoped"]);
+});
+
+test("a restored unified-rating queue opens final review without clearing its records", () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  const storage = new FakeStorage({
+    wb_practice_mode_alpha: "batch",
+    wb_session_alpha: JSON.stringify([{ problem_id: "p-1", state: "unrated" }]),
+  });
+  const app = runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
+  assert.equal(app.window.location, "session-end");
+  assert.equal(storage.getItem("wb_session_alpha"), JSON.stringify([{ problem_id: "p-1", state: "unrated" }]));
+});
+
+test("practice shows titled cards and validates an invalid rating in place", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  const calls = [];
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull")) return jsonResponse({ problems: [{
+        problem_id: "p-1", display_title: "Readable problem", problem_text: "Text",
+      }] });
+      if (url.endsWith("/problem/p-1")) return jsonResponse({ problem: { solution: "Solution" } });
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.match(elements.stream.innerHTML, /Readable problem/);
+  elements["answer-submit"].click();
+  elements["show-answer"].click();
+  await flush();
+  elements["rating-input"].value = "9";
+  elements["save-rating"].click();
+  assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
+  assert.match(elements["practice-error"].textContent, /1-5/);
+});
+
+test("practice pull failures stay visible beside the active study flow", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => url.includes("/weak?")
+      ? jsonResponse([{ kp_id: "kp-1" }])
+      : Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) }),
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.match(elements["practice-error"].textContent, /503/);
+  assert.equal(elements["retry-practice"].classList.contains("hidden"), false);
+  elements["retry-practice"].click();
+  await flush();
+  assert.equal(elements["retry-practice"].classList.contains("hidden"), false);
 });
 
 test("reduced-motion graph settles without scheduling animation frames", async () => {
@@ -529,9 +729,9 @@ test("graph filtering rebuilds layout and dragging reheats the simulation", asyn
   let creates = 0;
   let reheats = 0;
   const physics = Object.assign({}, GraphPhysics, {
-    createSimulation(...args) {
+    layoutGraph(...args) {
       creates += 1;
-      return GraphPhysics.createSimulation(...args);
+      return GraphPhysics.layoutGraph(...args);
     },
     reheat(simulation) {
       reheats += 1;
@@ -572,6 +772,38 @@ test("graph filtering rebuilds layout and dragging reheats the simulation", asyn
   assert.match(stage.style.transform, /scale\(1\.1\)/);
   canvas.trigger("wheel", { deltaY: 1, preventDefault() {} });
   fit.click();
+});
+
+test("graph renders curved paths and focuses one-hop and two-hop neighborhoods", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  runWorkbench({
+    elements: { layout: layout(), "graph-canvas": canvas },
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [1, 2, 3, 4, 5].map((id) => ({
+        id: "kp-" + id, title: "知识点 " + id, problem_count: 1,
+      })),
+      edges: [[1, 2], [2, 3], [3, 4]].map(([source, target]) => ({
+        source: "kp-" + source, target: "kp-" + target, attraction: 1,
+      })),
+    }),
+  });
+  await flush();
+  const stage = canvas.children[0];
+  const edgeLayer = stage.children.find((child) => child.className === "graph-edge-layer");
+  assert.equal(edgeLayer.children.length, 3);
+  assert.match(edgeLayer.children[0].getAttribute("d"), / Q /);
+  const nodes = Object.fromEntries(stage.children.filter(
+    (child) => child.dataset.kpId,
+  ).map((child) => [child.dataset.kpId, child]));
+  nodes["kp-2"].click();
+  assert.equal(nodes["kp-2"].classList.contains("graph-focus-selected"), true);
+  assert.equal(nodes["kp-1"].classList.contains("graph-focus-near"), true);
+  assert.equal(nodes["kp-3"].classList.contains("graph-focus-near"), true);
+  assert.equal(nodes["kp-4"].classList.contains("graph-focus-mid"), true);
+  assert.equal(nodes["kp-5"].classList.contains("graph-focus-far"), true);
+  canvas.trigger("click");
+  assert.equal(nodes["kp-5"].classList.contains("graph-focus-far"), false);
 });
 
 test("native graph dashboard removes duplicate content editors", async () => {
@@ -672,6 +904,29 @@ test("AI column discovers providers but opens a conversation only after selectio
   assert.match(elements["ai-messages"].children[1].innerHTML, /分步选择时相乘/);
 });
 
+test("the visible provider picker explains when no provider is available", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  await flush();
+  elements["ai-new-session"].click();
+  assert.equal(elements["ai-provider-picker"].classList.contains("hidden"), false);
+  assert.match(elements["ai-provider-options"].innerHTML, /暂无可用 Agent/);
+});
+
+test("provider discovery failures remain visible in the list and picker", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => url.endsWith("/ai/providers")
+      ? Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) })
+      : jsonResponse([]),
+  });
+  await flush();
+  assert.match(elements["ai-session-empty"].textContent, /Agent 服务暂不可用/);
+  elements["ai-new-session"].click();
+  assert.match(elements["ai-provider-options"].innerHTML, /Agent 服务暂不可用/);
+});
+
 test("AI free message sends page identifiers and excludes a draft by default", async () => {
   const pageLayout = layout();
   pageLayout.dataset.page = "kp";
@@ -713,13 +968,11 @@ test("AI free message sends page identifiers and excludes a draft by default", a
   assert.equal(Object.hasOwn(body, "draft_answer"), false);
 });
 
-test("practice draft is attached only after the learner enables it", async () => {
+test("practice drafts remain private because chat exposes no attachment setting", async () => {
   const pageLayout = layout();
   pageLayout.dataset.page = "practice";
-  const draft = new FakeElement("ai-include-draft", { checked: true });
   const elements = {
     layout: pageLayout, ...practiceElements(), ...aiElements(),
-    "ai-include-draft": draft,
   };
   const storage = new FakeStorage({
     wb_current_alpha: JSON.stringify({ problem_id: "p-1", answer_text: "" }),
@@ -745,9 +998,9 @@ test("practice draft is attached only after the learner enables it", async () =>
   await flush();
   const turn = calls.find((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
   const body = JSON.parse(turn.options.body);
-  assert.equal(body.include_draft, true);
-  assert.equal(body.draft_answer, "我的草稿");
-  assert.equal(body.draft_note, "尚未提交");
+  assert.equal(Object.hasOwn(body, "include_draft"), false);
+  assert.equal(Object.hasOwn(body, "draft_answer"), false);
+  assert.equal(Object.hasOwn(body, "draft_note"), false);
 });
 
 test("a running native turn exposes stop and calls only its cancel endpoint", async () => {

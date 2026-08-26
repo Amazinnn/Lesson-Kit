@@ -173,6 +173,26 @@
     });
   }
 
+  var mobileNavToggle = document.getElementById("mobile-nav-toggle");
+  var mobileAiToggle = document.getElementById("mobile-ai-toggle");
+  function toggleDrawer(name) {
+    var open = !layout.classList.contains(name);
+    layout.classList.toggle("left-drawer-open", name === "left-drawer-open" && open);
+    layout.classList.toggle("ai-drawer-open", name === "ai-drawer-open" && open);
+    if (mobileNavToggle) mobileNavToggle.setAttribute(
+      "aria-expanded", layout.classList.contains("left-drawer-open") ? "true" : "false"
+    );
+    if (mobileAiToggle) mobileAiToggle.setAttribute(
+      "aria-expanded", layout.classList.contains("ai-drawer-open") ? "true" : "false"
+    );
+  }
+  if (mobileNavToggle) mobileNavToggle.addEventListener("click", function () {
+    toggleDrawer("left-drawer-open");
+  });
+  if (mobileAiToggle) mobileAiToggle.addEventListener("click", function () {
+    toggleDrawer("ai-drawer-open");
+  });
+
   /* ---------- native knowledge graph ---------- */
 
   var graphCanvas = document.getElementById("graph-canvas");
@@ -189,6 +209,7 @@
     var graphStage = null;
     var graphNodeElements = new Map();
     var graphEdgeElements = [];
+    var graphAdjacency = new Map();
     var graphView = { x: 0, y: 0, scale: 1 };
     var graphAutoFit = true;
     var draggedNode = null;
@@ -196,14 +217,9 @@
     var reducedGraphMotion = window.matchMedia
       && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    function stateLabel(state) {
-      return {
-        needs_work: "待攻克", review: "待复习", mastered: "已掌握",
-      }[state] || "未标注";
-    }
-
-    function relationStrengthLabel(strength) {
-      return { low: "弱", medium: "中", high: "强" }[strength] || "暂无";
+    function actionReminder(node) {
+      return node.state === "needs_work" ? "重点练习"
+        : node.state === "review" ? "可以复习" : "";
     }
 
     function showGraphPanel(detailOpen) {
@@ -223,71 +239,65 @@
       if (!graphDetail) return;
       selectedGraphKpId = node.id;
       recordRecent("kp", node.id);
-      var neighborCount = graphData.edges.filter(function (edge) {
-        return edge.source === node.id || edge.target === node.id;
-      }).length;
-      var strongest = graphData.edges.filter(function (edge) {
-        return edge.source === node.id || edge.target === node.id;
-      }).reduce(function (best, edge) {
-        var rank = { low: 0, medium: 1, high: 2 };
-        return !best || rank[edge.strength] > rank[best.strength] ? edge : best;
-      }, null);
       graphDetail.innerHTML = "<p class='side-label'>学习看板</p><h2>"
         + escapeHtml(node.title) + "</h2>"
-        + "<div class='graph-dashboard-metrics' aria-label='知识点指标'>"
-        + "<div><span>当前状态</span><strong>" + escapeHtml(stateLabel(node.state)) + "</strong></div>"
-        + "<div><span>关联题目</span><strong>" + escapeHtml(node.problem_count || 0) + " 道</strong></div>"
-        + "<div><span>相邻知识点</span><strong>" + neighborCount + " 个</strong></div>"
-        + "<div><span>主要关系</span><strong>" + escapeHtml(strongest ? relationStrengthLabel(strongest.strength) : "暂无") + "</strong></div>"
-        + "<div><span>学习信号</span><strong id='graph-signal-summary'>读取中</strong></div>"
-        + "<div><span>下次复习</span><strong id='graph-schedule-summary'>读取中</strong></div>"
-        + "</div><p class='graph-dashboard-note muted'>状态和关联规模来自当前工作区的正式题池。</p>"
-        + "<label for='graph-state'>更新学习状态</label>";
-      var state = document.createElement("select");
-      state.id = "graph-state";
-      state.innerHTML = "<option value='needs_work'>待攻克</option>"
-        + "<option value='review'>待复习</option><option value='mastered'>已掌握</option>";
-      state.value = node.state || "review";
-      var save = document.createElement("button");
-      save.id = "graph-state-save";
-      save.className = "primary sm";
-      save.textContent = "保存状态";
-      save.addEventListener("click", function () {
-        post("/graph/state", {
-          item_type: "kp", item_id: node.id, state: state.value,
-        }).then(function (data) {
-          node.state = data.state;
-          renderGraph();
-          renderGraphDetail(node);
-        });
-      });
-      graphDetail.appendChild(state);
-      graphDetail.appendChild(save);
+        + (actionReminder(node) ? "<p class='action-reminder'>"
+          + actionReminder(node) + "</p>" : "");
       var link = document.createElement("a");
       link.id = "graph-open-kp";
       link.className = "graph-dashboard-link";
       link.href = "/w/" + encodeURIComponent(WS) + "/kp/" + encodeURIComponent(node.id);
       link.textContent = "打开知识点";
       graphDetail.appendChild(link);
-      api("/kp/" + encodeURIComponent(node.id)).then(function (detail) {
-        if (selectedGraphKpId !== node.id) return;
-        var signal = (detail.signals || []).map(function (item) {
-          return item.signal_type + " · " + item.weight;
-        }).join("、") || "暂无信号";
-        var schedule = detail.schedule && detail.schedule.due_at
-          ? "" + detail.schedule.due_at : "未排期";
-        var signalEl = document.getElementById("graph-signal-summary");
-        var scheduleEl = document.getElementById("graph-schedule-summary");
-        if (signalEl) signalEl.textContent = signal;
-        if (scheduleEl) scheduleEl.textContent = schedule;
-      }).catch(function () {
-        if (selectedGraphKpId !== node.id) return;
-        var signalEl = document.getElementById("graph-signal-summary");
-        var scheduleEl = document.getElementById("graph-schedule-summary");
-        if (signalEl) signalEl.textContent = "暂不可用";
-        if (scheduleEl) scheduleEl.textContent = "暂不可用";
-      });
       showGraphPanel(true);
+    }
+
+    function clearGraphFocus() {
+      graphNodeElements.forEach(function (elements) {
+        ["graph-focus-selected", "graph-focus-near", "graph-focus-mid", "graph-focus-far"]
+          .forEach(function (name) {
+            elements.node.classList.remove(name);
+            elements.label.classList.remove(name);
+          });
+      });
+      graphEdgeElements.forEach(function (entry) {
+        entry.element.classList.remove("graph-focus-near");
+        entry.element.classList.remove("graph-focus-mid");
+        entry.element.classList.remove("graph-focus-far");
+      });
+    }
+
+    function focusGraph(nodeId) {
+      clearGraphFocus();
+      var distances = new Map([[nodeId, 0]]);
+      var pending = [nodeId];
+      while (pending.length) {
+        var current = pending.shift();
+        var distance = distances.get(current);
+        if (distance >= 2) continue;
+        (graphAdjacency.get(current) || []).forEach(function (neighbor) {
+          if (!distances.has(neighbor)) {
+            distances.set(neighbor, distance + 1);
+            pending.push(neighbor);
+          }
+        });
+      }
+      graphNodeElements.forEach(function (elements, id) {
+        var distance = distances.get(id);
+        var name = distance === 0 ? "graph-focus-selected"
+          : distance === 1 ? "graph-focus-near"
+            : distance === 2 ? "graph-focus-mid" : "graph-focus-far";
+        elements.node.classList.add(name);
+        elements.label.classList.add(name);
+      });
+      graphEdgeElements.forEach(function (entry) {
+        var sourceDistance = distances.get(entry.edge.source);
+        var targetDistance = distances.get(entry.edge.target);
+        var name = sourceDistance <= 1 && targetDistance <= 1 ? "graph-focus-near"
+          : sourceDistance !== undefined && targetDistance !== undefined
+            ? "graph-focus-mid" : "graph-focus-far";
+        entry.element.classList.add(name);
+      });
     }
 
     function renderGraph() {
@@ -308,14 +318,23 @@
       graphStage = stage;
       graphNodeElements = new Map();
       graphEdgeElements = [];
-      graphSimulation = GraphPhysics.createSimulation(
+      graphAdjacency = new Map(nodes.map(function (node) { return [node.id, []]; }));
+      edges.forEach(function (edge) {
+        graphAdjacency.get(edge.source).push(edge.target);
+        graphAdjacency.get(edge.target).push(edge.source);
+      });
+      graphSimulation = GraphPhysics.layoutGraph(
         nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight,
       );
       graphAutoFit = true;
+      var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      edgeLayer.className = "graph-edge-layer";
+      edgeLayer.setAttribute("aria-hidden", "true");
+      stage.appendChild(edgeLayer);
       graphSimulation.edges.forEach(function (edge) {
-        var link = document.createElement("span");
+        var link = document.createElementNS("http://www.w3.org/2000/svg", "path");
         link.className = "graph-edge";
-        stage.appendChild(link);
+        edgeLayer.appendChild(link);
         graphEdgeElements.push({ element: link, edge: edge });
       });
       graphSimulation.nodes.forEach(function (node) {
@@ -324,11 +343,12 @@
         button.dataset.kpId = node.id;
         button.style.width = (node.radius * 2) + "px";
         button.style.height = (node.radius * 2) + "px";
-        button.setAttribute("aria-label", node.title + "，" + stateLabel(node.state)
-          + "，关联 " + (node.problem_count || 0) + " 道题");
-        button.title = node.title + " · " + stateLabel(node.state)
-          + " · " + (node.problem_count || 0) + " 道题";
-        button.addEventListener("click", function () { renderGraphDetail(node); });
+        button.setAttribute("aria-label", node.title);
+        button.title = node.title;
+        button.addEventListener("click", function () {
+          renderGraphDetail(node);
+          focusGraph(node.id);
+        });
         button.addEventListener("pointerdown", function (event) {
           if (event.stopPropagation) event.stopPropagation();
           draggedNode = node;
@@ -366,15 +386,17 @@
     }
 
     function drawGraph() {
-      graphEdgeElements.forEach(function (entry) {
+      graphEdgeElements.forEach(function (entry, index) {
         var source = entry.edge.sourceNode;
         var target = entry.edge.targetNode;
         var dx = target.x - source.x;
         var dy = target.y - source.y;
-        entry.element.style.left = source.x + "px";
-        entry.element.style.top = source.y + "px";
-        entry.element.style.width = Math.hypot(dx, dy) + "px";
-        entry.element.style.transform = "rotate(" + Math.atan2(dy, dx) + "rad)";
+        var length = Math.max(1, Math.hypot(dx, dy));
+        var bend = Math.min(22, length * 0.08) * (index % 2 ? 1 : -1);
+        var controlX = (source.x + target.x) / 2 - dy / length * bend;
+        var controlY = (source.y + target.y) / 2 + dx / length * bend;
+        entry.element.setAttribute("d", "M " + source.x + " " + source.y
+          + " Q " + controlX + " " + controlY + " " + target.x + " " + target.y);
       });
       if (!graphSimulation) return;
       graphSimulation.nodes.forEach(function (node) {
@@ -449,6 +471,9 @@
       graphAutoFit = false;
       panStart = { x: event.clientX, y: event.clientY, viewX: graphView.x, viewY: graphView.y };
     });
+    graphCanvas.addEventListener("click", function (event) {
+      if (event.target === graphCanvas || event.target === graphStage) clearGraphFocus();
+    });
     graphCanvas.addEventListener("pointermove", function (event) {
       if (draggedNode) {
         var rect = graphCanvas.getBoundingClientRect();
@@ -495,6 +520,15 @@
   var startPractice = document.getElementById("start-practice");
   var currentProblem = load(CURRENT_KEY, null);
   var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
+  var scopedMatch = String(window.location.search || "").match(/[?&]kp=([^&]+)/);
+  var scopedKpId = layout.dataset.practiceKpId || (scopedMatch && decodeURIComponent(scopedMatch[1])) || "";
+  if (stream && scopedKpId) {
+    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(CURRENT_KEY);
+    sessionStorage.removeItem(MODE_KEY);
+    store(KPS_KEY, [scopedKpId]);
+    currentProblem = null;
+  }
 
   function session() {
     return load(SESSION_KEY, []);
@@ -528,6 +562,22 @@
     var saveRating = document.getElementById("save-rating");
     var sessionEntry = document.getElementById("session-end-entry");
     var startArea = document.getElementById("start-area");
+    var practiceError = document.getElementById("practice-error");
+    var retryPractice = document.getElementById("retry-practice");
+
+    function showPracticeError(error, retryable) {
+      if (!practiceError) return;
+      practiceError.textContent = "请求未完成：" + (error.message || error || "未知错误");
+      practiceError.classList.remove("hidden");
+      if (retryPractice) retryPractice.classList.toggle("hidden", !retryable);
+    }
+
+    function clearPracticeError() {
+      if (!practiceError) return;
+      practiceError.textContent = "";
+      practiceError.classList.add("hidden");
+      if (retryPractice) retryPractice.classList.add("hidden");
+    }
 
     function selectedMode() {
       if (modeImmediate && modeImmediate.checked) return "immediate";
@@ -542,7 +592,8 @@
 
     function renderQuestion(problem) {
       stream.innerHTML = "<article class='practice-question-card card'>"
-        + "<p class='context-line'>题目 · " + escapeHtml(problem.problem_id) + "</p>"
+        + "<p class='context-line'>练习题</p><h2>"
+        + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div></article>";
       renderMath(stream);
     }
@@ -569,6 +620,7 @@
     function loadNext() {
       var kps = currentKps();
       var exclude = session().map(function (item) { return item.problem_id; });
+      clearPracticeError();
       api("/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -593,7 +645,7 @@
         feedbackNote.value = "";
         showComposer(true);
         answerBox.focus();
-      });
+      }).catch(function (error) { showPracticeError(error, true); });
     }
 
     function startSession() {
@@ -602,11 +654,17 @@
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
       sessionStorage.setItem(MODE_KEY, mode);
+      if (scopedKpId) {
+        store(KPS_KEY, [scopedKpId]);
+        if (startArea) startArea.classList.add("hidden");
+        loadNext();
+        return;
+      }
       api("/weak?limit=200").then(function (items) {
         store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
         if (startArea) startArea.classList.add("hidden");
         loadNext();
-      });
+      }).catch(showPracticeError);
     }
 
     function bindMode(mode) {
@@ -617,10 +675,25 @@
 
     bindMode(modeImmediate);
     bindMode(modeBatch);
+    var restoredMode = sessionStorage.getItem(MODE_KEY);
+    var hasPendingRatings = restoredMode === "batch" && session().some(function (item) {
+      return item.state === "unrated";
+    });
+    if (hasPendingRatings && !currentProblem) {
+      window.location = "session-end";
+    } else if (restoredMode && currentProblem) {
+      if (modeImmediate) modeImmediate.checked = restoredMode === "immediate";
+      if (modeBatch) modeBatch.checked = restoredMode === "batch";
+      if (startArea) startArea.classList.add("hidden");
+      renderQuestion(currentProblem);
+      answerBox.value = currentProblem.answer_text || "";
+      showComposer(true);
+    }
     if (startPractice) {
       startPractice.disabled = !selectedMode();
       startPractice.addEventListener("click", startSession);
     }
+    if (retryPractice) retryPractice.addEventListener("click", loadNext);
 
     if (submitAnswer) submitAnswer.addEventListener("click", function () {
       if (!currentProblem) return;
@@ -641,6 +714,7 @@
 
     if (showAnswer) showAnswer.addEventListener("click", function () {
       if (!currentProblem) return;
+      clearPracticeError();
       api("/problem/" + currentProblem.problem_id).then(function (detail) {
         var solution = detail.problem.solution || "（本题无解析，请基于自身作答自评）";
         stream.innerHTML += "<section class='practice-solution'><p class='section-kicker'>解析</p>"
@@ -648,12 +722,17 @@
         renderMath(stream);
         showAnswer.classList.add("hidden");
         feedbackArea.classList.remove("hidden");
-      });
+      }).catch(showPracticeError);
     });
 
     if (saveRating) saveRating.addEventListener("click", function () {
       var rating = parseInt(ratingInput.value, 10);
-      if (!currentProblem || rating < 1 || rating > 5) return;
+      if (!currentProblem) return;
+      if (rating < 1 || rating > 5) {
+        showPracticeError("请输入 1-5 的评分");
+        return;
+      }
+      clearPracticeError();
       post("/feedback", {
         item_type: "problem", item_id: currentProblem.problem_id,
         rating: rating, note: feedbackNote.value.trim(),
@@ -661,7 +740,7 @@
         updateSession(currentProblem.problem_id, { state: "rated" });
         setCurrent(null);
         loadNext();
-      });
+      }).catch(showPracticeError);
     });
 
     if (noTime) noTime.addEventListener("click", function () {
@@ -701,26 +780,46 @@
           var card = document.createElement("article");
           card.className = "pending-rating-card card";
           card.dataset.pid = item.problem_id;
-          card.innerHTML = "<p class='context-line'>题目 · " + escapeHtml(item.problem_id) + "</p>"
+          var title = problem.display_title || "未命名题目";
+          card.innerHTML = "<p class='context-line'>练习题</p><h2>" + escapeHtml(title) + "</h2>"
           + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
           + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
           + "<p class='section-kicker'>解析</p><div class='rich-text'>" + richText(problem.solution || "（本题无解析）") + "</div>";
           var rating = document.createElement("input");
-          rating.id = "end-rating";
+          rating.id = "end-rating-" + item.problem_id;
           rating.type = "number";
           rating.min = "1";
           rating.max = "5";
           rating.placeholder = "输入 1–5";
           var note = document.createElement("textarea");
-          note.id = "end-note";
+          note.id = "end-note-" + item.problem_id;
           note.placeholder = "可选备注";
           var save = document.createElement("button");
-          save.id = "end-save";
+          save.id = "end-save-" + item.problem_id;
           save.className = "primary sm";
           save.textContent = "保存评分";
+          var ratingLabel = document.createElement("label");
+          ratingLabel.id = "end-rating-label-" + item.problem_id;
+          ratingLabel.setAttribute("for", rating.id);
+          ratingLabel.textContent = "为“" + title + "”评分（1-5）";
+          var noteLabel = document.createElement("label");
+          noteLabel.id = "end-note-label-" + item.problem_id;
+          noteLabel.setAttribute("for", note.id);
+          noteLabel.textContent = "为“" + title + "”添加备注";
+          var error = document.createElement("p");
+          error.id = "end-error-" + item.problem_id;
+          error.className = "inline-error hidden";
+          error.setAttribute("aria-live", "polite");
+          function showCardError(message) {
+            error.textContent = message;
+            error.classList.remove("hidden");
+          }
           save.addEventListener("click", function () {
             var value = parseInt(rating.value, 10);
-            if (value < 1 || value > 5) return;
+            if (value < 1 || value > 5) {
+              showCardError("请输入 1-5 的评分");
+              return;
+            }
             post("/feedback", {
               item_type: "problem", item_id: item.problem_id,
               rating: value, note: note.value.trim(),
@@ -729,9 +828,12 @@
               card.remove();
               remaining -= 1;
               if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
-            });
+            }).catch(function (err) { showCardError(err.message || "保存失败"); });
           });
+          card.appendChild(error);
+          card.appendChild(ratingLabel);
           card.appendChild(rating);
+          card.appendChild(noteLabel);
           card.appendChild(note);
           card.appendChild(save);
           pending.appendChild(card);
@@ -758,7 +860,6 @@
   var aiSend = document.getElementById("ai-send");
   var aiStop = document.getElementById("ai-stop");
   var aiStatus = document.getElementById("ai-status");
-  var aiDraft = document.getElementById("ai-include-draft");
   var aiConversation = load(AI_CONVERSATION_KEY, "");
   var aiTurn = null;
   var aiPollTimer = null;
@@ -851,11 +952,6 @@
       body.problem_id = currentProblem.problem_id;
       body.practice_mode = sessionStorage.getItem(MODE_KEY) || "";
       body.progress = { seen: session().length };
-      if (aiDraft && aiDraft.checked) {
-        body.include_draft = true;
-        body.draft_answer = answerBox ? answerBox.value : (currentProblem.answer_text || "");
-        body.draft_note = feedbackNote ? feedbackNote.value : "";
-      }
     }
     if (layout.dataset.page === "graph") {
       body.selected_kp_id = selectedGraphKpId;
@@ -952,6 +1048,7 @@
   var aiSessionBack = document.getElementById("ai-session-back");
   var aiSessionRecords = [];
   var aiProviders = [];
+  var aiProviderLoadError = "";
 
   if (aiSessionBack) {
     aiSessionBack.setAttribute("aria-label", "返回对话列表");
@@ -1051,7 +1148,11 @@
       button.addEventListener("click", function () { aiCreateSession(provider.name); });
       aiProviderOptions.appendChild(button);
     });
-    if (!aiProviders.length) aiSetStatus("未发现可用 Agent CLI。");
+    if (aiProviderLoadError) {
+      aiProviderOptions.innerHTML = "<p class='inline-error'>Agent 服务暂不可用。请稍后重试。</p>";
+    } else if (!aiProviders.length) {
+      aiProviderOptions.innerHTML = "<p class='inline-error'>暂无可用 Agent。请先配置一个提供方。</p>";
+    }
   }
 
   function aiRefreshSessionList() {
@@ -1086,10 +1187,19 @@
   });
   if (aiSessionList) {
     aiSetView("list");
+    var providerRequest = api("/ai/providers").then(function (items) {
+      aiProviders = items || [];
+    }).catch(function () {
+      aiProviderLoadError = "Agent 服务暂不可用。";
+      if (aiSessionEmpty) {
+        aiSessionEmpty.textContent = aiProviderLoadError;
+        aiSessionEmpty.classList.remove("hidden");
+      }
+    });
     Promise.all([
-      api("/ai/providers").then(function (items) { aiProviders = items || []; }),
+      providerRequest,
       aiRefreshSessionList(),
-    ]).catch(function () { aiSetStatus("Agent 服务暂不可用。"); });
+    ]);
   }
   if (layout.dataset.objectType && layout.dataset.objectId) {
     aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);

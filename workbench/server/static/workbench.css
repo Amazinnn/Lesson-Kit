@@ -73,6 +73,7 @@ body {
 }
 #topbar .meta { color: var(--dsw-label-secondary); font-size: 13px; }
 .topbar-separator { color: var(--dsw-label-caption); }
+.mobile-drawer-controls { display: none; margin-left: auto; gap: 4px; }
 
 /* three columns — DSH geometry (sidebar 280 / details 360, collapse rail) */
 #layout {
@@ -334,11 +335,18 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-zoom { display: flex; gap: 4px; }
 #graph-canvas { height: calc(100% - 59px); overflow: hidden; background-image: linear-gradient(var(--dsw-border-l1) 1px, transparent 1px), linear-gradient(90deg, var(--dsw-border-l1) 1px, transparent 1px); background-size: 24px 24px; }
 .graph-stage { position: relative; width: 100%; height: 100%; transform-origin: 0 0; }
-.graph-edge { position: absolute; z-index: 1; height: 1px; background: var(--dsw-border-l3); pointer-events: none; transform-origin: 0 50%; }
+.graph-edge-layer { position: absolute; inset: 0; z-index: 1; width: 1200px; height: 800px; overflow: visible; pointer-events: none; }
+.graph-edge { fill: none; stroke: var(--dsw-border-l3); stroke-width: 1.25; transition: opacity 120ms ease, stroke-width 120ms ease; }
 .graph-node { position: absolute; z-index: 2; padding: 0; transform: translate(-50%, -50%); border: 2px solid var(--dsw-border-l2); border-radius: 50%; background: var(--dsw-bg-layer-1); box-shadow: var(--dsw-shadow-lv1); cursor: grab; }
 .graph-node:hover { transform: translate(-50%, -50%) scale(1.08); background: var(--dsw-interactive-bg-hover); }
 .graph-node:active { cursor: grabbing; }
 .graph-node-label { position: absolute; z-index: 3; max-width: 150px; transform: translateX(-50%); color: var(--dsw-label-primary); font-size: 12px; font-weight: 600; line-height: 16px; text-align: center; pointer-events: none; }
+.graph-focus-selected { opacity: 1; }
+.graph-node.graph-focus-selected { box-shadow: 0 0 0 4px rgba(24, 103, 180, .18); }
+.graph-focus-near { opacity: 1; }
+.graph-edge.graph-focus-near { stroke-width: 2; }
+.graph-focus-mid { opacity: .58; }
+.graph-focus-far { opacity: .14; }
 .graph-node.needs_work { border-color: #df8f89; background: #fff5f4; }
 .graph-node.review { border-color: #d1b46d; background: #fffaf0; }
 .graph-node.mastered { border-color: #8dbb95; background: #f4fbf5; }
@@ -517,6 +525,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .pending-rating-card > textarea { display: block; margin-top: 10px; }
 .pending-rating-card > input { width: 120px; }
 .pending-rating-card > button { margin-top: 8px; }
+.inline-error { margin: 0 0 12px; color: var(--dsw-state-error); }
+.action-reminder { margin: 14px 0; color: var(--dsw-label-secondary); font-weight: 600; }
+.kp-practice-action { text-decoration: none; }
 
 /* misc */
 h1 { font-size: 28px; line-height: 36px; margin: 0 0 8px; }
@@ -569,12 +580,27 @@ img { max-width: 100%; }
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1023px) {
   #topbar { padding: 0 14px; }
+  .mobile-drawer-controls { display: flex; }
   #layout,
   #layout[data-ai-collapsed] { grid-template-columns: 1fr; }
-  #left-column { display: none; }
-  #ai-column { display: none; }
+  #left-column,
+  #ai-column {
+    display: block;
+    position: fixed;
+    z-index: 10;
+    top: 52px;
+    bottom: 0;
+    width: min(86vw, 340px);
+    background: var(--dsw-bg-layer-1);
+    box-shadow: var(--dsw-shadow-lv3);
+    transition: transform 160ms ease;
+  }
+  #left-column { left: 0; transform: translateX(-105%); }
+  #ai-column { right: 0; transform: translateX(105%); overflow-y: auto; }
+  #layout.left-drawer-open #left-column { transform: translateX(0); }
+  #layout.ai-drawer-open #ai-column { transform: translateX(0); }
   #middle { padding: 24px 18px 36px; }
   .page-header h1 { font-size: 24px; line-height: 32px; }
   .section-heading,
