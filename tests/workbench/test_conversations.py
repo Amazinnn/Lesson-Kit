@@ -173,6 +173,63 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(done["error"], "provider timed out")
         self.assertEqual(conversations.get(self.pool, conversation["conversation_id"])["messages"], [])
 
+    def test_session_title_can_be_renamed_and_idle_mirror_deleted(self):
+        from workbench.bridge import conversations
+
+        conversation = conversations.create(self.pool, "codex")
+        self.assertEqual(conversation["title"], "")
+        self.assertEqual(conversation["title_source"], "unset")
+
+        renamed = conversations.rename(self.pool, conversation["conversation_id"], "组合计数复习")
+        self.assertEqual(renamed["title"], "组合计数复习")
+        self.assertEqual(renamed["title_source"], "user")
+        self.assertEqual(
+            conversations.get(self.pool, conversation["conversation_id"])["title"],
+            "组合计数复习",
+        )
+
+        result = conversations.delete(self.pool, conversation["conversation_id"])
+        self.assertEqual(result["conversation_id"], conversation["conversation_id"])
+        self.assertFalse((self.pool.jobs_dir() / conversation["conversation_id"]).exists())
+
+    def test_running_session_cannot_delete(self):
+        from workbench.bridge import conversations
+
+        conversation = conversations.create(self.pool, "codex")
+        path = self.pool.jobs_dir() / conversation["conversation_id"] / "conversation.json"
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["status"] = "running"
+        path.write_text(json.dumps(record), encoding="utf-8")
+        with self.assertRaises(conversations.ConversationConflict):
+            conversations.delete(self.pool, conversation["conversation_id"])
+        self.assertTrue(path.exists())
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_explicit_provider_title_is_mirrored(self, get_provider, normalize_event):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-1"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "Answer", "title": "排列组合基础"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Hello",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        restored = conversations.get(self.pool, conversation["conversation_id"])
+        self.assertEqual(restored["title"], "排列组合基础")
+        self.assertEqual(restored["title_source"], "agent")
+
 
 if __name__ == "__main__":
     unittest.main()

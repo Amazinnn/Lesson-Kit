@@ -101,6 +101,22 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertEqual(partial, {"kind": "text", "text": "Part"})
         self.assertEqual(initialized["provider_session_id"], "claude-1")
 
+    def test_explicit_result_title_is_preserved(self):
+        from workbench.bridge import conversation_providers
+
+        codex = conversation_providers.normalize_event(
+            "codex",
+            {"type": "item.completed", "item": {
+                "type": "agent_message", "text": "Answer", "title": "组合计数"
+            }},
+        )
+        claude = conversation_providers.normalize_event(
+            "claude",
+            {"type": "result", "result": "Answer", "session_id": "s-1", "title": "组合计数"},
+        )
+        self.assertEqual(codex["title"], "组合计数")
+        self.assertEqual(claude["title"], "组合计数")
+
 
 if __name__ == "__main__":
     unittest.main()

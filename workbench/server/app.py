@@ -46,6 +46,8 @@ ROUTES = [
     ("GET", "/api/w/{name}/ai/providers", api_mod.ai_providers),
     ("GET", "/api/w/{name}/ai/sessions", api_mod.ai_sessions_list),
     ("POST", "/api/w/{name}/ai/sessions", api_mod.ai_sessions_create),
+    ("PATCH", "/api/w/{name}/ai/sessions/{conversation_id}", api_mod.ai_session_update),
+    ("DELETE", "/api/w/{name}/ai/sessions/{conversation_id}", api_mod.ai_session_delete),
     ("GET", "/api/w/{name}/ai/sessions/{conversation_id}", api_mod.ai_session_get),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/turns", api_mod.ai_turn_start),
     ("GET", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}", api_mod.ai_turn_events),
@@ -65,6 +67,12 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         self._dispatch("POST")
+
+    def do_PATCH(self):
+        self._dispatch("PATCH")
+
+    def do_DELETE(self):
+        self._dispatch("DELETE")
 
     def _dispatch(self, method):
         parsed = urlparse(self.path)
@@ -93,7 +101,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             return
 
         body = None
-        if method == "POST":
+        if method in {"POST", "PATCH"}:
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             body = json.loads(raw.decode("utf-8")) if raw else {}

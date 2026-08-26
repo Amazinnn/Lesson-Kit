@@ -73,7 +73,11 @@ def normalize_event(provider_name, data):
         if event_type == "item.completed":
             item = data.get("item") or {}
             if item.get("type") == "agent_message":
-                return {"kind": "text", "text": str(item.get("text", ""))}
+                result = {"kind": "text", "text": str(item.get("text", ""))}
+                title = item.get("title") or data.get("title")
+                if title:
+                    result["title"] = str(title)
+                return result
             return {"kind": "phase", "label": f"item.completed:{item.get('type', 'unknown')}"}
         if event_type == "error":
             return {"kind": "error", "text": str(data.get("message", "provider error"))}
@@ -91,8 +95,11 @@ def normalize_event(provider_name, data):
             return {"kind": "text", "text": str(delta.get("text", ""))}
         return {"kind": "phase", "label": str(event.get("type", "stream_event"))}
     if event_type == "result":
-        return {
+        result = {
             "kind": "result", "text": str(data.get("result", "")),
             "provider_session_id": data.get("session_id"),
         }
+        if data.get("title"):
+            result["title"] = str(data["title"])
+        return result
     return {"kind": "phase", "label": event_type or "provider.event"}

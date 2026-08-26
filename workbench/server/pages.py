@@ -353,32 +353,47 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<div id='ai-head'><div><p class='side-label'>外部 Agent</p><h2>AI 教师</h2></div>"
         "<button id='ai-collapse' class='ghost sm' title='折叠/展开'>‹</button></div>"
         "<div id='ai-context'>当前页面上下文会在发送时读取。</div></section>"
-        "<section id='ai-session-controls' aria-label='Agent 与会话'>"
-        "<label for='ai-provider'>Agent</label><select id='ai-provider' aria-label='选择 Agent'></select>"
-        "<label for='ai-session'>当前对话</label><select id='ai-session' aria-label='最近对话'></select>"
-        "<div class='ai-session-actions'><button id='ai-new' class='outline sm'>新建对话</button></div>"
-        "<label class='ai-option' for='ai-daily'><input id='ai-daily' type='checkbox'> "
-        "每天首次进入时新建对话</label></section>"
-        "<section class='ai-conversation'><p class='side-label'>对话</p>"
-        "<div id='ai-messages'></div><p id='ai-status' class='muted' aria-live='polite'></p></section>"
+        "<section id='ai-session-controls' aria-label='Agent 对话'>"
+        "<div id='ai-session-list-view'>"
+        "<div class='ai-session-list-head'><p class='side-label'>对话</p>"
+        "<button id='ai-new-session' class='outline sm'>新建</button></div>"
+        "<div id='ai-session-list' role='list' aria-label='历史对话'></div>"
+        "<p id='ai-session-empty' class='muted'>还没有对话。</p>"
+        "</div>"
+        "<div id='ai-provider-picker' class='hidden' aria-label='选择 Agent'>"
+        "<p class='side-label'>选择 Agent</p>"
+        "<p class='muted'>创建后将固定使用所选 Agent。</p>"
+        "<div id='ai-provider-options' class='ai-provider-options'></div>"
+        "</div></section>"
+        "<section id='ai-chat-view' class='hidden' aria-label='当前对话'>"
+        "<div id='ai-chat-head'>"
+        "<button id='ai-session-back' class='ghost sm' title='返回对话列表'>‹ 返回</button>"
+        "<input id='ai-session-rename' class='ai-session-title' type='text' value='未命名对话' "
+        "aria-label='会话名称' maxlength='80'>"
+        "<span id='ai-session-provider' class='ai-session-provider'></span>"
+        "<button id='ai-session-delete' class='ghost sm' title='删除本地会话'>删除</button>"
+        "</div>"
+        "<section class='ai-conversation'><div id='ai-messages'></div>"
+        "<p id='ai-status' class='muted' aria-live='polite'></p></section>"
         f"{draft}"
         "<div id='ai-input-row' class='ai-input-row'>"
         "<textarea id='ai-input' rows='2' placeholder='向 AI 教师提问'></textarea>"
         "<div class='ai-send-actions'><button id='ai-stop' class='outline sm hidden'>停止</button>"
         "<button id='ai-send' class='primary sm' disabled>发送</button></div>"
-        "</div>"
+        "</div></section>"
     )
     if not graph_mode:
         return teacher
     return (
         "<div id='right-tabs' role='tablist' aria-label='图谱侧栏'>"
         "<button id='graph-detail-tab' class='right-tab active' role='tab' "
-        "aria-selected='true'>知识点详情</button>"
+        "aria-selected='true'>学习看板</button>"
         "<button id='ai-teacher-tab' class='right-tab' role='tab' "
         "aria-selected='false'>AI 教师</button></div>"
         "<section id='graph-detail-panel' role='tabpanel'>"
-        "<p class='side-label'>知识点详情</p><h2>选择一个节点</h2>"
-        "<p class='muted'>图谱会读取当前工作区；点击节点查看正文、学习状态与可编辑内容。</p>"
+        "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
+        "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>"
+        "<a id='graph-open-kp' class='graph-dashboard-link hidden' href='#'>打开知识点</a>"
         "</section>"
         "<div id='ai-teacher-panel' class='hidden' role='tabpanel'>"
         f"{teacher}</div>"
@@ -389,44 +404,69 @@ _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)
 
 
 def _render_markdown(text, workspace_name, kp_id):
-    """Minimal Markdown renderer: math, wiki links, images, headings, lists."""
+    """Render the same small safe Markdown subset used by the browser."""
     if not text:
         return ""
-    out = []
-    in_list = False
-    for line in text.splitlines():
-        if line.startswith("### "):
-            if in_list:
-                out.append("</ul>")
-                in_list = False
-            out.append(f"<h4>{_rich(line[4:], workspace_name)}</h4>")
-        elif line.startswith("## "):
-            if in_list:
-                out.append("</ul>")
-                in_list = False
-            out.append(f"<h3>{_rich(line[3:], workspace_name)}</h3>")
-        elif line.startswith("# "):
-            if in_list:
-                out.append("</ul>")
-                in_list = False
-            out.append(f"<h2>{_rich(line[2:], workspace_name)}</h2>")
-        elif line.startswith("- ") or line.startswith("* "):
-            if not in_list:
-                out.append("<ul>")
-                in_list = True
-            out.append(f"<li>{_rich(line[2:], workspace_name)}</li>")
-        elif line.strip() == "":
-            if in_list:
-                out.append("</ul>")
-                in_list = False
-            out.append("<p></p>")
-        else:
-            if in_list:
-                out.append("</ul>")
-                in_list = False
-            out.append(f"<p>{_rich(line, workspace_name)}</p>")
-    if in_list:
-        out.append("</ul>")
+    out, paragraph, list_tag = [], [], None
+    in_code, code_lang, code_lines = False, "", []
+
+    def close_list():
+        nonlocal list_tag
+        if list_tag:
+            out.append(f"</{list_tag}>")
+            list_tag = None
+
+    def flush_paragraph():
+        nonlocal paragraph
+        if paragraph:
+            out.append(f"<p>{'<br>'.join(_rich(line, workspace_name) for line in paragraph)}</p>")
+            paragraph = []
+
+    for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+        fence = re.match(r"^\s*```\s*([\w-]*)\s*$", line)
+        if fence:
+            flush_paragraph()
+            close_list()
+            if in_code:
+                out.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+                code_lines = []
+                code_lang = ""
+            in_code = not in_code
+            code_lang = fence.group(1) if in_code else ""
+            continue
+        if in_code:
+            code_lines.append(line)
+            continue
+        heading = re.match(r"^\s*(#{1,3})\s+(.+?)\s*#*\s*$", line)
+        if heading:
+            flush_paragraph(); close_list()
+            level = len(heading.group(1)) + 1
+            out.append(f"<h{level}>{_rich(heading.group(2), workspace_name)}</h{level}>")
+            continue
+        ordered = re.match(r"^\s*\d+[.)]\s+(.+)$", line)
+        unordered = re.match(r"^\s*[-*+]\s+(.+)$", line)
+        if ordered or unordered:
+            flush_paragraph()
+            wanted = "ol" if ordered else "ul"
+            if list_tag and list_tag != wanted:
+                close_list()
+            if not list_tag:
+                list_tag = wanted
+                out.append(f"<{list_tag}>")
+            out.append(f"<li>{_rich((ordered or unordered).group(1), workspace_name)}</li>")
+            continue
+        if line.startswith(">"):
+            flush_paragraph(); close_list()
+            out.append(f"<blockquote>{_rich(line[1:].lstrip(), workspace_name)}</blockquote>")
+            continue
+        if not line.strip():
+            flush_paragraph(); close_list()
+            continue
+        close_list()
+        paragraph.append(line)
+    flush_paragraph(); close_list()
+    if in_code:
+        out.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
     return "".join(out)
 
 
@@ -434,9 +474,18 @@ def _rich(text, workspace_name):
     """Escape first, then inject math/wiki/image markup (order matters)."""
     text = html.escape(text)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", text)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
     text = _MATH_RE.sub(_math_replace, text)
     text = _wiki_replace(text, workspace_name)
+    text = re.sub(
+        r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
+        lambda match: (
+            f"<a href='{html.escape(match.group(2), quote=True)}' "
+            f"target='_blank' rel='noopener noreferrer'>{match.group(1)}</a>"
+        ),
+        text,
+    )
     text = _image_replace(text, workspace_name)
     return text
 

@@ -191,7 +191,7 @@ def ai_providers(pool, workspace, params, body):
 
 
 def ai_sessions_list(pool, workspace, params, body):
-    return conversations.list_sessions(pool, limit=10)
+    return conversations.list_sessions(pool)
 
 
 def ai_sessions_create(pool, workspace, params, body):
@@ -199,9 +199,29 @@ def ai_sessions_create(pool, workspace, params, body):
     if not isinstance(provider, str) or not provider:
         raise ApiError(400, "provider is required")
     try:
-        return conversations.create(pool, provider)
+        title = body.get("title", "")
+        if title is not None and not isinstance(title, str):
+            raise ApiError(400, "title must be a string")
+        return conversations.create(pool, provider, title or "")
     except KeyError as exc:
         raise ApiError(400, str(exc)) from exc
+
+
+def ai_session_update(pool, workspace, params, body):
+    title = body.get("title")
+    if not isinstance(title, str) or not title.strip():
+        raise ApiError(400, "title is required")
+    try:
+        return conversations.rename(pool, params["conversation_id"], title)
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def ai_session_delete(pool, workspace, params, body):
+    try:
+        return conversations.delete(pool, params["conversation_id"])
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
 
 
 def ai_session_get(pool, workspace, params, body):

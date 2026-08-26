@@ -565,7 +565,7 @@ test("graph filtering rebuilds layout and dragging reheats the simulation", asyn
   fit.click();
 });
 
-test("native graph saves knowledge content only from its explicit save control", async () => {
+test("native graph dashboard removes duplicate content editors", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
   const calls = [];
@@ -585,32 +585,21 @@ test("native graph saves knowledge content only from its explicit save control",
     fetch: (url, options) => {
       calls.push({ url, options });
       if (url.endsWith("/graph/model")) return jsonResponse({
-        nodes: [{ id: "kp-1", title: "容斥原理", body: "旧正文", fragile: "旧说明" }], edges: [],
+      nodes: [{ id: "kp-1", title: "容斥原理", problem_count: 3 }], edges: [],
       });
-      return jsonResponse({ body: "新正文", fragile: "新说明" });
+      return jsonResponse({ signals: [], schedule: null });
     },
   });
   await flush();
   const node = canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1");
   node.click();
   assert.equal(calls.some((call) => call.url.endsWith("/graph/kp")), false);
-  assert.ok(detail.children.some((child) => child.id === "graph-body"));
-  assert.ok(detail.children.some((child) => child.id === "graph-fragile"));
-  assert.ok(detail.children.some((child) => child.id === "graph-content-save"));
-  const body = detail.children.find((child) => child.id === "graph-body");
-  const fragile = detail.children.find((child) => child.id === "graph-fragile");
-  const save = detail.children.find((child) => child.id === "graph-content-save");
-  body.value = "新正文";
-  fragile.value = "新说明";
-  save.click();
-  await flush();
-  const contentWrite = calls.find((call) => call.url.endsWith("/graph/kp"));
-  assert.deepEqual(JSON.parse(contentWrite.options.body), {
-    kp_id: "kp-1", body: "新正文", fragile: "新说明",
-  });
+  assert.equal(detail.children.some((child) => child.id === "graph-body"), false);
+  assert.equal(detail.children.some((child) => child.id === "graph-fragile"), false);
+  assert.ok(detail.children.some((child) => child.id === "graph-open-kp"));
 });
 
-test("native graph exposes related problem state as an explicit overwrite", async () => {
+test("native graph dashboard does not render per-problem save controls", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
   const calls = [];
@@ -630,28 +619,17 @@ test("native graph exposes related problem state as an explicit overwrite", asyn
     fetch: (url, options) => {
       calls.push({ url, options });
       if (url.endsWith("/graph/model")) return jsonResponse({
-        nodes: [{ id: "kp-1", title: "容斥原理", body: "正文", fragile: "" }], edges: [],
+        nodes: [{ id: "kp-1", title: "容斥原理", problem_count: 1 }], edges: [],
       });
-      if (url.endsWith("/kp/kp-1")) return jsonResponse({ problems: [{
-        problem_id: "p-1", display_title: "整数条件计数", topic_label: "容斥原理", current_state: null,
-      }] });
+      if (url.endsWith("/kp/kp-1")) return jsonResponse({ signals: [], schedule: null });
       return jsonResponse({ state: "needs_work" });
     },
   });
   await flush();
   canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1").click();
   await flush();
-  const problem = detail.children.find((child) => child.id === "graph-problem-p-1");
-  assert.ok(problem);
-  const state = problem.children.find((child) => child.id === "graph-problem-state");
-  const save = problem.children.find((child) => child.id === "graph-problem-save");
-  state.value = "needs_work";
-  save.click();
-  await flush();
-  const write = calls.find((call) => call.url.endsWith("/graph/state"));
-  assert.deepEqual(JSON.parse(write.options.body), {
-    item_type: "problem", item_id: "p-1", state: "needs_work",
-  });
+  assert.equal(detail.children.some((child) => child.id === "graph-problem-p-1"), false);
+  assert.equal(detail.children.some((child) => child.id === "graph-problem-save"), false);
 });
 
 test("AI column discovers providers and restores a recent native conversation", async () => {
@@ -788,4 +766,62 @@ test("a running native turn exposes stop and calls only its cancel endpoint", as
   elements["ai-stop"].click();
   await flush();
   assert.ok(calls.some((call) => call.url.endsWith("/ai/sessions/conv-001/cancel")));
+});
+
+test("rich text renders markdown structure and safe links in native messages", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions")) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" },
+      ]);
+      return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+        messages: [{ role: "assistant", content: "# 标题\n\n- **重点**\n\n[危险](javascript:alert(1)) [[kp-1|知识点]]\n\n```js\n<em>原样</em>\n```" }],
+      });
+    },
+  });
+  await flush();
+  const html = elements["ai-messages"].children[0].innerHTML;
+  assert.match(html, /<h1>标题<\/h1>/);
+  assert.match(html, /<ul>[\s\S]*<strong>重点<\/strong>[\s\S]*<\/ul>/);
+  assert.match(html, /href='\/w\/alpha\/kp\/kp-1'/);
+  assert.match(html, /<pre><code class=['"]language-js['"]>&lt;em&gt;原样&lt;\/em&gt;<\/code><\/pre>/);
+  assert.doesNotMatch(html, /href=['"]javascript:/i);
+});
+
+test("streaming assistant text is coalesced into one markdown message", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    setTimeoutFn: () => 0,
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle", messages: [],
+      });
+      if (url.endsWith("/turns") && options) return jsonResponse({ turn_id: "turn-1" });
+      if (url.includes("/turns/turn-1")) return jsonResponse({
+        turn: { status: "running" },
+        events: [
+          { sequence: 1, kind: "text", text: "## 片段" },
+          { sequence: 2, kind: "text", text: "\n\n完整回答" },
+        ],
+      });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  elements["ai-input"].value = "请回答";
+  elements["ai-send"].click();
+  await flush();
+  assert.equal(elements["ai-messages"].children.length, 2);
+  const assistant = elements["ai-messages"].children[1];
+  assert.match(assistant.innerHTML, /<h2>片段<\/h2>/);
+  assert.match(assistant.innerHTML, /完整回答/);
 });

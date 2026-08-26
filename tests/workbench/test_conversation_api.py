@@ -56,6 +56,23 @@ class ConversationApiTests(unittest.TestCase):
         with urllib.request.urlopen(request) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
 
+    def patch(self, path, payload):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}{path}",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="PATCH",
+        )
+        with urllib.request.urlopen(request) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+
+    def delete(self, path):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}{path}", method="DELETE"
+        )
+        with urllib.request.urlopen(request) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+
     @mock.patch("workbench.bridge.conversation_providers.discover")
     def test_provider_and_session_endpoints(self, discover):
         discover.return_value = [self.provider]
@@ -73,6 +90,31 @@ class ConversationApiTests(unittest.TestCase):
             )
             self.assertEqual(restored["provider"], "codex")
             self.assertEqual(restored["messages"], [])
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_session_list_is_unbounded_and_supports_rename_and_delete(self, get_provider):
+        get_provider.return_value = self.provider
+        created = []
+        for _ in range(11):
+            _, conversation = self.post("/api/w/dmath/ai/sessions", {"provider": "codex"})
+            created.append(conversation)
+
+        _, sessions = self.get("/api/w/dmath/ai/sessions")
+        self.assertEqual(len(sessions), 11)
+        self.assertTrue(all("title" in item and "title_source" in item for item in sessions))
+
+        conversation_id = created[0]["conversation_id"]
+        _, renamed = self.patch(
+            f"/api/w/dmath/ai/sessions/{conversation_id}",
+            {"title": "我的复习对话"},
+        )
+        self.assertEqual(renamed["title"], "我的复习对话")
+        self.assertEqual(renamed["title_source"], "user")
+        status, deleted = self.delete(f"/api/w/dmath/ai/sessions/{conversation_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(deleted["conversation_id"], conversation_id)
+        _, sessions = self.get("/api/w/dmath/ai/sessions")
+        self.assertNotIn(conversation_id, {item["conversation_id"] for item in sessions})
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_turn_endpoint_rebuilds_context_and_returns_events(self, get_provider):

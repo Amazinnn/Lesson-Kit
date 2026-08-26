@@ -237,3 +237,70 @@ Daily automatic conversation creation SHALL default off. When enabled, it SHALL 
 - **WHEN** no conversation was automatically created for that browser-local date and no turn is running
 - **THEN** one new conversation is created with the learner's selected provider
 
+### Requirement: User-visible Markdown uses one safe subset
+All user-visible learning text SHALL use the same supported Markdown subset: ATX headings through level 3, paragraphs, ordered and unordered lists, blockquotes, fenced and inline code, strong/emphasis, safe http(s) links, wiki links, math, and workspace-local images.
+
+#### Scenario: Agent answer renders Markdown
+- **WHEN** an Agent or student message contains `##`, `**bold**`, a list, or a fenced code block
+- **THEN** the message displays semantic headings, emphasis, list markers, and code styling rather than raw Markdown syntax
+
+#### Scenario: Unsafe markup is rejected
+- **WHEN** text contains raw HTML, a `javascript:` link, or an image path outside the workspace figure directory
+- **THEN** the rendered output contains escaped text and no executable link or image
+
+### Requirement: Streaming text is one message
+Partial Agent text events SHALL update one assistant message until the turn completes.
+
+#### Scenario: Partial events coalesce
+- **WHEN** a turn emits several text events
+- **THEN** the UI shows one growing assistant message and renders the combined Markdown
+
+### Requirement: The default Agent view is a session list
+The right column SHALL initially show all local sessions with title, provider, updated time, and status. It SHALL not automatically open a session or create one.
+
+#### Scenario: History is the first view
+- **WHEN** a workbench page loads
+- **THEN** the Agent column shows the session list and no session is opened or created
+
+### Requirement: Provider is selected once
+New-session flow SHALL require an explicit available provider choice before creation. A created session SHALL display its provider as read-only.
+
+#### Scenario: Provider is locked after creation
+- **WHEN** a student creates a session with Codex
+- **THEN** the conversation view shows Codex without a provider switch control
+
+### Requirement: Session title is explicit
+The mirror SHALL store `title` and `title_source`. A successful provider result MAY supply a title only when the session is unset; an explicit user rename SHALL take precedence.
+
+#### Scenario: User title wins
+- **WHEN** a student renames a session after an Agent title was received
+- **THEN** later turns do not replace the user title
+
+### Requirement: Local deletion is bounded
+Deleting an idle session SHALL remove only its Lesson Kit mirror directory. A running session SHALL return a conflict and remain intact.
+
+#### Scenario: Returning to history
+- **WHEN** a student clicks back from a conversation
+- **THEN** the list view returns without creating or modifying a learning record
+
+### Requirement: Graph detail is a learning dashboard
+Selecting a graph node SHALL show its readable title, current state, formal problem count, neighbor/relationship summary, signals, schedule, and a link to the formal knowledge-point page.
+
+#### Scenario: Node selection opens the dashboard
+- **WHEN** a student selects a node
+- **THEN** the right panel shows the node metrics and one link to its formal knowledge-point page
+
+### Requirement: Graph state editing remains covered
+The dashboard SHALL update only the selected knowledge point's current state through the existing coverage-based graph state behavior.
+
+#### Scenario: State update is coverage based
+- **WHEN** a student saves a selected node state
+- **THEN** the existing graph state behavior updates current state and schedule without adding a feedback event
+
+### Requirement: Graph does not duplicate content editing
+The graph panel SHALL NOT render knowledge-point body textareas, fragile-note editors, complete linked-problem content, or per-problem save controls.
+
+#### Scenario: Deep reading uses the formal page
+- **WHEN** a student needs the full body or linked problem text
+- **THEN** the graph panel offers the formal knowledge-point link instead of duplicate editors
+

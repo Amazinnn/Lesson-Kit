@@ -1,6 +1,7 @@
 """Provider-locked native conversations with a minimal successful mirror."""
 
 import json
+import shutil
 import subprocess
 import threading
 from datetime import datetime, timezone
@@ -58,7 +59,7 @@ def _next_number(paths, prefix):
     return max(numbers, default=0) + 1
 
 
-def create(pool, provider_name):
+def create(pool, provider_name, title=""):
     conversation_providers.get(provider_name)
     jobs_dir = pool.jobs_dir()
     jobs_dir.mkdir(parents=True, exist_ok=True)
@@ -68,9 +69,12 @@ def create(pool, provider_name):
         folder = jobs_dir / conversation_id
         folder.mkdir()
         now = _now()
+        title = title.strip() if isinstance(title, str) else ""
         record = {
             "conversation_id": conversation_id,
             "provider": provider_name,
+            "title": title,
+            "title_source": "user" if title else "unset",
             "provider_session_id": None,
             "status": "idle",
             "current_turn_id": None,
@@ -81,19 +85,24 @@ def create(pool, provider_name):
     return record
 
 
-def list_sessions(pool, limit=10):
+def list_sessions(pool, limit=None):
     records = []
     jobs_dir = pool.jobs_dir()
     if not jobs_dir.is_dir():
         return records
     for path in jobs_dir.glob("conv-*/conversation.json"):
-        records.append(_read_json(path))
+        record = _read_json(path)
+        record.setdefault("title", "")
+        record.setdefault("title_source", "unset")
+        records.append(record)
     records.sort(key=lambda item: item["updated_at"], reverse=True)
-    return records[:limit]
+    return records if limit is None else records[:limit]
 
 
 def get(pool, conversation_id):
     record = _read_json(_conversation_file(pool, conversation_id))
+    record.setdefault("title", "")
+    record.setdefault("title_source", "unset")
     messages = []
     transcript = _conversation_dir(pool, conversation_id) / "transcript.jsonl"
     if transcript.is_file():
@@ -105,6 +114,32 @@ def get(pool, conversation_id):
             ])
     record["messages"] = messages
     return record
+
+
+def rename(pool, conversation_id, title):
+    """Set a user-owned title on the local mirror."""
+    if not isinstance(title, str):
+        raise ValueError("title must be a string")
+    title = title.strip()
+    if not title:
+        raise ValueError("title is required")
+    path = _conversation_file(pool, conversation_id)
+    with _LOCK:
+        record = _read_json(path)
+        record.update({"title": title, "title_source": "user", "updated_at": _now()})
+        _write_json(path, record)
+    return record
+
+
+def delete(pool, conversation_id):
+    """Delete only an idle Lesson Kit mirror; provider sessions are untouched."""
+    folder = _conversation_dir(pool, conversation_id)
+    with _LOCK:
+        record = _read_json(folder / "conversation.json")
+        if record.get("status") == "running":
+            raise ConversationConflict("conversation has a running turn")
+        shutil.rmtree(folder)
+    return {"conversation_id": conversation_id, "deleted": True}
 
 
 def get_turn(pool, conversation_id, turn_id):
@@ -231,11 +266,22 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 _append_event(event_path, "phase", label="provider.output")
                 continue
             provider_session_id = normalized.pop("provider_session_id", None)
+            provider_title = normalized.pop("title", None)
             if provider_session_id:
                 conversation = _read_json(conversation_path)
                 conversation["provider_session_id"] = provider_session_id
                 conversation["updated_at"] = _now()
                 _write_json(conversation_path, conversation)
+            provider_title = str(provider_title).strip() if provider_title else ""
+            if provider_title:
+                conversation = _read_json(conversation_path)
+                if conversation.get("title_source", "unset") == "unset":
+                    conversation.update({
+                        "title": provider_title,
+                        "title_source": "agent",
+                        "updated_at": _now(),
+                    })
+                    _write_json(conversation_path, conversation)
             kind = normalized.pop("kind")
             _append_event(event_path, kind, **normalized)
             if kind == "text":

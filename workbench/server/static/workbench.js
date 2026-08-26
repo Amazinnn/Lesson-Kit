@@ -56,20 +56,102 @@
   }
 
   function escapeHtml(text) {
-    var div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text == null ? "" : text).replace(/[&<>\"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  function richInline(text) {
+    var tokens = [];
+    function token(html) {
+      var key = "\u0000" + tokens.length + "\u0000";
+      tokens.push(html);
+      return key;
+    }
+    var value = escapeHtml(text == null ? "" : String(text));
+    value = value.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function (_, alt, src) {
+      if (!/^\/(?:api\/w\/|static\/)|^[\w./-]+$/.test(src)) return alt;
+      return token("<img alt='" + alt + "' src='" + src.replace(/'/g, "&#39;") + "'>");
+    });
+    value = value.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, function (_, id, label) {
+      var cleanId = id.trim();
+      if (!/^[\w-]+$/.test(cleanId)) return label || cleanId;
+      return token("<a href='/w/" + encodeURIComponent(WS) + "/kp/" + encodeURIComponent(cleanId)
+        + "'>" + (label || cleanId) + "</a>");
+    });
+    value = value.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, href) {
+      return token("<a href='" + href.replace(/'/g, "&#39;")
+        + "' target='_blank' rel='noopener noreferrer'>" + label + "</a>");
+    });
+    value = value.replace(/`([^`\n]+)`/g, function (_, code) {
+      return token("<code>" + code + "</code>");
+    });
+    value = value.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+    value = value.replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
+    value = value.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+    value = value.replace(/_([^_\n]+)_/g, "<em>$1</em>");
+    value = value.replace(/\$\$([\s\S]+?)\$\$/g, function (_, math) {
+      return token("<span class='math display'>" + math + "</span>");
+    });
+    value = value.replace(/\$([^$\n]+)\$/g, function (_, math) {
+      return token("<span class='math'>" + math + "</span>");
+    });
+    return value.replace(/\u0000(\d+)\u0000/g, function (_, index) { return tokens[Number(index)]; });
   }
 
   function richText(text) {
-    return escapeHtml(text)
-      .replace(/\$\$([\s\S]+?)\$\$/g, function (_, m) {
-        return "<span class='math display'>" + m + "</span>";
-      })
-      .replace(/\$([^$\n]+)\$/g, function (_, m) {
-        return "<span class='math'>" + m + "</span>";
-      })
-      .replace(/\n/g, "<br>");
+    var lines = String(text == null ? "" : text).replace(/\r\n?/g, "\n").split("\n");
+    var out = [], paragraph = [], listType = null, inCode = false, codeLang = "", codeLines = [];
+    function closeList() {
+      if (listType) out.push("</" + listType + ">");
+      listType = null;
+    }
+    function flushParagraph() {
+      if (!paragraph.length) return;
+      out.push("<p>" + paragraph.map(richInline).join("<br>") + "</p>");
+      paragraph = [];
+    }
+    function flushCode() {
+      var cls = codeLang ? " class='language-" + codeLang.replace(/[^\w-]/g, "") + "'" : "";
+      out.push("<pre><code" + cls + ">" + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+      codeLines = []; codeLang = "";
+    }
+    lines.forEach(function (line) {
+      var fence = line.match(/^\s*```\s*([\w-]*)\s*$/);
+      if (fence) {
+        flushParagraph(); closeList();
+        if (inCode) flushCode();
+        inCode = !inCode; codeLang = inCode ? fence[1] : "";
+        return;
+      }
+      if (inCode) { codeLines.push(line); return; }
+      var heading = line.match(/^\s*(#{1,3})\s+(.+?)\s*#*\s*$/);
+      if (heading) {
+        flushParagraph(); closeList();
+        out.push("<h" + heading[1].length + ">" + richInline(heading[2]) + "</h" + heading[1].length + ">");
+        return;
+      }
+      var unordered = line.match(/^\s*[-*+]\s+(.+)$/);
+      var ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+      if (unordered || ordered) {
+        flushParagraph();
+        var wanted = ordered ? "ol" : "ul";
+        if (listType && listType !== wanted) closeList();
+        if (!listType) { listType = wanted; out.push("<" + listType + ">"); }
+        out.push("<li>" + richInline((ordered || unordered)[1]) + "</li>");
+        return;
+      }
+      if (/^\s*>\s?/.test(line)) {
+        flushParagraph(); closeList();
+        out.push("<blockquote>" + richInline(line.replace(/^\s*>\s?/, "")) + "</blockquote>");
+        return;
+      }
+      if (!line.trim()) { flushParagraph(); closeList(); return; }
+      closeList(); paragraph.push(line);
+    });
+    if (inCode) flushCode();
+    flushParagraph(); closeList();
+    return out.join("");
   }
 
   function recordRecent(type, id) {
@@ -123,6 +205,10 @@
       }[state] || "未标注";
     }
 
+    function relationStrengthLabel(strength) {
+      return { low: "弱", medium: "中", high: "强" }[strength] || "暂无";
+    }
+
     function showGraphPanel(detailOpen) {
       if (graphDetail) graphDetail.classList.toggle("hidden", !detailOpen);
       if (teacherPanel) teacherPanel.classList.toggle("hidden", detailOpen);
@@ -140,11 +226,26 @@
       if (!graphDetail) return;
       selectedGraphKpId = node.id;
       recordRecent("kp", node.id);
-      graphDetail.innerHTML = "<p class='side-label'>知识点详情</p><h2>"
-        + escapeHtml(node.title) + "</h2><p class='item-id'>" + escapeHtml(node.id)
-        + "</p><p class='graph-detail-body'>" + richText(node.body || "暂无正文")
-        + "</p><p class='graph-fragile-summary'>薄弱说明：" + escapeHtml(node.fragile || "—") + "</p>"
-        + "<label for='graph-state'>当前学习状态</label>";
+      var neighborCount = graphData.edges.filter(function (edge) {
+        return edge.source === node.id || edge.target === node.id;
+      }).length;
+      var strongest = graphData.edges.filter(function (edge) {
+        return edge.source === node.id || edge.target === node.id;
+      }).reduce(function (best, edge) {
+        var rank = { low: 0, medium: 1, high: 2 };
+        return !best || rank[edge.strength] > rank[best.strength] ? edge : best;
+      }, null);
+      graphDetail.innerHTML = "<p class='side-label'>学习看板</p><h2>"
+        + escapeHtml(node.title) + "</h2>"
+        + "<div class='graph-dashboard-metrics' aria-label='知识点指标'>"
+        + "<div><span>当前状态</span><strong>" + escapeHtml(stateLabel(node.state)) + "</strong></div>"
+        + "<div><span>关联题目</span><strong>" + escapeHtml(node.problem_count || 0) + " 道</strong></div>"
+        + "<div><span>相邻知识点</span><strong>" + neighborCount + " 个</strong></div>"
+        + "<div><span>主要关系</span><strong>" + escapeHtml(strongest ? relationStrengthLabel(strongest.strength) : "暂无") + "</strong></div>"
+        + "<div><span>学习信号</span><strong id='graph-signal-summary'>读取中</strong></div>"
+        + "<div><span>下次复习</span><strong id='graph-schedule-summary'>读取中</strong></div>"
+        + "</div><p class='graph-dashboard-note muted'>状态和关联规模来自当前工作区的正式题池。</p>"
+        + "<label for='graph-state'>更新学习状态</label>";
       var state = document.createElement("select");
       state.id = "graph-state";
       state.innerHTML = "<option value='needs_work'>待攻克</option>"
@@ -165,72 +266,31 @@
       });
       graphDetail.appendChild(state);
       graphDetail.appendChild(save);
-      var body = document.createElement("textarea");
-      body.id = "graph-body";
-      body.rows = 5;
-      body.value = node.body || "";
-      body.placeholder = "知识点正文";
-      var fragile = document.createElement("input");
-      fragile.id = "graph-fragile";
-      fragile.value = node.fragile || "";
-      fragile.placeholder = "薄弱说明";
-      var contentSave = document.createElement("button");
-      contentSave.id = "graph-content-save";
-      contentSave.className = "outline sm";
-      contentSave.textContent = "保存内容";
-      contentSave.addEventListener("click", function () {
-        post("/graph/kp", {
-          kp_id: node.id, body: body.value, fragile: fragile.value,
-        }).then(function (data) {
-          node.body = data.body;
-          node.fragile = data.fragile;
-          renderGraphDetail(node);
-        });
+      var link = document.createElement("a");
+      link.id = "graph-open-kp";
+      link.className = "graph-dashboard-link";
+      link.href = "/w/" + encodeURIComponent(WS) + "/kp/" + encodeURIComponent(node.id);
+      link.textContent = "打开知识点";
+      graphDetail.appendChild(link);
+      api("/kp/" + encodeURIComponent(node.id)).then(function (detail) {
+        if (selectedGraphKpId !== node.id) return;
+        var signal = (detail.signals || []).map(function (item) {
+          return item.signal_type + " · " + item.weight;
+        }).join("、") || "暂无信号";
+        var schedule = detail.schedule && detail.schedule.due_at
+          ? "" + detail.schedule.due_at : "未排期";
+        var signalEl = document.getElementById("graph-signal-summary");
+        var scheduleEl = document.getElementById("graph-schedule-summary");
+        if (signalEl) signalEl.textContent = signal;
+        if (scheduleEl) scheduleEl.textContent = schedule;
+      }).catch(function () {
+        if (selectedGraphKpId !== node.id) return;
+        var signalEl = document.getElementById("graph-signal-summary");
+        var scheduleEl = document.getElementById("graph-schedule-summary");
+        if (signalEl) signalEl.textContent = "暂不可用";
+        if (scheduleEl) scheduleEl.textContent = "暂不可用";
       });
-      graphDetail.appendChild(body);
-      graphDetail.appendChild(fragile);
-      graphDetail.appendChild(contentSave);
-      appendRelatedProblems(node);
       showGraphPanel(true);
-    }
-
-    function appendRelatedProblems(node) {
-      api("/kp/" + node.id).then(function (detail) {
-        var problems = detail.problems || [];
-        if (!problems.length) return;
-        var heading = document.createElement("p");
-        heading.className = "side-label";
-        heading.textContent = "关联题目状态";
-        graphDetail.appendChild(heading);
-        problems.forEach(function (problem) {
-          var row = document.createElement("section");
-          row.id = "graph-problem-" + problem.problem_id;
-          row.className = "graph-problem-state";
-          row.innerHTML = "<p>" + escapeHtml(problem.display_title || problem.problem_id)
-            + "</p><span class='item-id'>" + escapeHtml(problem.topic_label || "未分类") + " · "
-            + escapeHtml(problem.problem_id) + "</span>";
-          var state = document.createElement("select");
-          state.id = "graph-problem-state";
-          state.innerHTML = "<option value='needs_work'>待攻克</option>"
-            + "<option value='review'>待复习</option><option value='mastered'>已掌握</option>";
-          state.value = problem.current_state ? problem.current_state.state : "review";
-          var save = document.createElement("button");
-          save.id = "graph-problem-save";
-          save.className = "outline sm";
-          save.textContent = "保存状态";
-          save.addEventListener("click", function () {
-            post("/graph/state", {
-              item_type: "problem", item_id: problem.problem_id, state: state.value,
-            }).then(function (data) {
-              problem.current_state = { state: data.state };
-              save.textContent = "已保存";
-            });
-          });
-          row.appendChild(state);
-          row.appendChild(save);
-          graphDetail.appendChild(row);
-        });
-      });
     }
 
     function renderGraph() {
@@ -500,7 +560,7 @@
     function renderQuestion(problem) {
       stream.innerHTML = "<article class='practice-question-card card'>"
         + "<p class='context-line'>题目 · " + escapeHtml(problem.problem_id) + "</p>"
-        + "<div class='problem-text'>" + richText(problem.problem_text) + "</div></article>";
+        + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div></article>";
       renderMath(stream);
     }
 
@@ -601,7 +661,7 @@
       api("/problem/" + currentProblem.problem_id).then(function (detail) {
         var solution = detail.problem.solution || "（本题无解析，请基于自身作答自评）";
         stream.innerHTML += "<section class='practice-solution'><p class='section-kicker'>解析</p>"
-          + "<div>" + richText(solution) + "</div></section>";
+          + "<div class='rich-text'>" + richText(solution) + "</div></section>";
         renderMath(stream);
         showAnswer.classList.add("hidden");
         feedbackArea.classList.remove("hidden");
@@ -659,9 +719,9 @@
           card.className = "pending-rating-card card";
           card.dataset.pid = item.problem_id;
           card.innerHTML = "<p class='context-line'>题目 · " + escapeHtml(item.problem_id) + "</p>"
-            + "<div class='problem-text'>" + richText(problem.problem_text) + "</div>"
-            + "<p class='section-kicker'>我的作答</p><p>" + richText(item.answer_text || "（未作答）") + "</p>"
-            + "<p class='section-kicker'>解析</p><p>" + richText(problem.solution || "（本题无解析）") + "</p>";
+          + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
+          + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
+          + "<p class='section-kicker'>解析</p><div class='rich-text'>" + richText(problem.solution || "（本题无解析）") + "</div>";
           var rating = document.createElement("input");
           rating.id = "end-rating";
           rating.type = "number";
@@ -724,14 +784,34 @@
   var aiTurn = null;
   var aiPollTimer = null;
   var aiPollSequence = 0;
+  var aiStreamingMessage = null;
+
+  function aiAddMarkdown(text, cls) {
+    aiAdd(richText(text || ""), cls);
+  }
 
   function aiAdd(html, cls) {
     var div = document.createElement("div");
     div.className = "msg " + (cls || "ai");
-    div.innerHTML = html;
+    div.innerHTML = "<div class='rich-text'>" + html + "</div>";
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     renderMath(div);
+  }
+
+  function aiAppendAssistantText(text) {
+    if (!messages || !text) return;
+    if (!aiStreamingMessage) {
+      aiStreamingMessage = document.createElement("div");
+      aiStreamingMessage.className = "msg ai";
+      messages.appendChild(aiStreamingMessage);
+      aiStreamingMessage.content = "";
+    }
+    aiStreamingMessage.content += text;
+    aiStreamingMessage.innerHTML = "<div class='rich-text'>"
+      + richText(aiStreamingMessage.content) + "</div>";
+    messages.scrollTop = messages.scrollHeight;
+    renderMath(aiStreamingMessage);
   }
 
   function aiTask(operation) {
@@ -794,15 +874,7 @@
   }
 
   function renderResult(markdown, operation) {
-    var html = "<p><b>" + operation + " 结果</b></p>";
-    markdown.split(/\n## /).forEach(function (section) {
-      var lines = section.trim().split("\n");
-      var title = lines.shift().replace(/^#+\s*/, "");
-      if (!title) return;
-      html += "<div class='section'><h4>" + escapeHtml(title) + "</h4><p>"
-        + richText(lines.join("\n")) + "</p></div>";
-    });
-    return html;
+    return "<p><strong>" + escapeHtml(operation) + " 结果</strong></p>" + richText(markdown || "");
   }
 
   var explain = document.getElementById("ai-explain");
@@ -838,9 +910,13 @@
 
   function aiRenderConversation(record) {
     if (!messages) return;
+    if (aiSessionTitle) aiSessionTitle.value = record.title || "未命名对话";
+    if (aiSessionProvider) aiSessionProvider.textContent = record.provider || "";
+    if (aiChatView) aiSetView("chat");
     messages.innerHTML = "";
+    aiStreamingMessage = null;
     (record.messages || []).forEach(function (message) {
-      aiAdd(richText(message.content || ""), message.role === "user" ? "user" : "ai");
+      aiAddMarkdown(message.content || "", message.role === "user" ? "user" : "ai");
     });
     aiSetRunning(record.status === "running");
     aiSetStatus(record.status === "running" ? "Agent 正在处理…" : "");
@@ -855,7 +931,27 @@
     aiConversation = conversationId;
     store(AI_CONVERSATION_KEY, conversationId);
     if (aiSession) aiSession.value = conversationId;
-    return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(aiRenderConversation);
+    return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
+      var listView = document.getElementById("ai-session-list-view");
+      var chatView = document.getElementById("ai-chat-view");
+      if (listView && chatView) {
+        listView.classList.add("hidden");
+        chatView.classList.remove("hidden");
+      }
+      var title = document.getElementById("ai-session-rename");
+      var titleLabel = document.getElementById("ai-session-title");
+      var provider = document.getElementById("ai-session-provider");
+      if (title) {
+        title.value = record.title || "未命名对话";
+        title.textContent = title.value;
+      }
+      if (titleLabel) {
+        titleLabel.textContent = record.title || "未命名对话";
+        titleLabel.value = titleLabel.textContent;
+      }
+      if (provider) provider.textContent = record.provider || "Agent";
+      aiRenderConversation(record);
+    });
   }
 
   function aiPopulateSessions(items) {
@@ -923,7 +1019,7 @@
   function aiAppendEvents(data) {
     (data.events || []).forEach(function (event) {
       aiPollSequence = Math.max(aiPollSequence, event.sequence || 0);
-      if (event.kind === "text") aiAdd(richText(event.text || ""), "ai");
+      if (event.kind === "text") aiAppendAssistantText(event.text || "");
       else if (event.kind === "error") aiSetStatus(event.text || "Agent 返回错误");
       else if (event.kind === "phase" && event.label !== "provider.started") aiSetStatus(event.label || "");
     });
@@ -933,6 +1029,7 @@
       aiSetRunning(false);
       aiSetStatus("");
       aiLoadConversation(aiConversation);
+      if (typeof aiRefreshSessionList === "function") aiRefreshSessionList();
     } else if (data.turn.status === "failed") {
       aiTurn = null;
       aiSetRunning(false);
@@ -963,7 +1060,8 @@
   function aiSendMessage() {
     var message = aiInput ? aiInput.value.trim() : "";
     if (!message || !aiConversation || aiTurn) return;
-    aiAdd(richText(message), "user");
+    aiStreamingMessage = null;
+    aiAddMarkdown(message, "user");
     aiInput.value = "";
     aiSetRunning(true);
     aiSetStatus("正在发送…");
@@ -1035,6 +1133,153 @@
     aiDaily.addEventListener("change", function () {
       localStorage.setItem(AI_DAILY_KEY, aiDaily.checked ? "1" : "0");
     });
+  }
+
+  /* ---------- compact Agent session IA ---------- */
+
+  var aiSessionListView = document.getElementById("ai-session-list-view");
+  var aiSessionList = document.getElementById("ai-session-list");
+  var aiSessionEmpty = document.getElementById("ai-session-empty");
+  var aiNewSession = document.getElementById("ai-new-session");
+  var aiProviderPicker = document.getElementById("ai-provider-picker");
+  var aiProviderOptions = document.getElementById("ai-provider-options");
+  var aiChatView = document.getElementById("ai-chat-view");
+  var aiSessionBack = document.getElementById("ai-session-back");
+  var aiSessionTitle = document.getElementById("ai-session-rename");
+  var aiSessionProvider = document.getElementById("ai-session-provider");
+  var aiSessionDelete = document.getElementById("ai-session-delete");
+  var aiSessionRecords = [];
+  var aiProviders = [];
+
+  function aiSetView(view) {
+    if (!aiSessionListView || !aiProviderPicker || !aiChatView) return;
+    aiSessionListView.classList.toggle("hidden", view !== "list");
+    aiProviderPicker.classList.toggle("hidden", view !== "picker");
+    aiChatView.classList.toggle("hidden", view !== "chat");
+  }
+
+  function aiSessionLabel(record) {
+    return record.title || "未命名对话";
+  }
+
+  function aiRenderSessionList(items) {
+    if (!aiSessionList) return;
+    aiSessionRecords = items || [];
+    aiSessionList.innerHTML = "";
+    aiSessionRecords.forEach(function (record) {
+      var row = document.createElement("div");
+      row.className = "ai-session-item";
+      row.setAttribute("role", "listitem");
+      row.dataset.conversationId = record.conversation_id;
+      var button = document.createElement("button");
+      button.className = "ai-session-entry";
+      button.type = "button";
+      button.setAttribute("aria-label", aiSessionLabel(record));
+      var title = document.createElement("strong");
+      title.className = "ai-session-entry-title";
+      title.textContent = aiSessionLabel(record);
+      var meta = document.createElement("span");
+      meta.className = "ai-session-entry-meta";
+      var updated = record.updated_at ? String(record.updated_at).slice(0, 10) : "";
+      meta.textContent = (record.provider || "Agent")
+        + (updated ? " · " + updated : "")
+        + (record.status === "running" ? " · 运行中" : "");
+      button.appendChild(title);
+      button.appendChild(meta);
+      button.addEventListener("click", function () { aiLoadConversation(record.conversation_id); });
+      row.appendChild(button);
+      aiSessionList.appendChild(row);
+    });
+    if (aiSessionEmpty) aiSessionEmpty.classList.toggle("hidden", aiSessionRecords.length > 0);
+  }
+
+  function aiShowProviderPicker() {
+    if (!aiProviderOptions) return;
+    aiSetView("picker");
+    aiProviderOptions.innerHTML = "";
+    aiProviders.forEach(function (provider) {
+      var button = document.createElement("button");
+      button.className = "outline sm ai-provider-option";
+      button.type = "button";
+      button.dataset.provider = provider.name;
+      button.textContent = provider.name + (provider.model ? " · " + provider.model : "");
+      button.addEventListener("click", function () { aiCreateSession(provider.name); });
+      aiProviderOptions.appendChild(button);
+    });
+    if (!aiProviders.length) aiSetStatus("未发现可用 Agent CLI。");
+  }
+
+  function aiRefreshSessionList() {
+    return api("/ai/sessions").then(function (items) {
+      aiRenderSessionList(items);
+      return items;
+    }).catch(function () {
+      aiSetStatus("无法读取历史对话。");
+      aiRenderSessionList([]);
+      return [];
+    });
+  }
+
+  function aiCreateSession(provider) {
+    post("/ai/sessions", { provider: provider }).then(function (record) {
+      aiConversation = record.conversation_id;
+      store(AI_CONVERSATION_KEY, aiConversation);
+      aiSetView("chat");
+      return aiLoadConversation(aiConversation);
+    }).then(aiRefreshSessionList).catch(function (err) {
+      aiSetStatus("无法新建对话：" + (err.message || "未知错误"));
+    });
+  }
+
+  function aiRenameSession() {
+    if (!aiConversation || !aiSessionTitle) return;
+    var title = String(aiSessionTitle.value || "").trim();
+    if (!title) {
+      aiSessionTitle.value = "未命名对话";
+      return;
+    }
+    api("/ai/sessions/" + encodeURIComponent(aiConversation), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title }),
+    }).then(function (record) {
+      aiSessionTitle.value = aiSessionLabel(record);
+      aiRefreshSessionList();
+    }).catch(function (err) {
+      aiSetStatus("无法重命名：" + (err.message || "未知错误"));
+    });
+  }
+
+  function aiDeleteSession() {
+    if (!aiConversation) return;
+    if (window.confirm && !window.confirm("删除这个本地会话？")) return;
+    api("/ai/sessions/" + encodeURIComponent(aiConversation), { method: "DELETE" })
+      .then(function () {
+        aiConversation = "";
+        sessionStorage.removeItem(AI_CONVERSATION_KEY);
+        aiSetView("list");
+        aiRefreshSessionList();
+      }).catch(function (err) {
+        aiSetStatus(err.message === "409" ? "会话运行中，暂时不能删除。" : "无法删除会话。");
+      });
+  }
+
+  if (aiNewSession) aiNewSession.addEventListener("click", aiShowProviderPicker);
+  if (aiSessionBack) aiSessionBack.addEventListener("click", function () {
+    aiTurn = null;
+    aiConversation = "";
+    sessionStorage.removeItem(AI_CONVERSATION_KEY);
+    aiSetView("list");
+    aiRefreshSessionList();
+  });
+  if (aiSessionTitle) aiSessionTitle.addEventListener("change", aiRenameSession);
+  if (aiSessionDelete) aiSessionDelete.addEventListener("click", aiDeleteSession);
+  if (aiSessionList) {
+    aiSetView("list");
+    Promise.all([
+      api("/ai/providers").then(function (items) { aiProviders = items || []; }),
+      aiRefreshSessionList(),
+    ]).catch(function () { aiSetStatus("Agent 服务暂不可用。"); });
   }
   if (layout.dataset.objectType && layout.dataset.objectId) {
     aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);
