@@ -28,6 +28,8 @@ The workbench SHALL expose `prepare`, `run`, `gate`, `apply`, `render`, and offi
 
 A sourced formal problem SHALL have a non-empty solution produced during one Agent task and a complete independent audit produced in a fresh Agent session before formal apply. The audit SHALL cover source consistency, problem meaning, formatting, knowledge-point mapping, answer correctness, and solution completeness for every item, and every decision SHALL be PASS.
 
+The current recovery SHALL NOT weaken a rejected knowledge-point mapping to make the gate pass. Its corrective knowledge-point and mapping artifact SHALL be independently audited before it can join the formal apply.
+
 #### Scenario: Audit coverage is incomplete
 
 - **WHEN** a solution batch omits an audit entry or required audit dimension for any problem
@@ -38,24 +40,43 @@ A sourced formal problem SHALL have a non-empty solution produced during one Age
 - **WHEN** any independent audit decision is not PASS
 - **THEN** the entire batch is ineligible for formal apply
 
+#### Scenario: A mapping requires a missing concept
+
+- **WHEN** an independent audit rejects a formal-problem mapping because the required chapter concept is absent
+- **THEN** an explicit knowledge-point and mapping correction must independently pass the same formal gate before the recovery becomes eligible for apply
+
+### Requirement: Approved chapter mapping repair
+
+The current chapter recovery SHALL create `dmath-ch06-kp-029` for 子集的位串生成, `dmath-ch06-kp-030` for 字典序 r-组合生成, and `dmath-ch06-kp-031` for 康托展开/排列对应. It SHALL repair exactly these thirteen formal-problem mappings: `067 -> 003,009,010`; `156 -> 009,010,012,013`; `189 -> 014,026`; `190 -> 014,026`; `280 -> 020`; `281 -> 003,020`; `294 -> 029`; `295 -> 030`; `297 -> 030`; and `300`, `301`, `302`, `303 -> 031`.
+
+#### Scenario: Qualify the chapter mapping repair
+
+- **WHEN** the three new knowledge points and thirteen final mappings have complete independent PASS decisions
+- **THEN** they may join the 303 qualified solutions in the single formal-pool recovery transaction
+
+#### Scenario: Keep the current pool unchanged before qualification
+
+- **WHEN** any new knowledge point or repaired mapping lacks a complete PASS decision
+- **THEN** the active pool retains its existing 28 knowledge points and original formal-problem mappings
+
 ### Requirement: Atomic formal-pool backfill
 
-A formal-problem batch SHALL be applied in one transaction only after every item passes all gates. The operation SHALL create a recoverable database copy before changing the active pool, and any apply failure SHALL leave the active pool unchanged. The current pool SHALL NOT expose a partial solution backfill.
+The current formal-pool recovery SHALL apply the 303 solutions, three approved knowledge points, and thirteen approved mapping repairs in one transaction only after every item passes all gates. The operation SHALL create one recoverable database copy before changing the active pool, and any apply failure SHALL leave the active pool unchanged. The current pool SHALL NOT expose a partial solution, knowledge-point, or mapping update.
 
 #### Scenario: One item fails before apply
 
-- **WHEN** one of 303 solution records fails its gate
-- **THEN** none of the 303 formal problem solutions changes in the active pool
+- **WHEN** any solution, new knowledge point, or repaired mapping fails its gate
+- **THEN** the active pool retains all 303 empty solutions, 28 knowledge points, and original mappings
 
 #### Scenario: Apply a complete backfill
 
-- **WHEN** all 303 solution and audit records pass and apply is explicitly requested
-- **THEN** a recoverable copy is created and all formal solutions become visible after one committed transaction
+- **WHEN** all 303 solutions, three new knowledge points, thirteen repaired mappings, and their independent audit records pass and apply is explicitly requested
+- **THEN** one recoverable copy is created and one committed transaction makes all 303 solutions visible, preserves 303 formal problems, and yields 31 knowledge points with the qualified mappings
 
 #### Scenario: Apply transaction fails
 
 - **WHEN** an error occurs while applying a qualified batch
-- **THEN** the transaction rolls back and every original formal problem remains unchanged
+- **THEN** the transaction rolls back and all original solutions, knowledge points, and mappings remain unchanged
 
 ### Requirement: Problem-source damage gate
 
@@ -70,4 +91,3 @@ The deterministic problem gate SHALL reject missing solutions, malformed or empt
 
 - **WHEN** a problem contains balanced non-empty superscript or subscript markup without word splitting
 - **THEN** the deterministic markup gate accepts that construct subject to the independent semantic audit
-

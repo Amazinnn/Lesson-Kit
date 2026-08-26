@@ -10,8 +10,8 @@
 - [x] 2.3 Add failing tests for limited safe sup/sub markup, damaged OCR, missing solutions, incomplete/non-PASS audits, rollback, and complete-batch apply.
 - [x] 2.4 Implement deterministic problem gates, independent audit contracts, recoverable copy creation, and transactional formal-problem apply.
 - [x] 2.5 Generate solution artifacts for all current formal problems in bounded independent Agent batches.
-- [ ] 2.6 Audit every solution in fresh independent Agent sessions and repair any rejected item through the same gate.
-- [ ] 2.7 Apply all 303 qualified solutions in one transaction, rebuild views, and verify every formal problem is reveal-ready.
+- [ ] 2.6 Audit every solution and final knowledge-point mapping in fresh independent Agent sessions; repair rejected solutions and qualify the three approved knowledge points plus all thirteen mapping corrections through the same gate.
+- [ ] 2.7 From one recoverable database copy, apply the 303 qualified solutions, three approved knowledge points, and thirteen qualified mapping corrections in one transaction; rebuild views and verify 303 reveal-ready formal problems and 31 knowledge points.
 
 ## 3. Daily-use Reliability
 

@@ -33,7 +33,9 @@ Official recipes only sequence the same atomic commands. They are zero-write by 
 
 A sourced formal problem needs a structure/solution artifact and a separate audit artifact produced in a fresh Agent session. The audit covers source consistency, meaning, formatting, knowledge-point mapping, answer correctness, and solution completeness for every item. Deterministic gating requires complete audit coverage, all-PASS decisions, and non-empty solutions.
 
-The current 303-problem recovery follows the same contract in batches but does not partially update the pool. Only after all items pass do we create a recoverable database copy, apply every solution in one transaction, and rebuild views. Any failed item leaves the active pool unchanged.
+The independent audit found thirteen formal-problem mappings that require correction. Six use existing knowledge points: `067 -> 003,009,010`, `156 -> 009,010,012,013`, `189 -> 014,026`, `190 -> 014,026`, `280 -> 020`, and `281 -> 003,020`. Seven require three approved chapter knowledge points: `029` 子集的位串生成 for problem `294`; `030` 字典序 r-组合生成 for problems `295` and `297`; and `031` 康托展开/排列对应 for problems `300` through `303`. The identifiers expand to the existing readable forms `dmath-ch06-kp-029` through `dmath-ch06-kp-031` and `dmath-ch06-prob-NNN`.
+
+The current 303-problem recovery follows the same contract in batches but does not partially update the pool. The three knowledge points and thirteen mapping repairs are part of the same governed recovery unit as the 303 solutions. Only after every solution, new knowledge point, and final mapping passes the complete independent gate do we create one recoverable database copy, apply all changes in one transaction, and rebuild views. Any gate or transaction failure leaves the active pool at its pre-switch state, including its 303 empty solutions, 28 knowledge points, and original mappings. A successful switch keeps 303 formal problems and results in 31 knowledge points.
 
 ### D3. Narrow safe source markup
 
