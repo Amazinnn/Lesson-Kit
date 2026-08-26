@@ -1,0 +1,142 @@
+{
+  "kind": "knowledge-mapping-patch",
+  "provider": "codex",
+  "provider_session_id": "root-content-author-2026-08-26",
+  "knowledge_points": [
+    {
+      "kp_id": "dmath-ch06-kp-029",
+      "knowledge_item": "用位串生成子集",
+      "source_location": "Rosen Discrete Mathematics 6.6, Algorithm 2 and Exercise 8",
+      "knowledge_type": "algorithm-process",
+      "related_kp_ids": [
+        "dmath-ch06-kp-012"
+      ],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "设 $S=\\{s_1,s_2,\\ldots,s_n\\}$。每个 $n$ 位位串 $b_1b_2\\cdots b_n$ 唯一表示一个子集：当且仅当 $b_i=1$ 时，把 $s_i$ 放入子集。反过来，每个子集也唯一确定一个位串。\n\n**生成方法**：依次枚举从 $0$ 到 $2^n-1$ 的整数，把它们写成补足前导零的 $n$ 位二进制数，再按位选择元素。这样得到全部 $2^n$ 个子集，既不遗漏也不重复。\n\n例如 $S=\\{1,2,3,4\\}$ 时，位串 $0101$ 对应子集 $\\{2,4\\}$。",
+      "difficulty": 2,
+      "fragile": null,
+      "graph_label": "位串生成子集"
+    },
+    {
+      "kp_id": "dmath-ch06-kp-030",
+      "knowledge_item": "字典序生成 r-组合",
+      "source_location": "Rosen Discrete Mathematics 6.6, Algorithm 3 and Exercises 9-11",
+      "knowledge_type": "algorithm-process",
+      "related_kp_ids": [
+        "dmath-ch06-kp-012",
+        "dmath-ch06-kp-022"
+      ],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "把 $\\{1,2,\\ldots,n\\}$ 的一个 $r$-组合写成递增序列 $a_1<a_2<\\cdots<a_r$。从最小组合 $(1,2,\\ldots,r)$ 开始，可按下列规则求字典序中的下一个组合：\n\n1. 从右向左找最大的 $i$，使 $a_i<n-r+i$。\n2. 将 $a_i$ 增加 1。\n3. 对每个 $j=i+1,\\ldots,r$，令 $a_j=a_i+j-i$。\n\n第 1 步选择最靠右且仍可增加的位置，因此前缀改变得最晚；第 3 步把后缀重置为允许的最小递增序列，所以结果正好是下一个字典序组合。到达 $(n-r+1,\\ldots,n)$ 时结束。",
+      "difficulty": 3,
+      "fragile": "关注下标上界",
+      "graph_label": "字典序 r-组合"
+    },
+    {
+      "kp_id": "dmath-ch06-kp-031",
+      "knowledge_item": "康托展开与排列对应",
+      "source_location": "Rosen Discrete Mathematics 6.6, Exercises 14-17",
+      "knowledge_type": "algorithm-process",
+      "related_kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-022"
+      ],
+      "importance": "supplementary",
+      "learning_action": null,
+      "body": "每个满足 $0\\le N<n!$ 的整数都有唯一的康托展开\n\n$$N=a_1 1!+a_2 2!+\\cdots+a_{n-1}(n-1)!,$$\n\n其中 $0\\le a_i\\le i$。对 $\\{1,2,\\ldots,n\\}$ 的一个排列，令 $a_{k-1}$ 等于排列中位于 $k$ 之后且小于 $k$ 的元素个数；这些数字就是该排列的康托数码。\n\n**由数码恢复排列**：从列表 $[1]$ 开始，依次处理 $k=2,3,\\ldots,n$，把 $k$ 插入到当前列表从左起第 $k-a_{k-1}$ 个位置，使它右侧恰有 $a_{k-1}$ 个较小元素。每个允许的数码序列对应唯一排列，因此排列与 $0$ 到 $n!-1$ 的整数一一对应。按整数递增枚举并解码即可生成全部排列。",
+      "difficulty": 4,
+      "fragile": "区分数码下标与排列位置",
+      "graph_label": "康托展开"
+    }
+  ],
+  "mappings": [
+    {
+      "problem": "dmath-ch06-prob-067",
+      "kp_ids": [
+        "dmath-ch06-kp-003",
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-010"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-156",
+      "kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-010",
+        "dmath-ch06-kp-012",
+        "dmath-ch06-kp-013"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-189",
+      "kp_ids": [
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-026"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-190",
+      "kp_ids": [
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-026"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-280",
+      "kp_ids": [
+        "dmath-ch06-kp-020"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-281",
+      "kp_ids": [
+        "dmath-ch06-kp-003",
+        "dmath-ch06-kp-020"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-294",
+      "kp_ids": [
+        "dmath-ch06-kp-029"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-295",
+      "kp_ids": [
+        "dmath-ch06-kp-030"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-297",
+      "kp_ids": [
+        "dmath-ch06-kp-030"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-300",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-301",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-302",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ]
+    },
+    {
+      "problem": "dmath-ch06-prob-303",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,791 @@
+{
+  "kind": "audit",
+  "items": [
+    {
+      "source": "38. How many diferent bit strings can be formed using six 1s and eight 0s?",
+      "problem": "dmath-ch06-prob-256",
+      "solution": "A valid string is determined by the six positions occupied by the 1s among 14 positions. Hence the number is\n\\[\n\\binom{14}{6}=\\frac{14!}{6!8!}=3003.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "39. A student has three mangos, two papayas, and two kiwi fruits. If the student eats one piece of fruit each day, and only the type of fruit matters, in how many diferent ways can these fruits be consumed?",
+      "problem": "dmath-ch06-prob-257",
+      "solution": "The seven days contain three mango days, two papaya days, and two kiwi days. Permuting this multiset gives\n\\[\n\\frac{7!}{3!2!2!}=210\n\\]\ndifferent consumption sequences.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "40. A professor packs her collection of 40 issues of a mathematics journal in four boxes with 10 issues per box. How many ways can she distribute the journals if\n\na) each box is numbered, so that they are distinguishable?\n\nb) the boxes are identical, so that they cannot be distinguished?",
+      "problem": "dmath-ch06-prob-258",
+      "solution": "The 40 journal issues are distinct.\n\na) For four numbered boxes, choose 10 issues for each box in turn:\n\\[\n\\binom{40}{10}\\binom{30}{10}\\binom{20}{10}\\binom{10}{10}\n=\\frac{40!}{(10!)^4}.\n\\]\n\nb) With identical boxes, every distribution counted in part (a) is counted once for each of the \\(4!\\) assignments of its four groups to numbered boxes. Thus the answer is\n\\[\n\\frac{40!}{(10!)^4\\,4!}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "41. How many ways are there to travel in xyz space from the origin (0, 0, 0) to the point (4, 3, 5) by taking steps one unit in the positive x direction, one unit in the positive y direction, or one unit in the positive z direction? (Moving in the negative x, y, or z direction is prohibited, so that no backtracking is allowed.)",
+      "problem": "dmath-ch06-prob-259",
+      "solution": "Every route consists of 12 steps: four \\(x\\)-steps, three \\(y\\)-steps, and five \\(z\\)-steps. The routes are the permutations of this multiset, so their number is\n\\[\n\\frac{12!}{4!3!5!}=27{,}720.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "42. How many ways are there to travel in xyzw space from the origin (0, 0, 0, 0) to the point (4, 3, 5, 4) by taking steps one unit in the positive x, positive y, positive z, or positive w direction?",
+      "problem": "dmath-ch06-prob-260",
+      "solution": "A route has 16 steps, with multiplicities \\(4,3,5,4\\) in the \\(x,y,z,w\\) directions. Therefore the number of routes is\n\\[\n\\frac{16!}{4!3!5!4!}=50{,}450{,}400.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "43. How many ways are there to deal hands of seven cards to each of five players from a standard deck of 52 cards?",
+      "problem": "dmath-ch06-prob-261",
+      "solution": "The five players are distinguishable. Deal seven cards to each in order; the remaining 17 cards are undealt. Thus the number is\n\\[\n\\binom{52}{7}\\binom{45}{7}\\binom{38}{7}\\binom{31}{7}\\binom{24}{7}\n=\\frac{52!}{(7!)^5\\,17!}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "44. In bridge, the 52 cards of a standard deck are dealt to four players. How many diferent ways are there to deal bridge hands to four players?",
+      "problem": "dmath-ch06-prob-262",
+      "solution": "Each of the four distinguishable players receives 13 cards. Hence the number of deals is the multinomial coefficient\n\\[\n\\binom{52}{13,13,13,13}=\\frac{52!}{(13!)^4}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "45. How many ways are there to deal hands of five cards to each of six players from a deck containing 48 diferent cards?",
+      "problem": "dmath-ch06-prob-263",
+      "solution": "The six players are distinguishable, and 18 cards remain undealt. Dealing five cards to each player in order gives\n\\[\n\\binom{48}{5}\\binom{43}{5}\\binom{38}{5}\\binom{33}{5}\\binom{28}{5}\\binom{23}{5}\n=\\frac{48!}{(5!)^6\\,18!}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "46. In how many ways can a dozen books be placed on four distinguishable shelves\n\na) if the books are indistinguishable copies of the same title?\n\nb) if no two books are the same, and the positions of the books on the shelves matter? [Hint: Break this into 12 tasks, placing each book separately. Start with the sequence 1, 2, 3, 4 to represent the shelves. Represent the books by $b _ { i } , i = 1 , 2 , \\ldots , 1 2$ . Place $b _ { 1 }$ to the right of one of the terms in $1 , 2 , 3 , 4 .$ . Then successively place $b _ { 2 } , b _ { 3 } , \\ldots ,$ , and $b _ { 1 2 } . ]$",
+      "problem": "dmath-ch06-prob-264",
+      "solution": "a) Let \\(x_i\\) be the number of books on shelf \\(i\\). The nonnegative solutions of \\(x_1+x_2+x_3+x_4=12\\) number\n\\[\n\\binom{12+4-1}{4-1}=\\binom{15}{3}=455.\n\\]\n\nb) First order the 12 distinct books, then insert three separators to divide that order among the four shelves; adjacent separators represent empty shelves. There are\n\\[\n12!\\binom{15}{3}=\\frac{15!}{3!}\n\\]\narrangements.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "47. How many ways can n books be placed on k distinguishable shelves\n\na) if the books are indistinguishable copies of the same title?\n\nb) if no two books are the same, and the positions of the books on the shelves matter?",
+      "problem": "dmath-ch06-prob-265",
+      "solution": "a) The shelf occupancies are the nonnegative solutions of \\(x_1+\\cdots+x_k=n\\), so the number is\n\\[\n\\binom{n+k-1}{k-1}.\n\\]\n\nb) Choose an ordering of the \\(n\\) distinct books and then place \\(k-1\\) identical separators in the \\(n+k-1\\) available sequence positions, allowing adjacent separators. Hence the number is\n\\[\nn!\\binom{n+k-1}{k-1}=\\frac{(n+k-1)!}{(k-1)!}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "48. A shelf holds 12 books in a row. How many ways are there to choose five books so that no two adjacent books are chosen? [Hint: Represent the books that are chosen by bars and the books not chosen by stars. Count the number of sequences of five bars and seven stars so that no two bars are adjacent.]",
+      "problem": "dmath-ch06-prob-266",
+      "solution": "If the selected positions are \\(1\\le i_1<i_2<i_3<i_4<i_5\\le12\\) with no adjacency, set \\(j_t=i_t-(t-1)\\). Then\n\\(1\\le j_1<j_2<j_3<j_4<j_5\\le8\\), and this transformation is reversible. Therefore the answer is\n\\[\n\\binom{8}{5}=56.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "<sup>∗</sup>49. Use the product rule to prove Theorem 4, by first placing objects in the first box, then placing objects in the second box, and so on.",
+      "problem": "dmath-ch06-prob-267",
+      "solution": "Let the prescribed box sizes be \\(n_1,\\ldots,n_k\\), with \\(\\sum_i n_i=n\\). Choose \\(n_1\\) of the \\(n\\) objects for box 1, then \\(n_2\\) of the remaining objects for box 2, and continue. By the product rule, the number is\n\\[\n\\binom{n}{n_1}\\binom{n-n_1}{n_2}\\cdots\\binom{n-n_1-\\cdots-n_{k-1}}{n_k}.\n\\]\nWriting the binomial coefficients as factorials makes all intermediate factorials cancel, leaving\n\\[\n\\frac{n!}{n_1!n_2!\\cdots n_k!},\n\\]\nwhich is Theorem 4.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "<sup>∗</sup>50. Prove Theorem 4 by first setting up a one-to-one correspondence between permutations of n objects with $n _ { i }$ indistinguishable objects of type $i , i = 1 , 2 , 3 , \\ldots , k ,$ and the distributions of n objects in k boxes such that $n _ { i }$ objects are placed in box $i , i = 1 , 2 , 3 , \\ldots , k$ and then applying Theorem 3.",
+      "problem": "dmath-ch06-prob-268",
+      "solution": "Fix an ordering of the \\(n\\) distinguishable objects to be distributed. Given a distribution with \\(n_i\\) objects in box \\(i\\), write a type-\\(i\\) symbol in each position whose corresponding object is in box \\(i\\). This produces a permutation of a multiset containing \\(n_i\\) indistinguishable symbols of type \\(i\\). Conversely, such a symbol sequence sends each object to the box named by its symbol, so the correspondence is one-to-one and onto. By Theorem 3, the number of these multiset permutations, and hence of the distributions, is\n\\[\n\\frac{n!}{n_1!n_2!\\cdots n_k!}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "<sup>∗</sup>51. In this exercise we will prove Theorem 2 by setting up a one-to-one correspondence between the set of r-combinations with repetition allowed of $S =$ $\\{ 1 , 2 , 3 , \\dots , n \\}$ and the set of r-combinations of the set $T = \\{ 1 , 2 , 3 , \\dots , n + r - 1 \\}$\n\na) Arrange the elements in an r-combination, with repetition allowed, of S into an increasing sequence $x _ { 1 } \\leq x _ { 2 } \\leq \\dots \\leq x _ { r }$ . Show that the sequence formed by adding k − 1 to the kth term is strictly increasing. Conclude that this sequence is made up of r distinct elements from T.\n\nb) Show that the procedure described in (a) defines a one-to-one correspondence between the set of rcombinations, with repetition allowed, of S and the rcombinations of T. [Hint: Show the correspondence can be reversed by associating to the r-combination $\\{ x _ { 1 } , x _ { 2 } , \\ldots , x _ { r } \\}$ of $T ,$ with $1 \\leq x _ { 1 } < x _ { 2 } < \\cdots < x _ { r } \\leq$ n + r − 1, the r-combination with repetition allowed from S, formed by subtracting k − 1 from the kth element.]\n\nc) Conclude that the number of r-combinations with repetition allowed from a set with n elements is C(n + r − 1, r).",
+      "problem": "dmath-ch06-prob-269",
+      "solution": "a) Put \\(y_k=x_k+k-1\\). Since \\(x_{k+1}\\ge x_k\\),\n\\[\ny_{k+1}=x_{k+1}+k\\ge x_k+k=y_k+1,\n\\]\nso \\(y_1<y_2<\\cdots<y_r\\). Also \\(1\\le y_1\\) and \\(y_r\\le n+r-1\\), so the \\(y_k\\) are \\(r\\) distinct elements of \\(T\\).\n\nb) The forward map is\n\\[\n(x_1,\\ldots,x_r)\\longmapsto (x_1,x_2+1,\\ldots,x_r+r-1).\n\\]\nFor any \\(1\\le y_1<\\cdots<y_r\\le n+r-1\\), define \\(x_k=y_k-(k-1)\\). Then \\(x_{k+1}-x_k=(y_{k+1}-y_k)-1\\ge0\\), while \\(1\\le x_1\\) and \\(x_r\\le n\\). Thus the inverse produces a nondecreasing \\(r\\)-combination from \\(S\\), and the two maps undo each other.\n\nc) The bijection identifies the repeated \\(r\\)-combinations from an \\(n\\)-element set with ordinary \\(r\\)-subsets of an \\((n+r-1)\\)-element set. Their number is therefore\n\\[\n\\binom{n+r-1}{r}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "52. How many ways are there to distribute five distinguishable objects into three indistinguishable boxes?",
+      "problem": "dmath-ch06-prob-270",
+      "solution": "With indistinguishable boxes, a distribution is a partition of the five-object set into at most three nonempty blocks; unused boxes add no distinction. Thus the number is\n\\[\nS(5,1)+S(5,2)+S(5,3)=1+15+25=41,\n\\]\nwhere \\(S(n,k)\\) is a Stirling number of the second kind.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "53. How many ways are there to distribute six distinguishable objects into four indistinguishable boxes so that each of the boxes contains at least one object?",
+      "problem": "dmath-ch06-prob-271",
+      "solution": "Because all four indistinguishable boxes must be nonempty, the distributions are partitions of a six-object set into four nonempty blocks. Hence the answer is\n\\[\nS(6,4)=65.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "54. How many ways are there to put five temporary employees into four identical ofices?",
+      "problem": "dmath-ch06-prob-272",
+      "solution": "The employees are distinguishable and the four offices are identical; empty offices are allowed. A placement is therefore a partition of the five employees into at most four nonempty groups:\n\\[\nS(5,1)+S(5,2)+S(5,3)+S(5,4)=1+15+25+10=51.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "55. How many ways are there to put six temporary employees into four identical ofices so that there is at least one temporary employee in each of these four ofices?",
+      "problem": "dmath-ch06-prob-273",
+      "solution": "All four identical offices must be occupied, so a placement is a partition of the six distinguishable employees into four nonempty groups. The number is\n\\[\nS(6,4)=65.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "56. How many ways are there to distribute five indistinguishable objects into three indistinguishable boxes?",
+      "problem": "dmath-ch06-prob-274",
+      "solution": "For indistinguishable objects and boxes, only the positive occupancies of the nonempty boxes matter. The partitions of 5 into at most three parts are\n\\[\n5,\\quad4+1,\\quad3+2,\\quad3+1+1,\\quad2+2+1.\n\\]\nHence there are \\(5\\) distributions.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "57. How many ways are there to distribute six indistinguishable objects into four indistinguishable boxes so that each of the boxes contains at least one object?",
+      "problem": "dmath-ch06-prob-275",
+      "solution": "The required occupancy multisets are the partitions of 6 into exactly four positive parts:\n\\[\n3+1+1+1,\\qquad2+2+1+1.\n\\]\nTherefore there are \\(2\\) distributions.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "58. How many ways are there to pack eight identical DVDs into five indistinguishable boxes so that each box contains at least one DVD?",
+      "problem": "dmath-ch06-prob-276",
+      "solution": "The box occupancies must be a partition of 8 into exactly five positive parts. The possibilities are\n\\[\n4+1+1+1+1,\\quad3+2+1+1+1,\\quad2+2+2+1+1.\n\\]\nThus there are \\(3\\) packings.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "59. How many ways are there to pack nine identical DVDs into three indistinguishable boxes so that each box contains at least two DVDs?",
+      "problem": "dmath-ch06-prob-277",
+      "solution": "Subtract two DVDs from each of the three boxes. The remaining three identical DVDs form a partition into at most three parts, yielding the original occupancy patterns\n\\[\n5+2+2,\\quad4+3+2,\\quad3+3+3.\n\\]\nHence there are \\(3\\) packings.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "60. How many ways are there to distribute five balls into seven boxes if each box must have at most one ball in it if\n\na) both the balls and boxes are labeled?\n\nb) the balls are labeled, but the boxes are unlabeled?\n\nc) the balls are unlabeled, but the boxes are labeled?\n\nd) both the balls and boxes are unlabeled?",
+      "problem": "dmath-ch06-prob-278",
+      "solution": "a) Assign the five labeled balls injectively to seven labeled boxes:\n\\[\nP(7,5)=\\frac{7!}{2!}=2520.\n\\]\n\nb) With unlabeled boxes, the five labeled balls must occupy five singleton boxes, so there is \\(1\\) distribution.\n\nc) With unlabeled balls and labeled boxes, choose the five occupied boxes: \\(\\binom75=21\\).\n\nd) With both balls and boxes unlabeled, only five singleton occupied boxes occur, so there is \\(1\\) distribution.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "61. How many ways are there to distribute five balls into three boxes if each box must have at least one ball in it if\n\na) both the balls and boxes are labeled?\n\nb) the balls are labeled, but the boxes are unlabeled?\n\nc) the balls are unlabeled, but the boxes are labeled?\n\nd) both the balls and boxes are unlabeled?",
+      "problem": "dmath-ch06-prob-279",
+      "solution": "a) For labeled balls and boxes, count surjections:\n\\[\n3^5-\\binom31 2^5+\\binom32 1^5=243-96+3=150.\n\\]\n\nb) For labeled balls and unlabeled boxes, partition the balls into three nonempty blocks: \\(S(5,3)=25\\).\n\nc) For unlabeled balls and labeled boxes, the positive solutions of \\(x_1+x_2+x_3=5\\) number \\(\\binom{4}{2}=6\\).\n\nd) For both unlabeled, the only occupancy partitions are \\(3+1+1\\) and \\(2+2+1\\), so the answer is \\(2\\).",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "62. Suppose that a basketball league has 32 teams, split into two conferences of 16 teams each. Each conference is split into three divisions. Suppose that the North Central Division has five teams. Each of the teams in the North Central Division plays four games against each of the other teams in this division, three games against each of the 11 remaining teams in the conference, and two games against each of the 16 teams in the other conference. In how many diferent orders can the games of one of the teams in the North Central Division be scheduled?",
+      "problem": "dmath-ch06-prob-280",
+      "solution": "For one North Central team, the schedule contains \\(4\\cdot4=16\\) games against its four division opponents, \\(3\\cdot11=33\\) games against the other conference opponents, and \\(2\\cdot16=32\\) interconference games, for \\(81\\) games total. Games against the same opponent are indistinguishable for ordering purposes. Thus the number of orders is\n\\[\n\\frac{81!}{(4!)^4(3!)^{11}(2!)^{16}}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_ids dmath-ch06-kp-021 and dmath-ch06-kp-025 cover ball-box distributions, but this problem is an ordering of repeated games and should be mapped to the multinomial coefficient knowledge point dmath-ch06-kp-020."
+      ]
+    },
+    {
+      "source": "<sup>∗</sup>63. Suppose that a weapons inspector must inspect each of five diferent sites twice, visiting one site per day. The inspector is free to select the order in which to visit these sites, but cannot visit site X, the most suspicious site, on two consecutive days. In how many diferent orders can the inspector visit these sites?",
+      "problem": "dmath-ch06-prob-281",
+      "solution": "Without the restriction, the two visits to each of five sites can be ordered in\n\\[\n\\frac{10!}{(2!)^5}\n\\]\nways. If the two visits to \\(X\\) are consecutive, treat \\(XX\\) as one block; together with two visits to each of the other four sites, this gives\n\\[\n\\frac{9!}{(2!)^4}\n\\]\norders. Therefore the required number is\n\\[\n\\frac{10!}{(2!)^5}-\\frac{9!}{(2!)^4}=113400-22680=90720.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_ids dmath-ch06-kp-021 and dmath-ch06-kp-025 cover ball-box distributions, but this problem is an ordering of repeated site visits and should be mapped to the multinomial coefficient knowledge point dmath-ch06-kp-020."
+      ]
+    },
+    {
+      "source": "64. How many diferent terms are there in the expansion of $( x _ { 1 } + x _ { 2 } + \\cdots + x _ { m } ) ^ { n }$ after all terms with identical sets of exponents are added?",
+      "problem": "dmath-ch06-prob-282",
+      "solution": "After like terms are combined, every term has the form \\(x_1^{a_1}\\cdots x_m^{a_m}\\), where the exponents are nonnegative integers satisfying \\(a_1+\\cdots+a_m=n\\). Stars and bars gives\n\\[\n\\binom{n+m-1}{m-1}\n\\]\ndifferent exponent vectors, hence that many terms.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "<sup>∗</sup>65. Prove the Multinomial Theorem: If n is a positive integer, then\n\n$$\n\\begin{array} { l } { ( x _ { 1 } + x _ { 2 } + \\cdots + x _ { m } ) ^ { n } \\qquad } \\\\ { = \\displaystyle \\sum _ { n _ { 1 } + n _ { 2 } + \\cdots + n _ { m } = n } C ( n ; n _ { 1 } , n _ { 2 } , \\ldots , n _ { m } ) x _ { 1 } ^ { n _ { 1 } } x _ { 2 } ^ { n _ { 2 } } \\cdots x _ { m } ^ { n _ { m } } , } \\end{array}\n$$\n\nwhere\n\n$$\nC ( n ; n _ { 1 } , n _ { 2 } , \\ldots , n _ { m } ) = { \\frac { n ! } { n _ { 1 } ! n _ { 2 } ! \\cdots n _ { m } ! } }\n$$\n\nis a multinomial coeficient.",
+      "problem": "dmath-ch06-prob-283",
+      "solution": "View the expression as a product of \\(n\\) identical factors \\(x_1+\\cdots+x_m\\). To obtain \\(x_1^{n_1}\\cdots x_m^{n_m}\\), choose \\(x_i\\) from exactly \\(n_i\\) of the factors, where \\(\\sum_i n_i=n\\). The number of such choices is the number of ways to divide the \\(n\\) labeled factor positions into groups of sizes \\(n_1,\\ldots,n_m\\):\n\\[\n\\binom{n}{n_1,\\ldots,n_m}=\\frac{n!}{n_1!\\cdots n_m!}.\n\\]\nSumming this contribution over every nonnegative exponent vector with sum \\(n\\) gives\n\\[\n(x_1+\\cdots+x_m)^n\n=\\sum_{n_1+\\cdots+n_m=n}\n\\frac{n!}{n_1!\\cdots n_m!}x_1^{n_1}\\cdots x_m^{n_m},\n\\]\nwhich proves the theorem.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "66. Find the expansion of $( x + y + z ) ^ { 4 }$",
+      "problem": "dmath-ch06-prob-284",
+      "solution": "By the multinomial theorem,\n\\[\n\\begin{aligned}\n(x+y+z)^4={}&x^4+y^4+z^4\n+4x^3y+4x^3z+4xy^3+4y^3z+4xz^3+4yz^3\\\\\n&+6x^2y^2+6x^2z^2+6y^2z^2\n+12x^2yz+12xy^2z+12xyz^2.\n\\end{aligned}\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "67. Find the coeficient of $x ^ { 3 } y ^ { 2 } z ^ { 5 } \\sin { ( x + y + z ) } ^ { 1 0 }$",
+      "problem": "dmath-ch06-prob-285",
+      "solution": "The scanned token \\(\\sin\\) is most defensibly read as the word “in,” because the question asks for a coefficient in \\((x+y+z)^{10}\\). The exponents sum to \\(3+2+5=10\\), so the coefficient is\n\\[\n\\binom{10}{3,2,5}=\\frac{10!}{3!2!5!}=2520.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "68. How many terms are there in the expansion of\n\n$$\n( x + y + z ) ^ { 1 0 0 } ?\n$$\n\n![](images/7cc331e42f3e3b1d855174ac6d08020c85029066fbf9f7b6eb2b9d8b91ff7dd2.jpg)",
+      "problem": "dmath-ch06-prob-286",
+      "solution": "Each combined term is \\(x^a y^b z^c\\) for a nonnegative solution of \\(a+b+c=100\\). Therefore the number of terms is\n\\[\n\\binom{100+3-1}{3-1}=\\binom{102}{2}=5151.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "1. Place these permutations of {1, 2, 3, 4, 5} in lexicographic order: 43521, 15432, 45321, 23451, 23514, 14532, 21345, 45213, 31452, 31542.",
+      "problem": "dmath-ch06-prob-287",
+      "solution": "Compare entries from left to right. The lexicographic order is\n\\[\n14532,\\ 15432,\\ 21345,\\ 23451,\\ 23514,\\ 31452,\\ 31542,\\ 43521,\\ 45213,\\ 45321.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "2. Place these permutations of {1,2,3,4,5,6} in lexicographic order: 234561, 231456, 165432, 156423, 543216, 541236, 231465, 314562, 432561, 654321, 654312, 435612.",
+      "problem": "dmath-ch06-prob-288",
+      "solution": "Comparing the permutations at their first differing position gives\n\\[\n156423,\\ 165432,\\ 231456,\\ 231465,\\ 234561,\\ 314562,\\ 432561,\\ 435612,\\ 541236,\\ 543216,\\ 654312,\\ 654321.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "3. The name of a file in a computer directory consists of three uppercase letters followed by a digit, where each letter is either A, B, or C, and each digit is either 1 or 2. List the name of these files in lexicographic order, where we order letters using the usual alphabetic order of letters.",
+      "problem": "dmath-ch06-prob-289",
+      "solution": "For each three-letter prefix, the name ending in 1 precedes the name ending in 2. The complete lexicographic list is\n\nAAA1, AAA2, AAB1, AAB2, AAC1, AAC2, ABA1, ABA2, ABB1, ABB2, ABC1, ABC2, ACA1, ACA2, ACB1, ACB2, ACC1, ACC2,\nBAA1, BAA2, BAB1, BAB2, BAC1, BAC2, BBA1, BBA2, BBB1, BBB2, BBC1, BBC2, BCA1, BCA2, BCB1, BCB2, BCC1, BCC2,\nCAA1, CAA2, CAB1, CAB2, CAC1, CAC2, CBA1, CBA2, CBB1, CBB2, CBC1, CBC2, CCA1, CCA2, CCB1, CCB2, CCC1, CCC2.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "4. Suppose that the name of a file in a computer directory consists of three digits followed by two lowercase letters and each digit is 0, 1, or 2, and each letter is either a or b. List the name of these files in lexicographic order, where we order letters using the usual alphabetic order of letters.",
+      "problem": "dmath-ch06-prob-290",
+      "solution": "For each three-digit prefix, the suffixes occur as aa, ab, ba, bb. The complete lexicographic list is\n\n000aa, 000ab, 000ba, 000bb, 001aa, 001ab, 001ba, 001bb, 002aa, 002ab, 002ba, 002bb,\n010aa, 010ab, 010ba, 010bb, 011aa, 011ab, 011ba, 011bb, 012aa, 012ab, 012ba, 012bb,\n020aa, 020ab, 020ba, 020bb, 021aa, 021ab, 021ba, 021bb, 022aa, 022ab, 022ba, 022bb,\n100aa, 100ab, 100ba, 100bb, 101aa, 101ab, 101ba, 101bb, 102aa, 102ab, 102ba, 102bb,\n110aa, 110ab, 110ba, 110bb, 111aa, 111ab, 111ba, 111bb, 112aa, 112ab, 112ba, 112bb,\n120aa, 120ab, 120ba, 120bb, 121aa, 121ab, 121ba, 121bb, 122aa, 122ab, 122ba, 122bb,\n200aa, 200ab, 200ba, 200bb, 201aa, 201ab, 201ba, 201bb, 202aa, 202ab, 202ba, 202bb,\n210aa, 210ab, 210ba, 210bb, 211aa, 211ab, 211ba, 211bb, 212aa, 212ab, 212ba, 212bb,\n220aa, 220ab, 220ba, 220bb, 221aa, 221ab, 221ba, 221bb, 222aa, 222ab, 222ba, 222bb.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "5. Find the next larger permutation in lexicographic order after each of these permutations.\n\na) 1432\n\nb) 54123\n\nc) 12453\n\nd) 45231\n\ne) 6714235\n\nf) 31528764",
+      "problem": "dmath-ch06-prob-291",
+      "solution": "For each permutation, find the rightmost ascent, exchange its first entry with the smallest larger entry to its right, and sort the remaining suffix increasingly. This gives\n\na) \\(2134\\)\n\nb) \\(54132\\)\n\nc) \\(12534\\)\n\nd) \\(45312\\)\n\ne) \\(6714253\\)\n\nf) \\(31542678\\).",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "6. Find the next larger permutation in lexicographic order after each of these permutations.\n\na) 1342\n\nb) 45321\n\nc) 13245\n\nd) 612345\n\ne) 1623547\n\nf) 23587416",
+      "problem": "dmath-ch06-prob-292",
+      "solution": "Applying the rightmost-ascent rule gives\n\na) \\(1423\\)\n\nb) \\(51234\\)\n\nc) \\(13254\\)\n\nd) \\(612354\\)\n\ne) \\(1623574\\)\n\nf) \\(23587461\\).",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "7. Use Algorithm 1 to generate the 24 permutations of the first four positive integers in lexicographic order.",
+      "problem": "dmath-ch06-prob-293",
+      "solution": "Algorithm 1 produces the following lexicographic sequence:\n\\[\n\\begin{gathered}\n1234,\\ 1243,\\ 1324,\\ 1342,\\ 1423,\\ 1432,\\\\\n2134,\\ 2143,\\ 2314,\\ 2341,\\ 2413,\\ 2431,\\\\\n3124,\\ 3142,\\ 3214,\\ 3241,\\ 3412,\\ 3421,\\\\\n4123,\\ 4132,\\ 4213,\\ 4231,\\ 4312,\\ 4321.\n\\end{gathered}\n\\]\nThere are \\(4!=24\\) entries, so every permutation appears exactly once.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "8. Use Algorithm 2 to list all the subsets of the set {1, 2, 3, 4}.",
+      "problem": "dmath-ch06-prob-294",
+      "solution": "Using the bit-string order \\(0000,0001,0010,0011,0100,0101,0110,0111,1000,1001,1010,1011,1100,1101,1110,1111\\), with bit \\(i\\) indicating membership of \\(i\\), Algorithm 2 lists\n\\[\n\\varnothing,\\{4\\},\\{3\\},\\{3,4\\},\\{2\\},\\{2,4\\},\\{2,3\\},\\{2,3,4\\},\n\\{1\\},\\{1,4\\},\\{1,3\\},\\{1,3,4\\},\\{1,2\\},\\{1,2,4\\},\\{1,2,3\\},\\{1,2,3,4\\}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_id dmath-ch06-kp-022 is specifically lexicographic permutation generation; this problem uses subset generation by bit strings, which is not covered by the referenced KP definition."
+      ]
+    },
+    {
+      "source": "9. Use Algorithm 3 to list all the 3-combinations of {1, 2, 3, 4, 5}.",
+      "problem": "dmath-ch06-prob-295",
+      "solution": "Algorithm 3 gives the 3-combinations in lexicographic order:\n\\[\n\\{1,2,3\\},\\{1,2,4\\},\\{1,2,5\\},\\{1,3,4\\},\\{1,3,5\\},\\{1,4,5\\},\n\\{2,3,4\\},\\{2,3,5\\},\\{2,4,5\\},\\{3,4,5\\}.\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_id dmath-ch06-kp-022 is specifically lexicographic permutation generation; this problem uses lexicographic r-combination generation, which is not covered by the referenced KP definition."
+      ]
+    },
+    {
+      "source": "10. Show that Algorithm 1 produces the next larger permutation in lexicographic order.",
+      "problem": "dmath-ch06-prob-296",
+      "solution": "Let \\(a_1a_2\\cdots a_n\\) be a permutation that is not decreasing. Algorithm 1 chooses the largest \\(j\\) with \\(a_j<a_{j+1}\\). Consequently the suffix \\(a_{j+1},\\ldots,a_n\\) is decreasing, so no permutation with the unchanged prefix through \\(a_j\\) is larger. To make the smallest possible increase, \\(a_j\\) must be replaced by the smallest suffix entry larger than it; because the suffix is decreasing, this is the entry selected by the algorithm. After the swap, arranging the remaining suffix increasingly makes it as small as possible. Thus no permutation lies strictly between the input and the algorithm's output, so the output is the next lexicographic permutation.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "11. Show that Algorithm 3 produces the next larger r-combination in lexicographic order after a given r-combination.",
+      "problem": "dmath-ch06-prob-297",
+      "solution": "Write the combination as \\(a_1<a_2<\\cdots<a_r\\). Algorithm 3 chooses the largest index \\(i\\) for which \\(a_i<n-r+i\\); all later entries are therefore already at their maximum possible values. Any larger combination must change position \\(i\\) or an earlier position. Increasing \\(a_i\\) by exactly 1 is the smallest possible change at the latest possible position. Once \\(a_i\\) is increased, setting \\(a_{i+1}=a_i+1\\), then each later entry to its immediate successor, gives the smallest valid suffix. Hence the result is larger, and no valid \\(r\\)-combination lies between it and the original one.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_id dmath-ch06-kp-022 is specifically lexicographic permutation generation; this problem proves the next r-combination algorithm, which is not covered by the referenced KP definition."
+      ]
+    },
+    {
+      "source": "12. Develop an algorithm for generating the r-permutations of a set of n elements.",
+      "problem": "dmath-ch06-prob-298",
+      "solution": "A direct backtracking algorithm is:\n\n1. Start with an empty sequence and the set of all \\(n\\) elements as unused.\n2. If the sequence has length \\(r\\), output it.\n3. Otherwise, for each unused element in the chosen base order, append that element, recurse with it removed from the unused set, and then remove it from the sequence.\n\nAt depth \\(j\\), the sequence contains \\(j\\) distinct elements. Every ordered choice of \\(r\\) distinct elements determines exactly one root-to-depth-\\(r\\) path, so the algorithm outputs every \\(r\\)-permutation exactly once. It outputs \\(n!/(n-r)!\\) sequences.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "13. List all 3-permutations of {1, 2, 3, 4, 5}.",
+      "problem": "dmath-ch06-prob-299",
+      "solution": "In lexicographic order, the 60 three-permutations are\n\\[\n\\begin{gathered}\n123,124,125,132,134,135,142,143,145,152,153,154,\\\\\n213,214,215,231,234,235,241,243,245,251,253,254,\\\\\n312,314,315,321,324,325,341,342,345,351,352,354,\\\\\n412,413,415,421,423,425,431,432,435,451,452,453,\\\\\n512,513,514,521,523,524,531,532,534,541,542,543.\n\\end{gathered}\n\\]\nThe count is \\(5\\cdot4\\cdot3=60\\), confirming completeness.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "source": "The remaining exercises in this section develop another algorithm for generating the permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ . This algorithm is based on Cantor expansions of integers. Every nonnegative integer less than n! has a unique Cantor expansion\n\n$$\na _ { 1 } 1 ! + a _ { 2 } 2 ! + \\cdots + a _ { n - 1 } ( n - 1 ) !\n$$\n\nwhere $a _ { i }$ is a nonnegative integer not exceeding i, for $i =$ $1 , 2 , \\ldots , n - 1$ . The integers $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ are called the Cantor digits of this integer.\n\nGiven a permutation of $\\{ 1 , 2 , \\ldots , n \\}$ , let $a _ { k - 1 } , k =$ $2 , 3 , \\ldots , n ,$ be the number of integers less than k that follow k in the permutation. For instance, in the permutation 43215, $a _ { 1 }$ is the number of integers less than 2 that follow 2, so $a _ { 1 } = 1$ . Similarly, for this example $a _ { 2 } = 2 , a _ { 3 } = 3$ and $a _ { 4 } = 0$ . Consider the function from the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ to the set of nonnegative integers less than n! that sends a permutation to the integer that has $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ , defined in this way, as its Cantor digits.\n\n14. Find the Cantor digits $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ that correspond to these permutations.\n\na) 246531\n\nb) 12345\n\nc) 654321",
+      "problem": "dmath-ch06-prob-300",
+      "solution": "By definition, \\(a_{k-1}\\) counts entries smaller than \\(k\\) that occur to the right of \\(k\\).\n\na) For \\(246531\\), the counts for \\(k=2,3,4,5,6\\) are\n\\[\n(a_1,a_2,a_3,a_4,a_5)=(1,1,2,2,3).\n\\]\n\nb) In \\(12345\\), no smaller entry follows a larger one, so\n\\[\n(a_1,a_2,a_3,a_4)=(0,0,0,0).\n\\]\n\nc) In \\(654321\\), every smaller entry follows \\(k\\), so\n\\[\n(a_1,a_2,a_3,a_4,a_5)=(1,2,3,4,5).\n\\]",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_id dmath-ch06-kp-022 covers lexicographic permutation generation, but this problem is about Cantor digits and the Cantor-expansion correspondence."
+      ]
+    },
+    {
+      "source": "<sup>∗</sup>15. Show that the correspondence described in the preamble is a bijection between the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ and the nonnegative integers less than n!.",
+      "problem": "dmath-ch06-prob-301",
+      "solution": "For any permutation, the definition gives \\(0\\le a_i\\le i\\). Conversely, given digits satisfying these bounds, reconstruct a unique permutation as follows: start with \\(1\\), and for \\(k=2,\\ldots,n\\), insert \\(k\\) in the unique position having exactly \\(a_{k-1}\\) existing entries to its right. All existing entries are smaller than \\(k\\), so the reconstructed permutation has exactly the prescribed digits. Thus permutations are in bijection with valid Cantor digit vectors. The uniqueness of Cantor expansion then puts these vectors in bijection with the integers from \\(0\\) through \\(n!-1\\). Composing the two bijections proves the stated correspondence.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_id dmath-ch06-kp-022 covers lexicographic permutation generation, but this proof is about the Cantor-expansion bijection."
+      ]
+    },
+    {
+      "source": "16. Find the permutations of {1, 2, 3, 4, 5} that correspond to these integers with respect to the correspondence between Cantor expansions and permutations as described in the preamble to Exercise 14.\n\na) 3\n\nb) 89\n\nc) 111",
+      "problem": "dmath-ch06-prob-302",
+      "solution": "Write each integer as \\(a_1 1!+a_2 2!+a_3 3!+a_4 4!\\), then insert \\(k\\) so that exactly \\(a_{k-1}\\) smaller entries lie to its right.\n\na) \\(3=1\\cdot1!+1\\cdot2!+0\\cdot3!+0\\cdot4!\\), so the digits are \\((1,1,0,0)\\) and the permutation is \\(23145\\).\n\nb) \\(89=1\\cdot1!+2\\cdot2!+2\\cdot3!+3\\cdot4!\\), so the digits are \\((1,2,2,3)\\) and the permutation is \\(35421\\).\n\nc) \\(111=1\\cdot1!+1\\cdot2!+2\\cdot3!+4\\cdot4!\\), so the digits are \\((1,1,2,4)\\) and the permutation is \\(52431\\).",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_id dmath-ch06-kp-022 covers lexicographic permutation generation, but this problem converts Cantor-expansion integers to permutations."
+      ]
+    },
+    {
+      "source": "17. Develop an algorithm for producing all permutations of a set of n elements based on the correspondence described in the preamble to Exercise 14.",
+      "problem": "dmath-ch06-prob-303",
+      "solution": "For each integer \\(q=0,1,\\ldots,n!-1\\):\n\n1. Compute its Cantor digits by setting, for \\(i=n-1,n-2,\\ldots,1\\),\n\\[\na_i=\\left\\lfloor\\frac{q}{i!}\\right\\rfloor,\\qquad q\\leftarrow q\\bmod i!.\n\\]\n2. Start the list with \\(1\\). For \\(k=2,3,\\ldots,n\\), insert \\(k\\) in the unique position that leaves exactly \\(a_{k-1}\\) existing entries to its right.\n3. Output the resulting list.\n\nThe Cantor expansion is unique, and the insertion procedure is the inverse correspondence from the preamble. Therefore the loop outputs each of the \\(n!\\) permutations exactly once.",
+      "provider": "codex",
+      "provider_session_id": "01a03e41-b4b2-78d3-9646-4a4ff96dbd47",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "FAIL",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": [
+        "Existing kp_id dmath-ch06-kp-022 covers lexicographic permutation generation, but this problem asks for a Cantor-expansion-based permutation-generation algorithm."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,318 @@
+{
+  "kind": "knowledge-mapping-audit",
+  "provider": "codex",
+  "provider_session_id": "01a03e9c-5563-7c23-a9f0-11d9319299f6",
+  "knowledge_points": [
+    {
+      "knowledge_point": {
+        "kp_id": "dmath-ch06-kp-029",
+        "knowledge_item": "用位串生成子集",
+        "source_location": "Rosen Discrete Mathematics 6.6, Algorithm 2 and Exercise 8",
+        "knowledge_type": "algorithm-process",
+        "related_kp_ids": [
+          "dmath-ch06-kp-012"
+        ],
+        "importance": "supplementary",
+        "learning_action": null,
+        "body": "设 $S=\\{s_1,s_2,\\ldots,s_n\\}$。每个 $n$ 位位串 $b_1b_2\\cdots b_n$ 唯一表示一个子集：当且仅当 $b_i=1$ 时，把 $s_i$ 放入子集。反过来，每个子集也唯一确定一个位串。\n\n**生成方法**：依次枚举从 $0$ 到 $2^n-1$ 的整数，把它们写成补足前导零的 $n$ 位二进制数，再按位选择元素。这样得到全部 $2^n$ 个子集，既不遗漏也不重复。\n\n例如 $S=\\{1,2,3,4\\}$ 时，位串 $0101$ 对应子集 $\\{2,4\\}$。",
+        "difficulty": 2,
+        "fragile": null,
+        "graph_label": "位串生成子集"
+      },
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "relationship_mapping": "PASS",
+        "uniqueness": "PASS",
+        "completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "knowledge_point": {
+        "kp_id": "dmath-ch06-kp-030",
+        "knowledge_item": "字典序生成 r-组合",
+        "source_location": "Rosen Discrete Mathematics 6.6, Algorithm 3 and Exercises 9-11",
+        "knowledge_type": "algorithm-process",
+        "related_kp_ids": [
+          "dmath-ch06-kp-012",
+          "dmath-ch06-kp-022"
+        ],
+        "importance": "supplementary",
+        "learning_action": null,
+        "body": "把 $\\{1,2,\\ldots,n\\}$ 的一个 $r$-组合写成递增序列 $a_1<a_2<\\cdots<a_r$。从最小组合 $(1,2,\\ldots,r)$ 开始，可按下列规则求字典序中的下一个组合：\n\n1. 从右向左找最大的 $i$，使 $a_i<n-r+i$。\n2. 将 $a_i$ 增加 1。\n3. 对每个 $j=i+1,\\ldots,r$，令 $a_j=a_i+j-i$。\n\n第 1 步选择最靠右且仍可增加的位置，因此前缀改变得最晚；第 3 步把后缀重置为允许的最小递增序列，所以结果正好是下一个字典序组合。到达 $(n-r+1,\\ldots,n)$ 时结束。",
+        "difficulty": 3,
+        "fragile": "关注下标上界",
+        "graph_label": "字典序 r-组合"
+      },
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "relationship_mapping": "PASS",
+        "uniqueness": "PASS",
+        "completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "knowledge_point": {
+        "kp_id": "dmath-ch06-kp-031",
+        "knowledge_item": "康托展开与排列对应",
+        "source_location": "Rosen Discrete Mathematics 6.6, Exercises 14-17",
+        "knowledge_type": "algorithm-process",
+        "related_kp_ids": [
+          "dmath-ch06-kp-009",
+          "dmath-ch06-kp-022"
+        ],
+        "importance": "supplementary",
+        "learning_action": null,
+        "body": "每个满足 $0\\le N<n!$ 的整数都有唯一的康托展开\n\n$$N=a_1 1!+a_2 2!+\\cdots+a_{n-1}(n-1)!,$$\n\n其中 $0\\le a_i\\le i$。对 $\\{1,2,\\ldots,n\\}$ 的一个排列，令 $a_{k-1}$ 等于排列中位于 $k$ 之后且小于 $k$ 的元素个数；这些数字就是该排列的康托数码。\n\n**由数码恢复排列**：从列表 $[1]$ 开始，依次处理 $k=2,3,\\ldots,n$，把 $k$ 插入到当前列表从左起第 $k-a_{k-1}$ 个位置，使它右侧恰有 $a_{k-1}$ 个较小元素。每个允许的数码序列对应唯一排列，因此排列与 $0$ 到 $n!-1$ 的整数一一对应。按整数递增枚举并解码即可生成全部排列。",
+        "difficulty": 4,
+        "fragile": "区分数码下标与排列位置",
+        "graph_label": "康托展开"
+      },
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "relationship_mapping": "PASS",
+        "uniqueness": "PASS",
+        "completeness": "PASS"
+      },
+      "findings": []
+    }
+  ],
+  "mappings": [
+    {
+      "problem": "dmath-ch06-prob-067",
+      "kp_ids": [
+        "dmath-ch06-kp-003",
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-010"
+      ],
+      "source": "67. How many ways are there to arrange the letters a, b, c, and d such that a is not followed immediately by b?",
+      "solution": "There are $4!=24$ arrangements in total. If $a$ is immediately followed by $b$, treat $ab$ as one block; the block, $c$, and $d$ can be arranged in $3!=6$ ways. Hence $24-6=\\mathbf{18}$ arrangements satisfy the condition.",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-156",
+      "kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-010",
+        "dmath-ch06-kp-012",
+        "dmath-ch06-kp-013"
+      ],
+      "source": "29. A club has 25 members.\n\na) How many ways are there to choose four members of the club to serve on an executive committee?\n\nb) How many ways are there to choose a president, vice president, secretary, and treasurer of the club, where no person can hold more than one ofice?",
+      "solution": "a) An executive committee is an unordered selection, so there are \\(\\binom{25}{4}=12{,}650\\) choices.\n\nb) The four offices are distinct, so there are \\(P(25,4)=25\\cdot24\\cdot23\\cdot22=303{,}600\\) assignments.",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-189",
+      "kp_ids": [
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-026"
+      ],
+      "source": "<sup>∗</sup>14. Give a formula for the coeficient of $x ^ { k }$ in the expansion of $( x + 1 / x ) ^ { 1 0 0 }$ , where k is an integer.",
+      "solution": "Choosing \\(1/x\\) from \\(j\\) factors gives \\(\\binom{100}{j}x^{100-2j}\\). Thus\n\\[\n[x^k](x+1/x)^{100}=\n\\begin{cases}\n\\binom{100}{(100-k)/2},& -100\\le k\\le100\\text{ and }k\\text{ is even},\\\\\n0,&\\text{otherwise}.\n\\end{cases}\n\\]",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-190",
+      "kp_ids": [
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-026"
+      ],
+      "source": "<sup>∗</sup>15. Give a formula for the coeficient of $x ^ { k }$ in the expansion of $( x ^ { 2 } - 1 / x ) ^ { 1 0 0 }$ , where k is an integer.",
+      "solution": "Choosing \\(-1/x\\) from \\(j\\) factors gives \\((-1)^j\\binom{100}{j}x^{200-3j}\\). Hence, with \\(j=(200-k)/3\\),\n\\[\n[x^k](x^2-1/x)^{100}=\n\\begin{cases}\n(-1)^j\\binom{100}{j},&j\\text{ is an integer with }0\\le j\\le100,\\\\\n0,&\\text{otherwise}.\n\\end{cases}\n\\]",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-280",
+      "kp_ids": [
+        "dmath-ch06-kp-020"
+      ],
+      "source": "62. Suppose that a basketball league has 32 teams, split into two conferences of 16 teams each. Each conference is split into three divisions. Suppose that the North Central Division has five teams. Each of the teams in the North Central Division plays four games against each of the other teams in this division, three games against each of the 11 remaining teams in the conference, and two games against each of the 16 teams in the other conference. In how many diferent orders can the games of one of the teams in the North Central Division be scheduled?",
+      "solution": "For one North Central team, the schedule contains \\(4\\cdot4=16\\) games against its four division opponents, \\(3\\cdot11=33\\) games against the other conference opponents, and \\(2\\cdot16=32\\) interconference games, for \\(81\\) games total. Games against the same opponent are indistinguishable for ordering purposes. Thus the number of orders is\n\\[\n\\frac{81!}{(4!)^4(3!)^{11}(2!)^{16}}.\n\\]",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-281",
+      "kp_ids": [
+        "dmath-ch06-kp-003",
+        "dmath-ch06-kp-020"
+      ],
+      "source": "<sup>∗</sup>63. Suppose that a weapons inspector must inspect each of five diferent sites twice, visiting one site per day. The inspector is free to select the order in which to visit these sites, but cannot visit site X, the most suspicious site, on two consecutive days. In how many diferent orders can the inspector visit these sites?",
+      "solution": "Without the restriction, the two visits to each of five sites can be ordered in\n\\[\n\\frac{10!}{(2!)^5}\n\\]\nways. If the two visits to \\(X\\) are consecutive, treat \\(XX\\) as one block; together with two visits to each of the other four sites, this gives\n\\[\n\\frac{9!}{(2!)^4}\n\\]\norders. Therefore the required number is\n\\[\n\\frac{10!}{(2!)^5}-\\frac{9!}{(2!)^4}=113400-22680=90720.\n\\]",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-294",
+      "kp_ids": [
+        "dmath-ch06-kp-029"
+      ],
+      "source": "8. Use Algorithm 2 to list all the subsets of the set {1, 2, 3, 4}.",
+      "solution": "Using the bit-string order \\(0000,0001,0010,0011,0100,0101,0110,0111,1000,1001,1010,1011,1100,1101,1110,1111\\), with bit \\(i\\) indicating membership of \\(i\\), Algorithm 2 lists\n\\[\n\\varnothing,\\{4\\},\\{3\\},\\{3,4\\},\\{2\\},\\{2,4\\},\\{2,3\\},\\{2,3,4\\},\n\\{1\\},\\{1,4\\},\\{1,3\\},\\{1,3,4\\},\\{1,2\\},\\{1,2,4\\},\\{1,2,3\\},\\{1,2,3,4\\}.\n\\]",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-295",
+      "kp_ids": [
+        "dmath-ch06-kp-030"
+      ],
+      "source": "9. Use Algorithm 3 to list all the 3-combinations of {1, 2, 3, 4, 5}.",
+      "solution": "Algorithm 3 gives the 3-combinations in lexicographic order:\n\\[\n\\{1,2,3\\},\\{1,2,4\\},\\{1,2,5\\},\\{1,3,4\\},\\{1,3,5\\},\\{1,4,5\\},\n\\{2,3,4\\},\\{2,3,5\\},\\{2,4,5\\},\\{3,4,5\\}.\n\\]",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-297",
+      "kp_ids": [
+        "dmath-ch06-kp-030"
+      ],
+      "source": "11. Show that Algorithm 3 produces the next larger r-combination in lexicographic order after a given r-combination.",
+      "solution": "Write the combination as \\(a_1<a_2<\\cdots<a_r\\). Algorithm 3 chooses the largest index \\(i\\) for which \\(a_i<n-r+i\\); all later entries are therefore already at their maximum possible values. Any larger combination must change position \\(i\\) or an earlier position. Increasing \\(a_i\\) by exactly 1 is the smallest possible change at the latest possible position. Once \\(a_i\\) is increased, setting \\(a_{i+1}=a_i+1\\), then each later entry to its immediate successor, gives the smallest valid suffix. Hence the result is larger, and no valid \\(r\\)-combination lies between it and the original one.",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-300",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ],
+      "source": "The remaining exercises in this section develop another algorithm for generating the permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ . This algorithm is based on Cantor expansions of integers. Every nonnegative integer less than n! has a unique Cantor expansion\n\n$$\na _ { 1 } 1 ! + a _ { 2 } 2 ! + \\cdots + a _ { n - 1 } ( n - 1 ) !\n$$\n\nwhere $a _ { i }$ is a nonnegative integer not exceeding i, for $i =$ $1 , 2 , \\ldots , n - 1$ . The integers $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ are called the Cantor digits of this integer.\n\nGiven a permutation of $\\{ 1 , 2 , \\ldots , n \\}$ , let $a _ { k - 1 } , k =$ $2 , 3 , \\ldots , n ,$ be the number of integers less than k that follow k in the permutation. For instance, in the permutation 43215, $a _ { 1 }$ is the number of integers less than 2 that follow 2, so $a _ { 1 } = 1$ . Similarly, for this example $a _ { 2 } = 2 , a _ { 3 } = 3$ and $a _ { 4 } = 0$ . Consider the function from the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ to the set of nonnegative integers less than n! that sends a permutation to the integer that has $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ , defined in this way, as its Cantor digits.\n\n14. Find the Cantor digits $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ that correspond to these permutations.\n\na) 246531\n\nb) 12345\n\nc) 654321",
+      "solution": "By definition, \\(a_{k-1}\\) counts entries smaller than \\(k\\) that occur to the right of \\(k\\).\n\na) For \\(246531\\), the counts for \\(k=2,3,4,5,6\\) are\n\\[\n(a_1,a_2,a_3,a_4,a_5)=(1,1,2,2,3).\n\\]\n\nb) In \\(12345\\), no smaller entry follows a larger one, so\n\\[\n(a_1,a_2,a_3,a_4)=(0,0,0,0).\n\\]\n\nc) In \\(654321\\), every smaller entry follows \\(k\\), so\n\\[\n(a_1,a_2,a_3,a_4,a_5)=(1,2,3,4,5).\n\\]",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-301",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ],
+      "source": "<sup>∗</sup>15. Show that the correspondence described in the preamble is a bijection between the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ and the nonnegative integers less than n!.",
+      "solution": "For any permutation, the definition gives \\(0\\le a_i\\le i\\). Conversely, given digits satisfying these bounds, reconstruct a unique permutation as follows: start with \\(1\\), and for \\(k=2,\\ldots,n\\), insert \\(k\\) in the unique position having exactly \\(a_{k-1}\\) existing entries to its right. All existing entries are smaller than \\(k\\), so the reconstructed permutation has exactly the prescribed digits. Thus permutations are in bijection with valid Cantor digit vectors. The uniqueness of Cantor expansion then puts these vectors in bijection with the integers from \\(0\\) through \\(n!-1\\). Composing the two bijections proves the stated correspondence.",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-302",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ],
+      "source": "16. Find the permutations of {1, 2, 3, 4, 5} that correspond to these integers with respect to the correspondence between Cantor expansions and permutations as described in the preamble to Exercise 14.\n\na) 3\n\nb) 89\n\nc) 111",
+      "solution": "Write each integer as \\(a_1 1!+a_2 2!+a_3 3!+a_4 4!\\), then insert \\(k\\) so that exactly \\(a_{k-1}\\) smaller entries lie to its right.\n\na) \\(3=1\\cdot1!+1\\cdot2!+0\\cdot3!+0\\cdot4!\\), so the digits are \\((1,1,0,0)\\) and the permutation is \\(23145\\).\n\nb) \\(89=1\\cdot1!+2\\cdot2!+2\\cdot3!+3\\cdot4!\\), so the digits are \\((1,2,2,3)\\) and the permutation is \\(35421\\).\n\nc) \\(111=1\\cdot1!+1\\cdot2!+2\\cdot3!+4\\cdot4!\\), so the digits are \\((1,1,2,4)\\) and the permutation is \\(52431\\).",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    },
+    {
+      "problem": "dmath-ch06-prob-303",
+      "kp_ids": [
+        "dmath-ch06-kp-031"
+      ],
+      "source": "17. Develop an algorithm for producing all permutations of a set of n elements based on the correspondence described in the preamble to Exercise 14.",
+      "solution": "For each integer \\(q=0,1,\\ldots,n!-1\\):\n\n1. Compute its Cantor digits by setting, for \\(i=n-1,n-2,\\ldots,1\\),\n\\[\na_i=\\left\\lfloor\\frac{q}{i!}\\right\\rfloor,\\qquad q\\leftarrow q\\bmod i!.\n\\]\n2. Start the list with \\(1\\). For \\(k=2,3,\\ldots,n\\), insert \\(k\\) in the unique position that leaves exactly \\(a_{k-1}\\) existing entries to its right.\n3. Output the resulting list.\n\nThe Cantor expansion is unique, and the insertion procedure is the inverse correspondence from the preamble. Therefore the loop outputs each of the \\(n!\\) permutations exactly once.",
+      "decisions": {
+        "source_consistency": "PASS",
+        "meaning": "PASS",
+        "formatting": "PASS",
+        "knowledge_point_mapping": "PASS",
+        "answer_correctness": "PASS",
+        "solution_completeness": "PASS"
+      },
+      "findings": []
+    }
+  ]
+}

@@ -1,0 +1,149 @@
+{
+  "kind": "mapping-repairs",
+  "items": [
+    {
+      "problem": "dmath-ch06-prob-067",
+      "current_kp_ids": [
+        "dmath-ch06-kp-004",
+        "dmath-ch06-kp-001"
+      ],
+      "proposed_kp_ids": [
+        "dmath-ch06-kp-003",
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-010"
+      ],
+      "requires_new_kp": false,
+      "rationale": "The solution counts all arrangements of four distinct letters, counts the forbidden immediate ab block as a smaller permutation, and subtracts it. Division rule is inaccurate; permutation counting plus the subtraction rule cover the problem."
+    },
+    {
+      "problem": "dmath-ch06-prob-156",
+      "current_kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-010",
+        "dmath-ch06-kp-011"
+      ],
+      "proposed_kp_ids": [
+        "dmath-ch06-kp-009",
+        "dmath-ch06-kp-010",
+        "dmath-ch06-kp-012",
+        "dmath-ch06-kp-013"
+      ],
+      "requires_new_kp": false,
+      "rationale": "Part (a) is an unordered committee selection and needs combination concepts and formula. Part (b) assigns distinct offices without repetition and uses r-permutation counting. The factorial r-permutation form is not needed for the shown product calculation."
+    },
+    {
+      "problem": "dmath-ch06-prob-189",
+      "current_kp_ids": [
+        "dmath-ch06-kp-015",
+        "dmath-ch06-kp-016"
+      ],
+      "proposed_kp_ids": [
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-026"
+      ],
+      "requires_new_kp": false,
+      "rationale": "The task asks for a general coefficient in a binomial expansion with powers determined by choosing one term from j factors. This is binomial theorem plus the specified-term coefficient method, not Pascal identity or Pascal triangle."
+    },
+    {
+      "problem": "dmath-ch06-prob-190",
+      "current_kp_ids": [
+        "dmath-ch06-kp-015",
+        "dmath-ch06-kp-016"
+      ],
+      "proposed_kp_ids": [
+        "dmath-ch06-kp-014",
+        "dmath-ch06-kp-026"
+      ],
+      "requires_new_kp": false,
+      "rationale": "The solution expands a binomial with a negative reciprocal term, solves the exponent equation for j, and returns the coefficient or zero. That matches binomial theorem and specified-term coefficient extraction, not Pascal identity or triangle construction."
+    },
+    {
+      "problem": "dmath-ch06-prob-280",
+      "current_kp_ids": [
+        "dmath-ch06-kp-021",
+        "dmath-ch06-kp-025"
+      ],
+      "proposed_kp_ids": [
+        "dmath-ch06-kp-020"
+      ],
+      "requires_new_kp": false,
+      "rationale": "The schedule is an ordering of 81 games with repeated indistinguishable opponents, counted by a multinomial coefficient. It is not a ball-box distribution problem."
+    },
+    {
+      "problem": "dmath-ch06-prob-281",
+      "current_kp_ids": [
+        "dmath-ch06-kp-021",
+        "dmath-ch06-kp-025"
+      ],
+      "proposed_kp_ids": [
+        "dmath-ch06-kp-003",
+        "dmath-ch06-kp-020"
+      ],
+      "requires_new_kp": false,
+      "rationale": "The unrestricted orders are arrangements of repeated site visits using a multinomial coefficient; the consecutive-X cases are subtracted by treating XX as a block. Ball-box distribution KPs do not model this ordering task."
+    },
+    {
+      "problem": "dmath-ch06-prob-294",
+      "current_kp_ids": [
+        "dmath-ch06-kp-022"
+      ],
+      "proposed_kp_ids": [],
+      "requires_new_kp": true,
+      "rationale": "The problem uses Algorithm 2 to generate all subsets by bit-string order. Existing kp-022 is only lexicographic permutation generation, and the current database has no subset-generation or bit-string subset algorithm KP."
+    },
+    {
+      "problem": "dmath-ch06-prob-295",
+      "current_kp_ids": [
+        "dmath-ch06-kp-022"
+      ],
+      "proposed_kp_ids": [],
+      "requires_new_kp": true,
+      "rationale": "The problem asks for Algorithm 3 listing r-combinations in lexicographic order. Existing combination KPs define and count combinations, but no existing KP covers the lexicographic r-combination generation algorithm."
+    },
+    {
+      "problem": "dmath-ch06-prob-297",
+      "current_kp_ids": [
+        "dmath-ch06-kp-022"
+      ],
+      "proposed_kp_ids": [],
+      "requires_new_kp": true,
+      "rationale": "The proof concerns why Algorithm 3 gives the next lexicographic r-combination. The database has lexicographic permutation generation only, not the r-combination successor algorithm or its correctness argument."
+    },
+    {
+      "problem": "dmath-ch06-prob-300",
+      "current_kp_ids": [
+        "dmath-ch06-kp-022"
+      ],
+      "proposed_kp_ids": [],
+      "requires_new_kp": true,
+      "rationale": "The task computes Cantor digits from permutations. Existing kp-022 covers the next-permutation lexicographic algorithm, but there is no existing Cantor expansion or Cantor digit correspondence KP."
+    },
+    {
+      "problem": "dmath-ch06-prob-301",
+      "current_kp_ids": [
+        "dmath-ch06-kp-022"
+      ],
+      "proposed_kp_ids": [],
+      "requires_new_kp": true,
+      "rationale": "The proof establishes a bijection between permutations and Cantor-expansion digit vectors/integers. No existing KP covers Cantor expansion, Cantor digits, or this bijection."
+    },
+    {
+      "problem": "dmath-ch06-prob-302",
+      "current_kp_ids": [
+        "dmath-ch06-kp-022"
+      ],
+      "proposed_kp_ids": [],
+      "requires_new_kp": true,
+      "rationale": "The problem converts integers through Cantor expansions into permutations. The current lexicographic permutation KP does not cover Cantor-expansion decoding, and no existing KP does."
+    },
+    {
+      "problem": "dmath-ch06-prob-303",
+      "current_kp_ids": [
+        "dmath-ch06-kp-022"
+      ],
+      "proposed_kp_ids": [],
+      "requires_new_kp": true,
+      "rationale": "The requested algorithm generates permutations by enumerating Cantor expansions and decoding them. Existing kp-022 is a different lexicographic next-permutation algorithm, and the database has no Cantor-based generation KP."
+    }
+  ]
+}
