@@ -99,28 +99,34 @@ continues unaffected.
 - **THEN** it can query all attempts, feedback, and signals through the CLI data interface, regardless of what the column displays as priority context
 
 ### Requirement: Knowledge point display page
+The knowledge point page SHALL group linked formal problems by topic label. Topic groups SHALL be collapsed by default. After a group is opened, each row SHALL show a concise display title followed directly by the complete stored problem statement rendered with the workbench safe Markdown subset. The linked-problem area SHALL NOT render `display_summary`, truncated excerpts, ellipsis characters, or raw problem ids.
 
-The knowledge point display page SHALL render linked problems grouped by their topic label. Each row SHALL present a concise problem title as primary text. Problems whose normalized statement exceeds 300 characters MAY present a persisted Chinese one-sentence summary of at most 48 characters as secondary text. Every row SHALL allow the learner to reveal the complete problem statement without runtime truncation. Raw problem ids and ellipsis-truncated statement excerpts SHALL NOT appear in linked-problem rows.
+`display_summary` MAY remain as compatible metadata for normalized statements longer than 500 characters. It is optional and SHALL NOT be required for display or validation of a long problem.
+
+#### Scenario: Open a topic group
+
+- **WHEN** a learner opens a topic group on a knowledge point page
+- **THEN** the group reveals rows containing the short title and complete rendered statement, with no summary layer or nested full-statement disclosure
 
 #### Scenario: Browse grouped linked problems
 
 - **WHEN** a knowledge point has linked problems from multiple topics
-- **THEN** the page displays separate labeled groups containing concise problem titles
+- **THEN** the page displays separate labeled groups that are collapsed until opened
 
 #### Scenario: Read a long linked problem
 
-- **WHEN** a linked problem exceeds 300 normalized characters and has a valid display summary
-- **THEN** its row shows the complete stored summary and can reveal the full statement without an ellipsis
+- **WHEN** a linked problem exceeds 500 normalized characters and has a valid display summary
+- **THEN** its row displays the complete rendered statement and does not display the stored summary
 
 #### Scenario: Read a short linked problem
 
-- **WHEN** a linked problem is at most 300 normalized characters
-- **THEN** its row shows the title without manufacturing a secondary excerpt and can reveal the full statement
+- **WHEN** a linked problem is at most 500 normalized characters
+- **THEN** its row displays the title and complete rendered statement without manufacturing a summary
 
 #### Scenario: Missing long-problem summary
 
 - **WHEN** a long linked problem has no valid persisted summary
-- **THEN** its row shows the title and full-statement disclosure without falling back to a truncated excerpt
+- **THEN** its row still displays the title and complete rendered statement without falling back to a truncated excerpt
 
 #### Scenario: Navigate a wiki link
 
@@ -131,6 +137,16 @@ The knowledge point display page SHALL render linked problems grouped by their t
 
 - **WHEN** the knowledge point has signals or cascade boosts
 - **THEN** the display page shows the signal weight and the cascade reason text
+
+#### Scenario: Long statement has no summary
+
+- **WHEN** a linked problem is longer than 500 normalized characters and has no valid display summary
+- **THEN** the row still displays its complete statement without manufacturing a summary or truncating the text
+
+#### Scenario: Missing display title
+
+- **WHEN** a linked problem has no display title
+- **THEN** the row uses the fixed readable fallback `未命名题目` and never exposes the raw problem id as primary text
 
 ### Requirement: Knowledge point list page
 
@@ -228,15 +244,6 @@ For each turn, the browser SHALL send object identifiers rather than page DOM, a
 - **WHEN** the learner enables draft attachment for a turn
 - **THEN** only that turn receives the current answer draft in addition to the authoritative practice context
 
-### Requirement: Learner-controlled daily conversation
-
-Daily automatic conversation creation SHALL default off. When enabled, it SHALL use the browser's local date and create at most one conversation on the first workspace entry of that date, without interrupting a running conversation.
-
-#### Scenario: Enter on a new local date with daily creation enabled
-
-- **WHEN** no conversation was automatically created for that browser-local date and no turn is running
-- **THEN** one new conversation is created with the learner's selected provider
-
 ### Requirement: User-visible Markdown uses one safe subset
 All user-visible learning text SHALL use the same supported Markdown subset: ATX headings through level 3, paragraphs, ordered and unordered lists, blockquotes, fenced and inline code, strong/emphasis, safe http(s) links, wiki links, math, and workspace-local images.
 
@@ -256,11 +263,31 @@ Partial Agent text events SHALL update one assistant message until the turn comp
 - **THEN** the UI shows one growing assistant message and renders the combined Markdown
 
 ### Requirement: The default Agent view is a session list
-The right column SHALL initially show all local sessions with title, provider, updated time, and status. It SHALL not automatically open a session or create one.
+The Agent column SHALL initially show the complete local conversation list without opening or creating a session. New conversation creation SHALL require one explicit provider selection; the provider SHALL be immutable after creation. Rename and delete SHALL be available from compact history-row menus only.
+
+The chat state SHALL contain only an icon-only return-to-list control with an accessible label, the message stream, the input area, and a stop control while a turn is running. It SHALL NOT show provider settings, session settings, identity labels, current-page context text, daily-create controls, or chat-page rename/delete controls.
+
+The client SHALL NOT read or write provider-memory or daily-create browser keys, auto-open the first session, auto-create a daily session, or initialize the removed explain/diagnose task console. Server-side context construction and existing compatibility APIs remain unchanged.
+
+#### Scenario: Chat is quiet
+
+- **WHEN** a learner opens an existing conversation
+- **THEN** the chat view shows only the accessible icon back control, messages, input, and any running stop control
 
 #### Scenario: History is the first view
+
 - **WHEN** a workbench page loads
 - **THEN** the Agent column shows the session list and no session is opened or created
+
+#### Scenario: Return to history
+
+- **WHEN** the learner activates the back icon
+- **THEN** the history list returns without creating a session or learning record
+
+#### Scenario: History row actions
+
+- **WHEN** the learner chooses rename or delete from a history-row menu
+- **THEN** the corresponding local mirror action runs; those controls are absent from chat view
 
 ### Requirement: Provider is selected once
 New-session flow SHALL require an explicit available provider choice before creation. A created session SHALL display its provider as read-only.
