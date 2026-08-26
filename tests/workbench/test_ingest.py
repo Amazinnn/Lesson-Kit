@@ -20,6 +20,11 @@ DIMENSIONS = (
     "answer_correctness", "solution_completeness",
 )
 
+KP_DIMENSIONS = (
+    "source_consistency", "meaning", "formatting", "relationship_mapping",
+    "uniqueness", "completeness",
+)
+
 
 def audit_item(source, problem, solution):
     return {
@@ -253,6 +258,190 @@ class IngestTests(unittest.TestCase):
             ingest.apply(self.db_path, gate_path, self.root / "rollback-backup.db")
         self.assertEqual(self.snapshot(), before)
 
+
+class ContentPatchIngestTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.db_path = self.root / "pool.db"
+        conn = sqlite3.connect(self.db_path)
+        conn.executescript("""
+            CREATE TABLE knowledge_points (
+                kp_id TEXT PRIMARY KEY,
+                knowledge_item TEXT NOT NULL,
+                source_location TEXT,
+                knowledge_type TEXT NOT NULL,
+                related_kp_ids TEXT,
+                importance TEXT NOT NULL,
+                learning_action TEXT,
+                body TEXT,
+                difficulty INTEGER,
+                fragile TEXT,
+                graph_label TEXT
+            );
+            CREATE TABLE problems (
+                problem_id TEXT PRIMARY KEY,
+                kp_ids TEXT NOT NULL,
+                problem_text TEXT NOT NULL,
+                solution TEXT
+            );
+            CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
+            CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
+        """)
+        conn.executemany(
+            "INSERT INTO knowledge_points VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                ("kp-1", "排列", "Section 1", "concept-property", "[]",
+                 "core", None, "排列正文", 2, None, None),
+                ("kp-2", "组合", "Section 2", "concept-property", "[]",
+                 "core", None, "组合正文", 2, None, None),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO problems VALUES (?, ?, ?, ?)",
+            [
+                ("p-1", '["kp-1"]', "Problem one", "old one"),
+                ("p-2", '["kp-2"]', "Problem two", "old two"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def artifact(self, name, data):
+        path = self.root / name
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def snapshot(self, path=None):
+        conn = sqlite3.connect(path or self.db_path)
+        try:
+            return {
+                "knowledge_points": conn.execute(
+                    "SELECT * FROM knowledge_points ORDER BY kp_id"
+                ).fetchall(),
+                "problems": conn.execute(
+                    "SELECT * FROM problems ORDER BY problem_id"
+                ).fetchall(),
+            }
+        finally:
+            conn.close()
+
+    def qualified_files(self):
+        solution_items = [
+            {"source": "Problem one", "problem": "p-1", "solution": "Solution one"},
+            {"source": "Problem two", "problem": "p-2", "solution": "Solution two"},
+        ]
+        solutions = self.artifact("solutions.json", {
+            "kind": "solutions", "provider": "codex",
+            "provider_session_id": "solution-session", "items": solution_items,
+        })
+        audits = self.artifact("audit.json", {
+            "kind": "audit", "provider": "codex",
+            "provider_session_id": "solution-audit-session",
+            "items": [audit_item(x["source"], x["problem"], x["solution"])
+                      for x in solution_items],
+        })
+        knowledge_point = {
+            "kp_id": "kp-3", "knowledge_item": "位串生成子集",
+            "source_location": "Section 3", "knowledge_type": "algorithm-process",
+            "related_kp_ids": ["kp-2"], "importance": "supplementary",
+            "learning_action": None, "body": "用 $n$ 位串表示子集。",
+            "difficulty": 2, "fragile": None, "graph_label": "位串子集",
+        }
+        mappings = [
+            {"problem": "p-1", "kp_ids": ["kp-3"]},
+            {"problem": "p-2", "kp_ids": ["kp-1", "kp-2"]},
+        ]
+        content = self.artifact("content-patch.json", {
+            "kind": "knowledge-mapping-patch", "provider": "codex",
+            "provider_session_id": "content-session",
+            "knowledge_points": [knowledge_point], "mappings": mappings,
+        })
+        content_audit = self.artifact("content-audit.json", {
+            "kind": "knowledge-mapping-audit", "provider": "codex",
+            "provider_session_id": "content-audit-session",
+            "knowledge_points": [{
+                "knowledge_point": knowledge_point,
+                "decisions": {dimension: "PASS" for dimension in KP_DIMENSIONS},
+                "findings": [],
+            }],
+            "mappings": [{
+                **mapping,
+                "source": next(x["source"] for x in solution_items
+                               if x["problem"] == mapping["problem"]),
+                "solution": next(x["solution"] for x in solution_items
+                                 if x["problem"] == mapping["problem"]),
+                "decisions": {dimension: "PASS" for dimension in DIMENSIONS},
+                "findings": [],
+            } for mapping in mappings],
+        })
+        return solutions, audits, content, content_audit
+
+    def test_gate_binds_new_knowledge_points_and_final_mappings_to_independent_audit(self):
+        solutions, audits, content, content_audit = self.qualified_files()
+        report_path = self.root / "gate.json"
+
+        report = ingest.gate(
+            self.db_path, solutions, audits, report_path, content, content_audit,
+        )
+
+        self.assertTrue(report["ok"], report["errors"])
+        self.assertEqual(report["content_patch"]["kind"], "knowledge-mapping-patch")
+        self.assertEqual(report["content_audit"]["kind"], "knowledge-mapping-audit")
+
+        rejected = json.loads(content_audit.read_text(encoding="utf-8"))
+        rejected["mappings"][0]["decisions"]["knowledge_point_mapping"] = "FAIL"
+        bad_audit = self.artifact("bad-content-audit.json", rejected)
+        failed = ingest.gate(
+            self.db_path, solutions, audits, self.root / "bad-gate.json",
+            content, bad_audit,
+        )
+        self.assertFalse(failed["ok"])
+
+    def test_apply_uses_one_backup_and_transaction_for_solutions_kps_and_mappings(self):
+        solutions, audits, content, content_audit = self.qualified_files()
+        gate_path = self.root / "gate.json"
+        ingest.gate(
+            self.db_path, solutions, audits, gate_path, content, content_audit,
+        )
+        before = self.snapshot()
+        backup = self.root / "backup.db"
+
+        result = ingest.apply(self.db_path, gate_path, backup)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(self.snapshot(backup), before)
+        after = self.snapshot()
+        self.assertEqual(len(after["knowledge_points"]), 3)
+        self.assertEqual(after["problems"][0][1:], ('["kp-3"]', "Problem one", "Solution one"))
+        self.assertEqual(
+            after["problems"][1][1:],
+            ('["kp-1", "kp-2"]', "Problem two", "Solution two"),
+        )
+
+        self.tearDown()
+        self.setUp()
+        solutions, audits, content, content_audit = self.qualified_files()
+        gate_path = self.root / "rollback-gate.json"
+        ingest.gate(
+            self.db_path, solutions, audits, gate_path, content, content_audit,
+        )
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("""
+            CREATE TRIGGER reject_mapping BEFORE UPDATE ON problems
+            WHEN NEW.problem_id='p-2' BEGIN SELECT RAISE(ABORT, 'stop'); END;
+        """)
+        conn.commit()
+        conn.close()
+        before = self.snapshot()
+
+        with self.assertRaises(sqlite3.IntegrityError):
+            ingest.apply(self.db_path, gate_path, self.root / "rollback-backup.db")
+
+        self.assertEqual(self.snapshot(), before)
 
 if __name__ == "__main__":
     unittest.main()

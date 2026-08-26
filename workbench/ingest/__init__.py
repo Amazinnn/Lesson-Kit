@@ -14,6 +14,21 @@ AUDIT_DIMENSIONS = (
     "source_consistency", "meaning", "formatting", "knowledge_point_mapping",
     "answer_correctness", "solution_completeness",
 )
+KP_AUDIT_DIMENSIONS = (
+    "source_consistency", "meaning", "formatting", "relationship_mapping",
+    "uniqueness", "completeness",
+)
+KP_FIELDS = (
+    "kp_id", "knowledge_item", "source_location", "knowledge_type",
+    "related_kp_ids", "importance", "learning_action", "body", "difficulty",
+    "fragile", "graph_label",
+)
+KP_TYPES = {
+    "concept-property", "method-modeling", "formula-calculation",
+    "algorithm-process", "code-implementation", "system-timing",
+    "lab-implementation", "memory-recall",
+}
+KP_IMPORTANCE = {"core", "supplementary", "optional"}
 RECIPE_NAMES = {"knowledge", "problems", "candidates", "views"}
 _TAG = re.compile(r"</?(sup|sub)>")
 
@@ -89,16 +104,23 @@ def run(task_path, output_path, provider_name, workspace):
     return write_artifact(output_path, payload)
 
 
-def gate(db_path, solutions_path, audit_path, output_path):
+def gate(db_path, solutions_path, audit_path, output_path,
+         content_patch_path=None, content_audit_path=None):
     """Validate artifact provenance, source identity, and deterministic content gates."""
+    if bool(content_patch_path) != bool(content_audit_path):
+        raise ValueError("content patch and audit must be supplied together")
     solutions = read_artifact(solutions_path)
     audit = read_artifact(audit_path)
+    content_patch = read_artifact(content_patch_path) if content_patch_path else None
+    content_audit = read_artifact(content_audit_path) if content_audit_path else None
     conn = sqlite3.connect(db_path)
     try:
-        report = _gate_data(conn, solutions, audit)
+        report = _gate_data(conn, solutions, audit, content_patch, content_audit)
     finally:
         conn.close()
     report.update({"kind": "gate-report", "solutions": solutions, "audit": audit})
+    if content_patch is not None:
+        report.update({"content_patch": content_patch, "content_audit": content_audit})
     return write_artifact(output_path, report)
 
 
@@ -162,6 +184,8 @@ def apply(db_path, gate_path, backup_path=None):
         raise ValueError("apply requires a gate-report artifact")
     solutions = report.get("solutions")
     audit = report.get("audit")
+    content_patch = report.get("content_patch")
+    content_audit = report.get("content_audit")
     database = Path(db_path)
     backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
     if backup.exists():
@@ -169,15 +193,37 @@ def apply(db_path, gate_path, backup_path=None):
     conn = sqlite3.connect(database)
     try:
         conn.execute("BEGIN IMMEDIATE")
-        verified = _gate_data(conn, solutions, audit)
+        verified = _gate_data(conn, solutions, audit, content_patch, content_audit)
         if not verified["ok"]:
             raise ValueError("; ".join(verified["errors"]))
         _backup_database(database, backup)
+        if content_patch:
+            for item in content_patch["knowledge_points"]:
+                values = [
+                    json.dumps(item[field], ensure_ascii=False)
+                    if field == "related_kp_ids" else item[field]
+                    for field in KP_FIELDS
+                ]
+                conn.execute(
+                    f"INSERT INTO knowledge_points ({', '.join(KP_FIELDS)}) "
+                    f"VALUES ({', '.join('?' for _ in KP_FIELDS)})",
+                    values,
+                )
+        mappings = {
+            item["problem"]: json.dumps(item["kp_ids"], ensure_ascii=False)
+            for item in (content_patch or {}).get("mappings", [])
+        }
         for item in solutions["items"]:
-            cursor = conn.execute(
-                "UPDATE problems SET solution=? WHERE problem_id=?",
-                (item["solution"], item["problem"]),
-            )
+            if item["problem"] in mappings:
+                cursor = conn.execute(
+                    "UPDATE problems SET solution=?, kp_ids=? WHERE problem_id=?",
+                    (item["solution"], mappings[item["problem"]], item["problem"]),
+                )
+            else:
+                cursor = conn.execute(
+                    "UPDATE problems SET solution=? WHERE problem_id=?",
+                    (item["solution"], item["problem"]),
+                )
             if cursor.rowcount != 1:
                 raise ValueError(f"missing formal problem: {item['problem']}")
         conn.commit()
@@ -208,7 +254,7 @@ def _provider_payload(provider_name, stdout):
         raise ValueError("provider did not return one JSON artifact") from exc
 
 
-def _gate_data(conn, solutions, audit):
+def _gate_data(conn, solutions, audit, content_patch=None, content_audit=None):
     errors = []
     solution_items = _items(solutions, "solutions", errors)
     audit_items = _items(audit, "audit", errors)
@@ -243,7 +289,136 @@ def _gate_data(conn, solutions, audit):
             for dimension in AUDIT_DIMENSIONS:
                 if decisions.get(dimension) != "PASS":
                     errors.append(f"{problem}: audit {dimension} is not PASS")
+    if (content_patch is None) != (content_audit is None):
+        errors.append("content patch and audit must be supplied together")
+    elif content_patch is not None:
+        _gate_content_patch(
+            conn, content_patch, content_audit, solutions_by_problem, errors,
+        )
     return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
+
+
+def _gate_content_patch(conn, patch, audit, solutions, errors):
+    if patch.get("kind") != "knowledge-mapping-patch":
+        errors.append("expected knowledge-mapping-patch artifact")
+        return
+    if audit.get("kind") != "knowledge-mapping-audit":
+        errors.append("expected knowledge-mapping-audit artifact")
+        return
+    patch_ref = _provider_ref(patch, {})
+    audit_ref = _provider_ref(audit, {})
+    if not patch_ref or not audit_ref:
+        errors.append("content patch and audit require provider session provenance")
+    elif patch_ref == audit_ref:
+        errors.append("content audit must use a fresh provider session")
+
+    knowledge_points = patch.get("knowledge_points")
+    mappings = patch.get("mappings")
+    audited_kps = audit.get("knowledge_points")
+    audited_mappings = audit.get("mappings")
+    if not all(isinstance(items, list) for items in (
+            knowledge_points, mappings, audited_kps, audited_mappings)):
+        errors.append("content patch and audit require knowledge point and mapping lists")
+        return
+
+    existing_kps = {
+        row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")
+    }
+    proposed_kps = {}
+    for item in knowledge_points:
+        kp_id = item.get("kp_id") if isinstance(item, dict) else None
+        if not kp_id or kp_id in existing_kps or kp_id in proposed_kps:
+            errors.append("content patch has invalid or duplicate knowledge point")
+            continue
+        proposed_kps[kp_id] = item
+        if any(field not in item for field in KP_FIELDS):
+            errors.append(f"{kp_id}: knowledge point fields are incomplete")
+        if item.get("knowledge_type") not in KP_TYPES:
+            errors.append(f"{kp_id}: invalid knowledge type")
+        if item.get("importance") not in KP_IMPORTANCE:
+            errors.append(f"{kp_id}: invalid importance")
+        if not isinstance(item.get("knowledge_item"), str) or not item["knowledge_item"].strip():
+            errors.append(f"{kp_id}: knowledge item is missing")
+        if not isinstance(item.get("body"), str) or not item["body"].strip():
+            errors.append(f"{kp_id}: body is missing")
+        else:
+            errors.extend(f"{kp_id}: body {reason}" for reason in _markup_errors(item["body"]))
+        if not isinstance(item.get("difficulty"), int) or not 1 <= item["difficulty"] <= 5:
+            errors.append(f"{kp_id}: invalid difficulty")
+        if not isinstance(item.get("related_kp_ids"), list):
+            errors.append(f"{kp_id}: related_kp_ids must be a list")
+
+    known_kps = existing_kps | set(proposed_kps)
+    for kp_id, item in proposed_kps.items():
+        related = item.get("related_kp_ids", [])
+        if isinstance(related, list) and (
+                len(related) != len(set(related)) or not set(related) <= known_kps):
+            errors.append(f"{kp_id}: related knowledge points are invalid")
+
+    audited_kps_by_id = {}
+    for item in audited_kps:
+        record = item.get("knowledge_point") if isinstance(item, dict) else None
+        kp_id = record.get("kp_id") if isinstance(record, dict) else None
+        if not kp_id or kp_id in audited_kps_by_id:
+            errors.append("content audit has invalid or duplicate knowledge point")
+            continue
+        audited_kps_by_id[kp_id] = item
+    if set(audited_kps_by_id) != set(proposed_kps):
+        errors.append("knowledge point audit coverage does not match patch")
+    for kp_id, item in proposed_kps.items():
+        other = audited_kps_by_id.get(kp_id)
+        if not other:
+            continue
+        if other.get("knowledge_point") != item:
+            errors.append(f"{kp_id}: audited knowledge point differs from patch")
+        _all_pass(other, KP_AUDIT_DIMENSIONS, kp_id, "knowledge point audit", errors)
+
+    mappings_by_problem = _mapping_items(mappings, "content patch", errors)
+    audited_mappings_by_problem = _mapping_items(
+        audited_mappings, "content audit", errors,
+    )
+    if set(audited_mappings_by_problem) != set(mappings_by_problem):
+        errors.append("mapping audit coverage does not match patch")
+    for problem, item in mappings_by_problem.items():
+        kp_ids = item.get("kp_ids")
+        if problem not in solutions:
+            errors.append(f"{problem}: mapping is not a formal solution")
+        if not isinstance(kp_ids, list) or not kp_ids or len(kp_ids) != len(set(kp_ids)):
+            errors.append(f"{problem}: mapped knowledge points are invalid")
+        elif not set(kp_ids) <= known_kps:
+            errors.append(f"{problem}: mapping references an unknown knowledge point")
+        other = audited_mappings_by_problem.get(problem)
+        solution = solutions.get(problem)
+        if not other or not solution:
+            continue
+        for field in ("problem", "kp_ids"):
+            if other.get(field) != item.get(field):
+                errors.append(f"{problem}: audited mapping {field} differs from patch")
+        for field in ("source", "solution"):
+            if other.get(field) != solution.get(field):
+                errors.append(f"{problem}: mapping audit {field} differs from solution artifact")
+        _all_pass(other, AUDIT_DIMENSIONS, problem, "mapping audit", errors)
+
+
+def _mapping_items(items, label, errors):
+    result = {}
+    for item in items:
+        problem = item.get("problem") if isinstance(item, dict) else None
+        if not problem or problem in result:
+            errors.append(f"{label}: invalid or duplicate mapping")
+            continue
+        result[problem] = item
+    return result
+
+
+def _all_pass(item, dimensions, item_id, label, errors):
+    decisions = item.get("decisions")
+    if not isinstance(decisions, dict):
+        errors.append(f"{item_id}: {label} decisions are missing")
+        return
+    for dimension in dimensions:
+        if decisions.get(dimension) != "PASS":
+            errors.append(f"{item_id}: {label} {dimension} is not PASS")
 
 
 def _items(artifact, expected_kind, errors):

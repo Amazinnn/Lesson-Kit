@@ -238,6 +238,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(run.action, "run")
         self.assertEqual(run.provider, "codex")
 
+        gate = parser.parse_args([
+            "ingest", "dmath", "gate", "problem",
+            "--solutions", "solutions.json", "--audit", "audit.json",
+            "--content-patch", "content.json", "--content-audit", "content-audit.json",
+            "--output", "gate.json",
+        ])
+        self.assertEqual(gate.content_patch, "content.json")
+        self.assertEqual(gate.content_audit, "content-audit.json")
+
         recipe = parser.parse_args([
             "ingest", "dmath", "recipe", "problems",
             "--input", "problems.json", "--output", "recipe-dir", "--apply",

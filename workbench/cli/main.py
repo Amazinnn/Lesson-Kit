@@ -368,7 +368,10 @@ def cmd_ingest(args):
             if args.entity != "problem":
                 raise ValueError("formal gate currently supports problem artifacts")
             output = Path(args.output)
-            result = ingest.gate(db_path, args.solutions, args.audit, output)
+            result = ingest.gate(
+                db_path, args.solutions, args.audit, output,
+                args.content_patch, args.content_audit,
+            )
         elif args.action == "apply":
             if args.entity != "problem":
                 raise ValueError("formal apply currently supports problem artifacts")
@@ -548,6 +551,8 @@ def build_parser():
     action.add_argument("entity", choices=["kp", "problem", "candidate", "relation"])
     action.add_argument("--solutions", required=True)
     action.add_argument("--audit", required=True)
+    action.add_argument("--content-patch")
+    action.add_argument("--content-audit")
     action.add_argument("--output", required=True)
     action.set_defaults(func=cmd_ingest)
 
