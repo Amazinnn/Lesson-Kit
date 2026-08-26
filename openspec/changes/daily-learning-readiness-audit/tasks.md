@@ -10,8 +10,8 @@
 - [x] 2.3 Add failing tests for limited safe sup/sub markup, damaged OCR, missing solutions, incomplete/non-PASS audits, rollback, and complete-batch apply.
 - [x] 2.4 Implement deterministic problem gates, independent audit contracts, recoverable copy creation, and transactional formal-problem apply.
 - [x] 2.5 Generate solution artifacts for all current formal problems in bounded independent Agent batches.
-- [ ] 2.6 Audit every solution and final knowledge-point mapping in fresh independent Agent sessions; repair rejected solutions and qualify the three approved knowledge points plus all thirteen mapping corrections through the same gate.
-- [ ] 2.7 From one recoverable database copy, apply the 303 qualified solutions, three approved knowledge points, and thirteen qualified mapping corrections in one transaction; rebuild views and verify 303 reveal-ready formal problems and 31 knowledge points.
+- [x] 2.6 Audit every solution and final knowledge-point mapping in fresh independent Agent sessions; repair rejected solutions and qualify the three approved knowledge points plus all thirteen mapping corrections through the same gate.
+- [x] 2.7 From one recoverable database copy, apply the 303 qualified solutions, three approved knowledge points, and thirteen qualified mapping corrections in one transaction; rebuild views and verify 303 reveal-ready formal problems and 31 knowledge points.
 
 ## 3. Daily-use Reliability
 
@@ -37,7 +37,7 @@
 
 ## 6. Verification and Delivery
 
-- [ ] 6.1 Run focused and full pytest, JavaScript syntax checks, strict OpenSpec validation, doctor, and both pool guards.
-- [ ] 6.2 Perform responsive workbench acceptance at 375px, 1024px, and 1440px for practice recovery, knowledge-point handoff, Agent drawers, graph readability/focus, and safe problem markup.
+- [x] 6.1 Run focused and full pytest, JavaScript syntax checks, strict OpenSpec validation, doctor, and both pool guards.
+- [x] 6.2 Perform responsive workbench acceptance at 375px, 1024px, and 1440px for practice recovery, knowledge-point handoff, Agent drawers, graph readability/focus, and safe problem markup.
 - [ ] 6.3 Update the dated changelog with final behavior and evidence, archive the OpenSpec change, and verify no active change remains.
 - [ ] 6.4 Obtain independent code/contract review, resolve material findings, and push the verified main branch.
