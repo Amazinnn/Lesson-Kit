@@ -67,19 +67,33 @@ An excellent future graph expression of learning evidence is not prohibited, but
 
 **Rejected for now:** a default parameter dashboard; an expandable raw-data inspector in the student UI; deleting the underlying signal or scheduling mechanisms.
 
+### D2. Treat mastery estimation as an experimental algorithm
+
+Whether and to what degree an item is mastered will not be defined by renaming three UI enums or by a permanent hand-written threshold in the page layer. It is a distinct algorithmic problem whose inputs can include machine-graded results, self-ratings with explicit provenance, repeated wrong/stuck evidence, elapsed time, and spaced-review outcomes.
+
+The first evaluator should aim for a broadly reasonable and explainable result, not an optimal or academically final mastery model. Its behavior must be replaceable so later experiments can compare another evaluator without changing practice, storage, or presentation contracts.
+
+“Replaceable” means a narrow Domain-level evaluation boundary with pure inputs and outputs plus deterministic tests. It does not justify a generic plugin framework, dynamic package loading, a new dependency system, or premature configuration UI.
+
+The current code can support this direction: attempts, feedback, signals, current state, and scheduling already exist as separate inputs, and Domain rules are pure Python. The present direct `latest rating -> current state` mapping is the behavior to isolate rather than an interface to preserve as the final model.
+
+The learner-facing vocabulary and thresholds remain undecided until the experimental authority and evidence semantics are resolved. In particular, this decision does not yet approve either “已掌握” or “近期稳定” as a final label.
+
 ## Decision Queue
 
 Questions are resolved one at a time because each answer changes the later specification or task breakdown.
 
-1. Meaning of learner-facing state: replace the latest-self-rating label with an evidence-derived action state, separate system evidence from learner intent, or use another truthful model.
-2. Graph reading model: always show the complete graph with visual de-cluttering, make focused neighborhoods the default with an explicit full-graph mode, or use another hierarchy.
-3. Mathematical markup boundary: which limited source constructs are trusted at render time, and which must be normalized or rejected before pool insertion.
-4. Content CLI composition: define operation boundaries, intermediate contracts, provenance, gates, and orchestration without forcing one end-to-end route.
-5. Remaining daily-use gaps: decide which verified regressions belong in this readiness change and which should be separate follow-ups.
+1. Experimental authority: initially run mastery estimation in read-only shadow mode, let it affect ordering only, or let it replace current state immediately.
+2. Meaning of learner-facing state: after choosing experimental authority, define how system evidence and learner intent become concise, truthful actions or labels.
+3. Graph reading model: always show the complete graph with visual de-cluttering, make focused neighborhoods the default with an explicit full-graph mode, or use another hierarchy.
+4. Mathematical markup boundary: which limited source constructs are trusted at render time, and which must be normalized or rejected before pool insertion.
+5. Content CLI composition: define operation boundaries, intermediate contracts, provenance, gates, and orchestration without forcing one end-to-end route.
+6. Remaining daily-use gaps: decide which verified regressions belong in this readiness change and which should be separate follow-ups.
 
 ## Risks / Trade-offs
 
 - **A concise UI can hide useful evidence needed for diagnosis.** -> Decide separately what is primary, on-demand, and Agent-only rather than deleting data mechanisms reflexively.
+- **An experimental mastery estimate can become false authority.** -> Keep provenance explicit, compare predictions against later outcomes, and grant write or ordering authority only through a separate decision.
 - **Graph de-cluttering can hide legitimate topology.** -> Keep semantic data unchanged and distinguish a reading projection from stored relations.
 - **Permitting raw HTML can turn extraction damage into misleading mathematics.** -> Use a narrow allowlist only if it is paired with source validation; never trust arbitrary HTML.
 - **Composable commands can bypass quality gates if composition is unconstrained.** -> Separate operations while preserving explicit artifacts, validation, and promotion boundaries.
