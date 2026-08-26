@@ -2,7 +2,7 @@
   "schema_version": 1,
   "course": "dmath",
   "chapter": "ch06",
-  "summary_threshold": 300,
+  "summary_threshold": 500,
   "audit": {
     "reviewed_problem_ids": [
       "dmath-ch06-prob-001",
@@ -38,7 +38,6 @@
     ],
     "topic_coverage": [
       "基础计数",
-      "容斥原理",
       "树形图",
       "抽屉原理",
       "排列组合",
@@ -53,7 +52,7 @@
       "problem_id": "dmath-ch06-prob-001",
       "display_title": "代表选择练习001",
       "topic_label": "基础计数",
-      "display_summary": "分别计算选两名不同专业代表和选一名代表的方式数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-002",
@@ -65,7 +64,7 @@
       "problem_id": "dmath-ch06-prob-003",
       "display_title": "选择题作答练习003",
       "topic_label": "基础计数",
-      "display_summary": "计算十道四选一题全部作答或可留空时的答题方式数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-004",
@@ -77,7 +76,7 @@
       "problem_id": "dmath-ch06-prob-005",
       "display_title": "航线组合计数练习005",
       "topic_label": "基础计数",
-      "display_summary": "计算经丹佛从纽约到旧金山选择两段航空公司的方式数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-006",
@@ -179,7 +178,7 @@
       "problem_id": "dmath-ch06-prob-022",
       "display_title": "整数条件计数练习022",
       "topic_label": "容斥原理",
-      "display_summary": "分别统计千以下整数满足7和11整除及数字条件的数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-023",
@@ -335,7 +334,7 @@
       "problem_id": "dmath-ch06-prob-048",
       "display_title": "婚礼队列安排练习048",
       "topic_label": "基础计数",
-      "display_summary": "计算十人中排六人合影时包含新娘新郎的安排数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-049",
@@ -371,7 +370,7 @@
       "problem_id": "dmath-ch06-prob-054",
       "display_title": "学生分组计数练习054",
       "topic_label": "容斥原理",
-      "display_summary": "根据计算机、数学及双专业人数求班级总人数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-055",
@@ -395,25 +394,25 @@
       "problem_id": "dmath-ch06-prob-058",
       "display_title": "字符串计数练习058",
       "topic_label": "基础计数",
-      "display_summary": "计算C语言中由前八字符确定的合法变量名数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-059",
       "display_title": "字符串计数练习059",
       "topic_label": "基础计数",
-      "display_summary": "计算长度一至65535且首字符非数字的Java变量名数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-060",
       "display_title": "电话号码计数练习060",
       "topic_label": "基础计数",
-      "display_summary": "计算满足国家码和号码长度限制的国际电话号码数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-061",
       "display_title": "电话号码计数练习061",
       "topic_label": "基础计数",
-      "display_summary": "计算给定国家码和十位本地号格式下的电话号码数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-062",
@@ -509,7 +508,7 @@
       "problem_id": "dmath-ch06-prob-077",
       "display_title": "多边形对角线练习077",
       "topic_label": "基础计数",
-      "display_summary": "求n边凸多边形的对角线数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-078",
@@ -533,7 +532,7 @@
       "problem_id": "dmath-ch06-prob-081",
       "display_title": "抽屉原理题练习081",
       "topic_label": "抽屉原理",
-      "display_summary": "求随机摸袜时保证同色一双及两只黑袜所需数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-082",
@@ -545,13 +544,13 @@
       "problem_id": "dmath-ch06-prob-083",
       "display_title": "学生分组计数练习083",
       "topic_label": "抽屉原理",
-      "display_summary": "求保证两名学生同毕业年且同专业所需的最少学生数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-084",
       "display_title": "学生分组计数练习084",
       "topic_label": "抽屉原理",
-      "display_summary": "求保证同教师且期末考试同分所需的最少学生数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-085",
@@ -629,7 +628,7 @@
       "problem_id": "dmath-ch06-prob-097",
       "display_title": "抽屉原理题练习097",
       "topic_label": "抽屉原理",
-      "display_summary": "求保证两件产品存入同一仓位所需的最少产品数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-098",
@@ -641,7 +640,7 @@
       "problem_id": "dmath-ch06-prob-099",
       "display_title": "学生分组计数练习099",
       "topic_label": "抽屉原理",
-      "display_summary": "证明25名学生的三类年级人数满足给定下界。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-100",
@@ -671,7 +670,7 @@
       "problem_id": "dmath-ch06-prob-104",
       "display_title": "抽屉原理题练习104",
       "topic_label": "抽屉原理",
-      "display_summary": "证明竞赛中至少有一道题被至少三名女生和三名男生解出。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-105",
@@ -749,7 +748,7 @@
       "problem_id": "dmath-ch06-prob-117",
       "display_title": "抽屉原理题练习117",
       "topic_label": "抽屉原理",
-      "display_summary": "证明六台计算机中至少两台直接连接的台数相同。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-118",
@@ -773,7 +772,7 @@
       "problem_id": "dmath-ch06-prob-121",
       "display_title": "抽屉原理题练习121",
       "topic_label": "抽屉原理",
-      "display_summary": "证明摔跤手比赛期间存在连续时段恰有24场比赛。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-122",
@@ -785,7 +784,7 @@
       "problem_id": "dmath-ch06-prob-123",
       "display_title": "函数映射计数练习123",
       "topic_label": "抽屉原理",
-      "display_summary": "证明有限集函数至少有给定数量元素映射到同一值。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-124",
@@ -977,7 +976,7 @@
       "problem_id": "dmath-ch06-prob-155",
       "display_title": "球盒分配练习155",
       "topic_label": "排列组合",
-      "display_summary": "计算13名垒球队员上场选择、位置安排及女性限制下的方式数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-156",
@@ -995,13 +994,13 @@
       "problem_id": "dmath-ch06-prob-158",
       "display_title": "排列生成练习158",
       "topic_label": "排列组合",
-      "display_summary": "计算含三个连续整数的四排列在两种位置条件下的数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-159",
       "display_title": "委员会选择练习159",
       "topic_label": "排列组合",
-      "display_summary": "计算五人委员会至少含女性或两种性别时的选法数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-160",
@@ -1013,7 +1012,7 @@
       "problem_id": "dmath-ch06-prob-161",
       "display_title": "字符串计数练习161",
       "topic_label": "排列组合",
-      "display_summary": "计算含字母a、b及其位置限制的六位字母串数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-162",
@@ -1091,7 +1090,7 @@
       "problem_id": "dmath-ch06-prob-174",
       "display_title": "排列组合题练习174",
       "topic_label": "排列组合",
-      "display_summary": "计算六名赛跑者允许并列时颁发三种奖牌的方式数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-175",
@@ -1241,19 +1240,19 @@
       "problem_id": "dmath-ch06-prob-199",
       "display_title": "整数条件计数练习199",
       "topic_label": "二项式",
-      "display_summary": "证明帕斯卡三角中六边形位置的二项式系数恒等式。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-200",
       "display_title": "子集计数练习200",
       "topic_label": "二项式",
-      "display_summary": "分别用组合和代数方法证明一个二项式系数恒等式。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-201",
       "display_title": "整数条件计数练习201",
       "topic_label": "二项式",
-      "display_summary": "分别用组合和公式方法证明嵌套二项式系数恒等式。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-202",
@@ -1301,7 +1300,7 @@
       "problem_id": "dmath-ch06-prob-209",
       "display_title": "委员会选择练习209",
       "topic_label": "二项式",
-      "display_summary": "用组合证明带主席委员会计数的二项式系数恒等式。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-210",
@@ -1325,7 +1324,7 @@
       "problem_id": "dmath-ch06-prob-213",
       "display_title": "整数条件计数练习213",
       "topic_label": "二项式",
-      "display_summary": "利用格路径计数证明二项式系数的对称性。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-214",
@@ -1343,13 +1342,13 @@
       "problem_id": "dmath-ch06-prob-216",
       "display_title": "二项式题练习216",
       "topic_label": "二项式",
-      "display_summary": "利用格路径计数证明曲棍球棒恒等式。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-217",
       "display_title": "子集计数练习217",
       "topic_label": "二项式",
-      "display_summary": "用组合证明子集及其中两元素计数的恒等式。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-218",
@@ -1409,7 +1408,7 @@
       "problem_id": "dmath-ch06-prob-227",
       "display_title": "可重复组合题练习227",
       "topic_label": "可重复组合",
-      "display_summary": "计算选购不同数量百吉饼及附加数量限制下的选法数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-228",
@@ -1445,13 +1444,13 @@
       "problem_id": "dmath-ch06-prob-233",
       "display_title": "整数条件计数练习233",
       "topic_label": "可重复组合",
-      "display_summary": "计算和为21的五个非负整数解在多种约束下的数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-234",
       "display_title": "整数条件计数练习234",
       "topic_label": "可重复组合",
-      "display_summary": "计算和为29的六个非负整数解在多种约束下的数量。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-235",
@@ -1535,7 +1534,7 @@
       "problem_id": "dmath-ch06-prob-248",
       "display_title": "可重复组合题练习248",
       "topic_label": "可重复组合",
-      "display_summary": "证明含各类型最低数量限制的无序选择计数公式。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-249",
@@ -1601,7 +1600,7 @@
       "problem_id": "dmath-ch06-prob-259",
       "display_title": "多项式题练习259",
       "topic_label": "多项式",
-      "display_summary": "计算只能沿正坐标方向从原点到指定点的路径数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-260",
@@ -1643,7 +1642,7 @@
       "problem_id": "dmath-ch06-prob-266",
       "display_title": "多项式题练习266",
       "topic_label": "多项式",
-      "display_summary": "计算一排12本书中选5本且任意两本不相邻的选法数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-267",
@@ -1655,7 +1654,7 @@
       "problem_id": "dmath-ch06-prob-268",
       "display_title": "排列生成练习268",
       "topic_label": "多项式",
-      "display_summary": "通过排列与分盒的双射证明多项式系数定理。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-269",
@@ -1715,13 +1714,13 @@
       "problem_id": "dmath-ch06-prob-278",
       "display_title": "球盒分配练习278",
       "topic_label": "多项式",
-      "display_summary": "计算五球放入七盒且每盒至多一球在标签条件下的方式数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-279",
       "display_title": "球盒分配练习279",
       "topic_label": "多项式",
-      "display_summary": "计算五球放入三盒且每盒至少一球在标签条件下的方式数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-280",
@@ -1733,7 +1732,7 @@
       "problem_id": "dmath-ch06-prob-281",
       "display_title": "多项式题练习281",
       "topic_label": "多项式",
-      "display_summary": "计算检查员两访五地且不能连续访问X地的顺序数。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-282",
@@ -1787,7 +1786,7 @@
       "problem_id": "dmath-ch06-prob-290",
       "display_title": "字典序排列练习290",
       "topic_label": "字典序",
-      "display_summary": "按字典序列出由指定数字和字母组成的文件名。"
+      "display_summary": null
     },
     {
       "problem_id": "dmath-ch06-prob-291",

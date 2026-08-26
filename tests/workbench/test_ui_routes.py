@@ -122,7 +122,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("ai-column", body)
         self.assertIn("topbar", body)
         self.assertIn("<a class='brand' href='/'>lesson-kit</a>", body)
-        self.assertIn("ai-collapse", body)
+        self.assertNotIn("ai-identity", body)
 
     def test_ai_column_is_free_conversation_not_task_shortcuts(self):
         for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph"):
@@ -132,7 +132,9 @@ class UiRouteTests(unittest.TestCase):
             self.assertIn("id='ai-new-session'", body)
             self.assertIn("id='ai-provider-picker'", body)
             self.assertIn("id='ai-session-back'", body)
-            self.assertIn("id='ai-session-delete'", body)
+            self.assertNotIn("id='ai-session-delete'", body)
+            self.assertNotIn("id='ai-session-rename'", body)
+            self.assertNotIn("id='ai-context'", body)
             self.assertNotIn("id='ai-provider'", body)
             self.assertNotIn("id='ai-session'", body)
             self.assertNotIn("id='ai-daily'", body)
@@ -207,7 +209,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("class='weak-title'>Counting", body)
 
     def test_kp_page_renders(self):
-        full_text = "<em>两类代表</em>" + "的组合计数条件。" * 38
+        full_text = "*两类代表*" + "的组合计数条件。" * 38
         summary = "分析两类代表选择中的乘法计数与顺序条件。"
         conn = sqlite3.connect(self.fixture.db_path)
         try:
@@ -227,12 +229,16 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("两类代表选择", body)
         self.assertIn("乘法规则", body)
         self.assertIn("dmath-ch06-kp-001", body)
-        self.assertIn(summary, body)
-        self.assertIn("<details class='linked-problem-detail'>", body)
+        self.assertNotIn(summary, body)
+        self.assertNotIn("problem-summary", body)
+        self.assertNotIn("linked-problem-detail", body)
+        self.assertIn("class='problem-topic'", body)
+        self.assertNotIn("class='problem-topic' open", body)
         self.assertIn("两类代表", body)
         self.assertNotIn("…", body)
+        self.assertNotIn("...", body)
         self.assertNotIn("dmath-ch06-prob-001", body)
-        self.assertNotIn("&lt;em&gt;", body)
+        self.assertIn("<em>", body)
 
     def test_short_linked_problem_does_not_manufacture_a_summary(self):
         conn = sqlite3.connect(self.fixture.db_path)

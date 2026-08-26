@@ -13,10 +13,7 @@
   var SIMILAR_KEY = "wb_similar_round_" + WS;
   var MODE_KEY = "wb_practice_mode_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
-  var AI_PROVIDER_KEY = "wb_ai_provider_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
-  var AI_DAILY_KEY = "wb_ai_daily_" + WS;
-  var AI_DAILY_DATE_KEY = "wb_ai_daily_date_" + WS;
   var selectedGraphKpId = null;
 
   /* ---------- helpers ---------- */
@@ -503,19 +500,6 @@
     return load(SESSION_KEY, []);
   }
 
-  function updateAiContext() {
-    var el = document.getElementById("ai-context");
-    if (!el) return;
-    var pageLabels = {
-      practice: "练习", kp: "知识点", kps: "知识点列表",
-      graph: "知识图谱", "session-end": "统一自评",
-    };
-    var label = pageLabels[layout.dataset.page] || "工作台";
-    if (currentProblem) label += " · 当前题 " + currentProblem.problem_id;
-    else if (layout.dataset.objectId) label += " · " + layout.dataset.objectId;
-    el.textContent = "当前页面：" + label;
-  }
-
   function currentKps() {
     return load(KPS_KEY, []);
   }
@@ -524,7 +508,6 @@
     currentProblem = problem || null;
     store(CURRENT_KEY, currentProblem);
     if (currentProblem) recordRecent("problem", currentProblem.problem_id);
-    updateAiContext();
   }
 
   function updateSession(problemId, values) {
@@ -772,10 +755,6 @@
 
   var messages = document.getElementById("ai-messages");
   var aiInput = document.getElementById("ai-input");
-  var aiProvider = document.getElementById("ai-provider");
-  var aiSession = document.getElementById("ai-session");
-  var aiNew = document.getElementById("ai-new");
-  var aiDaily = document.getElementById("ai-daily");
   var aiSend = document.getElementById("ai-send");
   var aiStop = document.getElementById("ai-stop");
   var aiStatus = document.getElementById("ai-status");
@@ -814,81 +793,6 @@
     renderMath(aiStreamingMessage);
   }
 
-  function aiTask(operation) {
-    var current = load(CURRENT_KEY, null);
-    if (!current || !currentProblem || current.problem_id !== currentProblem.problem_id) {
-      aiAdd("<p>先打开一道题再发起讲解/诊断。</p>", "user");
-      return;
-    }
-    var note = aiInput ? aiInput.value.trim() : "";
-    var body = { problem_id: currentProblem.problem_id, note: note };
-    if (current.answer_text) {
-      body.user_answer = current.answer_text;
-    } else {
-      aiAdd("<p>本题尚未作答，将不附作答文本。</p>", "user");
-    }
-    if (stuckStep) {
-      body.stuck_step = stuckStep;
-    }
-    aiAdd("<p>已发起：" + operation + " " + currentProblem.problem_id + "</p>", "user");
-    if (aiInput) aiInput.value = "";
-    post("/ai/" + operation, body).then(function (data) {
-      pollJob(data.job_id, operation, currentProblem.problem_id);
-    }).catch(function () {
-      aiAdd("<p>桥接不可用：请先配置 provider（wb bridge add）。记录不受影响。</p>");
-    });
-  }
-
-  function pollJob(jobId, operation, problemId) {
-    var tries = 0;
-    var timer = setInterval(function () {
-      tries += 1;
-      api("/ai/jobs/" + jobId).then(function (status) {
-        if (status.state === "done") {
-          clearInterval(timer);
-          api("/explain/" + problemId).then(function (data) {
-            aiAdd(renderResult(data.markdown, operation), "ai");
-          });
-        } else if (status.state === "failed") {
-          clearInterval(timer);
-          aiAdd("<p>任务失败：" + escapeHtml(status.error || "未知原因") + "</p>");
-        } else if (tries > 60) {
-          clearInterval(timer);
-          aiAdd("<p>任务尚未完成。<button id='retry-poll' class='outline sm'>"
-            + "重试查询</button></p>");
-          var retry = document.getElementById("retry-poll");
-          if (retry) {
-            retry.addEventListener("click", function () {
-              pollJob(jobId, operation, problemId);
-            });
-          }
-        }
-      }).catch(function (err) {
-        if (err && err.message === "404") {
-          return; /* job record not visible yet — keep polling */
-        }
-        clearInterval(timer);
-        aiAdd("<p>状态查询失败。</p>");
-      });
-    }, 2000);
-  }
-
-  function renderResult(markdown, operation) {
-    return "<p><strong>" + escapeHtml(operation) + " 结果</strong></p>" + richText(markdown || "");
-  }
-
-  var explain = document.getElementById("ai-explain");
-  var diagnose = document.getElementById("ai-diagnose");
-  var fresh = document.getElementById("ai-new");
-  var send = document.getElementById("ai-send");
-  if (explain) explain.addEventListener("click", function () { aiTask("explain"); });
-  if (diagnose) diagnose.addEventListener("click", function () { aiTask("diagnose"); });
-  if (false && send) send.addEventListener("click", function () { aiTask("explain"); });
-  if (false && fresh) fresh.addEventListener("click", function () {
-    messages.innerHTML = "";
-    aiAdd("<p>新会话已开始（记录仍在池中）。</p>");
-  });
-
   function aiSetStatus(text) {
     if (aiStatus) aiStatus.textContent = text || "";
   }
@@ -910,8 +814,6 @@
 
   function aiRenderConversation(record) {
     if (!messages) return;
-    if (aiSessionTitle) aiSessionTitle.value = record.title || "未命名对话";
-    if (aiSessionProvider) aiSessionProvider.textContent = record.provider || "";
     if (aiChatView) aiSetView("chat");
     messages.innerHTML = "";
     aiStreamingMessage = null;
@@ -930,60 +832,9 @@
     if (!conversationId) return Promise.resolve();
     aiConversation = conversationId;
     store(AI_CONVERSATION_KEY, conversationId);
-    if (aiSession) aiSession.value = conversationId;
     return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
-      var listView = document.getElementById("ai-session-list-view");
-      var chatView = document.getElementById("ai-chat-view");
-      if (listView && chatView) {
-        listView.classList.add("hidden");
-        chatView.classList.remove("hidden");
-      }
-      var title = document.getElementById("ai-session-rename");
-      var titleLabel = document.getElementById("ai-session-title");
-      var provider = document.getElementById("ai-session-provider");
-      if (title) {
-        title.value = record.title || "未命名对话";
-        title.textContent = title.value;
-      }
-      if (titleLabel) {
-        titleLabel.textContent = record.title || "未命名对话";
-        titleLabel.value = titleLabel.textContent;
-      }
-      if (provider) provider.textContent = record.provider || "Agent";
       aiRenderConversation(record);
     });
-  }
-
-  function aiPopulateSessions(items) {
-    if (!aiSession) return;
-    aiSession.innerHTML = "";
-    (items || []).forEach(function (item) {
-      var option = document.createElement("option");
-      option.value = item.conversation_id;
-      option.textContent = item.conversation_id + " · " + item.provider;
-      aiSession.appendChild(option);
-    });
-    var preferred = aiConversation || (items && items[0] && items[0].conversation_id);
-    if (preferred) aiLoadConversation(preferred);
-  }
-
-  function aiCreateConversation() {
-    var provider = aiProvider && aiProvider.value;
-    if (!provider) return;
-    post("/ai/sessions", { provider: provider }).then(function (record) {
-      aiConversation = record.conversation_id;
-      store(AI_CONVERSATION_KEY, aiConversation);
-      if (messages) messages.innerHTML = "";
-      aiLoadConversation(aiConversation);
-    }).catch(function (err) {
-      aiSetStatus("无法新建对话：" + (err.message || "未知错误"));
-    });
-  }
-
-  function aiLocalDate() {
-    var now = new Date();
-    return now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0")
-      + "-" + String(now.getDate()).padStart(2, "0");
   }
 
   function aiContextBody(message) {
@@ -1076,45 +927,6 @@
       });
   }
 
-  if (aiProvider) {
-    api("/ai/providers").then(function (providers) {
-      aiProvider.innerHTML = "";
-      (providers || []).forEach(function (provider) {
-        var option = document.createElement("option");
-        option.value = provider.name;
-        option.textContent = provider.name + (provider.model ? " · " + provider.model : "");
-        aiProvider.appendChild(option);
-      });
-      var remembered = localStorage.getItem(AI_PROVIDER_KEY);
-      if (remembered && (providers || []).some(function (provider) { return provider.name === remembered; })) {
-        aiProvider.value = remembered;
-      } else if (providers && providers[0]) {
-        aiProvider.value = providers[0].name;
-      }
-      if (aiProvider.value) localStorage.setItem(AI_PROVIDER_KEY, aiProvider.value);
-      api("/ai/sessions").then(function (sessions) {
-        aiPopulateSessions(sessions);
-        var today = aiLocalDate();
-        if (aiDaily && aiDaily.checked && localStorage.getItem(AI_DAILY_DATE_KEY) !== today
-          && !sessions.some(function (item) { return item.status === "running"; })) {
-          localStorage.setItem(AI_DAILY_DATE_KEY, today);
-          aiCreateConversation();
-        }
-      }).catch(function () {
-        aiSetStatus("无法读取最近对话。");
-      });
-    }).catch(function () {
-      aiSetStatus("未发现可用 Agent CLI。");
-    });
-    aiProvider.addEventListener("change", function () {
-      localStorage.setItem(AI_PROVIDER_KEY, aiProvider.value);
-    });
-  }
-  if (aiSession) aiSession.addEventListener("change", function () {
-    aiTurn = null;
-    aiLoadConversation(aiSession.value);
-  });
-  if (aiNew) aiNew.addEventListener("click", aiCreateConversation);
   if (aiSend) aiSend.addEventListener("click", aiSendMessage);
   if (aiInput) aiInput.addEventListener("keydown", function (event) {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -1128,13 +940,6 @@
       .then(function () { aiSetStatus("正在停止…"); })
       .catch(function () { aiSetStatus("停止请求失败。"); });
   });
-  if (aiDaily) {
-    aiDaily.checked = localStorage.getItem(AI_DAILY_KEY) === "1";
-    aiDaily.addEventListener("change", function () {
-      localStorage.setItem(AI_DAILY_KEY, aiDaily.checked ? "1" : "0");
-    });
-  }
-
   /* ---------- compact Agent session IA ---------- */
 
   var aiSessionListView = document.getElementById("ai-session-list-view");
@@ -1145,11 +950,13 @@
   var aiProviderOptions = document.getElementById("ai-provider-options");
   var aiChatView = document.getElementById("ai-chat-view");
   var aiSessionBack = document.getElementById("ai-session-back");
-  var aiSessionTitle = document.getElementById("ai-session-rename");
-  var aiSessionProvider = document.getElementById("ai-session-provider");
-  var aiSessionDelete = document.getElementById("ai-session-delete");
   var aiSessionRecords = [];
   var aiProviders = [];
+
+  if (aiSessionBack) {
+    aiSessionBack.setAttribute("aria-label", "返回对话列表");
+    aiSessionBack.title = "返回对话列表";
+  }
 
   function aiSetView(view) {
     if (!aiSessionListView || !aiProviderPicker || !aiChatView) return;
@@ -1188,6 +995,44 @@
       button.appendChild(meta);
       button.addEventListener("click", function () { aiLoadConversation(record.conversation_id); });
       row.appendChild(button);
+      var actions = document.createElement("div");
+      actions.className = "ai-session-actions";
+      var rename = document.createElement("button");
+      rename.type = "button";
+      rename.className = "ghost sm icon-only";
+      rename.textContent = "✎";
+      rename.title = "重命名对话";
+      rename.setAttribute("aria-label", "重命名对话");
+      rename.addEventListener("click", function (event) {
+        if (event && event.stopPropagation) event.stopPropagation();
+        var next = window.prompt ? window.prompt("会话名称", aiSessionLabel(record)) : "";
+        next = String(next || "").trim();
+        if (!next) return;
+        api("/ai/sessions/" + encodeURIComponent(record.conversation_id), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: next }),
+        }).then(aiRefreshSessionList).catch(function (err) {
+          aiSetStatus("无法重命名：" + (err.message || "未知错误"));
+        });
+      });
+      var remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "ghost sm icon-only";
+      remove.textContent = "×";
+      remove.title = "删除本地会话";
+      remove.setAttribute("aria-label", "删除本地会话");
+      remove.addEventListener("click", function (event) {
+        if (event && event.stopPropagation) event.stopPropagation();
+        if (window.confirm && !window.confirm("删除这个本地会话？")) return;
+        api("/ai/sessions/" + encodeURIComponent(record.conversation_id), { method: "DELETE" })
+          .then(aiRefreshSessionList).catch(function (err) {
+            aiSetStatus(err.message === "409" ? "会话运行中，暂时不能删除。" : "无法删除会话。");
+          });
+      });
+      actions.appendChild(rename);
+      actions.appendChild(remove);
+      row.appendChild(actions);
       aiSessionList.appendChild(row);
     });
     if (aiSessionEmpty) aiSessionEmpty.classList.toggle("hidden", aiSessionRecords.length > 0);
@@ -1231,39 +1076,6 @@
     });
   }
 
-  function aiRenameSession() {
-    if (!aiConversation || !aiSessionTitle) return;
-    var title = String(aiSessionTitle.value || "").trim();
-    if (!title) {
-      aiSessionTitle.value = "未命名对话";
-      return;
-    }
-    api("/ai/sessions/" + encodeURIComponent(aiConversation), {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: title }),
-    }).then(function (record) {
-      aiSessionTitle.value = aiSessionLabel(record);
-      aiRefreshSessionList();
-    }).catch(function (err) {
-      aiSetStatus("无法重命名：" + (err.message || "未知错误"));
-    });
-  }
-
-  function aiDeleteSession() {
-    if (!aiConversation) return;
-    if (window.confirm && !window.confirm("删除这个本地会话？")) return;
-    api("/ai/sessions/" + encodeURIComponent(aiConversation), { method: "DELETE" })
-      .then(function () {
-        aiConversation = "";
-        sessionStorage.removeItem(AI_CONVERSATION_KEY);
-        aiSetView("list");
-        aiRefreshSessionList();
-      }).catch(function (err) {
-        aiSetStatus(err.message === "409" ? "会话运行中，暂时不能删除。" : "无法删除会话。");
-      });
-  }
-
   if (aiNewSession) aiNewSession.addEventListener("click", aiShowProviderPicker);
   if (aiSessionBack) aiSessionBack.addEventListener("click", function () {
     aiTurn = null;
@@ -1272,8 +1084,6 @@
     aiSetView("list");
     aiRefreshSessionList();
   });
-  if (aiSessionTitle) aiSessionTitle.addEventListener("change", aiRenameSession);
-  if (aiSessionDelete) aiSessionDelete.addEventListener("click", aiDeleteSession);
   if (aiSessionList) {
     aiSetView("list");
     Promise.all([
@@ -1298,31 +1108,11 @@
     });
   }
 
-  var aiCollapse = document.getElementById("ai-collapse");
-  var AI_COLLAPSED_KEY = "wb_ai_collapsed_" + WS;
-  if (layout && aiCollapse) {
-    function applyAiCollapsed(collapsed, persist) {
-      if (collapsed) layout.setAttribute("data-ai-collapsed", "1");
-      else layout.removeAttribute("data-ai-collapsed");
-      aiCollapse.textContent = collapsed ? "›" : "‹";
-      aiCollapse.title = collapsed ? "展开" : "折叠";
-      if (persist) {
-        sessionStorage.setItem(AI_COLLAPSED_KEY, collapsed ? "1" : "0");
-      }
-    }
-    var remembered = sessionStorage.getItem(AI_COLLAPSED_KEY) === "1";
-    applyAiCollapsed(window.innerWidth < 1024 || remembered, false);
-    aiCollapse.addEventListener("click", function () {
-      applyAiCollapsed(!layout.hasAttribute("data-ai-collapsed"), true);
-    });
-    window.addEventListener("resize", function () {
-      if (window.innerWidth < 1024) {
-        layout.setAttribute("data-ai-collapsed", "1");
-      } else if (sessionStorage.getItem(AI_COLLAPSED_KEY) !== "1") {
-        layout.removeAttribute("data-ai-collapsed");
-      }
-    });
+  function fitAiColumn() {
+    if (window.innerWidth < 1024) layout.setAttribute("data-ai-collapsed", "1");
+    else layout.removeAttribute("data-ai-collapsed");
   }
+  fitAiColumn();
+  window.addEventListener("resize", fitAiColumn);
 
-  updateAiContext();
 })();

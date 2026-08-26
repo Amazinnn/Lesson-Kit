@@ -236,17 +236,26 @@ function practiceElements() {
 
 function aiElements() {
   return {
-    "ai-provider": new FakeElement("ai-provider"),
-    "ai-session": new FakeElement("ai-session"),
-    "ai-new": new FakeElement("ai-new"),
-    "ai-daily": new FakeElement("ai-daily"),
+    "ai-session-list-view": new FakeElement("ai-session-list-view"),
+    "ai-session-list": new FakeElement("ai-session-list"),
+    "ai-session-empty": new FakeElement("ai-session-empty"),
+    "ai-new-session": new FakeElement("ai-new-session"),
+    "ai-provider-picker": new FakeElement("ai-provider-picker"),
+    "ai-provider-options": new FakeElement("ai-provider-options"),
+    "ai-chat-view": new FakeElement("ai-chat-view"),
+    "ai-session-back": new FakeElement("ai-session-back"),
     "ai-messages": new FakeElement("ai-messages"),
     "ai-input": new FakeElement("ai-input"),
     "ai-send": new FakeElement("ai-send"),
     "ai-stop": new FakeElement("ai-stop"),
     "ai-status": new FakeElement("ai-status"),
-    "ai-context": new FakeElement("ai-context"),
   };
+}
+
+async function openFirstAiSession(elements) {
+  await flush();
+  elements["ai-session-list"].children[0].children[0].click();
+  await flush();
 }
 
 test("workspace selector navigates to the selected workspace practice page", () => {
@@ -632,7 +641,7 @@ test("native graph dashboard does not render per-problem save controls", async (
   assert.equal(detail.children.some((child) => child.id === "graph-problem-save"), false);
 });
 
-test("AI column discovers providers and restores a recent native conversation", async () => {
+test("AI column discovers providers but opens a conversation only after selection", async () => {
   const elements = { layout: layout(), ...aiElements() };
   const calls = [];
   runWorkbench({
@@ -656,9 +665,9 @@ test("AI column discovers providers and restores a recent native conversation", 
   });
   await flush();
   assert.ok(calls.some((url) => url.endsWith("/ai/providers")));
+  assert.equal(calls.some((url) => url.endsWith("/ai/sessions/conv-001")), false);
+  await openFirstAiSession(elements);
   assert.ok(calls.some((url) => url.endsWith("/ai/sessions/conv-001")));
-  assert.equal(elements["ai-provider"].value, "codex");
-  assert.equal(elements["ai-session"].value, "conv-001");
   assert.equal(elements["ai-messages"].children.length, 2);
   assert.match(elements["ai-messages"].children[1].innerHTML, /分步选择时相乘/);
 });
@@ -691,7 +700,7 @@ test("AI free message sends page identifiers and excludes a draft by default", a
       return jsonResponse({});
     },
   });
-  await flush();
+  await openFirstAiSession(elements);
   elements["ai-input"].value = "解释当前知识点";
   elements["ai-send"].click();
   await flush();
@@ -730,7 +739,7 @@ test("practice draft is attached only after the learner enables it", async () =>
       return jsonResponse({ conversation_id: "conv-001", provider: "codex", status: "idle", messages: [] });
     },
   });
-  await flush();
+  await openFirstAiSession(elements);
   elements["ai-input"].value = "看看我的思路";
   elements["ai-send"].click();
   await flush();
@@ -760,7 +769,7 @@ test("a running native turn exposes stop and calls only its cancel endpoint", as
       return jsonResponse({ status: "cancelling" });
     },
   });
-  await flush();
+  await openFirstAiSession(elements);
   assert.equal(elements["ai-send"].disabled, true);
   assert.equal(elements["ai-stop"].classList.contains("hidden"), false);
   elements["ai-stop"].click();
@@ -783,7 +792,7 @@ test("rich text renders markdown structure and safe links in native messages", a
       });
     },
   });
-  await flush();
+  await openFirstAiSession(elements);
   const html = elements["ai-messages"].children[0].innerHTML;
   assert.match(html, /<h1>标题<\/h1>/);
   assert.match(html, /<ul>[\s\S]*<strong>重点<\/strong>[\s\S]*<\/ul>/);
@@ -816,7 +825,7 @@ test("streaming assistant text is coalesced into one markdown message", async ()
       return jsonResponse({});
     },
   });
-  await flush();
+  await openFirstAiSession(elements);
   elements["ai-input"].value = "请回答";
   elements["ai-send"].click();
   await flush();

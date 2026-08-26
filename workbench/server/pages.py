@@ -169,7 +169,7 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
         f"<span class='reasons'> {html.escape(s.get('note') or '')}</span></li>"
         for s in detail["signals"]
     )
-    problems_html = _linked_problems(detail["problems"])
+    problems_html = _linked_problems(detail["problems"], workspace["name"], kp_id)
     schedule = detail["schedule"]
     schedule_html = (
         f"state={schedule['state']} reps={schedule['repetitions']} "
@@ -294,23 +294,18 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     )
 
 
-def _linked_problems(problems):
+def _linked_problems(problems, workspace_name, kp_id):
     groups = {}
     for problem in problems:
         topic = problem.get("topic_label") or "未分类"
         groups.setdefault(topic, []).append(problem)
     return "".join(
-        "<details class='problem-topic' open>"
+        "<details class='problem-topic'>"
         f"<summary>{html.escape(topic)}</summary><ul>"
         + "".join(
             "<li class='linked-problem'>"
             f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
-            + (
-                f"<span class='problem-summary'>{html.escape(_problem_summary(problem))}</span>"
-                if _problem_summary(problem) else ""
-            )
-            + "<details class='linked-problem-detail'><summary>查看完整题干</summary>"
-            f"<p>{html.escape(_problem_text(problem))}</p></details>"
+            + f"<div class='linked-problem-text rich-text'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
             + "</li>"
             for problem in items
         )
@@ -323,14 +318,13 @@ def _problem_title(problem):
     title = problem.get("display_title")
     if title:
         return title
-    text = " ".join((problem.get("problem_text") or "").split())
-    return text[:24] or problem["problem_id"]
+    return "未命名题目"
 
 
 def _problem_summary(problem):
     text = _problem_text(problem)
     summary = " ".join((problem.get("display_summary") or "").split())
-    if len(text) <= 300 or not summary or len(summary) > 48:
+    if len(text) <= 500 or not summary or len(summary) > 48:
         return ""
     if "…" in summary or "..." in summary:
         return ""
@@ -349,11 +343,7 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         if page_type == "practice" else ""
     )
     teacher = (
-        "<section class='ai-identity'>"
-        "<div id='ai-head'><div><p class='side-label'>外部 Agent</p><h2>AI 教师</h2></div>"
-        "<button id='ai-collapse' class='ghost sm' title='折叠/展开'>‹</button></div>"
-        "<div id='ai-context'>当前页面上下文会在发送时读取。</div></section>"
-        "<section id='ai-session-controls' aria-label='Agent 对话'>"
+        "<section id='ai-session-controls' aria-label='对话'>"
         "<div id='ai-session-list-view'>"
         "<div class='ai-session-list-head'><p class='side-label'>对话</p>"
         "<button id='ai-new-session' class='outline sm'>新建</button></div>"
@@ -367,17 +357,14 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "</div></section>"
         "<section id='ai-chat-view' class='hidden' aria-label='当前对话'>"
         "<div id='ai-chat-head'>"
-        "<button id='ai-session-back' class='ghost sm' title='返回对话列表'>‹ 返回</button>"
-        "<input id='ai-session-rename' class='ai-session-title' type='text' value='未命名对话' "
-        "aria-label='会话名称' maxlength='80'>"
-        "<span id='ai-session-provider' class='ai-session-provider'></span>"
-        "<button id='ai-session-delete' class='ghost sm' title='删除本地会话'>删除</button>"
+        "<button id='ai-session-back' class='ghost sm icon-only' title='返回对话列表' "
+        "aria-label='返回对话列表'>‹</button>"
         "</div>"
         "<section class='ai-conversation'><div id='ai-messages'></div>"
         "<p id='ai-status' class='muted' aria-live='polite'></p></section>"
         f"{draft}"
         "<div id='ai-input-row' class='ai-input-row'>"
-        "<textarea id='ai-input' rows='2' placeholder='向 AI 教师提问'></textarea>"
+        "<textarea id='ai-input' rows='2' placeholder='输入问题'></textarea>"
         "<div class='ai-send-actions'><button id='ai-stop' class='outline sm hidden'>停止</button>"
         "<button id='ai-send' class='primary sm' disabled>发送</button></div>"
         "</div></section>"
@@ -389,7 +376,7 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<button id='graph-detail-tab' class='right-tab active' role='tab' "
         "aria-selected='true'>学习看板</button>"
         "<button id='ai-teacher-tab' class='right-tab' role='tab' "
-        "aria-selected='false'>AI 教师</button></div>"
+        "aria-selected='false'>对话</button></div>"
         "<section id='graph-detail-panel' role='tabpanel'>"
         "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
         "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>"

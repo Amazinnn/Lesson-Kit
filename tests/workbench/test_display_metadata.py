@@ -18,33 +18,33 @@ class DisplayMetadataTests(unittest.TestCase):
         self.assertEqual(len(rows), 303)
         self.assertEqual(len({row["problem_id"] for row in rows}), 303)
         summaries = [row for row in rows if row["display_summary"]]
-        self.assertEqual(len(summaries), 62)
+        self.assertEqual(len(summaries), 19)
         self.assertGreaterEqual(len(manifest["audit"]["reviewed_problem_ids"]), 30)
         self.assertEqual(
             set(manifest["audit"]["topic_coverage"]),
             {row["topic_label"] for row in summaries},
         )
 
-    def test_validate_rejects_short_problem_summary_and_ellipsis(self):
+    def test_validate_rejects_summary_at_or_below_500_and_ellipsis(self):
         rows = [
             {"problem_id": "p-1", "problem_text": "短题", "display_title": "短题标题",
              "topic_label": "基础计数", "display_summary": "不该存在。"},
-            {"problem_id": "p-2", "problem_text": "长" * 301, "display_title": "长题标题",
+            {"problem_id": "p-2", "problem_text": "长" * 501, "display_title": "长题标题",
              "topic_label": "组合计数", "display_summary": "这是截断摘要…"},
         ]
         errors = display_metadata.validate(rows)
-        self.assertIn("p-1: summary is only allowed above 300 characters", errors)
+        self.assertIn("p-1: summary is only allowed above 500 characters", errors)
         self.assertIn("p-2: summary must not contain an ellipsis", errors)
 
     def test_validate_requires_complete_display_fields_and_long_summary(self):
         rows = [
-            {"problem_id": "p-1", "problem_text": "长" * 301,
+            {"problem_id": "p-1", "problem_text": "长" * 501,
              "display_title": "", "topic_label": "", "display_summary": ""},
         ]
         errors = display_metadata.validate(rows)
         self.assertIn("p-1: display title is required", errors)
         self.assertIn("p-1: topic label is required", errors)
-        self.assertIn("p-1: summary is required above 300 characters", errors)
+        self.assertNotIn("summary is required", " ".join(errors))
 
     def test_apply_updates_problem_display_fields(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -56,7 +56,7 @@ class DisplayMetadataTests(unittest.TestCase):
                 "display_title TEXT, topic_label TEXT, display_summary TEXT)"
             )
             conn.execute("INSERT INTO problems VALUES ('p-1', ?, NULL, NULL, NULL)",
-                         ("长" * 301,))
+                ("长" * 501,))
             conn.commit()
             manifest.write_text(json.dumps({"problems": [{
                 "problem_id": "p-1",

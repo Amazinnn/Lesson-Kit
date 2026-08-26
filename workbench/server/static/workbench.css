@@ -347,10 +347,7 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .problem-topic summary { cursor: pointer; color: var(--dsw-label-secondary); font-weight: 600; }
 .linked-problem { padding: 10px 0 0; }
 .problem-title { display: block; color: var(--dsw-label-primary); font-size: 14px; font-weight: 600; }
-.problem-summary { display: block; margin-top: 3px; color: var(--dsw-label-secondary); font-size: 13px; line-height: 1.5; }
-.linked-problem-detail { margin-top: 7px; color: var(--dsw-label-secondary); font-size: 13px; }
-.linked-problem-detail summary { cursor: pointer; font-weight: 500; }
-.linked-problem-detail p { margin: 7px 0 0; line-height: 1.65; white-space: pre-wrap; }
+.linked-problem-text { margin-top: 7px; color: var(--dsw-label-secondary); font-size: 13px; }
 .empty-state { max-width: 640px; }
 .next-step { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 22px 24px; border-top: 1px solid var(--dsw-border-l2); }
 .next-step-actions { display: flex; gap: 8px; flex: none; }
@@ -395,13 +392,6 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 #graph-detail-panel select { margin-bottom: 8px; }
 #ai-teacher-panel { display: flex; flex: 1; min-height: 0; flex-direction: column; }
 #ai-teacher-panel .ai-conversation { min-height: 120px; }
-#ai-context {
-  font-size: 13px;
-  color: var(--dsw-label-secondary);
-  background: var(--dsw-bg-layer-2);
-  border-radius: var(--dsw-radius-sm);
-  padding: 8px 10px;
-}
 #ai-actions { display: flex; gap: 4px; margin: 12px 0 18px; flex-wrap: wrap; }
 #ai-session-controls { display: grid; gap: 6px; margin: 12px 0 16px; }
 #ai-session-list-view,
@@ -412,9 +402,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .ai-session-list-head { justify-content: space-between; margin-bottom: 6px; }
 .ai-session-list-head .side-label { margin: 0; }
 #ai-session-list { display: grid; gap: 2px; }
-.ai-session-item { min-width: 0; }
+.ai-session-item { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ai-session-entry {
-  width: 100%; height: auto; min-height: 42px; padding: 7px 9px;
+  flex: 1; min-width: 0; height: auto; min-height: 42px; padding: 7px 9px;
   display: grid; justify-items: start; gap: 2px; border-radius: var(--dsw-radius-sm);
   text-align: left;
 }
@@ -425,17 +415,10 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .ai-provider-options { display: grid; gap: 8px; }
 .ai-provider-option { justify-content: flex-start; width: 100%; }
 #ai-chat-head { margin-bottom: 10px; }
-#ai-session-title { display: none; }
-#ai-session-rename {
-  min-width: 0; flex: 1; min-height: 28px; padding: 3px 6px;
-  border: 1px solid transparent; background: transparent; font-weight: 600;
-}
-#ai-session-rename:focus { border-color: var(--dsw-border-l2); background: var(--dsw-bg-layer-1); }
-.ai-session-provider { color: var(--dsw-label-tertiary); font-size: 12px; white-space: nowrap; }
 #ai-session-controls label,
 .ai-option { color: var(--dsw-label-secondary); font-size: 12px; }
 #ai-session-controls select { width: 100%; }
-.ai-session-actions { display: flex; gap: 6px; }
+.ai-session-actions { display: flex; gap: 2px; flex: none; }
 .ai-option { display: flex; align-items: center; gap: 5px; }
 .ai-option input { width: auto; margin: 0; }
 .ai-conversation { display: flex; flex: 1; flex-direction: column; min-height: 0; border-top: 1px solid var(--dsw-border-l1); padding-top: 14px; }

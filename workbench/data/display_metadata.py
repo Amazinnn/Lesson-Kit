@@ -20,10 +20,8 @@ def validate(rows):
             errors.append(f"{problem_id}: display title is required")
         if not topic:
             errors.append(f"{problem_id}: topic label is required")
-        if summary and length <= 300:
-            errors.append(f"{problem_id}: summary is only allowed above 300 characters")
-        if not summary and length > 300:
-            errors.append(f"{problem_id}: summary is required above 300 characters")
+        if summary and length <= 500:
+            errors.append(f"{problem_id}: summary is only allowed above 500 characters")
         if "…" in summary or "..." in summary:
             errors.append(f"{problem_id}: summary must not contain an ellipsis")
         if len(summary) > 48:

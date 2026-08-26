@@ -76,23 +76,22 @@ function setup(fetch) {
     "ai-provider-options": new Element("ai-provider-options"),
     "ai-chat-view": new Element("ai-chat-view"),
     "ai-session-back": new Element("ai-session-back"),
-    "ai-session-title": new Element("ai-session-title"),
-    "ai-session-provider": new Element("ai-session-provider"),
-    "ai-session-rename": new Element("ai-session-rename"),
-    "ai-session-delete": new Element("ai-session-delete"),
     "ai-messages": new Element("ai-messages"),
     "ai-input": new Element("ai-input"),
     "ai-send": new Element("ai-send"),
     "ai-stop": new Element("ai-stop"),
     "ai-status": new Element("ai-status"),
-    "ai-collapse": new Element("ai-collapse"),
   };
   const document = {
     getElementById(id) { return elements[id] || null; },
     createElement(tag) { return new Element(tag); },
     querySelectorAll() { return []; },
   };
-  const window = { location: "", innerWidth: 1280, addEventListener() {}, matchMedia() { return { matches: false }; } };
+  const window = {
+    location: "", innerWidth: 1280, addEventListener() {},
+    matchMedia() { return { matches: false }; },
+    prompt() { return "我的会话"; }, confirm() { return true; },
+  };
   vm.runInNewContext(SOURCE, {
     document, window, fetch, sessionStorage: new Storage(), localStorage: new Storage(), console,
     setInterval, clearInterval, setTimeout, clearTimeout, requestAnimationFrame: (callback) => setImmediate(() => callback(0)),
@@ -127,7 +126,7 @@ test("agent column starts with history and requires an explicit provider for new
   assert.equal(calls.some((item) => item.url.endsWith("/ai/sessions/conv-001")), false);
 });
 
-test("history entry opens a fixed-provider chat that can be renamed, deleted, or left", async () => {
+test("history entry opens a minimal fixed-provider chat and list row owns actions", async () => {
   const calls = [];
   const app = setup((url, options) => {
     calls.push({ url, options });
@@ -144,16 +143,28 @@ test("history entry opens a fixed-provider chat that can be renamed, deleted, or
   app.elements["ai-session-list"].children[0].children[0].click();
   await flush();
   assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
-  assert.equal(app.elements["ai-session-provider"].textContent, "codex");
-  assert.equal(app.elements["ai-session-rename"].value, "旧会话");
-  app.elements["ai-session-rename"].value = "我的会话";
-  app.elements["ai-session-rename"].trigger("change");
+  assert.equal(app.elements["ai-session-back"].textContent, "");
+  assert.equal(app.elements["ai-session-back"].getAttribute("aria-label"), "返回对话列表");
+  assert.equal(app.elements["ai-session-title"], undefined);
+  assert.equal(app.elements["ai-session-provider"], undefined);
+  assert.equal(app.elements["ai-session-rename"], undefined);
+  assert.equal(app.elements["ai-session-delete"], undefined);
+  const row = app.elements["ai-session-list"].children[0];
+  assert.equal(row.children.length, 2);
+  row.children[1].children[0].click();
   await flush();
   const rename = calls.find((item) => item.url.endsWith("/ai/sessions/conv-001") && item.options && item.options.method === "PATCH");
   assert.deepEqual(JSON.parse(rename.options.body), { title: "我的会话" });
-  app.elements["ai-session-delete"].click();
+  row.children[1].children[1].click();
   await flush();
   assert.ok(calls.some((item) => item.url.endsWith("/ai/sessions/conv-001") && item.options && item.options.method === "DELETE"));
   app.elements["ai-session-back"].click();
   assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+});
+
+test("legacy provider-memory and daily-create branches are absent", () => {
+  assert.equal(SOURCE.includes("AI_PROVIDER_KEY"), false);
+  assert.equal(SOURCE.includes("AI_DAILY_KEY"), false);
+  assert.equal(SOURCE.includes("aiLocalDate"), false);
+  assert.equal(SOURCE.includes("aiTask("), false);
 });
