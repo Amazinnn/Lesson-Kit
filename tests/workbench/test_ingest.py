@@ -144,6 +144,37 @@ class IngestTests(unittest.TestCase):
         conn.close()
         self.assertFalse(ingest.gate(self.db_path, solutions, audits, self.root / "db-gate.json")["ok"])
 
+    def test_gate_accepts_per_item_sessions_from_independent_batches(self):
+        solution_items = [
+            {"source": "Let x<sup>2</sup> = 1.", "problem": "p-1",
+             "solution": "x is 1 or -1.", "provider": "codex",
+             "provider_session_id": "solve-batch-01"},
+            {"source": "Count two choices.", "problem": "p-2",
+             "solution": "There are four pairs.", "provider": "codex",
+             "provider_session_id": "solve-batch-02"},
+        ]
+        audit_items = [
+            {**audit_item(item["source"], item["problem"], item["solution"]),
+             "provider": "codex", "provider_session_id": "audit-" + item["problem"]}
+            for item in solution_items
+        ]
+        solutions = self.artifact("batch-solutions.json", {
+            "kind": "solutions", "items": solution_items,
+        })
+        audits = self.artifact("batch-audits.json", {"kind": "audit", "items": audit_items})
+
+        result = ingest.gate(self.db_path, solutions, audits, self.root / "batch-gate.json")
+
+        self.assertTrue(result["ok"], result["errors"])
+        audit_items[0]["provider_session_id"] = "solve-batch-01"
+        same_session = self.artifact("same-session-audits.json", {
+            "kind": "audit", "items": audit_items,
+        })
+        rejected = ingest.gate(
+            self.db_path, solutions, same_session, self.root / "same-session-gate.json",
+        )
+        self.assertFalse(rejected["ok"])
+
     def test_gate_rejects_solution_markup_ocr_damage_and_unterminated_html(self):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
         for source, solution in (

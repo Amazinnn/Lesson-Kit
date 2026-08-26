@@ -1,0 +1,463 @@
+{
+    "kind":  "source-batch",
+    "batch":  "01",
+    "items":  [
+                  {
+                      "source":  "1. There are 18 mathematics majors and 325 computer science majors at a college.\n\na) In how many ways can two representatives be picked so that one is a mathematics major and the other is a computer science major?\n\nb) In how many ways can one representative be picked who is either a mathematics major or a computer science major?",
+                      "problem":  "dmath-ch06-prob-001",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "2. An ofice building contains 27 floors and has 37 ofices on each floor. How many ofices are in the building?",
+                      "problem":  "dmath-ch06-prob-002",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "3. A multiple-choice test contains 10 questions. There are four possible answers for each question.\n\na) In how many ways can a student answer the questions on the test if the student answers every question?\n\nb) In how many ways can a student answer the questions on the test if the student can leave answers blank?",
+                      "problem":  "dmath-ch06-prob-003",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "4. A particular brand of shirt comes in 12 colors, has a male version and a female version, and comes in three sizes for each sex. How many diferent types of this shirt are made?",
+                      "problem":  "dmath-ch06-prob-004",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "5. Six diferent airlines fly from New York to Denver and seven fly from Denver to San Francisco. How many different pairs of airlines can you choose on which to book a trip from New York to San Francisco via Denver, when you pick an airline for the flight to Denver and an airline for the continuation flight to San Francisco?",
+                      "problem":  "dmath-ch06-prob-005",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "6. There are four major auto routes from Boston to Detroit and six from Detroit to Los Angeles. How many major auto routes are there from Boston to Los Angeles via Detroit?",
+                      "problem":  "dmath-ch06-prob-006",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "7. How many diferent three-letter initials can people have?",
+                      "problem":  "dmath-ch06-prob-007",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "8. How many diferent three-letter initials with none of the letters repeated can people have?",
+                      "problem":  "dmath-ch06-prob-008",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "9. How many diferent three-letter initials are there that begin with an A?",
+                      "problem":  "dmath-ch06-prob-009",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "10. How many bit strings are there of length eight?",
+                      "problem":  "dmath-ch06-prob-010",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "11. How many bit strings of length ten both begin and end with a 1?",
+                      "problem":  "dmath-ch06-prob-011",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "12. How many bit strings are there of length six or less, not counting the empty string?",
+                      "problem":  "dmath-ch06-prob-012",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "13. How many bit strings with length not exceeding n, where n is a positive integer, consist entirely of 1s, not counting the empty string?",
+                      "problem":  "dmath-ch06-prob-013",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "14. How many bit strings of length n, where n is a positive integer, start and end with 1s?",
+                      "problem":  "dmath-ch06-prob-014",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "15. How many strings are there of lowercase letters of length four or less, not counting the empty string?",
+                      "problem":  "dmath-ch06-prob-015",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "16. How many strings are there of four lowercase letters that have the letter x in them?",
+                      "problem":  "dmath-ch06-prob-016",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "17. How many strings of five ASCII characters contain the character @ (“at” sign) at least once? [Note: There are 128 diferent ASCII characters.]",
+                      "problem":  "dmath-ch06-prob-017",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "18. How many 5-element DNA sequences\n\na) end with A?\n\nb) start with T and end with G?\n\nc) contain only A and T?\n\nd) do not contain C?",
+                      "problem":  "dmath-ch06-prob-018",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "19. How many 6-element RNA sequences\n\na) do not contain U?\n\nb) end with GU?\n\nc) start with C?\n\nd) contain only A or U?",
+                      "problem":  "dmath-ch06-prob-019",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "20. How many positive integers between 5 and 31\n\na) are divisible by 3? Which integers are these?\n\nb) are divisible by 4? Which integers are these?\n\nc) are divisible by 3 and by 4? Which integers are these?",
+                      "problem":  "dmath-ch06-prob-020",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "21. How many positive integers between 50 and 100\n\na) are divisible by 7? Which integers are these?\n\nb) are divisible by 11? Which integers are these?\n\nc) are divisible by both 7 and 11? Which integers are these?",
+                      "problem":  "dmath-ch06-prob-021",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "22. How many positive integers less than 1000\n\na) are divisible by 7?\n\nb) are divisible by 7 but not by 11?\n\nc) are divisible by both 7 and 11?\n\nd) are divisible by either 7 or 11?\n\ne) are divisible by exactly one of 7 and 11?\n\nf) are divisible by neither 7 nor 11?\n\ng) have distinct digits?\n\nh) have distinct digits and are even?",
+                      "problem":  "dmath-ch06-prob-022",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "23. How many positive integers between 100 and 999 inclusive\n\na) are divisible by 7?\n\nb) are odd?\n\nc) have the same three decimal digits?\n\nd) are not divisible by 4?\n\ne) are divisible by 3 or 4?\n\nf) are not divisible by either 3 or 4?\n\ng) are divisible by 3 but not by 4?\n\nh) are divisible by 3 and 4?",
+                      "problem":  "dmath-ch06-prob-023",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "24. How many positive integers between 1000 and 9999 inclusive\n\na) are divisible by 9?\n\nb) are even?\n\nc) have distinct digits?\n\nd) are not divisible by 3?\n\ne) are divisible by 5 or 7?\n\nf) are not divisible by either 5 or 7?\n\ng) are divisible by 5 but not by 7?\n\nh) are divisible by 5 and 7?",
+                      "problem":  "dmath-ch06-prob-024",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "25. How many strings of three decimal digits\n\na) do not contain the same digit three times?\n\nb) begin with an odd digit?\n\nc) have exactly two digits that are 4s?",
+                      "problem":  "dmath-ch06-prob-025",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "26. How many strings of four decimal digits\n\na) do not contain the same digit twice?\n\nb) end with an even digit?\n\nc) have exactly three digits that are 9s?",
+                      "problem":  "dmath-ch06-prob-026",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "27. A committee is formed consisting of one representative from each of the 50 states in the United States, where the representative from a state is either the governor or one of the two senators from that state. How many ways are there to form this committee?",
+                      "problem":  "dmath-ch06-prob-027",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "28. How many license plates can be made using either three digits followed by three uppercase English letters or three uppercase English letters followed by three digits?",
+                      "problem":  "dmath-ch06-prob-028",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "29. How many license plates can be made using either two uppercase English letters followed by four digits or two digits followed by four uppercase English letters?",
+                      "problem":  "dmath-ch06-prob-029",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "30. How many license plates can be made using either three uppercase English letters followed by three digits or four uppercase English letters followed by two digits?",
+                      "problem":  "dmath-ch06-prob-030",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "31. How many license plates can be made using either two or three uppercase English letters followed by either two or three digits?",
+                      "problem":  "dmath-ch06-prob-031",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "32. How many strings of eight uppercase English letters are there\n\na) if letters can be repeated?\n\nb) if no letter can be repeated?\n\nc) that start with X, if letters can be repeated?\n\nd) that start with X, if no letter can be repeated?\n\ne) that start and end with X, if letters can be repeated?\n\nf) that start with the letters BO (in that order), if letters can be repeated?\n\ng) that start and end with the letters BO (in that order), if letters can be repeated?\n\nh) that start or end with the letters BO (in that order), if letters can be repeated?",
+                      "problem":  "dmath-ch06-prob-032",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "33. How many strings of eight English letters are there\n\na) that contain no vowels, if letters can be repeated?\n\nb) that contain no vowels, if letters cannot be repeated?\n\nc) that start with a vowel, if letters can be repeated?\n\nd) that start with a vowel, if letters cannot be repeated?\n\ne) that contain at least one vowel, if letters can be repeated?\n\nf) that contain exactly one vowel, if letters can be repeated?\n\ng) that start with X and contain at least one vowel, if letters can be repeated?\n\nh) that start and end with X and contain at least one vowel, if letters can be repeated?",
+                      "problem":  "dmath-ch06-prob-033",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "34. How many different functions are there from a set with 10 elements to sets with the following numbers of elements?\n\na) 2\n\nb) 3\n\nc) 4\n\nd) 5",
+                      "problem":  "dmath-ch06-prob-034",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "35. How many one-to-one functions are there from a set with five elements to sets with the following number of elements?\n\na) 4\n\nb) 5\n\nc) 6\n\nd) 7",
+                      "problem":  "dmath-ch06-prob-035",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "36. How many functions are there from the set {1, 2, … , n}, where n is a positive integer, to the set {0, 1}?",
+                      "problem":  "dmath-ch06-prob-036",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "37. How many functions are there from the set {1, 2, … , n}, where n is a positive integer, to the set {0, 1}\n\na) that are one-to-one?\n\nb) that assign 0 to both 1 and n?\n\nc) that assign 1 to exactly one of the positive integers less than n?",
+                      "problem":  "dmath-ch06-prob-037",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "38. How many partial functions (see Section 2.3) are there from a set with five elements to sets with each of these number of elements?\n\na) 1\n\nb) 2\n\nc) 5\n\nd) 9",
+                      "problem":  "dmath-ch06-prob-038",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "39. How many partial functions (see Definition 13 of Section 2.3) are there from a set with m elements to a set with n elements, where m and n are positive integers?",
+                      "problem":  "dmath-ch06-prob-039",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "40. How many subsets of a set with 100 elements have more than one element?",
+                      "problem":  "dmath-ch06-prob-040",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "41. A palindrome is a string whose reversal is identical to the string. How many bit strings of length n are palindromes?",
+                      "problem":  "dmath-ch06-prob-041",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "42. How many 4-element DNA sequences\n\na) do not contain the base T?\n\nb) contain the sequence ACG?\n\nc) contain all four bases A, T, C, and G?\n\nd) contain exactly three of the four bases A, T, C, and G?",
+                      "problem":  "dmath-ch06-prob-042",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "43. How many 4-element RNA sequences\n\na) contain the base U?\n\nb) do not contain the sequence CUG?\n\nc) do not contain all four bases A, U, C, and G?\n\nd) contain exactly two of the four bases A, U, C, and G?",
+                      "problem":  "dmath-ch06-prob-043",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "44. On each of the 22 work days in a particular month, every employee of a start-up venture was sent a company communication. If a total of 4642 total company communications were sent, how many employees does the company have, assuming that no stafing changes were made that month?",
+                      "problem":  "dmath-ch06-prob-044",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "45. At a large university, 434 freshmen, 883 sophomores, and 43 juniors are enrolled in an introductory algorithms course. How many sections of this course need to be scheduled to accommodate all these students if each section contains 34 students?",
+                      "problem":  "dmath-ch06-prob-045",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "46. How many ways are there to seat four of a group of ten people around a circular table where two seatings are considered the same when everyone has the same immediate left and immediate right neighbor?",
+                      "problem":  "dmath-ch06-prob-046",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-004",
+                                     "dmath-ch06-kp-001"
+                                 ]
+                  },
+                  {
+                      "source":  "47. How many ways are there to seat six people around a circular table where two seatings are considered the same when everyone has the same two neighbors without regard to whether they are right or left neighbors?",
+                      "problem":  "dmath-ch06-prob-047",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-004",
+                                     "dmath-ch06-kp-001"
+                                 ]
+                  },
+                  {
+                      "source":  "48. In how many ways can a photographer at a wedding arrange 6 people in a row from a group of 10 people, where the bride and the groom are among these 10 people, if\n\na) the bride must be in the picture?\n\nb) both the bride and groom must be in the picture?\n\nc) exactly one of the bride and the groom is in the picture?",
+                      "problem":  "dmath-ch06-prob-048",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "49. In how many ways can a photographer at a wedding arrange six people in a row, including the bride and groom, if\n\na) the bride must be next to the groom?\n\nb) the bride is not next to the groom?\n\nc) the bride is positioned somewhere to the left of the groom?",
+                      "problem":  "dmath-ch06-prob-049",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "50. How many bit strings of length seven either begin with two 0s or end with three 1s?",
+                      "problem":  "dmath-ch06-prob-050",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "51. How many bit strings of length 10 either begin with three 0s or end with two 0s?",
+                      "problem":  "dmath-ch06-prob-051",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  }
+              ]
+}

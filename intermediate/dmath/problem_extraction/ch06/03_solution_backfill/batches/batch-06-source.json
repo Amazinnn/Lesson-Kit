@@ -1,0 +1,392 @@
+{
+    "kind":  "source-batch",
+    "batch":  "06",
+    "items":  [
+                  {
+                      "source":  "38. How many diferent bit strings can be formed using six 1s and eight 0s?",
+                      "problem":  "dmath-ch06-prob-256",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "39. A student has three mangos, two papayas, and two kiwi fruits. If the student eats one piece of fruit each day, and only the type of fruit matters, in how many diferent ways can these fruits be consumed?",
+                      "problem":  "dmath-ch06-prob-257",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "40. A professor packs her collection of 40 issues of a mathematics journal in four boxes with 10 issues per box. How many ways can she distribute the journals if\n\na) each box is numbered, so that they are distinguishable?\n\nb) the boxes are identical, so that they cannot be distinguished?",
+                      "problem":  "dmath-ch06-prob-258",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "41. How many ways are there to travel in xyz space from the origin (0, 0, 0) to the point (4, 3, 5) by taking steps one unit in the positive x direction, one unit in the positive y direction, or one unit in the positive z direction? (Moving in the negative x, y, or z direction is prohibited, so that no backtracking is allowed.)",
+                      "problem":  "dmath-ch06-prob-259",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "42. How many ways are there to travel in xyzw space from the origin (0, 0, 0, 0) to the point (4, 3, 5, 4) by taking steps one unit in the positive x, positive y, positive z, or positive w direction?",
+                      "problem":  "dmath-ch06-prob-260",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "43. How many ways are there to deal hands of seven cards to each of five players from a standard deck of 52 cards?",
+                      "problem":  "dmath-ch06-prob-261",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "44. In bridge, the 52 cards of a standard deck are dealt to four players. How many diferent ways are there to deal bridge hands to four players?",
+                      "problem":  "dmath-ch06-prob-262",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "45. How many ways are there to deal hands of five cards to each of six players from a deck containing 48 diferent cards?",
+                      "problem":  "dmath-ch06-prob-263",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "46. In how many ways can a dozen books be placed on four distinguishable shelves\n\na) if the books are indistinguishable copies of the same title?\n\nb) if no two books are the same, and the positions of the books on the shelves matter? [Hint: Break this into 12 tasks, placing each book separately. Start with the sequence 1, 2, 3, 4 to represent the shelves. Represent the books by $b _ { i } , i = 1 , 2 , \\ldots , 1 2$ . Place $b _ { 1 }$ to the right of one of the terms in $1 , 2 , 3 , 4 .$ . Then successively place $b _ { 2 } , b _ { 3 } , \\ldots ,$ , and $b _ { 1 2 } . ]$",
+                      "problem":  "dmath-ch06-prob-264",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "47. How many ways can n books be placed on k distinguishable shelves\n\na) if the books are indistinguishable copies of the same title?\n\nb) if no two books are the same, and the positions of the books on the shelves matter?",
+                      "problem":  "dmath-ch06-prob-265",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "48. A shelf holds 12 books in a row. How many ways are there to choose five books so that no two adjacent books are chosen? [Hint: Represent the books that are chosen by bars and the books not chosen by stars. Count the number of sequences of five bars and seven stars so that no two bars are adjacent.]",
+                      "problem":  "dmath-ch06-prob-266",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e49. Use the product rule to prove Theorem 4, by first placing objects in the first box, then placing objects in the second box, and so on.",
+                      "problem":  "dmath-ch06-prob-267",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e50. Prove Theorem 4 by first setting up a one-to-one correspondence between permutations of n objects with $n _ { i }$ indistinguishable objects of type $i , i = 1 , 2 , 3 , \\ldots , k ,$ and the distributions of n objects in k boxes such that $n _ { i }$ objects are placed in box $i , i = 1 , 2 , 3 , \\ldots , k$ and then applying Theorem 3.",
+                      "problem":  "dmath-ch06-prob-268",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e51. In this exercise we will prove Theorem 2 by setting up a one-to-one correspondence between the set of r-combinations with repetition allowed of $S =$ $\\{ 1 , 2 , 3 , \\dots , n \\}$ and the set of r-combinations of the set $T = \\{ 1 , 2 , 3 , \\dots , n + r - 1 \\}$\n\na) Arrange the elements in an r-combination, with repetition allowed, of S into an increasing sequence $x _ { 1 } \\leq x _ { 2 } \\leq \\dots \\leq x _ { r }$ . Show that the sequence formed by adding k − 1 to the kth term is strictly increasing. Conclude that this sequence is made up of r distinct elements from T.\n\nb) Show that the procedure described in (a) defines a one-to-one correspondence between the set of rcombinations, with repetition allowed, of S and the rcombinations of T. [Hint: Show the correspondence can be reversed by associating to the r-combination $\\{ x _ { 1 } , x _ { 2 } , \\ldots , x _ { r } \\}$ of $T ,$ with $1 \\leq x _ { 1 } \u003c x _ { 2 } \u003c \\cdots \u003c x _ { r } \\leq$ n + r − 1, the r-combination with repetition allowed from S, formed by subtracting k − 1 from the kth element.]\n\nc) Conclude that the number of r-combinations with repetition allowed from a set with n elements is C(n + r − 1, r).",
+                      "problem":  "dmath-ch06-prob-269",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "52. How many ways are there to distribute five distinguishable objects into three indistinguishable boxes?",
+                      "problem":  "dmath-ch06-prob-270",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "53. How many ways are there to distribute six distinguishable objects into four indistinguishable boxes so that each of the boxes contains at least one object?",
+                      "problem":  "dmath-ch06-prob-271",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "54. How many ways are there to put five temporary employees into four identical ofices?",
+                      "problem":  "dmath-ch06-prob-272",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "55. How many ways are there to put six temporary employees into four identical ofices so that there is at least one temporary employee in each of these four ofices?",
+                      "problem":  "dmath-ch06-prob-273",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "56. How many ways are there to distribute five indistinguishable objects into three indistinguishable boxes?",
+                      "problem":  "dmath-ch06-prob-274",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "57. How many ways are there to distribute six indistinguishable objects into four indistinguishable boxes so that each of the boxes contains at least one object?",
+                      "problem":  "dmath-ch06-prob-275",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "58. How many ways are there to pack eight identical DVDs into five indistinguishable boxes so that each box contains at least one DVD?",
+                      "problem":  "dmath-ch06-prob-276",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "59. How many ways are there to pack nine identical DVDs into three indistinguishable boxes so that each box contains at least two DVDs?",
+                      "problem":  "dmath-ch06-prob-277",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "60. How many ways are there to distribute five balls into seven boxes if each box must have at most one ball in it if\n\na) both the balls and boxes are labeled?\n\nb) the balls are labeled, but the boxes are unlabeled?\n\nc) the balls are unlabeled, but the boxes are labeled?\n\nd) both the balls and boxes are unlabeled?",
+                      "problem":  "dmath-ch06-prob-278",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "61. How many ways are there to distribute five balls into three boxes if each box must have at least one ball in it if\n\na) both the balls and boxes are labeled?\n\nb) the balls are labeled, but the boxes are unlabeled?\n\nc) the balls are unlabeled, but the boxes are labeled?\n\nd) both the balls and boxes are unlabeled?",
+                      "problem":  "dmath-ch06-prob-279",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "62. Suppose that a basketball league has 32 teams, split into two conferences of 16 teams each. Each conference is split into three divisions. Suppose that the North Central Division has five teams. Each of the teams in the North Central Division plays four games against each of the other teams in this division, three games against each of the 11 remaining teams in the conference, and two games against each of the 16 teams in the other conference. In how many diferent orders can the games of one of the teams in the North Central Division be scheduled?",
+                      "problem":  "dmath-ch06-prob-280",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e63. Suppose that a weapons inspector must inspect each of five diferent sites twice, visiting one site per day. The inspector is free to select the order in which to visit these sites, but cannot visit site X, the most suspicious site, on two consecutive days. In how many diferent orders can the inspector visit these sites?",
+                      "problem":  "dmath-ch06-prob-281",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "64. How many diferent terms are there in the expansion of $( x _ { 1 } + x _ { 2 } + \\cdots + x _ { m } ) ^ { n }$ after all terms with identical sets of exponents are added?",
+                      "problem":  "dmath-ch06-prob-282",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e65. Prove the Multinomial Theorem: If n is a positive integer, then\n\n$$\n\\begin{array} { l } { ( x _ { 1 } + x _ { 2 } + \\cdots + x _ { m } ) ^ { n } \\qquad } \\\\ { = \\displaystyle \\sum _ { n _ { 1 } + n _ { 2 } + \\cdots + n _ { m } = n } C ( n ; n _ { 1 } , n _ { 2 } , \\ldots , n _ { m } ) x _ { 1 } ^ { n _ { 1 } } x _ { 2 } ^ { n _ { 2 } } \\cdots x _ { m } ^ { n _ { m } } , } \\end{array}\n$$\n\nwhere\n\n$$\nC ( n ; n _ { 1 } , n _ { 2 } , \\ldots , n _ { m } ) = { \\frac { n ! } { n _ { 1 } ! n _ { 2 } ! \\cdots n _ { m } ! } }\n$$\n\nis a multinomial coeficient.",
+                      "problem":  "dmath-ch06-prob-283",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "66. Find the expansion of $( x + y + z ) ^ { 4 }$",
+                      "problem":  "dmath-ch06-prob-284",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "67. Find the coeficient of $x ^ { 3 } y ^ { 2 } z ^ { 5 } \\sin { ( x + y + z ) } ^ { 1 0 }$",
+                      "problem":  "dmath-ch06-prob-285",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "68. How many terms are there in the expansion of\n\n$$\n( x + y + z ) ^ { 1 0 0 } ?\n$$\n\n![](images/7cc331e42f3e3b1d855174ac6d08020c85029066fbf9f7b6eb2b9d8b91ff7dd2.jpg)",
+                      "problem":  "dmath-ch06-prob-286",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "1. Place these permutations of {1, 2, 3, 4, 5} in lexicographic order: 43521, 15432, 45321, 23451, 23514, 14532, 21345, 45213, 31452, 31542.",
+                      "problem":  "dmath-ch06-prob-287",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "2. Place these permutations of {1,2,3,4,5,6} in lexicographic order: 234561, 231456, 165432, 156423, 543216, 541236, 231465, 314562, 432561, 654321, 654312, 435612.",
+                      "problem":  "dmath-ch06-prob-288",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "3. The name of a file in a computer directory consists of three uppercase letters followed by a digit, where each letter is either A, B, or C, and each digit is either 1 or 2. List the name of these files in lexicographic order, where we order letters using the usual alphabetic order of letters.",
+                      "problem":  "dmath-ch06-prob-289",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "4. Suppose that the name of a file in a computer directory consists of three digits followed by two lowercase letters and each digit is 0, 1, or 2, and each letter is either a or b. List the name of these files in lexicographic order, where we order letters using the usual alphabetic order of letters.",
+                      "problem":  "dmath-ch06-prob-290",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "5. Find the next larger permutation in lexicographic order after each of these permutations.\n\na) 1432\n\nb) 54123\n\nc) 12453\n\nd) 45231\n\ne) 6714235\n\nf) 31528764",
+                      "problem":  "dmath-ch06-prob-291",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "6. Find the next larger permutation in lexicographic order after each of these permutations.\n\na) 1342\n\nb) 45321\n\nc) 13245\n\nd) 612345\n\ne) 1623547\n\nf) 23587416",
+                      "problem":  "dmath-ch06-prob-292",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "7. Use Algorithm 1 to generate the 24 permutations of the first four positive integers in lexicographic order.",
+                      "problem":  "dmath-ch06-prob-293",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "8. Use Algorithm 2 to list all the subsets of the set {1, 2, 3, 4}.",
+                      "problem":  "dmath-ch06-prob-294",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "9. Use Algorithm 3 to list all the 3-combinations of {1, 2, 3, 4, 5}.",
+                      "problem":  "dmath-ch06-prob-295",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "10. Show that Algorithm 1 produces the next larger permutation in lexicographic order.",
+                      "problem":  "dmath-ch06-prob-296",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "11. Show that Algorithm 3 produces the next larger r-combination in lexicographic order after a given r-combination.",
+                      "problem":  "dmath-ch06-prob-297",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "12. Develop an algorithm for generating the r-permutations of a set of n elements.",
+                      "problem":  "dmath-ch06-prob-298",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "13. List all 3-permutations of {1, 2, 3, 4, 5}.",
+                      "problem":  "dmath-ch06-prob-299",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "The remaining exercises in this section develop another algorithm for generating the permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ . This algorithm is based on Cantor expansions of integers. Every nonnegative integer less than n! has a unique Cantor expansion\n\n$$\na _ { 1 } 1 ! + a _ { 2 } 2 ! + \\cdots + a _ { n - 1 } ( n - 1 ) !\n$$\n\nwhere $a _ { i }$ is a nonnegative integer not exceeding i, for $i =$ $1 , 2 , \\ldots , n - 1$ . The integers $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ are called the Cantor digits of this integer.\n\nGiven a permutation of $\\{ 1 , 2 , \\ldots , n \\}$ , let $a _ { k - 1 } , k =$ $2 , 3 , \\ldots , n ,$ be the number of integers less than k that follow k in the permutation. For instance, in the permutation 43215, $a _ { 1 }$ is the number of integers less than 2 that follow 2, so $a _ { 1 } = 1$ . Similarly, for this example $a _ { 2 } = 2 , a _ { 3 } = 3$ and $a _ { 4 } = 0$ . Consider the function from the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ to the set of nonnegative integers less than n! that sends a permutation to the integer that has $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ , defined in this way, as its Cantor digits.\n\n14. Find the Cantor digits $a _ { 1 } , a _ { 2 } , \\ldots , a _ { n - 1 }$ that correspond to these permutations.\n\na) 246531\n\nb) 12345\n\nc) 654321",
+                      "problem":  "dmath-ch06-prob-300",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e15. Show that the correspondence described in the preamble is a bijection between the set of permutations of $\\{ 1 , 2 , 3 , \\dots , n \\}$ and the nonnegative integers less than n!.",
+                      "problem":  "dmath-ch06-prob-301",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "16. Find the permutations of {1, 2, 3, 4, 5} that correspond to these integers with respect to the correspondence between Cantor expansions and permutations as described in the preamble to Exercise 14.\n\na) 3\n\nb) 89\n\nc) 111",
+                      "problem":  "dmath-ch06-prob-302",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  },
+                  {
+                      "source":  "17. Develop an algorithm for producing all permutations of a set of n elements based on the correspondence described in the preamble to Exercise 14.",
+                      "problem":  "dmath-ch06-prob-303",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-022"
+                                 ]
+                  }
+              ]
+}

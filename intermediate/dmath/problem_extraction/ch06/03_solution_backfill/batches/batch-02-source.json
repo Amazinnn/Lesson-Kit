@@ -1,0 +1,436 @@
+{
+    "kind":  "source-batch",
+    "batch":  "02",
+    "items":  [
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e52. How many bit strings of length 10 contain either five consecutive 0s or five consecutive 1s?",
+                      "problem":  "dmath-ch06-prob-052",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗∗\u003c/sup\u003e53. How many bit strings of length eight contain either three consecutive 0s or four consecutive 1s?",
+                      "problem":  "dmath-ch06-prob-053",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "54. Every student in a discrete mathematics class is either a computer science or a mathematics major or is a joint major in these two subjects. How many students are in the class if there are 38 computer science majors (including joint majors), 23 mathematics majors (including joint majors), and 7 joint majors?",
+                      "problem":  "dmath-ch06-prob-054",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "55. How many positive integers not exceeding 100 are divisible either by 4 or by 6?",
+                      "problem":  "dmath-ch06-prob-055",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "56. How many diferent initials can someone have if a person has at least two, but no more than five, diferent initials? Assume that each initial is one of the 26 uppercase letters of the English language.",
+                      "problem":  "dmath-ch06-prob-056",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "57. Suppose that a password for a computer system must have at least 8, but no more than 12, characters, where each character in the password is a lowercase English letter, an uppercase English letter, a digit, or one of the six special characters ∗, $\u003e , \\ \u003c , \\ 1 ,$ +, and =.\n\na) How many diferent passwords are available for this computer system?\n\nb) How many of these passwords contain at least one occurrence of at least one of the six special characters?\n\nc) Using your answer to part (a), determine how long it takes a hacker to try every possible password, assuming that it takes one nanosecond for a hacker to check each possible password.",
+                      "problem":  "dmath-ch06-prob-057",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "58. The name of a variable in the C programming language is a string that can contain uppercase letters, lowercase letters, digits, or underscores. Further, the first character in the string must be a letter, either uppercase or lowercase, or an underscore. If the name of a variable is determined by its first eight characters, how many diferent variables can be named in C? (Note that the name of a variable may contain fewer than eight characters.)",
+                      "problem":  "dmath-ch06-prob-058",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "59. The name of a variable in the JAVA programming language is a string of between 1 and 65,535 characters, inclusive, where each character can be an uppercase or a lowercase letter, a dollar sign, an underscore, or a digit, except that the first character must not be a digit. Determine the number of diferent variable names in JAVA.",
+                      "problem":  "dmath-ch06-prob-059",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "60. The International Telecommunications Union (ITU) specifies that a telephone number must consist of a country code with between 1 and 3 digits, except that the code 0 is not available for use as a country code, followed by a number with at most 15 digits. How many available possible telephone numbers are there that satisfy these restrictions?",
+                      "problem":  "dmath-ch06-prob-060",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "61. Suppose that at some future time every telephone in the world is assigned a number that contains a country code 1 to 3 digits long, that is, of the form X, XX, or XXX, followed by a 10-digit telephone number of the form NXX-NXX-XXXX (as described in Example 8). How many diferent telephone numbers would be available worldwide under this numbering plan?",
+                      "problem":  "dmath-ch06-prob-061",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "62. A key in the Vigenere cryptosystem is a string of English\\` letters, where the case of the letters does not matter. How many diferent keys for this cryptosystem are there with three, four, five, or six letters?",
+                      "problem":  "dmath-ch06-prob-062",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "63. A wired equivalent privacy (WEP) key for a wireless fidelity (WiFi) network is a string of either 10, 26, or 58 hexadecimal digits. How many diferent WEP keys are there?",
+                      "problem":  "dmath-ch06-prob-063",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "64. Suppose that p and q are prime numbers and that $n = p q$ Use the principle of inclusion–exclusion to find the number of positive integers not exceeding n that are relatively prime to n.",
+                      "problem":  "dmath-ch06-prob-064",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "65. Use the principle of inclusion–exclusion to find the number of positive integers less than 1,000,000 that are not divisible by either 4 or by 6.",
+                      "problem":  "dmath-ch06-prob-065",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-003",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "66. Use a tree diagram to find the number of bit strings of length four with no three consecutive 0s.",
+                      "problem":  "dmath-ch06-prob-066",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-005",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "67. How many ways are there to arrange the letters a, b, c, and d such that a is not followed immediately by b?",
+                      "problem":  "dmath-ch06-prob-067",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-004",
+                                     "dmath-ch06-kp-001"
+                                 ]
+                  },
+                  {
+                      "source":  "68. Use a tree diagram to find the number of ways that the World Series can occur, where the first team that wins four games out of seven wins the series.",
+                      "problem":  "dmath-ch06-prob-068",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-005",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "69. Use a tree diagram to determine the number of subsets of {3, 7, 9, 11, 24} with the property that the sum of the elements in the subset is less than 28.",
+                      "problem":  "dmath-ch06-prob-069",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-005",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "70.\n\na) Suppose that a store sells six varieties of soft drinks: cola, ginger ale, orange, root beer, lemonade, and cream soda. Use a tree diagram to determine the number of diferent types of bottles the store must stock to have all varieties available in all size bottles if all varieties are available in 12-ounce bottles, all but lemonade are available in 20-ounce bottles, only cola and ginger ale are available in 32-ounce bottles, and all but lemonade and cream soda are available in 64- ounce bottles?\n\nb) Answer the question in part (a) using counting rules.",
+                      "problem":  "dmath-ch06-prob-070",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-005",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "71.\n\na) Suppose that a popular style of running shoe is available for both men and women. The woman’s shoe comes in sizes 6, 7, 8, and 9, and the man’s shoe comes in sizes 8, 9, 10, 11, and 12. The man’s shoe comes in white and black, while the woman’s shoe comes in white, red, and black. Use a tree diagram to determine the number of diferent shoes that a store has to stock to have at least one pair of this type of running shoe for all available sizes and colors for both men and women.\n\nb) Answer the question in part (a) using counting rules.",
+                      "problem":  "dmath-ch06-prob-071",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-005",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "72. Determine the number of matches played in a singleelimination tournament with n players, where for each game between two players the winner goes on, but the loser is eliminated.",
+                      "problem":  "dmath-ch06-prob-072",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-005",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "73. Determine the minimum and the maximum number of matches that can be played in a double-elimination tournament with n players, where after each game between two players, the winner goes on and the loser goes on if and only if this is not a second loss.",
+                      "problem":  "dmath-ch06-prob-073",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-005",
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e74. Use the product rule to show that there are $2 ^ { 2 ^ { n } }$ diferent truth tables for propositions in n variables.",
+                      "problem":  "dmath-ch06-prob-074",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "75. Use mathematical induction to prove the sum rule for m tasks from the sum rule for two tasks.",
+                      "problem":  "dmath-ch06-prob-075",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-002"
+                                 ]
+                  },
+                  {
+                      "source":  "76. Use mathematical induction to prove the product rule for m tasks from the product rule for two tasks.",
+                      "problem":  "dmath-ch06-prob-076",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001"
+                                 ]
+                  },
+                  {
+                      "source":  "77. How many diagonals does a convex polygon with n sides have? (Recall that a polygon is convex if every line segment connecting two points in the interior or boundary of the polygon lies entirely within this set and that a diagonal of a polygon is a line segment connecting two vertices that are not adjacent.)",
+                      "problem":  "dmath-ch06-prob-077",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "78. Data are transmitted over the Internet in datagrams, which are structured blocks of bits. Each datagram contains header information organized into a maximum of 14 diferent fields (specifying many things, including the source and destination addresses) and a data area that contains the actual data that are transmitted. One of the 14 header fields is the header length field (denoted by HLEN), which is specified by the protocol to be 4 bits long and that specifies the header length in terms of 32- bit blocks of bits. For example, if HLEN = 0110, the header is made up of six 32-bit blocks. Another of the 14 header fields is the 16-bit-long total length field (denoted by TOTAL LENGTH), which specifies the length in bits of the entire datagram, including both the header fields and the data area. The length of the data area is the total length of the datagram minus the length of the header.\n\na) The largest possible value of TOTAL LENGTH (which is 16 bits long) determines the maximum total length in octets (blocks of 8 bits) of an Internet datagram. What is this value?\n\nb) The largest possible value of HLEN (which is 4 bits long) determines the maximum total header length in 32-bit blocks. What is this value? What is the maximum total header length in octets?\n\nc) The minimum (and most common) header length is 20 octets. What is the maximum total length in octets of the data area of an Internet datagram?\n\nd) How many diferent strings of octets in the data area can be transmitted if the header length is 20 octets and the total length is as long as possible?\n\n![](images/3d9f6934d96a760745fd62a416dbb67dddaef0ba82c5be69ba62c25ff1d2266e.jpg)\n\n## The Pigeonhole Principle",
+                      "problem":  "dmath-ch06-prob-078",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-001",
+                                     "dmath-ch06-kp-002",
+                                     "dmath-ch06-kp-028"
+                                 ]
+                  },
+                  {
+                      "source":  "1. Show that in any set of six classes, each meeting regularly once a week on a particular day of the week, there must be two that meet on the same day, assuming that no classes are held on weekends.",
+                      "problem":  "dmath-ch06-prob-079",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "2. Show that if there are 30 students in a class, then at least two have last names that begin with the same letter.",
+                      "problem":  "dmath-ch06-prob-080",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "3. A drawer contains a dozen brown socks and a dozen black socks, all unmatched. A man takes socks out at random in the dark.\n\na) How many socks must he take out to be sure that he has at least two socks of the same color?\n\nb) How many socks must he take out to be sure that he has at least two black socks?",
+                      "problem":  "dmath-ch06-prob-081",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "4. A bowl contains 10 red balls and 10 blue balls. A woman selects balls at random without looking at them.\n\na) How many balls must she select to be sure of having at least three balls of the same color?\n\nb) How many balls must she select to be sure of having at least three blue balls?",
+                      "problem":  "dmath-ch06-prob-082",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "5. Undergraduate students at a college belong to one of four groups depending on the year in which they are expected to graduate. Each student must choose one of 21 diferent majors. How many students are needed to assure that there are two students expected to graduate in the same year who have the same major?",
+                      "problem":  "dmath-ch06-prob-083",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "6. There are six professors teaching the introductory discrete mathematics class at a university. The same final exam is given by all six professors. If the lowest possible score on the final is 0 and the highest possible score is 100, how many students must there be to guarantee that there are two students with the same professor who earned the same final examination score?",
+                      "problem":  "dmath-ch06-prob-084",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "7. Show that among any group of five (not necessarily consecutive) integers, there are two with the same remainder when divided by 4.",
+                      "problem":  "dmath-ch06-prob-085",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "8. Let d be a positive integer. Show that among any group of d + 1 (not necessarily consecutive) integers there are two with exactly the same remainder when they are divided by d.",
+                      "problem":  "dmath-ch06-prob-086",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "9. Let n be a positive integer. Show that in any set of n consecutive integers there is exactly one divisible by n.",
+                      "problem":  "dmath-ch06-prob-087",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-006",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "10. Show that if f is a function from S to T, where S and T are finite sets with $\\vert S \\vert \u003e \\vert T \\vert$ , then there are elements $s _ { 1 }$ and $s _ { 2 }$ in S such that $f ( s _ { 1 } ) = f ( s _ { 2 } )$ , or in other words, f is not one-to-one.",
+                      "problem":  "dmath-ch06-prob-088",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-007",
+                                     "dmath-ch06-kp-006"
+                                 ]
+                  },
+                  {
+                      "source":  "11. What is the minimum number of students, each of whom comes from one of the 50 states, who must be enrolled in a university to guarantee that there are at least 100 who come from the same state?",
+                      "problem":  "dmath-ch06-prob-089",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e12. Let $( x _ { i } , y _ { i } ) , i = 1 , 2 , 3 , 4 , 5 ,$ , be a set of five distinct points with integer coordinates in the xy plane. Show that the midpoint of the line joining at least one pair of these points has integer coordinates.",
+                      "problem":  "dmath-ch06-prob-090",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e13. Let $( x _ { i } , y _ { i } , z _ { i } ) , i = 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9$ , be a set of nine distinct points with integer coordinates in xyz space. Show that the midpoint of at least one pair of these points has integer coordinates.",
+                      "problem":  "dmath-ch06-prob-091",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "14. How many ordered pairs of integers (a,\n\nb) are needed to guarantee that there are two ordered pairs $( a _ { 1 } , b _ { 1 } )$ and $( a _ { 2 } , b _ { 2 } )$ such that $a _ { 1 }$ mod $5 = a _ { 2 }$ mod 5 and $b _ { 1 }$ mod $5 = b _ { 2 }$ mod 5?",
+                      "problem":  "dmath-ch06-prob-092",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "15.\n\na) Show that if five integers are selected from the first eight positive integers, there must be a pair of these integers with a sum equal to 9.\n\nb) Is the conclusion in part (a) true if four integers are selected rather than five?",
+                      "problem":  "dmath-ch06-prob-093",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "16.\n\na) Show that if seven integers are selected from the first 10 positive integers, there must be at least two pairs of these integers with the sum 11.\n\nb) Is the conclusion in part (a) true if six integers are selected rather than seven?",
+                      "problem":  "dmath-ch06-prob-094",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "17. How many numbers must be selected from the set {1, 2, 3, 4, 5, 6} to guarantee that at least one pair of these numbers add up to 7?",
+                      "problem":  "dmath-ch06-prob-095",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "18. How many numbers must be selected from the set {1, 3, 5, 7, 9, 11, 13, 15} to guarantee that at least one pair of these numbers add up to 16?",
+                      "problem":  "dmath-ch06-prob-096",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "19. A company stores products in a warehouse. Storage bins in this warehouse are specified by their aisle, location in the aisle, and shelf. There are 50 aisles, 85 horizontal locations in each aisle, and 5 shelves throughout the warehouse. What is the least number of products the company can have so that at least two products must be stored in the same bin?",
+                      "problem":  "dmath-ch06-prob-097",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "20. Suppose that there are nine students in a discrete mathematics class at a small college.\n\na) Show that the class must have at least five male students or at least five female students.\n\nb) Show that the class must have at least three male students or at least seven female students.",
+                      "problem":  "dmath-ch06-prob-098",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "21. Suppose that every student in a discrete mathematics class of 25 students is a freshman, a sophomore, or a junior.\n\na) Show that there are at least nine freshmen, at least nine sophomores, or at least nine juniors in the class.\n\nb) Show that there are either at least three freshmen, at least 19 sophomores, or at least five juniors in the class.",
+                      "problem":  "dmath-ch06-prob-099",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "22. Find an increasing subsequence of maximal length and a decreasing subsequence of maximal length in the sequence 22, 5, 7, 2, 23, 10, 15, 21, 3, 17.",
+                      "problem":  "dmath-ch06-prob-100",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "23. Construct a sequence of 16 positive integers that has no increasing or decreasing subsequence of five terms.",
+                      "problem":  "dmath-ch06-prob-101",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "24. Show that if there are 101 people of diferent heights standing in a line, it is possible to find 11 people in the order they are standing in the line with heights that are either increasing or decreasing.",
+                      "problem":  "dmath-ch06-prob-102",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  }
+              ]
+}

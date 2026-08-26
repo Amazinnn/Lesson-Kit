@@ -212,10 +212,8 @@ def _gate_data(conn, solutions, audit):
     errors = []
     solution_items = _items(solutions, "solutions", errors)
     audit_items = _items(audit, "audit", errors)
-    if not _provenance(solutions) or not _provenance(audit):
+    if not _provenance(solutions, solution_items) or not _provenance(audit, audit_items):
         errors.append("solutions and audit require provider session provenance")
-    elif solutions["provider_session_id"] == audit["provider_session_id"]:
-        errors.append("audit must use a fresh provider session")
     solutions_by_problem = _by_problem(solution_items, "solution", errors)
     audits_by_problem = _by_problem(audit_items, "audit", errors)
     db_rows = dict(conn.execute("SELECT problem_id, problem_text FROM problems"))
@@ -232,6 +230,8 @@ def _gate_data(conn, solutions, audit):
         other = audits_by_problem.get(problem)
         if other is None:
             continue
+        if _provider_ref(solutions, item) == _provider_ref(audit, other):
+            errors.append(f"{problem}: audit must use a fresh provider session")
         _plain_fields(other, problem, errors, "audit")
         for field in ("source", "problem", "solution"):
             if other.get(field) != item.get(field):
@@ -257,8 +257,16 @@ def _items(artifact, expected_kind, errors):
     return items
 
 
-def _provenance(artifact):
-    return isinstance(artifact, dict) and isinstance(artifact.get("provider"), str) and artifact["provider"] in ("codex", "claude") and isinstance(artifact.get("provider_session_id"), str) and bool(artifact["provider_session_id"])
+def _provenance(artifact, items):
+    return isinstance(artifact, dict) and all(_provider_ref(artifact, item) for item in items)
+
+
+def _provider_ref(artifact, item):
+    provider = item.get("provider", artifact.get("provider"))
+    session = item.get("provider_session_id", artifact.get("provider_session_id"))
+    if provider in ("codex", "claude") and isinstance(session, str) and session:
+        return provider, session
+    return None
 
 
 def _by_problem(items, label, errors):

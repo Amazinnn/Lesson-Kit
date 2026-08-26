@@ -1,0 +1,436 @@
+{
+    "kind":  "source-batch",
+    "batch":  "03",
+    "items":  [
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e25. Show that whenever 25 girls and 25 boys are seated around a circular table there is always a person both of whose neighbors are boys.",
+                      "problem":  "dmath-ch06-prob-103",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗∗\u003c/sup\u003e26. Suppose that 21 girls and 21 boys enter a mathematics competition. Furthermore, suppose that each entrant solves at most six questions, and for every boy-girl pair, there is at least one question that they both solved. Show that there is a question that was solved by at least three girls and at least three boys.",
+                      "problem":  "dmath-ch06-prob-104",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e27. Describe an algorithm in pseudocode for producing the largest increasing or decreasing subsequence of a sequence of distinct integers.",
+                      "problem":  "dmath-ch06-prob-105",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "28. Show that in a group of five people (where any two people are either friends or enemies), there are not necessarily three mutual friends or three mutual enemies.",
+                      "problem":  "dmath-ch06-prob-106",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "29. Show that in a group of 10 people (where any two people are either friends or enemies), there are either three mutual friends or four mutual enemies, and there are either three mutual enemies or four mutual friends.",
+                      "problem":  "dmath-ch06-prob-107",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "30. Use Exercise 29 to show that among any group of 20 people (where any two people are either friends or enemies), there are either four mutual friends or four mutual enemies.",
+                      "problem":  "dmath-ch06-prob-108",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "31. Show that if n is an integer with n ≥ 2, then the Ramsey number R(2, n) equals n. (Recall that Ramsey numbers were discussed after Example 13 in Section 6.2.)",
+                      "problem":  "dmath-ch06-prob-109",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "32. Show that if m and n are integers with m ≥ 2 and n ≥ 2, then the Ramsey numbers R(m, n) and R(n, m) are equal. (Recall that Ramsey numbers were discussed after Example 13 in Section 6.2.)",
+                      "problem":  "dmath-ch06-prob-110",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "33. Show that there are at least six people in California (population: 39 million) with the same three initials who were born on the same day of the year (but not necessarily in the same year). Assume that everyone has three initials.",
+                      "problem":  "dmath-ch06-prob-111",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "34. Show that if there are 100,000,000 wage earners in the United States who earn less than 1,000,000 dollars (but at least a penny), then there are two who earned exactly the same amount of money, to the penny, last year.",
+                      "problem":  "dmath-ch06-prob-112",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "35. In the 17th century, there were more than 800,000 inhabitants of Paris. At the time, it was believed that no one had more than 200,000 hairs on their head. Assuming these numbers are correct and that everyone has at least one hair on their head (that is, no one is completely bald), use the pigeonhole principle to show, as the French writer Pierre Nicole did, that there had to be two Parisians with the same number of hairs on their heads. Then use the generalized pigeonhole principle to show that there had to be at least five Parisians at that time with the same number of hairs on their heads.",
+                      "problem":  "dmath-ch06-prob-113",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "36. Assuming that no one has more than 1,000,000 hairs on their head and that the population of New York City was 8,537,673 in 2016, show there had to be at least nine people in New York City in 2016 with the same number of hairs on their heads.",
+                      "problem":  "dmath-ch06-prob-114",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "37. There are 38 diferent time periods during which classes at a university can be scheduled. If there are 677 diferent classes, how many diferent rooms will be needed?",
+                      "problem":  "dmath-ch06-prob-115",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "38. A computer network consists of six computers. Each computer is directly connected to at least one of the other computers. Show that there are at least two computers in the network that are directly connected to the same number of other computers.",
+                      "problem":  "dmath-ch06-prob-116",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "39. A computer network consists of six computers. Each computer is directly connected to zero or more of the other computers. Show that there are at least two computers in the network that are directly connected to the same number of other computers. [Hint: It is impossible to have a computer linked to none of the others and a computer linked to all the others.]",
+                      "problem":  "dmath-ch06-prob-117",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "40. Find the least number of cables required to connect eight computers to four printers to guarantee that for every choice of four of the eight computers, these four computers can directly access four diferent printers. Justify your answer.",
+                      "problem":  "dmath-ch06-prob-118",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "41. Find the least number of cables required to connect 100 computers to 20 printers to guarantee that every subset of 20 computers can directly access 20 diferent printers. (Here, the assumptions about cables and computers are the same as in Example 9.) Justify your answer.",
+                      "problem":  "dmath-ch06-prob-119",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e42. Prove that at a party where there are at least two people, there are two people who know the same number of other people there.",
+                      "problem":  "dmath-ch06-prob-120",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "43. An arm wrestler is the champion for a period of 75 hours. (Here, by an hour, we mean a period starting from an exact hour, such as 1 P.M., until the next hour.) The arm wrestler had at least one match an hour, but no more than 125 total matches. Show that there is a period of consecutive hours during which the arm wrestler had exactly 24 matches.",
+                      "problem":  "dmath-ch06-prob-121",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e44. Is the statement in Exercise 43 true if 24 is replaced by\n\na) 2?\n\nb) 23?\n\nc) 25?\n\nd) 30?",
+                      "problem":  "dmath-ch06-prob-122",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "45. Show that if f is a function from S to T, where S and T are nonempty finite sets and $m = \\lceil \\left. S \\right. / \\left. T \\right. \\rceil$ , then there are at least m elements of S mapped to the same value of T. That is, show that there are distinct elements $s _ { 1 } , s _ { 2 } , \\ldots , s _ { m }$ of S such that $f ( s _ { 1 } ) = f ( s _ { 2 } ) = \\cdots = f ( s _ { m } )$",
+                      "problem":  "dmath-ch06-prob-123",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "46. There are 51 houses on a street. Each house has an address between 1000 and 1099, inclusive. Show that at least two houses have addresses that are consecutive integers.",
+                      "problem":  "dmath-ch06-prob-124",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e47. Let x be an irrational number. Show that for some positive integer j not exceeding the positive integer n, the absolute value of the diference between jx and the nearest integer to jx is less than 1/n.",
+                      "problem":  "dmath-ch06-prob-125",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "48. Let $n _ { 1 } , n _ { 2 } , \\ldots , n _ { t }$ be positive integers. Show that if $n _ { 1 } + n _ { 2 } + \\cdots + n _ { t } - t + 1$ objects are placed into t boxes, then for some $i , i = 1 , 2 , \\dots , t ,$ the ith box contains at least $n _ { i }$ objects.",
+                      "problem":  "dmath-ch06-prob-126",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e49. An alternative proof of Theorem 3 based on the generalized pigeonhole principle is outlined in this exercise. The notation used is the same as that used in the proof in the text.\n\na) Assume that $i _ { k } \\le n$ for $k = 1 , 2 , \\ldots , n ^ { 2 } + 1$ . Use the generalized pigeonhole principle to show that there are n + 1 terms $a _ { k _ { 1 } } , a _ { k _ { 2 } } , \\ldots , a _ { k _ { n + 1 } }$ with $i _ { k _ { 1 } } = i _ { k _ { 2 } } = \\cdots =$ $i _ { k _ { n + 1 } }$ , where $1 \\leq \\dot { k _ { 1 } } \u003c \\tilde { k } _ { 2 } \u003c \\cdots \u003c k _ { n + 1 }$\n\nb) Show that $a _ { k _ { j } } \u003e a _ { k _ { j + 1 } }$ for $j = 1 , 2 , \\dots , n .$ [Hint: Assume that $a _ { k _ { i } } \u003c a _ { k _ { i + 1 } }$ , and show that this implies that $i _ { k _ { j } } \u003e i _ { k _ { j + 1 } }$ , which is a contradiction.]\n\nc) Use parts (a) and (b) to show that if there is no increasing subsequence of length n + 1, then there must be a decreasing subsequence of this length.\n\n![](images/19cd3f3c0561215cdf1d575a13966edc61c9e02d373f0130b9e68d444f6b0683.jpg)",
+                      "problem":  "dmath-ch06-prob-127",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-008",
+                                     "dmath-ch06-kp-024"
+                                 ]
+                  },
+                  {
+                      "source":  "1. List all the permutations of {a, b, c}.",
+                      "problem":  "dmath-ch06-prob-128",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "2. How many diferent permutations are there of the set {a, b, c, d, e, f, g}?",
+                      "problem":  "dmath-ch06-prob-129",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "3. How many permutations of {a, b, c, d, e, f, g} end with a?",
+                      "problem":  "dmath-ch06-prob-130",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "4. Let S = {1, 2, 3, 4, 5}.\n\na) List all the 3-permutations of S.\n\nb) List all the 3-combinations of S.",
+                      "problem":  "dmath-ch06-prob-131",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "5. Find the value of each of these quantities.\n\na) P(6, 3)\n\nb) P(6, 5)\n\nc) P(8, 1)\n\nd) P(8, 5)\n\ne) P(8, 8)\n\nf) P(10, 9)",
+                      "problem":  "dmath-ch06-prob-132",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "6. Find the value of each of these quantities.\n\na) C(5, 1)\n\nb) C(5, 3)\n\nc) C(8, 4)\n\nd) C(8, 8)\n\ne) C(8, 0)\n\nf) C(12, 6)",
+                      "problem":  "dmath-ch06-prob-133",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "7. Find the number of 5-permutations of a set with nine elements.",
+                      "problem":  "dmath-ch06-prob-134",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "8. In how many diferent orders can five runners finish a race if no ties are allowed?",
+                      "problem":  "dmath-ch06-prob-135",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "9. How many possibilities are there for the win, place, and show (first, second, and third) positions in a horse race with 12 horses if all orders of finish are possible?",
+                      "problem":  "dmath-ch06-prob-136",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "10. There are six diferent candidates for governor of a state. In how many diferent orders can the names of the candidates be printed on a ballot?",
+                      "problem":  "dmath-ch06-prob-137",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "11. How many bit strings of length 10 contain\n\na) exactly four 1s?\n\nb) at most four 1s?\n\nc) at least four 1s?\n\nd) an equal number of 0s and 1s?",
+                      "problem":  "dmath-ch06-prob-138",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "12. How many bit strings of length 12 contain\n\na) exactly three 1s?\n\nb) at most three 1s?\n\nc) at least three 1s?\n\nd) an equal number of 0s and 1s?",
+                      "problem":  "dmath-ch06-prob-139",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "13. A group contains n men and n women. How many ways are there to arrange these people in a row if the men and women alternate?",
+                      "problem":  "dmath-ch06-prob-140",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "14. In how many ways can a set of two positive integers less than 100 be chosen?",
+                      "problem":  "dmath-ch06-prob-141",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "15. In how many ways can a set of five letters be selected from the English alphabet?",
+                      "problem":  "dmath-ch06-prob-142",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "16. How many subsets with an odd number of elements does a set with 10 elements have?",
+                      "problem":  "dmath-ch06-prob-143",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "17. How many subsets with more than two elements does a set with 100 elements have?",
+                      "problem":  "dmath-ch06-prob-144",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "18. A coin is flipped eight times where each flip comes up either heads or tails. How many possible outcomes\n\na) are there in total?\n\nb) contain exactly three heads?\n\nc) contain at least three heads?\n\nd) contain the same number of heads and tails?",
+                      "problem":  "dmath-ch06-prob-145",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "19. A coin is flipped 10 times where each flip comes up either heads or tails. How many possible outcomes\n\na) are there in total?\n\nb) contain exactly two heads?\n\nc) contain at most three tails?\n\nd) contain the same number of heads and tails?",
+                      "problem":  "dmath-ch06-prob-146",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "20. How many bit strings of length 10 have\n\na) exactly three 0s?\n\nb) more 0s than 1s?\n\nc) at least seven 1s?\n\nd) at least three 1s?",
+                      "problem":  "dmath-ch06-prob-147",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "21. How many permutations of the letters ABCDEFG contain\n\na) the string BCD?\n\nb) the string CFGA?\n\nc) the strings BA and GF?\n\nd) the strings ABC and DE?\n\ne) the strings ABC and CDE?\n\nf) the strings CBA and BED?",
+                      "problem":  "dmath-ch06-prob-148",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "22. How many permutations of the letters ABCDEFGH contain\n\na) the string ED?\n\nb) the string CDE?\n\nc) the strings BA and FGH?\n\nd) the strings AB, DE, and GH?\n\ne) the strings CAB and BED?\n\nf) the strings BCA and ABF?",
+                      "problem":  "dmath-ch06-prob-149",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "23. How many ways are there for eight men and five women to stand in a line so that no two women stand next to each other? [Hint: First position the men and then consider possible positions for the women.]",
+                      "problem":  "dmath-ch06-prob-150",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "24. How many ways are there for 10 women and six men to stand in a line so that no two men stand next to each other? [Hint: First position the women and then consider possible positions for the men.]",
+                      "problem":  "dmath-ch06-prob-151",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "25. How many ways are there for four men and five women to stand in a line so that\n\na) all men stand together?\n\nb) all women stand together?",
+                      "problem":  "dmath-ch06-prob-152",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "26. How many ways are there for three penguins and six pufins to stand in a line so that\n\na) all pufins stand together?\n\nb) all penguins stand together?",
+                      "problem":  "dmath-ch06-prob-153",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  }
+              ]
+}

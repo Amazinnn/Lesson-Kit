@@ -1,0 +1,436 @@
+{
+    "kind":  "source-batch",
+    "batch":  "04",
+    "items":  [
+                  {
+                      "source":  "27. One hundred tickets, numbered 1, 2, 3, … , 100, are sold to 100 diferent people for a drawing. Four diferent prizes are awarded, including a grand prize (a trip to Tahiti). How many ways are there to award the prizes if\n\na) there are no restrictions?\n\nb) the person holding ticket 47 wins the grand prize?\n\nc) the person holding ticket 47 wins one of the prizes?\n\nd) the person holding ticket 47 does not win a prize?\n\ne) the people holding tickets 19 and 47 both win prizes?\n\nf) the people holding tickets 19, 47, and 73 all win\n\nf) the people holding tickets 19, 47, and 73 all win prizes?\n\ng) the people holding tickets 19, 47, 73, and 97 all win prizes?\n\nh) none of the people holding tickets 19, 47, 73, and 97 wins a prize?\n\ni) the grand prize winner is a person holding ticket 19, 47, 73, or 97?\n\nj) the people holding tickets 19 and 47 win prizes, but the people holding tickets 73 and 97 do not win prizes?",
+                      "problem":  "dmath-ch06-prob-154",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "28. Thirteen people on a softball team show up for a game.\n\na) How many ways are there to choose 10 players to take the field?\n\nb) How many ways are there to assign the 10 positions by selecting players from the 13 people who show up?\n\nc) Of the 13 people who show up, three are women. How many ways are there to choose 10 players to take the field if at least one of these players must be a woman?",
+                      "problem":  "dmath-ch06-prob-155",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "29. A club has 25 members.\n\na) How many ways are there to choose four members of the club to serve on an executive committee?\n\nb) How many ways are there to choose a president, vice president, secretary, and treasurer of the club, where no person can hold more than one ofice?",
+                      "problem":  "dmath-ch06-prob-156",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "30. A professor writes 40 discrete mathematics true/false questions. Of the statements in these questions, 17 are true. If the questions can be positioned in any order, how many diferent answer keys are possible?",
+                      "problem":  "dmath-ch06-prob-157",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e31. How many 4-permutations of the positive integers not exceeding 100 contain three consecutive integers k, k + 1, k + 2, in the correct order\n\na) where these consecutive integers can perhaps be separated by other integers in the permutation?\n\nb) where they are in consecutive positions in the permutation?",
+                      "problem":  "dmath-ch06-prob-158",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "32. Seven women and nine men are on the faculty in the mathematics department at a school.\n\na) How many ways are there to select a committee of five members of the department if at least one woman must be on the committee?\n\nb) How many ways are there to select a committee of five members of the department if at least one woman and at least one man must be on the committee?",
+                      "problem":  "dmath-ch06-prob-159",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "33. The English alphabet contains 21 consonants and five vowels. How many strings of six lowercase letters of the English alphabet contain\n\na) exactly one vowel?\n\nb) exactly two vowels?\n\nc) at least one vowel?\n\nd) at least two vowels?",
+                      "problem":  "dmath-ch06-prob-160",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "34. How many strings of six lowercase letters from the English alphabet contain\n\na) the letter a?\n\nb) the letters a and b?\n\nc) the letters a and b in consecutive positions with a preceding b, with all the letters distinct?\n\nd) the letters a and b, where a is somewhere to the left of b in the string, with all the letters distinct?",
+                      "problem":  "dmath-ch06-prob-161",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "35. Suppose that a department contains 10 men and 15 women. How many ways are there to form a committee with six members if it must have the same number of men and women?",
+                      "problem":  "dmath-ch06-prob-162",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "36. Suppose that a department contains 10 men and 15 women. How many ways are there to form a committee with six members if it must have more women than men?",
+                      "problem":  "dmath-ch06-prob-163",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "37. How many bit strings contain exactly eight 0s and 10 1s if every 0 must be immediately followed by a 1?",
+                      "problem":  "dmath-ch06-prob-164",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "38. How many bit strings contain exactly five 0s and 14 1s if every 0 must be immediately followed by two 1s?",
+                      "problem":  "dmath-ch06-prob-165",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "39. How many bit strings of length 10 contain at least three 1s and at least three 0s?",
+                      "problem":  "dmath-ch06-prob-166",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "40. How many ways are there to select 12 countries in the United Nations to serve on a council if 3 are selected from a block of 45, 4 are selected from a block of 57, and the others are selected from the remaining 69 countries?",
+                      "problem":  "dmath-ch06-prob-167",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-012",
+                                     "dmath-ch06-kp-013"
+                                 ]
+                  },
+                  {
+                      "source":  "41. How many license plates consisting of three letters followed by three digits contain no letter or digit twice?",
+                      "problem":  "dmath-ch06-prob-168",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "A circular r-permutation of n people is a seating of r of these n people around a circular table, where seatings are considered to be the same if they can be obtained from each other by rotating the table.\n\n42. Find the number of circular 3-permutations of 5 people.",
+                      "problem":  "dmath-ch06-prob-169",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "43. Find a formula for the number of circular r-permutations of n people.",
+                      "problem":  "dmath-ch06-prob-170",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "44. Find a formula for the number of ways to seat r of n people around a circular table, where seatings are considered the same if every person has the same two neighbors without regard to which side these neighbors are sitting on.",
+                      "problem":  "dmath-ch06-prob-171",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "45. How many ways are there for a horse race with three horses to finish if ties are possible? [Note: Two or three horses may tie.]",
+                      "problem":  "dmath-ch06-prob-172",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e46. How many ways are there for a horse race with four horses to finish if ties are possible? [Note: Any number of the four horses may tie.]",
+                      "problem":  "dmath-ch06-prob-173",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e47. There are six runners in the 100-yard dash. How many ways are there for three medals to be awarded if ties are possible? (The runner or runners who finish with the fastest time receive gold medals, the runner or runners who finish with exactly one runner ahead receive silver medals, and the runner or runners who finish with exactly two runners ahead receive bronze medals.)",
+                      "problem":  "dmath-ch06-prob-174",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e48. This procedure is used to break ties in games in the championship round of the World Cup soccer tournament. Each team selects five players in a prescribed order. Each of these players takes a penalty kick, with a player from the first team followed by a player from the second team and so on, following the order of players specified. If the score is still tied at the end of the 10 penalty kicks, this procedure is repeated. If the score is still tied after 20 penalty kicks, a sudden-death shootout occurs, with the first team scoring an unanswered goal victorious.\n\na) How many diferent scoring scenarios are possible if the game is settled in the first round of 10 penalty kicks, where the round ends once it is impossible for a team to equal the number of goals scored by the other team?\n\nthe game is settled in the second round of 10 penalty kicks?\n\nb) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if\n\nc) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?\n\n![](images/72f1ed20e3da77da695f16131a45ff24c6b554e9309682ed865ac6512dcebc78.jpg)",
+                      "problem":  "dmath-ch06-prob-175",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-009",
+                                     "dmath-ch06-kp-010",
+                                     "dmath-ch06-kp-011"
+                                 ]
+                  },
+                  {
+                      "source":  "1. Find the expansion of $( x + y ) ^ { 4 }$\n\na) using combinatorial reasoning, as in Example 1.\n\nb) using the binomial theorem.",
+                      "problem":  "dmath-ch06-prob-176",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "2. Find the expansion of $( x + y ) ^ { 5 }$\n\na) using combinatorial reasoning, as in Example 1.\n\nb) using the binomial theorem.",
+                      "problem":  "dmath-ch06-prob-177",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "3. Find the expansion of $( x + y ) ^ { 6 }$",
+                      "problem":  "dmath-ch06-prob-178",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "4. Find the coeficient of $x ^ { 5 } y ^ { 8 } \\mathrm { i n } ( x + y ) ^ { 1 3 }$",
+                      "problem":  "dmath-ch06-prob-179",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "5. How many terms are there in the expansion of $( x + y ) ^ { 1 0 0 }$ after like terms are collected?",
+                      "problem":  "dmath-ch06-prob-180",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "6. What is the coeficient of $x ^ { 7 } \\mathrm { i n } ( 1 + x ) ^ { 1 1 } \\hat { . }$",
+                      "problem":  "dmath-ch06-prob-181",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "7. What is the coeficient of $x ^ { 9 }$ in $( 2 - x ) ^ { 1 9 } ?$",
+                      "problem":  "dmath-ch06-prob-182",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "8. What is the coeficient of $x ^ { 8 } y ^ { 9 }$ in the expansion of $( 3 x + 2 y ) ^ { 1 7 } ?$",
+                      "problem":  "dmath-ch06-prob-183",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "9. What is the coeficient of $x ^ { 1 0 1 } y ^ { 9 9 }$ in the expansion of $( 2 x - 3 y ) ^ { 2 0 0 } ?$",
+                      "problem":  "dmath-ch06-prob-184",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "10. Use the binomial theorem to expand $( 3 x - y ^ { 2 } ) ^ { 4 }$ into a sum of terms of the form $c x ^ { a } y ^ { b }$ , where c is a real number and a and b are nonnegative integers.",
+                      "problem":  "dmath-ch06-prob-185",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "11. Use the binomial theorem to expand $( 3 x ^ { 4 } - 2 y ^ { 3 } ) ^ { 5 }$ into a sum of terms of the form $c x ^ { a } y ^ { b }$ , where c is a real number and a and b are nonnegative integers.",
+                      "problem":  "dmath-ch06-prob-186",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "12. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 5 x ^ { 2 } + 2 y ^ { 3 } ) ^ { 6 }$ , where\n\na) $a = 6 , b = 9 .$\n\nb) $a = 2 , b = 1 5 .$\n\nc) $a = 3 , b = 1 2 .$\n\nd) $a = 1 2 , b = 0 .$\n\ne) $a = 8 , b = 9 .$",
+                      "problem":  "dmath-ch06-prob-187",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "13. Use the binomial theorem to find the coeficient of $x ^ { a } y ^ { b }$ in the expansion of $( 2 x ^ { 3 } - 4 y ^ { 2 } ) ^ { 7 }$ , where\n\na) $a = 9 , b = 8 .$\n\nb) $a = 8 , b = 9 .$\n\nc) $a = 0 , b = 1 4 .$\n\nd) $a = 1 2 , b = 6 .$\n\ne) $a = 1 8 , b = 2 .$",
+                      "problem":  "dmath-ch06-prob-188",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e14. Give a formula for the coeficient of $x ^ { k }$ in the expansion of $( x + 1 / x ) ^ { 1 0 0 }$ , where k is an integer.",
+                      "problem":  "dmath-ch06-prob-189",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e15. Give a formula for the coeficient of $x ^ { k }$ in the expansion of $( x ^ { 2 } - 1 / x ) ^ { 1 0 0 }$ , where k is an integer.",
+                      "problem":  "dmath-ch06-prob-190",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "16. The row of Pascal’s triangle containing the binomial coeficients $\\binom { 1 0 } { k } , 0 \\leq k \\leq 1 0 ,$ is:\n\n$$\n1 1 1 4 5 1 2 0 2 1 0 2 5 2 2 1 0 1 2 0 4 5 1 0 1\n$$\n\nUse Pascal’s identity to produce the row immediately following this row in Pascal’s triangle.",
+                      "problem":  "dmath-ch06-prob-191",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "17. What is the row of Pascal’s triangle containing the binomial coeficients $\\textstyle { \\binom { 9 } { k } } , 0 \\leq k \\leq 9 ?$",
+                      "problem":  "dmath-ch06-prob-192",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "18. Show that if n is a positive integer, then $\\begin{array} { r } { 1 = { \\binom { n } { 0 } } \u003c { \\binom { n } { 1 } } \u003c } \\end{array}$ $\\begin{array} { r } { \\cdots \u003c { \\binom { n } { \\lfloor n / 2 \\rfloor } } = { \\binom { n } { \\lceil n / 2 \\rceil } } \u003e \\cdots \u003e { \\binom { n } { n - 1 } } \u003e { \\binom { n } { n } } = \\stackrel { \\cup } { 1 } . } \\end{array}$",
+                      "problem":  "dmath-ch06-prob-193",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "19. Show that ${ \\binom { n } { k } } \\leq 2 ^ { n }$ for all positive integers n and all integers k with $0 \\leq k \\leq n$",
+                      "problem":  "dmath-ch06-prob-194",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "20.\n\na) Use Exercise 18 and Corollary 1 to show that if n is an integer greater than 1, then $\\binom { n } { | n / 2 | } \\geq 2 ^ { n } / n$\n\nb) Conclude from part (a) that if n is a positive integer, then ${ \\binom { 2 n } { n } } \\geq 4 ^ { n } / 2 n$",
+                      "problem":  "dmath-ch06-prob-195",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "21. Show that if n and k are integers with $1 \\leq k \\leq n ,$ , then ${ \\binom { n } { k } } \\leq n ^ { k } / 2 ^ { k - 1 }$",
+                      "problem":  "dmath-ch06-prob-196",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "22. Suppose that b is an integer with $b \\geq 7$ . Use the binomial theorem and the appropriate row of Pascal’s triangle to find the base-b expansion of $( 1 1 ) _ { b } ^ { 4 }$ [that is, the fourth power of the number $( 1 1 ) _ { b }$ in base-b notation].",
+                      "problem":  "dmath-ch06-prob-197",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "23. Prove Pascal’s identity, using the formula for \u003csup\u003en\u003c/sup\u003e .",
+                      "problem":  "dmath-ch06-prob-198",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "24. Suppose that k and n are integers with $1 \\leq k \u003c n .$ . Prove the hexagon identity\n\n$$\n{ \\binom { n - 1 } { k - 1 } } { \\binom { n } { k + 1 } } { \\binom { n + 1 } { k } } = { \\binom { n - 1 } { k } } { \\binom { n } { k - 1 } } { \\binom { n + 1 } { k + 1 } } ,\n$$\n\nwhich relates terms in Pascal’s triangle that form a hexagon.",
+                      "problem":  "dmath-ch06-prob-199",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "25. Prove that if n and k are integers with $1 \\leq k \\leq n ,$ , then $\\begin{array} { r } { k \\binom { n } { k } = n \\binom { n - 1 } { k - 1 } } \\end{array}$ ，\n\na) using a combinatorial proof. [Hint: Show that the two sides of the identity count the number of ways to select a subset with k elements from a set with n elements and then an element of this subset.]\n\nb) using an algebraic proof based on the formula for $\\binom { n } { r }$ given in Theorem 2 in Section 6.3.",
+                      "problem":  "dmath-ch06-prob-200",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "26. Prove the identity $\\textstyle { \\binom { n } { r } } { \\binom { r } { k } } = { \\binom { n } { k } } { \\binom { n - k } { r - k } }$ , whenever $n , r ,$ and k are nonnegative integers with $r \\leq n$ and $k \\leq r ,$\n\na) using a combinatorial argument.\n\nb) using an argument based on the formula for the number of r-combinations of a set with n elements.",
+                      "problem":  "dmath-ch06-prob-201",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "27. Show that if n and k are positive integers, then\n\n$$\n\\binom { n + 1 } { k } = ( n + 1 ) \\binom { n } { k - 1 } \\nearrow\n$$\n\nUse this identity to construct an inductive definition of the binomial coeficients.",
+                      "problem":  "dmath-ch06-prob-202",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "28. Show that if p is a prime and k is an integer such that $1 \\leq k \\leq p - 1$ , then p divides $\\binom { p } { k }$",
+                      "problem":  "dmath-ch06-prob-203",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "29. Let n be a positive integer. Show that\n\n$$\n{ \\binom { 2 n } { n + 1 } } + { \\binom { 2 n } { n } } = { \\binom { 2 n + 2 } { n + 1 } } / 2 .\n$$",
+                      "problem":  "dmath-ch06-prob-204",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  }
+              ]
+}

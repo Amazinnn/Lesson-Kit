@@ -1,0 +1,468 @@
+{
+    "kind":  "source-batch",
+    "batch":  "05",
+    "items":  [
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e30. Let n and k be integers with $1 \\leq k \\leq n .$ . Show that\n\n$$\n\\sum _ { k = 1 } ^ { n } { \\binom { n } { k } } { \\binom { n } { k - 1 } } = { \\binom { 2 n + 2 } { n + 1 } } / 2 - { \\binom { 2 n } { n } } .\n$$",
+                      "problem":  "dmath-ch06-prob-205",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-016"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e31. Prove the hockeystick identity\n\n$$\n\\sum _ { k = 0 } ^ { r } { \\binom { n + k } { k } } = { \\binom { n + r + 1 } { r } }\n$$\n\nwhenever n and r are positive integers,\n\na) using a combinatorial argument.\n\nb) using Pascal’s identity.",
+                      "problem":  "dmath-ch06-prob-206",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "32. Show that if n is a positive integer, then $\\textstyle { \\binom { 2 n } { 2 } } = 2 { \\binom { n } { 2 } } + n ^ { 2 }$\n\na) using a combinatorial argument.\n\nb) by algebraic manipulation.",
+                      "problem":  "dmath-ch06-prob-207",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e33. Give a combinatorial proof that $\\begin{array} { r } { \\sum _ { k = 1 } ^ { n } k { \\binom { n } { k } } = n 2 ^ { n - 1 } } \\end{array}$ [Hint: Count in two ways the number of ways to select a committee and to then select a leader of the committee.]",
+                      "problem":  "dmath-ch06-prob-208",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e34. Give a combinatorial proof that $\\begin{array} { r } { \\sum _ { k = 1 } ^ { n } k \\binom { n } { k } ^ { 2 } = n \\binom { 2 n - 1 } { n - 1 } } \\end{array}$ [Hint: Count in two ways the number of ways to select a committee, with n members from a group of n mathematics professors and n computer science professors, such that the chairperson of the committee is a mathematics professor.]",
+                      "problem":  "dmath-ch06-prob-209",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "35. Show that a nonempty set has the same number of subsets with an odd number of elements as it does subsets with an even number of elements.",
+                      "problem":  "dmath-ch06-prob-210",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e36. Prove the binomial theorem using mathematical induction.",
+                      "problem":  "dmath-ch06-prob-211",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "37. In this exercise we will count the number of paths in the xy plane between the origin (0, 0) and point (m, n), where m and n are nonnegative integers, such that each path is made up of a series of steps, where each step is a move one unit to the right or a move one unit upward. (No moves to the left or downward are allowed.) Two such paths from (0, 0) to (5, 3) are illustrated here.\n\n![](images/8cf884c79e92268ca1a3bdaca03a319185cfc095b008c3bf824fa4d71f2debda.jpg)\n\na) Show that each path of the type described can be represented by a bit string consisting of m 0s and n 1s, where a 0 represents a move one unit to the right and a 1 represents a move one unit upward.(\n\nb) Conclude from part (a) that there are $\\widetilde { \\binom { m + n } { n } }$ paths of the desired type.",
+                      "problem":  "dmath-ch06-prob-212",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "38. Use Exercise 37 to give an alternative proof of Corol-\u003csub\u003e( ) ( )\u003c/sub\u003e lary 2 in Section 6.3, which states that ${ \\binom { n } { k } } = { \\binom { n } { n - k } }$ whenever k is an integer with $0 \\leq k \\leq n .$ . [Hint: Consider the number of paths of the type described in Exercise 37 from (0, 0) to (n − k, k) and from (0, 0) to (k, n − k).]",
+                      "problem":  "dmath-ch06-prob-213",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "39. Use Exercise 37 to prove Theorem 4. [Hint: Count the number of paths with n steps of the type described in Exercise 37. Every such path must end at one of the points (n − k, k) for $k = 0 , 1 , 2 , \\ldots , n . ]$",
+                      "problem":  "dmath-ch06-prob-214",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "40. Use Exercise 37 to prove Pascal’s identity. [Hint: Show that a path of the type described in Exercise 37 from (0, 0) to $( n + 1 - k , k )$ passes through either $( n + 1 - k , k - 1 )$ or $( n - k , k )$ , but not through both.]",
+                      "problem":  "dmath-ch06-prob-215",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "41. Use Exercise 37 to prove the hockeystick identity from Exercise 31. [Hint: First, note that the number of paths from (0, 0) to (n + 1, r) equals ${ \\binom { n + 1 + r } { r } }$ . Second, count the number of paths by summing the number of these paths that start by going k units upward for $k =$ $0 , 1 , 2 , \\ldots , r . ]$",
+                      "problem":  "dmath-ch06-prob-216",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "42. Give a combinatorial proof that if n is a positive inte-\u003csub\u003e( )\u003c/sub\u003e ger then $\\begin{array} { r } { \\sum _ { k = 0 } ^ { n } k ^ { 2 } { \\binom { n } { k } } \\stackrel { \\bullet } { = } n ( n + 1 ) 2 ^ { n - 2 } . } \\end{array}$ . [Hint: Show that both sides count the ways to select a subset of a set of n elements together with two not necessarily distinct elements from this subset. Furthermore, express the righthand side as $n ( n - 1 ) 2 ^ { n - 2 } + n 2 ^ { n - 1 } .$ ]",
+                      "problem":  "dmath-ch06-prob-217",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e43. Determine a formula involving binomial coeficients for the nth term of a sequence if its initial terms are those listed. [Hint: Looking at Pascal’s triangle will be helpful. Although infinitely many sequences start with a specified set of terms, each of the following lists is the start of a sequence of the type desired.]\n\na) 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, …\n\nb) 1, 4, 10, 20, 35, 56, 84, 120, 165, 220, …\n\nc) 1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, …\n\nd) 1, 1, 2, 3, 6, 10, 20, 35, 70, 126, …\n\ne) 1, 1, 1, 3, 1, 5, 15, 35, 1, 9, …\n\nf) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …\n\n![](images/ad580e473c29f6164955f171fd672862d7d75e17981d43ad0e0f09940061798d.jpg)",
+                      "problem":  "dmath-ch06-prob-218",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-014",
+                                     "dmath-ch06-kp-015",
+                                     "dmath-ch06-kp-017",
+                                     "dmath-ch06-kp-026"
+                                 ]
+                  },
+                  {
+                      "source":  "1. In how many diferent ways can five elements be selected in order from a set with three elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-219",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-018"
+                                 ]
+                  },
+                  {
+                      "source":  "2. In how many diferent ways can five elements be selected in order from a set with five elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-220",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-018"
+                                 ]
+                  },
+                  {
+                      "source":  "3. How many strings of six letters are there?",
+                      "problem":  "dmath-ch06-prob-221",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-018"
+                                 ]
+                  },
+                  {
+                      "source":  "4. Every day a student randomly chooses a sandwich for lunch from a pile of wrapped sandwiches. If there are six kinds of sandwiches, how many diferent ways are there for the student to choose sandwiches for the seven days of a week if the order in which the sandwiches are chosen matters?",
+                      "problem":  "dmath-ch06-prob-222",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-018"
+                                 ]
+                  },
+                  {
+                      "source":  "5. How many ways are there to assign three jobs to five employees if each employee can be given more than one job?",
+                      "problem":  "dmath-ch06-prob-223",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-018"
+                                 ]
+                  },
+                  {
+                      "source":  "6. How many ways are there to select five unordered elements from a set with three elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-224",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "7. How many ways are there to select three unordered elements from a set with five elements when repetition is allowed?",
+                      "problem":  "dmath-ch06-prob-225",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "8. How many diferent ways are there to choose a dozen donuts from the 21 varieties at a donut shop?",
+                      "problem":  "dmath-ch06-prob-226",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "9. A bagel shop has onion bagels, poppy seed bagels, egg bagels, salty bagels, pumpernickel bagels, sesame seed bagels, raisin bagels, and plain bagels. How many ways are there to choose\n\na) six bagels?\n\nb) a dozen bagels?\n\nc) two dozen bagels?\n\nd) a dozen bagels with at least one of each kind?\n\ne) a dozen bagels with at least three egg bagels and no more than two salty bagels?",
+                      "problem":  "dmath-ch06-prob-227",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "10. A croissant shop has plain croissants, cherry croissants, chocolate croissants, almond croissants, apple croissants, and broccoli croissants. How many ways are there to choose\n\na) a dozen croissants?\n\nb) three dozen croissants?\n\nc) two dozen croissants with at least two of each kind?\n\nd) two dozen croissants with no more than two broccoli croissants?\n\ne) two dozen croissants with at least five chocolate croissants and at least three almond croissants?\n\nf) two dozen croissants with at least one plain croissant, at least two cherry croissants, at least three chocolate croissants, at least one almond croissant, at least two apple croissants, and no more than three broccoli croissants?",
+                      "problem":  "dmath-ch06-prob-228",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "11. How many ways are there to choose eight coins from a piggy bank containing 100 identical pennies and 80 identical nickels?",
+                      "problem":  "dmath-ch06-prob-229",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "12. How many diferent combinations of pennies, nickels, dimes, quarters, and half dollars can a piggy bank contain if it has 20 coins in it?",
+                      "problem":  "dmath-ch06-prob-230",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "13. A book publisher has 3000 copies of a discrete mathematics book. How many ways are there to store these books in their three warehouses if the copies of the book are indistinguishable?",
+                      "problem":  "dmath-ch06-prob-231",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "14. How many solutions are there to the equation\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } + x _ { 4 } = 1 7 ,\n$$\n\nwhere $x _ { 1 } , x _ { 2 } , x _ { 3 }$ , and $x _ { 4 }$ are nonnegative integers?",
+                      "problem":  "dmath-ch06-prob-232",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "15. How many solutions are there to the equation\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } + x _ { 4 } + x _ { 5 } = 2 1 ,\n$$\n\nwhere $x _ { i } , i = 1 , 2 , 3 , 4 , 5 ,$ , is a nonnegative integer such that\n\na) $x _ { 1 } \\geq 1 \\mathrm { 2 }$\n\nb) $x _ { i } \\geq 2 \\mathrm { f o r } i = 1 , 2 , 3 , 4 , 5 ?$\n\nc) $0 \\leq x _ { 1 } \\leq 1 0 ?$\n\nd) $0 \\leq x _ { 1 } \\leq 3 , 1 \\leq x _ { 2 } \u003c 4 , \\mathrm { a n d } x _ { 3 } \\geq 1 5 ?$",
+                      "problem":  "dmath-ch06-prob-233",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "16. How many solutions are there to the equation\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } + x _ { 4 } + x _ { 5 } + x _ { 6 } = 2 9 ,\n$$\n\nwhere $x _ { i } , i = 1 , 2 , 3 , 4 , 5 , 6 .$ , is a nonnegative integer such that\n\na) $x _ { i } \u003e 1$ for i = 1, 2, 3, 4, 5, 6?\n\n$$\nx _ { 1 } \\geq 1 , x _ { 2 } \\geq 2 , x _ { 3 } \\geq 3 , x _ { 4 } \\geq 4 , x _ { 5 } \u003e 5 , { \\mathrm { a n d } } x _ { 6 } \\geq 6 ?\n$$\n\nc) $x _ { 1 } \\leq 5 \\mathrm { ? }$\n\nd) $x _ { 1 } \u003c 8$ and $x _ { 2 } \u003e 8 ?$",
+                      "problem":  "dmath-ch06-prob-234",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "17. How many strings of 10 ternary digits (0, 1, or 2) are there that contain exactly two 0s, three 1s, and five 2s?",
+                      "problem":  "dmath-ch06-prob-235",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "18. How many strings of 20-decimal digits are there that contain two 0s, four 1s, three 2s, one 3, two 4s, three 5s, two $^ { 7 \\mathrm { s } , }$ and three 9s?",
+                      "problem":  "dmath-ch06-prob-236",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "19. Suppose that a large family has 14 children, including two sets of identical triplets, three sets of identical twins, and two individual children. How many ways are there to seat these children in a row of chairs if the identical triplets or twins cannot be distinguished from one another?",
+                      "problem":  "dmath-ch06-prob-237",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "20. How many solutions are there to the inequality\n\n$$\nx _ { 1 } + x _ { 2 } + x _ { 3 } \\leq 1 1 ,\n$$\n\nwhere $x _ { 1 } , x _ { 2 } ,$ and $x _ { 3 }$ are nonnegative integers? [Hint: Introduce an auxiliary variable $x _ { 4 }$ such that $x _ { 1 } + x _ { 2 } + x _ { 3 }$ + $x _ { 4 } = 1 1 . ]$",
+                      "problem":  "dmath-ch06-prob-238",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "21. A Swedish tour guide has devised a clever way for his clients to recognize him. He owns 13 pairs of shoes of the same style, customized so that each pair has a unique color. How many ways are there for him to choose a left shoe and a right shoe from these 13 pairs\n\na) without restrictions and which color is on which foot matters?\n\nb) so that the colors of the left and right shoe are diferent and which color is on which foot matters?\n\nc) so that the colors of the left and right shoe are diferent but which color is on which foot does not matter?\n\nd) without restrictions, but which color is on which foot does not matter?",
+                      "problem":  "dmath-ch06-prob-239",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "\u003csup\u003e∗\u003c/sup\u003e22. In how many ways can an airplane pilot be scheduled for five days of flying in October if he cannot work on consecutive days?",
+                      "problem":  "dmath-ch06-prob-240",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "23. How many ways are there to distribute six indistinguishable balls into nine distinguishable bins?",
+                      "problem":  "dmath-ch06-prob-241",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "24. How many ways are there to distribute 12 indistinguishable balls into six distinguishable bins?",
+                      "problem":  "dmath-ch06-prob-242",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "25. How many ways are there to distribute 12 distinguishable objects into six distinguishable boxes so that two objects are placed in each box?",
+                      "problem":  "dmath-ch06-prob-243",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "26. How many ways are there to distribute 15 distinguishable objects into five distinguishable boxes so that the boxes have one, two, three, four, and five objects in them, respectively.",
+                      "problem":  "dmath-ch06-prob-244",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "27. How many positive integers less than 1,000,000 have the sum of their digits equal to 19?",
+                      "problem":  "dmath-ch06-prob-245",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "28. How many positive integers less than 1,000,000 have exactly one digit equal to 9 and have a sum of digits equal to 13?",
+                      "problem":  "dmath-ch06-prob-246",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "29. There are 10 questions on a discrete mathematics final exam. How many ways are there to assign scores to the problems if the sum of the scores is 100 and each question is worth at least 5 points?",
+                      "problem":  "dmath-ch06-prob-247",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "30. Show that there are $C ( n + r - q _ { 1 } - q _ { 2 } - \\cdots - q _ { r } - 1 , n -$ $q _ { 1 } - q _ { 2 } - \\cdots - q _ { r } )$ diferent unordered selections of n objects of r diferent types that include at least $q _ { 1 }$ objects of type one, $q _ { 2 }$ objects of type two, … , and $q _ { r }$ objects of type r.",
+                      "problem":  "dmath-ch06-prob-248",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "31. How many diferent bit strings can be transmitted if the string must begin with a 1 bit, must include three additional 1 bits (so that a total of four 1 bits is sent), must include a total of 12 0 bits, and must have at least two 0 bits following each 1 bit?",
+                      "problem":  "dmath-ch06-prob-249",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-019",
+                                     "dmath-ch06-kp-023",
+                                     "dmath-ch06-kp-027"
+                                 ]
+                  },
+                  {
+                      "source":  "32. How many diferent strings can be made from the letters in MISSISSIPPI, using all the letters?",
+                      "problem":  "dmath-ch06-prob-250",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "33. How many diferent strings can be made from the letters in ABRACADABRA, using all the letters?",
+                      "problem":  "dmath-ch06-prob-251",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "34. How many diferent strings can be made from the letters in AARDVARK, using all the letters, if all three As must be consecutive?",
+                      "problem":  "dmath-ch06-prob-252",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "35. How many diferent strings can be made from the letters in ORONO, using some or all of the letters?",
+                      "problem":  "dmath-ch06-prob-253",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "36. How many strings with five or more characters can be formed from the letters in SEERESS?",
+                      "problem":  "dmath-ch06-prob-254",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  },
+                  {
+                      "source":  "37. How many strings with seven or more characters can be formed from the letters in EVERGREEN?",
+                      "problem":  "dmath-ch06-prob-255",
+                      "kp_ids":  [
+                                     "dmath-ch06-kp-020",
+                                     "dmath-ch06-kp-021",
+                                     "dmath-ch06-kp-025"
+                                 ]
+                  }
+              ]
+}
