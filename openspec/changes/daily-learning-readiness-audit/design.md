@@ -1,100 +1,79 @@
 ## Context
 
-See `proposal.md` for motivation. This document is a live design record for the planning discussion. It intentionally distinguishes verified evidence from decisions; no production implementation is authorized while the decision queue remains open.
+The workbench uses a one-way Shell -> Domain -> Data architecture. Content consumes pool products and the external Agent Bridge remains adjacent. SQLite is the durable source of truth; navigation, drafts, graph motion, and other browsing actions are not learning records. Only explicit learning conclusions or content edits write durable state.
 
-The existing architecture and record boundary remain fixed: Shell depends on Domain, Domain on Data; Content reads products and Bridge stays adjacent. Navigation, drafts, graph motion, and other browsing actions are not learning records. Only explicit learning conclusions or content edits may write durable state.
+Current evidence establishes four concrete readiness gaps: every one of the 303 formal discrete-mathematics problems has an empty solution; practice state stored in `sessionStorage` is not fully restored into the visible page; the 28-node graph contains disconnected components and many avoidable crossings under one centered simulation; and raw learning/scheduling fields are exposed as if the learner must interpret implementation state.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- Make the workbench readable enough for routine study without exposing storage or scheduling internals as primary content.
-- Preserve the learning mechanisms that have a demonstrated purpose while simplifying their presentation.
-- Separate legitimate mathematical markup from damaged OCR material.
-- Define independent, composable content operations without weakening pool gates or provenance.
-- Recover the original purpose of course graphs and focused mathematical views before changing graph behavior.
+- Make the current formal pool usable for reveal-then-rate practice.
+- Split content work into resumable atomic commands without weakening formal-content gates.
+- Make the existing workbench reliable on refresh and mobile screens while removing implementation vocabulary from the student UI.
+- Improve graph readability with deterministic, testable layout choices using the existing zero-dependency physics.
+- Provide a useful first mastery experiment with explicit evidence reasons and zero write authority.
 
 **Non-Goals:**
 
-- No production code, schema migration, task list, or implementation sequencing during this discussion stage.
-- No new study modes, AI capabilities, UI framework, graph dependency, OCR engine, or remote service.
-- No silent change to `pipeline/`, `pool/scripts/`, `lessonkit.py`, public routes, or learning-write semantics.
-- No assumption that every audit finding must become a feature; deletion and reuse remain preferred.
-
-## Verified Evidence
-
-### Graph readability
-
-- The live graph already uses a real force simulation with springs, pairwise repulsion, circular collision, center gravity, damping, reheating, and a stability threshold.
-- Existing semantic strength changes spring target distance, and formal problem count changes node radius.
-- The simulation optimizes node separation but has no explicit objective for edge crossings, parallel-edge separation, label collisions, or preserving recognizable clusters. Center gravity can therefore produce a compact but visually tangled graph.
-- Existing project documents distinguish a complete course graph from a query-time Focus Map. Graph findings such as paths, common neighbors, clusters, and spanning trees are intended to be computed on demand rather than persisted as semantic relations.
-
-### Learning-state presentation
-
-- Signals and scheduling are not decorative fields. The original rationale is weak-point-first ordering: explicit ratings or notes create evidence, and due state affects background ordering without locking content.
-- The current knowledge-point page exposes internal vocabulary and raw values directly, including `signal_type`, `weight`, `state`, `repetitions`, `ease`, and `due_at`.
-- The graph dashboard repeats part of the same evidence as “学习信号” and “下次复习”. These mechanisms can remain correct while their current presentation is unnecessary or unintelligible.
-- The implementation currently maintains three overlapping concepts: `learning_current_state` (`needs_work` / `review` / `mastered`), scheduler state (`learning` / `review` / `relearning`), and problem progress (`new` / `wrong` / `stuck` / `reviewing` / `mastered`).
-- `learning_current_state` is overwritten directly from the latest 1–5 self-rating, so one rating of 5 becomes `mastered`. This conflicts with ADR 0008's conservative rule that later mastery does not erase weak evidence and that the system must not infer mastery from one successful attempt.
-- Existing evidence is mixed by nature: machine-gradable outcomes can be observed directly, open responses require reveal-then-self-rate, repeated wrong/stuck results strengthen signals, and spaced results update an SM-2-style schedule. A truthful user-facing state must not present all of these as one equally objective measurement.
-
-### Problem markup and OCR
-
-- Raw `<sup>` and `<sub>` fragments occur throughout extracted source, intermediate manifests, and rendered outputs; an initial repository count found 128 matching lines in the scoped discrete-mathematics artifacts and pool sources.
-- Some fragments are legitimate presentational markup, for example a superscript marker. Others are visibly damaged extraction, for example a subscript tag interrupting an ordinary word.
-- The safe Markdown renderer escapes raw HTML by design, so legitimate tags appear literally. Allowing arbitrary HTML would also render malformed or unsafe source. The defect therefore spans both renderer policy and upstream content hygiene.
-
-### Daily-use gaps outside the reported examples
-
-- A unified-rating practice session is held in `sessionStorage`, but reload/navigation does not restore its visible mode and queue. Starting again clears accumulated unrated work, conflicting with the existing interruption-recovery contract.
-- Below 1024px the AI column is collapsed without a reopen path; at 720px both sidebars disappear without replacement navigation.
-- Several practice request failures and invalid ratings have no visible error state and can leave an empty main pane.
-- The unavailable-provider message is written into a hidden chat view, leaving the visible provider picker unexplained.
-- Practice and unified review still lead with raw problem IDs even though display metadata is available.
-- Knowledge-point linked problems are labeled as a practice entry but do not provide an actionable handoff into a selected practice scope.
-- Dynamic textareas and repeated batch controls lack reliable accessible names; batch controls also reuse IDs.
+- No OCR engine, generic workflow engine, provider SDK, package/plugin system, mastery probability, mastery UI, remote service, or Graph Findings panel.
+- No edits to existing `pipeline/`, `pool/scripts/`, or `lessonkit.py` behavior.
+- No new learning log for navigation, drafts, skips, graph interactions, ingestion planning, or experiment execution.
+- No claim that the `v0` evaluator is an optimal or final learning-science model.
 
 ## Decisions
 
-### D1. Keep learning mechanics in the background
+### D1. Atomic ingestion commands and governed recipes
 
-The student-facing UI will not show raw signal types, weights, weakness scores, scheduler state, repetitions, ease, or other implementation parameters. The primary surface will show only concise information that supports a study action. The complete evidence and scheduler data remain available to deterministic ordering, the CLI, and the Agent.
+`wb ingest` exposes `prepare`, `run`, `gate`, `apply`, `render`, and `recipe`. Each stage exchanges an explicit UTF-8 artifact. `prepare` never starts a provider; `run` requires an explicit `codex` or `claude` argument and never falls back. OCR output may be supplied as input material but OCR itself is not part of this core.
 
-An excellent future graph expression of learning evidence is not prohibited, but no parameter dashboard or placeholder control will be added in this change. Any later visualization must first demonstrate that it makes a meaningful relationship easier to understand.
+Official recipes only sequence the same atomic commands. They are zero-write by default and require `--apply` for one transaction. A caller may resume from any artifact that already satisfies the next stage contract.
 
-**Rationale:** the mechanisms serve weak-point ordering and forgetting reminders, but their current raw presentation asks the learner to interpret the implementation instead of studying.
+### D2. Formal problems require independent double review
 
-**Rejected for now:** a default parameter dashboard; an expandable raw-data inspector in the student UI; deleting the underlying signal or scheduling mechanisms.
+A sourced formal problem needs a structure/solution artifact and a separate audit artifact produced in a fresh Agent session. The audit covers source consistency, meaning, formatting, knowledge-point mapping, answer correctness, and solution completeness for every item. Deterministic gating requires complete audit coverage, all-PASS decisions, and non-empty solutions.
 
-### D2. Treat mastery estimation as an experimental algorithm
+The current 303-problem recovery follows the same contract in batches but does not partially update the pool. Only after all items pass do we create a recoverable database copy, apply every solution in one transaction, and rebuild views. Any failed item leaves the active pool unchanged.
 
-Whether and to what degree an item is mastered will not be defined by renaming three UI enums or by a permanent hand-written threshold in the page layer. It is a distinct algorithmic problem whose inputs can include machine-graded results, self-ratings with explicit provenance, repeated wrong/stuck evidence, elapsed time, and spaced-review outcomes.
+### D3. Narrow safe source markup
 
-The first evaluator should aim for a broadly reasonable and explainable result, not an optimal or academically final mastery model. Its behavior must be replaceable so later experiments can compare another evaluator without changing practice, storage, or presentation contracts.
+Source text remains escaped before rendering. Only balanced, non-empty `<sup>` and `<sub>` pairs whose contents are escaped are promoted to elements. Unknown HTML, tags that split ordinary words, malformed/empty tags, and suspicious formula loss fail ingestion. Difficulty stars are presentational and allowed; an Agent audit must still reject semantic loss.
 
-“Replaceable” means a narrow Domain-level evaluation boundary with pure inputs and outputs plus deterministic tests. It does not justify a generic plugin framework, dynamic package loading, a new dependency system, or premature configuration UI.
+### D4. Student UI shows actions, not internal parameters
 
-The current code can support this direction: attempts, feedback, signals, current state, and scheduling already exist as separate inputs, and Domain rules are pure Python. The present direct `latest rating -> current state` mapping is the behavior to isolate rather than an interface to preserve as the final model.
+Student pages do not show signal types, weights, weakness scores, scheduler state, repetitions, ease, or manual `needs_work/review/mastered` editors. Existing data and compatibility APIs remain available to deterministic ordering and Agent context.
 
-The learner-facing vocabulary and thresholds remain undecided until the experimental authority and evidence semantics are resolved. In particular, this decision does not yet approve either “已掌握” or “近期稳定” as a final label.
+The temporary visible vocabulary is conservative: explicit current weakness evidence yields `重点练习`; otherwise a due item yields `可以复习`; other items remain neutral. The graph dashboard contains only the knowledge-point name, that action reminder, and `打开知识点`.
 
-## Decision Queue
+### D5. Practice is tab-recoverable and explicit
 
-Questions are resolved one at a time because each answer changes the later specification or task breakdown.
+The existing `sessionStorage` keys remain authoritative for the current tab. Page initialization restores mode, current problem, seen IDs, and the unified-rating queue rather than beginning a new session. Closing the tab retains the existing browser-defined session boundary.
 
-1. Experimental authority: initially run mastery estimation in read-only shadow mode, let it affect ordering only, or let it replace current state immediately.
-2. Meaning of learner-facing state: after choosing experimental authority, define how system evidence and learner intent become concise, truthful actions or labels.
-3. Graph reading model: always show the complete graph with visual de-cluttering, make focused neighborhoods the default with an explicit full-graph mode, or use another hierarchy.
-4. Mathematical markup boundary: which limited source constructs are trusted at render time, and which must be normalized or rejected before pool insertion.
-5. Content CLI composition: define operation boundaries, intermediate contracts, provenance, gates, and orchestration without forcing one end-to-end route.
-6. Remaining daily-use gaps: decide which verified regressions belong in this readiness change and which should be separate follow-ups.
+Pull, reveal, feedback, and provider failures are rendered in the visible region that initiated them. Invalid ratings stay local and do not send a request. Cards use `display_title`; repeated controls have unique IDs and accessible labels. A knowledge-point page has one `练习此知识点` action that starts a continuous non-repeating session scoped to that knowledge point.
+
+At narrow widths the middle area remains primary and the two side columns become drawers opened from two compact top-bar icon controls.
+
+### D6. Component-aware graph layout
+
+The graph stays complete by default. Connected components run through the existing simulation independently; isolates receive their own deterministic region. Each nontrivial component evaluates six deterministic initial layouts, settles each without animation, and chooses the lexicographically smallest score `(edge crossings, label collisions, spatial waste)`. Components are then packed into the canvas.
+
+Remaining close or overlapping straight edges render as shallow deterministic SVG curves. Selecting a node preserves full emphasis for itself and one-hop neighbors, secondary emphasis for two-hop neighbors, and fades farther nodes plus unrelated edges; background selection resets the graph. Filter, resize, and drag still reheat; reduced-motion chooses and draws a stable layout once. Coordinates remain browser-memory only.
+
+### D7. Mastery evaluation is a pure read-only experiment
+
+`wb experiment <workspace> mastery` calls one versioned Domain `v0` evaluator and presents `evidence_insufficient`, `needs_work`, `due_review`, or `recently_stable` with Chinese explanations and traceable evidence reasons. It returns no probability and has no write or ordering authority.
+
+Strong evidence is an automatic correct/wrong/stuck result. Ratings 1-2 and 4-5 are medium negative/positive evidence; rating 3, notes, and skips are neutral. The latest decisive negative wins, then overdue status. Problem stability needs positive evidence on at least two dates and one strong positive, or at least three positive self-ratings across two dates.
+
+Knowledge-point failure propagates from every linked problem. Stability needs two distinct linked problems across dates; a one-problem knowledge point additionally needs a direct knowledge-point review on another date; a zero-problem knowledge point stays insufficient. Gate-passed candidate attempts may support only knowledge-point evaluation and never appear as formal-problem results.
 
 ## Risks / Trade-offs
 
-- **A concise UI can hide useful evidence needed for diagnosis.** -> Decide separately what is primary, on-demand, and Agent-only rather than deleting data mechanisms reflexively.
-- **An experimental mastery estimate can become false authority.** -> Keep provenance explicit, compare predictions against later outcomes, and grant write or ordering authority only through a separate decision.
-- **Graph de-cluttering can hide legitimate topology.** -> Keep semantic data unchanged and distinguish a reading projection from stored relations.
-- **Permitting raw HTML can turn extraction damage into misleading mathematics.** -> Use a narrow allowlist only if it is paired with source validation; never trust arbitrary HTML.
-- **Composable commands can bypass quality gates if composition is unconstrained.** -> Separate operations while preserving explicit artifacts, validation, and promotion boundaries.
-- **Combining all audit findings can create another oversized change.** -> Resolve and implement independent capability changes separately after the design is approved.
+- Independent Agent passes cost time. This is accepted because empty or wrong solutions make reveal-then-rate unusable; batching reduces coordination without weakening all-or-nothing apply.
+- Six graph starts cost browser CPU. The graph is small, layouts are deterministic, and the simulation stops at stability; no dependency or persistent coordinate cache is justified.
+- Concise state hides diagnostic detail. Full evidence stays accessible to CLI and Agent context, while the student surface shows only immediate action.
+- The first mastery rules are approximate. Keeping them read-only, versioned, pure, and reason-bearing makes replacement cheap without pretending precision.
+
+## Verification Strategy
+
+Each behavior follows a failing test before minimal implementation. Content tests cover artifact contracts, markup, audit completeness, provider selection, rollback, and zero-write recipes. UI/Node tests execute production scripts for restoration, drawers, errors, accessible IDs, titles, graph scoring/focus, and reduced-motion. Domain tests cover evidence precedence and cross-date/cross-problem thresholds while database snapshots prove zero writes. The final gates are full pytest, both JavaScript syntax checks, strict OpenSpec validation, `openspec doctor`, both pool guards, and responsive/manual workbench acceptance.
