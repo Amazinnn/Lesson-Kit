@@ -168,7 +168,11 @@ function runWorkbench({
       return new FakeElement(tag);
     },
     createElementNS(namespace, tag) {
-      return new FakeElement(tag);
+      const element = new FakeElement(tag);
+      Object.defineProperty(element, "className", {
+        get() { return { baseVal: element.getAttribute("class") || "" }; },
+      });
+      return element;
     },
     querySelectorAll() {
       return [];
@@ -721,7 +725,8 @@ test("reduced-motion graph settles without scheduling animation frames", async (
   await flush();
   assert.equal(app.rafCalls, 0);
   assert.equal(canvas.children[0].children.filter(
-    (child) => (child.className || "").startsWith("graph-node "),
+    (child) => typeof child.className === "string"
+      && child.className.startsWith("graph-node "),
   ).length, 2);
 });
 
@@ -790,8 +795,11 @@ test("graph renders curved paths and focuses one-hop and two-hop neighborhoods",
   });
   await flush();
   const stage = canvas.children[0];
-  const edgeLayer = stage.children.find((child) => child.className === "graph-edge-layer");
+  const edgeLayer = stage.children.find(
+    (child) => child.getAttribute("class") === "graph-edge-layer",
+  );
   assert.equal(edgeLayer.children.length, 3);
+  assert.equal(edgeLayer.children[0].getAttribute("class"), "graph-edge");
   assert.match(edgeLayer.children[0].getAttribute("d"), / Q /);
   const nodes = Object.fromEntries(stage.children.filter(
     (child) => child.dataset.kpId,

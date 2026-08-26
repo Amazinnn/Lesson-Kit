@@ -328,12 +328,12 @@
       );
       graphAutoFit = true;
       var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      edgeLayer.className = "graph-edge-layer";
+      edgeLayer.setAttribute("class", "graph-edge-layer");
       edgeLayer.setAttribute("aria-hidden", "true");
       stage.appendChild(edgeLayer);
       graphSimulation.edges.forEach(function (edge) {
         var link = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        link.className = "graph-edge";
+        link.setAttribute("class", "graph-edge");
         edgeLayer.appendChild(link);
         graphEdgeElements.push({ element: link, edge: edge });
       });
