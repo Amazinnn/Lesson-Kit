@@ -219,7 +219,6 @@
     var graphAutoFit = true;
     var graphLabelZoomed = false;
     var graphFocusedId = null;
-    var graphBreathTimer = null;
     var draggedNode = null;
     var panStart = null;
     var reducedGraphMotion = window.matchMedia
@@ -425,7 +424,7 @@
       }
     }
 
-    function drawGraph(elapsed, breathing) {
+    function drawGraph() {
       graphEdgeElements.forEach(function (entry, index) {
         var source = entry.edge.sourceNode;
         var target = entry.edge.targetNode;
@@ -450,24 +449,11 @@
       graphSimulation.nodes.forEach(function (node) {
         var elements = graphNodeElements.get(node.id);
         if (!elements) return;
-        var offset = breathing ? GraphPhysics.breathingOffset(node, elapsed) : { x: 0, y: 0 };
-        elements.node.style.left = (node.x + offset.x) + "px";
-        elements.node.style.top = (node.y + offset.y) + "px";
-        elements.label.style.left = (node.x + offset.x) + "px";
-        elements.label.style.top = (node.y + offset.y + node.radius + 6) + "px";
+        elements.node.style.left = node.x + "px";
+        elements.node.style.top = node.y + "px";
+        elements.label.style.left = node.x + "px";
+        elements.label.style.top = (node.y + node.radius + 6) + "px";
       });
-    }
-
-    function scheduleGraphBreathing() {
-      if (reducedGraphMotion || document.hidden || graphBreathTimer !== null) return;
-      graphBreathTimer = setTimeout(function () {
-        graphBreathTimer = null;
-        graphFrame = requestAnimationFrame(function () {
-          graphFrame = null;
-          drawGraph(Date.now(), true);
-          scheduleGraphBreathing();
-        });
-      }, 34);
     }
 
     function runGraphSimulation() {
@@ -477,10 +463,7 @@
         var stable = GraphPhysics.tick(graphSimulation);
         drawGraph();
         if (!stable) graphFrame = requestAnimationFrame(frame);
-        else {
-          if (graphAutoFit) fitGraph();
-          scheduleGraphBreathing();
-        }
+        else if (graphAutoFit) fitGraph();
       }
       graphFrame = requestAnimationFrame(frame);
     }
@@ -578,9 +561,7 @@
       if (document.hidden) {
         if (graphFrame !== null) cancelAnimationFrame(graphFrame);
         graphFrame = null;
-        if (graphBreathTimer !== null) clearTimeout(graphBreathTimer);
-        graphBreathTimer = null;
-      } else if (graphSimulation && graphSimulation.stable) scheduleGraphBreathing();
+      }
     });
     if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
     if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });

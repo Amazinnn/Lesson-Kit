@@ -118,7 +118,12 @@ Learning content SHALL be escaped before rendering and SHALL promote only balanc
 
 ### Requirement: Component-aware graph presentation
 
-The complete graph SHALL identify connected components and choose deterministic seed coordinates for each nontrivial component from six initial layouts using edge crossings, label collisions, and spatial waste in that order. Those packed seeds SHALL then enter one unified elastic field, while isolates retain separate initial regions. Stronger semantic edges SHALL have shorter targets than weaker edges, every pair of node circles SHALL retain at least 24 pixels of logical clearance, and labels SHALL NOT enlarge physical collision radii. Remaining obstructed edges SHALL use deterministic shallow curves while preserving their semantic endpoints.
+The complete graph SHALL identify connected components and choose deterministic seed coordinates for each nontrivial component from six initial layouts using edge crossings, label collisions, and spatial waste in that order. Those packed seeds SHALL then enter one unified elastic field, while isolates retain separate initial regions. Stronger semantic edges SHALL have shorter targets than weaker edges, every pair of node circles SHALL retain at least 24 pixels of logical clearance, and labels SHALL NOT enlarge physical collision radii. Remaining obstructed edges SHALL use deterministic shallow curves while preserving their semantic endpoints. A settled simulation SHALL stop updating until an explicit interaction or model/viewport change reheats it, and no idle breathing displacement SHALL be applied.
+
+#### Scenario: Interaction reheats a quiet graph
+
+- **WHEN** the learner drags a node or changes the graph view controls
+- **THEN** the unified simulation resumes from its current in-memory positions and settles again without persisting coordinates
 
 #### Scenario: Separate disconnected components
 
@@ -153,3 +158,4 @@ Selecting a graph node SHALL fully emphasize and gently expand its one-hop neigh
 
 - **WHEN** the learner selects the graph background
 - **THEN** all nodes and edges return to the complete-graph presentation and ordinary semantic targets
+

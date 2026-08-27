@@ -293,16 +293,22 @@ test("focus expansion preserves attraction ordering", () => {
     > physics.targetDistance(1.25, 10, 10, 1));
 });
 
-test("deterministic breathing stays within four pixels", () => {
-  const node = { id: "kp-7" };
-  const first = physics.breathingOffset(node, 4500);
-  assert.deepEqual(first, physics.breathingOffset(node, 4500));
-  assert.ok(Math.hypot(first.x, first.y) <= 4.0001);
+test("settled graphs expose no idle breathing offset", () => {
+  assert.equal(typeof physics.breathingOffset, "undefined");
 });
 
 test("gravity control changes only the in-memory center force", () => {
   const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
   physics.setGravity(simulation, 80);
-  assert.ok(Math.abs(simulation.gravity - 0.000936) < 1e-12);
+  assert.ok(Math.abs(simulation.gravity - 0.002808) < 1e-12);
   assert.equal(simulation.stable, false);
+});
+
+test("gravity range has a stronger center pull than the previous maximum", () => {
+  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
+  physics.setGravity(simulation, 0);
+  const low = simulation.gravity;
+  physics.setGravity(simulation, 100);
+  assert.equal(low, 0);
+  assert.ok(simulation.gravity > 0.00117 * 2);
 });

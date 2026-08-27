@@ -233,15 +233,8 @@
   }
 
   function setGravity(simulation, value) {
-    simulation.gravity = Math.max(0, Math.min(100, Number(value) || 0)) / 100 * 0.00117;
+    simulation.gravity = Math.max(0, Math.min(100, Number(value) || 0)) / 100 * 0.00351;
     reheat(simulation, 0.5);
-  }
-
-  function breathingOffset(node, elapsedMs) {
-    var id = String(node.id || "");
-    var phase = id.length * 0.73 + (id.charCodeAt(0) || 0) * 0.11;
-    var angle = elapsedMs * Math.PI * 2 / 15000 + phase;
-    return { x: Math.cos(angle) * 3.5, y: Math.sin(angle) * 2.2 };
   }
 
   function settle(simulation, maxTicks) {
@@ -549,7 +542,6 @@
     reheat: reheat,
     setSoftAnchor: setSoftAnchor,
     setGravity: setGravity,
-    breathingOffset: breathingOffset,
     settle: settle,
     connectedComponents: connectedComponents,
     candidateLayouts: candidateLayouts,
