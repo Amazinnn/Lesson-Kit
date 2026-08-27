@@ -39,5 +39,5 @@
 
 - [x] 6.1 Run focused and full pytest, JavaScript syntax checks, strict OpenSpec validation, doctor, and both pool guards.
 - [x] 6.2 Perform responsive workbench acceptance at 375px, 1024px, and 1440px for practice recovery, knowledge-point handoff, Agent drawers, graph readability/focus, and safe problem markup.
-- [ ] 6.3 Update the dated changelog with final behavior and evidence, archive the OpenSpec change, and verify no active change remains.
-- [ ] 6.4 Obtain independent code/contract review, resolve material findings, and push the verified main branch.
+- [x] 6.3 Update the dated changelog with final behavior and evidence, archive the OpenSpec change, and verify no active change remains.
+- [x] 6.4 Obtain independent code/contract review, resolve material findings, and push the verified main branch.
