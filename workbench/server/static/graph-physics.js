@@ -44,6 +44,7 @@
     return {
       nodes: nodes, edges: edges, width: width, height: height,
       alpha: 1, stable: nodes.length < 2, stableTicks: 0,
+      gravity: 0.000351,
     };
   }
 
@@ -104,8 +105,8 @@
         node.vy = 0;
         return;
       }
-      node.vx += (centerX - node.x) * 0.00035 * alpha;
-      node.vy += (centerY - node.y) * 0.00035 * alpha;
+      node.vx += (centerX - node.x) * simulation.gravity * alpha;
+      node.vy += (centerY - node.y) * simulation.gravity * alpha;
       if (node.componentAnchorX !== undefined) {
         node.vx += (node.componentAnchorX - node.x) * 0.00022 * alpha;
         node.vy += (node.componentAnchorY - node.y) * 0.00022 * alpha;
@@ -229,6 +230,11 @@
   function setSoftAnchor(node, x, y) {
     node.anchorX = x;
     node.anchorY = y;
+  }
+
+  function setGravity(simulation, value) {
+    simulation.gravity = Math.max(0, Math.min(100, Number(value) || 0)) / 100 * 0.00117;
+    reheat(simulation, 0.5);
   }
 
   function breathingOffset(node, elapsedMs) {
@@ -542,6 +548,7 @@
     tick: tick,
     reheat: reheat,
     setSoftAnchor: setSoftAnchor,
+    setGravity: setGravity,
     breathingOffset: breathingOffset,
     settle: settle,
     connectedComponents: connectedComponents,

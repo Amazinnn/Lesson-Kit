@@ -203,6 +203,7 @@
   if (graphCanvas) {
     var graphSearch = document.getElementById("graph-search");
     var graphFilter = document.getElementById("graph-state-filter");
+    var graphGravity = document.getElementById("graph-gravity");
     var graphDetail = document.getElementById("graph-detail-panel");
     var graphDetailTab = document.getElementById("graph-detail-tab");
     var teacherTab = document.getElementById("ai-teacher-tab");
@@ -516,6 +517,11 @@
 
     if (graphSearch) graphSearch.addEventListener("input", renderGraph);
     if (graphFilter) graphFilter.addEventListener("change", renderGraph);
+    if (graphGravity) graphGravity.addEventListener("input", function () {
+      if (!graphSimulation) return;
+      GraphPhysics.setGravity(graphSimulation, graphGravity.value);
+      runGraphSimulation();
+    });
     var zoomIn = document.getElementById("graph-zoom-in");
     var zoomOut = document.getElementById("graph-zoom-out");
     var graphFit = document.getElementById("graph-fit");

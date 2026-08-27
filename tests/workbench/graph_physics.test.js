@@ -299,3 +299,10 @@ test("deterministic breathing stays within four pixels", () => {
   assert.deepEqual(first, physics.breathingOffset(node, 4500));
   assert.ok(Math.hypot(first.x, first.y) <= 4.0001);
 });
+
+test("gravity control changes only the in-memory center force", () => {
+  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
+  physics.setGravity(simulation, 80);
+  assert.ok(Math.abs(simulation.gravity - 0.000936) < 1e-12);
+  assert.equal(simulation.stable, false);
+});

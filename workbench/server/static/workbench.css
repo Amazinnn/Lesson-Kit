@@ -336,6 +336,8 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-toolbar { display: flex; gap: 8px; align-items: center; padding: 12px; border-bottom: 1px solid var(--dsw-border-l1); }
 .graph-toolbar input { flex: 1; min-width: 160px; }
 .graph-toolbar select { width: 118px; }
+.graph-gravity-label { color: var(--dsw-label-tertiary); font-size: 12px; white-space: nowrap; }
+.graph-toolbar input[type="range"] { width: 104px; accent-color: var(--dsw-brand-accent); }
 .graph-zoom { display: flex; gap: 4px; }
 #graph-canvas { height: calc(100% - 59px); overflow: hidden; background-image: linear-gradient(var(--dsw-border-l1) 1px, transparent 1px), linear-gradient(90deg, var(--dsw-border-l1) 1px, transparent 1px); background-size: 24px 24px; }
 .graph-stage { position: relative; width: 100%; height: 100%; transform-origin: 0 0; }
