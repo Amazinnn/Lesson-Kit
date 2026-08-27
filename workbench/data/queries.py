@@ -2,6 +2,8 @@
 
 from datetime import date
 import json
+import sqlite3
+from pathlib import Path
 
 
 def hub_stats(pool):
@@ -13,6 +15,52 @@ def hub_stats(pool):
         "candidates": len(pool.gate_passed_candidates()),
         "signals": len(pool.signals()),
         "due": due,
+    }
+
+
+def planning_facts(pool, workspace):
+    """Collect read-only facts for the Domain planner."""
+    prefix = f"{pool.course}-{pool.chapter}"
+    problems = pool.problems_all()
+    progress = {}
+    conn = pool.connect()
+    try:
+        rows = conn.execute(
+            "SELECT problem_id, status FROM problem_progress"
+        ).fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    for row in rows:
+        progress.setdefault(row["problem_id"], {})["status"] = row["status"]
+    totals = {}
+    for problem in problems:
+        for kp_id in problem.get("kp_ids") or []:
+            totals[kp_id] = totals.get(kp_id, 0) + 1
+    completed = {}
+    for problem in problems:
+        if progress.get(problem["problem_id"], {}).get("status") in {"correct", "reviewing"}:
+            for kp_id in problem.get("kp_ids") or []:
+                completed[kp_id] = completed.get(kp_id, 0) + 1
+    progress_by_kp = {
+        kp_id: {"total": total, "completed": completed.get(kp_id, 0)}
+        for kp_id, total in totals.items()
+    }
+    goals = workspace.get("goals") or []
+    goals_path = Path(workspace["path"]) / ".lessonkit" / "goals.json"
+    if not goals and goals_path.is_file():
+        try:
+            goals = json.loads(goals_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            goals = []
+    return {
+        "course": pool.course,
+        "chapter": pool.chapter,
+        "goals": goals,
+        "kps": pool.kps(prefix),
+        "problems": problems,
+        "progress": progress_by_kp,
+        "signals": pool.signals(),
+        "schedule": pool.schedule_rows(),
     }
 
 

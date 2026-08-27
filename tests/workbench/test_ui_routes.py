@@ -77,6 +77,20 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("标记卡点", body)
         self.assertNotIn("下一题（不反馈）", body)
 
+    def test_practice_page_shows_coarse_daily_plan(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='daily-plan'", body)
+        self.assertIn("今日计划", body)
+        self.assertIn("Counting", body)
+        self.assertNotIn("逐题", body)
+
+    def test_daily_plan_api_is_available_without_agent(self):
+        status, payload = self.fetch_json("/api/w/dmath/plan")
+        self.assertEqual(status, 200)
+        self.assertIn("queue", payload)
+        self.assertTrue(payload["queue"])
+
     def test_graph_page_uses_native_canvas_not_artifact_iframe(self):
         graph = (self.fixture.ws / "output" / "dmath" / "ch06"
                  / "ch06-graph.html")

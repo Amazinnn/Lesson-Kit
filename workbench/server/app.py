@@ -35,6 +35,7 @@ ROUTES = [
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
     ("GET", "/api/w/{name}/weak", api_mod.weak_list),
     ("GET", "/api/w/{name}/due", api_mod.due_list),
+    ("GET", "/api/w/{name}/plan", api_mod.daily_plan),
     ("POST", "/api/w/{name}/pull", api_mod.pull_problems),
     ("POST", "/api/w/{name}/practice", api_mod.practice),
     ("POST", "/api/w/{name}/feedback", api_mod.feedback_record),
@@ -178,7 +179,10 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             elif page == "session-end":
                 html_body = pages.session_end_page(workspace, workspaces, weak_items)
             else:
-                html_body = pages.practice_page(workspace, workspaces, weak_items)
+                html_body = pages.practice_page(
+                    workspace, workspaces, weak_items,
+                    api_mod.daily_plan(pool, workspace, {}, {}),
+                )
         finally:
             pool.close()
         self._send_html(200, html_body)

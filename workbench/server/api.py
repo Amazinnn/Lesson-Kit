@@ -3,13 +3,13 @@
 import json
 import threading
 import time
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from workbench.bridge import conversation_providers, conversations, runner
 from workbench.data import queries
 from workbench.domain import (
-    feedback, learning_state, pull, schedule as schedule_rules, weak,
+    feedback, learning_state, planning, pull, schedule as schedule_rules, weak,
 )
 from workbench.server import context as agent_context
 
@@ -56,6 +56,12 @@ def weak_list(pool, workspace, params, body):
 
 def due_list(pool, workspace, params, body):
     return queries.due_list(pool)
+
+
+def daily_plan(pool, workspace, params, body):
+    return planning.build_baseline_plan(
+        queries.planning_facts(pool, workspace), now=datetime.now()
+    )
 
 
 def pull_problems(pool, workspace, params, body):

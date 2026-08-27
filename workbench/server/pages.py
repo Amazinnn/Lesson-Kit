@@ -5,7 +5,7 @@ import re
 from datetime import date
 
 from workbench.data import queries
-from workbench.domain import weak
+from workbench.domain import planning, weak
 
 
 def hub_page(workspaces):
@@ -85,14 +85,18 @@ def _page_header(context, title, summary="", actions=""):
     )
 
 
-def practice_page(workspace, workspaces, weak_items):
+def practice_page(workspace, workspaces, weak_items, plan=None):
+    if plan is None:
+        plan = {"goals": [], "queue": [], "totals": {}}
+    plan_html = _daily_plan(plan, workspace["name"])
     middle = (
         _page_header(
             "学习 / 弱项优先", "练习",
             "从最需要回看的知识点开始，按自己的节奏完成这一轮。",
         )
         + "<div class='page-content practice-content'>"
-        "<section id='start-area' class='practice-intro'>"
+        + plan_html
+        + "<section id='start-area' class='practice-intro'>"
         "<p class='section-kicker'>本轮练习</p>"
         "<h2>先选定自评方式</h2>"
         "<p>本轮会持续练习薄弱项相关题；跳题和草稿不会留下学习记录。</p>"
@@ -132,6 +136,36 @@ def practice_page(workspace, workspaces, weak_items):
         "</div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "practice", page_type="practice")
+
+
+def _daily_plan(plan, workspace_name):
+    goals = plan.get("goals") or []
+    queue = plan.get("queue") or []
+    goal_html = "".join(
+        "<li><strong>" + html.escape(goal.get("title") or "未命名目标")
+        + "</strong>"
+        + ("<span class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</span>"
+           if goal.get("deadline") else "")
+        + "</li>"
+        for goal in goals
+    ) or "<li class='muted'>暂未设置目标</li>"
+    queue_html = "".join(
+        "<li class='plan-queue-item'><div><a href='/w/" + html.escape(workspace_name)
+        + "/kp/" + html.escape(item["kp_ids"][0]) + "'><strong>"
+        + html.escape(item.get("title") or "未命名知识点") + "</strong></a>"
+        + "<p>" + html.escape(item.get("reason") or "按当前顺序推进") + "</p></div>"
+        + "<span class='plan-count'>约 " + str(item.get("target_count", 1)) + " 题</span></li>"
+        for item in queue
+    ) or "<li class='muted'>今天暂时没有安排</li>"
+    return (
+        "<section id='daily-plan' class='daily-plan' aria-label='今日计划'>"
+        "<div class='section-heading'><div><p class='section-kicker'>学习安排</p>"
+        "<h2>今日计划</h2></div><span class='plan-total'>"
+        + str((plan.get("totals") or {}).get("target_count", 0)) + " 题</span></div>"
+        "<div class='plan-columns'><section><h3>长期与阶段目标</h3><ul class='plan-goals'>"
+        + goal_html + "</ul></section><section><h3>今天先做</h3><ol class='plan-queue'>"
+        + queue_html + "</ol></section></div></section>"
+    )
 
 
 def kps_page(workspace, workspaces, weak_items, pool):
