@@ -5,6 +5,7 @@ database and never writes learning state; an Agent may adjust its result later.
 """
 
 from datetime import date, datetime
+import copy
 import math
 
 
@@ -98,6 +99,27 @@ def build_baseline_plan(workspace, *, now=None, available_minutes=None):
         },
         "generated_at": _iso(now),
     }
+
+
+def apply_adjustment(plan, adjustment):
+    """Apply only small, explicit Agent changes; invalid input is ignored."""
+    if not isinstance(adjustment, dict):
+        return plan
+    result = copy.deepcopy(plan)
+    queue = result.get("queue") or []
+    if isinstance(adjustment.get("queue"), list):
+        updates = {item.get("id"): item for item in adjustment["queue"] if isinstance(item, dict)}
+        for item in queue:
+            change = updates.get(item.get("id"))
+            if change and isinstance(change.get("target_count"), (int, float)):
+                item["target_count"] = max(1, min(20, int(change["target_count"])))
+    elif isinstance(adjustment.get("target_count"), (int, float)):
+        target = max(1, min(20, int(adjustment["target_count"])))
+        for item in queue:
+            item["target_count"] = target
+    result["totals"]["target_count"] = sum(item.get("target_count", 0) for item in queue)
+    result["adjusted"] = True
+    return result
 
 
 def _goal(value):

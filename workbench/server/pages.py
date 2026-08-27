@@ -167,8 +167,10 @@ def _daily_plan(plan, workspace_name):
     return (
         "<section id='daily-plan' class='daily-plan' aria-label='今日计划'>"
         "<div class='section-heading'><div><p class='section-kicker'>学习安排</p>"
-        "<h2>今日计划</h2></div><span class='plan-total'>"
+        "<h2>今日计划</h2></div><div class='plan-heading-actions'>"
+        "<span class='plan-total'>"
         + str((plan.get("totals") or {}).get("target_count", 0)) + " 题</span></div>"
+        + "<button id='recalculate-plan' class='ghost sm' type='button'>重新安排</button></div>"
         "<div class='plan-columns'><section><h3>长期与阶段目标</h3><ul class='plan-goals'>"
         + goal_html + "</ul></section><section><h3>今天先做</h3><ol class='plan-queue'>"
         + queue_html + "</ol></section></div></section>"

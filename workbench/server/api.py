@@ -64,6 +64,17 @@ def daily_plan(pool, workspace, params, body):
     )
 
 
+def daily_plan_recalculate(pool, workspace, params, body):
+    baseline = planning.build_baseline_plan(
+        queries.planning_facts(pool, workspace), now=datetime.now()
+    )
+    plan = planning.apply_adjustment(baseline, (body or {}).get("adjustment"))
+    path = Path(workspace["path"]) / ".lessonkit" / "plan.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"plan": plan, "status": "已更新今日计划"}
+
+
 def pull_problems(pool, workspace, params, body):
     return pull.select(
         pool, body.get("kp_ids", []), n=body.get("n", 5),

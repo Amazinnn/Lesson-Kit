@@ -834,6 +834,26 @@
     });
   }
 
+  var recalculatePlan = document.getElementById("recalculate-plan");
+  if (recalculatePlan) {
+    recalculatePlan.addEventListener("click", function () {
+      recalculatePlan.disabled = true;
+      post("/plan/recalculate", {}).then(function (result) {
+        recalculatePlan.disabled = false;
+        var total = document.querySelector ? document.querySelector(".plan-total") : null;
+        if (total && result.plan && result.plan.totals) {
+          total.textContent = result.plan.totals.target_count + " 题";
+        }
+      }).catch(function () { recalculatePlan.disabled = false; });
+    });
+    var heartbeatKey = "wb_plan_heartbeat_" + WS;
+    var today = new Date().toISOString().slice(0, 10);
+    if (sessionStorage.getItem(heartbeatKey) !== today) {
+      sessionStorage.setItem(heartbeatKey, today);
+      recalculatePlan.click();
+    }
+  }
+
   /* ---------- session-end ---------- */
 
   var pending = document.getElementById("pending-ratings");
