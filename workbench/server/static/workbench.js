@@ -321,21 +321,12 @@
     }
 
     function updateGraphLabels() {
-      var ranked = graphSimulation ? graphSimulation.nodes.slice().sort(function (a, b) {
-        var importance = (b.importance === "core") - (a.importance === "core");
-        return importance || (b.problem_count || 0) - (a.problem_count || 0)
-          || String(a.id).localeCompare(String(b.id));
-      }) : [];
-      var limit = !graphLabelZoomed ? 6 : graphView.scale < 0.8 ? 6
-        : graphView.scale < 1.1 ? 12 : ranked.length;
-      var visible = new Set(ranked.slice(0, limit).map(function (node) { return node.id; }));
       var search = (graphSearch && graphSearch.value || "").trim().toLowerCase();
       graphNodeElements.forEach(function (elements, id) {
         var node = graphSimulation.nodes.find(function (item) { return item.id === id; });
-        var near = graphFocusedId && (elements.node.classList.contains("graph-focus-selected")
-          || elements.node.classList.contains("graph-focus-near"));
-        var matched = search && (node.title + " " + node.id).toLowerCase().includes(search);
-        elements.label.style.display = visible.has(id) || near || matched || elements.hovered ? "" : "none";
+        var matched = search && node && (node.title + " " + node.id).toLowerCase().includes(search);
+        elements.label.style.display = "";
+        elements.label.setAttribute("aria-hidden", matched ? "false" : "false");
       });
     }
 

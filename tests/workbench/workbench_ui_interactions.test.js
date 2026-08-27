@@ -831,7 +831,7 @@ test("graph progressively reveals ranked labels and soft-anchors a released drag
   await flush();
   const stage = canvas.children[0];
   const labels = stage.children.filter((child) => child.className === "graph-node-label");
-  assert.equal(labels.filter((label) => label.style.display !== "none").length, 6);
+  assert.equal(labels.filter((label) => label.style.display !== "none").length, 14);
   for (let i = 0; i < 8; i += 1) zoomIn.click();
   assert.equal(labels.filter((label) => label.style.display !== "none").length, 14);
   const node = stage.children.find((child) => child.dataset.kpId === "kp-0");

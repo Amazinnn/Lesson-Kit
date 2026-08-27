@@ -127,9 +127,9 @@
       speed += velocity;
     });
     simulation.alpha *= 0.986;
-    var quiet = simulation.alpha < 0.02 && speed / Math.max(nodes.length, 1) < 0.03;
+    var quiet = simulation.alpha < 0.035 && speed / Math.max(nodes.length, 1) < 0.3;
     simulation.stableTicks = quiet ? simulation.stableTicks + 1 : 0;
-    simulation.stable = simulation.stableTicks >= 12;
+    simulation.stable = simulation.stableTicks >= 8;
     return simulation.stable;
   }
 
