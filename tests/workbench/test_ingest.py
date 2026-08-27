@@ -180,6 +180,80 @@ class IngestTests(unittest.TestCase):
         )
         self.assertFalse(rejected["ok"])
 
+    def test_current_formal_recovery_requires_knowledge_and_mapping_patch(self):
+        database = self.root / "current-recovery.db"
+        conn = sqlite3.connect(database)
+        conn.executescript("""
+            CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY);
+            CREATE TABLE problems (
+                problem_id TEXT PRIMARY KEY,
+                kp_ids TEXT NOT NULL,
+                problem_text TEXT NOT NULL,
+                solution TEXT
+            );
+            CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
+            CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
+        """)
+        conn.executemany(
+            "INSERT INTO knowledge_points VALUES (?)",
+            [(f"dmath-ch06-kp-{index:03d}",) for index in range(1, 29)],
+        )
+        sources = [
+            (f"dmath-ch06-prob-{index:03d}", f"Problem {index}")
+            for index in range(1, 304)
+        ]
+        conn.executemany(
+            "INSERT INTO problems VALUES (?, ?, ?, NULL)",
+            [(problem, '["dmath-ch06-kp-001"]', source) for problem, source in sources],
+        )
+        conn.commit()
+        conn.close()
+        solution_items = [
+            {"problem": problem, "source": source, "solution": f"Solution {index}"}
+            for index, (problem, source) in enumerate(sources, start=1)
+        ]
+        solutions = self.artifact("current-solutions.json", {
+            "kind": "solutions", "provider": "codex",
+            "provider_session_id": "solution-session", "items": solution_items,
+        })
+        audits = self.artifact("current-audits.json", {
+            "kind": "audit", "provider": "codex",
+            "provider_session_id": "audit-session",
+            "items": [audit_item(item["source"], item["problem"], item["solution"])
+                      for item in solution_items],
+        })
+
+        report = ingest.gate(
+            database, solutions, audits, self.root / "current-gate.json",
+        )
+
+        self.assertFalse(report["ok"])
+        self.assertIn(
+            "current formal recovery requires the approved knowledge and mapping patch",
+            report["errors"],
+        )
+        content_patch = self.artifact("empty-content-patch.json", {
+            "kind": "knowledge-mapping-patch", "provider": "codex",
+            "provider_session_id": "content-session",
+            "knowledge_points": [], "mappings": [],
+        })
+        content_audit = self.artifact("empty-content-audit.json", {
+            "kind": "knowledge-mapping-audit", "provider": "codex",
+            "provider_session_id": "content-audit-session",
+            "knowledge_points": [], "mappings": [],
+        })
+
+        incomplete = ingest.gate(
+            database, solutions, audits, self.root / "incomplete-current-gate.json",
+            content_patch, content_audit,
+        )
+
+        self.assertFalse(incomplete["ok"])
+        self.assertIn(
+            "current formal recovery patch must contain the approved knowledge points and mappings",
+            incomplete["errors"],
+        )
+
     def test_gate_rejects_solution_markup_ocr_damage_and_unterminated_html(self):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
         for source, solution in (

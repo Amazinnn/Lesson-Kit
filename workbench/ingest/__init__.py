@@ -31,6 +31,27 @@ KP_TYPES = {
 KP_IMPORTANCE = {"core", "supplementary", "optional"}
 RECIPE_NAMES = {"knowledge", "problems", "candidates", "views"}
 _TAG = re.compile(r"</?(sup|sub)>")
+_CURRENT_RECOVERY_PROBLEMS = {
+    f"dmath-ch06-prob-{index:03d}" for index in range(1, 304)
+}
+_CURRENT_RECOVERY_KPS = {
+    "dmath-ch06-kp-029", "dmath-ch06-kp-030", "dmath-ch06-kp-031",
+}
+_CURRENT_RECOVERY_MAPPINGS = {
+    "dmath-ch06-prob-067": ["dmath-ch06-kp-003", "dmath-ch06-kp-009", "dmath-ch06-kp-010"],
+    "dmath-ch06-prob-156": ["dmath-ch06-kp-009", "dmath-ch06-kp-010", "dmath-ch06-kp-012", "dmath-ch06-kp-013"],
+    "dmath-ch06-prob-189": ["dmath-ch06-kp-014", "dmath-ch06-kp-026"],
+    "dmath-ch06-prob-190": ["dmath-ch06-kp-014", "dmath-ch06-kp-026"],
+    "dmath-ch06-prob-280": ["dmath-ch06-kp-020"],
+    "dmath-ch06-prob-281": ["dmath-ch06-kp-003", "dmath-ch06-kp-020"],
+    "dmath-ch06-prob-294": ["dmath-ch06-kp-029"],
+    "dmath-ch06-prob-295": ["dmath-ch06-kp-030"],
+    "dmath-ch06-prob-297": ["dmath-ch06-kp-030"],
+    "dmath-ch06-prob-300": ["dmath-ch06-kp-031"],
+    "dmath-ch06-prob-301": ["dmath-ch06-kp-031"],
+    "dmath-ch06-prob-302": ["dmath-ch06-kp-031"],
+    "dmath-ch06-prob-303": ["dmath-ch06-kp-031"],
+}
 
 
 def read_artifact(path):
@@ -289,13 +310,56 @@ def _gate_data(conn, solutions, audit, content_patch=None, content_audit=None):
             for dimension in AUDIT_DIMENSIONS:
                 if decisions.get(dimension) != "PASS":
                     errors.append(f"{problem}: audit {dimension} is not PASS")
+    current_recovery_pending = _current_recovery_pending(conn, solutions_by_problem)
     if (content_patch is None) != (content_audit is None):
         errors.append("content patch and audit must be supplied together")
+    elif content_patch is None and current_recovery_pending:
+        errors.append("current formal recovery requires the approved knowledge and mapping patch")
     elif content_patch is not None:
         _gate_content_patch(
             conn, content_patch, content_audit, solutions_by_problem, errors,
         )
+        if current_recovery_pending:
+            _gate_current_recovery_patch(content_patch, errors)
     return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
+
+
+def _current_recovery_pending(conn, solutions):
+    if set(solutions) != _CURRENT_RECOVERY_PROBLEMS:
+        return False
+    knowledge_points = {
+        row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")
+    }
+    mappings = {
+        problem: json.loads(kp_ids)
+        for problem, kp_ids in conn.execute("SELECT problem_id, kp_ids FROM problems")
+        if problem in _CURRENT_RECOVERY_MAPPINGS
+    }
+    return (
+        not _CURRENT_RECOVERY_KPS <= knowledge_points
+        or mappings != _CURRENT_RECOVERY_MAPPINGS
+    )
+
+
+def _gate_current_recovery_patch(patch, errors):
+    knowledge_points = patch.get("knowledge_points")
+    mappings = patch.get("mappings")
+    if not isinstance(knowledge_points, list) or not isinstance(mappings, list):
+        return
+    patch_kps = {
+        item.get("kp_id") for item in knowledge_points if isinstance(item, dict)
+    }
+    patch_mappings = {
+        item.get("problem"): item.get("kp_ids")
+        for item in mappings if isinstance(item, dict)
+    }
+    if (
+        patch_kps != _CURRENT_RECOVERY_KPS
+        or patch_mappings != _CURRENT_RECOVERY_MAPPINGS
+    ):
+        errors.append(
+            "current formal recovery patch must contain the approved knowledge points and mappings"
+        )
 
 
 def _gate_content_patch(conn, patch, audit, solutions, errors):
