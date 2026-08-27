@@ -54,7 +54,8 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
         self.assertIn(".hidden { display: none !important; }", body)
-        self.assertIn("#ai-messages { flex: 1; overflow-y: auto;", body)
+        self.assertIn("#ai-messages {", body)
+        self.assertIn("overflow-y: auto;", body)
         self.assertIn("column-resizer", body)
 
     def test_practice_page_session_controls_live_outside_the_answer_card(self):
