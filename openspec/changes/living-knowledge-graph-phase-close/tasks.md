@@ -1,7 +1,7 @@
 ## 1. Specification
 
 - [x] 1.1 Record the unified field, semantic spacing, interaction, label, motion, and phase-freeze contracts.
-- [ ] 1.2 Add failing graph-model, pure-physics, and browser-interaction tests.
+- [x] 1.2 Add failing graph-model and pure-physics tests; add browser-interaction failures before UI implementation.
 
 ## 2. Implementation
 

@@ -209,6 +209,8 @@ class QueryTests(unittest.TestCase):
             "dmath-ch06-kp-002": 3,
             "dmath-ch06-kp-003": 1,
         })
+        importance = {node["id"]: node["importance"] for node in model["nodes"]}
+        self.assertEqual(importance["dmath-ch06-kp-003"], "core")
         self.assertEqual(len(model["edges"]), 1)
         edge = model["edges"][0]
         self.assertEqual({edge["source"], edge["target"]}, {

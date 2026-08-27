@@ -53,15 +53,15 @@ test("node radius grows monotonically with formal problem count and is capped", 
   assert.equal(physics.nodeRadius(10000), 30);
 });
 
-test("readable external labels reserve collision space around their node", () => {
+test("external labels do not enlarge physical collision radius", () => {
   const simulation = physics.createSimulation(
     [{ id: "a", title: "广义鸽巢原理与组合模型".repeat(3), problem_count: 1 }],
     [], 500, 320,
   );
-  assert.ok(simulation.nodes[0].collisionRadius >= 70);
+  assert.equal(simulation.nodes[0].collisionRadius, simulation.nodes[0].radius);
 });
 
-test("settled nodes preserve collision space for their labels", () => {
+test("settled nodes preserve 24 pixels of circle clearance", () => {
   const nodes = Array.from({ length: 12 }, (_, index) => ({
     id: String(index), title: "广义鸽巢原理与组合模型" + index, problem_count: 4,
   }));
@@ -74,13 +74,15 @@ test("settled nodes preserve collision space for their labels", () => {
     for (let j = i + 1; j < simulation.nodes.length; j += 1) {
       const a = simulation.nodes[i];
       const b = simulation.nodes[j];
-      assert.ok(distance(a, b) >= a.collisionRadius + b.collisionRadius + 7);
+      assert.ok(distance(a, b) >= a.radius + b.radius + 23.5);
     }
   }
 });
 
 test("stronger attraction has a shorter spring target", () => {
-  assert.ok(physics.targetDistance(1.25) < physics.targetDistance(0.75));
+  assert.equal(physics.targetDistance(1.875, 10, 20), 102);
+  assert.equal(physics.targetDistance(0.75, 10, 20), 174);
+  assert.ok(physics.targetDistance(1.25, 10, 20) < physics.targetDistance(0.75, 10, 20));
 });
 
 test("a stronger edge settles its pair closer than a weak edge", () => {
@@ -218,61 +220,82 @@ test("component packing separates regions and gives isolates a deterministic slo
     physics.packComponents([{ nodes: [{ id: "c", x: 0, y: 0, radius: 10 }] }], 500, 320));
 });
 
-test("packed graph keeps component simulations and visible nodes coherent after reheat", () => {
+test("packed seeds enter one unbounded unified simulation", () => {
   const graph = physics.layoutGraph(
     [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }],
     [{ source: "a", target: "b", attraction: 1 }, { source: "c", target: "d", attraction: 1 }],
     640, 420, 1600,
   );
+  assert.equal(graph.components, undefined);
+  assert.equal(graph.seedComponents.length, 2);
   const visible = graph.nodes.find((node) => node.id === "a");
-  const componentNode = graph.components[0].simulation.nodes.find((node) => node.id === "a");
-  assert.strictEqual(visible, componentNode);
-  visible.fx = graph.width - 1;
-  visible.fy = graph.height - 1;
+  visible.fx = graph.width + 400;
+  visible.fy = graph.height + 300;
   physics.reheat(graph);
   physics.tick(graph);
-  assert.ok(visible.x + visible.collisionRadius <= graph.width);
-  assert.ok(visible.y + visible.collisionRadius <= graph.height);
+  assert.ok(visible.x > graph.width);
+  assert.ok(visible.y > graph.height);
   visible.fx = null;
   visible.fy = null;
-  physics.reheat(graph);
-  physics.settle(graph, 2000);
-  assertInBounds(graph.nodes, graph.width, graph.height);
-  assertNoLabelOverlaps(graph.nodes);
 });
 
-test("real 28-node graph fits every component label and improves on the recorded 67-crossing start", () => {
+test("real 28-node unified graph preserves clearance and improves the recorded crossing start", () => {
   const graph = physics.layoutGraph(REAL_28_NODES, REAL_28_EDGES, 800, 600, 2000);
-  assertInBounds(graph.nodes, graph.width, graph.height);
-  assertNoLabelOverlaps(graph.nodes);
+  physics.settle(graph, 2400);
+  for (let i = 0; i < graph.nodes.length; i += 1) {
+    for (let j = i + 1; j < graph.nodes.length; j += 1) {
+      assert.ok(distance(graph.nodes[i], graph.nodes[j]) >= graph.nodes[i].radius + graph.nodes[j].radius + 23.5);
+    }
+  }
   assert.ok(physics.scoreLayout(graph.nodes, REAL_28_EDGES).crossings <= 67);
 });
 
-test("real graph packing remains collision free for desktop and narrow canvases", () => {
+test("real graph remains collision free for desktop and narrow seed canvases", () => {
   [[640, 420], [375, 320]].forEach(([width, height]) => {
     const graph = physics.layoutGraph(REAL_28_NODES, REAL_28_EDGES, width, height, 2000);
-    assertInBounds(graph.nodes, graph.width, graph.height);
-    assertNoLabelOverlaps(graph.nodes);
+    physics.settle(graph, 2400);
+    for (let i = 0; i < graph.nodes.length; i += 1) {
+      for (let j = i + 1; j < graph.nodes.length; j += 1) {
+        assert.ok(distance(graph.nodes[i], graph.nodes[j]) >= graph.nodes[i].radius + graph.nodes[j].radius + 23.5);
+      }
+    }
     assert.equal(graph.stable, true);
   });
 });
 
-test("complete graph layout selects and settles component layouts once", () => {
+test("complete graph layout selects deterministic component seeds", () => {
   const nodes = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "isolate" }];
   const edges = [{ source: "a", target: "b", attraction: 1 }, { source: "b", target: "c", attraction: 1 }];
   const first = physics.layoutGraph(nodes, edges, 640, 420, 1600);
   const second = physics.layoutGraph(nodes, edges, 640, 420, 1600);
-  assert.equal(first.stable, true);
   assert.deepEqual(first.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })),
     second.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })));
-  assert.equal(first.components.length, 2);
+  assert.equal(first.seedComponents.length, 2);
 });
 
-test("bounded graph layout reports when a component has not settled yet", () => {
-  const graph = physics.layoutGraph(
-    [{ id: "a" }, { id: "b" }, { id: "c" }],
-    [{ source: "a", target: "b", attraction: 1 }, { source: "b", target: "c", attraction: 1 }],
-    640, 420, 1,
+test("soft anchors preserve a drag intent without pinning the node", () => {
+  const graph = physics.createSimulation(
+    [{ id: "a" }, { id: "b" }], [{ source: "a", target: "b", attraction: 1 }], 640, 420,
   );
-  assert.equal(graph.stable, false);
+  const node = graph.nodes[0];
+  physics.setSoftAnchor(node, 900, -200);
+  physics.reheat(graph, 0.35);
+  physics.tick(graph);
+  assert.equal(node.fx, null);
+  assert.ok(node.anchorX === 900 && node.anchorY === -200);
+  assert.ok(distance(node, { x: 900, y: -200 }) < distance({ x: 320, y: 210 }, { x: 900, y: -200 }));
+});
+
+test("focus expansion preserves attraction ordering", () => {
+  assert.ok(physics.targetDistance(1.25, 10, 10, 1.15)
+    < physics.targetDistance(0.75, 10, 10, 1.15));
+  assert.ok(physics.targetDistance(1.25, 10, 10, 1.15)
+    > physics.targetDistance(1.25, 10, 10, 1));
+});
+
+test("deterministic breathing stays within four pixels", () => {
+  const node = { id: "kp-7" };
+  const first = physics.breathingOffset(node, 4500);
+  assert.deepEqual(first, physics.breathingOffset(node, 4500));
+  assert.ok(Math.hypot(first.x, first.y) <= 4.0001);
 });
