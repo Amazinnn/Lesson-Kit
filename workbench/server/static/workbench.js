@@ -216,6 +216,9 @@
     var graphAdjacency = new Map();
     var graphView = { x: 0, y: 0, scale: 1 };
     var graphAutoFit = true;
+    var graphLabelZoomed = false;
+    var graphFocusedId = null;
+    var graphBreathTimer = null;
     var draggedNode = null;
     var panStart = null;
     var reducedGraphMotion = window.matchMedia
@@ -257,6 +260,7 @@
     }
 
     function clearGraphFocus() {
+      graphFocusedId = null;
       graphNodeElements.forEach(function (elements) {
         ["graph-focus-selected", "graph-focus-near", "graph-focus-mid", "graph-focus-far"]
           .forEach(function (name) {
@@ -268,10 +272,17 @@
         entry.element.classList.remove("graph-focus-near");
         entry.element.classList.remove("graph-focus-mid");
         entry.element.classList.remove("graph-focus-far");
+        entry.edge.distanceFactor = 1;
       });
+      updateGraphLabels();
+      if (graphSimulation) {
+        GraphPhysics.reheat(graphSimulation, 0.3);
+        runGraphSimulation();
+      }
     }
 
     function focusGraph(nodeId) {
+      graphFocusedId = nodeId;
       clearGraphFocus();
       var distances = new Map([[nodeId, 0]]);
       var pending = [nodeId];
@@ -301,6 +312,30 @@
           : sourceDistance !== undefined && targetDistance !== undefined
             ? "graph-focus-mid" : "graph-focus-far";
         entry.element.classList.add(name);
+        entry.edge.distanceFactor = sourceDistance <= 1 && targetDistance <= 1 ? 1.15
+          : sourceDistance !== undefined && targetDistance !== undefined ? 1.08 : 1;
+      });
+      updateGraphLabels();
+      GraphPhysics.reheat(graphSimulation, 0.35);
+      runGraphSimulation();
+    }
+
+    function updateGraphLabels() {
+      var ranked = graphSimulation ? graphSimulation.nodes.slice().sort(function (a, b) {
+        var importance = (b.importance === "core") - (a.importance === "core");
+        return importance || (b.problem_count || 0) - (a.problem_count || 0)
+          || String(a.id).localeCompare(String(b.id));
+      }) : [];
+      var limit = !graphLabelZoomed ? 6 : graphView.scale < 0.8 ? 6
+        : graphView.scale < 1.1 ? 12 : ranked.length;
+      var visible = new Set(ranked.slice(0, limit).map(function (node) { return node.id; }));
+      var search = (graphSearch && graphSearch.value || "").trim().toLowerCase();
+      graphNodeElements.forEach(function (elements, id) {
+        var node = graphSimulation.nodes.find(function (item) { return item.id === id; });
+        var near = graphFocusedId && (elements.node.classList.contains("graph-focus-selected")
+          || elements.node.classList.contains("graph-focus-near"));
+        var matched = search && (node.title + " " + node.id).toLowerCase().includes(search);
+        elements.label.style.display = visible.has(id) || near || matched || elements.hovered ? "" : "none";
       });
     }
 
@@ -353,6 +388,14 @@
           renderGraphDetail(node);
           focusGraph(node.id);
         });
+        button.addEventListener("mouseenter", function () {
+          graphNodeElements.get(node.id).hovered = true;
+          updateGraphLabels();
+        });
+        button.addEventListener("mouseleave", function () {
+          graphNodeElements.get(node.id).hovered = false;
+          updateGraphLabels();
+        });
         button.addEventListener("pointerdown", function (event) {
           if (event.stopPropagation) event.stopPropagation();
           draggedNode = node;
@@ -380,6 +423,7 @@
       }
       graphCanvas.replaceChildren(stage);
       applyGraphView();
+      updateGraphLabels();
       if (reducedGraphMotion) {
         GraphPhysics.settle(graphSimulation, 1600);
         drawGraph();
@@ -389,28 +433,49 @@
       }
     }
 
-    function drawGraph() {
+    function drawGraph(elapsed, breathing) {
       graphEdgeElements.forEach(function (entry, index) {
         var source = entry.edge.sourceNode;
         var target = entry.edge.targetNode;
         var dx = target.x - source.x;
         var dy = target.y - source.y;
         var length = Math.max(1, Math.hypot(dx, dy));
-        var bend = Math.min(22, length * 0.08) * (index % 2 ? 1 : -1);
+        var obstructed = graphSimulation.nodes.some(function (node) {
+          if (node === source || node === target) return false;
+          var ratio = Math.max(0, Math.min(1,
+            ((node.x - source.x) * dx + (node.y - source.y) * dy) / (length * length)));
+          return Math.hypot(node.x - source.x - ratio * dx,
+            node.y - source.y - ratio * dy) < node.radius + 10;
+        });
+        var bend = obstructed ? Math.min(28, length * 0.1) : 0;
         var controlX = (source.x + target.x) / 2 - dy / length * bend;
         var controlY = (source.y + target.y) / 2 + dx / length * bend;
-        entry.element.setAttribute("d", "M " + source.x + " " + source.y
-          + " Q " + controlX + " " + controlY + " " + target.x + " " + target.y);
+        entry.element.setAttribute("d", bend ? "M " + source.x + " " + source.y
+          + " Q " + controlX + " " + controlY + " " + target.x + " " + target.y
+          : "M " + source.x + " " + source.y + " L " + target.x + " " + target.y);
       });
       if (!graphSimulation) return;
       graphSimulation.nodes.forEach(function (node) {
         var elements = graphNodeElements.get(node.id);
         if (!elements) return;
-        elements.node.style.left = node.x + "px";
-        elements.node.style.top = node.y + "px";
-        elements.label.style.left = node.x + "px";
-        elements.label.style.top = (node.y + node.radius + 6) + "px";
+        var offset = breathing ? GraphPhysics.breathingOffset(node, elapsed) : { x: 0, y: 0 };
+        elements.node.style.left = (node.x + offset.x) + "px";
+        elements.node.style.top = (node.y + offset.y) + "px";
+        elements.label.style.left = (node.x + offset.x) + "px";
+        elements.label.style.top = (node.y + offset.y + node.radius + 6) + "px";
       });
+    }
+
+    function scheduleGraphBreathing() {
+      if (reducedGraphMotion || document.hidden || graphBreathTimer !== null) return;
+      graphBreathTimer = setTimeout(function () {
+        graphBreathTimer = null;
+        graphFrame = requestAnimationFrame(function () {
+          graphFrame = null;
+          drawGraph(Date.now(), true);
+          scheduleGraphBreathing();
+        });
+      }, 34);
     }
 
     function runGraphSimulation() {
@@ -420,7 +485,10 @@
         var stable = GraphPhysics.tick(graphSimulation);
         drawGraph();
         if (!stable) graphFrame = requestAnimationFrame(frame);
-        else if (graphAutoFit) fitGraph();
+        else {
+          if (graphAutoFit) fitGraph();
+          scheduleGraphBreathing();
+        }
       }
       graphFrame = requestAnimationFrame(frame);
     }
@@ -433,8 +501,10 @@
 
     function setGraphScale(scale) {
       graphAutoFit = false;
+      graphLabelZoomed = true;
       graphView.scale = Math.max(0.4, Math.min(2.5, scale));
       applyGraphView();
+      updateGraphLabels();
     }
 
     function fitGraph() {
@@ -445,14 +515,12 @@
       var maxX = Math.max.apply(null, xs) + 48;
       var minY = Math.min.apply(null, ys) - 48;
       var maxY = Math.max.apply(null, ys) + 68;
-      graphView.scale = Math.max(0.4, Math.min(1, Math.min(
-        graphCanvas.clientWidth / Math.max(1, maxX - minX),
-        graphCanvas.clientHeight / Math.max(1, maxY - minY),
-      )));
+      graphView.scale = 1;
       graphView.x = (graphCanvas.clientWidth - (minX + maxX) * graphView.scale) / 2;
       graphView.y = (graphCanvas.clientHeight - (minY + maxY) * graphView.scale) / 2;
       graphAutoFit = false;
       applyGraphView();
+      updateGraphLabels();
     }
 
     if (graphSearch) graphSearch.addEventListener("input", renderGraph);
@@ -480,6 +548,12 @@
     });
     graphCanvas.addEventListener("pointermove", function (event) {
       if (draggedNode) {
+        var edge = 32;
+        if (event.clientX < edge) graphView.x += 8;
+        else if (event.clientX > graphCanvas.clientWidth - edge) graphView.x -= 8;
+        if (event.clientY < edge) graphView.y += 8;
+        else if (event.clientY > graphCanvas.clientHeight - edge) graphView.y -= 8;
+        applyGraphView();
         var rect = graphCanvas.getBoundingClientRect();
         draggedNode.fx = (event.clientX - rect.left - graphView.x) / graphView.scale;
         draggedNode.fy = (event.clientY - rect.top - graphView.y) / graphView.scale;
@@ -493,6 +567,7 @@
     });
     graphCanvas.addEventListener("pointerup", function () {
       if (draggedNode) {
+        GraphPhysics.setSoftAnchor(draggedNode, draggedNode.fx, draggedNode.fy);
         draggedNode.fx = null;
         draggedNode.fy = null;
         GraphPhysics.reheat(graphSimulation);
@@ -502,6 +577,14 @@
       panStart = null;
     });
     window.addEventListener("resize", renderGraph);
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        if (graphFrame !== null) cancelAnimationFrame(graphFrame);
+        graphFrame = null;
+        if (graphBreathTimer !== null) clearTimeout(graphBreathTimer);
+        graphBreathTimer = null;
+      } else if (graphSimulation && graphSimulation.stable) scheduleGraphBreathing();
+    });
     if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
     if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
     showGraphPanel(true);

@@ -158,9 +158,13 @@ class FakeStorage {
 
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
-  reducedMotion = false, physics = GraphPhysics, setTimeoutFn = setTimeout,
+  reducedMotion = false, physics = GraphPhysics, setTimeoutFn = () => 0,
 }) {
   const document = {
+    hidden: false,
+    listeners: {},
+    addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
+    trigger(type) { for (const callback of this.listeners[type] || []) callback(); },
     getElementById(id) {
       return elements[id] || null;
     },
@@ -203,7 +207,7 @@ function runWorkbench({
     },
     cancelAnimationFrame(handle) { clearImmediate(handle); },
   }, { filename: "workbench.js" });
-  return { elements, storage, window, get rafCalls() { return rafCalls; } };
+  return { elements, storage, window, document, get rafCalls() { return rafCalls; } };
 }
 
 async function flush() {
@@ -803,6 +807,40 @@ test("graph filtering rebuilds layout and dragging reheats the simulation", asyn
   fit.click();
 });
 
+test("graph progressively reveals ranked labels and soft-anchors a released drag", async () => {
+  let anchors = 0;
+  const physics = Object.assign({}, GraphPhysics, {
+    setSoftAnchor(...args) { anchors += 1; return GraphPhysics.setSoftAnchor(...args); },
+  });
+  const canvas = new FakeElement("graph-canvas", { clientWidth: 1200, clientHeight: 800 });
+  const zoomIn = new FakeElement("graph-zoom-in");
+  runWorkbench({
+    elements: { layout: layout(), "graph-canvas": canvas, "graph-zoom-in": zoomIn },
+    reducedMotion: true,
+    physics,
+    fetch: () => jsonResponse({
+      nodes: Array.from({ length: 14 }, (_, index) => ({
+        id: "kp-" + index, title: "知识点 " + index, problem_count: 14 - index,
+        importance: index < 8 ? "core" : "supplementary",
+      })),
+      edges: Array.from({ length: 13 }, (_, index) => ({
+        source: "kp-" + index, target: "kp-" + (index + 1), attraction: 1,
+      })),
+    }),
+  });
+  await flush();
+  const stage = canvas.children[0];
+  const labels = stage.children.filter((child) => child.className === "graph-node-label");
+  assert.equal(labels.filter((label) => label.style.display !== "none").length, 6);
+  for (let i = 0; i < 8; i += 1) zoomIn.click();
+  assert.equal(labels.filter((label) => label.style.display !== "none").length, 14);
+  const node = stage.children.find((child) => child.dataset.kpId === "kp-0");
+  node.trigger("pointerdown", { clientX: 100, clientY: 100, pointerId: 1 });
+  canvas.trigger("pointermove", { clientX: 1190, clientY: 790 });
+  canvas.trigger("pointerup", { clientX: 1190, clientY: 790 });
+  assert.equal(anchors, 1);
+});
+
 test("graph renders curved paths and focuses one-hop and two-hop neighborhoods", async () => {
   const canvas = new FakeElement("graph-canvas");
   runWorkbench({
@@ -824,7 +862,7 @@ test("graph renders curved paths and focuses one-hop and two-hop neighborhoods",
   );
   assert.equal(edgeLayer.children.length, 3);
   assert.equal(edgeLayer.children[0].getAttribute("class"), "graph-edge");
-  assert.match(edgeLayer.children[0].getAttribute("d"), / Q /);
+  assert.match(edgeLayer.children[0].getAttribute("d"), / [LQ] /);
   const nodes = Object.fromEntries(stage.children.filter(
     (child) => child.dataset.kpId,
   ).map((child) => [child.dataset.kpId, child]));

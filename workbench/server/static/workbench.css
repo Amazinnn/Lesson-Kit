@@ -324,8 +324,12 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .knowledge-list .score { margin-left: 8px; color: var(--dsw-label-tertiary); font-size: 12px; }
 .knowledge-list .reasons { display: block; margin-top: 2px; color: var(--dsw-label-tertiary); font-size: 13px; }
 .graph-content { max-width: none; }
+#layout[data-page="graph"] #middle { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 20px; }
+#layout[data-page="graph"] .page-header { width: 100%; flex: none; padding-bottom: 14px; }
+#layout[data-page="graph"] .page-summary { margin-top: 3px; }
+#layout[data-page="graph"] .graph-content { width: 100%; min-height: 0; flex: 1; padding-top: 14px; }
 .graph-panel {
-  height: calc(100vh - 190px); min-height: 420px; overflow: hidden;
+  height: 100%; min-height: 420px; overflow: hidden;
   border: 1px solid var(--dsw-border-l2); border-radius: var(--dsw-radius-md);
   background: var(--dsw-bg-layer-1); box-shadow: var(--dsw-shadow-lv1);
 }
