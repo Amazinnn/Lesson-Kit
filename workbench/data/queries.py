@@ -82,6 +82,7 @@ def graph_model(pool):
             "body": kp.get("body") or "",
             "fragile": kp.get("fragile") or "",
             "problem_count": problem_count[kp["kp_id"]],
+            "importance": kp.get("importance") or "supplementary",
             "state": current.get(
                 ("kp", kp["kp_id"]), _signal_state(signals.get(kp["kp_id"]))
             ),

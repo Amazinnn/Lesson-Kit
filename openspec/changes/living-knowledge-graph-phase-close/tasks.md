@@ -5,8 +5,8 @@
 
 ## 2. Implementation
 
-- [ ] 2.1 Expose existing knowledge-point importance in the graph model.
-- [ ] 2.2 Replace component-local runtime simulation with an unbounded unified field and independent clearance.
+- [x] 2.1 Expose existing knowledge-point importance in the graph model.
+- [x] 2.2 Replace component-local runtime simulation with an unbounded unified field and independent clearance.
 - [ ] 2.3 Add soft anchors, focus expansion, bounded breathing, pause behavior, and deterministic edge routing.
 - [ ] 2.4 Add progressive labels, edge-pan, camera-only fit, and full-height graph layout.
 

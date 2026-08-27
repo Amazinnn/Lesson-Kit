@@ -9,8 +9,10 @@
     return Math.min(30, 8 + 2.4 * Math.sqrt(Math.max(0, problemCount || 0)));
   }
 
-  function targetDistance(attraction) {
-    return 120 / Math.sqrt(Math.max(0.1, attraction || 1));
+  function targetDistance(attraction, sourceRadius, targetRadius, distanceFactor) {
+    var normalized = Math.max(0, Math.min(1, ((attraction || 1) - 0.75) / 1.125));
+    var gap = (144 - 72 * normalized) * (distanceFactor || 1);
+    return (sourceRadius || 0) + (targetRadius || 0) + gap;
   }
 
   function createSimulation(sourceNodes, sourceEdges, width, height, positions) {
@@ -25,13 +27,11 @@
       var position = positions && positions.get(source.id);
       return Object.assign({}, source, {
         radius: nodeRadius(source.problem_count),
-        collisionRadius: Math.max(
-          nodeRadius(source.problem_count) + 10,
-          Math.min(72, 20 + String(source.title || "").length * 2.4),
-        ),
+        collisionRadius: nodeRadius(source.problem_count),
         x: position ? position.x : centerX + Math.cos(angle) * distance,
         y: position ? position.y : centerY + Math.sin(angle) * distance,
         vx: 0, vy: 0, fx: null, fy: null,
+        anchorX: null, anchorY: null,
       });
     });
     var byId = new Map(nodes.map(function (node) { return [node.id, node]; }));
@@ -67,7 +67,10 @@
       var dy = target.y - source.y;
       var distance = Math.max(0.01, Math.hypot(dx, dy));
       var attraction = edge.attraction || 1;
-      var force = (distance - targetDistance(attraction)) * 0.018 * attraction * alpha;
+      var desiredDistance = targetDistance(
+        attraction, source.radius, target.radius, edge.distanceFactor || 1,
+      );
+      var force = (distance - desiredDistance) * 0.014 * attraction * alpha;
       var fx = force * dx / distance;
       var fy = force * dy / distance;
       if (source.fx === null) { source.vx += fx; source.vy += fy; }
@@ -82,9 +85,9 @@
         var distance = Math.max(0.01, Math.hypot(dx, dy));
         var nx = dx / distance;
         var ny = dy / distance;
-        var repulsion = Math.min(6, 2600 / (distance * distance)) * alpha;
-        var overlap = a.collisionRadius + b.collisionRadius + 8 - distance;
-        var separation = overlap > 0 ? overlap * 0.18 : 0;
+        var repulsion = Math.min(6, 3200 / (distance * distance)) * alpha;
+        var overlap = a.radius + b.radius + 24 - distance;
+        var separation = overlap > 0 ? overlap * 0.28 : 0;
         var force = repulsion + separation;
         if (a.fx === null) { a.vx -= force * nx; a.vy -= force * ny; }
         if (b.fx === null) { b.vx += force * nx; b.vy += force * ny; }
@@ -97,17 +100,22 @@
       if (node.fx !== null) {
         node.x = node.fx;
         node.y = node.fy;
-        clampNode(node, simulation);
-        node.fx = node.x;
-        node.fy = node.y;
         node.vx = 0;
         node.vy = 0;
         return;
       }
-      node.vx += (centerX - node.x) * 0.0018 * alpha;
-      node.vy += (centerY - node.y) * 0.0018 * alpha;
-      node.vx *= 0.82;
-      node.vy *= 0.82;
+      node.vx += (centerX - node.x) * 0.00035 * alpha;
+      node.vy += (centerY - node.y) * 0.00035 * alpha;
+      if (node.componentAnchorX !== undefined) {
+        node.vx += (node.componentAnchorX - node.x) * 0.00022 * alpha;
+        node.vy += (node.componentAnchorY - node.y) * 0.00022 * alpha;
+      }
+      if (node.anchorX !== null) {
+        node.vx += (node.anchorX - node.x) * 0.012 * alpha;
+        node.vy += (node.anchorY - node.y) * 0.012 * alpha;
+      }
+      node.vx *= 0.84;
+      node.vy *= 0.84;
       var velocity = Math.hypot(node.vx, node.vy);
       if (velocity > 12) {
         node.vx *= 12 / velocity;
@@ -116,10 +124,9 @@
       }
       node.x += node.vx;
       node.y += node.vy;
-      clampNode(node, simulation);
       speed += velocity;
     });
-    simulation.alpha *= 0.985;
+    simulation.alpha *= 0.986;
     var quiet = simulation.alpha < 0.02 && speed / Math.max(nodes.length, 1) < 0.03;
     simulation.stableTicks = quiet ? simulation.stableTicks + 1 : 0;
     simulation.stable = simulation.stableTicks >= 12;
@@ -210,41 +217,25 @@
   }
 
   function tick(simulation) {
-    if (!simulation.components) return tickOne(simulation);
-    if (simulation.stable) return true;
-    simulation.components.forEach(function (component) {
-      var active = component.simulation.nodes.some(function (node) { return node.fx !== null; });
-      if (active) component.simulation._dragging = true;
-      if (active || !component.simulation.stable) tickOne(component.simulation);
-    });
-    simulation.alpha = Math.max.apply(null, simulation.components.map(function (component) {
-      return component.simulation.alpha;
-    }));
-    simulation.stable = simulation.components.every(function (component) {
-      return component.simulation.stable;
-    });
-    return simulation.stable;
+    return tickOne(simulation);
   }
 
-  function reheat(simulation) {
-    if (simulation.components) {
-      simulation.components.forEach(function (component) {
-        var active = component.simulation.nodes.some(function (node) { return node.fx !== null; });
-        if (active || component.simulation._dragging) {
-          reheat(component.simulation);
-          component.simulation._dragging = active;
-        }
-      });
-      simulation.alpha = 1;
-      simulation.stableTicks = 0;
-      simulation.stable = simulation.components.every(function (component) {
-        return component.simulation.stable;
-      });
-      return;
-    }
-    simulation.alpha = 1;
+  function reheat(simulation, alpha) {
+    simulation.alpha = alpha === undefined ? 1 : alpha;
     simulation.stableTicks = 0;
     simulation.stable = simulation.nodes.length < 2;
+  }
+
+  function setSoftAnchor(node, x, y) {
+    node.anchorX = x;
+    node.anchorY = y;
+  }
+
+  function breathingOffset(node, elapsedMs) {
+    var id = String(node.id || "");
+    var phase = id.length * 0.73 + (id.charCodeAt(0) || 0) * 0.11;
+    var angle = elapsedMs * Math.PI * 2 / 15000 + phase;
+    return { x: Math.cos(angle) * 3.5, y: Math.sin(angle) * 2.2 };
   }
 
   function settle(simulation, maxTicks) {
@@ -511,19 +502,37 @@
       var best = bestComponentLayout(component, layoutWidth, layoutHeight, maxTicks);
       return { component: component, simulation: best.simulation, score: best.score, candidate: best.name };
     });
-    var nodes = packComponents(layouts.map(function (layout) { return layout.simulation; }),
+    var seededNodes = packComponents(layouts.map(function (layout) { return layout.simulation; }),
       layoutWidth, layoutHeight);
-    resolveCollisions(nodes, layoutWidth, layoutHeight, 120);
-    relocateCrowdedNodes(nodes, layoutWidth, layoutHeight);
-    var byId = new Map(nodes.map(function (node) { return [node.id, node]; }));
-    var edges = sourceEdges.map(function (edge) {
-      return Object.assign({}, edge, { sourceNode: byId.get(edge.source), targetNode: byId.get(edge.target) });
-    }).filter(function (edge) { return edge.sourceNode && edge.targetNode; });
-    return {
-      nodes: nodes, edges: edges, width: layoutWidth, height: layoutHeight,
-      alpha: 0, stable: layouts.every(function (layout) { return layout.simulation.stable; }),
-      stableTicks: 12, components: layouts,
-    };
+    resolveCollisions(seededNodes, layoutWidth, layoutHeight, 120);
+    relocateCrowdedNodes(seededNodes, layoutWidth, layoutHeight);
+    var positions = new Map(seededNodes.map(function (node) {
+      return [node.id, { x: node.x, y: node.y }];
+    }));
+    var componentCenters = new Map();
+    seededNodes.forEach(function (node) {
+      if (!componentCenters.has(node._layoutComponent)) {
+        componentCenters.set(node._layoutComponent, { x: 0, y: 0, count: 0 });
+      }
+      var center = componentCenters.get(node._layoutComponent);
+      center.x += node.x;
+      center.y += node.y;
+      center.count += 1;
+    });
+    var unified = createSimulation(sourceNodes, sourceEdges, layoutWidth, layoutHeight, positions);
+    var seededById = new Map(seededNodes.map(function (node) { return [node.id, node]; }));
+    unified.nodes.forEach(function (node) {
+      var seeded = seededById.get(node.id);
+      var center = componentCenters.get(seeded._layoutComponent);
+      node._layoutComponent = seeded._layoutComponent;
+      node.componentAnchorX = center.x / center.count;
+      node.componentAnchorY = center.y / center.count;
+    });
+    unified.seedComponents = layouts.map(function (layout) {
+      return { candidate: layout.candidate || "isolate", score: layout.score || null,
+        nodeIds: layout.component.nodes.map(function (node) { return node.id; }) };
+    });
+    return unified;
   }
 
   return {
@@ -532,6 +541,8 @@
     createSimulation: createSimulation,
     tick: tick,
     reheat: reheat,
+    setSoftAnchor: setSoftAnchor,
+    breathingOffset: breathingOffset,
     settle: settle,
     connectedComponents: connectedComponents,
     candidateLayouts: candidateLayouts,
