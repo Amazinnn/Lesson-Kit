@@ -526,7 +526,8 @@
   var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
   var scopedMatch = String(window.location.search || "").match(/[?&]kp=([^&]+)/);
   var scopedKpId = layout.dataset.practiceKpId || (scopedMatch && decodeURIComponent(scopedMatch[1])) || "";
-  if (stream && scopedKpId) {
+  var storedKps = load(KPS_KEY, []);
+  if (stream && scopedKpId && (storedKps.length !== 1 || storedKps[0] !== scopedKpId)) {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(CURRENT_KEY);
     sessionStorage.removeItem(MODE_KEY);

@@ -622,6 +622,30 @@ test("practice starts a knowledge-point handoff without loading the weak list", 
   assert.deepEqual(JSON.parse(pull.options.body).kp_ids, ["kp-1"]);
 });
 
+test("practice restores an active card when the knowledge-point scope is unchanged", async () => {
+  const page = layout();
+  page.dataset.practiceKpId = "kp-scoped";
+  const elements = { layout: page, ...practiceElements() };
+  const storage = new FakeStorage({
+    wb_practice_mode_alpha: "immediate",
+    wb_kps_alpha: JSON.stringify(["kp-scoped"]),
+    wb_session_alpha: JSON.stringify([{ problem_id: "p-scoped", state: "active" }]),
+    wb_current_alpha: JSON.stringify({
+      problem_id: "p-scoped", display_title: "Scoped restored", problem_text: "Restored text",
+    }),
+  });
+  const calls = [];
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => { calls.push({ url, options }); return jsonResponse({ problems: [] }); },
+  });
+  await flush();
+  assert.equal(elements["practice-mode-immediate"].checked, true);
+  assert.match(elements.stream.innerHTML, /Scoped restored/);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kps_alpha")), ["kp-scoped"]);
+  assert.equal(calls.some((call) => call.url.endsWith("/pull")), false);
+});
+
 test("knowledge-point handoff discards an unrelated restored active card", async () => {
   const page = layout();
   page.dataset.practiceKpId = "kp-scoped";
