@@ -1288,6 +1288,33 @@
     if (window.innerWidth < 1024) layout.setAttribute("data-ai-collapsed", "1");
     else layout.removeAttribute("data-ai-collapsed");
   }
+
+  function bindColumnResizer(id, side, min, max) {
+    var handle = document.getElementById(id);
+    var layout = document.getElementById("layout");
+    if (!handle || !layout || window.innerWidth < 1024) return;
+    var dragging = false;
+    handle.addEventListener("pointerdown", function (event) {
+      dragging = true;
+      if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
+      document.body.style.cursor = "col-resize";
+      event.preventDefault();
+    });
+    handle.addEventListener("pointermove", function (event) {
+      if (!dragging) return;
+      var width = side === "left" ? event.clientX : window.innerWidth - event.clientX;
+      width = Math.max(min, Math.min(max, width));
+      var current = getComputedStyle(layout).gridTemplateColumns.split(" ");
+      if (current.length < 3) return;
+      current[side === "left" ? 0 : 2] = width + "px";
+      layout.style.gridTemplateColumns = current.join(" ");
+    });
+    function stop() { if (!dragging) return; dragging = false; document.body.style.cursor = ""; }
+    handle.addEventListener("pointerup", stop);
+    handle.addEventListener("pointercancel", stop);
+  }
+  bindColumnResizer("left-resizer", "left", 200, 480);
+  bindColumnResizer("right-resizer", "right", 280, 520);
   fitAiColumn();
   window.addEventListener("resize", fitAiColumn);
 

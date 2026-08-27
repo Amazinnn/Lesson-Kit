@@ -64,9 +64,9 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         topbar
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
-        + f"<aside id='left-column'>{left}</aside>"
+        + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
         + f"<main id='middle'>{middle_html}</main>"
-        + f"<aside id='ai-column'>{ai}</aside>"
+        + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics.js'></script>" if graph_mode else "")
         + "<script src='/static/workbench.js'></script>"

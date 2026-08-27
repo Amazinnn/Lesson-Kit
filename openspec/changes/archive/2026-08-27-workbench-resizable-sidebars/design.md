@@ -1,0 +1,3 @@
+- Sidebars resize through pointer drag on narrow edge handles; widths are not persisted.
+- Desktop bounds are left 200–480px and right 280–520px; below the existing mobile breakpoint, drawer sizing remains governed by CSS.
+- Agent messages use `overflow-y: auto` inside a flex-constrained chat view, allowing wheel scrolling without changing message behavior.

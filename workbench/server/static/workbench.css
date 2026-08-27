@@ -85,6 +85,7 @@ body {
 }
 #layout[data-ai-collapsed] { grid-template-columns: 280px 1fr 0px; }
 #left-column {
+  position: relative;
   border-right: 1px solid var(--dsw-border-l1);
   background: var(--dsw-sidebar-fill);
   padding: 16px 12px 20px;
@@ -96,6 +97,7 @@ body {
   min-width: 0;
 }
 #ai-column {
+  position: relative;
   border-left: 1px solid var(--dsw-border-l2);
   padding: 16px;
   display: flex;
@@ -388,6 +390,10 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   overflow: hidden;
   background: var(--dsw-border-l1);
 }
+.column-resizer { position: absolute; top: 0; bottom: 0; width: 8px; z-index: 10; cursor: col-resize; }
+#left-resizer { right: -4px; }
+#right-resizer { left: -4px; }
+.column-resizer:hover, .column-resizer:active { background: var(--dsw-brand-accent); opacity: .35; }
 #graph-detail-panel .graph-dashboard-metrics > div {
   display: grid;
   gap: 3px;
@@ -407,10 +413,11 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 #ai-teacher-panel { display: flex; flex: 1; min-height: 0; flex-direction: column; }
 #ai-teacher-panel .ai-conversation { min-height: 120px; }
 #ai-actions { display: flex; gap: 4px; margin: 12px 0 18px; flex-wrap: wrap; }
-#ai-session-controls { display: grid; gap: 6px; margin: 12px 0 16px; }
+#ai-session-controls { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 6px; margin: 12px 0 16px; }
 #ai-session-list-view,
 #ai-provider-picker,
 #ai-chat-view { min-height: 0; }
+#ai-chat-view { display: flex; flex: 1; flex-direction: column; }
 .ai-session-list-head,
 #ai-chat-head { display: flex; align-items: center; gap: 8px; }
 .ai-session-list-head { justify-content: space-between; margin-bottom: 6px; }

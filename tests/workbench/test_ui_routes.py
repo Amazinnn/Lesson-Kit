@@ -54,6 +54,8 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
         self.assertIn(".hidden { display: none !important; }", body)
+        self.assertIn("#ai-messages { flex: 1; overflow-y: auto;", body)
+        self.assertIn("column-resizer", body)
 
     def test_practice_page_session_controls_live_outside_the_answer_card(self):
         # Session controls must not be nested in the answer card, where a state
@@ -119,6 +121,8 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("left-column", body)
+        self.assertIn("id='left-resizer'", body)
+        self.assertIn("id='right-resizer'", body)
         self.assertIn("ai-column", body)
         self.assertIn("topbar", body)
         self.assertIn("<a class='brand' href='/'>lesson-kit</a>", body)
@@ -138,12 +142,12 @@ class UiRouteTests(unittest.TestCase):
             self.assertNotIn("id='ai-provider'", body)
             self.assertNotIn("id='ai-session'", body)
             self.assertNotIn("id='ai-daily'", body)
-            self.assertIn("id='ai-messages'", body)
-            self.assertIn("id='ai-input'", body)
-            self.assertIn("id='ai-send'", body)
-            self.assertIn("id='ai-stop'", body)
-            self.assertNotIn("id='ai-explain'", body)
-            self.assertNotIn("id='ai-diagnose'", body)
+        self.assertIn("id='ai-messages'", body)
+        self.assertIn("id='ai-input'", body)
+        self.assertIn("id='ai-send'", body)
+        self.assertIn("id='ai-stop'", body)
+        self.assertNotIn("id='ai-explain'", body)
+        self.assertNotIn("id='ai-diagnose'", body)
 
     def test_chat_never_offers_a_draft_attachment_setting(self):
         _, practice = self.fetch("/w/dmath/practice")
