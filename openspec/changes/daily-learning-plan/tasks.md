@@ -1,0 +1,9 @@
+- [ ] Update requirements, design notes, and future-direction notes with the approved planning boundary.
+- [ ] Add failing planner tests for deterministic output, goal/deadline weighting, coverage, mixed problem types, and missing values.
+- [ ] Implement the pure baseline planner and read path.
+- [ ] Add failing route and browser tests for goal cards, coarse queue, mode selection, and fallback state.
+- [ ] Render the practice plan and queue with existing workbench hooks and responsive styles.
+- [ ] Add failing Agent tests for daily-first-open recalculation, explicit recalculation, status events, queued messages, stop, and fallback.
+- [ ] Implement bounded Agent adjustment and live status refresh without durable tool-event logs.
+- [ ] Run full tests, JS checks, strict OpenSpec validation, pool guards, and :3081 smoke acceptance.
+- [ ] Archive the change and write a dated changelog after acceptance.
