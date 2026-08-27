@@ -12,6 +12,7 @@
   var CURRENT_KEY = "wb_current_" + WS;
   var SIMILAR_KEY = "wb_similar_round_" + WS;
   var MODE_KEY = "wb_practice_mode_" + WS;
+  var PRACTICE_PATH_KEY = "wb_practice_path_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
   var selectedGraphKpId = null;
@@ -586,6 +587,8 @@
   var currentProblem = load(CURRENT_KEY, null);
   var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
   var scopedMatch = String(window.location.search || "").match(/[?&]kp=([^&]+)/);
+  var pathMatch = String(window.location.search || "").match(/[?&]path=([^&]+)/);
+  if (pathMatch) sessionStorage.setItem(PRACTICE_PATH_KEY, decodeURIComponent(pathMatch[1]));
   var scopedKpId = layout.dataset.practiceKpId || (scopedMatch && decodeURIComponent(scopedMatch[1])) || "";
   var storedKps = load(KPS_KEY, []);
   if (stream && scopedKpId && (storedKps.length !== 1 || storedKps[0] !== scopedKpId)) {

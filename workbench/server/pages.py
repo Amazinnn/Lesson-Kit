@@ -154,6 +154,13 @@ def _daily_plan(plan, workspace_name):
         + "/kp/" + html.escape(item["kp_ids"][0]) + "'><strong>"
         + html.escape(item.get("title") or "未命名知识点") + "</strong></a>"
         + "<p>" + html.escape(item.get("reason") or "按当前顺序推进") + "</p></div>"
+        + "<div class='plan-paths'>"
+        + "<a class='plan-path' data-practice-path='exam' href='/w/" + html.escape(workspace_name)
+        + "/practice?kp=" + html.escape(item["kp_ids"][0]) + "&path=exam'>综合</a>"
+        + "<a class='plan-path' data-practice-path='flash_card' href='/w/" + html.escape(workspace_name)
+        + "/practice?kp=" + html.escape(item["kp_ids"][0]) + "&path=flash_card'>卡片</a>"
+        + "<a class='plan-path' data-practice-path='yes_no' href='/w/" + html.escape(workspace_name)
+        + "/practice?kp=" + html.escape(item["kp_ids"][0]) + "&path=yes_no'>判断</a></div>"
         + "<span class='plan-count'>约 " + str(item.get("target_count", 1)) + " 题</span></li>"
         for item in queue
     ) or "<li class='muted'>今天暂时没有安排</li>"

@@ -84,6 +84,9 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("今日计划", body)
         self.assertIn("Counting", body)
         self.assertNotIn("逐题", body)
+        self.assertIn("data-practice-path='exam'", body)
+        self.assertIn("data-practice-path='flash_card'", body)
+        self.assertIn("data-practice-path='yes_no'", body)
 
     def test_daily_plan_api_is_available_without_agent(self):
         status, payload = self.fetch_json("/api/w/dmath/plan")

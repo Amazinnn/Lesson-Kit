@@ -576,8 +576,11 @@ img { max-width: 100%; }
 .plan-goals, .plan-queue { margin: 0; padding-left: 1.1rem; }
 .plan-goals li, .plan-queue-item { margin: .35rem 0; }
 .plan-deadline, .plan-count { color: var(--dsw-text-muted, #68707b); font-size: .78rem; margin-left: .5rem; }
-.plan-queue-item { display: flex; justify-content: space-between; gap: .75rem; }
+.plan-queue-item { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
 .plan-queue-item p { margin: .15rem 0 0; color: var(--dsw-text-muted, #68707b); font-size: .8rem; }
+.plan-paths { display: flex; gap: .35rem; white-space: nowrap; }
+.plan-path { color: var(--dsw-text-muted, #68707b); font-size: .75rem; text-decoration: none; }
+.plan-path:hover { color: var(--dsw-brand-primary, #2457d6); }
 .plan-total { font-size: .8rem; color: var(--dsw-text-muted, #68707b); }
 @media (max-width: 700px) { .plan-columns { grid-template-columns: 1fr; } }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
