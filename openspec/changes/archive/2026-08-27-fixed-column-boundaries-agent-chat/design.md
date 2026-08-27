@@ -1,0 +1,3 @@
+- Keep in-memory `leftWidth` and `rightWidth`; render `leftWidth px minmax(420px, 1fr) rightWidth px`.
+- Clamp each side against the opposite side and the 420px middle minimum.
+- Toggle the complete `#ai-session-controls` section hidden in chat state.

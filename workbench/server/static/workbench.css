@@ -83,6 +83,7 @@ body {
   grid-template-columns: 280px minmax(0, 1fr) 420px;
   transition: grid-template-columns 200ms ease;
 }
+#layout.is-resizing { transition: none; }
 #layout[data-ai-collapsed] { grid-template-columns: 280px minmax(0, 1fr) 0px; }
 #left-column {
   position: relative;

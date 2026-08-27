@@ -1105,6 +1105,7 @@
   /* ---------- compact Agent session IA ---------- */
 
   var aiSessionListView = document.getElementById("ai-session-list-view");
+  var aiSessionControls = document.getElementById("ai-session-controls");
   var aiSessionList = document.getElementById("ai-session-list");
   var aiSessionEmpty = document.getElementById("ai-session-empty");
   var aiNewSession = document.getElementById("ai-new-session");
@@ -1123,6 +1124,7 @@
 
   function aiSetView(view) {
     if (!aiSessionListView || !aiProviderPicker || !aiChatView) return;
+    if (aiSessionControls) aiSessionControls.classList.toggle("hidden", view === "chat");
     aiSessionListView.classList.toggle("hidden", view !== "list");
     aiProviderPicker.classList.toggle("hidden", view !== "picker");
     aiChatView.classList.toggle("hidden", view !== "chat");
@@ -1285,8 +1287,24 @@
   }
 
   function fitAiColumn() {
+    if (!layout) return;
     if (window.innerWidth < 1024) layout.setAttribute("data-ai-collapsed", "1");
     else layout.removeAttribute("data-ai-collapsed");
+  }
+
+  var leftWidth = 280;
+  var rightWidth = 420;
+  var middleMinWidth = 420;
+  function applyColumnWidths() {
+    if (!layout || !layout.style) return;
+    if (window.innerWidth < 1024) {
+      layout.style.gridTemplateColumns = "";
+      return;
+    }
+    var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
+    leftWidth = Math.max(200, Math.min(480, Math.min(leftWidth, available - rightWidth)));
+    rightWidth = Math.max(360, Math.min(560, Math.min(rightWidth, available - leftWidth)));
+    layout.style.gridTemplateColumns = leftWidth + "px minmax(420px, 1fr) " + rightWidth + "px";
   }
 
   function bindColumnResizer(id, side, min, max) {
@@ -1296,26 +1314,30 @@
     var dragging = false;
     handle.addEventListener("pointerdown", function (event) {
       dragging = true;
+      layout.classList.add("is-resizing");
       if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
       document.body.style.cursor = "col-resize";
       event.preventDefault();
     });
     handle.addEventListener("pointermove", function (event) {
       if (!dragging) return;
-      var width = side === "left" ? event.clientX : window.innerWidth - event.clientX;
-      width = Math.max(min, Math.min(max, width));
-      var current = getComputedStyle(layout).gridTemplateColumns.split(" ");
-      if (current.length < 3) return;
-      current[side === "left" ? 0 : 2] = width + "px";
-      layout.style.gridTemplateColumns = current.join(" ");
+      var rect = layout.getBoundingClientRect();
+      var width = side === "left" ? event.clientX - rect.left : rect.right - event.clientX;
+      var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
+      var cap = side === "left" ? available - rightWidth : available - leftWidth;
+      width = Math.max(min, Math.min(max, Math.min(width, cap)));
+      if (side === "left") leftWidth = width;
+      else rightWidth = width;
+      applyColumnWidths();
     });
-    function stop() { if (!dragging) return; dragging = false; document.body.style.cursor = ""; }
+    function stop() { if (!dragging) return; dragging = false; document.body.style.cursor = ""; layout.classList.remove("is-resizing"); }
     handle.addEventListener("pointerup", stop);
     handle.addEventListener("pointercancel", stop);
   }
   bindColumnResizer("left-resizer", "left", 200, 480);
   bindColumnResizer("right-resizer", "right", 360, 560);
   fitAiColumn();
-  window.addEventListener("resize", fitAiColumn);
+  applyColumnWidths();
+  window.addEventListener("resize", function () { fitAiColumn(); applyColumnWidths(); });
 
 })();
