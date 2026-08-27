@@ -12,5 +12,5 @@
 
 ## 3. Delivery
 
-- [ ] 3.1 Run target and full automated verification plus three-width browser acceptance.
-- [ ] 3.2 Record the final state, archive the change, freeze proactive feature development, and push main.
+- [x] 3.1 Run target/full automated verification and real-service graph acceptance; omit repeated screenshot automation under the user's bounded verification request.
+- [x] 3.2 Record the final state, archive the change, freeze proactive feature development, and push main.

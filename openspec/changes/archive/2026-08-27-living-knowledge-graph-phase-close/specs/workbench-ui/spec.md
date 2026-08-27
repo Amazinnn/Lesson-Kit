@@ -89,6 +89,8 @@ The knowledge graph page SHALL render the live complete chapter graph in a middl
 - **WHEN** the browser reports reduced motion
 - **THEN** the graph settles and draws once without idle breathing
 
+## ADDED Requirements
+
 ### Requirement: Living graph motion and readable labels
 
 After active settling, the graph SHALL use deterministic low-frequency breathing no faster than 30 frames per second and no farther than four pixels from stable positions. Hidden pages SHALL pause motion. By default labels SHALL be ranked by core importance, descending formal-problem count, and stable identifier: the first 6 SHALL show below 0.8 zoom, the first 12 from 0.8 below 1.1, and all at 1.1 or above. Hovered, searched, selected, and one-hop nodes SHALL always show readable labels, while raw identifiers SHALL NOT be primary canvas text.

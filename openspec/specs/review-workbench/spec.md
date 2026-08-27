@@ -270,12 +270,12 @@ The workbench SHALL maintain one current state for each knowledge point or probl
 
 ### Requirement: Semantic graph attraction
 
-The live graph model SHALL expose each knowledge point's formal-problem count and each semantic edge's explicit strength, shared-formal-problem count, and computed attraction. Edges SHALL originate only from formal knowledge relations or existing `related_kp_ids`. Reverse duplicate edges SHALL be merged, and shared problems SHALL reinforce but SHALL NOT create semantic edges.
+The live graph model SHALL expose each knowledge point's formal-problem count and existing importance classification, and each semantic edge's explicit strength, shared-formal-problem count, and computed attraction. Edges SHALL originate only from formal knowledge relations or existing `related_kp_ids`. Reverse duplicate edges SHALL be merged, and shared problems SHALL reinforce but SHALL NOT create semantic edges.
 
 #### Scenario: Count formal problems per node
 
-- **WHEN** formal and candidate problems refer to the same knowledge point
-- **THEN** `problem_count` includes only formal problems
+- **WHEN** formal and candidate problems refer to a knowledge point with an existing importance value
+- **THEN** `problem_count` includes only formal problems and the graph node reports that importance value
 
 #### Scenario: Merge a bidirectional semantic edge
 
