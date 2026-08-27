@@ -205,6 +205,14 @@ class IngestTests(unittest.TestCase):
             "j&lt;i, a_j&gt;a_i, and 0\\le k&lt;n",
         )
 
+    def test_markup_gate_rejects_unknown_html_with_attributes(self):
+        for text in ("<img src=x>", "<a href=x>unknown</a>"):
+            with self.subTest(text=text):
+                self.assertIn(
+                    "has unknown or unterminated HTML",
+                    ingest._markup_errors(text),
+                )
+
     def test_render_writes_a_resumable_utf8_artifact(self):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
         source = self.artifact("render-source.json", {
