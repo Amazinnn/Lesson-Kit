@@ -1314,7 +1314,7 @@
     handle.addEventListener("pointercancel", stop);
   }
   bindColumnResizer("left-resizer", "left", 200, 480);
-  bindColumnResizer("right-resizer", "right", 280, 520);
+  bindColumnResizer("right-resizer", "right", 360, 560);
   fitAiColumn();
   window.addEventListener("resize", fitAiColumn);
 
