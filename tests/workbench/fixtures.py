@@ -70,7 +70,9 @@ def build_fixture_db(conn):
         CREATE TABLE problem_attempts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             problem_id TEXT NOT NULL,
-            status TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (status IN (
+                'new', 'wrong', 'stuck', 'reviewing', 'mastered'
+            )),
             note TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
