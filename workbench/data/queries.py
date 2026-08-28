@@ -5,6 +5,8 @@ import json
 import sqlite3
 from pathlib import Path
 
+from workbench.domain import signals as signal_rules
+
 
 def hub_stats(pool):
     due = sum(1 for r in pool.schedule_rows() if _is_due(r, date.today()))
@@ -114,7 +116,10 @@ def graph_model(pool):
         (row["item_type"], row["item_id"]): row["state"]
         for row in pool.current_states()
     }
-    signals = {row["target_id"]: row["weight"] for row in pool.signals()}
+    signals = {
+        target_id: row["weight"]
+        for target_id, row in signal_rules.strongest_by_target(pool.signals()).items()
+    }
     problems = pool.problems_all()
     problem_count = {kp_id: 0 for kp_id in ids}
     problem_kps = []

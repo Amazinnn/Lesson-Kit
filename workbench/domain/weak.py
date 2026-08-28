@@ -2,6 +2,8 @@
 
 from datetime import date
 
+from workbench.domain import signals as signal_rules
+
 WEIGHT_SCORE = {"low": 0.5, "medium": 1.0, "high": 2.0}
 NO_SIGNAL = 0.2
 STRENGTH_FACTOR = {"high": 1.0, "medium": 0.7, "low": 0.4}
@@ -12,10 +14,10 @@ DEPTH_DECAY = 0.5
 
 def score_all(kps, signals, schedule_rows, relations, session_practiced, today):
     """Score and rank knowledge points. Never filters — ordering only."""
+    signal_by_target = signal_rules.strongest_by_target(signals)
     signal_extra = {
         s["target_id"]: _signal_score(s) - NO_SIGNAL
-        for s in signals
-        if s["target_type"] == "node"
+        for s in signal_by_target.values()
     }
     edges = [r for r in relations if r["relation_type"] in CASCADE_TYPES]
 
@@ -23,7 +25,7 @@ def score_all(kps, signals, schedule_rows, relations, session_practiced, today):
     for kp in kps:
         kp_id = kp["kp_id"]
         base = _signal_score(
-            next((s for s in signals if s["target_id"] == kp_id), None)
+            signal_by_target.get(kp_id)
         )
         boost = _due_boost(schedule_rows, kp_id, today)
         cascade, reasons = _cascade(kp_id, signal_extra, edges)

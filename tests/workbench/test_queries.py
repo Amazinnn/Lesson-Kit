@@ -220,6 +220,16 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(edge["shared_problem_count"], 1)
         self.assertAlmostEqual(edge["attraction"], 1.375)
 
+    def test_graph_model_uses_the_strongest_signal_for_each_node(self):
+        self.pool.connect().execute(
+            "INSERT INTO learner_signals VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("zz-low", "node", "dmath-ch06-kp-002", "confusion", "low", 99, None),
+        )
+        self.pool.commit()
+        model = self.queries.graph_model(self.pool)
+        node = next(item for item in model["nodes"] if item["id"] == "dmath-ch06-kp-002")
+        self.assertEqual(node["state"], "needs_work")
+
     def test_kp_detail(self):
         detail = self.queries.kp_detail(self.pool, "dmath-ch06-kp-002")
         self.assertEqual(detail["kp"]["kp_id"], "dmath-ch06-kp-002")
