@@ -543,6 +543,7 @@ test("content-mode practice uses only the explicit knowledge selection", async (
   assert.deepEqual(JSON.parse(pull.options.body), {
     kp_ids: ["kp-1", "kp-2"], n: 1, mode: "flash_card", exclude_ids: [],
   });
+  assert.match(elements.stream.innerHTML, /暂无可用的 Flash Card/);
 });
 
 test("unified rating controls have unique accessible labels and titled cards", async () => {

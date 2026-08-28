@@ -743,9 +743,12 @@
 
     function finishExhausted() {
       var mode = sessionStorage.getItem(MODE_KEY);
-      stream.innerHTML = similarRound
-        ? "<p class='muted'>暂无更多同类题。</p>"
-        : "<p class='muted'>本轮相关题目已练完。</p>";
+      var emptyMessage = similarRound
+        ? "暂无更多同类题。"
+        : (mode === "flash_card" ? "当前范围暂无可用的 Flash Card 题目，请选择其他模式。"
+          : mode === "yes_no" ? "当前范围暂无可用的 Yes / No 题目，请选择其他模式。"
+            : "本轮相关题目已练完。");
+      stream.innerHTML = "<p class='muted'>" + emptyMessage + "</p>";
       similarRound = false;
       sessionStorage.removeItem(SIMILAR_KEY);
       setCurrent(null);
