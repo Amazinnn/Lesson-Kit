@@ -72,6 +72,8 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='practice-mode-exam'", body)
         self.assertIn("id='practice-mode-flash_card'", body)
         self.assertIn("id='practice-mode-yes_no'", body)
+        self.assertIn("id='practice-rating-immediate'", body)
+        self.assertIn("id='practice-rating-batch'", body)
         self.assertIn("id='start-practice' class='primary' disabled", body)
 
     def test_practice_page_uses_explicit_scope_and_single_content_modes(self):
@@ -80,8 +82,8 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='practice-empty-state'", body)
         for mode in ("exam", "flash_card", "yes_no"):
             self.assertIn(f"id='practice-mode-{mode}'", body)
-        self.assertNotIn("practice-mode-immediate", body)
-        self.assertNotIn("practice-mode-batch", body)
+        self.assertIn("id='practice-rating-immediate'", body)
+        self.assertIn("id='practice-rating-batch'", body)
 
     def test_knowledge_views_expose_one_shared_selection_handoff(self):
         for path in ("/w/dmath/kps", "/w/dmath/graph"):

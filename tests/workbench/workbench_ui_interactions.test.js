@@ -240,6 +240,8 @@ function practiceElements() {
     "save-rating": new FakeElement("save-rating"),
     "practice-mode-immediate": new FakeElement("practice-mode-immediate"),
     "practice-mode-batch": new FakeElement("practice-mode-batch"),
+    "practice-rating-immediate": new FakeElement("practice-rating-immediate"),
+    "practice-rating-batch": new FakeElement("practice-rating-batch"),
     "start-area": new FakeElement("start-area"),
     "session-end-entry": new FakeElement("session-end-entry"),
     "practice-error": new FakeElement("practice-error"),
@@ -304,7 +306,7 @@ test("practice requires an explicit mode and excludes questions already seen", a
   assert.equal(calls[0].url, "/api/w/alpha/weak?limit=200");
   const pull = calls.find((call) => call.url.endsWith("/pull"));
   assert.deepEqual(JSON.parse(pull.options.body), {
-    kp_ids: ["kp-1"], n: 1, mode: "weak", exclude_ids: [],
+    kp_ids: ["kp-1"], n: 1, mode: "exam", exclude_ids: [],
   });
   assert.equal(app.window.location, "");
 });
@@ -536,6 +538,8 @@ test("content-mode practice uses only the explicit knowledge selection", async (
   });
   elements["practice-mode-flash_card"].checked = true;
   elements["practice-mode-flash_card"].trigger("change");
+  elements["practice-rating-immediate"].checked = true;
+  elements["practice-rating-immediate"].trigger("change");
   elements["start-practice"].click();
   await flush();
   assert.equal(calls.some((call) => call.url.includes("/weak?")), false);

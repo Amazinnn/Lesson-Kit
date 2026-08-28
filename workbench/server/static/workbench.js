@@ -12,6 +12,7 @@
   var CURRENT_KEY = "wb_current_" + WS;
   var SIMILAR_KEY = "wb_similar_round_" + WS;
   var MODE_KEY = "wb_practice_mode_" + WS;
+  var RATING_MODE_KEY = "wb_practice_rating_mode_" + WS;
   var SELECTION_KEY = "wb_kp_selection_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
@@ -661,6 +662,7 @@
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(CURRENT_KEY);
     sessionStorage.removeItem(MODE_KEY);
+    sessionStorage.removeItem(RATING_MODE_KEY);
     store(KPS_KEY, [scopedKpId]);
     currentProblem = null;
   }
@@ -693,6 +695,8 @@
     var modeYesNo = document.getElementById("practice-mode-yes_no");
     var modeImmediate = document.getElementById("practice-mode-immediate");
     var modeBatch = document.getElementById("practice-mode-batch");
+    var ratingImmediate = document.getElementById("practice-rating-immediate");
+    var ratingBatch = document.getElementById("practice-rating-batch");
     var legacyModeControls = !!(modeImmediate || modeBatch);
     var actions = document.getElementById("composer-actions");
     var feedbackArea = document.getElementById("feedback-area");
@@ -719,13 +723,25 @@
       if (retryPractice) retryPractice.classList.add("hidden");
     }
 
-    function selectedMode() {
+    function selectedContentMode() {
       if (modeExam && modeExam.checked) return "exam";
       if (modeFlashCard && modeFlashCard.checked) return "flash_card";
       if (modeYesNo && modeYesNo.checked) return "yes_no";
+      return "";
+    }
+
+    function selectedRatingMode() {
+      if (ratingImmediate && ratingImmediate.checked) return "immediate";
+      if (ratingBatch && ratingBatch.checked) return "batch";
       if (modeImmediate && modeImmediate.checked) return "immediate";
       if (modeBatch && modeBatch.checked) return "batch";
       return "";
+    }
+
+    function readyToStart() {
+      var content = selectedContentMode() || (legacyModeControls ? "exam" : "");
+      return !!content && !!selectedRatingMode()
+        && (legacyModeControls || selectedKpIds().length > 0);
     }
 
     function showComposer(show) {
@@ -743,6 +759,7 @@
 
     function finishExhausted() {
       var mode = sessionStorage.getItem(MODE_KEY);
+      var ratingMode = sessionStorage.getItem(RATING_MODE_KEY);
       var emptyMessage = similarRound
         ? "暂无更多同类题。"
         : (mode === "flash_card" ? "当前范围暂无可用的 Flash Card 题目，请选择其他模式。"
@@ -753,9 +770,10 @@
       sessionStorage.removeItem(SIMILAR_KEY);
       setCurrent(null);
       showComposer(false);
-      if (mode === "batch") window.location = "session-end";
+      if (ratingMode === "batch") window.location = "session-end";
       else {
         sessionStorage.removeItem(MODE_KEY);
+        sessionStorage.removeItem(RATING_MODE_KEY);
         [modeExam, modeFlashCard, modeYesNo, modeImmediate, modeBatch].forEach(function (input) {
           if (input) input.checked = false;
         });
@@ -775,7 +793,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kp_ids: kps, n: 1,
-          mode: mode === "immediate" || mode === "batch" ? "weak" : mode,
+          mode: mode,
           exclude_ids: exclude,
         }),
       }).then(function (result) {
@@ -802,11 +820,15 @@
     }
 
     function startSession() {
-      var mode = selectedMode();
-      if (!mode) return;
+      var contentMode = selectedContentMode();
+      var ratingMode = selectedRatingMode();
+      if (legacyModeControls && !ratingMode) ratingMode = selectedRatingMode();
+      if (!contentMode && legacyModeControls) contentMode = "exam";
+      if (!contentMode || !ratingMode) return;
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
-      sessionStorage.setItem(MODE_KEY, mode);
+      sessionStorage.setItem(MODE_KEY, contentMode);
+      sessionStorage.setItem(RATING_MODE_KEY, ratingMode);
       if (legacyModeControls && scopedKpId) {
         store(KPS_KEY, [scopedKpId]);
         if (startArea) startArea.classList.add("hidden");
@@ -833,7 +855,7 @@
 
     function bindMode(mode) {
       if (mode) mode.addEventListener("change", function () {
-        startPractice.disabled = !selectedMode() || (!legacyModeControls && !selectedKpIds().length);
+        startPractice.disabled = !readyToStart();
       });
     }
 
@@ -842,8 +864,12 @@
     bindMode(modeYesNo);
     bindMode(modeImmediate);
     bindMode(modeBatch);
+    bindMode(ratingImmediate);
+    bindMode(ratingBatch);
     var restoredMode = sessionStorage.getItem(MODE_KEY);
-    var hasPendingRatings = restoredMode === "batch" && session().some(function (item) {
+    var restoredRatingMode = sessionStorage.getItem(RATING_MODE_KEY)
+      || (restoredMode === "batch" ? "batch" : "");
+    var hasPendingRatings = restoredRatingMode === "batch" && session().some(function (item) {
       return item.state === "unrated";
     });
     if (hasPendingRatings && !currentProblem) {
@@ -854,6 +880,8 @@
       if (modeYesNo) modeYesNo.checked = restoredMode === "yes_no";
       if (modeImmediate) modeImmediate.checked = restoredMode === "immediate";
       if (modeBatch) modeBatch.checked = restoredMode === "batch";
+      if (ratingImmediate) ratingImmediate.checked = restoredRatingMode === "immediate";
+      if (ratingBatch) ratingBatch.checked = restoredRatingMode === "batch";
       if (startArea) startArea.classList.add("hidden");
       renderQuestion(currentProblem);
       answerBox.value = currentProblem.answer_text || "";
@@ -861,7 +889,7 @@
     }
     if (practiceEmpty && selectedKpIds().length) practiceEmpty.classList.add("hidden");
     if (startPractice) {
-      startPractice.disabled = !selectedMode() || (!legacyModeControls && !selectedKpIds().length);
+      startPractice.disabled = !readyToStart();
       startPractice.addEventListener("click", startSession);
     }
     if (retryPractice) retryPractice.addEventListener("click", loadNext);
@@ -872,7 +900,8 @@
       currentProblem.answer_text = answer;
       setCurrent(currentProblem);
       updateSession(currentProblem.problem_id, { answer_text: answer });
-      if (sessionStorage.getItem(MODE_KEY) === "batch") {
+      if (sessionStorage.getItem(RATING_MODE_KEY) === "batch"
+          || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "batch")) {
         updateSession(currentProblem.problem_id, { state: "unrated" });
         setCurrent(null);
         loadNext();
@@ -926,10 +955,12 @@
       if (currentProblem) updateSession(currentProblem.problem_id, { state: "skipped" });
       setCurrent(null);
       showComposer(false);
-      if (sessionStorage.getItem(MODE_KEY) === "batch") {
+      if (sessionStorage.getItem(RATING_MODE_KEY) === "batch"
+          || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "batch")) {
         window.location = "session-end";
       } else {
         sessionStorage.removeItem(MODE_KEY);
+        sessionStorage.removeItem(RATING_MODE_KEY);
         stream.innerHTML = "<p class='muted'>本轮练习已提前结束。</p>";
         if (startArea) startArea.classList.remove("hidden");
       }
@@ -1036,6 +1067,7 @@
     if (similar) similar.addEventListener("click", function () {
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(MODE_KEY);
+      sessionStorage.removeItem(RATING_MODE_KEY);
       api("/weak?limit=200").then(function (items) {
         store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
         sessionStorage.setItem(SIMILAR_KEY, "1");
