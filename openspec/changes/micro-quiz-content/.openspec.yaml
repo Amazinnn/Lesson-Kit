@@ -1,0 +1,4 @@
+schema: spec-driven
+
+name: micro-quiz-content
+description: Real structured micro-quiz content contract filling the Flash Card and Yes/No mode shells
