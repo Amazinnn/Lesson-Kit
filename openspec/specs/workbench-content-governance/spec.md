@@ -1,7 +1,15 @@
 # workbench-content-governance Specification
 
 ## Purpose
-TBD - created by archiving change agent-native-workbench-conversation. Update Purpose after archive.
+
+Set the single boundary through which pool content may change: explicit
+create/update/delete/state/gate/promote commands, issued by the student or an
+Agent acting on an explicit request. Everything else — browsing, drafts,
+ordinary conversation — is read-only. Mutations are transactional and physical
+(no tombstones), current-state replacement stays event-noise-free, ingestion
+and backfill run as composable audited commands, and a source-damage gate
+keeps broken upstream material out of the formal pool.
+
 ## Requirements
 ### Requirement: Explicit content mutation boundary
 

@@ -36,3 +36,5 @@ pool/*.db
 
 # AI bridge task working files — transient, not assets
 .lessonkit/jobs/
+.lessonkit/plan.json
+workbench/_claude_*_task.txt

@@ -5,8 +5,6 @@ import json
 import sqlite3
 from pathlib import Path
 
-from workbench.domain import signals as signal_rules
-
 
 def hub_stats(pool):
     due = sum(1 for r in pool.schedule_rows() if _is_due(r, date.today()))
@@ -108,7 +106,9 @@ def kp_detail(pool, kp_id):
     }
 
 
-def graph_model(pool):
+def graph_model(pool, signal_weights=None):
+    """Compose the graph view. signal_weights maps kp_id -> strongest weight;
+    the caller aggregates signals via the Domain layer (Data imports no Domain)."""
     prefix = f"{pool.course}-{pool.chapter}"
     kps = pool.kps(prefix)
     ids = {kp["kp_id"] for kp in kps}
@@ -116,10 +116,7 @@ def graph_model(pool):
         (row["item_type"], row["item_id"]): row["state"]
         for row in pool.current_states()
     }
-    signals = {
-        target_id: row["weight"]
-        for target_id, row in signal_rules.strongest_by_target(pool.signals()).items()
-    }
+    signals = signal_weights or {}
     problems = pool.problems_all()
     problem_count = {kp_id: 0 for kp_id in ids}
     problem_kps = []

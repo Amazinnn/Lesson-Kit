@@ -1,7 +1,8 @@
 # Requirements — lesson-kit Review Workbench
 
-> 阶段 0 产物（开工检查清单）。权威需求源：`openspec/changes/review-workbench-v1/`
-> （26+ 条 Requirement + Scenario）。本文件是人话版摘要 + 边界 + 验收标准。
+> 阶段 0 产物（开工检查清单）。权威需求源：`openspec/specs/`（各能力规格的
+> Requirement + Scenario；历史变更提案见 `openspec/changes/archive/`）。
+> 本文件是人话版摘要 + 边界 + 验收标准。
 
 ## 一句话
 
