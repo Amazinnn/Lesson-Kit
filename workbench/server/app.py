@@ -36,6 +36,7 @@ ROUTES = [
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
     ("GET", "/api/w/{name}/weak", api_mod.weak_list),
     ("GET", "/api/w/{name}/due", api_mod.due_list),
+    ("GET", "/api/w/{name}/calendar", api_mod.calendar_view),
     ("GET", "/api/w/{name}/plan", api_mod.daily_plan),
     ("POST", "/api/w/{name}/plan/recalculate", api_mod.daily_plan_recalculate),
     ("GET", "/api/w/{name}/goals", api_mod.goals_list),

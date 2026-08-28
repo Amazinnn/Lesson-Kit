@@ -382,5 +382,32 @@ class ApiTests(unittest.TestCase):
         self.assertNotEqual(rows["reverse"], today)
 
 
+    def test_calendar_view_buckets_days_and_goals(self):
+        import datetime
+        from pathlib import Path
+        today = datetime.date.today()
+        self._seed_schedule("kp", "dmath-ch06-kp-001", today.isoformat())
+        self._seed_schedule("kp", "dmath-ch06-kp-001",
+                            (today + datetime.timedelta(days=3)).isoformat(),
+                            direction="reverse")
+        self._seed_schedule("kp", "dmath-ch06-kp-002",
+                            (today - datetime.timedelta(days=1)).isoformat())
+        goals_path = Path(self.fixture.ws) / ".lessonkit" / "goals.json"
+        goals_path.parent.mkdir(parents=True, exist_ok=True)
+        goals_path.write_text(json.dumps([
+            {"id": "goal-001", "kind": "stage", "title": "G1",
+             "deadline": (today + datetime.timedelta(days=5)).isoformat()},
+        ]), encoding="utf-8")
+        status, data = self.get("/api/w/dmath/calendar")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(data["days"]), 14)
+        by_date = {day["date"]: day for day in data["days"]}
+        self.assertEqual(by_date[today.isoformat()]["count"], 1)
+        self.assertEqual(by_date[today.isoformat()]["overdue"], 1)
+        self.assertEqual(
+            by_date[(today + datetime.timedelta(days=3)).isoformat()]["count"], 1)
+        self.assertEqual(data["goals"][0]["title"], "G1")
+
+
 if __name__ == "__main__":
     unittest.main()

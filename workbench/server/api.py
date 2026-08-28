@@ -59,6 +59,10 @@ def due_list(pool, workspace, params, body):
     return queries.due_list(pool)[:max(0, limit)]
 
 
+def calendar_view(pool, workspace, params, body):
+    return queries.calendar_view(pool, workspace)
+
+
 def daily_plan(pool, workspace, params, body):
     path = _plan_path(workspace)
     if path.is_file():

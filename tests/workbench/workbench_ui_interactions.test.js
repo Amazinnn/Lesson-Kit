@@ -1514,3 +1514,80 @@ test("review page without directional rows has no card entry", () => {
   });
   assert.equal(elements["card-session"].classList.contains("hidden"), true);
 });
+
+function timeElements() {
+  const elements = reviewElements();
+  elements["time-view"] = new FakeElement("time-view");
+  elements["time-view"].classList.add("hidden");
+  elements["calendar-grid"] = new FakeElement("calendar-grid");
+  elements["workload-bars"] = new FakeElement("workload-bars");
+  elements["workload-prefill"] = new FakeElement("workload-prefill");
+  elements["workload-prefill"].classList.add("hidden");
+  elements["time-view-empty"] = new FakeElement("time-view-empty");
+  elements["time-view-empty"].classList.add("hidden");
+  elements["ai-input"] = new FakeElement("ai-input");
+  return elements;
+}
+
+test("time view renders goal calendar, heavy day marking, and prefill", async () => {
+  const elements = timeElements();
+  const today = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const plus3 = iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3));
+  const deadline = iso(today); /* stays inside the rendered month */
+  runWorkbench({
+    elements,
+    storage: new FakeStorage(),
+    fetch: (url) => {
+      if (url.includes("/calendar")) {
+        return jsonResponse({
+          goals: [{ id: "goal-001", kind: "stage", title: "覆盖率 80%", deadline }],
+          days: Array.from({ length: 14 }, (_, offset) => ({
+            date: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)),
+            count: offset === 3 ? 3 : 0,
+            overdue: 0,
+          })),
+        });
+      }
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  assert.equal(elements["time-view"].classList.contains("hidden"), false);
+  assert.ok(elements["calendar-grid"]._innerHTML.includes("覆盖率 80%"));
+  assert.ok(elements["calendar-grid"]._innerHTML.includes("calendar-cell today"));
+  assert.ok(elements["workload-bars"]._innerHTML.includes("重"));
+  assert.equal(elements["workload-prefill"].classList.contains("hidden"), false);
+  elements["workload-prefill"].click();
+  assert.ok(elements["ai-input"].value.includes("帮我重排一下"));
+  assert.ok(elements["ai-input"].value.includes("3 项"));
+});
+
+test("time view shows an honest empty state without goals or workload", async () => {
+  const elements = timeElements();
+  const today = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  runWorkbench({
+    elements,
+    storage: new FakeStorage(),
+    fetch: (url) => {
+      if (url.includes("/calendar")) {
+        return jsonResponse({
+          goals: [],
+          days: Array.from({ length: 14 }, (_, offset) => ({
+            date: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)),
+            count: 0,
+            overdue: 0,
+          })),
+        });
+      }
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  assert.equal(elements["time-view"].classList.contains("hidden"), false);
+  assert.equal(elements["time-view-empty"].classList.contains("hidden"), false);
+  assert.equal(elements["workload-prefill"].classList.contains("hidden"), true);
+});
