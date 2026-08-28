@@ -1073,6 +1073,37 @@ test("AI free message sends page identifiers and excludes a draft by default", a
   assert.equal(Object.hasOwn(body, "draft_answer"), false);
 });
 
+test("explicit practice intent applies an Agent selection replacement", async () => {
+  const pageLayout = layout();
+  pageLayout.dataset.page = "kps";
+  const elements = { layout: pageLayout, ...aiElements() };
+  const storage = new FakeStorage({ wb_kp_selection_alpha: JSON.stringify(["kp-1"]) });
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001/turns")) return jsonResponse({ turn_id: "turn-001" });
+      if (url.includes("/turns/turn-001")) return jsonResponse({
+        turn: { status: "done", action: { type: "replace_practice_selection", kp_ids: ["kp-2"] } },
+        events: [],
+      });
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle", messages: [],
+      });
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "帮我安排练习";
+  elements["ai-send"].click();
+  await flush();
+  await flush();
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
+});
+
 test("practice drafts remain private because chat exposes no attachment setting", async () => {
   const pageLayout = layout();
   pageLayout.dataset.page = "practice";

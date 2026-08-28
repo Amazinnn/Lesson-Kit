@@ -621,6 +621,11 @@ img { max-width: 100%; }
 .daily-queue > h3 { grid-column: 1 / -1; margin: 0; }
 .goal-card { padding: 16px; }
 .goal-card h3 { margin: 0 0 8px; }
+.goal-editor { margin: 12px 0 16px; }
+.goal-editor form { display: grid; gap: 8px; max-width: 32rem; padding: 12px 0; }
+.goal-editor input, .goal-editor select, .goal-editor textarea { width: 100%; }
+.problem-options { display: grid; gap: 6px; margin-top: 14px; padding: 12px; border: 1px solid var(--dsw-border-l2, #e6e8eb); border-radius: var(--dsw-radius-sm, 8px); }
+.problem-options label { cursor: pointer; }
 .knowledge-selection-bar {
   display: flex;
   align-items: center;

@@ -18,6 +18,10 @@ def build(pool, workspace, payload):
         "anchor": anchor,
         "current": {},
         "recent_objects": _recent(pool, payload.get("recent_objects", [])),
+        "knowledge_point_ids": [kp["kp_id"] for kp in pool.kps(
+            f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+        )],
+        "practice_intent": bool(payload.get("practice_intent")),
     }
     if page_type == "practice":
         _practice(pool, payload, result)

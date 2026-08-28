@@ -744,16 +744,42 @@
         && (legacyModeControls || selectedKpIds().length > 0);
     }
 
+    function problemOptions(problem) {
+      var raw = problem && problem.options_json;
+      if (!raw) return [];
+      if (typeof raw === "string") {
+        try { raw = JSON.parse(raw); } catch (_) { return []; }
+      }
+      if (!Array.isArray(raw)) return [];
+      return raw.map(function (option, index) {
+        if (typeof option === "string") return { id: String(index + 1), text: option };
+        return {
+          id: String(option.id || option.option_id || index + 1),
+          text: String(option.text || option.label || option.value || ""),
+        };
+      }).filter(function (option) { return option.text; });
+    }
+
     function showComposer(show) {
       if (composer) composer.classList.toggle("hidden", !show);
       if (sessionEntry) sessionEntry.classList.toggle("hidden", !show);
     }
 
     function renderQuestion(problem) {
+      var options = problemOptions(problem);
+      var optionHtml = options.length
+        ? "<fieldset class='problem-options'><legend>选择答案</legend>"
+          + options.map(function (option) {
+            return "<label><input data-choice-option type='" + (problem.interaction_type === "multiple_choice" ? "checkbox" : "radio")
+              + "' name='problem-option' value='" + escapeHtml(option.id) + "'> "
+              + escapeHtml(option.text) + "</label>";
+          }).join("") + "</fieldset>"
+        : "";
       stream.innerHTML = "<article class='practice-question-card card'>"
         + "<p class='context-line'>练习题</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
-        + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div></article>";
+        + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
+        + optionHtml + "</article>";
       renderMath(stream);
     }
 
@@ -897,6 +923,11 @@
     if (submitAnswer) submitAnswer.addEventListener("click", function () {
       if (!currentProblem) return;
       var answer = answerBox.value.trim();
+      if (stream && stream.querySelectorAll) {
+        var choices = Array.from(stream.querySelectorAll("[data-choice-option]:checked"))
+          .map(function (input) { return input.value; });
+        if (choices.length) answer = choices.join(", ");
+      }
       currentProblem.answer_text = answer;
       setCurrent(currentProblem);
       updateSession(currentProblem.problem_id, { answer_text: answer });
@@ -977,6 +1008,9 @@
         if (total && result.plan && result.plan.totals) {
           total.textContent = result.plan.totals.target_count + " 题";
         }
+        if (window.location && typeof window.location.reload === "function") {
+          window.location.reload();
+        }
       }).catch(function () { recalculatePlan.disabled = false; });
     });
     var heartbeatKey = "wb_plan_heartbeat_" + WS;
@@ -985,6 +1019,36 @@
       sessionStorage.setItem(heartbeatKey, today);
       recalculatePlan.click();
     }
+  }
+
+  var goalForm = document.getElementById("goal-form");
+  if (goalForm) {
+    goalForm.addEventListener("submit", function (event) {
+      if (event.preventDefault) event.preventDefault();
+      var status = document.getElementById("goal-form-status");
+      var title = document.getElementById("goal-title");
+      var kind = document.getElementById("goal-kind");
+      var deadline = document.getElementById("goal-deadline");
+      var description = document.getElementById("goal-description");
+      if (!title || !title.value.trim()) {
+        if (status) status.textContent = "请填写目标名称。";
+        return;
+      }
+      post("/goals", {
+        title: title.value.trim(),
+        kind: kind ? kind.value : "stage",
+        deadline: deadline ? deadline.value : "",
+        description: description ? description.value.trim() : "",
+      }).then(function () {
+        if (window.location && typeof window.location.reload === "function") {
+          window.location.reload();
+        } else {
+          window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+        }
+      }).catch(function (error) {
+        if (status) status.textContent = "保存失败：" + (error.message || "未知错误");
+      });
+    });
   }
 
   /* ---------- session-end ---------- */
@@ -1127,6 +1191,13 @@
     if (aiInput) aiInput.disabled = running;
   }
 
+  function aiApplyAction(action) {
+    if (!action || action.type !== "replace_practice_selection") return;
+    if (!Array.isArray(action.kp_ids) || !action.kp_ids.length) return;
+    saveSelectedKpIds(action.kp_ids);
+    aiSetStatus("练习范围已更新");
+  }
+
   function aiRecordRecent(type, id) {
     if (!type || !id) return;
     var recent = load(AI_RECENT_KEY, []).filter(function (item) {
@@ -1167,6 +1238,7 @@
       route: window.location.pathname || "",
       page_type: layout.dataset.page || "unknown",
       recent_objects: load(AI_RECENT_KEY, []),
+      practice_intent: /练习|做题|刷题|复习题/.test(message),
     };
     if (layout.dataset.objectType) body.object_type = layout.dataset.objectType;
     if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
@@ -1198,6 +1270,7 @@
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("");
+      aiApplyAction(data.turn.action);
       aiLoadConversation(aiConversation);
       if (typeof aiRefreshSessionList === "function") aiRefreshSessionList();
     } else if (data.turn.status === "failed") {

@@ -44,6 +44,15 @@ class UiRouteTests(unittest.TestCase):
         with urllib.request.urlopen(request) as resp:
             return resp.status, json.loads(resp.read().decode("utf-8"))
 
+    def request_json(self, method, path, body=None):
+        data = None if body is None else json.dumps(body).encode("utf-8")
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}{path}", data=data,
+            headers={"Content-Type": "application/json"}, method=method,
+        )
+        with urllib.request.urlopen(request) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+
     def test_static_asset_served(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
@@ -114,6 +123,23 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("queue", payload)
         self.assertTrue(payload["queue"])
+
+    def test_goal_api_crud_is_explicit(self):
+        status, payload = self.request_json("POST", "/api/w/dmath/goals", {
+            "title": "完成 ch06 复习", "kind": "stage",
+            "deadline": "2026-09-10", "description": "覆盖核心概念",
+        })
+        self.assertEqual(status, 200)
+        goal_id = payload["goal"]["id"]
+        status, listed = self.fetch_json("/api/w/dmath/goals")
+        self.assertEqual(status, 200)
+        self.assertEqual(listed[0]["id"], goal_id)
+        status, updated = self.request_json("PATCH", f"/api/w/dmath/goals/{goal_id}", {"title": "完成复习"})
+        self.assertEqual(status, 200)
+        self.assertEqual(updated["goal"]["title"], "完成复习")
+        status, deleted = self.request_json("DELETE", f"/api/w/dmath/goals/{goal_id}")
+        self.assertEqual(status, 200)
+        self.assertTrue(deleted["deleted"])
 
     def test_graph_page_uses_native_canvas_not_artifact_iframe(self):
         graph = (self.fixture.ws / "output" / "dmath" / "ch06"

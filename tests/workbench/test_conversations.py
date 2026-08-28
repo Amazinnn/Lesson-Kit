@@ -230,6 +230,33 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(restored["title"], "排列组合基础")
         self.assertEqual(restored["title_source"], "agent")
 
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_practice_action_requires_explicit_intent_and_valid_ids(self, get_provider, normalize_event):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-2"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "已安排。\n```lessonkit-action\n"
+             "{\"type\":\"replace_practice_selection\",\"kp_ids\":[\"kp-001\",\"unknown\"]}\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        with mock.patch.object(conversation_providers, "build_command", self.command("success", [])):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "帮我安排练习",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"},
+                 "practice_intent": True, "knowledge_point_ids": ["kp-001"]},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "done")
+        self.assertEqual(done["action"], {
+            "type": "replace_practice_selection", "kp_ids": ["kp-001"],
+        })
+
 
 if __name__ == "__main__":
     unittest.main()

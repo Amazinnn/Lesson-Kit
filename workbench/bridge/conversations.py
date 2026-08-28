@@ -1,6 +1,7 @@
 """Provider-locked native conversations with a minimal successful mirror."""
 
 import json
+import re
 import shutil
 import subprocess
 import threading
@@ -167,7 +168,10 @@ def _append_event(path, kind, **fields):
 def _prompt(message, context):
     return (
         "你是 Lesson Kit 的外部 AI 教师。普通问答只读取上下文；只有学生明确要求修改内容或提交学习结论时，"
-        "才可使用 wb data 写命令。回答末尾如有写入，用简洁中文列出对象、动作和可访问路径，不展示命令、SQL 或工具日志。\n\n"
+        "才可使用 wb data 写命令。回答末尾如有写入，用简洁中文列出对象、动作和可访问路径，不展示命令、SQL 或工具日志。"
+        "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
+        "普通问答不要附带动作。格式为 ```lessonkit-action {\"type\":\"replace_practice_selection\","
+        "\"kp_ids\":[\"知识点ID\"]} ```。\n\n"
         "服务端重建的当前上下文：\n"
         + json.dumps(context, ensure_ascii=False, indent=2)
         + "\n\n学生消息：\n"
@@ -308,7 +312,13 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
         _finish(folder, conversation_id, turn_id, "failed", "provider returned no assistant text")
         return
 
+    answer, action = _extract_action(answer, context)
+
     conversation = _read_json(conversation_path)
+    turn = _read_json(turn_path)
+    if action:
+        turn["action"] = action
+        _write_json(turn_path, turn)
     exchange = {
         "turn_id": turn_id,
         "user": message,
@@ -322,6 +332,27 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
         stream.write(json.dumps(exchange, ensure_ascii=False) + "\n")
     _append_event(event_path, "done")
     _finish(folder, conversation_id, turn_id, "done", None)
+
+
+def _extract_action(answer, context):
+    match = re.search(r"```lessonkit-action\s*([\s\S]*?)```", answer, re.IGNORECASE)
+    if not match or not context.get("practice_intent"):
+        return answer, None
+    try:
+        raw = json.loads(match.group(1).strip())
+    except (TypeError, ValueError):
+        return answer, None
+    if raw.get("type") != "replace_practice_selection":
+        return answer, None
+    allowed = set(context.get("knowledge_point_ids") or [])
+    ids = []
+    for item in raw.get("kp_ids") or []:
+        if item in allowed and item not in ids:
+            ids.append(item)
+    if not ids:
+        return answer, None
+    cleaned = (answer[:match.start()] + answer[match.end():]).strip()
+    return cleaned, {"type": raw["type"], "kp_ids": ids}
 
 
 def _finish(folder, conversation_id, turn_id, status, error):

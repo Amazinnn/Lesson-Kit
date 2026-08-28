@@ -322,6 +322,13 @@ def _daily_plan(plan, workspace_name):
     return (
         "<section id='daily-plan' class='daily-plan' aria-label='今日计划'><div class='section-heading'><div><p class='section-kicker'>学习安排</p><h2>今日计划</h2></div><span class='plan-total'>" + str((plan.get("totals") or {}).get("target_count", 0)) + " 题</span><button id='recalculate-plan' class='ghost sm' type='button'>重新安排</button></div>"
         "<section class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
+        "<details class='goal-editor'><summary>添加目标</summary><form id='goal-form'>"
+        "<label for='goal-title'>目标名称</label><input id='goal-title' name='title' required>"
+        "<label for='goal-kind'>目标类型</label><select id='goal-kind' name='kind'><option value='stage'>阶段目标</option><option value='long_term'>长期目标</option></select>"
+        "<label for='goal-deadline'>截止日期</label><input id='goal-deadline' name='deadline' type='date'>"
+        "<label for='goal-description'>说明</label><textarea id='goal-description' name='description' rows='3'></textarea>"
+        "<button class='primary sm' type='submit'>保存目标</button><p id='goal-form-status' class='inline-error' aria-live='polite'></p>"
+        "</form></details>"
         "<section class='daily-queue' aria-label='今天先做'><h3>今天先做</h3><ol class='plan-queue'>" + queue_html + "</ol></section></section>"
     )
 

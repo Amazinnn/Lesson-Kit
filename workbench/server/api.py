@@ -7,7 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from workbench.bridge import conversation_providers, conversations, runner
-from workbench.data import queries
+from workbench.data import goals, queries
 from workbench.domain import (
     feedback, learning_state, planning, pull, schedule as schedule_rules, weak,
 )
@@ -82,6 +82,28 @@ def daily_plan_recalculate(pool, workspace, params, body):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"plan": plan, "status": "已更新今日计划"}
+
+
+def goals_list(pool, workspace, params, body):
+    return goals.list_goals(workspace["path"])
+
+
+def goals_create(pool, workspace, params, body):
+    try:
+        return {"goal": goals.create_goal(workspace["path"], body or {})}
+    except ValueError as exc:
+        raise ApiError(400, str(exc))
+
+
+def goals_update(pool, workspace, params, body):
+    try:
+        return {"goal": goals.update_goal(workspace["path"], params["goal_id"], body or {})}
+    except ValueError as exc:
+        raise ApiError(400, str(exc))
+
+
+def goals_delete(pool, workspace, params, body):
+    return goals.delete_goal(workspace["path"], params["goal_id"])
 
 
 def _plan_path(workspace):
