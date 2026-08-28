@@ -222,6 +222,7 @@ def kps_page(workspace, workspaces, weak_items, pool):
         "</li>"
         for item in ranked
     )
+    empty_items = '<li class="muted">暂无知识点</li>'
     middle = (
         _page_header(
             "学习 / 当前章节", "知识点",
@@ -232,7 +233,7 @@ def kps_page(workspace, workspaces, weak_items, pool):
         "<div class='section-heading'><div>"
         "<p class='section-kicker'>当前排序</p><h2>本章知识点</h2>"
         "</div><p>分数越高，越值得优先回看。</p></div>"
-        f"<ul class='knowledge-list'>{items or '<li class="muted">暂无知识点</li>'}</ul>"
+        f"<ul class='knowledge-list'>{items or empty_items}</ul>"
         "</section></div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "kps", page_type="kps")
