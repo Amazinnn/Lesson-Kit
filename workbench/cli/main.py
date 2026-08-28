@@ -21,9 +21,6 @@ from workbench.domain import feedback, learning_state, pull, schedule as schedul
 from workbench.domain import mastery as mastery_rules
 
 
-RESULT_PROGRESS = {"correct": "reviewing", "wrong": "wrong", "stuck": "stuck"}
-
-
 def _workspace(name):
     return registry.get_workspace(name)
 
@@ -115,10 +112,12 @@ def cmd_practice(args):
     workspace = _workspace(_resolve_name(args))
     pool = _pool(workspace)
     try:
-        pool.insert_attempt(args.problem, args.result, args.note, args.answer_text)
-        status = RESULT_PROGRESS.get(args.result)
-        if status:
-            pool.upsert_problem_progress(args.problem, status, args.note)
+        status = schedule_rules.recorded_status(args.result)
+        if status is None:
+            print(f"recorded {args.problem}: {args.result} (no learning record)")
+            return
+        pool.insert_attempt(args.problem, status, args.note, args.answer_text)
+        pool.upsert_problem_progress(args.problem, status, args.note)
         state = pool.schedule_get("problem", args.problem) or schedule_rules.default_state(
             "problem", args.problem
         )

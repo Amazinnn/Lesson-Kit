@@ -181,6 +181,31 @@ class CliTests(unittest.TestCase):
         self.assertEqual(len(attempts), 1)
         self.assertEqual(attempts[0]["answer_text"], "my text")
 
+    def test_practice_correct_records_reviewing_and_skip_records_nothing(self):
+        code, out = self.run_cli("practice", "dmath",
+                                 "--problem", "dmath-ch06-prob-001",
+                                 "--result", "correct")
+        self.assertEqual(code, 0)
+        code, out = self.run_cli("practice", "dmath",
+                                 "--problem", "dmath-ch06-prob-001",
+                                 "--result", "skip")
+        self.assertEqual(code, 0)
+        self.assertIn("no learning record", out)
+        from data import pool as pool_mod
+        pool = pool_mod.Pool(root=self.ws, db_path=self.db_path,
+                             course="dmath", chapter="ch06")
+        attempts = pool.attempts("dmath-ch06-prob-001")
+        pool.close()
+        import sqlite3
+        conn = sqlite3.connect(self.db_path)
+        progress = conn.execute(
+            "SELECT status FROM problem_progress WHERE problem_id = ?",
+            ("dmath-ch06-prob-001",),
+        ).fetchone()
+        conn.close()
+        self.assertEqual([a["status"] for a in attempts], ["reviewing"])
+        self.assertEqual(progress[0], "reviewing")
+
     def test_feedback_creates_signal(self):
         code, out = self.run_cli("feedback", "dmath", "--item", "kp",
                                  "--id", "dmath-ch06-kp-001", "--rating", "2")

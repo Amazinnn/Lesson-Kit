@@ -9,6 +9,16 @@ EASE_DOWN = 0.2
 
 RESULT_QUALITY = {"correct": 4, "wrong": 2, "stuck": 2, "skip": None}
 
+RECORDED_STATUS = {"correct": "reviewing", "wrong": "wrong", "stuck": "stuck"}
+
+
+def recorded_status(result):
+    """Status a practice result is recorded as; None means record nothing.
+
+    'skip' never becomes a learning record (2026-08-22 study-flow change).
+    """
+    return RECORDED_STATUS.get(result)
+
 
 def after_result(state, result, now):
     """Return the next schedule state after a practice result or rating.

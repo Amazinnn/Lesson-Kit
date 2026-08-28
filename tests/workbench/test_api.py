@@ -79,6 +79,50 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("due_at", data)
 
+    def test_practice_correct_records_reviewing_attempt(self):
+        status, data = self.post("/api/w/dmath/practice", {
+            "problem_id": "dmath-ch06-prob-001", "result": "correct",
+        })
+        self.assertEqual(status, 200)
+        self.assertIn("due_at", data)
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            attempts = conn.execute(
+                "SELECT status FROM problem_attempts WHERE problem_id = ?",
+                ("dmath-ch06-prob-001",),
+            ).fetchall()
+            progress = conn.execute(
+                "SELECT status FROM problem_progress WHERE problem_id = ?",
+                ("dmath-ch06-prob-001",),
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertEqual([row[0] for row in attempts], ["reviewing"])
+        self.assertEqual(progress[0], "reviewing")
+
+    def test_practice_skip_records_nothing(self):
+        status, data = self.post("/api/w/dmath/practice", {
+            "problem_id": "dmath-ch06-prob-001", "result": "skip",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(data["recorded"], False)
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            attempts = conn.execute(
+                "SELECT COUNT(*) FROM problem_attempts"
+            ).fetchone()[0]
+            progress = conn.execute(
+                "SELECT COUNT(*) FROM problem_progress"
+            ).fetchone()[0]
+            schedule = conn.execute(
+                "SELECT COUNT(*) FROM review_schedule"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        self.assertEqual(attempts, 0)
+        self.assertEqual(progress, 0)
+        self.assertEqual(schedule, 0)
+
     def test_practice_rejects_unknown_problem_without_writing(self):
         status, data = self.post_error("/api/w/dmath/practice", {
             "problem_id": "dmath-ch06-prob-999", "result": "wrong",

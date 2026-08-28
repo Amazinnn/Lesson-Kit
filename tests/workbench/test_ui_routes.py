@@ -269,7 +269,7 @@ class UiRouteTests(unittest.TestCase):
     def test_workspace_switch_target_keeps_original_pool_records(self):
         self.fixture.add_workspace("algebra")
         self.post_json("/api/w/dmath/practice", {
-            "problem_id": "dmath-ch06-prob-001", "result": "skip",
+            "problem_id": "dmath-ch06-prob-001", "result": "wrong",
         })
         self.post_json("/api/w/dmath/feedback", {
             "item_type": "problem", "item_id": "dmath-ch06-prob-001",

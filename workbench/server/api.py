@@ -166,11 +166,12 @@ def practice(pool, workspace, params, body):
         raise ApiError(404, f"unknown problem: {problem_id}")
     if result not in schedule_rules.RESULT_QUALITY:
         raise ApiError(400, "invalid practice result")
-    pool.insert_attempt(problem_id, result, body.get("note"),
+    status = schedule_rules.recorded_status(result)
+    if status is None:
+        return {"problem_id": problem_id, "result": result, "recorded": False}
+    pool.insert_attempt(problem_id, status, body.get("note"),
                         body.get("answer_text"))
-    status_map = {"correct": "reviewing", "wrong": "wrong", "stuck": "stuck"}
-    if result in status_map:
-        pool.upsert_problem_progress(problem_id, status_map[result], body.get("note"))
+    pool.upsert_problem_progress(problem_id, status, body.get("note"))
     state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
         "problem", problem_id
     )
