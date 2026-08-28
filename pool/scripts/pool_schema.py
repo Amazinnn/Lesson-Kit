@@ -438,6 +438,8 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     ("display_title", "TEXT"),
                     ("topic_label", "TEXT"),
                     ("display_summary", "TEXT"),
+                    ("practice_modes", "TEXT"),
+                    ("micro_quiz", "TEXT"),
                 ],
             )
         )

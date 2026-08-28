@@ -59,7 +59,9 @@ def build_fixture_db(conn):
             problem_text TEXT NOT NULL,
             solution TEXT,
             problem_type TEXT,
-            source_kind TEXT
+            source_kind TEXT,
+            practice_modes TEXT,
+            micro_quiz TEXT
         );
         CREATE TABLE problem_progress (
             problem_id TEXT PRIMARY KEY,

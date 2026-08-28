@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from workbench.bridge import conversation_providers
+from workbench.domain import micro_quiz as micro_quiz_rules
 
 
 AUDIT_DIMENSIONS = (
@@ -29,7 +30,9 @@ KP_TYPES = {
     "lab-implementation", "memory-recall",
 }
 KP_IMPORTANCE = {"core", "supplementary", "optional"}
-RECIPE_NAMES = {"knowledge", "problems", "candidates", "views"}
+RECIPE_NAMES = {"knowledge", "problems", "candidates", "views", "micro-quiz"}
+MICRO_QUIZ_KIND = "micro-quiz-patch"
+MICRO_QUIZ_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-mq-\d{3}$")
 _TAG = re.compile(r"</?(sup|sub)>")
 _CURRENT_RECOVERY_PROBLEMS = {
     f"dmath-ch06-prob-{index:03d}" for index in range(1, 304)
@@ -176,7 +179,7 @@ def render_text(text):
 
 
 def recipe(name, db_path, input_path, output_dir, apply_changes=False, backup_path=None):
-    """Write an official recipe record; only the problems recipe can explicitly apply."""
+    """Write an official recipe record; the problems and micro-quiz recipes can explicitly apply."""
     if name not in RECIPE_NAMES:
         raise ValueError(f"unknown recipe: {name}")
     database = Path(db_path)
@@ -190,10 +193,14 @@ def recipe(name, db_path, input_path, output_dir, apply_changes=False, backup_pa
         "accounting": accounting, "applied": False,
     }
     if apply_changes:
-        if name != "problems":
-            raise ValueError("only the problems recipe has an apply stage")
-        applied = apply(database, input_path, backup_path)
-        result.update(applied)
+        if name == "micro-quiz":
+            applied = apply_micro_quiz(database, input_path, backup_path)
+            result.update(applied)
+        elif name == "problems":
+            applied = apply(database, input_path, backup_path)
+            result.update(applied)
+        else:
+            raise ValueError("only the problems and micro-quiz recipes have an apply stage")
     write_artifact(Path(output_dir) / "recipe.json", result)
     return result
 
@@ -254,6 +261,105 @@ def apply(db_path, gate_path, backup_path=None):
     finally:
         conn.close()
     return {"ok": True, "applied": True, "backup_path": str(backup), "accounting": verified["accounting"]}
+
+
+def apply_micro_quiz(db_path, manifest_path, backup_path=None):
+    """Revalidate and insert micro quizzes while holding one write lock."""
+    manifest = read_artifact(manifest_path)
+    database = Path(db_path)
+    backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
+    if backup.exists():
+        raise FileExistsError(f"recoverable copy already exists: {backup}")
+    conn = sqlite3.connect(database)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        verified = _gate_micro_quiz(conn, manifest)
+        if not verified["ok"]:
+            raise ValueError("; ".join(verified["errors"]))
+        _backup_database(database, backup)
+        for item in manifest["items"]:
+            row = _micro_quiz_row(item)
+            conn.execute(
+                "INSERT INTO problems (problem_id, kp_ids, problem_text, solution,"
+                " problem_type, source_kind, practice_modes, micro_quiz)"
+                " VALUES (?, ?, ?, NULL, ?, ?, ?, ?)",
+                (
+                    row["problem_id"],
+                    json.dumps(row["kp_ids"], ensure_ascii=False),
+                    row["problem_text"],
+                    row["problem_type"],
+                    row["source_kind"],
+                    json.dumps(row["practice_modes"], ensure_ascii=False),
+                    json.dumps(row["micro_quiz"], ensure_ascii=False),
+                ),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"ok": True, "applied": True, "backup_path": str(backup),
+            "accounting": verified["accounting"]}
+
+
+def _gate_micro_quiz(conn, manifest):
+    errors = []
+    if not isinstance(manifest, dict) or manifest.get("kind") != MICRO_QUIZ_KIND:
+        return {"ok": False, "errors": ["expected micro-quiz-patch artifact"],
+                "accounting": _accounting(conn)}
+    items = manifest.get("items")
+    if not isinstance(items, list) or not items:
+        return {"ok": False, "errors": ["micro-quiz-patch requires an items list"],
+                "accounting": _accounting(conn)}
+
+    known_kps = {row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")}
+    existing_ids = {row[0] for row in conn.execute("SELECT problem_id FROM problems")}
+    seen_ids = set()
+    for item in items:
+        problem_id = item.get("problem_id") if isinstance(item, dict) else None
+        if not isinstance(problem_id, str) or not MICRO_QUIZ_ID.match(problem_id):
+            errors.append(f"{problem_id}: id must look like <course>-<chapter>-mq-NNN")
+            continue
+        if problem_id in existing_ids or problem_id in seen_ids:
+            errors.append(f"{problem_id}: problem id already exists")
+            continue
+        seen_ids.add(problem_id)
+        row = _micro_quiz_row(item)
+        if row is None:
+            errors.append(f"{problem_id}: item must be an object")
+            continue
+        if row["kp_ids"][0] not in known_kps:
+            errors.append(f"{problem_id}: unknown knowledge point {row['kp_ids'][0]}")
+        errors.extend(f"{problem_id}: {reason}" for reason in _markup_errors(row["problem_text"]))
+        errors.extend(
+            f"{problem_id}: {reason}" for reason in micro_quiz_rules.validate_problem_row(row)
+        )
+    return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
+
+
+def _micro_quiz_row(item):
+    if not isinstance(item, dict):
+        return None
+    payload = item.get("micro_quiz")
+    if not isinstance(payload, dict):
+        payload = {
+            "quiz_type": item.get("quiz_type"),
+            "options": item.get("options"),
+            "answer_key": item.get("answer_key"),
+            "error_reason": item.get("error_reason"),
+            "source_evidence": item.get("source_evidence"),
+        }
+    return {
+        "problem_id": item.get("problem_id"),
+        "kp_ids": [item["kp_id"]] if isinstance(item.get("kp_id"), str) else item.get("kp_ids"),
+        "problem_text": item.get("stem", item.get("problem_text")),
+        "problem_type": item.get("problem_type") or "other",
+        "source_kind": item.get("source_kind") or "quiz",
+        "practice_modes": item.get("practice_modes")
+        or micro_quiz_rules.practice_modes_for(payload.get("quiz_type")),
+        "micro_quiz": payload,
+    }
 
 
 def _provider_payload(provider_name, stdout):
