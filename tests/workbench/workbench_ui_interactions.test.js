@@ -1232,3 +1232,156 @@ test("streaming assistant text is coalesced into one markdown message", async ()
   assert.match(assistant.innerHTML, /<h2>片段<\/h2>/);
   assert.match(assistant.innerHTML, /完整回答/);
 });
+
+test("micro quiz renders yes/no options and grades the objective answer", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  const verdict = new FakeElement("micro-quiz-verdict");
+  elements.stream.queryOne = (selector) =>
+    selector === "#micro-quiz-verdict" ? verdict : null;
+  const yesNoProblem = {
+    problem_id: "mq-1", problem_text: "1 是质数吗？",
+    micro_quiz: { quiz_type: "yes_no", answer_key: "否",
+                  error_reason: "1 只有一个正因数。" },
+  };
+  const app = runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [yesNoProblem] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.ok(elements.stream._innerHTML.includes("是"));
+  assert.ok(elements.stream._innerHTML.includes("否"));
+  assert.ok(elements.stream._innerHTML.includes("micro-quiz-verdict"));
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  assert.ok(verdict._textContent.includes("回答错误"));
+  assert.ok(verdict._textContent.includes("只有一个正因数"));
+  assert.equal(verdict.classList.contains("hidden"), false);
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.equal(JSON.parse(pull.options.body).mode, "exam");
+});
+
+test("a correct micro quiz choice reports success without an extra write", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  const verdict = new FakeElement("micro-quiz-verdict");
+  elements.stream.queryOne = (selector) =>
+    selector === "#micro-quiz-verdict" ? verdict : null;
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [{
+        problem_id: "mq-2", problem_text: "3 是质数吗？",
+        micro_quiz: { quiz_type: "yes_no", answer_key: "是",
+                      error_reason: "3 恰有两个正因数。" },
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  assert.ok(verdict._textContent.includes("回答正确"));
+  assert.equal(verdict._textContent.includes("错误"), false);
+});
+
+test("multiple choice micro quizzes render checkboxes and grade subsets", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  const verdict = new FakeElement("micro-quiz-verdict");
+  elements.stream.queryOne = (selector) =>
+    selector === "#micro-quiz-verdict" ? verdict : null;
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [{
+        problem_id: "mq-3", problem_text: "哪些是质数？",
+        micro_quiz: { quiz_type: "multiple_choice", options: ["2", "4", "5"],
+                      answer_key: ["2", "5"], error_reason: "4 有因数 2。" },
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.ok(elements.stream._innerHTML.includes("type='checkbox'"));
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked"
+      ? [{ value: "2" }, { value: "5" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  assert.ok(verdict._textContent.includes("回答正确"));
+});
+
+test("revealing a micro quiz answer shows the key and reason instead of a solution", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/problem/mq-1")) return jsonResponse({
+        problem: { problem_id: "mq-1", solution: null,
+                   micro_quiz: { quiz_type: "yes_no", answer_key: "否",
+                                 error_reason: "1 只有一个正因数。" } },
+      });
+      return jsonResponse({ problems: [{
+        problem_id: "mq-1", problem_text: "1 是质数吗？",
+        micro_quiz: { quiz_type: "yes_no", answer_key: "否",
+                      error_reason: "1 只有一个正因数。" },
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["answer-submit"].click();
+  await flush();
+  elements["show-answer"].click();
+  await flush();
+  assert.ok(elements.stream._innerHTML.includes("答案"));
+  assert.ok(elements.stream._innerHTML.includes("为什么"));
+  assert.ok(elements.stream._innerHTML.includes("只有一个正因数"));
+  assert.equal(elements["feedback-area"].classList.contains("hidden"), false);
+});
+
+test("ordinary problems render without a verdict element or micro quiz controls", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [{
+        problem_id: "p-1", problem_text: "普通题目", solution: "S1",
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.ok(elements.stream._innerHTML.includes("普通题目"));
+  assert.equal(elements.stream._innerHTML.includes("data-choice-option"), false);
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked" ? [{ value: "x" }] : [];
+  elements.stream.queryOne = (selector) =>
+    selector === "#micro-quiz-verdict" ? new FakeElement("v") : null;
+  elements["answer-submit"].click();
+  await flush();
+  assert.ok(elements["composer-actions"] !== undefined);
+  assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
+});

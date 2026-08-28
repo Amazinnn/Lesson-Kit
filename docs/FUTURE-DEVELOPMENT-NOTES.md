@@ -68,6 +68,10 @@ lesson-kit 已经接近日常可用。后续的重点不是继续堆页面和按
 
 ### Micro Quiz / 小测模式
 
+> 2026-08-28 已实现：内容契约、`wb ingest recipe micro-quiz` 入池配方与按题型
+> 渲染/客观题本地判分见 `openspec/specs/micro-quiz-content/spec.md`；
+> AI 生成微题仍是下述后置实验。
+
 - 一张卡只考察一个较小概念；
 - 题干短，反馈快；
 - 可以使用选择、判断、匹配和简短回答；

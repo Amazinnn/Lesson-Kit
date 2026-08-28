@@ -17,7 +17,8 @@ PREFIXES = {
     "relation": "rel",
 }
 
-JSON_FIELDS = {"kp_ids", "related_kp_ids", "options_json", "source_evidence_json"}
+JSON_FIELDS = {"kp_ids", "related_kp_ids", "options_json", "source_evidence_json",
+               "practice_modes", "micro_quiz"}
 
 EDITABLE_FIELDS = {
     "kp": {

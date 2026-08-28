@@ -788,7 +788,22 @@
         && (legacyModeControls || selectedKpIds().length > 0);
     }
 
+    function microQuiz(problem) {
+      var payload = problem && problem.micro_quiz;
+      if (!payload || typeof payload !== "object") return null;
+      return payload;
+    }
+
     function problemOptions(problem) {
+      var quiz = microQuiz(problem);
+      if (quiz) {
+        var type = quiz.quiz_type;
+        if (type === "yes_no") return (quiz.options || ["是", "否"]).map(function (text) { return { id: text, text: text }; });
+        if (type === "single_choice" || type === "multiple_choice") {
+          return (quiz.options || []).map(function (text) { return { id: text, text: text }; });
+        }
+        return [];
+      }
       var raw = problem && problem.options_json;
       if (!raw) return [];
       if (typeof raw === "string") {
@@ -810,11 +825,13 @@
     }
 
     function renderQuestion(problem) {
+      var quiz = microQuiz(problem);
       var options = problemOptions(problem);
+      var multiple = !!quiz && quiz.quiz_type === "multiple_choice";
       var optionHtml = options.length
         ? "<fieldset class='problem-options'><legend>选择答案</legend>"
           + options.map(function (option) {
-            return "<label><input data-choice-option type='" + (problem.interaction_type === "multiple_choice" ? "checkbox" : "radio")
+            return "<label><input data-choice-option type='" + (multiple ? "checkbox" : "radio")
               + "' name='problem-option' value='" + escapeHtml(option.id) + "'> "
               + escapeHtml(option.text) + "</label>";
           }).join("") + "</fieldset>"
@@ -823,8 +840,20 @@
         + "<p class='context-line'>练习题</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
-        + optionHtml + "</article>";
+        + optionHtml + "<p id='micro-quiz-verdict' class='muted hidden'></p></article>";
       renderMath(stream);
+    }
+
+    function gradeMicroQuiz(problem, submittedTexts) {
+      var quiz = microQuiz(problem);
+      if (!quiz) return null;
+      var type = quiz.quiz_type;
+      var answer = quiz.answer_key;
+      if (type === "multiple_choice") {
+        if (!Array.isArray(submittedTexts) || !Array.isArray(answer)) return false;
+        return submittedTexts.slice().sort().join("|") === answer.slice().sort().join("|");
+      }
+      return submittedTexts[0] === answer;
     }
 
     function finishExhausted() {
@@ -967,14 +996,26 @@
     if (submitAnswer) submitAnswer.addEventListener("click", function () {
       if (!currentProblem) return;
       var answer = answerBox.value.trim();
-      if (stream && stream.querySelectorAll) {
-        var choices = Array.from(stream.querySelectorAll("[data-choice-option]:checked"))
-          .map(function (input) { return input.value; });
-        if (choices.length) answer = choices.join(", ");
-      }
+      var choiceInputs = (stream && stream.querySelectorAll)
+        ? Array.prototype.slice.call(stream.querySelectorAll("[data-choice-option]:checked"))
+        : [];
+      var choiceTexts = choiceInputs.map(function (input) { return input.value; });
+      if (choiceTexts.length) answer = choiceTexts.join(", ");
       currentProblem.answer_text = answer;
       setCurrent(currentProblem);
       updateSession(currentProblem.problem_id, { answer_text: answer });
+      var verdict = (stream && stream.querySelector)
+        ? stream.querySelector("#micro-quiz-verdict") : null;
+      if (verdict) {
+        var result = gradeMicroQuiz(currentProblem, choiceTexts);
+        if (result !== null) {
+          var quiz = microQuiz(currentProblem);
+          verdict.textContent = result
+            ? "回答正确。"
+            : "回答错误。 " + (quiz.error_reason || "");
+          verdict.classList.remove("hidden");
+        }
+      }
       if (sessionStorage.getItem(RATING_MODE_KEY) === "batch"
           || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "batch")) {
         updateSession(currentProblem.problem_id, { state: "unrated" });
@@ -991,9 +1032,19 @@
       if (!currentProblem) return;
       clearPracticeError();
       api("/problem/" + currentProblem.problem_id).then(function (detail) {
-        var solution = detail.problem.solution || "（本题无解析，请基于自身作答自评）";
-        stream.innerHTML += "<section class='practice-solution'><p class='section-kicker'>解析</p>"
-          + "<div class='rich-text'>" + richText(solution) + "</div></section>";
+        var quiz = microQuiz(detail.problem) || microQuiz(currentProblem);
+        var section;
+        if (quiz) {
+          section = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
+            + "<div class='rich-text'>" + richText(String(quiz.answer_key || "")) + "</div>"
+            + "<p class='section-kicker'>为什么</p>"
+            + "<div class='rich-text'>" + richText(quiz.error_reason || "") + "</div></section>";
+        } else {
+          var solution = detail.problem.solution || "（本题无解析，请基于自身作答自评）";
+          section = "<section class='practice-solution'><p class='section-kicker'>解析</p>"
+            + "<div class='rich-text'>" + richText(solution) + "</div></section>";
+        }
+        stream.innerHTML += section;
         renderMath(stream);
         showAnswer.classList.add("hidden");
         feedbackArea.classList.remove("hidden");
@@ -1105,10 +1156,19 @@
           card.className = "pending-rating-card card";
           card.dataset.pid = item.problem_id;
           var title = problem.display_title || "未命名题目";
+          var quiz = problem.micro_quiz && typeof problem.micro_quiz === "object"
+            ? problem.micro_quiz : null;
+          var solutionHtml = quiz
+            ? "<p class='section-kicker'>答案</p><div class='rich-text'>"
+              + richText(String(quiz.answer_key || "")) + "</div>"
+              + "<p class='section-kicker'>为什么</p><div class='rich-text'>"
+              + richText(quiz.error_reason || "") + "</div>"
+            : "<p class='section-kicker'>解析</p><div class='rich-text'>"
+              + richText(problem.solution || "（本题无解析）") + "</div>";
           card.innerHTML = "<p class='context-line'>练习题</p><h2>" + escapeHtml(title) + "</h2>"
           + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
           + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
-          + "<p class='section-kicker'>解析</p><div class='rich-text'>" + richText(problem.solution || "（本题无解析）") + "</div>";
+          + solutionHtml;
           var rating = document.createElement("input");
           rating.id = "end-rating-" + item.problem_id;
           rating.type = "number";
