@@ -366,3 +366,39 @@
 ### B7 后置清单（⏸ 全部后置，未经否定）
 
 generate 桥操作（AI 出题补池缺口，题型学含归纳/迁移/推广）；Scoropic 苏格拉底对话模式；教师记忆消费端；速成模式视图；复习页（前端）；记忆卡片页（前端）；Agent 组织面板（贴标签/归类/候选入出库调整）；批量揭晓；扩展摘要；Obsidian vault 打包；图形资产管理工具；CLI 层 agent 准备（教学 Skill/提示词注入/系统化教学流程）。
+
+## 专题 18：视图重复与合并（2026-08-29）
+
+### 背景
+
+2026-08-29 短暂实现了第 4 导航页「复习」（到期分组列表 + 方向卡会话 +
+日历/任务量区块）。所有者指认：复习界面本应对应练习页里的 Yes/No（判断）
+功能；时间安排应放在练习页、与学习安排并列。随后做了全库文档漂移审计
+（全文：docs/design/2026-08-29-doc-drift-audit.md）。
+
+### 审计结论（引文摘要）
+
+- 「复习页」在 2026-08-29 之前**从未被定义**：仅有三处挂名——B7 后置清单
+  （本文件 L368「复习页（前端）」）、2026-08-16-workbench-ui/proposal.md L45
+  「Explicitly deferred: review page……」、ARCHITECTURE.md L41 模块注释。
+- Yes/No 的归属在全部在先文档中一致：**练习页的模式**（FUTURE-NOTES L80
+  「Yes/No 更适合作为 Micro Quiz 的一种回答类型，而不是单独维护一整套
+  会话系统」；L313/L322 三选一启动卡；REQUIREMENTS L235/L249）。
+- 日历/任务量曲线被记录为「Experimental，前端设计以后再做」
+  （FUTURE-NOTES L213），从未指名页面。
+- 三页导航是两次在案纠正的决定（本文件 L259 专题 17、L353 B6.2）。
+- 裁定：漂移 = 旧文档留白 + 2026-08-29 两个提案（review-page、
+  calendar-workload）用自行解读填充空白并经 strict 校验固化。
+
+### 决定（方案一）
+
+1. 导航回三页；复习页移除。
+2. 到期提醒回归练习页：与今日计划队列合流为一张「今天」列表，行内人话
+   原因（覆盖仍低 / 拖了 N 天 / 上次没记住），零调度参数。
+3. 时间安排（月历 + 14 天柱状图）移至练习页，与学习安排并列。
+4. 方向卡片会话 = 闪卡/判断模式内、范围含到期方向行时的可选轻会话
+   （ADR 0019 offered, never required）。
+5. 保留 additive API：pull include_ids、feedback direction、/calendar、
+   micro quiz 契约与判分。
+
+变更提案：openspec/changes/consolidate-practice-views/（由实现会话执行）。
