@@ -16,9 +16,11 @@ RATING_WEIGHT = {1: "high", 2: "high", 3: "medium", 4: "low", 5: None}
 RATING_PROGRESS = {1: "wrong", 2: "wrong", 3: "reviewing", 4: "reviewing", 5: "mastered"}
 
 
-def apply(pool, item_type, item_id, rating=None, note=None):
+def apply(pool, item_type, item_id, rating=None, note=None, direction=""):
     """Record feedback and update signals, events, progress, and schedule.
 
+    ``direction`` selects the schedule row key (default "" = forward); it does
+    not change progress, current-state, or signal semantics.
     Returns a list of human-readable changes for the UI.
     """
     changes = []
@@ -64,9 +66,8 @@ def apply(pool, item_type, item_id, rating=None, note=None):
             pool.upsert_current_state("kp", target_id, learning_state.for_rating(rating))
 
     if rating is not None:
-        state = pool.schedule_get(item_type, item_id) or schedule_rules.default_state(
-            item_type, item_id
-        )
+        state = pool.schedule_get(item_type, item_id, direction) or \
+            schedule_rules.default_state(item_type, item_id, direction)
         next_state = schedule_rules.after_result(state, rating, date.today())
         pool.schedule_upsert(next_state)
         changes.append(f"schedule: due {next_state['due_at']}")

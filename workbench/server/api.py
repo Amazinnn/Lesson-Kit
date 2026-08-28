@@ -55,7 +55,8 @@ def weak_list(pool, workspace, params, body):
 
 
 def due_list(pool, workspace, params, body):
-    return queries.due_list(pool)
+    limit = int(params.get("limit", "100"))
+    return queries.due_list(pool)[:max(0, limit)]
 
 
 def daily_plan(pool, workspace, params, body):
@@ -153,9 +154,16 @@ def pull_problems(pool, workspace, params, body):
         isinstance(item, str) for item in exclude_ids
     ):
         raise ApiError(400, "exclude_ids must be a string list")
+    include_ids = body.get("include_ids", [])
+    if not isinstance(include_ids, list) or not all(
+        isinstance(item, str) and item for item in include_ids
+    ):
+        raise ApiError(400, "include_ids must be a non-empty string list")
+    if include_ids and mode == "all":
+        raise ApiError(400, "include_ids cannot be combined with mode all")
     return pull.select(
         pool, kp_ids, n=n, mode=mode, source_kind=body.get("source_kind"),
-        exclude_ids=set(exclude_ids),
+        exclude_ids=set(exclude_ids), include_ids=set(include_ids),
     )
 
 
@@ -207,8 +215,12 @@ def feedback_record(pool, workspace, params, body):
         raise ApiError(400, "note must be a string")
     if rating is None and not (note and note.strip()):
         raise ApiError(400, "rating or note is required")
+    direction = body.get("direction", "")
+    if not isinstance(direction, str):
+        raise ApiError(400, "direction must be a string")
     return feedback.apply(
         pool, item_type, item_id, rating=rating, note=note,
+        direction=direction,
     )
 
 

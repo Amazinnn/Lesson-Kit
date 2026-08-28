@@ -6,13 +6,15 @@ PRACTICE_MODES = {"exam", "flash_card", "yes_no"}
 
 
 def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
-           seed=None):
+           seed=None, include_ids=None):
     """Pull durable problems, then gate-passed candidates, then report gaps.
 
     Never fabricates content: whatever cannot be filled is listed in
-    ``shortage``.
+    ``shortage``. ``include_ids`` optionally restricts the result to those
+    identifiers within the requested scope.
     """
     exclude_ids = exclude_ids or set()
+    include_ids = set(include_ids or [])
     practice_mode = mode if mode in PRACTICE_MODES else None
     order_mode = "weak" if practice_mode else mode
     if order_mode == "all":
@@ -30,10 +32,12 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
             random.Random(seed).shuffle(problems)
     if practice_mode:
         problems = [p for p in problems if _eligible_for_mode(p, practice_mode)]
+    if include_ids:
+        problems = [p for p in problems if p["problem_id"] in include_ids]
     problems = [p for p in problems if p["problem_id"] not in exclude_ids]
 
     candidates = []
-    if len(problems) < n and order_mode != "all":
+    if len(problems) < n and order_mode != "all" and not include_ids:
         candidates = [
             c for c in pool.gate_passed_candidates(kp_ids)
             if c["candidate_id"] not in exclude_ids

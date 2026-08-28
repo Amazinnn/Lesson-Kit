@@ -425,6 +425,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     nav_items = [
         ("practice", "练习"),
         ("kps", "知识点"),
+        ("review", "复习"),
         ("graph", "知识图谱"),
     ]
     nav = "".join(
@@ -677,4 +678,124 @@ def _base(title, body):
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"
         "<script src='/static/katex/katex.min.js'></script>"
         f"</head><body>{body}</body></html>"
+    )
+
+
+def review_page(workspace, workspaces, weak_items, due_items,
+                problem_kps=None, later_count=0):
+    """Due-review reminder surface: grouped list + inline card session."""
+    today = date.today()
+
+    def due_days(item):
+        try:
+            return (date.fromisoformat(str(item["due_at"])[:10]) - today).days
+        except ValueError:
+            return 0
+
+    due_items = sorted(due_items or [], key=lambda i: (i["due_at"], i["item_id"]))
+    directional = [i for i in due_items if i.get("direction")]
+    overdue = [i for i in due_items if due_days(i) < 0]
+    today_items = [i for i in due_items if due_days(i) == 0]
+    soon = [i for i in due_items if 0 < due_days(i) <= 7]
+    problems = problem_kps or {}
+
+    def badge(text, extra=""):
+        return f"<span class='badge {extra}'>{text}</span>"
+
+    def row(item):
+        days = due_days(item)
+        is_kp = item["item_type"] == "kp"
+        type_badge = badge("知识点" if is_kp else "题目", "badge-type")
+        direction_badge = (
+            badge("反向" if item["direction"] == "reverse" else item["direction"],
+                  "badge-direction")
+            if item.get("direction") else ""
+        )
+        due_note = (
+            "可以复习" if days == 0
+            else f"可以复习 · 已过期 {abs(days)} 天" if days < 0
+            else f"可以复习 · {days} 天后"
+        )
+        label = html.escape(item.get("label") or item["item_id"])
+        if is_kp:
+            kp_ids_json = html.escape(json.dumps([item["item_id"]]))
+            action = (f"<a class='queue-handoff ghost sm' data-queue-kp-ids='{kp_ids_json}' "
+                      f"href='/w/{html.escape(workspace['name'])}/practice'>去练习</a>")
+        else:
+            kp_ids = problems.get(item["item_id"]) or []
+            kp_ids_json = html.escape(json.dumps(kp_ids))
+            action = (f"<button class='outline sm review-practice-problem' type='button' "
+                      f"data-include-id='{html.escape(item['item_id'])}' "
+                      f"data-kp-ids='{kp_ids_json}'>练这道</button>")
+        return (f"<div class='review-row' data-item-type='{item['item_type']}' "
+                f"data-item-id='{html.escape(item['item_id'])}' "
+                f"data-direction='{html.escape(item.get('direction') or '')}'>"
+                f"<span class='review-label'>{label}</span>"
+                f"{type_badge}{direction_badge}"
+                f"<span class='review-due'>{due_note}</span>{action}</div>")
+
+    def group(title, items, extra_note=""):
+        if not items:
+            return ""
+        note = f"<span class='review-group-count'>{len(items)} 项{extra_note}</span>"
+        rows = "".join(row(item) for item in items)
+        return (f"<div class='review-group'><div class='review-group-head'>"
+                f"<h2>{title}</h2>{note}</div>{rows}</div>")
+
+    overdue_note = f" · 含逾期 {len(overdue)} 项" if overdue else ""
+    groups = (
+        group("今天到期", overdue + today_items, overdue_note)
+        + group("未来 7 天", soon)
+    )
+    list_html = groups if groups else ""
+    later_html = (
+        f"<p class='muted review-later'>以后还有 {later_count} 项，未列出。</p>"
+        if later_count else ""
+    )
+    if not due_items:
+        list_html = (
+            "<section class='empty-state card'><h2>今天没有到期的复习</h2>"
+            "<p>调度只做提醒。去练习一轮，到期的内容会自然出现在这里。</p>"
+            f"<a class='ghost' href='/w/{html.escape(workspace['name'])}/practice'>去练习</a>"
+            "</section>"
+        )
+    card_entry = (
+        "<section class='review-card-entry'>"
+        f"<button id='start-card-review' class='primary'>开始卡片复习</button>"
+        f"<span class='review-card-count'>{len(directional)} 张方向卡到期</span>"
+        "</section>"
+    ) if directional else ""
+    middle = (
+        _page_header("复习 / 到期提醒", "复习",
+                     "调度只做提醒；什么时候复习、复习多少，由你决定。")
+        + "<div id='review-content' class='page-content review-content'>"
+        + card_entry
+        + card_session_html()
+        + list_html
+        + later_html
+        + "</div>"
+    )
+    return shell(workspace, workspaces, weak_items, middle, "review", page_type="review")
+
+
+def card_session_html():
+    return (
+        "<section id='card-session' class='card review-card-session hidden' aria-label='卡片复习'>"
+        "<div class='section-heading'><p class='section-kicker'>卡片复习</p>"
+        "<span id='card-progress' class='review-card-progress'></span></div>"
+        "<div id='card-face' class='review-card-face rich-text'></div>"
+        "<button id='reveal-card' class='primary'>揭示</button>"
+        "<div id='card-back' class='review-card-face rich-text hidden'></div>"
+        "<div id='card-neighbours' class='review-neighbours hidden'></div>"
+        "<div id='card-rating' class='card-rating-row hidden'>"
+        "<span class='muted'>这张卡感觉如何</span>"
+        "<button class='outline sm' type='button' data-card-rating='1'>1 陌生</button>"
+        "<button class='outline sm' type='button' data-card-rating='2'>2</button>"
+        "<button class='outline sm' type='button' data-card-rating='3'>3</button>"
+        "<button class='outline sm' type='button' data-card-rating='4'>4</button>"
+        "<button class='outline sm' type='button' data-card-rating='5'>5 熟练</button>"
+        "</div>"
+        "<p id='card-summary' class='hidden'></p>"
+        "<button id='card-back-list' class='ghost hidden'>返回列表</button>"
+        "</section>"
     )
