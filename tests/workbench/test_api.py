@@ -7,6 +7,7 @@ import time
 import unittest
 import urllib.request
 from urllib.error import HTTPError
+from unittest import mock
 
 from tests.workbench.fixtures import WorkspaceFixture
 
@@ -173,6 +174,20 @@ class ApiTests(unittest.TestCase):
                 break
             time.sleep(0.05)
         self.assertEqual(state, "failed")
+
+    @mock.patch("workbench.server.api.runner.run_ai_task")
+    @mock.patch("workbench.server.api.runner.create_ai_task", return_value="job-042")
+    def test_ai_explain_returns_the_reserved_job_id(self, create_task, run_task):
+        status, data = self.post("/api/w/dmath/ai/explain", {
+            "problem_id": "dmath-ch06-prob-001",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(data["job_id"], "job-042")
+        create_task.assert_called_once()
+        deadline = time.time() + 1
+        while not run_task.called and time.time() < deadline:
+            time.sleep(0.01)
+        self.assertEqual(run_task.call_args.kwargs["job_id"], "job-042")
 
     def test_ai_explain_unknown_problem_404(self):
         with self.assertRaises(HTTPError) as ctx:

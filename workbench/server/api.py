@@ -2,7 +2,6 @@
 
 import json
 import threading
-import time
 from datetime import date, datetime
 from pathlib import Path
 
@@ -194,6 +193,10 @@ def ai_run(pool, workspace, params, body):
     note = body.get("note")
     user_answer = body.get("user_answer")
     stuck_step = body.get("stuck_step")
+    job_id = runner.create_ai_task(
+        pool, operation, problem_id, note=note,
+        user_answer=user_answer, stuck_step=stuck_step,
+    )
 
     def _run():
         # Provider runs on its own thread so the HTTP request returns
@@ -205,28 +208,12 @@ def ai_run(pool, workspace, params, body):
                 worker_pool, workspace_path, operation, problem_id,
                 provider_name=provider_name, note=note,
                 user_answer=user_answer, stuck_step=stuck_step,
+                job_id=job_id,
             )
         finally:
             worker_pool.close()
 
     threading.Thread(target=_run, daemon=True).start()
-    # Wait briefly for the job record so the response carries a real job id.
-    # Overlapping requests could in theory observe the same newest id; the
-    # client polls tolerantly (404 = keep waiting), so this self-heals.
-    deadline = time.time() + 2.0
-    job_id = ""
-    jobs_dir = pool.jobs_dir()
-    jobs_dir.mkdir(parents=True, exist_ok=True)
-    while time.time() < deadline:
-        existing = [
-            d.name for d in jobs_dir.iterdir()
-            if d.is_dir() and d.name.startswith("job-")
-        ]
-        if existing:
-            job_id = max(existing)
-            if (jobs_dir / job_id / "status.json").is_file():
-                break
-        time.sleep(0.01)
     return {"job_id": job_id}
 
 

@@ -4,6 +4,7 @@ import importlib.util
 import sys
 import tempfile
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 
@@ -51,6 +52,17 @@ class JobLifecycleTests(unittest.TestCase):
         second = jobs.create_job(self.jobs_dir, "diagnose", {}, "y")
         self.assertEqual(first, "job-001")
         self.assertEqual(second, "job-002")
+
+    def test_concurrent_job_ids_are_reserved_atomically(self):
+        def create(index):
+            return jobs.create_job(self.jobs_dir, "explain", {}, str(index))
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            job_ids = list(executor.map(create, range(20)))
+
+        self.assertEqual(len(job_ids), len(set(job_ids)))
+        self.assertTrue(all((self.jobs_dir / job_id / "status.json").is_file()
+                            for job_id in job_ids))
 
     def test_mark_running_then_done(self):
         job_id = jobs.create_job(self.jobs_dir, "explain", {}, "x")
