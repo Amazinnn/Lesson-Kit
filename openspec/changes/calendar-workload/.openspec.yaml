@@ -1,0 +1,4 @@
+schema: spec-driven
+
+name: calendar-workload
+description: Goal deadline calendar and a 14-day due-workload curve as an experimental read-only view

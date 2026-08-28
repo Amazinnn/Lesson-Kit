@@ -1,0 +1,4 @@
+schema: spec-driven
+
+name: review-page
+description: Due-review page with directional card sessions as a reminder surface
