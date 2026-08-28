@@ -328,6 +328,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .knowledge-list li:first-child { padding-top: 0; }
 .knowledge-list .score { margin-left: 8px; color: var(--dsw-label-tertiary); font-size: 12px; }
 .knowledge-list .reasons { display: block; margin-top: 2px; color: var(--dsw-label-tertiary); font-size: 13px; }
+.knowledge-sort-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 4px 0 14px; color: var(--dsw-label-tertiary); font-size: 12px; }
+.knowledge-sort-bar select { width: 118px; }
+.knowledge-meta { float: right; color: var(--dsw-label-tertiary); font-size: 12px; }
 .graph-content { max-width: none; }
 #layout[data-page="graph"] #middle { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 20px; }
 #layout[data-page="graph"] .page-header { width: 100%; flex: none; padding-bottom: 14px; }
@@ -361,6 +364,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-node.needs_work { border-color: #df8f89; background: #fff5f4; }
 .graph-node.review { border-color: #d1b46d; background: #fffaf0; }
 .graph-node.mastered { border-color: #8dbb95; background: #f4fbf5; }
+.graph-node.projection-problem_count { box-shadow: 0 0 0 calc(2px + var(--projection-score) * 5px) rgba(48, 112, 177, .12); }
+.graph-node.projection-importance { filter: saturate(calc(.85 + var(--projection-score) * .4)); }
+.graph-node.projection-state { filter: hue-rotate(calc(var(--projection-score) * -12deg)); }
 .graph-empty { padding: 24px; }
 .problem-topic { padding: 10px 0; border-bottom: 1px solid var(--dsw-border-l1); }
 .problem-topic summary { cursor: pointer; color: var(--dsw-label-secondary); font-weight: 600; }

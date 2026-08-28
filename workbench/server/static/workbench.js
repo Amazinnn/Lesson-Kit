@@ -62,6 +62,39 @@
 
   bindSelectionControls();
 
+  function bindKnowledgeSort() {
+    var list = document.getElementById("knowledge-list");
+    if (!list && document.querySelector) list = document.querySelector(".knowledge-list");
+    var sort = document.getElementById("knowledge-sort");
+    var direction = document.getElementById("knowledge-sort-direction");
+    if (!list || !sort) return;
+    var descending = false;
+    function apply() {
+      var rows = Array.from(list.children || []).filter(function (row) {
+        return row && row.classList && row.classList.contains("knowledge-row");
+      });
+      var field = sort.value || "source";
+      rows.sort(function (a, b) {
+        var av = field === "source" ? Number(a.dataset.kpOrder || 0)
+          : field === "problem_count" ? Number(a.dataset.kpProblemCount || 0)
+            : String(a.dataset["kp" + field.charAt(0).toUpperCase() + field.slice(1)] || "").toLowerCase();
+        var bv = field === "source" ? Number(b.dataset.kpOrder || 0)
+          : field === "problem_count" ? Number(b.dataset.kpProblemCount || 0)
+            : String(b.dataset["kp" + field.charAt(0).toUpperCase() + field.slice(1)] || "").toLowerCase();
+        var result = typeof av === "number" && typeof bv === "number" ? av - bv : av.localeCompare(bv);
+        if (!result) result = Number(a.dataset.kpOrder || 0) - Number(b.dataset.kpOrder || 0);
+        return descending ? -result : result;
+      });
+      if (rows.length) list.replaceChildren.apply(list, rows);
+      if (direction) direction.textContent = descending ? "↓" : "↑";
+    }
+    sort.addEventListener("change", apply);
+    if (direction) direction.addEventListener("click", function () { descending = !descending; apply(); });
+    apply();
+  }
+
+  bindKnowledgeSort();
+
   /* ---------- helpers ---------- */
 
   function api(path, options) {
@@ -263,6 +296,7 @@
     var graphAdjacency = new Map();
     var graphView = { x: 0, y: 0, scale: 1 };
     var graphAutoFit = true;
+    var graphProjection = "structure";
     var graphLabelZoomed = false;
     var graphFocusedId = null;
     var draggedNode = null;
@@ -402,6 +436,8 @@
       graphSimulation = GraphPhysics.layoutGraph(
         nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight,
       );
+      GraphPhysics.applyProjection(graphSimulation.nodes, graphProjection,
+        graphCanvas.clientWidth, graphCanvas.clientHeight);
       graphAutoFit = true;
       var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       edgeLayer.setAttribute("class", "graph-edge-layer");
@@ -415,10 +451,13 @@
       });
       graphSimulation.nodes.forEach(function (node) {
         var button = document.createElement("button");
-        button.className = "graph-node " + (node.state || "unmarked");
+        button.className = "graph-node " + (node.state || "unmarked")
+          + (node.projection ? " projection-" + node.projection : "");
         button.dataset.kpId = node.id;
         button.style.width = (node.radius * 2) + "px";
         button.style.height = (node.radius * 2) + "px";
+        if (button.style.setProperty) button.style.setProperty("--projection-score", String(node.projectionScore || 0));
+        else button.style["--projection-score"] = String(node.projectionScore || 0);
         button.setAttribute("aria-label", node.title);
         button.title = node.title;
         button.addEventListener("click", function () {
@@ -577,6 +616,11 @@
     var zoomIn = document.getElementById("graph-zoom-in");
     var zoomOut = document.getElementById("graph-zoom-out");
     var graphFit = document.getElementById("graph-fit");
+    var graphProjectionSelect = document.getElementById("graph-projection");
+    if (graphProjectionSelect) graphProjectionSelect.addEventListener("change", function () {
+      graphProjection = graphProjectionSelect.value || "structure";
+      renderGraph();
+    });
     if (zoomIn) zoomIn.addEventListener("click", function () {
       setGraphScale(graphView.scale + 0.1);
     });

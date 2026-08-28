@@ -237,6 +237,39 @@
     reheat(simulation, 0.5);
   }
 
+  function projectionValue(node, projection) {
+    if (projection === "problem_count") return Math.max(0, Number(node.problem_count) || 0);
+    if (projection === "importance") return node.importance === "core" ? 1 : 0;
+    if (projection === "state") {
+      return node.state === "needs_work" ? 1 : node.state === "review" ? 0.55
+        : node.state === "mastered" ? 0 : 0.25;
+    }
+    if (projection === "attraction") return Math.max(0, Number(node.attraction) || 0);
+    return 0;
+  }
+
+  function applyProjection(nodes, projection, width, height) {
+    if (!projection || projection === "structure" || !nodes.length) return nodes;
+    var values = nodes.map(function (node) { return projectionValue(node, projection); });
+    var min = Math.min.apply(null, values);
+    var max = Math.max.apply(null, values);
+    var span = max - min || 1;
+    var centerX = Math.max(240, width || 800) / 2;
+    var centerY = Math.max(180, height || 600) / 2;
+    var base = Math.min(Math.max(180, width || 800), Math.max(140, height || 600)) * 0.28;
+    nodes.slice().sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); })
+      .forEach(function (node, index, sorted) {
+        var score = (projectionValue(node, projection) - min) / span;
+        var angle = index * 2.399963229728653;
+        var radius = base * (1.12 - score * 0.62);
+        node.x = centerX + Math.cos(angle) * radius;
+        node.y = centerY + Math.sin(angle) * radius;
+        node.projection = projection;
+        node.projectionScore = score;
+      });
+    return nodes;
+  }
+
   function settle(simulation, maxTicks) {
     var ticks = 0;
     while (!simulation.stable && ticks < (maxTicks || 1200)) {
@@ -542,6 +575,8 @@
     reheat: reheat,
     setSoftAnchor: setSoftAnchor,
     setGravity: setGravity,
+    projectionValue: projectionValue,
+    applyProjection: applyProjection,
     settle: settle,
     connectedComponents: connectedComponents,
     candidateLayouts: candidateLayouts,

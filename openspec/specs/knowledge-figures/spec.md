@@ -159,3 +159,15 @@ Selecting a graph node SHALL fully emphasize and gently expand its one-hop neigh
 - **WHEN** the learner selects the graph background
 - **THEN** all nodes and edges return to the complete-graph presentation and ordinary semantic targets
 
+### Requirement: Existing-metric projections
+
+The graph MAY project existing `problem_count`, `importance`, `state`, or edge
+`attraction` into visual emphasis. The structural relationship layout SHALL
+remain the default, projections SHALL be deterministic, and coordinates SHALL
+not be persisted.
+
+#### Scenario: Switch projection
+- **WHEN** the learner selects an existing-metric projection
+- **THEN** the graph changes visual emphasis without changing its edges,
+  selection, or persisted data
+

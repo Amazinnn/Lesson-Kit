@@ -343,16 +343,34 @@ def _knowledge_selection_controls():
 
 def kps_page(workspace, workspaces, weak_items, pool):
     prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
-    ranked = weak.score_all(pool.kps(prefix), pool.signals(), pool.schedule_rows(), pool.relations(), set(), date.today())
+    source_kps = pool.kps(prefix)
+    problem_counts = {kp["kp_id"]: 0 for kp in source_kps}
+    for problem in pool.problems_all():
+        for kp_id in problem.get("kp_ids", []):
+            if kp_id in problem_counts:
+                problem_counts[kp_id] += 1
+    states = {row["item_id"]: row["state"] for row in pool.current_states()
+              if row["item_type"] == "kp"}
     items = "".join(
-        "<li class='knowledge-row'><label><input type='checkbox' data-kp-selection data-kp-id='" + html.escape(item["kp_id"]) + "'> "
-        "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a></label></li>"
-        for item in ranked
+        "<li class='knowledge-row' data-kp-order='" + str(index) + "' data-kp-title='" + html.escape(item.get("knowledge_item") or "")
+        + "' data-kp-problem-count='" + str(problem_counts.get(item["kp_id"], 0))
+        + "' data-kp-state='" + html.escape(states.get(item["kp_id"], "unmarked"))
+        + "' data-kp-importance='" + html.escape(item.get("importance") or "supplementary") + "'>"
+        "<label><input type='checkbox' data-kp-selection data-kp-id='" + html.escape(item["kp_id"]) + "'> "
+        "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
+        "<span class='knowledge-meta'>" + str(problem_counts.get(item["kp_id"], 0)) + " 题 · "
+        + html.escape(states.get(item["kp_id"], "unmarked")) + "</span></label></li>"
+        for index, item in enumerate(source_kps)
     )
     middle = (_page_header("学习 / 当前章节", "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
         + "<div class='page-content'>" + _knowledge_selection_controls()
+        + "<div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
+        + "<option value='source' selected>课程顺序</option><option value='title'>名称</option>"
+        + "<option value='problem_count'>题目数量</option><option value='state'>学习状态</option>"
+        + "<option value='importance'>重要性</option></select>"
+        + "<button id='knowledge-sort-direction' class='ghost sm' type='button' aria-label='切换排序方向' title='切换排序方向'>↑</button></div>"
         + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>本章知识点</h2></div></div>"
-        + f"<ul class='knowledge-list'>{items or '<li class=\"muted\">暂无知识点</li>'}</ul></section></div>")
+        + f"<ul id='knowledge-list' class='knowledge-list'>{items or '<li class=\"muted\">暂无知识点</li>'}</ul></section></div>")
     return shell(workspace, workspaces, weak_items, middle, "kps", page_type="kps")
 
 
@@ -361,6 +379,9 @@ def graph_page(workspace, workspaces, weak_items, has_artifact):
         + "<div class='page-content graph-content'>" + _knowledge_selection_controls()
         + "<section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
         "<label class='visually-hidden' for='graph-search'>搜索知识点</label><input id='graph-search' placeholder='搜索知识点'>"
+        "<label for='graph-projection'>视图</label><select id='graph-projection' title='按已有指标调整图谱形态'>"
+        "<option value='structure' selected>关系结构</option><option value='problem_count'>题目数量</option>"
+        "<option value='importance'>重要性</option><option value='state'>学习状态</option></select>"
         "<label class='graph-gravity-label' for='graph-gravity'>聚拢</label><input id='graph-gravity' type='range' min='0' max='100' value='30' aria-label='调整图谱聚拢程度' title='调整图谱聚拢程度'>"
         "<div class='graph-zoom' aria-label='缩放'><button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button><button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button><button id='graph-fit' class='outline sm'>适应画布</button></div>"
         "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div></section></div>")

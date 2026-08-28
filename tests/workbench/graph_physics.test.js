@@ -312,3 +312,17 @@ test("gravity range has a stronger center pull than the previous maximum", () =>
   assert.equal(low, 0);
   assert.ok(simulation.gravity > 0.00117 * 2);
 });
+
+test("existing knowledge metrics can project deterministically without changing graph membership", () => {
+  const nodes = [
+    { id: "b", problem_count: 1, importance: "supplementary", state: "review" },
+    { id: "a", problem_count: 9, importance: "core", state: "needs_work" },
+  ];
+  assert.equal(physics.projectionValue(nodes[1], "problem_count"), 9);
+  physics.applyProjection(nodes, "problem_count", 800, 600);
+  assert.equal(nodes.length, 2);
+  assert.ok(nodes.find((node) => node.id === "a").projectionScore > nodes.find((node) => node.id === "b").projectionScore);
+  const first = nodes.map((node) => ({ id: node.id, x: node.x, y: node.y }));
+  physics.applyProjection(nodes, "problem_count", 800, 600);
+  assert.deepEqual(nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })), first);
+});

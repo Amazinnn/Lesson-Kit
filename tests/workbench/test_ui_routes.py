@@ -314,6 +314,9 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn(">Counting</a>", body)
         self.assertIn("本章知识点", body)
+        self.assertIn("id='knowledge-sort'", body)
+        self.assertIn("id='knowledge-sort-direction'", body)
+        self.assertIn("data-kp-problem-count=", body)
 
     def test_kp_page_renders(self):
         full_text = "<sup>∗</sup>*两类代表*<b>原始 HTML</b>" + "的组合计数条件。" * 38
@@ -417,6 +420,7 @@ class UiRouteTests(unittest.TestCase):
         status, data = self.fetch_json("/api/w/dmath/graph/model")
         self.assertEqual(status, 200)
         self.assertEqual(data["nodes"][0]["title"], "Counting")
+        self.assertIn("id='graph-projection'", body)
 
     def test_explain_result_endpoint(self):
         explain_dir = (self.fixture.ws / ".lessonkit" / "explain"

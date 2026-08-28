@@ -1,0 +1,7 @@
+- [x] Add the OpenSpec deltas, requirements note, design note, and implementation plan.
+- [x] Add failing tests for separate content/rating modes, choice rendering, and unified self-rating reachability.
+- [x] Implement the practice state split and optional structured-choice renderer.
+- [x] Add failing tests and implement goal CRUD plus complete plan-region refresh.
+- [x] Add failing tests and implement explicit Agent practice-selection replacement.
+- [x] Add failing tests and implement knowledge-list sort toggles and graph projection selection.
+- [x] Run full verification, update changelog, and archive this change only after every task is green.
