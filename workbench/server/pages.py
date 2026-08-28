@@ -259,6 +259,7 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
         f"data-practice-kp-id='{html.escape(kp_id)}' "
         f"href='/w/{workspace['name']}/practice?kp={html.escape(kp_id)}'>练习此知识点</a>"
     )
+    empty_problems = '<p class="muted">—</p>'
     middle = (
         _page_header(
             "知识点 / 当前章节", html.escape(kp["knowledge_item"]),
@@ -271,7 +272,7 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
         "<div class='section-heading'><div>"
         "<p class='section-kicker'>练习入口</p><h2>关联题目</h2>"
         "</div></div>"
-        f"{problems_html or '<p class=\"muted\">—</p>'}"
+        f"{problems_html or empty_problems}"
         "</section></div>"
     )
     return shell(
@@ -365,6 +366,7 @@ def kps_page(workspace, workspaces, weak_items, pool):
         + "</span></label></li>"
         for index, item in enumerate(source_kps)
     )
+    empty_items = '<li class="muted">暂无知识点</li>'
     middle = (_page_header("学习 / 当前章节", "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
         + "<div class='page-content'>" + _knowledge_selection_controls()
         + "<div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
@@ -373,7 +375,7 @@ def kps_page(workspace, workspaces, weak_items, pool):
         + "<option value='importance'>重要性</option></select>"
         + "<button id='knowledge-sort-direction' class='ghost sm' type='button' aria-label='切换排序方向' title='切换排序方向'>↑</button></div>"
         + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>本章知识点</h2></div></div>"
-        + f"<ul id='knowledge-list' class='knowledge-list'>{items or '<li class=\"muted\">暂无知识点</li>'}</ul></section></div>")
+        + f"<ul id='knowledge-list' class='knowledge-list'>{items or empty_items}</ul></section></div>")
     return shell(workspace, workspaces, weak_items, middle, "kps", page_type="kps")
 
 
@@ -442,6 +444,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     )
     rail_label = "优先回看" if actionable else "本章知识点"
     empty = "暂无明确薄弱证据" if not actionable else "暂无提醒"
+    empty_weak = '<p class="score">' + empty + "</p>"
     return (
         "<section class='side-section workspace-switcher'>"
         "<p class='side-label'>工作区</p>"
@@ -452,7 +455,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"{nav}</nav>"
         "<section class='side-section weak-section'>"
         f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"
-        f"<div class='weak-list'>{weak_html or '<p class=\"score\">' + empty + '</p>'}</div>"
+        f"<div class='weak-list'>{weak_html or empty_weak}</div>"
         "</section>"
     )
 
