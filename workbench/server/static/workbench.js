@@ -1057,12 +1057,6 @@
         }
       }).catch(function () { recalculatePlan.disabled = false; });
     });
-    var heartbeatKey = "wb_plan_heartbeat_" + WS;
-    var today = new Date().toISOString().slice(0, 10);
-    if (sessionStorage.getItem(heartbeatKey) !== today) {
-      sessionStorage.setItem(heartbeatKey, today);
-      recalculatePlan.click();
-    }
   }
 
   var goalForm = document.getElementById("goal-form");

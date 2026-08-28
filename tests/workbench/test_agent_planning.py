@@ -2,6 +2,7 @@
 
 import json
 import unittest
+from datetime import date
 
 from tests.workbench.fixtures import WorkspaceFixture
 
@@ -67,6 +68,37 @@ class AgentPlanningTests(unittest.TestCase):
             pool.close()
         self.assertEqual(loaded["queue"], saved["queue"])
         self.assertEqual(loaded["plan_version"], 1)
+        self.assertEqual(loaded["plan_date"], date.today().isoformat())
+
+    def test_plan_from_another_day_is_not_reused(self):
+        from workbench.server.api import daily_plan
+        plan_path = self.workspace / ".lessonkit" / "plan.json"
+        plan_path.parent.mkdir(parents=True, exist_ok=True)
+        plan_path.write_text(json.dumps({
+            "plan_version": 1, "plan_date": "2000-01-01",
+            "queue": [{"id": "stale"}], "goals": [], "totals": {},
+        }), encoding="utf-8")
+        pool = self.pool_for(self.ws)
+        try:
+            loaded = daily_plan(pool, self.ws, {}, {})
+        finally:
+            pool.close()
+        self.assertNotEqual(loaded["queue"], [{"id": "stale"}])
+        self.assertEqual(loaded["plan_date"], date.today().isoformat())
+
+    def test_goal_change_invalidates_a_saved_plan(self):
+        from workbench.server.api import daily_plan, daily_plan_recalculate, goals_create
+        pool = self.pool_for(self.ws)
+        try:
+            daily_plan_recalculate(pool, self.ws, {}, {})
+            plan_path = self.workspace / ".lessonkit" / "plan.json"
+            self.assertTrue(plan_path.is_file())
+            goals_create(pool, self.ws, {}, {"title": "准备期末考试"})
+            self.assertFalse(plan_path.exists())
+            refreshed = daily_plan(pool, self.ws, {}, {})
+        finally:
+            pool.close()
+        self.assertEqual(refreshed["goals"][0]["title"], "准备期末考试")
 
 
 if __name__ == "__main__":
