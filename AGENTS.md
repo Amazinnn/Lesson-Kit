@@ -30,7 +30,7 @@
 4. **验证节奏**（交付前必跑）：
    ```bash
    python -m pytest tests -q
-   openspec validate review-workbench-v1 --strict
+   openspec validate --specs --strict
    python lessonkit.py guard extract-problems --course dmath --chapter ch06
    python lessonkit.py guard problem-set --course dmath --chapter ch06
    ```

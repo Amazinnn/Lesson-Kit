@@ -8,7 +8,8 @@ from pathlib import Path
 from workbench.bridge import conversation_providers, conversations, runner
 from workbench.data import goals, queries
 from workbench.domain import (
-    feedback, learning_state, planning, pull, schedule as schedule_rules, weak,
+    feedback, learning_state, planning, pull, schedule as schedule_rules,
+    signals as signal_rules, weak,
 )
 from workbench.server import context as agent_context
 
@@ -71,6 +72,7 @@ def daily_plan(pool, workspace, params, body):
         queries.planning_facts(pool, workspace), now=datetime.now()
     )
     plan.update({"plan_version": 1, "plan_date": date.today().isoformat()})
+    _persist_plan(path, plan)
     return plan
 
 
@@ -80,12 +82,15 @@ def daily_plan_recalculate(pool, workspace, params, body):
     )
     plan = planning.apply_adjustment(baseline, (body or {}).get("adjustment"))
     plan.update({"plan_version": 1, "plan_date": date.today().isoformat()})
-    path = _plan_path(workspace)
+    _persist_plan(_plan_path(workspace), plan)
+    return {"plan": plan, "status": "已更新今日计划"}
+
+
+def _persist_plan(path, plan):
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + f".{threading.get_ident()}.tmp")
     temporary.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
     temporary.replace(path)
-    return {"plan": plan, "status": "已更新今日计划"}
 
 
 def goals_list(pool, workspace, params, body):
@@ -222,7 +227,11 @@ def kp_detail(pool, workspace, params, body):
 
 
 def graph_model(pool, workspace, params, body):
-    return queries.graph_model(pool)
+    weights = {
+        target_id: row["weight"]
+        for target_id, row in signal_rules.strongest_by_target(pool.signals()).items()
+    }
+    return queries.graph_model(pool, weights)
 
 
 def graph_state(pool, workspace, params, body):

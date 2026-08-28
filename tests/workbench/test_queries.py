@@ -226,7 +226,12 @@ class QueryTests(unittest.TestCase):
             ("zz-low", "node", "dmath-ch06-kp-002", "confusion", "low", 99, None),
         )
         self.pool.commit()
-        model = self.queries.graph_model(self.pool)
+        from workbench.domain.signals import strongest_by_target
+        weights = {
+            target_id: row["weight"]
+            for target_id, row in strongest_by_target(self.pool.signals()).items()
+        }
+        model = self.queries.graph_model(self.pool, weights)
         node = next(item for item in model["nodes"] if item["id"] == "dmath-ch06-kp-002")
         self.assertEqual(node["state"], "needs_work")
 

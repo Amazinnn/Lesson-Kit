@@ -1,7 +1,15 @@
 # daily-learning-plan Specification
 
 ## Purpose
-TBD - created by archiving change daily-learning-plan. Update Purpose after archive.
+
+Define the workspace-local daily learning plan: a deterministic baseline queue
+built from long-term goals, stage goals, progress, and coverage; student-chosen
+practice paths per queue item; Agent adjustment only after explicit feedback or
+recalculation; and at most one automatic recalculation on the first workspace
+opening of a local day. The plan is a coarse queue capped at a few items that
+never fabricates goals and never creates learning records; when the Agent is
+unavailable the baseline remains usable and honestly labelled.
+
 ## Requirements
 ### Requirement: Baseline daily queue
 The system SHALL produce a deterministic coarse-grained daily queue from active course goals, stage goals, progress, deadlines, coverage, and available formal problem types without requiring an Agent.

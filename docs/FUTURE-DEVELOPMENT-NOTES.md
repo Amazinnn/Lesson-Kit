@@ -341,7 +341,7 @@ OCR 只是可选原材料，不应成为核心依赖。中间产物用明确的 
 
 Flash Card、Yes/No、选择题必须有真实的结构化内容、答案和解释，不能只拿长题前几十个字来冒充。没有合格内容时入口可以保留，但只能显示空状态。日历、任务量曲线、学习模型选择、跨学科视图、自动 AI 小题生成和第三方插件动态安装仍然是实验方向，不在本轮实现。
 
-当前实现计划保存于 `docs/superpowers/plans/2026-08-28-complete-learning-workbench.md`，正式契约保存于 `openspec/changes/complete-learning-workbench/`。后续会话以这两份文档为边界，避免把尚未决定的方向提前写成产品功能。
+当前实现计划保存于 `docs/superpowers/plans/2026-08-28-complete-learning-workbench.md`，正式契约已并入 `openspec/specs/`（该变更已归档至 `openspec/changes/archive/2026-08-28-complete-learning-workbench/`）。后续会话以规格库为边界，避免把尚未决定的方向提前写成产品功能。
 
 ### Task 1 文档纠偏补充（2026-08-28）
 
