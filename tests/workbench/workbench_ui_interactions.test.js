@@ -372,18 +372,25 @@ test("immediate self-rating writes only when saving and then moves to the next q
 });
 
 test("practice similar returns to the mode chooser without auto-pulling", async () => {
-  const storage = new FakeStorage({ wb_session_alpha: JSON.stringify([{ problem_id: "p-0" }]) });
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify([{ problem_id: "p-0" }]),
+    wb_kps_alpha: JSON.stringify(["kp-1", "kp-2"]),
+    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
+  });
   const similar = new FakeElement("practice-similar");
   const pending = new FakeElement("pending-ratings");
+  const sessionEndCalls = [];
   const sessionEnd = runWorkbench({
     elements: { layout: layout(), "pending-ratings": pending, "practice-similar": similar },
     storage,
-    fetch: (url) => jsonResponse(url.includes("/weak?") ? [{ kp_id: "kp-1" }] : {}),
+    fetch: (url) => { sessionEndCalls.push(url); return jsonResponse({}); },
   });
   similar.click();
   await flush();
   assert.equal(storage.getItem("wb_session_alpha"), null);
   assert.equal(storage.getItem("wb_practice_mode_alpha"), null);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-1", "kp-2"]);
+  assert.equal(sessionEndCalls.some((url) => url.includes("/weak?")), false);
   assert.equal(sessionEnd.window.location, "practice");
 
   const elements = { layout: layout(), ...practiceElements() };

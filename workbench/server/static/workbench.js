@@ -1173,14 +1173,17 @@
     }
     var similar = document.getElementById("practice-similar");
     if (similar) similar.addEventListener("click", function () {
+      var scope = currentKps();
       sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(CURRENT_KEY);
       sessionStorage.removeItem(MODE_KEY);
       sessionStorage.removeItem(RATING_MODE_KEY);
-      api("/weak?limit=200").then(function (items) {
-        store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
-        sessionStorage.setItem(SIMILAR_KEY, "1");
-        window.location = "practice";
-      });
+      if (scope.length) {
+        store(KPS_KEY, scope);
+        saveSelectedKpIds(scope);
+      }
+      sessionStorage.setItem(SIMILAR_KEY, "1");
+      window.location = "practice";
     });
   }
 
