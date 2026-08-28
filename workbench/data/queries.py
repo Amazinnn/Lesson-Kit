@@ -1,6 +1,6 @@
 """View queries: hub stats, due list, detail pages, figures, graph data."""
 
-from datetime import date
+from datetime import date, timedelta
 import json
 import sqlite3
 from pathlib import Path
@@ -244,3 +244,28 @@ def _item_label(pool, item_type, item_id):
         if kp:
             return kp["knowledge_item"]
     return item_id
+
+
+def calendar_view(pool, workspace):
+    """Read-only time view: goals plus a 14-day due histogram (today..+13)."""
+    from workbench.data import goals as goals_data
+
+    today = date.today()
+    buckets = {}
+    for offset in range(14):
+        day = (today + timedelta(days=offset)).isoformat()
+        buckets[day] = {"date": day, "count": 0, "overdue": 0}
+    overdue = 0
+    for row in pool.schedule_rows():
+        key = str(row["due_at"])[:10]
+        if key in buckets:
+            buckets[key]["count"] += 1
+        elif key < today.isoformat():
+            overdue += 1
+    days = list(buckets.values())
+    if days:
+        days[0]["overdue"] = overdue
+    return {
+        "goals": goals_data.list_goals(workspace["path"]),
+        "days": days,
+    }

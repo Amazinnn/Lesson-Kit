@@ -773,9 +773,24 @@ def review_page(workspace, workspaces, weak_items, due_items,
         + card_session_html()
         + list_html
         + later_html
+        + time_view_html()
         + "</div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "review", page_type="review")
+
+
+def time_view_html():
+    return (
+        "<section id='time-view' class='card time-view hidden' aria-label='时间安排'>"
+        "<div class='section-heading'><div><p class='section-kicker'>实验视图</p>"
+        "<h2>时间安排</h2></div>"
+        "<button id='workload-prefill' class='outline sm hidden' type='button'>让 Agent 看看</button>"
+        "</div>"
+        "<div id='calendar-grid' class='calendar-grid'></div>"
+        "<div id='workload-bars' class='workload-bars'></div>"
+        "<p id='time-view-empty' class='muted hidden'>最近没有安排在日历上。</p>"
+        "</section>"
+    )
 
 
 def card_session_html():

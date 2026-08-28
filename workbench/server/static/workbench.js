@@ -1872,4 +1872,121 @@
     }
   }
 
+  /* ---------- time view (calendar + workload) ---------- */
+
+  var timeView = document.getElementById("time-view");
+  if (timeView) {
+    var calendarGrid = document.getElementById("calendar-grid");
+    var workloadBars = document.getElementById("workload-bars");
+    var workloadPrefill = document.getElementById("workload-prefill");
+    var timeViewEmpty = document.getElementById("time-view-empty");
+    var WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
+
+    function isoDate(date) {
+      var month = String(date.getMonth() + 1).padStart(2, "0");
+      var day = String(date.getDate()).padStart(2, "0");
+      return date.getFullYear() + "-" + month + "-" + day;
+    }
+
+    function renderMonthGrid(goals) {
+      var today = new Date();
+      var year = today.getFullYear();
+      var month = today.getMonth();
+      var first = new Date(year, month, 1);
+      var daysInMonth = new Date(year, month + 1, 0).getDate();
+      var lead = (first.getDay() + 6) % 7; /* Monday-first */
+      var byDate = {};
+      var offGrid = [];
+      goals.forEach(function (goal) {
+        if (goal.deadline && typeof goal.deadline === "string") {
+          var key = goal.deadline.slice(0, 10);
+          if (key.slice(0, 7) === isoDate(first).slice(0, 7)) {
+            (byDate[key] ||= []).push(goal);
+            return;
+          }
+        }
+        offGrid.push(goal);
+      });
+      if (offGrid.length) {
+        var offLine = offGrid.map(function (goal) {
+          return escapeHtml(goal.title || "未命名目标")
+            + (goal.deadline ? "（" + escapeHtml(goal.deadline.slice(0, 10)) + "）" : "");
+        }).join("、");
+        calendarGrid.insertAdjacentHTML("afterend",
+          "<p class='muted review-later'>本月之外到期：" + offLine + "。</p>");
+      }
+      var html = WEEKDAYS.map(function (label) {
+        return "<div class='calendar-head'>" + label + "</div>";
+      }).join("");
+      for (var blank = 0; blank < lead; blank += 1) html += "<div class='calendar-cell blank'></div>";
+      for (var day = 1; day <= daysInMonth; day += 1) {
+        var key = isoDate(new Date(year, month, day));
+        var isToday = day === today.getDate();
+        var cards = (byDate[key] || []).map(function (goal) {
+          return "<span class='calendar-goal' title='" + escapeHtml(goal.title || "") + "'>"
+            + escapeHtml(goal.title || "未命名目标") + "</span>";
+        }).join("");
+        html += "<div class='calendar-cell" + (isToday ? " today" : "") + "'>"
+          + "<span class='calendar-day'>" + day + "</span>" + cards + "</div>";
+      }
+      calendarGrid.innerHTML = html;
+    }
+
+    function renderBars(days) {
+      var max = 0;
+      days.forEach(function (day) { max = Math.max(max, day.count); });
+      var nonzero = days.filter(function (day) { return day.count > 0; });
+      var average = nonzero.length
+        ? Math.max(3, nonzero.reduce(function (sum, day) { return sum + day.count; }, 0) / nonzero.length)
+        : 3;
+      workloadBars.innerHTML = days.map(function (day) {
+        var height = max ? Math.round((day.count / max) * 72) : 0;
+        var heavy = day.count >= average && day.count > 0;
+        var label = day.date.slice(8) === "01" || day.count
+          ? day.date.slice(8) : "";
+        return "<div class='bar-col" + (heavy ? " heavy" : "") + "' data-bar-date='" + day.date + "'>"
+          + "<div class='bar-fill'" + (height ? " style='height:" + height + "px'" : "") + "></div>"
+          + (heavy ? "<span class='bar-heavy-flag'>重</span>" : "")
+          + "<span class='bar-label'>" + label + "</span>"
+          + "<span class='bar-count'>" + (day.count || "") + "</span></div>";
+      }).join("");
+      var heavyDays = days.filter(function (day) {
+        return day.count >= average && day.count > 0;
+      });
+      if (heavyDays.length) {
+        workloadPrefill.classList.remove("hidden");
+        var busiest = heavyDays.reduce(function (a, b) { return b.count > a.count ? b : a; });
+        workloadPrefill.dataset.busiestCount = String(busiest.count);
+      }
+    }
+
+    api("/calendar").then(function (data) {
+      var goals = data.goals || [];
+      var days = data.days || [];
+      var hasWorkload = days.some(function (day) { return day.count > 0; });
+      if (!goals.length && !hasWorkload) {
+        timeView.classList.remove("hidden");
+        timeViewEmpty.classList.remove("hidden");
+        return;
+      }
+      timeView.classList.remove("hidden");
+      renderMonthGrid(goals);
+      renderBars(days);
+      if (!goals.length) {
+        calendarGrid.insertAdjacentHTML("afterend",
+          "<p class='muted'>还没有带截止日期的目标。</p>");
+      }
+    }).catch(function () { /* the time view stays hidden on failure */ });
+
+    if (workloadPrefill) {
+      workloadPrefill.addEventListener("click", function () {
+        var input = document.getElementById("ai-input");
+        if (!input) return;
+        var count = workloadPrefill.dataset.busiestCount || "较多";
+        input.value = "最近几天任务偏重（最多的一天 " + count + " 项），帮我重排一下。";
+        input.focus();
+      });
+    }
+  }
+
 })();
