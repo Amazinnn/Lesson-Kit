@@ -38,7 +38,7 @@ workbench/
 │   ├── __init__.py
 │   ├── pool.py        # Pool：工作区级只读/写连接 + 查询（weak/due/problem/kp/figures）
 │   ├── migrations.py  # 幂等增量迁移（ensure_* 模式，沿用 pool_schema.py）
-│   ├── queries.py     # 视图查询（hub 统计、练习页、复习页数据）
+│   ├── queries.py     # 视图查询（hub 统计、练习页合流列表/到期提醒/日历）
 │   └── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联（唯一经 Pool 碰 SQLite）
 ├── bridge/
 │   ├── __init__.py

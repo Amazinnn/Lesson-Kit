@@ -1,5 +1,12 @@
 # review-page Specification
 
+> **DEPRECATED 2026-08-29** — 本能力已被 `consolidate-practice-views` 取代：
+> 到期提醒回归练习页合流列表（review-workbench「Forgetting-curve scheduling
+> as background」的原始设计位置），方向卡片会话改为闪卡/判断模式内的可选
+> 轻会话，第 4 导航页移除。其中 `pull.include_ids`、`feedback.direction`、
+> `queries.review_overview` 等 API 要求已收编进 review-workbench 能力，
+> 实现保留。
+
 ## Purpose
 
 Turn accumulated schedule rows into a reminder surface: a review page that
