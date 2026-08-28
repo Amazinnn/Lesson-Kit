@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/editable-graph/package-lock.json
+      - name: Install test dependencies
+        run: python -m pip install pytest
+      - name: Run Python and browser tests
+        run: python -m pytest tests -q
+      - name: Verify frontend build
+        working-directory: frontend/editable-graph
+        run: |
+          npm ci
+          npm run build
