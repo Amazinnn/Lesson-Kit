@@ -173,9 +173,11 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(done["error"], "provider timed out")
         self.assertEqual(conversations.get(self.pool, conversation["conversation_id"])["messages"], [])
 
-    def test_session_title_can_be_renamed_and_idle_mirror_deleted(self):
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_session_title_can_be_renamed_and_idle_mirror_deleted(self, get_provider):
         from workbench.bridge import conversations
 
+        get_provider.return_value = self.provider
         conversation = conversations.create(self.pool, "codex")
         self.assertEqual(conversation["title"], "")
         self.assertEqual(conversation["title_source"], "unset")
@@ -192,9 +194,11 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(result["conversation_id"], conversation["conversation_id"])
         self.assertFalse((self.pool.jobs_dir() / conversation["conversation_id"]).exists())
 
-    def test_running_session_cannot_delete(self):
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_running_session_cannot_delete(self, get_provider):
         from workbench.bridge import conversations
 
+        get_provider.return_value = self.provider
         conversation = conversations.create(self.pool, "codex")
         path = self.pool.jobs_dir() / conversation["conversation_id"] / "conversation.json"
         record = json.loads(path.read_text(encoding="utf-8"))
