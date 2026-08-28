@@ -285,7 +285,7 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/kps")
         self.assertEqual(status, 200)
         self.assertIn(">Counting</a>", body)
-        self.assertIn("class='weak-title'>Counting", body)
+        self.assertIn("本章知识点", body)
 
     def test_kp_page_renders(self):
         full_text = "<sup>∗</sup>*两类代表*<b>原始 HTML</b>" + "的组合计数条件。" * 38

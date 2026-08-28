@@ -396,12 +396,18 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"<a href='/w/{workspace['name']}/{key}'>{label}</a></div>"
         for key, label in nav_items
     )
+    actionable = [
+        item for item in weak_items
+        if item.get("score", 0) > 0.2 or item.get("reasons")
+    ]
     weak_html = "".join(
         f"<div class='weak-item'><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
         f"<span class='weak-title'>{html.escape(item['knowledge_item'])}</span>"
         "</a></div>"
-        for item in weak_items
+        for item in actionable
     )
+    rail_label = "优先回看" if actionable else "本章知识点"
+    empty = "暂无明确薄弱证据" if not actionable else "暂无提醒"
     return (
         "<section class='side-section workspace-switcher'>"
         "<p class='side-label'>工作区</p>"
@@ -411,8 +417,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<p class='side-label'>页面</p>"
         f"{nav}</nav>"
         "<section class='side-section weak-section'>"
-        "<div class='side-heading'><p class='side-label'>优先回看</p></div>"
-        f"<div class='weak-list'>{weak_html or '<p class=\"score\">暂无提醒</p>'}</div>"
+        f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"
+        f"<div class='weak-list'>{weak_html or '<p class=\"score\">' + empty + '</p>'}</div>"
         "</section>"
     )
 

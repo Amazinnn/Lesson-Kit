@@ -189,6 +189,16 @@ class ApiTests(unittest.TestCase):
         status, html = self.get_html("/w/dmath/")
         self.assertIn("弱项", html)
 
+    def test_neutral_knowledge_points_are_not_labeled_as_weak(self):
+        from workbench.server.pages import _left_column
+        html = _left_column(
+            {"name": "dmath"}, [{"name": "dmath"}],
+            [{"kp_id": "kp-1", "knowledge_item": "中性知识点", "score": 0.2, "reasons": []}],
+            "practice",
+        )
+        self.assertIn("本章知识点", html)
+        self.assertNotIn("优先回看", html)
+
 
 if __name__ == "__main__":
     unittest.main()
