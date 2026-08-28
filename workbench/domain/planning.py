@@ -4,6 +4,8 @@ from datetime import date, datetime
 import copy
 import math
 
+from workbench.domain import signals as signal_rules
+
 DEFAULT_TARGET = 3
 
 
@@ -14,7 +16,7 @@ def build_baseline_plan(workspace, *, now=None, available_minutes=None):
     kps = list(facts.get("kps") or [])
     problems = list(facts.get("problems") or [])
     progress = facts.get("progress") or {}
-    signals = {row.get("target_id"): row for row in facts.get("signals") or []}
+    signals = signal_rules.strongest_by_target(facts.get("signals") or [])
     due = {
         row.get("item_id") for row in facts.get("schedule") or []
         if row.get("item_type") == "kp" and _is_due(row.get("due_at"), now)

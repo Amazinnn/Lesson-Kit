@@ -75,6 +75,17 @@ class PlanningTests(unittest.TestCase):
         plan = build_baseline_plan(facts, now=datetime(2026, 8, 28, 9, 0))
         self.assertLessEqual(len(plan["queue"]), 3)
 
+    def test_lower_signal_does_not_hide_a_high_signal(self):
+        facts = self.facts()
+        facts["signals"] = [
+            {"target_id": "kp-002", "signal_id": "a-high", "weight": "high"},
+            {"target_id": "kp-002", "signal_id": "z-low", "weight": "low",
+             "evidence_count": 20},
+        ]
+        plan = build_baseline_plan(facts, now=datetime(2026, 8, 28, 9, 0))
+        item = next(row for row in plan["queue"] if row["kp_ids"] == ["kp-002"])
+        self.assertIn("重点练习", item["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

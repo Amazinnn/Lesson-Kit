@@ -64,6 +64,16 @@ class WeakTests(unittest.TestCase):
         scored = weak.score_all([kp("b")], signals, [], [], set(), NOW)
         self.assertGreater(scored[0]["score"], 1.0)
 
+    def test_multiple_signal_types_use_the_strongest_independent_of_order(self):
+        high = {**sig("b", "high", 1), "signal_id": "b-sig-confusion",
+                "signal_type": "confusion"}
+        low = {**sig("b", "low", 9), "signal_id": "b-sig-weak",
+               "signal_type": "weak_node"}
+        first = weak.score_all([kp("b")], [high, low], [], [], set(), NOW)
+        second = weak.score_all([kp("b")], [low, high], [], [], set(), NOW)
+        self.assertEqual(first, second)
+        self.assertEqual(first[0]["score"], 2.0)
+
     def test_overdue_boosts_ordering(self):
         kps = [kp("a"), kp("b")]
         signals = [sig("a"), sig("b")]
