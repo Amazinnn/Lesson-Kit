@@ -59,6 +59,14 @@ def due_list(pool, workspace, params, body):
 
 
 def daily_plan(pool, workspace, params, body):
+    path = _plan_path(workspace)
+    if path.is_file():
+        try:
+            saved = json.loads(path.read_text(encoding="utf-8"))
+            if saved.get("plan_version") == 1:
+                return saved
+        except (OSError, ValueError, AttributeError):
+            pass
     return planning.build_baseline_plan(
         queries.planning_facts(pool, workspace), now=datetime.now()
     )
@@ -69,10 +77,15 @@ def daily_plan_recalculate(pool, workspace, params, body):
         queries.planning_facts(pool, workspace), now=datetime.now()
     )
     plan = planning.apply_adjustment(baseline, (body or {}).get("adjustment"))
-    path = Path(workspace["path"]) / ".lessonkit" / "plan.json"
+    plan["plan_version"] = 1
+    path = _plan_path(workspace)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
     return {"plan": plan, "status": "已更新今日计划"}
+
+
+def _plan_path(workspace):
+    return Path(workspace["path"]) / ".lessonkit" / "plan.json"
 
 
 def pull_problems(pool, workspace, params, body):

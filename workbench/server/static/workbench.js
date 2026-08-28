@@ -12,10 +12,54 @@
   var CURRENT_KEY = "wb_current_" + WS;
   var SIMILAR_KEY = "wb_similar_round_" + WS;
   var MODE_KEY = "wb_practice_mode_" + WS;
-  var PRACTICE_PATH_KEY = "wb_practice_path_" + WS;
+  var SELECTION_KEY = "wb_kp_selection_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
   var selectedGraphKpId = null;
+
+  function selectedKpIds() {
+    var ids = load(SELECTION_KEY, []);
+    return Array.from(new Set((Array.isArray(ids) ? ids : []).filter(Boolean)));
+  }
+
+  function saveSelectedKpIds(ids) {
+    var unique = Array.from(new Set((ids || []).filter(Boolean)));
+    store(SELECTION_KEY, unique);
+    document.querySelectorAll("[data-kp-selection]").forEach(function (input) {
+      var id = input.dataset.selectionKpId || input.dataset.kpId;
+      input.checked = unique.indexOf(id) >= 0;
+    });
+    var count = document.getElementById("selection-count");
+    if (count) count.textContent = "已选 " + unique.length + " 个知识点";
+    var handoff = document.getElementById("practice-selected");
+    if (handoff) handoff.disabled = !unique.length;
+    return unique;
+  }
+
+  function bindSelectionControls() {
+    var ids = selectedKpIds();
+    document.querySelectorAll("[data-kp-selection]").forEach(function (input) {
+      var id = input.dataset.selectionKpId || input.dataset.kpId;
+      input.checked = ids.indexOf(id) >= 0;
+      input.addEventListener("change", function () {
+        var next = selectedKpIds().filter(function (item) { return item !== id; });
+        if (input.checked) next.push(id);
+        saveSelectedKpIds(next);
+      });
+    });
+    saveSelectedKpIds(ids);
+    var handoff = document.getElementById("practice-selected");
+    if (handoff) handoff.addEventListener("click", function () {
+      if (selectedKpIds().length) window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+    });
+    document.querySelectorAll("[data-queue-kp-ids]").forEach(function (link) {
+      link.addEventListener("click", function () {
+        try { saveSelectedKpIds(JSON.parse(link.dataset.queueKpIds || "[]")); } catch (_) { saveSelectedKpIds([]); }
+      });
+    });
+  }
+
+  bindSelectionControls();
 
   /* ---------- helpers ---------- */
 
@@ -401,11 +445,30 @@
           runGraphSimulation();
         });
         stage.appendChild(button);
+        var select = document.createElement("input");
+        select.type = "checkbox";
+        select.className = "graph-kp-selection";
+        select.dataset.selectionKpId = node.id;
+        select.setAttribute("data-kp-selection", "");
+        select.setAttribute("aria-label", "选择 " + node.title);
+        select.checked = selectedKpIds().indexOf(node.id) >= 0;
+        select.addEventListener("pointerdown", function (event) {
+          if (event.stopPropagation) event.stopPropagation();
+        });
+        select.addEventListener("click", function (event) {
+          if (event.stopPropagation) event.stopPropagation();
+        });
+        select.addEventListener("change", function () {
+          var next = selectedKpIds().filter(function (id) { return id !== node.id; });
+          if (select.checked) next.push(node.id);
+          saveSelectedKpIds(next);
+        });
+        stage.appendChild(select);
         var label = document.createElement("span");
         label.className = "graph-node-label";
         label.textContent = node.title;
         stage.appendChild(label);
-        graphNodeElements.set(node.id, { node: button, label: label });
+        graphNodeElements.set(node.id, { node: button, select: select, label: label });
       });
       if (!nodes.length) {
         var empty = document.createElement("p");
@@ -452,6 +515,10 @@
         if (!elements) return;
         elements.node.style.left = node.x + "px";
         elements.node.style.top = node.y + "px";
+        if (elements.select) {
+          elements.select.style.left = (node.x + node.radius - 4) + "px";
+          elements.select.style.top = (node.y - node.radius - 4) + "px";
+        }
         elements.label.style.left = node.x + "px";
         elements.label.style.top = (node.y + node.radius + 6) + "px";
       });
@@ -587,9 +654,8 @@
   var currentProblem = load(CURRENT_KEY, null);
   var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
   var scopedMatch = String(window.location.search || "").match(/[?&]kp=([^&]+)/);
-  var pathMatch = String(window.location.search || "").match(/[?&]path=([^&]+)/);
-  if (pathMatch) sessionStorage.setItem(PRACTICE_PATH_KEY, decodeURIComponent(pathMatch[1]));
   var scopedKpId = layout.dataset.practiceKpId || (scopedMatch && decodeURIComponent(scopedMatch[1])) || "";
+  if (scopedKpId) store(SELECTION_KEY, [scopedKpId]);
   var storedKps = load(KPS_KEY, []);
   if (stream && scopedKpId && (storedKps.length !== 1 || storedKps[0] !== scopedKpId)) {
     sessionStorage.removeItem(SESSION_KEY);
@@ -604,7 +670,7 @@
   }
 
   function currentKps() {
-    return load(KPS_KEY, []);
+    return load(KPS_KEY, selectedKpIds());
   }
 
   function setCurrent(problem) {
@@ -622,8 +688,12 @@
   }
 
   if (stream) {
+    var modeExam = document.getElementById("practice-mode-exam");
+    var modeFlashCard = document.getElementById("practice-mode-flash_card");
+    var modeYesNo = document.getElementById("practice-mode-yes_no");
     var modeImmediate = document.getElementById("practice-mode-immediate");
     var modeBatch = document.getElementById("practice-mode-batch");
+    var legacyModeControls = !!(modeImmediate || modeBatch);
     var actions = document.getElementById("composer-actions");
     var feedbackArea = document.getElementById("feedback-area");
     var ratingInput = document.getElementById("rating-input");
@@ -631,6 +701,7 @@
     var saveRating = document.getElementById("save-rating");
     var sessionEntry = document.getElementById("session-end-entry");
     var startArea = document.getElementById("start-area");
+    var practiceEmpty = document.getElementById("practice-empty-state");
     var practiceError = document.getElementById("practice-error");
     var retryPractice = document.getElementById("retry-practice");
 
@@ -649,6 +720,9 @@
     }
 
     function selectedMode() {
+      if (modeExam && modeExam.checked) return "exam";
+      if (modeFlashCard && modeFlashCard.checked) return "flash_card";
+      if (modeYesNo && modeYesNo.checked) return "yes_no";
       if (modeImmediate && modeImmediate.checked) return "immediate";
       if (modeBatch && modeBatch.checked) return "batch";
       return "";
@@ -679,8 +753,9 @@
       if (mode === "batch") window.location = "session-end";
       else {
         sessionStorage.removeItem(MODE_KEY);
-        modeImmediate.checked = false;
-        modeBatch.checked = false;
+        [modeExam, modeFlashCard, modeYesNo, modeImmediate, modeBatch].forEach(function (input) {
+          if (input) input.checked = false;
+        });
         startPractice.disabled = true;
         if (startArea) startArea.classList.remove("hidden");
       }
@@ -688,12 +763,18 @@
 
     function loadNext() {
       var kps = currentKps();
+      var mode = sessionStorage.getItem(MODE_KEY);
+      if (!kps.length || !mode) return;
       var exclude = session().map(function (item) { return item.problem_id; });
       clearPracticeError();
       api("/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kp_ids: kps, n: 1, mode: "weak", exclude_ids: exclude }),
+        body: JSON.stringify({
+          kp_ids: kps, n: 1,
+          mode: mode === "immediate" || mode === "batch" ? "weak" : mode,
+          exclude_ids: exclude,
+        }),
       }).then(function (result) {
         if (!result.problems.length) {
           finishExhausted();
@@ -723,25 +804,39 @@
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
       sessionStorage.setItem(MODE_KEY, mode);
-      if (scopedKpId) {
+      if (legacyModeControls && scopedKpId) {
         store(KPS_KEY, [scopedKpId]);
         if (startArea) startArea.classList.add("hidden");
         loadNext();
         return;
       }
-      api("/weak?limit=200").then(function (items) {
-        store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
-        if (startArea) startArea.classList.add("hidden");
-        loadNext();
-      }).catch(showPracticeError);
+      if (legacyModeControls) {
+        api("/weak?limit=200").then(function (items) {
+          store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
+          if (startArea) startArea.classList.add("hidden");
+          loadNext();
+        }).catch(showPracticeError);
+        return;
+      }
+      var ids = selectedKpIds();
+      if (!ids.length) {
+        if (practiceError) showPracticeError("请先在知识点视图选择范围", false);
+        return;
+      }
+      store(KPS_KEY, ids);
+      if (startArea) startArea.classList.add("hidden");
+      loadNext();
     }
 
     function bindMode(mode) {
       if (mode) mode.addEventListener("change", function () {
-        startPractice.disabled = !selectedMode();
+        startPractice.disabled = !selectedMode() || (!legacyModeControls && !selectedKpIds().length);
       });
     }
 
+    bindMode(modeExam);
+    bindMode(modeFlashCard);
+    bindMode(modeYesNo);
     bindMode(modeImmediate);
     bindMode(modeBatch);
     var restoredMode = sessionStorage.getItem(MODE_KEY);
@@ -751,6 +846,9 @@
     if (hasPendingRatings && !currentProblem) {
       window.location = "session-end";
     } else if (restoredMode && currentProblem) {
+      if (modeExam) modeExam.checked = restoredMode === "exam";
+      if (modeFlashCard) modeFlashCard.checked = restoredMode === "flash_card";
+      if (modeYesNo) modeYesNo.checked = restoredMode === "yes_no";
       if (modeImmediate) modeImmediate.checked = restoredMode === "immediate";
       if (modeBatch) modeBatch.checked = restoredMode === "batch";
       if (startArea) startArea.classList.add("hidden");
@@ -758,8 +856,9 @@
       answerBox.value = currentProblem.answer_text || "";
       showComposer(true);
     }
+    if (practiceEmpty && selectedKpIds().length) practiceEmpty.classList.add("hidden");
     if (startPractice) {
-      startPractice.disabled = !selectedMode();
+      startPractice.disabled = !selectedMode() || (!legacyModeControls && !selectedKpIds().length);
       startPractice.addEventListener("click", startSession);
     }
     if (retryPractice) retryPractice.addEventListener("click", loadNext);

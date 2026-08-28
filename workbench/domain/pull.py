@@ -2,6 +2,8 @@
 
 import random
 
+PRACTICE_MODES = {"exam", "flash_card", "yes_no"}
+
 
 def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
            seed=None):
@@ -11,26 +13,31 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
     ``shortage``.
     """
     exclude_ids = exclude_ids or set()
-    if mode == "all":
+    practice_mode = mode if mode in PRACTICE_MODES else None
+    order_mode = "weak" if practice_mode else mode
+    if order_mode == "all":
         problems = pool.problems_all()
         if source_kind:
             problems = [p for p in problems if p["source_kind"] == source_kind]
     else:
         problems = pool.problems_for_kps(kp_ids, source_kind)
-        if mode == "weak":
+        if order_mode == "weak":
             problems = sorted(
                 problems,
                 key=lambda p: (-_hit_count(p, kp_ids), p["problem_id"]),
             )
-        elif mode == "random":
+        elif order_mode == "random":
             random.Random(seed).shuffle(problems)
+    if practice_mode:
+        problems = [p for p in problems if _eligible_for_mode(p, practice_mode)]
     problems = [p for p in problems if p["problem_id"] not in exclude_ids]
 
     candidates = []
-    if len(problems) < n and mode != "all":
+    if len(problems) < n and order_mode != "all":
         candidates = [
             c for c in pool.gate_passed_candidates(kp_ids)
             if c["candidate_id"] not in exclude_ids
+            and (not practice_mode or _eligible_for_mode(c, practice_mode))
         ]
         candidates = sorted(
             candidates,
@@ -38,7 +45,7 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
         )
 
     shortage = []
-    if mode != "all":
+    if order_mode != "all":
         for kp_id in kp_ids:
             durable = sum(1 for p in problems if kp_id in p["kp_ids"])
             extra = sum(1 for c in candidates if kp_id in c["kp_ids"])
@@ -54,3 +61,12 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
 
 def _hit_count(item, kp_ids):
     return sum(1 for kp_id in kp_ids if kp_id in item["kp_ids"])
+
+
+def _eligible_for_mode(item, mode):
+    """Unmarked durable content is exam-only; other modes are explicit."""
+    declared = item.get("practice_modes", item.get("practice_mode"))
+    if isinstance(declared, str):
+        declared = [declared]
+    declared = set(declared or [])
+    return mode in declared if declared else mode == "exam"

@@ -150,6 +150,32 @@ class PullTests(unittest.TestCase):
         result = self.pull.select(self.pool, [], n=10, mode="all")
         self.assertEqual(len(result["problems"]), 3)
 
+    def test_practice_modes_do_not_silently_fall_back(self):
+        class ExplicitModePool:
+            def problems_for_kps(self, kp_ids, source_kind=None):
+                return [
+                    {"problem_id": "exam", "kp_ids": ["kp-1"]},
+                    {"problem_id": "card", "kp_ids": ["kp-1"], "practice_mode": "flash_card"},
+                    {"problem_id": "judge", "kp_ids": ["kp-1"], "practice_mode": "yes_no"},
+                ]
+
+            def gate_passed_candidates(self, kp_ids):
+                return []
+
+        pool = ExplicitModePool()
+        self.assertEqual(
+            [p["problem_id"] for p in self.pull.select(pool, ["kp-1"], 10, mode="exam")["problems"]],
+            ["exam"],
+        )
+        self.assertEqual(
+            [p["problem_id"] for p in self.pull.select(pool, ["kp-1"], 10, mode="flash_card")["problems"]],
+            ["card"],
+        )
+        self.assertEqual(
+            [p["problem_id"] for p in self.pull.select(pool, ["kp-1"], 10, mode="yes_no")["problems"]],
+            ["judge"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

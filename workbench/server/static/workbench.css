@@ -611,6 +611,31 @@ img { max-width: 100%; }
   }
 }
 
+.goal-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.goal-cards > h3,
+.daily-queue > h3 { grid-column: 1 / -1; margin: 0; }
+.goal-card { padding: 16px; }
+.goal-card h3 { margin: 0 0 8px; }
+.knowledge-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0 16px;
+}
+.knowledge-row label { display: flex; align-items: center; gap: 10px; }
+.graph-kp-selection {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+}
+.practice-empty-state { margin-bottom: 16px; }
+
 @media (max-width: 1023px) {
   #topbar { padding: 0 14px; }
   .mobile-drawer-controls { display: flex; }

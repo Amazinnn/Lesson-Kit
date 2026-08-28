@@ -515,6 +515,36 @@ test("native graph dashboard limits student detail to title, reminder, and forma
   assert.equal(app.window.location, "");
 });
 
+test("content-mode practice uses only the explicit knowledge selection", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  delete elements["practice-mode-immediate"];
+  delete elements["practice-mode-batch"];
+  elements["practice-mode-exam"] = new FakeElement("practice-mode-exam");
+  elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
+  elements["practice-mode-yes_no"] = new FakeElement("practice-mode-yes_no");
+  elements["practice-empty-state"] = new FakeElement("practice-empty-state");
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
+  });
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({ problems: [] });
+    },
+  });
+  elements["practice-mode-flash_card"].checked = true;
+  elements["practice-mode-flash_card"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.equal(calls.some((call) => call.url.includes("/weak?")), false);
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.deepEqual(JSON.parse(pull.options.body), {
+    kp_ids: ["kp-1", "kp-2"], n: 1, mode: "flash_card", exclude_ids: [],
+  });
+});
+
 test("unified rating controls have unique accessible labels and titled cards", async () => {
   const pending = new FakeElement("pending-ratings");
   const storage = new FakeStorage({

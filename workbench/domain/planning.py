@@ -1,27 +1,16 @@
-"""Small, deterministic daily-plan rules.
-
-The planner consumes facts supplied by the Data/Shell layer.  It never opens a
-database and never writes learning state; an Agent may adjust its result later.
-"""
+"""Pure, deterministic rules for a coarse daily learning plan."""
 
 from datetime import date, datetime
 import copy
 import math
 
-
-DEFAULT_MINUTES = 45
 DEFAULT_TARGET = 3
 
 
 def build_baseline_plan(workspace, *, now=None, available_minutes=None):
-    """Return a repeatable coarse plan for one workspace facts mapping.
-
-    ``workspace`` is deliberately a plain mapping so callers can assemble it
-    from any Data query without making the Domain depend on SQLite.
-    """
+    """Build a truthful, at-most-three-item plan from Data-layer facts."""
     now = now or datetime.now()
     facts = workspace or {}
-    minutes = _positive_int(available_minutes, DEFAULT_MINUTES)
     kps = list(facts.get("kps") or [])
     problems = list(facts.get("problems") or [])
     progress = facts.get("progress") or {}
@@ -30,14 +19,7 @@ def build_baseline_plan(workspace, *, now=None, available_minutes=None):
         row.get("item_id") for row in facts.get("schedule") or []
         if row.get("item_type") == "kp" and _is_due(row.get("due_at"), now)
     }
-    goals = [_goal(row) for row in facts.get("goals") or []]
-    if not goals:
-        goals = [{
-            "id": "course",
-            "kind": "long_term",
-            "title": "完成当前课程",
-            "deadline": None,
-        }]
+    goals = [_goal(row) for row in facts.get("goals") or [] if isinstance(row, dict)]
     deadline_boost = _deadline_boost(goals, now)
     queue = []
     for kp in kps:
@@ -50,25 +32,15 @@ def build_baseline_plan(workspace, *, now=None, available_minutes=None):
         completed = max(0, _number(stats.get("completed"), 0))
         coverage = 0 if total <= 0 else min(1.0, completed / total)
         signal = signals.get(kp_id) or {}
-        urgency = (3 if signal.get("weight") == "high" else
-                   2 if signal.get("weight") == "medium" else 0)
+        urgency = 3 if signal.get("weight") == "high" else 2 if signal.get("weight") == "medium" else 0
         if kp_id in due:
             urgency += 2
         if kp.get("importance") == "core":
             urgency += 1
-        target = DEFAULT_TARGET
-        if coverage < 0.5:
-            target += 1
-        if urgency >= 3:
-            target += 1
+        target = DEFAULT_TARGET + (1 if coverage < 0.5 else 0) + (1 if urgency >= 3 else 0)
         if deadline_boost > 1:
             target += math.ceil(deadline_boost - 1)
-        target = max(1, min(target, max(1, len(linked)))) if linked else 1
-        types = {}
-        for problem in linked:
-            kind = problem.get("problem_type") or "other"
-            types[kind] = types.get(kind, 0) + 1
-        title = kp.get("knowledge_item") or kp_id
+        target = max(1, min(target, len(linked))) if linked else 1
         reasons = []
         if coverage < 0.5:
             reasons.append("覆盖仍低")
@@ -78,31 +50,32 @@ def build_baseline_plan(workspace, *, now=None, available_minutes=None):
             reasons.append("当前需要重点练习")
         if not reasons:
             reasons.append("按课程顺序推进")
+        types = {}
+        for problem in linked:
+            kind = problem.get("problem_type") or "other"
+            types[kind] = types.get(kind, 0) + 1
         queue.append({
             "id": "kp:" + kp_id,
-            "title": title,
+            "title": kp.get("knowledge_item") or kp_id,
             "kp_ids": [kp_id],
             "target_count": target,
             "difficulty_mix": types or {"mixed": target},
             "reason": "；".join(reasons),
-            "practice_paths": ["exam", "flash_card", "yes_no"],
             "priority": urgency + (1 - coverage),
         })
     queue.sort(key=lambda item: (-item.pop("priority"), item["id"]))
-    return {
-        "goals": goals,
-        "queue": queue,
-        "totals": {
-            "target_count": sum(item["target_count"] for item in queue),
-            "knowledge_points": len(queue),
-            "available_minutes": minutes,
-        },
-        "generated_at": _iso(now),
+    queue = queue[:3]
+    totals = {
+        "target_count": sum(item["target_count"] for item in queue),
+        "knowledge_points": len(queue),
     }
+    if available_minutes is not None:
+        totals["available_minutes"] = _positive_int(available_minutes, 45)
+    return {"goals": goals, "queue": queue, "totals": totals, "generated_at": _iso(now)}
 
 
 def apply_adjustment(plan, adjustment):
-    """Apply only small, explicit Agent changes; invalid input is ignored."""
+    """Apply the existing bounded Agent adjustment contract."""
     if not isinstance(adjustment, dict):
         return plan
     result = copy.deepcopy(plan)
@@ -117,7 +90,7 @@ def apply_adjustment(plan, adjustment):
         target = max(1, min(20, int(adjustment["target_count"])))
         for item in queue:
             item["target_count"] = target
-    result["totals"]["target_count"] = sum(item.get("target_count", 0) for item in queue)
+    result.setdefault("totals", {})["target_count"] = sum(item.get("target_count", 0) for item in queue)
     result["adjusted"] = True
     return result
 
@@ -128,20 +101,21 @@ def _goal(value):
         "kind": value.get("kind") or "stage",
         "title": value.get("title") or "未命名目标",
         "deadline": value.get("deadline"),
+        "progress": value.get("progress"),
+        "coverage_progress": value.get("coverage_progress"),
+        "description": value.get("description"),
+        "scope": value.get("scope"),
     }
 
 
 def _deadline_boost(goals, now):
     distances = []
     for goal in goals:
-        deadline = goal.get("deadline")
-        if not deadline:
+        if not goal.get("deadline"):
             continue
         try:
-            when = datetime.fromisoformat(str(deadline).replace("Z", "+00:00"))
-            current = now
-            if when.tzinfo and current.tzinfo is None:
-                current = current.replace(tzinfo=when.tzinfo)
+            when = datetime.fromisoformat(str(goal["deadline"]).replace("Z", "+00:00"))
+            current = now.replace(tzinfo=when.tzinfo) if when.tzinfo and now.tzinfo is None else now
             distances.append(max(0, (when - current).days))
         except (TypeError, ValueError):
             continue
@@ -162,8 +136,7 @@ def _is_due(value, now):
 
 
 def _positive_int(value, fallback):
-    number = _number(value, fallback)
-    return max(1, int(number))
+    return max(1, int(_number(value, fallback)))
 
 
 def _number(value, fallback):

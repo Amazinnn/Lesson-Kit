@@ -55,6 +55,19 @@ class AgentPlanningTests(unittest.TestCase):
         self.assertTrue(result["plan"]["queue"])
         self.assertEqual(result["status"], "已更新今日计划")
 
+    def test_recalculated_plan_is_returned_by_the_next_read(self):
+        from workbench.server.api import daily_plan, daily_plan_recalculate
+        pool = self.pool_for(self.ws)
+        try:
+            saved = daily_plan_recalculate(
+                pool, self.ws, {}, {"adjustment": {"target_count": 2}}
+            )["plan"]
+            loaded = daily_plan(pool, self.ws, {}, {})
+        finally:
+            pool.close()
+        self.assertEqual(loaded["queue"], saved["queue"])
+        self.assertEqual(loaded["plan_version"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

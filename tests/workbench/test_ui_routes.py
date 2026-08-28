@@ -66,16 +66,37 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='session-end-entry'", body)
         self.assertIn("id='goto-session-end'", body)
 
-    def test_practice_page_requires_an_explicit_self_rating_mode(self):
+    def test_practice_page_requires_an_explicit_content_mode(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("id='practice-mode-immediate'", body)
-        self.assertIn("id='practice-mode-batch'", body)
-        self.assertIn("每题作答后自评", body)
-        self.assertIn("完成后统一自评", body)
+        self.assertIn("id='practice-mode-exam'", body)
+        self.assertIn("id='practice-mode-flash_card'", body)
+        self.assertIn("id='practice-mode-yes_no'", body)
         self.assertIn("id='start-practice' class='primary' disabled", body)
-        self.assertNotIn("标记卡点", body)
-        self.assertNotIn("下一题（不反馈）", body)
+
+    def test_practice_page_uses_explicit_scope_and_single_content_modes(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='practice-empty-state'", body)
+        for mode in ("exam", "flash_card", "yes_no"):
+            self.assertIn(f"id='practice-mode-{mode}'", body)
+        self.assertNotIn("practice-mode-immediate", body)
+        self.assertNotIn("practice-mode-batch", body)
+
+    def test_knowledge_views_expose_one_shared_selection_handoff(self):
+        for path in ("/w/dmath/kps", "/w/dmath/graph"):
+            status, body = self.fetch(path)
+            self.assertEqual(status, 200)
+            self.assertIn("id='practice-selected'", body)
+            self.assertIn("data-kp-selection", body)
+
+    def test_plan_uses_goal_cards_and_queue_handoff_without_mode_links(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("class='goal-cards'", body)
+        self.assertIn("class='plan-queue-item", body)
+        self.assertIn("data-queue-kp-ids", body)
+        self.assertNotIn("data-practice-path='", body)
 
     def test_practice_page_shows_coarse_daily_plan(self):
         status, body = self.fetch("/w/dmath/practice")
@@ -84,9 +105,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("今日计划", body)
         self.assertIn("Counting", body)
         self.assertNotIn("逐题", body)
-        self.assertIn("data-practice-path='exam'", body)
-        self.assertIn("data-practice-path='flash_card'", body)
-        self.assertIn("data-practice-path='yes_no'", body)
+        self.assertNotIn("data-practice-path='", body)
 
     def test_daily_plan_api_is_available_without_agent(self):
         status, payload = self.fetch_json("/api/w/dmath/plan")

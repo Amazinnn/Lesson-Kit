@@ -52,6 +52,29 @@ class PlanningTests(unittest.TestCase):
         self.assertGreater(plan["queue"][1]["target_count"], 0)
         self.assertEqual(plan["totals"]["available_minutes"], 30)
 
+    def test_no_goals_has_no_fabricated_goal_and_keeps_available_work(self):
+        facts = self.facts()
+        facts["goals"] = []
+        facts["schedule"] = [{"item_type": "kp", "item_id": "kp-001", "due_at": "2026-08-28"}]
+        plan = build_baseline_plan(facts, now=datetime(2026, 8, 28, 9, 0))
+        self.assertEqual(plan["goals"], [])
+        self.assertIn(["kp-001"], [item["kp_ids"] for item in plan["queue"]])
+        self.assertNotIn("available_minutes", plan["totals"])
+
+    def test_queue_is_capped_at_three_coarse_items(self):
+        facts = self.facts()
+        facts["goals"] = [{"id": "g1", "kind": "stage", "title": "Exam"}]
+        facts["kps"] = [
+            {"kp_id": f"kp-{i:03d}", "knowledge_item": f"KP {i}"}
+            for i in range(1, 6)
+        ]
+        facts["problems"] = [
+            {"problem_id": f"p-{i}", "kp_ids": [f"kp-{i:03d}"], "problem_type": "calculation"}
+            for i in range(1, 6)
+        ]
+        plan = build_baseline_plan(facts, now=datetime(2026, 8, 28, 9, 0))
+        self.assertLessEqual(len(plan["queue"]), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

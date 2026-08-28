@@ -1,6 +1,7 @@
 """Server-rendered pages: DSH-styled three-column shell."""
 
 import html
+import json
 import re
 from datetime import date
 
@@ -138,6 +139,36 @@ def practice_page(workspace, workspaces, weak_items, plan=None):
     return shell(workspace, workspaces, weak_items, middle, "practice", page_type="practice")
 
 
+def practice_page(workspace, workspaces, weak_items, plan=None):
+    """Render practice without deriving scope from weak items or the plan."""
+    plan = plan or {"goals": [], "queue": [], "totals": {}}
+    middle = (
+        _page_header("学习 / 明确范围", "练习", "先从知识点视图明确本轮弱项或复习范围，再选择一种练习模式。")
+        + "<div class='page-content practice-content'>" + _daily_plan(plan, workspace["name"])
+        + "<section id='practice-empty-state' class='empty-state card'>"
+        "<p class='section-kicker'>练习范围</p><h2>先从知识点开始</h2>"
+        "<p>请在知识点列表或图谱中勾选范围，再回到这里选择一种练习模式。</p></section>"
+        "<section id='start-area' class='practice-intro'><p class='section-kicker'>本轮练习</p>"
+        "<h2>选择一种练习模式</h2>"
+        "<p id='practice-scope-summary'>当前范围由知识点视图明确选择；本轮不会自动扩展范围。</p>"
+        "<fieldset class='practice-mode-choice'><legend>练习模式（必选其一）</legend>"
+        "<label><input id='practice-mode-exam' type='radio' name='practice-mode' value='exam'> 综合题</label>"
+        "<label><input id='practice-mode-flash_card' type='radio' name='practice-mode' value='flash_card'> 闪卡</label>"
+        "<label><input id='practice-mode-yes_no' type='radio' name='practice-mode' value='yes_no'> 判断</label></fieldset>"
+        "<button id='start-practice' class='primary' disabled>开始本轮练习</button></section>"
+        "<section class='practice-flow' aria-label='练习过程'><p id='practice-error' class='inline-error hidden' aria-live='polite'></p>"
+        "<button id='retry-practice' class='outline sm hidden' type='button'>重试</button><div id='stream' class='practice-card-area'></div>"
+        "<div id='composer' class='practice-answer-card hidden'><div id='composer-row'><textarea id='answer-box' rows='3' placeholder='写下你的作答'></textarea>"
+        "<button id='answer-submit' class='primary'>提交作答</button></div><div id='composer-actions' class='hidden'>"
+        "<button id='show-answer' class='outline'>查看解析</button></div><div id='feedback-area' class='feedback-card hidden'>"
+        "<label for='rating-input'>自评分（1–5）</label><input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='输入 1–5'>"
+        "<textarea id='feedback-note' rows='2' placeholder='可选备注'></textarea><button id='save-rating' class='primary'>保存并下一题</button></div></div></section>"
+        "<div id='session-end-entry' class='session-end-entry hidden'><span>本题未提交的内容只保留在当前会话。</span><div>"
+        "<button id='no-time' class='ghost'>跳到下一道题目</button><button id='goto-session-end' class='outline'>提前结束本次练习</button></div></div></div>"
+    )
+    return shell(workspace, workspaces, weak_items, middle, "practice", page_type="practice")
+
+
 def _daily_plan(plan, workspace_name):
     goals = plan.get("goals") or []
     queue = plan.get("queue") or []
@@ -263,11 +294,67 @@ def graph_page(workspace, workspaces, weak_items, has_artifact):
         "<button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button>"
         "<button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button>"
         "<button id='graph-fit' class='outline sm'>适应画布</button></div>"
-        "</div><div id='graph-canvas' tabindex='0' aria-label='知识图谱画布'></div>"
+        "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div>"
         "</section></div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "graph", graph_mode=True,
                  page_type="graph")
+
+
+def _daily_plan(plan, workspace_name):
+    goals = plan.get("goals") or []
+    queue = (plan.get("queue") or [])[:3]
+    goal_cards = "".join(
+        "<article class='goal-card card'><h3>" + html.escape(goal.get("title") or "未命名目标") + "</h3>"
+        + ("<p class='goal-progress'>覆盖进度：" + html.escape(str(goal.get("coverage_progress", goal.get("progress", "暂无")))) + "</p>" if goal.get("coverage_progress", goal.get("progress")) is not None else "")
+        + ("<p class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</p>" if goal.get("deadline") else "")
+        + ("<details><summary>查看说明与范围</summary><p>" + html.escape(str(goal.get("description") or goal.get("scope") or "")) + "</p></details>" if goal.get("description") or goal.get("scope") else "")
+        + "</article>"
+        for goal in goals
+    ) or "<p class='muted'>暂无已设置的长期或阶段目标。</p>"
+    queue_html = "".join(
+        "<li class='plan-queue-item'><a class='queue-handoff' data-queue-kp-ids='" + html.escape(json.dumps(item.get("kp_ids") or [], ensure_ascii=False)) + "' href='/w/" + html.escape(workspace_name) + "/practice'><strong>" + html.escape(item.get("title") or "未命名知识点") + "</strong></a><span class='plan-count'>约 " + str(item.get("target_count", 1)) + " 题</span><p>" + html.escape(item.get("reason") or "按当前覆盖情况安排") + "</p></li>"
+        for item in queue
+    ) or "<li class='muted'>今天暂无到期或可用安排。</li>"
+    return (
+        "<section id='daily-plan' class='daily-plan' aria-label='今日计划'><div class='section-heading'><div><p class='section-kicker'>学习安排</p><h2>今日计划</h2></div><span class='plan-total'>" + str((plan.get("totals") or {}).get("target_count", 0)) + " 题</span><button id='recalculate-plan' class='ghost sm' type='button'>重新安排</button></div>"
+        "<section class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
+        "<section class='daily-queue' aria-label='今天先做'><h3>今天先做</h3><ol class='plan-queue'>" + queue_html + "</ol></section></section>"
+    )
+
+
+def _knowledge_selection_controls():
+    return (
+        "<div class='knowledge-selection-bar' role='region' aria-label='练习范围'>"
+        "<span id='selection-count' class='muted'>已选 0 个知识点</span>"
+        "<button id='practice-selected' class='primary' type='button' disabled>练习已选知识点</button></div>"
+    )
+
+
+def kps_page(workspace, workspaces, weak_items, pool):
+    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+    ranked = weak.score_all(pool.kps(prefix), pool.signals(), pool.schedule_rows(), pool.relations(), set(), date.today())
+    items = "".join(
+        "<li class='knowledge-row'><label><input type='checkbox' data-kp-selection data-kp-id='" + html.escape(item["kp_id"]) + "'> "
+        "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a></label></li>"
+        for item in ranked
+    )
+    middle = (_page_header("学习 / 当前章节", "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
+        + "<div class='page-content'>" + _knowledge_selection_controls()
+        + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>本章知识点</h2></div></div>"
+        + f"<ul class='knowledge-list'>{items or '<li class=\"muted\">暂无知识点</li>'}</ul></section></div>")
+    return shell(workspace, workspaces, weak_items, middle, "kps", page_type="kps")
+
+
+def graph_page(workspace, workspaces, weak_items, has_artifact):
+    middle = (_page_header("知识网络 / 当前章节", "知识图谱", "勾选知识点后，可将同一范围交给练习。")
+        + "<div class='page-content graph-content'>" + _knowledge_selection_controls()
+        + "<section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
+        "<label class='visually-hidden' for='graph-search'>搜索知识点</label><input id='graph-search' placeholder='搜索知识点'>"
+        "<label class='graph-gravity-label' for='graph-gravity'>聚拢</label><input id='graph-gravity' type='range' min='0' max='100' value='30' aria-label='调整图谱聚拢程度' title='调整图谱聚拢程度'>"
+        "<div class='graph-zoom' aria-label='缩放'><button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button><button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button><button id='graph-fit' class='outline sm'>适应画布</button></div>"
+        "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div></section></div>")
+    return shell(workspace, workspaces, weak_items, middle, "graph", graph_mode=True, page_type="graph")
 
 
 def session_end_page(workspace, workspaces, weak_items):
