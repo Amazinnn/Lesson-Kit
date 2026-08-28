@@ -543,3 +543,23 @@ based on existing data.
 - **THEN** order alternates ascending, descending, ascending without changing
   selection or writing a learning record
 
+### Requirement: Review page with card sessions
+
+The workbench SHALL provide a fourth navigation page `复习` (review) rendered
+in the three-column shell: a due-items overview grouped by due date with type
+and direction badges, a scope handoff to practice, and an inline directional
+card session as specified by the review-workbench capability. The page SHALL
+follow the shared visual tokens and SHALL keep the card session's primary
+action visible in the first screen.
+
+#### Scenario: Open the review page
+
+- **WHEN** the learner clicks the review navigation entry
+- **THEN** the middle area shows the due-items overview for the current
+  workspace and the review navigation entry is marked active
+
+#### Scenario: Card session entry visibility
+
+- **WHEN** no due row carries a direction
+- **THEN** the card-session primary action is not shown and the page states
+  the empty state honestly
