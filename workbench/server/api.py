@@ -111,18 +111,44 @@ def _plan_path(workspace):
 
 
 def pull_problems(pool, workspace, params, body):
+    body = _request_object(body)
+    kp_ids = body.get("kp_ids")
+    if not isinstance(kp_ids, list) or not kp_ids or not all(
+        isinstance(item, str) and item for item in kp_ids
+    ):
+        raise ApiError(400, "kp_ids must be a non-empty string list")
+    unknown = [kp_id for kp_id in kp_ids if pool.kp(kp_id) is None]
+    if unknown:
+        raise ApiError(404, f"unknown knowledge point: {unknown[0]}")
+    n = body.get("n", 5)
+    if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= 100:
+        raise ApiError(400, "n must be an integer from 1 to 100")
+    mode = body.get("mode", "weak")
+    if mode not in {"weak", "random", "all", *pull.PRACTICE_MODES}:
+        raise ApiError(400, "invalid practice mode")
+    exclude_ids = body.get("exclude_ids", [])
+    if not isinstance(exclude_ids, list) or not all(
+        isinstance(item, str) for item in exclude_ids
+    ):
+        raise ApiError(400, "exclude_ids must be a string list")
     return pull.select(
-        pool, body.get("kp_ids", []), n=body.get("n", 5),
-        mode=body.get("mode", "weak"), source_kind=body.get("source_kind"),
-        exclude_ids=set(body.get("exclude_ids", [])),
+        pool, kp_ids, n=n, mode=mode, source_kind=body.get("source_kind"),
+        exclude_ids=set(exclude_ids),
     )
 
 
 def practice(pool, workspace, params, body):
+    body = _request_object(body)
     problem_id = body.get("problem_id")
     result = body.get("result")
     if not problem_id or not result:
         raise ApiError(400, "problem_id and result are required")
+    if not isinstance(problem_id, str):
+        raise ApiError(400, "problem_id must be a string")
+    if pool.problem(problem_id) is None:
+        raise ApiError(404, f"unknown problem: {problem_id}")
+    if result not in schedule_rules.RESULT_QUALITY:
+        raise ApiError(400, "invalid practice result")
     pool.insert_attempt(problem_id, result, body.get("note"),
                         body.get("answer_text"))
     status_map = {"correct": "reviewing", "wrong": "wrong", "stuck": "stuck"}
@@ -138,10 +164,35 @@ def practice(pool, workspace, params, body):
 
 
 def feedback_record(pool, workspace, params, body):
+    body = _request_object(body)
+    item_type = body.get("item_type")
+    item_id = body.get("item_id")
+    rating = body.get("rating")
+    note = body.get("note")
+    if item_type not in {"kp", "problem"}:
+        raise ApiError(400, "item_type must be kp or problem")
+    if not isinstance(item_id, str) or not item_id:
+        raise ApiError(400, "item_id is required")
+    item = pool.kp(item_id) if item_type == "kp" else pool.problem(item_id)
+    if item is None:
+        raise ApiError(404, f"unknown {item_type}: {item_id}")
+    if rating is not None and (
+        isinstance(rating, bool) or not isinstance(rating, int) or rating not in range(1, 6)
+    ):
+        raise ApiError(400, "rating must be an integer from 1 to 5")
+    if note is not None and not isinstance(note, str):
+        raise ApiError(400, "note must be a string")
+    if rating is None and not (note and note.strip()):
+        raise ApiError(400, "rating or note is required")
     return feedback.apply(
-        pool, body.get("item_type"), body.get("item_id"),
-        rating=body.get("rating"), note=body.get("note"),
+        pool, item_type, item_id, rating=rating, note=note,
     )
+
+
+def _request_object(body):
+    if not isinstance(body, dict):
+        raise ApiError(400, "request body must be a JSON object")
+    return body
 
 
 def problem_detail(pool, workspace, params, body):

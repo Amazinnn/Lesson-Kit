@@ -40,6 +40,11 @@ class ApiTests(unittest.TestCase):
         with urllib.request.urlopen(request) as resp:
             return resp.status, json.loads(resp.read().decode("utf-8"))
 
+    def post_error(self, path, payload):
+        with self.assertRaises(HTTPError) as ctx:
+            self.post(path, payload)
+        return ctx.exception.code, json.loads(ctx.exception.read().decode("utf-8"))
+
     def get_html(self, path):
         with urllib.request.urlopen(f"http://127.0.0.1:{self.port}{path}") as resp:
             return resp.status, resp.read().decode("utf-8")
@@ -73,12 +78,65 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("due_at", data)
 
+    def test_practice_rejects_unknown_problem_without_writing(self):
+        status, data = self.post_error("/api/w/dmath/practice", {
+            "problem_id": "dmath-ch06-prob-999", "result": "wrong",
+        })
+        self.assertEqual(status, 404)
+        self.assertIn("unknown problem", data["error"])
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM problem_attempts").fetchone()[0], 0)
+        finally:
+            conn.close()
+
+    def test_practice_rejects_invalid_result_without_writing(self):
+        status, _ = self.post_error("/api/w/dmath/practice", {
+            "problem_id": "dmath-ch06-prob-001", "result": "perfect",
+        })
+        self.assertEqual(status, 400)
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM problem_attempts").fetchone()[0], 0)
+        finally:
+            conn.close()
+
     def test_feedback_endpoint(self):
         status, data = self.post("/api/w/dmath/feedback", {
             "item_type": "kp", "item_id": "dmath-ch06-kp-001", "rating": 2,
         })
         self.assertEqual(status, 200)
         self.assertGreater(len(data), 0)
+
+    def test_feedback_rejects_unknown_item_and_invalid_rating(self):
+        status, _ = self.post_error("/api/w/dmath/feedback", {
+            "item_type": "kp", "item_id": "dmath-ch06-kp-999", "rating": 2,
+        })
+        self.assertEqual(status, 404)
+        status, _ = self.post_error("/api/w/dmath/feedback", {
+            "item_type": "kp", "item_id": "dmath-ch06-kp-001", "rating": 7,
+        })
+        self.assertEqual(status, 400)
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM feedback_events").fetchone()[0], 0)
+        finally:
+            conn.close()
+
+    def test_pull_rejects_empty_unknown_and_malformed_scope(self):
+        for payload, expected in (
+            ({"kp_ids": [], "n": 1, "mode": "exam"}, 400),
+            ({"kp_ids": ["dmath-ch06-kp-999"], "n": 1, "mode": "exam"}, 404),
+            ({"kp_ids": ["dmath-ch06-kp-001"], "n": 0, "mode": "exam"}, 400),
+            ({"kp_ids": ["dmath-ch06-kp-001"], "n": 1, "mode": "mystery"}, 400),
+        ):
+            status, _ = self.post_error("/api/w/dmath/pull", payload)
+            self.assertEqual(status, expected)
+
+    def test_learning_write_endpoints_require_json_objects(self):
+        for path in ("/practice", "/feedback", "/pull"):
+            status, _ = self.post_error(f"/api/w/dmath{path}", [])
+            self.assertEqual(status, 400)
 
     def test_problem_detail_endpoint(self):
         status, data = self.get("/api/w/dmath/problem/dmath-ch06-prob-001")
