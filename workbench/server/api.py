@@ -62,13 +62,16 @@ def daily_plan(pool, workspace, params, body):
     if path.is_file():
         try:
             saved = json.loads(path.read_text(encoding="utf-8"))
-            if saved.get("plan_version") == 1:
+            if (saved.get("plan_version") == 1
+                    and saved.get("plan_date") == date.today().isoformat()):
                 return saved
         except (OSError, ValueError, AttributeError):
             pass
-    return planning.build_baseline_plan(
+    plan = planning.build_baseline_plan(
         queries.planning_facts(pool, workspace), now=datetime.now()
     )
+    plan.update({"plan_version": 1, "plan_date": date.today().isoformat()})
+    return plan
 
 
 def daily_plan_recalculate(pool, workspace, params, body):
@@ -76,10 +79,12 @@ def daily_plan_recalculate(pool, workspace, params, body):
         queries.planning_facts(pool, workspace), now=datetime.now()
     )
     plan = planning.apply_adjustment(baseline, (body or {}).get("adjustment"))
-    plan["plan_version"] = 1
+    plan.update({"plan_version": 1, "plan_date": date.today().isoformat()})
     path = _plan_path(workspace)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary = path.with_name(path.name + f".{threading.get_ident()}.tmp")
+    temporary.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.replace(path)
     return {"plan": plan, "status": "已更新今日计划"}
 
 
@@ -89,24 +94,37 @@ def goals_list(pool, workspace, params, body):
 
 def goals_create(pool, workspace, params, body):
     try:
-        return {"goal": goals.create_goal(workspace["path"], body or {})}
+        goal = goals.create_goal(workspace["path"], body or {})
+        _invalidate_plan(workspace)
+        return {"goal": goal}
     except ValueError as exc:
         raise ApiError(400, str(exc))
 
 
 def goals_update(pool, workspace, params, body):
     try:
-        return {"goal": goals.update_goal(workspace["path"], params["goal_id"], body or {})}
+        goal = goals.update_goal(workspace["path"], params["goal_id"], body or {})
+        _invalidate_plan(workspace)
+        return {"goal": goal}
     except ValueError as exc:
         raise ApiError(400, str(exc))
 
 
 def goals_delete(pool, workspace, params, body):
-    return goals.delete_goal(workspace["path"], params["goal_id"])
+    result = goals.delete_goal(workspace["path"], params["goal_id"])
+    _invalidate_plan(workspace)
+    return result
 
 
 def _plan_path(workspace):
     return Path(workspace["path"]) / ".lessonkit" / "plan.json"
+
+
+def _invalidate_plan(workspace):
+    try:
+        _plan_path(workspace).unlink()
+    except FileNotFoundError:
+        pass
 
 
 def pull_problems(pool, workspace, params, body):

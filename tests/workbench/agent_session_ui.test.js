@@ -167,4 +167,5 @@ test("legacy provider-memory and daily-create branches are absent", () => {
   assert.equal(SOURCE.includes("AI_DAILY_KEY"), false);
   assert.equal(SOURCE.includes("aiLocalDate"), false);
   assert.equal(SOURCE.includes("aiTask("), false);
+  assert.equal(SOURCE.includes("wb_plan_heartbeat_"), false);
 });
