@@ -680,3 +680,65 @@ img { max-width: 100%; }
   .next-step-actions button { flex: 1; }
   .hub-page { width: min(100% - 32px, 960px); padding: 36px 0; }
 }
+
+/* ---------- review page ---------- */
+.review-content { max-width: 800px; }
+.review-card-entry {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 0 22px;
+}
+.review-card-count { color: var(--dsw-label-secondary); font-size: 13px; }
+.review-card-session { padding: 22px; margin-bottom: 30px; }
+.review-card-progress { color: var(--dsw-label-secondary); font-size: 13px; }
+.review-card-face {
+  min-height: 88px; padding: 16px; margin: 12px 0;
+  border: 1px solid var(--dsw-border-l2); border-radius: 12px;
+  background: var(--dsw-bg-layer-1);
+  font-size: 16px; line-height: 1.7;
+}
+#reveal-card { margin-bottom: 12px; }
+.review-neighbours {
+  margin: 10px 0 4px; color: var(--dsw-label-secondary); font-size: 13px;
+}
+.card-rating-row {
+  display: flex; align-items: center; gap: 8px; margin-top: 14px;
+}
+.card-rating-row .muted { margin-right: 4px; }
+#card-summary { margin: 10px 0; }
+.review-group { margin-bottom: 28px; }
+.review-group-head {
+  display: flex; align-items: baseline; gap: 10px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--dsw-border-l2, #eceef1);
+}
+.review-group-head h2 { font-size: 16px; margin: 0; }
+.review-group-count { color: var(--dsw-label-secondary); font-size: 13px; }
+.review-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  gap: 10px; align-items: center;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--dsw-border-l1);
+}
+.review-label {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.badge {
+  display: inline-block; padding: 1px 8px; border-radius: 22px;
+  font-size: 12px; line-height: 20px;
+  color: var(--dsw-label-secondary);
+  background: var(--dsw-border-l1);
+}
+.badge-direction {
+  background: transparent;
+  border: 1px solid var(--dsw-brand-accent);
+  color: var(--dsw-brand-accent);
+}
+.review-due {
+  color: var(--dsw-label-secondary); font-size: 13px;
+  min-width: 72px; text-align: right;
+}
+.review-later { padding: 8px 2px; }
+@media (max-width: 700px) {
+  .review-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .review-due { text-align: left; }
+}

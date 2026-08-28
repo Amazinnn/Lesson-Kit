@@ -114,6 +114,8 @@ class FakeElement {
 
   focus() {}
 
+  scrollIntoView() {}
+
   getBoundingClientRect() {
     return { left: 0, top: 0, width: this.clientWidth, height: this.clientHeight };
   }
@@ -164,7 +166,9 @@ function runWorkbench({
     hidden: false,
     listeners: {},
     addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
-    trigger(type) { for (const callback of this.listeners[type] || []) callback(); },
+    trigger(type, event = {}) {
+      for (const callback of this.listeners[type] || []) callback(event);
+    },
     getElementById(id) {
       return elements[id] || null;
     },
@@ -181,12 +185,16 @@ function runWorkbench({
     querySelectorAll() {
       return [];
     },
+    querySelector() {
+      return null;
+    },
   };
   let rafCalls = 0;
   const window = {
     innerWidth: 1280,
     location: "",
     addEventListener() {},
+    scrollTo() {},
     matchMedia() { return { matches: reducedMotion }; },
   };
   vm.runInNewContext(SOURCE, {
@@ -1384,4 +1392,125 @@ test("ordinary problems render without a verdict element or micro quiz controls"
   await flush();
   assert.ok(elements["composer-actions"] !== undefined);
   assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
+});
+
+function reviewElements() {
+  const elements = {
+    layout: layout(),
+    "card-session": new FakeElement("card-session"),
+    "card-face": new FakeElement("card-face"),
+    "card-back": new FakeElement("card-back"),
+    "card-neighbours": new FakeElement("card-neighbours"),
+    "reveal-card": new FakeElement("reveal-card"),
+    "card-rating": new FakeElement("card-rating"),
+    "card-progress": new FakeElement("card-progress"),
+    "card-summary": new FakeElement("card-summary"),
+    "card-back-list": new FakeElement("card-back-list"),
+    "start-card-review": new FakeElement("start-card-review"),
+  };
+  elements["reveal-card"].classList.add("hidden");
+  elements["card-rating"].classList.add("hidden");
+  elements["card-summary"].classList.add("hidden");
+  elements["card-back-list"].classList.add("hidden");
+  elements["card-session"].classList.add("hidden");
+  return elements;
+}
+
+const DUE_ROWS = [
+  { item_type: "kp", item_id: "kp-1", direction: "", label: "正向卡", due_at: "2026-08-28" },
+  { item_type: "kp", item_id: "kp-2", direction: "reverse", label: "反向卡", due_at: "2026-08-28" },
+];
+
+test("card session reviews directional rows through the directional feedback path", async () => {
+  const calls = [];
+  const elements = reviewElements();
+  runWorkbench({
+    elements,
+    storage: new FakeStorage(),
+    fetch: (url, options) => {
+      calls.push({ url: String(url), body: options && options.body });
+      if (url.includes("/due")) return jsonResponse(DUE_ROWS);
+      if (url.endsWith("/kp/kp-1")) {
+        return jsonResponse({ kp: { kp_id: "kp-1", knowledge_item: "乘法规则", body: "两步相乘。" }, relations: [], neighbours: [] });
+      }
+      if (url.endsWith("/kp/kp-2")) {
+        return jsonResponse({ kp: { kp_id: "kp-2", knowledge_item: "加法规则", body: "两步相加。" }, relations: [], neighbours: [] });
+      }
+      return jsonResponse({});
+    },
+  });
+  assert.equal(elements["start-card-review"].classList.contains("hidden"), false);
+  elements["start-card-review"].click();
+  await flush();
+  // only the directional row enters the card session
+  assert.equal(elements["card-progress"]._textContent, "第 1 / 1 张");
+  assert.ok(elements["card-face"]._innerHTML.includes("两步相加。"));
+  assert.equal(elements["reveal-card"].disabled, false);
+  elements["reveal-card"].click();
+  await flush();
+  assert.ok(elements["card-back"]._innerHTML.includes("加法规则"));
+  assert.equal(elements["card-rating"].classList.contains("hidden"), false);
+  const ratingButton = new FakeElement("rate-4");
+  ratingButton.dataset.cardRating = "4";
+  ratingButton.closest = (selector) =>
+    selector === "[data-card-rating]" ? ratingButton : null;
+  elements["card-rating"].trigger("click", { target: ratingButton });
+  await flush();
+  const feedback = calls.find((call) => call.url.endsWith("/feedback"));
+  assert.deepEqual(JSON.parse(feedback.body), {
+    item_type: "kp", item_id: "kp-2", rating: 4, direction: "reverse",
+  });
+  assert.ok(elements["card-summary"]._textContent.includes("本轮卡片完成 1 张"));
+});
+
+test("card session resumes from tab-scoped state after refresh", async () => {
+  const elements = reviewElements();
+  const storage = new FakeStorage({
+    [`wb_card_session_alpha`]: JSON.stringify({
+      rows: DUE_ROWS, index: 1, done: 1,
+    }),
+  });
+  runWorkbench({
+    elements,
+    storage,
+    fetch: (url) => {
+      if (url.endsWith("/kp/kp-2")) {
+        return jsonResponse({ kp: { kp_id: "kp-2", knowledge_item: "加法规则", body: "两步相加。" }, relations: [], neighbours: [] });
+      }
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  assert.equal(elements["card-progress"]._textContent, "第 2 / 2 张 · 已评 1");
+});
+
+test("review page problem handoff stores scope and include id", () => {
+  const elements = reviewElements();
+  elements["review-content"] = new FakeElement("review-content");
+  const button = new FakeElement("practice-one");
+  button.dataset.includeId = "p-9";
+  button.dataset.kpIds = JSON.stringify(["kp-1"]);
+  button.closest = (selector) =>
+    selector === ".review-practice-problem" ? button : null;
+  const storage = new FakeStorage();
+  const app = runWorkbench({
+    elements,
+    storage,
+    fetch: () => jsonResponse({}),
+  });
+  elements["review-content"].trigger("click", { target: button });
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-1"]);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_practice_include_alpha")), ["p-9"]);
+  assert.equal(app.window.location, "/w/alpha/practice");
+});
+
+test("review page without directional rows has no card entry", () => {
+  const elements = reviewElements();
+  delete elements["start-card-review"];
+  runWorkbench({
+    elements,
+    storage: new FakeStorage(),
+    fetch: () => jsonResponse({}),
+  });
+  assert.equal(elements["card-session"].classList.contains("hidden"), true);
 });

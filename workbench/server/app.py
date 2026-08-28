@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 from workbench import registry
 from workbench.domain import weak
+from workbench.data import queries
 from workbench.server import api as api_mod
 from workbench.server import pages
 
@@ -180,6 +181,17 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 html_body = pages.graph_page(
                     workspace, workspaces, weak_items,
                     self._graph_artifact(workspace).is_file(),
+                )
+            elif page == "review":
+                overview = queries.review_overview(pool)
+                due_items = overview["items"]
+                problem_kps = {
+                    item["item_id"]: (pool.problem(item["item_id"]) or {}).get("kp_ids", [])
+                    for item in due_items if item["item_type"] == "problem"
+                }
+                html_body = pages.review_page(
+                    workspace, workspaces, weak_items, due_items, problem_kps,
+                    later_count=overview["later_count"],
                 )
             elif page == "session-end":
                 html_body = pages.session_end_page(workspace, workspaces, weak_items)

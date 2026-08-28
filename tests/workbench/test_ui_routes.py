@@ -444,5 +444,60 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 404)
 
 
+    def test_left_nav_has_review_entry(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn(">练习<", body)
+        self.assertIn(">知识点<", body)
+        self.assertIn(">复习<", body)
+        self.assertIn(">知识图谱<", body)
+
+    def seed_schedule(self, item_type, item_id, days_offset, direction=""):
+        import datetime
+        conn = sqlite3.connect(self.fixture.db_path)
+        due = (datetime.date.today() + datetime.timedelta(days=days_offset)).isoformat()
+        conn.execute(
+            "INSERT OR REPLACE INTO review_schedule (item_type, item_id, direction,"
+            " state, repetitions, ease, interval_days, due_at, last_rating,"
+            " last_reviewed_at) VALUES (?, ?, ?, 'review', 1, 2.5, 2, ?, 3, ?)",
+            (item_type, item_id, direction, due, due),
+        )
+        conn.commit()
+        conn.close()
+
+    def test_review_page_groups_rows_and_hides_scheduler_parameters(self):
+        self.seed_schedule("kp", "dmath-ch06-kp-001", -2)
+        self.seed_schedule("kp", "dmath-ch06-kp-002", 0)
+        self.seed_schedule("kp", "dmath-ch06-kp-003", 3, direction="reverse")
+        self.seed_schedule("problem", "dmath-ch06-prob-001", 0)
+        self.seed_schedule("kp", "dmath-ch06-kp-004", 10)
+        status, body = self.fetch("/w/dmath/review")
+        self.assertEqual(status, 200)
+        self.assertIn("今天到期", body)
+        self.assertIn("含逾期 1 项", body)
+        self.assertIn("未来 7 天", body)
+        self.assertIn("以后还有 1 项", body)
+        self.assertIn("反向", body)
+        self.assertIn("data-queue-kp-ids='[&quot;dmath-ch06-kp-001&quot;]'", body)
+        self.assertIn("data-include-id='dmath-ch06-prob-001'", body)
+        self.assertIn("可以复习", body)
+        self.assertNotIn("ease", body)
+        self.assertNotIn("interval_days", body)
+        self.assertNotIn("repetitions", body)
+
+    def test_review_page_empty_state(self):
+        status, body = self.fetch("/w/dmath/review")
+        self.assertEqual(status, 200)
+        self.assertIn("今天没有到期的复习", body)
+        self.assertNotIn("start-card-review", body)
+
+    def test_review_page_card_entry_for_directional_rows(self):
+        self.seed_schedule("kp", "dmath-ch06-kp-002", 0, direction="reverse")
+        status, body = self.fetch("/w/dmath/review")
+        self.assertEqual(status, 200)
+        self.assertIn("start-card-review", body)
+        self.assertIn("1 张方向卡到期", body)
+
+
 if __name__ == "__main__":
     unittest.main()

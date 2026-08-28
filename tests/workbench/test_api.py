@@ -317,5 +317,70 @@ class ApiTests(unittest.TestCase):
         self.assertNotIn("优先回看", html)
 
 
+    def _seed_schedule(self, item_type, item_id, due_iso, direction=""):
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.execute(
+            "INSERT OR REPLACE INTO review_schedule (item_type, item_id, direction,"
+            " state, repetitions, ease, interval_days, due_at, last_rating,"
+            " last_reviewed_at) VALUES (?, ?, ?, 'review', 1, 2.5, 2, ?, 3, ?)",
+            (item_type, item_id, direction, due_iso, due_iso),
+        )
+        conn.commit()
+        conn.close()
+
+    def test_due_includes_direction_and_limit(self):
+        import datetime
+        today = datetime.date.today().isoformat()
+        self._seed_schedule("kp", "dmath-ch06-kp-001", today)
+        self._seed_schedule("kp", "dmath-ch06-kp-001", today, direction="reverse")
+        status, data = self.get("/api/w/dmath/due")
+        self.assertEqual(status, 200)
+        directions = {(i["item_id"], i["direction"]) for i in data}
+        self.assertIn(("dmath-ch06-kp-001", "reverse"), directions)
+        status, data = self.get("/api/w/dmath/due?limit=1")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(data), 1)
+
+    def test_pull_include_ids_restricts_scope(self):
+        status, data = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 5, "mode": "weak",
+            "include_ids": ["dmath-ch06-prob-001"],
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            [p["problem_id"] for p in data["problems"]], ["dmath-ch06-prob-001"])
+
+    def test_pull_include_ids_with_all_mode_rejected(self):
+        status, data = self.post_error("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 5, "mode": "all",
+            "include_ids": ["dmath-ch06-prob-001"],
+        })
+        self.assertEqual(status, 400)
+
+    def test_feedback_direction_targets_schedule_row(self):
+        import datetime
+        today = datetime.date.today().isoformat()
+        self._seed_schedule("kp", "dmath-ch06-kp-001", today)
+        self._seed_schedule("kp", "dmath-ch06-kp-001", today, direction="reverse")
+        status, _ = self.post("/api/w/dmath/feedback", {
+            "item_type": "kp", "item_id": "dmath-ch06-kp-001",
+            "rating": 5, "direction": "reverse",
+        })
+        self.assertEqual(status, 200)
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            rows = {
+                row[0]: row[1]
+                for row in conn.execute(
+                    "SELECT direction, due_at FROM review_schedule"
+                    " WHERE item_type='kp' AND item_id='dmath-ch06-kp-001'"
+                )
+            }
+        finally:
+            conn.close()
+        self.assertEqual(rows[""], today)
+        self.assertNotEqual(rows["reverse"], today)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -70,17 +70,39 @@ def due_list(pool):
     for row in pool.schedule_rows():
         if not _is_due(row, today):
             continue
-        label = _item_label(pool, row["item_type"], row["item_id"])
-        items.append({
-            "item_type": row["item_type"],
-            "item_id": row["item_id"],
-            "due_at": row["due_at"],
-            "interval_days": row["interval_days"],
-            "ease": row["ease"],
-            "last_rating": row["last_rating"],
-            "label": label,
-        })
+        items.append(_due_item(row, pool, today))
     return items
+
+
+def review_overview(pool, upcoming_days=7):
+    """Due rows plus the next ``upcoming_days`` days, and a count of the rest."""
+    today = date.today()
+    items = []
+    later_count = 0
+    for row in pool.schedule_rows():
+        try:
+            days = (date.fromisoformat(str(row["due_at"])[:10]) - today).days
+        except ValueError:
+            days = 0
+        if days <= upcoming_days:
+            items.append(_due_item(row, pool, today))
+        else:
+            later_count += 1
+    return {"items": items, "later_count": later_count}
+
+
+def _due_item(row, pool, today):
+    label = _item_label(pool, row["item_type"], row["item_id"])
+    return {
+        "item_type": row["item_type"],
+        "item_id": row["item_id"],
+        "direction": row.get("direction") or "",
+        "due_at": row["due_at"],
+        "interval_days": row["interval_days"],
+        "ease": row["ease"],
+        "last_rating": row["last_rating"],
+        "label": label,
+    }
 
 
 def problem_detail(pool, problem_id):
