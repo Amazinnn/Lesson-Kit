@@ -17,9 +17,16 @@ def next_job_id(jobs_dir):
 
 def create_job(jobs_dir, operation, context, instruction, output_contract=None):
     """Create a job directory with task.json, task.md, and status.json."""
-    job_id = next_job_id(jobs_dir)
-    job_dir = jobs_dir / job_id
-    job_dir.mkdir(parents=True, exist_ok=True)
+    jobs_dir.mkdir(parents=True, exist_ok=True)
+    number = int(next_job_id(jobs_dir)[4:])
+    while True:
+        job_id = f"job-{number:03d}"
+        job_dir = jobs_dir / job_id
+        try:
+            job_dir.mkdir()
+            break
+        except FileExistsError:
+            number += 1
     task = {
         "operation": operation,
         "context": context,

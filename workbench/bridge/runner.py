@@ -4,9 +4,7 @@ from workbench import registry
 from workbench.bridge import contracts, jobs, providers, teacher
 
 
-def run_ai_task(pool, workspace_path, operation, problem_id, provider_name=None,
-                note=None, user_answer=None, stuck_step=None):
-    """Run an explain/diagnose task for a problem; returns the job id."""
+def _task(pool, operation, problem_id, note=None, user_answer=None, stuck_step=None):
     problem = pool.problem(problem_id)
     if problem is None:
         raise ValueError(f"unknown problem: {problem_id}")
@@ -33,10 +31,36 @@ def run_ai_task(pool, workspace_path, operation, problem_id, provider_name=None,
     )
     instruction = teacher.render(operation, context, str(output_path))
     output_contract = {"sections": sections}
+    return context, instruction, output_contract, output_path
+
+
+def create_ai_task(pool, operation, problem_id, note=None, user_answer=None,
+                   stuck_step=None):
+    """Reserve and persist a queued task before a worker is started."""
+    context, instruction, output_contract, _output_path = _task(
+        pool, operation, problem_id, note, user_answer, stuck_step
+    )
     jobs_dir = pool.jobs_dir()
-    job_id = jobs.create_job(
+    return jobs.create_job(
         jobs_dir, operation, context, instruction, output_contract
     )
+
+
+def run_ai_task(pool, workspace_path, operation, problem_id, provider_name=None,
+                note=None, user_answer=None, stuck_step=None, job_id=None):
+    """Run an explain/diagnose task; optionally use an already queued job."""
+    context, instruction, output_contract, output_path = _task(
+        pool, operation, problem_id, note, user_answer, stuck_step
+    )
+    jobs_dir = pool.jobs_dir()
+    if job_id is None:
+        job_id = jobs.create_job(
+            jobs_dir, operation, context, instruction, output_contract
+        )
+    else:
+        queued = jobs.status(jobs_dir, job_id)
+        if queued.get("state") != "queued" or queued.get("operation") != operation:
+            raise ValueError(f"job is not queued for {operation}: {job_id}")
 
     provider = _resolve_provider(provider_name)
     if provider is None:
