@@ -351,6 +351,7 @@ def kps_page(workspace, workspaces, weak_items, pool):
                 problem_counts[kp_id] += 1
     states = {row["item_id"]: row["state"] for row in pool.current_states()
               if row["item_type"] == "kp"}
+    state_labels = {"needs_work": "重点练习", "review": "可以复习"}
     items = "".join(
         "<li class='knowledge-row' data-kp-order='" + str(index) + "' data-kp-title='" + html.escape(item.get("knowledge_item") or "")
         + "' data-kp-problem-count='" + str(problem_counts.get(item["kp_id"], 0))
@@ -358,8 +359,9 @@ def kps_page(workspace, workspaces, weak_items, pool):
         + "' data-kp-importance='" + html.escape(item.get("importance") or "supplementary") + "'>"
         "<label><input type='checkbox' data-kp-selection data-kp-id='" + html.escape(item["kp_id"]) + "'> "
         "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
-        "<span class='knowledge-meta'>" + str(problem_counts.get(item["kp_id"], 0)) + " 题 · "
-        + html.escape(states.get(item["kp_id"], "unmarked")) + "</span></label></li>"
+        "<span class='knowledge-meta'>" + str(problem_counts.get(item["kp_id"], 0)) + " 题"
+        + (" · " + state_labels[states[item["kp_id"]]] if states.get(item["kp_id"]) in state_labels else "")
+        + "</span></label></li>"
         for index, item in enumerate(source_kps)
     )
     middle = (_page_header("学习 / 当前章节", "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
