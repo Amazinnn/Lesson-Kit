@@ -155,7 +155,7 @@ class PullTests(unittest.TestCase):
             def problems_for_kps(self, kp_ids, source_kind=None):
                 return [
                     {"problem_id": "exam", "kp_ids": ["kp-1"]},
-                    {"problem_id": "card", "kp_ids": ["kp-1"], "practice_mode": "flash_card"},
+                    {"problem_id": "card", "kp_ids": ["kp-1"], "practice_mode": "micro"},
                     {"problem_id": "judge", "kp_ids": ["kp-1"], "practice_mode": "yes_no"},
                 ]
 
@@ -168,7 +168,7 @@ class PullTests(unittest.TestCase):
             ["exam"],
         )
         self.assertEqual(
-            [p["problem_id"] for p in self.pull.select(pool, ["kp-1"], 10, mode="flash_card")["problems"]],
+            [p["problem_id"] for p in self.pull.select(pool, ["kp-1"], 10, mode="micro")["problems"]],
             ["card"],
         )
         self.assertEqual(

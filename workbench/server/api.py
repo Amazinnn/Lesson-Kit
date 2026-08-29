@@ -171,6 +171,41 @@ def pull_problems(pool, workspace, params, body):
     )
 
 
+def pull_cards(pool, workspace, params, body):
+    """Pull flash cards inside the selected scope; due rows first."""
+    body = _request_object(body)
+    kp_ids = body.get("kp_ids")
+    if not isinstance(kp_ids, list) or not kp_ids or not all(
+        isinstance(item, str) and item for item in kp_ids
+    ):
+        raise ApiError(400, "kp_ids must be a non-empty string list")
+    unknown = [kp_id for kp_id in kp_ids if pool.kp(kp_id) is None]
+    if unknown:
+        raise ApiError(404, f"unknown knowledge point: {unknown[0]}")
+    exclude_ids = body.get("exclude_ids", [])
+    if not isinstance(exclude_ids, list) or not all(
+        isinstance(item, str) for item in exclude_ids
+    ):
+        raise ApiError(400, "exclude_ids must be a string list")
+    exclude = set(exclude_ids)
+    today = date.today().isoformat()
+    due_at = {
+        row["item_id"]: str(row["due_at"])
+        for row in pool.schedule_rows()
+        if row["item_type"] == "card" and row.get("due_at")
+    }
+    cards = [
+        card for card in pool.cards_for_kps(kp_ids)
+        if card["card_id"] not in exclude
+    ]
+    cards.sort(key=lambda card: (
+        (0, due_at[card["card_id"]], card["card_id"])
+        if due_at.get(card["card_id"], "")[:10] <= today and card["card_id"] in due_at
+        else (1, "", card["card_id"])
+    ))
+    return {"cards": cards}
+
+
 def practice(pool, workspace, params, body):
     body = _request_object(body)
     problem_id = body.get("problem_id")
@@ -204,11 +239,16 @@ def feedback_record(pool, workspace, params, body):
     item_id = body.get("item_id")
     rating = body.get("rating")
     note = body.get("note")
-    if item_type not in {"kp", "problem"}:
-        raise ApiError(400, "item_type must be kp or problem")
+    if item_type not in {"kp", "problem", "card"}:
+        raise ApiError(400, "item_type must be kp, problem, or card")
     if not isinstance(item_id, str) or not item_id:
         raise ApiError(400, "item_id is required")
-    item = pool.kp(item_id) if item_type == "kp" else pool.problem(item_id)
+    if item_type == "kp":
+        item = pool.kp(item_id)
+    elif item_type == "card":
+        item = pool.card(item_id)
+    else:
+        item = pool.problem(item_id)
     if item is None:
         raise ApiError(404, f"unknown {item_type}: {item_id}")
     if rating is not None and (

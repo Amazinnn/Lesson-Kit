@@ -569,7 +569,7 @@ def build_parser():
 
     action = ingest_sub.add_parser("recipe")
     action.add_argument("recipe",
-                        choices=["knowledge", "problems", "candidates", "views", "micro-quiz"])
+                        choices=["knowledge", "problems", "candidates", "views", "micro-quiz", "flash-card"])
     action.add_argument("--input", required=True)
     action.add_argument("--output", required=True)
     action.add_argument("--apply", action="store_true")

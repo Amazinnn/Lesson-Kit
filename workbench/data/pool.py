@@ -116,6 +116,21 @@ class Pool:
         item["kp_ids"] = json.loads(item.get("kp_ids") or "[]")
         return item
 
+    # -- flash cards -------------------------------------------------------
+
+    def cards_for_kps(self, kp_ids):
+        conn = self.connect()
+        sql = "SELECT * FROM flash_cards WHERE "
+        sql += " OR ".join("kp_id=?" for _ in kp_ids)
+        rows = conn.execute(sql + " ORDER BY card_id", list(kp_ids)).fetchall()
+        return [dict(r) for r in rows]
+
+    def card(self, card_id):
+        row = self.connect().execute(
+            "SELECT * FROM flash_cards WHERE card_id=?", (card_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
     # -- learner state ----------------------------------------------------
 
     def signals(self):

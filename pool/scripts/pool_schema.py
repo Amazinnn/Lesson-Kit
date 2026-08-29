@@ -308,6 +308,20 @@ def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
     return changes
 
 
+def _widen_item_type_check(conn, table, create_sql):
+    """Rebuild a workbench table whose item_type CHECK predates 'card' rows."""
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)
+    ).fetchone()
+    if not row or "'card'" in (row[0] or ""):
+        return []
+    conn.execute(f"ALTER TABLE {table} RENAME TO {table}_widening_old")
+    conn.execute(create_sql)
+    conn.execute(f"INSERT INTO {table} SELECT * FROM {table}_widening_old")
+    conn.execute(f"DROP TABLE {table}_widening_old")
+    return [f"{table}_item_type_card"]
+
+
 def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
@@ -316,7 +330,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         conn.execute(
             """
             CREATE TABLE review_schedule (
-                item_type        TEXT NOT NULL CHECK (item_type IN ('kp', 'problem')),
+                item_type        TEXT NOT NULL CHECK (item_type IN ('kp', 'problem', 'card')),
                 item_id          TEXT NOT NULL,
                 direction        TEXT NOT NULL DEFAULT '',
                 state            TEXT NOT NULL DEFAULT 'learning'
@@ -338,7 +352,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             """
             CREATE TABLE feedback_events (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_type  TEXT NOT NULL CHECK (item_type IN ('kp', 'problem')),
+                item_type  TEXT NOT NULL CHECK (item_type IN ('kp', 'problem', 'card')),
                 item_id    TEXT NOT NULL,
                 rating     INTEGER CHECK (rating BETWEEN 1 AND 5),
                 note       TEXT,
@@ -378,6 +392,53 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             """
         )
         changes.append("content_sequences")
+
+    if not table_exists(conn, "flash_cards"):
+        conn.execute(
+            """
+            CREATE TABLE flash_cards (
+                card_id         TEXT PRIMARY KEY,
+                kp_id           TEXT NOT NULL,
+                front           TEXT NOT NULL,
+                back            TEXT NOT NULL,
+                source_evidence TEXT NOT NULL
+            )
+            """
+        )
+        changes.append("flash_cards")
+
+    changes.extend(_widen_item_type_check(
+        conn, "review_schedule",
+        """
+        CREATE TABLE review_schedule (
+            item_type        TEXT NOT NULL CHECK (item_type IN ('kp', 'problem', 'card')),
+            item_id          TEXT NOT NULL,
+            direction        TEXT NOT NULL DEFAULT '',
+            state            TEXT NOT NULL DEFAULT 'learning'
+                             CHECK (state IN ('learning', 'review', 'relearning')),
+            repetitions      INTEGER NOT NULL DEFAULT 0,
+            ease             REAL NOT NULL DEFAULT 2.5,
+            interval_days    REAL NOT NULL DEFAULT 0,
+            due_at           TEXT,
+            last_rating      INTEGER CHECK (last_rating BETWEEN 1 AND 5),
+            last_reviewed_at TEXT,
+            PRIMARY KEY (item_type, item_id, direction)
+        )
+        """,
+    ))
+    changes.extend(_widen_item_type_check(
+        conn, "feedback_events",
+        """
+        CREATE TABLE feedback_events (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_type  TEXT NOT NULL CHECK (item_type IN ('kp', 'problem', 'card')),
+            item_id    TEXT NOT NULL,
+            rating     INTEGER CHECK (rating BETWEEN 1 AND 5),
+            note       TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+        """,
+    ))
 
     for entity_type, table, id_column, marker in (
         ("kp", "knowledge_points", "kp_id", "kp"),
@@ -442,6 +503,13 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     ("micro_quiz", "TEXT"),
                 ],
             )
+        )
+        # 2026-08-29 introduce-flash-card: the practice mode formerly named
+        # flash_card is renamed micro; migrate existing marks idempotently.
+        conn.execute(
+            "UPDATE problems SET practice_modes = REPLACE(practice_modes, "
+            "'\"flash_card\"', '\"micro\"') "
+            "WHERE practice_modes LIKE '%flash_card%'"
         )
     if table_exists(conn, "candidate_problems"):
         changes.extend(

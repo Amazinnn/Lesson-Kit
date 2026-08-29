@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from workbench.bridge import conversation_providers
+from workbench.domain import cards as card_rules
 from workbench.domain import micro_quiz as micro_quiz_rules
 
 
@@ -30,9 +31,12 @@ KP_TYPES = {
     "lab-implementation", "memory-recall",
 }
 KP_IMPORTANCE = {"core", "supplementary", "optional"}
-RECIPE_NAMES = {"knowledge", "problems", "candidates", "views", "micro-quiz"}
+RECIPE_NAMES = {"knowledge", "problems", "candidates", "views", "micro-quiz",
+                "flash-card"}
 MICRO_QUIZ_KIND = "micro-quiz-patch"
 MICRO_QUIZ_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-mq-\d{3}$")
+FLASH_CARD_KIND = "flash-card-patch"
+FLASH_CARD_ID = re.compile(r"^[a-z0-9-]+-fc-\d{3}$")
 _TAG = re.compile(r"</?(sup|sub)>")
 _CURRENT_RECOVERY_PROBLEMS = {
     f"dmath-ch06-prob-{index:03d}" for index in range(1, 304)
@@ -196,11 +200,14 @@ def recipe(name, db_path, input_path, output_dir, apply_changes=False, backup_pa
         if name == "micro-quiz":
             applied = apply_micro_quiz(database, input_path, backup_path)
             result.update(applied)
+        elif name == "flash-card":
+            applied = apply_flash_cards(database, input_path, backup_path)
+            result.update(applied)
         elif name == "problems":
             applied = apply(database, input_path, backup_path)
             result.update(applied)
         else:
-            raise ValueError("only the problems and micro-quiz recipes have an apply stage")
+            raise ValueError("only the problems, micro-quiz, and flash-card recipes have an apply stage")
     write_artifact(Path(output_dir) / "recipe.json", result)
     return result
 
@@ -359,6 +366,95 @@ def _micro_quiz_row(item):
         "practice_modes": item.get("practice_modes")
         or micro_quiz_rules.practice_modes_for(payload.get("quiz_type")),
         "micro_quiz": payload,
+    }
+
+
+def apply_flash_cards(db_path, manifest_path, backup_path=None):
+    """Revalidate and insert flash cards while holding one write lock."""
+    manifest = read_artifact(manifest_path)
+    database = Path(db_path)
+    backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
+    if backup.exists():
+        raise FileExistsError(f"recoverable copy already exists: {backup}")
+    conn = sqlite3.connect(database)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        verified = _gate_flash_cards(conn, manifest)
+        if not verified["ok"]:
+            raise ValueError("; ".join(verified["errors"]))
+        _backup_database(database, backup)
+        for item in manifest["items"]:
+            row = _flash_card_row(item)
+            conn.execute(
+                "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence)"
+                " VALUES (?, ?, ?, ?, ?)",
+                (row["card_id"], row["kp_id"], row["front"], row["back"],
+                 row["source_evidence"]),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"ok": True, "applied": True, "backup_path": str(backup),
+            "accounting": verified["accounting"]}
+
+
+def _gate_flash_cards(conn, manifest):
+    errors = []
+    if not isinstance(manifest, dict) or manifest.get("kind") != FLASH_CARD_KIND:
+        return {"ok": False, "errors": ["expected flash-card-patch artifact"],
+                "accounting": _accounting(conn)}
+    items = manifest.get("items")
+    if not isinstance(items, list) or not items:
+        return {"ok": False, "errors": ["flash-card-patch requires an items list"],
+                "accounting": _accounting(conn)}
+
+    known_kps = {row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")}
+    cards_table = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='flash_cards'"
+    ).fetchone()
+    existing_ids = (
+        {row[0] for row in conn.execute("SELECT card_id FROM flash_cards")}
+        if cards_table else set()
+    )
+    seen_ids = set()
+    for item in items:
+        card_id = item.get("card_id") if isinstance(item, dict) else None
+        if not card_rules.is_valid_card_id(card_id):
+            errors.append(f"{card_id}: id must look like <scope>-fc-NNN")
+            continue
+        if card_id in existing_ids or card_id in seen_ids:
+            errors.append(f"{card_id}: card id already exists")
+            continue
+        seen_ids.add(card_id)
+        row = _flash_card_row(item)
+        if row is None:
+            errors.append(f"{card_id}: item must be an object")
+            continue
+        if row["kp_id"] not in known_kps:
+            errors.append(f"{card_id}: unknown knowledge point {row['kp_id']}")
+        for field in ("front", "back"):
+            errors.extend(
+                f"{card_id}: {field} {reason}"
+                for reason in _markup_errors(row[field])
+            )
+        errors.extend(
+            f"{card_id}: {reason}" for reason in card_rules.validate_card_row(row)
+        )
+    return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
+
+
+def _flash_card_row(item):
+    if not isinstance(item, dict):
+        return None
+    return {
+        "card_id": item.get("card_id"),
+        "kp_id": item.get("kp_id"),
+        "front": item.get("front"),
+        "back": item.get("back"),
+        "source_evidence": item.get("source_evidence"),
     }
 
 

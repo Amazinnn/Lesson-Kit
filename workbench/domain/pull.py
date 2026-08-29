@@ -2,7 +2,7 @@
 
 import random
 
-PRACTICE_MODES = {"exam", "flash_card", "yes_no"}
+PRACTICE_MODES = {"exam", "micro", "yes_no"}
 
 
 def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,

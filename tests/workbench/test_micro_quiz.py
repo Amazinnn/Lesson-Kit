@@ -51,6 +51,15 @@ class MicroQuizRulesTests(unittest.TestCase):
         })
         self.assertGreaterEqual(len(errors), 1)
 
+    def test_retired_types_are_rejected(self):
+        for quiz_type in ("short_answer", "closest_answer"):
+            errors = micro_quiz.validate_payload(quiz_type, {
+                "answer_key": "参考", "error_reason": "r", "source_evidence": "s",
+            })
+            self.assertTrue(any("retired" in e for e in errors), quiz_type)
+        self.assertNotIn("short_answer", micro_quiz.QUIZ_TYPES)
+        self.assertNotIn("closest_answer", micro_quiz.QUIZ_TYPES)
+
     def test_stem_and_kp_rules(self):
         row = {
             "kp_ids": ["kp-1", "kp-2"], "problem_text": "短题干",
@@ -215,10 +224,10 @@ class MicroQuizPullTests(unittest.TestCase):
         finally:
             pool.close()
 
-    def test_flash_card_pull_skips_other_quiz_marks(self):
+    def test_micro_pull_skips_other_quiz_marks(self):
         pool = self.pool()
         try:
-            result = pull_select(pool, mode="flash_card")
+            result = pull_select(pool, mode="micro")
             self.assertEqual(result["problems"], [])
             self.assertEqual(result["shortage"], ["dmath-ch06-kp-001"])
         finally:
@@ -234,7 +243,7 @@ class MicroQuizPullTests(unittest.TestCase):
             pool.close()
 
 
-def pull_select(pool, mode="flash_card"):
+def pull_select(pool, mode="micro"):
     from workbench.domain import pull
     return pull.select(pool, ["dmath-ch06-kp-001"], 5, mode=mode)
 

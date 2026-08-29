@@ -1,7 +1,7 @@
 """Micro-quiz content contract (pure rules)."""
 
-QUIZ_TYPES = ("yes_no", "single_choice", "multiple_choice",
-              "closest_answer", "short_answer")
+QUIZ_TYPES = ("yes_no", "single_choice", "multiple_choice")
+RETIRED_QUIZ_TYPES = ("closest_answer", "short_answer")
 OBJECTIVE_TYPES = ("yes_no", "single_choice", "multiple_choice")
 YES_NO_OPTIONS = ["是", "否"]
 MAX_OPTIONS = 6
@@ -9,10 +9,8 @@ MAX_STEM_CHARS = 200
 
 _PRACTICE_MODES = {
     "yes_no": ["yes_no"],
-    "single_choice": ["flash_card", "yes_no"],
-    "multiple_choice": ["flash_card", "yes_no"],
-    "closest_answer": ["flash_card"],
-    "short_answer": ["flash_card"],
+    "single_choice": ["micro"],
+    "multiple_choice": ["micro"],
 }
 
 
@@ -32,6 +30,8 @@ def validate_payload(quiz_type, payload):
     owns the knowledge-point and identity rules.
     """
     errors = []
+    if quiz_type in RETIRED_QUIZ_TYPES:
+        return [f"retired quiz type: {quiz_type}"]
     if quiz_type not in QUIZ_TYPES:
         return [f"unknown quiz type: {quiz_type}"]
     if not isinstance(payload, dict):
