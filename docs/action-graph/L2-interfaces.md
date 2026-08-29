@@ -2,7 +2,7 @@
 
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者。
 
-## API 路由（`/api/w/{ws}` 前缀，33 条）
+## API 路由（`/api/w/{ws}` 前缀，29 条）
 
 | 方法 路径 | 读写 | 服务层 | 给谁 |
 |---|---|---|---|
@@ -18,15 +18,12 @@
 | POST `/feedback` | 写 | 四件套 | 双 |
 | GET `/problem/{id}` · GET `/kp/{id}` | 读 | 查询 | 双 |
 | GET `/graph/model` · POST `/graph/state` · POST `/graph/kp` | 读/写 | 查询+图谱编辑 | 浏（模型可双） |
-| GET `/ai/providers` · GET `/ai/task-providers` | 读 | provider 两口径 | 浏 |
+| GET `/ai/providers` | 读 | 对话 provider（PATH 发现+overrides） | 浏 |
 | GET·POST `/ai/sessions`；PATCH·DELETE·GET `/ai/sessions/{id}` | 读/写 | 对话 | 浏 |
 | POST `/ai/sessions/{id}/turns` · GET `…/turns/{turn}` · POST `…/cancel` | 读/写 | 对话 | 浏 |
-| POST `/ai/{operation}`〔explain/diagnose，**待移除**〕 | 写 | 桥任务 | 浏+CLI |
-| GET `/ai/jobs/{job}` | 读 | 桥任务 | 双 |
-| GET `/explain/{problem_id}`〔**待移除**〕 | 读 | explain 文件 | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 
-## CLI 命令（`python -m workbench.cli.main …`，22 条）
+## CLI 命令（`python -m workbench.cli.main …`，21 条）
 
 | 命令 | 性质 | 给谁 |
 |---|---|---|
@@ -35,7 +32,6 @@
 | `pull` | 读（按 KP 拉题） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容） | Agent |
-| `ai` | 桥任务发起/查询 | Agent |
 | `bridge add` | 配置任务 provider | 人 |
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe` 六子链） | 内容治理唯一写池通道 | 双 |

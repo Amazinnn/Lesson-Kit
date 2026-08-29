@@ -225,8 +225,6 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='ai-input'", body)
         self.assertIn("id='ai-send'", body)
         self.assertIn("id='ai-stop'", body)
-        self.assertNotIn("id='ai-explain'", body)
-        self.assertNotIn("id='ai-diagnose'", body)
 
     def test_chat_never_offers_a_draft_attachment_setting(self):
         _, practice = self.fetch("/w/dmath/practice")
@@ -435,28 +433,6 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(data["nodes"][0]["title"], "Counting")
         self.assertIn("id='graph-projection'", body)
-
-    def test_explain_result_endpoint(self):
-        explain_dir = (self.fixture.ws / ".lessonkit" / "explain"
-                       / "dmath" / "ch06")
-        explain_dir.mkdir(parents=True)
-        (explain_dir / "dmath-ch06-prob-001.md").write_text(
-            "# Explain\n\n## 结论\n\nok\n", encoding="utf-8"
-        )
-        status, data = self.fetch_json(
-            "/api/w/dmath/explain/dmath-ch06-prob-001"
-        )
-        self.assertEqual(status, 200)
-        self.assertIn("## 结论", data["markdown"])
-
-    def test_explain_result_missing_404(self):
-        with self.assertRaises(HTTPError) as ctx:
-            urllib.request.urlopen(
-                f"http://127.0.0.1:{self.port}"
-                "/api/w/dmath/explain/dmath-ch06-prob-999"
-            )
-        self.assertEqual(ctx.exception.code, 404)
-
 
     def test_left_nav_returns_to_three_pages(self):
         status, body = self.fetch("/w/dmath/practice")

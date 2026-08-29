@@ -53,7 +53,6 @@ ROUTES = [
     ("POST", "/api/w/{name}/graph/state", api_mod.graph_state),
     ("POST", "/api/w/{name}/graph/kp", api_mod.graph_kp),
     ("GET", "/api/w/{name}/ai/providers", api_mod.ai_providers),
-    ("GET", "/api/w/{name}/ai/task-providers", api_mod.ai_task_providers),
     ("GET", "/api/w/{name}/ai/sessions", api_mod.ai_sessions_list),
     ("POST", "/api/w/{name}/ai/sessions", api_mod.ai_sessions_create),
     ("PATCH", "/api/w/{name}/ai/sessions/{conversation_id}", api_mod.ai_session_update),
@@ -62,9 +61,6 @@ ROUTES = [
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/turns", api_mod.ai_turn_start),
     ("GET", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}", api_mod.ai_turn_events),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/cancel", api_mod.ai_turn_cancel),
-    ("POST", "/api/w/{name}/ai/{operation}", api_mod.ai_run),
-    ("GET", "/api/w/{name}/ai/jobs/{job_id}", api_mod.ai_status),
-    ("GET", "/api/w/{name}/explain/{problem_id}", api_mod.explain_result),
     ("GET", "/api/w/{name}/graph", api_mod.graph_artifact),
 ]
 

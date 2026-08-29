@@ -715,8 +715,6 @@ img { max-width: 100%; }
 .problem-options label.option-selected { background: var(--dsw-interactive-bg-hover); }
 .problem-options label.option-correct { outline: 2px solid #1a7f37; outline-offset: 1px; border-radius: 4px; }
 #card-nav { display: inline-block; margin-left: 8px; }
-#ai-task-status { margin: 8px 0 0; }
-#ai-task-result { margin-top: 10px; }
 .time-off-note { padding: 8px 2px; }
 .calendar-grid {
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;

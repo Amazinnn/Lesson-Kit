@@ -23,7 +23,7 @@
 | `workspaces.json` | 工作区注册表 | CLI `init` | 已实现 |
 | `bridges.json` | 任务 provider 配置（`wb bridge add`） | CLI `bridge` | 已实现 |
 | `jobs/` | 任务工作文件 + 对话留痕（conv-###） | 桥 | 已实现 |
-| `explain/{course}/{chapter}/` | 讲解/诊断产物 | 讲解任务 | **待清理**（队列②随移除） |
+| `explain/{course}/{chapter}/` | （已移除，remove-explain-diagnose） | — | 已删除 |
 | `goals.json` | 目标（顶层 JSON 数组） | `POST/PATCH/DELETE /goals` | 已实现（UI 只有创建） |
 | `plan.json` | 每日计划缓存 | `POST /plan/recalculate` | 已实现 |
 | `pool/backups/*.db` | 入池前整池备份 | ingest `--backup` | 已实现 |

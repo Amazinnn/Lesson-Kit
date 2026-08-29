@@ -268,8 +268,5 @@ class Pool:
     def figures_dir(self):
         return self.root / ".lessonkit" / "figures" / self.course / self.chapter
 
-    def explain_dir(self):
-        return self.root / ".lessonkit" / "explain" / self.course / self.chapter
-
     def jobs_dir(self):
         return self.root / ".lessonkit" / "jobs"

@@ -5,7 +5,7 @@ import threading
 from datetime import date, datetime
 from pathlib import Path
 
-from workbench.bridge import conversation_providers, conversations, runner
+from workbench.bridge import conversation_providers, conversations
 from workbench.data import goals, queries
 from workbench.domain import (
     feedback, learning_state, planning, pull, schedule as schedule_rules,
@@ -316,58 +316,11 @@ def graph_kp(pool, workspace, params, body):
     return {"kp_id": kp_id, "body": content, "fragile": fragile}
 
 
-def ai_run(pool, workspace, params, body):
-    operation = params["operation"]
-    if operation not in ("explain", "diagnose"):
-        raise ApiError(400, "unknown operation")
-    problem_id = body.get("problem_id")
-    if problem_id is None or pool.problem(problem_id) is None:
-        raise ApiError(404, f"unknown problem: {problem_id}")
-    workspace_path = Path(workspace["path"])
-    provider_name = body.get("provider")
-    note = body.get("note")
-    user_answer = body.get("user_answer")
-    stuck_step = body.get("stuck_step")
-    job_id = runner.create_ai_task(
-        pool, operation, problem_id, note=note,
-        user_answer=user_answer, stuck_step=stuck_step,
-    )
-
-    def _run():
-        # Provider runs on its own thread so the HTTP request returns
-        # immediately (a provider run may take minutes). The worker opens
-        # its own Pool — sqlite connections are not shareable across threads.
-        worker_pool = _pool_for(workspace)
-        try:
-            runner.run_ai_task(
-                worker_pool, workspace_path, operation, problem_id,
-                provider_name=provider_name, note=note,
-                user_answer=user_answer, stuck_step=stuck_step,
-                job_id=job_id,
-            )
-        finally:
-            worker_pool.close()
-
-    threading.Thread(target=_run, daemon=True).start()
-    return {"job_id": job_id}
-
-
-def ai_status(pool, workspace, params, body):
-    from workbench.bridge import jobs
-    return jobs.status(pool.jobs_dir(), params["job_id"])
-
-
 def ai_providers(pool, workspace, params, body):
     return [
         {"name": provider["name"], "model": provider.get("model")}
         for provider in conversation_providers.discover()
     ]
-
-
-def ai_task_providers(pool, workspace, params, body):
-    from workbench import registry
-    providers = registry.load_bridges().get("providers", {})
-    return {"available": bool(providers), "count": len(providers)}
 
 
 def ai_sessions_list(pool, workspace, params, body):
@@ -439,16 +392,6 @@ def ai_turn_cancel(pool, workspace, params, body):
         return conversations.cancel(pool, params["conversation_id"])
     except conversations.ConversationConflict as exc:
         raise ApiError(409, str(exc)) from exc
-
-
-def explain_result(pool, workspace, params, body):
-    path = pool.explain_dir() / f"{params['problem_id']}.md"
-    if not path.is_file():
-        raise ApiError(404, "no explain result yet")
-    return {
-        "problem_id": params["problem_id"],
-        "markdown": path.read_text(encoding="utf-8"),
-    }
 
 
 def graph_artifact(pool, workspace, params, body):

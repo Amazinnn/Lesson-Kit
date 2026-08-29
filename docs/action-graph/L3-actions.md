@@ -19,7 +19,6 @@
 | 提前结束→收束页统一评分 | UI | 人 | 四件套×未评 | 已实现 |
 | 再练同类 | UI 收束页 | 人 | 新 session | 已实现 |
 | 刷新恢复（游标+视图态） | 被动 | 人 | — | 已实现 |
-| 讲解/诊断一键任务 | UI+CLI | 双 | jobs+explain/ | **待退役**（队列②） |
 
 ## 二、记录与调度
 
@@ -47,7 +46,6 @@
 | 新建会话/选 provider（锁定不换） | UI | 人 | conversations | 已实现 |
 | 停止轮次 | UI | 人 | turn=cancelled | 已实现 |
 | replace_practice_selection（明确练习意图才生效） | 对话产出动作 | Agent | 浏览器选区（一次性） | 已实现 |
-| 查任务 provider 可用性 | API | 双 | — | 已实现 |
 
 ## 五、目标与时间
 
@@ -75,3 +73,6 @@
 - 2026-08-29 generate 桥登记升级意向：Agent 可直接触发 ingest、生成→校验→
   直接入正式池（无候选中间态）、候选组织并入校验环节、或更名 Check（队列④定）。
 - 2026-08-29 目标编辑/删除标记缺口（API 已备、UI 无入口，队列③）。
+- 2026-08-29 讲解/诊断已移除（remove-explain-diagnose，队列②落地）：任务机
+  五模块、四条 API 路由、CLI `ai`、前端按钮与门槛逻辑全部退役；`bridge add`
+  保留（对话 provider overrides 通道）。
