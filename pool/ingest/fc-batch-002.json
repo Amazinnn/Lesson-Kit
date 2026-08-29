@@ -1,0 +1,362 @@
+{
+  "kind": "flash-card-patch",
+  "items": [
+    {
+      "card_id": "dmath-ch06-fc-016",
+      "kp_id": "dmath-ch06-kp-006",
+      "front": "鸽巢原理（Theorem 1）的内容是？",
+      "back": "k+1 个或更多对象放进 k 个盒子，则至少有一个盒子装有两个或更多对象。又称 Dirichlet 抽屉原理。",
+      "source_evidence": "Section 6.2.1（THE PIGEONHOLE PRINCIPLE, THEOREM 1 原文）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-017",
+      "kp_id": "dmath-ch06-kp-006",
+      "front": "鸽巢原理的证明思路是什么？",
+      "back": "逆否命题：若每个盒子至多装 1 个对象，则对象总数至多 k 个，与放了 k+1 个矛盾。",
+      "source_evidence": "Section 6.2.1（THEOREM 1 证明）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-018",
+      "kp_id": "dmath-ch06-kp-006",
+      "front": "鸽巢原理适合证明哪一类结论？",
+      "back": "存在性结论：证明某事物必然出现（如必有两数同余），只需要逼出存在，不需要构造出具体例子。",
+      "source_evidence": "Section 6.2.1（鸽巢原理的用途）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-019",
+      "kp_id": "dmath-ch06-kp-008",
+      "front": "广义鸽巢原理（Theorem 2）的结论是？",
+      "back": "N 个对象放进 k 个盒子，则至少有一个盒子装有至少 ⌈N/k⌉ 个对象——最满的盒子不少于这个下界。",
+      "source_evidence": "Section 6.2.2（THE GENERALIZED PIGEONHOLE PRINCIPLE, THEOREM 2）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-020",
+      "kp_id": "dmath-ch06-kp-008",
+      "front": "N = k+1 时广义鸽巢原理退化成什么？",
+      "back": "基础鸽巢原理：⌈(k+1)/k⌉ = 2，即至少一盒装 2 个或更多对象。",
+      "source_evidence": "Section 6.2.2（THEOREM 2 与 Theorem 1 的关系）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-021",
+      "kp_id": "dmath-ch06-kp-008",
+      "front": "100 名学生中，至少有几人生在同一个月？",
+      "back": "⌈100/12⌉ = 9 人。月份为 12 个盒子，广义鸽巢给出最满盒子的下界。",
+      "source_evidence": "Section 6.2.2, EXAMPLE 7（生日月份下界）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-022",
+      "kp_id": "dmath-ch06-kp-009",
+      "front": "r-排列（r-permutation）是什么？",
+      "back": "从集合中有序地选取 r 个元素排成一列，记 P(n,r)；每个元素至多被选一次（无重复）。例：S={1,2,3} 中 3,2 是一个 2-排列。",
+      "source_evidence": "Section 6.3.2（r-permutation 定义与 EXAMPLE 2）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-023",
+      "kp_id": "dmath-ch06-kp-009",
+      "front": "permutation 与 r-permutation 的区别是？",
+      "back": "permutation 是全部 n 个不同对象的有序排列；r-permutation 只取其中 r 个排成一列，r 可以小于 n。",
+      "source_evidence": "Section 6.3.2（两个定义的对比）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-024",
+      "kp_id": "dmath-ch06-kp-009",
+      "front": "S={1,2,3} 的 2-排列共有几个？",
+      "back": "6 个：12、13、21、23、31、32。第 1 位 3 种、第 2 位 2 种，3×2=6。",
+      "source_evidence": "Section 6.3.2（EXAMPLE 2 列举排列）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-025",
+      "kp_id": "dmath-ch06-kp-010",
+      "front": "r-排列计数公式 P(n,r) 是什么？",
+      "back": "P(n,r) = n(n-1)(n-2)⋯(n-r+1)，共 r 个逐次减 1 的因子。约定 P(n,0) = 1（空排列）。",
+      "source_evidence": "Section 6.3.2（THEOREM 1）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-026",
+      "kp_id": "dmath-ch06-kp-010",
+      "front": "P(n,r) 公式的证明思路是什么？",
+      "back": "乘法规则：第 1 个位置 n 种选择，第 2 个位置 n-1 种……第 r 个位置 n-r+1 种，逐步相乘。",
+      "source_evidence": "Section 6.3.2（THEOREM 1 证明）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-027",
+      "kp_id": "dmath-ch06-kp-010",
+      "front": "P(10,3) = ?",
+      "back": "10×9×8 = 720。三个因子 10、9、8 依次填三个位置。",
+      "source_evidence": "Section 6.3.2（THEOREM 1 的直接应用）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-028",
+      "kp_id": "dmath-ch06-kp-011",
+      "front": "P(n,r) 的阶乘形式是什么？",
+      "back": "P(n,r) = n!/(n-r)!。把连乘 n(n-1)⋯(n-r+1) 的分子分母补上 (n-r)! 即得。",
+      "source_evidence": "Section 6.3.2（COROLLARY 1）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-029",
+      "kp_id": "dmath-ch06-kp-011",
+      "front": "P(n,n) 等于什么？",
+      "back": "n!。此时 (n-r)! = 0! = 1，全体元素的排列数就是 n 的阶乘。",
+      "source_evidence": "Section 6.3.2（COROLLARY 1 取 r=n）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-030",
+      "kp_id": "dmath-ch06-kp-011",
+      "front": "用阶乘形式算 P(5,2) = ?",
+      "back": "5!/3! = 120/6 = 20。与连乘 5×4=20 一致。",
+      "source_evidence": "Section 6.3.2（COROLLARY 1 的数值应用）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-031",
+      "kp_id": "dmath-ch06-kp-012",
+      "front": "r-组合（r-combination）是什么？",
+      "back": "从 n 元集合中无序地选取 r 个元素，即大小为 r 的子集。记 C(n,r)，也叫二项式系数 C(n,r)。",
+      "source_evidence": "Section 6.3.3（r-combination 定义）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-032",
+      "kp_id": "dmath-ch06-kp-012",
+      "front": "{4,1,3} 和 {1,3,4} 是几个 3-组合？",
+      "back": "同一个。组合是子集、与顺序无关；{1,2,3,4} 的 3-组合共 C(4,3)=4 个。",
+      "source_evidence": "Section 6.3.3（组合无序性的例子）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-033",
+      "kp_id": "dmath-ch06-kp-012",
+      "front": "r-组合与 r-排列的关键区别是什么？",
+      "back": "顺序是否重要：排列有序，组合无序。同一个 r 元选取对应 r! 个不同排列，所以 P(n,r) = C(n,r)×r!。",
+      "source_evidence": "Section 6.3.2 与 6.3.3（排列与组合定义对比）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-034",
+      "kp_id": "dmath-ch06-kp-013",
+      "front": "r-组合计数公式 C(n,r) 是什么？",
+      "back": "C(n,r) = n!/(r!(n-r)!)，其中 0 ≤ r ≤ n。",
+      "source_evidence": "Section 6.3.3（THEOREM 2）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-035",
+      "kp_id": "dmath-ch06-kp-013",
+      "front": "C(n,r) 与 P(n,r) 的关系式及其证明思路？",
+      "back": "P(n,r) = C(n,r)×r!：先无序选出 r 个（C(n,r)），再把这 r 个排序（r! 种）。解出 C(n,r) = P(n,r)/r!。",
+      "source_evidence": "Section 6.3.3（THEOREM 2 的证明思路）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-036",
+      "kp_id": "dmath-ch06-kp-013",
+      "front": "C(n,r) 的对称性是什么？",
+      "back": "C(n,r) = C(n,n-r)：选 r 个与剩下 n-r 个一一对应。例 C(5,2) = C(5,3) = 10。",
+      "source_evidence": "Section 6.3.3（组合数的对称性）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-037",
+      "kp_id": "dmath-ch06-kp-014",
+      "front": "二项式定理的内容是什么？",
+      "back": "(x+y)ⁿ = Σ C(n,j)·xⁿ⁻ʲ·yʲ（j 从 0 到 n）：展开式第 j 项系数是二项式系数 C(n,j)。",
+      "source_evidence": "Section 6.4.1（THE BINOMIAL THEOREM）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-038",
+      "kp_id": "dmath-ch06-kp-014",
+      "front": "二项式定理的组合证明思路是什么？",
+      "back": "(x+y)ⁿ 是 n 个因子连乘，每个因子选 x 或 y；xⁿ⁻ʲyʲ 出现的次数等于从 n 个因子里选 j 个取 y 的方式数，即 C(n,j)。",
+      "source_evidence": "Section 6.4.1（二项式定理的组合证明）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-039",
+      "kp_id": "dmath-ch06-kp-014",
+      "front": "(x+y)ⁿ 展开式全部系数之和是多少？",
+      "back": "2ⁿ。令 x=y=1：(1+1)ⁿ = 2ⁿ = Σ C(n,j)。",
+      "source_evidence": "Section 6.4.1（令 x=y=1 的推论）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-040",
+      "kp_id": "dmath-ch06-kp-015",
+      "front": "帕斯卡恒等式是什么？",
+      "back": "C(n,k) + C(n,k+1) = C(n+1,k+1)，其中 k < n。",
+      "source_evidence": "Section 6.4.2（PASCAL'S IDENTITY）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-041",
+      "kp_id": "dmath-ch06-kp-015",
+      "front": "帕斯卡恒等式的组合证明思路是什么？",
+      "back": "从 n+1 个元素选 k+1 个，按是否包含特定元素 a 分两类：含 a 则从其余 n 个选 k 个（C(n,k)），不含则选 k+1 个（C(n,k+1)），两类互斥相加。",
+      "source_evidence": "Section 6.4.2（PASCAL'S IDENTITY 的组合证明）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-042",
+      "kp_id": "dmath-ch06-kp-015",
+      "front": "用帕斯卡恒等式算 C(6,3) = ?",
+      "back": "C(6,3) = C(5,2) + C(5,3) = 10 + 10 = 20。",
+      "source_evidence": "Section 6.4.2（恒等式的直接应用）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-043",
+      "kp_id": "dmath-ch06-kp-016",
+      "front": "帕斯卡三角形第 n 行（从 0 起）依次是什么数？",
+      "back": "C(n,0), C(n,1), …, C(n,n)。前几行：1；1 1；1 2 1；1 3 3 1；1 4 6 4 1。",
+      "source_evidence": "Section 6.4.2（Pascal's Triangle）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-044",
+      "kp_id": "dmath-ch06-kp-016",
+      "front": "帕斯卡三角形的构造规则是什么？",
+      "back": "每行两端为 1，其余每个数 = 上一行正上方相邻两数之和——正是帕斯卡恒等式的几何呈现。",
+      "source_evidence": "Section 6.4.2（由帕斯卡恒等式构造三角形）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-045",
+      "kp_id": "dmath-ch06-kp-016",
+      "front": "帕斯卡三角形第 n 行所有数之和是多少？",
+      "back": "2ⁿ：第 n 行是 (x+y)ⁿ 的全部系数，令 x=y=1 即得。",
+      "source_evidence": "Section 6.4.2（行和与二项式定理的联系）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-046",
+      "kp_id": "dmath-ch06-kp-017",
+      "front": "范德蒙德恒等式是什么？",
+      "back": "C(m+n,r) = Σ C(m,r-k)·C(n,k)（k 从 0 到 r）：从两组元素共选 r 个的方式数按每组取多少分类求和。",
+      "source_evidence": "Section 6.4.3（VANDERMONDE'S IDENTITY）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-047",
+      "kp_id": "dmath-ch06-kp-017",
+      "front": "范德蒙德恒等式的组合证明思路是什么？",
+      "back": "把 m+n 个元素分成 m 与 n 两组；从中选 r 个，设后一组选了 k 个，则前一组选 r-k 个，方式数 C(m,r-k)×C(n,k)，对 k 从 0 到 r 求和。",
+      "source_evidence": "Section 6.4.3（恒等式的组合证明）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-048",
+      "kp_id": "dmath-ch06-kp-017",
+      "front": "范德蒙德恒等式取 r=1 得到什么？",
+      "back": "m+n = C(m,1)+C(n,1)：正是基础加法规则——两类互斥方式相加。",
+      "source_evidence": "Section 6.4.3（r=1 特例）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-049",
+      "kp_id": "dmath-ch06-kp-018",
+      "front": "允许重复的 r-排列数是多少？",
+      "back": "nʳ：r 个位置的每一个都可以从 n 个对象中任选（可重复使用），乘法规则连乘 r 个 n。",
+      "source_evidence": "Section 6.5.2（THEOREM 1）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-050",
+      "kp_id": "dmath-ch06-kp-018",
+      "front": "26 个大写字母能组成多少个长度 r 的字符串？",
+      "back": "26ʳ。每个位置 26 种选择、可重复，是允许重复 r-排列的直接例子。",
+      "source_evidence": "Section 6.5.2（EXAMPLE 1，长度 r 的字符串）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-051",
+      "kp_id": "dmath-ch06-kp-018",
+      "front": "允许重复与不允许重复的 r-排列有何区别？",
+      "back": "不允许重复：P(n,r) = n(n-1)⋯(n-r+1)，要求 r ≤ n。允许重复：nʳ，长度 r 任意，因为元素可复用。",
+      "source_evidence": "Section 6.5.2（与 6.3.2 无重复排列的对比）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-052",
+      "kp_id": "dmath-ch06-kp-019",
+      "front": "允许重复的 r-组合数是多少？",
+      "back": "C(n+r-1, r)：从 n 种对象中无序地选 r 个、每种不限量。",
+      "source_evidence": "Section 6.5.3（combinations with repetition）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-053",
+      "kp_id": "dmath-ch06-kp-019",
+      "front": "从苹果、橘子、梨三种里无序买 4 个，几种方案？",
+      "back": "C(3+4-1, 4) = C(6,4) = 15 种。允许重复、无序选取的典型例子。",
+      "source_evidence": "Section 6.5.3（三种糕点选四个的例子）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-054",
+      "kp_id": "dmath-ch06-kp-019",
+      "front": "允许重复的组合数公式与 stars-and-bars 的关系？",
+      "back": "r 颗星（对象）与 n-1 条杠（类型分隔）共占 r+n-1 个位置，从中选 n-1 个放杠：C(r+n-1, n-1) = C(n+r-1, r)。",
+      "source_evidence": "Section 6.5.3（stars and bars 推导）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-055",
+      "kp_id": "dmath-ch06-kp-020",
+      "front": "不可区分对象的排列数公式（多项式系数）是什么？",
+      "back": "n!/(n₁!·n₂!⋯nₖ!)：n 个对象分 k 类，第 i 类 nᵢ 个彼此不可区分，且 n₁+⋯+nₖ = n。",
+      "source_evidence": "Section 6.5.4（permutations with indistinguishable objects）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-056",
+      "kp_id": "dmath-ch06-kp-020",
+      "front": "SUCCESS 的 6 个字母能排成多少个不同的字符串？",
+      "back": "6!/(3!·1!·1!·1!) = 120。3 个 S 互相不可区分，其余 U、C、E 各 1 个。",
+      "source_evidence": "Section 6.5.4（SUCCESS 例）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-057",
+      "kp_id": "dmath-ch06-kp-020",
+      "front": "不可区分对象排列数为什么要除以各 nᵢ!？",
+      "back": "n! 把同类对象内部的顺序也当作不同排列重复计入了；同类互换位置不产生新排列，所以每类除以 nᵢ! 修正。",
+      "source_evidence": "Section 6.5.4（公式的推导理由）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-058",
+      "kp_id": "dmath-ch06-kp-021",
+      "front": "n 个不同对象放入 k 个不同盒子（允许空盒），几种放法？",
+      "back": "kⁿ：每个对象独立地选 k 个盒子之一，乘法规则。",
+      "source_evidence": "Section 6.5.5（distinguishable objects, distinguishable boxes）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-059",
+      "kp_id": "dmath-ch06-kp-021",
+      "front": "n 个相同对象放入 k 个不同盒子（允许空盒），几种放法？",
+      "back": "C(n+k-1, n)：stars and bars——n 颗星、k-1 条杠共 n+k-1 个位置。",
+      "source_evidence": "Section 6.5.5（identical objects, distinguishable boxes）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-060",
+      "kp_id": "dmath-ch06-kp-021",
+      "front": "n 个不同对象放入 k 个不同盒子（每盒非空），几种放法？",
+      "back": "k!·S(n,k)：先按 Stirling 第二类数把对象分成 k 个无区别的非空堆，再给堆分配盒子顺序。",
+      "source_evidence": "Section 6.5.5（onto 分配与 Stirling 数）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-061",
+      "kp_id": "dmath-ch06-kp-022",
+      "front": "字典序生成下一排列算法的第一步是什么？",
+      "back": "从右向左找第一个相邻递增对 aⱼ < aⱼ₊₁（即最靠右的 j 使 aⱼ 小于它右边的邻居）。",
+      "source_evidence": "Section 6.6.2（next permutation 算法步骤 1）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-062",
+      "kp_id": "dmath-ch06-kp-022",
+      "front": "找到 aⱼ < aⱼ₊₁ 后，算法接下来两步做什么？",
+      "back": "在 aⱼ 右侧找大于 aⱼ 的最小元素 aₖ并与 aⱼ 交换；再把 j+1 到 n 这一段反转（原本是降序，反转即升序）。",
+      "source_evidence": "Section 6.6.2（next permutation 算法步骤 2–4）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-063",
+      "kp_id": "dmath-ch06-kp-022",
+      "front": "362541 的字典序下一个排列是？",
+      "back": "364125。最右相邻递增对是 2<5（第 3 位）；右侧大于 2 的最小是 4，交换得 364521，反转尾段 521 得 364125。",
+      "source_evidence": "Section 6.6.2（算法示例）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-064",
+      "kp_id": "dmath-ch06-kp-026",
+      "front": "求 (Axᵖ+Byᑫ)ⁿ 中 xᵃyᵇ 项系数的通用方法？",
+      "back": "第 j 项为 C(n,j)Aⁿ⁻ʲBʲxᵖ⁽ⁿ⁻ʲ⁾yᑫʲ；解指数方程 a=p(n-j)、b=qj 得 j；无整数解则系数为 0，有解则系数为 C(n,j)Aⁿ⁻ʲBʲ。",
+      "source_evidence": "Section 6.4.1, EXAMPLE 4（指定项系数求法）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-065",
+      "kp_id": "dmath-ch06-kp-026",
+      "front": "(2x−3y)²⁵ 中 x¹²y¹³ 的系数是？",
+      "back": "C(25,13)·2¹²·(−3)¹³ = −C(25,13)·2¹²·3¹³：由 25−j=12 得 j=13，负号来自 (−3) 的奇次幂。",
+      "source_evidence": "Section 6.4.1, EXAMPLE 4（(2x−3y)²⁵ 例）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-066",
+      "kp_id": "dmath-ch06-kp-026",
+      "front": "若指数方程 a=p(n-j)、b=qj 没有整数解，说明什么？",
+      "back": "展开式中根本不含 xᵃyᵇ 项，其系数为 0。",
+      "source_evidence": "Section 6.4.1（EXAMPLE 4 方法说明）"
+    }
+  ]
+}
