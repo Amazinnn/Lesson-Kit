@@ -3,11 +3,9 @@
 import json
 import sqlite3
 import threading
-import time
 import unittest
 import urllib.request
 from urllib.error import HTTPError
-from unittest import mock
 
 from tests.workbench.fixtures import WorkspaceFixture
 
@@ -257,46 +255,6 @@ class ApiTests(unittest.TestCase):
         ) as resp:
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read(), b"\x89PNG")
-
-    def test_ai_explain_without_provider_fails_gracefully(self):
-        status, data = self.post("/api/w/dmath/ai/explain", {
-            "problem_id": "dmath-ch06-prob-001",
-        })
-        self.assertEqual(status, 200)
-        job_id = data["job_id"]
-        self.assertTrue(job_id.startswith("job-"))
-        state = None
-        for _ in range(50):  # task runs on a worker thread now — let it settle
-            try:
-                _, data = self.get(f"/api/w/dmath/ai/jobs/{job_id}")
-                state = data["state"]
-            except HTTPError:
-                pass  # job record may not be visible yet
-            if state in ("done", "failed"):
-                break
-            time.sleep(0.05)
-        self.assertEqual(state, "failed")
-
-    @mock.patch("workbench.server.api.runner.run_ai_task")
-    @mock.patch("workbench.server.api.runner.create_ai_task", return_value="job-042")
-    def test_ai_explain_returns_the_reserved_job_id(self, create_task, run_task):
-        status, data = self.post("/api/w/dmath/ai/explain", {
-            "problem_id": "dmath-ch06-prob-001",
-        })
-        self.assertEqual(status, 200)
-        self.assertEqual(data["job_id"], "job-042")
-        create_task.assert_called_once()
-        deadline = time.time() + 1
-        while not run_task.called and time.time() < deadline:
-            time.sleep(0.01)
-        self.assertEqual(run_task.call_args.kwargs["job_id"], "job-042")
-
-    def test_ai_explain_unknown_problem_404(self):
-        with self.assertRaises(HTTPError) as ctx:
-            self.post("/api/w/dmath/ai/explain", {
-                "problem_id": "dmath-ch06-prob-999",
-            })
-        self.assertEqual(ctx.exception.code, 404)
 
     def test_hub_page(self):
         status, html = self.get_html("/")

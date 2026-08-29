@@ -100,31 +100,6 @@ def build_fixture_db(conn):
     conn.commit()
 
 
-FAKE_PROVIDER = """\
-import os
-result = \"\"\"# Explain
-
-## 结论
-
-The product rule counts ordered pairs.
-
-## 逐步拆解
-
-Step one then step two.
-
-## 易错点
-
-Independence is required.
-
-## 回源指向
-
-Rosen, Discrete Mathematics, section 6.1.
-\"\"\"
-with open(os.environ["LESSONKIT_OUTPUT_PATH"], "w", encoding="utf-8") as f:
-    f.write(result)
-"""
-
-
 class CliTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -219,33 +194,6 @@ class CliTests(unittest.TestCase):
                                  "--id", "dmath-ch06-prob-001")
         self.assertEqual(code, 0)
         self.assertIn("review", out)
-
-    def test_ai_explain_without_provider_fails_gracefully(self):
-        code, out = self.run_cli("ai", "dmath", "explain",
-                                 "dmath-ch06-prob-001")
-        self.assertEqual(code, 0)
-        self.assertIn("job-", out)
-        self.assertIn("no provider", out)
-
-    def test_ai_explain_with_provider_completes(self):
-        provider_script = Path(self.tmp.name) / "fake_provider.py"
-        provider_script.write_text(FAKE_PROVIDER, encoding="utf-8")
-        from registry import add_bridge
-        add_bridge("fake", "python", args=[str(provider_script)])
-        code, out = self.run_cli("ai", "dmath", "explain",
-                                 "dmath-ch06-prob-001", "--provider", "fake")
-        self.assertEqual(code, 0)
-        self.assertIn("done", out)
-        explain_file = self.ws / ".lessonkit" / "explain" / "dmath" / "ch06" \
-            / "dmath-ch06-prob-001.md"
-        self.assertTrue(explain_file.is_file())
-
-    def test_ai_status_reports_failed(self):
-        code, out = self.run_cli("ai", "dmath", "explain",
-                                 "dmath-ch06-prob-001")
-        job_id = out.strip().split(":")[0]
-        code, out = self.run_cli("ai", "dmath", "status", job_id)
-        self.assertIn("failed", out)
 
     def test_ingest_parser_exposes_atomic_commands(self):
         parser = self.cli.build_parser()

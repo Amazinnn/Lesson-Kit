@@ -866,7 +866,6 @@
     store(SESSION_KEY, PracticeDeck.serialize(practiceDeck));
   }
 
-  var refreshAiTaskButtonsForCurrent = null;
 
   function currentProblem() {
     return PracticeDeck.current(practiceDeck);
@@ -907,11 +906,6 @@
     var cardNav = document.getElementById("card-nav");
     var cardPrev = document.getElementById("card-prev");
     var cardNext = document.getElementById("card-next");
-    var aiExplain = document.getElementById("ai-explain");
-    var aiDiagnose = document.getElementById("ai-diagnose");
-    var aiTaskStatus = document.getElementById("ai-task-status");
-    var aiTaskResult = document.getElementById("ai-task-result");
-    var aiTaskTimer = null;
     var pulling = false;
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
@@ -1060,44 +1054,8 @@
       if (cardNext) cardNext.disabled = pulling;
     }
 
-    function aiProvidersReady() {
-      // Task entries run bridge tasks (bridges.json), not the conversation
-      // providers discovered on PATH — gate on the task-provider signal.
-      return !!aiTaskProvidersReady;
-    }
-
-    function updateAiTaskButtons(item) {
-      var buttons = [aiExplain, aiDiagnose];
-      var applicable = item.kind === "problem" && deckItemAnswered(item);
-      buttons.forEach(function (button) {
-        if (!button) return;
-        button.classList.toggle("hidden", !applicable);
-        button.disabled = !applicable || !aiProvidersReady();
-        button.title = applicable && !aiProvidersReady() ? "暂无可用 Agent" : "";
-      });
-    }
-
-    refreshAiTaskButtonsForCurrent = function () {
-      var item = currentProblem();
-      if (item) updateAiTaskButtons(item);
-    };
-
-    function aiTaskClearTransient() {
-      if (aiTaskTimer) { clearTimeout(aiTaskTimer); aiTaskTimer = null; }
-      if (aiTaskStatus) {
-        aiTaskStatus.textContent = "";
-        aiTaskStatus.classList.add("hidden");
-      }
-      if (aiTaskResult) {
-        aiTaskResult.innerHTML = "";
-        aiTaskResult.classList.add("hidden");
-      }
-    }
-
     function renderDeckItem(item) {
-      aiTaskClearTransient();
       updateCardNav(item);
-      updateAiTaskButtons(item);
       if (item.kind === "card") {
         var back = "<section id='card-back-section' class='practice-solution"
           + (item.revealed ? "'" : " hidden'") + ">"
@@ -1475,58 +1433,6 @@
     if (cardNext) cardNext.addEventListener("click", function () {
       advance();
     });
-
-    function aiTaskSetStatus(text) {
-      if (!aiTaskStatus) return;
-      aiTaskStatus.textContent = text || "";
-      aiTaskStatus.classList.toggle("hidden", !text);
-    }
-
-    function pollAiTask(jobId, problemId) {
-      api("/ai/jobs/" + encodeURIComponent(jobId)).then(function (status) {
-        if (status && status.state === "done") {
-          aiTaskTimer = null;
-          api("/explain/" + encodeURIComponent(problemId)).then(function (result) {
-            if (aiTaskResult) {
-              aiTaskResult.innerHTML = richText(result.markdown || "");
-              aiTaskResult.classList.remove("hidden");
-              renderMath(aiTaskResult);
-            }
-            aiTaskSetStatus("");
-          }).catch(function () { aiTaskSetStatus("讲解已生成，但读取失败。"); });
-        } else if (status && status.state === "failed") {
-          aiTaskTimer = null;
-          aiTaskSetStatus("任务失败：" + (status.error || "未知原因"));
-        } else {
-          aiTaskTimer = setTimeout(function () { pollAiTask(jobId, problemId); }, 350);
-        }
-      }).catch(function () {
-        aiTaskTimer = null;
-        aiTaskSetStatus("无法读取任务进度。");
-      });
-    }
-
-    function startAiTask(operation) {
-      var item = currentProblem();
-      if (!item || item.kind === "card") return;
-      var body = { problem_id: item.id };
-      if (operation === "diagnose") {
-        if (!(item.answer_text || "").trim()) {
-          aiTaskSetStatus("请先作答，再诊断。");
-          return;
-        }
-        body.user_answer = item.answer_text;
-      }
-      cancelScheduledAdvance();
-      aiTaskSetStatus(operation === "explain" ? "正在请 Agent 讲解…" : "正在请 Agent 诊断…");
-      post("/ai/" + operation, body).then(function (result) {
-        pollAiTask(result.job_id, item.id);
-      }).catch(function (error) {
-        aiTaskSetStatus("任务启动失败：" + (error.message || "未知错误"));
-      });
-    }
-    if (aiExplain) aiExplain.addEventListener("click", function () { startAiTask("explain"); });
-    if (aiDiagnose) aiDiagnose.addEventListener("click", function () { startAiTask("diagnose"); });
   }
 
   var recalculatePlan = document.getElementById("recalculate-plan");
@@ -1893,7 +1799,6 @@
   var aiSessionRecords = [];
   var aiProviders = [];
   var aiProviderLoadError = "";
-  var aiTaskProvidersReady = false;
 
   if (aiSessionBack) {
     aiSessionBack.setAttribute("aria-label", "返回对话列表");
@@ -2042,18 +1947,10 @@
         aiSessionEmpty.classList.remove("hidden");
       }
     });
-    var taskProviderRequest = api("/ai/task-providers").then(function (info) {
-      aiTaskProvidersReady = !!(info && info.available);
-    }).catch(function () {
-      aiTaskProvidersReady = false;
-    });
     Promise.all([
       providerRequest,
-      taskProviderRequest,
       aiRefreshSessionList(),
-    ]).then(function () {
-      if (refreshAiTaskButtonsForCurrent) refreshAiTaskButtonsForCurrent();
-    });
+    ]);
   }
   if (layout.dataset.objectType && layout.dataset.objectId) {
     aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);

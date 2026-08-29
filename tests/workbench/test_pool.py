@@ -223,10 +223,6 @@ class PoolTests(unittest.TestCase):
             self.pool.figures_dir(),
             self.ws_root / ".lessonkit" / "figures" / "dmath" / "ch06",
         )
-        self.assertEqual(
-            self.pool.explain_dir(),
-            self.ws_root / ".lessonkit" / "explain" / "dmath" / "ch06",
-        )
         self.assertEqual(self.pool.jobs_dir(), self.ws_root / ".lessonkit" / "jobs")
 
 

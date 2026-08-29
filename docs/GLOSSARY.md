@@ -245,10 +245,10 @@ _Avoid_：练习会话（同词两义，注意上下文）
 _Avoid_：模型热切换、多模型混用
 出处：workbench-ui spec；ai-teacher-bridge spec
 
-### 讲解 / Explain、诊断 / Diagnose
-两种桥操作：针对当前/指定题发起的讲解或错因诊断任务，带作答文本与卡点上下文；产出按「定位/提示/溯源/追问」四节渲染。
-_Avoid_：自动辅导、无提问的主动插话
-出处：ai-teacher-bridge spec；changelog/2026-08-16-frontend-phase2.md
+### 讲解 / Explain、诊断 / Diagnose（已移除）
+曾是与题相关的两种桥任务，2026-08-29 经所有者问卷决定彻底移除（Agent 上下文本就是整个版面，无需按题特化）；想聊某道题直接在对话里说。
+_Avoid_：任何按题特化的预设任务按钮
+出处：remove-explain-diagnose 归档；DISCUSSION-RECORD 问卷记录
 
 ### 桥 / Bridge
 工作台与外部 AI 会话的旁挂通道：只被请求时运行，产物流式回传；工作台核心零 AI 依赖（无 provider 时优雅降级）。

@@ -12,7 +12,6 @@ from pathlib import Path
 
 from workbench import registry
 from workbench import ingest
-from workbench.bridge import runner
 from workbench.data import pool as pool_mod
 from workbench.data import content
 from workbench.data import mastery as mastery_data
@@ -148,32 +147,6 @@ def cmd_schedule(args):
     finally:
         pool.close()
     print(json.dumps(row, ensure_ascii=False, indent=2) if row else "no schedule")
-
-
-def cmd_ai(args):
-    workspace = _workspace(_resolve_name(args))
-    pool = _pool(workspace)
-    try:
-        if args.action == "status":
-            job = pool_mod_jobs_status(pool, args.target)
-            print(f"{args.target}: {job.get('state')}"
-                  + (f" ({job.get('error')})" if job.get("error") else ""))
-            return
-        job_id = runner.run_ai_task(
-            pool, Path(workspace["path"]), args.action, args.target,
-            provider_name=args.provider, note=args.note,
-            user_answer=args.user_answer, stuck_step=args.stuck_step,
-        )
-        status = pool_mod_jobs_status(pool, job_id)
-        print(f"{job_id}: {status.get('state')}"
-              + (f" ({status.get('error')})" if status.get("error") else ""))
-    finally:
-        pool.close()
-
-
-def pool_mod_jobs_status(pool, job_id):
-    from workbench.bridge import jobs
-    return jobs.status(pool.jobs_dir(), job_id)
 
 
 def cmd_bridge(args):
@@ -493,16 +466,6 @@ def build_parser():
     p.add_argument("--item", required=True, choices=["kp", "problem"])
     p.add_argument("--id", required=True)
     p.set_defaults(func=cmd_schedule)
-
-    p = sub.add_parser("ai", help="AI teacher tasks via the bridge")
-    p.add_argument("name", nargs="?")
-    p.add_argument("action", choices=["explain", "diagnose", "status"])
-    p.add_argument("target", nargs="?", help="problem id, or job id for status")
-    p.add_argument("--provider")
-    p.add_argument("--note")
-    p.add_argument("--user-answer")
-    p.add_argument("--stuck-step")
-    p.set_defaults(func=cmd_ai)
 
     p = sub.add_parser("bridge", help="configure bridge providers")
     p.add_argument("action", choices=["add"])
