@@ -255,6 +255,11 @@ _Avoid_：自动辅导、无提问的主动插话
 _Avoid_：内嵌大模型、常驻后台进程
 出处：ARCHITECTURE.md；ai-teacher-bridge spec
 
+### 动作图谱 / Action Graph
+系统全部「能做的事」（用户操作、CLI 命令、API 动作、桥操作、门禁配方）的常设登记文档：每个动作登记入口、读写面、状态（已实现/已定义未实现/未定义挂名/冻结/待退役）与权威出处，并给出六域关系总图。名词归 GLOSSARY/PENDING 管，动作归本图管；功能变更交付时必须同步。
+_Avoid_：把动作清单散落在各 spec 里不登记、用浏览器操作代替明文
+出处：docs/ACTION-GRAPH.md；DISCUSSION-RECORD 专题 20 后所有者 2026-08-29 提出
+
 ### 批次 id / Batch id
 一次门禁 apply 写入池的那批内容的唯一标识；批次内的每一内容行携带该标记，用于事后溯源与整批撤销。
 _Avoid_：内容版本号、逐条审计日志

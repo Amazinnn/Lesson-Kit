@@ -27,7 +27,7 @@
    proposal、REQUIREMENTS、PRODUCT-MANUAL）引入新名词前必须先在
    `docs/GLOSSARY.md` 建条目；未定义的概念只能进 `docs/PENDING-DEFINITIONS.md`，
    禁止以挂名状态混入正式文档；功能变更交付时同步补 `docs/PRODUCT-MANUAL.md`
-   对应章节。
+   对应章节，并同步登记 `docs/ACTION-GRAPH.md`（新增/退役/改级动作必须留痕）。
 3. **Ponytail 阶梯**：写码前依次问——要不要写？有没有现成？标准库能否搞定？一行函数
    够不够？禁止过度工程、禁止防御性编程、禁止哈希。
 4. **小步提交**：`feat/fix/docs/chore/refactor` 前缀；工作区不留脏；每完成一个可验证
