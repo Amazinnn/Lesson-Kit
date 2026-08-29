@@ -255,6 +255,16 @@ _Avoid_：自动辅导、无提问的主动插话
 _Avoid_：内嵌大模型、常驻后台进程
 出处：ARCHITECTURE.md；ai-teacher-bridge spec
 
+### 批次 id / Batch id
+一次门禁 apply 写入池的那批内容的唯一标识；批次内的每一内容行携带该标记，用于事后溯源与整批撤销。
+_Avoid_：内容版本号、逐条审计日志
+出处：PENDING-DEFINITIONS「generate 桥操作」（2026-08-29 定稿）
+
+### 整批回滚 / Batch rollback
+按批次 id 一次命令撤销该批全部内容行的机制；是「无逐题人工确认的 AI 生成入池」的安全网（实现另立项）。
+_Avoid_：逐条手工删行、全池回退
+出处：PENDING-DEFINITIONS「generate 桥操作」（2026-08-29 定稿）
+
 ## 工程与流程
 
 ### 运行时状态 / Runtime State
