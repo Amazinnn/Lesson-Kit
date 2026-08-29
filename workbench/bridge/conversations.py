@@ -334,13 +334,18 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
             course=workspace.get("active_course", ""),
             chapter=workspace.get("active_chapter", ""),
         )
+        backup = action_pool.db_path.with_name(
+            action_pool.db_path.name
+            + f".{conversation_id}-{turn_id}-ingest-backup")
         try:
-            applied = ingest.apply_batch(action_pool.db_path, action["manifest"], source="bridge")
+            applied = ingest.apply_batch(
+                action_pool.db_path, action["manifest"],
+                source="bridge", backup_path=backup)
             action["result"] = {
                 key: applied[key]
                 for key in ("batch_id", "kind", "counts", "backup_path", "applied")
             }
-        except ValueError as exc:
+        except Exception as exc:
             action["error"] = str(exc)
         finally:
             action_pool.close()
