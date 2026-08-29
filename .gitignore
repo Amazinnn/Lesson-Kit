@@ -41,3 +41,6 @@ workbench/_claude_*_task.txt
 
 # pool backups (ingest auto-backup)
 pool/backups/
+
+# ingest recipe 运行时输出
+.lessonkit/out-*/

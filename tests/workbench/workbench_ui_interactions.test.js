@@ -658,6 +658,49 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
   });
 });
 
+test("batch flash cards mark played cards unrated for session-end", async () => {
+  const calls = [];
+  const backSection = new FakeElement("card-back-section");
+  backSection.classList.add("hidden");
+  const elements = { layout: layout(), ...practiceElements() };
+  elements.stream = new FakeElement("stream", {
+    queryOne: (selector) => (selector === "#card-back-section" ? backSection : null),
+  });
+  delete elements["practice-mode-immediate"];
+  delete elements["practice-mode-batch"];
+  elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+  });
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/pull-cards")) {
+        return jsonResponse({ cards: [
+          { card_id: "c-1", kp_id: "kp-1", front: "F1", back: "B1" },
+        ] });
+      }
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-flash_card"].checked = true;
+  elements["practice-mode-flash_card"].trigger("change");
+  elements["practice-rating-batch"].checked = true;
+  elements["practice-rating-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["show-answer"].click();
+  assert.equal(backSection.classList.contains("hidden"), false);
+  assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
+  let session = JSON.parse(storage.getItem("wb_session_alpha"));
+  assert.equal(session[0].state, "unrated");
+  elements["no-time"].click();
+  await flush();
+  session = JSON.parse(storage.getItem("wb_session_alpha"));
+  assert.equal(session[0].state, "unrated");
+});
+
 test("session-end lists played cards with front and back for rating", async () => {
   const calls = [];
   const pending = new FakeElement("pending-ratings");

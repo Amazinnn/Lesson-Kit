@@ -1179,8 +1179,15 @@
         var backSection = (stream && stream.querySelector)
           ? stream.querySelector("#card-back-section") : null;
         if (backSection) backSection.classList.remove("hidden");
+        currentProblem.revealed = true;
+        setCurrent(currentProblem);
         showAnswer.classList.add("hidden");
-        feedbackArea.classList.remove("hidden");
+        if (sessionStorage.getItem(RATING_MODE_KEY) === "batch") {
+          // Played cards collect their rating at session end.
+          updateSession(currentProblem.problem_id, { state: "unrated" });
+        } else {
+          feedbackArea.classList.remove("hidden");
+        }
         return;
       }
       api("/problem/" + currentProblem.problem_id).then(function (detail) {
@@ -1224,14 +1231,22 @@
 
     if (noTime) noTime.addEventListener("click", function () {
       if (!currentProblem) return;
-      updateSession(currentProblem.problem_id, { state: "skipped" });
+      // A revealed flash card has been played: it stays due for the
+      // session-end rating instead of being silently skipped.
+      var state = (currentProblem.card && currentProblem.revealed)
+        ? "unrated" : "skipped";
+      updateSession(currentProblem.problem_id, { state: state });
       setCurrent(null);
       loadNext();
     });
 
     var gotoBtn = document.getElementById("goto-session-end");
     if (gotoBtn) gotoBtn.addEventListener("click", function () {
-      if (currentProblem) updateSession(currentProblem.problem_id, { state: "skipped" });
+      if (currentProblem) {
+        var endState = (currentProblem.card && currentProblem.revealed)
+          ? "unrated" : "skipped";
+        updateSession(currentProblem.problem_id, { state: endState });
+      }
       setCurrent(null);
       showComposer(false);
       if (sessionStorage.getItem(RATING_MODE_KEY) === "batch"
