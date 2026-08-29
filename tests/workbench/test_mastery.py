@@ -41,9 +41,9 @@ class MasteryDomainTests(unittest.TestCase):
         self.mastery = mastery
         self.today = date(2026, 8, 26)
 
-    def evaluate(self, problems=(), kps=(), candidates=()):
+    def evaluate(self, problems=(), kps=()):
         return self.mastery.evaluate(
-            {"problems": list(problems), "kps": list(kps), "candidates": list(candidates)},
+            {"problems": list(problems), "kps": list(kps)},
             self.today,
         )
 
@@ -185,19 +185,15 @@ class MasteryDomainTests(unittest.TestCase):
         )
         self.assertEqual(self.one_kp(result)["category"], "recently_stable")
 
-    def test_candidate_positive_evidence_completes_kp_cross_date_evidence(self):
+    def test_retired_candidate_attempt_does_not_complete_cross_date_evidence(self):
         result = self.evaluate(
             problems=[
                 problem("p1", ["k1"], feedback=[rating(4, "2026-08-20T09:00:00")]),
                 problem("p2", ["k1"], feedback=[rating(5, "2026-08-20T10:00:00")]),
             ],
             kps=[kp("k1")],
-            candidates=[{
-                "id": "c1", "kp_ids": ["k1"],
-                "attempts": [{"status": "reviewing", "is_correct": 1, "created_at": "2026-08-21T09:00:00"}],
-            }],
         )
-        self.assertEqual(self.one_kp(result)["category"], "recently_stable")
+        self.assertEqual(self.one_kp(result)["category"], "evidence_insufficient")
 
     def test_single_formal_problem_requires_different_date_direct_kp_review(self):
         base = problem("p1", ["k1"], attempts=[attempt("mastered", "2026-08-20")])
@@ -212,10 +208,6 @@ class MasteryDomainTests(unittest.TestCase):
         result = self.evaluate(
             problems=[problem("p1", ["k1"])],
             kps=[kp("k1", feedback=[rating(5, "2026-08-21T09:00:00")])],
-            candidates=[{
-                "id": "c1", "kp_ids": ["k1"],
-                "attempts": [{"status": "reviewing", "is_correct": 1, "created_at": "2026-08-20T09:00:00"}],
-            }],
         )
         self.assertEqual(self.one_kp(result)["category"], "evidence_insufficient")
 
@@ -223,48 +215,22 @@ class MasteryDomainTests(unittest.TestCase):
         result = self.evaluate(
             problems=[problem("p1", ["k1"], attempts=[attempt("mastered", "2026-08-20T08:00:00")])],
             kps=[kp("k1", feedback=[rating(5, "2026-08-20T09:00:00")])],
-            candidates=[{
-                "id": "c1", "kp_ids": ["k1"],
-                "attempts": [{"status": "reviewing", "is_correct": 1,
-                              "created_at": "2026-08-21T09:00:00"}],
-            }],
         )
         item = self.one_kp(result)
         self.assertEqual(item["category"], "evidence_insufficient")
-
-    def test_candidate_positive_reason_uses_a_truthful_label(self):
-        result = self.evaluate(
-            problems=[
-                problem("p1", ["k1"], feedback=[rating(4, "2026-08-20T08:00:00")]),
-                problem("p2", ["k1"], feedback=[rating(5, "2026-08-20T09:00:00")]),
-            ],
-            kps=[kp("k1")],
-            candidates=[{
-                "id": "c1", "kp_ids": ["k1"],
-                "attempts": [{"status": "reviewing", "is_correct": 1,
-                              "created_at": "2026-08-21T09:00:00"}],
-            }],
-        )
-        evidence = [reason["evidence"] for reason in self.one_kp(result)["reasons"]]
-        self.assertIn("自动结果 correct", evidence)
 
     def test_zero_formal_problem_kp_stays_evidence_insufficient(self):
         result = self.evaluate(kps=[kp("k1", feedback=[rating(5, "2026-08-20")])])
         self.assertEqual(self.one_kp(result)["category"], "evidence_insufficient")
 
-    def test_gate_passed_candidate_evidence_is_kp_only(self):
+    def test_retired_candidate_negative_attempt_does_not_fail_kp(self):
         result = self.evaluate(
             problems=[problem("p1", ["k1"])],
             kps=[kp("k1")],
-            candidates=[{
-                "id": "c1", "kp_ids": ["k1"],
-                "attempts": [attempt("wrong", "2026-08-25")],
-            }],
         )
         self.assertEqual([item["id"] for item in result["problems"]], ["p1"])
         item = self.one_kp(result)
-        self.assertEqual(item["category"], "needs_work")
-        self.assertEqual(item["reasons"][0]["item_id"], "c1")
+        self.assertEqual(item["category"], "evidence_insufficient")
 
 
 class MasteryProjectionTests(unittest.TestCase):
@@ -315,8 +281,7 @@ class MasteryProjectionTests(unittest.TestCase):
 
         self.assertEqual(after, before)
         self.assertEqual(snapshot["problems"][0]["attempts"][0]["status"], "mastered")
-        self.assertEqual(snapshot["candidates"][0]["id"], "c1")
-        self.assertEqual(snapshot["candidates"][0]["attempts"][0]["is_correct"], 1)
+        self.assertNotIn("candidates", snapshot)
 
     @staticmethod
     def table_contents(conn):

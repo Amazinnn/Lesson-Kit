@@ -27,26 +27,9 @@ def snapshot(conn):
         owner = by_problem if row["item_type"] == "problem" else by_kp if row["item_type"] == "kp" else {}
         if row["item_id"] in owner:
             owner[row["item_id"]]["schedule"] = row
-    candidates = [
-        {"id": row["candidate_id"], "kp_ids": json.loads(row["kp_ids"]), "attempts": []}
-        for row in _rows(
-            conn,
-            "SELECT candidate_id, kp_ids FROM candidate_problems "
-            "WHERE status='gate_passed' ORDER BY candidate_id",
-        )
-    ]
-    by_candidate = {item["id"]: item for item in candidates}
-    if conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='candidate_attempts'"
-    ).fetchone():
-        for row in _rows(
-            conn,
-            "SELECT candidate_id, status, is_correct, note, created_at "
-            "FROM candidate_attempts ORDER BY id",
-        ):
-            if row["candidate_id"] in by_candidate:
-                by_candidate[row["candidate_id"]]["attempts"].append(row)
-    return {"problems": problems, "kps": kps, "candidates": candidates}
+    # Candidate rows are retired (2026-08-29 Check pipeline): no candidate
+    # or candidate-attempt evidence is read into the snapshot.
+    return {"problems": problems, "kps": kps}
 
 
 def _rows(conn, sql):

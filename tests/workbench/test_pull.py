@@ -133,12 +133,12 @@ class PullTests(unittest.TestCase):
         self.assertNotIn("dmath-ch06-prob-001",
                          [p["problem_id"] for p in result["problems"]])
 
-    def test_candidate_fallback(self):
+    def test_candidate_fallback_is_retired(self):
         result = self.pull.select(
             self.pool, ["dmath-ch06-kp-003"], n=5, mode="weak"
         )
-        candidate_ids = [c["candidate_id"] for c in result["candidates"]]
-        self.assertIn("dmath-ch06-cand-001", candidate_ids)
+        self.assertEqual(result["candidates"], [])
+        self.assertIn("dmath-ch06-kp-003", result["shortage"])
 
     def test_shortage_reported(self):
         result = self.pull.select(

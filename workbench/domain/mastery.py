@@ -11,8 +11,7 @@ def evaluate(snapshot, today):
     problems = [_evaluate_problem(problem, today) for problem in snapshot["problems"]]
     problem_by_id = {item["id"]: item for item in problems}
     knowledge_points = [
-        _evaluate_kp(kp, snapshot["problems"], problem_by_id,
-                     snapshot.get("candidates", ()), today)
+        _evaluate_kp(kp, snapshot["problems"], problem_by_id, today)
         for kp in snapshot["kps"]
     ]
     return {
@@ -35,7 +34,7 @@ def _evaluate_problem(problem, today):
     return _result(problem["id"], "problem", "evidence_insufficient", [_insufficient_reason()])
 
 
-def _evaluate_kp(kp, all_problems, problem_by_id, candidates, today):
+def _evaluate_kp(kp, all_problems, problem_by_id, today):
     linked = [problem for problem in all_problems if kp["id"] in problem["kp_ids"]]
     if not linked:
         return _result(kp["id"], "kp", "evidence_insufficient", [_zero_problem_reason()])
@@ -45,18 +44,10 @@ def _evaluate_kp(kp, all_problems, problem_by_id, candidates, today):
         for problem in linked
         if problem_by_id[problem["id"]]["category"] == "needs_work"
     ]
-    candidate_evidence = []
-    for candidate in candidates:
-        if kp["id"] in candidate["kp_ids"]:
-            evidence = _evidence(candidate.get("attempts", ()), (), candidate["id"])
-            latest = _latest(evidence)
-            if latest:
-                candidate_evidence.append(latest)
     direct_evidence = _evidence((), kp.get("feedback", ()), kp["id"])
     direct_latest = _latest(direct_evidence)
-    candidate_negative = _matching(candidate_evidence, "negative")
     direct_negative = [direct_latest] if direct_latest and direct_latest["polarity"] == "negative" else []
-    negative = _latest(formal_negative + candidate_negative + direct_negative)
+    negative = _latest(formal_negative + direct_negative)
     if negative:
         return _result(kp["id"], "kp", "needs_work", [negative])
     if _is_due(kp.get("schedule"), today):
@@ -70,9 +61,8 @@ def _evaluate_kp(kp, all_problems, problem_by_id, candidates, today):
         for problem in linked
     }
     direct_positive = _matching(direct_evidence, "positive")
-    candidate_positive = _matching(candidate_evidence, "positive")
     formal_items = [item for items in formal_positive.values() for item in items]
-    positive = formal_items + candidate_positive
+    positive = formal_items
     if len(linked) == 1:
         if (formal_items and direct_positive
                 and _distinct_dates(formal_items + direct_positive) >= 2):

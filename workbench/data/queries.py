@@ -12,7 +12,6 @@ def hub_stats(pool):
     return {
         "kps": len(pool.kps(prefix)),
         "problems": len(pool.problems_all()),
-        "candidates": len(pool.gate_passed_candidates()),
         "signals": len(pool.signals()),
         "due": due,
     }

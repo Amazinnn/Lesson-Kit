@@ -146,7 +146,7 @@ class QueryTests(unittest.TestCase):
         stats = self.queries.hub_stats(self.pool)
         self.assertEqual(stats["kps"], 2)
         self.assertEqual(stats["problems"], 2)
-        self.assertEqual(stats["candidates"], 0)
+        self.assertNotIn("candidates", stats)
         self.assertEqual(stats["signals"], 1)
         self.assertEqual(stats["due"], 1)
 
