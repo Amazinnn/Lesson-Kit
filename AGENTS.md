@@ -23,19 +23,24 @@
 
 1. **需求先落文档再动代码**：spec 未覆盖的行为必须先改 OpenSpec（proposal→specs）或
    询问用户，禁止悄悄实现。
-2. **Ponytail 阶梯**：写码前依次问——要不要写？有没有现成？标准库能否搞定？一行函数
+2. **名词先定义后使用**（2026-08-29 三文档约束）：正式文档（openspec specs、
+   proposal、REQUIREMENTS、PRODUCT-MANUAL）引入新名词前必须先在
+   `docs/GLOSSARY.md` 建条目；未定义的概念只能进 `docs/PENDING-DEFINITIONS.md`，
+   禁止以挂名状态混入正式文档；功能变更交付时同步补 `docs/PRODUCT-MANUAL.md`
+   对应章节。
+3. **Ponytail 阶梯**：写码前依次问——要不要写？有没有现成？标准库能否搞定？一行函数
    够不够？禁止过度工程、禁止防御性编程、禁止哈希。
-3. **小步提交**：`feat/fix/docs/chore/refactor` 前缀；工作区不留脏；每完成一个可验证
+4. **小步提交**：`feat/fix/docs/chore/refactor` 前缀；工作区不留脏；每完成一个可验证
    单元即提交。
-4. **验证节奏**（交付前必跑）：
+5. **验证节奏**（交付前必跑）：
    ```bash
    python -m pytest tests -q
    openspec validate --specs --strict
    python lessonkit.py guard extract-problems --course dmath --chapter ch06
    python lessonkit.py guard problem-set --course dmath --chapter ch06
    ```
-5. **单对话职责单一**：设计对话 / 实现对话 / 重构对话分开；长任务拆段，每段可恢复。
-6. **低价值探索禁止**：实现前先走阶梯（见 2），不确定的设计先问。
+6. **单对话职责单一**：设计对话 / 实现对话 / 重构对话分开；长任务拆段，每段可恢复。
+7. **低价值探索禁止**：实现前先走阶梯（见 3），不确定的设计先问。
 
 ## 运行时约定
 

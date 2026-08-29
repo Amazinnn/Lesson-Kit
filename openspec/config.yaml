@@ -106,7 +106,12 @@ context: |
 
   ## Docs to read
 
-  docs/design/philosophy.md (Chinese), CONTEXT.md (terminology), README.md,
+  docs/design/philosophy.md (Chinese), docs/GLOSSARY.md (authoritative term
+  definitions — every design noun in formal docs must resolve here),
+  docs/PENDING-DEFINITIONS.md (undefined concepts are quarantined here),
+  docs/PRODUCT-MANUAL.md (user-facing product manual — update the matching
+  chapter with every feature change), CONTEXT.md (legacy pipeline terms,
+  superseded by GLOSSARY), README.md,
   START_HERE.md, TASK_ROUTER.md, RED_LINES.md, FILE_CONTRACT.md, docs/adr/0001–0021,
   docs/DISCUSSION-RECORD.md (verbatim discussion record — source of truth for
   confirmed decisions and un-rejected proposals).
