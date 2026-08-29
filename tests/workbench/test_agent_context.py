@@ -94,6 +94,14 @@ class AgentContextTests(unittest.TestCase):
             [("kp", "dmath-ch06-kp-001"), ("problem", "dmath-ch06-prob-001")],
         )
 
+    def test_check_intent_is_rebuilt_from_the_request_payload(self):
+        from workbench.server import context
+
+        result = context.build(self.pool, self.workspace, {"check_intent": True})
+        self.assertTrue(result["check_intent"])
+        result = context.build(self.pool, self.workspace, {})
+        self.assertFalse(result["check_intent"])
+
 
 if __name__ == "__main__":
     unittest.main()

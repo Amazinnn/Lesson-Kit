@@ -557,6 +557,19 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .action-reminder { margin: 14px 0; color: var(--dsw-label-secondary); font-weight: 600; }
 .kp-practice-action { text-decoration: none; }
 
+/* Check pipeline result card (conversation flow, D2 independent result) */
+.check-card { border-bottom-style: none; }
+.check-card-body {
+  border: 1px solid var(--dsw-border-l2);
+  border-radius: var(--dsw-radius-lg);
+  background: var(--dsw-bg-layer-1);
+  padding: 10px 14px;
+  max-width: min(525px, 82%);
+}
+.check-card-title { font-weight: 600; color: var(--dsw-label-primary); }
+.check-card-detail { margin-top: 4px; color: var(--dsw-label-secondary); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+.check-card-rollback { margin-top: 8px; }
+
 /* misc */
 h1 { font-size: 28px; line-height: 36px; margin: 0 0 8px; }
 h2 { font-size: 18px; line-height: 26px; margin: 20px 0 8px; }

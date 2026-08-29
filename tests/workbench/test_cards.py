@@ -50,14 +50,32 @@ class CardIngestTests(unittest.TestCase):
             CREATE TABLE problems (problem_id TEXT PRIMARY KEY,
                 kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
                 solution TEXT, problem_type TEXT, source_kind TEXT,
-                practice_modes TEXT, micro_quiz TEXT);
+                practice_modes TEXT, micro_quiz TEXT, ingest_batch_id TEXT);
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY,
                 problem_text TEXT);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY,
                 source_kp_id TEXT, target_kp_id TEXT);
             CREATE TABLE flash_cards (card_id TEXT PRIMARY KEY,
                 kp_id TEXT NOT NULL, front TEXT NOT NULL, back TEXT NOT NULL,
-                source_evidence TEXT NOT NULL);
+                source_evidence TEXT NOT NULL, ingest_batch_id TEXT);
+            CREATE TABLE content_sequences (
+                scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
+                PRIMARY KEY (scope, entity_type));
+            CREATE TABLE ingest_batches (
+                batch_id TEXT PRIMARY KEY, kind TEXT NOT NULL, manifest_path TEXT NOT NULL,
+                counts_json TEXT NOT NULL, backup_path TEXT NOT NULL,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now')), rolled_back_at TEXT);
+            CREATE TABLE problem_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, problem_id TEXT NOT NULL);
+            CREATE TABLE problem_progress (problem_id TEXT PRIMARY KEY);
+            CREATE TABLE feedback_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT NOT NULL,
+                item_id TEXT NOT NULL);
+            CREATE TABLE review_schedule (
+                item_type TEXT NOT NULL, item_id TEXT NOT NULL, direction TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (item_type, item_id, direction));
+            CREATE TABLE learner_signals (
+                signal_id TEXT PRIMARY KEY, target_type TEXT NOT NULL, target_id TEXT NOT NULL);
         """)
         conn.execute("INSERT INTO knowledge_points VALUES ('dmath-ch06-kp-001', 'Counting')")
         conn.commit()
@@ -84,17 +102,29 @@ class CardIngestTests(unittest.TestCase):
         self.assertTrue(report["ok"], report["errors"])
         result = ingest.apply_flash_cards(self.db_path, path)
         self.assertTrue(result["applied"])
+        self.assertEqual(result["batch_id"], "batch-001")
         self.assertTrue(Path(result["backup_path"]).exists())
+        snapshot_path = self.root / "ingest" / "batch-001.json"
+        self.assertEqual(json.loads(snapshot_path.read_text(encoding="utf-8")), {
+            "kind": "flash-card-patch", "items": [manifest_item()],
+        })
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
-                "SELECT kp_id, front, back, source_evidence FROM flash_cards"
+                "SELECT kp_id, front, back, source_evidence, ingest_batch_id FROM flash_cards"
                 " WHERE card_id='dmath-ch06-fc-001'"
+            ).fetchone()
+            batch = conn.execute(
+                "SELECT kind, manifest_path, counts_json FROM ingest_batches"
             ).fetchone()
         finally:
             conn.close()
         self.assertEqual(row, ("dmath-ch06-kp-001", manifest_item()["front"],
-                               manifest_item()["back"], manifest_item()["source_evidence"]))
+                               manifest_item()["back"], manifest_item()["source_evidence"],
+                               "batch-001"))
+        self.assertEqual(batch[0], "flash-card-patch")
+        self.assertEqual(Path(batch[1]), snapshot_path)
+        self.assertEqual(json.loads(batch[2]), {"flash_cards": 1})
 
     def test_bad_items_are_rejected_without_writing(self):
         items = [
@@ -136,6 +166,35 @@ class CardIngestTests(unittest.TestCase):
         finally:
             conn.close()
         self.assertEqual(count, 1)
+
+    def test_card_feedback_and_schedule_block_rollback_without_deleting(self):
+        batch_id = ingest.apply_flash_cards(
+            self.db_path, self.manifest([manifest_item()])
+        )["batch_id"]
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "INSERT INTO feedback_events (item_type, item_id) VALUES ('card', ?)",
+            ("dmath-ch06-fc-001",),
+        )
+        conn.execute(
+            "INSERT INTO review_schedule (item_type, item_id) VALUES ('card', ?)",
+            ("dmath-ch06-fc-001",),
+        )
+        conn.commit()
+        conn.close()
+
+        with self.assertRaises(ValueError) as raised:
+            ingest.rollback_batch(self.db_path, batch_id)
+
+        self.assertIn("feedback_events", str(raised.exception))
+        self.assertIn("review_schedule", str(raised.exception))
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertEqual(conn.execute(
+                "SELECT COUNT(*) FROM flash_cards WHERE ingest_batch_id=?", (batch_id,)
+            ).fetchone()[0], 1)
+        finally:
+            conn.close()
 
 
 class CardPracticeTests(unittest.TestCase):

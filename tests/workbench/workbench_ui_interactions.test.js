@@ -72,6 +72,7 @@ class FakeElement {
 
   appendChild(child) {
     this.children.push(child);
+    child.parentElement = this;
     this.scrollHeight = this.children.length;
     return child;
   }
@@ -86,11 +87,34 @@ class FakeElement {
   }
 
   querySelector(selector) {
-    return this.queryOne(selector);
+    const found = this.queryOne(selector);
+    if (found) return found;
+    if (selector.startsWith(".")) {
+      const wanted = selector.slice(1);
+      const walk = (node) => {
+        for (const child of node.children || []) {
+          if (typeof child.className === "string"
+            && child.className.split(/\s+/).includes(wanted)) return child;
+          const deep = walk(child);
+          if (deep) return deep;
+        }
+        return null;
+      };
+      return walk(this);
+    }
+    return null;
   }
 
   closest(selector) {
-    return selector === ".card" ? this.card : null;
+    if (selector === ".card") return this.card;
+    const wanted = selector.slice(1);
+    let node = this;
+    while (node) {
+      if (typeof node.className === "string"
+        && node.className.split(/\s+/).includes(wanted)) return node;
+      node = node.parentElement;
+    }
+    return null;
   }
 
   remove() {
@@ -1282,6 +1306,111 @@ test("explicit practice intent applies an Agent selection replacement", async ()
   await flush();
   await flush();
   assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
+});
+
+function checkIngestHarness(turnAction, sessionMessages) {
+  const calls = [];
+  const pageLayout = layout();
+  pageLayout.dataset.page = "kps";
+  const elements = { layout: pageLayout, ...aiElements() };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options, method: options && options.method });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001") && !options) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+        messages: sessionMessages || [],
+      });
+      if (url.endsWith("/turns") && options) return jsonResponse({ turn_id: "turn-001" });
+      if (url.includes("/turns/turn-001")) return jsonResponse({
+        turn: { status: "done", action: turnAction },
+        events: [],
+      });
+      return jsonResponse({});
+    },
+  });
+  return { calls, elements };
+}
+
+test("explicit check intent is forwarded with the turn request", async () => {
+  const { calls, elements } = checkIngestHarness(null);
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "帮我给这个知识点出几道题";
+  elements["ai-send"].click();
+  await flush();
+  await flush();
+  const turnPost = calls.find((call) => call.url.endsWith("/turns") && call.options);
+  assert.equal(JSON.parse(turnPost.options.body).check_intent, true);
+  assert.equal(JSON.parse(turnPost.options.body).practice_intent, false);
+});
+
+test("check ingest success renders a batch result card whose rollback calls the API", async () => {
+  const { calls, elements } = checkIngestHarness({
+    type: "check_ingest",
+    result: {
+      batch_id: "batch-001", kind: "flash-card-patch", applied: 6,
+      counts: {}, backup_path: "pool/backups/dmath-pre-batch-001.db",
+    },
+  }, [
+    { role: "user", content: "给 kp-001 补 6 张闪卡" },
+    { role: "assistant", content: "好的", action: {
+      type: "check_ingest",
+      result: {
+        batch_id: "batch-001", kind: "flash-card-patch", applied: 6,
+        counts: {}, backup_path: "pool/backups/dmath-pre-batch-001.db",
+      },
+    } },
+  ]);
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "给 kp-001 补 6 张闪卡";
+  elements["ai-send"].click();
+  await flush();
+  await flush();
+  const messages = elements["ai-messages"];
+  const cards = messages.children.filter(
+    (node) => node.className === "msg ai check-card");
+  assert.ok(cards.length >= 1);
+  const card = cards[cards.length - 1];
+  const body = card.children[0];
+  assert.equal(body.children[0].textContent, "Check 入库完成");
+  assert.match(body.children[1].textContent, /batch-001/);
+  assert.match(body.children[1].textContent, /flash-card-patch/);
+  assert.match(body.children[1].textContent, /6 条/);
+  const rollback = body.children[2];
+  assert.equal(rollback.className, "check-card-rollback");
+  rollback.click();
+  await flush();
+  const rollbackPost = calls.find((call) => call.url.endsWith("/ingest/rollback") && call.options);
+  assert.ok(rollbackPost);
+  assert.deepEqual(JSON.parse(rollbackPost.options.body), { batch_id: "batch-001" });
+  assert.ok(rollback.removed);
+  assert.match(body.children[1].textContent, /已整批回滚/);
+});
+
+test("check ingest gate failure renders explicit reasons and no rollback button", async () => {
+  const { elements } = checkIngestHarness({
+    type: "check_ingest",
+    error: "mq-003: problem id already exists\nfc-002: missing source_evidence",
+  }, [
+    { role: "assistant", content: "尝试入库", action: {
+      type: "check_ingest",
+      error: "mq-003: problem id already exists\nfc-002: missing source_evidence",
+    } },
+  ]);
+  await openFirstAiSession(elements);
+  const messages = elements["ai-messages"];
+  const card = messages.children.map((node) => node).filter(
+    (node) => node.className === "msg ai check-card")[0];
+  assert.ok(card);
+  const body = card.children[0];
+  assert.equal(body.children[0].textContent, "入库未执行");
+  assert.match(body.children[1].textContent, /mq-003: problem id already exists/);
+  assert.match(body.children[1].textContent, /missing source_evidence/);
+  assert.equal(body.children.length, 2);
 });
 
 test("practice drafts remain private because chat exposes no attachment setting", async () => {

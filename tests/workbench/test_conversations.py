@@ -261,6 +261,96 @@ class ConversationTests(unittest.TestCase):
             "type": "replace_practice_selection", "kp_ids": ["kp-001"],
         })
 
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_check_ingest_success_is_stored_on_done_turn(self, get_provider, normalize_event):
+        from workbench.bridge import conversation_providers, conversations
+
+        manifest = {
+            "kind": "flash-card-patch",
+            "items": [{"card_id": "card-001"}],
+        }
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-3"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "已补池。\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": manifest}) + "\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        applied = {
+            "ok": True,
+            "batch_id": "batch-001",
+            "kind": "flash-card-patch",
+            "counts": {"flash_cards": 1},
+            "backup_path": "pool/backups/batch-001.sqlite",
+            "applied": ["card-001"],
+        }
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ), mock.patch.object(
+            conversations.ingest, "apply_batch", create=True, return_value=applied
+        ) as apply_batch:
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "帮我补池",
+                {"anchor": {"page_type": "kp", "route": "/w/dmath/kp/kp-001"},
+                 "check_intent": True},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "done")
+        self.assertEqual(done["action"], {
+            "type": "check_ingest",
+            "manifest": manifest,
+            "result": {
+                "batch_id": "batch-001",
+                "kind": "flash-card-patch",
+                "counts": {"flash_cards": 1},
+                "backup_path": "pool/backups/batch-001.sqlite",
+                "applied": ["card-001"],
+            },
+        })
+        self.assertEqual(apply_batch.call_args.kwargs, {"source": "bridge"})
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_check_ingest_gate_failure_is_stored_on_done_turn(self, get_provider, normalize_event):
+        from workbench.bridge import conversation_providers, conversations
+
+        manifest = {
+            "kind": "micro-quiz-patch",
+            "items": [{"problem_id": "prob-001"}],
+        }
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-4"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "未能补池。\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": manifest}) + "\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ), mock.patch.object(
+            conversations.ingest, "apply_batch", create=True,
+            side_effect=ValueError("prob-001: answer_key is required"),
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "给这个知识点加题",
+                {"anchor": {"page_type": "kp", "route": "/w/dmath/kp/kp-001"},
+                 "check_intent": True},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "done")
+        self.assertEqual(done["action"], {
+            "type": "check_ingest",
+            "manifest": manifest,
+            "error": "prob-001: answer_key is required",
+        })
+
 
 class GoalFormActionExtractionTests(unittest.TestCase):
     """prefill_goal_form：意图门、字段契约、区块剥离。"""
@@ -304,6 +394,77 @@ class GoalFormActionExtractionTests(unittest.TestCase):
     def test_malformed_json_is_ignored(self):
         _, action = self._run(self._answer("{oops}"), {"goal_intent": True})
         self.assertIsNone(action)
+
+
+class CheckIngestActionExtractionTests(unittest.TestCase):
+    def _run(self, body, context):
+        from workbench.bridge import conversations
+
+        answer = "已生成。\n```lessonkit-action\n" + body + "\n```"
+        return conversations._extract_action(answer, context)
+
+    def test_prompt_describes_check_ingest_manifest_contract(self):
+        from workbench.bridge import conversations
+
+        prompt = conversations._prompt("帮我补池", {"check_intent": True})
+        self.assertIn('"type":"check_ingest"', prompt)
+        self.assertIn("flash-card-patch", prompt)
+        self.assertIn("micro-quiz-patch", prompt)
+        self.assertIn("source_evidence", prompt)
+
+    def test_without_check_intent_nothing_is_extracted(self):
+        cleaned, action = self._run(
+            '{"type":"check_ingest","manifest":{"kind":"flash-card-patch",'
+            '"items":[{"card_id":"card-001"}]}}',
+            {"check_intent": False},
+        )
+        self.assertIsNone(action)
+        self.assertIn("check_ingest", cleaned)
+
+    def test_valid_manifest_is_extracted_and_stripped(self):
+        manifest = {
+            "kind": "flash-card-patch",
+            "items": [{"card_id": "card-001"}],
+        }
+        cleaned, action = self._run(
+            json.dumps({"type": "check_ingest", "manifest": manifest}),
+            {"check_intent": True},
+        )
+        self.assertEqual(action, {"type": "check_ingest", "manifest": manifest})
+        self.assertNotIn("lessonkit-action", cleaned)
+
+    def test_invalid_kind_is_an_explicit_error(self):
+        _, action = self._run(
+            '{"type":"check_ingest","manifest":{"kind":"essay-patch","items":[{}]}}',
+            {"check_intent": True},
+        )
+        self.assertEqual(action, {
+            "type": "check_ingest",
+            "error": "manifest kind must be flash-card-patch or micro-quiz-patch",
+        })
+
+    def test_empty_items_are_an_explicit_error(self):
+        _, action = self._run(
+            '{"type":"check_ingest","manifest":{"kind":"micro-quiz-patch","items":[]}}',
+            {"check_intent": True},
+        )
+        self.assertEqual(action, {
+            "type": "check_ingest",
+            "error": "manifest items must be a non-empty list",
+        })
+
+    def test_bad_json_is_explicit_with_check_intent(self):
+        cleaned, action = self._run("{oops}", {"check_intent": True})
+        self.assertEqual(action, {
+            "type": "check_ingest",
+            "error": "action block is not valid JSON",
+        })
+        self.assertNotIn("lessonkit-action", cleaned)
+
+    def test_bad_json_remains_ignored_without_check_intent(self):
+        cleaned, action = self._run("{oops}", {"check_intent": False})
+        self.assertIsNone(action)
+        self.assertIn("lessonkit-action", cleaned)
 
 
 if __name__ == "__main__":

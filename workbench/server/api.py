@@ -5,6 +5,7 @@ import threading
 from datetime import date, datetime
 from pathlib import Path
 
+from workbench import ingest
 from workbench.bridge import conversation_providers, conversations
 from workbench.data import goals, queries
 from workbench.domain import (
@@ -272,6 +273,17 @@ def _request_object(body):
     if not isinstance(body, dict):
         raise ApiError(400, "request body must be a JSON object")
     return body
+
+
+def ingest_rollback(pool, workspace, params, body):
+    body = _request_object(body)
+    batch_id = body.get("batch_id")
+    if not isinstance(batch_id, str) or not batch_id:
+        raise ApiError(400, "batch_id must be a non-empty string")
+    try:
+        return ingest.rollback_batch(pool.db_path, batch_id)
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
 
 
 def problem_detail(pool, workspace, params, body):

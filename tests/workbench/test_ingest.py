@@ -1,5 +1,7 @@
 """File-artifact ingestion contracts (TDD: red before implementation)."""
 
+import contextlib
+import io
 import json
 import sqlite3
 import subprocess
@@ -8,6 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from workbench.cli import main as cli_main
 
 try:
     from workbench import ingest
@@ -41,14 +44,22 @@ class IngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, knowledge_item TEXT);
-            CREATE TABLE problems (problem_id TEXT PRIMARY KEY, problem_text TEXT NOT NULL, solution TEXT);
+            CREATE TABLE problems (problem_id TEXT PRIMARY KEY, problem_text TEXT NOT NULL,
+                solution TEXT, ingest_batch_id TEXT);
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY, problem_text TEXT);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY, source_kp_id TEXT, target_kp_id TEXT);
+            CREATE TABLE content_sequences (
+                scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
+                PRIMARY KEY (scope, entity_type));
+            CREATE TABLE ingest_batches (
+                batch_id TEXT PRIMARY KEY, kind TEXT NOT NULL, manifest_path TEXT NOT NULL,
+                counts_json TEXT NOT NULL, backup_path TEXT NOT NULL,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now')), rolled_back_at TEXT);
             CREATE VIEW problem_view AS SELECT problem_id, problem_text, solution FROM problems;
         """)
         conn.execute("INSERT INTO knowledge_points VALUES ('kp-1', 'Counting')")
         conn.executemany(
-            "INSERT INTO problems VALUES (?, ?, ?)",
+            "INSERT INTO problems (problem_id, problem_text, solution) VALUES (?, ?, ?)",
             [("p-1", "Let x<sup>2</sup> = 1.", "old one"), ("p-2", "Count two choices.", "old two")],
         )
         conn.execute("INSERT INTO candidate_problems VALUES ('c-1', 'Candidate question')")
@@ -313,6 +324,50 @@ class IngestTests(unittest.TestCase):
                 self.assertTrue((self.root / name / "recipe.json").is_file())
         self.assertEqual(self.snapshot(), before)
 
+    def test_allocate_batch_id_uses_one_pool_sequence(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            first = ingest._allocate_batch_id(conn)
+            second = ingest._allocate_batch_id(conn)
+            conn.commit()
+            next_value = conn.execute(
+                "SELECT next_value FROM content_sequences "
+                "WHERE scope='pool' AND entity_type='batch'"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        self.assertEqual((first, second, next_value), ("batch-001", "batch-002", 3))
+
+    def test_formal_apply_records_batch_snapshot_and_stamps_problems(self):
+        solutions, audits = self.qualified_files()
+        gate_path = self.root / "gate.json"
+        ingest.gate(self.db_path, solutions, audits, gate_path)
+
+        result = ingest.apply(self.db_path, gate_path, self.root / "formal-backup.db")
+
+        self.assertEqual(result["batch_id"], "batch-001")
+        snapshot_path = self.root / "ingest" / "batch-001.json"
+        self.assertEqual(json.loads(snapshot_path.read_text(encoding="utf-8"))["kind"],
+                         "gate-report")
+        conn = sqlite3.connect(self.db_path)
+        try:
+            stamps = conn.execute(
+                "SELECT DISTINCT ingest_batch_id FROM problems"
+            ).fetchall()
+            batch = conn.execute(
+                "SELECT kind, manifest_path, counts_json, backup_path "
+                "FROM ingest_batches WHERE batch_id='batch-001'"
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(stamps, [("batch-001",)])
+        self.assertEqual(batch[0], "gate-report")
+        self.assertEqual(Path(batch[1]), snapshot_path)
+        self.assertEqual(json.loads(batch[2]), {"problems": 2})
+        self.assertEqual(Path(batch[3]), self.root / "formal-backup.db")
+
     def test_apply_revalidates_under_lock_creates_recoverable_copy_and_rolls_back(self):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
         solutions, audits = self.qualified_files()
@@ -323,8 +378,8 @@ class IngestTests(unittest.TestCase):
         result = ingest.apply(self.db_path, gate_path, backup)
 
         self.assertTrue(result["ok"])
-        self.assertEqual(self.snapshot(backup)["rows"]["problems"], [("p-1", "Let x<sup>2</sup> = 1.", "old one"), ("p-2", "Count two choices.", "old two")])
-        self.assertEqual(self.snapshot()["rows"]["problems"][0][-1], "x is 1 or -1.")
+        self.assertEqual(self.snapshot(backup)["rows"]["problems"], [("p-1", "Let x<sup>2</sup> = 1.", "old one", None), ("p-2", "Count two choices.", "old two", None)])
+        self.assertEqual(self.snapshot()["rows"]["problems"][0][2], "x is 1 or -1.")
 
         self.tearDown()
         self.setUp()
@@ -365,10 +420,18 @@ class ContentPatchIngestTests(unittest.TestCase):
                 problem_id TEXT PRIMARY KEY,
                 kp_ids TEXT NOT NULL,
                 problem_text TEXT NOT NULL,
-                solution TEXT
+                solution TEXT,
+                ingest_batch_id TEXT
             );
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
+            CREATE TABLE content_sequences (
+                scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
+                PRIMARY KEY (scope, entity_type));
+            CREATE TABLE ingest_batches (
+                batch_id TEXT PRIMARY KEY, kind TEXT NOT NULL, manifest_path TEXT NOT NULL,
+                counts_json TEXT NOT NULL, backup_path TEXT NOT NULL,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now')), rolled_back_at TEXT);
         """)
         conn.executemany(
             "INSERT INTO knowledge_points VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -380,7 +443,7 @@ class ContentPatchIngestTests(unittest.TestCase):
             ],
         )
         conn.executemany(
-            "INSERT INTO problems VALUES (?, ?, ?, ?)",
+            "INSERT INTO problems (problem_id, kp_ids, problem_text, solution) VALUES (?, ?, ?, ?)",
             [
                 ("p-1", '["kp-1"]', "Problem one", "old one"),
                 ("p-2", '["kp-2"]', "Problem two", "old two"),
@@ -498,9 +561,10 @@ class ContentPatchIngestTests(unittest.TestCase):
         self.assertEqual(self.snapshot(backup), before)
         after = self.snapshot()
         self.assertEqual(len(after["knowledge_points"]), 3)
-        self.assertEqual(after["problems"][0][1:], ('["kp-3"]', "Problem one", "Solution one"))
+        self.assertEqual(after["problems"][0][1:4], ('["kp-3"]', "Problem one", "Solution one"))
+        self.assertEqual(after["problems"][0][4], "batch-001")
         self.assertEqual(
-            after["problems"][1][1:],
+            after["problems"][1][1:4],
             ('["kp-1", "kp-2"]', "Problem two", "Solution two"),
         )
 
@@ -524,6 +588,189 @@ class ContentPatchIngestTests(unittest.TestCase):
             ingest.apply(self.db_path, gate_path, self.root / "rollback-backup.db")
 
         self.assertEqual(self.snapshot(), before)
+
+
+class BatchRollbackTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.db_path = self.root / "pool.db"
+        conn = sqlite3.connect(self.db_path)
+        conn.executescript("""
+            CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, knowledge_item TEXT);
+            CREATE TABLE problems (
+                problem_id TEXT PRIMARY KEY, kp_ids TEXT NOT NULL,
+                problem_text TEXT NOT NULL, solution TEXT, problem_type TEXT,
+                source_kind TEXT, practice_modes TEXT, micro_quiz TEXT,
+                ingest_batch_id TEXT);
+            CREATE TABLE flash_cards (
+                card_id TEXT PRIMARY KEY, kp_id TEXT NOT NULL, front TEXT NOT NULL,
+                back TEXT NOT NULL, source_evidence TEXT NOT NULL,
+                ingest_batch_id TEXT);
+            CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
+            CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
+            CREATE TABLE content_sequences (
+                scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
+                PRIMARY KEY (scope, entity_type));
+            CREATE TABLE ingest_batches (
+                batch_id TEXT PRIMARY KEY, kind TEXT NOT NULL, manifest_path TEXT NOT NULL,
+                counts_json TEXT NOT NULL, backup_path TEXT NOT NULL,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now')), rolled_back_at TEXT);
+            CREATE TABLE problem_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, problem_id TEXT NOT NULL);
+            CREATE TABLE problem_progress (problem_id TEXT PRIMARY KEY);
+            CREATE TABLE feedback_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT, item_type TEXT NOT NULL,
+                item_id TEXT NOT NULL);
+            CREATE TABLE review_schedule (
+                item_type TEXT NOT NULL, item_id TEXT NOT NULL, direction TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (item_type, item_id, direction));
+            CREATE TABLE learner_signals (
+                signal_id TEXT PRIMARY KEY, target_type TEXT NOT NULL, target_id TEXT NOT NULL);
+        """)
+        conn.execute("INSERT INTO knowledge_points VALUES ('dmath-ch06-kp-001', 'Counting')")
+        conn.commit()
+        conn.close()
+        self.manifest = {
+            "kind": "micro-quiz-patch",
+            "items": [{
+                "problem_id": "dmath-ch06-mq-001",
+                "kp_id": "dmath-ch06-kp-001",
+                "stem": "自然数 1 是质数吗？",
+                "quiz_type": "yes_no",
+                "answer_key": "否",
+                "error_reason": "1 只有 1 个正因数，不算质数。",
+                "source_evidence": "Rosen 6th, §3.1 定义",
+            }],
+        }
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def content_snapshot(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            return {
+                table: conn.execute(f"SELECT * FROM {table} ORDER BY rowid").fetchall()
+                for table in (
+                    "knowledge_points", "problems", "flash_cards",
+                    "candidate_problems", "knowledge_relations",
+                    "problem_attempts", "problem_progress", "feedback_events",
+                    "review_schedule", "learner_signals",
+                )
+            }
+        finally:
+            conn.close()
+
+    def apply_batch(self):
+        return ingest.apply_batch(self.db_path, self.manifest, source="bridge")
+
+    def test_apply_batch_and_rollback_restore_content_snapshot(self):
+        before = self.content_snapshot()
+        applied = self.apply_batch()
+
+        self.assertEqual(applied, {
+            "ok": True,
+            "batch_id": "batch-001",
+            "kind": "micro-quiz-patch",
+            "counts": {"problems": 1},
+            "backup_path": str(self.db_path.with_name("pool.db.ingest-backup")),
+            "applied": True,
+        })
+        result = ingest.rollback_batch(self.db_path, applied["batch_id"])
+
+        self.assertEqual(result["deleted"], 1)
+        self.assertEqual(result["accounting"], {
+            "knowledge_points": 1, "problems": 0,
+            "candidate_problems": 0, "knowledge_relations": 0,
+        })
+        self.assertEqual(self.content_snapshot(), before)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            rolled_back_at = conn.execute(
+                "SELECT rolled_back_at FROM ingest_batches WHERE batch_id='batch-001'"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        self.assertIsNotNone(rolled_back_at)
+
+    def test_rollback_lists_all_problem_dependencies_and_deletes_nothing(self):
+        applied = self.apply_batch()
+        problem_id = self.manifest["items"][0]["problem_id"]
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("INSERT INTO problem_attempts (problem_id) VALUES (?)", (problem_id,))
+        conn.execute("INSERT INTO problem_progress VALUES (?)", (problem_id,))
+        conn.execute(
+            "INSERT INTO feedback_events (item_type, item_id) VALUES ('problem', ?)",
+            (problem_id,),
+        )
+        conn.execute(
+            "INSERT INTO review_schedule (item_type, item_id) VALUES ('problem', ?)",
+            (problem_id,),
+        )
+        conn.execute(
+            "INSERT INTO learner_signals VALUES ('signal-1', 'problem', ?)",
+            (problem_id,),
+        )
+        conn.commit()
+        conn.close()
+
+        with self.assertRaises(ValueError) as raised:
+            ingest.rollback_batch(self.db_path, applied["batch_id"])
+
+        message = str(raised.exception)
+        for table in (
+                "problem_attempts", "problem_progress", "feedback_events",
+                "review_schedule", "learner_signals"):
+            self.assertIn(table, message)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertEqual(conn.execute(
+                "SELECT COUNT(*) FROM problems WHERE ingest_batch_id='batch-001'"
+            ).fetchone()[0], 1)
+            self.assertIsNone(conn.execute(
+                "SELECT rolled_back_at FROM ingest_batches WHERE batch_id='batch-001'"
+            ).fetchone()[0])
+        finally:
+            conn.close()
+        self.assertFalse(self.db_path.with_name("pool.db.rollback-backup").exists())
+
+    def test_unknown_and_already_rolled_back_batches_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unknown batch missing"):
+            ingest.rollback_batch(self.db_path, "missing")
+        batch_id = self.apply_batch()["batch_id"]
+        ingest.rollback_batch(self.db_path, batch_id)
+        with self.assertRaisesRegex(ValueError, "batch batch-001 already rolled back"):
+            ingest.rollback_batch(self.db_path, batch_id)
+
+    def run_cli(self, *args):
+        out = io.StringIO()
+        workspace = {"path": str(self.root), "db": self.db_path.name}
+        with patch("workbench.cli.main._workspace", return_value=workspace), \
+                contextlib.redirect_stdout(out):
+            code = cli_main.main(list(args))
+        return code, json.loads(out.getvalue())
+
+    def test_cli_rollback_success(self):
+        batch_id = self.apply_batch()["batch_id"]
+        backup = self.root / "cli-rollback.db"
+
+        code, output = self.run_cli(
+            "ingest", "dmath", "rollback", "--batch", batch_id,
+            "--backup", str(backup),
+        )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(output["result"]["batch_id"], batch_id)
+        self.assertTrue(backup.exists())
+
+    def test_cli_rollback_unknown_batch(self):
+        code, output = self.run_cli(
+            "ingest", "dmath", "rollback", "--batch", "missing",
+        )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(output, {"error": "unknown batch missing"})
 
 if __name__ == "__main__":
     unittest.main()

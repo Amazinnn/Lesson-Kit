@@ -47,6 +47,7 @@ ROUTES = [
     ("POST", "/api/w/{name}/pull-cards", api_mod.pull_cards),
     ("POST", "/api/w/{name}/practice", api_mod.practice),
     ("POST", "/api/w/{name}/feedback", api_mod.feedback_record),
+    ("POST", "/api/w/{name}/ingest/rollback", api_mod.ingest_rollback),
     ("GET", "/api/w/{name}/problem/{problem_id}", api_mod.problem_detail),
     ("GET", "/api/w/{name}/kp/{kp_id}", api_mod.kp_detail),
     ("GET", "/api/w/{name}/graph/model", api_mod.graph_model),

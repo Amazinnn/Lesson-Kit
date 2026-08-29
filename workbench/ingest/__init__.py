@@ -231,6 +231,8 @@ def apply(db_path, gate_path, backup_path=None):
         verified = _gate_data(conn, solutions, audit, content_patch, content_audit)
         if not verified["ok"]:
             raise ValueError("; ".join(verified["errors"]))
+        batch_id = _allocate_batch_id(conn)
+        manifest_path = _write_manifest_snapshot(database, batch_id, report)
         _backup_database(database, backup)
         if content_patch:
             for item in content_patch["knowledge_points"]:
@@ -251,23 +253,28 @@ def apply(db_path, gate_path, backup_path=None):
         for item in solutions["items"]:
             if item["problem"] in mappings:
                 cursor = conn.execute(
-                    "UPDATE problems SET solution=?, kp_ids=? WHERE problem_id=?",
-                    (item["solution"], mappings[item["problem"]], item["problem"]),
+                    "UPDATE problems SET solution=?, kp_ids=?, ingest_batch_id=? "
+                    "WHERE problem_id=?",
+                    (item["solution"], mappings[item["problem"]], batch_id,
+                     item["problem"]),
                 )
             else:
                 cursor = conn.execute(
-                    "UPDATE problems SET solution=? WHERE problem_id=?",
-                    (item["solution"], item["problem"]),
+                    "UPDATE problems SET solution=?, ingest_batch_id=? WHERE problem_id=?",
+                    (item["solution"], batch_id, item["problem"]),
                 )
             if cursor.rowcount != 1:
                 raise ValueError(f"missing formal problem: {item['problem']}")
+        counts = {"problems": len(solutions["items"])}
+        _record_batch(conn, batch_id, report["kind"], manifest_path, counts, backup)
         conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
-    return {"ok": True, "applied": True, "backup_path": str(backup), "accounting": verified["accounting"]}
+    return {"ok": True, "applied": True, "batch_id": batch_id,
+            "backup_path": str(backup), "accounting": verified["accounting"]}
 
 
 def apply_micro_quiz(db_path, manifest_path, backup_path=None):
@@ -275,39 +282,7 @@ def apply_micro_quiz(db_path, manifest_path, backup_path=None):
     manifest = read_artifact(manifest_path)
     database = Path(db_path)
     backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
-    if backup.exists():
-        raise FileExistsError(f"recoverable copy already exists: {backup}")
-    conn = sqlite3.connect(database)
-    try:
-        conn.execute("BEGIN IMMEDIATE")
-        verified = _gate_micro_quiz(conn, manifest)
-        if not verified["ok"]:
-            raise ValueError("; ".join(verified["errors"]))
-        _backup_database(database, backup)
-        for item in manifest["items"]:
-            row = _micro_quiz_row(item)
-            conn.execute(
-                "INSERT INTO problems (problem_id, kp_ids, problem_text, solution,"
-                " problem_type, source_kind, practice_modes, micro_quiz)"
-                " VALUES (?, ?, ?, NULL, ?, ?, ?, ?)",
-                (
-                    row["problem_id"],
-                    json.dumps(row["kp_ids"], ensure_ascii=False),
-                    row["problem_text"],
-                    row["problem_type"],
-                    row["source_kind"],
-                    json.dumps(row["practice_modes"], ensure_ascii=False),
-                    json.dumps(row["micro_quiz"], ensure_ascii=False),
-                ),
-            )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-    return {"ok": True, "applied": True, "backup_path": str(backup),
-            "accounting": verified["accounting"]}
+    return _apply_patch(database, manifest, backup, MICRO_QUIZ_KIND)
 
 
 def _gate_micro_quiz(conn, manifest):
@@ -374,31 +349,182 @@ def apply_flash_cards(db_path, manifest_path, backup_path=None):
     manifest = read_artifact(manifest_path)
     database = Path(db_path)
     backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
+    return _apply_patch(database, manifest, backup, FLASH_CARD_KIND)
+
+
+def apply_batch(db_path, manifest, *, source):
+    if source not in {"cli", "bridge"}:
+        raise ValueError("source must be cli or bridge")
+    kind = manifest.get("kind") if isinstance(manifest, dict) else None
+    if kind not in {MICRO_QUIZ_KIND, FLASH_CARD_KIND}:
+        raise ValueError(f"unsupported ingest kind: {kind}")
+    database = Path(db_path)
+    backup = database.with_name(database.name + ".ingest-backup")
+    result = _apply_patch(database, manifest, backup, kind)
+    return {key: result[key] for key in (
+        "ok", "batch_id", "kind", "counts", "backup_path", "applied",
+    )}
+
+
+def _apply_patch(database, manifest, backup, kind):
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
     conn = sqlite3.connect(database)
     try:
         conn.execute("BEGIN IMMEDIATE")
-        verified = _gate_flash_cards(conn, manifest)
+        verified = (
+            _gate_micro_quiz(conn, manifest)
+            if kind == MICRO_QUIZ_KIND else _gate_flash_cards(conn, manifest)
+        )
         if not verified["ok"]:
-            raise ValueError("; ".join(verified["errors"]))
+            raise ValueError("\n".join(verified["errors"]))
+        batch_id = _allocate_batch_id(conn)
+        manifest_path = _write_manifest_snapshot(database, batch_id, manifest)
         _backup_database(database, backup)
-        for item in manifest["items"]:
-            row = _flash_card_row(item)
-            conn.execute(
-                "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence)"
-                " VALUES (?, ?, ?, ?, ?)",
-                (row["card_id"], row["kp_id"], row["front"], row["back"],
-                 row["source_evidence"]),
-            )
+        if kind == MICRO_QUIZ_KIND:
+            for item in manifest["items"]:
+                row = _micro_quiz_row(item)
+                conn.execute(
+                    "INSERT INTO problems (problem_id, kp_ids, problem_text, solution,"
+                    " problem_type, source_kind, practice_modes, micro_quiz, ingest_batch_id)"
+                    " VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)",
+                    (
+                        row["problem_id"],
+                        json.dumps(row["kp_ids"], ensure_ascii=False),
+                        row["problem_text"],
+                        row["problem_type"],
+                        row["source_kind"],
+                        json.dumps(row["practice_modes"], ensure_ascii=False),
+                        json.dumps(row["micro_quiz"], ensure_ascii=False),
+                        batch_id,
+                    ),
+                )
+            counts = {"problems": len(manifest["items"])}
+        else:
+            for item in manifest["items"]:
+                row = _flash_card_row(item)
+                conn.execute(
+                    "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence,"
+                    " ingest_batch_id) VALUES (?, ?, ?, ?, ?, ?)",
+                    (row["card_id"], row["kp_id"], row["front"], row["back"],
+                     row["source_evidence"], batch_id),
+                )
+            counts = {"flash_cards": len(manifest["items"])}
+        _record_batch(conn, batch_id, kind, manifest_path, counts, backup)
         conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
-    return {"ok": True, "applied": True, "backup_path": str(backup),
+    return {"ok": True, "applied": True, "batch_id": batch_id, "kind": kind,
+            "counts": counts, "backup_path": str(backup),
             "accounting": verified["accounting"]}
+
+
+def _allocate_batch_id(conn):
+    next_value = conn.execute(
+        "INSERT INTO content_sequences (scope, entity_type, next_value) "
+        "VALUES ('pool', 'batch', 2) "
+        "ON CONFLICT(scope, entity_type) DO UPDATE SET "
+        "next_value=content_sequences.next_value + 1 RETURNING next_value"
+    ).fetchone()[0]
+    return f"batch-{next_value - 1:03d}"
+
+
+def _write_manifest_snapshot(database, batch_id, manifest):
+    path = database.parent / "ingest" / f"{batch_id}.json"
+    write_artifact(path, manifest)
+    return path
+
+
+def _record_batch(conn, batch_id, kind, manifest_path, counts, backup):
+    conn.execute(
+        "INSERT INTO ingest_batches "
+        "(batch_id, kind, manifest_path, counts_json, backup_path) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (batch_id, kind, str(manifest_path),
+         json.dumps(counts, ensure_ascii=False), str(backup)),
+    )
+
+
+def rollback_batch(db_path, batch_id, backup_path=None):
+    database = Path(db_path)
+    conn = sqlite3.connect(database)
+    try:
+        batch = conn.execute(
+            "SELECT kind, rolled_back_at FROM ingest_batches WHERE batch_id=?",
+            (batch_id,),
+        ).fetchone()
+        if batch is None:
+            raise ValueError(f"unknown batch {batch_id}")
+        if batch[1] is not None:
+            raise ValueError(f"batch {batch_id} already rolled back")
+        blockers = _rollback_blockers(conn, batch_id)
+        if blockers:
+            raise ValueError(
+                f"batch {batch_id} has dependent learning records:\n"
+                + "\n".join(blockers)
+            )
+        backup = (Path(backup_path) if backup_path else
+                  database.with_name(database.name + ".rollback-backup"))
+        if backup.exists():
+            raise FileExistsError(f"recoverable copy already exists: {backup}")
+        _backup_database(database, backup)
+        conn.execute("BEGIN IMMEDIATE")
+        table = "flash_cards" if batch[0] == FLASH_CARD_KIND else "problems"
+        cursor = conn.execute(
+            f"DELETE FROM {table} WHERE ingest_batch_id=?", (batch_id,),
+        )
+        conn.execute(
+            "UPDATE ingest_batches SET rolled_back_at=datetime('now') WHERE batch_id=?",
+            (batch_id,),
+        )
+        accounting = _accounting(conn)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"ok": True, "batch_id": batch_id, "deleted": cursor.rowcount,
+            "backup_path": str(backup), "accounting": accounting}
+
+
+def _rollback_blockers(conn, batch_id):
+    queries = (
+        ("problem_attempts",
+         "SELECT DISTINCT a.problem_id FROM problem_attempts a "
+         "JOIN problems p ON p.problem_id=a.problem_id WHERE p.ingest_batch_id=?",
+         (batch_id,)),
+        ("problem_progress",
+         "SELECT DISTINCT x.problem_id FROM problem_progress x "
+         "JOIN problems p ON p.problem_id=x.problem_id WHERE p.ingest_batch_id=?",
+         (batch_id,)),
+        ("feedback_events",
+         "SELECT DISTINCT e.item_type, e.item_id FROM feedback_events e "
+         "LEFT JOIN problems p ON e.item_type='problem' AND p.problem_id=e.item_id "
+         "LEFT JOIN flash_cards c ON e.item_type='card' AND c.card_id=e.item_id "
+         "WHERE p.ingest_batch_id=? OR c.ingest_batch_id=?",
+         (batch_id, batch_id)),
+        ("review_schedule",
+         "SELECT DISTINCT r.item_type, r.item_id FROM review_schedule r "
+         "LEFT JOIN problems p ON r.item_type='problem' AND p.problem_id=r.item_id "
+         "LEFT JOIN flash_cards c ON r.item_type='card' AND c.card_id=r.item_id "
+         "WHERE p.ingest_batch_id=? OR c.ingest_batch_id=?",
+         (batch_id, batch_id)),
+        ("learner_signals",
+         "SELECT DISTINCT s.target_id FROM learner_signals s "
+         "LEFT JOIN problems p ON p.problem_id=s.target_id "
+         "LEFT JOIN flash_cards c ON c.card_id=s.target_id "
+         "WHERE p.ingest_batch_id=? OR c.ingest_batch_id=?",
+         (batch_id, batch_id)),
+    )
+    blockers = []
+    for table, query, params in queries:
+        for row in conn.execute(query, params):
+            blockers.append(f"{table}: {':'.join(str(value) for value in row)}")
+    return blockers
 
 
 def _gate_flash_cards(conn, manifest):

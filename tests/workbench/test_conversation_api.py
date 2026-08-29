@@ -155,6 +155,51 @@ class ConversationApiTests(unittest.TestCase):
         self.assertEqual(exchange["context_anchor"]["kp_id"], "dmath-ch06-kp-001")
         self.assertNotIn("dom", str(exchange))
 
+    def test_ingest_rollback_endpoint_returns_result(self):
+        result = {
+            "ok": True,
+            "batch_id": "batch-001",
+            "deleted": {"flash_cards": 2},
+            "backup_path": "pool/backups/batch-001-rollback.sqlite",
+            "accounting": {"flash_cards": 2},
+        }
+        from workbench.server import api
+
+        with mock.patch.object(
+            api.ingest, "rollback_batch", create=True, return_value=result
+        ) as rollback_batch:
+            status, payload = self.post(
+                "/api/w/dmath/ingest/rollback", {"batch_id": "batch-001"}
+            )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(payload, result)
+        self.assertEqual(rollback_batch.call_args.args[1], "batch-001")
+
+    def test_ingest_rollback_endpoint_requires_batch_id(self):
+        with self.assertRaises(HTTPError) as caught:
+            self.post("/api/w/dmath/ingest/rollback", {})
+
+        self.assertEqual(caught.exception.code, 400)
+
+    def test_ingest_rollback_endpoint_reports_value_error(self):
+        from workbench.server import api
+
+        with mock.patch.object(
+            api.ingest, "rollback_batch", create=True,
+            side_effect=ValueError("unknown ingest batch: batch-999"),
+        ):
+            with self.assertRaises(HTTPError) as caught:
+                self.post(
+                    "/api/w/dmath/ingest/rollback", {"batch_id": "batch-999"}
+                )
+
+        self.assertEqual(caught.exception.code, 400)
+        self.assertEqual(
+            json.loads(caught.exception.read().decode("utf-8"))["error"],
+            "unknown ingest batch: batch-999",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

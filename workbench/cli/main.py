@@ -380,6 +380,9 @@ def cmd_ingest(args):
                 raise ValueError("formal apply currently supports problem artifacts")
             output = Path(args.input)
             result = ingest.apply(db_path, output, args.backup)
+        elif args.action == "rollback":
+            result = ingest.rollback_batch(db_path, args.batch, args.backup)
+            output = Path(result["backup_path"])
         elif args.action == "render":
             output = Path(args.output)
             result = ingest.render(args.input, output)
@@ -562,6 +565,11 @@ def build_parser():
     action = ingest_sub.add_parser("apply")
     action.add_argument("entity", choices=["kp", "problem", "candidate", "relation"])
     action.add_argument("--input", required=True)
+    action.add_argument("--backup")
+    action.set_defaults(func=cmd_ingest)
+
+    action = ingest_sub.add_parser("rollback")
+    action.add_argument("--batch", required=True)
     action.add_argument("--backup")
     action.set_defaults(func=cmd_ingest)
 
