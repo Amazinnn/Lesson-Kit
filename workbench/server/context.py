@@ -22,6 +22,7 @@ def build(pool, workspace, payload):
             f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
         )],
         "practice_intent": bool(payload.get("practice_intent")),
+        "goal_intent": bool(payload.get("goal_intent")),
     }
     if page_type == "practice":
         _practice(pool, payload, result)

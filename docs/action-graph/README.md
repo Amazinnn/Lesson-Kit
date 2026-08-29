@@ -48,5 +48,5 @@
 ## 队列（2026-08-29 问卷后所有者确认，全要，按序）
 
 ① 本图谱 v2（完成）→ ② 讲解/诊断彻底移除（完成，remove-explain-diagnose）→
-③ 目标补齐（UI 编辑/删除 + 自然语言输入接 Agent + CLI goals 命令）→
+③ 目标补齐（完成，complete-goals-loop）→
 ④ Check 管线立项（定义升级 + 首期实现）。

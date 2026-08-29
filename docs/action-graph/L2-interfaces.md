@@ -23,7 +23,7 @@
 | POST `/ai/sessions/{id}/turns` · GET `…/turns/{turn}` · POST `…/cancel` | 读/写 | 对话 | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 
-## CLI 命令（`python -m workbench.cli.main …`，21 条）
+## CLI 命令（`python -m workbench.cli.main …`，22 条）
 
 | 命令 | 性质 | 给谁 |
 |---|---|---|
@@ -31,6 +31,8 @@
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |
 | `pull` | 读（按 KP 拉题） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
+| `goals`（list/add/update/rm） | 写（目标管理） | Agent |
+| `goals` | 写（目标 list/add/update/rm） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容） | Agent |
 | `bridge add` | 配置任务 provider | 人 |
 | `guard` | 工作台守卫 | 双 |
@@ -39,4 +41,4 @@
 
 > 问卷 B1 口径：Agent 对池子增删改查全开——`data`（变更）、`ingest --apply`、
 > `practice/feedback` 均可由 Agent 直跑；门禁是决断辅助不是闸门。
-> 缺口：**无 `goals` CLI 命令**（队列③补）。
+> goals CLI 已上线（complete-goals-loop，22 命令）。

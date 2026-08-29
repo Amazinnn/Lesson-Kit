@@ -260,6 +260,11 @@ _Avoid_：内嵌大模型、常驻后台进程
 _Avoid_：把动作清单散落在各 spec 里不登记、用浏览器操作代替明文
 出处：docs/ACTION-GRAPH.md；DISCUSSION-RECORD 专题 20 后所有者 2026-08-29 提出
 
+### 目标助填动作 / prefill_goal_form
+目标表单发起一句话求助时，Agent 回复可附的结构化动作：仅 goal_intent 请求可生效，字段（title/kind/deadline/description）经服务端契约校验后原位填进表单，提交仍由人完成。
+_Avoid_：普通对话代填、跳过人确认直接创建
+出处：complete-goals-loop 归档；ai-teacher-bridge spec
+
 ### 批次 id / Batch id
 一次门禁 apply 写入池的那批内容的唯一标识；批次内的每一内容行携带该标记，用于事后溯源与整批撤销。
 _Avoid_：内容版本号、逐条审计日志

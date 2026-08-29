@@ -171,7 +171,10 @@ def _prompt(message, context):
         "才可使用 wb data 写命令。回答末尾如有写入，用简洁中文列出对象、动作和可访问路径，不展示命令、SQL 或工具日志。"
         "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
         "普通问答不要附带动作。格式为 ```lessonkit-action {\"type\":\"replace_practice_selection\","
-        "\"kp_ids\":[\"知识点ID\"]} ```。\n\n"
+        "\"kp_ids\":[\"知识点ID\"]} ```。"
+        "若学生从目标表单发起一句话求助，可附 ```lessonkit-action {\"type\":\"prefill_goal_form\","
+        "\"title\":\"…\",\"kind\":\"stage|long_term\",\"deadline\":\"YYYY-MM-DD或空\","
+        "\"description\":\"…\"} ``` 代填目标字段（仅此意图可附，普通问答不得代填）。\n\n"
         "服务端重建的当前上下文：\n"
         + json.dumps(context, ensure_ascii=False, indent=2)
         + "\n\n学生消息：\n"
@@ -334,25 +337,50 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     _finish(folder, conversation_id, turn_id, "done", None)
 
 
+_GOAL_KINDS = {"stage", "long_term"}
+
+
 def _extract_action(answer, context):
     match = re.search(r"```lessonkit-action\s*([\s\S]*?)```", answer, re.IGNORECASE)
-    if not match or not context.get("practice_intent"):
+    if not match:
         return answer, None
     try:
         raw = json.loads(match.group(1).strip())
     except (TypeError, ValueError):
         return answer, None
-    if raw.get("type") != "replace_practice_selection":
-        return answer, None
-    allowed = set(context.get("knowledge_point_ids") or [])
-    ids = []
-    for item in raw.get("kp_ids") or []:
-        if item in allowed and item not in ids:
-            ids.append(item)
-    if not ids:
+    action = None
+    if raw.get("type") == "replace_practice_selection" and context.get("practice_intent"):
+        allowed = set(context.get("knowledge_point_ids") or [])
+        ids = []
+        for item in raw.get("kp_ids") or []:
+            if item in allowed and item not in ids:
+                ids.append(item)
+        if ids:
+            action = {"type": raw["type"], "kp_ids": ids}
+    elif raw.get("type") == "prefill_goal_form" and context.get("goal_intent"):
+        action = _clean_goal_form_action(raw)
+    if action is None:
         return answer, None
     cleaned = (answer[:match.start()] + answer[match.end():]).strip()
-    return cleaned, {"type": raw["type"], "kp_ids": ids}
+    return cleaned, action
+
+
+def _clean_goal_form_action(raw):
+    title = str(raw.get("title") or "").strip()[:120]
+    if not title:
+        return None
+    kind = raw.get("kind") if raw.get("kind") in _GOAL_KINDS else "stage"
+    deadline = str(raw.get("deadline") or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", deadline):
+        deadline = ""
+    description = str(raw.get("description") or "").strip()[:500]
+    return {
+        "type": "prefill_goal_form",
+        "title": title,
+        "kind": kind,
+        "deadline": deadline,
+        "description": description,
+    }
 
 
 def _finish(folder, conversation_id, turn_id, status, error):

@@ -195,6 +195,27 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("review", out)
 
+    def test_goals_add_list_update_rm(self):
+        code, out = self.run_cli("goals", "dmath", "add", "--title", "期末掌握计数",
+                                 "--kind", "stage", "--deadline", "2026-09-30",
+                                 "--description", "重点鸽巢与组合")
+        self.assertEqual(code, 0)
+        self.assertIn("期末掌握计数", out)
+
+        code, out = self.run_cli("goals", "dmath", "list")
+        self.assertEqual(code, 0)
+        self.assertIn("期末掌握计数", out)
+
+        code, out = self.run_cli("goals", "dmath", "update", "goal-001",
+                                 "--title", "改后的目标")
+        self.assertEqual(code, 0)
+        self.assertIn("改后的目标", out)
+
+        code, out = self.run_cli("goals", "dmath", "rm", "goal-001")
+        self.assertEqual(code, 0)
+        code, out = self.run_cli("goals", "dmath", "list")
+        self.assertNotIn("改后的目标", out)
+
     def test_ingest_parser_exposes_atomic_commands(self):
         parser = self.cli.build_parser()
         prepared = parser.parse_args([

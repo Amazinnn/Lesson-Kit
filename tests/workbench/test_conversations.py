@@ -262,5 +262,49 @@ class ConversationTests(unittest.TestCase):
         })
 
 
+class GoalFormActionExtractionTests(unittest.TestCase):
+    """prefill_goal_form：意图门、字段契约、区块剥离。"""
+
+    def _run(self, answer, context):
+        from workbench.bridge import conversations
+        return conversations._extract_action(answer, context)
+
+    def _answer(self, body):
+        return "好的，我帮你填。\n```lessonkit-action\n" + body + "\n```"
+
+    def test_goal_intent_with_valid_action_is_extracted_and_stripped(self):
+        answer = self._answer('{"type":"prefill_goal_form","title":"期末掌握计数",'
+                              '"kind":"stage","deadline":"2026-09-30","description":"重点：鸽巢与组合"}')
+        cleaned, action = self._run(answer, {"goal_intent": True})
+        self.assertEqual(action["type"], "prefill_goal_form")
+        self.assertEqual(action["title"], "期末掌握计数")
+        self.assertEqual(action["deadline"], "2026-09-30")
+        self.assertNotIn("lessonkit-action", cleaned)
+
+    def test_without_goal_intent_nothing_is_extracted(self):
+        cleaned, action = self._run(
+            self._answer('{"type":"prefill_goal_form","title":"x"}'),
+            {"goal_intent": False})
+        self.assertIsNone(action)
+        self.assertIn("prefill_goal_form", cleaned)
+
+    def test_empty_title_is_discarded(self):
+        _, action = self._run(
+            self._answer('{"type":"prefill_goal_form","title":" "}'),
+            {"goal_intent": True})
+        self.assertIsNone(action)
+
+    def test_bad_kind_and_deadline_are_normalized(self):
+        _, action = self._run(
+            self._answer('{"type":"prefill_goal_form","title":"T","kind":"weird","deadline":"九月"}'),
+            {"goal_intent": True})
+        self.assertEqual(action["kind"], "stage")
+        self.assertEqual(action["deadline"], "")
+
+    def test_malformed_json_is_ignored(self):
+        _, action = self._run(self._answer("{oops}"), {"goal_intent": True})
+        self.assertIsNone(action)
+
+
 if __name__ == "__main__":
     unittest.main()
