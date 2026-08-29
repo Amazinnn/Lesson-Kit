@@ -67,6 +67,12 @@ ROUTES = [
 ]
 
 
+def _kp_titles(workspace, pool):
+    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+    return {kp["kp_id"]: kp.get("knowledge_item") or kp["kp_id"]
+            for kp in pool.kps(prefix)}
+
+
 class WorkbenchHandler(BaseHTTPRequestHandler):
     server_version = "Workbench/0.1"
 
@@ -183,23 +189,21 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                     workspace, workspaces, weak_items,
                     self._graph_artifact(workspace).is_file(),
                 )
-            elif page == "review":
-                overview = queries.review_overview(pool)
-                due_items = overview["items"]
-                problem_kps = {
-                    item["item_id"]: (pool.problem(item["item_id"]) or {}).get("kp_ids", [])
-                    for item in due_items if item["item_type"] == "problem"
-                }
-                html_body = pages.review_page(
-                    workspace, workspaces, weak_items, due_items, problem_kps,
-                    later_count=overview["later_count"],
-                )
             elif page == "session-end":
                 html_body = pages.session_end_page(workspace, workspaces, weak_items)
             else:
+                plan = api_mod.daily_plan(pool, workspace, {}, {})
+                overview = queries.review_overview(pool)
+                problem_kps = {
+                    item["item_id"]: (pool.problem(item["item_id"]) or {}).get("kp_ids", [])
+                    for item in overview["items"] if item["item_type"] == "problem"
+                }
+                kp_titles = _kp_titles(workspace, pool)
+                suggestions = pages.suggestion_rows(
+                    plan.get("queue"), overview["items"], problem_kps, kp_titles,
+                )
                 html_body = pages.practice_page(
-                    workspace, workspaces, weak_items,
-                    api_mod.daily_plan(pool, workspace, {}, {}),
+                    workspace, workspaces, weak_items, plan, suggestions, kp_titles,
                 )
         finally:
             pool.close()

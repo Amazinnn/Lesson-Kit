@@ -6,7 +6,6 @@ import re
 from datetime import date
 
 from workbench.data import queries
-from workbench.domain import planning, weak
 
 
 def hub_page(workspaces):
@@ -86,69 +85,18 @@ def _page_header(context, title, summary="", actions=""):
     )
 
 
-def practice_page(workspace, workspaces, weak_items, plan=None):
-    if plan is None:
-        plan = {"goals": [], "queue": [], "totals": {}}
-    plan_html = _daily_plan(plan, workspace["name"])
-    middle = (
-        _page_header(
-            "学习 / 弱项优先", "练习",
-            "从最需要回看的知识点开始，按自己的节奏完成这一轮。",
-        )
-        + "<div class='page-content practice-content'>"
-        + plan_html
-        + "<section id='start-area' class='practice-intro'>"
-        "<p class='section-kicker'>本轮练习</p>"
-        "<h2>先选定自评方式</h2>"
-        "<p>本轮会持续练习薄弱项相关题；跳题和草稿不会留下学习记录。</p>"
-        "<fieldset class='practice-mode-choice'><legend>本轮自评方式（必选）</legend>"
-        "<label><input id='practice-mode-immediate' type='radio' name='practice-mode' "
-        "value='immediate'> 每题作答后自评</label>"
-        "<label><input id='practice-mode-batch' type='radio' name='practice-mode' "
-        "value='batch'> 完成后统一自评</label></fieldset>"
-        "<button id='start-practice' class='primary' disabled>开始本轮练习</button>"
-        "</section>"
-        "<section class='practice-flow' aria-label='练习过程'>"
-        "<p id='practice-error' class='inline-error hidden' aria-live='polite'></p>"
-        "<button id='retry-practice' class='outline sm hidden' type='button'>重试</button>"
-        "<div id='stream' class='practice-card-area'></div>"
-        "<div id='composer' class='practice-answer-card hidden'>"
-        "<div id='composer-row'>"
-        "<textarea id='answer-box' rows='3' placeholder='写下你的作答'></textarea>"
-        "<button id='answer-submit' class='primary'>提交作答</button>"
-        "</div>"
-        "<div id='composer-actions' class='hidden'>"
-        "<button id='show-answer' class='outline'>查看解析</button>"
-        "</div>"
-        "<div id='feedback-area' class='feedback-card hidden'>"
-        "<label for='rating-input'>自评分（1–5）</label>"
-        "<input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' "
-        "placeholder='输入 1–5'>"
-        "<textarea id='feedback-note' rows='2' placeholder='可选备注'></textarea>"
-        "<button id='save-rating' class='primary'>保存并下一题</button>"
-        "</div>"
-        "</div>"
-        "</section>"
-        "<div id='session-end-entry' class='session-end-entry hidden'>"
-        "<span>本题未提交的内容只保留在当前会话。</span>"
-        "<div><button id='no-time' class='ghost'>跳到下一道题目</button>"
-        "<button id='goto-session-end' class='outline'>提前结束本次练习</button></div>"
-        "</div>"
-        "</div>"
-    )
-    return shell(workspace, workspaces, weak_items, middle, "practice", page_type="practice")
-
-
-def practice_page(workspace, workspaces, weak_items, plan=None):
-    """Render practice without deriving scope from weak items or the plan."""
+def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None,
+                  kp_titles=None):
+    """Render practice: staged selection list + on-demand suggestions + time view."""
     plan = plan or {"goals": [], "queue": [], "totals": {}}
     middle = (
-        _page_header("学习 / 明确范围", "练习", "先从知识点视图明确本轮弱项或复习范围，再选择一种练习模式。")
-        + "<div class='page-content practice-content'>" + _daily_plan(plan, workspace["name"])
-        + "<section id='practice-empty-state' class='empty-state card'>"
-        "<p class='section-kicker'>练习范围</p><h2>先从知识点开始</h2>"
-        "<p>请在知识点列表或图谱中勾选范围，再回到这里选择一种练习模式。</p></section>"
-        "<section id='start-area' class='practice-intro'><p class='section-kicker'>本轮练习</p>"
+        _page_header("学习 / 明确范围", "练习", "先选定要练的知识点，再选择一种练习模式。")
+        + "<div class='page-content practice-content'>"
+        + "<div class='practice-columns'>"
+        + "<div class='practice-main'>"
+        + _daily_plan(plan)
+        + _staged_practice_html(workspace["name"], suggestions or [], kp_titles or {})
+        + "<section id='start-area' class='practice-intro'><p class='section-kicker'>本轮练习</p>"
         "<h2>选择一种练习模式</h2>"
         "<p id='practice-scope-summary'>当前范围由知识点视图明确选择；本轮不会自动扩展范围。</p>"
         "<fieldset class='practice-mode-choice'><legend>练习模式（必选其一）</legend>"
@@ -159,7 +107,10 @@ def practice_page(workspace, workspaces, weak_items, plan=None):
         "<label><input id='practice-rating-immediate' type='radio' name='practice-rating-mode' value='immediate'> 每题作答后自评</label>"
         "<label><input id='practice-rating-batch' type='radio' name='practice-rating-mode' value='batch'> 完成后统一自评</label></fieldset>"
         "<button id='start-practice' class='primary' disabled>开始本轮练习</button></section>"
-        "<section class='practice-flow' aria-label='练习过程'><p id='practice-error' class='inline-error hidden' aria-live='polite'></p>"
+        + "</div>"
+        + "<aside class='practice-time'>" + time_view_html() + "</aside>"
+        + "</div>"
+        + "<section class='practice-flow' aria-label='练习过程'><p id='practice-error' class='inline-error hidden' aria-live='polite'></p>"
         "<button id='retry-practice' class='outline sm hidden' type='button'>重试</button><div id='stream' class='practice-card-area'></div>"
         "<div id='composer' class='practice-answer-card hidden'><div id='composer-row'><textarea id='answer-box' rows='3' placeholder='写下你的作答'></textarea>"
         "<button id='answer-submit' class='primary'>提交作答</button></div><div id='composer-actions' class='hidden'>"
@@ -172,71 +123,114 @@ def practice_page(workspace, workspaces, weak_items, plan=None):
     return shell(workspace, workspaces, weak_items, middle, "practice", page_type="practice")
 
 
-def _daily_plan(plan, workspace_name):
+def _daily_plan(plan):
     goals = plan.get("goals") or []
-    queue = plan.get("queue") or []
-    goal_html = "".join(
-        "<li><strong>" + html.escape(goal.get("title") or "未命名目标")
-        + "</strong>"
-        + ("<span class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</span>"
-           if goal.get("deadline") else "")
-        + "</li>"
+    goal_cards = "".join(
+        "<article class='goal-card card'><h3>" + html.escape(goal.get("title") or "未命名目标") + "</h3>"
+        + ("<p class='goal-progress'>覆盖进度：" + html.escape(str(goal.get("coverage_progress", goal.get("progress", "暂无")))) + "</p>" if goal.get("coverage_progress", goal.get("progress")) is not None else "")
+        + ("<p class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</p>" if goal.get("deadline") else "")
+        + ("<details><summary>查看说明与范围</summary><p>" + html.escape(str(goal.get("description") or goal.get("scope") or "")) + "</p></details>" if goal.get("description") or goal.get("scope") else "")
+        + "</article>"
         for goal in goals
-    ) or "<li class='muted'>暂未设置目标</li>"
-    queue_html = "".join(
-        "<li class='plan-queue-item'><div><a href='/w/" + html.escape(workspace_name)
-        + "/kp/" + html.escape(item["kp_ids"][0]) + "'><strong>"
-        + html.escape(item.get("title") or "未命名知识点") + "</strong></a>"
-        + "<p>" + html.escape(item.get("reason") or "按当前顺序推进") + "</p></div>"
-        + "<div class='plan-paths'>"
-        + "<a class='plan-path' data-practice-path='exam' href='/w/" + html.escape(workspace_name)
-        + "/practice?kp=" + html.escape(item["kp_ids"][0]) + "&path=exam'>综合</a>"
-        + "<a class='plan-path' data-practice-path='flash_card' href='/w/" + html.escape(workspace_name)
-        + "/practice?kp=" + html.escape(item["kp_ids"][0]) + "&path=flash_card'>卡片</a>"
-        + "<a class='plan-path' data-practice-path='yes_no' href='/w/" + html.escape(workspace_name)
-        + "/practice?kp=" + html.escape(item["kp_ids"][0]) + "&path=yes_no'>判断</a></div>"
-        + "<span class='plan-count'>约 " + str(item.get("target_count", 1)) + " 题</span></li>"
-        for item in queue
-    ) or "<li class='muted'>今天暂时没有安排</li>"
+    ) or "<p class='muted'>暂无已设置的长期或阶段目标。</p>"
     return (
-        "<section id='daily-plan' class='daily-plan' aria-label='今日计划'>"
-        "<div class='section-heading'><div><p class='section-kicker'>学习安排</p>"
-        "<h2>今日计划</h2></div><div class='plan-heading-actions'>"
-        "<span class='plan-total'>"
-        + str((plan.get("totals") or {}).get("target_count", 0)) + " 题</span></div>"
-        + "<button id='recalculate-plan' class='ghost sm' type='button'>重新安排</button></div>"
-        "<div class='plan-columns'><section><h3>长期与阶段目标</h3><ul class='plan-goals'>"
-        + goal_html + "</ul></section><section><h3>今天先做</h3><ol class='plan-queue'>"
-        + queue_html + "</ol></section></div></section>"
+        "<section id='daily-plan' class='daily-plan' aria-label='学习安排'>"
+        "<section class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
+        "<details class='goal-editor'><summary>添加目标</summary><form id='goal-form'>"
+        "<label for='goal-title'>目标名称</label><input id='goal-title' name='title' required>"
+        "<label for='goal-kind'>目标类型</label><select id='goal-kind' name='kind'><option value='stage'>阶段目标</option><option value='long_term'>长期目标</option></select>"
+        "<label for='goal-deadline'>截止日期</label><input id='goal-deadline' name='deadline' type='date'>"
+        "<label for='goal-description'>说明</label><textarea id='goal-description' name='description' rows='3'></textarea>"
+        "<button class='primary sm' type='submit'>保存目标</button><p id='goal-form-status' class='inline-error' aria-live='polite'></p>"
+        "</form></details></section>"
     )
 
 
-def kps_page(workspace, workspaces, weak_items, pool):
-    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
-    ranked = weak.score_all(
-        pool.kps(prefix), pool.signals(), pool.schedule_rows(),
-        pool.relations(), set(), date.today(),
+SUGGESTION_LIMIT = 20
+
+
+def suggestion_rows(plan_queue, due_items, problem_kps=None, kp_titles=None, today=None):
+    """KP-level on-demand suggestions: plan queue ∪ due rows, one phrase each.
+
+    Pure mapping for the practice page's suggestion entry: overdue and
+    due-today rows come first (earliest due date first), plan-only items
+    follow; every knowledge point appears at most once with at most one
+    human-readable phrase (due phrases win over plan phrases).
+    """
+    today = today or date.today()
+    problem_kps = problem_kps or {}
+    kp_titles = kp_titles or {}
+    rows = []
+    seen = set()
+
+    def add(kp_id, title, phrase):
+        if not kp_id or kp_id in seen:
+            return
+        seen.add(kp_id)
+        rows.append({"kp_id": kp_id, "title": title or kp_id, "reason": phrase})
+
+    def due_days(item):
+        try:
+            return (date.fromisoformat(str(item.get("due_at") or "")[:10]) - today).days
+        except ValueError:
+            return 0
+
+    due_sorted = sorted(
+        (item for item in (due_items or []) if due_days(item) <= 0),
+        key=lambda item: (str(item.get("due_at") or ""), str(item.get("item_id") or "")),
     )
-    items = "".join(
-        f"<li><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>{html.escape(item['knowledge_item'])}</a>"
-        "</li>"
-        for item in ranked
+    for item in due_sorted:
+        days = due_days(item)
+        phrase = f"拖了 {abs(days)} 天" if days < 0 else "今天到期"
+        if item.get("item_type") == "kp":
+            add(item.get("item_id"),
+                kp_titles.get(item.get("item_id")) or item.get("label"), phrase)
+        else:
+            for kp_id in problem_kps.get(item.get("item_id"), []):
+                add(kp_id, kp_titles.get(kp_id), phrase)
+    for item in plan_queue or []:
+        phrase = item.get("reason") or "覆盖仍低"
+        for kp_id in item.get("kp_ids") or []:
+            add(kp_id, kp_titles.get(kp_id) or item.get("title"), phrase)
+    return rows
+
+
+def _staged_practice_html(workspace_name, suggestions, kp_titles=None):
+    kp_titles = kp_titles or {}
+    names_json = html.escape(json.dumps(kp_titles, ensure_ascii=False))
+    total = len(suggestions)
+    rows = "".join(
+        "<li class='suggestion-row' data-kp-id='" + html.escape(row["kp_id"]) + "'>"
+        "<span class='suggestion-title'>" + html.escape(row["title"]) + "</span>"
+        "<span class='suggestion-reason'>" + html.escape(row["reason"]) + "</span>"
+        "<button class='outline sm suggestion-join' type='button' data-kp-id='"
+        + html.escape(row["kp_id"]) + "'>加入</button></li>"
+        for row in suggestions[:SUGGESTION_LIMIT]
     )
-    empty_items = '<li class="muted">暂无知识点</li>'
-    middle = (
-        _page_header(
-            "学习 / 当前章节", "知识点",
-            "按薄弱程度浏览本章内容，随时进入具体知识点回看。",
-        )
-        + "<div class='page-content'>"
-        "<section class='support-section knowledge-index'>"
-        "<div class='section-heading'><div>"
-        "<p class='section-kicker'>当前排序</p><h2>本章知识点</h2>"
-        "</div><p>分数越高，越值得优先回看。</p></div>"
-        f"<ul class='knowledge-list'>{items or empty_items}</ul>"
-        "</section></div>"
+    more = total - SUGGESTION_LIMIT
+    more_html = (
+        f"<p id='suggestions-more' class='muted'>还有 {more} 条。</p>"
+        if more > 0 else ""
     )
-    return shell(workspace, workspaces, weak_items, middle, "kps", page_type="kps")
+    return (
+        "<section id='staged-practice' class='staged-practice' aria-label='准备练习'>"
+        "<div class='section-heading'><div><p class='section-kicker'>准备练习</p>"
+        "<h2>今天要练的</h2></div></div>"
+        "<ol id='staged-list' class='staged-list' aria-label='已选定的知识点' "
+        f"data-kp-names='{names_json}'></ol>"
+        "<p id='staged-empty' class='muted staged-empty'>还没选定要练的知识点——"
+        f"<a href='/w/{html.escape(workspace_name)}/kps'>去知识点页挑一个</a>。</p>"
+        "<div class='suggestion-entry'>"
+        "<button id='suggestions-toggle' class='outline sm' type='button' "
+        "aria-expanded='false' data-total='" + str(total) + "'>"
+        "＋ 加今天要练的" + (f"（{total}）" if total else "") + "</button>"
+        "<div id='suggestions' class='suggestions hidden'>"
+        "<ol id='suggestion-list' class='suggestion-list'>" + rows + "</ol>"
+        + more_html
+        + "<p id='suggestions-empty' class='muted hidden'>今天没有建议。</p>"
+        "<button id='recalculate-plan' class='ghost sm' type='button'>重新安排</button>"
+        "</div></div></section>"
+    )
 
 
 def kp_page(workspace, workspaces, weak_items, pool, kp_id):
@@ -278,60 +272,6 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
     return shell(
         workspace, workspaces, weak_items, middle, "kps",
         page_type="kp", object_id=kp_id,
-    )
-
-
-def graph_page(workspace, workspaces, weak_items, has_artifact):
-    middle = (
-        _page_header(
-            "知识网络 / 当前章节", "知识图谱",
-            "搜索、筛选或聚焦一个知识点，查看它与当前学习状态的联系。",
-        )
-        + "<div class='page-content graph-content'>"
-        "<section class='graph-panel' aria-label='知识图谱'>"
-        "<div class='graph-toolbar'>"
-         "<label class='visually-hidden' for='graph-search'>搜索知识点</label>"
-         "<input id='graph-search' placeholder='搜索知识点'>"
-         "<label class='graph-gravity-label' for='graph-gravity'>聚拢</label>"
-         "<input id='graph-gravity' type='range' min='0' max='100' value='30' "
-         "aria-label='调整图谱聚拢程度' title='调整图谱聚拢程度'>"
-         "<div class='graph-zoom' aria-label='缩放'>"
-        "<button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button>"
-        "<button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button>"
-        "<button id='graph-fit' class='outline sm'>适应画布</button></div>"
-        "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div>"
-        "</section></div>"
-    )
-    return shell(workspace, workspaces, weak_items, middle, "graph", graph_mode=True,
-                 page_type="graph")
-
-
-def _daily_plan(plan, workspace_name):
-    goals = plan.get("goals") or []
-    queue = (plan.get("queue") or [])[:3]
-    goal_cards = "".join(
-        "<article class='goal-card card'><h3>" + html.escape(goal.get("title") or "未命名目标") + "</h3>"
-        + ("<p class='goal-progress'>覆盖进度：" + html.escape(str(goal.get("coverage_progress", goal.get("progress", "暂无")))) + "</p>" if goal.get("coverage_progress", goal.get("progress")) is not None else "")
-        + ("<p class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</p>" if goal.get("deadline") else "")
-        + ("<details><summary>查看说明与范围</summary><p>" + html.escape(str(goal.get("description") or goal.get("scope") or "")) + "</p></details>" if goal.get("description") or goal.get("scope") else "")
-        + "</article>"
-        for goal in goals
-    ) or "<p class='muted'>暂无已设置的长期或阶段目标。</p>"
-    queue_html = "".join(
-        "<li class='plan-queue-item'><a class='queue-handoff' data-queue-kp-ids='" + html.escape(json.dumps(item.get("kp_ids") or [], ensure_ascii=False)) + "' href='/w/" + html.escape(workspace_name) + "/practice'><strong>" + html.escape(item.get("title") or "未命名知识点") + "</strong></a><span class='plan-count'>约 " + str(item.get("target_count", 1)) + " 题</span><p>" + html.escape(item.get("reason") or "按当前覆盖情况安排") + "</p></li>"
-        for item in queue
-    ) or "<li class='muted'>今天暂无到期或可用安排。</li>"
-    return (
-        "<section id='daily-plan' class='daily-plan' aria-label='今日计划'><div class='section-heading'><div><p class='section-kicker'>学习安排</p><h2>今日计划</h2></div><span class='plan-total'>" + str((plan.get("totals") or {}).get("target_count", 0)) + " 题</span><button id='recalculate-plan' class='ghost sm' type='button'>重新安排</button></div>"
-        "<section class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
-        "<details class='goal-editor'><summary>添加目标</summary><form id='goal-form'>"
-        "<label for='goal-title'>目标名称</label><input id='goal-title' name='title' required>"
-        "<label for='goal-kind'>目标类型</label><select id='goal-kind' name='kind'><option value='stage'>阶段目标</option><option value='long_term'>长期目标</option></select>"
-        "<label for='goal-deadline'>截止日期</label><input id='goal-deadline' name='deadline' type='date'>"
-        "<label for='goal-description'>说明</label><textarea id='goal-description' name='description' rows='3'></textarea>"
-        "<button class='primary sm' type='submit'>保存目标</button><p id='goal-form-status' class='inline-error' aria-live='polite'></p>"
-        "</form></details>"
-        "<section class='daily-queue' aria-label='今天先做'><h3>今天先做</h3><ol class='plan-queue'>" + queue_html + "</ol></section></section>"
     )
 
 
@@ -425,7 +365,6 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     nav_items = [
         ("practice", "练习"),
         ("kps", "知识点"),
-        ("review", "复习"),
         ("graph", "知识图谱"),
     ]
     nav = "".join(
@@ -681,104 +620,6 @@ def _base(title, body):
     )
 
 
-def review_page(workspace, workspaces, weak_items, due_items,
-                problem_kps=None, later_count=0):
-    """Due-review reminder surface: grouped list + inline card session."""
-    today = date.today()
-
-    def due_days(item):
-        try:
-            return (date.fromisoformat(str(item["due_at"])[:10]) - today).days
-        except ValueError:
-            return 0
-
-    due_items = sorted(due_items or [], key=lambda i: (i["due_at"], i["item_id"]))
-    directional = [i for i in due_items if i.get("direction")]
-    overdue = [i for i in due_items if due_days(i) < 0]
-    today_items = [i for i in due_items if due_days(i) == 0]
-    soon = [i for i in due_items if 0 < due_days(i) <= 7]
-    problems = problem_kps or {}
-
-    def badge(text, extra=""):
-        return f"<span class='badge {extra}'>{text}</span>"
-
-    def row(item):
-        days = due_days(item)
-        is_kp = item["item_type"] == "kp"
-        type_badge = badge("知识点" if is_kp else "题目", "badge-type")
-        direction_badge = (
-            badge("反向" if item["direction"] == "reverse" else item["direction"],
-                  "badge-direction")
-            if item.get("direction") else ""
-        )
-        due_note = (
-            "可以复习" if days == 0
-            else f"可以复习 · 已过期 {abs(days)} 天" if days < 0
-            else f"可以复习 · {days} 天后"
-        )
-        label = html.escape(item.get("label") or item["item_id"])
-        if is_kp:
-            kp_ids_json = html.escape(json.dumps([item["item_id"]]))
-            action = (f"<a class='queue-handoff ghost sm' data-queue-kp-ids='{kp_ids_json}' "
-                      f"href='/w/{html.escape(workspace['name'])}/practice'>去练习</a>")
-        else:
-            kp_ids = problems.get(item["item_id"]) or []
-            kp_ids_json = html.escape(json.dumps(kp_ids))
-            action = (f"<button class='outline sm review-practice-problem' type='button' "
-                      f"data-include-id='{html.escape(item['item_id'])}' "
-                      f"data-kp-ids='{kp_ids_json}'>练这道</button>")
-        return (f"<div class='review-row' data-item-type='{item['item_type']}' "
-                f"data-item-id='{html.escape(item['item_id'])}' "
-                f"data-direction='{html.escape(item.get('direction') or '')}'>"
-                f"<span class='review-label'>{label}</span>"
-                f"{type_badge}{direction_badge}"
-                f"<span class='review-due'>{due_note}</span>{action}</div>")
-
-    def group(title, items, extra_note=""):
-        if not items:
-            return ""
-        note = f"<span class='review-group-count'>{len(items)} 项{extra_note}</span>"
-        rows = "".join(row(item) for item in items)
-        return (f"<div class='review-group'><div class='review-group-head'>"
-                f"<h2>{title}</h2>{note}</div>{rows}</div>")
-
-    overdue_note = f" · 含逾期 {len(overdue)} 项" if overdue else ""
-    groups = (
-        group("今天到期", overdue + today_items, overdue_note)
-        + group("未来 7 天", soon)
-    )
-    list_html = groups if groups else ""
-    later_html = (
-        f"<p class='muted review-later'>以后还有 {later_count} 项，未列出。</p>"
-        if later_count else ""
-    )
-    if not due_items:
-        list_html = (
-            "<section class='empty-state card'><h2>今天没有到期的复习</h2>"
-            "<p>调度只做提醒。去练习一轮，到期的内容会自然出现在这里。</p>"
-            f"<a class='ghost' href='/w/{html.escape(workspace['name'])}/practice'>去练习</a>"
-            "</section>"
-        )
-    card_entry = (
-        "<section class='review-card-entry'>"
-        f"<button id='start-card-review' class='primary'>开始卡片复习</button>"
-        f"<span class='review-card-count'>{len(directional)} 张方向卡到期</span>"
-        "</section>"
-    ) if directional else ""
-    middle = (
-        _page_header("复习 / 到期提醒", "复习",
-                     "调度只做提醒；什么时候复习、复习多少，由你决定。")
-        + "<div id='review-content' class='page-content review-content'>"
-        + card_entry
-        + card_session_html()
-        + list_html
-        + later_html
-        + time_view_html()
-        + "</div>"
-    )
-    return shell(workspace, workspaces, weak_items, middle, "review", page_type="review")
-
-
 def time_view_html():
     return (
         "<section id='time-view' class='card time-view hidden' aria-label='时间安排'>"
@@ -789,28 +630,5 @@ def time_view_html():
         "<div id='calendar-grid' class='calendar-grid'></div>"
         "<div id='workload-bars' class='workload-bars'></div>"
         "<p id='time-view-empty' class='muted hidden'>最近没有安排在日历上。</p>"
-        "</section>"
-    )
-
-
-def card_session_html():
-    return (
-        "<section id='card-session' class='card review-card-session hidden' aria-label='卡片复习'>"
-        "<div class='section-heading'><p class='section-kicker'>卡片复习</p>"
-        "<span id='card-progress' class='review-card-progress'></span></div>"
-        "<div id='card-face' class='review-card-face rich-text'></div>"
-        "<button id='reveal-card' class='primary'>揭示</button>"
-        "<div id='card-back' class='review-card-face rich-text hidden'></div>"
-        "<div id='card-neighbours' class='review-neighbours hidden'></div>"
-        "<div id='card-rating' class='card-rating-row hidden'>"
-        "<span class='muted'>这张卡感觉如何</span>"
-        "<button class='outline sm' type='button' data-card-rating='1'>1 陌生</button>"
-        "<button class='outline sm' type='button' data-card-rating='2'>2</button>"
-        "<button class='outline sm' type='button' data-card-rating='3'>3</button>"
-        "<button class='outline sm' type='button' data-card-rating='4'>4</button>"
-        "<button class='outline sm' type='button' data-card-rating='5'>5 熟练</button>"
-        "</div>"
-        "<p id='card-summary' class='hidden'></p>"
-        "<button id='card-back-list' class='ghost hidden'>返回列表</button>"
         "</section>"
     )

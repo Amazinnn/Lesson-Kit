@@ -35,6 +35,7 @@
     if (count) count.textContent = "已选 " + unique.length + " 个知识点";
     var handoff = document.getElementById("practice-selected");
     if (handoff) handoff.disabled = !unique.length;
+    renderStagedList();
     return unique;
   }
 
@@ -54,14 +55,72 @@
     if (handoff) handoff.addEventListener("click", function () {
       if (selectedKpIds().length) window.location = "/w/" + encodeURIComponent(WS) + "/practice";
     });
-    document.querySelectorAll("[data-queue-kp-ids]").forEach(function (link) {
-      link.addEventListener("click", function () {
-        try { saveSelectedKpIds(JSON.parse(link.dataset.queueKpIds || "[]")); } catch (_) { saveSelectedKpIds([]); }
-      });
-    });
   }
 
   bindSelectionControls();
+
+  /* ---------- staged practice list (selection view + on-demand suggestions) ---------- */
+
+  function renderStagedList() {
+    var list = document.getElementById("staged-list");
+    if (!list) return;
+    var names = {};
+    try { names = JSON.parse(list.dataset.kpNames || "{}") || {}; } catch (_) { names = {}; }
+    var ids = selectedKpIds();
+    list.innerHTML = ids.map(function (id) {
+      return "<li class='staged-row' data-kp-id='" + escapeHtml(id) + "'>"
+        + "<span class='staged-title'>" + escapeHtml(names[id] || id) + "</span>"
+        + "<button class='ghost sm staged-remove' type='button' data-kp-id='"
+        + escapeHtml(id) + "' aria-label='移除'>✕</button></li>";
+    }).join("");
+    var empty = document.getElementById("staged-empty");
+    if (empty) empty.classList.toggle("hidden", ids.length > 0);
+    updateSuggestions();
+  }
+
+  function updateSuggestions() {
+    var toggle = document.getElementById("suggestions-toggle");
+    if (!toggle) return;
+    var container = document.getElementById("suggestion-list");
+    var selected = selectedKpIds();
+    var visible = 0;
+    (container ? container.querySelectorAll(".suggestion-row") : []).forEach(function (row) {
+      var staged = selected.indexOf(row.dataset.kpId) >= 0;
+      row.classList.toggle("hidden", staged);
+      if (!staged) visible += 1;
+    });
+    var emptyLine = document.getElementById("suggestions-empty");
+    if (emptyLine) emptyLine.classList.toggle("hidden", visible > 0);
+    toggle.textContent = "＋ 加今天要练的" + (visible ? "（" + visible + "）" : "");
+  }
+
+  var stagedListEl = document.getElementById("staged-list");
+  if (stagedListEl) {
+    stagedListEl.addEventListener("click", function (event) {
+      var target = event.target;
+      var button = target && target.closest ? target.closest(".staged-remove") : null;
+      if (!button) return;
+      saveSelectedKpIds(selectedKpIds().filter(function (id) {
+        return id !== button.dataset.kpId;
+      }));
+    });
+    var suggestionsToggle = document.getElementById("suggestions-toggle");
+    var suggestionsBox = document.getElementById("suggestions");
+    if (suggestionsToggle) suggestionsToggle.addEventListener("click", function () {
+      var open = false;
+      if (suggestionsBox) open = suggestionsBox.classList.toggle("hidden") === false;
+      suggestionsToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    if (suggestionsBox) suggestionsBox.addEventListener("click", function (event) {
+      var target = event.target;
+      var button = target && target.closest ? target.closest(".suggestion-join") : null;
+      if (!button) return;
+      var next = selectedKpIds();
+      if (next.indexOf(button.dataset.kpId) < 0) next.push(button.dataset.kpId);
+      saveSelectedKpIds(next);
+    });
+    renderStagedList();
+  }
 
   function bindKnowledgeSort() {
     var list = document.getElementById("knowledge-list");
@@ -701,7 +760,7 @@
   var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
   var scopedMatch = String(window.location.search || "").match(/[?&]kp=([^&]+)/);
   var scopedKpId = layout.dataset.practiceKpId || (scopedMatch && decodeURIComponent(scopedMatch[1])) || "";
-  if (scopedKpId) store(SELECTION_KEY, [scopedKpId]);
+  if (scopedKpId) saveSelectedKpIds([scopedKpId]);
   var storedKps = load(KPS_KEY, []);
   if (stream && scopedKpId && (storedKps.length !== 1 || storedKps[0] !== scopedKpId)) {
     sessionStorage.removeItem(SESSION_KEY);
@@ -750,7 +809,6 @@
     var saveRating = document.getElementById("save-rating");
     var sessionEntry = document.getElementById("session-end-entry");
     var startArea = document.getElementById("start-area");
-    var practiceEmpty = document.getElementById("practice-empty-state");
     var practiceError = document.getElementById("practice-error");
     var retryPractice = document.getElementById("retry-practice");
 
@@ -991,7 +1049,6 @@
       answerBox.value = currentProblem.answer_text || "";
       showComposer(true);
     }
-    if (practiceEmpty && selectedKpIds().length) practiceEmpty.classList.add("hidden");
     if (startPractice) {
       startPractice.disabled = !readyToStart();
       startPractice.addEventListener("click", startSession);
@@ -1102,12 +1159,8 @@
   if (recalculatePlan) {
     recalculatePlan.addEventListener("click", function () {
       recalculatePlan.disabled = true;
-      post("/plan/recalculate", {}).then(function (result) {
+      post("/plan/recalculate", {}).then(function () {
         recalculatePlan.disabled = false;
-        var total = document.querySelector ? document.querySelector(".plan-total") : null;
-        if (total && result.plan && result.plan.totals) {
-          total.textContent = result.plan.totals.target_count + " 题";
-        }
         if (window.location && typeof window.location.reload === "function") {
           window.location.reload();
         }
@@ -1676,202 +1729,6 @@
   applyColumnWidths();
   window.addEventListener("resize", function () { fitAiColumn(); applyColumnWidths(); });
 
-  /* ---------- review page ---------- */
-
-  var CARD_KEY = "wb_card_session_" + WS;
-  var reviewContent = document.getElementById("review-content");
-
-  if (reviewContent) {
-    reviewContent.addEventListener("click", function (event) {
-      var target = event.target;
-      var button = target && target.closest ? target.closest(".review-practice-problem") : null;
-      if (!button) return;
-      var kpIds = [];
-      try { kpIds = JSON.parse(button.dataset.kpIds || "[]"); } catch (_) { kpIds = []; }
-      if (!kpIds.length) return;
-      saveSelectedKpIds(kpIds);
-      store(INCLUDE_KEY, [button.dataset.includeId]);
-      window.location = "/w/" + encodeURIComponent(WS) + "/practice";
-    });
-  }
-
-  var cardSessionEl = document.getElementById("card-session");
-  if (cardSessionEl) {
-    var cardFace = document.getElementById("card-face");
-    var cardBack = document.getElementById("card-back");
-    var cardNeighbours = document.getElementById("card-neighbours");
-    var revealCard = document.getElementById("reveal-card");
-    var cardRating = document.getElementById("card-rating");
-    var cardProgress = document.getElementById("card-progress");
-    var cardSummary = document.getElementById("card-summary");
-    var cardBackList = document.getElementById("card-back-list");
-    var startCardReview = document.getElementById("start-card-review");
-
-    function cardSession() { return load(CARD_KEY, null); }
-    function saveCardSession(value) {
-      if (value) store(CARD_KEY, value);
-      else sessionStorage.removeItem(CARD_KEY);
-    }
-    function showCardError(error) {
-      if (!cardSummary) return;
-      cardSummary.textContent = "请求未完成：" + (error.message || error || "未知错误");
-      cardSummary.classList.remove("hidden");
-    }
-
-    function detailPath(row) {
-      return (row.item_type === "kp" ? "/kp/" : "/problem/") + row.item_id;
-    }
-
-    function renderCardRow(row) {
-      cardFace.textContent = "加载中…";
-      cardFace.removeAttribute("data-ready");
-      cardBack.innerHTML = "";
-      cardBack.classList.add("hidden");
-      cardNeighbours.innerHTML = "";
-      cardNeighbours.classList.add("hidden");
-      cardRating.classList.add("hidden");
-      revealCard.classList.remove("hidden");
-      revealCard.disabled = true;
-      api(detailPath(row)).then(function (detail) {
-        var frontText = row.label || row.item_id;
-        if (row.item_type === "kp") {
-          var kp = detail.kp || {};
-          frontText = row.direction
-            ? (kp.body || kp.knowledge_item || row.item_id)
-            : (kp.knowledge_item || row.item_id);
-        } else if (detail.problem) {
-          frontText = detail.problem.problem_text || frontText;
-        }
-        cardFace.innerHTML = richText(String(frontText));
-        cardFace.setAttribute("data-ready", "1");
-        renderMath(cardSessionEl);
-        revealCard.disabled = false;
-      }).catch(function () {
-        cardFace.textContent = row.label || row.item_id;
-        revealCard.disabled = false;
-      });
-    }
-
-    function showCardBack(row) {
-      api(detailPath(row)).then(function (detail) {
-        var backText = "";
-        if (row.item_type === "kp") {
-          var kp = detail.kp || {};
-          backText = row.direction
-            ? (kp.knowledge_item || kp.kp_id || "")
-            : (kp.body || kp.knowledge_item || "");
-          var pairs = (detail.relations || []).filter(function (relation) {
-            return relation.relation_type === "contrast"
-              || relation.relation_type === "variant_of";
-          });
-          if (pairs.length) {
-            var names = {};
-            (detail.neighbours || []).forEach(function (n) {
-              names[n.kp_id] = n.knowledge_item || n.kp_id;
-            });
-            cardNeighbours.innerHTML = "对比："
-              + pairs.map(function (relation) {
-                var other = relation.source_kp_id === row.item_id
-                  ? relation.target_kp_id : relation.source_kp_id;
-                return escapeHtml(names[other] || other);
-              }).join("、");
-            cardNeighbours.classList.remove("hidden");
-          }
-        } else {
-          backText = (detail.problem && detail.problem.solution) || "（无解析）";
-        }
-        cardBack.innerHTML = richText(String(backText || ""));
-        cardBack.classList.remove("hidden");
-        renderMath(cardSessionEl);
-        revealCard.classList.add("hidden");
-        cardRating.classList.remove("hidden");
-      }).catch(function () {
-        cardBack.textContent = "加载失败，可直接自评。";
-        cardBack.classList.remove("hidden");
-        revealCard.classList.add("hidden");
-        cardRating.classList.remove("hidden");
-      });
-    }
-
-    function renderCurrentCard() {
-      var state = cardSession();
-      if (!state || state.index >= state.rows.length) { finishCardSession(); return; }
-      cardSessionEl.classList.remove("hidden");
-      cardSummary.classList.add("hidden");
-      cardBackList.classList.add("hidden");
-      cardProgress.textContent = "第 " + (state.index + 1) + " / " + state.rows.length + " 张"
-        + (state.done ? " · 已评 " + state.done : "");
-      renderCardRow(state.rows[state.index]);
-    }
-
-    function finishCardSession() {
-      var state = cardSession();
-      saveCardSession(null);
-      cardFace.textContent = "";
-      cardBack.innerHTML = "";
-      cardNeighbours.innerHTML = "";
-      cardNeighbours.classList.add("hidden");
-      revealCard.classList.add("hidden");
-      cardRating.classList.add("hidden");
-      cardProgress.textContent = "";
-      cardSummary.textContent = "本轮卡片完成 " + ((state && state.done) || 0) + " 张。";
-      cardSummary.classList.remove("hidden");
-      cardBackList.classList.remove("hidden");
-    }
-
-    if (startCardReview) {
-      startCardReview.addEventListener("click", function () {
-        api("/due?limit=100").then(function (items) {
-          var rows = (items || []).filter(function (item) { return item.direction; });
-          if (!rows.length) { finishCardSession(); return; }
-          saveCardSession({ rows: rows, index: 0, done: 0 });
-          renderCurrentCard();
-          cardSessionEl.scrollIntoView({ behavior: "smooth", block: "start" });
-        }).catch(showCardError);
-      });
-    }
-
-    if (revealCard) {
-      revealCard.addEventListener("click", function () {
-        var state = cardSession();
-        if (!state) return;
-        showCardBack(state.rows[state.index]);
-      });
-    }
-
-    if (cardRating) {
-      cardRating.addEventListener("click", function (event) {
-        var target = event.target;
-        var button = target && target.closest ? target.closest("[data-card-rating]") : null;
-        if (!button) return;
-        var state = cardSession();
-        if (!state) return;
-        var row = state.rows[state.index];
-        post("/feedback", {
-          item_type: row.item_type, item_id: row.item_id,
-          rating: parseInt(button.dataset.cardRating, 10),
-          direction: row.direction || "",
-        }).then(function () {
-          state.index += 1;
-          state.done += 1;
-          saveCardSession(state);
-          renderCurrentCard();
-        }).catch(showCardError);
-      });
-    }
-
-    if (cardBackList) {
-      cardBackList.addEventListener("click", function () {
-        cardSessionEl.classList.add("hidden");
-        window.scrollTo({ top: 0 });
-      });
-    }
-
-    if (cardSession()) {
-      renderCurrentCard();
-    }
-  }
-
   /* ---------- time view (calendar + workload) ---------- */
 
   var timeView = document.getElementById("time-view");
@@ -1913,7 +1770,7 @@
             + (goal.deadline ? "（" + escapeHtml(goal.deadline.slice(0, 10)) + "）" : "");
         }).join("、");
         calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted review-later'>本月之外到期：" + offLine + "。</p>");
+          "<p class='muted time-off-note'>本月之外到期：" + offLine + "。</p>");
       }
       var html = WEEKDAYS.map(function (label) {
         return "<div class='calendar-head'>" + label + "</div>";

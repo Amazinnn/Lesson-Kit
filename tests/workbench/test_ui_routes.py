@@ -88,7 +88,8 @@ class UiRouteTests(unittest.TestCase):
     def test_practice_page_uses_explicit_scope_and_single_content_modes(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("id='practice-empty-state'", body)
+        self.assertIn("id='staged-list'", body)
+        self.assertIn("id='staged-empty'", body)
         for mode in ("exam", "flash_card", "yes_no"):
             self.assertIn(f"id='practice-mode-{mode}'", body)
         self.assertIn("id='practice-rating-immediate'", body)
@@ -101,20 +102,24 @@ class UiRouteTests(unittest.TestCase):
             self.assertIn("id='practice-selected'", body)
             self.assertIn("data-kp-selection", body)
 
-    def test_plan_uses_goal_cards_and_queue_handoff_without_mode_links(self):
+    def test_plan_keeps_goal_cards_and_dissolves_the_queue_into_suggestions(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("class='goal-cards'", body)
-        self.assertIn("class='plan-queue-item", body)
-        self.assertIn("data-queue-kp-ids", body)
+        self.assertNotIn("plan-queue-item", body)
+        self.assertNotIn("data-queue-kp-ids", body)
         self.assertNotIn("data-practice-path='", body)
+        self.assertIn("id='recalculate-plan'", body)
 
-    def test_practice_page_shows_coarse_daily_plan(self):
+    def test_practice_page_shows_staged_list_and_suggestions(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("id='daily-plan'", body)
-        self.assertIn("今日计划", body)
-        self.assertIn("Counting", body)
+        self.assertIn("学习安排", body)
+        self.assertIn("id='staged-practice'", body)
+        self.assertIn("id='suggestions-toggle'", body)
+        self.assertIn("id='suggestion-list'", body)
+        self.assertIn("id='suggestions-empty'", body)
         self.assertNotIn("逐题", body)
         self.assertNotIn("data-practice-path='", body)
 
@@ -444,13 +449,13 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 404)
 
 
-    def test_left_nav_has_review_entry(self):
+    def test_left_nav_returns_to_three_pages(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn(">练习<", body)
         self.assertIn(">知识点<", body)
-        self.assertIn(">复习<", body)
         self.assertIn(">知识图谱<", body)
+        self.assertNotIn(">复习<", body)
 
     def seed_schedule(self, item_type, item_id, days_offset, direction=""):
         import datetime
@@ -465,38 +470,85 @@ class UiRouteTests(unittest.TestCase):
         conn.commit()
         conn.close()
 
-    def test_review_page_groups_rows_and_hides_scheduler_parameters(self):
+    def test_practice_page_suggestions_carry_one_phrase_and_hide_scheduler_parameters(self):
         self.seed_schedule("kp", "dmath-ch06-kp-001", -2)
         self.seed_schedule("kp", "dmath-ch06-kp-002", 0)
         self.seed_schedule("kp", "dmath-ch06-kp-003", 3, direction="reverse")
         self.seed_schedule("problem", "dmath-ch06-prob-001", 0)
         self.seed_schedule("kp", "dmath-ch06-kp-004", 10)
-        status, body = self.fetch("/w/dmath/review")
+        status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
+        # the due problem row is folded into its knowledge point; kp-001 keeps
+        # its overdue phrase and kp-002 its due-today phrase; future rows stay out
+        self.assertIn("id='suggestions-toggle'", body)
+        self.assertIn("拖了 2 天", body)
         self.assertIn("今天到期", body)
-        self.assertIn("含逾期 1 项", body)
-        self.assertIn("未来 7 天", body)
-        self.assertIn("以后还有 1 项", body)
-        self.assertIn("反向", body)
-        self.assertIn("data-queue-kp-ids='[&quot;dmath-ch06-kp-001&quot;]'", body)
-        self.assertIn("data-include-id='dmath-ch06-prob-001'", body)
-        self.assertIn("可以复习", body)
+        self.assertNotIn("3 天后", body)
+        self.assertNotIn("badge", body)
+        self.assertNotIn("data-include-id", body)
         self.assertNotIn("ease", body)
         self.assertNotIn("interval_days", body)
         self.assertNotIn("repetitions", body)
 
-    def test_review_page_empty_state(self):
-        status, body = self.fetch("/w/dmath/review")
-        self.assertEqual(status, 200)
-        self.assertIn("今天没有到期的复习", body)
-        self.assertNotIn("start-card-review", body)
+    def test_suggestion_rows_mapping(self):
+        import datetime
+        from workbench.server import pages
+        today = datetime.date.today()
 
-    def test_review_page_card_entry_for_directional_rows(self):
-        self.seed_schedule("kp", "dmath-ch06-kp-002", 0, direction="reverse")
+        def due(days):
+            return (today + datetime.timedelta(days=days)).isoformat()
+
+        plan_queue = [
+            {"kp_ids": ["kp-1"], "title": "数列极限", "reason": "覆盖仍低"},
+            {"kp_ids": ["kp-9"], "title": "未到期项", "reason": "覆盖仍低"},
+        ]
+        due_items = [
+            {"item_type": "kp", "item_id": "kp-1", "due_at": due(-3), "label": "数列极限"},
+            {"item_type": "kp", "item_id": "kp-2", "due_at": due(0), "label": "导数定义"},
+            {"item_type": "kp", "item_id": "kp-8", "due_at": due(5), "label": "未来项"},
+            {"item_type": "problem", "item_id": "prob-1", "due_at": due(-1), "label": "题目"},
+        ]
+        rows = pages.suggestion_rows(
+            plan_queue, due_items,
+            problem_kps={"prob-1": ["kp-2"]},
+            kp_titles={"kp-1": "数列极限", "kp-2": "导数定义", "kp-9": "未到期项"},
+            today=today,
+        )
+        # due phrases win over plan phrases; overdue first, one row per point
+        self.assertEqual(
+            rows,
+            [
+                {"kp_id": "kp-1", "title": "数列极限", "reason": "拖了 3 天"},
+                {"kp_id": "kp-2", "title": "导数定义", "reason": "拖了 1 天"},
+                {"kp_id": "kp-9", "title": "未到期项", "reason": "覆盖仍低"},
+            ],
+        )
+
+    def test_suggestion_rows_capped_at_twenty(self):
+        import datetime
+        from workbench.server import pages
+        today = datetime.date.today()
+        due_items = [
+            {"item_type": "kp", "item_id": f"kp-{i:02d}",
+             "due_at": (today - datetime.timedelta(days=1)).isoformat(),
+             "label": f"知识点 {i:02d}"}
+            for i in range(1, 26)
+        ]
+        rows = pages.suggestion_rows([], due_items, today=today)
+        self.assertEqual(len(rows), 25)
+        staged = pages._staged_practice_html("ws", rows)
+        self.assertIn("还有 5 条", staged)
+        self.assertEqual(staged.count("suggestion-row"), 20)
+
+    def test_review_page_is_gone(self):
         status, body = self.fetch("/w/dmath/review")
         self.assertEqual(status, 200)
-        self.assertIn("start-card-review", body)
-        self.assertIn("1 张方向卡到期", body)
+        # unknown pages fall back to the practice shell: no review surface remains
+        self.assertIn("data-page='practice'", body)
+        self.assertNotIn("id='review-content'", body)
+        self.assertNotIn("id='card-session'", body)
+        self.assertNotIn("id='start-card-review'", body)
+        self.assertNotIn("id='start-card-review'", self.fetch("/w/dmath/practice")[1])
 
 
 if __name__ == "__main__":
