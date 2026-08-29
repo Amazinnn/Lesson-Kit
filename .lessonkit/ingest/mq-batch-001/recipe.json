@@ -1,0 +1,14 @@
+{
+  "kind": "recipe",
+  "recipe": "micro-quiz",
+  "input": "pool/ingest/mq-batch-001.json",
+  "accounting": {
+    "knowledge_points": 31,
+    "problems": 303,
+    "candidate_problems": 0,
+    "knowledge_relations": 0
+  },
+  "applied": true,
+  "ok": true,
+  "backup_path": "pool\\backups\\dmath-pre-mq-batch-001.db"
+}

@@ -1,0 +1,86 @@
+{
+  "kind": "micro-quiz-patch",
+  "items": [
+    {
+      "problem_id": "dmath-ch06-mq-001",
+      "kp_id": "dmath-ch06-kp-001",
+      "stem": "一个过程可以分解为依次进行的两个任务：第一个任务有 3 种做法，且第一种任务的每种做法下第二个任务都有 4 种做法，那么整个过程共有 3+4=7 种做法。",
+      "quiz_type": "yes_no",
+      "answer_key": "否",
+      "error_reason": "依次执行的两个任务，总方式数应相乘：3×4=12 种。乘法规则算的是「完成整个流程」的方式数，两段相接不是并列可选，不能用加法。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-001 body：THE PRODUCT RULE——两任务依次执行、方式数相乘 n1·n2"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-002",
+      "kp_id": "dmath-ch06-kp-001",
+      "stem": "按乘法规则：若任务 T1 有 n1 种方式，且 T1 的每一种方式下任务 T2 都恰有 n2 种方式，则依次完成 T1、T2 共有 n1×n2 种方式。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "这正是乘法规则的前提与结论：T2 的方式数在 T1 的每种选择下都相同（相互独立），总方式数为 n1·n2；推广到 m 个任务即 n1·n2·…·nm。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-001 body：THE PRODUCT RULE 及其 m 任务推广"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-003",
+      "kp_id": "dmath-ch06-kp-001",
+      "stem": "一个密码由两部分依次排成：前缀是从 26 个字母中按顺序选 2 个不同字母，后缀是从 0–9 中按顺序选 2 个不同数字。这样的密码共有多少个？请用连乘表达式回答（如 26×25×10×9）。",
+      "quiz_type": "short_answer",
+      "answer_key": "26×25×10×9",
+      "error_reason": "前缀按序选 2 个不同字母：26×25（顺序有关，不重复选取）；后缀同理 10×9；两段依次执行，按乘法规则相乘：26×25×10×9 = 585000。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-001 body：乘法规则 m 任务推广（顺序执行、各段独立计数）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-004",
+      "kp_id": "dmath-ch06-kp-002",
+      "stem": "一个任务可以用甲方法或乙方法完成：甲有 5 种做法，乙有 3 种做法。已知甲的某些做法同时也是乙的做法（两套方式有交集），那么完成任务共有 5+3=8 种做法。",
+      "quiz_type": "yes_no",
+      "answer_key": "否",
+      "error_reason": "加法规则要求两套方式集合两两不相交；有交集时直接相加会把交集部分重复计入，应改用减法规则/容斥原理扣除交集。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-002 body：加法规则「关键条件——各方式集合两两不相交」"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-005",
+      "kp_id": "dmath-ch06-kp-002",
+      "stem": "书架上放有 3 本不同的数学书和 4 本不同的计算机书，从中任选一本，共有 3+4=7 种选法。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "选中的那本书不可能既是数学书又是计算机书，两类方式集合不相交，满足加法规则前提，总选法 3+4=7。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-002 body：THE SUM RULE——二选一任务、集合不相交则相加"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-006",
+      "kp_id": "dmath-ch06-kp-002",
+      "stem": "从杭州到上海：乘高铁有 2 个班次，乘长途汽车有 3 个班次，乘轮船有 1 个班次；三种方式的班次时刻互不重叠，每次只能选其中一种方式出发。到达上海共有多少种走法？请直接回答数字。",
+      "quiz_type": "short_answer",
+      "answer_key": "6",
+      "error_reason": "三类交通方式互不相交（高铁 2、汽车 3、轮船 1），且完成这件事只需选择其中一类，按加法规则相加：2+3+1=6。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-002 body：THE SUM RULE——多类不相交方式相加"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-007",
+      "kp_id": "dmath-ch06-kp-028",
+      "stem": "拿到一道计数题后，应当先套用自己最熟悉的计数公式，然后再检查题目的计数对象、表示方式与相同标准是否与公式匹配。",
+      "quiz_type": "yes_no",
+      "answer_key": "否",
+      "error_reason": "计数四入口要求在套用任何公式之前先回答四个问题：计数对象是什么、用什么表示、限制条件改变了什么、相同标准是什么。模型不匹配时公式必然出错，顺序不能反过来。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-028 body：计数四入口「在应用任何公式前先回答这四问，确保模型匹配问题」"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-008",
+      "kp_id": "dmath-ch06-kp-028",
+      "stem": "同一个计数对象可以用字符串、集合、函数、整数解、位串、盒子分配等不同方式表示，但每种表示必须与对象一一对应（或重复的次数已知），否则计数结果会出错。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "这正是计数四入口第二问「表示方式」的要求：表示与对象之间必须一一对应或重复数已知，把陌生问题翻译成可数模型时这一步不能含糊。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-028 body：计数四入口第 2 条「每个表示必须唯一（一对一或已知重复表示数）」"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-009",
+      "kp_id": "dmath-ch06-kp-028",
+      "stem": "「至少 5 人」「恰好 5 人」「不超过 5 人」这类关键词，属于计数四入口中哪一问要处理的内容？请回答该问的名称（四个字）。",
+      "quiz_type": "short_answer",
+      "answer_key": "限制条件",
+      "error_reason": "这些关键词都会改变被计数对象的选择空间，属于计数四入口第三问「限制条件」：把 distinct/repeated/at least/at most/exactly 等关键词翻译成集合条件、位置条件或变量不等式。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-028 body：计数四入口第 3 条「限制条件」关键词清单"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "kind": "micro-quiz-patch",
+  "items": [
+    {
+      "problem_id": "dmath-ch06-mq-003",
+      "kp_id": "dmath-ch06-kp-001",
+      "stem": "一个密码由两部分依次排成：前缀是从 26 个字母中按顺序选 2 个不同字母，后缀是从 0–9 中按顺序选 2 个不同数字。这样的密码共有多少个？请用连乘表达式回答（如 26×25×10×9）。",
+      "quiz_type": "short_answer",
+      "answer_key": "26×25×10×9",
+      "error_reason": "前缀按序选 2 个不同字母：26×25（顺序有关，不重复选取）；后缀同理 10×9；两段依次执行，按乘法规则相乘：26×25×10×9 = 585000。",
+      "source_evidence": "knowledge_points.dmath-ch06-kp-001 body：乘法规则 m 任务推广（顺序执行、各段独立计数）"
+    }
+  ]
+}
