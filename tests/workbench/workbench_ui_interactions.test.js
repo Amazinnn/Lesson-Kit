@@ -6,6 +6,7 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 const GraphPhysics = require("../../workbench/server/static/graph-physics.js");
+const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
 
 const SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/workbench.js"),
@@ -201,6 +202,7 @@ function runWorkbench({
     document,
     window,
     GraphPhysics: physics,
+    PracticeDeck,
     sessionStorage: storage,
     localStorage: local,
     fetch,
@@ -605,12 +607,7 @@ test("micro choice items hide the free-text answer box", async () => {
 
 test("flash card session pulls cards, reveals the back, and rates as card", async () => {
   const calls = [];
-  const backSection = new FakeElement("card-back-section");
-  backSection.classList.add("hidden");
   const elements = { layout: layout(), ...practiceElements() };
-  elements.stream = new FakeElement("stream", {
-    queryOne: (selector) => (selector === "#card-back-section" ? backSection : null),
-  });
   delete elements["practice-mode-immediate"];
   delete elements["practice-mode-batch"];
   elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
@@ -642,9 +639,10 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
   assert.match(elements.stream.innerHTML, /闪卡/);
   assert.match(elements.stream.innerHTML, /正面F/);
   assert.equal(elements["show-answer"].textContent, "揭示背面");
-  assert.equal(backSection.classList.contains("hidden"), true);
+  assert.match(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
   elements["show-answer"].click();
-  assert.equal(backSection.classList.contains("hidden"), false);
+  assert.doesNotMatch(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
+  assert.match(elements.stream._innerHTML, /背面B/);
   elements["rating-input"].value = "4";
   elements["save-rating"].click();
   await flush();
@@ -660,12 +658,7 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
 
 test("batch flash cards mark played cards unrated for session-end", async () => {
   const calls = [];
-  const backSection = new FakeElement("card-back-section");
-  backSection.classList.add("hidden");
   const elements = { layout: layout(), ...practiceElements() };
-  elements.stream = new FakeElement("stream", {
-    queryOne: (selector) => (selector === "#card-back-section" ? backSection : null),
-  });
   delete elements["practice-mode-immediate"];
   delete elements["practice-mode-batch"];
   elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
@@ -691,14 +684,14 @@ test("batch flash cards mark played cards unrated for session-end", async () => 
   elements["start-practice"].click();
   await flush();
   elements["show-answer"].click();
-  assert.equal(backSection.classList.contains("hidden"), false);
+  assert.doesNotMatch(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
   assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
   let session = JSON.parse(storage.getItem("wb_session_alpha"));
-  assert.equal(session[0].state, "unrated");
+  assert.equal(session.items[0].state, "unrated");
   elements["no-time"].click();
   await flush();
   session = JSON.parse(storage.getItem("wb_session_alpha"));
-  assert.equal(session[0].state, "unrated");
+  assert.equal(session.items[0].state, "unrated");
 });
 
 test("session-end lists played cards with front and back for rating", async () => {
@@ -898,13 +891,17 @@ test("knowledge-point handoff discards an unrelated restored active card", async
 
 test("a restored unified-rating queue opens final review without clearing its records", () => {
   const elements = { layout: layout(), ...practiceElements() };
+  const exhausted = JSON.stringify({
+    v: 2, cursor: 0, ended: true,
+    items: [{ problem_id: "p-1", state: "unrated" }],
+  });
   const storage = new FakeStorage({
     wb_practice_mode_alpha: "batch",
-    wb_session_alpha: JSON.stringify([{ problem_id: "p-1", state: "unrated" }]),
+    wb_session_alpha: exhausted,
   });
   const app = runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
   assert.equal(app.window.location, "session-end");
-  assert.equal(storage.getItem("wb_session_alpha"), JSON.stringify([{ problem_id: "p-1", state: "unrated" }]));
+  assert.equal(storage.getItem("wb_session_alpha"), exhausted);
 });
 
 test("practice shows titled cards and validates an invalid rating in place", async () => {
@@ -1412,9 +1409,6 @@ test("streaming assistant text is coalesced into one markdown message", async ()
 test("micro quiz renders yes/no options and grades the objective answer", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
-  const verdict = new FakeElement("micro-quiz-verdict");
-  elements.stream.queryOne = (selector) =>
-    selector === "#micro-quiz-verdict" ? verdict : null;
   const yesNoProblem = {
     problem_id: "mq-1", problem_text: "1 是质数吗？",
     micro_quiz: { quiz_type: "yes_no", answer_key: "否",
@@ -1434,23 +1428,21 @@ test("micro quiz renders yes/no options and grades the objective answer", async 
   await flush();
   assert.ok(elements.stream._innerHTML.includes("是"));
   assert.ok(elements.stream._innerHTML.includes("否"));
-  assert.ok(elements.stream._innerHTML.includes("micro-quiz-verdict"));
+  assert.equal(elements.stream._innerHTML.includes("micro-quiz-verdict"), false);
   elements.stream.queryAll = (selector) =>
     selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
   elements["answer-submit"].click();
   await flush();
-  assert.ok(verdict._textContent.includes("回答错误"));
-  assert.ok(verdict._textContent.includes("只有一个正因数"));
-  assert.equal(verdict.classList.contains("hidden"), false);
+  assert.ok(elements.stream._innerHTML.includes("micro-quiz-verdict"));
+  assert.ok(elements.stream._innerHTML.includes("回答错误"));
+  assert.ok(elements.stream._innerHTML.includes("只有一个正因数"));
+  assert.ok(elements.stream._innerHTML.includes("option-correct"));
   const pull = calls.find((call) => call.url.endsWith("/pull"));
   assert.equal(JSON.parse(pull.options.body).mode, "exam");
 });
 
 test("a correct micro quiz choice reports success without an extra write", async () => {
   const elements = { layout: layout(), ...practiceElements() };
-  const verdict = new FakeElement("micro-quiz-verdict");
-  elements.stream.queryOne = (selector) =>
-    selector === "#micro-quiz-verdict" ? verdict : null;
   runWorkbench({
     elements,
     fetch: (url) => {
@@ -1470,15 +1462,12 @@ test("a correct micro quiz choice reports success without an extra write", async
     selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
   elements["answer-submit"].click();
   await flush();
-  assert.ok(verdict._textContent.includes("回答正确"));
-  assert.equal(verdict._textContent.includes("错误"), false);
+  assert.ok(elements.stream._innerHTML.includes("回答正确"));
+  assert.equal(elements.stream._innerHTML.includes("错误"), false);
 });
 
 test("multiple choice micro quizzes render checkboxes and grade subsets", async () => {
   const elements = { layout: layout(), ...practiceElements() };
-  const verdict = new FakeElement("micro-quiz-verdict");
-  elements.stream.queryOne = (selector) =>
-    selector === "#micro-quiz-verdict" ? verdict : null;
   runWorkbench({
     elements,
     fetch: (url) => {
@@ -1500,7 +1489,7 @@ test("multiple choice micro quizzes render checkboxes and grade subsets", async 
       ? [{ value: "2" }, { value: "5" }] : [];
   elements["answer-submit"].click();
   await flush();
-  assert.ok(verdict._textContent.includes("回答正确"));
+  assert.ok(elements.stream._innerHTML.includes("回答正确"));
 });
 
 test("revealing a micro quiz answer shows the key and reason instead of a solution", async () => {
@@ -1718,4 +1707,163 @@ test("time view shows an honest empty state without goals or workload", async ()
   assert.equal(elements["time-view"].classList.contains("hidden"), false);
   assert.equal(elements["time-view-empty"].classList.contains("hidden"), false);
   assert.equal(elements["workload-prefill"].classList.contains("hidden"), true);
+});
+
+test("batch wrong answers hold the verdict with the correct option before advancing", async () => {
+  const calls = [];
+  const timers = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    setTimeoutFn: (callback, delay) => { timers.push({ callback, delay }); return timers.length; },
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      const body = JSON.parse((options && options.body) || "{}");
+      return jsonResponse({ problems: [{
+        problem_id: (body.exclude_ids || []).length ? "p-2" : "p-1",
+        problem_text: "题目",
+        micro_quiz: { quiz_type: "yes_no", answer_key: "否", error_reason: "1 只有 一个正因数。" },
+      }] });
+    },
+  });
+  elements["practice-mode-batch"].checked = true;
+  elements["practice-mode-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  // The verdict is instant and the correct option is highlighted, but the
+  // session holds instead of pulling the next item right away.
+  assert.ok(elements.stream._innerHTML.includes("回答错误"));
+  assert.ok(elements.stream._innerHTML.includes("option-correct"));
+  assert.equal(calls.filter((call) => call.url.endsWith("/pull")).length, 1);
+  assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
+  const holds = timers.filter((timer) => timer.delay === 2000);
+  assert.equal(holds.length, 1);
+  holds[0].callback();
+  await flush();
+  const pulls = calls.filter((call) => call.url.endsWith("/pull"));
+  assert.equal(pulls.length, 2);
+  assert.deepEqual(JSON.parse(pulls[1].options.body).exclude_ids, ["p-1"]);
+});
+
+test("flash cards page back and forth through history and only pull at the end", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  elements["card-nav"] = new FakeElement("card-nav");
+  elements["card-prev"] = new FakeElement("card-prev");
+  elements["card-next"] = new FakeElement("card-next");
+  delete elements["practice-mode-immediate"];
+  delete elements["practice-mode-batch"];
+  elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+  });
+  const cards = [
+    { card_id: "c-1", kp_id: "kp-1", front: "正面一", back: "背面一" },
+    { card_id: "c-2", kp_id: "kp-1", front: "正面二", back: "背面二" },
+    { card_id: "c-3", kp_id: "kp-1", front: "正面三", back: "背面三" },
+  ];
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/pull-cards")) {
+        const body = JSON.parse(options.body);
+        const next = cards.find((card) => (body.exclude_ids || []).indexOf(card.card_id) < 0);
+        return jsonResponse({ cards: next ? [next] : [] });
+      }
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-flash_card"].checked = true;
+  elements["practice-mode-flash_card"].trigger("change");
+  elements["practice-rating-batch"].checked = true;
+  elements["practice-rating-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["show-answer"].click();
+  elements["no-time"].click();
+  await flush();
+  elements["show-answer"].click();
+  assert.match(elements.stream._innerHTML, /正面二/);
+  const pullsBefore = calls.filter((call) => call.url.endsWith("/pull-cards")).length;
+  // Back to the first card: its reveal state persists and nothing is pulled.
+  elements["card-prev"].click();
+  assert.match(elements.stream._innerHTML, /正面一/);
+  assert.doesNotMatch(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
+  assert.equal(calls.filter((call) => call.url.endsWith("/pull-cards")).length, pullsBefore);
+  assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).cursor, 0);
+  assert.equal(elements["card-prev"].disabled, true);
+  // Forward replays history without pulling; only past the end pulls a new card.
+  elements["card-next"].click();
+  assert.match(elements.stream._innerHTML, /正面二/);
+  assert.equal(calls.filter((call) => call.url.endsWith("/pull-cards")).length, pullsBefore);
+  elements["card-next"].click();
+  await flush();
+  const pulls = calls.filter((call) => call.url.endsWith("/pull-cards"));
+  assert.equal(pulls.length, pullsBefore + 1);
+  assert.deepEqual(JSON.parse(pulls[pulls.length - 1].options.body).exclude_ids, ["c-1", "c-2"]);
+  assert.match(elements.stream._innerHTML, /正面三/);
+});
+
+test("practice one-click explain and diagnose tasks run through the job bridge", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  Object.assign(elements, {
+    "ai-session-list": new FakeElement("ai-session-list"),
+    "ai-session-list-view": new FakeElement("ai-session-list-view"),
+    "ai-provider-picker": new FakeElement("ai-provider-picker"),
+    "ai-chat-view": new FakeElement("ai-chat-view"),
+    "ai-explain": new FakeElement("ai-explain"),
+    "ai-diagnose": new FakeElement("ai-diagnose"),
+    "ai-task-status": new FakeElement("ai-task-status"),
+    "ai-task-result": new FakeElement("ai-task-result"),
+  });
+  elements["ai-task-status"].classList.add("hidden");
+  elements["ai-task-result"].classList.add("hidden");
+  elements["ai-explain"].classList.add("hidden");
+  elements["ai-diagnose"].classList.add("hidden");
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/task-providers")) return jsonResponse({ available: true, count: 1 });
+      if (url.endsWith("/ai/sessions")) return jsonResponse([]);
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/ai/explain")) return jsonResponse({ job_id: "job-1" });
+      if (url.endsWith("/ai/diagnose")) return jsonResponse({ job_id: "job-2" });
+      if (url.includes("/ai/jobs/")) return jsonResponse({ state: "done" });
+      if (url.endsWith("/explain/p-1")) return jsonResponse({
+        problem_id: "p-1", markdown: "## 定位\n\n讲解内容",
+      });
+      return jsonResponse({ problems: [{ problem_id: "p-1", problem_text: "题目" }] });
+    },
+  });
+  await flush();
+  // Before answering, the entries stay hidden.
+  assert.equal(elements["ai-explain"].classList.contains("hidden"), true);
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  // Diagnose refuses to run without an answer.
+  elements["ai-diagnose"].click();
+  assert.match(elements["ai-task-status"].textContent, /请先作答/);
+  assert.equal(calls.some((call) => call.url.endsWith("/ai/diagnose")), false);
+  // Answer, then explain runs the task and renders the validated result.
+  elements["answer-box"].value = "我的作答";
+  elements["answer-submit"].click();
+  await flush();
+  assert.equal(elements["ai-explain"].classList.contains("hidden"), false);
+  assert.equal(elements["ai-explain"].disabled, false);
+  elements["ai-explain"].click();
+  await flush();
+  const explain = calls.find((call) => call.url.endsWith("/ai/explain"));
+  assert.deepEqual(JSON.parse(explain.options.body), { problem_id: "p-1" });
+  assert.match(elements["ai-task-result"].innerHTML, /讲解内容/);
 });

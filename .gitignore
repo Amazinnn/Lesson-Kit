@@ -44,3 +44,4 @@ pool/backups/
 
 # ingest recipe 运行时输出
 .lessonkit/out-*/
+.lessonkit/pr_payload.json

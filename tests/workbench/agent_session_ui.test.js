@@ -9,6 +9,7 @@ const vm = require("node:vm");
 const SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/workbench.js"), "utf8",
 );
+const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
 
 class ClassList {
   constructor() { this.values = new Set(); }
@@ -93,7 +94,7 @@ function setup(fetch) {
     prompt() { return "我的会话"; }, confirm() { return true; },
   };
   vm.runInNewContext(SOURCE, {
-    document, window, fetch, sessionStorage: new Storage(), localStorage: new Storage(), console,
+    document, window, fetch, PracticeDeck, sessionStorage: new Storage(), localStorage: new Storage(), console,
     setInterval, clearInterval, setTimeout, clearTimeout, requestAnimationFrame: (callback) => setImmediate(() => callback(0)),
     cancelAnimationFrame: clearImmediate,
   }, { filename: "workbench.js" });

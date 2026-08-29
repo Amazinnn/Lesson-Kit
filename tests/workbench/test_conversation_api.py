@@ -73,6 +73,15 @@ class ConversationApiTests(unittest.TestCase):
         with urllib.request.urlopen(request) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
 
+    def test_task_providers_reflect_the_bridge_registry(self):
+        status, info = self.get("/api/w/dmath/ai/task-providers")
+        self.assertEqual(status, 200)
+        self.assertEqual(info, {"available": False, "count": 0})
+        from workbench import registry
+        registry.add_bridge("codex", sys.executable)
+        status, info = self.get("/api/w/dmath/ai/task-providers")
+        self.assertEqual(info, {"available": True, "count": 1})
+
     @mock.patch("workbench.bridge.conversation_providers.discover")
     def test_provider_and_session_endpoints(self, discover):
         discover.return_value = [self.provider]

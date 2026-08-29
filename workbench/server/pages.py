@@ -69,6 +69,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics.js'></script>" if graph_mode else "")
+        + "<script src='/static/practice-deck.js'></script>"
         + "<script src='/static/workbench.js'></script>"
     )
     return _base(f"workbench {workspace['name']}", body)
@@ -115,9 +116,15 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<button id='retry-practice' class='outline sm hidden' type='button'>重试</button><div id='stream' class='practice-card-area'></div>"
         "<div id='composer' class='practice-answer-card hidden'><div id='composer-row'><textarea id='answer-box' rows='3' placeholder='写下你的作答'></textarea>"
         "<button id='answer-submit' class='primary'>提交作答</button></div><div id='composer-actions' class='hidden'>"
-        "<button id='show-answer' class='outline'>查看解析</button></div><div id='feedback-area' class='feedback-card hidden'>"
+        "<button id='show-answer' class='outline'>查看解析</button>"
+        "<span id='card-nav' class='hidden'><button id='card-prev' class='ghost' type='button'>上一张</button>"
+        "<button id='card-next' class='ghost' type='button'>下一张</button></span>"
+        "<button id='ai-explain' class='ghost hidden' type='button' disabled>讲解</button>"
+        "<button id='ai-diagnose' class='ghost hidden' type='button' disabled>诊断</button></div><div id='feedback-area' class='feedback-card hidden'>"
         "<label for='rating-input'>自评分（1–5）</label><input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='输入 1–5'>"
-        "<textarea id='feedback-note' rows='2' placeholder='可选备注'></textarea><button id='save-rating' class='primary'>保存并下一题</button></div></div></section>"
+        "<textarea id='feedback-note' rows='2' placeholder='可选备注'></textarea><button id='save-rating' class='primary'>保存并下一题</button></div></div>"
+        "<p id='ai-task-status' class='muted hidden' aria-live='polite'></p>"
+        "<div id='ai-task-result' class='practice-solution hidden' aria-label='讲解结果'></div></section>"
         "<div id='session-end-entry' class='session-end-entry hidden'><span>本题未提交的内容只保留在当前会话。</span><div>"
         "<button id='no-time' class='ghost'>跳到下一道题目</button><button id='goto-session-end' class='outline'>提前结束本次练习</button></div></div></div>"
     )

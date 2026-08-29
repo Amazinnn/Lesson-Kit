@@ -581,6 +581,7 @@
       updateGraphLabels();
       if (reducedGraphMotion) {
         GraphPhysics.settle(graphSimulation, 1600);
+        settleLabelClearance();
         drawGraph();
         fitGraph();
       } else {
@@ -624,11 +625,92 @@
       });
     }
 
+    // The force model separates node circles; wrapped labels are wide
+    // rectangles a circular footprint cannot represent. After settling, one
+    // deterministic pass nudges nodes until the measured label boxes stop
+    // overlapping each other and nearby node circles.
+    function labelBox(node) {
+      var entry = graphNodeElements.get(node.id);
+      var width = 168;
+      var height = 16;
+      if (entry && entry.label) {
+        if (entry.label.offsetWidth) width = Math.min(entry.label.offsetWidth, 168);
+        if (entry.label.offsetHeight) height = entry.label.offsetHeight;
+      }
+      return {
+        x1: node.x - width / 2,
+        x2: node.x + width / 2,
+        y1: node.y + node.radius + 6,
+        y2: node.y + node.radius + 6 + height,
+      };
+    }
+
+    function boxIntersectsCircle(box, cx, cy, radius) {
+      var nx = Math.max(box.x1, Math.min(cx, box.x2));
+      var ny = Math.max(box.y1, Math.min(cy, box.y2));
+      return Math.hypot(cx - nx, cy - ny) < radius - 2;
+    }
+
+    function resolveLabelOverlaps() {
+      if (!graphSimulation) return;
+      var nodes = graphSimulation.nodes;
+      for (var round = 0; round < 40; round += 1) {
+        var moved = false;
+        for (var i = 0; i < nodes.length; i += 1) {
+          for (var j = i + 1; j < nodes.length; j += 1) {
+            var a = labelBox(nodes[i]);
+            var b = labelBox(nodes[j]);
+            var overlapX = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1);
+            var overlapY = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1);
+            var pushX = 0;
+            var pushY = 0;
+            if (overlapX > 0 && overlapY > 0) {
+              if (overlapX <= overlapY) {
+                pushX = ((nodes[i].x <= nodes[j].x ? 1 : -1)) * (overlapX / 2 + 2);
+              } else {
+                pushY = ((nodes[i].y <= nodes[j].y ? 1 : -1)) * (overlapY / 2 + 2);
+              }
+            } else if (boxIntersectsCircle(a, nodes[j].x, nodes[j].y, nodes[j].radius)
+                || boxIntersectsCircle(b, nodes[i].x, nodes[i].y, nodes[i].radius)) {
+              var dx = nodes[j].x - nodes[i].x;
+              var dy = nodes[j].y - nodes[i].y;
+              var distance = Math.max(0.01, Math.hypot(dx, dy));
+              pushX = dx / distance * 4;
+              pushY = dy / distance * 4;
+            } else {
+              continue;
+            }
+            if (nodes[i].fx === null) {
+              nodes[i].x -= pushX;
+              nodes[i].y -= pushY;
+            }
+            if (nodes[j].fx === null) {
+              nodes[j].x += pushX;
+              nodes[j].y += pushY;
+            }
+            moved = true;
+          }
+        }
+        if (!moved) break;
+      }
+      var width = graphSimulation.width;
+      var height = graphSimulation.height;
+      nodes.forEach(function (node) {
+        node.x = Math.max(node.radius, Math.min(width - node.radius, node.x));
+        node.y = Math.max(node.radius, Math.min(height - node.radius, node.y));
+      });
+    }
+
+    function settleLabelClearance() {
+      resolveLabelOverlaps();
+    }
+
     function runGraphSimulation() {
       if (!graphSimulation || reducedGraphMotion || graphFrame !== null) return;
       function frame() {
         graphFrame = null;
         var stable = GraphPhysics.tick(graphSimulation);
+        if (stable) settleLabelClearance();
         drawGraph();
         if (!stable) graphFrame = requestAnimationFrame(frame);
         else if (graphAutoFit) fitGraph();
@@ -756,43 +838,51 @@
   var showAnswer = document.getElementById("show-answer");
   var noTime = document.getElementById("no-time");
   var startPractice = document.getElementById("start-practice");
-  var currentProblem = load(CURRENT_KEY, null);
   var similarRound = sessionStorage.getItem(SIMILAR_KEY) === "1";
   var scopedMatch = String(window.location.search || "").match(/[?&]kp=([^&]+)/);
   var scopedKpId = layout.dataset.practiceKpId || (scopedMatch && decodeURIComponent(scopedMatch[1])) || "";
   if (scopedKpId) saveSelectedKpIds([scopedKpId]);
   var storedKps = load(KPS_KEY, []);
+  var practiceDeck = PracticeDeck.deserialize(load(SESSION_KEY, null));
+  // Legacy tabs stored the rendered payload of the current item separately;
+  // adopt it into the deck so a refresh restores without pulling again.
+  var legacyCurrent = load(CURRENT_KEY, null);
+  if (legacyCurrent && practiceDeck.items.length) {
+    var legacyTail = practiceDeck.items[practiceDeck.items.length - 1];
+    if (legacyTail.id === legacyCurrent.problem_id && !legacyTail.payload) {
+      legacyTail.payload = legacyCurrent;
+    }
+  }
   if (stream && scopedKpId && (storedKps.length !== 1 || storedKps[0] !== scopedKpId)) {
     sessionStorage.removeItem(SESSION_KEY);
     sessionStorage.removeItem(CURRENT_KEY);
     sessionStorage.removeItem(MODE_KEY);
     sessionStorage.removeItem(RATING_MODE_KEY);
     store(KPS_KEY, [scopedKpId]);
-    currentProblem = null;
+    practiceDeck = PracticeDeck.deserialize(null);
+  }
+
+  function persistDeck() {
+    store(SESSION_KEY, PracticeDeck.serialize(practiceDeck));
+  }
+
+  var refreshAiTaskButtonsForCurrent = null;
+
+  function currentProblem() {
+    return PracticeDeck.current(practiceDeck);
   }
 
   function session() {
-    return load(SESSION_KEY, []);
+    return practiceDeck.items;
   }
 
   function currentKps() {
     return load(KPS_KEY, selectedKpIds());
   }
 
-  function setCurrent(problem) {
-    currentProblem = problem || null;
-    store(CURRENT_KEY, currentProblem);
-    if (currentProblem && !currentProblem.card) {
-      recordRecent("problem", currentProblem.problem_id);
-    }
-  }
-
   function updateSession(problemId, values) {
-    var list = session();
-    list.forEach(function (item) {
-      if (item.problem_id === problemId) Object.assign(item, values);
-    });
-    store(SESSION_KEY, list);
+    PracticeDeck.settle(practiceDeck, problemId, values);
+    persistDeck();
   }
 
   if (stream) {
@@ -814,6 +904,17 @@
     var startArea = document.getElementById("start-area");
     var practiceError = document.getElementById("practice-error");
     var retryPractice = document.getElementById("retry-practice");
+    var cardNav = document.getElementById("card-nav");
+    var cardPrev = document.getElementById("card-prev");
+    var cardNext = document.getElementById("card-next");
+    var aiExplain = document.getElementById("ai-explain");
+    var aiDiagnose = document.getElementById("ai-diagnose");
+    var aiTaskStatus = document.getElementById("ai-task-status");
+    var aiTaskResult = document.getElementById("ai-task-result");
+    var aiTaskTimer = null;
+    var pulling = false;
+    var VERDICT_HOLD_MS = 2000;
+    var advanceToken = 0;
 
     function showPracticeError(error, retryable) {
       if (!practiceError) return;
@@ -903,35 +1004,146 @@
       if (showAnswer) showAnswer.textContent = mode === "card" ? "揭示背面" : "查看解析";
     }
 
-    function renderQuestion(problem) {
+    function ratingNow() {
+      return sessionStorage.getItem(RATING_MODE_KEY) === "immediate"
+        || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "immediate");
+    }
+
+    function batchNow() {
+      return sessionStorage.getItem(RATING_MODE_KEY) === "batch"
+        || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "batch");
+    }
+
+    function deckItemAnswered(item) {
+      if (item.kind === "card") return false;
+      return !!(item.choices && item.choices.length)
+        || !!(item.answer_text || "").trim()
+        || item.state === "unrated" || item.state === "rated";
+    }
+
+    function verdictLine(item) {
+      if (typeof item.verdict !== "boolean") return "";
+      var quiz = microQuiz(item.payload) || {};
+      return "<p id='micro-quiz-verdict' class='micro-verdict "
+        + (item.verdict ? "ok" : "bad") + "'>"
+        + (item.verdict ? "回答正确。" : "回答错误。 " + (quiz.error_reason || "")) + "</p>";
+    }
+
+    function optionHtmlFor(item) {
+      var problem = item.payload || {};
       var quiz = microQuiz(problem);
       var options = problemOptions(problem);
+      if (!options.length) return "";
       var multiple = !!quiz && quiz.quiz_type === "multiple_choice";
-      var optionHtml = options.length
-        ? "<fieldset class='problem-options'><legend>选择答案</legend>"
-          + options.map(function (option) {
-            return "<label><input data-choice-option type='" + (multiple ? "checkbox" : "radio")
-              + "' name='problem-option' value='" + escapeHtml(option.id) + "'> "
-              + escapeHtml(option.text) + "</label>";
-          }).join("") + "</fieldset>"
-        : "";
+      var answered = deckItemAnswered(item);
+      var keyList = multiple ? (quiz.answer_key || []) : [quiz.answer_key];
+      return "<fieldset class='problem-options'" + (answered ? " disabled" : "") + "><legend>选择答案</legend>"
+        + options.map(function (option) {
+          var selected = answered && (item.choices || []).indexOf(option.id) >= 0;
+          var correct = keyList.indexOf(option.id) >= 0;
+          var classes = [];
+          if (selected) classes.push("option-selected");
+          if (answered && item.verdict === false && correct) classes.push("option-correct");
+          return "<label" + (classes.length ? " class='" + classes.join(" ") + "'" : "") + ">"
+            + "<input data-choice-option type='" + (multiple ? "checkbox" : "radio")
+            + "' name='problem-option' value='" + escapeHtml(option.id) + "'"
+            + (selected ? " checked disabled" : "") + "> "
+            + escapeHtml(option.text) + "</label>";
+        }).join("") + "</fieldset>";
+    }
+
+    function updateCardNav(item) {
+      var isCard = item.kind === "card";
+      if (cardNav) cardNav.classList.toggle("hidden", !isCard);
+      if (!isCard) return;
+      if (cardPrev) cardPrev.disabled = practiceDeck.cursor <= 0;
+      if (cardNext) cardNext.disabled = pulling;
+    }
+
+    function aiProvidersReady() {
+      // Task entries run bridge tasks (bridges.json), not the conversation
+      // providers discovered on PATH — gate on the task-provider signal.
+      return !!aiTaskProvidersReady;
+    }
+
+    function updateAiTaskButtons(item) {
+      var buttons = [aiExplain, aiDiagnose];
+      var applicable = item.kind === "problem" && deckItemAnswered(item);
+      buttons.forEach(function (button) {
+        if (!button) return;
+        button.classList.toggle("hidden", !applicable);
+        button.disabled = !applicable || !aiProvidersReady();
+        button.title = applicable && !aiProvidersReady() ? "暂无可用 Agent" : "";
+      });
+    }
+
+    refreshAiTaskButtonsForCurrent = function () {
+      var item = currentProblem();
+      if (item) updateAiTaskButtons(item);
+    };
+
+    function aiTaskClearTransient() {
+      if (aiTaskTimer) { clearTimeout(aiTaskTimer); aiTaskTimer = null; }
+      if (aiTaskStatus) {
+        aiTaskStatus.textContent = "";
+        aiTaskStatus.classList.add("hidden");
+      }
+      if (aiTaskResult) {
+        aiTaskResult.innerHTML = "";
+        aiTaskResult.classList.add("hidden");
+      }
+    }
+
+    function renderDeckItem(item) {
+      aiTaskClearTransient();
+      updateCardNav(item);
+      updateAiTaskButtons(item);
+      if (item.kind === "card") {
+        var back = "<section id='card-back-section' class='practice-solution"
+          + (item.revealed ? "'" : " hidden'") + ">"
+          + "<p class='section-kicker'>背面</p>"
+          + "<div class='rich-text'>" + richText(item.payload.back || "") + "</div></section>";
+        stream.innerHTML = "<article class='practice-question-card card'>"
+          + "<p class='context-line'>闪卡</p>"
+          + "<p class='muted'>先在心里回忆，再揭示对照。</p>"
+          + "<div class='problem-text rich-text'>" + richText(item.payload.front || "") + "</div>"
+          + back
+          + (item.state === "rated" ? "<p class='muted'>已评分。</p>" : "")
+          + "</article>";
+        renderMath(stream);
+        setComposerLayout("card");
+        if (showAnswer) showAnswer.classList.toggle("hidden", item.revealed);
+        if (feedbackArea) {
+          feedbackArea.classList.toggle("hidden",
+            !(ratingNow() && item.revealed && item.state !== "rated"));
+        }
+        if (actions) actions.classList.remove("hidden");
+        return;
+      }
+      var problem = item.payload || {};
+      var answered = deckItemAnswered(item);
       stream.innerHTML = "<article class='practice-question-card card'>"
         + "<p class='context-line'>练习题</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
-        + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
-        + optionHtml + "<p id='micro-quiz-verdict' class='muted hidden'></p></article>";
+        + "<div class='problem-text rich-text'>" + richText(problem.problem_text || "") + "</div>"
+        + optionHtmlFor(item) + verdictLine(item) + "</article>";
       renderMath(stream);
-    }
-
-    function renderCard(card) {
-      stream.innerHTML = "<article class='practice-question-card card'>"
-        + "<p class='context-line'>闪卡</p>"
-        + "<p class='muted'>先在心里回忆，再揭示对照。</p>"
-        + "<div class='problem-text rich-text'>" + richText(card.front) + "</div>"
-        + "<section id='card-back-section' class='practice-solution hidden'>"
-        + "<p class='section-kicker'>背面</p>"
-        + "<div class='rich-text'>" + richText(card.back) + "</div></section></article>";
-      renderMath(stream);
+      setComposerLayout(
+        microQuiz(problem) && problemOptions(problem).length ? "choice" : "text");
+      answerBox.value = (answered && !(item.choices && item.choices.length))
+        ? (item.answer_text || "") : "";
+      if (answered) {
+        answerBox.disabled = true;
+        submitAnswer.classList.add("hidden");
+        actions.classList.remove("hidden");
+        feedbackArea.classList.add("hidden");
+      } else {
+        answerBox.disabled = false;
+        submitAnswer.classList.remove("hidden");
+        actions.classList.add("hidden");
+        feedbackArea.classList.add("hidden");
+        answerBox.focus();
+      }
     }
 
     function gradeMicroQuiz(problem, submittedTexts) {
@@ -955,10 +1167,12 @@
           : mode === "micro" ? "当前范围暂无可用的小测题目，请选择其他模式。"
           : mode === "yes_no" ? "当前范围暂无可用的 Yes / No 题目，请选择其他模式。"
             : "本轮相关题目已练完。");
+      advanceToken += 1;
+      practiceDeck.ended = true;
+      persistDeck();
       stream.innerHTML = "<p class='muted'>" + emptyMessage + "</p>";
       similarRound = false;
       sessionStorage.removeItem(SIMILAR_KEY);
-      setCurrent(null);
       showComposer(false);
       setPracticeFocus(false);
       if (ratingMode === "batch") window.location = "session-end";
@@ -973,43 +1187,61 @@
       }
     }
 
+    function cancelScheduledAdvance() {
+      advanceToken += 1;
+    }
+
+    function scheduleAdvance() {
+      var token = advanceToken;
+      setTimeout(function () {
+        if (token !== advanceToken) return;
+        advance();
+      }, VERDICT_HOLD_MS);
+    }
+
+    // Advance replays the presented history first; only past its end does a
+    // new pull happen. This is what makes flash-card paging and the batch
+    // verdict hold one rule instead of two.
+    function advance() {
+      cancelScheduledAdvance();
+      if (!PracticeDeck.atEnd(practiceDeck)) {
+        renderDeckItem(PracticeDeck.goTo(practiceDeck, practiceDeck.cursor + 1));
+        persistDeck();
+        return;
+      }
+      loadNext();
+    }
+
     function loadNext() {
       var kps = currentKps();
       var mode = sessionStorage.getItem(MODE_KEY);
-      if (!kps.length || !mode) return;
-      var exclude = session().map(function (item) { return item.problem_id; });
+      if (!kps.length || !mode || pulling) return;
+      var exclude = PracticeDeck.ids(practiceDeck);
       var includeIds = load(INCLUDE_KEY, null);
       clearPracticeError();
+      pulling = true;
       if (mode === "flash_card") {
         api("/pull-cards", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ kp_ids: kps, exclude_ids: exclude }),
         }).then(function (result) {
+          pulling = false;
           var card = (result.cards || [])[0];
           if (!card) {
             finishExhausted();
             return;
           }
-          var seen = session();
-          seen.push({
-            problem_id: card.card_id, card: true,
-            front: card.front, back: card.back,
-            answer_text: "", state: "active",
+          PracticeDeck.append(practiceDeck, {
+            id: card.card_id, kind: "card",
+            payload: { card_id: card.card_id, front: card.front, back: card.back },
           });
-          store(SESSION_KEY, seen);
-          setCurrent({
-            problem_id: card.card_id, card: true,
-            front: card.front, back: card.back,
-          });
-          renderCard(card);
+          persistDeck();
+          renderDeckItem(PracticeDeck.current(practiceDeck));
           ratingInput.value = "";
           feedbackNote.value = "";
-          feedbackArea.classList.add("hidden");
-          setComposerLayout("card");
-          actions.classList.remove("hidden");
           showComposer(true);
-        }).catch(function (error) { showPracticeError(error, true); });
+        }).catch(function (error) { pulling = false; showPracticeError(error, true); });
         return;
       }
       var pullBody = {
@@ -1023,29 +1255,21 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pullBody),
       }).then(function (result) {
+        pulling = false;
         sessionStorage.removeItem(INCLUDE_KEY);
         if (!result.problems.length) {
           finishExhausted();
           return;
         }
         var problem = result.problems[0];
-        var seen = session();
-        seen.push({ problem_id: problem.problem_id, answer_text: "", state: "active" });
-        store(SESSION_KEY, seen);
-        setCurrent(problem);
-        renderQuestion(problem);
-        setComposerLayout(
-          microQuiz(problem) && problemOptions(problem).length ? "choice" : "text");
-        answerBox.value = "";
-        answerBox.disabled = false;
-        submitAnswer.classList.remove("hidden");
-        actions.classList.add("hidden");
-        feedbackArea.classList.add("hidden");
-        ratingInput.value = "";
-        feedbackNote.value = "";
+        PracticeDeck.append(practiceDeck, {
+          id: problem.problem_id, kind: "problem", payload: problem,
+        });
+        persistDeck();
+        recordRecent("problem", problem.problem_id);
+        renderDeckItem(PracticeDeck.current(practiceDeck));
         showComposer(true);
-        answerBox.focus();
-      }).catch(function (error) { showPracticeError(error, true); });
+      }).catch(function (error) { pulling = false; showPracticeError(error, true); });
     }
 
     function startSession() {
@@ -1054,6 +1278,8 @@
       if (legacyModeControls && !ratingMode) ratingMode = selectedRatingMode();
       if (!contentMode && legacyModeControls) contentMode = "exam";
       if (!contentMode || !ratingMode) return;
+      advanceToken += 1;
+      practiceDeck = PracticeDeck.deserialize(null);
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
       sessionStorage.setItem(MODE_KEY, contentMode);
@@ -1102,12 +1328,13 @@
     var restoredMode = sessionStorage.getItem(MODE_KEY);
     var restoredRatingMode = sessionStorage.getItem(RATING_MODE_KEY)
       || (restoredMode === "batch" ? "batch" : "");
+    var restoredItem = currentProblem();
     var hasPendingRatings = restoredRatingMode === "batch" && session().some(function (item) {
       return item.state === "unrated";
     });
-    if (hasPendingRatings && !currentProblem) {
+    if (hasPendingRatings && restoredItem && practiceDeck.ended) {
       window.location = "session-end";
-    } else if (restoredMode && currentProblem) {
+    } else if (restoredMode && restoredItem) {
       if (modeExam) modeExam.checked = restoredMode === "exam";
       if (modeMicro) modeMicro.checked = restoredMode === "micro";
       if (modeFlashCard) modeFlashCard.checked = restoredMode === "flash_card";
@@ -1118,17 +1345,7 @@
       if (ratingBatch) ratingBatch.checked = restoredRatingMode === "batch";
       if (startArea) startArea.classList.add("hidden");
       setPracticeFocus(true);
-      if (currentProblem.card) {
-        renderCard(currentProblem);
-        setComposerLayout("card");
-        actions.classList.remove("hidden");
-      } else {
-        renderQuestion(currentProblem);
-        setComposerLayout(
-          microQuiz(currentProblem) && problemOptions(currentProblem).length
-            ? "choice" : "text");
-      }
-      answerBox.value = currentProblem.answer_text || "";
+      renderDeckItem(restoredItem);
       showComposer(true);
     }
     if (startPractice) {
@@ -1138,60 +1355,46 @@
     if (retryPractice) retryPractice.addEventListener("click", loadNext);
 
     if (submitAnswer) submitAnswer.addEventListener("click", function () {
-      if (!currentProblem || currentProblem.card) return;
+      var item = currentProblem();
+      if (!item || item.kind === "card") return;
       var answer = answerBox.value.trim();
       var choiceInputs = (stream && stream.querySelectorAll)
         ? Array.prototype.slice.call(stream.querySelectorAll("[data-choice-option]:checked"))
         : [];
       var choiceTexts = choiceInputs.map(function (input) { return input.value; });
       if (choiceTexts.length) answer = choiceTexts.join(", ");
-      currentProblem.answer_text = answer;
-      setCurrent(currentProblem);
-      updateSession(currentProblem.problem_id, { answer_text: answer });
-      var verdict = (stream && stream.querySelector)
-        ? stream.querySelector("#micro-quiz-verdict") : null;
-      if (verdict) {
-        var result = gradeMicroQuiz(currentProblem, choiceTexts);
-        if (result !== null) {
-          var quiz = microQuiz(currentProblem);
-          verdict.textContent = result
-            ? "回答正确。"
-            : "回答错误。 " + (quiz.error_reason || "");
-          verdict.classList.remove("hidden");
-        }
-      }
-      if (sessionStorage.getItem(RATING_MODE_KEY) === "batch"
-          || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "batch")) {
-        updateSession(currentProblem.problem_id, { state: "unrated" });
-        setCurrent(null);
-        loadNext();
+      var patch = { answer_text: answer };
+      if (choiceTexts.length) patch.choices = choiceTexts.slice();
+      var graded = gradeMicroQuiz(item.payload, choiceTexts);
+      if (graded !== null) patch.verdict = graded;
+      if (batchNow()) patch.state = "unrated";
+      PracticeDeck.settle(practiceDeck, item.id, patch);
+      persistDeck();
+      renderDeckItem(currentProblem());
+      if (batchNow()) {
+        // Instant verdict, deferred rating: hold the verdict (and the
+        // highlighted correct options) briefly, then advance. Nothing is
+        // written — ratings still happen only at session end.
+        if (graded !== null) scheduleAdvance();
+        else advance();
         return;
       }
-      answerBox.disabled = true;
-      submitAnswer.classList.add("hidden");
-      actions.classList.remove("hidden");
     });
 
     if (showAnswer) showAnswer.addEventListener("click", function () {
-      if (!currentProblem) return;
+      var item = currentProblem();
+      if (!item) return;
       clearPracticeError();
-      if (currentProblem.card) {
-        var backSection = (stream && stream.querySelector)
-          ? stream.querySelector("#card-back-section") : null;
-        if (backSection) backSection.classList.remove("hidden");
-        currentProblem.revealed = true;
-        setCurrent(currentProblem);
-        showAnswer.classList.add("hidden");
-        if (sessionStorage.getItem(RATING_MODE_KEY) === "batch") {
-          // Played cards collect their rating at session end.
-          updateSession(currentProblem.problem_id, { state: "unrated" });
-        } else {
-          feedbackArea.classList.remove("hidden");
-        }
+      if (item.kind === "card") {
+        var patch = { revealed: true };
+        if (batchNow() && item.state !== "rated") patch.state = "unrated";
+        PracticeDeck.settle(practiceDeck, item.id, patch);
+        persistDeck();
+        renderDeckItem(currentProblem());
         return;
       }
-      api("/problem/" + currentProblem.problem_id).then(function (detail) {
-        var quiz = microQuiz(detail.problem) || microQuiz(currentProblem);
+      api("/problem/" + item.id).then(function (detail) {
+        var quiz = microQuiz(detail.problem) || microQuiz(item.payload);
         var section;
         if (quiz) {
           section = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
@@ -1206,51 +1409,53 @@
         stream.innerHTML += section;
         renderMath(stream);
         showAnswer.classList.add("hidden");
-        feedbackArea.classList.remove("hidden");
+        if (!batchNow()) feedbackArea.classList.remove("hidden");
       }).catch(showPracticeError);
     });
 
     if (saveRating) saveRating.addEventListener("click", function () {
       var rating = parseInt(ratingInput.value, 10);
-      if (!currentProblem) return;
+      var item = currentProblem();
+      if (!item) return;
       if (rating < 1 || rating > 5) {
         showPracticeError("请输入 1-5 的评分");
         return;
       }
       clearPracticeError();
       post("/feedback", {
-        item_type: currentProblem.card ? "card" : "problem",
-        item_id: currentProblem.problem_id,
+        item_type: item.kind === "card" ? "card" : "problem",
+        item_id: item.id,
         rating: rating, note: feedbackNote.value.trim(),
       }).then(function () {
-        updateSession(currentProblem.problem_id, { state: "rated" });
-        setCurrent(null);
-        loadNext();
+        updateSession(item.id, { state: "rated" });
+        advance();
       }).catch(showPracticeError);
     });
 
     if (noTime) noTime.addEventListener("click", function () {
-      if (!currentProblem) return;
-      // A revealed flash card has been played: it stays due for the
-      // session-end rating instead of being silently skipped.
-      var state = (currentProblem.card && currentProblem.revealed)
-        ? "unrated" : "skipped";
-      updateSession(currentProblem.problem_id, { state: state });
-      setCurrent(null);
-      loadNext();
+      var item = currentProblem();
+      if (!item) return;
+      // Skipping applies only to items never answered: a graded problem or a
+      // revealed card keeps its played (unrated) state when moving on.
+      var state = (item.state === "active" || item.state === "skipped")
+        ? ((item.kind === "card" && item.revealed) ? "unrated" : "skipped")
+        : item.state;
+      updateSession(item.id, { state: state });
+      advance();
     });
 
     var gotoBtn = document.getElementById("goto-session-end");
     if (gotoBtn) gotoBtn.addEventListener("click", function () {
-      if (currentProblem) {
-        var endState = (currentProblem.card && currentProblem.revealed)
-          ? "unrated" : "skipped";
-        updateSession(currentProblem.problem_id, { state: endState });
+      var item = currentProblem();
+      if (item) {
+        var endState = (item.state === "active" || item.state === "skipped")
+          ? ((item.kind === "card" && item.revealed) ? "unrated" : "skipped")
+          : item.state;
+        updateSession(item.id, { state: endState });
       }
-      setCurrent(null);
+      cancelScheduledAdvance();
       showComposer(false);
-      if (sessionStorage.getItem(RATING_MODE_KEY) === "batch"
-          || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "batch")) {
+      if (batchNow()) {
         window.location = "session-end";
       } else {
         sessionStorage.removeItem(MODE_KEY);
@@ -1260,6 +1465,68 @@
         if (startArea) startArea.classList.remove("hidden");
       }
     });
+
+    if (cardPrev) cardPrev.addEventListener("click", function () {
+      if (practiceDeck.cursor <= 0) return;
+      cancelScheduledAdvance();
+      renderDeckItem(PracticeDeck.goTo(practiceDeck, practiceDeck.cursor - 1));
+      persistDeck();
+    });
+    if (cardNext) cardNext.addEventListener("click", function () {
+      advance();
+    });
+
+    function aiTaskSetStatus(text) {
+      if (!aiTaskStatus) return;
+      aiTaskStatus.textContent = text || "";
+      aiTaskStatus.classList.toggle("hidden", !text);
+    }
+
+    function pollAiTask(jobId, problemId) {
+      api("/ai/jobs/" + encodeURIComponent(jobId)).then(function (status) {
+        if (status && status.state === "done") {
+          aiTaskTimer = null;
+          api("/explain/" + encodeURIComponent(problemId)).then(function (result) {
+            if (aiTaskResult) {
+              aiTaskResult.innerHTML = richText(result.markdown || "");
+              aiTaskResult.classList.remove("hidden");
+              renderMath(aiTaskResult);
+            }
+            aiTaskSetStatus("");
+          }).catch(function () { aiTaskSetStatus("讲解已生成，但读取失败。"); });
+        } else if (status && status.state === "failed") {
+          aiTaskTimer = null;
+          aiTaskSetStatus("任务失败：" + (status.error || "未知原因"));
+        } else {
+          aiTaskTimer = setTimeout(function () { pollAiTask(jobId, problemId); }, 350);
+        }
+      }).catch(function () {
+        aiTaskTimer = null;
+        aiTaskSetStatus("无法读取任务进度。");
+      });
+    }
+
+    function startAiTask(operation) {
+      var item = currentProblem();
+      if (!item || item.kind === "card") return;
+      var body = { problem_id: item.id };
+      if (operation === "diagnose") {
+        if (!(item.answer_text || "").trim()) {
+          aiTaskSetStatus("请先作答，再诊断。");
+          return;
+        }
+        body.user_answer = item.answer_text;
+      }
+      cancelScheduledAdvance();
+      aiTaskSetStatus(operation === "explain" ? "正在请 Agent 讲解…" : "正在请 Agent 诊断…");
+      post("/ai/" + operation, body).then(function (result) {
+        pollAiTask(result.job_id, item.id);
+      }).catch(function (error) {
+        aiTaskSetStatus("任务启动失败：" + (error.message || "未知错误"));
+      });
+    }
+    if (aiExplain) aiExplain.addEventListener("click", function () { startAiTask("explain"); });
+    if (aiDiagnose) aiDiagnose.addEventListener("click", function () { startAiTask("diagnose"); });
   }
 
   var recalculatePlan = document.getElementById("recalculate-plan");
@@ -1374,15 +1641,16 @@
         renderMath(card);
       };
       unrated.forEach(function (item) {
-        if (item.card) {
+        if (item.kind === "card") {
+          var card = item.payload || {};
           buildRatingCard(
             "<p class='context-line'>闪卡</p>"
-            + "<div class='problem-text rich-text'>" + richText(item.front || "") + "</div>"
-            + "<p class='section-kicker'>背面</p><div class='rich-text'>" + richText(item.back || "") + "</div>",
-            "card", item.problem_id, String(item.front || "闪卡"));
+            + "<div class='problem-text rich-text'>" + richText(card.front || "") + "</div>"
+            + "<p class='section-kicker'>背面</p><div class='rich-text'>" + richText(card.back || "") + "</div>",
+            "card", item.id, String(card.front || "闪卡"));
           return;
         }
-        api("/problem/" + item.problem_id).then(function (detail) {
+        api("/problem/" + item.id).then(function (detail) {
           var problem = detail.problem;
           var title = problem.display_title || "未命名题目";
           var quiz = problem.micro_quiz && typeof problem.micro_quiz === "object"
@@ -1399,7 +1667,7 @@
             + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
             + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
             + solutionHtml,
-            "problem", item.problem_id, title);
+            "problem", item.id, title);
         });
       });
     }
@@ -1522,8 +1790,8 @@
     if (layout.dataset.objectType) body.object_type = layout.dataset.objectType;
     if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
     if (layout.dataset.page === "kp") body.kp_id = layout.dataset.objectId;
-    if (layout.dataset.page === "practice" && currentProblem) {
-      body.problem_id = currentProblem.problem_id;
+    if (layout.dataset.page === "practice" && currentProblem()) {
+      body.problem_id = currentProblem().id;
       body.practice_mode = sessionStorage.getItem(MODE_KEY) || "";
       body.progress = { seen: session().length };
     }
@@ -1625,6 +1893,7 @@
   var aiSessionRecords = [];
   var aiProviders = [];
   var aiProviderLoadError = "";
+  var aiTaskProvidersReady = false;
 
   if (aiSessionBack) {
     aiSessionBack.setAttribute("aria-label", "返回对话列表");
@@ -1773,10 +2042,18 @@
         aiSessionEmpty.classList.remove("hidden");
       }
     });
+    var taskProviderRequest = api("/ai/task-providers").then(function (info) {
+      aiTaskProvidersReady = !!(info && info.available);
+    }).catch(function () {
+      aiTaskProvidersReady = false;
+    });
     Promise.all([
       providerRequest,
+      taskProviderRequest,
       aiRefreshSessionList(),
-    ]);
+    ]).then(function () {
+      if (refreshAiTaskButtonsForCurrent) refreshAiTaskButtonsForCurrent();
+    });
   }
   if (layout.dataset.objectType && layout.dataset.objectId) {
     aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);

@@ -9,6 +9,31 @@
     return Math.min(30, 8 + 2.4 * Math.sqrt(Math.max(0, problemCount || 0)));
   }
 
+  // A wrapped label hangs below the node and occupies layout space; the
+  // collision footprint must cover it or neighbouring labels overlap.
+  function labelLineCount(title) {
+    var label = String(title || "").replace(/\s+/g, " ").trim();
+    if (!label) return 1;
+    var maxChars = 14;
+    var lines = 1;
+    var line = "";
+    Array.from(label).forEach(function (char) {
+      if (line && line.length + char.length > maxChars) {
+        lines += 1;
+        line = char;
+      } else {
+        line += char;
+      }
+    });
+    return lines;
+  }
+
+  function collisionRadius(radius, title) {
+    var label = String(title || "").trim();
+    var lines = labelLineCount(label);
+    return Math.min(150, radius + 6 + lines * 16);
+  }
+
   function targetDistance(attraction, sourceRadius, targetRadius, distanceFactor) {
     var normalized = Math.max(0, Math.min(1, ((attraction || 1) - 0.75) / 1.125));
     var gap = (144 - 72 * normalized) * (distanceFactor || 1);
@@ -27,7 +52,7 @@
       var position = positions && positions.get(source.id);
       return Object.assign({}, source, {
         radius: nodeRadius(source.problem_count),
-        collisionRadius: nodeRadius(source.problem_count),
+        collisionRadius: collisionRadius(nodeRadius(source.problem_count), source.title),
         x: position ? position.x : centerX + Math.cos(angle) * distance,
         y: position ? position.y : centerY + Math.sin(angle) * distance,
         vx: 0, vy: 0, fx: null, fy: null,
@@ -569,6 +594,8 @@
 
   return {
     nodeRadius: nodeRadius,
+    labelLineCount: labelLineCount,
+    collisionRadius: collisionRadius,
     targetDistance: targetDistance,
     createSimulation: createSimulation,
     tick: tick,
