@@ -1,0 +1,44 @@
+## ADDED Requirements
+
+### Requirement: Check ingest action
+
+The bridge MAY mirror a third structured action, `check_ingest`, only when the
+request carries explicit content-generation intent (the learner asks the agent
+to produce or add pool content). The action SHALL carry an inline manifest of
+kind `flash-card-patch` or `micro-quiz-patch`; the server SHALL validate it
+through the same deterministic gates as the CLI recipes and, on pass, apply it
+as one batch-recorded transactional apply. Gate failures SHALL be reported
+back into the conversation flow item by item and SHALL write nothing. Success
+SHALL be presented as an independent result card in the conversation flow
+showing the batch id, kind, item counts, and backup path, with a rollback
+affordance that calls the same whole-batch rollback as the CLI. Ordinary
+conversation without content-generation intent SHALL NOT trigger the action,
+and a malformed `check_ingest` block under content-generation intent SHALL be
+surfaced as an explicit error rather than silently dropped.
+
+#### Scenario: Conversation request produces cards
+
+- **WHEN** the learner asks the agent in conversation to add flash cards for a
+  knowledge point and the reply carries a valid `check_ingest` action
+- **THEN** the manifest passes the deterministic gate, one batch-recorded
+  apply inserts the cards, and an independent result card with the batch id
+  and a rollback affordance appears in the conversation flow
+
+#### Scenario: Gate failure is explicit
+
+- **WHEN** the action's manifest fails the deterministic gate
+- **THEN** the conversation flow lists every rejection reason, nothing is
+  written to the pool, and no result card claims success
+
+#### Scenario: Ordinary conversation cannot ingest
+
+- **WHEN** a turn without content-generation intent contains an action-like
+  block
+- **THEN** no check ingest action runs
+
+#### Scenario: Malformed check action is explicit
+
+- **WHEN** a turn with content-generation intent carries a `check_ingest`
+  block that is not valid JSON or does not satisfy the manifest structure
+- **THEN** the conversation flow shows an explicit error for the block instead
+  of silently dropping it
