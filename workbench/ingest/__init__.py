@@ -352,14 +352,15 @@ def apply_flash_cards(db_path, manifest_path, backup_path=None):
     return _apply_patch(database, manifest, backup, FLASH_CARD_KIND)
 
 
-def apply_batch(db_path, manifest, *, source):
+def apply_batch(db_path, manifest, *, source, backup_path=None):
     if source not in {"cli", "bridge"}:
         raise ValueError("source must be cli or bridge")
     kind = manifest.get("kind") if isinstance(manifest, dict) else None
     if kind not in {MICRO_QUIZ_KIND, FLASH_CARD_KIND}:
         raise ValueError(f"unsupported ingest kind: {kind}")
     database = Path(db_path)
-    backup = database.with_name(database.name + ".ingest-backup")
+    backup = Path(backup_path) if backup_path else (
+        database.with_name(database.name + ".ingest-backup"))
     result = _apply_patch(database, manifest, backup, kind)
     return {key: result[key] for key in (
         "ok", "batch_id", "kind", "counts", "backup_path", "applied",
@@ -467,7 +468,7 @@ def rollback_batch(db_path, batch_id, backup_path=None):
                 + "\n".join(blockers)
             )
         backup = (Path(backup_path) if backup_path else
-                  database.with_name(database.name + ".rollback-backup"))
+                  database.with_name(f"{database.name}.{batch_id}-rollback-backup"))
         if backup.exists():
             raise FileExistsError(f"recoverable copy already exists: {backup}")
         _backup_database(database, backup)

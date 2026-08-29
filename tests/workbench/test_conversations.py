@@ -311,7 +311,10 @@ class ConversationTests(unittest.TestCase):
                 "applied": ["card-001"],
             },
         })
-        self.assertEqual(apply_batch.call_args.kwargs, {"source": "bridge"})
+        kwargs = apply_batch.call_args.kwargs
+        self.assertEqual(kwargs["source"], "bridge")
+        self.assertTrue(str(kwargs["backup_path"]).endswith(
+            f"{conversation['conversation_id']}-{turn['turn_id']}-ingest-backup"))
 
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")

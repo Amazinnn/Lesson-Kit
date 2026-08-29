@@ -1771,9 +1771,13 @@
     }
     var result = action.result;
     if (!result || !result.batch_id) return;
+    var counts = result.counts || {};
+    var count = counts.flash_cards != null ? counts.flash_cards
+      : counts.problems != null ? counts.problems : null;
+    var backup = (result.backup_path || "").split(/[\\/]/).pop();
     var detail = "批次 " + result.batch_id + " · " + (result.kind || "?")
-      + " · 入库 " + (result.applied != null ? result.applied : "?") + " 条"
-      + " · 备份 " + (result.backup_path || "无");
+      + (count != null ? " · 入库 " + count + " 条" : "")
+      + (backup ? " · 备份 " + backup : "");
     aiAddCheckCard("Check 入库完成", detail, result.batch_id);
   }
 

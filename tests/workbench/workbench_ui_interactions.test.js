@@ -1360,8 +1360,9 @@ test("check ingest success renders a batch result card whose rollback calls the 
     { role: "assistant", content: "好的", action: {
       type: "check_ingest",
       result: {
-        batch_id: "batch-001", kind: "flash-card-patch", applied: 6,
-        counts: {}, backup_path: "pool/backups/dmath-pre-batch-001.db",
+        batch_id: "batch-001", kind: "flash-card-patch", applied: true,
+        counts: { flash_cards: 6 },
+        backup_path: "C:/pool/backups/dmath-pre-batch-001.db",
       },
     } },
   ]);
@@ -1379,7 +1380,9 @@ test("check ingest success renders a batch result card whose rollback calls the 
   assert.equal(body.children[0].textContent, "Check 入库完成");
   assert.match(body.children[1].textContent, /batch-001/);
   assert.match(body.children[1].textContent, /flash-card-patch/);
-  assert.match(body.children[1].textContent, /6 条/);
+  assert.match(body.children[1].textContent, /入库 6 条/);
+  assert.match(body.children[1].textContent, /dmath-pre-batch-001\.db/);
+  assert.doesNotMatch(body.children[1].textContent, /backups\/dmath/);
   const rollback = body.children[2];
   assert.equal(rollback.className, "check-card-rollback");
   rollback.click();

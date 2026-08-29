@@ -665,6 +665,14 @@ class BatchRollbackTests(unittest.TestCase):
     def apply_batch(self):
         return ingest.apply_batch(self.db_path, self.manifest, source="bridge")
 
+    def test_apply_batch_accepts_explicit_backup_path(self):
+        backup = self.root / "conv-001-turn-001-ingest-backup"
+        applied = ingest.apply_batch(
+            self.db_path, self.manifest, source="bridge", backup_path=backup)
+        self.assertEqual(Path(applied["backup_path"]), backup)
+        self.assertTrue(backup.exists())
+        self.assertFalse((self.root / "pool.db.ingest-backup").exists())
+
     def test_apply_batch_and_rollback_restore_content_snapshot(self):
         before = self.content_snapshot()
         applied = self.apply_batch()
@@ -733,7 +741,8 @@ class BatchRollbackTests(unittest.TestCase):
             ).fetchone()[0])
         finally:
             conn.close()
-        self.assertFalse(self.db_path.with_name("pool.db.rollback-backup").exists())
+        self.assertFalse(self.db_path.with_name(
+            "pool.db.batch-001-rollback-backup").exists())
 
     def test_unknown_and_already_rolled_back_batches_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "unknown batch missing"):
