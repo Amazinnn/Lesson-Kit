@@ -256,8 +256,10 @@
 ## 2026-08-29 视图合并决定
 
 - 导航回三页：练习 / 知识点 / 知识图谱；2026-08-29 短暂出现的第 4 导航页「复习」移除（与专题 17、B6.2 的三页导航纠正一致）。
-- 到期提醒回归练习页：与今日计划队列合流为一张「今天」列表，每行 = 名称 + 人话原因（覆盖仍低 / 拖了 N 天 / 上次没记住）+ 直接动作；不新增独立复习页面（对齐 review-workbench v1「到期摘要出现在工作区主页」的原始设计）。
+- （同日实现会话修订，见专题 19）练习页「真正要练的」只有一张「准备练习」列表 = 当前显式选区的行视图：知识点名 + 清除，与知识点页/图谱勾选双向同步，零新存储；模式选择与开始按钮行为不变。
+- 计划与到期都是建议、按需拉取：「加今天要练的（N）」按钮展开候选，行 = 知识点名 · 一个短语 · 加入（知识点级去重、一行一短语，到期短语优先）；「今天先做」计划卡片解散、计划输出降为候选来源之一，重算按钮保留；到期不做常驻视图；UI 只到知识点级，题目行不进任何 UI。
+- 字段极简是硬约束：候选与准备行不带徽标、日期、数字或调度参数；空态一句话一动作。
 - 时间安排（目标月历 + 14 天任务量柱状图，实验视图）放在练习页，与学习安排并列（宽屏并排、窄屏纵向）。
-- 方向卡片会话定位为闪卡/判断模式内、范围含到期方向行时的可选轻会话（ADR 0019 offered, never required）；判断题作答走 micro quiz 判分卡。
-- 保留的 additive API：pull include_ids、feedback direction、/calendar 端点、micro quiz 内容契约与判分；复习页 UI 拆除。
-- 依据与引文：docs/design/2026-08-29-doc-drift-audit.md；变更提案：openspec/changes/consolidate-practice-views/。
+- 方向卡片 UI 全拆：无系统导向的会话，会话由用户自开（所有者确认真实池尚无方向调度行）；每方向独立调度键保留，卡片 UI 待真实使用再议。
+- 保留的 additive API：pull include_ids、feedback direction、/calendar 端点、queries.review_overview（候选源与规划参考）、micro quiz 内容契约与判分；复习页 UI 拆除；顺手修复练习页主按钮禁用态样式（UX 清单项）。
+- 依据与引文：docs/design/2026-08-29-doc-drift-audit.md；变更提案：openspec/changes/consolidate-practice-views/；改判记录：DISCUSSION-RECORD 专题 19。

@@ -1,54 +1,61 @@
+## REMOVED Requirements
+
+### Requirement: Directional card practice for memory recall
+
+**Reason**: 方向卡 UI 全拆（无卡片页、无系统导向会话，DISCUSSION-RECORD
+专题 19 第 4 条）；其数据级承诺由新需求「Directional schedule entries」
+以更窄的形式继承（每方向独立调度键），API 语义由「Directional feedback
+key」继承。
+
 ## MODIFIED Requirements
 
 ### Requirement: Forgetting-curve scheduling as background
 
 The system SHALL maintain per-item scheduling state (repetitions, ease,
-interval, due date) updated on practice results, and SHALL surface due items as
-reminders. Scheduling SHALL influence ordering only; it SHALL never hide,
-lock, or refuse items. Due items SHALL be surfaced on the workspace home
-(practice page) inside the merged today list, each with a human-readable
-reason; a separate review page SHALL NOT be used.
+interval, due date) updated on practice results. Scheduling SHALL influence
+ordering and on-demand suggestions only; it SHALL never hide, lock, or refuse
+items, and due items SHALL NOT be surfaced as a standing due list or through a
+separate review page. Due knowledge points SHALL be reachable as on-demand
+suggestions inside the practice page's staged-list flow, each with at most one
+human-readable reason phrase.
 
 #### Scenario: Due items are reminded
 
-- **WHEN** the workspace home is opened
-- **THEN** it shows a due-items summary computed from scheduling state, alongside (never instead of) the weak-point list
+- **WHEN** the workspace home is opened with due schedule rows whose knowledge
+  points are not currently selected
+- **THEN** the practice page's suggestion entry shows their count, and
+  expanding it lists each due knowledge point with one human reason phrase,
+  never raw scheduler parameters
 
 #### Scenario: Schedule state updates after practice
 
 - **WHEN** a problem result is recorded
-- **THEN** its repetitions, ease, interval, and due date are updated in the scheduling table
+- **THEN** its repetitions, ease, interval, and due date are updated in the
+  scheduling table
 
-### Requirement: Directional card practice for memory recall
+## ADDED Requirements
 
-A knowledge point with `knowledge_type = memory-recall` SHALL be practiced as a
-card: prompt on the front, recall, reveal on the back. Cards SHALL carry a
-direction (for example English-to-Chinese and Chinese-to-English), each
-direction is a distinct learning action with its own schedule entry, and
-related knowledge points connected by `contrasts` or `variant_of` edges SHALL
-be shown alongside during card practice. The card session SHALL be offered as
-an optional light session inside the Flash Card or Yes/No modes when the
-selected scope contains due directional rows; it SHALL never be required, and
-rating a card SHALL record through the feedback path with the row's direction.
+### Requirement: Directional schedule entries
+
+Each direction (for example English-to-Chinese and Chinese-to-English) of a
+memory-recall knowledge point SHALL be a distinct learning action with its own
+schedule entry, and practicing one direction SHALL NOT advance the other. The
+workbench SHALL NOT provide a standing card-session page or system-initiated
+card prompts; card-shaped UI for directional rows is deferred until real usage
+exists.
 
 #### Scenario: Two directions schedule independently
 
 - **WHEN** a memory-recall knowledge point is practiced in both directions
-- **THEN** each direction has its own schedule state and due date, and practicing one direction does not advance the other
+- **THEN** each direction has its own schedule state and due date, and
+  practicing one direction does not advance the other
 
-#### Scenario: Confusable words are shown together
+#### Scenario: No system-initiated card session
 
-- **WHEN** a card's knowledge point has a `contrasts` neighbor
-- **THEN** the neighbor is displayed on the card page as a compare hint, without merging the two into one item
-
-#### Scenario: Offered, never required
-
-- **WHEN** a selected scope contains due directional rows and the learner starts
-  the Flash Card or Yes/No mode
-- **THEN** the workbench offers an optional first flip over the due cards and
-  proceeds with the normal mode flow if declined
-
-## ADDED Requirements
+- **WHEN** the learner starts any practice mode with due directional rows in
+  scope
+- **THEN** the workbench starts the requested mode directly without offering
+  or requiring a card session
 
 ### Requirement: Scoped include filter
 

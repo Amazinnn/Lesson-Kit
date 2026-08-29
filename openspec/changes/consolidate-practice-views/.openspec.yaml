@@ -1,4 +1,5 @@
 schema: spec-driven
 
 name: consolidate-practice-views
-description: Merge the duplicated practice/review/due views back into a three-page workbench with one today list
+
+description: Collapse the practice/review/due duplication back to three pages with a selection-backed staged list, on-demand plan/due suggestions, and no card-session UI
