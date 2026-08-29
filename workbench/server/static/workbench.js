@@ -1450,32 +1450,124 @@
 
   var goalForm = document.getElementById("goal-form");
   if (goalForm) {
+    var goalIdField = document.getElementById("goal-id");
+    var goalSubmit = document.getElementById("goal-submit");
+    var goalCancel = document.getElementById("goal-cancel");
+    var goalSummary = document.getElementById("goal-editor-summary");
+    var goalNl = document.getElementById("goal-nl");
+    var goalAssistSend = document.getElementById("goal-assist-send");
+
+    function goalStatus(text) {
+      var status = document.getElementById("goal-form-status");
+      if (status) status.textContent = text || "";
+    }
+
+    function resetGoalForm() {
+      if (goalIdField) goalIdField.value = "";
+      if (goalCancel) goalCancel.classList.add("hidden");
+      if (goalSubmit) goalSubmit.textContent = "保存目标";
+      if (goalSummary) goalSummary.textContent = "添加目标";
+      goalForm.reset();
+      goalStatus("");
+    }
+
+    function loadGoalIntoForm(card) {
+      if (goalIdField) goalIdField.value = card.dataset.goalId || "";
+      document.getElementById("goal-title").value = card.dataset.goalTitle || "";
+      var kind = document.getElementById("goal-kind");
+      if (kind) kind.value = card.dataset.goalKind || "stage";
+      var deadline = document.getElementById("goal-deadline");
+      if (deadline) deadline.value = card.dataset.goalDeadline || "";
+      document.getElementById("goal-description").value = card.dataset.goalDescription || "";
+      if (goalCancel) goalCancel.classList.remove("hidden");
+      if (goalSubmit) goalSubmit.textContent = "保存修改";
+      if (goalSummary) goalSummary.textContent = "修改目标";
+      if (goalForm.parentElement && goalForm.parentElement.open === false) {
+        goalForm.parentElement.open = true;
+      }
+      goalStatus("");
+    }
+
+    var goalCardsBox = document.getElementById("goal-cards");
+    Array.prototype.forEach.call(goalCardsBox ? goalCardsBox.querySelectorAll(".goal-card") : [], function (card) {
+      var edit = card.querySelector("[data-goal-edit]");
+      if (edit) edit.addEventListener("click", function () { loadGoalIntoForm(card); });
+      var remove = card.querySelector("[data-goal-delete]");
+      if (remove) remove.addEventListener("click", function () {
+        var id = card.dataset.goalId;
+        if (!id || (window.confirm && !window.confirm("删除这个目标？"))) return;
+        api("/goals/" + encodeURIComponent(id), { method: "DELETE" })
+          .then(function () { window.location.reload(); })
+          .catch(function (error) { goalStatus("删除失败：" + (error.message || "未知错误")); });
+      });
+    });
+
+    if (goalCancel) goalCancel.addEventListener("click", resetGoalForm);
+
     goalForm.addEventListener("submit", function (event) {
       if (event.preventDefault) event.preventDefault();
-      var status = document.getElementById("goal-form-status");
       var title = document.getElementById("goal-title");
       var kind = document.getElementById("goal-kind");
       var deadline = document.getElementById("goal-deadline");
       var description = document.getElementById("goal-description");
       if (!title || !title.value.trim()) {
-        if (status) status.textContent = "请填写目标名称。";
+        goalStatus("请填写目标名称。");
         return;
       }
-      post("/goals", {
+      var payload = {
         title: title.value.trim(),
         kind: kind ? kind.value : "stage",
         deadline: deadline ? deadline.value : "",
         description: description ? description.value.trim() : "",
-      }).then(function () {
+      };
+      var editing = goalIdField && goalIdField.value;
+      var request = editing
+        ? api("/goals/" + encodeURIComponent(goalIdField.value), {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+        : post("/goals", payload);
+      request.then(function () {
         if (window.location && typeof window.location.reload === "function") {
           window.location.reload();
         } else {
           window.location = "/w/" + encodeURIComponent(WS) + "/practice";
         }
       }).catch(function (error) {
-        if (status) status.textContent = "保存失败：" + (error.message || "未知错误");
+        goalStatus("保存失败：" + (error.message || "未知错误"));
       });
     });
+
+    function sendGoalAssist() {
+      var text = goalNl ? goalNl.value.trim() : "";
+      if (!text) {
+        goalStatus("先用一句话写下你的目标。");
+        return;
+      }
+      if (!(aiProviders || []).length) {
+        goalStatus("暂无可用 Agent。请先配置一个提供方，或手动填写字段。");
+        return;
+      }
+      if (!aiConversation || aiTurn) {
+        if (typeof aiShowProviderPicker === "function") aiShowProviderPicker();
+        goalStatus("请先在右侧选择 Agent 开始对话，再点一次「让 Agent 填」。");
+        return;
+      }
+      var body = aiContextBody(text);
+      body.goal_intent = true;
+      goalStatus("已发给 Agent，等待代填…");
+      post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns", body)
+        .then(function (turn) {
+          aiTurn = turn.turn_id;
+          aiPollSequence = 0;
+          aiPollConversationTurn();
+        })
+        .catch(function (error) {
+          goalStatus("发送失败：" + (error.message || "未知错误"));
+        });
+    }
+    if (goalAssistSend) goalAssistSend.addEventListener("click", sendGoalAssist);
   }
 
   /* ---------- session-end ---------- */
@@ -1645,10 +1737,27 @@
   }
 
   function aiApplyAction(action) {
-    if (!action || action.type !== "replace_practice_selection") return;
-    if (!Array.isArray(action.kp_ids) || !action.kp_ids.length) return;
-    saveSelectedKpIds(action.kp_ids);
-    aiSetStatus("练习范围已更新");
+    if (!action) return;
+    if (action.type === "replace_practice_selection") {
+      if (!Array.isArray(action.kp_ids) || !action.kp_ids.length) return;
+      saveSelectedKpIds(action.kp_ids);
+      aiSetStatus("练习范围已更新");
+      return;
+    }
+    if (action.type === "prefill_goal_form") {
+      var map = {
+        "goal-title": action.title, "goal-kind": action.kind,
+        "goal-deadline": action.deadline, "goal-description": action.description,
+      };
+      Object.keys(map).forEach(function (id) {
+        var field = document.getElementById(id);
+        if (field && map[id]) field.value = map[id];
+      });
+      var editor = document.querySelector(".goal-editor");
+      if (editor && editor.open === false) editor.open = true;
+      var goalNotice = document.getElementById("goal-form-status");
+      if (goalNotice) goalNotice.textContent = "Agent 已代填目标字段，确认后保存。";
+    }
   }
 
   function aiRecordRecent(type, id) {

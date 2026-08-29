@@ -434,6 +434,24 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(data["nodes"][0]["title"], "Counting")
         self.assertIn("id='graph-projection'", body)
 
+    def test_goal_lifecycle_controls_render(self):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}/api/w/dmath/goals",
+            data=json.dumps({"title": "期末掌握计数", "kind": "stage"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(response.status, 200)
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='goal-cards'", body)
+        self.assertIn("data-goal-edit", body)
+        self.assertIn("data-goal-delete", body)
+        self.assertIn("data-goal-id='goal-001'", body)
+        self.assertIn("期末掌握计数", body)
+        self.assertIn("id='goal-nl'", body)
+        self.assertIn("id='goal-assist-send'", body)
+
     def test_left_nav_returns_to_three_pages(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)

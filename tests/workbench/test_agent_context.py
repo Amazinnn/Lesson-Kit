@@ -97,3 +97,11 @@ class AgentContextTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_goal_intent_is_rebuilt_from_the_request_payload(self):
+        from workbench.server import context
+
+        result = context.build(self.pool, self.workspace, {"goal_intent": True})
+        self.assertTrue(result["goal_intent"])
+        result = context.build(self.pool, self.workspace, {})
+        self.assertFalse(result["goal_intent"])

@@ -149,6 +149,37 @@ def cmd_schedule(args):
     print(json.dumps(row, ensure_ascii=False, indent=2) if row else "no schedule")
 
 
+def cmd_goals(args):
+    from workbench.data import goals as goals_mod
+    workspace = _workspace(_resolve_name(args))
+    root = workspace["path"]
+    if args.action == "add":
+        if not args.title:
+            raise SystemExit("goals add requires --title")
+        goal = goals_mod.create_goal(root, {
+            "title": args.title,
+            "kind": args.kind or "stage",
+            "deadline": args.deadline or "",
+            "description": args.description or "",
+        })
+    elif args.action == "update":
+        if not args.goal_id:
+            raise SystemExit("goals update requires a goal id")
+        values = {k: v for k, v in {
+            "title": args.title, "kind": args.kind,
+            "deadline": args.deadline, "description": args.description,
+        }.items() if v is not None}
+        goal = goals_mod.update_goal(root, args.goal_id, values)
+    elif args.action == "rm":
+        if not args.goal_id:
+            raise SystemExit("goals rm requires a goal id")
+        goal = goals_mod.delete_goal(root, args.goal_id)
+    else:
+        print(json.dumps(goals_mod.list_goals(root), ensure_ascii=False, indent=2))
+        return
+    print(json.dumps(goal, ensure_ascii=False, indent=2))
+
+
 def cmd_bridge(args):
     registry.add_bridge(args.provider, args.command, args=args.args,
                         timeout_s=args.timeout)
@@ -466,6 +497,16 @@ def build_parser():
     p.add_argument("--item", required=True, choices=["kp", "problem"])
     p.add_argument("--id", required=True)
     p.set_defaults(func=cmd_schedule)
+
+    p = sub.add_parser("goals", help="manage goals (list/add/update/rm)")
+    p.add_argument("name", nargs="?")
+    p.add_argument("action", nargs="?", choices=["list", "add", "update", "rm"], default="list")
+    p.add_argument("goal_id", nargs="?")
+    p.add_argument("--title")
+    p.add_argument("--kind", choices=["stage", "long_term"])
+    p.add_argument("--deadline")
+    p.add_argument("--description")
+    p.set_defaults(func=cmd_goals)
 
     p = sub.add_parser("bridge", help="configure bridge providers")
     p.add_argument("action", choices=["add"])

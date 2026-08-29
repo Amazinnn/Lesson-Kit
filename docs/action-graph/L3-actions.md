@@ -52,8 +52,8 @@
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | 目标创建 | UI 表单 | 人 | goals.json | 已实现 |
-| 目标编辑/删除 | **UI 无入口（API/数据层已具备）** | — | goals.json | **缺口**（队列③） |
-| 目标自然语言输入→Agent 填字段（含 KP 归属筛选，版面原位变化） | 无 | Agent | goals 字段 | 未定义挂名（队列③设计） |
+| 目标自然语言助填（NL→对话轮次→prefill_goal_form→表单原位填充，提交留给人） | UI 目标表单 | Agent+人 | 表单字段（不直接写 goals.json） | 已实现（complete-goals-loop） |
+| 目标编辑/删除 | UI 卡片入口（同表单 PATCH/DELETE） | 人 | goals.json | 已实现（complete-goals-loop） |
 | 月历/工作量只读视图 | UI | 人 | — | 已实现（实验） |
 | 每日计划重算 | UI | 人 | plan.json | 已实现 |
 | 重日 prefill（只预填不发送） | UI | 人 | AI 输入框 | 已实现 |
@@ -76,3 +76,4 @@
 - 2026-08-29 讲解/诊断已移除（remove-explain-diagnose，队列②落地）：任务机
   五模块、四条 API 路由、CLI `ai`、前端按钮与门槛逻辑全部退役；`bridge add`
   保留（对话 provider overrides 通道）。
+- 2026-08-29 目标生命周期（编辑/删除）与目标表单助填动作落地（complete-goals-loop，队列③）；goals CLI 上线（22 命令）。

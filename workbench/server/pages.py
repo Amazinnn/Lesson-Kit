@@ -130,22 +130,37 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
 def _daily_plan(plan):
     goals = plan.get("goals") or []
     goal_cards = "".join(
-        "<article class='goal-card card'><h3>" + html.escape(goal.get("title") or "未命名目标") + "</h3>"
+        "<article class='goal-card card' data-goal-id='" + html.escape(str(goal.get("id") or "")) + "'"
+        + " data-goal-title='" + html.escape(goal.get("title") or "") + "'"
+        + " data-goal-kind='" + html.escape(str(goal.get("kind") or "stage")) + "'"
+        + " data-goal-deadline='" + html.escape(str(goal.get("deadline") or "")) + "'"
+        + " data-goal-description='" + html.escape(str(goal.get("description") or "")) + "'>"
+        + "<h3>" + html.escape(goal.get("title") or "未命名目标") + "</h3>"
         + ("<p class='goal-progress'>覆盖进度：" + html.escape(str(goal.get("coverage_progress", goal.get("progress", "暂无")))) + "</p>" if goal.get("coverage_progress", goal.get("progress")) is not None else "")
         + ("<p class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</p>" if goal.get("deadline") else "")
         + ("<details><summary>查看说明与范围</summary><p>" + html.escape(str(goal.get("description") or goal.get("scope") or "")) + "</p></details>" if goal.get("description") or goal.get("scope") else "")
+        + "<div class='goal-card-actions'><button type='button' class='ghost sm goal-edit' data-goal-edit>编辑</button>"
+        + "<button type='button' class='ghost sm goal-delete' data-goal-delete>删除</button></div>"
         + "</article>"
         for goal in goals
     ) or "<p class='muted'>暂无已设置的长期或阶段目标。</p>"
     return (
         "<section id='daily-plan' class='daily-plan' aria-label='学习安排'>"
-        "<section class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
-        "<details class='goal-editor'><summary>添加目标</summary><form id='goal-form'>"
+        "<section id='goal-cards' class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
+        "<details class='goal-editor'><summary id='goal-editor-summary'>添加目标</summary><form id='goal-form'>"
+        "<input type='hidden' id='goal-id' value=''>"
         "<label for='goal-title'>目标名称</label><input id='goal-title' name='title' required>"
         "<label for='goal-kind'>目标类型</label><select id='goal-kind' name='kind'><option value='stage'>阶段目标</option><option value='long_term'>长期目标</option></select>"
         "<label for='goal-deadline'>截止日期</label><input id='goal-deadline' name='deadline' type='date'>"
         "<label for='goal-description'>说明</label><textarea id='goal-description' name='description' rows='3'></textarea>"
-        "<button class='primary sm' type='submit'>保存目标</button><p id='goal-form-status' class='inline-error' aria-live='polite'></p>"
+        "<div class='goal-form-actions'><button class='primary sm' type='submit' id='goal-submit'>保存目标</button>"
+        "<button type='button' class='outline sm hidden' id='goal-cancel'>取消编辑</button></div>"
+        "<p id='goal-form-status' class='inline-error' aria-live='polite'></p>"
+        "<div class='goal-assist'>"
+        "<label for='goal-nl'>说不清字段？一句话让 Agent 帮你填</label>"
+        "<textarea id='goal-nl' rows='2' placeholder='例如：期末前掌握第六章计数，重点补鸽巢和组合'></textarea>"
+        "<button type='button' class='outline sm' id='goal-assist-send'>让 Agent 填</button>"
+        "</div>"
         "</form></details></section>"
     )
 

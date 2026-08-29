@@ -1809,3 +1809,84 @@ test("flash cards page back and forth through history and only pull at the end",
   assert.deepEqual(JSON.parse(pulls[pulls.length - 1].options.body).exclude_ids, ["c-1", "c-2"]);
   assert.match(elements.stream._innerHTML, /正面三/);
 });
+
+test("goal cards edit and delete drive the API, and the agent prefill action fills the form", async () => {
+  const calls = [];
+  const card = new FakeElement("goal-card");
+  card.dataset = {
+    goalId: "goal-001", goalTitle: "期末掌握计数", goalKind: "stage",
+    goalDeadline: "2026-09-30", goalDescription: "重点鸽巢",
+  };
+  const editBtn = new FakeElement("goal-edit-btn");
+  const deleteBtn = new FakeElement("goal-delete-btn");
+  card.queryOne = (selector) => selector === "[data-goal-edit]" ? editBtn
+    : selector === "[data-goal-delete]" ? deleteBtn : null;
+  const goalCards = new FakeElement("goal-cards");
+  goalCards.queryAll = (selector) => selector === ".goal-card" ? [card] : [];
+  const elements = {
+    layout: layout(), ...practiceElements(),
+    "goal-cards": goalCards, "goal-form": new FakeElement("goal-form"),
+    "goal-id": new FakeElement("goal-id"), "goal-title": new FakeElement("goal-title"),
+    "goal-kind": new FakeElement("goal-kind"), "goal-deadline": new FakeElement("goal-deadline"),
+    "goal-description": new FakeElement("goal-description"),
+    "goal-form-status": new FakeElement("goal-form-status"),
+    "goal-submit": new FakeElement("goal-submit"), "goal-cancel": new FakeElement("goal-cancel"),
+    "goal-editor-summary": new FakeElement("goal-editor-summary"),
+    "goal-nl": new FakeElement("goal-nl"), "goal-assist-send": new FakeElement("goal-assist-send"),
+    ...aiElements(),
+  };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options, method: options && options.method });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle", messages: [],
+      });
+      if (url.endsWith("/turns") && options) return jsonResponse({ turn_id: "turn-1" });
+      if (url.includes("/turns/turn-1")) return jsonResponse({
+        turn: { status: "done", action: {
+          type: "prefill_goal_form", title: "Agent 填的目标",
+          kind: "long_term", deadline: "2026-10-01", description: "含 kp-006 与 kp-008",
+        } },
+        events: [],
+      });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+
+  // 编辑：卡片字段载回表单，提交走 PATCH
+  editBtn.click();
+  assert.equal(elements["goal-id"].value, "goal-001");
+  assert.equal(elements["goal-title"].value, "期末掌握计数");
+  assert.equal(elements["goal-kind"].value, "stage");
+  assert.equal(elements["goal-submit"].textContent, "保存修改");
+  elements["goal-form"].trigger("submit");
+  await flush();
+  const patch = calls.find((call) => call.url.endsWith("/goals/goal-001") && call.method === "PATCH");
+  assert.ok(patch);
+  assert.deepEqual(JSON.parse(patch.options.body).title, "期末掌握计数");
+
+  // 助填动作镜像：先在右侧开会话，再从目标表单点「让 Agent 填」
+  elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  elements["goal-nl"].value = "期末前掌握第六章计数";
+  elements["goal-assist-send"].click();
+  await flush();
+  const turnPost = calls.find((call) => call.url.endsWith("/turns") && call.options);
+  assert.deepEqual(JSON.parse(turnPost.options.body).goal_intent, true);
+  assert.equal(elements["goal-title"].value, "Agent 填的目标");
+  assert.equal(elements["goal-kind"].value, "long_term");
+  assert.equal(elements["goal-deadline"].value, "2026-10-01");
+  assert.equal(elements["goal-description"].value, "含 kp-006 与 kp-008");
+  assert.match(elements["goal-form-status"].textContent, /Agent 已代填/);
+
+  // 删除：确认（无 confirm 环境直通）→ DELETE
+  deleteBtn.click();
+  await flush();
+  assert.ok(calls.some((call) => call.url.endsWith("/goals/goal-001") && call.method === "DELETE"));
+});
