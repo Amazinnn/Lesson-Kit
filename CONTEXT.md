@@ -3,6 +3,11 @@
 lesson-kit turns academic source material into reusable learning assets and
 student-facing views.
 
+> **Superseded (2026-08-29):** authoritative term definitions now live in
+> `docs/GLOSSARY.md` (bilingual, covers the workbench era). This file remains
+> as pipeline-era history; entries that are still valid were migrated into the
+> GLOSSARY. Do not add new entries here.
+
 ## Language
 
 **Knowledge Pool**:
