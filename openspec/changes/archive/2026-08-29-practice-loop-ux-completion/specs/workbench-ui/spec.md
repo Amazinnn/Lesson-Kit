@@ -51,14 +51,14 @@ presentation layout is affected.
 ### Requirement: Complete text display across surfaces
 
 Item labels and chips across the workbench SHALL display their complete text:
-recent-activity item labels and calendar goal chips SHALL wrap to additional
+due-item labels and calendar goal chips SHALL wrap to additional
 lines instead of being truncated, clipped, or ellipsized. Calendar cells
 SHALL grow in height to fit fully displayed goal chips. An overlong name is
 a content-naming matter — the UI SHALL NOT mitigate it by hiding text.
 
-#### Scenario: Long recent-activity label
+#### Scenario: Long due-item label
 
-- **WHEN** a recent-activity item's text exceeds one line
+- **WHEN** a due item's label text exceeds one line
 - **THEN** the row wraps and shows the full text with no character cap
 
 #### Scenario: Calendar chip with a long goal title

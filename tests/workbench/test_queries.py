@@ -156,6 +156,18 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(items[0]["item_id"], "dmath-ch06-prob-001")
         self.assertEqual(items[0]["label"], "P1")
 
+    def test_due_item_label_shows_the_full_text_without_a_cap(self):
+        long_text = "设集合 A 有 n 个元素，则 A 的子集共有 2 的 n 次方个，其中真子集要比子集少一个，这个结论在计数问题里反复出现。" * 2
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "UPDATE problems SET problem_text = ? WHERE problem_id = ?",
+            (long_text, "dmath-ch06-prob-001"),
+        )
+        conn.commit()
+        conn.close()
+        items = self.queries.due_list(self.pool)
+        self.assertEqual(items[0]["label"], long_text)
+
     def test_problem_detail(self):
         detail = self.queries.problem_detail(self.pool, "dmath-ch06-prob-002")
         self.assertEqual(detail["problem"]["problem_id"], "dmath-ch06-prob-002")

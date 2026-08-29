@@ -53,12 +53,23 @@ test("node radius grows monotonically with formal problem count and is capped", 
   assert.equal(physics.nodeRadius(10000), 30);
 });
 
-test("external labels do not enlarge physical collision radius", () => {
-  const simulation = physics.createSimulation(
+test("labels enlarge the collision footprint without changing node radius", () => {
+  const bare = physics.createSimulation(
+    [{ id: "a", title: "", problem_count: 1 }], [], 500, 320,
+  );
+  const titled = physics.createSimulation(
     [{ id: "a", title: "广义鸽巢原理与组合模型".repeat(3), problem_count: 1 }],
     [], 500, 320,
   );
-  assert.equal(simulation.nodes[0].collisionRadius, simulation.nodes[0].radius);
+  // The circle itself is untouched; the wrapped label extends the footprint.
+  assert.equal(titled.nodes[0].radius, bare.nodes[0].radius);
+  assert.ok(titled.nodes[0].collisionRadius > bare.nodes[0].collisionRadius);
+  assert.equal(
+    titled.nodes[0].collisionRadius,
+    physics.collisionRadius(titled.nodes[0].radius, "广义鸽巢原理与组合模型".repeat(3)),
+  );
+  assert.equal(physics.labelLineCount("十四个字符一行正好十四个"), 1);
+  assert.equal(physics.labelLineCount("二十八个字符的标签会折成两行显示出来"), 2);
 });
 
 test("settled nodes preserve 24 pixels of circle clearance", () => {

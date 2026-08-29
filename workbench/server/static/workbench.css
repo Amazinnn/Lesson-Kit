@@ -360,7 +360,7 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-node { position: absolute; z-index: 2; padding: 0; transform: translate(-50%, -50%); border: 2px solid var(--dsw-border-l2); border-radius: 50%; background: var(--dsw-bg-layer-1); box-shadow: var(--dsw-shadow-lv1); cursor: grab; }
 .graph-node:hover { transform: translate(-50%, -50%) scale(1.08); background: var(--dsw-interactive-bg-hover); }
 .graph-node:active { cursor: grabbing; }
-.graph-node-label { position: absolute; z-index: 3; max-width: 150px; transform: translateX(-50%); color: var(--dsw-label-primary); font-size: 12px; font-weight: 600; line-height: 16px; text-align: center; pointer-events: none; }
+.graph-node-label { position: absolute; z-index: 3; max-width: 168px; transform: translateX(-50%); color: var(--dsw-label-primary); font-size: 12px; font-weight: 600; line-height: 16px; text-align: center; pointer-events: none; }
 .graph-focus-selected { opacity: 1; }
 .graph-node.graph-focus-selected { box-shadow: 0 0 0 4px rgba(24, 103, 180, .18); }
 .graph-focus-near { opacity: 1; }
@@ -709,6 +709,14 @@ img { max-width: 100%; }
 
 /* ---------- time view (calendar + workload) ---------- */
 .time-view { padding: 22px; }
+.micro-verdict { margin: 10px 0 0; font-weight: 600; }
+.micro-verdict.ok { color: #1a7f37; }
+.micro-verdict.bad { color: #b42318; }
+.problem-options label.option-selected { background: var(--dsw-interactive-bg-hover); }
+.problem-options label.option-correct { outline: 2px solid #1a7f37; outline-offset: 1px; border-radius: 4px; }
+#card-nav { display: inline-block; margin-left: 8px; }
+#ai-task-status { margin: 8px 0 0; }
+#ai-task-result { margin-top: 10px; }
 .time-off-note { padding: 8px 2px; }
 .calendar-grid {
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
@@ -721,7 +729,7 @@ img { max-width: 100%; }
 .calendar-cell {
   min-height: 64px; padding: 4px 6px;
   border: 1px solid var(--dsw-border-l1); border-radius: 8px;
-  display: flex; flex-direction: column; gap: 3px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 3px;
 }
 .calendar-cell.blank { border-color: transparent; }
 .calendar-cell.today { border: 1.5px solid var(--dsw-brand-accent); }
@@ -729,7 +737,7 @@ img { max-width: 100%; }
 .calendar-goal {
   font-size: 11px; line-height: 1.4; padding: 2px 5px; border-radius: 6px;
   background: var(--dsw-brand-accent-soft); color: var(--dsw-label-primary);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  white-space: normal; overflow-wrap: anywhere;
 }
 .workload-bars {
   display: flex; align-items: flex-end; gap: 6px; height: 110px;

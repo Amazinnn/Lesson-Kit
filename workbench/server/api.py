@@ -364,6 +364,12 @@ def ai_providers(pool, workspace, params, body):
     ]
 
 
+def ai_task_providers(pool, workspace, params, body):
+    from workbench import registry
+    providers = registry.load_bridges().get("providers", {})
+    return {"available": bool(providers), "count": len(providers)}
+
+
 def ai_sessions_list(pool, workspace, params, body):
     return conversations.list_sessions(pool)
 

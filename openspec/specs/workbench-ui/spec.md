@@ -7,7 +7,6 @@ conversation column whose context display prioritizes the current problem
 without ever limiting what the agent can see. Visual style copies the DeepSeek
 Harness design system.
 ## Requirements
-
 ### Requirement: Three-column shell with navigation
 
 The workbench SHALL render a three-column desktop layout: a left navigation column with workspace and study navigation, a primary middle page, and a collapsible right Agent conversation column, with workspace/course/chapter context in the top bar. At narrow widths the middle page SHALL remain the single primary column; the left and right columns SHALL become dismissible drawers opened by two compact icon controls in the top bar. Switching workspaces or pages SHALL preserve recorded pool state.
@@ -464,7 +463,17 @@ Repeated unified-rating controls SHALL use unique identifiers, associated access
 
 ### Requirement: Living graph motion and readable labels
 
-The graph SHALL remain fully static after the force simulation settles. It SHALL reheat only after a learner interaction or viewport/model change such as dragging, filtering, focusing, resizing, or changing global gravity. It SHALL NOT apply a continuous idle breathing offset. Labels SHALL remain readable under the existing focus and zoom rules, and raw identifiers SHALL NOT be primary canvas text.
+The graph SHALL remain fully static after the force simulation settles. It
+SHALL reheat only after a learner interaction or viewport/model change such
+as dragging, filtering, focusing, resizing, or changing global gravity. It
+SHALL NOT apply a continuous idle breathing offset. Labels SHALL remain
+readable under the existing focus and zoom rules, and raw identifiers SHALL
+NOT be primary canvas text. Node labels SHALL always display their complete
+text — wrapping to multiple lines instead of truncating — and label extent
+SHALL participate in collision spacing so wrapped labels do not overlap
+each other or nearby nodes. The projection pipeline (how artifacts are
+derived from source material at ingest) SHALL NOT change; only the runtime
+presentation layout is affected.
 
 #### Scenario: Settled graph is quiet
 
@@ -490,6 +499,13 @@ The graph SHALL remain fully static after the force simulation settles. It SHALL
 
 - **WHEN** the learner changes zoom, search, hover, or focus
 - **THEN** the corresponding ranked or explicitly relevant labels remain readable under the defined thresholds
+
+#### Scenario: A long node label stays complete
+
+- **WHEN** a knowledge-point title is longer than one label line
+- **THEN** the label wraps to further lines and shows its full text without
+  truncation or ellipsis, and collision spacing accounts for the wrapped
+  extent
 
 ### Requirement: Adjustable graph compactness
 
@@ -603,3 +619,23 @@ one action.
   or due suggestions
 - **THEN** the staged list shows one sentence with one action, and the
   suggestion entry states there is nothing to add
+
+### Requirement: Complete text display across surfaces
+
+Item labels and chips across the workbench SHALL display their complete text:
+due-item labels and calendar goal chips SHALL wrap to additional
+lines instead of being truncated, clipped, or ellipsized. Calendar cells
+SHALL grow in height to fit fully displayed goal chips. An overlong name is
+a content-naming matter — the UI SHALL NOT mitigate it by hiding text.
+
+#### Scenario: Long due-item label
+
+- **WHEN** a due item's label text exceeds one line
+- **THEN** the row wraps and shows the full text with no character cap
+
+#### Scenario: Calendar chip with a long goal title
+
+- **WHEN** a day cell holds a goal whose title is longer than the cell width
+- **THEN** the goal chip wraps inside the cell and the cell grows to show
+  the full title
+
