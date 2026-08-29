@@ -83,19 +83,24 @@ _Avoid_：徽标、日期数字、ease/interval 等裸参数
 出处：consolidate-practice-views design D2（修订版）
 
 ### 练习模式 / Content Mode
-一轮练习的题型入口，三选一。每次会话只允许一种。**「practice path」是它在旧计划语境的别名，统一以本条为准。**
+一轮练习的题型入口，四选一：综合题（exam）/ 小测（micro）/ 判断（yes_no）/ 闪卡（flash_card）。每次会话只允许一种。**「practice path」是它在旧计划语境的别名，统一以本条为准。**
 _Avoid_：practice path（旧别名）、答题方式
-出处：workbench-ui spec「Practice page staged list…」；daily-learning-plan spec（别名裁决）
+出处：workbench-ui spec「Practice page」；daily-learning-plan spec（别名裁决）；introduce-flash-card
 
 ### 综合题模式 / Exam Mode
 练习模式之一：按范围拉取常规正式题，作答 → 查看解析 → 1–5 自评。未标注 practice_modes 的存量题只在此模式可用。
 _Avoid_：考试模式（不是考试，是常规练习）
 出处：review-workbench spec「Problem pull engine」「Grading input modes」
 
-### 闪卡模式 / Flash Card Mode
-练习模式之一：短题干快反馈卡，先回忆再揭示「答案 + 为什么（错因）」，然后 1–5 自评。只拉取标注了 flash_card 可用的微题（single_choice / multiple_choice / closest_answer / short_answer 题型），无内容时如实空态。
-_Avoid_：方向卡（按方向练习的记忆卡 UI，已拆除）、普通题冒充
-出处：micro-quiz-content spec；pull._eligible_for_mode
+### 小测模式 / Micro Mode
+练习模式之一：微题的选择题点选（single_choice / multiple_choice），提交后浏览器本地判分、显示对错与错因，之后仍走 1–5 自评。只拉取标注 micro 可用的微题，无内容时如实空态。**原名「闪卡模式」，2026-08-29 正名出让**：该模式实为微题的卡片式渲染，不是记忆卡。
+_Avoid_：闪卡（旧称，现指另一功能）、自由文本作答（微题一律点选）
+出处：introduce-flash-card；micro-quiz-content spec
+
+### 闪卡 / Flash Card
+从知识点解构出的键值对记忆卡（类似 dict 的一条键值对）：正面（front）→回忆→揭示背面（back）→1–5 自评，无选项、无判分。知识点是唯一事实源（Note），卡是派生视图（Card），一卡只放一个原子事实；每卡一行独立调度。练习会话第四种模式的练习对象；也可用于背单词、背概念等场景。AI 自动解构知识点成卡属 generate 桥后置实验，不在当前范围。
+_Avoid_：小测（微题的卡片式渲染，旧「闪卡」）、方向卡（已拆除 UI）、普通题冒充
+出处：introduce-flash-card；openspec/specs/flash-card（随归档落位）
 
 ### 判断模式 / Yes-No Mode
 练习模式之一：判断题（是/否），选择后浏览器本地立即判分并显示错因；判分只是即时反馈，不写学习记录，之后仍走 1–5 自评。只拉取标注了 yes_no 可用的微题（quiz_type = yes_no），无内容时如实空态。
@@ -133,8 +138,8 @@ _Avoid_：批量评分历史、补打卡
 出处：DISCUSSION-RECORD B6.5；workbench-ui spec
 
 ### 微题 / Micro Quiz
-带结构化载荷的短题干快反馈题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、答案关键、错因、来源证据）。五种题型：yes_no / single_choice / multiple_choice / closest_answer / short_answer。客观题在前端本地判分，判分本身不写学习记录。
-_Avoid_：小题（口语）、判断题系统（判断只是题型之一）
+带结构化载荷的短题干快反馈题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。
+_Avoid_：小题（口语）、判断题系统（判断只是题型之一）、填空作答
 出处：openspec/specs/micro-quiz-content/spec.md
 
 ### 答案关键 / Answer Key
@@ -263,7 +268,7 @@ _Avoid_：人工审阅、完工宣言
 出处：CONTEXT.md（迁入）；AGENTS.md 验证节奏
 
 ### 门禁 / Gate
-内容入库前的确定性检查。正式题候选过结构门禁 + 审计门禁两道；micro-quiz 清单过 `_gate_micro_quiz`（契约 + 标记安全 + 与库比对），失败即整体拒绝、零写入。
+内容入库前的确定性检查。正式题候选过结构门禁 + 审计门禁两道；micro-quiz 清单过 `_gate_micro_quiz`、flash-card 清单过对应门禁（契约 + 标记安全 + 与库比对），失败即整体拒绝、零写入。
 _Avoid_：人工抽查、事后补审
 出处：review-workbench spec「Past-paper coverage gate」；micro-quiz-content spec；workbench/ingest
 
