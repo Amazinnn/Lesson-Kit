@@ -1,0 +1,179 @@
+{
+  "kind": "micro-quiz-patch",
+  "items": [
+    {
+      "problem_id": "dmath-ch06-mq-028",
+      "kp_id": "dmath-ch06-kp-003",
+      "stem": "某班 40 人选了美术，30 人选了音乐，两门都选的有 10 人。至少选了一门的有多少人？",
+      "quiz_type": "single_choice",
+      "options": ["70", "60", "50", "40"],
+      "answer_key": "60",
+      "error_reason": "两类有交集时用减法规则：|A∪B| = |A|+|B|−|A∩B| = 40+30−10 = 60。答 70 是忘了扣掉重复计入的交集。",
+      "source_evidence": "Section 6.1.4（THE SUBTRACTION RULE，两集合容斥）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-029",
+      "kp_id": "dmath-ch06-kp-003",
+      "stem": "下列哪些情形必须用减法规则（而不是直接相加）来计数？",
+      "quiz_type": "multiple_choice",
+      "options": ["两种完成方式存在公共部分", "求 |A∪B| 且已知 |A∩B|", "两种完成方式互斥", "只知道 |A| 与 |B| 的差"],
+      "answer_key": ["两种完成方式存在公共部分", "求 |A∪B| 且已知 |A∩B|"],
+      "error_reason": "互斥时直接相加（加法规则），无需减法；只知道两数之差则既加不了也减不了。减法规则的关键信号是「有公共部分被重复计入」。",
+      "source_evidence": "Section 6.1.4（减法规则的适用条件）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-030",
+      "kp_id": "dmath-ch06-kp-003",
+      "stem": "减法规则就是两集合的容斥原理；更多集合的一般容斥原理在教材第 8 章展开。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "|A∪B| = |A|+|B|−|A∩B| 正是容斥原理的两集合形式，n 个集合的一般形式属于 Chapter 8。",
+      "source_evidence": "Section 6.1.4（inclusion–exclusion for two sets 的定位说明）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-031",
+      "kp_id": "dmath-ch06-kp-005",
+      "stem": "用树形图计数时，方案总数等于什么？",
+      "quiz_type": "single_choice",
+      "options": ["叶节点的个数", "所有分支（边）的总数", "从根到叶最长路径的长度", "内部节点的个数"],
+      "answer_key": "叶节点的个数",
+      "error_reason": "每个叶节点对应一个最终结果；分支只是中间选择，内部节点是部分方案。各级分支数之积 = 叶节点数（乘法规则）。",
+      "source_evidence": "Section 6.1.6（Tree Diagrams，叶节点对应结果）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-032",
+      "kp_id": "dmath-ch06-kp-005",
+      "stem": "下列哪些问题适合用树形图来解？",
+      "quiz_type": "multiple_choice",
+      "options": ["过程可分解为若干顺序步骤", "每一步的选项数有限", "需要把所有具体结果逐一枚举出来", "规模极大（如上亿种结果）的计数"],
+      "answer_key": ["过程可分解为若干顺序步骤", "每一步的选项数有限", "需要把所有具体结果逐一枚举出来"],
+      "error_reason": "树形图适合小规模枚举与验证；规模一大树叶数量爆炸，应改用乘法规则等公式直接计算。",
+      "source_evidence": "Section 6.1.6（树形图的适用场景与 EXAMPLE 22–23）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-033",
+      "kp_id": "dmath-ch06-kp-005",
+      "stem": "树形图本质上是乘法规则的可视化：各级分支数依次相乘恰好等于叶节点数。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "这正是树形图与乘法规则的关系：逐层分支对应逐个步骤，叶数 = 各层分支数之积。",
+      "source_evidence": "Section 6.1.6（树形图与乘法规则的关系）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-034",
+      "kp_id": "dmath-ch06-kp-023",
+      "stem": "用 stars-and-bars 把 5 颗相同的星分进 3 个不同的盒子（允许空盒），共有多少种方案？",
+      "quiz_type": "single_choice",
+      "options": ["21", "28", "15", "35"],
+      "answer_key": "21",
+      "error_reason": "杠数 = 盒数−1 = 2，总位置 = 5+2 = 7，从中选 2 个放杠：C(7,2) = 21。28 是错把总位置当 8；15 是 C(6,4)（星数记错）。",
+      "source_evidence": "Section 6.5.3（stars and bars 计位法）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-035",
+      "kp_id": "dmath-ch06-kp-023",
+      "stem": "下列哪些问题可以建模成 stars-and-bars（允许重复的组合）？",
+      "quiz_type": "multiple_choice",
+      "options": ["x+y+z=10 的非负整数解个数", "从 3 种糕点里无序买 12 个", "从 3 种糕点各至少买 1 个共买 12 个", "3 个人排队的方式数"],
+      "answer_key": ["x+y+z=10 的非负整数解个数", "从 3 种糕点里无序买 12 个", "从 3 种糕点各至少买 1 个共买 12 个"],
+      "error_reason": "「各至少 1 个」先每类扣 1 再用 stars-and-bars（变 C(11,2)）。排队是有序问题，属于排列，不是重复组合。",
+      "source_evidence": "Section 6.5.3（combinations with repetition 及其变体）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-036",
+      "kp_id": "dmath-ch06-kp-023",
+      "stem": "stars-and-bars 里星与杠的地位对称：从 r+n−1 个位置中选 r 个放星，与选 n−1 个放杠，结果相同。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "C(r+n−1, r) = C(r+n−1, n−1)，两种选法只是同一计数的两个视角。",
+      "source_evidence": "Section 6.5.3（组合数对称性在 stars and bars 中的体现）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-037",
+      "kp_id": "dmath-ch06-kp-024",
+      "stem": "「任取 5 个整数，必有两个之差能被 4 整除」——鸽巢建模时对象和盒子分别是什么？",
+      "quiz_type": "single_choice",
+      "options": ["对象是整数，盒子是除 4 的余数类（0,1,2,3）", "对象是两数之差，盒子是 4", "对象是整数，盒子是它们的质因数", "对象是余数，盒子是整数"],
+      "error_reason": "整数按 mod 4 分入 4 个余数类，5 个对象 4 个盒子，必有两数同类，其差被 4 整除。",
+      "answer_key": "对象是整数，盒子是除 4 的余数类（0,1,2,3）",
+      "source_evidence": "Section 6.2.3（同余模型：对象入余数类盒子）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-038",
+      "kp_id": "dmath-ch06-kp-024",
+      "stem": "鸽巢建模时，下列哪些可以作为「盒子」？",
+      "quiz_type": "multiple_choice",
+      "options": ["生日的月份", "整点坐标的奇偶类型", "考试可能的分数档", "全体学生名单"],
+      "answer_key": ["生日的月份", "整点坐标的奇偶类型", "考试可能的分数档"],
+      "error_reason": "盒子必须是对象的分类；学生是被分入盒子的对象本身，不是分类。",
+      "source_evidence": "Section 6.2.3（常见鸽巢应用模型表：对象—盒子配对）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-039",
+      "kp_id": "dmath-ch06-kp-024",
+      "stem": "鸽巢应用的核心思想是：把每个对象归入它所属的盒子，再由「对象数多于盒子数（或达到下界条件）」逼出必有某盒达到目标的结论。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "这正是模型表各行的共同结构：生日、同余、度数等题型只是对象与盒子的具体化不同。",
+      "source_evidence": "Section 6.2.3（应用模型表的共同思想）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-040",
+      "kp_id": "dmath-ch06-kp-025",
+      "stem": "8 个相同的球放进 4 个不同的盒子，每个盒子至少 1 个，共有多少种放法？",
+      "quiz_type": "single_choice",
+      "options": ["35", "165", "70", "65536"],
+      "answer_key": "35",
+      "error_reason": "相同对象 + 不同盒子 + 非空 → C(n−1, k−1) = C(7,3) = 35。165 是可空情形 C(11,3)；65536 是把球当作不同对象的 kⁿ。",
+      "source_evidence": "Section 6.5.5（identical objects into distinguishable boxes, nonempty）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-041",
+      "kp_id": "dmath-ch06-kp-025",
+      "stem": "球盒模型计数前，必须先确认哪几个问题才能锁定公式？",
+      "quiz_type": "multiple_choice",
+      "options": ["对象（球）是否相同", "盒子是否相同", "盒子是否允许为空", "球的编号是否连续"],
+      "answer_key": ["对象（球）是否相同", "盒子是否相同", "盒子是否允许为空"],
+      "error_reason": "三个判断维度（对象相同？盒子相同？可空？）确定主表的行；球的编号是否连续与计数无关。",
+      "source_evidence": "Section 6.5.5（球盒模型主表的三个关键判断）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-042",
+      "kp_id": "dmath-ch06-kp-025",
+      "stem": "n 个不同对象放入 k 个不同盒子（可空）共 kⁿ 种；n 个相同对象放入 k 个不同盒子（可空）共 C(n+k−1, n) 种。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "前者每个对象独立选盒（乘法规则 kⁿ）；后者是 stars and bars：n 颗星与 k−1 条杠。",
+      "source_evidence": "Section 6.5.5（主表前两行的公式）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-043",
+      "kp_id": "dmath-ch06-kp-027",
+      "stem": "方程 x+y+z = 12 有多少组正整数解？",
+      "quiz_type": "single_choice",
+      "options": ["55", "91", "220", "3¹²"],
+      "answer_key": "55",
+      "error_reason": "正整数解：令 yᵢ = xᵢ−1 ≥ 0，转为 y₁+y₂+y₃ = 9 的非负解：C(9+2, 2) = C(11,2) = 55。91 是忘了减 1 的 C(13,2)。",
+      "source_evidence": "Section 6.5.3（正整数解：下界替换后 stars and bars）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-044",
+      "kp_id": "dmath-ch06-kp-027",
+      "stem": "处理带下界或「≤」的计数方程时，下列哪些手段是正确的？",
+      "quiz_type": "multiple_choice",
+      "options": ["xᵢ ≥ aᵢ 时平移变量 yᵢ = xᵢ − aᵢ", "和 ≤ N 时引入松弛变量 x_{m+1} = N − 其余之和", "xᵢ ≥ 1 时每个变量减 1 再数非负解", "xᵢ ≤ bᵢ 时直接套 stars-and-bars"],
+      "answer_key": ["xᵢ ≥ aᵢ 时平移变量 yᵢ = xᵢ − aᵢ", "和 ≤ N 时引入松弛变量 x_{m+1} = N − 其余之和", "xᵢ ≥ 1 时每个变量减 1 再数非负解"],
+      "error_reason": "上界（xᵢ ≤ bᵢ）不能由 stars-and-bars 直接处理，要用容斥或补集；其余三条都是标准转化。",
+      "source_evidence": "Section 6.5.3（下界替换、松弛变量与上界的处理）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-045",
+      "kp_id": "dmath-ch06-kp-027",
+      "stem": "不等式 x₁+x₂+x₃ ≤ 10 的非负整数解共有 C(13,3) 组。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "引入松弛变量 x₄ = 10 − (x₁+x₂+x₃) ≥ 0，转化为 x₁+x₂+x₃+x₄ = 10：C(10+4−1, 4−1) = C(13,3) = 286 组。",
+      "source_evidence": "Section 6.5.3（不等式经松弛变量化为等式）"
+    }
+  ]
+}
