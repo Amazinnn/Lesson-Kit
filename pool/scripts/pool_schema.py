@@ -322,6 +322,21 @@ def _widen_item_type_check(conn, table, create_sql):
     return [f"{table}_item_type_card"]
 
 
+def _widen_content_sequences_check(conn, create_sql):
+    """Rebuild content_sequences whose entity_type CHECK predates 'batch' rows."""
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name=?",
+        ("content_sequences",),
+    ).fetchone()
+    if not row or "'batch'" in (row[0] or ""):
+        return []
+    conn.execute("ALTER TABLE content_sequences RENAME TO content_sequences_widening_old")
+    conn.execute(create_sql)
+    conn.execute("INSERT INTO content_sequences SELECT * FROM content_sequences_widening_old")
+    conn.execute("DROP TABLE content_sequences_widening_old")
+    return ["content_sequences_entity_type_batch"]
+
+
 def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
@@ -384,7 +399,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             CREATE TABLE content_sequences (
                 scope       TEXT NOT NULL,
                 entity_type TEXT NOT NULL CHECK (
-                    entity_type IN ('kp', 'problem', 'candidate', 'relation')
+                    entity_type IN ('kp', 'problem', 'candidate', 'relation', 'batch')
                 ),
                 next_value  INTEGER NOT NULL CHECK (next_value > 0),
                 PRIMARY KEY (scope, entity_type)
@@ -392,6 +407,19 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             """
         )
         changes.append("content_sequences")
+    changes.extend(_widen_content_sequences_check(
+        conn,
+        """
+        CREATE TABLE content_sequences (
+            scope       TEXT NOT NULL,
+            entity_type TEXT NOT NULL CHECK (
+                entity_type IN ('kp', 'problem', 'candidate', 'relation', 'batch')
+            ),
+            next_value  INTEGER NOT NULL CHECK (next_value > 0),
+            PRIMARY KEY (scope, entity_type)
+        )
+        """,
+    ))
 
     if not table_exists(conn, "flash_cards"):
         conn.execute(
@@ -401,11 +429,28 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                 kp_id           TEXT NOT NULL,
                 front           TEXT NOT NULL,
                 back            TEXT NOT NULL,
-                source_evidence TEXT NOT NULL
+                source_evidence TEXT NOT NULL,
+                ingest_batch_id TEXT
             )
             """
         )
         changes.append("flash_cards")
+
+    if not table_exists(conn, "ingest_batches"):
+        conn.execute(
+            """
+            CREATE TABLE ingest_batches (
+                batch_id       TEXT PRIMARY KEY,
+                kind           TEXT NOT NULL,
+                manifest_path  TEXT NOT NULL,
+                counts_json    TEXT NOT NULL,
+                backup_path    TEXT NOT NULL,
+                applied_at     TEXT NOT NULL DEFAULT (datetime('now')),
+                rolled_back_at TEXT
+            )
+            """
+        )
+        changes.append("ingest_batches")
 
     changes.extend(_widen_item_type_check(
         conn, "review_schedule",
@@ -501,6 +546,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     ("display_summary", "TEXT"),
                     ("practice_modes", "TEXT"),
                     ("micro_quiz", "TEXT"),
+                    ("ingest_batch_id", "TEXT"),
                 ],
             )
         )
@@ -529,6 +575,14 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                 conn,
                 "problem_attempts",
                 [("answer_text", "TEXT")],
+            )
+        )
+    if table_exists(conn, "flash_cards"):
+        changes.extend(
+            ensure_columns(
+                conn,
+                "flash_cards",
+                [("ingest_batch_id", "TEXT")],
             )
         )
 
