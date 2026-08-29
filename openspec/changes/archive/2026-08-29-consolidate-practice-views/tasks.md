@@ -36,12 +36,12 @@
 
 ## 4. 验证与收尾
 
-- [ ] 全量 pytest + Node + `openspec validate --specs --strict`。
-- [ ] scratch 真实走查（种子 49 条调度 + 2 目标，相对天数偏移）：三页导航、
+- [x] 全量 pytest + Node + `openspec validate --specs --strict`。
+- [x] scratch 真实走查（种子 49 条调度 + 2 目标，相对天数偏移）：三页导航、
       准备列表与勾选双向同步、候选加入-隐藏-计数、时间视图并列与窄屏
       堆叠、空态一句话一动作、禁用按钮样式；截图自检清单逐条过。
-- [ ] `workbench-ui` Purpose 归档时改写为三页导航；「Directional card
+- [x] `workbench-ui` Purpose 归档时改写为三页导航；「Directional card
       practice」按 delta 移除并由「Directional schedule entries」取代；
       FUTURE-NOTES 记「方向卡 UI 待真实使用再议」。
-- [ ] changelog + 归档本变更；REQUIREMENTS / DISCUSSION-RECORD /
+- [x] changelog + 归档本变更；REQUIREMENTS / DISCUSSION-RECORD /
       FUTURE-NOTES / ARCHITECTURE 一致性检查。
