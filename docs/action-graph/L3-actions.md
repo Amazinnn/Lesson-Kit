@@ -33,9 +33,9 @@
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
-| ingest 配方（micro-quiz / flash-card） | CLI | 双（Agent 可直跑） | problems/flash_cards 单事务 | 已实现 |
+| ingest 配方（micro-quiz / flash-card） | CLI | 双（Agent 可直跑） | problems/flash_cards 单事务（记批次 id+行戳记+manifest 快照） | 已实现 |
 | 全池备份 | ingest --backup | 同上 | pool/backups | 已实现 |
-| **Check 管线**（生成→校验→**直接入正式池**，无候选中间态；批次 id+整批回滚；候选组织并入校验环节） | 无（待立项） | Agent 主导 | 经门禁写池+批次标记 | **已定义未实现**（定义升级随队列④，名字 generate 桥→Check 待立项定） |
+| **Check 管线**（生成→校验→**直接入正式池**，无候选中间态；批次 id+整批回滚；候选组织并入校验环节） | CLI `ingest rollback --batch <id>` + 结果卡回滚按钮 + `POST /ingest/rollback` | Agent 主导 | 经门禁写池+批次标记+ingest_batches 登记 | **已实现**（introduce-check-pipeline，队列④） |
 | 抽取管线入池（教材→KP→题） | 管线脚本 | 人 | 全部内容表 | 已实现（一次性） |
 
 ## 四、Agent 桥
@@ -46,6 +46,8 @@
 | 新建会话/选 provider（锁定不换） | UI | 人 | conversations | 已实现 |
 | 停止轮次 | UI | 人 | turn=cancelled | 已实现 |
 | replace_practice_selection（明确练习意图才生效） | 对话产出动作 | Agent | 浏览器选区（一次性） | 已实现 |
+| check_ingest（出题入库：出题/补池意图→内联 manifest→服务端门禁→批次 apply；失败逐条显式回对话流） | 对话产出动作 | Agent | 池内容（经门禁+批次标记） | 已实现（introduce-check-pipeline） |
+| 整批回滚（结果卡按钮，与 CLI 同源 rollback） | UI 结果卡 | 人 | 池内容（按批次删行） | 已实现（introduce-check-pipeline） |
 
 ## 五、目标与时间
 
@@ -77,3 +79,7 @@
   五模块、四条 API 路由、CLI `ai`、前端按钮与门槛逻辑全部退役；`bridge add`
   保留（对话 provider overrides 通道）。
 - 2026-08-29 目标生命周期（编辑/删除）与目标表单助填动作落地（complete-goals-loop，队列③）；goals CLI 上线（22 命令）。
+- 2026-08-29 Check 管线落地（introduce-check-pipeline，队列④）：定名 Check（专题 22）；
+  三配方 apply 记批次 id+行戳记；`ingest rollback` + 桥 `check_ingest` 动作 +
+  结果卡回滚按钮上线；candidate_problems 读路径退役（pull/mastery/hub 停读，
+  表与 data candidate 子命令标**待退役**）。

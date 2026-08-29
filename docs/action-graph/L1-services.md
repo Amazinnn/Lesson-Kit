@@ -10,6 +10,7 @@
 | **practice 记录** | 记一次尝试（作答原文/卡点/状态） | problem_attempts | `/practice`（API/CLI） |
 | **门禁配方 micro-quiz** | manifest（micro-quiz-patch）确定性校验→备份→单事务 apply；重复 id 拒收 | problems | CLI `ingest recipe` |
 | **门禁配方 flash-card** | 同构（flash-card-patch）：五字段契约/正则 id/来源必填 | flash_cards | CLI `ingest recipe` |
+| **批次溯源与整批回滚** | apply 记批次 id（batch-NNN）+行戳记+manifest 快照+ingest_batches 登记；rollback 按批次删行（有练习/反馈依赖即拒绝），回滚前自动备份 | ingest_batches、problems、flash_cards | CLI `ingest rollback`、`POST /ingest/rollback`、桥结果卡 |
 | **ingest 链** | prepare/run/gate/apply/render 六环节编排与中间产物 | 中间产物目录 | CLI `ingest` 家族 |
 | **桥 runner/contracts/teacher** | 任务状态机（queued/running/done/failed）、输出契约校验、教学契约渲染 | jobs/、explain/ | `/ai/*`、CLI `ai` |
 | **对话 conversations** | provider 原生会话的建立/轮次/事件流/取消/最小镜像 | jobs/conv-### | `/ai/sessions/*` |

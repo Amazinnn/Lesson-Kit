@@ -2,7 +2,7 @@
 
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者。
 
-## API 路由（`/api/w/{ws}` 前缀，29 条）
+## API 路由（`/api/w/{ws}` 前缀，30 条）
 
 | 方法 路径 | 读写 | 服务层 | 给谁 |
 |---|---|---|---|
@@ -22,6 +22,7 @@
 | GET·POST `/ai/sessions`；PATCH·DELETE·GET `/ai/sessions/{id}` | 读/写 | 对话 | 浏 |
 | POST `/ai/sessions/{id}/turns` · GET `…/turns/{turn}` · POST `…/cancel` | 读/写 | 对话 | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
+| POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
 ## CLI 命令（`python -m workbench.cli.main …`，22 条）
 
@@ -32,11 +33,10 @@
 | `pull` | 读（按 KP 拉题） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
-| `goals` | 写（目标 list/add/update/rm） | Agent |
-| `data` | 读 + **显式变更**（JSON 直改内容） | Agent |
+| `data` | 读 + **显式变更**（JSON 直改内容；candidate 子命令**待退役**） | Agent |
 | `bridge add` | 配置任务 provider | 人 |
 | `guard` | 工作台守卫 | 双 |
-| `ingest`（+ `prepare/run/gate/apply/render/recipe` 六子链） | 内容治理唯一写池通道 | 双 |
+| `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback` 七子链） | 内容治理唯一写池通道（apply 记批次；rollback 按批次撤销） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
 
 > 问卷 B1 口径：Agent 对池子增删改查全开——`data`（变更）、`ingest --apply`、
