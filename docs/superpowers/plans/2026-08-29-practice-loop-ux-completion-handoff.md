@@ -113,6 +113,11 @@ PATH 发现——没配 `wb bridge add` 时按钮禁用 +「暂无可用 Agent�
 - API 发 PR：中文 JSON 必须走 `--data-binary @file`（内联 `-d` 会解析
   失败）；merge 用 PUT + rebase。
 - git 通道本阶段全程健康（push/PR 均正常）。
+- **⚠️ 已知异常（防复发）**：会话末发现本地 `intermediate/.../00_source/images/`
+  121 个文件被从磁盘删除（git 历史完好，`git checkout -- intermediate/`
+  已恢复，双 guard 复验通过）。触发源未定位，最可疑的是 `wb init <副本>
+  --course/--chapter`（在仓库根 CWD 运行）或某 pytest 用例触碰真实路径。
+  **下次跑 init/测试后顺手 `git status` 查一眼**；若复现，先锁定再修。
 
 ## 六、纪律提醒（不变）
 
