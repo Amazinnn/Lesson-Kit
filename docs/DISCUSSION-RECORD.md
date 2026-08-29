@@ -473,3 +473,40 @@ generate 桥操作（AI 出题补池缺口，题型学含归纳/迁移/推广）
    融入型结果（如 Agent 填目标字段）版面原位变化。
 6. 落地：remove-explain-diagnose 变更（任务机五模块+四路由+CLI ai 退役，
    对话桥与 bridge add 保留）；队列 ③目标补齐 ④Check 立项 排队。
+
+## 专题 22：Check 管线立项定名与口径（2026-08-29 立项 grilling）
+
+队列④开工。所有者经开场 grilling 五问定案（问题清单见
+docs/superpowers/plans/2026-08-29-check-pipeline-handoff.md 第三节）：
+
+1. **定名 Check**：采纳「Check 管线」，替代「generate 桥」。理由：强调
+   校验准入（生成→校验→直接入池），且无候选中间态后「桥」已名不副实。
+   PENDING-DEFINITIONS「generate 桥操作」条目迁往 GLOSSARY「Check 管线」。
+2. **回滚命令形态**：`wb ingest rollback --batch <id>`，挂在 ingest 子命令
+   族（「ingest 是内容治理唯一写池通道」口径不变）；回滚前自动做安全
+   备份，回滚后输出 accounting 核对。
+3. **首期 manifest 产出链**：只立闪卡+微题（两种门禁配方现成、真实池
+   验证过）；综合题（大题）AI 出题配方为显式后续项（问卷 C 组已勾意愿，
+   首期不落地，留 spec 未来段）。
+4. **candidate_problems 退役**：pull/mastery/hub 停止读取；表与 `wb data
+   candidate` 子命令保留但标「待退役」，不 DROP（additive 纪律）；将来
+   抽取管线入池统一走 Check 门禁，不再有中间态。「Agent 组织面板」挂名
+   条目随此正式了结（被 Check 校验环节吸收，专题 21 第 3 条）。
+5. **产出入口 = 对话桥结构化动作**：对话内自然语言 → `check_ingest`
+   结构化动作（manifest 内联）→ 服务端过既有确定性门禁 → apply →
+   独立结果卡片进对话流（批次 id、计数、备份路径、回滚按钮）；门禁
+   失败逐条显式呈现，不静默丢弃。外部 Agent 会话写文件跑 CLI 的通道
+   照旧可用（问卷 B1 口径不变）。
+
+**cloze 澄清**（所有者在问卷 C 组批注：「没有Cloze这个题目类型吧，这个你
+需要跟我解释清楚它是什么时候冒出来的」）：cloze **不是微题题型**——微题
+题型只有 yes_no / single_choice / multiple_choice 三种（retired 类型一律
+拒收）。它是**闪卡侧**的「挖空成卡」形态：知识点拆键值对时，把答案从
+表述里挖空生成填空卡（front 完整表述、back 挖空），属闪卡自动解构的
+产物形态之一。何时冒出来的：introduce-flash-card 变更时闪卡 spec 未来段
+「cloze-style automatic card derivation」首次入册，专题 20 generate 桥
+定稿注记「闪卡 AI 自动解构（含 cloze 挖空批量成卡）」沿用。本问卷未
+勾选，不入 Check 首期范围，留闪卡 spec 未来段。
+
+交付：OpenSpec change `introduce-check-pipeline`（规格 → 实现 → 走查 →
+归档）；本专题五答为该变更 proposal Why 的事实来源。

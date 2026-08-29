@@ -37,6 +37,12 @@ _Avoid_：练习册条目、题目草稿
 尚未进入正式题池的、有源可依的练习条目。必须先后通过结构门禁与审计门禁，再经显式晋升（promote）才成为正式题。
 _Avoid_：AI 生成的题、正式题草稿（与正式题严格分离）
 出处：CONTEXT.md（迁入）；review-workbench spec「Unified Agent data CLI」
+状态注记（2026-08-29 专题 22）：随 Check 管线立项**退役**——无候选中间态后 pull/mastery/hub 停止读取；表与 CLI 子命令保留、标「待退役」，不 DROP。
+
+### Check 管线 / Check pipeline
+内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规 manifest → 确定性门禁校验 → **直接入正式池**（无候选中间态）。每次 apply 记批次 id、内容行带批次标记，整批回滚是安全网；门禁失败逐条显式报错、零写入。Agent 可直接触发（CLI 或对话桥 `check_ingest` 动作），门禁是决断辅助不是权限闸门；AI 永不直写池数据库。
+_Avoid_：generate 桥（旧称）、候选中间态、staging 区、逐题人工确认
+出处：DISCUSSION-RECORD 专题 20/21/22；workbench-content-governance spec（introduce-check-pipeline）
 
 ### 来源类型 / Source Kind
 正式题的出身大类：textbook / quiz / midterm / final / makeup / other。
@@ -98,7 +104,7 @@ _Avoid_：闪卡（旧称，现指另一功能）、自由文本作答（微题�
 出处：introduce-flash-card；micro-quiz-content spec
 
 ### 闪卡 / Flash Card
-从知识点解构出的键值对记忆卡（类似 dict 的一条键值对）：正面（front）→回忆→揭示背面（back）→1–5 自评，无选项、无判分。知识点是唯一事实源（Note），卡是派生视图（Card），一卡只放一个原子事实；每卡一行独立调度。练习会话第四种模式的练习对象；也可用于背单词、背概念等场景。AI 自动解构知识点成卡属 generate 桥后置实验，不在当前范围。
+从知识点解构出的键值对记忆卡（类似 dict 的一条键值对）：正面（front）→回忆→揭示背面（back）→1–5 自评，无选项、无判分。知识点是唯一事实源（Note），卡是派生视图（Card），一卡只放一个原子事实；每卡一行独立调度。练习会话第四种模式的练习对象；也可用于背单词、背概念等场景。AI 自动解构知识点成卡（含 cloze 挖空成卡，见 DISCUSSION-RECORD 专题 22 澄清）属 Check 管线后置实验，不在当前范围。
 _Avoid_：小测（微题的卡片式渲染，旧「闪卡」）、方向卡（已拆除 UI）、普通题冒充
 出处：introduce-flash-card；openspec/specs/flash-card（随归档落位）
 
@@ -265,15 +271,20 @@ _Avoid_：把动作清单散落在各 spec 里不登记、用浏览器操作代�
 _Avoid_：普通对话代填、跳过人确认直接创建
 出处：complete-goals-loop 归档；ai-teacher-bridge spec
 
+### 出题入库动作 / check ingest action
+Agent 对话中触发出题入库的结构化动作：仅出题/补池意图（check_intent）请求可生效，Agent 在回复末尾附内联 manifest（flash-card-patch / micro-quiz-patch），服务端过既有确定性门禁后直接入正式池并记批次 id；成功以独立结果卡片呈现（批次号、计数、备份路径、回滚按钮），门禁失败逐条显式呈现、零写入。
+_Avoid_：静默丢弃失败清单、跳过门禁直写池、显式命令面板
+出处：DISCUSSION-RECORD 专题 21 第 5 条、专题 22 第 5 条；ai-teacher-bridge spec（introduce-check-pipeline）
+
 ### 批次 id / Batch id
-一次门禁 apply 写入池的那批内容的唯一标识；批次内的每一内容行携带该标记，用于事后溯源与整批撤销。
-_Avoid_：内容版本号、逐条审计日志
-出处：PENDING-DEFINITIONS「generate 桥操作」（2026-08-29 定稿）
+一次门禁 apply 写入池的那批内容的唯一标识（可读顺序 id，形如 batch-NNN，禁哈希）；批次内每一内容行携带该标记，用于事后溯源与整批撤销。
+_Avoid_：内容版本号、逐条审计日志、哈希 id
+出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 
 ### 整批回滚 / Batch rollback
-按批次 id 一次命令撤销该批全部内容行的机制；是「无逐题人工确认的 AI 生成入池」的安全网（实现另立项）。
-_Avoid_：逐条手工删行、全池回退
-出处：PENDING-DEFINITIONS「generate 桥操作」（2026-08-29 定稿）
+按批次 id 一条命令撤销该批全部内容行的安全网（`wb ingest rollback --batch <id>`，对话桥结果卡片回滚按钮同源）；回滚前自动做安全备份，回滚后输出 accounting 核对。批次内容行已有练习/反馈记录时拒绝回滚并如实报错。
+_Avoid_：逐条手工删行、全池回退、静默丢弃练习记录
+出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 
 ## 工程与流程
 
