@@ -1,0 +1,35 @@
+{
+  "kind": "micro-quiz-patch",
+  "items": [
+    {
+      "problem_id": "dmath-ch06-mq-010",
+      "kp_id": "dmath-ch06-kp-001",
+      "stem": "某网站密码由两部分依次组成：前缀按顺序选 2 个不同字母（26 个字母），后缀是 1 个数字（0–9）。共有多少种密码？",
+      "quiz_type": "single_choice",
+      "options": ["650", "6500", "6760", "65000"],
+      "answer_key": "6500",
+      "error_reason": "26×25×10=6500：字母不放回逐位相乘再乘数字位。6760 是允许字母重复（26×26×10）的结果；650 是漏乘了数字位。",
+      "source_evidence": "Section 6.1.2（乘法规则：依次两个任务，方式数相乘，后一任务与前一选择无关）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-011",
+      "kp_id": "dmath-ch06-kp-002",
+      "stem": "从杭州到上海：乘高铁有 2 个班次，乘长途汽车有 3 个班次，乘轮船有 1 个班次。共有多少种走法？",
+      "quiz_type": "single_choice",
+      "options": ["5", "6", "7", "36"],
+      "answer_key": "6",
+      "error_reason": "三类方式互斥、任选其一即完成任务，同一层相加：2+3+1=6。36 是错用乘法规则（那是分步都走一遍的算法）。",
+      "source_evidence": "Section 6.1.2（加法规则：互斥方案求总数）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-012",
+      "kp_id": "dmath-ch06-kp-028",
+      "stem": "按「计数四入口」的系统性步骤，解答计数题前第一个要回答的问题是？",
+      "quiz_type": "single_choice",
+      "options": ["每一个被数的东西（计数对象）是什么", "直接套用哪个计数公式", "怎样用圆排列消除镜像等价", "先写出通项再求和"],
+      "answer_key": "每一个被数的东西（计数对象）是什么",
+      "error_reason": "四入口依次为：计数对象 → 表示方式 → 限制条件 → 相同标准。先明确「数的是什么」，模型与公式才选得对；公式是最后才碰的东西。",
+      "source_evidence": "Section 6.1, introduction（计数问题的四个入口问题）"
+    }
+  ]
+}

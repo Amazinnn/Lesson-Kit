@@ -1,0 +1,110 @@
+{
+  "kind": "flash-card-patch",
+  "items": [
+    {
+      "card_id": "dmath-ch06-fc-001",
+      "kp_id": "dmath-ch06-kp-001",
+      "front": "乘法规则（Product Rule）的内容是？",
+      "back": "过程可分解为依次的两个任务：第一个有 n₁ 种方式，第二种对每种方式都有 n₂ 种，则整个过程有 n₁·n₂ 种方式。推广到 m 个任务：n₁·n₂·⋯·nₘ。",
+      "source_evidence": "Section 6.1.2（THE PRODUCT RULE 原文）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-002",
+      "kp_id": "dmath-ch06-kp-001",
+      "front": "乘法规则成立的关键前提是什么？",
+      "back": "各任务依次执行，且后面任务的方式数与前面的选择无关（不因之前选了什么而改变）。",
+      "source_evidence": "Section 6.1.2（推广段：与之前选择无关）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-003",
+      "kp_id": "dmath-ch06-kp-001",
+      "front": "密码 = 依次选 2 个不同字母（26 个）+ 1 个数字（0–9），共多少种？",
+      "back": "26×25×10 = 6500。字母不放回，逐位相乘。",
+      "source_evidence": "Section 6.1.2（乘法规则应用）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-004",
+      "kp_id": "dmath-ch06-kp-004",
+      "front": "除法规则（Division Rule）的内容是？",
+      "back": "任务可用 n 种过程完成；若对每个结果 w，恰好有 d 个过程与之对应，则该任务共有 n/d 种结果。",
+      "source_evidence": "Section 6.1.5（THE DIVISION RULE 原文）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-005",
+      "kp_id": "dmath-ch06-kp-004",
+      "front": "什么时候该用除法规则？",
+      "back": "多个过程产生同一个结果（重复计数）时：把带顺序/标签的计数除以每个无序结果被重复计的次数 d。",
+      "source_evidence": "Section 6.1.5（适用场景段）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-006",
+      "kp_id": "dmath-ch06-kp-004",
+      "front": "4 匹马赛跑取前两名：有序 4×3=12 种；「获奖马对」有多少？",
+      "back": "12 ÷ 2! = 6 对。每个马对被两种名次顺序各计一次。",
+      "source_evidence": "Section 6.1.5（除法规则应用）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-007",
+      "kp_id": "dmath-ch06-kp-007",
+      "front": "鸽巢原理推论 1（Corollary 1）说了什么？",
+      "back": "从元素个数为 k+1 或更多的集合到 k 元素集合的函数 f 必不是单射。",
+      "source_evidence": "Section 6.2.1, Corollary 1（原文）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-008",
+      "kp_id": "dmath-ch06-kp-007",
+      "front": "推论 1 的证明思路（把像值当盒子）是？",
+      "back": "每个像值 y 装所有 f(x)=y 的 x；值域只有 k 个盒子而定义域有 ≥k+1 个元素，必有盒子装 ≥2 个 x，即存在 x₁≠x₂ 使 f(x₁)=f(x₂)。",
+      "source_evidence": "Section 6.2.1, Corollary 1（证明）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-009",
+      "kp_id": "dmath-ch06-kp-007",
+      "front": "|A|=8、|B|=5 的函数 f:A→B，可能是单射吗？",
+      "back": "不可能。定义域比值域大（8>5），由推论 1 必非单射。",
+      "source_evidence": "Section 6.2.1, Corollary 1"
+    },
+    {
+      "card_id": "dmath-ch06-fc-010",
+      "kp_id": "dmath-ch06-kp-029",
+      "front": "n 位位串 b₁b₂…bₙ 怎样表示 S={s₁,…,sₙ} 的子集？",
+      "back": "bᵢ=1 ⇔ 把 sᵢ 放入子集。每个位串唯一对应一个子集，每个子集也唯一确定一个位串。",
+      "source_evidence": "Rosen 6.6, Algorithm 2 and Exercise 8"
+    },
+    {
+      "card_id": "dmath-ch06-fc-011",
+      "kp_id": "dmath-ch06-kp-029",
+      "front": "S={1,2,3,4} 的位串 0101 对应哪个子集？",
+      "back": "{2,4}——第 2、4 位为 1，把 s₂、s₄ 放入子集。",
+      "source_evidence": "Rosen 6.6, Algorithm 2 and Exercise 8（原例）"
+    },
+    {
+      "card_id": "dmath-ch06-fc-012",
+      "kp_id": "dmath-ch06-kp-029",
+      "front": "枚举整数生成全部子集的范围和数量？",
+      "back": "从 0 到 2ⁿ−1 共 2ⁿ 个整数，各写成补足前导零的 n 位二进制数，按位选元素——得全部 2ⁿ 个子集，不遗漏不重复。",
+      "source_evidence": "Rosen 6.6, Algorithm 2 and Exercise 8"
+    },
+    {
+      "card_id": "dmath-ch06-fc-013",
+      "kp_id": "dmath-ch06-kp-031",
+      "front": "康托展开的形式与数码约束？",
+      "back": "N=a₁·1!+a₂·2!+⋯+a₍ₙ₋₁₎·(n−1)!，其中 0≤aᵢ≤i；每个 0≤N<n! 的整数展开唯一。",
+      "source_evidence": "Rosen 6.6, Exercises 14-17"
+    },
+    {
+      "card_id": "dmath-ch06-fc-014",
+      "kp_id": "dmath-ch06-kp-031",
+      "front": "排列的康托数码 a₍ₖ₋₁₎ 怎么读出？",
+      "back": "等于排列中位于 k 之后且小于 k 的元素个数。",
+      "source_evidence": "Rosen 6.6, Exercises 14-17"
+    },
+    {
+      "card_id": "dmath-ch06-fc-015",
+      "kp_id": "dmath-ch06-kp-031",
+      "front": "由康托数码恢复排列时，k 插到哪里？",
+      "back": "把 k 插入当前列表从左起第 k−a₍ₖ₋₁₎ 个位置，使其右侧恰有 a₍ₖ₋₁₎ 个较小元素；数码序列与排列一一对应，故按整数递增解码即生成全部排列。",
+      "source_evidence": "Rosen 6.6, Exercises 14-17（由数码恢复排列）"
+    }
+  ]
+}

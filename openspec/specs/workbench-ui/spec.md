@@ -7,6 +7,7 @@ conversation column whose context display prioritizes the current problem
 without ever limiting what the agent can see. Visual style copies the DeepSeek
 Harness design system.
 ## Requirements
+
 ### Requirement: Three-column shell with navigation
 
 The workbench SHALL render a three-column desktop layout: a left navigation column with workspace and study navigation, a primary middle page, and a collapsible right Agent conversation column, with workspace/course/chapter context in the top bar. At narrow widths the middle page SHALL remain the single primary column; the left and right columns SHALL become dismissible drawers opened by two compact icon controls in the top bar. Switching workspaces or pages SHALL preserve recorded pool state.
@@ -33,11 +34,14 @@ The workbench SHALL render a three-column desktop layout: a left navigation colu
 
 ### Requirement: Practice page
 
-The practice page SHALL require a non-empty selected knowledge-point scope, one
-content mode (`exam`, `flash_card`, or `yes_no`), and one rating mode
-(`immediate` or `batch`) before pulling a problem. The content mode SHALL remain
-fixed for the session and the rating mode SHALL determine only when feedback is
-written.
+The practice page SHALL require a non-empty selected knowledge-point scope,
+one content mode (`exam`, `micro`, `yes_no`, or `flash_card`), and one rating
+mode (`immediate` or `batch`) before pulling. The content mode SHALL remain
+fixed for the session and the rating mode SHALL determine only when feedback
+is written. Starting a session in any content mode SHALL collapse the study
+arrangement region (goal cards, staged list, suggestions, mode selection, and
+time view) so the middle column shows only the running practice flow, and
+SHALL restore that region when the session is exhausted or ended.
 
 #### Scenario: Missing mode
 - **WHEN** scope, content mode, or rating mode is missing
@@ -76,6 +80,12 @@ written.
 #### Scenario: End a unified-rating session early
 - **WHEN** the learner ends a unified-rating session before exhaustion
 - **THEN** completed cards enter unified self-rating without a persistent write before each rating submission
+
+#### Scenario: Session focus
+
+- **WHEN** the learner starts a practice session in any content mode
+- **THEN** the middle column collapses to the practice flow and the study
+  arrangement region returns after the session ends
 
 ### Requirement: Session-end unified self-rating
 
@@ -593,4 +603,3 @@ one action.
   or due suggestions
 - **THEN** the staged list shows one sentence with one action, and the
   suggestion entry states there is nothing to add
-

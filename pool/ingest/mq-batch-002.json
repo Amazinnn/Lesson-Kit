@@ -1,0 +1,150 @@
+{
+  "kind": "micro-quiz-patch",
+  "items": [
+    {
+      "problem_id": "dmath-ch06-mq-013",
+      "kp_id": "dmath-ch06-kp-004",
+      "stem": "4 匹马赛跑取前两名，有序结果共 4×3=12 种；若只关心获奖马对（不分名次），获奖对共有多少？",
+      "quiz_type": "single_choice",
+      "options": ["6", "8", "12", "24"],
+      "answer_key": "6",
+      "error_reason": "每个马对被 2 种名次顺序各计一次，按除法规则 12/2!=6。直接答 12 是把名次顺序当成了不同结果。",
+      "source_evidence": "Section 6.1.5（除法规则：d 个过程对应同一结果时除以 d）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-014",
+      "kp_id": "dmath-ch06-kp-004",
+      "stem": "下列哪些任务该用除法规则（而非加法/乘法规则）处理？",
+      "quiz_type": "multiple_choice",
+      "options": ["把有序排列数换算成无序组数", "d 个过程对应同一个结果时去除重复计数", "两类互斥方案求总数", "分步独立选择求总数"],
+      "answer_key": ["把有序排列数换算成无序组数", "d 个过程对应同一个结果时去除重复计数"],
+      "error_reason": "互斥方案求总数用加法规则，分步独立选择用乘法规则；除法规则只在多个过程产生同一个结果（重复计数）时使用。",
+      "source_evidence": "Section 6.1.5（除法规则适用场景）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-015",
+      "kp_id": "dmath-ch06-kp-004",
+      "stem": "除法规则可以表述为：若一个任务可以用 n 种方式完成，且对每个结果 w 恰好有 d 种方式与之对应，则该任务共有 n/d 种结果。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "这正是 Rosen 6.1.5 的原文表述（There are n/d ways to do a task…exactly d of the n ways correspond to way w）。",
+      "source_evidence": "Section 6.1.5（THE DIVISION RULE 定义原文）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-016",
+      "kp_id": "dmath-ch06-kp-007",
+      "stem": "f 是从 8 元素集合到 5 元素集合的函数，下列哪项必然成立？",
+      "quiz_type": "single_choice",
+      "options": ["f 不是单射", "f 是单射", "f 是双射", "这样的函数不存在"],
+      "answer_key": "f 不是单射",
+      "error_reason": "鸽巢原理推论 1：定义域元素个数多于值域（8>5）的函数必不是单射。函数本身当然存在，只是必非单射。",
+      "source_evidence": "Section 6.2.1, Corollary 1（k+1 或更多元素到 k 元素的函数非单射）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-017",
+      "kp_id": "dmath-ch06-kp-007",
+      "stem": "下列哪些函数一定不是单射？",
+      "quiz_type": "multiple_choice",
+      "options": ["A→B：|A|=7，|B|=6", "A→B：|A|=6，|B|=7", "A→B：|A|=5，|B|=5", "A→B：|A|=9，|B|=4"],
+      "answer_key": ["A→B：|A|=7，|B|=6", "A→B：|A|=9，|B|=4"],
+      "error_reason": "推论 1 只在定义域元素严格多于值域时断言非单射（7>6、9>4）；|A|=|B| 或 |A|<|B| 时单射都可能存在，不能下必然结论。",
+      "source_evidence": "Section 6.2.1, Corollary 1"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-018",
+      "kp_id": "dmath-ch06-kp-007",
+      "stem": "「从 6 元素集合到 6 元素集合存在单射函数」这一事实与鸽巢原理推论 1 矛盾。",
+      "quiz_type": "yes_no",
+      "answer_key": "否",
+      "error_reason": "推论 1 只断言定义域元素个数多于值域（≥k+1 对 k）时非单射；两边相等时单射（甚至双射）存在，与推论无任何矛盾。",
+      "source_evidence": "Section 6.2.1, Corollary 1（条件是 k+1 或更多对 k）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-019",
+      "kp_id": "dmath-ch06-kp-029",
+      "stem": "S={1,2,3,4}，位串 0101 表示哪个子集？",
+      "quiz_type": "single_choice",
+      "options": ["{2,4}", "{1,3}", "{1,4}", "{2,3}"],
+      "answer_key": "{2,4}",
+      "error_reason": "bᵢ=1 表示把 sᵢ 放入子集：0101 即第 2、4 位为 1，对应 {2,4}。读反成 0 的位置就得到 {1,3}。",
+      "source_evidence": "Rosen 6.6, Algorithm 2 and Exercise 8（位串 0101 对应 {2,4} 的原例）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-020",
+      "kp_id": "dmath-ch06-kp-029",
+      "stem": "关于用 n 位位串表示 S={s₁,…,sₙ} 的全部子集，下列哪些说法正确？",
+      "quiz_type": "multiple_choice",
+      "options": ["每个子集对应唯一的位串", "枚举 0 到 2ⁿ−1 的整数（补足前导零）即可生成全部子集", "位串共 2ⁿ−1 个，因为要排除空集", "位串 0000 表示空集"],
+      "answer_key": ["每个子集对应唯一的位串", "枚举 0 到 2ⁿ−1 的整数（补足前导零）即可生成全部子集", "位串 0000 表示空集"],
+      "error_reason": "位串与子集一一对应、共 2ⁿ 个（含空集 0000），所以「2ⁿ−1 个」错误；其余三条均为方法原文。",
+      "source_evidence": "Rosen 6.6, Algorithm 2 and Exercise 8"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-021",
+      "kp_id": "dmath-ch06-kp-029",
+      "stem": "用位串法生成 S={s₁,…,sₙ} 的全部子集时，枚举 0 到 2ⁿ−1 的整数会遗漏一些子集。",
+      "quiz_type": "yes_no",
+      "answer_key": "否",
+      "error_reason": "补足前导零后，0 到 2ⁿ−1 的每个整数恰对应一个 n 位位串、一个子集，共 2ⁿ 个，既不遗漏也不重复。",
+      "source_evidence": "Rosen 6.6, Algorithm 2 and Exercise 8"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-022",
+      "kp_id": "dmath-ch06-kp-030",
+      "stem": "求 {1,…,n} 的 r-组合的下一个字典序组合时，第 1 步「从右向左找最大的 i 使 aᵢ<n−r+i」是在找什么？",
+      "quiz_type": "single_choice",
+      "options": ["最靠右且仍可增大的位置", "最小的可删除元素", "首个超过 n 的元素", "使序列不再递增的位置"],
+      "answer_key": "最靠右且仍可增大的位置",
+      "error_reason": "aᵢ<n−r+i 正是「该位置加 1 后仍不越界」的条件；选最靠右的 i 保证前缀改变得最晚，得到的才是紧邻的下一个。",
+      "source_evidence": "Rosen 6.6, Algorithm 3 and Exercises 9-11（字典序下一步规则第 1 步）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-023",
+      "kp_id": "dmath-ch06-kp-030",
+      "stem": "关于字典序生成 r-组合的下一步规则，下列哪些说法正确？",
+      "quiz_type": "multiple_choice",
+      "options": ["第 2 步把 aᵢ 增加 1", "第 3 步把后缀重置为允许的最小递增序列", "算法从最小组合 (1,2,…,r) 开始", "到达 (n−r+1,…,n) 时结束"],
+      "answer_key": ["第 2 步把 aᵢ 增加 1", "第 3 步把后缀重置为允许的最小递增序列", "算法从最小组合 (1,2,…,r) 开始", "到达 (n−r+1,…,n) 时结束"],
+      "error_reason": "四个说法均为规则原文：右起找最大可增 i → aᵢ 加 1 → 后缀重置为最小递增；起点 (1,…,r)、终点 (n−r+1,…,n)。",
+      "source_evidence": "Rosen 6.6, Algorithm 3 and Exercises 9-11"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-024",
+      "kp_id": "dmath-ch06-kp-030",
+      "stem": "字典序生成 r-组合时，第 3 步把后缀重置为允许的最小递增序列，结果正好是下一个字典序组合。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "前缀动得最晚、后缀取最小递增，恰好落在字典序的紧邻下一个——这正是三步规则的设计目的。",
+      "source_evidence": "Rosen 6.6, Algorithm 3 and Exercises 9-11（规则说明段）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-025",
+      "kp_id": "dmath-ch06-kp-031",
+      "stem": "康托展开 N=a₁·1!+a₂·2!+⋯+a₍ₙ₋₁₎·(n−1)! 中，数码 aᵢ 满足的约束是？",
+      "quiz_type": "single_choice",
+      "options": ["0≤aᵢ≤i", "1≤aᵢ≤i", "0≤aᵢ<i", "0≤aᵢ≤n"],
+      "answer_key": "0≤aᵢ≤i",
+      "error_reason": "正文约束是 0≤aᵢ≤i（a₁ 只能取 0，a₂ 可取 0/1，依次放宽）；aᵢ 上界是 i 不是 n，也不排除 0。",
+      "source_evidence": "Rosen 6.6, Exercises 14-17（康托展开定义）"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-026",
+      "kp_id": "dmath-ch06-kp-031",
+      "stem": "关于康托展开与排列的对应，下列哪些说法正确？",
+      "quiz_type": "multiple_choice",
+      "options": ["每个 0≤N<n! 的整数有唯一的康托展开", "a₍ₖ₋₁₎ 等于排列中位于 k 之后且小于 k 的元素个数", "康托数码允许某个 aᵢ 取到 n", "按整数递增枚举并解码可以生成全部排列"],
+      "answer_key": ["每个 0≤N<n! 的整数有唯一的康托展开", "a₍ₖ₋₁₎ 等于排列中位于 k 之后且小于 k 的元素个数", "按整数递增枚举并解码可以生成全部排列"],
+      "error_reason": "数码约束是 0≤aᵢ≤i≤n−1，任何数码都取不到 n；其余三条均为对应关系原文（唯一展开、数码读法、递增枚举生成全部排列）。",
+      "source_evidence": "Rosen 6.6, Exercises 14-17"
+    },
+    {
+      "problem_id": "dmath-ch06-mq-027",
+      "kp_id": "dmath-ch06-kp-031",
+      "stem": "由康托数码恢复排列时，把 k 插入当前列表后，应使 k 右侧恰好有 a₍ₖ₋₁₎ 个比 k 小的元素。",
+      "quiz_type": "yes_no",
+      "answer_key": "是",
+      "error_reason": "这正是恢复规则的等价说法：k 插到从左起第 k−a₍ₖ₋₁₎ 个位置，右侧恰有 a₍ₖ₋₁₎ 个较小元素。",
+      "source_evidence": "Rosen 6.6, Exercises 14-17（由数码恢复排列）"
+    }
+  ]
+}

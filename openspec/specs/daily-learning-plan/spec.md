@@ -11,6 +11,7 @@ never fabricates goals and never creates learning records; when the Agent is
 unavailable the baseline remains usable and honestly labelled.
 
 ## Requirements
+
 ### Requirement: Baseline daily queue
 The system SHALL produce a deterministic coarse-grained daily queue from active course goals, stage goals, progress, deadlines, coverage, and available formal problem types without requiring an Agent.
 
@@ -26,10 +27,11 @@ The practice page SHALL show long-term goals, stage goals, and today's queue tog
 - **THEN** the goals remain independently visible while today's queue presents a coarse aggregate action.
 
 ### Requirement: Student-selected practice path
-The system SHALL let the student choose the existing exam, Flash Card, or Yes/No practice path for a queue item.
+The system SHALL let the student choose the existing exam, Micro, Yes/No, or
+Flash Card practice path for a queue item.
 
 #### Scenario: Student chooses a path
-- **WHEN** the student selects one of the three paths
+- **WHEN** the student selects one of the four paths
 - **THEN** the existing practice entry receives the selected scope without changing learning-write semantics.
 
 ### Requirement: Agent adjustment
@@ -65,4 +67,3 @@ visible goal and queue region. It SHALL not create learning records.
 - **WHEN** the learner explicitly requests a recalculation
 - **THEN** the saved plan version changes and the complete visible goal and
   queue region is replaced with the returned plan
-

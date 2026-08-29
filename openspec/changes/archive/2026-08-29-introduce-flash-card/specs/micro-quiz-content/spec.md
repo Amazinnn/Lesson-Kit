@@ -1,16 +1,25 @@
-# micro-quiz-content Specification
+## ADDED Requirements
 
-## Purpose
+### Requirement: Explicit mode marking for Micro and Yes/No
 
-Define the micro-quiz content unit that fills the Micro and Yes/No mode
-shells: a short-stem, fast-feedback card over one atomic knowledge point with
-an explicit practice-mode marking, a structured payload (quiz type, options,
-answer key, error reason, source evidence), a deterministic-gate ingest recipe
-into the formal pool, and type-aware practice rendering with local objective
-grading with clickable options for every type. Micro quizzes never come from
-truncating long problems, and ordinary (unmarked) pool content stays exam-only.
+Formal problems without a `practice_modes` marking SHALL remain exam-only.
+Micro and Yes/No pulls SHALL return only problems explicitly marked for those
+modes (`single_choice`/`multiple_choice` marked for `micro`, `yes_no` marked
+for `yes_no`), and SHALL report unfilled demand as shortage instead of
+substituting unmarked content.
 
-## Requirements
+#### Scenario: Micro pull with marked content
+
+- **WHEN** a Micro pull runs over knowledge points holding marked micro
+  quizzes
+- **THEN** only marked items are returned in the existing pull result shape
+
+#### Scenario: Micro pull without marked content
+
+- **WHEN** no marked item exists for the selected scope
+- **THEN** the pull reports shortage and the entry keeps its empty state
+
+## MODIFIED Requirements
 
 ### Requirement: Micro quiz content contract
 
@@ -36,43 +45,6 @@ types `closest_answer` and `short_answer` at the gate.
   options that do not contain its answer key, maps to several knowledge
   points, or uses a retired quiz type
 - **THEN** the deterministic gate rejects that item and nothing is written
-
-### Requirement: Explicit mode marking for Micro and Yes/No
-
-Formal problems without a `practice_modes` marking SHALL remain exam-only.
-Micro and Yes/No pulls SHALL return only problems explicitly marked for those
-modes (`single_choice`/`multiple_choice` marked for `micro`, `yes_no` marked
-for `yes_no`), and SHALL report unfilled demand as shortage instead of
-substituting unmarked content.
-
-#### Scenario: Micro pull with marked content
-
-- **WHEN** a Micro pull runs over knowledge points holding marked micro
-  quizzes
-- **THEN** only marked items are returned in the existing pull result shape
-
-#### Scenario: Micro pull without marked content
-
-- **WHEN** no marked item exists for the selected scope
-- **THEN** the pull reports shortage and the entry keeps its empty state
-
-### Requirement: Composable micro-quiz ingestion
-
-Micro quizzes SHALL enter the pool only through the composable ingest recipe:
-a manifest artifact, a deterministic contract gate, a recoverable backup, and
-one explicit transactional apply. A failed apply SHALL leave the pool
-unchanged.
-
-#### Scenario: Apply a valid manifest
-
-- **WHEN** the recipe applies a gate-passed manifest
-- **THEN** all items are inserted in one committed transaction after a
-  recoverable backup is written
-
-#### Scenario: Apply fails midway
-
-- **WHEN** any statement inside the apply transaction fails
-- **THEN** the whole apply rolls back and the pool keeps its prior content
 
 ### Requirement: Type-aware practice rendering
 
@@ -104,3 +76,14 @@ Items without a micro-quiz payload SHALL render exactly as before.
 
 - **WHEN** a pulled problem has no micro-quiz payload
 - **THEN** the practice page renders the existing exam flow unchanged
+
+## REMOVED Requirements
+
+### Requirement: Explicit mode marking
+
+**Reason**: the mode formerly named Flash Card is renamed `micro` (小测);
+its marking rule is restated for the four-mode model.
+
+**Migration**: replaced by "Explicit mode marking for Micro and Yes/No"
+(ADDED above); stored `practice_modes` values `flash_card` are migrated to
+`micro` by an idempotent schema migration.
