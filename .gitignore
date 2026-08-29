@@ -38,3 +38,6 @@ pool/*.db
 .lessonkit/jobs/
 .lessonkit/plan.json
 workbench/_claude_*_task.txt
+
+# pool backups (ingest auto-backup)
+pool/backups/
