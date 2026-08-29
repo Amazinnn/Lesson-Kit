@@ -239,6 +239,10 @@ def _item_label(pool, item_type, item_id):
         problem = pool.problem(item_id)
         if problem:
             return problem["problem_text"][:40]
+    elif item_type == "card":
+        card = pool.card(item_id)
+        if card:
+            return card["front"][:40]
     else:
         kp = pool.kp(item_id)
         if kp:

@@ -79,6 +79,9 @@ def _targets(pool, item_type, item_id):
     if item_type == "problem":
         problem = pool.problem(item_id)
         return problem["kp_ids"] if problem else []
+    if item_type == "card":
+        card = pool.card(item_id)
+        return [card["kp_id"]] if card else []
     return [item_id]
 
 

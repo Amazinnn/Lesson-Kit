@@ -44,6 +44,7 @@ ROUTES = [
     ("PATCH", "/api/w/{name}/goals/{goal_id}", api_mod.goals_update),
     ("DELETE", "/api/w/{name}/goals/{goal_id}", api_mod.goals_delete),
     ("POST", "/api/w/{name}/pull", api_mod.pull_problems),
+    ("POST", "/api/w/{name}/pull-cards", api_mod.pull_cards),
     ("POST", "/api/w/{name}/practice", api_mod.practice),
     ("POST", "/api/w/{name}/feedback", api_mod.feedback_record),
     ("GET", "/api/w/{name}/problem/{problem_id}", api_mod.problem_detail),
@@ -194,13 +195,19 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             else:
                 plan = api_mod.daily_plan(pool, workspace, {}, {})
                 overview = queries.review_overview(pool)
-                problem_kps = {
-                    item["item_id"]: (pool.problem(item["item_id"]) or {}).get("kp_ids", [])
-                    for item in overview["items"] if item["item_type"] == "problem"
-                }
+                item_kps = {}
+                for item in overview["items"]:
+                    if item["item_type"] == "problem":
+                        problem = pool.problem(item["item_id"])
+                        if problem:
+                            item_kps[item["item_id"]] = problem.get("kp_ids", [])
+                    elif item["item_type"] == "card":
+                        card = pool.card(item["item_id"])
+                        if card:
+                            item_kps[item["item_id"]] = [card["kp_id"]]
                 kp_titles = _kp_titles(workspace, pool)
                 suggestions = pages.suggestion_rows(
-                    plan.get("queue"), overview["items"], problem_kps, kp_titles,
+                    plan.get("queue"), overview["items"], item_kps, kp_titles,
                 )
                 html_body = pages.practice_page(
                     workspace, workspaces, weak_items, plan, suggestions, kp_titles,

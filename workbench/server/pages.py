@@ -92,7 +92,7 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
     middle = (
         _page_header("学习 / 明确范围", "练习", "先选定要练的知识点，再选择一种练习模式。")
         + "<div class='page-content practice-content'>"
-        + "<div class='practice-columns'>"
+        + "<div class='practice-columns' id='practice-columns'>"
         + "<div class='practice-main'>"
         + _daily_plan(plan)
         + _staged_practice_html(workspace["name"], suggestions or [], kp_titles or {})
@@ -101,8 +101,9 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<p id='practice-scope-summary'>当前范围由知识点视图明确选择；本轮不会自动扩展范围。</p>"
         "<fieldset class='practice-mode-choice'><legend>练习模式（必选其一）</legend>"
         "<label><input id='practice-mode-exam' type='radio' name='practice-mode' value='exam'> 综合题</label>"
-        "<label><input id='practice-mode-flash_card' type='radio' name='practice-mode' value='flash_card'> 闪卡</label>"
-        "<label><input id='practice-mode-yes_no' type='radio' name='practice-mode' value='yes_no'> 判断</label></fieldset>"
+        "<label><input id='practice-mode-micro' type='radio' name='practice-mode' value='micro'> 小测</label>"
+        "<label><input id='practice-mode-yes_no' type='radio' name='practice-mode' value='yes_no'> 判断</label>"
+        "<label><input id='practice-mode-flash_card' type='radio' name='practice-mode' value='flash_card'> 闪卡</label></fieldset>"
         "<fieldset class='practice-rating-choice'><legend>自评时机（必选其一）</legend>"
         "<label><input id='practice-rating-immediate' type='radio' name='practice-rating-mode' value='immediate'> 每题作答后自评</label>"
         "<label><input id='practice-rating-batch' type='radio' name='practice-rating-mode' value='batch'> 完成后统一自评</label></fieldset>"
@@ -337,7 +338,7 @@ def session_end_page(workspace, workspaces, weak_items):
     middle = (
         _page_header(
             "练习 / 收束本轮", "会话末统一自评",
-            "只补充尚未评分的题目；已写入的记录不会重复出现。",
+            "只补充尚未评分的题目与闪卡；已写入的记录不会重复出现。",
         )
         + "<div class='page-content'>"
         "<section class='support-section pending-section'>"

@@ -538,6 +538,7 @@ test("content-mode practice uses only the explicit knowledge selection", async (
   delete elements["practice-mode-immediate"];
   delete elements["practice-mode-batch"];
   elements["practice-mode-exam"] = new FakeElement("practice-mode-exam");
+  elements["practice-mode-micro"] = new FakeElement("practice-mode-micro");
   elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
   elements["practice-mode-yes_no"] = new FakeElement("practice-mode-yes_no");
   elements["practice-empty-state"] = new FakeElement("practice-empty-state");
@@ -551,8 +552,8 @@ test("content-mode practice uses only the explicit knowledge selection", async (
       return jsonResponse({ problems: [] });
     },
   });
-  elements["practice-mode-flash_card"].checked = true;
-  elements["practice-mode-flash_card"].trigger("change");
+  elements["practice-mode-micro"].checked = true;
+  elements["practice-mode-micro"].trigger("change");
   elements["practice-rating-immediate"].checked = true;
   elements["practice-rating-immediate"].trigger("change");
   elements["start-practice"].click();
@@ -560,9 +561,133 @@ test("content-mode practice uses only the explicit knowledge selection", async (
   assert.equal(calls.some((call) => call.url.includes("/weak?")), false);
   const pull = calls.find((call) => call.url.endsWith("/pull"));
   assert.deepEqual(JSON.parse(pull.options.body), {
-    kp_ids: ["kp-1", "kp-2"], n: 1, mode: "flash_card", exclude_ids: [],
+    kp_ids: ["kp-1", "kp-2"], n: 1, mode: "micro", exclude_ids: [],
   });
-  assert.match(elements.stream.innerHTML, /暂无可用的 Flash Card/);
+  assert.match(elements.stream.innerHTML, /暂无可用的小测题目/);
+});
+
+test("micro choice items hide the free-text answer box", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  delete elements["practice-mode-immediate"];
+  delete elements["practice-mode-batch"];
+  elements["practice-mode-micro"] = new FakeElement("practice-mode-micro");
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+  });
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/pull")) {
+        return jsonResponse({ problems: [{
+          problem_id: "mq-1", display_title: "小测题", problem_text: "2 是偶数？",
+          micro_quiz: {
+            quiz_type: "single_choice", options: ["是", "否"], answer_key: "是",
+            error_reason: "r", source_evidence: "s",
+          },
+        }] });
+      }
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-micro"].checked = true;
+  elements["practice-mode-micro"].trigger("change");
+  elements["practice-rating-immediate"].checked = true;
+  elements["practice-rating-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.equal(JSON.parse(pull.options.body).mode, "micro");
+  assert.match(elements.stream.innerHTML, /data-choice-option/);
+  assert.equal(elements["answer-box"].classList.contains("hidden"), true);
+});
+
+test("flash card session pulls cards, reveals the back, and rates as card", async () => {
+  const calls = [];
+  const backSection = new FakeElement("card-back-section");
+  backSection.classList.add("hidden");
+  const elements = { layout: layout(), ...practiceElements() };
+  elements.stream = new FakeElement("stream", {
+    queryOne: (selector) => (selector === "#card-back-section" ? backSection : null),
+  });
+  delete elements["practice-mode-immediate"];
+  delete elements["practice-mode-batch"];
+  elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
+  elements["practice-columns"] = new FakeElement("practice-columns");
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+  });
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/pull-cards")) {
+        return jsonResponse({ cards: [
+          { card_id: "c-1", kp_id: "kp-1", front: "正面F", back: "背面B" },
+        ] });
+      }
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-flash_card"].checked = true;
+  elements["practice-mode-flash_card"].trigger("change");
+  elements["practice-rating-immediate"].checked = true;
+  elements["practice-rating-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.equal(elements["practice-columns"].classList.contains("hidden"), true);
+  const pull = calls.find((call) => call.url.endsWith("/pull-cards"));
+  assert.deepEqual(JSON.parse(pull.options.body), { kp_ids: ["kp-1"], exclude_ids: [] });
+  assert.match(elements.stream.innerHTML, /闪卡/);
+  assert.match(elements.stream.innerHTML, /正面F/);
+  assert.equal(elements["show-answer"].textContent, "揭示背面");
+  assert.equal(backSection.classList.contains("hidden"), true);
+  elements["show-answer"].click();
+  assert.equal(backSection.classList.contains("hidden"), false);
+  elements["rating-input"].value = "4";
+  elements["save-rating"].click();
+  await flush();
+  const fb = calls.find((call) => call.url.endsWith("/feedback"));
+  assert.deepEqual(JSON.parse(fb.options.body), {
+    item_type: "card", item_id: "c-1", rating: 4, note: "",
+  });
+  const next = calls.filter((call) => call.url.endsWith("/pull-cards"))[1];
+  assert.deepEqual(JSON.parse(next.options.body), {
+    kp_ids: ["kp-1"], exclude_ids: ["c-1"],
+  });
+});
+
+test("session-end lists played cards with front and back for rating", async () => {
+  const calls = [];
+  const pending = new FakeElement("pending-ratings");
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify([
+      { problem_id: "c-1", card: true, front: "正面F", back: "背面B",
+        answer_text: "", state: "unrated" },
+    ]),
+  });
+  runWorkbench({
+    elements: { layout: layout(), "pending-ratings": pending }, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({ problem: { problem_id: "p-1" } });
+    },
+  });
+  await flush();
+  assert.match(pending.children[0].innerHTML, /闪卡/);
+  assert.match(pending.children[0].innerHTML, /正面F/);
+  assert.match(pending.children[0].innerHTML, /背面B/);
+  const rating = pending.children[0].children.find((el) => el.id === "end-rating-c-1");
+  const save = pending.children[0].children.find((el) => el.id === "end-save-c-1");
+  rating.value = "3";
+  save.click();
+  await flush();
+  const fb = calls.find((call) => call.url.endsWith("/feedback"));
+  assert.deepEqual(JSON.parse(fb.options.body), {
+    item_type: "card", item_id: "c-1", rating: 3, note: "",
+  });
+  assert.equal(calls.some((call) => call.url.includes("/problem/")), false);
 });
 
 test("unified rating controls have unique accessible labels and titled cards", async () => {

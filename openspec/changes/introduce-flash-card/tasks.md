@@ -13,14 +13,14 @@
 
 ## 2. 实现（PR2）
 
-- [ ] 改名迁移（schema 幂等 REPLACE）+ 全链路同步（pull / micro_quiz /
+- [x] 改名迁移（schema 幂等 REPLACE）+ 全链路同步（pull / micro_quiz /
       pages / JS / 空态文案 / 测试）
-- [ ] micro 收敛（gate 拒绝 retired 类型 + 隐藏作答文本框）
-- [ ] flash_cards 建表（additive）+ `wb ingest recipe flash-card`
-- [ ] `/pull-cards` + JS 闪卡揭示流 + `/feedback` item_type='card' 调度
-- [ ] session-end 统一自评支持卡片条目
-- [ ] 会话聚焦（隐藏 .practice-columns + 恢复 + 刷新恢复分支）
-- [ ] pytest + node 全绿；review_overview/时间视图对 card 行优雅处理验证
+- [x] micro 收敛（gate 拒绝 retired 类型 + 隐藏作答文本框）
+- [x] flash_cards 建表（additive）+ `wb ingest recipe flash-card`
+- [x] `/pull-cards` + JS 闪卡揭示流 + `/feedback` item_type='card' 调度
+- [x] session-end 统一自评支持卡片条目
+- [x] 会话聚焦（隐藏 .practice-columns + 恢复 + 刷新恢复分支）
+- [x] pytest + node 全绿；review_overview/时间视图对 card 行优雅处理验证
 
 ## 3. 内容与走查（PR3）
 

@@ -782,7 +782,9 @@
   function setCurrent(problem) {
     currentProblem = problem || null;
     store(CURRENT_KEY, currentProblem);
-    if (currentProblem) recordRecent("problem", currentProblem.problem_id);
+    if (currentProblem && !currentProblem.card) {
+      recordRecent("problem", currentProblem.problem_id);
+    }
   }
 
   function updateSession(problemId, values) {
@@ -795,6 +797,7 @@
 
   if (stream) {
     var modeExam = document.getElementById("practice-mode-exam");
+    var modeMicro = document.getElementById("practice-mode-micro");
     var modeFlashCard = document.getElementById("practice-mode-flash_card");
     var modeYesNo = document.getElementById("practice-mode-yes_no");
     var modeImmediate = document.getElementById("practice-mode-immediate");
@@ -828,8 +831,9 @@
 
     function selectedContentMode() {
       if (modeExam && modeExam.checked) return "exam";
-      if (modeFlashCard && modeFlashCard.checked) return "flash_card";
+      if (modeMicro && modeMicro.checked) return "micro";
       if (modeYesNo && modeYesNo.checked) return "yes_no";
+      if (modeFlashCard && modeFlashCard.checked) return "flash_card";
       return "";
     }
 
@@ -883,6 +887,22 @@
       if (sessionEntry) sessionEntry.classList.toggle("hidden", !show);
     }
 
+    function setPracticeFocus(active) {
+      var columns = document.getElementById("practice-columns");
+      if (columns) columns.classList.toggle("hidden", active);
+      var flow = document.querySelector(".practice-flow");
+      if (active && flow && flow.scrollIntoView) flow.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function setComposerLayout(mode) {
+      // "card": no answer row (reveal instead); "choice": options only;
+      // "text": textarea + submit (ordinary exam answers).
+      var row = document.getElementById("composer-row");
+      if (row) row.classList.toggle("hidden", mode === "card");
+      if (answerBox) answerBox.classList.toggle("hidden", mode !== "text");
+      if (showAnswer) showAnswer.textContent = mode === "card" ? "揭示背面" : "查看解析";
+    }
+
     function renderQuestion(problem) {
       var quiz = microQuiz(problem);
       var options = problemOptions(problem);
@@ -903,6 +923,17 @@
       renderMath(stream);
     }
 
+    function renderCard(card) {
+      stream.innerHTML = "<article class='practice-question-card card'>"
+        + "<p class='context-line'>闪卡</p>"
+        + "<p class='muted'>先在心里回忆，再揭示对照。</p>"
+        + "<div class='problem-text rich-text'>" + richText(card.front) + "</div>"
+        + "<section id='card-back-section' class='practice-solution hidden'>"
+        + "<p class='section-kicker'>背面</p>"
+        + "<div class='rich-text'>" + richText(card.back) + "</div></section></article>";
+      renderMath(stream);
+    }
+
     function gradeMicroQuiz(problem, submittedTexts) {
       var quiz = microQuiz(problem);
       if (!quiz) return null;
@@ -920,7 +951,8 @@
       var ratingMode = sessionStorage.getItem(RATING_MODE_KEY);
       var emptyMessage = similarRound
         ? "暂无更多同类题。"
-        : (mode === "flash_card" ? "当前范围暂无可用的 Flash Card 题目，请选择其他模式。"
+        : (mode === "flash_card" ? "当前范围暂无可用的闪卡，请选择其他模式。"
+          : mode === "micro" ? "当前范围暂无可用的小测题目，请选择其他模式。"
           : mode === "yes_no" ? "当前范围暂无可用的 Yes / No 题目，请选择其他模式。"
             : "本轮相关题目已练完。");
       stream.innerHTML = "<p class='muted'>" + emptyMessage + "</p>";
@@ -928,11 +960,12 @@
       sessionStorage.removeItem(SIMILAR_KEY);
       setCurrent(null);
       showComposer(false);
+      setPracticeFocus(false);
       if (ratingMode === "batch") window.location = "session-end";
       else {
         sessionStorage.removeItem(MODE_KEY);
         sessionStorage.removeItem(RATING_MODE_KEY);
-        [modeExam, modeFlashCard, modeYesNo, modeImmediate, modeBatch].forEach(function (input) {
+        [modeExam, modeMicro, modeFlashCard, modeYesNo, modeImmediate, modeBatch].forEach(function (input) {
           if (input) input.checked = false;
         });
         startPractice.disabled = true;
@@ -947,6 +980,38 @@
       var exclude = session().map(function (item) { return item.problem_id; });
       var includeIds = load(INCLUDE_KEY, null);
       clearPracticeError();
+      if (mode === "flash_card") {
+        api("/pull-cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kp_ids: kps, exclude_ids: exclude }),
+        }).then(function (result) {
+          var card = (result.cards || [])[0];
+          if (!card) {
+            finishExhausted();
+            return;
+          }
+          var seen = session();
+          seen.push({
+            problem_id: card.card_id, card: true,
+            front: card.front, back: card.back,
+            answer_text: "", state: "active",
+          });
+          store(SESSION_KEY, seen);
+          setCurrent({
+            problem_id: card.card_id, card: true,
+            front: card.front, back: card.back,
+          });
+          renderCard(card);
+          ratingInput.value = "";
+          feedbackNote.value = "";
+          feedbackArea.classList.add("hidden");
+          setComposerLayout("card");
+          actions.classList.remove("hidden");
+          showComposer(true);
+        }).catch(function (error) { showPracticeError(error, true); });
+        return;
+      }
       var pullBody = {
         kp_ids: kps, n: 1,
         mode: mode,
@@ -969,6 +1034,8 @@
         store(SESSION_KEY, seen);
         setCurrent(problem);
         renderQuestion(problem);
+        setComposerLayout(
+          microQuiz(problem) && problemOptions(problem).length ? "choice" : "text");
         answerBox.value = "";
         answerBox.disabled = false;
         submitAnswer.classList.remove("hidden");
@@ -994,6 +1061,7 @@
       if (legacyModeControls && scopedKpId) {
         store(KPS_KEY, [scopedKpId]);
         if (startArea) startArea.classList.add("hidden");
+        setPracticeFocus(true);
         loadNext();
         return;
       }
@@ -1001,6 +1069,7 @@
         api("/weak?limit=200").then(function (items) {
           store(KPS_KEY, items.map(function (item) { return item.kp_id; }));
           if (startArea) startArea.classList.add("hidden");
+          setPracticeFocus(true);
           loadNext();
         }).catch(showPracticeError);
         return;
@@ -1012,6 +1081,7 @@
       }
       store(KPS_KEY, ids);
       if (startArea) startArea.classList.add("hidden");
+      setPracticeFocus(true);
       loadNext();
     }
 
@@ -1022,6 +1092,7 @@
     }
 
     bindMode(modeExam);
+    bindMode(modeMicro);
     bindMode(modeFlashCard);
     bindMode(modeYesNo);
     bindMode(modeImmediate);
@@ -1038,6 +1109,7 @@
       window.location = "session-end";
     } else if (restoredMode && currentProblem) {
       if (modeExam) modeExam.checked = restoredMode === "exam";
+      if (modeMicro) modeMicro.checked = restoredMode === "micro";
       if (modeFlashCard) modeFlashCard.checked = restoredMode === "flash_card";
       if (modeYesNo) modeYesNo.checked = restoredMode === "yes_no";
       if (modeImmediate) modeImmediate.checked = restoredMode === "immediate";
@@ -1045,7 +1117,17 @@
       if (ratingImmediate) ratingImmediate.checked = restoredRatingMode === "immediate";
       if (ratingBatch) ratingBatch.checked = restoredRatingMode === "batch";
       if (startArea) startArea.classList.add("hidden");
-      renderQuestion(currentProblem);
+      setPracticeFocus(true);
+      if (currentProblem.card) {
+        renderCard(currentProblem);
+        setComposerLayout("card");
+        actions.classList.remove("hidden");
+      } else {
+        renderQuestion(currentProblem);
+        setComposerLayout(
+          microQuiz(currentProblem) && problemOptions(currentProblem).length
+            ? "choice" : "text");
+      }
       answerBox.value = currentProblem.answer_text || "";
       showComposer(true);
     }
@@ -1056,7 +1138,7 @@
     if (retryPractice) retryPractice.addEventListener("click", loadNext);
 
     if (submitAnswer) submitAnswer.addEventListener("click", function () {
-      if (!currentProblem) return;
+      if (!currentProblem || currentProblem.card) return;
       var answer = answerBox.value.trim();
       var choiceInputs = (stream && stream.querySelectorAll)
         ? Array.prototype.slice.call(stream.querySelectorAll("[data-choice-option]:checked"))
@@ -1093,6 +1175,14 @@
     if (showAnswer) showAnswer.addEventListener("click", function () {
       if (!currentProblem) return;
       clearPracticeError();
+      if (currentProblem.card) {
+        var backSection = (stream && stream.querySelector)
+          ? stream.querySelector("#card-back-section") : null;
+        if (backSection) backSection.classList.remove("hidden");
+        showAnswer.classList.add("hidden");
+        feedbackArea.classList.remove("hidden");
+        return;
+      }
       api("/problem/" + currentProblem.problem_id).then(function (detail) {
         var quiz = microQuiz(detail.problem) || microQuiz(currentProblem);
         var section;
@@ -1122,7 +1212,8 @@
       }
       clearPracticeError();
       post("/feedback", {
-        item_type: "problem", item_id: currentProblem.problem_id,
+        item_type: currentProblem.card ? "card" : "problem",
+        item_id: currentProblem.problem_id,
         rating: rating, note: feedbackNote.value.trim(),
       }).then(function () {
         updateSession(currentProblem.problem_id, { state: "rated" });
@@ -1150,6 +1241,7 @@
         sessionStorage.removeItem(MODE_KEY);
         sessionStorage.removeItem(RATING_MODE_KEY);
         stream.innerHTML = "<p class='muted'>本轮练习已提前结束。</p>";
+        setPracticeFocus(false);
         if (startArea) startArea.classList.remove("hidden");
       }
     });
@@ -1207,12 +1299,76 @@
       pending.innerHTML = "<p>没有待评的题。</p>";
     } else {
       var remaining = unrated.length;
+      var buildRatingCard = function (contentHtml, itemType, entryId, title) {
+        var card = document.createElement("article");
+        card.className = "pending-rating-card card";
+        card.dataset.pid = entryId;
+        card.innerHTML = contentHtml;
+        var rating = document.createElement("input");
+        rating.id = "end-rating-" + entryId;
+        rating.type = "number";
+        rating.min = "1";
+        rating.max = "5";
+        rating.placeholder = "输入 1–5";
+        var note = document.createElement("textarea");
+        note.id = "end-note-" + entryId;
+        note.placeholder = "可选备注";
+        var save = document.createElement("button");
+        save.id = "end-save-" + entryId;
+        save.className = "primary sm";
+        save.textContent = "保存评分";
+        var ratingLabel = document.createElement("label");
+        ratingLabel.id = "end-rating-label-" + entryId;
+        ratingLabel.setAttribute("for", rating.id);
+        ratingLabel.textContent = "为“" + title + "”评分（1-5）";
+        var noteLabel = document.createElement("label");
+        noteLabel.id = "end-note-label-" + entryId;
+        noteLabel.setAttribute("for", note.id);
+        noteLabel.textContent = "为“" + title + "”添加备注";
+        var error = document.createElement("p");
+        error.id = "end-error-" + entryId;
+        error.className = "inline-error hidden";
+        error.setAttribute("aria-live", "polite");
+        function showCardError(message) {
+          error.textContent = message;
+          error.classList.remove("hidden");
+        }
+        save.addEventListener("click", function () {
+          var value = parseInt(rating.value, 10);
+          if (value < 1 || value > 5) {
+            showCardError("请输入 1-5 的评分");
+            return;
+          }
+          post("/feedback", {
+            item_type: itemType, item_id: entryId,
+            rating: value, note: note.value.trim(),
+          }).then(function () {
+            updateSession(entryId, { state: "rated" });
+            card.remove();
+            remaining -= 1;
+            if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
+          }).catch(function (err) { showCardError(err.message || "保存失败"); });
+        });
+        card.appendChild(error);
+        card.appendChild(ratingLabel);
+        card.appendChild(rating);
+        card.appendChild(noteLabel);
+        card.appendChild(note);
+        card.appendChild(save);
+        pending.appendChild(card);
+        renderMath(card);
+      };
       unrated.forEach(function (item) {
+        if (item.card) {
+          buildRatingCard(
+            "<p class='context-line'>闪卡</p>"
+            + "<div class='problem-text rich-text'>" + richText(item.front || "") + "</div>"
+            + "<p class='section-kicker'>背面</p><div class='rich-text'>" + richText(item.back || "") + "</div>",
+            "card", item.problem_id, String(item.front || "闪卡"));
+          return;
+        }
         api("/problem/" + item.problem_id).then(function (detail) {
           var problem = detail.problem;
-          var card = document.createElement("article");
-          card.className = "pending-rating-card card";
-          card.dataset.pid = item.problem_id;
           var title = problem.display_title || "未命名题目";
           var quiz = problem.micro_quiz && typeof problem.micro_quiz === "object"
             ? problem.micro_quiz : null;
@@ -1223,63 +1379,12 @@
               + richText(quiz.error_reason || "") + "</div>"
             : "<p class='section-kicker'>解析</p><div class='rich-text'>"
               + richText(problem.solution || "（本题无解析）") + "</div>";
-          card.innerHTML = "<p class='context-line'>练习题</p><h2>" + escapeHtml(title) + "</h2>"
-          + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
-          + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
-          + solutionHtml;
-          var rating = document.createElement("input");
-          rating.id = "end-rating-" + item.problem_id;
-          rating.type = "number";
-          rating.min = "1";
-          rating.max = "5";
-          rating.placeholder = "输入 1–5";
-          var note = document.createElement("textarea");
-          note.id = "end-note-" + item.problem_id;
-          note.placeholder = "可选备注";
-          var save = document.createElement("button");
-          save.id = "end-save-" + item.problem_id;
-          save.className = "primary sm";
-          save.textContent = "保存评分";
-          var ratingLabel = document.createElement("label");
-          ratingLabel.id = "end-rating-label-" + item.problem_id;
-          ratingLabel.setAttribute("for", rating.id);
-          ratingLabel.textContent = "为“" + title + "”评分（1-5）";
-          var noteLabel = document.createElement("label");
-          noteLabel.id = "end-note-label-" + item.problem_id;
-          noteLabel.setAttribute("for", note.id);
-          noteLabel.textContent = "为“" + title + "”添加备注";
-          var error = document.createElement("p");
-          error.id = "end-error-" + item.problem_id;
-          error.className = "inline-error hidden";
-          error.setAttribute("aria-live", "polite");
-          function showCardError(message) {
-            error.textContent = message;
-            error.classList.remove("hidden");
-          }
-          save.addEventListener("click", function () {
-            var value = parseInt(rating.value, 10);
-            if (value < 1 || value > 5) {
-              showCardError("请输入 1-5 的评分");
-              return;
-            }
-            post("/feedback", {
-              item_type: "problem", item_id: item.problem_id,
-              rating: value, note: note.value.trim(),
-            }).then(function () {
-              updateSession(item.problem_id, { state: "rated" });
-              card.remove();
-              remaining -= 1;
-              if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
-            }).catch(function (err) { showCardError(err.message || "保存失败"); });
-          });
-          card.appendChild(error);
-          card.appendChild(ratingLabel);
-          card.appendChild(rating);
-          card.appendChild(noteLabel);
-          card.appendChild(note);
-          card.appendChild(save);
-          pending.appendChild(card);
-          renderMath(card);
+          buildRatingCard(
+            "<p class='context-line'>练习题</p><h2>" + escapeHtml(title) + "</h2>"
+            + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
+            + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
+            + solutionHtml,
+            "problem", item.problem_id, title);
         });
       });
     }

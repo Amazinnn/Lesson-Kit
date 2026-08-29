@@ -79,8 +79,11 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("id='practice-mode-exam'", body)
+        self.assertIn("id='practice-mode-micro'", body)
         self.assertIn("id='practice-mode-flash_card'", body)
         self.assertIn("id='practice-mode-yes_no'", body)
+        self.assertIn("> 小测<", body)
+        self.assertIn("> 闪卡<", body)
         self.assertIn("id='practice-rating-immediate'", body)
         self.assertIn("id='practice-rating-batch'", body)
         self.assertIn("id='start-practice' class='primary' disabled", body)
@@ -90,10 +93,16 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("id='staged-list'", body)
         self.assertIn("id='staged-empty'", body)
-        for mode in ("exam", "flash_card", "yes_no"):
+        for mode in ("exam", "micro", "flash_card", "yes_no"):
             self.assertIn(f"id='practice-mode-{mode}'", body)
+        self.assertIn("id='practice-columns'", body)
         self.assertIn("id='practice-rating-immediate'", body)
         self.assertIn("id='practice-rating-batch'", body)
+
+    def test_session_end_page_mentions_cards(self):
+        status, body = self.fetch("/w/dmath/session-end")
+        self.assertEqual(status, 200)
+        self.assertIn("题目与闪卡", body)
 
     def test_knowledge_views_expose_one_shared_selection_handoff(self):
         for path in ("/w/dmath/kps", "/w/dmath/graph"):
