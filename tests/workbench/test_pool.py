@@ -151,9 +151,14 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(problem["problem_id"], "dmath-ch06-prob-001")
         self.assertEqual(problem["kp_ids"], ["dmath-ch06-kp-001"])
 
-    def test_gate_passed_candidates(self):
-        candidates = self.pool.gate_passed_candidates()
-        self.assertEqual([c["candidate_id"] for c in candidates], ["dmath-ch06-cand-001"])
+    def test_candidate_reads_are_retired(self):
+        self.assertFalse(hasattr(self.pool, "gate_passed_candidates"))
+        conn = self.pool.connect()
+        status = conn.execute(
+            "SELECT status FROM candidate_problems WHERE candidate_id=?",
+            ("dmath-ch06-cand-001",),
+        ).fetchone()[0]
+        self.assertEqual(status, "gate_passed")
 
     def test_signals_and_relations(self):
         signals = self.pool.signals()

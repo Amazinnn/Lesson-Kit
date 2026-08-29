@@ -7,11 +7,12 @@ PRACTICE_MODES = {"exam", "micro", "yes_no"}
 
 def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
            seed=None, include_ids=None):
-    """Pull durable problems, then gate-passed candidates, then report gaps.
+    """Pull durable problems and report gaps.
 
     Never fabricates content: whatever cannot be filled is listed in
-    ``shortage``. ``include_ids`` optionally restricts the result to those
-    identifiers within the requested scope.
+    ``shortage``. Candidate staging is retired (2026-08-29 Check pipeline):
+    the pull engine reads formal problems only. ``include_ids`` optionally
+    restricts the result to those identifiers within the requested scope.
     """
     exclude_ids = exclude_ids or set()
     include_ids = set(include_ids or [])
@@ -36,29 +37,16 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
         problems = [p for p in problems if p["problem_id"] in include_ids]
     problems = [p for p in problems if p["problem_id"] not in exclude_ids]
 
-    candidates = []
-    if len(problems) < n and order_mode != "all" and not include_ids:
-        candidates = [
-            c for c in pool.gate_passed_candidates(kp_ids)
-            if c["candidate_id"] not in exclude_ids
-            and (not practice_mode or _eligible_for_mode(c, practice_mode))
-        ]
-        candidates = sorted(
-            candidates,
-            key=lambda c: (-_hit_count(c, kp_ids), c["candidate_id"]),
-        )
-
     shortage = []
     if order_mode != "all":
         for kp_id in kp_ids:
             durable = sum(1 for p in problems if kp_id in p["kp_ids"])
-            extra = sum(1 for c in candidates if kp_id in c["kp_ids"])
-            if durable + extra < n:
+            if durable < n:
                 shortage.append(kp_id)
 
     return {
         "problems": problems[:n],
-        "candidates": candidates[: max(0, n - len(problems))],
+        "candidates": [],
         "shortage": shortage,
     }
 

@@ -95,20 +95,8 @@ class Pool:
             item[field] = json.loads(raw) if raw else None
         return item
 
-    # -- candidates -------------------------------------------------------
-
-    def gate_passed_candidates(self, kp_ids=None):
-        conn = self.connect()
-        if kp_ids:
-            sql = "SELECT * FROM candidate_problems WHERE status='gate_passed' AND ("
-            sql += " OR ".join("kp_ids LIKE ?" for _ in kp_ids)
-            sql += ")"
-            rows = conn.execute(sql, ["%" + kp_id + "%" for kp_id in kp_ids]).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM candidate_problems WHERE status='gate_passed'"
-            ).fetchall()
-        return [self._candidate_row(r) for r in rows]
+    # -- candidates (retired 2026-08-29 Check pipeline: no active readers;
+    #    the table and wb data candidate commands remain for 待退役 tooling)
 
     @staticmethod
     def _candidate_row(row):
