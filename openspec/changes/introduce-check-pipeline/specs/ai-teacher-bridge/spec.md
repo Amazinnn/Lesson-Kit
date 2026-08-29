@@ -11,7 +11,9 @@ as one batch-recorded transactional apply. Gate failures SHALL be reported
 back into the conversation flow item by item and SHALL write nothing. Success
 SHALL be presented as an independent result card in the conversation flow
 showing the batch id, kind, item counts, and backup path, with a rollback
-affordance that calls the same whole-batch rollback as the CLI. Ordinary
+affordance that calls the same whole-batch rollback as the CLI. The
+conversation mirror SHALL carry the check ingest action and its outcome so
+the result card is restored when the conversation is re-rendered. Ordinary
 conversation without content-generation intent SHALL NOT trigger the action,
 and a malformed `check_ingest` block under content-generation intent SHALL be
 surfaced as an explicit error rather than silently dropped.
@@ -23,6 +25,12 @@ surfaced as an explicit error rather than silently dropped.
 - **THEN** the manifest passes the deterministic gate, one batch-recorded
   apply inserts the cards, and an independent result card with the batch id
   and a rollback affordance appears in the conversation flow
+
+#### Scenario: Result card survives re-render
+
+- **WHEN** the conversation is reloaded after a check ingest action ran
+- **THEN** the mirrored assistant message carries the action outcome and the
+  result card is restored in the conversation flow
 
 #### Scenario: Gate failure is explicit
 

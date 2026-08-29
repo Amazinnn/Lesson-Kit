@@ -8,7 +8,9 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
+from workbench import ingest
 from workbench.bridge import conversation_providers
+from workbench.data.pool import Pool
 
 
 class ConversationConflict(Exception):
@@ -109,9 +111,12 @@ def get(pool, conversation_id):
     if transcript.is_file():
         for line in transcript.read_text(encoding="utf-8").splitlines():
             exchange = json.loads(line)
+            assistant = {"role": "assistant", "content": exchange["assistant"]}
+            if exchange.get("action"):
+                assistant["action"] = exchange["action"]
             messages.extend([
                 {"role": "user", "content": exchange["user"]},
-                {"role": "assistant", "content": exchange["assistant"]},
+                assistant,
             ])
     record["messages"] = messages
     return record
@@ -174,7 +179,13 @@ def _prompt(message, context):
         "\"kp_ids\":[\"知识点ID\"]} ```。"
         "若学生从目标表单发起一句话求助，可附 ```lessonkit-action {\"type\":\"prefill_goal_form\","
         "\"title\":\"…\",\"kind\":\"stage|long_term\",\"deadline\":\"YYYY-MM-DD或空\","
-        "\"description\":\"…\"} ``` 代填目标字段（仅此意图可附，普通问答不得代填）。\n\n"
+        "\"description\":\"…\"} ``` 代填目标字段（仅此意图可附，普通问答不得代填）。"
+        "仅当学生明确要求出题、补池或给某知识点加内容时，可在回答末尾附 "
+        "```lessonkit-action {\"type\":\"check_ingest\",\"manifest\":{"
+        "\"kind\":\"flash-card-patch\",\"items\":[…]}} ```。kind 只能是 "
+        "flash-card-patch 或 micro-quiz-patch；闪卡 items 必须包含 "
+        "card_id/kp_id/front/back/source_evidence；微题 items 必须包含 "
+        "problem_id/kp_id/stem/quiz_type/options/answer_key/error_reason/source_evidence。\n\n"
         "服务端重建的当前上下文：\n"
         + json.dumps(context, ensure_ascii=False, indent=2)
         + "\n\n学生消息：\n"
@@ -316,6 +327,23 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
         return
 
     answer, action = _extract_action(answer, context)
+    if action and action["type"] == "check_ingest" and "manifest" in action:
+        action_pool = Pool(
+            root=root,
+            db_path=root / workspace["db"],
+            course=workspace.get("active_course", ""),
+            chapter=workspace.get("active_chapter", ""),
+        )
+        try:
+            applied = ingest.apply_batch(action_pool.db_path, action["manifest"], source="bridge")
+            action["result"] = {
+                key: applied[key]
+                for key in ("batch_id", "kind", "counts", "backup_path", "applied")
+            }
+        except ValueError as exc:
+            action["error"] = str(exc)
+        finally:
+            action_pool.close()
 
     conversation = _read_json(conversation_path)
     turn = _read_json(turn_path)
@@ -331,6 +359,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
         "change_summary": [],
         "completed_at": _now(),
     }
+    if action:
+        exchange["action"] = action
     with (folder / "transcript.jsonl").open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(exchange, ensure_ascii=False) + "\n")
     _append_event(event_path, "done")
@@ -347,6 +377,12 @@ def _extract_action(answer, context):
     try:
         raw = json.loads(match.group(1).strip())
     except (TypeError, ValueError):
+        if context.get("check_intent"):
+            cleaned = (answer[:match.start()] + answer[match.end():]).strip()
+            return cleaned, {
+                "type": "check_ingest",
+                "error": "action block is not valid JSON",
+            }
         return answer, None
     action = None
     if raw.get("type") == "replace_practice_selection" and context.get("practice_intent"):
@@ -359,6 +395,22 @@ def _extract_action(answer, context):
             action = {"type": raw["type"], "kp_ids": ids}
     elif raw.get("type") == "prefill_goal_form" and context.get("goal_intent"):
         action = _clean_goal_form_action(raw)
+    elif raw.get("type") == "check_ingest" and context.get("check_intent"):
+        manifest = raw.get("manifest")
+        if not isinstance(manifest, dict):
+            action = {"type": "check_ingest", "error": "manifest must be an object"}
+        elif manifest.get("kind") not in {"flash-card-patch", "micro-quiz-patch"}:
+            action = {
+                "type": "check_ingest",
+                "error": "manifest kind must be flash-card-patch or micro-quiz-patch",
+            }
+        elif not isinstance(manifest.get("items"), list) or not manifest["items"]:
+            action = {
+                "type": "check_ingest",
+                "error": "manifest items must be a non-empty list",
+            }
+        else:
+            action = {"type": "check_ingest", "manifest": manifest}
     if action is None:
         return answer, None
     cleaned = (answer[:match.start()] + answer[match.end():]).strip()

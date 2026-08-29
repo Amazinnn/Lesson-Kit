@@ -23,6 +23,7 @@ def build(pool, workspace, payload):
         )],
         "practice_intent": bool(payload.get("practice_intent")),
         "goal_intent": bool(payload.get("goal_intent")),
+        "check_intent": bool(payload.get("check_intent")),
     }
     if page_type == "practice":
         _practice(pool, payload, result)

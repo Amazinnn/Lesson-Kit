@@ -99,11 +99,18 @@ class MicroQuizIngestTests(unittest.TestCase):
             CREATE TABLE problems (problem_id TEXT PRIMARY KEY,
                 kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
                 solution TEXT, problem_type TEXT, source_kind TEXT,
-                practice_modes TEXT, micro_quiz TEXT);
+                practice_modes TEXT, micro_quiz TEXT, ingest_batch_id TEXT);
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY,
                 problem_text TEXT);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY,
                 source_kp_id TEXT, target_kp_id TEXT);
+            CREATE TABLE content_sequences (
+                scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
+                PRIMARY KEY (scope, entity_type));
+            CREATE TABLE ingest_batches (
+                batch_id TEXT PRIMARY KEY, kind TEXT NOT NULL, manifest_path TEXT NOT NULL,
+                counts_json TEXT NOT NULL, backup_path TEXT NOT NULL,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now')), rolled_back_at TEXT);
         """)
         conn.execute("INSERT INTO knowledge_points VALUES ('dmath-ch06-kp-001', 'Counting')")
         conn.commit()
@@ -130,12 +137,20 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertTrue(report["ok"], report["errors"])
         result = ingest.apply_micro_quiz(self.db_path, path)
         self.assertTrue(result["applied"])
+        self.assertEqual(result["batch_id"], "batch-001")
         self.assertTrue(Path(result["backup_path"]).exists())
+        snapshot_path = self.root / "ingest" / "batch-001.json"
+        self.assertEqual(json.loads(snapshot_path.read_text(encoding="utf-8")), {
+            "kind": "micro-quiz-patch", "items": [manifest_item()],
+        })
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
-                "SELECT kp_ids, problem_text, practice_modes, micro_quiz"
+                "SELECT kp_ids, problem_text, practice_modes, micro_quiz, ingest_batch_id"
                 " FROM problems WHERE problem_id='dmath-ch06-mq-001'"
+            ).fetchone()
+            batch = conn.execute(
+                "SELECT kind, manifest_path, counts_json FROM ingest_batches"
             ).fetchone()
         finally:
             conn.close()
@@ -144,6 +159,24 @@ class MicroQuizIngestTests(unittest.TestCase):
         payload = json.loads(row[3])
         self.assertEqual(payload["quiz_type"], "yes_no")
         self.assertEqual(payload["answer_key"], "否")
+        self.assertEqual(row[4], "batch-001")
+        self.assertEqual(batch[0], "micro-quiz-patch")
+        self.assertEqual(Path(batch[1]), snapshot_path)
+        self.assertEqual(json.loads(batch[2]), {"problems": 1})
+
+    def test_apply_batch_rejects_source_kind_and_gate_errors(self):
+        manifest = {"kind": "micro-quiz-patch", "items": [manifest_item()]}
+        with self.assertRaisesRegex(ValueError, "source"):
+            ingest.apply_batch(self.db_path, manifest, source="other")
+        with self.assertRaisesRegex(ValueError, "unsupported ingest kind"):
+            ingest.apply_batch(
+                self.db_path, {"kind": "other", "items": []}, source="bridge",
+            )
+        manifest["items"][0]["kp_id"] = "missing"
+        with self.assertRaises(ValueError) as raised:
+            ingest.apply_batch(self.db_path, manifest, source="bridge")
+        self.assertIn("dmath-ch06-mq-001: unknown knowledge point missing",
+                      str(raised.exception).splitlines())
 
     def test_bad_items_are_rejected_without_writing(self):
         items = [
@@ -176,9 +209,24 @@ class MicroQuizIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             count = conn.execute("SELECT COUNT(*) FROM problems").fetchone()[0]
+            batches = conn.execute("SELECT COUNT(*) FROM ingest_batches").fetchone()[0]
         finally:
             conn.close()
         self.assertEqual(count, 1)
+        self.assertEqual(batches, 1)
+
+    def test_recipe_preview_does_not_write_pool_or_batch(self):
+        path = self.manifest([manifest_item()])
+
+        result = ingest.recipe("micro-quiz", self.db_path, path, self.root / "preview")
+
+        self.assertFalse(result["applied"])
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM problems").fetchone()[0], 0)
+            self.assertEqual(conn.execute("SELECT COUNT(*) FROM ingest_batches").fetchone()[0], 0)
+        finally:
+            conn.close()
 
 
 class MicroQuizPullTests(unittest.TestCase):

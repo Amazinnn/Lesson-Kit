@@ -1744,6 +1744,10 @@
       aiSetStatus("练习范围已更新");
       return;
     }
+    if (action.type === "check_ingest") {
+      aiApplyCheckAction(action);
+      return;
+    }
     if (action.type === "prefill_goal_form") {
       var map = {
         "goal-title": action.title, "goal-kind": action.kind,
@@ -1758,6 +1762,70 @@
       var goalNotice = document.getElementById("goal-form-status");
       if (goalNotice) goalNotice.textContent = "Agent 已代填目标字段，确认后保存。";
     }
+  }
+
+  function aiApplyCheckAction(action) {
+    if (action.error) {
+      aiAddCheckCard("入库未执行", "校验未通过：" + action.error, null);
+      return;
+    }
+    var result = action.result;
+    if (!result || !result.batch_id) return;
+    var detail = "批次 " + result.batch_id + " · " + (result.kind || "?")
+      + " · 入库 " + (result.applied != null ? result.applied : "?") + " 条"
+      + " · 备份 " + (result.backup_path || "无");
+    aiAddCheckCard("Check 入库完成", detail, result.batch_id);
+  }
+
+  function aiAddCheckCard(title, detail, batchId) {
+    if (!messages) return;
+    var div = document.createElement("div");
+    div.className = "msg ai check-card";
+    var body = document.createElement("div");
+    body.className = "check-card-body";
+    var heading = document.createElement("div");
+    heading.className = "check-card-title";
+    heading.textContent = title;
+    body.appendChild(heading);
+    var text = document.createElement("div");
+    text.className = "check-card-detail";
+    text.textContent = detail;
+    body.appendChild(text);
+    if (batchId) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "check-card-rollback";
+      button.textContent = "整批回滚";
+      button.addEventListener("click", function () { aiRollbackBatch(batchId, button); });
+      body.appendChild(button);
+    }
+    div.appendChild(body);
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function aiRollbackBatch(batchId, button) {
+    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？该批全部内容行将从池中撤销。")) return;
+    button.disabled = true;
+    api("/ingest/rollback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ batch_id: batchId }),
+    }).then(function (result) {
+      var card = button.closest(".check-card");
+      if (card) {
+        var detail = card.querySelector(".check-card-detail");
+        if (detail) {
+          detail.textContent = "批次 " + batchId + " 已整批回滚（撤销 "
+            + (result && result.deleted != null ? result.deleted : "?") + " 行）。";
+        }
+      }
+      button.remove();
+      aiSetStatus("批次已回滚");
+    }).catch(function (err) {
+      button.disabled = false;
+      aiSetStatus("回滚失败：" + (err && err.message ? err.message : "未知错误"));
+    });
   }
 
   function aiRecordRecent(type, id) {
@@ -1776,6 +1844,9 @@
     aiStreamingMessage = null;
     (record.messages || []).forEach(function (message) {
       aiAddMarkdown(message.content || "", message.role === "user" ? "user" : "ai");
+      if (message.action && message.action.type === "check_ingest") {
+        aiApplyCheckAction(message.action);
+      }
     });
     aiSetRunning(record.status === "running");
     aiSetStatus(record.status === "running" ? "Agent 正在处理…" : "");
@@ -1801,6 +1872,7 @@
       page_type: layout.dataset.page || "unknown",
       recent_objects: load(AI_RECENT_KEY, []),
       practice_intent: /练习|做题|刷题|复习题/.test(message),
+      check_intent: /出题|出几道|补池|加题|入库/.test(message),
     };
     if (layout.dataset.objectType) body.object_type = layout.dataset.objectType;
     if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
