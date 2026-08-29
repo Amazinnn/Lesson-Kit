@@ -7,31 +7,31 @@
 
 ## 1. 拆除
 
-- [ ] 移除 `review` 导航项、`app._send_page` review 分支、`pages.review_page`、
+- [x] 移除 `review` 导航项、`app._send_page` review 分支、`pages.review_page`、
       `card_session_html`；删除 `workbench.js` 复习页与卡片会话整段（不迁移）；
       移除复习页专属 CSS（保留徽标/水位等将复用的通用样式）。
-- [ ] 删除 `pages.py` 成对重复的第一套死函数定义
+- [x] 删除 `pages.py` 成对重复的第一套死函数定义
       （`practice_page`/`_daily_plan`/`kps_page`/`graph_page` 的前者）。
 
 ## 2. 练习页新形态
 
-- [ ] 「准备练习」区块：选区行视图（`wb_kp_selection_{ws}` 渲染为
+- [x] 「准备练习」区块：选区行视图（`wb_kp_selection_{ws}` 渲染为
       知识点名 + ✕ 清除，与知识点页/图谱勾选双向同步）。
-- [ ] 候选按需拉取：「加今天要练的（N）」按钮（计数）+ 展开行
+- [x] 候选按需拉取：「加今天要练的（N）」按钮（计数）+ 展开行
       （名称 · 一个短语 · 加入，D2 短语表）；计划 ∪ 到期知识点级去重、
       到期短语优先；已选定的不出现在候选；cap 20 + 「还有 N 条」；
       「重算计划」按钮迁入候选区。
-- [ ] 时间安排区块（`time_view_html` + JS）原样搬移至练习页右栏
+- [x] 时间安排区块（`time_view_html` + JS）原样搬移至练习页右栏
       （D3 双栏布局，`/calendar` 端点不变）。
-- [ ] CSS：准备行/候选行/双栏布局（仅既有令牌）；主按钮禁用态样式修复。
+- [x] CSS：准备行/候选行/双栏布局（仅既有令牌）；主按钮禁用态样式修复。
 
 ## 3. 测试
 
-- [ ] 路由测试回三页断言；练习页结构契约（准备容器、候选按钮计数与
+- [x] 路由测试回三页断言；练习页结构契约（准备容器、候选按钮计数与
       单短语行、无裸调度参数、review 页不存在回归）。
-- [ ] API 测试保持：due direction/limit、include_ids、feedback direction、
+- [x] API 测试保持：due direction/limit、include_ids、feedback direction、
       calendar。
-- [ ] Node UI：选区行渲染/移除/双向同步、候选加入-隐藏-计数、时间视图
+- [x] Node UI：选区行渲染/移除/双向同步、候选加入-隐藏-计数、时间视图
       搬移后渲染/预填/空态。
 
 ## 4. 验证与收尾

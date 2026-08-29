@@ -304,7 +304,7 @@ class ApiTests(unittest.TestCase):
 
     def test_workspace_page(self):
         status, html = self.get_html("/w/dmath/")
-        self.assertIn("弱项", html)
+        self.assertIn("准备练习", html)
 
     def test_neutral_knowledge_points_are_not_labeled_as_weak(self):
         from workbench.server.pages import _left_column

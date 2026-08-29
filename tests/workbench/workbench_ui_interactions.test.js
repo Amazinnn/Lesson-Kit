@@ -1394,138 +1394,98 @@ test("ordinary problems render without a verdict element or micro quiz controls"
   assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
 });
 
-function reviewElements() {
-  const elements = {
-    layout: layout(),
-    "card-session": new FakeElement("card-session"),
-    "card-face": new FakeElement("card-face"),
-    "card-back": new FakeElement("card-back"),
-    "card-neighbours": new FakeElement("card-neighbours"),
-    "reveal-card": new FakeElement("reveal-card"),
-    "card-rating": new FakeElement("card-rating"),
-    "card-progress": new FakeElement("card-progress"),
-    "card-summary": new FakeElement("card-summary"),
-    "card-back-list": new FakeElement("card-back-list"),
-    "start-card-review": new FakeElement("start-card-review"),
-  };
-  elements["reveal-card"].classList.add("hidden");
-  elements["card-rating"].classList.add("hidden");
-  elements["card-summary"].classList.add("hidden");
-  elements["card-back-list"].classList.add("hidden");
-  elements["card-session"].classList.add("hidden");
+function stagedElements(names = {}, rows = []) {
+  const elements = { layout: layout() };
+  elements["staged-list"] = new FakeElement("staged-list", {
+    dataset: { kpNames: JSON.stringify(names) },
+  });
+  elements["staged-empty"] = new FakeElement("staged-empty");
+  elements["suggestions-toggle"] = new FakeElement("suggestions-toggle");
+  elements["suggestions"] = new FakeElement("suggestions");
+  elements["suggestions"].classList.add("hidden");
+  elements["suggestion-list"] = new FakeElement("suggestion-list");
+  elements["suggestion-list"].queryAll = (selector) =>
+    selector === ".suggestion-row" ? rows : [];
+  elements["suggestions-empty"] = new FakeElement("suggestions-empty");
+  elements["suggestions-empty"].classList.add("hidden");
   return elements;
 }
 
-const DUE_ROWS = [
-  { item_type: "kp", item_id: "kp-1", direction: "", label: "正向卡", due_at: "2026-08-28" },
-  { item_type: "kp", item_id: "kp-2", direction: "reverse", label: "反向卡", due_at: "2026-08-28" },
-];
-
-test("card session reviews directional rows through the directional feedback path", async () => {
-  const calls = [];
-  const elements = reviewElements();
-  runWorkbench({
-    elements,
-    storage: new FakeStorage(),
-    fetch: (url, options) => {
-      calls.push({ url: String(url), body: options && options.body });
-      if (url.includes("/due")) return jsonResponse(DUE_ROWS);
-      if (url.endsWith("/kp/kp-1")) {
-        return jsonResponse({ kp: { kp_id: "kp-1", knowledge_item: "乘法规则", body: "两步相乘。" }, relations: [], neighbours: [] });
-      }
-      if (url.endsWith("/kp/kp-2")) {
-        return jsonResponse({ kp: { kp_id: "kp-2", knowledge_item: "加法规则", body: "两步相加。" }, relations: [], neighbours: [] });
-      }
-      return jsonResponse({});
-    },
-  });
-  assert.equal(elements["start-card-review"].classList.contains("hidden"), false);
-  elements["start-card-review"].click();
-  await flush();
-  // only the directional row enters the card session
-  assert.equal(elements["card-progress"]._textContent, "第 1 / 1 张");
-  assert.ok(elements["card-face"]._innerHTML.includes("两步相加。"));
-  assert.equal(elements["reveal-card"].disabled, false);
-  elements["reveal-card"].click();
-  await flush();
-  assert.ok(elements["card-back"]._innerHTML.includes("加法规则"));
-  assert.equal(elements["card-rating"].classList.contains("hidden"), false);
-  const ratingButton = new FakeElement("rate-4");
-  ratingButton.dataset.cardRating = "4";
-  ratingButton.closest = (selector) =>
-    selector === "[data-card-rating]" ? ratingButton : null;
-  elements["card-rating"].trigger("click", { target: ratingButton });
-  await flush();
-  const feedback = calls.find((call) => call.url.endsWith("/feedback"));
-  assert.deepEqual(JSON.parse(feedback.body), {
-    item_type: "kp", item_id: "kp-2", rating: 4, direction: "reverse",
-  });
-  assert.ok(elements["card-summary"]._textContent.includes("本轮卡片完成 1 张"));
-});
-
-test("card session resumes from tab-scoped state after refresh", async () => {
-  const elements = reviewElements();
+test("staged list renders the selection with names and removes rows in sync", () => {
+  const elements = stagedElements({ "kp-1": "数列极限", "kp-2": "导数定义" });
   const storage = new FakeStorage({
-    [`wb_card_session_alpha`]: JSON.stringify({
-      rows: DUE_ROWS, index: 1, done: 1,
-    }),
+    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
   });
-  runWorkbench({
-    elements,
-    storage,
-    fetch: (url) => {
-      if (url.endsWith("/kp/kp-2")) {
-        return jsonResponse({ kp: { kp_id: "kp-2", knowledge_item: "加法规则", body: "两步相加。" }, relations: [], neighbours: [] });
-      }
-      return jsonResponse({});
-    },
-  });
-  await flush();
-  assert.equal(elements["card-progress"]._textContent, "第 2 / 2 张 · 已评 1");
+  runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
+  assert.ok(elements["staged-list"]._innerHTML.includes("数列极限"));
+  assert.ok(elements["staged-list"]._innerHTML.includes("导数定义"));
+  assert.equal(elements["staged-empty"].classList.contains("hidden"), true);
+  const remove = new FakeElement("remove");
+  remove.dataset.kpId = "kp-1";
+  remove.closest = (selector) =>
+    selector === ".staged-remove" ? remove : null;
+  elements["staged-list"].trigger("click", { target: remove });
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
+  assert.ok(elements["staged-list"]._innerHTML.includes("导数定义"));
+  assert.equal(elements["staged-list"]._innerHTML.includes("数列极限"), false);
 });
 
-test("review page problem handoff stores scope and include id", () => {
-  const elements = reviewElements();
-  elements["review-content"] = new FakeElement("review-content");
-  const button = new FakeElement("practice-one");
-  button.dataset.includeId = "p-9";
-  button.dataset.kpIds = JSON.stringify(["kp-1"]);
-  button.closest = (selector) =>
-    selector === ".review-practice-problem" ? button : null;
+test("joining a suggestion stages it, hides its row, and lowers the count", () => {
+  const row1 = new FakeElement("row-1");
+  row1.dataset.kpId = "kp-1";
+  const row2 = new FakeElement("row-2");
+  row2.dataset.kpId = "kp-2";
+  const elements = stagedElements({ "kp-1": "数列极限", "kp-2": "导数定义" }, [row1, row2]);
   const storage = new FakeStorage();
-  const app = runWorkbench({
-    elements,
-    storage,
-    fetch: () => jsonResponse({}),
-  });
-  elements["review-content"].trigger("click", { target: button });
+  runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
+  assert.equal(elements["suggestions-toggle"]._textContent, "＋ 加今天要练的（2）");
+  const join = new FakeElement("join");
+  join.dataset.kpId = "kp-1";
+  join.closest = (selector) =>
+    selector === ".suggestion-join" ? join : null;
+  elements["suggestions"].trigger("click", { target: join });
   assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-1"]);
-  assert.deepEqual(JSON.parse(storage.getItem("wb_practice_include_alpha")), ["p-9"]);
-  assert.equal(app.window.location, "/w/alpha/practice");
+  assert.equal(row1.classList.contains("hidden"), true);
+  assert.equal(row2.classList.contains("hidden"), false);
+  assert.equal(elements["suggestions-toggle"]._textContent, "＋ 加今天要练的（1）");
+  assert.ok(elements["staged-list"]._innerHTML.includes("数列极限"));
+  assert.equal(elements["staged-empty"].classList.contains("hidden"), true);
 });
 
-test("review page without directional rows has no card entry", () => {
-  const elements = reviewElements();
-  delete elements["start-card-review"];
+test("the suggestion entry expands and collapses with honest empty state", () => {
+  const elements = stagedElements();
   runWorkbench({
     elements,
     storage: new FakeStorage(),
     fetch: () => jsonResponse({}),
   });
-  assert.equal(elements["card-session"].classList.contains("hidden"), true);
+  assert.equal(elements["suggestions-toggle"]._textContent, "＋ 加今天要练的");
+  assert.equal(elements["suggestions-empty"].classList.contains("hidden"), false);
+  elements["suggestions-toggle"].click();
+  assert.equal(elements["suggestions"].classList.contains("hidden"), false);
+  assert.equal(
+    elements["suggestions-toggle"].getAttribute("aria-expanded"), "true",
+  );
+  elements["suggestions-toggle"].click();
+  assert.equal(elements["suggestions"].classList.contains("hidden"), true);
+  assert.equal(
+    elements["suggestions-toggle"].getAttribute("aria-expanded"), "false",
+  );
 });
 
 function timeElements() {
-  const elements = reviewElements();
-  elements["time-view"] = new FakeElement("time-view");
+  const elements = {
+    layout: layout(),
+    "time-view": new FakeElement("time-view"),
+    "calendar-grid": new FakeElement("calendar-grid"),
+    "workload-bars": new FakeElement("workload-bars"),
+    "workload-prefill": new FakeElement("workload-prefill"),
+    "time-view-empty": new FakeElement("time-view-empty"),
+    "ai-input": new FakeElement("ai-input"),
+  };
   elements["time-view"].classList.add("hidden");
-  elements["calendar-grid"] = new FakeElement("calendar-grid");
-  elements["workload-bars"] = new FakeElement("workload-bars");
-  elements["workload-prefill"] = new FakeElement("workload-prefill");
   elements["workload-prefill"].classList.add("hidden");
-  elements["time-view-empty"] = new FakeElement("time-view-empty");
   elements["time-view-empty"].classList.add("hidden");
-  elements["ai-input"] = new FakeElement("ai-input");
   return elements;
 }
 
