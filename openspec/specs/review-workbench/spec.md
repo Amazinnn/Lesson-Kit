@@ -41,9 +41,8 @@ out: everything stays reachable, ordering only prioritizes pain points.
 
 The pull engine SHALL return problems linked to the requested knowledge points,
 ordered for weakness, with repeat practice in the same session de-prioritized.
-When durable problems are exhausted, it SHALL fall back to `gate_passed`
-candidates, and when both are exhausted it SHALL report the shortage per
-knowledge point instead of inventing content.
+When durable problems are exhausted it SHALL report the shortage per knowledge
+point instead of inventing content or falling back to candidate staging.
 
 #### Scenario: Pull problems for a weak knowledge point
 
@@ -53,7 +52,7 @@ knowledge point instead of inventing content.
 #### Scenario: Pool shortage is reported
 
 - **WHEN** a knowledge point has fewer durable problems than requested
-- **THEN** the response lists the shortfall per knowledge point and the UI offers the candidate-generation path instead of fabricating problems
+- **THEN** the response lists the shortfall per knowledge point and the UI points to the Check pipeline as the content path instead of fabricating problems
 
 ### Requirement: Practice session
 
@@ -282,7 +281,14 @@ The live graph model SHALL expose each knowledge point's formal-problem count an
 
 ### Requirement: Unified Agent data CLI
 
-The workbench SHALL expose JSON data commands for get, list, search, history, create, update, delete, current-state replacement, candidate gating, and candidate promotion across knowledge points, formal problems, candidate problems, and knowledge relations. Read operations SHALL perform zero writes. A formal problem SHALL be created only by promoting a candidate that has passed both existing gates.
+The workbench SHALL expose JSON data commands for get, list, search, history,
+create, update, delete, current-state replacement, candidate gating, and
+candidate promotion across knowledge points, formal problems, candidate
+problems, and knowledge relations. Read operations SHALL perform zero writes.
+Within this data CLI a formal problem SHALL be created only by promoting a
+candidate that has passed both existing gates. The candidate command family
+SHALL be retired (待退役): it receives no new capabilities, and the Check
+pipeline SHALL be the content path for adding formal problems.
 
 #### Scenario: Search without a write
 

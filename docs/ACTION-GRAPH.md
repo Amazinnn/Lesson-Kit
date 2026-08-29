@@ -56,7 +56,7 @@ flowchart LR
   subgraph BR[Agent 桥]
     CONV[对话轮次]
     SEL[replace_practice_selection]
-    CHK[Check 管线·已定义未实现]
+    CHK[Check 管线·已实现]
   end
   subgraph CLI[CLI 数据接口]
     Q[读]
@@ -72,7 +72,7 @@ flowchart LR
   K --> GSTATE --> DB
   A --> CONV
   CONV -->|明确练习意图| SEL --> P
-  CHK -.生成→校验→直接入池.-> ING --> BK --> DB
+  CHK ==>|生成→校验→直接入池·批次 id| ING --> BK --> DB
   CLI --> DB & FS
   T -->|只读| DB
 ```
@@ -81,8 +81,8 @@ flowchart LR
 
 ① 本图谱 v2（完成）→ ② 讲解/诊断彻底移除（完成，remove-explain-diagnose）→
 ③ 目标补齐（完成，complete-goals-loop）→
-④ Check 管线立项（定义升级：生成→校验→直接入正式池、无候选中间态、
-Agent 可直跑 ingest、候选组织并入校验环节；名字 generate→Check 待立项定）。
+④ Check 管线（完成，introduce-check-pipeline）：定名 Check、批次 id+
+整批回滚、桥 check_ingest 动作、candidate_problems 退役。
 
 ## 变更留痕
 
@@ -91,3 +91,8 @@ Agent 可直跑 ingest、候选组织并入校验环节；名字 generate→Chec
   （问卷 B1）、意外分支层（L4，回应所有者"不许想当然"要求）、铁律四条、队列四项。
 - 2026-08-29 目标生命周期与助填动作落地（complete-goals-loop，队列③）：goals CLI 上线。
 - 2026-08-29 讲解/诊断移除落地（队列②）：任务机退役，对话桥保留，各层同步。
+- 2026-08-29 Check 管线落地（introduce-check-pipeline，队列④）：定名 Check（专题 22）；
+  三配方 apply 记批次 id+行戳记+manifest 快照+ingest_batches 登记；
+  `ingest rollback --batch`、桥 `check_ingest` 动作、结果卡回滚按钮、
+  `POST /ingest/rollback` 上线；candidate_problems 读路径退役（pull/mastery/hub
+  停读，表与 data candidate 子命令标**待退役**）；L1/L2/L3/L4 同步。

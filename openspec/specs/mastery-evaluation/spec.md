@@ -43,7 +43,7 @@ The `v0` evaluator SHALL treat automatic correct/wrong/stuck results as strong e
 
 ### Requirement: Conservative knowledge-point propagation
 
-A decisive failure from any linked formal problem SHALL support `needs_work` for every linked knowledge point. A knowledge point SHALL require qualifying positive evidence from two distinct linked problems across dates for `recently_stable`. If it has only one linked problem, stability SHALL additionally require a direct knowledge-point review on a different date; if it has no linked problem, it SHALL remain `evidence_insufficient`. Gate-passed candidate attempts MAY support knowledge-point evidence but SHALL NOT appear as formal-problem outputs.
+A decisive failure from any linked formal problem SHALL support `needs_work` for every linked knowledge point. A knowledge point SHALL require qualifying positive evidence from two distinct linked problems across dates for `recently_stable`. If it has only one linked problem, stability SHALL additionally require a direct knowledge-point review on a different date; if it has no linked problem, it SHALL remain `evidence_insufficient`. Candidate rows are retired: candidate attempts SHALL NOT contribute evidence to any evaluation.
 
 #### Scenario: Failure propagates to all owners
 
@@ -62,5 +62,6 @@ A decisive failure from any linked formal problem SHALL support `needs_work` for
 
 #### Scenario: Candidate evidence stays knowledge-point-only
 
-- **WHEN** a gate-passed candidate attempt contributes evidence
-- **THEN** it may affect linked knowledge-point evaluation but no formal-problem result is emitted for the candidate
+- **WHEN** a gate-passed candidate attempt exists for a linked knowledge point
+- **THEN** it contributes no evidence at all (candidate rows are retired): it cannot affect knowledge-point evaluation and no formal-problem result is emitted for the candidate
+

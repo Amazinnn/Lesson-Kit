@@ -1,5 +1,10 @@
 # 2026-08-29 Check 管线立项交接（队列④）
 
+> **✅ 已交付（2026-08-29/30，introduce-check-pipeline）**：定名 Check（专题 22）、
+> 批次 id+整批回滚、桥 check_ingest 动作、candidate_problems 退役全部落地；
+> 走查与归档完成。详见 `changelog/2026-08-29-introduce-check-pipeline.md`。
+> 本文档以下内容保留为立项时的开场材料。
+
 > 给下一对话的开场材料。读完本份 + `AGENTS.md` + `docs/ACTION-GRAPH.md`
 > （README 队列 + L3 动作登记）即可立项。上一阶段交接见
 > `2026-08-29-practice-loop-ux-completion-handoff.md`（含当天全景）。
