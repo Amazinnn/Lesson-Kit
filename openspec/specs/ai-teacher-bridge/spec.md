@@ -8,122 +8,36 @@ are validated before their results are trusted.
 
 The bridge SHALL read provider definitions (command, arguments, working
 directory mode, timeout) from a config file, and the workbench SHALL expose
-provider configuration as a CLI operation.
+provider configuration as a CLI operation. Configured values serve as
+conversation-provider overrides (arguments, model, timeout) for the locally
+discovered agent CLIs.
 
 #### Scenario: Configure a provider
 
 - **WHEN** the user runs `wb bridge add <provider> --command <cmd>`
-- **THEN** the provider is written to the bridge config and listed as available for AI operations
-
-### Requirement: Task lifecycle
-
-An AI operation SHALL be a task with a durable state machine
-(queued, running, done, failed), a task file describing the operation and its
-context, a result file, and a status file. Status SHALL be queryable by the web
-shell and the CLI while the task runs.
-
-#### Scenario: Start and poll an explain task
-
-- **WHEN** the user requests an explanation for a problem
-- **THEN** a task is created in queued state and its status can be polled until it reaches done or failed
-
-#### Scenario: Task failure is observable
-
-- **WHEN** the external CLI exits non-zero or times out
-- **THEN** the task transitions to failed and the failure reason is queryable and shown in the UI
-
-### Requirement: Output-contract validation
-
-The bridge SHALL NOT trust raw model output. A completed task SHALL be
-validated against its output contract — result file written, required sections
-present, source reference present, parseable Markdown — before it transitions
-to done. Validation failure SHALL produce a failed state with the reason.
-
-#### Scenario: Output missing a required section
-
-- **WHEN** the agent result lacks a required section such as the source reference
-- **THEN** the task fails with a reason naming the missing section and the result is not shown as authoritative
-
-### Requirement: Explain operation
-
-The v1 bridge SHALL support exactly one operation: `explain`. The task context
-SHALL include the problem text, its solution, its knowledge-point links, the
-learner's note, and current weak signals; the task SHALL be executed with the
-workspace folder as working directory and its result SHALL be written under the
-workspace's intermediate directory.
-
-#### Scenario: Explain a problem the learner got wrong
-
-- **WHEN** the learner requests an explanation for a wrong problem with a note about the sticking point
-- **THEN** the task context includes problem, solution, linked knowledge points, the note, and weak signals, and the validated result is stored under the workspace intermediate directory and shown in the UI
-
-### Requirement: Teacher conduct contract
-
-Every explain task SHALL carry the teacher conduct rules in its instruction
-text: establish what the learner already knows before explaining, explain in
-focused and concise chunks, verify understanding with a question, never guess —
-verify against the workspace pool and the source material — and cite the source
-location. The conduct rules are part of the task contract, not of the
-workbench's own logic.
-
-#### Scenario: Task instruction includes conduct rules
-
-- **WHEN** a task instruction file is generated for an explain operation
-- **THEN** it contains the conduct rules (baseline question, concise explanation, comprehension check, no-guessing with source citation)
+- **THEN** the provider is written to the bridge config and applies to
+  conversations that use that provider
 
 ### Requirement: Workbench operates without AI
 
 The workbench SHALL be fully functional with no provider configured and no AI
-operation ever run: registry, weak list, pull, practice, feedback, and
+conversation ever started: registry, weak list, pull, practice, feedback, and
 scheduling SHALL work identically with or without the bridge.
 
 #### Scenario: Practice without any provider
 
 - **WHEN** no bridge provider is configured and the learner practices problems
-- **THEN** every non-AI feature works unchanged and AI actions are shown as unavailable rather than broken
-
-### Requirement: Diagnose operation
-
-The bridge SHALL support a second operation, `diagnose`, in addition to
-`explain`. A diagnose task SHALL include the learner's own answer text and any
-step-stuck marking in its context, and its teacher conduct SHALL locate the
-specific error or stuck point before explaining, give a next-step hint rather
-than the full solution, and end with a comprehension question. The diagnose
-output contract SHALL require the sections 定位 (location), 提示 (hint), 溯源
-(source reference), and 追问 (follow-up question).
-
-#### Scenario: Diagnose a wrong design
-
-- **WHEN** the learner pastes their own design, marks the result wrong, and starts a diagnose task
-- **THEN** the task context includes the design text and the marked step, and the validated result contains all four required sections with the hint section stopping short of the full solution
-
-#### Scenario: Diagnose output missing a section
-
-- **WHEN** a diagnose result lacks the 溯源 section
-- **THEN** the task fails contract validation and the result is not shown as authoritative
-
-### Requirement: Bridge artifact locations
-
-Task working files SHALL live under the workspace's `.lessonkit/jobs/<job-id>/`
-directory (task, instruction, status, and log files) and SHALL be excluded from
-version control. Validated explain and diagnose results SHALL be written under
-the workspace's `.lessonkit/explain/{course}/{chapter}/{item_id}.md` and SHALL
-be tracked in version control as learning assets.
-
-#### Scenario: Explain result lands in the explain area
-
-- **WHEN** an explain task passes contract validation
-- **THEN** the result file is written to `.lessonkit/explain/{course}/{chapter}/{item_id}.md` and the task working files remain under `.lessonkit/jobs/<job-id>/` outside version control
+- **THEN** every non-AI feature works unchanged and AI conversations are shown as unavailable rather than broken
 
 ### Requirement: CLI is a data interface, not a teacher
 
 The super CLI SHALL expose only data operations — query pool content, pull
-problems, record attempts and feedback, start bridge tasks, read task status —
-and SHALL carry no teaching semantics. Teaching behavior (how to teach, when to
-ask, how to close a topic) SHALL live in the teaching layer (skills and the
-teacher conduct contract), never in the CLI. The same teaching capability SHALL
-be reachable through the web shell, whose AI panel is a thin conversation
-surface over the same bridge tasks.
+problems, record attempts and feedback, read workspace state — and SHALL carry
+no teaching semantics. Teaching behavior (how to teach, when to ask, how to
+close a topic) SHALL live in the teaching layer (skills and teaching
+contracts), never in the CLI. The same teaching capability SHALL be reachable
+through the web shell, whose AI panel is a thin conversation surface over the
+same bridge conversations.
 
 #### Scenario: CLI records data without pedagogy
 
@@ -220,45 +134,4 @@ conversation.
 #### Scenario: Explicit replacement
 - **WHEN** a turn contains practice intent and valid knowledge-point ids
 - **THEN** the client replaces the current selection exactly once
-
-### Requirement: Practice-page one-click tasks
-
-The practice page SHALL offer one-click explain (讲解) and diagnose (诊断)
-task entries for the current problem item. A diagnose entry SHALL carry the
-learner's own answer text for that item as task context and SHALL prompt the
-learner to answer first when no answer exists. While a task runs its status
-SHALL be visible in the practice UI; a validated result SHALL be rendered in
-the practice UI in its contracted sections, and a failed task SHALL show its
-failure reason. With no provider configured the entries SHALL be shown as
-unavailable rather than broken, and every non-AI practice feature SHALL keep
-working. Card items SHALL NOT offer these entries (they are keyed by problem
-identity).
-
-#### Scenario: Diagnose with the learner's own answer
-
-- **WHEN** the learner answers a problem wrongly and starts a diagnose task
-  from the practice page
-- **THEN** the task context includes that answer text and the validated
-  result renders with the 定位 / 提示 / 溯源 / 追问 sections in the practice UI
-
-#### Scenario: Explain result shown inline
-
-- **WHEN** an explain task started from the practice page passes contract
-  validation
-- **THEN** the result is rendered in the practice UI and remains retrievable
-  again for the same problem
-
-#### Scenario: Task fails
-
-- **WHEN** a task started from the practice page fails contract validation or
-  the provider errors
-- **THEN** the practice UI shows the failure reason and the result is not
-  shown as authoritative
-
-#### Scenario: No provider configured
-
-- **WHEN** no bridge provider is available and the learner opens the practice
-  page
-- **THEN** the explain and diagnose entries are visibly unavailable while all
-  non-AI practice flows work unchanged
 
