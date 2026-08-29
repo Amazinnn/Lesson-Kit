@@ -168,12 +168,87 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         pool_schema.ensure_workbench_schema(self.conn)
         state = self.conn.execute(
             "SELECT state FROM learning_current_state WHERE item_type=? AND item_id=?",
-            ("problem", "dmath-ch06-prob-001"),
+            ("problem", "dmath-ch06-prob-001",),
         ).fetchone()
         self.assertEqual(state[0], "needs_work")
         self.assertEqual(
             self.conn.execute("SELECT COUNT(*) FROM feedback_events").fetchone()[0], 1
         )
+
+    def test_migration_creates_ingest_batch_schema(self):
+        pool_schema.ensure_workbench_schema(self.conn)
+        tables = self.table_names()
+        self.assertIn("ingest_batches", tables)
+        self.assertIn("ingest_batch_id", self.columns("problems"))
+        self.assertIn("ingest_batch_id", self.columns("flash_cards"))
+        self.conn.execute(
+            "INSERT INTO ingest_batches (batch_id, kind, manifest_path, counts_json, "
+            "backup_path, applied_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
+            ("batch-001", "flash-card-patch", "pool/ingest/batch-001.json", "{}", "b.db"),
+        )
+        self.conn.commit()
+        self.assertEqual(
+            self.conn.execute("SELECT kind FROM ingest_batches WHERE batch_id=?",
+                              ("batch-001",)).fetchone()[0],
+            "flash-card-patch",
+        )
+
+    def test_migration_widens_content_sequences_for_batch(self):
+        self.conn.execute(
+            """
+            CREATE TABLE content_sequences (
+                scope       TEXT NOT NULL,
+                entity_type TEXT NOT NULL CHECK (
+                    entity_type IN ('kp', 'problem', 'candidate', 'relation')
+                ),
+                next_value  INTEGER NOT NULL CHECK (next_value > 0),
+                PRIMARY KEY (scope, entity_type)
+            )
+            """
+        )
+        self.conn.execute(
+            "INSERT INTO content_sequences VALUES (?, ?, ?)",
+            ("dmath-ch06", "problem", 7),
+        )
+        self.conn.commit()
+        pool_schema.ensure_workbench_schema(self.conn)
+        self.conn.execute(
+            "INSERT INTO content_sequences VALUES (?, ?, ?)", ("pool", "batch", 1)
+        )
+        self.conn.commit()
+        self.assertEqual(
+            self.conn.execute(
+                "SELECT next_value FROM content_sequences "
+                "WHERE scope='dmath-ch06' AND entity_type='problem'"
+            ).fetchone()[0],
+            7,
+        )
+
+    def test_migration_adds_batch_column_to_existing_flash_cards(self):
+        self.conn.execute(
+            """
+            CREATE TABLE flash_cards (
+                card_id         TEXT PRIMARY KEY,
+                kp_id           TEXT NOT NULL,
+                front           TEXT NOT NULL,
+                back            TEXT NOT NULL,
+                source_evidence TEXT NOT NULL
+            )
+            """
+        )
+        self.conn.execute(
+            "INSERT INTO flash_cards VALUES (?, ?, ?, ?, ?)",
+            ("dmath-ch06-fc-001", "dmath-ch06-kp-001", "front", "back", "src"),
+        )
+        self.conn.commit()
+        pool_schema.ensure_workbench_schema(self.conn)
+        self.assertIn("ingest_batch_id", self.columns("flash_cards"))
+        row = self.conn.execute(
+            "SELECT card_id, ingest_batch_id FROM flash_cards WHERE card_id=?",
+            ("dmath-ch06-fc-001",),
+        ).fetchone()
+        self.assertEqual(row[0], "dmath-ch06-fc-001")
+        self.assertIsNone(row[1])
 
 
 if __name__ == "__main__":
