@@ -9,7 +9,7 @@
 | `knowledge_points` | 知识点：条目名/正文/类型/重要性 | 抽取管线（一次性）；图谱编辑（正文） | 拉取、图谱、覆盖审计 |
 | `knowledge_relations` | KP 关系（类型/方向/强度） | 抽取管线 | 图谱布局 |
 | `problems` | 正式题目（题干/解答/kp_ids/micro_quiz） | 门禁配方 ingest | 拉取、讲解〔待移除〕、练习 |
-| `candidate_problems` | 抽取管线暂存题（**现空**；Check 立项时定去留） | 抽取管线 | （无现行消费者） |
+| `candidate_problems` | **已物理移除**（2026-08-30 remove-candidate-store：表 DROP，pipeline 侧脚本成为无调用方退役物） | —— | —— |
 | `flash_cards` | 闪卡五字段（card_id/kp_id/front/back/source_evidence） | 门禁配方 ingest | 拉卡、收束页 |
 | `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点） | `POST /practice`、CLI `practice` | 诊断上下文〔待移除〕、查询 |
 | `feedback_events` | 自评事件（评分/备注，含 item_type=card） | `POST /feedback`（四件套之一） | 查询、信号 |

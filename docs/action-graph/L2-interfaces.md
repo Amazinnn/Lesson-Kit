@@ -33,7 +33,7 @@
 | `pull` | 读（按 KP 拉题） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
-| `data` | 读 + **显式变更**（JSON 直改内容；candidate 子命令**待退役**） | Agent |
+| `data` | 读 + **显式变更**（JSON 直改内容；candidate 实体与 gate/promote 动作已物理移除，2026-08-30） | Agent |
 | `bridge add` | 配置任务 provider | 人 |
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback` 七子链） | 内容治理唯一写池通道（apply 记批次；rollback 按批次撤销） | 双 |

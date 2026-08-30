@@ -83,3 +83,11 @@
   三配方 apply 记批次 id+行戳记；`ingest rollback` + 桥 `check_ingest` 动作 +
   结果卡回滚按钮上线；candidate_problems 读路径退役（pull/mastery/hub 停读，
   表与 data candidate 子命令标**待退役**）。
+- 2026-08-30 加固批次 #39–#52 合并（HTTP 边界 400/415/遍历修复、对话重启恢复、
+  学习写入事务化、目标库原子写、API 整数校验、前端损坏状态恢复等）。
+- 2026-08-30 出题链修复（conv-023 回归）：桥解析改为全区块按意图匹配；
+  check_intent 正则补自然措辞；被忽略的动作区块向下一轮上下文披露
+  「未写入任何内容」（openspec：disclose-ignored-action-blocks）。
+- 2026-08-30 candidate 物理退役落地（remove-candidate-store）：`wb data` 的
+  candidate 实体与 gate/promote 动作下线、候选证据分支删除、candidate_problems/
+  candidate_attempts 建表停止且真实池 DROP（先备份）；learner_signals 保留为核心。

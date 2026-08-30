@@ -5,7 +5,8 @@
 > 本文件是人话版摘要 + 边界 + 验收标准。
 
 > **当前实现快照（2026-08-30）**：题池已有 31 个知识点；练习只读取正式
-> `problems`，候选表保留为兼容维护面；旧 explain/diagnose 任务桥已退役，
+> `problems`，候选机制已物理移除（表 DROP、CLI 无 candidate 实体，Check ingest
+> 是 Agent 内容唯一通道）；旧 explain/diagnose 任务桥已退役，
 > Provider 原生自由对话与带意图门的 `check_ingest` 动作是当前 Bridge；
 > 闪卡、微题、目标生命周期、日历/任务量和整批回滚均已进入实现。
 > 下方带日期的小节保留当时的需求与决策历史，不能覆盖这份当前快照。

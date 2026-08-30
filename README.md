@@ -67,9 +67,6 @@ directory, so run them from the repository root.
 - `knowledge_relations`: audited point-to-point Course Learning Network edges.
 - `problems`: durable practice problems. `source_kind` distinguishes textbook,
   quiz, midterm, final, makeup, and other problem pools.
-- `candidate_problems`: source-grounded practice candidates awaiting or passing
-  the independent structure and semantic audit gates.
-- `candidate_attempts`: append-only practice history for gate-passed candidates.
 - `learner_signals`: current weak-node, confusion, prerequisite, transfer, and
   relation-gap signals used by Focus Map.
 - `problem_progress`: current durable problem status.
@@ -126,10 +123,6 @@ python pool/scripts/migrate-network.py --db pool/dmath.db
 python pipeline/scripts/insert-knowledge-points.py --db pool/dmath.db --manifest <pool-insert-manifest.json>
 python pipeline/scripts/insert-knowledge-relations.py --db pool/dmath.db --manifest <relation-insert-manifest.json>
 python pipeline/scripts/insert-problems.py --db pool/dmath.db --manifest <problem-insert-manifest.json>
-python pipeline/scripts/insert-candidates.py --db pool/dmath.db --manifest <candidate-insert-manifest.json>
-python pipeline/scripts/gate-candidates.py --db pool/dmath.db --audit <candidate-audit-report.json>
-python pool/scripts/practice-candidates.py --db pool/dmath.db --candidate dmath-ch06-cand-001
-python pipeline/scripts/import-candidates.py --db pool/dmath.db --candidate dmath-ch06-cand-001
 python pipeline/scripts/validate-pool.py --db pool/dmath.db --course dmath --chapter ch06
 python pool/scripts/query-pool.py --db pool/dmath.db --chapter dmath-ch06 --view problem-set --source-kind textbook
 python pool/scripts/query-focus-map.py --db pool/dmath.db --course dmath --chapter ch06 --seed dmath-ch06-kp-014 --target dmath-ch06-kp-001
@@ -154,8 +147,9 @@ Pre-release. Extraction and legacy rendered views remain available, while the
 active product is the three-page local workbench (practice, knowledge points,
 knowledge graph) with goals/calendar workload, governed flash-card and
 micro-quiz ingestion, transactional batch rollback, and provider-native Agent
-conversation. Candidate reads have retired from active practice but their
-storage and maintenance commands remain for compatibility.
+conversation. The candidate store was physically removed (2026-08-30): the
+Check ingest contract is the only Agent content channel, so the candidate
+pipeline scripts below are retired, caller-less artifacts.
 
 ## License
 

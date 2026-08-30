@@ -10,7 +10,6 @@ or view, then load only the files named by that path.
 | Extract knowledge from a chapter into SQLite | `pipeline/commands/extract-chapter.md` |
 | Extract durable problems into SQLite | `pipeline/commands/extract-problems.md` |
 | Generate governed flash cards or micro quizzes | `wb ingest` or an explicit Agent `check_ingest` action |
-| Inspect or maintain legacy candidate records | `wb data <workspace> ... candidate` |
 | Render a knowledge guide from the pool | `pool/scripts/print-graph.py` plus `docs/design/print-graph-design.md` |
 | Render a practice problem set | `views/problem-set/command.md` |
 
@@ -19,11 +18,10 @@ or view, then load only the files named by that path.
 - One course database: `pool/{course}.db`.
 - Chapter filtering uses full prefixes such as `dmath-ch06`.
 - Durable problems live in `problems`.
-- The old `candidate_problems` table remains for compatibility and maintenance,
-  but active practice reads formal `problems` only.
-- Agent-created flash cards and micro quizzes enter through the Check ingest
-  contract: deterministic gate, batch-recorded transaction, and whole-batch
-  rollback. They are not silently trusted from conversation text.
+- The candidate store was physically removed (2026-08-30): Agent-created content
+  has exactly one channel, the Check ingest contract — deterministic gate,
+  batch-recorded transaction, and whole-batch rollback. Nothing is silently
+  trusted from conversation text.
 - `questions` is a legacy companion-check table, not the durable problem pool.
 - Zip files are external handoff artifacts. Git is the version source of truth.
 

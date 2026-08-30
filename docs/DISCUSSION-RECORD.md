@@ -534,3 +534,40 @@ agent-chain-questionnaire.md）四答定案：
 首次落地，定稿于 harden-check-agent-chain 的 design.md。
 
 交付：OpenSpec change `harden-check-agent-chain`。
+
+## 专题 24：加固批次评审、出题链验收修复与候选物理退役（2026-08-30）
+
+**一、14 分支加固批次（#39–#52）评审合并。** 远端出现所有者侧批量产生的
+14 个开放 PR（两波创建、单 commit、自称"14 分支集成 372 项测试"）。逐个
+diff 评审 + 本地按合并序积分跑基线后按序 rebase-merge，全部零冲突。评审
+确认非过度防御：坏 JSON/坏参数当时会**无 HTTP 响应断连**（#41/#49 是真修
+复）；`kp_ids` 全库规范 JSON（#39 收紧安全）；前端全部 POST 自带
+Content-Type（415 门无伤）；#52 回滚加锁比 spec 更严谨；#43 将
+next_free_ids 语义改为章节前缀范围（Check 链兼容）。#45 起 CI 强制
+openspec strict + compileall + 双 guard。
+
+**二、所有者验收第一击：出题链断裂（conv-023）。** 真实 provider（Claude）
+下说「给知识点补两张闪卡」：回复带了动作区块但无结果卡片、零写入，Agent
+在正文里两轮虚构「已写入」。回放定位三缺陷并修复（openspec:
+disclose-ignored-action-blocks）：解析器只认第一个动作区块（多区块时
+manifest 被遮蔽）；check_intent 正则不认「补两张闪卡」；忽略无声使幻觉申报
+成为可能。修复后：全区块按意图匹配、自然措辞可触发、被忽略区块向下一轮
+上下文披露「未写入任何内容」。
+
+**三、候选机制物理退役（remove-candidate-store）。** 专题 22 定的「待退役」
+观察期结束、无任何消费者，所有者点名执行：`wb data` candidate 实体与
+gate/promote 动作下线、候选证据分支删除、两表停止创建且真实池 DROP（先整
+池备份）。learner_signals 确认为核心保留（codex lane 曾误将其兼容入口掏空，
+已修）。ADR 0008 标 Superseded。执行插曲：codex sub-agent 中途耗尽用量限额，
+按「核对残留再接手」纪律人工收尾。
+
+**四、方向拷问（grill-me）。** 逐分支定案：①验收先行（重启 3081 走四步）；
+②综合题配方 × 真题拟合**联合立项**、等 Check 首期一轮真实使用后启动（依据：
+8-27 反对 AI 大题三理由中幻觉已被门禁治理，难度/结构正是拟合所供；语料已
+入池 source_kind 区分；ADR 0018 目标=归纳/迁移/推广变体）；③轻量收尾窗口
+= 界面闭环（视验收）/codex 延迟治理（视验收）/候选 DROP（本轮已做）；cloze
+不进窗口；④教师记忆消费端保持机会主义（考证：单条目史可达、语料级不可达、
+零自动注入）；⑤难度评价需跨题型统一体系，具体算法排前端设计之后（模块化
+可插拔）。新挂名登记：「真题拟合」（并入联合立项）、「双向闪卡」（语言学习
+形态）。全部留痕于 FUTURE-DEVELOPMENT-NOTES「方向拷问结论」与
+PENDING-DEFINITIONS。
