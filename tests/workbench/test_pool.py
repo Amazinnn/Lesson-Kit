@@ -146,6 +146,53 @@ class PoolTests(unittest.TestCase):
         problems = self.pool.problems_for_kps(["dmath-ch06-kp-002"])
         self.assertEqual([p["problem_id"] for p in problems], ["dmath-ch06-prob-002"])
 
+    def test_problems_for_multiple_kps_applies_source_kind_to_the_whole_scope(self):
+        conn = self.pool.connect()
+        conn.execute(
+            "UPDATE problems SET source_kind='quiz' WHERE problem_id=?",
+            ("dmath-ch06-prob-001",),
+        )
+        conn.execute(
+            "UPDATE problems SET source_kind='final' WHERE problem_id=?",
+            ("dmath-ch06-prob-002",),
+        )
+        conn.commit()
+
+        problems = self.pool.problems_for_kps(
+            ["dmath-ch06-kp-001", "dmath-ch06-kp-002"], "final"
+        )
+
+        self.assertEqual(
+            [problem["problem_id"] for problem in problems],
+            ["dmath-ch06-prob-002"],
+        )
+
+    def test_problems_for_kps_uses_exact_json_membership(self):
+        conn = self.pool.connect()
+        conn.execute(
+            "INSERT INTO knowledge_points"
+            " (kp_id, knowledge_item, knowledge_type, importance)"
+            " VALUES (?, ?, ?, ?)",
+            ("dmath-ch06-kp-0020", "prefix collision", "concept", "supporting"),
+        )
+        conn.execute(
+            "INSERT INTO problems"
+            " (problem_id, kp_ids, problem_text, solution, problem_type, source_kind)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "dmath-ch06-prob-020", '["dmath-ch06-kp-0020"]', "prefix",
+                "solution", "short-answer", "textbook",
+            ),
+        )
+        conn.commit()
+
+        problems = self.pool.problems_for_kps(["dmath-ch06-kp-002"])
+
+        self.assertNotIn(
+            "dmath-ch06-prob-020",
+            [problem["problem_id"] for problem in problems],
+        )
+
     def test_problem_detail(self):
         problem = self.pool.problem("dmath-ch06-prob-001")
         self.assertEqual(problem["problem_id"], "dmath-ch06-prob-001")

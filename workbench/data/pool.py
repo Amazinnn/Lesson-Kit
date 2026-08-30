@@ -65,14 +65,18 @@ class Pool:
 
     def problems_for_kps(self, kp_ids, source_kind=None):
         conn = self.connect()
-        sql = "SELECT * FROM problems WHERE "
-        sql += " OR ".join("kp_ids LIKE ?" for _ in kp_ids)
-        params = ["%" + kp_id + "%" for kp_id in kp_ids]
+        sql = "SELECT * FROM problems WHERE ("
+        sql += " OR ".join("kp_ids LIKE ?" for _ in kp_ids) + ")"
+        params = [f'%"{kp_id}"%' for kp_id in kp_ids]
         if source_kind:
             sql += " AND source_kind=?"
             params.append(source_kind)
         rows = conn.execute(sql + " ORDER BY problem_id", params).fetchall()
-        return [self._problem_row(r) for r in rows]
+        requested = set(kp_ids)
+        return [
+            problem for problem in (self._problem_row(row) for row in rows)
+            if requested.intersection(problem["kp_ids"])
+        ]
 
     def problems_all(self):
         rows = self.connect().execute(
