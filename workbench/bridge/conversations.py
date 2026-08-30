@@ -461,26 +461,31 @@ def _extract_action(answer, context):
             action = {"type": raw["type"], "kp_ids": ids}
     elif raw.get("type") == "prefill_goal_form" and context.get("goal_intent"):
         action = _clean_goal_form_action(raw)
-    elif raw.get("type") == "check_ingest" and context.get("check_intent"):
-        manifest = raw.get("manifest")
-        if not isinstance(manifest, dict):
-            action = {"type": "check_ingest", "error": "manifest must be an object"}
-        elif manifest.get("kind") not in {"flash-card-patch", "micro-quiz-patch"}:
-            action = {
-                "type": "check_ingest",
-                "error": "manifest kind must be flash-card-patch or micro-quiz-patch",
-            }
-        elif not isinstance(manifest.get("items"), list) or not manifest["items"]:
-            action = {
-                "type": "check_ingest",
-                "error": "manifest items must be a non-empty list",
-            }
-        else:
-            action = {"type": "check_ingest", "manifest": manifest}
+    elif context.get("check_intent") and (
+        raw.get("type") == "check_ingest"
+        or ("type" not in raw and raw.get("kind") in {"flash-card-patch", "micro-quiz-patch"})
+    ):
+        # Agents sometimes emit the bare manifest without the action wrapper;
+        # under content-generation intent both forms are accepted.
+        manifest = raw.get("manifest") if raw.get("type") == "check_ingest" else raw
+        action = _clean_check_ingest_action(manifest)
     if action is None:
         return answer, None
     cleaned = (answer[:match.start()] + answer[match.end():]).strip()
     return cleaned, action
+
+
+def _clean_check_ingest_action(manifest):
+    if not isinstance(manifest, dict):
+        return {"type": "check_ingest", "error": "manifest must be an object"}
+    if manifest.get("kind") not in {"flash-card-patch", "micro-quiz-patch"}:
+        return {
+            "type": "check_ingest",
+            "error": "manifest kind must be flash-card-patch or micro-quiz-patch",
+        }
+    if not isinstance(manifest.get("items"), list) or not manifest["items"]:
+        return {"type": "check_ingest", "error": "manifest items must be a non-empty list"}
+    return {"type": "check_ingest", "manifest": manifest}
 
 
 def _clean_goal_form_action(raw):

@@ -182,7 +182,12 @@ conversation mirror SHALL carry the check ingest action and its outcome so
 the result card is restored when the conversation is re-rendered. Ordinary
 conversation without content-generation intent SHALL NOT trigger the action,
 and a malformed `check_ingest` block under content-generation intent SHALL be
-surfaced as an explicit error rather than silently dropped.
+surfaced as an explicit error rather than silently dropped. When a new turn
+starts in a conversation whose previous turn carried a check ingest action,
+the server-side provider context SHALL carry that action's outcome — a batch
+confirmation on success, or the itemized rejection reasons on failure — so
+the agent can correct a rejected manifest or avoid resubmitting applied
+content.
 
 #### Scenario: Conversation request produces cards
 
@@ -216,4 +221,18 @@ surfaced as an explicit error rather than silently dropped.
   block that is not valid JSON or does not satisfy the manifest structure
 - **THEN** the conversation flow shows an explicit error for the block instead
   of silently dropping it
+
+#### Scenario: Rejected manifest is correctable
+
+- **WHEN** a previous turn's check ingest action was rejected and the next
+  turn asks the agent to fix and resubmit
+- **THEN** the provider context carries the itemized rejection reasons and a
+  corrected manifest is gated and applied anew
+
+#### Scenario: Applied content is not resubmitted
+
+- **WHEN** a previous turn's check ingest action applied successfully and a
+  new turn starts
+- **THEN** the provider context carries the batch confirmation so the agent
+  does not resubmit the same content
 
