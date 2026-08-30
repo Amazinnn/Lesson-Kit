@@ -756,6 +756,16 @@ class BatchRollbackTests(unittest.TestCase):
             (problem_id,),
         )
         conn.execute(
+            "CREATE TABLE learning_current_state ("
+            "item_type TEXT NOT NULL, item_id TEXT NOT NULL, state TEXT NOT NULL, "
+            "PRIMARY KEY (item_type, item_id))"
+        )
+        conn.execute(
+            "INSERT INTO learning_current_state (item_type, item_id, state)"
+            " VALUES ('problem', ?, 'review')",
+            (problem_id,),
+        )
+        conn.execute(
             "INSERT INTO learner_signals VALUES ('signal-1', 'problem', ?)",
             (problem_id,),
         )
@@ -768,7 +778,7 @@ class BatchRollbackTests(unittest.TestCase):
         message = str(raised.exception)
         for table in (
                 "problem_attempts", "problem_progress", "feedback_events",
-                "review_schedule", "learner_signals"):
+                "review_schedule", "learning_current_state", "learner_signals"):
             self.assertIn(table, message)
         conn = sqlite3.connect(self.db_path)
         try:

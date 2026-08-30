@@ -488,6 +488,7 @@ def rollback_batch(db_path, batch_id, backup_path=None):
     database = Path(db_path)
     conn = sqlite3.connect(database)
     try:
+        conn.execute("BEGIN IMMEDIATE")
         batch = conn.execute(
             "SELECT kind, rolled_back_at FROM ingest_batches WHERE batch_id=?",
             (batch_id,),
@@ -507,7 +508,6 @@ def rollback_batch(db_path, batch_id, backup_path=None):
         if backup.exists():
             raise FileExistsError(f"recoverable copy already exists: {backup}")
         _backup_database(database, backup)
-        conn.execute("BEGIN IMMEDIATE")
         table = "flash_cards" if batch[0] == FLASH_CARD_KIND else "problems"
         cursor = conn.execute(
             f"DELETE FROM {table} WHERE ingest_batch_id=?", (batch_id,),
@@ -549,6 +549,11 @@ def _rollback_blockers(conn, batch_id):
          "LEFT JOIN flash_cards c ON r.item_type='card' AND c.card_id=r.item_id "
          "WHERE p.ingest_batch_id=? OR c.ingest_batch_id=?",
          (batch_id, batch_id)),
+        ("learning_current_state",
+         "SELECT DISTINCT s.item_type, s.item_id FROM learning_current_state s "
+         "JOIN problems p ON s.item_type='problem' AND p.problem_id=s.item_id "
+         "WHERE p.ingest_batch_id=?",
+         (batch_id,)),
         ("learner_signals",
          "SELECT DISTINCT s.target_id FROM learner_signals s "
          "LEFT JOIN problems p ON p.problem_id=s.target_id "
@@ -558,6 +563,10 @@ def _rollback_blockers(conn, batch_id):
     )
     blockers = []
     for table, query, params in queries:
+        if table == "learning_current_state" and conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+        ).fetchone() is None:
+            continue
         for row in conn.execute(query, params):
             blockers.append(f"{table}: {':'.join(str(value) for value in row)}")
     return blockers
