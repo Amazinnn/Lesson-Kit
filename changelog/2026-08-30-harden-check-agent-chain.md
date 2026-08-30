@@ -68,6 +68,10 @@ retired closest_answer（并报缺 practice_modes）/ topic_label 50 字——4/
 
 ## 所有者最终验收路径（真实池）
 
+> 追记（2026-08-30）：真实池的 Check schema（`ingest_batches` 表、批次/标签列、
+> `content_sequences` CHECK 放宽）已提前应用，迁移前整池备份留档于
+> `pool/backups/dmath-pre-schema-20260830.db`。3081 重启加载新代码后即可直接按此路径验收。
+
 1. 打开真实工作台（3081）→ 右栏对话新建（codex/claude 均可）。
 2. 说：「帮我给 dmath-ch06-kp-XXX 出题：补 3 张闪卡」（XXX 任选）。
 3. 预期：独立结果卡片显示批次号/条数；练习页闪卡模式可见新卡。
