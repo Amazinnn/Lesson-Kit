@@ -125,6 +125,26 @@ class PullTests(unittest.TestCase):
         )
         self.assertEqual(result["problems"], [])
 
+    def test_source_kind_filter_is_an_intersection_for_multiple_kps(self):
+        self.pool.connect().execute(
+            "UPDATE problems SET source_kind='quiz' WHERE problem_id=?",
+            ("dmath-ch06-prob-001",),
+        )
+        self.pool.commit()
+
+        result = self.pull.select(
+            self.pool,
+            ["dmath-ch06-kp-001", "dmath-ch06-kp-002"],
+            n=10,
+            mode="weak",
+            source_kind="final",
+        )
+
+        self.assertNotIn(
+            "dmath-ch06-prob-001",
+            [problem["problem_id"] for problem in result["problems"]],
+        )
+
     def test_exclude_ids_dedup(self):
         result = self.pull.select(
             self.pool, ["dmath-ch06-kp-001"], n=10, mode="weak",
