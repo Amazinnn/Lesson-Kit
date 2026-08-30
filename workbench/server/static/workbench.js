@@ -159,8 +159,10 @@
 
   function api(path, options) {
     return fetch("/api/w/" + WS + path, options).then(function (resp) {
-      if (!resp.ok) throw new Error(resp.status);
-      return resp.json();
+      return resp.json().catch(function () { return {}; }).then(function (data) {
+        if (!resp.ok) throw new Error(data.error || resp.status);
+        return data;
+      });
     });
   }
 
@@ -178,7 +180,13 @@
 
   function load(key, fallback) {
     var raw = sessionStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    if (!raw) return fallback;
+    try {
+      return JSON.parse(raw);
+    } catch (error) {
+      sessionStorage.removeItem(key);
+      return fallback;
+    }
   }
 
   function renderMath(root) {
