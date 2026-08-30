@@ -44,6 +44,13 @@ class MicroQuizRulesTests(unittest.TestCase):
         })
         self.assertEqual(ok, [])
 
+    def test_choice_options_must_be_strings(self):
+        errors = micro_quiz.validate_payload("single_choice", {
+            "options": [["a"], ["b"]], "answer_key": "a",
+            "error_reason": "r", "source_evidence": "s",
+        })
+        self.assertIn("options must be strings", errors)
+
     def test_reference_types_take_no_options(self):
         errors = micro_quiz.validate_payload("short_answer", {
             "options": ["x"], "answer_key": "参考",
@@ -74,6 +81,31 @@ class MicroQuizRulesTests(unittest.TestCase):
         errors = micro_quiz.validate_problem_row(row)
         self.assertTrue(any("exceeds" in e for e in errors))
 
+    def test_optional_label_fields_share_the_contract(self):
+        row = {
+            "kp_ids": ["kp-1"], "problem_text": "短题干",
+            "practice_modes": ["yes_no"],
+            "micro_quiz": {"quiz_type": "yes_no", "answer_key": "是",
+                           "error_reason": "r", "source_evidence": "s"},
+        }
+        self.assertEqual(micro_quiz.validate_problem_row(row), [])
+        for field, limit in (
+                ("topic_label", 40), ("display_title", 80),
+                ("display_summary", 200)):
+            with self.subTest(field=field, case="valid"):
+                self.assertEqual(
+                    micro_quiz.validate_problem_row({**row, field: "合法标签"}), [])
+            with self.subTest(field=field, case="empty"):
+                self.assertIn(
+                    f"{field} must be a non-empty string",
+                    micro_quiz.validate_problem_row({**row, field: "  "}),
+                )
+            with self.subTest(field=field, case="too_long"):
+                self.assertIn(
+                    f"{field} exceeds {limit} characters",
+                    micro_quiz.validate_problem_row({**row, field: "长" * (limit + 1)}),
+                )
+
     def test_check_answer_objective_only(self):
         item = {"micro_quiz": {"quiz_type": "yes_no", "answer_key": "否"}}
         self.assertIs(micro_quiz.check_answer(item, "否"), True)
@@ -99,6 +131,7 @@ class MicroQuizIngestTests(unittest.TestCase):
             CREATE TABLE problems (problem_id TEXT PRIMARY KEY,
                 kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
                 solution TEXT, problem_type TEXT, source_kind TEXT,
+                display_title TEXT, topic_label TEXT, display_summary TEXT,
                 practice_modes TEXT, micro_quiz TEXT, ingest_batch_id TEXT);
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY,
                 problem_text TEXT);
@@ -127,7 +160,11 @@ class MicroQuizIngestTests(unittest.TestCase):
         return path
 
     def test_gate_and_apply_insert_contract_rows(self):
-        path = self.manifest([manifest_item()])
+        item = manifest_item(
+            topic_label="质数定义", display_title="1 是质数吗",
+            display_summary="判断 1 是否符合质数定义。",
+        )
+        path = self.manifest([item])
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_micro_quiz(
@@ -141,12 +178,13 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertTrue(Path(result["backup_path"]).exists())
         snapshot_path = self.root / "ingest" / "batch-001.json"
         self.assertEqual(json.loads(snapshot_path.read_text(encoding="utf-8")), {
-            "kind": "micro-quiz-patch", "items": [manifest_item()],
+            "kind": "micro-quiz-patch", "items": [item],
         })
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
-                "SELECT kp_ids, problem_text, practice_modes, micro_quiz, ingest_batch_id"
+                "SELECT kp_ids, problem_text, practice_modes, micro_quiz, ingest_batch_id,"
+                " topic_label, display_title, display_summary"
                 " FROM problems WHERE problem_id='dmath-ch06-mq-001'"
             ).fetchone()
             batch = conn.execute(
@@ -160,9 +198,42 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertEqual(payload["quiz_type"], "yes_no")
         self.assertEqual(payload["answer_key"], "否")
         self.assertEqual(row[4], "batch-001")
+        self.assertEqual(row[5:], ("质数定义", "1 是质数吗", "判断 1 是否符合质数定义。"))
         self.assertEqual(batch[0], "micro-quiz-patch")
         self.assertEqual(Path(batch[1]), snapshot_path)
         self.assertEqual(json.loads(batch[2]), {"problems": 1})
+
+    def test_omitted_label_fields_are_stored_null(self):
+        ingest.apply_micro_quiz(self.db_path, self.manifest([manifest_item()]))
+        conn = sqlite3.connect(self.db_path)
+        try:
+            labels = conn.execute(
+                "SELECT topic_label, display_title, display_summary FROM problems"
+            ).fetchone()
+        finally:
+            conn.close()
+        self.assertEqual(labels, (None, None, None))
+
+    def test_gate_rejects_markup_damage_in_each_label_field(self):
+        items = [
+            manifest_item(problem_id=f"dmath-ch06-mq-{index:03d}",
+                          **{field: "<b>损坏</b>"})
+            for index, field in enumerate(
+                ("topic_label", "display_title", "display_summary"), start=1)
+        ]
+        path = self.manifest(items)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            report = ingest._gate_micro_quiz(
+                conn, json.loads(path.read_text(encoding="utf-8")))
+        finally:
+            conn.close()
+        for index, field in enumerate(
+                ("topic_label", "display_title", "display_summary"), start=1):
+            self.assertIn(
+                f"dmath-ch06-mq-{index:03d}: {field} has unknown or unterminated HTML",
+                report["errors"],
+            )
 
     def test_apply_batch_rejects_source_kind_and_gate_errors(self):
         manifest = {"kind": "micro-quiz-patch", "items": [manifest_item()]}
@@ -177,6 +248,19 @@ class MicroQuizIngestTests(unittest.TestCase):
             ingest.apply_batch(self.db_path, manifest, source="bridge")
         self.assertIn("dmath-ch06-mq-001: unknown knowledge point missing",
                       str(raised.exception).splitlines())
+
+    def test_missing_kp_is_reported_as_an_item_error(self):
+        item = manifest_item()
+        del item["kp_id"]
+        conn = sqlite3.connect(self.db_path)
+        try:
+            report = ingest._gate_micro_quiz(
+                conn, {"kind": "micro-quiz-patch", "items": [item]})
+        finally:
+            conn.close()
+        self.assertEqual(report["errors"], [
+            "dmath-ch06-mq-001: a micro quiz maps to exactly one knowledge point",
+        ])
 
     def test_bad_items_are_rejected_without_writing(self):
         items = [

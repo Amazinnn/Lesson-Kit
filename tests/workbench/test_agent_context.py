@@ -102,10 +102,6 @@ class AgentContextTests(unittest.TestCase):
         result = context.build(self.pool, self.workspace, {})
         self.assertFalse(result["check_intent"])
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_goal_intent_is_rebuilt_from_the_request_payload(self):
         from workbench.server import context
 
@@ -113,3 +109,34 @@ if __name__ == "__main__":
         self.assertTrue(result["goal_intent"])
         result = context.build(self.pool, self.workspace, {})
         self.assertFalse(result["goal_intent"])
+
+    def test_check_intent_context_carries_next_free_ids(self):
+        from workbench.server import context
+
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.executemany(
+            "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence) "
+            "VALUES (?, ?, ?, ?, ?)",
+            [
+                ("dmath-ch06-fc-001", "dmath-ch06-kp-001", "f", "b", "s"),
+                ("dmath-ch06-fc-009", "dmath-ch06-kp-001", "f", "b", "s"),
+            ],
+        )
+        conn.execute(
+            "INSERT INTO problems (problem_id, kp_ids, problem_text) VALUES (?, ?, ?)",
+            ("dmath-ch06-mq-004", '["dmath-ch06-kp-001"]', "题干"),
+        )
+        conn.commit()
+        conn.close()
+
+        result = context.build(self.pool, self.workspace, {"check_intent": True})
+        self.assertEqual(
+            result["next_free_ids"],
+            {"flash_card": "dmath-ch06-fc-010", "micro_quiz": "dmath-ch06-mq-005"},
+        )
+        without = context.build(self.pool, self.workspace, {})
+        self.assertNotIn("next_free_ids", without)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -37,6 +37,18 @@ class CardRulesTests(unittest.TestCase):
         self.assertFalse(cards.is_valid_card_id("dmath-ch06-fc-1"))
         self.assertFalse(cards.is_valid_card_id("dmath-ch06-mq-001"))
 
+    def test_topic_label_contract(self):
+        self.assertEqual(cards.validate_card_row(manifest_item(topic_label="鸽巢原理")), [])
+        self.assertEqual(cards.validate_card_row(manifest_item()), [])
+        self.assertIn(
+            "topic_label must be a non-empty string",
+            cards.validate_card_row(manifest_item(topic_label="  ")),
+        )
+        self.assertIn(
+            "topic_label exceeds 40 characters",
+            cards.validate_card_row(manifest_item(topic_label="长" * 41)),
+        )
+
 
 class CardIngestTests(unittest.TestCase):
     def setUp(self):
@@ -57,7 +69,8 @@ class CardIngestTests(unittest.TestCase):
                 source_kp_id TEXT, target_kp_id TEXT);
             CREATE TABLE flash_cards (card_id TEXT PRIMARY KEY,
                 kp_id TEXT NOT NULL, front TEXT NOT NULL, back TEXT NOT NULL,
-                source_evidence TEXT NOT NULL, ingest_batch_id TEXT);
+                source_evidence TEXT NOT NULL, topic_label TEXT,
+                ingest_batch_id TEXT);
             CREATE TABLE content_sequences (
                 scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
                 PRIMARY KEY (scope, entity_type));
@@ -92,7 +105,8 @@ class CardIngestTests(unittest.TestCase):
         return path
 
     def test_gate_and_apply_insert_contract_rows(self):
-        path = self.manifest([manifest_item()])
+        item = manifest_item(topic_label="鸽巢原理")
+        path = self.manifest([item])
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_flash_cards(
@@ -106,12 +120,13 @@ class CardIngestTests(unittest.TestCase):
         self.assertTrue(Path(result["backup_path"]).exists())
         snapshot_path = self.root / "ingest" / "batch-001.json"
         self.assertEqual(json.loads(snapshot_path.read_text(encoding="utf-8")), {
-            "kind": "flash-card-patch", "items": [manifest_item()],
+            "kind": "flash-card-patch", "items": [item],
         })
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
-                "SELECT kp_id, front, back, source_evidence, ingest_batch_id FROM flash_cards"
+                "SELECT kp_id, front, back, source_evidence, topic_label, ingest_batch_id"
+                " FROM flash_cards"
                 " WHERE card_id='dmath-ch06-fc-001'"
             ).fetchone()
             batch = conn.execute(
@@ -121,10 +136,35 @@ class CardIngestTests(unittest.TestCase):
             conn.close()
         self.assertEqual(row, ("dmath-ch06-kp-001", manifest_item()["front"],
                                manifest_item()["back"], manifest_item()["source_evidence"],
+                               "鸽巢原理",
                                "batch-001"))
         self.assertEqual(batch[0], "flash-card-patch")
         self.assertEqual(Path(batch[1]), snapshot_path)
         self.assertEqual(json.loads(batch[2]), {"flash_cards": 1})
+
+    def test_omitted_topic_label_is_stored_null(self):
+        ingest.apply_flash_cards(self.db_path, self.manifest([manifest_item()]))
+        conn = sqlite3.connect(self.db_path)
+        try:
+            topic_label = conn.execute(
+                "SELECT topic_label FROM flash_cards WHERE card_id='dmath-ch06-fc-001'"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        self.assertIsNone(topic_label)
+
+    def test_gate_rejects_topic_label_markup_damage(self):
+        path = self.manifest([manifest_item(topic_label="<b>鸽巢原理</b>")])
+        conn = sqlite3.connect(self.db_path)
+        try:
+            report = ingest._gate_flash_cards(
+                conn, json.loads(path.read_text(encoding="utf-8")))
+        finally:
+            conn.close()
+        self.assertEqual(report["errors"], [
+            "dmath-ch06-fc-001: topic_label has unknown or unterminated HTML",
+            "dmath-ch06-fc-001: topic_label has unknown or unterminated HTML",
+        ])
 
     def test_bad_items_are_rejected_without_writing(self):
         items = [

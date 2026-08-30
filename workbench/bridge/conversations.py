@@ -180,17 +180,71 @@ def _prompt(message, context):
         "若学生从目标表单发起一句话求助，可附 ```lessonkit-action {\"type\":\"prefill_goal_form\","
         "\"title\":\"…\",\"kind\":\"stage|long_term\",\"deadline\":\"YYYY-MM-DD或空\","
         "\"description\":\"…\"} ``` 代填目标字段（仅此意图可附，普通问答不得代填）。"
-        "仅当学生明确要求出题、补池或给某知识点加内容时，可在回答末尾附 "
-        "```lessonkit-action {\"type\":\"check_ingest\",\"manifest\":{"
-        "\"kind\":\"flash-card-patch\",\"items\":[…]}} ```。kind 只能是 "
-        "flash-card-patch 或 micro-quiz-patch；闪卡 items 必须包含 "
-        "card_id/kp_id/front/back/source_evidence；微题 items 必须包含 "
-        "problem_id/kp_id/stem/quiz_type/options/answer_key/error_reason/source_evidence。\n\n"
+        "仅当学生明确要求出题、补池或给某知识点加内容时，才可在回答末尾附出题入库区块；\n"
+        "对话内出题一律用 lessonkit-action 区块，禁止直接运行 wb ingest 或写数据库。\n"
+        "manifest 规则：kind 为 flash-card-patch 或 micro-quiz-patch。\n"
+        "闪卡 item 字段：card_id/kp_id/front/back/source_evidence，可选 topic_label。\n"
+        "微题 item 字段：problem_id/kp_id/stem/quiz_type/options/answer_key/error_reason/source_evidence，\n"
+        "可选 topic_label/display_title/display_summary。\n"
+        "id 形如 <course>-<chapter>-fc-NNN 或 -mq-NNN（NNN 为三位数字；与池内已有 id\n"
+        "重复会被拒收，收到拒收原因后改用其他编号重试）；kp_id 必须取自下方上下文的\n"
+        "knowledge_point_ids；新内容 id 从下方上下文 next_free_ids 起顺延（它给出每类\n"
+        "实体的下一个空闲编号）。\n"
+        "长度与取值：front≤100 字、back≤300 字、stem≤200 字、options 为 2–6 个互不相同的\n"
+        "字符串且 answer_key 必须是其中之一（yes_no 用默认 是/否 对）、quiz_type 仅\n"
+        "yes_no/single_choice/multiple_choice、topic_label≤40 字、display_title≤80 字、\n"
+        "display_summary≤200 字；数学乘号一律用 ×；source_evidence 必填（如\n"
+        "\"textbook ch06 §3.1\"）；一次产出 3–6 条。\n"
+        "闪卡 item 示例：{\"card_id\":\"dmath-ch06-fc-901\",\"kp_id\":\"dmath-ch06-kp-001\",\n"
+        "\"front\":\"乘法规则针对的是什么情形？\",\"back\":\"一个过程可分解为先后的两个任务，各自都有若干种做法——分步计数用乘法。\",\n"
+        "\"source_evidence\":\"textbook ch06 product rule\",\"topic_label\":\"计数原理\"}\n"
+        "微题 item 示例：{\"problem_id\":\"dmath-ch06-mq-901\",\"kp_id\":\"dmath-ch06-kp-001\",\n"
+        "\"stem\":\"自然数 1 是质数吗？\",\"quiz_type\":\"yes_no\",\"answer_key\":\"否\",\n"
+        "\"error_reason\":\"1 只有 1 个正因数，不算质数。\",\"source_evidence\":\"Rosen 6th, §3.1 定义\",\n"
+        "\"topic_label\":\"计数原理\"}\n"
+        "若上下文含 last_check_outcome：成功则不要重复提交相同内容；被拒收则按逐条原因\n"
+        "修正后重新提交完整区块。\n\n"
         "服务端重建的当前上下文：\n"
         + json.dumps(context, ensure_ascii=False, indent=2)
         + "\n\n学生消息：\n"
         + message
     )
+
+
+def _last_check_outcome(folder):
+    transcript = folder / "transcript.jsonl"
+    try:
+        exchange = json.loads(transcript.read_text(encoding="utf-8").splitlines()[-1])
+    except (OSError, UnicodeError, IndexError, json.JSONDecodeError):
+        return None
+    if not isinstance(exchange, dict):
+        return None
+    action = exchange.get("action")
+    if not isinstance(action, dict) or action.get("type") != "check_ingest":
+        return None
+    if "result" in action:
+        result = action["result"]
+        if not isinstance(result, dict) or not isinstance(result.get("counts"), dict):
+            return None
+        counts = result["counts"]
+        n = counts.get("flash_cards", counts.get("problems", 0))
+        try:
+            return (
+                f"上一轮出题动作已成功入库：批次 {result['batch_id']}"
+                f"（{result['kind']}，{n} 条）。不要重复提交相同内容。"
+            )
+        except KeyError:
+            return None
+    error = action.get("error")
+    if not isinstance(error, str):
+        return None
+    if "manifest" in action:
+        return (
+            "上一轮出题动作被门禁拒收（零写入），逐条原因：\n"
+            f"{error}\n"
+            "请修正 manifest 后重新提交完整的 lessonkit-action 区块。"
+        )
+    return f"上一轮出题动作区块无效：{error}。请重新提交符合契约的完整区块。"
 
 
 def start_turn(pool, workspace, conversation_id, message, context):
@@ -216,9 +270,16 @@ def start_turn(pool, workspace, conversation_id, message, context):
         key = (str(folder), turn_id)
         _CANCEL_REQUESTS.discard(key)
         _TIMEOUTS.discard(key)
+        turn_context = dict(context)
+        last_check_outcome = _last_check_outcome(folder)
+        if last_check_outcome:
+            turn_context["last_check_outcome"] = last_check_outcome
         thread = threading.Thread(
             target=_run_turn,
-            args=(pool.root, pool.jobs_dir(), workspace, conversation_id, turn_id, message, context),
+            args=(
+                pool.root, pool.jobs_dir(), workspace, conversation_id, turn_id,
+                message, turn_context,
+            ),
             daemon=True,
         )
         thread.start()

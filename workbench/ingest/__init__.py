@@ -311,9 +311,16 @@ def _gate_micro_quiz(conn, manifest):
         if row is None:
             errors.append(f"{problem_id}: item must be an object")
             continue
-        if row["kp_ids"][0] not in known_kps:
+        if isinstance(row["kp_ids"], list) and len(row["kp_ids"]) == 1 \
+                and row["kp_ids"][0] not in known_kps:
             errors.append(f"{problem_id}: unknown knowledge point {row['kp_ids'][0]}")
         errors.extend(f"{problem_id}: {reason}" for reason in _markup_errors(row["problem_text"]))
+        for field in micro_quiz_rules.LABEL_FIELD_LIMITS:
+            if field in row:
+                errors.extend(
+                    f"{problem_id}: {field} {reason}"
+                    for reason in _markup_errors(row[field])
+                )
         errors.extend(
             f"{problem_id}: {reason}" for reason in micro_quiz_rules.validate_problem_row(row)
         )
@@ -338,6 +345,8 @@ def _micro_quiz_row(item):
         "problem_text": item.get("stem", item.get("problem_text")),
         "problem_type": item.get("problem_type") or "other",
         "source_kind": item.get("source_kind") or "quiz",
+        **{field: item[field] for field in micro_quiz_rules.LABEL_FIELD_LIMITS
+           if field in item},
         "practice_modes": item.get("practice_modes")
         or micro_quiz_rules.practice_modes_for(payload.get("quiz_type")),
         "micro_quiz": payload,
@@ -387,14 +396,18 @@ def _apply_patch(database, manifest, backup, kind):
                 row = _micro_quiz_row(item)
                 conn.execute(
                     "INSERT INTO problems (problem_id, kp_ids, problem_text, solution,"
-                    " problem_type, source_kind, practice_modes, micro_quiz, ingest_batch_id)"
-                    " VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)",
+                    " problem_type, source_kind, topic_label, display_title, display_summary,"
+                    " practice_modes, micro_quiz, ingest_batch_id)"
+                    " VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         row["problem_id"],
                         json.dumps(row["kp_ids"], ensure_ascii=False),
                         row["problem_text"],
                         row["problem_type"],
                         row["source_kind"],
+                        row.get("topic_label"),
+                        row.get("display_title"),
+                        row.get("display_summary"),
                         json.dumps(row["practice_modes"], ensure_ascii=False),
                         json.dumps(row["micro_quiz"], ensure_ascii=False),
                         batch_id,
@@ -406,9 +419,9 @@ def _apply_patch(database, manifest, backup, kind):
                 row = _flash_card_row(item)
                 conn.execute(
                     "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence,"
-                    " ingest_batch_id) VALUES (?, ?, ?, ?, ?, ?)",
+                    " topic_label, ingest_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (row["card_id"], row["kp_id"], row["front"], row["back"],
-                     row["source_evidence"], batch_id),
+                     row["source_evidence"], row.get("topic_label"), batch_id),
                 )
             counts = {"flash_cards": len(manifest["items"])}
         _record_batch(conn, batch_id, kind, manifest_path, counts, backup)
@@ -447,6 +460,28 @@ def _record_batch(conn, batch_id, kind, manifest_path, counts, backup):
         (batch_id, kind, str(manifest_path),
          json.dumps(counts, ensure_ascii=False), str(backup)),
     )
+
+
+def list_batches(db_path):
+    conn = sqlite3.connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT batch_id, kind, counts_json, applied_at, rolled_back_at, backup_path "
+            "FROM ingest_batches ORDER BY applied_at DESC, rowid DESC"
+        ).fetchall()
+    finally:
+        conn.close()
+    return [
+        {
+            "batch_id": batch_id,
+            "kind": kind,
+            "counts": json.loads(counts_json),
+            "applied_at": applied_at,
+            "rolled_back_at": rolled_back_at,
+            "backup_path": backup_path,
+        }
+        for batch_id, kind, counts_json, applied_at, rolled_back_at, backup_path in rows
+    ]
 
 
 def rollback_batch(db_path, batch_id, backup_path=None):
@@ -567,6 +602,11 @@ def _gate_flash_cards(conn, manifest):
                 f"{card_id}: {field} {reason}"
                 for reason in _markup_errors(row[field])
             )
+        if "topic_label" in row:
+            errors.extend(
+                f"{card_id}: topic_label {reason}"
+                for reason in _markup_errors(row["topic_label"])
+            )
         errors.extend(
             f"{card_id}: {reason}" for reason in card_rules.validate_card_row(row)
         )
@@ -582,6 +622,7 @@ def _flash_card_row(item):
         "front": item.get("front"),
         "back": item.get("back"),
         "source_evidence": item.get("source_evidence"),
+        **({"topic_label": item["topic_label"]} if "topic_label" in item else {}),
     }
 
 

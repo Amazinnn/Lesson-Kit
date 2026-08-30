@@ -12,6 +12,7 @@ CARD_ID = re.compile(r"^[a-z0-9-]+-fc-\d{3}$")
 REQUIRED_FIELDS = ("card_id", "kp_id", "front", "back", "source_evidence")
 MAX_FRONT_CHARS = 100
 MAX_BACK_CHARS = 300
+MAX_TOPIC_LABEL_CHARS = 40
 
 
 def is_valid_card_id(card_id):
@@ -36,4 +37,10 @@ def validate_card_row(row):
     back = row.get("back")
     if isinstance(back, str) and len(back) > MAX_BACK_CHARS:
         errors.append(f"back exceeds {MAX_BACK_CHARS} characters")
+    if "topic_label" in row:
+        topic_label = row["topic_label"]
+        if not isinstance(topic_label, str) or not topic_label.strip():
+            errors.append("topic_label must be a non-empty string")
+        elif len(topic_label) > MAX_TOPIC_LABEL_CHARS:
+            errors.append(f"topic_label exceeds {MAX_TOPIC_LABEL_CHARS} characters")
     return errors
