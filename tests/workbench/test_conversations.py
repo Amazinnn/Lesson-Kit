@@ -561,12 +561,12 @@ class GoalFormActionExtractionTests(unittest.TestCase):
         self.assertEqual(action["deadline"], "2026-09-30")
         self.assertNotIn("lessonkit-action", cleaned)
 
-    def test_without_goal_intent_nothing_is_extracted(self):
+    def test_without_goal_intent_block_is_disclosed_as_ignored(self):
         cleaned, action = self._run(
             self._answer('{"type":"prefill_goal_form","title":"x"}'),
             {"goal_intent": False})
-        self.assertIsNone(action)
-        self.assertIn("prefill_goal_form", cleaned)
+        self.assertEqual(action, {"ignored": "no block matched the active intent"})
+        self.assertNotIn("lessonkit-action", cleaned)
 
     def test_empty_title_is_discarded(self):
         _, action = self._run(
@@ -581,9 +581,10 @@ class GoalFormActionExtractionTests(unittest.TestCase):
         self.assertEqual(action["kind"], "stage")
         self.assertEqual(action["deadline"], "")
 
-    def test_malformed_json_is_ignored(self):
-        _, action = self._run(self._answer("{oops}"), {"goal_intent": True})
-        self.assertIsNone(action)
+    def test_malformed_json_is_disclosed_as_ignored(self):
+        cleaned, action = self._run(self._answer("{oops}"), {"goal_intent": True})
+        self.assertEqual(action, {"ignored": "no block matched the active intent"})
+        self.assertNotIn("lessonkit-action", cleaned)
 
 
 class CheckIngestActionExtractionTests(unittest.TestCase):
@@ -591,6 +592,11 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         from workbench.bridge import conversations
 
         answer = "已生成。\n```lessonkit-action\n" + body + "\n```"
+        return conversations._extract_action(answer, context)
+
+    def _extract(self, answer, context):
+        from workbench.bridge import conversations
+
         return conversations._extract_action(answer, context)
 
     def test_prompt_describes_check_ingest_manifest_contract(self):
@@ -630,14 +636,14 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
             prompt,
         )
 
-    def test_without_check_intent_nothing_is_extracted(self):
+    def test_without_check_intent_block_is_disclosed_as_ignored(self):
         cleaned, action = self._run(
             '{"type":"check_ingest","manifest":{"kind":"flash-card-patch",'
             '"items":[{"card_id":"card-001"}]}}',
             {"check_intent": False},
         )
-        self.assertIsNone(action)
-        self.assertIn("check_ingest", cleaned)
+        self.assertEqual(action, {"ignored": "no block matched the active intent"})
+        self.assertNotIn("lessonkit-action", cleaned)
 
     def test_valid_manifest_is_extracted_and_stripped(self):
         manifest = {
@@ -679,10 +685,69 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         })
         self.assertNotIn("lessonkit-action", cleaned)
 
-    def test_bad_json_remains_ignored_without_check_intent(self):
+    def test_bad_json_without_check_intent_is_disclosed_as_ignored(self):
         cleaned, action = self._run("{oops}", {"check_intent": False})
-        self.assertIsNone(action)
-        self.assertIn("lessonkit-action", cleaned)
+        self.assertEqual(action, {"ignored": "no block matched the active intent"})
+        self.assertNotIn("lessonkit-action", cleaned)
+
+    def test_multi_block_reply_finds_the_matching_block(self):
+        # conv-023 回放：Claude 同报「选区 + 裸 manifest」两个区块，
+        # 练习意图缺席但出题意图在场——manifest 必须被解析而不是被首区块挡住。
+        answer = (
+            "格式确认。\n```lessonkit-action\n"
+            '{"type":"replace_practice_selection","kp_ids":["dmath-ch06-kp-028"]}\n'
+            "```\n```lessonkit-action\n"
+            '{"kind":"flash-card-patch","items":[{"card_id":"dmath-ch06-fc-097",'
+            '"kp_id":"dmath-ch06-kp-028","front":"f","back":"b",'
+            '"source_evidence":"kp-028 §4"}]}\n```'
+        )
+        cleaned, action = self._extract(answer, {"check_intent": True, "practice_intent": False})
+        self.assertEqual(action["type"], "check_ingest")
+        self.assertEqual(action["manifest"]["items"][0]["card_id"], "dmath-ch06-fc-097")
+        self.assertNotIn("lessonkit-action", cleaned)
+        self.assertIn("格式确认", cleaned)
+
+    def test_manifest_before_selection_block_is_still_found(self):
+        answer = (
+            "```lessonkit-action\n"
+            '{"kind":"flash-card-patch","items":[{"card_id":"card-001"}]}\n'
+            "```\n```lessonkit-action\n"
+            '{"type":"replace_practice_selection","kp_ids":["kp-001"]}\n```'
+        )
+        _, action = self._extract(answer, {"check_intent": True, "practice_intent": True})
+        self.assertEqual(action["type"], "check_ingest")
+
+
+class IgnoredActionDisclosureTests(unittest.TestCase):
+    """未被接受的区块必须进入下一轮上下文，堵住"已写入"幻觉。"""
+
+    def _folder_with_transcript(self, tmp, exchange):
+        folder = Path(tmp) / "conv-900"
+        folder.mkdir()
+        with (folder / "transcript.jsonl").open("w", encoding="utf-8") as stream:
+            stream.write(json.dumps(exchange, ensure_ascii=False) + "\n")
+        return folder
+
+    def test_ignored_action_is_disclosed_to_the_next_turn(self):
+        from workbench.bridge import conversations
+
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = self._folder_with_transcript(tmp, {
+                "turn_id": "turn-001", "user": "q", "assistant": "a",
+                "action": {"ignored": "no block matched the active intent"},
+            })
+            note = conversations._last_check_outcome(folder)
+        self.assertIn("未被接受", note)
+        self.assertIn("未写入任何内容", note)
+
+    def test_plain_exchange_still_returns_none(self):
+        from workbench.bridge import conversations
+
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = self._folder_with_transcript(tmp, {
+                "turn_id": "turn-001", "user": "q", "assistant": "a",
+            })
+            self.assertIsNone(conversations._last_check_outcome(folder))
 
 
 if __name__ == "__main__":

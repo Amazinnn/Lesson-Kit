@@ -257,7 +257,14 @@ def _last_check_outcome(folder):
     if not isinstance(exchange, dict):
         return None
     action = exchange.get("action")
-    if not isinstance(action, dict) or action.get("type") != "check_ingest":
+    if not isinstance(action, dict):
+        return None
+    if action.get("ignored"):
+        return (
+            f"上一轮回复附带了 lessonkit-action 区块，但未被接受（{action['ignored']}），"
+            "未写入任何内容。不要向学生声称已写入；只有收到批次确认才算成功。"
+        )
+    if action.get("type") != "check_ingest":
         return None
     if "result" in action:
         result = action["result"]
@@ -490,43 +497,63 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
 _GOAL_KINDS = {"stage", "long_term"}
 
 
+_ACTION_BLOCK_RE = re.compile(r"```lessonkit-action\s*([\s\S]*?)```", re.IGNORECASE)
+
+
 def _extract_action(answer, context):
-    match = re.search(r"```lessonkit-action\s*([\s\S]*?)```", answer, re.IGNORECASE)
-    if not match:
+    blocks = list(_ACTION_BLOCK_RE.finditer(answer))
+    if not blocks:
         return answer, None
-    try:
-        raw = json.loads(match.group(1).strip())
-    except (TypeError, ValueError):
-        if context.get("check_intent"):
-            cleaned = (answer[:match.start()] + answer[match.end():]).strip()
-            return cleaned, {
-                "type": "check_ingest",
-                "error": "action block is not valid JSON",
-            }
-        return answer, None
-    action = None
-    if raw.get("type") == "replace_practice_selection" and context.get("practice_intent"):
-        allowed = set(context.get("knowledge_point_ids") or [])
-        ids = []
-        for item in raw.get("kp_ids") or []:
-            if item in allowed and item not in ids:
-                ids.append(item)
-        if ids:
-            action = {"type": raw["type"], "kp_ids": ids}
-    elif raw.get("type") == "prefill_goal_form" and context.get("goal_intent"):
-        action = _clean_goal_form_action(raw)
-    elif context.get("check_intent") and (
-        raw.get("type") == "check_ingest"
-        or ("type" not in raw and raw.get("kind") in {"flash-card-patch", "micro-quiz-patch"})
-    ):
-        # Agents sometimes emit the bare manifest without the action wrapper;
-        # under content-generation intent both forms are accepted.
-        manifest = raw.get("manifest") if raw.get("type") == "check_ingest" else raw
-        action = _clean_check_ingest_action(manifest)
-    if action is None:
-        return answer, None
-    cleaned = (answer[:match.start()] + answer[match.end():]).strip()
-    return cleaned, action
+    applied = None
+    invalid_json = False
+    matched_intent = False
+    for match in blocks:
+        try:
+            raw = json.loads(match.group(1).strip())
+        except (TypeError, ValueError):
+            invalid_json = True
+            continue
+        if not isinstance(raw, dict):
+            continue
+        action = None
+        if raw.get("type") == "replace_practice_selection" and context.get("practice_intent"):
+            matched_intent = True
+            allowed = set(context.get("knowledge_point_ids") or [])
+            ids = []
+            for item in raw.get("kp_ids") or []:
+                if item in allowed and item not in ids:
+                    ids.append(item)
+            if ids:
+                action = {"type": raw["type"], "kp_ids": ids}
+        elif raw.get("type") == "prefill_goal_form" and context.get("goal_intent"):
+            matched_intent = True
+            # An action without a usable title is discarded entirely (spec).
+            action = _clean_goal_form_action(raw)
+        elif context.get("check_intent") and (
+            raw.get("type") == "check_ingest"
+            or ("type" not in raw and raw.get("kind") in {"flash-card-patch", "micro-quiz-patch"})
+        ):
+            # Agents sometimes emit the bare manifest without the action wrapper;
+            # under content-generation intent both forms are accepted.
+            matched_intent = True
+            manifest = raw.get("manifest") if raw.get("type") == "check_ingest" else raw
+            action = _clean_check_ingest_action(manifest)
+        if action is not None:
+            applied = action
+            break
+    cleaned = _ACTION_BLOCK_RE.sub("", answer).strip()
+    if applied is not None:
+        return cleaned, applied
+    if invalid_json and context.get("check_intent"):
+        return cleaned, {"type": "check_ingest", "error": "action block is not valid JSON"}
+    if matched_intent:
+        return cleaned, None
+    if blocks and context.get("check_intent"):
+        return cleaned, {
+            "type": "check_ingest",
+            "error": "回复包含 lessonkit-action 区块，但没有区块符合本次请求的意图或 manifest 契约，未写入任何内容",
+        }
+    return cleaned, {"ignored": "no block matched the active intent"}
 
 
 def _clean_check_ingest_action(manifest):

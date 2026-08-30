@@ -1361,6 +1361,26 @@ test("explicit check intent is forwarded with the turn request", async () => {
   assert.equal(JSON.parse(turnPost.options.body).practice_intent, false);
 });
 
+test("natural card phrasing toggles check intent without false positives", async () => {
+  const positive = checkIngestHarness(null);
+  await openFirstAiSession(positive.elements);
+  positive.elements["ai-input"].value = "请你给 dmath-ch06-kp-028 补两张闪卡";
+  positive.elements["ai-send"].click();
+  await flush();
+  await flush();
+  const post = positive.calls.find((call) => call.url.endsWith("/turns") && call.options);
+  assert.equal(JSON.parse(post.options.body).check_intent, true);
+
+  const negative = checkIngestHarness(null);
+  await openFirstAiSession(negative.elements);
+  negative.elements["ai-input"].value = "这张闪卡是什么意思";
+  negative.elements["ai-send"].click();
+  await flush();
+  await flush();
+  const plainPost = negative.calls.find((call) => call.url.endsWith("/turns") && call.options);
+  assert.equal(JSON.parse(plainPost.options.body).check_intent, false);
+});
+
 test("check ingest success renders a batch result card whose rollback calls the API", async () => {
   const { calls, elements } = checkIngestHarness({
     type: "check_ingest",

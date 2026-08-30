@@ -1884,7 +1884,7 @@
       page_type: layout.dataset.page || "unknown",
       recent_objects: load(AI_RECENT_KEY, []),
       practice_intent: /练习|做题|刷题|复习题/.test(message),
-      check_intent: /出题|出几道|补池|加题|入库/.test(message),
+      check_intent: /出题|出几道|补池|加题|入库|(?:补|加|写|生成)[^。？?]{0,6}(?:闪卡|微题|题|卡)/.test(message),
     };
     if (layout.dataset.objectType) body.object_type = layout.dataset.objectType;
     if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
