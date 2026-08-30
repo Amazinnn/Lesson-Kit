@@ -79,10 +79,13 @@ def review_overview(pool, upcoming_days=7):
     items = []
     later_count = 0
     for row in pool.schedule_rows():
+        due_at = row.get("due_at")
+        if not due_at:
+            continue
         try:
-            days = (date.fromisoformat(str(row["due_at"])[:10]) - today).days
+            days = (date.fromisoformat(str(due_at)[:10]) - today).days
         except ValueError:
-            days = 0
+            continue
         if days <= upcoming_days:
             items.append(_due_item(row, pool, today))
         else:

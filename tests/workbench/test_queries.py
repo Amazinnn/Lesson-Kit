@@ -168,6 +168,25 @@ class QueryTests(unittest.TestCase):
         items = self.queries.due_list(self.pool)
         self.assertEqual(items[0]["label"], long_text)
 
+    def test_review_overview_ignores_missing_and_invalid_due_dates(self):
+        conn = self.pool.connect()
+        conn.executemany(
+            "INSERT INTO review_schedule (item_type, item_id, direction, due_at)"
+            " VALUES (?, ?, ?, ?)",
+            [
+                ("kp", "dmath-ch06-kp-001", "unscheduled", None),
+                ("kp", "dmath-ch06-kp-002", "invalid", "not-a-date"),
+            ],
+        )
+        conn.commit()
+
+        overview = self.queries.review_overview(self.pool)
+
+        directions = {item["direction"] for item in overview["items"]}
+        self.assertNotIn("unscheduled", directions)
+        self.assertNotIn("invalid", directions)
+        self.assertEqual(overview["later_count"], 0)
+
     def test_problem_detail(self):
         detail = self.queries.problem_detail(self.pool, "dmath-ch06-prob-002")
         self.assertEqual(detail["problem"]["problem_id"], "dmath-ch06-prob-002")
