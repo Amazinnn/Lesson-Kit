@@ -510,3 +510,27 @@ docs/superpowers/plans/2026-08-29-check-pipeline-handoff.md 第三节）：
 
 交付：OpenSpec change `introduce-check-pipeline`（规格 → 实现 → 走查 →
 归档）；本专题五答为该变更 proposal Why 的事实来源。
+
+## 专题 23：Check Agent 产出链完整交付定标（2026-08-30 问卷）
+
+introduce-check-pipeline 交付后，所有者反馈「什么都实现了一点，但好像又没
+实现完全」，经拷问定性为：**真 Agent 出题链没走通**（演示出题来自 stub 脚本；
+真实 provider 未验证；门禁结果不回给 Agent）。所有者要求按《新项目开工检查
+清单》（Desktop Knowledge Base/growth/）交付**完整的开发结果**，指定
+to-questionnaire 定范围。问卷（docs/superpowers/plans/2026-08-30-check-
+agent-chain-questionnaire.md）四答定案：
+
+1. **范围**：真 Agent 产出链+benchmark，以及除综合题出题以外的所有面向
+   Agent 的 CLI；agent 产出的题/卡自带 topic_label 等完备格式，由门禁校验。
+   不做：界面闭环、综合题配方、候选表 DROP。
+2. **benchmark 规模**：codex 单链路 10 轮×2 kind=20 轮（hold-out KP）。
+3. **成功判定（严格）**：未经修正首轮合规入库才算成功，每种 kind 首轮
+   成功率 ≥60% 为达标线；修正后最终成功率另行报告。
+4. **真实池验收**：benchmark 达标后由所有者亲自在真实工作区实验（最终验收）。
+
+工作法：codex sub-agent 全程 ≤2 并行、文件集不交叉（问卷 Anythin-else 原话
+「依然鼓励你使用并行不多于2个Codex作为Sub Agent」）。开工清单的 benchmark
+验收机制（验收陈述/hold-out 隔离/反向用例/真实回放/成本报告/退役条件）在本轮
+首次落地，定稿于 harden-check-agent-chain 的 design.md。
+
+交付：OpenSpec change `harden-check-agent-chain`。
