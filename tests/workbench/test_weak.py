@@ -84,6 +84,26 @@ class WeakTests(unittest.TestCase):
         scored = weak.score_all(kps, signals, schedule, [], set(), NOW)
         self.assertEqual(scored[0]["kp_id"], "a")
 
+    def test_any_overdue_direction_boosts_the_knowledge_point(self):
+        schedule = [
+            {"item_type": "kp", "item_id": "a", "direction": "", "due_at": None},
+            {
+                "item_type": "kp", "item_id": "a", "direction": "reverse",
+                "due_at": "2026-08-10",
+            },
+            {
+                "item_type": "kp", "item_id": "b", "direction": "",
+                "due_at": "2026-08-30",
+            },
+        ]
+
+        scored = weak.score_all(
+            [kp("a"), kp("b")], [sig("a"), sig("b")], schedule, [], set(), NOW
+        )
+
+        self.assertEqual(scored[0]["kp_id"], "a")
+        self.assertGreater(scored[0]["score"], scored[1]["score"])
+
     def test_session_repeat_penalty(self):
         kps = [kp("a"), kp("b")]
         signals = [sig("a"), sig("b")]

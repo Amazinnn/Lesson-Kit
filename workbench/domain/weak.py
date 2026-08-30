@@ -53,21 +53,19 @@ def _signal_score(signal):
 
 
 def _due_boost(schedule_rows, item_id, today):
+    boosts = []
     for row in schedule_rows:
-        if row.get("item_type") == "kp" and row.get("item_id") == item_id:
-            due_at = row.get("due_at")
-            break
-    else:
-        due_at = None
-    if not due_at:
-        return 1.0
-    try:
-        due = date.fromisoformat(due_at[:10])
-    except ValueError:
-        return 1.0
-    if due <= today:
-        return 1.0 + (today - due).days
-    return 0.8
+        if row.get("item_type") != "kp" or row.get("item_id") != item_id:
+            continue
+        due_at = row.get("due_at")
+        if not due_at:
+            continue
+        try:
+            due = date.fromisoformat(str(due_at)[:10])
+        except ValueError:
+            continue
+        boosts.append(1.0 + (today - due).days if due <= today else 0.8)
+    return max(boosts, default=1.0)
 
 
 def _cascade(kp_id, signal_extra, edges):
