@@ -357,7 +357,10 @@ def cmd_ingest(args):
     workspace = _workspace(args.name)
     db_path = Path(workspace["path"]) / workspace["db"]
     try:
-        if args.action == "prepare":
+        if args.action == "batches":
+            output = None
+            result = {"batches": ingest.list_batches(db_path)}
+        elif args.action == "prepare":
             output = Path(args.output) / "task.json"
             result = ingest.prepare(args.operation, args.input, output)
         elif args.action == "run":
@@ -392,7 +395,8 @@ def cmd_ingest(args):
                 args.recipe, db_path, args.input, args.output,
                 apply_changes=args.apply, backup_path=args.backup,
             )
-        print(json.dumps({"artifact": str(output), "result": result}, ensure_ascii=False, indent=2))
+        print(json.dumps({"artifact": str(output) if output is not None else None,
+                          "result": result}, ensure_ascii=False, indent=2))
         return 0
     except (ValueError, OSError, RuntimeError, sqlite3.Error, json.JSONDecodeError) as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False))
@@ -540,6 +544,9 @@ def build_parser():
     p = sub.add_parser("ingest", help="prepare, run, gate, and apply UTF-8 content artifacts")
     p.add_argument("name")
     ingest_sub = p.add_subparsers(dest="action", required=True)
+
+    action = ingest_sub.add_parser("batches")
+    action.set_defaults(func=cmd_ingest)
 
     action = ingest_sub.add_parser("prepare")
     action.add_argument("operation", choices=["problem-solutions", "problem-audit"])

@@ -107,6 +107,44 @@ class IngestTests(unittest.TestCase):
         })
         return solutions, audits
 
+    def test_list_batches_empty_without_writing(self):
+        before = self.snapshot()
+        self.assertEqual(ingest.list_batches(self.db_path), [])
+        self.assertEqual(self.snapshot(), before)
+
+    def test_list_batches_returns_newest_first_without_writing(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.executemany(
+            "INSERT INTO ingest_batches (batch_id, kind, manifest_path, counts_json,"
+            " backup_path, applied_at, rolled_back_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                ("batch-001", "flash-card-patch", "one.json",
+                 '{"flash_cards": 2}', "one.db", "2026-08-30 10:00:00", None),
+                ("batch-002", "micro-quiz-patch", "two.json",
+                 '{"problems": 1}', "two.db", "2026-08-30 10:00:00",
+                 "2026-08-30 12:00:00"),
+            ],
+        )
+        conn.commit()
+        conn.close()
+        before = self.snapshot()
+
+        batches = ingest.list_batches(self.db_path)
+
+        self.assertEqual(batches, [
+            {
+                "batch_id": "batch-002", "kind": "micro-quiz-patch",
+                "counts": {"problems": 1}, "applied_at": "2026-08-30 10:00:00",
+                "rolled_back_at": "2026-08-30 12:00:00", "backup_path": "two.db",
+            },
+            {
+                "batch_id": "batch-001", "kind": "flash-card-patch",
+                "counts": {"flash_cards": 2}, "applied_at": "2026-08-30 10:00:00",
+                "rolled_back_at": None, "backup_path": "one.db",
+            },
+        ])
+        self.assertEqual(self.snapshot(), before)
+
     def test_prepare_writes_resumable_utf8_task_without_provider(self):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
         source = self.artifact("source.json", {"items": [{"problem_id": "p-1", "problem_text": "组合"}]})
@@ -601,12 +639,13 @@ class BatchRollbackTests(unittest.TestCase):
             CREATE TABLE problems (
                 problem_id TEXT PRIMARY KEY, kp_ids TEXT NOT NULL,
                 problem_text TEXT NOT NULL, solution TEXT, problem_type TEXT,
-                source_kind TEXT, practice_modes TEXT, micro_quiz TEXT,
+                source_kind TEXT, topic_label TEXT, display_title TEXT,
+                display_summary TEXT, practice_modes TEXT, micro_quiz TEXT,
                 ingest_batch_id TEXT);
             CREATE TABLE flash_cards (
                 card_id TEXT PRIMARY KEY, kp_id TEXT NOT NULL, front TEXT NOT NULL,
                 back TEXT NOT NULL, source_evidence TEXT NOT NULL,
-                ingest_batch_id TEXT);
+                topic_label TEXT, ingest_batch_id TEXT);
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
             CREATE TABLE content_sequences (

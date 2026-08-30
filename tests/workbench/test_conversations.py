@@ -64,6 +64,18 @@ class ConversationTests(unittest.TestCase):
             return [sys.executable, str(self.script), mode]
         return build
 
+    def write_transcript(self, conversation_id, lines):
+        path = self.pool.jobs_dir() / conversation_id / "transcript.jsonl"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def captured_start_context(self, conversations, conversation_id, context):
+        with mock.patch.object(conversations.threading, "Thread") as thread_type:
+            conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "Next question", context,
+            )
+        thread_type.return_value.start.assert_called_once_with()
+        return thread_type.call_args.kwargs["args"][-1]
+
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_successful_turn_mirrors_exchange_and_second_turn_resumes(self, get_provider):
         from workbench.bridge import conversation_providers, conversations
@@ -354,6 +366,129 @@ class ConversationTests(unittest.TestCase):
             "error": "prob-001: answer_key is required",
         })
 
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_start_turn_injects_successful_check_ingest_outcome(self, get_provider):
+        from workbench.bridge import conversations
+
+        get_provider.return_value = self.provider
+        conversation = conversations.create(self.pool, "codex")
+        exchange = {
+            "action": {
+                "type": "check_ingest",
+                "manifest": {"kind": "flash-card-patch", "items": []},
+                "result": {
+                    "batch_id": "batch-007",
+                    "kind": "flash-card-patch",
+                    "counts": {"flash_cards": 3},
+                },
+            },
+        }
+        self.write_transcript(
+            conversation["conversation_id"],
+            [json.dumps(exchange, ensure_ascii=False)],
+        )
+        original = {"anchor": {"page_type": "kp"}, "check_intent": True}
+
+        captured = self.captured_start_context(
+            conversations, conversation["conversation_id"], original,
+        )
+
+        self.assertEqual(
+            captured["last_check_outcome"],
+            "上一轮出题动作已成功入库：批次 batch-007（flash-card-patch，3 条）。"
+            "不要重复提交相同内容。",
+        )
+        self.assertIsNot(captured, original)
+        self.assertIs(captured["anchor"], original["anchor"])
+        self.assertNotIn("last_check_outcome", original)
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_start_turn_injects_rejected_check_ingest_outcome(self, get_provider):
+        from workbench.bridge import conversations
+
+        get_provider.return_value = self.provider
+        conversation = conversations.create(self.pool, "codex")
+        error = "card-901: source_evidence is required\ncard-902: duplicate card_id"
+        exchange = {
+            "action": {
+                "type": "check_ingest",
+                "manifest": {"kind": "flash-card-patch", "items": []},
+                "error": error,
+            },
+        }
+        self.write_transcript(
+            conversation["conversation_id"],
+            [json.dumps(exchange, ensure_ascii=False)],
+        )
+
+        captured = self.captured_start_context(
+            conversations, conversation["conversation_id"], {"check_intent": True},
+        )
+
+        self.assertEqual(
+            captured["last_check_outcome"],
+            "上一轮出题动作被门禁拒收（零写入），逐条原因：\n"
+            + error
+            + "\n请修正 manifest 后重新提交完整的 lessonkit-action 区块。",
+        )
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_start_turn_injects_invalid_check_ingest_block_outcome(self, get_provider):
+        from workbench.bridge import conversations
+
+        get_provider.return_value = self.provider
+        conversation = conversations.create(self.pool, "codex")
+        exchange = {
+            "action": {
+                "type": "check_ingest",
+                "error": "action block is not valid JSON",
+            },
+        }
+        self.write_transcript(
+            conversation["conversation_id"],
+            [json.dumps(exchange, ensure_ascii=False)],
+        )
+
+        captured = self.captured_start_context(
+            conversations, conversation["conversation_id"], {"check_intent": True},
+        )
+
+        self.assertEqual(
+            captured["last_check_outcome"],
+            "上一轮出题动作区块无效：action block is not valid JSON。"
+            "请重新提交符合契约的完整区块。",
+        )
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_start_turn_skips_missing_or_unusable_previous_action(self, get_provider):
+        from workbench.bridge import conversations
+
+        get_provider.return_value = self.provider
+        cases = {
+            "no transcript": None,
+            "empty transcript": [],
+            "last line damaged": [
+                json.dumps({"action": {"type": "check_ingest"}}),
+                "{broken",
+            ],
+            "no action": [json.dumps({"assistant": "plain answer"})],
+            "practice action": [json.dumps({
+                "action": {"type": "replace_practice_selection", "kp_ids": ["kp-001"]},
+            })],
+            "goal action": [json.dumps({
+                "action": {"type": "prefill_goal_form", "title": "复习"},
+            }, ensure_ascii=False)],
+        }
+        for label, lines in cases.items():
+            with self.subTest(label=label):
+                conversation = conversations.create(self.pool, "codex")
+                if lines is not None:
+                    self.write_transcript(conversation["conversation_id"], lines)
+                captured = self.captured_start_context(
+                    conversations, conversation["conversation_id"], {"check_intent": True},
+                )
+                self.assertNotIn("last_check_outcome", captured)
+
 
 class GoalFormActionExtractionTests(unittest.TestCase):
     """prefill_goal_form：意图门、字段契约、区块剥离。"""
@@ -410,10 +545,38 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         from workbench.bridge import conversations
 
         prompt = conversations._prompt("帮我补池", {"check_intent": True})
-        self.assertIn('"type":"check_ingest"', prompt)
         self.assertIn("flash-card-patch", prompt)
         self.assertIn("micro-quiz-patch", prompt)
         self.assertIn("source_evidence", prompt)
+        self.assertIn("对话内出题一律用 lessonkit-action 区块", prompt)
+        self.assertIn("禁止直接运行 wb ingest", prompt)
+        self.assertIn("topic_label", prompt)
+        self.assertIn("数学乘号一律用 ×", prompt)
+        self.assertIn('"card_id":"dmath-ch06-fc-901"', prompt)
+        self.assertIn('"problem_id":"dmath-ch06-mq-901"', prompt)
+        self.assertIn(
+            "若上下文含 last_check_outcome：成功则不要重复提交相同内容；"
+            "被拒收则按逐条原因\n修正后重新提交完整区块。",
+            prompt,
+        )
+
+    def test_prompt_preserves_practice_and_goal_action_contracts(self):
+        from workbench.bridge import conversations
+
+        prompt = conversations._prompt("帮我补池", {"check_intent": True})
+        self.assertIn(
+            "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
+            "普通问答不要附带动作。格式为 ```lessonkit-action "
+            '{"type":"replace_practice_selection","kp_ids":["知识点ID"]} ```。',
+            prompt,
+        )
+        self.assertIn(
+            "若学生从目标表单发起一句话求助，可附 ```lessonkit-action "
+            '{"type":"prefill_goal_form","title":"…","kind":"stage|long_term",'
+            '"deadline":"YYYY-MM-DD或空","description":"…"} ``` 代填目标字段'
+            "（仅此意图可附，普通问答不得代填）。",
+            prompt,
+        )
 
     def test_without_check_intent_nothing_is_extracted(self):
         cleaned, action = self._run(

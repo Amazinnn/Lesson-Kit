@@ -6,6 +6,11 @@ OBJECTIVE_TYPES = ("yes_no", "single_choice", "multiple_choice")
 YES_NO_OPTIONS = ["是", "否"]
 MAX_OPTIONS = 6
 MAX_STEM_CHARS = 200
+LABEL_FIELD_LIMITS = {
+    "topic_label": 40,
+    "display_title": 80,
+    "display_summary": 200,
+}
 
 _PRACTICE_MODES = {
     "yes_no": ["yes_no"],
@@ -52,12 +57,17 @@ def validate_payload(quiz_type, payload):
     elif quiz_type in ("single_choice", "multiple_choice"):
         if not isinstance(options, list) or not 2 <= len(options) <= MAX_OPTIONS:
             errors.append("choice items need 2-6 options")
+        elif not all(isinstance(option, str) for option in options):
+            errors.append("options must be strings")
         elif len(set(options)) != len(options):
             errors.append("options must be unique")
         if quiz_type == "single_choice":
             if not isinstance(options, list) or answer not in (options or []):
                 errors.append("answer_key must be one of the options")
-        elif not isinstance(answer, list) or not answer or not isinstance(options, list) \
+        elif not isinstance(answer, list) or not answer \
+                or not all(isinstance(option, str) for option in answer) \
+                or not isinstance(options, list) \
+                or not all(isinstance(option, str) for option in options) \
                 or not set(answer) <= set(options):
             errors.append("answer_key must be a non-empty subset of the options")
     else:
@@ -91,6 +101,14 @@ def validate_problem_row(row):
         allowed = set(practice_modes_for(quiz_type))
         if not set(modes) <= allowed:
             errors.append(f"practice_modes for {quiz_type} must be within {sorted(allowed)}")
+    for field, limit in LABEL_FIELD_LIMITS.items():
+        if field not in row:
+            continue
+        value = row[field]
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"{field} must be a non-empty string")
+        elif len(value) > limit:
+            errors.append(f"{field} exceeds {limit} characters")
     return errors
 
 

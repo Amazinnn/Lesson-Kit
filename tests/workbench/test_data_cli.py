@@ -101,6 +101,30 @@ class DataCliTests(unittest.TestCase):
         conn.close()
         self.assertEqual(after, before)
 
+    def test_ingest_batches_returns_json_envelope(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "INSERT INTO ingest_batches (batch_id, kind, manifest_path, counts_json,"
+            " backup_path, applied_at) VALUES (?, ?, ?, ?, ?, ?)",
+            ("batch-001", "flash-card-patch", "batch-001.json",
+             '{"flash_cards": 3}', "backup.db", "2026-08-30 10:00:00"),
+        )
+        conn.commit()
+        conn.close()
+
+        code, result = self.run_cli("ingest", "course", "batches")
+
+        self.assertEqual(code, 0)
+        self.assertEqual(result, {
+            "artifact": None,
+            "result": {"batches": [{
+                "batch_id": "batch-001", "kind": "flash-card-patch",
+                "counts": {"flash_cards": 3},
+                "applied_at": "2026-08-30 10:00:00",
+                "rolled_back_at": None, "backup_path": "backup.db",
+            }]},
+        })
+
     def test_create_update_delete_and_state_use_explicit_commands(self):
         create_path = self.write_json(
             "kp.json",

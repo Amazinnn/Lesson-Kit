@@ -430,6 +430,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                 front           TEXT NOT NULL,
                 back            TEXT NOT NULL,
                 source_evidence TEXT NOT NULL,
+                topic_label     TEXT,
                 ingest_batch_id TEXT
             )
             """
@@ -582,7 +583,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             ensure_columns(
                 conn,
                 "flash_cards",
-                [("ingest_batch_id", "TEXT")],
+                [("topic_label", "TEXT"), ("ingest_batch_id", "TEXT")],
             )
         )
 

@@ -181,6 +181,7 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertIn("ingest_batches", tables)
         self.assertIn("ingest_batch_id", self.columns("problems"))
         self.assertIn("ingest_batch_id", self.columns("flash_cards"))
+        self.assertIn("topic_label", self.columns("flash_cards"))
         self.conn.execute(
             "INSERT INTO ingest_batches (batch_id, kind, manifest_path, counts_json, "
             "backup_path, applied_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
@@ -224,7 +225,7 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
             7,
         )
 
-    def test_migration_adds_batch_column_to_existing_flash_cards(self):
+    def test_migration_adds_flash_card_columns_idempotently_and_preserves_data(self):
         self.conn.execute(
             """
             CREATE TABLE flash_cards (
@@ -242,13 +243,15 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         )
         self.conn.commit()
         pool_schema.ensure_workbench_schema(self.conn)
+        pool_schema.ensure_workbench_schema(self.conn)
         self.assertIn("ingest_batch_id", self.columns("flash_cards"))
+        self.assertIn("topic_label", self.columns("flash_cards"))
         row = self.conn.execute(
-            "SELECT card_id, ingest_batch_id FROM flash_cards WHERE card_id=?",
+            "SELECT card_id, topic_label, ingest_batch_id FROM flash_cards WHERE card_id=?",
             ("dmath-ch06-fc-001",),
         ).fetchone()
         self.assertEqual(row[0], "dmath-ch06-fc-001")
-        self.assertIsNone(row[1])
+        self.assertEqual(row[1:], (None, None))
 
 
 if __name__ == "__main__":

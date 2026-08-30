@@ -1,5 +1,7 @@
 """Rebuild bounded Agent context from browser identifiers and SQLite."""
 
+import sqlite3
+
 from workbench.data import queries
 
 
@@ -9,6 +11,7 @@ def build(pool, workspace, payload):
         "route": payload.get("route") or "",
         "page_type": page_type,
     }
+    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
     result = {
         "workspace": {
             "name": workspace["name"],
@@ -18,13 +21,13 @@ def build(pool, workspace, payload):
         "anchor": anchor,
         "current": {},
         "recent_objects": _recent(pool, payload.get("recent_objects", [])),
-        "knowledge_point_ids": [kp["kp_id"] for kp in pool.kps(
-            f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
-        )],
+        "knowledge_point_ids": [kp["kp_id"] for kp in pool.kps(prefix)],
         "practice_intent": bool(payload.get("practice_intent")),
         "goal_intent": bool(payload.get("goal_intent")),
         "check_intent": bool(payload.get("check_intent")),
     }
+    if payload.get("check_intent"):
+        result["next_free_ids"] = _next_free_ids(pool, prefix)
     if page_type == "practice":
         _practice(pool, payload, result)
     elif page_type == "kp":
@@ -32,6 +35,29 @@ def build(pool, workspace, payload):
     elif page_type == "graph":
         _graph(pool, payload, result)
     return result
+
+
+def _next_free_ids(pool, prefix):
+    """Best-effort next free content id per entity type, for check ingest turns."""
+    conn = pool.connect()
+    try:
+        card_max = conn.execute(
+            "SELECT MAX(CAST(SUBSTR(card_id, -3) AS INTEGER)) FROM flash_cards "
+            "WHERE SUBSTR(card_id, -7, 4) = '-fc-'"
+        ).fetchone()[0]
+    except sqlite3.OperationalError:
+        card_max = None
+    try:
+        quiz_max = conn.execute(
+            "SELECT MAX(CAST(SUBSTR(problem_id, -3) AS INTEGER)) FROM problems "
+            "WHERE SUBSTR(problem_id, -7, 4) = '-mq-'"
+        ).fetchone()[0]
+    except sqlite3.OperationalError:
+        quiz_max = None
+    return {
+        "flash_card": f"{prefix}-fc-{(card_max or 0) + 1:03d}",
+        "micro_quiz": f"{prefix}-mq-{(quiz_max or 0) + 1:03d}",
+    }
 
 
 def _practice(pool, payload, result):
