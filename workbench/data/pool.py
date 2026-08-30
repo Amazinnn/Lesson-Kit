@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 
 
@@ -18,6 +19,7 @@ class Pool:
         self.course = course
         self.chapter = chapter
         self._conn = None
+        self._transaction_depth = 0
 
     def connect(self):
         if self._conn is None:
@@ -31,7 +33,28 @@ class Pool:
             self._conn = None
 
     def commit(self):
-        self.connect().commit()
+        if self._transaction_depth == 0:
+            self.connect().commit()
+
+    @contextmanager
+    def transaction(self):
+        """Commit a group of Pool writes together, with nested-call support."""
+        conn = self.connect()
+        outermost = self._transaction_depth == 0
+        if outermost:
+            conn.execute("BEGIN")
+        self._transaction_depth += 1
+        try:
+            yield self
+        except Exception:
+            self._transaction_depth -= 1
+            if outermost:
+                conn.rollback()
+            raise
+        else:
+            self._transaction_depth -= 1
+            if outermost:
+                conn.commit()
 
     # -- knowledge points -------------------------------------------------
 

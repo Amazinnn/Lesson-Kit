@@ -23,6 +23,11 @@ def apply(pool, item_type, item_id, rating=None, note=None, direction=""):
     not change progress, current-state, or signal semantics.
     Returns a list of human-readable changes for the UI.
     """
+    with pool.transaction():
+        return _apply(pool, item_type, item_id, rating, note, direction)
+
+
+def _apply(pool, item_type, item_id, rating, note, direction):
     changes = []
     targets = _targets(pool, item_type, item_id)
     signal_type = _signal_type(note)
