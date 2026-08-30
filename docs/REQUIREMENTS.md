@@ -4,9 +4,15 @@
 > Requirement + Scenario；历史变更提案见 `openspec/changes/archive/`）。
 > 本文件是人话版摘要 + 边界 + 验收标准。
 
+> **当前实现快照（2026-08-30）**：题池已有 31 个知识点；练习只读取正式
+> `problems`，候选表保留为兼容维护面；旧 explain/diagnose 任务桥已退役，
+> Provider 原生自由对话与带意图门的 `check_ingest` 动作是当前 Bridge；
+> 闪卡、微题、目标生命周期、日历/任务量和整批回滚均已进入实现。
+> 下方带日期的小节保留当时的需求与决策历史，不能覆盖这份当前快照。
+
 ## 一句话
 
-**个人用的趁手学习工具**：把 lesson-kit 池子（28 KP / 303 题 / 信号 / 候选）变成每天打开
+**个人用的趁手学习工具**：把 lesson-kit 池子（31 KP / 正式题 / 闪卡 / 信号）变成每天打开
 的复习工作台——挠自己痛处（弱项优先），AI 只经外部 agent CLI 当老师，绝不内置 AI 内核。
 
 ## 核心需求（已确认）
@@ -35,7 +41,10 @@
 - 不改变现有管线/池子契约：新增全部增量（表/列），`lessonkit.py` 与 pipeline 不动。
 - 不做防御性编程、不用哈希（含 SHA-256），ID 一律可读顺序标识。
 
-## 验收标准（v1 后端"做完"的定义）
+## 历史验收标准（最初 v1 后端定义）
+
+> 本清单记录 2026-08-16 的原始范围，其中 explain/diagnose 等条目已经被后续
+> 归档变更取代；当前验收以 `openspec/specs/`、CI 与 `PRODUCT-MANUAL` 为准。
 
 - [ ] `pytest tests -q` 全绿（含新增 workbench 领域/桥/API 单测）。
 - [ ] 迁移幂等：新池（create-tables）与旧池升级（migrate-progress）都通过

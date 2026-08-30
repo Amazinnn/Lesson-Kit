@@ -32,11 +32,16 @@
    够不够？禁止过度工程、禁止防御性编程、禁止哈希。
 4. **小步提交**：`feat/fix/docs/chore/refactor` 前缀；工作区不留脏；每完成一个可验证
    单元即提交。
-5. **验证节奏**（交付前必跑）：
+5. **验证节奏**（每个 PR 必跑的仓库级检查）：
    ```bash
    python -m pytest tests -q
+   python -m compileall -q lessonkit.py workbench pipeline pool tests
    openspec validate --specs --strict
    python lessonkit.py guard extract-problems --course dmath --chapter ch06
+   ```
+   `problem-set` guard 属于工作区产物验收，只在对应输出已经生成时运行；
+   干净 Git checkout 不跟踪 `output/`，因此它不是仓库级 CI 前置条件：
+   ```bash
    python lessonkit.py guard problem-set --course dmath --chapter ch06
    ```
 6. **单对话职责单一**：设计对话 / 实现对话 / 重构对话分开；长任务拆段，每段可恢复。

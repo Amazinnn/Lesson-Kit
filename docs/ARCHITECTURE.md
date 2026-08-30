@@ -31,24 +31,27 @@ workbench/
 ├── domain/            # 学习模型层（纯规则）
 │   ├── __init__.py
 │   ├── weak.py        # 弱项排序 + 级联信号提升（ADR 0015）
-│   ├── pull.py        # 拉题引擎（problems→gate_passed 候选→缺口报告）
+│   ├── pull.py        # 拉题引擎（正式 problems → 缺口报告）
 │   ├── feedback.py    # 1-5 与自然语言 → signals/events（ADR 0011）
-│   └── schedule.py    # SM-2 变体（review_schedule，方向复合键，永不锁题）
+│   ├── schedule.py    # SM-2 变体（review_schedule，方向复合键，永不锁题）
+│   ├── planning.py    # 确定性今日计划与有界 Agent 调整
+│   ├── cards.py       # 闪卡内容规则
+│   ├── micro_quiz.py  # 微题内容规则与判分
+│   └── mastery.py     # 只读掌握度实验规则
 ├── data/
 │   ├── __init__.py
 │   ├── pool.py        # Pool：工作区级只读/写连接 + 查询（weak/due/problem/kp/figures）
-│   ├── migrations.py  # 幂等增量迁移（ensure_* 模式，沿用 pool_schema.py）
 │   ├── queries.py     # 视图查询（hub 统计、练习页合流列表/到期提醒/日历）
-│   └── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联（唯一经 Pool 碰 SQLite）
+│   ├── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联
+│   ├── goals.py       # 工作区本地目标存储
+│   ├── mastery.py     # 掌握度实验的只读数据投影
+│   └── display_metadata.py # 展示字段回填
 ├── bridge/
 │   ├── __init__.py
-│   ├── jobs.py        # 任务生命周期（queued/running/done/failed；.lessonkit/jobs/）
-│   ├── contracts.py   # 输出契约校验（explain 四节 / diagnose 定位-提示-溯源-追问）
-│   ├── providers.py   # 外部 CLI 拉起（cwd=工作区，超时，stdout 落日志；环境变量 LESSONKIT_JOB_DIR / LESSONKIT_OUTPUT_PATH 传递任务信息）
-│   ├── teacher.py     # 任务指令渲染（教师行为契约注入，纯数据接口，零教学硬编码）
-│   ├── runner.py      # AI 任务编排（建任务→拉 provider→契约校验→done/failed；无 provider 优雅失败）
 │   ├── conversation_providers.py # PATH Agent 发现、原生新建/续聊命令与 JSONL 归一化
 │   └── conversations.py # conv-###、串行 turn、取消、成功镜像
+├── ingest/
+│   └── __init__.py    # 内容 prepare/run/gate/apply/batch/rollback
 ├── cli/
 │   ├── __init__.py
 │   └── main.py        # wb 入口（argparse；纯数据命令，无教学语义）
@@ -73,8 +76,8 @@ workbench/
 - 新列：`knowledge_points.figure_paths`、`problems.figure_paths`（逻辑路径 JSON）、
   `problem_attempts.answer_text`。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪）、
-  `.lessonkit/explain/{course}/{chapter}/{item_id}.md`（跟踪）、`.lessonkit/jobs/<id>/`（gitignored）、
-  `.lessonkit/jobs/conv-###/`（provider 会话指针、运行事件与成功问答镜像）、
+  `.lessonkit/jobs/conv-###/`（provider 会话指针、运行事件与成功问答镜像，gitignored）、
+  `.lessonkit/plan.json` 与 `.lessonkit/goals.json`（工作区本地计划/目标）、
   `~/.lessonkit-workbench/workspaces.json` + `bridges.json`（用户级，JSON——stdlib 无 YAML 解析）。
 - ID 一律可读顺序标识（`job-003`），无哈希。
 
@@ -89,18 +92,18 @@ workbench/
   feedback.py，单测覆盖关键词表。
 - `domain.schedule.after_result(pool, item, result, now)`——SM-2 变体；`due(pool, days) -> [...]`。
 - 图谱状态动作经 Domain 规则映射到现有调度质量值；Shell 不直接写 SQLite，Data 层执行覆盖式存储。
-- `bridge.jobs`：`create/start/finish/fail/status`；任务文件 schema（operation/context/
-  output_contract）固定，新增操作只加 operation 类型。
-- `bridge.contracts.validate(kind, result_text) -> (ok, reasons)`——确定性、可单测。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
 - `bridge.conversations`：每工作区 `list/create/get/start/cancel`；同一会话单轮串行，完整上下文留在 provider 原生 store。
+- `ingest`：`prepare/run/gate/apply/apply_batch/rollback_batch`；生成内容只有通过
+  确定性门禁后才能以批次事务写入，并保留整批回滚边界。
 - `server.context`：按浏览器提供的路由与对象 ID 重新读取 Pool，生成权威 Agent 上下文；不接收整页 DOM。
 - `server.api`：handler 注册表 {method, path_pattern, handler(pool, ws, args) -> json}；
   HTML 页面经 pages.py，JSON 经 api.py，二者不混。
 
 ## 4. 扩展点（明确留口）
 
-- Bridge 新操作：contracts.py + teacher.py 各加一个 kind，jobs 协议不变。
+- Bridge 新浏览器动作：先扩展意图门与结构化 action 契约，再复用现有 Data/ingest
+  写入边界；普通对话始终只读。
 - 新学习动作：domain 加模块，data.queries 加查询，Shell 加命令/页面。
 - AI 教师记忆消费端：读 trace（jobs 归档）+ feedback_events，独立后置模块。
 - 前端：pages.py 服务端渲染升级为更顺滑交互时，改 pages.py 与静态资产即可，不动后端接口。
