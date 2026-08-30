@@ -319,6 +319,16 @@ test("workspace selector navigates to the selected workspace practice page", () 
   assert.equal(app.window.location, "/w/beta/practice");
 });
 
+test("corrupt session state is discarded instead of breaking page startup", () => {
+  const storage = new FakeStorage({ wb_session_alpha: "{broken" });
+  runWorkbench({
+    elements: { layout: layout() },
+    storage,
+    fetch: () => jsonResponse([]),
+  });
+  assert.equal(storage.getItem("wb_session_alpha"), null);
+});
+
 test("practice requires an explicit mode and excludes questions already seen", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
@@ -963,13 +973,16 @@ test("practice pull failures stay visible beside the active study flow", async (
     elements,
     fetch: (url) => url.includes("/weak?")
       ? jsonResponse([{ kp_id: "kp-1" }])
-      : Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({}) }),
+      : Promise.resolve({
+        ok: false, status: 503,
+        json: () => Promise.resolve({ error: "review service unavailable" }),
+      }),
   });
   elements["practice-mode-immediate"].checked = true;
   elements["practice-mode-immediate"].trigger("change");
   elements["start-practice"].click();
   await flush();
-  assert.match(elements["practice-error"].textContent, /503/);
+  assert.match(elements["practice-error"].textContent, /review service unavailable/);
   assert.equal(elements["retry-practice"].classList.contains("hidden"), false);
   elements["retry-practice"].click();
   await flush();
