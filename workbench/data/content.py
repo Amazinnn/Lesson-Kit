@@ -258,6 +258,26 @@ def _delete_learning_rows(conn, item_type, item_id):
 
 
 def _delete_kp(conn, kp_id):
+    card_ids = [
+        row[0] for row in conn.execute(
+            "SELECT card_id FROM flash_cards WHERE kp_id=?", (kp_id,)
+        )
+    ]
+    for card_id in card_ids:
+        _delete_learning_rows(conn, "card", card_id)
+        conn.execute("DELETE FROM learner_signals WHERE target_id=?", (card_id,))
+    conn.execute("DELETE FROM flash_cards WHERE kp_id=?", (kp_id,))
+
+    question_ids = [
+        row[0] for row in conn.execute(
+            "SELECT q_id FROM questions WHERE kp_id=?", (kp_id,)
+        )
+    ]
+    for question_id in question_ids:
+        conn.execute("DELETE FROM question_progress WHERE q_id=?", (question_id,))
+    conn.execute("DELETE FROM questions WHERE kp_id=?", (kp_id,))
+    conn.execute("DELETE FROM kp_progress WHERE kp_id=?", (kp_id,))
+
     relation_ids = [
         row[0] for row in conn.execute(
             "SELECT relation_id FROM knowledge_relations "
