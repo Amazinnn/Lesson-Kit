@@ -2,6 +2,7 @@
 
 import sqlite3
 import unittest
+from unittest import mock
 
 from tests.workbench.fixtures import WorkspaceFixture
 
@@ -136,6 +137,20 @@ class AgentContextTests(unittest.TestCase):
         )
         without = context.build(self.pool, self.workspace, {})
         self.assertNotIn("next_free_ids", without)
+
+    def test_context_asks_the_data_layer_for_next_ids(self):
+        from workbench.server import context
+
+        with mock.patch.object(
+            self.pool, "next_free_content_ids",
+            return_value={"flash_card": "fc-next", "micro_quiz": "mq-next"},
+        ) as next_ids:
+            result = context.build(
+                self.pool, self.workspace, {"check_intent": True}
+            )
+
+        next_ids.assert_called_once_with("dmath-ch06")
+        self.assertEqual(result["next_free_ids"]["flash_card"], "fc-next")
 
 
 if __name__ == "__main__":

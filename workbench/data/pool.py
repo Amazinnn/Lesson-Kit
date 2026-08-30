@@ -123,6 +123,20 @@ class Pool:
         ).fetchone()
         return dict(row) if row else None
 
+    def next_free_content_ids(self, prefix):
+        """Return chapter-scoped next ids for Agent-created cards and quizzes."""
+        conn = self.connect()
+        card_max = _maximum_readable_suffix(
+            conn, "flash_cards", "card_id", f"{prefix}-fc-"
+        )
+        quiz_max = _maximum_readable_suffix(
+            conn, "problems", "problem_id", f"{prefix}-mq-"
+        )
+        return {
+            "flash_card": f"{prefix}-fc-{(card_max or 0) + 1:03d}",
+            "micro_quiz": f"{prefix}-mq-{(quiz_max or 0) + 1:03d}",
+        }
+
     # -- learner state ----------------------------------------------------
 
     def signals(self):
@@ -262,3 +276,17 @@ class Pool:
 
     def jobs_dir(self):
         return self.root / ".lessonkit" / "jobs"
+
+
+def _maximum_readable_suffix(conn, table, column, marker):
+    """Read numeric suffixes without assuming they stay three digits forever."""
+    try:
+        rows = conn.execute(f"SELECT {column} FROM {table}").fetchall()
+    except sqlite3.OperationalError:
+        return None
+    numbers = [
+        int(value[len(marker):])
+        for row in rows
+        if (value := row[0]).startswith(marker) and value[len(marker):].isdigit()
+    ]
+    return max(numbers, default=None)
