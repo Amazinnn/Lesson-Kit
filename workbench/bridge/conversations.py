@@ -19,8 +19,10 @@ class ConversationConflict(Exception):
 
 _LOCK = threading.Lock()
 _PROCESSES = {}
+_ACTIVE_TURNS = set()
 _CANCEL_REQUESTS = set()
 _TIMEOUTS = set()
+STOP_GRACE_SECONDS = 1
 
 
 def _now():
@@ -94,7 +96,7 @@ def list_sessions(pool, limit=None):
     if not jobs_dir.is_dir():
         return records
     for path in jobs_dir.glob("conv-*/conversation.json"):
-        record = _read_json(path)
+        record = _recover_interrupted(pool, _read_json(path))
         record.setdefault("title", "")
         record.setdefault("title_source", "unset")
         records.append(record)
@@ -103,7 +105,9 @@ def list_sessions(pool, limit=None):
 
 
 def get(pool, conversation_id):
-    record = _read_json(_conversation_file(pool, conversation_id))
+    record = _recover_interrupted(
+        pool, _read_json(_conversation_file(pool, conversation_id))
+    )
     record.setdefault("title", "")
     record.setdefault("title_source", "unset")
     messages = []
@@ -140,6 +144,9 @@ def rename(pool, conversation_id, title):
 def delete(pool, conversation_id):
     """Delete only an idle Lesson Kit mirror; provider sessions are untouched."""
     folder = _conversation_dir(pool, conversation_id)
+    record = _recover_interrupted(
+        pool, _read_json(folder / "conversation.json")
+    )
     with _LOCK:
         record = _read_json(folder / "conversation.json")
         if record.get("status") == "running":
@@ -149,7 +156,37 @@ def delete(pool, conversation_id):
 
 
 def get_turn(pool, conversation_id, turn_id):
+    _recover_interrupted(
+        pool, _read_json(_conversation_file(pool, conversation_id))
+    )
     return _read_json(_turn_file(pool, conversation_id, turn_id))
+
+
+def _recover_interrupted(pool, record):
+    """Turn a persisted running state with no live worker into an honest failure."""
+    if record.get("status") != "running" or not record.get("current_turn_id"):
+        return record
+    turn_id = record["current_turn_id"]
+    key = (str(_conversation_dir(pool, record["conversation_id"])), turn_id)
+    with _LOCK:
+        if key in _ACTIVE_TURNS:
+            return record
+        current = _read_json(_conversation_file(pool, record["conversation_id"]))
+        if current.get("status") != "running" or current.get("current_turn_id") != turn_id:
+            return current
+        error = "workbench restarted while the provider turn was running"
+        turn_path = _turn_file(pool, record["conversation_id"], turn_id)
+        if turn_path.is_file():
+            turn = _read_json(turn_path)
+            turn.update({"status": "failed", "error": error, "updated_at": _now()})
+            _write_json(turn_path, turn)
+            _append_event(
+                _events_file(pool, record["conversation_id"], turn_id),
+                "error", text=error,
+            )
+        current.update({"status": "idle", "current_turn_id": None, "updated_at": _now()})
+        _write_json(_conversation_file(pool, record["conversation_id"]), current)
+        return current
 
 
 def events(pool, conversation_id, turn_id, after=0):
@@ -250,6 +287,7 @@ def _last_check_outcome(folder):
 def start_turn(pool, workspace, conversation_id, message, context):
     folder = _conversation_dir(pool, conversation_id)
     conversation_path = folder / "conversation.json"
+    _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
         conversation = _read_json(conversation_path)
         if conversation["status"] == "running":
@@ -268,6 +306,7 @@ def start_turn(pool, workspace, conversation_id, message, context):
         conversation.update({"status": "running", "current_turn_id": turn_id, "updated_at": now})
         _write_json(conversation_path, conversation)
         key = (str(folder), turn_id)
+        _ACTIVE_TURNS.add(key)
         _CANCEL_REQUESTS.discard(key)
         _TIMEOUTS.discard(key)
         turn_context = dict(context)
@@ -275,7 +314,7 @@ def start_turn(pool, workspace, conversation_id, message, context):
         if last_check_outcome:
             turn_context["last_check_outcome"] = last_check_outcome
         thread = threading.Thread(
-            target=_run_turn,
+            target=_run_turn_safely,
             args=(
                 pool.root, pool.jobs_dir(), workspace, conversation_id, turn_id,
                 message, turn_context,
@@ -284,6 +323,21 @@ def start_turn(pool, workspace, conversation_id, message, context):
         )
         thread.start()
     return turn
+
+
+def _run_turn_safely(*args):
+    jobs_dir, conversation_id, turn_id = args[1], args[3], args[4]
+    folder = jobs_dir / conversation_id
+    try:
+        _run_turn(*args)
+    except Exception as exc:
+        turn_path = folder / f"{turn_id}.json"
+        if turn_path.is_file() and _read_json(turn_path).get("status") == "running":
+            _append_event(
+                folder / f"{turn_id}.events.jsonl", "error",
+                text=f"provider turn failed: {exc}",
+            )
+            _finish(folder, conversation_id, turn_id, "failed", f"provider turn failed: {exc}")
 
 
 def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, context):
@@ -327,7 +381,7 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
         with _LOCK:
             if process.poll() is None:
                 _TIMEOUTS.add(key)
-                process.terminate()
+        _stop_process(process)
 
     timer = threading.Timer(provider.get("timeout_s", 300), timeout_process)
     timer.start()
@@ -508,24 +562,42 @@ def _clean_goal_form_action(raw):
 
 def _finish(folder, conversation_id, turn_id, status, error):
     now = _now()
-    conversation_path = folder / "conversation.json"
-    conversation = _read_json(conversation_path)
-    conversation.update({"status": "idle", "current_turn_id": None, "updated_at": now})
-    _write_json(conversation_path, conversation)
-    turn_path = folder / f"{turn_id}.json"
-    turn = _read_json(turn_path)
-    turn.update({"status": status, "error": error, "updated_at": now})
-    _write_json(turn_path, turn)
+    key = (str(folder), turn_id)
+    with _LOCK:
+        conversation_path = folder / "conversation.json"
+        conversation = _read_json(conversation_path)
+        conversation.update({"status": "idle", "current_turn_id": None, "updated_at": now})
+        _write_json(conversation_path, conversation)
+        turn_path = folder / f"{turn_id}.json"
+        turn = _read_json(turn_path)
+        turn.update({"status": status, "error": error, "updated_at": now})
+        _write_json(turn_path, turn)
+        _ACTIVE_TURNS.discard(key)
+        _CANCEL_REQUESTS.discard(key)
+        _TIMEOUTS.discard(key)
+
+
+def _stop_process(process):
+    if process.poll() is not None:
+        return
+    process.terminate()
+    try:
+        process.wait(timeout=STOP_GRACE_SECONDS)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 def cancel(pool, conversation_id):
-    conversation = _read_json(_conversation_file(pool, conversation_id))
+    conversation = _recover_interrupted(
+        pool, _read_json(_conversation_file(pool, conversation_id))
+    )
     if conversation["status"] != "running":
         raise ConversationConflict("conversation has no running turn")
     key = (str(_conversation_dir(pool, conversation_id)), conversation["current_turn_id"])
     with _LOCK:
         _CANCEL_REQUESTS.add(key)
         process = _PROCESSES.get(key)
-        if process is not None and process.poll() is None:
-            process.terminate()
+    if process is not None:
+        _stop_process(process)
     return {"conversation_id": conversation_id, "turn_id": conversation["current_turn_id"], "status": "cancelling"}

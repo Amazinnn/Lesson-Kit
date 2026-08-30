@@ -215,10 +215,62 @@ class ConversationTests(unittest.TestCase):
         path = self.pool.jobs_dir() / conversation["conversation_id"] / "conversation.json"
         record = json.loads(path.read_text(encoding="utf-8"))
         record["status"] = "running"
+        record["current_turn_id"] = "turn-001"
         path.write_text(json.dumps(record), encoding="utf-8")
-        with self.assertRaises(conversations.ConversationConflict):
-            conversations.delete(self.pool, conversation["conversation_id"])
-        self.assertTrue(path.exists())
+        key = (str(path.parent), "turn-001")
+        conversations._ACTIVE_TURNS.add(key)
+        try:
+            with self.assertRaises(conversations.ConversationConflict):
+                conversations.delete(self.pool, conversation["conversation_id"])
+            self.assertTrue(path.exists())
+        finally:
+            conversations._ACTIVE_TURNS.discard(key)
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_persisted_running_turn_is_recovered_after_restart(self, get_provider):
+        from workbench.bridge import conversations
+
+        get_provider.return_value = self.provider
+        conversation = conversations.create(self.pool, "codex")
+        folder = self.pool.jobs_dir() / conversation["conversation_id"]
+        record = json.loads((folder / "conversation.json").read_text(encoding="utf-8"))
+        record.update({"status": "running", "current_turn_id": "turn-001"})
+        (folder / "conversation.json").write_text(json.dumps(record), encoding="utf-8")
+        (folder / "turn-001.json").write_text(json.dumps({
+            "turn_id": "turn-001", "status": "running", "error": None,
+        }), encoding="utf-8")
+
+        restored = conversations.get(self.pool, conversation["conversation_id"])
+        turn = conversations.get_turn(
+            self.pool, conversation["conversation_id"], "turn-001"
+        )
+
+        self.assertEqual(restored["status"], "idle")
+        self.assertIsNone(restored["current_turn_id"])
+        self.assertEqual(turn["status"], "failed")
+        self.assertIn("workbench restarted", turn["error"])
+        self.assertEqual(
+            conversations.events(
+                self.pool, conversation["conversation_id"], "turn-001"
+            )[-1]["kind"],
+            "error",
+        )
+
+    def test_stop_escalates_to_kill_when_provider_ignores_terminate(self):
+        from workbench.bridge import conversations
+
+        process = mock.Mock()
+        process.poll.return_value = None
+        process.wait.side_effect = [
+            conversations.subprocess.TimeoutExpired("provider", 1),
+            0,
+        ]
+
+        conversations._stop_process(process)
+
+        process.terminate.assert_called_once_with()
+        process.kill.assert_called_once_with()
+        self.assertEqual(process.wait.call_count, 2)
 
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")
