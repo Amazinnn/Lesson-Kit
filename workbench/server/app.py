@@ -15,6 +15,7 @@ FRONTEND_DIST = (
     Path(__file__).resolve().parents[2] / "frontend" / "editable-graph" / "dist"
 )
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+MAX_JSON_BODY_BYTES = 2 * 1024 * 1024
 
 CONTENT_TYPES = {
     ".js": "application/javascript; charset=utf-8",
@@ -115,9 +116,22 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
         body = None
         if method in {"POST", "PATCH"}:
-            length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length) if length else b"{}"
-            body = json.loads(raw.decode("utf-8")) if raw else {}
+            content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            if content_type != "application/json":
+                self._send_json(415, {"error": "Content-Type must be application/json"})
+                return
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                if length < 0 or length > MAX_JSON_BODY_BYTES:
+                    raise ValueError("request body is too large")
+                raw = self.rfile.read(length) if length else b"{}"
+                body = json.loads(raw.decode("utf-8")) if raw else {}
+            except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                self._send_json(400, {"error": f"invalid JSON request: {exc}"})
+                return
+            if not isinstance(body, dict):
+                self._send_json(400, {"error": "request body must be a JSON object"})
+                return
 
         name = params.pop("name", None)
         if name is None:
@@ -238,19 +252,15 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         except KeyError:
             self._send_json(404, {"error": "unknown workspace"})
             return
-        pool = api_mod._pool_for(workspace)
-        try:
-            base = (Path(workspace["path"]) / ".lessonkit" / "figures").resolve()
-            target = (base / logical).resolve()
-            if not str(target).startswith(str(base)):
-                self._send_json(403, {"error": "forbidden"})
-                return
-            if not target.is_file():
-                self._send_json(404, {"error": "figure not found"})
-                return
-            data = target.read_bytes()
-        finally:
-            pool.close()
+        base = (Path(workspace["path"]) / ".lessonkit" / "figures").resolve()
+        target = (base / logical).resolve()
+        if not target.is_relative_to(base):
+            self._send_json(403, {"error": "forbidden"})
+            return
+        if not target.is_file():
+            self._send_json(404, {"error": "figure not found"})
+            return
+        data = target.read_bytes()
         self.send_response(200)
         self.send_header("Content-Type", _content_type(target.suffix))
         self.send_header("Content-Length", str(len(data)))
