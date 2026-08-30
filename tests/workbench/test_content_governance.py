@@ -190,6 +190,63 @@ class ContentGovernanceTests(unittest.TestCase):
             0,
         )
 
+    def test_kp_delete_clears_cards_and_legacy_dependents(self):
+        from workbench.data import content
+
+        conn = self.pool.connect()
+        kp_id = "dmath-ch06-kp-001"
+        card_id = "dmath-ch06-fc-001"
+        conn.execute(
+            "INSERT INTO flash_cards"
+            " (card_id, kp_id, front, back, source_evidence) VALUES (?, ?, ?, ?, ?)",
+            (card_id, kp_id, "front", "back", "source"),
+        )
+        conn.execute(
+            "INSERT INTO feedback_events (item_type, item_id, rating) VALUES ('card', ?, 2)",
+            (card_id,),
+        )
+        conn.execute(
+            "INSERT INTO review_schedule (item_type, item_id) VALUES ('card', ?)",
+            (card_id,),
+        )
+        conn.execute(
+            "INSERT INTO learner_signals"
+            " (signal_id, target_type, target_id, signal_type) VALUES (?, 'node', ?, 'weak_node')",
+            (card_id + "-sig", card_id),
+        )
+        conn.execute(
+            "INSERT INTO questions (q_id, question_text, answer_key, kp_id)"
+            " VALUES ('q-001', 'question', 'answer', ?)",
+            (kp_id,),
+        )
+        conn.execute(
+            "INSERT INTO question_progress (q_id, note) VALUES ('q-001', 'note')"
+        )
+        conn.execute(
+            "INSERT INTO kp_progress (kp_id, mastery_state) VALUES (?, 'grasping')",
+            (kp_id,),
+        )
+        conn.commit()
+
+        content.delete(self.pool, "kp", kp_id)
+
+        for table, column, value in (
+            ("flash_cards", "card_id", card_id),
+            ("feedback_events", "item_id", card_id),
+            ("review_schedule", "item_id", card_id),
+            ("learner_signals", "target_id", card_id),
+            ("questions", "q_id", "q-001"),
+            ("question_progress", "q_id", "q-001"),
+            ("kp_progress", "kp_id", kp_id),
+        ):
+            self.assertEqual(
+                conn.execute(
+                    f"SELECT COUNT(*) FROM {table} WHERE {column}=?", (value,)
+                ).fetchone()[0],
+                0,
+                table,
+            )
+
     def test_failed_delete_rolls_back_the_whole_cascade(self):
         from workbench.data import content
 
