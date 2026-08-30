@@ -18,10 +18,11 @@ def for_rating(rating):
 def apply(pool, item_type, item_id, state, now=None):
     """Overwrite current state and update its ordinary review schedule."""
     rating = STATE_RATING[state]
-    pool.upsert_current_state(item_type, item_id, state)
-    current = pool.schedule_get(item_type, item_id) or schedule.default_state(
-        item_type, item_id
-    )
-    next_state = schedule.after_result(current, rating, now or date.today())
-    pool.schedule_upsert(next_state)
+    with pool.transaction():
+        pool.upsert_current_state(item_type, item_id, state)
+        current = pool.schedule_get(item_type, item_id) or schedule.default_state(
+            item_type, item_id
+        )
+        next_state = schedule.after_result(current, rating, now or date.today())
+        pool.schedule_upsert(next_state)
     return next_state

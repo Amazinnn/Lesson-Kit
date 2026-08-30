@@ -222,14 +222,15 @@ def practice(pool, workspace, params, body):
     status = schedule_rules.recorded_status(result)
     if status is None:
         return {"problem_id": problem_id, "result": result, "recorded": False}
-    pool.insert_attempt(problem_id, status, body.get("note"),
-                        body.get("answer_text"))
-    pool.upsert_problem_progress(problem_id, status, body.get("note"))
-    state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
-        "problem", problem_id
-    )
-    next_state = schedule_rules.after_result(state, result, date.today())
-    pool.schedule_upsert(next_state)
+    with pool.transaction():
+        pool.insert_attempt(problem_id, status, body.get("note"),
+                            body.get("answer_text"))
+        pool.upsert_problem_progress(problem_id, status, body.get("note"))
+        state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
+            "problem", problem_id
+        )
+        next_state = schedule_rules.after_result(state, result, date.today())
+        pool.schedule_upsert(next_state)
     return {"problem_id": problem_id, "result": result,
             "due_at": next_state["due_at"]}
 

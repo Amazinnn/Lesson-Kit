@@ -151,6 +151,29 @@ class FeedbackTests(unittest.TestCase):
         current = self.pool.current_state("kp", "dmath-ch06-kp-001")
         self.assertEqual(current["state"], "needs_work")
 
+    def test_feedback_rolls_back_every_learning_write_if_schedule_fails(self):
+        self.pool.connect().execute(
+            "CREATE TRIGGER reject_schedule BEFORE INSERT ON review_schedule "
+            "BEGIN SELECT RAISE(ABORT, 'stop'); END"
+        )
+        self.pool.commit()
+
+        with self.assertRaises(sqlite3.DatabaseError):
+            self.feedback.apply(
+                self.pool, "kp", "dmath-ch06-kp-001", rating=2, note="混淆"
+            )
+
+        conn = self.pool.connect()
+        for table in (
+            "learner_signals", "feedback_events", "learning_current_state",
+            "review_schedule",
+        ):
+            self.assertEqual(
+                conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0],
+                0,
+                table,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -98,6 +98,38 @@ class ApiTests(unittest.TestCase):
         self.assertEqual([row[0] for row in attempts], ["reviewing"])
         self.assertEqual(progress[0], "reviewing")
 
+    def test_practice_rolls_back_attempt_and_progress_if_schedule_fails(self):
+        from workbench import registry
+        from workbench.server import api
+
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.execute(
+            "CREATE TRIGGER reject_schedule BEFORE INSERT ON review_schedule "
+            "BEGIN SELECT RAISE(ABORT, 'stop'); END"
+        )
+        conn.commit()
+        conn.close()
+        workspace = registry.get_workspace("dmath")
+        pool = api._pool_for(workspace)
+        try:
+            with self.assertRaises(sqlite3.DatabaseError):
+                api.practice(pool, workspace, {}, {
+                    "problem_id": "dmath-ch06-prob-001", "result": "wrong",
+                })
+        finally:
+            pool.close()
+
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            for table in ("problem_attempts", "problem_progress", "review_schedule"):
+                self.assertEqual(
+                    conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0],
+                    0,
+                    table,
+                )
+        finally:
+            conn.close()
+
     def test_practice_skip_records_nothing(self):
         status, data = self.post("/api/w/dmath/practice", {
             "problem_id": "dmath-ch06-prob-001", "result": "skip",
