@@ -14,13 +14,16 @@ cards remain future work.
 ### Requirement: Flash card content contract
 
 The pool SHALL store flash cards in a dedicated additive `flash_cards` table
-with exactly five fields: `card_id`, `kp_id`, `front`, `back`, and
-`source_evidence`. Each card SHALL reference exactly one existing knowledge
-point, carry non-empty front and back text (front at most 100 characters,
-back at most 300 characters), and carry non-empty source evidence. The
-knowledge point SHALL remain the single source of truth; cards are derived
-key-value recall views over it, one atomic fact per card, and no learning
-semantics SHALL be inferred from card content.
+with five content fields: `card_id`, `kp_id`, `front`, `back`, and
+`source_evidence`, plus one optional label field `topic_label`. Each card
+SHALL reference exactly one existing knowledge point, carry non-empty front
+and back text (front at most 100 characters, back at most 300 characters),
+and carry non-empty source evidence. A supplied `topic_label` SHALL be a
+non-empty string of at most 40 characters that passes the shared markup
+safety check; an omitted label is stored as null. The knowledge point SHALL
+remain the single source of truth; cards are derived key-value recall views
+over it, one atomic fact per card, and no learning semantics SHALL be
+inferred from card content.
 
 #### Scenario: A well-formed card enters the pool
 
@@ -33,6 +36,13 @@ semantics SHALL be inferred from card content.
 - **WHEN** an item lacks source evidence, exceeds a text bound, has an empty
   front or back, or references a knowledge point that does not exist
 - **THEN** the deterministic gate rejects that item and nothing is written
+
+#### Scenario: Label field validation
+
+- **WHEN** a manifest item supplies a `topic_label` that is empty after
+  trimming, exceeds 40 characters, or fails the markup safety check
+- **THEN** the deterministic gate rejects that item with an explicit reason;
+  an omitted `topic_label` is accepted and stored as null
 
 ### Requirement: Composable flash-card ingestion
 
