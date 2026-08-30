@@ -27,8 +27,6 @@ def snapshot(conn):
         owner = by_problem if row["item_type"] == "problem" else by_kp if row["item_type"] == "kp" else {}
         if row["item_id"] in owner:
             owner[row["item_id"]]["schedule"] = row
-    # Candidate rows are retired (2026-08-29 Check pipeline): no candidate
-    # or candidate-attempt evidence is read into the snapshot.
     return {"problems": problems, "kps": kps}
 
 

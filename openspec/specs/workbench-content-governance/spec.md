@@ -12,7 +12,11 @@ keeps broken upstream material out of the formal pool.
 ## Requirements
 ### Requirement: Explicit content mutation boundary
 
-Pool content SHALL change only after an explicit create, update, delete, state, gate, or promote command, or through the structured check ingest action defined by the ai-teacher-bridge capability. Browsing, search, navigation, draft text, ordinary Agent conversation, and provider tool events SHALL NOT mutate pool or learning data. After a successful Agent mutation, the teacher answer SHALL expose a concise object, action, and workbench-link summary rather than raw commands, SQL, or tool logs.
+Pool content SHALL change only after an explicit create, update, delete, or
+state command, or through the structured check ingest action defined by the
+ai-teacher-bridge capability. Browsing, search, navigation, draft text,
+ordinary Agent conversation, and provider tool events SHALL NOT mutate pool or
+learning data. After a successful Agent mutation, the teacher answer SHALL expose a concise object, action, and workbench-link summary rather than raw commands, SQL, or tool logs.
 
 #### Scenario: Discuss a possible edit
 

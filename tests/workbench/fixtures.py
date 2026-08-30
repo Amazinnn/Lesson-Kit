@@ -78,15 +78,6 @@ def build_fixture_db(conn):
             note TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
-        CREATE TABLE candidate_problems (
-            candidate_id TEXT PRIMARY KEY,
-            kp_ids TEXT NOT NULL,
-            problem_text TEXT NOT NULL,
-            solution TEXT,
-            status TEXT NOT NULL,
-            structure_gate_status TEXT NOT NULL DEFAULT 'pending',
-            audit_gate_status TEXT NOT NULL DEFAULT 'pending'
-        );
         CREATE TABLE learner_signals (
             signal_id TEXT PRIMARY KEY,
             target_type TEXT NOT NULL,

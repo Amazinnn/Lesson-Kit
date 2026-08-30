@@ -129,9 +129,6 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertIn("display_title", self.columns("problems"))
         self.assertIn("topic_label", self.columns("problems"))
         self.assertIn("display_summary", self.columns("problems"))
-        self.assertIn("display_title", self.columns("candidate_problems"))
-        self.assertIn("topic_label", self.columns("candidate_problems"))
-        self.assertIn("display_summary", self.columns("candidate_problems"))
         self.assertIn("learning_current_state", self.table_names())
 
     def test_migration_is_idempotent(self):

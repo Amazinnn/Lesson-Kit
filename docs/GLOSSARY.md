@@ -34,10 +34,13 @@ _Avoid_：练习册条目、题目草稿
 出处：CONTEXT.md（迁入）；review-workbench spec「Problem pull engine」「Formal problems are reveal-ready」
 
 ### 候选题 / Problem Candidate
-尚未进入正式题池的、有源可依的练习条目。必须先后通过结构门禁与审计门禁，再经显式晋升（promote）才成为正式题。
-_Avoid_：AI 生成的题、正式题草稿（与正式题严格分离）
-出处：CONTEXT.md（迁入）；review-workbench spec「Unified Agent data CLI」
-状态注记（2026-08-29 专题 22）：随 Check 管线立项**退役**——无候选中间态后 pull/mastery/hub 停止读取；表与 CLI 子命令保留、标「待退役」，不 DROP。
+**已退役（2026-08-30 remove-candidate-store）**：概念与机制整体移除，候选题不复存在。
+历史含义（留档）：尚未进入正式题池的、有源可依的练习条目；先后过结构门禁与审计门禁，
+再经显式晋升（promote）成为正式题。
+状态注记（2026-08-29 专题 22）：随 Check 管线立项退役——pull/mastery/hub 停止读取。
+状态注记（2026-08-30）：观察期结束，所有者拍板物理清除——candidate_problems 表 DROP、
+`wb data` 的 candidate 实体与 gate/promote 动作移除；Agent 内容唯一通道为 Check 管线
+（见「Check 管线」条目）。
 
 ### Check 管线 / Check pipeline
 内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规 manifest → 确定性门禁校验 → **直接入正式池**（无候选中间态）。每次 apply 记批次 id、内容行带批次标记，整批回滚是安全网；门禁失败逐条显式报错、零写入。Agent 可直接触发（CLI 或对话桥 `check_ingest` 动作），门禁是决断辅助不是权限闸门；AI 永不直写池数据库。

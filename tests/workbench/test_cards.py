@@ -63,8 +63,6 @@ class CardIngestTests(unittest.TestCase):
                 kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
                 solution TEXT, problem_type TEXT, source_kind TEXT,
                 practice_modes TEXT, micro_quiz TEXT, ingest_batch_id TEXT);
-            CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY,
-                problem_text TEXT);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY,
                 source_kp_id TEXT, target_kp_id TEXT);
             CREATE TABLE flash_cards (card_id TEXT PRIMARY KEY,
@@ -340,8 +338,6 @@ class CardSchemaMigrationTests(unittest.TestCase):
                     kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
                     solution TEXT, problem_type TEXT, source_kind TEXT,
                     practice_modes TEXT, micro_quiz TEXT);
-                CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY,
-                    problem_text TEXT);
                 CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY,
                     source_kp_id TEXT, target_kp_id TEXT);
                 CREATE TABLE review_schedule (

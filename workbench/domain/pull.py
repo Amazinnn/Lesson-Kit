@@ -10,8 +10,7 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
     """Pull durable problems and report gaps.
 
     Never fabricates content: whatever cannot be filled is listed in
-    ``shortage``. Candidate staging is retired (2026-08-29 Check pipeline):
-    the pull engine reads formal problems only. ``include_ids`` optionally
+    ``shortage``. The pull engine reads formal problems only. ``include_ids`` optionally
     restricts the result to those identifiers within the requested scope.
     """
     exclude_ids = exclude_ids or set()
@@ -46,7 +45,6 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, exclude_ids=None,
 
     return {
         "problems": problems[:n],
-        "candidates": [],
         "shortage": shortage,
     }
 

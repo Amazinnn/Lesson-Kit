@@ -46,7 +46,6 @@ class IngestTests(unittest.TestCase):
             CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, knowledge_item TEXT);
             CREATE TABLE problems (problem_id TEXT PRIMARY KEY, problem_text TEXT NOT NULL,
                 solution TEXT, ingest_batch_id TEXT);
-            CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY, problem_text TEXT);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY, source_kp_id TEXT, target_kp_id TEXT);
             CREATE TABLE content_sequences (
                 scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
@@ -62,7 +61,6 @@ class IngestTests(unittest.TestCase):
             "INSERT INTO problems (problem_id, problem_text, solution) VALUES (?, ?, ?)",
             [("p-1", "Let x<sup>2</sup> = 1.", "old one"), ("p-2", "Count two choices.", "old two")],
         )
-        conn.execute("INSERT INTO candidate_problems VALUES ('c-1', 'Candidate question')")
         conn.execute("INSERT INTO knowledge_relations VALUES ('r-1', 'kp-1', 'kp-1')")
         conn.commit()
         conn.close()
@@ -184,7 +182,7 @@ class IngestTests(unittest.TestCase):
         result = ingest.gate(self.db_path, solutions, audits, report)
 
         self.assertTrue(result["ok"])
-        self.assertEqual(result["accounting"], {"knowledge_points": 1, "problems": 2, "candidate_problems": 1, "knowledge_relations": 1})
+        self.assertEqual(result["accounting"], {"knowledge_points": 1, "problems": 2, "knowledge_relations": 1})
         self.assertEqual(json.loads(report.read_text(encoding="utf-8"))["kind"], "gate-report")
 
         stale = self.artifact("stale.json", {**json.loads(audits.read_text(encoding="utf-8")), "items": [
@@ -355,7 +353,7 @@ class IngestTests(unittest.TestCase):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
         source = self.artifact("input.json", {"items": []})
         before = self.snapshot()
-        for name in ("knowledge", "problems", "candidates", "views"):
+        for name in ("knowledge", "problems", "views"):
             with self.subTest(recipe=name):
                 result = ingest.recipe(name, self.db_path, source, self.root / name)
                 self.assertFalse(result["applied"])
@@ -728,8 +726,7 @@ class BatchRollbackTests(unittest.TestCase):
 
         self.assertEqual(result["deleted"], 1)
         self.assertEqual(result["accounting"], {
-            "knowledge_points": 1, "problems": 0,
-            "candidate_problems": 0, "knowledge_relations": 0,
+            "knowledge_points": 1, "problems": 0, "knowledge_relations": 0,
         })
         self.assertEqual(self.content_snapshot(), before)
         conn = sqlite3.connect(self.db_path)

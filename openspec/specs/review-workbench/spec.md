@@ -42,7 +42,7 @@ out: everything stays reachable, ordering only prioritizes pain points.
 The pull engine SHALL return problems linked to the requested knowledge points,
 ordered for weakness, with repeat practice in the same session de-prioritized.
 When durable problems are exhausted it SHALL report the shortage per knowledge
-point instead of inventing content or falling back to candidate staging.
+point instead of inventing content; no candidate staging exists to fall back on.
 
 #### Scenario: Pull problems for a weak knowledge point
 
@@ -234,7 +234,7 @@ coverage contract (`01_inputs/past-paper-coverage.json`) SHALL map every exam
 point to a pool knowledge point or durable problem. The coverage gate SHALL
 fail with the list of unmapped exam points when any point lacks a mapping, and
 the workbench SHALL surface unmapped exam points as pool gaps eligible for the
-candidate-generation path.
+Check ingest path.
 
 #### Scenario: Every exam point is mapped
 
@@ -244,7 +244,7 @@ candidate-generation path.
 #### Scenario: An exam point is unmapped
 
 - **WHEN** an exam point has no mapping to any knowledge point or durable problem
-- **THEN** the gate fails, the unmapped point is listed, and the workbench shows it as a pool gap with a candidate-generation entry point
+- **THEN** the gate fails, the unmapped point is listed, and the workbench shows it as a pool gap with a Check ingest entry point
 
 ### Requirement: Current learning state
 

@@ -5,14 +5,6 @@ from typing import Iterable, List
 
 
 PROBLEM_STATES = ("new", "wrong", "stuck", "reviewing", "mastered")
-CANDIDATE_STATUSES = (
-    "draft",
-    "gate_passed",
-    "needs_revision",
-    "rejected",
-    "imported",
-)
-GATE_STATUSES = ("pending", "pass", "fail")
 INTERACTION_TYPES = ("single_choice", "true_false", "free_response")
 GENERATION_PURPOSES = ("first_pass_check", "remediation")
 ORIGIN_KINDS = ("source_problem", "adapted_problem", "generated_grounded")
@@ -25,7 +17,7 @@ SIGNAL_TYPES = (
 )
 SIGNAL_WEIGHTS = ("low", "medium", "high")
 SIGNAL_TARGET_TYPES = ("node", "relation")
-PRACTICE_KINDS = ("candidate", "problem", "reflection", "other")
+PRACTICE_KINDS = ("problem", "reflection", "other")
 VALID_RELATION_TYPES = (
     "prerequisite",
     "part_of",
@@ -194,73 +186,8 @@ def ensure_course_network_schema(conn: sqlite3.Connection) -> List[str]:
     return changes
 
 
-def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
-    """Apply the Problem Candidate and learner-signal schema idempotently."""
+def _ensure_learner_signals(conn: sqlite3.Connection) -> List[str]:
     changes: List[str] = []
-    if not table_exists(conn, "candidate_problems"):
-        conn.execute(
-            """
-            CREATE TABLE candidate_problems (
-                candidate_id         TEXT PRIMARY KEY,
-                kp_ids               TEXT NOT NULL,
-                problem_text         TEXT NOT NULL,
-                options_json         TEXT,
-                correct_option_id    TEXT,
-                solution             TEXT,
-                problem_type         TEXT NOT NULL CHECK (problem_type IN (
-                    'calculation', 'proof', 'modeling', 'explanation',
-                    'experiment', 'design', 'application',
-                    'counterexample', 'other'
-                )),
-                interaction_type     TEXT NOT NULL CHECK (interaction_type IN (
-                    'single_choice', 'true_false', 'free_response'
-                )),
-                generation_purpose   TEXT NOT NULL CHECK (generation_purpose IN (
-                    'first_pass_check', 'remediation'
-                )),
-                origin_kind          TEXT NOT NULL CHECK (origin_kind IN (
-                    'source_problem', 'adapted_problem', 'generated_grounded'
-                )),
-                source_kind          TEXT NOT NULL CHECK (source_kind IN (
-                    'textbook', 'quiz', 'midterm', 'final', 'makeup', 'other'
-                )),
-                source_evidence_json TEXT NOT NULL,
-                status               TEXT NOT NULL DEFAULT 'draft' CHECK (status IN (
-                    'draft', 'gate_passed', 'needs_revision', 'rejected', 'imported'
-                )),
-                structure_gate_status TEXT NOT NULL DEFAULT 'pending' CHECK (
-                    structure_gate_status IN ('pending', 'pass', 'fail')
-                ),
-                audit_gate_status    TEXT NOT NULL DEFAULT 'pending' CHECK (
-                    audit_gate_status IN ('pending', 'pass', 'fail')
-                ),
-                gate_report          TEXT,
-                imported_problem_id  TEXT UNIQUE REFERENCES problems(problem_id),
-                created_at           TEXT NOT NULL DEFAULT (datetime('now')),
-                updated_at           TEXT NOT NULL DEFAULT (datetime('now'))
-            )
-            """
-        )
-        changes.append("candidate_problems")
-
-    if not table_exists(conn, "candidate_attempts"):
-        conn.execute(
-            """
-            CREATE TABLE candidate_attempts (
-                id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-                candidate_id       TEXT NOT NULL REFERENCES candidate_problems(candidate_id),
-                status             TEXT NOT NULL CHECK (status IN (
-                    'new', 'wrong', 'stuck', 'reviewing', 'mastered'
-                )),
-                selected_option_id TEXT,
-                is_correct         INTEGER CHECK (is_correct IN (0, 1)),
-                note               TEXT,
-                created_at         TEXT NOT NULL DEFAULT (datetime('now'))
-            )
-            """
-        )
-        changes.append("candidate_attempts")
-
     if not table_exists(conn, "learner_signals"):
         conn.execute(
             """
@@ -278,7 +205,7 @@ def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
                 evidence_count     INTEGER NOT NULL DEFAULT 1 CHECK (evidence_count >= 1),
                 note               TEXT,
                 last_practice_kind TEXT NOT NULL DEFAULT 'other' CHECK (
-                    last_practice_kind IN ('candidate', 'problem', 'reflection', 'other')
+                    last_practice_kind IN ('problem', 'reflection', 'other')
                 ),
                 last_practice_ref  TEXT,
                 created_at         TEXT NOT NULL DEFAULT (datetime('now')),
@@ -288,15 +215,6 @@ def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
             """
         )
         changes.append("learner_signals")
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_candidate_status "
-        "ON candidate_problems(status)"
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_candidate_attempts_candidate_id "
-        "ON candidate_attempts(candidate_id)"
-    )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_learner_signals_target "
         "ON learner_signals(target_type, target_id)"
@@ -306,6 +224,15 @@ def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
         "ON learner_signals(weight)"
     )
     return changes
+
+
+def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
+    """Compatibility entry point for frozen pipeline scripts.
+
+    Learner signals remain core; only the candidate tables were removed
+    (2026-08-30 remove-candidate-store).
+    """
+    return _ensure_learner_signals(conn)
 
 
 def _widen_item_type_check(conn, table, create_sql):
@@ -340,6 +267,7 @@ def _widen_content_sequences_check(conn, create_sql):
 def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
+    changes.extend(_ensure_learner_signals(conn))
 
     if not table_exists(conn, "review_schedule"):
         conn.execute(
@@ -489,7 +417,6 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     for entity_type, table, id_column, marker in (
         ("kp", "knowledge_points", "kp_id", "kp"),
         ("problem", "problems", "problem_id", "prob"),
-        ("candidate", "candidate_problems", "candidate_id", "cand"),
         ("relation", "knowledge_relations", "relation_id", "rel"),
     ):
         if not table_exists(conn, table):
@@ -557,18 +484,6 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             "UPDATE problems SET practice_modes = REPLACE(practice_modes, "
             "'\"flash_card\"', '\"micro\"') "
             "WHERE practice_modes LIKE '%flash_card%'"
-        )
-    if table_exists(conn, "candidate_problems"):
-        changes.extend(
-            ensure_columns(
-                conn,
-                "candidate_problems",
-                [
-                    ("display_title", "TEXT"),
-                    ("topic_label", "TEXT"),
-                    ("display_summary", "TEXT"),
-                ],
-            )
         )
     if table_exists(conn, "problem_attempts"):
         changes.extend(

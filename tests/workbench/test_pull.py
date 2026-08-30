@@ -157,7 +157,7 @@ class PullTests(unittest.TestCase):
         result = self.pull.select(
             self.pool, ["dmath-ch06-kp-003"], n=5, mode="weak"
         )
-        self.assertEqual(result["candidates"], [])
+        self.assertNotIn("candidates", result)
         self.assertIn("dmath-ch06-kp-003", result["shortage"])
 
     def test_shortage_reported(self):

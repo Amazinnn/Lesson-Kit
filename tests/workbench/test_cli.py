@@ -57,15 +57,6 @@ def build_fixture_db(conn):
             note TEXT,
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
-        CREATE TABLE candidate_problems (
-            candidate_id TEXT PRIMARY KEY,
-            kp_ids TEXT NOT NULL,
-            problem_text TEXT NOT NULL,
-            solution TEXT,
-            status TEXT NOT NULL,
-            structure_gate_status TEXT NOT NULL DEFAULT 'pending',
-            audit_gate_status TEXT NOT NULL DEFAULT 'pending'
-        );
         CREATE TABLE learner_signals (
             signal_id TEXT PRIMARY KEY,
             target_type TEXT NOT NULL,
@@ -140,8 +131,20 @@ class CliTests(unittest.TestCase):
         code, out = self.run_cli("pull", "dmath", "--kp", "dmath-ch06-kp-001",
                                  "--n", "5")
         self.assertEqual(code, 0)
-        self.assertIn("dmath-ch06-prob-001", out)
-        self.assertIn("shortage", out)
+        result = json.loads(out)
+        self.assertEqual(result["problems"], ["dmath-ch06-prob-001"])
+        self.assertIn("dmath-ch06-kp-001", result["shortage"])
+        self.assertNotIn("candidates", result)
+
+    def test_data_parser_excludes_retired_candidate_commands(self):
+        parser = self.cli.build_parser()
+        for argv in (
+            ["data", "dmath", "list", "candidate"],
+            ["data", "dmath", "gate", "problem", "p-1"],
+            ["data", "dmath", "promote", "problem", "p-1"],
+        ):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit):
+                parser.parse_args(argv)
 
     def test_practice_records_attempt(self):
         code, out = self.run_cli("practice", "dmath",

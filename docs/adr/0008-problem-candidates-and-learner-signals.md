@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted.
+Superseded (2026-08-30, remove-candidate-store): the candidate store itself is
+physically removed; learner signals remain core. See docs/GLOSSARY.md
+「候选题 / Problem Candidate」.
 
 ## Context
 

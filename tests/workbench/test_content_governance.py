@@ -33,7 +33,6 @@ class ContentGovernanceTests(unittest.TestCase):
         self.db_path = Path(self.tmp.name) / "pool.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript(create_tables.SCHEMA_SQL)
-        pool_schema.ensure_problem_candidate_schema(conn)
         pool_schema.ensure_workbench_schema(conn)
         conn.execute(
             "INSERT INTO knowledge_points "
@@ -90,7 +89,6 @@ class ContentGovernanceTests(unittest.TestCase):
         content.delete(self.pool, "kp", "dmath-ch06-kp-004")
         self.assertEqual(content.next_id(self.pool, "kp"), "dmath-ch06-kp-006")
         self.assertEqual(content.next_id(self.pool, "problem"), "dmath-ch06-prob-004")
-        self.assertEqual(content.next_id(self.pool, "candidate"), "dmath-ch06-cand-001")
 
     def test_get_list_search_and_history_are_zero_write(self):
         from workbench.data import content

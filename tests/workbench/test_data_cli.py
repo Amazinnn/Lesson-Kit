@@ -37,7 +37,6 @@ class DataCliTests(unittest.TestCase):
         self.db_path = self.ws / "pool" / "dmath.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript(create_tables.SCHEMA_SQL)
-        pool_schema.ensure_problem_candidate_schema(conn)
         pool_schema.ensure_workbench_schema(conn)
         conn.execute(
             "INSERT INTO knowledge_points "
@@ -165,81 +164,20 @@ class DataCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(deleted["action"], "deleted")
 
-    def test_formal_problem_cannot_be_created_directly(self):
-        path = self.write_json("problem.json", {"problem_text": "Bypass gate"})
-        code, result = self.run_cli(
-            "data", "course", "create", "problem", "--input", str(path)
-        )
-        self.assertEqual(code, 2)
-        self.assertIn("candidate promotion", result["error"])
-
-    def test_candidate_create_edit_gate_and_promote_reuse_pipeline(self):
-        candidate = {
+    def test_formal_problem_can_be_created_directly(self):
+        path = self.write_json("problem.json", {
             "kp_ids": ["dmath-ch06-kp-001"],
             "problem_text": "How many ordered pairs can be formed?",
             "solution": "Use the product rule.",
             "problem_type": "calculation",
-            "interaction_type": "free_response",
-            "generation_purpose": "first_pass_check",
-            "origin_kind": "generated_grounded",
             "source_kind": "textbook",
-            "source_evidence": [{"source": "Rosen", "location": "6.1"}],
-        }
-        create_path = self.write_json("candidate.json", candidate)
+        })
         code, created = self.run_cli(
-            "data", "course", "create", "candidate", "--input", str(create_path)
+            "data", "course", "create", "problem", "--input", str(path)
         )
         self.assertEqual(code, 0)
-        candidate_id = created["candidate_id"]
-        self.assertEqual(candidate_id, "dmath-ch06-cand-001")
-
-        conn = sqlite3.connect(self.db_path)
-        conn.execute(
-            "UPDATE candidate_problems SET status='gate_passed', "
-            "structure_gate_status='pass', audit_gate_status='pass' WHERE candidate_id=?",
-            (candidate_id,),
-        )
-        conn.commit()
-        conn.close()
-        update_path = self.write_json("candidate-update.json", {"solution": "Multiply."})
-        code, updated = self.run_cli(
-            "data", "course", "update", "candidate", candidate_id,
-            "--input", str(update_path),
-        )
-        self.assertEqual(code, 0)
-        self.assertEqual(updated["status"], "draft")
-        self.assertEqual(updated["structure_gate_status"], "pending")
-        self.assertEqual(updated["audit_gate_status"], "pending")
-
-        audit_path = self.write_json(
-            "audit.json",
-            {
-                "audits": [{
-                    "candidate_id": candidate_id,
-                    "checks": {
-                        "source_grounding": "PASS",
-                        "answer_correctness": "PASS",
-                        "training_usefulness": "PASS",
-                        "option_plausibility": "PASS",
-                    },
-                    "status": "PASS",
-                    "summary": "Grounded and correct.",
-                }]
-            },
-        )
-        code, gated = self.run_cli(
-            "data", "course", "gate", "candidate", candidate_id,
-            "--input", str(audit_path),
-        )
-        self.assertEqual(code, 0)
-        self.assertEqual(gated["status"], "gate_passed")
-
-        code, promoted = self.run_cli(
-            "data", "course", "promote", "candidate", candidate_id
-        )
-        self.assertEqual(code, 0)
-        self.assertEqual(promoted["problem_id"], "dmath-ch06-prob-002")
-        self.assertEqual(promoted["candidate_id"], candidate_id)
+        self.assertEqual(created["problem_id"], "dmath-ch06-prob-002")
+        self.assertEqual(created["kp_ids"], ["dmath-ch06-kp-001"])
 
 
 if __name__ == "__main__":

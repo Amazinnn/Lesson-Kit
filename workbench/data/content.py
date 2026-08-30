@@ -6,14 +6,12 @@ import json
 TABLES = {
     "kp": ("knowledge_points", "kp_id"),
     "problem": ("problems", "problem_id"),
-    "candidate": ("candidate_problems", "candidate_id"),
     "relation": ("knowledge_relations", "relation_id"),
 }
 
 PREFIXES = {
     "kp": "kp",
     "problem": "prob",
-    "candidate": "cand",
     "relation": "rel",
 }
 
@@ -30,7 +28,6 @@ EDITABLE_FIELDS = {
         "kp_ids", "problem_text", "solution", "problem_type", "source_kind",
         "display_title", "topic_label", "display_summary", "figure_paths",
     },
-    "candidate": {"display_title", "topic_label", "display_summary"},
     "relation": {
         "source_kp_id", "target_kp_id", "relation_type", "direction", "strength",
     },
@@ -97,10 +94,6 @@ def history(pool, entity, object_id):
             "state": _item_rows(conn, "learning_current_state", "kp", object_id, "updated_at"),
             "signals": _rows(conn, "learner_signals", "target_id", object_id, "signal_id"),
         }
-    if entity == "candidate":
-        return {
-            "attempts": _rows(conn, "candidate_attempts", "candidate_id", object_id, "id")
-        }
     if entity == "relation":
         return {
             "signals": _rows(conn, "learner_signals", "target_id", object_id, "signal_id")
@@ -166,10 +159,6 @@ def next_id(pool, entity):
 
 
 def create(pool, entity, data):
-    if entity == "problem":
-        raise ValueError("formal problems can only be created by candidate promotion")
-    if entity == "candidate":
-        raise ValueError("candidate creation must use the candidate pipeline")
     table, id_column = _entity(entity)
     object_id = next_id(pool, entity)
     fields = [field for field in EDITABLE_FIELDS[entity] if field in data]
@@ -217,8 +206,6 @@ def delete(pool, entity, object_id):
     with conn:
         if entity == "problem":
             _delete_problem(conn, object_id)
-        elif entity == "candidate":
-            _delete_candidate(conn, object_id)
         elif entity == "kp":
             _delete_kp(conn, object_id)
         else:
@@ -228,26 +215,11 @@ def delete(pool, entity, object_id):
 
 
 def _delete_problem(conn, problem_id):
-    conn.execute(
-        "UPDATE candidate_problems SET imported_problem_id=NULL, "
-        "status=CASE WHEN status='imported' THEN 'needs_revision' ELSE status END, "
-        "structure_gate_status=CASE WHEN status='imported' THEN 'pending' ELSE structure_gate_status END, "
-        "audit_gate_status=CASE WHEN status='imported' THEN 'pending' ELSE audit_gate_status END, "
-        "gate_report=CASE WHEN status='imported' THEN NULL ELSE gate_report END "
-        "WHERE imported_problem_id=?",
-        (problem_id,),
-    )
     conn.execute("DELETE FROM problem_progress WHERE problem_id=?", (problem_id,))
     conn.execute("DELETE FROM problem_attempts WHERE problem_id=?", (problem_id,))
     _delete_learning_rows(conn, "problem", problem_id)
     conn.execute("DELETE FROM learner_signals WHERE target_id=?", (problem_id,))
     conn.execute("DELETE FROM problems WHERE problem_id=?", (problem_id,))
-
-
-def _delete_candidate(conn, candidate_id):
-    conn.execute("DELETE FROM candidate_attempts WHERE candidate_id=?", (candidate_id,))
-    conn.execute("DELETE FROM candidate_problems WHERE candidate_id=?", (candidate_id,))
-
 
 def _delete_learning_rows(conn, item_type, item_id):
     for table in ("feedback_events", "review_schedule", "learning_current_state"):
@@ -292,22 +264,19 @@ def _delete_kp(conn, kp_id):
         (kp_id, kp_id),
     )
 
-    for table, id_column in (("problems", "problem_id"), ("candidate_problems", "candidate_id")):
-        rows = conn.execute(f"SELECT {id_column}, kp_ids FROM {table}").fetchall()
-        for row in rows:
-            kp_ids = json.loads(row[1] or "[]")
-            if kp_id not in kp_ids:
-                continue
-            remaining = [item for item in kp_ids if item != kp_id]
-            if remaining:
-                conn.execute(
-                    f"UPDATE {table} SET kp_ids=? WHERE {id_column}=?",
-                    (json.dumps(remaining, ensure_ascii=False), row[0]),
-                )
-            elif table == "problems":
-                _delete_problem(conn, row[0])
-            else:
-                _delete_candidate(conn, row[0])
+    rows = conn.execute("SELECT problem_id, kp_ids FROM problems").fetchall()
+    for row in rows:
+        kp_ids = json.loads(row[1] or "[]")
+        if kp_id not in kp_ids:
+            continue
+        remaining = [item for item in kp_ids if item != kp_id]
+        if remaining:
+            conn.execute(
+                "UPDATE problems SET kp_ids=? WHERE problem_id=?",
+                (json.dumps(remaining, ensure_ascii=False), row[0]),
+            )
+        else:
+            _delete_problem(conn, row[0])
 
     rows = conn.execute(
         "SELECT kp_id, related_kp_ids FROM knowledge_points "

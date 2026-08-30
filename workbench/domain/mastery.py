@@ -94,7 +94,7 @@ def _evidence(attempts, feedback, item_id=None):
 
 def _reason(row, polarity, strength, evidence, item_id=None, self_rating=False):
     return {
-        "item_id": item_id or row.get("item_id") or row.get("problem_id") or row.get("candidate_id"),
+        "item_id": item_id or row.get("item_id") or row.get("problem_id"),
         "date": _date(row.get("created_at")),
         "polarity": polarity,
         "strength": strength,

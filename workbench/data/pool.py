@@ -122,15 +122,6 @@ class Pool:
             item[field] = json.loads(raw) if raw else None
         return item
 
-    # -- candidates (retired 2026-08-29 Check pipeline: no active readers;
-    #    the table and wb data candidate commands remain for 待退役 tooling)
-
-    @staticmethod
-    def _candidate_row(row):
-        item = dict(row)
-        item["kp_ids"] = json.loads(item.get("kp_ids") or "[]")
-        return item
-
     # -- flash cards -------------------------------------------------------
 
     def cards_for_kps(self, kp_ids):

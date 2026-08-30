@@ -317,7 +317,7 @@ class CourseNetworkTests(unittest.TestCase):
         self.assertIn("sig:005", {signal["signal_id"] for signal in packet["signals"]})
 
     def test_focus_map_loads_course_scoped_learner_signals_from_db_by_default(self):
-        pool_schema.ensure_problem_candidate_schema(self.conn)
+        pool_schema.ensure_workbench_schema(self.conn)
         self.conn.execute(
             """
             INSERT INTO learner_signals (
@@ -333,8 +333,8 @@ class CourseNetworkTests(unittest.TestCase):
                 "high",
                 2,
                 "repeated miss",
-                "candidate",
-                "dmath-ch06-cand-007",
+                "problem",
+                "dmath-ch06-prob-007",
             ),
         )
         self.conn.commit()
@@ -350,7 +350,7 @@ class CourseNetworkTests(unittest.TestCase):
 
         self.assertIn("dmath-ch06-kp-005", {node["id"] for node in packet["nodes"]})
         self.assertEqual(packet["signals"][0]["signal_id"], "sig:db-default")
-        self.assertEqual(packet["signals"][0]["source"], "candidate:dmath-ch06-cand-007")
+        self.assertEqual(packet["signals"][0]["source"], "problem:dmath-ch06-prob-007")
 
 
 if __name__ == "__main__":

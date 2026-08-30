@@ -31,7 +31,7 @@ KP_TYPES = {
     "lab-implementation", "memory-recall",
 }
 KP_IMPORTANCE = {"core", "supplementary", "optional"}
-RECIPE_NAMES = {"knowledge", "problems", "candidates", "views", "micro-quiz",
+RECIPE_NAMES = {"knowledge", "problems", "views", "micro-quiz",
                 "flash-card"}
 MICRO_QUIZ_KIND = "micro-quiz-patch"
 MICRO_QUIZ_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-mq-\d{3}$")
@@ -965,7 +965,6 @@ def _accounting(conn):
     return {
         "knowledge_points": conn.execute("SELECT COUNT(*) FROM knowledge_points").fetchone()[0],
         "problems": conn.execute("SELECT COUNT(*) FROM problems").fetchone()[0],
-        "candidate_problems": conn.execute("SELECT COUNT(*) FROM candidate_problems").fetchone()[0],
         "knowledge_relations": conn.execute("SELECT COUNT(*) FROM knowledge_relations").fetchone()[0],
     }
 

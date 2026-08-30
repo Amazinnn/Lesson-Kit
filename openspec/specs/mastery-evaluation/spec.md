@@ -43,7 +43,7 @@ The `v0` evaluator SHALL treat automatic correct/wrong/stuck results as strong e
 
 ### Requirement: Conservative knowledge-point propagation
 
-A decisive failure from any linked formal problem SHALL support `needs_work` for every linked knowledge point. A knowledge point SHALL require qualifying positive evidence from two distinct linked problems across dates for `recently_stable`. If it has only one linked problem, stability SHALL additionally require a direct knowledge-point review on a different date; if it has no linked problem, it SHALL remain `evidence_insufficient`. Candidate rows are retired: candidate attempts SHALL NOT contribute evidence to any evaluation.
+A decisive failure from any linked formal problem SHALL support `needs_work` for every linked knowledge point. A knowledge point SHALL require qualifying positive evidence from two distinct linked problems across dates for `recently_stable`. If it has only one linked problem, stability SHALL additionally require a direct knowledge-point review on a different date; if it has no linked problem, it SHALL remain `evidence_insufficient`. The candidate store is physically removed: no candidate table, no candidate commands, and no candidate evidence path exist, so evaluations consider only formal problems, knowledge-point reviews, cards, and micro quizzes.
 
 #### Scenario: Failure propagates to all owners
 
@@ -62,6 +62,6 @@ A decisive failure from any linked formal problem SHALL support `needs_work` for
 
 #### Scenario: Candidate evidence stays knowledge-point-only
 
-- **WHEN** a gate-passed candidate attempt exists for a linked knowledge point
-- **THEN** it contributes no evidence at all (candidate rows are retired): it cannot affect knowledge-point evaluation and no formal-problem result is emitted for the candidate
+- **WHEN** any knowledge-point evaluation runs after the candidate store removal
+- **THEN** no candidate evidence exists to consider: the evaluation cites only formal problems and direct knowledge-point reviews, and no formal-problem result is emitted for anything but formal problems
 
