@@ -151,6 +151,65 @@ class PoolTests(unittest.TestCase):
         self.assertEqual(problem["problem_id"], "dmath-ch06-prob-001")
         self.assertEqual(problem["kp_ids"], ["dmath-ch06-kp-001"])
 
+    def test_next_free_content_ids_are_scoped_to_the_active_chapter(self):
+        conn = self.pool.connect()
+        conn.executemany(
+            "INSERT INTO flash_cards"
+            " (card_id, kp_id, front, back, source_evidence) VALUES (?, ?, ?, ?, ?)",
+            [
+                ("dmath-ch06-fc-004", "dmath-ch06-kp-001", "f", "b", "source"),
+                ("other-ch01-fc-999", "dmath-ch06-kp-001", "f", "b", "source"),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO problems"
+            " (problem_id, kp_ids, problem_text, solution, problem_type, source_kind)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    "dmath-ch06-mq-008", '["dmath-ch06-kp-001"]', "q", "a",
+                    "micro-quiz", "quiz",
+                ),
+                (
+                    "other-ch01-mq-999", '["dmath-ch06-kp-001"]', "q", "a",
+                    "micro-quiz", "quiz",
+                ),
+            ],
+        )
+        conn.commit()
+
+        result = self.pool.next_free_content_ids("dmath-ch06")
+
+        self.assertEqual(result, {
+            "flash_card": "dmath-ch06-fc-005",
+            "micro_quiz": "dmath-ch06-mq-009",
+        })
+
+    def test_next_free_content_ids_support_more_than_three_digits(self):
+        conn = self.pool.connect()
+        conn.execute(
+            "INSERT INTO flash_cards"
+            " (card_id, kp_id, front, back, source_evidence) VALUES (?, ?, ?, ?, ?)",
+            ("dmath-ch06-fc-1000", "dmath-ch06-kp-001", "f", "b", "source"),
+        )
+        conn.execute(
+            "INSERT INTO problems"
+            " (problem_id, kp_ids, problem_text, solution, problem_type, source_kind)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                "dmath-ch06-mq-1000", '["dmath-ch06-kp-001"]', "q", "a",
+                "micro-quiz", "quiz",
+            ),
+        )
+        conn.commit()
+
+        result = self.pool.next_free_content_ids("dmath-ch06")
+
+        self.assertEqual(result, {
+            "flash_card": "dmath-ch06-fc-1001",
+            "micro_quiz": "dmath-ch06-mq-1001",
+        })
+
     def test_candidate_reads_are_retired(self):
         self.assertFalse(hasattr(self.pool, "gate_passed_candidates"))
         conn = self.pool.connect()

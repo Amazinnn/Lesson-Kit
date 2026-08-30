@@ -1,6 +1,4 @@
-"""Rebuild bounded Agent context from browser identifiers and SQLite."""
-
-import sqlite3
+"""Rebuild bounded Agent context from browser identifiers and Pool data."""
 
 from workbench.data import queries
 
@@ -38,26 +36,7 @@ def build(pool, workspace, payload):
 
 
 def _next_free_ids(pool, prefix):
-    """Best-effort next free content id per entity type, for check ingest turns."""
-    conn = pool.connect()
-    try:
-        card_max = conn.execute(
-            "SELECT MAX(CAST(SUBSTR(card_id, -3) AS INTEGER)) FROM flash_cards "
-            "WHERE SUBSTR(card_id, -7, 4) = '-fc-'"
-        ).fetchone()[0]
-    except sqlite3.OperationalError:
-        card_max = None
-    try:
-        quiz_max = conn.execute(
-            "SELECT MAX(CAST(SUBSTR(problem_id, -3) AS INTEGER)) FROM problems "
-            "WHERE SUBSTR(problem_id, -7, 4) = '-mq-'"
-        ).fetchone()[0]
-    except sqlite3.OperationalError:
-        quiz_max = None
-    return {
-        "flash_card": f"{prefix}-fc-{(card_max or 0) + 1:03d}",
-        "micro_quiz": f"{prefix}-mq-{(quiz_max or 0) + 1:03d}",
-    }
+    return pool.next_free_content_ids(prefix)
 
 
 def _practice(pool, payload, result):
