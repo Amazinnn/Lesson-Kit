@@ -22,6 +22,18 @@ class ApiError(Exception):
         self.message = message
 
 
+def _query_int(params, name, default, *, minimum=0, maximum=None):
+    raw = params.get(name, str(default))
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ApiError(400, f"{name} must be an integer") from exc
+    if value < minimum or maximum is not None and value > maximum:
+        bounds = f"at least {minimum}" if maximum is None else f"from {minimum} to {maximum}"
+        raise ApiError(400, f"{name} must be {bounds}")
+    return value
+
+
 def hub_workspaces(pool, workspace, params, body):
     from workbench import registry
     results = []
@@ -48,7 +60,7 @@ def _pool_for(workspace):
 
 def weak_list(pool, workspace, params, body):
     prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
-    limit = int(params.get("limit", "20"))
+    limit = _query_int(params, "limit", 20, maximum=1000)
     return weak.score_all(
         pool.kps(prefix), pool.signals(), pool.schedule_rows(),
         pool.relations(), set(), date.today(),
@@ -56,8 +68,8 @@ def weak_list(pool, workspace, params, body):
 
 
 def due_list(pool, workspace, params, body):
-    limit = int(params.get("limit", "100"))
-    return queries.due_list(pool)[:max(0, limit)]
+    limit = _query_int(params, "limit", 100, maximum=1000)
+    return queries.due_list(pool)[:limit]
 
 
 def calendar_view(pool, workspace, params, body):
@@ -395,7 +407,7 @@ def ai_turn_events(pool, workspace, params, body):
         "turn": turn,
         "events": conversations.events(
             pool, params["conversation_id"], params["turn_id"],
-            after=int(params.get("after", 0)),
+            after=_query_int(params, "after", 0),
         ),
     }
 

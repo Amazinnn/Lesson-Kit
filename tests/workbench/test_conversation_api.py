@@ -46,6 +46,11 @@ class ConversationApiTests(unittest.TestCase):
         with urllib.request.urlopen(f"http://127.0.0.1:{self.port}{path}") as response:
             return response.status, json.loads(response.read().decode("utf-8"))
 
+    def get_error(self, path):
+        with self.assertRaises(HTTPError) as ctx:
+            self.get(path)
+        return ctx.exception.code, json.loads(ctx.exception.read().decode("utf-8"))
+
     def post(self, path, payload):
         request = urllib.request.Request(
             f"http://127.0.0.1:{self.port}{path}",
@@ -154,6 +159,13 @@ class ConversationApiTests(unittest.TestCase):
         exchange = json.loads(transcript.read_text(encoding="utf-8").splitlines()[0])
         self.assertEqual(exchange["context_anchor"]["kp_id"], "dmath-ch06-kp-001")
         self.assertNotIn("dom", str(exchange))
+
+        status, error = self.get_error(
+            f"/api/w/dmath/ai/sessions/{created['conversation_id']}"
+            f"/turns/{turn['turn_id']}?after=invalid"
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(error["error"], "after must be an integer")
 
     def test_ingest_rollback_endpoint_returns_result(self):
         result = {

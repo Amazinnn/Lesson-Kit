@@ -29,6 +29,11 @@ class ApiTests(unittest.TestCase):
         with urllib.request.urlopen(f"http://127.0.0.1:{self.port}{path}") as resp:
             return resp.status, json.loads(resp.read().decode("utf-8"))
 
+    def get_error(self, path):
+        with self.assertRaises(HTTPError) as ctx:
+            self.get(path)
+        return ctx.exception.code, json.loads(ctx.exception.read().decode("utf-8"))
+
     def post(self, path, payload):
         request = urllib.request.Request(
             f"http://127.0.0.1:{self.port}{path}",
@@ -57,6 +62,16 @@ class ApiTests(unittest.TestCase):
         status, data = self.get("/api/w/dmath/weak")
         self.assertEqual(status, 200)
         self.assertEqual(data[0]["kp_id"], "dmath-ch06-kp-001")
+
+    def test_list_query_limits_are_validated(self):
+        for path, message in (
+            ("/api/w/dmath/weak?limit=nope", "limit must be an integer"),
+            ("/api/w/dmath/due?limit=-1", "limit must be from 0 to 1000"),
+            ("/api/w/dmath/weak?limit=1001", "limit must be from 0 to 1000"),
+        ):
+            status, data = self.get_error(path)
+            self.assertEqual(status, 400)
+            self.assertEqual(data["error"], message)
 
     def test_pull_endpoint(self):
         status, data = self.post("/api/w/dmath/pull", {
