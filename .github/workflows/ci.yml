@@ -27,9 +27,17 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/editable-graph/package-lock.json
       - name: Install test dependencies
-        run: python -m pip install pytest
+        run: |
+          python -m pip install pytest==9.1.1
+          npm install --global @fission-ai/openspec@1.11.0
       - name: Run Python and browser tests
         run: python -m pytest tests -q
+      - name: Verify Python source compilation
+        run: python -m compileall -q lessonkit.py workbench pipeline pool tests
+      - name: Validate current specifications
+        run: openspec validate --specs --strict --no-interactive
+      - name: Verify tracked extraction artifacts
+        run: python lessonkit.py guard extract-problems --course dmath --chapter ch06
       - name: Verify frontend build
         working-directory: frontend/editable-graph
         run: |

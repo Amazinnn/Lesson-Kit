@@ -18,6 +18,23 @@ Source material
 The pool is the runtime source of truth for generated views. Markdown
 intermediate files remain on disk for audit and repair.
 
+## Review Workbench
+
+The current daily-use surface is the local Review Workbench: explicit
+knowledge-point selection, exam/micro-quiz/flash-card practice, goals and
+calendar workload, the live knowledge graph, and provider-native Agent
+conversations.
+
+Run commands from the repository root:
+
+```bash
+python -m workbench.cli.main init . --course dmath --chapter ch06
+python -m workbench.cli.main serve
+```
+
+Then open `http://127.0.0.1:3081/`. Codex or Claude are discovered from PATH;
+the non-AI workbench remains usable when neither provider is available.
+
 ## Runtime State
 
 Lesson-Kit has a lightweight workflow checkpoint at `.lessonkit/state.yaml`.
@@ -57,6 +74,13 @@ directory, so run them from the repository root.
   relation-gap signals used by Focus Map.
 - `problem_progress`: current durable problem status.
 - `problem_attempts`: append-only durable problem interaction history.
+- `flash_cards`: governed two-sided study content linked to one knowledge point.
+- `review_schedule`: background due ordering for problems, knowledge points,
+  and cards; it never locks content.
+- `feedback_events` and `learning_current_state`: append-only feedback history
+  separated from the current learning state.
+- `ingest_batches`: provenance and whole-batch rollback boundary for Check
+  content ingestion.
 - `questions`: legacy companion-check table retained for compatibility; it is
   not the v1 durable problem pool.
 
@@ -126,11 +150,12 @@ artifacts, not version records.
 
 ## Status
 
-Pre-release. Knowledge extraction, the Course Learning Network relation layer,
-the knowledge guide view, the unified problem pool, the problem-set view,
-source-grounded Problem Candidates, SQLite learner signals, Focus Map JSON
-queries, editable graph maintenance, and lightweight runtime guards are
-working.
+Pre-release. Extraction and legacy rendered views remain available, while the
+active product is the three-page local workbench (practice, knowledge points,
+knowledge graph) with goals/calendar workload, governed flash-card and
+micro-quiz ingestion, transactional batch rollback, and provider-native Agent
+conversation. Candidate reads have retired from active practice but their
+storage and maintenance commands remain for compatibility.
 
 ## License
 
