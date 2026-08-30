@@ -1,6 +1,7 @@
 """HTTP API tests (TDD, red first)."""
 
 import json
+import http.client
 import sqlite3
 import threading
 import unittest
@@ -181,6 +182,53 @@ class ApiTests(unittest.TestCase):
             status, _ = self.post_error(f"/api/w/dmath{path}", [])
             self.assertEqual(status, 400)
 
+    def test_malformed_json_returns_a_json_400_response(self):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}/api/w/dmath/pull",
+            data=b"{",
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as ctx:
+            urllib.request.urlopen(request)
+        self.assertEqual(ctx.exception.code, 400)
+        payload = json.loads(ctx.exception.read().decode("utf-8"))
+        self.assertIn("invalid JSON request", payload["error"])
+
+    def test_json_array_is_rejected_at_the_transport_boundary(self):
+        status, payload = self.post_error("/api/w/dmath/graph/state", [])
+
+        self.assertEqual(status, 400)
+        self.assertEqual(payload["error"], "request body must be a JSON object")
+
+    def test_non_json_write_is_rejected(self):
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}/api/w/dmath/practice",
+            data=b"problem_id=dmath-ch06-prob-001&result=wrong",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as ctx:
+            urllib.request.urlopen(request)
+
+        self.assertEqual(ctx.exception.code, 415)
+        payload = json.loads(ctx.exception.read().decode("utf-8"))
+        self.assertEqual(payload["error"], "Content-Type must be application/json")
+
+    def test_oversized_json_is_rejected_before_the_server_reads_it(self):
+        connection = http.client.HTTPConnection("127.0.0.1", self.port)
+        connection.putrequest("POST", "/api/w/dmath/pull")
+        connection.putheader("Content-Type", "application/json")
+        connection.putheader("Content-Length", str(2 * 1024 * 1024 + 1))
+        connection.endheaders()
+        response = connection.getresponse()
+        self.assertEqual(response.status, 400)
+        self.assertIn(
+            "request body is too large",
+            json.loads(response.read().decode("utf-8"))["error"],
+        )
+        connection.close()
+
     def test_problem_detail_endpoint(self):
         status, data = self.get("/api/w/dmath/problem/dmath-ch06-prob-001")
         self.assertEqual(status, 200)
@@ -255,6 +303,19 @@ class ApiTests(unittest.TestCase):
         ) as resp:
             self.assertEqual(resp.status, 200)
             self.assertEqual(resp.read(), b"\x89PNG")
+
+    def test_figure_route_cannot_escape_to_a_sibling_directory(self):
+        secret_dir = self.fixture.ws / ".lessonkit" / "figures-secret"
+        secret_dir.mkdir(parents=True)
+        (secret_dir / "leak.png").write_bytes(b"secret")
+        connection = http.client.HTTPConnection("127.0.0.1", self.port)
+        connection.request(
+            "GET", "/api/w/dmath/figures/../figures-secret/leak.png"
+        )
+        response = connection.getresponse()
+        self.assertEqual(response.status, 403)
+        self.assertNotEqual(response.read(), b"secret")
+        connection.close()
 
     def test_hub_page(self):
         status, html = self.get_html("/")
