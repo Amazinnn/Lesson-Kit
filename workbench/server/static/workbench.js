@@ -1484,6 +1484,8 @@
       document.getElementById("goal-title").value = card.dataset.goalTitle || "";
       var kind = document.getElementById("goal-kind");
       if (kind) kind.value = card.dataset.goalKind || "stage";
+      var startDate = document.getElementById("goal-start-date");
+      if (startDate) startDate.value = card.dataset.goalStartDate || "";
       var deadline = document.getElementById("goal-deadline");
       if (deadline) deadline.value = card.dataset.goalDeadline || "";
       document.getElementById("goal-description").value = card.dataset.goalDescription || "";
@@ -1516,15 +1518,22 @@
       if (event.preventDefault) event.preventDefault();
       var title = document.getElementById("goal-title");
       var kind = document.getElementById("goal-kind");
+      var startDate = document.getElementById("goal-start-date");
       var deadline = document.getElementById("goal-deadline");
       var description = document.getElementById("goal-description");
       if (!title || !title.value.trim()) {
         goalStatus("请填写目标名称。");
         return;
       }
+      if (startDate && deadline && startDate.value && deadline.value
+          && startDate.value > deadline.value) {
+        goalStatus("开始日期不能晚于截止日期。");
+        return;
+      }
       var payload = {
         title: title.value.trim(),
         kind: kind ? kind.value : "stage",
+        start_date: startDate ? startDate.value : "",
         deadline: deadline ? deadline.value : "",
         description: description ? description.value.trim() : "",
       };
@@ -1759,7 +1768,8 @@
     if (action.type === "prefill_goal_form") {
       var map = {
         "goal-title": action.title, "goal-kind": action.kind,
-        "goal-deadline": action.deadline, "goal-description": action.description,
+        "goal-start-date": action.start_date, "goal-deadline": action.deadline,
+        "goal-description": action.description,
       };
       Object.keys(map).forEach(function (id) {
         var field = document.getElementById(id);
@@ -2237,17 +2247,31 @@
       var year = today.getFullYear();
       var month = today.getMonth();
       var first = new Date(year, month, 1);
-      var daysInMonth = new Date(year, month + 1, 0).getDate();
+      var last = new Date(year, month + 1, 0);
+      var daysInMonth = last.getDate();
       var lead = (first.getDay() + 6) % 7; /* Monday-first */
-      var byDate = {};
+      var weekCount = Math.ceil((lead + daysInMonth) / 7);
+      var periods = [];
       var offGrid = [];
+
+      function plainDate(value) {
+        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) {
+          return null;
+        }
+        var parts = value.slice(0, 10).split("-").map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+
+      function dayNumber(value) {
+        return Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()) / 86400000;
+      }
+
       goals.forEach(function (goal) {
-        if (goal.deadline && typeof goal.deadline === "string") {
-          var key = goal.deadline.slice(0, 10);
-          if (key.slice(0, 7) === isoDate(first).slice(0, 7)) {
-            (byDate[key] ||= []).push(goal);
-            return;
-          }
+        var end = plainDate(goal.deadline);
+        var start = plainDate(goal.start_date) || end;
+        if (start && end && start <= end && end >= first && start <= last) {
+          periods.push({ goal: goal, start: start, end: end });
+          return;
         }
         offGrid.push(goal);
       });
@@ -2257,21 +2281,73 @@
             + (goal.deadline ? "（" + escapeHtml(goal.deadline.slice(0, 10)) + "）" : "");
         }).join("、");
         calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted time-off-note'>本月之外到期：" + offLine + "。</p>");
+          "<p class='muted time-off-note'>本月之外或未排期：" + offLine + "。</p>");
       }
-      var html = WEEKDAYS.map(function (label) {
+      periods.sort(function (a, b) {
+        return a.start - b.start || b.end - a.end
+          || String(a.goal.id || "").localeCompare(String(b.goal.id || ""));
+      });
+      var periodLaneEnds = [];
+      periods.forEach(function (period) {
+        var startDay = dayNumber(period.start);
+        var lane = periodLaneEnds.findIndex(function (occupiedUntil) {
+          return occupiedUntil < startDay;
+        });
+        if (lane < 0) lane = periodLaneEnds.length;
+        period.lane = lane;
+        periodLaneEnds[lane] = dayNumber(period.end);
+      });
+
+      var html = "<div class='calendar-weekdays'>" + WEEKDAYS.map(function (label) {
         return "<div class='calendar-head'>" + label + "</div>";
-      }).join("");
-      for (var blank = 0; blank < lead; blank += 1) html += "<div class='calendar-cell blank'></div>";
-      for (var day = 1; day <= daysInMonth; day += 1) {
-        var key = isoDate(new Date(year, month, day));
-        var isToday = day === today.getDate();
-        var cards = (byDate[key] || []).map(function (goal) {
-          return "<span class='calendar-goal' title='" + escapeHtml(goal.title || "") + "'>"
-            + escapeHtml(goal.title || "未命名目标") + "</span>";
+      }).join("") + "</div>";
+      for (var week = 0; week < weekCount; week += 1) {
+        var weekStart = new Date(year, month, 1 - lead + week * 7);
+        var weekEnd = new Date(year, month, 7 - lead + week * 7);
+        var segments = [];
+        periods.forEach(function (period) {
+          var segmentStart = period.start > weekStart ? period.start : weekStart;
+          var segmentEnd = period.end < weekEnd ? period.end : weekEnd;
+          if (segmentStart > segmentEnd) return;
+          var startColumn = dayNumber(segmentStart) - dayNumber(weekStart) + 1;
+          var endColumn = dayNumber(segmentEnd) - dayNumber(weekStart) + 1;
+          segments.push({
+            period: period, startColumn: startColumn, endColumn: endColumn, lane: period.lane,
+            begins: segmentStart.getTime() === period.start.getTime(),
+            ends: segmentEnd.getTime() === period.end.getTime(),
+          });
+        });
+
+        var cells = "";
+        for (var column = 0; column < 7; column += 1) {
+          var cellDate = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + column);
+          var inMonth = cellDate.getMonth() === month;
+          var isToday = isoDate(cellDate) === isoDate(today);
+          cells += "<div class='calendar-cell" + (!inMonth ? " blank" : "")
+            + (isToday ? " today" : "") + "'>"
+            + (inMonth ? "<span class='calendar-day'>" + cellDate.getDate() + "</span>" : "")
+            + "</div>";
+        }
+        var lanes = segments.map(function (segment) {
+          var goal = segment.period.goal;
+          var title = escapeHtml(goal.title || "未命名目标");
+          var kind = goal.kind === "long_term" ? " long-term" : " stage";
+          var overdue = segment.period.end < new Date(today.getFullYear(), today.getMonth(), today.getDate())
+            ? " overdue" : "";
+          var edges = (segment.begins ? " segment-start" : "") + (segment.ends ? " segment-end" : "");
+          var span = segment.endColumn - segment.startColumn + 1;
+          var range = isoDate(segment.period.start) + " 至 " + isoDate(segment.period.end);
+          return "<span class='calendar-goal" + kind + overdue + edges + "'"
+            + " style='grid-column:" + segment.startColumn + " / span " + span
+            + ";grid-row:" + (segment.lane + 1) + "' title='" + title + " · " + range
+            + "' aria-label='" + title + "，" + range + "'>" + title + "</span>";
         }).join("");
-        html += "<div class='calendar-cell" + (isToday ? " today" : "") + "'>"
-          + "<span class='calendar-day'>" + day + "</span>" + cards + "</div>";
+        var laneCount = segments.reduce(function (highest, segment) {
+          return Math.max(highest, segment.lane + 1);
+        }, 0);
+        html += "<div class='calendar-week' style='--calendar-lanes:" + laneCount + "'>"
+          + "<div class='calendar-week-days'>" + cells + "</div>"
+          + "<div class='calendar-lane-layer'>" + lanes + "</div></div>";
       }
       calendarGrid.innerHTML = html;
     }

@@ -554,10 +554,12 @@ class GoalFormActionExtractionTests(unittest.TestCase):
 
     def test_goal_intent_with_valid_action_is_extracted_and_stripped(self):
         answer = self._answer('{"type":"prefill_goal_form","title":"期末掌握计数",'
-                              '"kind":"stage","deadline":"2026-09-30","description":"重点：鸽巢与组合"}')
+                              '"kind":"stage","start_date":"2026-09-01",'
+                              '"deadline":"2026-09-30","description":"重点：鸽巢与组合"}')
         cleaned, action = self._run(answer, {"goal_intent": True})
         self.assertEqual(action["type"], "prefill_goal_form")
         self.assertEqual(action["title"], "期末掌握计数")
+        self.assertEqual(action["start_date"], "2026-09-01")
         self.assertEqual(action["deadline"], "2026-09-30")
         self.assertNotIn("lessonkit-action", cleaned)
 
@@ -576,9 +578,11 @@ class GoalFormActionExtractionTests(unittest.TestCase):
 
     def test_bad_kind_and_deadline_are_normalized(self):
         _, action = self._run(
-            self._answer('{"type":"prefill_goal_form","title":"T","kind":"weird","deadline":"九月"}'),
+            self._answer('{"type":"prefill_goal_form","title":"T","kind":"weird",'
+                         '"start_date":"九月","deadline":"九月"}'),
             {"goal_intent": True})
         self.assertEqual(action["kind"], "stage")
+        self.assertEqual(action["start_date"], "")
         self.assertEqual(action["deadline"], "")
 
     def test_malformed_json_is_disclosed_as_ignored(self):
@@ -631,7 +635,8 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertIn(
             "若学生从目标表单发起一句话求助，可附 ```lessonkit-action "
             '{"type":"prefill_goal_form","title":"…","kind":"stage|long_term",'
-            '"deadline":"YYYY-MM-DD或空","description":"…"} ``` 代填目标字段'
+            '"start_date":"YYYY-MM-DD或空","deadline":"YYYY-MM-DD或空",'
+            '"description":"…"} ``` 代填目标字段'
             "（仅此意图可附，普通问答不得代填）。",
             prompt,
         )

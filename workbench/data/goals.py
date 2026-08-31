@@ -36,6 +36,7 @@ def create_goal(root, values):
     title = str(values.get("title") or "").strip()
     if not title:
         raise ValueError("title is required")
+    _validate_period(values.get("start_date"), values.get("deadline"))
     with _LOCK:
         goals = _load(root)
         numbers = [
@@ -48,6 +49,7 @@ def create_goal(root, values):
             "id": f"goal-{max(numbers, default=0) + 1:03d}",
             "kind": values.get("kind") or "stage",
             "title": title,
+            "start_date": values.get("start_date") or None,
             "deadline": values.get("deadline") or None,
             "description": str(values.get("description") or "").strip() or None,
             "scope": str(values.get("scope") or "").strip() or None,
@@ -63,7 +65,12 @@ def update_goal(root, goal_id, values):
         for goal in goals:
             if goal.get("id") != goal_id:
                 continue
-            for key in ("kind", "deadline", "description", "scope"):
+            if "start_date" in values or "deadline" in values:
+                _validate_period(
+                    values.get("start_date", goal.get("start_date")),
+                    values.get("deadline", goal.get("deadline")),
+                )
+            for key in ("kind", "start_date", "deadline", "description", "scope"):
                 if key in values:
                     goal[key] = values[key] or None
             if "title" in values:
@@ -74,6 +81,11 @@ def update_goal(root, goal_id, values):
             _write(root, goals)
             return goal
     raise KeyError(goal_id)
+
+
+def _validate_period(start_date, deadline):
+    if start_date and deadline and str(start_date) > str(deadline):
+        raise ValueError("start_date must not be after deadline")
 
 
 def delete_goal(root, goal_id):

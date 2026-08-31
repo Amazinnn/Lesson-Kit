@@ -24,7 +24,7 @@
 | `bridges.json` | 任务 provider 配置（`wb bridge add`） | CLI `bridge` | 已实现 |
 | `jobs/` | 任务工作文件 + 对话留痕（conv-###） | 桥 | 已实现 |
 | `explain/{course}/{chapter}/` | （已移除，remove-explain-diagnose） | — | 已删除 |
-| `goals.json` | 目标（顶层 JSON 数组） | `POST/PATCH/DELETE /goals` | 已实现（UI 只有创建） |
+| `goals.json` | 目标（顶层 JSON 数组；可选 start_date + deadline 时间区间） | `POST/PATCH/DELETE /goals` | 已实现 |
 | `plan.json` | 每日计划缓存 | `POST /plan/recalculate` | 已实现 |
 | `pool/backups/*.db` | 入池前整池备份 | ingest `--backup` | 已实现 |
 

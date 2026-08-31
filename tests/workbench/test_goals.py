@@ -21,13 +21,18 @@ class GoalStoreTests(unittest.TestCase):
         created = goals.create_goal(root, {
             "title": "完成离散数学复习",
             "kind": "long_term",
+            "start_date": "2026-09-01",
             "deadline": "2026-09-10",
             "description": "覆盖本章核心内容",
         })
         self.assertEqual(created["id"], "goal-001")
+        self.assertEqual(created["start_date"], "2026-09-01")
         self.assertEqual(goals.list_goals(root)[0]["title"], "完成离散数学复习")
-        updated = goals.update_goal(root, "goal-001", {"title": "完成 ch06 复习"})
+        updated = goals.update_goal(root, "goal-001", {
+            "title": "完成 ch06 复习", "start_date": "2026-09-02",
+        })
         self.assertEqual(updated["title"], "完成 ch06 复习")
+        self.assertEqual(updated["start_date"], "2026-09-02")
         self.assertEqual(goals.delete_goal(root, "goal-001")["deleted"], True)
         self.assertEqual(goals.list_goals(root), [])
 
@@ -42,6 +47,16 @@ class GoalStoreTests(unittest.TestCase):
             goals.create_goal(self.fixture.ws, {"title": "must not overwrite"})
 
         self.assertEqual(path.read_text(encoding="utf-8"), "{broken")
+
+    def test_goal_period_rejects_a_start_after_its_deadline(self):
+        from workbench.data import goals
+
+        with self.assertRaisesRegex(ValueError, "start_date"):
+            goals.create_goal(self.fixture.ws, {
+                "title": "倒置区间",
+                "start_date": "2026-09-11",
+                "deadline": "2026-09-10",
+            })
 
     def test_concurrent_creates_do_not_lose_goals_or_reuse_ids(self):
         from workbench.data import goals

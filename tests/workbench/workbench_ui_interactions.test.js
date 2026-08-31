@@ -1818,13 +1818,19 @@ test("time view renders goal calendar, heavy day marking, and prefill", async ()
   const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const plus3 = iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3));
   const deadline = iso(today); /* stays inside the rendered month */
+  const monthStart = iso(new Date(today.getFullYear(), today.getMonth(), 1));
+  const monthEnd = iso(new Date(today.getFullYear(), today.getMonth() + 1, 0));
   runWorkbench({
     elements,
     storage: new FakeStorage(),
     fetch: (url) => {
       if (url.includes("/calendar")) {
         return jsonResponse({
-          goals: [{ id: "goal-001", kind: "stage", title: "覆盖率 80%", deadline }],
+          goals: [
+            { id: "goal-001", kind: "stage", title: "覆盖率 80%", start_date: monthStart, deadline: monthEnd },
+            { id: "goal-002", kind: "long_term", title: "期末复习", start_date: monthStart, deadline: monthEnd },
+            { id: "goal-003", kind: "stage", title: "旧目标", deadline },
+          ],
           days: Array.from({ length: 14 }, (_, offset) => ({
             date: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)),
             count: offset === 3 ? 3 : 0,
@@ -1839,6 +1845,10 @@ test("time view renders goal calendar, heavy day marking, and prefill", async ()
   assert.equal(elements["time-view"].classList.contains("hidden"), false);
   assert.ok(elements["calendar-grid"]._innerHTML.includes("覆盖率 80%"));
   assert.ok(elements["calendar-grid"]._innerHTML.includes("calendar-cell today"));
+  assert.ok(elements["calendar-grid"]._innerHTML.includes("calendar-goal long-term"));
+  assert.ok(elements["calendar-grid"]._innerHTML.includes("grid-row:2"));
+  assert.ok((elements["calendar-grid"]._innerHTML.match(/覆盖率 80%/g) || []).length > 1);
+  assert.ok(elements["calendar-grid"]._innerHTML.includes("旧目标"));
   assert.ok(elements["workload-bars"]._innerHTML.includes("重"));
   assert.equal(elements["workload-prefill"].classList.contains("hidden"), false);
   elements["workload-prefill"].click();
@@ -1980,7 +1990,7 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   const card = new FakeElement("goal-card");
   card.dataset = {
     goalId: "goal-001", goalTitle: "期末掌握计数", goalKind: "stage",
-    goalDeadline: "2026-09-30", goalDescription: "重点鸽巢",
+    goalStartDate: "2026-09-01", goalDeadline: "2026-09-30", goalDescription: "重点鸽巢",
   };
   const editBtn = new FakeElement("goal-edit-btn");
   const deleteBtn = new FakeElement("goal-delete-btn");
@@ -1992,7 +2002,8 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
     layout: layout(), ...practiceElements(),
     "goal-cards": goalCards, "goal-form": new FakeElement("goal-form"),
     "goal-id": new FakeElement("goal-id"), "goal-title": new FakeElement("goal-title"),
-    "goal-kind": new FakeElement("goal-kind"), "goal-deadline": new FakeElement("goal-deadline"),
+    "goal-kind": new FakeElement("goal-kind"), "goal-start-date": new FakeElement("goal-start-date"),
+    "goal-deadline": new FakeElement("goal-deadline"),
     "goal-description": new FakeElement("goal-description"),
     "goal-form-status": new FakeElement("goal-form-status"),
     "goal-submit": new FakeElement("goal-submit"), "goal-cancel": new FakeElement("goal-cancel"),
@@ -2015,7 +2026,8 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
       if (url.includes("/turns/turn-1")) return jsonResponse({
         turn: { status: "done", action: {
           type: "prefill_goal_form", title: "Agent 填的目标",
-          kind: "long_term", deadline: "2026-10-01", description: "含 kp-006 与 kp-008",
+          kind: "long_term", start_date: "2026-09-15", deadline: "2026-10-01",
+          description: "含 kp-006 与 kp-008",
         } },
         events: [],
       });
@@ -2029,7 +2041,13 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   assert.equal(elements["goal-id"].value, "goal-001");
   assert.equal(elements["goal-title"].value, "期末掌握计数");
   assert.equal(elements["goal-kind"].value, "stage");
+  assert.equal(elements["goal-start-date"].value, "2026-09-01");
   assert.equal(elements["goal-submit"].textContent, "保存修改");
+  elements["goal-start-date"].value = "2026-10-02";
+  elements["goal-form"].trigger("submit");
+  assert.match(elements["goal-form-status"].textContent, /开始日期不能晚于截止日期/);
+  assert.equal(calls.some((call) => call.url.endsWith("/goals/goal-001") && call.method === "PATCH"), false);
+  elements["goal-start-date"].value = "2026-09-01";
   elements["goal-form"].trigger("submit");
   await flush();
   const patch = calls.find((call) => call.url.endsWith("/goals/goal-001") && call.method === "PATCH");
@@ -2046,6 +2064,7 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   assert.deepEqual(JSON.parse(turnPost.options.body).goal_intent, true);
   assert.equal(elements["goal-title"].value, "Agent 填的目标");
   assert.equal(elements["goal-kind"].value, "long_term");
+  assert.equal(elements["goal-start-date"].value, "2026-09-15");
   assert.equal(elements["goal-deadline"].value, "2026-10-01");
   assert.equal(elements["goal-description"].value, "含 kp-006 与 kp-008");
   assert.match(elements["goal-form-status"].textContent, /Agent 已代填/);

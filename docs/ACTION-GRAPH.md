@@ -96,3 +96,4 @@ flowchart LR
   `ingest rollback --batch`、桥 `check_ingest` 动作、结果卡回滚按钮、
   `POST /ingest/rollback` 上线；candidate_problems 读路径退役（pull/mastery/hub
   停读，表与 data candidate 子命令标**待退役**）；L1/L2/L3/L4 同步。
+- 2026-08-31 目标时间跑道落地（goal-calendar-lanes）：目标可带开始日期，月历按周续接并为重叠目标分轨；时间视图继续只读。
