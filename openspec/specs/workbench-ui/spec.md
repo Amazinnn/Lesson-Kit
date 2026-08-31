@@ -86,6 +86,27 @@ SHALL restore that region when the session is exhausted or ended.
 - **THEN** the middle column collapses to the practice flow and the study
   arrangement region returns after the session ends
 
+### Requirement: Compact per-problem self-rating
+
+In per-problem mode, the revealed feedback area SHALL use a compact
+two-surface form: one direct numeric 1–5 input and one optional note surface
+with the explicit `记录并下一题` action. It SHALL retain accessible field names
+and SHALL NOT expand the rating into five separate choice controls. Rating
+validation and feedback-write timing SHALL remain unchanged.
+
+#### Scenario: Enter a compact per-problem rating
+
+- **WHEN** the learner reaches self-rating in per-problem mode
+- **THEN** the feedback area shows a direct numeric 1–5 input and an optional
+  note in two compact rounded surfaces
+- **AND** one explicit `记录并下一题` action records the feedback and advances
+- **AND** no five-choice rating group is rendered
+
+#### Scenario: Reject an invalid compact rating in place
+
+- **WHEN** the learner enters a value outside 1-5 in the compact form
+- **THEN** the visible card reports the validation error and no feedback request is sent
+
 ### Requirement: Session-end unified self-rating
 
 The session-end view SHALL present completed, unrated cards only for a unified-rating session. Each card SHALL show the learner answer and solution with a 1–5 input and optional note. Submitting a card’s score SHALL use the ordinary feedback behavior once and remove the scored card; skipped and unfinished problems SHALL not appear.
@@ -638,4 +659,3 @@ a content-naming matter — the UI SHALL NOT mitigate it by hiding text.
 - **WHEN** a day cell holds a goal whose title is longer than the cell width
 - **THEN** the goal chip wraps inside the cell and the cell grows to show
   the full title
-

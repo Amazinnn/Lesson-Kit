@@ -88,6 +88,23 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='practice-rating-batch'", body)
         self.assertIn("id='start-practice' class='primary' disabled", body)
 
+    def test_practice_page_uses_compact_direct_rating_input(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn(
+            "id='rating-input' type='number' min='1' max='5' step='1'",
+            body,
+        )
+        self.assertIn("placeholder='自评 1–5'", body)
+        self.assertIn(
+            "class='visually-hidden' for='rating-input'", body
+        )
+        self.assertIn("class='feedback-note-row'", body)
+        self.assertIn(
+            "id='save-rating' class='primary sm'>记录并下一题", body
+        )
+        self.assertNotIn("class='rate'", body)
+
     def test_practice_page_uses_explicit_scope_and_single_content_modes(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)

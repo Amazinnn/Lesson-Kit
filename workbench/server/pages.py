@@ -119,8 +119,11 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<button id='show-answer' class='outline'>查看解析</button>"
         "<span id='card-nav' class='hidden'><button id='card-prev' class='ghost' type='button'>上一张</button>"
         "<button id='card-next' class='ghost' type='button'>下一张</button></span></div><div id='feedback-area' class='feedback-card hidden'>"
-        "<label for='rating-input'>自评分（1–5）</label><input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='输入 1–5'>"
-        "<textarea id='feedback-note' rows='2' placeholder='可选备注'></textarea><button id='save-rating' class='primary'>保存并下一题</button></div></div></section>"
+        "<label class='visually-hidden' for='rating-input'>自评分（1–5）</label>"
+        "<input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='自评 1–5'>"
+        "<label class='visually-hidden' for='feedback-note'>卡点或心得（可选）</label>"
+        "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='卡点或心得（可选）'></textarea>"
+        "<button id='save-rating' class='primary sm'>记录并下一题</button></div></div></div></section>"
         "<div id='session-end-entry' class='session-end-entry hidden'><span>本题未提交的内容只保留在当前会话。</span><div>"
         "<button id='no-time' class='ghost'>跳到下一道题目</button><button id='goto-session-end' class='outline'>提前结束本次练习</button></div></div></div>"
     )
