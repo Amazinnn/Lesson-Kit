@@ -22,6 +22,11 @@ if mode == "slow":
 elif mode == "fail":
     print(json.dumps({"type":"error","message":"provider exploded"}), flush=True)
     raise SystemExit(3)
+elif mode == "activities":
+    print(json.dumps({"type":"item.started","item":{"id":"cmd-1","type":"command_execution","command":"wb pull"}}), flush=True)
+    print(json.dumps({"type":"item.completed","item":{"id":"cmd-1","type":"command_execution","command":"wb pull","aggregated_output":"2 problems","exit_code":0}}), flush=True)
+    print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"Answer"}}), flush=True)
+    print(json.dumps({"type":"turn.completed"}), flush=True)
 else:
     print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"Answer: " + prompt.splitlines()[-1]}}), flush=True)
     print(json.dumps({"type":"turn.completed"}), flush=True)
@@ -108,6 +113,34 @@ class ConversationTests(unittest.TestCase):
             self.pool, conversation["conversation_id"], first["turn_id"], after=0
         )]
         self.assertEqual(sequences, sorted(set(sequences)))
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_successful_turn_restores_coalesced_execution_plan(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("activities", [])
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Check",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "done")
+        restored = conversations.get(self.pool, conversation["conversation_id"])
+        activities = restored["messages"][1]["activities"]
+        command = next(item for item in activities if item["activity_id"] == "cmd-1")
+        provider_turn = next(
+            item for item in activities if item["activity_id"] == "provider-turn"
+        )
+        self.assertEqual(command["status"], "done")
+        self.assertEqual(command["detail"], "wb pull")
+        self.assertEqual(command["output"], "2 problems")
+        self.assertEqual(sum(item["activity_id"] == "cmd-1" for item in activities), 1)
+        self.assertEqual(provider_turn["status"], "done")
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_failure_is_literal_and_not_mirrored(self, get_provider):

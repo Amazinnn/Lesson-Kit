@@ -259,6 +259,11 @@ _Avoid_：练习会话（同词两义，注意上下文）
 _Avoid_：模型热切换、多模型混用
 出处：workbench-ui spec；ai-teacher-bridge spec
 
+### 执行计划 / Execution Plan
+Agent 单轮处理中显示在对话流里的可读活动时间线：把工具调用、命令执行、搜索与回答生成按发生顺序列成步骤，并用「进行中 / 已完成 / 失败」表示状态。它只展示提供方明确输出的活动，不展示隐藏推理，也不把底层协议事件名直接当界面文案。
+_Avoid_：任务状态码、思维链、后台日志墙
+出处：ai-teacher-bridge spec「Readable execution plan」
+
 ### 讲解 / Explain、诊断 / Diagnose（已移除）
 曾是与题相关的两种桥任务，2026-08-29 经所有者问卷决定彻底移除（Agent 上下文本就是整个版面，无需按题特化）；想聊某道题直接在对话里说。
 _Avoid_：任何按题特化的预设任务按钮
