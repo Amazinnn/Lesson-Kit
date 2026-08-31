@@ -33,7 +33,7 @@ def hub_page(workspaces):
 
 
 def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
-          page_type=None, object_id=None):
+          page_type=None, object_id=None, kp_titles=None):
     course = workspace.get("active_course") or ""
     chapter = workspace.get("active_chapter") or ""
     meta = f"<span class='meta'>{html.escape(workspace['name'])}"
@@ -65,7 +65,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
         + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
-        + f"<main id='middle'>{middle_html}</main>"
+        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{middle_html}</main>"
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics.js'></script>" if graph_mode else "")
@@ -73,6 +73,27 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + "<script src='/static/workbench.js'></script>"
     )
     return _base(f"workbench {workspace['name']}", body)
+
+
+def _practice_scope_tray(kp_titles=None):
+    names_json = html.escape(json.dumps(kp_titles or {}, ensure_ascii=False))
+    return (
+        "<div class='scope-tray-anchor'><aside id='scope-tray' class='scope-tray' "
+        "aria-label='练习范围托盘' data-kp-names='" + names_json + "'>"
+        "<button id='scope-tray-toggle' class='outline sm scope-tray-trigger' type='button' "
+        "aria-controls='scope-tray-panel' aria-expanded='false' aria-label='展开练习范围'>"
+        "练习范围 <span id='scope-tray-trigger-count'>0</span></button>"
+        "<section id='scope-tray-panel' class='scope-tray-panel hidden'>"
+        "<header class='scope-tray-header'><div><span class='side-label'>练习范围</span>"
+        "<strong id='scope-tray-count'>已选 0 个</strong></div>"
+        "<button id='scope-tray-collapse' class='ghost sm icon-only' type='button' "
+        "aria-label='收起练习范围' title='收起'>−</button></header>"
+        "<ol id='scope-tray-list' class='scope-tray-list' aria-label='已选知识点'></ol>"
+        "<p id='scope-tray-empty' class='muted scope-tray-empty'>还没有选择知识点。</p>"
+        "<button id='scope-tray-practice' class='primary scope-tray-practice' "
+        "type='button' disabled>练习这些知识点</button>"
+        "</section></aside></div>"
+    )
 
 
 def _page_header(context, title, summary="", actions=""):
@@ -127,7 +148,10 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<div id='session-end-entry' class='session-end-entry hidden'><span>本题未提交的内容只保留在当前会话。</span><div>"
         "<button id='no-time' class='ghost'>跳到下一道题目</button><button id='goto-session-end' class='outline'>提前结束本次练习</button></div></div></div>"
     )
-    return shell(workspace, workspaces, weak_items, middle, "practice", page_type="practice")
+    return shell(
+        workspace, workspaces, weak_items, middle, "practice",
+        page_type="practice", kp_titles=kp_titles,
+    )
 
 
 def _daily_plan(plan):
@@ -259,13 +283,13 @@ def _staged_practice_html(workspace_name, suggestions, kp_titles=None):
     )
 
 
-def kp_page(workspace, workspaces, weak_items, pool, kp_id):
+def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
     detail = queries.kp_detail(pool, kp_id)
     kp = detail["kp"]
     if kp is None:
         return shell(
             workspace, workspaces, weak_items, "<h1>未知知识点</h1>", "kps",
-            page_type="kp", object_id=kp_id,
+            page_type="kp", object_id=kp_id, kp_titles=kp_titles,
         )
     problems_html = _linked_problems(detail["problems"], workspace["name"], kp_id)
     schedule = detail["schedule"]
@@ -297,19 +321,11 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id):
     )
     return shell(
         workspace, workspaces, weak_items, middle, "kps",
-        page_type="kp", object_id=kp_id,
+        page_type="kp", object_id=kp_id, kp_titles=kp_titles,
     )
 
 
-def _knowledge_selection_controls():
-    return (
-        "<div class='knowledge-selection-bar' role='region' aria-label='练习范围'>"
-        "<span id='selection-count' class='muted'>已选 0 个知识点</span>"
-        "<button id='practice-selected' class='primary' type='button' disabled>练习已选知识点</button></div>"
-    )
-
-
-def kps_page(workspace, workspaces, weak_items, pool):
+def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
     source_kps = pool.kps(prefix)
     problem_counts = {kp["kp_id"]: 0 for kp in source_kps}
@@ -334,21 +350,22 @@ def kps_page(workspace, workspaces, weak_items, pool):
     )
     empty_items = '<li class="muted">暂无知识点</li>'
     middle = (_page_header("学习 / 当前章节", "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
-        + "<div class='page-content'>" + _knowledge_selection_controls()
-        + "<div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
+        + "<div class='page-content'><div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
         + "<option value='source' selected>课程顺序</option><option value='title'>名称</option>"
         + "<option value='problem_count'>题目数量</option><option value='state'>学习状态</option>"
         + "<option value='importance'>重要性</option></select>"
         + "<button id='knowledge-sort-direction' class='ghost sm' type='button' aria-label='切换排序方向' title='切换排序方向'>↑</button></div>"
         + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>本章知识点</h2></div></div>"
         + f"<ul id='knowledge-list' class='knowledge-list'>{items or empty_items}</ul></section></div>")
-    return shell(workspace, workspaces, weak_items, middle, "kps", page_type="kps")
+    return shell(
+        workspace, workspaces, weak_items, middle, "kps",
+        page_type="kps", kp_titles=kp_titles,
+    )
 
 
-def graph_page(workspace, workspaces, weak_items, has_artifact):
+def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
     middle = (_page_header("知识网络 / 当前章节", "知识图谱", "勾选知识点后，可将同一范围交给练习。")
-        + "<div class='page-content graph-content'>" + _knowledge_selection_controls()
-        + "<section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
+        + "<div class='page-content graph-content'><section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
         "<label class='visually-hidden' for='graph-search'>搜索知识点</label><input id='graph-search' placeholder='搜索知识点'>"
         "<label for='graph-projection'>视图</label><select id='graph-projection' title='按已有指标调整图谱形态'>"
         "<option value='structure' selected>关系结构</option><option value='problem_count'>题目数量</option>"
@@ -356,10 +373,13 @@ def graph_page(workspace, workspaces, weak_items, has_artifact):
         "<label class='graph-gravity-label' for='graph-gravity'>聚拢</label><input id='graph-gravity' type='range' min='0' max='100' value='30' aria-label='调整图谱聚拢程度' title='调整图谱聚拢程度'>"
         "<div class='graph-zoom' aria-label='缩放'><button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button><button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button><button id='graph-fit' class='outline sm'>适应画布</button></div>"
         "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div></section></div>")
-    return shell(workspace, workspaces, weak_items, middle, "graph", graph_mode=True, page_type="graph")
+    return shell(
+        workspace, workspaces, weak_items, middle, "graph", graph_mode=True,
+        page_type="graph", kp_titles=kp_titles,
+    )
 
 
-def session_end_page(workspace, workspaces, weak_items):
+def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
     middle = (
         _page_header(
             "练习 / 收束本轮", "会话末统一自评",
@@ -379,7 +399,7 @@ def session_end_page(workspace, workspaces, weak_items):
         "</div></section></div>"
     )
     return shell(workspace, workspaces, weak_items, middle, "session-end",
-                 page_type="session-end")
+                 page_type="session-end", kp_titles=kp_titles)
 
 
 def _left_column(workspace, workspaces, weak_items, active_nav):
