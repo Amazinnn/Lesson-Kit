@@ -118,6 +118,8 @@ def get(pool, conversation_id):
             assistant = {"role": "assistant", "content": exchange["assistant"]}
             if exchange.get("action"):
                 assistant["action"] = exchange["action"]
+            if exchange.get("activities"):
+                assistant["activities"] = exchange["activities"]
             messages.extend([
                 {"role": "user", "content": exchange["user"]},
                 assistant,
@@ -205,6 +207,27 @@ def _append_event(path, kind, **fields):
     with path.open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(event, ensure_ascii=False) + "\n")
     return event
+
+
+def _coalesced_activities(path):
+    """Collapse updates for one provider activity into one durable plan row."""
+    rows = {}
+    order = []
+    if not path.is_file():
+        return []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        event = json.loads(line)
+        if event.get("kind") != "activity":
+            continue
+        activity_id = event.get("activity_id") or f"activity-{event['sequence']}"
+        if activity_id not in rows:
+            order.append(activity_id)
+            rows[activity_id] = {"activity_id": activity_id}
+        rows[activity_id].update({
+            key: value for key, value in event.items()
+            if key not in {"kind", "sequence"}
+        })
+    return [rows[activity_id] for activity_id in order]
 
 
 def _prompt(message, context):
@@ -395,6 +418,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     timer.start()
     text_parts = []
     result_text = ""
+    answer_started = False
+    provider_output = []
     try:
         process.stdin.write(_prompt(message, context))
         process.stdin.close()
@@ -404,7 +429,12 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                     conversation["provider"], json.loads(line)
                 )
             except json.JSONDecodeError:
-                _append_event(event_path, "phase", label="provider.output")
+                provider_output.append(line.rstrip("\r\n"))
+                _append_event(
+                    event_path, "activity", activity_id="provider-output",
+                    activity_type="output", status="running", label="接收 Agent 输出",
+                    output="\n".join(provider_output),
+                )
                 continue
             provider_session_id = normalized.pop("provider_session_id", None)
             provider_title = normalized.pop("title", None)
@@ -424,6 +454,12 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                     })
                     _write_json(conversation_path, conversation)
             kind = normalized.pop("kind")
+            if kind in {"text", "result"} and not answer_started:
+                _append_event(
+                    event_path, "activity", activity_id="answer",
+                    activity_type="answer", status="running", label="组织回答",
+                )
+                answer_started = True
             _append_event(event_path, kind, **normalized)
             if kind == "text":
                 text_parts.append(normalized.get("text", ""))
@@ -436,21 +472,55 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
             _PROCESSES.pop(key, None)
 
     if key in _CANCEL_REQUESTS:
+        _append_event(
+            event_path, "activity", activity_id="provider-turn",
+            activity_type="progress", status="failed", label="本轮已停止",
+        )
         _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
         return
     if key in _TIMEOUTS:
+        _append_event(
+            event_path, "activity", activity_id="provider-turn",
+            activity_type="progress", status="failed", label="Agent 处理超时",
+        )
         _finish(folder, conversation_id, turn_id, "failed", "provider timed out")
         return
     if return_code != 0:
+        _append_event(
+            event_path, "activity", activity_id="provider-turn",
+            activity_type="progress", status="failed", label="Agent 处理失败",
+        )
         _finish(folder, conversation_id, turn_id, "failed", f"provider exit code {return_code}")
         return
     answer = result_text or "".join(text_parts)
     if not answer:
+        _append_event(
+            event_path, "activity", activity_id="provider-turn",
+            activity_type="progress", status="failed", label="Agent 未返回回答",
+        )
         _finish(folder, conversation_id, turn_id, "failed", "provider returned no assistant text")
         return
 
+    _append_event(
+        event_path, "activity", activity_id="provider-turn",
+        activity_type="progress", status="done", label="Agent 处理完成",
+    )
+    if provider_output:
+        _append_event(
+            event_path, "activity", activity_id="provider-output",
+            activity_type="output", status="done", label="Agent 输出已接收",
+            output="\n".join(provider_output),
+        )
     answer, action = _extract_action(answer, context)
+    _append_event(
+        event_path, "activity", activity_id="answer",
+        activity_type="answer", status="done", label="回答已生成",
+    )
     if action and action["type"] == "check_ingest" and "manifest" in action:
+        _append_event(
+            event_path, "activity", activity_id="check-ingest",
+            activity_type="tool", status="running", label="校验并写入学习内容",
+        )
         action_pool = Pool(
             root=root,
             db_path=root / workspace["db"],
@@ -468,8 +538,18 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 key: applied[key]
                 for key in ("batch_id", "kind", "counts", "backup_path", "applied")
             }
+            _append_event(
+                event_path, "activity", activity_id="check-ingest",
+                activity_type="tool", status="done", label="学习内容已入库",
+                output=f"批次 {applied['batch_id']}",
+            )
         except Exception as exc:
             action["error"] = str(exc)
+            _append_event(
+                event_path, "activity", activity_id="check-ingest",
+                activity_type="tool", status="failed", label="学习内容未入库",
+                output=str(exc),
+            )
         finally:
             action_pool.close()
 
@@ -489,6 +569,9 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     }
     if action:
         exchange["action"] = action
+    activities = _coalesced_activities(event_path)
+    if activities:
+        exchange["activities"] = activities
     with (folder / "transcript.jsonl").open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(exchange, ensure_ascii=False) + "\n")
     _append_event(event_path, "done")

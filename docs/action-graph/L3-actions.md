@@ -43,6 +43,7 @@
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | 对话轮次（自动带页面上下文） | UI/CLI | 双 | conv 留痕 | 已实现 |
+| 执行计划（命令/工具/搜索/回答活动归一化，同行状态更新，成功轮次可恢复） | UI 对话流 | 双 | conv 成功留痕 | 已实现（render-agent-execution-plan） |
 | 新建会话/选 provider（锁定不换） | UI | 人 | conversations | 已实现 |
 | 停止轮次 | UI | 人 | turn=cancelled | 已实现 |
 | replace_practice_selection（明确练习意图才生效） | 对话产出动作 | Agent | 浏览器选区（一次性） | 已实现 |
@@ -93,3 +94,5 @@
   candidate_attempts 建表停止且真实池 DROP（先备份）；learner_signals 保留为核心。
 - 2026-08-31 目标月历升级为时间跑道：目标增加可选开始日期，跨周续接、重叠分轨；
   阶段/长期/逾期采用黄/蓝/红边缘区分，旧目标按截止日单点兼容。
+- 2026-08-31 Agent 执行计划落地（render-agent-execution-plan）：Codex/Claude
+  命令、工具、搜索与回答活动统一成可读步骤；同一步原位更新状态，成功轮次可恢复。

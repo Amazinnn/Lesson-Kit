@@ -535,6 +535,84 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 #ai-input { flex: 1; min-height: 32px; }
 .ai-send-actions { display: flex; gap: 5px; }
 #ai-status { min-height: 18px; margin: 6px 0 0; }
+.ai-plan {
+  min-width: 0;
+  margin: 8px 0 10px;
+  border: 1px solid #171717;
+  border-left: 5px solid #2457c5;
+  border-radius: 2px;
+  background: #fffdf7;
+}
+.ai-plan-title {
+  padding: 7px 10px;
+  border-bottom: 1px solid #171717;
+  background: #f2c94c;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.ai-plan-list { margin: 0; padding: 4px 10px; list-style: none; }
+.ai-plan-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 0;
+}
+.ai-plan-step + .ai-plan-step { border-top: 1px solid rgb(0 0 0 / 9%); }
+.ai-plan-marker {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border: 2px solid #2457c5;
+  background: #fffdf7;
+}
+.ai-plan-step.is-running .ai-plan-marker {
+  background: #2457c5;
+  animation: ai-plan-pulse 1.15s ease-in-out infinite alternate;
+}
+.ai-plan-step.is-done .ai-plan-marker { border-color: #171717; background: #f2c94c; }
+.ai-plan-step.is-failed .ai-plan-marker { border-color: #d6453d; background: #d6453d; }
+.ai-plan-body { min-width: 0; }
+.ai-plan-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ai-plan-label { min-width: 0; overflow-wrap: anywhere; font-size: 13px; line-height: 18px; }
+.ai-plan-state {
+  flex: none;
+  margin-left: auto;
+  color: var(--dsw-label-tertiary);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ai-plan-step.is-failed .ai-plan-state { color: #b62f28; }
+.ai-plan-detail {
+  margin-top: 3px;
+  color: var(--dsw-label-secondary);
+  font-family: var(--dsw-font-code);
+  font-size: 11px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.ai-plan-output { min-width: 0; margin-top: 5px; color: var(--dsw-label-secondary); }
+.ai-plan-output summary { cursor: pointer; font-size: 11px; }
+.ai-plan-output pre {
+  max-height: 168px;
+  margin: 5px 0 0;
+  padding: 7px 8px;
+  overflow: auto;
+  border: 1px solid var(--dsw-border-l2);
+  background: #f7f7f4;
+  font-family: var(--dsw-font-code);
+  font-size: 11px;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+@keyframes ai-plan-pulse { to { opacity: .42; } }
+@media (prefers-reduced-motion: reduce) {
+  .ai-plan-step.is-running .ai-plan-marker { animation: none; }
+}
 .msg .section { margin-top: 8px; }
 .msg .section h4 { margin: 6px 0 2px; font-size: 13px; color: var(--dsw-label-secondary); }
 

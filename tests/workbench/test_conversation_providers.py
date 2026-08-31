@@ -67,7 +67,7 @@ class ConversationProviderTests(unittest.TestCase):
             ["claude", "--print", "--output-format", "stream-json", "--verbose", "--include-partial-messages", "--resume", "session-456"],
         )
 
-    def test_normalizes_codex_session_text_and_phase_events(self):
+    def test_normalizes_codex_session_text_and_turn_activity(self):
         from workbench.bridge import conversation_providers
 
         started = conversation_providers.normalize_event(
@@ -83,7 +83,67 @@ class ConversationProviderTests(unittest.TestCase):
 
         self.assertEqual(started["provider_session_id"], "thread-1")
         self.assertEqual(message, {"kind": "text", "text": "Answer"})
-        self.assertEqual(phase, {"kind": "phase", "label": "turn.started"})
+        self.assertEqual(phase, {
+            "kind": "activity", "activity_id": "provider-turn",
+            "activity_type": "progress", "status": "running",
+            "label": "Agent 正在处理",
+        })
+
+    def test_normalizes_codex_command_updates_as_one_activity(self):
+        from workbench.bridge import conversation_providers
+
+        started = conversation_providers.normalize_event("codex", {
+            "type": "item.started",
+            "item": {"id": "item-7", "type": "command_execution", "command": "wb pull"},
+        })
+        completed = conversation_providers.normalize_event("codex", {
+            "type": "item.completed",
+            "item": {
+                "id": "item-7", "type": "command_execution", "command": "wb pull",
+                "aggregated_output": "2 problems", "exit_code": 0,
+            },
+        })
+
+        self.assertEqual(started["activity_id"], "item-7")
+        self.assertEqual(started["status"], "running")
+        self.assertEqual(started["label"], "运行命令")
+        self.assertEqual(completed["activity_id"], "item-7")
+        self.assertEqual(completed["status"], "done")
+        self.assertEqual(completed["output"], "2 problems")
+
+    def test_normalizes_claude_bash_and_tool_result(self):
+        from workbench.bridge import conversation_providers
+
+        started = conversation_providers.normalize_event("claude", {
+            "type": "assistant", "message": {"content": [{
+                "type": "tool_use", "id": "tool-2", "name": "Bash",
+                "input": {"command": "python -m pytest"},
+            }]},
+        })
+        completed = conversation_providers.normalize_event("claude", {
+            "type": "user", "message": {"content": [{
+                "type": "tool_result", "tool_use_id": "tool-2", "content": "12 passed",
+            }]},
+        })
+
+        self.assertEqual(started["activity_type"], "command")
+        self.assertEqual(started["detail"], "python -m pytest")
+        self.assertEqual(completed["activity_id"], "tool-2")
+        self.assertEqual(completed["status"], "done")
+        self.assertEqual(completed["output"], "12 passed")
+        self.assertNotIn("label", completed)
+
+    def test_reasoning_activity_never_contains_reasoning_text(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("codex", {
+            "type": "item.completed",
+            "item": {"id": "thought-1", "type": "reasoning", "text": "private reasoning"},
+        })
+
+        self.assertEqual(event["label"], "分析任务")
+        self.assertNotIn("detail", event)
+        self.assertNotIn("output", event)
 
     def test_normalizes_claude_partial_and_session(self):
         from workbench.bridge import conversation_providers

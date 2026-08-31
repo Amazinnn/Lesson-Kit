@@ -55,6 +55,7 @@ flowchart LR
   end
   subgraph BR[Agent 桥]
     CONV[对话轮次]
+    PLAN[执行计划]
     SEL[replace_practice_selection]
     CHK[Check 管线·已实现]
   end
@@ -71,6 +72,7 @@ flowchart LR
   RATE & END --> FB --> DB
   K --> GSTATE --> DB
   A --> CONV
+  CONV --> PLAN --> A
   CONV -->|明确练习意图| SEL --> P
   CHK ==>|生成→校验→直接入池·批次 id| ING --> BK --> DB
   CLI --> DB & FS
@@ -97,3 +99,5 @@ flowchart LR
   `POST /ingest/rollback` 上线；candidate_problems 读路径退役（pull/mastery/hub
   停读，表与 data candidate 子命令标**待退役**）；L1/L2/L3/L4 同步。
 - 2026-08-31 目标时间跑道落地（goal-calendar-lanes）：目标可带开始日期，月历按周续接并为重叠目标分轨；时间视图继续只读。
+- 2026-08-31 Agent 执行计划上线（render-agent-execution-plan）：Bridge 将提供方
+  活动归一为可读步骤，对话流同行更新并恢复成功轮次记录；L3 同步。

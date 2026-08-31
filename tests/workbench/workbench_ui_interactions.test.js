@@ -1613,6 +1613,76 @@ test("streaming assistant text is coalesced into one markdown message", async ()
   assert.match(assistant.innerHTML, /完整回答/);
 });
 
+test("Agent activities render as one updating execution-plan row", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    setTimeoutFn: () => 0,
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle", messages: [],
+      });
+      if (url.endsWith("/turns") && options) return jsonResponse({ turn_id: "turn-1" });
+      if (url.includes("/turns/turn-1")) return jsonResponse({
+        turn: { status: "running" },
+        events: [
+          { sequence: 1, kind: "phase", label: "ITEM_COMPLETED_COMMAND_EXECUTION" },
+          { sequence: 2, kind: "activity", activity_id: "cmd-1",
+            activity_type: "command", status: "running", label: "运行命令",
+            detail: "python -m pytest" },
+          { sequence: 3, kind: "activity", activity_id: "cmd-1",
+            status: "done", output: "12 passed" },
+        ],
+      });
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "请检查";
+  elements["ai-send"].click();
+  await flush();
+
+  const plan = elements["ai-messages"].children[1];
+  assert.equal(plan.className, "ai-plan");
+  assert.equal(plan.children[0].textContent, "执行计划");
+  const rows = plan.children[1].children;
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].className, "ai-plan-step is-done");
+  assert.equal(rows[0].activityParts.label.textContent, "运行命令");
+  assert.equal(rows[0].activityParts.state.textContent, "已完成");
+  assert.equal(rows[0].activityParts.output.textContent, "12 passed");
+  assert.doesNotMatch(elements["ai-status"].textContent, /ITEM_COMPLETED/);
+});
+
+test("a restored assistant message places its execution plan before the answer", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions")) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" },
+      ]);
+      return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+        messages: [{ role: "assistant", content: "检查完成。", activities: [{
+          activity_id: "tool-1", activity_type: "tool", status: "done",
+          label: "调用工具", detail: "课程查询",
+        }] }],
+      });
+    },
+  });
+  await openFirstAiSession(elements);
+
+  assert.equal(elements["ai-messages"].children[0].className, "ai-plan");
+  assert.equal(elements["ai-messages"].children[1].className, "msg ai");
+  assert.match(elements["ai-messages"].children[1].innerHTML, /检查完成/);
+});
+
 test("micro quiz renders yes/no options and grades the objective answer", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
