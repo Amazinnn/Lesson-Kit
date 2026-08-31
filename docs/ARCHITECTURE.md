@@ -48,8 +48,8 @@ workbench/
 │   └── display_metadata.py # 展示字段回填
 ├── bridge/
 │   ├── __init__.py
-│   ├── conversation_providers.py # PATH Agent 发现、原生新建/续聊命令与 JSONL 归一化
-│   └── conversations.py # conv-###、串行 turn、取消、成功镜像
+│   ├── conversation_providers.py # PATH Agent 发现、原生新建/续聊命令与活动事件归一化
+│   └── conversations.py # conv-###、串行 turn、取消、成功镜像（含执行计划）
 ├── ingest/
 │   └── __init__.py    # 内容 prepare/run/gate/apply/batch/rollback
 ├── cli/
@@ -94,7 +94,9 @@ workbench/
 - `domain.schedule.after_result(pool, item, result, now)`——SM-2 变体；`due(pool, days) -> [...]`。
 - 图谱状态动作经 Domain 规则映射到现有调度质量值；Shell 不直接写 SQLite，Data 层执行覆盖式存储。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
-- `bridge.conversations`：每工作区 `list/create/get/start/cancel`；同一会话单轮串行，完整上下文留在 provider 原生 store。
+- `bridge.conversations`：每工作区 `list/create/get/start/cancel`；同一会话单轮串行，
+  provider 事件归一为命令/工具/搜索/回答活动，成功轮次将合并后的执行计划随答案镜像；
+  隐藏推理与原始协议包不进镜像，完整上下文仍留在 provider 原生 store。
 - `ingest`：`prepare/run/gate/apply/apply_batch/rollback_batch`；生成内容只有通过
   确定性门禁后才能以批次事务写入，并保留整批回滚边界。
 - `server.context`：按浏览器提供的路由与对象 ID 重新读取 Pool，生成权威 Agent 上下文；不接收整页 DOM。

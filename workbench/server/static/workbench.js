@@ -1775,6 +1775,7 @@
   var aiPollTimer = null;
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
+  var aiExecutionPlan = null;
 
   function aiAddMarkdown(text, cls) {
     aiAdd(richText(text || ""), cls);
@@ -1802,6 +1803,92 @@
       + richText(aiStreamingMessage.content) + "</div>";
     messages.scrollTop = messages.scrollHeight;
     renderMath(aiStreamingMessage);
+  }
+
+  function aiActivityState(status) {
+    if (status === "done") return "已完成";
+    if (status === "failed") return "失败";
+    return "进行中";
+  }
+
+  function aiCreateExecutionPlan() {
+    if (!messages) return null;
+    var plan = document.createElement("section");
+    plan.className = "ai-plan";
+    plan.setAttribute("aria-label", "执行计划");
+    var title = document.createElement("div");
+    title.className = "ai-plan-title";
+    title.textContent = "执行计划";
+    var list = document.createElement("ol");
+    list.className = "ai-plan-list";
+    plan.appendChild(title);
+    plan.appendChild(list);
+    messages.appendChild(plan);
+    aiExecutionPlan = { element: plan, list: list, rows: {} };
+    return aiExecutionPlan;
+  }
+
+  function aiUpsertActivity(activity, plan) {
+    if (!activity) return;
+    plan = plan || aiExecutionPlan || aiCreateExecutionPlan();
+    if (!plan) return;
+    var id = String(activity.activity_id || "activity-" + Object.keys(plan.rows).length);
+    var row = plan.rows[id];
+    if (!row) {
+      row = document.createElement("li");
+      var marker = document.createElement("span");
+      marker.className = "ai-plan-marker";
+      marker.setAttribute("aria-hidden", "true");
+      var body = document.createElement("div");
+      body.className = "ai-plan-body";
+      var heading = document.createElement("div");
+      heading.className = "ai-plan-heading";
+      var label = document.createElement("strong");
+      label.className = "ai-plan-label";
+      var state = document.createElement("span");
+      state.className = "ai-plan-state";
+      heading.appendChild(label);
+      heading.appendChild(state);
+      var detail = document.createElement("div");
+      detail.className = "ai-plan-detail hidden";
+      body.appendChild(heading);
+      body.appendChild(detail);
+      row.appendChild(marker);
+      row.appendChild(body);
+      row.activityParts = { label: label, state: state, detail: detail, body: body };
+      plan.rows[id] = row;
+      plan.list.appendChild(row);
+    }
+    var status = activity.status === "done" || activity.status === "failed"
+      ? activity.status : "running";
+    row.className = "ai-plan-step is-" + status;
+    if (activity.label != null || !row.activityParts.label.textContent) {
+      row.activityParts.label.textContent = activity.label || "执行步骤";
+    }
+    row.activityParts.state.textContent = aiActivityState(status);
+    if (activity.detail != null) row.activityParts.detail.textContent = activity.detail || "";
+    row.activityParts.detail.classList.toggle("hidden", !row.activityParts.detail.textContent);
+    if (activity.output != null && String(activity.output).length) {
+      if (!row.activityParts.output) {
+        var disclosure = document.createElement("details");
+        disclosure.className = "ai-plan-output";
+        var summary = document.createElement("summary");
+        summary.textContent = "查看输出";
+        var output = document.createElement("pre");
+        disclosure.appendChild(summary);
+        disclosure.appendChild(output);
+        row.activityParts.body.appendChild(disclosure);
+        row.activityParts.output = output;
+      }
+      row.activityParts.output.textContent = String(activity.output);
+    }
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function aiRenderExecutionPlan(activities) {
+    if (!activities || !activities.length) return;
+    var plan = aiCreateExecutionPlan();
+    activities.forEach(function (activity) { aiUpsertActivity(activity, plan); });
   }
 
   function aiSetStatus(text) {
@@ -1925,10 +2012,17 @@
     if (aiChatView) aiSetView("chat");
     messages.innerHTML = "";
     aiStreamingMessage = null;
+    aiExecutionPlan = null;
     (record.messages || []).forEach(function (message) {
-      aiAddMarkdown(message.content || "", message.role === "user" ? "user" : "ai");
-      if (message.action && message.action.type === "check_ingest") {
-        aiApplyCheckAction(message.action);
+      if (message.role === "user") {
+        aiAddMarkdown(message.content || "", "user");
+      } else {
+        aiRenderExecutionPlan(message.activities || []);
+        aiAddMarkdown(message.content || "", "ai");
+        if (message.action && message.action.type === "check_ingest") {
+          aiApplyCheckAction(message.action);
+        }
+        aiExecutionPlan = null;
       }
     });
     aiSetRunning(record.status === "running");
@@ -1979,8 +2073,8 @@
     (data.events || []).forEach(function (event) {
       aiPollSequence = Math.max(aiPollSequence, event.sequence || 0);
       if (event.kind === "text") aiAppendAssistantText(event.text || "");
+      else if (event.kind === "activity") aiUpsertActivity(event);
       else if (event.kind === "error") aiSetStatus(event.text || "Agent 返回错误");
-      else if (event.kind === "phase" && event.label !== "provider.started") aiSetStatus(event.label || "");
     });
     if (!data.turn) return;
     if (data.turn.status === "done") {
@@ -2021,6 +2115,7 @@
     var message = aiInput ? aiInput.value.trim() : "";
     if (!message || !aiConversation || aiTurn) return;
     aiStreamingMessage = null;
+    aiExecutionPlan = null;
     aiAddMarkdown(message, "user");
     aiInput.value = "";
     aiSetRunning(true);
