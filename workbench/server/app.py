@@ -190,20 +190,26 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         pool = api_mod._pool_for(workspace)
         try:
             weak_items = self._weak_items(workspace, pool)
+            kp_titles = _kp_titles(workspace, pool)
             page = parts[2] if len(parts) > 2 else "practice"
             if page == "kp":
                 kp_id = parts[3] if len(parts) > 3 else ""
                 html_body = pages.kp_page(workspace, workspaces, weak_items,
-                                          pool, kp_id)
+                                          pool, kp_id, kp_titles)
             elif page == "kps":
-                html_body = pages.kps_page(workspace, workspaces, weak_items, pool)
+                html_body = pages.kps_page(
+                    workspace, workspaces, weak_items, pool, kp_titles,
+                )
             elif page == "graph":
                 html_body = pages.graph_page(
                     workspace, workspaces, weak_items,
                     self._graph_artifact(workspace).is_file(),
+                    kp_titles,
                 )
             elif page == "session-end":
-                html_body = pages.session_end_page(workspace, workspaces, weak_items)
+                html_body = pages.session_end_page(
+                    workspace, workspaces, weak_items, kp_titles,
+                )
             else:
                 plan = api_mod.daily_plan(pool, workspace, {}, {})
                 overview = queries.review_overview(pool)
@@ -217,7 +223,6 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                         card = pool.card(item["item_id"])
                         if card:
                             item_kps[item["item_id"]] = [card["kp_id"]]
-                kp_titles = _kp_titles(workspace, pool)
                 suggestions = pages.suggestion_rows(
                     plan.get("queue"), overview["items"], item_kps, kp_titles,
                 )

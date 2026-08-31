@@ -15,6 +15,7 @@
   var INCLUDE_KEY = "wb_practice_include_" + WS;
   var RATING_MODE_KEY = "wb_practice_rating_mode_" + WS;
   var SELECTION_KEY = "wb_kp_selection_" + WS;
+  var SCOPE_TRAY_KEY = "wb_scope_tray_open_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
   var selectedGraphKpId = null;
@@ -31,12 +32,75 @@
       var id = input.dataset.selectionKpId || input.dataset.kpId;
       input.checked = unique.indexOf(id) >= 0;
     });
-    var count = document.getElementById("selection-count");
-    if (count) count.textContent = "已选 " + unique.length + " 个知识点";
-    var handoff = document.getElementById("practice-selected");
-    if (handoff) handoff.disabled = !unique.length;
+    renderScopeTray();
     renderStagedList();
     return unique;
+  }
+
+  function scopeTrayNames() {
+    var tray = document.getElementById("scope-tray");
+    if (!tray) return {};
+    try { return JSON.parse(tray.dataset.kpNames || "{}") || {}; }
+    catch (_) { return {}; }
+  }
+
+  function renderScopeTray() {
+    var list = document.getElementById("scope-tray-list");
+    if (!list) return;
+    var ids = selectedKpIds();
+    var names = scopeTrayNames();
+    list.innerHTML = ids.map(function (id) {
+      var title = names[id] || id;
+      return "<li class='scope-tray-item'><span>" + escapeHtml(title) + "</span>"
+        + "<button class='ghost sm icon-only scope-tray-remove' type='button' "
+        + "data-kp-id='" + escapeHtml(id) + "' aria-label='移除 "
+        + escapeHtml(title) + "'>×</button></li>";
+    }).join("");
+    var count = document.getElementById("scope-tray-count");
+    if (count) count.textContent = "已选 " + ids.length + " 个";
+    var triggerCount = document.getElementById("scope-tray-trigger-count");
+    if (triggerCount) triggerCount.textContent = String(ids.length);
+    var empty = document.getElementById("scope-tray-empty");
+    if (empty) empty.classList.toggle("hidden", ids.length > 0);
+    var practice = document.getElementById("scope-tray-practice");
+    if (practice) practice.disabled = !ids.length;
+  }
+
+  function setScopeTrayOpen(open) {
+    var toggle = document.getElementById("scope-tray-toggle");
+    var panel = document.getElementById("scope-tray-panel");
+    if (!toggle || !panel) return;
+    toggle.classList.toggle("hidden", open);
+    panel.classList.toggle("hidden", !open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    store(SCOPE_TRAY_KEY, !!open);
+  }
+
+  function bindScopeTray() {
+    var toggle = document.getElementById("scope-tray-toggle");
+    var collapse = document.getElementById("scope-tray-collapse");
+    var list = document.getElementById("scope-tray-list");
+    var practice = document.getElementById("scope-tray-practice");
+    if (!toggle) return;
+    toggle.addEventListener("click", function () { setScopeTrayOpen(true); });
+    if (collapse) collapse.addEventListener("click", function () {
+      setScopeTrayOpen(false);
+    });
+    if (list) list.addEventListener("click", function (event) {
+      var target = event.target;
+      var button = target && target.closest ? target.closest(".scope-tray-remove") : null;
+      if (!button) return;
+      saveSelectedKpIds(selectedKpIds().filter(function (id) {
+        return id !== button.dataset.kpId;
+      }));
+    });
+    if (practice) practice.addEventListener("click", function () {
+      if (selectedKpIds().length) {
+        window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+      }
+    });
+    setScopeTrayOpen(!!load(SCOPE_TRAY_KEY, false));
+    renderScopeTray();
   }
 
   function bindSelectionControls() {
@@ -51,12 +115,9 @@
       });
     });
     saveSelectedKpIds(ids);
-    var handoff = document.getElementById("practice-selected");
-    if (handoff) handoff.addEventListener("click", function () {
-      if (selectedKpIds().length) window.location = "/w/" + encodeURIComponent(WS) + "/practice";
-    });
   }
 
+  bindScopeTray();
   bindSelectionControls();
 
   /* ---------- staged practice list (selection view + on-demand suggestions) ---------- */

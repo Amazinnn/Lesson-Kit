@@ -57,6 +57,8 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
         self.assertIn("--dsw-brand-primary", body)
+        self.assertIn(".scope-tray-list {", body)
+        self.assertIn("overscroll-behavior: contain;", body)
 
     def test_css_defines_hidden_rule(self):
         # regression: .hidden was missing, breaking the practice visibility choreography
@@ -121,12 +123,24 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("题目与闪卡", body)
 
-    def test_knowledge_views_expose_one_shared_selection_handoff(self):
-        for path in ("/w/dmath/kps", "/w/dmath/graph"):
+    def test_workspace_pages_expose_one_shared_selection_tray(self):
+        for path in (
+            "/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph",
+            "/w/dmath/kp/dmath-ch06-kp-001", "/w/dmath/session-end",
+        ):
             status, body = self.fetch(path)
             self.assertEqual(status, 200)
-            self.assertIn("id='practice-selected'", body)
+            self.assertIn("id='scope-tray-toggle'", body)
+            self.assertIn("aria-controls='scope-tray-panel'", body)
+            self.assertIn("id='scope-tray-panel'", body)
+            self.assertIn("id='scope-tray-list'", body)
+            self.assertIn("id='scope-tray-collapse'", body)
+            self.assertIn("id='scope-tray-practice'", body)
+            self.assertIn("dmath-ch06-kp-001", body)
+        for path in ("/w/dmath/kps", "/w/dmath/graph"):
+            body = self.fetch(path)[1]
             self.assertIn("data-kp-selection", body)
+            self.assertNotIn("id='practice-selected'", body)
 
     def test_plan_keeps_goal_cards_and_dissolves_the_queue_into_suggestions(self):
         status, body = self.fetch("/w/dmath/practice")

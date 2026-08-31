@@ -319,6 +319,48 @@ test("workspace selector navigates to the selected workspace practice page", () 
   assert.equal(app.window.location, "/w/beta/practice");
 });
 
+test("practice scope tray expands, removes items, collapses, and keeps the selection", () => {
+  const elements = {
+    layout: layout(),
+    "scope-tray": new FakeElement("scope-tray", {
+      dataset: { kpNames: JSON.stringify({ "kp-1": "集合计数", "kp-2": "乘法规则" }) },
+    }),
+    "scope-tray-toggle": new FakeElement("scope-tray-toggle"),
+    "scope-tray-panel": new FakeElement("scope-tray-panel"),
+    "scope-tray-collapse": new FakeElement("scope-tray-collapse"),
+    "scope-tray-list": new FakeElement("scope-tray-list"),
+    "scope-tray-count": new FakeElement("scope-tray-count"),
+    "scope-tray-trigger-count": new FakeElement("scope-tray-trigger-count"),
+    "scope-tray-empty": new FakeElement("scope-tray-empty"),
+    "scope-tray-practice": new FakeElement("scope-tray-practice"),
+  };
+  elements["scope-tray-panel"].classList.add("hidden");
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
+  });
+  const app = runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
+
+  assert.equal(elements["scope-tray-trigger-count"].textContent, "2");
+  assert.equal(elements["scope-tray-count"].textContent, "已选 2 个");
+  assert.ok(elements["scope-tray-list"].innerHTML.includes("集合计数"));
+  assert.ok(elements["scope-tray-list"].innerHTML.includes("乘法规则"));
+  elements["scope-tray-toggle"].click();
+  assert.equal(elements["scope-tray-panel"].classList.contains("hidden"), false);
+  assert.equal(elements["scope-tray-toggle"].classList.contains("hidden"), true);
+
+  const remove = new FakeElement("remove", { dataset: { kpId: "kp-1" } });
+  remove.className = "scope-tray-remove";
+  elements["scope-tray-list"].trigger("click", { target: remove });
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
+  assert.equal(elements["scope-tray-trigger-count"].textContent, "1");
+
+  elements["scope-tray-collapse"].click();
+  assert.equal(elements["scope-tray-panel"].classList.contains("hidden"), true);
+  assert.equal(JSON.parse(storage.getItem("wb_scope_tray_open_alpha")), false);
+  elements["scope-tray-practice"].click();
+  assert.equal(app.window.location, "/w/alpha/practice");
+});
+
 test("corrupt session state is discarded instead of breaking page startup", () => {
   const storage = new FakeStorage({ wb_session_alpha: "{broken" });
   runWorkbench({
