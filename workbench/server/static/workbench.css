@@ -1130,10 +1130,12 @@ img { max-width: 100%; }
   width: 4px;
 }
 .workload-bars {
+  position: relative;
   display: flex; align-items: flex-end; gap: 6px; height: 110px;
   padding-top: 8px;
 }
 .bar-col {
+  z-index: 1;
   flex: 1; display: flex; flex-direction: column; justify-content: flex-end;
   align-items: center; height: 100%; position: relative;
 }
@@ -1145,3 +1147,39 @@ img { max-width: 100%; }
 .bar-col.heavy .bar-fill { opacity: 1; background: var(--dsw-state-warn); }
 .bar-heavy-flag { font-size: 11px; color: var(--dsw-state-warn); }
 .bar-label, .bar-count { font-size: 11px; color: var(--dsw-label-tertiary); }
+.workload-trend {
+  position: absolute;
+  z-index: 2;
+  inset: 8px 0 20px;
+  width: 100%;
+  height: calc(100% - 28px);
+  overflow: visible;
+  pointer-events: none;
+}
+.workload-trend-shadow,
+.workload-trend-line {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.workload-trend-shadow { stroke: rgba(23, 23, 23, 0.28); stroke-width: 6; }
+.workload-trend-line {
+  stroke: #f2c94c;
+  stroke-width: 3;
+  stroke-dasharray: 1800;
+  animation: workload-line-in 480ms ease-out both;
+}
+.workload-heavy-point {
+  fill: #d6453d;
+  stroke: #fffdf8;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+@keyframes workload-line-in {
+  from { stroke-dashoffset: 1800; }
+  to { stroke-dashoffset: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workload-trend-line { animation: none; }
+}

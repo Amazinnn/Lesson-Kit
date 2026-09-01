@@ -225,6 +225,11 @@ _Avoid_：正确率、完成度百分比（未经定义前不使用具体数字�
 _Avoid_：自动重排（视图只读，重排永远由你发起）
 出处：calendar-workload spec「Calendar and workload view」
 
+### 任务量趋势线 / Workload Trend Line
+叠在 14 天任务量柱状上的平滑只读曲线：柱子表达每天的准确到期项数，趋势线只帮助看出相邻几天的升降方向，不产生预测，也不改变计划。
+_Avoid_：预测曲线、自动拟合计划
+出处：calendar-workload spec「Calendar and workload view」
+
 ### 时间安排 / Time View
 练习页右栏的实验性只读视图：目标时间跑道月历（开始日→截止日、重叠目标分轨、今日高亮）+ 14 天任务量柱状。重日（某天到期数 ≥ 非零日均 2 倍）标「重」，可一键预填重排请求到 Agent 输入框（不发送）。只读，不改任何数据。
 _Avoid_：日历应用、自动重排
