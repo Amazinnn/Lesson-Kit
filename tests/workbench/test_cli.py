@@ -200,10 +200,12 @@ class CliTests(unittest.TestCase):
 
     def test_goals_add_list_update_rm(self):
         code, out = self.run_cli("goals", "dmath", "add", "--title", "期末掌握计数",
-                                 "--kind", "stage", "--deadline", "2026-09-30",
+                                 "--kind", "stage", "--start-date", "2026-09-01",
+                                 "--deadline", "2026-09-30",
                                  "--description", "重点鸽巢与组合")
         self.assertEqual(code, 0)
         self.assertIn("期末掌握计数", out)
+        self.assertIn("2026-09-01", out)
 
         code, out = self.run_cli("goals", "dmath", "list")
         self.assertEqual(code, 0)

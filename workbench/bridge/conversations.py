@@ -215,7 +215,8 @@ def _prompt(message, context):
         "普通问答不要附带动作。格式为 ```lessonkit-action {\"type\":\"replace_practice_selection\","
         "\"kp_ids\":[\"知识点ID\"]} ```。"
         "若学生从目标表单发起一句话求助，可附 ```lessonkit-action {\"type\":\"prefill_goal_form\","
-        "\"title\":\"…\",\"kind\":\"stage|long_term\",\"deadline\":\"YYYY-MM-DD或空\","
+        "\"title\":\"…\",\"kind\":\"stage|long_term\",\"start_date\":\"YYYY-MM-DD或空\","
+        "\"deadline\":\"YYYY-MM-DD或空\","
         "\"description\":\"…\"} ``` 代填目标字段（仅此意图可附，普通问答不得代填）。"
         "仅当学生明确要求出题、补池或给某知识点加内容时，才可在回答末尾附出题入库区块；\n"
         "对话内出题一律用 lessonkit-action 区块，禁止直接运行 wb ingest 或写数据库。\n"
@@ -574,6 +575,9 @@ def _clean_goal_form_action(raw):
     if not title:
         return None
     kind = raw.get("kind") if raw.get("kind") in _GOAL_KINDS else "stage"
+    start_date = str(raw.get("start_date") or "").strip()
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", start_date):
+        start_date = ""
     deadline = str(raw.get("deadline") or "").strip()
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", deadline):
         deadline = ""
@@ -582,6 +586,7 @@ def _clean_goal_form_action(raw):
         "type": "prefill_goal_form",
         "title": title,
         "kind": kind,
+        "start_date": start_date,
         "deadline": deadline,
         "description": description,
     }

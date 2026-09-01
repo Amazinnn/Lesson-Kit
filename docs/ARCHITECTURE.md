@@ -77,7 +77,8 @@ workbench/
   `problem_attempts.answer_text`。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪）、
   `.lessonkit/jobs/conv-###/`（provider 会话指针、运行事件与成功问答镜像，gitignored）、
-  `.lessonkit/plan.json` 与 `.lessonkit/goals.json`（工作区本地计划/目标）、
+  `.lessonkit/plan.json` 与 `.lessonkit/goals.json`（工作区本地计划/目标；目标可含
+  `start_date`→`deadline` 展示区间，旧目标无开始日期兼容）、
   `~/.lessonkit-workbench/workspaces.json` + `bridges.json`（用户级，JSON——stdlib 无 YAML 解析）。
 - ID 一律可读顺序标识（`job-003`），无哈希。
 

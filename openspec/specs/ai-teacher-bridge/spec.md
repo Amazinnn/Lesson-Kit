@@ -3,7 +3,9 @@
 The AI teacher bridge connects the workbench to an external agent CLI without
 embedding an AI kernel: tasks carry an output contract, run asynchronously, and
 are validated before their results are trusted.
+
 ## Requirements
+
 ### Requirement: Provider configuration
 
 The bridge SHALL read provider definitions (command, arguments, working
@@ -137,22 +139,23 @@ conversation.
 
 ### Requirement: Goal-form assist action
 
-The bridge MAY mirror a second structured action, `prefill_goal_form`, only
-when the request carries explicit goal intent (a goal-assist request from the
-goal form). The action SHALL carry at most the fields title, kind, deadline,
-and description, validated server-side against the goal contract; invalid or
-missing fields SHALL be dropped, and an action without a usable title SHALL
-be discarded entirely. The client SHALL apply the action in place by filling
-the goal form — submission remains an explicit human action. Ordinary
-conversation SHALL NOT fill the goal form, and no goal is ever created or
-modified by the action itself.
+When a learner explicitly starts a goal-form assistance turn, the Agent MAY
+return a `prefill_goal_form` action containing a title, goal kind, optional
+start date, optional deadline, and description. The server SHALL accept this
+action only under goal intent, validate its bounded field contract, and return
+the cleaned fields for in-place form population. The action SHALL NOT create or
+update the goal until the learner submits the form. Ordinary conversation SHALL
+NOT populate goal fields.
+
+#### Scenario: Agent supplies a goal period
+
+- **WHEN** a goal-assistance response contains valid `start_date` and `deadline` values
+- **THEN** both values populate the visible goal form and remain subject to learner confirmation
 
 #### Scenario: One-line goal request fills the form
 
-- **WHEN** the learner submits a one-line goal description from the goal form
-  and the agent's reply carries a valid `prefill_goal_form` action
-- **THEN** the form fields fill in place with a notice that the agent filled
-  them, and nothing is saved until the learner submits
+- **WHEN** the learner submits a one-line goal description from the goal form and the agent's reply carries a valid `prefill_goal_form` action
+- **THEN** the form fields fill in place with a notice that the agent filled them, and nothing is saved until the learner submits
 
 #### Scenario: Ordinary conversation cannot fill the form
 
@@ -161,10 +164,8 @@ modified by the action itself.
 
 #### Scenario: No provider or no active conversation
 
-- **WHEN** the goal-assist control is used with no provider configured or no
-  active conversation
-- **THEN** the UI states honestly what is missing and every manual goal
-  feature keeps working
+- **WHEN** the goal-assist control is used with no provider configured or no active conversation
+- **THEN** the UI states honestly what is missing and every manual goal feature keeps working
 
 ### Requirement: Check ingest action
 
@@ -262,4 +263,3 @@ discarded per that contract.
 - **THEN** the blocks are removed from the mirrored answer, the turn records
   the ignored disclosure, nothing is written, and the next turn's provider
   context states that no write happened
-
