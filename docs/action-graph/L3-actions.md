@@ -29,6 +29,7 @@
 | feedback 四件套 | API/CLI | 双 | 事件/信号/状态/调度 | 已实现 |
 | practice 尝试记录 | API/CLI | 双 | attempts | 已实现 |
 | 图谱状态显式编辑（不记反馈） | UI | 人 | 状态+调度 | 已实现 |
+| 图谱关系强度管线与有限消交叉 | UI | 系统 | —（纯视图） | 已实现（graph-relation-pipes） |
 | 方向写入（direction 键，UI 无入口） | API | Agent | 方向调度行 | 已实现（仅数据层） |
 
 ## 三、内容治理（唯一合法写池）

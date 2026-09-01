@@ -1253,8 +1253,13 @@ test("graph renders curved paths and focuses one-hop and two-hop neighborhoods",
     (child) => child.getAttribute("class") === "graph-edge-layer",
   );
   assert.equal(edgeLayer.children.length, 3);
-  assert.equal(edgeLayer.children[0].getAttribute("class"), "graph-edge");
-  assert.match(edgeLayer.children[0].getAttribute("d"), / [LQ] /);
+  assert.equal(edgeLayer.children[0].getAttribute("class"), "graph-edge-pipe");
+  assert.equal(edgeLayer.children[0].children.length, 3);
+  assert.deepEqual(edgeLayer.children[0].children.map((path) => path.getAttribute("class")), [
+    "graph-edge graph-edge-shadow", "graph-edge graph-edge-body",
+    "graph-edge graph-edge-highlight",
+  ]);
+  assert.match(edgeLayer.children[0].children[1].getAttribute("d"), / [LQ] /);
   const nodes = Object.fromEntries(stage.children.filter(
     (child) => child.dataset.kpId,
   ).map((child) => [child.dataset.kpId, child]));

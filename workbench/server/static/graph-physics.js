@@ -44,6 +44,18 @@
     return (sourceRadius || 0) + (targetRadius || 0) + gap;
   }
 
+  function edgeVisual(attraction) {
+    var score = Math.max(0, Math.min(1, ((Number(attraction) || 1) - 0.75) / 1.125));
+    var width = 1.35 + score * 2.65;
+    return {
+      score: score,
+      width: width,
+      shadowWidth: width + 3.5,
+      highlightWidth: Math.max(0.55, width * 0.24),
+      opacity: 0.28 + score * 0.52,
+    };
+  }
+
   function createSimulation(sourceNodes, sourceEdges, width, height, positions) {
     width = Math.max(240, width || 800);
     height = Math.max(180, height || 600);
@@ -507,6 +519,12 @@
   function scoreLayout(nodes, edges) {
     var byId = new Map(nodes.map(function (node) { return [node.id, node]; }));
     var crossings = 0;
+    var edgeLength = 0;
+    edges.forEach(function (edge) {
+      var source = byId.get(edge.source);
+      var target = byId.get(edge.target);
+      edgeLength += Math.hypot(target.x - source.x, target.y - source.y);
+    });
     for (var i = 0; i < edges.length; i += 1) {
       for (var j = i + 1; j < edges.length; j += 1) {
         var first = edges[i];
@@ -541,18 +559,53 @@
     return {
       crossings: crossings,
       labelCollisions: labelCollisions,
+      edgeLength: edgeLength,
       waste: nodes.length ? (maxX - minX) * (maxY - minY) : 0,
     };
+  }
+
+  function layoutIsBetter(a, b) {
+    if (a.crossings !== b.crossings) return a.crossings < b.crossings;
+    if (a.labelCollisions !== b.labelCollisions) return a.labelCollisions < b.labelCollisions;
+    if (Math.abs(a.edgeLength - b.edgeLength) > 0.01) return a.edgeLength < b.edgeLength;
+    return a.waste < b.waste;
+  }
+
+  function optimizeCrossings(nodes, edges, maxPasses) {
+    var score = scoreLayout(nodes, edges);
+    for (var pass = 0; pass < (maxPasses || 2); pass += 1) {
+      var improved = false;
+      for (var i = 0; i < nodes.length; i += 1) {
+        for (var j = i + 1; j < nodes.length; j += 1) {
+          var x = nodes[i].x;
+          var y = nodes[i].y;
+          nodes[i].x = nodes[j].x;
+          nodes[i].y = nodes[j].y;
+          nodes[j].x = x;
+          nodes[j].y = y;
+          var candidate = scoreLayout(nodes, edges);
+          if (layoutIsBetter(candidate, score)) {
+            score = candidate;
+            improved = true;
+          } else {
+            x = nodes[i].x;
+            y = nodes[i].y;
+            nodes[i].x = nodes[j].x;
+            nodes[i].y = nodes[j].y;
+            nodes[j].x = x;
+            nodes[j].y = y;
+          }
+        }
+      }
+      if (!improved) break;
+    }
+    return score;
   }
 
   function chooseBestLayout(candidates) {
     return candidates.reduce(function (best, candidate) {
       if (!best) return candidate;
-      var a = candidate.score;
-      var b = best.score;
-      if (a.crossings !== b.crossings) return a.crossings < b.crossings ? candidate : best;
-      if (a.labelCollisions !== b.labelCollisions) return a.labelCollisions < b.labelCollisions ? candidate : best;
-      return a.waste < b.waste ? candidate : best;
+      return layoutIsBetter(candidate.score, best.score) ? candidate : best;
     }, null);
   }
 
@@ -648,7 +701,8 @@
       var positions = new Map(layout.nodes.map(function (node) { return [node.id, node]; }));
       var simulation = createSimulation(component.nodes, component.edges, width, height, positions);
       settle(simulation, maxTicks);
-      return { name: layout.name, simulation: simulation, score: scoreLayout(simulation.nodes, component.edges) };
+      var score = optimizeCrossings(simulation.nodes, component.edges, 2);
+      return { name: layout.name, simulation: simulation, score: score };
     });
     return chooseBestLayout(candidates);
   }
@@ -703,6 +757,7 @@
     labelLineCount: labelLineCount,
     collisionRadius: collisionRadius,
     targetDistance: targetDistance,
+    edgeVisual: edgeVisual,
     createSimulation: createSimulation,
     tick: tick,
     reheat: reheat,
@@ -718,6 +773,7 @@
     connectedComponents: connectedComponents,
     candidateLayouts: candidateLayouts,
     scoreLayout: scoreLayout,
+    optimizeCrossings: optimizeCrossings,
     chooseBestLayout: chooseBestLayout,
     packComponents: packComponents,
     bestComponentLayout: bestComponentLayout,

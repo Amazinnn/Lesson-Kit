@@ -112,6 +112,8 @@ workbench/
 - 新学习动作：domain 加模块，data.queries 加查询，Shell 加命令/页面。
 - AI 教师记忆消费端：读 trace（jobs 归档）+ feedback_events，独立后置模块。
 - 前端：pages.py 服务端渲染升级为更顺滑交互时，改 pages.py 与静态资产即可，不动后端接口。
+- 图谱关系管线是纯展示映射：现有 attraction 决定宽度/深浅，候选布局执行有限
+  确定性消交叉；三层 SVG 路径和位置均不进入 SQLite。
 
 ## 5. 工程约束（硬规则）
 
