@@ -71,6 +71,18 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("overflow-wrap: anywhere;", body)
         self.assertIn("column-resizer", body)
 
+    def test_css_keeps_primary_text_complete_and_contains_wide_content(self):
+        status, body = self.fetch("/static/workbench.css")
+        self.assertEqual(status, 200)
+        self.assertIn(".page-header h1,", body)
+        self.assertIn(".rich-text :not(pre) > code", body)
+        self.assertIn(".rich-text table {", body)
+        staged_rule = body.split(".staged-title {", 1)[1].split("}", 1)[0]
+        suggestion_rule = body.split(".suggestion-title {", 1)[1].split("}", 1)[0]
+        self.assertIn("overflow-wrap: anywhere", staged_rule)
+        self.assertNotIn("text-overflow: ellipsis", staged_rule)
+        self.assertIn("overflow-wrap: anywhere", suggestion_rule)
+
     def test_practice_page_session_controls_live_outside_the_answer_card(self):
         # Session controls must not be nested in the answer card, where a state
         # transition could make them unreachable.

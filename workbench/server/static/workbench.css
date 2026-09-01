@@ -64,6 +64,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Primary learning text stays complete; intrinsically wide artifacts scroll
+   inside their own surface instead of widening the three-column shell. */
+#layout > *,
+.page-title-row > *,
+.section-heading > *,
+.next-step > *,
+.practice-columns > *,
+.support-grid > *,
+.ai-session-item > *,
+#ai-input-row > * { min-width: 0; }
+.page-header h1,
+.page-summary,
+.card,
+.knowledge-body,
+.knowledge-list,
+.weak-title,
+.problem-title,
+.linked-problem-text,
+.goal-card,
+#ai-status { overflow-wrap: anywhere; }
+
 /* top bar */
 #topbar {
   height: 52px;
@@ -724,7 +745,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   border-radius: 4px;
   padding: 1px 4px;
 }
+.rich-text :not(pre) > code { overflow-wrap: anywhere; word-break: break-word; }
 .rich-text pre {
+  max-width: 100%;
   margin: 12px 0;
   padding: 12px 14px;
   overflow-x: auto;
@@ -732,6 +755,13 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   border-radius: var(--dsw-radius-sm);
   background: var(--dsw-sidebar-fill);
 }
+.rich-text table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.rich-text .math.display { max-width: 100%; overflow-x: auto; }
 .rich-text pre code { padding: 0; background: transparent; }
 .rich-text a { color: var(--dsw-brand-accent); text-decoration: none; }
 .rich-text a:hover { text-decoration: underline; }
@@ -871,7 +901,7 @@ img { max-width: 100%; }
   padding: 8px 2px;
   border-bottom: 1px solid var(--dsw-border-l1);
 }
-.staged-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.staged-title { min-width: 0; overflow-wrap: anywhere; }
 .staged-empty { padding: 4px 0 8px; }
 .suggestion-entry { margin-top: 10px; }
 .suggestions { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--dsw-border-l1); border-radius: var(--dsw-radius-md); }
@@ -882,7 +912,7 @@ img { max-width: 100%; }
   border-bottom: 1px solid var(--dsw-border-l1);
 }
 .suggestion-row:last-child { border-bottom: none; }
-.suggestion-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .suggestion-reason { color: var(--dsw-label-secondary); font-size: 13px; white-space: nowrap; }
 #suggestions-more, #suggestions-empty { padding: 6px 0 2px; }
 #recalculate-plan { margin-top: 8px; }
