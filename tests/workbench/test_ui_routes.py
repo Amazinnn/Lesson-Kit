@@ -82,6 +82,16 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("overflow-wrap: anywhere", staged_rule)
         self.assertNotIn("text-overflow: ellipsis", staged_rule)
         self.assertIn("overflow-wrap: anywhere", suggestion_rule)
+    def test_css_exposes_the_soft_mondrian_visual_roles(self):
+        status, body = self.fetch("/static/workbench.css")
+        self.assertEqual(status, 200)
+        self.assertIn("--lk-paper: #fffdf7", body)
+        self.assertIn("--lk-blue: #2457c5", body)
+        self.assertIn("--lk-yellow: #f2c94c", body)
+        self.assertIn("--lk-red: #d6453d", body)
+        self.assertIn("#topbar .brand::before", body)
+        self.assertIn(".page-header::after", body)
+        self.assertIn("inset 4px 0 0 var(--lk-blue)", body)
 
     def test_practice_page_session_controls_live_outside_the_answer_card(self):
         # Session controls must not be nested in the answer card, where a state

@@ -69,6 +69,11 @@ _Avoid_：项目、数据库别名
 _Avoid_：第四个页面、复习页（已废弃）
 出处：workbench-ui spec Purpose；DISCUSSION-RECORD 专题 18/19
 
+### 柔和蒙德里安 / Soft Mondrian
+Lesson Kit 的视觉语言：暖纸色与深色结构线占主体，蓝/黄/红只承担主要动作、
+当前或复习强调、重点练习或失败等有限语义。状态同时保留文字或几何提示。
+出处：workbench-ui spec「Soft Mondrian visual foundation」
+
 ## 选择与练习
 
 ### 范围 / Scope
