@@ -1087,6 +1087,69 @@ test("graph projection keeps node elements and maps size, position, and palette"
   assert.equal(app.rafCalls, 0);
 });
 
+test("graph state filter fades exclusions, keeps a union, clusters, and restores", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const menu = new FakeElement("graph-state-filter");
+  const summary = new FakeElement("graph-filter-summary");
+  const clear = new FakeElement("graph-filter-clear");
+  const needsWork = new FakeElement("graph-filter-needs_work", { value: "needs_work" });
+  const review = new FakeElement("graph-filter-review", { value: "review" });
+  const mastered = new FakeElement("graph-filter-mastered", { value: "mastered" });
+  const unmarked = new FakeElement("graph-filter-null", { value: "null" });
+  var finishFilter = null;
+  var clusteredStates = [];
+  const physics = Object.assign({}, GraphPhysics, {
+    setStateClusters(simulation, states, width, height) {
+      clusteredStates = Array.from(states);
+      return GraphPhysics.setStateClusters(simulation, states, width, height);
+    },
+  });
+  runWorkbench({
+    elements: {
+      layout: layout(), "graph-canvas": canvas, "graph-state-filter": menu,
+      "graph-filter-summary": summary, "graph-filter-clear": clear,
+      "graph-filter-needs_work": needsWork, "graph-filter-review": review,
+      "graph-filter-mastered": mastered, "graph-filter-null": unmarked,
+    },
+    physics,
+    setTimeoutFn(callback, delay) {
+      if (delay === 160) finishFilter = callback;
+      return 0;
+    },
+    fetch: () => jsonResponse({
+      nodes: [
+        { id: "kp-weak", title: "薄弱点", state: "needs_work", problem_count: 1 },
+        { id: "kp-mastered", title: "掌握点", state: "mastered", problem_count: 1 },
+        { id: "kp-null", title: "未标记", state: null, problem_count: 1 },
+      ],
+      edges: [
+        { source: "kp-weak", target: "kp-mastered", attraction: 1 },
+        { source: "kp-mastered", target: "kp-null", attraction: 1 },
+      ],
+    }),
+  });
+  await flush();
+  const originalStage = canvas.children[0];
+  needsWork.checked = true;
+  mastered.checked = true;
+  needsWork.trigger("change");
+  const exiting = originalStage.children.find((child) => child.dataset.kpId === "kp-null");
+  assert.equal(exiting.classList.contains("graph-filter-exit"), true);
+  assert.equal(summary.textContent, "已筛 2 类");
+  assert.equal(clear.disabled, false);
+  finishFilter();
+  const filteredStage = canvas.children[0];
+  assert.deepEqual(clusteredStates, ["needs_work", "mastered"]);
+  assert.deepEqual(filteredStage.children.filter((child) => child.dataset.kpId)
+    .map((child) => child.dataset.kpId).sort(), ["kp-mastered", "kp-weak"]);
+  menu.open = true;
+  clear.click();
+  finishFilter();
+  assert.equal(menu.open, false);
+  assert.equal(clear.disabled, true);
+  assert.equal(canvas.children[0].children.filter((child) => child.dataset.kpId).length, 3);
+});
+
 test("graph filtering rebuilds layout and dragging reheats the simulation", async () => {
   let creates = 0;
   let reheats = 0;
@@ -1365,6 +1428,43 @@ test("AI free message sends page identifiers and excludes a draft by default", a
   assert.equal(body.page_type, "kp");
   assert.equal(body.kp_id, "kp-001");
   assert.equal(Object.hasOwn(body, "draft_answer"), false);
+});
+
+test("graph conversation context carries every selected state filter", async () => {
+  const pageLayout = layout();
+  pageLayout.dataset.page = "graph";
+  const review = new FakeElement("graph-filter-review", { value: "review", checked: true });
+  const mastered = new FakeElement("graph-filter-mastered", { value: "mastered", checked: true });
+  const elements = {
+    layout: pageLayout, ...aiElements(), "graph-search": new FakeElement("graph-search"),
+    "graph-filter-review": review, "graph-filter-mastered": mastered,
+  };
+  elements["graph-search"].value = "计数";
+  const calls = [];
+  runWorkbench({
+    elements,
+    setTimeoutFn: (callback) => setImmediate(callback),
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([{
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+      }]);
+      if (url.endsWith("/ai/sessions/conv-001/turns")) return jsonResponse({ turn_id: "turn-001" });
+      if (url.includes("/turns/turn-001")) return jsonResponse({ turn: { status: "done" }, events: [] });
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle", messages: [],
+      });
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "看看当前图谱";
+  elements["ai-send"].click();
+  await flush();
+  const turn = calls.find((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
+  const body = JSON.parse(turn.options.body);
+  assert.deepEqual(body.graph_filter, { query: "计数", states: ["review", "mastered"] });
 });
 
 test("explicit practice intent applies an Agent selection replacement", async () => {

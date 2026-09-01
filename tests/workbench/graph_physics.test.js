@@ -357,3 +357,33 @@ test("learning-state projection ranks attention from needs_work to mastered", ()
   assert.deepEqual(states.map((node) => node.targetRadius), [30, physics.metricRadius(0.66),
     physics.metricRadius(0.33), 10]);
 });
+
+test("state cluster targets separate selected categories deterministically", () => {
+  const nodes = [
+    { id: "weak-2", state: "needs_work" },
+    { id: "mastered", state: "mastered" },
+    { id: "weak-1", state: "needs_work" },
+    { id: "unmarked", state: null },
+  ];
+  const first = physics.stateClusterTargets(nodes, ["needs_work", "mastered"], 900, 600);
+  const second = physics.stateClusterTargets(nodes, ["needs_work", "mastered"], 900, 600);
+  assert.deepEqual(Array.from(second), Array.from(first));
+  assert.deepEqual(first.get("weak-1"), { x: 300, y: 300, state: "needs_work" });
+  assert.deepEqual(first.get("mastered"), { x: 600, y: 300, state: "mastered" });
+  assert.notDeepEqual(first.get("weak-2"), first.get("weak-1"));
+  assert.equal(first.has("unmarked"), false);
+});
+
+test("state clusters reheat in memory and clear without changing membership", () => {
+  const simulation = physics.createSimulation([
+    { id: "weak", state: "needs_work" },
+    { id: "review", state: "review" },
+  ], [{ source: "weak", target: "review", attraction: 1 }], 800, 600);
+  physics.setStateClusters(simulation, ["needs_work", "review"], 800, 600);
+  assert.equal(simulation.clustered, true);
+  assert.equal(simulation.nodes.length, 2);
+  assert.notEqual(simulation.nodes[0].clusterTargetX, simulation.nodes[1].clusterTargetX);
+  physics.setStateClusters(simulation, [], 800, 600);
+  assert.equal(simulation.clustered, false);
+  assert.equal(simulation.nodes.every((node) => node.clusterTargetX === null), true);
+});

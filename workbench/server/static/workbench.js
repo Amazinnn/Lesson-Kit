@@ -411,6 +411,11 @@
   if (graphCanvas) {
     var graphSearch = document.getElementById("graph-search");
     var graphFilter = document.getElementById("graph-state-filter");
+    var graphFilterSummary = document.getElementById("graph-filter-summary");
+    var graphFilterClear = document.getElementById("graph-filter-clear");
+    var graphFilterInputs = ["needs_work", "review", "mastered", "null"].map(
+      function (state) { return document.getElementById("graph-filter-" + state); }
+    ).filter(Boolean);
     var graphGravity = document.getElementById("graph-gravity");
     var graphProjectionHint = document.getElementById("graph-projection-hint");
     var graphDetail = document.getElementById("graph-detail-panel");
@@ -429,6 +434,9 @@
     var graphProjection = "structure";
     var graphLabelZoomed = false;
     var graphFocusedId = null;
+    var graphFilterVersion = 0;
+    var graphPendingPositions = null;
+    var graphEnteringIds = new Set();
     var draggedNode = null;
     var panStart = null;
     var reducedGraphMotion = window.matchMedia
@@ -489,8 +497,24 @@
         : graphProjection === "importance"
           ? "越大、越靠内、黄色越深 = 越重要"
           : graphProjection === "state"
-            ? "越大、越靠内 = 完成度越高 · 蓝/黄/红/灰 = 掌握/复习/待加强/未标记"
+            ? "越大、越靠内 = 关注优先级越高 · 蓝/黄/红/灰 = 掌握/复习/待加强/未标记"
             : "关系决定位置 · 大小表示题量";
+    }
+
+    function activeGraphStates() {
+      return graphFilterInputs.filter(function (input) { return input.checked; })
+        .map(function (input) { return input.value; });
+    }
+
+    function graphState(node) {
+      return node.state === "needs_work" || node.state === "review" || node.state === "mastered"
+        ? node.state : "null";
+    }
+
+    function updateGraphFilterControls() {
+      var count = activeGraphStates().length;
+      if (graphFilterSummary) graphFilterSummary.textContent = count ? "已筛 " + count + " 类" : "筛选状态";
+      if (graphFilterClear) graphFilterClear.disabled = count === 0;
     }
 
     function showGraphPanel(detailOpen) {
@@ -596,10 +620,10 @@
 
     function renderGraph() {
       var search = (graphSearch && graphSearch.value || "").trim().toLowerCase();
-      var state = graphFilter && graphFilter.value;
+      var states = new Set(activeGraphStates());
       var nodes = graphData.nodes.filter(function (node) {
         return (!search || (node.title + " " + node.id).toLowerCase().includes(search))
-          && (!state || node.state === state);
+          && (!states.size || states.has(graphState(node)));
       });
       var visibleIds = new Set(nodes.map(function (node) { return node.id; }));
       var edges = graphData.edges.filter(function (edge) {
@@ -617,11 +641,17 @@
         graphAdjacency.get(edge.source).push(edge.target);
         graphAdjacency.get(edge.target).push(edge.source);
       });
-      graphSimulation = GraphPhysics.layoutGraph(
-        nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight,
-      );
+      graphSimulation = graphPendingPositions
+        ? GraphPhysics.createSimulation(nodes, edges, graphCanvas.clientWidth,
+          graphCanvas.clientHeight, graphPendingPositions)
+        : GraphPhysics.layoutGraph(nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight);
+      graphPendingPositions = null;
       GraphPhysics.applyProjection(graphSimulation.nodes, graphProjection,
         graphCanvas.clientWidth, graphCanvas.clientHeight);
+      if (states.size) {
+        GraphPhysics.setStateClusters(graphSimulation, Array.from(states),
+          graphCanvas.clientWidth, graphCanvas.clientHeight);
+      }
       graphAutoFit = true;
       var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       edgeLayer.setAttribute("class", "graph-edge-layer");
@@ -630,6 +660,10 @@
       graphSimulation.edges.forEach(function (edge) {
         var link = document.createElementNS("http://www.w3.org/2000/svg", "path");
         link.setAttribute("class", "graph-edge");
+        if (!reducedGraphMotion
+            && (graphEnteringIds.has(edge.source) || graphEnteringIds.has(edge.target))) {
+          link.classList.add("graph-filter-enter");
+        }
         edgeLayer.appendChild(link);
         graphEdgeElements.push({ element: link, edge: edge });
       });
@@ -644,6 +678,9 @@
         else button.style["--projection-score"] = String(node.projectionScore || 0);
         button.setAttribute("aria-label", node.title);
         button.title = node.title;
+        if (!reducedGraphMotion && graphEnteringIds.has(node.id)) {
+          button.classList.add("graph-filter-enter");
+        }
         button.addEventListener("click", function () {
           renderGraphDetail(node);
           focusGraph(node.id);
@@ -676,6 +713,9 @@
         select.setAttribute("data-kp-selection", "");
         select.setAttribute("aria-label", "选择 " + node.title);
         select.checked = selectedKpIds().indexOf(node.id) >= 0;
+        if (!reducedGraphMotion && graphEnteringIds.has(node.id)) {
+          select.classList.add("graph-filter-enter");
+        }
         select.addEventListener("pointerdown", function (event) {
           if (event.stopPropagation) event.stopPropagation();
         });
@@ -691,6 +731,9 @@
         var label = document.createElement("span");
         label.className = "graph-node-label";
         label.textContent = node.title;
+        if (!reducedGraphMotion && graphEnteringIds.has(node.id)) {
+          label.classList.add("graph-filter-enter");
+        }
         stage.appendChild(label);
         graphNodeElements.set(node.id, { node: button, select: select, label: label });
         updateGraphNodeAppearance(node);
@@ -702,6 +745,19 @@
         stage.appendChild(empty);
       }
       graphCanvas.replaceChildren(stage);
+      if (!reducedGraphMotion && graphEnteringIds.size) {
+        requestAnimationFrame(function () {
+          graphNodeElements.forEach(function (elements) {
+            elements.node.classList.remove("graph-filter-enter");
+            elements.select.classList.remove("graph-filter-enter");
+            elements.label.classList.remove("graph-filter-enter");
+          });
+          graphEdgeElements.forEach(function (entry) {
+            entry.element.classList.remove("graph-filter-enter");
+          });
+        });
+      }
+      graphEnteringIds = new Set();
       applyGraphView();
       updateGraphLabels();
       if (reducedGraphMotion) {
@@ -875,8 +931,58 @@
       updateGraphLabels();
     }
 
+    function transitionGraphFilter() {
+      graphFilterVersion += 1;
+      var version = graphFilterVersion;
+      updateGraphFilterControls();
+      var states = new Set(activeGraphStates());
+      var search = (graphSearch && graphSearch.value || "").trim().toLowerCase();
+      var visibleIds = new Set(graphData.nodes.filter(function (node) {
+        return (!search || (node.title + " " + node.id).toLowerCase().includes(search))
+          && (!states.size || states.has(graphState(node)));
+      }).map(function (node) { return node.id; }));
+      var positions = new Map();
+      if (graphSimulation) {
+        graphSimulation.nodes.forEach(function (node) {
+          if (visibleIds.has(node.id)) positions.set(node.id, { x: node.x, y: node.y });
+        });
+      }
+      graphEnteringIds = new Set(Array.from(visibleIds).filter(function (id) {
+        return !positions.has(id);
+      }));
+      function rebuild() {
+        if (version !== graphFilterVersion) return;
+        graphPendingPositions = positions;
+        renderGraph();
+      }
+      if (reducedGraphMotion || !graphSimulation) {
+        rebuild();
+        return;
+      }
+      graphNodeElements.forEach(function (elements, id) {
+        if (visibleIds.has(id)) return;
+        elements.node.classList.add("graph-filter-exit");
+        elements.select.classList.add("graph-filter-exit");
+        elements.label.classList.add("graph-filter-exit");
+      });
+      graphEdgeElements.forEach(function (entry) {
+        if (!visibleIds.has(entry.edge.source) || !visibleIds.has(entry.edge.target)) {
+          entry.element.classList.add("graph-filter-exit");
+        }
+      });
+      setTimeout(rebuild, 160);
+    }
+
     if (graphSearch) graphSearch.addEventListener("input", renderGraph);
-    if (graphFilter) graphFilter.addEventListener("change", renderGraph);
+    graphFilterInputs.forEach(function (input) {
+      input.addEventListener("change", transitionGraphFilter);
+    });
+    if (graphFilterClear) graphFilterClear.addEventListener("click", function () {
+      graphFilterInputs.forEach(function (input) { input.checked = false; });
+      transitionGraphFilter();
+      if (graphFilter) graphFilter.open = false;
+    });
+    updateGraphFilterControls();
     if (graphGravity) graphGravity.addEventListener("input", function () {
       if (!graphSimulation) return;
       GraphPhysics.setGravity(graphSimulation, graphGravity.value);
@@ -2142,7 +2248,10 @@
       body.selected_kp_id = selectedGraphKpId;
       body.graph_filter = {
         query: (document.getElementById("graph-search") || {}).value || "",
-        state: (document.getElementById("graph-state-filter") || {}).value || "",
+        states: ["needs_work", "review", "mastered", "null"].filter(function (state) {
+          var input = document.getElementById("graph-filter-" + state);
+          return input && input.checked;
+        }),
       };
     }
     return body;

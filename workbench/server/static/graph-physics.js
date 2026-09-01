@@ -65,6 +65,7 @@
         vx: 0, vy: 0, fx: null, fy: null,
         anchorX: null, anchorY: null,
         projectionTargetX: null, projectionTargetY: null,
+        clusterTargetX: null, clusterTargetY: null,
       });
     });
     var byId = new Map(nodes.map(function (node) { return [node.id, node]; }));
@@ -77,7 +78,7 @@
     return {
       nodes: nodes, edges: edges, width: width, height: height,
       alpha: 1, stable: nodes.length < 2, stableTicks: 0,
-      gravity: 0.000351, projection: "structure",
+      gravity: 0.000351, projection: "structure", clustered: false,
     };
   }
 
@@ -105,7 +106,10 @@
         attraction, source.radius, target.radius, edge.distanceFactor || 1,
       );
       var projectionSpring = simulation.projection === "structure" ? 1 : 0.24;
-      var force = (distance - desiredDistance) * 0.014 * attraction * alpha * projectionSpring;
+      var clusterFactor = simulation.clustered
+        && stateKey(source) !== stateKey(target) ? 0.16 : 1;
+      var force = (distance - desiredDistance) * 0.014 * attraction * alpha
+        * projectionSpring * clusterFactor;
       var fx = force * dx / distance;
       var fy = force * dy / distance;
       if (source.fx === null) { source.vx += fx; source.vy += fy; }
@@ -157,6 +161,10 @@
         node.radius += (node.targetRadius - node.radius) * (0.06 + alpha * 0.16);
         if (Math.abs(node.targetRadius - node.radius) < 0.05) node.radius = node.targetRadius;
         node.collisionRadius = collisionRadius(node.radius, node.title);
+      }
+      if (node.clusterTargetX !== null) {
+        node.vx += (node.clusterTargetX - node.x) * 0.045 * alpha;
+        node.vy += (node.clusterTargetY - node.y) * 0.045 * alpha;
       }
       node.vx *= 0.84;
       node.vy *= 0.84;
@@ -278,6 +286,57 @@
   function setGravity(simulation, value) {
     simulation.gravity = Math.max(0, Math.min(100, Number(value) || 0)) / 100 * 0.00351;
     reheat(simulation, 0.5);
+  }
+
+  function stateKey(node) {
+    return node.state === "needs_work" || node.state === "review" || node.state === "mastered"
+      ? node.state : "null";
+  }
+
+  function stateClusterTargets(nodes, selectedStates, width, height) {
+    var order = ["needs_work", "review", "mastered", "null"];
+    var selected = new Set(Array.isArray(selectedStates) ? selectedStates : []);
+    var states = order.filter(function (state) {
+      return selected.has(state) && nodes.some(function (node) { return stateKey(node) === state; });
+    });
+    width = Math.max(240, width || 800);
+    height = Math.max(180, height || 600);
+    var centers = states.map(function (state, index) {
+      if (states.length === 1) return { state: state, x: width / 2, y: height / 2 };
+      if (states.length <= 3) {
+        return { state: state, x: width * (index + 1) / (states.length + 1), y: height / 2 };
+      }
+      return { state: state, x: width * (index % 2 ? 0.68 : 0.32),
+        y: height * (index < 2 ? 0.34 : 0.66) };
+    });
+    var targets = new Map();
+    centers.forEach(function (center) {
+      nodes.filter(function (node) { return stateKey(node) === center.state; })
+        .sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); })
+        .forEach(function (node, index) {
+          var distance = index ? 42 + Math.sqrt(index) * 20 : 0;
+          var angle = (index - 1) * 2.399963229728653;
+          targets.set(node.id, {
+            x: center.x + Math.cos(angle) * distance,
+            y: center.y + Math.sin(angle) * distance,
+            state: center.state,
+          });
+        });
+    });
+    return targets;
+  }
+
+  function setStateClusters(simulation, selectedStates, width, height) {
+    var states = Array.isArray(selectedStates) ? selectedStates : [];
+    var targets = stateClusterTargets(simulation.nodes, states, width, height);
+    simulation.clustered = states.length > 0;
+    simulation.nodes.forEach(function (node) {
+      var target = targets.get(node.id);
+      node.clusterTargetX = target ? target.x : null;
+      node.clusterTargetY = target ? target.y : null;
+    });
+    reheat(simulation, 0.82);
+    return targets;
   }
 
   function projectionValue(node, projection) {
@@ -649,6 +708,9 @@
     reheat: reheat,
     setSoftAnchor: setSoftAnchor,
     setGravity: setGravity,
+    stateKey: stateKey,
+    stateClusterTargets: stateClusterTargets,
+    setStateClusters: setStateClusters,
     projectionValue: projectionValue,
     applyProjection: applyProjection,
     setProjection: setProjection,

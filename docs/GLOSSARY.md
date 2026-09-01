@@ -236,6 +236,10 @@ _Avoid_：Obsidian、数据库编辑器
 知识图谱对同一组节点的只读视觉重排：当前指标越高，节点越大且越靠近中心，并使用对应色谱；切换时节点以力场目标连续迁移。关系结构仍以知识关系决定位置。投影不新增指标、不改变选区、不写数据。
 _Avoid_：排行榜、自动学习决策、持久布局
 出处：workbench-ui spec「Metric projection morphology」
+### 状态筛选分群 / State Filter Clustering
+知识图谱的只读多选筛选：从 `needs_work / review / mastered / null` 选择一个或多个状态，按并集保留节点，并让不同状态围绕各自中心聚拢。无选项表示显示全图；筛选不改变指标投影、练习选区或学习数据。
+_Avoid_：状态修改器、自动分班、持久社区
+出处：workbench-ui spec「Multi-state graph filtering」
 
 ### 课程知识网络 / Course Learning Network
 课程范围的知识点网络：已审核的知识点 + 已审核的知识关系 + 查询时的图谱发现。图谱页是它在工作台的可视化。

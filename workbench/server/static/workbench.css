@@ -426,6 +426,40 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   font-size: 11px;
   line-height: 1.3;
 }
+.graph-filter-menu { position: relative; flex: none; }
+.graph-filter-menu > summary {
+  min-width: 84px;
+  padding: 7px 10px;
+  border: 1px solid var(--dsw-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  color: var(--dsw-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  list-style: none;
+}
+.graph-filter-menu > summary::-webkit-details-marker { display: none; }
+.graph-filter-menu[open] > summary { border-color: var(--dsw-brand-primary); color: var(--dsw-label-primary); }
+.graph-filter-menu fieldset {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 7px);
+  left: 0;
+  display: grid;
+  width: 188px;
+  gap: 7px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--dsw-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  background: var(--dsw-bg-layer-1);
+  box-shadow: var(--dsw-shadow-lv3);
+}
+.graph-filter-menu legend { padding: 0 3px; color: var(--dsw-label-tertiary); font-size: 11px; }
+.graph-filter-menu label { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.graph-filter-menu input { width: auto; min-width: 0; }
+.graph-filter-menu button { margin-top: 3px; }
 .graph-gravity-label { color: var(--dsw-label-tertiary); font-size: 12px; white-space: nowrap; }
 .graph-toolbar input[type="range"] { width: 104px; accent-color: var(--dsw-brand-accent); }
 .graph-zoom { display: flex; gap: 4px; }
@@ -453,6 +487,20 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-node.needs_work { border-color: #df8f89; background: #fff5f4; }
 .graph-node.review { border-color: #d1b46d; background: #fffaf0; }
 .graph-node.mastered { border-color: #8dbb95; background: #f4fbf5; }
+.graph-node.projection-problem_count { box-shadow: 0 0 0 calc(2px + var(--projection-score) * 5px) rgba(48, 112, 177, .12); }
+.graph-node.projection-importance { filter: saturate(calc(.85 + var(--projection-score) * .4)); }
+.graph-node.projection-state { filter: hue-rotate(calc(var(--projection-score) * -12deg)); }
+.graph-node.graph-filter-exit,
+.graph-node.graph-filter-enter,
+.graph-node-label.graph-filter-exit,
+.graph-node-label.graph-filter-enter,
+.graph-kp-selection.graph-filter-exit,
+.graph-kp-selection.graph-filter-enter,
+.graph-edge.graph-filter-exit,
+.graph-edge.graph-filter-enter { opacity: 0; }
+.graph-node,
+.graph-node-label,
+.graph-kp-selection { transition: opacity 160ms ease; }
 .graph-empty { padding: 24px; }
 .problem-topic { padding: 10px 0; border-bottom: 1px solid var(--dsw-border-l1); }
 .problem-topic summary { cursor: pointer; color: var(--dsw-label-secondary); font-weight: 600; }
