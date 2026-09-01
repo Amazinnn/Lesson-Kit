@@ -367,9 +367,10 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
     middle = (_page_header("知识网络 / 当前章节", "知识图谱", "勾选知识点后，可将同一范围交给练习。")
         + "<div class='page-content graph-content'><section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
         "<label class='visually-hidden' for='graph-search'>搜索知识点</label><input id='graph-search' placeholder='搜索知识点'>"
-        "<label for='graph-projection'>视图</label><select id='graph-projection' title='按已有指标调整图谱形态'>"
+        "<label for='graph-projection'>视图</label><select id='graph-projection' aria-describedby='graph-projection-hint' title='按已有指标调整图谱形态'>"
         "<option value='structure' selected>关系结构</option><option value='problem_count'>题目数量</option>"
         "<option value='importance'>重要性</option><option value='state'>学习状态</option></select>"
+        "<span id='graph-projection-hint' class='graph-projection-hint'>关系决定位置 · 大小表示题量</span>"
         "<label class='graph-gravity-label' for='graph-gravity'>聚拢</label><input id='graph-gravity' type='range' min='0' max='100' value='30' aria-label='调整图谱聚拢程度' title='调整图谱聚拢程度'>"
         "<div class='graph-zoom' aria-label='缩放'><button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button><button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button><button id='graph-fit' class='outline sm'>适应画布</button></div>"
         "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div></section></div>")

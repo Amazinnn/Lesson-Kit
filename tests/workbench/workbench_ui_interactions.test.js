@@ -1052,6 +1052,41 @@ test("reduced-motion graph settles without scheduling animation frames", async (
   ).length, 2);
 });
 
+test("graph projection keeps node elements and maps size, position, and palette", async () => {
+  const canvas = new FakeElement("graph-canvas", { clientWidth: 800, clientHeight: 600 });
+  const projection = new FakeElement("graph-projection");
+  const hint = new FakeElement("graph-projection-hint");
+  projection.value = "structure";
+  const app = runWorkbench({
+    elements: { layout: layout(), "graph-canvas": canvas, "graph-projection": projection,
+      "graph-projection-hint": hint },
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [
+        { id: "kp-low", title: "基础", problem_count: 1, state: "needs_work" },
+        { id: "kp-high", title: "核心", problem_count: 16, state: "mastered" },
+      ],
+      edges: [{ source: "kp-low", target: "kp-high", attraction: 1 }],
+    }),
+  });
+  await flush();
+  const stage = canvas.children[0];
+  const low = stage.children.find((child) => child.dataset.kpId === "kp-low");
+  const high = stage.children.find((child) => child.dataset.kpId === "kp-high");
+  projection.value = "problem_count";
+  projection.trigger("change");
+  assert.equal(canvas.children[0], stage);
+  assert.equal(stage.children.find((child) => child.dataset.kpId === "kp-high"), high);
+  assert.ok(parseFloat(high.style.width) > parseFloat(low.style.width));
+  assert.notEqual(high.style.backgroundColor, low.style.backgroundColor);
+  assert.equal(high.classList.contains("projection-problem_count"), true);
+  assert.match(hint.textContent, /题量越多/);
+  const highDistance = Math.hypot(parseFloat(high.style.left) - 400, parseFloat(high.style.top) - 300);
+  const lowDistance = Math.hypot(parseFloat(low.style.left) - 400, parseFloat(low.style.top) - 300);
+  assert.ok(highDistance < lowDistance);
+  assert.equal(app.rafCalls, 0);
+});
+
 test("graph filtering rebuilds layout and dragging reheats the simulation", async () => {
   let creates = 0;
   let reheats = 0;

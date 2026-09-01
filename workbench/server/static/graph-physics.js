@@ -9,6 +9,10 @@
     return Math.min(30, 8 + 2.4 * Math.sqrt(Math.max(0, problemCount || 0)));
   }
 
+  function metricRadius(score) {
+    return 10 + 20 * Math.sqrt(Math.max(0, Math.min(1, Number(score) || 0)));
+  }
+
   // A wrapped label hangs below the node and occupies layout space; the
   // collision footprint must cover it or neighbouring labels overlap.
   function labelLineCount(title) {
@@ -50,13 +54,17 @@
       var angle = index * 2.399963229728653;
       var distance = spread * Math.sqrt((index + 1) / Math.max(sourceNodes.length, 1));
       var position = positions && positions.get(source.id);
+      var radius = nodeRadius(source.problem_count);
       return Object.assign({}, source, {
-        radius: nodeRadius(source.problem_count),
-        collisionRadius: collisionRadius(nodeRadius(source.problem_count), source.title),
+        radius: radius,
+        structureRadius: radius,
+        targetRadius: radius,
+        collisionRadius: collisionRadius(radius, source.title),
         x: position ? position.x : centerX + Math.cos(angle) * distance,
         y: position ? position.y : centerY + Math.sin(angle) * distance,
         vx: 0, vy: 0, fx: null, fy: null,
         anchorX: null, anchorY: null,
+        projectionTargetX: null, projectionTargetY: null,
       });
     });
     var byId = new Map(nodes.map(function (node) { return [node.id, node]; }));
@@ -69,7 +77,7 @@
     return {
       nodes: nodes, edges: edges, width: width, height: height,
       alpha: 1, stable: nodes.length < 2, stableTicks: 0,
-      gravity: 0.000351,
+      gravity: 0.000351, projection: "structure",
     };
   }
 
@@ -96,7 +104,8 @@
       var desiredDistance = targetDistance(
         attraction, source.radius, target.radius, edge.distanceFactor || 1,
       );
-      var force = (distance - desiredDistance) * 0.014 * attraction * alpha;
+      var projectionSpring = simulation.projection === "structure" ? 1 : 0.24;
+      var force = (distance - desiredDistance) * 0.014 * attraction * alpha * projectionSpring;
       var fx = force * dx / distance;
       var fy = force * dy / distance;
       if (source.fx === null) { source.vx += fx; source.vy += fy; }
@@ -139,6 +148,15 @@
       if (node.anchorX !== null) {
         node.vx += (node.anchorX - node.x) * 0.012 * alpha;
         node.vy += (node.anchorY - node.y) * 0.012 * alpha;
+      }
+      if (node.projectionTargetX !== null) {
+        node.vx += (node.projectionTargetX - node.x) * 0.045 * alpha;
+        node.vy += (node.projectionTargetY - node.y) * 0.045 * alpha;
+      }
+      if (node.targetRadius !== undefined) {
+        node.radius += (node.targetRadius - node.radius) * (0.06 + alpha * 0.16);
+        if (Math.abs(node.targetRadius - node.radius) < 0.05) node.radius = node.targetRadius;
+        node.collisionRadius = collisionRadius(node.radius, node.title);
       }
       node.vx *= 0.84;
       node.vy *= 0.84;
@@ -266,33 +284,61 @@
     if (projection === "problem_count") return Math.max(0, Number(node.problem_count) || 0);
     if (projection === "importance") return node.importance === "core" ? 1 : 0;
     if (projection === "state") {
-      return node.state === "needs_work" ? 1 : node.state === "review" ? 0.55
-        : node.state === "mastered" ? 0 : 0.25;
+      return node.state === "mastered" ? 1 : node.state === "review" ? 0.66
+        : node.state === "needs_work" ? 0.33 : 0;
     }
     if (projection === "attraction") return Math.max(0, Number(node.attraction) || 0);
     return 0;
   }
 
-  function applyProjection(nodes, projection, width, height) {
-    if (!projection || projection === "structure" || !nodes.length) return nodes;
+  function applyProjection(nodes, projection, width, height, structurePositions) {
+    if (!nodes.length) return nodes;
+    if (!projection || projection === "structure") {
+      nodes.forEach(function (node) {
+        var position = structurePositions && structurePositions.get(node.id);
+        node.projection = "structure";
+        node.projectionScore = 0;
+        node.targetRadius = node.structureRadius || nodeRadius(node.problem_count);
+        node.projectionTargetX = position ? position.x : null;
+        node.projectionTargetY = position ? position.y : null;
+        node.vx = (node.vx || 0) * 0.25;
+        node.vy = (node.vy || 0) * 0.25;
+      });
+      return nodes;
+    }
     var values = nodes.map(function (node) { return projectionValue(node, projection); });
     var min = Math.min.apply(null, values);
     var max = Math.max.apply(null, values);
-    var span = max - min || 1;
+    var span = max - min;
     var centerX = Math.max(240, width || 800) / 2;
     var centerY = Math.max(180, height || 600) / 2;
-    var base = Math.min(Math.max(180, width || 800), Math.max(140, height || 600)) * 0.28;
-    nodes.slice().sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); })
-      .forEach(function (node, index, sorted) {
-        var score = (projectionValue(node, projection) - min) / span;
-        var angle = index * 2.399963229728653;
-        var radius = base * (1.12 - score * 0.62);
-        node.x = centerX + Math.cos(angle) * radius;
-        node.y = centerY + Math.sin(angle) * radius;
+    var base = Math.min(Math.max(180, width || 800), Math.max(140, height || 600)) * 0.34;
+    var ranked = nodes.slice().sort(function (a, b) {
+      var difference = projectionValue(b, projection) - projectionValue(a, projection);
+      return difference || String(a.id).localeCompare(String(b.id));
+    });
+    var topIsUnique = ranked.length === 1
+      || projectionValue(ranked[0], projection) > projectionValue(ranked[1], projection);
+    ranked.forEach(function (node, index) {
+        var score = span ? (projectionValue(node, projection) - min) / span : 0.5;
+        var angle = Math.max(0, index - (topIsUnique ? 1 : 0)) * 2.399963229728653;
+        var distance = topIsUnique && index === 0 ? 0 : base * (0.2 + (1 - score) * 0.8);
         node.projection = projection;
         node.projectionScore = score;
+        node.targetRadius = metricRadius(score);
+        node.projectionTargetX = centerX + Math.cos(angle) * distance;
+        node.projectionTargetY = centerY + Math.sin(angle) * distance;
+        node.vx = (node.vx || 0) * 0.25;
+        node.vy = (node.vy || 0) * 0.25;
       });
     return nodes;
+  }
+
+  function setProjection(simulation, projection, width, height, structurePositions) {
+    simulation.projection = projection || "structure";
+    applyProjection(simulation.nodes, simulation.projection, width, height, structurePositions);
+    reheat(simulation, 0.82);
+    return simulation;
   }
 
   function settle(simulation, maxTicks) {
@@ -594,6 +640,7 @@
 
   return {
     nodeRadius: nodeRadius,
+    metricRadius: metricRadius,
     labelLineCount: labelLineCount,
     collisionRadius: collisionRadius,
     targetDistance: targetDistance,
@@ -604,6 +651,7 @@
     setGravity: setGravity,
     projectionValue: projectionValue,
     applyProjection: applyProjection,
+    setProjection: setProjection,
     settle: settle,
     connectedComponents: connectedComponents,
     candidateLayouts: candidateLayouts,

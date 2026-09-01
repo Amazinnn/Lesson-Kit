@@ -324,16 +324,36 @@ test("gravity range has a stronger center pull than the previous maximum", () =>
   assert.ok(simulation.gravity > 0.00117 * 2);
 });
 
-test("existing knowledge metrics can project deterministically without changing graph membership", () => {
-  const nodes = [
-    { id: "b", problem_count: 1, importance: "supplementary", state: "review" },
-    { id: "a", problem_count: 9, importance: "core", state: "needs_work" },
-  ];
-  assert.equal(physics.projectionValue(nodes[1], "problem_count"), 9);
-  physics.applyProjection(nodes, "problem_count", 800, 600);
-  assert.equal(nodes.length, 2);
-  assert.ok(nodes.find((node) => node.id === "a").projectionScore > nodes.find((node) => node.id === "b").projectionScore);
-  const first = nodes.map((node) => ({ id: node.id, x: node.x, y: node.y }));
-  physics.applyProjection(nodes, "problem_count", 800, 600);
-  assert.deepEqual(nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })), first);
+test("metric projections assign deterministic bubble targets without teleporting nodes", () => {
+  const simulation = physics.createSimulation([
+    { id: "b", title: "基础", problem_count: 1, importance: "supplementary" },
+    { id: "a", title: "核心", problem_count: 9, importance: "core" },
+  ], [], 800, 600);
+  const before = simulation.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y }));
+  physics.setProjection(simulation, "problem_count", 800, 600);
+  const high = simulation.nodes.find((node) => node.id === "a");
+  const low = simulation.nodes.find((node) => node.id === "b");
+  assert.equal(high.projectionTargetX, 400);
+  assert.equal(high.projectionTargetY, 300);
+  assert.ok(high.targetRadius > low.targetRadius);
+  assert.deepEqual(simulation.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })), before);
+  const firstTargets = simulation.nodes.map((node) => ({
+    id: node.id, x: node.projectionTargetX, y: node.projectionTargetY,
+  }));
+  physics.applyProjection(simulation.nodes, "problem_count", 800, 600);
+  assert.deepEqual(simulation.nodes.map((node) => ({
+    id: node.id, x: node.projectionTargetX, y: node.projectionTargetY,
+  })), firstTargets);
+  physics.settle(simulation, 1600);
+  assert.ok(Math.abs(high.radius - high.targetRadius) < 0.1);
+});
+
+test("learning-state projection ranks completion from mastered to unmarked", () => {
+  const states = ["mastered", "review", "needs_work", null].map((state, index) => ({
+    id: String(index), state,
+  }));
+  assert.deepEqual(states.map((node) => physics.projectionValue(node, "state")), [1, 0.66, 0.33, 0]);
+  physics.applyProjection(states, "state", 800, 600);
+  assert.deepEqual(states.map((node) => node.targetRadius), [30, physics.metricRadius(0.66),
+    physics.metricRadius(0.33), 10]);
 });
