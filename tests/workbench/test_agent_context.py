@@ -78,7 +78,7 @@ class AgentContextTests(unittest.TestCase):
             "route": "/w/dmath/graph",
             "page_type": "graph",
             "selected_kp_id": "dmath-ch06-kp-001",
-            "graph_filter": {"query": "count", "state": "review"},
+            "graph_filter": {"query": "count", "states": ["review", "mastered"]},
             "recent_objects": [
                 {"type": "kp", "id": "dmath-ch06-kp-001"},
                 {"type": "kp", "id": "dmath-ch06-kp-001"},
@@ -89,6 +89,7 @@ class AgentContextTests(unittest.TestCase):
         })
 
         self.assertEqual(result["current"]["filter"]["query"], "count")
+        self.assertEqual(result["current"]["filter"]["states"], ["review", "mastered"])
         self.assertEqual(result["current"]["selected"]["kp"]["kp_id"], "dmath-ch06-kp-001")
         self.assertEqual(
             [(item["type"], item["id"]) for item in result["recent_objects"]],

@@ -83,10 +83,14 @@ def _graph(pool, payload, result):
     selected = payload.get("selected_kp_id")
     result["anchor"]["selected_kp_id"] = selected
     graph_filter = payload.get("graph_filter") or {}
+    states = graph_filter.get("states")
+    if not isinstance(states, list):
+        states = [graph_filter["state"]] if graph_filter.get("state") else []
     result["current"] = {
         "filter": {
             "query": graph_filter.get("query") or "",
-            "state": graph_filter.get("state") or "",
+            "state": states[0] if len(states) == 1 else "",
+            "states": states,
         },
         "relation_summary": pool.relations(),
     }
