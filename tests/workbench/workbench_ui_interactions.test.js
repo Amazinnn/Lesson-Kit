@@ -276,6 +276,14 @@ function practiceElements() {
     "practice-mode-batch": new FakeElement("practice-mode-batch"),
     "practice-rating-immediate": new FakeElement("practice-rating-immediate"),
     "practice-rating-batch": new FakeElement("practice-rating-batch"),
+    "flash-direction-choice": new FakeElement("flash-direction-choice"),
+    "flash-direction-mixed": new FakeElement("flash-direction-mixed", { checked: true }),
+    "flash-direction-forward": new FakeElement("flash-direction-forward"),
+    "flash-direction-reverse": new FakeElement("flash-direction-reverse"),
+    "card-direction-switch": new FakeElement("card-direction-switch"),
+    "card-nav": new FakeElement("card-nav"),
+    "card-prev": new FakeElement("card-prev"),
+    "card-next": new FakeElement("card-next"),
     "start-area": new FakeElement("start-area"),
     "session-end-entry": new FakeElement("session-end-entry"),
     "practice-error": new FakeElement("practice-error"),
@@ -697,7 +705,8 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
       calls.push({ url, options });
       if (url.endsWith("/pull-cards")) {
         return jsonResponse({ cards: [
-          { card_id: "c-1", kp_id: "kp-1", front: "正面F", back: "背面B" },
+          { card_id: "c-1", kp_id: "kp-1", front: "正面F", back: "背面B",
+            direction: "forward", directions: ["forward"] },
         ] });
       }
       return jsonResponse({});
@@ -711,24 +720,79 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
   await flush();
   assert.equal(elements["practice-columns"].classList.contains("hidden"), true);
   const pull = calls.find((call) => call.url.endsWith("/pull-cards"));
-  assert.deepEqual(JSON.parse(pull.options.body), { kp_ids: ["kp-1"], exclude_ids: [] });
+  assert.deepEqual(JSON.parse(pull.options.body), {
+    kp_ids: ["kp-1"], direction_mode: "mixed", exclude_directions: [],
+  });
   assert.match(elements.stream.innerHTML, /闪卡/);
   assert.match(elements.stream.innerHTML, /正面F/);
-  assert.equal(elements["show-answer"].textContent, "揭示背面");
-  assert.match(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
+  assert.equal(elements["show-answer"].textContent, "揭示另一面");
+  assert.match(elements.stream._innerHTML, /card-back-section' class='practice-solution flash-card-expansion hidden/);
   elements["show-answer"].click();
-  assert.doesNotMatch(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
+  assert.doesNotMatch(elements.stream._innerHTML, /flash-card-expansion hidden/);
   assert.match(elements.stream._innerHTML, /背面B/);
   elements["rating-input"].value = "4";
   elements["save-rating"].click();
   await flush();
   const fb = calls.find((call) => call.url.endsWith("/feedback"));
   assert.deepEqual(JSON.parse(fb.options.body), {
-    item_type: "card", item_id: "c-1", rating: 4, note: "",
+    item_type: "card", item_id: "c-1", rating: 4, note: "", direction: "forward",
   });
   const next = calls.filter((call) => call.url.endsWith("/pull-cards"))[1];
   assert.deepEqual(JSON.parse(next.options.body), {
-    kp_ids: ["kp-1"], exclude_ids: ["c-1"],
+    kp_ids: ["kp-1"], direction_mode: "mixed", exclude_directions: ["c-1:forward"],
+  });
+});
+
+test("bidirectional flash card can switch prompt direction and fans open", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  delete elements["practice-mode-immediate"];
+  delete elements["practice-mode-batch"];
+  elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
+  elements["practice-columns"] = new FakeElement("practice-columns");
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+  });
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/pull-cards")) return jsonResponse({ cards: [{
+        card_id: "c-bi", kp_id: "kp-1", front: "英文", back: "中文",
+        direction: "reverse", directions: ["forward", "reverse"],
+      }] });
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-flash_card"].checked = true;
+  elements["practice-mode-flash_card"].trigger("change");
+  assert.equal(elements["flash-direction-choice"].classList.contains("hidden"), false);
+  elements["flash-direction-mixed"].checked = false;
+  elements["flash-direction-reverse"].checked = true;
+  elements["practice-rating-immediate"].checked = true;
+  elements["practice-rating-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  const pull = calls.find((call) => call.url.endsWith("/pull-cards"));
+  assert.equal(JSON.parse(pull.options.body).direction_mode, "reverse");
+  assert.match(elements.stream._innerHTML, /is-bidirectional/);
+  assert.match(elements.stream._innerHTML, /反向/);
+  assert.match(elements.stream._innerHTML, /中文/);
+  assert.doesNotMatch(elements.stream._innerHTML, /英文/);
+  assert.equal(elements["card-direction-switch"].classList.contains("hidden"), false);
+  elements["card-direction-switch"].click();
+  assert.match(elements.stream._innerHTML, /正向/);
+  assert.match(elements.stream._innerHTML, /英文/);
+  assert.doesNotMatch(elements.stream._innerHTML, /中文/);
+  elements["show-answer"].click();
+  assert.match(elements.stream._innerHTML, /is-revealed/);
+  assert.match(elements.stream._innerHTML, /中文/);
+  elements["rating-input"].value = "5";
+  elements["save-rating"].click();
+  await flush();
+  const feedback = calls.find((call) => call.url.endsWith("/feedback"));
+  assert.deepEqual(JSON.parse(feedback.options.body), {
+    item_type: "card", item_id: "c-bi", rating: 5, note: "", direction: "forward",
   });
 });
 
@@ -760,7 +824,7 @@ test("batch flash cards mark played cards unrated for session-end", async () => 
   elements["start-practice"].click();
   await flush();
   elements["show-answer"].click();
-  assert.doesNotMatch(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
+  assert.doesNotMatch(elements.stream._innerHTML, /flash-card-expansion hidden/);
   assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
   let session = JSON.parse(storage.getItem("wb_session_alpha"));
   assert.equal(session.items[0].state, "unrated");
@@ -790,14 +854,14 @@ test("session-end lists played cards with front and back for rating", async () =
   assert.match(pending.children[0].innerHTML, /闪卡/);
   assert.match(pending.children[0].innerHTML, /正面F/);
   assert.match(pending.children[0].innerHTML, /背面B/);
-  const rating = pending.children[0].children.find((el) => el.id === "end-rating-c-1");
-  const save = pending.children[0].children.find((el) => el.id === "end-save-c-1");
+  const rating = pending.children[0].children.find((el) => el.id === "end-rating-c-1-forward");
+  const save = pending.children[0].children.find((el) => el.id === "end-save-c-1-forward");
   rating.value = "3";
   save.click();
   await flush();
   const fb = calls.find((call) => call.url.endsWith("/feedback"));
   assert.deepEqual(JSON.parse(fb.options.body), {
-    item_type: "card", item_id: "c-1", rating: 3, note: "",
+    item_type: "card", item_id: "c-1", rating: 3, note: "", direction: "forward",
   });
   assert.equal(calls.some((call) => call.url.includes("/problem/")), false);
 });
@@ -2204,8 +2268,8 @@ test("flash cards page back and forth through history and only pull at the end",
       calls.push({ url, options });
       if (url.endsWith("/pull-cards")) {
         const body = JSON.parse(options.body);
-        const next = cards.find((card) => (body.exclude_ids || []).indexOf(card.card_id) < 0);
-        return jsonResponse({ cards: next ? [next] : [] });
+        const next = cards.find((card) => (body.exclude_directions || []).indexOf(card.card_id + ":forward") < 0);
+        return jsonResponse({ cards: next ? [{ ...next, direction: "forward", directions: ["forward"] }] : [] });
       }
       return jsonResponse({});
     },
@@ -2225,7 +2289,7 @@ test("flash cards page back and forth through history and only pull at the end",
   // Back to the first card: its reveal state persists and nothing is pulled.
   elements["card-prev"].click();
   assert.match(elements.stream._innerHTML, /正面一/);
-  assert.doesNotMatch(elements.stream._innerHTML, /card-back-section' class='practice-solution hidden/);
+  assert.doesNotMatch(elements.stream._innerHTML, /flash-card-expansion hidden/);
   assert.equal(calls.filter((call) => call.url.endsWith("/pull-cards")).length, pullsBefore);
   assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).cursor, 0);
   assert.equal(elements["card-prev"].disabled, true);
@@ -2237,7 +2301,8 @@ test("flash cards page back and forth through history and only pull at the end",
   await flush();
   const pulls = calls.filter((call) => call.url.endsWith("/pull-cards"));
   assert.equal(pulls.length, pullsBefore + 1);
-  assert.deepEqual(JSON.parse(pulls[pulls.length - 1].options.body).exclude_ids, ["c-1", "c-2"]);
+  assert.deepEqual(JSON.parse(pulls[pulls.length - 1].options.body).exclude_directions,
+    ["c-1:forward", "c-2:forward"]);
   assert.match(elements.stream._innerHTML, /正面三/);
 });
 

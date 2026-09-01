@@ -14,6 +14,7 @@
   var MODE_KEY = "wb_practice_mode_" + WS;
   var INCLUDE_KEY = "wb_practice_include_" + WS;
   var RATING_MODE_KEY = "wb_practice_rating_mode_" + WS;
+  var FLASH_DIRECTION_KEY = "wb_flash_direction_" + WS;
   var SELECTION_KEY = "wb_kp_selection_" + WS;
   var SCOPE_TRAY_KEY = "wb_scope_tray_open_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
@@ -1154,9 +1155,24 @@
     return load(KPS_KEY, selectedKpIds());
   }
 
-  function updateSession(problemId, values) {
-    PracticeDeck.settle(practiceDeck, problemId, values);
+  function updateSession(problemId, values, direction) {
+    var active = currentProblem();
+    var concreteDirection = direction === undefined && active && active.kind === "card"
+      ? active.direction : direction;
+    PracticeDeck.settle(practiceDeck, problemId, values, concreteDirection);
     persistDeck();
+  }
+
+  function cardSides(item) {
+    var payload = item.payload || {};
+    return item.direction === "reverse"
+      ? { prompt: payload.back || "", answer: payload.front || "" }
+      : { prompt: payload.front || "", answer: payload.back || "" };
+  }
+
+  function bidirectional(item) {
+    return item.kind === "card"
+      && (item.payload.directions || []).indexOf("reverse") >= 0;
   }
 
   if (stream) {
@@ -1168,6 +1184,10 @@
     var modeBatch = document.getElementById("practice-mode-batch");
     var ratingImmediate = document.getElementById("practice-rating-immediate");
     var ratingBatch = document.getElementById("practice-rating-batch");
+    var flashDirectionChoice = document.getElementById("flash-direction-choice");
+    var flashDirectionMixed = document.getElementById("flash-direction-mixed");
+    var flashDirectionForward = document.getElementById("flash-direction-forward");
+    var flashDirectionReverse = document.getElementById("flash-direction-reverse");
     var legacyModeControls = !!(modeImmediate || modeBatch);
     var actions = document.getElementById("composer-actions");
     var feedbackArea = document.getElementById("feedback-area");
@@ -1181,6 +1201,7 @@
     var cardNav = document.getElementById("card-nav");
     var cardPrev = document.getElementById("card-prev");
     var cardNext = document.getElementById("card-next");
+    var cardDirectionSwitch = document.getElementById("card-direction-switch");
     var pulling = false;
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
@@ -1213,6 +1234,18 @@
       if (modeImmediate && modeImmediate.checked) return "immediate";
       if (modeBatch && modeBatch.checked) return "batch";
       return "";
+    }
+
+    function selectedFlashDirection() {
+      if (flashDirectionForward && flashDirectionForward.checked) return "forward";
+      if (flashDirectionReverse && flashDirectionReverse.checked) return "reverse";
+      return "mixed";
+    }
+
+    function showFlashDirectionChoice() {
+      if (flashDirectionChoice) {
+        flashDirectionChoice.classList.toggle("hidden", selectedContentMode() !== "flash_card");
+      }
     }
 
     function readyToStart() {
@@ -1270,7 +1303,7 @@
       var row = document.getElementById("composer-row");
       if (row) row.classList.toggle("hidden", mode === "card");
       if (answerBox) answerBox.classList.toggle("hidden", mode !== "text");
-      if (showAnswer) showAnswer.textContent = mode === "card" ? "揭示背面" : "查看解析";
+      if (showAnswer) showAnswer.textContent = mode === "card" ? "揭示另一面" : "查看解析";
     }
 
     function ratingNow() {
@@ -1324,6 +1357,10 @@
     function updateCardNav(item) {
       var isCard = item.kind === "card";
       if (cardNav) cardNav.classList.toggle("hidden", !isCard);
+      if (cardDirectionSwitch) {
+        cardDirectionSwitch.classList.toggle("hidden",
+          !isCard || !bidirectional(item) || item.state === "rated");
+      }
       if (!isCard) return;
       if (cardPrev) cardPrev.disabled = practiceDeck.cursor <= 0;
       if (cardNext) cardNext.disabled = pulling;
@@ -1332,15 +1369,29 @@
     function renderDeckItem(item) {
       updateCardNav(item);
       if (item.kind === "card") {
-        var back = "<section id='card-back-section' class='practice-solution"
-          + (item.revealed ? "'" : " hidden'") + ">"
-          + "<p class='section-kicker'>背面</p>"
-          + "<div class='rich-text'>" + richText(item.payload.back || "") + "</div></section>";
-        stream.innerHTML = "<article class='practice-question-card card'>"
+        var sides = cardSides(item);
+        var directionLabel = item.direction === "reverse" ? "反向" : "正向";
+        var cardBody;
+        if (bidirectional(item)) {
+          cardBody = "<div class='flash-card-stage is-bidirectional"
+            + (item.revealed ? " is-revealed" : "") + "'>"
+            + "<section class='flash-card-face flash-card-answer' aria-label='另一面'>"
+            + "<p class='section-kicker'>另一面</p>"
+            + (item.revealed ? "<div class='rich-text'>" + richText(sides.answer) + "</div>" : "")
+            + "</section><section class='flash-card-face flash-card-prompt' aria-label='提示面'>"
+            + "<p class='section-kicker'>提示面</p><div class='rich-text'>"
+            + richText(sides.prompt) + "</div></section></div>";
+        } else {
+          cardBody = "<div class='problem-text rich-text'>" + richText(sides.prompt) + "</div>"
+            + "<section id='card-back-section' class='practice-solution flash-card-expansion"
+            + (item.revealed ? "'" : " hidden'") + ">"
+            + "<p class='section-kicker'>另一面</p><div class='rich-text'>"
+            + richText(sides.answer) + "</div></section>";
+        }
+        stream.innerHTML = "<article class='practice-question-card card flash-card-shell'>"
           + "<p class='context-line'>闪卡</p>"
-          + "<p class='muted'>先在心里回忆，再揭示对照。</p>"
-          + "<div class='problem-text rich-text'>" + richText(item.payload.front || "") + "</div>"
-          + back
+          + "<p class='muted flash-direction-label'>" + directionLabel
+          + " · 先在心里回忆，再揭示对照。</p>" + cardBody
           + (item.state === "rated" ? "<p class='muted'>已评分。</p>" : "")
           + "</article>";
         renderMath(stream);
@@ -1457,7 +1508,11 @@
         api("/pull-cards", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ kp_ids: kps, exclude_ids: exclude }),
+          body: JSON.stringify({
+            kp_ids: kps,
+            direction_mode: sessionStorage.getItem(FLASH_DIRECTION_KEY) || "mixed",
+            exclude_directions: PracticeDeck.directionKeys(practiceDeck),
+          }),
         }).then(function (result) {
           pulling = false;
           var card = (result.cards || [])[0];
@@ -1467,7 +1522,13 @@
           }
           PracticeDeck.append(practiceDeck, {
             id: card.card_id, kind: "card",
-            payload: { card_id: card.card_id, front: card.front, back: card.back },
+            direction: card.direction || "forward",
+            payload: {
+              card_id: card.card_id,
+              front: card.front,
+              back: card.back,
+              directions: card.directions || ["forward"],
+            },
           });
           persistDeck();
           renderDeckItem(PracticeDeck.current(practiceDeck));
@@ -1517,6 +1578,11 @@
       sessionStorage.removeItem(CURRENT_KEY);
       sessionStorage.setItem(MODE_KEY, contentMode);
       sessionStorage.setItem(RATING_MODE_KEY, ratingMode);
+      if (contentMode === "flash_card") {
+        sessionStorage.setItem(FLASH_DIRECTION_KEY, selectedFlashDirection());
+      } else {
+        sessionStorage.removeItem(FLASH_DIRECTION_KEY);
+      }
       if (legacyModeControls && scopedKpId) {
         store(KPS_KEY, [scopedKpId]);
         if (startArea) startArea.classList.add("hidden");
@@ -1546,6 +1612,7 @@
 
     function bindMode(mode) {
       if (mode) mode.addEventListener("change", function () {
+        showFlashDirectionChoice();
         startPractice.disabled = !readyToStart();
       });
     }
@@ -1559,6 +1626,10 @@
     bindMode(ratingImmediate);
     bindMode(ratingBatch);
     var restoredMode = sessionStorage.getItem(MODE_KEY);
+    var restoredFlashDirection = sessionStorage.getItem(FLASH_DIRECTION_KEY) || "mixed";
+    if (flashDirectionMixed) flashDirectionMixed.checked = restoredFlashDirection === "mixed";
+    if (flashDirectionForward) flashDirectionForward.checked = restoredFlashDirection === "forward";
+    if (flashDirectionReverse) flashDirectionReverse.checked = restoredFlashDirection === "reverse";
     var restoredRatingMode = sessionStorage.getItem(RATING_MODE_KEY)
       || (restoredMode === "batch" ? "batch" : "");
     var restoredItem = currentProblem();
@@ -1581,6 +1652,7 @@
       renderDeckItem(restoredItem);
       showComposer(true);
     }
+    showFlashDirectionChoice();
     if (startPractice) {
       startPractice.disabled = !readyToStart();
       startPractice.addEventListener("click", startSession);
@@ -1621,7 +1693,7 @@
       if (item.kind === "card") {
         var patch = { revealed: true };
         if (batchNow() && item.state !== "rated") patch.state = "unrated";
-        PracticeDeck.settle(practiceDeck, item.id, patch);
+        PracticeDeck.settle(practiceDeck, item.id, patch, item.direction);
         persistDeck();
         renderDeckItem(currentProblem());
         return;
@@ -1655,11 +1727,13 @@
         return;
       }
       clearPracticeError();
-      post("/feedback", {
+      var feedback = {
         item_type: item.kind === "card" ? "card" : "problem",
         item_id: item.id,
         rating: rating, note: feedbackNote.value.trim(),
-      }).then(function () {
+      };
+      if (item.kind === "card") feedback.direction = item.direction;
+      post("/feedback", feedback).then(function () {
         updateSession(item.id, { state: "rated" });
         advance();
       }).catch(showPracticeError);
@@ -1707,6 +1781,13 @@
     });
     if (cardNext) cardNext.addEventListener("click", function () {
       advance();
+    });
+    if (cardDirectionSwitch) cardDirectionSwitch.addEventListener("click", function () {
+      var item = currentProblem();
+      if (!item || !bidirectional(item)) return;
+      item.direction = item.direction === "reverse" ? "forward" : "reverse";
+      persistDeck();
+      renderDeckItem(item);
     });
   }
 
@@ -1863,7 +1944,8 @@
       pending.innerHTML = "<p>没有待评的题。</p>";
     } else {
       var remaining = unrated.length;
-      var buildRatingCard = function (contentHtml, itemType, entryId, title) {
+      var buildRatingCard = function (contentHtml, itemType, itemId, title, direction) {
+        var entryId = itemId + (direction ? "-" + direction : "");
         var card = document.createElement("article");
         card.className = "pending-rating-card card";
         card.dataset.pid = entryId;
@@ -1903,11 +1985,13 @@
             showCardError("请输入 1-5 的评分");
             return;
           }
-          post("/feedback", {
-            item_type: itemType, item_id: entryId,
+          var feedback = {
+            item_type: itemType, item_id: itemId,
             rating: value, note: note.value.trim(),
-          }).then(function () {
-            updateSession(entryId, { state: "rated" });
+          };
+          if (itemType === "card") feedback.direction = direction || "forward";
+          post("/feedback", feedback).then(function () {
+            updateSession(itemId, { state: "rated" }, direction);
             card.remove();
             remaining -= 1;
             if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
@@ -1925,11 +2009,13 @@
       unrated.forEach(function (item) {
         if (item.kind === "card") {
           var card = item.payload || {};
+          var sides = cardSides(item);
+          var directionLabel = item.direction === "reverse" ? "反向" : "正向";
           buildRatingCard(
-            "<p class='context-line'>闪卡</p>"
-            + "<div class='problem-text rich-text'>" + richText(card.front || "") + "</div>"
-            + "<p class='section-kicker'>背面</p><div class='rich-text'>" + richText(card.back || "") + "</div>",
-            "card", item.id, String(card.front || "闪卡"));
+            "<p class='context-line'>闪卡 · " + directionLabel + "</p>"
+            + "<div class='problem-text rich-text'>" + richText(sides.prompt) + "</div>"
+            + "<p class='section-kicker'>另一面</p><div class='rich-text'>" + richText(sides.answer) + "</div>",
+            "card", item.id, String(sides.prompt || "闪卡"), item.direction);
           return;
         }
         api("/problem/" + item.id).then(function (detail) {
