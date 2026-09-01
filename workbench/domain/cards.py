@@ -13,6 +13,10 @@ REQUIRED_FIELDS = ("card_id", "kp_id", "front", "back", "source_evidence")
 MAX_FRONT_CHARS = 100
 MAX_BACK_CHARS = 300
 MAX_TOPIC_LABEL_CHARS = 40
+FORWARD = "forward"
+REVERSE = "reverse"
+DEFAULT_DIRECTIONS = [FORWARD]
+BIDIRECTIONAL_DIRECTIONS = [FORWARD, REVERSE]
 
 
 def is_valid_card_id(card_id):
@@ -43,4 +47,47 @@ def validate_card_row(row):
             errors.append("topic_label must be a non-empty string")
         elif len(topic_label) > MAX_TOPIC_LABEL_CHARS:
             errors.append(f"topic_label exceeds {MAX_TOPIC_LABEL_CHARS} characters")
+    if row.get("directions", DEFAULT_DIRECTIONS) not in (
+        DEFAULT_DIRECTIONS, BIDIRECTIONAL_DIRECTIONS,
+    ):
+        errors.append('directions must be ["forward"] or ["forward", "reverse"]')
     return errors
+
+
+def practice_directions(allowed, preference):
+    """Return the concrete learning actions allowed by one session preference."""
+    if preference == REVERSE:
+        return [REVERSE] if REVERSE in allowed else [FORWARD]
+    if preference == "mixed":
+        return list(allowed)
+    return [FORWARD]
+
+
+def select(cards, schedule_rows, *, preference="forward", excluded_ids=(),
+           excluded_directions=(), today=""):
+    """Expand card rows into direction actions and order due actions first."""
+    schedules = {
+        (row["item_id"], row.get("direction", "")): row.get("due_at")
+        for row in schedule_rows if row["item_type"] == "card"
+    }
+    candidates = []
+    for card in cards:
+        if card["card_id"] in excluded_ids:
+            continue
+        for direction in practice_directions(card["directions"], preference):
+            if f"{card['card_id']}:{direction}" in excluded_directions:
+                continue
+            candidate = dict(card)
+            candidate["direction"] = direction
+            due_at = schedules.get((card["card_id"], direction))
+            if due_at is None and direction == FORWARD:
+                due_at = schedules.get((card["card_id"], ""))
+            candidate["_due_at"] = str(due_at or "")
+            candidates.append(candidate)
+    candidates.sort(key=lambda card: (
+        0 if card["_due_at"][:10] <= today and card["_due_at"] else 1,
+        card["_due_at"], card["card_id"], card["direction"],
+    ))
+    for candidate in candidates:
+        candidate.pop("_due_at")
+    return candidates

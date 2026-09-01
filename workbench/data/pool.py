@@ -129,13 +129,20 @@ class Pool:
         sql = "SELECT * FROM flash_cards WHERE "
         sql += " OR ".join("kp_id=?" for _ in kp_ids)
         rows = conn.execute(sql + " ORDER BY card_id", list(kp_ids)).fetchall()
-        return [dict(r) for r in rows]
+        return [self._card_row(r) for r in rows]
 
     def card(self, card_id):
         row = self.connect().execute(
             "SELECT * FROM flash_cards WHERE card_id=?", (card_id,)
         ).fetchone()
-        return dict(row) if row else None
+        return self._card_row(row) if row else None
+
+    @staticmethod
+    def _card_row(row):
+        item = dict(row)
+        raw = item.get("directions")
+        item["directions"] = json.loads(raw) if raw else ["forward"]
+        return item
 
     def next_free_content_ids(self, prefix):
         """Return chapter-scoped next ids for Agent-created cards and quizzes."""

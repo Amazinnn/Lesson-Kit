@@ -419,9 +419,10 @@ def _apply_patch(database, manifest, backup, kind):
                 row = _flash_card_row(item)
                 conn.execute(
                     "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence,"
-                    " topic_label, ingest_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    " topic_label, directions, ingest_batch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (row["card_id"], row["kp_id"], row["front"], row["back"],
-                     row["source_evidence"], row.get("topic_label"), batch_id),
+                     row["source_evidence"], row.get("topic_label"),
+                     json.dumps(row["directions"]), batch_id),
                 )
             counts = {"flash_cards": len(manifest["items"])}
         _record_batch(conn, batch_id, kind, manifest_path, counts, backup)
@@ -631,6 +632,7 @@ def _flash_card_row(item):
         "front": item.get("front"),
         "back": item.get("back"),
         "source_evidence": item.get("source_evidence"),
+        "directions": item.get("directions", list(card_rules.DEFAULT_DIRECTIONS)),
         **({"topic_label": item["topic_label"]} if "topic_label" in item else {}),
     }
 

@@ -116,6 +116,11 @@ _Avoid_：闪卡（旧称，现指另一功能）、自由文本作答（微题�
 _Avoid_：小测（微题的卡片式渲染，旧「闪卡」）、方向卡（已拆除 UI）、普通题冒充
 出处：introduce-flash-card；openspec/specs/flash-card（随归档落位）
 
+### 闪卡方向能力 / Flash-card Direction Capability
+闪卡内容声明允许怎样提问：`["forward"]` 表示只能以正面问、背面答；`["forward", "reverse"]` 表示正反都具有教学意义。方向能力属于内容事实，缺省按单向兼容；它不等于当前练习采用的方向。
+_Avoid_：把一张双向卡复制成两张内容卡、从文字长度猜方向
+出处：flash-card spec「Flash card direction capability」
+
 ### 判断模式 / Yes-No Mode
 练习模式之一：判断题（是/否），选择后浏览器本地立即判分并显示错因；判分只是即时反馈，不写学习记录，之后仍走 1–5 自评。只拉取标注了 yes_no 可用的微题（quiz_type = yes_no），无内容时如实空态。
 _Avoid_：机器批改作业（只判对错，不产生学习结论）

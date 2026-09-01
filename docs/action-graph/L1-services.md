@@ -5,11 +5,11 @@
 | 模块 | 职责 | 依赖 | 被谁调用 |
 |---|---|---|---|
 | **拉取 pull** | 按选区 KP + 模式拉题：exclude 已见、到期优先、n 条、诚实空态 | problems、review_schedule | `/pull`（API/CLI）、练习页 |
-| **拉取 pull-cards** | 同上，闪卡版（选区过滤/到期行优先/exclude_ids） | flash_cards、review_schedule | `/pull-cards`、练习页 |
+| **拉取 pull-cards** | 闪卡按方向能力展开；选区过滤、每方向到期优先、整卡/方向键排除 | flash_cards、review_schedule | `/pull-cards`、练习页 |
 | **feedback 四件套** | 一次自评原子写四件事：事件→信号→状态→调度；支持 item_type=problem/card + direction 键 | feedback_events、learner_signals、kp 状态、review_schedule | `/feedback`（API/CLI）、收束页 |
 | **practice 记录** | 记一次尝试（作答原文/卡点/状态） | problem_attempts | `/practice`（API/CLI） |
 | **门禁配方 micro-quiz** | manifest（micro-quiz-patch）确定性校验→备份→单事务 apply；重复 id 拒收 | problems | CLI `ingest recipe` |
-| **门禁配方 flash-card** | 同构（flash-card-patch）：五字段契约/正则 id/来源必填 | flash_cards | CLI `ingest recipe` |
+| **门禁配方 flash-card** | flash-card-patch：内容契约/正则 id/来源必填/directions 两种合法值 | flash_cards | CLI `ingest recipe` |
 | **批次溯源与整批回滚** | apply 记批次 id（batch-NNN）+行戳记+manifest 快照+ingest_batches 登记；rollback 按批次删行（有练习/反馈依赖即拒绝），回滚前自动备份 | ingest_batches、problems、flash_cards | CLI `ingest rollback`、`POST /ingest/rollback`、桥结果卡 |
 | **ingest 链** | prepare/run/gate/apply/render 六环节编排与中间产物 | 中间产物目录 | CLI `ingest` 家族 |
 | **桥 runner/contracts/teacher** | 任务状态机（queued/running/done/failed）、输出契约校验、教学契约渲染 | jobs/、explain/ | `/ai/*`、CLI `ai` |

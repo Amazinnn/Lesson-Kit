@@ -179,6 +179,7 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertIn("ingest_batch_id", self.columns("problems"))
         self.assertIn("ingest_batch_id", self.columns("flash_cards"))
         self.assertIn("topic_label", self.columns("flash_cards"))
+        self.assertIn("directions", self.columns("flash_cards"))
         self.conn.execute(
             "INSERT INTO ingest_batches (batch_id, kind, manifest_path, counts_json, "
             "backup_path, applied_at) VALUES (?, ?, ?, ?, ?, datetime('now'))",
@@ -243,12 +244,13 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         pool_schema.ensure_workbench_schema(self.conn)
         self.assertIn("ingest_batch_id", self.columns("flash_cards"))
         self.assertIn("topic_label", self.columns("flash_cards"))
+        self.assertIn("directions", self.columns("flash_cards"))
         row = self.conn.execute(
-            "SELECT card_id, topic_label, ingest_batch_id FROM flash_cards WHERE card_id=?",
+            "SELECT card_id, topic_label, directions, ingest_batch_id FROM flash_cards WHERE card_id=?",
             ("dmath-ch06-fc-001",),
         ).fetchone()
         self.assertEqual(row[0], "dmath-ch06-fc-001")
-        self.assertEqual(row[1:], (None, None))
+        self.assertEqual(row[1:], (None, '["forward"]', None))
 
 
 if __name__ == "__main__":

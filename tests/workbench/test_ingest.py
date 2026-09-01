@@ -643,7 +643,8 @@ class BatchRollbackTests(unittest.TestCase):
             CREATE TABLE flash_cards (
                 card_id TEXT PRIMARY KEY, kp_id TEXT NOT NULL, front TEXT NOT NULL,
                 back TEXT NOT NULL, source_evidence TEXT NOT NULL,
-                topic_label TEXT, ingest_batch_id TEXT);
+                topic_label TEXT, directions TEXT NOT NULL DEFAULT '["forward"]',
+                ingest_batch_id TEXT);
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
             CREATE TABLE content_sequences (
