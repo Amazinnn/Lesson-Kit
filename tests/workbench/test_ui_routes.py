@@ -466,6 +466,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(data["nodes"][0]["title"], "Counting")
         self.assertIn("id='graph-projection'", body)
+        self.assertIn("id='graph-projection-hint'", body)
 
     def test_goal_lifecycle_controls_render(self):
         request = urllib.request.Request(

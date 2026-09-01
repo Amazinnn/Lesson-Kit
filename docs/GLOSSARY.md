@@ -232,6 +232,11 @@ _Avoid_：日历应用、自动重排
 _Avoid_：Obsidian、数据库编辑器
 出处：workbench-ui spec；REQUIREMENTS.md 2026-08-27 段
 
+### 指标投影 / Metric Projection
+知识图谱对同一组节点的只读视觉重排：当前指标越高，节点越大且越靠近中心，并使用对应色谱；切换时节点以力场目标连续迁移。关系结构仍以知识关系决定位置。投影不新增指标、不改变选区、不写数据。
+_Avoid_：排行榜、自动学习决策、持久布局
+出处：workbench-ui spec「Metric projection morphology」
+
 ### 课程知识网络 / Course Learning Network
 课程范围的知识点网络：已审核的知识点 + 已审核的知识关系 + 查询时的图谱发现。图谱页是它在工作台的可视化。
 _Avoid_：人生地图、最终本体

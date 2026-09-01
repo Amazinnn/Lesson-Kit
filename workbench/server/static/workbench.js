@@ -412,6 +412,7 @@
     var graphSearch = document.getElementById("graph-search");
     var graphFilter = document.getElementById("graph-state-filter");
     var graphGravity = document.getElementById("graph-gravity");
+    var graphProjectionHint = document.getElementById("graph-projection-hint");
     var graphDetail = document.getElementById("graph-detail-panel");
     var graphDetailTab = document.getElementById("graph-detail-tab");
     var teacherTab = document.getElementById("ai-teacher-tab");
@@ -436,6 +437,60 @@
     function actionReminder(node) {
       return node.state === "needs_work" ? "重点练习"
         : node.state === "review" ? "可以复习" : "";
+    }
+
+    function mixGraphColor(from, to, score) {
+      var ratio = Math.max(0, Math.min(1, Number(score) || 0));
+      function channel(index) {
+        return Math.round(parseInt(from.slice(index, index + 2), 16) * (1 - ratio)
+          + parseInt(to.slice(index, index + 2), 16) * ratio);
+      }
+      return "rgb(" + channel(1) + ", " + channel(3) + ", " + channel(5) + ")";
+    }
+
+    function graphNodeColors(node) {
+      var score = node.projectionScore || 0;
+      if (node.projection === "problem_count") {
+        return [mixGraphColor("#edf3ff", "#2457c5", score),
+          mixGraphColor("#9bb5e8", "#153a8a", score)];
+      }
+      if (node.projection === "importance") {
+        return [mixGraphColor("#fff8dc", "#f2c94c", score),
+          mixGraphColor("#cdbf8c", "#9b7610", score)];
+      }
+      if (node.projection === "state") {
+        if (node.state === "mastered") return ["#2457c5", "#153a8a"];
+        if (node.state === "review") return ["#f2c94c", "#9b7610"];
+        if (node.state === "needs_work") return ["#d6453d", "#8f211c"];
+        return ["#f4f0e7", "#7a746a"];
+      }
+      return ["#fffdf8", "#171717"];
+    }
+
+    function updateGraphNodeAppearance(node) {
+      var elements = graphNodeElements.get(node.id);
+      if (!elements) return;
+      ["structure", "problem_count", "importance", "state"].forEach(function (name) {
+        elements.node.classList.remove("projection-" + name);
+      });
+      elements.node.classList.add("projection-" + (node.projection || "structure"));
+      var colors = graphNodeColors(node);
+      elements.node.style.backgroundColor = colors[0];
+      elements.node.style.borderColor = colors[1];
+      elements.node.style.boxShadow = node.projection === "structure"
+        ? "0 2px 8px rgba(23, 23, 23, .12)"
+        : "0 0 0 " + (2 + (node.projectionScore || 0) * 5) + "px rgba(36, 87, 197, .10)";
+    }
+
+    function updateGraphProjectionHint() {
+      if (!graphProjectionHint) return;
+      graphProjectionHint.textContent = graphProjection === "problem_count"
+        ? "越大、越靠内、蓝色越深 = 题量越多"
+        : graphProjection === "importance"
+          ? "越大、越靠内、黄色越深 = 越重要"
+          : graphProjection === "state"
+            ? "越大、越靠内 = 完成度越高 · 蓝/黄/红/灰 = 掌握/复习/待加强/未标记"
+            : "关系决定位置 · 大小表示题量";
     }
 
     function showGraphPanel(detailOpen) {
@@ -638,6 +693,7 @@
         label.textContent = node.title;
         stage.appendChild(label);
         graphNodeElements.set(node.id, { node: button, select: select, label: label });
+        updateGraphNodeAppearance(node);
       });
       if (!nodes.length) {
         var empty = document.createElement("p");
@@ -685,6 +741,8 @@
         if (!elements) return;
         elements.node.style.left = node.x + "px";
         elements.node.style.top = node.y + "px";
+        elements.node.style.width = (node.radius * 2) + "px";
+        elements.node.style.height = (node.radius * 2) + "px";
         if (elements.select) {
           elements.select.style.left = (node.x + node.radius - 4) + "px";
           elements.select.style.top = (node.y - node.radius - 4) + "px";
@@ -830,7 +888,28 @@
     var graphProjectionSelect = document.getElementById("graph-projection");
     if (graphProjectionSelect) graphProjectionSelect.addEventListener("change", function () {
       graphProjection = graphProjectionSelect.value || "structure";
-      renderGraph();
+      updateGraphProjectionHint();
+      if (!graphSimulation) return;
+      var structurePositions = null;
+      if (graphProjection === "structure") {
+        var structure = GraphPhysics.layoutGraph(
+          graphSimulation.nodes, graphSimulation.edges,
+          graphCanvas.clientWidth, graphCanvas.clientHeight,
+        );
+        structurePositions = new Map(structure.nodes.map(function (node) {
+          return [node.id, { x: node.x, y: node.y }];
+        }));
+      }
+      GraphPhysics.setProjection(graphSimulation, graphProjection,
+        graphCanvas.clientWidth, graphCanvas.clientHeight, structurePositions);
+      graphSimulation.nodes.forEach(updateGraphNodeAppearance);
+      if (reducedGraphMotion) {
+        GraphPhysics.settle(graphSimulation, 1600);
+        settleLabelClearance();
+        drawGraph();
+      } else {
+        runGraphSimulation();
+      }
     });
     if (zoomIn) zoomIn.addEventListener("click", function () {
       setGraphScale(graphView.scale + 0.1);
