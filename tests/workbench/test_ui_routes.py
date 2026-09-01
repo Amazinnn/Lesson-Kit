@@ -449,6 +449,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("data-goal-delete", body)
         self.assertIn("data-goal-id='goal-001'", body)
         self.assertIn("期末掌握计数", body)
+        self.assertIn("id='goal-start-date'", body)
         self.assertIn("id='goal-nl'", body)
         self.assertIn("id='goal-assist-send'", body)
 

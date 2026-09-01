@@ -133,11 +133,14 @@ def _daily_plan(plan):
         "<article class='goal-card card' data-goal-id='" + html.escape(str(goal.get("id") or "")) + "'"
         + " data-goal-title='" + html.escape(goal.get("title") or "") + "'"
         + " data-goal-kind='" + html.escape(str(goal.get("kind") or "stage")) + "'"
+        + " data-goal-start-date='" + html.escape(str(goal.get("start_date") or "")) + "'"
         + " data-goal-deadline='" + html.escape(str(goal.get("deadline") or "")) + "'"
         + " data-goal-description='" + html.escape(str(goal.get("description") or "")) + "'>"
         + "<h3>" + html.escape(goal.get("title") or "未命名目标") + "</h3>"
         + ("<p class='goal-progress'>覆盖进度：" + html.escape(str(goal.get("coverage_progress", goal.get("progress", "暂无")))) + "</p>" if goal.get("coverage_progress", goal.get("progress")) is not None else "")
-        + ("<p class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</p>" if goal.get("deadline") else "")
+        + ("<p class='plan-deadline'>" + html.escape(str(goal.get("start_date"))) + " → "
+           + html.escape(str(goal["deadline"])) + "</p>" if goal.get("start_date") and goal.get("deadline")
+           else ("<p class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</p>" if goal.get("deadline") else ""))
         + ("<details><summary>查看说明与范围</summary><p>" + html.escape(str(goal.get("description") or goal.get("scope") or "")) + "</p></details>" if goal.get("description") or goal.get("scope") else "")
         + "<div class='goal-card-actions'><button type='button' class='ghost sm goal-edit' data-goal-edit>编辑</button>"
         + "<button type='button' class='ghost sm goal-delete' data-goal-delete>删除</button></div>"
@@ -151,6 +154,7 @@ def _daily_plan(plan):
         "<input type='hidden' id='goal-id' value=''>"
         "<label for='goal-title'>目标名称</label><input id='goal-title' name='title' required>"
         "<label for='goal-kind'>目标类型</label><select id='goal-kind' name='kind'><option value='stage'>阶段目标</option><option value='long_term'>长期目标</option></select>"
+        "<label for='goal-start-date'>开始日期</label><input id='goal-start-date' name='start_date' type='date'>"
         "<label for='goal-deadline'>截止日期</label><input id='goal-deadline' name='deadline' type='date'>"
         "<label for='goal-description'>说明</label><textarea id='goal-description' name='description' rows='3'></textarea>"
         "<div class='goal-form-actions'><button class='primary sm' type='submit' id='goal-submit'>保存目标</button>"

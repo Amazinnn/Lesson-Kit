@@ -156,6 +156,7 @@ def cmd_goals(args):
         goal = goals_mod.create_goal(root, {
             "title": args.title,
             "kind": args.kind or "stage",
+            "start_date": args.start_date or "",
             "deadline": args.deadline or "",
             "description": args.description or "",
         })
@@ -164,7 +165,8 @@ def cmd_goals(args):
             raise SystemExit("goals update requires a goal id")
         values = {k: v for k, v in {
             "title": args.title, "kind": args.kind,
-            "deadline": args.deadline, "description": args.description,
+            "start_date": args.start_date, "deadline": args.deadline,
+            "description": args.description,
         }.items() if v is not None}
         goal = goals_mod.update_goal(root, args.goal_id, values)
     elif args.action == "rm":
@@ -401,6 +403,7 @@ def build_parser():
     p.add_argument("goal_id", nargs="?")
     p.add_argument("--title")
     p.add_argument("--kind", choices=["stage", "long_term"])
+    p.add_argument("--start-date")
     p.add_argument("--deadline")
     p.add_argument("--description")
     p.set_defaults(func=cmd_goals)

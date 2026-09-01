@@ -56,7 +56,7 @@
 | 目标创建 | UI 表单 | 人 | goals.json | 已实现 |
 | 目标自然语言助填（NL→对话轮次→prefill_goal_form→表单原位填充，提交留给人） | UI 目标表单 | Agent+人 | 表单字段（不直接写 goals.json） | 已实现（complete-goals-loop） |
 | 目标编辑/删除 | UI 卡片入口（同表单 PATCH/DELETE） | 人 | goals.json | 已实现（complete-goals-loop） |
-| 月历/工作量只读视图 | UI | 人 | — | 已实现（实验） |
+| 目标时间跑道/月历/工作量只读视图（跨周切段、重叠分轨） | UI | 人 | — | 已实现（实验） |
 | 每日计划重算 | UI | 人 | plan.json | 已实现 |
 | 重日 prefill（只预填不发送） | UI | 人 | AI 输入框 | 已实现 |
 | 复习重排建议 / 重日主动提醒（视图类，给 Agent 用） | 无 | Agent | — | 未定义挂名（问卷 C：延后） |
@@ -91,3 +91,5 @@
 - 2026-08-30 candidate 物理退役落地（remove-candidate-store）：`wb data` 的
   candidate 实体与 gate/promote 动作下线、候选证据分支删除、candidate_problems/
   candidate_attempts 建表停止且真实池 DROP（先备份）；learner_signals 保留为核心。
+- 2026-08-31 目标月历升级为时间跑道：目标增加可选开始日期，跨周续接、重叠分轨；
+  阶段/长期/逾期采用黄/蓝/红边缘区分，旧目标按截止日单点兼容。

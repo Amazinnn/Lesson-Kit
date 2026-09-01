@@ -102,6 +102,7 @@ def _goal(value):
         "id": value.get("id") or value.get("goal_id") or "goal",
         "kind": value.get("kind") or "stage",
         "title": value.get("title") or "未命名目标",
+        "start_date": value.get("start_date"),
         "deadline": value.get("deadline"),
         "progress": value.get("progress"),
         "coverage_progress": value.get("coverage_progress"),

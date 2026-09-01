@@ -1,14 +1,4 @@
-# calendar-workload Specification
-
-## Purpose
-
-An experimental, read-only time view inside the review page: goal periods
-drawn as parallel lanes across a month grid plus a 14-day histogram of due
-work, so overlap and overload are visible before they are felt. The view writes
-nothing and reschedules nothing; a heavy day offers a pre-filled reallocation
-request for the Agent instead of automatic replanning.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Calendar and workload view
 
