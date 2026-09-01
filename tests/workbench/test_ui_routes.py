@@ -92,6 +92,17 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("#topbar .brand::before", body)
         self.assertIn(".page-header::after", body)
         self.assertIn("inset 4px 0 0 var(--lk-blue)", body)
+    def test_css_makes_learning_content_the_primary_surface(self):
+        status, body = self.fetch("/static/workbench.css")
+        self.assertEqual(status, 200)
+        knowledge = body.split(".knowledge-body {", 1)[1].split("}", 1)[0]
+        question = body.split(".practice-question-card {", 1)[1].split("}", 1)[0]
+        solution = body.split(".practice-solution {", 1)[1].split("}", 1)[0]
+        self.assertIn("font-size: 17px", knowledge)
+        self.assertIn("border-left: 4px", knowledge)
+        self.assertIn("font-size: 17px", question)
+        self.assertIn("box-shadow: none", question)
+        self.assertIn("color: var(--dsw-label-secondary)", solution)
 
     def test_practice_page_session_controls_live_outside_the_answer_card(self):
         # Session controls must not be nested in the answer card, where a state
