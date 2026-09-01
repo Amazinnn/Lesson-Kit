@@ -2085,7 +2085,7 @@ test("time view renders goal calendar, heavy day marking, and prefill", async ()
           ],
           days: Array.from({ length: 14 }, (_, offset) => ({
             date: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)),
-            count: offset === 3 ? 3 : 0,
+            count: offset === 3 ? 4 : (offset < 2 ? 1 : 0),
             overdue: 0,
           })),
         });
@@ -2102,10 +2102,13 @@ test("time view renders goal calendar, heavy day marking, and prefill", async ()
   assert.ok((elements["calendar-grid"]._innerHTML.match(/覆盖率 80%/g) || []).length > 1);
   assert.ok(elements["calendar-grid"]._innerHTML.includes("旧目标"));
   assert.ok(elements["workload-bars"]._innerHTML.includes("重"));
+  assert.ok(elements["workload-bars"]._innerHTML.includes("workload-trend-line"));
+  assert.ok(elements["workload-bars"]._innerHTML.includes("14 天任务量趋势"));
+  assert.ok(elements["workload-bars"]._innerHTML.includes("workload-heavy-point"));
   assert.equal(elements["workload-prefill"].classList.contains("hidden"), false);
   elements["workload-prefill"].click();
   assert.ok(elements["ai-input"].value.includes("帮我重排一下"));
-  assert.ok(elements["ai-input"].value.includes("3 项"));
+  assert.ok(elements["ai-input"].value.includes("4 项"));
 });
 
 test("time view shows an honest empty state without goals or workload", async () => {
@@ -2134,6 +2137,7 @@ test("time view shows an honest empty state without goals or workload", async ()
   assert.equal(elements["time-view"].classList.contains("hidden"), false);
   assert.equal(elements["time-view-empty"].classList.contains("hidden"), false);
   assert.equal(elements["workload-prefill"].classList.contains("hidden"), true);
+  assert.equal(elements["workload-bars"]._innerHTML.includes("workload-trend-line"), false);
 });
 
 test("batch wrong answers hold the verdict with the correct option before advancing", async () => {

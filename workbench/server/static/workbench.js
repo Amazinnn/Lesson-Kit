@@ -2722,11 +2722,12 @@
       days.forEach(function (day) { max = Math.max(max, day.count); });
       var nonzero = days.filter(function (day) { return day.count > 0; });
       var average = nonzero.length
-        ? Math.max(3, nonzero.reduce(function (sum, day) { return sum + day.count; }, 0) / nonzero.length)
-        : 3;
-      workloadBars.innerHTML = days.map(function (day) {
+        ? nonzero.reduce(function (sum, day) { return sum + day.count; }, 0) / nonzero.length
+        : 0;
+      var heavyThreshold = average * 2;
+      var bars = days.map(function (day) {
         var height = max ? Math.round((day.count / max) * 72) : 0;
-        var heavy = day.count >= average && day.count > 0;
+        var heavy = day.count >= heavyThreshold && day.count > 0;
         var label = day.date.slice(8) === "01" || day.count
           ? day.date.slice(8) : "";
         return "<div class='bar-col" + (heavy ? " heavy" : "") + "' data-bar-date='" + day.date + "'>"
@@ -2735,8 +2736,38 @@
           + "<span class='bar-label'>" + label + "</span>"
           + "<span class='bar-count'>" + (day.count || "") + "</span></div>";
       }).join("");
+      var trend = "";
+      if (max) {
+        var fitted = days.map(function (day, index) {
+          var previous = days[index - 1] || day;
+          var next = days[index + 1] || day;
+          return (previous.count + day.count * 2 + next.count) / 4;
+        });
+        var points = fitted.map(function (count, index) {
+          return { x: 50 + index * 100, y: 78 - (count / max) * 62 };
+        });
+        var path = "M " + points[0].x + " " + points[0].y;
+        for (var i = 1; i < points.length; i += 1) {
+          var midpoint = (points[i - 1].x + points[i].x) / 2;
+          path += " C " + midpoint + " " + points[i - 1].y
+            + ", " + midpoint + " " + points[i].y
+            + ", " + points[i].x + " " + points[i].y;
+        }
+        var heavyPoints = days.map(function (day, index) {
+          if (!(day.count >= heavyThreshold && day.count > 0)) return "";
+          return "<circle class='workload-heavy-point' cx='" + points[index].x
+            + "' cy='" + points[index].y + "' r='5'><title>"
+            + day.date + "，" + day.count + " 项，任务偏重</title></circle>";
+        }).join("");
+        trend = "<svg class='workload-trend' viewBox='0 0 1400 90' preserveAspectRatio='none'"
+          + " role='img' aria-label='14 天任务量趋势'>"
+          + "<path class='workload-trend-shadow' d='" + path + "'></path>"
+          + "<path class='workload-trend-line' d='" + path + "'></path>"
+          + heavyPoints + "</svg>";
+      }
+      workloadBars.innerHTML = bars + trend;
       var heavyDays = days.filter(function (day) {
-        return day.count >= average && day.count > 0;
+        return day.count >= heavyThreshold && day.count > 0;
       });
       if (heavyDays.length) {
         workloadPrefill.classList.remove("hidden");
