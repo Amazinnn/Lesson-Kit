@@ -113,7 +113,7 @@ _Avoid_：闪卡（旧称，现指另一功能）、自由文本作答（微题�
 
 ### 闪卡 / Flash Card
 从知识点解构出的键值对记忆卡（类似 dict 的一条键值对）：正面（front）→回忆→揭示背面（back）→1–5 自评，无选项、无判分。知识点是唯一事实源（Note），卡是派生视图（Card），一卡只放一个原子事实；每卡一行独立调度。练习会话第四种模式的练习对象；也可用于背单词、背概念等场景。AI 自动解构知识点成卡（含 cloze 挖空成卡，见 DISCUSSION-RECORD 专题 22 澄清）属 Check 管线后置实验，不在当前范围。
-_Avoid_：小测（微题的卡片式渲染，旧「闪卡」）、方向卡（已拆除 UI）、普通题冒充
+_Avoid_：小测（微题的卡片式渲染，旧「闪卡」）、普通题冒充
 出处：introduce-flash-card；openspec/specs/flash-card（随归档落位）
 
 ### 闪卡方向能力 / Flash-card Direction Capability
@@ -199,8 +199,8 @@ _Avoid_：成绩、能力值
 出处：review-workbench spec「Weak knowledge point list」
 
 ### 方向 / Direction
-记忆回忆类知识点的练习朝向（如中→英、英→中）。每个方向是独立学习动作、独立调度行；评分可携带 direction 写对应方向行。方向卡 UI 已随复习页拆除，待真实使用再议（专题 19）。
-_Avoid_：正反面卡片页（已拆除的 UI）
+记忆回忆类知识点的练习朝向（如中→英、英→中）。每个方向是独立学习动作、独立调度行；闪卡模式可在开练前选择正向、反向或混合，也可用卡上的 ⇄ 随时交换当前双向卡的提问方向。
+_Avoid_：把方向当作一张新内容卡
 出处：review-workbench spec「Directional schedule entries」
 
 ## 目标、计划与时间

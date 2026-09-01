@@ -9,8 +9,10 @@ function problemItem(id, payload) {
   return { id, kind: "problem", payload: payload || { problem_id: id, problem_text: "题面 " + id } };
 }
 
-function cardItem(id, front, back) {
-  return { id, kind: "card", payload: { card_id: id, front: front || "正面 " + id, back: back || "背面 " + id } };
+function cardItem(id, front, back, direction = "forward") {
+  return { id, kind: "card", direction, payload: { card_id: id,
+    front: front || "正面 " + id, back: back || "背面 " + id,
+    directions: ["forward", "reverse"] } };
 }
 
 test("append moves the cursor to the tail", () => {
@@ -66,6 +68,8 @@ test("serialize / deserialize round-trips cursor, cards, and view state", () => 
   assert.equal(card.payload.back, "n+1 个物品放进 n 个抽屉");
   assert.equal(card.revealed, true);
   assert.equal(card.state, "unrated");
+  assert.equal(card.direction, "forward");
+  assert.deepEqual(card.payload.directions, ["forward", "reverse"]);
   const problem = restored.items[1];
   assert.equal(problem.kind, "problem");
   assert.equal(problem.payload.problem_text, "1+1=?");
@@ -85,6 +89,20 @@ test("wire format keeps the historical session-entry field names", () => {
   assert.equal(entry.front, "正面 kp-1-fc-002");
   assert.equal(entry.back, "背面 kp-1-fc-002");
   assert.equal(entry.state, "active");
+  assert.equal(entry.direction, "forward");
+  assert.deepEqual(entry.directions, ["forward", "reverse"]);
+});
+
+test("same card directions remain separate history actions", () => {
+  const d = deck.createDeck();
+  deck.append(d, cardItem("card-1", "F", "B", "forward"));
+  deck.append(d, cardItem("card-1", "F", "B", "reverse"));
+  deck.settle(d, "card-1", { revealed: true }, "reverse");
+  assert.equal(d.items[0].revealed, false);
+  assert.equal(d.items[1].revealed, true);
+  assert.deepEqual(deck.directionKeys(d), ["card-1:forward", "card-1:reverse"]);
+  const restored = deck.deserialize(deck.serialize(d));
+  assert.deepEqual(deck.directionKeys(restored), ["card-1:forward", "card-1:reverse"]);
 });
 
 test("deserialize accepts the v1 legacy bare-array format at the tail", () => {

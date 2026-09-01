@@ -27,6 +27,7 @@
       verdict: entry.verdict === undefined ? null : entry.verdict,
       revealed: !!entry.revealed,
       state: entry.state || "active",
+      direction: entry.kind === "card" ? (entry.direction || "forward") : "",
     };
   }
 
@@ -37,9 +38,12 @@
     return item;
   }
 
-  function find(deck, id) {
+  function find(deck, id, direction) {
     for (var i = 0; i < deck.items.length; i += 1) {
-      if (deck.items[i].id === id) return deck.items[i];
+      if (deck.items[i].id === id
+          && (direction === undefined || deck.items[i].direction === direction)) {
+        return deck.items[i];
+      }
     }
     return null;
   }
@@ -58,8 +62,8 @@
     return deck.items[index];
   }
 
-  function settle(deck, id, patch) {
-    var item = find(deck, id);
+  function settle(deck, id, patch, direction) {
+    var item = find(deck, id, direction);
     if (!item) return null;
     Object.keys(patch || {}).forEach(function (key) {
       item[key] = patch[key];
@@ -84,6 +88,8 @@
       data.card = true;
       data.front = (item.payload && item.payload.front) || "";
       data.back = (item.payload && item.payload.back) || "";
+      data.directions = (item.payload && item.payload.directions) || ["forward"];
+      data.direction = item.direction || "forward";
     } else {
       data.payload = item.payload || null;
     }
@@ -105,13 +111,15 @@
       id: data.problem_id,
       kind: card ? "card" : "problem",
       payload: card
-        ? { card_id: data.problem_id, front: data.front, back: data.back }
+        ? { card_id: data.problem_id, front: data.front, back: data.back,
+            directions: data.directions || ["forward"] }
         : (data.payload || null),
       answer_text: data.answer_text || "",
       choices: data.choices || [],
       verdict: typeof data.verdict === "boolean" ? data.verdict : null,
       revealed: !!data.revealed,
       state: data.state || "active",
+      direction: card ? (data.direction || "forward") : "",
     };
   }
 
@@ -134,6 +142,11 @@
     return deck;
   }
 
+  function directionKeys(deck) {
+    return deck.items.filter(function (item) { return item.kind === "card"; })
+      .map(function (item) { return item.id + ":" + item.direction; });
+  }
+
   return {
     createDeck: createDeck,
     makeItem: makeItem,
@@ -144,6 +157,7 @@
     goTo: goTo,
     settle: settle,
     ids: ids,
+    directionKeys: directionKeys,
     serialize: serialize,
     deserialize: deserialize,
   };
