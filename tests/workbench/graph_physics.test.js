@@ -96,6 +96,16 @@ test("stronger attraction has a shorter spring target", () => {
   assert.ok(physics.targetDistance(1.25, 10, 20) < physics.targetDistance(0.75, 10, 20));
 });
 
+test("relationship visual weight grows monotonically with attraction", () => {
+  const weak = physics.edgeVisual(0.75);
+  const strong = physics.edgeVisual(1.875);
+  assert.equal(weak.score, 0);
+  assert.equal(strong.score, 1);
+  assert.ok(strong.width > weak.width);
+  assert.ok(strong.opacity > weak.opacity);
+  assert.ok(strong.shadowWidth > strong.width);
+});
+
 test("a stronger edge settles its pair closer than a weak edge", () => {
   function settledPair(attraction) {
     const simulation = physics.createSimulation(
@@ -206,12 +216,22 @@ test("layout scoring treats collinear and near-overlapping edges as clutter", ()
   assert.equal(score.crossings, 3);
 });
 
+test("deterministic swapping removes an avoidable crossing", () => {
+  const nodes = [
+    { id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 100 },
+    { id: "c", x: 0, y: 100 }, { id: "d", x: 100, y: 0 },
+  ];
+  const edges = [{ source: "a", target: "b" }, { source: "c", target: "d" }];
+  assert.equal(physics.scoreLayout(nodes, edges).crossings, 1);
+  assert.equal(physics.optimizeCrossings(nodes, edges, 2).crossings, 0);
+});
+
 test("best layout selection is lexicographic and stable on ties", () => {
   const candidates = [
-    { name: "waste", score: { crossings: 0, labelCollisions: 1, waste: 1 } },
-    { name: "collision", score: { crossings: 0, labelCollisions: 0, waste: 999 } },
-    { name: "crossing", score: { crossings: 1, labelCollisions: 0, waste: 0 } },
-    { name: "tie", score: { crossings: 0, labelCollisions: 0, waste: 999 } },
+    { name: "waste", score: { crossings: 0, labelCollisions: 1, edgeLength: 1, waste: 1 } },
+    { name: "collision", score: { crossings: 0, labelCollisions: 0, edgeLength: 5, waste: 999 } },
+    { name: "crossing", score: { crossings: 1, labelCollisions: 0, edgeLength: 0, waste: 0 } },
+    { name: "tie", score: { crossings: 0, labelCollisions: 0, edgeLength: 5, waste: 999 } },
   ];
   assert.equal(physics.chooseBestLayout(candidates).name, "collision");
 });

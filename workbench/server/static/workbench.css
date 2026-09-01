@@ -475,13 +475,36 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   cursor: grab;
   transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
 }
+.graph-edge-pipe { transition: opacity 120ms ease; }
+.graph-edge {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  transition: stroke-width 120ms ease;
+}
+.graph-edge-shadow {
+  stroke: rgba(15, 17, 21, .16);
+  stroke-width: var(--edge-shadow-width);
+  transform: translateY(1px);
+}
+.graph-edge-body {
+  stroke: rgba(15, 17, 21, var(--edge-opacity));
+  stroke-width: var(--edge-width);
+}
+.graph-edge-highlight {
+  stroke: rgba(255, 255, 255, .56);
+  stroke-width: var(--edge-highlight-width);
+  transform: translateY(-.45px);
+}
+.graph-node { position: absolute; z-index: 2; padding: 0; transform: translate(-50%, -50%); border: 2px solid var(--dsw-border-l2); border-radius: 50%; background: var(--dsw-bg-layer-1); box-shadow: var(--dsw-shadow-lv1); cursor: grab; }
 .graph-node:hover { transform: translate(-50%, -50%) scale(1.08); background: var(--dsw-interactive-bg-hover); }
 .graph-node:active { cursor: grabbing; }
 .graph-node-label { position: absolute; z-index: 3; max-width: 168px; transform: translateX(-50%); color: var(--dsw-label-primary); font-size: 12px; font-weight: 600; line-height: 16px; text-align: center; pointer-events: none; }
 .graph-focus-selected { opacity: 1; }
 .graph-node.graph-focus-selected { box-shadow: 0 0 0 4px rgba(24, 103, 180, .18); }
 .graph-focus-near { opacity: 1; }
-.graph-edge.graph-focus-near { stroke-width: 2; }
+.graph-edge-pipe.graph-focus-near .graph-edge-body { stroke-width: calc(var(--edge-width) + 1px); }
 .graph-focus-mid { opacity: .58; }
 .graph-focus-far { opacity: .14; }
 .graph-node.needs_work { border-color: #df8f89; background: #fff5f4; }

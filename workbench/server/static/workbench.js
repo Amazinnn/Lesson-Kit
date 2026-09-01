@@ -657,15 +657,35 @@
       edgeLayer.setAttribute("class", "graph-edge-layer");
       edgeLayer.setAttribute("aria-hidden", "true");
       stage.appendChild(edgeLayer);
-      graphSimulation.edges.forEach(function (edge) {
-        var link = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        link.setAttribute("class", "graph-edge");
+      graphSimulation.edges.slice().sort(function (a, b) {
+        return (Number(a.attraction) || 1) - (Number(b.attraction) || 1)
+          || String(a.source + a.target).localeCompare(String(b.source + b.target));
+      }).forEach(function (edge) {
+        var visual = GraphPhysics.edgeVisual(edge.attraction);
+        var pipe = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        pipe.setAttribute("class", "graph-edge-pipe");
+        pipe.setAttribute("data-strength", visual.score.toFixed(3));
+        [
+          ["--edge-width", visual.width.toFixed(2) + "px"],
+          ["--edge-shadow-width", visual.shadowWidth.toFixed(2) + "px"],
+          ["--edge-highlight-width", visual.highlightWidth.toFixed(2) + "px"],
+          ["--edge-opacity", visual.opacity.toFixed(3)],
+        ].forEach(function (property) {
+          if (pipe.style.setProperty) pipe.style.setProperty(property[0], property[1]);
+          else pipe.style[property[0]] = property[1];
+        });
+        var paths = ["shadow", "body", "highlight"].map(function (layer) {
+          var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("class", "graph-edge graph-edge-" + layer);
+          pipe.appendChild(path);
+          return path;
+        });
         if (!reducedGraphMotion
             && (graphEnteringIds.has(edge.source) || graphEnteringIds.has(edge.target))) {
-          link.classList.add("graph-filter-enter");
+          pipe.classList.add("graph-filter-enter");
         }
-        edgeLayer.appendChild(link);
-        graphEdgeElements.push({ element: link, edge: edge });
+        edgeLayer.appendChild(pipe);
+        graphEdgeElements.push({ element: pipe, paths: paths, edge: edge });
       });
       graphSimulation.nodes.forEach(function (node) {
         var button = document.createElement("button");
@@ -787,9 +807,10 @@
         var bend = obstructed ? Math.min(28, length * 0.1) : 0;
         var controlX = (source.x + target.x) / 2 - dy / length * bend;
         var controlY = (source.y + target.y) / 2 + dx / length * bend;
-        entry.element.setAttribute("d", bend ? "M " + source.x + " " + source.y
+        var path = bend ? "M " + source.x + " " + source.y
           + " Q " + controlX + " " + controlY + " " + target.x + " " + target.y
-          : "M " + source.x + " " + source.y + " L " + target.x + " " + target.y);
+          : "M " + source.x + " " + source.y + " L " + target.x + " " + target.y;
+        entry.paths.forEach(function (layer) { layer.setAttribute("d", path); });
       });
       if (!graphSimulation) return;
       graphSimulation.nodes.forEach(function (node) {
