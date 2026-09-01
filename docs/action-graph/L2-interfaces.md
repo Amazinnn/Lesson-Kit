@@ -13,7 +13,7 @@
 | GET `/plan` · POST `/plan/recalculate` | 读/写 | 计划 | 浏 |
 | GET·POST `/goals`；PATCH·DELETE·GET `/goals/{id}` | 读/写 | goals.json | 浏（UI 仅用创建） |
 | POST `/pull` | 读 | 拉取 | 双 |
-| POST `/pull-cards` | 读 | 拉卡 | 双 |
+| POST `/pull-cards` | 读 | 拉卡（direction_mode + 独立方向排除） | 双 |
 | POST `/practice` | 写 | practice 记录 | 双 |
 | POST `/feedback` | 写 | 四件套 | 双 |
 | GET `/problem/{id}` · GET `/kp/{id}` | 读 | 查询 | 双 |

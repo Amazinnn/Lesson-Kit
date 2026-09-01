@@ -643,6 +643,7 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertIn("flash-card-patch", prompt)
         self.assertIn("micro-quiz-patch", prompt)
         self.assertIn("source_evidence", prompt)
+        self.assertIn('directions', prompt)
         self.assertIn("对话内出题一律用 lessonkit-action 区块", prompt)
         self.assertIn("禁止直接运行 wb ingest", prompt)
         self.assertIn("topic_label", prompt)

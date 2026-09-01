@@ -49,6 +49,15 @@ class CardRulesTests(unittest.TestCase):
             cards.validate_card_row(manifest_item(topic_label="长" * 41)),
         )
 
+    def test_direction_capability_contract(self):
+        self.assertEqual(cards.validate_card_row(manifest_item()), [])
+        self.assertEqual(
+            cards.validate_card_row(manifest_item(directions=["forward", "reverse"])), [])
+        self.assertIn(
+            'directions must be ["forward"] or ["forward", "reverse"]',
+            cards.validate_card_row(manifest_item(directions=["reverse"])),
+        )
+
 
 class CardIngestTests(unittest.TestCase):
     def setUp(self):
@@ -68,6 +77,7 @@ class CardIngestTests(unittest.TestCase):
             CREATE TABLE flash_cards (card_id TEXT PRIMARY KEY,
                 kp_id TEXT NOT NULL, front TEXT NOT NULL, back TEXT NOT NULL,
                 source_evidence TEXT NOT NULL, topic_label TEXT,
+                directions TEXT NOT NULL DEFAULT '["forward"]',
                 ingest_batch_id TEXT);
             CREATE TABLE content_sequences (
                 scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
@@ -123,7 +133,7 @@ class CardIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
-                "SELECT kp_id, front, back, source_evidence, topic_label, ingest_batch_id"
+                "SELECT kp_id, front, back, source_evidence, topic_label, directions, ingest_batch_id"
                 " FROM flash_cards"
                 " WHERE card_id='dmath-ch06-fc-001'"
             ).fetchone()
@@ -135,6 +145,7 @@ class CardIngestTests(unittest.TestCase):
         self.assertEqual(row, ("dmath-ch06-kp-001", manifest_item()["front"],
                                manifest_item()["back"], manifest_item()["source_evidence"],
                                "鸽巢原理",
+                               '["forward"]',
                                "batch-001"))
         self.assertEqual(batch[0], "flash-card-patch")
         self.assertEqual(Path(batch[1]), snapshot_path)
@@ -150,6 +161,17 @@ class CardIngestTests(unittest.TestCase):
         finally:
             conn.close()
         self.assertIsNone(topic_label)
+
+    def test_bidirectional_capability_is_stored_without_copying_the_card(self):
+        ingest.apply_flash_cards(self.db_path, self.manifest([
+            manifest_item(directions=["forward", "reverse"]),
+        ]))
+        conn = sqlite3.connect(self.db_path)
+        try:
+            rows = conn.execute("SELECT directions FROM flash_cards").fetchall()
+        finally:
+            conn.close()
+        self.assertEqual(rows, [('[' + '"forward", "reverse"' + ']',)])
 
     def test_gate_rejects_topic_label_markup_damage(self):
         path = self.manifest([manifest_item(topic_label="<b>鸽巢原理</b>")])
@@ -290,6 +312,48 @@ class CardPracticeTests(unittest.TestCase):
         finally:
             pool.close()
 
+    def test_mixed_pull_expands_and_excludes_direction_actions_independently(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.execute(
+            "UPDATE flash_cards SET directions='[\"forward\", \"reverse\"]' "
+            "WHERE card_id='dmath-ch06-fc-001'"
+        )
+        conn.execute(
+            "INSERT INTO review_schedule (item_type, item_id, direction, due_at) "
+            "VALUES ('card', 'dmath-ch06-fc-001', 'reverse', ?)",
+            (date.today().isoformat(),),
+        )
+        conn.commit()
+        conn.close()
+        pool = self.pool()
+        try:
+            result = api.pull_cards(pool, {}, {}, {
+                "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "mixed",
+            })
+            keys = [(card["card_id"], card["direction"]) for card in result["cards"]]
+            self.assertEqual(keys[0], ("dmath-ch06-fc-001", "reverse"))
+            self.assertIn(("dmath-ch06-fc-001", "forward"), keys)
+            result = api.pull_cards(pool, {}, {}, {
+                "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "mixed",
+                "exclude_directions": ["dmath-ch06-fc-001:reverse"],
+            })
+            keys = [(card["card_id"], card["direction"]) for card in result["cards"]]
+            self.assertNotIn(("dmath-ch06-fc-001", "reverse"), keys)
+            self.assertIn(("dmath-ch06-fc-001", "forward"), keys)
+        finally:
+            pool.close()
+
+    def test_reverse_pull_keeps_forward_only_cards(self):
+        pool = self.pool()
+        try:
+            result = api.pull_cards(pool, {}, {}, {
+                "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "reverse",
+            })
+            self.assertTrue(result["cards"])
+            self.assertTrue(all(card["direction"] == "forward" for card in result["cards"]))
+        finally:
+            pool.close()
+
     def test_feedback_card_writes_schedule_signal_and_state(self):
         from workbench.domain import feedback
         pool = self.pool()
@@ -307,6 +371,30 @@ class CardPracticeTests(unittest.TestCase):
             events = pool.feedback_events("card", "dmath-ch06-fc-001")
             self.assertEqual(len(events), 1)
             self.assertEqual(events[0]["rating"], 2)
+        finally:
+            pool.close()
+
+    def test_bidirectional_feedback_advances_only_the_used_direction(self):
+        pool = self.pool()
+        try:
+            from workbench.domain import feedback
+            feedback.apply(pool, "card", "dmath-ch06-fc-001", rating=4,
+                           direction="forward")
+            forward = pool.schedule_get("card", "dmath-ch06-fc-001", "forward")
+            reverse = pool.schedule_get("card", "dmath-ch06-fc-001", "reverse")
+            self.assertIsNotNone(forward)
+            self.assertIsNone(reverse)
+        finally:
+            pool.close()
+
+    def test_feedback_rejects_reverse_for_a_forward_only_card(self):
+        pool = self.pool()
+        try:
+            with self.assertRaises(api.ApiError):
+                api.feedback_record(pool, {}, {}, {
+                    "item_type": "card", "item_id": "dmath-ch06-fc-001",
+                    "rating": 4, "direction": "reverse",
+                })
         finally:
             pool.close()
 

@@ -9,8 +9,8 @@ from workbench import ingest
 from workbench.bridge import conversation_providers, conversations
 from workbench.data import goals, queries
 from workbench.domain import (
-    feedback, learning_state, planning, pull, schedule as schedule_rules,
-    signals as signal_rules, weak,
+    cards as card_rules, feedback, learning_state, planning, pull,
+    schedule as schedule_rules, signals as signal_rules, weak,
 )
 from workbench.server import context as agent_context
 
@@ -201,22 +201,19 @@ def pull_cards(pool, workspace, params, body):
     ):
         raise ApiError(400, "exclude_ids must be a string list")
     exclude = set(exclude_ids)
-    today = date.today().isoformat()
-    due_at = {
-        row["item_id"]: str(row["due_at"])
-        for row in pool.schedule_rows()
-        if row["item_type"] == "card" and row.get("due_at")
-    }
-    cards = [
-        card for card in pool.cards_for_kps(kp_ids)
-        if card["card_id"] not in exclude
-    ]
-    cards.sort(key=lambda card: (
-        (0, due_at[card["card_id"]], card["card_id"])
-        if due_at.get(card["card_id"], "")[:10] <= today and card["card_id"] in due_at
-        else (1, "", card["card_id"])
-    ))
-    return {"cards": cards}
+    direction_mode = body.get("direction_mode", "forward")
+    if direction_mode not in {"forward", "reverse", "mixed"}:
+        raise ApiError(400, "direction_mode must be forward, reverse, or mixed")
+    exclude_directions = body.get("exclude_directions", [])
+    if not isinstance(exclude_directions, list) or not all(
+        isinstance(item, str) for item in exclude_directions
+    ):
+        raise ApiError(400, "exclude_directions must be a string list")
+    return {"cards": card_rules.select(
+        pool.cards_for_kps(kp_ids), pool.schedule_rows(),
+        preference=direction_mode, excluded_ids=exclude,
+        excluded_directions=set(exclude_directions), today=date.today().isoformat(),
+    )}
 
 
 def practice(pool, workspace, params, body):
@@ -276,6 +273,8 @@ def feedback_record(pool, workspace, params, body):
     direction = body.get("direction", "")
     if not isinstance(direction, str):
         raise ApiError(400, "direction must be a string")
+    if item_type == "card" and direction not in {"", *item["directions"]}:
+        raise ApiError(400, "direction is not available for this card")
     return feedback.apply(
         pool, item_type, item_id, rating=rating, note=note,
         direction=direction,

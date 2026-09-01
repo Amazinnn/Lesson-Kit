@@ -72,6 +72,7 @@ workbench/
 - 新表 `feedback_events(id, item_type, item_id, rating, note, created_at)` 追加日志。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
 - 题目与闪卡可增量拥有 `display_title`（可读短标题）与 `topic_label`（单一主题标签）；它们是内容展示字段，不替代稳定 ID。
+- 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
 - 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
 - 新列：`knowledge_points.figure_paths`、`problems.figure_paths`（逻辑路径 JSON）、
   `problem_attempts.answer_text`。
@@ -89,6 +90,7 @@ workbench/
 - `domain.weak.score(pool, course, chapter, now) -> [(kp, score, reasons)]`——原因可解释。
 - `domain.pull.select(pool, kp_ids, n, mode, source_kind?) -> {problems:[...],
   shortage:[kp_id...]}`——永不伪造内容；候选机制已物理移除（2026-08-30）。
+- `domain.cards.select(cards, schedule_rows, preference, excluded_*) -> [card action]`——把内容方向能力展开为独立练习动作并按各自调度行排序，零 IO。
 - `domain.feedback.apply(pool, item_type, item_id, rating?, note?) -> changes`——映射规则全在
   feedback.py，单测覆盖关键词表。
 - `domain.schedule.after_result(pool, item, result, now)`——SM-2 变体；`due(pool, days) -> [...]`。
