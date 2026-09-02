@@ -2694,8 +2694,13 @@
 
   var timeView = document.getElementById("time-view");
   if (timeView) {
+    var timeViewContent = document.getElementById("time-view-content");
     var calendarGrid = document.getElementById("calendar-grid");
+    var calendarMonthLabel = document.getElementById("calendar-month-label");
     var workloadBars = document.getElementById("workload-bars");
+    var workloadTotal = document.getElementById("workload-total");
+    var workloadPeak = document.getElementById("workload-peak");
+    var workloadOverdue = document.getElementById("workload-overdue");
     var workloadPrefill = document.getElementById("workload-prefill");
     var timeViewEmpty = document.getElementById("time-view-empty");
     var WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
@@ -2717,6 +2722,9 @@
       var weekCount = Math.ceil((lead + daysInMonth) / 7);
       var periods = [];
       var offGrid = [];
+      if (calendarMonthLabel) {
+        calendarMonthLabel.textContent = year + "年" + (month + 1) + "月";
+      }
 
       function plainDate(value) {
         if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) {
@@ -2799,12 +2807,17 @@
           var overdue = segment.period.end < new Date(today.getFullYear(), today.getMonth(), today.getDate())
             ? " overdue" : "";
           var edges = (segment.begins ? " segment-start" : "") + (segment.ends ? " segment-end" : "");
+          if (!segment.ends) edges += " segment-continuing";
           var span = segment.endColumn - segment.startColumn + 1;
           var range = isoDate(segment.period.start) + " 至 " + isoDate(segment.period.end);
+          var labelHere = !segment.period.labelShown
+            && (span > 1 || segment.ends || week === weekCount - 1);
+          var label = labelHere ? "<span class='calendar-goal-label'>" + title + "</span>" : "";
+          if (labelHere) segment.period.labelShown = true;
           return "<span class='calendar-goal" + kind + overdue + edges + "'"
             + " style='grid-column:" + segment.startColumn + " / span " + span
             + ";grid-row:" + (segment.lane + 1) + "' title='" + title + " · " + range
-            + "' aria-label='" + title + "，" + range + "'>" + title + "</span>";
+            + "' aria-label='" + title + "，" + range + "'>" + label + "</span>";
         }).join("");
         var laneCount = segments.reduce(function (highest, segment) {
           return Math.max(highest, segment.lane + 1);
@@ -2818,54 +2831,42 @@
 
     function renderBars(days) {
       var max = 0;
-      days.forEach(function (day) { max = Math.max(max, day.count); });
+      var total = 0;
+      days.forEach(function (day) {
+        max = Math.max(max, day.count);
+        total += day.count;
+      });
       var nonzero = days.filter(function (day) { return day.count > 0; });
       var average = nonzero.length
         ? nonzero.reduce(function (sum, day) { return sum + day.count; }, 0) / nonzero.length
         : 0;
       var heavyThreshold = average * 2;
-      var bars = days.map(function (day) {
-        var height = max ? Math.round((day.count / max) * 72) : 0;
-        var heavy = day.count >= heavyThreshold && day.count > 0;
-        var label = day.date.slice(8);
-        return "<div class='bar-col" + (heavy ? " heavy" : "") + "' data-bar-date='" + day.date + "'>"
-          + "<div class='bar-fill'" + (height ? " style='height:" + height + "px'" : "") + "></div>"
-          + (heavy ? "<span class='bar-heavy-flag'>重</span>" : "")
-          + "<span class='bar-label'>" + label + "</span>"
-          + "<span class='bar-count'>" + (day.count || "") + "</span></div>";
-      }).join("");
-      var trend = "";
-      var nonzeroDays = days.filter(function (day) { return day.count > 0; });
-      if (nonzeroDays.length >= 2) {
-        var fitted = days.map(function (day, index) {
-          var previous = days[index - 1] || day;
-          var next = days[index + 1] || day;
-          return (previous.count + day.count * 2 + next.count) / 4;
-        });
-        var points = fitted.map(function (count, index) {
-          return { x: 50 + index * 100, y: 78 - (count / max) * 62 };
-        });
-        var path = "M " + points[0].x + " " + points[0].y;
-        for (var i = 1; i < points.length; i += 1) {
-          var midpoint = (points[i - 1].x + points[i].x) / 2;
-          path += " C " + midpoint + " " + points[i - 1].y
-            + ", " + midpoint + " " + points[i].y
-            + ", " + points[i].x + " " + points[i].y;
-        }
-        var heavyPoints = days.map(function (day, index) {
-          if (!(day.count >= heavyThreshold && day.count > 0)) return "";
-          return "<circle class='workload-heavy-point' cx='" + points[index].x
-            + "' cy='" + points[index].y + "' r='5'><title>"
-            + day.date + "，" + day.count + " 项，任务偏重</title></circle>";
-        }).join("");
-        trend = "<svg class='workload-trend' viewBox='0 0 1400 90' preserveAspectRatio='none'"
-          + " role='img' aria-label='14 天任务量趋势'>"
-          + "<path class='workload-trend-shadow' d='" + path + "'></path>"
-          + "<path class='workload-trend-line' d='" + path + "'></path>"
-          + heavyPoints + "</svg>";
+      var peakDay = days.find(function (day) { return day.count === max && max > 0; });
+      var overdue = days.length ? Number(days[0].overdue || 0) : 0;
+      if (workloadTotal) workloadTotal.textContent = "共 " + total + " 项";
+      if (workloadPeak) {
+        workloadPeak.textContent = peakDay
+          ? "峰值 " + peakDay.date.slice(5).replace("-", ".") + " · " + peakDay.count + " 项"
+          : "峰值 —";
       }
-      workloadBars.innerHTML = bars + trend
-        + (nonzeroDays.length ? "" : "<p class='muted workload-empty'>最近 14 天暂无到期任务。</p>");
+      if (workloadOverdue) workloadOverdue.textContent = "逾期 " + overdue + " 项";
+      var bars = days.map(function (day) {
+        var height = max ? Math.round((day.count / max) * 132) : 0;
+        var heavy = day.count >= heavyThreshold && day.count > 0;
+        var peak = day === peakDay;
+        var label = day.date.slice(8);
+        var state = (peak ? " peak" : "") + (heavy ? " heavy" : "");
+        var stateLabel = (peak ? "，峰值" : "") + (heavy ? "，任务偏重" : "");
+        return "<div class='bar-col" + state + "' role='listitem' data-bar-date='" + day.date
+          + "' aria-label='" + day.date + "，" + day.count + " 项" + stateLabel + "'>"
+          + "<div class='bar-plot'>"
+          + (day.count ? "<span class='bar-value' style='bottom:" + (height + 5) + "px'>" + day.count + "</span>" : "")
+          + (day.count ? "<div class='bar-fill' style='height:" + height + "px'></div>" : "")
+          + (heavy ? "<span class='bar-heavy-flag' style='bottom:" + Math.max(height - 3, 0) + "px' aria-hidden='true'></span>" : "")
+          + "</div><span class='bar-date'>" + label + "</span></div>";
+      }).join("");
+      workloadBars.innerHTML = bars
+        + (nonzero.length ? "" : "<p class='muted workload-empty'>未来 14 天暂无到期复习项。</p>");
       var heavyDays = days.filter(function (day) {
         return day.count >= heavyThreshold && day.count > 0;
       });
@@ -2882,10 +2883,12 @@
       var hasWorkload = days.some(function (day) { return day.count > 0; });
       if (!goals.length && !hasWorkload) {
         timeView.classList.remove("hidden");
+        if (timeViewContent) timeViewContent.classList.add("hidden");
         timeViewEmpty.classList.remove("hidden");
         return;
       }
       timeView.classList.remove("hidden");
+      if (timeViewContent) timeViewContent.classList.remove("hidden");
       renderMonthGrid(goals);
       renderBars(days);
       if (!goals.length) {

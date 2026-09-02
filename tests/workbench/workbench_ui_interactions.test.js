@@ -2120,7 +2120,11 @@ function timeElements() {
     layout: layout(),
     "time-view": new FakeElement("time-view"),
     "calendar-grid": new FakeElement("calendar-grid"),
+    "calendar-month-label": new FakeElement("calendar-month-label"),
     "workload-bars": new FakeElement("workload-bars"),
+    "workload-total": new FakeElement("workload-total"),
+    "workload-peak": new FakeElement("workload-peak"),
+    "workload-overdue": new FakeElement("workload-overdue"),
     "workload-prefill": new FakeElement("workload-prefill"),
     "time-view-empty": new FakeElement("time-view-empty"),
     "ai-input": new FakeElement("ai-input"),
@@ -2131,7 +2135,7 @@ function timeElements() {
   return elements;
 }
 
-test("time view renders goal calendar, heavy day marking, and prefill", async () => {
+test("time view renders thin goal tracks and an exact fixed-axis workload", async () => {
   const elements = timeElements();
   const today = new Date();
   const pad = (n) => String(n).padStart(2, "0");
@@ -2140,6 +2144,8 @@ test("time view renders goal calendar, heavy day marking, and prefill", async ()
   const deadline = iso(today); /* stays inside the rendered month */
   const monthStart = iso(new Date(today.getFullYear(), today.getMonth(), 1));
   const monthEnd = iso(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  const monthLead = (new Date(today.getFullYear(), today.getMonth(), 1).getDay() + 6) % 7;
+  const firstSunday = iso(new Date(today.getFullYear(), today.getMonth(), 7 - monthLead));
   runWorkbench({
     elements,
     storage: new FakeStorage(),
@@ -2150,11 +2156,12 @@ test("time view renders goal calendar, heavy day marking, and prefill", async ()
             { id: "goal-001", kind: "stage", title: "覆盖率 80%", start_date: monthStart, deadline: monthEnd },
             { id: "goal-002", kind: "long_term", title: "期末复习", start_date: monthStart, deadline: monthEnd },
             { id: "goal-003", kind: "stage", title: "旧目标", deadline },
+            { id: "goal-004", kind: "stage", title: "周日启动", start_date: firstSunday, deadline: monthEnd },
           ],
           days: Array.from({ length: 14 }, (_, offset) => ({
             date: iso(new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset)),
             count: offset === 3 ? 4 : (offset < 2 ? 1 : 0),
-            overdue: 0,
+            overdue: offset === 0 ? 2 : 0,
           })),
         });
       }
@@ -2167,12 +2174,21 @@ test("time view renders goal calendar, heavy day marking, and prefill", async ()
   assert.ok(elements["calendar-grid"]._innerHTML.includes("calendar-cell today"));
   assert.ok(elements["calendar-grid"]._innerHTML.includes("calendar-goal long-term"));
   assert.ok(elements["calendar-grid"]._innerHTML.includes("grid-row:2"));
-  assert.ok((elements["calendar-grid"]._innerHTML.match(/覆盖率 80%/g) || []).length > 1);
+  assert.equal((elements["calendar-grid"]._innerHTML.match(/>覆盖率 80%</g) || []).length, 1);
+  assert.ok(elements["calendar-grid"]._innerHTML.includes("calendar-goal-label"));
+  assert.ok(elements["calendar-grid"]._innerHTML.includes("segment-continuing"));
   assert.ok(elements["calendar-grid"]._innerHTML.includes("旧目标"));
-  assert.ok(elements["workload-bars"]._innerHTML.includes("重"));
-  assert.ok(elements["workload-bars"]._innerHTML.includes("workload-trend-line"));
-  assert.ok(elements["workload-bars"]._innerHTML.includes("14 天任务量趋势"));
-  assert.ok(elements["workload-bars"]._innerHTML.includes("workload-heavy-point"));
+  assert.equal((elements["calendar-grid"]._innerHTML.match(/>周日启动</g) || []).length, 1);
+  assert.match(elements["calendar-month-label"].textContent, /年\d+月/);
+  assert.match(elements["workload-bars"]._innerHTML, /bar-value[^>]*>4</);
+  assert.ok(elements["workload-bars"]._innerHTML.includes("bar-col peak heavy"));
+  assert.ok(elements["workload-bars"]._innerHTML.includes("bar-heavy-flag"));
+  assert.equal(elements["workload-bars"]._innerHTML.includes("workload-trend"), false);
+  assert.equal((elements["workload-bars"]._innerHTML.match(/class='bar-fill'/g) || []).length, 3);
+  assert.equal((elements["workload-bars"]._innerHTML.match(/class='bar-date'/g) || []).length, 14);
+  assert.equal(elements["workload-total"].textContent, "共 6 项");
+  assert.ok(elements["workload-peak"].textContent.includes("4 项"));
+  assert.equal(elements["workload-overdue"].textContent, "逾期 2 项");
   assert.equal(elements["workload-prefill"].classList.contains("hidden"), false);
   elements["workload-prefill"].click();
   assert.ok(elements["ai-input"].value.includes("帮我重排一下"));
