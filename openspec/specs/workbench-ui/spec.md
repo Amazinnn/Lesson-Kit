@@ -6,9 +6,7 @@ graph), a middle page area, a session-end self-rating step, and a right AI
 conversation column whose context display prioritizes the current problem
 without ever limiting what the agent can see. Visual style copies the DeepSeek
 Harness design system.
-
 ## Requirements
-
 ### Requirement: Three-column shell with navigation
 
 The workbench SHALL render a three-column desktop layout: a left navigation column with workspace and study navigation, a primary middle page, and a collapsible right Agent conversation column, with workspace/course/chapter context in the top bar. At narrow widths the middle page SHALL remain the single primary column; the left and right columns SHALL become dismissible drawers opened by two compact icon controls in the top bar. Switching workspaces or pages SHALL preserve recorded pool state.
@@ -699,6 +697,7 @@ existing tab-local selection and SHALL NOT create server-side state.
 - **WHEN** at least one knowledge point is selected and the learner activates
   the tray's practice action
 - **THEN** the practice page opens with that same explicit selection
+
 ### Requirement: Metric projection morphology
 
 The knowledge graph page SHALL preserve the same visible node elements when the learner switches among relationship structure, formal-problem count, importance, and learning-state projections. A metric projection SHALL map higher values to both a larger node radius and a target nearer the canvas center, while retaining deterministic separation for equal values. Learning-state projection SHALL rank attention as `needs_work`, `review`, unmarked, then `mastered`. Each projection SHALL apply a restrained, distinguishable Mondrian palette without changing or persisting learning data.
@@ -731,6 +730,7 @@ Projection changes SHALL reheat the existing in-memory simulation and animate no
 
 - **WHEN** a reduced-motion learner changes the active graph projection
 - **THEN** the projected terminal layout is drawn without requesting animation frames
+
 ### Requirement: Multi-state graph filtering
 
 The knowledge graph SHALL expose a multi-select learning-state filter using exactly `needs_work`, `review`, `mastered`, and `null` as its values. No selected value SHALL mean no filtering. One or more selected values SHALL retain the union of matching nodes and only edges whose two endpoints remain visible. Filtering SHALL be independent of the active graph projection and SHALL NOT change the explicit practice selection or any learning data.
@@ -768,6 +768,7 @@ When state filtering is active, each visible state SHALL receive a deterministic
 
 - **WHEN** a reduced-motion learner changes the state filter
 - **THEN** the graph draws the stable filtered clusters without scheduling fade or movement frames
+
 ### Requirement: Layered knowledge relationships
 
 The structure projection SHALL draw each visible relationship as a layered pipe
@@ -802,6 +803,7 @@ occupied area. The optimization SHALL schedule no recurring background work.
 
 - **WHEN** the same graph and canvas dimensions are laid out twice
 - **THEN** the selected positions and relationship ordering are identical
+
 ### Requirement: Complete primary learning text
 
 The workbench SHALL display user-authored knowledge titles, questions, notes, goal
@@ -835,6 +837,7 @@ page or Agent column.
 
 - **WHEN** an Agent message contains a table wider than the right column
 - **THEN** the table scrolls locally and the conversation composer remains in view
+
 ### Requirement: Soft Mondrian visual foundation
 
 The workbench SHALL use warm paper surfaces, dark structural rules, and restrained
@@ -869,6 +872,7 @@ or another geometric cue in addition to color.
 - **WHEN** a node has a formal learning state
 - **THEN** its existing state name remains available while its outline uses the
   corresponding visual role
+
 ### Requirement: Learning content is the visual anchor
 
 An active practice question and a knowledge-point body SHALL use the primary reading
@@ -903,3 +907,35 @@ change the current practice choreography.
 
 - **WHEN** a learner reaches the related-problem section
 - **THEN** the section is separated from the knowledge body and topics remain compact
+
+### Requirement: Flash card stacked presentation
+
+Every flash card in a session SHALL render as two fully overlapped card
+faces: the prompt face on top and the other face completely hidden behind
+it, with no edges visible before the reveal. Selecting Flash Card SHALL
+offer exactly a forward or reverse session preference, forward by default,
+chosen once before the first pull and fixed for the whole session. The
+workbench SHALL NOT offer a direction switch during the session, and every
+saved card rating SHALL carry the session direction. One explicit reveal
+action SHALL disclose the hidden face: the top face SHALL drift a short
+distance counterclockwise and settle, and the bottom face SHALL drift a
+short distance clockwise before sliding out beneath it, fully visible with
+a slight tilt, while the page grows to fit both faces. Reduced-motion
+preferences SHALL show the same final state directly without positional
+animation.
+
+#### Scenario: Reveal the hidden face
+
+- **WHEN** the learner activates the single reveal action on an unrevealed card
+- **THEN** the prompt face settles tilted aside, the other face becomes fully visible beneath it with a slight tilt, and no third control appears
+
+#### Scenario: Direction is fixed per session
+
+- **WHEN** a session starts with the reverse preference
+- **THEN** every card prompts from the back, the forward preference cannot be changed until the session ends, and no swap control exists
+
+#### Scenario: Reduced motion reveal
+
+- **WHEN** reduced motion is requested and the learner reveals a card
+- **THEN** both faces are shown in their final positions without animation frames
+
