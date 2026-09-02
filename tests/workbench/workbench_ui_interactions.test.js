@@ -1117,6 +1117,7 @@ test("graph projection keeps node elements and maps size, position, and palette"
   const canvas = new FakeElement("graph-canvas", { clientWidth: 800, clientHeight: 600 });
   const projection = new FakeElement("graph-projection");
   const hint = new FakeElement("graph-projection-hint");
+  hint.hidden = true;
   projection.value = "structure";
   const app = runWorkbench({
     elements: { layout: layout(), "graph-canvas": canvas, "graph-projection": projection,
@@ -1141,10 +1142,16 @@ test("graph projection keeps node elements and maps size, position, and palette"
   assert.ok(parseFloat(high.style.width) > parseFloat(low.style.width));
   assert.notEqual(high.style.backgroundColor, low.style.backgroundColor);
   assert.equal(high.classList.contains("projection-problem_count"), true);
+  assert.equal(stage.querySelectorAll(".graph-edge-pipe").length, 0);
+  assert.equal(hint.hidden, true);
   assert.match(hint.textContent, /题量越多/);
   const highDistance = Math.hypot(parseFloat(high.style.left) - 400, parseFloat(high.style.top) - 300);
   const lowDistance = Math.hypot(parseFloat(low.style.left) - 400, parseFloat(low.style.top) - 300);
   assert.ok(highDistance < lowDistance);
+  projection.trigger("mouseenter");
+  assert.equal(hint.hidden, false);
+  projection.trigger("mouseleave");
+  assert.equal(hint.hidden, true);
   assert.equal(app.rafCalls, 0);
 });
 

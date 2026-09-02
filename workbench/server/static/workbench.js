@@ -433,6 +433,7 @@
     var graphView = { x: 0, y: 0, scale: 1 };
     var graphAutoFit = true;
     var graphRecovered = false;
+    var graphRelaxed = false;
     var graphProjection = "structure";
     var graphLabelZoomed = false;
     var graphFocusedId = null;
@@ -501,6 +502,18 @@
           : graphProjection === "state"
             ? "越大、越靠内 = 关注优先级越高 · 蓝/黄/红/灰 = 掌握/复习/待加强/未标记"
             : "关系决定位置 · 大小表示题量";
+    }
+
+    function showGraphProjectionHint() {
+      if (!graphProjectionHint) return;
+      graphProjectionHint.hidden = false;
+      if (graphProjection && typeof graphProjection.offsetLeft === "number") {
+        graphProjectionHint.style.left = Math.max(24, graphProjection.offsetLeft) + "px";
+      }
+    }
+
+    function hideGraphProjectionHint() {
+      if (graphProjectionHint) graphProjectionHint.hidden = true;
     }
 
     function activeGraphStates() {
@@ -655,40 +668,42 @@
           graphCanvas.clientWidth, graphCanvas.clientHeight);
       }
       graphAutoFit = true;
-      var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      edgeLayer.setAttribute("class", "graph-edge-layer");
-      edgeLayer.setAttribute("aria-hidden", "true");
-      stage.appendChild(edgeLayer);
-      graphSimulation.edges.slice().sort(function (a, b) {
-        return (Number(a.attraction) || 1) - (Number(b.attraction) || 1)
-          || String(a.source + a.target).localeCompare(String(b.source + b.target));
-      }).forEach(function (edge) {
-        var visual = GraphPhysics.edgeVisual(edge.attraction);
-        var pipe = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        pipe.setAttribute("class", "graph-edge-pipe");
-        pipe.setAttribute("data-strength", visual.score.toFixed(3));
-        [
-          ["--edge-width", visual.width.toFixed(2) + "px"],
-          ["--edge-shadow-width", visual.shadowWidth.toFixed(2) + "px"],
-          ["--edge-highlight-width", visual.highlightWidth.toFixed(2) + "px"],
-          ["--edge-opacity", visual.opacity.toFixed(3)],
-        ].forEach(function (property) {
-          if (pipe.style.setProperty) pipe.style.setProperty(property[0], property[1]);
-          else pipe.style[property[0]] = property[1];
+      if (graphProjection === "structure") {
+        var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        edgeLayer.setAttribute("class", "graph-edge-layer");
+        edgeLayer.setAttribute("aria-hidden", "true");
+        stage.appendChild(edgeLayer);
+        graphSimulation.edges.slice().sort(function (a, b) {
+          return (Number(a.attraction) || 1) - (Number(b.attraction) || 1)
+            || String(a.source + a.target).localeCompare(String(b.source + b.target));
+        }).forEach(function (edge) {
+          var visual = GraphPhysics.edgeVisual(edge.attraction);
+          var pipe = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          pipe.setAttribute("class", "graph-edge-pipe");
+          pipe.setAttribute("data-strength", visual.score.toFixed(3));
+          [
+            ["--edge-width", visual.width.toFixed(2) + "px"],
+            ["--edge-shadow-width", visual.shadowWidth.toFixed(2) + "px"],
+            ["--edge-highlight-width", visual.highlightWidth.toFixed(2) + "px"],
+            ["--edge-opacity", visual.opacity.toFixed(3)],
+          ].forEach(function (property) {
+            if (pipe.style.setProperty) pipe.style.setProperty(property[0], property[1]);
+            else pipe.style[property[0]] = property[1];
+          });
+          var paths = ["shadow", "body", "highlight"].map(function (layer) {
+            var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("class", "graph-edge graph-edge-" + layer);
+            pipe.appendChild(path);
+            return path;
+          });
+          if (!reducedGraphMotion
+              && (graphEnteringIds.has(edge.source) || graphEnteringIds.has(edge.target))) {
+            pipe.classList.add("graph-filter-enter");
+          }
+          edgeLayer.appendChild(pipe);
+          graphEdgeElements.push({ element: pipe, paths: paths, edge: edge });
         });
-        var paths = ["shadow", "body", "highlight"].map(function (layer) {
-          var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          path.setAttribute("class", "graph-edge graph-edge-" + layer);
-          pipe.appendChild(path);
-          return path;
-        });
-        if (!reducedGraphMotion
-            && (graphEnteringIds.has(edge.source) || graphEnteringIds.has(edge.target))) {
-          pipe.classList.add("graph-filter-enter");
-        }
-        edgeLayer.appendChild(pipe);
-        graphEdgeElements.push({ element: pipe, paths: paths, edge: edge });
-      });
+      }
       graphSimulation.nodes.forEach(function (node) {
         var button = document.createElement("button");
         button.className = "graph-node " + (node.state || "unmarked")
@@ -914,6 +929,7 @@
     function runGraphSimulation() {
       if (!graphSimulation || reducedGraphMotion || graphFrame !== null) return;
       graphRecovered = false;
+      graphRelaxed = false;
       function frame() {
         graphFrame = null;
         var stable = GraphPhysics.tick(graphSimulation);
@@ -922,6 +938,12 @@
           settleLabelClearance();
           GraphPhysics.reheat(graphSimulation, 0.08);
           graphRecovered = true;
+          stable = false;
+        } else if (stable && !graphRelaxed
+            && GraphPhysics.crowdedPairs(graphSimulation) > 0) {
+          // 手动拖成一团后：再跑一轮完整放松，让斥力把拥挤布局重新撑开
+          GraphPhysics.reheat(graphSimulation, 0.8);
+          graphRelaxed = true;
           stable = false;
         }
         drawGraph();
@@ -1026,7 +1048,13 @@
     var zoomOut = document.getElementById("graph-zoom-out");
     var graphFit = document.getElementById("graph-fit");
     var graphProjectionSelect = document.getElementById("graph-projection");
-    if (graphProjectionSelect) graphProjectionSelect.addEventListener("change", function () {
+    if (graphProjectionSelect) {
+      updateGraphProjectionHint();
+      graphProjectionSelect.addEventListener("mouseenter", showGraphProjectionHint);
+      graphProjectionSelect.addEventListener("focus", showGraphProjectionHint);
+      graphProjectionSelect.addEventListener("mouseleave", hideGraphProjectionHint);
+      graphProjectionSelect.addEventListener("blur", hideGraphProjectionHint);
+      graphProjectionSelect.addEventListener("change", function () {
       graphProjection = graphProjectionSelect.value || "structure";
       updateGraphProjectionHint();
       if (!graphSimulation) return;
@@ -1050,7 +1078,8 @@
       } else {
         runGraphSimulation();
       }
-    });
+      });
+    }
     if (zoomIn) zoomIn.addEventListener("click", function () {
       setGraphScale(graphView.scale + 0.1);
     });
@@ -2798,8 +2827,7 @@
       var bars = days.map(function (day) {
         var height = max ? Math.round((day.count / max) * 72) : 0;
         var heavy = day.count >= heavyThreshold && day.count > 0;
-        var label = day.date.slice(8) === "01" || day.count
-          ? day.date.slice(8) : "";
+        var label = day.date.slice(8);
         return "<div class='bar-col" + (heavy ? " heavy" : "") + "' data-bar-date='" + day.date + "'>"
           + "<div class='bar-fill'" + (height ? " style='height:" + height + "px'" : "") + "></div>"
           + (heavy ? "<span class='bar-heavy-flag'>重</span>" : "")
@@ -2807,7 +2835,8 @@
           + "<span class='bar-count'>" + (day.count || "") + "</span></div>";
       }).join("");
       var trend = "";
-      if (max) {
+      var nonzeroDays = days.filter(function (day) { return day.count > 0; });
+      if (nonzeroDays.length >= 2) {
         var fitted = days.map(function (day, index) {
           var previous = days[index - 1] || day;
           var next = days[index + 1] || day;
@@ -2835,7 +2864,8 @@
           + "<path class='workload-trend-line' d='" + path + "'></path>"
           + heavyPoints + "</svg>";
       }
-      workloadBars.innerHTML = bars + trend;
+      workloadBars.innerHTML = bars + trend
+        + (nonzeroDays.length ? "" : "<p class='muted workload-empty'>最近 14 天暂无到期任务。</p>");
       var heavyDays = days.filter(function (day) {
         return day.count >= heavyThreshold && day.count > 0;
       });
