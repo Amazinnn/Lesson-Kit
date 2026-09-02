@@ -90,7 +90,7 @@
     return {
       nodes: nodes, edges: edges, width: width, height: height,
       alpha: 1, stable: nodes.length < 2, stableTicks: 0,
-      gravity: 0.000351, projection: "structure", clustered: false,
+      gravity: 0.0006, projection: "structure", clustered: false,
     };
   }
 
@@ -136,7 +136,7 @@
         var distance = Math.max(0.01, Math.hypot(dx, dy));
         var nx = dx / distance;
         var ny = dy / distance;
-        var repulsion = Math.min(6, 3200 / (distance * distance)) * alpha;
+        var repulsion = Math.min(9, 4200 / (distance * distance)) * alpha;
         var overlap = a.radius + b.radius + 24 - distance;
         var separation = overlap > 0 ? overlap * 0.28 : 0;
         var force = repulsion + separation;
@@ -296,7 +296,8 @@
   }
 
   function setGravity(simulation, value) {
-    simulation.gravity = Math.max(0, Math.min(100, Number(value) || 0)) / 100 * 0.00351;
+    var v = Math.max(0, Math.min(100, Number(value) || 0)) / 100;
+    simulation.gravity = v * v * 0.008;
     reheat(simulation, 0.5);
   }
 

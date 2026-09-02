@@ -331,7 +331,7 @@ test("settled graphs expose no idle breathing offset", () => {
 test("gravity control changes only the in-memory center force", () => {
   const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
   physics.setGravity(simulation, 80);
-  assert.ok(Math.abs(simulation.gravity - 0.002808) < 1e-12);
+  assert.ok(Math.abs(simulation.gravity - 0.00512) < 1e-12);
   assert.equal(simulation.stable, false);
 });
 
