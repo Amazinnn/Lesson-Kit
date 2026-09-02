@@ -202,8 +202,8 @@ def pull_cards(pool, workspace, params, body):
         raise ApiError(400, "exclude_ids must be a string list")
     exclude = set(exclude_ids)
     direction_mode = body.get("direction_mode", "forward")
-    if direction_mode not in {"forward", "reverse", "mixed"}:
-        raise ApiError(400, "direction_mode must be forward, reverse, or mixed")
+    if direction_mode not in {"forward", "reverse"}:
+        raise ApiError(400, "direction_mode must be forward or reverse")
     exclude_directions = body.get("exclude_directions", [])
     if not isinstance(exclude_directions, list) or not all(
         isinstance(item, str) for item in exclude_directions

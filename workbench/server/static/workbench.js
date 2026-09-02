@@ -1170,11 +1170,6 @@
       : { prompt: payload.front || "", answer: payload.back || "" };
   }
 
-  function bidirectional(item) {
-    return item.kind === "card"
-      && (item.payload.directions || []).indexOf("reverse") >= 0;
-  }
-
   if (stream) {
     var modeExam = document.getElementById("practice-mode-exam");
     var modeMicro = document.getElementById("practice-mode-micro");
@@ -1185,7 +1180,6 @@
     var ratingImmediate = document.getElementById("practice-rating-immediate");
     var ratingBatch = document.getElementById("practice-rating-batch");
     var flashDirectionChoice = document.getElementById("flash-direction-choice");
-    var flashDirectionMixed = document.getElementById("flash-direction-mixed");
     var flashDirectionForward = document.getElementById("flash-direction-forward");
     var flashDirectionReverse = document.getElementById("flash-direction-reverse");
     var legacyModeControls = !!(modeImmediate || modeBatch);
@@ -1201,7 +1195,6 @@
     var cardNav = document.getElementById("card-nav");
     var cardPrev = document.getElementById("card-prev");
     var cardNext = document.getElementById("card-next");
-    var cardDirectionSwitch = document.getElementById("card-direction-switch");
     var pulling = false;
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
@@ -1237,9 +1230,8 @@
     }
 
     function selectedFlashDirection() {
-      if (flashDirectionForward && flashDirectionForward.checked) return "forward";
       if (flashDirectionReverse && flashDirectionReverse.checked) return "reverse";
-      return "mixed";
+      return "forward";
     }
 
     function showFlashDirectionChoice() {
@@ -1357,10 +1349,6 @@
     function updateCardNav(item) {
       var isCard = item.kind === "card";
       if (cardNav) cardNav.classList.toggle("hidden", !isCard);
-      if (cardDirectionSwitch) {
-        cardDirectionSwitch.classList.toggle("hidden",
-          !isCard || !bidirectional(item) || item.state === "rated");
-      }
       if (!isCard) return;
       if (cardPrev) cardPrev.disabled = practiceDeck.cursor <= 0;
       if (cardNext) cardNext.disabled = pulling;
@@ -1371,23 +1359,15 @@
       if (item.kind === "card") {
         var sides = cardSides(item);
         var directionLabel = item.direction === "reverse" ? "反向" : "正向";
-        var cardBody;
-        if (bidirectional(item)) {
-          cardBody = "<div class='flash-card-stage is-bidirectional"
-            + (item.revealed ? " is-revealed" : "") + "'>"
-            + "<section class='flash-card-face flash-card-answer' aria-label='另一面'>"
-            + "<p class='section-kicker'>另一面</p>"
-            + (item.revealed ? "<div class='rich-text'>" + richText(sides.answer) + "</div>" : "")
-            + "</section><section class='flash-card-face flash-card-prompt' aria-label='提示面'>"
-            + "<p class='section-kicker'>提示面</p><div class='rich-text'>"
-            + richText(sides.prompt) + "</div></section></div>";
-        } else {
-          cardBody = "<div class='problem-text rich-text'>" + richText(sides.prompt) + "</div>"
-            + "<section id='card-back-section' class='practice-solution flash-card-expansion"
-            + (item.revealed ? "'" : " hidden'") + ">"
-            + "<p class='section-kicker'>另一面</p><div class='rich-text'>"
-            + richText(sides.answer) + "</div></section>";
-        }
+        var cardBody = "<div class='flash-card-stage"
+          + (item.revealed ? " is-revealed" : "") + "'>"
+          + "<section class='flash-card-face flash-card-answer' aria-label='另一面'"
+          + (item.revealed ? "" : " aria-hidden='true'") + ">"
+          + "<p class='section-kicker'>另一面</p><div class='rich-text'>"
+          + richText(sides.answer) + "</div></section>"
+          + "<section class='flash-card-face flash-card-prompt' aria-label='提示面'>"
+          + "<p class='section-kicker'>提示面</p><div class='rich-text'>"
+          + richText(sides.prompt) + "</div></section></div>";
         stream.innerHTML = "<article class='practice-question-card card flash-card-shell'>"
           + "<p class='context-line'>闪卡</p>"
           + "<p class='muted flash-direction-label'>" + directionLabel
@@ -1510,7 +1490,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             kp_ids: kps,
-            direction_mode: sessionStorage.getItem(FLASH_DIRECTION_KEY) || "mixed",
+            direction_mode: sessionStorage.getItem(FLASH_DIRECTION_KEY) || "forward",
             exclude_directions: PracticeDeck.directionKeys(practiceDeck),
           }),
         }).then(function (result) {
@@ -1626,8 +1606,7 @@
     bindMode(ratingImmediate);
     bindMode(ratingBatch);
     var restoredMode = sessionStorage.getItem(MODE_KEY);
-    var restoredFlashDirection = sessionStorage.getItem(FLASH_DIRECTION_KEY) || "mixed";
-    if (flashDirectionMixed) flashDirectionMixed.checked = restoredFlashDirection === "mixed";
+    var restoredFlashDirection = sessionStorage.getItem(FLASH_DIRECTION_KEY) || "forward";
     if (flashDirectionForward) flashDirectionForward.checked = restoredFlashDirection === "forward";
     if (flashDirectionReverse) flashDirectionReverse.checked = restoredFlashDirection === "reverse";
     var restoredRatingMode = sessionStorage.getItem(RATING_MODE_KEY)
@@ -1781,13 +1760,6 @@
     });
     if (cardNext) cardNext.addEventListener("click", function () {
       advance();
-    });
-    if (cardDirectionSwitch) cardDirectionSwitch.addEventListener("click", function () {
-      var item = currentProblem();
-      if (!item || !bidirectional(item)) return;
-      item.direction = item.direction === "reverse" ? "forward" : "reverse";
-      persistDeck();
-      renderDeckItem(item);
     });
   }
 

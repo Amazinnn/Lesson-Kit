@@ -312,7 +312,7 @@ class CardPracticeTests(unittest.TestCase):
         finally:
             pool.close()
 
-    def test_mixed_pull_expands_and_excludes_direction_actions_independently(self):
+    def test_reverse_pull_yields_one_direction_and_rejects_mixed(self):
         conn = sqlite3.connect(self.fixture.db_path)
         conn.execute(
             "UPDATE flash_cards SET directions='[\"forward\", \"reverse\"]' "
@@ -328,18 +328,21 @@ class CardPracticeTests(unittest.TestCase):
         pool = self.pool()
         try:
             result = api.pull_cards(pool, {}, {}, {
-                "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "mixed",
+                "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "reverse",
             })
             keys = [(card["card_id"], card["direction"]) for card in result["cards"]]
             self.assertEqual(keys[0], ("dmath-ch06-fc-001", "reverse"))
-            self.assertIn(("dmath-ch06-fc-001", "forward"), keys)
+            self.assertNotIn(("dmath-ch06-fc-001", "forward"), keys)
             result = api.pull_cards(pool, {}, {}, {
-                "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "mixed",
+                "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "reverse",
                 "exclude_directions": ["dmath-ch06-fc-001:reverse"],
             })
             keys = [(card["card_id"], card["direction"]) for card in result["cards"]]
             self.assertNotIn(("dmath-ch06-fc-001", "reverse"), keys)
-            self.assertIn(("dmath-ch06-fc-001", "forward"), keys)
+            with self.assertRaises(api.ApiError):
+                api.pull_cards(pool, {}, {}, {
+                    "kp_ids": ["dmath-ch06-kp-001"], "direction_mode": "mixed",
+                })
         finally:
             pool.close()
 

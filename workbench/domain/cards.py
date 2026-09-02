@@ -58,8 +58,6 @@ def practice_directions(allowed, preference):
     """Return the concrete learning actions allowed by one session preference."""
     if preference == REVERSE:
         return [REVERSE] if REVERSE in allowed else [FORWARD]
-    if preference == "mixed":
-        return list(allowed)
     return [FORWARD]
 
 

@@ -883,7 +883,7 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 }
 .flash-direction-choice {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, max-content));
+  grid-template-columns: repeat(2, minmax(0, max-content));
   gap: 8px 18px;
   margin: 18px 0;
   padding: 12px;
@@ -900,13 +900,13 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   color: var(--dsw-label-tertiary);
   font-size: 12px;
 }
-.flash-card-shell { overflow: hidden; border-top: 5px solid #2864dc; }
+.flash-card-shell { border-top: 5px solid #2864dc; }
 .flash-direction-label { margin: -6px 0 14px; overflow-wrap: anywhere; }
 .flash-card-stage {
   display: grid;
   grid-template: minmax(154px, auto) / minmax(0, 1fr);
-  padding: 0 6% 12px;
-  transition: padding-bottom 260ms ease;
+  padding: 0 6%;
+  transition: padding-bottom 300ms ease;
 }
 .flash-card-face {
   grid-area: 1 / 1;
@@ -918,23 +918,24 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   border-radius: var(--dsw-radius-md);
   background: var(--dsw-bg-layer-1);
   box-shadow: 5px 7px 0 rgb(17 19 24 / 14%);
-  transition: transform 260ms cubic-bezier(.2, .8, .2, 1), box-shadow 260ms ease;
+  transition: transform 300ms cubic-bezier(.2, .8, .2, 1), box-shadow 300ms ease;
 }
-.flash-card-answer { z-index: 1; transform: translate(7px, 9px); border-color: #d12c2c; }
+.flash-card-answer { z-index: 1; border-color: #d12c2c; }
 .flash-card-prompt { z-index: 2; border-color: #2864dc; }
-.flash-card-stage.is-revealed { padding-bottom: 104px; }
+.flash-card-stage.is-revealed { padding-bottom: 174px; }
 .flash-card-stage.is-revealed .flash-card-prompt {
-  transform: translate(-7%, 48px) rotate(-4deg);
+  transform: translate(-5%, 10px) rotate(-5deg);
   box-shadow: 4px 9px 0 rgb(17 19 24 / 12%);
 }
 .flash-card-stage.is-revealed .flash-card-answer {
-  transform: translate(7%, 72px) rotate(4deg);
+  transform: translate(2.5%, calc(100% + 12px)) rotate(2.5deg);
   box-shadow: 7px 10px 0 rgb(17 19 24 / 18%);
+  animation: flash-answer-reveal 620ms cubic-bezier(.2, .75, .2, 1) both;
 }
-.flash-card-expansion { animation: flash-card-expand 220ms ease-out; }
-@keyframes flash-card-expand {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes flash-answer-reveal {
+  from { transform: translate(0, 0) rotate(0); }
+  30% { transform: translate(2%, 4px) rotate(2.5deg); }
+  to { transform: translate(2.5%, calc(100% + 12px)) rotate(2.5deg); }
 }
 .pending-rating-card { font-size: 14px; line-height: 22px; }
 .pending-rating-card > input,
@@ -1047,8 +1048,8 @@ img { max-width: 100%; }
 @media (max-width: 640px) {
   .flash-direction-choice { grid-template-columns: 1fr; }
   .flash-card-stage { padding-right: 3%; padding-left: 3%; }
-  .flash-card-stage.is-revealed .flash-card-prompt { transform: translate(-3%, 42px) rotate(-2deg); }
-  .flash-card-stage.is-revealed .flash-card-answer { transform: translate(3%, 64px) rotate(2deg); }
+  .flash-card-stage.is-revealed .flash-card-prompt { transform: translate(-3%, 8px) rotate(-3deg); }
+  .flash-card-stage.is-revealed .flash-card-answer { transform: translate(1.5%, calc(100% + 10px)) rotate(1.5deg); }
 }
 
 .goal-cards {
@@ -1121,23 +1122,19 @@ img { max-width: 100%; }
 #card-direction-switch { min-width: 38px; color: #2864dc; font-size: 18px; font-weight: 700; }
 .time-off-note { padding: 8px 2px; }
 .calendar-grid {
-  overflow-x: auto;
   margin-bottom: 22px;
   padding-bottom: 4px;
-  scrollbar-width: thin;
 }
 .calendar-weekdays,
 .calendar-week-days,
 .calendar-lane-layer {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  min-width: 560px;
 }
 .calendar-weekdays { gap: 0; }
 .calendar-week {
   --calendar-lanes: 0;
   position: relative;
-  min-width: 560px;
   min-height: calc(42px + var(--calendar-lanes) * 24px);
   margin-top: -1px;
 }
@@ -1157,7 +1154,7 @@ img { max-width: 100%; }
 }
 .calendar-cell {
   min-width: 0;
-  padding: 4px 6px;
+  padding: 4px 5px;
   border: 1px solid #171717;
   border-left-width: 0;
   background: #fffdf8;

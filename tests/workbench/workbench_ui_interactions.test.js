@@ -277,10 +277,8 @@ function practiceElements() {
     "practice-rating-immediate": new FakeElement("practice-rating-immediate"),
     "practice-rating-batch": new FakeElement("practice-rating-batch"),
     "flash-direction-choice": new FakeElement("flash-direction-choice"),
-    "flash-direction-mixed": new FakeElement("flash-direction-mixed", { checked: true }),
-    "flash-direction-forward": new FakeElement("flash-direction-forward"),
+    "flash-direction-forward": new FakeElement("flash-direction-forward", { checked: true }),
     "flash-direction-reverse": new FakeElement("flash-direction-reverse"),
-    "card-direction-switch": new FakeElement("card-direction-switch"),
     "card-nav": new FakeElement("card-nav"),
     "card-prev": new FakeElement("card-prev"),
     "card-next": new FakeElement("card-next"),
@@ -721,14 +719,17 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
   assert.equal(elements["practice-columns"].classList.contains("hidden"), true);
   const pull = calls.find((call) => call.url.endsWith("/pull-cards"));
   assert.deepEqual(JSON.parse(pull.options.body), {
-    kp_ids: ["kp-1"], direction_mode: "mixed", exclude_directions: [],
+    kp_ids: ["kp-1"], direction_mode: "forward", exclude_directions: [],
   });
   assert.match(elements.stream.innerHTML, /闪卡/);
   assert.match(elements.stream.innerHTML, /正面F/);
   assert.equal(elements["show-answer"].textContent, "揭示另一面");
-  assert.match(elements.stream._innerHTML, /card-back-section' class='practice-solution flash-card-expansion hidden/);
+  assert.match(elements.stream._innerHTML, /flash-card-stage/);
+  assert.match(elements.stream._innerHTML, /aria-hidden='true'/);
+  assert.doesNotMatch(elements.stream._innerHTML, /is-revealed/);
   elements["show-answer"].click();
-  assert.doesNotMatch(elements.stream._innerHTML, /flash-card-expansion hidden/);
+  assert.match(elements.stream._innerHTML, /is-revealed/);
+  assert.doesNotMatch(elements.stream._innerHTML, /aria-hidden='true'/);
   assert.match(elements.stream._innerHTML, /背面B/);
   elements["rating-input"].value = "4";
   elements["save-rating"].click();
@@ -739,11 +740,11 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
   });
   const next = calls.filter((call) => call.url.endsWith("/pull-cards"))[1];
   assert.deepEqual(JSON.parse(next.options.body), {
-    kp_ids: ["kp-1"], direction_mode: "mixed", exclude_directions: ["c-1:forward"],
+    kp_ids: ["kp-1"], direction_mode: "forward", exclude_directions: ["c-1:forward"],
   });
 });
 
-test("bidirectional flash card can switch prompt direction and fans open", async () => {
+test("reverse session prompts from the back and reveals the front", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
   delete elements["practice-mode-immediate"];
@@ -767,7 +768,6 @@ test("bidirectional flash card can switch prompt direction and fans open", async
   elements["practice-mode-flash_card"].checked = true;
   elements["practice-mode-flash_card"].trigger("change");
   assert.equal(elements["flash-direction-choice"].classList.contains("hidden"), false);
-  elements["flash-direction-mixed"].checked = false;
   elements["flash-direction-reverse"].checked = true;
   elements["practice-rating-immediate"].checked = true;
   elements["practice-rating-immediate"].trigger("change");
@@ -775,24 +775,21 @@ test("bidirectional flash card can switch prompt direction and fans open", async
   await flush();
   const pull = calls.find((call) => call.url.endsWith("/pull-cards"));
   assert.equal(JSON.parse(pull.options.body).direction_mode, "reverse");
-  assert.match(elements.stream._innerHTML, /is-bidirectional/);
+  assert.match(elements.stream._innerHTML, /flash-card-stage/);
+  assert.doesNotMatch(elements.stream._innerHTML, /is-bidirectional/);
   assert.match(elements.stream._innerHTML, /反向/);
   assert.match(elements.stream._innerHTML, /中文/);
-  assert.doesNotMatch(elements.stream._innerHTML, /英文/);
-  assert.equal(elements["card-direction-switch"].classList.contains("hidden"), false);
-  elements["card-direction-switch"].click();
-  assert.match(elements.stream._innerHTML, /正向/);
   assert.match(elements.stream._innerHTML, /英文/);
-  assert.doesNotMatch(elements.stream._innerHTML, /中文/);
+  assert.match(elements.stream._innerHTML, /aria-hidden='true'/);
   elements["show-answer"].click();
   assert.match(elements.stream._innerHTML, /is-revealed/);
-  assert.match(elements.stream._innerHTML, /中文/);
+  assert.doesNotMatch(elements.stream._innerHTML, /aria-hidden='true'/);
   elements["rating-input"].value = "5";
   elements["save-rating"].click();
   await flush();
   const feedback = calls.find((call) => call.url.endsWith("/feedback"));
   assert.deepEqual(JSON.parse(feedback.options.body), {
-    item_type: "card", item_id: "c-bi", rating: 5, note: "", direction: "forward",
+    item_type: "card", item_id: "c-bi", rating: 5, note: "", direction: "reverse",
   });
 });
 
@@ -824,7 +821,7 @@ test("batch flash cards mark played cards unrated for session-end", async () => 
   elements["start-practice"].click();
   await flush();
   elements["show-answer"].click();
-  assert.doesNotMatch(elements.stream._innerHTML, /flash-card-expansion hidden/);
+  assert.doesNotMatch(elements.stream._innerHTML, /aria-hidden='true'/);
   assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
   let session = JSON.parse(storage.getItem("wb_session_alpha"));
   assert.equal(session.items[0].state, "unrated");
@@ -2289,7 +2286,7 @@ test("flash cards page back and forth through history and only pull at the end",
   // Back to the first card: its reveal state persists and nothing is pulled.
   elements["card-prev"].click();
   assert.match(elements.stream._innerHTML, /正面一/);
-  assert.doesNotMatch(elements.stream._innerHTML, /flash-card-expansion hidden/);
+  assert.doesNotMatch(elements.stream._innerHTML, /aria-hidden='true'/);
   assert.equal(calls.filter((call) => call.url.endsWith("/pull-cards")).length, pullsBefore);
   assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).cursor, 0);
   assert.equal(elements["card-prev"].disabled, true);

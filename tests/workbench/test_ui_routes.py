@@ -71,7 +71,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("overflow-wrap: anywhere;", body)
         self.assertIn("column-resizer", body)
         self.assertIn(".flash-card-stage.is-revealed", body)
-        self.assertIn("@keyframes flash-card-expand", body)
+        self.assertIn("@keyframes flash-answer-reveal", body)
         self.assertIn("@media (prefers-reduced-motion: reduce)", body)
 
     def test_css_keeps_primary_text_complete_and_contains_wide_content(self):
@@ -123,10 +123,11 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='practice-mode-flash_card'", body)
         self.assertIn("id='practice-mode-yes_no'", body)
         self.assertIn("id='flash-direction-choice'", body)
-        self.assertIn("id='flash-direction-mixed'", body)
         self.assertIn("id='flash-direction-forward'", body)
         self.assertIn("id='flash-direction-reverse'", body)
-        self.assertIn("id='card-direction-switch'", body)
+        self.assertIn("checked> 正向 · 概念先行", body)
+        self.assertNotIn("flash-direction-mixed", body)
+        self.assertNotIn("card-direction-switch", body)
         self.assertIn("> 小测<", body)
         self.assertIn("> 闪卡<", body)
         self.assertIn("id='practice-rating-immediate'", body)
