@@ -700,22 +700,22 @@ existing tab-local selection and SHALL NOT create server-side state.
 
 ### Requirement: Metric projection morphology
 
-The knowledge graph page SHALL preserve the same visible node elements when the learner switches among relationship structure, formal-problem count, importance, and learning-state projections. A metric projection SHALL map higher values to both a larger node radius and a target nearer the canvas center, while retaining deterministic separation for equal values. Learning-state projection SHALL rank attention as `needs_work`, `review`, unmarked, then `mastered`. Each projection SHALL apply a restrained, distinguishable Mondrian palette without changing or persisting learning data.
+The knowledge graph page SHALL preserve the same visible node elements when the learner switches among relationship structure, formal-problem count, importance, and learning-state projections. A metric projection SHALL map higher values to both a larger node radius and a target nearer the canvas center, while retaining deterministic separation for equal values. Learning-state projection SHALL rank attention as `needs_work`, `review`, unmarked, then `mastered`. Each projection SHALL apply a restrained, distinguishable Mondrian palette without changing or persisting learning data. Relationship edges SHALL be rendered only under the relationship-structure projection; metric projections SHALL render nodes only, without creating any relationship edge elements.
 
 #### Scenario: Switch to a numeric metric
 
 - **WHEN** the learner changes from relationship structure to formal-problem count
-- **THEN** the same nodes move continuously toward deterministic metric targets and higher-count nodes become larger and nearer the center
+- **THEN** the same nodes move continuously toward deterministic metric targets and higher-count nodes become larger and nearer the center, with no relationship edges created
 
 #### Scenario: Read attention from learning state
 
 - **WHEN** the learner selects learning-state projection
-- **THEN** needs-work nodes are ranked above review, unmarked, and mastered nodes for size and radial position
+- **THEN** needs-work nodes are ranked above review, unmarked, and mastered nodes for size and radial position, with no relationship edges created
 
 #### Scenario: Return to relationship structure
 
 - **WHEN** the learner returns from a metric projection to relationship structure
-- **THEN** the same nodes transition back toward a freshly computed relationship layout without changing graph membership, selection, or stored coordinates
+- **THEN** the same nodes transition back toward a freshly computed relationship layout with relationship edges restored, without changing graph membership, selection, or stored coordinates
 
 ### Requirement: Metric projection transition
 
@@ -724,7 +724,7 @@ Projection changes SHALL reheat the existing in-memory simulation and animate no
 #### Scenario: Metric transition settles
 
 - **WHEN** an ordinary-motion learner changes the active graph projection
-- **THEN** nodes and incident edges move together until the new projection settles and no recurring animation remains
+- **THEN** nodes move together until the new projection settles and no recurring animation remains
 
 #### Scenario: Reduced-motion metric switch
 
