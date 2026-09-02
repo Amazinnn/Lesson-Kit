@@ -432,6 +432,7 @@
     var graphAdjacency = new Map();
     var graphView = { x: 0, y: 0, scale: 1 };
     var graphAutoFit = true;
+    var graphRecovered = false;
     var graphProjection = "structure";
     var graphLabelZoomed = false;
     var graphFocusedId = null;
@@ -901,8 +902,8 @@
       var width = graphSimulation.width;
       var height = graphSimulation.height;
       nodes.forEach(function (node) {
-        node.x = Math.max(node.radius, Math.min(width - node.radius, node.x));
-        node.y = Math.max(node.radius, Math.min(height - node.radius, node.y));
+        node.x = Math.max(node.collisionRadius || node.radius, Math.min(width - (node.collisionRadius || node.radius), node.x));
+        node.y = Math.max(node.collisionRadius || node.radius, Math.min(height - (node.collisionRadius || node.radius), node.y));
       });
     }
 
@@ -912,10 +913,17 @@
 
     function runGraphSimulation() {
       if (!graphSimulation || reducedGraphMotion || graphFrame !== null) return;
+      graphRecovered = false;
       function frame() {
         graphFrame = null;
         var stable = GraphPhysics.tick(graphSimulation);
-        if (stable) settleLabelClearance();
+        if (stable && !graphRecovered) {
+          // 定格前先做标签避让，再用一小段物理把推挤吸收掉（恢复圆形间距、平滑收尾）
+          settleLabelClearance();
+          GraphPhysics.reheat(graphSimulation, 0.08);
+          graphRecovered = true;
+          stable = false;
+        }
         drawGraph();
         if (!stable) graphFrame = requestAnimationFrame(frame);
         else if (graphAutoFit) fitGraph();
@@ -949,6 +957,10 @@
       graphView.x = (graphCanvas.clientWidth - (minX + maxX) * graphView.scale) / 2;
       graphView.y = (graphCanvas.clientHeight - (minY + maxY) * graphView.scale) / 2;
       graphAutoFit = false;
+      if (graphStage) {
+        graphStage.classList.add("graph-fit-anim");
+        setTimeout(function () { graphStage.classList.remove("graph-fit-anim"); }, 320);
+      }
       applyGraphView();
       updateGraphLabels();
     }
