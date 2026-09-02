@@ -90,7 +90,7 @@
     return {
       nodes: nodes, edges: edges, width: width, height: height,
       alpha: 1, stable: nodes.length < 2, stableTicks: 0,
-      gravity: 0.0006, projection: "structure", clustered: false,
+      gravity: 0.0006, projection: "structure", clustered: false, spread: 1,
     };
   }
 
@@ -136,7 +136,8 @@
         var distance = Math.max(0.01, Math.hypot(dx, dy));
         var nx = dx / distance;
         var ny = dy / distance;
-        var repulsion = Math.min(9, 4200 / (distance * distance)) * alpha;
+        var repulsion = Math.min(9, 4200 / (distance * distance)) * alpha
+          * (simulation.spread || 1);
         var overlap = a.radius + b.radius + 24 - distance;
         var separation = overlap > 0 ? overlap * 0.28 : 0;
         var force = repulsion + separation;
@@ -162,8 +163,8 @@
         node.vy += (node.componentAnchorY - node.y) * 0.00022 * alpha;
       }
       if (node.anchorX !== null) {
-        node.vx += (node.anchorX - node.x) * 0.012 * alpha;
-        node.vy += (node.anchorY - node.y) * 0.012 * alpha;
+        node.vx += (node.anchorX - node.x) * 0.028 * alpha;
+        node.vy += (node.anchorY - node.y) * 0.028 * alpha;
       }
       if (node.projectionTargetX !== null) {
         node.vx += (node.projectionTargetX - node.x) * 0.045 * alpha;
@@ -298,7 +299,23 @@
   function setGravity(simulation, value) {
     var v = Math.max(0, Math.min(100, Number(value) || 0)) / 100;
     simulation.gravity = v * v * 0.008;
-    reheat(simulation, 0.5);
+    simulation.spread = 1.15 - 0.5 * v;
+    reheat(simulation, 0.55);
+  }
+
+  function crowdedPairs(simulation) {
+    var nodes = simulation.nodes;
+    var crowded = 0;
+    for (var i = 0; i < nodes.length; i += 1) {
+      for (var j = i + 1; j < nodes.length; j += 1) {
+        var a = nodes[i];
+        var b = nodes[j];
+        if (Math.hypot(b.x - a.x, b.y - a.y) < a.radius + b.radius + 12) {
+          crowded += 1;
+        }
+      }
+    }
+    return crowded;
   }
 
   function stateKey(node) {
@@ -764,6 +781,7 @@
     reheat: reheat,
     setSoftAnchor: setSoftAnchor,
     setGravity: setGravity,
+    crowdedPairs: crowdedPairs,
     stateKey: stateKey,
     stateClusterTargets: stateClusterTargets,
     setStateClusters: setStateClusters,

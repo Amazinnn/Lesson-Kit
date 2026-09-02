@@ -344,6 +344,27 @@ test("gravity range has a stronger center pull than the previous maximum", () =>
   assert.ok(simulation.gravity > 0.00117 * 2);
 });
 
+test("gravity slider couples the spread factor with the center pull", () => {
+  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
+  physics.setGravity(simulation, 0);
+  assert.equal(simulation.gravity, 0);
+  assert.ok(Math.abs(simulation.spread - 1.15) < 1e-12);
+  physics.setGravity(simulation, 30);
+  assert.ok(Math.abs(simulation.spread - 1) < 1e-12);
+  physics.setGravity(simulation, 100);
+  assert.ok(Math.abs(simulation.gravity - 0.008) < 1e-12);
+  assert.ok(Math.abs(simulation.spread - 0.65) < 1e-12);
+});
+
+test("crowdedPairs counts node pairs closer than their clearances", () => {
+  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
+  simulation.nodes[0].x = 300; simulation.nodes[0].y = 300;
+  simulation.nodes[1].x = 310; simulation.nodes[1].y = 300;
+  assert.ok(physics.crowdedPairs(simulation) >= 1);
+  simulation.nodes[1].x = 500; simulation.nodes[1].y = 300;
+  assert.equal(physics.crowdedPairs(simulation), 0);
+});
+
 test("metric projections assign deterministic bubble targets without teleporting nodes", () => {
   const simulation = physics.createSimulation([
     { id: "b", title: "基础", problem_count: 1, importance: "supplementary" },
