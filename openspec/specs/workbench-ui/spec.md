@@ -701,17 +701,17 @@ existing tab-local selection and SHALL NOT create server-side state.
 - **THEN** the practice page opens with that same explicit selection
 ### Requirement: Metric projection morphology
 
-The knowledge graph page SHALL preserve the same visible node elements when the learner switches among relationship structure, formal-problem count, importance, and learning-state projections. A metric projection SHALL map higher values to both a larger node radius and a target nearer the canvas center, while retaining deterministic separation for equal values. Learning-state projection SHALL order completion as `mastered`, `review`, `needs_work`, then unmarked. Each projection SHALL apply a restrained, distinguishable Mondrian palette without changing or persisting learning data.
+The knowledge graph page SHALL preserve the same visible node elements when the learner switches among relationship structure, formal-problem count, importance, and learning-state projections. A metric projection SHALL map higher values to both a larger node radius and a target nearer the canvas center, while retaining deterministic separation for equal values. Learning-state projection SHALL rank attention as `needs_work`, `review`, unmarked, then `mastered`. Each projection SHALL apply a restrained, distinguishable Mondrian palette without changing or persisting learning data.
 
 #### Scenario: Switch to a numeric metric
 
 - **WHEN** the learner changes from relationship structure to formal-problem count
 - **THEN** the same nodes move continuously toward deterministic metric targets and higher-count nodes become larger and nearer the center
 
-#### Scenario: Read completion from learning state
+#### Scenario: Read attention from learning state
 
 - **WHEN** the learner selects learning-state projection
-- **THEN** mastered nodes are ranked above review, needs-work, and unmarked nodes for size and radial position
+- **THEN** needs-work nodes are ranked above review, unmarked, and mastered nodes for size and radial position
 
 #### Scenario: Return to relationship structure
 
