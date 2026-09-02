@@ -1,13 +1,5 @@
-# calendar-workload Specification
+## MODIFIED Requirements
 
-## Purpose
-
-An experimental, read-only time view inside the review page: goal periods
-drawn as parallel lanes across a month grid plus a 14-day histogram of due
-work, so overlap and overload are visible before they are felt. The view writes
-nothing and reschedules nothing; a heavy day offers a pre-filled reallocation
-request for the Agent instead of automatic replanning.
-## Requirements
 ### Requirement: Calendar and workload view
 
 The workbench SHALL offer an experimental, read-only time view on the practice
@@ -67,33 +59,3 @@ render honest empty states when there is nothing scheduled.
 
 - **WHEN** there are no goals and no due rows in the visible window
 - **THEN** the view shows one honest empty-state sentence and no controls
-
-### Requirement: Goal lifecycle management
-
-The practice page study-arrangement region SHALL manage the full goal
-lifecycle: creating goals, editing an existing goal's title / kind / optional
-start date / deadline / description through the same form, and deleting a goal
-behind an explicit confirmation. Edits and deletions SHALL take effect on the
-goal cards and calendar immediately. Goal ids SHALL NOT be shown as primary
-text. The calendar-and-workload view itself stays read-only.
-
-#### Scenario: Edit a goal period in place
-
-- **WHEN** the learner edits a goal with a start date and deadline
-- **THEN** both dates load into the shared form and the saved period appears on the timeline after refresh
-
-#### Scenario: Edit a goal in place
-
-- **WHEN** the learner opens a goal card's edit action and the form loads with that goal's current fields
-- **THEN** saving submits exactly the changed goal, and the card and month timeline reflect the update without a full page rebuild
-
-#### Scenario: Delete with confirmation
-
-- **WHEN** the learner activates a goal card's delete action and confirms
-- **THEN** the goal is removed and disappears from the cards and the calendar; declining the confirmation leaves everything unchanged
-
-#### Scenario: Cancel an edit
-
-- **WHEN** the learner cancels a loaded edit
-- **THEN** the form returns to its empty creation state
-
