@@ -348,8 +348,8 @@ test("metric projections assign deterministic bubble targets without teleporting
   assert.ok(Math.abs(high.radius - high.targetRadius) < 0.1);
 });
 
-test("learning-state projection ranks completion from mastered to unmarked", () => {
-  const states = ["mastered", "review", "needs_work", null].map((state, index) => ({
+test("learning-state projection ranks attention from needs_work to mastered", () => {
+  const states = ["needs_work", "review", null, "mastered"].map((state, index) => ({
     id: String(index), state,
   }));
   assert.deepEqual(states.map((node) => physics.projectionValue(node, "state")), [1, 0.66, 0.33, 0]);

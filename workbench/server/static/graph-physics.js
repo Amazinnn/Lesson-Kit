@@ -284,8 +284,8 @@
     if (projection === "problem_count") return Math.max(0, Number(node.problem_count) || 0);
     if (projection === "importance") return node.importance === "core" ? 1 : 0;
     if (projection === "state") {
-      return node.state === "mastered" ? 1 : node.state === "review" ? 0.66
-        : node.state === "needs_work" ? 0.33 : 0;
+      return node.state === "needs_work" ? 1 : node.state === "review" ? 0.66
+        : node.state === "mastered" ? 0 : 0.33;
     }
     if (projection === "attraction") return Math.max(0, Number(node.attraction) || 0);
     return 0;
