@@ -371,10 +371,10 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
     middle = (_page_header("知识网络 / 当前章节", "知识图谱", "勾选知识点后，可将同一范围交给练习。")
         + "<div class='page-content graph-content'><section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
         "<label class='visually-hidden' for='graph-search'>搜索知识点</label><input id='graph-search' placeholder='搜索知识点'>"
-        "<label for='graph-projection'>视图</label><select id='graph-projection' aria-describedby='graph-projection-hint' title='按已有指标调整图谱形态'>"
+        "<label for='graph-projection'>视图</label><select id='graph-projection' title='按已有指标调整图谱形态'>"
         "<option value='structure' selected>关系结构</option><option value='problem_count'>题目数量</option>"
         "<option value='importance'>重要性</option><option value='state'>学习状态</option></select>"
-        "<span id='graph-projection-hint' class='graph-projection-hint'>关系决定位置 · 大小表示题量</span>"
+        "<span id='graph-projection-hint' class='graph-hint-popover' role='tooltip' hidden></span>"
         "<details id='graph-state-filter' class='graph-filter-menu'><summary id='graph-filter-summary'>筛选状态</summary>"
         "<fieldset><legend>显示哪些学习状态</legend>"
         "<label><input id='graph-filter-needs_work' type='checkbox' value='needs_work'>重点练习</label>"
