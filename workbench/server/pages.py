@@ -135,7 +135,7 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<label><input id='practice-rating-batch' type='radio' name='practice-rating-mode' value='batch'> 完成后统一自评</label></fieldset>"
         "<button id='start-practice' class='primary' disabled>开始本轮练习</button></section>"
         + "</div>"
-        + "<aside class='practice-time'>" + time_view_html() + "</aside>"
+        + "<section class='practice-time'>" + time_view_html() + "</section>"
         + "</div>"
         + "<section class='practice-flow' aria-label='练习过程'><p id='practice-error' class='inline-error hidden' aria-live='polite'></p>"
         "<button id='retry-practice' class='outline sm hidden' type='button'>重试</button><div id='stream' class='practice-card-area'></div>"

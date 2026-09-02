@@ -533,6 +533,7 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-zoom { display: flex; gap: 4px; }
 #graph-canvas { height: calc(100% - 59px); overflow: hidden; background-image: linear-gradient(var(--dsw-border-l1) 1px, transparent 1px), linear-gradient(90deg, var(--dsw-border-l1) 1px, transparent 1px); background-size: 24px 24px; }
 .graph-stage { position: relative; width: 100%; height: 100%; transform-origin: 0 0; }
+.graph-stage.graph-fit-anim { transition: transform 260ms ease; }
 .graph-edge-layer { position: absolute; inset: 0; z-index: 1; width: 1200px; height: 800px; overflow: visible; pointer-events: none; }
 .graph-edge { fill: none; stroke: var(--dsw-border-l3); stroke-width: 1.25; transition: opacity 120ms ease, stroke-width 120ms ease; }
 .graph-node {
@@ -989,12 +990,22 @@ img { max-width: 100%; }
 /* ---------- practice page: staged list + on-demand suggestions + time view ---------- */
 .practice-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: 1fr;
+  gap: 0;
 }
 @media (max-width: 1023px) { .practice-columns { grid-template-columns: 1fr; } }
 .practice-main { min-width: 0; }
+.practice-time { margin-top: 26px; }
+.time-view {
+  padding: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 20px;
+}
+.time-view .section-heading,
+.time-view #time-view-empty { grid-column: 1 / -1; }
+.time-view #workload-bars { align-self: center; }
+@media (max-width: 1023px) { .time-view { grid-template-columns: 1fr; } }
 .staged-practice { margin: 0 0 1.5rem; }
 .staged-list { margin: 0 0 4px; padding: 0; list-style: none; }
 .staged-row {
@@ -1112,7 +1123,6 @@ img { max-width: 100%; }
 }
 
 /* ---------- time view (calendar + workload) ---------- */
-.time-view { padding: 22px; }
 .micro-verdict { margin: 10px 0 0; font-weight: 600; }
 .micro-verdict.ok { color: #1a7f37; }
 .micro-verdict.bad { color: #b42318; }
@@ -1191,7 +1201,7 @@ img { max-width: 100%; }
 }
 .workload-bars {
   position: relative;
-  display: flex; align-items: flex-end; gap: 6px; height: 110px;
+  display: flex; align-items: flex-end; gap: 4px; height: 110px;
   padding-top: 8px;
 }
 .bar-col {
