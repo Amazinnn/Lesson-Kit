@@ -10,6 +10,7 @@ from pathlib import Path
 
 from workbench import registry
 from workbench import ingest
+from workbench.bridge import conversation_providers
 from workbench.data import pool as pool_mod
 from workbench.data import content
 from workbench.data import mastery as mastery_data
@@ -180,9 +181,32 @@ def cmd_goals(args):
 
 
 def cmd_bridge(args):
+    if args.action == "list":
+        return _bridge_list()
+    if not args.provider or not args.command:
+        raise SystemExit("bridge add requires <provider> and --command")
     registry.add_bridge(args.provider, args.command, args=args.args,
-                        timeout_s=args.timeout)
+                        model=args.model, timeout_s=args.timeout)
     print(f"bridge provider configured: {args.provider}")
+
+
+def _bridge_list():
+    from workbench.bridge import conversation_providers
+    configured = registry.load_bridges().get("providers", {})
+    found = conversation_providers.discover()
+    if not found:
+        print("no supported Agent CLI found on PATH or in bridge config")
+    for provider in found:
+        source = "config" if provider["name"] in configured else "path"
+        command = provider["command"]
+        marker = "" if Path(command).is_file() else " (missing)"
+        model = provider.get("model") or "-"
+        print(f"{provider['name']}: {command}{marker} [{source}] model={model} "
+              f"timeout={provider['timeout_s']}s")
+    for name in conversation_providers.SUPPORTED:
+        if name not in {provider["name"] for provider in found}:
+            print(f"{name}: not found")
+    return 0
 
 
 def _json_input(path):
@@ -332,8 +356,62 @@ def cmd_serve(args):
     app.serve(port=args.port)
 
 
-def build_parser():
-    parser = argparse.ArgumentParser(prog="wb",
+def cmd_daemon(args):
+    from workbench.cli import service
+    try:
+        if args.action == "start":
+            result = service.start(port=args.port)
+            if result["already_running"]:
+                print(f"workbench already running: pid {result['pid']} "
+                      f"http://127.0.0.1:{result['port']}/")
+                return 0
+            print(f"workbench started: pid {result['pid']} "
+                  f"http://127.0.0.1:{result['port']}/ (log: {result['log']})")
+            return 0
+        if args.action == "stop":
+            result = service.stop()
+            if not result["was_running"]:
+                print("workbench is not running")
+                return 0
+            print(f"workbench stopped: pid {result['pid']} (log: {result['log']})")
+            return 0
+        result = service.status()
+    except RuntimeError as exc:
+        print(f"workbench: {exc}", file=sys.stderr)
+        return 2
+    if not result["running"]:
+        print("workbench is not running")
+        return 0
+    print(f"workbench running: pid {result['pid']} "
+          f"http://127.0.0.1:{result['port']}/ since {result.get('started_at')}")
+    return 0
+
+
+def cmd_dashboard(args):
+    import webbrowser
+
+    from workbench.cli import service
+    try:
+        result = service.start(port=args.port)
+    except RuntimeError as exc:
+        print(f"workbench: {exc}", file=sys.stderr)
+        return 2
+    if result["already_running"]:
+        print(f"workbench already running: pid {result['pid']}")
+    else:
+        print(f"workbench started: pid {result['pid']} (log: {result['log']})")
+    name = args.name
+    if not name:
+        workspaces = registry.list_workspaces()
+        name = workspaces[0]["name"] if len(workspaces) == 1 else None
+    url = service.workbench_url(args.port, name)
+    print(f"opening {url}")
+    webbrowser.open(url)
+    return 0
+
+
+def build_parser(prog="wb"):
+    parser = argparse.ArgumentParser(prog=prog,
                                      description="lesson-kit workbench CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
@@ -352,9 +430,27 @@ def build_parser():
     p.add_argument("--port", type=int, default=3081)
     p.set_defaults(func=cmd_open)
 
-    p = sub.add_parser("serve", help="start the web workbench")
+    p = sub.add_parser("serve", help="start the web workbench in the foreground")
     p.add_argument("--port", type=int, default=3081)
     p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("daemon", help="run the web workbench in the background")
+    daemon_sub = p.add_subparsers(dest="action", required=True)
+
+    action = daemon_sub.add_parser("start")
+    action.add_argument("--port", type=int, default=3081)
+    action.set_defaults(func=cmd_daemon)
+
+    action = daemon_sub.add_parser("stop")
+    action.set_defaults(func=cmd_daemon)
+
+    action = daemon_sub.add_parser("status")
+    action.set_defaults(func=cmd_daemon)
+
+    p = sub.add_parser("dashboard", help="ensure the workbench runs and open it")
+    p.add_argument("name", nargs="?")
+    p.add_argument("--port", type=int, default=3081)
+    p.set_defaults(func=cmd_dashboard)
 
     p = sub.add_parser("weak", help="weak knowledge points, ordered")
     p.add_argument("name", nargs="?")
@@ -408,10 +504,11 @@ def build_parser():
     p.add_argument("--description")
     p.set_defaults(func=cmd_goals)
 
-    p = sub.add_parser("bridge", help="configure bridge providers")
-    p.add_argument("action", choices=["add"])
-    p.add_argument("provider")
-    p.add_argument("--command", required=True)
+    p = sub.add_parser("bridge", help="configure or list bridge providers")
+    p.add_argument("action", choices=["add", "list"])
+    p.add_argument("provider", nargs="?")
+    p.add_argument("--command")
+    p.add_argument("--model")
     p.add_argument("--args", action="append", default=[])
     p.add_argument("--timeout", type=int, default=300)
     p.set_defaults(func=cmd_bridge)
@@ -449,7 +546,8 @@ def build_parser():
 
     action = ingest_sub.add_parser("run")
     action.add_argument("target")
-    action.add_argument("--provider", required=True, choices=["codex", "claude"])
+    action.add_argument("--provider", required=True,
+                        choices=list(conversation_providers.SUPPORTED))
     action.add_argument("--output")
     action.set_defaults(func=cmd_ingest)
 
@@ -499,9 +597,19 @@ def build_parser():
     return parser
 
 
-def main(argv=None):
-    args = build_parser().parse_args(argv)
+def _run(argv, prog):
+    args = build_parser(prog).parse_args(argv)
     return args.func(args) or 0
+
+
+def main(argv=None):
+    """Entry point for the `wb` command."""
+    return _run(argv, "wb")
+
+
+def lesson_kit_main(argv=None):
+    """Entry point for the `lesson-kit` command."""
+    return _run(argv, "lesson-kit")
 
 
 if __name__ == "__main__":
