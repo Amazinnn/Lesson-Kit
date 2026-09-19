@@ -1,0 +1,99 @@
+{
+  "kind": "figure-patch",
+  "course": "dmath",
+  "chapter": "ch06",
+  "items": [
+    {
+      "owner_type": "problem",
+      "owner_id": "dmath-ch06-prob-078",
+      "figure_files": [
+        {
+          "source_path": "D:\\Projects\\Academic Workflow\\lesson-kit\\intermediate\\dmath\\extraction\\ch06\\00_source\\images\\3d9f6934d96a760745fd62a416dbb67dddaef0ba82c5be69ba62c25ff1d2266e.jpg"
+        }
+      ],
+      "text": "78. Data are transmitted over the Internet in datagrams, which are structured blocks of bits. Each datagram contains header information organized into a maximum of 14 diferent fields (specifying many things, including the source and destination addresses) and a data area that contains the actual data that are transmitted. One of the 14 header fields is the header length field (denoted by HLEN), which is specified by the protocol to be 4 bits long and that specifies the header length in terms of 32- bit blocks of bits. For example, if HLEN = 0110, the header is made up of six 32-bit blocks. Another of the 14 header fields is the 16-bit-long total length field (denoted by TOTAL LENGTH), which specifies the length in bits of the entire datagram, including both the header fields and the data area. The length of the data area is the total length of the datagram minus the length of the header.\n\na) The largest possible value of TOTAL LENGTH (which is 16 bits long) determines the maximum total length in octets (blocks of 8 bits) of an Internet datagram. What is this value?\n\nb) The largest possible value of HLEN (which is 4 bits long) determines the maximum total header length in 32-bit blocks. What is this value? What is the maximum total header length in octets?\n\nc) The minimum (and most common) header length is 20 octets. What is the maximum total length in octets of the data area of an Internet datagram?\n\nd) How many diferent strings of octets in the data area can be transmitted if the header length is 20 octets and the total length is as long as possible?\n\n![](dmath/ch06/64fefa398d274c699f7b54d7d7d3af15bbeb869857f15b490732464d9decd778.jpg)\n\n## The Pigeonhole Principle"
+    },
+    {
+      "owner_type": "problem",
+      "owner_id": "dmath-ch06-prob-127",
+      "figure_files": [
+        {
+          "source_path": "D:\\Projects\\Academic Workflow\\lesson-kit\\intermediate\\dmath\\extraction\\ch06\\00_source\\images\\19cd3f3c0561215cdf1d575a13966edc61c9e02d373f0130b9e68d444f6b0683.jpg"
+        }
+      ],
+      "text": "<sup>∗</sup>49. An alternative proof of Theorem 3 based on the generalized pigeonhole principle is outlined in this exercise. The notation used is the same as that used in the proof in the text.\n\na) Assume that $i _ { k } \\le n$ for $k = 1 , 2 , \\ldots , n ^ { 2 } + 1$ . Use the generalized pigeonhole principle to show that there are n + 1 terms $a _ { k _ { 1 } } , a _ { k _ { 2 } } , \\ldots , a _ { k _ { n + 1 } }$ with $i _ { k _ { 1 } } = i _ { k _ { 2 } } = \\cdots =$ $i _ { k _ { n + 1 } }$ , where $1 \\leq \\dot { k _ { 1 } } < \\tilde { k } _ { 2 } < \\cdots < k _ { n + 1 }$\n\nb) Show that $a _ { k _ { j } } > a _ { k _ { j + 1 } }$ for $j = 1 , 2 , \\dots , n .$ [Hint: Assume that $a _ { k _ { i } } < a _ { k _ { i + 1 } }$ , and show that this implies that $i _ { k _ { j } } > i _ { k _ { j + 1 } }$ , which is a contradiction.]\n\nc) Use parts (a) and (b) to show that if there is no increasing subsequence of length n + 1, then there must be a decreasing subsequence of this length.\n\n![](dmath/ch06/8ca247f98dcdb3ed303c6707695481ddae00d5f271efdeb187e5db5ad5a93c66.jpg)"
+    },
+    {
+      "owner_type": "problem",
+      "owner_id": "dmath-ch06-prob-175",
+      "figure_files": [
+        {
+          "source_path": "D:\\Projects\\Academic Workflow\\lesson-kit\\intermediate\\dmath\\extraction\\ch06\\00_source\\images\\72f1ed20e3da77da695f16131a45ff24c6b554e9309682ed865ac6512dcebc78.jpg"
+        }
+      ],
+      "text": "<sup>∗</sup>48. This procedure is used to break ties in games in the championship round of the World Cup soccer tournament. Each team selects five players in a prescribed order. Each of these players takes a penalty kick, with a player from the first team followed by a player from the second team and so on, following the order of players specified. If the score is still tied at the end of the 10 penalty kicks, this procedure is repeated. If the score is still tied after 20 penalty kicks, a sudden-death shootout occurs, with the first team scoring an unanswered goal victorious.\n\na) How many diferent scoring scenarios are possible if the game is settled in the first round of 10 penalty kicks, where the round ends once it is impossible for a team to equal the number of goals scored by the other team?\n\nthe game is settled in the second round of 10 penalty kicks?\n\nb) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if\n\nc) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?\n\n![](dmath/ch06/da2af47e862f2f9fef7ce82e78d0096d3f38c395b79972b9b3d22a454a9074fe.jpg)"
+    },
+    {
+      "owner_type": "problem",
+      "owner_id": "dmath-ch06-prob-212",
+      "figure_files": [
+        {
+          "source_path": "D:\\Projects\\Academic Workflow\\lesson-kit\\intermediate\\dmath\\extraction\\ch06\\00_source\\images\\8cf884c79e92268ca1a3bdaca03a319185cfc095b008c3bf824fa4d71f2debda.jpg"
+        }
+      ],
+      "text": "37. In this exercise we will count the number of paths in the xy plane between the origin (0, 0) and point (m, n), where m and n are nonnegative integers, such that each path is made up of a series of steps, where each step is a move one unit to the right or a move one unit upward. (No moves to the left or downward are allowed.) Two such paths from (0, 0) to (5, 3) are illustrated here.\n\n![](dmath/ch06/3a400a51756e8c78a264e08cefc40ed2066b209dc5792460230ac7fafbe80dcc.jpg)\n\na) Show that each path of the type described can be represented by a bit string consisting of m 0s and n 1s, where a 0 represents a move one unit to the right and a 1 represents a move one unit upward.(\n\nb) Conclude from part (a) that there are $\\widetilde { \\binom { m + n } { n } }$ paths of the desired type."
+    },
+    {
+      "owner_type": "problem",
+      "owner_id": "dmath-ch06-prob-218",
+      "figure_files": [
+        {
+          "source_path": "D:\\Projects\\Academic Workflow\\lesson-kit\\intermediate\\dmath\\extraction\\ch06\\00_source\\images\\ad580e473c29f6164955f171fd672862d7d75e17981d43ad0e0f09940061798d.jpg"
+        }
+      ],
+      "text": "<sup>∗</sup>43. Determine a formula involving binomial coeficients for the nth term of a sequence if its initial terms are those listed. [Hint: Looking at Pascal’s triangle will be helpful. Although infinitely many sequences start with a specified set of terms, each of the following lists is the start of a sequence of the type desired.]\n\na) 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, …\n\nb) 1, 4, 10, 20, 35, 56, 84, 120, 165, 220, …\n\nc) 1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, …\n\nd) 1, 1, 2, 3, 6, 10, 20, 35, 70, 126, …\n\ne) 1, 1, 1, 3, 1, 5, 15, 35, 1, 9, …\n\nf) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …\n\n![](dmath/ch06/447fc2c5c795aabe78cb6b0f8655d3853c3ad246f8bf7ecb4bb0243ddd58f757.jpg)"
+    },
+    {
+      "owner_type": "problem",
+      "owner_id": "dmath-ch06-prob-286",
+      "figure_files": [
+        {
+          "source_path": "D:\\Projects\\Academic Workflow\\lesson-kit\\intermediate\\dmath\\extraction\\ch06\\00_source\\images\\7cc331e42f3e3b1d855174ac6d08020c85029066fbf9f7b6eb2b9d8b91ff7dd2.jpg"
+        }
+      ],
+      "text": "68. How many terms are there in the expansion of\n\n$$\n( x + y + z ) ^ { 1 0 0 } ?\n$$\n\n![](dmath/ch06/2a542edc237782eacd919b45e9b52594663131afb0390eb59f782057a10fc09c.jpg)"
+    }
+  ],
+  "previous": [
+    {
+      "owner_id": "dmath-ch06-prob-078",
+      "text": "78. Data are transmitted over the Internet in datagrams, which are structured blocks of bits. Each datagram contains header information organized into a maximum of 14 diferent fields (specifying many things, including the source and destination addresses) and a data area that contains the actual data that are transmitted. One of the 14 header fields is the header length field (denoted by HLEN), which is specified by the protocol to be 4 bits long and that specifies the header length in terms of 32- bit blocks of bits. For example, if HLEN = 0110, the header is made up of six 32-bit blocks. Another of the 14 header fields is the 16-bit-long total length field (denoted by TOTAL LENGTH), which specifies the length in bits of the entire datagram, including both the header fields and the data area. The length of the data area is the total length of the datagram minus the length of the header.\n\na) The largest possible value of TOTAL LENGTH (which is 16 bits long) determines the maximum total length in octets (blocks of 8 bits) of an Internet datagram. What is this value?\n\nb) The largest possible value of HLEN (which is 4 bits long) determines the maximum total header length in 32-bit blocks. What is this value? What is the maximum total header length in octets?\n\nc) The minimum (and most common) header length is 20 octets. What is the maximum total length in octets of the data area of an Internet datagram?\n\nd) How many diferent strings of octets in the data area can be transmitted if the header length is 20 octets and the total length is as long as possible?\n\n![](images/3d9f6934d96a760745fd62a416dbb67dddaef0ba82c5be69ba62c25ff1d2266e.jpg)\n\n## The Pigeonhole Principle",
+      "figure_paths": null
+    },
+    {
+      "owner_id": "dmath-ch06-prob-127",
+      "text": "<sup>∗</sup>49. An alternative proof of Theorem 3 based on the generalized pigeonhole principle is outlined in this exercise. The notation used is the same as that used in the proof in the text.\n\na) Assume that $i _ { k } \\le n$ for $k = 1 , 2 , \\ldots , n ^ { 2 } + 1$ . Use the generalized pigeonhole principle to show that there are n + 1 terms $a _ { k _ { 1 } } , a _ { k _ { 2 } } , \\ldots , a _ { k _ { n + 1 } }$ with $i _ { k _ { 1 } } = i _ { k _ { 2 } } = \\cdots =$ $i _ { k _ { n + 1 } }$ , where $1 \\leq \\dot { k _ { 1 } } < \\tilde { k } _ { 2 } < \\cdots < k _ { n + 1 }$\n\nb) Show that $a _ { k _ { j } } > a _ { k _ { j + 1 } }$ for $j = 1 , 2 , \\dots , n .$ [Hint: Assume that $a _ { k _ { i } } < a _ { k _ { i + 1 } }$ , and show that this implies that $i _ { k _ { j } } > i _ { k _ { j + 1 } }$ , which is a contradiction.]\n\nc) Use parts (a) and (b) to show that if there is no increasing subsequence of length n + 1, then there must be a decreasing subsequence of this length.\n\n![](images/19cd3f3c0561215cdf1d575a13966edc61c9e02d373f0130b9e68d444f6b0683.jpg)",
+      "figure_paths": null
+    },
+    {
+      "owner_id": "dmath-ch06-prob-175",
+      "text": "<sup>∗</sup>48. This procedure is used to break ties in games in the championship round of the World Cup soccer tournament. Each team selects five players in a prescribed order. Each of these players takes a penalty kick, with a player from the first team followed by a player from the second team and so on, following the order of players specified. If the score is still tied at the end of the 10 penalty kicks, this procedure is repeated. If the score is still tied after 20 penalty kicks, a sudden-death shootout occurs, with the first team scoring an unanswered goal victorious.\n\na) How many diferent scoring scenarios are possible if the game is settled in the first round of 10 penalty kicks, where the round ends once it is impossible for a team to equal the number of goals scored by the other team?\n\nthe game is settled in the second round of 10 penalty kicks?\n\nb) How many diferent scoring scenarios for the first and second groups of penalty kicks are possible if\n\nc) How many scoring scenarios are possible for the full set of penalty kicks if the game is settled with no more than 10 total additional kicks after the two rounds of five kicks for each team?\n\n![](images/72f1ed20e3da77da695f16131a45ff24c6b554e9309682ed865ac6512dcebc78.jpg)",
+      "figure_paths": null
+    },
+    {
+      "owner_id": "dmath-ch06-prob-212",
+      "text": "37. In this exercise we will count the number of paths in the xy plane between the origin (0, 0) and point (m, n), where m and n are nonnegative integers, such that each path is made up of a series of steps, where each step is a move one unit to the right or a move one unit upward. (No moves to the left or downward are allowed.) Two such paths from (0, 0) to (5, 3) are illustrated here.\n\n![](images/8cf884c79e92268ca1a3bdaca03a319185cfc095b008c3bf824fa4d71f2debda.jpg)\n\na) Show that each path of the type described can be represented by a bit string consisting of m 0s and n 1s, where a 0 represents a move one unit to the right and a 1 represents a move one unit upward.(\n\nb) Conclude from part (a) that there are $\\widetilde { \\binom { m + n } { n } }$ paths of the desired type.",
+      "figure_paths": null
+    },
+    {
+      "owner_id": "dmath-ch06-prob-218",
+      "text": "<sup>∗</sup>43. Determine a formula involving binomial coeficients for the nth term of a sequence if its initial terms are those listed. [Hint: Looking at Pascal’s triangle will be helpful. Although infinitely many sequences start with a specified set of terms, each of the following lists is the start of a sequence of the type desired.]\n\na) 1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 66, …\n\nb) 1, 4, 10, 20, 35, 56, 84, 120, 165, 220, …\n\nc) 1, 2, 6, 20, 70, 252, 924, 3432, 12870, 48620, …\n\nd) 1, 1, 2, 3, 6, 10, 20, 35, 70, 126, …\n\ne) 1, 1, 1, 3, 1, 5, 15, 35, 1, 9, …\n\nf) 1, 3, 15, 84, 495, 3003, 18564, 116280, 735471,4686825, …\n\n![](images/ad580e473c29f6164955f171fd672862d7d75e17981d43ad0e0f09940061798d.jpg)",
+      "figure_paths": null
+    },
+    {
+      "owner_id": "dmath-ch06-prob-286",
+      "text": "68. How many terms are there in the expansion of\n\n$$\n( x + y + z ) ^ { 1 0 0 } ?\n$$\n\n![](images/7cc331e42f3e3b1d855174ac6d08020c85029066fbf9f7b6eb2b9d8b91ff7dd2.jpg)",
+      "figure_paths": null
+    }
+  ]
+}

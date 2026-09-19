@@ -337,6 +337,11 @@ def cmd_ingest(args):
         elif args.action == "rollback":
             result = ingest.rollback_batch(db_path, args.batch, args.backup)
             output = Path(result["backup_path"])
+        elif args.action == "migrate-figures":
+            output = None
+            result = ingest.migrate_legacy_figures(
+                db_path, workspace["path"], apply_changes=args.apply,
+                backup_path=args.backup)
         elif args.action == "render":
             output = Path(args.output)
             result = ingest.render(args.input, output)
@@ -612,6 +617,12 @@ def build_parser(prog="wb"):
     action.add_argument("--backup")
     action.set_defaults(func=cmd_ingest)
 
+    action = ingest_sub.add_parser("migrate-figures",
+                                   help="plan (default) or apply (--apply) the migration of embedded source images")
+    action.add_argument("--apply", action="store_true")
+    action.add_argument("--backup")
+    action.set_defaults(func=cmd_ingest)
+
     action = ingest_sub.add_parser("render")
     action.add_argument("target", choices=["guide", "problem-set", "graph"])
     action.add_argument("--input", required=True)
@@ -620,7 +631,7 @@ def build_parser(prog="wb"):
 
     action = ingest_sub.add_parser("recipe")
     action.add_argument("recipe",
-                        choices=["knowledge", "problems", "views", "micro-quiz", "flash-card"])
+                        choices=["knowledge", "problems", "views", "micro-quiz", "flash-card", "figures"])
     action.add_argument("--input", required=True)
     action.add_argument("--output", required=True)
     action.add_argument("--apply", action="store_true")

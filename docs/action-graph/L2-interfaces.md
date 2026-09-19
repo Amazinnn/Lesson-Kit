@@ -38,7 +38,7 @@
 | `data` | 读 + **显式变更**（JSON 直改内容；candidate 实体与 gate/promote 动作已物理移除，2026-08-30） | Agent |
 | `bridge add / list` | 配置 provider / 报告解析到的可执行文件与来源 | 人 |
 | `guard` | 工作台守卫 | 双 |
-| `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback` 七子链；`run --provider` 支持 codex/claude/pi） | 内容治理唯一写池通道（apply 记批次；rollback 按批次撤销） | 双 |
+| `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
 
 > 问卷 B1 口径：Agent 对池子增删改查全开——`data`（变更）、`ingest --apply`、

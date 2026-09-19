@@ -1,8 +1,10 @@
 """Resumable UTF-8 ingestion artifacts and formal-problem gates."""
 
 import html
+import hashlib
 import json
 import re
+import shutil
 import sqlite3
 import subprocess
 from pathlib import Path
@@ -32,11 +34,14 @@ KP_TYPES = {
 }
 KP_IMPORTANCE = {"core", "supplementary", "optional"}
 RECIPE_NAMES = {"knowledge", "problems", "views", "micro-quiz",
-                "flash-card"}
+                "flash-card", "figures"}
 MICRO_QUIZ_KIND = "micro-quiz-patch"
 MICRO_QUIZ_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-mq-\d{3}$")
 FLASH_CARD_KIND = "flash-card-patch"
 FLASH_CARD_ID = re.compile(r"^[a-z0-9-]+-fc-\d{3}$")
+FIGURE_PATCH_KIND = "figure-patch"
+FIGURE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "svg", "webp"}
+_LEGACY_IMAGE_REF = re.compile(r"!\[[^\]]*\]\(images/([^)/\s]+)\)")
 _TAG = re.compile(r"</?(sup|sub)>")
 _CURRENT_RECOVERY_PROBLEMS = {
     f"dmath-ch06-prob-{index:03d}" for index in range(1, 304)
@@ -205,11 +210,14 @@ def recipe(name, db_path, input_path, output_dir, apply_changes=False, backup_pa
         elif name == "flash-card":
             applied = apply_flash_cards(database, input_path, backup_path)
             result.update(applied)
+        elif name == "figures":
+            applied = apply_figure_patch(database, input_path, backup_path)
+            result.update(applied)
         elif name == "problems":
             applied = apply(database, input_path, backup_path)
             result.update(applied)
         else:
-            raise ValueError("only the problems, micro-quiz, and flash-card recipes have an apply stage")
+            raise ValueError("only the problems, micro-quiz, flash-card, and figures recipes have an apply stage")
     write_artifact(Path(output_dir) / "recipe.json", result)
     return result
 
@@ -465,6 +473,215 @@ def _record_batch(conn, batch_id, kind, manifest_path, counts, backup):
     )
 
 
+def _figure_name(source_bytes, source_path):
+    extension = Path(source_path).suffix.lstrip(".").lower()
+    if extension not in FIGURE_EXTENSIONS:
+        raise ValueError(f"unsupported figure extension .{extension}")
+    return f"{hashlib.sha256(source_bytes).hexdigest()}.{extension}"
+
+
+def _gate_figure_patch(conn, manifest):
+    errors = []
+    if manifest.get("kind") != FIGURE_PATCH_KIND:
+        return {"ok": False, "errors": ["manifest kind must be figure-patch"]}
+    course = manifest.get("course")
+    chapter = manifest.get("chapter")
+    if not isinstance(course, str) or not course:
+        errors.append("figure-patch requires course")
+    if not isinstance(chapter, str) or not chapter:
+        errors.append("figure-patch requires chapter")
+    items = manifest.get("items")
+    if not isinstance(items, list) or not items:
+        return {"ok": False,
+                "errors": errors + ["figure-patch requires a non-empty items list"]}
+    plans = []
+    for index, item in enumerate(items):
+        label = f"item {index}"
+        if not isinstance(item, dict):
+            errors.append(f"{label}: must be an object")
+            continue
+        owner_id = item.get("owner_id")
+        row = conn.execute(
+            "SELECT problem_text, figure_paths FROM problems WHERE problem_id=?",
+            (owner_id,),
+        ).fetchone()
+        if row is None:
+            errors.append(f"{label}: unknown problem {owner_id}")
+            continue
+        text = item.get("text")
+        if not isinstance(text, str) or not text.strip():
+            errors.append(f"{owner_id}: text must be a non-empty replacement")
+            continue
+        files = item.get("figure_files")
+        if not isinstance(files, list) or not files:
+            errors.append(f"{owner_id}: figure_files must be a non-empty list")
+            continue
+        landed = []
+        for entry in files:
+            source = (entry or {}).get("source_path") if isinstance(entry, dict) else None
+            if not isinstance(source, str) or not source:
+                errors.append(f"{owner_id}: each figure_file needs source_path")
+                continue
+            path = Path(source)
+            if not path.is_file():
+                errors.append(f"{owner_id}: missing source file {source}")
+                continue
+            try:
+                content = path.read_bytes()
+                name = _figure_name(content, path)
+            except ValueError as exc:
+                errors.append(f"{owner_id}: {exc}")
+                continue
+            logical = f"{course}/{chapter}/{name}"
+            if f"]({logical})" not in text and f"]({name})" not in text:
+                errors.append(f"{owner_id}: text must reference {logical}")
+                continue
+            landed.append({"name": name, "logical": logical,
+                           "source": str(path), "content": content})
+        if landed or not files:
+            plans.append({"owner_id": owner_id, "previous": row,
+                          "files": landed})
+    if errors:
+        return {"ok": False, "errors": errors}
+    return {"ok": True, "errors": [], "plans": plans}
+
+
+def _figures_root(database, course, chapter):
+    workspace = database.resolve().parent.parent
+    return workspace / ".lessonkit" / "figures" / course / chapter
+
+
+def _merge_figure_paths(previous_paths, logicals):
+    try:
+        existing = json.loads(previous_paths) if previous_paths else []
+    except (TypeError, json.JSONDecodeError):
+        existing = []
+    if not isinstance(existing, list):
+        existing = []
+    merged = [path for path in existing if isinstance(path, str)]
+    merged += [path for path in logicals if path not in merged]
+    return merged
+
+
+def apply_figure_patch(db_path, manifest_path, backup_path=None):
+    manifest = read_artifact(manifest_path)
+    return _apply_figure_patch(Path(db_path), manifest, backup_path)
+
+
+def _apply_figure_patch(database, manifest, backup_path=None):
+    backup = (Path(backup_path) if backup_path
+              else database.with_name(database.name + ".ingest-backup"))
+    if backup.exists():
+        raise FileExistsError(f"recoverable copy already exists: {backup}")
+    conn = sqlite3.connect(database)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        verified = _gate_figure_patch(conn, manifest)
+        if not verified["ok"]:
+            raise ValueError("\n".join(verified["errors"]))
+        batch_id = _allocate_batch_id(conn)
+        snapshot = dict(manifest)
+        snapshot["previous"] = [
+            {"owner_id": plan["owner_id"],
+             "text": plan["previous"][0],
+             "figure_paths": plan["previous"][1]}
+            for plan in verified["plans"]
+        ]
+        manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
+        _backup_database(database, backup)
+        figures_root = _figures_root(database, manifest["course"], manifest["chapter"])
+        figures_root.mkdir(parents=True, exist_ok=True)
+        for plan in verified["plans"]:
+            for entry in plan["files"]:
+                dest = figures_root / entry["name"]
+                if dest.exists() and dest.read_bytes() != entry["content"]:
+                    raise ValueError(
+                        f"{plan['owner_id']}: destination conflict for {entry['name']}")
+                if not dest.exists():
+                    shutil.copyfile(entry["source"], dest)
+        counts = {"problems": 0, "figures": 0}
+        for plan in verified["plans"]:
+            item = next(i for i in manifest["items"] if i.get("owner_id") == plan["owner_id"])
+            paths = _merge_figure_paths(
+                plan["previous"][1], [entry["logical"] for entry in plan["files"]])
+            conn.execute(
+                "UPDATE problems SET problem_text=?, figure_paths=? WHERE problem_id=?",
+                (item["text"], json.dumps(paths, ensure_ascii=False), plan["owner_id"]),
+            )
+            counts["problems"] += 1
+            counts["figures"] += len(plan["files"])
+        _record_batch(conn, batch_id, FIGURE_PATCH_KIND, manifest_path, counts, backup)
+        accounting = _accounting(conn)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"ok": True, "applied": True, "batch_id": batch_id, "kind": FIGURE_PATCH_KIND,
+            "counts": counts, "backup_path": str(backup), "accounting": accounting}
+
+
+def build_legacy_figure_manifest(db_path, workspace_path):
+    """Plan the migration of `](images/…)` references into figure-patches."""
+    conn = sqlite3.connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT problem_id, problem_text FROM problems "
+            "WHERE problem_text LIKE '%](images/%' ORDER BY problem_id"
+        ).fetchall()
+    finally:
+        conn.close()
+    workspace = Path(workspace_path)
+    errors = []
+    grouped = {}
+    for problem_id, text in rows:
+        owner = re.match(r"^(.+)-(ch[A-Za-z0-9]+)-prob-", problem_id)
+        if owner is None:
+            errors.append(f"{problem_id}: cannot derive course/chapter from the id")
+            continue
+        course, chapter = owner.group(1), owner.group(2)
+        files, new_text = [], text
+        for legacy_name in sorted(set(_LEGACY_IMAGE_REF.findall(text))):
+            hits = sorted(workspace.glob(f"intermediate/**/images/{legacy_name}"))
+            if not hits:
+                errors.append(f"{problem_id}: source image not found: {legacy_name}")
+                continue
+            source = hits[0]
+            true_name = _figure_name(source.read_bytes(), source)
+            files.append({"source_path": str(source.resolve())})
+            new_text = new_text.replace(
+                f"](images/{legacy_name})",
+                f"]({course}/{chapter}/{true_name})",
+            )
+        if files:
+            key = (course, chapter)
+            grouped.setdefault(key, []).append({
+                "owner_type": "problem", "owner_id": problem_id,
+                "figure_files": files, "text": new_text,
+            })
+    if errors:
+        return {"ok": False, "errors": errors}
+    manifests = [
+        {"kind": FIGURE_PATCH_KIND, "course": course, "chapter": chapter,
+         "items": items}
+        for (course, chapter), items in sorted(grouped.items())
+    ]
+    return {"ok": True, "errors": [], "manifests": manifests}
+
+
+def migrate_legacy_figures(db_path, workspace_path, apply_changes=False,
+                           backup_path=None):
+    """Plan (default) or apply the migration of embedded `](images/…)` refs."""
+    plan = build_legacy_figure_manifest(db_path, workspace_path)
+    if not plan["ok"] or not apply_changes:
+        return {"applied": False, "errors": plan["errors"],
+                "manifests": plan.get("manifests", [])}
+    return {"applied": True,
+            "results": [_apply_figure_patch(Path(db_path), manifest, backup_path)
+                        for manifest in plan["manifests"]]}
+
+
 def list_batches(db_path):
     conn = sqlite3.connect(db_path)
     try:
@@ -511,10 +728,16 @@ def rollback_batch(db_path, batch_id, backup_path=None):
         if backup.exists():
             raise FileExistsError(f"recoverable copy already exists: {backup}")
         _backup_database(database, backup)
-        table = "flash_cards" if batch[0] == FLASH_CARD_KIND else "problems"
-        cursor = conn.execute(
-            f"DELETE FROM {table} WHERE ingest_batch_id=?", (batch_id,),
-        )
+        if batch[0] == FIGURE_PATCH_KIND:
+            counts = _rollback_figure_patch(conn, batch_id)
+            deleted = counts.get("problems", 0)
+        else:
+            table = "flash_cards" if batch[0] == FLASH_CARD_KIND else "problems"
+            cursor = conn.execute(
+                f"DELETE FROM {table} WHERE ingest_batch_id=?", (batch_id,),
+            )
+            deleted = cursor.rowcount
+            counts = {table: deleted}
         conn.execute(
             "UPDATE ingest_batches SET rolled_back_at=datetime('now') WHERE batch_id=?",
             (batch_id,),
@@ -526,8 +749,24 @@ def rollback_batch(db_path, batch_id, backup_path=None):
         raise
     finally:
         conn.close()
-    return {"ok": True, "batch_id": batch_id, "deleted": cursor.rowcount,
+    return {"ok": True, "batch_id": batch_id, "deleted": deleted,
             "backup_path": str(backup), "accounting": accounting}
+
+
+def _rollback_figure_patch(conn, batch_id):
+    """Restore pre-patch text and figure paths from the batch snapshot."""
+    row = conn.execute(
+        "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
+    ).fetchone()
+    snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
+    restored = 0
+    for previous in snapshot.get("previous", []):
+        conn.execute(
+            "UPDATE problems SET problem_text=?, figure_paths=? WHERE problem_id=?",
+            (previous["text"], previous["figure_paths"], previous["owner_id"]),
+        )
+        restored += 1
+    return {"problems": restored}
 
 
 def _rollback_blockers(conn, batch_id):

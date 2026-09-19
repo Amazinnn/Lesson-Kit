@@ -280,8 +280,15 @@
     });
     var value = escapeHtml(source);
     value = value.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function (_, alt, src) {
-      if (!/^\/(?:api\/w\/|static\/)|^[\w./-]+$/.test(src)) return alt;
-      return token("<img alt='" + alt + "' src='" + src.replace(/'/g, "&#39;") + "'>");
+      var resolved;
+      if (/^\/(?:api\/w\/|static\/)/.test(src)) {
+        resolved = src;
+      } else if (/^[\w./-]+$/.test(src)) {
+        resolved = "/api/w/" + encodeURIComponent(WS) + "/figures/" + src.replace(/^\//, "");
+      } else {
+        return alt;
+      }
+      return token("<img alt='" + alt + "' src='" + resolved.replace(/'/g, "&#39;") + "'>");
     });
     value = value.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, function (_, id, label) {
       var cleanId = id.trim();
