@@ -57,6 +57,11 @@ _Avoid_：考试年份、作者
 _Avoid_：当前状态、浏览记录
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」
 
+### 附图 / Figure
+题干自带的教材原图或生成图：文件落在工作区 `.lessonkit/figures/{course}/{chapter}/`，文件名 = **内容 sha256 + 原扩展名**（由门禁计算，不由 manifest 声明）；池里只存逻辑路径（`figure_paths` 列）+ 题干里的标准 Markdown 引用。入池唯一通道 = figure-patch 门禁（图与替换后的题干全文同批校验，失败零写入）；回滚恢复题干与 figure_paths 前值，已落盘文件保留。
+_Avoid_：`{owner_id}-fig-{NNN}.png`（旧命名规则，2026-09-20 作废）、图片入库（base64）、任意路径引用
+出处：knowledge-figures spec「Declared figure area / Gated figure patch channel / Legacy source-image migration」；ADR 0017
+
 ## 工作区与工作台
 
 ### 工作区 / Workspace
