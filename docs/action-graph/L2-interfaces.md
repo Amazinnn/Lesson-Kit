@@ -24,21 +24,23 @@
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 | POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
-## CLI 命令（`python -m workbench.cli.main …`，22 条）
+## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，18 条顶层命令）
 
 | 命令 | 性质 | 给谁 |
 |---|---|---|
-| `init / ls / open / serve` | 管理（注册/列表/URL/起服务） | 人 + Agent |
+| `init / ls / open / serve` | 管理（注册/列表/URL/前台起服务） | 人 + Agent |
+| `daemon start\|stop\|status` | 管理（后台服务生命周期；pid 与日志在用户级注册表目录） | 人 |
+| `dashboard` | 管理（确保服务在跑 + 打开浏览器；不新增页面） | 人 |
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |
 | `pull` | 读（按 KP 拉题） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容；candidate 实体与 gate/promote 动作已物理移除，2026-08-30） | Agent |
-| `bridge add` | 配置任务 provider | 人 |
+| `bridge add / list` | 配置 provider / 报告解析到的可执行文件与来源 | 人 |
 | `guard` | 工作台守卫 | 双 |
-| `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback` 七子链） | 内容治理唯一写池通道（apply 记批次；rollback 按批次撤销） | 双 |
+| `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback` 七子链；`run --provider` 支持 codex/claude/pi） | 内容治理唯一写池通道（apply 记批次；rollback 按批次撤销） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
 
 > 问卷 B1 口径：Agent 对池子增删改查全开——`data`（变更）、`ingest --apply`、
 > `practice/feedback` 均可由 Agent 直跑；门禁是决断辅助不是闸门。
-> goals CLI 已上线（complete-goals-loop，22 命令）。
+> `lesson-kit` 是 `wb` 的第二个名字（同一实现，仅 prog 名不同），命令集完全一致。

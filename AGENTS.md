@@ -1,7 +1,26 @@
 # AGENTS.md — lesson-kit 开发纪律
 
-> 阶段 2–3 产物（开工检查清单）。任何 Agent（Claude Code / DSH / Codex…）在本仓库
+> 阶段 2–3 产物（开工检查清单）。任何 Agent（Claude Code / Codex / Pi / DSH…）在本仓库
 > 工作时必须遵守。新对话开场先复述：**分层方向、兼容边界、scope 边界**，复述不对请纠正。
+
+## 项目地图（本文件是入口，但内容不全在本文）
+
+不同的 Agent CLI 只自动加载 `AGENTS.md` / `CLAUDE.md` 这一层。下面这些文件**不会被自动加载**，
+需要时按路径读取：
+
+| 文件 | 内容 |
+|---|---|
+| `.claude/CLAUDE.md` | 运行时地图（pipeline/pool/views 结构）与池契约（字段名、id 前缀、source_kind 取值） |
+| `TASK_ROUTER.md` | 任务 → 该跑哪个命令 / 读哪个技能的路由表 |
+| `START_HERE.md` | 冷启动路由（当前契约速览） |
+| `docs/GLOSSARY.md` | **全部设计名词的唯一权威定义源**；正式文档用词以它为准 |
+| `docs/ARCHITECTURE.md` | 分层与架构现状 |
+| `skills/<name>/SKILL.md` | 33 个提示词技能模块，**按路径引用**（见下） |
+
+**关于 `skills/`**：这些技能是**路径引用的 Markdown 模块**，不是 Agent Skills 标准包——
+它们**没有 YAML frontmatter**，因此不会被任何 harness 的自动发现机制加载（Pi 会警告并跳过）。
+这是有意的：由 `TASK_ROUTER.md` 或具体命令指明读哪一个，缺什么读什么。
+不要为了"让它们被发现"而给 33 个文件批量加 frontmatter。
 
 ## 兼容边界（硬规则，违反先问）
 

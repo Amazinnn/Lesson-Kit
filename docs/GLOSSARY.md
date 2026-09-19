@@ -69,6 +69,21 @@ _Avoid_：项目、数据库别名
 _Avoid_：第四个页面、复习页（已废弃）
 出处：workbench-ui spec Purpose；DISCUSSION-RECORD 专题 18/19
 
+### 守护进程 / Daemon
+后台运行的工作台服务：`lesson-kit daemon start|stop|status` 管理**唯一**一个实例，绑定固定本地端口（默认 3081）。进程号与日志记在用户级注册表目录 `~/.lessonkit-workbench/`（`daemon.json`、`daemon.log`），与工作区注册表同级。`start` 只在端口真的应答后才报成功；`stop` 遇到进程号已被回收成非 Python 进程时拒绝终止并清理记录。它不排程、不自启，没有客户端对话时不消耗 Agent 调用。
+_Avoid_：Heartbeat 后台服务（不做）、任务计划程序、开机自启
+出处：ADR 0022；review-workbench spec「Background workbench service」
+
+### 工作台命令 / lesson-kit Command
+`wb` 的第二个名字，不是第二套 CLI：两者共用全部子命令。`lesson-kit init` 即 `wb init`（注册工作区）；`lesson-kit dashboard` 确保服务在跑并打开浏览器，**不新增页面**。
+_Avoid_：第四页总览看板、`lessonkit.py init`（根 CLI，语义不同：写 `.lessonkit/state.yaml`）
+出处：review-workbench spec「Unified CLI entry point」；ADR 0022
+
+### 显式可执行文件 / Pinned Executable
+`bridges.json` 中为某个 provider 配置的 `command`：它**优先于** PATH 探测决定实际运行哪个可执行文件。存在理由：同一台机器可能装有多份同名 Agent CLI（本机即有两份 `pi` 与两个 npm 前缀），否则"用哪个"完全由 PATH 顺序决定。解析结果由 `wb bridge list` 报告。
+_Avoid_：PATH 探测优先（旧行为，已推翻）、静默回退
+出处：ai-teacher-bridge spec「Provider-native conversation discovery」
+
 ### 柔和蒙德里安 / Soft Mondrian
 Lesson Kit 的视觉语言：暖纸色与深色结构线占主体，蓝/黄/红只承担主要动作、
 当前或复习强调、重点练习或失败等有限语义。状态同时保留文字或几何提示。

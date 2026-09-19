@@ -66,7 +66,18 @@
 | 重日 prefill（只预填不发送） | UI | 人 | AI 输入框 | 已实现 |
 | 复习重排建议 / 重日主动提醒（视图类，给 Agent 用） | 无 | Agent | — | 未定义挂名（问卷 C：延后） |
 
-## 六、未定动作区（挂名池，定义见 PENDING-DEFINITIONS）
+## 六、服务与运行
+
+| 动作 | 入口 | 权限 | 写 | 状态 |
+|---|---|---|---|---|
+| 后台服务启动（分离进程；端口应答后才报成功；已在跑则幂等） | CLI `daemon start` | 人 | `~/.lessonkit-workbench/daemon.json`（pid/port） | 已实现（introduce-pi-agent-and-cli） |
+| 后台服务停止（进程号被回收成非 Python 进程时拒绝终止并清记录） | CLI `daemon stop` | 人 | 清除 daemon.json | 已实现（同上） |
+| 后台服务状态 | CLI `daemon status` | 人 | —（只读） | 已实现（同上） |
+| 打开工作台（确保服务在跑 + 打开浏览器；不新增页面） | CLI `dashboard` | 人 | 需要时起服务 | 已实现（同上） |
+| provider 解析清单（可执行文件、来源 config/path、路径是否缺失） | CLI `bridge list` | 人 | —（只读） | 已实现（同上） |
+| 显式钉死 provider 可执行文件（优先于 PATH 探测） | CLI `bridge add --command` | 人 | bridges.json | 已实现（同上） |
+
+## 七、未定动作区（挂名池，定义见 PENDING-DEFINITIONS）
 
 速成模式视图 · 批量揭晓 · 扩展摘要 · 教师记忆消费端 · Obsidian 打包 ·
 图形资产管理 · CLI 层 agent 准备 · cloze 拆卡（闪卡 spec 未来段） ·
@@ -101,3 +112,10 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   阶段/长期/逾期采用黄/蓝/红边缘区分，旧目标按截止日单点兼容。
 - 2026-08-31 Agent 执行计划落地（render-agent-execution-plan）：Codex/Claude
   命令、工具、搜索与回答活动统一成可读步骤；同一步原位更新状态，成功轮次可恢复。
+- 2026-09-17 Pi 接入 + 首版 CLI（introduce-pi-agent-and-cli）：provider 集合扩为
+  codex/claude/pi，bridges.json 的 `command` 开始**优先于 PATH 探测**（本机存在
+  两份 pi 与两个 npm 前缀，否则"用哪个"由 PATH 顺序决定）；流内错误（进程退出码
+  为 0 但 provider 自报失败）纳入失败判定；新增第六节的服务生命周期六个动作
+  （`daemon start|stop|status`、`dashboard`、`bridge list`、`bridge add --command`），
+  CLI 顶层命令由 16 条增至 18 条。后台服务与
+  「应用未打开时不运行」的旧记载之取舍见 ADR 0022。
