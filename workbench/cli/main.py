@@ -44,9 +44,44 @@ def _resolve_name(args):
 
 
 def cmd_init(args):
-    workspace = registry.register(args.path, name=args.name,
+    folder = Path(args.path)
+    folder.mkdir(parents=True, exist_ok=True)
+    if not registry.looks_like_workspace(folder):
+        _bootstrap_workspace(folder, course=args.course)
+    workspace = registry.register(str(folder), name=args.name,
                                   course=args.course or "", chapter=args.chapter or "")
     print(f"registered workspace: {workspace['name']} -> {workspace['path']}")
+
+
+def _bootstrap_workspace(folder, course):
+    """Create a pool database and the .lessonkit skeleton in a fresh folder."""
+    if not course:
+        raise SystemExit("init on a new folder requires --course (the pool database name)")
+    repo_root = Path(__file__).resolve().parents[2]
+    script = repo_root / "pipeline" / "scripts" / "create-tables.py"
+    try:
+        subprocess.run(
+            [sys.executable, str(script), "--db", f"pool/{course}.db"],
+            cwd=str(folder), check=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        raise SystemExit(f"creating the pool database failed (exit {exc.returncode})")
+    for name in ("figures", "explain", "jobs"):
+        (folder / ".lessonkit" / name).mkdir(parents=True, exist_ok=True)
+
+
+def cmd_use(args):
+    if args.workspace:
+        name = args.workspace
+    else:
+        workspaces = registry.list_workspaces()
+        if len(workspaces) == 1:
+            name = workspaces[0]["name"]
+        else:
+            raise SystemExit("multiple workspaces registered — pass --workspace <name>")
+    registry.update_active(name, args.course, args.chapter)
+    print(f"workspace {name}: active course/chapter -> {args.course}/{args.chapter}")
+    print(f"workbench at http://127.0.0.1:3081/w/{name}/")
 
 
 def cmd_ls(args):
@@ -415,12 +450,18 @@ def build_parser(prog="wb"):
                                      description="lesson-kit workbench CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("init", help="register a folder as a workspace")
+    p = sub.add_parser("init", help="register a folder; create pool and skeleton first if it is not a workspace yet")
     p.add_argument("path")
     p.add_argument("--name")
     p.add_argument("--course")
     p.add_argument("--chapter")
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser("use", help="switch the active course and chapter of a workspace")
+    p.add_argument("course")
+    p.add_argument("chapter")
+    p.add_argument("--workspace")
+    p.set_defaults(func=cmd_use)
 
     p = sub.add_parser("ls", help="list workspaces with stats")
     p.set_defaults(func=cmd_ls)

@@ -30,7 +30,7 @@ def save_registry(registry_data):
 
 def register(path, name=None, db=None, course=None, chapter=None):
     folder = Path(path).resolve()
-    if not _looks_like_workspace(folder):
+    if not looks_like_workspace(folder):
         raise ValueError(f"not a lesson-kit folder: {folder}")
     registry_data = load_registry()
     workspace = {
@@ -60,6 +60,18 @@ def get_workspace(name):
     raise KeyError(f"unknown workspace: {name}")
 
 
+def update_active(name, course, chapter):
+    """Switch a workspace's active course/chapter in place; touches nothing else."""
+    registry_data = load_registry()
+    for workspace in registry_data["workspaces"]:
+        if workspace["name"] == name:
+            workspace["active_course"] = course
+            workspace["active_chapter"] = chapter
+            save_registry(registry_data)
+            return workspace
+    raise KeyError(f"unknown workspace: {name}")
+
+
 def load_bridges():
     return _load_json(base_dir() / "bridges.json", {"version": 1, "providers": {}})
 
@@ -84,7 +96,7 @@ def add_bridge(provider, command, args=None, cwd_mode="workspace", timeout_s=300
     return bridges["providers"][provider]
 
 
-def _looks_like_workspace(folder):
+def looks_like_workspace(folder):
     if (folder / "lessonkit.py").is_file():
         return True
     pool_dir = folder / "pool"

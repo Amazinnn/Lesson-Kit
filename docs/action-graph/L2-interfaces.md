@@ -24,11 +24,11 @@
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 | POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
-## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，18 条顶层命令）
+## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，19 条顶层命令）
 
 | 命令 | 性质 | 给谁 |
 |---|---|---|
-| `init / ls / open / serve` | 管理（注册/列表/URL/前台起服务） | 人 + Agent |
+| `init`（空文件夹自动先建池+骨架）/ `use`（换课程/章节）/ `ls / open / serve` | 管理（创建+注册/切换/列表/URL/前台起服务） | 人 + Agent |
 | `daemon start\|stop\|status` | 管理（后台服务生命周期；pid 与日志在用户级注册表目录） | 人 |
 | `dashboard` | 管理（确保服务在跑 + 打开浏览器；不新增页面） | 人 |
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |

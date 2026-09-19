@@ -26,7 +26,7 @@ lesson-kit 把你的课程材料变成一个可以天天用的学习台：知识
 主要动作和选中，黄色用于当前阶段与复习提示，红色用于重点练习和失败。颜色
 旁始终还有文字、轮廓或位置提示，不要求靠辨色理解状态。
 
-**怎么把它跑起来**：在仓库根目录 `lesson-kit daemon start`（后台服务，进程号与日志记在用户级目录），`lesson-kit dashboard` 一步到位——没在跑就起、然后打开浏览器；`lesson-kit daemon status` 看状态、`daemon stop` 收工。想看着日志占用一个终端就换 `wb serve`（前台运行，Ctrl+C 停）。
+**怎么把它跑起来**：在仓库根目录 `lesson-kit daemon start`（后台服务，进程号与日志记在用户级目录），`lesson-kit dashboard` 一步到位——没在跑就起、然后打开浏览器；`lesson-kit daemon status` 看状态、`daemon stop` 收工。想看着日志占用一个终端就换 `wb serve`（前台运行，Ctrl+C 停）。全新开始用一个空文件夹也行：`lesson-kit init <文件夹> --course <课>` 会自动建好池和骨架再注册。要换课程或章节，`lesson-kit use <课> <章>`，不用重新注册。
 
 ---
 
