@@ -27,7 +27,7 @@
 | 总纲 | [action-graph/README.md](action-graph/README.md) | 分层模型、铁律、状态标记、队列 |
 | L0 数据层 | [action-graph/L0-data.md](action-graph/L0-data.md) | 表/文件/会话键：谁读谁写 |
 | L1 服务层 | [action-graph/L1-services.md](action-graph/L1-services.md) | 域逻辑模块与依赖 |
-| L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 33 路由 + CLI 22 命令 |
+| L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 30 路由 + CLI 18 命令 |
 | L3 动作层 | [action-graph/L3-actions.md](action-graph/L3-actions.md) | 动作登记（入口/权限/读写/状态）+ 留痕 |
 | L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 四条主流程 + 15 条意外分支清单 |
 

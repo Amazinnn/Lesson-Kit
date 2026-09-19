@@ -12,11 +12,12 @@
 | **门禁配方 flash-card** | flash-card-patch：内容契约/正则 id/来源必填/directions 两种合法值 | flash_cards | CLI `ingest recipe` |
 | **批次溯源与整批回滚** | apply 记批次 id（batch-NNN）+行戳记+manifest 快照+ingest_batches 登记；rollback 按批次删行（有练习/反馈依赖即拒绝），回滚前自动备份 | ingest_batches、problems、flash_cards | CLI `ingest rollback`、`POST /ingest/rollback`、桥结果卡 |
 | **ingest 链** | prepare/run/gate/apply/render 六环节编排与中间产物 | 中间产物目录 | CLI `ingest` 家族 |
-| **桥 runner/contracts/teacher** | 任务状态机（queued/running/done/failed）、输出契约校验、教学契约渲染 | jobs/、explain/ | `/ai/*`、CLI `ai` |
-| **对话 conversations** | provider 原生会话的建立/轮次/事件流/取消/最小镜像 | jobs/conv-### | `/ai/sessions/*` |
-| **provider 发现/配置** | PATH 发现（对话）与 bridges.json（任务）两套口径 | bridges.json | `/ai/providers`、`/ai/task-providers` |
+| **对话 conversations** | provider 原生会话的建立/轮次/事件流/取消/最小镜像；失败原因含进程退出码、超时、取消与**流内错误**（provider 退出码为 0 也算失败） | jobs/conv-### | `/ai/sessions/*` |
+| **provider 发现/配置** | 单一发现口径：先取 bridges.json 为该 provider 配置的 `command`，否则退回 PATH 探测；配置另可覆盖 args / model / timeout | bridges.json | `/ai/providers`、CLI `bridge add`/`bridge list` |
+| **后台服务 service** | 工作台服务的 pid 记录、分离启动、终止与存活探测；`start` 只在端口应答后报成功，`stop` 拒绝终止已被回收的进程号 | `~/.lessonkit-workbench/daemon.json`、`daemon.log` | CLI `daemon start\|stop\|status`、`dashboard` |
 | **查询 queries** | hub 统计/due 列表/图谱模型/kp 详情/review 概览（标签全长） | 全表只读 | 多个 GET API |
 | **计划 planning** | 每日建议（≤3 条人话）+ 失败保留上次结果 | 全表只读 + plan.json | `/plan`、建议区 |
 
-> 已知边界：任务 provider 与对话 provider 是**两套配置**（bridges.json vs PATH 发现），
-> 界面按钮门槛以任务 provider 为准（`GET /ai/task-providers`）。
+> `bridge/` 现存两个模块：`conversation_providers.py`（发现 + 命令构建 + 事件归一化）
+> 与 `conversations.py`（轮次生命周期）。旧的 runner/contracts/teacher 三件套与
+> `wb ai` 子命令、`GET /ai/task-providers` 门槛端点已于 remove-explain-diagnose 退役。

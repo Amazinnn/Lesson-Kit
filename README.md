@@ -32,8 +32,30 @@ python -m workbench.cli.main init . --course dmath --chapter ch06
 python -m workbench.cli.main serve
 ```
 
-Then open `http://127.0.0.1:3081/`. Codex or Claude are discovered from PATH;
-the non-AI workbench remains usable when neither provider is available.
+Then open `http://127.0.0.1:3081/`. Codex, Claude, and Pi are discovered from
+PATH; the non-AI workbench remains usable when no provider is available.
+
+An editable install exposes the same CLI under two names, `wb` and
+`lesson-kit`, and adds a background service plus a one-step launch:
+
+```bash
+lesson-kit init . --course dmath --chapter ch06
+lesson-kit daemon start      # detached; pid and log under ~/.lessonkit-workbench/
+lesson-kit daemon status
+lesson-kit dashboard         # ensure the service runs, then open the browser
+lesson-kit daemon stop
+wb bridge list               # which executable each provider resolves to
+```
+
+Pin an Agent executable instead of letting PATH ordering decide, which matters
+when several installs of the same CLI exist:
+
+```bash
+lesson-kit bridge add pi --command "C:/Users/you/.npm-global/pi.cmd" --model "provider/model-id"
+```
+
+For a provider flag whose value starts with a dash, use the equals form, e.g.
+`--args=--no-tools`.
 
 ## Runtime State
 
