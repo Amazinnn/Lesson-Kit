@@ -3,7 +3,9 @@
 import contextlib
 import io
 import os
+import sqlite3
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from tests.workbench.fixtures import WorkspaceFixture
@@ -213,6 +215,91 @@ class CliSurfaceTests(unittest.TestCase):
         self.assertEqual(self.cli.build_parser().prog, "wb")
         self.assertEqual(self.cli.build_parser("lesson-kit").prog, "lesson-kit")
         self.assertTrue(callable(self.cli.lesson_kit_main))
+
+
+class BootstrapInitTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = WorkspaceFixture()
+        from workbench.cli import main as cli_main
+
+        self.cli = cli_main
+        self.empty = Path(self.fixture.tmp.name) / "fresh"
+        self.empty.mkdir()
+
+    def tearDown(self):
+        self.fixture.cleanup()
+
+    def run_cli(self, *args):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = self.cli.main(list(args))
+        return code, out.getvalue()
+
+    def test_init_creates_a_workspace_from_an_empty_folder(self):
+        code, out = self.run_cli("init", str(self.empty), "--course", "geo", "--chapter", "ch01")
+
+        self.assertEqual(code, 0)
+        self.assertIn("registered workspace", out)
+        self.assertTrue((self.empty / "pool" / "geo.db").is_file())
+        for name in ("figures", "explain", "jobs"):
+            self.assertTrue((self.empty / ".lessonkit" / name).is_dir(), name)
+        from workbench import registry
+
+        workspace = registry.get_workspace("fresh")
+        self.assertEqual(workspace["active_course"], "geo")
+        self.assertEqual(workspace["active_chapter"], "ch01")
+
+        conn = sqlite3.connect(self.empty / "pool" / "geo.db")
+        tables = {row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        conn.close()
+        self.assertIn("knowledge_points", tables)
+        self.assertIn("flash_cards", tables)
+        self.assertNotIn("candidate_problems", tables)
+
+    def test_init_on_an_existing_workspace_never_bootstraps(self):
+        code, out = self.run_cli("init", str(self.fixture.ws), "--course", "dmath")
+
+        self.assertEqual(code, 0)
+        self.assertFalse((self.fixture.ws / ".lessonkit").exists())
+        self.assertFalse((self.fixture.ws / "pool" / "dmath2.db").exists())
+
+    def test_bootstrap_requires_a_course(self):
+        with self.assertRaises(SystemExit):
+            self.run_cli("init", str(self.empty))
+
+        self.assertFalse((self.empty / "pool").exists())
+        self.assertFalse((self.empty / ".lessonkit").exists())
+
+    def test_use_switches_the_active_course_and_chapter(self):
+        code, out = self.run_cli("use", "geo", "ch07")
+
+        self.assertEqual(code, 0)
+        from workbench import registry
+
+        workspace = registry.get_workspace("dmath")
+        self.assertEqual(workspace["active_course"], "geo")
+        self.assertEqual(workspace["active_chapter"], "ch07")
+
+    def test_use_names_an_unknown_workspace_without_changing_state(self):
+        with self.assertRaises(KeyError):
+            self.run_cli("use", "geo", "ch07", "--workspace", "nope")
+
+        from workbench import registry
+
+        workspace = registry.get_workspace("dmath")
+        self.assertEqual(workspace["active_course"], "dmath")
+
+    def test_use_requires_an_explicit_workspace_when_ambiguous(self):
+        self.fixture.add_workspace("second")
+        with self.assertRaises(SystemExit):
+            self.run_cli("use", "geo", "ch07")
+
+        code, out = self.run_cli("use", "geo", "ch07", "--workspace", "second")
+        self.assertEqual(code, 0)
+        from workbench import registry
+
+        self.assertEqual(registry.get_workspace("second")["active_course"], "geo")
 
 
 if __name__ == "__main__":

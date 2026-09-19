@@ -44,8 +44,12 @@ lesson-kit daemon start      # detached; pid and log under ~/.lessonkit-workbenc
 lesson-kit daemon status
 lesson-kit dashboard         # ensure the service runs, then open the browser
 lesson-kit daemon stop
+lesson-kit use dmath ch07    # switch course/chapter without re-registering
 wb bridge list               # which executable each provider resolves to
 ```
+
+`init` also works on an empty folder: it creates the pool database and the
+`.lessonkit/` skeleton first, so a brand-new study workspace is one command.
 
 Pin an Agent executable instead of letting PATH ordering decide, which matters
 when several installs of the same CLI exist:
