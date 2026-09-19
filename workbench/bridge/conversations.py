@@ -233,7 +233,8 @@ def _coalesced_activities(path):
 def _prompt(message, context):
     return (
         "你是 Lesson Kit 的外部 AI 教师。普通问答只读取上下文；只有学生明确要求修改内容或提交学习结论时，"
-        "才可使用 wb data 写命令。回答末尾如有写入，用简洁中文列出对象、动作和可访问路径，不展示命令、SQL 或工具日志。"
+        "才可使用 lesson-kit data 写命令（等价写法 python -m workbench.cli.main data）。"
+        "回答末尾如有写入，用简洁中文列出对象、动作和可访问路径，不展示命令、SQL 或工具日志。"
         "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
         "普通问答不要附带动作。格式为 ```lessonkit-action {\"type\":\"replace_practice_selection\","
         "\"kp_ids\":[\"知识点ID\"]} ```。"
@@ -242,7 +243,7 @@ def _prompt(message, context):
         "\"deadline\":\"YYYY-MM-DD或空\","
         "\"description\":\"…\"} ``` 代填目标字段（仅此意图可附，普通问答不得代填）。"
         "仅当学生明确要求出题、补池或给某知识点加内容时，才可在回答末尾附出题入库区块；\n"
-        "对话内出题一律用 lessonkit-action 区块，禁止直接运行 wb ingest 或写数据库。\n"
+        "对话内出题一律用 lessonkit-action 区块，禁止直接运行 lesson-kit ingest 或写数据库。\n"
         "manifest 规则：kind 为 flash-card-patch 或 micro-quiz-patch。\n"
         "闪卡 item 字段：card_id/kp_id/front/back/source_evidence，可选 topic_label/directions；\n"
         "directions 只能是 [\"forward\"]（默认，单向）或 [\"forward\",\"reverse\"]（双向）。\n"
@@ -420,6 +421,7 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     timer.start()
     text_parts = []
     result_text = ""
+    error_text = ""
     answer_started = False
     provider_output = []
     try:
@@ -437,6 +439,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                     activity_type="output", status="running", label="接收 Agent 输出",
                     output="\n".join(provider_output),
                 )
+                continue
+            if normalized is None:
                 continue
             provider_session_id = normalized.pop("provider_session_id", None)
             provider_title = normalized.pop("title", None)
@@ -467,6 +471,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 text_parts.append(normalized.get("text", ""))
             elif kind == "result":
                 result_text = normalized.get("text", "")
+            elif kind == "error":
+                error_text = normalized.get("text", "") or error_text
         return_code = process.wait()
     finally:
         timer.cancel()
@@ -498,9 +504,11 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     if not answer:
         _append_event(
             event_path, "activity", activity_id="provider-turn",
-            activity_type="progress", status="failed", label="Agent 未返回回答",
+            activity_type="progress", status="failed",
+            label="Agent 处理失败" if error_text else "Agent 未返回回答",
         )
-        _finish(folder, conversation_id, turn_id, "failed", "provider returned no assistant text")
+        _finish(folder, conversation_id, turn_id, "failed",
+                error_text or "provider returned no assistant text")
         return
 
     _append_event(

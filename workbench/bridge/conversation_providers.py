@@ -6,17 +6,17 @@ import shutil
 from workbench import registry
 
 
-SUPPORTED = ("codex", "claude")
+SUPPORTED = ("codex", "claude", "pi")
 
 
 def discover():
     overrides = registry.load_bridges().get("providers", {})
     found = []
     for name in SUPPORTED:
-        command = shutil.which(name)
+        override = overrides.get(name, {})
+        command = override.get("command") or shutil.which(name)
         if not command:
             continue
-        override = overrides.get(name, {})
         found.append({
             "name": name,
             "command": command,
@@ -50,6 +50,14 @@ def build_command(provider, session_id=None):
         if session_id:
             result.append(session_id)
         result.append("-")
+        return result
+    if name == "pi":
+        result = [command, "--print", "--mode", "json"]
+        if model:
+            result.extend(["--model", model])
+        result.extend(args)
+        if session_id:
+            result.extend(["--session", session_id])
         return result
     result = [
         command, "--print", "--output-format", "stream-json", "--verbose",
@@ -132,8 +140,129 @@ def _claude_tool_activity(block, status="running"):
     return _activity(block.get("id") or f"claude-{name}", activity_type, status, label, detail)
 
 
-def normalize_event(provider_name, data):
+def _pi_message_text(message):
+    parts = []
+    for block in (message or {}).get("content") or []:
+        if isinstance(block, dict) and block.get("type") == "text":
+            parts.append(str(block.get("text", "")))
+    return "".join(parts)
+
+
+def _pi_tool_detail(args):
+    if isinstance(args, str):
+        return args
+    if isinstance(args, dict):
+        for field in ("command", "file_path", "path", "pattern", "query", "url"):
+            value = args.get(field)
+            if isinstance(value, str) and value:
+                return value
+        return _text(args) if args else ""
+    return _text(args) if args not in (None, "") else ""
+
+
+def _pi_tool_output(result):
+    """Pi returns tool results as {content: [{type, text}], details}, not text."""
+    if isinstance(result, dict):
+        blocks = result.get("content")
+        if isinstance(blocks, list):
+            parts = [
+                str(block.get("text", "")) for block in blocks
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
+            text = "".join(parts)
+            if text:
+                return text
+        details = result.get("details")
+        return details if details not in (None, "") else ""
+    return result if result not in (None, "") else ""
+
+
+def _pi_tool_activity(tool_id, tool_name, status, args=None, result=None):
+    name = str(tool_name or "")
+    command = name.lower() in {"bash", "shell", "terminal", "command"}
+    return _activity(
+        tool_id or ("pi-command" if command else "pi-tool"),
+        "command" if command else "tool",
+        status,
+        "运行命令" if command else "调用工具",
+        _pi_tool_detail(args),
+        _pi_tool_output(result),
+    )
+
+
+def _normalize_pi_event(data):
     event_type = data.get("type", "")
+    if event_type == "session":
+        event = {"kind": "phase", "label": "provider.ready"}
+        if data.get("id"):
+            event["provider_session_id"] = str(data["id"])
+        return event
+    if event_type == "turn_start":
+        return _activity("provider-turn", "progress", "running", "Agent 正在处理")
+    if event_type == "message_start":
+        message = data.get("message") or {}
+        if message.get("role") == "assistant":
+            return _activity("provider-turn", "progress", "running", "Agent 正在处理")
+        return {"kind": "phase", "label": "provider.working"}
+    if event_type == "message_update":
+        update = data.get("assistantMessageEvent") or {}
+        update_type = update.get("type")
+        if update_type == "text_delta":
+            return {"kind": "text", "text": str(update.get("delta", ""))}
+        if update_type == "thinking_start":
+            return _activity("provider-reasoning", "reasoning", "running", "分析任务")
+        if update_type == "thinking_end":
+            return _activity("provider-reasoning", "reasoning", "done", "分析任务")
+        if update_type == "toolcall_start":
+            return _pi_tool_activity(
+                update.get("id"), update.get("toolName"), "running",
+            )
+        # thinking_delta / text_start / text_end / toolcall_delta carry no
+        # learner-facing step at all. Reasoning text must never be surfaced,
+        # and Pi emits one such event per token, so they are dropped instead of
+        # being written as protocol noise into the durable event log.
+        return None
+    if event_type == "tool_execution_start":
+        return _pi_tool_activity(
+            data.get("toolCallId"), data.get("toolName"), "running", data.get("args"),
+        )
+    if event_type == "tool_execution_update":
+        return _pi_tool_activity(
+            data.get("toolCallId"), data.get("toolName"), "running",
+            data.get("args"), data.get("partialResult"),
+        )
+    if event_type == "tool_execution_end":
+        return _pi_tool_activity(
+            data.get("toolCallId"), data.get("toolName"),
+            "failed" if data.get("isError") else "done",
+            data.get("args"), data.get("result"),
+        )
+    if event_type == "message_end":
+        message = data.get("message") or {}
+        if message.get("role") != "assistant":
+            return {"kind": "phase", "label": "provider.working"}
+        error = str(message.get("errorMessage") or "").strip()
+        if error or message.get("stopReason") == "error":
+            return {"kind": "error", "text": error or "provider reported an error result"}
+        text = _pi_message_text(message)
+        if text:
+            return {"kind": "result", "text": text}
+        return {"kind": "phase", "label": "provider.working"}
+    if event_type == "agent_end":
+        for message in reversed(data.get("messages") or []):
+            if isinstance(message, dict) and message.get("role") == "assistant":
+                text = _pi_message_text(message)
+                if text:
+                    return {"kind": "result", "text": text}
+        return {"kind": "phase", "label": "provider.working"}
+    return {"kind": "phase", "label": "provider.working"}
+
+
+def normalize_event(provider_name, data):
+    """Normalize one provider event, or return None when it has no meaning here."""
+    event_type = data.get("type", "")
+    if provider_name == "pi":
+        return _normalize_pi_event(data)
     if provider_name == "codex":
         if event_type == "thread.started":
             return {

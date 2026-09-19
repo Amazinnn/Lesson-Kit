@@ -102,9 +102,11 @@ def prepare(operation, input_path, output_path):
 
 
 def run(task_path, output_path, provider_name, workspace):
-    """Run one PATH-native Codex or Claude session, without registry fallback."""
-    if provider_name not in ("codex", "claude"):
-        raise ValueError("provider must be explicitly codex or claude")
+    """Run one PATH-native agent session, without registry fallback."""
+    if provider_name not in conversation_providers.SUPPORTED:
+        raise ValueError(
+            "provider must be explicitly " + " or ".join(conversation_providers.SUPPORTED)
+        )
     task = read_artifact(task_path)
     if task.get("kind") != "ingest-task":
         raise ValueError("run requires an ingest-task artifact")
@@ -646,6 +648,8 @@ def _provider_payload(provider_name, stdout):
         except json.JSONDecodeError:
             continue
         normalized = conversation_providers.normalize_event(provider_name, event)
+        if normalized is None:
+            continue
         session_id = normalized.get("provider_session_id") or session_id
         if normalized.get("kind") in ("text", "result"):
             texts.append(normalized.get("text", ""))
@@ -884,7 +888,7 @@ def _provenance(artifact, items):
 def _provider_ref(artifact, item):
     provider = item.get("provider", artifact.get("provider"))
     session = item.get("provider_session_id", artifact.get("provider_session_id"))
-    if provider in ("codex", "claude") and isinstance(session, str) and session:
+    if provider in conversation_providers.SUPPORTED and isinstance(session, str) and session:
         return provider, session
     return None
 
