@@ -3,9 +3,7 @@
 The AI teacher bridge connects the workbench to an external agent CLI without
 embedding an AI kernel: tasks carry an output contract, run asynchronously, and
 are validated before their results are trusted.
-
 ## Requirements
-
 ### Requirement: Provider configuration
 
 The bridge SHALL read provider definitions (command, arguments, working
@@ -73,21 +71,46 @@ learning data that can feed signals and later memory features.
 
 ### Requirement: Provider-native conversation discovery
 
-The bridge SHALL discover supported Agent CLIs from PATH. Codex and Claude SHALL be offered when their executables exist, with optional registry configuration limited to arguments, model, and timeout. A conversation SHALL lock its selected provider. The bridge SHALL NOT silently switch provider, create a replacement provider session, or hide authentication, timeout, cancellation, nonzero-exit, or provider-session-loss errors.
+The bridge SHALL discover supported Agent CLIs from PATH. Codex, Claude, and Pi
+SHALL be offered when their executables exist, with optional registry
+configuration limited to command, arguments, model, and timeout. When the
+registry configures an explicit command for a provider, that executable SHALL
+take precedence over PATH discovery, so the resolved executable is never left
+to PATH ordering alone. A conversation SHALL lock its selected provider. The
+bridge SHALL NOT silently switch provider, create a replacement provider
+session, or hide authentication, timeout, cancellation, nonzero-exit, or
+provider-session-loss errors. A provider that reports a failure inside its own
+event stream while still exiting zero SHALL be surfaced as a failed turn with
+the provider's stated reason.
 
 #### Scenario: Discover a local provider
 
-- **WHEN** `codex` or `claude` is present on PATH
+- **WHEN** `codex`, `claude`, or `pi` is present on PATH
 - **THEN** the providers endpoint lists it without requiring a duplicate command registration
+
+#### Scenario: Explicit executable takes precedence over PATH
+
+- **WHEN** the registry configures an explicit command for a provider whose name is also present on PATH
+- **THEN** the provider is launched from the configured executable, and the providers listing reports that resolved path
 
 #### Scenario: Provider fails during a turn
 
 - **WHEN** the selected provider exits, times out, is cancelled, or cannot resume its native session
 - **THEN** that turn reports the actual failure and the conversation remains locked to the same provider
 
+#### Scenario: Provider reports failure inside its stream while exiting zero
+
+- **WHEN** the provider process exits successfully but its event stream carries an error result
+- **THEN** the turn is reported as failed with the provider's stated reason instead of as an answer-less success
+
 ### Requirement: Native session continuity
 
-Codex conversations SHALL use stable exec/resume JSONL commands and Claude conversations SHALL use print/resume stream-json commands. The provider SHALL run in the registered workspace, inherit local authentication, configuration, skills, session store, and project instructions, and receive an appended Lesson Kit teacher contract and server-rebuilt page context.
+Codex conversations SHALL use stable exec/resume JSONL commands, Claude
+conversations SHALL use print/resume stream-json commands, and Pi conversations
+SHALL use print mode with JSON output plus native session resumption. The
+provider SHALL run in the registered workspace, inherit local authentication,
+configuration, skills, session store, and project instructions, and receive an
+appended Lesson Kit teacher contract and server-rebuilt page context.
 
 #### Scenario: Continue an existing provider session
 
@@ -96,8 +119,13 @@ Codex conversations SHALL use stable exec/resume JSONL commands and Claude conve
 
 #### Scenario: Send a context-free learning question
 
-- **WHEN** the learner sends a question while no practice problem is active
+- **WHEN** the learner asks a question while no practice problem is active
 - **THEN** the provider still receives the fixed workspace/page context and can use `wb data` to search the pool
+
+#### Scenario: Pi session id is taken from the provider's own header
+
+- **WHEN** a Pi conversation completes its first turn
+- **THEN** the native session id recorded for later resumption is the one the provider announced in its session header, not a server-generated identifier
 
 ### Requirement: Minimal successful conversation mirror
 
@@ -302,3 +330,4 @@ discarded per that contract.
 - **THEN** the blocks are removed from the mirrored answer, the turn records
   the ignored disclosure, nothing is written, and the next turn's provider
   context states that no write happened
+
