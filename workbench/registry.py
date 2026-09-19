@@ -68,14 +68,18 @@ def save_bridges(bridges):
     _save_json(base_dir() / "bridges.json", bridges)
 
 
-def add_bridge(provider, command, args=None, cwd_mode="workspace", timeout_s=300):
+def add_bridge(provider, command, args=None, cwd_mode="workspace", timeout_s=300,
+               model=None):
     bridges = load_bridges()
-    bridges["providers"][provider] = {
+    entry = {
         "command": command,
         "args": args or [],
         "cwd_mode": cwd_mode,
         "timeout_s": timeout_s,
     }
+    if model:
+        entry["model"] = model
+    bridges["providers"][provider] = entry
     save_bridges(bridges)
     return bridges["providers"][provider]
 

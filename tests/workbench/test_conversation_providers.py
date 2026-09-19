@@ -7,14 +7,14 @@ from unittest import mock
 class ConversationProviderTests(unittest.TestCase):
     @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
     @mock.patch("workbench.bridge.conversation_providers.shutil.which")
-    def test_discovers_path_providers_and_limits_overrides(self, which, load_bridges):
+    def test_configured_command_wins_and_other_overrides_stay_limited(self, which, load_bridges):
         from workbench.bridge import conversation_providers
 
-        which.side_effect = lambda name: f"C:/bin/{name}.cmd" if name in {"codex", "claude"} else None
+        which.side_effect = lambda name: f"C:/bin/{name}.cmd" if name in {"codex", "claude", "pi"} else None
         load_bridges.return_value = {
             "providers": {
                 "codex": {
-                    "command": "C:/unsafe/custom.exe",
+                    "command": "C:/pinned/codex.exe",
                     "args": ["--profile", "teacher"],
                     "model": "gpt-test",
                     "timeout_s": 42,
@@ -25,12 +25,215 @@ class ConversationProviderTests(unittest.TestCase):
 
         providers = {item["name"]: item for item in conversation_providers.discover()}
 
-        self.assertEqual(providers["codex"]["command"], "C:/bin/codex.cmd")
+        self.assertEqual(providers["codex"]["command"], "C:/pinned/codex.exe")
         self.assertEqual(providers["codex"]["args"], ["--profile", "teacher"])
         self.assertEqual(providers["codex"]["model"], "gpt-test")
         self.assertEqual(providers["codex"]["timeout_s"], 42)
         self.assertNotIn("cwd_mode", providers["codex"])
         self.assertEqual(providers["claude"]["command"], "C:/bin/claude.cmd")
+        self.assertEqual(providers["pi"]["command"], "C:/bin/pi.cmd")
+
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
+    @mock.patch("workbench.bridge.conversation_providers.shutil.which")
+    def test_configured_command_is_discovered_without_path(self, which, load_bridges):
+        from workbench.bridge import conversation_providers
+
+        which.return_value = None
+        load_bridges.return_value = {
+            "providers": {"pi": {"command": "C:/npm-global/pi.cmd", "model": "minimax/MiniMax-M2.7"}}
+        }
+
+        providers = {item["name"]: item for item in conversation_providers.discover()}
+
+        self.assertEqual(list(providers), ["pi"])
+        self.assertEqual(providers["pi"]["command"], "C:/npm-global/pi.cmd")
+        self.assertEqual(providers["pi"]["model"], "minimax/MiniMax-M2.7")
+
+    def test_pi_uses_print_json_and_native_session_resume(self):
+        from workbench.bridge import conversation_providers
+
+        provider = {
+            "name": "pi", "command": "pi", "args": [], "model": "minimax/MiniMax-M2.7",
+        }
+        new = conversation_providers.build_command(provider)
+        resumed = conversation_providers.build_command(provider, "01a0af85-5427")
+
+        self.assertEqual(
+            new,
+            ["pi", "--print", "--mode", "json", "--model", "minimax/MiniMax-M2.7"],
+        )
+        self.assertEqual(
+            resumed,
+            ["pi", "--print", "--mode", "json", "--model", "minimax/MiniMax-M2.7",
+             "--session", "01a0af85-5427"],
+        )
+
+    def test_normalizes_pi_session_and_text_delta(self):
+        from workbench.bridge import conversation_providers
+
+        header = conversation_providers.normalize_event(
+            "pi", {"type": "session", "version": 3, "id": "pi-session-1", "cwd": "D:/ws"}
+        )
+        delta = conversation_providers.normalize_event("pi", {
+            "type": "message_update", "usage": {"input": 11},
+            "assistantMessageEvent": {"type": "text_delta", "contentIndex": 0, "delta": "Part"},
+        })
+
+        self.assertEqual(header["provider_session_id"], "pi-session-1")
+        self.assertEqual(header["kind"], "phase")
+        self.assertEqual(delta, {"kind": "text", "text": "Part"})
+
+    def test_pi_user_message_is_never_treated_as_the_answer(self):
+        from workbench.bridge import conversation_providers
+
+        echoed = conversation_providers.normalize_event("pi", {
+            "type": "message_end",
+            "message": {"role": "user", "content": [{"type": "text", "text": "学生的问题"}]},
+        })
+
+        self.assertEqual(echoed["kind"], "phase")
+
+    def test_pi_reports_stream_error_even_when_the_process_succeeds(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "message_end",
+            "message": {
+                "role": "assistant", "content": [], "stopReason": "error",
+                "errorMessage": "401 invalid api key",
+            },
+        })
+
+        self.assertEqual(event, {"kind": "error", "text": "401 invalid api key"})
+
+    def test_pi_final_answer_comes_from_the_authoritative_message(self):
+        from workbench.bridge import conversation_providers
+
+        message = {
+            "role": "assistant",
+            "content": [{"type": "text", "text": "结论：先数重复。"}],
+            "stopReason": "stop",
+        }
+        ended = conversation_providers.normalize_event(
+            "pi", {"type": "message_end", "message": message}
+        )
+        settled = conversation_providers.normalize_event(
+            "pi", {"type": "agent_end", "messages": [message], "willRetry": False}
+        )
+
+        self.assertEqual(ended, {"kind": "result", "text": "结论：先数重复。"})
+        self.assertEqual(settled, {"kind": "result", "text": "结论：先数重复。"})
+
+    def test_normalizes_pi_command_and_tool_updates_as_one_activity(self):
+        from workbench.bridge import conversation_providers
+
+        started = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_start",
+            "toolCallId": "call-9", "toolName": "bash", "args": {"command": "lesson-kit pull"},
+        })
+        completed = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end",
+            "toolCallId": "call-9", "toolName": "bash",
+            "result": {"content": [{"type": "text", "text": "2 problems"}], "details": {}},
+            "isError": False,
+        })
+
+        self.assertEqual(started["activity_id"], "call-9")
+        self.assertEqual(started["activity_type"], "command")
+        self.assertEqual(started["label"], "运行命令")
+        self.assertEqual(started["detail"], "lesson-kit pull")
+        self.assertEqual(started["status"], "running")
+        self.assertEqual(completed["activity_id"], "call-9")
+        self.assertEqual(completed["status"], "done")
+        self.assertEqual(completed["output"], "2 problems")
+
+    def test_pi_tool_output_is_readable_text_not_a_json_envelope(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end",
+            "toolCallId": "call-10", "toolName": "read",
+            "result": {"content": [{"type": "text", "text": "line one\nline two"}],
+                       "details": {"bytes": 18}},
+            "isError": False,
+        })
+
+        self.assertEqual(event["output"], "line one\nline two")
+        self.assertNotIn("{", event["output"])
+
+    def test_pi_failed_tool_call_is_marked_failed(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end",
+            "toolCallId": "call-11", "toolName": "bash",
+            "result": {"content": [{"type": "text", "text": "No such file"}], "details": {}},
+            "isError": True,
+        })
+
+        self.assertEqual(event["status"], "failed")
+        self.assertEqual(event["output"], "No such file")
+
+    def test_pi_partial_tool_output_updates_the_same_running_row(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_update",
+            "toolCallId": "call-12", "toolName": "bash", "args": {"command": "ls -la"},
+            "partialResult": {"content": [{"type": "text", "text": "total 8"}], "details": {}},
+        })
+
+        self.assertEqual(event["activity_id"], "call-12")
+        self.assertEqual(event["status"], "running")
+        self.assertEqual(event["detail"], "ls -la")
+        self.assertEqual(event["output"], "total 8")
+
+    def test_pi_reasoning_activity_never_contains_reasoning_text(self):
+        from workbench.bridge import conversation_providers
+
+        started = conversation_providers.normalize_event("pi", {
+            "type": "message_update",
+            "assistantMessageEvent": {"type": "thinking_start"},
+        })
+        delta = conversation_providers.normalize_event("pi", {
+            "type": "message_update",
+            "assistantMessageEvent": {"type": "thinking_delta", "delta": "private reasoning"},
+        })
+        ended = conversation_providers.normalize_event("pi", {
+            "type": "message_update",
+            "assistantMessageEvent": {"type": "thinking_end"},
+        })
+
+        self.assertEqual(started["label"], "分析任务")
+        self.assertEqual(started["status"], "running")
+        self.assertEqual(ended["status"], "done")
+        for event in (started, ended):
+            self.assertNotIn("detail", event)
+            self.assertNotIn("output", event)
+        self.assertIsNone(delta)
+
+    def test_pi_emits_one_reasoning_row_per_block_not_one_per_delta(self):
+        from workbench.bridge import conversation_providers
+
+        events = [
+            conversation_providers.normalize_event("pi", {
+                "type": "message_update",
+                "assistantMessageEvent": {"type": "thinking_delta", "delta": str(index)},
+            })
+            for index in range(25)
+        ]
+
+        self.assertEqual(set(events), {None})
+
+    def test_pi_protocol_noise_is_dropped_not_logged(self):
+        from workbench.bridge import conversation_providers
+
+        for marker in ("text_start", "text_end", "toolcall_delta"):
+            event = conversation_providers.normalize_event("pi", {
+                "type": "message_update",
+                "assistantMessageEvent": {"type": marker, "delta": ""},
+            })
+            self.assertIsNone(event)
 
     def test_codex_uses_stable_new_and_resume_commands(self):
         from workbench.bridge import conversation_providers

@@ -21,6 +21,27 @@ print(json.dumps({"type":"turn.completed"}), flush=True)
 '''
 
 
+FAKE_PI_TURN = r'''import json, sys
+prompt = sys.stdin.read()
+print(json.dumps({"type":"session","version":3,"id":"pi-native-1","cwd":"."}), flush=True)
+print(json.dumps({"type":"agent_start"}), flush=True)
+print(json.dumps({"type":"turn_start"}), flush=True)
+print(json.dumps({"type":"message_update","assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"Pi 的"}}), flush=True)
+print(json.dumps({"type":"message_update","assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"回答"}}), flush=True)
+print(json.dumps({"type":"message_end","message":{"role":"assistant","content":[{"type":"text","text":"Pi 的回答"}],"stopReason":"stop"}}), flush=True)
+print(json.dumps({"type":"agent_end","messages":[{"role":"assistant","content":[{"type":"text","text":"Pi 的回答"}]}]}), flush=True)
+print(json.dumps({"type":"agent_settled"}), flush=True)
+'''
+
+
+FAKE_PI_ERROR_TURN = r'''import json, sys
+prompt = sys.stdin.read()
+print(json.dumps({"type":"session","version":3,"id":"pi-native-2","cwd":"."}), flush=True)
+print(json.dumps({"type":"message_end","message":{"role":"assistant","content":[],"stopReason":"error","errorMessage":"401 invalid api key"}}), flush=True)
+print(json.dumps({"type":"agent_end","messages":[],"willRetry":False}), flush=True)
+'''
+
+
 class ConversationApiTests(unittest.TestCase):
     def setUp(self):
         self.fixture = WorkspaceFixture()
@@ -166,6 +187,67 @@ class ConversationApiTests(unittest.TestCase):
         )
         self.assertEqual(status, 400)
         self.assertEqual(error["error"], "after must be an integer")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_pi_turn_streams_deltas_and_keeps_its_native_session(self, get_provider):
+        from workbench.bridge import conversation_providers
+
+        provider = {"name": "pi", "command": sys.executable, "args": [],
+                    "model": "minimax/MiniMax-M2.7", "timeout_s": 3}
+        get_provider.return_value = provider
+        script = Path(self.fixture.tmp.name) / "pi_turn.py"
+        script.write_text(FAKE_PI_TURN, encoding="utf-8")
+        with mock.patch.object(
+            conversation_providers, "build_command",
+            return_value=[sys.executable, str(script)],
+        ):
+            _, created = self.post("/api/w/dmath/ai/sessions", {"provider": "pi"})
+            data = self.run_turn(created["conversation_id"], "解释一下当前知识点")
+
+        self.assertEqual(data["turn"]["status"], "done")
+        kinds = [event["kind"] for event in data["events"]]
+        self.assertEqual(kinds.count("text"), 2)
+        _, restored = self.get(f"/api/w/dmath/ai/sessions/{created['conversation_id']}")
+        self.assertEqual(restored["provider"], "pi")
+        self.assertEqual(restored["provider_session_id"], "pi-native-1")
+        self.assertEqual(restored["messages"][-1]["content"], "Pi 的回答")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_pi_stream_error_fails_the_turn_even_though_the_process_succeeds(self, get_provider):
+        from workbench.bridge import conversation_providers
+
+        provider = {"name": "pi", "command": sys.executable, "args": [],
+                    "model": None, "timeout_s": 3}
+        get_provider.return_value = provider
+        script = Path(self.fixture.tmp.name) / "pi_error_turn.py"
+        script.write_text(FAKE_PI_ERROR_TURN, encoding="utf-8")
+        with mock.patch.object(
+            conversation_providers, "build_command",
+            return_value=[sys.executable, str(script)],
+        ):
+            _, created = self.post("/api/w/dmath/ai/sessions", {"provider": "pi"})
+            data = self.run_turn(created["conversation_id"], "解释一下当前知识点")
+
+        self.assertEqual(data["turn"]["status"], "failed")
+        self.assertIn("401 invalid api key", data["turn"]["error"])
+        errors = [event["text"] for event in data["events"] if event["kind"] == "error"]
+        self.assertEqual(errors, ["401 invalid api key"])
+
+    def run_turn(self, conversation_id, message):
+        _, turn = self.post(
+            f"/api/w/dmath/ai/sessions/{conversation_id}/turns",
+            {"message": message, "route": "/w/dmath/kp/dmath-ch06-kp-001",
+             "page_type": "kp", "kp_id": "dmath-ch06-kp-001"},
+        )
+        data = None
+        for _ in range(100):
+            _, data = self.get(
+                f"/api/w/dmath/ai/sessions/{conversation_id}/turns/{turn['turn_id']}?after=0"
+            )
+            if data["turn"]["status"] not in {"queued", "running"}:
+                break
+            time.sleep(0.02)
+        return data
 
     def test_ingest_rollback_endpoint_returns_result(self):
         result = {
