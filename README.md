@@ -45,6 +45,7 @@ lesson-kit daemon status
 lesson-kit dashboard         # ensure the service runs, then open the browser
 lesson-kit daemon stop
 lesson-kit use dmath ch07    # switch course/chapter without re-registering
+lesson-kit doctor            # read-only self-check: registry, pools, providers, service
 wb bridge list               # which executable each provider resolves to
 ```
 
