@@ -302,5 +302,69 @@ class BootstrapInitTests(unittest.TestCase):
         self.assertEqual(registry.get_workspace("second")["active_course"], "geo")
 
 
+class DoctorTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = WorkspaceFixture()
+        from workbench.cli import main as cli_main
+
+        self.cli = cli_main
+
+    def tearDown(self):
+        self.fixture.cleanup()
+
+    def run_cli(self, *args):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = self.cli.main(list(args))
+        return code, out.getvalue(), err.getvalue()
+
+    def test_doctor_passes_on_a_healthy_fixture_and_writes_nothing(self):
+        from workbench import registry
+        from workbench.cli import doctor
+
+        before = (registry.base_dir() / "workspaces.json").read_text(encoding="utf-8")
+        code, out, _ = self.run_cli("doctor")
+
+        self.assertEqual(code, 0)
+        self.assertIn("all checks passed", out)
+        self.assertIn("pool database", out)
+        self.assertEqual(
+            (registry.base_dir() / "workspaces.json").read_text(encoding="utf-8"),
+            before)
+        self.assertTrue(callable(doctor.all_passed))
+
+    def test_doctor_lists_a_missing_database_and_fails(self):
+        (self.fixture.ws / "pool" / "dmath.db").unlink()
+        code, out, err = self.run_cli("doctor")
+
+        self.assertEqual(code, 2)
+        self.assertIn("FAIL", out)
+        self.assertIn("pool database", out)
+        self.assertIn("nothing was changed", err)
+
+    def test_doctor_lists_a_missing_provider_executable(self):
+        with mock.patch(
+            "workbench.bridge.conversation_providers.discover",
+            return_value=[{"name": "pi", "command": "C:/nowhere/pi.cmd",
+                           "args": [], "model": None, "timeout_s": 300}],
+        ):
+            code, out, _ = self.run_cli("doctor")
+
+        self.assertEqual(code, 2)
+        self.assertIn("missing executable for pi", out)
+
+    def test_doctor_reports_a_service_that_no_longer_answers(self):
+        from workbench.cli import service
+
+        service.write_state({"pid": 999999999, "port": 3099, "started_at": "x"})
+        try:
+            code, out, _ = self.run_cli("doctor")
+        finally:
+            service.clear_state()
+
+        self.assertEqual(code, 0)
+        self.assertIn("not running", out)
+
+
 if __name__ == "__main__":
     unittest.main()

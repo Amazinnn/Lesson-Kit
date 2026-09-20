@@ -450,6 +450,18 @@ def cmd_dashboard(args):
     return 0
 
 
+def cmd_doctor(args):
+    from workbench.cli import doctor
+    checks = doctor.run_checks()
+    for line in doctor.format_report(checks):
+        print(line)
+    if doctor.all_passed(checks):
+        print("all checks passed")
+        return 0
+    print("problems found (nothing was changed)", file=sys.stderr)
+    return 2
+
+
 def build_parser(prog="wb"):
     parser = argparse.ArgumentParser(prog=prog,
                                      description="lesson-kit workbench CLI")
@@ -497,6 +509,9 @@ def build_parser(prog="wb"):
     p.add_argument("name", nargs="?")
     p.add_argument("--port", type=int, default=3081)
     p.set_defaults(func=cmd_dashboard)
+
+    p = sub.add_parser("doctor", help="check registry, databases, providers, and service (read-only)")
+    p.set_defaults(func=cmd_doctor)
 
     p = sub.add_parser("weak", help="weak knowledge points, ordered")
     p.add_argument("name", nargs="?")
