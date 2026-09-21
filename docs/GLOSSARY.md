@@ -13,8 +13,14 @@
 
 ## 内容与池
 
+### 课程标识符 / Course Identifier（slug）
+一门课程（一本教材）的机器名：小写 ASCII（字母、数字、连字符），既当池库名（`pool/<course>.db`）又当每条内容 id 的前缀段（`dmath-ch06-kp-001` 里的 `dmath`）。它与人看的工作区名是两样东西——中文文件夹名照样可以当工作区名。注册时按「显式 `--course` › 已有池名 › ASCII 文件夹名推导 › 自动顺序短码 `c01`、`c02`…」取一个：前三条是人认得的名字，最后一条只是机器内部的下标（自动分配，顶栏不显示）。显式给的值一律按本式样校验，不合就带理由拒绝——ingest 各条门禁只认这个字符集。
+_Avoid_：工作区名（人看的、可中文）、自由命名的课程名、把短码当成课程名
+
+出处：openspec/specs/review-workbench「Unified CLI entry point」「Course and chapter switching」；workbench/cli/main.py
+
 ### 知识池 / Knowledge Pool
-课程级的 SQLite 存储（`pool/<course>.db`），保存提取好的知识点、正式题与全部学习状态。整个工作台的数据底座。
+课程级的 SQLite 存储（`pool/<course>.db`，`<course>` 即「课程标识符」），保存提取好的知识点、正式题与全部学习状态。整个工作台的数据底座。
 _Avoid_：章节数据库、压缩包版本
 出处：CONTEXT.md（迁入）；pool_schema.py
 

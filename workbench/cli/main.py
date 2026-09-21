@@ -468,16 +468,20 @@ def build_parser(prog="lesson-kit"):
                                      description="lesson-kit workbench CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("init", help="register a folder; create pool and skeleton first if it is not a workspace yet")
-    p.add_argument("path")
-    p.add_argument("--name")
-    p.add_argument("--course")
+    p = sub.add_parser("init", help="register a folder; create the pool and skeleton first if it is not a workspace yet")
+    p.add_argument("path", nargs="?", default=".",
+                   help="folder to register (default: the current directory)")
+    p.add_argument("--name", help="workspace name (default: the folder name)")
+    p.add_argument("--course",
+                   help="course identifier, lowercase ASCII (default: the pool "
+                        "database name, else a slug of the folder name, else the "
+                        "next free short code)")
     p.add_argument("--chapter")
     p.set_defaults(func=cmd_init)
 
     p = sub.add_parser("use", help="switch the active course and chapter of a workspace")
     p.add_argument("course")
-    p.add_argument("chapter")
+    p.add_argument("chapter", help="chapter identifier, or \"\" for the whole course")
     p.add_argument("--workspace")
     p.set_defaults(func=cmd_use)
 

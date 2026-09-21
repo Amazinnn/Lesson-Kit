@@ -38,12 +38,7 @@ def hub_page(workspaces):
 
 def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
           page_type=None, object_id=None, kp_titles=None):
-    course = workspace.get("active_course") or ""
-    chapter = workspace.get("active_chapter") or ""
-    meta = f"<span class='meta'>{html.escape(workspace['name'])}"
-    if course and chapter:
-        meta += f" · {html.escape(course)} / {html.escape(chapter)}"
-    meta += "</span>"
+    meta = f"<span class='meta'>{html.escape(workspace['name'])}</span>"
     topbar = (
         "<header id='topbar'>"
         "<a class='brand' href='/'>lesson-kit</a>"
