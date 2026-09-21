@@ -47,11 +47,15 @@ lesson-kit dashboard         # ensure the service runs, then open the browser
 lesson-kit daemon stop
 lesson-kit use dmath ch07    # switch course/chapter without re-registering
 lesson-kit doctor            # read-only self-check: registry, pools, providers, service
-wb bridge list               # which executable each provider resolves to
+lesson-kit bridge list       # which executable each provider resolves to
 ```
 
 `init` also works on an empty folder: it creates the pool database and the
 `.lessonkit/` skeleton first, so a brand-new study workspace is one command.
+Only `init <path>` is needed — the course identifier comes from `--course`, else
+the pool already in the folder, else an ASCII folder name, else an automatically
+allocated short code (`c01`, `c02`, …). The workspace name is separate and may be
+any script (a Chinese folder name is fine; the top bar shows the name).
 
 Pin an Agent executable instead of letting PATH ordering decide, which matters
 when several installs of the same CLI exist:
