@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 import sqlite3
 import subprocess
 import sys
@@ -44,7 +45,7 @@ def _resolve_name(args):
 
 
 def cmd_init(args):
-    folder = Path(args.path)
+    folder = Path(args.path).resolve()
     folder.mkdir(parents=True, exist_ok=True)
     if not registry.looks_like_workspace(folder):
         _bootstrap_workspace(folder, course=args.course)

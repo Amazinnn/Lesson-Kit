@@ -2,7 +2,10 @@
 
 import json
 import os
+import re
 from pathlib import Path
+
+IDENTIFIER = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 
 def base_dir():
