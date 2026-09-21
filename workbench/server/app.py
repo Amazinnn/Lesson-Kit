@@ -3,7 +3,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from workbench import registry
 from workbench.domain import weak
@@ -178,7 +178,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"error": "not found"})
 
     def _send_page(self, path):
-        parts = [s for s in path.split("/") if s]
+        parts = [unquote(s) for s in path.split("/") if s]
         # /w/{name}/{practice|kps|kp/{id}|graph|session-end}
         name = parts[1]
         try:
@@ -248,7 +248,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 / f"{chapter}-graph.html")
 
     def _send_figure(self, path):
-        parts = path.split("/")
+        parts = [unquote(s) for s in path.split("/")]
         # /api/w/{name}/figures/{course}/{chapter}/{file}
         name = parts[3]
         logical = "/".join(parts[5:])
@@ -273,7 +273,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def _send_graph_artifact(self, path):
-        parts = path.split("/")
+        parts = [unquote(s) for s in path.split("/")]
         # /api/w/{name}/graph/artifact — raw self-contained graph HTML
         name = parts[3]
         try:
@@ -293,7 +293,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def _match_route(self, method, path):
-        segments = [s for s in path.split("/") if s]
+        segments = [unquote(s) for s in path.split("/") if s]
         for rmethod, pattern, handler in ROUTES:
             if rmethod != method:
                 continue

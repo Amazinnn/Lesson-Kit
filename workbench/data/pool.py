@@ -1,6 +1,7 @@
 """Pool: workspace-scoped SQLite access and runtime path resolution."""
 
 import json
+import re
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
