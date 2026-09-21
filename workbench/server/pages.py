@@ -36,6 +36,33 @@ def hub_page(workspaces):
     return _base("lesson-kit 工作台", body)
 
 
+def _chapter_lens(workspace):
+    """The top bar's chapter control: off = whole course, on = exactly one chapter.
+
+    The chapters come from the pool (see `_send_page`); with none, the whole-course
+    lens is the only state and the control is not rendered.
+    """
+    chapters = workspace.get("chapters") or []
+    if not chapters:
+        return ""
+    active = workspace.get("active_chapter") or ""
+    options = "".join(
+        f"<option value='{html.escape(chapter)}'"
+        f"{' selected' if chapter == active else ''}>{html.escape(chapter)}</option>"
+        for chapter in chapters
+    )
+    return (
+        "<div id='chapter-lens' class='chapter-lens'"
+        f" data-active='{html.escape(active)}'>"
+        "<label class='chapter-lens-toggle'>"
+        f"<input type='checkbox' id='chapter-lens-switch'{' checked' if active else ''}>"
+        "<span>章</span></label>"
+        f"<select id='chapter-lens-select' aria-label='选择章节'{'' if active else ' hidden'}>"
+        f"{options}</select>"
+        "</div>"
+    )
+
+
 def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
           page_type=None, object_id=None, kp_titles=None):
     meta = f"<span class='meta'>{html.escape(workspace['name'])}</span>"
@@ -44,6 +71,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         "<a class='brand' href='/'>lesson-kit</a>"
         "<span class='topbar-separator'>/</span>"
         f"{meta}"
+        f"{_chapter_lens(workspace)}"
         "<div class='mobile-drawer-controls'>"
         "<button id='mobile-nav-toggle' class='ghost sm icon-only' type='button' "
         "aria-controls='left-column' aria-expanded='false' aria-label='打开导航' title='打开导航'>☰</button>"
@@ -93,6 +121,11 @@ def _practice_scope_tray(kp_titles=None):
         "type='button' disabled>练习这些知识点</button>"
         "</section></aside></div>"
     )
+
+
+def _lens_label(workspace, chapter_label, whole_label):
+    """Name the active lens, so a page never claims a chapter it is not showing."""
+    return chapter_label if workspace.get("active_chapter") else whole_label
 
 
 def _page_header(context, title, summary="", actions=""):
@@ -309,7 +342,8 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
     empty_problems = '<p class="muted">—</p>'
     middle = (
         _page_header(
-            "知识点 / 当前章节", html.escape(kp["knowledge_item"]),
+            _lens_label(workspace, "知识点 / 当前章节", "知识点 / 全课程"),
+            html.escape(kp["knowledge_item"]),
             "先读正文，再按需要继续练习相关题目。", practice_action,
         )
         + "<div class='page-content'>"
@@ -329,7 +363,7 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
 
 
 def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
-    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+    prefix = pool.scope_prefix()
     source_kps = pool.kps(prefix)
     problem_counts = {kp["kp_id"]: 0 for kp in source_kps}
     for problem in pool.problems_all():
@@ -352,13 +386,17 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         for index, item in enumerate(source_kps)
     )
     empty_items = '<li class="muted">暂无知识点</li>'
-    middle = (_page_header("学习 / 当前章节", "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
+    middle = (_page_header(
+        _lens_label(workspace, "学习 / 当前章节", "学习 / 全课程"),
+        "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
         + "<div class='page-content'><div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
         + "<option value='source' selected>课程顺序</option><option value='title'>名称</option>"
         + "<option value='problem_count'>题目数量</option><option value='state'>学习状态</option>"
         + "<option value='importance'>重要性</option></select>"
         + "<button id='knowledge-sort-direction' class='ghost sm' type='button' aria-label='切换排序方向' title='切换排序方向'>↑</button></div>"
-        + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>本章知识点</h2></div></div>"
+        + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>"
+        + _lens_label(workspace, "本章知识点", "全部知识点")
+        + "</h2></div></div>"
         + f"<ul id='knowledge-list' class='knowledge-list'>{items or empty_items}</ul></section></div>")
     return shell(
         workspace, workspaces, weak_items, middle, "kps",
@@ -367,7 +405,8 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
 
 
 def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
-    middle = (_page_header("知识网络 / 当前章节", "知识图谱", "勾选知识点后，可将同一范围交给练习。")
+    middle = (_page_header(_lens_label(workspace, "知识网络 / 当前章节", "知识网络 / 全课程"),
+                     "知识图谱", "勾选知识点后，可将同一范围交给练习。")
         + "<div class='page-content graph-content'><section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
         "<label class='visually-hidden' for='graph-search'>搜索知识点</label><input id='graph-search' placeholder='搜索知识点'>"
         "<label for='graph-projection'>视图</label><select id='graph-projection' title='按已有指标调整图谱形态'>"
@@ -440,7 +479,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "</a></div>"
         for item in actionable
     )
-    rail_label = "优先回看" if actionable else "本章知识点"
+    rail_label = "优先回看" if actionable else _lens_label(
+        workspace, "本章知识点", "全部知识点")
     empty = "暂无明确薄弱证据" if not actionable else "暂无提醒"
     empty_weak = '<p class="score">' + empty + "</p>"
     return (

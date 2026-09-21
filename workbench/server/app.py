@@ -36,6 +36,7 @@ def _content_type(suffix):
 ROUTES = [
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
     ("GET", "/api/w/{name}/weak", api_mod.weak_list),
+    ("POST", "/api/w/{name}/chapter", api_mod.set_chapter_lens),
     ("GET", "/api/w/{name}/due", api_mod.due_list),
     ("GET", "/api/w/{name}/calendar", api_mod.calendar_view),
     ("GET", "/api/w/{name}/plan", api_mod.daily_plan),
@@ -68,7 +69,7 @@ ROUTES = [
 
 
 def _kp_titles(workspace, pool):
-    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+    prefix = pool.scope_prefix()
     return {kp["kp_id"]: kp.get("knowledge_item") or kp["kp_id"]
             for kp in pool.kps(prefix)}
 
@@ -193,6 +194,8 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         workspaces = registry.list_workspaces()
         pool = api_mod._pool_for(workspace)
         try:
+            # the chapter lens control in the top bar reads both from here
+            workspace = {**workspace, "chapters": pool.chapters()}
             weak_items = self._weak_items(workspace, pool)
             kp_titles = _kp_titles(workspace, pool)
             page = parts[2] if len(parts) > 2 else "practice"
@@ -239,7 +242,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
     def _weak_items(self, workspace, pool):
         from datetime import date
-        prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+        prefix = pool.scope_prefix()
         return weak.score_all(
             pool.kps(prefix), pool.signals(), pool.schedule_rows(),
             pool.relations(), set(), date.today(),

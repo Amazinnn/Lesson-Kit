@@ -15,7 +15,7 @@
 | **对话 conversations** | provider 原生会话的建立/轮次/事件流/取消/最小镜像；失败原因含进程退出码、超时、取消与**流内错误**（provider 退出码为 0 也算失败） | jobs/conv-### | `/ai/sessions/*` |
 | **provider 发现/配置** | 单一发现口径：先取 bridges.json 为该 provider 配置的 `command`，否则退回 PATH 探测；配置另可覆盖 args / model / timeout | bridges.json | `/ai/providers`、CLI `bridge add`/`bridge list` |
 | **后台服务 service** | 工作台服务的 pid 记录、分离启动、终止与存活探测；`start` 只在端口应答后报成功，`stop` 拒绝终止已被回收的进程号 | `~/.lessonkit-workbench/daemon.json`、`daemon.log` | CLI `daemon start\|stop\|status`、`dashboard` |
-| **查询 queries** | hub 统计/due 列表/图谱模型/kp 详情/review 概览（标签全长） | 全表只读 | 多个 GET API |
+| **查询 queries** | hub 统计（四项整课程口径）/due 列表/图谱模型/kp 详情/review 概览（标签全长）；章透镜下的取数走 `Pool.scope_prefix()` | 全表只读 | 多个 GET API |
 | **计划 planning** | 每日建议（≤3 条人话）+ 失败保留上次结果 | 全表只读 + plan.json | `/plan`、建议区 |
 
 > `bridge/` 现存两个模块：`conversation_providers.py`（发现 + 命令构建 + 事件归一化）

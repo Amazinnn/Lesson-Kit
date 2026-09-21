@@ -9,7 +9,7 @@ def build(pool, workspace, payload):
         "route": payload.get("route") or "",
         "page_type": page_type,
     }
-    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+    prefix = pool.scope_prefix()
     result = {
         "workspace": {
             "name": workspace["name"],

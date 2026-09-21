@@ -636,6 +636,139 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("id='start-card-review'", body)
         self.assertNotIn("id='start-card-review'", self.fetch("/w/dmath/practice")[1])
 
+    def test_encoded_workspace_names_resolve_on_pages_and_api(self):
+        self.fixture.add_workspace("大学物理")
+        encoded = quote("大学物理")
+
+        status, body = self.fetch(f"/w/{encoded}/practice")
+
+        self.assertEqual(status, 200)
+        self.assertIn("大学物理", body)
+        status, payload = self.fetch_json(f"/api/w/{encoded}/weak")
+        self.assertEqual(status, 200)
+        self.assertIsInstance(payload, list)
+
+    def test_topbar_shows_the_name_and_chapter_not_the_machine_course(self):
+        self.fixture.add_workspace("大学物理", course="c01", chapter="ch06")
+
+        status, body = self.fetch(f"/w/{quote('大学物理')}/practice")
+
+        self.assertEqual(status, 200)
+        meta = body.split("<span class='meta'>", 1)[1].split("</span>", 1)[0]
+        self.assertIn("大学物理", meta)
+        self.assertNotIn("c01", meta)
+        self.assertNotIn("ch06", meta)
+
+    def test_the_chapter_lens_controls_the_lens_not_the_name(self):
+        _, body = self.fetch("/w/dmath/practice")
+
+        self.assertIn("id='chapter-lens'", body)
+        self.assertIn("id='chapter-lens-switch' checked", body)
+        self.assertIn("<option value='ch06' selected>ch06</option>", body)
+
+    def test_the_whole_course_lens_leaves_the_switch_off(self):
+        self.fixture.add_workspace("second", chapter="")
+
+        _, body = self.fetch("/w/second/practice")
+
+        self.assertIn("id='chapter-lens-switch'>", body)
+        self.assertIn("id='chapter-lens-select' aria-label='选择章节' hidden", body)
+
+    def test_switching_the_lens_writes_the_registry_value(self):
+        from workbench import registry
+
+        status, payload = self.post_json("/api/w/dmath/chapter", {"chapter": "ch06"})
+
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["chapter"], "ch06")
+        self.assertEqual(payload["chapters"], ["ch06"])
+        self.assertEqual(registry.get_workspace("dmath")["active_chapter"], "ch06")
+
+        status, payload = self.post_json("/api/w/dmath/chapter", {"chapter": ""})
+
+        self.assertEqual(payload["chapter"], "")
+        self.assertEqual(registry.get_workspace("dmath")["active_chapter"], "")
+
+    def test_the_lens_endpoint_refuses_a_value_that_is_not_an_identifier(self):
+        from workbench import registry
+
+        request = urllib.request.Request(
+            f"http://127.0.0.1:{self.port}/api/w/dmath/chapter",
+            data=json.dumps({"chapter": "第7章"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as ctx:
+            urllib.request.urlopen(request)
+
+        self.assertEqual(ctx.exception.code, 400)
+        self.assertEqual(registry.get_workspace("dmath")["active_chapter"], "ch06")
+
+    def _seed_second_chapter(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.execute(
+            "INSERT INTO knowledge_points (kp_id, knowledge_item, body,"
+            " knowledge_type, importance) VALUES (?, ?, ?, ?, ?)",
+            ("dmath-ch07-kp-001", "递归", "", "concept-property", "core"),
+        )
+        conn.execute(
+            "INSERT INTO problems (problem_id, kp_ids, problem_text, solution,"
+            " problem_type, source_kind) VALUES (?, ?, ?, ?, ?, ?)",
+            ("dmath-ch07-prob-001", '["dmath-ch07-kp-001"]', "P7", "S7",
+             "calculation", "textbook"),
+        )
+        conn.commit()
+        conn.close()
+
+    def test_chapters_come_from_content_and_the_hub_stays_course_wide(self):
+        self._seed_second_chapter()
+
+        status, payload = self.post_json("/api/w/dmath/chapter", {"chapter": "ch07"})
+
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["chapters"], ["ch06", "ch07"])
+        _, body = self.fetch("/w/dmath/practice")
+        self.assertIn("<option value='ch06'>ch06</option>", body)
+        self.assertIn("<option value='ch07' selected>ch07</option>", body)
+
+        stats = self.fetch_json("/api/hub/workspaces")[1][0]["stats"]
+        self.assertEqual(stats["kps"], 2)
+        self.assertEqual(stats["problems"], 2)
+
+    def test_views_follow_the_lens(self):
+        self._seed_second_chapter()
+        self.post_json("/api/w/dmath/chapter", {"chapter": "ch07"})
+
+        _, body = self.fetch("/w/dmath/kps")
+
+        self.assertIn("dmath-ch07-kp-001", body)
+        self.assertNotIn("dmath-ch06-kp-001", body)
+
+    def test_practice_still_draws_from_a_selection_that_spans_chapters(self):
+        self._seed_second_chapter()
+        self.post_json("/api/w/dmath/chapter", {"chapter": "ch07"})
+
+        status, payload = self.post_json("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001", "dmath-ch07-kp-001"],
+            "n": 5, "mode": "all",
+        })
+
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            {problem["problem_id"] for problem in payload["problems"]},
+            {"dmath-ch06-prob-001", "dmath-ch07-prob-001"},
+        )
+
+    def test_unknown_workspace_names_fail_cleanly(self):
+        missing = quote("没有这个区")
+
+        with self.assertRaises(HTTPError) as page_error:
+            self.fetch(f"/w/{missing}/practice")
+        self.assertEqual(page_error.exception.code, 404)
+        with self.assertRaises(HTTPError) as api_error:
+            self.fetch_json(f"/api/w/{missing}/weak")
+        self.assertEqual(api_error.exception.code, 404)
+
 
 if __name__ == "__main__":
     unittest.main()

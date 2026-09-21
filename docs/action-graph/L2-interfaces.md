@@ -2,12 +2,13 @@
 
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者。
 
-## API 路由（`/api/w/{ws}` 前缀，30 条）
+## API 路由（`/api/w/{ws}` 前缀，31 条）
 
 | 方法 路径 | 读写 | 服务层 | 给谁 |
 |---|---|---|---|
 | GET `/hub/workspaces` | 读 | 查询 | 浏 |
 | GET `/weak` | 读 | 查询 | 双 |
+| POST `/chapter` | 写 | 注册表（顶栏章透镜；空串 = 全课程，与 `use` 同源） | 浏 |
 | GET `/due` | 读 | 查询 | 双 |
 | GET `/calendar` | 读 | 查询 | 浏 |
 | GET `/plan` · POST `/plan/recalculate` | 读/写 | 计划 | 浏 |

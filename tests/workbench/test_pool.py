@@ -152,6 +152,47 @@ class PoolTests(unittest.TestCase):
         kps = self.pool.kps("dmath-ch06")
         self.assertEqual(len(kps), 2)
 
+    def test_scope_prefix_is_course_chapter_or_the_whole_course(self):
+        self.assertEqual(self.pool.scope_prefix(), "dmath-ch06")
+
+        whole = self.pool_mod.Pool(root=self.ws_root, db_path=self.db_path,
+                                   course="dmath", chapter="")
+        try:
+            self.assertEqual(whole.scope_prefix(), "dmath-")
+            self.assertEqual(len(whole.kps(whole.scope_prefix())), 2)
+        finally:
+            whole.close()
+
+    def test_chapters_are_derived_from_content_ids(self):
+        conn = self.pool.connect()
+        conn.execute(
+            "INSERT INTO problems (problem_id, kp_ids, problem_text, solution,"
+            " problem_type, source_kind) VALUES (?, ?, ?, ?, ?, ?)",
+            ("dmath-ch07-prob-001", '["dmath-ch06-kp-001"]', "P7", "S7",
+             "calculation", "textbook"),
+        )
+        conn.execute(
+            "INSERT INTO knowledge_points (kp_id, knowledge_item, body,"
+            " knowledge_type, importance) VALUES (?, ?, ?, ?, ?)",
+            ("other-course-ch06-kp-001", "Another course", "", "concept-property", "core"),
+        )
+        conn.execute(
+            "INSERT INTO knowledge_points (kp_id, knowledge_item, body,"
+            " knowledge_type, importance) VALUES (?, ?, ?, ?, ?)",
+            ("dmath-kp-001", "No chapter segment", "", "concept-property", "core"),
+        )
+        conn.commit()
+
+        self.assertEqual(self.pool.chapters(), ["ch06", "ch07"])
+
+    def test_chapters_of_an_empty_course_are_empty(self):
+        other = self.pool_mod.Pool(root=self.ws_root, db_path=self.db_path,
+                                   course="c01", chapter="")
+        try:
+            self.assertEqual(other.chapters(), [])
+        finally:
+            other.close()
+
     def test_problems_for_kps(self):
         problems = self.pool.problems_for_kps(["dmath-ch06-kp-002"])
         self.assertEqual([p["problem_id"] for p in problems], ["dmath-ch06-prob-002"])

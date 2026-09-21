@@ -21,7 +21,7 @@ def hub_stats(pool):
 
 def planning_facts(pool, workspace):
     """Collect read-only facts for the Domain planner."""
-    prefix = f"{pool.course}-{pool.chapter}"
+    prefix = pool.scope_prefix()
     problems = pool.problems_all()
     progress = {}
     conn = pool.connect()
@@ -135,7 +135,7 @@ def kp_detail(pool, kp_id):
 def graph_model(pool, signal_weights=None):
     """Compose the graph view. signal_weights maps kp_id -> strongest weight;
     the caller aggregates signals via the Domain layer (Data imports no Domain)."""
-    prefix = f"{pool.course}-{pool.chapter}"
+    prefix = pool.scope_prefix()
     kps = pool.kps(prefix)
     ids = {kp["kp_id"] for kp in kps}
     current = {

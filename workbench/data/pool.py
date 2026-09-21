@@ -172,6 +172,34 @@ class Pool:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    # -- chapter lens -----------------------------------------------------
+
+    def scope_prefix(self):
+        """The id prefix of the active lens: `course-chapter`, or `course-` for the
+        whole course. An empty chapter is the whole-course contract, not an accident."""
+        return f"{self.course}-{self.chapter}"
+
+    def chapters(self):
+        """Chapters present in this course, derived from the content ids themselves.
+
+        There is no chapters table: a chapter exists exactly as long as content
+        carrying its id segment does. Ids that do not parse are ignored, never guessed.
+        """
+        pattern = re.compile(
+            rf"^{re.escape(self.course)}-(.+)-(?:kp|prob|mq|fc)-\d+$")
+        conn = self.connect()
+        chapters = set()
+        for table, column in (("knowledge_points", "kp_id"),
+                              ("problems", "problem_id"),
+                              ("flash_cards", "card_id")):
+            if not _has_table(conn, table):
+                continue
+            for row in conn.execute(f"SELECT DISTINCT {column} FROM {table}"):
+                match = pattern.match(row[0] or "")
+                if match:
+                    chapters.add(match.group(1))
+        return sorted(chapters)
+
     def relations(self):
         rows = self.connect().execute(
             "SELECT * FROM knowledge_relations ORDER BY relation_id"

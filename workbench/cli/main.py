@@ -151,8 +151,10 @@ def cmd_use(args):
             name = workspaces[0]["name"]
         else:
             raise SystemExit("multiple workspaces registered — pass --workspace <name>")
-    registry.update_active(name, args.course, args.chapter)
-    print(f"workspace {name}: active course/chapter -> {args.course}/{args.chapter}")
+    chapter = _optional_slug(args.chapter, "chapter")
+    registry.update_active(name, _require_slug(args.course), chapter)
+    print(f"workspace {name}: active course/chapter -> "
+          f"{args.course}/{chapter or '<全课程>'}")
     print(f"workbench at http://127.0.0.1:3081/w/{name}/")
 
 

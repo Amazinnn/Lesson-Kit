@@ -77,6 +77,27 @@
     store(SCOPE_TRAY_KEY, !!open);
   }
 
+  function bindChapterLens() {
+    var lens = document.getElementById("chapter-lens");
+    var toggle = document.getElementById("chapter-lens-switch");
+    var select = document.getElementById("chapter-lens-select");
+    if (!lens || !toggle || !select) return;
+    function applyChapter(chapter) {
+      post("/chapter", { chapter: chapter }).then(function () {
+        window.location.reload();
+      }, function (error) {
+        window.alert("切换章节失败：" + error.message);
+        window.location.reload();
+      });
+    }
+    toggle.addEventListener("change", function () {
+      applyChapter(toggle.checked ? select.value : "");
+    });
+    select.addEventListener("change", function () {
+      applyChapter(select.value);
+    });
+  }
+
   function bindScopeTray() {
     var toggle = document.getElementById("scope-tray-toggle");
     var collapse = document.getElementById("scope-tray-collapse");
@@ -118,6 +139,7 @@
     saveSelectedKpIds(ids);
   }
 
+  bindChapterLens();
   bindScopeTray();
   bindSelectionControls();
 
