@@ -65,8 +65,25 @@ def _pool_for(workspace):
     )
 
 
+def set_chapter_lens(pool, workspace, params, body):
+    """The top-bar chapter switch: the human writer of the one active-chapter value.
+
+    Empty chapter means the whole course. `lesson-kit use` writes the same value.
+    """
+    from workbench import registry
+    chapter = body.get("chapter", "")
+    if not isinstance(chapter, str):
+        raise ApiError(400, "chapter must be a string or empty")
+    try:
+        registry.update_active(
+            workspace["name"], workspace.get("active_course", ""), chapter)
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+    return {"chapter": chapter, "chapters": pool.chapters()}
+
+
 def weak_list(pool, workspace, params, body):
-    prefix = f"{workspace.get('active_course', '')}-{workspace.get('active_chapter', '')}"
+    prefix = pool.scope_prefix()
     limit = _query_int(params, "limit", 20, maximum=1000)
     return weak.score_all(
         pool.kps(prefix), pool.signals(), pool.schedule_rows(),

@@ -125,6 +125,31 @@ body {
 }
 #topbar .meta { color: var(--dsw-label-secondary); font-size: 13px; }
 .topbar-separator { color: var(--dsw-label-caption); }
+.chapter-lens {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  font-size: 13px;
+  color: var(--dsw-label-secondary);
+}
+.chapter-lens-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.chapter-lens-toggle input { accent-color: var(--lk-blue); margin: 0; }
+.chapter-lens select {
+  max-width: 130px;
+  padding: 2px 4px;
+  font-size: 13px;
+  color: var(--dsw-label-primary);
+  background: var(--dsw-bg-layer-1);
+  border: 1px solid var(--lk-ink);
+  border-radius: 4px;
+}
 .mobile-drawer-controls { display: none; margin-left: auto; gap: 4px; }
 
 /* three columns — DSH geometry (sidebar 280 / details 360, collapse rail) */
@@ -1085,6 +1110,17 @@ img { max-width: 100%; }
   .flash-card-stage { padding-right: 3%; padding-left: 3%; }
   .flash-card-stage.is-revealed .flash-card-prompt { transform: translate(-3%, 8px) rotate(-3deg); }
   .flash-card-stage.is-revealed .flash-card-answer { transform: translate(1.5%, calc(100% + 10px)) rotate(1.5deg); }
+  #topbar { gap: 6px; }
+  #topbar .brand { font-size: 0; width: 47px; flex: none; }
+  #topbar .brand::before { margin-right: 0; }
+  #topbar .meta {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chapter-lens { flex: none; margin-left: 0; }
+  .chapter-lens select { max-width: 84px; }
 }
 
 .goal-cards {
@@ -1113,6 +1149,7 @@ img { max-width: 100%; }
 @media (max-width: 1023px) {
   #topbar { padding: 0 14px; }
   .mobile-drawer-controls { display: flex; }
+  .chapter-lens select { max-width: 92px; }
   #layout,
   #layout[data-ai-collapsed] { grid-template-columns: 1fr; }
   #left-column,

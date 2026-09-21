@@ -24,6 +24,11 @@ _Avoid_：工作区名（人看的、可中文）、自由命名的课程名、�
 _Avoid_：章节数据库、压缩包版本
 出处：CONTEXT.md（迁入）；pool_schema.py
 
+### 章 / Chapter
+一本教材（课程）内部的内容分段，只以内容 id 的前缀段存在：`dmath-ch06-kp-001` 里的 `<course>-<chapter>-`（`<course>` 即「课程标识符」；知识点、正式题、微测、闪卡同理）。一个池（`pool/<course>.db`）容纳多章（「单库多章」）；章的名单从池内容派生，不是一张表、也没有登记动作。工作台的**章透镜**（顶栏那个「章」开关）把注册表的 `active_chapter` 指向某一章，关掉开关 = 空值 = 全课程；透镜只改"看什么"（知识点页/图谱页/复习/练习建议），不改选区，也不锁题。
+_Avoid_：章节数据库、chapters 表的行、跨库切章、把透镜当练习范围
+出处：pipeline/commands/extract-chapter.md（单库多章）；openspec/specs/review-workbench「Chapter list derived from pool content」「Chapter lens scoping」
+
 ### 知识点 / Knowledge Point
 从源材料中提取、入池的可复用知识单元，是练习、调度、图谱、信号的共同挂载对象。每章一章（如 `dmath-ch06-kp-001`）。
 _Avoid_：卡片、笔记条

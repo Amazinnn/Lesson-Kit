@@ -118,7 +118,7 @@ def _item_rows(conn, table, item_type, item_id, order):
 
 def next_id(pool, entity):
     table, id_column = _entity(entity)
-    scope = f"{pool.course}-{pool.chapter}"
+    scope = pool.scope_prefix()
     prefix = f"{scope}-{PREFIXES[entity]}-"
     conn = pool.connect()
     conn.execute("BEGIN IMMEDIATE")

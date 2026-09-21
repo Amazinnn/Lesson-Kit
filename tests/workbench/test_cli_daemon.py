@@ -366,6 +366,64 @@ class BootstrapInitTests(unittest.TestCase):
         workspace = registry.get_workspace("dmath")
         self.assertEqual(workspace["active_course"], "dmath")
 
+    def test_use_refuses_a_course_that_is_not_an_identifier(self):
+        with self.assertRaises(SystemExit) as caught:
+            self.run_cli("use", "大学物理", "ch01")
+
+        self.assertIn("not a valid identifier", str(caught.exception))
+        from workbench import registry
+
+        self.assertEqual(registry.get_workspace("dmath")["active_course"], "dmath")
+
+    def test_use_refuses_a_chapter_that_is_not_an_identifier(self):
+        with self.assertRaises(SystemExit) as caught:
+            self.run_cli("use", "geo", "第7章")
+
+        self.assertIn("not a valid identifier", str(caught.exception))
+        from workbench import registry
+
+        self.assertEqual(registry.get_workspace("dmath")["active_chapter"], "ch06")
+
+    def test_init_refuses_a_chapter_that_is_not_an_identifier(self):
+        with self.assertRaises(SystemExit) as caught:
+            self.run_cli("init", str(self.fixture.ws), "--chapter", "ch0 6")
+
+        self.assertIn("not a valid identifier", str(caught.exception))
+
+    def test_init_refuses_a_folder_with_several_pools(self):
+        folder = Path(self.fixture.tmp.name) / "two-pools"
+        (folder / "pool").mkdir(parents=True)
+        shutil.copy(self.fixture.db_path, folder / "pool" / "dmath.db")
+        shutil.copy(self.fixture.db_path, folder / "pool" / "dmath-backup.db")
+
+        with self.assertRaises(SystemExit) as caught:
+            self.run_cli("init", str(folder))
+
+        self.assertIn("dmath-backup.db", str(caught.exception))
+
+    def test_a_command_with_several_workspaces_names_the_candidates(self):
+        self.fixture.add_workspace("second")
+
+        with self.assertRaises(SystemExit) as caught:
+            self.run_cli("weak")
+
+        message = str(caught.exception)
+        self.assertIn("dmath", message)
+        self.assertIn("second", message)
+        self.assertIn("lesson-kit weak", message)
+
+        code, out = self.run_cli("weak", "second", "--limit", "1")
+        self.assertEqual(code, 0)
+
+    def test_use_with_an_empty_chapter_switches_to_the_whole_course(self):
+        code, out = self.run_cli("use", "dmath", "")
+
+        self.assertEqual(code, 0)
+        from workbench import registry
+
+        self.assertEqual(registry.get_workspace("dmath")["active_chapter"], "")
+        self.assertIn("全课程", out)
+
     def test_use_requires_an_explicit_workspace_when_ambiguous(self):
         self.fixture.add_workspace("second")
         with self.assertRaises(SystemExit):

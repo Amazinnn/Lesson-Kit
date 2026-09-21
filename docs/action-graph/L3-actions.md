@@ -7,6 +7,7 @@
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
+| 切换章透镜（关 = 全课程；开着时选一章） | UI 顶栏「章」开关 | 人 | 注册表 `active_chapter`（与 `use` 同源） | 已实现（dashboard-chapter-filter） |
 | 选定练习范围（选择是唯一来源） | UI 勾选 | 人 | 选区键 | 已实现 |
 | 加入今日要练 | UI 建议区 | 人 | 选区键 | 已实现 |
 | 开始本轮练习（模式+自评时机必选） | UI | 人 | 牌组 | 已实现 |
@@ -119,3 +120,13 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   （`daemon start|stop|status`、`dashboard`、`bridge list`、`bridge add --command`），
   CLI 顶层命令由 16 条增至 18 条。后台服务与
   「应用未打开时不运行」的旧记载之取舍见 ADR 0022。
+- 2026-09-21 工作区文件隔离（workspace-file-isolation）：本表动作**不新增**，但
+  三个动作的写入边界收紧——内容治理的 id 钉在本工作区课程前缀（外课 id 拒收）；
+  对话轮次/会话读写只认 `conv-NNN`/`turn-NNN`（`%2F` 穿越被拒，删除只落在本区
+  `.lessonkit/jobs/`）；开局 `init` 的池选择排除 ingest 备份、多池时要求
+  `--course` 指名。合同见 review-workbench「Workspace file containment」与
+  workbench-content-governance「Ingest stays inside one course」。
+- 2026-09-21 dashboard 章透镜（dashboard-chapter-filter）：第一节新增「切换章透镜」
+  一个动作（人面入口 = 顶栏开关，写注册表 `active_chapter`，与 CLI `use` 同源；
+  关 = 全课程）；读侧受影响的是知识点页/图谱页/复习与练习建议的取数口径，
+  hub 卡片四项统计改整课程口径（原 kps 按章）。章名单由池内容派生，无登记动作。
