@@ -21,7 +21,7 @@
 | 文件/目录 | 存什么 | 谁写 | 状态 |
 |---|---|---|---|
 | `workspaces.json` | 工作区注册表 | CLI `init` | 已实现 |
-| `bridges.json` | 任务 provider 配置（`wb bridge add`） | CLI `bridge` | 已实现 |
+| `bridges.json` | 任务 provider 配置（`lesson-kit bridge add`） | CLI `bridge` | 已实现 |
 | `jobs/` | 任务工作文件 + 对话留痕（conv-###） | 桥 | 已实现 |
 | `explain/{course}/{chapter}/` | （已移除，remove-explain-diagnose） | — | 已删除 |
 | `goals.json` | 目标（顶层 JSON 数组；可选 start_date + deadline 时间区间） | `POST/PATCH/DELETE /goals` | 已实现 |

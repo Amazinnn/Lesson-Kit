@@ -80,12 +80,12 @@ _Avoid_：Heartbeat 后台服务（不做）、任务计划程序、开机自启
 出处：ADR 0022；review-workbench spec「Background workbench service」
 
 ### 工作台命令 / lesson-kit Command
-`wb` 的第二个名字，不是第二套 CLI：两者共用全部子命令。`lesson-kit init` 即 `wb init`（注册工作区）；`lesson-kit dashboard` 确保服务在跑并打开浏览器，**不新增页面**。
-_Avoid_：第四页总览看板、`lessonkit.py init`（根 CLI，语义不同：写 `.lessonkit/state.yaml`）
+本项目的唯一命令名，模块形式 `python -m workbench.cli.main` 等价。`lesson-kit init` 注册工作区；`lesson-kit dashboard` 确保服务在跑并打开浏览器，**不新增页面**。
+_Avoid_：`lesson-kit`（另一个同名程序是 Weights & Biases，与本项目无关）、`lessonkit.py init`（根 CLI，语义不同：写 `.lessonkit/state.yaml`）
 出处：review-workbench spec「Unified CLI entry point」；ADR 0022
 
 ### 显式可执行文件 / Pinned Executable
-`bridges.json` 中为某个 provider 配置的 `command`：它**优先于** PATH 探测决定实际运行哪个可执行文件。存在理由：同一台机器可能装有多份同名 Agent CLI（本机即有两份 `pi` 与两个 npm 前缀），否则"用哪个"完全由 PATH 顺序决定。解析结果由 `wb bridge list` 报告。
+`bridges.json` 中为某个 provider 配置的 `command`：它**优先于** PATH 探测决定实际运行哪个可执行文件。存在理由：同一台机器可能装有多份同名 Agent CLI（本机即有两份 `pi` 与两个 npm 前缀），否则"用哪个"完全由 PATH 顺序决定。解析结果由 `lesson-kit bridge list` 报告。
 _Avoid_：PATH 探测优先（旧行为，已推翻）、静默回退
 出处：ai-teacher-bridge spec「Provider-native conversation discovery」
 
@@ -339,7 +339,7 @@ _Avoid_：内容版本号、逐条审计日志、哈希 id
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 
 ### 整批回滚 / Batch rollback
-按批次 id 一条命令撤销该批全部内容行的安全网（`wb ingest rollback --batch <id>`，对话桥结果卡片回滚按钮同源）；回滚前自动做安全备份，回滚后输出 accounting 核对。批次内容行已有练习/反馈记录时拒绝回滚并如实报错。
+按批次 id 一条命令撤销该批全部内容行的安全网（`lesson-kit ingest rollback --batch <id>`，对话桥结果卡片回滚按钮同源）；回滚前自动做安全备份，回滚后输出 accounting 核对。批次内容行已有练习/反馈记录时拒绝回滚并如实报错。
 _Avoid_：逐条手工删行、全池回退、静默丢弃练习记录
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 

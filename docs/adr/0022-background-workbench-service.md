@@ -6,8 +6,8 @@ Accepted (2026-09-17).
 
 ## Context
 
-The workbench server has always been a foreground process: `wb serve` blocks
-until Ctrl+C, and `wb open` only prints a URL. Three earlier records assumed
+The workbench server has always been a foreground process: `lesson-kit serve` blocks
+until Ctrl+C, and `lesson-kit open` only prints a URL. Three earlier records assumed
 that shape and argued against going further:
 
 - **ADR 0004** ("lightweight runtime state") closed with: "We will not
@@ -51,8 +51,8 @@ the CLI name explicit.
   browser. It **does not add a fourth page**: DESIGN.md's anti-dashboard
   stance and the three-page model (practice / knowledge points / knowledge
   graph) stand unchanged.
-- `lesson-kit` is a **second name for the same CLI**, not a second CLI. It
-  shares every subcommand with `wb`; `lesson-kit init` is `wb init`.
+- `lesson-kit` is the **single command name** for this CLI (2026-09-21: the
+  earlier second name `lesson-kit` was dropped — see change `single-cli-name`).
 - The bridge gains an explicit `command` override that **takes precedence over
   PATH discovery**, so a provider executable can be pinned rather than
   resolved by PATH ordering.
@@ -75,7 +75,7 @@ Costs accepted:
   service is restarted; `bridge list` exists to make that visible instead of
   silent.
 - `lessonkit.py init` (runtime state for a workspace folder) and
-  `lesson-kit init` / `wb init` (workspace registration) mean different
+  `lesson-kit init` (workspace registration) mean different
   things. The root CLI is frozen by AGENTS.md, so the collision is documented
   rather than resolved by renaming.
 - Pinning `command` in `bridges.json` reverses a previously asserted behavior

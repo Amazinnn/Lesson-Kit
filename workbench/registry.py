@@ -64,7 +64,15 @@ def get_workspace(name):
 
 
 def update_active(name, course, chapter):
-    """Switch a workspace's active course/chapter in place; touches nothing else."""
+    """Switch a workspace's active course/chapter in place; touches nothing else.
+
+    One writer for both surfaces: the dashboard chapter lens and `lesson-kit use`.
+    An empty chapter is the whole-course lens and is always accepted.
+    """
+    if chapter and not IDENTIFIER.fullmatch(chapter):
+        raise ValueError(
+            f"chapter {chapter!r} must be a lowercase ASCII identifier or empty"
+        )
     registry_data = load_registry()
     for workspace in registry_data["workspaces"]:
         if workspace["name"] == name:

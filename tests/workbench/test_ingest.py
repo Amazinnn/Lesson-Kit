@@ -250,7 +250,7 @@ class IngestTests(unittest.TestCase):
             for index in range(1, 304)
         ]
         conn.executemany(
-            "INSERT INTO problems VALUES (?, ?, ?, NULL)",
+            "INSERT INTO problems VALUES (?, ?, ?, NULL, NULL)",
             [(problem, '["dmath-ch06-kp-001"]', source) for problem, source in sources],
         )
         conn.commit()
@@ -414,7 +414,7 @@ class IngestTests(unittest.TestCase):
         result = ingest.apply(self.db_path, gate_path, backup)
 
         self.assertTrue(result["ok"])
-        self.assertEqual(self.snapshot(backup)["rows"]["problems"], [("p-1", "Let x<sup>2</sup> = 1.", "old one", None), ("p-2", "Count two choices.", "old two", None)])
+        self.assertEqual(self.snapshot(backup)["rows"]["problems"], [("p-1", "Let x<sup>2</sup> = 1.", "old one", None, None), ("p-2", "Count two choices.", "old two", None, None)])
         self.assertEqual(self.snapshot()["rows"]["problems"][0][2], "x is 1 or -1.")
 
         self.tearDown()

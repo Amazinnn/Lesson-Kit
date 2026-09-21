@@ -35,8 +35,9 @@ python -m workbench.cli.main serve
 Then open `http://127.0.0.1:3081/`. Codex, Claude, and Pi are discovered from
 PATH; the non-AI workbench remains usable when no provider is available.
 
-An editable install exposes the same CLI under two names, `wb` and
-`lesson-kit`, and adds a background service plus a one-step launch:
+An editable install exposes the `lesson-kit` CLI (module form:
+`python -m workbench.cli.main`) and adds a background service plus a one-step
+launch:
 
 ```bash
 lesson-kit init . --course dmath --chapter ch06

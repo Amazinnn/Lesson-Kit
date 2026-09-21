@@ -58,15 +58,15 @@
 - 愿望原文：「AI 出题补池缺口，题型学含归纳/迁移/推广」
 - 状态：**已升级迁移（2026-08-29 专题 21/22）→ 见 GLOSSARY「Check 管线」**
 - 升级记录（2026-08-29 专题 21）：问卷 B1 推翻下述定义中的「由所有者运行
-  `wb ingest --apply`」条款——Agent 可直接触发 ingest，「门禁步骤是决断
+  `lesson-kit ingest --apply`」条款——Agent 可直接触发 ingest，「门禁步骤是决断
   辅助，不是权限闸门」；问卷 C 组吸收「Agent 组织面板」为校验环节、确立
   无候选中间态（直接入正式池）。立项 grilling（专题 22）定名 **Check
-  管线**、回滚命令 `wb ingest rollback --batch <id>`、首期产出链闪卡+微题、
+  管线**、回滚命令 `lesson-kit ingest rollback --batch <id>`、首期产出链闪卡+微题、
   产出入口为对话桥结构化动作、candidate_problems 退役。本条目原文留档
   如下（「所有者触发」等旧口径以 GLOSSARY「Check 管线」与
   introduce-check-pipeline 变更为准）：
 - 定义（2026-08-29，所有者确认）：
-  - **指什么**：AI 产出符合既有 recipe schema 的 manifest（微题 / 闪卡 / 综合题内容），由**所有者**运行既有 `wb ingest --apply` 入池；确定性门禁与自动备份照走；**无逐题人工确认**。AI 不持有任何直写池的通道。每次 apply 记**批次 id**、内容行带批次标记，支持**整批回滚**（机制属本定义，实现另立项）。
+  - **指什么**：AI 产出符合既有 recipe schema 的 manifest（微题 / 闪卡 / 综合题内容），由**所有者**运行既有 `lesson-kit ingest --apply` 入池；确定性门禁与自动备份照走；**无逐题人工确认**。AI 不持有任何直写池的通道。每次 apply 记**批次 id**、内容行带批次标记，支持**整批回滚**（机制属本定义，实现另立项）。
   - **不指什么**：题型学扩展（归纳/迁移/推广题型）为桥上显式未定项；AI 自主触发入池、定时自动补池不在范围。
   - **正例**：AI 为某知识点产出 6 张闪卡的 flash-card-patch manifest，所有者跑门禁 apply 入池；发现质量差，按批次 id 整批回滚后重生成。
   - **反例**：AI 直接 UPDATE 池数据库（禁止——唯一合法写池方式是门禁配方）；AI 产出缺 source_evidence 的 manifest 被门禁拒收（正确行为，非缺陷）。

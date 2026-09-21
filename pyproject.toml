@@ -15,7 +15,6 @@ dependencies = []
 dev = ["pytest==9.1.1"]
 
 [project.scripts]
-wb = "workbench.cli.main:main"
 lesson-kit = "workbench.cli.main:lesson_kit_main"
 
 [tool.setuptools.packages.find]

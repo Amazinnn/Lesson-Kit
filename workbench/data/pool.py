@@ -300,6 +300,12 @@ class Pool:
         return self.root / ".lessonkit" / "jobs"
 
 
+def _has_table(conn, name):
+    return conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+    ).fetchone() is not None
+
+
 def _maximum_readable_suffix(conn, table, column, marker):
     """Read numeric suffixes without assuming they stay three digits forever."""
     try:

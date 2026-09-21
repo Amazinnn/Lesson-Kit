@@ -838,6 +838,9 @@ def _gate_flash_cards(conn, manifest):
         if not card_rules.is_valid_card_id(card_id):
             errors.append(f"{card_id}: id must look like <scope>-fc-NNN")
             continue
+        if not card_id.startswith(prefix):
+            errors.append(f"{card_id}: id must start with {prefix} (this workspace's course)")
+            continue
         if card_id in existing_ids or card_id in seen_ids:
             errors.append(f"{card_id}: card id already exists")
             continue

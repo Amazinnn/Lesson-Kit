@@ -20,7 +20,7 @@ hard-coding — DeepTutor's answer is layered adaptation, not enforcement.
 
 Teaching is agent-native; process control is layered, not enforced:
 
-1. **CLI is a data interface.** `wb` exposes only data operations (query, pull,
+1. **CLI is a data interface.** `lesson-kit` exposes only data operations (query, pull,
    record, start bridge tasks, status). Teaching behavior lives in the teaching
    skill and the teacher conduct contract. This mirrors DeepTutor's own design,
    which documents handing its CLI to Claude Code subagents.

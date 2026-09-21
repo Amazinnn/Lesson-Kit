@@ -6,6 +6,7 @@ import threading
 import unittest
 import urllib.request
 from urllib.error import HTTPError
+from urllib.parse import quote
 
 from tests.workbench.fixtures import WorkspaceFixture
 

@@ -9,17 +9,59 @@ with flexible feedback and a forgetting curve used as background guidance only.
 Each lesson-kit folder is a workspace. The registry maps a workspace name to a
 folder path, its pool database, and its active course/chapter. A workspace can
 be registered, listed, and opened (web shell or CLI), and a registered
-workspace SHALL appear in the hub with its pool statistics.
+workspace SHALL appear in the hub with its pool statistics. Hub statistics
+SHALL be counted over the workspace's whole course pool — every chapter present
+in that pool — regardless of the active chapter lens.
+
+A workspace SHALL register exactly one pool database, and that database SHALL
+live inside the workspace folder. Registration SHALL ignore ingest backups
+(`*.db.ingest-backup`, `pool/backups/*`) when choosing the pool, SHALL refuse a
+folder whose remaining candidates are several databases unless one of them is the
+explicitly named course, and SHALL refuse to register a folder or a database that
+another registered workspace already owns. Re-registering the same name for a
+different folder SHALL be refused instead of silently replacing the existing
+entry. The active chapter SHALL be an identifier (lowercase ASCII letters, digits,
+and dashes) or empty, and a value that is not SHALL be refused with the reason.
 
 #### Scenario: Register a folder as a workspace
 
-- **WHEN** the user runs `wb init <path>` on a folder with lesson-kit structure (a `pool/*.db` file or `lessonkit.py`)
+- **WHEN** the user runs `lesson-kit init <path>` on a folder with lesson-kit structure (a `pool/*.db` file or `lessonkit.py`)
 - **THEN** the folder is added to the registry under its folder name and the hub lists it with pool row counts
 
 #### Scenario: List workspaces with statistics
 
 - **WHEN** the hub page is loaded
-- **THEN** it shows each registered workspace with course, chapter, knowledge-point count, problem count, due-item count, and weak-signal count
+- **THEN** it shows each registered workspace with its course, chapter, knowledge-point count, problem count, due-item count, and weak-signal count, all counted course-wide
+
+#### Scenario: Hub statistics ignore the chapter lens
+
+- **WHEN** the active chapter lens selects a chapter that holds only part of the pool
+- **THEN** the hub card still reports course-wide counts and does not shrink to the selected chapter
+
+#### Scenario: A backup is never adopted as the pool
+
+- **WHEN** a folder holds both a live pool and an ingest backup (or a pre-readiness copy of the pool)
+- **THEN** registration selects the live pool and the backup file is left untouched
+
+#### Scenario: Several pools ask which one
+
+- **WHEN** a folder holds more than one candidate pool database and none matches the named course
+- **THEN** registration fails and lists the candidates with the command that selects one
+
+#### Scenario: Two workspaces cannot share a pool
+
+- **WHEN** a folder whose pool database is already registered under another workspace name is registered again
+- **THEN** the registration is refused and both existing entries stay intact
+
+#### Scenario: A name collision does not silently replace
+
+- **WHEN** `init` runs with a name that is already registered for a different folder
+- **THEN** the existing registration is left unchanged and the command fails with the conflict
+
+#### Scenario: An invalid chapter is refused
+
+- **WHEN** a chapter value that is not a lowercase ASCII identifier is passed to `init` or `use`
+- **THEN** nothing is stored and the error explains the accepted form
 
 ### Requirement: Weak knowledge point list
 
@@ -292,7 +334,7 @@ pipeline SHALL be the content path for adding formal problems.
 
 #### Scenario: Search without a write
 
-- **WHEN** an Agent searches the pool through `wb data`
+- **WHEN** an Agent searches the pool through `lesson-kit data`
 - **THEN** matching structured entities are returned and no content, learning, sequence, or conversation row changes
 
 #### Scenario: Edit a candidate
@@ -396,8 +438,9 @@ signal, event, progress, and current-state semantics SHALL remain unchanged.
 
 ### Requirement: Unified CLI entry point
 
-The workbench SHALL expose its super CLI under both the `wb` and `lesson-kit`
-command names, backed by the same implementation and the same subcommands. The
+The workbench SHALL expose its super CLI under the single command name
+`lesson-kit`; `python -m workbench.cli.main` SHALL be an equivalent module form
+of the same CLI. The
 CLI serves two audiences over one implementation: a small, stable human surface
 (init, use, dashboard, daemon, ls, bridge, doctor) and an agent surface (data,
 pull, practice, feedback, ingest, goals). `lesson-kit init <path>` SHALL
