@@ -137,7 +137,11 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         if name is None:
             self._send_json(200, handler(None, None, query, body))
             return
-        workspace = registry.get_workspace(name)
+        try:
+            workspace = registry.get_workspace(name)
+        except KeyError:
+            self._send_json(404, {"error": f"unknown workspace: {name}"})
+            return
         pool = api_mod._pool_for(workspace)
         try:
             result = handler(pool, workspace, {**query, **params}, body)

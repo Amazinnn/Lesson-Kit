@@ -268,9 +268,81 @@ class BootstrapInitTests(unittest.TestCase):
         self.assertFalse((self.fixture.ws / ".lessonkit").exists())
         self.assertFalse((self.fixture.ws / "pool" / "dmath2.db").exists())
 
-    def test_bootstrap_requires_a_course(self):
-        with self.assertRaises(SystemExit):
-            self.run_cli("init", str(self.empty))
+    def test_init_defaults_to_the_current_directory(self):
+        os.chdir(self.empty)
+
+        code, out = self.run_cli("init", "--course", "geo")
+
+        self.assertEqual(code, 0)
+        self.assertTrue((self.empty / "pool" / "geo.db").is_file())
+        from workbench import registry
+
+        workspace = registry.get_workspace("fresh")
+        self.assertEqual(workspace["path"], str(self.empty))
+        self.assertEqual(workspace["active_course"], "geo")
+
+    def test_init_derives_the_course_from_an_ascii_folder_name(self):
+        folder = Path(self.fixture.tmp.name) / "Linear Algebra (Spring)"
+        folder.mkdir()
+
+        code, out = self.run_cli("init", str(folder))
+
+        self.assertEqual(code, 0)
+        self.assertTrue((folder / "pool" / "linear-algebra-spring.db").is_file())
+
+    def test_init_in_the_current_directory_derives_from_its_resolved_name(self):
+        folder = Path(self.fixture.tmp.name) / "Graph Theory"
+        folder.mkdir()
+        os.chdir(folder)
+
+        code, out = self.run_cli("init")
+
+        self.assertEqual(code, 0)
+        self.assertTrue((folder / "pool" / "graph-theory.db").is_file())
+
+    def test_init_on_an_existing_pool_takes_the_course_from_the_database(self):
+        folder = Path(self.fixture.tmp.name) / "已建好的库"
+        (folder / "pool").mkdir(parents=True)
+        shutil.copy(self.fixture.db_path, folder / "pool" / "dmath.db")
+
+        code, out = self.run_cli("init", str(folder))
+
+        self.assertEqual(code, 0)
+        from workbench import registry
+
+        workspace = registry.get_workspace("已建好的库")
+        self.assertEqual(workspace["active_course"], "dmath")
+
+    def test_a_folder_name_without_ascii_gets_the_first_short_code(self):
+        folder = Path(self.fixture.tmp.name) / "大学物理"
+        folder.mkdir()
+
+        code, out = self.run_cli("init", str(folder))
+
+        self.assertEqual(code, 0)
+        self.assertTrue((folder / "pool" / "c01.db").is_file())
+        from workbench import registry
+
+        self.assertEqual(registry.get_workspace("大学物理")["active_course"], "c01")
+
+    def test_automatic_short_codes_do_not_repeat_across_workspaces(self):
+        first = Path(self.fixture.tmp.name) / "大学物理甲"
+        second = Path(self.fixture.tmp.name) / "大学物理乙"
+
+        for folder in (first, second):
+            folder.mkdir()
+            code, out = self.run_cli("init", str(folder))
+            self.assertEqual(code, 0)
+
+        self.assertTrue((first / "pool" / "c01.db").is_file())
+        self.assertTrue((second / "pool" / "c02.db").is_file())
+
+    def test_an_explicit_course_must_be_a_lowercase_ascii_slug(self):
+        for bad in ("大学物理", "Graph Theory", "Geo"):
+            with self.assertRaises(SystemExit) as caught:
+                self.run_cli("init", str(self.empty), "--course", bad)
+
+            self.assertIn("not a valid identifier", str(caught.exception))
 
         self.assertFalse((self.empty / "pool").exists())
         self.assertFalse((self.empty / ".lessonkit").exists())

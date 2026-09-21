@@ -249,6 +249,56 @@ class ConversationApiTests(unittest.TestCase):
             time.sleep(0.02)
         return data
 
+    def test_a_traversal_session_id_cannot_touch_another_folder(self):
+        outside = Path(self.fixture.tmp.name) / "other" / ".lessonkit" / "jobs" / "conv-001"
+        outside.mkdir(parents=True)
+        (outside / "conversation.json").write_text("{}", encoding="utf-8")
+        traversal = "..%2F..%2Fother%2F.lessonkit%2Fjobs%2Fconv-001"
+
+        for method, path, payload in (
+            ("DELETE", f"/api/w/dmath/ai/sessions/{traversal}", None),
+            ("PATCH", f"/api/w/dmath/ai/sessions/{traversal}", {"title": "x"}),
+        ):
+            request = urllib.request.Request(
+                f"http://127.0.0.1:{self.port}{path}",
+                data=None if payload is None else json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method=method,
+            )
+            with self.assertRaises(HTTPError) as ctx:
+                urllib.request.urlopen(request)
+            self.assertEqual(ctx.exception.code, 400, method)
+
+        self.assertTrue(outside.is_dir(), "another folder's conversation was removed")
+        status, payload = self.get_error(f"/api/w/dmath/ai/sessions/{traversal}")
+        self.assertEqual(status, 400)
+        self.assertIn("invalid conversation id", payload["error"])
+
+    def test_a_conversation_of_another_workspace_is_unreachable(self):
+        from workbench.bridge import conversations
+        from workbench.data.pool import Pool
+
+        self.fixture.add_workspace("physics", course="c01", chapter="ch07")
+        pool = Pool(root=self.fixture.ws, db_path=self.fixture.ws / "pool" / "dmath.db",
+                    course="dmath", chapter="ch06")
+        try:
+            created = conversations.create(pool, "codex")
+        finally:
+            pool.close()
+        mirror = (self.fixture.ws / ".lessonkit" / "jobs"
+                  / created["conversation_id"])
+
+        self.assertTrue(mirror.is_dir())
+        status, payload = self.get_error(
+            f"/api/w/physics/ai/sessions/{created['conversation_id']}")
+        self.assertEqual(status, 404)
+
+        self.assertTrue(mirror.is_dir(), "the other workspace's mirror was touched")
+        status, restored = self.get(
+            f"/api/w/dmath/ai/sessions/{created['conversation_id']}")
+        self.assertEqual(status, 200)
+        self.assertEqual(restored["conversation_id"], created["conversation_id"])
+
     def test_ingest_rollback_endpoint_returns_result(self):
         result = {
             "ok": True,

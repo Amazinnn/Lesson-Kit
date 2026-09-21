@@ -40,6 +40,11 @@ MICRO_QUIZ_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-mq-\d{3}$")
 FLASH_CARD_KIND = "flash-card-patch"
 FLASH_CARD_ID = re.compile(r"^[a-z0-9-]+-fc-\d{3}$")
 FIGURE_PATCH_KIND = "figure-patch"
+CHAPTER_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+MIGRATION_HINT = (
+    "this pool predates the difficulty column — run: "
+    "python pool/scripts/migrate-progress.py --db pool/<course>.db"
+)
 FIGURE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "svg", "webp"}
 _LEGACY_IMAGE_REF = re.compile(r"!\[[^\]]*\]\(images/([^)/\s]+)\)")
 _TAG = re.compile(r"</?(sup|sub)>")
@@ -287,15 +292,15 @@ def apply(db_path, gate_path, backup_path=None):
             "backup_path": str(backup), "accounting": verified["accounting"]}
 
 
-def apply_micro_quiz(db_path, manifest_path, backup_path=None):
+def apply_micro_quiz(db_path, manifest_path, backup_path=None, course=None):
     """Revalidate and insert micro quizzes while holding one write lock."""
     manifest = read_artifact(manifest_path)
     database = Path(db_path)
     backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
-    return _apply_patch(database, manifest, backup, MICRO_QUIZ_KIND)
+    return _apply_patch(database, manifest, backup, MICRO_QUIZ_KIND, course)
 
 
-def _gate_micro_quiz(conn, manifest):
+def _gate_micro_quiz(conn, manifest, course=""):
     errors = []
     if not isinstance(manifest, dict) or manifest.get("kind") != MICRO_QUIZ_KIND:
         return {"ok": False, "errors": ["expected micro-quiz-patch artifact"],
@@ -363,15 +368,15 @@ def _micro_quiz_row(item):
     }
 
 
-def apply_flash_cards(db_path, manifest_path, backup_path=None):
+def apply_flash_cards(db_path, manifest_path, backup_path=None, course=None):
     """Revalidate and insert flash cards while holding one write lock."""
     manifest = read_artifact(manifest_path)
     database = Path(db_path)
     backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
-    return _apply_patch(database, manifest, backup, FLASH_CARD_KIND)
+    return _apply_patch(database, manifest, backup, FLASH_CARD_KIND, course)
 
 
-def apply_batch(db_path, manifest, *, source, backup_path=None):
+def apply_batch(db_path, manifest, *, source, backup_path=None, course=None):
     if source not in {"cli", "bridge"}:
         raise ValueError("source must be cli or bridge")
     kind = manifest.get("kind") if isinstance(manifest, dict) else None
@@ -380,7 +385,7 @@ def apply_batch(db_path, manifest, *, source, backup_path=None):
     database = Path(db_path)
     backup = Path(backup_path) if backup_path else (
         database.with_name(database.name + ".ingest-backup"))
-    result = _apply_patch(database, manifest, backup, kind)
+    result = _apply_patch(database, manifest, backup, kind, course)
     return {key: result[key] for key in (
         "ok", "batch_id", "kind", "counts", "backup_path", "applied",
     )}
@@ -389,12 +394,13 @@ def apply_batch(db_path, manifest, *, source, backup_path=None):
 def _apply_patch(database, manifest, backup, kind):
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
+    course = course or database.stem          # the pool file name is the course id
     conn = sqlite3.connect(database)
     try:
         conn.execute("BEGIN IMMEDIATE")
         verified = (
-            _gate_micro_quiz(conn, manifest)
-            if kind == MICRO_QUIZ_KIND else _gate_flash_cards(conn, manifest)
+            _gate_micro_quiz(conn, manifest, course)
+            if kind == MICRO_QUIZ_KIND else _gate_flash_cards(conn, manifest, course)
         )
         if not verified["ok"]:
             raise ValueError("\n".join(verified["errors"]))
@@ -480,16 +486,21 @@ def _figure_name(source_bytes, source_path):
     return f"{hashlib.sha256(source_bytes).hexdigest()}.{extension}"
 
 
-def _gate_figure_patch(conn, manifest):
+def _gate_figure_patch(conn, manifest, course=""):
     errors = []
     if manifest.get("kind") != FIGURE_PATCH_KIND:
         return {"ok": False, "errors": ["manifest kind must be figure-patch"]}
-    course = manifest.get("course")
+    patch_course = manifest.get("course")
     chapter = manifest.get("chapter")
-    if not isinstance(course, str) or not course:
+    if not isinstance(patch_course, str) or not patch_course:
         errors.append("figure-patch requires course")
-    if not isinstance(chapter, str) or not chapter:
-        errors.append("figure-patch requires chapter")
+    elif course and patch_course != course:
+        errors.append(
+            f"figure-patch course {patch_course!r} is not this workspace's "
+            f"course {course!r}"
+        )
+    if not isinstance(chapter, str) or not CHAPTER_ID.fullmatch(chapter):
+        errors.append("figure-patch requires a chapter identifier (lowercase ASCII)")
     items = manifest.get("items")
     if not isinstance(items, list) or not items:
         return {"ok": False,
@@ -532,7 +543,7 @@ def _gate_figure_patch(conn, manifest):
             except ValueError as exc:
                 errors.append(f"{owner_id}: {exc}")
                 continue
-            logical = f"{course}/{chapter}/{name}"
+            logical = f"{patch_course}/{chapter}/{name}"
             if f"]({logical})" not in text and f"]({name})" not in text:
                 errors.append(f"{owner_id}: text must reference {logical}")
                 continue
@@ -547,8 +558,13 @@ def _gate_figure_patch(conn, manifest):
 
 
 def _figures_root(database, course, chapter):
+    """The figures directory of one course/chapter, which must stay in the workspace."""
     workspace = database.resolve().parent.parent
-    return workspace / ".lessonkit" / "figures" / course / chapter
+    figures = (workspace / ".lessonkit" / "figures").resolve()
+    root = (figures / course / chapter).resolve()
+    if not root.is_relative_to(figures):
+        raise ValueError(f"figure path would leave the workspace: {course}/{chapter}")
+    return root
 
 
 def _merge_figure_paths(previous_paths, logicals):
@@ -563,20 +579,21 @@ def _merge_figure_paths(previous_paths, logicals):
     return merged
 
 
-def apply_figure_patch(db_path, manifest_path, backup_path=None):
+def apply_figure_patch(db_path, manifest_path, backup_path=None, course=None):
     manifest = read_artifact(manifest_path)
-    return _apply_figure_patch(Path(db_path), manifest, backup_path)
+    return _apply_figure_patch(Path(db_path), manifest, backup_path, course)
 
 
-def _apply_figure_patch(database, manifest, backup_path=None):
+def _apply_figure_patch(database, manifest, backup_path=None, course=None):
     backup = (Path(backup_path) if backup_path
               else database.with_name(database.name + ".ingest-backup"))
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
+    course = course or database.stem          # the pool file name is the course id
     conn = sqlite3.connect(database)
     try:
         conn.execute("BEGIN IMMEDIATE")
-        verified = _gate_figure_patch(conn, manifest)
+        verified = _gate_figure_patch(conn, manifest, course)
         if not verified["ok"]:
             raise ValueError("\n".join(verified["errors"]))
         batch_id = _allocate_batch_id(conn)
@@ -814,7 +831,7 @@ def _rollback_blockers(conn, batch_id):
     return blockers
 
 
-def _gate_flash_cards(conn, manifest):
+def _gate_flash_cards(conn, manifest, course=""):
     errors = []
     if not isinstance(manifest, dict) or manifest.get("kind") != FLASH_CARD_KIND:
         return {"ok": False, "errors": ["expected flash-card-patch artifact"],
@@ -823,6 +840,7 @@ def _gate_flash_cards(conn, manifest):
     if not isinstance(items, list) or not items:
         return {"ok": False, "errors": ["flash-card-patch requires an items list"],
                 "accounting": _accounting(conn)}
+    prefix = _course_prefix(course, errors)
 
     known_kps = {row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")}
     cards_table = conn.execute(

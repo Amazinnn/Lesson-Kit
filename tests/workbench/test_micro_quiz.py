@@ -123,7 +123,7 @@ class MicroQuizIngestTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.db_path = self.root / "pool.db"
+        self.db_path = self.root / "dmath.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY,

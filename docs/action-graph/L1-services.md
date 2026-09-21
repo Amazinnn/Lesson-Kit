@@ -20,4 +20,8 @@
 
 > `bridge/` 现存两个模块：`conversation_providers.py`（发现 + 命令构建 + 事件归一化）
 > 与 `conversations.py`（轮次生命周期）。旧的 runner/contracts/teacher 三件套与
-> `wb ai` 子命令、`GET /ai/task-providers` 门槛端点已于 remove-explain-diagnose 退役。
+> `lesson-kit ai` 子命令、`GET /ai/task-providers` 门槛端点已于 remove-explain-diagnose 退役。
+>
+> `registry.py`（工作区注册表）不属上表任何服务，是 Shell 与 Data 之间的身份层：
+> 一个名字 → 一个文件夹、一个池、一个激活课程/章，且**注册时校验池在工作区内、
+> 路径与池不重复、同名冲突不覆盖**（2026-09-21 workspace-file-isolation）。

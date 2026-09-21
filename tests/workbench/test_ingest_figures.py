@@ -81,6 +81,21 @@ class FigurePatchTests(unittest.TestCase):
         self.assertFalse(
             (self.fixture.ws / ".lessonkit" / "figures" / "dmath" / "ch06").exists())
 
+    def test_a_foreign_course_or_escaping_chapter_is_refused(self):
+        outside = Path(self.fixture.tmp.name) / "escaped"
+        for course, chapter in (("c01", "ch06"), ("dmath", "../../escaped")):
+            manifest = self.manifest(text=f"![]({course}/{chapter}/{self.name})")
+            manifest["course"], manifest["chapter"] = course, chapter
+            path = Path(self.fixture.tmp.name) / "m.json"
+            path.write_text(json.dumps(manifest), encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                self.apply(self.db, path)
+
+        self.assertIsNone(self.row()[1])
+        self.assertFalse(outside.exists())
+        self.assertFalse((self.fixture.ws / ".lessonkit" / "figures" / "c01").exists())
+
     def test_destination_conflict_is_rejected(self):
         figures = self.fixture.ws / ".lessonkit" / "figures" / "dmath" / "ch06"
         figures.mkdir(parents=True)

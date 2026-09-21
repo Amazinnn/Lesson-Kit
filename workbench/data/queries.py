@@ -7,10 +7,12 @@ from pathlib import Path
 
 
 def hub_stats(pool):
+    """Course-wide counts for a hub card. The card answers "what does this workspace
+    hold", independent of the chapter lens; every number is counted over the whole
+    course pool so the four figures share one scope."""
     due = sum(1 for r in pool.schedule_rows() if _is_due(r, date.today()))
-    prefix = f"{pool.course}-{pool.chapter}"
     return {
-        "kps": len(pool.kps(prefix)),
+        "kps": len(pool.kps(f"{pool.course}-")),
         "problems": len(pool.problems_all()),
         "signals": len(pool.signals()),
         "due": due,
