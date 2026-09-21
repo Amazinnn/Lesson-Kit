@@ -115,3 +115,45 @@ flowchart LR
   双向，拉取按内容能力展开并复用既有方向调度键；旧卡与旧调用默认 forward。
 - 2026-09-01 闪卡方向 UI 落地（render-directional-flash-cards）：显式闪卡模式内可选
   混合/正向/反向并以 ⇄ 交换；单向下展、双向扇形揭示，评分写最终使用方向。
+- 2026-09-20 init 简化与中文名路由修复（init-ergonomics-and-cjk-names）：
+  `init` 的 `path` 可省（默认当前目录），course 按「显式 `--course` › 已有池名 ›
+  ASCII 文件夹名」推导；四条带名路径
+  （页面 / API / 附图 / 图谱工件）统一对 URL 编码段解码，API 分派把未知名收成
+  404；`registry._find_pool` 提为公开 `find_pool`。L2 同步。
+- 2026-09-21 课程标识符与人名的分离（course-identifier-and-name）：文件夹名
+  无法给出 ASCII 缩写时不再报错——自动分配顺序短码 `c01`/`c02`…（扫注册表与
+  本文件夹 `pool/*.db` 取最大号 +1），显式 `--course`/`use` 一律校验为小写
+  ASCII 标识（拒绝理由写进报错）；顶栏只显示工作区名与章，机器标识不再露面。
+  L2、PRODUCT-MANUAL、GLOSSARY 同步。
+- 2026-09-21 单一命令名（single-cli-name）：`wb` 入口退役，本项目只留
+  `lesson-kit`（模块形式 `python -m workbench.cli.main` 等价，prog 同名）；live
+  文档与三条规格同步改名，历史档案不动；`Scripts/wb.exe` 归还 Weights & Biases
+  （重装用 `"wandb==0.25.1"` 钉版本，裸 `--force-reinstall --no-deps` 会升版本且缺依赖）。
+- 2026-09-21 工作区文件隔离（workspace-file-isolation）：把"一个工作区只碰自己
+  文件夹、一个工作区只装一门课"落成硬校验——会话/轮次 id 必须是 `conv-NNN`/
+  `turn-NNN`（原先 `%2F` 段可穿越到别的工作区并 `rmtree`）；不带名命令在多个
+  工作区注册时拒绝猜（报错给出位置名可粘贴命令）；注册校验池在工作区内、路径与
+  池不重复、同名冲突不静默覆盖；池候选排除 ingest 备份，同一文件夹多份池且无
+  `--course` 匹配时拒绝并列出（本仓库 `pool/` 的 pre-readiness 副本因此不再被
+  当成主库）；章与课程同规则校验；入池门禁把 id 钉在本工作区课程前缀上、
+  figure-patch 的课程/章与最终路径必须落在本工作区 `.lessonkit/figures/` 内；
+  会话提示词示例改用上下文里的真实课程/章（原先硬编码 `dmath-ch06`）。
+  L1/L2/L3、GLOSSARY、PRODUCT-MANUAL 同步。
+- 2026-09-21 dashboard 章透镜（dashboard-chapter-filter）：顶栏工作区名旁新增
+  「章」单选开关（关 = 全课程），与 `lesson-kit use` 写同一个注册表值；章名单
+  从池内容 id 派生（`Pool.chapters()`，不建表）；前缀计算收敛到
+  `Pool.scope_prefix()`（空章 = 课程前缀 = 全课程，从巧合升为契约）；hub 卡片
+  四项统计统一为整课程口径（原 kps 按章、题数/待复习全池）；服务端新增写当前章
+  端点 `POST /api/w/{name}/chapter`；页头/标题按透镜显示「当前章节」或
+  「全课程」；透镜只作用于"看"，选区跨章且切换不丢。L2/L3、GLOSSARY、
+  PRODUCT-MANUAL 同步。
+- 2026-09-21 难度可选门控（optional-problem-difficulty-gate）：`problems` 增列
+  `difficulty`（可空 1-5；`knowledge_points.difficulty` 原样），三条入池通道
+  （微测 patch / 正式题 apply / KP content-patch）改为**可选**语义——填了必须
+  int 1-5 且同 item 带非空 `difficulty_basis`，缺依据拒收整批、不填放行、依据
+  不落盘；KP 门禁的必填集合移出 difficulty（legacy 提取路径的默认 2 按分层
+  铁律不动）。Un-migrated 旧池：不声明难度照常可用，声明了则拒收并给出
+  `pool/scripts/migrate-progress.py` 命令。生成侧提示词要求逐项给出难度 + 依据、
+  不确定可弃权；`difficulty_mix` 误名改为 `problem_type_mix`（题型直方图）。
+  无消费者、不回填旧题、学习者可见面零变更。L1/L3、GLOSSARY、
+  PENDING-DEFINITIONS（真题拟合数据前奏）同步。

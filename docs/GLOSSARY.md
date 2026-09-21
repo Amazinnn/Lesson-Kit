@@ -44,13 +44,18 @@ _Avoid_：算法臆造的关系、隐藏关系
 _Avoid_：练习册条目、题目草稿
 出处：CONTEXT.md（迁入）；review-workbench spec「Problem pull engine」「Formal problems are reveal-ready」
 
+### 难度 / Difficulty
+内容（知识点与题）的客观复杂度属性，取值 1-5：1-2 记忆/识别，2-4 有条件的直接应用，4-5 综合与构造（证明、建模、开放设计），跨章节综合 = 5。入池通道的定义是**可选**属性：填了必须 int 1-5 且带一行依据 `difficulty_basis`，不填 = 未知（NULL）；知识点与题（含微测）共享同一语义，依据只在门禁当下校验、**不落盘**。列落在 `knowledge_points.difficulty`（原有）与 `problems.difficulty`（2026-09-21 增列，旧池需跑 `python pool/scripts/migrate-progress.py --db pool/<course>.db`；未迁移的池上不声明难度照常可用，声明了会被拒收并给出该命令）。知识点另有 legacy 提取路径，缺失默认 2（`pipeline/` 行为契约，不动）。难度目前只被记录，不被任何排序、计划或界面消费；统一评价体系与拟合算法属「真题拟合」联合立项。
+_Avoid_：学习者自评的 1-5（那是自评）、间隔/掌握度等算法参数、表现层难度星号、日计划里的 `problem_type_mix`（那是题型直方图，与难度无关）
+出处：pipeline/skills/pool-field-inference/SKILL.md；openspec/specs/workbench-content-governance「Optional difficulty declaration」；docs/design/philosophy.md 轴 8（难度自主权）
+
 ### 候选题 / Problem Candidate
 **已退役（2026-08-30 remove-candidate-store）**：概念与机制整体移除，候选题不复存在。
 历史含义（留档）：尚未进入正式题池的、有源可依的练习条目；先后过结构门禁与审计门禁，
 再经显式晋升（promote）成为正式题。
 状态注记（2026-08-29 专题 22）：随 Check 管线立项退役——pull/mastery/hub 停止读取。
 状态注记（2026-08-30）：观察期结束，所有者拍板物理清除——candidate_problems 表 DROP、
-`wb data` 的 candidate 实体与 gate/promote 动作移除；Agent 内容唯一通道为 Check 管线
+`lesson-kit data` 的 candidate 实体与 gate/promote 动作移除；Agent 内容唯一通道为 Check 管线
 （见「Check 管线」条目）。
 
 ### Check 管线 / Check pipeline

@@ -48,7 +48,7 @@ class PlanningTests(unittest.TestCase):
         facts = self.facts()
         facts["problems"].append({"problem_id": "p-4", "kp_ids": ["kp-002"]})
         plan = build_baseline_plan(facts, now=datetime(2026, 8, 28, 9, 0), available_minutes=30)
-        self.assertIn("choice", plan["queue"][1]["difficulty_mix"])
+        self.assertIn("choice", plan["queue"][1]["problem_type_mix"])
         self.assertGreater(plan["queue"][1]["target_count"], 0)
         self.assertEqual(plan["totals"]["available_minutes"], 30)
 

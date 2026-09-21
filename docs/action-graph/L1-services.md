@@ -8,11 +8,11 @@
 | **拉取 pull-cards** | 闪卡按方向能力展开；选区过滤、每方向到期优先、整卡/方向键排除 | flash_cards、review_schedule | `/pull-cards`、练习页 |
 | **feedback 四件套** | 一次自评原子写四件事：事件→信号→状态→调度；支持 item_type=problem/card + direction 键 | feedback_events、learner_signals、kp 状态、review_schedule | `/feedback`（API/CLI）、收束页 |
 | **practice 记录** | 记一次尝试（作答原文/卡点/状态） | problem_attempts | `/practice`（API/CLI） |
-| **门禁配方 micro-quiz** | manifest（micro-quiz-patch）确定性校验→备份→单事务 apply；重复 id 拒收 | problems | CLI `ingest recipe` |
-| **门禁配方 flash-card** | flash-card-patch：内容契约/正则 id/来源必填/directions 两种合法值 | flash_cards | CLI `ingest recipe` |
+| **门禁配方 micro-quiz** | manifest（micro-quiz-patch）确定性校验→备份→单事务 apply；重复 id 拒收；**id 前缀必须等于本工作区课程**；**难度可选（1-5 + 依据同现，依据不落盘）**（2026-09-21） | problems | CLI `ingest recipe` |
+| **门禁配方 flash-card** | flash-card-patch：内容契约/正则 id/来源必填/directions 两种合法值；**id 前缀必须等于本工作区课程**（2026-09-21） | flash_cards | CLI `ingest recipe` |
 | **批次溯源与整批回滚** | apply 记批次 id（batch-NNN）+行戳记+manifest 快照+ingest_batches 登记；rollback 按批次删行（有练习/反馈依赖即拒绝），回滚前自动备份 | ingest_batches、problems、flash_cards | CLI `ingest rollback`、`POST /ingest/rollback`、桥结果卡 |
 | **ingest 链** | prepare/run/gate/apply/render 六环节编排与中间产物 | 中间产物目录 | CLI `ingest` 家族 |
-| **对话 conversations** | provider 原生会话的建立/轮次/事件流/取消/最小镜像；失败原因含进程退出码、超时、取消与**流内错误**（provider 退出码为 0 也算失败） | jobs/conv-### | `/ai/sessions/*` |
+| **对话 conversations** | provider 原生会话的建立/轮次/事件流/取消/最小镜像；失败原因含进程退出码、超时、取消与**流内错误**（provider 退出码为 0 也算失败）；会话/轮次 id 只认 `conv-NNN`/`turn-NNN`，越界拼路径直接拒绝（2026-09-21） | jobs/conv-### | `/ai/sessions/*` |
 | **provider 发现/配置** | 单一发现口径：先取 bridges.json 为该 provider 配置的 `command`，否则退回 PATH 探测；配置另可覆盖 args / model / timeout | bridges.json | `/ai/providers`、CLI `bridge add`/`bridge list` |
 | **后台服务 service** | 工作台服务的 pid 记录、分离启动、终止与存活探测；`start` 只在端口应答后报成功，`stop` 拒绝终止已被回收的进程号 | `~/.lessonkit-workbench/daemon.json`、`daemon.log` | CLI `daemon start\|stop\|status`、`dashboard` |
 | **查询 queries** | hub 统计（四项整课程口径）/due 列表/图谱模型/kp 详情/review 概览（标签全长）；章透镜下的取数走 `Pool.scope_prefix()` | 全表只读 | 多个 GET API |

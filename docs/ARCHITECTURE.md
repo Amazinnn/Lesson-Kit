@@ -75,8 +75,10 @@ workbench/
 - 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
 - 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
 - 新列：`knowledge_points.figure_paths`、`problems.figure_paths`（逻辑路径 JSON）、
-  `problem_attempts.answer_text`。
-- 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪）、
+  `problem_attempts.answer_text`、`problems.difficulty`（可空 1-5，可选难度；
+  旧池升级跑 `pool/scripts/migrate-progress.py`）。
+- 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪；`{course}`
+  是「课程标识符」而不是工作区名）、
   `.lessonkit/jobs/conv-###/`（provider 会话指针、运行事件与成功问答镜像，gitignored）、
   `.lessonkit/plan.json` 与 `.lessonkit/goals.json`（工作区本地计划/目标；目标可含
   `start_date`→`deadline` 展示区间，旧目标无开始日期兼容）、

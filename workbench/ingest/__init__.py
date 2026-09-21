@@ -24,7 +24,7 @@ KP_AUDIT_DIMENSIONS = (
 )
 KP_FIELDS = (
     "kp_id", "knowledge_item", "source_location", "knowledge_type",
-    "related_kp_ids", "importance", "learning_action", "body", "difficulty",
+    "related_kp_ids", "importance", "learning_action", "body",
     "fragile", "graph_label",
 )
 KP_TYPES = {
@@ -251,32 +251,38 @@ def apply(db_path, gate_path, backup_path=None):
         _backup_database(database, backup)
         if content_patch:
             for item in content_patch["knowledge_points"]:
+                fields = list(KP_FIELDS)
+                if item.get("difficulty") is not None:
+                    fields.append("difficulty")
                 values = [
                     json.dumps(item[field], ensure_ascii=False)
                     if field == "related_kp_ids" else item[field]
-                    for field in KP_FIELDS
+                    for field in fields
                 ]
                 conn.execute(
-                    f"INSERT INTO knowledge_points ({', '.join(KP_FIELDS)}) "
-                    f"VALUES ({', '.join('?' for _ in KP_FIELDS)})",
+                    f"INSERT INTO knowledge_points ({', '.join(fields)}) "
+                    f"VALUES ({', '.join('?' for _ in fields)})",
                     values,
                 )
         mappings = {
             item["problem"]: json.dumps(item["kp_ids"], ensure_ascii=False)
             for item in (content_patch or {}).get("mappings", [])
         }
+        can_store_difficulty = _has_column(conn, "problems", "difficulty")
         for item in solutions["items"]:
+            difficulty = item.get("difficulty") if can_store_difficulty else None
             if item["problem"] in mappings:
                 cursor = conn.execute(
-                    "UPDATE problems SET solution=?, kp_ids=?, ingest_batch_id=? "
-                    "WHERE problem_id=?",
+                    "UPDATE problems SET solution=?, kp_ids=?, ingest_batch_id=?,"
+                    " difficulty=COALESCE(?, difficulty) WHERE problem_id=?",
                     (item["solution"], mappings[item["problem"]], batch_id,
-                     item["problem"]),
+                     difficulty, item["problem"]),
                 )
             else:
                 cursor = conn.execute(
-                    "UPDATE problems SET solution=?, ingest_batch_id=? WHERE problem_id=?",
-                    (item["solution"], batch_id, item["problem"]),
+                    "UPDATE problems SET solution=?, ingest_batch_id=?,"
+                    " difficulty=COALESCE(?, difficulty) WHERE problem_id=?",
+                    (item["solution"], batch_id, difficulty, item["problem"]),
                 )
             if cursor.rowcount != 1:
                 raise ValueError(f"missing formal problem: {item['problem']}")
@@ -309,6 +315,8 @@ def _gate_micro_quiz(conn, manifest, course=""):
     if not isinstance(items, list) or not items:
         return {"ok": False, "errors": ["micro-quiz-patch requires an items list"],
                 "accounting": _accounting(conn)}
+    prefix = _course_prefix(course, errors)
+    errors.extend(_difficulty_column_errors(conn, items))
 
     known_kps = {row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")}
     existing_ids = {row[0] for row in conn.execute("SELECT problem_id FROM problems")}
@@ -318,9 +326,13 @@ def _gate_micro_quiz(conn, manifest, course=""):
         if not isinstance(problem_id, str) or not MICRO_QUIZ_ID.match(problem_id):
             errors.append(f"{problem_id}: id must look like <course>-<chapter>-mq-NNN")
             continue
+        if not problem_id.startswith(prefix):
+            errors.append(f"{problem_id}: id must start with {prefix} (this workspace's course)")
+            continue
         if problem_id in existing_ids or problem_id in seen_ids:
             errors.append(f"{problem_id}: problem id already exists")
             continue
+        errors.extend(_difficulty_errors(item, problem_id))
         seen_ids.add(problem_id)
         row = _micro_quiz_row(item)
         if row is None:
@@ -360,6 +372,7 @@ def _micro_quiz_row(item):
         "problem_text": item.get("stem", item.get("problem_text")),
         "problem_type": item.get("problem_type") or "other",
         "source_kind": item.get("source_kind") or "quiz",
+        "difficulty": item.get("difficulty"),
         **{field: item[field] for field in micro_quiz_rules.LABEL_FIELD_LIMITS
            if field in item},
         "practice_modes": item.get("practice_modes")
@@ -391,7 +404,62 @@ def apply_batch(db_path, manifest, *, source, backup_path=None, course=None):
     )}
 
 
-def _apply_patch(database, manifest, backup, kind):
+def _difficulty_errors(item, label):
+    """Optional difficulty: declared means 1-5 with a basis; undeclared passes.
+
+    The basis is gate-time evidence only — it is never written to the pool.
+    """
+    value = item.get("difficulty")
+    if value is None:
+        return []
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 5:
+        return [f"{label}: difficulty must be an integer from 1 to 5"]
+    basis = item.get("difficulty_basis")
+    if not isinstance(basis, str) or not basis.strip():
+        return [f"{label}: difficulty requires a non-empty difficulty_basis"]
+    return []
+
+
+def _has_column(conn, table, column):
+    return column in {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _difficulty_column_errors(conn, items):
+    """A declared difficulty needs the problems.difficulty column; an old pool must
+    be migrated first. An undeclared difficulty keeps working on an old pool."""
+    declared = any(isinstance(item, dict) and item.get("difficulty") is not None
+                   for item in items)
+    if not declared or _has_column(conn, "problems", "difficulty"):
+        return []
+    return [MIGRATION_HINT]
+
+
+def _problem_fields(conn):
+    """The problem columns of this pool; `difficulty` is absent before migration."""
+    fields = ["problem_id", "kp_ids", "problem_text", "problem_type", "source_kind",
+              "topic_label", "display_title", "display_summary", "practice_modes",
+              "micro_quiz", "ingest_batch_id"]
+    if _has_column(conn, "problems", "difficulty"):
+        fields.append("difficulty")
+    return fields
+
+
+def _course_prefix(course, errors):
+    """The `course-` prefix every id of this batch must carry, or "" plus a reason.
+
+    A workspace holds exactly one course; without one there is nothing to check
+    ids against, so the batch is refused instead of guessed at.
+    """
+    if isinstance(course, str) and course:
+        return f"{course}-"
+    errors.append(
+        "this workspace has no course identifier — set it with "
+        "`lesson-kit use <course> <chapter>` before adding content"
+    )
+    return ""
+
+
+def _apply_patch(database, manifest, backup, kind, course=None):
     if backup.exists():
         raise FileExistsError(f"recoverable copy already exists: {backup}")
     course = course or database.stem          # the pool file name is the course id
@@ -408,26 +476,28 @@ def _apply_patch(database, manifest, backup, kind):
         manifest_path = _write_manifest_snapshot(database, batch_id, manifest)
         _backup_database(database, backup)
         if kind == MICRO_QUIZ_KIND:
+            fields = _problem_fields(conn)
             for item in manifest["items"]:
                 row = _micro_quiz_row(item)
+                values = [
+                    row["problem_id"],
+                    json.dumps(row["kp_ids"], ensure_ascii=False),
+                    row["problem_text"],
+                    row["problem_type"],
+                    row["source_kind"],
+                    row.get("topic_label"),
+                    row.get("display_title"),
+                    row.get("display_summary"),
+                    json.dumps(row["practice_modes"], ensure_ascii=False),
+                    json.dumps(row["micro_quiz"], ensure_ascii=False),
+                    batch_id,
+                ]
+                if "difficulty" in fields:
+                    values.append(row.get("difficulty"))
                 conn.execute(
-                    "INSERT INTO problems (problem_id, kp_ids, problem_text, solution,"
-                    " problem_type, source_kind, topic_label, display_title, display_summary,"
-                    " practice_modes, micro_quiz, ingest_batch_id)"
-                    " VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        row["problem_id"],
-                        json.dumps(row["kp_ids"], ensure_ascii=False),
-                        row["problem_text"],
-                        row["problem_type"],
-                        row["source_kind"],
-                        row.get("topic_label"),
-                        row.get("display_title"),
-                        row.get("display_summary"),
-                        json.dumps(row["practice_modes"], ensure_ascii=False),
-                        json.dumps(row["micro_quiz"], ensure_ascii=False),
-                        batch_id,
-                    ),
+                    f"INSERT INTO problems ({', '.join(fields)}, solution)"
+                    f" VALUES ({', '.join('?' for _ in values)}, NULL)",
+                    values,
                 )
             counts = {"problems": len(manifest["items"])}
         else:
@@ -924,6 +994,7 @@ def _gate_data(conn, solutions, audit, content_patch=None, content_audit=None):
     errors = []
     solution_items = _items(solutions, "solutions", errors)
     audit_items = _items(audit, "audit", errors)
+    errors.extend(_difficulty_column_errors(conn, solution_items))
     if not _provenance(solutions, solution_items) or not _provenance(audit, audit_items):
         errors.append("solutions and audit require provider session provenance")
     solutions_by_problem = _by_problem(solution_items, "solution", errors)
@@ -935,6 +1006,7 @@ def _gate_data(conn, solutions, audit, content_patch=None, content_audit=None):
         errors.append("audit coverage does not match solutions")
     for problem, item in solutions_by_problem.items():
         _plain_fields(item, problem, errors, "solution")
+        errors.extend(_difficulty_errors(item, problem))
         if db_rows.get(problem) != item.get("source"):
             errors.append(f"{problem}: artifact source differs from active problem_text")
         errors.extend(f"{problem}: source {reason}" for reason in _markup_errors(item.get("source")))
@@ -1052,8 +1124,7 @@ def _gate_content_patch(conn, patch, audit, solutions, errors):
             errors.append(f"{kp_id}: body is missing")
         else:
             errors.extend(f"{kp_id}: body {reason}" for reason in _markup_errors(item["body"]))
-        if not isinstance(item.get("difficulty"), int) or not 1 <= item["difficulty"] <= 5:
-            errors.append(f"{kp_id}: invalid difficulty")
+        errors.extend(_difficulty_errors(item, kp_id))
         if not isinstance(item.get("related_kp_ids"), list):
             errors.append(f"{kp_id}: related_kp_ids must be a list")
 
