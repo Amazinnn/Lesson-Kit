@@ -17,19 +17,33 @@ class ConversationConflict(Exception):
     pass
 
 
+class InvalidIdentifier(ValueError):
+    """A client-supplied conversation or turn id that is not a plain generated name."""
+
+
 _LOCK = threading.Lock()
 _PROCESSES = {}
 _ACTIVE_TURNS = set()
 _CANCEL_REQUESTS = set()
 _TIMEOUTS = set()
 STOP_GRACE_SECONDS = 1
+CONVERSATION_ID = re.compile(r"conv-\d+")
+TURN_ID = re.compile(r"turn-\d+")
 
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def _require_id(value, pattern, kind):
+    """Refuse an id that could address anything outside this workspace's jobs dir."""
+    if isinstance(value, str) and pattern.fullmatch(value):
+        return value
+    raise InvalidIdentifier(f"invalid {kind} id: {value!r}")
+
+
 def _conversation_dir(pool, conversation_id):
+    _require_id(conversation_id, CONVERSATION_ID, "conversation")
     return pool.jobs_dir() / conversation_id
 
 
@@ -38,10 +52,12 @@ def _conversation_file(pool, conversation_id):
 
 
 def _turn_file(pool, conversation_id, turn_id):
+    _require_id(turn_id, TURN_ID, "turn")
     return _conversation_dir(pool, conversation_id) / f"{turn_id}.json"
 
 
 def _events_file(pool, conversation_id, turn_id):
+    _require_id(turn_id, TURN_ID, "turn")
     return _conversation_dir(pool, conversation_id) / f"{turn_id}.events.jsonl"
 
 
@@ -546,7 +562,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
         try:
             applied = ingest.apply_batch(
                 action_pool.db_path, action["manifest"],
-                source="bridge", backup_path=backup)
+                source="bridge", backup_path=backup,
+                course=action_pool.course)
             action["result"] = {
                 key: applied[key]
                 for key in ("batch_id", "kind", "counts", "backup_path", "applied")

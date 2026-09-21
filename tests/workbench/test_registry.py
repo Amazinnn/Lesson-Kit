@@ -63,6 +63,64 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(workspace["active_course"], "dmath")
         self.assertEqual(registry.list_workspaces().__len__(), 1)
 
+    def test_a_second_pool_must_be_chosen_explicitly(self):
+        (self.ws / "pool" / "dmath-pre-readiness-2026-08-26.db").write_bytes(b"x")
+
+        with self.assertRaises(ValueError) as caught:
+            registry.register(str(self.ws))
+
+        message = str(caught.exception)
+        self.assertIn("dmath-pre-readiness-2026-08-26.db", message)
+        self.assertIn("--course", message)
+        self.assertEqual(registry.list_workspaces(), [])
+
+    def test_named_course_picks_its_own_pool_out_of_several(self):
+        (self.ws / "pool" / "dmath-pre-readiness-2026-08-26.db").write_bytes(b"x")
+
+        workspace = registry.register(str(self.ws), course="dmath")
+
+        self.assertEqual(workspace["db"], "pool/dmath.db")
+
+    def test_ingest_backups_are_not_pool_candidates(self):
+        backup = self.ws / "pool" / "backups"
+        backup.mkdir()
+        (backup / "batch-001.sqlite").write_bytes(b"x")
+        (self.ws / "pool" / "dmath.db.ingest-backup").write_bytes(b"x")
+        (self.ws / "pool" / "dmath.db").unlink()
+
+        self.assertEqual(registry.pool_candidates(self.ws), [])
+        self.assertEqual(registry.find_pool(self.ws), "")
+
+    def test_a_name_collision_never_replaces_the_other_folder(self):
+        registry.register(str(self.ws))
+        other = Path(self.tmp.name) / "elsewhere"
+        (other / "pool").mkdir(parents=True)
+        (other / "pool" / "other.db").write_bytes(b"x")
+
+        with self.assertRaises(ValueError) as caught:
+            registry.register(str(other), name="dmath")
+
+        self.assertIn("already registered", str(caught.exception))
+        self.assertEqual(registry.get_workspace("dmath")["path"], str(self.ws))
+
+    def test_one_folder_cannot_be_two_workspaces(self):
+        registry.register(str(self.ws))
+
+        with self.assertRaises(ValueError) as caught:
+            registry.register(str(self.ws), name="alias")
+
+        self.assertIn("already registered", str(caught.exception))
+        self.assertEqual([w["name"] for w in registry.list_workspaces()], ["dmath"])
+
+    def test_a_pool_outside_the_folder_is_refused(self):
+        outside = Path(self.tmp.name) / "stolen.db"
+        outside.write_bytes(b"x")
+
+        with self.assertRaises(ValueError) as caught:
+            registry.register(str(self.ws), db="../stolen.db")
+
+        self.assertIn("must live inside the workspace", str(caught.exception))
+
 
 class BridgeConfigTests(unittest.TestCase):
     def setUp(self):

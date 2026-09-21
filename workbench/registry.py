@@ -39,10 +39,25 @@ def register(path, name=None, db=None, course=None, chapter=None):
     workspace = {
         "name": name or folder.name,
         "path": str(folder),
-        "db": db or _find_pool(folder),
+        "db": db or find_pool(folder, course or ""),
         "active_course": course or "",
         "active_chapter": chapter or "",
     }
+    if not workspace["db"] or not (folder / workspace["db"]).resolve().is_relative_to(folder):
+        raise ValueError(
+            f"the pool database must live inside the workspace folder: "
+            f"{workspace['db']!r}"
+        )
+    for other in registry_data["workspaces"]:
+        if other["name"] == workspace["name"] and Path(other["path"]) != folder:
+            raise ValueError(
+                f"workspace name {workspace['name']!r} is already registered for "
+                f"{other['path']} — pass --name <name> to keep both"
+            )
+        if other["name"] != workspace["name"] and Path(other["path"]) == folder:
+            raise ValueError(
+                f"{folder} is already registered as workspace {other['name']!r}"
+            )
     workspaces = [
         w for w in registry_data["workspaces"] if w["name"] != workspace["name"]
     ]
@@ -114,9 +129,33 @@ def looks_like_workspace(folder):
     return pool_dir.is_dir() and any(pool_dir.glob("*.db"))
 
 
-def _find_pool(folder):
+def pool_candidates(folder):
+    """Candidate pools of a folder, in name order; ingest backups are never candidates."""
     pool_dir = folder / "pool"
-    if pool_dir.is_dir():
-        for db in sorted(pool_dir.glob("*.db")):
-            return f"pool/{db.name}"
-    return ""
+    if not pool_dir.is_dir():
+        return []
+    return [
+        f"pool/{db.name}" for db in sorted(pool_dir.glob("*.db"))
+        if not db.name.endswith(".ingest-backup")
+    ]
+
+
+def find_pool(folder, course=""):
+    """The pool a folder registers with: `pool/<course>.db`, else its only candidate.
+
+    Several candidates with no matching name is a refusal, not a guess: a folder may
+    hold a pre-readiness copy of the pool next to the live one, and picking the
+    alphabetically first would register the wrong database.
+    """
+    candidates = pool_candidates(folder)
+    if course and f"pool/{course}.db" in candidates:
+        return f"pool/{course}.db"
+    if len(candidates) == 1:
+        return candidates[0]
+    if not candidates:
+        return ""
+    raise ValueError(
+        f"{folder} holds several pool databases "
+        f"({', '.join(Path(c).name for c in candidates)})\n"
+        f"Pick one: lesson-kit init {folder} --course <name>"
+    )

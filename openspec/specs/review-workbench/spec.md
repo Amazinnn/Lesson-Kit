@@ -546,21 +546,47 @@ process is gone.
 
 ### Requirement: Course and chapter switching
 
-`lesson-kit use <course> <chapter>` SHALL switch the active course and chapter
-of the current workspace in the registry. When several workspaces are
-registered, the workspace SHALL be selectable explicitly. A switch SHALL NOT
-create, move, or delete any data, and an unknown workspace or missing argument
-SHALL be reported as an error without changing stored state.
+The active chapter SHALL act as a course-wide view lens with two writers over
+one registry value: the dashboard chapter switch (the human surface) and
+`lesson-kit use <course> <chapter>` (the agent-and-script surface). An empty
+chapter SHALL explicitly mean the whole course, with no chapter filter. A
+switch SHALL NOT create, move, or delete any data; subsequent page and prefix
+queries SHALL resolve against the new lens; and no pool file SHALL be modified.
+When several workspaces are registered, the workspace SHALL be selectable
+explicitly. An unknown workspace or a missing argument SHALL be reported as an
+error without changing stored state. A course value that is not a lowercase
+ASCII slug SHALL be rejected with the reason, since it prefixes every content
+id.
+
+#### Scenario: Switch the active chapter from the dashboard
+
+- **WHEN** the learner turns the chapter switch on and selects a chapter in the top bar
+- **THEN** subsequent views and practice resolve against that chapter and the registry records it as the active chapter
+
+#### Scenario: Turn the lens off
+
+- **WHEN** the learner turns the chapter switch off
+- **THEN** views and practice resolve against the whole course pool and the registry records an empty active chapter
 
 #### Scenario: Switch the active chapter
 
 - **WHEN** the user runs `lesson-kit use <new-course> <new-chapter>`
 - **THEN** subsequent hub, page, and prefix queries resolve against the new course and chapter, and no pool file was modified
 
+#### Scenario: Switch to the whole course from the CLI
+
+- **WHEN** the user runs `lesson-kit use <new-course> ""`
+- **THEN** the registry records an empty active chapter and views resolve against the whole course pool
+
 #### Scenario: Switching never happens silently on error
 
 - **WHEN** the user names a workspace that is not registered or omits an argument
 - **THEN** the command fails with a clear message and the registry is unchanged
+
+#### Scenario: A chapter that is not an identifier is refused
+
+- **WHEN** a chapter value that is not a lowercase ASCII identifier is passed to `use`
+- **THEN** nothing is stored and the error explains the accepted form
 
 ### Requirement: Environment self-check
 
@@ -586,4 +612,129 @@ every check passes, and otherwise exit nonzero with each failed check listed.
 
 - **WHEN** `lesson-kit doctor` runs in any state, healthy or broken
 - **THEN** no registry entry, database, or runtime file is created, modified, or deleted
+
+### Requirement: Encoded names resolve in workbench routes
+
+Every workbench route that carries a workspace name or a file path in its URL
+SHALL decode percent-encoded path segments before looking the workspace up in
+the registry or resolving a path on disk — the page shell, the JSON API, the
+figure route, and the graph-artifact route alike. A workspace whose name
+contains non-ASCII characters or spaces SHALL therefore open normally in the
+browser and answer its API calls, and an unknown name SHALL still produce a
+404 rather than a server error.
+
+#### Scenario: A name with non-ASCII characters opens
+
+- **WHEN** a workspace is registered under a name containing non-ASCII characters and the browser requests that workspace's practice page
+- **THEN** the page renders for that workspace instead of returning 404
+
+#### Scenario: Encoded names reach the API
+
+- **WHEN** the browser percent-encodes a non-ASCII workspace name in an API request
+- **THEN** the API resolves that workspace and answers as it does for an ASCII name
+
+#### Scenario: Unknown names still fail cleanly
+
+- **WHEN** a request names a workspace that is not registered
+- **THEN** the route answers 404 and does not raise a server error
+
+### Requirement: Workspace file containment
+
+Every file path a workbench operation builds for a workspace SHALL resolve inside
+that workspace's folder. Workspace data — pool database, `.lessonkit/` figures and
+jobs, plan and goal files — SHALL be read and written through paths derived from
+the registered folder; a value that arrives from a client (page route segment, API
+body, artifact manifest) SHALL be validated as a plain name before it becomes a
+path segment: no path separator, no `..`, no absolute path, no drive letter.
+Conversation and turn identifiers SHALL additionally match their generated shape
+(`conv-NNN`, `turn-NNN`). A value that fails validation SHALL be reported as an
+error and SHALL cause no read, write, or deletion outside the workspace folder; a
+registered pool database that does not resolve inside the workspace folder SHALL
+be refused rather than opened.
+
+#### Scenario: A traversal identifier is refused
+
+- **WHEN** a client supplies a conversation, turn, or artifact identifier that contains a path separator or `..`
+- **THEN** the request fails with an explicit error and no file outside the workspace folder is read, written, or deleted
+
+#### Scenario: Two workspaces never share files
+
+- **WHEN** two workspaces are registered for two different subjects and both the CLI and the pages are used against each
+- **THEN** every path each operation touches lies inside its own workspace folder, and neither workspace's pool, figures, jobs, or plan file is reachable through the other's routes or commands
+
+#### Scenario: A pool outside the workspace is refused
+
+- **WHEN** a registered entry points its pool database outside the workspace folder
+- **THEN** opening that workspace fails with an explicit error instead of reading the other folder's database
+
+### Requirement: Workspace selection never guesses
+
+When the registry holds several workspaces, a command that needs one SHALL NOT
+fall back to the first registered entry. It SHALL fail with a message that names
+the registered workspaces and shows a ready-to-paste command that selects one
+explicitly.
+
+#### Scenario: An ambiguous command is refused
+
+- **WHEN** a workspace-scoped command runs without naming a workspace while two or more are registered
+- **THEN** nothing is read or written, and the error names the registered workspaces with a paste-ready command that selects one
+
+#### Scenario: A single registered workspace needs no name
+
+- **WHEN** exactly one workspace is registered and a workspace-scoped command runs without a name
+- **THEN** that workspace is used, as before
+
+### Requirement: Chapter list derived from pool content
+
+The workbench SHALL list the chapters of the active course by deriving them from
+the content identifiers already in the pool (knowledge points, problems, cards).
+It SHALL NOT introduce a chapters table, a chapter registry, or any chapter
+registration step. A chapter SHALL appear as soon as content carrying its
+identifier exists and SHALL disappear only when that content does.
+
+#### Scenario: Chapters come from content
+
+- **WHEN** the pool contains knowledge points or problems whose identifiers carry two different chapter segments
+- **THEN** the chapter switch lists exactly those two chapters for the active course
+
+#### Scenario: A new chapter appears without registration
+
+- **WHEN** a batch of content for a chapter that has no content yet is applied to the pool
+- **THEN** the new chapter appears in the switch without any additional command
+
+#### Scenario: An empty pool offers no chapter
+
+- **WHEN** the pool holds no content for the active course
+- **THEN** the switch reports no chapters and the whole-course lens remains the only state
+
+### Requirement: Chapter lens scoping
+
+The chapter lens SHALL scope the reading surfaces — the knowledge point list
+page, the knowledge point detail page, the knowledge graph page, and the
+practice page's suggestion range — and SHALL NOT constrain the practice
+selection (the staged list). A selection MAY span chapters and SHALL survive
+chapter switching. Ordering rules (weakness first, due reminders as background)
+SHALL remain unchanged inside any lens, and no item SHALL ever be locked or
+hidden by the lens beyond the reading scope it sets. The pages SHALL name the
+lens they are showing, so a whole-course page never claims to be a chapter.
+
+#### Scenario: Views follow the lens
+
+- **WHEN** a chapter is selected
+- **THEN** the knowledge point list, the knowledge point detail, the knowledge graph, and the practice suggestions show only that chapter's items
+
+#### Scenario: Selection survives switching
+
+- **WHEN** the learner has staged knowledge points from two chapters and then switches the lens to one of them
+- **THEN** the staged list still holds both chapters' knowledge points and practice still draws from the full selection
+
+#### Scenario: Whole-course lens shows everything
+
+- **WHEN** the lens is off
+- **THEN** every chapter's items are visible on the reading surfaces
+
+#### Scenario: The pages say which lens is active
+
+- **WHEN** the lens is off, and again when a chapter is selected
+- **THEN** the page header names the whole course in the first case and the chapter in the second, and the knowledge-point heading says 全部知识点 or 本章知识点 to match
 

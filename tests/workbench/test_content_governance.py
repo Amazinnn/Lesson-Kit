@@ -30,7 +30,7 @@ create_tables = load_script(
 class ContentGovernanceTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.tmp.name) / "pool.db"
+        self.db_path = Path(self.tmp.name) / "dmath.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript(create_tables.SCHEMA_SQL)
         pool_schema.ensure_workbench_schema(conn)

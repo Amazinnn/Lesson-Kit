@@ -203,3 +203,15 @@ rollback.
 - **WHEN** the batch listing runs over any pool
 - **THEN** database contents and row counts remain identical before and after
 
+An ingest batch SHALL belong to exactly one course: the course of the workspace's
+pool. Content ids in a `micro-quiz-patch` or `flash-card-patch` manifest SHALL
+carry that course prefix, and a batch whose ids carry another course SHALL be
+refused by the gate with an itemized reason naming the expected prefix. A
+`figure-patch` manifest SHALL name the workspace's own course and a chapter that
+is a plain identifier, and its figure paths SHALL resolve inside the workspace's
+`.lessonkit/figures/<course>/<chapter>/` directory; a manifest whose course or
+chapter would leave that directory SHALL be refused and no file SHALL be written.
+
+- **WHEN** a figure-patch manifest names a course other than the workspace's, or a chapter containing a path separator or `..`
+- **THEN** the gate fails and no figure file is written outside `.lessonkit/figures/<workspace course>/<chapter>/`
+

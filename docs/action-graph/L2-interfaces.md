@@ -44,4 +44,9 @@
 
 > 问卷 B1 口径：Agent 对池子增删改查全开——`data`（变更）、`ingest --apply`、
 > `practice/feedback` 均可由 Agent 直跑；门禁是决断辅助不是闸门。
-> `lesson-kit` 是 `wb` 的第二个名字（同一实现，仅 prog 名不同），命令集完全一致。
+> `lesson-kit` 是本项目唯一的命令名（模块形式 `python -m workbench.cli.main` 等价）。
+>
+> 所有 `w/{name}` 路由与工作区命令都**只碰该工作区文件夹内的文件**：池、`.lessonkit/`、
+> 计划与目标文件都在其中；会话 id、轮次 id、附图课程/章都先按裸名字校验再拼路径
+> （2026-09-21 workspace-file-isolation）。多个工作区注册时，不带名的命令拒绝猜，
+> 报错给出「`lesson-kit <cmd> <工作区名>`」的可粘贴形式。

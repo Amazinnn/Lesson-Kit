@@ -63,7 +63,7 @@ class CardIngestTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.db_path = self.root / "pool.db"
+        self.db_path = self.root / "dmath.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY,
@@ -420,7 +420,7 @@ class CardSchemaMigrationTests(unittest.TestCase):
         from tests.workbench.fixtures import load_script
         tmp = tempfile.TemporaryDirectory()
         try:
-            db_path = Path(tmp.name) / "pool.db"
+            db_path = Path(tmp.name) / "dmath.db"
             conn = sqlite3.connect(db_path)
             conn.executescript("""
                 CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY,

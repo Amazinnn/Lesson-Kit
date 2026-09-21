@@ -15,7 +15,12 @@ class Pool:
     """
 
     def __init__(self, root, db_path, course, chapter):
-        self.root = Path(root)
+        root = Path(root).resolve()
+        if not Path(db_path).resolve().is_relative_to(root):
+            raise ValueError(
+                f"the pool database must live inside the workspace folder: {db_path}"
+            )
+        self.root = root
         self.db_path = Path(db_path)
         self.course = course
         self.chapter = chapter

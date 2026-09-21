@@ -138,6 +138,16 @@ class PoolTests(unittest.TestCase):
         self.pool.close()
         self.tmp.cleanup()
 
+    def test_a_pool_that_lives_outside_the_workspace_is_refused(self):
+        other = Path(self.tmp.name) / "other-workspace"
+        other.mkdir()
+
+        with self.assertRaises(ValueError) as caught:
+            self.pool_mod.Pool(root=other, db_path=self.db_path,
+                               course="dmath", chapter="ch06")
+
+        self.assertIn("must live inside the workspace", str(caught.exception))
+
     def test_kps_filtered_by_prefix(self):
         kps = self.pool.kps("dmath-ch06")
         self.assertEqual(len(kps), 2)

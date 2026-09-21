@@ -71,8 +71,11 @@ _Avoid_：`{owner_id}-fig-{NNN}.png`（旧命名规则，2026-09-20 作废）、
 ## 工作区与工作台
 
 ### 工作区 / Workspace
-一个 lesson-kit 文件夹的注册身份：名称 → 文件夹路径、池数据库、激活的课程/章节。注册表在用户级 `~/.lessonkit-workbench/`。
-_Avoid_：项目、数据库别名
+一个 lesson-kit 文件夹的注册身份：名称 → 文件夹路径、池数据库、激活的课程/章节。名称是给人看的（可用中文，取自文件夹名或 `--name`），与「课程标识符」无关。注册表在用户级 `~/.lessonkit-workbench/`。
+
+**硬性局限**：一个工作区**只碰自己文件夹里的文件**，且**只装一门课**——池库、`.lessonkit/figures`、`.lessonkit/jobs`、`plan.json`/`goals.json` 都在工作区文件夹内；页面、API、CLI、桥接构造的每个路径都先校验落在这个文件夹里，跨工作区的 id（会话、轮次、附图、池）一律拒绝。因此**不同学科必须各自一个工作区**：切换的是工作区（Dashboard 或命令的位置名），不是在一个工作区里混装多门课。文件夹自己复制粘贴出来的第二份 = 另一个工作区（各写各的），不会被认成同一个。
+_Avoid_：项目、数据库别名、把两个学科的内容放进一个工作区、把另一个工作区的池注册进来
+出处：review-workbench spec「Workspace file containment」「Workspace registry」；2026-09-21 workspace-file-isolation
 出处：review-workbench spec「Workspace registry」
 
 ### 工作台 / Workbench

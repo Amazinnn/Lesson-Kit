@@ -40,7 +40,7 @@ class IngestTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.db_path = self.root / "pool.db"
+        self.db_path = self.root / "dmath.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, knowledge_item TEXT);
@@ -436,7 +436,7 @@ class ContentPatchIngestTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.db_path = self.root / "pool.db"
+        self.db_path = self.root / "dmath.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE knowledge_points (
@@ -630,7 +630,7 @@ class BatchRollbackTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        self.db_path = self.root / "pool.db"
+        self.db_path = self.root / "dmath.db"
         conn = sqlite3.connect(self.db_path)
         conn.executescript("""
             CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, knowledge_item TEXT);
@@ -709,7 +709,7 @@ class BatchRollbackTests(unittest.TestCase):
             self.db_path, self.manifest, source="bridge", backup_path=backup)
         self.assertEqual(Path(applied["backup_path"]), backup)
         self.assertTrue(backup.exists())
-        self.assertFalse((self.root / "pool.db.ingest-backup").exists())
+        self.assertFalse((self.root / "dmath.db.ingest-backup").exists())
 
     def test_apply_batch_and_rollback_restore_content_snapshot(self):
         before = self.content_snapshot()
@@ -720,7 +720,7 @@ class BatchRollbackTests(unittest.TestCase):
             "batch_id": "batch-001",
             "kind": "micro-quiz-patch",
             "counts": {"problems": 1},
-            "backup_path": str(self.db_path.with_name("pool.db.ingest-backup")),
+            "backup_path": str(self.db_path.with_name("dmath.db.ingest-backup")),
             "applied": True,
         })
         result = ingest.rollback_batch(self.db_path, applied["batch_id"])
@@ -789,7 +789,7 @@ class BatchRollbackTests(unittest.TestCase):
         finally:
             conn.close()
         self.assertFalse(self.db_path.with_name(
-            "pool.db.batch-001-rollback-backup").exists())
+            "dmath.db.batch-001-rollback-backup").exists())
 
     def test_unknown_and_already_rolled_back_batches_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "unknown batch missing"):

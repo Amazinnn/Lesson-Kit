@@ -35,29 +35,100 @@ def _pool(workspace):
 
 
 def _resolve_name(args):
+    """The workspace a command works on — never guessed when several are registered."""
     name = getattr(args, "name", None)
     if name:
         return name
     workspaces = registry.list_workspaces()
     if not workspaces:
-        sys.exit("no workspaces registered — run: wb init <path>")
-    return workspaces[0]["name"]
+        sys.exit("no workspaces registered — run: lesson-kit init <path>")
+    if len(workspaces) == 1:
+        return workspaces[0]["name"]
+    names = ", ".join(w["name"] for w in workspaces)
+    command = getattr(args, "command", "data")
+    sys.exit(
+        f"several workspaces registered ({names}) — name one:\n"
+        f"  lesson-kit {command} {workspaces[0]['name']} …"
+    )
+
+
+COURSE_SLUG = re.compile(r"[a-z0-9][a-z0-9-]*")
+
+
+def _slug_from_name(name):
+    """Course slug for an ASCII folder name; None when it cannot be derived."""
+    if not name.isascii():
+        return None
+    candidate = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return candidate if COURSE_SLUG.fullmatch(candidate) else None
+
+
+def _require_slug(value, kind="course"):
+    """Reject a course or chapter that would poison every content id.
+
+    Both go into ids and paths (the chapter also into the `course-chapter` query
+    prefix and the graph artifact name), so a free-form value is never stored.
+    """
+    if COURSE_SLUG.fullmatch(value):
+        return value
+    example = ("lesson-kit init --course uphy2" if kind == "course"
+               else "lesson-kit use uphy2 ch06")
+    raise SystemExit(
+        f"{kind} {value!r} is not a valid identifier — it goes into every content "
+        f"id and path of this workspace, so it must be lowercase ASCII (letters, "
+        f"digits, dashes).\nExample: {example}"
+    )
+
+
+def _optional_slug(value, kind):
+    """Empty means "no chapter" (the whole course); anything else must be an identifier."""
+    return _require_slug(value, kind) if value else ""
+
+
+def _next_course_code(folder):
+    """Sequential short code (c01, c02, …) for a folder name that yields no slug."""
+    used = {w.get("active_course", "") for w in registry.list_workspaces()}
+    pool_dir = folder / "pool"
+    if pool_dir.is_dir():
+        used |= {db.stem for db in pool_dir.glob("*.db")}
+    numbers = [
+        int(match.group(1)) for name in used
+        if (match := re.fullmatch(r"c(\d+)", name or ""))
+    ]
+    return f"c{max(numbers, default=0) + 1:02d}"
+
+
+def _init_course(args, folder):
+    """Explicit --course, else an existing pool's name, else a folder-name slug,
+    else an automatically allocated sequential code."""
+    if args.course:
+        return _require_slug(args.course)
+    pool = registry.find_pool(folder)
+    if pool:
+        return Path(pool).stem
+    return _slug_from_name(folder.name) or _next_course_code(folder)
 
 
 def cmd_init(args):
     folder = Path(args.path).resolve()
     folder.mkdir(parents=True, exist_ok=True)
+    try:
+        course = _init_course(args, folder)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     if not registry.looks_like_workspace(folder):
-        _bootstrap_workspace(folder, course=args.course)
-    workspace = registry.register(str(folder), name=args.name,
-                                  course=args.course or "", chapter=args.chapter or "")
+        _bootstrap_workspace(folder, course=course)
+    chapter = _optional_slug(args.chapter, "chapter")
+    try:
+        workspace = registry.register(str(folder), name=args.name,
+                                      course=course, chapter=chapter)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
     print(f"registered workspace: {workspace['name']} -> {workspace['path']}")
 
 
 def _bootstrap_workspace(folder, course):
     """Create a pool database and the .lessonkit skeleton in a fresh folder."""
-    if not course:
-        raise SystemExit("init on a new folder requires --course (the pool database name)")
     repo_root = Path(__file__).resolve().parents[2]
     script = repo_root / "pipeline" / "scripts" / "create-tables.py"
     try:

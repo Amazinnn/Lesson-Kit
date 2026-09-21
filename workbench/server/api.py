@@ -38,12 +38,19 @@ def hub_workspaces(pool, workspace, params, body):
     from workbench import registry
     results = []
     for ws in registry.list_workspaces():
-        ws_pool = _pool_for(ws)
+        entry = {"name": ws["name"], "path": ws["path"]}
         try:
-            stats = queries.hub_stats(ws_pool)
+            ws_pool = _pool_for(ws)
+        except ValueError as exc:
+            results.append({**entry, "error": str(exc)})
+            continue
+        try:
+            entry["stats"] = queries.hub_stats(ws_pool)
+        except Exception as exc:  # one broken pool must not blank the whole hub
+            entry["error"] = str(exc)
         finally:
             ws_pool.close()
-        results.append({"name": ws["name"], "path": ws["path"], "stats": stats})
+        results.append(entry)
     return results
 
 
@@ -347,6 +354,14 @@ def ai_providers(pool, workspace, params, body):
     ]
 
 
+def _session_call(func, *args):
+    """A refused conversation/turn identifier is a client error, not a server fault."""
+    try:
+        return func(*args)
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
 def ai_sessions_list(pool, workspace, params, body):
     return conversations.list_sessions(pool)
 
@@ -377,12 +392,14 @@ def ai_session_update(pool, workspace, params, body):
 def ai_session_delete(pool, workspace, params, body):
     try:
         return conversations.delete(pool, params["conversation_id"])
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
     except conversations.ConversationConflict as exc:
         raise ApiError(409, str(exc)) from exc
 
 
 def ai_session_get(pool, workspace, params, body):
-    return conversations.get(pool, params["conversation_id"])
+    return _session_call(conversations.get, pool, params["conversation_id"])
 
 
 def ai_turn_start(pool, workspace, params, body):
@@ -394,19 +411,21 @@ def ai_turn_start(pool, workspace, params, body):
         return conversations.start_turn(
             pool, workspace, params["conversation_id"], message.strip(), context
         )
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
     except conversations.ConversationConflict as exc:
         raise ApiError(409, str(exc)) from exc
 
 
 def ai_turn_events(pool, workspace, params, body):
-    turn = conversations.get_turn(
-        pool, params["conversation_id"], params["turn_id"]
+    turn = _session_call(
+        conversations.get_turn, pool, params["conversation_id"], params["turn_id"]
     )
     return {
         "turn": turn,
-        "events": conversations.events(
-            pool, params["conversation_id"], params["turn_id"],
-            after=_query_int(params, "after", 0),
+        "events": _session_call(
+            conversations.events, pool, params["conversation_id"], params["turn_id"],
+            _query_int(params, "after", 0),
         ),
     }
 
@@ -414,6 +433,8 @@ def ai_turn_events(pool, workspace, params, body):
 def ai_turn_cancel(pool, workspace, params, body):
     try:
         return conversations.cancel(pool, params["conversation_id"])
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
     except conversations.ConversationConflict as exc:
         raise ApiError(409, str(exc)) from exc
 
