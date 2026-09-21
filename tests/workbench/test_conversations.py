@@ -639,7 +639,10 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
     def test_prompt_describes_check_ingest_manifest_contract(self):
         from workbench.bridge import conversations
 
-        prompt = conversations._prompt("帮我补池", {"check_intent": True})
+        prompt = conversations._prompt("帮我补池", {
+            "check_intent": True,
+            "workspace": {"name": "大学物理", "course": "uphy2", "chapter": "ch07"},
+        })
         self.assertIn("flash-card-patch", prompt)
         self.assertIn("micro-quiz-patch", prompt)
         self.assertIn("source_evidence", prompt)

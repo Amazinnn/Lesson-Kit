@@ -1,4 +1,4 @@
-"""wb — the workbench super CLI. Data-only commands, no teaching semantics."""
+"""lesson-kit — the workbench super CLI. Data-only commands, no teaching semantics."""
 
 import argparse
 import json
@@ -463,7 +463,7 @@ def cmd_doctor(args):
     return 2
 
 
-def build_parser(prog="wb"):
+def build_parser(prog="lesson-kit"):
     parser = argparse.ArgumentParser(prog=prog,
                                      description="lesson-kit workbench CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -671,8 +671,8 @@ def _run(argv, prog):
 
 
 def main(argv=None):
-    """Entry point for the `wb` command."""
-    return _run(argv, "wb")
+    """Module-form entry point (`python -m workbench.cli.main`)."""
+    return _run(argv, "lesson-kit")
 
 
 def lesson_kit_main(argv=None):

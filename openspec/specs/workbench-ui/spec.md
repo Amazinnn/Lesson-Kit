@@ -9,7 +9,7 @@ Harness design system.
 ## Requirements
 ### Requirement: Three-column shell with navigation
 
-The workbench SHALL render a three-column desktop layout: a left navigation column with workspace and study navigation, a primary middle page, and a collapsible right Agent conversation column, with workspace/course/chapter context in the top bar. At narrow widths the middle page SHALL remain the single primary column; the left and right columns SHALL become dismissible drawers opened by two compact icon controls in the top bar. Switching workspaces or pages SHALL preserve recorded pool state.
+The workbench SHALL render a three-column desktop layout: a left navigation column with workspace and study navigation, a primary middle page, and a collapsible right Agent conversation column, with the workspace name and the chapter lens in the top bar (the machine course identifier SHALL NOT be shown there). At narrow widths the middle page SHALL remain the single primary column; the left and right columns SHALL become dismissible drawers opened by two compact icon controls in the top bar. Switching workspaces or pages SHALL preserve recorded pool state.
 
 #### Scenario: Navigate from the left column
 
@@ -30,6 +30,16 @@ The workbench SHALL render a three-column desktop layout: a left navigation colu
 
 - **WHEN** the learner switches the workspace dropdown
 - **THEN** the new workspace loads and previously recorded attempts, feedback, and signals remain intact in their original pool
+
+#### Scenario: The top bar shows the name, not the identifier
+
+- **WHEN** a workspace's course is an automatically allocated code and its name is the folder name
+- **THEN** the top bar shows the workspace name, and the code does not appear there
+
+#### Scenario: The chapter context lives in the lens control
+
+- **WHEN** a chapter is active
+- **THEN** the top bar shows it through the chapter lens control rather than repeating it beside the workspace name
 
 ### Requirement: Practice page
 
@@ -418,11 +428,19 @@ The mirror SHALL store `title` and `title_source`. A successful provider result 
 - **THEN** later turns do not replace the user title
 
 ### Requirement: Local deletion is bounded
-Deleting an idle session SHALL remove only its Lesson Kit mirror directory. A running session SHALL return a conflict and remain intact.
+Deleting an idle session SHALL remove only its Lesson Kit mirror directory. A running session SHALL return a conflict and remain intact. The identifier SHALL be validated as a plain generated conversation name before any filesystem call, so a request that carries a path separator or `..` is refused with an explicit error and removes nothing.
 
 #### Scenario: Returning to history
 - **WHEN** a student clicks back from a conversation
 - **THEN** the list view returns without creating or modifying a learning record
+
+#### Scenario: A traversal identifier is refused
+- **WHEN** a delete or rename request carries a conversation identifier that is not a plain name
+- **THEN** the request fails with an explicit error and no directory inside or outside the workspace is removed
+
+#### Scenario: Another workspace's conversation is unreachable
+- **WHEN** a delete request names a conversation that belongs to a different workspace
+- **THEN** the request fails as unknown and the other workspace's jobs directory is untouched
 
 ### Requirement: Graph detail is a learning dashboard
 
@@ -938,4 +956,28 @@ animation.
 
 - **WHEN** reduced motion is requested and the learner reveals a card
 - **THEN** both faces are shown in their final positions without animation frames
+
+### Requirement: Chapter switch in the top bar
+
+The workbench top bar SHALL carry one chapter control beside the workspace and
+course context: a switch whose off state means the whole course and whose on
+state selects exactly one chapter from the chapters present in the pool. The
+control SHALL write the active chapter through the service and refresh the
+shell, SHALL NOT introduce a fourth navigation page, and SHALL show no
+per-chapter statistics, counts, or selection reasons.
+
+#### Scenario: Toggle the lens on
+
+- **WHEN** the learner turns the chapter switch on and selects a chapter
+- **THEN** the shell reloads with that chapter's context and the control shows the selected chapter
+
+#### Scenario: Toggle the lens off
+
+- **WHEN** the learner turns the chapter switch off
+- **THEN** the shell reloads with the whole-course context and the control shows no chapter
+
+#### Scenario: No new navigation surface
+
+- **WHEN** the chapter control is used
+- **THEN** the three-page shell and its navigation entries remain unchanged
 

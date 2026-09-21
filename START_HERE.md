@@ -9,7 +9,7 @@ or view, then load only the files named by that path.
 |---|---|
 | Extract knowledge from a chapter into SQLite | `pipeline/commands/extract-chapter.md` |
 | Extract durable problems into SQLite | `pipeline/commands/extract-problems.md` |
-| Generate governed flash cards or micro quizzes | `wb ingest` or an explicit Agent `check_ingest` action |
+| Generate governed flash cards or micro quizzes | `lesson-kit ingest` or an explicit Agent `check_ingest` action |
 | Render a knowledge guide from the pool | `pool/scripts/print-graph.py` plus `docs/design/print-graph-design.md` |
 | Render a practice problem set | `views/problem-set/command.md` |
 

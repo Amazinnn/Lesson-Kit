@@ -5,7 +5,7 @@ Provides a read-only and replaceable first experiment for classifying current le
 ## Requirements
 ### Requirement: Read-only mastery experiment command
 
-The workbench SHALL expose `wb experiment <workspace> mastery` for all entities or one knowledge point/problem, with optional JSON output. It SHALL return `evidence_insufficient`, `needs_work`, `due_review`, or `recently_stable`, a Chinese explanation, and traceable evidence reasons. It SHALL NOT output a mastery probability, change ordering, write a database row, or integrate with the student UI.
+The workbench SHALL expose `lesson-kit experiment <workspace> mastery` for all entities or one knowledge point/problem, with optional JSON output. It SHALL return `evidence_insufficient`, `needs_work`, `due_review`, or `recently_stable`, a Chinese explanation, and traceable evidence reasons. It SHALL NOT output a mastery probability, change ordering, write a database row, or integrate with the student UI.
 
 #### Scenario: Evaluate without writes
 

@@ -14,7 +14,7 @@ discovered agent CLIs.
 
 #### Scenario: Configure a provider
 
-- **WHEN** the user runs `wb bridge add <provider> --command <cmd>`
+- **WHEN** the user runs `lesson-kit bridge add <provider> --command <cmd>`
 - **THEN** the provider is written to the bridge config and applies to
   conversations that use that provider
 
@@ -41,7 +41,7 @@ same bridge conversations.
 
 #### Scenario: CLI records data without pedagogy
 
-- **WHEN** an agent runs `wb pull` and `wb record` to gather and record practice data
+- **WHEN** an agent runs `lesson-kit pull` and `lesson-kit record` to gather and record practice data
 - **THEN** the CLI returns and stores data only, with no teaching instructions, and the agent's teaching behavior comes from the teaching skill it loaded
 
 ### Requirement: Flexible session model
@@ -120,7 +120,7 @@ appended Lesson Kit teacher contract and server-rebuilt page context.
 #### Scenario: Send a context-free learning question
 
 - **WHEN** the learner asks a question while no practice problem is active
-- **THEN** the provider still receives the fixed workspace/page context and can use `wb data` to search the pool
+- **THEN** the provider still receives the fixed workspace/page context and can use `lesson-kit data` to search the pool
 
 #### Scenario: Pi session id is taken from the provider's own header
 
@@ -255,7 +255,9 @@ starts in a conversation whose previous turn carried a check ingest action,
 the server-side provider context SHALL carry that action's outcome — a batch
 confirmation on success, or the itemized rejection reasons on failure — so
 the agent can correct a rejected manifest or avoid resubmitting applied
-content.
+content. The prompt's content-id examples SHALL carry the workspace's own
+active course and chapter, so a conversation held in one subject never teaches
+the agent another subject's ids.
 
 #### Scenario: Conversation request produces cards
 
@@ -303,6 +305,11 @@ content.
   new turn starts
 - **THEN** the provider context carries the batch confirmation so the agent
   does not resubmit the same content
+
+#### Scenario: Examples carry the workspace course
+
+- **WHEN** the prompt for a content-generation turn is composed in a workspace whose active course and chapter are set
+- **THEN** the example card and micro-quiz ids carry that course and chapter, and no other course's ids appear in the prompt
 
 ### Requirement: Action block disclosure
 

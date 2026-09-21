@@ -18,7 +18,7 @@
 
 ## 核心需求（已确认）
 
-1. 网页一体工作台 + 超级 CLI（wb），文件夹 = 工作区，用户级注册表。
+1. 网页一体工作台 + 超级 CLI（`lesson-kit`），文件夹 = 工作区，用户级注册表。
 2. 日常复习为主；考前突击（`--mode all` 跨章节）、跟课抽取并重。
 3. 挠痛处模型：弱项列表 → 拉题 → 直接练不会的；流程不钉死，永不锁题。
 4. 反馈可选：1–5 打分 + 自然语言，映射信号并影响下次复习；信号永不自动清除。
@@ -50,7 +50,7 @@
 - [ ] `pytest tests -q` 全绿（含新增 workbench 领域/桥/API 单测）。
 - [ ] 迁移幂等：新池（create-tables）与旧池升级（migrate-progress）都通过
       `validate-pool`；现有 28 KP / 303 题数据不变。
-- [ ] `wb` 全命令可用：init/ls/open/weak/due/pull/record/feedback/schedule/ai/bridge/guard。
+- [ ] `lesson-kit` 全命令可用：init/ls/open/weak/due/pull/record/feedback/schedule/ai/bridge/guard。
 - [ ] 服务端 API 全部按 spec 的 WHEN/THEN 场景通过测试（hub/weak/pull/practice/feedback/
       schedule/figures/ai jobs）。
 - [ ] 桥：explain + diagnose 任务全生命周期（queued→running→done/failed）+ 契约校验
@@ -142,7 +142,7 @@
 
 ### Agent 数据能力
 
-- 提供统一 JSON `wb data`，覆盖知识点、正式题、候选题和关系的读取、搜索、历史、显式增删改、状态、门禁与晋升。
+- 提供统一 JSON `lesson-kit data`，覆盖知识点、正式题、候选题和关系的读取、搜索、历史、显式增删改、状态、门禁与晋升。
 - 浏览、搜索、讨论、草稿和导航零写入；正式题只能由双门禁通过的候选题晋升创建。
 - 新对象按课程/章节/实体分配可读顺序 ID，不使用 hash；候选内容修改后重置门禁。
 - 物理删除在单一事务中完成完整级联，不保留删除日志；显式状态编辑仍只覆盖当前值与调度。
@@ -209,7 +209,7 @@
 - 303 道正式题解析、3 个新增知识点和 13 处映射修复必须全量门禁通过后，基于同一个可恢复数据库副本在单一事务中切换；任一项失败时真实池的解析、28 个知识点和原映射完全不变，成功后保持 303 道正式题并得到 31 个知识点。
 - 练习刷新恢复、知识点限定队列、移动双抽屉、可见错误、可访问表单与简洁行动状态均有生产代码测试。
 - 真实 28 节点图的交叉数低于旧单起点基线，筛选、拖拽、缩放、搜索、reduced-motion 和聚焦不回归。
-- `wb experiment ... mastery` 覆盖证据优先级、跨日/跨题阈值并证明运行前后数据库内容与行数完全一致。
+- `lesson-kit experiment ... mastery` 覆盖证据优先级、跨日/跨题阈值并证明运行前后数据库内容与行数完全一致。
 - 完整 pytest、JS 语法、OpenSpec strict/doctor、两道 pool guard 和 `:3081` 三档宽度人工验收通过。
 
 ## 2026-08-27 灵动知识图谱与开发阶段冻结

@@ -1,8 +1,8 @@
 # Contributing
 
 Lesson Kit's runtime remains standard-library-only. The editable development
-install adds only the test runner and exposes the workbench CLI under two
-equivalent command names, `wb` and `lesson-kit`.
+install adds only the test runner and exposes the workbench CLI as the single
+command `lesson-kit`.
 
 ## Development setup
 
@@ -21,27 +21,23 @@ python -m pip install -e ".[dev]"
 The workbench CLI is now available from the repository root:
 
 ```bash
-wb --help
-wb init . --course dmath --chapter ch06
-wb serve
+lesson-kit --help
+lesson-kit init . --course dmath --chapter ch06
+lesson-kit serve
 ```
 
-`lesson-kit` is the same entry point under a second name; `lesson-kit daemon
-start|stop|status` runs the server detached and `lesson-kit dashboard` opens
-it. Both names share every subcommand, so a change to one applies to both. Run
-the CLI tests after touching either:
+`lesson-kit daemon start|stop|status` runs the server detached and
+`lesson-kit dashboard` opens it. Run
+the CLI tests after touching the entry point:
 
 ```bash
 python -m pytest tests/workbench/test_cli_daemon.py tests/workbench/test_cli.py -q
 ```
 
-**Name collision:** the project's `wb` script collides with the `wb` console
-script shipped by Weights & Biases. Installing lesson-kit into an environment
-that already has `wandb` overwrites that launcher (whichever was installed
-last wins), and the `wb` command silently changes meaning. Prefer the
-`lesson-kit` name, install into a virtualenv, or re-run
-`pip install --force-reinstall --no-deps wandb` afterwards to give `wb` back
-to Weights & Biases. `python -m workbench.cli.main` is always unambiguous.
+**One name, on purpose:** the project ships only `lesson-kit` (module form:
+`python -m workbench.cli.main`). It deliberately does **not** install a `lesson-kit`
+script — that name belongs to Weights & Biases, and letting two packages claim
+one launcher means whichever installed last silently wins.
 
 ## Configuring an Agent provider
 
@@ -72,7 +68,7 @@ lesson-kit daemon stop && lesson-kit daemon start
 - **Prompt delivery is unchanged.** The provider-agnostic teacher contract and
   page context are written to stdin every turn; Pi reads them in
   `--print --mode json` without a positional prompt (verified). The contract
-  names only project-level things (`wb data`, the `lessonkit-action` block), so
+  names only project-level things (`lesson-kit data`, the `lessonkit-action` block), so
   it does not assume any harness's tool names.
 - **Pi loads `AGENTS.md` automatically** from the working directory and its
   ancestors, and context files are loaded regardless of project trust. The

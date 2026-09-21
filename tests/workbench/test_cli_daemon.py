@@ -3,6 +3,7 @@
 import contextlib
 import io
 import os
+import shutil
 import sqlite3
 import unittest
 from pathlib import Path
@@ -211,10 +212,11 @@ class CliSurfaceTests(unittest.TestCase):
         for name in ("codex", "claude", "pi"):
             self.assertIn(f"{name}: not found", out)
 
-    def test_both_entry_points_keep_their_own_program_name(self):
-        self.assertEqual(self.cli.build_parser().prog, "wb")
+    def test_one_command_name_for_both_entry_points(self):
+        self.assertEqual(self.cli.build_parser().prog, "lesson-kit")
         self.assertEqual(self.cli.build_parser("lesson-kit").prog, "lesson-kit")
         self.assertTrue(callable(self.cli.lesson_kit_main))
+        self.assertTrue(callable(self.cli.main))
 
 
 class BootstrapInitTests(unittest.TestCase):
@@ -225,8 +227,10 @@ class BootstrapInitTests(unittest.TestCase):
         self.cli = cli_main
         self.empty = Path(self.fixture.tmp.name) / "fresh"
         self.empty.mkdir()
+        self._cwd = os.getcwd()
 
     def tearDown(self):
+        os.chdir(self._cwd)
         self.fixture.cleanup()
 
     def run_cli(self, *args):

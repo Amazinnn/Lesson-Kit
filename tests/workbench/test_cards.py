@@ -118,7 +118,7 @@ class CardIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_flash_cards(
-                conn, json.loads(path.read_text(encoding="utf-8")))
+                conn, json.loads(path.read_text(encoding="utf-8")), "dmath")
         finally:
             conn.close()
         self.assertTrue(report["ok"], report["errors"])
@@ -178,7 +178,7 @@ class CardIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_flash_cards(
-                conn, json.loads(path.read_text(encoding="utf-8")))
+                conn, json.loads(path.read_text(encoding="utf-8")), "dmath")
         finally:
             conn.close()
         self.assertEqual(report["errors"], [
@@ -198,7 +198,7 @@ class CardIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_flash_cards(
-                conn, json.loads(path.read_text(encoding="utf-8")))
+                conn, json.loads(path.read_text(encoding="utf-8")), "dmath")
         finally:
             conn.close()
         self.assertFalse(report["ok"])
@@ -453,7 +453,7 @@ class CardSchemaMigrationTests(unittest.TestCase):
                     created_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
                 INSERT INTO problems VALUES ('p-1', '["kp-1"]', 't', NULL,
-                    'other', 'quiz', '["flash_card"]', NULL);
+                    'other', 'quiz', '["flash_card"]', NULL, NULL);
                 INSERT INTO review_schedule (item_type, item_id) VALUES ('kp', 'kp-1');
                 INSERT INTO feedback_events (item_type, item_id, rating) VALUES ('problem', 'p-1', 3);
             """)

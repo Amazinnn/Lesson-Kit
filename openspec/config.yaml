@@ -18,7 +18,7 @@ context: |
   Five layers, one-way dependencies (shell → learning model → data; content
   reads data; intelligence is attached, never in the main path):
 
-  - Shell: web workbench + super CLI (wb), two thin entry points over one
+  - Shell: web workbench + super CLI (lesson-kit), two thin entry points over one
     service layer. Stateless: no business state outside the pool.
   - Learning model: weakness ordering, problem pull, feedback→signal mapping,
     forgetting-curve scheduling — pure rules, zero AI dependency, unit-testable.
@@ -43,7 +43,7 @@ context: |
     task files + output contract validation; teacher conduct rules (establish
     baseline, concise explanation, comprehension check, never guess, cite
     source) are part of the task contract. v1 operation: explain only.
-  - CLI is a data interface: wb carries no teaching semantics; teaching lives
+  - CLI is a data interface: lesson-kit carries no teaching semantics; teaching lives
     in the teaching skill + conduct contract (ADR 0020, informed by DeepTutor).
   - Sessions are flexible: not bound to one task, learner opens new sessions
     anytime; anti-derailment via anchor + parked digressions + learner control,
@@ -115,5 +115,5 @@ context: |
   START_HERE.md, TASK_ROUTER.md, RED_LINES.md, FILE_CONTRACT.md, docs/adr/0001–0021,
   docs/DISCUSSION-RECORD.md (verbatim discussion record — source of truth for
   confirmed decisions and un-rejected proposals).
-  All lessonkit.py/wb commands resolve paths relative to the current working
+  All lessonkit.py/lesson-kit commands resolve paths relative to the current working
   directory — run them from the repository root.

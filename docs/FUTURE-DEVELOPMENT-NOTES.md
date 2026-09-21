@@ -70,7 +70,7 @@ lesson-kit 已经接近日常可用。后续的重点不是继续堆页面和按
 
 ### Micro Quiz / 小测模式
 
-> 2026-08-28 已实现：内容契约、`wb ingest recipe micro-quiz` 入池配方与按题型
+> 2026-08-28 已实现：内容契约、`lesson-kit ingest recipe micro-quiz` 入池配方与按题型
 > 渲染/客观题本地判分见 `openspec/specs/micro-quiz-content/spec.md`；
 > AI 生成微题仍是下述后置实验。
 
@@ -114,7 +114,7 @@ OCR 只是可选原材料，不应成为核心依赖。中间产物用明确的 
 ## Agent 教学能力
 
 - 普通对话不应该绑死在练习、诊断或讲解某一个活动上；会话可以自由探索。
-- Agent 通过 `wb data` 获取权威材料，Lesson Kit 负责数据边界和写入门禁。
+- Agent 通过 `lesson-kit data` 获取权威材料，Lesson Kit 负责数据边界和写入门禁。
 - 页面上下文可以提供当前工作区、知识点、题目、练习范围和最近浏览对象；未提交草稿默认不进入长期记录。
 - Agent 可以解释、追问、比较、帮助规划，但不应绕过正式内容门禁直接制造可信度不明的正式题。
 - 会话记忆、外部 Provider 原生上下文和 Lesson Kit 的显式问答镜像需要继续保持边界。
@@ -384,8 +384,8 @@ Flash Card、Yes/No、选择题必须有真实的结构化内容、答案和解�
    codex 延迟治理（体感卡→bridges.json timeout_s）、candidate_problems 物理 DROP
    （2026-08-30 所有者点名执行，候选机制同日退役——GLOSSARY「候选题」条目）。
    cloze 拆卡不进窗口，继续挂起。
-4. **教师记忆消费端 = 保持机会主义**。考证：`wb data history` 单条目史可达、
-   `wb weak`/`wb due` 聚合可达；语料级痕迹（全部反馈事件、会话镜像）无数据接口；
+4. **教师记忆消费端 = 保持机会主义**。考证：`lesson-kit data history` 单条目史可达、
+   `lesson-kit weak`/`lesson-kit due` 聚合可达；语料级痕迹（全部反馈事件、会话镜像）无数据接口；
    provider 上下文零自动注入。「怎么系统性注入」正是其未定义部分，等真实需求信号。
 5. 新挂名概念登记：「真题拟合」（已并入联合立项）与「双向闪卡」（语言学习形态，
    看一种语言说另一种语言）。其中双向闪卡已于 2026-09-01 定义并实现，留档见

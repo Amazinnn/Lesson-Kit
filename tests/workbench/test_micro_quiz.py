@@ -168,7 +168,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_micro_quiz(
-                conn, json.loads(path.read_text(encoding="utf-8")))
+                conn, json.loads(path.read_text(encoding="utf-8")), "dmath")
         finally:
             conn.close()
         self.assertTrue(report["ok"], report["errors"])
@@ -225,7 +225,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_micro_quiz(
-                conn, json.loads(path.read_text(encoding="utf-8")))
+                conn, json.loads(path.read_text(encoding="utf-8")), "dmath")
         finally:
             conn.close()
         for index, field in enumerate(
@@ -275,7 +275,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             report = ingest._gate_micro_quiz(
-                conn, json.loads(path.read_text(encoding="utf-8")))
+                conn, json.loads(path.read_text(encoding="utf-8")), "dmath")
         finally:
             conn.close()
         self.assertFalse(report["ok"])

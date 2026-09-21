@@ -1,4 +1,4 @@
-"""wb CLI integration tests (TDD, red first)."""
+"""lesson-kit CLI integration tests (TDD, red first)."""
 
 import contextlib
 import importlib.util

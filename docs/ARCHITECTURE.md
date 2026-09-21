@@ -6,7 +6,7 @@
 ## 0. 分层总则（ADR 0009，硬规则）
 
 ```
-Shell（wb CLI + HTTP 服务）   ← 无业务逻辑，只编排
+Shell（lesson-kit CLI + HTTP 服务）   ← 无业务逻辑，只编排
   ↓ 只调用
 Domain（弱项/拉题/反馈/调度） ← 纯规则，零 IO 副作用，可单测
   ↓ 只调用
@@ -54,7 +54,7 @@ workbench/
 │   └── __init__.py    # 内容 prepare/run/gate/apply/batch/rollback
 ├── cli/
 │   ├── __init__.py
-│   └── main.py        # wb 入口（argparse；纯数据命令，无教学语义）
+│   └── main.py        # lesson-kit 入口（argparse；纯数据命令，无教学语义）
 ├── server/
 │   ├── __init__.py
 │   ├── app.py         # BaseHTTPRequestHandler 路由（单进程单端口 127.0.0.1）

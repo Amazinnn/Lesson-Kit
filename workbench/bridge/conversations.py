@@ -231,6 +231,9 @@ def _coalesced_activities(path):
 
 
 def _prompt(message, context):
+    workspace = context.get("workspace") or {}
+    course = workspace.get("course") or "<course>"
+    chapter = workspace.get("chapter") or "ch01"
     return (
         "你是 Lesson Kit 的外部 AI 教师。普通问答只读取上下文；只有学生明确要求修改内容或提交学习结论时，"
         "才可使用 lesson-kit data 写命令（等价写法 python -m workbench.cli.main data）。"

@@ -12,12 +12,16 @@ def hub_page(workspaces):
     cards = []
     for ws in workspaces:
         stats = ws.get("stats", {})
+        if ws.get("error"):
+            detail = f"数据库读不了：{str(ws['error']).splitlines()[0]}"
+        else:
+            detail = (f"{stats.get('kps')} 个知识点 · {stats.get('problems')} 道题 · "
+                      f"{stats.get('due')} 项待复习")
         cards.append(
             f"<a class='workspace-card' href='/w/{ws['name']}/practice'>"
             f"<span class='context-line'>学习工作区</span>"
             f"<h2>{html.escape(ws['name'])}</h2>"
-            f"<p>{stats.get('kps')} 个知识点 · {stats.get('problems')} 道题 · "
-            f"{stats.get('due')} 项待复习</p></a>"
+            f"<p>{html.escape(detail)}</p></a>"
         )
     body = (
         "<main class='hub-page'>"

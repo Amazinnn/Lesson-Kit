@@ -17,7 +17,7 @@ rules that actually drive learning.
 
 Structure the workbench in five layers with one-way dependencies:
 
-1. **Shell** — web workbench and super CLI (`wb`), two thin entry points over a
+1. **Shell** — web workbench and super CLI (`lesson-kit`), two thin entry points over a
    single service layer. The shell is stateless: all business state lives in
    the pool.
 2. **Learning model** — weakness ordering, problem pull, feedback→signal

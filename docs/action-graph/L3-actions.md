@@ -105,7 +105,7 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
 - 2026-08-30 出题链修复（conv-023 回归）：桥解析改为全区块按意图匹配；
   check_intent 正则补自然措辞；被忽略的动作区块向下一轮上下文披露
   「未写入任何内容」（openspec：disclose-ignored-action-blocks）。
-- 2026-08-30 candidate 物理退役落地（remove-candidate-store）：`wb data` 的
+- 2026-08-30 candidate 物理退役落地（remove-candidate-store）：`lesson-kit data` 的
   candidate 实体与 gate/promote 动作下线、候选证据分支删除、candidate_problems/
   candidate_attempts 建表停止且真实池 DROP（先备份）；learner_signals 保留为核心。
 - 2026-08-31 目标月历升级为时间跑道：目标增加可选开始日期，跨周续接、重叠分轨；
