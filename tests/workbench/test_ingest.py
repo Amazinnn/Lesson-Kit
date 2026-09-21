@@ -45,7 +45,7 @@ class IngestTests(unittest.TestCase):
         conn.executescript("""
             CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY, knowledge_item TEXT);
             CREATE TABLE problems (problem_id TEXT PRIMARY KEY, problem_text TEXT NOT NULL,
-                solution TEXT, ingest_batch_id TEXT);
+                solution TEXT, ingest_batch_id TEXT, difficulty INTEGER);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY, source_kp_id TEXT, target_kp_id TEXT);
             CREATE TABLE content_sequences (
                 scope TEXT NOT NULL, entity_type TEXT NOT NULL, next_value INTEGER NOT NULL,
@@ -236,7 +236,8 @@ class IngestTests(unittest.TestCase):
                 problem_id TEXT PRIMARY KEY,
                 kp_ids TEXT NOT NULL,
                 problem_text TEXT NOT NULL,
-                solution TEXT
+                solution TEXT,
+                difficulty INTEGER
             );
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
@@ -457,7 +458,8 @@ class ContentPatchIngestTests(unittest.TestCase):
                 kp_ids TEXT NOT NULL,
                 problem_text TEXT NOT NULL,
                 solution TEXT,
-                ingest_batch_id TEXT
+                ingest_batch_id TEXT,
+                difficulty INTEGER
             );
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY);
@@ -530,7 +532,8 @@ class ContentPatchIngestTests(unittest.TestCase):
             "source_location": "Section 3", "knowledge_type": "algorithm-process",
             "related_kp_ids": ["kp-2"], "importance": "supplementary",
             "learning_action": None, "body": "用 $n$ 位串表示子集。",
-            "difficulty": 2, "fragile": None, "graph_label": "位串子集",
+            "difficulty": 2, "difficulty_basis": "直接套用位串与子集的对应",
+            "fragile": None, "graph_label": "位串子集",
         }
         mappings = [
             {"problem": "p-1", "kp_ids": ["kp-3"]},
@@ -581,6 +584,40 @@ class ContentPatchIngestTests(unittest.TestCase):
             content, bad_audit,
         )
         self.assertFalse(failed["ok"])
+
+    def test_knowledge_point_difficulty_is_optional_but_needs_a_basis(self):
+        solutions, audits, content, content_audit = self.qualified_files()
+        patch = json.loads(content.read_text(encoding="utf-8"))
+        audit = json.loads(content_audit.read_text(encoding="utf-8"))
+        for record in (patch["knowledge_points"][0],
+                       audit["knowledge_points"][0]["knowledge_point"]):
+            record.pop("difficulty")
+            record.pop("difficulty_basis")
+        without_difficulty = self.artifact("content-without-difficulty.json", patch)
+        matching_audit = self.artifact("audit-without-difficulty.json", audit)
+
+        report = ingest.gate(
+            self.db_path, solutions, audits, self.root / "gate.json",
+            without_difficulty, matching_audit,
+        )
+
+        self.assertTrue(report["ok"], report["errors"])
+
+        for record in (patch["knowledge_points"][0],
+                       audit["knowledge_points"][0]["knowledge_point"]):
+            record["difficulty"] = 3
+        undeclared_basis = self.artifact("content-without-basis.json", patch)
+        matching_audit = self.artifact("audit-without-basis.json", audit)
+        refused = ingest.gate(
+            self.db_path, solutions, audits, self.root / "bad-gate.json",
+            undeclared_basis, matching_audit,
+        )
+
+        self.assertFalse(refused["ok"])
+        self.assertIn(
+            "kp-3: difficulty requires a non-empty difficulty_basis",
+            "\n".join(refused["errors"]),
+        )
 
     def test_apply_uses_one_backup_and_transaction_for_solutions_kps_and_mappings(self):
         solutions, audits, content, content_audit = self.qualified_files()
@@ -639,7 +676,7 @@ class BatchRollbackTests(unittest.TestCase):
                 problem_text TEXT NOT NULL, solution TEXT, problem_type TEXT,
                 source_kind TEXT, topic_label TEXT, display_title TEXT,
                 display_summary TEXT, practice_modes TEXT, micro_quiz TEXT,
-                ingest_batch_id TEXT);
+                ingest_batch_id TEXT, difficulty INTEGER);
             CREATE TABLE flash_cards (
                 card_id TEXT PRIMARY KEY, kp_id TEXT NOT NULL, front TEXT NOT NULL,
                 back TEXT NOT NULL, source_evidence TEXT NOT NULL,

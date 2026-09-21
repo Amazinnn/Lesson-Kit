@@ -476,6 +476,8 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     ("practice_modes", "TEXT"),
                     ("micro_quiz", "TEXT"),
                     ("ingest_batch_id", "TEXT"),
+                    # optional 1-5 attribute; NULL = not declared (see GLOSSARY 难度)
+                    ("difficulty", "INTEGER CHECK (difficulty BETWEEN 1 AND 5)"),
                 ],
             )
         )

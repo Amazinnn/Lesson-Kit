@@ -654,8 +654,12 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertNotIn("wb ingest", prompt)
         self.assertIn("topic_label", prompt)
         self.assertIn("数学乘号一律用 ×", prompt)
-        self.assertIn('"card_id":"dmath-ch06-fc-901"', prompt)
-        self.assertIn('"problem_id":"dmath-ch06-mq-901"', prompt)
+        self.assertIn('"card_id":"uphy2-ch07-fc-901"', prompt)
+        self.assertIn('"problem_id":"uphy2-ch07-mq-901"', prompt)
+        self.assertIn('"kp_id":"uphy2-ch07-kp-001"', prompt)
+        self.assertNotIn("dmath", prompt)
+        self.assertIn('"difficulty":1,"difficulty_basis"', prompt)
+        self.assertIn("判断不了就两项都不写", prompt)
         self.assertIn(
             "若上下文含 last_check_outcome：成功则不要重复提交相同内容；"
             "被拒收则按逐条原因\n修正后重新提交完整区块。",

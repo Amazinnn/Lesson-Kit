@@ -61,7 +61,7 @@ def build_baseline_plan(workspace, *, now=None, available_minutes=None):
             "title": kp.get("knowledge_item") or kp_id,
             "kp_ids": [kp_id],
             "target_count": target,
-            "difficulty_mix": types or {"mixed": target},
+            "problem_type_mix": types or {"mixed": target},
             "reason": "；".join(reasons),
             "priority": urgency + (1 - coverage),
         })
