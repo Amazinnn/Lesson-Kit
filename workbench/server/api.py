@@ -9,7 +9,7 @@ from workbench import ingest
 from workbench.bridge import conversation_providers, conversations
 from workbench.data import goals, queries
 from workbench.domain import (
-    cards as card_rules, feedback, learning_state, planning, pull,
+    cards as card_rules, difficulty as difficulty_rules, feedback, learning_state, planning, pull,
     schedule as schedule_rules, signals as signal_rules, weak,
 )
 from workbench.server import context as agent_context
@@ -202,9 +202,44 @@ def pull_problems(pool, workspace, params, body):
         raise ApiError(400, "include_ids must be a non-empty string list")
     if include_ids and mode == "all":
         raise ApiError(400, "include_ids cannot be combined with mode all")
+    origin_kind = body.get("origin_kind")
+    if origin_kind not in {None, "source_problem", "adapted_problem", "generated_grounded"}:
+        raise ApiError(400, "invalid origin_kind")
+    source_group = body.get("source_group")
+    if source_group not in {None, "textbook", "exam", "ai_generated", "other"}:
+        raise ApiError(400, "invalid source_group")
+    difficulty_min = body.get("difficulty_min")
+    difficulty_max = body.get("difficulty_max")
+    for name, value in (("difficulty_min", difficulty_min), ("difficulty_max", difficulty_max)):
+        if value is not None and (
+            isinstance(value, bool) or not isinstance(value, (int, float)) or not 1 <= value <= 5
+        ):
+            raise ApiError(400, f"{name} must be a number from 1 to 5")
+    if difficulty_min is not None and difficulty_max is not None and difficulty_min > difficulty_max:
+        raise ApiError(400, "difficulty_min must not exceed difficulty_max")
+    dimension_ranges = body.get("difficulty_dimensions", {})
+    if not isinstance(dimension_ranges, dict) or set(dimension_ranges) - set(difficulty_rules.DIMENSIONS):
+        raise ApiError(400, "difficulty_dimensions contains an unknown dimension")
+    for name, bounds in dimension_ranges.items():
+        if not isinstance(bounds, list) or len(bounds) != 2:
+            raise ApiError(400, f"{name} range must be [min, max]")
+        low, high = bounds
+        if any(value is not None and (
+            isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 5
+        ) for value in bounds):
+            raise ApiError(400, f"{name} bounds must be integers from 1 to 5")
+        if low is not None and high is not None and low > high:
+            raise ApiError(400, f"{name} minimum must not exceed maximum")
+    difficulty_strategy = body.get("difficulty_strategy")
+    if difficulty_strategy not in {None, "balanced"}:
+        raise ApiError(400, "invalid difficulty_strategy")
     return pull.select(
         pool, kp_ids, n=n, mode=mode, source_kind=body.get("source_kind"),
+        origin_kind=origin_kind, source_group=source_group,
         exclude_ids=set(exclude_ids), include_ids=set(include_ids),
+        difficulty_min=difficulty_min, difficulty_max=difficulty_max,
+        difficulty_dimensions=dimension_ranges,
+        difficulty_strategy=difficulty_strategy,
     )
 
 
@@ -309,6 +344,11 @@ def _request_object(body):
     if not isinstance(body, dict):
         raise ApiError(400, "request body must be a JSON object")
     return body
+
+
+def ingest_batches(pool, workspace, params, body):
+    """Current state of every batch, so a reopened card can stop offering rollback."""
+    return ingest.list_batches(pool.db_path)
 
 
 def ingest_rollback(pool, workspace, params, body):
@@ -423,7 +463,9 @@ def ai_turn_start(pool, workspace, params, body):
     message = body.get("message")
     if not isinstance(message, str) or not message.strip():
         raise ApiError(400, "message is required")
-    context = agent_context.build(pool, workspace, body)
+    # The conversation owns the staged-manifest directory; the body cannot pick it.
+    framed = {**body, "conversation_id": params["conversation_id"]}
+    context = agent_context.build(pool, workspace, framed)
     try:
         return conversations.start_turn(
             pool, workspace, params["conversation_id"], message.strip(), context

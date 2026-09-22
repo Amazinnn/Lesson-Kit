@@ -119,6 +119,14 @@ class FakeElement {
 
   remove() {
     this.removed = true;
+    // A detached node must leave the fake tree, or class lookups keep finding
+    // what the page removed.
+    const parent = this.parentElement;
+    if (parent && Array.isArray(parent.children)) {
+      const index = parent.children.indexOf(this);
+      if (index >= 0) parent.children.splice(index, 1);
+    }
+    this.parentElement = null;
   }
 
   setAttribute(name, value) {
@@ -1571,7 +1579,7 @@ test("explicit practice intent applies an Agent selection replacement", async ()
   assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
 });
 
-function checkIngestHarness(turnAction, sessionMessages) {
+function checkIngestHarness(turnAction, sessionMessages, batches = []) {
   const calls = [];
   const pageLayout = layout();
   pageLayout.dataset.page = "kps";
@@ -1581,6 +1589,7 @@ function checkIngestHarness(turnAction, sessionMessages) {
     fetch: (url, options) => {
       calls.push({ url, options, method: options && options.method });
       if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ingest/batches")) return jsonResponse(batches);
       if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
         { conversation_id: "conv-001", provider: "codex", status: "idle" },
       ]);
@@ -1599,58 +1608,36 @@ function checkIngestHarness(turnAction, sessionMessages) {
   return { calls, elements };
 }
 
-test("explicit check intent is forwarded with the turn request", async () => {
+test("a turn request carries no keyword-derived content intent", async () => {
+  // The browser regex that used to gate content actions is gone: a valid
+  // append-only action carries its own authority, so the request must not
+  // smuggle an intent boolean derived from the learner's wording.
   const { calls, elements } = checkIngestHarness(null);
   await openFirstAiSession(elements);
-  elements["ai-input"].value = "帮我给这个知识点出几道题";
+  elements["ai-input"].value = "请你给 dmath-ch06-kp-028 补两张闪卡";
   elements["ai-send"].click();
   await flush();
   await flush();
   const turnPost = calls.find((call) => call.url.endsWith("/turns") && call.options);
-  assert.equal(JSON.parse(turnPost.options.body).check_intent, true);
-  assert.equal(JSON.parse(turnPost.options.body).practice_intent, false);
-});
-
-test("natural card phrasing toggles check intent without false positives", async () => {
-  const positive = checkIngestHarness(null);
-  await openFirstAiSession(positive.elements);
-  positive.elements["ai-input"].value = "请你给 dmath-ch06-kp-028 补两张闪卡";
-  positive.elements["ai-send"].click();
-  await flush();
-  await flush();
-  const post = positive.calls.find((call) => call.url.endsWith("/turns") && call.options);
-  assert.equal(JSON.parse(post.options.body).check_intent, true);
-
-  const negative = checkIngestHarness(null);
-  await openFirstAiSession(negative.elements);
-  negative.elements["ai-input"].value = "这张闪卡是什么意思";
-  negative.elements["ai-send"].click();
-  await flush();
-  await flush();
-  const plainPost = negative.calls.find((call) => call.url.endsWith("/turns") && call.options);
-  assert.equal(JSON.parse(plainPost.options.body).check_intent, false);
+  const body = JSON.parse(turnPost.options.body);
+  assert.equal(body.check_intent, undefined);
+  assert.equal(body.practice_intent, false);
 });
 
 test("check ingest success renders a batch result card whose rollback calls the API", async () => {
-  const { calls, elements } = checkIngestHarness({
-    type: "check_ingest",
-    result: {
-      batch_id: "batch-001", kind: "flash-card-patch", applied: 6,
-      counts: {}, backup_path: "pool/backups/dmath-pre-batch-001.db",
-    },
-  }, [
-    { role: "user", content: "给 kp-001 补 6 张闪卡" },
-    { role: "assistant", content: "好的", action: {
-      type: "check_ingest",
-      result: {
-        batch_id: "batch-001", kind: "flash-card-patch", applied: true,
-        counts: { flash_cards: 6 },
-        backup_path: "C:/pool/backups/dmath-pre-batch-001.db",
-      },
-    } },
-  ]);
+  const result = {
+    batch_id: "batch-001", kind: "content-bundle", applied: true,
+    counts: { knowledge_points: 1, problems: 28, flash_cards: 2, figures: 1 },
+    origins: { source_problem: 27, generated_grounded: 3 },
+    workspace: "uphy2",
+    backup_path: "C:/pool/backups/dmath-pre-batch-001.db",
+  };
+  const { calls, elements } = checkIngestHarness({ type: "check_ingest", result }, [
+    { role: "user", content: "把第 12 章习题导入" },
+    { role: "assistant", content: "好的", action: { type: "check_ingest", result } },
+  ], [{ batch_id: "batch-001", rolled_back_at: null }]);
   await openFirstAiSession(elements);
-  elements["ai-input"].value = "给 kp-001 补 6 张闪卡";
+  elements["ai-input"].value = "把第 12 章习题导入";
   elements["ai-send"].click();
   await flush();
   await flush();
@@ -1660,12 +1647,15 @@ test("check ingest success renders a batch result card whose rollback calls the 
   assert.ok(cards.length >= 1);
   const card = cards[cards.length - 1];
   const body = card.children[0];
+  const detail = body.children[1].textContent;
   assert.equal(body.children[0].textContent, "Check 入库完成");
-  assert.match(body.children[1].textContent, /batch-001/);
-  assert.match(body.children[1].textContent, /flash-card-patch/);
-  assert.match(body.children[1].textContent, /入库 6 条/);
-  assert.match(body.children[1].textContent, /dmath-pre-batch-001\.db/);
-  assert.doesNotMatch(body.children[1].textContent, /backups\/dmath/);
+  assert.match(detail, /batch-001/);
+  assert.match(detail, /content-bundle/);
+  assert.match(detail, /知识点 1、题目 28、闪卡 2、图片 1/);
+  assert.match(detail, /来源 source_problem 27 · generated_grounded 3/);
+  assert.match(detail, /工作区 uphy2/);
+  assert.match(detail, /dmath-pre-batch-001\.db/);
+  assert.doesNotMatch(detail, /backups\/dmath/);
   const rollback = body.children[2];
   assert.equal(rollback.className, "check-card-rollback");
   rollback.click();
@@ -1675,6 +1665,28 @@ test("check ingest success renders a batch result card whose rollback calls the 
   assert.deepEqual(JSON.parse(rollbackPost.options.body), { batch_id: "batch-001" });
   assert.ok(rollback.removed);
   assert.match(body.children[1].textContent, /已整批回滚/);
+});
+
+test("a reopened result card shows the current batch state without rollback", async () => {
+  const result = {
+    batch_id: "batch-002", kind: "content-bundle", applied: true,
+    counts: { problems: 5, figures: 2 },
+    backup_path: "C:/pool/backups/dmath-pre-batch-002.db",
+  };
+  const { elements } = checkIngestHarness(null, [
+    { role: "user", content: "导入" },
+    { role: "assistant", content: "已入库", action: { type: "check_ingest", result } },
+  ], [{ batch_id: "batch-002", rolled_back_at: "2026-09-23 10:00:00" }]);
+  await openFirstAiSession(elements);
+  await flush();
+  await flush();
+  const card = elements["ai-messages"].children.filter(
+    (node) => node.className === "msg ai check-card").pop();
+  const body = card.children[0];
+  assert.equal(body.children[0].textContent, "Check 入库已回滚");
+  assert.match(body.children[1].textContent, /batch-002 已整批回滚/);
+  assert.match(body.children[1].textContent, /题目 5、图片 2/);
+  assert.equal(card.querySelector(".check-card-rollback"), null);
 });
 
 test("check ingest gate failure renders explicit reasons and no rollback button", async () => {
@@ -1787,6 +1799,41 @@ test("rich text renders markdown structure and safe links in native messages", a
   assert.doesNotMatch(html, /href=['"]javascript:/i);
 });
 
+test("rich text matches the shared safe-subset fixtures", async () => {
+  // One fixture file, two renderers: the browser and the server pages must
+  // support the same safe subset, including GFM tables.
+  const fixture = JSON.parse(fs.readFileSync(
+    path.resolve(__dirname, "fixtures/rich_text.json"), "utf8"));
+  for (const item of fixture.cases) {
+    const elements = { layout: layout(), ...aiElements() };
+    runWorkbench({
+      elements,
+      fetch: (url) => {
+        if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+        if (url.endsWith("/ai/sessions")) return jsonResponse([
+          { conversation_id: "conv-001", provider: "codex", status: "idle" },
+        ]);
+        return jsonResponse({
+          conversation_id: "conv-001", provider: "codex", status: "idle",
+          messages: [{ role: "assistant", content: item.markdown }],
+        });
+      },
+    });
+    await openFirstAiSession(elements);
+    const html = elements["ai-messages"].children[0].innerHTML;
+    for (const fragment of item.contains) {
+      // `{workspace}` stands for the owning workspace name (alpha in the harness).
+      const expected = fragment.replace("{workspace}", "alpha");
+      assert.ok(html.includes(expected),
+        `${item.name}: expected ${expected} in ${html}`);
+    }
+    for (const fragment of item.excludes) {
+      assert.ok(!html.includes(fragment),
+        `${item.name}: unexpected ${fragment} in ${html}`);
+    }
+  }
+});
+
 test("streaming assistant text is coalesced into one markdown message", async () => {
   const elements = { layout: layout(), ...aiElements() };
   runWorkbench({
@@ -1864,6 +1911,77 @@ test("Agent activities render as one updating execution-plan row", async () => {
   assert.equal(rows[0].activityParts.state.textContent, "已完成");
   assert.equal(rows[0].activityParts.output.textContent, "12 passed");
   assert.doesNotMatch(elements["ai-status"].textContent, /ITEM_COMPLETED/);
+});
+
+test("Pi activities are messages that update in place and split text segments", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    setTimeoutFn: () => 0,
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "pi" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "pi", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "pi", status: "idle", messages: [],
+      });
+      if (url.endsWith("/turns") && options) return jsonResponse({ turn_id: "turn-1" });
+      if (url.includes("/turns/turn-1")) return jsonResponse({
+        turn: { status: "running" },
+        events: [
+          { sequence: 1, kind: "text", text: "先检查。" },
+          { sequence: 2, kind: "activity", activity_id: "read-1",
+            activity_type: "file-read", status: "running", label: "读取文件",
+            detail: "docs/GLOSSARY.md" },
+          { sequence: 3, kind: "text", text: "检查完成。" },
+          { sequence: 4, kind: "activity", activity_id: "read-1",
+            status: "done", output: "content" },
+        ],
+      });
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "请检查";
+  elements["ai-send"].click();
+  await flush();
+
+  assert.equal(elements["ai-messages"].children.length, 4);
+  assert.match(elements["ai-messages"].children[1].innerHTML, /先检查/);
+  const activity = elements["ai-messages"].children[2];
+  assert.equal(activity.className, "msg ai-activity is-done");
+  assert.equal(activity.activityParts.label.textContent, "读取文件");
+  assert.equal(activity.activityParts.state.textContent, "已完成");
+  assert.equal(activity.activityParts.output.textContent, "content");
+  assert.equal(activity.activityParts.disclosure.hasAttribute("open"), false);
+  assert.match(elements["ai-messages"].children[3].innerHTML, /检查完成/);
+});
+
+test("a restored Pi message uses activity messages while Codex keeps its plan", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "pi" }]);
+      if (url.endsWith("/ai/sessions")) return jsonResponse([
+        { conversation_id: "conv-001", provider: "pi", status: "idle" },
+      ]);
+      return jsonResponse({
+        conversation_id: "conv-001", provider: "pi", status: "idle",
+        messages: [{ role: "assistant", content: "检查完成。", activities: [{
+          activity_id: "tool-1", activity_type: "search", status: "done",
+          label: "搜索", detail: "origin_kind",
+        }] }],
+      });
+    },
+  });
+  await openFirstAiSession(elements);
+
+  assert.equal(elements["ai-messages"].children[0].className,
+               "msg ai-activity is-done");
+  assert.equal(elements["ai-messages"].children[1].className, "msg ai");
+  assert.match(elements["ai-messages"].children[1].innerHTML, /检查完成/);
 });
 
 test("a restored assistant message places its execution plan before the answer", async () => {
@@ -2007,6 +2125,92 @@ test("revealing a micro quiz answer shows the key and reason instead of a soluti
   assert.ok(elements.stream._innerHTML.includes("为什么"));
   assert.ok(elements.stream._innerHTML.includes("只有一个正因数"));
   assert.equal(elements["feedback-area"].classList.contains("hidden"), false);
+});
+
+test("a practice problem shows its source evidence under the title", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [{
+        problem_id: "prob-1", problem_text: "如图，求轴线上的电场强度。",
+        display_title: "习题12-5", source_evidence: "教材 第12章 习题12-5",
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  const html = elements.stream._innerHTML;
+  assert.match(html, /class='practice-source'/);
+  assert.match(html, /来源：教材 第12章 习题12-5/);
+  assert.match(html, /习题12-5/);
+});
+
+test("the reveal tells a source answer, a source solution, and an AI explanation apart", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  let origin = "source";
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/problem/prob-1")) return jsonResponse({
+        problem: {
+          problem_id: "prob-1", problem_text: "求电场强度。",
+          source_answer: "答案：E = λ/(2πε₀x)",
+          solution: "教材原解：由库仑定律积分。",
+          solution_origin: origin,
+        },
+      });
+      return jsonResponse({ problems: [{
+        problem_id: "prob-1", problem_text: "求电场强度。",
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["show-answer"].click();
+  await flush();
+  let html = elements.stream._innerHTML;
+  assert.match(html, /教材答案/);
+  assert.match(html, /答案：E = λ\/\(2πε₀x\)/);
+  assert.match(html, /教材解析/);
+  assert.match(html, /教材原解/);
+  assert.doesNotMatch(html, /AI 生成解析/);
+
+  origin = "generated";
+  const fresh = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements: fresh,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/problem/prob-1")) return jsonResponse({
+        problem: {
+          problem_id: "prob-1", problem_text: "求电场强度。",
+          source_answer: "答案：E = λ/(2πε₀x)",
+          solution: "AI 推导：先取微元再积分。",
+          solution_origin: "generated",
+        },
+      });
+      return jsonResponse({ problems: [{
+        problem_id: "prob-1", problem_text: "求电场强度。",
+      }] });
+    },
+  });
+  fresh["practice-mode-immediate"].checked = true;
+  fresh["practice-mode-immediate"].trigger("change");
+  fresh["start-practice"].click();
+  await flush();
+  fresh["show-answer"].click();
+  await flush();
+  html = fresh.stream._innerHTML;
+  assert.match(html, /AI 生成解析/);
+  assert.match(html, /AI 推导/);
+  assert.match(html, /教材答案/);
 });
 
 test("ordinary problems render without a verdict element or micro quiz controls", async () => {

@@ -136,6 +136,64 @@ class CliTests(unittest.TestCase):
         self.assertIn("dmath-ch06-kp-001", result["shortage"])
         self.assertNotIn("candidates", result)
 
+    def test_pull_without_kp_uses_the_active_lens(self):
+        code, out = self.run_cli("pull", "dmath", "--n", "5")
+        self.assertEqual(code, 0)
+        result = json.loads(out)
+        self.assertEqual(result["problems"], ["dmath-ch06-prob-001"])
+
+    def test_pull_with_an_empty_lens_reports_no_problems(self):
+        self.run_cli("use", "dmath", "ch99")
+        code, out = self.run_cli("pull", "dmath", "--n", "5")
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["problems"], [])
+
+    def test_difficulty_check_and_apply_use_one_manifest(self):
+        manifest = self.ws / "difficulty.json"
+        manifest.write_text(json.dumps({"items": [{
+            "problem_id": "dmath-ch06-prob-001",
+            "knowledge_breadth": 2,
+            "reasoning_depth": 2,
+            "transfer_distance": 2,
+            "construction_openness": 3,
+        }]}), encoding="utf-8")
+
+        code, output = self.run_cli(
+            "difficulty", "dmath", "check", "--input", str(manifest)
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output)["items"][0]["difficulty"], 2.3)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertIsNone(conn.execute(
+                "SELECT difficulty FROM problems WHERE problem_id='dmath-ch06-prob-001'"
+            ).fetchone()[0])
+        finally:
+            conn.close()
+
+        code, output = self.run_cli(
+            "difficulty", "dmath", "apply", "--input", str(manifest)
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output)["updated"], 1)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertEqual(conn.execute(
+                "SELECT difficulty FROM problems WHERE problem_id='dmath-ch06-prob-001'"
+            ).fetchone()[0], 2.3)
+        finally:
+            conn.close()
+
+        code, output = self.run_cli(
+            "pull", "dmath", "--kp", "dmath-ch06-kp-001", "--n", "5",
+            "--source-group", "textbook", "--origin-kind", "source_problem",
+            "--difficulty-min", "2", "--difficulty-max", "3",
+            "--knowledge-breadth-min", "2", "--knowledge-breadth-max", "2",
+            "--difficulty-strategy", "balanced",
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output)["problems"], ["dmath-ch06-prob-001"])
+
     def test_data_parser_excludes_retired_candidate_commands(self):
         parser = self.cli.build_parser()
         for argv in (

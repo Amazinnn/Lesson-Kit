@@ -1,0 +1,142 @@
+{
+  "workspace": "dmath",
+  "note": "One safe rich-text feature set, asserted against BOTH renderers (browser workbench.js richText and server pages._render_markdown). Heading levels deliberately differ per surface (the browser starts at h1, server pages keep their own h1 title), so heading assertions stay level-agnostic. Raw HTML must never become live markup. {workspace} stands for the owning workspace name, substituted by each test.",
+  "cases": [
+    {
+      "name": "heading",
+      "markdown": "### 知识跨度",
+      "contains": [
+        ">知识跨度</h"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "unordered_list",
+      "markdown": "- 第一项\n- 第二项",
+      "contains": [
+        "<ul>",
+        "<li>第一项</li>",
+        "<li>第二项</li>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "ordered_list",
+      "markdown": "1. 第一步\n2. 第二步",
+      "contains": [
+        "<ol>",
+        "<li>第一步</li>",
+        "<li>第二步</li>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "blockquote",
+      "markdown": "> 引用行",
+      "contains": [
+        "<blockquote>引用行</blockquote>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "emphasis",
+      "markdown": "**粗体** 与 *斜体* 与 _下划斜体_",
+      "contains": [
+        "<strong>粗体</strong>",
+        "<em>斜体</em>",
+        "<em>下划斜体</em>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "inline_code",
+      "markdown": "`E = F/q`",
+      "contains": [
+        "<code>E = F/q</code>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "fenced_code",
+      "markdown": "```python\nprint(1)\n```",
+      "contains": [
+        "<pre><code",
+        "print(1)"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "link",
+      "markdown": "[教材](https://example.com/phys)",
+      "contains": [
+        "<a href=",
+        "https://example.com/phys",
+        ">教材</a>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "image",
+      "markdown": "![圆环图](ch12/abc.png)",
+      "contains": [
+        "<img",
+        "/api/w/{workspace}/figures/ch12/abc.png"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "inline_math",
+      "markdown": "电荷 $q = 2$ 受力",
+      "contains": [
+        "<span class='math'>",
+        "q = 2"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "display_math",
+      "markdown": "$$E = 2k\\lambda / R$$",
+      "contains": [
+        "<span class='math display'>",
+        "E = 2k"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "gfm_table",
+      "markdown": "| 量 | 单位 |\n| --- | --- |\n| E | N/C |\n| q | C |",
+      "contains": [
+        "rich-table-wrap",
+        "<table",
+        "<th>量</th>",
+        "<th>单位</th>",
+        "<td>E</td>",
+        "<td>N/C</td>",
+        "<td>q</td>"
+      ],
+      "excludes": [
+        "| 量 |",
+        "| --- |"
+      ]
+    },
+    {
+      "name": "table_cells_keep_inline_rules",
+      "markdown": "| 记号 | 说明 |\n| --- | --- |\n| `B` | **磁感**应强度 |",
+      "contains": [
+        "<code>B</code>",
+        "<strong>磁感</strong>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "raw_html_is_escaped",
+      "markdown": "<script>alert(1)</script> 不安全",
+      "contains": [
+        "&lt;script&gt;"
+      ],
+      "excludes": [
+        "<script"
+      ]
+    }
+  ]
+}

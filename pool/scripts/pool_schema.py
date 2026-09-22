@@ -58,6 +58,135 @@ def ensure_columns(
     return added
 
 
+PROBLEM_DIFFICULTY_COLUMNS = (
+    "difficulty_knowledge_breadth",
+    "difficulty_reasoning_depth",
+    "difficulty_transfer_distance",
+    "difficulty_construction_openness",
+)
+
+
+def _ensure_problem_contract(conn: sqlite3.Connection) -> List[str]:
+    """Rebuild the pre-release problem table around provenance and difficulty."""
+    if not table_exists(conn, "problems"):
+        return []
+    info = {str(row[1]): str(row[2]).upper() for row in conn.execute(
+        "PRAGMA table_info(problems)"
+    )}
+    required = {
+        "origin_kind", "difficulty", "difficulty_model", *PROBLEM_DIFFICULTY_COLUMNS,
+    }
+    if required <= info.keys() and info["difficulty"] == "REAL":
+        return []
+
+    foreign_keys = bool(conn.execute("PRAGMA foreign_keys").fetchone()[0])
+    if foreign_keys:
+        if conn.in_transaction:
+            raise sqlite3.OperationalError("problem migration requires no active transaction")
+        conn.execute("PRAGMA foreign_keys=OFF")
+    existing = set(info)
+    conn.execute("DROP TABLE IF EXISTS problems_difficulty_new")
+    conn.execute(
+        """
+        CREATE TABLE problems_difficulty_new (
+            problem_id TEXT PRIMARY KEY,
+            kp_ids TEXT NOT NULL,
+            problem_text TEXT NOT NULL,
+            solution TEXT,
+            problem_type TEXT NOT NULL CHECK (problem_type IN (
+                'calculation', 'proof', 'modeling', 'explanation',
+                'experiment', 'design', 'application', 'counterexample', 'other'
+            )),
+            source_kind TEXT NOT NULL CHECK (source_kind IN (
+                'textbook', 'quiz', 'midterm', 'final', 'makeup', 'other'
+            )),
+            origin_kind TEXT NOT NULL DEFAULT 'source_problem' CHECK (origin_kind IN (
+                'source_problem', 'adapted_problem', 'generated_grounded'
+            )),
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            figure_paths TEXT,
+            display_title TEXT,
+            topic_label TEXT,
+            display_summary TEXT,
+            practice_modes TEXT,
+            micro_quiz TEXT,
+            ingest_batch_id TEXT,
+            difficulty REAL CHECK (difficulty BETWEEN 1.0 AND 5.0),
+            difficulty_knowledge_breadth INTEGER CHECK (
+                difficulty_knowledge_breadth BETWEEN 1 AND 5
+            ),
+            difficulty_reasoning_depth INTEGER CHECK (
+                difficulty_reasoning_depth BETWEEN 1 AND 5
+            ),
+            difficulty_transfer_distance INTEGER CHECK (
+                difficulty_transfer_distance BETWEEN 1 AND 5
+            ),
+            difficulty_construction_openness INTEGER CHECK (
+                difficulty_construction_openness BETWEEN 1 AND 5
+            ),
+            difficulty_model TEXT,
+            CHECK (
+                (difficulty IS NULL
+                 AND difficulty_knowledge_breadth IS NULL
+                 AND difficulty_reasoning_depth IS NULL
+                 AND difficulty_transfer_distance IS NULL
+                 AND difficulty_construction_openness IS NULL
+                 AND difficulty_model IS NULL)
+                OR
+                (difficulty IS NOT NULL
+                 AND difficulty_knowledge_breadth IS NOT NULL
+                 AND difficulty_reasoning_depth IS NOT NULL
+                 AND difficulty_transfer_distance IS NOT NULL
+                 AND difficulty_construction_openness IS NOT NULL
+                 AND difficulty_model IS NOT NULL)
+            )
+        )
+        """
+    )
+    target_columns = [
+        "problem_id", "kp_ids", "problem_text", "solution", "problem_type",
+        "source_kind", "origin_kind", "created_at", "updated_at", "figure_paths",
+        "display_title", "topic_label", "display_summary", "practice_modes",
+        "micro_quiz", "ingest_batch_id", "difficulty",
+        *PROBLEM_DIFFICULTY_COLUMNS, "difficulty_model",
+    ]
+    expressions = []
+    for column in target_columns:
+        if column == "origin_kind":
+            if column in existing:
+                expressions.append("COALESCE(origin_kind, 'source_problem')")
+            else:
+                expressions.append(
+                    "CASE WHEN problem_id LIKE '%-mq-%' THEN 'generated_grounded' "
+                    "ELSE 'source_problem' END"
+                )
+        elif column in {"difficulty", "difficulty_model", *PROBLEM_DIFFICULTY_COLUMNS}:
+            expressions.append("NULL")
+        elif column in existing:
+            expressions.append(column)
+        elif column in {"created_at", "updated_at"}:
+            expressions.append("datetime('now')")
+        else:
+            expressions.append("NULL")
+    conn.execute(
+        f"INSERT INTO problems_difficulty_new ({', '.join(target_columns)}) "
+        f"SELECT {', '.join(expressions)} FROM problems"
+    )
+    conn.execute("DROP TABLE problems")
+    conn.execute("ALTER TABLE problems_difficulty_new RENAME TO problems")
+    conn.execute("CREATE INDEX idx_problem_source_kind ON problems(source_kind)")
+    conn.execute("CREATE INDEX idx_problem_type ON problems(problem_type)")
+    conn.execute("CREATE INDEX idx_problem_origin_kind ON problems(origin_kind)")
+    conn.execute("CREATE INDEX idx_problem_difficulty ON problems(difficulty)")
+    if foreign_keys:
+        conn.commit()
+        conn.execute("PRAGMA foreign_keys=ON")
+        if conn.execute("PRAGMA foreign_key_check").fetchone():
+            raise sqlite3.IntegrityError("problem migration broke a foreign key")
+    return ["problems.provenance-difficulty-v1"]
+
+
 def ensure_learning_state_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the lightweight learning-state schema migration idempotently."""
     changes: List[str] = []
@@ -267,6 +396,10 @@ def _widen_content_sequences_check(conn, create_sql):
 def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
+    if table_exists(conn, "problems"):
+        # This rebuild may temporarily toggle PRAGMA foreign_keys, which SQLite
+        # only permits before any other ensure opens a transaction.
+        changes.extend(_ensure_problem_contract(conn))
     changes.extend(_ensure_learner_signals(conn))
 
     if not table_exists(conn, "review_schedule"):
@@ -460,7 +593,8 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             ensure_columns(
                 conn,
                 "knowledge_points",
-                [("figure_paths", "TEXT"), ("fragile", "TEXT")],
+                [("figure_paths", "TEXT"), ("fragile", "TEXT"),
+                 ("ingest_batch_id", "TEXT")],
             )
         )
     if table_exists(conn, "problems"):
@@ -476,8 +610,12 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     ("practice_modes", "TEXT"),
                     ("micro_quiz", "TEXT"),
                     ("ingest_batch_id", "TEXT"),
-                    # optional 1-5 attribute; NULL = not declared (see GLOSSARY 难度)
-                    ("difficulty", "INTEGER CHECK (difficulty BETWEEN 1 AND 5)"),
+                    # Source fidelity: the learner-visible source reference, a
+                    # short source answer kept apart from the detailed solution,
+                    # and who wrote that solution ("source" vs "generated").
+                    ("source_evidence", "TEXT"),
+                    ("source_answer", "TEXT"),
+                    ("solution_origin", "TEXT"),
                 ],
             )
         )

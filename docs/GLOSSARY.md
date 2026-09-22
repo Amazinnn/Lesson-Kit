@@ -44,10 +44,26 @@ _Avoid_：算法臆造的关系、隐藏关系
 _Avoid_：练习册条目、题目草稿
 出处：CONTEXT.md（迁入）；review-workbench spec「Problem pull engine」「Formal problems are reveal-ready」
 
-### 难度 / Difficulty
-内容（知识点与题）的客观复杂度属性，取值 1-5：1-2 记忆/识别，2-4 有条件的直接应用，4-5 综合与构造（证明、建模、开放设计），跨章节综合 = 5。入池通道的定义是**可选**属性：填了必须 int 1-5 且带一行依据 `difficulty_basis`，不填 = 未知（NULL）；知识点与题（含微测）共享同一语义，依据只在门禁当下校验、**不落盘**。列落在 `knowledge_points.difficulty`（原有）与 `problems.difficulty`（2026-09-21 增列，旧池需跑 `python pool/scripts/migrate-progress.py --db pool/<course>.db`；未迁移的池上不声明难度照常可用，声明了会被拒收并给出该命令）。知识点另有 legacy 提取路径，缺失默认 2（`pipeline/` 行为契约，不动）。难度目前只被记录，不被任何排序、计划或界面消费；统一评价体系与拟合算法属「真题拟合」联合立项。
-_Avoid_：学习者自评的 1-5（那是自评）、间隔/掌握度等算法参数、表现层难度星号、日计划里的 `problem_type_mix`（那是题型直方图，与难度无关）
-出处：pipeline/skills/pool-field-inference/SKILL.md；openspec/specs/workbench-content-governance「Optional difficulty declaration」；docs/design/philosophy.md 轴 8（难度自主权）
+### 客观题目难度 / Objective Problem Difficulty
+正式题或微题自身的认知复杂度，由知识跨度、推理深度、迁移距离、构造开放性四个
+1–5 整数维度组成；总分由 `cognitive-v1-equal-mean` 等权平均并按 Decimal
+`ROUND_HALF_UP` 保留一位小数。评级整组可空，且只能由显式 `lesson-kit difficulty`
+事务写入；内容入池、练习和显示均不依赖评级。闪卡不评级，题型本身不决定分数。
+_Avoid_：学习者自评、能力等级、把 `problem_type` 当难度、在出题 manifest 内写难度、`difficulty_basis`
+出处：problem-difficulty spec；problem-difficulty-and-provenance design
+
+### 个人难度 / Learner Difficulty
+这名学习者当前觉得某知识或练习有多难的证据集合，来自显式自评、作答、卡点、学习信号
+和到期状态；不新增主观难度星级字段。它只参与知识范围和优先级，不覆盖客观题目难度，
+也不从一次自评推导持久“能力等级”。
+_Avoid_：客观题目难度、统一能力分、自动升降题目难度
+出处：problem-difficulty spec「Objective and learner difficulty remain separate」
+
+### Legacy 知识内容复杂度 / Legacy Knowledge Complexity
+`knowledge_points.difficulty` 的冻结 pipeline 语义。旧提取路径缺失时仍默认 2；它不使用
+题目的四维量尺，也不与 `problems.difficulty` 互相换算。
+_Avoid_：客观题目难度向量、学习者自评
+出处：pipeline/skills/pool-field-inference/SKILL.md；problem-difficulty-and-provenance design
 
 ### 候选题 / Problem Candidate
 **已退役（2026-08-30 remove-candidate-store）**：概念与机制整体移除，候选题不复存在。
@@ -59,14 +75,28 @@ _Avoid_：学习者自评的 1-5（那是自评）、间隔/掌握度等算法�
 （见「Check 管线」条目）。
 
 ### Check 管线 / Check pipeline
-内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规 manifest → 确定性门禁校验 → **直接入正式池**（无候选中间态）。每次 apply 记批次 id、内容行带批次标记，整批回滚是安全网；门禁失败逐条显式报错、零写入。Agent 可直接触发（CLI 或对话桥 `check_ingest` 动作），门禁是决断辅助不是权限闸门；AI 永不直写池数据库。
-_Avoid_：generate 桥（旧称）、候选中间态、staging 区、逐题人工确认
-出处：DISCUSSION-RECORD 专题 20/21/22；workbench-content-governance spec（introduce-check-pipeline）
+内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规清单 → 确定性门禁校验 → **直接入正式池**（无候选中间态）。清单形态以 `content-bundle` 为主（可同时含知识点、正式题、微题、闪卡与必需原图，条数无上限，大清单暂存于本对话 jobs 目录），`flash-card-patch` / `micro-quiz-patch` 作为兼容通道保留。每次 apply 记批次 id、内容行带批次标记、图片按字节落 `figures/`，整批回滚是安全网（含删除本批创建且无引用的图片）；门禁失败逐条显式报错、零写入。对话桥的控制动作仍叫 `check_ingest`，但**不再有浏览器关键词意图门**——合法的纯新增动作自动执行；门禁是决断辅助不是权限闸门，AI 永不直写池数据库。
+_Avoid_：generate 桥（旧称）、候选中间态、staging 区、逐题人工确认、关键词意图门
+出处：DISCUSSION-RECORD 专题 20/21/22；workbench-content-governance spec（introduce-check-pipeline）；first-use-conversation-content-fidelity
 
 ### 来源类型 / Source Kind
-正式题的出身大类：textbook / quiz / midterm / final / makeup / other。
-_Avoid_：考试年份、作者
-出处：CONTEXT.md（迁入）
+正式题或微题所依据材料的类别：textbook / quiz / midterm / final / makeup / other。
+它不回答题目是不是 AI 生成；生成题仍需如实记录其依据材料。
+_Avoid_：题目来源方式、把 quiz 当作“微题”、考试年份、作者
+出处：CONTEXT.md（迁入）；review-workbench spec「Provenance-filtered problem pull」
+
+### 题目来源方式 / Origin Kind
+题目相对依据材料的形成方式：`source_problem`（材料中的原题）、`adapted_problem`
+（改编题）、`generated_grounded`（基于材料生成的新题）。它与来源类型正交。
+_Avoid_：来源类型、题型、难度、把所有 AI 题的 `source_kind` 写成 quiz
+出处：workbench-content-governance spec「Problem provenance axes」
+
+### 来源便捷组 / Source Group
+由来源类型和题目来源方式派生的互斥筛选组：生成题优先归 `ai_generated`；其余
+quiz/midterm/final/makeup 归 `exam`，其余 textbook 归 `textbook`，剩余归 `other`。
+它不落库，也不抹掉两条原始来源轴。
+_Avoid_：第三条存储轴、题型分组、难度分组
+出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
 与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。只有显式提交自评才产生。
@@ -347,10 +377,20 @@ _Avoid_：把动作清单散落在各 spec 里不登记、用浏览器操作代�
 _Avoid_：普通对话代填、跳过人确认直接创建
 出处：complete-goals-loop 归档；ai-teacher-bridge spec
 
-### 出题入库动作 / check ingest action
-Agent 对话中触发出题入库的结构化动作：仅出题/补池意图（check_intent）请求可生效，Agent 在回复末尾附内联 manifest（flash-card-patch / micro-quiz-patch），服务端过既有确定性门禁后直接入正式池并记批次 id；成功以独立结果卡片呈现（批次号、计数、备份路径、回滚按钮），门禁失败逐条显式呈现、零写入。
-_Avoid_：静默丢弃失败清单、跳过门禁直写池、显式命令面板
-出处：DISCUSSION-RECORD 专题 21 第 5 条、专题 22 第 5 条；ai-teacher-bridge spec（introduce-check-pipeline）
+### 内容批次动作 / content bundle action
+Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份、一个批次 id；任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。成功以结果卡片呈现（批次号、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
+_Avoid_：关键词意图门、静默丢弃不合格条目、跳过门禁直写池、显式命令面板
+出处：ai-teacher-bridge spec（first-use-conversation-content-fidelity）
+
+### 暂存清单 / Staged manifest
+写在 `.lessonkit/jobs/conv-NNN/` 下、随对话保留的完整内容清单。服务端只接受该对话目录内的相对 `.json` 路径；绝对路径、`..` 与非 JSON 一律拒绝，回答正文不承载清单本身。
+
+### 来源证据 / 来源答案 / AI 生成解析
+来源证据（`source_evidence`）：每道 Agent 新增题必填的出处（如「教材 第12章 习题12-5」），显示在题目下方。来源答案（`source_answer`）：教材给出的短答案，单独存放、不覆盖详细解析。解析分级（`solution_origin`）：教材原有解析标「教材解析」，按需生成的详细解析标「AI 生成解析」并允许直接入库。
+_Avoid_：用 AI 解析覆盖教材答案、把来源证据只留在批次快照里
+
+### Pi RPC 常驻进程 / Conversation-owned Pi RPC process
+Pi 对话不再每轮起一个 `--print` 进程：每个对话一个隐藏的 `pi --mode rpc` 进程，以严格 LF JSONL 收发带 id 的命令与流式事件，空闲 30 分钟回收（不设并发上限，删除对话/关闭服务工作台都会回收）；取消先发 RPC `abort`，失效才 terminate/kill；启动或握手失败可重启一次，prompt 被接受后崩溃不得重放。所有 provider 子进程在 Windows 下都不弹终端窗口。
 
 ### 批次 id / Batch id
 一次门禁 apply 写入池的那批内容的唯一标识（可读顺序 id，形如 batch-NNN，禁哈希）；批次内每一内容行携带该标记，用于事后溯源与整批撤销。

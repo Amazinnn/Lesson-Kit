@@ -85,6 +85,42 @@ class ApiTests(unittest.TestCase):
         )
         self.assertEqual(data["shortage"], ["dmath-ch06-kp-001"])
 
+    def test_pull_endpoint_accepts_provenance_and_difficulty_filters(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "UPDATE problems SET difficulty=2.3, difficulty_knowledge_breadth=2, "
+                "difficulty_reasoning_depth=2, difficulty_transfer_distance=2, "
+                "difficulty_construction_openness=3, "
+                "difficulty_model='cognitive-v1-equal-mean'"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        status, data = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"],
+            "n": 5,
+            "mode": "weak",
+            "source_group": "textbook",
+            "origin_kind": "source_problem",
+            "difficulty_min": 2.0,
+            "difficulty_max": 3.0,
+            "difficulty_dimensions": {"knowledge_breadth": [2, 2]},
+            "difficulty_strategy": "balanced",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            [p["problem_id"] for p in data["problems"]],
+            ["dmath-ch06-prob-001"],
+        )
+        _, excluded = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"],
+            "n": 5,
+            "mode": "weak",
+            "difficulty_min": 4.0,
+        })
+        self.assertEqual(excluded["problems"], [])
+
     def test_practice_endpoint(self):
         status, data = self.post("/api/w/dmath/practice", {
             "problem_id": "dmath-ch06-prob-001", "result": "wrong",

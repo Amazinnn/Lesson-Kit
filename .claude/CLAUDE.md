@@ -32,13 +32,31 @@ views/
 └── common/                           ← 共享 view skills/gates
 ```
 
-## Current Pool Contract
+## Conversation content channel (current)
+
+- New content enters through one atomic `content-bundle` action: knowledge
+  points, formal problems, micro quizzes, flash cards, and required figures in
+  one prevalidated batch with one backup and one `batch-NNN`. Any invalid item or
+  missing image writes nothing.
+- A valid append-only action runs without any keyword intent; updates, deletes,
+  rollback, and difficulty ratings still require an explicit learner instruction.
+- Source exercises keep their original wording, form, and `origin_kind=source_problem`;
+  figures are copied byte for byte into `.lessonkit/figures/{course}/{chapter}/`.
+- Pi conversations run one hidden `pi --mode rpc` process each; no provider may
+  show a console window on Windows.
+
+## Frozen Pipeline Base Contract
+
+本节只描述 `pipeline/` 创建的基础表，不是当前 workbench 的完整 schema。
+`pool/scripts/pool_schema.py` 通过幂等 ensure 增加当前字段；权威现状见
+`docs/ARCHITECTURE.md`、`docs/GLOSSARY.md` 与 live OpenSpec。不要用本节删除或拒绝
+workbench additive columns。
 
 - `knowledge_points`: 持久化知识点。
 - `problems`: 持久化题目。不同题目池由 `source_kind` 逻辑区分。
 - `questions`: legacy companion-check 表；不是 v1 题目池核心。
 
-`problems` v1 字段：
+冻结基础字段：
 
 ```text
 problem_id, kp_ids, problem_text, solution, problem_type, source_kind
@@ -51,7 +69,9 @@ Rules:
 - `solution`: optional. Final answers and worked explanations both live here.
 - `source_kind`: `textbook | quiz | midterm | final | makeup | other`.
 - `problem_type`: `calculation | proof | modeling | explanation | experiment | design | application | counterexample | other`.
-- Do not add `answer`, `training_target`, `condition_axes`, or source-location fields to v1.
+- 当前 workbench 另有必填 `origin_kind`；问题客观难度是可空的四维向量、派生
+  REAL 总分与 `difficulty_model`，只能经显式 `lesson-kit difficulty` 事务写入。
+- `knowledge_points.difficulty` 仍是冻结 pipeline 的 legacy 内容复杂度，不与题目向量同义。
 
 ## Current Views
 

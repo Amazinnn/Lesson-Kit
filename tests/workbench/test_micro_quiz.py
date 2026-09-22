@@ -16,6 +16,8 @@ def manifest_item(problem_id="dmath-ch06-mq-001", kp_id="dmath-ch06-kp-001",
     payload.setdefault("answer_key", "否")
     payload.setdefault("error_reason", "1 只有 1 个正因数，不算质数。")
     payload.setdefault("source_evidence", "Rosen 6th, §3.1 定义")
+    payload.setdefault("source_kind", "textbook")
+    payload.setdefault("origin_kind", "generated_grounded")
     return {"problem_id": problem_id, "kp_id": kp_id, "stem": stem, **payload}
 
 
@@ -131,9 +133,15 @@ class MicroQuizIngestTests(unittest.TestCase):
             CREATE TABLE problems (problem_id TEXT PRIMARY KEY,
                 kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
                 solution TEXT, problem_type TEXT, source_kind TEXT,
+                origin_kind TEXT NOT NULL DEFAULT 'source_problem',
                 display_title TEXT, topic_label TEXT, display_summary TEXT,
                 practice_modes TEXT, micro_quiz TEXT, ingest_batch_id TEXT,
-                difficulty INTEGER);
+                difficulty REAL,
+                difficulty_knowledge_breadth INTEGER,
+                difficulty_reasoning_depth INTEGER,
+                difficulty_transfer_distance INTEGER,
+                difficulty_construction_openness INTEGER,
+                difficulty_model TEXT);
             CREATE TABLE candidate_problems (candidate_id TEXT PRIMARY KEY,
                 problem_text TEXT);
             CREATE TABLE knowledge_relations (relation_id TEXT PRIMARY KEY,
@@ -284,102 +292,33 @@ class MicroQuizIngestTests(unittest.TestCase):
 
         self.assertTrue(applied["ok"], applied)
 
-    def test_a_declared_difficulty_is_stored_and_its_basis_is_not(self):
-        item = manifest_item(difficulty=2, difficulty_basis="判断题，只需回忆质数定义")
-
+    def test_agent_micro_quiz_requires_provenance_and_stays_unrated(self):
         applied = ingest.apply_batch(
-            self.db_path, {"kind": "micro-quiz-patch", "items": [item]}, source="cli")
-
+            self.db_path, {"kind": "micro-quiz-patch", "items": [manifest_item()]},
+            source="cli")
         self.assertTrue(applied["ok"], applied)
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
-                "SELECT difficulty FROM problems WHERE problem_id='dmath-ch06-mq-001'"
+                "SELECT source_kind, origin_kind, difficulty FROM problems "
+                "WHERE problem_id='dmath-ch06-mq-001'"
             ).fetchone()
-            columns = [r[1] for r in conn.execute("PRAGMA table_info(problems)")]
         finally:
             conn.close()
-        self.assertEqual(row[0], 2)
-        self.assertNotIn("difficulty_basis", columns)
+        self.assertEqual(row, ("textbook", "generated_grounded", None))
 
-    def test_a_declared_difficulty_without_a_basis_is_refused(self):
-        item = manifest_item(difficulty=2)
-
-        with self.assertRaises(ValueError) as raised:
+        missing = manifest_item(problem_id="dmath-ch06-mq-002")
+        del missing["origin_kind"]
+        with self.assertRaisesRegex(ValueError, "origin_kind is required"):
             ingest.apply_batch(
-                self.db_path, {"kind": "micro-quiz-patch", "items": [item]},
-                source="cli")
-
-        self.assertIn(
-            "dmath-ch06-mq-001: difficulty requires a non-empty difficulty_basis",
-            str(raised.exception).splitlines(),
-        )
-
-    def test_an_out_of_range_or_undeclared_difficulty(self):
-        for bad in (0, 6, "3", 2.5, True):
-            with self.assertRaises(ValueError) as raised:
-                ingest.apply_batch(
-                    self.db_path,
-                    {"kind": "micro-quiz-patch",
-                     "items": [manifest_item(difficulty=bad, difficulty_basis="x")]},
-                    source="cli")
-            self.assertIn("difficulty must be an integer from 1 to 5",
-                          str(raised.exception))
-
-        undeclared = ingest.apply_batch(
-            self.db_path, {"kind": "micro-quiz-patch", "items": [manifest_item()]},
-            source="cli")
-        self.assertTrue(undeclared["ok"], undeclared)
-
-    def test_a_batch_may_mix_declared_and_undeclared_items(self):
-        items = [
-            manifest_item(difficulty=4, difficulty_basis="需要构造反例"),
-            manifest_item(problem_id="dmath-ch06-mq-002"),
-        ]
-
-        applied = ingest.apply_batch(
-            self.db_path, {"kind": "micro-quiz-patch", "items": items}, source="cli")
-
-        self.assertTrue(applied["ok"], applied)
-        conn = sqlite3.connect(self.db_path)
-        try:
-            rows = conn.execute(
-                "SELECT difficulty FROM problems WHERE problem_id LIKE 'dmath-ch06-mq-%'"
-                " ORDER BY problem_id"
-            ).fetchall()
-        finally:
-            conn.close()
-        self.assertEqual([row[0] for row in rows], [4, None])
-
-    def test_an_old_pool_still_accepts_undeclared_difficulty(self):
-        conn = sqlite3.connect(self.db_path)
-        try:
-            conn.executescript("""
-                CREATE TABLE legacy_problems AS SELECT * FROM problems;
-                DROP TABLE problems;
-                CREATE TABLE problems (problem_id TEXT PRIMARY KEY,
-                    kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
-                    solution TEXT, problem_type TEXT, source_kind TEXT,
-                    display_title TEXT, topic_label TEXT, display_summary TEXT,
-                    practice_modes TEXT, micro_quiz TEXT, ingest_batch_id TEXT);
-            """)
-            conn.commit()
-        finally:
-            conn.close()
-
-        applied = ingest.apply_batch(
-            self.db_path, {"kind": "micro-quiz-patch", "items": [manifest_item()]},
-            source="cli")
-
-        self.assertTrue(applied["ok"], applied)
-        with self.assertRaises(ValueError) as raised:
-            ingest.apply_batch(
-                self.db_path,
-                {"kind": "micro-quiz-patch",
-                 "items": [manifest_item(problem_id="dmath-ch06-mq-002",
-                                         difficulty=2, difficulty_basis="x")]},
+                self.db_path, {"kind": "micro-quiz-patch", "items": [missing]},
                 source="cli", backup_path=self.root / "second-backup.db")
-        self.assertIn("migrate-progress.py", str(raised.exception))
+
+    def test_content_ingest_refuses_inline_difficulty(self):
+        item = manifest_item(difficulty=2, difficulty_basis="legacy")
+        with self.assertRaisesRegex(ValueError, "difficulty is rated separately"):
+            ingest.apply_batch(
+                self.db_path, {"kind": "micro-quiz-patch", "items": [item]}, source="cli")
 
     def test_missing_kp_is_reported_as_an_item_error(self):
         item = manifest_item()

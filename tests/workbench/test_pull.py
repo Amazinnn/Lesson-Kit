@@ -145,6 +145,75 @@ class PullTests(unittest.TestCase):
             [problem["problem_id"] for problem in result["problems"]],
         )
 
+    def test_source_groups_are_mutually_exclusive_and_axes_intersect(self):
+        conn = self.pool.connect()
+        conn.executemany(
+            "INSERT INTO problems (problem_id, kp_ids, problem_text, solution, "
+            "problem_type, source_kind, origin_kind) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                ("exam", '["dmath-ch06-kp-001"]', "E", "S", "calculation",
+                 "final", "source_problem"),
+                ("generated", '["dmath-ch06-kp-001"]', "G", "S", "calculation",
+                 "final", "generated_grounded"),
+            ],
+        )
+        conn.commit()
+
+        exam = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001"], 20, source_group="exam"
+        )["problems"]
+        generated = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001"], 20, source_group="ai_generated"
+        )["problems"]
+        adapted_final = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001"], 20,
+            source_kind="final", origin_kind="adapted_problem",
+        )["problems"]
+        self.assertIn("exam", [row["problem_id"] for row in exam])
+        self.assertNotIn("generated", [row["problem_id"] for row in exam])
+        self.assertEqual([row["problem_id"] for row in generated], ["generated"])
+        self.assertEqual(adapted_final, [])
+
+    def test_explicit_difficulty_ranges_exclude_unrated_problems(self):
+        conn = self.pool.connect()
+        conn.execute(
+            "UPDATE problems SET difficulty=2.3, difficulty_knowledge_breadth=2, "
+            "difficulty_reasoning_depth=2, difficulty_transfer_distance=2, "
+            "difficulty_construction_openness=3, "
+            "difficulty_model='cognitive-v1-equal-mean' "
+            "WHERE problem_id='dmath-ch06-prob-001'"
+        )
+        conn.commit()
+        result = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001", "dmath-ch06-kp-002"], 20,
+            difficulty_min=2.0, difficulty_max=3.0,
+            difficulty_dimensions={"knowledge_breadth": (2, 2)},
+        )
+        self.assertEqual(
+            [row["problem_id"] for row in result["problems"]],
+            ["dmath-ch06-prob-001"],
+        )
+
+    def test_balanced_difficulty_cycles_bands_then_uses_unrated_fallback(self):
+        class RatedPool:
+            def problems_for_kps(self, _kp_ids, _source_kind=None):
+                return [
+                    {"problem_id": "band-1", "kp_ids": ["kp"], "difficulty": 1.0},
+                    {"problem_id": "band-2", "kp_ids": ["kp"], "difficulty": 2.0},
+                    {"problem_id": "band-3", "kp_ids": ["kp"], "difficulty": 3.0},
+                    {"problem_id": "band-4", "kp_ids": ["kp"], "difficulty": 4.0},
+                    {"problem_id": "band-5", "kp_ids": ["kp"], "difficulty": 5.0},
+                    {"problem_id": "unrated", "kp_ids": ["kp"], "difficulty": None},
+                ]
+
+        result = self.pull.select(
+            RatedPool(), ["kp"], 6, difficulty_strategy="balanced"
+        )
+        self.assertEqual(
+            [row["problem_id"] for row in result["problems"]],
+            ["band-3", "band-2", "band-4", "band-1", "band-5", "unrated"],
+        )
+
     def test_exclude_ids_dedup(self):
         result = self.pull.select(
             self.pool, ["dmath-ch06-kp-001"], n=10, mode="weak",

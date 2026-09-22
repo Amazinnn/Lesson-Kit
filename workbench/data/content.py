@@ -17,6 +17,8 @@ PREFIXES = {
 
 JSON_FIELDS = {"kp_ids", "related_kp_ids", "options_json", "source_evidence_json",
                "practice_modes", "micro_quiz"}
+SOURCE_KINDS = {"textbook", "quiz", "midterm", "final", "makeup", "other"}
+ORIGIN_KINDS = {"source_problem", "adapted_problem", "generated_grounded"}
 
 EDITABLE_FIELDS = {
     "kp": {
@@ -26,7 +28,7 @@ EDITABLE_FIELDS = {
     },
     "problem": {
         "kp_ids", "problem_text", "solution", "problem_type", "source_kind",
-        "display_title", "topic_label", "display_summary", "figure_paths",
+        "origin_kind", "display_title", "topic_label", "display_summary", "figure_paths",
     },
     "relation": {
         "source_kp_id", "target_kp_id", "relation_type", "direction", "strength",
@@ -160,6 +162,11 @@ def next_id(pool, entity):
 
 def create(pool, entity, data):
     table, id_column = _entity(entity)
+    if entity == "problem":
+        if data.get("source_kind") not in SOURCE_KINDS:
+            raise ValueError("source_kind is required and must be valid")
+        if data.get("origin_kind") not in ORIGIN_KINDS:
+            raise ValueError("origin_kind is required and must be valid")
     object_id = next_id(pool, entity)
     fields = [field for field in EDITABLE_FIELDS[entity] if field in data]
     values = [_db_value(field, data[field]) for field in fields]
@@ -180,6 +187,14 @@ def update(pool, entity, object_id, data):
         return get(pool, entity, object_id)
     assignments = [f"{field}=?" for field in fields]
     columns = {row[1] for row in pool.connect().execute(f"PRAGMA table_info({table})")}
+    if entity == "problem" and {"kp_ids", "problem_text", "solution", "problem_type"} & set(fields):
+        assignments.extend(
+            f"{field}=NULL" for field in (
+                "difficulty", "difficulty_knowledge_breadth",
+                "difficulty_reasoning_depth", "difficulty_transfer_distance",
+                "difficulty_construction_openness", "difficulty_model",
+            ) if field in columns
+        )
     if "updated_at" in columns:
         assignments.append("updated_at=datetime('now')")
     values = [_db_value(field, data[field]) for field in fields]
@@ -272,7 +287,11 @@ def _delete_kp(conn, kp_id):
         remaining = [item for item in kp_ids if item != kp_id]
         if remaining:
             conn.execute(
-                "UPDATE problems SET kp_ids=? WHERE problem_id=?",
+                "UPDATE problems SET kp_ids=?, difficulty=NULL, "
+                "difficulty_knowledge_breadth=NULL, difficulty_reasoning_depth=NULL, "
+                "difficulty_transfer_distance=NULL, "
+                "difficulty_construction_openness=NULL, difficulty_model=NULL "
+                "WHERE problem_id=?",
                 (json.dumps(remaining, ensure_ascii=False), row[0]),
             )
         else:

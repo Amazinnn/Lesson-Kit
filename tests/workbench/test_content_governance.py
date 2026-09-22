@@ -154,6 +154,13 @@ class ContentGovernanceTests(unittest.TestCase):
 
         conn = self.pool.connect()
         conn.execute(
+            "UPDATE problems SET difficulty=4.0, "
+            "difficulty_knowledge_breadth=4, difficulty_reasoning_depth=4, "
+            "difficulty_transfer_distance=4, difficulty_construction_openness=4, "
+            "difficulty_model='cognitive-v1-equal-mean' "
+            "WHERE problem_id='dmath-ch06-prob-003'"
+        )
+        conn.execute(
             "INSERT INTO problems "
             "(problem_id, kp_ids, problem_text, problem_type, source_kind) "
             "VALUES (?, ?, ?, ?, ?)",
@@ -175,6 +182,15 @@ class ContentGovernanceTests(unittest.TestCase):
             ).fetchone()[0]
         )
         self.assertEqual(shared, ["dmath-ch06-kp-004"])
+        self.assertEqual(
+            tuple(conn.execute(
+                "SELECT difficulty, difficulty_knowledge_breadth, "
+                "difficulty_reasoning_depth, difficulty_transfer_distance, "
+                "difficulty_construction_openness, difficulty_model "
+                "FROM problems WHERE problem_id='dmath-ch06-prob-003'"
+            ).fetchone()),
+            (None, None, None, None, None, None),
+        )
         self.assertIsNone(
             conn.execute(
                 "SELECT 1 FROM problems WHERE problem_id='dmath-ch06-prob-004'"

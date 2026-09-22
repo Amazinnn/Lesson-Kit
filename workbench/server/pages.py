@@ -510,12 +510,21 @@ def _linked_problems(problems, workspace_name, kp_id):
             "<li class='linked-problem'>"
             f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
             + f"<div class='linked-problem-text rich-text'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
+            + _linked_problem_source(problem)
             + "</li>"
             for problem in items
         )
         + "</ul></details>"
         for topic, items in groups.items()
     )
+
+
+def _linked_problem_source(problem):
+    """The concise source line under a linked problem; empty when unknown."""
+    evidence = " ".join(str(problem.get("source_evidence") or "").split())
+    if not evidence:
+        return ""
+    return (f"<div class='linked-problem-source'>来源：{html.escape(evidence)}</div>")
 
 
 def _problem_title(problem):
@@ -586,6 +595,54 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
 
 
 _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)
+_TABLE_DELIMITER_CELL = re.compile(r":?-{1,}:?")
+
+
+def _table_cells(line):
+    """Split one GFM table row into trimmed cells."""
+    value = line.strip()
+    if value.startswith("|"):
+        value = value[1:]
+    if value.endswith("|"):
+        value = value[:-1]
+    return [cell.strip() for cell in value.split("|")]
+
+
+def _is_table_start(lines, position):
+    """A header row plus a delimiter row of the same width is a GFM table."""
+    if position + 1 >= len(lines) or "|" not in lines[position]:
+        return False
+    header = _table_cells(lines[position])
+    if len(header) < 2:
+        return False
+    delimiter = _table_cells(lines[position + 1])
+    if len(delimiter) != len(header):
+        return False
+    return all(_TABLE_DELIMITER_CELL.fullmatch(cell) for cell in delimiter)
+
+
+def _render_table(lines, position, workspace_name):
+    """Render a GFM table; returns the HTML and the last consumed line index."""
+    header = _table_cells(lines[position])
+    rows = []
+    index = position + 2
+    while index < len(lines) and lines[index].strip() and "|" in lines[index]:
+        rows.append(_table_cells(lines[index]))
+        index += 1
+    head = "".join(
+        f"<th>{_rich(cell, workspace_name)}</th>" for cell in header
+    )
+    body = "".join(
+        "<tr>" + "".join(
+            f"<td>{_rich(cell, workspace_name)}</td>" for cell in row
+        ) + "</tr>"
+        for row in rows
+    )
+    return (
+        "<div class='rich-table-wrap'><table><thead>"
+        f"<tr>{head}</tr></thead><tbody>{body}</tbody></table></div>",
+        index - 1,
+    )
 
 
 def _render_markdown(text, workspace_name, kp_id):
@@ -594,6 +651,7 @@ def _render_markdown(text, workspace_name, kp_id):
         return ""
     out, paragraph, list_tag = [], [], None
     in_code, code_lang, code_lines = False, "", []
+    skip_until = -1
 
     def close_list():
         nonlocal list_tag
@@ -607,7 +665,10 @@ def _render_markdown(text, workspace_name, kp_id):
             out.append(f"<p>{'<br>'.join(_rich(line, workspace_name) for line in paragraph)}</p>")
             paragraph = []
 
-    for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"):
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    for position, line in enumerate(lines):
+        if position <= skip_until:
+            continue
         fence = re.match(r"^\s*```\s*([\w-]*)\s*$", line)
         if fence:
             flush_paragraph()
@@ -621,6 +682,12 @@ def _render_markdown(text, workspace_name, kp_id):
             continue
         if in_code:
             code_lines.append(line)
+            continue
+        if _is_table_start(lines, position):
+            flush_paragraph()
+            close_list()
+            table_html, skip_until = _render_table(lines, position, workspace_name)
+            out.append(table_html)
             continue
         heading = re.match(r"^\s*(#{1,3})\s+(.+?)\s*#*\s*$", line)
         if heading:
@@ -668,7 +735,9 @@ def _rich(text, workspace_name):
     text = re.sub(r"<(sup|sub)>([^<>]+)</\1>", preserve_script, text)
     text = html.escape(text)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<![A-Za-z0-9_])__(.+?)__(?![A-Za-z0-9_])", r"<strong>\1</strong>", text)
     text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", text)
+    text = re.sub(r"(?<![A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])", r"<em>\1</em>", text)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
     text = _MATH_RE.sub(_math_replace, text)
     text = _wiki_replace(text, workspace_name)

@@ -93,6 +93,8 @@ class Pool:
     # -- problems ---------------------------------------------------------
 
     def problems_for_kps(self, kp_ids, source_kind=None):
+        if not kp_ids:
+            return []
         conn = self.connect()
         sql = "SELECT * FROM problems WHERE ("
         sql += " OR ".join("kp_ids LIKE ?" for _ in kp_ids) + ")"
@@ -131,6 +133,8 @@ class Pool:
     # -- flash cards -------------------------------------------------------
 
     def cards_for_kps(self, kp_ids):
+        if not kp_ids:
+            return []
         conn = self.connect()
         sql = "SELECT * FROM flash_cards WHERE "
         sql += " OR ".join("kp_id=?" for _ in kp_ids)

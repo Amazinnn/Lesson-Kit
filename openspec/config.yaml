@@ -6,7 +6,7 @@ context: |
 
   Modular study-material generator plus a web review workbench. Source material
   enters a course-level SQLite pool (knowledge points, durable problems,
-  candidate problems, learner signals); views render from the pool. The pool is
+  flash cards, learner signals); views render from the pool. The pool is
   the single source of truth and the durable cross-session memory.
 
   Core philosophy (see docs/design/philosophy.md): NOT helping the learner skip
@@ -22,7 +22,7 @@ context: |
     service layer. Stateless: no business state outside the pool.
   - Learning model: weakness ordering, problem pull, feedback→signal mapping,
     forgetting-curve scheduling — pure rules, zero AI dependency, unit-testable.
-  - Content: view rendering (guide, problem set, graph, KP detail, explain).
+  - Content: view rendering (practice, knowledge points, graph, KP detail).
     Data-first: render from the pool; Markdown artifacts are print/export
     outputs.
   - Data: per-workspace SQLite pool + .lessonkit/state.yaml runtime state.
@@ -42,7 +42,8 @@ context: |
   - AI bridge: no embedded AI kernel; external agent CLI with cwd = workspace;
     task files + output contract validation; teacher conduct rules (establish
     baseline, concise explanation, comprehension check, never guess, cite
-    source) are part of the task contract. v1 operation: explain only.
+    source) are part of the conversation contract. Ordinary conversation is
+    read-only; governed content writes require explicit intent and gates.
   - CLI is a data interface: lesson-kit carries no teaching semantics; teaching lives
     in the teaching skill + conduct contract (ADR 0020, informed by DeepTutor).
   - Sessions are flexible: not bound to one task, learner opens new sessions
@@ -58,8 +59,8 @@ context: |
     ADR 0021, to be designed only after the v1 loop proves itself.
   - High-SNR input diet: syllabus, past papers, classic explanations are the
     preferred extraction inputs; test-first and reverse review from wrong
-    answers; pool shortages trigger candidate generation, never invented
-    content.
+    answers; pool shortages may trigger governed Check ingest, never silent
+    invented content or candidate state.
   - Data-first views; figures are files referenced by Markdown, viewable in
     both web and Obsidian.
 
@@ -70,17 +71,14 @@ context: |
     strength-weighted); learner_signals stays evidence-only, boosts show their
     reason.
   - Step-stuck marking: multi-step solutions split into blocks; "stuck at
-    block N" + optional note goes on the attempt and into explain/diagnose
-    context.
-  - Diagnose operation: bridge op alongside explain; carries user_answer and
-    stuck markers; locates before explaining, hints not full solutions, ends
-    with a question; output sections 定位/提示/溯源/追问.
+    block N" + optional note goes on the attempt and into authoritative Agent
+    conversation context.
   - Directional cards: memory-recall KPs practice as cards with direction;
     review_schedule keys (item_type, item_id, direction); contrasts/variant_of
     neighbors shown as compare hints.
   - Past-paper coverage gate: inputs include past papers; a
     past-paper-coverage.json maps every exam point to pool items or fails with
-    the unmapped list; gaps feed the candidate-generation path.
+    the unmapped list; gaps feed an explicit governed content request.
   - Figures: declared area .lessonkit/figures/{course}/{chapter}/; logical
     paths on knowledge_points.figure_paths AND problems.figure_paths; Markdown
     references render in web and Obsidian.
@@ -88,8 +86,8 @@ context: |
   ## Runtime layout (hidden dot-directories)
 
   All runtime assets live under .lessonkit/: state.yaml and
-  figures/{course}/{chapter}/ and explain/{course}/{chapter}/ are tracked;
-  jobs/<job-id>/ task files are gitignored. The pool stores logical paths;
+  figures/{course}/{chapter}/ is tracked; jobs/conv-NNN/ provider state, events,
+  and mirrors are gitignored. The pool stores logical paths;
   display surfaces resolve them.
 
   ## Engineering constraints (hard rules)

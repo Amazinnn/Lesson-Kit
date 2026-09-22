@@ -157,3 +157,22 @@ flowchart LR
   不确定可弃权；`difficulty_mix` 误名改为 `problem_type_mix`（题型直方图）。
   无消费者、不回填旧题、学习者可见面零变更。L1/L3、GLOSSARY、
   PENDING-DEFINITIONS（真题拟合数据前奏）同步。
+- 2026-09-22 题目来源与惰性四维难度（problem-difficulty-and-provenance）：上一条
+  单值门控被本条取代。题目新增 `origin_kind`，与材料 `source_kind` 正交；派生
+  `ai_generated/exam/textbook/other` 互斥组供 CLI/API 筛选。正式题与微题的客观难度
+  改为知识跨度、推理深度、迁移距离、构造开放性四维 1–5，`cognitive-v1-equal-mean`
+  生成一位小数总分；全组可空，创建和入池不触发评级。公开动作是
+  `lesson-kit difficulty <workspace> check|apply --input <file|->`；check 零写入，apply
+  整批原子覆盖。题干、解析、知识点关联或题型变化清空评级。pull 可显式按来源、总分、
+  分维与 balanced 策略筛选；未传新参数保持旧顺序，学生 UI 不展示难度。
+- 2026-09-22 Pi 活动消息流（pi-activity-message-stream）：复用既有 350ms polling 与
+  normalized activity。Pi 的读/写/搜索/命令/Lesson Kit 操作显示为独立消息并按 id
+  原位更新，具体活动切开前后文本气泡；输出默认折叠且落事件前遮盖/截断。通用阶段、
+  hidden reasoning 和原始协议不显示；Codex/Claude 的执行计划不变。
+- 2026-09-23 首次真实使用修缮（first-use-conversation-content-fidelity）：新增
+  `content-bundle` 原子内容批次（知识点/正式题/微题/闪卡/必需原图，key 互引、服务端分配 id、
+  大清单暂存本对话 jobs、整批预检与单备份、缺图零写入、回滚只删无引用图片）；删除浏览器
+  关键词意图门，合法纯新增自动执行；题目新增来源证据/来源答案/解析来源三列并在两个渲染面
+  显示；浏览器与服务端富文本统一支持 GFM 表格；Pi 改为每对话一个隐藏 `--mode rpc` 常驻
+  进程（空闲 30 分钟回收、abort 优先、接受后崩溃不重放），全部 provider 子进程 Windows
+  无窗口。L1/L3 同步。

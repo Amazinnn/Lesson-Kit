@@ -35,6 +35,7 @@ workbench/
 │   ├── feedback.py    # 1-5 与自然语言 → signals/events（ADR 0011）
 │   ├── schedule.py    # SM-2 变体（review_schedule，方向复合键，永不锁题）
 │   ├── planning.py    # 确定性今日计划与有界 Agent 调整
+│   ├── difficulty.py  # 四维客观题目难度校验、Decimal 汇总与档位投影
 │   ├── cards.py       # 闪卡内容规则
 │   ├── micro_quiz.py  # 微题内容规则与判分
 │   └── mastery.py     # 只读掌握度实验规则
@@ -43,13 +44,15 @@ workbench/
 │   ├── pool.py        # Pool：工作区级只读/写连接 + 查询（weak/due/problem/kp/figures）
 │   ├── queries.py     # 视图查询（hub 统计、练习页合流列表/到期提醒/日历）
 │   ├── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联
+│   ├── difficulty.py  # 显式难度 check/apply 整批事务
 │   ├── goals.py       # 工作区本地目标存储
 │   ├── mastery.py     # 掌握度实验的只读数据投影
 │   └── display_metadata.py # 展示字段回填
 ├── bridge/
 │   ├── __init__.py
 │   ├── conversation_providers.py # PATH Agent 发现、原生新建/续聊命令与活动事件归一化
-│   └── conversations.py # conv-###、串行 turn、取消、成功镜像（含执行计划）
+│   ├── conversations.py # conv-###、串行 turn、取消、成功镜像（含执行计划）
+│   └── pi_rpc.py       # 每对话一个隐藏 `pi --mode rpc` 常驻进程（LF JSONL、abort、空闲回收）
 ├── ingest/
 │   └── __init__.py    # 内容 prepare/run/gate/apply/batch/rollback
 ├── cli/
@@ -75,8 +78,9 @@ workbench/
 - 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
 - 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
 - 新列：`knowledge_points.figure_paths`、`problems.figure_paths`（逻辑路径 JSON）、
-  `problem_attempts.answer_text`、`problems.difficulty`（可空 1-5，可选难度；
-  旧池升级跑 `pool/scripts/migrate-progress.py`）。
+  `problem_attempts.answer_text`、`problems.origin_kind`，以及 `problems` 的可空四维
+  客观难度、REAL 总分和 `difficulty_model`。四维、总分与模型全空或全有；旧标量
+  迁移清空，不伪造向量。`knowledge_points.difficulty` 保留 legacy 语义。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪；`{course}`
   是「课程标识符」而不是工作区名）、
   `.lessonkit/jobs/conv-###/`（provider 会话指针、运行事件与成功问答镜像，gitignored）、
@@ -90,8 +94,11 @@ workbench/
 - `registry`：`load() / save() / register(path, name?) -> Workspace / list() -> [Workspace] /
   get(name) -> Workspace`；Workspace = dataclass(name, path, db, active_course, active_chapter)。
 - `domain.weak.score(pool, course, chapter, now) -> [(kp, score, reasons)]`——原因可解释。
-- `domain.pull.select(pool, kp_ids, n, mode, source_kind?) -> {problems:[...],
+- `domain.pull.select(pool, kp_ids, n, mode, source_kind?, origin_kind?, source_group?,
+  difficulty_ranges?, strategy?) -> {problems:[...],
   shortage:[kp_id...]}`——永不伪造内容；候选机制已物理移除（2026-08-30）。
+- `domain.difficulty`：唯一模型 `cognitive-v1-equal-mean`；四维等权 Decimal
+  `ROUND_HALF_UP` 一位小数，并提供 balanced 使用的 1–5 档位投影。
 - `domain.cards.select(cards, schedule_rows, preference, excluded_*) -> [card action]`——把内容方向能力展开为独立练习动作并按各自调度行排序，零 IO。
 - `domain.feedback.apply(pool, item_type, item_id, rating?, note?) -> changes`——映射规则全在
   feedback.py，单测覆盖关键词表。
@@ -100,9 +107,16 @@ workbench/
 - 图谱指标投影完全位于浏览器表示层：`graph-physics.js` 只为现有节点计算内存中的目标位置、目标半径与过渡力；关系结构/题量/重要性/学习状态均不产生数据写入。
 - 图谱状态筛选分群完全位于浏览器表示层：四个既有状态按多选并集决定可见子图，`graph-physics.js` 只计算内存聚类目标；筛选值仅随页面上下文提供给 Agent，不写 Pool。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
+- `data.difficulty.check/apply`：1–N 题完整清单的零写入预览与整批原子覆盖；内容语义变化
+  统一清空整组评级，未评级不影响任何主流程。
 - `bridge.conversations`：每工作区 `list/create/get/start/cancel`；同一会话单轮串行，
   provider 事件归一为命令/工具/搜索/回答活动，成功轮次将合并后的执行计划随答案镜像；
   隐藏推理与原始协议包不进镜像，完整上下文仍留在 provider 原生 store。
+- Pi 在同一 normalized activity + 350ms polling 链路上把读、写、搜索、命令和
+  Lesson Kit 操作呈现为独立消息；Codex/Claude 继续使用执行计划，不新增流协议。
+- `ingest.content-bundle`：一份清单原子提交知识点/正式题/微题/闪卡/图片；预检即校验引用、
+  契约、来源证据、图片字节与目标冲突，apply 在单事务内落库并按字节复制图片，回滚连带删除
+  本批创建且无引用的图片文件。
 - `ingest`：`prepare/run/gate/apply/apply_batch/rollback_batch`；生成内容只有通过
   确定性门禁后才能以批次事务写入，并保留整批回滚边界。
 - `server.context`：按浏览器提供的路由与对象 ID 重新读取 Pool，生成权威 Agent 上下文；不接收整页 DOM。

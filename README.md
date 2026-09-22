@@ -179,9 +179,8 @@ Pre-release. Extraction and legacy rendered views remain available, while the
 active product is the three-page local workbench (practice, knowledge points,
 knowledge graph) with goals/calendar workload, governed flash-card and
 micro-quiz ingestion, transactional batch rollback, and provider-native Agent
-conversation. The candidate store was physically removed (2026-08-30): the
-Check ingest contract is the only Agent content channel, so the candidate
-pipeline scripts below are retired, caller-less artifacts.
+conversation. Check ingest is the only Agent content channel; no staging or
+promotion store exists in the active workbench.
 
 ## License
 

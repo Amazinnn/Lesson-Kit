@@ -232,7 +232,7 @@ class PoolTests(unittest.TestCase):
             " VALUES (?, ?, ?, ?, ?, ?)",
             (
                 "dmath-ch06-prob-020", '["dmath-ch06-kp-0020"]', "prefix",
-                "solution", "short-answer", "textbook",
+                "solution", "other", "textbook",
             ),
         )
         conn.commit()
@@ -266,11 +266,11 @@ class PoolTests(unittest.TestCase):
             [
                 (
                     "dmath-ch06-mq-008", '["dmath-ch06-kp-001"]', "q", "a",
-                    "micro-quiz", "quiz",
+                    "other", "textbook",
                 ),
                 (
                     "other-ch01-mq-999", '["dmath-ch06-kp-001"]', "q", "a",
-                    "micro-quiz", "quiz",
+                    "other", "textbook",
                 ),
             ],
         )
@@ -296,7 +296,7 @@ class PoolTests(unittest.TestCase):
             " VALUES (?, ?, ?, ?, ?, ?)",
             (
                 "dmath-ch06-mq-1000", '["dmath-ch06-kp-001"]', "q", "a",
-                "micro-quiz", "quiz",
+                "other", "textbook",
             ),
         )
         conn.commit()

@@ -35,9 +35,8 @@ python -m pytest tests/workbench/test_cli_daemon.py tests/workbench/test_cli.py 
 ```
 
 **One name, on purpose:** the project ships only `lesson-kit` (module form:
-`python -m workbench.cli.main`). It deliberately does **not** install a `lesson-kit`
-script — that name belongs to Weights & Biases, and letting two packages claim
-one launcher means whichever installed last silently wins.
+`python -m workbench.cli.main`). It deliberately does **not** install the old
+`wb` alias; every document, prompt, and example uses the same launcher.
 
 ## Configuring an Agent provider
 
@@ -65,11 +64,18 @@ lesson-kit daemon stop && lesson-kit daemon start
 
 ### Pi specifics
 
-- **Prompt delivery is unchanged.** The provider-agnostic teacher contract and
-  page context are written to stdin every turn; Pi reads them in
-  `--print --mode json` without a positional prompt (verified). The contract
-  names only project-level things (`lesson-kit data`, the `lessonkit-action` block), so
-  it does not assume any harness's tool names.
+- **Pi runs one hidden RPC process per conversation.** `bridge/pi_rpc.py` starts
+  `pi --mode rpc`, frames strict LF JSONL, sends correlated `prompt`/`abort`
+  commands, and keeps the process for 30 idle minutes (no process-count cap).
+  Cancellation sends RPC `abort` first and only terminates when the run does not
+  settle. A launch/handshake failure restarts once; a crash after the prompt was
+  accepted fails the turn and is never replayed. Every provider child — Pi RPC,
+  each Codex/Claude print-mode run, and the ingest provider session — launches
+  with `CREATE_NO_WINDOW` on Windows, so no terminal window ever appears.
+- **The teacher contract still arrives on stdin.** Codex and Claude read it as
+  before; Pi receives the same text as the `prompt` command payload. The contract
+  names only project-level things (`lesson-kit data`, the `lessonkit-action`
+  block), so it does not assume any harness's tool names.
 - **Pi loads `AGENTS.md` automatically** from the working directory and its
   ancestors, and context files are loaded regardless of project trust. The
   bridge runs the provider with the workspace as cwd, so the repository's

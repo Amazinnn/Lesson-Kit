@@ -24,6 +24,11 @@ def build(pool, workspace, payload):
         "goal_intent": bool(payload.get("goal_intent")),
         "check_intent": bool(payload.get("check_intent")),
     }
+    conversation_id = payload.get("conversation_id")
+    if isinstance(conversation_id, str) and conversation_id:
+        # Where a large manifest is staged: relative to the workspace root, the
+        # same base the provider's file tools and cwd already use.
+        result["staged_manifest_dir"] = f".lessonkit/jobs/{conversation_id}"
     if payload.get("check_intent"):
         result["next_free_ids"] = _next_free_ids(pool, prefix)
     if page_type == "practice":

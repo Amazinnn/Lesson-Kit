@@ -14,8 +14,10 @@ from workbench import ingest
 from workbench.bridge import conversation_providers
 from workbench.data import pool as pool_mod
 from workbench.data import content
+from workbench.data import difficulty as difficulty_data
 from workbench.data import mastery as mastery_data
 from workbench.data import queries
+from workbench.domain import difficulty as difficulty_rules
 from workbench.domain import feedback, learning_state, pull, schedule as schedule_rules, weak
 from workbench.domain import mastery as mastery_rules
 
@@ -202,9 +204,19 @@ def cmd_pull(args):
     workspace = _workspace(_resolve_name(args))
     pool = _pool(workspace)
     try:
+        kp_ids = args.kp or [row["kp_id"] for row in pool.kps(pool.scope_prefix())]
         result = pull.select(
-            pool, args.kp, n=args.n, mode=args.mode,
-            source_kind=args.source_kind, exclude_ids=set(args.exclude),
+            pool, kp_ids, n=args.n, mode=args.mode,
+            source_kind=args.source_kind, origin_kind=args.origin_kind,
+            source_group=args.source_group, exclude_ids=set(args.exclude),
+            difficulty_min=args.difficulty_min, difficulty_max=args.difficulty_max,
+            difficulty_dimensions={
+                name: (getattr(args, name + "_min"), getattr(args, name + "_max"))
+                for name in difficulty_rules.DIMENSIONS
+                if getattr(args, name + "_min") is not None
+                or getattr(args, name + "_max") is not None
+            },
+            difficulty_strategy=args.difficulty_strategy,
         )
     finally:
         pool.close()
@@ -359,6 +371,22 @@ def cmd_data(args):
             }
         if result is None:
             raise KeyError(args.target)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    except (ValueError, KeyError, OSError, json.JSONDecodeError, sqlite3.Error) as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
+    finally:
+        pool.close()
+
+
+def cmd_difficulty(args):
+    workspace = _workspace(args.name)
+    pool = _pool(workspace)
+    try:
+        manifest = _json_input(args.input)
+        result = (difficulty_data.check(pool, manifest) if args.action == "check"
+                  else difficulty_data.apply(pool, manifest))
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (ValueError, KeyError, OSError, json.JSONDecodeError, sqlite3.Error) as exc:
@@ -606,6 +634,18 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("--n", type=int, default=5)
     p.add_argument("--mode", choices=["weak", "random", "all"], default="weak")
     p.add_argument("--source-kind")
+    p.add_argument("--origin-kind", choices=[
+        "source_problem", "adapted_problem", "generated_grounded",
+    ])
+    p.add_argument("--source-group", choices=[
+        "textbook", "exam", "ai_generated", "other",
+    ])
+    p.add_argument("--difficulty-min", type=float)
+    p.add_argument("--difficulty-max", type=float)
+    for dimension in difficulty_rules.DIMENSIONS:
+        p.add_argument("--" + dimension.replace("_", "-") + "-min", type=int)
+        p.add_argument("--" + dimension.replace("_", "-") + "-max", type=int)
+    p.add_argument("--difficulty-strategy", choices=["balanced"])
     p.add_argument("--exclude", action="append", default=[])
     p.set_defaults(func=cmd_pull)
 
@@ -663,6 +703,14 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("value", nargs="?", choices=["needs_work", "review", "mastered"])
     p.add_argument("--input")
     p.set_defaults(func=cmd_data)
+
+    p = sub.add_parser("difficulty", help="check or apply objective problem ratings")
+    p.add_argument("name")
+    difficulty_sub = p.add_subparsers(dest="action", required=True)
+    for action_name in ("check", "apply"):
+        action = difficulty_sub.add_parser(action_name)
+        action.add_argument("--input", required=True)
+        action.set_defaults(func=cmd_difficulty)
 
     p = sub.add_parser("guard", help="run a workspace guard")
     p.add_argument("name", nargs="?")
