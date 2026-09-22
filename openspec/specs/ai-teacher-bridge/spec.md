@@ -158,36 +158,74 @@ A conversation SHALL run at most one provider turn at a time. Turn events SHALL 
 
 ### Requirement: Readable execution plan
 
-The Bridge SHALL translate stable provider events into provider-neutral activity records
-for command execution, tool calls, search, and answer generation. Each record SHALL carry a
-human-readable label and a localized presentation state equivalent to running, completed,
-or failed; updates for the same provider activity SHALL update one plan row rather than add
-duplicate status lines. Command and tool details explicitly emitted by the provider MAY be
-shown in a collapsible output area. Hidden reasoning SHALL NOT be shown, and raw provider
-protocol event names SHALL NOT be used as learner-facing status text. Existing phase, text,
-result, error, and done events SHALL remain readable for compatibility.
+The Bridge SHALL translate stable provider events into provider-neutral
+activity records. For Pi it SHALL emit only concrete command, file, search,
+and tool activities; generic provider progress, hidden reasoning, and answer
+generation SHALL not become learner-facing activity rows. Details and output
+SHALL be sanitized before event storage, then bounded to 500 and 4000
+characters respectively. Existing Codex and Claude activity behavior remains
+compatible.
+
+For Pi, read/view tools SHALL be labelled as file reads; write/edit/apply-patch
+tools as file updates; grep/find/search tools as searches; bash/shell tools as
+commands; and every concrete unmatched tool by its tool name. A shell command
+that invokes `lesson-kit` or its module-form equivalent SHALL use the Lesson Kit
+operation label instead of the generic command label.
+
+#### Scenario: Pi reads a file
+
+- **WHEN** Pi emits a read tool execution with a path
+- **THEN** one activity identifies the file read and exposes no file contents in its summary
+
+#### Scenario: Pi invokes Lesson Kit
+
+- **WHEN** Pi runs `lesson-kit` or its module-form equivalent
+- **THEN** the activity is labelled as a Lesson Kit operation and retains the sanitized command detail
+
+#### Scenario: Pi updates a file
+
+- **WHEN** Pi emits a write, edit, or apply-patch tool execution with a target path
+- **THEN** one activity identifies the file update and its summary contains no written file body
+
+#### Scenario: Pi searches
+
+- **WHEN** Pi emits grep, find, or search with a bounded query
+- **THEN** one activity identifies the search and retains only the sanitized query detail
+
+#### Scenario: Pi calls another concrete tool
+
+- **WHEN** Pi emits a tool execution outside the named read, write, search, and shell groups
+- **THEN** one activity identifies that concrete tool by name without exposing raw protocol data
+
+#### Scenario: Pi emits reasoning lifecycle
+
+- **WHEN** Pi emits thinking start, delta, or end events
+- **THEN** no reasoning content or generic reasoning activity is shown
+
+#### Scenario: Successful conversation is reopened
+
+- **WHEN** a successful Pi turn with concrete activities is reopened
+- **THEN** its coalesced concrete activities are available with the final answer
 
 #### Scenario: Command progresses from start to completion
 
-- **WHEN** a provider emits start and completion events for the same command item
-- **THEN** the conversation shows one command row whose state changes from running to
-  completed and whose emitted command output is available without overflowing the panel
+- **WHEN** Codex or Claude emits start and completion events for the same command
+- **THEN** the existing execution plan keeps one command row and updates its state
 
 #### Scenario: Provider streams its answer
 
-- **WHEN** the provider emits answer text in multiple deltas
-- **THEN** the deltas continue building one assistant answer bubble while the execution plan
-  records answer generation as a readable step
+- **WHEN** a provider emits answer text in multiple deltas
+- **THEN** contiguous deltas continue building readable assistant text
 
 #### Scenario: Unknown protocol phase is received
 
-- **WHEN** a provider emits a protocol event for which no learner-facing activity exists
-- **THEN** the event does not replace the status line with a raw protocol label
+- **WHEN** a provider emits a protocol event with no learner-facing activity
+- **THEN** no raw protocol label replaces learner-facing status text
 
 #### Scenario: Conversation is reopened
 
-- **WHEN** a successful conversation containing command or tool activity is reopened
-- **THEN** its coalesced execution plan is restored before the corresponding final answer
+- **WHEN** a successful non-Pi conversation is reopened
+- **THEN** its existing coalesced execution plan is restored before the answer
 
 ### Requirement: Explicit practice action
 
@@ -236,80 +274,77 @@ NOT populate goal fields.
 
 ### Requirement: Check ingest action
 
-The bridge MAY mirror a third structured action, `check_ingest`, only when the
-request carries explicit content-generation intent (the learner asks the agent
-to produce or add pool content). The action SHALL carry an inline manifest of
-kind `flash-card-patch` or `micro-quiz-patch`; the server SHALL validate it
-through the same deterministic gates as the CLI recipes and, on pass, apply it
-as one batch-recorded transactional apply. Gate failures SHALL be reported
-back into the conversation flow item by item and SHALL write nothing. Success
-SHALL be presented as an independent result card in the conversation flow
-showing the batch id, kind, item counts, and backup path, with a rollback
-affordance that calls the same whole-batch rollback as the CLI. The
-conversation mirror SHALL carry the check ingest action and its outcome so
-the result card is restored when the conversation is re-rendered. Ordinary
-conversation without content-generation intent SHALL NOT trigger the action,
-and a malformed `check_ingest` block under content-generation intent SHALL be
-surfaced as an explicit error rather than silently dropped. When a new turn
-starts in a conversation whose previous turn carried a check ingest action,
-the server-side provider context SHALL carry that action's outcome — a batch
-confirmation on success, or the itemized rejection reasons on failure — so
-the agent can correct a rejected manifest or avoid resubmitting applied
-content. The prompt's content-id examples SHALL carry the workspace's own
-active course and chapter, so a conversation held in one subject never teaches
-the agent another subject's ids.
+The bridge SHALL parse a valid governed append-only content action without
+depending on message keyword regexes and SHALL execute it automatically without
+a confirmation dialog. A reply with no action SHALL perform zero content or
+learning writes. Automatic actions MAY add knowledge points, formal problems,
+micro quizzes, flash cards, and figures. Updating or deleting existing content,
+rolling back a batch, and applying difficulty SHALL still require an explicit
+learner instruction.
+
+Large actions SHALL reference one complete manifest staged under the current
+conversation's jobs directory. The server SHALL reject staged paths outside
+that directory, impose no fixed six-item limit, validate the full manifest,
+create a recoverable backup, and apply one atomic batch. Any invalid item SHALL
+produce itemized errors and zero writes; the Agent SHALL repair and resubmit the
+complete manifest rather than silently dropping items. Outcomes SHALL remain in
+the mirror and next-turn context. Result cards SHALL show batch id, final asset
+types/counts, workspace, backup, and current rollback state.
+
+Provider file tools MAY read and write arbitrary local paths. Those external
+tool writes are outside Lesson Kit's governed batch/rollback boundary. Managed
+runtime, pool, staged-manifest, and figure destinations SHALL remain inside the
+active workspace.
 
 #### Scenario: Conversation request produces cards
 
-- **WHEN** the learner asks the agent in conversation to add flash cards for a
-  knowledge point and the reply carries a valid `check_ingest` action
-- **THEN** the manifest passes the deterministic gate, one batch-recorded
-  apply inserts the cards, and an independent result card with the batch id
-  and a rollback affordance appears in the conversation flow
+- **WHEN** the Agent returns a valid append-only flash-card action
+- **THEN** one governed batch inserts the cards automatically and restores a result card with rollback
 
 #### Scenario: Result card survives re-render
 
-- **WHEN** the conversation is reloaded after a check ingest action ran
-- **THEN** the mirrored assistant message carries the action outcome and the
-  result card is restored in the conversation flow
+- **WHEN** the conversation is reopened after an action ran or was rolled back
+- **THEN** the card reflects the current batch state and an already rolled-back batch has no rollback action
 
 #### Scenario: Gate failure is explicit
 
-- **WHEN** the action's manifest fails the deterministic gate
-- **THEN** the conversation flow lists every rejection reason, nothing is
-  written to the pool, and no result card claims success
+- **WHEN** any item in the staged manifest fails validation
+- **THEN** every reason is shown, the whole bundle writes nothing, and no success is claimed
 
 #### Scenario: Ordinary conversation cannot ingest
 
-- **WHEN** a turn without content-generation intent contains an action-like
-  block
-- **THEN** no check ingest action runs
+- **WHEN** a provider returns ordinary answer text without a structured action
+- **THEN** no content or learning row changes
 
 #### Scenario: Malformed check action is explicit
 
-- **WHEN** a turn with content-generation intent carries a `check_ingest`
-  block that is not valid JSON or does not satisfy the manifest structure
-- **THEN** the conversation flow shows an explicit error for the block instead
-  of silently dropping it
+- **WHEN** a provider returns malformed action JSON or an invalid staged-manifest reference
+- **THEN** the conversation shows an explicit contract error and writes nothing
 
 #### Scenario: Rejected manifest is correctable
 
-- **WHEN** a previous turn's check ingest action was rejected and the next
-  turn asks the agent to fix and resubmit
-- **THEN** the provider context carries the itemized rejection reasons and a
-  corrected manifest is gated and applied anew
+- **WHEN** the Agent repairs the complete staged manifest from itemized errors
+- **THEN** the full bundle is checked anew and may apply under one batch id
 
 #### Scenario: Applied content is not resubmitted
 
-- **WHEN** a previous turn's check ingest action applied successfully and a
-  new turn starts
-- **THEN** the provider context carries the batch confirmation so the agent
-  does not resubmit the same content
+- **WHEN** a prior action applied successfully and another turn starts
+- **THEN** the provider receives the batch confirmation and avoids resubmitting the same content
 
 #### Scenario: Examples carry the workspace course
 
-- **WHEN** the prompt for a content-generation turn is composed in a workspace whose active course and chapter are set
-- **THEN** the example card and micro-quiz ids carry that course and chapter, and no other course's ids appear in the prompt
+- **WHEN** a content prompt is composed for an active course and chapter
+- **THEN** all managed ids, staged paths, and destinations use that workspace scope
+
+#### Scenario: Thirty items form one batch
+
+- **WHEN** one valid staged bundle contains thirty requested problems
+- **THEN** the complete list commits under one batch id instead of prompt-driven six-item turns
+
+#### Scenario: Keyword-free follow-up
+
+- **WHEN** the learner says `继续` and the Agent returns another valid append-only action
+- **THEN** the action is processed without a keyword-derived intent boolean
 
 ### Requirement: Action block disclosure
 
@@ -337,4 +372,83 @@ discarded per that contract.
 - **THEN** the blocks are removed from the mirrored answer, the turn records
   the ignored disclosure, nothing is written, and the next turn's provider
   context states that no write happened
+
+### Requirement: Conversation mirror consistency during polling
+
+The bridge SHALL keep conversation metadata, turn metadata, event streams, and
+successful transcripts readable while an active provider turn updates them.
+In-process readers and writers SHALL observe complete JSON values and complete
+JSONL records; a polling read SHALL NOT cause a provider turn to fail because
+the mirror file is being replaced.
+
+#### Scenario: Poll while conversation metadata changes
+
+- **WHEN** the browser polls a turn while the worker updates the conversation mirror
+- **THEN** the poll reads either the prior or next complete value and the worker continues without a sharing violation
+
+#### Scenario: Poll while an event is appended
+
+- **WHEN** one thread appends the next sequenced event while another reads events
+- **THEN** the reader receives only complete records with strictly increasing sequence numbers
+
+### Requirement: Explicit Agent difficulty rating
+
+An Agent MAY invoke difficulty check and apply only when the learner explicitly
+asks to rate or rerate named problems. Ordinary conversation, content ingest,
+and problem creation SHALL NOT trigger, queue, or suggest automatic rating.
+
+#### Scenario: Explicit rating request
+
+- **WHEN** the learner asks Pi to rate a bounded set of problems
+- **THEN** Pi may check then apply one complete rating manifest through the CLI
+
+#### Scenario: New content remains unrated
+
+- **WHEN** an Agent creates a problem without a separate rating request
+- **THEN** the content is ingested with all difficulty fields null
+
+### Requirement: Conversation-owned Pi RPC process
+
+The Bridge SHALL keep one `pi --mode rpc` process per active Pi conversation,
+use strict LF-delimited JSONL, send correlated prompt/abort commands, and feed
+streamed events into the existing normalized activity contract. The process
+SHALL expire after 30 idle minutes; no separate simultaneous-process limit is
+imposed. Conversation deletion and server shutdown SHALL close it, while a
+later process resumes the saved native session.
+
+One launch or handshake failure before prompt acceptance MAY restart once. A
+crash after acceptance SHALL fail the turn without replaying the prompt because
+tools may already have caused side effects. Cancellation SHALL send RPC abort
+before terminate/kill fallback. All provider child processes SHALL launch
+without a visible Windows console.
+
+#### Scenario: Several turns reuse one process
+
+- **WHEN** three serialized turns run in one active Pi conversation
+- **THEN** one Pi PID handles all three and native context continues
+
+#### Scenario: Resume after idle expiry
+
+- **WHEN** a Pi process expires after 30 idle minutes and a new turn arrives
+- **THEN** a hidden RPC process resumes the saved native session
+
+#### Scenario: Handshake fails once
+
+- **WHEN** Pi fails before accepting the prompt on the first launch
+- **THEN** the Bridge restarts once and sends the prompt only after a successful handshake
+
+#### Scenario: Process dies after acceptance
+
+- **WHEN** Pi exits after accepting a prompt and possibly running tools
+- **THEN** the turn fails with preserved events and the prompt is not automatically replayed
+
+#### Scenario: Cancel an RPC turn
+
+- **WHEN** the learner stops an active Pi turn
+- **THEN** the Bridge sends abort, mirrors no successful exchange, and kills only if abort fails
+
+#### Scenario: Windows providers stay hidden
+
+- **WHEN** any configured provider process starts on Windows
+- **THEN** no terminal window becomes visible
 

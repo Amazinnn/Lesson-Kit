@@ -40,30 +40,40 @@ Required files:
 04_checks/problem-pool-validation-report.md
 ```
 
-## Problem Candidate Generation
+## Agent Content Ingest
 
-Path:
-
-```text
-intermediate/{course}/problem_generation/{chapter}/
-```
-
-Required agent-to-script artifacts for a generation run:
+Agent-created knowledge points, problems, flash cards, and their figures use
+one complete JSON manifest:
 
 ```text
-02_analysis/candidate-insert-manifest.json
-04_checks/candidate-audit-report.json
+content-bundle
 ```
 
-The candidate manifest contains source-grounded candidate bodies and evidence.
-The audit report supplies the semantic PASS/FAIL decision. Scripts independently
-run structural checks. A candidate becomes `gate_passed` only when both checks
-pass; only `gate_passed` candidates may be practiced or imported.
+A bundle may contain `knowledge_points`, `problems`, `flash_cards`, and each
+problem's `figures`. Items reference each other by a bundle-local `key`; ids are
+allocated by the server in course/chapter order. Large manifests are staged under
+the owning conversation's `.lessonkit/jobs/conv-NNN/` directory and referenced
+from the action by file name (the server refuses absolute paths and `..`).
 
-Candidate rows, attempts, and current learner signals live in the course pool.
-They remain separate from durable `problems` until explicit import. Import
-renders structured options into `problem_text` and answer explanations into
-`solution`; it does not add candidate-only fields to the durable table.
+The manifest is checked and applied through the workbench ingest boundary as one
+atomic batch: one prevalidation, one recoverable backup, one `batch-NNN`.
+Any invalid item or missing required image leaves SQLite and the figure
+destination untouched. Source figures are copied byte for byte into
+`.lessonkit/figures/{course}/{chapter}/` and referenced by logical path.
+
+Every problem carries both provenance axes: `source_kind` describes the
+grounding material and `origin_kind` describes whether the problem is sourced,
+adapted, or generated from it, plus non-empty `source_evidence`. A
+source-provided short answer lives in `source_answer`, separate from the
+detailed `solution`, whose origin is labelled by `solution_origin`
+(`source` vs `generated`). Difficulty fields never belong to an ingest manifest;
+explicit rating uses the separate `lesson-kit difficulty` transaction.
+
+Legacy `flash-card-patch` and `micro-quiz-patch` manifests remain accepted.
+
+Successful applies store a manifest snapshot under the pool's ingest area and
+stamp a readable batch id. Failed gates write no content. There is no candidate
+artifact, candidate table, promotion step, or staging state.
 
 ## Course Learning Network
 
@@ -120,8 +130,7 @@ Runtime assets follow the hidden dot-directory convention and live under
 .lessonkit/
 ├── state.yaml                                   # runtime state (tracked)
 ├── figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png   # tracked
-├── explain/{course}/{chapter}/{item_id}.md      # validated bridge results (tracked)
-└── jobs/<job-id>/                               # task working files (gitignored)
+└── jobs/conv-NNN/                               # provider state/events/mirror (gitignored)
 ```
 
 ### Figure Area
@@ -136,12 +145,15 @@ Runtime assets follow the hidden dot-directory convention and live under
 - The extraction pipeline MUST land figures (knowledge-point figures and
   problem-embedded figures) during extraction; views never invent figures.
 
-### Explain Area
+### Conversation Area
 
-- Path: `.lessonkit/explain/{course}/{chapter}/{item_id}.md`
-- Only contract-validated bridge results (explain/diagnose) are written here.
-- Task working files stay in `.lessonkit/jobs/<job-id>/` and are excluded from
-  version control.
+- Path: `.lessonkit/jobs/conv-NNN/`
+- Provider-native storage remains the full conversation authority. Lesson Kit
+  stores provider session pointers, turn events, and successful mirrored
+  exchanges for navigation and display.
+- Failed/cancelled output, hidden reasoning, raw protocol events, and ordinary
+  navigation are not durable transcript content.
+- The whole jobs area is excluded from version control.
 
 ## Rules
 

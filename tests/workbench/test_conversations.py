@@ -4,6 +4,7 @@ import json
 import os
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -15,6 +16,16 @@ from tests.workbench.fixtures import WorkspaceFixture
 FAKE_TURN = r'''import json, sys, time
 mode = sys.argv[1]
 prompt = sys.stdin.read()
+if mode == "pi-activities":
+    print(json.dumps({"type":"session","id":"pi-native-1"}), flush=True)
+    print(json.dumps({"type":"turn_start"}), flush=True)
+    print(json.dumps({"type":"message_update","assistantMessageEvent":{"type":"thinking_start"}}), flush=True)
+    print(json.dumps({"type":"message_update","assistantMessageEvent":{"type":"thinking_end"}}), flush=True)
+    print(json.dumps({"type":"tool_execution_start","toolCallId":"read-1","toolName":"read","args":{"path":"docs/GLOSSARY.md"}}), flush=True)
+    print(json.dumps({"type":"tool_execution_end","toolCallId":"read-1","toolName":"read","args":{"path":"docs/GLOSSARY.md"},"result":{"content":[{"type":"text","text":"file output"}]},"isError":False}), flush=True)
+    message = {"role":"assistant","content":[{"type":"text","text":"Pi answer"}],"stopReason":"stop"}
+    print(json.dumps({"type":"message_end","message":message}), flush=True)
+    raise SystemExit(0)
 print(json.dumps({"type":"thread.started","thread_id":"native-123"}), flush=True)
 print(json.dumps({"type":"turn.started"}), flush=True)
 if mode == "slow":
@@ -68,6 +79,100 @@ class ConversationTests(unittest.TestCase):
             calls.append(session_id)
             return [sys.executable, str(self.script), mode]
         return build
+
+    def test_json_mirror_serializes_reader_and_writer(self):
+        from workbench.bridge import conversations
+
+        path = Path(self.fixture.tmp.name) / "mirror.json"
+        path.write_text('{"value": 1}', encoding="utf-8")
+        read_started = threading.Event()
+        release_read = threading.Event()
+        replace_started = threading.Event()
+        original_read = Path.read_text
+        original_replace = Path.replace
+
+        def blocking_read(current, *args, **kwargs):
+            if current == path:
+                read_started.set()
+                release_read.wait(timeout=2)
+            return original_read(current, *args, **kwargs)
+
+        def observed_replace(current, target):
+            replace_started.set()
+            return original_replace(current, target)
+
+        with mock.patch.object(Path, "read_text", blocking_read), mock.patch.object(
+            Path, "replace", observed_replace
+        ):
+            reader = threading.Thread(target=conversations._read_json, args=(path,))
+            writer = threading.Thread(
+                target=conversations._write_json, args=(path, {"value": 2})
+            )
+            reader.start()
+            self.assertTrue(read_started.wait(timeout=1))
+            writer.start()
+            try:
+                self.assertFalse(replace_started.wait(timeout=0.1))
+            finally:
+                release_read.set()
+                reader.join(timeout=2)
+                writer.join(timeout=2)
+
+        self.assertEqual(conversations._read_json(path), {"value": 2})
+
+    def test_event_stream_serializes_reader_and_appender(self):
+        from workbench.bridge import conversations
+
+        folder = self.pool.jobs_dir() / "conv-001"
+        folder.mkdir(parents=True)
+        path = folder / "turn-001.events.jsonl"
+        path.write_text('{"sequence": 1, "kind": "phase"}\n', encoding="utf-8")
+        read_started = threading.Event()
+        release_read = threading.Event()
+        append_started = threading.Event()
+        original_read = Path.read_text
+        original_open = Path.open
+
+        def blocking_read(current, *args, **kwargs):
+            if current == path and threading.current_thread().name == "mirror-reader":
+                read_started.set()
+                release_read.wait(timeout=2)
+            return original_read(current, *args, **kwargs)
+
+        def observed_open(current, mode="r", *args, **kwargs):
+            if current == path and "a" in mode:
+                append_started.set()
+            return original_open(current, mode, *args, **kwargs)
+
+        with mock.patch.object(Path, "read_text", blocking_read), mock.patch.object(
+            Path, "open", observed_open
+        ):
+            reader = threading.Thread(
+                name="mirror-reader",
+                target=conversations.events,
+                args=(self.pool, "conv-001", "turn-001"),
+            )
+            writer = threading.Thread(
+                name="mirror-writer",
+                target=conversations._append_event,
+                args=(path, "done"),
+            )
+            reader.start()
+            self.assertTrue(read_started.wait(timeout=1))
+            writer.start()
+            try:
+                self.assertFalse(append_started.wait(timeout=0.1))
+            finally:
+                release_read.set()
+                reader.join(timeout=2)
+                writer.join(timeout=2)
+
+        self.assertEqual(
+            [event["sequence"] for event in conversations.events(
+                self.pool, "conv-001", "turn-001"
+            )],
+            [1, 2],
+        )
 
     def write_transcript(self, conversation_id, lines):
         path = self.pool.jobs_dir() / conversation_id / "transcript.jsonl"
@@ -141,6 +246,33 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(command["output"], "2 problems")
         self.assertEqual(sum(item["activity_id"] == "cmd-1" for item in activities), 1)
         self.assertEqual(provider_turn["status"], "done")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_successful_pi_turn_mirrors_only_concrete_activities(self, get_provider):
+        # Pi runs over its persistent RPC process, and the mirror still keeps
+        # only the concrete activities (no reasoning, no protocol noise).
+        from workbench.bridge import conversation_providers, conversations, pi_rpc
+        from tests.workbench.test_pi_rpc import FakePiLauncher
+
+        launcher = FakePiLauncher("normal", Path(self.fixture.tmp.name) / "pi.log")
+        registry = pi_rpc.PiRpcRegistry(idle_seconds=1800)
+        get_provider.return_value = {**self.provider, "name": "pi", "args": []}
+        with mock.patch.object(conversation_providers, "build_command", launcher),                 mock.patch.object(conversations, "PI_RPC", registry):
+            conversation = conversations.create(self.pool, "pi")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Check",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+            registry.close_all()
+
+        self.assertEqual(done["status"], "done")
+        restored = conversations.get(self.pool, conversation["conversation_id"])
+        activities = restored["messages"][1]["activities"]
+        self.assertEqual([item["activity_id"] for item in activities], ["call_1"])
+        self.assertEqual(activities[0]["activity_type"], "file-read")
+        self.assertEqual(activities[0]["status"], "done")
+        self.assertEqual(launcher.modes, ["rpc"])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_failure_is_literal_and_not_mirrored(self, get_provider):
@@ -406,6 +538,7 @@ class ConversationTests(unittest.TestCase):
                 "counts": {"flash_cards": 1},
                 "backup_path": "pool/backups/batch-001.sqlite",
                 "applied": ["card-001"],
+                "workspace": "dmath",
             },
         })
         kwargs = apply_batch.call_args.kwargs
@@ -480,7 +613,7 @@ class ConversationTests(unittest.TestCase):
 
         self.assertEqual(
             captured["last_check_outcome"],
-            "上一轮出题动作已成功入库：批次 batch-007（flash-card-patch，3 条）。"
+            "上一轮内容动作已成功入库：批次 batch-007（flash-card-patch，闪卡 3）。"
             "不要重复提交相同内容。",
         )
         self.assertIsNot(captured, original)
@@ -512,9 +645,9 @@ class ConversationTests(unittest.TestCase):
 
         self.assertEqual(
             captured["last_check_outcome"],
-            "上一轮出题动作被门禁拒收（零写入），逐条原因：\n"
+            "上一轮内容动作被门禁拒收（零写入），逐条原因：\n"
             + error
-            + "\n请修正 manifest 后重新提交完整的 lessonkit-action 区块。",
+            + "\n请修正清单后重新提交完整的 lessonkit-action 区块。",
         )
 
     @mock.patch("workbench.bridge.conversation_providers.get")
@@ -540,7 +673,7 @@ class ConversationTests(unittest.TestCase):
 
         self.assertEqual(
             captured["last_check_outcome"],
-            "上一轮出题动作区块无效：action block is not valid JSON。"
+            "上一轮内容动作区块无效：action block is not valid JSON。"
             "请重新提交符合契约的完整区块。",
         )
 
@@ -618,53 +751,74 @@ class GoalFormActionExtractionTests(unittest.TestCase):
         self.assertEqual(action["start_date"], "")
         self.assertEqual(action["deadline"], "")
 
-    def test_malformed_json_is_disclosed_as_ignored(self):
+    def test_malformed_json_is_explicit(self):
         cleaned, action = self._run(self._answer("{oops}"), {"goal_intent": True})
-        self.assertEqual(action, {"ignored": "no block matched the active intent"})
+        self.assertEqual(action, {
+            "type": "check_ingest",
+            "error": "action block is not valid JSON",
+        })
         self.assertNotIn("lessonkit-action", cleaned)
 
 
 class CheckIngestActionExtractionTests(unittest.TestCase):
-    def _run(self, body, context):
+    def _run(self, body, context, folder=None):
         from workbench.bridge import conversations
 
         answer = "已生成。\n```lessonkit-action\n" + body + "\n```"
-        return conversations._extract_action(answer, context)
+        return conversations._extract_action(answer, context, folder)
 
     def _extract(self, answer, context):
         from workbench.bridge import conversations
 
         return conversations._extract_action(answer, context)
 
-    def test_prompt_describes_check_ingest_manifest_contract(self):
+    def test_prompt_describes_the_content_bundle_contract(self):
         from workbench.bridge import conversations
 
         prompt = conversations._prompt("帮我补池", {
             "check_intent": True,
             "workspace": {"name": "大学物理", "course": "uphy2", "chapter": "ch07"},
+            "staged_manifest_dir": ".lessonkit/jobs/conv-003",
         })
-        self.assertIn("flash-card-patch", prompt)
-        self.assertIn("micro-quiz-patch", prompt)
+        self.assertIn("content-bundle", prompt)
+        self.assertIn("staged_manifest", prompt)
+        self.assertIn(".lessonkit/jobs/conv-003", prompt)
+        self.assertIn("knowledge_points", prompt)
+        self.assertIn("flash_cards", prompt)
         self.assertIn("source_evidence", prompt)
-        self.assertIn('directions', prompt)
-        self.assertIn("对话内出题一律用 lessonkit-action 区块", prompt)
+        self.assertIn("source_answer", prompt)
+        self.assertIn("solution_origin", prompt)
+        self.assertIn("directions", prompt)
+        self.assertIn("figure:f1", prompt)
         self.assertIn("禁止直接运行 lesson-kit ingest", prompt)
+        self.assertIn("source_kind", prompt)
+        self.assertIn("origin_kind", prompt)
+        self.assertIn("source_problem", prompt)
+        self.assertIn("generated_grounded", prompt)
+        self.assertIn("lesson-kit difficulty", prompt)
+        self.assertNotIn("difficulty_basis", prompt)
+        self.assertNotIn('"difficulty":1', prompt)
         self.assertIn("才可使用 lesson-kit data 写命令", prompt)
         self.assertNotIn("wb data", prompt)
         self.assertNotIn("wb ingest", prompt)
         self.assertIn("topic_label", prompt)
         self.assertIn("数学乘号一律用 ×", prompt)
-        self.assertIn('"card_id":"uphy2-ch07-fc-901"', prompt)
-        self.assertIn('"problem_id":"uphy2-ch07-mq-901"', prompt)
-        self.assertIn('"kp_id":"uphy2-ch07-kp-001"', prompt)
+        self.assertIn("证明题", prompt)
         self.assertNotIn("dmath", prompt)
-        self.assertIn('"difficulty":1,"difficulty_basis"', prompt)
-        self.assertIn("判断不了就两项都不写", prompt)
-        self.assertIn(
-            "若上下文含 last_check_outcome：成功则不要重复提交相同内容；"
-            "被拒收则按逐条原因\n修正后重新提交完整区块。",
-            prompt,
-        )
+        # The pre-release six-item ceiling and its id bookkeeping are gone.
+        self.assertNotIn("3–6", prompt)
+        self.assertNotIn("一次产出", prompt)
+        self.assertNotIn("next_free_ids", prompt.split("服务端重建的当前上下文")[0])
+        self.assertIn("last_check_outcome", prompt)
+
+    def test_prompt_has_no_item_ceiling(self):
+        from workbench.bridge import conversations
+
+        prompt = conversations._prompt("q", {"workspace": {"course": "uphy2",
+                                                          "chapter": "ch12"}})
+        self.assertNotIn("3–6", prompt)
+        self.assertIn("条数没有上限", prompt)
+        self.assertIn("一个清单就是一个批次", prompt)
 
     def test_prompt_preserves_practice_and_goal_action_contracts(self):
         from workbench.bridge import conversations
@@ -685,14 +839,55 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
             prompt,
         )
 
-    def test_without_check_intent_block_is_disclosed_as_ignored(self):
+    def test_append_action_runs_without_any_keyword_intent(self):
+        manifest = {"kind": "flash-card-patch", "items": [{"card_id": "card-001"}]}
         cleaned, action = self._run(
-            '{"type":"check_ingest","manifest":{"kind":"flash-card-patch",'
-            '"items":[{"card_id":"card-001"}]}}',
+            json.dumps({"type": "check_ingest", "manifest": manifest}),
             {"check_intent": False},
         )
-        self.assertEqual(action, {"ignored": "no block matched the active intent"})
+        self.assertEqual(action, {"type": "check_ingest", "manifest": manifest})
         self.assertNotIn("lessonkit-action", cleaned)
+
+    def test_bare_bundle_manifest_runs_without_intent(self):
+        manifest = {
+            "kind": "content-bundle",
+            "problems": [{"key": "p1", "problem_type": "proof"}],
+        }
+        _, action = self._run(json.dumps(manifest), {})
+        self.assertEqual(action, {"type": "check_ingest", "manifest": manifest})
+
+    def test_staged_manifest_is_loaded_from_the_conversation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "conv-002"
+            folder.mkdir()
+            manifest = {
+                "kind": "content-bundle",
+                "problems": [{"key": "p1", "problem_type": "calculation"}],
+            }
+            (folder / "bundle.json").write_text(
+                json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+            _, action = self._run(
+                '{"type":"content-bundle","staged_manifest":"bundle.json"}',
+                {}, folder,
+            )
+        self.assertEqual(action["staged_manifest"], "bundle.json")
+        self.assertEqual(action["manifest"], manifest)
+        self.assertNotIn("error", action)
+
+    def test_staged_manifest_cannot_leave_the_conversation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "conv-002"
+            folder.mkdir()
+            outside = Path(tmp) / "elsewhere.json"
+            outside.write_text('{"kind":"content-bundle","problems":[{"key":"p"}]}',
+                               encoding="utf-8")
+            _, action = self._run(
+                '{"type":"content-bundle","staged_manifest":"../elsewhere.json"}',
+                {}, folder,
+            )
+        self.assertIn("error", action)
+        self.assertIn("inside this conversation", action["error"])
+        self.assertNotIn("manifest", action)
 
     def test_valid_manifest_is_extracted_and_stripped(self):
         manifest = {
@@ -713,7 +908,8 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         )
         self.assertEqual(action, {
             "type": "check_ingest",
-            "error": "manifest kind must be flash-card-patch or micro-quiz-patch",
+            "error": "manifest kind must be flash-card-patch, micro-quiz-patch, "
+                     "or content-bundle",
         })
 
     def test_empty_items_are_an_explicit_error(self):
@@ -734,9 +930,12 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         })
         self.assertNotIn("lessonkit-action", cleaned)
 
-    def test_bad_json_without_check_intent_is_disclosed_as_ignored(self):
+    def test_bad_json_is_explicit_without_any_intent(self):
         cleaned, action = self._run("{oops}", {"check_intent": False})
-        self.assertEqual(action, {"ignored": "no block matched the active intent"})
+        self.assertEqual(action, {
+            "type": "check_ingest",
+            "error": "action block is not valid JSON",
+        })
         self.assertNotIn("lessonkit-action", cleaned)
 
     def test_multi_block_reply_finds_the_matching_block(self):

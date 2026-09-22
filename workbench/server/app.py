@@ -2,10 +2,12 @@
 
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
 from workbench import registry
+from workbench.bridge import conversations
 from workbench.domain import weak
 from workbench.data import queries
 from workbench.server import api as api_mod
@@ -49,6 +51,7 @@ ROUTES = [
     ("POST", "/api/w/{name}/pull-cards", api_mod.pull_cards),
     ("POST", "/api/w/{name}/practice", api_mod.practice),
     ("POST", "/api/w/{name}/feedback", api_mod.feedback_record),
+    ("GET", "/api/w/{name}/ingest/batches", api_mod.ingest_batches),
     ("POST", "/api/w/{name}/ingest/rollback", api_mod.ingest_rollback),
     ("GET", "/api/w/{name}/problem/{problem_id}", api_mod.problem_detail),
     ("GET", "/api/w/{name}/kp/{kp_id}", api_mod.kp_detail),
@@ -349,4 +352,6 @@ def serve(port=3081):
     except KeyboardInterrupt:
         pass
     finally:
+        # Long-lived provider processes belong to this server's lifetime.
+        conversations.shutdown()
         server.server_close()

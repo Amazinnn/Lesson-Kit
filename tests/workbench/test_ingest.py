@@ -405,6 +405,44 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(json.loads(batch[2]), {"problems": 2})
         self.assertEqual(Path(batch[3]), self.root / "formal-backup.db")
 
+    def test_formal_apply_clears_the_complete_problem_difficulty_rating(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            for definition in (
+                "difficulty_knowledge_breadth INTEGER",
+                "difficulty_reasoning_depth INTEGER",
+                "difficulty_transfer_distance INTEGER",
+                "difficulty_construction_openness INTEGER",
+                "difficulty_model TEXT",
+            ):
+                conn.execute(f"ALTER TABLE problems ADD COLUMN {definition}")
+            conn.execute(
+                "UPDATE problems SET difficulty=4, "
+                "difficulty_knowledge_breadth=4, difficulty_reasoning_depth=4, "
+                "difficulty_transfer_distance=4, "
+                "difficulty_construction_openness=4, "
+                "difficulty_model='cognitive-v1-equal-mean'"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        solutions, audits = self.qualified_files()
+        gate_path = self.root / "difficulty-gate.json"
+        ingest.gate(self.db_path, solutions, audits, gate_path)
+
+        ingest.apply(self.db_path, gate_path, self.root / "difficulty-backup.db")
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            ratings = conn.execute(
+                "SELECT difficulty, difficulty_knowledge_breadth, "
+                "difficulty_reasoning_depth, difficulty_transfer_distance, "
+                "difficulty_construction_openness, difficulty_model FROM problems"
+            ).fetchall()
+        finally:
+            conn.close()
+        self.assertEqual(ratings, [(None, None, None, None, None, None)] * 2)
+
     def test_apply_revalidates_under_lock_creates_recoverable_copy_and_rolls_back(self):
         self.assertIsNotNone(ingest, "workbench.ingest is required")
         solutions, audits = self.qualified_files()
@@ -674,7 +712,8 @@ class BatchRollbackTests(unittest.TestCase):
             CREATE TABLE problems (
                 problem_id TEXT PRIMARY KEY, kp_ids TEXT NOT NULL,
                 problem_text TEXT NOT NULL, solution TEXT, problem_type TEXT,
-                source_kind TEXT, topic_label TEXT, display_title TEXT,
+                source_kind TEXT, origin_kind TEXT NOT NULL DEFAULT 'source_problem',
+                topic_label TEXT, display_title TEXT,
                 display_summary TEXT, practice_modes TEXT, micro_quiz TEXT,
                 ingest_batch_id TEXT, difficulty INTEGER);
             CREATE TABLE flash_cards (
@@ -716,6 +755,8 @@ class BatchRollbackTests(unittest.TestCase):
                 "answer_key": "否",
                 "error_reason": "1 只有 1 个正因数，不算质数。",
                 "source_evidence": "Rosen 6th, §3.1 定义",
+                "source_kind": "textbook",
+                "origin_kind": "generated_grounded",
             }],
         }
 

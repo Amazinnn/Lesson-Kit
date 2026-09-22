@@ -124,7 +124,7 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertEqual(ended, {"kind": "result", "text": "结论：先数重复。"})
         self.assertEqual(settled, {"kind": "result", "text": "结论：先数重复。"})
 
-    def test_normalizes_pi_command_and_tool_updates_as_one_activity(self):
+    def test_normalizes_pi_lesson_kit_command_updates_as_one_activity(self):
         from workbench.bridge import conversation_providers
 
         started = conversation_providers.normalize_event("pi", {
@@ -139,8 +139,8 @@ class ConversationProviderTests(unittest.TestCase):
         })
 
         self.assertEqual(started["activity_id"], "call-9")
-        self.assertEqual(started["activity_type"], "command")
-        self.assertEqual(started["label"], "运行命令")
+        self.assertEqual(started["activity_type"], "lesson-kit")
+        self.assertEqual(started["label"], "操作 Lesson Kit")
         self.assertEqual(started["detail"], "lesson-kit pull")
         self.assertEqual(started["status"], "running")
         self.assertEqual(completed["activity_id"], "call-9")
@@ -188,7 +188,71 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertEqual(event["detail"], "ls -la")
         self.assertEqual(event["output"], "total 8")
 
-    def test_pi_reasoning_activity_never_contains_reasoning_text(self):
+    def test_pi_classifies_concrete_tools_without_exposing_write_contents(self):
+        from workbench.bridge import conversation_providers
+
+        cases = [
+            ("read", {"path": "docs/GLOSSARY.md"}, "file-read", "读取文件"),
+            ("view", {"file_path": "diagram.png"}, "file-read", "读取文件"),
+            ("write", {"path": "notes.md", "content": "private body"},
+             "file-write", "更新文件"),
+            ("apply_patch", {"file_path": "app.py", "patch": "private patch"},
+             "file-write", "更新文件"),
+            ("grep", {"pattern": "origin_kind"}, "search", "搜索"),
+            ("custom_tool", {"value": "not shown"}, "tool", "调用 custom_tool"),
+        ]
+
+        for index, (name, args, activity_type, label) in enumerate(cases):
+            with self.subTest(name=name):
+                event = conversation_providers.normalize_event("pi", {
+                    "type": "tool_execution_start", "toolCallId": f"call-{index}",
+                    "toolName": name, "args": args,
+                })
+                self.assertEqual(event["activity_type"], activity_type)
+                self.assertEqual(event["label"], label)
+                self.assertNotIn("private", event.get("detail", ""))
+                self.assertNotIn("not shown", event.get("detail", ""))
+
+    def test_pi_activity_details_and_output_are_redacted_and_bounded(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "secret-call",
+            "toolName": "bash",
+            "args": {"command": "TOKEN=abc123 " + ("x" * 800)},
+            "result": {"content": [{"type": "text",
+                                     "text": "MINIMAX_API_KEY=very-secret " + ("y" * 5000)}]},
+            "isError": False,
+        })
+
+        self.assertNotIn("abc123", event["detail"])
+        self.assertNotIn("very-secret", event["output"])
+        self.assertLessEqual(len(event["detail"]), 500)
+        self.assertLessEqual(len(event["output"]), 4000)
+
+    def test_pi_shell_path_containing_lesson_kit_is_not_a_cli_invocation(self):
+        from workbench.bridge import conversation_providers
+
+        ordinary = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_start", "toolCallId": "write-via-shell",
+            "toolName": "bash",
+            "args": {"command": (
+                "cd /tmp/lesson-kit-pre-release-123 && "
+                "printf marker > acceptance-output.txt"
+            )},
+        })
+        module = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_start", "toolCallId": "module-cli",
+            "toolName": "bash",
+            "args": {"command": "python -m workbench.cli.main pull acceptance --n 1"},
+        })
+
+        self.assertEqual(ordinary["activity_type"], "command")
+        self.assertEqual(ordinary["label"], "运行命令")
+        self.assertEqual(module["activity_type"], "lesson-kit")
+        self.assertEqual(module["label"], "操作 Lesson Kit")
+
+    def test_pi_reasoning_lifecycle_has_no_learner_facing_activity(self):
         from workbench.bridge import conversation_providers
 
         started = conversation_providers.normalize_event("pi", {
@@ -204,13 +268,19 @@ class ConversationProviderTests(unittest.TestCase):
             "assistantMessageEvent": {"type": "thinking_end"},
         })
 
-        self.assertEqual(started["label"], "分析任务")
-        self.assertEqual(started["status"], "running")
-        self.assertEqual(ended["status"], "done")
-        for event in (started, ended):
-            self.assertNotIn("detail", event)
-            self.assertNotIn("output", event)
+        self.assertIsNone(started)
+        self.assertIsNone(ended)
         self.assertIsNone(delta)
+
+    def test_pi_generic_lifecycle_has_no_activity_row(self):
+        from workbench.bridge import conversation_providers
+
+        self.assertIsNone(conversation_providers.normalize_event(
+            "pi", {"type": "turn_start"}
+        ))
+        self.assertIsNone(conversation_providers.normalize_event(
+            "pi", {"type": "message_start", "message": {"role": "assistant"}}
+        ))
 
     def test_pi_emits_one_reasoning_row_per_block_not_one_per_delta(self):
         from workbench.bridge import conversation_providers

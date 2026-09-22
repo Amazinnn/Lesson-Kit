@@ -1,12 +1,37 @@
 """Discover supported Agent CLIs and normalize their stable JSONL output."""
 
 import json
+import os
+import re
+import shlex
 import shutil
+import subprocess
 
 from workbench import registry
 
 
 SUPPORTED = ("codex", "claude", "pi")
+
+
+def hidden_launch_kwargs():
+    """Never flash a console window for a provider child on Windows.
+
+    Every provider process — the persistent Pi RPC one and each print-mode run —
+    goes through this, so "no visible console" is one rule, not a per-call hope.
+    """
+    if os.name == "nt":
+        return {"creationflags": subprocess.CREATE_NO_WINDOW}
+    return {}
+
+
+_PI_DETAIL_LIMIT = 500
+_PI_OUTPUT_LIMIT = 4000
+_SECRET_ASSIGNMENT = re.compile(
+    r"(?i)\b([a-z0-9_]*(?:api[_-]?key|token|password|secret)[a-z0-9_]*)\b"
+    r"(\s*(?:=|:)\s*|\s+)([^\s,;]+)"
+)
+_BEARER_TOKEN = re.compile(r"(?i)\bBearer\s+[^\s,;]+")
+_SHELL_SEGMENT = re.compile(r"&&|\|\||[;\n]")
 
 
 def discover():
@@ -34,7 +59,7 @@ def get(name):
     raise KeyError(f"provider unavailable: {name}")
 
 
-def build_command(provider, session_id=None):
+def build_command(provider, session_id=None, mode="print"):
     name = provider["name"]
     command = provider["command"]
     args = list(provider.get("args", []))
@@ -52,7 +77,9 @@ def build_command(provider, session_id=None):
         result.append("-")
         return result
     if name == "pi":
-        result = [command, "--print", "--mode", "json"]
+        # `rpc` keeps one process per conversation; `print` is one process per turn.
+        result = [command, "--mode", "rpc"] if mode == "rpc" else [
+            command, "--print", "--mode", "json"]
         if model:
             result.extend(["--model", model])
         result.extend(args)
@@ -156,8 +183,8 @@ def _pi_tool_detail(args):
             value = args.get(field)
             if isinstance(value, str) and value:
                 return value
-        return _text(args) if args else ""
-    return _text(args) if args not in (None, "") else ""
+        return ""
+    return ""
 
 
 def _pi_tool_output(result):
@@ -177,17 +204,65 @@ def _pi_tool_output(result):
     return result if result not in (None, "") else ""
 
 
-def _pi_tool_activity(tool_id, tool_name, status, args=None, result=None):
-    name = str(tool_name or "")
-    command = name.lower() in {"bash", "shell", "terminal", "command"}
-    return _activity(
-        tool_id or ("pi-command" if command else "pi-tool"),
-        "command" if command else "tool",
-        status,
-        "运行命令" if command else "调用工具",
-        _pi_tool_detail(args),
-        _pi_tool_output(result),
+def _pi_safe_text(value, limit):
+    text = _text(value)
+    text = _BEARER_TOKEN.sub("Bearer [REDACTED]", text)
+    text = _SECRET_ASSIGNMENT.sub(
+        lambda match: match.group(1) + match.group(2) + "[REDACTED]", text,
     )
+    if len(text) > limit:
+        text = text[:limit - 1] + "…"
+    return text
+
+
+def _pi_activity_identity(tool_name, detail):
+    name = str(tool_name or "工具")
+    normalized = name.lower().replace("-", "_")
+    if normalized in {"read", "view", "read_file", "view_file"}:
+        return "file-read", "读取文件"
+    if normalized in {"write", "edit", "apply_patch", "write_file", "edit_file"}:
+        return "file-write", "更新文件"
+    if normalized in {"grep", "find", "search", "rg"}:
+        return "search", "搜索"
+    if normalized in {"bash", "shell", "terminal", "command"}:
+        if _runs_lesson_kit(detail):
+            return "lesson-kit", "操作 Lesson Kit"
+        return "command", "运行命令"
+    return "tool", f"调用 {name}"
+
+
+def _runs_lesson_kit(command):
+    """Recognize an invoked CLI, not a path or argument containing its name."""
+    for segment in _SHELL_SEGMENT.split(command):
+        try:
+            parts = shlex.split(segment.strip(), posix=False)
+        except ValueError:
+            parts = segment.split()
+        if not parts:
+            continue
+        parts = [part.strip("\"'") for part in parts]
+        executable = re.split(r"[\\/]", parts[0])[-1].lower()
+        if executable in {"lesson-kit", "lesson-kit.exe", "lesson-kit.cmd", "lessonkit.py"}:
+            return True
+        if executable in {"python", "python.exe", "py", "py.exe"}:
+            if len(parts) >= 3 and parts[1:3] == ["-m", "workbench.cli.main"]:
+                return True
+            if len(parts) >= 2 and re.split(r"[\\/]", parts[1])[-1].lower() == "lessonkit.py":
+                return True
+    return False
+
+
+def _pi_tool_activity(tool_id, tool_name, status, args=None, result=None):
+    detail = _pi_safe_text(_pi_tool_detail(args), _PI_DETAIL_LIMIT)
+    output = _pi_safe_text(_pi_tool_output(result), _PI_OUTPUT_LIMIT)
+    activity_id = tool_id or "pi-tool"
+    if not detail and status != "running":
+        event = {"kind": "activity", "activity_id": str(activity_id), "status": status}
+        if output:
+            event["output"] = output
+        return event
+    activity_type, label = _pi_activity_identity(tool_name, detail)
+    return _activity(activity_id, activity_type, status, label, detail, output)
 
 
 def _normalize_pi_event(data):
@@ -198,11 +273,11 @@ def _normalize_pi_event(data):
             event["provider_session_id"] = str(data["id"])
         return event
     if event_type == "turn_start":
-        return _activity("provider-turn", "progress", "running", "Agent 正在处理")
+        return None
     if event_type == "message_start":
         message = data.get("message") or {}
         if message.get("role") == "assistant":
-            return _activity("provider-turn", "progress", "running", "Agent 正在处理")
+            return None
         return {"kind": "phase", "label": "provider.working"}
     if event_type == "message_update":
         update = data.get("assistantMessageEvent") or {}
@@ -210,9 +285,9 @@ def _normalize_pi_event(data):
         if update_type == "text_delta":
             return {"kind": "text", "text": str(update.get("delta", ""))}
         if update_type == "thinking_start":
-            return _activity("provider-reasoning", "reasoning", "running", "分析任务")
+            return None
         if update_type == "thinking_end":
-            return _activity("provider-reasoning", "reasoning", "done", "分析任务")
+            return None
         if update_type == "toolcall_start":
             return _pi_tool_activity(
                 update.get("id"), update.get("toolName"), "running",

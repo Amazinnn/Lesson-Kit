@@ -125,8 +125,9 @@ class AgentContextTests(unittest.TestCase):
             ],
         )
         conn.execute(
-            "INSERT INTO problems (problem_id, kp_ids, problem_text) VALUES (?, ?, ?)",
-            ("dmath-ch06-mq-004", '["dmath-ch06-kp-001"]', "题干"),
+            "INSERT INTO problems (problem_id, kp_ids, problem_text, problem_type, "
+            "source_kind) VALUES (?, ?, ?, ?, ?)",
+            ("dmath-ch06-mq-004", '["dmath-ch06-kp-001"]', "题干", "other", "textbook"),
         )
         conn.commit()
         conn.close()

@@ -440,6 +440,28 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("&lt;b&gt;原始 HTML&lt;/b&gt;", body)
         self.assertIn("<em>", body)
 
+    def test_linked_problem_shows_its_source_evidence(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "UPDATE problems SET source_evidence=?, source_answer=?, "
+                "solution_origin=? WHERE problem_id=?",
+                ("教材 第12章 习题12-5", "答案：E = λ/(2πε₀x)", "source",
+                 "dmath-ch06-prob-001"),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertEqual(status, 200)
+        self.assertIn("linked-problem-source", body)
+        self.assertIn("教材 第12章 习题12-5", body)
+
+    def test_linked_problem_without_source_evidence_shows_no_source_line(self):
+        status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertEqual(status, 200)
+        self.assertNotIn("linked-problem-source", body)
+
     def test_short_linked_problem_does_not_manufacture_a_summary(self):
         conn = sqlite3.connect(self.fixture.db_path)
         try:

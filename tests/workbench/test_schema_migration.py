@@ -131,6 +131,132 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertIn("display_summary", self.columns("problems"))
         self.assertIn("learning_current_state", self.table_names())
 
+    def test_migration_rebuilds_problem_difficulty_and_provenance(self):
+        self.conn.execute("ALTER TABLE problems ADD COLUMN difficulty INTEGER")
+        self.conn.execute(
+            "UPDATE problems SET difficulty=4 WHERE problem_id='dmath-ch06-prob-001'"
+        )
+        self.conn.commit()
+
+        pool_schema.ensure_workbench_schema(self.conn)
+
+        columns = {
+            row[1]: row[2]
+            for row in self.conn.execute("PRAGMA table_info(problems)")
+        }
+        self.assertEqual(columns["difficulty"], "REAL")
+        for name in (
+            "origin_kind",
+            "difficulty_knowledge_breadth",
+            "difficulty_reasoning_depth",
+            "difficulty_transfer_distance",
+            "difficulty_construction_openness",
+            "difficulty_model",
+        ):
+            self.assertIn(name, columns)
+        row = self.conn.execute(
+            "SELECT origin_kind, difficulty, difficulty_model "
+            "FROM problems WHERE problem_id='dmath-ch06-prob-001'"
+        ).fetchone()
+        self.assertEqual(row, ("source_problem", None, None))
+
+    def test_problem_difficulty_is_all_null_or_complete(self):
+        pool_schema.ensure_workbench_schema(self.conn)
+        self.conn.commit()
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.conn.execute(
+                "UPDATE problems SET difficulty_knowledge_breadth=2 "
+                "WHERE problem_id='dmath-ch06-prob-001'"
+            )
+        self.conn.rollback()
+        self.conn.execute(
+            "UPDATE problems SET difficulty=2.3, "
+            "difficulty_knowledge_breadth=2, difficulty_reasoning_depth=2, "
+            "difficulty_transfer_distance=2, difficulty_construction_openness=3, "
+            "difficulty_model='cognitive-v1-equal-mean' "
+            "WHERE problem_id='dmath-ch06-prob-001'"
+        )
+        self.conn.commit()
+
+    def test_problem_rebuild_preserves_foreign_keys_checks_and_indexes(self):
+        path = Path(self.tmp.name) / "foreign.db"
+        conn = sqlite3.connect(path)
+        try:
+            conn.execute("PRAGMA foreign_keys=ON")
+            conn.executescript(
+                """
+                CREATE TABLE problems (
+                    problem_id TEXT PRIMARY KEY,
+                    kp_ids TEXT NOT NULL,
+                    problem_text TEXT NOT NULL,
+                    solution TEXT,
+                    problem_type TEXT NOT NULL CHECK (problem_type IN (
+                        'calculation', 'proof', 'modeling', 'explanation',
+                        'experiment', 'design', 'application', 'counterexample', 'other'
+                    )),
+                    source_kind TEXT NOT NULL CHECK (source_kind IN (
+                        'textbook', 'quiz', 'midterm', 'final', 'makeup', 'other'
+                    )),
+                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+                CREATE INDEX idx_problem_source_kind ON problems(source_kind);
+                CREATE INDEX idx_problem_type ON problems(problem_type);
+                CREATE TABLE problem_progress (
+                    problem_id TEXT PRIMARY KEY REFERENCES problems(problem_id),
+                    status TEXT NOT NULL
+                );
+                CREATE TABLE problem_attempts (
+                    id INTEGER PRIMARY KEY,
+                    problem_id TEXT NOT NULL REFERENCES problems(problem_id),
+                    status TEXT NOT NULL
+                );
+                INSERT INTO problems (
+                    problem_id, kp_ids, problem_text, solution, problem_type, source_kind
+                ) VALUES ('p-1', '[]', 'text', 'solution', 'proof', 'textbook');
+                INSERT INTO problem_progress VALUES ('p-1', 'new');
+                INSERT INTO problem_attempts VALUES (1, 'p-1', 'wrong');
+                """
+            )
+            conn.commit()
+
+            first = pool_schema.ensure_workbench_schema(conn)
+            conn.commit()
+            second = pool_schema.ensure_workbench_schema(conn)
+            conn.commit()
+
+            self.assertIn("problems.provenance-difficulty-v1", first)
+            self.assertEqual(second, [])
+            self.assertEqual(conn.execute("PRAGMA foreign_keys").fetchone()[0], 1)
+            self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
+            self.assertEqual(
+                conn.execute("SELECT problem_id FROM problem_progress").fetchall(),
+                [("p-1",)],
+            )
+            self.assertEqual(
+                conn.execute("SELECT problem_id FROM problem_attempts").fetchall(),
+                [("p-1",)],
+            )
+            indexes = {
+                row[1] for row in conn.execute("PRAGMA index_list(problems)")
+            }
+            self.assertIn("idx_problem_source_kind", indexes)
+            self.assertIn("idx_problem_type", indexes)
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(
+                    "INSERT INTO problems (problem_id, kp_ids, problem_text, "
+                    "problem_type, source_kind) VALUES ('bad-type', '[]', 'x', "
+                    "'not-a-type', 'textbook')"
+                )
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(
+                    "INSERT INTO problems (problem_id, kp_ids, problem_text, "
+                    "problem_type, source_kind) VALUES ('bad-source', '[]', 'x', "
+                    "'proof', 'not-a-source')"
+                )
+        finally:
+            conn.close()
+
     def test_migration_is_idempotent(self):
         pool_schema.ensure_workbench_schema(self.conn)
         self.conn.execute("INSERT INTO review_schedule VALUES (?,?,?,?,?,?,?,?,?,?)", (

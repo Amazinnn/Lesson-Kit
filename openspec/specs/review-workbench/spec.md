@@ -248,26 +248,25 @@ SHALL NOT participate in cascading.
 
 For open-ended or multi-step problems, the practice page SHALL present the
 solution as blocks and let the learner mark "stuck at block N" with an optional
-natural-language note. The marking SHALL be recorded on the attempt (note and
-answer text) and SHALL be included in the context of any later explain or
-diagnose task for that problem. Marking is never required.
+natural-language note. The marking SHALL be recorded on the explicit attempt
+and SHALL be available in authoritative Agent conversation context for that
+problem. Marking is never required.
 
 #### Scenario: Mark a stuck step in a proof
 
-- **WHEN** the learner marks "stuck at step 3" with a short note on a proof problem
-- **THEN** the attempt records the step marker and note, and a later diagnose task for that problem carries the marker in its context
+- **WHEN** the learner records "stuck at step 3" with a short note on a proof problem
+- **THEN** the attempt stores the marker and note and later Agent context for that problem includes them
 
 ### Requirement: Answer text capture for open problems
 
-The practice page SHALL provide an answer box for open problem types (proof,
-design, modeling, explanation, application) and SHALL store the learner's text
-on the attempt. The latest attempt's answer text SHALL be included in the
-context of a diagnose task for that problem.
+The practice page SHALL provide an answer box for open problem types and SHALL
+store the learner's text only on an explicit rated attempt. The latest recorded
+answer SHALL be available to authoritative Agent conversation context.
 
 #### Scenario: Attach a design attempt to its record
 
-- **WHEN** the learner pastes their own design into the answer box and submits a result
-- **THEN** the attempt stores the answer text, and a diagnose task started for that problem includes it
+- **WHEN** the learner submits a design answer with an explicit rating
+- **THEN** the attempt stores the answer text and later Agent context includes it
 
 ### Requirement: Past-paper coverage gate
 
@@ -299,17 +298,21 @@ The workbench SHALL maintain one current state for each knowledge point or probl
 
 ### Requirement: Semantic graph attraction
 
-The live graph model SHALL expose each knowledge point's formal-problem count and existing importance classification, and each semantic edge's explicit strength, shared-formal-problem count, and computed attraction. Edges SHALL originate only from formal knowledge relations or existing `related_kp_ids`. Reverse duplicate edges SHALL be merged, and shared problems SHALL reinforce but SHALL NOT create semantic edges.
+The live graph model SHALL expose each knowledge point's formal-problem count
+and importance and each semantic edge's explicit strength, shared-formal-
+problem count, and computed attraction. Only formal problems contribute to
+problem counts. Edges originate only from formal relations or existing
+`related_kp_ids`; co-occurrence never invents an edge.
 
 #### Scenario: Count formal problems per node
 
-- **WHEN** formal and candidate problems refer to a knowledge point with an existing importance value
-- **THEN** `problem_count` includes only formal problems and the graph node reports that importance value
+- **WHEN** formal problems refer to a knowledge point
+- **THEN** `problem_count` includes those formal problems and no retired candidate source
 
 #### Scenario: Merge a bidirectional semantic edge
 
-- **WHEN** two knowledge points relate to each other through duplicate or reverse relation declarations
-- **THEN** the graph model returns one edge for that unordered pair
+- **WHEN** two knowledge points declare duplicate or reverse semantic relations
+- **THEN** the graph model returns one edge for the unordered pair
 
 #### Scenario: Reinforce an existing relation with shared problems
 
@@ -318,43 +321,47 @@ The live graph model SHALL expose each knowledge point's formal-problem count an
 
 #### Scenario: Do not infer a relation from co-occurrence
 
-- **WHEN** two knowledge points share a problem but have no formal relation or `related_kp_ids` link
+- **WHEN** two knowledge points share a problem but have no formal relation
 - **THEN** the graph model returns no edge between them
 
 ### Requirement: Unified Agent data CLI
 
 The workbench SHALL expose JSON data commands for get, list, search, history,
-create, update, delete, current-state replacement, candidate gating, and
-candidate promotion across knowledge points, formal problems, candidate
-problems, and knowledge relations. Read operations SHALL perform zero writes.
-Within this data CLI a formal problem SHALL be created only by promoting a
-candidate that has passed both existing gates. The candidate command family
-SHALL be retired (待退役): it receives no new capabilities, and the Check
-pipeline SHALL be the content path for adding formal problems.
+create, update, delete, and current-state replacement across knowledge points,
+formal problems, and knowledge relations. Read operations SHALL perform zero
+writes. Candidate entities, candidate gates, and candidate promotion SHALL NOT
+exist; governed content enters through the Check pipeline.
 
 #### Scenario: Search without a write
 
 - **WHEN** an Agent searches the pool through `lesson-kit data`
-- **THEN** matching structured entities are returned and no content, learning, sequence, or conversation row changes
+- **THEN** matching current entities are returned and no content or learning row changes
+
+#### Scenario: Candidate command is unavailable
+
+- **WHEN** an Agent requests a candidate entity or promotion command
+- **THEN** the CLI rejects the unsupported entity/action instead of recreating candidate state
 
 #### Scenario: Edit a candidate
 
-- **WHEN** candidate content is explicitly updated
-- **THEN** the candidate is updated and both gate states reset to pending
+- **WHEN** an Agent requests an update for a retired candidate entity
+- **THEN** the CLI rejects the unsupported entity and no pool row changes
 
 #### Scenario: Promote a gated candidate
 
-- **WHEN** a candidate has passed structure and audit gates and the Agent explicitly promotes it
-- **THEN** one formal problem with a readable sequence id is created and the candidate reflects promotion
+- **WHEN** an Agent requests retired candidate promotion
+- **THEN** the CLI rejects the unsupported action and points to the Check pipeline
 
 ### Requirement: Readable content sequences
 
-New knowledge points, formal problems, candidates, and relations SHALL receive course/chapter-scoped sequential readable identifiers allocated atomically from an additive sequence table. Existing numeric identifiers SHALL seed the next value. No hash-derived identifier SHALL be used.
+New knowledge points, formal problems, relations, and ingest batches SHALL use
+course/chapter-scoped sequential readable identifiers. Existing suffixes seed
+the next value; no hash-derived identifier is used.
 
 #### Scenario: Allocate after existing content
 
-- **WHEN** the chapter already contains numbered entities and a new entity is explicitly created
-- **THEN** its id uses the next readable number in that entity scope without scanning to reuse a deleted id
+- **WHEN** a scope already contains numbered entities and a new entity is created
+- **THEN** it receives the next readable number without reusing a deleted id
 
 ### Requirement: Action-oriented learning reminders
 
@@ -737,4 +744,22 @@ lens they are showing, so a whole-course page never claims to be a chapter.
 
 - **WHEN** the lens is off, and again when a chapter is selected
 - **THEN** the page header names the whole course in the first case and the chapter in the second, and the knowledge-point heading says 全部知识点 or 本章知识点 to match
+
+### Requirement: Provenance-filtered problem pull
+
+Problem pull SHALL accept `source_kind`, `origin_kind`, and a derived mutually
+exclusive `source_group`. `ai_generated` contains generated origin; `exam`
+contains non-generated quiz/midterm/final/makeup sources; `textbook` contains
+non-generated textbook sources; all remaining rows are `other`. Multiple
+filters intersect.
+
+#### Scenario: AI exam-grounded problem stays in AI group
+
+- **WHEN** a generated problem is grounded in final-exam material
+- **THEN** the AI group includes it and the exam convenience group does not
+
+#### Scenario: Combine source axes
+
+- **WHEN** pull requests textbook material and adapted origin
+- **THEN** only rows satisfying both values are returned
 

@@ -326,9 +326,9 @@
       return token("<code>" + code + "</code>");
     });
     value = value.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
-    value = value.replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
+    value = value.replace(/(?<![A-Za-z0-9_])__([^_\n]+)__(?![A-Za-z0-9_])/g, "<strong>$1</strong>");
     value = value.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
-    value = value.replace(/_([^_\n]+)_/g, "<em>$1</em>");
+    value = value.replace(/(?<![A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])/g, "<em>$1</em>");
     value = value.replace(/\$\$([\s\S]+?)\$\$/g, function (_, math) {
       return token("<span class='math display'>" + math + "</span>");
     });
@@ -338,9 +338,52 @@
     return value.replace(/\u0000(\d+)\u0000/g, function (_, index) { return tokens[Number(index)]; });
   }
 
+  var TABLE_DELIMITER_CELL = /^:?-{1,}:?$/;
+
+  function tableCells(line) {
+    var value = String(line).trim();
+    if (value.charAt(0) === "|") value = value.slice(1);
+    if (value.charAt(value.length - 1) === "|") value = value.slice(0, -1);
+    return value.split("|").map(function (cell) { return cell.trim(); });
+  }
+
+  function tableStart(lines, position) {
+    if (position + 1 >= lines.length || lines[position].indexOf("|") === -1) return false;
+    var header = tableCells(lines[position]);
+    if (header.length < 2) return false;
+    var delimiter = tableCells(lines[position + 1]);
+    if (delimiter.length !== header.length) return false;
+    return delimiter.every(function (cell) { return TABLE_DELIMITER_CELL.test(cell); });
+  }
+
+  function tableHtml(lines, position) {
+    var header = tableCells(lines[position]);
+    var rows = [];
+    var cursor = position + 2;
+    while (cursor < lines.length && lines[cursor].trim()
+      && lines[cursor].indexOf("|") !== -1) {
+      rows.push(tableCells(lines[cursor]));
+      cursor += 1;
+    }
+    var head = header.map(function (cell) {
+      return "<th>" + richInline(cell) + "</th>";
+    }).join("");
+    var body = rows.map(function (row) {
+      return "<tr>" + row.map(function (cell) {
+        return "<td>" + richInline(cell) + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    return {
+      html: "<div class='rich-table-wrap'><table><thead><tr>" + head
+        + "</tr></thead><tbody>" + body + "</tbody></table></div>",
+      next: cursor - 1,
+    };
+  }
+
   function richText(text) {
     var lines = String(text == null ? "" : text).replace(/\r\n?/g, "\n").split("\n");
     var out = [], paragraph = [], listType = null, inCode = false, codeLang = "", codeLines = [];
+    var skipUntil = -1;
     function closeList() {
       if (listType) out.push("</" + listType + ">");
       listType = null;
@@ -355,7 +398,8 @@
       out.push("<pre><code" + cls + ">" + escapeHtml(codeLines.join("\n")) + "</code></pre>");
       codeLines = []; codeLang = "";
     }
-    lines.forEach(function (line) {
+    lines.forEach(function (line, position) {
+      if (position <= skipUntil) return;
       var fence = line.match(/^\s*```\s*([\w-]*)\s*$/);
       if (fence) {
         flushParagraph(); closeList();
@@ -364,6 +408,13 @@
         return;
       }
       if (inCode) { codeLines.push(line); return; }
+      if (tableStart(lines, position)) {
+        flushParagraph(); closeList();
+        var table = tableHtml(lines, position);
+        out.push(table.html);
+        skipUntil = table.next;
+        return;
+      }
       var heading = line.match(/^\s*(#{1,3})\s+(.+?)\s*#*\s*$/);
       if (heading) {
         flushParagraph(); closeList();
@@ -1459,6 +1510,7 @@
       stream.innerHTML = "<article class='practice-question-card card'>"
         + "<p class='context-line'>练习题</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
+        + practiceSourceHtml(problem)
         + "<div class='problem-text rich-text'>" + richText(problem.problem_text || "") + "</div>"
         + optionHtmlFor(item) + verdictLine(item) + "</article>";
       renderMath(stream);
@@ -1756,9 +1808,7 @@
             + "<p class='section-kicker'>为什么</p>"
             + "<div class='rich-text'>" + richText(quiz.error_reason || "") + "</div></section>";
         } else {
-          var solution = detail.problem.solution || "（本题无解析，请基于自身作答自评）";
-          section = "<section class='practice-solution'><p class='section-kicker'>解析</p>"
-            + "<div class='rich-text'>" + richText(solution) + "</div></section>";
+          section = practiceSolutionHtml(detail.problem);
         }
         stream.innerHTML += section;
         renderMath(stream);
@@ -2110,6 +2160,8 @@
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
   var aiExecutionPlan = null;
+  var aiCurrentProvider = "";
+  var aiPiActivities = {};
 
   function aiAddMarkdown(text, cls) {
     aiAdd(richText(text || ""), cls);
@@ -2225,6 +2277,76 @@
     activities.forEach(function (activity) { aiUpsertActivity(activity, plan); });
   }
 
+  function aiUpsertPiActivity(activity) {
+    if (!messages || !activity) return;
+    var id = String(activity.activity_id || "activity-" + Object.keys(aiPiActivities).length);
+    var row = aiPiActivities[id];
+    if (!row) {
+      aiStreamingMessage = null;
+      row = document.createElement("div");
+      var body = document.createElement("div");
+      body.className = "ai-plan-body";
+      var heading = document.createElement("div");
+      heading.className = "ai-plan-heading";
+      var label = document.createElement("strong");
+      label.className = "ai-plan-label";
+      var state = document.createElement("span");
+      state.className = "ai-plan-state";
+      heading.appendChild(label);
+      heading.appendChild(state);
+      var detail = document.createElement("div");
+      detail.className = "ai-plan-detail hidden";
+      body.appendChild(heading);
+      body.appendChild(detail);
+      row.appendChild(body);
+      row.activityParts = {
+        label: label, state: state, detail: detail, body: body,
+        disclosure: null, output: null,
+      };
+      aiPiActivities[id] = row;
+      messages.appendChild(row);
+    }
+    var status = activity.status === "done" || activity.status === "failed"
+      ? activity.status : "running";
+    row.className = "msg ai-activity is-" + status;
+    if (activity.label != null || !row.activityParts.label.textContent) {
+      row.activityParts.label.textContent = activity.label || "调用工具";
+    }
+    row.activityParts.state.textContent = aiActivityState(status);
+    if (activity.detail != null) row.activityParts.detail.textContent = activity.detail || "";
+    row.activityParts.detail.classList.toggle("hidden", !row.activityParts.detail.textContent);
+    if (activity.output != null && String(activity.output).length) {
+      if (!row.activityParts.output) {
+        var disclosure = document.createElement("details");
+        disclosure.className = "ai-plan-output";
+        var summary = document.createElement("summary");
+        summary.textContent = "查看输出";
+        var output = document.createElement("pre");
+        disclosure.appendChild(summary);
+        disclosure.appendChild(output);
+        row.activityParts.body.appendChild(disclosure);
+        row.activityParts.disclosure = disclosure;
+        row.activityParts.output = output;
+      }
+      row.activityParts.output.textContent = String(activity.output);
+    }
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function aiHandleActivity(activity) {
+    if (aiCurrentProvider === "pi") aiUpsertPiActivity(activity);
+    else aiUpsertActivity(activity);
+  }
+
+  function aiRenderActivities(activities) {
+    if (!activities || !activities.length) return;
+    if (aiCurrentProvider === "pi") {
+      activities.forEach(aiUpsertPiActivity);
+    } else {
+      aiRenderExecutionPlan(activities);
+    }
+  }
+
   function aiSetStatus(text) {
     if (aiStatus) aiStatus.textContent = text || "";
   }
@@ -2264,6 +2386,64 @@
     }
   }
 
+  var ASSET_LABELS = [
+    ["knowledge_points", "知识点"],
+    ["problems", "题目"],
+    ["flash_cards", "闪卡"],
+    ["figures", "图片"],
+  ];
+
+  function aiAssetSummary(counts) {
+    return ASSET_LABELS.filter(function (pair) {
+      return counts[pair[0]];
+    }).map(function (pair) {
+      return pair[1] + " " + counts[pair[0]];
+    }).join("、");
+  }
+
+  function aiResultDetail(result) {
+    var counts = result.counts || {};
+    var origins = result.origins || {};
+    var lines = ["批次 " + (result.batch_id || "?") + " · " + (result.kind || "?")];
+    var assets = aiAssetSummary(counts);
+    if (assets) lines.push(assets);
+    var originKeys = Object.keys(origins);
+    if (originKeys.length) {
+      lines.push("来源 " + originKeys.map(function (key) {
+        return key + " " + origins[key];
+      }).join(" · "));
+    }
+    if (result.workspace) lines.push("工作区 " + result.workspace);
+    if (result.backup_path) {
+      lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
+    }
+    return lines.join("\n");
+  }
+
+  function aiBatchState(batchId) {
+    return api("/ingest/batches").then(function (items) {
+      var rows = items || [];
+      for (var index = 0; index < rows.length; index += 1) {
+        if (rows[index].batch_id === batchId) return rows[index];
+      }
+      return null;
+    }).catch(function () { return null; });
+  }
+
+  function aiMarkRolledBack(card, batchId) {
+    if (!card) return;
+    var title = card.querySelector(".check-card-title");
+    var detail = card.querySelector(".check-card-detail");
+    var assets = detail && detail.dataset ? detail.dataset.assets : "";
+    if (title) title.textContent = "Check 入库已回滚";
+    if (detail) {
+      detail.textContent = "批次 " + batchId + " 已整批回滚"
+        + (assets ? "（撤销 " + assets + "）" : "") + "，池中不再包含该批内容。";
+    }
+    var button = card.querySelector(".check-card-rollback");
+    if (button) button.remove();
+  }
+
   function aiApplyCheckAction(action) {
     if (action.error) {
       aiAddCheckCard("入库未执行", "校验未通过：" + action.error, null);
@@ -2271,18 +2451,18 @@
     }
     var result = action.result;
     if (!result || !result.batch_id) return;
-    var counts = result.counts || {};
-    var count = counts.flash_cards != null ? counts.flash_cards
-      : counts.problems != null ? counts.problems : null;
-    var backup = (result.backup_path || "").split(/[\\/]/).pop();
-    var detail = "批次 " + result.batch_id + " · " + (result.kind || "?")
-      + (count != null ? " · 入库 " + count + " 条" : "")
-      + (backup ? " · 备份 " + backup : "");
-    aiAddCheckCard("Check 入库完成", detail, result.batch_id);
+    var card = aiAddCheckCard("Check 入库完成", aiResultDetail(result), result.batch_id);
+    var line = card ? card.querySelector(".check-card-detail") : null;
+    if (line) line.dataset.assets = aiAssetSummary(result.counts || {});
+    // A reopened card shows the batch's current state, not the state at the time
+    // it ran: an already rolled-back batch offers no second rollback.
+    aiBatchState(result.batch_id).then(function (batch) {
+      if (batch && batch.rolled_back_at) aiMarkRolledBack(card, result.batch_id);
+    });
   }
 
   function aiAddCheckCard(title, detail, batchId) {
-    if (!messages) return;
+    if (!messages) return null;
     var div = document.createElement("div");
     div.className = "msg ai check-card";
     var body = document.createElement("div");
@@ -2306,6 +2486,7 @@
     div.appendChild(body);
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
+    return div;
   }
 
   function aiRollbackBatch(batchId, button) {
@@ -2332,6 +2513,35 @@
     });
   }
 
+  function practiceSolutionHtml(problem) {
+    // A source answer, a source solution, and an AI explanation are three
+    // different things and must not read as one.
+    var sections = "";
+    var answer = problem.source_answer;
+    if (answer && String(answer).trim()) {
+      sections += "<section class='practice-solution'><p class='section-kicker'>教材答案</p>"
+        + "<div class='rich-text'>" + richText(String(answer)) + "</div></section>";
+    }
+    var origin = problem.solution_origin;
+    var label = origin === "generated" ? "AI 生成解析"
+      : origin === "source" ? "教材解析" : "解析";
+    var solution = problem.solution;
+    if (solution && String(solution).trim()) {
+      sections += "<section class='practice-solution'><p class='section-kicker'>" + label + "</p>"
+        + "<div class='rich-text'>" + richText(String(solution)) + "</div></section>";
+    } else if (!sections) {
+      sections = "<section class='practice-solution'><p class='section-kicker'>解析</p>"
+        + "<div class='rich-text'>（本题无解析，请基于自身作答自评）</div></section>";
+    }
+    return sections;
+  }
+
+  function practiceSourceHtml(problem) {
+    var evidence = String((problem && problem.source_evidence) || "").replace(/\s+/g, " ").trim();
+    if (!evidence) return "";
+    return "<p class='practice-source'>来源：" + escapeHtml(evidence) + "</p>";
+  }
+
   function aiRecordRecent(type, id) {
     if (!type || !id) return;
     var recent = load(AI_RECENT_KEY, []).filter(function (item) {
@@ -2345,13 +2555,16 @@
     if (!messages) return;
     if (aiChatView) aiSetView("chat");
     messages.innerHTML = "";
+    aiCurrentProvider = record.provider || "";
     aiStreamingMessage = null;
     aiExecutionPlan = null;
+    aiPiActivities = {};
     (record.messages || []).forEach(function (message) {
       if (message.role === "user") {
         aiAddMarkdown(message.content || "", "user");
       } else {
-        aiRenderExecutionPlan(message.activities || []);
+        aiPiActivities = {};
+        aiRenderActivities(message.activities || []);
         aiAddMarkdown(message.content || "", "ai");
         if (message.action && message.action.type === "check_ingest") {
           aiApplyCheckAction(message.action);
@@ -2377,13 +2590,14 @@
   }
 
   function aiContextBody(message) {
+    // No keyword gate: a valid append-only content action carries its own
+    // authority, so the learner's wording no longer decides whether one runs.
     var body = {
       message: message,
       route: window.location.pathname || "",
       page_type: layout.dataset.page || "unknown",
       recent_objects: load(AI_RECENT_KEY, []),
       practice_intent: /练习|做题|刷题|复习题/.test(message),
-      check_intent: /出题|出几道|补池|加题|入库|(?:补|加|写|生成)[^。？?]{0,6}(?:闪卡|微题|题|卡)/.test(message),
     };
     if (layout.dataset.objectType) body.object_type = layout.dataset.objectType;
     if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
@@ -2410,7 +2624,7 @@
     (data.events || []).forEach(function (event) {
       aiPollSequence = Math.max(aiPollSequence, event.sequence || 0);
       if (event.kind === "text") aiAppendAssistantText(event.text || "");
-      else if (event.kind === "activity") aiUpsertActivity(event);
+      else if (event.kind === "activity") aiHandleActivity(event);
       else if (event.kind === "error") aiSetStatus(event.text || "Agent 返回错误");
     });
     if (!data.turn) return;
@@ -2453,6 +2667,7 @@
     if (!message || !aiConversation || aiTurn) return;
     aiStreamingMessage = null;
     aiExecutionPlan = null;
+    aiPiActivities = {};
     aiAddMarkdown(message, "user");
     aiInput.value = "";
     aiSetRunning(true);

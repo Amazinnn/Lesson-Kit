@@ -801,6 +801,17 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+.ai-activity {
+  min-width: 0;
+  margin: 5px 0 7px;
+  padding: 8px 10px !important;
+  border: 1px solid var(--dsw-border-l2);
+  border-left: 4px solid #2457c5;
+  background: #fffdf7;
+}
+.ai-activity.is-done { border-left-color: #b58b00; }
+.ai-activity.is-failed { border-left-color: #d6453d; }
+.ai-activity.is-failed .ai-plan-state { color: #b62f28; }
 @keyframes ai-plan-pulse { to { opacity: .42; } }
 @media (prefers-reduced-motion: reduce) {
   .ai-plan-step.is-running .ai-plan-marker { animation: none; }
@@ -846,11 +857,22 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   background: var(--dsw-sidebar-fill);
 }
 .rich-text table {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
-  white-space: nowrap;
+  border-collapse: collapse;
+  width: 100%;
 }
+.rich-text .rich-table-wrap {
+  max-width: 100%;
+  margin: 10px 0;
+  overflow-x: auto;
+}
+.rich-text th,
+.rich-text td {
+  border: 1px solid var(--dsw-border-subtle);
+  padding: 5px 9px;
+  text-align: left;
+  vertical-align: top;
+}
+.rich-text th { background: var(--dsw-sidebar-fill); font-weight: 600; }
 .rich-text .math.display { max-width: 100%; overflow-x: auto; }
 .rich-text pre code { padding: 0; background: transparent; }
 .rich-text a { color: var(--dsw-brand-accent); text-decoration: none; }

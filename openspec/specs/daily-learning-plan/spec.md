@@ -9,15 +9,24 @@ recalculation; and at most one automatic recalculation on the first workspace
 opening of a local day. The plan is a coarse queue capped at a few items that
 never fabricates goals and never creates learning records; when the Agent is
 unavailable the baseline remains usable and honestly labelled.
-
 ## Requirements
-
 ### Requirement: Baseline daily queue
-The system SHALL produce a deterministic coarse-grained daily queue from active course goals, stage goals, progress, deadlines, coverage, and available formal problem types without requiring an Agent.
+
+The system SHALL produce a deterministic coarse queue from goals, progress,
+deadlines, coverage, available problem types, and available objective-
+difficulty bands without requiring an Agent. Personal signals continue to
+choose knowledge priority; objective difficulty contributes distribution and
+suggested mix only. Unrated content remains available.
 
 #### Scenario: Agent unavailable
+
 - **WHEN** the Agent is unavailable or does not modify the plan
-- **THEN** the baseline queue remains available and usable.
+- **THEN** the baseline includes stable hidden difficulty distribution/mix data and remains usable
+
+#### Scenario: Student presentation stays quiet
+
+- **WHEN** a plan carries difficulty distribution data
+- **THEN** the practice page does not display raw totals, dimensions, or stars
 
 ### Requirement: Goal and queue presentation
 The practice page SHALL show long-term goals, stage goals, and today's queue together, with readable knowledge-point names and no micro-action checklist.

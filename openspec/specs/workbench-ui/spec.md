@@ -136,33 +136,6 @@ The session-end view SHALL present completed, unrated cards only for a unified-r
 - **WHEN** the learner clicks the single practice-similar entry after a session ends
 - **THEN** a new session begins for the same weak knowledge-point groups and does not reuse the prior seen-id set
 
-### Requirement: AI column with priority context
-
-The AI column SHALL display the current problem and recently viewed problems as
-priority context, purely as a display hint. The column SHALL NOT restrict what
-the external agent can see: the agent reaches all records through the CLI data
-interface and can search freely. The learner SHALL be able to start an explain
-or diagnose task for the current problem with one click (carrying answer text
-and stuck-step markers), poll the task status, and view rendered results. New
-conversations SHALL be startable at any time. With no provider configured, AI
-actions SHALL show a graceful "configure the bridge" message and recording
-continues unaffected.
-
-#### Scenario: Explain the current problem
-
-- **WHEN** the learner clicks "explain" for the current problem with an answer text present
-- **THEN** a bridge task is created carrying the problem and the answer text, the column shows its status, and the validated result renders when done
-
-#### Scenario: No provider configured
-
-- **WHEN** the learner clicks "explain" and no bridge provider is configured
-- **THEN** the column shows a graceful message that the bridge needs configuration, and practice recording is unaffected
-
-#### Scenario: Agent sees beyond the priority context
-
-- **WHEN** the agent works in the workspace
-- **THEN** it can query all attempts, feedback, and signals through the CLI data interface, regardless of what the column displays as priority context
-
 ### Requirement: Knowledge point display page
 
 The knowledge-point page SHALL render the body as its primary reading content and provide one prominent `练习此知识点` action. Activating it SHALL start a continuous non-repeating practice session scoped to that knowledge point. Linked formal problems SHALL remain reading-only, grouped by topic and collapsed by default; opened rows SHALL show `display_title` and the complete safe-rendered problem statement without summary text, truncation, ellipsis, raw ids, or per-problem practice controls. Raw signal and scheduler parameters SHALL not be shown.
@@ -980,4 +953,69 @@ per-chapter statistics, counts, or selection reasons.
 
 - **WHEN** the chapter control is used
 - **THEN** the three-page shell and its navigation entries remain unchanged
+
+### Requirement: Pi activities are conversation messages
+
+The chat SHALL render each Pi concrete activity as an independent compact
+message in event order. Updates with the same activity id SHALL update that
+message in place. Tool output SHALL be collapsed by default. Codex and Claude
+SHALL continue using the existing execution-plan presentation.
+
+#### Scenario: Pi command completes
+
+- **WHEN** a Pi command activity changes from running to done
+- **THEN** one compact message changes state without adding a duplicate row
+
+#### Scenario: Output is present
+
+- **WHEN** a Pi activity carries command or tool output
+- **THEN** the output is available behind a closed disclosure for running, done, and failed states
+
+### Requirement: Pi text follows event chronology
+
+Contiguous Pi text deltas SHALL grow one assistant bubble. A concrete activity
+after text SHALL close that segment; later text SHALL start a new bubble after
+the activity. The durable successful mirror may restore the coalesced activities
+before the final combined answer.
+
+#### Scenario: Tool call interrupts text
+
+- **WHEN** Pi emits text, then a tool activity, then more text
+- **THEN** the chat shows text bubble, activity message, and a new text bubble in that order
+
+### Requirement: Rich-text surfaces share one safe feature set
+
+Agent messages and server-rendered linked-problem text SHALL both support
+headings, ordered/unordered lists, blockquotes, emphasis, code, links, images,
+inline/display math, and GFM tables. Table cells SHALL use the same escaping and
+inline rules, and tables SHALL scroll locally on narrow surfaces. Raw HTML
+SHALL remain escaped/rejected.
+
+#### Scenario: Pi answers with a table
+
+- **WHEN** a Pi answer contains a Markdown header row, delimiter row, and body rows
+- **THEN** the conversation renders a table rather than literal pipe text
+
+#### Scenario: Linked problem contains rich content
+
+- **WHEN** a linked problem contains table, math, and image Markdown
+- **THEN** the knowledge-point row renders all three with the same safe semantics
+
+### Requirement: Content results expose type, source, and rollback state
+
+An automatically executed append action SHALL render a result card containing
+the final asset types/counts, affected workspace, source summary, figure count,
+batch id, backup, and current rollback state. Formal/linked problems SHALL show
+concise source evidence. Solution reveal SHALL distinguish source answer,
+source solution, and `AI 生成解析`.
+
+#### Scenario: Source problem enters automatically
+
+- **WHEN** an Agent action imports formal source problems
+- **THEN** the result card states that type and every rendered problem shows its source evidence
+
+#### Scenario: Reopen a rolled-back result
+
+- **WHEN** a conversation is reopened after its batch was rolled back
+- **THEN** the card shows `已回滚` and exposes no rollback button
 

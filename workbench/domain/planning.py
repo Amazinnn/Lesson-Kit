@@ -4,6 +4,7 @@ from datetime import date, datetime
 import copy
 import math
 
+from workbench.domain import difficulty as difficulty_rules
 from workbench.domain import signals as signal_rules
 
 DEFAULT_TARGET = 3
@@ -56,12 +57,21 @@ def build_baseline_plan(workspace, *, now=None, available_minutes=None):
         for problem in linked:
             kind = problem.get("problem_type") or "other"
             types[kind] = types.get(kind, 0) + 1
+        distribution = {str(value): 0 for value in range(1, 6)}
+        distribution["unrated"] = 0
+        for problem in linked:
+            value = problem.get("difficulty")
+            key = "unrated" if value is None else str(difficulty_rules.band(value))
+            distribution[key] += 1
+        difficulty_mix = _difficulty_mix(distribution, target)
         queue.append({
             "id": "kp:" + kp_id,
             "title": kp.get("knowledge_item") or kp_id,
             "kp_ids": [kp_id],
             "target_count": target,
             "problem_type_mix": types or {"mixed": target},
+            "difficulty_distribution": distribution,
+            "difficulty_mix": difficulty_mix,
             "reason": "；".join(reasons),
             "priority": urgency + (1 - coverage),
         })
@@ -109,6 +119,22 @@ def _goal(value):
         "description": value.get("description"),
         "scope": value.get("scope"),
     }
+
+
+def _difficulty_mix(distribution, target):
+    remaining = dict(distribution)
+    result = {}
+    while sum(result.values()) < target:
+        progressed = False
+        for key in ("3", "2", "4", "1", "5", "unrated"):
+            if remaining.get(key, 0) <= 0 or sum(result.values()) >= target:
+                continue
+            remaining[key] -= 1
+            result[key] = result.get(key, 0) + 1
+            progressed = True
+        if not progressed:
+            break
+    return result
 
 
 def _deadline_boost(goals, now):

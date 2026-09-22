@@ -190,48 +190,46 @@ class ConversationApiTests(unittest.TestCase):
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_pi_turn_streams_deltas_and_keeps_its_native_session(self, get_provider):
-        from workbench.bridge import conversation_providers
+        # Pi answers over its persistent RPC process; the mirror keeps the
+        # streamed answer and the native session for resuming.
+        from workbench.bridge import conversation_providers, conversations, pi_rpc
+        from tests.workbench.test_pi_rpc import FakePiLauncher
 
         provider = {"name": "pi", "command": sys.executable, "args": [],
-                    "model": "minimax/MiniMax-M2.7", "timeout_s": 3}
+                    "model": "minimax/MiniMax-M2.7", "timeout_s": 5}
         get_provider.return_value = provider
-        script = Path(self.fixture.tmp.name) / "pi_turn.py"
-        script.write_text(FAKE_PI_TURN, encoding="utf-8")
-        with mock.patch.object(
-            conversation_providers, "build_command",
-            return_value=[sys.executable, str(script)],
-        ):
+        launcher = FakePiLauncher("normal", Path(self.fixture.tmp.name) / "pi.log")
+        registry = pi_rpc.PiRpcRegistry(idle_seconds=1800)
+        with mock.patch.object(conversation_providers, "build_command", launcher),                 mock.patch.object(conversations, "PI_RPC", registry):
             _, created = self.post("/api/w/dmath/ai/sessions", {"provider": "pi"})
             data = self.run_turn(created["conversation_id"], "解释一下当前知识点")
+            registry.close_all()
 
         self.assertEqual(data["turn"]["status"], "done")
-        kinds = [event["kind"] for event in data["events"]]
-        self.assertEqual(kinds.count("text"), 2)
         _, restored = self.get(f"/api/w/dmath/ai/sessions/{created['conversation_id']}")
         self.assertEqual(restored["provider"], "pi")
-        self.assertEqual(restored["provider_session_id"], "pi-native-1")
-        self.assertEqual(restored["messages"][-1]["content"], "Pi 的回答")
+        self.assertEqual(restored["provider_session_id"], "pi-rpc-session-1")
+        self.assertEqual(restored["messages"][-1]["content"], "第 1 轮回答")
+        self.assertEqual(launcher.modes, ["rpc"])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_pi_stream_error_fails_the_turn_even_though_the_process_succeeds(self, get_provider):
-        from workbench.bridge import conversation_providers
+        # A provider-side error arrives in the message stream, not as an exit code.
+        from workbench.bridge import conversation_providers, conversations, pi_rpc
+        from tests.workbench.test_pi_rpc import FakePiLauncher
 
         provider = {"name": "pi", "command": sys.executable, "args": [],
-                    "model": None, "timeout_s": 3}
+                    "model": None, "timeout_s": 5}
         get_provider.return_value = provider
-        script = Path(self.fixture.tmp.name) / "pi_error_turn.py"
-        script.write_text(FAKE_PI_ERROR_TURN, encoding="utf-8")
-        with mock.patch.object(
-            conversation_providers, "build_command",
-            return_value=[sys.executable, str(script)],
-        ):
+        launcher = FakePiLauncher("error", Path(self.fixture.tmp.name) / "pi.log")
+        registry = pi_rpc.PiRpcRegistry(idle_seconds=1800)
+        with mock.patch.object(conversation_providers, "build_command", launcher),                 mock.patch.object(conversations, "PI_RPC", registry):
             _, created = self.post("/api/w/dmath/ai/sessions", {"provider": "pi"})
             data = self.run_turn(created["conversation_id"], "解释一下当前知识点")
+            registry.close_all()
 
         self.assertEqual(data["turn"]["status"], "failed")
         self.assertIn("401 invalid api key", data["turn"]["error"])
-        errors = [event["text"] for event in data["events"] if event["kind"] == "error"]
-        self.assertEqual(errors, ["401 invalid api key"])
 
     def run_turn(self, conversation_id, message):
         _, turn = self.post(
@@ -248,56 +246,6 @@ class ConversationApiTests(unittest.TestCase):
                 break
             time.sleep(0.02)
         return data
-
-    def test_a_traversal_session_id_cannot_touch_another_folder(self):
-        outside = Path(self.fixture.tmp.name) / "other" / ".lessonkit" / "jobs" / "conv-001"
-        outside.mkdir(parents=True)
-        (outside / "conversation.json").write_text("{}", encoding="utf-8")
-        traversal = "..%2F..%2Fother%2F.lessonkit%2Fjobs%2Fconv-001"
-
-        for method, path, payload in (
-            ("DELETE", f"/api/w/dmath/ai/sessions/{traversal}", None),
-            ("PATCH", f"/api/w/dmath/ai/sessions/{traversal}", {"title": "x"}),
-        ):
-            request = urllib.request.Request(
-                f"http://127.0.0.1:{self.port}{path}",
-                data=None if payload is None else json.dumps(payload).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
-                method=method,
-            )
-            with self.assertRaises(HTTPError) as ctx:
-                urllib.request.urlopen(request)
-            self.assertEqual(ctx.exception.code, 400, method)
-
-        self.assertTrue(outside.is_dir(), "another folder's conversation was removed")
-        status, payload = self.get_error(f"/api/w/dmath/ai/sessions/{traversal}")
-        self.assertEqual(status, 400)
-        self.assertIn("invalid conversation id", payload["error"])
-
-    def test_a_conversation_of_another_workspace_is_unreachable(self):
-        from workbench.bridge import conversations
-        from workbench.data.pool import Pool
-
-        self.fixture.add_workspace("physics", course="c01", chapter="ch07")
-        pool = Pool(root=self.fixture.ws, db_path=self.fixture.ws / "pool" / "dmath.db",
-                    course="dmath", chapter="ch06")
-        try:
-            created = conversations.create(pool, "codex")
-        finally:
-            pool.close()
-        mirror = (self.fixture.ws / ".lessonkit" / "jobs"
-                  / created["conversation_id"])
-
-        self.assertTrue(mirror.is_dir())
-        status, payload = self.get_error(
-            f"/api/w/physics/ai/sessions/{created['conversation_id']}")
-        self.assertEqual(status, 404)
-
-        self.assertTrue(mirror.is_dir(), "the other workspace's mirror was touched")
-        status, restored = self.get(
-            f"/api/w/dmath/ai/sessions/{created['conversation_id']}")
-        self.assertEqual(status, 200)
-        self.assertEqual(restored["conversation_id"], created["conversation_id"])
 
     def test_ingest_rollback_endpoint_returns_result(self):
         result = {

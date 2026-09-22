@@ -52,6 +52,21 @@ class PlanningTests(unittest.TestCase):
         self.assertGreater(plan["queue"][1]["target_count"], 0)
         self.assertEqual(plan["totals"]["available_minutes"], 30)
 
+    def test_plan_carries_hidden_difficulty_distribution_and_mix(self):
+        facts = self.facts()
+        facts["problems"].append({
+            "problem_id": "p-unrated", "kp_ids": ["kp-001"],
+            "problem_type": "proof", "difficulty": None,
+        })
+        plan = build_baseline_plan(facts, now=datetime(2026, 8, 28, 9, 0))
+        item = next(row for row in plan["queue"] if row["kp_ids"] == ["kp-001"])
+        self.assertEqual(
+            item["difficulty_distribution"],
+            {"1": 0, "2": 1, "3": 0, "4": 1, "5": 0, "unrated": 1},
+        )
+        self.assertEqual(sum(item["difficulty_mix"].values()), item["target_count"])
+        self.assertNotIn("difficulty", item["reason"])
+
     def test_no_goals_has_no_fabricated_goal_and_keeps_available_work(self):
         facts = self.facts()
         facts["goals"] = []

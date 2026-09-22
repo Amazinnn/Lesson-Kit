@@ -52,7 +52,7 @@
 | 新建会话/选 provider（锁定不换） | UI | 人 | conversations | 已实现 |
 | 停止轮次 | UI | 人 | turn=cancelled | 已实现 |
 | replace_practice_selection（明确练习意图才生效） | 对话产出动作 | Agent | 浏览器选区（一次性） | 已实现 |
-| check_ingest（出题入库：出题/补池意图→内联 manifest→服务端门禁→批次 apply；失败逐条显式回对话流） | 对话产出动作 | Agent | 池内容（经门禁+批次标记） | 已实现（introduce-check-pipeline） |
+| content-bundle（内容批次：合法的纯新增动作自动执行，无关键词意图门；大清单暂存本对话 jobs 后由区块引用→整批预检→一份备份→单事务 apply→一个批次 id；失败逐条显式回对话流、零写入） | 对话产出动作 | Agent | 池内容 + `.lessonkit/figures/{course}/{chapter}/`（经门禁+批次标记） | 已实现（first-use-conversation-content-fidelity，2026-09-23 取代 check_ingest 的关键词门与内联清单） |
 | 整批回滚（结果卡按钮，与 CLI 同源 rollback） | UI 结果卡 | 人 | 池内容（按批次删行） | 已实现（introduce-check-pipeline） |
 
 ## 五、目标与时间
@@ -106,6 +106,16 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
 - 2026-08-30 出题链修复（conv-023 回归）：桥解析改为全区块按意图匹配；
   check_intent 正则补自然措辞；被忽略的动作区块向下一轮上下文披露
   「未写入任何内容」（openspec：disclose-ignored-action-blocks）。
+  **（2026-09-23 已被 first-use-conversation-content-fidelity 取代：关键词意图门删除，
+  合法的纯新增内容动作自动执行，见本文件末条。）**
+- 2026-09-23 首次真实使用修缮（first-use-conversation-content-fidelity）：对话内容通道扩为
+  `content-bundle`（知识点 / 正式题 / 微题 / 闪卡 / 图片同一原子批次；key 互相引用、
+  服务端按课程与章分配 id、大清单暂存到本对话 jobs 目录、暂存路径越界即拒）；浏览器
+  关键词意图门删除；图片按原始字节复制到 `.lessonkit/figures/{course}/{chapter}/`，
+  缺必需图片整批零写入，回滚只删该批创建且无引用者；题目新增来源证据 / 来源答案 /
+  解析来源三列，并在知识点页与练习卡显示；浏览器与服务端富文本统一支持 GFM 表格；
+  Pi 改为每对话一个隐藏 `pi --mode rpc` 常驻进程（空闲 30 分钟回收、abort 优先、
+  接受后崩溃不重放），全部 provider 子进程 Windows 无窗口。
 - 2026-08-30 candidate 物理退役落地（remove-candidate-store）：`lesson-kit data` 的
   candidate 实体与 gate/promote 动作下线、候选证据分支删除、candidate_problems/
   candidate_attempts 建表停止且真实池 DROP（先备份）；learner_signals 保留为核心。

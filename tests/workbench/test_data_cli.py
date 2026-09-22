@@ -171,6 +171,7 @@ class DataCliTests(unittest.TestCase):
             "solution": "Use the product rule.",
             "problem_type": "calculation",
             "source_kind": "textbook",
+            "origin_kind": "source_problem",
         })
         code, created = self.run_cli(
             "data", "course", "create", "problem", "--input", str(path)
@@ -178,6 +179,20 @@ class DataCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(created["problem_id"], "dmath-ch06-prob-002")
         self.assertEqual(created["kp_ids"], ["dmath-ch06-kp-001"])
+
+    def test_problem_create_requires_both_provenance_axes(self):
+        path = self.write_json("problem-missing-origin.json", {
+            "kp_ids": ["dmath-ch06-kp-001"],
+            "problem_text": "Generated check",
+            "solution": "Answer",
+            "problem_type": "calculation",
+            "source_kind": "textbook",
+        })
+        code, result = self.run_cli(
+            "data", "course", "create", "problem", "--input", str(path)
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("origin_kind is required", result["error"])
 
 
 if __name__ == "__main__":
