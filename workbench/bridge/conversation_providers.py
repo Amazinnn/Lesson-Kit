@@ -12,6 +12,17 @@ from workbench import registry
 
 SUPPORTED = ("codex", "claude", "pi")
 
+# Turn budgets measure silence, not total time: IDLE_SECONDS is how long a turn
+# may produce nothing at all before it is declared stuck, and TOOL_SECONDS is
+# the longer budget that applies while a tool call is in flight, because a slow
+# command printing nothing for minutes is normal rather than stalled.
+#
+# A tool budget must stay under IDLE_SECONDS: that is also the RPC process idle
+# window, after which the reaper closes the process out from under its turn.
+IDLE_SECONDS = 30 * 60
+TOOL_SECONDS = 20 * 60
+DEFAULT_IDLE_SECONDS = 300
+
 
 def hidden_launch_kwargs():
     """Never flash a console window for a provider child on Windows.
@@ -26,12 +37,26 @@ def hidden_launch_kwargs():
 
 _PI_DETAIL_LIMIT = 500
 _PI_OUTPUT_LIMIT = 4000
+_PI_SUMMARY_LIMIT = 240
+_PI_FAILURE_FALLBACK = "执行失败，未返回诊断信息"
 _SECRET_ASSIGNMENT = re.compile(
     r"(?i)\b([a-z0-9_]*(?:api[_-]?key|token|password|secret)[a-z0-9_]*)\b"
     r"(\s*(?:=|:)\s*|\s+)([^\s,;]+)"
 )
 _BEARER_TOKEN = re.compile(r"(?i)\bBearer\s+[^\s,;]+")
 _SHELL_SEGMENT = re.compile(r"&&|\|\||[;\n]")
+
+
+def _budgets(name, override):
+    """Effective turn budgets, kept inside what this provider can honor."""
+    idle = max(1, int(override.get("timeout_s", DEFAULT_IDLE_SECONDS)))
+    tool = max(idle, int(override.get("tool_timeout_s", TOOL_SECONDS)))
+    if name == "pi":
+        # The reaper closes a Pi RPC process after IDLE_SECONDS of quiet, so a
+        # tool budget up there would let the process die mid-turn instead of the
+        # turn failing by its own budget.
+        tool = min(tool, IDLE_SECONDS - 60)
+    return idle, tool
 
 
 def discover():
@@ -42,12 +67,14 @@ def discover():
         command = override.get("command") or shutil.which(name)
         if not command:
             continue
+        idle, tool = _budgets(name, override)
         found.append({
             "name": name,
             "command": command,
             "args": list(override.get("args", [])),
             "model": override.get("model"),
-            "timeout_s": int(override.get("timeout_s", 300)),
+            "timeout_s": idle,
+            "tool_timeout_s": tool,
         })
     return found
 
@@ -215,6 +242,21 @@ def _pi_safe_text(value, limit):
     return text
 
 
+def _pi_failure_summary(output):
+    """The last meaningful line of an already-sanitized failure output.
+
+    Presentation only: the status itself always comes from the provider's own
+    failure signal, never from reading the text.
+    """
+    lines = [line.strip() for line in str(output or "").splitlines() if line.strip()]
+    if not lines:
+        return _PI_FAILURE_FALLBACK
+    summary = lines[-1]
+    if len(summary) > _PI_SUMMARY_LIMIT:
+        summary = summary[: _PI_SUMMARY_LIMIT - 1] + "…"
+    return summary
+
+
 def _pi_activity_identity(tool_name, detail):
     name = str(tool_name or "工具")
     normalized = name.lower().replace("-", "_")
@@ -260,9 +302,15 @@ def _pi_tool_activity(tool_id, tool_name, status, args=None, result=None):
         event = {"kind": "activity", "activity_id": str(activity_id), "status": status}
         if output:
             event["output"] = output
+        if status == "failed":
+            event["summary"] = _pi_failure_summary(output)
         return event
     activity_type, label = _pi_activity_identity(tool_name, detail)
-    return _activity(activity_id, activity_type, status, label, detail, output)
+    event = _activity(activity_id, activity_type, status, label, detail, output)
+    if status == "failed":
+        # The reason must be readable without expanding the folded output.
+        event["summary"] = _pi_failure_summary(output)
+    return event
 
 
 def _normalize_pi_event(data):

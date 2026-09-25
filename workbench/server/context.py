@@ -3,6 +3,16 @@
 from workbench.data import queries
 
 
+# Focused practice drafts ride along with one turn only. They are learner input,
+# never pool facts, and are bounded so a pasted essay cannot flood the prompt.
+DRAFT_ANSWER_CHARS = 2000
+DRAFT_NOTE_CHARS = 500
+DRAFT_CHOICES = 20
+DRAFT_CHOICE_CHARS = 200
+DRAFT_IMAGES = 12
+DRAFT_IMAGE_CHARS = 300
+
+
 def build(pool, workspace, payload):
     page_type = payload.get("page_type") or "unknown"
     anchor = {
@@ -61,10 +71,35 @@ def _practice(pool, payload, result):
         result["current"]["schedule"] = pool.schedule_get("problem", problem_id)
         result["current"]["state"] = pool.current_state("problem", problem_id)
     if payload.get("include_draft") is True:
-        result["current"]["draft"] = {
-            "answer": payload.get("draft_answer") or "",
-            "note": payload.get("draft_note") or "",
-        }
+        result["current"]["draft"] = _draft(payload)
+
+
+def _draft(payload):
+    """The focused turn's unsent learner input: bounded, ephemeral, unwritten."""
+    answer, cut = _bounded_text(payload.get("draft_answer"), DRAFT_ANSWER_CHARS)
+    note, note_cut = _bounded_text(payload.get("draft_note"), DRAFT_NOTE_CHARS)
+    choices, choices_cut = _bounded_list(
+        payload.get("draft_choices"), DRAFT_CHOICES, DRAFT_CHOICE_CHARS)
+    images, images_cut = _bounded_list(
+        payload.get("draft_images"), DRAFT_IMAGES, DRAFT_IMAGE_CHARS)
+    draft = {"answer": answer, "note": note, "choices": choices, "images": images}
+    if cut or note_cut or choices_cut or images_cut:
+        draft["truncated"] = True
+    return draft
+
+
+def _bounded_text(value, limit):
+    if not isinstance(value, str):
+        return "", False
+    return value[:limit], len(value) > limit
+
+
+def _bounded_list(value, count, width):
+    if not isinstance(value, list):
+        return [], False
+    texts = [item[:width] for item in value if isinstance(item, str) and item]
+    return texts[:count], len(texts) > count or any(
+        len(item) > width for item in value if isinstance(item, str))
 
 
 def _kp(pool, kp_id, result):

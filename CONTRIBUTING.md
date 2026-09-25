@@ -72,6 +72,19 @@ lesson-kit daemon stop && lesson-kit daemon start
   accepted fails the turn and is never replayed. Every provider child — Pi RPC,
   each Codex/Claude print-mode run, and the ingest provider session — launches
   with `CREATE_NO_WINDOW` on Windows, so no terminal window ever appears.
+- **A turn's budget measures silence, not duration.** Two budgets live in
+  `bridge/conversation_providers.py`: `timeout_s` (default 300s, the `silence`
+  column of `bridge list`) is how long a turn may produce nothing before it is
+  declared stuck, and `tool_timeout_s` (default 1200s, `tool`) is what applies
+  while a command or tool is in flight, because a slow build printing nothing
+  for minutes is normal rather than stalled. Every record or output line resets
+  the clock, so a turn that keeps working is never cut off for taking long, and
+  a command is never killed mid-run by the idle budget. Set both per provider:
+  `lesson-kit bridge add pi --command <path> --timeout 600 --tool-timeout 1500`.
+  `tool_timeout_s` is normalized to at least `timeout_s` and, for Pi, to stay
+  under the 30-minute RPC idle window (`pi_rpc.IDLE_SECONDS`) that recycles the
+  process — otherwise the process would be closed out from under a running turn.
+  A stall still fails honestly: the turn ends as `provider timed out`.
 - **The teacher contract still arrives on stdin.** Codex and Claude read it as
   before; Pi receives the same text as the `prompt` command payload. The contract
   names only project-level things (`lesson-kit data`, the `lessonkit-action`

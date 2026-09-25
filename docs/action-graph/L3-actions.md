@@ -12,6 +12,10 @@
 | 加入今日要练 | UI 建议区 | 人 | 选区键 | 已实现 |
 | 开始本轮练习（模式+自评时机必选） | UI | 人 | 牌组 | 已实现 |
 | 拉题/拉卡 | API/CLI | 双 | 牌组 | 已实现 |
+| 组一次练习（范围/单题/条件筛选/薄弱·到期·错题；逐题 reason） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-09-25） |
+| 落练习清单（可重跑，零写入读取） | CLI `pull --plan` / `--input` | Agent | 练习清单 JSON（非池数据） | 已实现（2026-09-25） |
+| 出练习集两份 Markdown（学生卷无答案/无内部标识，解答卷题号对齐、缺解「待补」） | CLI `pull --print` | Agent | `output/…-problem-set.md` + `-solutions.md` | 已实现（2026-09-25） |
+| 练习集零写入预检（题数/缺口/缺解/重复/泄漏） | CLI `pull --check` | Agent | — | 已实现（2026-09-25） |
 | 作答+本地判分（横幅 2s+高亮） | UI | 人 | 牌组（不写库） | 已实现 |
 | 揭示（卡背/解析） | UI | 人 | 牌组 | 已实现 |
 | 闪卡方向偏好与 ⇄ 交换 | UI | 人 | 牌组方向 | 已实现 |
@@ -23,13 +27,22 @@
 | 刷新恢复（游标+视图态） | 被动 | 人 | — | 已实现 |
 | 切换图谱指标投影（大小/色谱/气泡式过渡） | UI | 人 | — | 已实现（只读、内存） |
 | 图谱多状态筛选与分群 | UI | 人 | — | 已实现（只读、内存） |
+| 练习页发消息附聚焦草稿（当前题目 + 未提交作答/选项/备注/当前可见图片；服务端限长） | UI 对话 | 人 | —（临时上下文，不写池、不写会话镜像） | 已实现（2026-09-24） |
 
 ## 二、记录与调度
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | feedback 四件套 | API/CLI | 双 | 事件/信号/状态/调度 | 已实现 |
-| practice 尝试记录 | API/CLI | 双 | attempts | 已实现 |
+| practice 尝试记录（CLI 与页面同一事务、同一存在性校验） | API/CLI | 双 | attempts + progress + schedule（单事务） | 已实现（2026-09-25 对齐） |
+| 闪卡反馈与方向（CLI 补齐 card/direction） | API/CLI | 双 | 四件套（含方向调度键） | 已实现（2026-09-25 对齐） |
+| 目标变更失效每日计划缓存（CLI 与 API 同一 helper） | API/CLI | 双 | plan.json（删除） | 已实现（2026-09-25 对齐） |
+| 读命令 JSON 形态（人读默认不变） | CLI `weak`/`due`/`ls --json` | Agent | — | 已实现（2026-09-25） |
+| Agent 代录尝试（转录 + 可选 1–5，可一次多题） | CLI `attempts apply` | Agent（学生明确要求） | attempts +（带评分时）事件/信号/状态/进度/调度 + `attempt_operations` 留痕 | 已实现（agent-assisted-practice-records） |
+| 尝试清单预检（零写入） | CLI `attempts check` | Agent | — | 已实现（同上） |
+| 指定尝试更正（撤回旧评分后重算；有更晚活动即零写入拒绝） | CLI `attempts correct <attempt-id>` | Agent（学生明确要求） | attempts 原文/评语/状态 + 事件/信号/状态/进度/调度 + 快照更新 | 已实现（同上） |
+| 尝试与操作留痕读取 | CLI `attempts list\|get` | Agent | — | 已实现（同上） |
+| 答卷目录登记（只存路径，不复制图片） | CLI `attempts sources add\|list\|remove` | Agent | `answer-sources.json` | 已实现（同上） |
 | 图谱状态显式编辑（不记反馈） | UI | 人 | 状态+调度 | 已实现 |
 | 图谱关系强度管线与有限消交叉 | UI | 系统 | —（纯视图） | 已实现（graph-relation-pipes） |
 | 方向写入（最终使用的 direction 键） | UI/API | 双 | 方向调度行 | 已实现 |
@@ -52,8 +65,8 @@
 | 新建会话/选 provider（锁定不换） | UI | 人 | conversations | 已实现 |
 | 停止轮次 | UI | 人 | turn=cancelled | 已实现 |
 | replace_practice_selection（明确练习意图才生效） | 对话产出动作 | Agent | 浏览器选区（一次性） | 已实现 |
-| content-bundle（内容批次：合法的纯新增动作自动执行，无关键词意图门；大清单暂存本对话 jobs 后由区块引用→整批预检→一份备份→单事务 apply→一个批次 id；失败逐条显式回对话流、零写入） | 对话产出动作 | Agent | 池内容 + `.lessonkit/figures/{course}/{chapter}/`（经门禁+批次标记） | 已实现（first-use-conversation-content-fidelity，2026-09-23 取代 check_ingest 的关键词门与内联清单） |
-| 整批回滚（结果卡按钮，与 CLI 同源 rollback） | UI 结果卡 | 人 | 池内容（按批次删行） | 已实现（introduce-check-pipeline） |
+| content-bundle（内容批次：合法的纯新增动作自动执行，无关键词意图门；大清单暂存本对话 jobs 后由区块引用、小清单内联（`kind`/`type` 都认）→整份清单预检→一份备份→单事务 apply；**清单可跨章**，按每项声明的章发号/落图并**按章各记一个批次**，推不出章的条目点名拒收；**一轮里每个区块都应用**，学生说清几章就一轮导完；**题型（综合题/判断/小测）入库时可选，客观题允许无答案键**；失败逐条显式回对话流、零写入） | 对话产出动作 | Agent | 池内容 + `.lessonkit/figures/{course}/{chapter}/`（经门禁+按章批次标记）；补答案键走 `data update problem` | 已实现（2026-09-23；2026-09-25 跨章与多区块、题型与无键客观题） |
+| 整批回滚（结果卡按钮，与 CLI 同源 rollback；跨章导入时**每章一行、各撤各的**） | UI 结果卡 | 人 | 池内容（按批次删行） | 已实现（introduce-check-pipeline；2026-09-25 按章细化） |
 
 ## 五、目标与时间
 
@@ -75,8 +88,8 @@
 | 后台服务停止（进程号被回收成非 Python 进程时拒绝终止并清记录） | CLI `daemon stop` | 人 | 清除 daemon.json | 已实现（同上） |
 | 后台服务状态 | CLI `daemon status` | 人 | —（只读） | 已实现（同上） |
 | 打开工作台（确保服务在跑 + 打开浏览器；不新增页面） | CLI `dashboard` | 人 | 需要时起服务 | 已实现（同上） |
-| provider 解析清单（可执行文件、来源 config/path、路径是否缺失） | CLI `bridge list` | 人 | —（只读） | 已实现（同上） |
-| 显式钉死 provider 可执行文件（优先于 PATH 探测） | CLI `bridge add --command` | 人 | bridges.json | 已实现（同上） |
+| provider 解析清单（可执行文件、来源 config/path、路径是否缺失、生效的两个轮次预算） | CLI `bridge list` | 人 | —（只读） | 已实现（introduce-pi-agent-and-cli；2026-09-25 报告预算） |
+| 显式钉死 provider 可执行文件（优先于 PATH 探测），并设定静默/工具两个轮次预算 | CLI `bridge add --command [--timeout --tool-timeout]` | 人 | bridges.json | 已实现（同上；2026-09-25 预算） |
 
 ## 七、未定动作区（挂名池，定义见 PENDING-DEFINITIONS）
 
@@ -140,3 +153,19 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   一个动作（人面入口 = 顶栏开关，写注册表 `active_chapter`，与 CLI `use` 同源；
   关 = 全课程）；读侧受影响的是知识点页/图谱页/复习与练习建议的取数口径，
   hub 卡片四项统计改整课程口径（原 kps 按章）。章名单由池内容派生，无登记动作。
+- 2026-09-25 轮次静默预算（bridge-timeouts-follow-progress）：**本表动作不新增**，
+  但第六节两个动作扩了参数——`bridge add` 增加 `--tool-timeout`，`bridge list` 报告
+  生效的两个预算；对话轮次的失败判据由「总时长」改为「静默」：任一输出行或归一
+  事件重置时钟，命令/工具在飞时改用更长的工具预算，因此长回答与慢命令都不再被
+  截停，真卡住时仍如实报 `provider timed out`。生效值经归一化（工具预算不低于静默
+  预算，Pi 再压到 30 分钟 RPC 空闲窗以内，否则进程会被回收在轮次之下）。
+
+- 2026-09-25 入库题型与契约对齐（ingest-mode-choice-and-contract-parity）：**本表动作不新增**。
+  入库时可选题型：不给 `quiz_type`=综合题、`yes_no`=判断、`single_choice`/`multiple_choice`=小测；
+  **客观题允许没有答案键**（判断题/单选题题源丢答案的常态）——无键题不判分、练习页写明「未录入
+  答案键」并走 1–5 自评，批次计数与下一轮上下文报出未录键条数，答案键可用 `data update problem`
+  事后补（空值清回无键，按该题 `quiz_type` 校验形状）；普通题声明小测/判断模式却不给 `quiz_type`
+  即拒收并给修法。契约与代码对齐：内联清单照收（`kind`/`type` 都是 content-bundle）、章规则改为
+  实话（该项 chapter → 清单顶层 chapter → 点名拒收，**不回退当前章**）、成功入库后的下一轮上下文
+  明确要求「学生要求但尚未导入的章直接补齐，不必让学生再说一次『继续』」，并修掉单动作轮次重开时
+  结果卡渲染两遍的重复。

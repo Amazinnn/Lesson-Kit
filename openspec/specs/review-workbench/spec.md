@@ -85,6 +85,13 @@ The pull engine SHALL return problems linked to the requested knowledge points,
 ordered for weakness, with repeat practice in the same session de-prioritized.
 When durable problems are exhausted it SHALL report the shortage per knowledge
 point instead of inventing content; no candidate staging exists to fall back on.
+A pull MAY additionally accept explicitly named problem ids, which SHALL be
+included even when they fall outside the requested knowledge points or the
+active filters, and MAY select by learner evidence — weak knowledge points, due
+problems, and previously wrong problems. Every returned problem SHALL carry the
+reason it was selected. The weakness order used by learner-driven selection is
+the weak-point score; the `weak` ordering mode of a session pull orders by
+how many requested knowledge points a problem covers and is unchanged.
 
 #### Scenario: Pull problems for a weak knowledge point
 
@@ -96,9 +103,25 @@ point instead of inventing content; no candidate staging exists to fall back on.
 - **WHEN** a knowledge point has fewer durable problems than requested
 - **THEN** the response lists the shortfall per knowledge point and the UI points to the Check pipeline as the content path instead of fabricating problems
 
+#### Scenario: Explicitly named problems always come back
+
+- **WHEN** a pull names a problem id outside the requested knowledge points
+- **THEN** that problem is returned with its selection reason while the scope still governs the rest
+
+#### Scenario: Learner evidence selects problems
+
+- **WHEN** a pull selects by weak knowledge points, by due problems, or by previously wrong problems
+- **THEN** the returned problems are exactly those its evidence marks, and each carries the matching reason
+
 ### Requirement: Practice session
 
-A workbench practice session SHALL present one problem at a time from a weak-point-first, non-repeating session queue. The learner SHALL choose either per-problem self-rating or end-of-session unified self-rating before the first problem is pulled. Showing a problem, drafting an answer, revealing a solution, skipping a problem, or ending a session without an explicit rating SHALL NOT write an attempt, feedback event, signal, progress row, or schedule update. The schedule SHALL never lock a problem.
+A workbench practice session SHALL present one problem at a time from a
+weak-point-first, non-repeating queue. The learner SHALL choose per-problem or
+end-of-session self-rating before the first pull. Merely showing a problem,
+drafting, revealing a solution, skipping, or ending a session SHALL NOT write
+learning records. A learner-requested Agent attempt CLI operation MAY record
+the active answer and an optional 1–5 learning rating. Scheduling SHALL never
+lock a problem.
 
 #### Scenario: Skip a problem without a learning record
 
@@ -118,7 +141,12 @@ A workbench practice session SHALL present one problem at a time from a weak-poi
 #### Scenario: Practice an un-due problem
 
 - **WHEN** the learner selects a problem that is not yet due
-- **THEN** it is shown and practiced normally, with no lock or refusal
+- **THEN** it is shown and practiced normally with no lock or refusal
+
+#### Scenario: Agent records at the learner's request
+
+- **WHEN** the learner asks the Agent to record the active answer
+- **THEN** only the explicit attempt CLI call writes it; viewing or discussing the draft alone does not
 
 ### Requirement: Reverse review from wrong results
 
@@ -133,7 +161,11 @@ until it yields.
 
 ### Requirement: Flexible feedback
 
-Feedback SHALL consist of an optional natural-language note paired with an explicit 1–5 self-rating when the learner chooses to record a learning conclusion. A submitted rating SHALL preserve the note verbatim and update the existing signal and scheduling mechanisms. The workbench SHALL NOT request a feedback log for navigation or unfinished work.
+Feedback SHALL preserve a natural-language note and optional 1–5 learning
+rating. A learner self-rating or a learner-requested Agent rating MAY record a
+learning conclusion. A rating SHALL use the same signal and schedule rules,
+independent of who submitted it. Navigation and unfinished work SHALL NOT
+request or create a feedback log.
 
 #### Scenario: Rate mastery without text
 
@@ -143,12 +175,12 @@ Feedback SHALL consist of an optional natural-language note paired with an expli
 #### Scenario: Describe a weakness in words
 
 - **WHEN** the learner submits a rating with a natural-language note about a confusion
-- **THEN** the note is mapped to a signal type, stored verbatim on the signal, and one event is appended
+- **THEN** the note is preserved verbatim, mapped through existing signal rules, and one event is appended
 
 #### Scenario: Skip feedback entirely
 
-- **WHEN** the learner leaves a problem without submitting a rating
-- **THEN** the session continues with no feedback, attempt, signal, progress, or schedule write
+- **WHEN** the learner leaves a problem without submitting a rating or requesting Agent recording
+- **THEN** the session continues without a new feedback, attempt, signal, progress, or schedule write
 
 #### Scenario: Describe a weakness with a submitted rating
 
@@ -205,7 +237,12 @@ Recorded learning conclusions SHALL remain durable in the pool. The active pract
 
 ### Requirement: Grading input modes
 
-Practice SHALL accept multiple answer and grading modes. Problems with machine-gradable structure (single choice, true/false) SHALL be graded automatically. Open text problems SHALL follow reveal-then-rate: the learner answers first (text or natural language), the solution is revealed, then the learner self-rates. If the learner declares no time to grade, the attempt SHALL be recorded without a grade and without blocking the session.
+Machine-gradable choice and true/false content SHALL retain its existing
+automatic verdict. Open problems SHALL continue to support answer, reveal,
+then learner self-rating. The learner MAY instead ask an Agent to transcribe
+and grade the answer through the attempt CLI. An answer whose learning rating
+cannot be determined MAY be recorded without a rating and SHALL NOT regress
+the schedule.
 
 #### Scenario: Auto-grade a choice problem
 
@@ -215,12 +252,12 @@ Practice SHALL accept multiple answer and grading modes. Problems with machine-g
 #### Scenario: Reveal-then-rate an open problem
 
 - **WHEN** the learner submits text for an open problem
-- **THEN** the solution is revealed, the learner self-rates, and the attempt records the answer text and the rating
+- **THEN** the solution is revealed, the learner self-rates, and the attempt records the answer text and rating
 
 #### Scenario: Record without grading
 
-- **WHEN** the learner chooses "no time to grade"
-- **THEN** the attempt is recorded with no grade and no rating, the schedule does not regress, and the session continues
+- **WHEN** the learner or Agent records an answer without a learning rating
+- **THEN** the attempt is retained without changing signals, current states, progress, or schedule
 
 ### Requirement: Cascade signal boosts
 
@@ -259,14 +296,20 @@ problem. Marking is never required.
 
 ### Requirement: Answer text capture for open problems
 
-The practice page SHALL provide an answer box for open problem types and SHALL
-store the learner's text only on an explicit rated attempt. The latest recorded
-answer SHALL be available to authoritative Agent conversation context.
+The practice page SHALL provide an answer box for open problems. A learner's
+explicit rated submission or learner-requested Agent attempt CLI call SHALL
+store the answer text. The latest recorded answer SHALL be available to later
+authoritative Agent context. Unsubmitted drafts SHALL remain unwritten.
 
 #### Scenario: Attach a design attempt to its record
 
 - **WHEN** the learner submits a design answer with an explicit rating
 - **THEN** the attempt stores the answer text and later Agent context includes it
+
+#### Scenario: Agent transcribes a photographed answer
+
+- **WHEN** the learner asks the Agent to record a photographed open answer
+- **THEN** later Agent context can read the transcription without a stored answer-image attachment
 
 ### Requirement: Past-paper coverage gate
 
@@ -418,7 +461,9 @@ exists.
 A scoped pull MAY carry `include_ids`; returned problems SHALL then be
 restricted to those identifiers within the requested knowledge-point scope.
 Combining `include_ids` with the unscoped `all` mode SHALL be rejected, and
-the shortage report SHALL keep reflecting the remaining unfilled demand.
+the shortage report SHALL keep reflecting the remaining unfilled demand. The
+super CLI SHALL expose the same filter, so a caller that can reach `/pull` is
+not limited to the browser for it.
 
 #### Scenario: Pull one due problem
 
@@ -429,6 +474,11 @@ the shortage report SHALL keep reflecting the remaining unfilled demand.
 
 - **WHEN** a pull carries `include_ids` together with `mode: all`
 - **THEN** the request is rejected with 400 and nothing is pulled
+
+#### Scenario: Agent uses the include filter
+
+- **WHEN** the Agent passes the include filter to the CLI
+- **THEN** the same restriction applies and the response reports the same shortage
 
 ### Requirement: Directional feedback key
 
@@ -454,7 +504,10 @@ pull, practice, feedback, ingest, goals). The human surface SHALL stay
 parameter-light: beyond the subcommand name, a human command SHALL require at
 most two parameters, SHALL default or derive every value it can infer, and when
 it cannot infer a required value it SHALL fail with a ready-to-paste complete
-command instead of a bare argument error. `lesson-kit init [path]` SHALL
+command instead of a bare argument error. A human command that reports learning
+data SHALL keep its human-readable default and SHALL also accept a flag that
+makes the same data machine-readable, so an Agent is never forced to parse prose.
+`lesson-kit init [path]` SHALL
 register a workspace, with the path defaulting to the
 current directory; when the folder is not yet a lesson-kit workspace, it SHALL
 instead create one — pool database, `.lessonkit/` skeleton — without modifying
@@ -520,6 +573,11 @@ workbench page or reinterpret the existing three-page shell.
 
 - **WHEN** the user runs `lesson-kit init` inside a folder that already contains a pool database and is not registered
 - **THEN** the course is taken from that database's name and the folder is registered without a `--course` flag
+
+#### Scenario: A read command serves both audiences
+
+- **WHEN** the Agent asks the weak-point, due, or workspace-stats command for machine-readable output
+- **THEN** the same data is printed as JSON, and the default human output for that command is unchanged
 
 ### Requirement: Background workbench service
 
@@ -751,7 +809,9 @@ Problem pull SHALL accept `source_kind`, `origin_kind`, and a derived mutually
 exclusive `source_group`. `ai_generated` contains generated origin; `exam`
 contains non-generated quiz/midterm/final/makeup sources; `textbook` contains
 non-generated textbook sources; all remaining rows are `other`. Multiple
-filters intersect.
+filters intersect. Pull MAY also filter by `exam_year`, matched as a prefix so
+that a value such as `2023` selects every problem whose recorded year starts
+with it.
 
 #### Scenario: AI exam-grounded problem stays in AI group
 
@@ -762,4 +822,65 @@ filters intersect.
 
 - **WHEN** pull requests textbook material and adapted origin
 - **THEN** only rows satisfying both values are returned
+
+#### Scenario: Select one exam year
+
+- **WHEN** a pull carries an exam year
+- **THEN** only problems whose recorded year starts with that value are returned
+
+### Requirement: Every learning action is reachable from the CLI
+
+Every learning action the browser workbench can perform SHALL be reachable
+through the super CLI in JSON form: recording a practice result, recording
+feedback (including cards and directions), replacing a current state, and
+managing goals. Where the HTTP API already validates an action or wraps it in
+one transaction, the CLI SHALL apply the same validation and the same
+transaction boundary, and a rejected action SHALL leave every row unchanged.
+A CLI goal write SHALL invalidate the cached daily plan exactly as the API does.
+
+#### Scenario: Recording a practice result is atomic
+
+- **WHEN** the CLI records a practice result and one of the writes fails
+- **THEN** no attempt, progress, or schedule row is left changed and the command exits nonzero
+
+#### Scenario: An unknown problem is rejected before writing
+
+- **WHEN** the CLI records a practice result for a problem id the pool does not hold
+- **THEN** it exits nonzero naming the problem and nothing is written
+
+#### Scenario: The Agent rates a card in a direction
+
+- **WHEN** the Agent records feedback for a flash card with a direction through the CLI
+- **THEN** only that schedule row advances and the signal, event, progress, and current-state semantics stay unchanged
+
+#### Scenario: A CLI goal write invalidates the plan
+
+- **WHEN** a goal is created, changed, or deleted through the CLI
+- **THEN** the next daily-plan read rebuilds instead of serving the cached plan
+
+### Requirement: Declared interface surface
+
+One ownership table SHALL declare every HTTP API route and every CLI command
+with its audience (Agent, human, both, or browser-only) and its status. A test
+SHALL derive the real sets from the argument parser and the route table and
+SHALL fail when a declared entry does not exist, when a real entry is
+undeclared, or when an entry declared reachable from both surfaces lacks either
+implementation. The human registration document SHALL point at this table as the
+machine authority, and a surface that is deliberately browser-only SHALL be
+declared as such rather than left unmentioned.
+
+#### Scenario: An undeclared command fails the audit
+
+- **WHEN** a command is added to the parser without being declared in the ownership table
+- **THEN** the audit test fails and names the command
+
+#### Scenario: A declared but missing entry fails the audit
+
+- **WHEN** the table declares a command or route that does not exist in the code
+- **THEN** the audit test fails and names the entry
+
+#### Scenario: A both-surface entry needs both implementations
+
+- **WHEN** an entry is declared reachable from the browser and from the Agent but only one side exists
+- **THEN** the audit test fails until the missing side exists or the entry is re-declared
 

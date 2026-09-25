@@ -147,6 +147,14 @@ class BridgeConfigTests(unittest.TestCase):
         self.assertEqual(bridges["providers"]["claude"]["command"], "claude-code")
         self.assertEqual(len(bridges["providers"]), 1)
 
+    def test_tool_timeout_is_optional(self):
+        registry.add_bridge("claude", "claude")
+        self.assertNotIn("tool_timeout_s", registry.load_bridges()["providers"]["claude"])
+
+        registry.add_bridge("pi", "pi", tool_timeout_s=900)
+        self.assertEqual(
+            registry.load_bridges()["providers"]["pi"]["tool_timeout_s"], 900)
+
 
 if __name__ == "__main__":
     unittest.main()

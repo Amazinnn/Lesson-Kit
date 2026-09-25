@@ -169,10 +169,40 @@ flowchart LR
   normalized activity。Pi 的读/写/搜索/命令/Lesson Kit 操作显示为独立消息并按 id
   原位更新，具体活动切开前后文本气泡；输出默认折叠且落事件前遮盖/截断。通用阶段、
   hidden reasoning 和原始协议不显示；Codex/Claude 的执行计划不变。
-- 2026-09-23 首次真实使用修缮（first-use-conversation-content-fidelity）：新增
-  `content-bundle` 原子内容批次（知识点/正式题/微题/闪卡/必需原图，key 互引、服务端分配 id、
+- 2026-09-23 首次真实使用修缮（first-use-conversation-content-fidelity）：新增  `content-bundle` 原子内容批次（知识点/正式题/微题/闪卡/必需原图，key 互引、服务端分配 id、
   大清单暂存本对话 jobs、整批预检与单备份、缺图零写入、回滚只删无引用图片）；删除浏览器
   关键词意图门，合法纯新增自动执行；题目新增来源证据/来源答案/解析来源三列并在两个渲染面
   显示；浏览器与服务端富文本统一支持 GFM 表格；Pi 改为每对话一个隐藏 `--mode rpc` 常驻
   进程（空闲 30 分钟回收、abort 优先、接受后崩溃不重放），全部 provider 子进程 Windows
   无窗口。L1/L3 同步。
+- 2026-09-24 Agent 代录与更正尝试（agent-assisted-practice-records）：新增 `lesson-kit
+  attempts`（`list`/`get` 只读、`check` 零写入预检、`apply` 一份清单多题单事务、`correct`
+  按 attempt-id 整体替换）与 `attempts sources` 答卷目录登记；池新增 `attempt_operations`
+  留痕表与 `feedback_events.attempt_id` 列（增量迁移、旧行不动）；带评分的尝试复用既有
+  1–5 四件套并只结算一次，无评分的尝试只留文本、不碰任何投影；同 `request_id` 同内容重发
+  回放首次结果，异内容零写入拒绝；更正先比投影快照、有更晚活动或更晚尝试即零写入拒绝，
+  否则恢复前快照→替换尝试→按新评分重算→更新快照；练习页发消息改为附带**聚焦草稿**
+  （未提交作答/选项/备注/当前可见图片，服务端限长、零写入），普通对话与只读图片不产生
+  任何学习记录；图片只按目录被 Agent 读取，不入池、不建索引。L0/L1/L2/L3/L4、GLOSSARY、
+  PRODUCT-MANUAL 同步。
+- 2026-09-25 组练习与接口归属（practice-set-export-and-cli-audit）：`lesson-kit pull` 升级为
+  **组一次练习的唯一入口**——范围/单题/条件筛选（新增 `--exam-year`）/薄弱·到期·错题三种
+  驱动可组合，每题回报入卷理由；默认输出**完整题目行**（与 `/pull` 对齐，`--ids` 保留旧形状），
+  补上规格早已要求却无 CLI 入口的 `--include`；`--plan` 落练习清单（输入清单，不是学习记录）、
+  `--print` 出学生卷+解答卷（题号对齐、缺解「待补」、无答案与内部标识）、`--check` 零写入预检。
+  池新增可空 `problems.exam_year`（纯增量、不回填、前缀匹配筛选；未迁移池只在用到时报
+  migrate 命令）。新增 `workbench/surface.py` 接口归属表 + 对账测试，把「谁该有 CLI」变成
+  机器事实（修正 L2 的 31/20 → 32/22）。同批修四道既有裂缝：`practice` CLI 与页面同事务同
+  校验、`feedback` CLI 补闪卡与方向、`goals` CLI 写入后失效计划缓存、`weak`/`due`/`ls`
+  提供 `--json`；删除两处死面（`ingest render` 的无用 target、`ingest gate/apply` 收了又拒的
+  entity 取值）。L0/L1/L2/L3/L4、GLOSSARY、PRODUCT-MANUAL、REQUIREMENTS 同步。
+- 2026-09-25 跨章内容批次（cross-chapter-content-bundles）：**一份清单可以跨章**——每个知识点/
+  题目/闪卡可写自己的 `chapter`（缺省顶层再缺省当前章，推不出即点名拒收），发号、图片目录、
+  微题 id、重复检查全部跟随该项的章，显式 id 必须与该项章同名（原先 ch14 的 id 塞进 ch12 清单
+  会把图落错目录）；一次预检、一份备份、一个事务不变，但**按章各记一个批次**，因此
+  `ingest rollback`/结果卡可**只撤其中一章**（回滚本就按批次删行+删无引用图片，无章的假设）；
+  结果带 `batches`（单章时仍保留旧的 `batch_id`/`counts`），结果卡每章一行、各带回滚按钮。
+  一轮回复里的**每个** content-bundle 区块都会被依次应用（原先只应用第一个、其余静默丢弃），
+  所以「12–14 章都导进来」一次回答即可；提示词写明清单可跨章、按章成批、遇多区块继续。
+  顺手修：回滚改写 `related_kp_ids` 前先查列（老池缺列不再报错）。L0/L1/L2/L3/L4、GLOSSARY、
+  PRODUCT-MANUAL、REQUIREMENTS 同步。

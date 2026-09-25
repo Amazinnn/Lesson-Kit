@@ -132,7 +132,10 @@ class CliTests(unittest.TestCase):
                                  "--n", "5")
         self.assertEqual(code, 0)
         result = json.loads(out)
-        self.assertEqual(result["problems"], ["dmath-ch06-prob-001"])
+        # Rows by default (the same shape /pull returns), with the selection reason.
+        self.assertEqual([item["problem_id"] for item in result["problems"]],
+                         ["dmath-ch06-prob-001"])
+        self.assertEqual(result["problems"][0]["reason"], "scope")
         self.assertIn("dmath-ch06-kp-001", result["shortage"])
         self.assertNotIn("candidates", result)
 
@@ -140,7 +143,8 @@ class CliTests(unittest.TestCase):
         code, out = self.run_cli("pull", "dmath", "--n", "5")
         self.assertEqual(code, 0)
         result = json.loads(out)
-        self.assertEqual(result["problems"], ["dmath-ch06-prob-001"])
+        self.assertEqual([item["problem_id"] for item in result["problems"]],
+                         ["dmath-ch06-prob-001"])
 
     def test_pull_with_an_empty_lens_reports_no_problems(self):
         self.run_cli("use", "dmath", "ch99")
@@ -192,7 +196,8 @@ class CliTests(unittest.TestCase):
             "--difficulty-strategy", "balanced",
         )
         self.assertEqual(code, 0)
-        self.assertEqual(json.loads(output)["problems"], ["dmath-ch06-prob-001"])
+        self.assertEqual([item["problem_id"] for item in json.loads(output)["problems"]],
+                         ["dmath-ch06-prob-001"])
 
     def test_data_parser_excludes_retired_candidate_commands(self):
         parser = self.cli.build_parser()
@@ -203,6 +208,36 @@ class CliTests(unittest.TestCase):
         ):
             with self.subTest(argv=argv), self.assertRaises(SystemExit):
                 parser.parse_args(argv)
+
+    def cli_failure(self, *argv):
+        """Run the CLI and capture its exit code plus the diagnostic text."""
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            try:
+                code = self.cli.main(list(argv))
+            except SystemExit as exc:
+                code = exc.code
+        return code, stderr.getvalue()
+
+    def test_missing_workspace_argument_fails_loudly(self):
+        # the shape the Agent got wrong: the workspace name comes right after
+        # the command, before the action
+        code, diagnostic = self.cli_failure(
+            "data", "create", "kp", "--input", "manifest.json")
+        self.assertEqual(code, 2)
+        self.assertIn("usage:", diagnostic)
+        self.assertIn("data", diagnostic)
+
+    def test_unknown_argument_fails_loudly(self):
+        code, diagnostic = self.cli_failure("data", "dmath", "create", "kp", "--nope")
+        self.assertEqual(code, 2)
+        self.assertIn("--nope", diagnostic)
+
+    def test_business_error_still_reports_json_and_exit_two(self):
+        code, out = self.run_cli("data", "dmath", "create", "kp",
+                                 "--input", "no-such-manifest.json")
+        self.assertEqual(code, 2)
+        self.assertIn("error", json.loads(out))
 
     def test_practice_records_attempt(self):
         code, out = self.run_cli("practice", "dmath",

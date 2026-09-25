@@ -28,11 +28,56 @@ def is_objective(quiz_type):
     return quiz_type in OBJECTIVE_TYPES
 
 
+def has_answer_key(payload):
+    """Whether an objective payload carries a usable answer key.
+
+    A keyless item is a legitimate import: a 判断题/单选题 whose source lost its
+    answer still belongs in the 判断/小测 shell, it just cannot be graded.
+    """
+    if not isinstance(payload, dict):
+        return False
+    answer = payload.get("answer_key")
+    if isinstance(answer, str):
+        return bool(answer.strip())
+    if isinstance(answer, list):
+        return bool(answer) and all(
+            isinstance(option, str) and option.strip() for option in answer)
+    return False
+
+
+def validate_answer_key(quiz_type, options, answer_key):
+    """Contract errors for one supplied answer key (its shape, not its presence).
+
+    Separate from the payload rules so a key filled in later — long after the
+    import, possibly without an error reason — is checked for the shape that
+    item's quiz type can grade, and nothing more.
+    """
+    if quiz_type == "yes_no":
+        return [] if answer_key in YES_NO_OPTIONS else [
+            "yes_no answer_key must be 是 or 否"]
+    if quiz_type == "single_choice":
+        if not isinstance(options, list) or answer_key not in options:
+            return ["answer_key must be one of the options"]
+        return []
+    if quiz_type == "multiple_choice":
+        if not isinstance(answer_key, list) or not answer_key \
+                or not all(isinstance(option, str) for option in answer_key) \
+                or not isinstance(options, list) \
+                or not set(answer_key) <= set(options):
+            return ["answer_key must be a non-empty subset of the options"]
+        return []
+    if not isinstance(answer_key, str) or not answer_key.strip():
+        return [f"{quiz_type} answer_key needs a reference answer"]
+    return []
+
+
 def validate_payload(quiz_type, payload):
     """Return a list of contract errors; empty means the payload is valid.
 
     The stem lives in problem_text and is validated by the caller, which also
-    owns the knowledge-point and identity rules.
+    owns the knowledge-point and identity rules. A missing answer key is allowed
+    (the item is then practised ungraded); a supplied key must be complete, and
+    error_reason is required whenever a key is there to explain a wrong answer.
     """
     errors = []
     if quiz_type in RETIRED_QUIZ_TYPES:
@@ -44,7 +89,9 @@ def validate_payload(quiz_type, payload):
 
     options = payload.get("options")
     answer = payload.get("answer_key")
-    if not isinstance(payload.get("error_reason"), str) or not payload["error_reason"].strip():
+    graded = has_answer_key(payload)
+    if graded and (not isinstance(payload.get("error_reason"), str)
+                   or not payload["error_reason"].strip()):
         errors.append("error_reason is required")
     if not isinstance(payload.get("source_evidence"), str) or not payload["source_evidence"].strip():
         errors.append("source_evidence is required")
@@ -52,8 +99,8 @@ def validate_payload(quiz_type, payload):
     if quiz_type == "yes_no":
         if options is not None and options != YES_NO_OPTIONS:
             errors.append("yes_no options must be the default 是/否 pair")
-        if answer not in YES_NO_OPTIONS:
-            errors.append("yes_no answer_key must be 是 or 否")
+        if graded:
+            errors.extend(validate_answer_key(quiz_type, options, answer))
     elif quiz_type in ("single_choice", "multiple_choice"):
         if not isinstance(options, list) or not 2 <= len(options) <= MAX_OPTIONS:
             errors.append("choice items need 2-6 options")
@@ -61,15 +108,8 @@ def validate_payload(quiz_type, payload):
             errors.append("options must be strings")
         elif len(set(options)) != len(options):
             errors.append("options must be unique")
-        if quiz_type == "single_choice":
-            if not isinstance(options, list) or answer not in (options or []):
-                errors.append("answer_key must be one of the options")
-        elif not isinstance(answer, list) or not answer \
-                or not all(isinstance(option, str) for option in answer) \
-                or not isinstance(options, list) \
-                or not all(isinstance(option, str) for option in options) \
-                or not set(answer) <= set(options):
-            errors.append("answer_key must be a non-empty subset of the options")
+        if graded:
+            errors.extend(validate_answer_key(quiz_type, options, answer))
     else:
         if options:
             errors.append(f"{quiz_type} items take no options")

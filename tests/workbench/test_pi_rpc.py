@@ -131,6 +131,62 @@ class PiRpcProcessTests(unittest.TestCase):
             process.close()
         self.assertEqual(len(self.entries("prompt")), 1)
 
+    def test_the_budget_measures_silence_not_duration(self):
+        # The whole turn outlives its budget while no single gap does: a turn
+        # that keeps reporting progress must run to completion.
+        process = self.make(mode="chatty")
+        try:
+            process.start()
+            process.prompt("长活")
+            started = time.monotonic()
+            kinds = [record.get("type") for record in process.stream(0.5)]
+            elapsed = time.monotonic() - started
+        finally:
+            process.close()
+        self.assertEqual(kinds[-1], "agent_settled")
+        self.assertEqual(len(self.entries("turn")), 1)
+        # It really did outlive the budget it was handed.
+        self.assertGreater(elapsed, 0.5)
+
+    def test_silence_past_the_budget_still_times_out(self):
+        process = self.make(mode="quiet-command")
+        try:
+            process.start()
+            process.prompt("静默")
+            with self.assertRaises(pi_rpc.PiRpcTimeout):
+                list(process.stream(0.2, 0.2))
+        finally:
+            process.close()
+
+    def test_a_command_in_flight_gets_the_longer_budget(self):
+        # 1s of silence from a running command: fatal under the idle budget,
+        # ordinary under the tool budget.
+        process = self.make(mode="quiet-command")
+        try:
+            process.start()
+            process.prompt("慢命令")
+            started = time.monotonic()
+            kinds = [record.get("type") for record in process.stream(0.2, 5)]
+            elapsed = time.monotonic() - started
+        finally:
+            process.close()
+        self.assertEqual(kinds[-1], "agent_settled")
+        self.assertIn("tool_execution_end", kinds)
+        # The command stayed quiet for longer than the idle budget.
+        self.assertGreater(elapsed, 0.2)
+
+    def test_the_tool_budget_expires_like_any_other(self):
+        # A command that never comes back is still a stall, not a licence to
+        # hang: it fails by its own budget.
+        process = self.make(mode="quiet-command")
+        try:
+            process.start()
+            process.prompt("卡住的命令")
+            with self.assertRaises(pi_rpc.PiRpcTimeout):
+                list(process.stream(5, 0.2))
+        finally:
+            process.close()
+
     def test_abort_is_sent_as_an_rpc_command(self):
         process = self.make(mode="slow")
         try:

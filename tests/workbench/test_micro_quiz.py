@@ -46,6 +46,40 @@ class MicroQuizRulesTests(unittest.TestCase):
         })
         self.assertEqual(ok, [])
 
+    def test_an_absent_key_marks_an_item_ungraded(self):
+        # A 判断题/单选题 whose source lost its answer is still valid content: it
+        # enters ungraded instead of being refused, and needs no error reason.
+        for quiz_type, extra in (
+            ("yes_no", {}),
+            ("single_choice", {"options": ["甲", "乙"]}),
+            ("multiple_choice", {"options": ["甲", "乙", "丙"]}),
+        ):
+            with self.subTest(quiz_type=quiz_type):
+                payload = {"quiz_type": quiz_type, "answer_key": None,
+                           "source_evidence": "s", **extra}
+                self.assertEqual(
+                    micro_quiz.validate_payload(quiz_type, payload), [])
+                self.assertEqual(
+                    micro_quiz.validate_payload(
+                        quiz_type, {**payload, "answer_key": ""}), [])
+                self.assertFalse(micro_quiz.has_answer_key(payload))
+                self.assertFalse(micro_quiz.has_answer_key(
+                    {**payload, "answer_key": []}))
+
+    def test_a_supplied_key_is_still_checked(self):
+        errors = micro_quiz.validate_payload("yes_no", {
+            "answer_key": "maybe", "source_evidence": "s",
+        })
+        self.assertIn("yes_no answer_key must be 是 or 否", errors)
+        # A key without an error reason stays refused: the reason explains it.
+        errors = micro_quiz.validate_payload("yes_no", {
+            "answer_key": "是", "source_evidence": "s",
+        })
+        self.assertIn("error_reason is required", errors)
+        self.assertTrue(micro_quiz.has_answer_key({"answer_key": "是"}))
+        self.assertTrue(micro_quiz.has_answer_key(
+            {"answer_key": ["甲", "乙"]}))
+
     def test_choice_options_must_be_strings(self):
         errors = micro_quiz.validate_payload("single_choice", {
             "options": [["a"], ["b"]], "answer_key": "a",

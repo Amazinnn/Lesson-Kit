@@ -71,6 +71,65 @@ class AgentContextTests(unittest.TestCase):
         self.assertEqual(attached["current"]["draft"]["note"], "private note")
         self.assertEqual(attached["current"]["problem"]["problem_id"], "dmath-ch06-prob-001")
 
+    def test_focused_practice_draft_is_bounded_and_never_a_pool_fact(self):
+        from workbench.server import context
+
+        result = context.build(self.pool, self.workspace, {
+            "route": "/w/dmath/practice",
+            "page_type": "practice",
+            "problem_id": "dmath-ch06-prob-001",
+            "include_draft": True,
+            "draft_answer": "答" * (context.DRAFT_ANSWER_CHARS + 50),
+            "draft_note": "卡点",
+            "draft_choices": ["A", "B"] * 20,
+            "draft_images": ["/api/w/dmath/figures/dmath/ch06/p1.png"] * 13,
+        })
+
+        draft = result["current"]["draft"]
+        self.assertEqual(len(draft["answer"]), context.DRAFT_ANSWER_CHARS)
+        self.assertEqual(draft["note"], "卡点")
+        self.assertEqual(draft["choices"], ["A", "B"] * 10)
+        self.assertEqual(len(draft["images"]), context.DRAFT_IMAGES)
+        self.assertTrue(draft["truncated"])
+        # The authoritative facts still come from the pool, not from the browser.
+        self.assertEqual(result["current"]["problem"]["problem_text"], "P1")
+        self.assertEqual(result["current"]["submitted_attempts"], [])
+
+    def test_a_draft_turn_writes_no_learning_record(self):
+        from workbench.server import context
+
+        context.build(self.pool, self.workspace, {
+            "route": "/w/dmath/practice",
+            "page_type": "practice",
+            "problem_id": "dmath-ch06-prob-001",
+            "include_draft": True,
+            "draft_answer": "只有草稿",
+            "draft_note": "还没提交",
+            "draft_images": ["/api/w/dmath/figures/dmath/ch06/p1.png"],
+        })
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            for table in ("problem_attempts", "feedback_events", "learner_signals",
+                          "problem_progress", "learning_current_state",
+                          "review_schedule"):
+                with self.subTest(table=table):
+                    count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                    self.assertEqual(count, 0)
+        finally:
+            conn.close()
+
+    def test_other_pages_keep_their_existing_context(self):
+        from workbench.server import context
+
+        result = context.build(self.pool, self.workspace, {
+            "route": "/w/dmath/kp/dmath-ch06-kp-001",
+            "page_type": "kp",
+            "kp_id": "dmath-ch06-kp-001",
+            "include_draft": True,
+            "draft_answer": "不应出现在知识点页",
+        })
+        self.assertNotIn("draft", result["current"])
+
     def test_graph_and_three_recent_distinct_objects_are_authoritative(self):
         from workbench.server import context
 

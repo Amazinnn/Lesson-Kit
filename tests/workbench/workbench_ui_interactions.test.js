@@ -1624,6 +1624,61 @@ test("a turn request carries no keyword-derived content intent", async () => {
   assert.equal(body.practice_intent, false);
 });
 
+test("a two-chapter bundle renders one rollback row per batch", async () => {
+  const result = {
+    kind: "content-bundle", applied: true,
+    counts: { knowledge_points: 3, problems: 10, flash_cards: 0, figures: 4 },
+    origins: { source_problem: 10 },
+    workspace: "c01",
+    backup_path: "C:/pool/backups/one-import.db",
+    batches: [
+      { batch_id: "batch-010", chapter: "ch12",
+        counts: { knowledge_points: 1, problems: 6, flash_cards: 0, figures: 4 },
+        origins: { source_problem: 6 } },
+      { batch_id: "batch-011", chapter: "ch13",
+        counts: { knowledge_points: 2, problems: 4, flash_cards: 0, figures: 0 },
+        origins: { source_problem: 4 } },
+    ],
+  };
+  const { calls, elements } = checkIngestHarness(null, [
+    { role: "assistant", content: "两章都导好了", actions: [{ type: "check_ingest", result }] },
+  ], [
+    { batch_id: "batch-010", rolled_back_at: null },
+    { batch_id: "batch-011", rolled_back_at: "2026-09-25 08:00:00" },
+  ]);
+  await openFirstAiSession(elements);
+
+  const messages = elements["ai-messages"];
+  const card = messages.children.filter(
+    (node) => node.className === "msg ai check-card").pop();
+  assert.ok(card, "the restored turn renders its card");
+  const body = card.children[0];
+  assert.equal(body.children[0].textContent, "Check 入库完成");
+  assert.match(body.children[1].textContent, /共 2 个批次/);
+  assert.match(body.children[1].textContent, /ch12、ch13/);
+  assert.match(body.children[1].textContent, /知识点 3、题目 10、图片 4/);
+
+  const rows = body.children.slice(2);
+  assert.equal(rows.length, 2);
+  // Every row names its own batch, chapter and asset counts.
+  assert.match(rows[0].children[0].textContent, /批次 batch-010 · ch12 · 知识点 1/);
+  assert.match(rows[1].children[0].textContent, /batch-011/);
+  await flush();
+  // Only the rolled-back chapter loses its button and says so; its sibling keeps
+  // both the button and its own summary line.
+  assert.equal(rows[1].children.length, 1);
+  assert.match(rows[1].children[0].textContent, /batch-011 已整批回滚/);
+  assert.equal(rows[0].children.length, 2);
+  assert.match(rows[0].children[0].textContent, /批次 batch-010 · ch12/);
+  assert.equal(rows[0].children[1].className, "check-card-rollback");
+
+  rows[0].children[1].click();
+  await flush();
+  const rollbackPost = calls.find(
+    (call) => call.url.endsWith("/ingest/rollback") && call.options);
+  assert.deepEqual(JSON.parse(rollbackPost.options.body), { batch_id: "batch-010" });
+});
+
 test("check ingest success renders a batch result card whose rollback calls the API", async () => {
   const result = {
     batch_id: "batch-001", kind: "content-bundle", applied: true,
@@ -1665,6 +1720,27 @@ test("check ingest success renders a batch result card whose rollback calls the 
   assert.deepEqual(JSON.parse(rollbackPost.options.body), { batch_id: "batch-001" });
   assert.ok(rollback.removed);
   assert.match(body.children[1].textContent, /已整批回滚/);
+});
+
+test("a restored single-action turn renders one result card, not two", async () => {
+  // The mirror records both keys for a one-action turn; the restore path must
+  // render the list and skip the single action, or the card appears twice.
+  const result = {
+    batch_id: "batch-003", kind: "content-bundle", applied: true,
+    counts: { problems: 2 },
+    backup_path: "C:/pool/backups/dmath-pre-batch-003.db",
+  };
+  const action = { type: "check_ingest", result };
+  const { elements } = checkIngestHarness(null, [
+    { role: "user", content: "导入" },
+    { role: "assistant", content: "已入库", action, actions: [action] },
+  ], [{ batch_id: "batch-003", rolled_back_at: null }]);
+  await openFirstAiSession(elements);
+  await flush();
+  await flush();
+  const cards = elements["ai-messages"].children.filter(
+    (node) => node.className === "msg ai check-card");
+  assert.equal(cards.length, 1, "one action must render exactly one card");
 });
 
 test("a reopened result card shows the current batch state without rollback", async () => {
@@ -1711,17 +1787,32 @@ test("check ingest gate failure renders explicit reasons and no rollback button"
   assert.equal(body.children.length, 2);
 });
 
-test("practice drafts remain private because chat exposes no attachment setting", async () => {
+test("a practice turn attaches the focused draft without recording anything", async () => {
   const pageLayout = layout();
   pageLayout.dataset.page = "practice";
   const elements = {
     layout: pageLayout, ...practiceElements(), ...aiElements(),
   };
+  elements["stream"].queryAll = (selector) => {
+    assert.equal(selector, ".practice-question-card img");
+    return [
+      new FakeElement("img", { dataset: {} }),
+      new FakeElement("img", { dataset: {} }),
+    ].map((img, index) => {
+      img.getAttribute = (name) => (name === "src"
+        ? "/api/w/alpha/figures/dmath/ch06/p" + (index + 1) + ".png" : null);
+      return img;
+    });
+  };
   const storage = new FakeStorage({
-    wb_current_alpha: JSON.stringify({ problem_id: "p-1", answer_text: "" }),
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 0, items: [{
+      problem_id: "dmath-ch06-prob-001",
+      payload: { problem_id: "dmath-ch06-prob-001", problem_text: "题干" },
+      answer_text: "", choices: ["2", "4"], state: "active",
+    }] }),
   });
   elements["answer-box"].value = "我的草稿";
-  elements["feedback-note"].value = "尚未提交";
+  elements["feedback-note"].value = "还没提交的卡点";
   const calls = [];
   runWorkbench({
     elements, storage,
@@ -1741,9 +1832,53 @@ test("practice drafts remain private because chat exposes no attachment setting"
   await flush();
   const turn = calls.find((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
   const body = JSON.parse(turn.options.body);
+  assert.equal(body.page_type, "practice");
+  assert.equal(body.problem_id, "dmath-ch06-prob-001");
+  assert.equal(body.include_draft, true);
+  assert.equal(body.draft_answer, "我的草稿");
+  assert.equal(body.draft_note, "还没提交的卡点");
+  assert.deepEqual(body.draft_choices, ["2", "4"]);
+  assert.deepEqual(body.draft_images, [
+    "/api/w/alpha/figures/dmath/ch06/p1.png",
+    "/api/w/alpha/figures/dmath/ch06/p2.png",
+  ]);
+  // Discussing a draft is not submitting it: no learning write leaves the page.
+  assert.equal(calls.some((call) => /\/(practice|feedback)$/.test(call.url)), false);
+});
+
+test("a knowledge-point turn still carries no practice draft", async () => {
+  const pageLayout = layout();
+  pageLayout.dataset.page = "kp";
+  pageLayout.dataset.objectId = "kp-001";
+  const elements = {
+    layout: pageLayout, ...practiceElements(), ...aiElements(),
+  };
+  elements["answer-box"].value = "我的草稿";
+  elements["feedback-note"].value = "尚未提交";
+  const calls = [];
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([{
+        conversation_id: "conv-001", provider: "codex", status: "idle",
+      }]);
+      if (url.endsWith("/ai/sessions/conv-001/turns")) return jsonResponse({ turn_id: "turn-001" });
+      return jsonResponse({ conversation_id: "conv-001", provider: "codex", status: "idle", messages: [] });
+    },
+  });
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "解释当前知识点";
+  elements["ai-send"].click();
+  await flush();
+  const turn = calls.find((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
+  const body = JSON.parse(turn.options.body);
+  assert.equal(body.page_type, "kp");
   assert.equal(Object.hasOwn(body, "include_draft"), false);
   assert.equal(Object.hasOwn(body, "draft_answer"), false);
   assert.equal(Object.hasOwn(body, "draft_note"), false);
+  assert.equal(Object.hasOwn(body, "draft_images"), false);
 });
 
 test("a running native turn exposes stop and calls only its cancel endpoint", async () => {
@@ -1958,6 +2093,102 @@ test("Pi activities are messages that update in place and split text segments", 
   assert.match(elements["ai-messages"].children[3].innerHTML, /检查完成/);
 });
 
+test("a failed Pi activity shows its summary without expanding the output", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    setTimeoutFn: () => 0,
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "pi" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "pi", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "pi", status: "idle", messages: [],
+      });
+      if (url.endsWith("/turns") && options) return jsonResponse({ turn_id: "turn-1" });
+      if (url.includes("/turns/turn-1")) return jsonResponse({
+        turn: { status: "running" },
+        events: [
+          { sequence: 1, kind: "activity", activity_id: "cli-1",
+            activity_type: "lesson-kit", status: "running", label: "操作 Lesson Kit",
+            detail: "lesson-kit data create kp --input manifest.json" },
+          { sequence: 2, kind: "activity", activity_id: "cli-1",
+            activity_type: "lesson-kit", status: "failed",
+            detail: "lesson-kit data create kp --input manifest.json",
+            summary: "lesson-kit data: error: argument action: invalid choice: 'kp'",
+            output: "usage: lesson-kit data [-h] ...\nargument action: invalid choice" },
+        ],
+      });
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "导入这一章";
+  elements["ai-send"].click();
+  await flush();
+
+  const row = elements["ai-messages"].children.filter(
+    (node) => node.className === "msg ai-activity is-failed").pop();
+  assert.ok(row, "the failed activity row is rendered as failed");
+  assert.equal(row.activityParts.state.textContent, "失败");
+  // the reason is visible without expanding anything
+  assert.match(row.activityParts.summary.textContent, /invalid choice/);
+  assert.equal(row.activityParts.summary.classList.contains("hidden"), false);
+  // the full output stays folded
+  assert.equal(row.activityParts.disclosure.hasAttribute("open"), false);
+  // the command itself also stays visible
+  assert.match(row.activityParts.detail.textContent, /lesson-kit data create kp/);
+});
+
+test("a corrected retry keeps the earlier failed row", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    setTimeoutFn: () => 0,
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "pi" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "pi", status: "idle" },
+      ]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "pi", status: "idle", messages: [],
+      });
+      if (url.endsWith("/turns") && options) return jsonResponse({ turn_id: "turn-1" });
+      if (url.includes("/turns/turn-1")) return jsonResponse({
+        turn: { status: "running" },
+        events: [
+          { sequence: 1, kind: "activity", activity_id: "cli-fail",
+            activity_type: "lesson-kit", status: "failed",
+            label: "操作 Lesson Kit",
+            detail: "lesson-kit data create kp --input manifest.json",
+            summary: "lesson-kit data: error: argument action: invalid choice: 'kp'",
+            output: "usage: lesson-kit data ..." },
+          { sequence: 2, kind: "activity", activity_id: "cli-ok",
+            activity_type: "lesson-kit", status: "done",
+            label: "操作 Lesson Kit",
+            detail: "lesson-kit data alpha create kp --input manifest.json",
+            output: '{"kp_id": "alpha-ch06-kp-777"}' },
+        ],
+      });
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "导入";
+  elements["ai-send"].click();
+  await flush();
+
+  const rows = elements["ai-messages"].children.filter(
+    (node) => node.className.indexOf("ai-activity") >= 0);
+  assert.equal(rows.length, 2, "two invocations stay two rows");
+  assert.equal(rows[0].className, "msg ai-activity is-failed");
+  assert.equal(rows[1].className, "msg ai-activity is-done");
+  // the earlier failure is not erased, and the retry carries no failure summary
+  assert.match(rows[0].activityParts.summary.textContent, /invalid choice/);
+  assert.equal(rows[1].activityParts.summary.classList.contains("hidden"), true);
+});
+
 test("a restored Pi message uses activity messages while Codex keeps its plan", async () => {
   const elements = { layout: layout(), ...aiElements() };
   runWorkbench({
@@ -2067,6 +2298,42 @@ test("a correct micro quiz choice reports success without an extra write", async
   await flush();
   assert.ok(elements.stream._innerHTML.includes("回答正确"));
   assert.equal(elements.stream._innerHTML.includes("错误"), false);
+});
+
+test("an item without an answer key is not graded and says so", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  const keyless = {
+    problem_id: "mq-9", problem_text: "电场是矢量。",
+    micro_quiz: { quiz_type: "yes_no", answer_key: null, error_reason: null },
+  };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/problem/mq-9")) {
+        return jsonResponse({ problem: { ...keyless, solution: null } });
+      }
+      return jsonResponse({ problems: [keyless] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  // The student still gets the clickable 是/否 pair, plus an honest notice.
+  assert.ok(elements.stream._innerHTML.includes("是"));
+  assert.ok(elements.stream._innerHTML.includes("micro-quiz-keyless"));
+  assert.ok(elements.stream._innerHTML.includes("未录入答案键"));
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  // No verdict is invented from a missing key — grading stays silent.
+  assert.equal(elements.stream._innerHTML.includes("micro-quiz-verdict"), false);
+  assert.equal(elements.stream._innerHTML.includes("回答错误"), false);
+  elements["show-answer"].click();
+  await flush();
+  assert.ok(elements.stream._innerHTML.includes("未录入答案键"));
 });
 
 test("multiple choice micro quizzes render checkboxes and grade subsets", async () => {

@@ -160,7 +160,7 @@ The deterministic problem gate SHALL reject missing solutions, malformed or empt
 
 ### Requirement: Batch provenance and rollback
 
-Every recipe apply SHALL allocate one readable sequential batch id (no hash-derived identifier), record the batch with its kind, item counts, and backup path in an additive ingest-batch registry, and stamp every content row it writes with that batch id. A whole-batch rollback SHALL run as one transaction that first writes a fresh recoverable backup, then deletes exactly the content rows carrying that batch id, and then marks the batch rolled back. Rollback SHALL refuse a batch whose content rows still have dependent learning records, and SHALL refuse an already rolled-back batch.
+Every recipe apply SHALL allocate one readable sequential batch id (no hash-derived identifier), record the batch with its kind, item counts, and backup path in an additive ingest-batch registry, and stamp every content row it writes with that batch id. A bundle that spans chapters SHALL record one batch per chapter, each stamped on that chapter's rows, so a whole-batch rollback undoes one chapter without touching its siblings. A whole-batch rollback SHALL run as one transaction that first writes a fresh recoverable backup, then deletes exactly the content rows carrying that batch id, and then marks the batch rolled back. Rollback SHALL refuse a batch whose content rows still have dependent learning records, and SHALL refuse an already rolled-back batch.
 
 #### Scenario: Apply records the batch
 
@@ -181,6 +181,11 @@ Every recipe apply SHALL allocate one readable sequential batch id (no hash-deri
 
 - **WHEN** rollback is requested for a batch already rolled back
 - **THEN** the command fails without writing and reports the batch as already rolled back
+
+#### Scenario: One chapter is undone while the other stays
+
+- **WHEN** a two-chapter bundle was applied and rollback is requested for one of its two batches
+- **THEN** only that chapter's rows and its now-unreferenced figures are removed, the sibling batch and its rows stay, and the registry shows one batch rolled back and one still applied
 
 ### Requirement: Ingest batch registry visibility
 
@@ -239,7 +244,11 @@ chapter would leave that directory SHALL be refused and no file SHALL be written
 Every new Agent-managed problem or micro quiz SHALL declare `source_kind` for
 its underlying material and `origin_kind` as `source_problem`,
 `adapted_problem`, or `generated_grounded`. Generated content SHALL NOT use a
-quiz/exam source value merely to describe its interaction form.
+quiz/exam source value merely to describe its interaction form. A problem MAY
+additionally declare `exam_year`, the optional study year of its source
+examination (`2023`, `2023-2024秋冬`); when present it SHALL start with a
+four-digit year and SHALL be at most 20 characters, and when absent the field
+SHALL stay empty without affecting any other field.
 
 #### Scenario: Generated micro quiz grounded in a textbook
 
@@ -249,6 +258,16 @@ quiz/exam source value merely to describe its interaction form.
 #### Scenario: Missing provenance is rejected
 
 - **WHEN** Agent-managed problem content omits either provenance axis
+- **THEN** the content gate rejects it and writes nothing
+
+#### Scenario: Exam year is optional
+
+- **WHEN** a problem is created without an exam year
+- **THEN** it is accepted with the field empty and every other field is unaffected
+
+#### Scenario: An invalid exam year is rejected
+
+- **WHEN** Agent-managed problem content declares an exam year that does not start with a four-digit year or exceeds the length bound
 - **THEN** the content gate rejects it and writes nothing
 
 ### Requirement: Requested problem type and source form are preserved
@@ -281,10 +300,21 @@ allowed with `origin_kind=generated_grounded`.
 
 A `content-bundle` SHALL contain one or more new knowledge points, formal
 problems, micro quizzes, flash cards, and required source figures. Its manifest
-SHALL be staged under the owning conversation. The complete bundle SHALL be
-prevalidated and applied under one readable batch id with one recoverable
-backup; any invalid entity/reference/file SHALL leave both SQLite and the
-figure destination unchanged. There SHALL be no fixed six-item ceiling.
+SHALL be staged under the owning conversation, or carried inline when it declares
+its `kind` or its `type` as `content-bundle`. Every knowledge point, problem,
+and flash card SHALL resolve exactly one chapter: an item MAY declare its own
+`chapter`, otherwise the bundle-level `chapter` applies; an item that resolves no
+chapter SHALL be refused with its label and nothing SHALL be written, and the
+workspace's active chapter SHALL NOT be used as a fallback, so a manifest that
+spans chapters can never be silently assigned to the chapter the learner happens
+to be viewing. A single bundle MAY therefore span several chapters, and every
+derived value SHALL follow its item's chapter — allocated id prefix, figure
+logical path and destination directory, micro-quiz id, and the duplicate check.
+The complete bundle SHALL be prevalidated and applied under one backup and one
+transaction; any invalid entity, reference, or file SHALL leave both SQLite and
+the figure destination unchanged. It SHALL record one batch per chapter present,
+in chapter order, so each chapter's content can be rolled back on its own. There
+SHALL be no fixed ceiling on items or on chapters per bundle.
 
 #### Scenario: Missing knowledge point is included
 
@@ -300,6 +330,26 @@ figure destination unchanged. There SHALL be no fixed six-item ceiling.
 
 - **WHEN** one bundle contains thirty valid exercises and their dependencies
 - **THEN** all commit under one batch id
+
+#### Scenario: One bundle imports two chapters
+
+- **WHEN** a bundle carries chapter-12 and chapter-13 items in one manifest
+- **THEN** every id carries its own chapter prefix, each figure lands under its own chapter directory, and the bundle records one batch for each chapter
+
+#### Scenario: An item cannot be assigned to a chapter
+
+- **WHEN** a bundle has no chapter of its own and an item declares none, even though the workspace has an active chapter
+- **THEN** that item is refused with its label and no content and no figure is written
+
+#### Scenario: A declared chapter is not an identifier
+
+- **WHEN** an item or the bundle declares a chapter that is not a lowercase ASCII identifier
+- **THEN** the bundle is refused with that reason and nothing is written
+
+#### Scenario: An inline bundle carries the same contract
+
+- **WHEN** the manifest arrives inline in the reply instead of as a staged file
+- **THEN** the same chapter resolution, per-chapter batches, backup, and transaction apply
 
 ### Requirement: Source and solution provenance
 

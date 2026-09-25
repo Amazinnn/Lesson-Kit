@@ -1276,6 +1276,16 @@
     return load(KPS_KEY, selectedKpIds());
   }
 
+  function visiblePracticeImages() {
+    // Whatever the current question card shows right now — the answer the
+    // learner is asking about, not an archive of the page.
+    if (!stream || !stream.querySelectorAll) return [];
+    var nodes = stream.querySelectorAll(".practice-question-card img");
+    return Array.prototype.slice.call(nodes).map(function (img) {
+      return (img && img.getAttribute && img.getAttribute("src")) || "";
+    }).filter(function (src) { return !!src; });
+  }
+
   function updateSession(problemId, values, direction) {
     var active = currentProblem();
     var concreteDirection = direction === undefined && active && active.kind === "card"
@@ -1444,6 +1454,13 @@
         + (item.verdict ? "回答正确。" : "回答错误。 " + (quiz.error_reason || "")) + "</p>";
     }
 
+    function keylessLine(item) {
+      var quiz = microQuiz(item.payload);
+      if (!quiz || quizHasKey(quiz)) return "";
+      return "<p id='micro-quiz-keyless' class='muted'>"
+        + "本题未录入答案键，请对照课本或解析自评。</p>";
+    }
+
     function optionHtmlFor(item) {
       var problem = item.payload || {};
       var quiz = microQuiz(problem);
@@ -1512,7 +1529,7 @@
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
         + "<div class='problem-text rich-text'>" + richText(problem.problem_text || "") + "</div>"
-        + optionHtmlFor(item) + verdictLine(item) + "</article>";
+        + optionHtmlFor(item) + keylessLine(item) + verdictLine(item) + "</article>";
       renderMath(stream);
       setComposerLayout(
         microQuiz(problem) && problemOptions(problem).length ? "choice" : "text");
@@ -1532,9 +1549,22 @@
       }
     }
 
+    function quizHasKey(quiz) {
+      if (!quiz) return false;
+      var answer = quiz.answer_key;
+      if (typeof answer === "string") return answer.trim().length > 0;
+      if (Object.prototype.toString.call(answer) === "[object Array]") {
+        return answer.length > 0;
+      }
+      return false;
+    }
+
     function gradeMicroQuiz(problem, submittedTexts) {
       var quiz = microQuiz(problem);
       if (!quiz) return null;
+      // An item whose source lost its answer key is practised ungraded: guessing
+      // a verdict from a missing key would mark every answer wrong.
+      if (!quizHasKey(quiz)) return null;
       var type = quiz.quiz_type;
       var answer = quiz.answer_key;
       if (type === "multiple_choice") {
@@ -1803,10 +1833,13 @@
         var quiz = microQuiz(detail.problem) || microQuiz(item.payload);
         var section;
         if (quiz) {
+          var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
+          var why = quiz.error_reason
+            ? "<p class='section-kicker'>为什么</p>"
+              + "<div class='rich-text'>" + richText(quiz.error_reason) + "</div>"
+            : "";
           section = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
-            + "<div class='rich-text'>" + richText(String(quiz.answer_key || "")) + "</div>"
-            + "<p class='section-kicker'>为什么</p>"
-            + "<div class='rich-text'>" + richText(quiz.error_reason || "") + "</div></section>";
+            + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>";
         } else {
           section = practiceSolutionHtml(detail.problem);
         }
@@ -2117,9 +2150,12 @@
             ? problem.micro_quiz : null;
           var solutionHtml = quiz
             ? "<p class='section-kicker'>答案</p><div class='rich-text'>"
-              + richText(String(quiz.answer_key || "")) + "</div>"
-              + "<p class='section-kicker'>为什么</p><div class='rich-text'>"
-              + richText(quiz.error_reason || "") + "</div>"
+              + richText(quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键")
+              + "</div>"
+              + (quiz.error_reason
+                ? "<p class='section-kicker'>为什么</p><div class='rich-text'>"
+                  + richText(quiz.error_reason) + "</div>"
+                : "")
             : "<p class='section-kicker'>解析</p><div class='rich-text'>"
               + richText(problem.solution || "（本题无解析）") + "</div>";
           buildRatingCard(
@@ -2296,11 +2332,14 @@
       heading.appendChild(state);
       var detail = document.createElement("div");
       detail.className = "ai-plan-detail hidden";
+      var summary = document.createElement("div");
+      summary.className = "ai-plan-summary hidden";
       body.appendChild(heading);
       body.appendChild(detail);
+      body.appendChild(summary);
       row.appendChild(body);
       row.activityParts = {
-        label: label, state: state, detail: detail, body: body,
+        label: label, state: state, detail: detail, summary: summary, body: body,
         disclosure: null, output: null,
       };
       aiPiActivities[id] = row;
@@ -2315,6 +2354,13 @@
     row.activityParts.state.textContent = aiActivityState(status);
     if (activity.detail != null) row.activityParts.detail.textContent = activity.detail || "";
     row.activityParts.detail.classList.toggle("hidden", !row.activityParts.detail.textContent);
+    if (activity.summary != null) {
+      row.activityParts.summary.textContent = String(activity.summary);
+    }
+    // A provider-reported failure shows its reason without expanding anything.
+    var hasSummary = activity.status === "failed"
+      && !!row.activityParts.summary.textContent;
+    row.activityParts.summary.classList.toggle("hidden", !hasSummary);
     if (activity.output != null && String(activity.output).length) {
       if (!row.activityParts.output) {
         var disclosure = document.createElement("details");
@@ -2391,6 +2437,7 @@
     ["problems", "题目"],
     ["flash_cards", "闪卡"],
     ["figures", "图片"],
+    ["keyless", "未录答案键"],
   ];
 
   function aiAssetSummary(counts) {
@@ -2432,6 +2479,15 @@
 
   function aiMarkRolledBack(card, batchId) {
     if (!card) return;
+    var row = aiBatchRow(card, batchId);
+    if (row) {
+      var label = row.children[0];
+      if (label) label.textContent = "批次 " + batchId + " 已整批回滚";
+      (row.children || []).slice().forEach(function (child) {
+        if (child.className === "check-card-rollback") child.remove();
+      });
+      return;
+    }
     var title = card.querySelector(".check-card-title");
     var detail = card.querySelector(".check-card-detail");
     var assets = detail && detail.dataset ? detail.dataset.assets : "";
@@ -2444,21 +2500,98 @@
     if (button) button.remove();
   }
 
+  function aiBatchRow(card, batchId) {
+    var body = (card.children || [])[0];
+    var rows = (body && body.children) || [];
+    for (var index = 0; index < rows.length; index += 1) {
+      var row = rows[index];
+      if (row.dataset && row.dataset.batchId === batchId) return row;
+    }
+    return null;
+  }
+
   function aiApplyCheckAction(action) {
     if (action.error) {
       aiAddCheckCard("入库未执行", "校验未通过：" + action.error, null);
       return;
     }
     var result = action.result;
-    if (!result || !result.batch_id) return;
-    var card = aiAddCheckCard("Check 入库完成", aiResultDetail(result), result.batch_id);
-    var line = card ? card.querySelector(".check-card-detail") : null;
+    if (!result) return;
+    var batches = Array.isArray(result.batches) ? result.batches : [];
+    if (batches.length > 1) {
+      // One bundle that spanned chapters: every recorded batch gets its own row
+      // and its own rollback.
+      var card = aiAddMultiBatchCard(result, batches);
+      batches.forEach(function (batch) {
+        aiBatchState(batch.batch_id).then(function (state) {
+          if (state && state.rolled_back_at) aiMarkRolledBack(card, batch.batch_id);
+        });
+      });
+      return;
+    }
+    if (!result.batch_id) return;
+    var single = aiAddCheckCard("Check 入库完成", aiResultDetail(result), result.batch_id);
+    var line = single ? single.querySelector(".check-card-detail") : null;
     if (line) line.dataset.assets = aiAssetSummary(result.counts || {});
     // A reopened card shows the batch's current state, not the state at the time
     // it ran: an already rolled-back batch offers no second rollback.
     aiBatchState(result.batch_id).then(function (batch) {
-      if (batch && batch.rolled_back_at) aiMarkRolledBack(card, result.batch_id);
+      if (batch && batch.rolled_back_at) aiMarkRolledBack(single, result.batch_id);
     });
+  }
+
+  function aiAddMultiBatchCard(result, batches) {
+    var card = aiAddCheckCard("Check 入库完成", aiMultiBatchDetail(result, batches), null);
+    if (!card) return null;
+    var body = card.children[0];
+    batches.forEach(function (batch) {
+      var row = document.createElement("div");
+      row.className = "check-card-batch";
+      row.dataset.batchId = batch.batch_id;
+      var label = document.createElement("div");
+      label.className = "check-card-batch-label";
+      label.textContent = aiBatchLabel(batch);
+      row.appendChild(label);
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "check-card-rollback";
+      button.textContent = "整批回滚";
+      button.addEventListener("click", function () {
+        aiRollbackBatch(batch.batch_id, button);
+      });
+      row.appendChild(button);
+      body.appendChild(row);
+    });
+    return card;
+  }
+
+  function aiBatchLabel(batch) {
+    var parts = ["批次 " + batch.batch_id];
+    if (batch.chapter) parts.push(batch.chapter);
+    var assets = aiAssetSummary(batch.counts || {});
+    if (assets) parts.push(assets);
+    return parts.join(" · ");
+  }
+
+  function aiMultiBatchDetail(result, batches) {
+    var chapters = batches.map(function (batch) { return batch.chapter; })
+      .filter(function (chapter) { return !!chapter; });
+    var totals = {};
+    batches.forEach(function (batch) {
+      Object.keys(batch.counts || {}).forEach(function (key) {
+        totals[key] = (totals[key] || 0) + batch.counts[key];
+      });
+    });
+    var lines = ["共 " + batches.length + " 个批次"
+      + (chapters.length ? " · " + chapters.join("、") : "")
+      + " · " + (result.kind || "?")];
+    var assets = aiAssetSummary(totals);
+    if (assets) lines.push(assets);
+    if (result.workspace) lines.push("工作区 " + result.workspace);
+    if (result.backup_path) {
+      lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
+    }
+    return lines.join("\\n");
   }
 
   function aiAddCheckCard(title, detail, batchId) {
@@ -2566,7 +2699,14 @@
         aiPiActivities = {};
         aiRenderActivities(message.activities || []);
         aiAddMarkdown(message.content || "", "ai");
-        if (message.action && message.action.type === "check_ingest") {
+        // A single-action turn records both keys; render the list, and fall back
+        // to the single action only when the list is absent (one card, never two).
+        var actions = message.actions || [];
+        if (actions.length) {
+          actions.forEach(function (restored) {
+            if (restored && restored.type === "check_ingest") aiApplyCheckAction(restored);
+          });
+        } else if (message.action && message.action.type === "check_ingest") {
           aiApplyCheckAction(message.action);
         }
         aiExecutionPlan = null;
@@ -2603,9 +2743,17 @@
     if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
     if (layout.dataset.page === "kp") body.kp_id = layout.dataset.objectId;
     if (layout.dataset.page === "practice" && currentProblem()) {
-      body.problem_id = currentProblem().id;
+      var active = currentProblem();
+      body.problem_id = active.id;
       body.practice_mode = sessionStorage.getItem(MODE_KEY) || "";
       body.progress = { seen: session().length };
+      // Attached for this turn only: the server bounds these and stores none of
+      // them, so an unsent draft never becomes a learning record.
+      body.include_draft = true;
+      body.draft_answer = answerBox ? answerBox.value : "";
+      body.draft_note = feedbackNote ? feedbackNote.value : "";
+      body.draft_choices = (active.choices || []).slice();
+      body.draft_images = visiblePracticeImages();
     }
     if (layout.dataset.page === "graph") {
       body.selected_kp_id = selectedGraphKpId;

@@ -820,6 +820,13 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .msg .section h4 { margin: 6px 0 2px; font-size: 13px; color: var(--dsw-label-secondary); }
 
 /* shared, safe markdown surface */
+.ai-plan-summary {
+  margin-top: 4px;
+  color: var(--dsw-state-error);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .rich-text { line-height: 1.7; overflow-wrap: anywhere; }
 .rich-text > :first-child { margin-top: 0; }
 .rich-text > :last-child { margin-bottom: 0; }
@@ -1019,6 +1026,9 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .check-card-title { font-weight: 600; color: var(--dsw-label-primary); }
 .check-card-detail { margin-top: 4px; color: var(--dsw-label-secondary); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
 .check-card-rollback { margin-top: 8px; }
+.check-card-batch { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.check-card-batch-label { color: var(--dsw-label-secondary); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+.check-card-batch .check-card-rollback { margin-top: 0; flex: none; }
 
 /* misc */
 h1 { font-size: 28px; line-height: 36px; margin: 0 0 8px; }

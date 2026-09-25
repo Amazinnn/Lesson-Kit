@@ -438,6 +438,27 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         )
         changes.append("feedback_events")
 
+    if not table_exists(conn, "attempt_operations"):
+        conn.execute(
+            """
+            CREATE TABLE attempt_operations (
+                request_id   TEXT NOT NULL,
+                problem_id   TEXT NOT NULL,
+                attempt_id   INTEGER NOT NULL,
+                kind         TEXT NOT NULL CHECK (kind IN ('apply', 'correct')),
+                rating       INTEGER CHECK (rating BETWEEN 1 AND 5),
+                fingerprint  TEXT NOT NULL,
+                batch_fingerprint TEXT NOT NULL,
+                result       TEXT NOT NULL,
+                pre_state    TEXT NOT NULL,
+                post_state   TEXT NOT NULL,
+                created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (request_id, problem_id)
+            )
+            """
+        )
+        changes.append("attempt_operations")
+
     if not table_exists(conn, "learning_current_state"):
         conn.execute(
             """
@@ -616,6 +637,9 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     ("source_evidence", "TEXT"),
                     ("source_answer", "TEXT"),
                     ("solution_origin", "TEXT"),
+                    # Optional study year of the source examination (2026-09-25
+                    # practice-set-export-and-cli-audit): additive and nullable.
+                    ("exam_year", "TEXT"),
                 ],
             )
         )
@@ -633,6 +657,21 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                 "problem_attempts",
                 [("answer_text", "TEXT")],
             )
+        )
+    if table_exists(conn, "feedback_events"):
+        # An Agent-recorded rating links to the attempt it graded; browser and
+        # legacy events stay unlinked (2026-09-24 agent-assisted-practice-records).
+        changes.extend(
+            ensure_columns(
+                conn,
+                "feedback_events",
+                [("attempt_id", "INTEGER")],
+            )
+        )
+    if table_exists(conn, "attempt_operations"):
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_attempt_operations_attempt "
+            "ON attempt_operations(attempt_id)"
         )
     if table_exists(conn, "flash_cards"):
         changes.extend(

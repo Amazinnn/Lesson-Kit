@@ -30,6 +30,21 @@ print(json.dumps({"type":"thread.started","thread_id":"native-123"}), flush=True
 print(json.dumps({"type":"turn.started"}), flush=True)
 if mode == "slow":
     time.sleep(20)
+elif mode == "chatty":
+    # Reports progress in small pieces, for longer in total than the turn
+    # budget: duration alone must never stop the turn.
+    for index in range(12):
+        print(json.dumps({"type":"item.completed","item":{"id":"r%d" % index,"type":"reasoning","text":"思考 %d" % index}}), flush=True)
+        time.sleep(0.05)
+    print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"想完了"}}), flush=True)
+    print(json.dumps({"type":"turn.completed"}), flush=True)
+elif mode == "quiet-command":
+    # A command that runs and prints nothing for longer than the idle budget.
+    print(json.dumps({"type":"item.started","item":{"id":"cmd-9","type":"command_execution","command":"make -j8"}}), flush=True)
+    time.sleep(1.0)
+    print(json.dumps({"type":"item.completed","item":{"id":"cmd-9","type":"command_execution","command":"make -j8","aggregated_output":"build ok","exit_code":0}}), flush=True)
+    print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"构建完成"}}), flush=True)
+    print(json.dumps({"type":"turn.completed"}), flush=True)
 elif mode == "fail":
     print(json.dumps({"type":"error","message":"provider exploded"}), flush=True)
     raise SystemExit(3)
@@ -351,6 +366,67 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(conversations.get(self.pool, conversation["conversation_id"])["messages"], [])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_output_past_the_budget_is_not_a_timeout(self, get_provider):
+        # The turn outlives its 0.3s budget while never going quiet for that
+        # long: it must finish, not be cut off for taking time.
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = {**self.provider, "timeout_s": 0.3}
+        with mock.patch.object(conversation_providers, "build_command", self.command("chatty", [])):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Chatty",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            started = time.monotonic()
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+            elapsed = time.monotonic() - started
+
+        self.assertEqual(done["status"], "done")
+        self.assertGreater(elapsed, 0.3)
+        self.assertIn("想完了", conversations.get(
+            self.pool, conversation["conversation_id"])["messages"][-1]["content"])
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_quiet_command_gets_the_tool_budget(self, get_provider):
+        # One second of silence from a running command: fatal under the 0.3s
+        # idle budget, ordinary under the tool budget.
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = {
+            **self.provider, "timeout_s": 0.3, "tool_timeout_s": 10,
+        }
+        with mock.patch.object(conversation_providers, "build_command", self.command("quiet-command", [])):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Quiet",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "done")
+        self.assertIn("构建完成", conversations.get(
+            self.pool, conversation["conversation_id"])["messages"][-1]["content"])
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_quiet_command_still_fails_by_its_own_budget(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = {
+            **self.provider, "timeout_s": 5, "tool_timeout_s": 0.2,
+        }
+        with mock.patch.object(conversation_providers, "build_command", self.command("quiet-command", [])):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Stuck",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "failed")
+        self.assertEqual(done["error"], "provider timed out")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
     def test_session_title_can_be_renamed_and_idle_mirror_deleted(self, get_provider):
         from workbench.bridge import conversations
 
@@ -548,6 +624,235 @@ class ConversationTests(unittest.TestCase):
 
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_two_content_actions_in_one_reply_are_both_applied(
+            self, get_provider, normalize_event):
+        """One turn may import two chapters: the second block is not dropped."""
+        from workbench.bridge import conversation_providers, conversations
+
+        def bundle(chapter):
+            return {
+                "kind": "content-bundle", "chapter": chapter,
+                "problems": [{
+                    "key": "p1", "problem_type": "calculation",
+                    "problem_text": "题目", "kp_ids": ["dmath-ch06-kp-001"],
+                    "source_kind": "textbook", "origin_kind": "source_problem",
+                    "source_evidence": "教材 第12章 习题12-1",
+                }],
+            }
+
+        first, second = bundle("ch12"), bundle("ch13")
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-9"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "两章都导好了。"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": first}) + "\n```"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": second}) + "\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        applied = {
+            "ok": True, "kind": "content-bundle", "applied": 2,
+            "batch_id": "batch-010", "counts": {"problems": 3},
+            "origins": {"source_problem": 3},
+            "batches": [
+                {"batch_id": "batch-010", "chapter": "ch12",
+                 "counts": {"problems": 3}, "origins": {"source_problem": 3}},
+                {"batch_id": "batch-011", "chapter": "ch13",
+                 "counts": {"problems": 2}, "origins": {"source_problem": 2}},
+            ],
+            "backup_path": "pool/backups/one.sqlite",
+        }
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ), mock.patch.object(
+            conversations.ingest, "apply_batch", create=True, return_value=applied
+        ) as apply_batch:
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "把 12、13 章都导进去",
+                {"anchor": {"page_type": "kp", "route": "/w/dmath/kp/kp-001"},
+                 "check_intent": True},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "done")
+        self.assertEqual(apply_batch.call_count, 2, "every content block is applied")
+        self.assertEqual(
+            [action["manifest"]["chapter"] for action in done["actions"]],
+            ["ch12", "ch13"],
+        )
+        self.assertEqual([batch["chapter"] for batch in
+                          done["actions"][1]["result"]["batches"]], ["ch12", "ch13"])
+        # No single action to show: the card renders every batch instead.
+        self.assertNotIn("action", done)
+        transcript = (Path(self.fixture.tmp.name) / "dmath" / ".lessonkit" / "jobs"
+                      / conversation["conversation_id"] / "transcript.jsonl")
+        exchange = json.loads(transcript.read_text(encoding="utf-8").splitlines()[-1])
+        self.assertEqual(len(exchange["actions"]), 2)
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_two_real_actions_in_one_turn_keep_their_own_backups(
+            self, get_provider, normalize_event):
+        """Both blocks really apply: one recovery copy each, no name clash."""
+        from workbench.bridge import conversation_providers, conversations
+
+        def bundle(chapter):
+            return {
+                "kind": "content-bundle", "chapter": chapter,
+                "problems": [{
+                    "key": "p1", "chapter": chapter, "problem_type": "calculation",
+                    "problem_text": chapter + " 题目",
+                    "kp_ids": ["dmath-ch06-kp-001"],
+                    "source_kind": "textbook", "origin_kind": "source_problem",
+                    "source_evidence": "教材 第6章 习题6-1",
+                }],
+            }
+
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-11"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "两章都导好了。"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": bundle("ch06")}) + "\n```"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": bundle("ch07")}) + "\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "把六、七章导进去",
+                {"anchor": {"page_type": "kp", "route": "/w/dmath/kp/kp-001"},
+                 "check_intent": True},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "done", done.get("error"))
+        batches = [batch for action in done["actions"]
+                   for batch in action["result"]["batches"]]
+        self.assertEqual([batch["chapter"] for batch in batches], ["ch06", "ch07"])
+        self.assertEqual(len({batch["batch_id"] for batch in batches}), 2)
+        ids = [row[0] for row in self.pool.connect().execute(
+            "SELECT problem_id FROM problems WHERE problem_id LIKE 'dmath-ch0%'"
+            " ORDER BY problem_id")]
+        self.assertIn("dmath-ch07-prob-001", ids)
+        backups = sorted(p.name for p in self.pool.db_path.parent.glob("*backup*"))
+        self.assertEqual(len(backups), 2, backups)
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_keyless_objective_import_reports_its_count_next_turn(
+            self, get_provider, normalize_event):
+        """A 判断题 whose source lost its answer still lands — and is disclosed."""
+        from workbench.bridge import conversation_providers, conversations
+
+        manifest = {
+            "kind": "content-bundle", "chapter": "ch06",
+            "problems": [
+                {"key": "m1", "chapter": "ch06", "problem_type": "other",
+                 "stem": "1 是质数吗？", "quiz_type": "yes_no", "answer_key": None,
+                 "kp_ids": ["dmath-ch06-kp-001"], "source_kind": "textbook",
+                 "origin_kind": "source_problem",
+                 "source_evidence": "教材 第6章 习题6-1"},
+            ],
+        }
+
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-12"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "判断题导好了。"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "content-bundle", "manifest": manifest}) + "\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "把判断题导进去",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+            outcome = conversations._last_check_outcome(
+                conversations._conversation_dir(
+                    self.pool, conversation["conversation_id"]))
+
+        self.assertEqual(done["status"], "done", done.get("error"))
+        row = self.pool.connect().execute(
+            "SELECT practice_modes, micro_quiz FROM problems"
+            " WHERE problem_id LIKE '%-mq-%'").fetchone()
+        self.assertEqual(json.loads(row[0]), ["yes_no"])
+        self.assertIsNone(json.loads(row[1])["answer_key"])
+        self.assertIn("未录答案键 1", outcome)
+        self.assertIn("不要让学生再说一次「继续」", outcome)
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_one_failing_content_action_leaves_the_other_applied(
+            self, get_provider, normalize_event):
+        from workbench.bridge import conversation_providers, conversations
+        from workbench import ingest
+
+        def bundle(chapter, kp_id):
+            return {
+                "kind": "content-bundle", "chapter": chapter,
+                "problems": [{
+                    "key": "p1", "problem_type": "calculation",
+                    "problem_text": "题目", "kp_ids": [kp_id],
+                    "source_kind": "textbook", "origin_kind": "source_problem",
+                    "source_evidence": "教材 第12章 习题12-1",
+                }],
+            }
+
+        good = bundle("ch12", "dmath-ch06-kp-001")
+        bad = bundle("ch13", "kp-9")
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-10"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "先导 12 章，13 章有问题。"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": good}) + "\n```"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "check_ingest", "manifest": bad}) + "\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        real_apply = ingest.apply_batch
+
+        def apply(db_path, manifest, **kwargs):
+            if manifest["chapter"] == "ch13":
+                raise ValueError("problem 1: unknown knowledge point kp-9")
+            return real_apply(db_path, manifest, **kwargs)
+
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ), mock.patch.object(
+            conversations.ingest, "apply_batch", side_effect=apply, create=True
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "把 12、13 章导进去",
+                {"anchor": {"page_type": "kp", "route": "/w/dmath/kp/kp-001"},
+                 "check_intent": True},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        actions = done["actions"]
+        self.assertEqual(actions[0]["result"]["kind"], "content-bundle")
+        self.assertIn("unknown knowledge point", actions[1]["error"])
+        self.assertEqual(self.pool.connect().execute(
+            "SELECT COUNT(*) FROM ingest_batches").fetchone()[0], 1)
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
     def test_check_ingest_gate_failure_is_stored_on_done_turn(self, get_provider, normalize_event):
         from workbench.bridge import conversation_providers, conversations
 
@@ -614,7 +919,8 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(
             captured["last_check_outcome"],
             "上一轮内容动作已成功入库：批次 batch-007（flash-card-patch，闪卡 3）。"
-            "不要重复提交相同内容。",
+            "不要重复提交相同内容；若学生要求的内容还有未导入的章，直接继续提交剩余部分，"
+            "不要让学生再说一次「继续」。",
         )
         self.assertIsNot(captured, original)
         self.assertIs(captured["anchor"], original["anchor"])
@@ -713,7 +1019,9 @@ class GoalFormActionExtractionTests(unittest.TestCase):
 
     def _run(self, answer, context):
         from workbench.bridge import conversations
-        return conversations._extract_action(answer, context)
+
+        cleaned, _, notice = conversations._extract_action(answer, context)
+        return cleaned, notice
 
     def _answer(self, body):
         return "好的，我帮你填。\n```lessonkit-action\n" + body + "\n```"
@@ -765,12 +1073,26 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         from workbench.bridge import conversations
 
         answer = "已生成。\n```lessonkit-action\n" + body + "\n```"
-        return conversations._extract_action(answer, context, folder)
+        cleaned, content, notice = conversations._extract_action(
+            answer, context, folder)
+        return cleaned, (content[0] if content else notice)
+
+    def _run_all(self, bodies, context, folder=None):
+        """Every content action of one reply, in block order."""
+        from workbench.bridge import conversations
+
+        answer = "已生成。" + "".join(
+            "\n```lessonkit-action\n" + body + "\n```" for body in bodies
+        )
+        cleaned, content, notice = conversations._extract_action(
+            answer, context, folder)
+        return cleaned, [*content, *([notice] if notice else [])]
 
     def _extract(self, answer, context):
         from workbench.bridge import conversations
 
-        return conversations._extract_action(answer, context)
+        cleaned, content, notice = conversations._extract_action(answer, context)
+        return cleaned, (content[0] if content else notice)
 
     def test_prompt_describes_the_content_bundle_contract(self):
         from workbench.bridge import conversations
@@ -818,7 +1140,38 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
                                                           "chapter": "ch12"}})
         self.assertNotIn("3–6", prompt)
         self.assertIn("条数没有上限", prompt)
-        self.assertIn("一个清单就是一个批次", prompt)
+        # One manifest may span chapters and lands as one batch per chapter.
+        self.assertIn("一份清单可以跨任意多章", prompt)
+        self.assertIn("按章各记一个批次", prompt)
+        self.assertIn("content-bundle 区块都会被依次应用", prompt)
+        self.assertIn("不要只导一章就停下来", prompt)
+        # The chapter rule is stated as implemented: no workspace fallback.
+        self.assertIn("点名拒收", prompt)
+        # The practice mode is chosen with fields, and a key may be missing.
+        self.assertIn("练习题型三选一", prompt)
+        self.assertIn("即使题源没有正确答案也照样入库", prompt)
+        # A resumed session is told the contract takes precedence.
+        self.assertIn("content-bundle 契约（v2", prompt)
+
+    def test_prompt_teaches_workspace_arguments_and_independent_cli_calls(self):
+        from workbench.bridge import conversations
+
+        prompt = conversations._prompt("q", {"workspace": {
+            "name": "大学物理乙II", "course": "c01", "chapter": "ch12"}})
+        # the argument order the Agent got wrong: workspace right after the command
+        self.assertIn("lesson-kit data 大学物理乙II create kp --input", prompt)
+        # discover flags from help instead of guessing
+        self.assertIn("--help", prompt)
+        self.assertIn("不要猜", prompt)
+        # an independent invocation keeps its own exit status
+        self.assertIn("单独执行", prompt)
+        self.assertIn("不要接管道", prompt)
+        self.assertIn("退出码", prompt)
+        # redirecting to a file keeps the output readable without losing status
+        self.assertIn("> out.txt", prompt)
+        self.assertIn("echo $?", prompt)
+        # success may only be claimed from a successful result
+        self.assertIn("不要谎报成功", prompt)
 
     def test_prompt_preserves_practice_and_goal_action_contracts(self):
         from workbench.bridge import conversations
@@ -855,6 +1208,50 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         }
         _, action = self._run(json.dumps(manifest), {})
         self.assertEqual(action, {"type": "check_ingest", "manifest": manifest})
+
+    def test_an_inline_block_may_name_the_bundle_with_type(self):
+        # The contract calls the block a content-bundle, so writing
+        # {"type": "content-bundle", …} must not be refused over the key's name.
+        _, action = self._run(json.dumps({
+            "type": "content-bundle",
+            "chapter": "ch07",
+            "problems": [{"key": "p1", "problem_type": "proof", "chapter": "ch07"}],
+        }), {})
+        self.assertNotIn("error", action)
+        self.assertEqual(action["manifest"]["kind"], "content-bundle")
+        self.assertEqual(action["manifest"]["problems"][0]["key"], "p1")
+
+    def test_a_staged_file_may_carry_only_the_lists(self):
+        # The real Agent staged the manifest body without a wrapper key, because
+        # the block already said which action it is.
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "conv-003"
+            folder.mkdir()
+            (folder / "bundle.json").write_text(json.dumps({
+                "chapter": "ch07",
+                "problems": [{"key": "p1", "problem_type": "proof",
+                              "chapter": "ch07"}],
+            }), encoding="utf-8")
+            _, action = self._run(
+                '{"type":"content-bundle","staged_manifest":"bundle.json"}',
+                {}, folder,
+            )
+        self.assertNotIn("error", action)
+        self.assertEqual(action["manifest"]["kind"], "content-bundle")
+        self.assertEqual(action["manifest"]["problems"][0]["problem_type"], "proof")
+
+    def test_a_list_with_no_entries_is_still_an_empty_bundle(self):
+        _, action = self._run(json.dumps({"problems": []}), {})
+        self.assertIn("requires at least one knowledge point", action["error"])
+
+    def test_a_wrong_shape_is_still_refused(self):
+        # A recognized block type with an empty manifest keeps its explicit error.
+        _, action = self._run(
+            json.dumps({"type": "content-bundle", "knowledge_points": []}), {})
+        self.assertIn("at least one knowledge point", action["error"])
+        # An unknown block type is refused as an unrecognized action.
+        _, action = self._run(json.dumps({"type": "flash-card", "items": []}), {})
+        self.assertIn("没有区块符合已知动作契约", action["error"])
 
     def test_staged_manifest_is_loaded_from_the_conversation(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -909,7 +1306,8 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertEqual(action, {
             "type": "check_ingest",
             "error": "manifest kind must be flash-card-patch, micro-quiz-patch, "
-                     "or content-bundle",
+                     "or content-bundle — a content-bundle carries "
+                     "knowledge_points / problems / flash_cards",
         })
 
     def test_empty_items_are_an_explicit_error(self):
