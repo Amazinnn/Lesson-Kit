@@ -124,6 +124,53 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertIn("figure_paths", self.columns("problems"))
         self.assertIn("answer_text", self.columns("problem_attempts"))
 
+    def test_migration_adds_exam_year_without_touching_rows(self):
+        before = self.conn.execute(
+            "SELECT problem_id, problem_text, solution FROM problems ORDER BY problem_id"
+        ).fetchall()
+        self.assertNotIn("exam_year", self.columns("problems"))
+
+        pool_schema.ensure_workbench_schema(self.conn)
+
+        self.assertIn("exam_year", self.columns("problems"))
+        self.assertEqual(
+            [tuple(row) for row in self.conn.execute(
+                "SELECT problem_id, problem_text, solution FROM problems ORDER BY problem_id")],
+            [tuple(row) for row in before],
+        )
+        self.assertEqual(
+            [row[0] for row in self.conn.execute("SELECT exam_year FROM problems")],
+            [None] * len(before),
+        )
+        # Idempotent: a second pass reports nothing new for the column.
+        self.assertNotIn("problems.exam_year", pool_schema.ensure_workbench_schema(self.conn))
+
+    def test_migration_adds_attempt_recording_without_touching_legacy_rows(self):
+        self.conn.execute(
+            "INSERT INTO problem_attempts (problem_id, status, note) VALUES (?, ?, ?)",
+            ("dmath-ch06-prob-001", "wrong", "old attempt"),
+        )
+        before = self.conn.execute(
+            "SELECT id, problem_id, status, note FROM problem_attempts ORDER BY id"
+        ).fetchall()
+
+        pool_schema.ensure_workbench_schema(self.conn)
+
+        self.assertIn("attempt_operations", self.table_names())
+        self.assertIn("attempt_id", self.columns("feedback_events"))
+        self.assertIn(
+            "idx_attempt_operations_attempt",
+            {row[0] for row in self.conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='index'")},
+        )
+        self.assertEqual(
+            [tuple(row) for row in self.conn.execute(
+                "SELECT id, problem_id, status, note FROM problem_attempts ORDER BY id")],
+            [tuple(row) for row in before],
+        )
+        self.assertEqual(
+            self.conn.execute("SELECT COUNT(*) FROM attempt_operations").fetchone()[0], 0)
+
     def test_migration_adds_problem_metadata_and_current_state(self):
         pool_schema.ensure_workbench_schema(self.conn)
         self.assertIn("display_title", self.columns("problems"))

@@ -217,13 +217,21 @@ class Pool:
         ).fetchall()
         return [dict(r) for r in rows]
 
+    def attempt(self, attempt_id):
+        row = self.connect().execute(
+            "SELECT * FROM problem_attempts WHERE id=?", (attempt_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
     def insert_attempt(self, problem_id, status, note=None, answer_text=None):
-        self.connect().execute(
+        """Append one attempt and return its id — the handle a record links to."""
+        cursor = self.connect().execute(
             "INSERT INTO problem_attempts (problem_id, status, note, answer_text)"
             " VALUES (?, ?, ?, ?)",
             (problem_id, status, note, answer_text),
         )
         self.commit()
+        return cursor.lastrowid
 
     def upsert_problem_progress(self, problem_id, status, note=None):
         self.connect().execute(
@@ -234,6 +242,21 @@ class Pool:
             (problem_id, status, note),
         )
         self.commit()
+
+    def problem_progress_rows(self):
+        rows = self.connect().execute(
+            "SELECT * FROM problem_progress ORDER BY problem_id"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def latest_attempt_statuses(self):
+        """One status per problem: the newest attempt, for wrong-problem selection."""
+        rows = self.connect().execute(
+            "SELECT a.problem_id, a.status FROM problem_attempts a"
+            " JOIN (SELECT problem_id, MAX(id) AS id FROM problem_attempts"
+            "       GROUP BY problem_id) newest ON a.id = newest.id"
+        ).fetchall()
+        return {row["problem_id"]: row["status"] for row in rows}
 
     def current_state(self, item_type, item_id):
         row = self.connect().execute(
@@ -306,13 +329,15 @@ class Pool:
 
     # -- feedback events --------------------------------------------------
 
-    def insert_feedback_event(self, item_type, item_id, rating=None, note=None):
-        self.connect().execute(
-            "INSERT INTO feedback_events (item_type, item_id, rating, note)"
-            " VALUES (?, ?, ?, ?)",
-            (item_type, item_id, rating, note),
+    def insert_feedback_event(self, item_type, item_id, rating=None, note=None,
+                              attempt_id=None):
+        cursor = self.connect().execute(
+            "INSERT INTO feedback_events (item_type, item_id, rating, note, attempt_id)"
+            " VALUES (?, ?, ?, ?, ?)",
+            (item_type, item_id, rating, note, attempt_id),
         )
         self.commit()
+        return cursor.lastrowid
 
     def feedback_events(self, item_type=None, item_id=None):
         conn = self.connect()
@@ -327,6 +352,13 @@ class Pool:
                 "SELECT * FROM feedback_events ORDER BY id"
             ).fetchall()
         return [dict(r) for r in rows]
+
+    def feedback_event_for_attempt(self, attempt_id):
+        row = self.connect().execute(
+            "SELECT * FROM feedback_events WHERE attempt_id=? ORDER BY id DESC LIMIT 1",
+            (attempt_id,),
+        ).fetchone()
+        return dict(row) if row else None
 
     # -- runtime paths ----------------------------------------------------
 

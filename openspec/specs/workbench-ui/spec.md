@@ -324,7 +324,16 @@ The right column SHALL provide free conversation on every workbench page without
 
 ### Requirement: Authoritative page context for Agent turns
 
-For each turn, the browser SHALL send object identifiers rather than page DOM, and the server SHALL rebuild authoritative workspace, course, chapter, route, page type, selected object, and relevant learning context from SQLite. Practice, knowledge-point, and graph pages SHALL attach their defined object/state summaries. The latest three different browser-session object anchors SHALL also be attached. Unsubmitted answer and note drafts SHALL remain excluded, and the chat UI SHALL expose no draft-attachment setting.
+For each turn, the browser SHALL send object identifiers rather than the full
+page DOM; the server SHALL rebuild authoritative workspace, course, chapter,
+route, page type, selected object, and relevant learning context from SQLite.
+Practice, knowledge-point, and graph pages SHALL retain their existing
+object/state summaries and the latest three distinct browser-session anchors.
+On the practice page, the current unsent answer text, selected options, note,
+and currently displayed image references SHALL also be passed as bounded,
+ephemeral learner input. They SHALL be treated as draft content, not database
+facts, and SHALL NOT be written to the pool or conversation mirror merely by
+sending a turn. Other pages keep their existing context behavior.
 
 #### Scenario: Ask about a knowledge point page
 
@@ -333,13 +342,18 @@ For each turn, the browser SHALL send object identifiers rather than page DOM, a
 
 #### Scenario: Keep a practice draft private
 
-- **WHEN** an unsubmitted answer or note exists
-- **THEN** it is absent from Agent context and is not persisted by the conversation bridge
+- **WHEN** an unsubmitted answer or note exists but no Agent turn or explicit practice submission occurs
+- **THEN** it is absent from durable learning records and the conversation mirror
 
 #### Scenario: Attach a practice draft explicitly
 
-- **WHEN** a learner sends an Agent turn while an unsubmitted practice draft exists
-- **THEN** the draft remains excluded because the student chat exposes no attachment setting
+- **WHEN** a learner sends an Agent turn while a practice draft exists
+- **THEN** the focused draft, chosen options, and visible image references are available to that turn without creating an attempt
+
+#### Scenario: Agent reads the focused answer
+
+- **WHEN** the learner is viewing an open problem with entered work and sends a chat message
+- **THEN** the current problem and entered work take priority in Agent context while wider workspace reads remain available
 
 ### Requirement: User-visible Markdown uses one safe subset
 All user-visible learning text SHALL use the same supported Markdown subset: ATX headings through level 3, paragraphs, ordered and unordered lists, blockquotes, fenced and inline code, strong/emphasis, safe http(s) links, wiki links, math, and workspace-local images.
@@ -1018,4 +1032,26 @@ source solution, and `AI 生成解析`.
 
 - **WHEN** a conversation is reopened after its batch was rolled back
 - **THEN** the card shows `已回滚` and exposes no rollback button
+
+### Requirement: Failed activities expose a concise error summary
+
+A failed activity SHALL display a sanitized error summary of at most 240
+characters without requiring expansion. Full bounded tool output SHALL remain
+collapsed by default. Empty output SHALL produce an explicit generic failure
+message. Existing sensitive-value redaction SHALL precede truncation/storage.
+
+#### Scenario: Pi tool reports an error
+
+- **WHEN** Pi emits tool_execution_end with isError=true and diagnostic text
+- **THEN** the activity visibly shows failure and its short diagnostic while full output remains collapsed
+
+#### Scenario: Error output is empty
+
+- **WHEN** a tool fails without diagnostic text
+- **THEN** the activity shows a generic failure summary rather than a blank detail
+
+#### Scenario: Failure contains sensitive and long output
+
+- **WHEN** a failed activity contains secrets and more than 240 characters
+- **THEN** its summary is redacted and bounded and cannot expose the removed sensitive values
 

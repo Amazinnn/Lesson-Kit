@@ -10,6 +10,19 @@ from pathlib import Path
 _LOCK = threading.Lock()
 
 
+def plan_path(workspace):
+    """The cached daily plan that any goal change makes stale."""
+    return Path(workspace["path"]) / ".lessonkit" / "plan.json"
+
+
+def invalidate_plan(workspace):
+    """One writer for both surfaces: a goal change drops the cached plan."""
+    try:
+        plan_path(workspace).unlink()
+    except FileNotFoundError:
+        pass
+
+
 def _path(root):
     return Path(root) / ".lessonkit" / "goals.json"
 

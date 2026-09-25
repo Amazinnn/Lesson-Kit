@@ -53,13 +53,27 @@ A bundle may contain `knowledge_points`, `problems`, `flash_cards`, and each
 problem's `figures`. Items reference each other by a bundle-local `key`; ids are
 allocated by the server in course/chapter order. Large manifests are staged under
 the owning conversation's `.lessonkit/jobs/conv-NNN/` directory and referenced
-from the action by file name (the server refuses absolute paths and `..`).
+from the action by file name (the server refuses absolute paths and `..`); a small
+manifest may also be inline in the reply, naming itself with `kind` or `type` as
+`content-bundle`. Every knowledge point, problem, and card resolves exactly one
+chapter — its own `chapter`, else the bundle-level one — and an item that
+resolves none is refused with its label: the workspace's active chapter is never
+a fallback, so a multi-chapter manifest cannot be silently assigned to the
+chapter the learner happens to be viewing.
 
 The manifest is checked and applied through the workbench ingest boundary as one
-atomic batch: one prevalidation, one recoverable backup, one `batch-NNN`.
-Any invalid item or missing required image leaves SQLite and the figure
-destination untouched. Source figures are copied byte for byte into
+prevalidation, one recoverable backup, and one transaction, recording one batch
+per chapter present (`batch-NNN` each, in chapter order) so a chapter can be
+rolled back on its own. Any invalid item or missing required image leaves SQLite
+and the figure destination untouched. Source figures are copied byte for byte into
 `.lessonkit/figures/{course}/{chapter}/` and referenced by logical path.
+
+An objective item declares its practice form with `quiz_type` (`yes_no`,
+`single_choice`, `multiple_choice`) plus `options`, and optionally an
+`answer_key` together with `error_reason`. A **missing answer key is allowed**:
+the item is then practised in its 判断/小测 shell without a verdict, and the key
+can be supplied later with `lesson-kit data <workspace> update problem <id>
+--input '{"answer_key": "…"}'` (an empty value clears it again).
 
 Every problem carries both provenance axes: `source_kind` describes the
 grounding material and `origin_kind` describes whether the problem is sourced,

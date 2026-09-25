@@ -453,6 +453,205 @@ class ContentBundleTests(unittest.TestCase):
             self.apply({"kind": "flash-card-patch", "items": []})
         self.assertIn("content-bundle", str(caught.exception))
 
+    # -- bundles that span chapters --------------------------------------
+
+    def two_chapter_manifest(self, figure=None):
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "knowledge_points": [
+                {"key": "kp-06", "knowledge_item": "第六章概念"},
+                {"key": "kp-07", "chapter": "ch07", "knowledge_item": "第七章概念"},
+            ],
+            "problems": [
+                formal("p-06", ["kp-06"], text="第六章题目"),
+                formal("p-07", ["kp-07"], chapter="ch07", text="第七章题目"),
+            ],
+        }
+        if figure is not None:
+            manifest["problems"].append(formal(
+                "p-fig", ["kp-07"], text="带图题目 ![图](figure:f1)",
+                chapter="ch07", figures=[{"key": "f1", "source_path": str(figure)}],
+            ))
+        return manifest
+
+    def test_one_bundle_imports_two_chapters(self):
+        figure = self.image("two-chapter.png")
+        result = self.apply(self.two_chapter_manifest(figure))
+
+        self.assertTrue(result["ok"])
+        self.assertEqual([batch["chapter"] for batch in result["batches"]], ["ch06", "ch07"])
+        self.assertEqual(len({batch["batch_id"] for batch in result["batches"]}), 2)
+        self.assertNotIn("batch_id", result, "a multi-chapter bundle has no single batch id")
+        self.assertEqual(
+            [row[0] for row in self.query(
+                "SELECT problem_id FROM problems WHERE problem_id LIKE 'dmath-ch0%'"
+                " ORDER BY problem_id")],
+            ["dmath-ch06-prob-001", "dmath-ch06-prob-002", "dmath-ch07-prob-001",
+             "dmath-ch07-prob-002"],
+        )
+        self.assertEqual(
+            self.query("SELECT problem_id, ingest_batch_id FROM problems WHERE"
+                       " problem_id LIKE 'dmath-ch07-prob-%' ORDER BY problem_id"),
+            [("dmath-ch07-prob-001", result["batches"][1]["batch_id"]),
+             ("dmath-ch07-prob-002", result["batches"][1]["batch_id"])],
+        )
+        # Each chapter's figures land in its own chapter directory.
+        self.assertTrue((self.ws / ".lessonkit" / "figures" / "dmath" / "ch07"
+                         / f"{figure.stem}").parent.is_dir())
+        copied = list((self.ws / ".lessonkit" / "figures" / "dmath" / "ch07").glob("*.png"))
+        self.assertEqual(len(copied), 1)
+        self.assertFalse((self.ws / ".lessonkit" / "figures" / "dmath" / "ch06").exists())
+        self.assertEqual(len(self.query("SELECT batch_id FROM ingest_batches")), 2)
+
+    def test_each_chapter_batch_rolls_back_alone(self):
+        result = self.apply(self.two_chapter_manifest())
+        first, second = (batch["batch_id"] for batch in result["batches"])
+
+        rolled = ingest.rollback_batch(self.db_path, first)
+
+        self.assertEqual(rolled["counts"]["problems"], 1)
+        self.assertEqual(
+            [row[0] for row in self.query(
+                "SELECT problem_id FROM problems WHERE problem_id LIKE 'dmath-ch07-prob-%'")],
+            ["dmath-ch07-prob-001"], "the sibling batch stays")
+        states = dict(self.query("SELECT batch_id, rolled_back_at FROM ingest_batches"))
+        self.assertIsNotNone(states[first])
+        self.assertIsNone(states[second])
+
+    def test_an_item_without_a_chapter_is_refused(self):
+        manifest = self.two_chapter_manifest()
+        del manifest["chapter"]
+        manifest["knowledge_points"][0].pop("chapter", None)
+        before = self.count("problems")
+
+        with self.assertRaises(ValueError) as caught:
+            self.apply(manifest)
+
+        self.assertIn("knowledge point 1: chapter is required", str(caught.exception))
+        self.assertEqual(self.count("problems"), before)
+        self.assertEqual(len(self.query("SELECT batch_id FROM ingest_batches")), 0)
+
+    def test_a_bad_chapter_value_is_refused(self):
+        manifest = self.two_chapter_manifest()
+        manifest["problems"][1]["chapter"] = "第7章"
+        with self.assertRaises(ValueError) as caught:
+            self.apply(manifest)
+        self.assertIn("chapter must be a lowercase ASCII identifier", str(caught.exception))
+
+    def test_an_explicit_id_must_name_the_items_chapter(self):
+        manifest = self.two_chapter_manifest()
+        manifest["problems"][1]["problem_id"] = "dmath-ch08-prob-001"
+        with self.assertRaises(ValueError) as caught:
+            self.apply(manifest)
+        message = str(caught.exception)
+        self.assertIn("must start with dmath-ch07-", message)
+        self.assertIn("it belongs to ch08", message)
+
+    def test_a_single_chapter_bundle_keeps_the_legacy_result(self):
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [formal("p1", [], text="题目")],
+        }
+        manifest["problems"][0]["kp_ids"] = ["dmath-ch06-kp-001"]
+        result = self.apply(manifest)
+        self.assertEqual(result["batch_id"], result["batches"][0]["batch_id"])
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(result["origins"], {"source_problem": 1})
+
+    # -- practice mode and missing answer keys ---------------------------
+
+    def test_an_objective_item_may_enter_without_an_answer_key(self):
+        page = ["dmath-ch06-kp-001"]
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [
+                micro("m1", page, answer_key=None, error_reason=None),
+                micro("m2", page, quiz_type="single_choice", stem="与 E 同向的是？",
+                      options=["甲", "乙", "丙"], answer_key=None, error_reason=None),
+                micro("m3", page),
+            ],
+        }
+
+        result = self.apply(manifest)
+
+        self.assertEqual(result["counts"]["problems"], 3)
+        self.assertEqual(result["counts"]["keyless"], 2)
+        rows = self.query(
+            "SELECT problem_id, practice_modes, micro_quiz FROM problems "
+            "WHERE problem_id LIKE '%mq-%' ORDER BY problem_id"
+        )
+        self.assertEqual([tuple(json.loads(row[1])) for row in rows],
+                         [("yes_no",), ("micro",), ("yes_no",)])
+        payloads = {row[0]: json.loads(row[2]) for row in rows}
+        keyless = [row[0] for row in rows if payloads[row[0]]["answer_key"] is None]
+        self.assertEqual(len(keyless), 2)
+        self.assertIsNone(payloads[keyless[0]]["error_reason"])
+        graded = [row[0] for row in rows if payloads[row[0]]["answer_key"] == "是"]
+        self.assertEqual(len(graded), 1)
+        batch = self.query(
+            "SELECT counts_json FROM ingest_batches WHERE batch_id=?",
+            (result["batch_id"],),
+        )
+        self.assertEqual(json.loads(batch[0][0])["keyless"], 2)
+
+    def test_a_keyed_item_still_needs_its_error_reason(self):
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [micro("m1", ["dmath-ch06-kp-001"], error_reason=None)],
+        }
+        with self.assertRaises(ValueError) as caught:
+            self.apply(manifest)
+        self.assertIn("error_reason is required", str(caught.exception))
+
+    def test_a_keyless_choice_item_still_needs_options(self):
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [micro("m1", ["dmath-ch06-kp-001"],
+                               quiz_type="single_choice", options=None,
+                               answer_key=None, error_reason=None)],
+        }
+        with self.assertRaises(ValueError) as caught:
+            self.apply(manifest)
+        self.assertIn("choice items need 2-6 options", str(caught.exception))
+
+    def test_a_plain_problem_cannot_declare_a_micro_mode(self):
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [formal("p1", ["dmath-ch06-kp-001"],
+                                practice_modes=["micro"])],
+        }
+        before = self.count("problems")
+
+        with self.assertRaises(ValueError) as caught:
+            self.apply(manifest)
+
+        message = str(caught.exception)
+        self.assertIn("practice_modes ['micro']", message)
+        self.assertIn("quiz_type", message)
+        self.assertEqual(self.count("problems"), before)
+
+    def test_declaring_the_exam_mode_is_a_no_op(self):
+        manifest = {
+            "kind": "content-bundle",
+            "chapter": "ch06",
+            "problems": [formal("p1", ["dmath-ch06-kp-001"],
+                                practice_modes=["exam"])],
+        }
+        result = self.apply(manifest)
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(result["counts"]["keyless"], 0)
+        stored = self.query(
+            "SELECT practice_modes FROM problems WHERE ingest_batch_id=?",
+            (result["batch_id"],),
+        )
+        self.assertEqual(stored, [(None,)])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -99,9 +99,59 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。只有显式提交自评才产生。
-_Avoid_：当前状态、浏览记录
-出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」
+与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源只有两个：学生显式提交自评（浏览器），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交（2026-09-24）。**无评分的尝试同样成立**（状态 `new`），只是不改信号、当前状态、进度与调度。
+_Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
+出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
+
+### 答卷目录 / Answer-image Directory
+学生为某个工作区显式配置的一个或多个目录，只作为 Agent 的**只读**取图来源；可位于工作区之外。Lesson Kit 只记住目录路径，不复制、不归档图片字节，不在尝试上保存单张图片路径，也不建扫描索引，因此不承诺跨扫描的图片去重。
+_Avoid_：图片库、答案附件、图片索引、把答卷图片读进池
+出处：agent-assisted-practice-records spec「Answer-image discovery without image retention」
+
+### 尝试清单 / Attempt Manifest
+Agent 提交给 `lesson-kit attempts check|apply --input <文件|->` 的 UTF-8 JSON 对象：`request_id` + `items[]`，每项只有 `problem_id` / `answer_text` / `note` / `rating`（1–5，可选）。一份清单可含多题，一次调用就是一个事务：任一条不合法即整批零写入。清单**不接受**图片字节、图片路径、卷面分或批改者身份字段。
+_Avoid_：卷面分、批改者字段、把整份清单当一次尝试
+出处：agent-assisted-practice-records spec「Workspace attempt CLI」
+
+### 请求标识 / Request Id
+清单与更正里的调用方自述幂等键（`request_id`）：同一标识 + 完全相同内容重复提交 → 返回第一次的结果、不重复记分；同一标识 + 不同内容 → 拒绝（零写入）。换新标识 = 同一道题也可以再记一次尝试。
+_Avoid_：把 request id 当内容 id、靠重试去重
+出处：agent-assisted-practice-records spec「Workspace attempt CLI」
+
+### 尝试更正 / Attempt Correction
+`lesson-kit attempts <工作区> correct <attempt-id> --input <文件>`：按**指定尝试 id** 整体替换其作答原文、评语与可选评分（是替换不是补丁），并撤销旧评分留下的影响后按新评分重算。仅当该尝试由 Agent 记录、仍是该题最新一次尝试、且没有更晚的学习活动改过它涉及的题目/知识点投影时才执行；否则零写入并提示改记一次新尝试。更正不新建尝试、不留更正历史、不保留旧评分。
+_Avoid_：历史更正流水、静默改写后续学习记录
+出处：agent-assisted-practice-records spec「Explicit attempt correction」
+
+### 聚焦草稿 / Focused Draft
+练习页上**尚未提交**的作答文本、已选选项、评语备注与当前可见图片引用。学生从练习页发消息时随该轮一起送给 Agent，只作这一轮的临时上下文，不是池事实、不是尝试，也不写会话镜像；页面上的草稿本身照旧随标签页消失。
+_Avoid_：把草稿当尝试、把浏览器内容当权威事实、整页 DOM
+出处：workbench-ui spec「Authoritative page context for Agent turns」
+
+### 练习集 / Practice Set
+**一次练习的题目集合**——不是新对象，也不是新功能名：它就是练习（见「练习会话」）在打印/导出时的那份清单，CLI 里由 `pull` 选题后落成两份 Markdown（`{base}-problem-set.md` + `{base}-solutions.md`）。学生卷只有题干，不含答案、不含 `problem_id`/`kp_id`/`source_kind`；解答卷题号对齐，无解写「待补」。持久化保存某份练习集不在当前范围。
+_Avoid_：试卷、卷子（当作独立实体）、练习集数据库表
+出处：practice-set-export spec；DISCUSSION-RECORD B1.4（Markdown 产物降级为打印/导出）
+
+### 练习清单 / Practice Manifest
+`pull --plan <文件>` 写出的 UTF-8 JSON：标题、逐题 `problem_id` + 入卷理由（`reason`）、以及复现这次选题所需的输入（范围/单题/筛选/驱动/上限）。`pull --input <文件>` 可重跑同一份清单得到同一批题；它**是输入清单，不是学习记录**，读它零写入。
+_Avoid_：把它当学习记录或题库、在清单里塞题目正文
+出处：practice-set-export spec「Practice manifest」
+
+### 考察年份 / Exam Year
+正式题可空的一个来源事实：这道题的**来源考试属于哪一届**，例如 `2023` 或 `2023-2024秋冬`。填了必须以 4 位年份开头、不超过 20 字符；不填就是「不知道」。`pull --exam-year 2023` 按**前缀匹配**（所以能命中 `2023-2024秋冬`）。它是 `source_kind`（材料类型）与 `origin_kind`（产生方式）之外的第三项可选来源事实，不是卷面分。
+_Avoid_：卷面分、难度、把年份当 id 或当作试卷实体
+出处：practice-set-export-and-cli-audit spec；workbench-content-governance spec「Problem provenance axes」
+
+### 选题 / Problem Selection（CLI 组练习）
+`lesson-kit pull` 的选题目径，一次调用组合六种方式：**范围**（`--kp`，缺省用章透镜）、**单题指定**（`--problem`，显式追加、不受筛选与上限约束）、**条件筛选**（`--source-kind`/`--origin-kind`/`--source-group`/`--exam-year`/客观难度区间）、**薄弱**（`--weak`，用 `domain.weak` 的薄弱分选出有弱点证据的知识点的题）、**到期**（`--due`）、**错题**（`--wrong`，进度为 wrong/stuck 或最近一次尝试为错）。范围决定候选集，条件筛选收窄它，三个驱动在候选集内取并集，单题最后追加；每题回报入卷理由（`scope`/`weak`/`due`/`wrong`/`explicit`）。注意 `--mode weak` 是**排序**（命中知识点多者先），与 `--weak` 驱动不是一回事。
+_Avoid_：把 `--weak` 当排序、把驱动当过滤条件之外的隐式扩范围
+出处：review-workbench spec「Problem pull engine」；practice-set-export spec「Practice set composition」
+
+### 接口归属表 / Declared Interface Surface
+`workbench/surface.py`：逐条声明每个 API 路由与每条 CLI 命令的**受众**（Agent / 人 / 双 / 仅浏览器）与状态，并由 `tests/workbench/test_cli_surface.py` 与真实的参数解析器、`ROUTES` 对账。它是「谁该有 CLI」这个问题的机器权威：声明了却不存在、存在却没声明、标「双」却缺一边，测试都失败；仅浏览器保留的能力必须写明理由。
+_Avoid_：靠文档计数描述接口覆盖（会漂移）、把归属当许可闸门
+出处：review-workbench spec「Declared interface surface」
 
 ### 附图 / Figure
 题干自带的教材原图或生成图：文件落在工作区 `.lessonkit/figures/{course}/{chapter}/`，文件名 = **内容 sha256 + 原扩展名**（由门禁计算，不由 manifest 声明）；池里只存逻辑路径（`figure_paths` 列）+ 题干里的标准 Markdown 引用。入池唯一通道 = figure-patch 门禁（图与替换后的题干全文同批校验，失败零写入）；回滚恢复题干与 figure_paths 前值，已落盘文件保留。
@@ -167,8 +217,14 @@ _Avoid_：徽标、日期数字、ease/interval 等裸参数
 
 ### 练习模式 / Content Mode
 一轮练习的题型入口，四选一：综合题（exam）/ 小测（micro）/ 判断（yes_no）/ 闪卡（flash_card）。每次会话只允许一种。**「practice path」是它在旧计划语境的别名，统一以本条为准。**
-_Avoid_：practice path（旧别名）、答题方式
-出处：workbench-ui spec「Practice page」；daily-learning-plan spec（别名裁决）；introduce-flash-card
+入库时选哪一档靠字段而不是名额：普通题目（不给 `quiz_type`）进综合题，`quiz_type` 为 `yes_no` 进判断、为 `single_choice`/`multiple_choice` 进小测。**日常说的「题型」指的就是本条（练习模式），不是 `problem_type`**——后者是题目的学科形态（calculation/proof/…），判断题、单选题的 `problem_type` 写 `other`。
+_Avoid_：practice path（旧别名）、答题方式、把「题型」当成 problem_type
+出处：workbench-ui spec「Practice page」；daily-learning-plan spec（别名裁决）；introduce-flash-card；ingest-mode-choice-and-contract-parity
+
+### 无答案键客观题 / Keyless Objective Item
+判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析自评」，作答文本仍记录，学习状态仍由 1–5 自评写入。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
+_Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、给无键题判分
+出处：ingest-mode-choice-and-contract-parity；micro-quiz-content spec
 
 ### 综合题模式 / Exam Mode
 练习模式之一：按范围拉取常规正式题，作答 → 查看解析 → 1–5 自评。未标注 practice_modes 的存量题只在此模式可用。
@@ -378,7 +434,7 @@ _Avoid_：普通对话代填、跳过人确认直接创建
 出处：complete-goals-loop 归档；ai-teacher-bridge spec
 
 ### 内容批次动作 / content bundle action
-Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份、一个批次 id；任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。成功以结果卡片呈现（批次号、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
+Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`，再缺省用当前章，某项因此推不出所属章即被点名拒收；服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的回滚标记，可单独撤销）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
 _Avoid_：关键词意图门、静默丢弃不合格条目、跳过门禁直写池、显式命令面板
 出处：ai-teacher-bridge spec（first-use-conversation-content-fidelity）
 
@@ -393,7 +449,7 @@ _Avoid_：用 AI 解析覆盖教材答案、把来源证据只留在批次快照
 Pi 对话不再每轮起一个 `--print` 进程：每个对话一个隐藏的 `pi --mode rpc` 进程，以严格 LF JSONL 收发带 id 的命令与流式事件，空闲 30 分钟回收（不设并发上限，删除对话/关闭服务工作台都会回收）；取消先发 RPC `abort`，失效才 terminate/kill；启动或握手失败可重启一次，prompt 被接受后崩溃不得重放。所有 provider 子进程在 Windows 下都不弹终端窗口。
 
 ### 批次 id / Batch id
-一次门禁 apply 写入池的那批内容的唯一标识（可读顺序 id，形如 batch-NNN，禁哈希）；批次内每一内容行携带该标记，用于事后溯源与整批撤销。
+一次门禁 apply 写入池的那批内容的唯一标识（可读顺序 id，形如 batch-NNN，禁哈希）；批次内每一内容行携带该标记，用于事后溯源与整批撤销。跨章清单一趟写出**多个**批次（一章一个），所以撤销可以按章进行；一次导入仍只有一份池级备份。
 _Avoid_：内容版本号、逐条审计日志、哈希 id
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 

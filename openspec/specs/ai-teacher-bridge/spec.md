@@ -283,13 +283,26 @@ rolling back a batch, and applying difficulty SHALL still require an explicit
 learner instruction.
 
 Large actions SHALL reference one complete manifest staged under the current
-conversation's jobs directory. The server SHALL reject staged paths outside
-that directory, impose no fixed six-item limit, validate the full manifest,
-create a recoverable backup, and apply one atomic batch. Any invalid item SHALL
-produce itemized errors and zero writes; the Agent SHALL repair and resubmit the
-complete manifest rather than silently dropping items. Outcomes SHALL remain in
-the mirror and next-turn context. Result cards SHALL show batch id, final asset
-types/counts, workspace, backup, and current rollback state.
+conversation's jobs directory. An inline manifest SHALL be accepted whether it
+declares its `kind` or its `type` as `content-bundle`. The server SHALL reject
+staged paths outside that directory, impose no fixed item ceiling, validate the
+full manifest, create a recoverable backup, and apply one transaction. One
+manifest MAY span several chapters: every knowledge point, problem, and flash
+card SHALL resolve exactly one chapter (its own `chapter`, else the manifest's), a
+manifest that leaves any item without a chapter SHALL be refused with that item's
+label instead of falling back to the workspace chapter, and every derived value —
+allocated id prefix, figure destination, micro-quiz id, duplicate check — SHALL
+follow the item's chapter. The apply SHALL record one batch per chapter present,
+so a chapter can be rolled back on its own, while prevalidation, backup, and the
+transaction cover the whole manifest. Every content action block in one reply
+SHALL be applied in order, so a learner who asks for several chapters is served
+in one turn. Any invalid item SHALL produce itemized errors and zero writes; the
+Agent SHALL repair and resubmit the complete manifest rather than silently
+dropping items. Outcomes SHALL remain in the mirror and next-turn context, where
+a successful apply SHALL also tell the Agent to continue any chapters the learner
+asked for that are still missing rather than asking the learner for another
+「继续」. Result cards SHALL show batch id, final asset types/counts, workspace,
+backup, and current rollback state.
 
 Provider file tools MAY read and write arbitrary local paths. Those external
 tool writes are outside Lesson Kit's governed batch/rollback boundary. Managed
@@ -304,7 +317,7 @@ active workspace.
 #### Scenario: Result card survives re-render
 
 - **WHEN** the conversation is reopened after an action ran or was rolled back
-- **THEN** the card reflects the current batch state and an already rolled-back batch has no rollback action
+- **THEN** the card reflects the current batch state and an already rolled-back batch has no rollback action, and a turn carrying one action renders one card
 
 #### Scenario: Gate failure is explicit
 
@@ -346,14 +359,51 @@ active workspace.
 - **WHEN** the learner says `继续` and the Agent returns another valid append-only action
 - **THEN** the action is processed without a keyword-derived intent boolean
 
+#### Scenario: Every content action of one reply is applied
+
+- **WHEN** a reply carries one content action for chapter 12 and another for chapter 13
+- **THEN** both are applied in order, each with its own batches, and both results stay in the mirror
+
+#### Scenario: One failing action leaves the others alone
+
+- **WHEN** a reply carries two content actions and the second fails validation
+- **THEN** the first is applied and recorded, the second writes nothing, and its itemized reasons reach the learner and the next turn
+
+#### Scenario: A multi-chapter bundle reports each batch
+
+- **WHEN** an applied bundle contains content for two chapters
+- **THEN** the result lists both batches with their chapters and counts, and each card row offers its own rollback
+
+#### Scenario: One reply imports several chapters
+
+- **WHEN** a learner asks for three chapters and the Agent answers with one manifest spanning them, or with one content block per chapter
+- **THEN** every chapter is written in that turn, one batch per chapter, and no further learner message is required to finish the request
+
+#### Scenario: An inline manifest is accepted
+
+- **WHEN** a reply carries a small inline manifest whose block declares `type` as `content-bundle`
+- **THEN** the manifest is applied exactly as the staged form, with no contract error
+
+#### Scenario: A chapter-less item is refused with its label
+
+- **WHEN** a manifest has no bundle-level chapter and an item declares none, even though the workspace has an active chapter
+- **THEN** that item is refused with its label and a reason that names the missing chapter, and nothing is written
+
+#### Scenario: Stopping early is corrected next turn
+
+- **WHEN** an import applied successfully for some of the chapters the learner asked for
+- **THEN** the next-turn context states the applied batches and tells the Agent to continue the remaining chapters without waiting for another learner message
+
 ### Requirement: Action block disclosure
 
 A provider reply MAY carry multiple lessonkit-action blocks. The bridge SHALL
-consider every block and apply the first one matching the active intent, not
-only the first block in the reply. When a reply carries action blocks but none
-is accepted, the bridge SHALL strip the blocks from the mirrored answer, record
-that they were ignored with the reason, and carry that disclosure into the next
-turn's provider context so the agent does not claim writes that never happened.
+consider every block: every content block SHALL be applied, and an
+intent-gated block SHALL be applied only for its active intent. Applying several
+content blocks SHALL NOT be treated as a conflict. When a reply carries action
+blocks but none is accepted, the bridge SHALL strip the blocks from the mirrored
+answer, record that they were ignored with the reason, and carry that disclosure
+into the next turn's provider context so the agent does not claim writes that
+never happened.
 A block that matches an active intent but is discarded by its own field
 contract (for example a goal form without a usable title) stays silently
 discarded per that contract.
@@ -372,6 +422,11 @@ discarded per that contract.
 - **THEN** the blocks are removed from the mirrored answer, the turn records
   the ignored disclosure, nothing is written, and the next turn's provider
   context states that no write happened
+
+#### Scenario: Several content blocks all land
+
+- **WHEN** a reply carries three content manifests, one per chapter
+- **THEN** all three are applied in the order they appear and none is dropped silently
 
 ### Requirement: Conversation mirror consistency during polling
 
@@ -451,4 +506,80 @@ without a visible Windows console.
 
 - **WHEN** any configured provider process starts on Windows
 - **THEN** no terminal window becomes visible
+
+### Requirement: Agent CLI calls preserve error feedback
+
+The Agent prompt SHALL give the correct workspace-aware CLI argument order and
+direct the Agent to query the relevant subcommand help when uncertain. Lesson
+Kit invocations SHALL be issued independently without output pipelines,
+failure-suppressing fallbacks, or trailing commands masking their exit status.
+The Bridge SHALL use provider-reported activity outcomes rather than classify
+failure by matching words in output. A failed tool call MAY be followed by a
+corrected invocation without automatically failing the whole conversation.
+
+#### Scenario: Invalid CLI arguments
+
+- **WHEN** an independent CLI invocation omits a required workspace or supplies unknown arguments
+- **THEN** it returns nonzero with diagnostic output and a provider-reported error is retained as a failed activity
+
+#### Scenario: Successful output mentions error
+
+- **WHEN** a provider reports success and its output contains the word error
+- **THEN** the Bridge does not override success based on that text
+
+#### Scenario: Corrected invocation succeeds
+
+- **WHEN** the Agent corrects a failed invocation and issues a new successful call
+- **THEN** both activities retain their own outcomes and the Agent reports success only from the successful result
+
+### Requirement: Learner-requested Agent attempt recording
+
+The Agent MAY inspect accessible workspace material and use the public
+`lesson-kit attempts` CLI to record or correct a problem attempt when the
+learner requests that action. The Agent SHALL receive the focused practice
+context and the CLI's structured result. Reading a page, a draft, an image, or
+an existing attempt SHALL NOT itself write a learning record. The Bridge SHALL
+NOT silently turn an ordinary conversation into an attempt or rating.
+
+#### Scenario: Discuss a draft without recording
+
+- **WHEN** the learner asks about the current solution without asking to record or grade it
+- **THEN** the Agent can read the focused content but no attempt or feedback is added
+
+#### Scenario: Record a photographed solution
+
+- **WHEN** the learner asks the Agent to transcribe and grade local answer images
+- **THEN** the Agent may read them with existing file tools and submit one checked attempt manifest through the CLI
+
+### Requirement: Provider turn budgets follow progress
+
+A provider turn budget SHALL measure silence rather than total duration: every
+provider record or output line SHALL reset it, and while a command or tool call
+is in flight the longer tool budget SHALL apply, so a slow command is never cut
+off mid-run. A turn that produces no record for the applicable budget SHALL fail
+as a provider timeout through the existing failure path. The tool budget SHALL be
+at least the silence budget and remain shorter than the idle process window, so a
+stuck turn fails with its own reason before its provider process is recycled.
+Both budgets SHALL be configurable per provider, and the default silence budget
+SHALL NOT be shorter than the one already in force.
+
+#### Scenario: A long answer is not a timeout
+
+- **WHEN** a provider keeps reporting events for longer than the silence budget
+- **THEN** the turn keeps running and is never failed as a timeout for taking a long time
+
+#### Scenario: A slow command is not cut off
+
+- **WHEN** a command or tool call runs without output for longer than the silence budget
+- **THEN** the turn keeps running for at least the tool budget and the command is allowed to finish
+
+#### Scenario: Real silence is still a stall
+
+- **WHEN** nothing arrives for the silence budget while no command is in flight
+- **THEN** the turn fails as a provider timeout, the process is stopped, and no transcript entry is written
+
+#### Scenario: The budgets are visible and configurable
+
+- **WHEN** a provider is configured or listed
+- **THEN** both its silence budget and its tool budget are readable, and the tool budget is below the process idle window
 

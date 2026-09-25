@@ -16,18 +16,21 @@ RATING_WEIGHT = {1: "high", 2: "high", 3: "medium", 4: "low", 5: None}
 RATING_PROGRESS = {1: "wrong", 2: "wrong", 3: "reviewing", 4: "reviewing", 5: "mastered"}
 
 
-def apply(pool, item_type, item_id, rating=None, note=None, direction=""):
+def apply(pool, item_type, item_id, rating=None, note=None, direction="",
+          attempt_id=None):
     """Record feedback and update signals, events, progress, and schedule.
 
     ``direction`` selects the schedule row key (default "" = forward); it does
     not change progress, current-state, or signal semantics.
+    ``attempt_id`` links the appended event to the attempt it graded; browser
+    self-rating and legacy callers leave it unlinked.
     Returns a list of human-readable changes for the UI.
     """
     with pool.transaction():
-        return _apply(pool, item_type, item_id, rating, note, direction)
+        return _apply(pool, item_type, item_id, rating, note, direction, attempt_id)
 
 
-def _apply(pool, item_type, item_id, rating, note, direction):
+def _apply(pool, item_type, item_id, rating, note, direction, attempt_id=None):
     changes = []
     targets = _targets(pool, item_type, item_id)
     signal_type = _signal_type(note)
@@ -57,7 +60,7 @@ def _apply(pool, item_type, item_id, rating, note, direction):
             changes.append(f"signal {target_id}: {signal_type}, note saved")
 
     if rating is not None or note:
-        pool.insert_feedback_event(item_type, item_id, rating, note)
+        pool.insert_feedback_event(item_type, item_id, rating, note, attempt_id)
         changes.append("event logged")
 
     if item_type == "problem" and rating is not None:

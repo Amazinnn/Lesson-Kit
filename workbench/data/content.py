@@ -1,6 +1,9 @@
 """Transactional access to Agent-managed current content."""
 
 import json
+import re
+
+from workbench.domain import micro_quiz
 
 
 TABLES = {
@@ -19,6 +22,8 @@ JSON_FIELDS = {"kp_ids", "related_kp_ids", "options_json", "source_evidence_json
                "practice_modes", "micro_quiz"}
 SOURCE_KINDS = {"textbook", "quiz", "midterm", "final", "makeup", "other"}
 ORIGIN_KINDS = {"source_problem", "adapted_problem", "generated_grounded"}
+EXAM_YEAR_LIMIT = 20
+EXAM_YEAR = re.compile(r"\d{4}")
 
 EDITABLE_FIELDS = {
     "kp": {
@@ -28,12 +33,55 @@ EDITABLE_FIELDS = {
     },
     "problem": {
         "kp_ids", "problem_text", "solution", "problem_type", "source_kind",
-        "origin_kind", "display_title", "topic_label", "display_summary", "figure_paths",
+        "origin_kind", "display_title", "topic_label", "display_summary",
+        "figure_paths", "exam_year",
     },
     "relation": {
         "source_kp_id", "target_kp_id", "relation_type", "direction", "strength",
     },
 }
+
+
+def exam_year_error(value):
+    """None when an exam year is acceptable; otherwise the reason.
+
+    The field is optional, so empty means "unknown year". A present value starts
+    with its four-digit study year (`2023`, `2023-2024秋冬`) — that prefix is
+    what the pull filter matches — and stays short enough to read in a table.
+    """
+    if value is None or value == "":
+        return None
+    if not isinstance(value, str):
+        return "exam_year must be a string"
+    text = value.strip()
+    if not text or not EXAM_YEAR.match(text) or len(text) > EXAM_YEAR_LIMIT:
+        return ("exam_year must start with a four-digit year "
+                f"(e.g. 2023 or 2023-2024秋冬) and be at most {EXAM_YEAR_LIMIT} characters")
+    return None
+
+
+def normalize_exam_year(value):
+    """The stored form of an exam year; raises with the reason when invalid."""
+    reason = exam_year_error(value)
+    if reason:
+        raise ValueError(reason)
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def exam_year_column_error(pool):
+    """None when this pool can hold or filter exam years; else the migrate hint."""
+    columns = {str(row[1]) for row in pool.connect().execute("PRAGMA table_info(problems)")}
+    if "exam_year" in columns:
+        return None
+    try:
+        db = pool.db_path.relative_to(pool.root).as_posix()
+    except ValueError:
+        db = pool.db_path
+    return (
+        "this pool has no exam_year column yet — run: "
+        f"python pool/scripts/migrate-progress.py --db {db}"
+    )
+
 
 
 def _entity(entity):
@@ -167,6 +215,11 @@ def create(pool, entity, data):
             raise ValueError("source_kind is required and must be valid")
         if data.get("origin_kind") not in ORIGIN_KINDS:
             raise ValueError("origin_kind is required and must be valid")
+        reason = exam_year_error(data.get("exam_year"))
+        if reason:
+            raise ValueError(reason)
+        if "exam_year" in data:
+            data = {**data, "exam_year": normalize_exam_year(data["exam_year"])}
     object_id = next_id(pool, entity)
     fields = [field for field in EDITABLE_FIELDS[entity] if field in data]
     values = [_db_value(field, data[field]) for field in fields]
@@ -182,10 +235,19 @@ def create(pool, entity, data):
 
 def update(pool, entity, object_id, data):
     table, id_column = _entity(entity)
+    if entity == "problem" and "exam_year" in data:
+        reason = exam_year_error(data["exam_year"])
+        if reason:
+            raise ValueError(reason)
+        data = {**data, "exam_year": normalize_exam_year(data["exam_year"])}
+    special = {}
+    if entity == "problem" and "answer_key" in data:
+        special["micro_quiz"] = _patched_micro_quiz(pool, object_id, data["answer_key"])
     fields = [field for field in EDITABLE_FIELDS[entity] if field in data]
-    if not fields:
+    if not fields and not special:
         return get(pool, entity, object_id)
     assignments = [f"{field}=?" for field in fields]
+    values = [_db_value(field, data[field]) for field in fields]
     columns = {row[1] for row in pool.connect().execute(f"PRAGMA table_info({table})")}
     if entity == "problem" and {"kp_ids", "problem_text", "solution", "problem_type"} & set(fields):
         assignments.extend(
@@ -197,7 +259,8 @@ def update(pool, entity, object_id, data):
         )
     if "updated_at" in columns:
         assignments.append("updated_at=datetime('now')")
-    values = [_db_value(field, data[field]) for field in fields]
+    assignments.extend(f"{field}=?" for field in special)
+    values.extend(special.values())
     conn = pool.connect()
     with conn:
         cursor = conn.execute(
@@ -207,6 +270,40 @@ def update(pool, entity, object_id, data):
         if cursor.rowcount == 0:
             raise KeyError(object_id)
     return get(pool, entity, object_id)
+
+
+def _patched_micro_quiz(pool, problem_id, answer_key):
+    """Fold a supplied answer key into the item's own micro-quiz payload.
+
+    Only the key's shape is checked, against that item's quiz type, so filling a
+    key in later never forces an error reason the learner may not have. An empty
+    value clears the key and the item is practised ungraded again.
+    """
+    row = pool.connect().execute(
+        "SELECT micro_quiz FROM problems WHERE problem_id=?", (problem_id,)
+    ).fetchone()
+    if row is None:
+        raise KeyError(problem_id)
+    raw = row[0]
+    payload = None
+    if isinstance(raw, str) and raw.strip():
+        try:
+            payload = json.loads(raw)
+        except ValueError:
+            payload = None
+    if not isinstance(payload, dict) or not payload.get("quiz_type"):
+        raise ValueError(
+            f"{problem_id} is not a 判断/小测 item: an answer key belongs to an "
+            "objective item imported with quiz_type/options"
+        )
+    cleared = answer_key in (None, "")
+    candidate = {**payload, "answer_key": None if cleared else answer_key}
+    if not cleared:
+        errors = micro_quiz.validate_answer_key(
+            payload["quiz_type"], payload.get("options"), answer_key)
+        if errors:
+            raise ValueError("; ".join(errors))
+    return json.dumps(candidate, ensure_ascii=False)
 
 
 def _db_value(field, value):

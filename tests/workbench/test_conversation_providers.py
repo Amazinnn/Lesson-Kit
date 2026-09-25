@@ -49,6 +49,34 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertEqual(providers["pi"]["command"], "C:/npm-global/pi.cmd")
         self.assertEqual(providers["pi"]["model"], "minimax/MiniMax-M2.7")
 
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
+    @mock.patch("workbench.bridge.conversation_providers.shutil.which")
+    def test_turn_budgets_stay_inside_what_each_provider_can_honor(self, which, load_bridges):
+        from workbench.bridge import conversation_providers
+
+        which.return_value = None
+        load_bridges.return_value = {
+            "providers": {
+                "codex": {"command": "codex"},
+                "claude": {"command": "claude", "timeout_s": 3600},
+                "pi": {"command": "pi", "timeout_s": 600, "tool_timeout_s": 99999},
+            }
+        }
+
+        providers = {item["name"]: item for item in conversation_providers.discover()}
+
+        # Defaults: a silence budget of 5 minutes, 20 for a command in flight.
+        self.assertEqual(providers["codex"]["timeout_s"], 300)
+        self.assertEqual(providers["codex"]["tool_timeout_s"], 1200)
+        # A silence budget above the tool default raises the tool budget with it,
+        # so a running command is never cut off sooner than an idle turn.
+        self.assertEqual(providers["claude"]["timeout_s"], 3600)
+        self.assertEqual(providers["claude"]["tool_timeout_s"], 3600)
+        # Pi is capped below the RPC idle window that recycles its process.
+        self.assertEqual(providers["pi"]["timeout_s"], 600)
+        self.assertLess(providers["pi"]["tool_timeout_s"],
+                        conversation_providers.IDLE_SECONDS)
+
     def test_pi_uses_print_json_and_native_session_resume(self):
         from workbench.bridge import conversation_providers
 
@@ -229,6 +257,110 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertNotIn("very-secret", event["output"])
         self.assertLessEqual(len(event["detail"]), 500)
         self.assertLessEqual(len(event["output"]), 4000)
+
+    def test_failed_pi_activity_carries_a_visible_bounded_summary(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "call-1", "toolName": "bash",
+            "args": {"command": "lesson-kit data create kp --input manifest.json"},
+            "result": {"content": [{"type": "text", "text":
+                                    "usage: lesson-kit data [-h] ...\n"
+                                    "lesson-kit data: error: argument action: invalid choice: 'kp'"}]},
+            "isError": True,
+        })
+
+        self.assertEqual(event["status"], "failed")
+        self.assertEqual(event["summary"],
+                         "lesson-kit data: error: argument action: invalid choice: 'kp'")
+        self.assertLessEqual(len(event["summary"]), 240)
+        # the command stays visible and the full output stays folded
+        self.assertIn("lesson-kit data create kp", event["detail"])
+        self.assertIn("usage: lesson-kit data", event["output"])
+
+    def test_failed_pi_activity_summary_is_redacted_and_bounded(self):
+        from workbench.bridge import conversation_providers
+
+        # the secret sits inside the summary window, so redaction must happen
+        # before the bound is applied
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "call-2", "toolName": "bash",
+            "args": {"command": "lesson-kit data dmath create kp --input m.json"},
+            "result": {"content": [{"type": "text", "text":
+                                    "MINIMAX_API_KEY=very-secret-value " + ("z" * 400)}]},
+            "isError": True,
+        })
+
+        self.assertEqual(event["status"], "failed")
+        self.assertLessEqual(len(event["summary"]), 240)
+        self.assertIn("[REDACTED]", event["summary"])
+        self.assertNotIn("very-secret-value", event["summary"])
+        self.assertNotIn("very-secret-value", event["output"])
+
+    def test_failed_pi_activity_summary_keeps_a_long_error_line_bounded(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "call-2b", "toolName": "bash",
+            "args": {"command": "lesson-kit data dmath create kp --input m.json"},
+            "result": {"content": [{"type": "text", "text":
+                                    "lesson-kit data: error: " + ("detail " * 80)}]},
+            "isError": True,
+        })
+
+        self.assertEqual(event["status"], "failed")
+        self.assertLessEqual(len(event["summary"]), 240)
+        # the diagnostic lead-in survives the bound
+        self.assertTrue(event["summary"].startswith("lesson-kit data: error:"))
+
+    def test_failed_pi_activity_without_output_shows_a_generic_summary(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "call-3", "toolName": "bash",
+            "args": {"command": "lesson-kit data dmath create kp --input m.json"},
+            "result": {"content": []},
+            "isError": True,
+        })
+
+        self.assertEqual(event["status"], "failed")
+        self.assertEqual(event["summary"], "执行失败，未返回诊断信息")
+
+    def test_successful_pi_activity_never_gets_a_failure_summary(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "call-4", "toolName": "bash",
+            "args": {"command": "lesson-kit data dmath list kp"},
+            "result": {"content": [{"type": "text", "text":
+                                    '{"error": null, "items": []}  # no error, honestly'}]},
+            "isError": False,
+        })
+
+        self.assertEqual(event["status"], "done")
+        self.assertNotIn("summary", event)
+
+    def test_a_corrected_invocation_keeps_its_own_outcome(self):
+        from workbench.bridge import conversation_providers
+
+        failed = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "call-5", "toolName": "bash",
+            "args": {"command": "lesson-kit data create kp --input m.json"},
+            "result": {"content": [{"type": "text", "text": "usage: ... error: invalid choice"}]},
+            "isError": True,
+        })
+        corrected = conversation_providers.normalize_event("pi", {
+            "type": "tool_execution_end", "toolCallId": "call-6", "toolName": "bash",
+            "args": {"command": "lesson-kit data dmath create kp --input m.json"},
+            "result": {"content": [{"type": "text", "text": '{"kp_id": "dmath-ch06-kp-777"}'}]},
+            "isError": False,
+        })
+
+        self.assertEqual(failed["status"], "failed")
+        self.assertEqual(corrected["status"], "done")
+        self.assertNotEqual(failed["activity_id"], corrected["activity_id"])
+        self.assertIn("summary", failed)
+        self.assertNotIn("summary", corrected)
 
     def test_pi_shell_path_containing_lesson_kit_is_not_a_cli_invocation(self):
         from workbench.bridge import conversation_providers

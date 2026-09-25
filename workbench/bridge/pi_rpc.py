@@ -15,13 +15,16 @@ import time
 from workbench.bridge import conversation_providers
 
 
-IDLE_SECONDS = 30 * 60
+IDLE_SECONDS = conversation_providers.IDLE_SECONDS
 REAP_INTERVAL_SECONDS = 60
 HANDSHAKE_SECONDS = 60
 PROMPT_ACCEPT_SECONDS = 30
 STOP_GRACE_SECONDS = 2
 # How long an aborted turn may take to settle before terminate/kill.
 ABORT_SETTLE_SECONDS = 8
+# The in-flight tool budget. It stays below IDLE_SECONDS by construction, so a
+# stuck turn fails by its own budget before its process is recycled under it.
+TOOL_SECONDS = conversation_providers.TOOL_SECONDS
 
 
 class PiRpcError(RuntimeError):
@@ -211,19 +214,27 @@ class PiRpcProcess:
         except PiRpcError as exc:
             raise PiRpcRejected(str(exc)) from exc
 
-    def stream(self, timeout):
-        """Yield agent events until the run settles or the process ends."""
-        for record in self.take_pending():
+    def stream(self, timeout, tool_timeout=None):
+        """Yield agent events until the run settles or the process ends.
+
+        The budget measures silence, not total time: every record resets it, so a
+        turn that keeps working is never cut off for taking long. While a tool
+        call is in flight the longer ``tool_timeout`` applies instead, because a
+        slow command is exactly the case that prints nothing for minutes.
+        """
+        tool_timeout = timeout if tool_timeout is None else tool_timeout
+        live_tools = set()
+        pending = list(self.take_pending())
+        while pending:
+            record = pending.pop(0)
+            _track_tools(live_tools, record)
             yield record
             if record.get("type") == "agent_settled":
                 return
-        deadline = time.monotonic() + timeout
         while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise PiRpcTimeout("the turn did not settle in time")
-            record = self._next_record(remaining)
+            record = self._next_record(tool_timeout if live_tools else timeout)
             self._last_used = self._clock()
+            _track_tools(live_tools, record)
             if record.get("type") == "response":
                 self._stash(record)
                 continue
@@ -244,6 +255,19 @@ class PiRpcProcess:
         except PiRpcError:
             return False
         return True
+
+
+def _track_tools(live_tools, record):
+    """Remember which tool calls are in flight, so a slow one keeps its budget."""
+    record_type = record.get("type")
+    if record_type == "tool_execution_start":
+        tool_id = record.get("toolCallId") or record.get("id") or "tool"
+        live_tools.add(tool_id)
+    elif record_type == "tool_execution_end":
+        tool_id = record.get("toolCallId") or record.get("id") or "tool"
+        live_tools.discard(tool_id)
+    elif record_type in {"turn_end", "agent_end", "agent_settled"}:
+        live_tools.clear()
 
 
 class PiRpcRegistry:

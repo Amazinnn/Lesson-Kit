@@ -108,6 +108,24 @@ def run_turn(count, request_id):
             time.sleep(0.05)
         if _STATE["aborted"]:
             return
+    if MODE == "chatty":
+        # Keeps reporting progress with no gap worth mentioning, for longer in
+        # total than a turn budget: duration alone must never stop the turn.
+        for index in range(12):
+            emit({"type": "message_update",
+                  "assistantMessageEvent": {"type": "text_delta",
+                                            "delta": "第 %d 片" % index}})
+            time.sleep(0.05)
+    if MODE == "quiet-command":
+        # A command that runs for a while and prints nothing: the case that must
+        # not be cut off mid-flight.
+        emit({"type": "tool_execution_start", "toolCallId": "call_quiet",
+              "toolName": "bash", "args": {"command": "make -j8"}})
+        time.sleep(1.0)
+        emit({"type": "tool_execution_end", "toolCallId": "call_quiet",
+              "toolName": "bash", "isError": False,
+              "result": {"content": [{"type": "text", "text": "构建完成"}],
+                         "details": {}}})
     emit({"type": "message_update",
           "assistantMessageEvent": {"type": "text_delta", "delta": "收到"}})
     emit({"type": "message_update",

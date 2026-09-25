@@ -164,14 +164,12 @@ def goals_delete(pool, workspace, params, body):
 
 
 def _plan_path(workspace):
-    return Path(workspace["path"]) / ".lessonkit" / "plan.json"
+    return goals.plan_path(workspace)
 
 
 def _invalidate_plan(workspace):
-    try:
-        _plan_path(workspace).unlink()
-    except FileNotFoundError:
-        pass
+    """Shared with the CLI (`lesson-kit goals`), so both surfaces drop the cache."""
+    goals.invalidate_plan(workspace)
 
 
 def pull_problems(pool, workspace, params, body):

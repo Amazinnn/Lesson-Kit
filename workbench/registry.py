@@ -98,16 +98,63 @@ def update_active(name, course, chapter):
     raise KeyError(f"unknown workspace: {name}")
 
 
+def answer_sources_path():
+    return base_dir() / "answer-sources.json"
+
+
+def load_answer_sources():
+    return _load_json(answer_sources_path(), {"version": 1, "workspaces": {}})
+
+
+def answer_sources(name):
+    """Directories this workspace points the Agent at; only paths are stored."""
+    return list(load_answer_sources()["workspaces"].get(name, []))
+
+
+def add_answer_source(name, path):
+    """Remember one learner-chosen directory. The directory itself is only read."""
+    folder = Path(path).expanduser()
+    if not folder.is_dir():
+        raise ValueError(
+            f"not a readable directory: {path}\n"
+            "answer images stay where the learner keeps them — add the folder that "
+            "holds them, e.g. lesson-kit attempts <workspace> sources add --path "
+            "D:/photos/ch12"
+        )
+    resolved = str(folder.resolve())
+    sources = load_answer_sources()
+    paths = sources["workspaces"].setdefault(name, [])
+    added = resolved not in paths
+    if added:
+        paths.append(resolved)
+        _save_json(answer_sources_path(), sources)
+    return {"workspace": name, "path": resolved, "paths": list(paths), "added": added}
+
+
+def remove_answer_source(name, path):
+    resolved = str(Path(path).expanduser().resolve())
+    sources = load_answer_sources()
+    paths = sources["workspaces"].setdefault(name, [])
+    if resolved not in paths:
+        listed = ", ".join(paths) if paths else "none"
+        raise ValueError(
+            f"that directory is not configured for {name}: {resolved}\n"
+            f"configured directories: {listed}"
+        )
+    paths.remove(resolved)
+    _save_json(answer_sources_path(), sources)
+    return {"workspace": name, "path": resolved, "paths": list(paths), "removed": True}
+
+
 def load_bridges():
     return _load_json(base_dir() / "bridges.json", {"version": 1, "providers": {}})
-
 
 def save_bridges(bridges):
     _save_json(base_dir() / "bridges.json", bridges)
 
 
 def add_bridge(provider, command, args=None, cwd_mode="workspace", timeout_s=300,
-               model=None):
+               model=None, tool_timeout_s=None):
     bridges = load_bridges()
     entry = {
         "command": command,
@@ -117,6 +164,8 @@ def add_bridge(provider, command, args=None, cwd_mode="workspace", timeout_s=300
     }
     if model:
         entry["model"] = model
+    if tool_timeout_s:
+        entry["tool_timeout_s"] = tool_timeout_s
     bridges["providers"][provider] = entry
     save_bridges(bridges)
     return bridges["providers"][provider]

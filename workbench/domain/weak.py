@@ -43,6 +43,16 @@ def score_all(kps, signals, schedule_rows, relations, session_practiced, today):
     return ranked
 
 
+def weak_kp_ids(ranked):
+    """The knowledge points carrying weakness evidence right now.
+
+    A score above the empty baseline means something raised it: a signal, a
+    cascade from a weak neighbour, or an overdue review row. Ranking never
+    filters, so this is the explicit filter for callers that need one.
+    """
+    return [item["kp_id"] for item in ranked if item["score"] > NO_SIGNAL]
+
+
 def _signal_score(signal):
     if signal is None:
         return NO_SIGNAL

@@ -8,7 +8,9 @@ packages govern current lesson-kit work.
 | "extract this chapter", "build the KP pool" | `pipeline/commands/extract-chapter.md` | `pool-insert-manifest.json` |
 | "extract the exercises/problems", "build the problem pool" | `pipeline/commands/extract-problems.md` | `full-problem-bank.md` |
 | "import these exercises", "add knowledge points or figures", "generate checks", "add flash cards/micro quizzes" | Agent content action (`content-bundle`; legacy `flash-card-patch` / `micro-quiz-patch` still accepted) | complete governed manifest, staged under `.lessonkit/jobs/conv-NNN/` |
+| "print a paper / practice set for chapter X", "give me my wrong problems" | `lesson-kit pull <workspace> … --plan/--print` | a composed practice manifest (or the two rendered Markdown files) |
 | "rate these problems", "rerate difficulty" | `lesson-kit difficulty <workspace> check` then `apply` | complete four-dimension rating manifest |
+| "record my handwritten answer", "grade this photo of my work", "fix the rating you just recorded" | `lesson-kit attempts <workspace> check\|apply\|correct --input <file\|->` | attempt manifest (`request_id` + `items[]`), plus `sources list` for the answer-image directories |
 | "show me the knowledge guide", "print the chapter guide" | `pool/scripts/print-graph.py` | existing `knowledge_points` rows |
 | "make a problem set", "practice problems" | `views/problem-set/command.md` | existing `problems` rows |
 

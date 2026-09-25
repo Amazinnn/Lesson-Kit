@@ -194,6 +194,72 @@ class DataCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("origin_kind is required", result["error"])
 
+    def micro_item(self, payload):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "INSERT INTO problems (problem_id, kp_ids, problem_text, problem_type, "
+            "source_kind, origin_kind, practice_modes, micro_quiz) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ("dmath-ch06-mq-001", '["dmath-ch06-kp-001"]', "1 是质数吗？", "other",
+             "textbook", "generated_grounded", '["yes_no"]',
+             json.dumps(payload, ensure_ascii=False)),
+        )
+        conn.commit()
+        conn.close()
+
+    def stored_quiz(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            raw = conn.execute(
+                "SELECT micro_quiz FROM problems WHERE problem_id='dmath-ch06-mq-001'"
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        return json.loads(raw)
+
+    def test_an_answer_key_can_be_filled_in_and_cleared(self):
+        self.micro_item({"quiz_type": "yes_no", "answer_key": None,
+                         "source_evidence": "教材 §3.1"})
+        filled = self.write_json("key.json", {"answer_key": "否"})
+        code, updated = self.run_cli(
+            "data", "course", "update", "problem", "dmath-ch06-mq-001",
+            "--input", str(filled),
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(updated["micro_quiz"]["answer_key"], "否")
+
+        cleared = self.write_json("clear.json", {"answer_key": ""})
+        code, _ = self.run_cli(
+            "data", "course", "update", "problem", "dmath-ch06-mq-001",
+            "--input", str(cleared),
+        )
+        self.assertEqual(code, 0)
+        self.assertIsNone(self.stored_quiz()["answer_key"])
+
+    def test_a_key_must_fit_the_items_own_quiz_type(self):
+        self.micro_item({"quiz_type": "single_choice", "options": ["甲", "乙"],
+                         "answer_key": None, "source_evidence": "教材 §3.1"})
+        before = self.stored_quiz()
+        wrong = self.write_json("wrong-key.json", {"answer_key": "丙"})
+
+        code, result = self.run_cli(
+            "data", "course", "update", "problem", "dmath-ch06-mq-001",
+            "--input", str(wrong),
+        )
+
+        self.assertEqual(code, 2)
+        self.assertIn("answer_key must be one of the options", result["error"])
+        self.assertEqual(self.stored_quiz(), before)
+
+    def test_an_answer_key_needs_an_objective_item(self):
+        path = self.write_json("not-micro.json", {"answer_key": "是"})
+        code, result = self.run_cli(
+            "data", "course", "update", "problem", "dmath-ch06-prob-001",
+            "--input", str(path),
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("判断/小测", result["error"])
+
 
 if __name__ == "__main__":
     unittest.main()
