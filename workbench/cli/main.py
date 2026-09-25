@@ -517,6 +517,8 @@ def _bridge_list():
 
 
 def _json_input(path):
+    if not path:
+        raise ValueError("this action needs --input <json file|->")
     text = sys.stdin.read() if path == "-" else Path(path).read_text(encoding="utf-8-sig")
     value = json.loads(text)
     if not isinstance(value, dict):
@@ -1089,7 +1091,7 @@ def build_parser(prog="lesson-kit"):
 
     action = ingest_sub.add_parser("recipe")
     action.add_argument("recipe",
-                        choices=["knowledge", "problems", "views", "micro-quiz", "flash-card", "figures"])
+                        choices=["knowledge", "problems", "views", "micro-quiz", "flash-card", "figures", "problem-patch"])
     action.add_argument("--input", required=True)
     action.add_argument("--output", required=True)
     action.add_argument("--apply", action="store_true")

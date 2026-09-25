@@ -73,7 +73,30 @@ An objective item declares its practice form with `quiz_type` (`yes_no`,
 `answer_key` together with `error_reason`. A **missing answer key is allowed**:
 the item is then practised in its 判断/小测 shell without a verdict, and the key
 can be supplied later with `lesson-kit data <workspace> update problem <id>
---input '{"answer_key": "…"}'` (an empty value clears it again).
+--input '{"answer_key": "…"}'` (an empty value clears it again). The stem bound
+is 800 characters.
+
+Problems that already exist are changed **in place** — never by deleting and
+re-importing, because the readable id is the row's identity and everything a
+learner has recorded hangs off it:
+
+- one row: `lesson-kit data <workspace> update problem <id> --input <file>`;
+- many rows: a `problem-patch` manifest (`{"kind": "problem-patch", "items":
+  [{"problem_id": "…", …fields}]}`) applied with `lesson-kit ingest <workspace>
+  recipe problem-patch --input <manifest> --output <dir> --apply`, which
+  prevalidates every item, refuses unknown ids and unknown field names, writes
+  one recoverable backup and one transaction, records one batch id together with
+  **each row's previous values**, and can therefore be undone value-for-value
+  with `ingest rollback --batch batch-NNN`.
+
+Writable fields are the problem's descriptive ones plus its practice form:
+`problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`,
+`origin_kind`, `source_evidence`, `source_answer`, `solution_origin`,
+`topic_label`, `display_title`, `display_summary`, `exam_year`,
+`practice_modes`, `micro_quiz`, and the `answer_key` shorthand. A patch cannot
+change a `problem_id`, and difficulty stays with `lesson-kit difficulty`.
+Changing `kp_ids`, `problem_text`, `solution`, or `problem_type` clears the
+difficulty rating group as before.
 
 Every problem carries both provenance axes: `source_kind` describes the
 grounding material and `origin_kind` describes whether the problem is sourced,

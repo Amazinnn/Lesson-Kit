@@ -2300,6 +2300,40 @@ test("a correct micro quiz choice reports success without an extra write", async
   assert.equal(elements.stream._innerHTML.includes("错误"), false);
 });
 
+test("a converted -prob- row renders exactly like an imported -mq- item", async () => {
+  // The read path never looks at the id suffix: what makes an item a 小测/判断
+  // is practice_modes plus the payload, so an in-place conversion needs no
+  // re-import and no UI special case.
+  const elements = { layout: layout(), ...practiceElements() };
+  const converted = {
+    problem_id: "c02-ch03-prob-014", problem_text: "队列是先进先出。",
+    practice_modes: ["yes_no"],
+    micro_quiz: { quiz_type: "yes_no", answer_key: "是",
+                  error_reason: "FIFO 是队列的定义。" },
+  };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/problem/c02-ch03-prob-014")) {
+        return jsonResponse({ problem: converted });
+      }
+      return jsonResponse({ problems: [converted] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  assert.ok(elements.stream._innerHTML.includes("是"));
+  assert.ok(elements.stream._innerHTML.includes("否"));
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  assert.ok(elements.stream._innerHTML.includes("回答正确"));
+});
+
 test("an item without an answer key is not graded and says so", async () => {
   const elements = { layout: layout(), ...practiceElements() };
   const keyless = {

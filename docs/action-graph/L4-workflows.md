@@ -65,6 +65,8 @@ flowchart TD
   Y2[一轮回复多个区块] -.每个区块都应用<br/>各自一份恢复副本.-> E
 ```
 
+> 2026-09-25（in-place-problem-edits）：入库之后改题不再等于「删除重导」。原地补丁保留题号与全部学习记录，可把选项从题面拆进 `options` 让旧单选题变成小测题，整批存旧值可 `rollback` 还原；判断题/单选题的题干上限同时从 200 放宽到 800 字。批量修改只在学生明确要求时执行。
+
 > 2026-09-25（ingest-mode-choice-and-contract-parity）：入库时可选题型——判断题（`quiz_type: yes_no`）
 > 与单选题（`single_choice`/`multiple_choice` + 选项）即使**题源没有答案键**也能入库：这类题不判分，
 > 练习页写明「本题未录入答案键」并由学生自评，答案键可事后用 `data update problem` 补；普通题目（不给

@@ -146,6 +146,9 @@ workbench/
   `data.content` 里事后补写（按该题 `quiz_type` 校验形状，空值清回无键）。
 - `ingest`：`prepare/run/gate/apply/apply_batch/rollback_batch`；生成内容只有通过
   确定性门禁后才能以批次事务写入，并保留整批回滚边界。
+- `ingest.problem-patch`（+ `data.content.plan_problem_patch`）：**原地**改已有题目——
+  单题与批量共用同一份校验（未知字段/题号身份/难度归属/微题契约），批量记录批次号与
+  每行改前旧值，`rollback_batch` 对它走「写回旧值」而不是「删行」，因此学习记录不受影响。
 - `server.context`：按浏览器提供的路由与对象 ID 重新读取 Pool，生成权威 Agent 上下文；不接收整页 DOM。
 - `server.api`：handler 注册表 {method, path_pattern, handler(pool, ws, args) -> json}；
   HTML 页面经 pages.py，JSON 经 api.py，二者不混。

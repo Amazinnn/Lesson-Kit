@@ -796,6 +796,57 @@ class ConversationTests(unittest.TestCase):
 
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_problem_patch_action_converts_rows_in_place(
+            self, get_provider, normalize_event):
+        """An explicitly requested in-place edit keeps the id and reports counts."""
+        from workbench.bridge import conversation_providers, conversations
+
+        manifest = {
+            "kind": "problem-patch",
+            "items": [{
+                "problem_id": "dmath-ch06-prob-001",
+                "practice_modes": ["yes_no"],
+                "micro_quiz": {"quiz_type": "yes_no", "answer_key": "否",
+                               "error_reason": "1 不是质数。",
+                               "source_evidence": "教材 第6章 习题6-1"},
+            }],
+        }
+
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-13"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "已按你的要求原地改好。"
+             + "\n```lessonkit-action\n"
+             + json.dumps({"type": "content-bundle", "manifest": manifest}) + "\n```"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        with mock.patch.object(
+            conversation_providers, "build_command", self.command("success", [])
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"],
+                "把这道题改成判断题",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+            outcome = conversations._last_check_outcome(
+                conversations._conversation_dir(
+                    self.pool, conversation["conversation_id"]))
+
+        self.assertEqual(done["status"], "done", done.get("error"))
+        row = self.pool.connect().execute(
+            "SELECT practice_modes, micro_quiz FROM problems"
+            " WHERE problem_id='dmath-ch06-prob-001'").fetchone()
+        self.assertEqual(json.loads(row[0]), ["yes_no"])
+        self.assertEqual(json.loads(row[1])["answer_key"], "否")
+        self.assertEqual(
+            [action["result"]["kind"] for action in done["actions"]], ["problem-patch"])
+        self.assertIn("problem-patch", outcome)
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
     def test_one_failing_content_action_leaves_the_other_applied(
             self, get_provider, normalize_event):
         from workbench.bridge import conversation_providers, conversations
@@ -1306,8 +1357,8 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertEqual(action, {
             "type": "check_ingest",
             "error": "manifest kind must be flash-card-patch, micro-quiz-patch, "
-                     "or content-bundle — a content-bundle carries "
-                     "knowledge_points / problems / flash_cards",
+                     "problem-patch, or content-bundle — a content-bundle "
+                     "carries knowledge_points / problems / flash_cards",
         })
 
     def test_empty_items_are_an_explicit_error(self):

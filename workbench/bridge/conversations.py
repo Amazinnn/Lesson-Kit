@@ -270,6 +270,7 @@ _COUNT_LABELS = {
     "flash_cards": "闪卡",
     "figures": "图片",
     "keyless": "未录答案键",
+    "difficulty_cleared": "评级清空",
 }
 
 
@@ -424,10 +425,21 @@ def _prompt(message, context):
         "directions 只能是 [\"forward\"]（默认，单向）或 [\"forward\",\"reverse\"]（双向）。\n"
         "12) 出题入库不得携带任何难度字段，也不得自动建议或排队评级；只有学生明确要求给指定题目评级时，"
         "才可另行调用 lesson-kit difficulty 先 check 再 apply。\n"
-        "13) 长度与取值：微题 stem≤200 字、options 为 2–6 个互不相同的字符串"
+        "13) 长度与取值：微题 stem≤800 字、options 为 2–6 个互不相同的字符串"
         "（answer_key 若给，必须是其中之一；yes_no 用默认 是/否 对）、topic_label≤40 字、"
         "display_title≤80 字、display_summary≤200 字；数学乘号一律用 ×；"
         "正文可以带标题、列表、引用、代码、链接、图片、$数学$ 与 GFM 表格。\n"
+        "学生明确要求修改已有题目时（补答案键、把已有题改成判断/小测、补来源、把选项从题面里拆出来），"
+        "**不要删了重导**：用一份 problem-patch 清单原地修改。形状 {\"kind\":\"problem-patch\","
+        "\"items\":[{\"problem_id\":\"…\", …要改的字段}]}，可改字段：problem_text、solution、kp_ids、"
+        "problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、"
+        "topic_label、display_title、display_summary、exam_year、practice_modes、micro_quiz"
+        "（整份 quiz_type/options/answer_key/error_reason）、answer_key；**不能改题号**，难度仍走 "
+        "lesson-kit difficulty。让一道已有题进小测/判断只需给 practice_modes 与 micro_quiz：判断题写 "
+        "quiz_type:\"yes_no\"，单选题写 \"single_choice\" 并把选项放进 options（题面只保留题干，"
+        "原题面里的选项可以原样搬进 options，不要改写文字），多选题同理；每小题只挂一个知识点。"
+        "原地修改保留题号与全部学习记录，整批可回滚"
+        "（`lesson-kit ingest <工作区> rollback --batch batch-0NN`），所以优先于删除重导。\n"
         "服务端整份清单预检：任何一条不合法就整份零写入并逐条给出原因；请按原因修正完整清单后重新提交，"
         "不要擅自删掉不合格的条目，也不要向学生声称已写入。若上下文含 last_check_outcome："
         "成功则不要重复提交相同内容，并按提示补齐学生要求但尚未导入的章；"
@@ -999,7 +1011,9 @@ CONTENT_ACTION_TYPES = ("check_ingest", "content-bundle")
 FLASH_CARD_KIND = "flash-card-patch"
 MICRO_QUIZ_KIND = "micro-quiz-patch"
 CONTENT_BUNDLE_KIND = "content-bundle"
-_MANIFEST_KINDS = {FLASH_CARD_KIND, MICRO_QUIZ_KIND, CONTENT_BUNDLE_KIND}
+PROBLEM_PATCH_KIND = "problem-patch"
+_MANIFEST_KINDS = {FLASH_CARD_KIND, MICRO_QUIZ_KIND, CONTENT_BUNDLE_KIND,
+                   PROBLEM_PATCH_KIND}
 _CONTENT_LISTS = ("knowledge_points", "problems", "flash_cards")
 
 
@@ -1141,7 +1155,7 @@ def _manifest_contract_error(manifest):
     if not isinstance(manifest, dict):
         return "manifest must be an object"
     kind = manifest.get("kind")
-    if kind in {FLASH_CARD_KIND, MICRO_QUIZ_KIND}:
+    if kind in {FLASH_CARD_KIND, MICRO_QUIZ_KIND, PROBLEM_PATCH_KIND}:
         if not isinstance(manifest.get("items"), list) or not manifest["items"]:
             return "manifest items must be a non-empty list"
         return ""
@@ -1153,8 +1167,8 @@ def _manifest_contract_error(manifest):
         return ("content-bundle requires at least one knowledge point, "
                 "problem, or flash card")
     return (f"manifest kind must be {FLASH_CARD_KIND}, {MICRO_QUIZ_KIND}, "
-            f"or {CONTENT_BUNDLE_KIND} — a {CONTENT_BUNDLE_KIND} carries "
-            + " / ".join(_CONTENT_LISTS))
+            f"{PROBLEM_PATCH_KIND}, or {CONTENT_BUNDLE_KIND} — a "
+            f"{CONTENT_BUNDLE_KIND} carries " + " / ".join(_CONTENT_LISTS))
 
 
 def _clean_check_ingest_action(manifest):

@@ -5,7 +5,10 @@ RETIRED_QUIZ_TYPES = ("closest_answer", "short_answer")
 OBJECTIVE_TYPES = ("yes_no", "single_choice", "multiple_choice")
 YES_NO_OPTIONS = ["是", "否"]
 MAX_OPTIONS = 6
-MAX_STEM_CHARS = 200
+# Long stems were refused outright when micro quizzes were only short cards;
+# real 判断题/单选题 from question banks carry long option blocks, so the bound is
+# a sanity ceiling now, not a design statement.
+MAX_STEM_CHARS = 800
 LABEL_FIELD_LIMITS = {
     "topic_label": 40,
     "display_title": 80,

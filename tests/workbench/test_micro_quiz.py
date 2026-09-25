@@ -113,9 +113,12 @@ class MicroQuizRulesTests(unittest.TestCase):
         errors = micro_quiz.validate_problem_row(row)
         self.assertTrue(any("exactly one" in e for e in errors))
         row["kp_ids"] = ["kp-1"]
-        row["problem_text"] = "长" * 201
+        row["problem_text"] = "长" * (micro_quiz.MAX_STEM_CHARS + 1)
         errors = micro_quiz.validate_problem_row(row)
         self.assertTrue(any("exceeds" in e for e in errors))
+        # The bound is a sanity ceiling: a long 判断题/单选题 is legal content.
+        row["problem_text"] = "长" * micro_quiz.MAX_STEM_CHARS
+        self.assertEqual(micro_quiz.validate_problem_row(row), [])
 
     def test_optional_label_fields_share_the_contract(self):
         row = {
@@ -372,7 +375,8 @@ class MicroQuizIngestTests(unittest.TestCase):
             manifest_item(),
             manifest_item(problem_id="dmath-ch06-mq-002",
                           kp_id="kp-missing"),
-            manifest_item(problem_id="dmath-ch06-mq-003", stem="长" * 201),
+            manifest_item(problem_id="dmath-ch06-mq-003",
+                          stem="长" * (micro_quiz.MAX_STEM_CHARS + 1)),
             manifest_item(problem_id="dmath-ch06-mq-004", answer_key="对"),
             manifest_item(problem_id="not-an-id"),
         ]

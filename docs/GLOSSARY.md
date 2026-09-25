@@ -221,6 +221,16 @@ _Avoid_：徽标、日期数字、ease/interval 等裸参数
 _Avoid_：practice path（旧别名）、答题方式、把「题型」当成 problem_type
 出处：workbench-ui spec「Practice page」；daily-learning-plan spec（别名裁决）；introduce-flash-card；ingest-mode-choice-and-contract-parity
 
+### 原地改题 / In-place Problem Edit
+不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、topic_label/display_title/display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key/error_reason）、answer_key。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
+_Avoid_：把「改属性」当成「重导」、以为要删掉再导、以为题号可以换
+出处：in-place-problem-edits
+
+### 拆选项 / Option Splitting
+把题面里自带的选项块（如 `A. … B. …`）原样搬进结构化 `options`，题面只留题干。这是原地改题的一种，用于让题库里那些「选项写在题面里」的单选题变成真正的小测题；**只搬动原文，不编造内容**，改动前的题面在补丁快照里可回滚。
+_Avoid_：改写题目文字、把没有选项的题硬凑选项
+出处：in-place-problem-edits
+
 ### 无答案键客观题 / Keyless Objective Item
 判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析自评」，作答文本仍记录，学习状态仍由 1–5 自评写入。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
 _Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、给无键题判分
@@ -282,7 +292,7 @@ _Avoid_：批量评分历史、补打卡
 出处：DISCUSSION-RECORD B6.5；workbench-ui spec
 
 ### 微题 / Micro Quiz
-带结构化载荷的短题干快反馈题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。
+带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。题干上限 800 字（2026-09-25 从 200 放宽，因为题库里的判断题、单选题本来就长）；答案键可以缺（见「无答案键客观题」）。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
 _Avoid_：小题（口语）、判断题系统（判断只是题型之一）、填空作答
 出处：openspec/specs/micro-quiz-content/spec.md
 

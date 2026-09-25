@@ -260,6 +260,120 @@ class DataCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("判断/小测", result["error"])
 
+    def update_problem(self, problem_id, payload, name="patch.json"):
+        path = self.write_json(name, payload)
+        return self.run_cli(
+            "data", "course", "update", "problem", problem_id, "--input", str(path))
+
+    def test_an_existing_problem_can_become_a_micro_quiz_in_place(self):
+        # The stem keeps its options inside the text; the patch moves them into
+        # `options`, so the item becomes a 小测 without changing its id.
+        code, updated = self.update_problem("dmath-ch06-prob-001", {
+            "problem_text": "下列哪个是国际单位制基本单位？",
+            "micro_quiz": {
+                "quiz_type": "single_choice",
+                "options": ["米", "牛", "焦", "瓦"],
+                "answer_key": "米",
+                "error_reason": "牛、焦、瓦都是导出单位。",
+            },
+            "source_evidence": "教材 第6章 习题6-1",
+        })
+
+        self.assertEqual(code, 0, updated)
+        self.assertEqual(updated["problem_id"], "dmath-ch06-prob-001")
+        self.assertEqual(updated["practice_modes"], ["micro"])
+        self.assertEqual(updated["micro_quiz"]["options"], ["米", "牛", "焦", "瓦"])
+        self.assertEqual(updated["source_evidence"], "教材 第6章 习题6-1")
+
+    def test_a_patch_derives_the_mode_and_replays_it_in_the_other_direction(self):
+        self.assertEqual(self.update_problem("dmath-ch06-prob-001", {
+            "micro_quiz": {"quiz_type": "yes_no", "answer_key": "是",
+                           "error_reason": "因为有大小和方向。",
+                           "source_evidence": "教材 第6章 习题6-1"},
+        }, name="to-micro.json")[1]["practice_modes"], ["yes_no"])
+
+        edited = self.update_problem("dmath-ch06-prob-001", {
+            "practice_modes": [],
+            "micro_quiz": None,
+        }, name="back.json")
+
+        self.assertEqual(edited[1]["practice_modes"], None)
+        self.assertEqual(edited[1]["micro_quiz"], None)
+
+    def test_the_micro_contract_is_enforced_on_a_patch(self):
+        cases = {
+            "two kps": {"kp_ids": ["dmath-ch06-kp-001", "dmath-ch06-kp-002"],
+                        "micro_quiz": {"quiz_type": "yes_no", "error_reason": "r"}},
+            "bad mode": {"micro_quiz": {"quiz_type": "yes_no", "answer_key": "是",
+                                        "error_reason": "r"},
+                         "practice_modes": ["micro"]},
+            "one option": {"micro_quiz": {"quiz_type": "single_choice",
+                                          "options": ["米"], "error_reason": "r"}},
+            "mode without payload": {"practice_modes": ["micro"]},
+        }
+        for case, payload in cases.items():
+            with self.subTest(case=case):
+                code, result = self.update_problem(
+                    "dmath-ch06-prob-001", payload, name=f"{case}.json")
+                self.assertEqual(code, 2, result)
+                self.assertTrue(result["error"])
+
+    def test_unknown_fields_and_difficulty_are_refused(self):
+        store = self.update_problem(
+            "dmath-ch06-prob-001", {"sollution": "typo"}, name="typo.json")
+        self.assertEqual(store[0], 2)
+        self.assertIn("unsupported field", store[1]["error"])
+        self.assertIn("solution", store[1]["error"])
+
+        rated = self.update_problem(
+            "dmath-ch06-prob-001", {"difficulty": 3}, name="difficulty.json")
+        self.assertEqual(rated[0], 2)
+        self.assertIn("rated separately", rated[1]["error"])
+
+    def test_a_mode_change_keeps_the_rating_and_a_stem_change_clears_it(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "UPDATE problems SET difficulty=3, difficulty_knowledge_breadth=2,"
+            " difficulty_reasoning_depth=3, difficulty_transfer_distance=2,"
+            " difficulty_construction_openness=3, difficulty_model='cognitive-v1-equal-mean'"
+            " WHERE problem_id='dmath-ch06-prob-001'")
+        conn.commit()
+        conn.close()
+
+        code, _ = self.update_problem("dmath-ch06-prob-001", {
+            "micro_quiz": {"quiz_type": "yes_no", "error_reason": "r",
+                           "source_evidence": "教材 第6章 习题6-1"},
+        }, name="mode-only.json")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.difficulty_of("dmath-ch06-prob-001"), 3)
+
+        code, _ = self.update_problem("dmath-ch06-prob-001", {
+            "problem_text": "改写后的题干",
+        }, name="stem.json")
+        self.assertEqual(code, 0)
+        self.assertIsNone(self.difficulty_of("dmath-ch06-prob-001"))
+
+    def difficulty_of(self, problem_id):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            return conn.execute(
+                "SELECT difficulty FROM problems WHERE problem_id=?",
+                (problem_id,)).fetchone()[0]
+        finally:
+            conn.close()
+
+    def test_deleting_an_unknown_problem_is_an_error(self):
+        code, result = self.run_cli(
+            "data", "course", "delete", "problem", "dmath-ch06-prob-999")
+        self.assertEqual(code, 2)
+        self.assertIn("dmath-ch06-prob-999", result["error"])
+
+    def test_an_update_without_input_says_so(self):
+        code, result = self.run_cli(
+            "data", "course", "update", "problem", "dmath-ch06-prob-001")
+        self.assertEqual(code, 2)
+        self.assertIn("--input", result["error"])
+
 
 if __name__ == "__main__":
     unittest.main()
