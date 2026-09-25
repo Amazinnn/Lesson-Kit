@@ -35,7 +35,7 @@ KP_TYPES = {
 }
 KP_IMPORTANCE = {"core", "supplementary", "optional"}
 RECIPE_NAMES = {"knowledge", "problems", "views", "micro-quiz",
-                "flash-card", "figures"}
+                "flash-card", "figures", "problem-patch"}
 MICRO_QUIZ_KIND = "micro-quiz-patch"
 MICRO_QUIZ_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*-mq-\d{3}$")
 FLASH_CARD_KIND = "flash-card-patch"
@@ -43,6 +43,9 @@ FLASH_CARD_ID = re.compile(r"^[a-z0-9-]+-fc-\d{3}$")
 FIGURE_PATCH_KIND = "figure-patch"
 # One atomic bundle of new knowledge points, problems, cards, and source figures.
 CONTENT_BUNDLE_KIND = "content-bundle"
+# In-place edits of problems that already exist; nothing is inserted, and the
+# batch snapshot keeps the previous values so a rollback restores them.
+PROBLEM_PATCH_KIND = "problem-patch"
 PROBLEM_TYPES = {
     "calculation", "proof", "modeling", "explanation", "experiment",
     "design", "application", "counterexample", "other",
@@ -226,11 +229,16 @@ def recipe(name, db_path, input_path, output_dir, apply_changes=False, backup_pa
         elif name == "figures":
             applied = apply_figure_patch(database, input_path, backup_path)
             result.update(applied)
+        elif name == "problem-patch":
+            applied = apply_problem_patch(database, input_path, backup_path)
+            result.update(applied)
         elif name == "problems":
             applied = apply(database, input_path, backup_path)
             result.update(applied)
         else:
-            raise ValueError("only the problems, micro-quiz, flash-card, and figures recipes have an apply stage")
+            raise ValueError(
+                "only the problems, micro-quiz, flash-card, figures, and "
+                "problem-patch recipes have an apply stage")
     write_artifact(Path(output_dir) / "recipe.json", result)
     return result
 
@@ -417,17 +425,28 @@ def apply_flash_cards(db_path, manifest_path, backup_path=None, course=None):
     return _apply_patch(database, manifest, backup, FLASH_CARD_KIND, course)
 
 
+def apply_problem_patch(db_path, manifest_path, backup_path=None, course=None):
+    """Revalidate and apply in-place problem edits while holding one write lock."""
+    manifest = read_artifact(manifest_path)
+    database = Path(db_path)
+    backup = Path(backup_path) if backup_path else database.with_name(database.name + ".ingest-backup")
+    return _apply_problem_patch(database, manifest, backup, course)
+
+
 def apply_batch(db_path, manifest, *, source, backup_path=None, course=None):
     if source not in {"cli", "bridge"}:
         raise ValueError("source must be cli or bridge")
     kind = manifest.get("kind") if isinstance(manifest, dict) else None
-    if kind not in {MICRO_QUIZ_KIND, FLASH_CARD_KIND, CONTENT_BUNDLE_KIND}:
+    if kind not in {MICRO_QUIZ_KIND, FLASH_CARD_KIND, CONTENT_BUNDLE_KIND,
+                    PROBLEM_PATCH_KIND}:
         raise ValueError(f"unsupported ingest kind: {kind}")
     database = Path(db_path)
     backup = Path(backup_path) if backup_path else (
         database.with_name(database.name + ".ingest-backup"))
     if kind == CONTENT_BUNDLE_KIND:
         result = _apply_content_bundle(database, manifest, backup, course)
+    elif kind == PROBLEM_PATCH_KIND:
+        result = _apply_problem_patch(database, manifest, backup, course)
     else:
         result = _apply_patch(database, manifest, backup, kind, course)
     return {key: result[key] for key in (
@@ -1385,6 +1404,155 @@ def _gate_figure_patch(conn, manifest, course=""):
     return {"ok": True, "errors": [], "plans": plans}
 
 
+def _gate_problem_patch(conn, manifest, course=""):
+    """Validate an in-place problem patch; every reason is reported, nothing is written.
+
+    A patch can only touch rows that already exist, never changes an id, and
+    records each row's previous values so the whole batch can be rolled back.
+    """
+    errors = []
+    if not isinstance(manifest, dict) or manifest.get("kind") != PROBLEM_PATCH_KIND:
+        return {"ok": False, "errors": [f"expected a {PROBLEM_PATCH_KIND} manifest"]}
+    conn.row_factory = sqlite3.Row      # the plan reads the row by column name
+    prefix = _course_prefix(course, errors)
+    items = manifest.get("items")
+    if not isinstance(items, list) or not items:
+        errors.append("items must be a non-empty list")
+        items = []
+    plans = []
+    seen = set()
+    for index, item in enumerate(items):
+        label = f"item {index + 1}"
+        if not isinstance(item, dict):
+            errors.append(f"{label}: must be an object")
+            continue
+        problem_id = item.get("problem_id")
+        if not isinstance(problem_id, str) or not problem_id.strip():
+            errors.append(f"{label}: problem_id is required")
+            continue
+        label = problem_id
+        if problem_id in seen:
+            errors.append(f"{label}: listed twice")
+            continue
+        seen.add(problem_id)
+        if prefix and not problem_id.startswith(prefix):
+            errors.append(
+                f"{label}: id must start with {prefix} (this workspace's course)")
+            continue
+        row = conn.execute(
+            "SELECT * FROM problems WHERE problem_id=?", (problem_id,)
+        ).fetchone()
+        if row is None:
+            errors.append(
+                f"{label}: unknown problem — a patch can only change rows that exist")
+            continue
+        data = {key: value for key, value in item.items() if key != "problem_id"}
+        plan = content_data.plan_problem_patch(
+            content_data.decode_problem(row), data, course=course)
+        if plan["errors"]:
+            errors.extend(f"{label}: {reason}" for reason in plan["errors"])
+            continue
+        if not plan["fields"]:
+            errors.append(f"{label}: nothing to change")
+            continue
+        plans.append({
+            "problem_id": problem_id,
+            "fields": plan["fields"],
+            "clear_difficulty": plan["clear_difficulty"],
+            "previous": _problem_previous(row, plan),
+        })
+    if errors:
+        return {"ok": False, "errors": errors}
+    return {"ok": True, "errors": [], "plans": plans, "accounting": _accounting(conn)}
+
+
+def _problem_previous(row, plan):
+    """The current values of exactly the columns this patch will write."""
+    previous = {}
+    for field in plan["fields"]:
+        previous[field] = row[field] if field in row.keys() else None
+    if plan["clear_difficulty"]:
+        for field in content_data.DIFFICULTY_COLUMNS:
+            if field in row.keys():
+                previous[field] = row[field]
+    return previous
+
+
+def _apply_problem_patch(database, manifest, backup, course=None):
+    """Apply one problem patch in a single transaction, keeping the previous values."""
+    if backup.exists():
+        raise FileExistsError(f"recoverable copy already exists: {backup}")
+    course = course or database.stem          # the pool file name is the course id
+    conn = sqlite3.connect(database)
+    conn.row_factory = sqlite3.Row
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        verified = _gate_problem_patch(conn, manifest, course)
+        if not verified["ok"]:
+            raise ValueError("\n".join(verified["errors"]))
+        batch_id = _allocate_batch_id(conn)
+        snapshot = {
+            "kind": PROBLEM_PATCH_KIND,
+            "items": manifest["items"],
+            "previous": [
+                {"problem_id": plan["problem_id"], "fields": plan["previous"]}
+                for plan in verified["plans"]
+            ],
+        }
+        manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
+        _backup_database(database, backup)
+        cleared = 0
+        for plan in verified["plans"]:
+            assignments = [f"{field}=?" for field in plan["fields"]]
+            values = [content_data._db_value(field, value)
+                      for field, value in plan["fields"].items()]
+            if plan["clear_difficulty"]:
+                assignments.extend(f"{field}=NULL" for field in content_data.DIFFICULTY_COLUMNS)
+                if plan["previous"].get("difficulty") is not None:
+                    cleared += 1
+            assignments.append("updated_at=datetime('now')")
+            cursor = conn.execute(
+                f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
+                (*values, plan["problem_id"]),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError(f"missing formal problem: {plan['problem_id']}")
+        counts = {"problems": len(verified["plans"]),
+                  "difficulty_cleared": cleared}
+        _record_batch(conn, batch_id, PROBLEM_PATCH_KIND, manifest_path, counts, backup)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"ok": True, "applied": True, "batch_id": batch_id,
+            "kind": PROBLEM_PATCH_KIND, "counts": counts,
+            "backup_path": str(backup), "accounting": verified["accounting"]}
+
+
+def _rollback_problem_patch(conn, batch_id):
+    """Restore the previous values recorded by a problem patch."""
+    row = conn.execute(
+        "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
+    ).fetchone()
+    snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
+    restored = 0
+    for entry in snapshot.get("previous", []):
+        fields = entry.get("fields") or {}
+        if not fields:
+            continue
+        assignments = [f"{field}=?" for field in fields]
+        values = list(fields.values())
+        assignments.append("updated_at=datetime('now')")
+        conn.execute(
+            f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
+            (*values, entry["problem_id"]),
+        )
+        restored += 1
+    return {"problems": restored}
+
+
 def _figures_root(database, course, chapter):
     """The figures directory of one course/chapter, which must stay in the workspace."""
     workspace = database.resolve().parent.parent
@@ -1576,6 +1744,11 @@ def rollback_batch(db_path, batch_id, backup_path=None):
         if batch[0] == FIGURE_PATCH_KIND:
             counts = _rollback_figure_patch(conn, batch_id)
             deleted = counts.get("problems", 0)
+        elif batch[0] == PROBLEM_PATCH_KIND:
+            # A patch restores values instead of deleting rows, so the learning
+            # records it never touched need no blocker check.
+            counts = _rollback_problem_patch(conn, batch_id)
+            deleted = 0
         elif batch[0] == CONTENT_BUNDLE_KIND:
             counts = _rollback_content_bundle(conn, database, batch_id)
             deleted = (counts["problems"] + counts["flash_cards"]

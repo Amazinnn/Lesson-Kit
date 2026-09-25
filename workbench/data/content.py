@@ -34,12 +34,24 @@ EDITABLE_FIELDS = {
     "problem": {
         "kp_ids", "problem_text", "solution", "problem_type", "source_kind",
         "origin_kind", "display_title", "topic_label", "display_summary",
-        "figure_paths", "exam_year",
+        "figure_paths", "exam_year", "source_evidence", "source_answer",
+        "solution_origin", "practice_modes", "micro_quiz",
     },
     "relation": {
         "source_kp_id", "target_kp_id", "relation_type", "direction", "strength",
     },
 }
+
+# The four content axes: changing one clears the whole difficulty rating group.
+CONTENT_AXES = {"kp_ids", "problem_text", "solution", "problem_type"}
+DIFFICULTY_COLUMNS = (
+    "difficulty", "difficulty_knowledge_breadth", "difficulty_reasoning_depth",
+    "difficulty_transfer_distance", "difficulty_construction_openness",
+    "difficulty_model",
+)
+# What an in-place problem patch may carry; `answer_key` is the shape-only sugar
+# for the item's own payload (see `plan_problem_patch`).
+PROBLEM_PATCH_FIELDS = frozenset(EDITABLE_FIELDS["problem"]) | {"answer_key"}
 
 
 def exam_year_error(value):
@@ -235,32 +247,16 @@ def create(pool, entity, data):
 
 def update(pool, entity, object_id, data):
     table, id_column = _entity(entity)
-    if entity == "problem" and "exam_year" in data:
-        reason = exam_year_error(data["exam_year"])
-        if reason:
-            raise ValueError(reason)
-        data = {**data, "exam_year": normalize_exam_year(data["exam_year"])}
-    special = {}
-    if entity == "problem" and "answer_key" in data:
-        special["micro_quiz"] = _patched_micro_quiz(pool, object_id, data["answer_key"])
+    if entity == "problem":
+        return _update_problem(pool, object_id, data)
     fields = [field for field in EDITABLE_FIELDS[entity] if field in data]
-    if not fields and not special:
+    if not fields:
         return get(pool, entity, object_id)
     assignments = [f"{field}=?" for field in fields]
     values = [_db_value(field, data[field]) for field in fields]
     columns = {row[1] for row in pool.connect().execute(f"PRAGMA table_info({table})")}
-    if entity == "problem" and {"kp_ids", "problem_text", "solution", "problem_type"} & set(fields):
-        assignments.extend(
-            f"{field}=NULL" for field in (
-                "difficulty", "difficulty_knowledge_breadth",
-                "difficulty_reasoning_depth", "difficulty_transfer_distance",
-                "difficulty_construction_openness", "difficulty_model",
-            ) if field in columns
-        )
     if "updated_at" in columns:
         assignments.append("updated_at=datetime('now')")
-    assignments.extend(f"{field}=?" for field in special)
-    values.extend(special.values())
     conn = pool.connect()
     with conn:
         cursor = conn.execute(
@@ -272,41 +268,217 @@ def update(pool, entity, object_id, data):
     return get(pool, entity, object_id)
 
 
-def _patched_micro_quiz(pool, problem_id, answer_key):
-    """Fold a supplied answer key into the item's own micro-quiz payload.
-
-    Only the key's shape is checked, against that item's quiz type, so filling a
-    key in later never forces an error reason the learner may not have. An empty
-    value clears the key and the item is practised ungraded again.
-    """
-    row = pool.connect().execute(
-        "SELECT micro_quiz FROM problems WHERE problem_id=?", (problem_id,)
-    ).fetchone()
-    if row is None:
-        raise KeyError(problem_id)
-    raw = row[0]
-    payload = None
-    if isinstance(raw, str) and raw.strip():
-        try:
-            payload = json.loads(raw)
-        except ValueError:
-            payload = None
-    if not isinstance(payload, dict) or not payload.get("quiz_type"):
-        raise ValueError(
-            f"{problem_id} is not a 判断/小测 item: an answer key belongs to an "
-            "objective item imported with quiz_type/options"
+def _update_problem(pool, problem_id, data):
+    """Apply one in-place problem patch through the shared plan."""
+    plan = plan_problem_update(pool, problem_id, data)
+    if plan["errors"]:
+        raise ValueError("; ".join(plan["errors"]))
+    fields = plan["fields"]
+    if not fields:
+        return get(pool, "problem", problem_id)
+    columns = {row[1] for row in pool.connect().execute("PRAGMA table_info(problems)")}
+    assignments = [f"{field}=?" for field in fields]
+    values = [_db_value(field, value) for field, value in fields.items()]
+    if plan["clear_difficulty"]:
+        assignments.extend(
+            f"{field}=NULL" for field in DIFFICULTY_COLUMNS if field in columns)
+    if "updated_at" in columns:
+        assignments.append("updated_at=datetime('now')")
+    conn = pool.connect()
+    with conn:
+        cursor = conn.execute(
+            f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
+            (*values, problem_id),
         )
+        if cursor.rowcount == 0:
+            raise KeyError(problem_id)
+    return get(pool, "problem", problem_id)
+
+
+def plan_problem_update(pool, problem_id, data):
+    """Plan one in-place patch for a problem that must already exist here."""
+    row = pool.problem(problem_id)
+    if row is None:
+        return {"errors": [f"unknown problem: {problem_id}"], "fields": {},
+                "clear_difficulty": False, "row": None}
+    return plan_problem_patch(row, data, course=pool.course)
+
+
+def decode_problem(row):
+    """Decode one `problems` row into the shape a patch plan expects."""
+    item = dict(row)
+    item["kp_ids"] = json.loads(item.get("kp_ids") or "[]")
+    for field in ("practice_modes", "micro_quiz"):
+        raw = item.get(field)
+        if isinstance(raw, str):
+            item[field] = json.loads(raw) if raw else None
+    return item
+
+
+def plan_problem_patch(row, data, course=""):
+    """Validate one in-place problem patch and return what to write.
+
+    One authority for both entry points — `data update problem` and the bulk
+    `problem-patch` gate — so a converted row can never be one the ingestion
+    contract would refuse. `row` is the decoded current row (`kp_ids`,
+    `practice_modes`, and `micro_quiz` already parsed).
+
+    - an unknown field is an error, never a silent drop;
+    - the id must belong to this workspace's course and never changes;
+    - difficulty stays a separate command;
+    - `practice_modes` follows the payload unless it is declared (`[]`/null is
+      exam-only), and a micro/yes-no marking without a payload is refused;
+    - the resulting row is checked against the micro-quiz contract for the parts
+      this patch touches (payload shape, one knowledge point, stem bound, mode
+      marking). Fields the patch does not touch are left as they are, so legacy
+      rows stay patchable without re-validating their old content.
+
+    Returns ``{"errors", "fields", "clear_difficulty", "row"}``; `fields` is
+    empty when nothing would change.
+    """
+    if not isinstance(data, dict):
+        return {"errors": ["a problem patch must be a JSON object"], "fields": {},
+                "clear_difficulty": False, "row": row}
+    errors = []
+    if "problem_id" in data:
+        errors.append("a patch cannot change problem_id — it is the row's identity")
+    unsupported = sorted(set(data) - PROBLEM_PATCH_FIELDS - {"problem_id"})
+    if unsupported:
+        difficulty = [name for name in unsupported
+                      if name.startswith("difficulty")]
+        if difficulty:
+            errors.append(
+                "difficulty is rated separately with `lesson-kit difficulty`")
+        rest = [name for name in unsupported if not name.startswith("difficulty")]
+        if rest:
+            errors.append(
+                f"unsupported field(s) {rest} — writable fields: "
+                + ", ".join(sorted(PROBLEM_PATCH_FIELDS)))
+    problem_id = (row or {}).get("problem_id", "")
+    if course and isinstance(problem_id, str) and problem_id \
+            and not problem_id.startswith(f"{course}-"):
+        errors.append(
+            f"{problem_id}: id must start with {course}- (this workspace's course)")
+    if errors:
+        return {"errors": errors, "fields": {}, "clear_difficulty": False,
+                "row": row}
+
+    fields = {name: data[name] for name in data
+              if name in PROBLEM_PATCH_FIELDS and name != "answer_key"}
+    # A whole-payload write gets the full contract; the `answer_key` sugar only
+    # checks the key's shape, so an existing row keeps its other payload fields.
+    explicit_payload = "micro_quiz" in data
+    if "exam_year" in fields:
+        reason = exam_year_error(fields["exam_year"])
+        if reason:
+            errors.append(reason)
+        else:
+            fields["exam_year"] = normalize_exam_year(fields["exam_year"])
+
+    if "answer_key" in data:
+        errors.extend(_answer_key_errors(row, fields, data["answer_key"]))
+
+    if "micro_quiz" in fields:
+        payload = fields["micro_quiz"]
+        if payload is None:
+            # Clearing the payload puts the item back in 综合题; the mode follows
+            # unless the caller declares one.
+            fields.pop("practice_modes", None)
+            fields["practice_modes"] = None
+            fields["micro_quiz"] = None
+        elif not isinstance(payload, dict) or not payload.get("quiz_type"):
+            errors.append(
+                "micro_quiz needs quiz_type (yes_no / single_choice / "
+                "multiple_choice), or null to clear it back to 综合题")
+        else:
+            carried = fields.get("source_evidence") or row.get("source_evidence")
+            if not str(payload.get("source_evidence") or "").strip() \
+                    and str(carried or "").strip():
+                # The row already carries its provenance (or this patch supplies
+                # it); a payload write need not repeat it.
+                payload = {**payload, "source_evidence": carried}
+                fields["micro_quiz"] = payload
+            if "practice_modes" not in fields:
+                fields["practice_modes"] = micro_quiz.practice_modes_for(
+                    payload["quiz_type"])
+    elif "practice_modes" in fields:
+        declared = fields["practice_modes"]
+        modes = [] if declared is None else (
+            declared if isinstance(declared, list) else [declared])
+        existing = row.get("micro_quiz")
+        outside = sorted({mode for mode in modes if mode != "exam"})
+        if outside and not (isinstance(existing, dict) and existing.get("quiz_type")):
+            errors.append(
+                f"practice_modes {outside} need a micro_quiz payload — send "
+                "quiz_type and options to make this a 判断/小测 item, or leave "
+                "practice_modes unset for 综合题")
+        fields["practice_modes"] = [mode for mode in modes if mode != "exam"] or None
+
+    if errors:
+        return {"errors": errors, "fields": {}, "clear_difficulty": False,
+                "row": row}
+
+    prospective = {**row, **fields}
+    payload = prospective.get("micro_quiz")
+    if isinstance(payload, dict) and payload.get("quiz_type"):
+        if explicit_payload:
+            errors.extend(micro_quiz.validate_payload(payload["quiz_type"], payload))
+        if explicit_payload or "kp_ids" in fields:
+            kp_ids = prospective.get("kp_ids")
+            if not isinstance(kp_ids, list) or len(kp_ids) != 1:
+                errors.append("a micro quiz maps to exactly one knowledge point")
+        if "problem_text" in fields:
+            stem = prospective.get("problem_text")
+            if not isinstance(stem, str) or not stem.strip():
+                errors.append("problem_text is required")
+            elif len(stem) > micro_quiz.MAX_STEM_CHARS:
+                errors.append(
+                    f"problem_text exceeds {micro_quiz.MAX_STEM_CHARS} characters; "
+                    "long content belongs to the exam mode")
+        modes = prospective.get("practice_modes")
+        if not isinstance(modes, list) or not modes:
+            errors.append("practice_modes marking is required for a micro quiz")
+        else:
+            allowed = micro_quiz.practice_modes_for(payload["quiz_type"])
+            if not set(modes) <= set(allowed):
+                errors.append(
+                    f"practice_modes for {payload['quiz_type']} must be within "
+                    f"{sorted(allowed)}")
+    return {
+        "errors": errors,
+        "fields": {} if errors else fields,
+        "clear_difficulty": bool(CONTENT_AXES & set(fields)),
+        "row": row,
+    }
+
+
+def _answer_key_errors(row, fields, answer_key):
+    """Fold an `answer_key` patch into the item's payload; only its shape is checked.
+
+    Filling a key in later must not force an error reason the learner may not
+    have, so this is the shape-only rule while a whole-payload write gets the
+    full contract.
+    """
+    payload = fields.get("micro_quiz", row.get("micro_quiz"))
+    if not isinstance(payload, dict) or not payload.get("quiz_type"):
+        return [
+            "answer_key needs a 判断/小测 item: set micro_quiz (quiz_type and "
+            "options) first, or send the whole micro_quiz payload"
+        ]
     cleared = answer_key in (None, "")
-    candidate = {**payload, "answer_key": None if cleared else answer_key}
-    if not cleared:
-        errors = micro_quiz.validate_answer_key(
-            payload["quiz_type"], payload.get("options"), answer_key)
-        if errors:
-            raise ValueError("; ".join(errors))
-    return json.dumps(candidate, ensure_ascii=False)
+    if cleared:
+        fields["micro_quiz"] = {**payload, "answer_key": None}
+        return []
+    errors = micro_quiz.validate_answer_key(
+        payload["quiz_type"], payload.get("options"), answer_key)
+    if not errors:
+        fields["micro_quiz"] = {**payload, "answer_key": answer_key}
+    return errors
 
 
 def _db_value(field, value):
+    if value is None:
+        return None
     if field in JSON_FIELDS and not isinstance(value, str):
         return json.dumps(value, ensure_ascii=False)
     return value
@@ -314,8 +486,14 @@ def _db_value(field, value):
 
 def delete(pool, entity, object_id):
     _entity(entity)
+    table, id_column = _entity(entity)
     conn = pool.connect()
     with conn:
+        exists = conn.execute(
+            f"SELECT 1 FROM {table} WHERE {id_column}=?", (object_id,)
+        ).fetchone()
+        if exists is None:
+            raise KeyError(object_id)
         if entity == "problem":
             _delete_problem(conn, object_id)
         elif entity == "kp":

@@ -21,14 +21,20 @@ the item keyless instead of being refused, the choice types SHALL still carry
 2–6 options, `yes_no` SHALL keep its implied 是/否 options, and `error_reason`
 SHALL be mandatory only for an item that carries a key. Every micro quiz type
 SHALL present clickable options; free-text answering SHALL NOT be part of the
-contract. A micro quiz SHALL map to exactly one knowledge point. Manifest items
-MAY carry optional label fields `topic_label` (at most 40 characters),
-`display_title` (at most 80 characters), and `display_summary` (at most 200
-characters); a supplied label field SHALL be a non-empty string that passes
-the shared markup safety check, and an omitted field is stored as null. The
-system SHALL NOT truncate long formal problems into micro quizzes, SHALL NOT
-infer micro-quiz content from legacy problem-type values, and SHALL NOT
-accept the retired types `closest_answer` and `short_answer` at the gate.
+contract. A micro quiz SHALL map to exactly one knowledge point, and its stem
+SHALL be at most 800 characters. Manifest items MAY carry optional label fields
+`topic_label` (at most 40 characters), `display_title` (at most 80 characters),
+and `display_summary` (at most 200 characters); a supplied label field SHALL be
+a non-empty string that passes the shared markup safety check, and an omitted
+field is stored as null. A problem that already exists in the pool SHALL be
+convertible into a micro quiz **in place**, keeping its readable id and every
+learning record: the conversion supplies `practice_modes` and the payload
+through the explicit problem patch, the options MAY be lifted verbatim out of
+the old problem text, and the same contract SHALL be enforced for the parts the
+patch touches. The system SHALL NOT truncate long formal problems into micro
+quizzes, SHALL NOT fabricate options a source does not have, SHALL NOT infer
+micro-quiz content from legacy problem-type values, and SHALL NOT accept the
+retired types `closest_answer` and `short_answer` at the gate.
 
 #### Scenario: A well-formed micro quiz enters the pool
 
@@ -59,6 +65,16 @@ accept the retired types `closest_answer` and `short_answer` at the gate.
 
 - **WHEN** the learner or the Agent fills in the answer key of a keyless item through the problem update path
 - **THEN** the key is validated against that item's own quiz type and stored, and clearing it returns the item to keyless
+
+#### Scenario: An existing problem becomes a micro quiz in place
+
+- **WHEN** an explicitly requested patch gives an existing problem a quiz type, options, and its practice-mode marking
+- **THEN** the row keeps its id and learning records, is pulled by the matching practice mode, and is no longer pulled by 综合题
+
+#### Scenario: The stem bound admits long objective items
+
+- **WHEN** a 判断题 or 单选题 carries a stem of 800 characters or fewer
+- **THEN** its length is not a contract violation, and a stem above 800 characters is still refused as long content
 
 ### Requirement: Explicit mode marking for Micro and Yes/No
 
