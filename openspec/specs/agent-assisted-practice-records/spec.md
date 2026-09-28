@@ -1,7 +1,16 @@
 # agent-assisted-practice-records Specification
 
 ## Purpose
-TBD - created by archiving change agent-assisted-practice-records. Update Purpose after archive.
+
+Let the learner hand the Agent what they wrote on paper — a photographed
+proof, a scanned derivation — and have it become a real practice record: the
+`lesson-kit attempts` CLI transcribes the answer, optionally attaches the
+learner's own 1–5 rating, and links the attempt to the same four-piece learning
+write a browser self-rating uses. Everything here is explicit and idempotent:
+one manifest can carry several problems, a request id makes a resend safe, an
+attempt that was never rated still counts as a record, a correction replaces
+one attempt in place, and the answer images stay in the learner's own
+directories — registered read-only, never copied into the pool.
 ## Requirements
 ### Requirement: Workspace attempt CLI
 

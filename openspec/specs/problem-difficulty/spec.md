@@ -1,7 +1,14 @@
 # problem-difficulty Specification
 
 ## Purpose
-TBD - created by archiving change problem-difficulty-and-provenance. Update Purpose after archive.
+
+Record how hard a problem is in a way a student never has to see: an optional,
+lazily assigned vector of four dimensions (knowledge breadth, reasoning depth,
+transfer distance, construction openness) with a derived total, kept apart
+from the learner's own difficulty, which only the learner's ratings move. The
+vector is all-present or all-absent, only an explicit, checked transaction may
+write it, a content change invalidates it, and it can filter a selection
+without ever blocking ingest, display, practice, or scheduling.
 ## Requirements
 ### Requirement: Complete lazy difficulty vector
 

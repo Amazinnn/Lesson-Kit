@@ -1,7 +1,14 @@
 # practice-set-export Specification
 
 ## Purpose
-TBD - created by archiving change practice-set-export-and-cli-audit. Update Purpose after archive.
+
+Turn one `pull` selection into something the learner can carry to paper: a
+practice manifest that reproduces the same selection, a student sheet with the
+stems only, a solution sheet aligned to it problem by problem, and a
+zero-write check that says what a set would contain — including any internal
+identifier or answer that would leak into the student sheet — before anything
+is written. The set is a view over the pool, not a new entity: composition
+stays a read, and the learner keeps the choice of scope, filters, and size.
 ## Requirements
 ### Requirement: Practice set composition
 
