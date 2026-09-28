@@ -2,7 +2,7 @@
 
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者。
 
-## API 路由（`/api/w/{ws}` 前缀，32 条）
+## API 路由（`/api/w/{ws}` 前缀，36 条）
 
 | 方法 路径 | 读写 | 服务层 | 给谁 |
 |---|---|---|---|
@@ -13,10 +13,14 @@
 | GET `/calendar` | 读 | 查询 | 浏 |
 | GET `/plan` · POST `/plan/recalculate` | 读/写 | 计划 | 浏 |
 | GET·POST `/goals`；PATCH·DELETE·GET `/goals/{id}` | 读/写 | goals.json | 浏（UI 仅用创建） |
-| POST `/pull` | 读 | 拉取 | 双 |
+| POST `/pull` | 读 | 拉取（`filters` 三维：来源类型/年份/文档，维度内 OR、维度间 AND） | 双 |
+| GET `/pull-facets` | 读 | 拉取（筛选浮窗的维度与计数，取自池内实际值） | 浏 |
+| GET `/search/problems` | 读 | 查询（浮窗搜索选题，命中后走 `include_ids`） | 浏 |
 | POST `/pull-cards` | 读 | 拉卡（direction_mode + 独立方向排除） | 双 |
 | POST `/practice` | 写 | practice 记录 | 双 |
-| POST `/feedback` | 写 | 四件套 | 双 |
+| POST `/attempts` | 写 | 尝试（浏览器每次提交落一条：作答+选项+判定，不碰进度与调度） | 双 |
+| GET `/records` | 读 | 做题记录页（服务端渲染最近 100 条） | 浏 |
+| POST `/feedback` | 写 | 四件套（可带 `attempt_id` 链回本次作答） | 双 |
 | GET `/problem/{id}` · GET `/kp/{id}` | 读 | 查询 | 双 |
 | GET `/graph/model` · POST `/graph/state` · POST `/graph/kp` | 读/写 | 查询+图谱编辑 | 浏（模型可双） |
 | GET `/ai/providers` | 读 | 对话 provider（PATH 发现+overrides） | 浏 |
@@ -34,12 +38,12 @@
 | `dashboard` | 管理（确保服务在跑 + 打开浏览器；不新增页面） | 人 |
 | `doctor` | 读（环境自检：注册表/池库/provider/服务端口，只读不改） | 人 |
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |
-| `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
+| `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；来源筛选 `--source-kind`·`--exam-year`·`--source-evidence` 均可重复；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检，apply 单事务多题，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容；candidate 实体与 gate/promote 动作已物理移除，2026-08-30） | Agent |
-| `bridge add / list` | 配置 provider / 报告解析到的可执行文件与来源 | 人 |
+| `bridge add / add-model / list` | 配置 provider 与**模型条目**（显示名自定，与 harness 解耦）/ 报告解析到的可执行文件、来源与条目 | 人 |
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |
 | `experiment` | 只读实验评估器 | 人 |

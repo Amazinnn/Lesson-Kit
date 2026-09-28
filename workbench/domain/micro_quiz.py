@@ -5,10 +5,9 @@ RETIRED_QUIZ_TYPES = ("closest_answer", "short_answer")
 OBJECTIVE_TYPES = ("yes_no", "single_choice", "multiple_choice")
 YES_NO_OPTIONS = ["是", "否"]
 MAX_OPTIONS = 6
-# Long stems were refused outright when micro quizzes were only short cards;
-# real 判断题/单选题 from question banks carry long option blocks, so the bound is
-# a sanity ceiling now, not a design statement.
-MAX_STEM_CHARS = 800
+# No stem length bound: a question bank's 判断题/单选题 are as long as the source
+# paper makes them (several assertions, long scenarios, inlined option blocks),
+# and refusing them by length sent real objective items into the exam shell.
 LABEL_FIELD_LIMITS = {
     "topic_label": 40,
     "display_title": 80,
@@ -134,9 +133,6 @@ def validate_problem_row(row):
     stem = row.get("problem_text")
     if not isinstance(stem, str) or not stem.strip():
         errors.append("stem (problem_text) is required")
-    elif len(stem) > MAX_STEM_CHARS:
-        errors.append(f"stem exceeds {MAX_STEM_CHARS} characters; "
-                      "long content belongs to the exam mode")
     if not isinstance(modes, list) or not modes:
         errors.append("practice_modes marking is required for a micro quiz")
     errors.extend(validate_payload(quiz_type, row.get("micro_quiz")))

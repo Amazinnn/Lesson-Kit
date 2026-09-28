@@ -38,11 +38,26 @@ ROUTES = {
     ("PATCH", "/api/w/{name}/goals/{goal_id}"): (BOTH, ("goals",), ""),
     ("DELETE", "/api/w/{name}/goals/{goal_id}"): (BOTH, ("goals",), ""),
     ("POST", "/api/w/{name}/pull"): (BOTH, ("pull",), ""),
+    ("GET", "/api/w/{name}/pull-facets"): (
+        BROWSER, (),
+        "the filter panel derives its dimensions from the pool; the CLI pull "
+        "filters directly by flag"),
+    ("GET", "/api/w/{name}/search/problems"): (
+        BROWSER, (),
+        "the filter panel's search picker; `data search problem` covers the CLI"),
     ("POST", "/api/w/{name}/pull-cards"): (
         BROWSER, (),
         "flash cards are practised in the page; the CLI has no card command yet"),
     ("POST", "/api/w/{name}/practice"): (BOTH, ("practice",), ""),
+    ("POST", "/api/w/{name}/attempts"): (
+        BOTH, ("attempts",),
+        "the page submits one attempt per answer; the Agent's attempts apply "
+        "records whole manifests through the same table"),
     ("POST", "/api/w/{name}/feedback"): (BOTH, ("feedback",), ""),
+    ("GET", "/api/w/{name}/records"): (
+        BROWSER, (),
+        "the records page is server-rendered; `attempts list`/`data history` "
+        "serve the CLI and Agent"),
     ("GET", "/api/w/{name}/ingest/batches"): (BOTH, ("ingest",), ""),
     ("POST", "/api/w/{name}/ingest/rollback"): (BOTH, ("ingest",), ""),
     ("GET", "/api/w/{name}/problem/{problem_id}"): (BOTH, ("data",), ""),

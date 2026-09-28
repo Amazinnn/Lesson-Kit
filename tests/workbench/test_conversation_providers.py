@@ -582,6 +582,61 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertEqual(codex["title"], "组合计数")
         self.assertEqual(claude["title"], "组合计数")
 
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
+    @mock.patch("workbench.bridge.conversation_providers.shutil.which")
+    def test_named_model_entries_replace_the_harness_labels(self, which, load_bridges):
+        from workbench.bridge import conversation_providers
+
+        which.return_value = None
+        load_bridges.return_value = {
+            "providers": {"pi": {"command": "C:/npm/pi.cmd",
+                                 "model": "deepseek/deepseek-v4-flash"}},
+            "models": [
+                {"name": "DeepSeek V4", "provider": "pi",
+                 "model": "deepseek/deepseek-v4-flash"},
+                {"name": "另一个", "provider": "pi", "model": "other/model-9"},
+            ],
+        }
+
+        entries = conversation_providers.discover_entries()
+
+        # The picker shows the learner's own names; the harness rides along.
+        self.assertEqual([entry["name"] for entry in entries],
+                         ["DeepSeek V4", "另一个"])
+        self.assertTrue(all(entry["provider"] == "pi" for entry in entries))
+        self.assertEqual(entries[1]["model"], "other/model-9")
+        self.assertEqual(entries[1]["command"], "C:/npm/pi.cmd")
+
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
+    @mock.patch("workbench.bridge.conversation_providers.shutil.which")
+    def test_without_named_entries_the_picker_falls_back_to_harnesses(
+            self, which, load_bridges):
+        from workbench.bridge import conversation_providers
+
+        which.return_value = None
+        load_bridges.return_value = {
+            "providers": {"pi": {"command": "C:/npm/pi.cmd"}}
+        }
+
+        entries = conversation_providers.discover_entries()
+
+        self.assertEqual([entry["name"] for entry in entries], ["pi"])
+        self.assertEqual(entries[0]["provider"], "pi")
+        self.assertIsNone(entries[0]["model"])
+
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
+    @mock.patch("workbench.bridge.conversation_providers.shutil.which")
+    def test_an_entry_whose_harness_is_missing_is_skipped(self, which, load_bridges):
+        from workbench.bridge import conversation_providers
+
+        which.return_value = None
+        load_bridges.return_value = {
+            "providers": {},
+            "models": [{"name": "幽灵", "provider": "pi", "model": "x/y"}],
+        }
+
+        self.assertEqual(conversation_providers.discover_entries(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

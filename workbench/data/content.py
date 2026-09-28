@@ -431,10 +431,6 @@ def plan_problem_patch(row, data, course=""):
             stem = prospective.get("problem_text")
             if not isinstance(stem, str) or not stem.strip():
                 errors.append("problem_text is required")
-            elif len(stem) > micro_quiz.MAX_STEM_CHARS:
-                errors.append(
-                    f"problem_text exceeds {micro_quiz.MAX_STEM_CHARS} characters; "
-                    "long content belongs to the exam mode")
         modes = prospective.get("practice_modes")
         if not isinstance(modes, list) or not modes:
             errors.append("practice_modes marking is required for a micro quiz")

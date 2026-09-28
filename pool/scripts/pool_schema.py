@@ -393,6 +393,56 @@ def _widen_content_sequences_check(conn, create_sql):
     return ["content_sequences_entity_type_batch"]
 
 
+def _widen_problem_attempts_status_check(conn):
+    """Rebuild problem_attempts whose status CHECK predates 'answered' rows.
+
+    A browser-answered item that has not been rated yet is neither new nor
+    wrong: its outcome lives in the verdict column, and the row needs a status
+    that says exactly that. The rebuild copies every column the old shape
+    actually has — the table's shape evolved (answer_text, then verdict and
+    choices), so a positional INSERT ... SELECT would not line up.
+    """
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='problem_attempts'"
+    ).fetchone()
+    if not row or "'answered'" in (row[0] or ""):
+        return []
+    old_columns = [item[1] for item in conn.execute("PRAGMA table_info(problem_attempts)")]
+    conn.execute("ALTER TABLE problem_attempts RENAME TO problem_attempts_widening_old")
+    conn.execute(
+        """
+        CREATE TABLE problem_attempts (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            problem_id TEXT NOT NULL REFERENCES problems(problem_id),
+            status     TEXT NOT NULL
+                       CHECK (status IN (
+                           'new', 'answered', 'wrong', 'stuck', 'reviewing', 'mastered'
+                       )),
+            note       TEXT,
+            answer_text TEXT,
+            verdict    INTEGER,
+            choices    TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+        """
+    )
+    common = [name for name in (
+        "id", "problem_id", "status", "note", "answer_text", "verdict",
+        "choices", "created_at",
+    ) if name in old_columns]
+    names = ", ".join(common)
+    conn.execute(
+        f"INSERT INTO problem_attempts ({names})"
+        f" SELECT {names} FROM problem_attempts_widening_old"
+    )
+    conn.execute("DROP TABLE problem_attempts_widening_old")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_problem_attempts_problem_id"
+        " ON problem_attempts(problem_id)"
+    )
+    return ["problem_attempts_status_answered"]
+
+
 def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
@@ -651,6 +701,10 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             "WHERE practice_modes LIKE '%flash_card%'"
         )
     if table_exists(conn, "problem_attempts"):
+        # The status widening rebuilds the table with the full modern shape
+        # (including verdict/choices), so it must run before the column adder:
+        # a positional SELECT * across a half-migrated shape would not line up.
+        changes.extend(_widen_problem_attempts_status_check(conn))
         changes.extend(
             ensure_columns(
                 conn,
@@ -658,6 +712,17 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                 [("answer_text", "TEXT")],
             )
         )
+        changes.extend(
+            ensure_columns(
+                conn,
+                "problem_attempts",
+                # 2026-09-27 attempt-records-filters-and-model-entries: the
+                # browser's own verdict and chosen options, additive and
+                # nullable so综合题 rows and legacy rows stay untouched.
+                [("verdict", "INTEGER"), ("choices", "TEXT")],
+            )
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_problem_attempts_problem_id ON problem_attempts(problem_id)")
     if table_exists(conn, "feedback_events"):
         # An Agent-recorded rating links to the attempt it graded; browser and
         # legacy events stay unlinked (2026-09-24 agent-assisted-practice-records).

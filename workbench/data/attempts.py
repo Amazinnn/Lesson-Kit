@@ -16,6 +16,7 @@ from workbench.domain import schedule as schedule_rules
 
 
 UNGRADED_STATUS = "new"
+ANSWERED_STATUS = "answered"
 MANIFEST_FIELDS = {"request_id", "items"}
 ITEM_FIELDS = {"problem_id", "answer_text", "note", "rating"}
 CORRECTION_FIELDS = {"request_id", "answer_text", "note", "rating"}
@@ -422,6 +423,41 @@ def list_attempts(pool, problem_id):
             "latest": attempt["id"] == latest,
         })
     return {"problem_id": problem_id, "count": len(rows), "attempts": rows}
+
+
+def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
+                           choices=None):
+    """Persist one answer the practice page just submitted.
+
+    The attempt row is the learner's durable record; progress, schedule, and
+    signals still move only when the session's rating lands, linked back through
+    ``attempt_id``. The verdict is the objective grading the browser computed;
+    a综合题 answer has none and stores ``answer_text`` alone. A pool that has
+    not been migrated yet still gets the row (status ``new``, no verdict) — the
+    migration adds the ``answered`` status and the verdict/choices columns.
+    """
+    if pool.problem(problem_id) is None:
+        raise ManifestError(f"unknown problem: {problem_id}")
+    if verdict is not None and verdict not in (0, 1):
+        raise ManifestError("verdict must be true or false")
+    if choices is not None and (
+            not isinstance(choices, list)
+            or not all(isinstance(choice, str) for choice in choices)):
+        raise ManifestError("choices must be a list of option texts")
+    conn = pool.connect()
+    ddl = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='problem_attempts'"
+    ).fetchone()
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(problem_attempts)")}
+    widened = bool(ddl) and "'answered'" in (ddl[0] or "")
+    status = ANSWERED_STATUS if widened else UNGRADED_STATUS
+    attempt_id = pool.insert_attempt(
+        problem_id, status, None, answer_text or None,
+        verdict if widened and "verdict" in columns else None,
+        choices if widened and "choices" in columns else None)
+    return {"attempt_id": attempt_id, "problem_id": problem_id,
+            "recorded": True, "status": status,
+            "verdict_recorded": widened and verdict is not None}
 
 
 def get_attempt(pool, attempt_id):

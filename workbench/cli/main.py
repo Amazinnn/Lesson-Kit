@@ -302,10 +302,11 @@ def _compose_plan(pool, args, workspace):
     kp_ids = args.kp or [row["kp_id"] for row in pool.kps(pool.scope_prefix())]
     result = pull.select(
         pool, kp_ids, n=args.n, mode=args.mode,
-        source_kind=args.source_kind, origin_kind=args.origin_kind,
+        source_kinds=args.source_kind, origin_kind=args.origin_kind,
         source_group=args.source_group, exclude_ids=set(args.exclude),
         include_ids=set(args.include),
         exam_year=args.exam_year, explicit_ids=set(args.problem),
+        evidence_docs=args.source_evidence,
         drivers=[name for name in pull.DRIVERS if getattr(args, name)],
         difficulty_min=args.difficulty_min, difficulty_max=args.difficulty_max,
         difficulty_dimensions={
@@ -383,7 +384,8 @@ def _pull_request(args, workspace):
         "kp": list(args.kp),
         "problem": list(args.problem),
         "drivers": [name for name in pull.DRIVERS if getattr(args, name)],
-        "source_kind": args.source_kind,
+        "source_kinds": list(args.source_kind),
+        "source_evidence": list(args.source_evidence),
         "origin_kind": args.origin_kind,
         "source_group": args.source_group,
         "exam_year": args.exam_year,
@@ -486,6 +488,17 @@ def cmd_goals(args):
 def cmd_bridge(args):
     if args.action == "list":
         return _bridge_list()
+    if args.action == "add-model":
+        if not args.provider or not args.model:
+            raise SystemExit("bridge add-model requires <name>, --provider and --model")
+        try:
+            entry = registry.add_model(args.entry_name, args.provider,
+                                       args.model, args.args or None)
+        except ValueError as exc:
+            raise SystemExit(str(exc))
+        print(f"model entry configured: {entry['name']} "
+              f"({entry['provider']} · {entry['model']})")
+        return 0
     if not args.provider or not args.command:
         raise SystemExit("bridge add requires <provider> and --command")
     registry.add_bridge(args.provider, args.command, args=args.args,
@@ -513,6 +526,11 @@ def _bridge_list():
     for name in conversation_providers.SUPPORTED:
         if name not in {provider["name"] for provider in found}:
             print(f"{name}: not found")
+    entries = registry.load_models()
+    if entries:
+        print("model entries:")
+        for entry in entries:
+            print(f"  {entry['name']} = {entry['provider']} · {entry.get('model') or '-'}")
     return 0
 
 
@@ -890,7 +908,8 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("--n", type=int, default=5)
     p.add_argument("--mode", choices=["weak", "random", "all", "exam", "micro", "yes_no"],
                    default="weak")
-    p.add_argument("--source-kind")
+    p.add_argument("--source-kind", action="append", default=[],
+                   help="source kind to keep (repeatable; any of the rows counts)")
     p.add_argument("--origin-kind", choices=[
         "source_problem", "adapted_problem", "generated_grounded",
     ])
@@ -899,6 +918,9 @@ def build_parser(prog="lesson-kit"):
     ])
     p.add_argument("--exam-year",
                    help="source examination year; matched as a prefix (2023 finds 2023-2024秋冬)")
+    p.add_argument("--source-evidence", action="append", default=[],
+                   help="keep rows whose source evidence contains this text "
+                        "(case-insensitive; names a document, e.g. a paper's file name)")
     p.add_argument("--difficulty-min", type=float)
     p.add_argument("--difficulty-max", type=float)
     for dimension in difficulty_rules.DIMENSIONS:
@@ -956,8 +978,9 @@ def build_parser(prog="lesson-kit"):
     p.set_defaults(func=cmd_goals)
 
     p = sub.add_parser("bridge", help="configure or list bridge providers")
-    p.add_argument("action", choices=["add", "list"])
+    p.add_argument("action", choices=["add", "list", "add-model"])
     p.add_argument("provider", nargs="?")
+    p.add_argument("entry_name", nargs="?")
     p.add_argument("--command")
     p.add_argument("--model")
     p.add_argument("--args", action="append", default=[])

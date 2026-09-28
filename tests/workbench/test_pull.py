@@ -265,6 +265,63 @@ class PullTests(unittest.TestCase):
             ["judge"],
         )
 
+    # -- list-valued source filters (attempt-records-filters-and-model-entries)
+
+    def seed_source_columns(self):
+        conn = self.pool.connect()
+        conn.executemany(
+            "UPDATE problems SET exam_year=?, source_evidence=? WHERE problem_id=?",
+            [
+                ("2023-2024秋冬", "题库/midterm·合集A.md 第1题", "dmath-ch06-prob-001"),
+                ("2023-2024秋冬", "题库/final·合集B.md 第2题", "dmath-ch06-prob-002"),
+                ("2019-2020秋冬", "教材 第12章 习题12-1", "dmath-ch06-prob-003"),
+            ],
+        )
+        self.pool.commit()
+
+    def test_source_kinds_is_or_within_the_dimension(self):
+        self.seed_source_columns()
+        result = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001", "dmath-ch06-kp-002", "dmath-ch06-kp-003"],
+            n=10, mode="weak", source_kinds=["final", "quiz"],
+        )
+        self.assertEqual(
+            sorted(p["problem_id"] for p in result["problems"]),
+            ["dmath-ch06-prob-003"],
+        )
+
+    def test_exam_years_is_or_within_and_prefix_matched(self):
+        self.seed_source_columns()
+        result = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001", "dmath-ch06-kp-002", "dmath-ch06-kp-003"],
+            n=10, mode="weak", exam_years=["2023", "2019"],
+        )
+        self.assertEqual(
+            sorted(p["problem_id"] for p in result["problems"]),
+            ["dmath-ch06-prob-001", "dmath-ch06-prob-002", "dmath-ch06-prob-003"],
+        )
+
+    def test_evidence_docs_matches_case_insensitively_across_pools_formats(self):
+        self.seed_source_columns()
+        result = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001", "dmath-ch06-kp-002", "dmath-ch06-kp-003"],
+            n=10, mode="weak", evidence_docs=["合集a.MD"],
+        )
+        self.assertEqual(
+            [p["problem_id"] for p in result["problems"]],
+            ["dmath-ch06-prob-001"],
+        )
+
+    def test_filter_dimensions_intersect(self):
+        self.seed_source_columns()
+        result = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001", "dmath-ch06-kp-002", "dmath-ch06-kp-003"],
+            n=10, mode="weak",
+            source_kinds=["final"], exam_years=["2023"],
+        )
+        # The final row is a 2019 paper, so the 2023 years select nothing here.
+        self.assertEqual(result["problems"], [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -758,6 +758,119 @@ class ScenarioTests(AttemptsTestCase):
         self.assertEqual(still_mine["attempts"][0]["rating"], 4)
         self.assertEqual(still_mine["attempts"][0]["request_id"], "r1")
 
+    # -- browser-submitted attempts (attempt-records-filters-and-model-entries)
+
+    def browser_attempt(self, problem_id, answer_text=None, verdict=None,
+                        choices=None):
+        from workbench.data import attempts as attempts_data
+        from workbench.data.pool import Pool
+
+        pool = Pool(root=self.ws, db_path=self.db_path, course="dmath",
+                    chapter="ch12")
+        try:
+            return attempts_data.record_browser_attempt(
+                pool, problem_id, answer_text=answer_text, verdict=verdict,
+                choices=choices)
+        finally:
+            pool.close()
+
+    def rows(self, sql, params=()):
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            return [dict(row) for row in conn.execute(sql, params)]
+        finally:
+            conn.close()
+
+    def test_a_browser_answer_persists_verdict_choices_and_answer(self):
+        result = self.browser_attempt(
+            "dmath-ch12-prob-001", answer_text="是",
+            verdict=True, choices=["是"])
+
+        self.assertTrue(result["recorded"])
+        row = self.rows(
+            "SELECT * FROM problem_attempts WHERE id=?", (result["attempt_id"],))[0]
+        self.assertEqual(row["status"], "answered")
+        self.assertEqual(row["verdict"], 1)
+        self.assertEqual(json.loads(row["choices"]), ["是"])
+        self.assertEqual(row["answer_text"], "是")
+        # The attempt alone moves no learning projection.
+        self.assertEqual(self.rows("SELECT * FROM problem_progress"), [])
+        self.assertEqual(self.rows("SELECT * FROM review_schedule"), [])
+
+    def test_a_comprehensive_answer_stores_text_without_a_verdict(self):
+        result = self.browser_attempt("dmath-ch12-prob-001", answer_text="证明…")
+
+        row = self.rows(
+            "SELECT * FROM problem_attempts WHERE id=?", (result["attempt_id"],))[0]
+        self.assertEqual(row["status"], "answered")
+        self.assertIsNone(row["verdict"])
+        self.assertIsNone(row["choices"])
+
+    def test_a_bad_verdict_is_refused_with_zero_writes(self):
+        with self.assertRaises(Exception):
+            self.browser_attempt("dmath-ch12-prob-001", verdict=2)
+        with self.assertRaises(Exception):
+            self.browser_attempt("dmath-ch12-prob-999", verdict=True)
+        self.assertEqual(self.rows("SELECT * FROM problem_attempts"), [])
+
+    def test_the_session_rating_links_back_to_the_attempt(self):
+        from workbench.data import attempts as attempts_data
+        from workbench.data.pool import Pool
+        from workbench.data import queries
+        from workbench.domain import feedback
+
+        submitted = self.browser_attempt(
+            "dmath-ch12-prob-001", answer_text="是", verdict=False, choices=["是"])
+        pool = Pool(root=self.ws, db_path=self.db_path, course="dmath",
+                    chapter="ch12")
+        try:
+            feedback.apply(pool, "problem", "dmath-ch12-prob-001",
+                           rating=2, note="错了", attempt_id=submitted["attempt_id"])
+            detail = queries.problem_detail(pool, "dmath-ch12-prob-001")
+        finally:
+            pool.close()
+
+        self.assertEqual(detail["attempts"][0]["rating"], 2)
+        self.assertEqual(detail["attempts"][0]["verdict"], 0)
+        events = self.rows("SELECT attempt_id FROM feedback_events")
+        self.assertEqual(events[0]["attempt_id"], submitted["attempt_id"])
+
+    def test_an_attempt_id_from_another_problem_is_refused(self):
+        from workbench.domain import feedback
+        from workbench.data.pool import Pool
+
+        submitted = self.browser_attempt("dmath-ch12-prob-001", answer_text="是")
+        pool = Pool(root=self.ws, db_path=self.db_path, course="dmath",
+                    chapter="ch12")
+        try:
+            with self.assertRaises(ValueError):
+                feedback.apply(pool, "problem", "dmath-ch12-prob-002",
+                               rating=3, attempt_id=submitted["attempt_id"])
+        finally:
+            pool.close()
+
+    def test_the_records_overview_lists_the_history_newest_first(self):
+        from workbench.data import queries
+        from workbench.data.pool import Pool
+
+        self.browser_attempt("dmath-ch12-prob-001", answer_text="第一次", verdict=False)
+        self.browser_attempt("dmath-ch12-prob-002", answer_text="第二次", verdict=True)
+
+        pool = Pool(root=self.ws, db_path=self.db_path, course="dmath",
+                    chapter="ch12")
+        try:
+            overview = queries.records_overview(pool)
+        finally:
+            pool.close()
+
+        self.assertEqual(overview["count"], 2)
+        self.assertEqual(
+            [row["problem_id"] for row in overview["records"]],
+            ["dmath-ch12-prob-002", "dmath-ch12-prob-001"])
+        self.assertEqual(overview["records"][0]["verdict"], 1)
+        self.assertIn("证明题二", overview["records"][0]["title"])
+
 
 if __name__ == "__main__":
     unittest.main()
