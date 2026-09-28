@@ -223,12 +223,30 @@ class Pool:
         ).fetchone()
         return dict(row) if row else None
 
-    def insert_attempt(self, problem_id, status, note=None, answer_text=None):
-        """Append one attempt and return its id — the handle a record links to."""
+    def insert_attempt(self, problem_id, status, note=None, answer_text=None,
+                       verdict=None, choices=None):
+        """Append one attempt and return its id — the handle a record links to.
+
+        ``verdict`` (0/1) and ``choices`` (a JSON list of chosen option texts)
+        exist only on migrated pools; on an older one they are skipped so the
+        attempt itself still lands.
+        """
+        columns = ["problem_id", "status", "note", "answer_text"]
+        values = [problem_id, status, note, answer_text]
+        existing = {row[1] for row in self.connect().execute(
+            "PRAGMA table_info(problem_attempts)")}
+        if "verdict" in existing:
+            columns.append("verdict")
+            values.append(verdict)
+        if "choices" in existing:
+            columns.append("choices")
+            values.append(
+                json.dumps(choices, ensure_ascii=False)
+                if choices is not None else None)
         cursor = self.connect().execute(
-            "INSERT INTO problem_attempts (problem_id, status, note, answer_text)"
-            " VALUES (?, ?, ?, ?)",
-            (problem_id, status, note, answer_text),
+            f"INSERT INTO problem_attempts ({', '.join(columns)})"
+            f" VALUES ({', '.join('?' for _ in columns)})",
+            values,
         )
         self.commit()
         return cursor.lastrowid

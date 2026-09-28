@@ -165,7 +165,11 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<fieldset class='practice-rating-choice'><legend>自评时机（必选其一）</legend>"
         "<label><input id='practice-rating-immediate' type='radio' name='practice-rating-mode' value='immediate'> 每题作答后自评</label>"
         "<label><input id='practice-rating-batch' type='radio' name='practice-rating-mode' value='batch'> 完成后统一自评</label></fieldset>"
-        "<button id='start-practice' class='primary' disabled>开始本轮练习</button></section>"
+        "<div class='start-row'>"
+        "<button id='start-practice' class='primary' disabled>开始本轮练习</button>"
+        "<button id='filter-launch' class='outline' type='button' aria-expanded='false'>来源筛选<span id='filter-count' class='filter-count-active hidden'></span></button>"
+        "</div>"
+        "<div id='filter-popup' class='filter-popup card hidden' aria-label='来源筛选'></div></section>"
         + "</div>"
         + "<section class='practice-time'>" + time_view_html() + "</section>"
         + "</div>"
@@ -430,6 +434,58 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
     )
 
 
+def records_page(workspace, workspaces, weak_items, pool, problem_id=None):
+    """The learner's practice history, newest first, rendered server-side."""
+    from workbench.data import queries as queries_mod
+
+    overview = queries_mod.records_overview(pool, limit=100, problem_id=problem_id)
+    rows = []
+    for record in overview["records"]:
+        verdict = record.get("verdict")
+        if verdict is None:
+            badge, verdict_class = "未判定", "record-verdict-open"
+        elif verdict:
+            badge, verdict_class = "对", "record-verdict-ok"
+        else:
+            badge, verdict_class = "错", "record-verdict-bad"
+        rating = record.get("rating")
+        title = html.escape(record.get("title") or "未命名题目")
+        answer = html.escape((record.get("answer_text") or "").strip())
+        note = html.escape(
+            (record.get("feedback_note") or record.get("note") or "").strip())
+        link = f"/w/{workspace['name']}/practice?problem={record['problem_id']}"
+        stars = ""
+        if isinstance(rating, int) and 1 <= rating <= 5:
+            stars = (f"<span class='record-rating'>{'★' * rating}"
+                     f"{'☆' * (5 - rating)}</span>")
+        rows.append(
+            "<article class='record-row card'>"
+            f"<header><a class='record-title' href='{link}'>{title}</a>"
+            f"<span class='record-verdict {verdict_class}'>{badge}</span>"
+            + stars
+            + "<time class='record-time'>"
+            + html.escape(str(record.get("created_at") or ""))
+            + "</time></header>"
+            + (f"<p class='record-answer'>{answer}</p>" if answer else "")
+            + (f"<p class='record-note muted'>{note}</p>" if note else "")
+            + "</article>"
+        )
+    if not rows:
+        rows.append("<p class='muted'>还没有做题记录——去练习页答第一题吧。</p>")
+    subtitle = "按题目过滤" if problem_id else "最近 100 条，新在上"
+    middle = (
+        _page_header(
+            "练习 / 做题记录", subtitle,
+            "每一次作答都会留档：作答内容、客观题判定与你的评分。",
+        )
+        + "<div class='page-content'><section class='support-section'>"
+        + "".join(rows)
+        + "</section></div>"
+    )
+    return shell(workspace, workspaces, weak_items, middle, "records",
+                 page_type="records", kp_titles=None)
+
+
 def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
     middle = (
         _page_header(
@@ -463,6 +519,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         ("practice", "练习"),
         ("kps", "知识点"),
         ("graph", "知识图谱"),
+        ("records", "做题记录"),
     ]
     nav = "".join(
         f"<div class='nav-item {'active' if key == active_nav else ''}'>"
@@ -567,6 +624,9 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<div id='ai-chat-head'>"
         "<button id='ai-session-back' class='ghost sm icon-only' title='返回对话列表' "
         "aria-label='返回对话列表'>‹</button>"
+        "<label class='visually-hidden' for='ai-model-switch'>切换模型</label>"
+        "<select id='ai-model-switch' class='ai-model-switch' title='切换模型（下一轮生效）'>"
+        "<option value=''>当前模型</option></select>"
         "</div>"
         "<section class='ai-conversation'><div id='ai-messages'></div>"
         "<p id='ai-status' class='muted' aria-live='polite'></p></section>"

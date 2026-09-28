@@ -158,6 +158,11 @@ output/{course}/{chapter}/{chapter}-problem-set.md
 output/{course}/{chapter}/{chapter}-solutions.md
 ```
 
+Math is preserved verbatim: `$…$` and `$$…$$` are written to both Markdown
+files exactly as stored, so the exported set must be read with a
+math-capable Markdown viewer (or rendered later) — the workbench page renders
+it with KaTeX, the raw file does not.
+
 ## Workbench Runtime Areas
 
 Runtime assets follow the hidden dot-directory convention and live under

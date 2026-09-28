@@ -93,8 +93,10 @@ def _next_number(paths, prefix):
     return max(numbers, default=0) + 1
 
 
-def create(pool, provider_name, title=""):
+def create(pool, provider_name, title="", model=None):
     conversation_providers.get(provider_name)
+    if model is not None:
+        model = _resolve_model(provider_name, model)
     jobs_dir = pool.jobs_dir()
     jobs_dir.mkdir(parents=True, exist_ok=True)
     with _LOCK:
@@ -107,6 +109,7 @@ def create(pool, provider_name, title=""):
         record = {
             "conversation_id": conversation_id,
             "provider": provider_name,
+            "model": (model or None),
             "title": title,
             "title_source": "user" if title else "unset",
             "provider_session_id": None,
@@ -172,6 +175,54 @@ def rename(pool, conversation_id, title):
         record = _read_json(path)
         record.update({"title": title, "title_source": "user", "updated_at": _now()})
         _write_json(path, record)
+    return record
+
+
+def _resolve_model(provider_name, model):
+    """The model id a conversation stores: an entry name resolves to its model.
+
+    An entry name is the learner's own display text (spaces welcome); anything
+    that names no entry is taken as a raw model id, which must be a single
+    token because it becomes one ``--model`` argv element.
+    """
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("model must be a non-empty string")
+    match = next(
+        (entry for entry in conversation_providers.discover_entries()
+         if entry["provider"] == provider_name and entry["name"] == model),
+        None,
+    )
+    if match:
+        return match["model"] or None
+    if len(model.split()) > 1:
+        raise ValueError("unknown model entry — a raw model id must be one token")
+    return model
+
+
+def set_model(pool, conversation_id, model):
+    """Switch the conversation's model; the next turn runs on it.
+
+    Switching discards the cached RPC process so the next launch carries the
+    new ``--model``; the native session id is kept, and a provider that refuses
+    the cross-model resume falls back to a fresh session at launch (the
+    mirror's history is unaffected either way).
+    """
+    path = _conversation_file(pool, conversation_id)
+    with _LOCK:
+        record = _recover_interrupted(pool, _read_json(path))
+        if record["status"] == "running":
+            raise ConversationConflict("conversation has a running turn")
+        if model is None or (isinstance(model, str) and not model.strip()):
+            record.update({"model": None, "updated_at": _now()})
+        else:
+            record.update({"model": _resolve_model(record["provider"], model),
+                           "updated_at": _now()})
+        _write_json(path, record)
+        if record["provider"] == "pi":
+            folder = _conversation_dir(pool, conversation_id)
+            process = PI_RPC.discard(str(folder))
+            if process is not None:
+                process.close()
     return record
 
 
@@ -425,7 +476,8 @@ def _prompt(message, context):
         "directions 只能是 [\"forward\"]（默认，单向）或 [\"forward\",\"reverse\"]（双向）。\n"
         "12) 出题入库不得携带任何难度字段，也不得自动建议或排队评级；只有学生明确要求给指定题目评级时，"
         "才可另行调用 lesson-kit difficulty 先 check 再 apply。\n"
-        "13) 长度与取值：微题 stem≤800 字、options 为 2–6 个互不相同的字符串"
+        "13) 长度与取值：题干不限长度（真题里的判断题/单选题本来就长，"
+        "长题干不是退回综合题的理由）、options 为 2–6 个互不相同的字符串"
         "（answer_key 若给，必须是其中之一；yes_no 用默认 是/否 对）、topic_label≤40 字、"
         "display_title≤80 字、display_summary≤200 字；数学乘号一律用 ×；"
         "正文可以带标题、列表、引用、代码、链接、图片、$数学$ 与 GFM 表格。\n"
@@ -595,6 +647,10 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     conversation = _read_json(conversation_path)
     try:
         provider = conversation_providers.get(conversation["provider"])
+        if conversation.get("model"):
+            # The conversation's own model wins: an in-chat switch takes effect
+            # on the next turn, whatever the bridges.json default says.
+            provider = {**provider, "model": conversation["model"]}
         if conversation["provider"] != "pi":
             command = conversation_providers.build_command(
                 provider, conversation.get("provider_session_id")
@@ -901,10 +957,29 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
         "answer_started": False, "pi_messages": pi_messages,
     }
     try:
-        process = PI_RPC.launch_with_retry(
-            str(folder), provider, workspace["path"],
-            conversation.get("provider_session_id"),
-        )
+        try:
+            process = PI_RPC.launch_with_retry(
+                str(folder), provider, workspace["path"],
+                conversation.get("provider_session_id"),
+            )
+        except pi_rpc.PiRpcError as exc:
+            if not conversation.get("provider_session_id"):
+                raise
+            # A resumed session can refuse a different model after an in-chat
+            # switch: drop the native session once and start fresh — the local
+            # mirror keeps the whole history either way.
+            conversation = _read_json(conversation_path)
+            conversation["provider_session_id"] = None
+            conversation["updated_at"] = _now()
+            _write_json(conversation_path, conversation)
+            _append_event(
+                event_path, "activity", activity_id="model-switch",
+                activity_type="progress", status="done",
+                label="切换模型后无法续接原会话，已开启新会话（本地历史不受影响）",
+            )
+            process = PI_RPC.launch_with_retry(
+                str(folder), provider, workspace["path"], None,
+            )
     except pi_rpc.PiRpcError as exc:
         _append_event(event_path, "error", text=f"provider launch failed: {exc}")
         _finish(folder, conversation_id, turn_id, "failed", f"provider launch failed: {exc}")

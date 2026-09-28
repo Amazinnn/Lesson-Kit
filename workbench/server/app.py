@@ -4,7 +4,7 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from pathlib import Path
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse, urlsplit
 
 from workbench import registry
 from workbench.bridge import conversations
@@ -48,9 +48,13 @@ ROUTES = [
     ("PATCH", "/api/w/{name}/goals/{goal_id}", api_mod.goals_update),
     ("DELETE", "/api/w/{name}/goals/{goal_id}", api_mod.goals_delete),
     ("POST", "/api/w/{name}/pull", api_mod.pull_problems),
+    ("GET", "/api/w/{name}/pull-facets", api_mod.pull_facets),
+    ("GET", "/api/w/{name}/search/problems", api_mod.search_problems),
     ("POST", "/api/w/{name}/pull-cards", api_mod.pull_cards),
     ("POST", "/api/w/{name}/practice", api_mod.practice),
+    ("POST", "/api/w/{name}/attempts", api_mod.attempt_record),
     ("POST", "/api/w/{name}/feedback", api_mod.feedback_record),
+    ("GET", "/api/w/{name}/records", api_mod.records_overview),
     ("GET", "/api/w/{name}/ingest/batches", api_mod.ingest_batches),
     ("POST", "/api/w/{name}/ingest/rollback", api_mod.ingest_rollback),
     ("GET", "/api/w/{name}/problem/{problem_id}", api_mod.problem_detail),
@@ -219,6 +223,12 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             elif page == "session-end":
                 html_body = pages.session_end_page(
                     workspace, workspaces, weak_items, kp_titles,
+                )
+            elif page == "records":
+                query = parse_qs(urlsplit(self.path).query)
+                problem_id = (query.get("problem") or [None])[0]
+                html_body = pages.records_page(
+                    workspace, workspaces, weak_items, pool, problem_id,
                 )
             else:
                 plan = api_mod.daily_plan(pool, workspace, {}, {})

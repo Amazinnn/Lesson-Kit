@@ -15,7 +15,8 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
            source_group=None, exclude_ids=None, seed=None, include_ids=None,
            difficulty_min=None, difficulty_max=None, difficulty_dimensions=None,
            difficulty_strategy=None, exam_year=None, explicit_ids=None,
-           drivers=None, with_reasons=False, coverage=False, today=None):
+           drivers=None, with_reasons=False, coverage=False, today=None,
+           source_kinds=None, exam_years=None, evidence_docs=None):
     """Pull durable problems and report gaps.
 
     Never fabricates content: whatever cannot be filled is listed in
@@ -49,10 +50,14 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
     include_ids = set(include_ids or [])
     explicit_ids = {item for item in (explicit_ids or {}) if item}
     driver_names = set(drivers or ())
+    source_kinds = [item for item in (source_kinds or []) if item]
+    exam_years = [item for item in (exam_years or []) if item]
+    evidence_docs = [item for item in (evidence_docs or []) if item]
     practice_mode = mode if mode in PRACTICE_MODES else None
     order_mode = "weak" if practice_mode else mode
     today = today or date.today()
-    conditional = bool(source_kind or origin_kind or source_group or exam_year) or (
+    conditional = bool(source_kind or origin_kind or source_group or exam_year
+                       or source_kinds or exam_years or evidence_docs) or (
         difficulty_min is not None or difficulty_max is not None
         or bool(difficulty_dimensions)
     )
@@ -82,6 +87,15 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
         problems = [p for p in problems if _source_group(p) == source_group]
     if exam_year:
         problems = [p for p in problems if _matches_exam_year(p, exam_year)]
+    if source_kinds:
+        wanted = set(source_kinds)
+        problems = [p for p in problems if p.get("source_kind") in wanted]
+    if exam_years:
+        problems = [p for p in problems
+                    if any(_matches_exam_year(p, year) for year in exam_years)]
+    if evidence_docs:
+        problems = [p for p in problems
+                    if any(_matches_evidence(p, doc) for doc in evidence_docs)]
     if difficulty_min is not None or difficulty_max is not None or difficulty_dimensions:
         problems = [
             p for p in problems
@@ -172,6 +186,18 @@ def _due_problem_ids(pool, today):
 def _matches_exam_year(item, exam_year):
     stored = item.get("exam_year")
     return isinstance(stored, str) and stored.startswith(exam_year)
+
+
+def _matches_evidence(item, needle):
+    """Casefold substring match on the free-text source evidence.
+
+    ``source_evidence`` is the only field that carries document-level identity
+    (one 期中合集 can hold 90 items across nine documents that share a year), so
+    a filter names a document — or any distinctive fragment of one — and every
+    row whose evidence mentions it belongs to the selection.
+    """
+    stored = item.get("source_evidence")
+    return isinstance(stored, str) and needle.casefold() in stored.casefold()
 
 
 def coverage_first(problems):

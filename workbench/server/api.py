@@ -231,6 +231,26 @@ def pull_problems(pool, workspace, params, body):
     difficulty_strategy = body.get("difficulty_strategy")
     if difficulty_strategy not in {None, "balanced"}:
         raise ApiError(400, "invalid difficulty_strategy")
+    filters = body.get("filters", {})
+    if not isinstance(filters, dict):
+        raise ApiError(400, "filters must be an object")
+    unknown = set(filters) - {"source_kinds", "exam_years", "docs"}
+    if unknown:
+        raise ApiError(400, f"filters has unknown dimension(s): {sorted(unknown)}")
+    def _dimension(name):
+        value = filters.get(name)
+        if value is None:
+            return []
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) and item for item in value
+        ):
+            raise ApiError(400, f"filters.{name} must be a string list")
+        return value
+    exam_year_single = body.get("exam_year")
+    if exam_year_single is not None and (
+        not isinstance(exam_year_single, str) or not exam_year_single
+    ):
+        raise ApiError(400, "exam_year must be a string")
     return pull.select(
         pool, kp_ids, n=n, mode=mode, source_kind=body.get("source_kind"),
         origin_kind=origin_kind, source_group=source_group,
@@ -238,7 +258,31 @@ def pull_problems(pool, workspace, params, body):
         difficulty_min=difficulty_min, difficulty_max=difficulty_max,
         difficulty_dimensions=dimension_ranges,
         difficulty_strategy=difficulty_strategy,
+        exam_year=exam_year_single,
+        source_kinds=_dimension("source_kinds"),
+        exam_years=_dimension("exam_years"),
+        evidence_docs=_dimension("docs"),
     )
+
+
+def pull_facets(pool, workspace, params, body):
+    """The filter dimensions of this pool, each value with its row count."""
+    from workbench.domain import facets
+
+    return facets.pool_facets(pool)
+
+
+def search_problems(pool, workspace, params, body):
+    """A lightweight picker feed for the filter panel's search box."""
+    query = params.get("q", "")
+    return queries.search_problems(pool, query)
+
+
+def records_overview(pool, workspace, params, body):
+    """The practice history feed behind the records page."""
+    problem_id = params.get("problem") or None
+    limit = _query_int(params, "limit", 100, minimum=1, maximum=500)
+    return queries.records_overview(pool, limit=limit, problem_id=problem_id)
 
 
 def pull_cards(pool, workspace, params, body):
@@ -332,10 +376,44 @@ def feedback_record(pool, workspace, params, body):
         raise ApiError(400, "direction must be a string")
     if item_type == "card" and direction not in {"", *item["directions"]}:
         raise ApiError(400, "direction is not available for this card")
+    attempt_id = body.get("attempt_id")
+    if attempt_id is not None:
+        if isinstance(attempt_id, bool) or not isinstance(attempt_id, int):
+            raise ApiError(400, "attempt_id must be an integer")
+        attempt = pool.attempt(attempt_id)
+        if attempt is None or attempt["problem_id"] != item_id:
+            raise ApiError(400, "attempt_id does not belong to this item")
     return feedback.apply(
         pool, item_type, item_id, rating=rating, note=note,
-        direction=direction,
+        direction=direction, attempt_id=attempt_id,
     )
+
+
+def attempt_record(pool, workspace, params, body):
+    """Persist one answer the practice page just submitted (no rating effects)."""
+    from workbench.data import attempts as attempts_data
+
+    body = _request_object(body)
+    problem_id = body.get("problem_id")
+    if not isinstance(problem_id, str) or not problem_id:
+        raise ApiError(400, "problem_id is required")
+    answer_text = body.get("answer_text")
+    if answer_text is not None and not isinstance(answer_text, str):
+        raise ApiError(400, "answer_text must be a string")
+    verdict = body.get("verdict")
+    if verdict is not None and not isinstance(verdict, bool):
+        raise ApiError(400, "verdict must be a boolean")
+    choices = body.get("choices")
+    if choices is not None and (
+            not isinstance(choices, list)
+            or not all(isinstance(choice, str) for choice in choices)):
+        raise ApiError(400, "choices must be a list of option texts")
+    try:
+        return attempts_data.record_browser_attempt(
+            pool, problem_id, answer_text=answer_text,
+            verdict=None if verdict is None else int(verdict), choices=choices)
+    except attempts_data.ManifestError as exc:
+        raise ApiError(400, str(exc)) from exc
 
 
 def _request_object(body):
@@ -403,9 +481,11 @@ def graph_kp(pool, workspace, params, body):
 
 
 def ai_providers(pool, workspace, params, body):
+    """The selectable model entries; each carries its harness in `provider`."""
     return [
-        {"name": provider["name"], "model": provider.get("model")}
-        for provider in conversation_providers.discover()
+        {"name": entry["name"], "provider": entry["provider"],
+         "model": entry.get("model")}
+        for entry in conversation_providers.discover_entries()
     ]
 
 
@@ -429,19 +509,36 @@ def ai_sessions_create(pool, workspace, params, body):
         title = body.get("title", "")
         if title is not None and not isinstance(title, str):
             raise ApiError(400, "title must be a string")
-        return conversations.create(pool, provider, title or "")
-    except KeyError as exc:
+        model = body.get("model")
+        if model is not None and not isinstance(model, str):
+            raise ApiError(400, "model must be a string")
+        return conversations.create(pool, provider, title or "", model=model)
+    except (KeyError, ValueError) as exc:
         raise ApiError(400, str(exc)) from exc
 
 
 def ai_session_update(pool, workspace, params, body):
+    body = _request_object(body)
     title = body.get("title")
-    if not isinstance(title, str) or not title.strip():
-        raise ApiError(400, "title is required")
+    model = body.get("model")
+    if title is None and model is None:
+        raise ApiError(400, "title or model is required")
+    if title is not None and not isinstance(title, str):
+        raise ApiError(400, "title must be a string")
+    if model is not None and not isinstance(model, str):
+        raise ApiError(400, "model must be a string")
     try:
-        return conversations.rename(pool, params["conversation_id"], title)
+        record = None
+        if model is not None:
+            record = conversations.set_model(
+                pool, params["conversation_id"], model)
+        if title is not None and title.strip():
+            record = conversations.rename(pool, params["conversation_id"], title)
+        return record
     except ValueError as exc:
         raise ApiError(400, str(exc)) from exc
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
 
 
 def ai_session_delete(pool, workspace, params, body):

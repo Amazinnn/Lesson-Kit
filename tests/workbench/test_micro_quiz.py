@@ -113,11 +113,9 @@ class MicroQuizRulesTests(unittest.TestCase):
         errors = micro_quiz.validate_problem_row(row)
         self.assertTrue(any("exactly one" in e for e in errors))
         row["kp_ids"] = ["kp-1"]
-        row["problem_text"] = "长" * (micro_quiz.MAX_STEM_CHARS + 1)
-        errors = micro_quiz.validate_problem_row(row)
-        self.assertTrue(any("exceeds" in e for e in errors))
-        # The bound is a sanity ceiling: a long 判断题/单选题 is legal content.
-        row["problem_text"] = "长" * micro_quiz.MAX_STEM_CHARS
+        # No stem length bound: a long 判断题/单选题 is legal content, and refusing
+        # it by length would send a real objective item into the exam shell.
+        row["problem_text"] = "长" * 5000
         self.assertEqual(micro_quiz.validate_problem_row(row), [])
 
     def test_optional_label_fields_share_the_contract(self):
@@ -376,7 +374,7 @@ class MicroQuizIngestTests(unittest.TestCase):
             manifest_item(problem_id="dmath-ch06-mq-002",
                           kp_id="kp-missing"),
             manifest_item(problem_id="dmath-ch06-mq-003",
-                          stem="长" * (micro_quiz.MAX_STEM_CHARS + 1)),
+                          stem="长" * 5000),  # long stems are legal, not an error
             manifest_item(problem_id="dmath-ch06-mq-004", answer_key="对"),
             manifest_item(problem_id="not-an-id"),
         ]
@@ -388,7 +386,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         finally:
             conn.close()
         self.assertFalse(report["ok"])
-        self.assertGreaterEqual(len(report["errors"]), 4)
+        self.assertGreaterEqual(len(report["errors"]), 3)
 
     def test_apply_failure_rolls_back_and_recipe_applies(self):
         path = self.manifest([manifest_item()])

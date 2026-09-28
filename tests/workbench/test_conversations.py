@@ -794,6 +794,148 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("未录答案键 1", outcome)
         self.assertIn("不要让学生再说一次「继续」", outcome)
 
+    def test_a_conversation_remembers_its_model_and_can_switch_it(self):
+        from workbench.bridge import conversations
+
+        conversation = conversations.create(self.pool, "codex", model="gpt-test-9")
+        self.assertEqual(conversation["model"], "gpt-test-9")
+
+        switched = conversations.set_model(
+            self.pool, conversation["conversation_id"], "gpt-test-8")
+        self.assertEqual(switched["model"], "gpt-test-8")
+
+        cleared = conversations.set_model(
+            self.pool, conversation["conversation_id"], None)
+        self.assertIsNone(cleared["model"])
+
+    def test_a_model_token_may_not_contain_whitespace(self):
+        from workbench.bridge import conversations
+
+        with self.assertRaises(ValueError):
+            conversations.create(self.pool, "codex", model="two words")
+
+    def test_set_model_resolves_a_named_entry_for_the_same_harness(self):
+        from workbench.bridge import conversation_providers, conversations
+
+        conversation = conversations.create(self.pool, "codex")
+        with mock.patch.object(
+            conversation_providers, "discover_entries",
+            return_value=[{"name": "GPT Test", "provider": "codex",
+                           "model": "gpt-test-9", "command": "codex"}],
+        ):
+            switched = conversations.set_model(
+                self.pool, conversation["conversation_id"], "GPT Test")
+
+        self.assertEqual(switched["model"], "gpt-test-9")
+
+    @mock.patch("workbench.bridge.conversation_providers.normalize_event")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_turn_launches_with_the_conversations_own_model(
+            self, get_provider, normalize_event):
+        """The model override rides the provider dict into build_command."""
+        from workbench.bridge import conversation_providers, conversations
+
+        seen = []
+        def build(provider, session_id=None, mode="print"):
+            seen.append(dict(provider))
+            return [sys.executable, str(self.script), "success"]
+
+        conversation = conversations.create(self.pool, "codex", model="gpt-test-9")
+        get_provider.return_value = self.provider
+        normalize_event.side_effect = [
+            {"kind": "phase", "label": "thread.started", "provider_session_id": "native-20"},
+            {"kind": "phase", "label": "turn.started"},
+            {"kind": "result", "text": "好的"},
+            {"kind": "phase", "label": "turn.completed"},
+        ]
+        with mock.patch.object(conversation_providers, "build_command", build):
+            conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "你好",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            self.wait_turn(conversation["conversation_id"], "turn-001")
+
+        self.assertTrue(seen)
+        self.assertEqual(seen[0].get("model"), "gpt-test-9")
+
+    def test_switching_the_model_discards_the_cached_pi_process(self):
+        """A stale RPC process would keep answering with the old model."""
+        from workbench.bridge import conversations, pi_rpc
+
+        class FakeProcess:
+            def __init__(self):
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        process = FakeProcess()
+        registry = mock.Mock()
+        registry.discard.return_value = process
+        conversation = conversations.create(self.pool, "pi")
+        with mock.patch.object(conversations, "PI_RPC", registry):
+            conversations.set_model(
+                self.pool, conversation["conversation_id"], "qwen3-coder")
+
+        registry.discard.assert_called_once()
+        self.assertTrue(process.closed)
+        self.assertEqual(
+            conversations.get(self.pool, conversation["conversation_id"])["model"],
+            "qwen3-coder",
+        )
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_refused_cross_model_resume_starts_a_fresh_session(self, get_provider):
+        """The switch may cost the native session, never the mirrored history."""
+        from workbench.bridge import conversation_providers, conversations, pi_rpc
+        from tests.workbench.test_pi_rpc import FakePiLauncher
+
+        inner = FakePiLauncher("normal", Path(self.fixture.tmp.name) / "pi-model.log")
+        asked = []
+
+        class RefusingResume:
+            def __call__(self, provider, session_id=None, mode="print"):
+                asked.append(session_id)
+                if session_id:
+                    raise pi_rpc.PiRpcError("resume refused")
+                return inner(provider, session_id, mode)
+
+        registry = pi_rpc.PiRpcRegistry(idle_seconds=1800)
+        get_provider.return_value = {**self.provider, "name": "pi", "args": []}
+        with mock.patch.object(conversation_providers, "build_command", RefusingResume()), \
+                mock.patch.object(conversations, "PI_RPC", registry):
+            conversation = conversations.create(self.pool, "pi", model="model-a")
+            first = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "第一问",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            self.wait_turn(conversation["conversation_id"], first["turn_id"])
+            resumed = conversations.get(
+                self.pool, conversation["conversation_id"])["provider_session_id"]
+            conversations.set_model(
+                self.pool, conversation["conversation_id"], "model-b")
+            second = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "第二问",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+            )
+            done = self.wait_turn(conversation["conversation_id"], second["turn_id"])
+            events = conversations.events(
+                self.pool, conversation["conversation_id"], second["turn_id"], after=0)
+            registry.close_all()
+
+        self.assertTrue(resumed, "the first turn must have stored a native session")
+        self.assertEqual(done["status"], "done")
+        self.assertIn(resumed, asked, "the switched turn should try the old session")
+        self.assertIn(None, asked, "and fall back to a fresh one")
+        notices = [event for event in events
+                   if "无法续接原会话" in (event.get("label") or "")]
+        self.assertEqual(len(notices), 1, notices)
+        restored = conversations.get(self.pool, conversation["conversation_id"])
+        self.assertEqual(restored["model"], "model-b")
+        # Both turns stay in the mirror: the local history survives the switch.
+        self.assertEqual([message["role"] for message in restored["messages"]],
+                         ["user", "assistant", "user", "assistant"])
+
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_a_problem_patch_action_converts_rows_in_place(

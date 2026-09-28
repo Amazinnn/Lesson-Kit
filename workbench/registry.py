@@ -171,6 +171,31 @@ def add_bridge(provider, command, args=None, cwd_mode="workspace", timeout_s=300
     return bridges["providers"][provider]
 
 
+def load_models():
+    """The named model entries (display name decoupled from the harness)."""
+    bridges = load_bridges()
+    models = bridges.get("models")
+    return models if isinstance(models, list) else []
+
+
+def add_model(name, provider, model, args=None):
+    """Register one selectable model entry; the display name is the learner's own."""
+    name = (name or "").strip()
+    provider = (provider or "").strip()
+    model = (model or "").strip()
+    if not name or not provider or not model:
+        raise ValueError("bridge add-model needs <name>, --provider and --model")
+    bridges = load_bridges()
+    models = [item for item in load_models() if item.get("name") != name]
+    entry = {"name": name, "provider": provider, "model": model}
+    if args:
+        entry["args"] = list(args)
+    models.append(entry)
+    bridges["models"] = models
+    save_bridges(bridges)
+    return entry
+
+
 def looks_like_workspace(folder):
     if (folder / "lessonkit.py").is_file():
         return True

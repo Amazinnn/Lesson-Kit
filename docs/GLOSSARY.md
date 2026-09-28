@@ -99,9 +99,19 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源只有两个：学生显式提交自评（浏览器），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交（2026-09-24）。**无评分的尝试同样成立**（状态 `new`），只是不改信号、当前状态、进度与调度。
+与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（2026-09-26 起；状态 `answered`，带上选中的选项文本与客观题判定，但不改信号、当前状态、进度与调度），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交（2026-09-24）。**无评分的尝试同样成立**（状态 `new`），只是不改信号、当前状态、进度与调度；池尚未迁移时，练习页的提交降级为不带判定/选项的一行，绝不因此报错。
 _Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
+
+### 判定 / Verdict
+客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在自评时改变。答案键缺失时不判分，页面如实写明「本题未录入答案键」。
+_Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩
+出处：review-workbench spec「Durable practice records」；workbench-ui spec
+
+### 做题记录 / Practice Record
+把尝试、判定与自评合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及导航第四页「做题记录」（本工作区最近 100 条，可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——自评通过 `attempt_id` 链回那次提交。**记录只增不改**：修错了重新作答并自评，不改写旧行。
+_Avoid_：学习状态、排期表、把记录页当批改结果
+出处：review-workbench spec「Durable practice records」；workbench-ui spec
 
 ### 答卷目录 / Answer-image Directory
 学生为某个工作区显式配置的一个或多个目录，只作为 Agent 的**只读**取图来源；可位于工作区之外。Lesson Kit 只记住目录路径，不复制、不归档图片字节，不在尝试上保存单张图片路径，也不建扫描索引，因此不承诺跨扫描的图片去重。
@@ -144,9 +154,19 @@ _Avoid_：卷面分、难度、把年份当 id 或当作试卷实体
 出处：practice-set-export-and-cli-audit spec；workbench-content-governance spec「Problem provenance axes」
 
 ### 选题 / Problem Selection（CLI 组练习）
-`lesson-kit pull` 的选题目径，一次调用组合六种方式：**范围**（`--kp`，缺省用章透镜）、**单题指定**（`--problem`，显式追加、不受筛选与上限约束）、**条件筛选**（`--source-kind`/`--origin-kind`/`--source-group`/`--exam-year`/客观难度区间）、**薄弱**（`--weak`，用 `domain.weak` 的薄弱分选出有弱点证据的知识点的题）、**到期**（`--due`）、**错题**（`--wrong`，进度为 wrong/stuck 或最近一次尝试为错）。范围决定候选集，条件筛选收窄它，三个驱动在候选集内取并集，单题最后追加；每题回报入卷理由（`scope`/`weak`/`due`/`wrong`/`explicit`）。注意 `--mode weak` 是**排序**（命中知识点多者先），与 `--weak` 驱动不是一回事。
+`lesson-kit pull` 的选题目径，一次调用组合六种方式：**范围**（`--kp`，缺省用章透镜）、**单题指定**（`--problem`，显式追加、不受筛选与上限约束）、**条件筛选**（`--source-kind`/`--origin-kind`/`--source-group`/`--exam-year`/`--source-evidence`/客观难度区间）、**薄弱**（`--weak`，用 `domain.weak` 的薄弱分选出有弱点证据的知识点的题）、**到期**（`--due`）、**错题**（`--wrong`，进度为 wrong/stuck 或最近一次尝试为错）。范围决定候选集，条件筛选收窄它，三个驱动在候选集内取并集，单题最后追加；每题回报入卷理由（`scope`/`weak`/`due`/`wrong`/`explicit`）。注意 `--mode weak` 是**排序**（命中知识点多者先），与 `--weak` 驱动不是一回事。`--source-kind`/`--exam-year`/`--source-evidence` 都可重复，语义见「筛选维度」。
 _Avoid_：把 `--weak` 当排序、把驱动当过滤条件之外的隐式扩范围
 出处：review-workbench spec「Problem pull engine」；practice-set-export spec「Practice set composition」
+
+### 筛选维度 / Filter Dimension
+来源筛选的三个**多值**维度：`source_kinds`（来源类型）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**：勾中的同一维度里任意一个命中即可（`final` 或 `midterm`），不同维度必须同时满足（是 final **且** 属于 2023）。浏览器练习页的「来源筛选」浮窗按维度分组勾选（每项标注池内计数，取自池内实际值），选中的题（搜索挑选）另走 `include_ids`；CLI 用可重复的 `--source-kind`/`--exam-year`/`--source-evidence`。单选值参数（`source_kind` 等）保持兼容，与列表参数取并集。
+_Avoid_：把维度内的多个值当 AND、把筛选当扩范围、把浮窗选择写进池
+出处：review-workbench spec「Source dimensions and facets」；workbench-ui spec
+
+### 文档键 / Document Key
+把 `source_evidence` 折叠成**一份文档一个键**的纯规则（`domain.facets.document_key`）：写成路径的（`题库/final·A.md`）原样就是键；教材类（`教材 …`）统一折成「教材」（它的证据逐题不同、没有文档级身份）；其余取第一段。两个真实池里两套书写格式因此归得进同一组，浮窗的「来源文档」维度与计数都由它聚合。
+_Avoid_：把它当第三个来源字段落库、按整串证据精确匹配
+出处：review-workbench spec「Source dimensions and facets」
 
 ### 接口归属表 / Declared Interface Surface
 `workbench/surface.py`：逐条声明每个 API 路由与每条 CLI 命令的**受众**（Agent / 人 / 双 / 仅浏览器）与状态，并由 `tests/workbench/test_cli_surface.py` 与真实的参数解析器、`ROUTES` 对账。它是「谁该有 CLI」这个问题的机器权威：声明了却不存在、存在却没声明、标「双」却缺一边，测试都失败；仅浏览器保留的能力必须写明理由。
@@ -169,9 +189,9 @@ _Avoid_：项目、数据库别名、把两个学科的内容放进一个工作�
 出处：review-workbench spec「Workspace registry」
 
 ### 工作台 / Workbench
-浏览器里的学习界面：三栏壳层（左导航 + 中页面 + 右 Agent 对话），三个页面——练习 / 知识点 / 知识图谱。三页导航是两次在案决定（DISCUSSION-RECORD 专题 17、B6.2）与专题 18/19 的既定模型。
-_Avoid_：第四个页面、复习页（已废弃）
-出处：workbench-ui spec Purpose；DISCUSSION-RECORD 专题 18/19
+浏览器里的学习界面：三栏壳层（左导航 + 中页面 + 右 Agent 对话），四个页面——练习 / 知识点 / 知识图谱 / **做题记录**。前三个来自专题 18/19 的既定模型（DISCUSSION-RECORD 专题 17、B6.2 的两次在案纠正）；做题记录是 2026-09-26 新增的**只读历史页**，不是第五种练习方式（复习页仍然废弃）。
+_Avoid_：把做题记录当复习页或练习方式、再开别的页面
+出处：workbench-ui spec Purpose；DISCUSSION-RECORD 专题 18/19；attempt-records-filters-and-model-entries
 
 ### 守护进程 / Daemon
 后台运行的工作台服务：`lesson-kit daemon start|stop|status` 管理**唯一**一个实例，绑定固定本地端口（默认 3081）。进程号与日志记在用户级注册表目录 `~/.lessonkit-workbench/`（`daemon.json`、`daemon.log`），与工作区注册表同级。`start` 只在端口真的应答后才报成功；`stop` 遇到进程号已被回收成非 Python 进程时拒绝终止并清理记录。它不排程、不自启，没有客户端对话时不消耗 Agent 调用。
@@ -292,7 +312,7 @@ _Avoid_：批量评分历史、补打卡
 出处：DISCUSSION-RECORD B6.5；workbench-ui spec
 
 ### 微题 / Micro Quiz
-带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。题干上限 800 字（2026-09-25 从 200 放宽，因为题库里的判断题、单选题本来就长）；答案键可以缺（见「无答案键客观题」）。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
+带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。题干不限长度（2026-09-25 从 200 放宽到 800，2026-09-26 取消上限：题库里的判断题、单选题本来就长，按长度退回综合题会把真题客观题挤出小测）；答案键可以缺（见「无答案键客观题」）。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
 _Avoid_：小题（口语）、判断题系统（判断只是题型之一）、填空作答
 出处：openspec/specs/micro-quiz-content/spec.md
 
@@ -378,7 +398,7 @@ _Avoid_：日历应用、自动重排
 ## 图谱
 
 ### 知识图谱页 / Knowledge Graph Page
-工作台第三页：章节知识点的力导向图，支持搜索、投影切换（关系结构/题目数量/重要性/学习状态）、聚拢滑杆、缩放、节点勾选（与选区同步）与学习看板。默认关系布局，不持久化坐标。
+工作台第三页（练习 / 知识点 / **图谱**）：章节知识点的力导向图，支持搜索、投影切换（关系结构/题目数量/重要性/学习状态）、聚拢滑杆、缩放、节点勾选（与选区同步）与学习看板。默认关系布局，不持久化坐标。
 _Avoid_：Obsidian、数据库编辑器
 出处：workbench-ui spec；REQUIREMENTS.md 2026-08-27 段
 
@@ -414,9 +434,19 @@ _Avoid_：练习会话（同词两义，注意上下文）
 出处：workbench-ui spec；ai-teacher-bridge spec
 
 ### Agent 提供方 / Provider
-一次 Agent 对话创建时固定选择的底层 AI 服务。创建后不可更换；未配置 provider 时如实提示。
-_Avoid_：模型热切换、多模型混用
+一次 Agent 对话创建时固定的底层 Agent 命令行（codex / claude / pi）。对话**不会中途换 harness**；换的是同一个 harness 上的**模型条目**（见下），且只在下一轮生效。未配置 provider 时如实提示。
+_Avoid_：模型热切换（当前轮不改）、把显示名当 harness 名
 出处：workbench-ui spec；ai-teacher-bridge spec
+
+### 模型条目 / Model Entry
+`bridges.json` 里可选的一组具名模型：`{name, provider, model, args?}`。**显示名由你定**，与 harness、模型串解耦（例如显示成 `DeepSeek V4` 而不是 `pi · deepseek/deepseek-v4-flash`）；条目在读取时按名字挂到已发现的 harness 上（命令、预算与启动旗标仍来自 harness），harness 不在本机就跳过这条而不报错。没有任何条目时，选择器回退成「一个 harness 一条」的历史行为。命令行 `lesson-kit bridge add-model <显示名> --provider <harness> --model <串>`。
+_Avoid_：把显示名当模型 id、为每条条目复制一份命令配置
+出处：ai-teacher-bridge spec「Named model entries」
+
+### 对话内切换模型 / In-chat Model Switch
+对话头部下拉框（只列该对话 harness 上的条目），选中后 `PATCH /ai/sessions/{id}` 写入对话的 `model`：**下一轮**用它启动（缓存的 Pi RPC 进程立刻丢弃，免得旧进程还用旧模型），原生会话 id 保留；若该服务拒绝跨模型续接原会话，桥**放弃旧会话、开一个新会话**并在对话流里写明「本地历史不受影响」。轮次运行中切换返回 409，不猜。
+_Avoid_：丢掉本地镜像、静默换 harness、当前轮热切换
+出处：ai-teacher-bridge spec「Per-conversation model」
 
 ### 执行计划 / Execution Plan
 Agent 单轮处理中显示在对话流里的可读活动时间线：把工具调用、命令执行、搜索与回答生成按发生顺序列成步骤，并用「进行中 / 已完成 / 失败」表示状态。它只展示提供方明确输出的活动，不展示隐藏推理，也不把底层协议事件名直接当界面文案。

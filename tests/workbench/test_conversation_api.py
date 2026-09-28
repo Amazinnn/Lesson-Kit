@@ -1,6 +1,7 @@
 """Internal HTTP API for provider-native conversations."""
 
 import json
+import sqlite3
 import sys
 import threading
 import time
@@ -39,6 +40,15 @@ prompt = sys.stdin.read()
 print(json.dumps({"type":"session","version":3,"id":"pi-native-2","cwd":"."}), flush=True)
 print(json.dumps({"type":"message_end","message":{"role":"assistant","content":[],"stopReason":"error","errorMessage":"401 invalid api key"}}), flush=True)
 print(json.dumps({"type":"agent_end","messages":[],"willRetry":False}), flush=True)
+'''
+
+
+SLOW_TURN = r'''import json, sys, time
+prompt = sys.stdin.read()
+time.sleep(1.2)
+print(json.dumps({"type":"thread.started","thread_id":"api-slow"}), flush=True)
+print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"慢回答"}}), flush=True)
+print(json.dumps({"type":"turn.completed"}), flush=True)
 '''
 
 
@@ -82,6 +92,16 @@ class ConversationApiTests(unittest.TestCase):
         with urllib.request.urlopen(request) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
 
+    def post_error(self, path, payload):
+        with self.assertRaises(HTTPError) as ctx:
+            self.post(path, payload)
+        return ctx.exception.code, json.loads(ctx.exception.read().decode("utf-8"))
+
+    def patch_error(self, path, payload):
+        with self.assertRaises(HTTPError) as ctx:
+            self.patch(path, payload)
+        return ctx.exception.code, json.loads(ctx.exception.read().decode("utf-8"))
+
     def patch(self, path, payload):
         request = urllib.request.Request(
             f"http://127.0.0.1:{self.port}{path}",
@@ -104,7 +124,9 @@ class ConversationApiTests(unittest.TestCase):
         discover.return_value = [self.provider]
         status, providers = self.get("/api/w/dmath/ai/providers")
         self.assertEqual(status, 200)
-        self.assertEqual(providers, [{"name": "codex", "model": None}])
+        # The picker sees one entry per harness until named models exist.
+        self.assertEqual(providers,
+                         [{"name": "codex", "provider": "codex", "model": None}])
 
         with mock.patch("workbench.bridge.conversation_providers.get", return_value=self.provider):
             status, created = self.post("/api/w/dmath/ai/sessions", {"provider": "codex"})
@@ -291,6 +313,158 @@ class ConversationApiTests(unittest.TestCase):
             json.loads(caught.exception.read().decode("utf-8"))["error"],
             "unknown ingest batch: batch-999",
         )
+
+    # -- records, attempts, filters, and the model switch -----------------
+
+    def seed_evidence(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.execute(
+            "UPDATE problems SET exam_year='2023-2024秋冬', source_evidence=? "
+            "WHERE problem_id='dmath-ch06-prob-001'",
+            ("题库/midterm·合集A.md 第1题",),
+        )
+        conn.commit()
+        conn.close()
+
+    def test_a_browser_attempt_and_its_rating_form_one_record(self):
+        status, submitted = self.post("/api/w/dmath/attempts", {
+            "problem_id": "dmath-ch06-prob-001",
+            "answer_text": "P1 的作答", "verdict": False, "choices": ["甲"],
+        })
+        self.assertEqual(status, 200)
+        self.assertTrue(submitted["recorded"])
+
+        status, rated = self.post("/api/w/dmath/feedback", {
+            "item_type": "problem", "item_id": "dmath-ch06-prob-001",
+            "rating": 2, "attempt_id": submitted["attempt_id"],
+        })
+        self.assertEqual(status, 200)
+
+        status, records = self.get("/api/w/dmath/records")
+        self.assertEqual(status, 200)
+        self.assertEqual(records["count"], 1)
+        row = records["records"][0]
+        self.assertEqual(row["verdict"], 0)
+        self.assertEqual(row["rating"], 2)
+        self.assertEqual(row["choices"], ["甲"])
+
+    def test_an_attempt_for_an_unknown_problem_is_a_client_error(self):
+        status, _ = self.post_error("/api/w/dmath/attempts", {
+            "problem_id": "dmath-ch06-prob-999", "answer_text": "x",
+        })
+        self.assertEqual(status, 400)
+        status, records = self.get("/api/w/dmath/records")
+        self.assertEqual(records["count"], 0)
+
+    def test_the_filter_facets_and_the_search_feed(self):
+        self.seed_evidence()
+        status, facets = self.get("/api/w/dmath/pull-facets")
+        self.assertEqual(status, 200)
+        kinds = {item["value"]: item["count"] for item in facets["source_kinds"]}
+        self.assertEqual(kinds, {"textbook": 1})
+        docs = [item["value"] for item in facets["docs"]]
+        self.assertEqual(docs, ["题库/midterm·合集A.md"])
+
+        from urllib.parse import quote
+        status, found = self.get("/api/w/dmath/search/problems?q=" + quote("合集a"))
+        self.assertEqual(status, 200)
+        self.assertEqual([item["problem_id"] for item in found["problems"]],
+                         ["dmath-ch06-prob-001"])
+
+    def test_the_pull_api_applies_filter_dimensions_and_exam_year(self):
+        self.seed_evidence()
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.execute(
+            "UPDATE problems SET exam_year='2019-2020秋冬', "
+            "source_evidence='题库/final·合集B.md 第2题' "
+            "WHERE problem_id='dmath-ch06-prob-001'")
+        conn.commit()
+        conn.close()
+
+        status, result = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 10, "mode": "all",
+            "exam_year": "2023",
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(result["problems"], [])
+
+        status, result = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 10, "mode": "all",
+            "filters": {"docs": ["合集b"]},
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual([item["problem_id"] for item in result["problems"]],
+                         ["dmath-ch06-prob-001"])
+
+    def test_a_running_turn_refuses_a_model_switch(self):
+        from workbench.bridge import conversation_providers
+
+        slow = Path(self.fixture.tmp.name) / "slow_turn.py"
+        slow.write_text(SLOW_TURN, encoding="utf-8")
+        with mock.patch("workbench.bridge.conversation_providers.get",
+                        return_value=self.provider), mock.patch.object(
+                conversation_providers, "build_command",
+                return_value=[sys.executable, str(slow)]):
+            _, created = self.post("/api/w/dmath/ai/sessions",
+                                   {"provider": "codex", "model": "gpt-test-9"})
+            conversation_id = created["conversation_id"]
+            _, turn = self.post(
+                f"/api/w/dmath/ai/sessions/{conversation_id}/turns",
+                {"message": "切换前的这一轮", "page_type": "kps",
+                 "route": "/w/dmath/kps"},
+            )
+            status, error = self.patch_error(
+                f"/api/w/dmath/ai/sessions/{conversation_id}",
+                {"model": "gpt-test-8"})
+            self.assertEqual(status, 409, error)
+            self.assertIn("running", error["error"])
+            # The refused switch changed nothing.
+            _, still = self.get(f"/api/w/dmath/ai/sessions/{conversation_id}")
+            self.assertEqual(still["model"], "gpt-test-9")
+
+            for _ in range(150):
+                _, data = self.get(
+                    f"/api/w/dmath/ai/sessions/{conversation_id}"
+                    f"/turns/{turn['turn_id']}?after=0")
+                if data["turn"]["status"] not in {"queued", "running"}:
+                    break
+                time.sleep(0.02)
+            self.assertEqual(data["turn"]["status"], "done")
+
+            _, switched = self.patch(
+                f"/api/w/dmath/ai/sessions/{conversation_id}",
+                {"model": "gpt-test-8"})
+            self.assertEqual(switched["model"], "gpt-test-8")
+            _, renamed = self.patch(
+                f"/api/w/dmath/ai/sessions/{conversation_id}",
+                {"title": "换个名字"})
+            self.assertEqual(renamed["title"], "换个名字")
+            self.assertEqual(renamed["model"], "gpt-test-8")
+
+    def test_the_model_switch_updates_the_conversation_and_refuses_a_running_turn(self):
+        with mock.patch("workbench.bridge.conversation_providers.get",
+                        return_value=self.provider):
+            status, created = self.post("/api/w/dmath/ai/sessions",
+                                        {"provider": "codex", "model": "gpt-test-9"})
+            self.assertEqual(status, 200)
+            self.assertEqual(created["model"], "gpt-test-9")
+
+            status, switched = self.patch(
+                f"/api/w/dmath/ai/sessions/{created['conversation_id']}",
+                {"model": "gpt-test-8"})
+            self.assertEqual(status, 200)
+            self.assertEqual(switched["model"], "gpt-test-8")
+
+            status, cleared = self.patch(
+                f"/api/w/dmath/ai/sessions/{created['conversation_id']}",
+                {"model": ""})
+            self.assertEqual(status, 200)
+            self.assertIsNone(cleared["model"])
+
+            status, error = self.patch_error(
+                f"/api/w/dmath/ai/sessions/{created['conversation_id']}",
+                {})
+            self.assertEqual(status, 400)
 
 
 if __name__ == "__main__":

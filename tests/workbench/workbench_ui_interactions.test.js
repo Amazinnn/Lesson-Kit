@@ -44,6 +44,7 @@ class FakeElement {
     this.dataset = options.dataset || {};
     this.value = options.value || "";
     this.checked = options.checked || false;
+    this.selected = options.selected || false;
     this.disabled = false;
     this.listeners = {};
     this.classList = new FakeClassList();
@@ -75,6 +76,18 @@ class FakeElement {
     child.parentElement = this;
     this.scrollHeight = this.children.length;
     return child;
+  }
+
+  insertBefore(child, before) {
+    const at = before ? this.children.indexOf(before) : -1;
+    if (at < 0) return this.appendChild(child);
+    this.children.splice(at, 0, child);
+    child.parentElement = this;
+    return child;
+  }
+
+  get firstChild() {
+    return this.children[0] || null;
   }
 
   replaceChildren(...children) {
@@ -294,13 +307,21 @@ function practiceElements() {
     "session-end-entry": new FakeElement("session-end-entry"),
     "practice-error": new FakeElement("practice-error"),
     "retry-practice": new FakeElement("retry-practice"),
+    "filter-launch": new FakeElement("filter-launch"),
+    "filter-count": new FakeElement("filter-count"),
+    "filter-popup": new FakeElement("filter-popup"),
   };
   elements["retry-practice"].classList.add("hidden");
+  // The page ships the popup and its badge hidden; the fake must start the same
+  // way or the first click reads as "now hidden" and never loads the facets.
+  elements["filter-popup"].classList.add("hidden");
+  elements["filter-count"].classList.add("hidden");
   return elements;
 }
 
 function aiElements() {
   return {
+    "ai-model-switch": new FakeElement("ai-model-switch"),
     "ai-session-list-view": new FakeElement("ai-session-list-view"),
     "ai-session-list": new FakeElement("ai-session-list"),
     "ai-session-empty": new FakeElement("ai-session-empty"),
@@ -1470,6 +1491,107 @@ test("provider discovery failures remain visible in the list and picker", async 
   assert.match(elements["ai-provider-options"].innerHTML, /Agent 服务暂不可用/);
 });
 
+test("the chat header offers the conversation's own model entries and switches", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  const calls = [];
+  const entries = [
+    { name: "DeepSeek V4", provider: "pi", model: "deepseek/deepseek-v4-flash" },
+    { name: "本地 Qwen", provider: "pi", model: "qwen3-coder" },
+    { name: "codex 默认", provider: "codex", model: null },
+  ];
+  let model = "deepseek/deepseek-v4-flash";
+  runWorkbench({
+    elements,
+    storage: new FakeStorage({ wb_ai_conversation_alpha: JSON.stringify("conv-001") }),
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/ai/providers")) return jsonResponse(entries);
+      if (url.endsWith("/ai/sessions/conv-001") && !options) return jsonResponse({
+        conversation_id: "conv-001", provider: "pi", status: "idle",
+        model, messages: [],
+      });
+      if (url.endsWith("/ai/sessions/conv-001")) {
+        // The server stores the switch; the reload must read it back.
+        model = JSON.parse(options.body).model;
+        return jsonResponse({ conversation_id: "conv-001", provider: "pi",
+                              status: "idle", model, messages: [] });
+      }
+      if (url.endsWith("/ai/sessions")) return jsonResponse([
+        { conversation_id: "conv-001", provider: "pi", status: "idle" }]);
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  const select = elements["ai-model-switch"];
+  // Only this conversation's harness, and the model it is on is the marked one.
+  assert.deepEqual(select.children.map((option) => option.textContent),
+    ["DeepSeek V4", "本地 Qwen"]);
+  assert.equal(select.children[0].selected, true);
+  assert.equal(select.children[1].selected, false);
+  assert.equal(select.classList.contains("hidden"), false);
+
+  select.value = "qwen3-coder";
+  const loads = () => calls.filter(
+    (call) => call.url.endsWith("/ai/sessions/conv-001") && !call.options).length;
+  const loadsBefore = loads();
+  select.trigger("change");
+  await flush();
+  const patched = calls.find((call) => call.options && call.options.method === "PATCH");
+  assert.ok(patched, "switching must PATCH the conversation");
+  assert.equal(patched.options.body, JSON.stringify({ model: "qwen3-coder" }));
+  assert.match(elements["ai-status"].textContent, /模型已切换/);
+  // The switch reloads the conversation, and the header now marks the new model.
+  assert.equal(loads(), loadsBefore + 1);
+  assert.equal(select.children[1].selected, true);
+  assert.equal(select.children[0].selected, false);
+});
+
+test("a raw model id no entry names still shows as the current choice", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    storage: new FakeStorage({ wb_ai_conversation_alpha: JSON.stringify("conv-001") }),
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([
+        { name: "DeepSeek V4", provider: "pi", model: "deepseek/deepseek-v4-flash" }]);
+      if (url.endsWith("/ai/sessions/conv-001") && !options) return jsonResponse({
+        conversation_id: "conv-001", provider: "pi", status: "idle",
+        model: "some/other-model", messages: [],
+      });
+      if (url.endsWith("/ai/sessions")) return jsonResponse([
+        { conversation_id: "conv-001", provider: "pi", status: "idle" }]);
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  const select = elements["ai-model-switch"];
+  assert.deepEqual(select.children.map((option) => option.value),
+    ["some/other-model", "deepseek/deepseek-v4-flash"]);
+  assert.equal(select.children[0].selected, true);
+});
+
+test("a harness without entries hides the switcher instead of offering a wrong one", async () => {
+  const elements = { layout: layout(), ...aiElements() };
+  runWorkbench({
+    elements,
+    storage: new FakeStorage({ wb_ai_conversation_alpha: JSON.stringify("conv-001") }),
+    fetch: (url, options) => {
+      if (url.endsWith("/ai/providers")) return jsonResponse([
+        { name: "codex 默认", provider: "codex", model: null }]);
+      if (url.endsWith("/ai/sessions/conv-001") && !options) return jsonResponse({
+        conversation_id: "conv-001", provider: "pi", status: "idle", messages: [],
+      });
+      if (url.endsWith("/ai/sessions")) return jsonResponse([
+        { conversation_id: "conv-001", provider: "pi", status: "idle" }]);
+      return jsonResponse({});
+    },
+  });
+  await openFirstAiSession(elements);
+  const select = elements["ai-model-switch"];
+  assert.equal(select.children.length, 0);
+  assert.equal(select.classList.contains("hidden"), true);
+});
+
 test("AI free message sends page identifiers and excludes a draft by default", async () => {
   const pageLayout = layout();
   pageLayout.dataset.page = "kp";
@@ -2238,6 +2360,140 @@ test("a restored assistant message places its execution plan before the answer",
   assert.equal(elements["ai-messages"].children[0].className, "ai-plan");
   assert.equal(elements["ai-messages"].children[1].className, "msg ai");
   assert.match(elements["ai-messages"].children[1].innerHTML, /检查完成/);
+});
+
+test("choice options render their math instead of showing it raw", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [{
+        problem_id: "mq-7", problem_text: "复杂度是？",
+        micro_quiz: { quiz_type: "single_choice", options: ["$O(n)$", "$O(1)$"],
+                      answer_key: "$O(n)$", error_reason: "线性。",
+                      practice_modes: ["micro"] },
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  // The option label is richText'd: the math span exists instead of the raw $…$.
+  assert.ok(elements.stream._innerHTML.includes("class='math'"));
+});
+
+test("a submission posts an attempt and the rating links back to it", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  const problem = {
+    problem_id: "mq-8", problem_text: "1 是质数吗？",
+    micro_quiz: { quiz_type: "yes_no", answer_key: "否",
+                  error_reason: "1 只有一个正因数。" },
+  };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, body: options && options.body ? JSON.parse(options.body) : null });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/attempts")) return jsonResponse({ attempt_id: 41, recorded: true });
+      return jsonResponse({ problems: [problem] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements.stream.queryAll = (selector) =>
+    selector === "[data-choice-option]:checked" ? [{ value: "是" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  const attempt = calls.find((call) => call.url.endsWith("/attempts"));
+  assert.ok(attempt, "the submission must POST /attempts");
+  assert.equal(attempt.body.problem_id, "mq-8");
+  assert.equal(attempt.body.verdict, false);
+  assert.deepEqual(attempt.body.choices, ["是"]);
+  elements["rating-input"].value = "2";
+  elements["save-rating"].click();
+  await flush();
+  const feedback = calls.filter((call) => call.url.endsWith("/feedback")).pop();
+  assert.equal(feedback.body.attempt_id, 41);
+});
+
+test("the filter popup loads facets and renders every dimension with counts", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, body: options && options.body ? JSON.parse(options.body) : null });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull-facets")) return jsonResponse({
+        source_kinds: [{ value: "final", count: 9 }],
+        exam_years: [{ value: "2023-2024秋冬", count: 4 }],
+        docs: [{ value: "题库/final·A.md", count: 9 }],
+      });
+      return jsonResponse({ problems: [] });
+    },
+  });
+  assert.equal(elements["filter-popup"].classList.contains("hidden"), true);
+  elements["filter-launch"].click();
+  await flush();
+  await flush();
+  // Opening reveals the panel and derives its options from the pool, not from a
+  // table written into the page.
+  assert.equal(elements["filter-popup"].classList.contains("hidden"), false);
+  const popup = elements["filter-popup"]._innerHTML;
+  assert.ok(popup.includes("来源类型"), popup.slice(0, 120));
+  assert.ok(popup.includes("考查年份"));
+  assert.ok(popup.includes("来源文档"));
+  assert.ok(popup.includes("题库/final·A.md"));
+  assert.ok(popup.includes("2023-2024秋冬"));
+  assert.ok(popup.includes(">9<") || popup.includes(">9 <"), popup);
+  assert.equal(calls.filter((call) => call.url.endsWith("/pull-facets")).length, 1);
+  // Reopening reuses the cached facets instead of asking again.
+  elements["filter-launch"].click();
+  elements["filter-launch"].click();
+  await flush();
+  assert.equal(calls.filter((call) => call.url.endsWith("/pull-facets")).length, 1);
+});
+
+test("a pull carries the saved dimensions and the picked ids", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  const storage = new FakeStorage({
+    wb_practice_filters_alpha: JSON.stringify({
+      source_kinds: ["final"],
+      exam_years: ["2023-2024秋冬"],
+      docs: ["题库/final·A.md"],
+      picked: { "prob-7": "第七题" },
+    }),
+  });
+  runWorkbench({
+    storage,
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, body: options && options.body ? JSON.parse(options.body) : null });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse({ problems: [] });
+    },
+  });
+  // The badge counts every chosen option, dimensions and picked problems alike.
+  assert.equal(elements["filter-count"].textContent, "4");
+  assert.equal(elements["filter-count"].classList.contains("hidden"), false);
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.ok(pull, "starting practice must pull");
+  assert.deepEqual(pull.body.filters, {
+    source_kinds: ["final"],
+    exam_years: ["2023-2024秋冬"],
+    docs: ["题库/final·A.md"],
+  });
+  assert.deepEqual(pull.body.include_ids, ["prob-7"]);
 });
 
 test("micro quiz renders yes/no options and grades the objective answer", async () => {

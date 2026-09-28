@@ -105,17 +105,16 @@ class ProblemPatchTests(unittest.TestCase):
     def test_a_patch_can_split_options_out_of_a_long_stem(self):
         long_stem = "题干" * 150 + "\nA. 甲\nB. 乙\nC. 丙"
         self.seed(problem_text=long_stem)
-        self.assertEqual(len(long_stem) > 800, False)
 
         self.apply([patch_item(
             "dmath-ch06-prob-002",
-            problem_text="题干" * 150,
+            problem_text="题干" * 400,  # 800+ characters: no stem bound applies
             micro_quiz={"quiz_type": "single_choice", "options": ["甲", "乙", "丙"],
                         "source_evidence": "教材 第6章 习题6-2"},
         )])
 
         row = self.row("dmath-ch06-prob-002")
-        self.assertEqual(row["problem_text"], "题干" * 150)
+        self.assertEqual(row["problem_text"], "题干" * 400)
         self.assertEqual(json.loads(row["micro_quiz"])["options"], ["甲", "乙", "丙"])
 
     def test_a_patch_counts_cleared_ratings(self):

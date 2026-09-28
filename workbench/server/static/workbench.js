@@ -258,6 +258,14 @@
     });
   }
 
+  function patch(path, body) {
+    return api(path, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+  }
+
   function store(key, value) {
     sessionStorage.setItem(key, JSON.stringify(value));
   }
@@ -1449,9 +1457,13 @@
     function verdictLine(item) {
       if (typeof item.verdict !== "boolean") return "";
       var quiz = microQuiz(item.payload) || {};
+      // error_reason goes through richText: it renders its $…$ and, unlike the
+      // old string concat, cannot inject markup.
       return "<p id='micro-quiz-verdict' class='micro-verdict "
         + (item.verdict ? "ok" : "bad") + "'>"
-        + (item.verdict ? "回答正确。" : "回答错误。 " + (quiz.error_reason || "")) + "</p>";
+        + (item.verdict
+          ? "回答正确。"
+          : "回答错误。 " + richText(quiz.error_reason || "")) + "</p>";
     }
 
     function keylessLine(item) {
@@ -1459,6 +1471,34 @@
       if (!quiz || quizHasKey(quiz)) return "";
       return "<p id='micro-quiz-keyless' class='muted'>"
         + "本题未录入答案键，请对照课本或解析自评。</p>";
+    }
+
+    function attemptHistoryHtml(attempts) {
+      // Every past answer of this problem, oldest last; the record the current
+      // session just wrote may not be in the payload yet, which is fine — the
+      // records page holds the full ledger.
+      if (!attempts || !attempts.length) return "";
+      var rows = attempts.slice(-5).map(function (attempt) {
+        var verdict = attempt.verdict;
+        var badge = verdict === null || verdict === undefined
+          ? "未判定" : (verdict ? "对" : "错");
+        var stars = "";
+        if (typeof attempt.rating === "number" && attempt.rating >= 1) {
+          stars = " · " + "★".repeat(attempt.rating) + "☆".repeat(5 - attempt.rating);
+        }
+        return "<div class='attempt-row'>"
+          + "<span class='record-verdict "
+          + (verdict === false ? "record-verdict-bad" : "record-verdict-open")
+          + "'>" + badge + "</span>"
+          + "<time>" + escapeHtml(String(attempt.created_at || "")) + "</time>"
+          + stars
+          + (attempt.answer_text
+            ? "<div class='rich-text'>" + richText(attempt.answer_text) + "</div>"
+            : "")
+          + "</div>";
+      });
+      return "<details class='attempt-history'><summary>历史作答 "
+        + attempts.length + " 条</summary>" + rows.join("") + "</details>";
     }
 
     function optionHtmlFor(item) {
@@ -1480,7 +1520,7 @@
             + "<input data-choice-option type='" + (multiple ? "checkbox" : "radio")
             + "' name='problem-option' value='" + escapeHtml(option.id) + "'"
             + (selected ? " checked disabled" : "") + "> "
-            + escapeHtml(option.text) + "</label>";
+            + "<span class='rich-text'>" + richText(option.text) + "</span></label>";
         }).join("") + "</fieldset>";
     }
 
@@ -1675,7 +1715,13 @@
         mode: mode,
         exclude_ids: exclude,
       };
-      if (includeIds && includeIds.length) pullBody.include_ids = includeIds;
+      applyFiltersToPullBody(pullBody);
+      if (includeIds && includeIds.length) {
+        pullBody.include_ids = (pullBody.include_ids || []).concat(
+          includeIds.filter(function (id) {
+            return (pullBody.include_ids || []).indexOf(id) < 0;
+          }));
+      }
       api("/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1790,6 +1836,152 @@
     }
     if (retryPractice) retryPractice.addEventListener("click", loadNext);
 
+    /* ---------- 来源筛选浮窗 ---------- */
+
+    var FILTER_KEY = "wb_practice_filters_" + WS;
+    var filterLaunch = document.getElementById("filter-launch");
+    var filterCount = document.getElementById("filter-count");
+    var filterPopup = document.getElementById("filter-popup");
+    var filterFacets = null;
+    var filterState = load(FILTER_KEY, null)
+      || { source_kinds: [], exam_years: [], docs: [], picked: {} };
+    if (!filterState.picked) filterState.picked = {};
+
+    function filterActiveCount() {
+      return filterState.source_kinds.length + filterState.exam_years.length
+        + filterState.docs.length + Object.keys(filterState.picked).length;
+    }
+
+    function updateFilterBadge() {
+      if (!filterCount) return;
+      var count = filterActiveCount();
+      filterCount.textContent = count ? String(count) : "";
+      filterCount.classList.toggle("hidden", !count);
+    }
+
+    function saveFilters() {
+      store(FILTER_KEY, filterState);
+      updateFilterBadge();
+    }
+
+    function applyFiltersToPullBody(pullBody) {
+      var dimensions = {};
+      ["source_kinds", "exam_years", "docs"].forEach(function (key) {
+        if (filterState[key] && filterState[key].length) {
+          dimensions[key] = filterState[key].slice();
+        }
+      });
+      if (Object.keys(dimensions).length) pullBody.filters = dimensions;
+      var pickedIds = Object.keys(filterState.picked || {});
+      if (pickedIds.length) pullBody.include_ids = pickedIds;
+    }
+
+    function filterDimension(name, label, entries) {
+      var state = filterState[name] || [];
+      var options = entries.map(function (facet) {
+        var checked = state.indexOf(facet.value) >= 0;
+        return "<label class='filter-option'><input type='checkbox' data-filter-dimension='"
+          + escapeHtml(name) + "' value='" + escapeHtml(facet.value) + "'"
+          + (checked ? " checked" : "") + "> " + escapeHtml(facet.value)
+          + " <span class='count'>" + facet.count + "</span></label>";
+      }).join("");
+      return "<div class='filter-dimension'><h3>" + escapeHtml(label) + "</h3>"
+        + (options || "<p class='muted'>本池暂无此维度</p>") + "</div>";
+    }
+
+    function renderFilterPopup() {
+      if (!filterPopup) return;
+      filterPopup.innerHTML =
+        filterDimension("source_kinds", "来源类型", filterFacets.source_kinds || [])
+        + filterDimension("exam_years", "考查年份", filterFacets.exam_years || [])
+        + filterDimension("docs", "来源文档", filterFacets.docs || [])
+        + "<div class='filter-dimension'><h3>搜索选题</h3>"
+        + "<div class='filter-search'><input id='filter-search-box' type='search' "
+        + "placeholder='题面 / 标题 / 来源…'>"
+        + "<button id='filter-search-go' class='outline sm'>搜</button></div>"
+        + "<div id='filter-search-results' class='filter-search-results'></div></div>"
+        + "<div class='filter-actions'>"
+        + "<button id='filter-clear' class='ghost sm'>清除全部</button>"
+        + "<button id='filter-close' class='outline sm'>关闭</button></div>";
+      filterPopup.querySelectorAll("[data-filter-dimension]").forEach(function (box) {
+        box.addEventListener("change", function () {
+          var list = filterState[box.dataset.filterDimension];
+          var at = list.indexOf(box.value);
+          if (box.checked && at < 0) list.push(box.value);
+          if (!box.checked && at >= 0) list.splice(at, 1);
+          saveFilters();
+        });
+      });
+      var searchGo = filterPopup.querySelector("#filter-search-go");
+      var searchBox = filterPopup.querySelector("#filter-search-box");
+      if (searchGo && searchBox) {
+        var runSearch = function () {
+          var term = searchBox.value.trim();
+          var target = filterPopup.querySelector("#filter-search-results");
+          if (!term) { target.innerHTML = ""; return; }
+          api("/search/problems?q=" + encodeURIComponent(term)).then(function (found) {
+            if (!found.problems.length) {
+              target.innerHTML = "<p class='muted'>没有匹配的题目。</p>";
+              return;
+            }
+            target.innerHTML = found.problems.map(function (problem) {
+              var checked = problem.problem_id in filterState.picked;
+              return "<label class='filter-option'><input type='checkbox' "
+                + "data-picked-id='" + escapeHtml(problem.problem_id) + "'"
+                + (checked ? " checked" : "") + "> "
+                + escapeHtml(problem.title) + "</label>";
+            }).join("");
+            target.querySelectorAll("[data-picked-id]").forEach(function (box) {
+              box.addEventListener("change", function () {
+                if (box.checked) {
+                  var hit = found.problems.filter(function (problem) {
+                    return problem.problem_id === box.dataset.pickedId;
+                  })[0];
+                  filterState.picked[box.dataset.pickedId] = hit ? hit.title : "";
+                } else {
+                  delete filterState.picked[box.dataset.pickedId];
+                }
+                saveFilters();
+              });
+            });
+          }).catch(function () {
+            target.innerHTML = "<p class='inline-error'>搜索失败。</p>";
+          });
+        };
+        searchGo.addEventListener("click", runSearch);
+        searchBox.addEventListener("keydown", function (event) {
+          if (event.key === "Enter") runSearch();
+        });
+      }
+      var clear = filterPopup.querySelector("#filter-clear");
+      if (clear) clear.addEventListener("click", function () {
+        filterState = { source_kinds: [], exam_years: [], docs: [], picked: {} };
+        saveFilters();
+        renderFilterPopup();
+      });
+      var close = filterPopup.querySelector("#filter-close");
+      if (close) close.addEventListener("click", function () {
+        filterPopup.classList.add("hidden");
+        if (filterLaunch) filterLaunch.setAttribute("aria-expanded", "false");
+      });
+    }
+
+    if (filterLaunch && filterPopup) {
+      filterLaunch.addEventListener("click", function () {
+        var hidden = filterPopup.classList.toggle("hidden");
+        filterLaunch.setAttribute("aria-expanded", hidden ? "false" : "true");
+        if (!hidden && !filterFacets) {
+          api("/pull-facets").then(function (facets) {
+            filterFacets = facets;
+            renderFilterPopup();
+          }).catch(function () {
+            filterPopup.innerHTML = "<p class='inline-error'>筛选维度读取失败。</p>";
+          });
+        }
+      });
+      updateFilterBadge();
+    }
+
     if (submitAnswer) submitAnswer.addEventListener("click", function () {
       var item = currentProblem();
       if (!item || item.kind === "card") return;
@@ -1807,10 +1999,23 @@
       PracticeDeck.settle(practiceDeck, item.id, patch);
       persistDeck();
       renderDeckItem(currentProblem());
+      // The attempt itself is the durable record: one POST per submission,
+      // before any rating. The session's rating later links back via attempt_id.
+      post("/attempts", {
+        problem_id: item.id,
+        answer_text: answer,
+        choices: choiceTexts.length ? choiceTexts.slice() : undefined,
+        verdict: graded === null ? undefined : graded,
+      }).then(function (recorded) {
+        PracticeDeck.settle(practiceDeck, item.id,
+          { attempt_id: recorded.attempt_id });
+        persistDeck();
+      }).catch(function () {
+        // A failed record never blocks the practice loop itself.
+      });
       if (batchNow()) {
         // Instant verdict, deferred rating: hold the verdict (and the
-        // highlighted correct options) briefly, then advance. Nothing is
-        // written — ratings still happen only at session end.
+        // highlighted correct options) briefly, then advance.
         if (graded !== null) scheduleAdvance();
         else advance();
         return;
@@ -1843,7 +2048,7 @@
         } else {
           section = practiceSolutionHtml(detail.problem);
         }
-        stream.innerHTML += section;
+        stream.innerHTML += section + attemptHistoryHtml(detail.attempts);
         renderMath(stream);
         showAnswer.classList.add("hidden");
         if (!batchNow()) feedbackArea.classList.remove("hidden");
@@ -1865,6 +2070,9 @@
         rating: rating, note: feedbackNote.value.trim(),
       };
       if (item.kind === "card") feedback.direction = item.direction;
+      if (item.kind !== "card" && item.attempt_id) {
+        feedback.attempt_id = item.attempt_id;
+      }
       post("/feedback", feedback).then(function () {
         updateSession(item.id, { state: "rated" });
         advance();
@@ -2114,6 +2322,13 @@
             item_type: itemType, item_id: itemId,
             rating: value, note: note.value.trim(),
           };
+          if (itemType !== "card") {
+            // Link the rating back to the attempt the submission created.
+            var origin = (session().filter(function (entry) {
+              return entry.id === itemId;
+            })[0]) || {};
+            if (origin.attempt_id) feedback.attempt_id = origin.attempt_id;
+          }
           if (itemType === "card") feedback.direction = direction || "forward";
           post("/feedback", feedback).then(function () {
             updateSession(itemId, { state: "rated" }, direction);
@@ -2689,6 +2904,7 @@
     if (aiChatView) aiSetView("chat");
     messages.innerHTML = "";
     aiCurrentProvider = record.provider || "";
+    aiSyncModelSwitch(record);
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
@@ -2726,6 +2942,62 @@
     store(AI_CONVERSATION_KEY, conversationId);
     return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
       aiRenderConversation(record);
+      return record;
+    });
+  }
+
+  function aiSyncModelSwitch(record) {
+    // One select per conversation: the entries of the conversation's own
+    // harness, with the current model marked; switching takes the next turn.
+    var select = document.getElementById("ai-model-switch");
+    if (!select || !record) return;
+    var provider = record.provider;
+    select.innerHTML = "";
+    var matched = false;
+    aiProviders.filter(function (entry) {
+      return entry.provider === provider;
+    }).forEach(function (entry) {
+      var option = document.createElement("option");
+      option.value = entry.model || "";
+      option.textContent = entry.name;
+      if ((record.model || "") === (entry.model || "")) {
+        option.selected = true;
+        matched = true;
+      }
+      select.appendChild(option);
+    });
+    if (!select.children.length) {
+      select.classList.add("hidden");
+      return;
+    }
+    select.classList.remove("hidden");
+    if (record.model && !matched) {
+      // A raw model id that no entry names: show it as the current choice.
+      var option = document.createElement("option");
+      option.value = record.model;
+      option.textContent = record.model;
+      option.selected = true;
+      select.insertBefore(option, select.firstChild);
+    }
+  }
+
+  var aiModelSwitch = document.getElementById("ai-model-switch");
+  if (aiModelSwitch) {
+    aiModelSwitch.addEventListener("change", function () {
+      if (!aiConversation) return;
+      var failure = "";
+      aiSetStatus("切换模型中…");
+      patch("/ai/sessions/" + encodeURIComponent(aiConversation),
+        { model: aiModelSwitch.value || null })
+        .catch(function (err) { failure = err.message || "未知错误"; })
+        .then(function () {
+          // The reload repaints the header, so the notice is set after it.
+          return aiLoadConversation(aiConversation);
+        })
+        .then(function () {
+          aiSetStatus(failure ? "无法切换模型：" + failure
+                              : "模型已切换，下一轮生效。");
+        });
     });
   }
 
@@ -2949,13 +3221,18 @@
     if (!aiProviderOptions) return;
     aiSetView("picker");
     aiProviderOptions.innerHTML = "";
-    aiProviders.forEach(function (provider) {
+    aiProviders.forEach(function (entry) {
       var button = document.createElement("button");
       button.className = "outline sm ai-provider-option";
       button.type = "button";
-      button.dataset.provider = provider.name;
-      button.textContent = provider.name + (provider.model ? " · " + provider.model : "");
-      button.addEventListener("click", function () { aiCreateSession(provider.name); });
+      button.dataset.provider = entry.provider || entry.name;
+      button.dataset.model = entry.model || "";
+      // The display name is the entry's own — the harness and model id stay
+      // out of the label.
+      button.textContent = entry.name;
+      button.addEventListener("click", function () {
+        aiCreateSession(entry.provider || entry.name, entry.model || "");
+      });
       aiProviderOptions.appendChild(button);
     });
     if (aiProviderLoadError) {
@@ -2976,8 +3253,10 @@
     });
   }
 
-  function aiCreateSession(provider) {
-    post("/ai/sessions", { provider: provider }).then(function (record) {
+  function aiCreateSession(provider, model) {
+    var payload = { provider: provider };
+    if (model) payload.model = model;
+    post("/ai/sessions", payload).then(function (record) {
       aiConversation = record.conversation_id;
       store(AI_CONVERSATION_KEY, aiConversation);
       aiSetView("chat");

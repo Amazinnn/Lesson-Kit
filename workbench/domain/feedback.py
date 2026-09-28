@@ -32,6 +32,11 @@ def apply(pool, item_type, item_id, rating=None, note=None, direction="",
 
 def _apply(pool, item_type, item_id, rating, note, direction, attempt_id=None):
     changes = []
+    if attempt_id is not None:
+        attempt = pool.attempt(attempt_id)
+        if attempt is None or attempt["problem_id"] != item_id:
+            raise ValueError(
+                f"attempt {attempt_id} does not belong to {item_type} {item_id}")
     targets = _targets(pool, item_type, item_id)
     signal_type = _signal_type(note)
 

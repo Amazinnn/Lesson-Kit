@@ -86,6 +86,40 @@ def get(name):
     raise KeyError(f"provider unavailable: {name}")
 
 
+def discover_entries():
+    """The selectable model entries shown in the picker.
+
+    Named `models` entries win: the display name is the learner's own, decoupled
+    from the harness, and each entry rides the harness's discovered command.
+    Without any, the picker falls back to one entry per harness — the historical
+    behaviour — so nothing breaks.
+    """
+    models = registry.load_models()
+    harnesses = {item["name"]: item for item in discover()}
+    entries = []
+    for model in models:
+        name = model.get("name")
+        provider = model.get("provider")
+        if not isinstance(name, str) or not name or provider not in harnesses:
+            continue
+        base = harnesses[provider]
+        entry = {**base, "name": name, "provider": provider,
+                 "model": model.get("model") or base.get("model")}
+        if isinstance(model.get("args"), list):
+            entry["args"] = list(model["args"])
+        entries.append(entry)
+    if entries:
+        return entries
+    return [{**item, "provider": item["name"]} for item in discover()]
+
+
+def get_entry(name):
+    for entry in discover_entries():
+        if entry["name"] == name:
+            return entry
+    raise KeyError(f"model entry unavailable: {name}")
+
+
 def build_command(provider, session_id=None, mode="print"):
     name = provider["name"]
     command = provider["command"]
