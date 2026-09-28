@@ -2,6 +2,7 @@
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -209,8 +210,10 @@ class PiRpcProcessTests(unittest.TestCase):
         with mock.patch.object(os, "name", "nt"):
             kwargs = conversation_providers.hidden_launch_kwargs()
         self.assertIn("creationflags", kwargs)
-        import subprocess as sp
-        self.assertEqual(kwargs["creationflags"], sp.CREATE_NO_WINDOW)
+        # The constant itself exists only on Windows, so the branch is exercised
+        # under a mocked os.name and compared against whatever the host offers.
+        self.assertEqual(kwargs["creationflags"],
+                         getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
     def test_non_windows_launch_adds_no_flags(self):
         with mock.patch.object(os, "name", "posix"):

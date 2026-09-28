@@ -31,7 +31,8 @@ def hidden_launch_kwargs():
     goes through this, so "no visible console" is one rule, not a per-call hope.
     """
     if os.name == "nt":
-        return {"creationflags": subprocess.CREATE_NO_WINDOW}
+        # The constant is Windows-only, like the branch that reads it.
+        return {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
     return {}
 
 

@@ -794,9 +794,11 @@ class ConversationTests(unittest.TestCase):
         self.assertIn("未录答案键 1", outcome)
         self.assertIn("不要让学生再说一次「继续」", outcome)
 
-    def test_a_conversation_remembers_its_model_and_can_switch_it(self):
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_conversation_remembers_its_model_and_can_switch_it(self, get_provider):
         from workbench.bridge import conversations
 
+        get_provider.return_value = self.provider
         conversation = conversations.create(self.pool, "codex", model="gpt-test-9")
         self.assertEqual(conversation["model"], "gpt-test-9")
 
@@ -808,15 +810,19 @@ class ConversationTests(unittest.TestCase):
             self.pool, conversation["conversation_id"], None)
         self.assertIsNone(cleared["model"])
 
-    def test_a_model_token_may_not_contain_whitespace(self):
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_a_model_token_may_not_contain_whitespace(self, get_provider):
         from workbench.bridge import conversations
 
+        get_provider.return_value = self.provider
         with self.assertRaises(ValueError):
             conversations.create(self.pool, "codex", model="two words")
 
-    def test_set_model_resolves_a_named_entry_for_the_same_harness(self):
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_set_model_resolves_a_named_entry_for_the_same_harness(self, get_provider):
         from workbench.bridge import conversation_providers, conversations
 
+        get_provider.return_value = self.provider
         conversation = conversations.create(self.pool, "codex")
         with mock.patch.object(
             conversation_providers, "discover_entries",
@@ -858,7 +864,8 @@ class ConversationTests(unittest.TestCase):
         self.assertTrue(seen)
         self.assertEqual(seen[0].get("model"), "gpt-test-9")
 
-    def test_switching_the_model_discards_the_cached_pi_process(self):
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_switching_the_model_discards_the_cached_pi_process(self, get_provider):
         """A stale RPC process would keep answering with the old model."""
         from workbench.bridge import conversations, pi_rpc
 
@@ -872,6 +879,7 @@ class ConversationTests(unittest.TestCase):
         process = FakeProcess()
         registry = mock.Mock()
         registry.discard.return_value = process
+        get_provider.return_value = {**self.provider, "name": "pi", "args": []}
         conversation = conversations.create(self.pool, "pi")
         with mock.patch.object(conversations, "PI_RPC", registry):
             conversations.set_model(
