@@ -1254,6 +1254,8 @@
   var visiblePracticeImages = practiceRuntime.visiblePracticeImages;
   var draftAnswer = practiceRuntime.draftAnswer;
   var draftNote = practiceRuntime.draftNote;
+  var practiceSelectionContext = practiceRuntime.selectionContext
+    || function () { return {}; };
 
   /* ---------- saved papers ---------- */
 
@@ -1293,11 +1295,12 @@
 
   if (practiceSetList) {
     practiceSetList.addEventListener("click", function (event) {
-      var button = event.target.closest && event.target.closest("button");
-      if (!button) return;
-      var card = button.closest(".practice-set-card");
+      var card = event.target.closest && event.target.closest(".practice-set-card");
       if (!card) return;
       var practiceSetId = card.dataset.practiceSetId;
+      layout.dataset.practiceSetId = practiceSetId;
+      var button = event.target.closest && event.target.closest("button");
+      if (!button) return;
       var encoded = encodeURIComponent(practiceSetId);
 
       if (button.hasAttribute("data-set-start")) {
@@ -2115,6 +2118,7 @@
       page_type: layout.dataset.page || "unknown",
       recent_objects: load(AI_RECENT_KEY, []),
       practice_intent: /练习|做题|刷题|复习题/.test(message),
+      selected_kp_ids: selectedKpIds(),
     };
     if (layout.dataset.objectType) body.object_type = layout.dataset.objectType;
     if (layout.dataset.objectId) body.object_id = layout.dataset.objectId;
@@ -2131,6 +2135,20 @@
       body.draft_note = draftNote();
       body.draft_choices = (active.choices || []).slice();
       body.draft_images = visiblePracticeImages();
+      body.practice_selection = practiceSelectionContext();
+    } else if (layout.dataset.page === "practice") {
+      body.practice_selection = practiceSelectionContext();
+    }
+    if (layout.dataset.page === "practice-sets" && layout.dataset.practiceSetId) {
+      body.practice_set_id = layout.dataset.practiceSetId;
+    }
+    if (layout.dataset.page === "records") {
+      try {
+        body.records_problem_id = new URLSearchParams(window.location.search || "")
+          .get("problem") || "";
+      } catch (_) {
+        body.records_problem_id = "";
+      }
     }
     if (layout.dataset.page === "graph") {
       body.selected_kp_id = selectedGraphKpId;
