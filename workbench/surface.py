@@ -48,6 +48,20 @@ ROUTES = {
     ("POST", "/api/w/{name}/pull-cards"): (
         BROWSER, (),
         "flash cards are practised in the page; the CLI has no card command yet"),
+    ("GET", "/api/w/{name}/practice-sets"): (
+        BROWSER, (), "the browser lists reusable saved papers"),
+    ("POST", "/api/w/{name}/practice-sets"): (
+        BROWSER, (), "the browser saves the current selected problems as a paper"),
+    ("GET", "/api/w/{name}/practice-sets/{practice_set_id}"): (
+        BROWSER, (), "the browser opens one saved paper"),
+    ("PATCH", "/api/w/{name}/practice-sets/{practice_set_id}"): (
+        BROWSER, (), "the browser renames or replaces one paper's ordered problems"),
+    ("DELETE", "/api/w/{name}/practice-sets/{practice_set_id}"): (
+        BROWSER, (), "the browser deletes only the saved paper"),
+    ("GET", "/api/w/{name}/practice-sets/{practice_set_id}/render"): (
+        BROWSER, (), "the browser reuses the existing student/solution renderer"),
+    ("POST", "/api/w/{name}/practice-sets/{practice_set_id}/start"): (
+        BROWSER, (), "the browser copies one paper into the single active practice"),
     ("GET", "/api/w/{name}/practice/current"): (
         BROWSER, (), "the browser resumes the workspace's single active practice"),
     ("POST", "/api/w/{name}/practice/current"): (
