@@ -4,11 +4,10 @@ import contextlib
 import hashlib
 import io
 import json
-import sqlite3
 import unittest
 from pathlib import Path
 
-from tests.workbench.fixtures import WorkspaceFixture
+from tests.workbench.fixtures import WorkspaceFixture, open_db
 from workbench.data.content_audit import CHECKS, audit
 from workbench.data.pool import Pool
 
@@ -36,7 +35,7 @@ class ContentAuditTests(unittest.TestCase):
         }
         columns = ", ".join(values)
         placeholders = ", ".join("?" for _ in values)
-        with sqlite3.connect(self.db) as conn:
+        with open_db(self.db) as conn:
             conn.execute(
                 f"INSERT INTO problems ({columns}) VALUES ({placeholders})",
                 tuple(values.values()),
@@ -70,7 +69,7 @@ class ContentAuditTests(unittest.TestCase):
 
         before_hash = hashlib.sha256(self.db.read_bytes()).hexdigest()
         before_counts = {}
-        with sqlite3.connect(self.db) as conn:
+        with open_db(self.db) as conn:
             for table in ("problems", "knowledge_points", "ingest_batches"):
                 before_counts[table] = conn.execute(
                     f"SELECT COUNT(*) FROM {table}"
@@ -100,7 +99,7 @@ class ContentAuditTests(unittest.TestCase):
                             for item in result["findings"]
                             if item["check"] == "orphan-figures"))
 
-        with sqlite3.connect(self.db) as conn:
+        with open_db(self.db) as conn:
             after_counts = {
                 table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                 for table in before_counts

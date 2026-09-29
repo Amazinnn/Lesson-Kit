@@ -9,6 +9,8 @@ from pathlib import Path
 from workbench import ingest
 from workbench.domain import micro_quiz
 
+from tests.workbench.fixtures import open_db
+
 
 def manifest_item(problem_id="dmath-ch06-mq-001", kp_id="dmath-ch06-kp-001",
                   stem="自然数 1 是质数吗？", **payload):
@@ -265,7 +267,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertEqual(json.loads(batch[2]), {"problems": 1})
 
     def test_gate_refuses_an_existing_identity_and_reports_its_source(self):
-        with sqlite3.connect(self.db_path) as conn:
+        with open_db(self.db_path) as conn:
             conn.execute("ALTER TABLE problems ADD COLUMN source_evidence TEXT")
             conn.execute(
                 "INSERT INTO problems (problem_id, kp_ids, problem_text, source_evidence) "

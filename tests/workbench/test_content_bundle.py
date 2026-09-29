@@ -7,7 +7,7 @@ from pathlib import Path
 
 from workbench import ingest
 
-from tests.workbench.fixtures import WorkspaceFixture
+from tests.workbench.fixtures import WorkspaceFixture, open_db
 
 
 def formal(key, kp_ids, text="P", **extra):
@@ -385,7 +385,7 @@ class ContentBundleTests(unittest.TestCase):
             "kind": "content-bundle", "chapter": "ch06",
             "problems": [formal("p1", ["dmath-ch06-kp-001"], text="A new question")],
         })
-        with sqlite3.connect(self.db_path) as conn:
+        with open_db(self.db_path) as conn:
             conn.execute(
                 "UPDATE problems SET problem_text='edited after apply' "
                 "WHERE ingest_batch_id=?", (applied["batch_id"],),
@@ -554,7 +554,7 @@ class ContentBundleTests(unittest.TestCase):
         self.assertEqual(self.count("problems"), before)
 
     def test_bundle_refuses_existing_content_identity_with_source_evidence(self):
-        with sqlite3.connect(self.db_path) as conn:
+        with open_db(self.db_path) as conn:
             conn.execute(
                 "UPDATE problems SET problem_text=?, source_evidence=? "
                 "WHERE problem_id='dmath-ch06-prob-001'",
@@ -580,7 +580,7 @@ class ContentBundleTests(unittest.TestCase):
         self.assertFalse(Path(self.fixture.tmp.name, "backup-001.db").exists())
 
     def test_bundle_checks_existing_rows_without_a_course_id_prefix(self):
-        with sqlite3.connect(self.db_path) as conn:
+        with open_db(self.db_path) as conn:
             conn.execute(
                 "UPDATE problems SET problem_id=?, problem_text=? "
                 "WHERE problem_id='dmath-ch06-prob-001'",

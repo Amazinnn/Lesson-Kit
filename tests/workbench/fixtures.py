@@ -1,5 +1,6 @@
 """Shared test fixtures for workbench tests."""
 
+import contextlib
 import importlib.util
 import os
 import sqlite3
@@ -41,6 +42,22 @@ def load_script(name, relative):
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
+
+
+@contextlib.contextmanager
+def open_db(path):
+    """Connect to a fixture database and close it on the way out.
+
+    `with sqlite3.connect(...)` only commits the transaction — it leaves the
+    connection open, and Windows then refuses to delete the workspace while the
+    handle is alive, which shows up as a teardown error instead of a test failure.
+    """
+    conn = sqlite3.connect(path)
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def build_fixture_db(conn):
