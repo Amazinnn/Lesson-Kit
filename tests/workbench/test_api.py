@@ -7,6 +7,7 @@ import threading
 import unittest
 import urllib.request
 from urllib.error import HTTPError
+from unittest import mock
 
 from tests.workbench.fixtures import WorkspaceFixture
 
@@ -311,6 +312,19 @@ class ApiTests(unittest.TestCase):
             json.loads(response.read().decode("utf-8"))["error"],
         )
         connection.close()
+
+    def test_ai_session_update_accepts_null_model_reset(self):
+        from workbench.server import api
+
+        expected = {"conversation_id": "conv-001", "model": None}
+        with mock.patch.object(
+                api.conversations, "set_model", return_value=expected) as set_model:
+            result = api.ai_session_update(
+                None, None, {"conversation_id": "conv-001"}, {"model": None})
+
+        self.assertEqual(result, expected)
+        set_model.assert_called_once_with(
+            None, "conv-001", None, provider=None, entry=None)
 
     def test_problem_detail_endpoint(self):
         status, data = self.get("/api/w/dmath/problem/dmath-ch06-prob-001")
