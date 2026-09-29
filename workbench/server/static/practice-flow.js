@@ -46,6 +46,7 @@
   if (scopedKpId) saveSelectedKpIds([scopedKpId]);
   var storedKps = load(KPS_KEY, []);
   var practiceDeck = PracticeDeck.deserialize(load(SESSION_KEY, null));
+  var activePractice = null;
   // Legacy tabs stored the rendered payload of the current item separately;
   // adopt it into the deck so a refresh restores without pulling again.
   var legacyCurrent = load(CURRENT_KEY, null);
@@ -117,6 +118,10 @@
     var request = post("/attempts", saved.payload).then(function (recorded) {
       updateSession(item.id, { attempt_id: recorded.attempt_id, attempt_status: "saved" },
         item.direction);
+      if (recorded.practice) {
+        activePractice = recorded.practice.completed ? null : recorded.practice.practice;
+        renderResumeCard(activePractice);
+      }
       return recorded.attempt_id;
     }).catch(function (error) {
       updateSession(item.id, { attempt_status: "failed" }, item.direction);
@@ -180,6 +185,12 @@
     var saveRating = document.getElementById("save-rating");
     var sessionEntry = document.getElementById("session-end-entry");
     var startArea = document.getElementById("start-area");
+    var practiceCount = document.getElementById("practice-count");
+    var resumeCard = document.getElementById("active-practice-resume");
+    var resumeTitle = document.getElementById("active-practice-title");
+    var resumeMeta = document.getElementById("active-practice-meta");
+    var resumeFill = document.getElementById("active-practice-progress-fill");
+    var resumeButton = document.getElementById("resume-practice");
     var practiceError = document.getElementById("practice-error");
     var retryPractice = document.getElementById("retry-practice");
     var cardNav = document.getElementById("card-nav");
@@ -201,6 +212,101 @@
       practiceError.textContent = "";
       practiceError.classList.add("hidden");
       if (retryPractice) retryPractice.classList.add("hidden");
+    }
+
+    function activeToDeck(practice) {
+      var deck = PracticeDeck.createDeck();
+      (practice.items || []).forEach(function (row) {
+        var attempt = row.attempt || {};
+        var item = PracticeDeck.append(deck, {
+          id: row.item_id,
+          kind: row.item_type === "card" ? "card" : "problem",
+          direction: row.direction || "forward",
+          payload: row.payload || null,
+          answer_text: attempt.answer_text || "",
+          choices: Array.isArray(attempt.choices) ? attempt.choices : [],
+          verdict: attempt.verdict === null || attempt.verdict === undefined
+            ? null : !!attempt.verdict,
+          state: row.state === "pending" ? "active"
+            : row.state === "stuck" ? "skipped"
+              : (row.feedback ? "rated" : "unrated"),
+        });
+        if (row.attempt_id) item.attempt_id = row.attempt_id;
+      });
+      deck.cursor = Math.max(0, Math.min(
+        typeof practice.cursor === "number" ? practice.cursor : 0,
+        Math.max(0, deck.items.length - 1)
+      ));
+      return deck;
+    }
+
+    function renderResumeCard(practice) {
+      if (!resumeCard) return;
+      if (!practice) {
+        resumeCard.classList.add("hidden");
+        return;
+      }
+      var progress = practice.progress || {};
+      var total = progress.total || 0;
+      var completed = progress.completed || 0;
+      var percent = total ? Math.round(completed * 100 / total) : 0;
+      if (resumeTitle) resumeTitle.textContent = "未完成练习";
+      if (resumeMeta) {
+        resumeMeta.textContent = completed + " / " + total
+          + " · " + (progress.answered || 0) + " 已作答 · "
+          + (progress.stuck || 0) + " 不会 · "
+          + (progress.remaining || 0) + " 待完成";
+      }
+      if (resumeFill && resumeFill.style) resumeFill.style.width = percent + "%";
+      resumeCard.classList.remove("hidden");
+    }
+
+    function resumeActivePractice() {
+      if (!activePractice) return;
+      practiceDeck = activeToDeck(activePractice);
+      persistDeck();
+      sessionStorage.setItem(MODE_KEY, activePractice.practice_mode || "exam");
+      sessionStorage.setItem(RATING_MODE_KEY, activePractice.rating_mode || "immediate");
+      store(KPS_KEY, activePractice.kp_ids || []);
+      if (startArea) startArea.classList.add("hidden");
+      renderResumeCard(null);
+      setPracticeFocus(true);
+      var item = currentProblem();
+      if (item) {
+        renderDeckItem(item);
+        showComposer(true);
+      }
+    }
+
+    function loadActivePractice() {
+      return api("/practice/current").then(function (result) {
+        if (!result || !Object.prototype.hasOwnProperty.call(result, "practice")) return null;
+        activePractice = result.practice || null;
+        if (!activePractice) {
+          sessionStorage.removeItem(SESSION_KEY);
+          sessionStorage.removeItem(CURRENT_KEY);
+          practiceDeck = PracticeDeck.createDeck();
+          renderResumeCard(null);
+          showComposer(false);
+          setPracticeFocus(false);
+          if (startArea) startArea.classList.remove("hidden");
+          return null;
+        }
+        renderResumeCard(activePractice);
+        showComposer(false);
+        setPracticeFocus(false);
+        if (startArea) startArea.classList.remove("hidden");
+        return activePractice;
+      }).catch(function () {
+        // A pre-migration pool keeps the old client cache usable; the API error
+        // remains non-destructive until the workspace is migrated.
+        return null;
+      });
+    }
+
+    function selectedCount() {
+      var value = practiceCount ? parseInt(practiceCount.value, 10) : 10;
+      return value === 5 || value === 20 ? value : 10;
     }
 
     function selectedContentMode() {
@@ -520,7 +626,8 @@
         persistDeck();
         return;
       }
-      loadNext();
+      if (resumeCard) finishExhausted();
+      else loadNext();
     }
 
     function loadNext() {
@@ -599,13 +706,88 @@
       }).catch(function (error) { pulling = false; showPracticeError(error, true); });
     }
 
-    function startSession() {
-      var contentMode = selectedContentMode();
-      var ratingMode = selectedRatingMode();
-      if (legacyModeControls && !ratingMode) ratingMode = selectedRatingMode();
-      if (!contentMode && legacyModeControls) contentMode = "exam";
-      if (!contentMode || !ratingMode) return;
-      advanceToken += 1;
+    function beginFixedPractice(kps, contentMode, ratingMode) {
+      if (!kps.length || pulling) return;
+      var replace = false;
+      if (activePractice) {
+        var oldKps = (activePractice.kp_ids || []).slice().sort().join("|");
+        var newKps = kps.slice().sort().join("|");
+        var prompt = oldKps === newKps
+          ? "当前知识点还有一轮未完成练习。确定重新开始吗？"
+          : "当前还有一轮练习没有完成。确定开始新的练习吗？";
+        if (window.confirm && !window.confirm(prompt)) {
+          resumeActivePractice();
+          return;
+        }
+        replace = true;
+      }
+
+      clearPracticeError();
+      pulling = true;
+      var count = selectedCount();
+      var selection;
+      if (contentMode === "flash_card") {
+        selection = api("/pull-cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kp_ids: kps,
+            direction_mode: selectedFlashDirection(),
+            exclude_directions: [],
+          }),
+        }).then(function (result) {
+          var cards = (result.cards || []).slice(0, count);
+          return cards.map(function (card) {
+            return {
+              item_type: "card", item_id: card.card_id,
+              direction: card.direction || "forward",
+            };
+          });
+        });
+      } else {
+        var pullBody = { kp_ids: kps, n: count, mode: contentMode };
+        applyFiltersToPullBody(pullBody);
+        var includeIds = load(INCLUDE_KEY, null);
+        if (includeIds && includeIds.length) pullBody.include_ids = includeIds.slice();
+        selection = api("/pull", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(pullBody),
+        }).then(function (result) {
+          return (result.problems || []).map(function (problem) {
+            return { item_type: "problem", item_id: problem.problem_id };
+          });
+        });
+      }
+
+      selection.then(function (items) {
+        if (!items.length) throw new Error("当前范围没有可用题目。");
+        return post("/practice/current", {
+          source_kind: "quick",
+          kp_ids: kps,
+          practice_mode: contentMode,
+          rating_mode: ratingMode,
+          items: items,
+          replace: replace,
+        });
+      }).then(function (practice) {
+        pulling = false;
+        activePractice = practice;
+        sessionStorage.removeItem(INCLUDE_KEY);
+        sessionStorage.setItem(MODE_KEY, contentMode);
+        sessionStorage.setItem(RATING_MODE_KEY, ratingMode);
+        if (contentMode === "flash_card") {
+          sessionStorage.setItem(FLASH_DIRECTION_KEY, selectedFlashDirection());
+        }
+        store(KPS_KEY, kps);
+        resumeActivePractice();
+      }).catch(function (error) {
+        pulling = false;
+        showPracticeError(error, true);
+      });
+    }
+
+    function startLegacySession(contentMode, ratingMode) {
       practiceDeck = PracticeDeck.deserialize(null);
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
@@ -641,6 +823,37 @@
       if (startArea) startArea.classList.add("hidden");
       setPracticeFocus(true);
       loadNext();
+    }
+
+    function startSession() {
+      var contentMode = selectedContentMode();
+      var ratingMode = selectedRatingMode();
+      if (legacyModeControls && !ratingMode) ratingMode = selectedRatingMode();
+      if (!contentMode && legacyModeControls) contentMode = "exam";
+      if (!contentMode || !ratingMode) return;
+      advanceToken += 1;
+      if (!resumeCard) {
+        startLegacySession(contentMode, ratingMode);
+        return;
+      }
+
+      if (legacyModeControls && scopedKpId) {
+        beginFixedPractice([scopedKpId], contentMode, ratingMode);
+        return;
+      }
+      if (legacyModeControls) {
+        api("/weak?limit=200").then(function (items) {
+          beginFixedPractice(items.map(function (item) { return item.kp_id; }),
+            contentMode, ratingMode);
+        }).catch(showPracticeError);
+        return;
+      }
+      var ids = selectedKpIds();
+      if (!ids.length) {
+        if (practiceError) showPracticeError("请先在知识点视图选择范围", false);
+        return;
+      }
+      beginFixedPractice(ids, contentMode, ratingMode);
     }
 
     function bindMode(mode) {
@@ -689,7 +902,9 @@
       startPractice.disabled = !readyToStart();
       startPractice.addEventListener("click", startSession);
     }
-    if (retryPractice) retryPractice.addEventListener("click", loadNext);
+    if (resumeButton) resumeButton.addEventListener("click", resumeActivePractice);
+    if (retryPractice) retryPractice.addEventListener("click", resumeCard ? startSession : loadNext);
+    if (resumeCard) loadActivePractice();
 
     /* ---------- 来源筛选浮窗 ---------- */
 
@@ -858,6 +1073,7 @@
         request_id: newPracticeRequestId(), problem_id: item.id,
         answer_text: answer, choices: choiceTexts.length ? choiceTexts.slice() : undefined,
         verdict: graded === null ? undefined : graded,
+        practice_position: activePractice ? practiceDeck.cursor : undefined,
       };
       patch.attempt_id = null;
       patch.attempt_request = { request_id: attemptPayload.request_id, payload: attemptPayload };
@@ -932,6 +1148,14 @@
         if (item.kind !== "card" && attemptId) feedback.attempt_id = attemptId;
         return saveItemFeedback(item, feedback);
       }).then(function () {
+        if (item.kind !== "card" || !activePractice) return null;
+        return patch("/practice/current", {
+          position: practiceDeck.cursor, state: "answered",
+        }).then(function (result) {
+          activePractice = result.completed ? null : result.practice;
+          renderResumeCard(activePractice);
+        });
+      }).then(function () {
         advance();
       }).catch(function (error) {
         updateSession(item.id, { feedback_status: "failed" }, item.direction);
@@ -942,35 +1166,75 @@
     if (noTime) noTime.addEventListener("click", function () {
       var item = currentProblem();
       if (!item) return;
-      // Skipping applies only to items never answered: a graded problem or a
-      // revealed card keeps its played (unrated) state when moving on.
-      var state = (item.state === "active" || item.state === "skipped")
-        ? ((item.kind === "card" && item.revealed) ? "unrated" : "skipped")
-        : item.state;
-      updateSession(item.id, { state: state });
-      advance();
+      clearPracticeError();
+      if (!activePractice) {
+        var legacyState = (item.kind === "card" && item.revealed)
+          ? "unrated" : "skipped";
+        updateSession(item.id, { state: legacyState }, item.direction);
+        advance();
+        return;
+      }
+      var position = practiceDeck.cursor;
+      var request;
+      if (item.kind === "card") {
+        request = post("/feedback", {
+          item_type: "card", item_id: item.id, rating: 1,
+          direction: item.direction || "forward",
+          request_id: newPracticeRequestId(),
+        }).then(function () {
+          return patch("/practice/current", {
+            position: position, state: "stuck",
+          });
+        });
+      } else {
+        request = post("/attempts", {
+          request_id: newPracticeRequestId(),
+          problem_id: item.id,
+          answer_text: "",
+          stuck: true,
+          practice_position: position,
+        }).then(function (result) {
+          return result.practice || null;
+        });
+      }
+      request.then(function (progress) {
+        if (progress) {
+          activePractice = progress.completed ? null : progress.practice;
+          renderResumeCard(activePractice);
+        }
+        updateSession(item.id, { state: "skipped" }, item.direction);
+        advance();
+      }).catch(showPracticeError);
     });
 
     var gotoBtn = document.getElementById("goto-session-end");
     if (gotoBtn) gotoBtn.addEventListener("click", function () {
-      var item = currentProblem();
-      if (item) {
-        var endState = (item.state === "active" || item.state === "skipped")
-          ? ((item.kind === "card" && item.revealed) ? "unrated" : "skipped")
-          : item.state;
-        updateSession(item.id, { state: endState });
+      if (!resumeCard) {
+        var item = currentProblem();
+        if (item) {
+          var endState = (item.state === "active" || item.state === "skipped")
+            ? ((item.kind === "card" && item.revealed) ? "unrated" : "skipped")
+            : item.state;
+          updateSession(item.id, { state: endState });
+        }
+        cancelScheduledAdvance();
+        showComposer(false);
+        if (batchNow()) window.location = "session-end";
+        else {
+          sessionStorage.removeItem(MODE_KEY);
+          sessionStorage.removeItem(RATING_MODE_KEY);
+          stream.innerHTML = "<p class='muted'>本轮练习已提前结束。</p>";
+          setPracticeFocus(false);
+          if (startArea) startArea.classList.remove("hidden");
+        }
+        return;
       }
       cancelScheduledAdvance();
       showComposer(false);
-      if (batchNow()) {
-        window.location = "session-end";
-      } else {
-        sessionStorage.removeItem(MODE_KEY);
-        sessionStorage.removeItem(RATING_MODE_KEY);
-        stream.innerHTML = "<p class='muted'>本轮练习已提前结束。</p>";
-        setPracticeFocus(false);
-        if (startArea) startArea.classList.remove("hidden");
-      }
+      setPracticeFocus(false);
+      if (stream) stream.innerHTML = "";
+      if (startArea) startArea.classList.remove("hidden");
+      renderResumeCard(activePractice);
     });
 
     if (cardPrev) cardPrev.addEventListener("click", function () {
