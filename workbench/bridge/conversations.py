@@ -93,10 +93,9 @@ def _next_number(paths, prefix):
     return max(numbers, default=0) + 1
 
 
-def create(pool, provider_name, title="", model=None):
+def create(pool, provider_name, title="", model=None, entry=None):
     conversation_providers.get(provider_name)
-    if model is not None:
-        model = _resolve_model(provider_name, model)
+    target = _resolve_target(provider_name, model=model, entry=entry)
     jobs_dir = pool.jobs_dir()
     jobs_dir.mkdir(parents=True, exist_ok=True)
     with _LOCK:
@@ -108,8 +107,10 @@ def create(pool, provider_name, title="", model=None):
         title = title.strip() if isinstance(title, str) else ""
         record = {
             "conversation_id": conversation_id,
-            "provider": provider_name,
-            "model": (model or None),
+            "provider": target["provider"],
+            "model": target["model"],
+            "model_entry": target.get("entry"),
+            "model_args": target.get("args", []),
             "title": title,
             "title_source": "user" if title else "unset",
             "provider_session_id": None,
@@ -178,51 +179,87 @@ def rename(pool, conversation_id, title):
     return record
 
 
-def _resolve_model(provider_name, model):
-    """The model id a conversation stores: an entry name resolves to its model.
+def _resolve_target(provider_name, model=None, entry=None):
+    if entry is not None:
+        if not isinstance(entry, str) or not entry.strip():
+            raise ValueError("model entry must be a non-empty string")
+        return conversation_providers.resolve_target(provider_name, entry_name=entry)
+    if model is not None:
+        if not isinstance(model, str) or not model.strip():
+            raise ValueError("model must be a non-empty string")
+        match = next(
+            (item for item in conversation_providers.discover_entries()
+             if item["provider"] == provider_name and item["name"] == model),
+            None,
+        )
+        if match:
+            return {
+                "provider": provider_name,
+                "model": match.get("model"),
+                "args": list(match.get("args", [])),
+                "entry": match["name"],
+            }
+        if len(model.split()) > 1:
+            raise ValueError("unknown model entry — a raw model id must be one token")
+    return conversation_providers.resolve_target(provider_name, model=model)
 
-    An entry name is the learner's own display text (spaces welcome); anything
-    that names no entry is taken as a raw model id, which must be a single
-    token because it becomes one ``--model`` argv element.
-    """
-    if not isinstance(model, str) or not model.strip():
-        raise ValueError("model must be a non-empty string")
-    match = next(
-        (entry for entry in conversation_providers.discover_entries()
-         if entry["provider"] == provider_name and entry["name"] == model),
-        None,
-    )
-    if match:
-        return match["model"] or None
-    if len(model.split()) > 1:
-        raise ValueError("unknown model entry — a raw model id must be one token")
-    return model
+
+def _pi_model_parts(model):
+    if not isinstance(model, str) or "/" not in model:
+        return None
+    provider, model_id = model.split("/", 1)
+    return (provider, model_id) if provider and model_id else None
 
 
-def set_model(pool, conversation_id, model):
-    """Switch the conversation's model; the next turn runs on it.
+def set_model(pool, conversation_id, model, provider=None, entry=None):
+    """Switch one logical conversation to another model target.
 
-    Switching discards the cached RPC process so the next launch carries the
-    new ``--model``; the native session id is kept, and a provider that refuses
-    the cross-model resume falls back to a fresh session at launch (the
-    mirror's history is unaffected either way).
+    The local transcript owns continuity. Same-Pi switches use Pi's live RPC
+    model switch when a process is already running; cross-harness switches clear
+    the incompatible native session and mark the next turn for a bounded local
+    history handoff.
     """
     path = _conversation_file(pool, conversation_id)
     with _LOCK:
         record = _recover_interrupted(pool, _read_json(path))
         if record["status"] == "running":
             raise ConversationConflict("conversation has a running turn")
-        if model is None or (isinstance(model, str) and not model.strip()):
-            record.update({"model": None, "updated_at": _now()})
+        old_provider = record["provider"]
+        target_provider = provider or old_provider
+        if target_provider not in conversation_providers.SUPPORTED:
+            raise ValueError(f"unsupported provider: {target_provider}")
+        if model is None and entry is None:
+            target = _resolve_target(target_provider, model=None)
         else:
-            record.update({"model": _resolve_model(record["provider"], model),
-                           "updated_at": _now()})
-        _write_json(path, record)
-        if record["provider"] == "pi":
-            folder = _conversation_dir(pool, conversation_id)
+            target = _resolve_target(target_provider, model=model, entry=entry)
+        folder = _conversation_dir(pool, conversation_id)
+        process = None
+        if old_provider == "pi":
+            process = PI_RPC.active().get(str(folder))
+        if old_provider == target_provider == "pi" and process is not None:
+            parts = _pi_model_parts(target.get("model"))
+            if parts:
+                try:
+                    process.set_model(*parts)
+                except pi_rpc.PiRpcError:
+                    process = PI_RPC.discard(str(folder), process)
+                    if process is not None:
+                        process.close()
+        elif old_provider == "pi":
             process = PI_RPC.discard(str(folder))
             if process is not None:
                 process.close()
+        if old_provider != target_provider:
+            record["provider_session_id"] = None
+            record["handoff_from"] = old_provider
+        record.update({
+            "provider": target_provider,
+            "model": target.get("model"),
+            "model_entry": target.get("entry"),
+            "model_args": list(target.get("args", [])),
+            "updated_at": _now(),
+        })
+        _write_json(path, record)
     return record
 
 
@@ -496,7 +533,10 @@ def _prompt(message, context):
         "不要擅自删掉不合格的条目，也不要向学生声称已写入。若上下文含 last_check_outcome："
         "成功则不要重复提交相同内容，并按提示补齐学生要求但尚未导入的章；"
         "被拒收则按逐条原因修正后重新提交完整区块。\n\n"
-        "服务端重建的当前上下文：\n"
+        + ("模型/Agent 已切换。下面 conversation_handoff 是 Lesson Kit 本地镜像的最近历史；"
+           "请把它作为连续对话上下文，不要声称你能恢复旧 harness 的私有状态。\n"
+           if context.get("conversation_handoff") else "")
+        + "服务端重建的当前上下文：\n"
         + json.dumps(context, ensure_ascii=False, indent=2)
         + "\n\n学生消息：\n"
         + message
@@ -638,6 +678,32 @@ def _run_turn_safely(*args):
             _finish(folder, conversation_id, turn_id, "failed", f"provider turn failed: {exc}")
 
 
+def _handoff_history(folder, limit=8, max_chars=12000):
+    """Bounded local transcript for the first turn after a harness switch."""
+    transcript = folder / "transcript.jsonl"
+    try:
+        rows = [
+            json.loads(line)
+            for line in transcript.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ][-limit:]
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return []
+    history = []
+    used = 0
+    for row in reversed(rows):
+        pair = [
+            {"role": "user", "content": str(row.get("user") or "")},
+            {"role": "assistant", "content": str(row.get("assistant") or "")},
+        ]
+        size = sum(len(item["content"]) for item in pair)
+        if history and used + size > max_chars:
+            break
+        history[0:0] = pair
+        used += size
+    return history
+
+
 def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, context):
     folder = jobs_dir / conversation_id
     conversation_path = folder / "conversation.json"
@@ -647,10 +713,14 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     conversation = _read_json(conversation_path)
     try:
         provider = conversation_providers.get(conversation["provider"])
-        if conversation.get("model"):
-            # The conversation's own model wins: an in-chat switch takes effect
-            # on the next turn, whatever the bridges.json default says.
-            provider = {**provider, "model": conversation["model"]}
+        provider = {
+            **provider,
+            "model": conversation.get("model"),
+            "args": list(conversation.get("model_args") or provider.get("args", [])),
+        }
+        if conversation.get("handoff_from"):
+            context = dict(context)
+            context["conversation_handoff"] = _handoff_history(folder)
         if conversation["provider"] != "pi":
             command = conversation_providers.build_command(
                 provider, conversation.get("provider_session_id")
@@ -916,6 +986,9 @@ def _store_answer(folder, conversation_path, turn_path, event_path, root, worksp
             )
 
     conversation = _read_json(conversation_path)
+    if conversation.pop("handoff_from", None) is not None:
+        conversation["updated_at"] = _now()
+        _write_json(conversation_path, conversation)
     turn = _read_json(turn_path)
     if content_actions:
         turn["actions"] = content_actions
