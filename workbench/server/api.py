@@ -457,11 +457,14 @@ def attempt_record(pool, workspace, params, body):
             or practice_position < 0
         ):
             raise ApiError(400, "practice_position must be a non-negative integer")
+        stuck = body.get("stuck", False)
+        if not isinstance(stuck, bool):
+            raise ApiError(400, "stuck must be a boolean")
         return attempts_data.record_browser_attempt(
             pool, problem_id, answer_text=answer_text,
             verdict=None if verdict is None else int(verdict), choices=choices,
             request_id=_browser_request_id(body),
-            practice_position=practice_position)
+            practice_position=practice_position, stuck=stuck)
     except attempts_data.RequestConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except attempts_data.ManifestError as exc:
