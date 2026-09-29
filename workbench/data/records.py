@@ -156,6 +156,82 @@ def _rating_distribution(conn, problem_id, linked_feedback):
     return [{"rating": rating, "count": counts[rating]} for rating in counts]
 
 
+def _practice_sets(conn, limit):
+    if "practice_runs" not in _tables(conn):
+        return []
+    feedback_columns = {
+        row[1] for row in conn.execute("PRAGMA table_info(feedback_events)")
+    }
+    linked_feedback = "attempt_id" in feedback_columns
+    rows = conn.execute(
+        "SELECT * FROM practice_runs "
+        "WHERE source_kind='practice_set' AND status='completed' "
+        "ORDER BY id DESC LIMIT ?",
+        (limit,),
+    ).fetchall()
+    groups = {}
+    for row in rows:
+        record = dict(row)
+        source_ref = record.get("source_ref")
+        if not source_ref:
+            continue
+        try:
+            items = json.loads(record.get("items_json") or "[]")
+        except json.JSONDecodeError:
+            items = []
+        attempt_ids = [
+            item.get("attempt_id")
+            for item in items
+            if isinstance(item.get("attempt_id"), int)
+        ]
+        judged = correct = 0
+        average_rating = None
+        if attempt_ids:
+            marks = ",".join(["?"] * len(attempt_ids))
+            judged, correct = conn.execute(
+                f"SELECT COUNT(verdict), COALESCE(SUM(verdict = 1), 0) "
+                f"FROM problem_attempts WHERE id IN ({marks})",
+                attempt_ids,
+            ).fetchone()
+            if linked_feedback:
+                average_rating = conn.execute(
+                    f"SELECT AVG(rating) FROM feedback_events "
+                    f"WHERE attempt_id IN ({marks}) AND rating IS NOT NULL",
+                    attempt_ids,
+                ).fetchone()[0]
+        signature = tuple(
+            (
+                item.get("item_type"),
+                item.get("item_id"),
+                item.get("direction") or "",
+            )
+            for item in items
+        )
+        group = groups.setdefault(source_ref, {
+            "source_ref": source_ref,
+            "source_label": record.get("source_label") or f"试卷 {source_ref}",
+            "runs": [],
+            "_signatures": set(),
+        })
+        group["_signatures"].add(signature)
+        group["runs"].append({
+            "run_id": record["id"],
+            "finished_at": record.get("finished_at"),
+            "judged": judged,
+            "correct": correct,
+            "accuracy": (correct / judged) if judged else None,
+            "average_rating": average_rating,
+            "stuck": sum(item.get("state") == "stuck" for item in items),
+        })
+    result = []
+    for group in groups.values():
+        signatures = group.pop("_signatures")
+        group["count"] = len(group["runs"])
+        group["content_changed"] = len(signatures) > 1
+        result.append(group)
+    return result
+
+
 def overview(pool, limit=100, problem_id=None):
     """Return attempts plus the small derived views used by the records page."""
     conn = pool.connect()
@@ -218,4 +294,5 @@ def overview(pool, limit=100, problem_id=None):
         "ratings": _rating_distribution(conn, problem_id, linked),
         "active_run": active_run,
         "runs": runs,
+        "practice_sets": _practice_sets(conn, limit),
     }
