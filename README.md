@@ -103,6 +103,7 @@ directory, so run them from the repository root.
   relation-gap signals used by Focus Map.
 - `problem_progress`: current durable problem status.
 - `problem_attempts`: append-only durable problem interaction history.
+- `practice_runs`: minimal completed/abandoned practice snapshots used by the records center; per-problem evidence stays in attempts/feedback.
 - `flash_cards`: governed two-sided study content linked to one knowledge point.
 - `review_schedule`: background due ordering for problems, knowledge points,
   and cards; it never locks content.
