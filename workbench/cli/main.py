@@ -627,6 +627,15 @@ def cmd_data(args):
             return 1 if result["findings"] else 0
         if not args.entity:
             raise ValueError(f"data {args.action} requires an entity")
+        if args.action in ("check", "apply"):
+            if args.entity != "relation":
+                raise ValueError("data check/apply is supported only for relation")
+            from workbench.data import relations
+            manifest = _json_input(args.input)
+            result = (relations.check(pool, manifest) if args.action == "check"
+                      else relations.apply(pool, manifest))
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0 if result["valid"] else 2
         if args.action == "get":
             result = content.get(pool, args.entity, args.target)
         elif args.action == "list":
@@ -1063,7 +1072,8 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("name")
     p.add_argument(
         "action",
-        choices=["get", "list", "search", "history", "create", "update", "delete", "state", "audit"],
+        choices=["get", "list", "search", "history", "create", "update", "delete",
+                 "state", "audit", "check", "apply"],
     )
     p.add_argument("entity", nargs="?", choices=["kp", "problem", "relation"])
     p.add_argument("target", nargs="?")
