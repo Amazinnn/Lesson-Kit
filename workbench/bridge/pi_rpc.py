@@ -207,6 +207,23 @@ class PiRpcProcess:
         self._pending = []
         return pending
 
+    def available_models(self):
+        """Return Pi's configured runtime model objects."""
+        data = self.request({"type": "get_available_models"}, HANDSHAKE_SECONDS)
+        models = data.get("models") if isinstance(data, dict) else None
+        return [item for item in (models or []) if isinstance(item, dict)]
+
+    def set_model(self, provider, model_id):
+        """Switch the live Pi process without discarding its native session."""
+        if not isinstance(provider, str) or not provider:
+            raise PiRpcError("model provider is required")
+        if not isinstance(model_id, str) or not model_id:
+            raise PiRpcError("model id is required")
+        return self.request(
+            {"type": "set_model", "provider": provider, "modelId": model_id},
+            HANDSHAKE_SECONDS,
+        )
+
     def prompt(self, message):
         """Accept one prompt; returns after acceptance, not completion."""
         try:
