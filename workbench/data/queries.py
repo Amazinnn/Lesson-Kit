@@ -179,8 +179,7 @@ def kp_detail(pool, kp_id):
 
 
 def graph_model(pool, signal_weights=None):
-    """Compose the graph view. signal_weights maps kp_id -> strongest weight;
-    the caller aggregates signals via the Domain layer (Data imports no Domain)."""
+    """Compose a graph view without changing relation semantics."""
     prefix = pool.scope_prefix()
     kps = pool.kps(prefix)
     ids = {kp["kp_id"] for kp in kps}
@@ -211,20 +210,45 @@ def graph_model(pool, signal_weights=None):
         }
         for kp in kps
     ]
-    edges = {}
+
+    edges = []
+    formal_pairs = set()
     for relation in pool.relations():
         source = relation["source_kp_id"]
         target = relation["target_kp_id"]
-        if source in ids and target in ids:
-            _merge_graph_edge(
-                edges, source, target, relation["relation_type"],
-                relation.get("strength") or "medium",
-            )
+        if source not in ids or target not in ids or source == target:
+            continue
+        formal_pairs.add(frozenset((source, target)))
+        edges.append({
+            "id": relation["relation_id"],
+            "source": source,
+            "target": target,
+            "relation_type": relation["relation_type"],
+            "direction": relation.get("direction") or "directed",
+            "strength": _graph_strength(relation.get("strength")),
+        })
+
+    legacy_pairs = set()
     for kp in kps:
-        for related in json.loads(kp.get("related_kp_ids") or "[]"):
-            if related in ids:
-                _merge_graph_edge(edges, kp["kp_id"], related, "related", "medium")
-    for edge in edges.values():
+        source = kp["kp_id"]
+        for target in json.loads(kp.get("related_kp_ids") or "[]"):
+            if target not in ids or source == target:
+                continue
+            pair = frozenset((source, target))
+            if pair in formal_pairs or pair in legacy_pairs:
+                continue
+            legacy_pairs.add(pair)
+            first, second = sorted((source, target))
+            edges.append({
+                "id": f"legacy:{first}:{second}",
+                "source": first,
+                "target": second,
+                "relation_type": "related",
+                "direction": "symmetric",
+                "strength": "low",
+            })
+
+    for edge in edges:
         shared = sum(
             1 for kp_ids in problem_kps
             if edge["source"] in kp_ids and edge["target"] in kp_ids
@@ -232,25 +256,11 @@ def graph_model(pool, signal_weights=None):
         edge["shared_problem_count"] = shared
         coefficient = {"low": 0.75, "medium": 1.0, "high": 1.25}[edge["strength"]]
         edge["attraction"] = coefficient * min(1.5, 1 + shared * 0.1)
-    return {"nodes": nodes, "edges": list(edges.values())}
+    return {"nodes": nodes, "edges": edges}
 
 
-def _merge_graph_edge(edges, source, target, relation_type, strength):
-    if source == target:
-        return
-    source, target = sorted((source, target))
-    key = (source, target)
-    strength = strength if strength in {"low", "medium", "high"} else "medium"
-    rank = {"low": 0, "medium": 1, "high": 2}
-    current = edges.get(key)
-    if current is None:
-        edges[key] = {
-            "source": source, "target": target,
-            "relation_type": relation_type, "strength": strength,
-        }
-    elif rank[strength] > rank[current["strength"]]:
-        current["strength"] = strength
-        current["relation_type"] = relation_type
+def _graph_strength(value):
+    return value if value in {"low", "medium", "high"} else "medium"
 
 
 def figures_list(pool):
