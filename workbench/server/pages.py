@@ -506,16 +506,17 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     )
 
 
-def records_page(workspace, workspaces, weak_items, pool, problem_id=None):
-    """The learner's practice history, newest first."""
-    overview = queries.records_overview(pool, limit=100, problem_id=problem_id)
-    subtitle = "按题目过滤" if problem_id else "最近 100 条，新在上"
+def records_page(workspace, workspaces, weak_items, pool, problem_id=None, view="overview"):
+    """Dedicated history center: runs, papers, attempts, and derived views."""
+    limit = 500 if view in {"attempts", "wrong"} else 100
+    overview = queries.records_overview(pool, limit=limit, problem_id=problem_id)
     middle = (
         _page_header(
-            "练习 / 做题记录", subtitle,
-            "每一次作答都会留档：作答内容、客观题判定与你的评分。",
+            "学习 / 记录", "记录",
+            "练习轮次、试卷作答和逐题记录都在这里；统计只从已有学习记录实时计算。",
         )
-        + records_view.content(workspace["name"], overview)
+        + records_view.content(
+            workspace["name"], overview, view=view, problem_id=problem_id)
     )
     return shell(workspace, workspaces, weak_items, middle, "records",
                  page_type="records", kp_titles=None)
@@ -555,7 +556,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         ("practice-sets", "组卷"),
         ("kps", "知识点"),
         ("graph", "知识图谱"),
-        ("records", "做题记录"),
+        ("records", "记录"),
     ]
     nav = "".join(
         f"<div class='nav-item {'active' if key == active_nav else ''}'>"
