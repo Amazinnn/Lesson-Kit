@@ -609,6 +609,31 @@ class ConversationProviderTests(unittest.TestCase):
 
     @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
     @mock.patch("workbench.bridge.conversation_providers.shutil.which")
+    def test_named_entries_do_not_hide_other_discovered_harnesses(
+            self, which, load_bridges):
+        from workbench.bridge import conversation_providers
+
+        which.return_value = None
+        load_bridges.return_value = {
+            "providers": {
+                "pi": {"command": "pi"},
+                "codex": {"command": "codex"},
+            },
+            "models": [
+                {"name": "Qwen", "provider": "pi", "model": "qwen/qwen3-coder",
+                 "args": ["--no-tools"]},
+            ],
+        }
+
+        entries = conversation_providers.discover_entries()
+
+        self.assertEqual([entry["name"] for entry in entries], ["Qwen", "codex"])
+        self.assertEqual(entries[0]["args"], ["--no-tools"])
+        self.assertEqual(entries[1]["provider"], "codex")
+        self.assertEqual(entries[1]["source"], "default")
+
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_bridges")
+    @mock.patch("workbench.bridge.conversation_providers.shutil.which")
     def test_without_named_entries_the_picker_falls_back_to_harnesses(
             self, which, load_bridges):
         from workbench.bridge import conversation_providers
