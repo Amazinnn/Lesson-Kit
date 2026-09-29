@@ -428,3 +428,113 @@ test("state clusters reheat in memory and clear without changing membership", ()
   assert.equal(simulation.clustered, false);
   assert.equal(simulation.nodes.every((node) => node.clusterTargetX === null), true);
 });
+
+
+test("prerequisite relations create stable top-to-bottom hierarchy levels", () => {
+  const nodes = [
+    { id: "a", title: "A", problem_count: 1 },
+    { id: "b", title: "B", problem_count: 1 },
+    { id: "c", title: "C", problem_count: 1 },
+  ];
+  const edges = [
+    { id: "r1", source: "a", target: "b", relation_type: "prerequisite",
+      direction: "directed", attraction: 1.25 },
+    { id: "r2", source: "b", target: "c", relation_type: "prerequisite",
+      direction: "directed", attraction: 1.25 },
+  ];
+  const graph = physics.layoutHierarchy(nodes, edges, 800, 600, "structure");
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  assert.equal(graph.hierarchical, true);
+  assert.ok(byId.get("a").y < byId.get("b").y);
+  assert.ok(byId.get("b").y < byId.get("c").y);
+  assert.equal(byId.get("a").hierarchyLevel, 0);
+  assert.equal(byId.get("b").hierarchyLevel, 1);
+  assert.equal(byId.get("c").hierarchyLevel, 2);
+});
+
+test("non-prerequisite relations do not invent hierarchy", () => {
+  const graph = physics.layoutHierarchy(
+    [
+      { id: "a", title: "A", problem_count: 1 },
+      { id: "b", title: "B", problem_count: 1 },
+    ],
+    [
+      { id: "r1", source: "a", target: "b", relation_type: "contrasts",
+        direction: "symmetric", attraction: 1 },
+    ],
+    800, 600, "structure",
+  );
+  assert.equal(graph.nodes[0].hierarchyLevel, 0);
+  assert.equal(graph.nodes[1].hierarchyLevel, 0);
+  assert.equal(graph.nodes[0].y, graph.nodes[1].y);
+});
+
+test("prerequisite cycles remain finite and share a stable level", () => {
+  const graph = physics.layoutHierarchy(
+    [
+      { id: "a", title: "A", problem_count: 1 },
+      { id: "b", title: "B", problem_count: 1 },
+      { id: "c", title: "C", problem_count: 1 },
+    ],
+    [
+      { source: "a", target: "b", relation_type: "prerequisite", direction: "directed" },
+      { source: "b", target: "c", relation_type: "prerequisite", direction: "directed" },
+      { source: "c", target: "a", relation_type: "prerequisite", direction: "directed" },
+    ],
+    800, 600, "structure",
+  );
+  const levels = new Set(graph.nodes.map((node) => node.hierarchyLevel));
+  assert.equal(levels.size, 1);
+  graph.nodes.forEach((node) => {
+    assert.ok(Number.isFinite(node.x));
+    assert.ok(Number.isFinite(node.y));
+  });
+});
+
+test("metric projection reorders within a level without destroying hierarchy", () => {
+  const graph = physics.layoutHierarchy(
+    [
+      { id: "a", title: "A", problem_count: 1, importance: "supplementary" },
+      { id: "b", title: "B", problem_count: 8, importance: "core" },
+      { id: "c", title: "C", problem_count: 2, importance: "supplementary" },
+    ],
+    [
+      { source: "a", target: "c", relation_type: "prerequisite", direction: "directed" },
+      { source: "b", target: "c", relation_type: "prerequisite", direction: "directed" },
+    ],
+    800, 600, "structure",
+  );
+  const before = new Map(graph.nodes.map((node) => [node.id, {
+    level: node.hierarchyLevel, y: node.y,
+  }]));
+  physics.applyHierarchyProjection(graph, "problem_count");
+  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
+  graph.nodes.forEach((node) => {
+    assert.equal(node.hierarchyLevel, before.get(node.id).level);
+    assert.equal(node.y, before.get(node.id).y);
+  });
+  assert.ok(byId.get("b").x < byId.get("a").x,
+    "larger metric should sort earlier inside the same hierarchy level");
+});
+
+test("parallel relations receive deterministic distinct curve slots", () => {
+  const graph = physics.layoutHierarchy(
+    [{ id: "a" }, { id: "b" }],
+    [
+      { id: "r2", source: "a", target: "b", relation_type: "applies_to",
+        direction: "directed" },
+      { id: "r1", source: "a", target: "b", relation_type: "prerequisite",
+        direction: "directed" },
+    ],
+    800, 600, "structure",
+  );
+  assert.equal(graph.edges.length, 2);
+  assert.deepEqual(
+    graph.edges.map((edge) => edge.parallelCount),
+    [2, 2],
+  );
+  assert.deepEqual(
+    new Set(graph.edges.map((edge) => edge.parallelIndex)),
+    new Set([0, 1]),
+  );
+});
