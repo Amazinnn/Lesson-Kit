@@ -235,6 +235,10 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 html_body = pages.session_end_page(
                     workspace, workspaces, weak_items, kp_titles,
                 )
+            elif page == "practice-sets":
+                html_body = pages.practice_sets_page(
+                    workspace, workspaces, weak_items, pool, kp_titles,
+                )
             elif page == "records":
                 query = parse_qs(urlsplit(self.path).query)
                 problem_id = (query.get("problem") or [None])[0]
