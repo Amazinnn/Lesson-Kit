@@ -82,11 +82,19 @@ class SavedPracticeSetTests(unittest.TestCase):
 
         self.assertEqual(started["source_kind"], "practice_set")
         self.assertEqual(started["source_ref"], "ps-001")
+        self.assertEqual(started["source_label"], "卷子")
         self.assertEqual(
             [item["item_id"] for item in started["items"]],
             ["dmath-ch06-prob-002", "dmath-ch06-prob-001"],
         )
-        self.assertIsNotNone(active_practice.current(self.pool))
+        active_practice.mark(self.pool, 0, "stuck")
+        active_practice.mark(self.pool, 1, "stuck")
+        archived = self.pool.connect().execute(
+            "SELECT source_ref, source_label, status FROM practice_runs"
+        ).fetchone()
+        self.assertEqual(
+            tuple(archived), ("ps-001", "卷子", "completed"))
+        self.assertIsNone(active_practice.current(self.pool))
 
     def test_deleting_a_paper_does_not_delete_attempt_history(self):
         from workbench.data import attempts, practice_sets
