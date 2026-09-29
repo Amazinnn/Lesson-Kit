@@ -663,5 +663,77 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertEqual(conversation_providers.discover_entries(), [])
 
 
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_models")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    @mock.patch("workbench.bridge.conversation_providers.subprocess.run")
+    def test_codex_models_are_enumerated_from_app_server(
+            self, run, get_provider, load_models):
+        from workbench.bridge import conversation_providers
+
+        get_provider.return_value = {
+            "name": "codex", "command": "codex", "args": [], "model": None,
+        }
+        load_models.return_value = []
+        run.return_value = mock.Mock(
+            stdout='{"id":1,"result":{}}\n'
+                   '{"id":2,"result":{"data":['
+                   '{"id":"gpt-a","model":"gpt-a","displayName":"GPT A",'
+                   '"hidden":false,"isDefault":true},'
+                   '{"id":"hidden","model":"hidden","displayName":"Hidden",'
+                   '"hidden":true,"isDefault":false}]}}\n',
+            stderr="", returncode=0,
+        )
+
+        entries = conversation_providers.list_models("codex")
+
+        self.assertEqual(
+            [(item["name"], item["model"]) for item in entries],
+            [("GPT A", "gpt-a"), ("codex 默认", None)],
+        )
+        command = run.call_args.args[0]
+        self.assertEqual(command[-1], "app-server")
+
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_models")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_claude_models_are_enumerated_inside_the_claude_harness(
+            self, get_provider, load_models):
+        from workbench.bridge import conversation_providers
+
+        get_provider.return_value = {
+            "name": "claude", "command": "claude", "args": [], "model": None,
+        }
+        load_models.return_value = []
+
+        entries = conversation_providers.list_models("claude")
+
+        self.assertTrue(entries)
+        self.assertTrue(all(item["provider"] == "claude" for item in entries))
+        models = {item["model"] for item in entries}
+        self.assertIn("claude-sonnet-5", models)
+        self.assertIn("claude-opus-5-5", models)
+
+    @mock.patch("workbench.bridge.conversation_providers.registry.load_models")
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_pi_runtime_models_stay_inside_the_pi_harness(
+            self, get_provider, load_models):
+        from workbench.bridge import conversation_providers
+
+        get_provider.return_value = {
+            "name": "pi", "command": "pi", "args": [], "model": None,
+        }
+        load_models.return_value = []
+
+        entries = conversation_providers.list_models("pi", runtime_models=[
+            {"provider": "openai", "id": "gpt-test", "name": "GPT Test"},
+            {"provider": "qwen", "id": "coder", "name": "Coder"},
+        ])
+
+        self.assertEqual(
+            [item["model"] for item in entries[:2]],
+            ["openai/gpt-test", "qwen/coder"],
+        )
+        self.assertTrue(all(item["provider"] == "pi" for item in entries))
+
+
 if __name__ == "__main__":
     unittest.main()
