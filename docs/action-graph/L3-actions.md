@@ -37,7 +37,7 @@
 |---|---|---|---|---|
 | feedback 四件套 | API/CLI | 双 | 事件/信号/状态/调度（可带 `attempt_id` 链回那次作答） | 已实现 |
 | 浏览器作答落库（提交即写，判定/选项同存；不碰信号·状态·进度·调度） | API `POST /attempts` / UI 提交 | 双 | attempts（status `answered`） | 已实现（2026-09-26） |
-| 做题记录视图（导航第四页；按题过滤；练习页「历史作答」折叠段） | UI / API `GET /records` | 浏（CLI 侧为 `attempts list`） | —（只读） | 已实现（2026-09-26） |
+| 记录中心（概览/练习·试卷/作答明细/错题四视图；按题过滤；练习页「历史作答」折叠段） | UI / API `GET /records` | 浏（CLI 侧为 `attempts list`） | —（只读） | 已实现（2026-09-26 建，2026-09-29 扩为记录中心） |
 | practice 尝试记录（CLI 与页面同一事务、同一存在性校验） | API/CLI | 双 | attempts + progress + schedule（单事务） | 已实现（2026-09-25 对齐） |
 | 闪卡反馈与方向（CLI 补齐 card/direction） | API/CLI | 双 | 四件套（含方向调度键） | 已实现（2026-09-25 对齐） |
 | 目标变更失效每日计划缓存（CLI 与 API 同一 helper） | API/CLI | 双 | plan.json（删除） | 已实现（2026-09-25 对齐） |
@@ -180,6 +180,10 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
 - 2026-09-25 原地改题（in-place-problem-edits）：新增 problem-patch 动作与批量通道（见上表），单题入口 `data update problem` 扩到 `practice_modes`/整份 `micro_quiz`/来源三字段/`answer_key`；`data update` 对不认识的字段名不再静默丢弃、`data delete` 删不存在的题号不再假装成功；客观题题干上限 200→800 字。补丁回滚是写回旧值，学习记录与题号一起保住。
 - 2026-09-26 取消客观题题干上限：真题里的长篇单选/多选（多断言、长情境、内联选项块）不再因长度被退回综合题，摄入门禁与 `problem-patch` 同步取消长度校验。
 - 2026-09-29 内容身份去重与只读题库审计（content-dedup-and-audit）：同一课程内题干完整规范化后跨来源、跨章节去重；`data <ws> audit` 报告重复、片段、未标客观题、缺标题与图片问题；回滚 apply 后状态变动时先拒绝且不创建备份。
+- 2026-09-29 记录中心 groundwork（records-center）：左侧「记录」扩为独立记录中心——概览（作答量 14 天趋势、
+  正确率、1–5 自评分布实时聚合）、练习 / 试卷（`practice_runs` 最小快照：临时练习 / 试卷名 / Agent 练习）、
+  作答明细（载入上限 500 条并如实提示截断）、错题（客观判错或卡住）；旧池迁移补 `practice_runs` 与
+  `active_practice.source_label`，行数据零改动。
 - 2026-09-26 做题记录 + 来源筛选 + 模型条目（attempt-records-filters-and-model-entries）：
   练习回路新增「来源筛选浮窗」，记录与调度新增两条（浏览器作答落库、做题记录视图），
   Agent 桥新增两条（模型条目配置、对话内切换模型）并修正「新建会话」的措辞（harness 锁定、

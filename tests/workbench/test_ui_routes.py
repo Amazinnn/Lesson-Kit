@@ -823,6 +823,78 @@ class UiRouteTests(unittest.TestCase):
             self.fetch_json(f"/api/w/{missing}/weak")
         self.assertEqual(api_error.exception.code, 404)
 
+    def _seed_records_history(self):
+        """One wrong attempt plus one completed practice run."""
+        import sys
+
+        from tests.workbench.fixtures import REPO_ROOT
+
+        sys.path.insert(0, str(REPO_ROOT / "workbench"))
+        from workbench.server import api
+        from workbench.data import active_practice
+
+        pool = api._pool_for({
+            "path": str(self.fixture.ws),
+            "db": "pool/dmath.db",
+            "active_course": "dmath",
+            "active_chapter": "ch06",
+        })
+        try:
+            pool.insert_attempt(
+                "dmath-ch06-prob-001", "answered", answer_text="答错的内容",
+                verdict=0, choices=["A"])
+            active_practice.create(pool, {
+                "source_kind": "quick",
+                "kp_ids": ["dmath-ch06-kp-001"],
+                "practice_mode": "exam",
+                "rating_mode": "immediate",
+                "items": [{"item_type": "problem",
+                           "item_id": "dmath-ch06-prob-001"}],
+            })
+            active_practice.mark(pool, 0, "stuck")
+        finally:
+            pool.close()
+
+    def test_records_page_serves_all_views_from_one_route(self):
+        self._seed_records_history()
+
+        status, overview = self.fetch("/w/dmath/records")
+        self.assertEqual(status, 200)
+        self.assertIn("record-tabs", overview)
+        for label in ("概览", "练习 / 试卷", "作答明细", "错题"):
+            self.assertIn(label, overview)
+        self.assertIn("最近 14 天", overview)
+
+        status, runs = self.fetch("/w/dmath/records?view=runs")
+        self.assertEqual(status, 200)
+        self.assertIn("已完成", runs)
+        self.assertIn("临时练习", runs)
+        self.assertIn("1 个不会", runs)
+
+        status, attempts = self.fetch("/w/dmath/records?view=attempts")
+        self.assertEqual(status, 200)
+        self.assertIn("1 条已载入", attempts)
+        self.assertIn("答错的内容", attempts)
+
+        status, wrong = self.fetch("/w/dmath/records?view=wrong")
+        self.assertEqual(status, 200)
+        self.assertIn("1 条客观判错或卡住的记录", wrong)
+        self.assertIn("答错的内容", wrong)
+
+    def test_records_view_falls_back_to_overview_on_unknown_view(self):
+        status, body = self.fetch("/w/dmath/records?view=bogus")
+        self.assertEqual(status, 200)
+        self.assertIn("最近 14 天", body)
+        self.assertNotIn("view=bogus", body)
+
+    def test_records_page_notes_a_single_problem_filter(self):
+        self._seed_records_history()
+        status, body = self.fetch(
+            "/w/dmath/records?view=attempts&problem=dmath-ch06-prob-001")
+        self.assertEqual(status, 200)
+        self.assertIn("正在按单题过滤", body)
+        self.assertIn("查看全部记录", body)
+
 
 if __name__ == "__main__":
     unittest.main()

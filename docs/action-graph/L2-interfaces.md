@@ -19,7 +19,7 @@
 | POST `/pull-cards` | 读 | 拉卡（direction_mode + 独立方向排除） | 双 |
 | POST `/practice` | 写 | practice 记录 | 双 |
 | POST `/attempts` | 写 | 尝试（浏览器每次提交落一条：作答+选项+判定，不碰进度与调度） | 双 |
-| GET `/records` | 读 | 做题记录页（服务端渲染最近 100 条） | 浏 |
+| GET `/records` | 读 | 记录中心页（概览/练习·试卷/作答明细/错题，`?view=` 切换、`?problem=` 过滤） | 浏 |
 | POST `/feedback` | 写 | 四件套（可带 `attempt_id` 链回本次作答） | 双 |
 | GET `/problem/{id}` · GET `/kp/{id}` | 读 | 查询 | 双 |
 | GET `/graph/model` · POST `/graph/state` · POST `/graph/kp` | 读/写 | 查询+图谱编辑 | 浏（模型可双） |
