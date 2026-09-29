@@ -1,4 +1,4 @@
-"""Run the dependency-free graph physics checks as part of pytest."""
+"""Run the dependency-free graph layout checks as part of pytest."""
 
 import subprocess
 from pathlib import Path
