@@ -36,7 +36,7 @@ LOG = POSITIONAL[1] if len(POSITIONAL) > 1 else ""
 SESSION = "pi-rpc-session-1"
 
 _OUT = threading.Lock()
-_STATE = {"prompt_count": 0, "aborted": False}
+_STATE = {"prompt_count": 0, "aborted": False, "model": {"provider": "deepseek", "id": "deepseek-v4-flash"}}
 USAGE = {"input": 10, "output": 2, "cacheRead": 0, "cacheWrite": 0,
          "totalTokens": 12, "cost": {"input": 0, "output": 0, "total": 0}}
 
@@ -163,6 +163,17 @@ for command in read_commands():
             "sessionId": SESSION, "isStreaming": False,
             "messageCount": _STATE["prompt_count"],
         })
+    elif kind == "get_available_models":
+        respond(request_id, kind, data={"models": [
+            {"provider": "deepseek", "id": "deepseek-v4-flash", "name": "DeepSeek V4"},
+            {"provider": "qwen", "id": "qwen3-coder", "name": "Qwen3 Coder"},
+        ]})
+    elif kind == "set_model":
+        provider = command.get("provider")
+        model_id = command.get("modelId")
+        _STATE["model"] = {"provider": provider, "id": model_id}
+        log({"event": "set-model", "pid": os.getpid(), "provider": provider, "model": model_id})
+        respond(request_id, kind, data=_STATE["model"])
     elif kind == "prompt":
         _STATE["prompt_count"] += 1
         count = _STATE["prompt_count"]
