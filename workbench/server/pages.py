@@ -176,6 +176,7 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<select id='practice-count'><option value='5'>5</option><option value='10' selected>10</option>"
         "<option value='20'>20</option></select></label>"
         "<button id='start-practice' class='primary' disabled>开始本轮练习</button>"
+        "<button id='save-practice-set' class='outline' type='button' disabled>保存为试卷</button>"
         "<button id='filter-launch' class='outline' type='button' aria-expanded='false'>来源筛选<span id='filter-count' class='filter-count-active hidden'></span></button>"
         "</div>"
         "<div id='filter-popup' class='filter-popup card hidden' aria-label='来源筛选'></div></section>"
@@ -443,6 +444,67 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
     )
 
 
+def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
+    """Saved papers: stable problem collections, never execution progress."""
+    from workbench.data import practice_sets as practice_sets_data
+
+    cards = []
+    for record in practice_sets_data.list_saved(pool):
+        rows = []
+        for index, item in enumerate(record["plan"]["items"]):
+            problem = pool.problem(item["problem_id"]) or {}
+            title = problem.get("display_title") or problem.get("problem_text") or item["problem_id"]
+            rows.append(
+                "<li class='practice-set-item' data-problem-id='"
+                + html.escape(item["problem_id"]) + "'>"
+                + "<span class='practice-set-item-index'>" + str(index + 1) + "</span>"
+                + "<span class='practice-set-item-title'>" + html.escape(str(title)[:120]) + "</span>"
+                + "<span class='practice-set-item-actions'>"
+                + "<button class='ghost sm' type='button' data-set-up aria-label='上移题目'>↑</button>"
+                + "<button class='ghost sm' type='button' data-set-down aria-label='下移题目'>↓</button>"
+                + "<button class='ghost sm' type='button' data-set-remove>移除</button>"
+                + "</span></li>"
+            )
+        cards.append(
+            "<article class='practice-set-card card' data-practice-set-id='"
+            + html.escape(record["practice_set_id"]) + "'>"
+            + "<header class='practice-set-card-head'><div>"
+            + "<p class='section-kicker'>试卷</p><h2>"
+            + html.escape(record["title"]) + "</h2><p class='muted'>"
+            + str(record["count"]) + " 题 · 只保存题目与顺序</p></div>"
+            + "<div class='practice-set-card-actions'>"
+            + "<button class='primary sm' type='button' data-set-start>开始练习</button>"
+            + "<button class='outline sm' type='button' data-set-rename>改名</button>"
+            + "<button class='outline sm' type='button' data-set-export>导出</button>"
+            + "<button class='ghost sm' type='button' data-set-delete>删除</button>"
+            + "</div></header>"
+            + "<ol class='practice-set-items'>" + "".join(rows) + "</ol>"
+            + "<p class='inline-error practice-set-status hidden' aria-live='polite'></p>"
+            + "</article>"
+        )
+    empty = (
+        "<section class='card practice-set-empty'><h2>还没有试卷</h2>"
+        "<p class='muted'>去练习页选题后，可直接练习，也可保存为试卷再编辑。</p>"
+        "<a class='primary button-link' href='/w/" + html.escape(workspace["name"])
+        + "/practice'>去选题</a></section>"
+    )
+    middle = (
+        _page_header(
+            "练习 / 组卷", "组卷",
+            "试卷只保存题目与顺序；开始后仍进入同一个练习执行过程。",
+            "<a class='outline button-link' href='/w/"
+            + html.escape(workspace["name"]) + "/practice'>去练习页选题</a>",
+        )
+        + "<div class='page-content'><section id='practice-set-list' class='practice-set-list'>"
+        + ("".join(cards) if cards else empty)
+        + "</section></div>"
+    )
+    return shell(
+        workspace, workspaces, weak_items, middle, "practice-sets",
+        page_type="practice-sets", kp_titles=kp_titles,
+    )
+
+
 def records_page(workspace, workspaces, weak_items, pool, problem_id=None):
     """The learner's practice history, newest first, rendered server-side."""
     from workbench.data import queries as queries_mod
@@ -526,6 +588,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     )
     nav_items = [
         ("practice", "练习"),
+        ("practice-sets", "组卷"),
         ("kps", "知识点"),
         ("graph", "知识图谱"),
         ("records", "做题记录"),
