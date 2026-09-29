@@ -218,6 +218,7 @@ class FakeStorage {
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
   reducedMotion = false, physics = GraphPhysics, setTimeoutFn = () => 0,
+  promptFn = undefined, confirmFn = undefined,
 }) {
   const document = {
     hidden: false,
@@ -253,6 +254,8 @@ function runWorkbench({
     addEventListener() {},
     scrollTo() {},
     matchMedia() { return { matches: reducedMotion }; },
+    prompt: promptFn,
+    confirm: confirmFn,
   };
   const sandbox = {
     document,
@@ -336,6 +339,7 @@ function practiceElements() {
 function durablePracticeElements() {
   const elements = practiceElements();
   elements["practice-count"] = new FakeElement("practice-count", { value: "10" });
+  elements["save-practice-set"] = new FakeElement("save-practice-set");
   elements["active-practice-resume"] = new FakeElement("active-practice-resume");
   elements["active-practice-title"] = new FakeElement("active-practice-title");
   elements["active-practice-meta"] = new FakeElement("active-practice-meta");
@@ -430,6 +434,58 @@ test("corrupt session state is discarded instead of breaking page startup", () =
     fetch: () => jsonResponse([]),
   });
   assert.equal(storage.getItem("wb_session_alpha"), null);
+});
+
+test("saving a paper reuses the same fixed problem selection contract", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const storage = new FakeStorage({
+    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+    wb_practice_filters_alpha: JSON.stringify({
+      source_kinds: ["final"], exam_years: ["2024"], docs: [], picked: {},
+    }),
+  });
+  const app = runWorkbench({
+    elements, storage, promptFn: () => "期中热身卷",
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current")) return jsonResponse({ practice: null });
+      if (url.endsWith("/pull")) return jsonResponse({ problems: [
+        { problem_id: "p-1", problem_text: "题一" },
+        { problem_id: "p-2", problem_text: "题二" },
+      ] });
+      if (url.endsWith("/practice-sets")) return jsonResponse({
+        practice_set_id: "ps-001", title: "期中热身卷", count: 2,
+      });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  elements["practice-mode-exam"] = elements["practice-mode-exam"]
+    || new FakeElement("practice-mode-exam");
+  // The durable helper is used by older-mode controls; choose the legacy exam
+  // surface explicitly through its immediate mode.
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["save-practice-set"].click();
+  await flush();
+  await flush();
+
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.ok(pull);
+  const request = JSON.parse(pull.options.body);
+  assert.equal(request.n, 10);
+  assert.deepEqual(request.filters, {
+    source_kinds: ["final"], exam_years: ["2024"],
+  });
+  const save = calls.find((call) =>
+    call.url.endsWith("/practice-sets") && call.options && call.options.method === "POST");
+  assert.ok(save);
+  const body = JSON.parse(save.options.body);
+  assert.equal(body.title, "期中热身卷");
+  assert.deepEqual(body.problem_ids, ["p-1", "p-2"]);
+  assert.deepEqual(body.request, request);
+  assert.equal(app.window.location, "/w/alpha/practice-sets");
 });
 
 test("durable practice freezes the whole selected set before execution", async () => {
