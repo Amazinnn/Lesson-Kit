@@ -10,6 +10,9 @@ const SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/workbench.js"), "utf8",
 );
 const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
+const PRACTICE_FLOW_SOURCE = fs.readFileSync(
+  path.resolve(__dirname, "../../workbench/server/static/practice-flow.js"), "utf8",
+);
 
 class ClassList {
   constructor() { this.values = new Set(); }
@@ -93,11 +96,14 @@ function setup(fetch) {
     matchMedia() { return { matches: false }; },
     prompt() { return "我的会话"; }, confirm() { return true; },
   };
-  vm.runInNewContext(SOURCE, {
+  const sandbox = {
     document, window, fetch, PracticeDeck, sessionStorage: new Storage(), localStorage: new Storage(), console,
     setInterval, clearInterval, setTimeout, clearTimeout, requestAnimationFrame: (callback) => setImmediate(() => callback(0)),
     cancelAnimationFrame: clearImmediate,
-  }, { filename: "workbench.js" });
+  };
+  const context = vm.createContext(sandbox);
+  vm.runInContext(PRACTICE_FLOW_SOURCE, context, { filename: "practice-flow.js" });
+  vm.runInContext(SOURCE, context, { filename: "workbench.js" });
   return { elements, window };
 }
 

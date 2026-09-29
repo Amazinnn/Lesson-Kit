@@ -242,7 +242,13 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='graph-detail-tab'", body)
         self.assertIn("id='ai-teacher-tab'", body)
         self.assertIn("<script src='/static/graph-physics.js'></script>", body)
+        self.assertIn("<script src='/static/practice-flow.js'></script>", body)
         self.assertNotIn("<iframe", body)
+
+    def test_practice_flow_static_module_is_served(self):
+        status, body = self.fetch("/static/practice-flow.js")
+        self.assertEqual(status, 200)
+        self.assertIn("PracticeFlow", body)
 
     def test_graph_artifact_route_serves_raw_html(self):
         graph = (self.fixture.ws / "output" / "dmath" / "ch06"

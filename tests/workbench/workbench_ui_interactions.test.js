@@ -7,6 +7,9 @@ const test = require("node:test");
 const vm = require("node:vm");
 const GraphPhysics = require("../../workbench/server/static/graph-physics.js");
 const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
+const PRACTICE_FLOW_SOURCE = fs.readFileSync(
+  path.resolve(__dirname, "../../workbench/server/static/practice-flow.js"), "utf8",
+);
 
 function savedRequestBody(call) {
   const body = JSON.parse(call.options.body);
@@ -251,7 +254,7 @@ function runWorkbench({
     scrollTo() {},
     matchMedia() { return { matches: reducedMotion }; },
   };
-  vm.runInNewContext(SOURCE, {
+  const sandbox = {
     document,
     window,
     GraphPhysics: physics,
@@ -269,7 +272,10 @@ function runWorkbench({
       return setImmediate(() => callback(0));
     },
     cancelAnimationFrame(handle) { clearImmediate(handle); },
-  }, { filename: "workbench.js" });
+  };
+  const context = vm.createContext(sandbox);
+  vm.runInContext(PRACTICE_FLOW_SOURCE, context, { filename: "practice-flow.js" });
+  vm.runInContext(SOURCE, context, { filename: "workbench.js" });
   return { elements, storage, window, document, get rafCalls() { return rafCalls; } };
 }
 
