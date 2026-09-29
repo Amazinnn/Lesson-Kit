@@ -160,6 +160,37 @@ class ActivePracticeTests(unittest.TestCase):
         self.assertEqual(rows[0]["source_label"], "临时练习")
         self.assertIn('"state": "stuck"', rows[0]["items_json"])
 
+    def test_archived_practice_can_be_replayed_without_new_history_fields(self):
+        from workbench.data import active_practice
+
+        active_practice.create(self.pool, {
+            "source_kind": "quick",
+            "kp_ids": ["dmath-ch06-kp-001"],
+            "practice_mode": "exam",
+            "rating_mode": "immediate",
+            "items": [{"item_type": "problem", "item_id": "dmath-ch06-prob-001"}],
+        })
+        active_practice.mark(self.pool, 0, "stuck")
+        run_id = self.pool.connect().execute(
+            "SELECT id FROM practice_runs ORDER BY id DESC LIMIT 1"
+        ).fetchone()["id"]
+
+        replayed = active_practice.replay(self.pool, run_id)
+        self.assertEqual(replayed["source_kind"], "quick")
+        self.assertEqual(
+            [item["item_id"] for item in replayed["items"]],
+            ["dmath-ch06-prob-001"],
+        )
+        self.assertEqual(replayed["progress"]["remaining"], 1)
+
+        active_practice.clear(self.pool)
+        self.pool.connect().execute(
+            "UPDATE practice_runs SET items_json=? WHERE id=?",
+            ('[{"item_type":"problem","item_id":"missing-problem","direction":""}]', run_id),
+        )
+        with self.assertRaisesRegex(active_practice.ActivePracticeError, "unknown problem"):
+            active_practice.replay(self.pool, run_id)
+
     def test_routes_expose_the_single_current_practice_resource(self):
         from workbench.server import app
 
@@ -168,6 +199,10 @@ class ActivePracticeTests(unittest.TestCase):
             if pattern == "/api/w/{name}/practice/current"
         }
         self.assertEqual(methods, {"GET", "POST", "PATCH", "DELETE"})
+        self.assertIn(
+            ("POST", "/api/w/{name}/practice/runs/{run_id}/replay"),
+            {(method, pattern) for method, pattern, _handler in app.ROUTES},
+        )
 
 
 if __name__ == "__main__":
