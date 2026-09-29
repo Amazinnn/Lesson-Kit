@@ -613,58 +613,67 @@ re-importing the problem.
 - **WHEN** a content prompt is composed for an active workspace
 - **THEN** it states that in-place patching keeps the problem id and learning records, that the batch can be rolled back, and that splitting options out of an old stem is preferred over deleting and re-importing
 
-### Requirement: Runtime model catalog
+### Requirement: Per-harness model catalog
 
-The Bridge SHALL expose one selectable model catalog across all discovered Agent
-harnesses. Configured named entries SHALL preserve their display name, harness,
-model id, and optional extra arguments. Configuring entries for one harness SHALL
-NOT hide another discovered harness: every uncovered harness SHALL retain one
-default target.
+The Bridge SHALL discover Agent harnesses independently from the models available
+inside each harness. A conversation SHALL choose exactly one harness at creation,
+and model enumeration SHALL never make that conversation selectable as another
+harness.
 
-For Pi, the server SHALL augment configured targets with the models reported by
-Pi's runtime RPC `get_available_models` command. Runtime discovery failure SHALL
-fall back to the configured/default catalog rather than making Agent chat
-unavailable. Codex and Claude SHALL continue to use configured/default targets
-unless they expose a stable machine-readable model catalog.
+Configured named entries SHALL preserve their display name, model id, harness,
+and optional extra arguments. Each available harness SHALL expose a model list
+through one bridge contract:
 
-#### Scenario: Configured Pi models do not hide Codex
+- Codex SHALL query its supported app-server `model/list` RPC and MAY fall back
+  to its local model cache when runtime discovery is unavailable.
+- Claude Code SHALL expose its supported model catalog plus configured named
+  entries.
+- Pi SHALL augment configured targets with models reported by
+  `get_available_models`.
 
-- **WHEN** Pi has named model entries and Codex is also discovered
-- **THEN** the picker contains the Pi entries and a Codex default target
+Discovery failure SHALL degrade to configured/default targets for that harness,
+not remove unrelated harnesses or make Agent chat unavailable.
+
+#### Scenario: Codex runtime models are enumerated
+
+- **WHEN** Codex app-server returns picker-visible models
+- **THEN** the Codex harness exposes those models without requiring duplicate Lesson Kit configuration
+
+#### Scenario: Claude model choices stay in Claude
+
+- **WHEN** Claude Code is discovered
+- **THEN** its supported Claude model choices are exposed under the Claude harness only
 
 #### Scenario: Pi runtime models appear without manual duplication
 
 - **WHEN** Pi reports configured models through `get_available_models`
-- **THEN** models not already represented in the catalog are added as Pi runtime targets
+- **THEN** models not already represented by configured Pi entries are added as Pi runtime choices
 
 #### Scenario: Runtime discovery is best effort
 
-- **WHEN** Pi model discovery cannot start or answer
-- **THEN** the picker still returns the configured/default targets for available harnesses
+- **WHEN** a harness-specific model discovery mechanism cannot answer
+- **THEN** that harness retains its configured/default target and other harnesses are unaffected
 
-### Requirement: A conversation carries a model target
+### Requirement: Conversation harness is immutable
 
-A Lesson Kit conversation SHALL be a logical local conversation independent of
-any one provider-native session. It SHALL record the active harness, model,
-configured entry identity, and entry-specific arguments needed to launch the
-target. Existing conversation records that contain only `provider` and `model`
-SHALL remain readable.
+A Lesson Kit conversation SHALL record the harness selected at creation together
+with its current model, configured entry identity, and entry-specific arguments.
+Existing conversation records that contain only `provider` and `model` SHALL
+remain readable.
 
-The in-chat selector SHALL offer all currently available model targets, not only
-targets belonging to the active harness. Switching SHALL be refused while a turn
-is running and SHALL take effect on the next turn.
+The harness SHALL be immutable for the lifetime of the conversation. An attempt
+to PATCH or otherwise switch a conversation to a different harness SHALL be
+rejected and SHALL NOT alter its native session pointer, transcript, or local
+conversation id. A learner who wants another harness SHALL create another
+conversation.
 
-For an active Pi RPC process, a switch to a provider-qualified Pi model SHALL use
-Pi's native `set_model` RPC command first so the process and native session can
-continue. If live switching is unavailable, the Bridge MAY recycle the Pi
-process and resume the saved native session. A cross-harness switch SHALL clear
-the incompatible provider-native session. A non-Pi model switch that cannot
-safely reuse its native session SHALL also start a fresh native segment.
-
-Whenever a fresh native segment is required, the Bridge SHALL retain the local
-Lesson Kit transcript and provide a bounded recent-history handoff on the first
-turn of the new segment. That handoff SHALL be removed after a successful turn.
-The Bridge SHALL NOT claim that provider-private state was transferred.
+The in-chat selector SHALL offer only models belonging to the conversation's
+harness. Same-harness switching SHALL be refused while a turn is running and
+SHALL take effect on the next turn. Codex and Claude MAY resume the same native
+session with the newly selected model. For an active Pi RPC process, a
+provider-qualified model switch SHALL use Pi's native `set_model` RPC first;
+if live switching is unavailable, the process MAY be recycled while the same
+conversation/harness binding remains.
 
 #### Scenario: Named entry arguments survive selection
 
@@ -676,18 +685,18 @@ The Bridge SHALL NOT claim that provider-private state was transferred.
 - **WHEN** an idle Pi conversation has a live RPC process and the learner selects another provider-qualified Pi model
 - **THEN** the Bridge calls `set_model` and keeps that process when Pi accepts the switch
 
-#### Scenario: The learner switches harnesses in one chat
+#### Scenario: Cross-harness switch is refused
 
-- **WHEN** an idle conversation changes from Pi to Codex, Codex to Claude, or another discovered harness transition
-- **THEN** the local conversation id and transcript stay unchanged, the incompatible native session is cleared, and the next turn runs on the selected harness
+- **WHEN** a Codex conversation is asked to become Claude or Pi, or any equivalent harness transition is requested
+- **THEN** the request is rejected and the conversation remains bound to its original harness and native session
 
-#### Scenario: Fresh native segment receives a bounded handoff
+#### Scenario: In-chat choices are harness-local
 
-- **WHEN** a target switch starts a new provider-native session
-- **THEN** the next prompt includes bounded recent user/assistant history from the local mirror and no claim of transferred private provider state
+- **WHEN** a conversation is bound to Claude Code
+- **THEN** its model selector contains Claude Code models and no Codex or Pi targets
 
 #### Scenario: Default-model reset is a real update
 
 - **WHEN** the browser PATCHes a conversation with `"model": null`
-- **THEN** the request is accepted as a target update rather than rejected as an empty PATCH
+- **THEN** the request is accepted as a same-harness model update rather than rejected as an empty PATCH
 
