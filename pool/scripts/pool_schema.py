@@ -522,6 +522,44 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         )
         changes.append("practice_request_operations")
 
+    if not table_exists(conn, "active_practice"):
+        conn.execute(
+            """
+            CREATE TABLE active_practice (
+                singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+                source_kind TEXT NOT NULL CHECK (
+                    source_kind IN ('quick', 'practice_set', 'agent')
+                ),
+                source_ref TEXT,
+                kp_ids_json TEXT NOT NULL DEFAULT '[]',
+                practice_mode TEXT NOT NULL,
+                rating_mode TEXT NOT NULL,
+                cursor INTEGER NOT NULL DEFAULT 0 CHECK (cursor >= 0),
+                started_at TEXT NOT NULL DEFAULT (datetime('now')),
+                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        changes.append("active_practice")
+
+    if not table_exists(conn, "active_practice_items"):
+        conn.execute(
+            """
+            CREATE TABLE active_practice_items (
+                position INTEGER PRIMARY KEY CHECK (position >= 0),
+                item_type TEXT NOT NULL CHECK (item_type IN ('problem', 'card')),
+                item_id TEXT NOT NULL,
+                direction TEXT NOT NULL DEFAULT '',
+                state TEXT NOT NULL DEFAULT 'pending' CHECK (
+                    state IN ('pending', 'answered', 'stuck')
+                ),
+                attempt_id INTEGER REFERENCES problem_attempts(id),
+                UNIQUE (item_type, item_id, direction)
+            )
+            """
+        )
+        changes.append("active_practice_items")
+
     if not table_exists(conn, "learning_current_state"):
         conn.execute(
             """
