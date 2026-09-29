@@ -54,6 +54,25 @@ class RecordsBoundaryTests(unittest.TestCase):
         wrong = records_view.content("dmath", overview, view="wrong")
         self.assertIn("my answer", wrong)
 
+    def test_attempt_views_admit_truncation_at_the_load_limit(self):
+        from workbench.data import records
+        from workbench.server import records as records_view
+
+        self.pool.insert_attempt("dmath-ch06-prob-001", "answered")
+        overview = records.overview(self.pool)
+
+        capped = records_view.content(
+            "dmath", overview, view="attempts", limit=1)
+        self.assertIn("已载入最近 1 条", capped)
+        self.assertIn("更早的记录未显示", capped)
+        wrong_capped = records_view.content(
+            "dmath", overview, view="wrong", limit=1)
+        self.assertIn("已载入最近 1 条", wrong_capped)
+
+        roomy = records_view.content(
+            "dmath", overview, view="attempts", limit=50)
+        self.assertNotIn("更早的记录未显示", roomy)
+
 
 if __name__ == "__main__":
     unittest.main()

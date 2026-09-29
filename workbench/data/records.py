@@ -25,7 +25,9 @@ def _run_summary(record, *, run_id=None, status=None, finished_at=None):
         "source_ref": record.get("source_ref"),
         "source_label": record.get("source_label") or (
             f"试卷 {record.get('source_ref')}" if record.get("source_kind") == "practice_set"
-            and record.get("source_ref") else "临时练习"
+            and record.get("source_ref")
+            else "Agent 练习" if record.get("source_kind") == "agent"
+            else "临时练习"
         ),
         "practice_mode": record.get("practice_mode"),
         "rating_mode": record.get("rating_mode"),

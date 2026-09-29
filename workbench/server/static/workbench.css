@@ -1194,12 +1194,6 @@ img { max-width: 100%; }
 }
 
 @media (max-width: 640px) {
-  .record-summary-grid,
-  .record-dashboard-grid { grid-template-columns: 1fr; }
-  .record-trend { gap: 2px; }
-  .record-day-label { font-size: 8px; }
-  .record-run header { display: block; }
-  .record-run time { display: block; margin-top: 4px; }
   .flash-direction-choice { grid-template-columns: 1fr; }
   .flash-card-stage { padding-right: 3%; padding-left: 3%; }
   .flash-card-stage.is-revealed .flash-card-prompt { transform: translate(-3%, 8px) rotate(-3deg); }
@@ -1531,3 +1525,13 @@ img { max-width: 100%; }
 .filter-popup .filter-search-results { max-height: 180px; overflow: auto; margin-top: 6px; }
 .filter-popup .filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 .filter-count-active { background: var(--dsw-interactive-bg-hover); border-radius: 999px; padding: 0 8px; font-size: 12px; }
+
+/* 记录中心窄屏覆盖必须排在基础样式之后（同优先级后写的赢） */
+@media (max-width: 640px) {
+  .record-summary-grid,
+  .record-dashboard-grid { grid-template-columns: 1fr; }
+  .record-trend { gap: 2px; }
+  .record-day-label { font-size: 8px; }
+  .record-run header { display: block; }
+  .record-run time { display: block; margin-top: 4px; }
+}
