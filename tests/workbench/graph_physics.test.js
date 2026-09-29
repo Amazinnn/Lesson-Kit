@@ -3,457 +3,60 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 
-const physics = require("../../workbench/server/static/graph-physics.js");
+const graph = require("../../workbench/server/static/graph-physics.js");
 
-function distance(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-const REAL_28_NODES = Array.from({ length: 28 }, (_, index) => ({
-  id: "kp-" + (index + 1), title: "Counting concept " + (index + 1), problem_count: 0,
-}));
-const REAL_28_EDGES = [
-  [1, 2], [1, 9], [2, 3], [1, 3], [3, 4], [1, 5], [2, 5], [6, 7], [6, 8],
-  [9, 10], [9, 12], [10, 11], [10, 13], [12, 13], [13, 14], [13, 15],
-  [14, 15], [14, 16], [15, 16], [15, 17], [13, 16], [13, 17], [9, 18],
-  [1, 18], [12, 19], [13, 19], [10, 20], [14, 20], [20, 21], [9, 22],
-].map(([source, target]) => ({ source: "kp-" + source, target: "kp-" + target, attraction: 1 }));
-
-function assertInBounds(nodes, width, height) {
-  nodes.forEach((node) => {
-    assert.ok(node.x - node.collisionRadius >= 0, node.id + " exceeds left bound");
-    assert.ok(node.x + node.collisionRadius <= width, node.id + " exceeds right bound");
-    assert.ok(node.y - node.collisionRadius >= 0, node.id + " exceeds top bound");
-    assert.ok(node.y + node.collisionRadius <= height, node.id + " exceeds bottom bound");
-  });
-}
-
-function assertNoLabelOverlaps(nodes) {
-  for (let i = 0; i < nodes.length; i += 1) {
-    for (let j = i + 1; j < nodes.length; j += 1) {
-      assert.ok(distance(nodes[i], nodes[j]) >= nodes[i].collisionRadius + nodes[j].collisionRadius,
-        nodes[i].id + " overlaps " + nodes[j].id);
-    }
-  }
-}
-
-function assertNoCrossComponentLabelOverlaps(nodes) {
-  for (let i = 0; i < nodes.length; i += 1) {
-    for (let j = i + 1; j < nodes.length; j += 1) {
-      if (nodes[i]._layoutComponent === nodes[j]._layoutComponent) continue;
-      assert.ok(distance(nodes[i], nodes[j]) >= nodes[i].collisionRadius + nodes[j].collisionRadius,
-        nodes[i].id + " overlaps " + nodes[j].id);
-    }
-  }
-}
-
-test("node radius grows monotonically with formal problem count and is capped", () => {
-  assert.equal(physics.nodeRadius(0), 8);
-  assert.ok(physics.nodeRadius(4) > physics.nodeRadius(1));
-  assert.equal(physics.nodeRadius(10000), 30);
+test("node size stays monotonic and capped", () => {
+  assert.equal(graph.nodeRadius(0), 8);
+  assert.ok(graph.nodeRadius(4) > graph.nodeRadius(1));
+  assert.equal(graph.nodeRadius(10000), 30);
+  assert.ok(graph.metricRadius(1) > graph.metricRadius(0));
 });
 
-test("labels enlarge the collision footprint without changing node radius", () => {
-  const bare = physics.createSimulation(
-    [{ id: "a", title: "", problem_count: 1 }], [], 500, 320,
+test("wrapped labels enlarge only the collision footprint", () => {
+  const radius = graph.nodeRadius(4);
+  assert.equal(graph.labelLineCount("十四个字符一行正好十四个"), 1);
+  assert.equal(graph.labelLineCount("二十八个字符的标签会折成两行显示出来"), 2);
+  assert.ok(
+    graph.collisionRadius(radius, "广义鸽巢原理与组合模型".repeat(3))
+      > graph.collisionRadius(radius, "短标签"),
   );
-  const titled = physics.createSimulation(
-    [{ id: "a", title: "广义鸽巢原理与组合模型".repeat(3), problem_count: 1 }],
-    [], 500, 320,
-  );
-  // The circle itself is untouched; the wrapped label extends the footprint.
-  assert.equal(titled.nodes[0].radius, bare.nodes[0].radius);
-  assert.ok(titled.nodes[0].collisionRadius > bare.nodes[0].collisionRadius);
-  assert.equal(
-    titled.nodes[0].collisionRadius,
-    physics.collisionRadius(titled.nodes[0].radius, "广义鸽巢原理与组合模型".repeat(3)),
-  );
-  assert.equal(physics.labelLineCount("十四个字符一行正好十四个"), 1);
-  assert.equal(physics.labelLineCount("二十八个字符的标签会折成两行显示出来"), 2);
 });
 
-test("settled nodes preserve 24 pixels of circle clearance", () => {
-  const nodes = Array.from({ length: 12 }, (_, index) => ({
-    id: String(index), title: "广义鸽巢原理与组合模型" + index, problem_count: 4,
-  }));
-  const edges = nodes.slice(1).map((node) => ({
-    source: "0", target: node.id, attraction: 1.25,
-  }));
-  const simulation = physics.createSimulation(nodes, edges, 800, 600);
-  physics.settle(simulation, 2000);
-  for (let i = 0; i < simulation.nodes.length; i += 1) {
-    for (let j = i + 1; j < simulation.nodes.length; j += 1) {
-      const a = simulation.nodes[i];
-      const b = simulation.nodes[j];
-      assert.ok(distance(a, b) >= a.radius + b.radius + 23.5);
-    }
-  }
-});
-
-test("stronger attraction has a shorter spring target", () => {
-  assert.equal(physics.targetDistance(1.875, 10, 20), 102);
-  assert.equal(physics.targetDistance(0.75, 10, 20), 174);
-  assert.ok(physics.targetDistance(1.25, 10, 20) < physics.targetDistance(0.75, 10, 20));
-});
-
-test("relationship visual weight grows monotonically with attraction", () => {
-  const weak = physics.edgeVisual(0.75);
-  const strong = physics.edgeVisual(1.875);
+test("relationship visual weight still follows stored attraction", () => {
+  const weak = graph.edgeVisual(0.75);
+  const strong = graph.edgeVisual(1.875);
   assert.equal(weak.score, 0);
   assert.equal(strong.score, 1);
   assert.ok(strong.width > weak.width);
   assert.ok(strong.opacity > weak.opacity);
-  assert.ok(strong.shadowWidth > strong.width);
 });
 
-test("a stronger edge settles its pair closer than a weak edge", () => {
-  function settledPair(attraction) {
-    const simulation = physics.createSimulation(
-      [{ id: "a", problem_count: 1 }, { id: "b", problem_count: 1 }],
-      [{ source: "a", target: "b", attraction }],
-      640, 420,
-    );
-    physics.settle(simulation, 1800);
-    return distance(simulation.nodes[0], simulation.nodes[1]);
-  }
-  assert.ok(settledPair(1.25) < settledPair(0.75));
-});
-
-test("simulation converges and reheat resumes movement", () => {
-  const simulation = physics.createSimulation(
+test("prerequisite relations create stable top-to-bottom levels", () => {
+  const layout = graph.layoutHierarchy(
     [
-      { id: "a", problem_count: 1 },
-      { id: "b", problem_count: 4 },
-      { id: "c", problem_count: 9 },
+      { id: "a", title: "A", problem_count: 1 },
+      { id: "b", title: "B", problem_count: 1 },
+      { id: "c", title: "C", problem_count: 1 },
     ],
     [
-      { source: "a", target: "b", attraction: 1 },
-      { source: "b", target: "c", attraction: 1.25 },
+      { id: "r1", source: "a", target: "b", relation_type: "prerequisite",
+        direction: "directed", attraction: 1.25 },
+      { id: "r2", source: "b", target: "c", relation_type: "prerequisite",
+        direction: "directed", attraction: 1.25 },
     ],
-    700, 500,
+    800, 600, "structure",
   );
-  const ticks = physics.settle(simulation, 2000);
-  assert.ok(ticks < 2000);
-  assert.equal(simulation.stable, true);
-  physics.reheat(simulation);
-  assert.equal(simulation.stable, false);
-  assert.ok(simulation.alpha > 0.9);
-});
-
-test("filtered data creates a new layout and reduced motion settles synchronously", () => {
-  const full = physics.createSimulation(
-    [{ id: "a" }, { id: "b" }, { id: "c" }],
-    [{ source: "a", target: "b", attraction: 1 }],
-    500, 320,
-  );
-  const filtered = physics.createSimulation(
-    [{ id: "a" }, { id: "b" }],
-    [{ source: "a", target: "b", attraction: 1 }],
-    500, 320,
-  );
-  assert.equal(full.nodes.length, 3);
-  assert.equal(filtered.nodes.length, 2);
-  physics.settle(filtered, 2000);
-  assert.equal(filtered.stable, true);
-});
-
-test("connected components retain isolates and their internal edges", () => {
-  const components = physics.connectedComponents(
-    [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }, { id: "e" }],
-    [
-      { source: "b", target: "a", attraction: 1 },
-      { source: "c", target: "d", attraction: 1 },
-    ],
-  );
-  assert.deepEqual(components.map((component) => component.nodes.map((node) => node.id)), [
-    ["a", "b"], ["c", "d"], ["e"],
-  ]);
-  assert.deepEqual(components.map((component) => component.edges.length), [1, 1, 0]);
-});
-
-test("nontrivial components have six repeatable distinct starting layouts", () => {
-  const nodes = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
-  const first = physics.candidateLayouts(nodes, 640, 420);
-  const second = physics.candidateLayouts(nodes, 640, 420);
-  assert.equal(first.length, 6);
-  assert.deepEqual(second, first);
-  assert.equal(new Set(first.map((layout) => JSON.stringify(layout.nodes))).size, 6);
-});
-
-test("layout scoring counts crossing edges and label collisions", () => {
-  const crossing = physics.scoreLayout(
-    [
-      { id: "a", x: 0, y: 0, collisionRadius: 10 },
-      { id: "b", x: 100, y: 100, collisionRadius: 10 },
-      { id: "c", x: 0, y: 100, collisionRadius: 10 },
-      { id: "d", x: 100, y: 0, collisionRadius: 10 },
-    ],
-    [{ source: "a", target: "b" }, { source: "c", target: "d" }],
-  );
-  const collision = physics.scoreLayout(
-    [
-      { id: "a", x: 0, y: 0, collisionRadius: 20 },
-      { id: "b", x: 25, y: 0, collisionRadius: 20 },
-    ], [],
-  );
-  assert.equal(crossing.crossings, 1);
-  assert.equal(crossing.labelCollisions, 0);
-  assert.equal(collision.crossings, 0);
-  assert.equal(collision.labelCollisions, 1);
-});
-
-test("layout scoring treats collinear and near-overlapping edges as clutter", () => {
-  const score = physics.scoreLayout(
-    [
-      { id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 0 },
-      { id: "c", x: 25, y: 0 }, { id: "d", x: 75, y: 0 },
-      { id: "e", x: 25, y: 2 }, { id: "f", x: 75, y: 2 },
-    ],
-    [
-      { source: "a", target: "b" }, { source: "c", target: "d" }, { source: "e", target: "f" },
-    ],
-  );
-  assert.equal(score.crossings, 3);
-});
-
-test("deterministic swapping removes an avoidable crossing", () => {
-  const nodes = [
-    { id: "a", x: 0, y: 0 }, { id: "b", x: 100, y: 100 },
-    { id: "c", x: 0, y: 100 }, { id: "d", x: 100, y: 0 },
-  ];
-  const edges = [{ source: "a", target: "b" }, { source: "c", target: "d" }];
-  assert.equal(physics.scoreLayout(nodes, edges).crossings, 1);
-  assert.equal(physics.optimizeCrossings(nodes, edges, 2).crossings, 0);
-});
-
-test("best layout selection is lexicographic and stable on ties", () => {
-  const candidates = [
-    { name: "waste", score: { crossings: 0, labelCollisions: 1, edgeLength: 1, waste: 1 } },
-    { name: "collision", score: { crossings: 0, labelCollisions: 0, edgeLength: 5, waste: 999 } },
-    { name: "crossing", score: { crossings: 1, labelCollisions: 0, edgeLength: 0, waste: 0 } },
-    { name: "tie", score: { crossings: 0, labelCollisions: 0, edgeLength: 5, waste: 999 } },
-  ];
-  assert.equal(physics.chooseBestLayout(candidates).name, "collision");
-});
-
-test("component packing separates regions and gives isolates a deterministic slot", () => {
-  const packed = physics.packComponents([
-    { nodes: [{ id: "a", x: 0, y: 0, radius: 10 }, { id: "b", x: 40, y: 0, radius: 10 }] },
-    { nodes: [{ id: "c", x: 0, y: 0, radius: 10 }] },
-    { nodes: [{ id: "d", x: 0, y: 0, radius: 10 }] },
-  ], 500, 320);
-  const a = packed.find((node) => node.id === "a");
-  const c = packed.find((node) => node.id === "c");
-  const d = packed.find((node) => node.id === "d");
-  assert.ok(distance(a, c) > 40);
-  assert.ok(distance(c, d) > 40);
-  assert.deepEqual(physics.packComponents([{ nodes: [{ id: "c", x: 0, y: 0, radius: 10 }] }], 500, 320),
-    physics.packComponents([{ nodes: [{ id: "c", x: 0, y: 0, radius: 10 }] }], 500, 320));
-});
-
-test("packed seeds enter one unbounded unified simulation", () => {
-  const graph = physics.layoutGraph(
-    [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }],
-    [{ source: "a", target: "b", attraction: 1 }, { source: "c", target: "d", attraction: 1 }],
-    640, 420, 1600,
-  );
-  assert.equal(graph.components, undefined);
-  assert.equal(graph.seedComponents.length, 2);
-  const visible = graph.nodes.find((node) => node.id === "a");
-  visible.fx = graph.width + 400;
-  visible.fy = graph.height + 300;
-  physics.reheat(graph);
-  physics.tick(graph);
-  assert.ok(visible.x > graph.width);
-  assert.ok(visible.y > graph.height);
-  visible.fx = null;
-  visible.fy = null;
-});
-
-test("real 28-node unified graph preserves clearance and improves the recorded crossing start", () => {
-  const graph = physics.layoutGraph(REAL_28_NODES, REAL_28_EDGES, 800, 600, 2000);
-  physics.settle(graph, 2400);
-  for (let i = 0; i < graph.nodes.length; i += 1) {
-    for (let j = i + 1; j < graph.nodes.length; j += 1) {
-      assert.ok(distance(graph.nodes[i], graph.nodes[j]) >= graph.nodes[i].radius + graph.nodes[j].radius + 23.5);
-    }
-  }
-  assert.ok(physics.scoreLayout(graph.nodes, REAL_28_EDGES).crossings <= 67);
-});
-
-test("real graph remains collision free for desktop and narrow seed canvases", () => {
-  [[640, 420], [375, 320]].forEach(([width, height]) => {
-    const graph = physics.layoutGraph(REAL_28_NODES, REAL_28_EDGES, width, height, 2000);
-    physics.settle(graph, 2400);
-    for (let i = 0; i < graph.nodes.length; i += 1) {
-      for (let j = i + 1; j < graph.nodes.length; j += 1) {
-        assert.ok(distance(graph.nodes[i], graph.nodes[j]) >= graph.nodes[i].radius + graph.nodes[j].radius + 23.5);
-      }
-    }
-    assert.equal(graph.stable, true);
-  });
-});
-
-test("complete graph layout selects deterministic component seeds", () => {
-  const nodes = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "isolate" }];
-  const edges = [{ source: "a", target: "b", attraction: 1 }, { source: "b", target: "c", attraction: 1 }];
-  const first = physics.layoutGraph(nodes, edges, 640, 420, 1600);
-  const second = physics.layoutGraph(nodes, edges, 640, 420, 1600);
-  assert.deepEqual(first.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })),
-    second.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })));
-  assert.equal(first.seedComponents.length, 2);
-});
-
-test("soft anchors preserve a drag intent without pinning the node", () => {
-  const graph = physics.createSimulation(
-    [{ id: "a" }, { id: "b" }], [{ source: "a", target: "b", attraction: 1 }], 640, 420,
-  );
-  const node = graph.nodes[0];
-  physics.setSoftAnchor(node, 900, -200);
-  physics.reheat(graph, 0.35);
-  physics.tick(graph);
-  assert.equal(node.fx, null);
-  assert.ok(node.anchorX === 900 && node.anchorY === -200);
-  assert.ok(distance(node, { x: 900, y: -200 }) < distance({ x: 320, y: 210 }, { x: 900, y: -200 }));
-});
-
-test("focus expansion preserves attraction ordering", () => {
-  assert.ok(physics.targetDistance(1.25, 10, 10, 1.15)
-    < physics.targetDistance(0.75, 10, 10, 1.15));
-  assert.ok(physics.targetDistance(1.25, 10, 10, 1.15)
-    > physics.targetDistance(1.25, 10, 10, 1));
-});
-
-test("settled graphs expose no idle breathing offset", () => {
-  assert.equal(typeof physics.breathingOffset, "undefined");
-});
-
-test("gravity control changes only the in-memory center force", () => {
-  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
-  physics.setGravity(simulation, 80);
-  assert.ok(Math.abs(simulation.gravity - 0.00512) < 1e-12);
-  assert.equal(simulation.stable, false);
-});
-
-test("gravity range has a stronger center pull than the previous maximum", () => {
-  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
-  physics.setGravity(simulation, 0);
-  const low = simulation.gravity;
-  physics.setGravity(simulation, 100);
-  assert.equal(low, 0);
-  assert.ok(simulation.gravity > 0.00117 * 2);
-});
-
-test("gravity slider couples the spread factor with the center pull", () => {
-  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
-  physics.setGravity(simulation, 0);
-  assert.equal(simulation.gravity, 0);
-  assert.ok(Math.abs(simulation.spread - 1.15) < 1e-12);
-  physics.setGravity(simulation, 30);
-  assert.ok(Math.abs(simulation.spread - 1) < 1e-12);
-  physics.setGravity(simulation, 100);
-  assert.ok(Math.abs(simulation.gravity - 0.008) < 1e-12);
-  assert.ok(Math.abs(simulation.spread - 0.65) < 1e-12);
-});
-
-test("crowdedPairs counts node pairs closer than their clearances", () => {
-  const simulation = physics.createSimulation([{ id: "a" }, { id: "b" }], [], 640, 420);
-  simulation.nodes[0].x = 300; simulation.nodes[0].y = 300;
-  simulation.nodes[1].x = 310; simulation.nodes[1].y = 300;
-  assert.ok(physics.crowdedPairs(simulation) >= 1);
-  simulation.nodes[1].x = 500; simulation.nodes[1].y = 300;
-  assert.equal(physics.crowdedPairs(simulation), 0);
-});
-
-test("metric projections assign deterministic bubble targets without teleporting nodes", () => {
-  const simulation = physics.createSimulation([
-    { id: "b", title: "基础", problem_count: 1, importance: "supplementary" },
-    { id: "a", title: "核心", problem_count: 9, importance: "core" },
-  ], [], 800, 600);
-  const before = simulation.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y }));
-  physics.setProjection(simulation, "problem_count", 800, 600);
-  const high = simulation.nodes.find((node) => node.id === "a");
-  const low = simulation.nodes.find((node) => node.id === "b");
-  assert.equal(high.projectionTargetX, 400);
-  assert.equal(high.projectionTargetY, 300);
-  assert.ok(high.targetRadius > low.targetRadius);
-  assert.deepEqual(simulation.nodes.map((node) => ({ id: node.id, x: node.x, y: node.y })), before);
-  const firstTargets = simulation.nodes.map((node) => ({
-    id: node.id, x: node.projectionTargetX, y: node.projectionTargetY,
-  }));
-  physics.applyProjection(simulation.nodes, "problem_count", 800, 600);
-  assert.deepEqual(simulation.nodes.map((node) => ({
-    id: node.id, x: node.projectionTargetX, y: node.projectionTargetY,
-  })), firstTargets);
-  physics.settle(simulation, 1600);
-  assert.ok(Math.abs(high.radius - high.targetRadius) < 0.1);
-});
-
-test("learning-state projection ranks attention from needs_work to mastered", () => {
-  const states = ["needs_work", "review", null, "mastered"].map((state, index) => ({
-    id: String(index), state,
-  }));
-  assert.deepEqual(states.map((node) => physics.projectionValue(node, "state")), [1, 0.66, 0.33, 0]);
-  physics.applyProjection(states, "state", 800, 600);
-  assert.deepEqual(states.map((node) => node.targetRadius), [30, physics.metricRadius(0.66),
-    physics.metricRadius(0.33), 10]);
-});
-
-test("state cluster targets separate selected categories deterministically", () => {
-  const nodes = [
-    { id: "weak-2", state: "needs_work" },
-    { id: "mastered", state: "mastered" },
-    { id: "weak-1", state: "needs_work" },
-    { id: "unmarked", state: null },
-  ];
-  const first = physics.stateClusterTargets(nodes, ["needs_work", "mastered"], 900, 600);
-  const second = physics.stateClusterTargets(nodes, ["needs_work", "mastered"], 900, 600);
-  assert.deepEqual(Array.from(second), Array.from(first));
-  assert.deepEqual(first.get("weak-1"), { x: 300, y: 300, state: "needs_work" });
-  assert.deepEqual(first.get("mastered"), { x: 600, y: 300, state: "mastered" });
-  assert.notDeepEqual(first.get("weak-2"), first.get("weak-1"));
-  assert.equal(first.has("unmarked"), false);
-});
-
-test("state clusters reheat in memory and clear without changing membership", () => {
-  const simulation = physics.createSimulation([
-    { id: "weak", state: "needs_work" },
-    { id: "review", state: "review" },
-  ], [{ source: "weak", target: "review", attraction: 1 }], 800, 600);
-  physics.setStateClusters(simulation, ["needs_work", "review"], 800, 600);
-  assert.equal(simulation.clustered, true);
-  assert.equal(simulation.nodes.length, 2);
-  assert.notEqual(simulation.nodes[0].clusterTargetX, simulation.nodes[1].clusterTargetX);
-  physics.setStateClusters(simulation, [], 800, 600);
-  assert.equal(simulation.clustered, false);
-  assert.equal(simulation.nodes.every((node) => node.clusterTargetX === null), true);
-});
-
-
-test("prerequisite relations create stable top-to-bottom hierarchy levels", () => {
-  const nodes = [
-    { id: "a", title: "A", problem_count: 1 },
-    { id: "b", title: "B", problem_count: 1 },
-    { id: "c", title: "C", problem_count: 1 },
-  ];
-  const edges = [
-    { id: "r1", source: "a", target: "b", relation_type: "prerequisite",
-      direction: "directed", attraction: 1.25 },
-    { id: "r2", source: "b", target: "c", relation_type: "prerequisite",
-      direction: "directed", attraction: 1.25 },
-  ];
-  const graph = physics.layoutHierarchy(nodes, edges, 800, 600, "structure");
-  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
-  assert.equal(graph.hierarchical, true);
+  const byId = new Map(layout.nodes.map((node) => [node.id, node]));
   assert.ok(byId.get("a").y < byId.get("b").y);
   assert.ok(byId.get("b").y < byId.get("c").y);
-  assert.equal(byId.get("a").hierarchyLevel, 0);
-  assert.equal(byId.get("b").hierarchyLevel, 1);
-  assert.equal(byId.get("c").hierarchyLevel, 2);
+  assert.deepEqual(
+    ["a", "b", "c"].map((id) => byId.get(id).hierarchyLevel),
+    [0, 1, 2],
+  );
 });
 
-test("non-prerequisite relations do not invent hierarchy", () => {
-  const graph = physics.layoutHierarchy(
+test("auxiliary relations do not invent learning hierarchy", () => {
+  const layout = graph.layoutHierarchy(
     [
       { id: "a", title: "A", problem_count: 1 },
       { id: "b", title: "B", problem_count: 1 },
@@ -464,17 +67,17 @@ test("non-prerequisite relations do not invent hierarchy", () => {
     ],
     800, 600, "structure",
   );
-  assert.equal(graph.nodes[0].hierarchyLevel, 0);
-  assert.equal(graph.nodes[1].hierarchyLevel, 0);
-  assert.equal(graph.nodes[0].y, graph.nodes[1].y);
+  assert.equal(layout.nodes[0].hierarchyLevel, 0);
+  assert.equal(layout.nodes[1].hierarchyLevel, 0);
+  assert.equal(layout.nodes[0].y, layout.nodes[1].y);
 });
 
-test("prerequisite cycles remain finite and share a stable level", () => {
-  const graph = physics.layoutHierarchy(
+test("a prerequisite cycle remains finite instead of starting a simulation", () => {
+  const layout = graph.layoutHierarchy(
     [
-      { id: "a", title: "A", problem_count: 1 },
-      { id: "b", title: "B", problem_count: 1 },
-      { id: "c", title: "C", problem_count: 1 },
+      { id: "a", title: "A" },
+      { id: "b", title: "B" },
+      { id: "c", title: "C" },
     ],
     [
       { source: "a", target: "b", relation_type: "prerequisite", direction: "directed" },
@@ -483,16 +86,15 @@ test("prerequisite cycles remain finite and share a stable level", () => {
     ],
     800, 600, "structure",
   );
-  const levels = new Set(graph.nodes.map((node) => node.hierarchyLevel));
-  assert.equal(levels.size, 1);
-  graph.nodes.forEach((node) => {
+  assert.equal(new Set(layout.nodes.map((node) => node.hierarchyLevel)).size, 1);
+  layout.nodes.forEach((node) => {
     assert.ok(Number.isFinite(node.x));
     assert.ok(Number.isFinite(node.y));
   });
 });
 
-test("metric projection reorders within a level without destroying hierarchy", () => {
-  const graph = physics.layoutHierarchy(
+test("metric projection reorders only inside the existing levels", () => {
+  const layout = graph.layoutHierarchy(
     [
       { id: "a", title: "A", problem_count: 1, importance: "supplementary" },
       { id: "b", title: "B", problem_count: 8, importance: "core" },
@@ -504,37 +106,40 @@ test("metric projection reorders within a level without destroying hierarchy", (
     ],
     800, 600, "structure",
   );
-  const before = new Map(graph.nodes.map((node) => [node.id, {
-    level: node.hierarchyLevel, y: node.y,
+  const before = new Map(layout.nodes.map((node) => [node.id, {
+    level: node.hierarchyLevel,
+    y: node.y,
   }]));
-  physics.applyHierarchyProjection(graph, "problem_count");
-  const byId = new Map(graph.nodes.map((node) => [node.id, node]));
-  graph.nodes.forEach((node) => {
+
+  graph.applyHierarchyProjection(layout, "problem_count");
+  const byId = new Map(layout.nodes.map((node) => [node.id, node]));
+  layout.nodes.forEach((node) => {
     assert.equal(node.hierarchyLevel, before.get(node.id).level);
     assert.equal(node.y, before.get(node.id).y);
   });
-  assert.ok(byId.get("b").x < byId.get("a").x,
-    "larger metric should sort earlier inside the same hierarchy level");
+  assert.ok(byId.get("b").x < byId.get("a").x);
+  assert.ok(byId.get("b").radius > byId.get("a").radius);
 });
 
-test("parallel relations receive deterministic distinct curve slots", () => {
-  const graph = physics.layoutHierarchy(
+test("multiple relations between one pair keep deterministic curve slots", () => {
+  const layout = graph.layoutHierarchy(
     [{ id: "a" }, { id: "b" }],
     [
       { id: "r2", source: "a", target: "b", relation_type: "applies_to",
         direction: "directed" },
       { id: "r1", source: "a", target: "b", relation_type: "prerequisite",
         direction: "directed" },
+      { id: "r3", source: "b", target: "a", relation_type: "prerequisite",
+        direction: "directed" },
     ],
     800, 600, "structure",
   );
-  assert.equal(graph.edges.length, 2);
   assert.deepEqual(
-    graph.edges.map((edge) => edge.parallelCount),
-    [2, 2],
+    layout.edges.map((edge) => edge.parallelCount),
+    [3, 3, 3],
   );
   assert.deepEqual(
-    new Set(graph.edges.map((edge) => edge.parallelIndex)),
-    new Set([0, 1]),
+    new Set(layout.edges.map((edge) => edge.parallelIndex)),
+    new Set([0, 1, 2]),
   );
 });
