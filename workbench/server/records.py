@@ -108,6 +108,66 @@ def _runs(active, runs, limit=None):
     return "".join(items) or "<p class='muted'>还没有完整的练习轮次记录。</p>"
 
 
+def _practice_set_history(practice_sets):
+    if not practice_sets:
+        return ""
+    cards = []
+    for item in practice_sets:
+        runs = item.get("runs") or []
+        latest = runs[0] if runs else {}
+        accuracy = latest.get("accuracy")
+        rating = latest.get("average_rating")
+        meta = [
+            f"已完成 {item.get('count') or 0} 次",
+            "最近正确率 —" if accuracy is None else f"最近正确率 {accuracy * 100:.0f}%",
+            "最近自评 —" if rating is None else f"最近自评 {rating:.1f} / 5",
+            f"最近不会 {latest.get('stuck') or 0} 个",
+        ]
+        history = []
+        for run in runs[:8]:
+            run_accuracy = run.get("accuracy")
+            run_rating = run.get("average_rating")
+            history.append(
+                "<li>"
+                f"<time>{html.escape(str(run.get('finished_at') or ''))}</time>"
+                " · "
+                + (
+                    "正确 —"
+                    if run_accuracy is None
+                    else f"正确 {run.get('correct') or 0}/{run.get('judged') or 0}"
+                )
+                + " · "
+                + (
+                    "自评 —"
+                    if run_rating is None
+                    else f"自评 {run_rating:.1f} / 5"
+                )
+                + f" · 不会 {run.get('stuck') or 0} 个"
+                + "</li>"
+            )
+        changed = (
+            "<p class='record-filter-note'>这张试卷的题目或顺序曾变化；"
+            "下面按每次实际内容分别显示，不合并成一条趋势。</p>"
+            if item.get("content_changed") else ""
+        )
+        cards.append(
+            "<article class='record-run card'>"
+            f"<h3>{html.escape(item.get('source_label') or '未命名试卷')}</h3>"
+            f"<p class='muted'>{html.escape(' · '.join(meta))}</p>"
+            + changed
+            + "<ul>"
+            + "".join(history)
+            + "</ul></article>"
+        )
+    return (
+        "<section class='support-section'><div class='section-heading'><div>"
+        "<p class='section-kicker'>同一试卷</p><h2>多次练习</h2></div>"
+        "<p>只使用每次实际留下的作答、自评和不会记录。</p></div>"
+        + "".join(cards)
+        + "</section>"
+    )
+
+
 def _summary_cards(summary, runs):
     accuracy = summary.get("accuracy")
     average = summary.get("average_rating")
@@ -217,7 +277,8 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
 
     if view == "runs":
         body = (
-            "<section class='support-section'><div class='section-heading'><div>"
+            _practice_set_history(overview.get("practice_sets") or [])
+            + "<section class='support-section'><div class='section-heading'><div>"
             "<p class='section-kicker'>练习 / 试卷</p><h2>每一轮做了什么</h2></div>"
             "<p>完成或替换一轮练习后保留快照；试卷记录保留当时的试卷名称。</p></div>"
             + _runs(active, runs)
