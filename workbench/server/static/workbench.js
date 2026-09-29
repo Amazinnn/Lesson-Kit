@@ -949,7 +949,10 @@
       graphEnteringIds = new Set();
       applyGraphView();
       updateGraphLabels();
-      if (reducedGraphMotion) {
+      if (graphSimulation.hierarchical) {
+        drawGraph();
+        fitGraph();
+      } else if (reducedGraphMotion) {
         GraphPhysics.settle(graphSimulation, 1600);
         settleLabelClearance();
         drawGraph();
@@ -973,10 +976,13 @@
           return Math.hypot(node.x - source.x - ratio * dx,
             node.y - source.y - ratio * dy) < node.radius + 10;
         });
-        var bend = obstructed ? Math.min(28, length * 0.1) : 0;
+        var parallelCount = entry.edge.parallelCount || 1;
+        var parallelIndex = entry.edge.parallelIndex || 0;
+        var parallelBend = (parallelIndex - (parallelCount - 1) / 2) * 20;
+        var bend = parallelBend + (obstructed ? Math.min(28, length * 0.1) : 0);
         var controlX = (source.x + target.x) / 2 - dy / length * bend;
         var controlY = (source.y + target.y) / 2 + dx / length * bend;
-        var path = bend ? "M " + source.x + " " + source.y
+        var path = Math.abs(bend) > 0.1 ? "M " + source.x + " " + source.y
           + " Q " + controlX + " " + controlY + " " + target.x + " " + target.y
           : "M " + source.x + " " + source.y + " L " + target.x + " " + target.y;
         entry.paths.forEach(function (layer) { layer.setAttribute("d", path); });
@@ -1079,7 +1085,13 @@
     }
 
     function runGraphSimulation() {
-      if (!graphSimulation || reducedGraphMotion || graphFrame !== null) return;
+      if (!graphSimulation) return;
+      if (graphSimulation.hierarchical) {
+        drawGraph();
+        if (graphAutoFit) fitGraph();
+        return;
+      }
+      if (reducedGraphMotion || graphFrame !== null) return;
       graphRecovered = false;
       graphRelaxed = false;
       function frame() {
@@ -1127,9 +1139,15 @@
       var maxX = Math.max.apply(null, xs) + 48;
       var minY = Math.min.apply(null, ys) - 48;
       var maxY = Math.max.apply(null, ys) + 68;
-      graphView.scale = 1;
-      graphView.x = (graphCanvas.clientWidth - (minX + maxX) * graphView.scale) / 2;
-      graphView.y = (graphCanvas.clientHeight - (minY + maxY) * graphView.scale) / 2;
+      var contentWidth = Math.max(1, maxX - minX);
+      var contentHeight = Math.max(1, maxY - minY);
+      var scaleX = Math.max(0.35, (graphCanvas.clientWidth - 32) / contentWidth);
+      var scaleY = Math.max(0.35, (graphCanvas.clientHeight - 32) / contentHeight);
+      graphView.scale = Math.max(0.35, Math.min(1.15, scaleX, scaleY));
+      graphView.x = graphCanvas.clientWidth / 2
+        - ((minX + maxX) / 2) * graphView.scale;
+      graphView.y = graphCanvas.clientHeight / 2
+        - ((minY + maxY) / 2) * graphView.scale;
       graphAutoFit = false;
       if (graphStage) {
         graphStage.classList.add("graph-fit-anim");
@@ -1207,29 +1225,27 @@
       graphProjectionSelect.addEventListener("mouseleave", hideGraphProjectionHint);
       graphProjectionSelect.addEventListener("blur", hideGraphProjectionHint);
       graphProjectionSelect.addEventListener("change", function () {
-      graphProjection = graphProjectionSelect.value || "structure";
-      updateGraphProjectionHint();
-      if (!graphSimulation) return;
-      var structurePositions = null;
-      if (graphProjection === "structure") {
-        var structure = GraphPhysics.layoutGraph(
-          graphSimulation.nodes, graphSimulation.edges,
-          graphCanvas.clientWidth, graphCanvas.clientHeight,
+        graphProjection = graphProjectionSelect.value || "structure";
+        updateGraphProjectionHint();
+        if (!graphSimulation) return;
+        if (graphSimulation.hierarchical) {
+          GraphPhysics.applyHierarchyProjection(graphSimulation, graphProjection);
+          graphSimulation.nodes.forEach(updateGraphNodeAppearance);
+          drawGraph();
+          return;
+        }
+        GraphPhysics.setProjection(
+          graphSimulation, graphProjection,
+          graphCanvas.clientWidth, graphCanvas.clientHeight, null,
         );
-        structurePositions = new Map(structure.nodes.map(function (node) {
-          return [node.id, { x: node.x, y: node.y }];
-        }));
-      }
-      GraphPhysics.setProjection(graphSimulation, graphProjection,
-        graphCanvas.clientWidth, graphCanvas.clientHeight, structurePositions);
-      graphSimulation.nodes.forEach(updateGraphNodeAppearance);
-      if (reducedGraphMotion) {
-        GraphPhysics.settle(graphSimulation, 1600);
-        settleLabelClearance();
-        drawGraph();
-      } else {
-        runGraphSimulation();
-      }
+        graphSimulation.nodes.forEach(updateGraphNodeAppearance);
+        if (reducedGraphMotion) {
+          GraphPhysics.settle(graphSimulation, 1600);
+          settleLabelClearance();
+          drawGraph();
+        } else {
+          runGraphSimulation();
+        }
       });
     }
     if (zoomIn) zoomIn.addEventListener("click", function () {
@@ -1261,8 +1277,14 @@
         var rect = graphCanvas.getBoundingClientRect();
         draggedNode.fx = (event.clientX - rect.left - graphView.x) / graphView.scale;
         draggedNode.fy = (event.clientY - rect.top - graphView.y) / graphView.scale;
-        GraphPhysics.reheat(graphSimulation);
-        runGraphSimulation();
+        if (graphSimulation.hierarchical) {
+          draggedNode.x = draggedNode.fx;
+          draggedNode.y = draggedNode.fy;
+          drawGraph();
+        } else {
+          GraphPhysics.reheat(graphSimulation);
+          runGraphSimulation();
+        }
       } else if (panStart) {
         graphView.x = panStart.viewX + event.clientX - panStart.x;
         graphView.y = panStart.viewY + event.clientY - panStart.y;
@@ -1271,11 +1293,17 @@
     });
     graphCanvas.addEventListener("pointerup", function () {
       if (draggedNode) {
-        GraphPhysics.setSoftAnchor(draggedNode, draggedNode.fx, draggedNode.fy);
-        draggedNode.fx = null;
-        draggedNode.fy = null;
-        GraphPhysics.reheat(graphSimulation);
-        runGraphSimulation();
+        if (!graphSimulation.hierarchical) {
+          GraphPhysics.setSoftAnchor(draggedNode, draggedNode.fx, draggedNode.fy);
+          draggedNode.fx = null;
+          draggedNode.fy = null;
+          GraphPhysics.reheat(graphSimulation);
+          runGraphSimulation();
+        } else {
+          draggedNode.fx = null;
+          draggedNode.fy = null;
+          drawGraph();
+        }
       }
       draggedNode = null;
       panStart = null;
