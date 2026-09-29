@@ -163,6 +163,31 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='practice-rating-immediate'", body)
         self.assertIn("id='practice-rating-batch'", body)
 
+    def test_practice_page_exposes_direct_practice_and_save_as_paper(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='start-practice'", body)
+        self.assertIn("id='save-practice-set'", body)
+        self.assertIn("保存为试卷", body)
+
+    def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
+        status, saved = self.request_json(
+            "POST", "/api/w/dmath/practice-sets",
+            {"title": "第六章热身卷", "problem_ids": ["dmath-ch06-prob-001"]},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(saved["practice_set_id"], "ps-001")
+
+        status, body = self.fetch("/w/dmath/practice-sets")
+        self.assertEqual(status, 200)
+        self.assertIn("data-page='practice-sets'", body)
+        self.assertIn("data-practice-set-id='ps-001'", body)
+        self.assertIn("第六章热身卷", body)
+        self.assertIn("data-problem-id='dmath-ch06-prob-001'", body)
+        self.assertIn("data-set-start", body)
+        self.assertIn("data-set-export", body)
+        self.assertNotIn("7 / 10", body)
+
     def test_session_end_page_mentions_cards(self):
         status, body = self.fetch("/w/dmath/session-end")
         self.assertEqual(status, 200)
@@ -402,6 +427,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn(">练习<", body)
         self.assertIn(">知识点<", body)
         self.assertIn(">知识图谱<", body)
+        self.assertIn(">组卷<", body)
 
     def test_kps_page_lists_knowledge_points(self):
         status, body = self.fetch("/w/dmath/kps")
