@@ -1468,12 +1468,27 @@
   }
 
 
+    function selectionContext() {
+      return {
+        kp_ids: currentKps().slice(),
+        practice_mode: selectedContentMode() || (legacyModeControls ? "exam" : ""),
+        count: selectedCount(),
+        filters: {
+          source_kinds: (filterState.source_kinds || []).slice(),
+          exam_years: (filterState.exam_years || []).slice(),
+          docs: (filterState.docs || []).slice(),
+          picked_problem_ids: Object.keys(filterState.picked || {}),
+        },
+      };
+    }
+
     return {
       currentProblem: currentProblem,
       session: session,
       visiblePracticeImages: visiblePracticeImages,
       draftAnswer: function () { return answerBox ? answerBox.value : ""; },
       draftNote: function () { return feedbackNote ? feedbackNote.value : ""; },
+      selectionContext: selectionContext,
     };
   }
 
