@@ -151,6 +151,11 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         + "<div class='practice-main'>"
         + _daily_plan(plan)
         + _staged_practice_html(workspace["name"], suggestions or [], kp_titles or {})
+        + "<section id='active-practice-resume' class='active-practice-resume card hidden' aria-live='polite'>"
+        "<div><p class='section-kicker'>继续上次练习</p><h2 id='active-practice-title'>未完成练习</h2>"
+        "<p id='active-practice-meta' class='muted'></p>"
+        "<div class='active-practice-progress' aria-hidden='true'><span id='active-practice-progress-fill'></span></div></div>"
+        "<button id='resume-practice' class='primary' type='button'>继续练习</button></section>"
         + "<section id='start-area' class='practice-intro'><p class='section-kicker'>本轮练习</p>"
         "<h2>选择一种练习模式</h2>"
         "<p id='practice-scope-summary'>当前范围由知识点视图明确选择；本轮不会自动扩展范围。</p>"
@@ -167,6 +172,9 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<label><input id='practice-rating-immediate' type='radio' name='practice-rating-mode' value='immediate'> 每题作答后自评</label>"
         "<label><input id='practice-rating-batch' type='radio' name='practice-rating-mode' value='batch'> 完成后统一自评</label></fieldset>"
         "<div class='start-row'>"
+        "<label class='practice-count-label' for='practice-count'>题量 "
+        "<select id='practice-count'><option value='5'>5</option><option value='10' selected>10</option>"
+        "<option value='20'>20</option></select></label>"
         "<button id='start-practice' class='primary' disabled>开始本轮练习</button>"
         "<button id='filter-launch' class='outline' type='button' aria-expanded='false'>来源筛选<span id='filter-count' class='filter-count-active hidden'></span></button>"
         "</div>"
@@ -187,7 +195,7 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='卡点或心得（可选）'></textarea>"
         "<button id='save-rating' class='primary sm'>记录并下一题</button></div></div></div></section>"
         "<div id='session-end-entry' class='session-end-entry hidden'><span>本题未提交的内容只保留在当前会话。</span><div>"
-        "<button id='no-time' class='ghost'>跳到下一道题目</button><button id='goto-session-end' class='outline'>提前结束本次练习</button></div></div></div>"
+        "<button id='no-time' class='ghost'>不会，下一题</button><button id='goto-session-end' class='outline'>暂停本轮</button></div></div></div>"
     )
     return shell(
         workspace, workspaces, weak_items, middle, "practice",
