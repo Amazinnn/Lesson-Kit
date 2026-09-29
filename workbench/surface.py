@@ -48,6 +48,14 @@ ROUTES = {
     ("POST", "/api/w/{name}/pull-cards"): (
         BROWSER, (),
         "flash cards are practised in the page; the CLI has no card command yet"),
+    ("GET", "/api/w/{name}/practice/current"): (
+        BROWSER, (), "the browser resumes the workspace's single active practice"),
+    ("POST", "/api/w/{name}/practice/current"): (
+        BROWSER, (), "the browser starts or explicitly replaces the active practice"),
+    ("PATCH", "/api/w/{name}/practice/current"): (
+        BROWSER, (), "the browser advances one fixed practice item"),
+    ("DELETE", "/api/w/{name}/practice/current"): (
+        BROWSER, (), "the browser explicitly clears only execution state"),
     ("POST", "/api/w/{name}/practice"): (BOTH, ("practice",), ""),
     ("POST", "/api/w/{name}/attempts"): (
         BOTH, ("attempts",),
