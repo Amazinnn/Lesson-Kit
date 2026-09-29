@@ -7,7 +7,7 @@ from pathlib import Path
 
 from workbench import ingest
 from workbench.bridge import conversation_providers, conversations, pi_rpc
-from workbench.data import attempts as attempts_data, goals, queries
+from workbench.data import active_practice, attempts as attempts_data, goals, queries
 from workbench.domain import (
     cards as card_rules, difficulty as difficulty_rules, feedback, learning_state, planning, pull,
     schedule as schedule_rules, signals as signal_rules, weak,
@@ -317,6 +317,48 @@ def pull_cards(pool, workspace, params, body):
     )}
 
 
+def active_practice_get(pool, workspace, params, body):
+    try:
+        return {"practice": active_practice.current(pool)}
+    except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def active_practice_create(pool, workspace, params, body):
+    body = _request_object(body)
+    replace = body.get("replace", False)
+    if not isinstance(replace, bool):
+        raise ApiError(400, "replace must be a boolean")
+    payload = {key: value for key, value in body.items() if key != "replace"}
+    try:
+        return active_practice.create(pool, payload, replace=replace)
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def active_practice_update(pool, workspace, params, body):
+    body = _request_object(body)
+    position = body.get("position")
+    state = body.get("state")
+    attempt_id = body.get("attempt_id")
+    try:
+        return active_practice.mark(
+            pool, position, state, attempt_id=attempt_id)
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def active_practice_delete(pool, workspace, params, body):
+    try:
+        return active_practice.clear(pool)
+    except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
 def practice(pool, workspace, params, body):
     body = _request_object(body)
     problem_id = body.get("problem_id")
@@ -329,9 +371,16 @@ def practice(pool, workspace, params, body):
         raise ApiError(404, f"unknown problem: {problem_id}")
     if result not in schedule_rules.RESULT_QUALITY:
         raise ApiError(400, "invalid practice result")
+    practice_position = body.get("practice_position")
+    if practice_position is not None and (
+        isinstance(practice_position, bool) or not isinstance(practice_position, int)
+        or practice_position < 0
+    ):
+        raise ApiError(400, "practice_position must be a non-negative integer")
     return attempts_data.record_result(
         pool, problem_id, result, note=body.get("note"),
-        answer_text=body.get("answer_text"))
+        answer_text=body.get("answer_text"),
+        practice_position=practice_position)
 
 
 def feedback_record(pool, workspace, params, body):
@@ -401,10 +450,18 @@ def attempt_record(pool, workspace, params, body):
             or not all(isinstance(choice, str) for choice in choices)):
         raise ApiError(400, "choices must be a list of option texts")
     try:
+        practice_position = body.get("practice_position")
+        if practice_position is not None and (
+            isinstance(practice_position, bool)
+            or not isinstance(practice_position, int)
+            or practice_position < 0
+        ):
+            raise ApiError(400, "practice_position must be a non-negative integer")
         return attempts_data.record_browser_attempt(
             pool, problem_id, answer_text=answer_text,
             verdict=None if verdict is None else int(verdict), choices=choices,
-            request_id=_browser_request_id(body))
+            request_id=_browser_request_id(body),
+            practice_position=practice_position)
     except attempts_data.RequestConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except attempts_data.ManifestError as exc:
