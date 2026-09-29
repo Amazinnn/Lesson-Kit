@@ -6,6 +6,7 @@ import re
 import shlex
 import shutil
 import subprocess
+from pathlib import Path
 
 from workbench import registry
 
@@ -85,6 +86,186 @@ def get(name):
         if provider["name"] == name:
             return provider
     raise KeyError(f"provider unavailable: {name}")
+
+
+CLAUDE_MODELS = (
+    ("claude-opus-5-5", "Opus 5.5"),
+    ("claude-fable-5-1", "Fable 5.1"),
+    ("claude-opus-5", "Opus 5"),
+    ("claude-sonnet-5", "Sonnet 5"),
+    ("claude-fable-5", "Fable 5"),
+    ("claude-opus-4-8", "Opus 4.8"),
+    ("claude-opus-4-7", "Opus 4.7"),
+    ("claude-sonnet-4-6", "Sonnet 4.6"),
+    ("claude-opus-4-6", "Opus 4.6"),
+    ("claude-opus-4-5-20251101", "Opus 4.5"),
+    ("claude-haiku-4-5-20251001", "Haiku 4.5"),
+    ("claude-sonnet-4-5-20250929", "Sonnet 4.5"),
+)
+MODEL_DISCOVERY_TIMEOUT = 8
+
+
+def _configured_entries(provider_name, base):
+    entries = []
+    for model in registry.load_models():
+        if model.get("provider") != provider_name:
+            continue
+        name = model.get("name")
+        model_id = model.get("model")
+        if not isinstance(name, str) or not name:
+            continue
+        entry = {
+            **base,
+            "name": name,
+            "provider": provider_name,
+            "model": model_id or base.get("model"),
+            "source": "configured",
+            "entry": name,
+        }
+        if isinstance(model.get("args"), list):
+            entry["args"] = list(model["args"])
+        entries.append(entry)
+    return entries
+
+
+def _normalize_codex_models(items):
+    models = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        visibility = str(item.get("visibility") or "").lower()
+        if item.get("hidden") is True or visibility == "hide":
+            continue
+        model_id = item.get("model") or item.get("slug") or item.get("id")
+        if not isinstance(model_id, str) or not model_id:
+            continue
+        display = (
+            item.get("displayName") or item.get("display_name")
+            or item.get("name") or model_id
+        )
+        models.append({
+            "name": str(display),
+            "model": model_id,
+            "source": "runtime",
+            "entry": None,
+        })
+    return models
+
+
+def _codex_cache_models():
+    home = Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex"))
+    path = home / "models_cache.json"
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return []
+    return _normalize_codex_models(raw.get("models") if isinstance(raw, dict) else [])
+
+
+def _codex_app_server_models(provider):
+    """Ask Codex's supported app-server model/list endpoint for picker-visible models."""
+    requests = [
+        {
+            "method": "initialize",
+            "id": 1,
+            "params": {
+                "clientInfo": {
+                    "name": "lesson-kit",
+                    "title": "Lesson Kit",
+                    "version": "0.1",
+                }
+            },
+        },
+        {
+            "method": "model/list",
+            "id": 2,
+            "params": {"limit": 100, "cursor": None, "includeHidden": False},
+        },
+    ]
+    try:
+        completed = subprocess.run(
+            [provider["command"], "app-server"],
+            input="\n".join(json.dumps(item) for item in requests) + "\n",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            timeout=MODEL_DISCOVERY_TIMEOUT,
+            **hidden_launch_kwargs(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    for line in completed.stdout.splitlines():
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if record.get("id") != 2 or not isinstance(record.get("result"), dict):
+            continue
+        return _normalize_codex_models(record["result"].get("data"))
+    return []
+
+
+def list_models(provider_name, runtime_models=None):
+    """Enumerate model choices inside one harness; never return another harness.
+
+    Codex uses its supported app-server model/list RPC (with the local cache as a
+    fallback), Claude uses the model catalog documented by Claude Code, and Pi
+    accepts the runtime get_available_models result supplied by its RPC caller.
+    User-configured model entries are always retained because they may carry
+    gateway-specific ids or extra arguments.
+    """
+    base = get(provider_name)
+    entries = _configured_entries(provider_name, base)
+
+    discovered = []
+    if provider_name == "codex":
+        discovered = _codex_app_server_models(base) or _codex_cache_models()
+    elif provider_name == "claude":
+        discovered = [
+            {"name": name, "model": model_id, "source": "supported", "entry": None}
+            for model_id, name in CLAUDE_MODELS
+        ]
+    elif provider_name == "pi":
+        for item in runtime_models or []:
+            if not isinstance(item, dict):
+                continue
+            runtime_provider = item.get("provider")
+            model_id = item.get("id")
+            if not isinstance(runtime_provider, str) or not runtime_provider:
+                continue
+            if not isinstance(model_id, str) or not model_id:
+                continue
+            discovered.append({
+                "name": str(item.get("name") or model_id),
+                "model": f"{runtime_provider}/{model_id}",
+                "source": "runtime",
+                "entry": None,
+            })
+
+    seen = {
+        (entry.get("model"), tuple(entry.get("args", [])))
+        for entry in entries
+    }
+    for item in discovered:
+        key = (item.get("model"), ())
+        if key in seen:
+            continue
+        entries.append({**base, "provider": provider_name, **item})
+        seen.add(key)
+
+    # The harness default remains a valid reset target even when models were
+    # enumerated. Keep it last so concrete choices are more useful in the picker.
+    default_key = (base.get("model"), tuple(base.get("args", [])))
+    if default_key not in seen:
+        entries.append({
+            **base,
+            "name": f"{provider_name} 默认",
+            "provider": provider_name,
+            "source": "default",
+            "entry": None,
+        })
+    return entries
 
 
 def discover_entries():
