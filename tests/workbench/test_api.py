@@ -324,7 +324,7 @@ class ApiTests(unittest.TestCase):
 
         self.assertEqual(result, expected)
         set_model.assert_called_once_with(
-            None, "conv-001", None, provider=None, entry=None)
+            None, "conv-001", None, entry=None)
 
     def test_problem_detail_endpoint(self):
         status, data = self.get("/api/w/dmath/problem/dmath-ch06-prob-001")
