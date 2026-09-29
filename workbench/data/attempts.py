@@ -442,7 +442,8 @@ def list_attempts(pool, problem_id):
 
 
 def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
-                           choices=None, request_id=None, practice_position=None):
+                           choices=None, request_id=None, practice_position=None,
+                           stuck=False):
     """Persist one answer the practice page just submitted.
 
     The attempt row is the learner's durable record; progress, schedule, and
@@ -452,6 +453,8 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
     not been migrated yet still gets the row (status ``new``, no verdict) — the
     migration adds the ``answered`` status and the verdict/choices columns.
     """
+    if not isinstance(stuck, bool):
+        raise ManifestError("stuck must be a boolean")
     if verdict is not None and verdict not in (0, 1):
         raise ManifestError("verdict must be true or false")
     if choices is not None and (
@@ -460,7 +463,8 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
         raise ManifestError("choices must be a list of option texts")
     payload = _browser_payload("attempt", problem_id=problem_id,
                                answer_text=answer_text, verdict=verdict,
-                               choices=choices, practice_position=practice_position)
+                               choices=choices, practice_position=practice_position,
+                               stuck=stuck)
     if request_id is not None:
         _require_browser_schema(pool)
     with pool.transaction(immediate=request_id is not None):
@@ -475,7 +479,8 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
         ).fetchone()
         columns = {row[1] for row in conn.execute("PRAGMA table_info(problem_attempts)")}
         widened = bool(ddl) and "'answered'" in (ddl[0] or "")
-        status = ANSWERED_STATUS if widened else UNGRADED_STATUS
+        status = "stuck" if stuck else (
+            ANSWERED_STATUS if widened else UNGRADED_STATUS)
         attempt_id = pool.insert_attempt(
             problem_id, status, None, answer_text or None,
             verdict if widened and "verdict" in columns else None,
@@ -483,9 +488,17 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
         result = {"attempt_id": attempt_id, "problem_id": problem_id,
                   "recorded": True, "status": status,
                   "verdict_recorded": widened and verdict is not None}
+        if stuck:
+            pool.upsert_problem_progress(problem_id, "stuck")
+            state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
+                "problem", problem_id)
+            next_state = schedule_rules.after_result(state, "stuck", date.today())
+            pool.schedule_upsert(next_state)
+            result["due_at"] = next_state["due_at"]
         if practice_position is not None:
             result["practice"] = active_practice.mark(
-                pool, practice_position, "answered", attempt_id=attempt_id)
+                pool, practice_position, "stuck" if stuck else "answered",
+                attempt_id=attempt_id)
         _save_browser_operation(pool, request_id, payload, result)
     return result
 
