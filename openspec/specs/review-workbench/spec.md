@@ -148,6 +148,25 @@ lock a problem.
 - **WHEN** the learner asks the Agent to record the active answer
 - **THEN** only the explicit attempt CLI call writes it; viewing or discussing the draft alone does not
 
+### Requirement: Durable practice run archive
+
+The single active-practice resource SHALL remain the execution authority. When
+that practice completes or is explicitly replaced or cleared, the workbench
+SHALL append one minimal `practice_runs` snapshot before deleting the active
+execution state. The snapshot SHALL preserve source identity, modes, ordered
+item identities/final states, and timestamps only. It SHALL NOT replace,
+duplicate, edit, or delete `problem_attempts` or `feedback_events`.
+
+#### Scenario: Completing the last item archives the run
+
+- **WHEN** the final pending item of an active practice is answered or marked stuck
+- **THEN** one completed run snapshot is appended and the active singleton is cleared
+
+#### Scenario: Replacing an unfinished practice keeps both histories honest
+
+- **WHEN** the learner explicitly replaces an unfinished active practice
+- **THEN** the old run is archived as abandoned, its existing attempts remain unchanged, and the new active practice starts independently
+
 ### Requirement: Reverse review from wrong results
 
 After a wrong or stuck result, the session SHALL offer to practice the same
