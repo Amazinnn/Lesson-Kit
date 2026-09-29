@@ -1,8 +1,8 @@
-"""One workspace-local active practice: fixed items, resumable cursor, no history.
+"""One workspace-local active practice plus a tiny durable run archive.
 
-The active practice is execution state only. Durable learning evidence remains in
-problem_attempts/feedback_events. Replacing or completing this singleton never
-deletes an attempt.
+The active singleton remains execution state. Completed or replaced runs are
+snapshotted for the records page; attempts and feedback remain the learning
+evidence.
 """
 
 import json
@@ -28,7 +28,7 @@ def _require_schema(pool):
             "SELECT name FROM sqlite_master WHERE type='table'"
         )
     }
-    if {"active_practice", "active_practice_items"} <= names:
+    if {"active_practice", "active_practice_items", "practice_runs"} <= names:
         return
     try:
         db = pool.db_path.relative_to(pool.root).as_posix()
@@ -61,6 +61,17 @@ def _normalize(pool, payload):
         not isinstance(source_ref, str) or not source_ref.strip()
     ):
         raise ActivePracticeError("source_ref must be a non-empty string or null")
+    source_label = payload.get("source_label")
+    if source_label is not None and (
+        not isinstance(source_label, str) or not source_label.strip()
+    ):
+        raise ActivePracticeError("source_label must be a non-empty string or null")
+    if source_label is None:
+        source_label = (
+            f"试卷 {source_ref.strip()}" if source_kind == "practice_set" and source_ref
+            else "Agent 练习" if source_kind == "agent"
+            else "临时练习"
+        )
     practice_mode = payload.get("practice_mode")
     rating_mode = payload.get("rating_mode")
     if not isinstance(practice_mode, str) or not practice_mode:
@@ -114,6 +125,7 @@ def _normalize(pool, payload):
     return {
         "source_kind": source_kind,
         "source_ref": source_ref.strip() if isinstance(source_ref, str) else None,
+        "source_label": source_label.strip(),
         "kp_ids": kp_ids,
         "practice_mode": practice_mode,
         "rating_mode": rating_mode,
@@ -185,14 +197,16 @@ def create(pool, payload, *, replace=False):
         if _row(pool) is not None:
             if not replace:
                 raise ActivePracticeConflict("an unfinished practice already exists")
+            _archive(pool, current(pool, resolve=False), "abandoned")
             _delete(pool)
         pool.connect().execute(
             "INSERT INTO active_practice "
-            "(singleton, source_kind, source_ref, kp_ids_json, practice_mode, "
-            " rating_mode, cursor) VALUES (1, ?, ?, ?, ?, ?, 0)",
+            "(singleton, source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
+            " rating_mode, cursor) VALUES (1, ?, ?, ?, ?, ?, ?, 0)",
             (
                 normalized["source_kind"],
                 normalized["source_ref"],
+                normalized["source_label"],
                 json.dumps(normalized["kp_ids"], ensure_ascii=False),
                 normalized["practice_mode"],
                 normalized["rating_mode"],
@@ -210,6 +224,37 @@ def create(pool, payload, *, replace=False):
     return current(pool)
 
 
+def _archive(pool, record, status):
+    items = [
+        {
+            "position": item["position"],
+            "item_type": item["item_type"],
+            "item_id": item["item_id"],
+            "direction": item.get("direction") or "",
+            "state": item["state"],
+            "attempt_id": item.get("attempt_id"),
+        }
+        for item in record["items"]
+    ]
+    pool.connect().execute(
+        "INSERT INTO practice_runs "
+        "(source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
+        " rating_mode, items_json, status, started_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            record["source_kind"],
+            record.get("source_ref"),
+            record.get("source_label"),
+            json.dumps(record["kp_ids"], ensure_ascii=False),
+            record["practice_mode"],
+            record["rating_mode"],
+            json.dumps(items, ensure_ascii=False),
+            status,
+            record["started_at"],
+        ),
+    )
+
+
 def _delete(pool):
     pool.connect().execute("DELETE FROM active_practice_items")
     pool.connect().execute("DELETE FROM active_practice WHERE singleton=1")
@@ -221,6 +266,7 @@ def clear(pool):
     if before is None:
         return {"cleared": False, "practice": None}
     with pool.transaction(immediate=True):
+        _archive(pool, before, "abandoned")
         _delete(pool)
     return {"cleared": True, "practice": before}
 
@@ -267,6 +313,7 @@ def mark(pool, position, state, *, attempt_id=None):
         ).fetchall()
         if not pending:
             finished = current(pool)
+            _archive(pool, finished, "completed")
             _delete(pool)
             return {"completed": True, "replay": False, "practice": finished}
 
