@@ -89,6 +89,7 @@ function setup(fetch) {
   const document = {
     getElementById(id) { return elements[id] || null; },
     createElement(tag) { return new Element(tag); },
+    querySelector() { return null; },
     querySelectorAll() { return []; },
   };
   const window = {
