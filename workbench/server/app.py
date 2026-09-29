@@ -62,6 +62,7 @@ ROUTES = [
     ("POST", "/api/w/{name}/practice/current", api_mod.active_practice_create),
     ("PATCH", "/api/w/{name}/practice/current", api_mod.active_practice_update),
     ("DELETE", "/api/w/{name}/practice/current", api_mod.active_practice_delete),
+    ("POST", "/api/w/{name}/practice/runs/{run_id}/replay", api_mod.practice_run_replay),
     ("POST", "/api/w/{name}/practice", api_mod.practice),
     ("POST", "/api/w/{name}/attempts", api_mod.attempt_record),
     ("POST", "/api/w/{name}/feedback", api_mod.feedback_record),
