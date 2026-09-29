@@ -834,6 +834,26 @@ class ConversationTests(unittest.TestCase):
 
         self.assertEqual(switched["model"], "gpt-test-9")
 
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_named_model_entry_keeps_its_extra_arguments(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        with mock.patch.object(
+            conversation_providers, "discover_entries",
+            return_value=[{
+                "name": "GPT Test", "provider": "codex", "model": "gpt-test-9",
+                "command": "codex", "args": ["--profile", "lesson-kit"],
+                "source": "configured",
+            }],
+        ):
+            conversation = conversations.create(
+                self.pool, "codex", entry="GPT Test")
+
+        self.assertEqual(conversation["model"], "gpt-test-9")
+        self.assertEqual(conversation["model_entry"], "GPT Test")
+        self.assertEqual(conversation["model_args"], ["--profile", "lesson-kit"])
+
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_a_turn_launches_with_the_conversations_own_model(
