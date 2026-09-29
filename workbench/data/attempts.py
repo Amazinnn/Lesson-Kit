@@ -32,6 +32,10 @@ class ManifestError(ValueError):
         self.items = items or []
 
 
+class RequestConflict(ValueError):
+    """A browser retry id already belongs to a different write."""
+
+
 # -- manifest reading ---------------------------------------------------------
 
 def check(pool, manifest):
@@ -413,7 +417,9 @@ def list_attempts(pool, problem_id):
     rows = []
     for attempt in attempts:
         operation = linked_operation(pool, attempt["id"])
-        rating = operation["rating"] if operation else None
+        event = pool.feedback_event_for_attempt(attempt["id"])
+        rating = operation["rating"] if operation else (
+            event["rating"] if event else None)
         rows.append({
             **attempt,
             "agent_recorded": operation is not None,
@@ -426,7 +432,7 @@ def list_attempts(pool, problem_id):
 
 
 def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
-                           choices=None):
+                           choices=None, request_id=None):
     """Persist one answer the practice page just submitted.
 
     The attempt row is the learner's durable record; progress, schedule, and
@@ -436,28 +442,97 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
     not been migrated yet still gets the row (status ``new``, no verdict) — the
     migration adds the ``answered`` status and the verdict/choices columns.
     """
-    if pool.problem(problem_id) is None:
-        raise ManifestError(f"unknown problem: {problem_id}")
     if verdict is not None and verdict not in (0, 1):
         raise ManifestError("verdict must be true or false")
     if choices is not None and (
             not isinstance(choices, list)
             or not all(isinstance(choice, str) for choice in choices)):
         raise ManifestError("choices must be a list of option texts")
-    conn = pool.connect()
-    ddl = conn.execute(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='problem_attempts'"
+    payload = _browser_payload("attempt", problem_id=problem_id,
+                               answer_text=answer_text, verdict=verdict,
+                               choices=choices)
+    if request_id is not None:
+        _require_browser_schema(pool)
+    with pool.transaction(immediate=request_id is not None):
+        replay = _browser_replay(pool, request_id, payload)
+        if replay is not None:
+            return replay
+        if pool.problem(problem_id) is None:
+            raise ManifestError(f"unknown problem: {problem_id}")
+        conn = pool.connect()
+        ddl = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='problem_attempts'"
+        ).fetchone()
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(problem_attempts)")}
+        widened = bool(ddl) and "'answered'" in (ddl[0] or "")
+        status = ANSWERED_STATUS if widened else UNGRADED_STATUS
+        attempt_id = pool.insert_attempt(
+            problem_id, status, None, answer_text or None,
+            verdict if widened and "verdict" in columns else None,
+            choices if widened and "choices" in columns else None)
+        result = {"attempt_id": attempt_id, "problem_id": problem_id,
+                  "recorded": True, "status": status,
+                  "verdict_recorded": widened and verdict is not None}
+        _save_browser_operation(pool, request_id, payload, result)
+    return result
+
+
+def record_browser_feedback(pool, item_type, item_id, rating=None, note=None,
+                            direction="", attempt_id=None, request_id=None):
+    """Apply a rating and its retry marker in one serialized transaction."""
+    payload = _browser_payload("feedback", item_type=item_type, item_id=item_id,
+                               rating=rating, note=note, direction=direction,
+                               attempt_id=attempt_id)
+    if request_id is not None:
+        _require_browser_schema(pool)
+    with pool.transaction(immediate=request_id is not None):
+        replay = _browser_replay(pool, request_id, payload)
+        if replay is not None:
+            return replay
+        result = feedback_rules.apply(
+            pool, item_type, item_id, rating=rating, note=note,
+            direction=direction, attempt_id=attempt_id)
+        _save_browser_operation(pool, request_id, payload, result)
+    return result
+
+
+def _browser_payload(kind, **fields):
+    return json.dumps({"kind": kind, **fields}, sort_keys=True,
+                      ensure_ascii=False, separators=(",", ":"))
+
+
+def _require_browser_schema(pool):
+    row = pool.connect().execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table'"
+        " AND name='practice_request_operations'"
     ).fetchone()
-    columns = {row[1] for row in conn.execute("PRAGMA table_info(problem_attempts)")}
-    widened = bool(ddl) and "'answered'" in (ddl[0] or "")
-    status = ANSWERED_STATUS if widened else UNGRADED_STATUS
-    attempt_id = pool.insert_attempt(
-        problem_id, status, None, answer_text or None,
-        verdict if widened and "verdict" in columns else None,
-        choices if widened and "choices" in columns else None)
-    return {"attempt_id": attempt_id, "problem_id": problem_id,
-            "recorded": True, "status": status,
-            "verdict_recorded": widened and verdict is not None}
+    if row is None:
+        db = pool.db_path.relative_to(pool.root)
+        raise ManifestError(
+            "this pool is not migrated for retry-safe browser practice — run: "
+            + MIGRATION_COMMAND.format(db))
+
+
+def _browser_replay(pool, request_id, payload):
+    if request_id is None:
+        return None
+    row = pool.connect().execute(
+        "SELECT payload, result FROM practice_request_operations WHERE request_id=?",
+        (request_id,)).fetchone()
+    if row is None:
+        return None
+    if row["payload"] != payload:
+        raise RequestConflict(f"request_id {request_id} was already used for another write")
+    return json.loads(row["result"])
+
+
+def _save_browser_operation(pool, request_id, payload, result):
+    if request_id is not None:
+        pool.connect().execute(
+            "INSERT INTO practice_request_operations (request_id, payload, result)"
+            " VALUES (?, ?, ?)",
+            (request_id, payload, json.dumps(result, ensure_ascii=False,
+                                              sort_keys=True)))
 
 
 def get_attempt(pool, attempt_id):

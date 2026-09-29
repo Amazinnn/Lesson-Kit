@@ -77,12 +77,14 @@ workbench/
   interval_days, due_at, last_rating, last_reviewed_at)`，PK `(item_type, item_id, direction)`，
   direction 默认空串（普通项无方向；卡片按方向独立调度）。
 - 新表 `feedback_events(id, item_type, item_id, rating, note, attempt_id, created_at)` 追加日志；
-  `attempt_id` 只用于 Agent 代录（指回那次尝试），浏览器自评与旧行为 NULL。
+  浏览器作答后的自评与 Agent 代录评分均可用 `attempt_id` 指回那次尝试。
 - 新表 `attempt_operations(request_id, problem_id, attempt_id, kind, rating, fingerprint,
   batch_fingerprint, result, pre_state, post_state, created_at)`：一次 Agent 清单操作一行，
   含幂等键与内容指纹、返回给调用方的结果、以及该次操作前后**受影响投影**的快照
   （题目进度/当前状态/调度行 + 关联知识点的状态与信号）；`correct` 靠它判断
   「还能不能改」并在能改时精确撤回旧评分影响。
+- 新表 `practice_request_operations(request_id, payload, result, created_at)`：浏览器的
+  作答和自评共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
 - 题目与闪卡可增量拥有 `display_title`（可读短标题）与 `topic_label`（单一主题标签）；它们是内容展示字段，不替代稳定 ID。
 - 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
@@ -126,6 +128,9 @@ workbench/
   校验/解析与出卷，写文件由 Shell 完成。
 - `data.attempts.record_result`：`/practice` 与 CLI `practice` 共用的单事务写法
   （尝试 + 进度 + 调度一起写，未知题拒写）。
+- `data.attempts.record_browser_attempt/record_browser_feedback`：浏览器在发送前把请求
+  id 与完整载荷放进 sessionStorage；Data 用即时事务串行比较 id、写入尝试或评分及其
+  返回结果。同 id 改内容返回冲突，页面刷新后仍能重试首次请求。
 - `data.attempts.check/apply/correct/list/get`：Agent 代录尝试的零写入预检、单事务多题、
   按 attempt-id 的守卫式更正与只读回看；带评分的条目在**同一事务内**调用既有
   `domain.feedback.apply(..., attempt_id=…)`（不经过 categorical 的 `practice` 映射），

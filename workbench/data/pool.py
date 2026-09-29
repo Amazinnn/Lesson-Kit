@@ -43,12 +43,12 @@ class Pool:
             self.connect().commit()
 
     @contextmanager
-    def transaction(self):
+    def transaction(self, immediate=False):
         """Commit a group of Pool writes together, with nested-call support."""
         conn = self.connect()
         outermost = self._transaction_depth == 0
         if outermost:
-            conn.execute("BEGIN")
+            conn.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
         self._transaction_depth += 1
         try:
             yield self

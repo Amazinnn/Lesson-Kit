@@ -509,6 +509,19 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         )
         changes.append("attempt_operations")
 
+    if not table_exists(conn, "practice_request_operations"):
+        conn.execute(
+            """
+            CREATE TABLE practice_request_operations (
+                request_id TEXT PRIMARY KEY,
+                payload TEXT NOT NULL,
+                result TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        changes.append("practice_request_operations")
+
     if not table_exists(conn, "learning_current_state"):
         conn.execute(
             """

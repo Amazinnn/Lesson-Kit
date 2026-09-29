@@ -78,6 +78,25 @@ test("serialize / deserialize round-trips cursor, cards, and view state", () => 
   assert.equal(problem.answer_text, "2");
 });
 
+test("pending answer and rating requests survive refresh with their exact payloads", () => {
+  const d = deck.createDeck();
+  deck.append(d, problemItem("p-1"));
+  const answer = { request_id: "answer-1", problem_id: "p-1", answer_text: "first" };
+  const rating = { request_id: "rating-1", item_type: "problem", item_id: "p-1",
+    rating: 2, attempt_id: 42 };
+  deck.settle(d, "p-1", {
+    attempt_id: 42, attempt_request: { request_id: "answer-1", payload: answer },
+    attempt_status: "saving", feedback_request: { request_id: "rating-1", payload: rating },
+    feedback_status: "saving", state: "unrated",
+  });
+  const restored = deck.deserialize(JSON.parse(JSON.stringify(deck.serialize(d)))).items[0];
+  assert.equal(restored.attempt_id, 42);
+  assert.deepEqual(restored.attempt_request.payload, answer);
+  assert.deepEqual(restored.feedback_request.payload, rating);
+  assert.equal(restored.attempt_status, "failed");
+  assert.equal(restored.feedback_status, "failed");
+});
+
 test("wire format keeps the historical session-entry field names", () => {
   const d = deck.createDeck();
   deck.append(d, cardItem("kp-1-fc-002"));

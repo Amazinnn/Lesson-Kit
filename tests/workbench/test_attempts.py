@@ -761,7 +761,7 @@ class ScenarioTests(AttemptsTestCase):
     # -- browser-submitted attempts (attempt-records-filters-and-model-entries)
 
     def browser_attempt(self, problem_id, answer_text=None, verdict=None,
-                        choices=None):
+                        choices=None, request_id=None):
         from workbench.data import attempts as attempts_data
         from workbench.data.pool import Pool
 
@@ -770,7 +770,7 @@ class ScenarioTests(AttemptsTestCase):
         try:
             return attempts_data.record_browser_attempt(
                 pool, problem_id, answer_text=answer_text, verdict=verdict,
-                choices=choices)
+                choices=choices, request_id=request_id)
         finally:
             pool.close()
 
@@ -813,6 +813,64 @@ class ScenarioTests(AttemptsTestCase):
         with self.assertRaises(Exception):
             self.browser_attempt("dmath-ch12-prob-999", verdict=True)
         self.assertEqual(self.rows("SELECT * FROM problem_attempts"), [])
+
+    def test_browser_answer_retry_returns_first_attempt_without_writing_again(self):
+        from workbench.data import attempts as attempts_data
+
+        first = self.browser_attempt("dmath-ch12-prob-001", answer_text="证明…",
+                                     request_id="browser-answer-1")
+        again = self.browser_attempt("dmath-ch12-prob-001", answer_text="证明…",
+                                     request_id="browser-answer-1")
+        self.assertEqual(first, again)
+        with self.assertRaises(attempts_data.RequestConflict):
+            self.browser_attempt("dmath-ch12-prob-001", answer_text="修改答案",
+                                 request_id="browser-answer-1")
+        self.assertEqual(len(self.rows("SELECT * FROM problem_attempts")), 1)
+        self.assertEqual(len(self.rows("SELECT * FROM practice_request_operations")), 1)
+
+    def test_browser_retry_on_an_unmigrated_pool_explains_the_migration(self):
+        from workbench.data import attempts as attempts_data
+
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("DROP TABLE practice_request_operations")
+        conn.commit()
+        conn.close()
+        with self.assertRaises(attempts_data.ManifestError) as context:
+            self.browser_attempt("dmath-ch12-prob-001", answer_text="proof",
+                                 request_id="browser-answer-legacy")
+        self.assertIn("migrate-progress.py --db", str(context.exception))
+        self.assertEqual(self.rows("SELECT * FROM problem_attempts"), [])
+
+    def test_browser_rating_retry_keeps_one_linked_event_and_projection(self):
+        from workbench.data import attempts as attempts_data
+        from workbench.data.pool import Pool
+
+        submitted = self.browser_attempt("dmath-ch12-prob-001", answer_text="错",
+                                         request_id="browser-answer-2")
+        pool = Pool(root=self.ws, db_path=self.db_path, course="dmath", chapter="ch12")
+        try:
+            kwargs = {"rating": 2, "note": "算错了", "attempt_id": submitted["attempt_id"],
+                      "request_id": "browser-rating-2"}
+            first = attempts_data.record_browser_feedback(
+                pool, "problem", "dmath-ch12-prob-001", **kwargs)
+            again = attempts_data.record_browser_feedback(
+                pool, "problem", "dmath-ch12-prob-001", **kwargs)
+            self.assertEqual(first, again)
+            with self.assertRaises(attempts_data.RequestConflict):
+                attempts_data.record_browser_feedback(
+                    pool, "problem", "dmath-ch12-prob-001", **{**kwargs, "rating": 4})
+            with self.assertRaises(attempts_data.RequestConflict):
+                attempts_data.record_browser_feedback(
+                    pool, "problem", "dmath-ch12-prob-001", rating=2,
+                    request_id="browser-answer-2")
+        finally:
+            pool.close()
+        self.assertEqual(len(self.rows("SELECT * FROM feedback_events")), 1)
+        self.assertEqual(self.rows("SELECT attempt_id FROM feedback_events")[0]["attempt_id"],
+                         submitted["attempt_id"])
+        self.assertEqual(len(self.rows("SELECT * FROM review_schedule")), 1)
+        self.assertEqual(self.rows("SELECT evidence_count FROM learner_signals")[0][
+            "evidence_count"], 1)
 
     def test_the_session_rating_links_back_to_the_attempt(self):
         from workbench.data import attempts as attempts_data

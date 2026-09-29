@@ -7,7 +7,7 @@ from pathlib import Path
 
 from workbench import ingest
 from workbench.bridge import conversation_providers, conversations
-from workbench.data import goals, queries
+from workbench.data import attempts as attempts_data, goals, queries
 from workbench.domain import (
     cards as card_rules, difficulty as difficulty_rules, feedback, learning_state, planning, pull,
     schedule as schedule_rules, signals as signal_rules, weak,
@@ -329,20 +329,9 @@ def practice(pool, workspace, params, body):
         raise ApiError(404, f"unknown problem: {problem_id}")
     if result not in schedule_rules.RESULT_QUALITY:
         raise ApiError(400, "invalid practice result")
-    status = schedule_rules.recorded_status(result)
-    if status is None:
-        return {"problem_id": problem_id, "result": result, "recorded": False}
-    with pool.transaction():
-        pool.insert_attempt(problem_id, status, body.get("note"),
-                            body.get("answer_text"))
-        pool.upsert_problem_progress(problem_id, status, body.get("note"))
-        state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
-            "problem", problem_id
-        )
-        next_state = schedule_rules.after_result(state, result, date.today())
-        pool.schedule_upsert(next_state)
-    return {"problem_id": problem_id, "result": result,
-            "due_at": next_state["due_at"]}
+    return attempts_data.record_result(
+        pool, problem_id, result, note=body.get("note"),
+        answer_text=body.get("answer_text"))
 
 
 def feedback_record(pool, workspace, params, body):
@@ -383,16 +372,19 @@ def feedback_record(pool, workspace, params, body):
         attempt = pool.attempt(attempt_id)
         if attempt is None or attempt["problem_id"] != item_id:
             raise ApiError(400, "attempt_id does not belong to this item")
-    return feedback.apply(
-        pool, item_type, item_id, rating=rating, note=note,
-        direction=direction, attempt_id=attempt_id,
-    )
+    try:
+        return attempts_data.record_browser_feedback(
+            pool, item_type, item_id, rating=rating, note=note,
+            direction=direction, attempt_id=attempt_id,
+            request_id=_browser_request_id(body))
+    except attempts_data.RequestConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except attempts_data.ManifestError as exc:
+        raise ApiError(400, str(exc)) from exc
 
 
 def attempt_record(pool, workspace, params, body):
     """Persist one answer the practice page just submitted (no rating effects)."""
-    from workbench.data import attempts as attempts_data
-
     body = _request_object(body)
     problem_id = body.get("problem_id")
     if not isinstance(problem_id, str) or not problem_id:
@@ -411,9 +403,22 @@ def attempt_record(pool, workspace, params, body):
     try:
         return attempts_data.record_browser_attempt(
             pool, problem_id, answer_text=answer_text,
-            verdict=None if verdict is None else int(verdict), choices=choices)
+            verdict=None if verdict is None else int(verdict), choices=choices,
+            request_id=_browser_request_id(body))
+    except attempts_data.RequestConflict as exc:
+        raise ApiError(409, str(exc)) from exc
     except attempts_data.ManifestError as exc:
         raise ApiError(400, str(exc)) from exc
+
+
+def _browser_request_id(body):
+    request_id = body.get("request_id")
+    if request_id is not None and (
+        not isinstance(request_id, str) or not request_id.strip()
+        or len(request_id) > 200
+    ):
+        raise ApiError(400, "request_id must be a non-empty string of at most 200 characters")
+    return request_id
 
 
 def _request_object(body):

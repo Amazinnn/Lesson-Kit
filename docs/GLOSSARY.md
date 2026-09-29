@@ -99,9 +99,14 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（2026-09-26 起；状态 `answered`，带上选中的选项文本与客观题判定，但不改信号、当前状态、进度与调度），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交（2026-09-24）。**无评分的尝试同样成立**（状态 `new`），只是不改信号、当前状态、进度与调度；池尚未迁移时，练习页的提交降级为不带判定/选项的一行，绝不因此报错。
+与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（2026-09-26 起；状态 `answered`，带上选中的选项文本与客观题判定，但不改信号、当前状态、进度与调度），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交（2026-09-24）。**无评分的尝试同样成立**（状态 `new`），只是不改信号、当前状态、进度与调度；旧池需要运行迁移命令后才能使用浏览器请求重试。
 _Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
+
+### 浏览器练习请求 / Browser Practice Request
+一次提交作答或保存自评及其稳定 `request_id`。练习页先保存完整请求，再发送；响应丢失或刷新后原样重试只取回首次结果。同一个 id 改变作答、评分或操作类型会被拒绝，不多写尝试或学习状态。
+_Avoid_：把一次重试当成第二次作答、把判定当评分
+出处：review-workbench spec「Retry-safe browser practice writes」
 
 ### 判定 / Verdict
 客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在自评时改变。答案键缺失时不判分，页面如实写明「本题未录入答案键」。

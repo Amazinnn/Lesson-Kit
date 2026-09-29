@@ -96,6 +96,11 @@
     if (item.choices && item.choices.length) data.choices = item.choices;
     if (typeof item.verdict === "boolean") data.verdict = item.verdict;
     if (item.revealed) data.revealed = true;
+    if (item.attempt_id) data.attempt_id = item.attempt_id;
+    if (item.attempt_request) data.attempt_request = item.attempt_request;
+    if (item.attempt_status) data.attempt_status = item.attempt_status;
+    if (item.feedback_request) data.feedback_request = item.feedback_request;
+    if (item.feedback_status) data.feedback_status = item.feedback_status;
     return data;
   }
 
@@ -118,6 +123,11 @@
       choices: data.choices || [],
       verdict: typeof data.verdict === "boolean" ? data.verdict : null,
       revealed: !!data.revealed,
+      attempt_id: data.attempt_id || null,
+      attempt_request: data.attempt_request || null,
+      attempt_status: data.attempt_status === "saving" ? "failed" : (data.attempt_status || ""),
+      feedback_request: data.feedback_request || null,
+      feedback_status: data.feedback_status === "saving" ? "failed" : (data.feedback_status || ""),
       state: data.state || "active",
       direction: card ? (data.direction || "forward") : "",
     };
