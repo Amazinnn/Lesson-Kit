@@ -505,7 +505,6 @@
     var graphFilterInputs = ["needs_work", "review", "mastered", "null"].map(
       function (state) { return document.getElementById("graph-filter-" + state); }
     ).filter(Boolean);
-    var graphGravity = document.getElementById("graph-gravity");
     var graphProjectionHint = document.getElementById("graph-projection-hint");
     var graphDetail = document.getElementById("graph-detail-panel");
     var graphDetailTab = document.getElementById("graph-detail-tab");
@@ -513,20 +512,16 @@
     var teacherPanel = document.getElementById("ai-teacher-panel");
     var graphData = { nodes: [], edges: [] };
     var graphSimulation = null;
-    var graphFrame = null;
     var graphStage = null;
     var graphNodeElements = new Map();
     var graphEdgeElements = [];
     var graphAdjacency = new Map();
     var graphView = { x: 0, y: 0, scale: 1 };
     var graphAutoFit = true;
-    var graphRecovered = false;
-    var graphRelaxed = false;
     var graphProjection = "structure";
     var graphLabelZoomed = false;
     var graphFocusedId = null;
     var graphFilterVersion = 0;
-    var graphPendingPositions = null;
     var graphEnteringIds = new Set();
     var draggedNode = null;
     var panStart = null;
@@ -708,10 +703,6 @@
         entry.edge.distanceFactor = 1;
       });
       updateGraphLabels();
-      if (graphSimulation && !graphSimulation.hierarchical) {
-        GraphPhysics.reheat(graphSimulation, 0.3);
-        runGraphSimulation();
-      }
     }
 
     function focusGraph(nodeId) {
@@ -749,10 +740,6 @@
           : sourceDistance !== undefined && targetDistance !== undefined ? 1.08 : 1;
       });
       updateGraphLabels();
-      if (!graphSimulation.hierarchical) {
-        GraphPhysics.reheat(graphSimulation, 0.35);
-        runGraphSimulation();
-      }
     }
 
     function updateGraphLabels() {
@@ -776,8 +763,6 @@
       var edges = graphData.edges.filter(function (edge) {
         return visibleIds.has(edge.source) && visibleIds.has(edge.target);
       });
-      if (graphFrame !== null) cancelAnimationFrame(graphFrame);
-      graphFrame = null;
       var stage = document.createElement("div");
       stage.className = "graph-stage";
       graphStage = stage;
@@ -791,7 +776,6 @@
       graphSimulation = GraphPhysics.layoutHierarchy(
         nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight, graphProjection,
       );
-      graphPendingPositions = null;
       graphAutoFit = true;
 
       var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -886,13 +870,12 @@
           if (event.stopPropagation) event.stopPropagation();
           draggedNode = node;
           graphAutoFit = false;
+          if (graphStage) graphStage.classList.add("graph-dragging");
           node.fx = node.x;
           node.fy = node.y;
           if (button.setPointerCapture && event.pointerId !== undefined) {
             button.setPointerCapture(event.pointerId);
           }
-          GraphPhysics.reheat(graphSimulation);
-          runGraphSimulation();
         });
         stage.appendChild(button);
         var select = document.createElement("input");
@@ -949,17 +932,8 @@
       graphEnteringIds = new Set();
       applyGraphView();
       updateGraphLabels();
-      if (graphSimulation.hierarchical) {
-        drawGraph();
-        fitGraph();
-      } else if (reducedGraphMotion) {
-        GraphPhysics.settle(graphSimulation, 1600);
-        settleLabelClearance();
-        drawGraph();
-        fitGraph();
-      } else {
-        runGraphSimulation();
-      }
+      drawGraph();
+      fitGraph();
     }
 
     function drawGraph() {
@@ -1002,119 +976,6 @@
         elements.label.style.left = node.x + "px";
         elements.label.style.top = (node.y + node.radius + 6) + "px";
       });
-    }
-
-    // The force model separates node circles; wrapped labels are wide
-    // rectangles a circular footprint cannot represent. After settling, one
-    // deterministic pass nudges nodes until the measured label boxes stop
-    // overlapping each other and nearby node circles.
-    function labelBox(node) {
-      var entry = graphNodeElements.get(node.id);
-      var width = 168;
-      var height = 16;
-      if (entry && entry.label) {
-        if (entry.label.offsetWidth) width = Math.min(entry.label.offsetWidth, 168);
-        if (entry.label.offsetHeight) height = entry.label.offsetHeight;
-      }
-      return {
-        x1: node.x - width / 2,
-        x2: node.x + width / 2,
-        y1: node.y + node.radius + 6,
-        y2: node.y + node.radius + 6 + height,
-      };
-    }
-
-    function boxIntersectsCircle(box, cx, cy, radius) {
-      var nx = Math.max(box.x1, Math.min(cx, box.x2));
-      var ny = Math.max(box.y1, Math.min(cy, box.y2));
-      return Math.hypot(cx - nx, cy - ny) < radius - 2;
-    }
-
-    function resolveLabelOverlaps() {
-      if (!graphSimulation) return;
-      var nodes = graphSimulation.nodes;
-      for (var round = 0; round < 40; round += 1) {
-        var moved = false;
-        for (var i = 0; i < nodes.length; i += 1) {
-          for (var j = i + 1; j < nodes.length; j += 1) {
-            var a = labelBox(nodes[i]);
-            var b = labelBox(nodes[j]);
-            var overlapX = Math.min(a.x2, b.x2) - Math.max(a.x1, b.x1);
-            var overlapY = Math.min(a.y2, b.y2) - Math.max(a.y1, b.y1);
-            var pushX = 0;
-            var pushY = 0;
-            if (overlapX > 0 && overlapY > 0) {
-              if (overlapX <= overlapY) {
-                pushX = ((nodes[i].x <= nodes[j].x ? 1 : -1)) * (overlapX / 2 + 2);
-              } else {
-                pushY = ((nodes[i].y <= nodes[j].y ? 1 : -1)) * (overlapY / 2 + 2);
-              }
-            } else if (boxIntersectsCircle(a, nodes[j].x, nodes[j].y, nodes[j].radius)
-                || boxIntersectsCircle(b, nodes[i].x, nodes[i].y, nodes[i].radius)) {
-              var dx = nodes[j].x - nodes[i].x;
-              var dy = nodes[j].y - nodes[i].y;
-              var distance = Math.max(0.01, Math.hypot(dx, dy));
-              pushX = dx / distance * 4;
-              pushY = dy / distance * 4;
-            } else {
-              continue;
-            }
-            if (nodes[i].fx === null) {
-              nodes[i].x -= pushX;
-              nodes[i].y -= pushY;
-            }
-            if (nodes[j].fx === null) {
-              nodes[j].x += pushX;
-              nodes[j].y += pushY;
-            }
-            moved = true;
-          }
-        }
-        if (!moved) break;
-      }
-      var width = graphSimulation.width;
-      var height = graphSimulation.height;
-      nodes.forEach(function (node) {
-        node.x = Math.max(node.collisionRadius || node.radius, Math.min(width - (node.collisionRadius || node.radius), node.x));
-        node.y = Math.max(node.collisionRadius || node.radius, Math.min(height - (node.collisionRadius || node.radius), node.y));
-      });
-    }
-
-    function settleLabelClearance() {
-      resolveLabelOverlaps();
-    }
-
-    function runGraphSimulation() {
-      if (!graphSimulation) return;
-      if (graphSimulation.hierarchical) {
-        drawGraph();
-        if (graphAutoFit) fitGraph();
-        return;
-      }
-      if (reducedGraphMotion || graphFrame !== null) return;
-      graphRecovered = false;
-      graphRelaxed = false;
-      function frame() {
-        graphFrame = null;
-        var stable = GraphPhysics.tick(graphSimulation);
-        if (stable && !graphRecovered) {
-          // 定格前先做标签避让，再用一小段物理把推挤吸收掉（恢复圆形间距、平滑收尾）
-          settleLabelClearance();
-          GraphPhysics.reheat(graphSimulation, 0.08);
-          graphRecovered = true;
-          stable = false;
-        } else if (stable && !graphRelaxed
-            && GraphPhysics.crowdedPairs(graphSimulation) > 0) {
-          // 手动拖成一团后：再跑一轮完整放松，让斥力把拥挤布局重新撑开
-          GraphPhysics.reheat(graphSimulation, 0.8);
-          graphRelaxed = true;
-          stable = false;
-        }
-        drawGraph();
-        if (!stable) graphFrame = requestAnimationFrame(frame);
-        else if (graphAutoFit) fitGraph();
-      }
-      graphFrame = requestAnimationFrame(frame);
     }
 
     function applyGraphView() {
@@ -1178,7 +1039,6 @@
       }));
       function rebuild() {
         if (version !== graphFilterVersion) return;
-        graphPendingPositions = positions;
         renderGraph();
       }
       if (reducedGraphMotion || !graphSimulation) {
@@ -1209,11 +1069,6 @@
       if (graphFilter) graphFilter.open = false;
     });
     updateGraphFilterControls();
-    if (graphGravity) graphGravity.addEventListener("input", function () {
-      if (!graphSimulation) return;
-      GraphPhysics.setGravity(graphSimulation, graphGravity.value);
-      runGraphSimulation();
-    });
     var zoomIn = document.getElementById("graph-zoom-in");
     var zoomOut = document.getElementById("graph-zoom-out");
     var graphFit = document.getElementById("graph-fit");
@@ -1228,24 +1083,9 @@
         graphProjection = graphProjectionSelect.value || "structure";
         updateGraphProjectionHint();
         if (!graphSimulation) return;
-        if (graphSimulation.hierarchical) {
-          GraphPhysics.applyHierarchyProjection(graphSimulation, graphProjection);
-          graphSimulation.nodes.forEach(updateGraphNodeAppearance);
-          drawGraph();
-          return;
-        }
-        GraphPhysics.setProjection(
-          graphSimulation, graphProjection,
-          graphCanvas.clientWidth, graphCanvas.clientHeight, null,
-        );
+        GraphPhysics.applyHierarchyProjection(graphSimulation, graphProjection);
         graphSimulation.nodes.forEach(updateGraphNodeAppearance);
-        if (reducedGraphMotion) {
-          GraphPhysics.settle(graphSimulation, 1600);
-          settleLabelClearance();
-          drawGraph();
-        } else {
-          runGraphSimulation();
-        }
+        drawGraph();
       });
     }
     if (zoomIn) zoomIn.addEventListener("click", function () {
@@ -1277,14 +1117,9 @@
         var rect = graphCanvas.getBoundingClientRect();
         draggedNode.fx = (event.clientX - rect.left - graphView.x) / graphView.scale;
         draggedNode.fy = (event.clientY - rect.top - graphView.y) / graphView.scale;
-        if (graphSimulation.hierarchical) {
-          draggedNode.x = draggedNode.fx;
-          draggedNode.y = draggedNode.fy;
-          drawGraph();
-        } else {
-          GraphPhysics.reheat(graphSimulation);
-          runGraphSimulation();
-        }
+        draggedNode.x = draggedNode.fx;
+        draggedNode.y = draggedNode.fy;
+        drawGraph();
       } else if (panStart) {
         graphView.x = panStart.viewX + event.clientX - panStart.x;
         graphView.y = panStart.viewY + event.clientY - panStart.y;
@@ -1293,28 +1128,15 @@
     });
     graphCanvas.addEventListener("pointerup", function () {
       if (draggedNode) {
-        if (!graphSimulation.hierarchical) {
-          GraphPhysics.setSoftAnchor(draggedNode, draggedNode.fx, draggedNode.fy);
-          draggedNode.fx = null;
-          draggedNode.fy = null;
-          GraphPhysics.reheat(graphSimulation);
-          runGraphSimulation();
-        } else {
-          draggedNode.fx = null;
-          draggedNode.fy = null;
-          drawGraph();
-        }
+        draggedNode.fx = null;
+        draggedNode.fy = null;
+        drawGraph();
       }
+      if (draggedNode && graphStage) graphStage.classList.remove("graph-dragging");
       draggedNode = null;
       panStart = null;
     });
     window.addEventListener("resize", renderGraph);
-    document.addEventListener("visibilitychange", function () {
-      if (document.hidden) {
-        if (graphFrame !== null) cancelAnimationFrame(graphFrame);
-        graphFrame = null;
-      }
-    });
     if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
     if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
     showGraphPanel(true);

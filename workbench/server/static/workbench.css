@@ -564,8 +564,6 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-filter-menu label { display: flex; align-items: center; gap: 7px; font-size: 12px; }
 .graph-filter-menu input { width: auto; min-width: 0; }
 .graph-filter-menu button { margin-top: 3px; }
-.graph-gravity-label { color: var(--dsw-label-tertiary); font-size: 12px; white-space: nowrap; }
-.graph-toolbar input[type="range"] { width: 104px; accent-color: var(--dsw-brand-accent); }
 .graph-zoom { display: flex; gap: 4px; }
 #graph-canvas { height: calc(100% - 59px); overflow: hidden; background-image: linear-gradient(var(--dsw-border-l1) 1px, transparent 1px), linear-gradient(90deg, var(--dsw-border-l1) 1px, transparent 1px); background-size: 24px 24px; }
 .graph-stage { position: relative; width: 100%; height: 100%; transform-origin: 0 0; }
@@ -642,6 +640,11 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 .graph-node-label,
 .graph-kp-selection {
   transition: left 320ms ease, top 320ms ease, opacity 160ms ease;
+}
+.graph-dragging .graph-node,
+.graph-dragging .graph-node-label,
+.graph-dragging .graph-kp-selection {
+  transition: opacity 160ms ease;
 }
 .graph-empty { padding: 24px; }
 .linked-problems { margin-top: 42px; }

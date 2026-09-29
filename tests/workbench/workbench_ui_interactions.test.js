@@ -1432,7 +1432,7 @@ test("graph projection keeps node elements and maps size, position, and palette"
   assert.equal(app.rafCalls, 0);
 });
 
-test("graph state filter fades exclusions, keeps a union, clusters, and restores", async () => {
+test("graph state filter fades exclusions, keeps a union, and restores", async () => {
   const canvas = new FakeElement("graph-canvas");
   const menu = new FakeElement("graph-state-filter");
   const summary = new FakeElement("graph-filter-summary");
@@ -1442,13 +1442,6 @@ test("graph state filter fades exclusions, keeps a union, clusters, and restores
   const mastered = new FakeElement("graph-filter-mastered", { value: "mastered" });
   const unmarked = new FakeElement("graph-filter-null", { value: "null" });
   var finishFilter = null;
-  var clusteredStates = [];
-  const physics = Object.assign({}, GraphPhysics, {
-    setStateClusters(simulation, states, width, height) {
-      clusteredStates = Array.from(states);
-      return GraphPhysics.setStateClusters(simulation, states, width, height);
-    },
-  });
   runWorkbench({
     elements: {
       layout: layout(), "graph-canvas": canvas, "graph-state-filter": menu,
@@ -1456,7 +1449,6 @@ test("graph state filter fades exclusions, keeps a union, clusters, and restores
       "graph-filter-needs_work": needsWork, "graph-filter-review": review,
       "graph-filter-mastered": mastered, "graph-filter-null": unmarked,
     },
-    physics,
     setTimeoutFn(callback, delay) {
       if (delay === 160) finishFilter = callback;
       return 0;
@@ -1484,7 +1476,6 @@ test("graph state filter fades exclusions, keeps a union, clusters, and restores
   assert.equal(clear.disabled, false);
   finishFilter();
   const filteredStage = canvas.children[0];
-  assert.deepEqual(clusteredStates, ["needs_work", "mastered"]);
   assert.deepEqual(filteredStage.children.filter((child) => child.dataset.kpId)
     .map((child) => child.dataset.kpId).sort(), ["kp-mastered", "kp-weak"]);
   menu.open = true;
@@ -1495,17 +1486,12 @@ test("graph state filter fades exclusions, keeps a union, clusters, and restores
   assert.equal(canvas.children[0].children.filter((child) => child.dataset.kpId).length, 3);
 });
 
-test("graph filtering rebuilds layout and dragging reheats the simulation", async () => {
+test("graph filtering and search rebuild the deterministic layout", async () => {
   let creates = 0;
-  let reheats = 0;
   const physics = Object.assign({}, GraphPhysics, {
-    layoutGraph(...args) {
+    layoutHierarchy(...args) {
       creates += 1;
-      return GraphPhysics.layoutGraph(...args);
-    },
-    reheat(simulation) {
-      reheats += 1;
-      return GraphPhysics.reheat(simulation);
+      return GraphPhysics.layoutHierarchy(...args);
     },
   });
   const canvas = new FakeElement("graph-canvas");
@@ -1533,52 +1519,13 @@ test("graph filtering rebuilds layout and dragging reheats the simulation", asyn
   search.trigger("input");
   assert.equal(creates, 2);
   const stage = canvas.children[0];
-  const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
-  node.trigger("pointerdown", { clientX: 100, clientY: 100, pointerId: 1 });
-  canvas.trigger("pointermove", { clientX: 140, clientY: 130 });
-  canvas.trigger("pointerup", { clientX: 140, clientY: 130 });
-  assert.ok(reheats >= 3);
   zoomIn.click();
-  assert.match(stage.style.transform, /scale\(1\.1\)/);
+  assert.match(stage.style.transform, /scale\(1\.25\)/);
   canvas.trigger("wheel", { deltaY: 1, preventDefault() {} });
   fit.click();
 });
 
-test("graph progressively reveals ranked labels and soft-anchors a released drag", async () => {
-  let anchors = 0;
-  const physics = Object.assign({}, GraphPhysics, {
-    setSoftAnchor(...args) { anchors += 1; return GraphPhysics.setSoftAnchor(...args); },
-  });
-  const canvas = new FakeElement("graph-canvas", { clientWidth: 1200, clientHeight: 800 });
-  const zoomIn = new FakeElement("graph-zoom-in");
-  runWorkbench({
-    elements: { layout: layout(), "graph-canvas": canvas, "graph-zoom-in": zoomIn },
-    reducedMotion: true,
-    physics,
-    fetch: () => jsonResponse({
-      nodes: Array.from({ length: 14 }, (_, index) => ({
-        id: "kp-" + index, title: "知识点 " + index, problem_count: 14 - index,
-        importance: index < 8 ? "core" : "supplementary",
-      })),
-      edges: Array.from({ length: 13 }, (_, index) => ({
-        source: "kp-" + index, target: "kp-" + (index + 1), attraction: 1,
-      })),
-    }),
-  });
-  await flush();
-  const stage = canvas.children[0];
-  const labels = stage.children.filter((child) => child.className === "graph-node-label");
-  assert.equal(labels.filter((label) => label.style.display !== "none").length, 14);
-  for (let i = 0; i < 8; i += 1) zoomIn.click();
-  assert.equal(labels.filter((label) => label.style.display !== "none").length, 14);
-  const node = stage.children.find((child) => child.dataset.kpId === "kp-0");
-  node.trigger("pointerdown", { clientX: 100, clientY: 100, pointerId: 1 });
-  canvas.trigger("pointermove", { clientX: 1190, clientY: 790 });
-  canvas.trigger("pointerup", { clientX: 1190, clientY: 790 });
-  assert.equal(anchors, 1);
-});
-
-test("graph renders curved paths and focuses one-hop and two-hop neighborhoods", async () => {
+test("graph renders arrow-marked edges and focuses one-hop and two-hop neighborhoods", async () => {
   const canvas = new FakeElement("graph-canvas");
   runWorkbench({
     elements: { layout: layout(), "graph-canvas": canvas },
@@ -1597,14 +1544,17 @@ test("graph renders curved paths and focuses one-hop and two-hop neighborhoods",
   const edgeLayer = stage.children.find(
     (child) => child.getAttribute("class") === "graph-edge-layer",
   );
-  assert.equal(edgeLayer.children.length, 3);
-  assert.equal(edgeLayer.children[0].getAttribute("class"), "graph-edge-pipe");
-  assert.equal(edgeLayer.children[0].children.length, 3);
-  assert.deepEqual(edgeLayer.children[0].children.map((path) => path.getAttribute("class")), [
+  const defs = edgeLayer.children.find((child) => child.id === "defs");
+  assert.ok(defs, "arrow marker defs exist");
+  const pipes = edgeLayer.children.filter(
+    (child) => child.getAttribute("class") === "graph-edge-pipe graph-relation-related graph-direction-directed",
+  );
+  assert.equal(pipes.length, 3);
+  assert.equal(pipes[0].children.length, 3);
+  assert.deepEqual(pipes[0].children.map((path) => path.getAttribute("class")), [
     "graph-edge graph-edge-shadow", "graph-edge graph-edge-body",
     "graph-edge graph-edge-highlight",
   ]);
-  assert.match(edgeLayer.children[0].children[1].getAttribute("d"), / [LQ] /);
   const nodes = Object.fromEntries(stage.children.filter(
     (child) => child.dataset.kpId,
   ).map((child) => [child.dataset.kpId, child]));
