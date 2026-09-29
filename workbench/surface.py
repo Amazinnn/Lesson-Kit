@@ -70,6 +70,8 @@ ROUTES = {
         BROWSER, (), "the browser advances one fixed practice item"),
     ("DELETE", "/api/w/{name}/practice/current"): (
         BROWSER, (), "the browser explicitly clears only execution state"),
+    ("POST", "/api/w/{name}/practice/runs/{run_id}/replay"): (
+        BROWSER, (), "the browser replays one archived run into the active practice"),
     ("POST", "/api/w/{name}/practice"): (BOTH, ("practice",), ""),
     ("POST", "/api/w/{name}/attempts"): (
         BOTH, ("attempts",),
