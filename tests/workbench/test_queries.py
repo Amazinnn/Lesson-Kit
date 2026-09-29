@@ -194,7 +194,7 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(detail["attempts"][0]["answer_text"], "my proof")
         self.assertEqual(detail["schedule"], None)
 
-    def test_graph_model_counts_formal_problems_and_merges_semantic_edges(self):
+    def test_graph_model_counts_formal_problems_and_keeps_each_relation(self):
         conn = sqlite3.connect(self.db_path)
         try:
             conn.execute(
@@ -224,9 +224,9 @@ class QueryTests(unittest.TestCase):
                 "INSERT INTO knowledge_relations VALUES (?, ?, ?, ?, ?, ?)",
                 [
                     ("rel-1", "dmath-ch06-kp-001", "dmath-ch06-kp-002",
-                     "prerequisite", "forward", "high"),
+                     "prerequisite", "directed", "high"),
                     ("rel-2", "dmath-ch06-kp-002", "dmath-ch06-kp-001",
-                     "related", "forward", "low"),
+                     "related", "symmetric", "low"),
                 ],
             )
             conn.commit()
@@ -242,14 +242,20 @@ class QueryTests(unittest.TestCase):
         })
         importance = {node["id"]: node["importance"] for node in model["nodes"]}
         self.assertEqual(importance["dmath-ch06-kp-003"], "core")
-        self.assertEqual(len(model["edges"]), 1)
-        edge = model["edges"][0]
-        self.assertEqual({edge["source"], edge["target"]}, {
-            "dmath-ch06-kp-001", "dmath-ch06-kp-002",
-        })
-        self.assertEqual(edge["strength"], "high")
-        self.assertEqual(edge["shared_problem_count"], 1)
-        self.assertAlmostEqual(edge["attraction"], 1.375)
+        # Both formal relations survive — the graph no longer merges the pair
+        # into one strongest edge, and the pair keeps no legacy fallback.
+        by_key = {(edge["source"], edge["target"]): edge for edge in model["edges"]}
+        self.assertEqual(len(model["edges"]), 2)
+        prerequisite = by_key[("dmath-ch06-kp-001", "dmath-ch06-kp-002")]
+        self.assertEqual(prerequisite["relation_type"], "prerequisite")
+        self.assertEqual(prerequisite["direction"], "directed")
+        self.assertEqual(prerequisite["strength"], "high")
+        self.assertEqual(prerequisite["shared_problem_count"], 1)
+        self.assertAlmostEqual(prerequisite["attraction"], 1.375)
+        related = by_key[("dmath-ch06-kp-002", "dmath-ch06-kp-001")]
+        self.assertEqual(related["relation_type"], "related")
+        self.assertEqual(related["direction"], "symmetric")
+        self.assertEqual(related["strength"], "low")
 
     def test_graph_model_uses_the_strongest_signal_for_each_node(self):
         self.pool.connect().execute(
