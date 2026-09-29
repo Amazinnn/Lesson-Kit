@@ -6,7 +6,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from workbench import ingest
-from workbench.bridge import conversation_providers, conversations
+from workbench.bridge import conversation_providers, conversations, pi_rpc
 from workbench.data import attempts as attempts_data, goals, queries
 from workbench.domain import (
     cards as card_rules, difficulty as difficulty_rules, feedback, learning_state, planning, pull,
@@ -486,12 +486,48 @@ def graph_kp(pool, workspace, params, body):
 
 
 def ai_providers(pool, workspace, params, body):
-    """The selectable model entries; each carries its harness in `provider`."""
-    return [
-        {"name": entry["name"], "provider": entry["provider"],
-         "model": entry.get("model")}
+    """Return selectable targets, enriched with Pi's live configured models."""
+    entries = [
+        {
+            "name": entry["name"],
+            "provider": entry["provider"],
+            "model": entry.get("model"),
+            "entry": entry["name"] if entry.get("source") == "configured" else None,
+            "source": entry.get("source", "configured"),
+        }
         for entry in conversation_providers.discover_entries()
     ]
+    try:
+        provider = conversation_providers.get("pi")
+        process = pi_rpc.PiRpcProcess(provider, workspace.path)
+        try:
+            process.start()
+            models = process.available_models()
+        finally:
+            process.close()
+    except (KeyError, OSError, pi_rpc.PiRpcError):
+        models = []
+    seen = {(item["provider"], item.get("model")) for item in entries}
+    for item in models:
+        runtime_provider = item.get("provider")
+        model_id = item.get("id")
+        if not isinstance(runtime_provider, str) or not runtime_provider:
+            continue
+        if not isinstance(model_id, str) or not model_id:
+            continue
+        model = f"{runtime_provider}/{model_id}"
+        key = ("pi", model)
+        if key in seen:
+            continue
+        entries.append({
+            "name": str(item.get("name") or model_id),
+            "provider": "pi",
+            "model": model,
+            "entry": None,
+            "source": "runtime",
+        })
+        seen.add(key)
+    return entries
 
 
 def _session_call(func, *args):
@@ -515,32 +551,45 @@ def ai_sessions_create(pool, workspace, params, body):
         if title is not None and not isinstance(title, str):
             raise ApiError(400, "title must be a string")
         model = body.get("model")
+        entry = body.get("entry")
         if model is not None and not isinstance(model, str):
             raise ApiError(400, "model must be a string")
-        return conversations.create(pool, provider, title or "", model=model)
+        if entry is not None and not isinstance(entry, str):
+            raise ApiError(400, "entry must be a string")
+        return conversations.create(
+            pool, provider, title or "", model=model, entry=entry)
     except (KeyError, ValueError) as exc:
         raise ApiError(400, str(exc)) from exc
 
 
 def ai_session_update(pool, workspace, params, body):
     body = _request_object(body)
+    has_title = "title" in body
+    has_target = any(key in body for key in ("model", "provider", "entry"))
     title = body.get("title")
     model = body.get("model")
-    if title is None and model is None:
-        raise ApiError(400, "title or model is required")
-    if title is not None and not isinstance(title, str):
+    provider = body.get("provider")
+    entry = body.get("entry")
+    if not has_title and not has_target:
+        raise ApiError(400, "title or model target is required")
+    if has_title and title is not None and not isinstance(title, str):
         raise ApiError(400, "title must be a string")
     if model is not None and not isinstance(model, str):
-        raise ApiError(400, "model must be a string")
+        raise ApiError(400, "model must be a string or null")
+    if provider is not None and not isinstance(provider, str):
+        raise ApiError(400, "provider must be a string")
+    if entry is not None and not isinstance(entry, str):
+        raise ApiError(400, "entry must be a string")
     try:
         record = None
-        if model is not None:
+        if has_target:
             record = conversations.set_model(
-                pool, params["conversation_id"], model)
-        if title is not None and title.strip():
+                pool, params["conversation_id"], model,
+                provider=provider, entry=entry)
+        if has_title and isinstance(title, str) and title.strip():
             record = conversations.rename(pool, params["conversation_id"], title)
         return record
-    except ValueError as exc:
+    except (KeyError, ValueError) as exc:
         raise ApiError(400, str(exc)) from exc
     except conversations.ConversationConflict as exc:
         raise ApiError(409, str(exc)) from exc
