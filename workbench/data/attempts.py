@@ -11,6 +11,7 @@ import hashlib
 import json
 from datetime import date
 
+from workbench.data import active_practice
 from workbench.domain import feedback as feedback_rules
 from workbench.domain import schedule as schedule_rules
 
@@ -381,7 +382,8 @@ def correction_conflict(pool, attempt, operation):
 
 # -- reading ------------------------------------------------------------------
 
-def record_result(pool, problem_id, result, note=None, answer_text=None, now=None):
+def record_result(pool, problem_id, result, note=None, answer_text=None, now=None,
+                  practice_position=None):
     """Record one practice result atomically, the way the practice page does.
 
     Both surfaces call this, so the CLI cannot write a different shape than the
@@ -394,16 +396,24 @@ def record_result(pool, problem_id, result, note=None, answer_text=None, now=Non
     if pool.problem(problem_id) is None:
         raise ValueError(f"unknown problem: {problem_id}")
     with pool.transaction():
-        pool.insert_attempt(problem_id, status, note, answer_text)
+        attempt_id = pool.insert_attempt(problem_id, status, note, answer_text)
         pool.upsert_problem_progress(problem_id, status, note)
         state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
             "problem", problem_id
         )
         next_state = schedule_rules.after_result(state, result, now or date.today())
         pool.schedule_upsert(next_state)
+        practice = None
+        if practice_position is not None:
+            practice = active_practice.mark(
+                pool, practice_position,
+                "stuck" if result == "stuck" else "answered",
+                attempt_id=attempt_id,
+            )
     return {
         "problem_id": problem_id, "result": result, "recorded": True,
-        "status": status, "due_at": next_state["due_at"],
+        "attempt_id": attempt_id, "status": status, "due_at": next_state["due_at"],
+        "practice": practice,
     }
 
 
@@ -432,7 +442,7 @@ def list_attempts(pool, problem_id):
 
 
 def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
-                           choices=None, request_id=None):
+                           choices=None, request_id=None, practice_position=None):
     """Persist one answer the practice page just submitted.
 
     The attempt row is the learner's durable record; progress, schedule, and
@@ -450,7 +460,7 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
         raise ManifestError("choices must be a list of option texts")
     payload = _browser_payload("attempt", problem_id=problem_id,
                                answer_text=answer_text, verdict=verdict,
-                               choices=choices)
+                               choices=choices, practice_position=practice_position)
     if request_id is not None:
         _require_browser_schema(pool)
     with pool.transaction(immediate=request_id is not None):
@@ -473,6 +483,9 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
         result = {"attempt_id": attempt_id, "problem_id": problem_id,
                   "recorded": True, "status": status,
                   "verdict_recorded": widened and verdict is not None}
+        if practice_position is not None:
+            result["practice"] = active_practice.mark(
+                pool, practice_position, "answered", attempt_id=attempt_id)
         _save_browser_operation(pool, request_id, payload, result)
     return result
 
