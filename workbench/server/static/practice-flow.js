@@ -186,6 +186,7 @@
     var sessionEntry = document.getElementById("session-end-entry");
     var startArea = document.getElementById("start-area");
     var practiceCount = document.getElementById("practice-count");
+    var savePracticeSet = document.getElementById("save-practice-set");
     var resumeCard = document.getElementById("active-practice-resume");
     var resumeTitle = document.getElementById("active-practice-title");
     var resumeMeta = document.getElementById("active-practice-meta");
@@ -706,6 +707,52 @@
       }).catch(function (error) { pulling = false; showPracticeError(error, true); });
     }
 
+    function selectFixedItems(kps, contentMode) {
+      var count = selectedCount();
+      if (contentMode === "flash_card") {
+        return api("/pull-cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kp_ids: kps,
+            direction_mode: selectedFlashDirection(),
+            exclude_directions: [],
+          }),
+        }).then(function (result) {
+          return {
+            request: {
+              kp_ids: kps.slice(), n: count, mode: contentMode,
+              direction_mode: selectedFlashDirection(),
+            },
+            items: (result.cards || []).slice(0, count).map(function (card) {
+              return {
+                item_type: "card", item_id: card.card_id,
+                direction: card.direction || "forward",
+              };
+            }),
+          };
+        });
+      }
+
+      var pullBody = { kp_ids: kps, n: count, mode: contentMode };
+      applyFiltersToPullBody(pullBody);
+      var includeIds = load(INCLUDE_KEY, null);
+      if (includeIds && includeIds.length) pullBody.include_ids = includeIds.slice();
+      var request = JSON.parse(JSON.stringify(pullBody));
+      return api("/pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pullBody),
+      }).then(function (result) {
+        return {
+          request: request,
+          items: (result.problems || []).map(function (problem) {
+            return { item_type: "problem", item_id: problem.problem_id };
+          }),
+        };
+      });
+    }
+
     function beginFixedPractice(kps, contentMode, ratingMode) {
       if (!kps.length || pulling) return;
       var replace = false;
@@ -724,50 +771,14 @@
 
       clearPracticeError();
       pulling = true;
-      var count = selectedCount();
-      var selection;
-      if (contentMode === "flash_card") {
-        selection = api("/pull-cards", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            kp_ids: kps,
-            direction_mode: selectedFlashDirection(),
-            exclude_directions: [],
-          }),
-        }).then(function (result) {
-          var cards = (result.cards || []).slice(0, count);
-          return cards.map(function (card) {
-            return {
-              item_type: "card", item_id: card.card_id,
-              direction: card.direction || "forward",
-            };
-          });
-        });
-      } else {
-        var pullBody = { kp_ids: kps, n: count, mode: contentMode };
-        applyFiltersToPullBody(pullBody);
-        var includeIds = load(INCLUDE_KEY, null);
-        if (includeIds && includeIds.length) pullBody.include_ids = includeIds.slice();
-        selection = api("/pull", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(pullBody),
-        }).then(function (result) {
-          return (result.problems || []).map(function (problem) {
-            return { item_type: "problem", item_id: problem.problem_id };
-          });
-        });
-      }
-
-      selection.then(function (items) {
-        if (!items.length) throw new Error("当前范围没有可用题目。");
+      selectFixedItems(kps, contentMode).then(function (selection) {
+        if (!selection.items.length) throw new Error("当前范围没有可用题目。");
         return post("/practice/current", {
           source_kind: "quick",
           kp_ids: kps,
           practice_mode: contentMode,
           rating_mode: ratingMode,
-          items: items,
+          items: selection.items,
           replace: replace,
         });
       }).then(function (practice) {
@@ -783,6 +794,37 @@
         resumeActivePractice();
       }).catch(function (error) {
         pulling = false;
+        showPracticeError(error, true);
+      });
+    }
+
+    function saveCurrentSelectionAsPaper() {
+      var contentMode = selectedContentMode() || (legacyModeControls ? "exam" : "");
+      var kps = legacyModeControls && scopedKpId ? [scopedKpId] : selectedKpIds();
+      if (!contentMode || !kps.length) return;
+      if (contentMode === "flash_card") {
+        showPracticeError("试卷只保存题目；闪卡请直接开始练习。", false);
+        return;
+      }
+      var title = window.prompt ? window.prompt("试卷名称", "新的试卷") : "新的试卷";
+      if (!title || !title.trim()) return;
+      clearPracticeError();
+      pulling = true;
+      if (savePracticeSet) savePracticeSet.disabled = true;
+      selectFixedItems(kps, contentMode).then(function (selection) {
+        if (!selection.items.length) throw new Error("当前范围没有可保存的题目。");
+        return post("/practice-sets", {
+          title: title.trim(),
+          problem_ids: selection.items.map(function (item) { return item.item_id; }),
+          request: selection.request,
+        });
+      }).then(function () {
+        pulling = false;
+        sessionStorage.removeItem(INCLUDE_KEY);
+        window.location = "/w/" + encodeURIComponent(WS) + "/practice-sets";
+      }).catch(function (error) {
+        pulling = false;
+        if (savePracticeSet) savePracticeSet.disabled = !readyToStart();
         showPracticeError(error, true);
       });
     }
@@ -856,10 +898,18 @@
       beginFixedPractice(ids, contentMode, ratingMode);
     }
 
+    function syncSelectionActions() {
+      var ready = readyToStart();
+      if (startPractice) startPractice.disabled = !ready;
+      if (savePracticeSet) {
+        savePracticeSet.disabled = !ready || selectedContentMode() === "flash_card";
+      }
+    }
+
     function bindMode(mode) {
       if (mode) mode.addEventListener("change", function () {
         showFlashDirectionChoice();
-        startPractice.disabled = !readyToStart();
+        syncSelectionActions();
       });
     }
 
@@ -898,10 +948,11 @@
       showComposer(true);
     }
     showFlashDirectionChoice();
-    if (startPractice) {
-      startPractice.disabled = !readyToStart();
-      startPractice.addEventListener("click", startSession);
+    if (startPractice) startPractice.addEventListener("click", startSession);
+    if (savePracticeSet) {
+      savePracticeSet.addEventListener("click", saveCurrentSelectionAsPaper);
     }
+    syncSelectionActions();
     if (resumeButton) resumeButton.addEventListener("click", resumeActivePractice);
     if (retryPractice) retryPractice.addEventListener("click", resumeCard ? startSession : loadNext);
     if (resumeCard) loadActivePractice();
