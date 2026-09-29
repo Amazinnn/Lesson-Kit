@@ -212,57 +212,46 @@ def _pi_model_parts(model):
 
 
 def set_model(pool, conversation_id, model, provider=None, entry=None):
-    """Switch one logical conversation to another model target.
+    """Switch models inside one immutable Agent harness.
 
-    The local transcript owns continuity. Same-Pi switches use Pi's live RPC
-    model switch when a process is already running; cross-harness switches clear
-    the incompatible native session and mark the next turn for a bounded local
-    history handoff.
+    A conversation is permanently bound to the harness chosen at creation.
+    Same-Pi switches use Pi's live RPC set_model when possible; Codex and Claude
+    keep their native session id and receive the new --model on the next turn.
     """
     path = _conversation_file(pool, conversation_id)
     with _LOCK:
         record = _recover_interrupted(pool, _read_json(path))
         if record["status"] == "running":
             raise ConversationConflict("conversation has a running turn")
-        old_provider = record["provider"]
-        target_provider = provider or old_provider
-        if target_provider not in conversation_providers.SUPPORTED:
-            raise ValueError(f"unsupported provider: {target_provider}")
+        harness = record["provider"]
+        if provider is not None and provider != harness:
+            raise ConversationConflict(
+                "conversation harness cannot be changed; create a new conversation")
         if model is None and entry is None:
-            target = _resolve_target(target_provider, model=None)
+            target = _resolve_target(harness, model=None)
         else:
-            target = _resolve_target(target_provider, model=model, entry=entry)
+            target = _resolve_target(harness, model=model, entry=entry)
         folder = _conversation_dir(pool, conversation_id)
-        process = None
-        if old_provider == "pi":
-            process = PI_RPC.active().get(str(folder))
         target_changed = (
-            old_provider != target_provider
-            or record.get("model") != target.get("model")
+            record.get("model") != target.get("model")
             or list(record.get("model_args") or []) != list(target.get("args", []))
         )
-        if old_provider == target_provider == "pi" and process is not None:
-            parts = _pi_model_parts(target.get("model"))
-            if parts:
-                try:
-                    process.set_model(*parts)
-                except pi_rpc.PiRpcError:
-                    process = PI_RPC.discard(str(folder), process)
-                    if process is not None:
-                        process.close()
-            elif target_changed:
-                process = PI_RPC.discard(str(folder), process)
-                if process is not None:
-                    process.close()
-        elif old_provider == "pi":
-            process = PI_RPC.discard(str(folder))
+        if harness == "pi" and target_changed:
+            process = PI_RPC.active().get(str(folder))
             if process is not None:
-                process.close()
-        if old_provider != target_provider or (target_changed and target_provider != "pi"):
-            record["provider_session_id"] = None
-            record["handoff_from"] = old_provider
+                parts = _pi_model_parts(target.get("model"))
+                if parts:
+                    try:
+                        process.set_model(*parts)
+                    except pi_rpc.PiRpcError:
+                        stale = PI_RPC.discard(str(folder), process)
+                        if stale is not None:
+                            stale.close()
+                else:
+                    stale = PI_RPC.discard(str(folder), process)
+                    if stale is not None:
+                        stale.close()
         record.update({
-            "provider": target_provider,
             "model": target.get("model"),
             "model_entry": target.get("entry"),
             "model_args": list(target.get("args", [])),
@@ -542,9 +531,6 @@ def _prompt(message, context):
         "不要擅自删掉不合格的条目，也不要向学生声称已写入。若上下文含 last_check_outcome："
         "成功则不要重复提交相同内容，并按提示补齐学生要求但尚未导入的章；"
         "被拒收则按逐条原因修正后重新提交完整区块。\n\n"
-        + ("模型/Agent 已切换。下面 conversation_handoff 是 Lesson Kit 本地镜像的最近历史；"
-           "请把它作为连续对话上下文，不要声称你能恢复旧 harness 的私有状态。\n"
-           if context.get("conversation_handoff") else "")
         + "服务端重建的当前上下文：\n"
         + json.dumps(context, ensure_ascii=False, indent=2)
         + "\n\n学生消息：\n"
@@ -687,32 +673,6 @@ def _run_turn_safely(*args):
             _finish(folder, conversation_id, turn_id, "failed", f"provider turn failed: {exc}")
 
 
-def _handoff_history(folder, limit=8, max_chars=12000):
-    """Bounded local transcript for the first turn after a harness switch."""
-    transcript = folder / "transcript.jsonl"
-    try:
-        rows = [
-            json.loads(line)
-            for line in transcript.read_text(encoding="utf-8").splitlines()
-            if line.strip()
-        ][-limit:]
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        return []
-    history = []
-    used = 0
-    for row in reversed(rows):
-        pair = [
-            {"role": "user", "content": str(row.get("user") or "")},
-            {"role": "assistant", "content": str(row.get("assistant") or "")},
-        ]
-        size = sum(len(item["content"]) for item in pair)
-        if history and used + size > max_chars:
-            break
-        history[0:0] = pair
-        used += size
-    return history
-
-
 def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, context):
     folder = jobs_dir / conversation_id
     conversation_path = folder / "conversation.json"
@@ -727,9 +687,6 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
             "model": conversation.get("model"),
             "args": list(conversation.get("model_args") or provider.get("args", [])),
         }
-        if conversation.get("handoff_from"):
-            context = dict(context)
-            context["conversation_handoff"] = _handoff_history(folder)
         if conversation["provider"] != "pi":
             command = conversation_providers.build_command(
                 provider, conversation.get("provider_session_id")
@@ -994,10 +951,6 @@ def _store_answer(folder, conversation_path, turn_path, event_path, root, worksp
                 activity_id, index,
             )
 
-    conversation = _read_json(conversation_path)
-    if conversation.pop("handoff_from", None) is not None:
-        conversation["updated_at"] = _now()
-        _write_json(conversation_path, conversation)
     turn = _read_json(turn_path)
     if content_actions:
         turn["actions"] = content_actions
