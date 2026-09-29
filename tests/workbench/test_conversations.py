@@ -855,28 +855,23 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(conversation["model_args"], ["--profile", "lesson-kit"])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
-    def test_switching_harness_keeps_the_local_conversation_and_starts_handoff(
+    def test_switching_harness_is_refused_and_keeps_the_conversation_binding(
             self, get_provider):
         from workbench.bridge import conversations
 
         get_provider.side_effect = lambda name: {**self.provider, "name": name}
         conversation = conversations.create(self.pool, "codex", model="gpt-test-9")
-        conversation_path = (
-            self.pool.jobs_dir() / conversation["conversation_id"] / "conversation.json")
-        stored = json.loads(conversation_path.read_text(encoding="utf-8"))
-        stored["provider_session_id"] = "native-codex-session"
-        conversation_path.write_text(
-            json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")
 
-        switched = conversations.set_model(
-            self.pool, conversation["conversation_id"], "claude-test",
-            provider="claude")
+        with self.assertRaises(conversations.ConversationConflict):
+            conversations.set_model(
+                self.pool, conversation["conversation_id"], "claude-test",
+                provider="claude")
 
-        self.assertEqual(switched["conversation_id"], conversation["conversation_id"])
-        self.assertEqual(switched["provider"], "claude")
-        self.assertEqual(switched["model"], "claude-test")
-        self.assertIsNone(switched["provider_session_id"])
-        self.assertEqual(switched["handoff_from"], "codex")
+        restored = conversations.get(self.pool, conversation["conversation_id"])
+        self.assertEqual(restored["provider"], "codex")
+        self.assertEqual(restored["model"], "gpt-test-9")
+        self.assertNotIn("handoff_from", restored)
+
 
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")
