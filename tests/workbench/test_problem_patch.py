@@ -7,7 +7,7 @@ from pathlib import Path
 
 from workbench import ingest
 
-from tests.workbench.fixtures import WorkspaceFixture
+from tests.workbench.fixtures import WorkspaceFixture, open_db
 
 
 def patch_item(problem_id, **fields):
@@ -283,7 +283,7 @@ class ProblemPatchTests(unittest.TestCase):
         self.seed()
         applied = self.apply([patch_item(
             "dmath-ch06-prob-002", display_title="apply title")])
-        with sqlite3.connect(self.db_path) as conn:
+        with open_db(self.db_path) as conn:
             conn.execute(
                 "UPDATE problems SET display_title='later edit' "
                 "WHERE problem_id='dmath-ch06-prob-002'")
