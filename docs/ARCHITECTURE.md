@@ -95,6 +95,7 @@ workbench/
   「还能不能改」并在能改时精确撤回旧评分影响。
 - 新表 `practice_request_operations(request_id, payload, result, created_at)`：浏览器的
   作答和自评共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
+- 新表 `practice_runs(id, source_kind, source_ref, source_label, kp_ids_json, practice_mode, rating_mode, items_json, status, started_at, finished_at)`：只在一轮 active practice 完成或被显式替换 / 清除时写一条最小快照；逐题证据仍留在 attempts / feedback，统计图实时聚合，不复制统计值。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
 - 题目与闪卡可增量拥有 `display_title`（可读短标题）与 `topic_label`（单一主题标签）；它们是内容展示字段，不替代稳定 ID。
 - 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
