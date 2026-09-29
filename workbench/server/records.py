@@ -212,6 +212,33 @@ def _trend_chart(trend):
     return "<div class='record-trend' aria-label='最近 14 天作答量'>" + "".join(bars) + "</div>"
 
 
+def _activity_calendar(activity):
+    if not activity or not any(day.get("attempts") for day in activity):
+        return "<p class='muted'>最近 12 周还没有作答。</p>"
+    labels = "".join(
+        f"<span class='record-activity-weekday'>{label}</span>"
+        for label in ("一", "二", "三", "四", "五", "六", "日")
+    )
+    cells = []
+    for day in activity:
+        if day.get("future"):
+            cells.append("<span class='record-activity-day future' aria-hidden='true'></span>")
+            continue
+        attempts = int(day.get("attempts") or 0)
+        level = 0 if attempts == 0 else 1 if attempts == 1 else 2 if attempts <= 3 else 3 if attempts <= 7 else 4
+        date_text = str(day.get("date") or "")
+        cells.append(
+            f"<span class='record-activity-day level-{level}' "
+            f"title='{html.escape(date_text)} · {attempts} 次作答' "
+            f"aria-label='{html.escape(date_text)}，{attempts} 次作答'></span>"
+        )
+    return (
+        "<div class='record-activity' aria-label='最近 12 周作答日历'>"
+        + labels + "".join(cells) + "</div>"
+        "<p class='muted'>颜色只表示当天的作答次数。</p>"
+    )
+
+
 def _rating_chart(ratings):
     maximum = max((item.get("count", 0) for item in ratings), default=0)
     if maximum == 0:
@@ -303,6 +330,11 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
     else:
         body = (
             _summary_cards(overview.get("summary") or {}, runs)
+            + "<section class='card record-chart-card record-activity-card'>"
+            "<div class='section-heading'><div><p class='section-kicker'>最近 12 周</p>"
+            "<h2>作答日历</h2></div></div>"
+            + _activity_calendar(overview.get("activity") or [])
+            + "</section>"
             + "<section class='record-dashboard-grid'>"
             "<article class='card record-chart-card'><div class='section-heading'><div>"
             "<p class='section-kicker'>最近 14 天</p><h2>作答量</h2></div></div>"
