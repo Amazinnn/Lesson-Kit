@@ -152,7 +152,7 @@ workbench/
   更长的工具预算（`bridge add --timeout/--tool-timeout`），因此长回答与慢命令都不会被
   截停；真正卡住的轮次仍如实记为 `provider timed out`。
 - `bridge.conversation_actions` 只解析模型回复里的动作区块并校验包装形状；会话并发、持久化、执行与失败提示仍由 `bridge.conversations` 编排。
-- Agent 会话由 Lesson Kit 本地 mirror 持有逻辑连续性；模型目标记录 harness/model/entry args。跨 harness 时原生 session 清空，并在新 transport 首轮注入有界 transcript handoff；Pi 同 harness 优先 RPC 原生切换。
+- Agent 会话在创建时绑定一个不可变的 harness；模型目标记录 model/entry args，只允许在该 harness 内切换。Codex 通过 app-server `model/list` 枚举，Claude Code 使用其支持模型 catalog，Pi 使用 RPC `get_available_models`；Pi 同 harness 优先 RPC `set_model` 原生切换。更换 harness 必须新建会话。
 - Pi 在同一 normalized activity + 350ms polling 链路上把读、写、搜索、命令和
   Lesson Kit 操作呈现为独立消息；Codex/Claude 继续使用执行计划，不新增流协议。
 - `ingest.content-bundle`：一份清单原子提交知识点/正式题/微题/闪卡/图片；预检即校验引用、
