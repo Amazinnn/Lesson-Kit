@@ -7,7 +7,7 @@ from pathlib import Path
 
 from workbench import ingest
 from workbench.bridge import conversation_providers, conversations, pi_rpc
-from workbench.data import active_practice, attempts as attempts_data, goals, queries
+from workbench.data import active_practice, attempts as attempts_data, goals, practice_sets, queries
 from workbench.domain import (
     cards as card_rules, difficulty as difficulty_rules, feedback, learning_state, planning, pull,
     schedule as schedule_rules, signals as signal_rules, weak,
@@ -315,6 +315,96 @@ def pull_cards(pool, workspace, params, body):
         preference=direction_mode, excluded_ids=exclude,
         excluded_directions=set(exclude_directions), today=date.today().isoformat(),
     )}
+
+
+def practice_sets_list(pool, workspace, params, body):
+    return {"practice_sets": practice_sets.list_saved(pool)}
+
+
+def practice_sets_create(pool, workspace, params, body):
+    body = _request_object(body)
+    try:
+        return practice_sets.create_saved(
+            pool, body.get("title"), body.get("problem_ids"),
+            request=body.get("request"))
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_set_get(pool, workspace, params, body):
+    try:
+        return practice_sets.get_saved(pool, params["practice_set_id"])
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_set_update(pool, workspace, params, body):
+    body = _request_object(body)
+    allowed = {"title", "problem_ids", "request"}
+    extra = set(body) - allowed
+    if extra:
+        raise ApiError(400, f"unsupported practice-set field: {sorted(extra)[0]}")
+    if not body:
+        raise ApiError(400, "practice-set update is empty")
+    try:
+        return practice_sets.update_saved(
+            pool, params["practice_set_id"],
+            title=body.get("title"),
+            problem_ids=body.get("problem_ids"),
+            request=body.get("request"))
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_set_delete(pool, workspace, params, body):
+    try:
+        return practice_sets.delete_saved(pool, params["practice_set_id"])
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_set_render(pool, workspace, params, body):
+    try:
+        return practice_sets.render_saved(pool, params["practice_set_id"])
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_set_start(pool, workspace, params, body):
+    body = _request_object(body)
+    replace = body.get("replace", False)
+    if not isinstance(replace, bool):
+        raise ApiError(400, "replace must be a boolean")
+    practice_mode = body.get("practice_mode", "exam")
+    rating_mode = body.get("rating_mode", "immediate")
+    if practice_mode not in {"exam", "micro", "yes_no"}:
+        raise ApiError(400, "practice_mode must be exam, micro, or yes_no")
+    if rating_mode not in {"immediate", "batch"}:
+        raise ApiError(400, "rating_mode must be immediate or batch")
+    try:
+        record = practice_sets.get_saved(pool, params["practice_set_id"])
+        problem_ids = [item["problem_id"] for item in record["plan"]["items"]]
+        kp_ids = []
+        for problem_id in problem_ids:
+            problem = pool.problem(problem_id)
+            for kp_id in (problem or {}).get("kp_ids", []):
+                if kp_id not in kp_ids:
+                    kp_ids.append(kp_id)
+        return active_practice.create(pool, {
+            "source_kind": "practice_set",
+            "source_ref": record["practice_set_id"],
+            "kp_ids": kp_ids,
+            "practice_mode": practice_mode,
+            "rating_mode": rating_mode,
+            "items": [
+                {"item_type": "problem", "item_id": problem_id}
+                for problem_id in problem_ids
+            ],
+        }, replace=replace)
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except (active_practice.ActivePracticeError, ValueError) as exc:
+        raise ApiError(400, str(exc)) from exc
 
 
 def active_practice_get(pool, workspace, params, body):
