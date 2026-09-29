@@ -125,8 +125,10 @@ class ConversationApiTests(unittest.TestCase):
         status, providers = self.get("/api/w/dmath/ai/providers")
         self.assertEqual(status, 200)
         # The picker sees one entry per harness until named models exist.
-        self.assertEqual(providers,
-                         [{"name": "codex", "provider": "codex", "model": None}])
+        self.assertEqual(providers, [{
+            "name": "codex", "provider": "codex", "model": None,
+            "entry": None, "source": "default",
+        }])
 
         with mock.patch("workbench.bridge.conversation_providers.get", return_value=self.provider):
             status, created = self.post("/api/w/dmath/ai/sessions", {"provider": "codex"})
