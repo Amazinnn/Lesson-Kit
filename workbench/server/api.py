@@ -450,6 +450,20 @@ def active_practice_delete(pool, workspace, params, body):
         raise ApiError(400, str(exc)) from exc
 
 
+def practice_run_replay(pool, workspace, params, body):
+    body = _request_object(body)
+    replace = body.get("replace", False)
+    if not isinstance(replace, bool):
+        raise ApiError(400, "replace must be a boolean")
+    try:
+        run_id = int(params["run_id"])
+        return active_practice.replay(pool, run_id, replace=replace)
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except (active_practice.ActivePracticeError, ValueError) as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
 def practice(pool, workspace, params, body):
     body = _request_object(body)
     problem_id = body.get("problem_id")
