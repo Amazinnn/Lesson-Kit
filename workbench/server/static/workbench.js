@@ -1920,38 +1920,42 @@
     });
   }
 
+  function aiTargetValue(entry) {
+    return JSON.stringify([
+      entry.provider || entry.name || "",
+      entry.model || "",
+      entry.entry || "",
+    ]);
+  }
+
   function aiSyncModelSwitch(record) {
-    // One select per conversation: the entries of the conversation's own
-    // harness, with the current model marked; switching takes the next turn.
+    // Lesson Kit owns the logical conversation, so every available target may
+    // be selected here; crossing harnesses hands the local mirror to the next
+    // provider instead of pretending native sessions are portable.
     var select = document.getElementById("ai-model-switch");
     if (!select || !record) return;
-    var provider = record.provider;
     select.innerHTML = "";
     var matched = false;
-    aiProviders.filter(function (entry) {
-      return entry.provider === provider;
-    }).forEach(function (entry) {
+    aiProviders.forEach(function (entry) {
       var option = document.createElement("option");
-      option.value = entry.model || "";
-      option.textContent = entry.name;
-      if ((record.model || "") === (entry.model || "")) {
+      option.value = aiTargetValue(entry);
+      option.textContent = entry.name + " · " + (entry.provider || "");
+      var sameProvider = (record.provider || "") === (entry.provider || "");
+      var sameModel = (record.model || "") === (entry.model || "");
+      var sameEntry = !record.model_entry || !entry.entry || record.model_entry === entry.entry;
+      if (sameProvider && sameModel && sameEntry) {
         option.selected = true;
         matched = true;
       }
       select.appendChild(option);
     });
-    if (!select.children.length) {
-      select.classList.add("hidden");
-      return;
-    }
-    select.classList.remove("hidden");
-    if (record.model && !matched) {
-      // A raw model id that no entry names: show it as the current choice.
-      var option = document.createElement("option");
-      option.value = record.model;
-      option.textContent = record.model;
-      option.selected = true;
-      select.insertBefore(option, select.firstChild);
+    select.classList.toggle("hidden", !aiProviders.length);
+    if (!matched && record.provider) {
+      var current = document.createElement("option");
+      current.value = JSON.stringify([record.provider, record.model || "", record.model_entry || ""]);
+      current.textContent = (record.model_entry || record.model || record.provider) + " · " + record.provider;
+      current.selected = true;
+      select.insertBefore(current, select.firstChild);
     }
   }
 
@@ -1961,8 +1965,17 @@
       if (!aiConversation) return;
       var failure = "";
       aiSetStatus("切换模型中…");
-      patch("/ai/sessions/" + encodeURIComponent(aiConversation),
-        { model: aiModelSwitch.value || null })
+      var target;
+      try {
+        target = JSON.parse(aiModelSwitch.value || "[]");
+      } catch (error) {
+        target = [];
+      }
+      patch("/ai/sessions/" + encodeURIComponent(aiConversation), {
+        provider: target[0] || null,
+        model: target[1] || null,
+        entry: target[2] || null,
+      })
         .catch(function (err) { failure = err.message || "未知错误"; })
         .then(function () {
           // The reload repaints the header, so the notice is set after it.
@@ -2195,7 +2208,9 @@
     if (!aiProviderOptions) return;
     aiSetView("picker");
     aiProviderOptions.innerHTML = "";
-    aiProviders.forEach(function (entry) {
+    aiRefreshProviders().then(function () {
+      aiProviderOptions.innerHTML = "";
+      aiProviders.forEach(function (entry) {
       var button = document.createElement("button");
       button.className = "outline sm ai-provider-option";
       button.type = "button";
@@ -2204,16 +2219,29 @@
       // The display name is the entry's own — the harness and model id stay
       // out of the label.
       button.textContent = entry.name;
-      button.addEventListener("click", function () {
-        aiCreateSession(entry.provider || entry.name, entry.model || "");
+        button.dataset.entry = entry.entry || "";
+        button.addEventListener("click", function () {
+          aiCreateSession(entry.provider || entry.name, entry.model || "", entry.entry || "");
+        });
+        aiProviderOptions.appendChild(button);
       });
-      aiProviderOptions.appendChild(button);
+      if (aiProviderLoadError) {
+        aiProviderOptions.innerHTML = "<p class='inline-error'>Agent 服务暂不可用。请稍后重试。</p>";
+      } else if (!aiProviders.length) {
+        aiProviderOptions.innerHTML = "<p class='inline-error'>暂无可用 Agent。请先配置一个提供方。</p>";
+      }
     });
-    if (aiProviderLoadError) {
-      aiProviderOptions.innerHTML = "<p class='inline-error'>Agent 服务暂不可用。请稍后重试。</p>";
-    } else if (!aiProviders.length) {
-      aiProviderOptions.innerHTML = "<p class='inline-error'>暂无可用 Agent。请先配置一个提供方。</p>";
-    }
+  }
+
+  function aiRefreshProviders() {
+    return api("/ai/providers").then(function (items) {
+      aiProviders = items || [];
+      aiProviderLoadError = "";
+      return aiProviders;
+    }).catch(function () {
+      aiProviderLoadError = "Agent 服务暂不可用。";
+      return [];
+    });
   }
 
   function aiRefreshSessionList() {
@@ -2227,9 +2255,10 @@
     });
   }
 
-  function aiCreateSession(provider, model) {
+  function aiCreateSession(provider, model, entry) {
     var payload = { provider: provider };
     if (model) payload.model = model;
+    if (entry) payload.entry = entry;
     post("/ai/sessions", payload).then(function (record) {
       aiConversation = record.conversation_id;
       store(AI_CONVERSATION_KEY, aiConversation);
@@ -2250,11 +2279,8 @@
   });
   if (aiSessionList) {
     aiSetView("list");
-    var providerRequest = api("/ai/providers").then(function (items) {
-      aiProviders = items || [];
-    }).catch(function () {
-      aiProviderLoadError = "Agent 服务暂不可用。";
-      if (aiSessionEmpty) {
+    var providerRequest = aiRefreshProviders().then(function () {
+      if (aiProviderLoadError && aiSessionEmpty) {
         aiSessionEmpty.textContent = aiProviderLoadError;
         aiSessionEmpty.classList.remove("hidden");
       }
