@@ -42,7 +42,7 @@
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检，apply 单事务多题，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
-| `data` | 读 + **显式变更**（JSON 直改内容；candidate 实体与 gate/promote 动作已物理移除，2026-08-30） | Agent |
+| `data` | 读 + **显式变更**（JSON 直改内容；`data <ws> audit` 只读报告重复、片段、标题和图片问题） | Agent |
 | `bridge add / add-model / list` | 配置 provider 与**模型条目**（显示名自定，与 harness 解耦）/ 报告解析到的可执行文件、来源与条目 | 人 |
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |

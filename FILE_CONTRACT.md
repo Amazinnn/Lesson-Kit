@@ -73,8 +73,21 @@ An objective item declares its practice form with `quiz_type` (`yes_no`,
 `answer_key` together with `error_reason`. A **missing answer key is allowed**:
 the item is then practised in its 判断/小测 shell without a verdict, and the key
 can be supplied later with `lesson-kit data <workspace> update problem <id>
---input '{"answer_key": "…"}'` (an empty value clears it again). The stem bound
-is 800 characters.
+--input '{"answer_key": "…"}'` (an empty value clears it again). Objective
+stems have no length limit.
+
+Before a new problem is written, its normalized whole-stem identity is compared
+with every existing problem in the course and with the other items in the same
+manifest, across chapters. Case, whitespace, punctuation, known math-rendering
+variants, and export-noise lines are normalized; the comparison is not
+truncated. A duplicate is refused with the colliding problem id and source
+evidence. Similar but different stems remain valid.
+
+The read-only hygiene report is `lesson-kit data <workspace> audit`; select
+checks with repeated `--check` options and use `--json` for machine output. It
+reports duplicates, likely fragments, unmarked objective items, missing display
+titles, unresolved figure references, and orphaned figure files. It exits 0
+when selected checks are clean and 1 when they report findings.
 
 Problems that already exist are changed **in place** — never by deleting and
 re-importing, because the readable id is the row's identity and everything a

@@ -405,6 +405,24 @@ class IngestTests(unittest.TestCase):
         self.assertEqual(json.loads(batch[2]), {"problems": 2})
         self.assertEqual(Path(batch[3]), self.root / "formal-backup.db")
 
+    def test_formal_batch_rollback_restores_existing_solution_rows(self):
+        solutions, audits = self.qualified_files()
+        gate_path = self.root / "gate.json"
+        ingest.gate(self.db_path, solutions, audits, gate_path)
+        applied = ingest.apply(self.db_path, gate_path, self.root / "formal-backup.db")
+
+        rolled = ingest.rollback_batch(self.db_path, applied["batch_id"])
+
+        self.assertEqual(rolled["counts"], {"problems": 2, "knowledge_points": 0})
+        conn = sqlite3.connect(self.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT problem_id, solution, ingest_batch_id FROM problems ORDER BY problem_id"
+            ).fetchall()
+        finally:
+            conn.close()
+        self.assertEqual(rows, [("p-1", "old one", None), ("p-2", "old two", None)])
+
     def test_formal_apply_clears_the_complete_problem_difficulty_rating(self):
         conn = sqlite3.connect(self.db_path)
         try:

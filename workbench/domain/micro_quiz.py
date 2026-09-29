@@ -1,5 +1,7 @@
 """Micro-quiz content contract (pure rules)."""
 
+from workbench.domain import markup
+
 QUIZ_TYPES = ("yes_no", "single_choice", "multiple_choice")
 RETIRED_QUIZ_TYPES = ("closest_answer", "short_answer")
 OBJECTIVE_TYPES = ("yes_no", "single_choice", "multiple_choice")
@@ -8,11 +10,7 @@ MAX_OPTIONS = 6
 # No stem length bound: a question bank's 判断题/单选题 are as long as the source
 # paper makes them (several assertions, long scenarios, inlined option blocks),
 # and refusing them by length sent real objective items into the exam shell.
-LABEL_FIELD_LIMITS = {
-    "topic_label": 40,
-    "display_title": 80,
-    "display_summary": 200,
-}
+LABEL_FIELD_LIMITS = markup.LABEL_FIELD_LIMITS
 
 _PRACTICE_MODES = {
     "yes_no": ["yes_no"],
@@ -133,6 +131,8 @@ def validate_problem_row(row):
     stem = row.get("problem_text")
     if not isinstance(stem, str) or not stem.strip():
         errors.append("stem (problem_text) is required")
+    else:
+        errors.extend(markup.validate_markup(stem))
     if not isinstance(modes, list) or not modes:
         errors.append("practice_modes marking is required for a micro quiz")
     errors.extend(validate_payload(quiz_type, row.get("micro_quiz")))
@@ -140,14 +140,10 @@ def validate_problem_row(row):
         allowed = set(practice_modes_for(quiz_type))
         if not set(modes) <= allowed:
             errors.append(f"practice_modes for {quiz_type} must be within {sorted(allowed)}")
-    for field, limit in LABEL_FIELD_LIMITS.items():
+    for field in LABEL_FIELD_LIMITS:
         if field not in row:
             continue
-        value = row[field]
-        if not isinstance(value, str) or not value.strip():
-            errors.append(f"{field} must be a non-empty string")
-        elif len(value) > limit:
-            errors.append(f"{field} exceeds {limit} characters")
+        errors.extend(markup.validate_label(field, row[field]))
     return errors
 
 

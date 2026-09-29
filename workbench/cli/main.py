@@ -14,6 +14,7 @@ from workbench import ingest
 from workbench.bridge import conversation_providers
 from workbench.data import pool as pool_mod
 from workbench.data import content
+from workbench.data import content_audit
 from workbench.data import difficulty as difficulty_data
 from workbench.data import mastery as mastery_data
 from workbench.data import queries
@@ -603,6 +604,29 @@ def cmd_data(args):
     workspace = _workspace(args.name)
     pool = _pool(workspace)
     try:
+        if args.action == "audit":
+            result = content_audit.audit(pool, args.check)
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            elif not result["findings"]:
+                print("content audit: clean")
+                print("checks: " + ", ".join(result["checks"]))
+            else:
+                print(f"content audit: {len(result['findings'])} finding(s)")
+                for check in result["checks"]:
+                    grouped = [item for item in result["findings"]
+                               if item["check"] == check]
+                    if not grouped:
+                        continue
+                    print(f"{check}:")
+                    for item in grouped:
+                        chapter = f" [{item['chapter']}]" if item["chapter"] else ""
+                        problem_ids = ", ".join(item["problem_ids"])
+                        prefix = f"  {problem_ids}{chapter}: " if problem_ids else "  "
+                        print(prefix + item["detail"])
+            return 1 if result["findings"] else 0
+        if not args.entity:
+            raise ValueError(f"data {args.action} requires an entity")
         if args.action == "get":
             result = content.get(pool, args.entity, args.target)
         elif args.action == "list":
@@ -1039,12 +1063,14 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("name")
     p.add_argument(
         "action",
-        choices=["get", "list", "search", "history", "create", "update", "delete", "state"],
+        choices=["get", "list", "search", "history", "create", "update", "delete", "state", "audit"],
     )
-    p.add_argument("entity", choices=["kp", "problem", "relation"])
+    p.add_argument("entity", nargs="?", choices=["kp", "problem", "relation"])
     p.add_argument("target", nargs="?")
     p.add_argument("value", nargs="?", choices=["needs_work", "review", "mastered"])
     p.add_argument("--input")
+    p.add_argument("--check", action="append", choices=content_audit.CHECKS)
+    p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_data)
 
     p = sub.add_parser("difficulty", help="check or apply objective problem ratings")

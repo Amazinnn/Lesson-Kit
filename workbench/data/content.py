@@ -4,6 +4,7 @@ import json
 import re
 
 from workbench.domain import micro_quiz
+from workbench.domain import markup
 
 
 TABLES = {
@@ -329,7 +330,7 @@ def plan_problem_patch(row, data, course=""):
     - `practice_modes` follows the payload unless it is declared (`[]`/null is
       exam-only), and a micro/yes-no marking without a payload is refused;
     - the resulting row is checked against the micro-quiz contract for the parts
-      this patch touches (payload shape, one knowledge point, stem bound, mode
+      this patch touches (payload shape, one knowledge point, mode
       marking). Fields the patch does not touch are left as they are, so legacy
       rows stay patchable without re-validating their old content.
 
@@ -365,6 +366,18 @@ def plan_problem_patch(row, data, course=""):
 
     fields = {name: data[name] for name in data
               if name in PROBLEM_PATCH_FIELDS and name != "answer_key"}
+    if "problem_text" in fields and (
+        not isinstance(fields["problem_text"], str)
+        or not fields["problem_text"].strip()
+    ):
+        errors.append("problem_text must be a non-empty string")
+    for field in ("problem_text", "solution"):
+        if field in fields and fields[field] is not None:
+            errors.extend(f"{field} {reason}" for reason in
+                          markup.validate_markup(fields[field]))
+    for field in markup.LABEL_FIELD_LIMITS:
+        if field in fields:
+            errors.extend(markup.validate_label(field, fields[field]))
     # A whole-payload write gets the full contract; the `answer_key` sugar only
     # checks the key's shape, so an existing row keeps its other payload fields.
     explicit_payload = "micro_quiz" in data

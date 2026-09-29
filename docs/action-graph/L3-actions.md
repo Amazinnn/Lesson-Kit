@@ -73,6 +73,7 @@
 | replace_practice_selection（明确练习意图才生效） | 对话产出动作 | Agent | 浏览器选区（一次性） | 已实现 |
 | content-bundle（内容批次：合法的纯新增动作自动执行，无关键词意图门；大清单暂存本对话 jobs 后由区块引用、小清单内联（`kind`/`type` 都认）→整份清单预检→一份备份→单事务 apply；**清单可跨章**，按每项声明的章发号/落图并**按章各记一个批次**，推不出章的条目点名拒收；**一轮里每个区块都应用**，学生说清几章就一轮导完；**题型（综合题/判断/小测）入库时可选，客观题允许无答案键**；失败逐条显式回对话流、零写入） | 对话产出动作 | Agent | 池内容 + `.lessonkit/figures/{course}/{chapter}/`（经门禁+按章批次标记）；补答案键走 `data update problem` | 已实现（2026-09-23；2026-09-25 跨章与多区块、题型与无键客观题） |
 | problem-patch（原地改已有题目：补答案键/改题型/补来源/把选项从题面拆进 `options`；单题 `data update problem`、批量 `ingest recipe problem-patch --apply`；未知字段与难度字段拒收，题号不可改；批次记旧值可回滚） | 对话产出动作 / CLI | Agent（仅明确指令）+人 | problems（原地 UPDATE，不插入不删行） | 已实现（2026-09-25） |
+| 内容审计（重复题/疑似片段/未标客观题/缺标题/图片引用；只读，可 `--check` 筛选、`--json` 输出） | CLI `data <ws> audit` | Agent | —（数据库与文件零写入；有发现返回 1） | 已实现（content-dedup-and-audit） |
 | 整批回滚（结果卡按钮，与 CLI 同源 rollback；跨章导入时**每章一行、各撤各的**） | UI 结果卡 | 人 | 池内容（按批次删行） | 已实现（introduce-check-pipeline；2026-09-25 按章细化） |
 
 ## 五、目标与时间
@@ -178,6 +179,7 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   结果卡渲染两遍的重复。
 - 2026-09-25 原地改题（in-place-problem-edits）：新增 problem-patch 动作与批量通道（见上表），单题入口 `data update problem` 扩到 `practice_modes`/整份 `micro_quiz`/来源三字段/`answer_key`；`data update` 对不认识的字段名不再静默丢弃、`data delete` 删不存在的题号不再假装成功；客观题题干上限 200→800 字。补丁回滚是写回旧值，学习记录与题号一起保住。
 - 2026-09-26 取消客观题题干上限：真题里的长篇单选/多选（多断言、长情境、内联选项块）不再因长度被退回综合题，摄入门禁与 `problem-patch` 同步取消长度校验。
+- 2026-09-29 内容身份去重与只读题库审计（content-dedup-and-audit）：同一课程内题干完整规范化后跨来源、跨章节去重；`data <ws> audit` 报告重复、片段、未标客观题、缺标题与图片问题；回滚 apply 后状态变动时先拒绝且不创建备份。
 - 2026-09-26 做题记录 + 来源筛选 + 模型条目（attempt-records-filters-and-model-entries）：
   练习回路新增「来源筛选浮窗」，记录与调度新增两条（浏览器作答落库、做题记录视图），
   Agent 桥新增两条（模型条目配置、对话内切换模型）并修正「新建会话」的措辞（harness 锁定、

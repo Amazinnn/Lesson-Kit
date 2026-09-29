@@ -109,7 +109,7 @@ COMMANDS = {
     "feedback": (AGENT, ""),
     "goals": (AGENT, ""),
     "attempts": (AGENT, ""),
-    "data": (AGENT, ""),
+    "data": (AGENT, "reads/writes current content and runs a read-only content audit"),
     "difficulty": (AGENT, ""),
     "ingest": (AGENT, ""),
 }
