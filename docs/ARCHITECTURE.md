@@ -57,10 +57,10 @@ workbench/
 │   └── display_metadata.py # 展示字段回填
 ├── bridge/
 │   ├── __init__.py
-│   ├── conversation_providers.py # PATH Agent 发现、原生新建/续聊命令、活动事件归一化与轮次预算
+│   ├── conversation_providers.py # Agent harness 发现、统一模型目标、原生新建/续聊命令与轮次预算
 │   ├── conversations.py # conv-###、串行 turn、取消、成功镜像（含执行计划、静默预算看门狗）
 │   ├── conversation_actions.py # 对话回复中的结构化动作解析与契约校验
-│   └── pi_rpc.py       # 每对话一个隐藏 `pi --mode rpc` 常驻进程（LF JSONL、abort、空闲回收）
+│   └── pi_rpc.py       # 每对话一个隐藏 `pi --mode rpc` 常驻进程（含模型枚举/原生切换、abort、空闲回收）
 ├── ingest/
 │   ├── __init__.py    # 内容 prepare/run/gate/apply/batch/rollback（公开兼容入口）
 │   └── artifacts.py   # UTF-8 JSON 工件读写与会话暂存清单读取
@@ -152,6 +152,7 @@ workbench/
   更长的工具预算（`bridge add --timeout/--tool-timeout`），因此长回答与慢命令都不会被
   截停；真正卡住的轮次仍如实记为 `provider timed out`。
 - `bridge.conversation_actions` 只解析模型回复里的动作区块并校验包装形状；会话并发、持久化、执行与失败提示仍由 `bridge.conversations` 编排。
+- Agent 会话由 Lesson Kit 本地 mirror 持有逻辑连续性；模型目标记录 harness/model/entry args。跨 harness 时原生 session 清空，并在新 transport 首轮注入有界 transcript handoff；Pi 同 harness 优先 RPC 原生切换。
 - Pi 在同一 normalized activity + 350ms polling 链路上把读、写、搜索、命令和
   Lesson Kit 操作呈现为独立消息；Codex/Claude 继续使用执行计划，不新增流协议。
 - `ingest.content-bundle`：一份清单原子提交知识点/正式题/微题/闪卡/图片；预检即校验引用、
