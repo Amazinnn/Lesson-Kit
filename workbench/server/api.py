@@ -568,6 +568,8 @@ def ai_session_update(pool, workspace, params, body):
     has_target = any(key in body for key in ("model", "provider", "entry"))
     title = body.get("title")
     model = body.get("model")
+    if model == "":
+        model = None
     provider = body.get("provider")
     entry = body.get("entry")
     if not has_title and not has_target:
