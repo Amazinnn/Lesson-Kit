@@ -2244,6 +2244,7 @@
       aiProviderLoadError = "";
       return aiProviders;
     }).catch(function () {
+      aiProviders = [];
       aiProviderLoadError = "Agent 服务暂不可用。";
       return [];
     });
