@@ -1464,9 +1464,10 @@ img { max-width: 100%; }
   position: relative; border-bottom: 1px solid var(--dsw-border-l2);
 }
 .record-day-bar {
-  display: block; width: min(22px, 76%); min-height: 2px;
+  display: block; width: min(22px, 76%);
   background: var(--lk-blue); border: 1px solid var(--lk-ink); border-bottom: 0;
 }
+.record-day-bar.empty { border: 0; background: transparent; }
 .record-day-value {
   position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
   color: var(--dsw-label-tertiary); font-size: 10px; line-height: 14px;
