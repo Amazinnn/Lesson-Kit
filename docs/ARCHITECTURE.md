@@ -46,7 +46,8 @@ workbench/
 ├── data/
 │   ├── __init__.py
 │   ├── pool.py        # Pool：工作区级只读/写连接 + 查询（weak/due/problem/kp/figures）
-│   ├── queries.py     # 视图查询（hub 统计、练习页合流列表/到期提醒/日历）
+│   ├── queries.py     # 通用视图查询（hub 统计、练习页合流列表/到期提醒/日历）
+│   ├── records.py     # 做题记录只读查询
 │   ├── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联
 │   ├── content_audit.py # 只读题库卫生检查
 │   ├── difficulty.py  # 显式难度 check/apply 整批事务
@@ -72,7 +73,8 @@ workbench/
 │   ├── app.py         # BaseHTTPRequestHandler 路由（单进程单端口 127.0.0.1）
 │   ├── api.py         # JSON API 处理器（hub/weak/pull/practice/feedback/schedule/figures/ai）
 │   ├── context.py     # 按路由/对象 ID 重建 Agent 权威页面上下文（练习页额外附带限长的聚焦草稿）
-│   ├── pages.py       # 服务端渲染 HTML（KaTeX 资产静态复用 editable-graph/dist）
+│   ├── pages.py       # 服务端页面壳与通用页面 HTML
+│   ├── records.py     # 做题记录页面 HTML
 │   └── static/
 │       ├── practice-deck.js # 练习 session 纯数据状态
 │       └── practice-flow.js # 练习页 DOM 与请求生命周期
