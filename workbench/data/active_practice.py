@@ -255,6 +255,40 @@ def _archive(pool, record, status):
     )
 
 
+def replay(pool, run_id, *, replace=False):
+    """Start the exact items stored by one archived practice."""
+    _require_schema(pool)
+    if isinstance(run_id, bool) or not isinstance(run_id, int) or run_id <= 0:
+        raise ActivePracticeError("run_id must be a positive integer")
+    row = pool.connect().execute(
+        "SELECT * FROM practice_runs WHERE id=?", (run_id,)
+    ).fetchone()
+    if row is None:
+        raise ActivePracticeError(f"unknown practice run: {run_id}")
+    record = dict(row)
+    try:
+        items = json.loads(record["items_json"] or "[]")
+        kp_ids = json.loads(record["kp_ids_json"] or "[]")
+    except json.JSONDecodeError as exc:
+        raise ActivePracticeError(f"practice run {run_id} is invalid") from exc
+    return create(pool, {
+        "source_kind": record["source_kind"],
+        "source_ref": record.get("source_ref"),
+        "source_label": record.get("source_label"),
+        "kp_ids": kp_ids,
+        "practice_mode": record["practice_mode"],
+        "rating_mode": record["rating_mode"],
+        "items": [
+            {
+                "item_type": item.get("item_type"),
+                "item_id": item.get("item_id"),
+                "direction": item.get("direction") or "",
+            }
+            for item in items
+        ],
+    }, replace=replace)
+
+
 def _delete(pool):
     pool.connect().execute("DELETE FROM active_practice_items")
     pool.connect().execute("DELETE FROM active_practice WHERE singleton=1")
