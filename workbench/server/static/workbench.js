@@ -1255,6 +1255,124 @@
   var draftAnswer = practiceRuntime.draftAnswer;
   var draftNote = practiceRuntime.draftNote;
 
+  /* ---------- saved papers ---------- */
+
+  var practiceSetList = document.getElementById("practice-set-list");
+
+  function practiceSetIds(card) {
+    return Array.prototype.slice.call(
+      card.querySelectorAll(".practice-set-item")
+    ).map(function (row) { return row.dataset.problemId; });
+  }
+
+  function practiceSetStatus(card, message) {
+    var status = card.querySelector(".practice-set-status");
+    if (!status) return;
+    status.textContent = message || "";
+    status.classList.toggle("hidden", !message);
+  }
+
+  function reloadPage() {
+    if (window.location && typeof window.location.reload === "function") {
+      window.location.reload();
+    }
+  }
+
+  function downloadPaper(title, suffix, text) {
+    if (typeof Blob === "undefined" || !window.URL || !window.URL.createObjectURL) return;
+    var blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    var url = window.URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = (title || "practice-set").replace(/[\\/:*?"<>|]+/g, "-") + suffix;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }
+
+  if (practiceSetList) {
+    practiceSetList.addEventListener("click", function (event) {
+      var button = event.target.closest && event.target.closest("button");
+      if (!button) return;
+      var card = button.closest(".practice-set-card");
+      if (!card) return;
+      var practiceSetId = card.dataset.practiceSetId;
+      var encoded = encodeURIComponent(practiceSetId);
+
+      if (button.hasAttribute("data-set-start")) {
+        post("/practice-sets/" + encoded + "/start", {}).then(function () {
+          window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+        }).catch(function (error) {
+          if (window.confirm && window.confirm(
+            "当前还有一轮练习没有完成。开始这张试卷会清除旧进度，继续吗？"
+          )) {
+            post("/practice-sets/" + encoded + "/start", { replace: true }).then(function () {
+              window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+            }).catch(function (retryError) {
+              practiceSetStatus(card, retryError.message || "无法开始练习");
+            });
+          } else {
+            practiceSetStatus(card, error.message || "当前练习未完成");
+          }
+        });
+        return;
+      }
+
+      if (button.hasAttribute("data-set-rename")) {
+        var heading = card.querySelector("h2");
+        var title = window.prompt
+          ? window.prompt("试卷名称", heading ? heading.textContent : "")
+          : null;
+        if (!title || !title.trim()) return;
+        patch("/practice-sets/" + encoded, { title: title.trim() })
+          .then(reloadPage)
+          .catch(function (error) { practiceSetStatus(card, error.message); });
+        return;
+      }
+
+      if (button.hasAttribute("data-set-delete")) {
+        if (window.confirm && !window.confirm("删除这张试卷？做题记录不会被删除。")) return;
+        api("/practice-sets/" + encoded, { method: "DELETE" })
+          .then(reloadPage)
+          .catch(function (error) { practiceSetStatus(card, error.message); });
+        return;
+      }
+
+      if (button.hasAttribute("data-set-export")) {
+        api("/practice-sets/" + encoded + "/render").then(function (rendered) {
+          var heading = card.querySelector("h2");
+          var title = heading ? heading.textContent : practiceSetId;
+          downloadPaper(title, "-problem-set.md", rendered.practice_set || "");
+          downloadPaper(title, "-solutions.md", rendered.solutions || "");
+        }).catch(function (error) { practiceSetStatus(card, error.message); });
+        return;
+      }
+
+      var row = button.closest(".practice-set-item");
+      if (!row) return;
+      var list = row.parentNode;
+      if (button.hasAttribute("data-set-up") && row.previousElementSibling) {
+        list.insertBefore(row, row.previousElementSibling);
+      } else if (button.hasAttribute("data-set-down") && row.nextElementSibling) {
+        list.insertBefore(row.nextElementSibling, row);
+      } else if (button.hasAttribute("data-set-remove")) {
+        row.remove();
+      } else {
+        return;
+      }
+      var ids = practiceSetIds(card);
+      if (!ids.length) {
+        practiceSetStatus(card, "试卷至少需要一道题；如不再需要请删除整张试卷。");
+        reloadPage();
+        return;
+      }
+      patch("/practice-sets/" + encoded, { problem_ids: ids })
+        .then(reloadPage)
+        .catch(function (error) { practiceSetStatus(card, error.message); });
+    });
+  }
+
   /* ---------- goals ---------- */
 
   var recalculatePlan = document.getElementById("recalculate-plan");
