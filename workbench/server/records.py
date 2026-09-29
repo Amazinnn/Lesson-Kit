@@ -79,6 +79,13 @@ def _run_card(run):
         kind, mode, rating_mode, f"{completed}/{total} 项",
         f"{stuck} 个不会" if stuck else "",
     ]))
+    replay = ""
+    if run.get("run_id") is not None:
+        replay = (
+            "<div class='record-run-actions'>"
+            f"<button type='button' data-run-replay='{int(run['run_id'])}'>再做一次</button>"
+            "</div>"
+        )
     return (
         "<article class='record-run card'>"
         "<header><div>"
@@ -88,7 +95,7 @@ def _run_card(run):
         f"<p class='muted'>{html.escape(meta)}</p>"
         "<div class='record-run-progress' aria-label='完成进度'>"
         f"<span style='width:{(completed / total * 100) if total else 0:.1f}%'></span>"
-        "</div></article>"
+        "</div>" + replay + "</article>"
     )
 
 
