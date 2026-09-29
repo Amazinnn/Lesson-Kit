@@ -951,6 +951,27 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   font-size: 13px;
 }
 .practice-count-label select { width: auto; min-width: 70px; }
+
+.practice-set-list { display: grid; gap: 18px; }
+.practice-set-card { padding: 20px 22px; border-top: 5px solid var(--lk-yellow); }
+.practice-set-card-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
+}
+.practice-set-card-head h2 { margin: 2px 0 5px; }
+.practice-set-card-actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
+.practice-set-items {
+  list-style: none; padding: 0; margin: 16px 0 0;
+  border-top: 1px solid var(--dsw-border-l1);
+}
+.practice-set-item {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 10px; align-items: center; padding: 10px 0;
+  border-bottom: 1px solid var(--dsw-border-l1);
+}
+.practice-set-item-index { font-variant-numeric: tabular-nums; color: var(--dsw-label-tertiary); }
+.practice-set-item-title { min-width: 0; overflow-wrap: anywhere; }
+.practice-set-item-actions { display: flex; gap: 4px; }
+.practice-set-empty { padding: 26px; }
 .practice-mode-choice {
   display: grid;
   gap: 8px;
