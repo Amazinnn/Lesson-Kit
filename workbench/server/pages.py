@@ -516,7 +516,8 @@ def records_page(workspace, workspaces, weak_items, pool, problem_id=None, view=
             "练习轮次、试卷作答和逐题记录都在这里；统计只从已有学习记录实时计算。",
         )
         + records_view.content(
-            workspace["name"], overview, view=view, problem_id=problem_id)
+            workspace["name"], overview, view=view, problem_id=problem_id,
+            limit=limit)
     )
     return shell(workspace, workspaces, weak_items, middle, "records",
                  page_type="records", kp_titles=None)

@@ -182,20 +182,30 @@ def _tabs(workspace_name, active_view):
     )
 
 
-def content(workspace_name, overview, view="overview", problem_id=None):
+def content(workspace_name, overview, view="overview", problem_id=None, limit=None):
     view = view if view in VIEWS else "overview"
     records = overview.get("records") or []
     runs = overview.get("runs") or []
     active = overview.get("active_run")
-    filtered = [
-        record for record in records
-        if record.get("verdict") is False or record.get("status") in {"wrong", "stuck"}
-    ]
+
+    def _needs_review(record):
+        # sqlite returns verdict as 0/1, never bool — compare by value.
+        verdict = record.get("verdict")
+        return ((verdict is not None and not verdict)
+                or record.get("status") in {"wrong", "stuck"})
+
+    filtered = [record for record in records if _needs_review(record)]
     notice = ""
     if problem_id:
         notice = (
             "<p class='record-filter-note'>正在按单题过滤。"
             f"<a href='/w/{html.escape(workspace_name, quote=True)}/records'>查看全部记录</a></p>"
+        )
+    elif (limit and view in {"attempts", "wrong"}
+            and len(records) >= limit):
+        notice = (
+            f"<p class='record-filter-note'>已载入最近 {limit} 条，"
+            "更早的记录未显示。</p>"
         )
 
     if view == "runs":
