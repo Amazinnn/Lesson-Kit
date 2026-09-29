@@ -393,6 +393,7 @@ def practice_set_start(pool, workspace, params, body):
         return active_practice.create(pool, {
             "source_kind": "practice_set",
             "source_ref": record["practice_set_id"],
+            "source_label": record["title"],
             "kp_ids": kp_ids,
             "practice_mode": practice_mode,
             "rating_mode": rating_mode,
