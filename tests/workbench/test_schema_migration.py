@@ -426,6 +426,41 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertEqual(row[0], "dmath-ch06-fc-001")
         self.assertEqual(row[1:], (None, '["forward"]', None))
 
+    def test_migration_upgrades_active_practice_for_the_run_archive(self):
+        """A pool migrated before run archiving keeps its rows and gains the table."""
+        pool_schema.ensure_workbench_schema(self.conn)
+        self.conn.execute("ALTER TABLE active_practice DROP COLUMN source_label")
+        self.conn.execute("DROP TABLE practice_runs")
+        self.conn.execute(
+            "INSERT INTO active_practice (singleton, source_kind, source_ref,"
+            " kp_ids_json, practice_mode, rating_mode, cursor)"
+            " VALUES (1, 'practice_set', 'ps-009', '[]', 'exam', 'batch', 1)"
+        )
+        self.conn.commit()
+
+        changes = pool_schema.ensure_workbench_schema(self.conn)
+
+        self.assertIn("active_practice.source_label", changes)
+        self.assertIn("practice_runs", changes)
+        row = self.conn.execute(
+            "SELECT source_kind, source_ref, practice_mode, rating_mode, cursor"
+            " FROM active_practice WHERE singleton=1"
+        ).fetchone()
+        self.assertEqual(row, ("practice_set", "ps-009", "exam", "batch", 1))
+        self.assertIsNone(
+            self.conn.execute(
+                "SELECT source_label FROM active_practice WHERE singleton=1"
+            ).fetchone()[0]
+        )
+        self.conn.execute(
+            "INSERT INTO practice_runs (source_kind, source_ref, source_label,"
+            " kp_ids_json, practice_mode, rating_mode, items_json, status,"
+            " started_at) VALUES ('quick', NULL, '临时练习', '[]', 'exam',"
+            " 'immediate', '[]', 'completed', datetime('now'))"
+        )
+        self.assertEqual(
+            self.conn.execute("SELECT COUNT(*) FROM practice_runs").fetchone()[0], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
