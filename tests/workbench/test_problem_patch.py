@@ -200,6 +200,34 @@ class ProblemPatchTests(unittest.TestCase):
             self.apply([patch_item("c99-ch06-prob-002", display_title="x")])
         self.assertIn("must start with dmath-", str(caught.exception))
 
+    def test_patch_and_data_update_share_label_and_markup_validation(self):
+        from workbench.data import content
+        from workbench.data.pool import Pool
+
+        self.seed(problem_text="Legacy <script>markup</script>")
+        pool = Pool(self.fixture.ws, self.db_path, "dmath", "ch06")
+        try:
+            for fields in (
+                {"display_title": "长" * 81},
+                {"problem_text": "题目 <script>alert(1)</script>"},
+            ):
+                with self.subTest(path="data", fields=fields):
+                    with self.assertRaises(ValueError):
+                        content.update(pool, "problem", "dmath-ch06-prob-002", fields)
+                with self.subTest(path="manifest", fields=fields):
+                    with self.assertRaises(ValueError):
+                        self.apply([patch_item("dmath-ch06-prob-002", **fields)])
+
+            # The pre-existing invalid markup is not revisited when another
+            # field is touched; callers can still repair legacy rows gradually.
+            content.update(pool, "problem", "dmath-ch06-prob-002",
+                           {"display_title": "可读标题"})
+            self.assertEqual(self.row("dmath-ch06-prob-002")["display_title"], "可读标题")
+            self.apply([patch_item("dmath-ch06-prob-002", topic_label="标签")])
+            self.assertEqual(self.row("dmath-ch06-prob-002")["topic_label"], "标签")
+        finally:
+            pool.close()
+
     def test_an_item_with_nothing_to_change_is_refused(self):
         self.seed()
         with self.assertRaises(ValueError) as caught:
@@ -250,6 +278,27 @@ class ProblemPatchTests(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:
             ingest.rollback_batch(self.db_path, applied["batch_id"])
         self.assertIn("already rolled back", str(caught.exception))
+
+    def test_rollback_refuses_changed_post_state_before_creating_backup(self):
+        self.seed()
+        applied = self.apply([patch_item(
+            "dmath-ch06-prob-002", display_title="apply title")])
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "UPDATE problems SET display_title='later edit' "
+                "WHERE problem_id='dmath-ch06-prob-002'")
+        backup = self.db_path.with_name(
+            f"{self.db_path.name}.{applied['batch_id']}-rollback-backup")
+
+        with self.assertRaisesRegex(ValueError, "changed after apply"):
+            ingest.rollback_batch(self.db_path, applied["batch_id"])
+
+        self.assertFalse(backup.exists())
+        self.assertEqual(self.row("dmath-ch06-prob-002")["display_title"], "later edit")
+        self.assertIsNone(self.query(
+            "SELECT rolled_back_at FROM ingest_batches WHERE batch_id=?",
+            (applied["batch_id"],),
+        )[0][0])
 
     def test_a_patch_survives_learning_records(self):
         self.seed()

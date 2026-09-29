@@ -44,6 +44,16 @@ _Avoid_：算法臆造的关系、隐藏关系
 _Avoid_：练习册条目、题目草稿
 出处：CONTEXT.md（迁入）；review-workbench spec「Problem pull engine」「Formal problems are reveal-ready」
 
+### 内容身份 / Content Identity
+由完整题干规范化得到的严格比较键：忽略大小写、空白、标点、已知数学标记/渲染差异与常见导出噪声，不截断题干；相同键表示同一道题，跨来源、跨章节也只保留一条。相似但确实不同的题干保留。
+_Avoid_：题目 id、截断前缀、模糊相似度
+出处：workbench-content-governance spec「Content identity dedup at ingest」；`workbench/domain/content_identity.py`
+
+### 内容审计 / Content Audit
+对课程题池运行的只读卫生检查：重复题、疑似片段、未标练习模式的客观题、缺展示标题、失效图片引用和孤儿图片。命令为 `lesson-kit data <workspace> audit`；按 `--check` 选择检查，`--json` 输出机器可读报告，发现问题退出码为 1，不修改数据库或文件。
+_Avoid_：自动修复、正式题源审计、会写入的检查
+出处：workbench-content-governance spec「Read-only pool content audit」；`workbench/data/content_audit.py`
+
 ### 客观题目难度 / Objective Problem Difficulty
 正式题或微题自身的认知复杂度，由知识跨度、推理深度、迁移距离、构造开放性四个
 1–5 整数维度组成；总分由 `cognitive-v1-equal-mean` 等权平均并按 Decimal
@@ -75,7 +85,7 @@ _Avoid_：客观题目难度向量、学习者自评
 （见「Check 管线」条目）。
 
 ### Check 管线 / Check pipeline
-内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规清单 → 确定性门禁校验 → **直接入正式池**（无候选中间态）。清单形态以 `content-bundle` 为主（可同时含知识点、正式题、微题、闪卡与必需原图，条数无上限，大清单暂存于本对话 jobs 目录），`flash-card-patch` / `micro-quiz-patch` 作为兼容通道保留。每次 apply 记批次 id、内容行带批次标记、图片按字节落 `figures/`，整批回滚是安全网（含删除本批创建且无引用的图片）；门禁失败逐条显式报错、零写入。对话桥的控制动作仍叫 `check_ingest`，但**不再有浏览器关键词意图门**——合法的纯新增动作自动执行；门禁是决断辅助不是权限闸门，AI 永不直写池数据库。
+内容入池的唯一 Agent 通道（原名 generate 桥）：Agent 产出合规清单 → 确定性门禁校验 → **直接入正式池**（无候选中间态）。清单形态以 `content-bundle` 为主（可同时含知识点、正式题、微题、闪卡与必需原图，条数无上限，大清单暂存于本对话 jobs 目录），`flash-card-patch` / `micro-quiz-patch` 作为兼容通道保留。题目身份在整个课程池比较，不因跨来源或跨章重复入库。每次 apply 记批次 id、内容行带批次标记、图片按字节落 `figures/`；整批回滚先核对 apply 后状态，若后续内容有改动则在创建备份前拒绝；门禁失败逐条显式报错、零写入。对话桥的控制动作仍叫 `check_ingest`，但**不再有浏览器关键词意图门**——合法的纯新增动作自动执行；门禁是决断辅助不是权限闸门，AI 永不直写池数据库。
 _Avoid_：generate 桥（旧称）、候选中间态、staging 区、逐题人工确认、关键词意图门
 出处：DISCUSSION-RECORD 专题 20/21/22；workbench-content-governance spec（introduce-check-pipeline）；first-use-conversation-content-fidelity
 
@@ -317,7 +327,7 @@ _Avoid_：批量评分历史、补打卡
 出处：DISCUSSION-RECORD B6.5；workbench-ui spec
 
 ### 微题 / Micro Quiz
-带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。题干不限长度（2026-09-25 从 200 放宽到 800，2026-09-26 取消上限：题库里的判断题、单选题本来就长，按长度退回综合题会把真题客观题挤出小测）；答案键可以缺（见「无答案键客观题」）。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
+带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。题干不限长度；答案键可以缺（见「无答案键客观题」）。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
 _Avoid_：小题（口语）、判断题系统（判断只是题型之一）、填空作答
 出处：openspec/specs/micro-quiz-content/spec.md
 
@@ -499,7 +509,7 @@ _Avoid_：内容版本号、逐条审计日志、哈希 id
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 
 ### 整批回滚 / Batch rollback
-按批次 id 一条命令撤销该批全部内容行的安全网（`lesson-kit ingest rollback --batch <id>`，对话桥结果卡片回滚按钮同源）；回滚前自动做安全备份，回滚后输出 accounting 核对。批次内容行已有练习/反馈记录时拒绝回滚并如实报错。
+按批次 id 一条命令撤销该批全部内容行的安全网（`lesson-kit ingest rollback --batch <id>`，对话桥结果卡片回滚按钮同源）；核对内容仍处于 apply 后状态且没有阻塞学习记录后才做安全备份，再回滚并输出 accounting。apply 后被改动的内容会在创建备份前触发冲突拒绝，不覆盖后续修改。
 _Avoid_：逐条手工删行、全池回退、静默丢弃练习记录
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 

@@ -12,6 +12,8 @@ from pathlib import Path
 from workbench.bridge import conversation_providers
 from workbench.data import content as content_data
 from workbench.domain import cards as card_rules
+from workbench.domain import content_identity
+from workbench.domain import markup
 from workbench.domain import micro_quiz as micro_quiz_rules
 
 
@@ -57,7 +59,6 @@ SOURCE_KINDS = {"textbook", "quiz", "midterm", "final", "makeup", "other"}
 ORIGIN_KINDS = {"source_problem", "adapted_problem", "generated_grounded"}
 FIGURE_EXTENSIONS = {"jpg", "jpeg", "png", "gif", "svg", "webp"}
 _LEGACY_IMAGE_REF = re.compile(r"!\[[^\]]*\]\(images/([^)/\s]+)\)")
-_TAG = re.compile(r"</?(sup|sub)>")
 _CURRENT_RECOVERY_PROBLEMS = {
     f"dmath-ch06-prob-{index:03d}" for index in range(1, 304)
 }
@@ -197,7 +198,7 @@ def render_text(text):
         raise ValueError("; ".join(errors))
     parts = []
     index = 0
-    for match in _TAG.finditer(text):
+    for match in markup.ALLOWED_TAG.finditer(text):
         parts.append(html.escape(text[index:match.start()]))
         parts.append(match.group(0))
         index = match.end()
@@ -263,7 +264,33 @@ def apply(db_path, gate_path, backup_path=None):
         if not verified["ok"]:
             raise ValueError("; ".join(verified["errors"]))
         batch_id = _allocate_batch_id(conn)
-        manifest_path = _write_manifest_snapshot(database, batch_id, report)
+        problem_ids = [item["problem"] for item in solutions["items"]]
+        problem_columns = [row[1] for row in conn.execute("PRAGMA table_info(problems)")]
+        previous = []
+        for problem_id in problem_ids:
+            row = conn.execute(
+                "SELECT * FROM problems WHERE problem_id=?", (problem_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"missing formal problem: {problem_id}")
+            current = dict(zip(problem_columns, row))
+            fields = {"solution": current.get("solution"),
+                      "ingest_batch_id": current.get("ingest_batch_id")}
+            if problem_id in {
+                item["problem"] for item in (content_patch or {}).get("mappings", [])
+            }:
+                fields["kp_ids"] = current.get("kp_ids")
+            fields.update({field: current[field] for field in content_data.DIFFICULTY_COLUMNS
+                           if field in current})
+            previous.append({"problem_id": problem_id, "fields": fields})
+        inserted_kps = [item["kp_id"] for item in (content_patch or {}).get(
+            "knowledge_points", [])]
+        snapshot = {
+            **report,
+            "previous": previous,
+            "_applied": {"knowledge_points": inserted_kps},
+        }
+        manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
         _backup_database(database, backup)
         if content_patch:
             for item in content_patch["knowledge_points"]:
@@ -311,6 +338,28 @@ def apply(db_path, gate_path, backup_path=None):
             if cursor.rowcount != 1:
                 raise ValueError(f"missing formal problem: {item['problem']}")
         counts = {"problems": len(solutions["items"])}
+        snapshot["post"] = []
+        for item in solutions["items"]:
+            problem_id = item["problem"]
+            fields = {
+                "solution": item["solution"], "ingest_batch_id": batch_id,
+                **{field: None for field in content_data.DIFFICULTY_COLUMNS
+                   if field in problem_columns},
+            }
+            if problem_id in mappings:
+                fields["kp_ids"] = mappings[problem_id]
+            snapshot["post"].append({"problem_id": problem_id, "fields": fields})
+        _save_post_state(
+            conn, database, manifest_path, snapshot,
+            {
+                "problems": {"id_column": "problem_id", "ids": problem_ids},
+                "knowledge_points": {
+                    "id_column": "kp_id", "ids": inserted_kps,
+                    "batch_scoped": False,
+                },
+            },
+            batch_id=batch_id,
+        )
         _record_batch(conn, batch_id, report["kind"], manifest_path, counts, backup)
         conn.commit()
     except Exception:
@@ -344,6 +393,7 @@ def _gate_micro_quiz(conn, manifest, course=""):
     known_kps = {row[0] for row in conn.execute("SELECT kp_id FROM knowledge_points")}
     existing_ids = {row[0] for row in conn.execute("SELECT problem_id FROM problems")}
     seen_ids = set()
+    identity_candidates = []
     for item in items:
         problem_id = item.get("problem_id") if isinstance(item, dict) else None
         if not isinstance(problem_id, str) or not MICRO_QUIZ_ID.match(problem_id):
@@ -361,16 +411,15 @@ def _gate_micro_quiz(conn, manifest, course=""):
         if row is None:
             errors.append(f"{problem_id}: item must be an object")
             continue
+        identity_candidates.append({
+            "label": problem_id, "problem_id": problem_id,
+            "text": row["problem_text"],
+            "source_evidence": (item.get("source_evidence")
+                                or (row.get("micro_quiz") or {}).get("source_evidence")),
+        })
         if isinstance(row["kp_ids"], list) and len(row["kp_ids"]) == 1 \
                 and row["kp_ids"][0] not in known_kps:
             errors.append(f"{problem_id}: unknown knowledge point {row['kp_ids'][0]}")
-        errors.extend(f"{problem_id}: {reason}" for reason in _markup_errors(row["problem_text"]))
-        for field in micro_quiz_rules.LABEL_FIELD_LIMITS:
-            if field in row:
-                errors.extend(
-                    f"{problem_id}: {field} {reason}"
-                    for reason in _markup_errors(row[field])
-                )
         errors.extend(
             f"{problem_id}: {reason}" for reason in micro_quiz_rules.validate_problem_row(row)
         )
@@ -386,6 +435,7 @@ def _gate_micro_quiz(conn, manifest, course=""):
                 f"{problem_id}: this pool has no exam_year column yet — run: "
                 "python pool/scripts/migrate-progress.py --db pool/<course>.db"
             )
+    errors.extend(_problem_identity_errors(conn, identity_candidates))
     return {"ok": not errors, "errors": errors, "accounting": _accounting(conn)}
 
 
@@ -562,6 +612,15 @@ def _apply_patch(database, manifest, backup, kind, course=None):
                      json.dumps(row["directions"]), batch_id),
                 )
             counts = {"flash_cards": len(manifest["items"])}
+        snapshot = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        table = "problems" if kind == MICRO_QUIZ_KIND else "flash_cards"
+        id_column = "problem_id" if table == "problems" else "card_id"
+        ids = [item[id_column] for item in manifest["items"]]
+        _save_post_state(
+            conn, database, manifest_path, snapshot,
+            {table: {"id_column": id_column, "ids": ids}},
+            batch_id=batch_id,
+        )
         _record_batch(conn, batch_id, kind, manifest_path, counts, backup)
         conn.commit()
     except Exception:
@@ -724,6 +783,51 @@ def _has_exam_year(conn):
     return _has_column(conn, "problems", "exam_year")
 
 
+def _problem_identity_errors(conn, candidates):
+    """Refuse identities already in this pool or repeated within the batch."""
+    if not candidates:
+        return []
+    has_evidence = _has_column(conn, "problems", "source_evidence")
+    select_evidence = ", source_evidence" if has_evidence else ", NULL"
+    rows = conn.execute(
+        "SELECT problem_id, problem_text" + select_evidence
+        + " FROM problems ORDER BY problem_id"
+    )
+    existing = {}
+    for problem_id, text, evidence in rows:
+        identity = content_identity.problem_identity(text)
+        if identity:
+            existing.setdefault(identity, []).append((problem_id, evidence))
+
+    errors = []
+    grouped = {}
+    for candidate in candidates:
+        identity = content_identity.problem_identity(candidate.get("text"))
+        if not identity:
+            continue
+        grouped.setdefault(identity, []).append(candidate)
+        matches = existing.get(identity, [])
+        if matches:
+            problem_id, evidence = matches[0]
+            detail = f"{candidate['label']}: duplicate content matches {problem_id}"
+            if evidence:
+                detail += f" (source evidence: {evidence})"
+            errors.append(detail)
+    for members in grouped.values():
+        if len(members) < 2:
+            continue
+        for candidate in members:
+            other = next(member for member in members if member is not candidate)
+            detail = (
+                f"{candidate['label']}: duplicate content matches manifest item "
+                f"{other['problem_id']}"
+            )
+            if other.get("source_evidence"):
+                detail += f" (source evidence: {other['source_evidence']})"
+            errors.append(detail)
+    return errors
+
+
 def _bundle_micro_payload(item):
     return {
         "quiz_type": item.get("quiz_type"),
@@ -823,6 +927,7 @@ def _gate_content_bundle(conn, manifest, course=""):
     known_kps |= set(kp_ids)
 
     problem_plans = []
+    identity_candidates = []
     seen_problem_keys = set()
     for index, item in enumerate(problem_items):
         label = f"problem {index + 1}"
@@ -867,6 +972,8 @@ def _gate_content_bundle(conn, manifest, course=""):
                 "practice_modes": item.get("practice_modes")
                 or micro_quiz_rules.practice_modes_for(payload.get("quiz_type")),
                 "micro_quiz": payload,
+                **{field: item[field] for field in micro_quiz_rules.LABEL_FIELD_LIMITS
+                   if field in item},
             }
             errors.extend(f"{label}: {reason}" for reason in micro_quiz_rules.validate_problem_row(row))
             fields["problem_type"] = row["problem_type"]
@@ -916,6 +1023,17 @@ def _gate_content_bundle(conn, manifest, course=""):
                 f"{label}: this pool has no exam_year column yet — run: "
                 "python pool/scripts/migrate-progress.py --db pool/<course>.db"
             )
+        for field in markup.LABEL_FIELD_LIMITS:
+            if field in item:
+                errors.extend(
+                    f"{label}: {reason}"
+                    for reason in markup.validate_label(field, item[field])
+                )
+        if fields["solution"] is not None:
+            errors.extend(
+                f"{label}: solution {reason}"
+                for reason in markup.validate_markup(fields["solution"])
+            )
         problem_id = item.get("problem_id")
         if problem_id is None:
             problem_id = allocate("problems", "problem_id", f"{scope}{suffix}-")
@@ -934,6 +1052,11 @@ def _gate_content_bundle(conn, manifest, course=""):
         )
         errors.extend(plans.get("errors") or [])
         fields["problem_text"] = plans["text"]
+        identity_candidates.append({
+            "label": f"{label} {problem_id}", "problem_id": problem_id,
+            "text": fields["problem_text"],
+            "source_evidence": fields["source_evidence"],
+        })
         problem_plans.append({
             "key": key, "problem_id": problem_id, "chapter": item_chapter,
             "fields": fields, "is_micro": is_micro, "figures": plans["figures"],
@@ -986,6 +1109,7 @@ def _gate_content_bundle(conn, manifest, course=""):
         row["chapter"] = item_chapter
         card_plans.append(row)
 
+    errors.extend(_problem_identity_errors(conn, identity_candidates))
     if errors:
         return {"ok": False, "errors": errors}
     chapters = sorted({
@@ -1191,6 +1315,27 @@ def _apply_content_bundle(database, manifest, backup, course=None):
             counts["flash_cards"] += 1
         for item_chapter in verified["chapters"]:
             entry = batches[item_chapter]
+            snapshot = json.loads(Path(entry["manifest_path"]).read_text(encoding="utf-8"))
+            batch_id = entry["batch_id"]
+            _save_post_state(
+                conn, database, entry["manifest_path"], snapshot,
+                {
+                    "knowledge_points": {
+                        "id_column": "kp_id",
+                        "ids": snapshot["_applied"]["knowledge_points"],
+                    },
+                    "problems": {
+                        "id_column": "problem_id",
+                        "ids": snapshot["_applied"]["problems"],
+                    },
+                    "flash_cards": {
+                        "id_column": "card_id",
+                        "ids": snapshot["_applied"]["flash_cards"],
+                    },
+                },
+                batch_id=batch_id,
+                figures=snapshot["_applied"].get("figures", []),
+            )
             _record_batch(conn, entry["batch_id"], CONTENT_BUNDLE_KIND,
                           entry["manifest_path"], entry["counts"], backup)
         accounting = _accounting(conn)
@@ -1314,6 +1459,154 @@ def _write_manifest_snapshot(database, batch_id, manifest):
     path = database.parent / "ingest" / f"{batch_id}.json"
     write_artifact(path, manifest)
     return path
+
+
+def _write_snapshot(path, snapshot):
+    Path(path).write_text(
+        json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _save_post_state(conn, database, path, snapshot, row_specs, *,
+                     batch_id=None, figures=()):
+    """Persist the exact applied rows/files needed to guard a later rollback."""
+    tables = {}
+    for table, spec in row_specs.items():
+        id_column = spec["id_column"]
+        ids = list(spec["ids"])
+        columns = [row[1] for row in conn.execute(f"PRAGMA table_info({table})")]
+        rows = []
+        if ids:
+            placeholders = ", ".join("?" for _ in ids)
+            sql = f"SELECT * FROM {table} WHERE {id_column} IN ({placeholders})"
+            params = ids
+            if batch_id and spec.get("batch_scoped", True) \
+                    and "ingest_batch_id" in columns:
+                sql += " AND ingest_batch_id=?"
+                params = [*ids, batch_id]
+            cursor = conn.execute(sql, params)
+            rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        if {row[id_column] for row in rows} != set(ids):
+            raise ValueError(f"could not snapshot applied {table} rows for rollback")
+        tables[table] = {
+            "id_column": id_column,
+            "batch_scoped": spec.get("batch_scoped", True),
+            "rows": rows,
+        }
+    root = database.resolve().parent.parent / ".lessonkit" / "figures"
+    figure_states = []
+    for logical in sorted(set(figures)):
+        target = (root / logical).resolve()
+        if not target.is_relative_to(root.resolve()) or not target.is_file():
+            raise ValueError(f"could not snapshot applied figure for rollback: {logical}")
+        figure_states.append({
+            "logical": logical,
+            "sha256": hashlib.sha256(target.read_bytes()).hexdigest(),
+        })
+    snapshot["_post_state"] = {"tables": tables, "figures": figure_states}
+    _write_snapshot(path, snapshot)
+
+
+def _rollback_conflicts(conn, database, kind, batch_id, snapshot):
+    """Find edits after apply that make restoring this snapshot unsafe."""
+    post_state = snapshot.get("_post_state")
+    if not isinstance(post_state, dict):
+        return [f"batch {batch_id} has no post-apply snapshot for safe rollback"]
+    conflicts = []
+    if kind in {CONTENT_BUNDLE_KIND, "gate-report"}:
+        applied = snapshot.get("_applied") or {}
+        for kp_id in applied.get("knowledge_points", []):
+            for problem_id, in conn.execute(
+                "SELECT problem_id FROM problems WHERE kp_ids LIKE ? "
+                "AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
+                (f'%"{kp_id}"%', batch_id),
+            ):
+                conflicts.append(
+                    f"knowledge_points: {kp_id} referenced by problems:{problem_id}")
+            for card_id, in conn.execute(
+                "SELECT card_id FROM flash_cards WHERE kp_id=? "
+                "AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
+                (kp_id, batch_id),
+            ):
+                conflicts.append(
+                    f"knowledge_points: {kp_id} referenced by flash_cards:{card_id}")
+            if _has_column(conn, "knowledge_points", "related_kp_ids"):
+                for owner, related in conn.execute(
+                    "SELECT kp_id, related_kp_ids FROM knowledge_points"
+                ):
+                    if owner in applied.get("knowledge_points", []):
+                        continue
+                    try:
+                        related_ids = json.loads(related or "[]")
+                    except (TypeError, json.JSONDecodeError):
+                        continue
+                    if isinstance(related_ids, list) and kp_id in related_ids:
+                        conflicts.append(
+                            f"knowledge_points: {kp_id} referenced by related_kp_ids:{owner}")
+            for relation_id, in conn.execute(
+                "SELECT relation_id FROM knowledge_relations "
+                "WHERE source_kp_id=? OR target_kp_id=?", (kp_id, kp_id),
+            ):
+                conflicts.append(
+                    f"knowledge_points: {kp_id} referenced by relation:{relation_id}")
+    for table, expected in post_state.get("tables", {}).items():
+        id_column = expected["id_column"]
+        expected_rows = expected.get("rows", [])
+        expected_ids = {row[id_column] for row in expected_rows}
+        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if expected.get("batch_scoped", True) and "ingest_batch_id" in columns:
+            current_ids = {
+                row[0] for row in conn.execute(
+                    f"SELECT {id_column} FROM {table} WHERE ingest_batch_id=?",
+                    (batch_id,),
+                )
+            }
+            if current_ids != expected_ids:
+                conflicts.append(f"{table}: rows assigned to batch {batch_id} changed")
+        for saved in expected_rows:
+            row = conn.execute(
+                f"SELECT * FROM {table} WHERE {id_column}=?", (saved[id_column],)
+            ).fetchone()
+            if row is None:
+                conflicts.append(f"{table}: {saved[id_column]} is missing")
+                continue
+            actual = dict(zip(
+                (column[1] for column in
+                 conn.execute(f"PRAGMA table_info({table})")), row,
+            ))
+            if actual != saved:
+                conflicts.append(f"{table}: {saved[id_column]} changed after apply")
+
+    post_fields = snapshot.get("post")
+    if kind in {PROBLEM_PATCH_KIND, FIGURE_PATCH_KIND} and not isinstance(post_fields, list):
+        conflicts.append(f"batch {batch_id} has no expected patch values")
+    for entry in post_fields or []:
+        id_column = "owner_id" if kind == FIGURE_PATCH_KIND else "problem_id"
+        object_id = entry.get(id_column)
+        row = conn.execute(
+            "SELECT * FROM problems WHERE problem_id=?", (object_id,),
+        ).fetchone()
+        if row is None:
+            conflicts.append(f"problems: {object_id} is missing")
+            continue
+        columns = [column[1] for column in conn.execute("PRAGMA table_info(problems)")]
+        actual = dict(zip(columns, row))
+        for field, expected in (entry.get("fields") or {}).items():
+            if field in actual and actual[field] != expected:
+                conflicts.append(f"problems: {object_id}.{field} changed after apply")
+
+    root = (database.resolve().parent.parent / ".lessonkit" / "figures").resolve()
+    for figure in post_state.get("figures", []):
+        logical = figure.get("logical")
+        path = (root / logical).resolve()
+        if not path.is_relative_to(root) or not path.is_file():
+            conflicts.append(f"figure {logical} is missing or outside the figure area")
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != figure.get("sha256"):
+            conflicts.append(f"figure {logical} changed after apply")
+    return conflicts
 
 
 def _record_batch(conn, batch_id, kind, manifest_path, counts, backup):
@@ -1517,6 +1810,18 @@ def _apply_problem_patch(database, manifest, backup, course=None):
             )
             if cursor.rowcount != 1:
                 raise ValueError(f"missing formal problem: {plan['problem_id']}")
+        snapshot["post"] = []
+        for plan in verified["plans"]:
+            fields = {
+                field: content_data._db_value(field, value)
+                for field, value in plan["fields"].items()
+            }
+            if plan["clear_difficulty"]:
+                fields.update({field: None for field in content_data.DIFFICULTY_COLUMNS})
+            snapshot["post"].append({
+                "problem_id": plan["problem_id"], "fields": fields,
+            })
+        _save_post_state(conn, database, manifest_path, snapshot, {})
         counts = {"problems": len(verified["plans"]),
                   "difficulty_cleared": cleared}
         _record_batch(conn, batch_id, PROBLEM_PATCH_KIND, manifest_path, counts, backup)
@@ -1551,6 +1856,28 @@ def _rollback_problem_patch(conn, batch_id):
         )
         restored += 1
     return {"problems": restored}
+
+
+def _rollback_gate_report(conn, batch_id):
+    """Restore solved rows and remove only knowledge points added by the batch."""
+    row = conn.execute(
+        "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
+    ).fetchone()
+    snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
+    restored = 0
+    for entry in snapshot.get("previous", []):
+        fields = entry.get("fields") or {}
+        assignments = [f"{field}=?" for field in fields]
+        conn.execute(
+            f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
+            (*fields.values(), entry["problem_id"]),
+        )
+        restored += 1
+    removed = 0
+    for kp_id in (snapshot.get("_applied") or {}).get("knowledge_points", []):
+        conn.execute("DELETE FROM knowledge_points WHERE kp_id=?", (kp_id,))
+        removed += 1
+    return {"problems": restored, "knowledge_points": removed}
 
 
 def _figures_root(database, course, chapter):
@@ -1623,6 +1950,26 @@ def _apply_figure_patch(database, manifest, backup_path=None, course=None):
             )
             counts["problems"] += 1
             counts["figures"] += len(plan["files"])
+        snapshot["post"] = []
+        for plan in verified["plans"]:
+            item = next(i for i in manifest["items"] if i.get("owner_id") == plan["owner_id"])
+            snapshot["post"].append({
+                "owner_id": plan["owner_id"],
+                "fields": {
+                    "problem_text": item["text"],
+                    "figure_paths": json.dumps(
+                        _merge_figure_paths(
+                            plan["previous"][1],
+                            [entry["logical"] for entry in plan["files"]],
+                        ), ensure_ascii=False,
+                    ),
+                },
+            })
+        _save_post_state(
+            conn, database, manifest_path, snapshot, {},
+            figures=[entry["logical"] for plan in verified["plans"]
+                     for entry in plan["files"]],
+        )
         _record_batch(conn, batch_id, FIGURE_PATCH_KIND, manifest_path, counts, backup)
         accounting = _accounting(conn)
         conn.commit()
@@ -1730,7 +2077,8 @@ def rollback_batch(db_path, batch_id, backup_path=None):
             raise ValueError(f"unknown batch {batch_id}")
         if batch[1] is not None:
             raise ValueError(f"batch {batch_id} already rolled back")
-        blockers = _rollback_blockers(conn, batch_id)
+        blockers = ([] if batch[0] in {PROBLEM_PATCH_KIND, "gate-report"}
+                    else _rollback_blockers(conn, batch_id))
         if blockers:
             raise ValueError(
                 f"batch {batch_id} has dependent learning records:\n"
@@ -1740,6 +2088,16 @@ def rollback_batch(db_path, batch_id, backup_path=None):
                   database.with_name(f"{database.name}.{batch_id}-rollback-backup"))
         if backup.exists():
             raise FileExistsError(f"recoverable copy already exists: {backup}")
+        manifest_path = conn.execute(
+            "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
+        ).fetchone()[0]
+        snapshot = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        conflicts = _rollback_conflicts(conn, database, batch[0], batch_id, snapshot)
+        if conflicts:
+            raise ValueError(
+                f"batch {batch_id} changed after apply; rollback refused without backup:\n"
+                + "\n".join(conflicts)
+            )
         _backup_database(database, backup)
         if batch[0] == FIGURE_PATCH_KIND:
             counts = _rollback_figure_patch(conn, batch_id)
@@ -1748,6 +2106,9 @@ def rollback_batch(db_path, batch_id, backup_path=None):
             # A patch restores values instead of deleting rows, so the learning
             # records it never touched need no blocker check.
             counts = _rollback_problem_patch(conn, batch_id)
+            deleted = 0
+        elif batch[0] == "gate-report":
+            counts = _rollback_gate_report(conn, batch_id)
             deleted = 0
         elif batch[0] == CONTENT_BUNDLE_KIND:
             counts = _rollback_content_bundle(conn, database, batch_id)
@@ -2178,49 +2539,7 @@ def _plain_fields(item, problem, errors, label):
 
 
 def _markup_errors(text):
-    if not isinstance(text, str):
-        return ["is not text"]
-    if "\ufffd" in text:
-        return ["has suspicious formula damage"]
-    errors = []
-    stack = []
-    index = 0
-    while index < len(text):
-        start = text.find("<", index)
-        if start < 0:
-            break
-        match = _TAG.match(text, start)
-        if match is None:
-            tail = text[start:]
-            complete_tag = re.match(r"</?[A-Za-z][A-Za-z0-9]*(?:\s+[^<>]*)?\s*/?>", tail)
-            unterminated_tag = (
-                (start == 0 or text[start - 1].isspace())
-                and re.match(r"</?[A-Za-z][A-Za-z0-9]*(?:\s+[^<>]*)?\s*$", tail)
-            )
-            if complete_tag or unterminated_tag:
-                errors.append("has unknown or unterminated HTML")
-            index = start + 1
-            continue
-        tag = match.group(1)
-        closing = text.startswith("</", start)
-        if closing:
-            if not stack or stack[-1][0] != tag:
-                errors.append("has unbalanced sup/sub")
-            else:
-                _, content_start, opening_start = stack.pop()
-                content = text[content_start:start]
-                if not content.strip():
-                    errors.append("has empty sup/sub")
-                left = _word_left(text, opening_start)
-                right = _word_right(text, match.end())
-                if left and right and (len(left) + len(right) > 2 or (left.islower() and right.islower())):
-                    errors.append("sup/sub splits an ordinary word")
-        else:
-            stack.append((tag, match.end(), start))
-        index = match.end()
-    if stack:
-        errors.append("has unbalanced sup/sub")
-    return errors
+    return markup.validate_markup(text)
 
 
 def _word_left(text, index):
