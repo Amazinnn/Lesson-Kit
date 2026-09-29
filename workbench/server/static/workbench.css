@@ -1194,6 +1194,12 @@ img { max-width: 100%; }
 }
 
 @media (max-width: 640px) {
+  .record-summary-grid,
+  .record-dashboard-grid { grid-template-columns: 1fr; }
+  .record-trend { gap: 2px; }
+  .record-day-label { font-size: 8px; }
+  .record-run header { display: block; }
+  .record-run time { display: block; margin-top: 4px; }
   .flash-direction-choice { grid-template-columns: 1fr; }
   .flash-card-stage { padding-right: 3%; padding-left: 3%; }
   .flash-card-stage.is-revealed .flash-card-prompt { transform: translate(-3%, 8px) rotate(-3deg); }
@@ -1416,7 +1422,83 @@ img { max-width: 100%; }
   position: absolute; inset: 44% 0 auto; margin: 0; text-align: center;
 }
 
-/* 做题记录 page (attempt-records-filters-and-model-entries) */
+/* 记录中心 */
+.records-center { display: grid; gap: 18px; }
+.record-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 2px;
+  border-bottom: 1px solid var(--dsw-border-l1);
+}
+.record-tab {
+  padding: 8px 11px; color: var(--dsw-label-secondary);
+  border-bottom: 3px solid transparent; text-decoration: none;
+}
+.record-tab:hover { color: var(--dsw-label-primary); text-decoration: none; }
+.record-tab.active {
+  color: var(--dsw-label-primary); font-weight: 700; border-color: var(--lk-blue);
+}
+.record-filter-note {
+  margin: 0; padding: 9px 12px; border-left: 4px solid var(--lk-yellow);
+  background: var(--dsw-bg-layer-2);
+}
+.record-summary-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
+}
+.record-summary { padding: 14px 16px; }
+.record-summary span { display: block; color: var(--dsw-label-secondary); font-size: 12px; }
+.record-summary strong {
+  display: block; margin-top: 6px; font-size: 24px; line-height: 30px;
+  font-variant-numeric: tabular-nums;
+}
+.record-dashboard-grid {
+  display: grid; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); gap: 12px;
+}
+.record-chart-card { padding: 18px; }
+.record-chart-card .section-heading { margin-bottom: 8px; }
+.record-trend {
+  height: 170px; display: grid; grid-template-columns: repeat(14, minmax(14px, 1fr));
+  gap: 5px; align-items: end; padding-top: 14px;
+}
+.record-day { min-width: 0; text-align: center; }
+.record-day-bar-wrap {
+  height: 132px; display: flex; align-items: flex-end; justify-content: center;
+  position: relative; border-bottom: 1px solid var(--dsw-border-l2);
+}
+.record-day-bar {
+  display: block; width: min(22px, 76%); min-height: 2px;
+  background: var(--lk-blue); border: 1px solid var(--lk-ink); border-bottom: 0;
+}
+.record-day-value {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  color: var(--dsw-label-tertiary); font-size: 10px; line-height: 14px;
+}
+.record-day-label {
+  display: block; margin-top: 4px; color: var(--dsw-label-tertiary);
+  font-size: 9px; line-height: 12px; white-space: nowrap;
+}
+.record-rating-chart { display: grid; gap: 9px; padding-top: 7px; }
+.record-rating-row {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) 24px;
+  gap: 8px; align-items: center; font-size: 12px;
+}
+.record-rating-row strong { text-align: right; font-variant-numeric: tabular-nums; }
+.record-rating-track {
+  height: 10px; overflow: hidden; border: 1px solid var(--lk-ink);
+  background: var(--dsw-bg-layer-2);
+}
+.record-rating-track span { display: block; height: 100%; background: var(--lk-yellow); }
+.record-section { margin-top: 0; }
+.record-run { margin: 0 0 10px; padding: 14px 16px; }
+.record-run header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+}
+.record-run h3 { margin: 1px 0 0; font-size: 16px; }
+.record-run time { color: var(--dsw-label-tertiary); font-size: 12px; white-space: nowrap; }
+.record-run > p { margin: 7px 0 8px; }
+.record-run-progress {
+  height: 8px; overflow: hidden; border: 1px solid var(--lk-ink);
+  background: var(--dsw-bg-layer-2);
+}
+.record-run-progress span { display: block; height: 100%; background: var(--lk-blue); }
 .record-row { margin: 0 0 12px; padding: 12px 14px; }
 .record-row header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .record-title { font-weight: 600; color: inherit; text-decoration: none; }
