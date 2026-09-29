@@ -1922,42 +1922,43 @@
 
   function aiTargetValue(entry) {
     return JSON.stringify([
-      entry.provider || entry.name || "",
       entry.model || "",
       entry.entry || "",
     ]);
   }
 
   function aiSyncModelSwitch(record) {
-    // Lesson Kit owns the logical conversation, so every available target may
-    // be selected here; crossing harnesses hands the local mirror to the next
-    // provider instead of pretending native sessions are portable.
+    // A conversation is permanently bound to its Agent harness. The selector
+    // therefore contains only models enumerated by that harness.
     var select = document.getElementById("ai-model-switch");
     if (!select || !record) return;
     select.innerHTML = "";
     var matched = false;
-    aiProviders.forEach(function (entry) {
+    var models = aiProviders.filter(function (entry) {
+      return (entry.provider || "") === (record.provider || "");
+    });
+    models.forEach(function (entry) {
       var option = document.createElement("option");
       option.value = aiTargetValue(entry);
-      option.textContent = entry.name + " · " + (entry.provider || "");
-      var sameProvider = (record.provider || "") === (entry.provider || "");
+      option.textContent = entry.name;
       var sameModel = (record.model || "") === (entry.model || "");
       var sameEntry = !record.model_entry || !entry.entry || record.model_entry === entry.entry;
-      if (sameProvider && sameModel && sameEntry) {
+      if (sameModel && sameEntry) {
         option.selected = true;
         matched = true;
       }
       select.appendChild(option);
     });
-    select.classList.toggle("hidden", !aiProviders.length);
     if (!matched && record.provider) {
       var current = document.createElement("option");
-      current.value = JSON.stringify([record.provider, record.model || "", record.model_entry || ""]);
-      current.textContent = (record.model_entry || record.model || record.provider) + " · " + record.provider;
+      current.value = JSON.stringify([record.model || "", record.model_entry || ""]);
+      current.textContent = record.model_entry || record.model || (record.provider + " 默认");
       current.selected = true;
       select.insertBefore(current, select.firstChild);
     }
+    select.classList.toggle("hidden", !select.children.length);
   }
+
 
   var aiModelSwitch = document.getElementById("ai-model-switch");
   if (aiModelSwitch) {
@@ -1972,9 +1973,8 @@
         target = [];
       }
       patch("/ai/sessions/" + encodeURIComponent(aiConversation), {
-        provider: target[0] || null,
-        model: target[1] || null,
-        entry: target[2] || null,
+        model: target[0] || null,
+        entry: target[1] || null,
       })
         .catch(function (err) { failure = err.message || "未知错误"; })
         .then(function () {
@@ -2216,7 +2216,7 @@
       button.dataset.entry = entry.entry || "";
       // The display name is the entry's own — the harness and model id stay
       // out of the label.
-      button.textContent = entry.name;
+      button.textContent = (entry.provider || "") + " · " + entry.name;
       button.addEventListener("click", function () {
         aiCreateSession(entry.provider || entry.name, entry.model || "", entry.entry || "");
       });
