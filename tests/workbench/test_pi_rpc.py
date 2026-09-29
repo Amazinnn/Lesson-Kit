@@ -99,6 +99,26 @@ class PiRpcProcessTests(unittest.TestCase):
             process.close()
         self.assertEqual(self.launcher.modes, ["rpc"])
 
+    def test_runtime_models_can_be_listed_and_switched_without_restart(self):
+        process = self.make()
+        try:
+            process.start()
+            pid = process.pid
+            models = process.available_models()
+            self.assertEqual(
+                [(item["provider"], item["id"]) for item in models],
+                [("deepseek", "deepseek-v4-flash"), ("qwen", "qwen3-coder")],
+            )
+            switched = process.set_model("qwen", "qwen3-coder")
+            self.assertEqual(switched, {"provider": "qwen", "id": "qwen3-coder"})
+            self.assertEqual(process.pid, pid)
+        finally:
+            process.close()
+        self.assertEqual(
+            [(row["provider"], row["model"]) for row in self.entries("set-model")],
+            [("qwen", "qwen3-coder")],
+        )
+
     def test_prompt_streams_events_until_settled(self):
         process = self.make()
         try:
