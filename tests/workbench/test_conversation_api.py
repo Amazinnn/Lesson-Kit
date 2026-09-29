@@ -122,11 +122,16 @@ class ConversationApiTests(unittest.TestCase):
     @mock.patch("workbench.bridge.conversation_providers.discover")
     def test_provider_and_session_endpoints(self, discover):
         discover.return_value = [self.provider]
-        status, providers = self.get("/api/w/dmath/ai/providers")
+        with mock.patch(
+                "workbench.bridge.conversation_providers.list_models",
+                return_value=[{
+                    **self.provider, "name": "codex 默认", "provider": "codex",
+                    "model": None, "entry": None, "source": "default",
+                }]):
+            status, providers = self.get("/api/w/dmath/ai/providers")
         self.assertEqual(status, 200)
-        # The picker sees one entry per harness until named models exist.
         self.assertEqual(providers, [{
-            "name": "codex", "provider": "codex", "model": None,
+            "name": "codex 默认", "provider": "codex", "model": None,
             "entry": None, "source": "default",
         }])
 
@@ -483,6 +488,12 @@ class ConversationApiTests(unittest.TestCase):
                 {"model": "gpt-test-8"})
             self.assertEqual(status, 200)
             self.assertEqual(switched["model"], "gpt-test-8")
+
+            status, error = self.patch_error(
+                f"/api/w/dmath/ai/sessions/{created['conversation_id']}",
+                {"provider": "claude", "model": "claude-sonnet-5"})
+            self.assertEqual(status, 400)
+            self.assertIn("harness cannot be changed", error["error"])
 
             status, cleared = self.patch(
                 f"/api/w/dmath/ai/sessions/{created['conversation_id']}",
