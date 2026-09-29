@@ -103,7 +103,7 @@ def _summary(conn, problem_id, verdict_column, linked_feedback):
 def _trend(conn, problem_id, verdict_column, days=14):
     first = date.today() - timedelta(days=days - 1)
     params = [first.isoformat()]
-    where = "created_at >= ?"
+    where = "date(created_at, 'localtime') >= ?"
     if problem_id:
         where += " AND problem_id=?"
         params.append(problem_id)
@@ -115,10 +115,10 @@ def _trend(conn, problem_id, verdict_column, days=14):
     rows = {
         row["day"]: dict(row)
         for row in conn.execute(
-            "SELECT substr(created_at, 1, 10) AS day, COUNT(*) AS attempts"
+            "SELECT date(created_at, 'localtime') AS day, COUNT(*) AS attempts"
             + verdict_sql
             + " FROM problem_attempts WHERE " + where
-            + " GROUP BY substr(created_at, 1, 10)",
+            + " GROUP BY date(created_at, 'localtime')",
             params,
         )
     }
@@ -136,6 +136,34 @@ def _trend(conn, problem_id, verdict_column, days=14):
             ).get("wrong", 0),
         }
         for offset in range(days)
+    ]
+
+
+def _activity(conn, problem_id, weeks=12):
+    today = date.today()
+    first = today - timedelta(days=today.weekday() + (weeks - 1) * 7)
+    last = first + timedelta(days=weeks * 7 - 1)
+    params = [first.isoformat(), last.isoformat()]
+    where = "date(created_at, 'localtime') BETWEEN ? AND ?"
+    if problem_id:
+        where += " AND problem_id=?"
+        params.append(problem_id)
+    rows = {
+        row["day"]: row["attempts"]
+        for row in conn.execute(
+            "SELECT date(created_at, 'localtime') AS day, COUNT(*) AS attempts "
+            "FROM problem_attempts WHERE " + where
+            + " GROUP BY date(created_at, 'localtime')",
+            params,
+        )
+    }
+    return [
+        {
+            "date": (first + timedelta(days=offset)).isoformat(),
+            "attempts": rows.get((first + timedelta(days=offset)).isoformat(), 0),
+            "future": first + timedelta(days=offset) > today,
+        }
+        for offset in range(weeks * 7)
     ]
 
 
@@ -291,6 +319,7 @@ def overview(pool, limit=100, problem_id=None):
         "records": records,
         "summary": _summary(conn, problem_id, has_verdict, linked),
         "trend": _trend(conn, problem_id, has_verdict),
+        "activity": _activity(conn, problem_id),
         "ratings": _rating_distribution(conn, problem_id, linked),
         "active_run": active_run,
         "runs": runs,
