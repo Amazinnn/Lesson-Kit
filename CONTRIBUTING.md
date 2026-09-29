@@ -45,7 +45,8 @@ installs of the same CLI exist, and set the model explicitly:
 
 ```bash
 lesson-kit bridge add pi --command "C:/Users/you/.npm-global/pi.cmd" --model "deepseek/deepseek-v4-flash"
-lesson-kit bridge list        # resolved path, [config] vs [path] source, missing-path marker
+lesson-kit bridge add-model "DeepSeek V4" --provider pi --model "deepseek/deepseek-v4-flash"
+lesson-kit bridge list        # resolved harnesses plus configured named model entries
 ```
 
 A configured `command` takes precedence over PATH discovery. Provider flags go
@@ -64,6 +65,13 @@ lesson-kit daemon stop && lesson-kit daemon start
 
 ### Pi specifics
 
+- **The Agent picker is a model catalog, not a provider lock.** Configured named
+  entries keep their per-model `--args`; configuring Pi entries does not hide an
+  installed Codex/Claude harness. Pi additionally contributes its live configured
+  models through RPC `get_available_models`. Inside a conversation, switching to
+  another Pi model uses RPC `set_model` when possible; switching harnesses keeps
+  the Lesson Kit transcript, clears the incompatible native session, and hands a
+  bounded recent transcript to the new harness on its first turn.
 - **Pi runs one hidden RPC process per conversation.** `bridge/pi_rpc.py` starts
   `pi --mode rpc`, frames strict LF JSONL, sends correlated `prompt`/`abort`
   commands, and keeps the process for 30 idle minutes (no process-count cap).
