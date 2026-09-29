@@ -172,11 +172,24 @@ def _timestamp():
 
 
 def _next_saved_id(pool):
+    # practice_runs keeps the source_ref of deleted papers forever, so the
+    # scan must include it: reusing a freed id would merge two different
+    # papers into one run-history group.
     maximum = 0
     folder = _saved_dir(pool)
     if folder.is_dir():
         for path in folder.glob("ps-*.json"):
             match = SAVED_ID.fullmatch(path.stem)
+            if match:
+                maximum = max(maximum, int(match.group(1)))
+    if "practice_runs" in {
+        row[0] for row in pool.connect().execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")
+    }:
+        for (ref,) in pool.connect().execute(
+            "SELECT DISTINCT source_ref FROM practice_runs WHERE source_ref IS NOT NULL"
+        ):
+            match = SAVED_ID.fullmatch(ref or "")
             if match:
                 maximum = max(maximum, int(match.group(1)))
     return f"ps-{maximum + 1:03d}"

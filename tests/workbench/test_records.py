@@ -135,6 +135,58 @@ class RecordsBoundaryTests(unittest.TestCase):
         self.assertIn("第一章试卷", rendered)
         self.assertIn("题目或顺序曾变化", rendered)
 
+    def test_unchanged_paper_runs_merge_without_the_warning(self):
+        from workbench.data import records
+        from workbench.server import records as records_view
+
+        for label, started in (("旧的一轮", "2026-09-20 10:00:00"),
+                               ("新的一轮", "2026-09-29 10:00:00")):
+            self.pool.insert_attempt(
+                "dmath-ch06-prob-001", "answered", answer_text=label,
+                verdict=True, choices=["A"])
+            attempt = self.pool.connect().execute(
+                "SELECT id FROM problem_attempts ORDER BY id DESC LIMIT 1"
+            ).fetchone()[0]
+            items_json = ('[{"item_type":"problem","item_id":"dmath-ch06-prob-001",'
+                          '"direction":"","state":"answered","attempt_id":%d}]' % attempt)
+            self.pool.connect().execute(
+                "INSERT INTO practice_runs "
+                "(source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
+                "rating_mode, items_json, status, started_at, finished_at) "
+                "VALUES ('practice_set', 'ps-001', '第一章试卷', '[]', 'exam', "
+                "'immediate', ?, 'completed', ?, ?)",
+                (items_json, started, started))
+
+        overview = records.overview(self.pool)
+        paper = overview["practice_sets"][0]
+        self.assertEqual(paper["count"], 2)
+        self.assertFalse(paper["content_changed"])
+        self.assertEqual(paper["runs"][0]["accuracy"], 1.0)
+
+        rendered = records_view.content("dmath", overview, view="runs")
+        self.assertNotIn("题目或顺序曾变化", rendered)
+
+    def test_freed_paper_ids_are_not_reused_after_the_paper_is_deleted(self):
+        from workbench.data import practice_sets
+
+        saved = practice_sets.create_saved(
+            self.pool, "会删掉的卷子", ["dmath-ch06-prob-001"])
+        old_id = saved["practice_set_id"]
+        self.pool.connect().execute(
+            "INSERT INTO practice_runs "
+            "(source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
+            "rating_mode, items_json, status, started_at, finished_at) "
+            "VALUES ('practice_set', ?, '旧卷', '[]', 'exam', 'immediate', "
+            "'[]', 'completed', '2026-09-20 10:00:00', '2026-09-20 10:20:00')",
+            (old_id,),
+        )
+        practice_sets.delete_saved(self.pool, old_id)
+
+        recreated = practice_sets.create_saved(
+            self.pool, "重建的卷子", ["dmath-ch06-prob-001"])
+        self.assertNotEqual(recreated["practice_set_id"], old_id)
+        self.assertEqual(recreated["practice_set_id"], "ps-002")
+
 
 if __name__ == "__main__":
     unittest.main()
