@@ -1568,7 +1568,7 @@ test("provider discovery failures remain visible in the list and picker", async 
   assert.match(elements["ai-provider-options"].innerHTML, /Agent 服务暂不可用/);
 });
 
-test("the chat header offers every model target and can cross harnesses", async () => {
+test("the chat header only offers models from the conversation harness", async () => {
   const elements = { layout: layout(), ...aiElements() };
   const calls = [];
   const entries = [
@@ -1576,7 +1576,6 @@ test("the chat header offers every model target and can cross harnesses", async 
     { name: "本地 Qwen", provider: "pi", model: "qwen/qwen3-coder", source: "runtime" },
     { name: "codex 默认", provider: "codex", model: null, source: "default" },
   ];
-  let provider = "pi";
   let model = "deepseek/deepseek-v4-flash";
   runWorkbench({
     elements,
@@ -1585,29 +1584,32 @@ test("the chat header offers every model target and can cross harnesses", async 
       calls.push({ url, options });
       if (url.endsWith("/ai/providers")) return jsonResponse(entries);
       if (url.endsWith("/ai/sessions/conv-001") && !options) return jsonResponse({
-        conversation_id: "conv-001", provider, status: "idle",
-        model, model_entry: provider === "pi" ? "DeepSeek V4" : null, messages: [],
+        conversation_id: "conv-001", provider: "pi", status: "idle",
+        model, model_entry: model === "deepseek/deepseek-v4-flash" ? "DeepSeek V4" : null,
+        messages: [],
       });
       if (url.endsWith("/ai/sessions/conv-001")) {
         const target = JSON.parse(options.body);
-        provider = target.provider;
+        assert.equal(Object.hasOwn(target, "provider"), false);
         model = target.model;
-        return jsonResponse({ conversation_id: "conv-001", provider,
-                              status: "idle", model, messages: [] });
+        return jsonResponse({
+          conversation_id: "conv-001", provider: "pi",
+          status: "idle", model, messages: [],
+        });
       }
       if (url.endsWith("/ai/sessions")) return jsonResponse([
-        { conversation_id: "conv-001", provider, status: "idle" }]);
+        { conversation_id: "conv-001", provider: "pi", status: "idle" }]);
       return jsonResponse({});
     },
   });
   await openFirstAiSession(elements);
   const select = elements["ai-model-switch"];
   assert.deepEqual(select.children.map((option) => option.textContent),
-    ["DeepSeek V4 · pi", "本地 Qwen · pi", "codex 默认 · codex"]);
+    ["DeepSeek V4", "本地 Qwen"]);
   assert.equal(select.children[0].selected, true);
   assert.equal(select.classList.contains("hidden"), false);
 
-  select.value = JSON.stringify(["codex", "", ""]);
+  select.value = JSON.stringify(["qwen/qwen3-coder", ""]);
   const loads = () => calls.filter(
     (call) => call.url.endsWith("/ai/sessions/conv-001") && !call.options).length;
   const loadsBefore = loads();
@@ -1616,10 +1618,9 @@ test("the chat header offers every model target and can cross harnesses", async 
   const patched = calls.find((call) => call.options && call.options.method === "PATCH");
   assert.ok(patched, "switching must PATCH the conversation");
   assert.deepEqual(JSON.parse(patched.options.body),
-    { provider: "codex", model: null, entry: null });
+    { model: "qwen/qwen3-coder", entry: null });
   assert.match(elements["ai-status"].textContent, /模型已切换/);
   assert.equal(loads(), loadsBefore + 1);
-  assert.equal(select.children[2].selected, true);
 });
 
 test("a raw model id no target names still shows as the current choice", async () => {
@@ -1642,11 +1643,11 @@ test("a raw model id no target names still shows as the current choice", async (
   await openFirstAiSession(elements);
   const select = elements["ai-model-switch"];
   assert.equal(select.children.length, 2);
-  assert.equal(select.children[0].textContent, "some/other-model · pi");
+  assert.equal(select.children[0].textContent, "some/other-model");
   assert.equal(select.children[0].selected, true);
 });
 
-test("a conversation keeps its current target while other harnesses remain selectable", async () => {
+test("a conversation model selector never exposes another harness", async () => {
   const elements = { layout: layout(), ...aiElements() };
   runWorkbench({
     elements,
@@ -1664,11 +1665,9 @@ test("a conversation keeps its current target while other harnesses remain selec
   });
   await openFirstAiSession(elements);
   const select = elements["ai-model-switch"];
-  assert.equal(select.children.length, 2);
-  assert.equal(select.children[0].textContent, "pi · pi");
+  assert.equal(select.children.length, 1);
+  assert.equal(select.children[0].textContent, "pi 默认");
   assert.equal(select.children[0].selected, true);
-  assert.equal(select.children[1].textContent, "codex 默认 · codex");
-  assert.equal(select.classList.contains("hidden"), false);
 });
 
 test("AI free message sends page identifiers and excludes a draft by default", async () => {
