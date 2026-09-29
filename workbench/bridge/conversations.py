@@ -236,6 +236,11 @@ def set_model(pool, conversation_id, model, provider=None, entry=None):
         process = None
         if old_provider == "pi":
             process = PI_RPC.active().get(str(folder))
+        target_changed = (
+            old_provider != target_provider
+            or record.get("model") != target.get("model")
+            or list(record.get("model_args") or []) != list(target.get("args", []))
+        )
         if old_provider == target_provider == "pi" and process is not None:
             parts = _pi_model_parts(target.get("model"))
             if parts:
@@ -245,11 +250,15 @@ def set_model(pool, conversation_id, model, provider=None, entry=None):
                     process = PI_RPC.discard(str(folder), process)
                     if process is not None:
                         process.close()
+            elif target_changed:
+                process = PI_RPC.discard(str(folder), process)
+                if process is not None:
+                    process.close()
         elif old_provider == "pi":
             process = PI_RPC.discard(str(folder))
             if process is not None:
                 process.close()
-        if old_provider != target_provider:
+        if old_provider != target_provider or (target_changed and target_provider != "pi"):
             record["provider_session_id"] = None
             record["handoff_from"] = old_provider
         record.update({
