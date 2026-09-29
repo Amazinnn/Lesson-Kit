@@ -8,6 +8,14 @@ const vm = require("node:vm");
 const GraphPhysics = require("../../workbench/server/static/graph-physics.js");
 const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
 
+function savedRequestBody(call) {
+  const body = JSON.parse(call.options.body);
+  assert.equal(typeof body.request_id, "string");
+  assert.ok(body.request_id.length > 0);
+  delete body.request_id;
+  return body;
+}
+
 const SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/workbench.js"),
   "utf8",
@@ -487,7 +495,7 @@ test("immediate self-rating writes only when saving and then moves to the next q
   await flush();
   const feedback = calls.find((call) => call.url.endsWith("/feedback"));
   assert.ok(feedback);
-  assert.deepEqual(JSON.parse(feedback.options.body), {
+  assert.deepEqual(savedRequestBody(feedback), {
     item_type: "problem", item_id: "p-1", rating: 4, note: "复习后会做",
   });
 });
@@ -589,7 +597,7 @@ test("batch self-rating writes only from its final review card", async () => {
   save.click();
   await flush();
   const feedback = calls.find((call) => call.url.endsWith("/feedback"));
-  assert.deepEqual(JSON.parse(feedback.options.body), {
+  assert.deepEqual(savedRequestBody(feedback), {
     item_type: "problem", item_id: "p-1", rating: 5, note: "已掌握",
   });
 });
@@ -764,7 +772,7 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
   elements["save-rating"].click();
   await flush();
   const fb = calls.find((call) => call.url.endsWith("/feedback"));
-  assert.deepEqual(JSON.parse(fb.options.body), {
+  assert.deepEqual(savedRequestBody(fb), {
     item_type: "card", item_id: "c-1", rating: 4, note: "", direction: "forward",
   });
   const next = calls.filter((call) => call.url.endsWith("/pull-cards"))[1];
@@ -817,7 +825,7 @@ test("reverse session prompts from the back and reveals the front", async () => 
   elements["save-rating"].click();
   await flush();
   const feedback = calls.find((call) => call.url.endsWith("/feedback"));
-  assert.deepEqual(JSON.parse(feedback.options.body), {
+  assert.deepEqual(savedRequestBody(feedback), {
     item_type: "card", item_id: "c-bi", rating: 5, note: "", direction: "reverse",
   });
 });
@@ -886,7 +894,7 @@ test("session-end lists played cards with front and back for rating", async () =
   save.click();
   await flush();
   const fb = calls.find((call) => call.url.endsWith("/feedback"));
-  assert.deepEqual(JSON.parse(fb.options.body), {
+  assert.deepEqual(savedRequestBody(fb), {
     item_type: "card", item_id: "c-1", rating: 3, note: "", direction: "forward",
   });
   assert.equal(calls.some((call) => call.url.includes("/problem/")), false);
@@ -980,6 +988,69 @@ test("practice restores the same tab's titled active card without pulling again"
   assert.equal(elements["start-area"].classList.contains("hidden"), true);
   assert.match(elements.stream.innerHTML, /Restored title/);
   assert.equal(calls.some((call) => call.url.endsWith("/pull")), false);
+});
+
+test("refresh retries the saved answer request and recovers its attempt id", async () => {
+  const payload = { request_id: "answer-after-refresh", problem_id: "p-1",
+    answer_text: "original answer", verdict: false };
+  const storage = new FakeStorage({
+    wb_practice_mode_alpha: "immediate",
+    wb_kps_alpha: JSON.stringify(["kp-1"]),
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 0, items: [{
+      problem_id: "p-1", state: "unrated", attempt_status: "saving",
+      attempt_request: { request_id: payload.request_id, payload },
+      payload: { problem_id: "p-1", problem_text: "题目" },
+    }] }),
+  });
+  const calls = [];
+  runWorkbench({ elements: { layout: layout(), ...practiceElements() }, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/attempts")) return jsonResponse({ attempt_id: 71 });
+      return jsonResponse({ problems: [] });
+    },
+  });
+  await flush();
+  const submitted = calls.filter((call) => call.url.endsWith("/attempts"));
+  assert.equal(submitted.length, 1);
+  assert.deepEqual(JSON.parse(submitted[0].options.body), payload);
+  assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).items[0].attempt_id, 71);
+});
+
+test("session-end retries the saved rating payload after refresh", async () => {
+  const payload = { request_id: "rating-after-refresh", item_type: "problem",
+    item_id: "p-1", rating: 2, note: "original note", attempt_id: 71 };
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 0, items: [{
+      problem_id: "p-1", state: "unrated", attempt_id: 71,
+      feedback_status: "saving",
+      feedback_request: { request_id: payload.request_id, payload },
+    }] }),
+  });
+  const pending = new FakeElement("pending-ratings");
+  const calls = [];
+  runWorkbench({ elements: { layout: layout(), "pending-ratings": pending }, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/problem/")) return jsonResponse({ problem: {
+        problem_id: "p-1", problem_text: "题目", display_title: "题目",
+      } });
+      return jsonResponse([]);
+    },
+  });
+  await flush();
+  const card = pending.children[0];
+  const rating = card.children.find((child) => child.id === "end-rating-p-1");
+  const note = card.children.find((child) => child.id === "end-note-p-1");
+  assert.equal(rating.value, 2);
+  assert.equal(note.value, "original note");
+  rating.value = "5";
+  note.value = "changed after refresh";
+  card.children.find((child) => child.id === "end-save-p-1").click();
+  await flush();
+  const sent = calls.find((call) => call.url.endsWith("/feedback"));
+  assert.deepEqual(JSON.parse(sent.options.body), payload);
+  assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).items[0].state, "rated");
 });
 
 test("practice starts a knowledge-point handoff without loading the weak list", async () => {

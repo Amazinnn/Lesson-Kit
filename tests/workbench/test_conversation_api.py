@@ -356,6 +356,33 @@ class ConversationApiTests(unittest.TestCase):
         status, records = self.get("/api/w/dmath/records")
         self.assertEqual(records["count"], 0)
 
+    def test_browser_write_retries_return_original_result_and_conflict_on_change(self):
+        answer = {"request_id": "web-answer-1", "problem_id": "dmath-ch06-prob-001",
+                  "answer_text": "原作答", "verdict": False}
+        status, first = self.post("/api/w/dmath/attempts", answer)
+        self.assertEqual(status, 200)
+        status, replay = self.post("/api/w/dmath/attempts", answer)
+        self.assertEqual((status, replay), (200, first))
+        status, _ = self.post_error("/api/w/dmath/attempts", {
+            **answer, "answer_text": "改过的作答"})
+        self.assertEqual(status, 409)
+
+        feedback = {"request_id": "web-rating-1", "item_type": "problem",
+                    "item_id": answer["problem_id"], "rating": 2,
+                    "attempt_id": first["attempt_id"]}
+        status, rated = self.post("/api/w/dmath/feedback", feedback)
+        self.assertEqual(status, 200)
+        status, again = self.post("/api/w/dmath/feedback", feedback)
+        self.assertEqual((status, again), (200, rated))
+        status, _ = self.post_error("/api/w/dmath/feedback", {**feedback, "rating": 4})
+        self.assertEqual(status, 409)
+        status, _ = self.post_error("/api/w/dmath/feedback", {
+            **feedback, "request_id": answer["request_id"]})
+        self.assertEqual(status, 409)
+        status, records = self.get("/api/w/dmath/records")
+        self.assertEqual((status, records["count"]), (200, 1))
+        self.assertEqual(records["records"][0]["rating"], 2)
+
     def test_the_filter_facets_and_the_search_feed(self):
         self.seed_evidence()
         status, facets = self.get("/api/w/dmath/pull-facets")

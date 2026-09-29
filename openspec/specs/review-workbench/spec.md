@@ -913,6 +913,32 @@ failing the practice flow.
 - **WHEN** a rating names an attempt that belongs to another item
 - **THEN** the rating is refused with zero writes
 
+### Requirement: Retry-safe browser practice writes
+
+Browser answer submissions and ratings SHALL carry a stable `request_id`. Before
+sending a write, the browser SHALL persist its exact payload and id with the
+practice session and reuse them after a refresh or failed response. The server
+SHALL store the request result atomically with its write: an exact retry SHALL
+return the original result without another attempt, feedback event, or learning
+projection update. Reusing an id for a changed operation or payload SHALL
+return a conflict without writing. A rating SHALL retain the `attempt_id` link
+to its answer.
+
+#### Scenario: An answer response is lost
+
+- **WHEN** the browser retries the saved answer request after a refresh
+- **THEN** the original attempt id is returned and exactly one attempt exists
+
+#### Scenario: A rating response is lost
+
+- **WHEN** the browser retries the saved rating request after a refresh
+- **THEN** its original result is returned and the linked rating applies once
+
+#### Scenario: A request id is reused with changed content
+
+- **WHEN** the browser sends a different answer or rating with an existing request id
+- **THEN** the server returns a conflict and changes no learning row
+
 ### Requirement: Practice history is readable in the product
 
 The workbench SHALL surface the practice history to the learner: a server-
@@ -980,4 +1006,3 @@ existing scope and mode.
 
 - **WHEN** the learner reloads the page with filters active and later presses clear-all
 - **THEN** the badge and the panel restore exactly, and the cleared state sends no filter dimensions
-

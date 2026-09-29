@@ -1302,6 +1302,60 @@
     persistDeck();
   }
 
+  function newPracticeRequestId() {
+    return window.crypto && window.crypto.randomUUID
+      ? window.crypto.randomUUID()
+      : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+  }
+
+  var pendingAttemptRequests = {};
+  function ensureAttempt(item) {
+    if (item.attempt_id) return Promise.resolve(item.attempt_id);
+    if (!item.attempt_request) return Promise.resolve(null);
+    var saved = item.attempt_request;
+    if (pendingAttemptRequests[saved.request_id]) {
+      return pendingAttemptRequests[saved.request_id];
+    }
+    updateSession(item.id, { attempt_status: "saving" }, item.direction);
+    var request = post("/attempts", saved.payload).then(function (recorded) {
+      updateSession(item.id, { attempt_id: recorded.attempt_id, attempt_status: "saved" },
+        item.direction);
+      return recorded.attempt_id;
+    }).catch(function (error) {
+      updateSession(item.id, { attempt_status: "failed" }, item.direction);
+      throw error;
+    });
+    pendingAttemptRequests[saved.request_id] = request;
+    request.then(function () { delete pendingAttemptRequests[saved.request_id]; },
+      function () { delete pendingAttemptRequests[saved.request_id]; });
+    return request;
+  }
+
+  function saveItemFeedback(item, payload) {
+    var saved = item.feedback_request;
+    if (!saved) {
+      payload.request_id = newPracticeRequestId();
+      saved = { request_id: payload.request_id, payload: payload };
+      updateSession(item.id, { feedback_request: saved }, item.direction);
+    }
+    updateSession(item.id, { feedback_status: "saving" }, item.direction);
+    return post("/feedback", saved.payload).then(function (result) {
+      updateSession(item.id, { state: "rated", feedback_status: "saved" }, item.direction);
+      return result;
+    }).catch(function (error) {
+      updateSession(item.id, { feedback_status: "failed" }, item.direction);
+      throw error;
+    });
+  }
+
+  // A refresh can happen after the server wrote an answer but before its reply.
+  // The saved request is sent unchanged until the original attempt id returns.
+  session().forEach(function (item) {
+    if (item.attempt_request && !item.attempt_id) {
+      ensureAttempt(item).catch(function () { /* retry on the next rating or refresh */ });
+    }
+  });
+
   function cardSides(item) {
     var payload = item.payload || {};
     return item.direction === "reverse"
@@ -1558,6 +1612,10 @@
         if (feedbackArea) {
           feedbackArea.classList.toggle("hidden",
             !(ratingNow() && item.revealed && item.state !== "rated"));
+        }
+        if (item.feedback_request) {
+          if (ratingInput) ratingInput.value = item.feedback_request.payload.rating;
+          if (feedbackNote) feedbackNote.value = item.feedback_request.payload.note || "";
         }
         if (actions) actions.classList.remove("hidden");
         return;
@@ -1985,6 +2043,10 @@
     if (submitAnswer) submitAnswer.addEventListener("click", function () {
       var item = currentProblem();
       if (!item || item.kind === "card") return;
+      if (item.attempt_request && !item.attempt_id) {
+        ensureAttempt(item).catch(showPracticeError);
+        return;
+      }
       var answer = answerBox.value.trim();
       var choiceInputs = (stream && stream.querySelectorAll)
         ? Array.prototype.slice.call(stream.querySelectorAll("[data-choice-option]:checked"))
@@ -1995,24 +2057,21 @@
       if (choiceTexts.length) patch.choices = choiceTexts.slice();
       var graded = gradeMicroQuiz(item.payload, choiceTexts);
       if (graded !== null) patch.verdict = graded;
+      var attemptPayload = {
+        request_id: newPracticeRequestId(), problem_id: item.id,
+        answer_text: answer, choices: choiceTexts.length ? choiceTexts.slice() : undefined,
+        verdict: graded === null ? undefined : graded,
+      };
+      patch.attempt_id = null;
+      patch.attempt_request = { request_id: attemptPayload.request_id, payload: attemptPayload };
+      patch.attempt_status = "saving";
       if (batchNow()) patch.state = "unrated";
       PracticeDeck.settle(practiceDeck, item.id, patch);
       persistDeck();
       renderDeckItem(currentProblem());
       // The attempt itself is the durable record: one POST per submission,
       // before any rating. The session's rating later links back via attempt_id.
-      post("/attempts", {
-        problem_id: item.id,
-        answer_text: answer,
-        choices: choiceTexts.length ? choiceTexts.slice() : undefined,
-        verdict: graded === null ? undefined : graded,
-      }).then(function (recorded) {
-        PracticeDeck.settle(practiceDeck, item.id,
-          { attempt_id: recorded.attempt_id });
-        persistDeck();
-      }).catch(function () {
-        // A failed record never blocks the practice loop itself.
-      });
+      ensureAttempt(currentProblem()).catch(showPracticeError);
       if (batchNow()) {
         // Instant verdict, deferred rating: hold the verdict (and the
         // highlighted correct options) briefly, then advance.
@@ -2059,6 +2118,7 @@
       var rating = parseInt(ratingInput.value, 10);
       var item = currentProblem();
       if (!item) return;
+      if (item.feedback_status === "saving") return;
       if (rating < 1 || rating > 5) {
         showPracticeError("请输入 1-5 的评分");
         return;
@@ -2070,13 +2130,16 @@
         rating: rating, note: feedbackNote.value.trim(),
       };
       if (item.kind === "card") feedback.direction = item.direction;
-      if (item.kind !== "card" && item.attempt_id) {
-        feedback.attempt_id = item.attempt_id;
-      }
-      post("/feedback", feedback).then(function () {
-        updateSession(item.id, { state: "rated" });
+      updateSession(item.id, { feedback_status: "saving" }, item.direction);
+      ensureAttempt(item).then(function (attemptId) {
+        if (item.kind !== "card" && attemptId) feedback.attempt_id = attemptId;
+        return saveItemFeedback(item, feedback);
+      }).then(function () {
         advance();
-      }).catch(showPracticeError);
+      }).catch(function (error) {
+        updateSession(item.id, { feedback_status: "failed" }, item.direction);
+        showPracticeError(error);
+      });
     });
 
     if (noTime) noTime.addEventListener("click", function () {
@@ -2277,7 +2340,7 @@
       pending.innerHTML = "<p>没有待评的题。</p>";
     } else {
       var remaining = unrated.length;
-      var buildRatingCard = function (contentHtml, itemType, itemId, title, direction) {
+      var buildRatingCard = function (contentHtml, itemType, itemId, title, direction, item) {
         var entryId = itemId + (direction ? "-" + direction : "");
         var card = document.createElement("article");
         card.className = "pending-rating-card card";
@@ -2292,6 +2355,10 @@
         var note = document.createElement("textarea");
         note.id = "end-note-" + entryId;
         note.placeholder = "可选备注";
+        if (item.feedback_request) {
+          rating.value = item.feedback_request.payload.rating;
+          note.value = item.feedback_request.payload.note || "";
+        }
         var save = document.createElement("button");
         save.id = "end-save-" + entryId;
         save.className = "primary sm";
@@ -2322,20 +2389,25 @@
             item_type: itemType, item_id: itemId,
             rating: value, note: note.value.trim(),
           };
+          var origin = item;
+          if (origin.feedback_status === "saving") return;
           if (itemType !== "card") {
             // Link the rating back to the attempt the submission created.
-            var origin = (session().filter(function (entry) {
-              return entry.id === itemId;
-            })[0]) || {};
             if (origin.attempt_id) feedback.attempt_id = origin.attempt_id;
           }
           if (itemType === "card") feedback.direction = direction || "forward";
-          post("/feedback", feedback).then(function () {
-            updateSession(itemId, { state: "rated" }, direction);
+          updateSession(origin.id, { feedback_status: "saving" }, origin.direction);
+          ensureAttempt(origin).then(function (attemptId) {
+            if (itemType !== "card" && attemptId) feedback.attempt_id = attemptId;
+            return saveItemFeedback(origin, feedback);
+          }).then(function () {
             card.remove();
             remaining -= 1;
             if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
-          }).catch(function (err) { showCardError(err.message || "保存失败"); });
+          }).catch(function (err) {
+            updateSession(origin.id, { feedback_status: "failed" }, origin.direction);
+            showCardError(err.message || "保存失败");
+          });
         });
         card.appendChild(error);
         card.appendChild(ratingLabel);
@@ -2355,7 +2427,7 @@
             "<p class='context-line'>闪卡 · " + directionLabel + "</p>"
             + "<div class='problem-text rich-text'>" + richText(sides.prompt) + "</div>"
             + "<p class='section-kicker'>另一面</p><div class='rich-text'>" + richText(sides.answer) + "</div>",
-            "card", item.id, String(sides.prompt || "闪卡"), item.direction);
+            "card", item.id, String(sides.prompt || "闪卡"), item.direction, item);
           return;
         }
         api("/problem/" + item.id).then(function (detail) {
@@ -2378,7 +2450,7 @@
             + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
             + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
             + solutionHtml,
-            "problem", item.id, title);
+            "problem", item.id, title, "", item);
         });
       });
     }

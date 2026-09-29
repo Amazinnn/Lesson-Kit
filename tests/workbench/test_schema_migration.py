@@ -157,6 +157,7 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         pool_schema.ensure_workbench_schema(self.conn)
 
         self.assertIn("attempt_operations", self.table_names())
+        self.assertIn("practice_request_operations", self.table_names())
         self.assertIn("attempt_id", self.columns("feedback_events"))
         self.assertIn(
             "idx_attempt_operations_attempt",
