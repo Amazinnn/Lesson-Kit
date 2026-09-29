@@ -788,54 +788,74 @@
         graphAdjacency.get(edge.source).push(edge.target);
         graphAdjacency.get(edge.target).push(edge.source);
       });
-      graphSimulation = graphPendingPositions
-        ? GraphPhysics.createSimulation(nodes, edges, graphCanvas.clientWidth,
-          graphCanvas.clientHeight, graphPendingPositions)
-        : GraphPhysics.layoutGraph(nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight);
+      graphSimulation = GraphPhysics.layoutHierarchy(
+        nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight, graphProjection,
+      );
       graphPendingPositions = null;
-      GraphPhysics.applyProjection(graphSimulation.nodes, graphProjection,
-        graphCanvas.clientWidth, graphCanvas.clientHeight);
-      if (states.size) {
-        GraphPhysics.setStateClusters(graphSimulation, Array.from(states),
-          graphCanvas.clientWidth, graphCanvas.clientHeight);
-      }
       graphAutoFit = true;
-      if (graphProjection === "structure") {
-        var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        edgeLayer.setAttribute("class", "graph-edge-layer");
-        edgeLayer.setAttribute("aria-hidden", "true");
-        stage.appendChild(edgeLayer);
-        graphSimulation.edges.slice().sort(function (a, b) {
-          return (Number(a.attraction) || 1) - (Number(b.attraction) || 1)
-            || String(a.source + a.target).localeCompare(String(b.source + b.target));
-        }).forEach(function (edge) {
-          var visual = GraphPhysics.edgeVisual(edge.attraction);
-          var pipe = document.createElementNS("http://www.w3.org/2000/svg", "g");
-          pipe.setAttribute("class", "graph-edge-pipe");
-          pipe.setAttribute("data-strength", visual.score.toFixed(3));
-          [
-            ["--edge-width", visual.width.toFixed(2) + "px"],
-            ["--edge-shadow-width", visual.shadowWidth.toFixed(2) + "px"],
-            ["--edge-highlight-width", visual.highlightWidth.toFixed(2) + "px"],
-            ["--edge-opacity", visual.opacity.toFixed(3)],
-          ].forEach(function (property) {
-            if (pipe.style.setProperty) pipe.style.setProperty(property[0], property[1]);
-            else pipe.style[property[0]] = property[1];
-          });
-          var paths = ["shadow", "body", "highlight"].map(function (layer) {
-            var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-            path.setAttribute("class", "graph-edge graph-edge-" + layer);
-            pipe.appendChild(path);
-            return path;
-          });
-          if (!reducedGraphMotion
-              && (graphEnteringIds.has(edge.source) || graphEnteringIds.has(edge.target))) {
-            pipe.classList.add("graph-filter-enter");
-          }
-          edgeLayer.appendChild(pipe);
-          graphEdgeElements.push({ element: pipe, paths: paths, edge: edge });
+
+      var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      edgeLayer.setAttribute("class", "graph-edge-layer");
+      edgeLayer.setAttribute("aria-hidden", "true");
+      var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      var marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+      marker.setAttribute("id", "graph-arrow");
+      marker.setAttribute("viewBox", "0 0 8 8");
+      marker.setAttribute("refX", "7");
+      marker.setAttribute("refY", "4");
+      marker.setAttribute("markerWidth", "7");
+      marker.setAttribute("markerHeight", "7");
+      marker.setAttribute("orient", "auto-start-reverse");
+      var markerPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      markerPath.setAttribute("d", "M 0 0 L 8 4 L 0 8 z");
+      markerPath.setAttribute("fill", "rgba(41, 55, 75, .72)");
+      marker.appendChild(markerPath);
+      defs.appendChild(marker);
+      edgeLayer.appendChild(defs);
+      stage.appendChild(edgeLayer);
+      graphSimulation.edges.slice().sort(function (a, b) {
+        function rank(edge) {
+          return edge.relation_type === "related" ? 0
+            : edge.relation_type === "prerequisite" ? 2 : 1;
+        }
+        return rank(a) - rank(b)
+          || String(a.source + a.target + (a.id || "")).localeCompare(
+            String(b.source + b.target + (b.id || "")));
+      }).forEach(function (edge) {
+        var visual = GraphPhysics.edgeVisual(edge.attraction);
+        var relationClass = String(edge.relation_type || "related")
+          .replace(/[^a-z0-9_-]/gi, "-");
+        var directionClass = edge.direction === "symmetric" ? "symmetric" : "directed";
+        var pipe = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        pipe.setAttribute("class", "graph-edge-pipe graph-relation-" + relationClass
+          + " graph-direction-" + directionClass);
+        pipe.setAttribute("data-relation", edge.relation_type || "related");
+        pipe.setAttribute("data-strength", visual.score.toFixed(3));
+        [
+          ["--edge-width", visual.width.toFixed(2) + "px"],
+          ["--edge-shadow-width", visual.shadowWidth.toFixed(2) + "px"],
+          ["--edge-highlight-width", visual.highlightWidth.toFixed(2) + "px"],
+          ["--edge-opacity", visual.opacity.toFixed(3)],
+        ].forEach(function (property) {
+          if (pipe.style.setProperty) pipe.style.setProperty(property[0], property[1]);
+          else pipe.style[property[0]] = property[1];
         });
-      }
+        var paths = ["shadow", "body", "highlight"].map(function (layer) {
+          var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("class", "graph-edge graph-edge-" + layer);
+          pipe.appendChild(path);
+          return path;
+        });
+        if (edge.direction !== "symmetric") {
+          paths[1].setAttribute("marker-end", "url(#graph-arrow)");
+        }
+        if (!reducedGraphMotion
+            && (graphEnteringIds.has(edge.source) || graphEnteringIds.has(edge.target))) {
+          pipe.classList.add("graph-filter-enter");
+        }
+        edgeLayer.appendChild(pipe);
+        graphEdgeElements.push({ element: pipe, paths: paths, edge: edge });
+      });
       graphSimulation.nodes.forEach(function (node) {
         var button = document.createElement("button");
         button.className = "graph-node " + (node.state || "unmarked")
