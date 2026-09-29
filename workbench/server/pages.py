@@ -6,6 +6,7 @@ import re
 from datetime import date
 
 from workbench.data import queries
+from workbench.server import records as records_view
 
 
 def hub_page(workspaces):
@@ -506,52 +507,15 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
 
 
 def records_page(workspace, workspaces, weak_items, pool, problem_id=None):
-    """The learner's practice history, newest first, rendered server-side."""
-    from workbench.data import queries as queries_mod
-
-    overview = queries_mod.records_overview(pool, limit=100, problem_id=problem_id)
-    rows = []
-    for record in overview["records"]:
-        verdict = record.get("verdict")
-        if verdict is None:
-            badge, verdict_class = "未判定", "record-verdict-open"
-        elif verdict:
-            badge, verdict_class = "对", "record-verdict-ok"
-        else:
-            badge, verdict_class = "错", "record-verdict-bad"
-        rating = record.get("rating")
-        title = html.escape(record.get("title") or "未命名题目")
-        answer = html.escape((record.get("answer_text") or "").strip())
-        note = html.escape(
-            (record.get("feedback_note") or record.get("note") or "").strip())
-        link = f"/w/{workspace['name']}/practice?problem={record['problem_id']}"
-        stars = ""
-        if isinstance(rating, int) and 1 <= rating <= 5:
-            stars = (f"<span class='record-rating'>{'★' * rating}"
-                     f"{'☆' * (5 - rating)}</span>")
-        rows.append(
-            "<article class='record-row card'>"
-            f"<header><a class='record-title' href='{link}'>{title}</a>"
-            f"<span class='record-verdict {verdict_class}'>{badge}</span>"
-            + stars
-            + "<time class='record-time'>"
-            + html.escape(str(record.get("created_at") or ""))
-            + "</time></header>"
-            + (f"<p class='record-answer'>{answer}</p>" if answer else "")
-            + (f"<p class='record-note muted'>{note}</p>" if note else "")
-            + "</article>"
-        )
-    if not rows:
-        rows.append("<p class='muted'>还没有做题记录——去练习页答第一题吧。</p>")
+    """The learner's practice history, newest first."""
+    overview = queries.records_overview(pool, limit=100, problem_id=problem_id)
     subtitle = "按题目过滤" if problem_id else "最近 100 条，新在上"
     middle = (
         _page_header(
             "练习 / 做题记录", subtitle,
             "每一次作答都会留档：作答内容、客观题判定与你的评分。",
         )
-        + "<div class='page-content'><section class='support-section'>"
-        + "".join(rows)
-        + "</section></div>"
+        + records_view.content(workspace["name"], overview)
     )
     return shell(workspace, workspaces, weak_items, middle, "records",
                  page_type="records", kp_titles=None)
