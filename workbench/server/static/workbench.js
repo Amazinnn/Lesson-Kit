@@ -2204,33 +2204,38 @@
     if (aiSessionEmpty) aiSessionEmpty.classList.toggle("hidden", aiSessionRecords.length > 0);
   }
 
-  function aiShowProviderPicker() {
+  function aiRenderProviderPicker() {
     if (!aiProviderOptions) return;
-    aiSetView("picker");
     aiProviderOptions.innerHTML = "";
-    aiRefreshProviders().then(function () {
-      aiProviderOptions.innerHTML = "";
-      aiProviders.forEach(function (entry) {
+    aiProviders.forEach(function (entry) {
       var button = document.createElement("button");
       button.className = "outline sm ai-provider-option";
       button.type = "button";
       button.dataset.provider = entry.provider || entry.name;
       button.dataset.model = entry.model || "";
+      button.dataset.entry = entry.entry || "";
       // The display name is the entry's own — the harness and model id stay
       // out of the label.
       button.textContent = entry.name;
-        button.dataset.entry = entry.entry || "";
-        button.addEventListener("click", function () {
-          aiCreateSession(entry.provider || entry.name, entry.model || "", entry.entry || "");
-        });
-        aiProviderOptions.appendChild(button);
+      button.addEventListener("click", function () {
+        aiCreateSession(entry.provider || entry.name, entry.model || "", entry.entry || "");
       });
-      if (aiProviderLoadError) {
-        aiProviderOptions.innerHTML = "<p class='inline-error'>Agent 服务暂不可用。请稍后重试。</p>";
-      } else if (!aiProviders.length) {
-        aiProviderOptions.innerHTML = "<p class='inline-error'>暂无可用 Agent。请先配置一个提供方。</p>";
-      }
+      aiProviderOptions.appendChild(button);
     });
+    if (aiProviderLoadError) {
+      aiProviderOptions.innerHTML = "<p class='inline-error'>Agent 服务暂不可用。请稍后重试。</p>";
+    } else if (!aiProviders.length) {
+      aiProviderOptions.innerHTML = "<p class='inline-error'>暂无可用 Agent。请先配置一个提供方。</p>";
+    }
+  }
+
+  function aiShowProviderPicker() {
+    if (!aiProviderOptions) return;
+    aiSetView("picker");
+    // Show the last known catalog immediately; then refresh it without leaving
+    // the picker blank while runtime discovery is in flight.
+    aiRenderProviderPicker();
+    aiRefreshProviders().then(aiRenderProviderPicker);
   }
 
   function aiRefreshProviders() {
