@@ -333,6 +333,18 @@ function practiceElements() {
   return elements;
 }
 
+function durablePracticeElements() {
+  const elements = practiceElements();
+  elements["practice-count"] = new FakeElement("practice-count", { value: "10" });
+  elements["active-practice-resume"] = new FakeElement("active-practice-resume");
+  elements["active-practice-title"] = new FakeElement("active-practice-title");
+  elements["active-practice-meta"] = new FakeElement("active-practice-meta");
+  elements["active-practice-progress-fill"] = new FakeElement("active-practice-progress-fill");
+  elements["resume-practice"] = new FakeElement("resume-practice");
+  elements["active-practice-resume"].classList.add("hidden");
+  return elements;
+}
+
 function aiElements() {
   return {
     "ai-model-switch": new FakeElement("ai-model-switch"),
@@ -418,6 +430,109 @@ test("corrupt session state is discarded instead of breaking page startup", () =
     fetch: () => jsonResponse([]),
   });
   assert.equal(storage.getItem("wb_session_alpha"), null);
+});
+
+test("durable practice freezes the whole selected set before execution", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const active = {
+    source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "exam",
+    rating_mode: "immediate", cursor: 0,
+    progress: { completed: 0, answered: 0, stuck: 0, remaining: 2, total: 2 },
+    items: [
+      { position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+        payload: { problem_id: "p-1", display_title: "P1", problem_text: "题一" } },
+      { position: 1, item_type: "problem", item_id: "p-2", state: "pending",
+        payload: { problem_id: "p-2", display_title: "P2", problem_text: "题二" } },
+    ],
+  };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current") && !options) return jsonResponse({ practice: null });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull")) return jsonResponse({ problems: [
+        { problem_id: "p-1", display_title: "P1", problem_text: "题一" },
+        { problem_id: "p-2", display_title: "P2", problem_text: "题二" },
+      ] });
+      if (url.endsWith("/practice/current") && options && options.method === "POST") {
+        return jsonResponse(active);
+      }
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  await flush();
+
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.equal(JSON.parse(pull.options.body).n, 10);
+  const create = calls.find((call) =>
+    call.url.endsWith("/practice/current") && call.options && call.options.method === "POST");
+  const body = JSON.parse(create.options.body);
+  assert.deepEqual(body.items.map((item) => item.item_id), ["p-1", "p-2"]);
+  assert.equal(calls.filter((call) => call.url.endsWith("/pull")).length, 1);
+  assert.match(elements.stream.innerHTML, /题一/);
+});
+
+test("durable practice resumes the server cursor without pulling again", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const practice = {
+    source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "exam",
+    rating_mode: "immediate", cursor: 1,
+    progress: { completed: 1, answered: 1, stuck: 0, remaining: 1, total: 2 },
+    items: [
+      { position: 0, item_type: "problem", item_id: "p-1", state: "answered",
+        attempt_id: 4, attempt: { id: 4, answer_text: "done" },
+        payload: { problem_id: "p-1", display_title: "P1", problem_text: "题一" } },
+      { position: 1, item_type: "problem", item_id: "p-2", state: "pending",
+        payload: { problem_id: "p-2", display_title: "P2", problem_text: "题二" } },
+    ],
+  };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current")) return jsonResponse({ practice });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  assert.match(elements["active-practice-meta"].textContent, /1 \/ 2/);
+  elements["resume-practice"].click();
+  assert.match(elements.stream.innerHTML, /题二/);
+  assert.equal(calls.some((call) => call.url.endsWith("/pull")), false);
+});
+
+test("pausing a durable practice does not settle the current item", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const practice = {
+    source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "exam",
+    rating_mode: "immediate", cursor: 0,
+    progress: { completed: 0, answered: 0, stuck: 0, remaining: 1, total: 1 },
+    items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+      payload: { problem_id: "p-1", display_title: "P1", problem_text: "题一" } }],
+  };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current")) return jsonResponse({ practice });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  elements["resume-practice"].click();
+  elements["goto-session-end"].click();
+  assert.equal(calls.some((call) =>
+    call.options && /\/(attempts|practice|feedback)$/.test(call.url)), false);
+  assert.equal(elements["active-practice-resume"].classList.contains("hidden"), false);
 });
 
 test("practice requires an explicit mode and excludes questions already seen", async () => {
