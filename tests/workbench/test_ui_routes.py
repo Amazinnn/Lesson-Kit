@@ -895,6 +895,85 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("正在按单题过滤", body)
         self.assertIn("查看全部记录", body)
 
+    def _archive_one_quick_run(self):
+        from tests.workbench.fixtures import REPO_ROOT
+        import sys
+
+        sys.path.insert(0, str(REPO_ROOT / "workbench"))
+        from workbench.server import api
+        from workbench.data import active_practice
+
+        pool = api._pool_for({
+            "path": str(self.fixture.ws),
+            "db": "pool/dmath.db",
+            "active_course": "dmath",
+            "active_chapter": "ch06",
+        })
+        try:
+            active_practice.create(pool, {
+                "source_kind": "quick",
+                "kp_ids": ["dmath-ch06-kp-001"],
+                "practice_mode": "exam",
+                "rating_mode": "immediate",
+                "items": [{"item_type": "problem",
+                           "item_id": "dmath-ch06-prob-001"}],
+            })
+            active_practice.mark(pool, 0, "stuck")
+            return pool.connect().execute(
+                "SELECT id FROM practice_runs ORDER BY id DESC LIMIT 1"
+            ).fetchone()[0]
+        finally:
+            pool.close()
+
+    def test_replay_route_starts_the_archived_run(self):
+        run_id = self._archive_one_quick_run()
+
+        status, payload = self.post_json(
+            f"/api/w/dmath/practice/runs/{run_id}/replay", {})
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["source_kind"], "quick")
+        self.assertEqual(
+            [item["item_id"] for item in payload["items"]],
+            ["dmath-ch06-prob-001"],
+        )
+
+    def test_replay_route_conflicts_with_an_unfinished_practice(self):
+        from tests.workbench.fixtures import REPO_ROOT
+        import sys
+
+        run_id = self._archive_one_quick_run()
+        sys.path.insert(0, str(REPO_ROOT / "workbench"))
+        from workbench.server import api
+        from workbench.data import active_practice
+
+        pool = api._pool_for({
+            "path": str(self.fixture.ws),
+            "db": "pool/dmath.db",
+            "active_course": "dmath",
+            "active_chapter": "ch06",
+        })
+        try:
+            active_practice.create(pool, {
+                "source_kind": "quick",
+                "kp_ids": ["dmath-ch06-kp-001"],
+                "practice_mode": "exam",
+                "rating_mode": "immediate",
+                "items": [{"item_type": "problem",
+                           "item_id": "dmath-ch06-prob-001"}],
+            })
+        finally:
+            pool.close()
+
+        with self.assertRaises(HTTPError) as caught:
+            self.post_json(
+                f"/api/w/dmath/practice/runs/{run_id}/replay", {})
+        self.assertEqual(caught.exception.code, 409)
+
+        status, payload = self.post_json(
+            f"/api/w/dmath/practice/runs/{run_id}/replay", {"replace": True})
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["progress"]["remaining"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
