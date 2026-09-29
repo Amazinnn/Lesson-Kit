@@ -916,6 +916,41 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 }
 #session-end-entry { margin: 18px 0 0; }
 .session-end-entry { display: flex; justify-content: space-between; align-items: center; color: var(--dsw-label-tertiary); font-size: 13px; }
+.active-practice-resume {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border-left: 5px solid #2864dc;
+}
+.active-practice-resume > div { flex: 1; min-width: 0; }
+.active-practice-resume h2 { margin: 2px 0 4px; }
+.active-practice-progress {
+  width: 100%;
+  height: 9px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--dsw-bg-layer-3);
+}
+.active-practice-progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #2864dc;
+  transition: width 180ms ease;
+}
+.practice-count-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dsw-label-secondary);
+  font-size: 13px;
+}
+.practice-count-label select { width: auto; min-width: 70px; }
 .practice-mode-choice {
   display: grid;
   gap: 8px;
