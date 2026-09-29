@@ -63,13 +63,14 @@ the ADS near-duplicates through, because the differing suffix is what made them
 look distinct), and a similarity threshold over shingles (no stdlib-only
 implementation, and it would merge genuinely different problems).
 
-### D2 — The check runs in the gate, before any write, over the target scope
+### D2 — The check runs in the gate, before any write, over the whole course
 
-The content-bundle gate normalizes the scope's existing rows once (a single
-`SELECT problem_text … WHERE problem_id LIKE '<course>-<chapter>-%'`, normalized
-in process) and checks each manifest item against that set and against the
-items earlier in the same manifest. Micro-quiz bundles reuse the same check.
-Cost is linear in scope size; the largest known pool is under a thousand rows.
+The content-bundle gate normalizes the course's existing rows once (a single
+`SELECT problem_text … WHERE problem_id LIKE '<course>-%'`, normalized in
+process) and checks every manifest item against that set and all other items in
+the manifest, including items assigned to another chapter. Micro-quiz bundles
+reuse the same check. Cost is linear in course size; the largest known pool is
+under a thousand rows.
 
 ### D3 — Refusal only, no override flag
 

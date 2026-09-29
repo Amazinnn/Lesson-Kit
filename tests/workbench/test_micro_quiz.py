@@ -143,6 +143,19 @@ class MicroQuizRulesTests(unittest.TestCase):
                     micro_quiz.validate_problem_row({**row, field: "长" * (limit + 1)}),
                 )
 
+    def test_markup_safety_is_shared_with_micro_quiz_validation(self):
+        row = {
+            "kp_ids": ["kp-1"], "problem_text": "题干",
+            "practice_modes": ["yes_no"],
+            "micro_quiz": {"quiz_type": "yes_no", "answer_key": "是",
+                           "error_reason": "r", "source_evidence": "s"},
+        }
+        self.assertIn(
+            "has unknown or unterminated HTML",
+            micro_quiz.validate_problem_row(
+                {**row, "problem_text": "题干 <script>x</script>"}),
+        )
+
     def test_check_answer_objective_only(self):
         item = {"micro_quiz": {"quiz_type": "yes_no", "answer_key": "否"}}
         self.assertIs(micro_quiz.check_answer(item, "否"), True)
@@ -221,9 +234,13 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertEqual(result["batch_id"], "batch-001")
         self.assertTrue(Path(result["backup_path"]).exists())
         snapshot_path = self.root / "ingest" / "batch-001.json"
-        self.assertEqual(json.loads(snapshot_path.read_text(encoding="utf-8")), {
-            "kind": "micro-quiz-patch", "items": [item],
-        })
+        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        self.assertEqual(snapshot["kind"], "micro-quiz-patch")
+        self.assertEqual(snapshot["items"], [item])
+        self.assertEqual(
+            snapshot["_post_state"]["tables"]["problems"]["rows"][0]["problem_id"],
+            "dmath-ch06-mq-001",
+        )
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(
@@ -246,6 +263,46 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertEqual(batch[0], "micro-quiz-patch")
         self.assertEqual(Path(batch[1]), snapshot_path)
         self.assertEqual(json.loads(batch[2]), {"problems": 1})
+
+    def test_gate_refuses_an_existing_identity_and_reports_its_source(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("ALTER TABLE problems ADD COLUMN source_evidence TEXT")
+            conn.execute(
+                "INSERT INTO problems (problem_id, kp_ids, problem_text, source_evidence) "
+                "VALUES (?, ?, ?, ?)",
+                ("dmath-ch06-prob-009", '["dmath-ch06-kp-001"]',
+                 "Is 1 prime?", "Rosen 6th, §3.1"),
+            )
+        conn = sqlite3.connect(self.db_path)
+        try:
+            report = ingest._gate_micro_quiz(conn, {
+                "kind": "micro-quiz-patch",
+                "items": [manifest_item(
+                    "dmath-ch07-mq-001", stem="is 1 prime!")],
+            }, "dmath")
+        finally:
+            conn.close()
+        self.assertFalse(report["ok"])
+        message = "\n".join(report["errors"])
+        self.assertIn("dmath-ch06-prob-009", message)
+        self.assertIn("Rosen 6th, §3.1", message)
+
+    def test_gate_refuses_both_members_of_a_manifest_duplicate_group(self):
+        items = [
+            manifest_item("dmath-ch06-mq-001", stem="Is 1 prime?"),
+            manifest_item("dmath-ch06-mq-002", stem="is 1 prime!"),
+        ]
+        conn = sqlite3.connect(self.db_path)
+        try:
+            report = ingest._gate_micro_quiz(conn, {
+                "kind": "micro-quiz-patch", "items": items,
+            }, "dmath")
+        finally:
+            conn.close()
+        self.assertFalse(report["ok"])
+        message = "\n".join(report["errors"])
+        self.assertIn("dmath-ch06-mq-001", message)
+        self.assertIn("dmath-ch06-mq-002", message)
 
     def test_omitted_label_fields_are_stored_null(self):
         ingest.apply_micro_quiz(self.db_path, self.manifest([manifest_item()]))

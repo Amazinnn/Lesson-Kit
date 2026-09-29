@@ -128,9 +128,13 @@ class CardIngestTests(unittest.TestCase):
         self.assertEqual(result["batch_id"], "batch-001")
         self.assertTrue(Path(result["backup_path"]).exists())
         snapshot_path = self.root / "ingest" / "batch-001.json"
-        self.assertEqual(json.loads(snapshot_path.read_text(encoding="utf-8")), {
-            "kind": "flash-card-patch", "items": [item],
-        })
+        snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        self.assertEqual(snapshot["kind"], "flash-card-patch")
+        self.assertEqual(snapshot["items"], [item])
+        self.assertEqual(
+            snapshot["_post_state"]["tables"]["flash_cards"]["rows"][0]["card_id"],
+            "dmath-ch06-fc-001",
+        )
         conn = sqlite3.connect(self.db_path)
         try:
             row = conn.execute(

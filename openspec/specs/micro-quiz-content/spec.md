@@ -21,8 +21,8 @@ the item keyless instead of being refused, the choice types SHALL still carry
 2–6 options, `yes_no` SHALL keep its implied 是/否 options, and `error_reason`
 SHALL be mandatory only for an item that carries a key. Every micro quiz type
 SHALL present clickable options; free-text answering SHALL NOT be part of the
-contract. A micro quiz SHALL map to exactly one knowledge point, and its stem
-SHALL be at most 800 characters. Manifest items MAY carry optional label fields
+contract. A micro quiz SHALL map to exactly one knowledge point and SHALL NOT
+be refused for stem length alone. Manifest items MAY carry optional label fields
 `topic_label` (at most 40 characters), `display_title` (at most 80 characters),
 and `display_summary` (at most 200 characters); a supplied label field SHALL be
 a non-empty string that passes the shared markup safety check, and an omitted
@@ -49,9 +49,8 @@ retired types `closest_answer` and `short_answer` at the gate.
 
 #### Scenario: Contract violation
 
-- **WHEN** an item lacks source evidence, exceeds the stem length bound, has
-  options that do not contain its answer key, maps to several knowledge
-  points, or uses a retired quiz type
+- **WHEN** an item lacks source evidence, has options that do not contain its
+  answer key, maps to several knowledge points, or uses a retired quiz type
 - **THEN** the deterministic gate rejects that item and nothing is written
 
 #### Scenario: Label field validation
@@ -71,10 +70,10 @@ retired types `closest_answer` and `short_answer` at the gate.
 - **WHEN** an explicitly requested patch gives an existing problem a quiz type, options, and its practice-mode marking
 - **THEN** the row keeps its id and learning records, is pulled by the matching practice mode, and is no longer pulled by 综合题
 
-#### Scenario: The stem bound admits long objective items
+#### Scenario: Objective items have no stem length bound
 
-- **WHEN** a 判断题 or 单选题 carries a stem of 800 characters or fewer
-- **THEN** its length is not a contract violation, and a stem above 800 characters is still refused as long content
+- **WHEN** a 判断题 or 单选题 carries a long multi-assertion stem or inlined option block
+- **THEN** it stays in the matching practice mode and is not refused for its length
 
 ### Requirement: Explicit mode marking for Micro and Yes/No
 
@@ -178,4 +177,3 @@ render exactly as before.
 
 - **WHEN** a pulled problem has no micro-quiz payload
 - **THEN** the practice page renders the existing exam flow unchanged
-

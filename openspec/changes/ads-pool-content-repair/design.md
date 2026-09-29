@@ -178,8 +178,7 @@ deletion list before the remaining 14 chapters are processed.
 
 Because `problem-patch` does not apply the label-length or markup rules, a
 preflight script checks every manifest item against the ingest contract before
-submission: non-empty stem, ≤ 800 characters when the item carries a
-`micro_quiz`, exactly one `kp_ids` entry for micro items, 2–6 unique string
+submission: non-empty stem, exactly one `kp_ids` entry for micro items, 2–6 unique string
 options, `answer_key` identical to one of the options (or 是/否 for
 `yes_no`), `topic_label` ≤ 40 / `display_title` ≤ 80, no HTML other than
 `<sup>/<sub>`, no U+FFFD, and a non-empty `source_evidence`.
@@ -198,9 +197,8 @@ options, `answer_key` identical to one of the options (or 是/否 for
   instead of guessed at.
 - **[84 rows have no options anywhere in text]** → they stay as stem-only 综合题
   and are listed with ids; no content is invented.
-- **[Micro bounds force some objective items to stay 综合题]** (more than 6
-  options, stem over 800 characters) → accepted; the report lists each one with
-  its blocking bound.
+- **[Micro option bound forces some objective items to stay 综合题]** (more than
+  6 options) → accepted; the report lists each one with its blocking bound.
 - **[Figure ownership is semantic]** — a figure can resolve while belonging to
   another problem; only source-order reconstruction finds these, so the audit
   proposed in `content-dedup-and-audit` cannot replace the manual pass.

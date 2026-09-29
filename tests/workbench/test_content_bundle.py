@@ -14,7 +14,7 @@ def formal(key, kp_ids, text="P", **extra):
     item = {
         "key": key,
         "problem_type": "calculation",
-        "problem_text": text,
+        "problem_text": text if text != "P" else f"Question {key}",
         "kp_ids": kp_ids,
         "source_kind": "textbook",
         "origin_kind": "source_problem",
@@ -28,7 +28,7 @@ def micro(key, kp_ids, **extra):
     item = {
         "key": key,
         "problem_type": "other",
-        "stem": "判断：电场是矢量。",
+        "stem": f"判断：{key} 是矢量。",
         "quiz_type": "yes_no",
         "answer_key": "是",
         "error_reason": "电场有大小和方向。",
@@ -365,7 +365,7 @@ class ContentBundleTests(unittest.TestCase):
             "kind": "content-bundle",
             "chapter": "ch06",
             "problems": [formal(
-                "p1", ["dmath-ch06-kp-001"], text="![图](figure:f1)",
+                "p1", ["dmath-ch06-kp-001"], text="图甲 ![图](figure:f1)",
                 figures=[{"key": "f1", "source_path": str(figure)}],
             )],
         })
@@ -379,6 +379,28 @@ class ContentBundleTests(unittest.TestCase):
         rolled = ingest.rollback_batch(self.db_path, result["batch_id"])
         self.assertEqual(rolled["deleted"], 1)
         self.assertFalse(stored.exists())
+
+    def test_rollback_refuses_changed_inserted_row_without_backup(self):
+        applied = self.apply({
+            "kind": "content-bundle", "chapter": "ch06",
+            "problems": [formal("p1", ["dmath-ch06-kp-001"], text="A new question")],
+        })
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "UPDATE problems SET problem_text='edited after apply' "
+                "WHERE ingest_batch_id=?", (applied["batch_id"],),
+            )
+        backup = self.db_path.with_name(
+            f"{self.db_path.name}.{applied['batch_id']}-rollback-backup")
+
+        with self.assertRaisesRegex(ValueError, "changed after apply"):
+            ingest.rollback_batch(self.db_path, applied["batch_id"])
+
+        self.assertFalse(backup.exists())
+        self.assertEqual(self.query(
+            "SELECT problem_text FROM problems WHERE ingest_batch_id=?",
+            (applied["batch_id"],),
+        ), [("edited after apply",)])
 
     def test_rollback_keeps_a_shared_figure(self):
         figure = self.image(name="shared.png")
@@ -394,7 +416,7 @@ class ContentBundleTests(unittest.TestCase):
             "kind": "content-bundle",
             "chapter": "ch06",
             "problems": [formal(
-                "p2", ["dmath-ch06-kp-001"], text="![图](figure:f2)",
+                "p2", ["dmath-ch06-kp-001"], text="图乙 ![图](figure:f2)",
                 figures=[{"key": "f2", "source_path": str(figure)}],
             )],
         })
@@ -530,6 +552,79 @@ class ContentBundleTests(unittest.TestCase):
 
         self.assertIn("knowledge point 1: chapter is required", str(caught.exception))
         self.assertEqual(self.count("problems"), before)
+
+    def test_bundle_refuses_existing_content_identity_with_source_evidence(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "UPDATE problems SET problem_text=?, source_evidence=? "
+                "WHERE problem_id='dmath-ch06-prob-001'",
+                ("Find the value of x?", "教材第六章习题 1"),
+            )
+        before = self.count("problems")
+        batches_before = self.count("ingest_batches")
+
+        with self.assertRaises(ValueError) as caught:
+            self.apply({
+                "kind": "content-bundle", "chapter": "ch06",
+                "problems": [formal(
+                    "same", ["dmath-ch06-kp-001"], text="FIND the value of x!",
+                )],
+            })
+
+        message = str(caught.exception)
+        self.assertIn("duplicate content", message)
+        self.assertIn("dmath-ch06-prob-001", message)
+        self.assertIn("教材第六章习题 1", message)
+        self.assertEqual(self.count("problems"), before)
+        self.assertEqual(self.count("ingest_batches"), batches_before)
+        self.assertFalse(Path(self.fixture.tmp.name, "backup-001.db").exists())
+
+    def test_bundle_checks_existing_rows_without_a_course_id_prefix(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                "UPDATE problems SET problem_id=?, problem_text=? "
+                "WHERE problem_id='dmath-ch06-prob-001'",
+                ("legacy-problem-001", "A legacy stem without a course prefix"),
+            )
+
+        with self.assertRaises(ValueError) as caught:
+            self.apply({
+                "kind": "content-bundle", "chapter": "ch07",
+                "problems": [formal(
+                    "same", ["dmath-ch06-kp-001"], chapter="ch07",
+                    text="A legacy stem without a course prefix!",
+                )],
+            })
+
+        self.assertIn("legacy-problem-001", str(caught.exception))
+        self.assertEqual(self.count("ingest_batches"), 0)
+
+    def test_two_items_with_one_identity_are_both_refused_without_writes(self):
+        before = self.count("problems")
+        with self.assertRaises(ValueError) as caught:
+            self.apply({
+                "kind": "content-bundle", "chapter": "ch06",
+                "problems": [
+                    formal("same-a", ["dmath-ch06-kp-001"], text="Solve x + 1 = 2."),
+                    formal("same-b", ["dmath-ch06-kp-001"], chapter="ch07",
+                           text="solve x+1=2!"),
+                ],
+            })
+        message = str(caught.exception)
+        self.assertIn("dmath-ch06-prob-002", message)
+        self.assertIn("dmath-ch07-prob-001", message)
+        self.assertEqual(self.count("problems"), before)
+        self.assertEqual(self.count("ingest_batches"), 0)
+
+    def test_bundle_refuses_identity_from_another_chapter_in_the_course(self):
+        with self.assertRaises(ValueError) as caught:
+            self.apply({
+                "kind": "content-bundle", "chapter": "ch07",
+                "problems": [formal(
+                    "same", ["dmath-ch06-kp-001"], chapter="ch07", text="P1!",
+                )],
+            })
+        self.assertIn("dmath-ch06-prob-001", str(caught.exception))
         self.assertEqual(len(self.query("SELECT batch_id FROM ingest_batches")), 0)
 
     def test_a_bad_chapter_value_is_refused(self):

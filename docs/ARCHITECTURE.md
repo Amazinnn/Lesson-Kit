@@ -40,12 +40,15 @@ workbench/
 │   ├── practice_set.py # 练习集渲染纯规则（题号、遮答案、缺解写「待补」、泄漏扫描）
 │   ├── cards.py       # 闪卡内容规则
 │   ├── micro_quiz.py  # 微题内容规则与判分
+│   ├── content_identity.py # 完整题干的保守规范化身份（无 IO）
+│   └── markup.py      # 题面/标签共享标记校验
 │   └── mastery.py     # 只读掌握度实验规则
 ├── data/
 │   ├── __init__.py
 │   ├── pool.py        # Pool：工作区级只读/写连接 + 查询（weak/due/problem/kp/figures）
 │   ├── queries.py     # 视图查询（hub 统计、练习页合流列表/到期提醒/日历）
 │   ├── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联
+│   ├── content_audit.py # 只读题库卫生检查
 │   ├── difficulty.py  # 显式难度 check/apply 整批事务
 │   ├── attempts.py    # Agent 代录尝试：清单校验、单事务 apply、快照守卫的 correct
 │   ├── practice_sets.py # 练习清单校验/解析与出卷（两份 Markdown，零写入预检）
@@ -121,6 +124,7 @@ workbench/
 - 图谱指标投影完全位于浏览器表示层：`graph-physics.js` 只为现有节点计算内存中的目标位置、目标半径与过渡力；关系结构/题量/重要性/学习状态均不产生数据写入。
 - 图谱状态筛选分群完全位于浏览器表示层：四个既有状态按多选并集决定可见子图，`graph-physics.js` 只计算内存聚类目标；筛选值仅随页面上下文提供给 Agent，不写 Pool。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
+- `domain.content_identity` 是入库拒重与 `data.content_audit` 重复组报告的共同身份规则；全题干比较，不截断。`data.content_audit` 只读报告重复题、疑似片段、未标注练习模式的客观题、缺标题、失效图片引用和孤儿图片；有发现时 CLI 返回 1。
 - `data.difficulty.check/apply`：1–N 题完整清单的零写入预览与整批原子覆盖；内容语义变化
   统一清空整组评级，未评级不影响任何主流程。
 - `domain.practice_set.render_*`：练习集两份 Markdown 的纯文本规则（连续题号、学生卷
@@ -145,7 +149,9 @@ workbench/
   Lesson Kit 操作呈现为独立消息；Codex/Claude 继续使用执行计划，不新增流协议。
 - `ingest.content-bundle`：一份清单原子提交知识点/正式题/微题/闪卡/图片；预检即校验引用、
   契约、来源证据、图片字节与目标冲突，apply 在单事务内落库并按字节复制图片，回滚连带删除
-  本批创建且无引用的图片文件。清单可跨章（每项自己的 `chapter`，推不出即点名拒收），预检/
+  本批创建且无引用的图片文件。完整规范化题干已在同一课程题库内跨来源、跨章节去重；apply
+  后内容状态与图片字节被快照，后续改动会让 rollback 先拒绝且不创建备份。清单可跨章
+  （每项自己的 `chapter`，推不出即点名拒收），预检/
   备份/事务覆盖整份清单而**按章各记一个批次**；题型由 `quiz_type` 决定（综合题/判断/小测），
   **客观题允许没有答案键**——这类题不判分、计入 `keyless` 计数并披露，答案键可在
   `data.content` 里事后补写（按该题 `quiz_type` 校验形状，空值清回无键）。
