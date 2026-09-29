@@ -152,6 +152,20 @@ def current(pool, *, resolve=True):
                 else pool.card(item["item_id"])
             )
             item["payload"] = payload
+            if item["item_type"] == "problem" and item.get("attempt_id"):
+                attempt = pool.attempt(item["attempt_id"])
+                if attempt is not None:
+                    attempt = dict(attempt)
+                    choices = attempt.get("choices")
+                    if isinstance(choices, str) and choices:
+                        try:
+                            attempt["choices"] = json.loads(choices)
+                        except json.JSONDecodeError:
+                            attempt["choices"] = []
+                    item["attempt"] = attempt
+                    event = pool.feedback_event_for_attempt(item["attempt_id"])
+                    if event is not None:
+                        item["feedback"] = event
         items.append(item)
     record["items"] = items
     record["progress"] = {
