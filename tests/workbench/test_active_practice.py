@@ -140,6 +140,26 @@ class ActivePracticeTests(unittest.TestCase):
         self.assertEqual(len(attempts_kept), 1)
         self.assertEqual(attempts_kept[0]["answer_text"], "kept")
 
+    def test_finished_and_replaced_practices_are_archived(self):
+        from workbench.data import active_practice
+
+        self.add_problem("dmath-ch06-prob-002")
+        active_practice.create(
+            self.pool,
+            self.payload("dmath-ch06-prob-001", "dmath-ch06-prob-002"),
+        )
+        active_practice.mark(self.pool, 0, "stuck")
+        active_practice.create(
+            self.pool, self.payload("dmath-ch06-prob-002"), replace=True)
+        active_practice.mark(self.pool, 0, "stuck")
+
+        rows = self.pool.connect().execute(
+            "SELECT status, source_label, items_json FROM practice_runs ORDER BY id"
+        ).fetchall()
+        self.assertEqual([row["status"] for row in rows], ["abandoned", "completed"])
+        self.assertEqual(rows[0]["source_label"], "临时练习")
+        self.assertIn('"state": "stuck"', rows[0]["items_json"])
+
     def test_routes_expose_the_single_current_practice_resource(self):
         from workbench.server import app
 
