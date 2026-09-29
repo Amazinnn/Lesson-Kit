@@ -179,12 +179,20 @@ def _item_rows(conn, table, item_type, item_id, order):
     return [dict(row) for row in rows]
 
 
-def next_id(pool, entity):
+def next_id(pool, entity, conn=None):
+    """Allocate one scoped content id.
+
+    When conn is supplied the caller owns the surrounding transaction. This
+    keeps batch relation writes atomic instead of committing an id allocation
+    before the batch itself succeeds.
+    """
     table, id_column = _entity(entity)
     scope = pool.scope_prefix()
     prefix = f"{scope}-{PREFIXES[entity]}-"
-    conn = pool.connect()
-    conn.execute("BEGIN IMMEDIATE")
+    own_transaction = conn is None
+    conn = conn or pool.connect()
+    if own_transaction:
+        conn.execute("BEGIN IMMEDIATE")
     try:
         row = conn.execute(
             "SELECT next_value FROM content_sequences "
@@ -214,15 +222,19 @@ def next_id(pool, entity):
                 "WHERE scope=? AND entity_type=?",
                 (value + 1, scope, entity),
             )
-        conn.commit()
+        if own_transaction:
+            conn.commit()
     except Exception:
-        conn.rollback()
+        if own_transaction:
+            conn.rollback()
         raise
     return f"{prefix}{value:03d}"
 
-
 def create(pool, entity, data):
     table, id_column = _entity(entity)
+    if entity == "relation":
+        from workbench.data import relations
+        return relations.create(pool, data)
     if entity == "problem":
         if data.get("source_kind") not in SOURCE_KINDS:
             raise ValueError("source_kind is required and must be valid")
@@ -248,6 +260,9 @@ def create(pool, entity, data):
 
 def update(pool, entity, object_id, data):
     table, id_column = _entity(entity)
+    if entity == "relation":
+        from workbench.data import relations
+        return relations.update(pool, object_id, data)
     if entity == "problem":
         return _update_problem(pool, object_id, data)
     fields = [field for field in EDITABLE_FIELDS[entity] if field in data]
@@ -495,6 +510,10 @@ def _db_value(field, value):
 
 def delete(pool, entity, object_id):
     _entity(entity)
+    if entity == "relation":
+        from workbench.data import relations
+        relations.delete(pool, object_id)
+        return
     table, id_column = _entity(entity)
     conn = pool.connect()
     with conn:
