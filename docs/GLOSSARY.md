@@ -153,10 +153,15 @@ _Avoid_：历史更正流水、静默改写后续学习记录
 _Avoid_：把草稿当尝试、把浏览器内容当权威事实、整页 DOM
 出处：workbench-ui spec「Authoritative page context for Agent turns」
 
-### 练习集 / Practice Set
-**一次练习的题目集合**——不是新对象，也不是新功能名：它就是练习（见「练习会话」）在打印/导出时的那份清单，CLI 里由 `pull` 选题后落成两份 Markdown（`{base}-problem-set.md` + `{base}-solutions.md`）。学生卷只有题干，不含答案、不含 `problem_id`/`kp_id`/`source_kind`；解答卷题号对齐，无解写「待补」。持久化保存某份练习集不在当前范围。
-_Avoid_：试卷、卷子（当作独立实体）、练习集数据库表
-出处：practice-set-export spec；DISCUSSION-RECORD B1.4（Markdown 产物降级为打印/导出）
+### 练习集 / Practice Set（界面称「试卷」）
+一份**可复用的有序题目集合**。保存后使用稳定 `ps-NNN` 标识并存于工作区 `.lessonkit/practice-sets/`；编辑它只改变「以后想做什么」，不会产生尝试、进度或评分。开始试卷时把当时的有序题目复制进唯一 active practice，之后执行进度与试卷定义彼此独立。打印/导出仍复用同一清单生成学生卷和解答卷。
+_Avoid_：把试卷本身当作一次作答、把执行进度写回试卷定义
+出处：practice-set-export spec；PR #76/#77
+
+### 练习轮次 / Practice Run
+一次 active practice 从开始到完成，或到被显式替换 / 清除的执行过程。运行中仍只有一个 `active_practice`；结束时仅把来源（临时练习 / 试卷 / Agent）、模式、题目顺序、最终状态与时间写入 `practice_runs` 最小快照。逐题作答、判定、自评继续以 `problem_attempts` / `feedback_events` 为唯一学习证据，统计图也只读聚合这些事实。
+_Avoid_：第二套 attempt 表、把图表统计缓存成学习事实、把 practice run 当试卷定义
+出处：review-workbench spec「Durable practice run archive」；workbench-ui spec「Records center」
 
 ### 练习清单 / Practice Manifest
 `pull --plan <文件>` 写出的 UTF-8 JSON：标题、逐题 `problem_id` + 入卷理由（`reason`）、以及复现这次选题所需的输入（范围/单题/筛选/驱动/上限）。`pull --input <文件>` 可重跑同一份清单得到同一批题；它**是输入清单，不是学习记录**，读它零写入。
