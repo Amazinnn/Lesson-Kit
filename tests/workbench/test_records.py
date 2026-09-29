@@ -46,17 +46,6 @@ class RecordsBoundaryTests(unittest.TestCase):
         self.assertEqual(sum(day["attempts"] for day in overview["trend"]), 1)
         self.assertEqual(len(overview["activity"]), 84)
         self.assertEqual(sum(day["attempts"] for day in overview["activity"]), 1)
-        self.assertEqual(overview["runs"][0]["status"], "completed")
-        self.assertEqual(overview["records"][0]["answer_text"], "my answer")
-
-        rendered = records_view.content("dmath", overview)
-        self.assertIn("练习 / 试卷", rendered)
-        self.assertIn("最近 14 天", rendered)
-        self.assertIn("作答日历", rendered)
-        self.assertIn("record-verdict-bad", rendered)
-        self.assertIn("再做一次", rendered)
-        wrong = records_view.content("dmath", overview, view="wrong")
-        self.assertIn("my answer", wrong)
 
     def test_attempt_views_admit_truncation_at_the_load_limit(self):
         from workbench.data import records
@@ -189,6 +178,47 @@ class RecordsBoundaryTests(unittest.TestCase):
             self.pool, "重建的卷子", ["dmath-ch06-prob-001"])
         self.assertNotEqual(recreated["practice_set_id"], old_id)
         self.assertEqual(recreated["practice_set_id"], "ps-002")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+    def test_late_utc_attempts_land_on_the_local_date(self):
+        """created_at is stored UTC; 16:30 UTC is next morning for UTC+8."""
+        from datetime import datetime, timedelta, timezone
+        from workbench.data import records
+
+        self.pool.insert_attempt("dmath-ch06-prob-001", "answered")
+        stamped = (datetime.now(timezone.utc) - timedelta(days=1)
+                   ).replace(hour=16, minute=30, second=0, microsecond=0)
+        self.pool.connect().execute(
+            "UPDATE problem_attempts SET created_at=? "
+            "WHERE id=(SELECT MAX(id) FROM problem_attempts)",
+            (stamped.strftime("%Y-%m-%d %H:%M:%S"),),
+        )
+        self.pool.commit()
+
+        overview = records.overview(self.pool)
+        local_day = stamped.astimezone().date().isoformat()
+        self.assertEqual(
+            sum(day["attempts"] for day in overview["trend"]
+                if day["date"] == local_day), 1)
+        self.assertEqual(
+            sum(day["attempts"] for day in overview["activity"]
+                if day["date"] == local_day), 1)
+        self.assertEqual(overview["runs"][0]["status"], "completed")
+        self.assertEqual(overview["records"][0]["answer_text"], "my answer")
+
+        rendered = records_view.content("dmath", overview)
+        self.assertIn("练习 / 试卷", rendered)
+        self.assertIn("最近 14 天", rendered)
+        self.assertIn("作答日历", rendered)
+        self.assertIn("record-verdict-bad", rendered)
+        wrong = records_view.content("dmath", overview, view="wrong")
+        self.assertIn("my answer", wrong)
+        self.assertIn("再做一次", rendered)
+        wrong = records_view.content("dmath", overview, view="wrong")
+        self.assertIn("my answer", wrong)
 
 
 if __name__ == "__main__":
