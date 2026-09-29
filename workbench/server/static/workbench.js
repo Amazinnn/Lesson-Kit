@@ -584,12 +584,12 @@
     function updateGraphProjectionHint() {
       if (!graphProjectionHint) return;
       graphProjectionHint.textContent = graphProjection === "problem_count"
-        ? "越大、越靠内、蓝色越深 = 题量越多"
+        ? "同层内按题量排序 · 越大、蓝色越深 = 题量越多"
         : graphProjection === "importance"
-          ? "越大、越靠内、黄色越深 = 越重要"
+          ? "同层内按重要性排序 · 越大、黄色越深 = 越重要"
           : graphProjection === "state"
-            ? "越大、越靠内 = 关注优先级越高 · 蓝/黄/红/灰 = 掌握/复习/待加强/未标记"
-            : "关系决定位置 · 大小表示题量";
+            ? "同层内按学习状态排序 · 蓝/黄/红/灰 = 掌握/复习/待加强/未标记"
+            : "纵向表示明确的前置层级 · 大小表示题量";
     }
 
     function showGraphProjectionHint() {
