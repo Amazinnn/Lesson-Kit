@@ -710,7 +710,8 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertTrue(all(item["provider"] == "claude" for item in entries))
         models = {item["model"] for item in entries}
         self.assertIn("claude-sonnet-5", models)
-        self.assertIn("claude-opus-5", models)
+        self.assertIn("claude-opus-5-5", models)
+        self.assertIn("claude-fable-5-1", models)
 
     @mock.patch("workbench.bridge.conversation_providers.registry.load_models")
     @mock.patch("workbench.bridge.conversation_providers.get")
