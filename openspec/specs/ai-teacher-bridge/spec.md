@@ -613,44 +613,81 @@ re-importing the problem.
 - **WHEN** a content prompt is composed for an active workspace
 - **THEN** it states that in-place patching keeps the problem id and learning records, that the batch can be rolled back, and that splitting options out of an old stem is preferred over deleting and re-importing
 
-### Requirement: Named model entries
+### Requirement: Runtime model catalog
 
-Bridge configuration SHALL support named model entries — a display name chosen
-by the learner, a harness, a model id, and optional extra arguments — and the
-provider picker SHALL present these entries by their display name, decoupled
-from the harness and the raw model id. When no entries are configured the
-picker SHALL fall back to one entry per discovered harness (the historical
-behaviour). An entry whose harness is not discoverable SHALL be skipped rather
-than breaking discovery.
+The Bridge SHALL expose one selectable model catalog across all discovered Agent
+harnesses. Configured named entries SHALL preserve their display name, harness,
+model id, and optional extra arguments. Configuring entries for one harness SHALL
+NOT hide another discovered harness: every uncovered harness SHALL retain one
+default target.
 
-#### Scenario: Entries replace the harness labels
+For Pi, the server SHALL augment configured targets with the models reported by
+Pi's runtime RPC `get_available_models` command. Runtime discovery failure SHALL
+fall back to the configured/default catalog rather than making Agent chat
+unavailable. Codex and Claude SHALL continue to use configured/default targets
+unless they expose a stable machine-readable model catalog.
 
-- **WHEN** named model entries are configured and the learner opens the picker
-- **THEN** each button shows the entry's own name, and creating a conversation from it records both the harness and the model
+#### Scenario: Configured Pi models do not hide Codex
 
-#### Scenario: The fallback keeps working
+- **WHEN** Pi has named model entries and Codex is also discovered
+- **THEN** the picker contains the Pi entries and a Codex default target
 
-- **WHEN** no model entries are configured
-- **THEN** the picker lists one entry per harness exactly as before
+#### Scenario: Pi runtime models appear without manual duplication
 
-### Requirement: A conversation carries its model
+- **WHEN** Pi reports configured models through `get_available_models`
+- **THEN** models not already represented in the catalog are added as Pi runtime targets
 
-A conversation SHALL record the model it runs on (chosen at creation or switched
-later) and every turn SHALL launch with that model, overriding the harness
-default. Switching the model SHALL take effect on the next turn, SHALL be
-refused while a turn is running, and SHALL discard the cached RPC process so no
-stale process keeps serving the old model. Switching SHALL keep the native
-session id, and when the provider refuses a cross-model resume the bridge SHALL
-start a fresh session once and disclose that in the conversation stream — the
-local mirror's history SHALL be unaffected.
+#### Scenario: Runtime discovery is best effort
 
-#### Scenario: The next turn runs on the switched model
+- **WHEN** Pi model discovery cannot start or answer
+- **THEN** the picker still returns the configured/default targets for available harnesses
 
-- **WHEN** the conversation's model is switched and a new turn starts
-- **THEN** the provider is launched with the new model and the mirror records it
+### Requirement: A conversation carries a model target
 
-#### Scenario: A cross-model resume failure is honest
+A Lesson Kit conversation SHALL be a logical local conversation independent of
+any one provider-native session. It SHALL record the active harness, model,
+configured entry identity, and entry-specific arguments needed to launch the
+target. Existing conversation records that contain only `provider` and `model`
+SHALL remain readable.
 
-- **WHEN** the provider refuses to resume the saved session under the new model
-- **THEN** the bridge starts a fresh session for that turn, states so in the stream, and the mirror keeps the prior history
+The in-chat selector SHALL offer all currently available model targets, not only
+targets belonging to the active harness. Switching SHALL be refused while a turn
+is running and SHALL take effect on the next turn.
+
+For an active Pi RPC process, a switch to a provider-qualified Pi model SHALL use
+Pi's native `set_model` RPC command first so the process and native session can
+continue. If live switching is unavailable, the Bridge MAY recycle the Pi
+process and resume the saved native session. A cross-harness switch SHALL clear
+the incompatible provider-native session. A non-Pi model switch that cannot
+safely reuse its native session SHALL also start a fresh native segment.
+
+Whenever a fresh native segment is required, the Bridge SHALL retain the local
+Lesson Kit transcript and provide a bounded recent-history handoff on the first
+turn of the new segment. That handoff SHALL be removed after a successful turn.
+The Bridge SHALL NOT claim that provider-private state was transferred.
+
+#### Scenario: Named entry arguments survive selection
+
+- **WHEN** a configured model entry carries extra launch arguments
+- **THEN** the conversation stores and applies those arguments on every turn
+
+#### Scenario: Pi switches the live process
+
+- **WHEN** an idle Pi conversation has a live RPC process and the learner selects another provider-qualified Pi model
+- **THEN** the Bridge calls `set_model` and keeps that process when Pi accepts the switch
+
+#### Scenario: The learner switches harnesses in one chat
+
+- **WHEN** an idle conversation changes from Pi to Codex, Codex to Claude, or another discovered harness transition
+- **THEN** the local conversation id and transcript stay unchanged, the incompatible native session is cleared, and the next turn runs on the selected harness
+
+#### Scenario: Fresh native segment receives a bounded handoff
+
+- **WHEN** a target switch starts a new provider-native session
+- **THEN** the next prompt includes bounded recent user/assistant history from the local mirror and no claim of transferred private provider state
+
+#### Scenario: Default-model reset is a real update
+
+- **WHEN** the browser PATCHes a conversation with `"model": null`
+- **THEN** the request is accepted as a target update rather than rejected as an empty PATCH
 
