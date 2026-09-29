@@ -1376,6 +1376,34 @@
     });
   }
 
+  var recordsCenter = document.querySelector(".records-center");
+  if (recordsCenter) {
+    recordsCenter.addEventListener("click", function (event) {
+      var button = event.target.closest && event.target.closest("[data-run-replay]");
+      if (!button) return;
+      var runId = encodeURIComponent(button.dataset.runReplay);
+      button.disabled = true;
+      post("/practice/runs/" + runId + "/replay", {}).then(function () {
+        window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+      }).catch(function (error) {
+        button.disabled = false;
+        if (error.message === "an unfinished practice already exists"
+            && window.confirm
+            && window.confirm("当前还有一轮练习没有完成。重新开始会清除旧进度，继续吗？")) {
+          button.disabled = true;
+          post("/practice/runs/" + runId + "/replay", { replace: true }).then(function () {
+            window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+          }).catch(function (retryError) {
+            button.disabled = false;
+            if (window.alert) window.alert(retryError.message || "无法重新开始");
+          });
+        } else if (window.alert) {
+          window.alert(error.message || "无法重新开始");
+        }
+      });
+    });
+  }
+
   /* ---------- goals ---------- */
 
   var recalculatePlan = document.getElementById("recalculate-plan");
