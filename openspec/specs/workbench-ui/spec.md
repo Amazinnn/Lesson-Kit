@@ -1055,24 +1055,40 @@ message. Existing sensitive-value redaction SHALL precede truncation/storage.
 - **WHEN** a failed activity contains secrets and more than 240 characters
 - **THEN** its summary is redacted and bounded and cannot expose the removed sensitive values
 
-### Requirement: Practice records page
+### Requirement: Records center
 
-The three-column shell SHALL gain a 做题记录 navigation entry rendering the
-learner's practice history server-side: newest first, each row showing the
-problem (linked), an honest verdict badge (对 / 错 / 未判定), the rating as
-stars when one is linked, the note, the answer excerpt, and the time. The view
-SHALL degrade to an honest empty state when no attempts exist, and SHALL
-support isolating one problem's history via the URL.
+The three-column shell SHALL expose a 记录 navigation entry as a dedicated
+server-rendered history center. It SHALL provide overview, practice/paper runs,
+attempt details, and wrong/stuck views. Attempt rows SHALL retain the linked
+problem, honest verdict (对 / 错 / 未判定), linked rating, note, answer excerpt,
+and time. Overview statistics and charts SHALL be derived from durable attempts
+and feedback at read time and SHALL NOT write cached statistics.
+
+A completed or explicitly replaced/cleared active practice SHALL leave one
+minimal durable run snapshot containing its source kind/reference/label,
+practice/rating modes, item order/final states, and timestamps. A saved paper
+run SHALL therefore remain identifiable as that paper without copying problem
+text, solutions, ratings, or other learning evidence into the run snapshot.
 
 #### Scenario: A fresh workspace shows an honest empty state
 
-- **WHEN** no attempt exists in the pool
-- **THEN** the records page says so instead of rendering an empty list
+- **WHEN** no attempt or archived run exists in the pool
+- **THEN** the records center shows zero/empty views instead of fabricated activity
+
+#### Scenario: A saved paper is completed
+
+- **WHEN** an active practice started from a saved paper finishes
+- **THEN** the run view shows one completed paper run with its saved title and item progress while the attempts remain the per-problem evidence
+
+#### Scenario: Overview is read-only
+
+- **WHEN** the records overview renders its 14-day volume, accuracy, and rating distribution
+- **THEN** those values are aggregated from existing records and no learning or statistics row is written
 
 #### Scenario: One problem's history is isolatable
 
 - **WHEN** the records page is opened with a problem identifier
-- **THEN** only that problem's attempts are listed
+- **THEN** only that problem's attempts and attempt-derived statistics are shown
 
 ### Requirement: Problem fields render math wherever they render text
 
