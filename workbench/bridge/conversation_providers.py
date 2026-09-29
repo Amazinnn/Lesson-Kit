@@ -88,37 +88,68 @@ def get(name):
 
 
 def discover_entries():
-    """The selectable model entries shown in the picker.
+    """Return configured model targets plus one fallback for uncovered harnesses.
 
-    Named `models` entries win: the display name is the learner's own, decoupled
-    from the harness, and each entry rides the harness's discovered command.
-    Without any, the picker falls back to one entry per harness — the historical
-    behaviour — so nothing breaks.
+    A configured target must never make another installed harness disappear.
+    Each target also carries the exact argv it needs, so selecting a named model
+    does not silently lose its per-model flags.
     """
     models = registry.load_models()
     harnesses = {item["name"]: item for item in discover()}
     entries = []
+    covered = set()
     for model in models:
         name = model.get("name")
         provider = model.get("provider")
         if not isinstance(name, str) or not name or provider not in harnesses:
             continue
         base = harnesses[provider]
-        entry = {**base, "name": name, "provider": provider,
-                 "model": model.get("model") or base.get("model")}
+        entry = {
+            **base,
+            "name": name,
+            "provider": provider,
+            "model": model.get("model") or base.get("model"),
+            "source": "configured",
+        }
         if isinstance(model.get("args"), list):
             entry["args"] = list(model["args"])
         entries.append(entry)
-    if entries:
-        return entries
-    return [{**item, "provider": item["name"]} for item in discover()]
+        covered.add(provider)
+    for provider, base in harnesses.items():
+        if provider not in covered:
+            entries.append({
+                **base,
+                "name": provider,
+                "provider": provider,
+                "source": "default",
+            })
+    return entries
 
 
-def get_entry(name):
+def get_entry(name, provider=None):
     for entry in discover_entries():
-        if entry["name"] == name:
+        if entry["name"] == name and (provider is None or entry["provider"] == provider):
             return entry
     raise KeyError(f"model entry unavailable: {name}")
+
+
+def resolve_target(provider, model=None, entry_name=None):
+    """Resolve one conversation target without losing entry-specific arguments."""
+    if entry_name:
+        entry = get_entry(entry_name, provider)
+        return {
+            "provider": entry["provider"],
+            "model": entry.get("model"),
+            "args": list(entry.get("args", [])),
+            "entry": entry["name"],
+        }
+    base = get(provider)
+    return {
+        "provider": provider,
+        "model": model if model is not None else base.get("model"),
+        "args": list(base.get("args", [])),
+        "entry": None,
+    }
 
 
 def build_command(provider, session_id=None, mode="print"):
