@@ -127,6 +127,48 @@ appended Lesson Kit teacher contract and server-rebuilt page context.
 - **WHEN** a Pi conversation completes its first turn
 - **THEN** the native session id recorded for later resumption is the one the provider announced in its session header, not a server-generated identifier
 
+### Requirement: Agent context follows current learning state
+
+The Bridge SHALL rebuild learning context from managed Lesson Kit state rather
+than requiring the learner to repeat material already visible in the workbench.
+Browser payloads MAY identify the current page, selection, filter, focused
+object, and unsent draft, but durable facts SHALL be read back from the active
+practice, saved practice sets, attempts, and Pool rows on the server.
+
+Practice context SHALL use the workspace's active-practice progress and ordered
+items as the progress authority. The browser's current selection and filter
+values SHALL be bounded supplemental focus only. The saved-paper page SHALL
+expose bounded paper summaries and, when one paper is focused, its managed
+problem content. The records page SHALL expose a bounded recent attempt view.
+Knowledge-point selections SHALL resolve to existing Pool objects before they
+reach the provider. These reads SHALL NOT themselves create attempts, ratings,
+papers, practices, or other learning writes.
+
+#### Scenario: Discuss the current practice without copying it
+
+- **WHEN** the learner asks about a practice problem or unfinished practice visible in the workbench
+- **THEN** the provider receives the durable active-practice progress and current Pool problem context without requiring the learner to paste the question
+
+#### Scenario: Discuss the current selection before starting
+
+- **WHEN** the learner is choosing knowledge points, source filters, years, or explicitly picked problems
+- **THEN** the provider receives a bounded representation of that visible selection while the Pool remains the authority for resolved learning objects
+
+#### Scenario: Discuss a saved paper
+
+- **WHEN** the learner asks about the 组卷 page or focuses one saved paper
+- **THEN** the provider receives bounded managed paper summaries and the focused paper's ordered problem context when available
+
+#### Scenario: Discuss recent practice records
+
+- **WHEN** the learner asks about the 做题记录 page
+- **THEN** the provider receives a bounded recent durable attempt view including recorded status and available verdict/rating information
+
+#### Scenario: Reading visible state is not a write
+
+- **WHEN** any of these contexts is attached to an ordinary Agent turn
+- **THEN** no attempt, rating, active practice, or saved paper is created or modified merely because the context was read
+
 ### Requirement: Minimal successful conversation mirror
 
 Each workspace SHALL store conversations under `.lessonkit/jobs/conv-###/`. Lesson Kit
