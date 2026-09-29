@@ -105,6 +105,24 @@ class ActivePracticeTests(unittest.TestCase):
         self.assertEqual(rows[0]["status"], "stuck")
         self.assertEqual(rows[0]["id"], result["attempt_id"])
 
+    def test_browser_stuck_attempt_is_retry_safe_and_finishes_once(self):
+        from workbench.data import active_practice, attempts
+
+        active_practice.create(
+            self.pool, self.payload("dmath-ch06-prob-001"))
+
+        first = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-001", answer_text="",
+            request_id="stuck-once", practice_position=0, stuck=True)
+        replay = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-001", answer_text="",
+            request_id="stuck-once", practice_position=0, stuck=True)
+
+        self.assertEqual(first["attempt_id"], replay["attempt_id"])
+        self.assertEqual(first["status"], "stuck")
+        self.assertEqual(len(self.pool.attempts("dmath-ch06-prob-001")), 1)
+        self.assertIsNone(active_practice.current(self.pool))
+
     def test_replacing_execution_state_never_deletes_attempt_history(self):
         from workbench.data import active_practice, attempts
 
