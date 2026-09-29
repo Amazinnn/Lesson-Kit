@@ -176,10 +176,10 @@ artifacts, not version records.
 ## Status
 
 Pre-release. Extraction and legacy rendered views remain available, while the
-active product is the three-page local workbench (practice, knowledge points,
-knowledge graph) with goals/calendar workload, governed flash-card and
-micro-quiz ingestion, transactional batch rollback, and provider-native Agent
-conversation. Check ingest is the only Agent content channel; no staging or
+active product is the five-page local workbench (practice, paper building,
+knowledge points, knowledge graph, and practice records) with goals/calendar
+workload, governed flash-card and micro-quiz ingestion, transactional batch
+rollback, and provider-native Agent conversation. Check ingest is the only Agent content channel; no staging or
 promotion store exists in the active workbench.
 
 ## License
