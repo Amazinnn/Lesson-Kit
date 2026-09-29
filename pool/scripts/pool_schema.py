@@ -531,6 +531,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                     source_kind IN ('quick', 'practice_set', 'agent')
                 ),
                 source_ref TEXT,
+                source_label TEXT,
                 kp_ids_json TEXT NOT NULL DEFAULT '[]',
                 practice_mode TEXT NOT NULL,
                 rating_mode TEXT NOT NULL,
@@ -541,6 +542,9 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             """
         )
         changes.append("active_practice")
+    changes.extend(
+        ensure_columns(conn, "active_practice", [("source_label", "TEXT")])
+    )
 
     if not table_exists(conn, "active_practice_items"):
         conn.execute(
@@ -559,6 +563,28 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             """
         )
         changes.append("active_practice_items")
+
+    if not table_exists(conn, "practice_runs"):
+        conn.execute(
+            """
+            CREATE TABLE practice_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_kind TEXT NOT NULL CHECK (
+                    source_kind IN ('quick', 'practice_set', 'agent')
+                ),
+                source_ref TEXT,
+                source_label TEXT,
+                kp_ids_json TEXT NOT NULL DEFAULT '[]',
+                practice_mode TEXT NOT NULL,
+                rating_mode TEXT NOT NULL,
+                items_json TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (status IN ('completed', 'abandoned')),
+                started_at TEXT NOT NULL,
+                finished_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        changes.append("practice_runs")
 
     if not table_exists(conn, "learning_current_state"):
         conn.execute(
