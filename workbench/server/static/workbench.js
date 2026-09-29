@@ -633,6 +633,46 @@
       }
     }
 
+    function graphRelationLabel(type) {
+      return {
+        prerequisite: "前置",
+        part_of: "组成",
+        contrasts: "对比",
+        generalizes: "概括",
+        variant_of: "变体",
+        applies_to: "应用于",
+        related: "相关",
+      }[type] || type || "相关";
+    }
+
+    function graphTitle(id) {
+      var node = graphData.nodes.find(function (item) { return item.id === id; });
+      return node ? node.title : id;
+    }
+
+    function graphRelationHtml(nodeId) {
+      var rows = graphData.edges.filter(function (edge) {
+        return edge.source === nodeId || edge.target === nodeId;
+      }).sort(function (a, b) {
+        var aMain = a.relation_type === "prerequisite" ? 0 : 1;
+        var bMain = b.relation_type === "prerequisite" ? 0 : 1;
+        return aMain - bMain
+          || String(a.relation_type).localeCompare(String(b.relation_type))
+          || String(a.id || "").localeCompare(String(b.id || ""));
+      });
+      if (!rows.length) return "<p class='muted graph-no-relations'>暂无明确关系。</p>";
+      return "<div class='graph-relation-list'>" + rows.map(function (edge) {
+        var symmetric = edge.direction === "symmetric";
+        var arrow = symmetric ? " ↔ " : " → ";
+        var text = escapeHtml(graphTitle(edge.source)) + arrow
+          + escapeHtml(graphTitle(edge.target));
+        var type = String(edge.relation_type || "related").replace(/[^a-z0-9_-]/gi, "-");
+        return "<div class='graph-relation-row relation-" + type + "'>"
+          + "<span class='graph-relation-type'>" + escapeHtml(graphRelationLabel(edge.relation_type))
+          + "</span><span class='graph-relation-text'>" + text + "</span></div>";
+      }).join("") + "</div>";
+    }
+
     function renderGraphDetail(node) {
       if (!graphDetail) return;
       selectedGraphKpId = node.id;
@@ -640,7 +680,9 @@
       graphDetail.innerHTML = "<p class='side-label'>学习看板</p><h2>"
         + escapeHtml(node.title) + "</h2>"
         + (actionReminder(node) ? "<p class='action-reminder'>"
-          + actionReminder(node) + "</p>" : "");
+          + actionReminder(node) + "</p>" : "")
+        + "<section class='graph-relations-panel'><p class='side-label'>直接关系</p>"
+        + graphRelationHtml(node.id) + "</section>";
       var link = document.createElement("a");
       link.id = "graph-open-kp";
       link.className = "graph-dashboard-link";
@@ -666,15 +708,15 @@
         entry.edge.distanceFactor = 1;
       });
       updateGraphLabels();
-      if (graphSimulation) {
+      if (graphSimulation && !graphSimulation.hierarchical) {
         GraphPhysics.reheat(graphSimulation, 0.3);
         runGraphSimulation();
       }
     }
 
     function focusGraph(nodeId) {
-      graphFocusedId = nodeId;
       clearGraphFocus();
+      graphFocusedId = nodeId;
       var distances = new Map([[nodeId, 0]]);
       var pending = [nodeId];
       while (pending.length) {
@@ -707,8 +749,10 @@
           : sourceDistance !== undefined && targetDistance !== undefined ? 1.08 : 1;
       });
       updateGraphLabels();
-      GraphPhysics.reheat(graphSimulation, 0.35);
-      runGraphSimulation();
+      if (!graphSimulation.hierarchical) {
+        GraphPhysics.reheat(graphSimulation, 0.35);
+        runGraphSimulation();
+      }
     }
 
     function updateGraphLabels() {
