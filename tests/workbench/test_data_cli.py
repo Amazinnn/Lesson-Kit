@@ -164,6 +164,44 @@ class DataCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(deleted["action"], "deleted")
 
+    def test_relation_batch_check_and_apply_share_the_data_command(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "INSERT INTO knowledge_points "
+            "(kp_id, knowledge_item, knowledge_type, importance) VALUES (?, ?, ?, ?)",
+            ("dmath-ch06-kp-002", "加法规则", "concept-property", "core"),
+        )
+        conn.commit()
+        conn.close()
+        manifest = self.write_json("relations.json", {
+            "items": [{
+                "action": "create",
+                "source_kp_id": "dmath-ch06-kp-001",
+                "target_kp_id": "dmath-ch06-kp-002",
+                "relation_type": "prerequisite",
+                "direction": "directed",
+                "strength": "high",
+            }]
+        })
+
+        code, checked = self.run_cli(
+            "data", "course", "check", "relation", "--input", str(manifest)
+        )
+        self.assertEqual(code, 0)
+        self.assertTrue(checked["valid"])
+        conn = sqlite3.connect(self.db_path)
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM knowledge_relations").fetchone()[0], 0
+        )
+        conn.close()
+
+        code, applied = self.run_cli(
+            "data", "course", "apply", "relation", "--input", str(manifest)
+        )
+        self.assertEqual(code, 0)
+        self.assertTrue(applied["applied"])
+        self.assertEqual(applied["items"][0]["relation_id"], "dmath-ch06-rel-001")
+
     def test_formal_problem_can_be_created_directly(self):
         path = self.write_json("problem.json", {
             "kp_ids": ["dmath-ch06-kp-001"],
