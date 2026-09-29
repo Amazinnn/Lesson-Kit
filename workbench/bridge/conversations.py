@@ -951,6 +951,7 @@ def _store_answer(folder, conversation_path, turn_path, event_path, root, worksp
                 activity_id, index,
             )
 
+    conversation = _read_json(conversation_path)
     turn = _read_json(turn_path)
     if content_actions:
         turn["actions"] = content_actions
