@@ -242,8 +242,9 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             elif page == "records":
                 query = parse_qs(urlsplit(self.path).query)
                 problem_id = (query.get("problem") or [None])[0]
+                view = (query.get("view") or ["overview"])[0]
                 html_body = pages.records_page(
-                    workspace, workspaces, weak_items, pool, problem_id,
+                    workspace, workspaces, weak_items, pool, problem_id, view,
                 )
             else:
                 plan = api_mod.daily_plan(pool, workspace, {}, {})
