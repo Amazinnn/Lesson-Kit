@@ -436,7 +436,6 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<label><input id='graph-filter-null' type='checkbox' value='null'>未标记</label>"
         "<button id='graph-filter-clear' class='ghost sm' type='button' disabled>清除筛选</button>"
         "</fieldset></details>"
-        "<label class='graph-gravity-label' for='graph-gravity'>聚拢</label><input id='graph-gravity' type='range' min='0' max='100' value='30' aria-label='调整图谱聚拢程度' title='调整图谱聚拢程度'>"
         "<div class='graph-zoom' aria-label='缩放'><button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button><button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button><button id='graph-fit' class='outline sm'>适应画布</button></div>"
         "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div></section></div>")
     return shell(
