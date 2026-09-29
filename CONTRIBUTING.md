@@ -65,13 +65,16 @@ lesson-kit daemon stop && lesson-kit daemon start
 
 ### Pi specifics
 
-- **The Agent picker is a model catalog, not a provider lock.** Configured named
-  entries keep their per-model `--args`; configuring Pi entries does not hide an
-  installed Codex/Claude harness. Pi additionally contributes its live configured
-  models through RPC `get_available_models`. Inside a conversation, switching to
-  another Pi model uses RPC `set_model` when possible; switching harnesses keeps
-  the Lesson Kit transcript, clears the incompatible native session, and hands a
-  bounded recent transcript to the new harness on its first turn.
+- **One conversation is permanently bound to one Agent harness.** Choose Codex,
+  Claude Code, or Pi when creating the conversation; changing harness means creating
+  another conversation. The in-chat model selector only shows models belonging to
+  that harness.
+- **Every harness exposes model choices through one bridge contract.** Codex uses
+  its supported app-server `model/list` RPC (falling back to
+  `~/.codex/models_cache.json`), Claude Code uses its documented supported-model
+  catalog plus any configured entries, and Pi contributes its live configured
+  models through RPC `get_available_models`. Named entries keep their per-model
+  `--args`. Same-harness Pi switching uses RPC `set_model` when possible.
 - **Pi runs one hidden RPC process per conversation.** `bridge/pi_rpc.py` starts
   `pi --mode rpc`, frames strict LF JSONL, sends correlated `prompt`/`abort`
   commands, and keeps the process for 30 idle minutes (no process-count cap).
