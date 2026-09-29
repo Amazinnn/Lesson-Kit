@@ -51,6 +51,7 @@ class RecordsBoundaryTests(unittest.TestCase):
         self.assertIn("练习 / 试卷", rendered)
         self.assertIn("最近 14 天", rendered)
         self.assertIn("record-verdict-bad", rendered)
+        self.assertIn("再做一次", rendered)
         wrong = records_view.content("dmath", overview, view="wrong")
         self.assertIn("my answer", wrong)
 
