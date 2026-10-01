@@ -186,6 +186,7 @@
   }
 
   function weightedNeighbors(graph, id) {
+    if (graph.adjacency && graph.adjacency.has(id)) return graph.adjacency.get(id);
     var out = [];
     graph.edges.forEach(function (edge) {
       if (edge.source !== id && edge.target !== id) return;
@@ -194,7 +195,7 @@
       var relationWeight = edge.relation_type === "prerequisite" ? 1.35
         : edge.relation_type === "applies_to" ? 1.0
           : edge.relation_type === "contrasts" ? 0.82 : 0.68;
-      out.push({ id: other, weight: relationWeight * (0.72 + visual.score * 0.62) });
+      out.push({ id: other, weight: relationWeight * (0.72 + visual.score * 0.62), edge: edge });
     });
     return out;
   }
@@ -388,33 +389,68 @@
     });
   }
 
+  function spatialPairs(nodes, cellSize, callback) {
+    var cells = new Map();
+    nodes.forEach(function (node, index) {
+      var cx = Math.floor(node.x / cellSize);
+      var cy = Math.floor(node.y / cellSize);
+      var key = cx + ":" + cy;
+      if (!cells.has(key)) cells.set(key, []);
+      cells.get(key).push(index);
+    });
+    var offsets = [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 1]];
+    cells.forEach(function (indices, key) {
+      var parts = key.split(":");
+      var cx = Number(parts[0]), cy = Number(parts[1]);
+      offsets.forEach(function (offset) {
+        var other = cells.get((cx + offset[0]) + ":" + (cy + offset[1]));
+        if (!other) return;
+        indices.forEach(function (i) {
+          other.forEach(function (j) {
+            if (offset[0] === 0 && offset[1] === 0 && j <= i) return;
+            callback(nodes[i], nodes[j]);
+          });
+        });
+      });
+    });
+  }
+
+  function localDensity(graph) {
+    var counts = new Map(graph.nodes.map(function (node) { return [node.id, 0]; }));
+    spatialPairs(graph.nodes, 280, function (a, b) {
+      var distance = Math.hypot(b.x - a.x, b.y - a.y);
+      if (distance > 280) return;
+      var weight = Math.pow(1 - distance / 280, 1.25);
+      counts.set(a.id, counts.get(a.id) + weight);
+      counts.set(b.id, counts.get(b.id) + weight);
+    });
+    return counts;
+  }
+
   function resolveOverlaps(graph, rounds) {
     var nodes = graph.nodes;
     for (var round = 0; round < rounds; round += 1) {
       var moved = false;
-      for (var i = 0; i < nodes.length; i += 1) {
-        for (var j = i + 1; j < nodes.length; j += 1) {
-          var a = nodes[i], b = nodes[j];
-          var fa = nodeFootprint(a), fb = nodeFootprint(b);
-          var ax1 = a.x - fa.halfWidth - 8, ax2 = a.x + fa.halfWidth + 8;
-          var ay1 = a.y - fa.top - 8, ay2 = a.y + fa.bottom + 8;
-          var bx1 = b.x - fb.halfWidth - 8, bx2 = b.x + fb.halfWidth + 8;
-          var by1 = b.y - fb.top - 8, by2 = b.y + fb.bottom + 8;
-          var ox = Math.min(ax2, bx2) - Math.max(ax1, bx1);
-          var oy = Math.min(ay2, by2) - Math.max(ay1, by1);
-          if (ox <= 0 || oy <= 0) continue;
-          moved = true;
-          if (ox <= oy) {
-            var xdir = a.x <= b.x ? -1 : 1;
-            var xshift = (ox + 5) * 0.5;
-            a.x += xdir * xshift; b.x -= xdir * xshift;
-          } else {
-            var ydir = a.y <= b.y ? -1 : 1;
-            var yshift = (oy + 5) * 0.5;
-            a.y += ydir * yshift; b.y -= ydir * yshift;
-          }
+      spatialPairs(nodes, 230, function (a, b) {
+        var fa = nodeFootprint(a), fb = nodeFootprint(b);
+        var ax1 = a.x - fa.halfWidth - 8, ax2 = a.x + fa.halfWidth + 8;
+        var ay1 = a.y - fa.top - 8, ay2 = a.y + fa.bottom + 8;
+        var bx1 = b.x - fb.halfWidth - 8, bx2 = b.x + fb.halfWidth + 8;
+        var by1 = b.y - fb.top - 8, by2 = b.y + fb.bottom + 8;
+        var ox = Math.min(ax2, bx2) - Math.max(ax1, bx1);
+        var oy = Math.min(ay2, by2) - Math.max(ay1, by1);
+        if (ox <= 0 || oy <= 0) return;
+        moved = true;
+        if (ox <= oy) {
+          var xdir = a.x <= b.x ? -1 : 1;
+          var xshift = (ox + 6) * 0.5;
+          a.x += xdir * xshift; b.x -= xdir * xshift;
+        } else {
+          var ydir = a.y <= b.y ? -1 : 1;
+          var yshift = (oy + 6) * 0.5;
+          a.y += ydir * yshift; b.y -= ydir * yshift;
         }
-      }
+      });
       if (!moved) break;
     }
   }
@@ -424,8 +460,8 @@
     var nodes = graph.nodes;
     var n = nodes.length;
     if (!n) return graph;
-    var iterations = n <= 40 ? 64 : n <= 100 ? 40 : n <= 240 ? 24 : 14;
-    var damping = 0.79;
+    var iterations = n <= 32 ? 56 : n <= 80 ? 34 : n <= 180 ? 20 : 12;
+    var damping = 0.78;
 
     nodes.forEach(function (node) {
       if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) {
@@ -444,51 +480,63 @@
         var ux = dx / distance, uy = dy / distance;
         var desired = desiredEdgeLength(graph, edge);
         var error = distance - desired;
-        var dead = 14 + desired * 0.025;
+        var dead = 16 + desired * 0.028;
         if (Math.abs(error) <= dead) return;
-        var hubNorm = Math.min(1, 1.75 / Math.sqrt(Math.max(1, a.degree * b.degree)));
+        var hubNorm = Math.min(1, 1.8 / Math.sqrt(Math.max(1, a.degree * b.degree)));
         var typeWeight = edge.relation_type === "prerequisite" ? 1
           : edge.relation_type === "applies_to" ? 0.82
-            : edge.relation_type === "contrasts" ? 0.70 : 0.56;
+            : edge.relation_type === "contrasts" ? 0.70 : 0.54;
         var strength = 0.70 + edgeVisual(edge.attraction).score * 0.46;
-        var magnitude = clamp((Math.abs(error) - dead) / Math.max(110, desired), 0, 1.2)
+        var magnitude = clamp((Math.abs(error) - dead) / Math.max(120, desired), 0, 1.15)
           * hubNorm * typeWeight * strength * alpha;
         var force = Math.sign(error) * magnitude;
         a.vx += force * ux; a.vy += force * uy;
         b.vx -= force * ux; b.vy -= force * uy;
       });
 
-      for (var i = 0; i < n; i += 1) {
-        for (var j = i + 1; j < n; j += 1) {
-          var a = nodes[i], b = nodes[j];
-          var dx = b.x - a.x, dy = b.y - a.y;
-          var distance = Math.max(1, Math.hypot(dx, dy));
-          var ux = dx / distance, uy = dy / distance;
-          var floor = readabilityFloor(a, b, ux, uy);
-          var densityBoost = 1 + Math.min(1.7, (a.degree + b.degree) * 0.075);
-          var nearBoost = distance < floor * 1.45 ? 1.8 : 1;
-          var repulsion = Math.min(1.2, 11800 / (distance * distance))
-            * densityBoost * nearBoost * alpha;
-          a.vx -= repulsion * ux; a.vy -= repulsion * uy;
-          b.vx += repulsion * ux; b.vy += repulsion * uy;
-        }
+      spatialPairs(nodes, 250, function (a, b) {
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var distance = Math.max(1, Math.hypot(dx, dy));
+        if (distance > 250) return;
+        var ux = dx / distance, uy = dy / distance;
+        var floor = readabilityFloor(a, b, ux, uy);
+        var densityBoost = 1 + Math.min(1.8, (a.degree + b.degree) * 0.078);
+        var nearBoost = distance < floor * 1.48 ? 1.9 : 1;
+        var repulsion = Math.min(1.25, 12800 / (distance * distance))
+          * densityBoost * nearBoost * alpha;
+        a.vx -= repulsion * ux; a.vy -= repulsion * uy;
+        b.vx += repulsion * ux; b.vy += repulsion * uy;
+      });
+
+      if (step % 4 === 0) {
+        var density = localDensity(graph);
+        nodes.forEach(function (node) {
+          var crowd = density.get(node.id) || 0;
+          if (crowd < 1.9) return;
+          var dx = node.x - graph.width / 2;
+          var dy = node.y - graph.height / 2;
+          var length = Math.max(1, Math.hypot(dx, dy));
+          var push = Math.min(0.38, (crowd - 1.8) * 0.045) * alpha;
+          node.vx += dx / length * push;
+          node.vy += dy / length * push;
+        });
       }
 
       nodes.forEach(function (node) {
         var gx = node.guideX, gy = node.guideY;
         if (graph.projection === "structure") {
           node.vx += (gx - node.x) * 0.016 * alpha;
-          node.vy += (gy - node.y) * 0.070 * alpha;
+          node.vy += (gy - node.y) * 0.066 * alpha;
         } else if (graph.projection === "state") {
-          node.vx += (gx - node.x) * 0.015 * alpha;
-          node.vy += (gy - node.y) * 0.015 * alpha;
-          node.vy += (130 + node.hierarchyLevel * 160 * spreadFactor(graph) - node.y)
-            * 0.0014 * alpha;
+          node.vx += (gx - node.x) * 0.014 * alpha;
+          node.vy += (gy - node.y) * 0.014 * alpha;
+          node.vy += (142 + node.hierarchyLevel * 166 * spreadFactor(graph) - node.y)
+            * 0.0012 * alpha;
         } else {
           node.vx += (gx - node.x) * 0.010 * alpha;
           node.vy += (gy - node.y) * 0.010 * alpha;
-          node.vy += (130 + node.hierarchyLevel * 160 * spreadFactor(graph) - node.y)
-            * 0.0025 * alpha;
+          node.vy += (142 + node.hierarchyLevel * 166 * spreadFactor(graph) - node.y)
+            * 0.0023 * alpha;
         }
         node.vx *= damping; node.vy *= damping;
         var speed = Math.hypot(node.vx, node.vy);
@@ -496,18 +544,18 @@
         node.x += node.vx; node.y += node.vy;
       });
 
-      if (step % 8 === 7) resolveOverlaps(graph, 2);
+      if (step % 7 === 6) resolveOverlaps(graph, 2);
     }
 
-    resolveOverlaps(graph, 14);
+    resolveOverlaps(graph, n <= 100 ? 12 : 6);
 
     var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     nodes.forEach(function (node) {
       var fp = nodeFootprint(node);
-      minX = Math.min(minX, node.x - fp.halfWidth - 36);
-      maxX = Math.max(maxX, node.x + fp.halfWidth + 36);
-      minY = Math.min(minY, node.y - fp.top - 36);
-      maxY = Math.max(maxY, node.y + fp.bottom + 36);
+      minX = Math.min(minX, node.x - fp.halfWidth - 38);
+      maxX = Math.max(maxX, node.x + fp.halfWidth + 38);
+      minY = Math.min(minY, node.y - fp.top - 38);
+      maxY = Math.max(maxY, node.y + fp.bottom + 38);
     });
     var shiftX = minX < 24 ? 24 - minX : 0;
     var shiftY = minY < 24 ? 24 - minY : 0;
@@ -515,8 +563,8 @@
       nodes.forEach(function (node) { node.x += shiftX; node.y += shiftY; });
       maxX += shiftX; maxY += shiftY;
     }
-    graph.width = Math.max(graph.width, maxX + 40);
-    graph.height = Math.max(graph.height, maxY + 40);
+    graph.width = Math.max(graph.width, maxX + 44);
+    graph.height = Math.max(graph.height, maxY + 44);
     return graph;
   }
 
@@ -562,10 +610,21 @@
       node.degree = stats.count.get(node.id) || 0;
       node.degreeWeighted = stats.weighted.get(node.id) || 0;
     });
+    var adjacency = new Map(nodes.map(function (node) { return [node.id, []]; }));
+    edges.forEach(function (edge) {
+      var visual = edgeVisual(edge.attraction);
+      var relationWeight = edge.relation_type === "prerequisite" ? 1.35
+        : edge.relation_type === "applies_to" ? 1.0
+          : edge.relation_type === "contrasts" ? 0.82 : 0.68;
+      var weight = relationWeight * (0.72 + visual.score * 0.62);
+      adjacency.get(edge.source).push({ id: edge.target, weight: weight, edge: edge });
+      adjacency.get(edge.target).push({ id: edge.source, weight: weight, edge: edge });
+    });
     var graph = {
       nodes: nodes,
       edges: edges,
       nodeById: nodeById,
+      adjacency: adjacency,
       degreeCount: stats.count,
       degreeWeighted: stats.weighted,
       width: dimensions.width,
