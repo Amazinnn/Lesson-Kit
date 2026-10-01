@@ -190,12 +190,15 @@ def graph_model(pool, signal_weights=None):
     signals = signal_weights or {}
     problems = pool.problems_all()
     problem_count = {kp_id: 0 for kp_id in ids}
-    problem_kps = []
+    shared_problem_count = {}
     for problem in problems:
-        kp_ids = {kp_id for kp_id in problem["kp_ids"] if kp_id in ids}
-        problem_kps.append(kp_ids)
+        kp_ids = sorted({kp_id for kp_id in problem["kp_ids"] if kp_id in ids})
         for kp_id in kp_ids:
             problem_count[kp_id] += 1
+        for index, source in enumerate(kp_ids):
+            for target in kp_ids[index + 1:]:
+                pair = (source, target)
+                shared_problem_count[pair] = shared_problem_count.get(pair, 0) + 1
     nodes = [
         {
             "id": kp["kp_id"],
@@ -249,10 +252,8 @@ def graph_model(pool, signal_weights=None):
             })
 
     for edge in edges:
-        shared = sum(
-            1 for kp_ids in problem_kps
-            if edge["source"] in kp_ids and edge["target"] in kp_ids
-        )
+        pair = tuple(sorted((edge["source"], edge["target"])))
+        shared = shared_problem_count.get(pair, 0)
         edge["shared_problem_count"] = shared
         coefficient = {"low": 0.75, "medium": 1.0, "high": 1.25}[edge["strength"]]
         edge["attraction"] = coefficient * min(1.5, 1 + shared * 0.1)
