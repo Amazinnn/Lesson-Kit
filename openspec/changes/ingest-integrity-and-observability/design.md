@@ -33,6 +33,42 @@ Paths below are written `ncmc:…` / `c04:…` for workspace files and
 
 ---
 
+## Audit note — 2026-10-01, against the merged tree
+
+This register was written against the tree at `415e03c` and landed after five
+more batches merged (`#80`–`#90`). A re-verification pass checked every `repo:`
+citation and re-ran the headline query. Three things moved:
+
+1. **The `c04` pool kept evolving after authorship.** Re-running the P0-1 diff
+   on 2026-10-01 (same 974-row snapshot): live pool is now **1063** rows,
+   deleted **59**, added **148**, common **915**, of which **403** hold a
+   different question and **512** are unchanged. The structural defect P0-1
+   stands; the example row (`c04-ch01-prob-204`) still reproduces. The
+   authorship-time figures (937 / 37 / 0 / 425) describe the register's window
+   and are kept as written.
+2. **P1-18 no longer reproduces on the server path.** `_render_markdown`
+   (now `workbench/server/pages.py:789`) escapes the text exactly once — a live
+   render of `若 a<b 且 x<y` yields `a&lt;b` with no double escape — and the
+   client site (`workbench.js:311,340-345`) was rewritten by the records/graph
+   batches to a single `escapeHtml`. Task 1.2 narrows to task 1.3's real-pool
+   regression check.
+3. **The graph-semantics NOT-A-DEFECT row is half-superseded.** Batches `#87`
+   and `#90` deliberately changed the graph model to preserve stored direction
+   and multiple relations per pair — the opposite of "the `sorted()` that drops
+   direction". The spec scenario at
+   `openspec/specs/review-workbench/spec.md:355-358` still mandates the old
+   one-edge merge, so the spec is now the stale side; updating that scenario is
+   owed work (see `tasks.md` §7.1). The "empty `knowledge_relations`" half of
+   the row remains valid.
+
+All other `repo:` citations were re-read at their cited lines in the merged
+tree and hold (`pipeline/scripts/*`, `workbench/data/difficulty.py`,
+`pool/scripts/render-graph-html.py`, `AGENTS.md:38-39`, and the three specs
+this register leans on), except `workbench-ui` scenario lines, which moved two
+lines down (`:1079-1083`, `:1092-1093`).
+
+---
+
 ## Route per item
 
 How each item below must be fixed. `proposal.md` and `tasks.md` use the same
@@ -47,7 +83,7 @@ four labels.
 | P1-12 | `CONFORMANCE` | "every inserted row carries the batch id" (`openspec/specs/workbench-content-governance/spec.md:163`, scenario `:167-168`). 100% NULL violates a live SHALL. |
 | P1-10 | `NEW-GAP` | The apply path has no requirement that reported accounting match reality. "the reported accounting matches the recorded counts" exists only at `:173`, inside the *Roll back a whole batch* scenario — and it compares the reported figure against the recorded one, both derived from the same record, so a constant count satisfies it. |
 | P1-11 | `NEW-GAP` | A backup path is required (`:163`) but distinct per-batch files are not. |
-| P1-18 | `CONFORMANCE` | `workbench-ui` already requires one consistent, escaped-then-rendered math pipeline (`openspec/specs/workbench-ui/spec.md:1077-1083,1090-1093`); the server path escapes twice. |
+| P1-18 | `CONFORMANCE` | `workbench-ui` already requires one consistent, escaped-then-rendered math pipeline (`openspec/specs/workbench-ui/spec.md:1079-1083,1092-1093`). Re-verified 2026-10-01: the server path escapes once and the client site was rewritten — see the audit note; what remains is task 1.3's real-pool regression check. |
 | P1-19, P1-20, P1-21, P1-22 | `NEW-GAP` | Graph label / search / filter semantics: no requirement defines them. |
 | P1-23, P1-24 | `NEW-GAP` | No formula validator; textbook import does no entity or heading normalisation. |
 | P1-25, P1-26, P1-27, P1-28 | `NEW-GAP` | Undocumented contracts — `FILE_CONTRACT.md` mentions none of `source_location`, `related_kp_ids`, `fragile`, `graph_label`. |
@@ -57,13 +93,17 @@ four labels.
 
 ## Not defects — recorded so they are not "fixed"
 
-`knowledge_relations` stays empty and edge direction stays discarded. Both were
-reported by the first sweep as defects. Both are what the spec requires:
-"Edges originate only from formal relations **or existing `related_kp_ids`**"
-(`openspec/specs/review-workbench/spec.md:347-348`) permits the empty table, and
-"WHEN two knowledge points declare duplicate or reverse semantic relations THEN
-the graph model returns one edge for the **unordered pair**" (`:355-358`)
-mandates the direction loss. An earlier draft of this change would have proposed
+`knowledge_relations` stays empty. That half was reported by the first sweep as
+a defect and is what the spec requires: "Edges originate only from formal
+relations **or existing `related_kp_ids`**"
+(`openspec/specs/review-workbench/spec.md:347-348`) permits the empty table.
+
+The second half — "edge direction stays discarded" — is **superseded as of
+2026-10-01**: batches `#87`/`#90` deliberately changed the graph model to keep
+stored direction and to return one edge per stored relation, and the spec
+scenario at `:355-358` is now the side that has to move. Do not treat the
+multi-edge-preserving model as the violation; see the audit note and
+`tasks.md` §7.1. An earlier draft of this change would have proposed
 breaking a live requirement.
 
 ---

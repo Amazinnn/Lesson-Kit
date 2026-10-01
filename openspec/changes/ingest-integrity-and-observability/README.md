@@ -42,3 +42,11 @@ register of defects changes nothing. Where an item does imply a new requirement,
 
 Every query in `design.md` is read-only and was run in `mode=ro`. No pool is
 touched by this change.
+
+## Audit trail
+
+2026-10-01, against the merged tree (`#80`–`#90` landed): every `repo:` citation
+re-read, the headline `c04` diff re-run (the pool kept evolving — see the
+design.md audit note), the server-side double-escape no longer reproduces, and
+the graph-semantics NOT-A-DEFECT row is half-superseded by `#87`/`#90`. Details
+in `design.md` and `tasks.md` §1.2/§3.1/§7.1.
