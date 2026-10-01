@@ -30,6 +30,9 @@ it. This is a decision, not an implementation task.
 - [ ] 2.2 After 2.1: stop `INSERT OR REPLACE` rebuilding the row. `pipeline/scripts/insert-problems.py:256-259` writes 6 columns and `pipeline/scripts/insert-knowledge-points.py:254-259` writes 11, so every other column returns to its default and the run exits 0 — a partial re-ingest silently clears `exam_year`, difficulty ratings, display titles and practice modes. The pattern to copy already exists in the tree: `workbench/data/difficulty.py:48-50` writes a targeted `UPDATE`.
 - [ ] 2.3 After 2.1: exit non-zero when rows were dropped. Without `--strict`, `pipeline/scripts/insert-knowledge-points.py:239-246` prints "Continuing with valid rows only" and falls through to `return 0` at `:297`, so any caller checking `$?` sees success. The `c04` course worked around it by passing `--strict` at every call site.
 - [ ] 2.4 After 2.1: narrow `COLLAPSED_SUBPART_PATTERN`. `pipeline/scripts/candidate_contract.py:12` (`[^\n][ \t]+[a-j]\s*\)[ \t]+`, used at `:55`) matches the `- a) ` inside ordinary printed maths such as `(b - a) `, and cost 6 of 180 real problems under `--strict`.
+- [ ] 2.5 After 2.1: make the post-hoc sweep able to run. `pipeline/scripts/validate-pool.py:151-161` still requires the two tables retired on 2026-08-30, and the early return at `:612-613` then skips every content gate — measured 2026-10-01 on `dmath`/`c01`/`c04`, the whole report is two `missing required table` errors (P0-5). Either drop `candidate_problems`/`candidate_attempts` from the required list, or narrow the early return to the tables the following gates actually read.
+- [ ] 2.6 After 2.1, in the same pass as 2.5: widen `PROBLEM_ID_PATTERN` (`:32`) to accept the `-mq-NNN` micro-quiz form — or accept it explicitly — otherwise restoring the sweep reports 42 false positives on the repo's own pool (P0-6).
+- [ ] 2.7 After 2.1: state which sweep is the acceptance signal — `lesson-kit data <ws> audit` (live) or `validate-pool.py` (frozen) — so course work stops citing the latter's FAIL as a pool verdict, which it cannot be today (P0-5).
 
 ## 3. New gap — ingest integrity and the batch registry
 
@@ -76,6 +79,7 @@ Owner: `knowledge-figures`, `workbench-ui`. Note that the one item here which
 
 - [ ] 7.1 Leave `knowledge_relations` empty. `openspec/specs/review-workbench/spec.md:347-348` requires that edges may originate from "formal relations **or existing `related_kp_ids`**", so an empty table is the specified behaviour. Recorded because the first sweep reported it as a defect and an earlier draft of this change would have proposed breaking a live requirement. **Superseded half (2026-10-01):** "edge direction stays discarded" no longer holds — batches `#87`/`#90` deliberately preserve stored direction and one edge per stored relation, so the spec scenario at `:355-358` (collapse to one edge for the unordered pair) is now the stale side; update that scenario in the next change that touches `review-workbench`, and do not treat the multi-edge-preserving model as the violation.
 - [ ] 7.2 Note the refuted `c04` hypothesis so it is not re-investigated: ch05–ch08 knowledge points were *not* orphaned by late ingestion. Per-chapter references are 578/672/434/324/225/128/237/172, all non-zero, with zero dangling references, and `kp-baseline.json` is timestamped between the two pre-ingest snapshots. The real orphan population is 22 of 324. The absence of a gate that would have caught it either way is item 3.2.
+- [ ] 7.3 Do not "fix" `query_rows`' LIKE. A claim that the prefix lacks a trailing `%` is false — `query_rows` (`pipeline/scripts/validate-pool.py:144-145`) appends it, all ten prefix-LIKE call sites route through it, and the comprehension yields 31 ids on `dmath/ch06`. Recorded so the "missing %" change does not land; the real symptom (four gate groups contributing nothing) is P0-5.
 
 ## 8. Handoff
 
@@ -83,7 +87,10 @@ Owner: `knowledge-figures`, `workbench-ui`. Note that the one item here which
   `workbench-content-governance`, since all three change what an ingest is
   allowed to accept and write.
 - [ ] 8.2 Hand §2 to whoever owns the `pipeline/` layering decision, and do not
-  author requirements for those four items before that decision exists.
+  author requirements for those items before that decision exists.
 - [ ] 8.3 Re-check §1 and 3.10 against `content-dedup-and-audit` when it lands: its audit
   command is the natural place to surface the accounting and provenance
   violations, and its read-only content audit should not have to re-derive them.
+- [ ] 8.4 Hand P0-5/P0-6 to the same `pipeline/` decision as §2: until the sweep
+  runs again (2.5/2.6), no course may cite `validate-pool` as evidence of
+  anything.

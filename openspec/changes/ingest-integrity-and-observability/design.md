@@ -79,6 +79,7 @@ four labels.
 | P0-1 | `NEW-GAP` | Stable ids: no requirement exists. Highest value, needs its own change. |
 | P0-2, P0-3, P1-2 | `DOCTRINE` | All three are in `pipeline/`, frozen by `AGENTS.md:38-39` and carved out of scope by `openspec/changes/archive/2026-09-20-optional-problem-difficulty-gate/specs/workbench-content-governance/spec.md:13-14`. |
 | P0-4 | `NEW-GAP` | No cross-reference gate for problems ↔ knowledge points. The flash-card equivalent already exists (`openspec/specs/flash-card/spec.md:19-20,37`) but is not applied here. |
+| P0-5, P0-6 | `DOCTRINE` | Both are in `pipeline/scripts/validate-pool.py`, frozen by the same `AGENTS.md:38-39` decision as P0-2/P0-3/P1-2. Until that decision, the post-hoc sweep cannot run at all (P0-5) and would misfire once it can (P0-6). |
 | P1-1 | `NEW-GAP` | `difficulty` coverage: the spec deliberately promises nothing (`openspec/specs/problem-difficulty/spec.md:77-80,87-90`); only the code docstring overclaims. |
 | P1-12 | `CONFORMANCE` | "every inserted row carries the batch id" (`openspec/specs/workbench-content-governance/spec.md:163`, scenario `:167-168`). 100% NULL violates a live SHALL. |
 | P1-10 | `NEW-GAP` | The apply path has no requirement that reported accounting match reality. "the reported accounting matches the recorded counts" exists only at `:173`, inside the *Roll back a whole batch* scenario — and it compares the reported figure against the recorded one, both derived from the same record, so a constant count satisfies it. |
@@ -105,6 +106,16 @@ scenario at `:355-358` is now the side that has to move. Do not treat the
 multi-edge-preserving model as the violation; see the audit note and
 `tasks.md` §7.1. An earlier draft of this change would have proposed
 breaking a live requirement.
+
+**A third claim was refuted on 2026-10-01:** "the sweep's `chapter_kp_ids` is
+always empty because the LIKE prefix has no trailing `%`" is false. The prefix
+(`` `c05-ch10-` ``) indeed carries no `%`, but `query_rows`
+(`repo:pipeline/scripts/validate-pool.py:144-145`) appends it —
+`conn.execute(sql_filtered, (prefix + "%",))` — and all ten prefix-LIKE call
+sites route through that helper. Re-run read-only: the comprehension at
+`:622-630` yields **31** ids on `pool/dmath.db` dmath/ch06, so the four gate
+groups do receive input. The observed "gates skipped" symptom is real but
+belongs to P0-5. Do not "fix" the LIKE.
 
 ---
 
@@ -225,6 +236,61 @@ There is no gate anywhere between per-item field validation and the
 post-hoc `validate-pool` sweep, so an entire chapter can be built from a
 manifest that references knowledge points nobody ever ingested.
 
+### P0-5 · the post-hoc sweep reports nothing on any current pool — `DOCTRINE`
+
+`repo:pipeline/scripts/validate-pool.py:611-613`:
+
+```python
+    findings = run_schema_gate(conn)
+    if any(f["level"] == "ERROR" and f["gate"] == "schema-conformance" for f in findings):
+        return findings
+```
+
+`run_schema_gate` (`:149-167`) demands ten tables (`:151-161`), two of which
+the product **retired on 2026-08-30** — `candidate_problems` and
+`candidate_attempts` (`repo:pool/scripts/pool_schema.py:358-364`:
+`ensure_problem_candidate_schema` now only guarantees `learner_signals`, and
+its docstring says the candidate tables were removed). Every pool built or
+migrated since then lacks them, so the schema gate returns two ERRORs and
+`run_gates` returns before the kp, legacy, problem and candidate gates ever
+run.
+
+Measured 2026-10-01, read-only, on three live pools — `dmath` (345 problems),
+`c01` and `c04` — the entire report is exactly:
+
+```
+Result: FAIL
+  - ERROR:   2
+  - WARNING: 0
+
+=== Findings ===
+  ERROR [schema-conformance] missing required table 'candidate_problems'
+  ERROR [schema-conformance] missing required table 'candidate_attempts'
+```
+
+No content gate has run on any of these pools. P0-4's closing line — "no gate
+anywhere between per-item field validation and the post-hoc `validate-pool`
+sweep" — therefore reads worse than written: the sweep itself is inert, so the
+defects it was meant to catch (P0-1's displacement, P0-4's dropped bindings)
+would not have been reported either way. The live replacement is
+`lesson-kit data <ws> audit` plus the pool-pipeline skill's `preflight.py`.
+
+### P0-6 · the sweep's id pattern predates micro-quiz ids, so fixing P0-5 alone would cry wolf — `DOCTRINE`
+
+`repo:pipeline/scripts/validate-pool.py:32`:
+
+```python
+PROBLEM_ID_PATTERN = re.compile(r"^[a-z0-9]+-ch\d{2}-prob-\d{3}$")
+```
+
+The product mints micro-quiz rows as `<course>-<chapter>-mq-NNN`. Bypassing
+P0-5's early return and re-running the gates read-only over `pool/dmath.db`
+(dmath/ch06) yields **42 findings, all of them this pattern rejecting
+`-mq-NNN` ids** — after three courses of use, the sweep has produced exactly
+one kind of output and it is a false positive. Whoever restores the sweep
+(P0-5) must widen the pattern — or accept the mq form explicitly — in the same
+pass, or every micro-quiz row becomes an ERROR.
+
 ---
 
 ## P1 — output cannot be trusted, or cannot be checked
@@ -310,6 +376,9 @@ Re-run read-only by the recorder, not taken from a sweep:
 | `c04` `solution` empty | 245/937 |
 | `c04` `display_summary` set | 3/937 |
 | `c04` `problem_type` mix | explanation 481 + other 285 = 766/937 (81.7%) |
+| `validate-pool.py` on `dmath` / `c01` / `c04` | all three: FAIL with exactly two `missing required table` errors (`candidate_problems`, `candidate_attempts`) and zero other findings — the early return skips every content gate (P0-5) |
+| `validate-pool` gates re-run with the early return bypassed (`pool/dmath.db`, dmath/ch06) | 42 findings, all `problem-completeness: invalid problem_id` on `-mq-NNN` rows (P0-6) |
+| `chapter_kp_ids` comprehension, dmath/ch06 | **31** non-empty — refutes the missing-`%` claim recorded under *Not defects* |
 | `insert-problems.py` upsert column list | 6 columns (`repo:pipeline/scripts/insert-problems.py:256-259`) |
 | `insert-knowledge-points.py` upsert column list | 11 columns (`repo:pipeline/scripts/insert-knowledge-points.py:254-259`) |
 | non-strict drop path | prints and falls through to `return 0` (`repo:pipeline/scripts/insert-knowledge-points.py:239-246,297`) |
@@ -377,6 +446,25 @@ cd 'D:\Documents\Document_In_University\课程\2026-2027 秋冬 大二上\宏观
 
 # P0-1, P1-12 — ledger and per-batch provenance
 python -c "import sqlite3;c=sqlite3.connect('file:c04.db?mode=ro',uri=True);q=lambda s:c.execute(s).fetchall();print(q('select count(*) from knowledge_relations'));print(q('select count(*) from problems where ingest_batch_id is null'));print(q('select count(*) from knowledge_points where ingest_batch_id is null'));print(q('select batch_id,kind,applied_at,rolled_back_at from ingest_batches order by batch_id'))"
+
+# P0-5, P0-6 — the sweep is inert, and what it would say once restored
+cd 'D:\Projects\Academic Workflow\lesson-kit'
+python pipeline/scripts/validate-pool.py --db pool/dmath.db --course dmath --chapter ch06
+#   expect (2026-10-01): exactly 2 ERRORs, both "missing required table 'candidate_*'"
+# read-only harness: bypass the early return and re-run the gates
+python -c "
+import importlib.util, sqlite3
+from collections import Counter
+s = importlib.util.spec_from_file_location('vp', 'pipeline/scripts/validate-pool.py')
+vp = importlib.util.module_from_spec(s); s.loader.exec_module(vp)
+c = sqlite3.connect('file:pool/dmath.db?mode=ro', uri=True)
+p = vp.get_prefix('dmath', 'ch06')
+a = {r[0] for r in c.execute('SELECT kp_id FROM knowledge_points')}
+f = [x for x in vp.run_schema_gate(c) if 'candidate' not in x['message']]
+f += vp.run_kp_gates(c, 'dmath', 'ch06', p)
+f += vp.run_problem_gates(c, p, a)
+print(Counter(x['gate'] for x in f))"
+#   expect: Counter({'problem-completeness': 42}), messages "dmath-ch06-mq-*: invalid problem_id"
 
 # P0-2, P0-3, P1-1, P1-2, P1-18..21 — read the cited lines in this repository
 #   pipeline/scripts/insert-problems.py:256-259
