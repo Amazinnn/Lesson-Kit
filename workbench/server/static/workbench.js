@@ -992,7 +992,8 @@
       graphSimulation = GraphPhysics.layoutHierarchy(
         nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight, graphProjection
       );
-      if (GraphPhysics.setCompactness) {
+      if (GraphPhysics.setCompactness
+          && Math.abs((graphSimulation.compactness || 0) - graphCompactnessNumber()) > 0.5) {
         GraphPhysics.setCompactness(graphSimulation, graphCompactnessNumber());
       }
       if (version !== graphRenderVersion) return;
