@@ -590,6 +590,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='graph-legend'", body)
         self.assertIn("data-edge-type='prereq'", body)
         self.assertIn("data-edge-type='legacy'", body)
+        self.assertIn("id='graph-edge-budget'", body)
         self.assertIn("aria-pressed='true'", body)
         self.assertIn("id='graph-toast'", body)
 
