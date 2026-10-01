@@ -1617,6 +1617,7 @@ img { max-width: 100%; }
 #layout[data-page="graph"] .graph-toolbar {
   z-index: 8;
   gap: 9px;
+  flex-wrap: wrap;
   border-bottom-color: #d8d2c6;
   background: rgba(255, 253, 247, .97);
 }
@@ -1845,6 +1846,7 @@ img { max-width: 100%; }
   border-color: #d8d2c6;
   border-radius: 3px;
   background: #fffdf7;
+  white-space: nowrap;
 }
 .graph-filter-menu fieldset { box-shadow: 0 5px 14px rgb(61 52 37 / 8%); }
 .graph-hint-popover {

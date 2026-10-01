@@ -583,7 +583,7 @@
     return applyHierarchyProjection(graph, graph.projection || "structure");
   }
 
-  function layoutHierarchy(sourceNodes, sourceEdges, width, height, projection) {
+  function layoutHierarchy(sourceNodes, sourceEdges, width, height, projection, compactness) {
     var levels = hierarchyLevels(sourceNodes, sourceEdges);
     var dimensions = hierarchyDimensions(sourceNodes, levels, width, height);
     var nodes = sourceNodes.map(function (source, index) {
@@ -633,7 +633,7 @@
       projection: projection || "structure",
       compactness: 30,
     };
-    return applyHierarchyProjection(graph, projection || "structure");
+    return applyHierarchyProjection(graph, projection || "structure", compactness);
   }
 
   return {

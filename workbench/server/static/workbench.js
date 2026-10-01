@@ -535,6 +535,7 @@
     var graphAmbientContext = null;
     var graphAmbientFrame = null;
     var graphAmbientBoost = 0;
+    var graphAmbientLive = false;
     var reducedGraphMotion = window.matchMedia
       && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -986,11 +987,13 @@
 
     function renderGraph(keepView) {
       var version = ++graphRenderVersion;
+      graphMotionVersion += 1; // a fresh solve invalidates any running interpolation
       var model = graphVisibleModel();
       var nodes = model.nodes, edges = model.edges;
       var previousView = { x: graphView.x, y: graphView.y, scale: graphView.scale };
       graphSimulation = GraphPhysics.layoutHierarchy(
-        nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight, graphProjection
+        nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight, graphProjection,
+        graphCompactnessNumber()
       );
       if (GraphPhysics.setCompactness
           && Math.abs((graphSimulation.compactness || 0) - graphCompactnessNumber()) > 0.5) {
@@ -1118,8 +1121,10 @@
         empty.textContent = "没有符合条件的知识点。";
         stage.appendChild(empty);
       }
-      if (graphAmbientCanvas) graphCanvas.replaceChildren(graphAmbientCanvas, stage);
-      else graphCanvas.replaceChildren(stage);
+      if (graphAmbientCanvas) {
+        graphCanvas.replaceChildren(graphAmbientCanvas, stage);
+        graphAmbientLive = true;
+      } else graphCanvas.replaceChildren(stage);
       drawGraph();
       updateGraphFocus();
       if (keepView) {
@@ -1199,18 +1204,34 @@
       graphAmbientContext.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
-    function graphAmbientNodeMask(x, y) {
-      if (!graphSimulation) return 1;
-      var mask = 1;
-      for (var index = 0; index < graphSimulation.nodes.length; index += 1) {
-        var node = graphSimulation.nodes[index];
+    // Screen-space node boxes are projected once per frame, not once per dot.
+    function graphAmbientMaskNodes() {
+      if (!graphSimulation) return [];
+      var out = [];
+      var nodes = graphSimulation.nodes;
+      for (var index = 0; index < nodes.length; index += 1) {
+        var node = nodes[index];
         var sx = graphView.x + node.x * graphView.scale;
         var sy = graphView.y + node.y * graphView.scale;
         var core = Math.max(46, node.radius * graphView.scale + 28);
         var fade = core + 82;
-        var distance = Math.hypot(x - sx, y - sy);
-        if (distance <= core) return 0.02;
-        if (distance < fade) mask = Math.min(mask, 0.02 + 0.98 * (distance - core) / (fade - core));
+        if (sx < -fade || sy < -fade
+          || sx > (graphAmbientCanvas.clientWidth || graphCanvas.clientWidth) + fade
+          || sy > (graphAmbientCanvas.clientHeight || graphCanvas.clientHeight) + fade) continue;
+        out.push({ sx: sx, sy: sy, core: core, fade: fade });
+      }
+      return out;
+    }
+
+    function graphAmbientNodeMask(x, y, maskNodes) {
+      var mask = 1;
+      for (var index = 0; index < maskNodes.length; index += 1) {
+        var spot = maskNodes[index];
+        var distance = Math.hypot(x - spot.sx, y - spot.sy);
+        if (distance <= spot.core) return 0.02;
+        if (distance < spot.fade) {
+          mask = Math.min(mask, 0.02 + 0.98 * (distance - spot.core) / (spot.fade - spot.core));
+        }
       }
       return mask;
     }
@@ -1223,7 +1244,7 @@
     }
 
     function drawGraphAmbient(now) {
-      if (!graphAmbientCanvas || !graphAmbientContext) return;
+      if (!graphAmbientCanvas || !graphAmbientContext || !graphAmbientLive) return;
       var width = graphAmbientCanvas.clientWidth || graphCanvas.clientWidth;
       var height = graphAmbientCanvas.clientHeight || graphCanvas.clientHeight;
       var ctx = graphAmbientContext;
@@ -1233,6 +1254,7 @@
       var normalX = Math.SQRT1_2, normalY = Math.SQRT1_2;
       var centerX = width * 0.5, centerY = height * 0.56;
       var span = Math.hypot(width, height) + 320;
+      var maskNodes = graphAmbientMaskNodes();
       var ribbons = [
         [-230, 16, 176, 34, 2, 35, 30, 2.1, 4.0, 0.090, [181, 139, 0], 0.3],
         [-120, 19, 212, 37, 3, 37, 38, 2.3, 4.8, 0.112, [36, 87, 197], 1.2],
@@ -1256,7 +1278,7 @@
             var x = centerX + dirX * u + normalX * cross;
             var y = centerY + dirY * u + normalY * cross;
             if (x < -34 || x > width + 34 || y < -34 || y > height + 34) continue;
-            var mask = graphAmbientNodeMask(x, y);
+            var mask = graphAmbientNodeMask(x, y, maskNodes);
             if (mask < 0.018) continue;
             var local = Math.sin((u / (wave * 0.72)) * Math.PI * 2
               + phase * 1.35 + t * 1.65 + lane * 0.45) * 0.5 + 0.5;

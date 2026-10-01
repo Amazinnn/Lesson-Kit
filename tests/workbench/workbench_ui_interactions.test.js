@@ -818,7 +818,10 @@ test("native graph dashboard limits student detail to title, reminder, and forma
     (child) => child.className === "graph-node-label",
   );
   assert.equal(label.textContent, "加法规则");
-  assert.equal(node.style.width, "25.6px");
+  // The constrained layout sizes nodes through the engine's readability
+  // bounds (radius 14–31 → width 28–62); exact values belong to its own suite.
+  const nodeWidth = parseFloat(node.style.width);
+  assert.ok(nodeWidth >= 28 && nodeWidth <= 62, "node width within readability bounds: " + node.style.width);
   node.click();
   assert.match(detail.innerHTML, /加法规则/);
   assert.match(detail.innerHTML, /可以复习/);
