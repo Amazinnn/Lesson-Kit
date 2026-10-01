@@ -63,15 +63,15 @@ class UiRouteTests(unittest.TestCase):
 
     def test_edge_layer_follows_the_stage_size(self):
         """The SVG carries width/height/viewBox from the layout, so the last
-        `.graph-edge-layer` rule must size it to the stage box. A fixed CSS
-        size lets the viewBox rescale the whole edge layer — on 2026-10-01
-        that put every edge off-canvas (nodes rendered, relations invisible)."""
+        `.graph-edges` rule must size it to the stage box. A fixed CSS size
+        lets the viewBox rescale the whole edge layer — on 2026-10-01 that put
+        every edge off-canvas (nodes rendered, relations invisible)."""
         import re
 
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
-        blocks = re.findall(r"\.graph-edge-layer\s*\{([^}]*)\}", body)
-        self.assertTrue(blocks, "no .graph-edge-layer rule in the stylesheet")
+        blocks = re.findall(r"\.graph-edges\s*\{([^}]*)\}", body)
+        self.assertTrue(blocks, "no .graph-edges rule in the stylesheet")
         effective = blocks[-1]
         self.assertIn("width: 100%", effective)
         self.assertIn("height: 100%", effective)
@@ -577,13 +577,21 @@ class UiRouteTests(unittest.TestCase):
         status, data = self.fetch_json("/api/w/dmath/graph/model")
         self.assertEqual(status, 200)
         self.assertEqual(data["nodes"][0]["title"], "Counting")
-        self.assertIn("id='graph-projection'", body)
-        self.assertIn("id='graph-projection-hint'", body)
-        self.assertIn("id='graph-state-filter'", body)
-        self.assertIn("id='graph-filter-needs_work'", body)
-        self.assertIn("id='graph-filter-review'", body)
-        self.assertIn("id='graph-filter-mastered'", body)
-        self.assertIn("id='graph-filter-null'", body)
+        # blueprint surface: view segment, filter chips, gravity, tide, legend
+        self.assertIn("id='graph-views'", body)
+        self.assertIn("data-view='structure'", body)
+        self.assertIn("id='graph-filters'", body)
+        self.assertIn("data-filter='work'", body)
+        self.assertIn("data-filter='new'", body)
+        self.assertIn("id='graph-gravity'", body)
+        self.assertIn("id='graph-solver-state'", body)
+        self.assertIn("id='graph-tide'", body)
+        self.assertIn("id='graph-edges'", body)
+        self.assertIn("id='graph-legend'", body)
+        self.assertIn("data-edge-type='prereq'", body)
+        self.assertIn("data-edge-type='legacy'", body)
+        self.assertIn("aria-pressed='true'", body)
+        self.assertIn("id='graph-toast'", body)
 
     def test_goal_lifecycle_controls_render(self):
         request = urllib.request.Request(
