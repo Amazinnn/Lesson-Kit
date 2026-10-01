@@ -5,62 +5,56 @@
   if (typeof module === "object" && module.exports) module.exports = api;
   root.GraphPhysics = api;
 }(typeof globalThis === "object" ? globalThis : this, function () {
+  var GOLDEN_ANGLE = 2.399963229728653;
+  var TAU = Math.PI * 2;
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
   function nodeRadius(problemCount) {
-    return Math.min(30, 8 + 2.4 * Math.sqrt(Math.max(0, problemCount || 0)));
+    return Math.min(31, 14 + 3.2 * Math.sqrt(Math.max(0, Number(problemCount) || 0)));
   }
 
   function metricRadius(score) {
-    return 10 + 20 * Math.sqrt(Math.max(0, Math.min(1, Number(score) || 0)));
+    return 14 + 17 * Math.sqrt(clamp(Number(score) || 0, 0, 1));
   }
 
   function labelLineCount(title) {
     var label = String(title || "").replace(/\s+/g, " ").trim();
     if (!label) return 1;
-    var maxChars = 14;
-    var lines = 1;
-    var line = "";
-    Array.from(label).forEach(function (char) {
-      if (line && line.length + char.length > maxChars) {
-        lines += 1;
-        line = char;
-      } else {
-        line += char;
-      }
-    });
-    return lines;
+    return Math.max(1, Math.ceil(Array.from(label).length / 14));
+  }
+
+  function labelWidth(title) {
+    return Math.min(168, Math.max(62, Array.from(String(title || "")).length * 12 + 18));
   }
 
   function collisionRadius(radius, title) {
-    return Math.min(150, radius + 6 + labelLineCount(title) * 16);
-  }
-
-  function edgeVisual(attraction) {
-    var score = Math.max(
-      0, Math.min(1, ((Number(attraction) || 1) - 0.75) / 1.125),
-    );
-    var width = 1.35 + score * 2.65;
-    return {
-      score: score,
-      width: width,
-      shadowWidth: width + 3.5,
-      highlightWidth: Math.max(0.55, width * 0.24),
-      opacity: 0.28 + score * 0.52,
-    };
+    var vertical = radius + 18 + labelLineCount(title) * 16;
+    var horizontal = Math.max(radius + 14, labelWidth(title) / 2);
+    return Math.min(180, Math.max(vertical, horizontal));
   }
 
   function projectionValue(node, projection) {
-    if (projection === "problem_count") {
-      return Math.max(0, Number(node.problem_count) || 0);
-    }
-    if (projection === "importance") {
-      return node.importance === "core" ? 1 : 0;
-    }
-    if (projection === "state") {
-      return node.state === "needs_work" ? 1
-        : node.state === "review" ? 0.66
-          : node.state === "mastered" ? 0 : 0.33;
-    }
+    if (projection === "problem_count") return Math.max(0, Number(node.problem_count) || 0);
+    if (projection === "importance") return node.importance === "core" ? 1 : 0.35;
+    if (projection === "state") return node.state === "needs_work" ? 1
+      : node.state === "review" ? 0.70
+        : node.state === "mastered" ? 0.22 : 0.46;
     return 0;
+  }
+
+  function edgeVisual(attraction) {
+    var score = clamp(((Number(attraction) || 1) - 0.75) / 1.125, 0, 1);
+    var width = 1.05 + score * 2.35;
+    return {
+      score: score,
+      width: width,
+      shadowWidth: width + 2.8,
+      highlightWidth: Math.max(0.45, width * 0.20),
+      opacity: 0.18 + score * 0.48,
+    };
   }
 
   function hierarchyLevels(sourceNodes, sourceEdges) {
@@ -99,9 +93,7 @@
     }
 
     var maxLevel = 0;
-    processed.forEach(function (id) {
-      maxLevel = Math.max(maxLevel, levels.get(id));
-    });
+    processed.forEach(function (id) { maxLevel = Math.max(maxLevel, levels.get(id)); });
     var unresolved = Array.from(structural).filter(function (id) {
       return !processed.has(id);
     }).sort();
@@ -117,39 +109,6 @@
       .sort()
       .forEach(function (id) { levels.set(id, isolateLevel); });
     return levels;
-  }
-
-  function hierarchyDimensions(sourceNodes, levels, width, height) {
-    var counts = new Map();
-    sourceNodes.forEach(function (node) {
-      var level = levels.get(node.id) || 0;
-      counts.set(level, (counts.get(level) || 0) + 1);
-    });
-    var maxCount = Math.max.apply(null, [1].concat(Array.from(counts.values())));
-    var maxLevel = Math.max.apply(null, [0].concat(Array.from(counts.keys())));
-    return {
-      width: Math.max(1200, width || 800, maxCount * 190 + 180),
-      height: Math.max(800, height || 600, (maxLevel + 1) * 190 + 180),
-    };
-  }
-
-  function scoreMap(nodes, projection) {
-    var scores = new Map();
-    if (!projection || projection === "structure") {
-      nodes.forEach(function (node) { scores.set(node.id, 0); });
-      return scores;
-    }
-    var values = nodes.map(function (node) {
-      return projectionValue(node, projection);
-    });
-    var min = Math.min.apply(null, values);
-    var max = Math.max.apply(null, values);
-    var span = max - min;
-    nodes.forEach(function (node) {
-      var value = projectionValue(node, projection);
-      scores.set(node.id, span ? (value - min) / span : 0.5);
-    });
-    return scores;
   }
 
   function decorateParallelEdges(edges) {
@@ -171,79 +130,449 @@
     });
   }
 
-  function applyHierarchyProjection(graph, projection) {
-    if (!graph || !graph.nodes) return graph;
-    var scores = scoreMap(graph.nodes, projection);
-    var groups = new Map();
-    graph.nodes.forEach(function (node) {
-      var level = node.hierarchyLevel || 0;
-      if (!groups.has(level)) groups.set(level, []);
-      groups.get(level).push(node);
+  function degreeStats(nodes, edges) {
+    var count = new Map(nodes.map(function (node) { return [node.id, 0]; }));
+    var weighted = new Map(nodes.map(function (node) { return [node.id, 0]; }));
+    edges.forEach(function (edge) {
+      if (!count.has(edge.source) || !count.has(edge.target)) return;
+      var visual = edgeVisual(edge.attraction);
+      var weight = 0.72 + visual.score * 0.82
+        + (edge.relation_type === "prerequisite" ? 0.16 : 0);
+      count.set(edge.source, count.get(edge.source) + 1);
+      count.set(edge.target, count.get(edge.target) + 1);
+      weighted.set(edge.source, weighted.get(edge.source) + weight);
+      weighted.set(edge.target, weighted.get(edge.target) + weight);
     });
+    return { count: count, weighted: weighted };
+  }
 
-    Array.from(groups.keys()).sort(function (a, b) { return a - b; })
-      .forEach(function (level, levelIndex) {
-        var group = groups.get(level);
-        group.sort(function (a, b) {
-          if (projection && projection !== "structure") {
-            var difference = scores.get(b.id) - scores.get(a.id);
-            if (difference) return difference;
+  function normalizeMap(values, fallback) {
+    var numbers = Array.from(values.values());
+    var min = Math.min.apply(null, [0].concat(numbers));
+    var max = Math.max.apply(null, [0].concat(numbers));
+    var span = max - min;
+    var out = new Map();
+    values.forEach(function (value, id) {
+      out.set(id, span ? (value - min) / span : fallback);
+    });
+    return out;
+  }
+
+  function scoreMap(graph, projection) {
+    if (projection === "structure") return normalizeMap(graph.degreeWeighted, 0.5);
+    var out = new Map();
+    if (projection === "problem_count") {
+      var values = new Map(graph.nodes.map(function (node) {
+        return [node.id, Math.max(0, Number(node.problem_count) || 0)];
+      }));
+      return normalizeMap(values, 0.5);
+    }
+    if (projection === "importance") {
+      graph.nodes.forEach(function (node) {
+        out.set(node.id, node.importance === "core" ? 1 : 0.35);
+      });
+      return out;
+    }
+    if (projection === "state") {
+      graph.nodes.forEach(function (node) {
+        out.set(node.id, node.state === "needs_work" ? 1
+          : node.state === "review" ? 0.70
+            : node.state === "mastered" ? 0.22 : 0.46);
+      });
+      return out;
+    }
+    graph.nodes.forEach(function (node) { out.set(node.id, 0.5); });
+    return out;
+  }
+
+  function weightedNeighbors(graph, id) {
+    var out = [];
+    graph.edges.forEach(function (edge) {
+      if (edge.source !== id && edge.target !== id) return;
+      var other = edge.source === id ? edge.target : edge.source;
+      var visual = edgeVisual(edge.attraction);
+      var relationWeight = edge.relation_type === "prerequisite" ? 1.35
+        : edge.relation_type === "applies_to" ? 1.0
+          : edge.relation_type === "contrasts" ? 0.82 : 0.68;
+      out.push({ id: other, weight: relationWeight * (0.72 + visual.score * 0.62) });
+    });
+    return out;
+  }
+
+  function structureOrdering(graph) {
+    var levels = Array.from(new Set(graph.nodes.map(function (node) {
+      return node.hierarchyLevel || 0;
+    }))).sort(function (a, b) { return a - b; });
+    var groups = new Map(levels.map(function (level) {
+      return [level, graph.nodes.filter(function (node) {
+        return (node.hierarchyLevel || 0) === level;
+      }).sort(function (a, b) {
+        return a.x - b.x || String(a.id).localeCompare(String(b.id));
+      })];
+    }));
+    function rankMap() {
+      var rank = new Map();
+      levels.forEach(function (level) {
+        (groups.get(level) || []).forEach(function (node, index) { rank.set(node.id, index); });
+      });
+      return rank;
+    }
+    for (var pass = 0; pass < 4; pass += 1) {
+      var rank = rankMap();
+      levels.slice(1).forEach(function (level) {
+        groups.get(level).sort(function (a, b) {
+          function bary(node) {
+            var sum = 0, weight = 0;
+            weightedNeighbors(graph, node.id).forEach(function (entry) {
+              var other = graph.nodeById.get(entry.id);
+              if (!other || other.hierarchyLevel >= level || !rank.has(other.id)) return;
+              sum += rank.get(other.id) * entry.weight;
+              weight += entry.weight;
+            });
+            return weight ? sum / weight : rank.get(node.id);
           }
-          return String(a.id).localeCompare(String(b.id));
-        });
-        var centerX = graph.width / 2;
-        group.forEach(function (node, index) {
-          var score = scores.get(node.id) || 0;
-          node.projection = projection || "structure";
-          node.projectionScore = score;
-          node.structureRadius = node.structureRadius || nodeRadius(node.problem_count);
-          node.radius = (!projection || projection === "structure")
-            ? node.structureRadius : metricRadius(score);
-          node.collisionRadius = collisionRadius(node.radius, node.title);
-          node.x = centerX + (index - (group.length - 1) / 2) * 190;
-          node.y = 100 + levelIndex * 190;
-          node.fx = null;
-          node.fy = null;
+          return bary(a) - bary(b) || String(a.id).localeCompare(String(b.id));
         });
       });
+      rank = rankMap();
+      levels.slice(0, -1).reverse().forEach(function (level) {
+        groups.get(level).sort(function (a, b) {
+          function bary(node) {
+            var sum = 0, weight = 0;
+            weightedNeighbors(graph, node.id).forEach(function (entry) {
+              var other = graph.nodeById.get(entry.id);
+              if (!other || other.hierarchyLevel <= level || !rank.has(other.id)) return;
+              sum += rank.get(other.id) * entry.weight;
+              weight += entry.weight;
+            });
+            return weight ? sum / weight : rank.get(node.id);
+          }
+          return bary(a) - bary(b) || String(a.id).localeCompare(String(b.id));
+        });
+      });
+    }
+    return { levels: levels, groups: groups };
+  }
 
+  function compactness01(value) {
+    var g = clamp((Number(value) || 0) / 100, 0, 1);
+    return (1 - Math.exp(-3 * g)) / (1 - Math.exp(-3));
+  }
+
+  function spreadFactor(graph) {
+    return 1.29 - 0.41 * compactness01(graph.compactness);
+  }
+
+  function baseGapForAttraction(attraction) {
+    return 218 - 118 * edgeVisual(attraction).score;
+  }
+
+  function nodeFootprint(node) {
+    return {
+      halfWidth: Math.max(node.radius + 14, labelWidth(node.title) / 2),
+      top: node.radius + 13,
+      bottom: node.radius + 42,
+    };
+  }
+
+  function readabilityFloor(a, b, ux, uy) {
+    var fa = nodeFootprint(a), fb = nodeFootprint(b);
+    var ah = Math.max(fa.top, fa.bottom), bh = Math.max(fb.top, fb.bottom);
+    var ea = Math.abs(ux) * fa.halfWidth + Math.abs(uy) * ah;
+    var eb = Math.abs(ux) * fb.halfWidth + Math.abs(uy) * bh;
+    var degreeBoost = Math.min(34, ((a.degree || 0) + (b.degree || 0)) * 1.6);
+    return ea + eb + 18 + degreeBoost;
+  }
+
+  function desiredEdgeLength(graph, edge) {
+    var a = edge.sourceNode, b = edge.targetNode;
+    if (!a || !b) return 160;
+    var dx = b.x - a.x, dy = b.y - a.y;
+    var distance = Math.max(1, Math.hypot(dx, dy));
+    var ux = dx / distance, uy = dy / distance;
+    var semantic = (a.radius + b.radius) * 0.48
+      + baseGapForAttraction(edge.attraction) * spreadFactor(graph);
+    return Math.max(semantic, readabilityFloor(a, b, ux, uy));
+  }
+
+  function hierarchyDimensions(nodes, levels, width, height) {
+    var counts = new Map();
+    nodes.forEach(function (node) {
+      var level = levels.get(node.id) || 0;
+      counts.set(level, (counts.get(level) || 0) + 1);
+    });
+    var maxCount = Math.max.apply(null, [1].concat(Array.from(counts.values())));
+    var maxLevel = Math.max.apply(null, [0].concat(Array.from(counts.keys())));
+    return {
+      width: Math.max(1200, width || 800, maxCount * 190 + 240),
+      height: Math.max(820, height || 600, (maxLevel + 1) * 180 + 260),
+    };
+  }
+
+  function buildGuides(graph) {
+    var scores = scoreMap(graph, graph.projection);
+    graph.scores = scores;
+    graph.nodes.forEach(function (node) {
+      node.projection = graph.projection;
+      node.projectionScore = scores.get(node.id) || 0;
+      node.radius = metricRadius(node.projectionScore);
+      node.collisionRadius = collisionRadius(node.radius, node.title);
+    });
+
+    var centerX = graph.width / 2;
+    var centerY = graph.height / 2;
+    var spread = spreadFactor(graph);
+    if (graph.projection === "structure") {
+      var ordered = structureOrdering(graph);
+      ordered.levels.forEach(function (level, levelIndex) {
+        var group = ordered.groups.get(level) || [];
+        var widths = group.map(function (node) {
+          return Math.max(labelWidth(node.title), node.radius * 2 + 36);
+        });
+        var gap = 62 + 36 * spread;
+        var total = widths.reduce(function (sum, value) { return sum + value; }, 0)
+          + gap * Math.max(0, group.length - 1);
+        var cursor = centerX - total / 2;
+        group.forEach(function (node, index) {
+          node.guideX = cursor + widths[index] / 2;
+          cursor += widths[index] + gap;
+          node.guideY = 130 + levelIndex * 170 * spread;
+        });
+      });
+      return;
+    }
+
+    if (graph.projection === "state") {
+      var order = ["needs_work", "review", "mastered", null];
+      var present = order.filter(function (state) {
+        return graph.nodes.some(function (node) { return (node.state || null) === state; });
+      });
+      var centers = new Map();
+      var radius = 260 * spread;
+      present.forEach(function (state, index) {
+        var angle = -Math.PI / 2 + index * TAU / Math.max(1, present.length);
+        centers.set(state, {
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+        });
+      });
+      present.forEach(function (state) {
+        var group = graph.nodes.filter(function (node) { return (node.state || null) === state; });
+        var c = centers.get(state);
+        var ring = 56 + Math.sqrt(group.length) * 31 * spread;
+        group.sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
+        group.forEach(function (node, index) {
+          var angle = index * GOLDEN_ANGLE - Math.PI / 2;
+          var factor = index ? 1 : 0;
+          node.guideX = c.x + Math.cos(angle) * ring * factor;
+          node.guideY = c.y + Math.sin(angle) * ring * factor;
+        });
+      });
+      return;
+    }
+
+    graph.nodes.forEach(function (node, index) {
+      var score = scores.get(node.id) || 0;
+      var dx = node.x - centerX, dy = node.y - centerY;
+      var distance = Math.hypot(dx, dy);
+      var ux, uy;
+      if (distance < 24) {
+        var angle = index * GOLDEN_ANGLE;
+        ux = Math.cos(angle); uy = Math.sin(angle);
+      } else {
+        ux = dx / distance; uy = dy / distance;
+      }
+      var targetR = (150 + (1 - score) * 450) * spread;
+      node.guideX = centerX + ux * targetR;
+      node.guideY = centerY + uy * targetR;
+    });
+  }
+
+  function resolveOverlaps(graph, rounds) {
+    var nodes = graph.nodes;
+    for (var round = 0; round < rounds; round += 1) {
+      var moved = false;
+      for (var i = 0; i < nodes.length; i += 1) {
+        for (var j = i + 1; j < nodes.length; j += 1) {
+          var a = nodes[i], b = nodes[j];
+          var fa = nodeFootprint(a), fb = nodeFootprint(b);
+          var ax1 = a.x - fa.halfWidth - 8, ax2 = a.x + fa.halfWidth + 8;
+          var ay1 = a.y - fa.top - 8, ay2 = a.y + fa.bottom + 8;
+          var bx1 = b.x - fb.halfWidth - 8, bx2 = b.x + fb.halfWidth + 8;
+          var by1 = b.y - fb.top - 8, by2 = b.y + fb.bottom + 8;
+          var ox = Math.min(ax2, bx2) - Math.max(ax1, bx1);
+          var oy = Math.min(ay2, by2) - Math.max(ay1, by1);
+          if (ox <= 0 || oy <= 0) continue;
+          moved = true;
+          if (ox <= oy) {
+            var xdir = a.x <= b.x ? -1 : 1;
+            var xshift = (ox + 5) * 0.5;
+            a.x += xdir * xshift; b.x -= xdir * xshift;
+          } else {
+            var ydir = a.y <= b.y ? -1 : 1;
+            var yshift = (oy + 5) * 0.5;
+            a.y += ydir * yshift; b.y -= ydir * yshift;
+          }
+        }
+      }
+      if (!moved) break;
+    }
+  }
+
+  function solve(graph) {
+    buildGuides(graph);
+    var nodes = graph.nodes;
+    var n = nodes.length;
+    if (!n) return graph;
+    var iterations = n <= 40 ? 64 : n <= 100 ? 40 : n <= 240 ? 24 : 14;
+    var damping = 0.79;
+
+    nodes.forEach(function (node) {
+      if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) {
+        node.x = node.guideX; node.y = node.guideY;
+      }
+      node.vx = 0; node.vy = 0;
+    });
+
+    for (var step = 0; step < iterations; step += 1) {
+      var alpha = 1 - step / iterations;
+      graph.edges.forEach(function (edge) {
+        var a = edge.sourceNode, b = edge.targetNode;
+        if (!a || !b) return;
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var distance = Math.max(1, Math.hypot(dx, dy));
+        var ux = dx / distance, uy = dy / distance;
+        var desired = desiredEdgeLength(graph, edge);
+        var error = distance - desired;
+        var dead = 14 + desired * 0.025;
+        if (Math.abs(error) <= dead) return;
+        var hubNorm = Math.min(1, 1.75 / Math.sqrt(Math.max(1, a.degree * b.degree)));
+        var typeWeight = edge.relation_type === "prerequisite" ? 1
+          : edge.relation_type === "applies_to" ? 0.82
+            : edge.relation_type === "contrasts" ? 0.70 : 0.56;
+        var strength = 0.70 + edgeVisual(edge.attraction).score * 0.46;
+        var magnitude = clamp((Math.abs(error) - dead) / Math.max(110, desired), 0, 1.2)
+          * hubNorm * typeWeight * strength * alpha;
+        var force = Math.sign(error) * magnitude;
+        a.vx += force * ux; a.vy += force * uy;
+        b.vx -= force * ux; b.vy -= force * uy;
+      });
+
+      for (var i = 0; i < n; i += 1) {
+        for (var j = i + 1; j < n; j += 1) {
+          var a = nodes[i], b = nodes[j];
+          var dx = b.x - a.x, dy = b.y - a.y;
+          var distance = Math.max(1, Math.hypot(dx, dy));
+          var ux = dx / distance, uy = dy / distance;
+          var floor = readabilityFloor(a, b, ux, uy);
+          var densityBoost = 1 + Math.min(1.7, (a.degree + b.degree) * 0.075);
+          var nearBoost = distance < floor * 1.45 ? 1.8 : 1;
+          var repulsion = Math.min(1.2, 11800 / (distance * distance))
+            * densityBoost * nearBoost * alpha;
+          a.vx -= repulsion * ux; a.vy -= repulsion * uy;
+          b.vx += repulsion * ux; b.vy += repulsion * uy;
+        }
+      }
+
+      nodes.forEach(function (node) {
+        var gx = node.guideX, gy = node.guideY;
+        if (graph.projection === "structure") {
+          node.vx += (gx - node.x) * 0.016 * alpha;
+          node.vy += (gy - node.y) * 0.070 * alpha;
+        } else if (graph.projection === "state") {
+          node.vx += (gx - node.x) * 0.015 * alpha;
+          node.vy += (gy - node.y) * 0.015 * alpha;
+          node.vy += (130 + node.hierarchyLevel * 160 * spreadFactor(graph) - node.y)
+            * 0.0014 * alpha;
+        } else {
+          node.vx += (gx - node.x) * 0.010 * alpha;
+          node.vy += (gy - node.y) * 0.010 * alpha;
+          node.vy += (130 + node.hierarchyLevel * 160 * spreadFactor(graph) - node.y)
+            * 0.0025 * alpha;
+        }
+        node.vx *= damping; node.vy *= damping;
+        var speed = Math.hypot(node.vx, node.vy);
+        if (speed > 7) { node.vx *= 7 / speed; node.vy *= 7 / speed; }
+        node.x += node.vx; node.y += node.vy;
+      });
+
+      if (step % 8 === 7) resolveOverlaps(graph, 2);
+    }
+
+    resolveOverlaps(graph, 14);
+
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    nodes.forEach(function (node) {
+      var fp = nodeFootprint(node);
+      minX = Math.min(minX, node.x - fp.halfWidth - 36);
+      maxX = Math.max(maxX, node.x + fp.halfWidth + 36);
+      minY = Math.min(minY, node.y - fp.top - 36);
+      maxY = Math.max(maxY, node.y + fp.bottom + 36);
+    });
+    var shiftX = minX < 24 ? 24 - minX : 0;
+    var shiftY = minY < 24 ? 24 - minY : 0;
+    if (shiftX || shiftY) {
+      nodes.forEach(function (node) { node.x += shiftX; node.y += shiftY; });
+      maxX += shiftX; maxY += shiftY;
+    }
+    graph.width = Math.max(graph.width, maxX + 40);
+    graph.height = Math.max(graph.height, maxY + 40);
+    return graph;
+  }
+
+  function applyHierarchyProjection(graph, projection, compactness) {
+    if (!graph || !graph.nodes) return graph;
     graph.projection = projection || "structure";
+    if (compactness !== undefined) graph.compactness = clamp(Number(compactness) || 0, 0, 100);
+    solve(graph);
     decorateParallelEdges(graph.edges);
     return graph;
+  }
+
+  function setCompactness(graph, compactness) {
+    if (!graph) return graph;
+    graph.compactness = clamp(Number(compactness) || 0, 0, 100);
+    return applyHierarchyProjection(graph, graph.projection || "structure");
   }
 
   function layoutHierarchy(sourceNodes, sourceEdges, width, height, projection) {
     var levels = hierarchyLevels(sourceNodes, sourceEdges);
     var dimensions = hierarchyDimensions(sourceNodes, levels, width, height);
-    var nodes = sourceNodes.map(function (source) {
-      var radius = nodeRadius(source.problem_count);
+    var nodes = sourceNodes.map(function (source, index) {
+      var angle = index * GOLDEN_ANGLE;
+      var ring = 90 + Math.sqrt(index + 1) * 72;
       return Object.assign({}, source, {
-        radius: radius,
-        structureRadius: radius,
-        collisionRadius: collisionRadius(radius, source.title),
+        radius: nodeRadius(source.problem_count),
         hierarchyLevel: levels.get(source.id) || 0,
-        x: dimensions.width / 2,
-        y: 100,
-        fx: null,
-        fy: null,
+        x: dimensions.width / 2 + Math.cos(angle) * ring,
+        y: 130 + (levels.get(source.id) || 0) * 160 + Math.sin(angle) * 36,
+        vx: 0, vy: 0, fx: null, fy: null,
       });
     });
-    var byId = new Map(nodes.map(function (node) { return [node.id, node]; }));
+    var nodeById = new Map(nodes.map(function (node) { return [node.id, node]; }));
     var edges = sourceEdges.map(function (edge) {
       return Object.assign({}, edge, {
-        sourceNode: byId.get(edge.source),
-        targetNode: byId.get(edge.target),
+        sourceNode: nodeById.get(edge.source),
+        targetNode: nodeById.get(edge.target),
       });
-    }).filter(function (edge) {
-      return edge.sourceNode && edge.targetNode;
+    }).filter(function (edge) { return edge.sourceNode && edge.targetNode; });
+    decorateParallelEdges(edges);
+    var stats = degreeStats(nodes, edges);
+    nodes.forEach(function (node) {
+      node.degree = stats.count.get(node.id) || 0;
+      node.degreeWeighted = stats.weighted.get(node.id) || 0;
     });
     var graph = {
       nodes: nodes,
       edges: edges,
+      nodeById: nodeById,
+      degreeCount: stats.count,
+      degreeWeighted: stats.weighted,
       width: dimensions.width,
       height: dimensions.height,
       hierarchical: true,
-      projection: "structure",
+      projection: projection || "structure",
+      compactness: 30,
     };
     return applyHierarchyProjection(graph, projection || "structure");
   }
@@ -252,11 +581,14 @@
     nodeRadius: nodeRadius,
     metricRadius: metricRadius,
     labelLineCount: labelLineCount,
+    labelWidth: labelWidth,
     collisionRadius: collisionRadius,
     edgeVisual: edgeVisual,
     projectionValue: projectionValue,
     hierarchyLevels: hierarchyLevels,
+    desiredEdgeLength: desiredEdgeLength,
     applyHierarchyProjection: applyHierarchyProjection,
+    setCompactness: setCompactness,
     layoutHierarchy: layoutHierarchy,
   };
 }));
