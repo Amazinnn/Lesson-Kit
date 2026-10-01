@@ -61,6 +61,21 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn(".scope-tray-list {", body)
         self.assertIn("overscroll-behavior: contain;", body)
 
+    def test_edge_layer_follows_the_stage_size(self):
+        """The SVG carries width/height/viewBox from the layout, so the last
+        `.graph-edge-layer` rule must size it to the stage box. A fixed CSS
+        size lets the viewBox rescale the whole edge layer — on 2026-10-01
+        that put every edge off-canvas (nodes rendered, relations invisible)."""
+        import re
+
+        status, body = self.fetch("/static/workbench.css")
+        self.assertEqual(status, 200)
+        blocks = re.findall(r"\.graph-edge-layer\s*\{([^}]*)\}", body)
+        self.assertTrue(blocks, "no .graph-edge-layer rule in the stylesheet")
+        effective = blocks[-1]
+        self.assertIn("width: 100%", effective)
+        self.assertIn("height: 100%", effective)
+
     def test_css_defines_hidden_rule(self):
         # regression: .hidden was missing, breaking the practice visibility choreography
         status, body = self.fetch("/static/workbench.css")
