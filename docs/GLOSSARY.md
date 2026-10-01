@@ -34,6 +34,17 @@ _Avoid_：章节数据库、chapters 表的行、跨库切章、把透镜当练�
 _Avoid_：卡片、笔记条
 出处：CONTEXT.md（迁入）；openspec/specs/review-workbench
 
+### 可见字符 / Visible Characters
+一段文本的字符数，计数前先剔掉行内公式（`$$…$$`、`$…$`）与反引号代码。之所以要剔：`ncmc` 一个段落的总字符里约 44% 是 LaTeX 源码（`\frac{...}` 五个字符只渲染成一个分数），用总字符会把段落长度虚高 1.76 倍，而 `c04` 只虚高 1.09 倍——同一把尺在两门课上含义完全不同；改数汉字更糟，`dmath` 是英文课，51 字符的段落只有 15 个汉字。**剔除只发生在计数这一步，文本一个字都不改。**
+_Avoid_：字符数、字数、汉字数、len()、文本长度上限
+出处：kp-text-typesetting-check design「The measurement」
+
+### 排版检出 / Typesetting Check
+对知识点 `body` 的**只读**排版检查：把正文按空行切成段落，用「可见字符」量每段长度，任一段落在 40–300 之外就报出这个知识点，并注明两侧各几段、最长段与最短段各多少。它跑在两个时机（入池前读 content-bundle 清单、入池后读池），两边共用同一把尺和同一套报告口径。
+**它不是门禁**：只报、不拒、不改文本、不退出非零，也不告诉你该怎么排版——不给目标字数、不推荐小节名、不提示切分位置。**不触发就说明没有可报的问题**；41 字符和 300 字符同样可以。区间 40–300 记在 workbench-content-governance spec 里，不是实现常量。
+_Avoid_：门禁/gate（那是一失败就整批拒绝、零写入）、审计/audit（那个会退出非零）、字数上限、格式校验、自动重排/自动分段
+出处：kp-text-typesetting-check（spec + proposal + design）；ADR 0023
+
 ### 知识关系 / Knowledge Relation
 两个知识点之间经审核的点对点边（如 prerequisite / applies_to / contrasts / variant_of），存于 `knowledge_relations`。图谱的事实层。
 _Avoid_：算法臆造的关系、隐藏关系
