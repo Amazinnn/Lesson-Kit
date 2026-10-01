@@ -67,7 +67,7 @@
 | `solution` | active | 完整解析/解答；与 `source_answer` 分离 |
 | `problem_type` | active | 学科/解题形态：calculation/proof/modeling/...；**不是判断/单选/多选** |
 | `source_kind` | active | 依据材料类别：textbook/quiz/midterm/final/makeup/other |
-| `origin_kind` | active | 题目相对依据材料的形成方式：source/adapted/generated-grounded |
+| `origin_kind` | active | 题目相对依据材料的形成方式：`source_problem` / `adapted_problem` / `generated_grounded` |
 | `exam_year` | active | 可空来源学年/年份标签；筛选使用四位年份前缀 |
 | `source_evidence` | active | 支撑该题来源与内容真实性的证据文本 |
 | `source_answer` | active | 来源材料自带的短答案/答案依据；不替代完整 `solution` |
