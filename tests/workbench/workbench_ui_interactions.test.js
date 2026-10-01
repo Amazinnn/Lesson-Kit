@@ -1520,6 +1520,78 @@ test("a settled graph still repaints when the user selects or hovers", async () 
   assert.equal(ctx.rafCalls, afterSelect, "the loop parks again once the frame is painted");
 });
 
+test("the edge budget keeps each point's strongest relation and drops the rest", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const nodes = [];
+  for (let i = 0; i < 40; i += 1) nodes.push({ id: "kp-" + i, title: "知识点 " + i, problem_count: 1 });
+  // every point gets one strong prerequisite link in a chain plus a pile of weak
+  // author relations, so the 0.5x budget must trim while never isolating a point
+  const edges = [];
+  for (let i = 0; i < 39; i += 1) {
+    edges.push({ id: "chain-" + i, source: "kp-" + i, target: "kp-" + (i + 1),
+      relation_type: "prerequisite", direction: "directed", strength: "high" });
+  }
+  for (let i = 0; i < 40; i += 1) {
+    edges.push({ id: "weak-" + i, source: "kp-" + i, target: "kp-" + ((i + 7) % 40),
+      relation_type: "related", direction: "symmetric", strength: "low" });
+  }
+  const budget = new FakeElement("graph-edge-budget");
+  runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas, "graph-edge-budget": budget }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({ nodes, edges }),
+  });
+  await flush();
+  await settleGraph(200);
+  const stage = canvas.children[0];
+  const layer = stage.children.find((child) => child.id === "graph-edges") || stage;
+  const paths = layer.children.filter((child) => (child.attributes.class || "").includes("graph-edge"));
+  const shown = paths.filter((child) => child.style.display !== "none");
+  const ids = new Set(shown.map((child) => child.dataset.edgeId));
+  assert.ok(shown.length <= 40, "the 0.5x budget caps a 40-point course at ~20-40 edges, got " + shown.length);
+  assert.ok(shown.length >= 20, "and it does not over-trim, got " + shown.length);
+  // The floor is connectivity, not identity: a point may lose one specific edge
+  // as long as it still shows some relation, so assert incident-ness.
+  for (let i = 0; i < 40; i += 1) {
+    const kept = paths.some((child) => {
+      if (child.style.display === "none") return false;
+      const edge = edges.find((candidate) => candidate.id === child.dataset.edgeId);
+      return edge && (edge.source === "kp-" + i || edge.target === "kp-" + i);
+    });
+    assert.ok(kept, "every point keeps at least one relation (" + i + ")");
+  }
+  assert.ok(ids.has("chain-0"), "a strong prerequisite link outranks a weak author link");
+  assert.equal(ids.size, [...ids].filter((id) => id.startsWith("chain-")).length,
+    "no weak author link survives while stronger links are still being dropped");
+  assert.ok((budget.textContent || "").includes("/"), "the readout reports shown / total: " + budget.textContent);
+});
+
+test("panning and zooming repaint the viewport, not the whole graph", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [1, 2, 3].map((id) => ({ id: "kp-" + id, title: "知识点 " + id, problem_count: 1 })),
+      edges: [[1, 2], [2, 3]].map(([source, target], index) => ({
+        id: "r-" + index, source: "kp-" + source, target: "kp-" + target,
+        relation_type: "prerequisite", direction: "directed", strength: "medium",
+      })),
+    }),
+  });
+  await flush();
+  await settleGraph(600);
+  const stage = canvas.children[0];
+  assert.equal(stage.dataset.lastPaint, "full", "settling paints the full frame");
+  canvas.trigger("wheel", { clientX: 400, clientY: 300, deltaY: -100, preventDefault() {} });
+  assert.equal(stage.dataset.lastPaint, "viewport",
+    "a wheel zoom only rescales strokes and labels, never rebuilds paths");
+  const wrap = stage.children.find((child) => child.dataset.kpId === "kp-2");
+  wrap.children.find((child) => child.className === "node").click();
+  await settleGraph(60);
+  assert.equal(stage.dataset.lastPaint, "full", "a selection change is a real repaint");
+});
+
 test("legend items toggle relation types and start with derived links hidden", async () => {
   const canvas = new FakeElement("graph-canvas");
   const legend = new FakeElement("graph-legend");

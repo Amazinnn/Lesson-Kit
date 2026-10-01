@@ -408,8 +408,10 @@
 
   function visibleEdges(state) {
     var hiddenTypes = state.graph.hiddenEdgeTypes;
+    var hiddenIds = state.graph.hiddenEdgeIds;
     return state.edges.filter(function (edge) {
       if (hiddenTypes && hiddenTypes[edge.type]) return false;
+      if (hiddenIds && hiddenIds.has(edge.id)) return false;
       var a = state.byId.get(edge.s);
       var b = state.byId.get(edge.t);
       return a && b && a.visible && b.visible;
@@ -1000,6 +1002,7 @@
         autoFitAfterSettle: true,
         userMovedViewport: false,
         hiddenEdgeTypes: options.hiddenEdgeTypes || {},
+        hiddenEdgeIds: options.hiddenEdgeIds || new Set(),
       },
       scoreFor: function (node, view) {
         view = view || state.graph.view;
@@ -1054,10 +1057,13 @@
       updateProjection: function () {
         state.nodes.forEach(function (n) { n.targetSize = sizeFor(state.scoreFor(n)); });
       },
-      setEdgeTypes: function (hidden) {
-        // Relation-type visibility is a physics-level fact: a hidden type is
-        // not a constraint either, so the layout re-solves without it.
-        state.graph.hiddenEdgeTypes = hidden || {};
+      setEdgeVisibility: function (next) {
+        // Relation visibility is a physics-level fact: a hidden relation is not
+        // a constraint either, so the layout re-solves without it. Types cover
+        // the legend toggles, ids cover the display budget.
+        next = next || {};
+        state.graph.hiddenEdgeTypes = next.types || {};
+        state.graph.hiddenEdgeIds = next.ids || new Set();
         reheat(state, .85, true);
       },
       setView: function (view) {

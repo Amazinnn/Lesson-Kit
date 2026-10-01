@@ -519,6 +519,7 @@
     var graphZoomOut = document.getElementById("graph-zoom-out");
     var graphZoomReset = document.getElementById("graph-reset");
     var graphDetail = document.getElementById("graph-detail-panel");
+    var graphEdgeBudgetEl = null;
     var graphDetailTab = document.getElementById("graph-detail-tab");
     var teacherTab = document.getElementById("ai-teacher-tab");
     var teacherPanel = document.getElementById("ai-teacher-panel");
@@ -575,12 +576,86 @@
     // also has explicit relations starts with them hidden; the legend item
     // brings them back.
     var graphHiddenEdgeTypes = {};
+    /* Relation display budget. A whole-course lens can carry several hundred
+     * relations (习概: 192 points, 728 relations), and drawing them all is a
+     * hairball nobody can read. Each knowledge point keeps its single strongest
+     * relation, then the remaining slots go by weight, so low-weight links drop
+     * out of both the picture and the layout instead of papering over it. */
+    var GRAPH_EDGE_BUDGET_RATIO = 0.5;
+
+    function graphEdgeWeight(edge) {
+      var typeWeight = edge.type === "prereq" ? 1
+        : edge.type === "apply" ? .95
+          : edge.type === "contrast" ? .85
+            : edge.type === "legacy" ? .25
+              : .6;                      // authored "related"
+      var strengthWeight = edge.strength >= 1.875 ? 1 : edge.strength >= 1.25 ? .8 : .6;
+      // A co-occurrence link that gathers many shared problems is closer to a
+      // real relation than one that shares a single problem.
+      return typeWeight * strengthWeight + Math.min(.25, edge.sharedProblems / 200);
+    }
+
+    function graphSelectDisplayEdges(edges, nodeCount) {
+      var budget = Math.max(24, Math.round(nodeCount * GRAPH_EDGE_BUDGET_RATIO));
+      var ranked = edges.map(function (edge) { return { edge: edge, score: graphEdgeWeight(edge) }; })
+        .sort(function (a, b) {
+          return b.score - a.score || String(a.edge.id).localeCompare(String(b.edge.id));
+        });
+      var kept = new Set();
+      var bestPerNode = new Map();
+      ranked.forEach(function (item) {
+        [item.edge.s, item.edge.t].forEach(function (id) {
+          var best = bestPerNode.get(id);
+          if (!best || best.score < item.score) bestPerNode.set(id, item);
+        });
+      });
+      bestPerNode.forEach(function (item) { kept.add(item); });
+      for (var i = 0; i < ranked.length && kept.size < budget; i += 1) kept.add(ranked[i]);
+      var hiddenIds = new Set();
+      ranked.forEach(function (item) {
+        if (!kept.has(item)) hiddenIds.add(item.edge.id);
+      });
+      return { hiddenIds: hiddenIds, budget: budget, shown: kept.size };
+    }
+
+    var graphEdgeTotals = { total: 0, shown: 0 };
+
+    function graphEdgeBudgetText() {
+      if (!graphEdgeTotals.total) return "—";
+      return graphEdgeTotals.shown + " / " + graphEdgeTotals.total;
+    }
+
+    function graphApplyEdgeVisibility() {
+      if (!sim) return;
+      var enabled = sim.edges.filter(function (edge) {
+        return !graphHiddenEdgeTypes[edge.type];
+      });
+      var selection = graphSelectDisplayEdges(enabled, sim.nodes.length);
+      sim.setEdgeVisibility({ types: graphHiddenEdgeTypes, ids: selection.hiddenIds });
+      graphEdgeTotals = { total: sim.edges.length, shown: selection.shown };
+      if (graphEdgeBudgetEl) {
+        graphEdgeBudgetEl.textContent = graphEdgeBudgetText();
+        graphEdgeBudgetEl.title = "整门课按权重取舍关系：每个知识点至少保留最强的一条，隐含共现排在最末。"
+          + "当前显示 " + selection.shown + " 条，共 " + sim.edges.length + " 条（预算 " + selection.budget + "，隐式类型不计入）。";
+      }
+      var trimmed = sim.edges.length - selection.shown;
+      if (trimmed > 0 && !graphEdgeBudget.told) {
+        graphEdgeBudget.told = true;
+        graphToastShow("关系较多：按权重显示 " + selection.shown + " / " + sim.edges.length + " 条，低权重关系不参与显示与布局");
+      }
+    }
+
+    var graphEdgeBudget = { told: false };
+    var graphEdgeBudgetEl = null;
+
     var graphNodeData = [];   // physics nodes
     var graphEdgeData = [];   // physics edges
     var graphEdgeEls = [];    // {edge, path}
     var graphEls = new Map(); // id -> {wrap, node, label, meta, value, satellite}
     var sim = null;
     var graphView = { scale: .7, panX: 52, panY: -18, userMoved: false };
+    var graphPathScaled = 1;
+    var graphLastPaintedScale = 0;
     var graphRenderDirty = true;
     var graphFrameHandle = null;
 
@@ -652,11 +727,13 @@
       });
       graphEdgeData = (model.edges || []).map(function (edge) {
         return {
+          id: edge.id,
           s: edge.source,
           t: edge.target,
           type: mapEdgeType(edge),
           strength: mapStrength(edge.strength),
           direction: edge.direction,
+          sharedProblems: Number(edge.shared_problem_count) || 0,
         };
       });
       var ids = new Set(graphNodeData.map(function (node) { return node.id; }));
@@ -676,6 +753,9 @@
         gravity: graphGravity ? Number(graphGravity.value) : 30,
         hiddenEdgeTypes: graphHiddenEdgeTypes,
       });
+      graphEdgeBudget = { told: false };
+      graphEdgeBudgetEl = graphEdgeBudgetEl || document.getElementById("graph-edge-budget");
+      graphApplyEdgeVisibility();
       graphSyncLegend();
       graphNodeData = sim.nodes;
       graphEdgeData = sim.edges;
@@ -705,6 +785,7 @@
       graphEdgeEls = sim.edges.map(function (edge) {
         var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("class", "graph-edge " + edge.type);
+        if (edge.id !== undefined && path.dataset) path.dataset.edgeId = String(edge.id);
         if (edge.type === "prereq" && edge.direction !== "symmetric") {
           path.setAttribute("marker-end", "url(#graph-arrow-blue)");
         }
@@ -874,7 +955,34 @@
     function graphApplyView() {
       if (!sim) return;
       graphStage.style.transform = "translate(" + graphView.panX + "px," + graphView.panY + "px) scale(" + graphView.scale + ")";
-      graphMarkDirty();
+      // Panning moves the existing picture and nothing else, and zooming only
+      // changes stroke compensation and label thresholds. Rebuilding every edge
+      // path on each wheel tick is what made a whole-course graph feel frozen,
+      // so the viewport takes the light pass and geometry waits for the solver
+      // or an interaction that actually moves nodes.
+      if (graphView.scale !== graphLastPaintedScale) graphPaintViewport();
+    }
+
+    function graphPaintViewport() {
+      if (!sim) return;
+      graphLastPaintedScale = graphView.scale;
+      graphPathScaled = 1 / Math.max(.2, graphView.scale || 1);
+      graphEdgeEls.forEach(function (item) {
+        if (item.path.style && item.path.style.display === "none") return;
+        var style = sim.edgeStyle(item.edge);
+        item.path.style.strokeWidth = (style.width * graphPathScaled) + "px";
+        if (item.edge.type === "contrast") {
+          item.path.style.strokeDasharray = (6 * graphPathScaled) + " " + (5 * graphPathScaled);
+        } else if (item.edge.type === "legacy") {
+          item.path.style.strokeDasharray = (2 * graphPathScaled) + " " + (6 * graphPathScaled);
+        }
+      });
+      graphPaintNodes();
+      graphNotePaint("viewport");
+    }
+
+    function graphNotePaint(kind) {
+      if (graphStage.dataset) graphStage.dataset.lastPaint = kind;
     }
 
     function graphSelect(id, centerIt) {
@@ -978,7 +1086,7 @@
       }
     }
 
-    function graphRenderFrame() {
+    function graphPaintNodes() {
       if (!sim) return;
       var focus = sim.graph.selected ? sim.neighbors(sim.graph.selected) : null;
       sim.nodes.forEach(function (node) {
@@ -998,18 +1106,26 @@
         elements.label.style.opacity = (labelVisible ? node.opacity : 0).toFixed(3);
         elements.meta.style.opacity = ((graphView.scale > .84 || node.id === sim.graph.selected ? .9 : 0) * node.opacity).toFixed(3);
       });
+    }
+
+    function graphRenderFrame() {
+      if (!sim) return;
+      graphPaintNodes();
       var activeEdges = sim.visibleEdges();
+      var visibleSet = new Set(activeEdges);
       sim.computePortSlots(activeEdges);
       // Vector-effect cannot rescue strokes from an ancestor CSS transform, so
       // the render keeps line weight and dash rhythm constant on screen by
       // pre-dividing them by the zoom. Without this a fit view of a wide graph
       // draws 0.4px lines and the relations simply vanish.
-      var inverseScale = 1 / Math.max(.2, graphView.scale || 1);
+      graphPathScaled = 1 / Math.max(.2, graphView.scale || 1);
+      graphLastPaintedScale = graphView.scale;
       graphEdgeEls.forEach(function (item) {
         var edge = item.edge;
-        if (sim.graph.hiddenEdgeTypes && sim.graph.hiddenEdgeTypes[edge.type]) {
-          // A hidden relation type is no longer a layout constraint, so it must
-          // not leave a stale path painted on the canvas either.
+        if (!visibleSet.has(edge)) {
+          // A relation hidden by type or by the weight budget is not a layout
+          // constraint either, so it must not leave a stale path painted on the
+          // canvas; it comes back the moment the legend or the budget allows.
           item.path.style.display = "none";
           return;
         }
@@ -1025,15 +1141,16 @@
         var opacity = Math.min(a.opacity, b.opacity) * edgeFocus * style.baseOpacity;
         item.path.setAttribute("d", sim.edgePath(edge));
         item.path.style.opacity = opacity.toFixed(3);
-        item.path.style.strokeWidth = (style.width * inverseScale) + "px";
+        item.path.style.strokeWidth = (style.width * graphPathScaled) + "px";
         if (edge.type === "contrast") {
-          item.path.style.strokeDasharray = (6 * inverseScale) + " " + (5 * inverseScale);
+          item.path.style.strokeDasharray = (6 * graphPathScaled) + " " + (5 * graphPathScaled);
         } else if (edge.type === "legacy") {
-          item.path.style.strokeDasharray = (2 * inverseScale) + " " + (6 * inverseScale);
+          item.path.style.strokeDasharray = (2 * graphPathScaled) + " " + (6 * graphPathScaled);
         } else {
           item.path.style.strokeDasharray = "";
         }
       });
+      graphNotePaint("full");
     }
 
     function graphFrame() {
@@ -1390,7 +1507,7 @@
         if (graphHiddenEdgeTypes[type]) delete graphHiddenEdgeTypes[type];
         else graphHiddenEdgeTypes[type] = true;
         graphSyncLegend();
-        sim.setEdgeTypes(graphHiddenEdgeTypes);
+        graphApplyEdgeVisibility();
         var labels = { prereq: "先修", related: "相关", apply: "应用", contrast: "对比", legacy: "隐含关联" };
         graphToastShow((graphHiddenEdgeTypes[type] ? "已隐藏" : "已显示") + (labels[type] || type));
         graphView.userMoved = false;

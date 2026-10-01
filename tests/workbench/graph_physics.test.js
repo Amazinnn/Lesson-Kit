@@ -173,20 +173,30 @@ test("wide levels wrap into stacked rows instead of one huge ribbon", () => {
   });
 });
 
-test("hidden relation types stop constraining the layout", () => {
+test("hidden relations stop constraining the layout, by type or by id", () => {
   const nodes = [node("a", "甲"), node("b", "乙"), node("c", "丙")];
-  const edges = [edge("a", "b", "prereq"), edge("b", "c", "legacy")];
+  const edges = [
+    Object.assign(edge("a", "b", "prereq"), { id: "e1" }),
+    Object.assign(edge("b", "c", "legacy"), { id: "e2" }),
+  ];
   const sim = graph.create(nodes, edges, { stageWidth: 1800, stageHeight: 1550 });
   assert.equal(sim.visibleEdges().length, 2, "everything is visible by default");
-  sim.setEdgeTypes({ legacy: true });
+  sim.setEdgeVisibility({ types: { legacy: true } });
   assert.equal(sim.visibleEdges().length, 1, "a hidden type is not a constraint");
   assert.ok(sim.graph.alpha > 0, "toggling relation visibility re-solves the layout");
-  sim.setEdgeTypes({});
+  sim.setEdgeVisibility({});
   assert.equal(sim.visibleEdges().length, 2, "the type comes back");
+  sim.setEdgeVisibility({ ids: new Set(["e1"]) });
+  assert.equal(sim.visibleEdges().length, 1, "an id-pruned relation drops out of the layout too");
+  assert.equal(sim.visibleEdges()[0].id, "e2");
+  sim.setEdgeVisibility({ types: { legacy: true }, ids: new Set(["e1"]) });
+  assert.equal(sim.visibleEdges().length, 0, "type and id filters combine");
   const preHidden = graph.create(nodes, edges, {
-    stageWidth: 1800, stageHeight: 1550, hiddenEdgeTypes: { legacy: true },
+    stageWidth: 1800, stageHeight: 1550,
+    hiddenEdgeTypes: { legacy: true },
+    hiddenEdgeIds: new Set(["e1"]),
   });
-  assert.equal(preHidden.visibleEdges().length, 1, "create() honours hiddenEdgeTypes");
+  assert.equal(preHidden.visibleEdges().length, 0, "create() honours both filters");
 });
 
 test("an unwrapped graph keeps the blueprint's single-band stage", () => {

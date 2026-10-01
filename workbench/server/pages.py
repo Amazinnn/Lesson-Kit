@@ -461,6 +461,8 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<em id='graph-solver-text'>已收敛</em></span></div>"
         "<div class='solver-line'><span>可读性保护</span>"
         "<span id='graph-readability-state'>硬下限 · 1.00×</span></div>"
+        "<div class='solver-line'><span>关系显示</span>"
+        "<span id='graph-edge-budget'>—</span></div>"
         "</div></div>"
         "<canvas class='graph-tide' id='graph-tide' aria-hidden='true'></canvas>"
         "<div class='graph-stage' id='graph-stage'><svg class='graph-edges' id='graph-edges'></svg></div>"
