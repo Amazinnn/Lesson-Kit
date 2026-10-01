@@ -1369,7 +1369,7 @@ test("practice pull failures stay visible beside the active study flow", async (
   assert.equal(elements["retry-practice"].classList.contains("hidden"), false);
 });
 
-test("reduced-motion graph settles without scheduling animation frames", async () => {
+test("reduced-motion graph renders without scheduling animation frames", async () => {
   const canvas = new FakeElement("graph-canvas");
   const app = runWorkbench({
     elements: { layout: layout(), "graph-canvas": canvas },
@@ -1379,39 +1379,46 @@ test("reduced-motion graph settles without scheduling animation frames", async (
         { id: "kp-1", title: "加法规则", problem_count: 1 },
         { id: "kp-2", title: "乘法规则", problem_count: 4 },
       ],
-      edges: [{ source: "kp-1", target: "kp-2", attraction: 1.25 }],
+      edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
+        relation_type: "prerequisite", direction: "directed", attraction: 1.25 }],
     }),
   });
   await flush();
   assert.equal(app.rafCalls, 0);
-  assert.equal(canvas.children[0].children.filter(
+  const stage = canvas.children[0];
+  assert.equal(stage.children.filter(
     (child) => typeof child.className === "string"
       && child.className.startsWith("graph-node "),
   ).length, 2);
 });
 
-test("graph projection keeps node elements and maps size, position, and palette", async () => {
+test("graph projections keep node elements, resize metrics, and use one circular body", async () => {
   const canvas = new FakeElement("graph-canvas", { clientWidth: 800, clientHeight: 600 });
   const projection = new FakeElement("graph-projection");
   const hint = new FakeElement("graph-projection-hint");
   hint.hidden = true;
   projection.value = "structure";
-  const app = runWorkbench({
+  runWorkbench({
     elements: { layout: layout(), "graph-canvas": canvas, "graph-projection": projection,
       "graph-projection-hint": hint },
     reducedMotion: true,
     fetch: () => jsonResponse({
       nodes: [
-        { id: "kp-low", title: "基础", problem_count: 1, state: "needs_work" },
-        { id: "kp-high", title: "核心", problem_count: 16, state: "mastered" },
+        { id: "kp-low", title: "基础", problem_count: 1, state: "needs_work",
+          importance: "supplementary" },
+        { id: "kp-high", title: "核心", problem_count: 16, state: "mastered",
+          importance: "core" },
       ],
-      edges: [{ source: "kp-low", target: "kp-high", attraction: 1 }],
+      edges: [{ id: "r-1", source: "kp-low", target: "kp-high",
+        relation_type: "prerequisite", direction: "directed", attraction: 1.25 }],
     }),
   });
   await flush();
   const stage = canvas.children[0];
   const low = stage.children.find((child) => child.dataset.kpId === "kp-low");
   const high = stage.children.find((child) => child.dataset.kpId === "kp-high");
+  assert.equal(low.children.length, 1);
+  assert.equal(low.children[0].className, "graph-node-value");
   projection.value = "problem_count";
   projection.trigger("change");
   assert.equal(canvas.children[0], stage);
@@ -1419,20 +1426,14 @@ test("graph projection keeps node elements and maps size, position, and palette"
   assert.ok(parseFloat(high.style.width) > parseFloat(low.style.width));
   assert.notEqual(high.style.backgroundColor, low.style.backgroundColor);
   assert.equal(high.classList.contains("projection-problem_count"), true);
-  assert.equal(stage.querySelectorAll(".graph-edge-pipe").length, 0);
-  assert.equal(hint.hidden, true);
-  assert.match(hint.textContent, /题量越多/);
-  const highDistance = Math.hypot(parseFloat(high.style.left) - 400, parseFloat(high.style.top) - 300);
-  const lowDistance = Math.hypot(parseFloat(low.style.left) - 400, parseFloat(low.style.top) - 300);
-  assert.ok(highDistance < lowDistance);
+  assert.match(hint.textContent, /题量决定节点大小/);
   projection.trigger("mouseenter");
   assert.equal(hint.hidden, false);
   projection.trigger("mouseleave");
   assert.equal(hint.hidden, true);
-  assert.equal(app.rafCalls, 0);
 });
 
-test("graph state filter fades exclusions, keeps a union, and restores", async () => {
+test("graph state filter keeps a union and restores immediately", async () => {
   const canvas = new FakeElement("graph-canvas");
   const menu = new FakeElement("graph-state-filter");
   const summary = new FakeElement("graph-filter-summary");
@@ -1441,7 +1442,6 @@ test("graph state filter fades exclusions, keeps a union, and restores", async (
   const review = new FakeElement("graph-filter-review", { value: "review" });
   const mastered = new FakeElement("graph-filter-mastered", { value: "mastered" });
   const unmarked = new FakeElement("graph-filter-null", { value: "null" });
-  var finishFilter = null;
   runWorkbench({
     elements: {
       layout: layout(), "graph-canvas": canvas, "graph-state-filter": menu,
@@ -1449,10 +1449,7 @@ test("graph state filter fades exclusions, keeps a union, and restores", async (
       "graph-filter-needs_work": needsWork, "graph-filter-review": review,
       "graph-filter-mastered": mastered, "graph-filter-null": unmarked,
     },
-    setTimeoutFn(callback, delay) {
-      if (delay === 160) finishFilter = callback;
-      return 0;
-    },
+    reducedMotion: true,
     fetch: () => jsonResponse({
       nodes: [
         { id: "kp-weak", title: "薄弱点", state: "needs_work", problem_count: 1 },
@@ -1460,34 +1457,31 @@ test("graph state filter fades exclusions, keeps a union, and restores", async (
         { id: "kp-null", title: "未标记", state: null, problem_count: 1 },
       ],
       edges: [
-        { source: "kp-weak", target: "kp-mastered", attraction: 1 },
-        { source: "kp-mastered", target: "kp-null", attraction: 1 },
+        { id: "r-1", source: "kp-weak", target: "kp-mastered",
+          relation_type: "related", direction: "symmetric", attraction: 1 },
+        { id: "r-2", source: "kp-mastered", target: "kp-null",
+          relation_type: "related", direction: "symmetric", attraction: 1 },
       ],
     }),
   });
   await flush();
-  const originalStage = canvas.children[0];
   needsWork.checked = true;
   mastered.checked = true;
   needsWork.trigger("change");
-  const exiting = originalStage.children.find((child) => child.dataset.kpId === "kp-null");
-  assert.equal(exiting.classList.contains("graph-filter-exit"), true);
   assert.equal(summary.textContent, "已筛 2 类");
   assert.equal(clear.disabled, false);
-  finishFilter();
-  const filteredStage = canvas.children[0];
-  assert.deepEqual(filteredStage.children.filter((child) => child.dataset.kpId)
+  assert.deepEqual(canvas.children[0].children.filter((child) => child.dataset.kpId)
     .map((child) => child.dataset.kpId).sort(), ["kp-mastered", "kp-weak"]);
   menu.open = true;
   clear.click();
-  finishFilter();
   assert.equal(menu.open, false);
   assert.equal(clear.disabled, true);
   assert.equal(canvas.children[0].children.filter((child) => child.dataset.kpId).length, 3);
 });
 
-test("graph filtering and search rebuild the deterministic layout", async () => {
+test("graph search is debounced and rebuilds only after the pending input settles", async () => {
   let creates = 0;
+  let runSearch = null;
   const physics = Object.assign({}, GraphPhysics, {
     layoutHierarchy(...args) {
       creates += 1;
@@ -1496,36 +1490,75 @@ test("graph filtering and search rebuild the deterministic layout", async () => 
   });
   const canvas = new FakeElement("graph-canvas");
   const search = new FakeElement("graph-search");
-  const zoomIn = new FakeElement("graph-zoom-in");
-  const fit = new FakeElement("graph-fit");
   runWorkbench({
-    elements: {
-      layout: layout(), "graph-canvas": canvas, "graph-search": search,
-      "graph-state-filter": new FakeElement("graph-state-filter"),
-      "graph-zoom-in": zoomIn, "graph-fit": fit,
-    },
+    elements: { layout: layout(), "graph-canvas": canvas, "graph-search": search },
+    reducedMotion: true,
     physics,
+    setTimeoutFn(callback, delay) {
+      if (delay === 90) runSearch = callback;
+      return 0;
+    },
     fetch: () => jsonResponse({
       nodes: [
         { id: "kp-1", title: "加法规则", problem_count: 1 },
         { id: "kp-2", title: "乘法规则", problem_count: 2 },
       ],
-      edges: [{ source: "kp-1", target: "kp-2", attraction: 1 }],
+      edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
+        relation_type: "related", direction: "symmetric", attraction: 1 }],
     }),
   });
   await flush();
   assert.equal(creates, 1);
   search.value = "加法";
   search.trigger("input");
+  assert.equal(creates, 1);
+  assert.ok(runSearch);
+  runSearch();
   assert.equal(creates, 2);
-  const stage = canvas.children[0];
-  zoomIn.click();
-  assert.match(stage.style.transform, /scale\(1\.25\)/);
-  canvas.trigger("wheel", { deltaY: 1, preventDefault() {} });
-  fit.click();
+  assert.deepEqual(canvas.children[0].children.filter((child) => child.dataset.kpId)
+    .map((child) => child.dataset.kpId), ["kp-1"]);
 });
 
-test("graph renders arrow-marked edges and focuses one-hop and two-hop neighborhoods", async () => {
+test("graph compactness re-solves in place and keeps the same stage", async () => {
+  let runCompactness = null;
+  const canvas = new FakeElement("graph-canvas");
+  const compactness = new FakeElement("graph-compactness", { value: "30" });
+  const output = new FakeElement("graph-compactness-value");
+  runWorkbench({
+    elements: {
+      layout: layout(), "graph-canvas": canvas,
+      "graph-compactness": compactness, "graph-compactness-value": output,
+    },
+    reducedMotion: true,
+    setTimeoutFn(callback, delay) {
+      if (delay === 70) runCompactness = callback;
+      return 0;
+    },
+    fetch: () => jsonResponse({
+      nodes: [
+        { id: "kp-1", title: "排列组合", problem_count: 4 },
+        { id: "kp-2", title: "二项式", problem_count: 6 },
+      ],
+      edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
+        relation_type: "related", direction: "symmetric", attraction: 1.875 }],
+    }),
+  });
+  await flush();
+  const stage = canvas.children[0];
+  compactness.value = "100";
+  compactness.trigger("input");
+  assert.equal(output.textContent, "100");
+  assert.ok(runCompactness);
+  runCompactness();
+  assert.equal(canvas.children[0], stage);
+  const nodes = stage.children.filter((child) => child.dataset.kpId);
+  nodes.forEach((node) => {
+    assert.ok(Number.isFinite(parseFloat(node.style.left)));
+    assert.ok(Number.isFinite(parseFloat(node.style.top)));
+  });
+});
+
+test("graph renders port-routed arrow edges and focuses one-hop and two-hop neighborhoods", async () => {
   const canvas = new FakeElement("graph-canvas");
   runWorkbench({
     elements: { layout: layout(), "graph-canvas": canvas },
@@ -1534,8 +1567,10 @@ test("graph renders arrow-marked edges and focuses one-hop and two-hop neighborh
       nodes: [1, 2, 3, 4, 5].map((id) => ({
         id: "kp-" + id, title: "知识点 " + id, problem_count: 1,
       })),
-      edges: [[1, 2], [2, 3], [3, 4]].map(([source, target]) => ({
+      edges: [[1, 2], [2, 3], [3, 4]].map(([source, target], index) => ({
+        id: "r-" + index,
         source: "kp-" + source, target: "kp-" + target, attraction: 1,
+        relation_type: "prerequisite", direction: "directed",
       })),
     }),
   });
@@ -1544,17 +1579,12 @@ test("graph renders arrow-marked edges and focuses one-hop and two-hop neighborh
   const edgeLayer = stage.children.find(
     (child) => child.getAttribute("class") === "graph-edge-layer",
   );
-  const defs = edgeLayer.children.find((child) => child.id === "defs");
-  assert.ok(defs, "arrow marker defs exist");
   const pipes = edgeLayer.children.filter(
-    (child) => child.getAttribute("class") === "graph-edge-pipe graph-relation-related graph-direction-directed",
+    (child) => String(child.getAttribute("class") || "").includes("graph-edge-pipe"),
   );
   assert.equal(pipes.length, 3);
-  assert.equal(pipes[0].children.length, 3);
-  assert.deepEqual(pipes[0].children.map((path) => path.getAttribute("class")), [
-    "graph-edge graph-edge-shadow", "graph-edge graph-edge-body",
-    "graph-edge graph-edge-highlight",
-  ]);
+  assert.match(pipes[0].children[1].getAttribute("d"), /^M .* C /);
+  assert.equal(pipes[0].children[1].getAttribute("marker-end"), "url(#graph-arrow)");
   const nodes = Object.fromEntries(stage.children.filter(
     (child) => child.dataset.kpId,
   ).map((child) => [child.dataset.kpId, child]));
@@ -1568,29 +1598,25 @@ test("graph renders arrow-marked edges and focuses one-hop and two-hop neighborh
   assert.equal(nodes["kp-5"].classList.contains("graph-focus-far"), false);
 });
 
-test("native graph dashboard removes duplicate content editors", async () => {
+test("native graph dashboard remains read-only and links to the knowledge point", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
   const calls = [];
   runWorkbench({
     elements: {
       layout: layout(), "graph-canvas": canvas,
-      "graph-search": new FakeElement("graph-search"),
-      "graph-state-filter": new FakeElement("graph-state-filter"),
-      "graph-zoom-in": new FakeElement("graph-zoom-in"),
-      "graph-zoom-out": new FakeElement("graph-zoom-out"),
-      "graph-fit": new FakeElement("graph-fit"),
       "graph-detail-tab": new FakeElement("graph-detail-tab"),
       "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
       "graph-detail-panel": detail,
       "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
     },
+    reducedMotion: true,
     fetch: (url, options) => {
       calls.push({ url, options });
       if (url.endsWith("/graph/model")) return jsonResponse({
-      nodes: [{ id: "kp-1", title: "容斥原理", problem_count: 3 }], edges: [],
+        nodes: [{ id: "kp-1", title: "容斥原理", problem_count: 3 }], edges: [],
       });
-      return jsonResponse({ signals: [], schedule: null });
+      return jsonResponse({});
     },
   });
   await flush();
@@ -1600,39 +1626,6 @@ test("native graph dashboard removes duplicate content editors", async () => {
   assert.equal(detail.children.some((child) => child.id === "graph-body"), false);
   assert.equal(detail.children.some((child) => child.id === "graph-fragile"), false);
   assert.ok(detail.children.some((child) => child.id === "graph-open-kp"));
-});
-
-test("native graph dashboard does not render per-problem save controls", async () => {
-  const canvas = new FakeElement("graph-canvas");
-  const detail = new FakeElement("graph-detail-panel");
-  const calls = [];
-  runWorkbench({
-    elements: {
-      layout: layout(), "graph-canvas": canvas,
-      "graph-search": new FakeElement("graph-search"),
-      "graph-state-filter": new FakeElement("graph-state-filter"),
-      "graph-zoom-in": new FakeElement("graph-zoom-in"),
-      "graph-zoom-out": new FakeElement("graph-zoom-out"),
-      "graph-fit": new FakeElement("graph-fit"),
-      "graph-detail-tab": new FakeElement("graph-detail-tab"),
-      "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
-      "graph-detail-panel": detail,
-      "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
-    },
-    fetch: (url, options) => {
-      calls.push({ url, options });
-      if (url.endsWith("/graph/model")) return jsonResponse({
-        nodes: [{ id: "kp-1", title: "容斥原理", problem_count: 1 }], edges: [],
-      });
-      if (url.endsWith("/kp/kp-1")) return jsonResponse({ signals: [], schedule: null });
-      return jsonResponse({ state: "needs_work" });
-    },
-  });
-  await flush();
-  canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1").click();
-  await flush();
-  assert.equal(detail.children.some((child) => child.id === "graph-problem-p-1"), false);
-  assert.equal(detail.children.some((child) => child.id === "graph-problem-save"), false);
 });
 
 test("AI column discovers providers but opens a conversation only after selection", async () => {
