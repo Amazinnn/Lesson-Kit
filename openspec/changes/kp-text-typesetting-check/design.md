@@ -23,6 +23,28 @@ The 汉字 trap is not hypothetical. `ingest-integrity-and-observability` P1-27
 records a course-local validator that measured `len()` against a "汉字"
 specification and passed 100/100 rows whose real CJK median was 353.
 
+## Audit note — 2026-10-01, against the merged tree
+
+The register landed after batches `#80`–`#90`; every `repo:` citation was
+re-read and the calibration was re-run read-only against the live pools.
+
+- Citations hold: `pipeline/commands/extract-chapter.md:102,107` and
+  `pipeline/scripts/validate-pool.py:232-239` are untouched since authorship;
+  the two doctrine quotes were re-read at their current lines
+  (`workbench/domain/micro_quiz.py:8-10`, D9 at
+  `openspec/changes/content-dedup-and-audit/design.md:126-138`). The change
+  validates and all 13 specs pass `--strict`.
+- Re-run (independent implementation of the §1 ruler): `ncmc` reproduces —
+  508 paragraphs vs 514, p50 **374**, max **2258**, **100%** of bodies over
+  300; `dmath`'s under-40 rate reproduces exactly (**83.9%**). `c04` moved:
+  the spacing-fix re-ingest rebuilt its paragraph structure after authorship,
+  so its table reads p50 **134**, max **645**, **21.9%** of bodies over 300 and
+  **48.5%** under 40 (was 64 / 473 / 8.3% / 72.8%). The band is a definition;
+  the pools are living data, and a higher `c04` report is the check working.
+  Paragraph totals differ slightly between implementations (508/107 vs
+  514/141) because whitespace-only runs at paragraph edges are counted
+  differently; the spec's ruler text is authoritative.
+
 ## 2. Calibration of the band, and its honest limits
 
 The band is **40 to 300 visible characters**, both ends hard. Paragraph totals
