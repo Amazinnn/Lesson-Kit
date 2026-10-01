@@ -61,7 +61,7 @@ class FakeElement {
     this.classList = new FakeClassList();
     this.children = [];
     this.attributes = {};
-    this.style = {};
+    this.style = { setProperty(name, value) { this[name] = value; } };
     this.clientWidth = options.clientWidth || 800;
     this.clientHeight = options.clientHeight || 600;
     this.queryAll = options.queryAll || (() => []);
@@ -285,6 +285,26 @@ function runWorkbench({
 async function flush() {
   await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setImmediate(resolve));
+}
+
+async function settleGraph(turns = 500) {
+  for (let i = 0; i < turns; i += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+}
+
+function graphElements(extra = {}) {
+  // Mirror the served markup: #graph-canvas holds #graph-stage, which holds
+  // the edge layer; the page JS only paints into them.
+  const stage = new FakeElement("graph-stage");
+  const edges = new FakeElement("graph-edges");
+  const merged = Object.assign({
+    "graph-stage": stage, "graph-edges": edges,
+  }, extra);
+  const canvas = merged["graph-canvas"];
+  if (canvas && canvas.children.indexOf(stage) < 0) canvas.appendChild(stage);
+  if (stage.children.indexOf(edges) < 0) stage.appendChild(edges);
+  return merged;
 }
 
 function jsonResponse(value) {
@@ -779,58 +799,57 @@ test("batch self-rating writes only from its final review card", async () => {
   });
 });
 
-test("native graph dashboard limits student detail to title, reminder, and formal link", async () => {
+test("graph detail renders the knowledge-point card and toggles the practice scope", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
+  const toggle = new FakeElement("graph-scope-toggle");
+  const toast = new FakeElement("graph-toast");
+  const storage = new FakeStorage();
   const calls = [];
-  const app = runWorkbench({
-    elements: {
-      layout: layout(),
-      "graph-canvas": canvas,
-      "graph-search": new FakeElement("graph-search"),
-      "graph-state-filter": new FakeElement("graph-state-filter"),
-      "graph-zoom-in": new FakeElement("graph-zoom-in"),
-      "graph-zoom-out": new FakeElement("graph-zoom-out"),
-      "graph-fit": new FakeElement("graph-fit"),
+  runWorkbench({
+    elements: graphElements({
+      layout: layout(), "graph-canvas": canvas,
       "graph-detail-tab": new FakeElement("graph-detail-tab"),
       "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
       "graph-detail-panel": detail,
       "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
-    },
-    fetch: (url, options) => {
-      calls.push({ url, options });
+      "graph-scope-toggle": toggle, "graph-toast": toast,
+    }),
+    storage,
+    reducedMotion: true,
+    fetch: (url) => {
+      calls.push(url);
       if (url.endsWith("/graph/model")) {
-        return jsonResponse({ nodes: [{
-          id: "kp-1", title: "加法规则", body: "正文", fragile: "易混", state: "review",
-          problem_count: 4,
-        }], edges: [] });
+        return jsonResponse({
+          nodes: [
+            { id: "kp-1", title: "加法规则", state: "review", problem_count: 4 },
+            { id: "kp-2", title: "乘法规则", state: "needs_work", problem_count: 2 },
+          ],
+          edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
+            relation_type: "prerequisite", direction: "directed", strength: "high" }],
+        });
       }
       return jsonResponse({});
     },
   });
   await flush();
-
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url, "/api/w/alpha/graph/model");
-  assert.equal(canvas.children.length, 1);
-  const node = canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1");
-  const label = canvas.children[0].children.find(
-    (child) => child.className === "graph-node-label",
-  );
-  assert.equal(label.textContent, "加法规则");
-  // The constrained layout sizes nodes through the engine's readability
-  // bounds (radius 14–31 → width 28–62); exact values belong to its own suite.
-  const nodeWidth = parseFloat(node.style.width);
-  assert.ok(nodeWidth >= 28 && nodeWidth <= 62, "node width within readability bounds: " + node.style.width);
-  node.click();
+  const stage = canvas.children[0];
+  const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
+  node.children.find((child) => child.className === "node").click();
   assert.match(detail.innerHTML, /加法规则/);
   assert.match(detail.innerHTML, /可以复习/);
-  assert.equal(calls.some((call) => call.url.endsWith("/graph/state")), false);
+  assert.match(detail.innerHTML, /关联题目/);
+  assert.match(detail.innerHTML, /<b>4<\/b>/);
+  assert.match(detail.innerHTML, /先修/);
+  assert.match(detail.innerHTML, /kp-1/);
+  assert.equal(calls.some((url) => url.endsWith("/graph/state")), false);
 
-  assert.equal(detail.children.some((child) => child.id === "graph-state"), false);
-  assert.equal(detail.children.some((child) => child.id === "graph-state-save"), false);
-  assert.equal(calls.some((call) => call.url.endsWith("/kp/kp-1")), false);
-  assert.equal(app.window.location, "");
+  toggle.click();
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-1"]);
+  assert.equal(toast.classList.contains("show"), true);
+  toggle.click();
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), []);
+  assert.equal(node.classList.contains("in-scope"), false);
 });
 
 test("content-mode practice uses only the explicit knowledge selection", async () => {
@@ -1372,86 +1391,81 @@ test("practice pull failures stay visible beside the active study flow", async (
   assert.equal(elements["retry-practice"].classList.contains("hidden"), false);
 });
 
-test("reduced-motion graph renders without scheduling animation frames", async () => {
+test("a settled graph renders one circular body per node and typed ported edges", async () => {
   const canvas = new FakeElement("graph-canvas");
+  const edges = new FakeElement("graph-edges");
   const app = runWorkbench({
-    elements: { layout: layout(), "graph-canvas": canvas },
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas, "graph-edges": edges }),
     reducedMotion: true,
     fetch: () => jsonResponse({
-      nodes: [
-        { id: "kp-1", title: "加法规则", problem_count: 1 },
-        { id: "kp-2", title: "乘法规则", problem_count: 4 },
+      nodes: [1, 2, 3].map((id) => ({ id: "kp-" + id, title: "知识点 " + id, problem_count: id })),
+      edges: [
+        { id: "r-1", source: "kp-1", target: "kp-2",
+          relation_type: "prerequisite", direction: "directed", strength: "high" },
+        { id: "r-2", source: "kp-2", target: "kp-3",
+          relation_type: "contrasts", direction: "symmetric", strength: "medium" },
+        { id: "legacy:kp-1:kp-3", source: "kp-1", target: "kp-3",
+          relation_type: "related", direction: "symmetric", strength: "low" },
       ],
-      edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
-        relation_type: "prerequisite", direction: "directed", attraction: 1.25 }],
-    }),
-  });
-  await flush();
-  assert.equal(app.rafCalls, 0);
-  const stage = canvas.children[0];
-  assert.equal(stage.children.filter(
-    (child) => typeof child.className === "string"
-      && child.className.startsWith("graph-node "),
-  ).length, 2);
-});
-
-test("graph projections keep node elements, resize metrics, and use one circular body", async () => {
-  const canvas = new FakeElement("graph-canvas", { clientWidth: 800, clientHeight: 600 });
-  const projection = new FakeElement("graph-projection");
-  const hint = new FakeElement("graph-projection-hint");
-  hint.hidden = true;
-  projection.value = "structure";
-  runWorkbench({
-    elements: { layout: layout(), "graph-canvas": canvas, "graph-projection": projection,
-      "graph-projection-hint": hint },
-    reducedMotion: true,
-    fetch: () => jsonResponse({
-      nodes: [
-        { id: "kp-low", title: "基础", problem_count: 1, state: "needs_work",
-          importance: "supplementary" },
-        { id: "kp-high", title: "核心", problem_count: 16, state: "mastered",
-          importance: "core" },
-      ],
-      edges: [{ id: "r-1", source: "kp-low", target: "kp-high",
-        relation_type: "prerequisite", direction: "directed", attraction: 1.25 }],
     }),
   });
   await flush();
   const stage = canvas.children[0];
-  const low = stage.children.find((child) => child.dataset.kpId === "kp-low");
-  const high = stage.children.find((child) => child.dataset.kpId === "kp-high");
-  assert.equal(low.children.length, 1);
-  assert.equal(low.children[0].className, "graph-node-value");
-  projection.value = "problem_count";
-  projection.trigger("change");
-  assert.equal(canvas.children[0], stage);
-  assert.equal(stage.children.find((child) => child.dataset.kpId === "kp-high"), high);
-  assert.ok(parseFloat(high.style.width) > parseFloat(low.style.width));
-  assert.notEqual(high.style.backgroundColor, low.style.backgroundColor);
-  assert.equal(high.classList.contains("projection-problem_count"), true);
-  assert.match(hint.textContent, /题量决定节点大小/);
-  projection.trigger("mouseenter");
-  assert.equal(hint.hidden, false);
-  projection.trigger("mouseleave");
-  assert.equal(hint.hidden, true);
+  const wraps = stage.children.filter((child) => child.dataset.kpId);
+  assert.equal(wraps.length, 3);
+  wraps.forEach((wrap) => {
+    const button = wrap.children.find((child) => child.className === "node");
+    assert.ok(button, "each knowledge point is one circular body button");
+    assert.ok(button.children.some((child) => child.className === "node-face"));
+    assert.ok(button.children.some((child) => child.className === "node-satellite"));
+  });
+  assert.equal(edges.children.length, 3);
+  assert.match(edges.children[0].getAttribute("class"), /graph-edge prereq/);
+  assert.equal(edges.children[0].getAttribute("marker-end"), "url(#graph-arrow-blue)");
+  assert.match(edges.children[1].getAttribute("class"), /graph-edge contrast/);
+  assert.equal(edges.children[1].getAttribute("marker-end"), null,
+    "symmetric relations carry no one-way arrow");
+  assert.match(edges.children[2].getAttribute("class"), /graph-edge legacy/);
+  await settleGraph();
+  assert.match(edges.children[0].getAttribute("d"), /^M .* C /);
+  const rafCalls = app.rafCalls;
+  await settleGraph(20);
+  assert.equal(app.rafCalls, rafCalls, "an idle graph stops scheduling frames");
 });
 
-test("graph state filter keeps a union and restores immediately", async () => {
+test("graph projections resize metrics in place and keep the same stage", async () => {
   const canvas = new FakeElement("graph-canvas");
-  const menu = new FakeElement("graph-state-filter");
-  const summary = new FakeElement("graph-filter-summary");
-  const clear = new FakeElement("graph-filter-clear");
-  const needsWork = new FakeElement("graph-filter-needs_work", { value: "needs_work" });
-  const review = new FakeElement("graph-filter-review", { value: "review" });
-  const mastered = new FakeElement("graph-filter-mastered", { value: "mastered" });
-  const unmarked = new FakeElement("graph-filter-null", { value: "null" });
+  const views = new FakeElement("graph-views");
   runWorkbench({
-    elements: {
-      layout: layout(), "graph-canvas": canvas, "graph-state-filter": menu,
-      "graph-filter-summary": summary, "graph-filter-clear": clear,
-      "graph-filter-needs_work": needsWork, "graph-filter-review": review,
-      "graph-filter-mastered": mastered, "graph-filter-null": unmarked,
-    },
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas, "graph-views": views }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [
+        { id: "kp-low", title: "基础", problem_count: 1, importance: "supplementary" },
+        { id: "kp-high", title: "核心", problem_count: 16, importance: "core" },
+      ],
+      edges: [],
+    }),
+  });
+  await flush();
+  const stage = canvas.children[0];
+  const high = stage.children.find((child) => child.dataset.kpId === "kp-high");
+  const low = stage.children.find((child) => child.dataset.kpId === "kp-low");
+  const valueOf = (wrap) => wrap.children.find((child) => child.className === "node")
+    .children.find((child) => child.className === "node-face")
+    .children.find((child) => child.className === "node-value").textContent;
+  views.trigger("click", { target: { dataset: { view: "problem_count" } } });
+  assert.equal(canvas.children[0], stage, "projection re-solves in place, no rebuild");
+  assert.equal(stage.children.find((child) => child.dataset.kpId === "kp-high"), high);
+  assert.equal(valueOf(high), "16");
+  assert.equal(valueOf(low), "1");
+});
+
+test("graph filter chips hide and restore whole states", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const filters = new FakeElement("graph-filters");
+  runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas, "graph-filters": filters }),
     reducedMotion: true,
     fetch: () => jsonResponse({
       nodes: [
@@ -1459,176 +1473,175 @@ test("graph state filter keeps a union and restores immediately", async () => {
         { id: "kp-mastered", title: "掌握点", state: "mastered", problem_count: 1 },
         { id: "kp-null", title: "未标记", state: null, problem_count: 1 },
       ],
+      edges: [],
+    }),
+  });
+  await flush();
+  const stage = canvas.children[0];
+  const wrap = (id) => stage.children.find((child) => child.dataset.kpId === id);
+  filters.trigger("click", { target: { dataset: { filter: "work" } } });
+  assert.equal(wrap("kp-weak").classList.contains("filtered"), false);
+  assert.equal(wrap("kp-mastered").classList.contains("filtered"), true);
+  assert.equal(wrap("kp-null").classList.contains("filtered"), true);
+  filters.trigger("click", { target: { dataset: { filter: "mastered" } } });
+  assert.equal(wrap("kp-mastered").classList.contains("filtered"), false);
+  assert.equal(wrap("kp-null").classList.contains("filtered"), true);
+  filters.trigger("click", { target: { dataset: { filter: "all" } } });
+  assert.equal(wrap("kp-mastered").classList.contains("filtered"), false);
+  assert.equal(wrap("kp-null").classList.contains("filtered"), false);
+});
+
+test("a settled graph still repaints when the user selects or hovers", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const ctx = runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [1, 2, 3].map((id) => ({ id: "kp-" + id, title: "知识点 " + id, problem_count: 1 })),
+      edges: [[1, 2], [2, 3]].map(([source, target], index) => ({
+        id: "r-" + index, source: "kp-" + source, target: "kp-" + target,
+        relation_type: "prerequisite", direction: "directed", strength: "medium",
+      })),
+    }),
+  });
+  await flush();
+  await settleGraph(600);
+  const idleFrames = ctx.rafCalls;
+  await settleGraph(30);
+  assert.equal(ctx.rafCalls, idleFrames, "the parked loop asks for no frames");
+  const stage = canvas.children[0];
+  const wrap = (id) => stage.children.find((child) => child.dataset.kpId === id);
+  wrap("kp-2").children.find((child) => child.className === "node").click();
+  await flush();
+  assert.ok(ctx.rafCalls > idleFrames, "selecting re-arms the paint loop");
+  await settleGraph(400);
+  const afterSelect = ctx.rafCalls;
+  await settleGraph(30);
+  assert.equal(ctx.rafCalls, afterSelect, "the loop parks again once the frame is painted");
+});
+
+test("legend items toggle relation types and start with derived links hidden", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const legend = new FakeElement("graph-legend");
+  const legacy = new FakeElement("legend-item", { dataset: { edgeType: "legacy" } });
+  const related = new FakeElement("legend-item", { dataset: { edgeType: "related" } });
+  legacy.className = "legend-item";
+  related.className = "legend-item";
+  legend.appendChild(legacy);
+  legend.appendChild(related);
+  const toast = new FakeElement("graph-toast");
+  runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas, "graph-legend": legend, "graph-toast": toast }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [
+        { id: "kp-a", title: "甲", state: "new", problem_count: 1 },
+        { id: "kp-b", title: "乙", state: "new", problem_count: 1 },
+      ],
       edges: [
-        { id: "r-1", source: "kp-weak", target: "kp-mastered",
-          relation_type: "related", direction: "symmetric", attraction: 1 },
-        { id: "r-2", source: "kp-mastered", target: "kp-null",
-          relation_type: "related", direction: "symmetric", attraction: 1 },
+        { id: "e1", source: "kp-a", target: "kp-b", relation_type: "related", strength: "medium" },
+        { id: "legacy:kp-b:kp-a", source: "kp-b", target: "kp-a", relation_type: "related", strength: "low" },
       ],
     }),
   });
   await flush();
-  needsWork.checked = true;
-  mastered.checked = true;
-  needsWork.trigger("change");
-  assert.equal(summary.textContent, "已筛 2 类");
-  assert.equal(clear.disabled, false);
-  assert.deepEqual(canvas.children[0].children.filter((child) => child.dataset.kpId)
-    .map((child) => child.dataset.kpId).sort(), ["kp-mastered", "kp-weak"]);
-  menu.open = true;
-  clear.click();
-  assert.equal(menu.open, false);
-  assert.equal(clear.disabled, true);
-  assert.equal(canvas.children[0].children.filter((child) => child.dataset.kpId).length, 3);
+  await settleGraph(60);
+  assert.equal(legacy.classList.contains("off"), true,
+    "auto-derived co-occurrence links start hidden when explicit relations exist");
+  assert.equal(related.classList.contains("off"), false);
+  legend.trigger("click", { target: legacy });
+  await flush();
+  assert.equal(legacy.classList.contains("off"), false, "clicking the item shows the type again");
+  assert.ok((toast.textContent || "").includes("已显示隐含关联"), "the toggle reports what it did");
+  assert.equal(legacy.getAttribute("aria-pressed"), "true");
 });
 
-test("graph search is debounced and rebuilds only after the pending input settles", async () => {
-  let creates = 0;
-  let runSearch = null;
-  const physics = Object.assign({}, GraphPhysics, {
-    layoutHierarchy(...args) {
-      creates += 1;
-      return GraphPhysics.layoutHierarchy(...args);
-    },
-  });
+test("graph search selects and centers the first match immediately", async () => {
   const canvas = new FakeElement("graph-canvas");
   const search = new FakeElement("graph-search");
   runWorkbench({
-    elements: { layout: layout(), "graph-canvas": canvas, "graph-search": search },
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas, "graph-search": search }),
     reducedMotion: true,
-    physics,
-    setTimeoutFn(callback, delay) {
-      if (delay === 90) runSearch = callback;
-      return 0;
-    },
     fetch: () => jsonResponse({
       nodes: [
         { id: "kp-1", title: "加法规则", problem_count: 1 },
         { id: "kp-2", title: "乘法规则", problem_count: 2 },
       ],
-      edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
-        relation_type: "related", direction: "symmetric", attraction: 1 }],
+      edges: [],
     }),
   });
   await flush();
-  assert.equal(creates, 1);
-  search.value = "加法";
+  search.value = "乘法";
   search.trigger("input");
-  assert.equal(creates, 1);
-  assert.ok(runSearch);
-  runSearch();
-  assert.equal(creates, 2);
-  assert.deepEqual(canvas.children[0].children.filter((child) => child.dataset.kpId)
-    .map((child) => child.dataset.kpId), ["kp-1"]);
+  const stage = canvas.children[0];
+  assert.equal(stage.children.find((child) => child.dataset.kpId === "kp-2")
+    .classList.contains("selected"), true);
+  assert.equal(stage.children.find((child) => child.dataset.kpId === "kp-1")
+    .classList.contains("selected"), false);
 });
 
-test("graph compactness re-solves in place and keeps the same stage", async () => {
-  let runCompactness = null;
+test("gravity re-solves in place and reports the gap legend", async () => {
   const canvas = new FakeElement("graph-canvas");
-  const compactness = new FakeElement("graph-compactness", { value: "30" });
-  const output = new FakeElement("graph-compactness-value");
+  const gravity = new FakeElement("graph-gravity", { value: "30" });
+  const gravityValue = new FakeElement("graph-gravity-value");
+  const strongGap = new FakeElement("graph-strong-gap");
+  const readability = new FakeElement("graph-readability-state");
   runWorkbench({
-    elements: {
+    elements: graphElements({
       layout: layout(), "graph-canvas": canvas,
-      "graph-compactness": compactness, "graph-compactness-value": output,
-    },
+      "graph-gravity": gravity, "graph-gravity-value": gravityValue,
+      "graph-strong-gap": strongGap, "graph-readability-state": readability,
+    }),
     reducedMotion: true,
-    setTimeoutFn(callback, delay) {
-      if (delay === 70) runCompactness = callback;
-      return 0;
-    },
     fetch: () => jsonResponse({
       nodes: [
         { id: "kp-1", title: "排列组合", problem_count: 4 },
         { id: "kp-2", title: "二项式", problem_count: 6 },
       ],
       edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
-        relation_type: "related", direction: "symmetric", attraction: 1.875 }],
+        relation_type: "prerequisite", direction: "directed", strength: "high" }],
     }),
   });
   await flush();
   const stage = canvas.children[0];
-  compactness.value = "100";
-  compactness.trigger("input");
-  assert.equal(output.textContent, "100");
-  assert.ok(runCompactness);
-  runCompactness();
+  gravity.value = "100";
+  gravity.trigger("input");
+  assert.equal(gravityValue.textContent, "100");
+  assert.match(strongGap.textContent, /^\d+px$/);
+  assert.match(readability.textContent, /硬下限 · 1\.\d\d×/);
+  await settleGraph();
   assert.equal(canvas.children[0], stage);
-  const nodes = stage.children.filter((child) => child.dataset.kpId);
-  nodes.forEach((node) => {
+  stage.children.filter((child) => child.dataset.kpId).forEach((node) => {
     assert.ok(Number.isFinite(parseFloat(node.style.left)));
     assert.ok(Number.isFinite(parseFloat(node.style.top)));
   });
 });
 
-test("graph renders port-routed arrow edges and focuses one-hop and two-hop neighborhoods", async () => {
+test("selecting a node focuses its neighborhood and clears on empty click", async () => {
   const canvas = new FakeElement("graph-canvas");
   runWorkbench({
-    elements: { layout: layout(), "graph-canvas": canvas },
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
     reducedMotion: true,
     fetch: () => jsonResponse({
-      nodes: [1, 2, 3, 4, 5].map((id) => ({
-        id: "kp-" + id, title: "知识点 " + id, problem_count: 1,
-      })),
-      edges: [[1, 2], [2, 3], [3, 4]].map(([source, target], index) => ({
-        id: "r-" + index,
-        source: "kp-" + source, target: "kp-" + target, attraction: 1,
-        relation_type: "prerequisite", direction: "directed",
+      nodes: [1, 2, 3, 4, 5].map((id) => ({ id: "kp-" + id, title: "知识点 " + id, problem_count: 1 })),
+      edges: [[1, 2], [2, 3], [3, 4], [4, 5]].map(([source, target], index) => ({
+        id: "r-" + index, source: "kp-" + source, target: "kp-" + target,
+        relation_type: "prerequisite", direction: "directed", strength: "medium",
       })),
     }),
   });
   await flush();
+  await settleGraph();
   const stage = canvas.children[0];
-  const edgeLayer = stage.children.find(
-    (child) => child.getAttribute("class") === "graph-edge-layer",
-  );
-  const pipes = edgeLayer.children.filter(
-    (child) => String(child.getAttribute("class") || "").includes("graph-edge-pipe"),
-  );
-  assert.equal(pipes.length, 3);
-  assert.match(pipes[0].children[1].getAttribute("d"), /^M .* C /);
-  assert.equal(pipes[0].children[1].getAttribute("marker-end"), "url(#graph-arrow)");
-  const nodes = Object.fromEntries(stage.children.filter(
-    (child) => child.dataset.kpId,
-  ).map((child) => [child.dataset.kpId, child]));
-  nodes["kp-2"].click();
-  assert.equal(nodes["kp-2"].classList.contains("graph-focus-selected"), true);
-  assert.equal(nodes["kp-1"].classList.contains("graph-focus-near"), true);
-  assert.equal(nodes["kp-3"].classList.contains("graph-focus-near"), true);
-  assert.equal(nodes["kp-4"].classList.contains("graph-focus-mid"), true);
-  assert.equal(nodes["kp-5"].classList.contains("graph-focus-far"), true);
-  canvas.trigger("click");
-  assert.equal(nodes["kp-5"].classList.contains("graph-focus-far"), false);
-});
-
-test("native graph dashboard remains read-only and links to the knowledge point", async () => {
-  const canvas = new FakeElement("graph-canvas");
-  const detail = new FakeElement("graph-detail-panel");
-  const calls = [];
-  runWorkbench({
-    elements: {
-      layout: layout(), "graph-canvas": canvas,
-      "graph-detail-tab": new FakeElement("graph-detail-tab"),
-      "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
-      "graph-detail-panel": detail,
-      "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
-    },
-    reducedMotion: true,
-    fetch: (url, options) => {
-      calls.push({ url, options });
-      if (url.endsWith("/graph/model")) return jsonResponse({
-        nodes: [{ id: "kp-1", title: "容斥原理", problem_count: 3 }], edges: [],
-      });
-      return jsonResponse({});
-    },
-  });
-  await flush();
-  const node = canvas.children[0].children.find((child) => child.dataset.kpId === "kp-1");
-  node.click();
-  assert.equal(calls.some((call) => call.url.endsWith("/graph/kp")), false);
-  assert.equal(detail.children.some((child) => child.id === "graph-body"), false);
-  assert.equal(detail.children.some((child) => child.id === "graph-fragile"), false);
-  assert.ok(detail.children.some((child) => child.id === "graph-open-kp"));
+  const wrap = (id) => stage.children.find((child) => child.dataset.kpId === id);
+  wrap("kp-3").children.find((child) => child.className === "node").click();
+  assert.equal(wrap("kp-3").classList.contains("selected"), true);
+  assert.equal(wrap("kp-2").classList.contains("dim"), false, "one hop stays legible");
+  assert.equal(wrap("kp-1").classList.contains("dim"), true, "two hops dim down");
+  assert.equal(wrap("kp-5").classList.contains("dim"), true);
+  canvas.trigger("click", { target: canvas });
+  assert.equal(wrap("kp-3").classList.contains("selected"), false);
+  assert.equal(wrap("kp-5").classList.contains("dim"), false);
 });
 
 test("AI column discovers providers but opens a conversation only after selection", async () => {
@@ -1831,11 +1844,10 @@ test("AI free message sends page identifiers and excludes a draft by default", a
 test("graph conversation context carries every selected state filter", async () => {
   const pageLayout = layout();
   pageLayout.dataset.page = "graph";
-  const review = new FakeElement("graph-filter-review", { value: "review", checked: true });
-  const mastered = new FakeElement("graph-filter-mastered", { value: "mastered", checked: true });
+  const chips = new FakeElement("graph-filters");
   const elements = {
     layout: pageLayout, ...aiElements(), "graph-search": new FakeElement("graph-search"),
-    "graph-filter-review": review, "graph-filter-mastered": mastered,
+    ...graphElements({ "graph-canvas": new FakeElement("graph-canvas"), "graph-filters": chips }),
   };
   elements["graph-search"].value = "计数";
   const calls = [];
@@ -1844,6 +1856,9 @@ test("graph conversation context carries every selected state filter", async () 
     setTimeoutFn: (callback) => setImmediate(callback),
     fetch: (url, options) => {
       calls.push({ url, options });
+      if (url.endsWith("/graph/model")) return jsonResponse({
+        nodes: [{ id: "kp-1", title: "计数原理", problem_count: 1 }], edges: [],
+      });
       if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
       if (url.endsWith("/ai/sessions") && !options) return jsonResponse([{
         conversation_id: "conv-001", provider: "codex", status: "idle",
@@ -1857,6 +1872,8 @@ test("graph conversation context carries every selected state filter", async () 
     },
   });
   await openFirstAiSession(elements);
+  chips.trigger("click", { target: { dataset: { filter: "review" } } });
+  chips.trigger("click", { target: { dataset: { filter: "mastered" } } });
   elements["ai-input"].value = "看看当前图谱";
   elements["ai-send"].click();
   await flush();

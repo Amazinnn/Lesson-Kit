@@ -420,28 +420,62 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
 
 
 def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
+    views = (("structure", "关系结构"), ("problem_count", "题目数量"),
+             ("importance", "重要性"), ("state", "学习状态"))
+    filters = (("all", "全部"), ("work", "重点练习"), ("review", "可以复习"),
+               ("mastered", "已掌握"), ("new", "未标记"))
     middle = (_page_header(_lens_label(workspace, "知识网络 / 当前章节", "知识网络 / 全课程"),
-                     "知识图谱", "勾选知识点后，可将同一范围交给练习。")
-        + "<div class='page-content graph-content'><section class='graph-panel' aria-label='知识图谱'><div class='graph-toolbar'>"
-        "<label class='visually-hidden' for='graph-search'>搜索知识点</label><input id='graph-search' placeholder='搜索知识点'>"
-        "<label for='graph-projection'>视图</label><select id='graph-projection' title='按已有指标调整图谱形态'>"
-        "<option value='structure' selected>关系结构</option><option value='problem_count'>题目数量</option>"
-        "<option value='importance'>重要性</option><option value='state'>学习状态</option></select>"
-        "<span id='graph-projection-hint' class='graph-hint-popover' role='tooltip' hidden></span>"
-        "<label class='graph-compactness-control' for='graph-compactness'>聚集"
-        "<input id='graph-compactness' type='range' min='0' max='100' value='30' step='1' "
-        "title='调整语义关系的整体聚集程度；可读性下限不会被突破'>"
-        "<output id='graph-compactness-value' for='graph-compactness'>30</output></label>"
-        "<details id='graph-state-filter' class='graph-filter-menu'><summary id='graph-filter-summary'>筛选状态</summary>"
-        "<fieldset><legend>显示哪些学习状态</legend>"
-        "<label><input id='graph-filter-needs_work' type='checkbox' value='needs_work'>重点练习</label>"
-        "<label><input id='graph-filter-review' type='checkbox' value='review'>可以复习</label>"
-        "<label><input id='graph-filter-mastered' type='checkbox' value='mastered'>已掌握</label>"
-        "<label><input id='graph-filter-null' type='checkbox' value='null'>未标记</label>"
-        "<button id='graph-filter-clear' class='ghost sm' type='button' disabled>清除筛选</button>"
-        "</fieldset></details>"
-        "<div class='graph-zoom' aria-label='缩放'><button id='graph-zoom-out' class='ghost sm' title='缩小'>−</button><button id='graph-zoom-in' class='ghost sm' title='放大'>＋</button><button id='graph-fit' class='outline sm'>适应画布</button></div>"
-        "</div><div id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'></div></section></div>")
+                     "知识图谱", "约束布局 · 纸质图谱 · 蒙德里安")
+        + "<div class='page-content graph-content'>"
+        + "<header class='graph-topbar'>"
+        "<div class='search'><label class='visually-hidden' for='graph-search'>搜索知识点</label>"
+        "<input id='graph-search' placeholder='搜索知识点并聚焦…'></div>"
+        "<div class='seg' id='graph-views' role='tablist' aria-label='视图'>"
+        + "".join(
+            f"<button type='button' data-view='{key}'"
+            f"{' class=active' if key == 'structure' else ''}>{label}</button>"
+            for key, label in views)
+        + "</div>"
+        "<button class='icon-btn' id='graph-focus' type='button' title='聚焦选中节点' aria-label='聚焦选中节点'>◎</button>"
+        "<button class='icon-btn' id='graph-fit' type='button' title='适应画布' aria-label='适应画布'>⌗</button>"
+        "</header>"
+        "<section class='graph-shell' id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'>"
+        "<div class='floating controls'>"
+        "<div class='control-head'><strong>图谱控制</strong><span>保留原版语义</span></div>"
+        "<div class='filter-row' id='graph-filters'>"
+        + "".join(
+            f"<button type='button' class='chip{' active' if key == 'all' else ''}'"
+            f" data-filter='{key}'>{label}</button>"
+            for key, label in filters)
+        + "</div>"
+        "<div class='slider-block'>"
+        "<div class='slider-label'><span>关系聚散 / Gravity</span><b id='graph-gravity-value'>30</b></div>"
+        "<input id='graph-gravity' type='range' min='0' max='100' value='30' aria-label='关系聚散'>"
+        "<div class='hint'>越右越紧凑，但会在可读性下限处饱和：强关系仍优先更短，节点与标签绝不以重叠换取“聚集”。</div>"
+        "<div class='distance-scale'>"
+        "<div class='distance-cell'><b id='graph-strong-gap'>—</b><span>强关系</span></div>"
+        "<div class='distance-cell'><b id='graph-medium-gap'>—</b><span>中关系</span></div>"
+        "<div class='distance-cell'><b id='graph-weak-gap'>—</b><span>弱关系</span></div></div>"
+        "<div class='solver-line'><span>布局引擎</span>"
+        "<span class='solver-state' id='graph-solver-state'><i class='solver-dot'></i>"
+        "<em id='graph-solver-text'>已收敛</em></span></div>"
+        "<div class='solver-line'><span>可读性保护</span>"
+        "<span id='graph-readability-state'>硬下限 · 1.00×</span></div>"
+        "</div></div>"
+        "<canvas class='graph-tide' id='graph-tide' aria-hidden='true'></canvas>"
+        "<div class='graph-stage' id='graph-stage'><svg class='graph-edges' id='graph-edges'></svg></div>"
+        "<div class='legend' id='graph-legend' aria-label='关系类型图例，可点按显示或隐藏'>"
+        "<button type='button' class='legend-item' data-edge-type='prereq' aria-pressed='true' title='显示或隐藏先修关系'><i></i>先修</button>"
+        "<button type='button' class='legend-item' data-edge-type='related' aria-pressed='true' title='显示或隐藏相关关系'><i class='rel'></i>相关</button>"
+        "<button type='button' class='legend-item' data-edge-type='apply' aria-pressed='true' title='显示或隐藏应用关系'><i class='app'></i>应用</button>"
+        "<button type='button' class='legend-item' data-edge-type='contrast' aria-pressed='true' title='显示或隐藏对比关系'><i class='con'></i>对比</button>"
+        "<button type='button' class='legend-item' data-edge-type='legacy' aria-pressed='true' title='显示或隐藏由共现推算的隐含关联；存在明确关系时默认隐藏'><i class='leg'></i>隐含</button></div>"
+        "<div class='zoom' aria-label='缩放'>"
+        "<button id='graph-zoom-out' type='button' title='缩小' aria-label='缩小'>−</button>"
+        "<button id='graph-zoom-in' type='button' title='放大' aria-label='放大'>＋</button>"
+        "<button id='graph-reset' type='button' title='重置为 1:1' aria-label='重置为 1:1'>1:1</button></div>"
+        "<div class='toast' id='graph-toast' role='status' aria-live='polite'></div>"
+        "</section></div>")
     return shell(
         workspace, workspaces, weak_items, middle, "graph", graph_mode=True,
         page_type="graph", kp_titles=kp_titles,

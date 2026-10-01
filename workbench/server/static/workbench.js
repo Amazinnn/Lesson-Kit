@@ -494,154 +494,48 @@
     toggleDrawer("ai-drawer-open");
   });
 
-  /* ---------- native knowledge graph ---------- */
+  /* ---------- native knowledge graph (implementation blueprint port) ---------- */
 
   var graphCanvas = document.getElementById("graph-canvas");
   if (graphCanvas) {
     var graphSearch = document.getElementById("graph-search");
-    var graphFilter = document.getElementById("graph-state-filter");
-    var graphFilterSummary = document.getElementById("graph-filter-summary");
-    var graphFilterClear = document.getElementById("graph-filter-clear");
-    var graphFilterInputs = ["needs_work", "review", "mastered", "null"].map(
-      function (state) { return document.getElementById("graph-filter-" + state); }
-    ).filter(Boolean);
-    var graphProjectionHint = document.getElementById("graph-projection-hint");
+    var graphViews = document.getElementById("graph-views");
+    var graphFocusBtn = document.getElementById("graph-focus");
+    var graphFitBtn = document.getElementById("graph-fit");
+    var graphFilters = document.getElementById("graph-filters");
+    var graphGravity = document.getElementById("graph-gravity");
+    var graphGravityValue = document.getElementById("graph-gravity-value");
+    var graphStrongGap = document.getElementById("graph-strong-gap");
+    var graphMediumGap = document.getElementById("graph-medium-gap");
+    var graphWeakGap = document.getElementById("graph-weak-gap");
+    var graphSolverState = document.getElementById("graph-solver-state");
+    var graphSolverText = document.getElementById("graph-solver-text");
+    var graphReadabilityState = document.getElementById("graph-readability-state");
+    var graphStage = document.getElementById("graph-stage");
+    var graphEdges = document.getElementById("graph-edges");
+    var graphTide = document.getElementById("graph-tide");
+    var graphToast = document.getElementById("graph-toast");
+    var graphZoomIn = document.getElementById("graph-zoom-in");
+    var graphZoomOut = document.getElementById("graph-zoom-out");
+    var graphZoomReset = document.getElementById("graph-reset");
     var graphDetail = document.getElementById("graph-detail-panel");
     var graphDetailTab = document.getElementById("graph-detail-tab");
     var teacherTab = document.getElementById("ai-teacher-tab");
     var teacherPanel = document.getElementById("ai-teacher-panel");
-    var graphProjectionSelect = document.getElementById("graph-projection");
-    var graphCompactness = document.getElementById("graph-compactness");
-    var graphCompactnessValue = document.getElementById("graph-compactness-value");
-    var graphData = { nodes: [], edges: [] };
-    var graphSimulation = null;
-    var graphStage = null;
-    var graphNodeElements = new Map();
-    var graphNodeById = new Map();
-    var graphEdgeElements = [];
-    var graphAdjacency = new Map();
-    var graphView = { x: 0, y: 0, scale: 1 };
-    var graphProjection = "structure";
-    var graphFocusedId = null;
-    var graphHoveredId = null;
-    var draggedNode = null;
-    var panStart = null;
-    var graphSearchTimer = null;
-    var graphResizeTimer = null;
-    var graphCompactnessTimer = null;
-    var graphRenderVersion = 0;
-    var graphMotionVersion = 0;
-    var graphAmbientCanvas = null;
-    var graphAmbientContext = null;
-    var graphAmbientFrame = null;
-    var graphAmbientBoost = 0;
-    var graphAmbientLive = false;
-    var reducedGraphMotion = window.matchMedia
-      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    function actionReminder(node) {
-      return node.state === "needs_work" ? "重点练习"
-        : node.state === "review" ? "可以复习" : "";
-    }
-
-    function mixGraphColor(from, to, score) {
-      var ratio = Math.max(0, Math.min(1, Number(score) || 0));
-      function channel(index) {
-        return Math.round(parseInt(from.slice(index, index + 2), 16) * (1 - ratio)
-          + parseInt(to.slice(index, index + 2), 16) * ratio);
-      }
-      return "rgb(" + channel(1) + ", " + channel(3) + ", " + channel(5) + ")";
-    }
-
-    function graphNodeColors(node) {
-      var score = node.projectionScore || 0;
-      if (node.projection === "problem_count") {
-        return [mixGraphColor("#fffdf7", "#dce7ff", score),
-          mixGraphColor("#c8c1b5", "#2457c5", score)];
-      }
-      if (node.projection === "importance") {
-        return [mixGraphColor("#fffdf7", "#fff0a6", score),
-          mixGraphColor("#c8c1b5", "#b58b00", score)];
-      }
-      if (node.projection === "state") {
-        if (node.state === "mastered") return ["#f7f9ff", "#2457c5"];
-        if (node.state === "review") return ["#fff9df", "#b58b00"];
-        if (node.state === "needs_work") return ["#fff5f1", "#d6453d"];
-        return ["#fffdf7", "#8a8378"];
-      }
-      return ["#fffdf7", "#3b3732"];
-    }
-
-    function graphNodeMetric(node) {
-      if (node.projection === "problem_count") return String(node.problem_count || 0);
-      if (node.projection === "importance") return node.importance === "core" ? "核" : "辅";
-      if (node.projection === "state") {
-        return node.state === "needs_work" ? "练"
-          : node.state === "review" ? "复"
-            : node.state === "mastered" ? "熟" : "新";
-      }
-      return String(node.degree || 0);
-    }
-
-    function updateGraphNodeAppearance(node) {
-      var elements = graphNodeElements.get(node.id);
-      if (!elements) return;
-      ["structure", "problem_count", "importance", "state"].forEach(function (name) {
-        elements.node.classList.remove("projection-" + name);
-      });
-      elements.node.classList.add("projection-" + (node.projection || "structure"));
-      var colors = graphNodeColors(node);
-      elements.node.style.backgroundColor = colors[0];
-      elements.node.style.borderColor = colors[1];
-      if (elements.node.style.setProperty) {
-        elements.node.style.setProperty("--projection-score", String(node.projectionScore || 0));
-        elements.node.style.setProperty("--metric-angle",
-          (Math.max(0.06, Number(node.projectionScore) || 0) * 302) + "deg");
-        elements.node.style.setProperty("--node-accent", colors[1]);
-      }
-      if (elements.value) elements.value.textContent = graphNodeMetric(node);
-    }
-
-    function updateGraphProjectionHint() {
-      if (!graphProjectionHint) return;
-      graphProjectionHint.textContent = graphProjection === "problem_count"
-        ? "题量决定节点大小；位置尽量保留关系拓扑，避免为了排序破坏知识结构。"
-        : graphProjection === "importance"
-          ? "重要性决定节点大小；核心知识点受到轻微中心吸引，关系仍参与布局。"
-          : graphProjection === "state"
-            ? "学习状态形成柔性聚类；蓝/黄/红/灰 = 掌握/复习/待加强/未标记。"
-            : "前置关系约束层级；关系越强越近；节点大小表示结构关联度。";
-    }
-
-    function showGraphProjectionHint() {
-      if (!graphProjectionHint) return;
-      graphProjectionHint.hidden = false;
-      if (graphProjectionSelect && typeof graphProjectionSelect.offsetLeft === "number") {
-        graphProjectionHint.style.left = Math.max(24, graphProjectionSelect.offsetLeft) + "px";
-      }
-    }
-
-    function hideGraphProjectionHint() {
-      if (graphProjectionHint) graphProjectionHint.hidden = true;
-    }
-
-    function activeGraphStates() {
-      return graphFilterInputs.filter(function (input) { return input.checked; })
-        .map(function (input) { return input.value; });
-    }
-
-    function graphState(node) {
-      return node.state === "needs_work" || node.state === "review" || node.state === "mastered"
-        ? node.state : "null";
-    }
-
-    function updateGraphFilterControls() {
-      var count = activeGraphStates().length;
-      if (graphFilterSummary) {
-        graphFilterSummary.textContent = count ? "已筛 " + count + " 类" : "筛选状态";
-      }
-      if (graphFilterClear) graphFilterClear.disabled = count === 0;
-    }
+    var STATE_LABEL = { work: "重点练习", review: "可以复习", mastered: "已掌握", new: "未标记" };
+    var STATE_SHORT = { work: "练", review: "复", mastered: "熟", new: "新" };
+    var STATE_PILL = {
+      work: { bg: "var(--redSoft)", fg: "var(--red)" },
+      review: { bg: "var(--yellowSoft)", fg: "#8c6b00" },
+      mastered: { bg: "var(--blueSoft)", fg: "var(--blue)" },
+      new: { bg: "#f3f4f6", fg: "#747983" },
+    };
+    var REL_NAME = { prereq: "先修", related: "相关", contrast: "对比", apply: "应用" };
+    var REL_CLS = { prereq: "blue", related: "", contrast: "red", apply: "yellow" };
+    var PROJECTION_TEXT = {
+      structure: "关系", problem_count: "题目", importance: "重要性", state: "关注度",
+    };
 
     function showGraphPanel(detailOpen) {
       if (graphDetail) graphDetail.classList.toggle("hidden", !detailOpen);
@@ -656,762 +550,966 @@
       }
     }
 
-    function graphRelationLabel(type) {
-      return {
-        prerequisite: "前置", part_of: "组成", contrasts: "对比", generalizes: "概括",
-        variant_of: "变体", applies_to: "应用于", related: "相关",
-      }[type] || type || "相关";
+    function mapGraphState(state) {
+      if (!state) return "new";
+      if (state === "needs_work") return "work";
+      return state;
     }
 
-    function graphTitle(id) {
-      var node = graphData.nodes.find(function (item) { return item.id === id; });
-      return node ? node.title : id;
+    function mapEdgeType(edge) {
+      if (edge.id && String(edge.id).indexOf("legacy:") === 0) return "legacy";
+      return ({
+        prerequisite: "prereq",
+        applies_to: "apply",
+        contrasts: "contrast",
+        related: "related",
+      })[edge.relation_type] || "related";
     }
 
-    function graphRelationHtml(nodeId) {
-      var rows = graphData.edges.filter(function (edge) {
-        return edge.source === nodeId || edge.target === nodeId;
-      }).sort(function (a, b) {
-        var aMain = a.relation_type === "prerequisite" ? 0 : 1;
-        var bMain = b.relation_type === "prerequisite" ? 0 : 1;
-        return aMain - bMain
-          || String(a.relation_type).localeCompare(String(b.relation_type))
-          || String(a.id || "").localeCompare(String(b.id || ""));
+    function mapStrength(strength) {
+      return strength === "high" ? 1.875 : strength === "medium" ? 1.25 : .75;
+    }
+
+    // Relation-type visibility, driven by the legend buttons. Co-occurrence
+    // ("legacy") edges are auto-derived rather than authored, so a pool that
+    // also has explicit relations starts with them hidden; the legend item
+    // brings them back.
+    var graphHiddenEdgeTypes = {};
+    var graphNodeData = [];   // physics nodes
+    var graphEdgeData = [];   // physics edges
+    var graphEdgeEls = [];    // {edge, path}
+    var graphEls = new Map(); // id -> {wrap, node, label, meta, value, satellite}
+    var sim = null;
+    var graphView = { scale: .7, panX: 52, panY: -18, userMoved: false };
+    var graphRenderDirty = true;
+    var graphFrameHandle = null;
+
+    function graphSolver(solving) {
+      if (!graphSolverState) return;
+      graphSolverState.classList.toggle("solving", !!solving);
+      if (graphSolverText) graphSolverText.textContent = solving ? "约束求解中" : "已收敛";
+    }
+
+    function graphLegendItems() {
+      var legend = document.getElementById("graph-legend");
+      if (!legend) return [];
+      var found = legend.querySelectorAll ? legend.querySelectorAll(".legend-item") : [];
+      if (found && found.length) return Array.prototype.slice.call(found);
+      var children = legend.children ? Array.prototype.slice.call(legend.children) : [];
+      return children.filter(function (child) {
+        return typeof child.className === "string"
+          && child.className.split(/\s+/).indexOf("legend-item") >= 0;
       });
-      if (!rows.length) return "<p class='muted graph-no-relations'>暂无明确关系。</p>";
-      return "<div class='graph-relation-list'>" + rows.map(function (edge) {
-        var arrow = edge.direction === "symmetric" ? " ↔ " : " → ";
-        var text = escapeHtml(graphTitle(edge.source)) + arrow + escapeHtml(graphTitle(edge.target));
-        var type = String(edge.relation_type || "related").replace(/[^a-z0-9_-]/gi, "-");
-        var strength = edge.strength === "high" ? "强" : edge.strength === "low" ? "弱" : "中";
-        return "<div class='graph-relation-row relation-" + type + "'>"
-          + "<span class='graph-relation-type'>" + escapeHtml(graphRelationLabel(edge.relation_type))
-          + "</span><span class='graph-relation-text'>" + text + " · " + strength + "</span></div>";
-      }).join("") + "</div>";
     }
 
-    function renderGraphDetail(node) {
-      if (!graphDetail) return;
-      selectedGraphKpId = node.id;
-      recordRecent("kp", node.id);
-      graphDetail.innerHTML = "<p class='side-label'>学习看板</p><h2>"
-        + escapeHtml(node.title) + "</h2>"
-        + (actionReminder(node) ? "<p class='action-reminder'>" + actionReminder(node) + "</p>" : "")
-        + "<div class='graph-dashboard-metrics'><div><span>当前视图</span><strong>"
-        + escapeHtml(graphNodeMetric(node)) + "</strong></div><div><span>关联题目</span><strong>"
-        + String(node.problem_count || 0) + "</strong></div></div>"
-        + "<section class='graph-relations-panel'><p class='side-label'>直接关系</p>"
-        + graphRelationHtml(node.id) + "</section>";
-      var link = document.createElement("a");
-      link.id = "graph-open-kp";
-      link.className = "graph-dashboard-link";
-      link.href = "/w/" + encodeURIComponent(WS) + "/kp/" + encodeURIComponent(node.id);
-      link.textContent = "打开知识点";
-      graphDetail.appendChild(link);
-      showGraphPanel(true);
+    function graphSyncLegend() {
+      graphLegendItems().forEach(function (item) {
+        var hidden = !!graphHiddenEdgeTypes[item.dataset.edgeType];
+        item.classList.toggle("off", hidden);
+        item.setAttribute("aria-pressed", hidden ? "false" : "true");
+      });
     }
 
-    function graphNeighbors(nodeId) {
-      var distances = new Map([[nodeId, 0]]);
-      var pending = [nodeId];
-      while (pending.length) {
-        var current = pending.shift();
-        var distance = distances.get(current);
-        if (distance >= 2) continue;
-        (graphAdjacency.get(current) || []).forEach(function (neighbor) {
-          if (!distances.has(neighbor)) {
-            distances.set(neighbor, distance + 1);
-            pending.push(neighbor);
-          }
-        });
+    function graphToastShow(text) {
+      if (!graphToast) return;
+      graphToast.textContent = text;
+      graphToast.classList.add("show");
+      setTimeout(function () { graphToast.classList.remove("show"); }, 1300);
+    }
+
+    function graphUpdateGapLegend() {
+      if (!sim) return;
+      // The legend has to describe the guides the current view actually uses:
+      // structure guides follow gravity only (band wrapping, not inflation,
+      // absorbs pressure), while the metric views keep the inflation escape
+      // hatch from the blueprint.
+      var inflation = sim.graph.view === "structure" ? 1 : sim.graph.layoutInflation;
+      var spread = GraphPhysics.spreadFactor(sim.graph.gravity) * inflation;
+      if (graphStrongGap) graphStrongGap.textContent = Math.round(GraphPhysics.baseGapForStrength(1.875) * spread) + "px";
+      if (graphMediumGap) graphMediumGap.textContent = Math.round(GraphPhysics.baseGapForStrength(1.25) * spread) + "px";
+      if (graphWeakGap) graphWeakGap.textContent = Math.round(GraphPhysics.baseGapForStrength(.75) * spread) + "px";
+      if (graphReadabilityState) {
+        graphReadabilityState.textContent = "硬下限 · " + inflation.toFixed(2) + "×";
       }
-      return distances;
     }
 
-    function updateGraphFocus() {
-      var distances = graphFocusedId ? graphNeighbors(graphFocusedId) : null;
-      graphNodeElements.forEach(function (elements, id) {
-        ["graph-focus-selected", "graph-focus-near", "graph-focus-mid", "graph-focus-far"]
-          .forEach(function (name) {
-            elements.node.classList.remove(name);
-            elements.label.classList.remove(name);
-          });
-        if (!distances) return;
-        var distance = distances.get(id);
-        var name = distance === 0 ? "graph-focus-selected"
-          : distance === 1 ? "graph-focus-near"
-            : distance === 2 ? "graph-focus-mid" : "graph-focus-far";
-        elements.node.classList.add(name);
-        elements.label.classList.add(name);
+    function graphStageSize(nodes, levels, gravity) {
+      // The stage must cover the guide grid exactly; both come from the same
+      // physics helper so they cannot drift apart.
+      return GraphPhysics.structureStageSize(nodes, levels, gravity);
+    }
+
+    function graphBuild(model) {
+      graphNodeData = (model.nodes || []).map(function (node) {
+        return {
+          id: node.id,
+          title: node.title || node.id,
+          state: mapGraphState(node.state),
+          kind: node.importance === "supplementary" ? "support" : "core",
+          importance: node.importance === "supplementary" ? .55 : 1,
+          problems: Number(node.problem_count) || 0,
+        };
       });
-      graphEdgeElements.forEach(function (entry) {
-        ["graph-focus-near", "graph-focus-mid", "graph-focus-far"].forEach(function (name) {
-          entry.element.classList.remove(name);
-        });
-        if (!distances) return;
-        var sourceDistance = distances.get(entry.edge.source);
-        var targetDistance = distances.get(entry.edge.target);
-        var name = sourceDistance <= 1 && targetDistance <= 1 ? "graph-focus-near"
-          : sourceDistance !== undefined && targetDistance !== undefined
-            ? "graph-focus-mid" : "graph-focus-far";
-        entry.element.classList.add(name);
+      graphEdgeData = (model.edges || []).map(function (edge) {
+        return {
+          s: edge.source,
+          t: edge.target,
+          type: mapEdgeType(edge),
+          strength: mapStrength(edge.strength),
+          direction: edge.direction,
+        };
       });
-      updateGraphLabels();
-    }
-
-    function clearGraphFocus() {
-      graphFocusedId = null;
-      updateGraphFocus();
-    }
-
-    function focusGraph(nodeId) {
-      graphFocusedId = nodeId;
-      updateGraphFocus();
-    }
-
-    function updateGraphLabels() {
-      var search = (graphSearch && graphSearch.value || "").trim().toLowerCase();
-      graphNodeElements.forEach(function (elements, id) {
-        var node = graphNodeById.get(id);
-        var matched = !!(search && node
-          && (node.title + " " + node.id).toLowerCase().includes(search));
-        var focused = graphFocusedId === id || graphHoveredId === id;
-        var visible = graphView.scale >= 0.58 || focused || matched;
-        elements.label.style.opacity = visible ? "1" : "0";
-        elements.label.setAttribute("aria-hidden", visible ? "false" : "true");
+      var ids = new Set(graphNodeData.map(function (node) { return node.id; }));
+      graphEdgeData = graphEdgeData.filter(function (edge) {
+        return ids.has(edge.s) && ids.has(edge.t) && edge.s !== edge.t;
       });
-    }
-
-    function graphCompactnessNumber() {
-      var value = graphCompactness ? Number(graphCompactness.value) : 30;
-      return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 30;
-    }
-
-    function graphVisibleModel() {
-      var search = (graphSearch && graphSearch.value || "").trim().toLowerCase();
-      var states = new Set(activeGraphStates());
-      var nodes = graphData.nodes.filter(function (node) {
-        return (!search || (node.title + " " + node.id).toLowerCase().includes(search))
-          && (!states.size || states.has(graphState(node)));
+      var levels = GraphPhysics.hierarchyLevels(graphNodeData, graphEdgeData);
+      var size = graphStageSize(graphNodeData, levels, graphGravity ? Number(graphGravity.value) : 30);
+      graphHiddenEdgeTypes = {};
+      var hasSemanticEdge = graphEdgeData.some(function (edge) { return edge.type !== "legacy"; });
+      var hasLegacyEdge = graphEdgeData.some(function (edge) { return edge.type === "legacy"; });
+      if (hasSemanticEdge && hasLegacyEdge) graphHiddenEdgeTypes.legacy = true;
+      sim = GraphPhysics.create(graphNodeData, graphEdgeData, {
+        stageWidth: size.width,
+        stageHeight: size.height,
+        view: "structure",
+        gravity: graphGravity ? Number(graphGravity.value) : 30,
+        hiddenEdgeTypes: graphHiddenEdgeTypes,
       });
-      var visibleIds = new Set(nodes.map(function (node) { return node.id; }));
-      return {
-        nodes: nodes,
-        edges: graphData.edges.filter(function (edge) {
-          return visibleIds.has(edge.source) && visibleIds.has(edge.target);
-        }),
-      };
+      graphSyncLegend();
+      graphNodeData = sim.nodes;
+      graphEdgeData = sim.edges;
+      graphStage.style.width = sim.state.stageWidth + "px";
+      graphStage.style.height = sim.state.stageHeight + "px";
+      graphEdges.setAttribute("width", String(sim.state.stageWidth));
+      graphEdges.setAttribute("height", String(sim.state.stageHeight));
+      graphEdges.setAttribute("viewBox", "0 0 " + sim.state.stageWidth + " " + sim.state.stageHeight);
+      graphCreateSvg();
+      graphCreateNodes();
+      graphApplyVisibility();
+      graphUpdateGapLegend();
+      graphApplyView();
+      sim.reheat(1, true);
+      graphSolver(true);
+      graphEnsureLoop();
     }
 
-    function computeGraphPorts() {
-      var slots = new Map();
-      if (!graphSimulation) return slots;
-      var incident = new Map(graphSimulation.nodes.map(function (node) { return [node.id, []]; }));
-      graphSimulation.edges.forEach(function (edge) {
-        var source = edge.sourceNode, target = edge.targetNode;
-        if (!source || !target) return;
-        incident.get(source.id).push({ edge: edge,
-          angle: Math.atan2(target.y - source.y, target.x - source.x) });
-        incident.get(target.id).push({ edge: edge,
-          angle: Math.atan2(source.y - target.y, source.x - target.x) });
-      });
-      incident.forEach(function (raw, nodeId) {
-        if (!raw.length) return;
-        var list = raw.slice().sort(function (a, b) { return a.angle - b.angle; });
-        if (list.length > 1) {
-          var cut = 0, maxGap = -1;
-          for (var i = 0; i < list.length; i += 1) {
-            var gap = list[(i + 1) % list.length].angle - list[i].angle;
-            if (i === list.length - 1) gap += Math.PI * 2;
-            if (gap > maxGap) { maxGap = gap; cut = i + 1; }
-          }
-          list = list.slice(cut).concat(list.slice(0, cut));
+    function graphCreateSvg() {
+      graphEdges.innerHTML =
+        "<defs>"
+        + "<marker id='graph-arrow-blue' viewBox='0 0 8 8' refX='7' refY='4' markerWidth='6' markerHeight='6' orient='auto'>"
+        + "<path d='M0 0 L8 4 L0 8Z' fill='#2457c5' opacity='.75'></path></marker>"
+        + "<marker id='graph-arrow-yellow' viewBox='0 0 8 8' refX='7' refY='4' markerWidth='6' markerHeight='6' orient='auto'>"
+        + "<path d='M0 0 L8 4 L0 8Z' fill='#c3a128' opacity='.72'></path></marker>"
+        + "</defs>";
+      graphEdgeEls = sim.edges.map(function (edge) {
+        var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("class", "graph-edge " + edge.type);
+        if (edge.type === "prereq" && edge.direction !== "symmetric") {
+          path.setAttribute("marker-end", "url(#graph-arrow-blue)");
         }
-        var groups = [], group = [list[0]];
-        for (var index = 1; index < list.length; index += 1) {
-          var angleGap = list[index].angle - list[index - 1].angle;
-          if (angleGap < 0) angleGap += Math.PI * 2;
-          if (angleGap < 0.78) group.push(list[index]);
-          else { groups.push(group); group = [list[index]]; }
+        if (edge.type === "apply" && edge.direction !== "symmetric") {
+          path.setAttribute("marker-end", "url(#graph-arrow-yellow)");
         }
-        groups.push(group);
-        groups.forEach(function (entries) {
-          var mid = (entries.length - 1) / 2;
-          entries.forEach(function (entry, position) {
-            slots.set(String(entry.edge.id || entry.edge.source + ":" + entry.edge.target)
-              + "|" + nodeId, { slot: position - mid, angle: entry.angle });
-          });
+        graphEdges.appendChild(path);
+        return { edge: edge, path: path };
+      });
+    }
+
+    function graphCreateNodes() {
+      if (graphEls.size) {
+        graphEls.forEach(function (elements) {
+          elements.wrap.remove();
+          elements.select.remove();
         });
-      });
-      return slots;
-    }
-
-    function drawGraph() {
-      if (!graphSimulation || !graphStage) return;
-      graphStage.style.width = graphSimulation.width + "px";
-      graphStage.style.height = graphSimulation.height + "px";
-      var edgeLayer = graphStage.querySelector(".graph-edge-layer");
-      if (edgeLayer) {
-        edgeLayer.setAttribute("width", String(graphSimulation.width));
-        edgeLayer.setAttribute("height", String(graphSimulation.height));
-        edgeLayer.setAttribute("viewBox", "0 0 " + graphSimulation.width + " " + graphSimulation.height);
+        graphEls = new Map();
       }
-      var ports = computeGraphPorts();
-      graphEdgeElements.forEach(function (entry) {
-        var source = entry.edge.sourceNode, target = entry.edge.targetNode;
-        if (!source || !target) return;
-        var key = String(entry.edge.id || entry.edge.source + ":" + entry.edge.target);
-        var baseAngle = Math.atan2(target.y - source.y, target.x - source.x);
-        var sourcePort = ports.get(key + "|" + source.id) || { slot: 0, angle: baseAngle };
-        var targetPort = ports.get(key + "|" + target.id)
-          || { slot: 0, angle: baseAngle + Math.PI };
-        var sourceRadius = source.radius + 10, targetRadius = target.radius + 11;
-        var sourceGap = Math.min(12, 5 + source.radius * 0.12);
-        var targetGap = Math.min(12, 5 + target.radius * 0.12);
-        var sux = Math.cos(sourcePort.angle), suy = Math.sin(sourcePort.angle);
-        var stx = -suy, sty = sux;
-        var tux = Math.cos(targetPort.angle), tuy = Math.sin(targetPort.angle);
-        var ttx = -tuy, tty = tux;
-        var x1 = source.x + sux * sourceRadius + stx * sourcePort.slot * sourceGap;
-        var y1 = source.y + suy * sourceRadius + sty * sourcePort.slot * sourceGap;
-        var x2 = target.x + tux * targetRadius + ttx * targetPort.slot * targetGap;
-        var y2 = target.y + tuy * targetRadius + tty * targetPort.slot * targetGap;
-        var dx = x2 - x1, dy = y2 - y1;
-        var length = Math.max(1, Math.hypot(dx, dy));
-        var px = -dy / length, py = dx / length;
-        var typeBend = entry.edge.relation_type === "related" ? 18
-          : entry.edge.relation_type === "contrasts" ? -20
-            : entry.edge.relation_type === "applies_to" ? 14 : 0;
-        var laneBend = (sourcePort.slot - targetPort.slot) * 7;
-        var shift = Math.max(-40, Math.min(40, typeBend + laneBend));
-        var sourceOut = 18 + Math.abs(sourcePort.slot) * 4 + Math.min(12, length * 0.06);
-        var targetOut = 18 + Math.abs(targetPort.slot) * 4 + Math.min(12, length * 0.06);
-        var c1x = x1 + sux * sourceOut + stx * sourcePort.slot * 2.5 + px * shift;
-        var c1y = y1 + suy * sourceOut + sty * sourcePort.slot * 2.5 + py * shift;
-        var c2x = x2 + tux * targetOut + ttx * targetPort.slot * 2.5 + px * shift;
-        var c2y = y2 + tuy * targetOut + tty * targetPort.slot * 2.5 + py * shift;
-        var path = "M " + x1.toFixed(1) + " " + y1.toFixed(1)
-          + " C " + c1x.toFixed(1) + " " + c1y.toFixed(1)
-          + " " + c2x.toFixed(1) + " " + c2y.toFixed(1)
-          + " " + x2.toFixed(1) + " " + y2.toFixed(1);
-        entry.paths.forEach(function (layer) { layer.setAttribute("d", path); });
-      });
-      graphSimulation.nodes.forEach(function (node) {
-        var elements = graphNodeElements.get(node.id);
-        if (!elements) return;
-        elements.node.style.left = node.x + "px";
-        elements.node.style.top = node.y + "px";
-        elements.node.style.width = (node.radius * 2) + "px";
-        elements.node.style.height = (node.radius * 2) + "px";
-        if (elements.select) {
-          elements.select.style.left = (node.x + node.radius - 2) + "px";
-          elements.select.style.top = (node.y - node.radius - 2) + "px";
-        }
-        elements.label.style.left = node.x + "px";
-        elements.label.style.top = (node.y + node.radius + 9) + "px";
-      });
-      drawGraphAmbientOnce();
-    }
-
-    function applyGraphView() {
-      if (!graphStage) return;
-      graphStage.style.transform = "translate(" + graphView.x + "px," + graphView.y
-        + "px) scale(" + graphView.scale + ")";
-      updateGraphLabels();
-    }
-
-    function setGraphScale(scale, anchorX, anchorY) {
-      var old = graphView.scale;
-      var next = Math.max(0.32, Math.min(2.5, scale));
-      if (anchorX !== undefined && anchorY !== undefined && old) {
-        var worldX = (anchorX - graphView.x) / old;
-        var worldY = (anchorY - graphView.y) / old;
-        graphView.x = anchorX - worldX * next;
-        graphView.y = anchorY - worldY * next;
-      }
-      graphView.scale = next;
-      applyGraphView();
-    }
-
-    function fitGraph() {
-      if (!graphSimulation || !graphSimulation.nodes.length) return;
-      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      graphSimulation.nodes.forEach(function (node) {
-        var labelHalf = Math.min(84, Math.max(31, Array.from(String(node.title || "")).length * 6 + 9));
-        minX = Math.min(minX, node.x - Math.max(node.radius + 12, labelHalf));
-        maxX = Math.max(maxX, node.x + Math.max(node.radius + 12, labelHalf));
-        minY = Math.min(minY, node.y - node.radius - 18);
-        maxY = Math.max(maxY, node.y + node.radius + 54);
-      });
-      var contentWidth = Math.max(1, maxX - minX);
-      var contentHeight = Math.max(1, maxY - minY);
-      var scaleX = Math.max(0.28, (graphCanvas.clientWidth - 54) / contentWidth);
-      var scaleY = Math.max(0.28, (graphCanvas.clientHeight - 54) / contentHeight);
-      graphView.scale = Math.max(0.28, Math.min(1.12, scaleX, scaleY));
-      graphView.x = graphCanvas.clientWidth / 2 - ((minX + maxX) / 2) * graphView.scale;
-      graphView.y = graphCanvas.clientHeight / 2 - ((minY + maxY) / 2) * graphView.scale;
-      if (graphStage) {
-        graphStage.classList.add("graph-fit-anim");
-        setTimeout(function () {
-          if (graphStage) graphStage.classList.remove("graph-fit-anim");
-        }, 340);
-      }
-      applyGraphView();
-    }
-
-    function makeGraphEdgeLayer(stage) {
-      var edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      edgeLayer.setAttribute("class", "graph-edge-layer");
-      edgeLayer.setAttribute("aria-hidden", "true");
-      edgeLayer.setAttribute("width", String(graphSimulation.width));
-      edgeLayer.setAttribute("height", String(graphSimulation.height));
-      edgeLayer.setAttribute("viewBox", "0 0 " + graphSimulation.width + " " + graphSimulation.height);
-      var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-      var marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
-      marker.setAttribute("id", "graph-arrow");
-      marker.setAttribute("viewBox", "0 0 8 8");
-      marker.setAttribute("refX", "7");
-      marker.setAttribute("refY", "4");
-      marker.setAttribute("markerWidth", "7");
-      marker.setAttribute("markerHeight", "7");
-      marker.setAttribute("orient", "auto-start-reverse");
-      var markerPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      markerPath.setAttribute("d", "M 0 0 L 8 4 L 0 8 z");
-      markerPath.setAttribute("fill", "rgba(47, 44, 39, .62)");
-      marker.appendChild(markerPath);
-      defs.appendChild(marker);
-      edgeLayer.appendChild(defs);
-      stage.appendChild(edgeLayer);
-      return edgeLayer;
-    }
-
-    function renderGraph(keepView) {
-      var version = ++graphRenderVersion;
-      graphMotionVersion += 1; // a fresh solve invalidates any running interpolation
-      var model = graphVisibleModel();
-      var nodes = model.nodes, edges = model.edges;
-      var previousView = { x: graphView.x, y: graphView.y, scale: graphView.scale };
-      graphSimulation = GraphPhysics.layoutHierarchy(
-        nodes, edges, graphCanvas.clientWidth, graphCanvas.clientHeight, graphProjection,
-        graphCompactnessNumber()
-      );
-      if (GraphPhysics.setCompactness
-          && Math.abs((graphSimulation.compactness || 0) - graphCompactnessNumber()) > 0.5) {
-        GraphPhysics.setCompactness(graphSimulation, graphCompactnessNumber());
-      }
-      if (version !== graphRenderVersion) return;
-      graphNodeById = graphSimulation.nodeById
-        || new Map(graphSimulation.nodes.map(function (node) { return [node.id, node]; }));
-      graphAdjacency = new Map(nodes.map(function (node) { return [node.id, []]; }));
-      edges.forEach(function (edge) {
-        if (graphAdjacency.has(edge.source)) graphAdjacency.get(edge.source).push(edge.target);
-        if (graphAdjacency.has(edge.target)) graphAdjacency.get(edge.target).push(edge.source);
-      });
-      graphNodeElements = new Map();
-      graphEdgeElements = [];
-
-      var stage = document.createElement("div");
-      stage.className = "graph-stage";
-      stage.style.width = graphSimulation.width + "px";
-      stage.style.height = graphSimulation.height + "px";
-      graphStage = stage;
-      var edgeLayer = makeGraphEdgeLayer(stage);
-
-      graphSimulation.edges.slice().sort(function (a, b) {
-        function rank(edge) {
-          return edge.relation_type === "related" ? 0
-            : edge.relation_type === "prerequisite" ? 2 : 1;
-        }
-        return rank(a) - rank(b)
-          || String(a.source + a.target + (a.id || "")).localeCompare(
-            String(b.source + b.target + (b.id || "")));
-      }).forEach(function (edge) {
-        var visual = GraphPhysics.edgeVisual(edge.attraction);
-        var relationClass = String(edge.relation_type || "related")
-          .replace(/[^a-z0-9_-]/gi, "-");
-        var directionClass = edge.direction === "symmetric" ? "symmetric" : "directed";
-        var pipe = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        pipe.setAttribute("class", "graph-edge-pipe graph-relation-" + relationClass
-          + " graph-direction-" + directionClass);
-        pipe.setAttribute("data-relation", edge.relation_type || "related");
-        [
-          ["--edge-width", visual.width.toFixed(2) + "px"],
-          ["--edge-shadow-width", visual.shadowWidth.toFixed(2) + "px"],
-          ["--edge-highlight-width", visual.highlightWidth.toFixed(2) + "px"],
-          ["--edge-opacity", visual.opacity.toFixed(3)],
-        ].forEach(function (property) {
-          if (pipe.style.setProperty) pipe.style.setProperty(property[0], property[1]);
-          else pipe.style[property[0]] = property[1];
-        });
-        var paths = ["shadow", "body", "highlight"].map(function (layer) {
-          var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          path.setAttribute("class", "graph-edge graph-edge-" + layer);
-          pipe.appendChild(path);
-          return path;
-        });
-        if (edge.direction !== "symmetric") paths[1].setAttribute("marker-end", "url(#graph-arrow)");
-        edgeLayer.appendChild(pipe);
-        graphEdgeElements.push({ element: pipe, paths: paths, edge: edge });
-      });
-
-      graphSimulation.nodes.forEach(function (node) {
+      var selected = selectedKpIds();
+      sim.nodes.forEach(function (node) {
+        var wrap = document.createElement("div");
+        wrap.className = "node-wrap " + node.kind + " state-" + node.state;
+        wrap.dataset.kpId = node.id;
         var button = document.createElement("button");
-        button.className = "graph-node " + (node.state || "unmarked")
-          + " projection-" + (node.projection || "structure");
-        button.dataset.kpId = node.id;
+        button.type = "button";
+        button.className = "node";
         button.setAttribute("aria-label", node.title);
-        button.title = node.title;
+        var metric = document.createElement("span");
+        metric.className = "metric-track";
+        var ring = document.createElement("span");
+        ring.className = "status-ring";
+        var face = document.createElement("span");
+        face.className = "node-face";
         var value = document.createElement("span");
-        value.className = "graph-node-value";
-        value.setAttribute("aria-hidden", "true");
-        button.appendChild(value);
-        button.addEventListener("click", function () {
-          renderGraphDetail(node);
-          focusGraph(node.id);
-          graphAmbientBoost = Math.max(graphAmbientBoost, 0.55);
+        value.className = "node-value";
+        var unit = document.createElement("span");
+        unit.className = "node-unit";
+        face.appendChild(value);
+        face.appendChild(unit);
+        var satellite = document.createElement("span");
+        satellite.className = "node-satellite";
+        button.appendChild(metric);
+        button.appendChild(ring);
+        button.appendChild(face);
+        button.appendChild(satellite);
+        var label = document.createElement("div");
+        label.className = "label";
+        label.textContent = node.title;
+        var meta = document.createElement("div");
+        meta.className = "meta";
+        wrap.appendChild(button);
+        wrap.appendChild(label);
+        wrap.appendChild(meta);
+        button.addEventListener("click", function (event) {
+          if (event.stopPropagation) event.stopPropagation();
+          graphSelect(node.id, true);
         });
         button.addEventListener("mouseenter", function () {
-          graphHoveredId = node.id;
-          updateGraphLabels();
+          sim.graph.hover = node.id;
+          graphMarkDirty();
         });
         button.addEventListener("mouseleave", function () {
-          graphHoveredId = null;
-          updateGraphLabels();
+          if (sim.graph.hover === node.id) sim.graph.hover = null;
+          graphMarkDirty();
         });
         button.addEventListener("pointerdown", function (event) {
           if (event.stopPropagation) event.stopPropagation();
-          draggedNode = node;
-          panStart = null;
-          if (graphStage) graphStage.classList.add("graph-dragging");
-          if (button.setPointerCapture && event.pointerId !== undefined) button.setPointerCapture(event.pointerId);
+          sim.graph.drag = { id: node.id, pointerId: event.pointerId };
+          wrap.classList.add("dragging");
+          if (button.setPointerCapture && event.pointerId !== undefined) {
+            button.setPointerCapture(event.pointerId);
+          }
+          sim.reheat(.55, false);
+          graphSolver(true);
+          graphEnsureLoop();
         });
-        stage.appendChild(button);
-
+        button.addEventListener("dblclick", function (event) {
+          if (event.stopPropagation) event.stopPropagation();
+          node.anchorX = null;
+          node.anchorY = null;
+          sim.reheat(.8, true);
+          graphSolver(true);
+          graphEnsureLoop();
+          graphToastShow("已释放固定位置");
+        });
+        graphStage.appendChild(wrap);
+        graphEls.set(node.id, {
+          node: node, wrap: wrap, button: button, label: label, meta: meta,
+          value: value, unit: unit,
+        });
         var select = document.createElement("input");
         select.type = "checkbox";
-        select.className = "graph-kp-selection";
+        select.className = "graph-kp-selection visually-hidden";
         select.dataset.selectionKpId = node.id;
         select.setAttribute("data-kp-selection", "");
-        select.setAttribute("aria-label", "选择 " + node.title);
-        select.checked = selectedKpIds().indexOf(node.id) >= 0;
-        select.addEventListener("pointerdown", function (event) {
-          if (event.stopPropagation) event.stopPropagation();
-        });
-        select.addEventListener("click", function (event) {
-          if (event.stopPropagation) event.stopPropagation();
-        });
+        select.checked = selected.indexOf(node.id) >= 0;
         select.addEventListener("change", function () {
           var next = selectedKpIds().filter(function (id) { return id !== node.id; });
           if (select.checked) next.push(node.id);
           saveSelectedKpIds(next);
+          graphSyncScope();
         });
-        stage.appendChild(select);
-
-        var label = document.createElement("span");
-        label.className = "graph-node-label";
-        label.textContent = node.title;
-        stage.appendChild(label);
-        graphNodeElements.set(node.id, { node: button, select: select, label: label, value: value });
-        updateGraphNodeAppearance(node);
+        graphStage.appendChild(select);
+        graphEls.get(node.id).select = select;
+        graphUpdateNodeAppearance(node);
       });
+      graphSyncScope();
+    }
 
-      if (!nodes.length) {
-        var empty = document.createElement("p");
-        empty.className = "muted graph-empty";
-        empty.textContent = "没有符合条件的知识点。";
-        stage.appendChild(empty);
-      }
-      if (graphAmbientCanvas) {
-        graphCanvas.replaceChildren(graphAmbientCanvas, stage);
-        graphAmbientLive = true;
-      } else graphCanvas.replaceChildren(stage);
-      drawGraph();
-      updateGraphFocus();
-      if (keepView) {
-        graphView = previousView;
-        applyGraphView();
-      } else {
-        fitGraph();
+    function graphProjectionDisplay(node) {
+      var score = sim.scoreFor(node);
+      if (sim.graph.view === "structure") return [String(sim.state.degreeCount.get(node.id) || 0), ""];
+      if (sim.graph.view === "problem_count") return [String(node.problems), ""];
+      if (sim.graph.view === "importance") return [String(Math.round(node.importance * 100)), "%"];
+      return [STATE_SHORT[node.state], ""];
+    }
+
+    function graphUpdateNodeAppearance(node) {
+      var elements = graphEls.get(node.id);
+      if (!elements) return;
+      var score = sim.scoreFor(node);
+      elements.button.style.setProperty("--metric-angle", (Math.max(.06, score) * 302) + "deg");
+      var display = graphProjectionDisplay(node);
+      if (elements.value) elements.value.textContent = display[0];
+      if (elements.unit) elements.unit.textContent = display[1];
+      if (elements.meta) {
+        elements.meta.textContent = STATE_LABEL[node.state] + " · "
+          + PROJECTION_TEXT[sim.graph.view] + " " + display[0] + display[1];
       }
     }
 
-    function animateGraphTransition(before) {
-      if (!graphSimulation || reducedGraphMotion) {
-        drawGraph();
-        fitGraph();
+    function graphSyncScope() {
+      var selected = selectedKpIds();
+      graphEls.forEach(function (elements, id) {
+        var member = selected.indexOf(id) >= 0;
+        elements.wrap.classList.toggle("in-scope", member);
+        if (elements.select) elements.select.checked = member;
+      });
+    }
+
+    function graphApplyVisibility() {
+      var filters = sim.graph.filters;
+      var focus = sim.graph.selected
+        ? sim.neighbors(sim.graph.selected)
+        : { one: new Set(), two: new Set() };
+      sim.nodes.forEach(function (node) {
+        var allowed = filters.size === 0 || filters.has(node.state);
+        node.visible = allowed;
+        var weight = 1;
+        if (sim.graph.selected) {
+          weight = node.id === sim.graph.selected ? 1
+            : focus.one.has(node.id) ? .92
+              : focus.two.has(node.id) ? .48 : .12;
+        }
+        node.focusWeight = weight;
+        node.targetOpacity = allowed ? weight : 0;
+        var elements = graphEls.get(node.id);
+        if (elements) {
+          elements.wrap.classList.toggle("selected", node.id === sim.graph.selected);
+          elements.wrap.classList.toggle("dim", weight < .5);
+          elements.wrap.classList.toggle("filtered", !allowed);
+        }
+      });
+    }
+
+    function graphApplyView() {
+      if (!sim) return;
+      graphStage.style.transform = "translate(" + graphView.panX + "px," + graphView.panY + "px) scale(" + graphView.scale + ")";
+      graphMarkDirty();
+    }
+
+    function graphSelect(id, centerIt) {
+      sim.graph.selected = id;
+      selectedGraphKpId = id;
+      recordRecent("kp", id);
+      graphApplyVisibility();
+      graphRenderDetail(sim.byId.get(id));
+      if (centerIt) graphCenterOn(sim.byId.get(id), true);
+      graphMarkDirty();
+    }
+
+    function graphCenterOn(node, zoom) {
+      if (!node) return;
+      if (zoom) graphView.scale = Math.max(graphView.scale, .78);
+      graphView.panX = graphCanvas.clientWidth / 2 - node.x * graphView.scale;
+      graphView.panY = graphCanvas.clientHeight / 2 - node.y * graphView.scale;
+      graphView.userMoved = true;
+      graphApplyView();
+    }
+
+    function graphFit() {
+      if (!sim) return;
+      var active = sim.nodes.filter(function (node) { return node.visible && node.opacity > .02; });
+      if (!active.length) return;
+      var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      active.forEach(function (node) {
+        var fp = GraphPhysics.footprint(node);
+        minX = Math.min(minX, node.x - fp.left - 18);
+        maxX = Math.max(maxX, node.x + fp.right + 18);
+        minY = Math.min(minY, node.y - fp.top - 18);
+        maxY = Math.max(maxY, node.y + fp.bottom + 18);
+      });
+      var width = maxX - minX + 90;
+      var height = maxY - minY + 100;
+      graphView.scale = Math.max(.38, Math.min(1.05,
+        (graphCanvas.clientWidth - 36) / width,
+        (graphCanvas.clientHeight - 36) / height));
+      graphView.panX = graphCanvas.clientWidth / 2 - (minX + maxX) / 2 * graphView.scale;
+      graphView.panY = graphCanvas.clientHeight / 2 - (minY + maxY) / 2 * graphView.scale;
+      graphApplyView();
+    }
+
+    function graphRenderDetail(node) {
+      if (!graphDetail) return;
+      if (!node) {
+        graphDetail.innerHTML =
+          "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
+          + "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>";
         return;
       }
-      var targets = new Map(graphSimulation.nodes.map(function (node) {
-        return [node.id, { x: node.x, y: node.y, radius: node.radius }];
-      }));
-      graphSimulation.nodes.forEach(function (node) {
-        var start = before.get(node.id);
-        if (!start) return;
-        node.x = start.x; node.y = start.y; node.radius = start.radius;
+      var pill = STATE_PILL[node.state] || STATE_PILL.new;
+      var relations = sim.edges.filter(function (edge) {
+        return edge.s === node.id || edge.t === node.id;
       });
-      var version = ++graphMotionVersion;
-      var frame = 0, frames = 14;
-      function step() {
-        if (version !== graphMotionVersion || !graphSimulation) return;
-        frame += 1;
-        var t = Math.min(1, frame / frames);
-        var ease = 1 - Math.pow(1 - t, 3);
-        graphSimulation.nodes.forEach(function (node) {
-          var start = before.get(node.id), target = targets.get(node.id);
-          if (!target) return;
-          if (!start) start = target;
-          node.x = start.x + (target.x - start.x) * ease;
-          node.y = start.y + (target.y - start.y) * ease;
-          node.radius = start.radius + (target.radius - start.radius) * ease;
+      var rows = relations.slice(0, 7).map(function (edge) {
+        var other = sim.byId.get(edge.s === node.id ? edge.t : edge.s);
+        var score = GraphPhysics.strength01(edge.strength);
+        var strength = score > .72 ? "强" : score > .28 ? "中" : "弱";
+        return "<div class='rel-item'>"
+          + "<span class='rel-tag " + (REL_CLS[edge.type] || "") + "'>"
+          + (REL_NAME[edge.type] || "相关") + "</span>"
+          + "<span>" + escapeHtml(other ? other.title : "") + " · " + strength + "</span></div>";
+      }).join("");
+      var member = selectedKpIds().indexOf(node.id) >= 0;
+      graphDetail.innerHTML =
+        "<div class='eyebrow'>Knowledge Point</div>"
+        + "<h3 id='graph-detail-title'>" + escapeHtml(node.title) + "</h3>"
+        + "<div class='id'>" + escapeHtml(node.id) + "</div>"
+        + "<div class='state-pill' style='background:" + pill.bg + ";color:" + pill.fg + "'>"
+        + (STATE_LABEL[node.state] || "未标记") + "</div>"
+        + "<section class='section'><div class='section-title'>学习概况</div>"
+        + "<div class='metric-row'>"
+        + "<div class='metric'><b>" + node.problems + "</b><span>关联题目</span></div>"
+        + "<div class='metric'><b>" + relations.length + "</b><span>直接关系</span></div>"
+        + "</div></section>"
+        + "<section class='section'><div class='section-title'>直接关系</div>"
+        + "<div class='rel-list'>" + (rows || "<p class='muted'>还没有直接关系。</p>") + "</div></section>"
+        + "<section class='section'><div class='section-title'>说明</div>"
+        + "<div class='note'>布局在可读性硬下限之上同时压低点密度与线密度：节点从局部过密区域轻微疏散；"
+        + "连线不再都从同一圆心出发，而是分配不同的出口 port 与 lane。</div></section>"
+        + "<div class='detail-actions'>"
+        + "<a class='ghost' href='/w/" + encodeURIComponent(WS) + "/kps?kp=" + encodeURIComponent(node.id)
+        + "'>打开知识点</a>"
+        + "<button type='button' class='primary' id='graph-scope-toggle'>"
+        + (member ? "移出练习范围" : "加入练习范围") + "</button></div>";
+      var toggle = document.getElementById("graph-scope-toggle");
+      if (toggle && !toggle.dataset.scopeBound) {
+        toggle.dataset.scopeBound = "1";
+        toggle.addEventListener("click", function () {
+          var ids = selectedKpIds();
+          var member2 = ids.indexOf(node.id) >= 0;
+          var next = member2
+            ? ids.filter(function (id) { return id !== node.id; })
+            : ids.concat([node.id]);
+          saveSelectedKpIds(next);
+          graphSyncScope();
+          graphRenderDetail(node);
+          graphToastShow(member2 ? "已移出练习范围" : "已加入练习范围");
         });
-        drawGraph();
-        if (frame < frames) requestAnimationFrame(step);
-        else {
-          graphSimulation.nodes.forEach(function (node) {
-            var target = targets.get(node.id);
-            if (!target) return;
-            node.x = target.x; node.y = target.y; node.radius = target.radius;
-          });
-          drawGraph();
-          fitGraph();
+      }
+    }
+
+    function graphRenderFrame() {
+      if (!sim) return;
+      var focus = sim.graph.selected ? sim.neighbors(sim.graph.selected) : null;
+      sim.nodes.forEach(function (node) {
+        var elements = graphEls.get(node.id);
+        if (!elements) return;
+        var sizeDelta = node.targetSize - node.size;
+        node.size += sizeDelta * .14;
+        var opacityDelta = node.targetOpacity - node.opacity;
+        node.opacity += opacityDelta * .18;
+        elements.wrap.style.left = node.x + "px";
+        elements.wrap.style.top = node.y + "px";
+        elements.wrap.style.opacity = node.opacity.toFixed(3);
+        elements.wrap.style.setProperty("--size", node.size + "px");
+        var focused = sim.graph.selected
+          && (node.id === sim.graph.selected || focus.one.has(node.id));
+        var labelVisible = graphView.scale > .60 || focused || sim.graph.hover === node.id;
+        elements.label.style.opacity = (labelVisible ? node.opacity : 0).toFixed(3);
+        elements.meta.style.opacity = ((graphView.scale > .84 || node.id === sim.graph.selected ? .9 : 0) * node.opacity).toFixed(3);
+      });
+      var activeEdges = sim.visibleEdges();
+      sim.computePortSlots(activeEdges);
+      // Vector-effect cannot rescue strokes from an ancestor CSS transform, so
+      // the render keeps line weight and dash rhythm constant on screen by
+      // pre-dividing them by the zoom. Without this a fit view of a wide graph
+      // draws 0.4px lines and the relations simply vanish.
+      var inverseScale = 1 / Math.max(.2, graphView.scale || 1);
+      graphEdgeEls.forEach(function (item) {
+        var edge = item.edge;
+        if (sim.graph.hiddenEdgeTypes && sim.graph.hiddenEdgeTypes[edge.type]) {
+          // A hidden relation type is no longer a layout constraint, so it must
+          // not leave a stale path painted on the canvas either.
+          item.path.style.display = "none";
+          return;
         }
-      }
-      requestAnimationFrame(step);
-    }
-
-    function reprojectGraph() {
-      if (!graphSimulation) return;
-      var before = new Map(graphSimulation.nodes.map(function (node) {
-        return [node.id, { x: node.x, y: node.y, radius: node.radius }];
-      }));
-      GraphPhysics.applyHierarchyProjection(
-        graphSimulation, graphProjection, graphCompactnessNumber()
-      );
-      graphNodeById = graphSimulation.nodeById || graphNodeById;
-      graphSimulation.nodes.forEach(updateGraphNodeAppearance);
-      animateGraphTransition(before);
-      graphAmbientBoost = Math.max(graphAmbientBoost, 0.95);
-    }
-
-    function resizeGraphAmbient() {
-      if (!graphAmbientCanvas || !graphAmbientContext) return;
-      var rect = graphCanvas.getBoundingClientRect();
-      var dpr = Math.min(2, window.devicePixelRatio || 1);
-      graphAmbientCanvas.width = Math.max(1, Math.round(rect.width * dpr));
-      graphAmbientCanvas.height = Math.max(1, Math.round(rect.height * dpr));
-      graphAmbientCanvas.style.width = Math.max(1, Math.round(rect.width)) + "px";
-      graphAmbientCanvas.style.height = Math.max(1, Math.round(rect.height)) + "px";
-      graphAmbientContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    // Screen-space node boxes are projected once per frame, not once per dot.
-    function graphAmbientMaskNodes() {
-      if (!graphSimulation) return [];
-      var out = [];
-      var nodes = graphSimulation.nodes;
-      for (var index = 0; index < nodes.length; index += 1) {
-        var node = nodes[index];
-        var sx = graphView.x + node.x * graphView.scale;
-        var sy = graphView.y + node.y * graphView.scale;
-        var core = Math.max(46, node.radius * graphView.scale + 28);
-        var fade = core + 82;
-        if (sx < -fade || sy < -fade
-          || sx > (graphAmbientCanvas.clientWidth || graphCanvas.clientWidth) + fade
-          || sy > (graphAmbientCanvas.clientHeight || graphCanvas.clientHeight) + fade) continue;
-        out.push({ sx: sx, sy: sy, core: core, fade: fade });
-      }
-      return out;
-    }
-
-    function graphAmbientNodeMask(x, y, maskNodes) {
-      var mask = 1;
-      for (var index = 0; index < maskNodes.length; index += 1) {
-        var spot = maskNodes[index];
-        var distance = Math.hypot(x - spot.sx, y - spot.sy);
-        if (distance <= spot.core) return 0.02;
-        if (distance < spot.fade) {
-          mask = Math.min(mask, 0.02 + 0.98 * (distance - spot.core) / (spot.fade - spot.core));
+        item.path.style.display = "";
+        var a = sim.byId.get(edge.s);
+        var b = sim.byId.get(edge.t);
+        var style = sim.edgeStyle(edge);
+        var edgeFocus = 1;
+        if (sim.graph.selected) {
+          edgeFocus = (edge.s === sim.graph.selected || edge.t === sim.graph.selected) ? 1
+            : (a.focusWeight >= .48 && b.focusWeight >= .48) ? .38 : .07;
         }
-      }
-      return mask;
+        var opacity = Math.min(a.opacity, b.opacity) * edgeFocus * style.baseOpacity;
+        item.path.setAttribute("d", sim.edgePath(edge));
+        item.path.style.opacity = opacity.toFixed(3);
+        item.path.style.strokeWidth = (style.width * inverseScale) + "px";
+        if (edge.type === "contrast") {
+          item.path.style.strokeDasharray = (6 * inverseScale) + " " + (5 * inverseScale);
+        } else if (edge.type === "legacy") {
+          item.path.style.strokeDasharray = (2 * inverseScale) + " " + (6 * inverseScale);
+        } else {
+          item.path.style.strokeDasharray = "";
+        }
+      });
     }
 
-    function graphAmbientHash(value) {
+    function graphFrame() {
+      graphFrameHandle = null;
+      if (!sim) return;
+      var wasSolving = sim.graph.alpha > 0;
+      // One physics step per frame is plenty for a normal pool; a couple of
+      // hundred nodes get a few steps per frame so the settle finishes in a
+      // sensible wall-clock time instead of a minute of near-static frames.
+      var steps = sim.nodes.length > 120 ? 3 : 1;
+      while (steps > 0 && sim.graph.alpha > 0) {
+        sim.tick();
+        steps -= 1;
+      }
+      if (sim.graph.settled && sim.graph.autoFitAfterSettle && !graphView.userMoved) {
+        sim.graph.autoFitAfterSettle = false;
+        graphFit();
+      }
+      if (wasSolving !== (sim.graph.alpha > 0)) {
+        graphSolver(sim.graph.alpha > 0);
+        graphUpdateGapLegend();
+      } else if (wasSolving) {
+        graphUpdateGapLegend();
+      }
+      // A big pool makes one graph paint far more expensive than one physics
+      // step, so the canvas repaints on a stride while the solver runs; every
+      // interaction still forces a frame through graphRenderDirty, and the
+      // settle frame always paints.
+      var solving = sim.graph.alpha > 0;
+      var stride = 1;
+      if (solving) {
+        if (sim.nodes.length > 300) stride = 12;
+        else if (sim.nodes.length > 120) stride = 8;
+      }
+      var paintNow = graphRenderDirty || !solving || sim.graph.solveStep % stride === 0;
+      if (paintNow) {
+        graphRenderFrame();
+        graphRenderDirty = false;
+      }
+      graphTideSurge(solving ? .06 : 0);
+      // keep animating only while the solver runs or a frame was requested;
+      // interactions call graphEnsureLoop() again when they change something
+      if (solving || graphRenderDirty) graphEnsureLoop();
+    }
+
+    function graphEnsureLoop() {
+      if (graphFrameHandle === null) graphFrameHandle = requestAnimationFrame(graphFrame);
+    }
+
+    /* Anything that changes what the canvas should show marks it dirty through
+     * here. Setting the flag alone is not enough: the loop parks itself once the
+     * solver settles, and a parked loop would only repaint on the next
+     * unrelated interaction (selection, hover and zoom all hit this). */
+    function graphMarkDirty() {
+      graphRenderDirty = true;
+      graphEnsureLoop();
+    }
+
+    /* ---- ambient layer: paper-styled chroma tide, lower-left -> upper-right ---- */
+
+    var graphTideState = { boost: 0, live: false, frame: null, reduced: false };
+    var graphTideCtx = null;
+    var graphTideSize = { w: 0, h: 0 };
+    var graphTideRibbons = [
+      { offset: -240, amp: 16, wave: 170, laneGap: 34, lanes: 2, step: 34, speed: 32, dotBase: 2.2, dotAmp: 4.0, alpha: .10, color: [195, 161, 40], phase: .3 },
+      { offset: -130, amp: 19, wave: 210, laneGap: 37, lanes: 3, step: 36, speed: 38, dotBase: 2.3, dotAmp: 4.8, alpha: .12, color: [36, 87, 197], phase: 1.2 },
+      { offset: 0, amp: 22, wave: 235, laneGap: 40, lanes: 4, step: 39, speed: 44, dotBase: 2.7, dotAmp: 5.8, alpha: .115, color: [214, 69, 61], phase: 2.5 },
+      { offset: 135, amp: 19, wave: 205, laneGap: 37, lanes: 3, step: 36, speed: 36, dotBase: 2.3, dotAmp: 4.8, alpha: .12, color: [36, 87, 197], phase: 3.8 },
+      { offset: 245, amp: 16, wave: 175, laneGap: 33, lanes: 2, step: 33, speed: 29, dotBase: 2.1, dotAmp: 3.9, alpha: .10, color: [195, 161, 40], phase: 5.1 },
+    ];
+
+    function graphTideHash(value) {
       var x = (value | 0) + 0x6D2B79F5;
       x = Math.imul(x ^ (x >>> 15), x | 1);
       x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
       return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
     }
 
-    function drawGraphAmbient(now) {
-      if (!graphAmbientCanvas || !graphAmbientContext || !graphAmbientLive) return;
-      var width = graphAmbientCanvas.clientWidth || graphCanvas.clientWidth;
-      var height = graphAmbientCanvas.clientHeight || graphCanvas.clientHeight;
-      var ctx = graphAmbientContext;
-      ctx.clearRect(0, 0, width, height);
-      var t = reducedGraphMotion ? 0 : (Number(now) || 0) / 1000;
-      var dirX = Math.SQRT1_2, dirY = -Math.SQRT1_2;
-      var normalX = Math.SQRT1_2, normalY = Math.SQRT1_2;
-      var centerX = width * 0.5, centerY = height * 0.56;
-      var span = Math.hypot(width, height) + 320;
-      var maskNodes = graphAmbientMaskNodes();
-      var ribbons = [
-        [-230, 16, 176, 34, 2, 35, 30, 2.1, 4.0, 0.090, [181, 139, 0], 0.3],
-        [-120, 19, 212, 37, 3, 37, 38, 2.3, 4.8, 0.112, [36, 87, 197], 1.2],
-        [0, 22, 238, 40, 4, 40, 44, 2.7, 5.8, 0.105, [214, 69, 61], 2.5],
-        [132, 19, 208, 37, 3, 37, 36, 2.3, 4.8, 0.112, [36, 87, 197], 3.8],
-        [242, 16, 180, 33, 2, 34, 29, 2.1, 3.9, 0.088, [181, 139, 0], 5.1],
-      ];
-      ribbons.forEach(function (ribbon, bandIndex) {
-        var offset = ribbon[0], amp = ribbon[1], wave = ribbon[2], laneGap = ribbon[3];
-        var lanes = ribbon[4], step = ribbon[5], speed = ribbon[6], dotBase = ribbon[7];
-        var dotAmp = ribbon[8], alpha = ribbon[9], color = ribbon[10], phase = ribbon[11];
-        var travel = t * speed * (1 + graphAmbientBoost * 1.5);
-        var cols = Math.ceil(span / step) + 8;
-        for (var lane = 0; lane < lanes; lane += 1) {
-          var laneOffset = offset + (lane - (lanes - 1) / 2) * laneGap;
+    function graphTideSurge(amount) {
+      graphTideState.boost = Math.max(graphTideState.boost, amount);
+    }
+
+    function graphTideResize() {
+      if (!graphTide || !graphTideCtx) return;
+      var rect = graphCanvas.getBoundingClientRect();
+      var w = Math.max(1, Math.round(rect.width));
+      var h = Math.max(1, Math.round(rect.height));
+      var dpr = Math.min(2, window.devicePixelRatio || 1);
+      graphTide.width = Math.round(w * dpr);
+      graphTide.height = Math.round(h * dpr);
+      graphTide.style.width = w + "px";
+      graphTide.style.height = h + "px";
+      graphTideCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      graphTideSize = { w: w, h: h };
+    }
+
+    function graphTideNodeMask(x, y, w, h) {
+      var mask = 1;
+      if (!sim) return mask;
+      for (var i = 0; i < sim.nodes.length; i += 1) {
+        var node = sim.nodes[i];
+        if (!node.visible || node.opacity < .06) continue;
+        var sx = graphView.panX + node.x * graphView.scale;
+        var sy = graphView.panY + node.y * graphView.scale;
+        var core = Math.max(48, node.size * graphView.scale * .84) + 18;
+        var fade = core + 92;
+        var dist = Math.hypot(x - sx, y - sy);
+        if (dist <= core) return .02;
+        if (dist < fade) mask = Math.min(mask, .02 + .98 * (dist - core) / (fade - core));
+      }
+      return mask;
+    }
+
+    function graphTideEdgeMask(x, y, w, h) {
+      var ex = Math.min(1, x / 108, (w - x) / 108);
+      var ey = Math.min(1, y / 84, (h - y) / 84);
+      return Math.max(0, Math.min(1, Math.min(ex, ey)));
+    }
+
+    function graphTideDraw(t) {
+      var ctx = graphTideCtx;
+      var w = graphTideSize.w;
+      var h = graphTideSize.h;
+      if (!ctx || !w || !h) return;
+      ctx.clearRect(0, 0, w, h);
+      var SQ = Math.sqrt(.5);
+      var DIR = { x: SQ, y: -SQ };
+      var NRM = { x: SQ, y: SQ };
+      var TAU = Math.PI * 2;
+      var boost = graphTideState.boost;
+      var center = { x: w * .5, y: h * .56 };
+
+      graphTideRibbons.forEach(function (ribbon, bandIndex) {
+        var diag = Math.hypot(w, h);
+        var travel = t * ribbon.speed * (1 + boost * 1.55);
+        var span = diag + 320;
+        var cols = Math.ceil(span / ribbon.step) + 8;
+        for (var lane = 0; lane < ribbon.lanes; lane += 1) {
+          var laneOffset = ribbon.offset + (lane - (ribbon.lanes - 1) / 2) * ribbon.laneGap;
+          var alongPhase = lane * .58 + bandIndex * .77;
           for (var i = -4; i < cols; i += 1) {
             var seed = bandIndex * 100000 + lane * 10000 + i;
-            var u = -span / 2 + i * step + (travel % (step * 3));
-            var cross = laneOffset + Math.sin((u / wave) * Math.PI * 2
-              + phase + lane * 0.58 + t * 0.9) * amp;
-            var x = centerX + dirX * u + normalX * cross;
-            var y = centerY + dirY * u + normalY * cross;
-            if (x < -34 || x > width + 34 || y < -34 || y > height + 34) continue;
-            var mask = graphAmbientNodeMask(x, y, maskNodes);
-            if (mask < 0.018) continue;
-            var local = Math.sin((u / (wave * 0.72)) * Math.PI * 2
-              + phase * 1.35 + t * 1.65 + lane * 0.45) * 0.5 + 0.5;
-            var pulse = Math.sin(t * 1.35 + lane * 0.82 + i * 0.13 + phase) * 0.5 + 0.5;
-            var radius = (dotBase + dotAmp * (0.24 + 0.76 * local))
-              * (0.87 + 0.22 * pulse) * (1 + graphAmbientBoost * 0.36);
-            var maskAlpha = alpha * mask * (0.74 + 0.34 * graphAmbientHash(seed + 29));
+            var u = -span / 2 + i * ribbon.step + (travel % (ribbon.step * 3));
+            var wave = Math.sin((u / ribbon.wave) * TAU + ribbon.phase + alongPhase + t * .9) * ribbon.amp;
+            var cross = laneOffset + wave;
+            var x = center.x + DIR.x * u + NRM.x * cross;
+            var y = center.y + DIR.y * u + NRM.y * cross;
+            if (x < -34 || x > w + 34 || y < -34 || y > h + 34) continue;
+            var local = Math.sin((u / (ribbon.wave * .72)) * TAU + ribbon.phase * 1.35 + t * 1.65 + lane * .45) * .5 + .5;
+            var pulse = Math.sin(t * 1.35 + lane * .82 + i * .13 + ribbon.phase) * .5 + .5;
+            var radius = (ribbon.dotBase + ribbon.dotAmp * (.24 + .76 * local))
+              * (.87 + .22 * pulse) * (1 + boost * .38);
+            var mask = graphTideNodeMask(x, y) * graphTideEdgeMask(x, y, w, h);
+            if (mask < .018) continue;
+            var jitterX = (graphTideHash(seed + 11) - .5) * 1.7;
+            var jitterY = (graphTideHash(seed + 17) - .5) * 1.9;
+            var alpha = ribbon.alpha * mask * (.74 + .34 * graphTideHash(seed + 29)) * (1 + boost * .16);
             ctx.beginPath();
-            ctx.fillStyle = "rgba(" + color[0] + "," + color[1] + "," + color[2]
-              + "," + maskAlpha.toFixed(4) + ")";
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(" + ribbon.color[0] + "," + ribbon.color[1] + "," + ribbon.color[2] + "," + alpha.toFixed(4) + ")";
+            ctx.arc(x + jitterX, y + jitterY, radius, 0, TAU);
             ctx.fill();
+            if (radius > 5.15) {
+              ctx.beginPath();
+              ctx.fillStyle = "rgba(" + ribbon.color[0] + "," + ribbon.color[1] + "," + ribbon.color[2] + "," + (alpha * .11).toFixed(4) + ")";
+              ctx.arc(x + jitterX, y + jitterY, radius * 1.7, 0, TAU);
+              ctx.fill();
+            }
           }
         }
       });
-      graphAmbientBoost *= reducedGraphMotion ? 0 : 0.968;
-      if (!reducedGraphMotion) graphAmbientFrame = requestAnimationFrame(drawGraphAmbient);
+
+      var dustCount = Math.max(18, Math.round((w * h) / 21000));
+      var palette = [[36, 87, 197], [195, 161, 40], [214, 69, 61]];
+      for (var d = 0; d < dustCount; d += 1) {
+        var dustSeed = 700000 + d;
+        var dx = (graphTideHash(dustSeed) * w + t * 5 * (graphTideHash(dustSeed + 1) - .5) + w) % w;
+        var dy = (graphTideHash(dustSeed + 2) * h + t * 3 * (graphTideHash(dustSeed + 3) - .5) + h) % h;
+        var dustMask = graphTideNodeMask(dx, dy) * graphTideEdgeMask(dx, dy, w, h);
+        if (dustMask < .03) continue;
+        var color = palette[Math.floor(graphTideHash(dustSeed + 4) * palette.length)];
+        var dustR = .8 + graphTideHash(dustSeed + 5) * 1.6;
+        var dustA = (.018 + graphTideHash(dustSeed + 6) * .018) * (1 + boost * .08) * dustMask;
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + dustA.toFixed(4) + ")";
+        ctx.arc(dx, dy, dustR, 0, TAU);
+        ctx.fill();
+      }
+
+      var markAlpha = .03 * (1 + boost * .35);
+      var marks = [
+        [w * .18, h * .82, 18, 0, "36,87,197"],
+        [w * .49, h * .50, 0, 16, "214,69,61"],
+        [w * .82, h * .18, 14, 0, "195,161,40"],
+      ];
+      for (var m = 0; m < marks.length; m += 1) {
+        var mark = marks[m];
+        var wobble = Math.sin(t * .32 + m * 1.7) * 1.8;
+        var markMask = graphTideNodeMask(mark[0], mark[1]);
+        ctx.strokeStyle = "rgba(" + mark[4] + "," + (markAlpha * markMask).toFixed(4) + ")";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(mark[0] - mark[2] / 2, mark[1] - mark[3] / 2 + wobble);
+        ctx.lineTo(mark[0] + mark[2] / 2, mark[1] + mark[3] / 2 + wobble);
+        ctx.stroke();
+      }
+      graphTideState.boost *= graphTideState.reduced ? 0 : .968;
+      if (graphTideState.boost < .008) graphTideState.boost = 0;
     }
 
-    function drawGraphAmbientOnce() {
-      if (reducedGraphMotion && graphAmbientCanvas) drawGraphAmbient(0);
+    function graphTideFrame(now) {
+      graphTideState.frame = null;
+      if (!graphTideState.live) return;
+      // While a large pool solves, the ambient canvas would double the paint
+      // bill of every frame for no information; it resumes on settle.
+      var solvingLarge = sim && sim.nodes.length > 120 && sim.graph.alpha > 0;
+      if (!solvingLarge) graphTideDraw(graphTideState.reduced ? 0 : now / 1000);
+      if (!graphTideState.reduced) graphTideState.frame = requestAnimationFrame(graphTideFrame);
     }
 
-    function startGraphAmbient() {
-      if (graphAmbientCanvas) return;
-      graphAmbientCanvas = document.createElement("canvas");
-      graphAmbientCanvas.className = "graph-ambient";
-      graphAmbientCanvas.setAttribute("aria-hidden", "true");
-      graphAmbientContext = graphAmbientCanvas.getContext
-        && graphAmbientCanvas.getContext("2d", { alpha: true });
-      if (!graphAmbientContext) {
-        graphAmbientCanvas = null;
+    function graphStartTide() {
+      if (!graphTide || graphTideState.live) return;
+      graphTideCtx = graphTide.getContext && graphTide.getContext("2d", { alpha: true });
+      if (!graphTideCtx) return;
+      graphTideState.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      graphTideState.live = true;
+      if (typeof ResizeObserver === "function") {
+        new ResizeObserver(function () {
+          graphTideResize();
+          graphMarkDirty();
+          graphEnsureLoop();
+        }).observe(graphCanvas);
+      }
+      window.addEventListener("resize", function () {
+        graphTideResize();
+        graphMarkDirty();
+        graphEnsureLoop();
+      });
+      graphTideResize();
+      if (graphTideState.reduced) graphTideFrame(0);
+      else graphTideState.frame = requestAnimationFrame(graphTideFrame);
+    }
+
+    /* ---- interactions ---- */
+
+    function graphPointerToStage(event) {
+      var rect = graphCanvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left - graphView.panX) / graphView.scale,
+        y: (event.clientY - rect.top - graphView.panY) / graphView.scale,
+      };
+    }
+
+    var graphPanDrag = null;
+
+    graphCanvas.addEventListener("pointerdown", function (event) {
+      if (event.target.closest && event.target.closest(".node-wrap, .controls, .zoom, .legend")) return;
+      graphPanDrag = {
+        x: event.clientX, y: event.clientY,
+        panX: graphView.panX, panY: graphView.panY,
+      };
+      graphView.userMoved = true;
+      if (graphCanvas.setPointerCapture && event.pointerId !== undefined) {
+        graphCanvas.setPointerCapture(event.pointerId);
+      }
+    });
+
+    graphCanvas.addEventListener("pointermove", function (event) {
+      if (!sim) return;
+      if (sim.graph.drag) {
+        var dragged = sim.byId.get(sim.graph.drag.id);
+        var point = graphPointerToStage(event);
+        dragged.x = point.x;
+        dragged.y = point.y;
+        dragged.vx = 0;
+        dragged.vy = 0;
+        dragged.anchorX = point.x;
+        dragged.anchorY = point.y;
+        sim.reheat(.34, false);
+        graphSolver(true);
+        graphEnsureLoop();
         return;
       }
-      resizeGraphAmbient();
-      if (reducedGraphMotion) drawGraphAmbient(0);
-      else graphAmbientFrame = requestAnimationFrame(drawGraphAmbient);
-    }
+      if (graphPanDrag) {
+        graphView.panX = graphPanDrag.panX + event.clientX - graphPanDrag.x;
+        graphView.panY = graphPanDrag.panY + event.clientY - graphPanDrag.y;
+        graphApplyView();
+      }
+    });
 
-    if (graphProjectionSelect) {
-      updateGraphProjectionHint();
-      graphProjectionSelect.addEventListener("mouseenter", showGraphProjectionHint);
-      graphProjectionSelect.addEventListener("focus", showGraphProjectionHint);
-      graphProjectionSelect.addEventListener("mouseleave", hideGraphProjectionHint);
-      graphProjectionSelect.addEventListener("blur", hideGraphProjectionHint);
-      graphProjectionSelect.addEventListener("change", function () {
-        graphProjection = graphProjectionSelect.value || "structure";
-        updateGraphProjectionHint();
-        reprojectGraph();
-      });
-    }
-    if (graphCompactness) {
-      if (graphCompactnessValue) graphCompactnessValue.textContent = graphCompactness.value;
-      graphCompactness.addEventListener("input", function () {
-        if (graphCompactnessValue) graphCompactnessValue.textContent = graphCompactness.value;
-        if (graphCompactnessTimer) clearTimeout(graphCompactnessTimer);
-        graphCompactnessTimer = setTimeout(reprojectGraph, 70);
-      });
-    }
-    if (graphSearch) graphSearch.addEventListener("input", function () {
-      if (graphSearchTimer) clearTimeout(graphSearchTimer);
-      graphSearchTimer = setTimeout(function () { renderGraph(false); }, 90);
+    graphCanvas.addEventListener("pointerup", function () {
+      if (sim && sim.graph.drag) {
+        var node = sim.byId.get(sim.graph.drag.id);
+        var elements = graphEls.get(node.id);
+        if (elements) elements.wrap.classList.remove("dragging");
+        node.anchorX = node.x;
+        node.anchorY = node.y;
+        sim.reheat(.52, false);
+        graphSolver(true);
+        graphEnsureLoop();
+      }
+      sim && (sim.graph.drag = null);
+      graphPanDrag = null;
     });
-    graphFilterInputs.forEach(function (input) {
-      input.addEventListener("change", function () {
-        updateGraphFilterControls();
-        renderGraph(false);
-      });
-    });
-    if (graphFilterClear) graphFilterClear.addEventListener("click", function () {
-      graphFilterInputs.forEach(function (input) { input.checked = false; });
-      updateGraphFilterControls();
-      renderGraph(false);
-      if (graphFilter) graphFilter.open = false;
-    });
-    updateGraphFilterControls();
 
-    var zoomIn = document.getElementById("graph-zoom-in");
-    var zoomOut = document.getElementById("graph-zoom-out");
-    var graphFit = document.getElementById("graph-fit");
-    if (zoomIn) zoomIn.addEventListener("click", function () { setGraphScale(graphView.scale + 0.1); });
-    if (zoomOut) zoomOut.addEventListener("click", function () { setGraphScale(graphView.scale - 0.1); });
-    if (graphFit) graphFit.addEventListener("click", fitGraph);
+    graphCanvas.addEventListener("click", function (event) {
+      if (!sim) return;
+      if (event.target === graphCanvas || event.target === graphStage) {
+        sim.graph.selected = null;
+        selectedGraphKpId = null;
+        graphApplyVisibility();
+        graphRenderDetail(null);
+        graphMarkDirty();
+      }
+    });
 
     graphCanvas.addEventListener("wheel", function (event) {
-      if (event.preventDefault) event.preventDefault();
+      event.preventDefault();
+      var old = graphView.scale;
+      graphView.scale = Math.max(.38, Math.min(1.6, graphView.scale * (event.deltaY > 0 ? .92 : 1.08)));
       var rect = graphCanvas.getBoundingClientRect();
-      setGraphScale(graphView.scale * (event.deltaY > 0 ? 0.90 : 1.10),
-        event.clientX - rect.left, event.clientY - rect.top);
-    });
-    graphCanvas.addEventListener("pointerdown", function (event) {
-      if (event.target !== graphCanvas && event.target !== graphAmbientCanvas && event.target !== graphStage) return;
-      panStart = { x: event.clientX, y: event.clientY, viewX: graphView.x, viewY: graphView.y };
-    });
-    graphCanvas.addEventListener("click", function (event) {
-      if (event.target === graphCanvas || event.target === graphAmbientCanvas || event.target === graphStage) {
-        clearGraphFocus();
-      }
-    });
-    graphCanvas.addEventListener("pointermove", function (event) {
-      if (draggedNode) {
-        var rect = graphCanvas.getBoundingClientRect();
-        draggedNode.x = (event.clientX - rect.left - graphView.x) / graphView.scale;
-        draggedNode.y = (event.clientY - rect.top - graphView.y) / graphView.scale;
-        drawGraph();
-      } else if (panStart) {
-        graphView.x = panStart.viewX + event.clientX - panStart.x;
-        graphView.y = panStart.viewY + event.clientY - panStart.y;
-        applyGraphView();
-      }
-    });
-    graphCanvas.addEventListener("pointerup", function () {
-      if (draggedNode && graphStage) graphStage.classList.remove("graph-dragging");
-      draggedNode = null;
-      panStart = null;
-    });
+      var mx = event.clientX - rect.left;
+      var my = event.clientY - rect.top;
+      graphView.panX = mx - (mx - graphView.panX) * (graphView.scale / old);
+      graphView.panY = my - (my - graphView.panY) * (graphView.scale / old);
+      graphView.userMoved = true;
+      graphApplyView();
+    }, { passive: false });
 
-    window.addEventListener("resize", function () {
-      if (graphResizeTimer) clearTimeout(graphResizeTimer);
-      graphResizeTimer = setTimeout(function () {
-        resizeGraphAmbient();
-        renderGraph(false);
-      }, 180);
-    });
+    if (graphViews) {
+      graphViews.addEventListener("click", function (event) {
+        var view = event.target.dataset ? event.target.dataset.view : null;
+        if (!view || !sim) return;
+        graphViews.querySelectorAll("button").forEach(function (button) {
+          button.classList.toggle("active", button.dataset.view === view);
+        });
+        sim.setView(view);
+        sim.updateProjection();
+        sim.nodes.forEach(graphUpdateNodeAppearance);
+        graphSolver(true);
+        graphEnsureLoop();
+        graphTideSurge(.95);
+      });
+    }
+
+    var graphLegend = document.getElementById("graph-legend");
+    if (graphLegend) {
+      graphLegend.addEventListener("click", function (event) {
+        var item = event.target && event.target.closest
+          ? event.target.closest(".legend-item")
+          : event.target;
+        if (!item || !sim || !item.dataset) return;
+        var type = item.dataset.edgeType;
+        if (!type) return;
+        if (graphHiddenEdgeTypes[type]) delete graphHiddenEdgeTypes[type];
+        else graphHiddenEdgeTypes[type] = true;
+        graphSyncLegend();
+        sim.setEdgeTypes(graphHiddenEdgeTypes);
+        var labels = { prereq: "先修", related: "相关", apply: "应用", contrast: "对比", legacy: "隐含关联" };
+        graphToastShow((graphHiddenEdgeTypes[type] ? "已隐藏" : "已显示") + (labels[type] || type));
+        graphView.userMoved = false;
+        graphSolver(true);
+        graphEnsureLoop();
+        graphTideSurge(.45);
+      });
+    }
+
+    if (graphFilters) {
+      graphFilters.addEventListener("click", function (event) {
+        var key = event.target.dataset ? event.target.dataset.filter : null;
+        if (!key || !sim) return;
+        if (key === "all") sim.graph.filters.clear();
+        else if (sim.graph.filters.has(key)) sim.graph.filters.delete(key);
+        else sim.graph.filters.add(key);
+        graphFilters.querySelectorAll(".chip").forEach(function (chip) {
+          chip.classList.toggle("active", chip.dataset.filter === "all"
+            ? sim.graph.filters.size === 0
+            : sim.graph.filters.has(chip.dataset.filter));
+        });
+        graphApplyVisibility();
+        if (sim.graph.selected && !sim.byId.get(sim.graph.selected).visible) {
+          sim.graph.selected = null;
+          selectedGraphKpId = null;
+          graphApplyVisibility();
+          graphRenderDetail(null);
+        }
+        graphView.userMoved = false;
+        sim.reheat(.88, true);
+        graphSolver(true);
+        graphEnsureLoop();
+        graphTideSurge(.45);
+      });
+    }
+
+    if (graphGravity) {
+      graphGravity.addEventListener("input", function () {
+        if (!sim) return;
+        graphGravityValue.textContent = graphGravity.value;
+        sim.graph.gravity = GraphPhysics.clamp(Number(graphGravity.value) || 0, 0, 100);
+        graphView.userMoved = false;
+        sim.reheat(.62, true);
+        graphSolver(true);
+        graphEnsureLoop();
+      });
+    }
+
+    if (graphSearch) {
+      graphSearch.addEventListener("input", function () {
+        if (!sim) return;
+        var query = graphSearch.value.trim().toLowerCase();
+        if (!query) return;
+        var hit = sim.nodes.find(function (node) {
+          return node.title.toLowerCase().indexOf(query) >= 0
+            || String(node.id).toLowerCase().indexOf(query) >= 0;
+        });
+        if (!hit) return;
+        if (sim.graph.filters.size && !sim.graph.filters.has(hit.state)) {
+          sim.graph.filters.clear();
+          if (graphFilters) {
+            graphFilters.querySelectorAll(".chip").forEach(function (chip) {
+              chip.classList.toggle("active", chip.dataset.filter === "all");
+            });
+          }
+          graphApplyVisibility();
+        }
+        graphSelect(hit.id, true);
+      });
+    }
+
+    if (graphFocusBtn) {
+      graphFocusBtn.addEventListener("click", function () {
+        if (sim && sim.graph.selected) graphCenterOn(sim.byId.get(sim.graph.selected), true);
+      });
+    }
+    if (graphFitBtn) {
+      graphFitBtn.addEventListener("click", function () {
+        graphView.userMoved = false;
+        graphFit();
+      });
+    }
+    if (graphZoomIn) {
+      graphZoomIn.addEventListener("click", function () {
+        graphView.scale = Math.min(1.6, graphView.scale + .09);
+        graphView.userMoved = true;
+        graphApplyView();
+      });
+    }
+    if (graphZoomOut) {
+      graphZoomOut.addEventListener("click", function () {
+        graphView.scale = Math.max(.38, graphView.scale - .09);
+        graphView.userMoved = true;
+        graphApplyView();
+      });
+    }
+    if (graphZoomReset) {
+      graphZoomReset.addEventListener("click", function () {
+        graphView.scale = 1;
+        graphView.panX = 0;
+        graphView.panY = 0;
+        graphView.userMoved = true;
+        graphApplyView();
+      });
+    }
+
     if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
     if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
     showGraphPanel(true);
-    startGraphAmbient();
+    graphStartTide();
     api("/graph/model").then(function (model) {
-      graphData = model;
-      renderGraph(false);
-    }).catch(function () {
-      graphCanvas.textContent = "图谱暂时无法读取。";
+      graphBuild(model);
+      graphStartTide();
+      graphEnsureLoop();
+    }).catch(function (error) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("graph: model render failed", error && error.stack ? error.stack : error);
+      }
+      if (graphCanvas) graphCanvas.textContent = "图谱暂时无法读取。";
     });
   }
 
@@ -2361,11 +2459,13 @@
     }
     if (layout.dataset.page === "graph") {
       body.selected_kp_id = selectedGraphKpId;
+      var activeGraphFilters = sim && sim.graph ? sim.graph.filters : null;
       body.graph_filter = {
         query: (document.getElementById("graph-search") || {}).value || "",
         states: ["needs_work", "review", "mastered", "null"].filter(function (state) {
-          var input = document.getElementById("graph-filter-" + state);
-          return input && input.checked;
+          if (!activeGraphFilters) return false;
+          var key = state === "needs_work" ? "work" : state === "null" ? "new" : state;
+          return activeGraphFilters.has(key);
         }),
       };
     }
