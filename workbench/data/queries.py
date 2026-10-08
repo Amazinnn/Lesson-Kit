@@ -149,7 +149,7 @@ def search_problems(pool, query, limit=20):
     for problem in pool.problems_all():
         haystack = " ".join(filter(None, (
             problem.get("display_title"), problem.get("problem_text"),
-            problem.get("topic_label"), problem.get("source_evidence"),
+            problem.get("source_evidence"),
         ))).casefold()
         if needle in haystack:
             hits.append({
