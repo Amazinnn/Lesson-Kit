@@ -223,8 +223,13 @@ class ProblemPatchTests(unittest.TestCase):
             content.update(pool, "problem", "dmath-ch06-prob-002",
                            {"display_title": "可读标题"})
             self.assertEqual(self.row("dmath-ch06-prob-002")["display_title"], "可读标题")
-            self.apply([patch_item("dmath-ch06-prob-002", topic_label="标签")])
-            self.assertEqual(self.row("dmath-ch06-prob-002")["topic_label"], "标签")
+
+            # The retired grouping field is rejected by both mutation paths.
+            with self.assertRaises(ValueError):
+                content.update(pool, "problem", "dmath-ch06-prob-002",
+                               {"topic_label": "标签"})
+            with self.assertRaises(ValueError):
+                self.apply([patch_item("dmath-ch06-prob-002", topic_label="标签")])
         finally:
             pool.close()
 
