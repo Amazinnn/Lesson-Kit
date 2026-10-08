@@ -15,12 +15,12 @@
 | `START_HERE.md` | 冷启动路由（当前契约速览） |
 | `docs/GLOSSARY.md` | **全部设计名词的唯一权威定义源**；正式文档用词以它为准 |
 | `docs/ARCHITECTURE.md` | 分层与架构现状 |
-| `skills/<name>/SKILL.md` | 33 个提示词技能模块，**按路径引用**（见下） |
+| `skills/<name>/SKILL.md` | 提示词技能模块，**按路径引用**（见下） |
 
 **关于 `skills/`**：这些技能是**路径引用的 Markdown 模块**，不是 Agent Skills 标准包——
 它们**没有 YAML frontmatter**，因此不会被任何 harness 的自动发现机制加载（Pi 会警告并跳过）。
 这是有意的：由 `TASK_ROUTER.md` 或具体命令指明读哪一个，缺什么读什么。
-不要为了"让它们被发现"而给 33 个文件批量加 frontmatter。
+不要为了"让它们被发现"而给这些文件批量加 frontmatter。
 
 ## 兼容边界（硬规则，违反先问）
 
