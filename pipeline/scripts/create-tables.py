@@ -2,8 +2,8 @@
 """
 Pipeline Step 1: Create lesson-kit pool SQLite database.
 
-Creates the active knowledge, problem, candidate, progress, and learner-signal
-tables and indexes defined in the lesson-kit pool contract.
+Creates the active knowledge, problem, progress, learner-signal, and workbench
+tables defined in the lesson-kit pool contract.
 
 Usage:
     python pipeline/scripts/create-tables.py --db pool/dld.db [--force]
@@ -26,6 +26,7 @@ POOL_SCRIPT_DIR = Path(__file__).resolve().parents[2] / "pool" / "scripts"
 if str(POOL_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(POOL_SCRIPT_DIR))
 
+from experience_schema import ensure_experience_schema  # noqa: E402
 from pool_schema import ensure_problem_candidate_schema  # noqa: E402
 from pool_schema import ensure_workbench_schema  # noqa: E402
 
@@ -208,6 +209,8 @@ def main(argv=None) -> int:
     conn = sqlite3.connect(db_path)
     try:
         existing_tables = [
+            "kp_experience_problems",
+            "kp_experiences",
             "candidate_attempts",
             "candidate_problems",
             "learner_signals",
@@ -242,17 +245,13 @@ def main(argv=None) -> int:
         conn.executescript(SCHEMA_SQL)
         ensure_problem_candidate_schema(conn)
         ensure_workbench_schema(conn)
+        ensure_experience_schema(conn)
         conn.commit()
 
         verb = "Recreated" if any_existing else "Created"
         prefix = "fresh" if not existed_before else "existing"
         print(f"{verb} schema in {prefix} DB: {db_path}")
-        print(
-            "  - 11 tables: knowledge_points, knowledge_relations, questions, "
-            "problems, kp_progress, question_progress, problem_progress, "
-            "problem_attempts, candidate_problems, candidate_attempts, learner_signals"
-        )
-        print("  - 18 indexes")
+        print("  - core pool and workbench tables created")
         return 0
     except sqlite3.Error as exc:
         print(f"SQLite error: {exc}", file=sys.stderr)

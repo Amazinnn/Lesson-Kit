@@ -86,6 +86,10 @@ ROUTES = {
     ("POST", "/api/w/{name}/ingest/rollback"): (BOTH, ("ingest",), ""),
     ("GET", "/api/w/{name}/problem/{problem_id}"): (BOTH, ("data",), ""),
     ("GET", "/api/w/{name}/kp/{kp_id}"): (BOTH, ("data",), ""),
+    ("GET", "/api/w/{name}/kp/{kp_id}/experience"): (BOTH, ("experience",), ""),
+    ("POST", "/api/w/{name}/kp/{kp_id}/experience"): (BOTH, ("experience",), ""),
+    ("PATCH", "/api/w/{name}/kp/{kp_id}/experience"): (BOTH, ("experience",), ""),
+    ("DELETE", "/api/w/{name}/kp/{kp_id}/experience"): (BOTH, ("experience",), ""),
     ("GET", "/api/w/{name}/graph/model"): (
         BROWSER, (),
         "the graph model is projected in the browser from pool rows"),
@@ -135,5 +139,6 @@ COMMANDS = {
     "attempts": (AGENT, ""),
     "data": (AGENT, "reads/writes current content and runs a read-only content audit"),
     "difficulty": (AGENT, ""),
+    "experience": (AGENT, "explicit CRUD for learner-owned knowledge-point practice experience"),
     "ingest": (AGENT, ""),
 }

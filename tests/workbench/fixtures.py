@@ -115,7 +115,11 @@ def build_fixture_db(conn):
         """
     )
     pool_schema = load_script("pool_schema", Path("pool/scripts/pool_schema.py"))
+    experience_schema = load_script(
+        "experience_schema", Path("pool/scripts/experience_schema.py")
+    )
     pool_schema.ensure_workbench_schema(conn)
+    experience_schema.ensure_experience_schema(conn)
     conn.execute(
         "INSERT INTO knowledge_points (kp_id, knowledge_item, body, knowledge_type, importance)"
         " VALUES (?, ?, ?, ?, ?)",
