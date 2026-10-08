@@ -351,11 +351,16 @@ sending a turn. Other pages keep their existing context behavior.
 - **THEN** the current problem and entered work take priority in Agent context while wider workspace reads remain available
 
 ### Requirement: User-visible Markdown uses one safe subset
-All user-visible learning text SHALL use the same supported Markdown subset: ATX headings through level 3, paragraphs, ordered and unordered lists, blockquotes, fenced and inline code, strong/emphasis, safe http(s) links, wiki links, math, and workspace-local images.
+All user-visible learning text SHALL use the same supported Markdown subset: ATX headings through level 3, paragraphs, ordered and unordered lists, blockquotes, thematic breaks, fenced and inline code, strong/emphasis, safe http(s) links, wiki links, math, and workspace-local images.
 
 #### Scenario: Agent answer renders Markdown
 - **WHEN** an Agent or student message contains `##`, `**bold**`, a list, or a fenced code block
 - **THEN** the message displays semantic headings, emphasis, list markers, and code styling rather than raw Markdown syntax
+
+#### Scenario: Markdown thematic break
+- **WHEN** user-visible Markdown contains standalone `---`, `***`, or `___` outside a fenced code block
+- **THEN** both browser and server renderers emit a semantic horizontal rule rather than showing the marker text
+- **AND** the same markers inside a fenced code block remain literal code
 
 #### Scenario: Unsafe markup is rejected
 - **WHEN** text contains raw HTML, a `javascript:` link, or an image path outside the workspace figure directory
@@ -995,10 +1000,10 @@ before the final combined answer.
 ### Requirement: Rich-text surfaces share one safe feature set
 
 Agent messages and server-rendered linked-problem text SHALL both support
-headings, ordered/unordered lists, blockquotes, emphasis, code, links, images,
-inline/display math, and GFM tables. Table cells SHALL use the same escaping and
-inline rules, and tables SHALL scroll locally on narrow surfaces. Raw HTML
-SHALL remain escaped/rejected.
+headings, ordered/unordered lists, blockquotes, thematic breaks, emphasis, code,
+links, images, inline/display math, and GFM tables. Table cells SHALL use the
+same escaping and inline rules, and tables SHALL scroll locally on narrow
+surfaces. Raw HTML SHALL remain escaped/rejected.
 
 #### Scenario: Pi answers with a table
 

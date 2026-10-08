@@ -347,6 +347,7 @@
   }
 
   var TABLE_DELIMITER_CELL = /^:?-{1,}:?$/;
+  var THEMATIC_BREAK = /^\s*(?:\*(?:\s*\*){2,}|-(?:\s*-){2,}|_(?:\s*_){2,})\s*$/;
 
   function tableCells(line) {
     var value = String(line).trim();
@@ -421,6 +422,11 @@
         var table = tableHtml(lines, position);
         out.push(table.html);
         skipUntil = table.next;
+        return;
+      }
+      if (THEMATIC_BREAK.test(line)) {
+        flushParagraph(); closeList();
+        out.push("<hr>");
         return;
       }
       var heading = line.match(/^\s*(#{1,3})\s+(.+?)\s*#*\s*$/);
