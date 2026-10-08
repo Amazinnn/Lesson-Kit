@@ -453,18 +453,15 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='knowledge-sort-direction'", body)
         self.assertIn("data-kp-problem-count=", body)
 
-    def test_kp_page_renders(self):
+    def test_kp_page_renders_linked_problems_directly(self):
         full_text = "<sup>∗</sup>*两类代表*<b>原始 HTML</b>" + "的组合计数条件。" * 38
         summary = "分析两类代表选择中的乘法计数与顺序条件。"
         conn = sqlite3.connect(self.fixture.db_path)
         try:
             conn.execute(
-                "UPDATE problems SET problem_text=?, display_title=?, topic_label=?, "
-                "display_summary=? WHERE problem_id=?",
-                (
-                    full_text, "两类代表选择", "乘法规则", summary,
-                    "dmath-ch06-prob-001",
-                ),
+                "UPDATE problems SET problem_text=?, display_title=?, display_summary=? "
+                "WHERE problem_id=?",
+                (full_text, "两类代表选择", summary, "dmath-ch06-prob-001"),
             )
             conn.commit()
         finally:
@@ -472,13 +469,13 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
         self.assertEqual(status, 200)
         self.assertIn("两类代表选择", body)
-        self.assertIn("乘法规则", body)
         self.assertIn("dmath-ch06-kp-001", body)
         self.assertNotIn(summary, body)
         self.assertNotIn("problem-summary", body)
         self.assertNotIn("linked-problem-detail", body)
-        self.assertIn("class='problem-topic'", body)
-        self.assertNotIn("class='problem-topic' open", body)
+        self.assertIn("class='linked-problem-list'", body)
+        self.assertIn("class='linked-problem'", body)
+        self.assertNotIn("problem-topic", body)
         self.assertIn("两类代表", body)
         self.assertNotIn("…", body)
         self.assertNotIn("...", body)
@@ -513,10 +510,10 @@ class UiRouteTests(unittest.TestCase):
         conn = sqlite3.connect(self.fixture.db_path)
         try:
             conn.execute(
-                "UPDATE problems SET problem_text=?, display_title=?, topic_label=?, "
-                "display_summary=? WHERE problem_id=?",
+                "UPDATE problems SET problem_text=?, display_title=?, display_summary=? "
+                "WHERE problem_id=?",
                 (
-                    "完整短题题干。", "短题标题", "基础计数", "不应显示的摘要。",
+                    "完整短题题干。", "短题标题", "不应显示的摘要。",
                     "dmath-ch06-prob-001",
                 ),
             )
