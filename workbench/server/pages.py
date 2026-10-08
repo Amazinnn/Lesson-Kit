@@ -633,23 +633,19 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
 
 
 def _linked_problems(problems, workspace_name, kp_id):
-    groups = {}
-    for problem in problems:
-        topic = problem.get("topic_label") or "未分类"
-        groups.setdefault(topic, []).append(problem)
-    return "".join(
-        "<details class='problem-topic'>"
-        f"<summary>{html.escape(topic)}</summary><ul>"
+    if not problems:
+        return ""
+    return (
+        "<ul class='linked-problem-list'>"
         + "".join(
             "<li class='linked-problem'>"
             f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
             + f"<div class='linked-problem-text rich-text'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
             + _linked_problem_source(problem)
             + "</li>"
-            for problem in items
+            for problem in problems
         )
-        + "</ul></details>"
-        for topic, items in groups.items()
+        + "</ul>"
     )
 
 
