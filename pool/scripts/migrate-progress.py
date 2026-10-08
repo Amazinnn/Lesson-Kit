@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Migrate an existing pool for learning state, candidates, and signals."""
+"""Migrate an existing pool for learning state, signals, and workbench data."""
 
 import argparse
 import os
@@ -13,6 +13,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from experience_schema import ensure_experience_schema  # noqa: E402
 from pool_schema import (  # noqa: E402
     ensure_course_network_schema,
     ensure_learning_state_schema,
@@ -23,7 +24,7 @@ from pool_schema import (  # noqa: E402
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Add learning-state, network, candidate, signal, and workbench tables.",
+        description="Add current learning-state, network, signal, and workbench tables.",
     )
     parser.add_argument("--db", required=True, help="Path to SQLite DB.")
     return parser.parse_args(argv)
@@ -38,6 +39,7 @@ def migrate_db(db_path: Path) -> list[str]:
         changes.extend(ensure_course_network_schema(conn))
         changes.extend(ensure_problem_candidate_schema(conn))
         changes.extend(ensure_workbench_schema(conn))
+        changes.extend(ensure_experience_schema(conn))
         conn.commit()
         return changes
     finally:

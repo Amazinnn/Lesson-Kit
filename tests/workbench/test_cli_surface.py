@@ -9,7 +9,7 @@ the counts drifted before (31/20 written down, 32/22 in the code).
 import unittest
 
 from workbench import surface
-from workbench.cli.main import command_names
+from workbench.cli.entry import command_names
 from workbench.server import app
 
 
@@ -20,7 +20,7 @@ class DeclaredSurfaceTests(unittest.TestCase):
         self.assertEqual(sorted(real - declared), [],
                          "commands exist but are not declared in workbench/surface.py")
         self.assertEqual(sorted(declared - real), [],
-                         "commands are declared but do not exist in the parser")
+                         "commands are declared but do not exist in the installed CLI")
 
     def test_every_declared_route_exists_and_every_route_is_declared(self):
         real = {(method, path) for method, path, _ in app.ROUTES}
