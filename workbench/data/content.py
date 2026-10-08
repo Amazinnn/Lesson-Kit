@@ -34,9 +34,9 @@ EDITABLE_FIELDS = {
     },
     "problem": {
         "kp_ids", "problem_text", "solution", "problem_type", "source_kind",
-        "origin_kind", "display_title", "topic_label", "display_summary",
-        "figure_paths", "exam_year", "source_evidence", "source_answer",
-        "solution_origin", "practice_modes", "micro_quiz",
+        "origin_kind", "display_title", "display_summary", "figure_paths",
+        "exam_year", "source_evidence", "source_answer", "solution_origin",
+        "practice_modes", "micro_quiz",
     },
     "relation": {
         "source_kp_id", "target_kp_id", "relation_type", "direction", "strength",

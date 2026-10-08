@@ -10,7 +10,12 @@ MAX_OPTIONS = 6
 # No stem length bound: a question bank's 判断题/单选题 are as long as the source
 # paper makes them (several assertions, long scenarios, inlined option blocks),
 # and refusing them by length sent real objective items into the exam shell.
-LABEL_FIELD_LIMITS = markup.LABEL_FIELD_LIMITS
+# `topic_label` remains a shared label only for flash cards; problems expose no
+# stored topic-group layer after the direct knowledge-point ↔ problem model.
+LABEL_FIELD_LIMITS = {
+    "display_title": markup.LABEL_FIELD_LIMITS["display_title"],
+    "display_summary": markup.LABEL_FIELD_LIMITS["display_summary"],
+}
 
 _PRACTICE_MODES = {
     "yes_no": ["yes_no"],

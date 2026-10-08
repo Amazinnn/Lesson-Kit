@@ -367,7 +367,7 @@ def ensure_problem_candidate_schema(conn: sqlite3.Connection) -> List[str]:
 def _widen_item_type_check(conn, table, create_sql):
     """Rebuild a workbench table whose item_type CHECK predates 'card' rows."""
     row = conn.execute(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)
+        "SELECT sql FROM sqlite_master WHERE type='table' and name=?", (table,)
     ).fetchone()
     if not row or "'card'" in (row[0] or ""):
         return []
@@ -753,7 +753,6 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                 [
                     ("figure_paths", "TEXT"),
                     ("display_title", "TEXT"),
-                    ("topic_label", "TEXT"),
                     ("display_summary", "TEXT"),
                     ("practice_modes", "TEXT"),
                     ("micro_quiz", "TEXT"),
@@ -825,6 +824,10 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                  ("ingest_batch_id", "TEXT")],
             )
         )
+
+    if table_exists(conn, "problems") and "topic_label" in column_names(conn, "problems"):
+        conn.execute("ALTER TABLE problems DROP COLUMN topic_label")
+        changes.append("problems.topic_label-retired")
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_review_schedule_due "

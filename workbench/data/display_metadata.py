@@ -13,13 +13,10 @@ def validate(rows):
     for row in rows:
         problem_id = row.get("problem_id", "<missing>")
         title = " ".join((row.get("display_title") or "").split())
-        topic = " ".join((row.get("topic_label") or "").split())
         summary = " ".join((row.get("display_summary") or "").split())
         length = len(normalize(row.get("problem_text")))
         if not title:
             errors.append(f"{problem_id}: display title is required")
-        if not topic:
-            errors.append(f"{problem_id}: topic label is required")
         if summary and length <= 500:
             errors.append(f"{problem_id}: summary is only allowed above 500 characters")
         if "…" in summary or "..." in summary:
@@ -42,13 +39,9 @@ def apply(conn, manifest_path):
     if errors:
         raise ValueError("\n".join(errors))
     conn.executemany(
-        "UPDATE problems SET display_title=?, topic_label=?, display_summary=? "
-        "WHERE problem_id=?",
+        "UPDATE problems SET display_title=?, display_summary=? WHERE problem_id=?",
         [
-            (
-                row.get("display_title"), row.get("topic_label"),
-                row.get("display_summary"), row["problem_id"],
-            )
+            (row.get("display_title"), row.get("display_summary"), row["problem_id"])
             for row in rows
         ],
     )
