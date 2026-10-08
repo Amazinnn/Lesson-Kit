@@ -347,6 +347,7 @@
   }
 
   var TABLE_DELIMITER_CELL = /^:?-{1,}:?$/;
+  var THEMATIC_BREAK = /^\s*(?:\*(?:\s*\*){2,}|-(?:\s*-){2,}|_(?:\s*_){2,})\s*$/;
 
   function tableCells(line) {
     var value = String(line).trim();
@@ -421,6 +422,11 @@
         var table = tableHtml(lines, position);
         out.push(table.html);
         skipUntil = table.next;
+        return;
+      }
+      if (THEMATIC_BREAK.test(line)) {
+        flushParagraph(); closeList();
+        out.push("<hr>");
         return;
       }
       var heading = line.match(/^\s*(#{1,3})\s+(.+?)\s*#*\s*$/);
@@ -588,10 +594,8 @@
         : edge.type === "apply" ? .95
           : edge.type === "contrast" ? .85
             : edge.type === "legacy" ? .25
-              : .6;                      // authored "related"
+              : .6;
       var strengthWeight = edge.strength >= 1.875 ? 1 : edge.strength >= 1.25 ? .8 : .6;
-      // A co-occurrence link that gathers many shared problems is closer to a
-      // real relation than one that shares a single problem.
       return typeWeight * strengthWeight + Math.min(.25, edge.sharedProblems / 200);
     }
 
@@ -646,12 +650,10 @@
     }
 
     var graphEdgeBudget = { told: false };
-    var graphEdgeBudgetEl = null;
-
-    var graphNodeData = [];   // physics nodes
-    var graphEdgeData = [];   // physics edges
-    var graphEdgeEls = [];    // {edge, path}
-    var graphEls = new Map(); // id -> {wrap, node, label, meta, value, satellite}
+    var graphNodeData = [];
+    var graphEdgeData = [];
+    var graphEdgeEls = [];
+    var graphEls = new Map();
     var sim = null;
     var graphView = { scale: .7, panX: 52, panY: -18, userMoved: false };
     var graphPathScaled = 1;
@@ -694,23 +696,15 @@
 
     function graphUpdateGapLegend() {
       if (!sim) return;
-      // The legend has to describe the guides the current view actually uses:
-      // structure guides follow gravity only (band wrapping, not inflation,
-      // absorbs pressure), while the metric views keep the inflation escape
-      // hatch from the blueprint.
       var inflation = sim.graph.view === "structure" ? 1 : sim.graph.layoutInflation;
       var spread = GraphPhysics.spreadFactor(sim.graph.gravity) * inflation;
       if (graphStrongGap) graphStrongGap.textContent = Math.round(GraphPhysics.baseGapForStrength(1.875) * spread) + "px";
       if (graphMediumGap) graphMediumGap.textContent = Math.round(GraphPhysics.baseGapForStrength(1.25) * spread) + "px";
       if (graphWeakGap) graphWeakGap.textContent = Math.round(GraphPhysics.baseGapForStrength(.75) * spread) + "px";
-      if (graphReadabilityState) {
-        graphReadabilityState.textContent = "硬下限 · " + inflation.toFixed(2) + "×";
-      }
+      if (graphReadabilityState) graphReadabilityState.textContent = "硬下限 · " + inflation.toFixed(2) + "×";
     }
 
     function graphStageSize(nodes, levels, gravity) {
-      // The stage must cover the guide grid exactly; both come from the same
-      // physics helper so they cannot drift apart.
       return GraphPhysics.structureStageSize(nodes, levels, gravity);
     }
 
@@ -786,12 +780,8 @@
         var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("class", "graph-edge " + edge.type);
         if (edge.id !== undefined && path.dataset) path.dataset.edgeId = String(edge.id);
-        if (edge.type === "prereq" && edge.direction !== "symmetric") {
-          path.setAttribute("marker-end", "url(#graph-arrow-blue)");
-        }
-        if (edge.type === "apply" && edge.direction !== "symmetric") {
-          path.setAttribute("marker-end", "url(#graph-arrow-yellow)");
-        }
+        if (edge.type === "prereq" && edge.direction !== "symmetric") path.setAttribute("marker-end", "url(#graph-arrow-blue)");
+        if (edge.type === "apply" && edge.direction !== "symmetric") path.setAttribute("marker-end", "url(#graph-arrow-yellow)");
         graphEdges.appendChild(path);
         return { edge: edge, path: path };
       });
@@ -856,9 +846,7 @@
           if (event.stopPropagation) event.stopPropagation();
           sim.graph.drag = { id: node.id, pointerId: event.pointerId };
           wrap.classList.add("dragging");
-          if (button.setPointerCapture && event.pointerId !== undefined) {
-            button.setPointerCapture(event.pointerId);
-          }
+          if (button.setPointerCapture && event.pointerId !== undefined) button.setPointerCapture(event.pointerId);
           sim.reheat(.55, false);
           graphSolver(true);
           graphEnsureLoop();
@@ -929,9 +917,7 @@
 
     function graphApplyVisibility() {
       var filters = sim.graph.filters;
-      var focus = sim.graph.selected
-        ? sim.neighbors(sim.graph.selected)
-        : { one: new Set(), two: new Set() };
+      var focus = sim.graph.selected ? sim.neighbors(sim.graph.selected) : { one: new Set(), two: new Set() };
       sim.nodes.forEach(function (node) {
         var allowed = filters.size === 0 || filters.has(node.state);
         node.visible = allowed;
@@ -955,11 +941,6 @@
     function graphApplyView() {
       if (!sim) return;
       graphStage.style.transform = "translate(" + graphView.panX + "px," + graphView.panY + "px) scale(" + graphView.scale + ")";
-      // Panning moves the existing picture and nothing else, and zooming only
-      // changes stroke compensation and label thresholds. Rebuilding every edge
-      // path on each wheel tick is what made a whole-course graph feel frozen,
-      // so the viewport takes the light pass and geometry waits for the solver
-      // or an interaction that actually moves nodes.
       if (graphView.scale !== graphLastPaintedScale) graphPaintViewport();
     }
 
@@ -1114,18 +1095,11 @@
       var activeEdges = sim.visibleEdges();
       var visibleSet = new Set(activeEdges);
       sim.computePortSlots(activeEdges);
-      // Vector-effect cannot rescue strokes from an ancestor CSS transform, so
-      // the render keeps line weight and dash rhythm constant on screen by
-      // pre-dividing them by the zoom. Without this a fit view of a wide graph
-      // draws 0.4px lines and the relations simply vanish.
       graphPathScaled = 1 / Math.max(.2, graphView.scale || 1);
       graphLastPaintedScale = graphView.scale;
       graphEdgeEls.forEach(function (item) {
         var edge = item.edge;
         if (!visibleSet.has(edge)) {
-          // A relation hidden by type or by the weight budget is not a layout
-          // constraint either, so it must not leave a stale path painted on the
-          // canvas; it comes back the moment the legend or the budget allows.
           item.path.style.display = "none";
           return;
         }
@@ -1157,9 +1131,6 @@
       graphFrameHandle = null;
       if (!sim) return;
       var wasSolving = sim.graph.alpha > 0;
-      // One physics step per frame is plenty for a normal pool; a couple of
-      // hundred nodes get a few steps per frame so the settle finishes in a
-      // sensible wall-clock time instead of a minute of near-static frames.
       var steps = sim.nodes.length > 120 ? 3 : 1;
       while (steps > 0 && sim.graph.alpha > 0) {
         sim.tick();
@@ -1175,10 +1146,6 @@
       } else if (wasSolving) {
         graphUpdateGapLegend();
       }
-      // A big pool makes one graph paint far more expensive than one physics
-      // step, so the canvas repaints on a stride while the solver runs; every
-      // interaction still forces a frame through graphRenderDirty, and the
-      // settle frame always paints.
       var solving = sim.graph.alpha > 0;
       var stride = 1;
       if (solving) {
@@ -1191,8 +1158,6 @@
         graphRenderDirty = false;
       }
       graphTideSurge(solving ? .06 : 0);
-      // keep animating only while the solver runs or a frame was requested;
-      // interactions call graphEnsureLoop() again when they change something
       if (solving || graphRenderDirty) graphEnsureLoop();
     }
 
@@ -1200,16 +1165,10 @@
       if (graphFrameHandle === null) graphFrameHandle = requestAnimationFrame(graphFrame);
     }
 
-    /* Anything that changes what the canvas should show marks it dirty through
-     * here. Setting the flag alone is not enough: the loop parks itself once the
-     * solver settles, and a parked loop would only repaint on the next
-     * unrelated interaction (selection, hover and zoom all hit this). */
     function graphMarkDirty() {
       graphRenderDirty = true;
       graphEnsureLoop();
     }
-
-    /* ---- ambient layer: paper-styled chroma tide, lower-left -> upper-right ---- */
 
     var graphTideState = { boost: 0, live: false, frame: null, reduced: false };
     var graphTideCtx = null;
@@ -1363,8 +1322,6 @@
     function graphTideFrame(now) {
       graphTideState.frame = null;
       if (!graphTideState.live) return;
-      // While a large pool solves, the ambient canvas would double the paint
-      // bill of every frame for no information; it resumes on settle.
       var solvingLarge = sim && sim.nodes.length > 120 && sim.graph.alpha > 0;
       if (!solvingLarge) graphTideDraw(graphTideState.reduced ? 0 : now / 1000);
       if (!graphTideState.reduced) graphTideState.frame = requestAnimationFrame(graphTideFrame);
@@ -1393,8 +1350,6 @@
       else graphTideState.frame = requestAnimationFrame(graphTideFrame);
     }
 
-    /* ---- interactions ---- */
-
     function graphPointerToStage(event) {
       var rect = graphCanvas.getBoundingClientRect();
       return {
@@ -1412,9 +1367,7 @@
         panX: graphView.panX, panY: graphView.panY,
       };
       graphView.userMoved = true;
-      if (graphCanvas.setPointerCapture && event.pointerId !== undefined) {
-        graphCanvas.setPointerCapture(event.pointerId);
-      }
+      if (graphCanvas.setPointerCapture && event.pointerId !== undefined) graphCanvas.setPointerCapture(event.pointerId);
     });
 
     graphCanvas.addEventListener("pointermove", function (event) {
@@ -1498,9 +1451,7 @@
     var graphLegend = document.getElementById("graph-legend");
     if (graphLegend) {
       graphLegend.addEventListener("click", function (event) {
-        var item = event.target && event.target.closest
-          ? event.target.closest(".legend-item")
-          : event.target;
+        var item = event.target && event.target.closest ? event.target.closest(".legend-item") : event.target;
         if (!item || !sim || !item.dataset) return;
         var type = item.dataset.edgeType;
         if (!type) return;
@@ -1579,40 +1530,30 @@
       });
     }
 
-    if (graphFocusBtn) {
-      graphFocusBtn.addEventListener("click", function () {
-        if (sim && sim.graph.selected) graphCenterOn(sim.byId.get(sim.graph.selected), true);
-      });
-    }
-    if (graphFitBtn) {
-      graphFitBtn.addEventListener("click", function () {
-        graphView.userMoved = false;
-        graphFit();
-      });
-    }
-    if (graphZoomIn) {
-      graphZoomIn.addEventListener("click", function () {
-        graphView.scale = Math.min(1.6, graphView.scale + .09);
-        graphView.userMoved = true;
-        graphApplyView();
-      });
-    }
-    if (graphZoomOut) {
-      graphZoomOut.addEventListener("click", function () {
-        graphView.scale = Math.max(.38, graphView.scale - .09);
-        graphView.userMoved = true;
-        graphApplyView();
-      });
-    }
-    if (graphZoomReset) {
-      graphZoomReset.addEventListener("click", function () {
-        graphView.scale = 1;
-        graphView.panX = 0;
-        graphView.panY = 0;
-        graphView.userMoved = true;
-        graphApplyView();
-      });
-    }
+    if (graphFocusBtn) graphFocusBtn.addEventListener("click", function () {
+      if (sim && sim.graph.selected) graphCenterOn(sim.byId.get(sim.graph.selected), true);
+    });
+    if (graphFitBtn) graphFitBtn.addEventListener("click", function () {
+      graphView.userMoved = false;
+      graphFit();
+    });
+    if (graphZoomIn) graphZoomIn.addEventListener("click", function () {
+      graphView.scale = Math.min(1.6, graphView.scale + .09);
+      graphView.userMoved = true;
+      graphApplyView();
+    });
+    if (graphZoomOut) graphZoomOut.addEventListener("click", function () {
+      graphView.scale = Math.max(.38, graphView.scale - .09);
+      graphView.userMoved = true;
+      graphApplyView();
+    });
+    if (graphZoomReset) graphZoomReset.addEventListener("click", function () {
+      graphView.scale = 1;
+      graphView.panX = 0;
+      graphView.panY = 0;
+      graphView.userMoved = true;
+      graphApplyView();
+    });
 
     if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
     if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
@@ -1650,17 +1591,15 @@
   var visiblePracticeImages = practiceRuntime.visiblePracticeImages;
   var draftAnswer = practiceRuntime.draftAnswer;
   var draftNote = practiceRuntime.draftNote;
-  var practiceSelectionContext = practiceRuntime.selectionContext
-    || function () { return {}; };
+  var practiceSelectionContext = practiceRuntime.selectionContext || function () { return {}; };
 
   /* ---------- saved papers ---------- */
 
   var practiceSetList = document.getElementById("practice-set-list");
 
   function practiceSetIds(card) {
-    return Array.prototype.slice.call(
-      card.querySelectorAll(".practice-set-item")
-    ).map(function (row) { return row.dataset.problemId; });
+    return Array.prototype.slice.call(card.querySelectorAll(".practice-set-item"))
+      .map(function (row) { return row.dataset.problemId; });
   }
 
   function practiceSetStatus(card, message) {
@@ -1671,9 +1610,7 @@
   }
 
   function reloadPage() {
-    if (window.location && typeof window.location.reload === "function") {
-      window.location.reload();
-    }
+    if (window.location && typeof window.location.reload === "function") window.location.reload();
   }
 
   function downloadPaper(title, suffix, text) {
@@ -1703,9 +1640,7 @@
         post("/practice-sets/" + encoded + "/start", {}).then(function () {
           window.location = "/w/" + encodeURIComponent(WS) + "/practice";
         }).catch(function (error) {
-          if (window.confirm && window.confirm(
-            "当前还有一轮练习没有完成。开始这张试卷会清除旧进度，继续吗？"
-          )) {
+          if (window.confirm && window.confirm("当前还有一轮练习没有完成。开始这张试卷会清除旧进度，继续吗？")) {
             post("/practice-sets/" + encoded + "/start", { replace: true }).then(function () {
               window.location = "/w/" + encodeURIComponent(WS) + "/practice";
             }).catch(function (retryError) {
@@ -1720,9 +1655,7 @@
 
       if (button.hasAttribute("data-set-rename")) {
         var heading = card.querySelector("h2");
-        var title = window.prompt
-          ? window.prompt("试卷名称", heading ? heading.textContent : "")
-          : null;
+        var title = window.prompt ? window.prompt("试卷名称", heading ? heading.textContent : "") : null;
         if (!title || !title.trim()) return;
         patch("/practice-sets/" + encoded, { title: title.trim() })
           .then(reloadPage)
@@ -1808,9 +1741,7 @@
       recalculatePlan.disabled = true;
       post("/plan/recalculate", {}).then(function () {
         recalculatePlan.disabled = false;
-        if (window.location && typeof window.location.reload === "function") {
-          window.location.reload();
-        }
+        if (window.location && typeof window.location.reload === "function") window.location.reload();
       }).catch(function () { recalculatePlan.disabled = false; });
     });
   }
@@ -1851,9 +1782,7 @@
       if (goalCancel) goalCancel.classList.remove("hidden");
       if (goalSubmit) goalSubmit.textContent = "保存修改";
       if (goalSummary) goalSummary.textContent = "修改目标";
-      if (goalForm.parentElement && goalForm.parentElement.open === false) {
-        goalForm.parentElement.open = true;
-      }
+      if (goalForm.parentElement && goalForm.parentElement.open === false) goalForm.parentElement.open = true;
       goalStatus("");
     }
 
@@ -1884,8 +1813,7 @@
         goalStatus("请填写目标名称。");
         return;
       }
-      if (startDate && deadline && startDate.value && deadline.value
-          && startDate.value > deadline.value) {
+      if (startDate && deadline && startDate.value && deadline.value && startDate.value > deadline.value) {
         goalStatus("开始日期不能晚于截止日期。");
         return;
       }
@@ -1905,11 +1833,8 @@
           })
         : post("/goals", payload);
       request.then(function () {
-        if (window.location && typeof window.location.reload === "function") {
-          window.location.reload();
-        } else {
-          window.location = "/w/" + encodeURIComponent(WS) + "/practice";
-        }
+        if (window.location && typeof window.location.reload === "function") window.location.reload();
+        else window.location = "/w/" + encodeURIComponent(WS) + "/practice";
       }).catch(function (error) {
         goalStatus("保存失败：" + (error.message || "未知错误"));
       });
@@ -1984,8 +1909,7 @@
       aiStreamingMessage.content = "";
     }
     aiStreamingMessage.content += text;
-    aiStreamingMessage.innerHTML = "<div class='rich-text'>"
-      + richText(aiStreamingMessage.content) + "</div>";
+    aiStreamingMessage.innerHTML = "<div class='rich-text'>" + richText(aiStreamingMessage.content) + "</div>";
     messages.scrollTop = messages.scrollHeight;
     renderMath(aiStreamingMessage);
   }
@@ -2044,12 +1968,9 @@
       plan.rows[id] = row;
       plan.list.appendChild(row);
     }
-    var status = activity.status === "done" || activity.status === "failed"
-      ? activity.status : "running";
+    var status = activity.status === "done" || activity.status === "failed" ? activity.status : "running";
     row.className = "ai-plan-step is-" + status;
-    if (activity.label != null || !row.activityParts.label.textContent) {
-      row.activityParts.label.textContent = activity.label || "执行步骤";
-    }
+    if (activity.label != null || !row.activityParts.label.textContent) row.activityParts.label.textContent = activity.label || "执行步骤";
     row.activityParts.state.textContent = aiActivityState(status);
     if (activity.detail != null) row.activityParts.detail.textContent = activity.detail || "";
     row.activityParts.detail.classList.toggle("hidden", !row.activityParts.detail.textContent);
@@ -2108,21 +2029,14 @@
       aiPiActivities[id] = row;
       messages.appendChild(row);
     }
-    var status = activity.status === "done" || activity.status === "failed"
-      ? activity.status : "running";
+    var status = activity.status === "done" || activity.status === "failed" ? activity.status : "running";
     row.className = "msg ai-activity is-" + status;
-    if (activity.label != null || !row.activityParts.label.textContent) {
-      row.activityParts.label.textContent = activity.label || "调用工具";
-    }
+    if (activity.label != null || !row.activityParts.label.textContent) row.activityParts.label.textContent = activity.label || "调用工具";
     row.activityParts.state.textContent = aiActivityState(status);
     if (activity.detail != null) row.activityParts.detail.textContent = activity.detail || "";
     row.activityParts.detail.classList.toggle("hidden", !row.activityParts.detail.textContent);
-    if (activity.summary != null) {
-      row.activityParts.summary.textContent = String(activity.summary);
-    }
-    // A provider-reported failure shows its reason without expanding anything.
-    var hasSummary = activity.status === "failed"
-      && !!row.activityParts.summary.textContent;
+    if (activity.summary != null) row.activityParts.summary.textContent = String(activity.summary);
+    var hasSummary = activity.status === "failed" && !!row.activityParts.summary.textContent;
     row.activityParts.summary.classList.toggle("hidden", !hasSummary);
     if (activity.output != null && String(activity.output).length) {
       if (!row.activityParts.output) {
@@ -2149,11 +2063,8 @@
 
   function aiRenderActivities(activities) {
     if (!activities || !activities.length) return;
-    if (aiCurrentProvider === "pi") {
-      activities.forEach(aiUpsertPiActivity);
-    } else {
-      aiRenderExecutionPlan(activities);
-    }
+    if (aiCurrentProvider === "pi") activities.forEach(aiUpsertPiActivity);
+    else aiRenderExecutionPlan(activities);
   }
 
   function aiSetStatus(text) {
@@ -2204,11 +2115,8 @@
   ];
 
   function aiAssetSummary(counts) {
-    return ASSET_LABELS.filter(function (pair) {
-      return counts[pair[0]];
-    }).map(function (pair) {
-      return pair[1] + " " + counts[pair[0]];
-    }).join("、");
+    return ASSET_LABELS.filter(function (pair) { return counts[pair[0]]; })
+      .map(function (pair) { return pair[1] + " " + counts[pair[0]]; }).join("、");
   }
 
   function aiResultDetail(result) {
@@ -2219,14 +2127,10 @@
     if (assets) lines.push(assets);
     var originKeys = Object.keys(origins);
     if (originKeys.length) {
-      lines.push("来源 " + originKeys.map(function (key) {
-        return key + " " + origins[key];
-      }).join(" · "));
+      lines.push("来源 " + originKeys.map(function (key) { return key + " " + origins[key]; }).join(" · "));
     }
     if (result.workspace) lines.push("工作区 " + result.workspace);
-    if (result.backup_path) {
-      lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
-    }
+    if (result.backup_path) lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
     return lines.join("\n");
   }
 
@@ -2282,8 +2186,6 @@
     if (!result) return;
     var batches = Array.isArray(result.batches) ? result.batches : [];
     if (batches.length > 1) {
-      // One bundle that spanned chapters: every recorded batch gets its own row
-      // and its own rollback.
       var card = aiAddMultiBatchCard(result, batches);
       batches.forEach(function (batch) {
         aiBatchState(batch.batch_id).then(function (state) {
@@ -2296,8 +2198,6 @@
     var single = aiAddCheckCard("Check 入库完成", aiResultDetail(result), result.batch_id);
     var line = single ? single.querySelector(".check-card-detail") : null;
     if (line) line.dataset.assets = aiAssetSummary(result.counts || {});
-    // A reopened card shows the batch's current state, not the state at the time
-    // it ran: an already rolled-back batch offers no second rollback.
     aiBatchState(result.batch_id).then(function (batch) {
       if (batch && batch.rolled_back_at) aiMarkRolledBack(single, result.batch_id);
     });
@@ -2319,9 +2219,7 @@
       button.type = "button";
       button.className = "check-card-rollback";
       button.textContent = "整批回滚";
-      button.addEventListener("click", function () {
-        aiRollbackBatch(batch.batch_id, button);
-      });
+      button.addEventListener("click", function () { aiRollbackBatch(batch.batch_id, button); });
       row.appendChild(button);
       body.appendChild(row);
     });
@@ -2337,8 +2235,7 @@
   }
 
   function aiMultiBatchDetail(result, batches) {
-    var chapters = batches.map(function (batch) { return batch.chapter; })
-      .filter(function (chapter) { return !!chapter; });
+    var chapters = batches.map(function (batch) { return batch.chapter; }).filter(function (chapter) { return !!chapter; });
     var totals = {};
     batches.forEach(function (batch) {
       Object.keys(batch.counts || {}).forEach(function (key) {
@@ -2351,9 +2248,7 @@
     var assets = aiAssetSummary(totals);
     if (assets) lines.push(assets);
     if (result.workspace) lines.push("工作区 " + result.workspace);
-    if (result.backup_path) {
-      lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
-    }
+    if (result.backup_path) lines.push("备份 " + String(result.backup_path).split(/[\\/]/).pop());
     return lines.join("\\n");
   }
 
@@ -2434,8 +2329,6 @@
         aiPiActivities = {};
         aiRenderActivities(message.activities || []);
         aiAddMarkdown(message.content || "", "ai");
-        // A single-action turn records both keys; render the list, and fall back
-        // to the single action only when the list is absent (one card, never two).
         var actions = message.actions || [];
         if (actions.length) {
           actions.forEach(function (restored) {
@@ -2466,15 +2359,10 @@
   }
 
   function aiTargetValue(entry) {
-    return JSON.stringify([
-      entry.model || "",
-      entry.entry || "",
-    ]);
+    return JSON.stringify([entry.model || "", entry.entry || ""]);
   }
 
   function aiSyncModelSwitch(record) {
-    // A conversation is permanently bound to its Agent harness. The selector
-    // therefore contains only models enumerated by that harness.
     var select = document.getElementById("ai-model-switch");
     if (!select || !record) return;
     select.innerHTML = "";
@@ -2504,7 +2392,6 @@
     select.classList.toggle("hidden", !select.children.length);
   }
 
-
   var aiModelSwitch = document.getElementById("ai-model-switch");
   if (aiModelSwitch) {
     aiModelSwitch.addEventListener("change", function () {
@@ -2512,30 +2399,21 @@
       var failure = "";
       aiSetStatus("切换模型中…");
       var target;
-      try {
-        target = JSON.parse(aiModelSwitch.value || "[]");
-      } catch (error) {
-        target = [];
-      }
+      try { target = JSON.parse(aiModelSwitch.value || "[]"); }
+      catch (error) { target = []; }
       patch("/ai/sessions/" + encodeURIComponent(aiConversation), {
         model: target[0] || null,
         entry: target[1] || null,
       })
         .catch(function (err) { failure = err.message || "未知错误"; })
+        .then(function () { return aiLoadConversation(aiConversation); })
         .then(function () {
-          // The reload repaints the header, so the notice is set after it.
-          return aiLoadConversation(aiConversation);
-        })
-        .then(function () {
-          aiSetStatus(failure ? "无法切换模型：" + failure
-                              : "模型已切换，下一轮生效。");
+          aiSetStatus(failure ? "无法切换模型：" + failure : "模型已切换，下一轮生效。");
         });
     });
   }
 
   function aiContextBody(message) {
-    // No keyword gate: a valid append-only content action carries its own
-    // authority, so the learner's wording no longer decides whether one runs.
     var body = {
       message: message,
       route: window.location.pathname || "",
@@ -2552,8 +2430,6 @@
       body.problem_id = active.id;
       body.practice_mode = sessionStorage.getItem(MODE_KEY) || "";
       body.progress = { seen: session().length };
-      // Attached for this turn only: the server bounds these and stores none of
-      // them, so an unsent draft never becomes a learning record.
       body.include_draft = true;
       body.draft_answer = draftAnswer();
       body.draft_note = draftNote();
@@ -2563,13 +2439,10 @@
     } else if (layout.dataset.page === "practice") {
       body.practice_selection = practiceSelectionContext();
     }
-    if (layout.dataset.page === "practice-sets" && layout.dataset.practiceSetId) {
-      body.practice_set_id = layout.dataset.practiceSetId;
-    }
+    if (layout.dataset.page === "practice-sets" && layout.dataset.practiceSetId) body.practice_set_id = layout.dataset.practiceSetId;
     if (layout.dataset.page === "records") {
       try {
-        body.records_problem_id = new URLSearchParams(window.location.search || "")
-          .get("problem") || "";
+        body.records_problem_id = new URLSearchParams(window.location.search || "").get("problem") || "";
       } catch (_) {
         body.records_problem_id = "";
       }
@@ -2665,6 +2538,7 @@
       .then(function () { aiSetStatus("正在停止…"); })
       .catch(function () { aiSetStatus("停止请求失败。"); });
   });
+
   /* ---------- compact Agent session IA ---------- */
 
   var aiSessionListView = document.getElementById("ai-session-list-view");
@@ -2776,8 +2650,6 @@
       button.dataset.provider = entry.provider || entry.name;
       button.dataset.model = entry.model || "";
       button.dataset.entry = entry.entry || "";
-      // The display name is the entry's own — the harness and model id stay
-      // out of the label.
       button.textContent = (entry.provider || "") + " · " + entry.name;
       button.addEventListener("click", function () {
         aiCreateSession(entry.provider || entry.name, entry.model || "", entry.entry || "");
@@ -2794,8 +2666,6 @@
   function aiShowProviderPicker() {
     if (!aiProviderOptions) return;
     aiSetView("picker");
-    // Show the last known catalog immediately; then refresh it without leaving
-    // the picker blank while runtime discovery is in flight.
     aiRenderProviderPicker();
     aiRefreshProviders().then(aiRenderProviderPicker);
   }
@@ -2853,14 +2723,9 @@
         aiSessionEmpty.classList.remove("hidden");
       }
     });
-    Promise.all([
-      providerRequest,
-      aiRefreshSessionList(),
-    ]);
+    Promise.all([providerRequest, aiRefreshSessionList()]);
   }
-  if (layout.dataset.objectType && layout.dataset.objectId) {
-    aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);
-  }
+  if (layout.dataset.objectType && layout.dataset.objectId) aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);
 
   /* ---------- page init ---------- */
 
@@ -2919,7 +2784,12 @@
       else rightWidth = width;
       applyColumnWidths();
     });
-    function stop() { if (!dragging) return; dragging = false; document.body.style.cursor = ""; layout.classList.remove("is-resizing"); }
+    function stop() {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.cursor = "";
+      layout.classList.remove("is-resizing");
+    }
     handle.addEventListener("pointerup", stop);
     handle.addEventListener("pointercancel", stop);
   }
@@ -2957,18 +2827,14 @@
       var first = new Date(year, month, 1);
       var last = new Date(year, month + 1, 0);
       var daysInMonth = last.getDate();
-      var lead = (first.getDay() + 6) % 7; /* Monday-first */
+      var lead = (first.getDay() + 6) % 7;
       var weekCount = Math.ceil((lead + daysInMonth) / 7);
       var periods = [];
       var offGrid = [];
-      if (calendarMonthLabel) {
-        calendarMonthLabel.textContent = year + "年" + (month + 1) + "月";
-      }
+      if (calendarMonthLabel) calendarMonthLabel.textContent = year + "年" + (month + 1) + "月";
 
       function plainDate(value) {
-        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) {
-          return null;
-        }
+        if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) return null;
         var parts = value.slice(0, 10).split("-").map(Number);
         return new Date(parts[0], parts[1] - 1, parts[2]);
       }
@@ -2991,19 +2857,15 @@
           return escapeHtml(goal.title || "未命名目标")
             + (goal.deadline ? "（" + escapeHtml(goal.deadline.slice(0, 10)) + "）" : "");
         }).join("、");
-        calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted time-off-note'>本月之外或未排期：" + offLine + "。</p>");
+        calendarGrid.insertAdjacentHTML("afterend", "<p class='muted time-off-note'>本月之外或未排期：" + offLine + "。</p>");
       }
       periods.sort(function (a, b) {
-        return a.start - b.start || b.end - a.end
-          || String(a.goal.id || "").localeCompare(String(b.goal.id || ""));
+        return a.start - b.start || b.end - a.end || String(a.goal.id || "").localeCompare(String(b.goal.id || ""));
       });
       var periodLaneEnds = [];
       periods.forEach(function (period) {
         var startDay = dayNumber(period.start);
-        var lane = periodLaneEnds.findIndex(function (occupiedUntil) {
-          return occupiedUntil < startDay;
-        });
+        var lane = periodLaneEnds.findIndex(function (occupiedUntil) { return occupiedUntil < startDay; });
         if (lane < 0) lane = periodLaneEnds.length;
         period.lane = lane;
         periodLaneEnds[lane] = dayNumber(period.end);
@@ -3043,14 +2905,12 @@
           var goal = segment.period.goal;
           var title = escapeHtml(goal.title || "未命名目标");
           var kind = goal.kind === "long_term" ? " long-term" : " stage";
-          var overdue = segment.period.end < new Date(today.getFullYear(), today.getMonth(), today.getDate())
-            ? " overdue" : "";
+          var overdue = segment.period.end < new Date(today.getFullYear(), today.getMonth(), today.getDate()) ? " overdue" : "";
           var edges = (segment.begins ? " segment-start" : "") + (segment.ends ? " segment-end" : "");
           if (!segment.ends) edges += " segment-continuing";
           var span = segment.endColumn - segment.startColumn + 1;
           var range = isoDate(segment.period.start) + " 至 " + isoDate(segment.period.end);
-          var labelHere = !segment.period.labelShown
-            && (span > 1 || segment.ends || week === weekCount - 1);
+          var labelHere = !segment.period.labelShown && (span > 1 || segment.ends || week === weekCount - 1);
           var label = labelHere ? "<span class='calendar-goal-label'>" + title + "</span>" : "";
           if (labelHere) segment.period.labelShown = true;
           return "<span class='calendar-goal" + kind + overdue + edges + "'"
@@ -3106,9 +2966,7 @@
       }).join("");
       workloadBars.innerHTML = bars
         + (nonzero.length ? "" : "<p class='muted workload-empty'>未来 14 天暂无到期复习项。</p>");
-      var heavyDays = days.filter(function (day) {
-        return day.count >= heavyThreshold && day.count > 0;
-      });
+      var heavyDays = days.filter(function (day) { return day.count >= heavyThreshold && day.count > 0; });
       if (heavyDays.length) {
         workloadPrefill.classList.remove("hidden");
         var busiest = heavyDays.reduce(function (a, b) { return b.count > a.count ? b : a; });
@@ -3130,10 +2988,7 @@
       if (timeViewContent) timeViewContent.classList.remove("hidden");
       renderMonthGrid(goals);
       renderBars(days);
-      if (!goals.length) {
-        calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted'>还没有带截止日期的目标。</p>");
-      }
+      if (!goals.length) calendarGrid.insertAdjacentHTML("afterend", "<p class='muted'>还没有带截止日期的目标。</p>");
     }).catch(function () { /* the time view stays hidden on failure */ });
 
     if (workloadPrefill) {
