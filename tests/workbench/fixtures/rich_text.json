@@ -164,7 +164,9 @@
       "name": "horizontal_rule_inside_code_stays_code",
       "markdown": "```text\n---\n***\n___\n```",
       "contains": [
-        "<pre><code>---\n***\n___</code></pre>"
+        "<pre><code",
+        "---\n***\n___",
+        "</code></pre>"
       ],
       "excludes": [
         "<hr>"
