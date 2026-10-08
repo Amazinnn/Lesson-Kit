@@ -729,6 +729,9 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
 
 _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)
 _TABLE_DELIMITER_CELL = re.compile(r":?-{1,}:?")
+_THEMATIC_BREAK = re.compile(
+    r"\s*(?:\*(?:\s*\*){2,}|-(?:\s*-){2,}|_(?:\s*_){2,})\s*"
+)
 
 
 def _table_cells(line):
@@ -821,6 +824,11 @@ def _render_markdown(text, workspace_name, kp_id):
             close_list()
             table_html, skip_until = _render_table(lines, position, workspace_name)
             out.append(table_html)
+            continue
+        if _THEMATIC_BREAK.fullmatch(line):
+            flush_paragraph()
+            close_list()
+            out.append("<hr>")
             continue
         heading = re.match(r"^\s*(#{1,3})\s+(.+?)\s*#*\s*$", line)
         if heading:
