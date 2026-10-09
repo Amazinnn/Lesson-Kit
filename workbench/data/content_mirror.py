@@ -224,6 +224,11 @@ def _scan_repo(repo, course):
                 envelope = read_entity(path, course, entity_type)
                 key = (entity_type, envelope["entity_id"])
                 if key in found:
+                    # Identity is inside JSON, not in the path.  Two files that
+                    # claim one identity are ambiguous, so neither may win by
+                    # scan order. Removing the first also prevents sync from
+                    # applying it while merely reporting the second as bad.
+                    found.pop(key, None)
                     raise MirrorError(f"duplicate entity_id: {envelope['entity_id']}")
                 found[key] = (path, envelope)
             except MirrorError as exc:
@@ -405,7 +410,18 @@ def plan(pool, repo, entity_id=None):
     tracked = _tracked(pool, entity_id)
     tracked_keys = set(tracked)
     for entity_type, identity in tracked:
-        results.append(_plan_one(pool, found.get((entity_type, identity)), entity_type, identity))
+        repo_entry = found.get((entity_type, identity))
+        if repo_entry is None and parse_errors:
+            # An unreadable/ambiguous file has no trustworthy identity.  It may
+            # be a renamed copy of this tracked entity, so treating absence as a
+            # safe deletion-and-restore would risk overwriting authored work.
+            results.append(_result(
+                entity_type, identity, "invalid",
+                "repository contains unreadable or duplicate entity JSON; "
+                "refusing missing-file restoration until it is repaired",
+            ))
+            continue
+        results.append(_plan_one(pool, repo_entry, entity_type, identity))
     for (entity_type, identity), (path, _envelope_value) in sorted(found.items()):
         if entity_id and identity != entity_id:
             continue
