@@ -21,6 +21,8 @@ Intelligence（Bridge）       ← 旁挂：任务+契约+外部 CLI；只被 Sh
   Bridge 不 import Server。
 - **依赖注入**：Domain 函数接收 `Pool`（Data 层对象），不自己开连接。
 - 现有 `pipeline/`、`pool/scripts/`、`lessonkit.py` 一律不动；工作台是新增旁挂树。
+  `kp-text-typesetting-check` 授权的唯一例外是 `pipeline/scripts/validate-pool.py`
+  的只读排版检出调用与既有报告输出；它不扩展其他 frozen-layer 行为。
 
 ## 1. 目录契约（workbench/ 全部 stdlib-only）
 
@@ -169,6 +171,11 @@ workbench/
   `data.content` 里事后补写（按该题 `quiz_type` 校验形状，空值清回无键）。
 - `ingest`：`prepare/run/gate/apply/apply_batch/rollback_batch`；生成内容只有通过
   确定性门禁后才能以批次事务写入，并保留整批回滚边界。
+- `domain.typesetting.check/render_text`：正文段落的纯测量与共用报告措辞；
+  `data.typesetting.read_rows` 只从已有连接读取正文/id，不 ensure schema。
+  ingest 的 `inspect_content_bundle_typesetting` 是纯预检；有效 bundle check 与
+  成功 apply 增加 `typesetting`，CLI/Bridge 保留该报告。pipeline 使用自己仓库根目录
+  的相同规则，在旧 schema 提前返回前读取可用正文。检出不影响门禁、计数或退出码。
 - `ingest.problem-patch`（+ `data.content.plan_problem_patch`）：**原地**改已有题目——
   单题与批量共用同一份校验（未知字段/题号身份/难度归属/微题契约），批量记录批次号与
   每行改前旧值，`rollback_batch` 对它走「写回旧值」而不是「删行」，因此学习记录不受影响。

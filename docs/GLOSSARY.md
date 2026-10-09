@@ -57,7 +57,8 @@ _Avoid_：字符数、字数、汉字数、len()、文本长度上限
 对知识点 `body` 的**只读**排版检查：把正文按空行切成段落，用「可见字符」量每段长度，任一段落在 40–300 之外就报出这个知识点，并注明两侧各几段、最长段与最短段各多少。它跑在两个时机（入池前读 content-bundle 清单、入池后读池），两边共用同一把尺和同一套报告口径。
 **它不是门禁**：只报、不拒、不改文本、不退出非零，也不告诉你该怎么排版——不给目标字数、不推荐小节名、不提示切分位置。**不触发就说明没有可报的问题**；41 字符和 300 字符同样可以。区间 40–300 记在 workbench-content-governance spec 里，不是实现常量。
 _Avoid_：门禁/gate（那是一失败就整批拒绝、零写入）、审计/audit（那个会退出非零）、字数上限、格式校验、自动重排/自动分段
-出处：kp-text-typesetting-check（spec + proposal + design）；ADR 0023
+实现使用正文的空行边界；跨空行的反引号代码仍整体剔除后计数。正文段落的零可见字符计入统计，但不触发过短检出。报告中入池前可用清单 key 标识知识点，入池后使用 kp_id。
+出处：kp-text-typesetting-check（spec + proposal + design）；implement-kp-text-typesetting-check；ADR 0023
 
 ### 知识关系 / Knowledge Relation
 两个知识点之间经审核的点对点边（如 prerequisite / applies_to / contrasts / variant_of），存于 `knowledge_relations`。图谱的事实层。
