@@ -1056,6 +1056,8 @@
 
     function syncSelectionActions() {
       var ready = readyToStart();
+      var ratingChoice = document.querySelector(".practice-rating-choice");
+      if (ratingChoice) ratingChoice.classList.toggle("hidden", ratingOff());
       if (startPractice) startPractice.disabled = !ready;
       if (savePracticeSet) {
         savePracticeSet.disabled = !ready || selectedContentMode() === "flash_card";
@@ -1077,6 +1079,7 @@
     bindMode(modeBatch);
     bindMode(ratingImmediate);
     bindMode(ratingBatch);
+    bindMode(document.getElementById("setting-show-rating"));
     var restoredMode = sessionStorage.getItem(MODE_KEY);
     var restoredFlashDirection = sessionStorage.getItem(FLASH_DIRECTION_KEY) || "forward";
     if (flashDirectionForward) flashDirectionForward.checked = restoredFlashDirection === "forward";
@@ -1103,12 +1106,6 @@
       setPracticeFocus(true);
       renderDeckItem(restoredItem);
       showComposer(true);
-    }
-    if (ratingOffNow) {
-      // Shadow-invisible: hide the timing choice itself. A round already
-      // running with immediate/batch keeps the panels it started with.
-      var ratingChoice = document.querySelector(".practice-rating-choice");
-      if (ratingChoice) ratingChoice.classList.add("hidden");
     }
     showFlashDirectionChoice();
     if (startPractice) startPractice.addEventListener("click", startSession);
@@ -1438,11 +1435,11 @@
       var position = practiceDeck.cursor;
       var request;
       if (item.kind === "card") {
-        request = post("/feedback", {
+        request = (offNow() ? Promise.resolve() : post("/feedback", {
           item_type: "card", item_id: item.id, rating: 1,
           direction: item.direction || "forward",
           request_id: newPracticeRequestId(),
-        }).then(function () {
+        })).then(function () {
           return patch("/practice/current", {
             position: position, state: "stuck",
           });
@@ -1505,7 +1502,29 @@
       persistDeck();
     });
     if (cardNext) cardNext.addEventListener("click", function () {
-      advance();
+      if (pulling) return;
+      var item = currentProblem();
+      if (!offNow() || !activePractice || !item || item.kind !== "card"
+          || item.state !== "active") {
+        advance();
+        return;
+      }
+      pulling = true;
+      cardNext.disabled = true;
+      patch("/practice/current", {
+        position: practiceDeck.cursor,
+        state: item.revealed ? "answered" : "stuck",
+      }).then(function (progress) {
+        activePractice = progress.completed ? null : progress.practice;
+        renderResumeCard(activePractice);
+        updateSession(item.id, { state: item.revealed ? "unrated" : "skipped" }, item.direction);
+        pulling = false;
+        advance();
+      }).catch(function (error) {
+        pulling = false;
+        cardNext.disabled = false;
+        showPracticeError(error);
+      });
     });
     if (nextProblem) nextProblem.addEventListener("click", function () {
       if (!offNow()) return;

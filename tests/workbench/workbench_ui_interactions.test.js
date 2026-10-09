@@ -218,7 +218,7 @@ class FakeStorage {
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
   reducedMotion = false, physics = GraphPhysics, setTimeoutFn = () => 0,
-  promptFn = undefined, confirmFn = undefined,
+  promptFn = undefined, confirmFn = undefined, selectors = {},
 }) {
   const document = {
     hidden: false,
@@ -243,8 +243,8 @@ function runWorkbench({
     querySelectorAll() {
       return [];
     },
-    querySelector() {
-      return null;
+    querySelector(selector) {
+      return selectors[selector] || null;
     },
   };
   let rafCalls = 0;
@@ -3764,6 +3764,99 @@ test("the rating preference persists through localStorage and the paper start ca
   });
   assert.equal(reopened.checked, false);
 });
+
+for (const initiallyOn of [true, false]) {
+  test(`rating preference ${initiallyOn ? "on to off" : "off to on"} updates current-page start controls`, () => {
+    const elements = { layout: layout(), ...durablePracticeElements() };
+    delete elements["practice-mode-immediate"];
+    delete elements["practice-mode-batch"];
+    elements["practice-mode-exam"] = new FakeElement("practice-mode-exam", { checked: true });
+    elements["setting-show-rating"] = new FakeElement("setting-show-rating");
+    const timing = new FakeElement("rating-choice");
+    runWorkbench({
+      elements,
+      storage: new FakeStorage({ wb_kp_selection_alpha: JSON.stringify(["kp-1"]) }),
+      local: new FakeStorage({ wb_settings_alpha: JSON.stringify({ showRating: initiallyOn }) }),
+      selectors: { ".practice-rating-choice": timing },
+      fetch: () => jsonResponse({ practice: null }),
+    });
+    assert.equal(elements["start-practice"].disabled, initiallyOn);
+    const box = elements["setting-show-rating"];
+    box.checked = !initiallyOn;
+    box.trigger("change");
+    assert.equal(elements["start-practice"].disabled, !initiallyOn);
+    assert.equal(elements["save-practice-set"].disabled, !initiallyOn);
+    assert.equal(timing.classList.contains("hidden"), initiallyOn);
+  });
+}
+
+for (const count of [1, 2]) {
+  test(`off card round checkpoints ${count} directions only on explicit next`, async () => {
+    const calls = [];
+    const elements = { layout: layout(), ...durablePracticeElements() };
+    const practice = {
+      source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "flash_card",
+      rating_mode: "off", cursor: 0,
+      progress: { completed: 0, remaining: count, total: count },
+      items: Array.from({ length: count }, (_, position) => ({
+        position, item_type: "card", item_id: "fc-1", state: "pending",
+        direction: position ? "reverse" : "forward",
+        payload: { card_id: "fc-1", front: "Front", back: "Back" },
+      })),
+    };
+    runWorkbench({ elements, fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current") && options?.method === "PATCH") {
+        const body = JSON.parse(options.body);
+        practice.items[body.position].state = body.state;
+        practice.cursor = body.position + 1;
+        const done = practice.items.every((item) => item.state !== "pending");
+        return jsonResponse({ completed: done, practice });
+      }
+      return jsonResponse({ practice });
+    } });
+    await flush();
+    elements["resume-practice"].click();
+    const patches = () => calls.filter((call) => call.options?.method === "PATCH");
+    for (let position = 0; position < count; position++) {
+      elements["show-answer"].click();
+      await flush();
+      assert.equal(patches().length, position, "reveal is not a completion write");
+      if (position) {
+        elements["card-prev"].click();
+        elements["card-next"].click();
+        await flush();
+        assert.equal(patches().length, position, "backwards review is not a new completion");
+      }
+      elements["card-next"].click();
+      await flush();
+      assert.equal(patches().length, position + 1);
+      assert.deepEqual(JSON.parse(patches()[position].options.body), { position, state: "answered" });
+    }
+    assert.equal(calls.some((call) => /\/(feedback|attempts)$/.test(call.url)), false);
+    assert.equal(elements["active-practice-resume"].classList.contains("hidden"), true);
+  });
+}
+
+for (const mode of ["immediate", "batch", "off"]) {
+  test(`running ${mode} mode survives the preference change`, async () => {
+    const elements = { layout: layout(), ...durablePracticeElements() };
+    elements["setting-show-rating"] = new FakeElement("setting-show-rating");
+    const storage = new FakeStorage();
+    const practice = { source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "exam",
+      rating_mode: mode, cursor: 0, progress: { total: 1, remaining: 1 },
+      items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+        payload: { problem_id: "p-1", problem_text: "Question" } }] };
+    runWorkbench({ elements, storage, fetch: () => jsonResponse({ practice }) });
+    await flush();
+    elements["resume-practice"].click();
+    const feedbackHidden = elements["feedback-area"].classList.contains("hidden");
+    elements["setting-show-rating"].checked = false;
+    elements["setting-show-rating"].trigger("change");
+    assert.equal(storage.getItem("wb_practice_rating_mode_alpha"), mode);
+    assert.equal(elements["feedback-area"].classList.contains("hidden"), feedbackHidden);
+  });
+}
 
 test("an empty rating input is rejected inline instead of dying at the server", async () => {
   const calls = [];

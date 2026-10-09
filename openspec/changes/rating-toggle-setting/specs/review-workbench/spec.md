@@ -49,6 +49,17 @@ never lock a problem.
 - **THEN** the round begins without the learner choosing a rating timing, and
   the stored rating mode is `off`
 
+#### Scenario: Explicit off-card navigation completes execution without a rating
+
+- **WHEN** the learner explicitly advances an off-mode flash card
+- **THEN** the existing current-practice checkpoint records answered after reveal or stuck when skipped, without creating an attempt, feedback, learning state or schedule update
+- **AND** settling the last pending item archives the completed off round and clears the active resource, so refresh does not resurrect it
+
+#### Scenario: Revealing an off card does not complete it
+
+- **WHEN** an off-mode card is displayed, revealed, or revisited with backwards navigation
+- **THEN** no new execution completion or learning record is written until explicit forward completion of a pending item
+
 #### Scenario: Practice an un-due problem
 
 - **WHEN** the learner selects a problem that is not yet due

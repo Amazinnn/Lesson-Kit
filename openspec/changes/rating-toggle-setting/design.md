@@ -65,6 +65,11 @@ including NaN: `!(rating >= 1 && rating <= 5)`.
 
 ## Verification
 
+Off-card forward navigation uses the existing PATCH current-practice checkpoint:
+answered after reveal, stuck for explicit skip, with no synthetic rating or
+learning projection. The final item archives the execution snapshot. Display,
+reveal and backwards review do not settle a pending item.
+
 - JS: an off round posts `rating_mode: "off"`, starts without choosing a
   timing, never shows the feedback area, shows 「下一题」 after submit and
   advances on click; flash cards page without rating surfaces; the setting

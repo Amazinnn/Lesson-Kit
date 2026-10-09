@@ -256,6 +256,43 @@ class ActivePracticeTests(unittest.TestCase):
         ).fetchone()[0]
         self.assertEqual(moved, 0)
 
+    def test_off_card_checkpoints_archive_without_learning_writes(self):
+        from workbench.data import active_practice
+        from workbench.server import api
+
+        conn = self.pool.connect()
+        conn.execute(
+            "INSERT INTO flash_cards (card_id,kp_id,front,back,source_evidence,directions) "
+            "VALUES (?,?,?,?,?,?)",
+            ("dmath-ch06-fc-901", "dmath-ch06-kp-001", "Front", "Back", "Test",
+             '["forward","reverse"]'))
+        self.pool.commit()
+        learning_tables = ("problem_attempts", "feedback_events", "problem_progress",
+                           "learning_current_state", "review_schedule", "learner_signals")
+        before = {table: [tuple(row) for row in conn.execute(f"SELECT * FROM {table}")]
+                  for table in learning_tables}
+        for count in (1, 2):
+            with self.subTest(directions=count):
+                active_practice.create(self.pool, {
+                    "source_kind": "quick", "kp_ids": ["dmath-ch06-kp-001"],
+                    "practice_mode": "flash_card", "rating_mode": "off",
+                    "items": [{"item_type": "card", "item_id": "dmath-ch06-fc-901",
+                               "direction": direction}
+                              for direction in ("forward", "reverse")[:count]],
+                })
+                for position in range(count):
+                    result = api.active_practice_update(self.pool, {}, {}, {
+                        "position": position, "state": "answered"})
+                    self.assertEqual(result["completed"], position == count - 1)
+                self.assertIsNone(active_practice.current(self.pool))
+                archived = conn.execute(
+                    "SELECT status,rating_mode FROM practice_runs ORDER BY id DESC LIMIT 1"
+                ).fetchone()
+                self.assertEqual(tuple(archived), ("completed", "off"))
+                after = {table: [tuple(row) for row in conn.execute(f"SELECT * FROM {table}")]
+                         for table in learning_tables}
+                self.assertEqual(after, before)
+
 
 if __name__ == "__main__":
     unittest.main()
