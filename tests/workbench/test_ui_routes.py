@@ -63,15 +63,15 @@ class UiRouteTests(unittest.TestCase):
 
     def test_edge_layer_follows_the_stage_size(self):
         """The SVG carries width/height/viewBox from the layout, so the last
-        `.graph-edge-layer` rule must size it to the stage box. A fixed CSS
-        size lets the viewBox rescale the whole edge layer — on 2026-10-01
-        that put every edge off-canvas (nodes rendered, relations invisible)."""
+        `.graph-edges` rule must size it to the stage box. A fixed CSS size
+        lets the viewBox rescale the whole edge layer — on 2026-10-01 that put
+        every edge off-canvas (nodes rendered, relations invisible)."""
         import re
 
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
-        blocks = re.findall(r"\.graph-edge-layer\s*\{([^}]*)\}", body)
-        self.assertTrue(blocks, "no .graph-edge-layer rule in the stylesheet")
+        blocks = re.findall(r"\.graph-edges\s*\{([^}]*)\}", body)
+        self.assertTrue(blocks, "no .graph-edges rule in the stylesheet")
         effective = blocks[-1]
         self.assertIn("width: 100%", effective)
         self.assertIn("height: 100%", effective)
@@ -453,18 +453,15 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='knowledge-sort-direction'", body)
         self.assertIn("data-kp-problem-count=", body)
 
-    def test_kp_page_renders(self):
+    def test_kp_page_renders_linked_problems_directly(self):
         full_text = "<sup>∗</sup>*两类代表*<b>原始 HTML</b>" + "的组合计数条件。" * 38
         summary = "分析两类代表选择中的乘法计数与顺序条件。"
         conn = sqlite3.connect(self.fixture.db_path)
         try:
             conn.execute(
-                "UPDATE problems SET problem_text=?, display_title=?, topic_label=?, "
-                "display_summary=? WHERE problem_id=?",
-                (
-                    full_text, "两类代表选择", "乘法规则", summary,
-                    "dmath-ch06-prob-001",
-                ),
+                "UPDATE problems SET problem_text=?, display_title=?, display_summary=? "
+                "WHERE problem_id=?",
+                (full_text, "两类代表选择", summary, "dmath-ch06-prob-001"),
             )
             conn.commit()
         finally:
@@ -472,13 +469,13 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
         self.assertEqual(status, 200)
         self.assertIn("两类代表选择", body)
-        self.assertIn("乘法规则", body)
         self.assertIn("dmath-ch06-kp-001", body)
         self.assertNotIn(summary, body)
         self.assertNotIn("problem-summary", body)
         self.assertNotIn("linked-problem-detail", body)
-        self.assertIn("class='problem-topic'", body)
-        self.assertNotIn("class='problem-topic' open", body)
+        self.assertIn("class='linked-problem-list'", body)
+        self.assertIn("class='linked-problem'", body)
+        self.assertNotIn("problem-topic", body)
         self.assertIn("两类代表", body)
         self.assertNotIn("…", body)
         self.assertNotIn("...", body)
@@ -513,10 +510,10 @@ class UiRouteTests(unittest.TestCase):
         conn = sqlite3.connect(self.fixture.db_path)
         try:
             conn.execute(
-                "UPDATE problems SET problem_text=?, display_title=?, topic_label=?, "
-                "display_summary=? WHERE problem_id=?",
+                "UPDATE problems SET problem_text=?, display_title=?, display_summary=? "
+                "WHERE problem_id=?",
                 (
-                    "完整短题题干。", "短题标题", "基础计数", "不应显示的摘要。",
+                    "完整短题题干。", "短题标题", "不应显示的摘要。",
                     "dmath-ch06-prob-001",
                 ),
             )
@@ -577,13 +574,22 @@ class UiRouteTests(unittest.TestCase):
         status, data = self.fetch_json("/api/w/dmath/graph/model")
         self.assertEqual(status, 200)
         self.assertEqual(data["nodes"][0]["title"], "Counting")
-        self.assertIn("id='graph-projection'", body)
-        self.assertIn("id='graph-projection-hint'", body)
-        self.assertIn("id='graph-state-filter'", body)
-        self.assertIn("id='graph-filter-needs_work'", body)
-        self.assertIn("id='graph-filter-review'", body)
-        self.assertIn("id='graph-filter-mastered'", body)
-        self.assertIn("id='graph-filter-null'", body)
+        # blueprint surface: view segment, filter chips, gravity, tide, legend
+        self.assertIn("id='graph-views'", body)
+        self.assertIn("data-view='structure'", body)
+        self.assertIn("id='graph-filters'", body)
+        self.assertIn("data-filter='work'", body)
+        self.assertIn("data-filter='new'", body)
+        self.assertIn("id='graph-gravity'", body)
+        self.assertIn("id='graph-solver-state'", body)
+        self.assertIn("id='graph-tide'", body)
+        self.assertIn("id='graph-edges'", body)
+        self.assertIn("id='graph-legend'", body)
+        self.assertIn("data-edge-type='prereq'", body)
+        self.assertIn("data-edge-type='legacy'", body)
+        self.assertIn("id='graph-edge-budget'", body)
+        self.assertIn("aria-pressed='true'", body)
+        self.assertIn("id='graph-toast'", body)
 
     def test_goal_lifecycle_controls_render(self):
         request = urllib.request.Request(

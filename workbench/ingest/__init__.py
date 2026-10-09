@@ -390,6 +390,8 @@ def _gate_micro_quiz(conn, manifest, course=""):
         if problem_id in existing_ids or problem_id in seen_ids:
             errors.append(f"{problem_id}: problem id already exists")
             continue
+        if "topic_label" in item:
+            errors.append(f"{problem_id}: topic_label is retired for problems")
         errors.extend(_inline_problem_difficulty_errors(item, problem_id))
         seen_ids.add(problem_id)
         row = _micro_quiz_row(item)
@@ -522,7 +524,7 @@ def _inline_problem_difficulty_errors(item, label):
 def _problem_fields(conn):
     """The governed problem columns written by a micro-quiz patch."""
     fields = ["problem_id", "kp_ids", "problem_text", "problem_type", "source_kind",
-              "origin_kind", "topic_label", "display_title", "display_summary", "practice_modes",
+              "origin_kind", "display_title", "display_summary", "practice_modes",
               "micro_quiz", "ingest_batch_id"]
     if _has_exam_year(conn):
         fields.insert(-1, "exam_year")
@@ -571,7 +573,6 @@ def _apply_patch(database, manifest, backup, kind, course=None):
                     row["problem_type"],
                     row["source_kind"],
                     row["origin_kind"],
-                    row.get("topic_label"),
                     row.get("display_title"),
                     row.get("display_summary"),
                     json.dumps(row["practice_modes"], ensure_ascii=False),
@@ -690,7 +691,6 @@ def _bundle_problem_fields(item, kp_ids):
         "source_answer": item.get("source_answer"),
         "solution": solution,
         "solution_origin": item.get("solution_origin"),
-        "topic_label": item.get("topic_label"),
         "display_title": item.get("display_title"),
         "display_summary": item.get("display_summary"),
         "exam_year": item.get("exam_year"),
@@ -895,6 +895,8 @@ def _gate_content_bundle(conn, manifest, course=""):
         if not isinstance(item, dict):
             errors.append(f"{label}: must be an object")
             continue
+        if "topic_label" in item:
+            errors.append(f"{label}: topic_label is retired for problems")
         key = item.get("key")
         if not isinstance(key, str) or not key.strip():
             errors.append(f"{label}: key is required")
@@ -1227,7 +1229,7 @@ def _apply_content_bundle(database, manifest, backup, course=None):
             paths = [entry["logical"] for entry in plan["figures"]]
             columns = [
                 "problem_id", "kp_ids", "problem_text", "solution", "problem_type",
-                "source_kind", "origin_kind", "topic_label", "display_title",
+                "source_kind", "origin_kind", "display_title",
                 "display_summary", "practice_modes", "micro_quiz", "figure_paths",
                 "source_evidence", "source_answer", "solution_origin", "ingest_batch_id",
             ]
@@ -1236,7 +1238,7 @@ def _apply_content_bundle(database, manifest, backup, course=None):
                 json.dumps(fields["kp_ids"], ensure_ascii=False),
                 fields["problem_text"], fields["solution"],
                 fields["problem_type"], fields["source_kind"], fields["origin_kind"],
-                fields["topic_label"], fields["display_title"],
+                fields["display_title"],
                 fields["display_summary"],
                 json.dumps(fields["practice_modes"], ensure_ascii=False)
                 if fields.get("practice_modes") else None,
@@ -1345,7 +1347,7 @@ def _rollback_content_bundle(conn, database, batch_id):
         for problem_id, in conn.execute(
             "SELECT problem_id FROM problems WHERE kp_ids LIKE ?"
             " AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
-            (f'%"{kp_id}"%', batch_id),
+            (f'%\"{kp_id}\"%', batch_id),
         ):
             blockers.append(f"knowledge_points: {kp_id} referenced by problems:{problem_id}")
         for card_id, in conn.execute(
@@ -1481,7 +1483,7 @@ def _rollback_conflicts(conn, database, kind, batch_id, snapshot):
             for problem_id, in conn.execute(
                 "SELECT problem_id FROM problems WHERE kp_ids LIKE ? "
                 "AND (ingest_batch_id IS NULL OR ingest_batch_id<>?)",
-                (f'%"{kp_id}"%', batch_id),
+                (f'%\"{kp_id}\"%', batch_id),
             ):
                 conflicts.append(
                     f"knowledge_points: {kp_id} referenced by problems:{problem_id}")

@@ -1,6 +1,6 @@
 """Rebuild bounded Agent context from browser identifiers and Pool data."""
 
-from workbench.data import active_practice, practice_sets, queries
+from workbench.data import active_practice, experience, practice_sets, queries
 
 
 # Focused practice drafts ride along with one turn only. They are learner input,
@@ -151,6 +151,20 @@ def _bounded_list(value, count, width):
         len(item) > width for item in value if isinstance(item, str))
 
 
+def _experience_context(pool, kp_id):
+    record = experience.get(pool, kp_id)
+    if record is None:
+        return None
+    return {
+        **record,
+        "problems": [
+            _problem_summary(problem)
+            for problem_id in record["problem_ids"]
+            if (problem := pool.problem(problem_id)) is not None
+        ],
+    }
+
+
 def _kp(pool, kp_id, result):
     result["anchor"]["kp_id"] = kp_id
     detail = queries.kp_detail(pool, kp_id)
@@ -165,6 +179,7 @@ def _kp(pool, kp_id, result):
     }
     detail["relations"] = relations
     detail["neighbours"] = [pool.kp(item) for item in sorted(neighbour_ids) if pool.kp(item)]
+    detail["practice_experience"] = _experience_context(pool, kp_id)
     result["current"] = detail
 
 
@@ -189,6 +204,7 @@ def _graph(pool, payload, result):
             key: value for key, value in queries.kp_detail(pool, selected).items()
             if key != "kp"
         })
+        selected_context["practice_experience"] = _experience_context(pool, selected)
         result["current"]["selected"] = selected_context
 
 

@@ -129,8 +129,7 @@ class MicroQuizRulesTests(unittest.TestCase):
         }
         self.assertEqual(micro_quiz.validate_problem_row(row), [])
         for field, limit in (
-                ("topic_label", 40), ("display_title", 80),
-                ("display_summary", 200)):
+                ("display_title", 80), ("display_summary", 200)):
             with self.subTest(field=field, case="valid"):
                 self.assertEqual(
                     micro_quiz.validate_problem_row({**row, field: "合法标签"}), [])
@@ -184,7 +183,7 @@ class MicroQuizIngestTests(unittest.TestCase):
                 kp_ids TEXT NOT NULL, problem_text TEXT NOT NULL,
                 solution TEXT, problem_type TEXT, source_kind TEXT,
                 origin_kind TEXT NOT NULL DEFAULT 'source_problem',
-                display_title TEXT, topic_label TEXT, display_summary TEXT,
+                display_title TEXT, display_summary TEXT,
                 practice_modes TEXT, micro_quiz TEXT, ingest_batch_id TEXT,
                 difficulty REAL,
                 difficulty_knowledge_breadth INTEGER,
@@ -220,7 +219,7 @@ class MicroQuizIngestTests(unittest.TestCase):
 
     def test_gate_and_apply_insert_contract_rows(self):
         item = manifest_item(
-            topic_label="质数定义", display_title="1 是质数吗",
+            display_title="1 是质数吗",
             display_summary="判断 1 是否符合质数定义。",
         )
         path = self.manifest([item])
@@ -247,7 +246,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         try:
             row = conn.execute(
                 "SELECT kp_ids, problem_text, practice_modes, micro_quiz, ingest_batch_id,"
-                " topic_label, display_title, display_summary"
+                " display_title, display_summary"
                 " FROM problems WHERE problem_id='dmath-ch06-mq-001'"
             ).fetchone()
             batch = conn.execute(
@@ -261,7 +260,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         self.assertEqual(payload["quiz_type"], "yes_no")
         self.assertEqual(payload["answer_key"], "否")
         self.assertEqual(row[4], "batch-001")
-        self.assertEqual(row[5:], ("质数定义", "1 是质数吗", "判断 1 是否符合质数定义。"))
+        self.assertEqual(row[5:], ("1 是质数吗", "判断 1 是否符合质数定义。"))
         self.assertEqual(batch[0], "micro-quiz-patch")
         self.assertEqual(Path(batch[1]), snapshot_path)
         self.assertEqual(json.loads(batch[2]), {"problems": 1})
@@ -311,18 +310,18 @@ class MicroQuizIngestTests(unittest.TestCase):
         conn = sqlite3.connect(self.db_path)
         try:
             labels = conn.execute(
-                "SELECT topic_label, display_title, display_summary FROM problems"
+                "SELECT display_title, display_summary FROM problems"
             ).fetchone()
         finally:
             conn.close()
-        self.assertEqual(labels, (None, None, None))
+        self.assertEqual(labels, (None, None))
 
     def test_gate_rejects_markup_damage_in_each_label_field(self):
         items = [
             manifest_item(problem_id=f"dmath-ch06-mq-{index:03d}",
                           **{field: "<b>损坏</b>"})
             for index, field in enumerate(
-                ("topic_label", "display_title", "display_summary"), start=1)
+                ("display_title", "display_summary"), start=1)
         ]
         path = self.manifest(items)
         conn = sqlite3.connect(self.db_path)
@@ -332,7 +331,7 @@ class MicroQuizIngestTests(unittest.TestCase):
         finally:
             conn.close()
         for index, field in enumerate(
-                ("topic_label", "display_title", "display_summary"), start=1):
+                ("display_title", "display_summary"), start=1):
             self.assertIn(
                 f"dmath-ch06-mq-{index:03d}: {field} has unknown or unterminated HTML",
                 report["errors"],

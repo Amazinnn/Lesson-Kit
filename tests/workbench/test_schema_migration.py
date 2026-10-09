@@ -175,7 +175,7 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
     def test_migration_adds_problem_metadata_and_current_state(self):
         pool_schema.ensure_workbench_schema(self.conn)
         self.assertIn("display_title", self.columns("problems"))
-        self.assertIn("topic_label", self.columns("problems"))
+        self.assertNotIn("topic_label", self.columns("problems"))
         self.assertIn("display_summary", self.columns("problems"))
         self.assertIn("learning_current_state", self.table_names())
 

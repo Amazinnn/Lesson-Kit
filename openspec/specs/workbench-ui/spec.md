@@ -138,26 +138,21 @@ The session-end view SHALL present completed, unrated cards only for a unified-r
 
 ### Requirement: Knowledge point display page
 
-The knowledge-point page SHALL render the body as its primary reading content and provide one prominent `练习此知识点` action. Activating it SHALL start a continuous non-repeating practice session scoped to that knowledge point. Linked formal problems SHALL remain reading-only, grouped by topic and collapsed by default; opened rows SHALL show `display_title` and the complete safe-rendered problem statement without summary text, truncation, ellipsis, raw ids, or per-problem practice controls. Raw signal and scheduler parameters SHALL not be shown.
+The knowledge-point page SHALL render the body as its primary reading content and provide one prominent `练习此知识点` action. Activating it SHALL start a continuous non-repeating practice session scoped to that knowledge point. Linked formal problems SHALL remain reading-only and SHALL be listed directly under the knowledge point with no stored topic/group layer; each row SHALL show `display_title` and the complete safe-rendered problem statement without summary text, truncation, ellipsis, raw ids, or per-problem practice controls. Raw signal and scheduler parameters SHALL not be shown.
 
 #### Scenario: Practice one knowledge point
 
 - **WHEN** a learner activates `练习此知识点`
 - **THEN** practice opens with that knowledge point as the pull scope and continues through unseen linked problems
 
-#### Scenario: Browse grouped linked problems
+#### Scenario: Browse linked problems directly
 
-- **WHEN** a knowledge point has linked problems from multiple topics
-- **THEN** the page displays separate collapsed labeled groups whose rows are reading-only
-
-#### Scenario: Open a topic group
-
-- **WHEN** a learner opens a linked-problem topic group
-- **THEN** it reveals titled rows with the complete rendered statement and no nested summary or full-text disclosure
+- **WHEN** a knowledge point has several linked formal problems
+- **THEN** the page lists those problems directly without a synthetic topic or group heading
 
 #### Scenario: Read a complete linked problem
 
-- **WHEN** the learner opens a topic group
+- **WHEN** the learner opens a knowledge-point page with linked problems
 - **THEN** each row shows the title and complete rendered statement without summary, truncation, raw id, or an independent practice button
 
 #### Scenario: Read a long linked problem
@@ -356,11 +351,16 @@ sending a turn. Other pages keep their existing context behavior.
 - **THEN** the current problem and entered work take priority in Agent context while wider workspace reads remain available
 
 ### Requirement: User-visible Markdown uses one safe subset
-All user-visible learning text SHALL use the same supported Markdown subset: ATX headings through level 3, paragraphs, ordered and unordered lists, blockquotes, fenced and inline code, strong/emphasis, safe http(s) links, wiki links, math, and workspace-local images.
+All user-visible learning text SHALL use the same supported Markdown subset: ATX headings through level 3, paragraphs, ordered and unordered lists, blockquotes, thematic breaks, fenced and inline code, strong/emphasis, safe http(s) links, wiki links, math, and workspace-local images.
 
 #### Scenario: Agent answer renders Markdown
 - **WHEN** an Agent or student message contains `##`, `**bold**`, a list, or a fenced code block
 - **THEN** the message displays semantic headings, emphasis, list markers, and code styling rather than raw Markdown syntax
+
+#### Scenario: Markdown thematic break
+- **WHEN** user-visible Markdown contains standalone `---`, `***`, or `___` outside a fenced code block
+- **THEN** both browser and server renderers emit a semantic horizontal rule rather than showing the marker text
+- **AND** the same markers inside a fenced code block remain literal code
 
 #### Scenario: Unsafe markup is rejected
 - **WHEN** text contains raw HTML, a `javascript:` link, or an image path outside the workspace figure directory
@@ -911,7 +911,7 @@ change the current practice choreography.
 #### Scenario: Browse related problems
 
 - **WHEN** a learner reaches the related-problem section
-- **THEN** the section is separated from the knowledge body and topics remain compact
+- **THEN** the section is separated from the knowledge body and linked problems remain a direct, quiet list
 
 ### Requirement: Flash card stacked presentation
 
@@ -1000,10 +1000,10 @@ before the final combined answer.
 ### Requirement: Rich-text surfaces share one safe feature set
 
 Agent messages and server-rendered linked-problem text SHALL both support
-headings, ordered/unordered lists, blockquotes, emphasis, code, links, images,
-inline/display math, and GFM tables. Table cells SHALL use the same escaping and
-inline rules, and tables SHALL scroll locally on narrow surfaces. Raw HTML
-SHALL remain escaped/rejected.
+headings, ordered/unordered lists, blockquotes, thematic breaks, emphasis, code,
+links, images, inline/display math, and GFM tables. Table cells SHALL use the
+same escaping and inline rules, and tables SHALL scroll locally on narrow
+surfaces. Raw HTML SHALL remain escaped/rejected.
 
 #### Scenario: Pi answers with a table
 
@@ -1121,4 +1121,3 @@ silent.
 
 - **WHEN** a conversation is opened and the learner picks another entry
 - **THEN** the conversation records the new model, the next turn runs on it, and reloading shows the new selection
-

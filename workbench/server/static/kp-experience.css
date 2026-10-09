@@ -1,0 +1,70 @@
+.practice-experience {
+  margin-top: 18px;
+}
+
+.experience-actions,
+.experience-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.experience-markdown {
+  line-height: 1.7;
+}
+
+.experience-empty {
+  margin: 8px 0 0;
+}
+
+.experience-problems {
+  margin-top: 16px;
+}
+
+.experience-problems h3 {
+  margin-bottom: 8px;
+}
+
+.experience-problems ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.experience-editor {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.experience-editor.hidden {
+  display: none;
+}
+
+.experience-editor textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 150px;
+}
+
+.experience-editor fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+#experience-problem-choices {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.experience-problem-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 8px;
+}
+
+.experience-problem-choice input {
+  margin-top: 3px;
+}

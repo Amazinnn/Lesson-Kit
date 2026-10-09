@@ -7,6 +7,7 @@ packages govern current lesson-kit work.
 |---|---|---|
 | "extract this chapter", "build the KP pool" | `pipeline/commands/extract-chapter.md` | `pool-insert-manifest.json` |
 | "extract the exercises/problems", "build the problem pool" | `pipeline/commands/extract-problems.md` | `full-problem-bank.md` |
+| "批量整理/修复/去重题库", "把多份试卷/题库并入已有池" | `skills/pool-pipeline/SKILL.md` | source inventory；只有课程特有策略才新增 workspace-local `policy-override.md` |
 | "import these exercises", "add knowledge points or figures", "generate checks", "add flash cards/micro quizzes" | Agent content action (`content-bundle`; legacy `flash-card-patch` / `micro-quiz-patch` still accepted) | complete governed manifest, staged under `.lessonkit/jobs/conv-NNN/` |
 | "print a paper / practice set for chapter X", "give me my wrong problems" | `lesson-kit pull <workspace> … --plan/--print` | a composed practice manifest (or the two rendered Markdown files) |
 | "rate these problems", "rerate difficulty" | `lesson-kit difficulty <workspace> check` then `apply` | complete four-dimension rating manifest |
@@ -52,6 +53,7 @@ workflow step.
 - Run KP extraction before problem extraction.
 - Run problem extraction before problem-set rendering.
 - Keep frozen sourced-problem extraction separate from Agent Check ingest.
+- Use `skills/pool-pipeline/SKILL.md` for bulk repair/merge/dedup work; current OpenSpec, CLI and schema remain authoritative if the skill ever drifts.
 - Problem-set rendering never generates content. Agent-generated flash cards
   and micro quizzes enter the durable pool directly only after their governed
   manifest passes the Check gate; no candidate state exists.

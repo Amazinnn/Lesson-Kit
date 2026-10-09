@@ -11,6 +11,7 @@ from workbench.bridge import conversations
 from workbench.domain import weak
 from workbench.data import queries
 from workbench.server import api as api_mod
+from workbench.server import experience_api, experience_page
 from workbench.server import pages
 
 FRONTEND_DIST = (
@@ -71,6 +72,10 @@ ROUTES = [
     ("POST", "/api/w/{name}/ingest/rollback", api_mod.ingest_rollback),
     ("GET", "/api/w/{name}/problem/{problem_id}", api_mod.problem_detail),
     ("GET", "/api/w/{name}/kp/{kp_id}", api_mod.kp_detail),
+    ("GET", "/api/w/{name}/kp/{kp_id}/experience", experience_api.get),
+    ("POST", "/api/w/{name}/kp/{kp_id}/experience", experience_api.create),
+    ("PATCH", "/api/w/{name}/kp/{kp_id}/experience", experience_api.update),
+    ("DELETE", "/api/w/{name}/kp/{kp_id}/experience", experience_api.delete),
     ("GET", "/api/w/{name}/graph/model", api_mod.graph_model),
     ("POST", "/api/w/{name}/graph/state", api_mod.graph_state),
     ("POST", "/api/w/{name}/graph/kp", api_mod.graph_kp),
@@ -220,8 +225,9 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             page = parts[2] if len(parts) > 2 else "practice"
             if page == "kp":
                 kp_id = parts[3] if len(parts) > 3 else ""
-                html_body = pages.kp_page(workspace, workspaces, weak_items,
-                                          pool, kp_id, kp_titles)
+                html_body = experience_page.kp_page(
+                    workspace, workspaces, weak_items, pool, kp_id, kp_titles,
+                )
             elif page == "kps":
                 html_body = pages.kps_page(
                     workspace, workspaces, weak_items, pool, kp_titles,
