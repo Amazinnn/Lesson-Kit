@@ -22,11 +22,11 @@ the item keyless instead of being refused, the choice types SHALL still carry
 SHALL be mandatory only for an item that carries a key. Every micro quiz type
 SHALL present clickable options; free-text answering SHALL NOT be part of the
 contract. A micro quiz SHALL map to exactly one knowledge point and SHALL NOT
-be refused for stem length alone. Manifest items MAY carry optional label fields
-`topic_label` (at most 40 characters), `display_title` (at most 80 characters),
-and `display_summary` (at most 200 characters); a supplied label field SHALL be
-a non-empty string that passes the shared markup safety check, and an omitted
-field is stored as null. A problem that already exists in the pool SHALL be
+be refused for stem length alone. Manifest items MAY carry optional display
+fields `display_title` (at most 80 characters) and `display_summary` (at most
+200 characters); a supplied display field SHALL be a non-empty string that
+passes the shared markup safety check, and an omitted field is stored as null.
+`topic_label` is not a problem field. A problem that already exists in the pool SHALL be
 convertible into a micro quiz **in place**, keeping its readable id and every
 learning record: the conversion supplies `practice_modes` and the payload
 through the explicit problem patch, the options MAY be lifted verbatim out of
@@ -53,7 +53,7 @@ retired types `closest_answer` and `short_answer` at the gate.
   answer key, maps to several knowledge points, or uses a retired quiz type
 - **THEN** the deterministic gate rejects that item and nothing is written
 
-#### Scenario: Label field validation
+#### Scenario: Display field validation
 
 - **WHEN** a manifest item supplies a label field that is empty after
   trimming, exceeds its bound, or fails the markup safety check

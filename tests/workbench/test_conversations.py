@@ -1373,6 +1373,24 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertNotIn("next_free_ids", prompt.split("服务端重建的当前上下文")[0])
         self.assertIn("last_check_outcome", prompt)
 
+    def test_prompt_keeps_topic_label_flash_card_only(self):
+        from workbench.bridge import conversations
+
+        prompt = conversations._prompt("帮我补池", {
+            "workspace": {"name": "大学物理", "course": "uphy2", "chapter": "ch07"},
+        })
+        problem_fields = prompt.split("6) 题目字段：", 1)[1].split(
+            "7) 练习题型", 1)[0]
+        problem_patch = prompt.split("学生明确要求修改已有题目时", 1)[1].split(
+            "服务端整份清单预检", 1)[0]
+        flash_card_fields = prompt.split("11) 闪卡字段：", 1)[1].split(
+            "12) 出题入库", 1)[0]
+
+        self.assertNotIn("topic_label", problem_fields)
+        self.assertNotIn("topic_label", problem_patch)
+        self.assertIn("topic_label", flash_card_fields)
+        self.assertEqual(prompt.count("topic_label"), 1)
+
     def test_prompt_has_no_item_ceiling(self):
         from workbench.bridge import conversations
 

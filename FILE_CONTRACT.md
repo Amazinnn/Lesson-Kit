@@ -105,11 +105,14 @@ learner has recorded hangs off it:
 Writable fields are the problem's descriptive ones plus its practice form:
 `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`,
 `origin_kind`, `source_evidence`, `source_answer`, `solution_origin`,
-`topic_label`, `display_title`, `display_summary`, `exam_year`,
+`display_title`, `display_summary`, `exam_year`,
 `practice_modes`, `micro_quiz`, and the `answer_key` shorthand. A patch cannot
 change a `problem_id`, and difficulty stays with `lesson-kit difficulty`.
 Changing `kp_ids`, `problem_text`, `solution`, or `problem_type` clears the
 difficulty rating group as before.
+
+`topic_label` is not a problem field and problem manifests reject it. It remains
+an optional field on flash cards only.
 
 Every problem carries both provenance axes: `source_kind` describes the
 grounding material and `origin_kind` describes whether the problem is sourced,
