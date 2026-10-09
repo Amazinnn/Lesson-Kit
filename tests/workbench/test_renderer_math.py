@@ -184,6 +184,40 @@ class LinkAndImageTests(unittest.TestCase):
         self.assertNotIn("onmouseover='alert(1)'", html.split(">")[0])
 
 
+class NestedInlineTokenTests(unittest.TestCase):
+    """Stashed math must survive code and link labels without token leakage."""
+
+    def test_inline_code_keeps_single_and_double_math_delimiters_literal(self):
+        self.assertEqual(render_inline("`$x$`"), "<code>$x$</code>")
+        self.assertEqual(render_inline("`$$x$$`"), "<code>$$x$$</code>")
+
+    def test_fenced_code_keeps_single_and_double_math_delimiters_literal(self):
+        self.assertEqual(
+            render_block("```\n$x$\n```"), "<pre><code>$x$</code></pre>")
+        self.assertEqual(
+            render_block("```\n$$x$$\n```"), "<pre><code>$$x$$</code></pre>")
+
+    def test_block_inline_code_keeps_math_literal(self):
+        self.assertEqual(render_block("`$x$`"), "<p><code>$x$</code></p>")
+        self.assertEqual(render_block("`$$x$$`"), "<p><code>$$x$$</code></p>")
+
+    def test_backticks_inside_math_are_not_code(self):
+        self.assertEqual(render_inline("$a`b`c$"), "<span class='math'>a`b`c</span>")
+
+    def test_external_link_math_labels_are_restored(self):
+        self.assertEqual(
+            render_inline("[math $x$](https://example.com)"),
+            "<a href='https://example.com' target='_blank' "
+            "rel='noopener noreferrer'>math <span class='math'>x</span></a>",
+        )
+
+    def test_wiki_link_math_labels_are_restored(self):
+        self.assertEqual(
+            render_inline("[[kp-01|$x$]]"),
+            "<a href='/w/dmath/kp/kp-01'><span class='math'>x</span></a>",
+        )
+
+
 class SharedFixtureTests(unittest.TestCase):
     """Every shared fixture case must hold on the server renderer."""
 
@@ -235,6 +269,11 @@ class PythonJavaScriptParityTests(unittest.TestCase):
         ("inline", "![x](/static/workbench.css)"),
         ("inline", "snake_case_name"),
         ("inline", "`code` $a`b$"),
+        ("inline", "`$x$`"),
+        ("inline", "`$$x$$`"),
+        ("inline", "$a`b`c$"),
+        ("inline", "[math $x$](https://example.com)"),
+        ("inline", "[[kp-01|$x$]]"),
         ("inline", "__bold__ and _em_"),
         ("inline", r"\* star in math"),
         ("inline", "$$x=1$$"),
@@ -250,6 +289,12 @@ class PythonJavaScriptParityTests(unittest.TestCase):
         ("block", "试证：\n\n$$\n\\exists x _ {0} \\in [ 0, 1 ]\n$$\n"),
         ("block", "文字\n$$\nx=1\n$$\n后文"),
         ("block", "```\n$$\nnot math\n$$\n```"),
+        ("block", "```\n$x$\n```"),
+        ("block", "```\n$$x$$\n```"),
+        ("block", "`$x$`"),
+        ("block", "`$$x$$`"),
+        ("block", "[math $$x$$](https://example.com)"),
+        ("block", "[[kp-01|$$x$$]]"),
         ("block", "$$\nE = 2k\\lambda / R\n$$"),
         ("block", "$$\nx=1\n$$"),
         ("block", "| 记号 | 说明 |\n| --- | --- |\n| $a<b$ | **磁** |"),

@@ -388,7 +388,9 @@
     var mark = pickMark(text, DISPLAY_MARKS);
     var spans = [];
     function replace(chunk) {
-      return chunk.replace(DISPLAY_BLOCK_RE, function (_, expr) {
+      var blocks = new RegExp(CODE_RE.source + "|" + DISPLAY_BLOCK_RE.source, "g");
+      return chunk.replace(blocks, function (whole, code, expr) {
+        if (code != null) return whole;
         spans.push(displaySpan(expr.replace(/^\n+|\n+$/g, "")));
         return mark + (spans.length - 1) + mark;
       });
@@ -417,10 +419,15 @@
     var tokens = [];
     var mark = pickMark(text == null ? "" : String(text), INLINE_MARKS);
     function token(html) {
+      html = restoreTokens(html, mark, tokens);
       tokens.push(html);
       return mark + (tokens.length - 1) + mark;
     }
     var source = text == null ? "" : String(text);
+    source = source.replace(new RegExp(CODE_RE.source + "|" + MATH_RE.source, "g"),
+      function (whole, code) {
+        return code != null ? token("<code>" + escapeHtml(code) + "</code>") : whole;
+      });
     source = source.replace(/<(sup|sub)>([^<>]+)<\/\1>/g, function (_, tag, content) {
       return token("<" + tag + ">" + escapeHtml(content) + "</" + tag + ">");
     });
@@ -448,9 +455,6 @@
     value = value.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, href) {
       return token("<a href='" + href + "' target='_blank' rel='noopener noreferrer'>"
         + label + "</a>");
-    });
-    value = value.replace(CODE_RE, function (_, code) {
-      return token("<code>" + code + "</code>");
     });
     value = value.replace(STRONG_EM_RE, "<strong><em>$1</em></strong>");
     value = value.replace(STRONG_STAR_RE, "<strong>$1</strong>");

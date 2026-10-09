@@ -810,15 +810,19 @@ def _stash_display_blocks(text):
     spans = []
 
     def replace(match):
+        if match.group(1) is not None:
+            return match.group(0)  # Inline code is literal, including $$ delimiters.
         # Strip the newlines the block delimiters own; KaTeX wants the body.
-        spans.append(_display_span(match.group(1).strip("\n")))
+        spans.append(_display_span(match.group(2).strip("\n")))
         return f"{mark}{len(spans) - 1}{mark}"
+
+    blocks = re.compile(_CODE_RE.pattern + "|" + _DISPLAY_BLOCK_RE.pattern, re.DOTALL)
 
     out, buffer, in_code = [], [], False
     for line in text.split("\n"):
         if _FENCE_LINE_RE.match(line):
             if buffer:
-                out.append(_DISPLAY_BLOCK_RE.sub(replace, "\n".join(buffer)))
+                out.append(blocks.sub(replace, "\n".join(buffer)))
                 buffer = []
             out.append(line)
             in_code = not in_code
@@ -827,7 +831,7 @@ def _stash_display_blocks(text):
         else:
             buffer.append(line)
     if buffer:
-        out.append(_DISPLAY_BLOCK_RE.sub(replace, "\n".join(buffer)))
+        out.append(blocks.sub(replace, "\n".join(buffer)))
     return "\n".join(out), spans, mark
 
 
@@ -966,7 +970,7 @@ def _render_markdown(text, workspace_name, kp_id):
 def _rich(text, workspace_name):
     """Escape each fragment exactly once, in this order (order matters).
 
-    Math and `<sup>/<sub>` are stashed *before* the remaining text is escaped,
+    Inline code is literal; math and `<sup>/<sub>` are stashed before the remaining text is escaped,
     so no Markdown rule below can ever see LaTeX source, and each stashed
     fragment is escaped exactly once. Escaping a math fragment twice is what
     used to hand KaTeX `a&amp;lt;b`, so every formula holding `<`, `>` or `'`
@@ -976,9 +980,14 @@ def _rich(text, workspace_name):
     mark = _pick_mark(text, _INLINE_MARKS)
 
     def stash(fragment):
+        fragment = _restore_tokens(fragment, mark, tokens)
         tokens.append(fragment)
         return f"{mark}{len(tokens) - 1}{mark}"
 
+    text = re.sub(
+        _CODE_RE.pattern + "|" + _MATH_RE.pattern,
+        lambda match: stash(f"<code>{html.escape(match.group(1))}</code>")
+        if match.group(1) is not None else match.group(0), text)
     text = re.sub(r"<(sup|sub)>([^<>]+)</\1>",
                   lambda match: stash(
                       f"<{match.group(1)}>{html.escape(match.group(2))}"
@@ -992,7 +1001,6 @@ def _rich(text, workspace_name):
         lambda match: stash(
             f"<a href='{match.group(2)}' target='_blank' "
             f"rel='noopener noreferrer'>{match.group(1)}</a>"), text)
-    text = _CODE_RE.sub(lambda match: stash(f"<code>{match.group(1)}</code>"), text)
     text = _STRONG_EM_RE.sub(r"<strong><em>\1</em></strong>", text)
     text = _STRONG_STAR_RE.sub(r"<strong>\1</strong>", text)
     text = _STRONG_UNDERSCORE_RE.sub(r"<strong>\1</strong>", text)
