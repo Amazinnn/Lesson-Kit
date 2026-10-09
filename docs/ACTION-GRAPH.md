@@ -229,3 +229,6 @@ flowchart LR
 - 2026-10-06/07 组卷页浏览与折叠（practice-set-item-preview）：已保存试卷的卡片默认收起，
   当前标签页按工作区记住展开状态；卡片命令不改变展开状态，错误状态留在折叠区外。题目项可
   就地展开预览题面与来源，不含答案、不改变试卷数据。L3 与 PRODUCT-MANUAL 同步。
+- 2026-10-10 恢复 PR106 题目标签删除（restore-pr106-problem-label-removal）：schema ensure
+  物理删除 `problems.topic_label`，旧表重建不再保留该列；取代 PR111 的列保留语义。
+  闪卡标签与其他内容/学习记录不变，外部备份承担历史恢复；不新增或改级 CLI/API 动作。

@@ -21,6 +21,8 @@ Intelligence（Bridge）       ← 旁挂：任务+契约+外部 CLI；只被 Sh
   Bridge 不 import Server。
 - **依赖注入**：Domain 函数接收 `Pool`（Data 层对象），不自己开连接。
 - 现有 `pipeline/`、`pool/scripts/`、`lessonkit.py` 一律不动；工作台是新增旁挂树。
+  `pool_schema.py` 既有 ensure 路径的授权迁移例外包括恢复 PR106：旧表重建不含
+  `problems.topic_label`，当前表直接删除该列；不改变闪卡同名列或其他层的边界。
   `kp-text-typesetting-check` 授权的唯一例外是 `pipeline/scripts/validate-pool.py`
   的只读排版检出调用与既有报告输出；它不扩展其他 frozen-layer 行为。
 

@@ -497,34 +497,57 @@ can be gated on it.
 - **WHEN** the audit runs with all checks before a content repair, and again after
 - **THEN** its findings can be grouped by chapter and defect class both times, so the repair can be planned from the first run and verified against the second
 
-### Requirement: Preserve retired problem-label history during ordinary schema ensure
+### Requirement: Remove retired problem labels from current schemas
 
-An ordinary workbench schema ensure SHALL preserve an existing
-`problems.topic_label` column and its values, including when it rebuilds a
-compatible legacy problem table. Retiring the field from new problem inputs,
-search and presentation SHALL NOT silently delete historical course data.
-The retained column SHALL NOT become a new writing interface or search field.
-Flash-card `topic_label` remains governed by its existing contract.
+Workbench schema ensure SHALL physically remove an existing
+`problems.topic_label` column, and a rebuilt problem table SHALL omit that
+column. This requirement explicitly supersedes the previous ordinary-ensure
+retention semantics introduced after PR106. Current databases SHALL NOT retain
+problem labels in a hidden column or replacement table. Recovery backups MAY
+preserve historical labels outside the migrated database.
 
-Destructive removal SHALL remain outside ordinary ensure until a separate
-explicit removal migration is specified and approved. This change SHALL NOT
-execute such a migration on existing course pools.
+The removal SHALL preserve every other current problem field and value,
+learning row, foreign key and unrelated schema object. Existing legacy
+provenance/difficulty upgrades remain governed by their existing requirements.
+Problem manifests, patches, search and presentation SHALL continue to exclude
+`topic_label`. The independent `flash_cards.topic_label` field and all its
+existing values SHALL remain unchanged.
 
-#### Scenario: Open a pool with historical problem labels
+The explicitly authorized migration of registered course databases SHALL create
+and prove recovery from an external SQLite backup before live deletion. The
+observed c05 `problems_by_chapter` view SHALL omit only its `p.topic_label`
+projection before the column drop, preserving its other SQL and columns.
+Any other dependency on the target column SHALL block deletion and be reported.
 
-- **WHEN** ordinary schema ensure runs on a pool with populated problem labels
-- **THEN** the labels, problem IDs and existing learning rows remain unchanged
-- **AND** the retired field is still excluded from new problem inputs and UI
+#### Scenario: Open a current pool with historical problem labels
+
+- **WHEN** schema ensure runs on a current pool with populated problem labels
+- **THEN** `problems.topic_label` is absent from the resulting table
+- **AND** all nontarget problem values, learning rows and flash-card labels are unchanged
 
 #### Scenario: Rebuild a compatible legacy problem table
 
-- **WHEN** schema ensure upgrades a legacy problem table carrying labels
-- **THEN** it copies the existing label values to the compatible table without loss
+- **WHEN** schema ensure upgrades a compatible legacy problem table carrying labels
+- **THEN** the rebuilt problem schema omits `topic_label`
+- **AND** existing nontarget values and learning rows survive the upgrade
 
 #### Scenario: Repeat schema ensure
 
-- **WHEN** schema ensure runs again on the upgraded pool
-- **THEN** the historical values are unchanged and no label-removal operation occurs
+- **WHEN** schema ensure runs again after removal
+- **THEN** the problem label column is not reintroduced and no further schema change is reported
+
+#### Scenario: Recover a database before live removal
+
+- **WHEN** the operator prepares a registered course database for deletion
+- **THEN** a separate SQLite backup and recovered copy prove that historical
+  labels and all other data can be recovered before the live change
+
+#### Scenario: A view references the retired column
+
+- **WHEN** the registered c05 pool contains the observed `problems_by_chapter`
+  view with a direct `p.topic_label` projection
+- **THEN** the operator removes only that projection before dropping the column
+- **AND** any additional dependency stops the migration for explicit review
 
 ### Requirement: Knowledge-point body paragraph typesetting check
 
