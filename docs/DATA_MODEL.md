@@ -12,6 +12,7 @@
 - **active**：当前正式字段，可以被新功能依赖。
 - **compat**：仍被当前实现读取，但主要用于兼容旧数据；新设计不得扩大依赖。
 - **legacy**：冻结遗留语义，只为旧 pipeline / 旧池保留。
+- **retired**：已由明确变更退役；新写入不得使用，迁移后的正式 schema 不再保留。
 - **unresolved**：当前资料或实现互相冲突；在决策前不得新增依赖、不得复用字段表达新含义。
 
 ## knowledge_points
@@ -30,7 +31,7 @@
 | `difficulty` | **legacy** | 旧知识内容复杂度 1–5；与正式题四维 objective difficulty 无换算关系 | 冻结 pipeline / 兼容查询 |
 | `fragile` | active | 易错/脆弱点备注；保存内容本身，不产生学习事件 | 知识点详情、兼容编辑 API |
 | `figure_paths` | **unresolved** | 该知识点引用的逻辑图片路径 JSON；**路径命名策略当前存在仓库级冲突** | 图像渲染/回滚 |
-| `ingest_batch_id` | active | 最后一次由受治理 ingest 写入该内容的批次 provenance | 回滚/审计 |
+| `ingest_batch_id` | active | 受治理内容创建/导入的批次 provenance；原地 problem-patch 的修改批次另由批次清单记录，不保证覆盖此列 | 回滚/审计 |
 | `created_at`, `updated_at` | active | 行生命周期时间戳；不得承载业务状态 | 审计/排序 |
 
 ### 知识关系双轨现状
@@ -73,7 +74,7 @@
 | `source_answer` | active | 来源材料自带的短答案/答案依据；不替代完整 `solution` |
 | `solution_origin` | active | `source/generated`，说明详细解析由来源还是 Agent 产生 |
 | `display_title` | active | 题目短标题；UI 标题，不是身份 |
-| `topic_label` | active | 单一主题标签；用于分组，不是知识点 id |
+| `topic_label` | **retired** | PR #106 已退役题目主题分组与该列；迁移移除 `problems.topic_label`，通用 problem 写入不再接受它。闪卡同名列仍保留，不属于本次退役 |
 | `display_summary` | **unresolved** | 当前 ingest 允许 ≤200；旧 backfill validator 要求 ≤48 且长题才允许；当前主页面无实际消费 | 
 | `practice_modes` | active | 存储的练习 shell 资格 JSON。空值 = exam-only；客观题时必须与 `micro_quiz.quiz_type` 相容 |
 | `micro_quiz` | active | 客观交互 payload JSON：`quiz_type/options/answer_key/error_reason/source_evidence` 等；决定判断/单选/多选 |
@@ -84,7 +85,7 @@
 | `difficulty_transfer_distance` | active | 客观难度：迁移距离 1–5 |
 | `difficulty_construction_openness` | active | 客观难度：构造开放性 1–5 |
 | `difficulty_model` | active | 难度汇总模型 id；六个 difficulty 字段必须全空或全有 |
-| `ingest_batch_id` | active | 受治理内容写入批次 provenance |
+| `ingest_batch_id` | active | 受治理内容创建/导入批次 provenance；原地修改的批次通过 problem-patch 清单与批次表追溯，不把该列视为最后修改批次 |
 | `created_at`, `updated_at` | active | 行生命周期时间戳 |
 
 ### 三个最容易混淆的“题型”字段

@@ -11,6 +11,20 @@
 
 ---
 
+## 契约治理
+
+### 契约权威 / Contract Authority
+某一类事实的规范定义由指定职责文件承担：live OpenSpec 定义可观察行为，DATA_MODEL 定义持久字段，FILE_CONTRACT 定义交换工件，ARCHITECTURE 定义分层，PRODUCT-MANUAL 说明用户操作。本术语不表示一个文件可以覆盖其他职责，也不按更新时间决定权威。
+出处：AGENTS.md「契约权威与冲突处理」
+
+### 契约漂移 / Contract Drift
+职责文件或实现证据对同一事实给出互相冲突的定义。必须显式登记，由该事实的契约拥有者协调；历史审计记录不是当前规范。
+出处：AGENTS.md「契约权威与冲突处理」
+
+### 契约协调 / Contract Reconciliation
+交付行为、字段、接口或工件变更时，核对并同步被该变更影响的职责文件；未决冲突保留为明确的后续决策，不以代码现状或文件日期静默裁决。
+出处：AGENTS.md「开发纪律」；docs/DATA_MODEL.md「字段变更纪律」
+
 ## 内容与池
 
 ### 课程标识符 / Course Identifier（slug）
