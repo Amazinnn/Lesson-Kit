@@ -46,6 +46,13 @@ class TypesettingTests(unittest.TestCase):
         self.assertEqual(report["over_long"], [])
         self.assertEqual(report["summary"]["paragraphs"], 5)
 
+    def test_backtick_code_keeps_literal_ticks_and_accepts_longer_closing_fence(self):
+        report = self.check([{"key": "kp", "body":
+                             "```python\nx = '`'\n\n# comment\n````\n\n``literal ` tick``"}])
+        self.assertEqual(report["short"], [])
+        self.assertEqual(report["summary"]["visible_characters"],
+                         {"p50": 0, "p75": 0, "p90": 0, "p99": 0})
+
     def test_blank_line_split_crlf_and_body_only_language_neutral_count(self):
         for char in ("a", "字"):
             with self.subTest(char=char):

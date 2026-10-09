@@ -7,7 +7,10 @@ import re
 # kp-text-typesetting-check: Knowledge-point body paragraph typesetting check.
 MIN_VISIBLE = 40
 MAX_VISIBLE = 300
-_CONSTRUCT = re.compile(r"(?P<ticks>`+).*?(?P=ticks)|\$\$.*?\$\$|\$[^$\n]*\$", re.DOTALL)
+_CONSTRUCT = re.compile(
+    r"^[ \t]*(?P<fence>`{3,})[^\n]*\n.*?^[ \t]*(?P=fence)`*[ \t]*(?=\n|$)"
+    r"|(?P<ticks>`+).*?(?P=ticks)|\$\$.*?\$\$|\$[^$\n]*\$",
+    re.DOTALL | re.MULTILINE)
 
 
 def _paragraph_counts(body):
