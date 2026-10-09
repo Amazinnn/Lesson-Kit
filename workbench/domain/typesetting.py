@@ -37,7 +37,8 @@ def check(rows, available=True):
     over_long, short, lengths = [], [], []
     over_count = short_count = 0
     for row in rows:
-        counts = _paragraph_counts(row.get("body") or "")
+        body = row.get("body")
+        counts = _paragraph_counts(str(body) if body is not None else "")
         lengths.extend(counts)
         over = sum(count > MAX_VISIBLE for count in counts)
         under = sum(0 < count < MIN_VISIBLE for count in counts)

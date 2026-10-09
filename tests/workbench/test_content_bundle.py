@@ -144,6 +144,17 @@ class ContentBundleTests(unittest.TestCase):
         self.assertEqual((self.count("knowledge_points"), self.count("ingest_batches")), before)
         self.assertFalse((Path(self.fixture.tmp.name) / "backup-001.db").exists())
 
+    def test_typesetting_does_not_refuse_previously_accepted_numeric_body(self):
+        for body in (123, 0):
+            with self.subTest(body=body):
+                manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+                    {"key": "new", "knowledge_item": "知识点", "body": body}]}
+                result = self.apply(manifest)
+                kp_id = result["typesetting"]["short"][0]["kp_id"]
+                self.assertEqual(self.query("SELECT body FROM knowledge_points WHERE kp_id=?", (kp_id,)),
+                                 [(str(body),)])
+                self.assertEqual(result["typesetting"]["short"][0]["min_visible_characters"], len(str(body)))
+
     def test_thirty_items_commit_under_one_batch_id(self):
         figure = self.image()
         problems = [

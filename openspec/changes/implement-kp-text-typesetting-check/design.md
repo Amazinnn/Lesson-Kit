@@ -13,6 +13,9 @@ lines, and removes math/backticked constructs for counting. Constructs are
 recognized over the whole body so fenced code spanning blank lines is excluded
 throughout; original paragraph boundaries and the input text are preserved.
 Measurement trims paragraph edges; interior whitespace and line breaks count.
+Previously accepted numeric bundle body values are measured through a local
+string view, preserving existing SQLite TEXT-affinity storage and acceptance;
+this introduces no body type gate or content rewrite.
 All original nonempty paragraphs, including zero-visible ones, enter totals,
 extremes and nearest-rank percentiles; only the short-bound test excludes zero.
 
