@@ -209,3 +209,17 @@ flowchart LR
   所以「12–14 章都导进来」一次回答即可；提示词写明清单可跨章、按章成批、遇多区块继续。
   顺手修：回滚改写 `related_kp_ids` 前先查列（老池缺列不再报错）。L0/L1/L2/L3/L4、GLOSSARY、
   PRODUCT-MANUAL、REQUIREMENTS 同步。
+- 2026-10-06 搜索与来源维度升级（problem-search-and-origin-filter）：**一个搜索框变成两个关键词
+  域**——`GET /search/problems` 收 `stem` 与 `source`（旧 `q` 删除，不映射、不兼容），题干域
+  = 标题+题面，来源域 = 来源证据+考查年份+题面开头的 `【…】` 标签段（老池把卷面
+  身份只写在那里的事实）；每域按空格切多词、域内 AND、跨域 AND，两参数都空返回空集而非全池。
+  两个域的定义只有一份（`domain.facets.stem_text`/`source_text`），搜索与选题都读它。
+  **`origin_kind` 单值升为多值维度**：进 `/pull-facets` 第四维（浮窗显示历年原题/改编/AI生成）、
+  `pull.select(origin_kinds=…)` 任一命中、CLI 改可重复的 `--origin-kinds`，`POST /pull` 收
+  `filters.origin_kinds` 与顶层 `origin_kinds`。`lesson-kit pull` 新增 `--search-stem`/
+  `--search-source`，`data search` 查询改多词 AND。浮窗保存键升为
+  `wb_practice_filters_v2_<ws>`（旧键不读不迁移）。零兼容：删掉的三处旧形都是无法表达新
+  语义或一次点击即可重建的状态。L2/L3/L4、GLOSSARY、PRODUCT-MANUAL、REQUIREMENTS 同步。
+- 2026-10-06/07 组卷页浏览与折叠（practice-set-item-preview）：已保存试卷的卡片默认收起，
+  当前标签页按工作区记住展开状态；卡片命令不改变展开状态，错误状态留在折叠区外。题目项可
+  就地展开预览题面与来源，不含答案、不改变试卷数据。L3 与 PRODUCT-MANUAL 同步。

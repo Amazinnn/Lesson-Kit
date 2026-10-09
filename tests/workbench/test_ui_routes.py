@@ -185,6 +185,17 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='save-practice-set'", body)
         self.assertIn("保存为试卷", body)
 
+    def test_left_rail_carries_the_learner_settings_section(self):
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("class='side-section settings-section'", body)
+        self.assertIn("id='setting-show-rating'", body)
+        self.assertIn("练习与组卷显示自评", body)
+        self.assertIn("<button id='next-problem' class='primary hidden' type='button'>下一题</button>", body)
+        # The composer's next action sits beside 查看解析, outside the rating area.
+        self.assertLess(body.index("id='show-answer'"), body.index("id='next-problem'"))
+        self.assertLess(body.index("id='next-problem'"), body.index("id='feedback-area'"))
+
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
             "POST", "/api/w/dmath/practice-sets",
@@ -202,6 +213,18 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("data-set-start", body)
         self.assertIn("data-set-export", body)
         self.assertNotIn("7 / 10", body)
+        # Each item previews the problem it names, collapsed on arrival.
+        self.assertIn("<details class='practice-set-item-body'><summary>", body)
+        self.assertIn("<div class='linked-problem-text rich-text'><p>P1</p></div>", body)
+        self.assertNotIn("<details class='practice-set-item-body' open", body)
+        # The card itself folds too, with its controls in the fold's head.
+        self.assertIn("<details class='practice-set-card-body'>", body)
+        self.assertIn("<summary class='practice-set-card-head'>", body)
+        self.assertNotIn("<details class='practice-set-card-body' open", body)
+        self.assertLess(
+            body.index("practice-set-card-body"), body.index("practice-set-items"))
+        self.assertGreater(
+            body.index("practice-set-status"), body.rindex("</details>"))
 
     def test_session_end_page_mentions_cards(self):
         status, body = self.fetch("/w/dmath/session-end")

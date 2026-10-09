@@ -288,7 +288,8 @@ def _selection_given(args):
     return bool(
         args.kp or args.problem or args.exclude or args.include
         or args.weak or args.due or args.wrong
-        or args.source_kind or args.origin_kind or args.source_group
+        or args.source_kind or args.origin_kinds or args.source_group
+        or args.search_stem or args.search_source
         or args.exam_year or args.difficulty_min is not None
         or args.difficulty_max is not None or args.difficulty_strategy
         or any(getattr(args, name + "_min") is not None
@@ -303,11 +304,12 @@ def _compose_plan(pool, args, workspace):
     kp_ids = args.kp or [row["kp_id"] for row in pool.kps(pool.scope_prefix())]
     result = pull.select(
         pool, kp_ids, n=args.n, mode=args.mode,
-        source_kinds=args.source_kind, origin_kind=args.origin_kind,
+        source_kinds=args.source_kind, origin_kinds=args.origin_kinds,
         source_group=args.source_group, exclude_ids=set(args.exclude),
         include_ids=set(args.include),
         exam_year=args.exam_year, explicit_ids=set(args.problem),
         evidence_docs=args.source_evidence,
+        stem_keywords=args.search_stem, source_keywords=args.search_source,
         drivers=[name for name in pull.DRIVERS if getattr(args, name)],
         difficulty_min=args.difficulty_min, difficulty_max=args.difficulty_max,
         difficulty_dimensions={
@@ -387,7 +389,9 @@ def _pull_request(args, workspace):
         "drivers": [name for name in pull.DRIVERS if getattr(args, name)],
         "source_kinds": list(args.source_kind),
         "source_evidence": list(args.source_evidence),
-        "origin_kind": args.origin_kind,
+        "origin_kinds": list(args.origin_kinds),
+        "search_stem": list(args.search_stem),
+        "search_source": list(args.search_source),
         "source_group": args.source_group,
         "exam_year": args.exam_year,
         "n": args.n,
@@ -943,9 +947,15 @@ def build_parser(prog="lesson-kit"):
                    default="weak")
     p.add_argument("--source-kind", action="append", default=[],
                    help="source kind to keep (repeatable; any of the rows counts)")
-    p.add_argument("--origin-kind", choices=[
+    p.add_argument("--origin-kinds", action="append", default=[], choices=[
         "source_problem", "adapted_problem", "generated_grounded",
-    ])
+    ], help="keep rows produced in this way (repeatable; any of the listed ways)")
+    p.add_argument("--search-stem", action="append", default=[],
+                   help="keep rows whose title/problem text carries this "
+                        "text (space-separated words, all of which must match)")
+    p.add_argument("--search-source", action="append", default=[],
+                   help="keep rows whose source evidence/year/【…】 tag carries "
+                        "this text (space-separated words, all of which must match)")
     p.add_argument("--source-group", choices=[
         "textbook", "exam", "ai_generated", "other",
     ])

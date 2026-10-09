@@ -119,9 +119,10 @@ workbench/
 - `registry`：`load() / save() / register(path, name?) -> Workspace / list() -> [Workspace] /
   get(name) -> Workspace`；Workspace = dataclass(name, path, db, active_course, active_chapter)。
 - `domain.weak.score(pool, course, chapter, now) -> [(kp, score, reasons)]`——原因可解释。
-- `domain.pull.select(pool, kp_ids, n, mode, source_kind?, origin_kind?, source_group?,
-  difficulty_ranges?, strategy?) -> {problems:[...],
+- `domain.pull.select(pool, kp_ids, n, mode, source_kind?, origin_kinds?, source_group?,
+  difficulty_ranges?, strategy?, stem_keywords?, source_keywords?) -> {problems:[...],
   shortage:[kp_id...]}`——永不伪造内容；候选机制已物理移除（2026-08-30）。
+- `domain.facets.stem_text / source_text`：题干域与来源域的**唯一**字段清单，搜索与选题都读它。
 - `domain.difficulty`：唯一模型 `cognitive-v1-equal-mean`；四维等权 Decimal
   `ROUND_HALF_UP` 一位小数，并提供 balanced 使用的 1–5 档位投影。
 - `domain.cards.select(cards, schedule_rows, preference, excluded_*) -> [card action]`——把内容方向能力展开为独立练习动作并按各自调度行排序，零 IO。

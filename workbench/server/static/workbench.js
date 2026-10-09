@@ -281,32 +281,151 @@
     }
   }
 
+  // Preferences outlive the tab; every other client state is session-scoped.
+  var SETTINGS_KEY = "wb_settings_" + WS;
+
+  function loadSetting(key, fallback) {
+    var raw = null;
+    try { raw = window.localStorage.getItem(SETTINGS_KEY); } catch (error) { return fallback; }
+    if (!raw) return fallback;
+    try {
+      var value = JSON.parse(raw)[key];
+      return value === undefined ? fallback : value;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function saveSetting(key, value) {
+    var data = {};
+    try { data = JSON.parse(window.localStorage.getItem(SETTINGS_KEY) || "{}") || {}; }
+    catch (error) { data = {}; }
+    data[key] = value;
+    try { window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch (error) {}
+  }
+
+  function showRatingEnabled() {
+    return loadSetting("showRating", true) !== false;
+  }
+
   function renderMath(root) {
     var spans = (root || document).querySelectorAll(".math");
     if (!spans.length || !window.katex) return;
     spans.forEach(function (span) {
       try {
-        katex.render(span.textContent, span, { throwOnError: false });
+        // A `$$` block is emitted with the `display` class, so read the layout
+        // mode off it: without this KaTeX lays `$$` out inline and rejects
+        // `\tag`, which only exists in display equations.
+        katex.render(span.textContent, span, {
+          displayMode: span.classList.contains("display"),
+          throwOnError: false,
+        });
       } catch (e) { /* keep raw text */ }
     });
   }
 
   function escapeHtml(text) {
+    // `'` maps to `&#x27;` to match the server's `html.escape`, so both
+    // renderers emit byte-identical HTML for the same input.
     return String(text == null ? "" : text).replace(/[&<>\"']/g, function (ch) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch];
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#x27;" }[ch];
     });
   }
 
+  /* Placeholder delimiters are private-use code points, which course text
+     can never contain, so body text cannot forge a token and break rendering. */
+  var DISPLAY_MARKS = ["\ue000", "\ue001", "\ue002", "\ue003", "\ue004"];
+  var INLINE_MARKS = ["\ue010", "\ue011", "\ue012", "\ue013", "\ue014"];
+  var DISPLAY_BLOCK_RE = /\$\$([\s\S]*?)\$\$/g;
+  var FENCE_LINE_RE = /^\s*```\s*([\w-]*)\s*$/;
+  var MATH_RE = /\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$/g;
+  // Emphasis must not fire on a delimiter LaTeX escaped (\\_, \*, \\_\\_),
+  // so every delimiter carries a lookaround that also rejects a preceding
+  // backslash. The triple-star form is matched first, otherwise the double-star
+  // rule would split it and nest the tags across each other
+  var STRONG_EM_RE = /(?<![\\*])\*\*\*(?!\*)(.+?)(?<![\\*])\*\*\*(?!\*)/g;
+  var STRONG_STAR_RE = /(?<![\\*])\*\*(?!\*)(.+?)(?<![\\*])\*\*(?!\*)/g;
+  var STRONG_UNDERSCORE_RE = /(?<![A-Za-z0-9_\\])__(.+?)__(?![A-Za-z0-9_\\])/g;
+  var EM_STAR_RE = /(?<![\\*])\*(?!\*)([^*\n]+?)\*(?![\\*])/g;
+  var EM_UNDERSCORE_RE = /(?<![A-Za-z0-9_\\])_([^_\n]+)_(?![A-Za-z0-9_\\])/g;
+  var CODE_RE = /`([^`\n]+)`/g;
+
+  function pickMark(text, marks) {
+    for (var i = 0; i < marks.length; i += 1) {
+      if (text.indexOf(marks[i]) === -1) return marks[i];
+    }
+    return marks[0];
+  }
+
+  function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function restoreTokens(text, mark, tokens) {
+    if (!tokens.length) return text;
+    var pattern = new RegExp(escapeRegExp(mark) + "(\\d+)" + escapeRegExp(mark), "g");
+    return text.replace(pattern, function (whole, index) {
+      var at = Number(index);
+      return at < tokens.length ? tokens[at] : whole;
+    });
+  }
+
+  function displaySpan(expr) {
+    return "<span class='math display'>" + escapeHtml(expr) + "</span>";
+  }
+
+  function mathSpan(display, expr) {
+    // The delimiters own the surrounding newlines; KaTeX wants the body.
+    if (display != null) return displaySpan(expr.replace(/^\n+|\n+$/g, ""));
+    return "<span class='math'>" + escapeHtml(expr) + "</span>";
+  }
+
+  function stashDisplayBlocks(text) {
+    /* Pull whole display-math blocks out before the line loop runs: richInline
+       is called one line at a time, so a $$…$$ block whose delimiters own their
+       own lines could never match there. Each block collapses to a one-line
+       placeholder richInline cannot touch, restored after the loop. */
+    var mark = pickMark(text, DISPLAY_MARKS);
+    var spans = [];
+    function replace(chunk) {
+      return chunk.replace(DISPLAY_BLOCK_RE, function (_, expr) {
+        spans.push(displaySpan(expr.replace(/^\n+|\n+$/g, "")));
+        return mark + (spans.length - 1) + mark;
+      });
+    }
+    var out = [], buffer = [], inCode = false;
+    String(text).split("\n").forEach(function (line) {
+      if (FENCE_LINE_RE.test(line)) {
+        if (buffer.length) { out.push(replace(buffer.join("\n"))); buffer = []; }
+        out.push(line);
+        inCode = !inCode;
+      } else if (inCode) {
+        out.push(line);
+      } else {
+        buffer.push(line);
+      }
+    });
+    if (buffer.length) out.push(replace(buffer.join("\n")));
+    return { text: out.join("\n"), spans: spans, mark: mark };
+  }
+
   function richInline(text) {
+    /* Escape each fragment exactly once, in this order (order matters).
+       Math and <sup>/<sub> are stashed BEFORE the remaining text is escaped,
+       so no Markdown rule below can ever see LaTeX source, and each stashed
+       fragment is escaped exactly once. */
     var tokens = [];
+    var mark = pickMark(text == null ? "" : String(text), INLINE_MARKS);
     function token(html) {
-      var key = "\u0000" + tokens.length + "\u0000";
       tokens.push(html);
-      return key;
+      return mark + (tokens.length - 1) + mark;
     }
     var source = text == null ? "" : String(text);
     source = source.replace(/<(sup|sub)>([^<>]+)<\/\1>/g, function (_, tag, content) {
       return token("<" + tag + ">" + escapeHtml(content) + "</" + tag + ">");
+    });
+    source = source.replace(MATH_RE, function (_, display, inline) {
+      return token(mathSpan(display, display != null ? display : inline));
     });
     var value = escapeHtml(source);
     value = value.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function (_, alt, src) {
@@ -318,7 +437,7 @@
       } else {
         return alt;
       }
-      return token("<img alt='" + alt + "' src='" + resolved.replace(/'/g, "&#39;") + "'>");
+      return token("<img alt='" + alt + "' src='" + resolved + "'>");
     });
     value = value.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, function (_, id, label) {
       var cleanId = id.trim();
@@ -327,23 +446,22 @@
         + "'>" + (label || cleanId) + "</a>");
     });
     value = value.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, href) {
-      return token("<a href='" + href.replace(/'/g, "&#39;")
-        + "' target='_blank' rel='noopener noreferrer'>" + label + "</a>");
+      return token("<a href='" + href + "' target='_blank' rel='noopener noreferrer'>"
+        + label + "</a>");
     });
-    value = value.replace(/`([^`\n]+)`/g, function (_, code) {
+    value = value.replace(CODE_RE, function (_, code) {
       return token("<code>" + code + "</code>");
     });
-    value = value.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
-    value = value.replace(/(?<![A-Za-z0-9_])__([^_\n]+)__(?![A-Za-z0-9_])/g, "<strong>$1</strong>");
-    value = value.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
-    value = value.replace(/(?<![A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])/g, "<em>$1</em>");
-    value = value.replace(/\$\$([\s\S]+?)\$\$/g, function (_, math) {
-      return token("<span class='math display'>" + math + "</span>");
-    });
-    value = value.replace(/\$([^$\n]+)\$/g, function (_, math) {
-      return token("<span class='math'>" + math + "</span>");
-    });
-    return value.replace(/\u0000(\d+)\u0000/g, function (_, index) { return tokens[Number(index)]; });
+    value = value.replace(STRONG_EM_RE, "<strong><em>$1</em></strong>");
+    value = value.replace(STRONG_STAR_RE, "<strong>$1</strong>");
+    value = value.replace(STRONG_UNDERSCORE_RE, "<strong>$1</strong>");
+    value = value.replace(EM_STAR_RE, "<em>$1</em>");
+    value = value.replace(EM_UNDERSCORE_RE, "<em>$1</em>");
+    // A LaTeX-escaped underscore outside math is a fill-in blank, so render the
+    // underscore the author meant. Safe here: every math fragment is already
+    // stashed out of this text.
+    value = value.replace(/\\_/g, "_");
+    return restoreTokens(value, mark, tokens);
   }
 
   var TABLE_DELIMITER_CELL = /^:?-{1,}:?$/;
@@ -390,7 +508,8 @@
   }
 
   function richText(text) {
-    var lines = String(text == null ? "" : text).replace(/\r\n?/g, "\n").split("\n");
+    var display = stashDisplayBlocks(String(text == null ? "" : text).replace(/\r\n?/g, "\n"));
+    var lines = display.text.split("\n");
     var out = [], paragraph = [], listType = null, inCode = false, codeLang = "", codeLines = [];
     var skipUntil = -1;
     function closeList() {
@@ -455,7 +574,7 @@
     });
     if (inCode) flushCode();
     flushParagraph(); closeList();
-    return out.join("");
+    return restoreTokens(out.join(""), display.mark, display.spans);
   }
 
   function recordRecent(type, id) {
@@ -477,6 +596,16 @@
   if (selector) {
     selector.addEventListener("change", function () {
       window.location = "/w/" + selector.value + "/practice";
+    });
+  }
+
+  /* ---------- learner settings ---------- */
+
+  var showRatingBox = document.getElementById("setting-show-rating");
+  if (showRatingBox) {
+    showRatingBox.checked = showRatingEnabled();
+    showRatingBox.addEventListener("change", function () {
+      saveSetting("showRating", showRatingBox.checked);
     });
   }
 
@@ -1644,6 +1773,7 @@
     patch: patch,
     store: store,
     load: load,
+    showRatingEnabled: showRatingEnabled,
     renderMath: renderMath,
     escapeHtml: escapeHtml,
     richText: richText,
@@ -1662,6 +1792,26 @@
   /* ---------- saved papers ---------- */
 
   var practiceSetList = document.getElementById("practice-set-list");
+  var paperOpenKey = "wb_paper_open_" + WS;
+
+  // A card folds away its problem list, and the fold survives the reload that
+  // every edit does — otherwise moving one item shut the paper being edited.
+  function restorePaperFolds() {
+    var open = load(paperOpenKey, {});
+    Array.prototype.forEach.call(
+      practiceSetList.querySelectorAll(".practice-set-card"),
+      function (card) {
+        var body = card.querySelector(".practice-set-card-body");
+        if (!body) return;
+        if (open[card.dataset.practiceSetId]) body.open = true;
+        body.addEventListener("toggle", function (event) {
+          if (event.target !== body) return;
+          var state = load(paperOpenKey, {});
+          state[card.dataset.practiceSetId] = body.open;
+          store(paperOpenKey, state);
+        });
+      });
+  }
 
   function practiceSetIds(card) {
     return Array.prototype.slice.call(
@@ -1696,6 +1846,7 @@
   }
 
   if (practiceSetList) {
+    restorePaperFolds();
     practiceSetList.addEventListener("click", function (event) {
       var card = event.target.closest && event.target.closest(".practice-set-card");
       if (!card) return;
@@ -1703,16 +1854,22 @@
       layout.dataset.practiceSetId = practiceSetId;
       var button = event.target.closest && event.target.closest("button");
       if (!button) return;
+      // The card head is a <summary>: a control click must not also fold the paper.
+      event.preventDefault();
       var encoded = encodeURIComponent(practiceSetId);
 
       if (button.hasAttribute("data-set-start")) {
-        post("/practice-sets/" + encoded + "/start", {}).then(function () {
+        // A paper never had a rating-timing UI; the learner preference is the
+        // choice: off starts a no-rating round, on keeps the old default.
+        var paperStartBody = { rating_mode: showRatingEnabled() ? "immediate" : "off" };
+        post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
           window.location = "/w/" + encodeURIComponent(WS) + "/practice";
         }).catch(function (error) {
           if (window.confirm && window.confirm(
             "当前还有一轮练习没有完成。开始这张试卷会清除旧进度，继续吗？"
           )) {
-            post("/practice-sets/" + encoded + "/start", { replace: true }).then(function () {
+            paperStartBody.replace = true;
+            post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
               window.location = "/w/" + encodeURIComponent(WS) + "/practice";
             }).catch(function (retryError) {
               practiceSetStatus(card, retryError.message || "无法开始练习");

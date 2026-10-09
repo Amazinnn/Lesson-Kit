@@ -3,6 +3,7 @@
 import json
 import re
 
+from workbench.domain import facets
 from workbench.domain import micro_quiz
 from workbench.domain import markup
 
@@ -132,11 +133,16 @@ def list_items(pool, entity):
 
 
 def search(pool, entity, query):
-    needle = query.casefold()
-    return [
-        item for item in list_items(pool, entity)
-        if needle in json.dumps(item, ensure_ascii=False).casefold()
-    ]
+    """Every whitespace-separated keyword must be in the row (AND), casefolded."""
+    words = facets.keyword_words(query)
+    if not words:
+        return []
+    hits = []
+    for item in list_items(pool, entity):
+        row_text = json.dumps(item, ensure_ascii=False).casefold()
+        if facets.matches_all(row_text, words):
+            hits.append(item)
+    return hits
 
 
 def history(pool, entity, object_id):

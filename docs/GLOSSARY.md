@@ -130,9 +130,14 @@ _Avoid_：把一次重试当成第二次作答、把判定当评分
 出处：review-workbench spec「Retry-safe browser practice writes」
 
 ### 判定 / Verdict
-客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在自评时改变。答案键缺失时不判分，页面如实写明「本题未录入答案键」。
-_Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩
-出处：review-workbench spec「Durable practice records」；workbench-ui spec
+客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在自评时改变——**例外**：关闭自评的轮次（见「学习者设置」）里，判定就是学习结论，落库时一次性折算为进度与排期（对 → mastered、错 → wrong），不写带评分的反馈事件。答案键缺失时不判分，页面如实写明「本题未录入答案键」。
+_Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩、把折算出的进度当自评分
+出处：review-workbench spec「Durable practice records」；workbench-ui spec；rating-toggle-setting change
+
+### 学习者设置 / Learner Settings
+左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**——这是工作台唯一的 localStorage 用法；其余一切客户端状态仍是会话级。第一项是「练习与组卷显示自评」（默认开）：关闭后自评在练习与组卷流程里完全消失（不选自评时机、无反馈面板、不进统一自评页、记录页标「关闭自评」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
+_Avoid_：把设置当学习记录、按工作区写进数据库、对进行中的轮次即时生效
+出处：rating-toggle-setting change「Learner settings in the left rail」
 
 ### 做题记录 / Practice Record
 把尝试、判定与自评合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及左侧「记录」中心的**作答明细 / 错题**视图（可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——自评通过 `attempt_id` 链回那次提交。**记录只增不改**：修错了重新作答并自评，不改写旧行。
@@ -185,14 +190,20 @@ _Avoid_：卷面分、难度、把年份当 id 或当作试卷实体
 出处：practice-set-export-and-cli-audit spec；workbench-content-governance spec「Problem provenance axes」
 
 ### 选题 / Problem Selection（CLI 组练习）
-`lesson-kit pull` 的选题目径，一次调用组合六种方式：**范围**（`--kp`，缺省用章透镜）、**单题指定**（`--problem`，显式追加、不受筛选与上限约束）、**条件筛选**（`--source-kind`/`--origin-kind`/`--source-group`/`--exam-year`/`--source-evidence`/客观难度区间）、**薄弱**（`--weak`，用 `domain.weak` 的薄弱分选出有弱点证据的知识点的题）、**到期**（`--due`）、**错题**（`--wrong`，进度为 wrong/stuck 或最近一次尝试为错）。范围决定候选集，条件筛选收窄它，三个驱动在候选集内取并集，单题最后追加；每题回报入卷理由（`scope`/`weak`/`due`/`wrong`/`explicit`）。注意 `--mode weak` 是**排序**（命中知识点多者先），与 `--weak` 驱动不是一回事。`--source-kind`/`--exam-year`/`--source-evidence` 都可重复，语义见「筛选维度」。
+`lesson-kit pull` 的选题目径，一次调用组合六种方式：**范围**（`--kp`，缺省用章透镜）、**单题指定**（`--problem`，显式追加、不受筛选与上限约束）、**条件筛选**（`--source-kind`/`--origin-kinds`/`--source-group`/`--exam-year`/`--source-evidence`/`--search-stem`/`--search-source`/客观难度区间）、**薄弱**（`--weak`，用 `domain.weak` 的薄弱分选出有弱点证据的知识点的题）、**到期**（`--due`）、**错题**（`--wrong`，进度为 wrong/stuck 或最近一次尝试为错）。范围决定候选集，条件筛选收窄它，三个驱动在候选集内取并集，单题最后追加；每题回报入卷理由（`scope`/`weak`/`due`/`wrong`/`explicit`）。注意 `--mode weak` 是**排序**（命中知识点多者先），与 `--weak` 驱动不是一回事。`--source-kind`/`--origin-kinds`/`--exam-year`/`--source-evidence` 都可重复，语义见「筛选维度」；`--search-stem`/`--search-source` 是两个关键词域，语义见「题干域 / 来源域」。
 _Avoid_：把 `--weak` 当排序、把驱动当过滤条件之外的隐式扩范围
 出处：review-workbench spec「Problem pull engine」；practice-set-export spec「Practice set composition」
 
 ### 筛选维度 / Filter Dimension
-来源筛选的三个**多值**维度：`source_kinds`（来源类型）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**：勾中的同一维度里任意一个命中即可（`final` 或 `midterm`），不同维度必须同时满足（是 final **且** 属于 2023）。浏览器练习页的「来源筛选」浮窗按维度分组勾选（每项标注池内计数，取自池内实际值），选中的题（搜索挑选）另走 `include_ids`；CLI 用可重复的 `--source-kind`/`--exam-year`/`--source-evidence`。单选值参数（`source_kind` 等）保持兼容，与列表参数取并集。
+来源筛选的四个**多值**维度：`source_kinds`（来源类型）、`origin_kinds`（题目来源方式）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**：勾中的同一维度里任意一个命中即可（`final` 或 `midterm`），不同维度必须同时满足（是 final **且** 属于 2023）。浏览器练习页的「来源筛选」浮窗按维度分组勾选（每项标注池内计数，取自池内实际值；`origin_kinds` 一组显示为历年原题/改编/AI生成），选中的题（搜索挑选）另走 `include_ids`；CLI 用可重复的 `--source-kind`/`--origin-kinds`/`--exam-year`/`--source-evidence`。其余单值参数（`source_kind` 等）保持兼容，与列表参数取并集；单值 `origin_kind` 已由 `origin_kinds` 取代，不保留别名。
 _Avoid_：把维度内的多个值当 AND、把筛选当扩范围、把浮窗选择写进池
 出处：review-workbench spec「Source dimensions and facets」；workbench-ui spec
+
+### 题干域 / 来源域 / Stem & Source Keyword Domains
+一道题上回答两个不同问题的两组文字，全仓库只有一份定义（`domain.facets.stem_text` / `source_text`），搜索端点与选题引擎都读它——所以一道题不可能「按一套规则搜得到、按另一套规则筛不出来」。**题干域** = `display_title` + `problem_text`（题目**说了什么**）；**来源域** = `source_evidence` + `exam_year` + `problem_text` 开头的连续 `【…】` 标签段（题目**从哪来**）。`【…】` 只在题面开头算来源：早于来源字段的老池把卷面身份只写在题面开头（如 `【2023期末】【合集A】`），那里是它唯一的容身处。
+每个域的查询按空白切成多个词、逐词 casefold，**域内 AND**（每个词都必须在该域文字里出现）；两域都给则跨域 AND。空查询返回空集，不是全池。
+_Avoid_：把两域合成一个 haystack、只取第一个词、把词序当语义、把来源词算进题干域或反过来
+出处：review-workbench spec「Multi-dimension source filters」「Source filter panel on the practice page」
 
 ### 文档键 / Document Key
 把 `source_evidence` 折叠成**一份文档一个键**的纯规则（`domain.facets.document_key`）：写成路径的（`题库/final·A.md`）原样就是键；教材类（`教材 …`）统一折成「教材」（它的证据逐题不同、没有文档级身份）；其余取第一段。两个真实池里两套书写格式因此归得进同一组，浮窗的「来源文档」维度与计数都由它聚合。

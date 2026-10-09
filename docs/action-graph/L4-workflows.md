@@ -147,7 +147,7 @@ flowchart TD
 ```mermaid
 flowchart TD
   A[确定范围<br/>章透镜/ --kp / 关透镜=整门课] --> B{选题方式}
-  B -- 条件筛选 --> C[source_kind / origin_kind / exam_year / 难度]
+  B -- 条件筛选 --> C[source_kind / origin_kinds / exam_year / source_evidence<br/>search_stem / search_source 两个关键词域 / 难度]
   B -- 学习证据 --> D[--weak 薄弱 / --due 到期 / --wrong 错题]
   B -- 单题 --> E[--problem 追加·不受筛选与上限约束]
   C & D & E --> F[逐题 reason：scope/weak/due/wrong/explicit]
@@ -178,11 +178,13 @@ flowchart TD
   G --> H[导航第四页「做题记录」<br/>判定徽章/星级/评语/作答摘录 · 可按题过滤]
   X1[只提交不自评] -.记录在 · 学习状态不动.-> Z[(信号/状态/进度/调度不变)]
 
-  P[来源筛选按钮] --> Q[浮窗: 三维多选 + 池内计数]
+  P[来源筛选按钮] --> Q[浮窗: 四维多选 + 池内计数]
   Q -- 勾选 --> R[维度内 OR · 维度间 AND<br/>filters 随 /pull 上送]
-  Q -- 搜索选题 --> S[命中题按 include_ids 显式指定<br/>不受筛选与上限约束]
+  Q -- 题干关键词/来源关键词 --> S[命中题按 include_ids 显式指定<br/>不受筛选与上限约束]
+  S -- 勾选 --> S1[结果行: 题面摘要 + 来源行]
   R & S --> T[pull 只回那一批]
-  Q -.sessionStorage 按工作区·关标签页即散.-> Z
+  Q -.sessionStorage 按工作区·键 wb_practice_filters_v2_<ws>·关标签页即散.-> Z
+  S -.两框都空则搜不出东西·不是列出全池.-> Z
 
   M1[新建对话] --> M2{有模型条目?}
   M2 -- 无 --> M3[回退: 一个 harness 一条]
@@ -197,10 +199,22 @@ flowchart TD
 
 > 2026-09-26（attempt-records-filters-and-model-entries）：三件事合并交付。**记录**：提交即落库
 > （判定与选项同存），自评通过 `attempt_id` 链回那次作答，于是「作答了什么、判定如何、评为几分」
-> 读得成一行；记录只增不改，学习状态仍只由自评驱动。**筛选**：来源三个维度（类型/年份/文档）在
+> 读得成一行；记录只增不改，学习状态仍只由自评驱动。**筛选**：来源维度在
 > CLI、API 与练习页浮窗同一语义——维度内 OR、维度间 AND；文档键把两套证据书写格式折成一份文档
-> 一个键，计数取自池内实际值。**模型**：bridges.json 的 `models` 条目让显示名与 harness 解耦
+> 一个键，计数取自池内实际值。
+>
+> 2026-10-06（problem-search-and-origin-filter）：来源维度由三个增为**四个**（多一个题目来源方式
+> `origin_kinds`，浮窗显示历年原题/改编/AI生成，CLI 改可重复的 `--origin-kinds`，单值 `origin_kind`
+> 删除不兼容）。浮窗的「一个搜索框」变成**两个关键词域**：题干域（标题/题面）与来源域
+> （来源证据/考查年份/题面开头的 `【…】` 标签段，老池把卷面身份只写在那里），各域按空格切多词、
+> 域内 AND，两域都填则跨域 AND；域的定义只有一份，搜索与 `/pull` 的 `--search-stem`/
+> `--search-source` 共用。两框都空返回空集而不是全池。旧 `?q=` 参数删除，浮窗存储键升为
+> `wb_practice_filters_v2_<ws>`。**模型**：bridges.json 的 `models` 条目让显示名与 harness 解耦
 > （不再显示 `pi · deepseek/…`），对话记住自己的模型并可在头部下拉里换，**下一轮**生效。
+
+> 2026-10-06/07（practice-set-item-preview）：组卷页先展示试卷卡片；卡片默认折叠，展开状态
+> 按工作区记在当前标签页。卡片命令不切换折叠状态，命令失败的状态行仍在折叠区外；打开题目项
+> 只呈现题面与来源，答案继续由导出解答卷提供。
 
 ## W8 · 记录中心（2026-09-29）
 

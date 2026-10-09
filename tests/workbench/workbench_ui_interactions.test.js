@@ -536,6 +536,49 @@ test("a saved paper folds away its problem list and the fold outlives a reload",
     JSON.parse(storage.getItem("wb_paper_open_alpha"))["ps-001"], false);
 });
 
+test("a saved paper head command runs without toggling the card", async () => {
+  const calls = [];
+  const list = new FakeElement("practice-set-list");
+  const card = new FakeElement("article", {
+    dataset: { practiceSetId: "ps-001" },
+  });
+  card.className = "practice-set-card card";
+  const body = new FakeElement("details");
+  body.open = true;
+  const button = new FakeElement("button");
+  button.setAttribute("data-set-export", "");
+  button.closest = (selector) => {
+    if (selector === "button") return button;
+    if (selector === ".practice-set-card") return card;
+    return null;
+  };
+  card.queryOne = (selector) => {
+    if (selector === ".practice-set-card-body") return body;
+    if (selector === "h2") return new FakeElement("h2", { value: "Paper" });
+    return null;
+  };
+  list.queryAll = (selector) => (selector === ".practice-set-card" ? [card] : []);
+  const app = runWorkbench({
+    elements: { layout: layout(), "practice-set-list": list },
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({ practice_set: "paper", solutions: "answers" });
+    },
+  });
+
+  let prevented = false;
+  list.trigger("click", {
+    target: button,
+    preventDefault() { prevented = true; },
+  });
+  await flush();
+
+  assert.equal(prevented, true);
+  assert.equal(body.open, true);
+  assert.ok(calls.some((call) => call.url.endsWith("/practice-sets/ps-001/render")));
+  assert.equal(app.window.location, "");
+});
+
 test("durable practice freezes the whole selected set before execution", async () => {
   const calls = [];
   const elements = { layout: layout(), ...durablePracticeElements() };

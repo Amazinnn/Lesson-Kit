@@ -152,6 +152,51 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(out)["problems"], [])
 
+    def test_pull_reaches_both_keyword_domains_and_the_origin_list(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "UPDATE problems SET problem_text=?, source_evidence=?, exam_year=?,"
+            " origin_kind=? WHERE problem_id=?",
+            ("【2023期末】【合集A】计算 1+2+3", "题库/final·合集A.md 第1题",
+             "2023-2024秋冬", "generated_grounded", "dmath-ch06-prob-001"),
+        )
+        conn.commit()
+        conn.close()
+        base = ("pull", "dmath", "--kp", "dmath-ch06-kp-001", "--n", "5")
+
+        def ids(*extra):
+            code, out = self.run_cli(*base, *extra)
+            self.assertEqual(code, 0)
+            return [item["problem_id"] for item in json.loads(out)["problems"]]
+
+        # two words in one domain is an AND; the domains do not leak into each other
+        # (合集A is readable from the stem because the 【…】 tags are part of the text,
+        # but "final" only ever lives in the source domain)
+        self.assertEqual(ids("--search-stem", "计算 期末"), ["dmath-ch06-prob-001"])
+        self.assertEqual(ids("--search-stem", "计算 final"), [])
+        self.assertEqual(ids("--search-source", "合集A 2023"), ["dmath-ch06-prob-001"])
+        # both domains at once
+        self.assertEqual(
+            ids("--search-stem", "计算", "--search-source", "final 合集a"),
+            ["dmath-ch06-prob-001"],
+        )
+        self.assertEqual(
+            ids("--search-stem", "计算", "--search-source", "midterm"),
+            [],
+        )
+        # origin_kinds is a list and any of the named ways is kept
+        self.assertEqual(ids("--origin-kinds", "generated_grounded"),
+                         ["dmath-ch06-prob-001"])
+        self.assertEqual(
+            ids("--origin-kinds", "source_problem", "--origin-kinds", "adapted_problem"),
+            [],
+        )
+        # a keyword filter counts as a selection, so --input and flags cannot mix
+        code, out = self.run_cli("pull", "dmath", "--input", "-",
+                                 "--search-stem", "计算")
+        self.assertEqual(code, 2)
+        self.assertIn("not both", json.loads(out)["error"])
+
     def test_difficulty_check_and_apply_use_one_manifest(self):
         manifest = self.ws / "difficulty.json"
         manifest.write_text(json.dumps({"items": [{
@@ -190,7 +235,7 @@ class CliTests(unittest.TestCase):
 
         code, output = self.run_cli(
             "pull", "dmath", "--kp", "dmath-ch06-kp-001", "--n", "5",
-            "--source-group", "textbook", "--origin-kind", "source_problem",
+            "--source-group", "textbook", "--origin-kinds", "source_problem",
             "--difficulty-min", "2", "--difficulty-max", "3",
             "--knowledge-breadth-min", "2", "--knowledge-breadth-max", "2",
             "--difficulty-strategy", "balanced",

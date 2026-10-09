@@ -13,6 +13,7 @@ from datetime import date
 
 from workbench.data import active_practice
 from workbench.domain import feedback as feedback_rules
+from workbench.domain import learning_state
 from workbench.domain import schedule as schedule_rules
 
 
@@ -441,6 +442,13 @@ def list_attempts(pool, problem_id):
     return {"problem_id": problem_id, "count": len(rows), "attempts": rows}
 
 
+def _round_rating_mode(pool):
+    """The active round's rating mode, or None when no round is active."""
+    row = pool.connect().execute(
+        "SELECT rating_mode FROM active_practice WHERE singleton = 1").fetchone()
+    return row[0] if row else None
+
+
 def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
                            choices=None, request_id=None, practice_position=None,
                            stuck=False):
@@ -457,6 +465,11 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
         raise ManifestError("stuck must be a boolean")
     if verdict is not None and verdict not in (0, 1):
         raise ManifestError("verdict must be true or false")
+    # In a rating-off round the verdict IS the learning conclusion: the machine
+    # judged the answer, so the self-question is already answered. Derived
+    # state moves progress/current-state/schedule; no rated feedback event is
+    # written, so the self-rating stats stay free of synthesized data.
+    derive = verdict is not None and _round_rating_mode(pool) == "off"
     if choices is not None and (
             not isinstance(choices, list)
             or not all(isinstance(choice, str) for choice in choices)):
@@ -495,6 +508,21 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
             next_state = schedule_rules.after_result(state, "stuck", date.today())
             pool.schedule_upsert(next_state)
             result["due_at"] = next_state["due_at"]
+        if derive:
+            progress_status = feedback_rules.RATING_PROGRESS[5 if verdict else 2]
+            pool.upsert_problem_progress(problem_id, progress_status)
+            pool.upsert_current_state(
+                "problem", problem_id,
+                learning_state.for_rating(5 if verdict else 2))
+            state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
+                "problem", problem_id)
+            next_state = schedule_rules.after_result(
+                state, 5 if verdict else 2, date.today())
+            pool.schedule_upsert(next_state)
+            result["derived_state"] = progress_status
+            for target_id in _targets(pool, problem_id):
+                pool.upsert_current_state("kp", target_id, learning_state.for_rating(
+                    5 if verdict else 2))
         if practice_position is not None:
             result["practice"] = active_practice.mark(
                 pool, practice_position, "stuck" if stuck else "answered",

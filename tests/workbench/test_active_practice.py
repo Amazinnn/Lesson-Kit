@@ -204,6 +204,58 @@ class ActivePracticeTests(unittest.TestCase):
             {(method, pattern) for method, pattern, _handler in app.ROUTES},
         )
 
+    def test_off_round_derives_learning_state_from_the_verdict(self):
+        from workbench.data import active_practice, attempts
+
+        self.add_problem("dmath-ch06-prob-002")
+        active_practice.create(
+            self.pool, {**self.payload("dmath-ch06-prob-001", "dmath-ch06-prob-002"),
+                        "rating_mode": "off"})
+
+        wrong = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-001", answer_text="B", verdict=0,
+            request_id="off-1", practice_position=0)
+        self.assertEqual(wrong["derived_state"], "wrong")
+
+        right = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-002", answer_text="A", verdict=1,
+            request_id="off-2", practice_position=1)
+        self.assertEqual(right["derived_state"], "mastered")
+
+        # Progress and schedule moved; no rated feedback event was synthesized.
+        conn = self.pool.connect()
+        progress = dict(conn.execute(
+            "SELECT problem_id, status FROM problem_progress "
+            "WHERE problem_id LIKE 'dmath-ch06-prob-00%'").fetchall())
+        self.assertEqual(progress, {
+            "dmath-ch06-prob-001": "wrong",
+            "dmath-ch06-prob-002": "mastered",
+        })
+        events = conn.execute(
+            "SELECT COUNT(*) FROM feedback_events WHERE rating IS NOT NULL").fetchone()[0]
+        self.assertEqual(events, 0)
+        due = conn.execute(
+            "SELECT due_at FROM review_schedule WHERE item_id='dmath-ch06-prob-001' "
+            "AND direction=''").fetchone()[0]
+        self.assertIsNotNone(due)
+
+    def test_rated_round_still_defers_learning_state_to_the_rating(self):
+        from workbench.data import active_practice, attempts
+
+        active_practice.create(
+            self.pool, self.payload("dmath-ch06-prob-001"))
+
+        result = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-001", answer_text="A", verdict=1,
+            request_id="rated-1", practice_position=0)
+
+        self.assertNotIn("derived_state", result)
+        conn = self.pool.connect()
+        moved = conn.execute(
+            "SELECT COUNT(*) FROM problem_progress WHERE problem_id='dmath-ch06-prob-001'"
+        ).fetchone()[0]
+        self.assertEqual(moved, 0)
+
 
 if __name__ == "__main__":
     unittest.main()
