@@ -905,7 +905,7 @@ def _apply_content_action(action, root, workspace, conversation_id, turn_id,
         action["result"] = {
             key: applied[key]
             for key in ("batch_id", "kind", "counts", "origins", "batches",
-                        "backup_path", "applied")
+                        "backup_path", "applied", "typesetting")
             if key in applied
         }
         action["result"]["workspace"] = workspace["name"]

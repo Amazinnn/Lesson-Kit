@@ -15,6 +15,7 @@ from workbench.domain import cards as card_rules
 from workbench.domain import content_identity
 from workbench.domain import markup
 from workbench.domain import micro_quiz as micro_quiz_rules
+from workbench.domain import typesetting
 from workbench.ingest.artifacts import read_artifact, read_staged_manifest, write_artifact
 
 
@@ -488,7 +489,7 @@ def apply_batch(db_path, manifest, *, source, backup_path=None, course=None):
         result = _apply_patch(database, manifest, backup, kind, course)
     return {key: result[key] for key in (
         "ok", "batch_id", "kind", "counts", "origins", "batches", "backup_path",
-        "applied",
+        "applied", "typesetting",
     ) if key in result}
 
 
@@ -625,6 +626,15 @@ def apply_content_bundle(db_path, manifest, backup_path=None, course=None):
     backup = Path(backup_path) if backup_path else (
         database.with_name(database.name + ".ingest-backup"))
     return _apply_content_bundle(database, manifest, backup, course)
+
+
+def inspect_content_bundle_typesetting(manifest):
+    """Pure pre-apply body inspection, separate from existing bundle validation."""
+    if manifest is None:
+        return typesetting.check([], available=False)
+    if not isinstance(manifest, dict) or manifest.get("kind") != CONTENT_BUNDLE_KIND:
+        raise ValueError("expected a content-bundle manifest")
+    return typesetting.check(manifest.get("knowledge_points", []))
 
 
 def _bundle_list(manifest, field, errors):
@@ -1084,6 +1094,9 @@ def _gate_content_bundle(conn, manifest, course=""):
         "chapters": chapters,
         "knowledge_points": kp_plans, "problems": problem_plans,
         "flash_cards": card_plans,
+        "typesetting": typesetting.check([
+            {"kp_id": plan["kp_id"], "body": plan["fields"]["body"]}
+            for plan in kp_plans]),
     }
 
 
@@ -1326,7 +1339,8 @@ def _apply_content_bundle(database, manifest, backup, course=None):
     ]
     result = {"ok": True, "applied": True, "kind": CONTENT_BUNDLE_KIND,
               "batches": recorded, "counts": counts, "origins": origins,
-              "backup_path": str(backup), "accounting": accounting}
+              "backup_path": str(backup), "accounting": accounting,
+              "typesetting": verified["typesetting"]}
     if len(recorded) == 1:
         # A single-chapter bundle keeps the historical shape as well.
         result["batch_id"] = recorded[0]["batch_id"]
