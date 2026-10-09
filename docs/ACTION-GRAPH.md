@@ -94,6 +94,12 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-10-09 正文排版检出（implement-kp-text-typesetting-check）：既有内容清单
+  有效检查/成功 apply 与 pool validator 报告新增同口径的 `typesetting` 结果，
+  Bridge 动作结果保留它；纯检查不新增写入动作、门禁、CLI 选项或退出码。
+  只度量正文并只报事实；pipeline 只读调用是 kp-text-typesetting-check 已授权的
+  窄例外。章节结构识别、其他字段区间与正文修复仍是原 change 的延期/范围外事项。
+
 - 2026-08-29 建图（v1：总图+六域登记表）；同日讲解/诊断标待退役。
 - 2026-08-29 v2 分层重构：明细迁入 `docs/action-graph/` 五层六文件；新增权限列
   （问卷 B1）、意外分支层（L4，回应所有者"不许想当然"要求）、铁律四条、队列四项。

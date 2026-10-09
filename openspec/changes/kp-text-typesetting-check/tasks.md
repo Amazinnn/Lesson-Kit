@@ -1,37 +1,40 @@
 # Tasks
 
-This PR records the check; it does not implement it. The queue below is for the
-follow-up change that builds it. Order matters: §1 is the rule, §2 the two hosts,
-§3 the report, §4 the proof.
+The original PR recorded the check. Follow-up
+`implement-kp-text-typesetting-check` implements required sections 1–4; checked
+items below mean implementation with focused evidence, not final acceptance.
+Section 4.5 remains pending independent repository/isolated acceptance. Sections
+5–6 are deliberately deferred/outside scope and remain unchecked; they are not
+required implementation work and must be carried forward before archive.
 
 ## 1. The measurement rule
 
-- [ ] 1.1 One shared module holding the paragraph split and the visible-character count (strip `$$…$$`, `$…$`, backticked code), used by both hosts so the two cannot drift.
-- [ ] 1.2 The band 40–300 as named constants, with a comment pointing at the spec requirement rather than at the calibration numbers.
-- [ ] 1.3 Exclude paragraphs whose visible count is zero from the short-paragraph test.
-- [ ] 1.4 Apply the band to `body` only; `fragile` and `learning_action` are read for the report but not measured against the band.
+- [x] 1.1 One shared module holding the paragraph split and the visible-character count (strip `$$…$$`, `$…$`, backticked code), used by both hosts so the two cannot drift.
+- [x] 1.2 The band 40–300 as named constants, with a comment pointing at the spec requirement rather than at the calibration numbers.
+- [x] 1.3 Exclude paragraphs whose visible count is zero from the short-paragraph test.
+- [x] 1.4 Apply the band to `body` only; `fragile` and `learning_action` are excluded, as specified by the approved requirement. The report reads id/body only; this reconciles the original task's extra 'read for report' phrase with that requirement.
 
 ## 2. The two hosts
 
-- [ ] 2.1 Bundle-side: read the content bundle in `workbench/ingest` and produce findings before apply. `workbench/` is the sanctioned layer for new code (`AGENTS.md`), so no frozen-layer exception is involved. Decide where in the existing bundle check it attaches, and confirm that a finding does not turn into a refusal.
-- [ ] 2.2 Pool-side: add one read-only check to `pipeline/scripts/validate-pool.py`, emitted at an advisory level so the exit code is unchanged (`:16-19`). This is the only place the granted frozen-layer exception is spent.
-- [ ] 2.3 A scope with no bundle reports that it had nothing to check, modelled on `validate-pool.py:273`'s handling of a missing `coverage-check.md`.
-- [ ] 2.4 `body` must be added to the columns that check reads; it is not currently selected (`:196` selects seven columns, none of them `body`).
+- [x] 2.1 Bundle-side: read the content bundle in `workbench/ingest` and produce findings before apply. `workbench/` is the sanctioned layer for new code (`AGENTS.md`), so no frozen-layer exception is involved. Decide where in the existing bundle check it attaches, and confirm that a finding does not turn into a refusal.
+- [x] 2.2 Pool-side: add one read-only check to `pipeline/scripts/validate-pool.py`, emitted at an advisory level so the exit code is unchanged (`:16-19`). This is the only place the granted frozen-layer exception is spent.
+- [x] 2.3 A scope with no bundle reports that it had nothing to check, modelled on `validate-pool.py:273`'s handling of a missing `coverage-check.md`.
+- [x] 2.4 `body` is selected by the dedicated read-only Data adapter; the frozen legacy gate's seven-column query stays intact.
 
 ## 3. The report
 
-- [ ] 3.1 Two sections, over-long first, short second; omit a section entirely when it is empty.
-- [ ] 3.2 One row per knowledge point, carrying the count past each bound plus the longest and shortest measured paragraph. A point violating both bounds appears once, in the over-long section, with both counts.
-- [ ] 3.3 A closing line with the scope's knowledge point count, paragraph count, visible-character percentiles, and each side's count and share.
-- [ ] 3.4 Wording discipline, checked before merge: no target length, no recommended section names, no suggested split point, no template. Every number recomputable from the stored text.
-- [ ] 3.5 Feed the pool-side findings into the existing `04_checks/pool-validation-report.md` and the existing `--json` output rather than writing a second report file.
+- [x] 3.1 Two sections, over-long first, short second; omit a section entirely when it is empty.
+- [x] 3.2 One row per knowledge point, carrying the count past each bound plus the longest and shortest measured paragraph. A point violating both bounds appears once, in the over-long section, with both counts.
+- [x] 3.3 A closing line with the scope's knowledge point count, paragraph count, visible-character percentiles, and each side's count and share.
+- [x] 3.4 Wording discipline, checked before merge: no target length, no recommended section names, no suggested split point, no template. Every number recomputable from the stored text.
+- [x] 3.5 Feed the pool-side findings into the existing `04_checks/pool-validation-report.md` and the existing `--json` output rather than writing a second report file. The existing textual report can be captured at that path as before; the validator creates no file.
 
 ## 4. Proof
 
-- [ ] 4.1 A test for a body whose only short paragraph is a display formula or a code block — it must not be reported as too short.
-- [ ] 4.2 A test that the check writes nothing: row counts, row contents and the batch list identical before and after.
-- [ ] 4.3 A test that a body violating both bounds appears exactly once, in the over-long section.
-- [ ] 4.4 A test that a scope with no bundle is distinguishable from a clean scope.
+- [x] 4.1 A test for a body whose only short paragraph is a display formula or a code block — it must not be reported as too short.
+- [x] 4.2 A test that the check writes nothing: row counts, row contents and the batch list identical before and after.
+- [x] 4.3 A test that a body violating both bounds appears exactly once, in the over-long section.
+- [x] 4.4 A test that a scope with no bundle is distinguishable from a clean scope.
 - [ ] 4.5 Run the repository checks `AGENTS.md` requires before a PR:
       `python -m pytest tests -q`,
       `node --test tests/workbench/*.test.js`,
