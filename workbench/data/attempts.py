@@ -444,6 +444,10 @@ def list_attempts(pool, problem_id):
 
 def _round_rating_mode(pool):
     """The active round's rating mode, or None when no round is active."""
+    if pool.connect().execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='active_practice'"
+    ).fetchone() is None:
+        return None  # Legacy non-retry submissions still support older pools.
     row = pool.connect().execute(
         "SELECT rating_mode FROM active_practice WHERE singleton = 1").fetchone()
     return row[0] if row else None
@@ -455,10 +459,12 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
     """Persist one answer the practice page just submitted.
 
     The attempt row is the learner's durable record; progress, schedule, and
-    signals still move only when the session's rating lands, linked back through
-    ``attempt_id``. The verdict is the objective grading the browser computed;
+    signals follow the session's rating, linked back through ``attempt_id``;
+    an off round instead derives progress/state/schedule from its recorded
+    objective verdict without creating a rating event. The verdict is the
+    objective grading the browser computed;
     a综合题 answer has none and stores ``answer_text`` alone. A pool that has
-    not been migrated yet still gets the row (status ``new``, no verdict) — the
+    not been migrated yet supports the no-request-id legacy row (status ``new``, no verdict) — the
     migration adds the ``answered`` status and the verdict/choices columns.
     """
     if not isinstance(stuck, bool):
@@ -469,7 +475,6 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
     # judged the answer, so the self-question is already answered. Derived
     # state moves progress/current-state/schedule; no rated feedback event is
     # written, so the self-rating stats stay free of synthesized data.
-    derive = verdict is not None and _round_rating_mode(pool) == "off"
     if choices is not None and (
             not isinstance(choices, list)
             or not all(isinstance(choice, str) for choice in choices)):
@@ -486,6 +491,7 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
             return replay
         if pool.problem(problem_id) is None:
             raise ManifestError(f"unknown problem: {problem_id}")
+        derive = verdict is not None and _round_rating_mode(pool) == "off"
         conn = pool.connect()
         ddl = conn.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='problem_attempts'"
