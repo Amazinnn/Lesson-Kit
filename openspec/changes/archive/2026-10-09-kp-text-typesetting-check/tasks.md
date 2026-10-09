@@ -35,7 +35,7 @@ required implementation work and must be carried forward before archive.
 - [x] 4.2 A test that the check writes nothing: row counts, row contents and the batch list identical before and after.
 - [x] 4.3 A test that a body violating both bounds appears exactly once, in the over-long section.
 - [x] 4.4 A test that a scope with no bundle is distinguishable from a clean scope.
-- [ ] 4.5 Run the repository checks `AGENTS.md` requires before a PR:
+- [x] 4.5 Run the repository checks `AGENTS.md` requires before a PR:
       `python -m pytest tests -q`,
       `node --test tests/workbench/*.test.js`,
       `python -m compileall -q lessonkit.py workbench pipeline pool tests`,

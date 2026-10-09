@@ -15,26 +15,27 @@ truncating long problems, and ordinary (unmarked) pool content stays exam-only.
 The pool SHALL store micro quizzes as formal problems carrying an explicit
 `practice_modes` marking and a structured `micro_quiz` payload with quiz type
 (`yes_no`, `single_choice`, `multiple_choice`), options, an answer key, an
-error reason, and source evidence. An objective item MAY enter **without** an
+error reason, and source evidence. An objective item MAY enter without an
 answer key when its source lost it: an absent or empty `answer_key` SHALL mark
 the item keyless instead of being refused, the choice types SHALL still carry
 2–6 options, `yes_no` SHALL keep its implied 是/否 options, and `error_reason`
 SHALL be mandatory only for an item that carries a key. Every micro quiz type
 SHALL present clickable options; free-text answering SHALL NOT be part of the
 contract. A micro quiz SHALL map to exactly one knowledge point and SHALL NOT
-be refused for stem length alone. Manifest items MAY carry optional display
-fields `display_title` (at most 80 characters) and `display_summary` (at most
-200 characters); a supplied display field SHALL be a non-empty string that
-passes the shared markup safety check, and an omitted field is stored as null.
-`topic_label` is not a problem field. A problem that already exists in the pool SHALL be
-convertible into a micro quiz **in place**, keeping its readable id and every
-learning record: the conversion supplies `practice_modes` and the payload
-through the explicit problem patch, the options MAY be lifted verbatim out of
-the old problem text, and the same contract SHALL be enforced for the parts the
-patch touches. The system SHALL NOT truncate long formal problems into micro
-quizzes, SHALL NOT fabricate options a source does not have, SHALL NOT infer
-micro-quiz content from legacy problem-type values, and SHALL NOT accept the
-retired types `closest_answer` and `short_answer` at the gate.
+be refused for stem length alone. Problem manifest items MAY carry optional
+`display_title` (at most 80 characters) and `display_summary` (at most 200
+characters); a supplied field SHALL be a non-empty string that passes the
+shared markup safety check, and an omitted field is stored as null. Problem
+manifests and edits SHALL NOT accept `topic_label`, which is a flash-card field
+only. A problem that already exists in the pool SHALL be convertible into a
+micro quiz in place, keeping its readable id and every learning record: the
+conversion supplies `practice_modes` and the payload through the explicit
+problem patch, the options MAY be lifted verbatim out of the old problem text,
+and the same contract SHALL be enforced for the parts the patch touches. The
+system SHALL NOT truncate long formal problems into micro quizzes, SHALL NOT
+fabricate options a source does not have, SHALL NOT infer micro-quiz content
+from legacy problem-type values, and SHALL NOT accept the retired types
+`closest_answer` and `short_answer` at the gate.
 
 #### Scenario: A well-formed micro quiz enters the pool
 
@@ -55,10 +56,10 @@ retired types `closest_answer` and `short_answer` at the gate.
 
 #### Scenario: Display field validation
 
-- **WHEN** a manifest item supplies a label field that is empty after
+- **WHEN** a manifest item supplies a display field that is empty after
   trimming, exceeds its bound, or fails the markup safety check
 - **THEN** the deterministic gate rejects that item with an explicit reason;
-  omitted label fields are accepted and stored as null
+  omitted display fields are accepted and stored as null
 
 #### Scenario: A key can be supplied later
 
@@ -74,6 +75,32 @@ retired types `closest_answer` and `short_answer` at the gate.
 
 - **WHEN** a 判断题 or 单选题 carries a long multi-assertion stem or inlined option block
 - **THEN** it stays in the matching practice mode and is not refused for its length
+
+#### Scenario: A problem does not carry a topic label
+
+- **WHEN** a problem or micro-quiz manifest is prepared
+- **THEN** its supported display fields are `display_title` and
+  `display_summary`, and `topic_label` is not part of the problem contract
+
+#### Scenario: Flash cards retain their topic label
+
+- **WHEN** a flash-card manifest supplies its optional `topic_label`
+- **THEN** the flash-card contract validates and stores that field as specified
+  by the `flash-card` capability
+
+#### Scenario: Label field validation
+
+- **WHEN** a manifest item supplies a label field that is empty after
+  trimming, exceeds its bound, or fails the markup safety check
+- **THEN** the deterministic gate rejects that item with an explicit reason;
+  omitted label fields are accepted and stored as null
+
+#### Scenario: The stem bound admits long objective items
+
+- **WHEN** a 判断题 or 单选题 carries a stem of any length — multiple assertions, a
+  long scenario, or a whole option block inlined in the text
+- **THEN** it is stored as a micro quiz for its practice mode, with no length-based
+  refusal at the ingest gate and no length-based refusal on the patch path
 
 ### Requirement: Explicit mode marking for Micro and Yes/No
 
@@ -123,9 +150,12 @@ defined by the content governance capability.
 
 The practice page SHALL render micro quizzes by quiz type with clickable
 options for every type: yes/no buttons, single-choice radios, or
-multiple-choice checkboxes. Micro sessions SHALL reveal the answer and error
-reason before rating, and the free-text answer box SHALL NOT be shown for
-option-based items. Objective items that carry an answer key SHALL be compared
+multiple-choice checkboxes. Micro sessions SHALL reveal the answer key, the
+error reason, and — when the problem carries a non-empty written solution —
+that written solution before rating, and the free-text answer box SHALL NOT be
+shown for option-based items. The written solution SHALL be presented in the
+same explanation section the exam flow uses, labelled by the problem's
+solution origin. Objective items that carry an answer key SHALL be compared
 locally against it with the error reason shown, while the student's rating flow
 and all learning-write semantics stay unchanged. An objective item without a key
 SHALL NOT be graded: its submitted choice is still recorded, the page states
@@ -135,8 +165,10 @@ verdict SHALL remain visible for a brief hold before the session advances to the
 next item, and a wrong answer SHALL highlight the correct option(s) during that
 hold; the hold SHALL NOT write any feedback — ratings and learning writes still
 happen only at session end. Session-end rating cards SHALL show the micro-quiz
-answer key and error reason instead of a formal solution, and SHALL state that a
-keyless item has no stored answer key. Items without a micro-quiz payload SHALL
+answer key and error reason, SHALL also show the problem's written solution
+when one is stored, and SHALL state that a keyless item has no stored answer
+key; a card whose problem has no stored written solution SHALL fall back to the
+key and error reason alone. Items without a micro-quiz payload SHALL
 render exactly as before.
 
 #### Scenario: Answer a yes/no item
@@ -157,6 +189,28 @@ render exactly as before.
 
 - **WHEN** the student answers an objective item whose answer key is not stored
 - **THEN** no verdict is shown, the page says the item has no stored answer key, the submitted choice is still recorded, and the session's rating path is unchanged
+
+#### Scenario: Reveal shows the stored written solution
+
+- **WHEN** the student reveals a micro quiz whose problem carries a non-empty
+  written solution
+- **THEN** the reveal shows the answer key, the error reason, and the written
+  solution in the explanation section with its solution-origin label, and the
+  rating path is unchanged
+
+#### Scenario: Reveal without a stored written solution
+
+- **WHEN** the student reveals a micro quiz whose problem has no stored
+  written solution
+- **THEN** the reveal shows the answer key and error reason only, with no
+  empty explanation section
+
+#### Scenario: Session-end card shows the written solution
+
+- **WHEN** a session ends on rating cards for micro-quiz items that carry a
+  written solution
+- **THEN** each card shows the answer key, the error reason, and the written
+  solution, while solution-less items show only the key and error reason
 
 #### Scenario: Wrong answer in unified rating
 

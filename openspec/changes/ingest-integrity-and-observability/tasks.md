@@ -96,3 +96,13 @@ Owner: `knowledge-figures`, `workbench-ui`. Note that the one item here which
   anything.
 
 2026-10-09: current workbench paths verified with real c02/ncmc copies and legacy gate-report fixture; recorded historical NULL markers are not backfilled. NEW-GAP/DOCTRINE remain pending. See verify-ingest-conformance and dated changelog.
+## 9. Deferred typesetting work carried forward
+
+The implemented body advisory is accepted; these are deliberately unresolved,
+not implementation completion claims (source: kp-text-typesetting-check §5–6).
+
+- [ ] 9.1 NEW-GAP: whether one line contains multiple structural units (seam boundary).
+- [ ] 9.2 NEW-GAP: whether fragile/learning_action need their own measurement bands.
+- [ ] 9.3 NEW-GAP: whether body bounds should become course-adjustable; v1 fixed40–300.
+- [ ] 9.4 OUTSIDE: rewriting existing ncmc bodies is course work, not this delivery.
+- [ ] 9.5 DOCTRINE: body repairs must avoid frozen upsert row replacement until its decision; no source repair was executed.

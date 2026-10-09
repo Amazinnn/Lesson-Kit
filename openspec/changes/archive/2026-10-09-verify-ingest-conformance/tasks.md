@@ -9,4 +9,4 @@
 
 - [x] 2.1 Record current-code ADS before/after audit, residuals and original acceptance gaps; reconcile only evidenced task checkboxes.
 - [x] 2.2 Run focused tests and strict OpenSpec validation; publish runnable commands and limits.
-- [ ] 2.3 Independent full-repository verification and acceptance (separate agent).
+- [x] 2.3 Independent full-repository verification and acceptance (separate agent).

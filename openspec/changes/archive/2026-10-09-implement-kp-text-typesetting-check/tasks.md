@@ -19,6 +19,6 @@ specs and both related changes pass strict validation. No real pool is opened.
 
 ## 3. Independent acceptance (parent-owned)
 
-- [ ] 3.1 Independent review, full repository checks and isolated acceptance.
-- [ ] 3.2 Reconcile original required tasks 1–4 with acceptance evidence; preserve
+- [x] 3.1 Independent review, full repository checks and isolated acceptance.
+- [x] 3.2 Reconcile original required tasks 1–4 with acceptance evidence; preserve
   original tasks 5–6 as deferred/outside scope before any archive.

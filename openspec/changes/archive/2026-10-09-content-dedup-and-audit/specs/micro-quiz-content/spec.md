@@ -5,26 +5,27 @@
 The pool SHALL store micro quizzes as formal problems carrying an explicit
 `practice_modes` marking and a structured `micro_quiz` payload with quiz type
 (`yes_no`, `single_choice`, `multiple_choice`), options, an answer key, an
-error reason, and source evidence. An objective item MAY enter **without** an
+error reason, and source evidence. An objective item MAY enter without an
 answer key when its source lost it: an absent or empty `answer_key` SHALL mark
 the item keyless instead of being refused, the choice types SHALL still carry
 2–6 options, `yes_no` SHALL keep its implied 是/否 options, and `error_reason`
 SHALL be mandatory only for an item that carries a key. Every micro quiz type
 SHALL present clickable options; free-text answering SHALL NOT be part of the
 contract. A micro quiz SHALL map to exactly one knowledge point and SHALL NOT
-be refused for stem length alone. Manifest items MAY carry optional display
-fields `display_title` (at most 80 characters) and `display_summary` (at most
-200 characters); a supplied display field SHALL be a non-empty string that
-passes the shared markup safety check, and an omitted field is stored as null.
-`topic_label` is not a problem field. A problem that already exists in the pool SHALL be
-convertible into a micro quiz **in place**, keeping its readable id and every
-learning record: the conversion supplies `practice_modes` and the payload
-through the explicit problem patch, the options MAY be lifted verbatim out of
-the old problem text, and the same contract SHALL be enforced for the parts the
-patch touches. The system SHALL NOT truncate long formal problems into micro
-quizzes, SHALL NOT fabricate options a source does not have, SHALL NOT infer
-micro-quiz content from legacy problem-type values, and SHALL NOT accept the
-retired types `closest_answer` and `short_answer` at the gate.
+be refused for stem length alone. Problem manifest items MAY carry optional
+`display_title` (at most 80 characters) and `display_summary` (at most 200
+characters); a supplied field SHALL be a non-empty string that passes the
+shared markup safety check, and an omitted field is stored as null. Problem
+manifests and edits SHALL NOT accept `topic_label`, which is a flash-card field
+only. A problem that already exists in the pool SHALL be convertible into a
+micro quiz in place, keeping its readable id and every learning record: the
+conversion supplies `practice_modes` and the payload through the explicit
+problem patch, the options MAY be lifted verbatim out of the old problem text,
+and the same contract SHALL be enforced for the parts the patch touches. The
+system SHALL NOT truncate long formal problems into micro quizzes, SHALL NOT
+fabricate options a source does not have, SHALL NOT infer micro-quiz content
+from legacy problem-type values, and SHALL NOT accept the retired types
+`closest_answer` and `short_answer` at the gate.
 
 #### Scenario: A well-formed micro quiz enters the pool
 
@@ -45,10 +46,10 @@ retired types `closest_answer` and `short_answer` at the gate.
 
 #### Scenario: Display field validation
 
-- **WHEN** a manifest item supplies a label field that is empty after
+- **WHEN** a manifest item supplies a display field that is empty after
   trimming, exceeds its bound, or fails the markup safety check
 - **THEN** the deterministic gate rejects that item with an explicit reason;
-  omitted label fields are accepted and stored as null
+  omitted display fields are accepted and stored as null
 
 #### Scenario: A key can be supplied later
 
@@ -64,6 +65,18 @@ retired types `closest_answer` and `short_answer` at the gate.
 
 - **WHEN** a 判断题 or 单选题 carries a long multi-assertion stem or inlined option block
 - **THEN** it stays in the matching practice mode and is not refused for its length
+
+#### Scenario: A problem does not carry a topic label
+
+- **WHEN** a problem or micro-quiz manifest is prepared
+- **THEN** its supported display fields are `display_title` and
+  `display_summary`, and `topic_label` is not part of the problem contract
+
+#### Scenario: Flash cards retain their topic label
+
+- **WHEN** a flash-card manifest supplies its optional `topic_label`
+- **THEN** the flash-card contract validates and stores that field as specified
+  by the `flash-card` capability
 
 #### Scenario: Label field validation
 
