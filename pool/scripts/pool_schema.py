@@ -85,9 +85,10 @@ def _ensure_problem_contract(conn: sqlite3.Connection) -> List[str]:
             raise sqlite3.OperationalError("problem migration requires no active transaction")
         conn.execute("PRAGMA foreign_keys=OFF")
     existing = set(info)
+    legacy_topic_column = "topic_label TEXT," if "topic_label" in existing else ""
     conn.execute("DROP TABLE IF EXISTS problems_difficulty_new")
     conn.execute(
-        """
+        f"""
         CREATE TABLE problems_difficulty_new (
             problem_id TEXT PRIMARY KEY,
             kp_ids TEXT NOT NULL,
@@ -107,7 +108,7 @@ def _ensure_problem_contract(conn: sqlite3.Connection) -> List[str]:
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             figure_paths TEXT,
             display_title TEXT,
-            topic_label TEXT,
+            {legacy_topic_column}
             display_summary TEXT,
             practice_modes TEXT,
             micro_quiz TEXT,
@@ -151,6 +152,8 @@ def _ensure_problem_contract(conn: sqlite3.Connection) -> List[str]:
         "micro_quiz", "ingest_batch_id", "difficulty",
         *PROBLEM_DIFFICULTY_COLUMNS, "difficulty_model",
     ]
+    if "topic_label" not in existing:
+        target_columns.remove("topic_label")
     expressions = []
     for column in target_columns:
         if column == "origin_kind":
@@ -824,10 +827,6 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
                  ("ingest_batch_id", "TEXT")],
             )
         )
-
-    if table_exists(conn, "problems") and "topic_label" in column_names(conn, "problems"):
-        conn.execute("ALTER TABLE problems DROP COLUMN topic_label")
-        changes.append("problems.topic_label-retired")
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_review_schedule_due "

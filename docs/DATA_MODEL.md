@@ -73,7 +73,7 @@
 | `source_answer` | active | 来源材料自带的短答案/答案依据；不替代完整 `solution` |
 | `solution_origin` | active | `source/generated`，说明详细解析由来源还是 Agent 产生 |
 | `display_title` | active | 题目短标题；UI 标题，不是身份 |
-| `topic_label` | **legacy** | 题目主题标签已从当前 `problems` schema 退役，problem manifest 与 patch 均拒绝该字段；只保留历史语义说明。`flash_cards.topic_label` 是独立的 active 字段 |
+| `topic_label` | **legacy** | 题目主题分组与新写入已退役；旧池列和历史值保留，普通 schema ensure 不再删除，也不在没有该列的升级目标里新增它。problem manifest 与 patch 仍拒绝该字段，题目搜索与 UI 不使用它。`flash_cards.topic_label` 仍是独立的 active 字段。未来物理删除须另行明确迁移与恢复验证 |
 | `display_summary` | **unresolved** | 当前 ingest 允许 ≤200；旧 backfill validator 要求 ≤48 且长题才允许；当前主页面无实际消费 | 
 | `practice_modes` | active | 存储的练习 shell 资格 JSON。空值 = exam-only；客观题时必须与 `micro_quiz.quiz_type` 相容 |
 | `micro_quiz` | active | 客观交互 payload JSON：`quiz_type/options/answer_key/error_reason/source_evidence` 等；决定判断/单选/多选 |
