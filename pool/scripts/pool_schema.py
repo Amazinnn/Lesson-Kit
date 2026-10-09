@@ -58,6 +58,57 @@ def ensure_columns(
     return added
 
 
+def ensure_content_mirror_schema(conn: sqlite3.Connection) -> List[str]:
+    """Add the per-entity authored-content mirror ledger idempotently.
+
+    The ledger stores the last synchronized normalized JSON itself rather than a
+    fingerprint.  This keeps the common ancestor inspectable and follows the
+    repository's no-hash discipline.
+    """
+    changes: List[str] = []
+    if not table_exists(conn, "content_mirror_state"):
+        conn.execute(
+            """
+            CREATE TABLE content_mirror_state (
+                entity_type TEXT NOT NULL CHECK (
+                    entity_type IN ('kp', 'problem', 'relation')
+                ),
+                entity_id TEXT NOT NULL,
+                revision INTEGER NOT NULL CHECK (revision > 0),
+                content_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                PRIMARY KEY (entity_type, entity_id)
+            )
+            """
+        )
+        changes.append("content_mirror_state")
+    if not table_exists(conn, "content_mirror_log"):
+        conn.execute(
+            """
+            CREATE TABLE content_mirror_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                entity_type TEXT NOT NULL CHECK (
+                    entity_type IN ('kp', 'problem', 'relation')
+                ),
+                entity_id TEXT NOT NULL,
+                direction TEXT NOT NULL CHECK (direction IN (
+                    'init', 'repo_to_pool', 'pool_to_repo',
+                    'restore_repo_file', 'recover_converged'
+                )),
+                from_revision INTEGER,
+                to_revision INTEGER NOT NULL CHECK (to_revision > 0),
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX idx_content_mirror_log_entity "
+            "ON content_mirror_log(entity_type, entity_id, id)"
+        )
+        changes.append("content_mirror_log")
+    return changes
+
+
 PROBLEM_DIFFICULTY_COLUMNS = (
     "difficulty_knowledge_breadth",
     "difficulty_reasoning_depth",
@@ -451,6 +502,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         # only permits before any other ensure opens a transaction.
         changes.extend(_ensure_problem_contract(conn))
     changes.extend(_ensure_learner_signals(conn))
+    changes.extend(ensure_content_mirror_schema(conn))
 
     if not table_exists(conn, "review_schedule"):
         conn.execute(
