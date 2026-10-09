@@ -109,6 +109,22 @@ class DataCliTests(unittest.TestCase):
         conn.close()
         self.assertEqual(after, before)
 
+    def test_problem_search_excludes_retained_legacy_labels(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("ALTER TABLE problems ADD COLUMN topic_label TEXT")
+            conn.execute("UPDATE problems SET topic_label='legacy_only_sentinel'")
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertEqual(self.run_cli(
+            "data", "course", "search", "problem", "legacy_only_sentinel")[1], [])
+        self.assertEqual(self.run_cli(
+            "data", "course", "get", "problem", "dmath-ch06-prob-001"
+        )[1]["topic_label"], "legacy_only_sentinel")
+        self.assertEqual(len(self.run_cli(
+            "data", "course", "search", "problem", "Original problem")[1]), 1)
+
     def test_ingest_batches_returns_json_envelope(self):
         conn = sqlite3.connect(self.db_path)
         conn.execute(

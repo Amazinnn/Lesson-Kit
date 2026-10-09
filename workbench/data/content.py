@@ -139,7 +139,9 @@ def search(pool, entity, query):
         return []
     hits = []
     for item in list_items(pool, entity):
-        row_text = json.dumps(item, ensure_ascii=False).casefold()
+        searchable = ({key: value for key, value in item.items() if key != "topic_label"}
+                      if entity == "problem" else item)
+        row_text = json.dumps(searchable, ensure_ascii=False).casefold()
         if facets.matches_all(row_text, words):
             hits.append(item)
     return hits
