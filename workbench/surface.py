@@ -141,4 +141,5 @@ COMMANDS = {
     "difficulty": (AGENT, ""),
     "experience": (AGENT, "explicit CRUD for learner-owned knowledge-point practice experience"),
     "ingest": (AGENT, ""),
+    "mirror": (AGENT, "validates and synchronizes the checked-out authored-content JSON projection"),
 }
