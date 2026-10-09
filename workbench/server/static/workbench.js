@@ -424,38 +424,39 @@
       return mark + (tokens.length - 1) + mark;
     }
     var source = text == null ? "" : String(text);
-    source = source.replace(new RegExp(CODE_RE.source + "|" + MATH_RE.source, "g"),
-      function (whole, code) {
-        return code != null ? token("<code>" + escapeHtml(code) + "</code>") : whole;
-      });
+    var protectedInline = new RegExp([
+      CODE_RE.source, MATH_RE.source, "!\\[[^\\]]*\\]\\([^)]+\\)",
+      "\\[\\[([^\\]|]+)(?:\\|([^\\]]+))?\\]\\]", "\\[[^\\]]+\\]\\(https?://[^\\s)]+\\)",
+    ].join("|"), "g");
+    source = source.replace(protectedInline, function (whole) {
+      if (whole.charAt(0) === "`") return token("<code>" + escapeHtml(whole.slice(1, -1)) + "</code>");
+      if (whole.charAt(0) === "$") {
+        var math = whole.match(new RegExp(MATH_RE.source));
+        return token(mathSpan(math[1], math[1] != null ? math[1] : math[2]));
+      }
+      if (whole.indexOf("![") === 0) {
+        var image = whole.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+        var src = image[2], resolved;
+        if (/^\/(?:api\/w\/|static\/)/.test(src)) resolved = src;
+        else if (/^[\w./-]+$/.test(src)) {
+          resolved = "/api/w/" + encodeURIComponent(WS) + "/figures/" + src.replace(/^\//, "");
+        } else return token(escapeHtml(image[1]));
+        return token("<img alt='" + escapeHtml(image[1]) + "' src='" + escapeHtml(resolved) + "'>");
+      }
+      if (whole.indexOf("[[") === 0) {
+        var wiki = whole.match(/^\[\[([^\]|]+)(?:\|([^\]]+))?\]\]$/);
+        var id = wiki[1].trim(), label = richInline(wiki[2] || id);
+        if (!/^[\w-]+$/.test(id)) return token(label);
+        return token("<a href='/w/" + encodeURIComponent(WS) + "/kp/" + encodeURIComponent(id) + "'>" + label + "</a>");
+      }
+      var link = whole.match(/^\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)$/);
+      return token("<a href='" + escapeHtml(link[2]) + "' target='_blank' rel='noopener noreferrer'>"
+        + richInline(link[1]) + "</a>");
+    });
     source = source.replace(/<(sup|sub)>([^<>]+)<\/\1>/g, function (_, tag, content) {
       return token("<" + tag + ">" + escapeHtml(content) + "</" + tag + ">");
     });
-    source = source.replace(MATH_RE, function (_, display, inline) {
-      return token(mathSpan(display, display != null ? display : inline));
-    });
     var value = escapeHtml(source);
-    value = value.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function (_, alt, src) {
-      var resolved;
-      if (/^\/(?:api\/w\/|static\/)/.test(src)) {
-        resolved = src;
-      } else if (/^[\w./-]+$/.test(src)) {
-        resolved = "/api/w/" + encodeURIComponent(WS) + "/figures/" + src.replace(/^\//, "");
-      } else {
-        return alt;
-      }
-      return token("<img alt='" + alt + "' src='" + resolved + "'>");
-    });
-    value = value.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, function (_, id, label) {
-      var cleanId = id.trim();
-      if (!/^[\w-]+$/.test(cleanId)) return label || cleanId;
-      return token("<a href='/w/" + encodeURIComponent(WS) + "/kp/" + encodeURIComponent(cleanId)
-        + "'>" + (label || cleanId) + "</a>");
-    });
-    value = value.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function (_, label, href) {
-      return token("<a href='" + href + "' target='_blank' rel='noopener noreferrer'>"
-        + label + "</a>");
-    });
     value = value.replace(STRONG_EM_RE, "<strong><em>$1</em></strong>");
     value = value.replace(STRONG_STAR_RE, "<strong>$1</strong>");
     value = value.replace(STRONG_UNDERSCORE_RE, "<strong>$1</strong>");

@@ -40,10 +40,11 @@ explicit-action shape: submit (verdict renders), 查看解析 when wanted, then
 composer row as 查看解析; `advance()` alone — the attempt was already written
 at submit, so there is nothing to save.
 
-Flash cards have no verdict to derive from and no answer-submit step; their
-existing card navigation (`#card-nav`) already pages without any write, so off
-just never reveals the rating panel. An off card round produces no learning
-records — browsing is not studying.
+Flash cards have no verdict or answer-submit step. In off rounds the existing
+navigation writes only an execution checkpoint on explicit next/skip, using
+PATCH current-practice; it creates no rating, attempt or learning projection.
+The final pending item archives the round. Display, reveal and backwards review
+do not complete an item.
 
 ## localStorage, and the one precedent it sets
 

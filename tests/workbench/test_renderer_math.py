@@ -217,6 +217,18 @@ class NestedInlineTokenTests(unittest.TestCase):
             "<a href='/w/dmath/kp/kp-01'><span class='math'>x</span></a>",
         )
 
+    def test_math_in_image_alt_stays_literal_and_preserves_src(self):
+        expected = "<img alt='image $x$' src='/api/w/dmath/figures/fig.png'>"
+        self.assertEqual(render_inline("![image $x$](fig.png)"), expected)
+        self.assertEqual(render_block("![image $x$](fig.png)"), "<p>" + expected + "</p>")
+
+    def test_math_delimiters_in_link_url_stay_literal(self):
+        self.assertEqual(
+            render_inline("[label](https://example.com/$x$?a=1&b=2)"),
+            "<a href='https://example.com/$x$?a=1&amp;b=2' target='_blank' "
+            "rel='noopener noreferrer'>label</a>",
+        )
+
 
 class SharedFixtureTests(unittest.TestCase):
     """Every shared fixture case must hold on the server renderer."""
@@ -274,6 +286,9 @@ class PythonJavaScriptParityTests(unittest.TestCase):
         ("inline", "$a`b`c$"),
         ("inline", "[math $x$](https://example.com)"),
         ("inline", "[[kp-01|$x$]]"),
+        ("inline", "[[kp-01|]]"),
+        ("inline", "![image $x$](fig.png)"),
+        ("inline", "[label](https://example.com/$x$?a=1&b=2)"),
         ("inline", "__bold__ and _em_"),
         ("inline", r"\* star in math"),
         ("inline", "$$x=1$$"),
@@ -293,6 +308,7 @@ class PythonJavaScriptParityTests(unittest.TestCase):
         ("block", "```\n$$x$$\n```"),
         ("block", "`$x$`"),
         ("block", "`$$x$$`"),
+        ("block", "![image $x$](fig.png)"),
         ("block", "[math $$x$$](https://example.com)"),
         ("block", "[[kp-01|$$x$$]]"),
         ("block", "$$\nE = 2k\\lambda / R\n$$"),

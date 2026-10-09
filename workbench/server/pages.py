@@ -984,23 +984,31 @@ def _rich(text, workspace_name):
         tokens.append(fragment)
         return f"{mark}{len(tokens) - 1}{mark}"
 
-    text = re.sub(
-        _CODE_RE.pattern + "|" + _MATH_RE.pattern,
-        lambda match: stash(f"<code>{html.escape(match.group(1))}</code>")
-        if match.group(1) is not None else match.group(0), text)
+    def protect(match):
+        fragment = match.group(0)
+        if fragment.startswith("`"):
+            return stash(f"<code>{html.escape(fragment[1:-1])}</code>")
+        if fragment.startswith("$"):
+            return stash(_math_span(_MATH_RE.fullmatch(fragment)))
+        if fragment.startswith("!["):
+            return stash(_image_replace(html.escape(fragment), workspace_name))
+        if fragment.startswith("[["):
+            return stash(_wiki_replace(html.escape(fragment), workspace_name))
+        link = re.fullmatch(r"\[([^\]]+)\]\((https?://[^\s)]+)\)", fragment)
+        return stash(
+            f"<a href='{html.escape(link.group(2))}' target='_blank' "
+            f"rel='noopener noreferrer'>{_rich(link.group(1), workspace_name)}</a>")
+
+    # A whole link/image owns its attributes; only visible link labels are rich text.
+    text = re.sub("|".join((
+        _CODE_RE.pattern, _MATH_RE.pattern, r"!\[[^\]]*\]\([^)]+\)",
+        r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]",
+        r"\[[^\]]+\]\(https?://[^\s)]+\)")), protect, text)
     text = re.sub(r"<(sup|sub)>([^<>]+)</\1>",
                   lambda match: stash(
                       f"<{match.group(1)}>{html.escape(match.group(2))}"
                       f"</{match.group(1)}>"), text)
-    text = _MATH_RE.sub(lambda match: stash(_math_span(match)), text)
     text = html.escape(text)
-    text = _image_replace(text, workspace_name)
-    text = _wiki_replace(text, workspace_name)
-    text = re.sub(
-        r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
-        lambda match: stash(
-            f"<a href='{match.group(2)}' target='_blank' "
-            f"rel='noopener noreferrer'>{match.group(1)}</a>"), text)
     text = _STRONG_EM_RE.sub(r"<strong><em>\1</em></strong>", text)
     text = _STRONG_STAR_RE.sub(r"<strong>\1</strong>", text)
     text = _STRONG_UNDERSCORE_RE.sub(r"<strong>\1</strong>", text)
@@ -1025,10 +1033,11 @@ def _math_span(match):
 def _wiki_replace(line, workspace_name):
     def repl(match):
         kp_id, label = match.group(1).strip(), match.group(2)
+        label = _rich(html.unescape(label or kp_id), workspace_name)
         if not re.fullmatch(r"[\w-]+", kp_id):
-            return label or kp_id
+            return label
         return (f"<a href='/w/{_url_component(workspace_name)}/kp/"
-                f"{_url_component(kp_id)}'>{label or kp_id}</a>")
+                f"{_url_component(kp_id)}'>{label}</a>")
     return re.sub(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]", repl, line)
 
 

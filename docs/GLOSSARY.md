@@ -134,7 +134,7 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（状态 `answered`，带选项文本与客观判定），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定折算」更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
+与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（状态 `answered`，带选项文本与客观判定），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定」的关闭自评规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
 _Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
 
@@ -333,7 +333,7 @@ _Avoid_：把一张双向卡复制成两张内容卡、从文字长度猜方向
 出处：flash-card spec「Flash card direction capability」
 
 ### 判断模式 / Yes-No Mode
-练习模式之一：判断题（是/否），有答案键时浏览器本地立即判分并显示错因；开启自评的轮次随后走 1–5 自评，关闭自评的轮次在显式提交客观尝试时按「判定折算」更新学习投影。无答案键的题不判分、不折算。只拉取标注了 yes_no 可用的微题，无内容时如实空态。
+练习模式之一：判断题（是/否），有答案键时浏览器本地立即判分并显示错因；开启自评的轮次随后走 1–5 自评，关闭自评的轮次在显式提交客观尝试时按「判定」的关闭自评规则更新学习投影。无答案键的题不判分、不折算。只拉取标注了 yes_no 可用的微题，无内容时如实空态。
 _Avoid_：主观题自动评分、浏览即掌握
 出处：micro-quiz-content spec；workbench.js gradeMicroQuiz
 
@@ -368,7 +368,7 @@ _Avoid_：批量评分历史、补打卡
 出处：DISCUSSION-RECORD B6.5；workbench-ui spec
 
 ### 微题 / Micro Quiz
-带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。前端本地判分提供即时反馈；显式提交且自评关闭时，已记录的客观判定按「判定折算」更新学习投影，其余轮次等待自评。题干不限长度；答案键可以缺（见「无答案键客观题」），缺键不判分、不折算。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
+带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。前端本地判分提供即时反馈；显式提交且自评关闭时，已记录的客观判定按「判定」的关闭自评规则更新学习投影，其余轮次等待自评。题干不限长度；答案键可以缺（见「无答案键客观题」），缺键不判分、不折算。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
 _Avoid_：小题（口语）、判断题系统（判断只是题型之一）、填空作答
 出处：openspec/specs/micro-quiz-content/spec.md
 
