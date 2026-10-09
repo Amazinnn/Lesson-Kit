@@ -152,9 +152,10 @@ def pool_projection(pool, entity_type, entity_id):
 
 
 def _all_pool_entities(pool):
+    identity_fields = {"kp": "kp_id", "problem": "problem_id", "relation": "relation_id"}
     for entity_type in ENTITY_DIRS:
         for row in content.list_items(pool, entity_type):
-            identity = row[{"kp": "kp_id", "problem": "problem_id", "relation": "relation_id"}[entity_type]]
+            identity = row[identity_fields[entity_type]]
             if str(identity).startswith(pool.course + "-"):
                 yield entity_type, identity, authored_projection(row, entity_type)
 
@@ -286,27 +287,30 @@ def init(pool, repo, entity_id=None, dry_run=False):
                     results.append(_result(
                         entity_type, identity, "conflict",
                         "existing JSON does not match pool bootstrap content",
+                        path=path,
                     ))
                     continue
             except MirrorError as exc:
-                results.append(_result(entity_type, identity, "invalid", str(exc)))
+                results.append(_result(entity_type, identity, "invalid", str(exc), path=path))
                 continue
         if not dry_run:
             if not path.exists():
                 _atomic_write(path, _envelope(entity_type, identity, 1, authored))
             _put_state(pool, entity_type, identity, 1, authored, "init")
-        results.append(_result(entity_type, identity, "initialized", revision=1))
+        results.append(_result(entity_type, identity, "initialized", revision=1, path=path))
     if entity_id and not any(item["entity_id"] == entity_id for item in results):
         results.append({"entity_id": entity_id, "status": "invalid", "error": "entity is not in this pool"})
     return _report(results, _read_delete_requests(repo, pool.course))
 
 
-def _result(entity_type, entity_id, status, detail=None, revision=None):
+def _result(entity_type, entity_id, status, detail=None, revision=None, path=None):
     result = {"entity_type": entity_type, "entity_id": entity_id, "status": status}
     if detail:
         result["detail"] = detail
     if revision is not None:
         result["revision"] = revision
+    if path is not None:
+        result["path"] = str(path)
     return result
 
 
@@ -329,16 +333,16 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
     if repo_entry is None:
         return _result(entity_type, entity_id, "restore_repo_file", revision=revision + 1)
 
-    _path, envelope = repo_entry
+    path, envelope = repo_entry
     if envelope["entity_id"] != entity_id:
-        return _result(entity_type, entity_id, "invalid", "entity identity mismatch")
+        return _result(entity_type, entity_id, "invalid", "entity identity mismatch", path=path)
     repo_now = envelope["content"]
     repo_revision = envelope["revision"]
     if set(repo_now) != set(baseline):
         return _result(
             entity_type, entity_id, "invalid",
             "content fields must match the initialized authored projection exactly",
-            revision,
+            revision, path=path,
         )
 
     pool_changed = pool_now != baseline
@@ -347,29 +351,33 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
         if repo_revision != revision:
             return _result(
                 entity_type, entity_id, "invalid",
-                f"unchanged content must keep revision {revision}", revision,
+                f"unchanged content must keep revision {revision}", revision, path=path,
             )
         if pool_changed:
-            return _result(entity_type, entity_id, "pool_to_repo", revision=revision + 1)
-        return _result(entity_type, entity_id, "noop", revision=revision)
+            return _result(
+                entity_type, entity_id, "pool_to_repo", revision=revision + 1, path=path
+            )
+        return _result(entity_type, entity_id, "noop", revision=revision, path=path)
 
     if repo_revision != revision + 1:
         return _result(
             entity_type, entity_id, "invalid",
             f"changed repository content must advance revision {revision} -> {revision + 1}",
-            revision,
+            revision, path=path,
         )
     if not pool_changed:
         error = _incoming_error(pool, entity_type, entity_id, baseline, repo_now)
         if error:
-            return _result(entity_type, entity_id, "invalid", error, revision)
-        return _result(entity_type, entity_id, "repo_to_pool", revision=repo_revision)
+            return _result(entity_type, entity_id, "invalid", error, revision, path=path)
+        return _result(entity_type, entity_id, "repo_to_pool", revision=repo_revision, path=path)
     if pool_now == repo_now:
-        return _result(entity_type, entity_id, "recover_converged", revision=repo_revision)
+        return _result(
+            entity_type, entity_id, "recover_converged", revision=repo_revision, path=path
+        )
     return _result(
         entity_type, entity_id, "conflict",
         "pool and repository both changed differently from the synchronized content",
-        revision,
+        revision, path=path,
     )
 
 
@@ -398,13 +406,14 @@ def plan(pool, repo, entity_id=None):
     tracked_keys = set(tracked)
     for entity_type, identity in tracked:
         results.append(_plan_one(pool, found.get((entity_type, identity)), entity_type, identity))
-    for (entity_type, identity), (_path, _envelope_value) in sorted(found.items()):
+    for (entity_type, identity), (path, _envelope_value) in sorted(found.items()):
         if entity_id and identity != entity_id:
             continue
         if (entity_type, identity) not in tracked_keys:
             results.append(_result(
                 entity_type, identity, "invalid",
                 "repository-only entity is not tracked; remote creation is not enabled in v1",
+                path=path,
             ))
     if entity_id and not any(item.get("entity_id") == entity_id for item in results):
         results.append({"entity_id": entity_id, "status": "invalid", "error": "entity is not tracked"})
@@ -420,17 +429,29 @@ def _apply_one(pool, repo, item):
     state = _state(pool, entity_type, entity_id)
     if state is None:
         return _result(entity_type, entity_id, "invalid", "mirror state disappeared")
-    path = entity_path(repo, pool.course, entity_type, entity_id)
+    path = Path(item["path"]) if item.get("path") else entity_path(
+        repo, pool.course, entity_type, entity_id
+    )
     if status in {"pool_to_repo", "restore_repo_file"}:
         authored = pool_projection(pool, entity_type, entity_id)
         revision = state["revision"] + 1
         _atomic_write(path, _envelope(entity_type, entity_id, revision, authored))
         _put_state(pool, entity_type, entity_id, revision, authored, status)
-        return _result(entity_type, entity_id, "exported" if status == "pool_to_repo" else "restored", revision=revision)
+        return _result(
+            entity_type, entity_id,
+            "exported" if status == "pool_to_repo" else "restored",
+            revision=revision, path=path,
+        )
     if status == "recover_converged":
         envelope = read_entity(path, pool.course, entity_type)
-        _put_state(pool, entity_type, entity_id, envelope["revision"], envelope["content"], status)
-        return _result(entity_type, entity_id, "recovered", revision=envelope["revision"])
+        _put_state(
+            pool, entity_type, entity_id,
+            envelope["revision"], envelope["content"], status,
+        )
+        return _result(
+            entity_type, entity_id, "recovered",
+            revision=envelope["revision"], path=path,
+        )
     if status == "repo_to_pool":
         envelope = read_entity(path, pool.course, entity_type)
         baseline = state["content"]
@@ -443,7 +464,9 @@ def _apply_one(pool, repo, item):
                 f"governed mutation did not produce the requested projection for {entity_id}"
             )
         _put_state(pool, entity_type, entity_id, envelope["revision"], actual, status)
-        return _result(entity_type, entity_id, "applied", revision=envelope["revision"])
+        return _result(
+            entity_type, entity_id, "applied", revision=envelope["revision"], path=path
+        )
     raise MirrorError(f"cannot apply mirror status: {status}")
 
 
@@ -461,7 +484,8 @@ def sync(pool, repo, entity_id=None, dry_run=False):
             output.append(_apply_one(pool, Path(repo).resolve(), item))
         except (MirrorError, ValueError, KeyError) as exc:
             output.append(_result(
-                item["entity_type"], item["entity_id"], "invalid", str(exc)
+                item["entity_type"], item["entity_id"], "invalid", str(exc),
+                path=item.get("path"),
             ))
     return _report(output, report["delete_requests"])
 
