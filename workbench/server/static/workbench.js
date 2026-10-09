@@ -388,10 +388,14 @@
     var mark = pickMark(text, DISPLAY_MARKS);
     var spans = [];
     function replace(chunk) {
-      var blocks = new RegExp(CODE_RE.source + "|" + DISPLAY_BLOCK_RE.source, "g");
-      return chunk.replace(blocks, function (whole, code, expr) {
-        if (code != null) return whole;
-        spans.push(displaySpan(expr.replace(/^\n+|\n+$/g, "")));
+      var blocks = new RegExp([
+        CODE_RE.source, "!\\[[^\\]]*\\]\\([^)]+\\)",
+        "\\[\\[([^\\]|]+)(?:\\|([^\\]]+))?\\]\\]",
+        "\\[[^\\]]+\\]\\(https?://[^\\s)]+\\)", DISPLAY_BLOCK_RE.source,
+      ].join("|"), "g");
+      return chunk.replace(blocks, function (whole) {
+        if (whole.slice(0, 2) !== "$$") return whole;
+        spans.push(displaySpan(whole.slice(2, -2).replace(/^\n+|\n+$/g, "")));
         return mark + (spans.length - 1) + mark;
       });
     }

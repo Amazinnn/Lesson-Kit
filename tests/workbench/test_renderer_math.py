@@ -218,9 +218,10 @@ class NestedInlineTokenTests(unittest.TestCase):
         )
 
     def test_math_in_image_alt_stays_literal_and_preserves_src(self):
-        expected = "<img alt='image $x$' src='/api/w/dmath/figures/fig.png'>"
-        self.assertEqual(render_inline("![image $x$](fig.png)"), expected)
-        self.assertEqual(render_block("![image $x$](fig.png)"), "<p>" + expected + "</p>")
+        for math in ("$x$", "$$x$$"):
+            expected = f"<img alt='image {math}' src='/api/w/dmath/figures/fig.png'>"
+            self.assertEqual(render_inline(f"![image {math}](fig.png)"), expected)
+            self.assertEqual(render_block(f"![image {math}](fig.png)"), "<p>" + expected + "</p>")
 
     def test_math_delimiters_in_link_url_stay_literal(self):
         self.assertEqual(
@@ -309,6 +310,8 @@ class PythonJavaScriptParityTests(unittest.TestCase):
         ("block", "`$x$`"),
         ("block", "`$$x$$`"),
         ("block", "![image $x$](fig.png)"),
+        ("block", "![image $$x$$](fig.png)"),
+        ("block", "[label](https://example.com/$$x$$)"),
         ("block", "[math $$x$$](https://example.com)"),
         ("block", "[[kp-01|$$x$$]]"),
         ("block", "$$\nE = 2k\\lambda / R\n$$"),

@@ -810,13 +810,17 @@ def _stash_display_blocks(text):
     spans = []
 
     def replace(match):
-        if match.group(1) is not None:
-            return match.group(0)  # Inline code is literal, including $$ delimiters.
+        fragment = match.group(0)
+        if not fragment.startswith("$$"):
+            return fragment  # Code and link/image attributes are literal.
         # Strip the newlines the block delimiters own; KaTeX wants the body.
-        spans.append(_display_span(match.group(2).strip("\n")))
+        spans.append(_display_span(fragment[2:-2].strip("\n")))
         return f"{mark}{len(spans) - 1}{mark}"
 
-    blocks = re.compile(_CODE_RE.pattern + "|" + _DISPLAY_BLOCK_RE.pattern, re.DOTALL)
+    blocks = re.compile("|".join((
+        _CODE_RE.pattern, r"!\[[^\]]*\]\([^)]+\)",
+        r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]",
+        r"\[[^\]]+\]\(https?://[^\s)]+\)", _DISPLAY_BLOCK_RE.pattern)), re.DOTALL)
 
     out, buffer, in_code = [], [], False
     for line in text.split("\n"):
