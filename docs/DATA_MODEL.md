@@ -74,7 +74,7 @@
 | `source_answer` | active | 来源材料自带的短答案/答案依据；不替代完整 `solution` |
 | `solution_origin` | active | `source/generated`，说明详细解析由来源还是 Agent 产生 |
 | `display_title` | active | 题目短标题；UI 标题，不是身份 |
-| `topic_label` | **retired** | PR #106 已退役题目主题分组与该列；迁移移除 `problems.topic_label`，通用 problem 写入不再接受它。闪卡同名列仍保留，不属于本次退役 |
+| `topic_label` | **unresolved** | PR #106 的实现已退役题目主题分组、移除该列并拒绝新写入，但 live micro-quiz-content、FILE_CONTRACT 和旧 Agent 提示仍声明或请求它；这是待协调的退役漂移，不得新增依赖。闪卡同名列仍保留 |
 | `display_summary` | **unresolved** | 当前 ingest 允许 ≤200；旧 backfill validator 要求 ≤48 且长题才允许；当前主页面无实际消费 | 
 | `practice_modes` | active | 存储的练习 shell 资格 JSON。空值 = exam-only；客观题时必须与 `micro_quiz.quiz_type` 相容 |
 | `micro_quiz` | active | 客观交互 payload JSON：`quiz_type/options/answer_key/error_reason/source_evidence` 等；决定判断/单选/多选 |
