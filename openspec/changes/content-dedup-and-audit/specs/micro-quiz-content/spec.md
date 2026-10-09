@@ -11,23 +11,20 @@ the item keyless instead of being refused, the choice types SHALL still carry
 2–6 options, `yes_no` SHALL keep its implied 是/否 options, and `error_reason`
 SHALL be mandatory only for an item that carries a key. Every micro quiz type
 SHALL present clickable options; free-text answering SHALL NOT be part of the
-contract. A micro quiz SHALL map to exactly one knowledge point. **Its stem
-SHALL NOT be refused for length alone:** an objective item taken from a
-question bank is as long as its source paper makes it — several assertions, a
-long scenario, or an inlined option block — and no length bound SHALL divert a
-real 判断题/单选题 into the exam shell. Manifest items MAY carry optional label
-fields `topic_label` (at most 40 characters), `display_title` (at most 80
-characters), and `display_summary` (at most 200 characters); a supplied label
-field SHALL be a non-empty string that passes the shared markup safety check,
-and an omitted field is stored as null. A problem that already exists in the
-pool SHALL be convertible into a micro quiz **in place**, keeping its readable
-id and every learning record: the conversion supplies `practice_modes` and the
-payload through the explicit problem patch, the options MAY be lifted verbatim
-out of the old problem text, and the same contract SHALL be enforced for the
-parts the patch touches. The system SHALL NOT truncate long formal problems
-into micro quizzes, SHALL NOT fabricate options a source does not have, SHALL
-NOT infer micro-quiz content from legacy problem-type values, and SHALL NOT
-accept the retired types `closest_answer` and `short_answer` at the gate.
+contract. A micro quiz SHALL map to exactly one knowledge point and SHALL NOT
+be refused for stem length alone. Manifest items MAY carry optional display
+fields `display_title` (at most 80 characters) and `display_summary` (at most
+200 characters); a supplied display field SHALL be a non-empty string that
+passes the shared markup safety check, and an omitted field is stored as null.
+`topic_label` is not a problem field. A problem that already exists in the pool SHALL be
+convertible into a micro quiz **in place**, keeping its readable id and every
+learning record: the conversion supplies `practice_modes` and the payload
+through the explicit problem patch, the options MAY be lifted verbatim out of
+the old problem text, and the same contract SHALL be enforced for the parts the
+patch touches. The system SHALL NOT truncate long formal problems into micro
+quizzes, SHALL NOT fabricate options a source does not have, SHALL NOT infer
+micro-quiz content from legacy problem-type values, and SHALL NOT accept the
+retired types `closest_answer` and `short_answer` at the gate.
 
 #### Scenario: A well-formed micro quiz enters the pool
 
@@ -42,10 +39,11 @@ accept the retired types `closest_answer` and `short_answer` at the gate.
 
 #### Scenario: Contract violation
 
-- **WHEN** an item lacks source evidence, has options that do not contain its answer key, maps to several knowledge points, or uses a retired quiz type
+- **WHEN** an item lacks source evidence, has options that do not contain its
+  answer key, maps to several knowledge points, or uses a retired quiz type
 - **THEN** the deterministic gate rejects that item and nothing is written
 
-#### Scenario: Label field validation
+#### Scenario: Display field validation
 
 - **WHEN** a manifest item supplies a label field that is empty after
   trimming, exceeds its bound, or fails the markup safety check
@@ -61,6 +59,18 @@ accept the retired types `closest_answer` and `short_answer` at the gate.
 
 - **WHEN** an explicitly requested patch gives an existing problem a quiz type, options, and its practice-mode marking
 - **THEN** the row keeps its id and learning records, is pulled by the matching practice mode, and is no longer pulled by 综合题
+
+#### Scenario: Objective items have no stem length bound
+
+- **WHEN** a 判断题 or 单选题 carries a long multi-assertion stem or inlined option block
+- **THEN** it stays in the matching practice mode and is not refused for its length
+
+#### Scenario: Label field validation
+
+- **WHEN** a manifest item supplies a label field that is empty after
+  trimming, exceeds its bound, or fails the markup safety check
+- **THEN** the deterministic gate rejects that item with an explicit reason;
+  omitted label fields are accepted and stored as null
 
 #### Scenario: The stem bound admits long objective items
 

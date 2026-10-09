@@ -64,12 +64,12 @@
 
 ## 7. Acceptance
 
-- [x] 7.1 Gap diff against baseline: keyless = 0, empty `solution` = 0,
+- [ ] 7.1 Gap diff against baseline: keyless = 0, empty `solution` = 0,
   sub-40-char `error_reason` residue on pre-existing rows = 0 (new 109
   short tags excepted), 346 existing keys untouched.
-- [x] 7.2 Run `pipeline/scripts/validate-pool.py --db pool/c02.db` and
+- [ ] 7.2 Run `pipeline/scripts/validate-pool.py --db pool/c02.db` and
   `lesson-kit data <ws> audit`; both exit 0.
-- [x] 7.3 Learning-record diff: the three tables byte-identical to 1.2's
+- [ ] 7.3 Learning-record diff: the three tables byte-identical to 1.2's
   before-image; spot-check a keyed row's `problem_attempts` still reads.
 - [x] 7.4 Practice-page render spot check: a newly keyed 判断/单选/多选 item
   grades and shows its error reason; a 325-row item shows the expanded
@@ -81,5 +81,16 @@
   file + location, confidence) and the conflict list with resolutions.
 - [x] 8.2 Publish the batch ledger (chapter → batch id → rollback
   command) and the residual report (any row still keyless, with reason).
-- [x] 8.3 Check off this change's tasks and run
+- [ ] 8.3 Check off this change's tasks and run
   `openspec validate ads-answer-gap-repair`.
+
+## 2026-10-09 evidence reconciliation
+
+Current registered pool, read-only:497 IDs retained, empty solutions0,
+one keyless programming item (`c02-ch07-mq-007`). Historical acceptance permits
+that residual and an incidental existing-key correction, so it does not prove
+7.1's zero-keyless/346-untouched criteria. Current audit exits1 with108 findings;
+the frozen validator's retired-schema failures cannot prove pool quality.
+No saved immediate post-apply byte-identical learning snapshot was found for7.3.
+Later real practice explains increased learning counts, not historical repair
+mutation. Keep these checks open; do not weaken criteria or rerun source repair.
