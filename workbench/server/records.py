@@ -68,6 +68,7 @@ def _run_card(run):
     rating_mode = {
         "immediate": "逐题自评",
         "batch": "统一自评",
+        "off": "关闭自评",
     }.get(run.get("rating_mode"), "")
     progress = run.get("progress") or {}
     completed = int(progress.get("completed") or 0)

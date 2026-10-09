@@ -398,12 +398,63 @@ class ConversationApiTests(unittest.TestCase):
         self.assertEqual(kinds, {"textbook": 1})
         docs = [item["value"] for item in facets["docs"]]
         self.assertEqual(docs, ["题库/midterm·合集A.md"])
+        origins = {item["value"]: item["count"] for item in facets["origin_kinds"]}
+        self.assertEqual(origins, {"source_problem": 1})
 
         from urllib.parse import quote
-        status, found = self.get("/api/w/dmath/search/problems?q=" + quote("合集a"))
+        status, found = self.get("/api/w/dmath/search/problems?source=" + quote("合集a"))
         self.assertEqual(status, 200)
         self.assertEqual([item["problem_id"] for item in found["problems"]],
                          ["dmath-ch06-prob-001"])
+        # the stem domain cannot reach a word only the source domain holds
+        status, missed = self.get("/api/w/dmath/search/problems?stem=" + quote("合集a"))
+        self.assertEqual((status, missed["problems"]), (200, []))
+        # two words in one domain are an AND
+        status, both = self.get(
+            "/api/w/dmath/search/problems?source=" + quote("合集a midterm")
+        )
+        self.assertEqual((status, both["count"]), (200, 1))
+        status, narrow = self.get(
+            "/api/w/dmath/search/problems?source=" + quote("合集a 期中")
+        )
+        self.assertEqual((status, narrow["count"]), (200, 0))
+        # both parameters empty is not a request to list the pool
+        status, empty = self.get("/api/w/dmath/search/problems")
+        self.assertEqual((status, empty), (200, {"count": 0, "problems": []}))
+
+    def test_the_pull_api_takes_origin_kinds_as_a_dimension_or_a_top_level_list(self):
+        self.seed_evidence()
+        conn = sqlite3.connect(self.fixture.db_path)
+        conn.execute(
+            "UPDATE problems SET origin_kind='generated_grounded'"
+            " WHERE problem_id='dmath-ch06-prob-001'")
+        conn.commit()
+        conn.close()
+
+        status, result = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 10, "mode": "all",
+            "origin_kinds": ["source_problem"],
+        })
+        self.assertEqual((status, result["problems"]), (200, []))
+
+        status, result = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 10, "mode": "all",
+            "origin_kinds": ["adapted_problem", "generated_grounded"],
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual([item["problem_id"] for item in result["problems"]],
+                         ["dmath-ch06-prob-001"])
+
+        status, result = self.post("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 10, "mode": "all",
+            "filters": {"origin_kinds": ["source_problem"]},
+        })
+        self.assertEqual((status, result["problems"]), (200, []))
+
+        self.assertEqual(self.post_error("/api/w/dmath/pull", {
+            "kp_ids": ["dmath-ch06-kp-001"], "n": 10, "mode": "all",
+            "origin_kinds": ["not_an_origin"],
+        }), (400, {"error": "invalid origin_kinds"}))
 
     def test_the_pull_api_applies_filter_dimensions_and_exam_year(self):
         self.seed_evidence()

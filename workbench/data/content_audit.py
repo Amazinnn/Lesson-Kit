@@ -97,6 +97,7 @@ def _fragment_findings(problems, course):
                 if other["problem_id"] != problem["problem_id"]
                 and len(identity) >= 8 and len(other_identity) > len(identity)
                 and (other_identity.startswith(identity) or other_identity.endswith(identity))
+                and not _is_standalone_item(problem, other)
             ), None)
             if partner:
                 reasons.append(f"stem is a prefix/suffix of {partner['problem_id']}")
@@ -107,6 +108,32 @@ def _fragment_findings(problems, course):
                     "detail": "; ".join(reasons),
                 })
     return sorted(findings, key=lambda item: item["problem_ids"][0])
+
+
+def _text(value):
+    return value.strip() if isinstance(value, str) else ""
+
+
+def _is_standalone_item(problem, partner):
+    """Return ``True`` when ``problem`` is a question in its own right.
+
+    A stem that is literally contained in another stem of the same chapter
+    only proves that one wording is a substring of the other.  It says nothing
+    about ownership: the same question is routinely written both as a terse
+    keyword phrase and with a lead-in verb, and the two rows then come from
+    different source documents.  Literal containment must not be read as "this
+    row is a piece cut out of that row".
+
+    A row that carries its own non-empty ``solution`` **and** cites a
+    ``source_evidence`` that differs from the longer row's is sourced from a
+    different document, so it is an independent question rather than a
+    fragment.  A genuine fragment has no answer of its own, or shares its
+    host's source anchor -- both cases keep the finding.
+    """
+    has_own_answer = bool(_text(problem.get("solution")))
+    own_source = _text(problem.get("source_evidence"))
+    partner_source = _text(partner.get("source_evidence"))
+    return has_own_answer and bool(own_source) and own_source != partner_source
 
 
 def _unmarked_findings(problems):

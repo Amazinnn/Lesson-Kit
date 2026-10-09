@@ -218,7 +218,7 @@ class FakeStorage {
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
   reducedMotion = false, physics = GraphPhysics, setTimeoutFn = () => 0,
-  promptFn = undefined, confirmFn = undefined,
+  promptFn = undefined, confirmFn = undefined, selectors = {},
 }) {
   const document = {
     hidden: false,
@@ -243,8 +243,8 @@ function runWorkbench({
     querySelectorAll() {
       return [];
     },
-    querySelector() {
-      return null;
+    querySelector(selector) {
+      return selectors[selector] || null;
     },
   };
   let rafCalls = 0;
@@ -256,6 +256,7 @@ function runWorkbench({
     matchMedia() { return { matches: reducedMotion }; },
     prompt: promptFn,
     confirm: confirmFn,
+    localStorage: local,
   };
   const sandbox = {
     document,
@@ -330,6 +331,7 @@ function practiceElements() {
     "feedback-note": new FakeElement("feedback-note"),
     "rating-input": new FakeElement("rating-input"),
     "save-rating": new FakeElement("save-rating"),
+    "next-problem": new FakeElement("next-problem", { dataset: {} }),
     "practice-mode-immediate": new FakeElement("practice-mode-immediate"),
     "practice-mode-batch": new FakeElement("practice-mode-batch"),
     "practice-rating-immediate": new FakeElement("practice-rating-immediate"),
@@ -461,8 +463,9 @@ test("saving a paper reuses the same fixed problem selection contract", async ()
   const elements = { layout: layout(), ...durablePracticeElements() };
   const storage = new FakeStorage({
     wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
-    wb_practice_filters_alpha: JSON.stringify({
-      source_kinds: ["final"], exam_years: ["2024"], docs: [], picked: {},
+    wb_practice_filters_v2_alpha: JSON.stringify({
+      source_kinds: ["final"], origin_kinds: [], exam_years: ["2024"], docs: [],
+      picked: {},
     }),
   });
   const app = runWorkbench({
@@ -506,6 +509,74 @@ test("saving a paper reuses the same fixed problem selection contract", async ()
   assert.deepEqual(body.problem_ids, ["p-1", "p-2"]);
   assert.deepEqual(body.request, request);
   assert.equal(app.window.location, "/w/alpha/practice-sets");
+});
+
+test("a saved paper folds away its problem list and the fold outlives a reload", () => {
+  const list = new FakeElement("practice-set-list");
+  const card = new FakeElement("article", { dataset: { practiceSetId: "ps-001" } });
+  const body = new FakeElement("details");
+  card.queryOne = (selector) => (selector === ".practice-set-card-body" ? body : null);
+  card.appendChild(body);
+  list.queryAll = (selector) => (selector === ".practice-set-card" ? [card] : []);
+  const storage = new FakeStorage({
+    wb_paper_open_alpha: JSON.stringify({ "ps-001": true }),
+  });
+
+  runWorkbench({
+    elements: { layout: layout(), "practice-set-list": list },
+    storage,
+    fetch: () => jsonResponse({}),
+  });
+
+  // The tab that had this paper open gets it back open after the reload.
+  assert.equal(body.open, true);
+  body.open = false;
+  body.trigger("toggle", { target: body });
+  assert.equal(
+    JSON.parse(storage.getItem("wb_paper_open_alpha"))["ps-001"], false);
+});
+
+test("a saved paper head command runs without toggling the card", async () => {
+  const calls = [];
+  const list = new FakeElement("practice-set-list");
+  const card = new FakeElement("article", {
+    dataset: { practiceSetId: "ps-001" },
+  });
+  card.className = "practice-set-card card";
+  const body = new FakeElement("details");
+  body.open = true;
+  const button = new FakeElement("button");
+  button.setAttribute("data-set-export", "");
+  button.closest = (selector) => {
+    if (selector === "button") return button;
+    if (selector === ".practice-set-card") return card;
+    return null;
+  };
+  card.queryOne = (selector) => {
+    if (selector === ".practice-set-card-body") return body;
+    if (selector === "h2") return new FakeElement("h2", { value: "Paper" });
+    return null;
+  };
+  list.queryAll = (selector) => (selector === ".practice-set-card" ? [card] : []);
+  const app = runWorkbench({
+    elements: { layout: layout(), "practice-set-list": list },
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({ practice_set: "paper", solutions: "answers" });
+    },
+  });
+
+  let prevented = false;
+  list.trigger("click", {
+    target: button,
+    preventDefault() { prevented = true; },
+  });
+  await flush();
+
+  assert.equal(prevented, true);
+  assert.equal(body.open, true);
+  assert.ok(calls.some((call) => call.url.endsWith("/practice-sets/ps-001/render")));
+  assert.equal(app.window.location, "");
 });
 
 test("durable practice freezes the whole selected set before execution", async () => {
@@ -2715,6 +2786,11 @@ test("the filter popup loads facets and renders every dimension with counts", as
       if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
       if (url.endsWith("/pull-facets")) return jsonResponse({
         source_kinds: [{ value: "final", count: 9 }],
+        origin_kinds: [
+          { value: "source_problem", count: 7 },
+          { value: "adapted_problem", count: 1 },
+          { value: "generated_grounded", count: 1 },
+        ],
         exam_years: [{ value: "2023-2024秋冬", count: 4 }],
         docs: [{ value: "题库/final·A.md", count: 9 }],
       });
@@ -2735,6 +2811,14 @@ test("the filter popup loads facets and renders every dimension with counts", as
   assert.ok(popup.includes("题库/final·A.md"));
   assert.ok(popup.includes("2023-2024秋冬"));
   assert.ok(popup.includes(">9<") || popup.includes(">9 <"), popup);
+  // origin_kind is a dimension like the others, shown in the learner's words
+  // and carried under its own state key
+  assert.ok(popup.includes("题目来源方式"), popup);
+  for (const label of ["历年原题", "改编", "AI生成"]) {
+    assert.ok(popup.includes(label), `${label} missing from ${popup}`);
+  }
+  assert.ok(popup.includes("data-filter-dimension='origin_kinds'"), popup);
+  assert.ok(!popup.includes("> source_problem <"), popup);
   assert.equal(calls.filter((call) => call.url.endsWith("/pull-facets")).length, 1);
   // Reopening reuses the cached facets instead of asking again.
   elements["filter-launch"].click();
@@ -2747,8 +2831,9 @@ test("a pull carries the saved dimensions and the picked ids", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
   const storage = new FakeStorage({
-    wb_practice_filters_alpha: JSON.stringify({
+    wb_practice_filters_v2_alpha: JSON.stringify({
       source_kinds: ["final"],
+      origin_kinds: ["source_problem", "adapted_problem"],
       exam_years: ["2023-2024秋冬"],
       docs: ["题库/final·A.md"],
       picked: { "prob-7": "第七题" },
@@ -2764,7 +2849,7 @@ test("a pull carries the saved dimensions and the picked ids", async () => {
     },
   });
   // The badge counts every chosen option, dimensions and picked problems alike.
-  assert.equal(elements["filter-count"].textContent, "4");
+  assert.equal(elements["filter-count"].textContent, "6");
   assert.equal(elements["filter-count"].classList.contains("hidden"), false);
   elements["practice-mode-immediate"].checked = true;
   elements["practice-mode-immediate"].trigger("change");
@@ -2774,10 +2859,117 @@ test("a pull carries the saved dimensions and the picked ids", async () => {
   assert.ok(pull, "starting practice must pull");
   assert.deepEqual(pull.body.filters, {
     source_kinds: ["final"],
+    origin_kinds: ["source_problem", "adapted_problem"],
     exam_years: ["2023-2024秋冬"],
     docs: ["题库/final·A.md"],
   });
   assert.deepEqual(pull.body.include_ids, ["prob-7"]);
+});
+
+test("the two search boxes send one parameter each and pick by problem id", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  // The real page builds the boxes from the popup's innerHTML; the fake has to
+  // hand them back for querySelector so the wiring can be exercised.
+  const stemBox = new FakeElement("filter-search-stem");
+  const sourceBox = new FakeElement("filter-search-source");
+  const go = new FakeElement("filter-search-go");
+  const results = new FakeElement("filter-search-results");
+  const boxes = {
+    "#filter-search-stem": stemBox,
+    "#filter-search-source": sourceBox,
+    "#filter-search-go": go,
+    "#filter-search-results": results,
+  };
+  elements["filter-popup"].queryOne = (selector) => boxes[selector] || null;
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, body: options && options.body ? JSON.parse(options.body) : null });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull-facets")) return jsonResponse({
+        source_kinds: [], origin_kinds: [], exam_years: [], docs: [],
+      });
+      if (url.includes("/search/problems")) {
+        return jsonResponse({
+          count: 1,
+          problems: [{
+            problem_id: "prob-7",
+            title: "计数原理",
+            stem: "【2023期末】计算 1+2+3 的和",
+            source_evidence: "题库/final·合集A.md 第2题",
+          }],
+        });
+      }
+      return jsonResponse({ problems: [] });
+    },
+  });
+  elements["filter-launch"].click();
+  await flush();
+  await flush();
+  stemBox.value = "计数 期末";
+  sourceBox.value = "合集A";
+  const hit = new FakeElement("hit", { dataset: { pickedId: "prob-7" } });
+  results.queryAll = () => [hit];
+  go.click();
+  await flush();
+  const search = calls.find((call) => call.url.includes("/search/problems"));
+  assert.ok(search, "the picker must search");
+  assert.ok(search.url.includes("stem=" + encodeURIComponent("计数 期末")), search.url);
+  assert.ok(search.url.includes("source=" + encodeURIComponent("合集A")), search.url);
+  // the result row shows the stem summary and the source line
+  assert.ok(results.innerHTML.includes("【2023期末】计算 1+2+3 的和"), results.innerHTML);
+  assert.ok(results.innerHTML.includes("题库/final·合集A.md 第2题"), results.innerHTML);
+  // checking the row names the problem for the pull body
+  hit.checked = true;
+  hit.trigger("change");
+  assert.equal(
+    calls.filter((call) => call.url.endsWith("/pull")).length, 0,
+    "searching alone must not pull",
+  );
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  const pulled = calls.find((call) => call.url.endsWith("/pull"));
+  assert.deepEqual(pulled.body.include_ids, ["prob-7"]);
+});
+
+test("a search with both boxes empty clears the result list instead of listing the pool", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  const stemBox = new FakeElement("filter-search-stem");
+  const sourceBox = new FakeElement("filter-search-source");
+  const go = new FakeElement("filter-search-go");
+  const results = new FakeElement("filter-search-results");
+  results._innerHTML = "<p>stale</p>";
+  const boxes = {
+    "#filter-search-stem": stemBox,
+    "#filter-search-source": sourceBox,
+    "#filter-search-go": go,
+    "#filter-search-results": results,
+  };
+  elements["filter-popup"].queryOne = (selector) => boxes[selector] || null;
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      calls.push({ url });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull-facets")) {
+        return jsonResponse({
+          source_kinds: [], origin_kinds: [], exam_years: [], docs: [],
+        });
+      }
+      return jsonResponse({ problems: [] });
+    },
+  });
+  elements["filter-launch"].click();
+  await flush();
+  await flush();
+  go.click();
+  await flush();
+  assert.equal(calls.filter((call) => call.url.includes("/search/problems")).length, 0);
+  assert.equal(results.innerHTML, "");
 });
 
 test("micro quiz renders yes/no options and grades the objective answer", async () => {
@@ -2936,7 +3128,7 @@ test("multiple choice micro quizzes render checkboxes and grade subsets", async 
   assert.ok(elements.stream._innerHTML.includes("回答正确"));
 });
 
-test("revealing a micro quiz answer shows the key and reason instead of a solution", async () => {
+test("revealing a micro quiz answer shows the key and reason, and no explanation the row does not have", async () => {
   const elements = { layout: layout(), ...practiceElements() };
   runWorkbench({
     elements,
@@ -2965,6 +3157,46 @@ test("revealing a micro quiz answer shows the key and reason instead of a soluti
   assert.ok(elements.stream._innerHTML.includes("答案"));
   assert.ok(elements.stream._innerHTML.includes("为什么"));
   assert.ok(elements.stream._innerHTML.includes("只有一个正因数"));
+  assert.doesNotMatch(elements.stream._innerHTML, /section-kicker'>解析</);
+  assert.equal(elements["feedback-area"].classList.contains("hidden"), false);
+});
+
+test("revealing a micro quiz also shows its written explanation", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/problem/mq-1")) return jsonResponse({
+        problem: { problem_id: "mq-1",
+                   solution: "【答案】否\n【解析】1 只有 1 一个正因数，按定义不是质数。",
+                   solution_origin: "generated",
+                   micro_quiz: { quiz_type: "yes_no", answer_key: "否",
+                                 error_reason: "1 只有一个正因数。" } },
+      });
+      return jsonResponse({ problems: [{
+        problem_id: "mq-1", problem_text: "1 是质数吗？",
+        micro_quiz: { quiz_type: "yes_no", answer_key: "否",
+                      error_reason: "1 只有一个正因数。" },
+      }] });
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["answer-submit"].click();
+  await flush();
+  elements["show-answer"].click();
+  await flush();
+  const html = elements.stream._innerHTML;
+  assert.ok(html.includes("答案"));
+  assert.ok(html.includes("为什么"));
+  assert.ok(html.includes("只有一个正因数"));
+  // The verdict and the analysis are separate sections, both visible.
+  assert.match(html, /section-kicker'>AI 生成解析</);
+  assert.match(html, /按定义不是质数/);
+  assert.equal(html.indexOf("只有一个正因数") < html.indexOf("按定义不是质数"), true);
   assert.equal(elements["feedback-area"].classList.contains("hidden"), false);
 });
 
@@ -3459,4 +3691,198 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   deleteBtn.click();
   await flush();
   assert.ok(calls.some((call) => call.url.endsWith("/goals/goal-001") && call.method === "DELETE"));
+});
+
+test("an off round starts without a timing choice, never shows rating, and advances via 下一题", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  const local = new FakeStorage({
+    wb_settings_alpha: JSON.stringify({ showRating: false }),
+  });
+  runWorkbench({
+    elements, local,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull")) return jsonResponse({ problems: [{
+        problem_id: "mq-1", display_title: "小测题", problem_text: "2 是偶数？",
+        micro_quiz: {
+          quiz_type: "single_choice", options: ["是", "否"], answer_key: "是",
+          error_reason: "r", source_evidence: "s",
+        },
+      }] });
+      if (url.endsWith("/problem/mq-1")) return jsonResponse({ problem: { solution: "解析" } });
+      return jsonResponse({});
+    },
+  });
+  // The preference is off: start works without touching any rating radio.
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  assert.equal(elements["start-practice"].disabled, false);
+  elements["start-practice"].click();
+  await flush();
+  const pull = calls.find((call) => call.url.endsWith("/pull"));
+  assert.ok(pull);
+  elements["answer-submit"].click();
+  await flush();
+  // Attempt recorded, verdict rendered, no rating surface, 下一题 appears.
+  assert.ok(calls.some((call) => call.url.endsWith("/attempts")));
+  assert.match(elements.stream.innerHTML, /micro-quiz-verdict/);
+  assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
+  assert.equal(elements["next-problem"].classList.contains("hidden"), false);
+  elements["show-answer"].click();
+  await flush();
+  assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
+  elements["next-problem"].click();
+  await flush();
+  assert.equal(elements["next-problem"].classList.contains("hidden"), true);
+  const pulls = calls.filter((call) => call.url.endsWith("/pull"));
+  assert.deepEqual(JSON.parse(pulls[1].options.body).exclude_ids, ["mq-1"]);
+  assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
+});
+
+test("the rating preference persists through localStorage and the paper start carries it", async () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  elements["setting-show-rating"] = new FakeElement("setting-show-rating");
+  const local = new FakeStorage();
+  runWorkbench({
+    elements, local,
+    fetch: () => jsonResponse({}),
+  });
+  const box = elements["setting-show-rating"];
+  assert.equal(box.checked, true);
+  box.checked = false;
+  box.trigger("change");
+  assert.equal(
+    JSON.parse(local.getItem("wb_settings_alpha")).showRating, false);
+  // A new tab reads the same stored preference as off.
+  const reopened = new FakeElement("setting-show-rating");
+  runWorkbench({
+    elements: { layout: layout(), ...practiceElements(), "setting-show-rating": reopened },
+    local: new FakeStorage({ wb_settings_alpha: local.getItem("wb_settings_alpha") }),
+    fetch: () => jsonResponse({}),
+  });
+  assert.equal(reopened.checked, false);
+});
+
+for (const initiallyOn of [true, false]) {
+  test(`rating preference ${initiallyOn ? "on to off" : "off to on"} updates current-page start controls`, () => {
+    const elements = { layout: layout(), ...durablePracticeElements() };
+    delete elements["practice-mode-immediate"];
+    delete elements["practice-mode-batch"];
+    elements["practice-mode-exam"] = new FakeElement("practice-mode-exam", { checked: true });
+    elements["setting-show-rating"] = new FakeElement("setting-show-rating");
+    const timing = new FakeElement("rating-choice");
+    runWorkbench({
+      elements,
+      storage: new FakeStorage({ wb_kp_selection_alpha: JSON.stringify(["kp-1"]) }),
+      local: new FakeStorage({ wb_settings_alpha: JSON.stringify({ showRating: initiallyOn }) }),
+      selectors: { ".practice-rating-choice": timing },
+      fetch: () => jsonResponse({ practice: null }),
+    });
+    assert.equal(elements["start-practice"].disabled, initiallyOn);
+    const box = elements["setting-show-rating"];
+    box.checked = !initiallyOn;
+    box.trigger("change");
+    assert.equal(elements["start-practice"].disabled, !initiallyOn);
+    assert.equal(elements["save-practice-set"].disabled, !initiallyOn);
+    assert.equal(timing.classList.contains("hidden"), initiallyOn);
+  });
+}
+
+for (const count of [1, 2]) {
+  test(`off card round checkpoints ${count} directions only on explicit next`, async () => {
+    const calls = [];
+    const elements = { layout: layout(), ...durablePracticeElements() };
+    const practice = {
+      source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "flash_card",
+      rating_mode: "off", cursor: 0,
+      progress: { completed: 0, remaining: count, total: count },
+      items: Array.from({ length: count }, (_, position) => ({
+        position, item_type: "card", item_id: "fc-1", state: "pending",
+        direction: position ? "reverse" : "forward",
+        payload: { card_id: "fc-1", front: "Front", back: "Back" },
+      })),
+    };
+    runWorkbench({ elements, fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current") && options?.method === "PATCH") {
+        const body = JSON.parse(options.body);
+        practice.items[body.position].state = body.state;
+        practice.cursor = body.position + 1;
+        const done = practice.items.every((item) => item.state !== "pending");
+        return jsonResponse({ completed: done, practice });
+      }
+      return jsonResponse({ practice });
+    } });
+    await flush();
+    elements["resume-practice"].click();
+    const patches = () => calls.filter((call) => call.options?.method === "PATCH");
+    for (let position = 0; position < count; position++) {
+      elements["show-answer"].click();
+      await flush();
+      assert.equal(patches().length, position, "reveal is not a completion write");
+      if (position) {
+        elements["card-prev"].click();
+        elements["card-next"].click();
+        await flush();
+        assert.equal(patches().length, position, "backwards review is not a new completion");
+      }
+      elements["card-next"].click();
+      await flush();
+      assert.equal(patches().length, position + 1);
+      assert.deepEqual(JSON.parse(patches()[position].options.body), { position, state: "answered" });
+    }
+    assert.equal(calls.some((call) => /\/(feedback|attempts)$/.test(call.url)), false);
+    assert.equal(elements["active-practice-resume"].classList.contains("hidden"), true);
+  });
+}
+
+for (const mode of ["immediate", "batch", "off"]) {
+  test(`running ${mode} mode survives the preference change`, async () => {
+    const elements = { layout: layout(), ...durablePracticeElements() };
+    elements["setting-show-rating"] = new FakeElement("setting-show-rating");
+    const storage = new FakeStorage();
+    const practice = { source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "exam",
+      rating_mode: mode, cursor: 0, progress: { total: 1, remaining: 1 },
+      items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+        payload: { problem_id: "p-1", problem_text: "Question" } }] };
+    runWorkbench({ elements, storage, fetch: () => jsonResponse({ practice }) });
+    await flush();
+    elements["resume-practice"].click();
+    const feedbackHidden = elements["feedback-area"].classList.contains("hidden");
+    elements["setting-show-rating"].checked = false;
+    elements["setting-show-rating"].trigger("change");
+    assert.equal(storage.getItem("wb_practice_rating_mode_alpha"), mode);
+    assert.equal(elements["feedback-area"].classList.contains("hidden"), feedbackHidden);
+  });
+}
+
+test("an empty rating input is rejected inline instead of dying at the server", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  runWorkbench({
+    elements,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull")) return jsonResponse({ problems: [{
+        problem_id: "p-1", problem_text: "题目一",
+      }] });
+      return jsonResponse({});
+    },
+  });
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-mode-immediate"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements["answer-box"].value = "作答";
+  elements["answer-submit"].click();
+  elements["show-answer"].click();
+  await flush();
+  elements["rating-input"].value = "";
+  elements["save-rating"].click();
+  await flush();
+  assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
+  assert.match(elements["practice-error"].textContent, /请输入 1-5 的评分/);
 });

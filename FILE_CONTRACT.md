@@ -105,11 +105,14 @@ learner has recorded hangs off it:
 Writable fields are the problem's descriptive ones plus its practice form:
 `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`,
 `origin_kind`, `source_evidence`, `source_answer`, `solution_origin`,
-`topic_label`, `display_title`, `display_summary`, `exam_year`,
+`display_title`, `display_summary`, `exam_year`,
 `practice_modes`, `micro_quiz`, and the `answer_key` shorthand. A patch cannot
 change a `problem_id`, and difficulty stays with `lesson-kit difficulty`.
 Changing `kp_ids`, `problem_text`, `solution`, or `problem_type` clears the
 difficulty rating group as before.
+
+`topic_label` is not a problem field and problem manifests reject it. It remains
+an optional field on flash cards only.
 
 Every problem carries both provenance axes: `source_kind` describes the
 grounding material and `origin_kind` describes whether the problem is sourced,
@@ -120,6 +123,42 @@ detailed `solution`, whose origin is labelled by `solution_origin`
 explicit rating uses the separate `lesson-kit difficulty` transaction.
 
 Legacy `flash-card-patch` and `micro-quiz-patch` manifests remain accepted.
+
+Valid content-bundle checks and successful content-bundle applies add a
+`typesetting` report, preserved by `apply_batch`, CLI JSON and Bridge
+`action.result`. The pool validator adds the same key to its existing JSON
+report and uses the shared text rendering in the existing textual report
+(`04_checks/pool-validation-report.md` may capture it as before). It is advisory
+and does not change any existing gate result, accounting, or exit code.
+
+```json
+{
+  "available": true,
+  "band": {"min": 40, "max": 300},
+  "over_long": [
+    {"kp_id": "dmath-ch06-kp-001", "over_long_paragraphs": 1,
+     "short_paragraphs": 1, "min_visible_characters": 12,
+     "max_visible_characters": 301}
+  ],
+  "short": [],
+  "summary": {
+    "knowledge_points": 1, "paragraphs": 2,
+    "visible_characters": {"p50": 12, "p75": 301, "p90": 301, "p99": 301},
+    "over_long": {"knowledge_points": 1, "share": 1.0},
+    "short": {"knowledge_points": 1, "share": 1.0}
+  }
+}
+```
+
+`kp_id` is the provided id, or the local bundle key before allocation. Each
+flagged knowledge point appears once: over-long first, then short-only. Shares
+are fractions of all checked knowledge points; percentiles use nearest rank
+over all measured paragraphs, including zero-visible paragraphs. Empty scopes
+have zero counts/shares and null percentiles. `available: false` explicitly
+means no input to check (absent bundle, or unreadable pool table/body/id), whereas
+`available: true` with empty sections means checked and clean. The pure helper
+`ingest.inspect_content_bundle_typesetting(manifest)` exposes that distinction
+without adding a CLI command or replacing existing bundle validation.
 
 Successful applies store a manifest snapshot under the pool's ingest area and
 stamp a readable batch id. Failed gates write no content. There is no candidate

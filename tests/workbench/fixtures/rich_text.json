@@ -103,6 +103,83 @@
       "excludes": []
     },
     {
+      "name": "inline_math_escapes_once",
+      "markdown": "当 $a<b$ 且 $f'(x)$ 时，$a=\"b\"$",
+      "contains": [
+        "<span class='math'>a&lt;b</span>",
+        "f&#x27;(x)",
+        "a=&quot;b&quot;"
+      ],
+      "excludes": [
+        "&amp;lt;",
+        "&amp;gt;",
+        "&amp;#x27;",
+        "&amp;quot;"
+      ]
+    },
+    {
+      "name": "display_math_escapes_once",
+      "markdown": "$$x < y \\quad \\left| f \\right| > 4$$",
+      "contains": [
+        "<span class='math display'>",
+        "x &lt; y",
+        "&gt; 4"
+      ],
+      "excludes": [
+        "&amp;lt;",
+        "&amp;gt;"
+      ]
+    },
+    {
+      "name": "display_math_spans_lines",
+      "markdown": "试证：\n\n$$\n\\exists x _ {0} \\in [ 0, 1 ]\n$$\n\n$$\n\\left| f \\left(x _ {0}\\right) \\right| > 4\n$$\n",
+      "contains": [
+        "<span class='math display'>",
+        "\\exists x _ {0} \\in [ 0, 1 ]",
+        "\\left| f \\left(x _ {0}\\right) \\right| &gt; 4"
+      ],
+      "excludes": [
+        "$$",
+        "<em>"
+      ]
+    },
+    {
+      "name": "latex_escaped_underscore_is_a_blank",
+      "markdown": "则 $\\lim_{n \\to \\infty} x_{n} =$ \\_\\_\\_\\_.",
+      "contains": [
+        "<span class='math'>\\lim_{n \\to \\infty} x_{n} =</span>",
+        "____."
+      ],
+      "excludes": [
+        "<em>",
+        "\\_\\_\\_\\_",
+        "<em>\\</em>"
+      ]
+    },
+    {
+      "name": "latex_subscripts_survive_emphasis",
+      "markdown": "$\\sum_{i=1}^{n} x_i$ 与 $\\lim _ {n} \\frac {A _ {1}}{n}$",
+      "contains": [
+        "<span class='math'>\\sum_{i=1}^{n} x_i</span>",
+        "<span class='math'>\\lim _ {n} \\frac {A _ {1}}{n}</span>"
+      ],
+      "excludes": [
+        "<em>"
+      ]
+    },
+    {
+      "name": "emphasis_inside_math_is_untouched",
+      "markdown": "$a \\* b$ 与 $a ` b$",
+      "contains": [
+        "<span class='math'>a \\* b</span>",
+        "<span class='math'>a ` b</span>"
+      ],
+      "excludes": [
+        "<em>",
+        "<code>"
+      ]
+    },
+    {
       "name": "gfm_table",
       "markdown": "| 量 | 单位 |\n| --- | --- |\n| E | N/C |\n| q | C |",
       "contains": [
@@ -180,6 +257,54 @@
       ],
       "excludes": [
         "<script"
+      ]
+    },
+    {
+      "name": "raw_html_inside_math_stays_text",
+      "markdown": "$<img src=x onerror=alert(1)>$",
+      "contains": [
+        "<span class='math'>&lt;img src=x onerror=alert(1)&gt;</span>"
+      ],
+      "excludes": [
+        "<img"
+      ]
+    },
+    {
+      "name": "wiki_link_renders_its_label",
+      "markdown": "见 [[kp-01|级数展开]] 继续",
+      "contains": [
+        "<a href='/w/{workspace}/kp/kp-01'>级数展开</a>"
+      ],
+      "excludes": []
+    },
+    {
+      "name": "wiki_link_id_must_be_an_identifier",
+      "markdown": "见 [[../../etc/passwd]] 继续",
+      "contains": [
+        "../../etc/passwd"
+      ],
+      "excludes": [
+        "href='/w/{workspace}/kp/../"
+      ]
+    },
+    {
+      "name": "external_link_keeps_its_query",
+      "markdown": "[教材](https://example.com/p?a=1&b=2)",
+      "contains": [
+        "href='https://example.com/p?a=1&amp;b=2'"
+      ],
+      "excludes": [
+        "&amp;amp;"
+      ]
+    },
+    {
+      "name": "image_alt_escapes_once",
+      "markdown": "![a<b 图](ch12/abc.png)",
+      "contains": [
+        "<img alt='a&lt;b 图' src='/api/w/{workspace}/figures/ch12/abc.png'>"
+      ],
+      "excludes": [
+        "&amp;lt;"
       ]
     }
   ]

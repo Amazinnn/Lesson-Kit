@@ -29,8 +29,9 @@ Lesson Kit 把课程源材料整理为课程级 SQLite 知识池，并提供每�
 - `origin_kind`：`source_problem | adapted_problem | generated_grounded`，表示原题、改编或生成。
 
 派生 `source_group` 互斥：生成来源优先归 `ai_generated`；其余考试材料归 `exam`，
-课本材料归 `textbook`，剩余归 `other`。CLI/API 可组合筛选两轴和便捷组；练习页本轮
-不新增来源控件。
+课本材料归 `textbook`，剩余归 `other`。CLI/API 可组合筛选两轴和便捷组；`origin_kind`
+作为筛选维度是列表 `origin_kinds`（`/pull-facets` 的第四维），单值 `origin_kind` 参数已
+删除，不保留别名。练习页的来源筛选浮窗即消费这四维。
 
 ## 题目难度
 
@@ -71,8 +72,14 @@ Agent 提供隐藏分布和建议配比，学生界面不显示裸分、分维�
 - 练习页每次「提交作答」都写一条尝试（`POST /attempts`，状态 `answered`）：作答原文、选中的
   选项文本、客观题的**判定**（对/错；综合题为空）同一条返回 id；该 id 随自评上送并写入
   `feedback_events.attempt_id`，所以一条记录能读成「作答 + 判定 + 评分」。写入本身不改信号、
-  当前状态、进度与调度——那些仍只由 1–5 自评驱动。
+  当前状态、进度与调度——那些仍只由 1–5 自评驱动。**例外**：`rating_mode="off"` 的轮次（左栏
+  设置关闭自评）里，客观题判定在落库时一次性折算为进度/状态/排期（对 → mastered、错 → wrong），
+  不写评分事件；综合题只记作答。
 - 判定是浏览器本地对比答案键的结果，不是服务端判分；答案键缺失的题不判分并如实显示。
+- 左栏「设置」区块承载学习者偏好（浏览器 `localStorage`，按工作区持久，工作台唯一的
+  localStorage 用法）：第一项「练习与组卷显示自评」默认开；关闭后自评在练习与组卷全程不出现，
+  试卷开始按该偏好带 `rating_mode`（off / immediate），记录页标「关闭自评」。设置在下一轮生效，
+  进行中的轮次保持开始时的模式。
 - 迁移是增量的（新列 + 状态值，走既有 `_widen_*` 重建再补列），未迁移池上提交降级为不带
   判定/选项的一行且不报错；`doctor` 提示需要迁移。
 - 左侧「记录」是独立记录中心：概览、练习 / 试卷、作答明细、错题四个只读视图；概览中的
@@ -83,25 +90,35 @@ Agent 提供隐藏分布和建议配比，学生界面不显示裸分、分维�
 - 作答明细仍支持 `?problem=<id>` 单题过滤；练习页揭示区继续提供同题「历史作答」。
 - 记录只增不改：不提供编辑或删除入口；重复练习产生新 attempt / run。
 
-## 来源筛选（三维 + 计数 + 文档键）
+## 来源筛选（四维 + 计数 + 文档键 + 两个关键词域）
 
-- `pull.select` 有三个列表维度：`source_kinds`、`exam_years`（前缀）、`evidence_docs`
-  （对 `source_evidence` 做不区分大小写的子串匹配）。语义是**维度内 OR、维度间 AND**；
-  原有单值参数保持兼容，与列表参数合并取并集。
-- 文档键是唯一的新纯规则（`domain.facets.document_key`）：`*.md` 路径原样成键、教材类折成
+- `pull.select` 有四个列表维度：`source_kinds`、`origin_kinds`、`exam_years`（前缀）、
+  `evidence_docs`（对 `source_evidence` 做不区分大小写的子串匹配）。语义是**维度内 OR、
+  维度间 AND**；`origin_kind` 单值参数已由 `origin_kinds` 取代，不保留别名，其余单值参数
+  保持兼容，与列表参数合并取并集。
+- 文档键是纯规则（`domain.facets.document_key`）：`*.md` 路径原样成键、教材类折成
   「教材」、其余取第一段；两个真实池的两套证据书写格式因此归得进同一组。
-- `GET /pull-facets` 返回池内实际值及其计数（浮窗不为空选项撒谎）；`GET /search/problems?q=`
-  为题面/标题/标签/来源的子串搜索，命中后由浮窗按 `include_ids` 显式指定。
-- 三个入口同一语义：CLI `--source-kind`/`--exam-year`/`--source-evidence`（均可重复）、
-  `POST /pull` 的 `filters`（外加此前缺失的单值 `exam_year`）、练习页的来源筛选浮窗
-  （按工作区存 sessionStorage，与知识点选区互不干扰，闪卡不受影响）。
+- 两个关键词域同样只有一份定义（`domain.facets.stem_text` / `source_text`），搜索与筛选
+  共用：**题干域** = `display_title` + `problem_text`；**来源域** =
+  `source_evidence` + `exam_year` + `problem_text` 开头的连续 `【…】` 标签段
+  （`^\s*((?:【[^】]*】)+)`；早于来源字段的池把来源标签只写在题面开头，所以这一段必须算
+  来源域）。每个域的词按空白切分、casefold，**域内 AND**；两域都给则跨域 AND。
+- `GET /pull-facets` 返回池内实际值及其计数，含 `origin_kinds` 第四维（浮窗不为空选项
+  撒谎）；`GET /search/problems?stem=&source=` 按上面两个域搜索（旧 `q` 参数已删除，不映射），
+  两参数都空返回空集而非全池，命中后由浮窗按 `include_ids` 显式指定。
+- `lesson-kit data search` 的查询同样按空白切成多词并要求全部命中。
+- 四个入口同一语义：CLI
+  `--source-kind`/`--origin-kinds`/`--exam-year`/`--source-evidence`（均可重复）、
+  `--search-stem`/`--search-source`（两个关键词域）、`POST /pull` 的 `filters` 与顶层
+  `origin_kinds`（外加此前缺失的单值 `exam_year`）、练习页的来源筛选浮窗（按工作区存
+  sessionStorage，键为 `wb_practice_filters_v2_<ws>`，与知识点选区互不干扰，闪卡不受影响）。
 
 ## 组一次练习与打印
 
 - `lesson-kit pull` 是组练习的唯一入口，一次调用可组合六种选题方式：范围（`--kp`，缺省
   章透镜）、单题指定（`--problem`，显式追加且不受筛选与上限约束）、条件筛选
-  （`source_kind`/`origin_kind`/`source_group`/`exam_year`/`source_evidence`/难度四维；
-  前四个可重复，语义见「来源筛选」）、薄弱（`--weak`，
+  （`source_kind`/`origin_kinds`/`source_group`/`exam_year`/`source_evidence`/难度四维/
+  `search_stem`/`search_source`；前四个可重复，语义见「来源筛选」）、薄弱（`--weak`，
   用 `domain.weak` 的薄弱分）、到期（`--due`）、错题（`--wrong`，进度或最近尝试为错）。
   范围决定候选集，条件筛选收窄，三个驱动在候选集内取并集，单题最后追加；每题回报
   `reason`（`scope`/`weak`/`due`/`wrong`/`explicit`），缺口仍进 `shortage`，全程零写入。

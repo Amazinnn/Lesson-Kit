@@ -655,6 +655,7 @@ class ConversationTests(unittest.TestCase):
         applied = {
             "ok": True, "kind": "content-bundle", "applied": 2,
             "batch_id": "batch-010", "counts": {"problems": 3},
+            "typesetting": {"available": True, "over_long": [], "short": []},
             "origins": {"source_problem": 3},
             "batches": [
                 {"batch_id": "batch-010", "chapter": "ch12",
@@ -685,12 +686,16 @@ class ConversationTests(unittest.TestCase):
         )
         self.assertEqual([batch["chapter"] for batch in
                           done["actions"][1]["result"]["batches"]], ["ch12", "ch13"])
+        self.assertEqual(done["actions"][1]["result"].get("typesetting"),
+                         applied["typesetting"])
         # No single action to show: the card renders every batch instead.
         self.assertNotIn("action", done)
         transcript = (Path(self.fixture.tmp.name) / "dmath" / ".lessonkit" / "jobs"
                       / conversation["conversation_id"] / "transcript.jsonl")
         exchange = json.loads(transcript.read_text(encoding="utf-8").splitlines()[-1])
         self.assertEqual(len(exchange["actions"]), 2)
+        self.assertEqual(exchange["actions"][1]["result"]["typesetting"],
+                         applied["typesetting"])
 
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")
@@ -1372,6 +1377,24 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertNotIn("一次产出", prompt)
         self.assertNotIn("next_free_ids", prompt.split("服务端重建的当前上下文")[0])
         self.assertIn("last_check_outcome", prompt)
+
+    def test_prompt_keeps_topic_label_flash_card_only(self):
+        from workbench.bridge import conversations
+
+        prompt = conversations._prompt("帮我补池", {
+            "workspace": {"name": "大学物理", "course": "uphy2", "chapter": "ch07"},
+        })
+        problem_fields = prompt.split("6) 题目字段：", 1)[1].split(
+            "7) 练习题型", 1)[0]
+        problem_patch = prompt.split("学生明确要求修改已有题目时", 1)[1].split(
+            "服务端整份清单预检", 1)[0]
+        flash_card_fields = prompt.split("11) 闪卡字段：", 1)[1].split(
+            "12) 出题入库", 1)[0]
+
+        self.assertNotIn("topic_label", problem_fields)
+        self.assertNotIn("topic_label", problem_patch)
+        self.assertIn("topic_label", flash_card_fields)
+        self.assertEqual(prompt.count("topic_label"), 1)
 
     def test_prompt_has_no_item_ceiling(self):
         from workbench.bridge import conversations

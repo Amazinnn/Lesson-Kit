@@ -807,6 +807,30 @@ class ScenarioTests(AttemptsTestCase):
         self.assertIsNone(row["verdict"])
         self.assertIsNone(row["choices"])
 
+    def test_objective_legacy_retry_keeps_the_migration_diagnostic(self):
+        from workbench.data.attempts import ManifestError
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.executescript("DROP TABLE active_practice_items; DROP TABLE active_practice; "
+                               "DROP TABLE practice_request_operations;")
+        finally:
+            conn.close()
+        with self.assertRaisesRegex(ManifestError, "migrate-progress.py"):
+            self.browser_attempt("dmath-ch12-prob-001", verdict=True,
+                                 request_id="legacy-objective")
+
+    def test_objective_legacy_without_retry_id_still_records(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.executescript("DROP TABLE active_practice_items; DROP TABLE active_practice; "
+                               "DROP TABLE practice_request_operations;")
+        finally:
+            conn.close()
+        result = self.browser_attempt("dmath-ch12-prob-001", verdict=True)
+        self.assertTrue(result["recorded"])
+        self.assertEqual(self.rows("SELECT * FROM problem_progress"), [])
+        self.assertEqual(self.rows("SELECT * FROM review_schedule"), [])
+
     def test_a_bad_verdict_is_refused_with_zero_writes(self):
         with self.assertRaises(Exception):
             self.browser_attempt("dmath-ch12-prob-001", verdict=2)

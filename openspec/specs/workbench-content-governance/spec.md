@@ -422,3 +422,180 @@ error rather than a silent drop.
 - **WHEN** a patch payload carries a field the pool does not manage, or a difficulty field
 - **THEN** it is refused with the writable field list (or the `lesson-kit difficulty` pointer) and nothing is written
 
+### Requirement: Content identity dedup at ingest
+
+Content that is the same problem as an item already in the pool, or as an item
+earlier in the same manifest, SHALL be refused rather than stored a second
+time. The gate SHALL derive a normalized content identity from the problem
+text — case folded, whitespace collapsed, punctuation dropped, math delimiters
+and rendering variants canonicalized, and export noise such as score, author,
+and unit lines removed — and SHALL NOT truncate it, because a truncated key
+cannot separate a duplicate from a similar item that diverges later in the
+stem. Two items whose identities match SHALL be a duplicate regardless of their
+keys, their source files, or their chapters, and the refusal SHALL name the
+colliding problem id together with its source evidence so the caller can see
+which row already covers the content. Two stems that differ beyond those
+variants SHALL NOT collide: similar-but-different items are deliberately kept.
+A duplicate refusal SHALL follow the existing all-or-nothing rule — every reason
+reported per item, nothing written, no batch recorded.
+
+#### Scenario: The same item arrives from a second source file
+
+- **WHEN** a manifest item's normalized identity equals an existing problem's identity in the same course scope
+- **THEN** the gate refuses that item with a reason naming the existing problem id and nothing is written
+
+#### Scenario: The same item appears twice in one manifest
+
+- **WHEN** two items of one manifest share a normalized identity
+- **THEN** the gate reports an itemized reason for each and the manifest is not applied
+
+#### Scenario: Rendering variants still collide
+
+- **WHEN** an item and an existing problem differ only in whitespace, punctuation, `$…$` rendering, or export noise
+- **THEN** they are treated as the same problem and the second one is refused
+
+#### Scenario: Similar items are kept
+
+- **WHEN** two stems differ beyond the normalized variants
+- **THEN** both are accepted, and neither is reported as a duplicate
+
+#### Scenario: A duplicate never half-writes
+
+- **WHEN** a manifest mixes a duplicate with otherwise valid new items
+- **THEN** the duplicate is reported and no item of that manifest reaches the pool
+
+### Requirement: Read-only pool content audit
+
+The workbench SHALL provide a read-only audit over the workspace's pool that
+reports content-hygiene findings for the selected scope: duplicate content
+groups with their identity and member problem ids; fragment rows (a row whose
+text is the continuation of another row, such as a stem that begins with a
+connective or a row holding only an option label); objective items that carry
+no practice mode; problems without a display title; figure references that do
+not resolve to a file; and figure files that no item references. The audit
+SHALL write nothing, SHALL be machine-readable, and SHALL exit non-zero when a
+requested check reports findings, so a repair pass and a later regression check
+can be gated on it.
+
+#### Scenario: A pool with findings is reported
+
+- **WHEN** the audit runs over a pool holding a duplicate group and an objective item without a practice mode
+- **THEN** both findings are reported with their problem ids and the command exits non-zero
+
+#### Scenario: A clean pool reports nothing
+
+- **WHEN** the audit runs over a pool with no findings for the selected checks
+- **THEN** it reports an empty finding set and exits zero
+
+#### Scenario: The audit changes nothing
+
+- **WHEN** the audit runs over any pool
+- **THEN** row counts, row contents, and the recorded batch list are identical before and after
+
+#### Scenario: The audit sizes and verifies a repair
+
+- **WHEN** the audit runs with all checks before a content repair, and again after
+- **THEN** its findings can be grouped by chapter and defect class both times, so the repair can be planned from the first run and verified against the second
+
+### Requirement: Preserve retired problem-label history during ordinary schema ensure
+
+An ordinary workbench schema ensure SHALL preserve an existing
+`problems.topic_label` column and its values, including when it rebuilds a
+compatible legacy problem table. Retiring the field from new problem inputs,
+search and presentation SHALL NOT silently delete historical course data.
+The retained column SHALL NOT become a new writing interface or search field.
+Flash-card `topic_label` remains governed by its existing contract.
+
+Destructive removal SHALL remain outside ordinary ensure until a separate
+explicit removal migration is specified and approved. This change SHALL NOT
+execute such a migration on existing course pools.
+
+#### Scenario: Open a pool with historical problem labels
+
+- **WHEN** ordinary schema ensure runs on a pool with populated problem labels
+- **THEN** the labels, problem IDs and existing learning rows remain unchanged
+- **AND** the retired field is still excluded from new problem inputs and UI
+
+#### Scenario: Rebuild a compatible legacy problem table
+
+- **WHEN** schema ensure upgrades a legacy problem table carrying labels
+- **THEN** it copies the existing label values to the compatible table without loss
+
+#### Scenario: Repeat schema ensure
+
+- **WHEN** schema ensure runs again on the upgraded pool
+- **THEN** the historical values are unchanged and no label-removal operation occurs
+
+### Requirement: Knowledge-point body paragraph typesetting check
+
+A knowledge point's `body` is read as a sequence of paragraphs, where a
+paragraph is a run of text between blank lines. A paragraph's **visible
+characters** are what remain after inline math (`$$…$$`, `$…$`) and backticked
+code are removed for the purpose of counting; nothing else is removed, and the
+text itself is never altered.
+
+A typesetting check SHALL report a knowledge point when any of its `body`
+paragraphs falls outside the band **40 to 300 visible characters**, and SHALL
+report each such knowledge point once, naming the number of paragraphs past
+each bound together with the longest and shortest measured paragraph.
+
+The check is read-only and advisory:
+
+- it SHALL write nothing and SHALL NOT refuse, reject, or exit non-zero because
+  of a typesetting finding;
+- it SHALL NOT modify, normalize, reflow, split, trim, or reorder any text;
+- it SHALL NOT state a preferred typesetting — no target paragraph length, no
+  recommended section vocabulary, no suggested split point, no template;
+- it SHALL report measured facts only, each recomputable from the stored text.
+
+A paragraph whose visible character count is zero — a paragraph consisting only
+of inline math or only of code — SHALL NOT count as too short. The band
+applies to `body` only; `fragile` and `learning_action` are excluded because a
+reminder note and an action line are written as short units by design.
+
+The check SHALL be available at two points, sharing one measurement rule and one
+report wording: over the content bundle before it is applied, and over the pool
+after it is applied. Where no bundle is available to check, the check SHALL say
+so in the report rather than reporting nothing, so that a caller can tell "checked
+and clean" from "nothing to check".
+
+#### Scenario: A body holding an over-long paragraph is reported with its measurement
+
+- **WHEN** a knowledge point's body holds a paragraph of 1750 visible characters
+- **THEN** the report names the knowledge point with one paragraph past the upper bound and the longest measured paragraph, and the run completes as it would for a clean pool
+
+#### Scenario: A body holding a too-short paragraph is reported separately
+
+- **WHEN** a knowledge point's body holds a paragraph of 12 visible characters
+- **THEN** the report names the knowledge point under the short-paragraph section with its measured length, and the run completes as it would for a clean pool
+
+#### Scenario: A paragraph of only math or only code is not a short paragraph
+
+- **WHEN** a knowledge point's body holds a paragraph whose entire content is a display formula or a code block, leaving zero visible characters
+- **THEN** that paragraph is not counted as too short
+
+#### Scenario: A body violating both bounds appears once
+
+- **WHEN** one knowledge point's body holds both an over-long and a too-short paragraph
+- **THEN** it appears once in the over-long section, which comes first, and the row states how many paragraphs are past each bound
+
+#### Scenario: A body inside the band is not reported
+
+- **WHEN** a knowledge point's body holds only paragraphs between 40 and 300 visible characters
+- **THEN** it is absent from both sections
+
+#### Scenario: The check states no preferred typesetting
+
+- **WHEN** the check reports any finding
+- **THEN** the report contains no target length, no recommended section names, and no suggested split point, and every number in it is recomputable from the stored text
+
+#### Scenario: The check changes nothing
+
+- **WHEN** the check runs over a pool or a content bundle
+- **THEN** row counts, row contents, and the recorded batch list are identical before and after
+
+#### Scenario: Nothing to check is stated rather than implied
+
+- **WHEN** the pre-apply check runs over a scope that has no content bundle
+- **THEN** the report says that scope had nothing to check, which is distinguishable from a scope that was checked and found clean
+

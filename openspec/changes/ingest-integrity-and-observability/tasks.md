@@ -12,9 +12,9 @@ carries, so they need no new spec and no doctrine decision.
 
 Owner: `workbench-content-governance`, `workbench-ui`.
 
-- [ ] 1.1 Stamp every written content row with its batch id. `ingest_batch_id` is NULL on 937/937 problems and 324/324 knowledge points despite 16 ledger batches, so no batch can be traced or rolled back. `openspec/specs/workbench-content-governance/spec.md:163` requires it, scenario at `:167-168`.
-- [ ] 1.2 Escape each text exactly once on the server render path. At authorship `workbench/server/pages.py:796` escaped the whole text and `_math_replace` (`:816-820`) escaped the expression again, so `&` reached KaTeX as `&amp;`; the client path at `workbench/server/static/workbench.js:311,340-345` escaped once and rendered correctly, which is why the same row could be fine in one surface and broken in another. `openspec/specs/workbench-ui/spec.md:1079-1083,1092-1093` requires one consistent math pipeline, escaped-then-rendered. **Re-verified 2026-10-01 against the merged tree: the server path now escapes once (live render check) and the client site was rewritten by the records/graph batches — what remains of this task is 1.3's real-pool regression check.**
-- [ ] 1.3 Add a regression check for 1.1–1.2 that runs against a real pool, not a fixture. Both survived a full 8-chapter import in two courses.
+- [x] 1.1 Stamp every inserted content row in sanctioned apply with its batch id. `ingest_batch_id` is NULL on 937/937 problems and 324/324 knowledge points despite 16 ledger batches, so no batch can be traced or rolled back. `openspec/specs/workbench-content-governance/spec.md:163` requires it, scenario at `:167-168`.
+- [x] 1.2 Escape each text exactly once on the server render path. At authorship `workbench/server/pages.py:796` escaped the whole text and `_math_replace` (`:816-820`) escaped the expression again, so `&` reached KaTeX as `&amp;`; the client path at `workbench/server/static/workbench.js:311,340-345` escaped once and rendered correctly, which is why the same row could be fine in one surface and broken in another. `openspec/specs/workbench-ui/spec.md:1079-1083,1092-1093` requires one consistent math pipeline, escaped-then-rendered. **Re-verified 2026-10-01 against the merged tree: the server path now escapes once (live render check) and the client site was rewritten by the records/graph batches — what remains of this task is 1.3's real-pool regression check.**
+- [x] 1.3 Add a regression check for 1.1–1.2 that runs against a real pool, not a fixture. Both survived a full 8-chapter import in two courses.
 
 ## 2. Doctrine — decide before writing any requirement
 
@@ -94,3 +94,15 @@ Owner: `knowledge-figures`, `workbench-ui`. Note that the one item here which
 - [ ] 8.4 Hand P0-5/P0-6 to the same `pipeline/` decision as §2: until the sweep
   runs again (2.5/2.6), no course may cite `validate-pool` as evidence of
   anything.
+
+2026-10-09: current workbench paths verified with real c02/ncmc copies and legacy gate-report fixture; recorded historical NULL markers are not backfilled. NEW-GAP/DOCTRINE remain pending. See verify-ingest-conformance and dated changelog.
+## 9. Deferred typesetting work carried forward
+
+The implemented body advisory is accepted; these are deliberately unresolved,
+not implementation completion claims (source: kp-text-typesetting-check §5–6).
+
+- [ ] 9.1 NEW-GAP: whether one line contains multiple structural units (seam boundary).
+- [ ] 9.2 NEW-GAP: whether fragile/learning_action need their own measurement bands.
+- [ ] 9.3 NEW-GAP: whether body bounds should become course-adjustable; v1 fixed40–300.
+- [ ] 9.4 OUTSIDE: rewriting existing ncmc bodies is course work, not this delivery.
+- [ ] 9.5 DOCTRINE: body repairs must avoid frozen upsert row replacement until its decision; no source repair was executed.

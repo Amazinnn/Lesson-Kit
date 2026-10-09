@@ -26,7 +26,7 @@
 
 ## 5. Verification
 
-- [ ] 5.1 Blocked in this checkout: the ADS workspace pool used by `ads-pool-content-repair` is absent, so its before/after conformance run must happen in that workspace.
+- [x] 5.1 Registered ADS pool compared read-only with its896-row before-image on2026-10-09:19→1 duplicate groups,100→1 fragments,896→0 untitled; full current audit108 findings. The real-pool runner proves zero source writes, report/exit behavior, guarded refusal and rollback on copies. Residual data findings remain explicit; no clean-pool claim or source repair.
 - [x] 5.2 Full unittest discovery (including the declared-surface audit): 723 tests ran; 722 passed and one existing process-image test failed because this container returns an empty image name. `pytest` is not installed in this runtime.
 
 ## 6. No stem length bound (implemented with the ADS repair)

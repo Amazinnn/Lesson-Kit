@@ -156,6 +156,76 @@ class QueryTests(unittest.TestCase):
         self.assertEqual(items[0]["item_id"], "dmath-ch06-prob-001")
         self.assertEqual(items[0]["label"], "P1")
 
+    def _seed_searchable_problem(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute(
+            "UPDATE problems SET display_title=?, problem_text=?,"
+            " source_evidence=?, exam_year=? WHERE problem_id=?",
+            ("计数原理", "【2023期末·真题】【合集A】计算 1+2+3 的和",
+             "题库/final·合集A.md 第2题", "2023-2024秋冬", "dmath-ch06-prob-002"),
+        )
+        conn.commit()
+        conn.close()
+
+    def test_search_without_any_word_finds_nothing(self):
+        self.assertEqual(
+            self.queries.search_problems(self.pool),
+            {"count": 0, "problems": []},
+        )
+        self.assertEqual(
+            self.queries.search_problems(self.pool, stem_q="  ", source_q=""),
+            {"count": 0, "problems": []},
+        )
+
+    def test_stem_words_all_have_to_match_and_source_words_are_a_separate_domain(self):
+        self._seed_searchable_problem()
+        # both words are in the stem domain, so the row survives
+        both = self.queries.search_problems(self.pool, stem_q="计数 期末")
+        self.assertEqual(
+            [item["problem_id"] for item in both["problems"]], ["dmath-ch06-prob-002"],
+        )
+        # "final" is only in source_evidence, so the stem domain cannot reach it
+        self.assertEqual(
+            self.queries.search_problems(self.pool, stem_q="计数 final")["problems"], [],
+        )
+        # the source domain can, and it casefolds both sides
+        self.assertEqual(
+            [item["problem_id"] for item in
+             self.queries.search_problems(self.pool, source_q="final")["problems"]],
+            ["dmath-ch06-prob-002"],
+        )
+        # 真题 lives only in the leading 【…】 tags, and the source domain reads them
+        self.assertEqual(
+            [item["problem_id"] for item in
+             self.queries.search_problems(self.pool, source_q="真题")["problems"]],
+            ["dmath-ch06-prob-002"],
+        )
+        # the second word is missing from the source domain, so the row drops out
+        self.assertEqual(
+            self.queries.search_problems(self.pool, source_q="final 期中")["problems"], [],
+        )
+
+    def test_both_domains_given_is_an_and_across_them(self):
+        self._seed_searchable_problem()
+        found = self.queries.search_problems(
+            self.pool, stem_q="计数", source_q="合集a",
+        )
+        self.assertEqual(found["count"], 1)
+        self.assertEqual(found["problems"][0]["problem_id"], "dmath-ch06-prob-002")
+        self.assertEqual(found["problems"][0]["source_evidence"], "题库/final·合集A.md 第2题")
+        self.assertTrue(found["problems"][0]["stem"].startswith("【2023期末·真题】"))
+        self.assertEqual(
+            self.queries.search_problems(
+                self.pool, stem_q="计数", source_q="不存在的卷子",
+            )["problems"],
+            [],
+        )
+
+    def test_search_returns_at_most_the_limit(self):
+        self.assertEqual(
+            len(self.queries.search_problems(self.pool, stem_q="P", limit=1)["problems"]), 1,
+        )
+
     def test_due_item_label_shows_the_full_text_without_a_cap(self):
         long_text = "设集合 A 有 n 个元素，则 A 的子集共有 2 的 n 次方个，其中真子集要比子集少一个，这个结论在计数问题里反复出现。" * 2
         conn = sqlite3.connect(self.db_path)

@@ -57,7 +57,8 @@ _Avoid_：字符数、字数、汉字数、len()、文本长度上限
 对知识点 `body` 的**只读**排版检查：把正文按空行切成段落，用「可见字符」量每段长度，任一段落在 40–300 之外就报出这个知识点，并注明两侧各几段、最长段与最短段各多少。它跑在两个时机（入池前读 content-bundle 清单、入池后读池），两边共用同一把尺和同一套报告口径。
 **它不是门禁**：只报、不拒、不改文本、不退出非零，也不告诉你该怎么排版——不给目标字数、不推荐小节名、不提示切分位置。**不触发就说明没有可报的问题**；41 字符和 300 字符同样可以。区间 40–300 记在 workbench-content-governance spec 里，不是实现常量。
 _Avoid_：门禁/gate（那是一失败就整批拒绝、零写入）、审计/audit（那个会退出非零）、字数上限、格式校验、自动重排/自动分段
-出处：kp-text-typesetting-check（spec + proposal + design）；ADR 0023
+实现使用正文的空行边界；跨空行的反引号代码仍整体剔除后计数。正文段落的零可见字符计入统计，但不触发过短检出。报告中入池前可用清单 key 标识知识点，入池后使用 kp_id。
+出处：kp-text-typesetting-check（spec + proposal + design）；implement-kp-text-typesetting-check；ADR 0023
 
 ### 知识关系 / Knowledge Relation
 两个知识点之间经审核的点对点边（如 prerequisite / applies_to / contrasts / variant_of），存于 `knowledge_relations`。图谱的事实层。
@@ -134,7 +135,7 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（2026-09-26 起；状态 `answered`，带上选中的选项文本与客观题判定，但不改信号、当前状态、进度与调度），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交（2026-09-24）。**无评分的尝试同样成立**（状态 `new`），只是不改信号、当前状态、进度与调度；旧池需要运行迁移命令后才能使用浏览器请求重试。
+与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（状态 `answered`，带选项文本与客观判定），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定」的关闭自评规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
 _Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
 
@@ -144,9 +145,14 @@ _Avoid_：把一次重试当成第二次作答、把判定当评分
 出处：review-workbench spec「Retry-safe browser practice writes」
 
 ### 判定 / Verdict
-客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在自评时改变。答案键缺失时不判分，页面如实写明「本题未录入答案键」。
-_Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩
-出处：review-workbench spec「Durable practice records」；workbench-ui spec
+客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在自评时改变——**例外**：关闭自评的轮次（见「学习者设置」）里，判定就是学习结论，落库时一次性折算为进度与排期（对 → mastered、错 → wrong），不写带评分的反馈事件。答案键缺失时不判分，页面如实写明「本题未录入答案键」。
+_Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩、把折算出的进度当自评分
+出处：review-workbench spec「Durable practice records」；workbench-ui spec；rating-toggle-setting change
+
+### 学习者设置 / Learner Settings
+左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**——这是工作台唯一的 localStorage 用法；其余一切客户端状态仍是会话级。第一项是「练习与组卷显示自评」（默认开）：关闭后自评在练习与组卷流程里完全消失（不选自评时机、无反馈面板、不进统一自评页、记录页标「关闭自评」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
+_Avoid_：把设置当学习记录、按工作区写进数据库、对进行中的轮次即时生效
+出处：rating-toggle-setting change「Learner settings in the left rail」
 
 ### 做题记录 / Practice Record
 把尝试、判定与自评合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及左侧「记录」中心的**作答明细 / 错题**视图（可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——自评通过 `attempt_id` 链回那次提交。**记录只增不改**：修错了重新作答并自评，不改写旧行。
@@ -199,14 +205,20 @@ _Avoid_：卷面分、难度、把年份当 id 或当作试卷实体
 出处：practice-set-export-and-cli-audit spec；workbench-content-governance spec「Problem provenance axes」
 
 ### 选题 / Problem Selection（CLI 组练习）
-`lesson-kit pull` 的选题目径，一次调用组合六种方式：**范围**（`--kp`，缺省用章透镜）、**单题指定**（`--problem`，显式追加、不受筛选与上限约束）、**条件筛选**（`--source-kind`/`--origin-kind`/`--source-group`/`--exam-year`/`--source-evidence`/客观难度区间）、**薄弱**（`--weak`，用 `domain.weak` 的薄弱分选出有弱点证据的知识点的题）、**到期**（`--due`）、**错题**（`--wrong`，进度为 wrong/stuck 或最近一次尝试为错）。范围决定候选集，条件筛选收窄它，三个驱动在候选集内取并集，单题最后追加；每题回报入卷理由（`scope`/`weak`/`due`/`wrong`/`explicit`）。注意 `--mode weak` 是**排序**（命中知识点多者先），与 `--weak` 驱动不是一回事。`--source-kind`/`--exam-year`/`--source-evidence` 都可重复，语义见「筛选维度」。
+`lesson-kit pull` 的选题目径，一次调用组合六种方式：**范围**（`--kp`，缺省用章透镜）、**单题指定**（`--problem`，显式追加、不受筛选与上限约束）、**条件筛选**（`--source-kind`/`--origin-kinds`/`--source-group`/`--exam-year`/`--source-evidence`/`--search-stem`/`--search-source`/客观难度区间）、**薄弱**（`--weak`，用 `domain.weak` 的薄弱分选出有弱点证据的知识点的题）、**到期**（`--due`）、**错题**（`--wrong`，进度为 wrong/stuck 或最近一次尝试为错）。范围决定候选集，条件筛选收窄它，三个驱动在候选集内取并集，单题最后追加；每题回报入卷理由（`scope`/`weak`/`due`/`wrong`/`explicit`）。注意 `--mode weak` 是**排序**（命中知识点多者先），与 `--weak` 驱动不是一回事。`--source-kind`/`--origin-kinds`/`--exam-year`/`--source-evidence` 都可重复，语义见「筛选维度」；`--search-stem`/`--search-source` 是两个关键词域，语义见「题干域 / 来源域」。
 _Avoid_：把 `--weak` 当排序、把驱动当过滤条件之外的隐式扩范围
 出处：review-workbench spec「Problem pull engine」；practice-set-export spec「Practice set composition」
 
 ### 筛选维度 / Filter Dimension
-来源筛选的三个**多值**维度：`source_kinds`（来源类型）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**：勾中的同一维度里任意一个命中即可（`final` 或 `midterm`），不同维度必须同时满足（是 final **且** 属于 2023）。浏览器练习页的「来源筛选」浮窗按维度分组勾选（每项标注池内计数，取自池内实际值），选中的题（搜索挑选）另走 `include_ids`；CLI 用可重复的 `--source-kind`/`--exam-year`/`--source-evidence`。单选值参数（`source_kind` 等）保持兼容，与列表参数取并集。
+来源筛选的四个**多值**维度：`source_kinds`（来源类型）、`origin_kinds`（题目来源方式）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**：勾中的同一维度里任意一个命中即可（`final` 或 `midterm`），不同维度必须同时满足（是 final **且** 属于 2023）。浏览器练习页的「来源筛选」浮窗按维度分组勾选（每项标注池内计数，取自池内实际值；`origin_kinds` 一组显示为历年原题/改编/AI生成），选中的题（搜索挑选）另走 `include_ids`；CLI 用可重复的 `--source-kind`/`--origin-kinds`/`--exam-year`/`--source-evidence`。其余单值参数（`source_kind` 等）保持兼容，与列表参数取并集；单值 `origin_kind` 已由 `origin_kinds` 取代，不保留别名。
 _Avoid_：把维度内的多个值当 AND、把筛选当扩范围、把浮窗选择写进池
 出处：review-workbench spec「Source dimensions and facets」；workbench-ui spec
+
+### 题干域 / 来源域 / Stem & Source Keyword Domains
+一道题上回答两个不同问题的两组文字，全仓库只有一份定义（`domain.facets.stem_text` / `source_text`），搜索端点与选题引擎都读它——所以一道题不可能「按一套规则搜得到、按另一套规则筛不出来」。**题干域** = `display_title` + `problem_text`（题目**说了什么**）；**来源域** = `source_evidence` + `exam_year` + `problem_text` 开头的连续 `【…】` 标签段（题目**从哪来**）。`【…】` 只在题面开头算来源：早于来源字段的老池把卷面身份只写在题面开头（如 `【2023期末】【合集A】`），那里是它唯一的容身处。
+每个域的查询按空白切成多个词、逐词 casefold，**域内 AND**（每个词都必须在该域文字里出现）；两域都给则跨域 AND。空查询返回空集，不是全池。
+_Avoid_：把两域合成一个 haystack、只取第一个词、把词序当语义、把来源词算进题干域或反过来
+出处：review-workbench spec「Multi-dimension source filters」「Source filter panel on the practice page」
 
 ### 文档键 / Document Key
 把 `source_evidence` 折叠成**一份文档一个键**的纯规则（`domain.facets.document_key`）：写成路径的（`题库/final·A.md`）原样就是键；教材类（`教材 …`）统一折成「教材」（它的证据逐题不同、没有文档级身份）；其余取第一段。两个真实池里两套书写格式因此归得进同一组，浮窗的「来源文档」维度与计数都由它聚合。
@@ -287,7 +299,7 @@ _Avoid_：practice path（旧别名）、答题方式、把「题型」当成 pr
 出处：workbench-ui spec「Practice page」；daily-learning-plan spec（别名裁决）；introduce-flash-card；ingest-mode-choice-and-contract-parity
 
 ### 原地改题 / In-place Problem Edit
-不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、topic_label/display_title/display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key/error_reason）、answer_key。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
+不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key/error_reason）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
 _Avoid_：把「改属性」当成「重导」、以为要删掉再导、以为题号可以换
 出处：in-place-problem-edits
 
@@ -322,12 +334,12 @@ _Avoid_：把一张双向卡复制成两张内容卡、从文字长度猜方向
 出处：flash-card spec「Flash card direction capability」
 
 ### 判断模式 / Yes-No Mode
-练习模式之一：判断题（是/否），选择后浏览器本地立即判分并显示错因；判分只是即时反馈，不写学习记录，之后仍走 1–5 自评。只拉取标注了 yes_no 可用的微题（quiz_type = yes_no），无内容时如实空态。
-_Avoid_：机器批改作业（只判对错，不产生学习结论）
+练习模式之一：判断题（是/否），有答案键时浏览器本地立即判分并显示错因；开启自评的轮次随后走 1–5 自评，关闭自评的轮次在显式提交客观尝试时按「判定」的关闭自评规则更新学习投影。无答案键的题不判分、不折算。只拉取标注了 yes_no 可用的微题，无内容时如实空态。
+_Avoid_：主观题自动评分、浏览即掌握
 出处：micro-quiz-content spec；workbench.js gradeMicroQuiz
 
 ### 自评时机 / Rating Mode
-二选一：每题作答后自评（immediate）或 完成后统一自评（batch）。开始练习前必选。
+一轮练习保存的自评安排：每题作答后自评（immediate）、完成后统一自评（batch），或关闭自评（off）。开启自评时开始前选择前两种时机；偏好关闭时直接以 off 开始。偏好变化只影响下一轮，进行中的轮次保留原安排。
 _Avoid_：评分方式（与 1–5 自评本身混淆）
 出处：workbench-ui spec「Practice session」
 
@@ -337,8 +349,8 @@ _Avoid_：Agent 对话会话（另一个「会话」，见该条）
 出处：review-workbench spec「Practice session」「Session interruption recovery」
 
 ### 自评 / Self-Rating
-学习者对一道完成题的显式 1–5 打分（可带自然语言备注）。是唯一触发学习记录（反馈事件、信号、进度、调度）的动作。
-_Avoid_：客观题自动判分（micro quiz 的前端判分，不写记录）、浏览即记录
+学习者对一道完成题的显式 1–5 打分（可带自然语言备注），写入对应反馈并按评分更新学习投影。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可另按 off 规则折算。
+_Avoid_：把自动判定伪装成自评分、浏览即掌握
 出处：review-workbench spec「Flexible feedback」
 
 ### 揭示再自评 / Reveal-then-Rate
@@ -357,7 +369,7 @@ _Avoid_：批量评分历史、补打卡
 出处：DISCUSSION-RECORD B6.5；workbench-ui spec
 
 ### 微题 / Micro Quiz
-带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。客观题在前端本地判分，判分本身不写学习记录。题干不限长度；答案键可以缺（见「无答案键客观题」）。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
+带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。前端本地判分提供即时反馈；显式提交且自评关闭时，已记录的客观判定按「判定」的关闭自评规则更新学习投影，其余轮次等待自评。题干不限长度；答案键可以缺（见「无答案键客观题」），缺键不判分、不折算。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
 _Avoid_：小题（口语）、判断题系统（判断只是题型之一）、填空作答
 出处：openspec/specs/micro-quiz-content/spec.md
 

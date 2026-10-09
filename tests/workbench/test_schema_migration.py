@@ -179,6 +179,28 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertIn("display_summary", self.columns("problems"))
         self.assertIn("learning_current_state", self.table_names())
 
+    def test_retired_problem_labels_survive_rebuild_and_repeat_ensure(self):
+        self.conn.execute("ALTER TABLE problems ADD COLUMN topic_label TEXT")
+        self.conn.execute("UPDATE problems SET topic_label='Historical label'")
+        self.conn.execute(
+            "INSERT INTO problem_attempts (problem_id,status,note) VALUES (?,?,?)",
+            ("dmath-ch06-prob-001", "wrong", "Existing answer"))
+        self.conn.commit()
+        before_labels = self.conn.execute(
+            "SELECT problem_id,topic_label FROM problems ORDER BY problem_id").fetchall()
+        before_attempts = self.conn.execute(
+            "SELECT id,problem_id,status,note FROM problem_attempts ORDER BY id").fetchall()
+        for _ in range(2):
+            changes = pool_schema.ensure_workbench_schema(self.conn)
+            self.assertIn("topic_label", self.columns("problems"))
+            self.assertEqual(self.conn.execute(
+                "SELECT problem_id,topic_label FROM problems ORDER BY problem_id"
+            ).fetchall(), before_labels)
+            self.assertEqual(self.conn.execute(
+                "SELECT id,problem_id,status,note FROM problem_attempts ORDER BY id"
+            ).fetchall(), before_attempts)
+            self.assertNotIn("problems.topic_label-retired", changes)
+
     def test_migration_rebuilds_problem_difficulty_and_provenance(self):
         self.conn.execute("ALTER TABLE problems ADD COLUMN difficulty INTEGER")
         self.conn.execute(

@@ -93,12 +93,37 @@ class DataCliTests(unittest.TestCase):
         self.assertEqual(item["knowledge_item"], "乘法规则")
         self.assertEqual(self.run_cli("data", "course", "list", "kp")[1][0]["kp_id"], "dmath-ch06-kp-001")
         self.assertEqual(self.run_cli("data", "course", "search", "kp", "乘法")[1][0]["kp_id"], "dmath-ch06-kp-001")
+        # a search query is space-separated words and every one of them must match
+        self.assertEqual(
+            [row["kp_id"] for row in
+             self.run_cli("data", "course", "search", "kp", "乘法 规则")[1]],
+            ["dmath-ch06-kp-001"],
+        )
+        self.assertEqual(self.run_cli("data", "course", "search", "kp", "乘法 除法")[1], [])
+        # an empty query is not a request to list everything
+        self.assertEqual(self.run_cli("data", "course", "search", "kp", "   ")[1], [])
         self.assertEqual(self.run_cli("data", "course", "history", "problem", "dmath-ch06-prob-001")[1]["attempts"], [])
 
         conn = sqlite3.connect(self.db_path)
         after = conn.execute("SELECT total_changes()").fetchone()[0]
         conn.close()
         self.assertEqual(after, before)
+
+    def test_problem_search_excludes_retained_legacy_labels(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            conn.execute("ALTER TABLE problems ADD COLUMN topic_label TEXT")
+            conn.execute("UPDATE problems SET topic_label='legacy_only_sentinel'")
+            conn.commit()
+        finally:
+            conn.close()
+        self.assertEqual(self.run_cli(
+            "data", "course", "search", "problem", "legacy_only_sentinel")[1], [])
+        self.assertEqual(self.run_cli(
+            "data", "course", "get", "problem", "dmath-ch06-prob-001"
+        )[1]["topic_label"], "legacy_only_sentinel")
+        self.assertEqual(len(self.run_cli(
+            "data", "course", "search", "problem", "Original problem")[1]), 1)
 
     def test_ingest_batches_returns_json_envelope(self):
         conn = sqlite3.connect(self.db_path)

@@ -98,15 +98,19 @@ SHALL restore that region when the session is exhausted or ended.
 
 ### Requirement: Compact per-problem self-rating
 
-In per-problem mode, the revealed feedback area SHALL use a compact
-two-surface form: one direct numeric 1–5 input and one optional note surface
-with the explicit `记录并下一题` action. It SHALL retain accessible field names
-and SHALL NOT expand the rating into five separate choice controls. Rating
-validation and feedback-write timing SHALL remain unchanged.
+In per-problem mode with the learner's show-rating preference on, the revealed
+feedback area SHALL use a compact two-surface form: one direct numeric 1–5
+input and one optional note surface with the explicit `记录并下一题` action. It
+SHALL retain accessible field names and SHALL NOT expand the rating into five
+separate choice controls. Rating validation and feedback-write timing SHALL
+remain unchanged. With the preference off, the feedback area SHALL NOT appear;
+an objective problem's verdict and the revealed solution SHALL be followed by a
+single explicit `下一题` action that advances without a feedback write, and an
+empty or out-of-range rating SHALL be rejected inline at the input.
 
 #### Scenario: Enter a compact per-problem rating
 
-- **WHEN** the learner reaches self-rating in per-problem mode
+- **WHEN** the learner reaches self-rating in per-problem mode with rating shown
 - **THEN** the feedback area shows a direct numeric 1–5 input and an optional
   note in two compact rounded surfaces
 - **AND** one explicit `记录并下一题` action records the feedback and advances
@@ -114,8 +118,21 @@ validation and feedback-write timing SHALL remain unchanged.
 
 #### Scenario: Reject an invalid compact rating in place
 
-- **WHEN** the learner enters a value outside 1-5 in the compact form
-- **THEN** the visible card reports the validation error and no feedback request is sent
+- **WHEN** the learner enters a value outside 1-5 — or leaves the input empty —
+  in the compact form
+- **THEN** the visible card reports the validation error and no feedback
+  request is sent
+
+#### Scenario: Off mode advances without a feedback write
+
+- **WHEN** the preference is off and the learner submits a problem, then presses
+  `下一题`
+- **THEN** the next unseen problem is shown and no feedback request is sent
+
+#### Scenario: Off mode hides the rating surface entirely
+
+- **WHEN** the preference is off and a problem's solution is revealed
+- **THEN** no rating input, note surface, or `记录并下一题` action appears
 
 ### Requirement: Session-end unified self-rating
 
@@ -1121,3 +1138,98 @@ silent.
 
 - **WHEN** a conversation is opened and the learner picks another entry
 - **THEN** the conversation records the new model, the next turn runs on it, and reloading shows the new selection
+
+### Requirement: Saved paper items preview their problem
+
+The 组卷 page SHALL let a learner read the problems a saved paper holds without
+leaving the page. Each item SHALL be an expandable block whose summary keeps the
+index, title and reorder/remove controls it has today, and whose opened body
+shows the problem's full text together with its recorded source line when one
+exists. The body SHALL render through the same safe Markdown subset as the
+knowledge point page's linked problems, so mathematics, figures and code render
+identically on both surfaces. Items SHALL arrive collapsed, and the disclosure
+affordance SHALL be visible on every item. Expanding an item SHALL change
+nothing about the paper: the preview is a reading surface, never a second
+editor.
+
+#### Scenario: Read one problem of a saved paper
+
+- **WHEN** a learner opens an item of a saved paper card
+- **THEN** the problem's own text appears under the item title, with its source
+  line when one is recorded
+
+#### Scenario: A long paper stays scannable
+
+- **WHEN** a saved paper holds dozens of problems
+- **THEN** every item is collapsed on arrival and the card lists titles only
+
+#### Scenario: Preview does not disturb the paper
+
+- **WHEN** items are expanded and the learner then moves or removes items
+- **THEN** those controls act on the same item rows as before, and only the
+  saved order changes
+
+### Requirement: Saved paper cards fold
+
+The 组卷 page SHALL present every saved paper as a foldable card: the head — the
+paper's title, its size, and its controls — stays visible while the problem list
+folds away beneath it. Cards SHALL arrive folded, so the page reads as the
+learner's papers rather than the concatenation of their problems. Within a
+browser tab, a card the learner opened SHALL come back open after the reload an
+edit performs: moving or removing items must not require re-opening the paper
+after every click. Folding SHALL be a reading state only — opening or closing a
+card sends no request and changes no stored order. A control in the head SHALL
+act on the paper without folding the card as a side effect.
+
+#### Scenario: A folded card shows its head only
+
+- **WHEN** the 组卷 page renders saved papers
+- **THEN** each card shows its title, its size and its controls, with its
+  problem list folded away
+
+#### Scenario: An edit leaves the paper open
+
+- **WHEN** a learner opens a paper, moves one of its problems, and the page
+  reloads the saved order
+- **THEN** that paper is open again in that tab
+
+#### Scenario: A control does not fold the card
+
+- **WHEN** a learner presses 导出 or 开始练习 on an open card
+- **THEN** the control runs and the card stays as the learner left it
+
+#### Scenario: An error remains visible on a folded card
+
+- **WHEN** a rename or export command fails while its paper card is folded
+- **THEN** the error status remains visible outside the folded problem list
+
+### Requirement: Learner settings in the left rail
+
+The workbench's left column SHALL carry a settings section whose preferences
+apply across the practice and paper surfaces. Its first preference SHALL be a
+checkbox, 「练习与组卷显示自评」, defaulting to on: self-rating behaves exactly
+as before. With it off, no self-rating surface SHALL appear anywhere in the
+flow — the rating-timing choice is hidden and not required to start, the
+feedback panel never renders, a finished round takes the no-session-end path,
+and records label the round 关闭自评. The preference SHALL persist per
+workspace in the browser across tabs and restarts, and SHALL take effect at the
+next round's start; a running round keeps the mode it started with.
+
+#### Scenario: The preference survives a restart
+
+- **WHEN** the learner turns the checkbox off and reopens the workbench later
+- **THEN** the checkbox is still off and a new round starts without any
+  self-rating surface
+
+#### Scenario: Off removes every rating surface
+
+- **WHEN** a round starts with the preference off
+- **THEN** the rating-timing fieldset is absent, no feedback panel appears
+  during the round, the round ends without the session-end view, and records
+  show 关闭自评 for it
+
+#### Scenario: On keeps today's behavior
+
+- **WHEN** the preference is on
+- **THEN** the rating-timing choice, per-problem rating, and session-end
+  unified rating behave as before

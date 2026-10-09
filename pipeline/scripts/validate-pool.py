@@ -25,6 +25,7 @@ import os
 import re
 import sqlite3
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Set
 
 
@@ -649,6 +650,20 @@ def run_gates(conn: sqlite3.Connection, course: str, chapter: str) -> List[Dict[
     return findings
 
 
+def _run_typesetting_check(conn, course, chapter):
+    # Only this approved read-only hook imports workbench. Prefer this script's
+    # repository over an editable-installed checkout when run standalone.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    try:
+        from workbench.data.typesetting import read_rows
+        from workbench.domain.typesetting import check, render_text
+    finally:
+        sys.path.pop(0)
+    rows = read_rows(conn, get_prefix(course, chapter))
+    report = check(rows or [], available=rows is not None)
+    return report, render_text(report)
+
+
 def main(argv=None) -> int:
     args = parse_args(argv)
 
@@ -656,8 +671,10 @@ def main(argv=None) -> int:
         print(f"ERROR: DB not found: {args.db}", file=sys.stderr)
         return 1
 
-    conn = sqlite3.connect(args.db)
+    conn = sqlite3.connect(Path(args.db).resolve().as_uri() + "?mode=ro", uri=True)
     try:
+        typesetting_report, typesetting_text = _run_typesetting_check(
+            conn, args.course or "", args.chapter)
         findings = run_gates(conn, args.course or "", args.chapter)
     except sqlite3.Error as exc:
         print(f"SQLite error: {exc}", file=sys.stderr)
@@ -678,6 +695,7 @@ def main(argv=None) -> int:
             "status": "FAIL" if error_count > 0 else "PASS",
         },
         "findings": findings,
+        "typesetting": typesetting_report,
     }
 
     if args.json:
@@ -697,6 +715,8 @@ def main(argv=None) -> int:
             for item in findings:
                 marker = "ERROR" if item["level"] == "ERROR" else "WARNING"
                 print(f"  {marker} [{item['gate']}] {item['message']}")
+
+        print("\n" + typesetting_text)
 
     return 2 if error_count > 0 else 0
 

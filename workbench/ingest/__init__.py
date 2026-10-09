@@ -11,10 +11,12 @@ from pathlib import Path
 
 from workbench.bridge import conversation_providers
 from workbench.data import content as content_data
+from workbench.data import typesetting as typesetting_data
 from workbench.domain import cards as card_rules
 from workbench.domain import content_identity
 from workbench.domain import markup
 from workbench.domain import micro_quiz as micro_quiz_rules
+from workbench.domain import typesetting
 from workbench.ingest.artifacts import read_artifact, read_staged_manifest, write_artifact
 
 
@@ -278,6 +280,8 @@ def apply(db_path, gate_path, backup_path=None):
         manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
         _backup_database(database, backup)
         if content_patch:
+            if content_patch["knowledge_points"]:
+                content_data.ensure_kp_batch_column(conn)
             for item in content_patch["knowledge_points"]:
                 fields = list(KP_FIELDS)
                 if item.get("difficulty") is not None:
@@ -287,11 +291,9 @@ def apply(db_path, gate_path, backup_path=None):
                     if field == "related_kp_ids" else item[field]
                     for field in fields
                 ]
-                conn.execute(
-                    f"INSERT INTO knowledge_points ({', '.join(fields)}) "
-                    f"VALUES ({', '.join('?' for _ in fields)})",
-                    values,
-                )
+                _insert_row(conn, "knowledge_points", {
+                    **dict(zip(fields, values)), "ingest_batch_id": batch_id,
+                })
         mappings = {
             item["problem"]: json.dumps(item["kp_ids"], ensure_ascii=False)
             for item in (content_patch or {}).get("mappings", [])
@@ -488,7 +490,7 @@ def apply_batch(db_path, manifest, *, source, backup_path=None, course=None):
         result = _apply_patch(database, manifest, backup, kind, course)
     return {key: result[key] for key in (
         "ok", "batch_id", "kind", "counts", "origins", "batches", "backup_path",
-        "applied",
+        "applied", "typesetting",
     ) if key in result}
 
 
@@ -625,6 +627,15 @@ def apply_content_bundle(db_path, manifest, backup_path=None, course=None):
     backup = Path(backup_path) if backup_path else (
         database.with_name(database.name + ".ingest-backup"))
     return _apply_content_bundle(database, manifest, backup, course)
+
+
+def inspect_content_bundle_typesetting(manifest):
+    """Pure pre-apply body inspection, separate from existing bundle validation."""
+    if manifest is None:
+        return typesetting.check([], available=False)
+    if not isinstance(manifest, dict) or manifest.get("kind") != CONTENT_BUNDLE_KIND:
+        raise ValueError("expected a content-bundle manifest")
+    return typesetting.check(typesetting_data.bundle_rows(manifest.get("knowledge_points") or []))
 
 
 def _bundle_list(manifest, field, errors):
@@ -1084,6 +1095,9 @@ def _gate_content_bundle(conn, manifest, course=""):
         "chapters": chapters,
         "knowledge_points": kp_plans, "problems": problem_plans,
         "flash_cards": card_plans,
+        "typesetting": typesetting.check(typesetting_data.bundle_rows([
+              {"kp_id": plan["kp_id"], "body": plan["fields"]["body"]}
+              for plan in kp_plans])),
     }
 
 
@@ -1326,7 +1340,8 @@ def _apply_content_bundle(database, manifest, backup, course=None):
     ]
     result = {"ok": True, "applied": True, "kind": CONTENT_BUNDLE_KIND,
               "batches": recorded, "counts": counts, "origins": origins,
-              "backup_path": str(backup), "accounting": accounting}
+              "backup_path": str(backup), "accounting": accounting,
+              "typesetting": verified["typesetting"]}
     if len(recorded) == 1:
         # A single-chapter bundle keeps the historical shape as well.
         result["batch_id"] = recorded[0]["batch_id"]
