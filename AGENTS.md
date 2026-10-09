@@ -14,6 +14,7 @@
 | `TASK_ROUTER.md` | 任务 → 该跑哪个命令 / 读哪个技能的路由表 |
 | `START_HERE.md` | 冷启动路由（当前契约速览） |
 | `docs/GLOSSARY.md` | **全部设计名词的唯一权威定义源**；正式文档用词以它为准 |
+| `docs/DATA_MODEL.md` | **持久字段语义的唯一权威定义源**；字段状态、含义、writer/consumer 边界以它为准 |
 | `docs/ARCHITECTURE.md` | 分层与架构现状 |
 | `skills/<name>/SKILL.md` | 提示词技能模块，**按路径引用**（见下） |
 
@@ -29,7 +30,27 @@
 | 用户数据格式 | 开发期可改测试数据；进入维护期必须向后兼容 |
 | 用户可感知的行为 | 必须兼容，以旧为优先；有充足优化动机时先问再做 |
 | 内部代码接口 | 允许删减重构，但必须在高度模块化前提下，禁止"自由重构" |
-| 文档 / 规范 | 是资产不是负担；改动代码必须同步 OpenSpec / ARCHITECTURE.md / ADR |
+| 文档 / 规范 | 是资产不是负担；改动代码必须同步被击中的 OpenSpec / DATA_MODEL / ARCHITECTURE / ADR 等职责文件 |
+
+## 契约权威与冲突处理
+
+不同文档只在自己的职责内权威，**禁止按“哪个文件更新得晚”自行选边**：
+
+| 资产 | 唯一职责 |
+|---|---|
+| `openspec/specs/` | 当前用户可观察行为与 capability contract |
+| `docs/DATA_MODEL.md` | 持久字段语义、状态、writer/consumer 边界 |
+| `docs/GLOSSARY.md` | 设计名词定义 |
+| `FILE_CONTRACT.md` | Agent / CLI 中间工件与 manifest 契约 |
+| `docs/ARCHITECTURE.md` | 分层、依赖与模块边界 |
+| `docs/PRODUCT-MANUAL.md` | 用户操作与可见产品说明 |
+| `openspec/changes/` | 尚未成为当前事实的增量变更 |
+| `openspec/changes/archive/` | 历史原因；**不得用于推断当前事实** |
+
+代码与 SQLite schema 是实现事实和审计证据，但不能单独覆盖已经声明的契约。
+若上述职责文件或实现对同一事实互相冲突，这叫 **contract drift**：Agent 必须在当前任务
+范围内登记并协调，无法安全裁决时保持冲突显式存在并提出独立 change，禁止静默挑一个版本继续实现。
+`docs/audits/` 只保存带日期的审计快照，不是滚动规范，也不得成为新的 source of truth。
 
 ## 分层铁律
 
@@ -47,11 +68,14 @@
    `docs/GLOSSARY.md` 建条目；未定义的概念只能进 `docs/PENDING-DEFINITIONS.md`，
    禁止以挂名状态混入正式文档；功能变更交付时同步补 `docs/PRODUCT-MANUAL.md`
    对应章节，并同步登记 `docs/ACTION-GRAPH.md`（新增/退役/改级动作必须留痕）。
-3. **Ponytail 阶梯**：写码前依次问——要不要写？有没有现成？标准库能否搞定？一行函数
+3. **Contract Reconciliation**：凡是改变用户可观察行为、持久字段/schema、CLI/API、manifest/
+   中间工件或字段枚举的任务，交付前必须逐项检查其职责文件并在**同一个 PR**同步；未受影响的
+   文档不要机械改写。发现既有契约冲突时先显式登记/解决，不得靠时间戳、代码现状或个人猜测选边。
+4. **Ponytail 阶梯**：写码前依次问——要不要写？有没有现成？标准库能否搞定？一行函数
    够不够？禁止过度工程、禁止防御性编程、禁止哈希。
-4. **小步提交**：`feat/fix/docs/chore/refactor` 前缀；工作区不留脏；每完成一个可验证
+5. **小步提交**：`feat/fix/docs/chore/refactor` 前缀；工作区不留脏；每完成一个可验证
    单元即提交。
-5. **验证节奏**（每个 PR 必跑的仓库级检查）：
+6. **验证节奏**（每个 PR 必跑的仓库级检查）：
    ```bash
    python -m pytest tests -q
    python -m compileall -q lessonkit.py workbench pipeline pool tests
@@ -63,8 +87,8 @@
    ```bash
    python lessonkit.py guard problem-set --course dmath --chapter ch06
    ```
-6. **单对话职责单一**：设计对话 / 实现对话 / 重构对话分开；长任务拆段，每段可恢复。
-7. **低价值探索禁止**：实现前先走阶梯（见 3），不确定的设计先问。
+7. **单对话职责单一**：设计对话 / 实现对话 / 重构对话分开；长任务拆段，每段可恢复。
+8. **低价值探索禁止**：实现前先走阶梯（见 4），不确定的设计先问。
 
 ## 运行时约定
 
