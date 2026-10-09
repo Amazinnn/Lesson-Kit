@@ -132,6 +132,12 @@ def list_items(pool, entity):
     return [_row(row) for row in rows]
 
 
+def ensure_kp_batch_column(conn):
+    """Add the declared nullable provenance column for a legacy explicit apply."""
+    if "ingest_batch_id" not in {row[1] for row in conn.execute("PRAGMA table_info(knowledge_points)")}:
+        conn.execute("ALTER TABLE knowledge_points ADD COLUMN ingest_batch_id TEXT")
+
+
 def search(pool, entity, query):
     """Every whitespace-separated keyword must be in the row (AND), casefolded."""
     words = facets.keyword_words(query)

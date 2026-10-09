@@ -15,19 +15,23 @@ _CONSTRUCT = re.compile(
 
 def _paragraph_counts(body):
     text = body.replace("\r\n", "\n")
-    # Mask before splitting: a fenced construct may span several paragraphs.
-    # Keep positions/line breaks so only original blank lines define boundaries.
-    masked = _CONSTRUCT.sub(
-        lambda match: re.sub(r"[^\n]", "\0", match.group()), text)
-    counts, lines = [], []
-    for original, measured in zip(text.split("\n"), masked.split("\n")):
+    # Keep original positions for paragraph boundaries; remove every construct
+    # character, including internal newlines, from the measurement view.
+    masked = list(text)
+    for match in _CONSTRUCT.finditer(text):
+        masked[match.start():match.end()] = [""] * (match.end() - match.start())
+    counts, lines, offset = [], [], 0
+    for original in text.split("\n"):
+        end = offset + len(original) + 1
+        measured = "".join(masked[offset:end])
         if original.strip():
-            lines.append(measured.replace("\0", ""))
+            lines.append(measured)
         elif lines:
-            counts.append(len("\n".join(lines).strip()))
+            counts.append(len("".join(lines).strip()))
             lines = []
+        offset = end
     if lines:
-        counts.append(len("\n".join(lines).strip()))
+        counts.append(len("".join(lines).strip()))
     return counts
 
 
@@ -46,7 +50,7 @@ def check(rows, available=True):
         short_count += bool(under)
         if over or under:
             entry = {
-                "kp_id": row.get("kp_id") or row["key"],
+                "kp_id": row.get("kp_id") or row.get("key"),
                 "over_long_paragraphs": over, "short_paragraphs": under,
                 "min_visible_characters": min(counts),
                 "max_visible_characters": max(counts),
@@ -80,8 +84,9 @@ def render_text(report):
         if report[field]:
             lines.append(f"{label}:")
             for row in report[field]:
+                label = row["kp_id"] if row["kp_id"] is not None else "(missing knowledge point id)"
                 lines.append(
-                    f"  {row['kp_id']}: over {high}: {row['over_long_paragraphs']}, "
+                    f"  {label}: over {high}: {row['over_long_paragraphs']}, "
                     f"under {low}: {row['short_paragraphs']}; "
                     f"min {row['min_visible_characters']}, max {row['max_visible_characters']}")
     summary = report["summary"]

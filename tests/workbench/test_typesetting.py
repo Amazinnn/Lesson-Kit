@@ -26,6 +26,12 @@ class TypesettingTests(unittest.TestCase):
         self.assertEqual(report["summary"]["short"],
                          {"knowledge_points": 1, "share": 0.2})
 
+    def test_removed_construct_internal_newlines_do_not_count(self):
+        for construct in ("$$\nx\n$$", "```python\nx = 1\n```", "`one\ntwo`"):
+            with self.subTest(construct=construct):
+                report = self.check([{"key": "kp", "body": "a" * 18 + "\n" + construct + "\n" + "b" * 19}])
+                self.assertEqual(report["short"][0]["min_visible_characters"], 39)
+
     def test_math_and_code_are_removed_for_measurement_only(self):
         rows = [{"key": "kp", "body": "字" * 40 + "\n\n$$x^2$$\n\n$x$\n\n`code`"}]
         before = copy.deepcopy(rows)

@@ -92,6 +92,19 @@ class PoolTypesettingTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2, result.stderr)
         self.assertFalse(json.loads(result.stdout)["typesetting"]["available"])
 
+    def test_null_legacy_id_without_course_keeps_schema_errors(self):
+        self.seed("CREATE TABLE knowledge_points(kp_id TEXT,body TEXT); "
+                  "INSERT INTO knowledge_points VALUES(NULL,'short');")
+        result = subprocess.run(
+            [sys.executable, str(VALIDATOR), "--db", str(self.db_path), "--chapter", "ch06", "--json"],
+            cwd=self.root, env={**os.environ, "PYTHONUTF8": "1"},
+            capture_output=True, text=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 2, result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["summary"]["errors"], 9)
+        self.assertEqual(report["summary"]["warnings"], 0)
+        self.assertIsNone(report["typesetting"]["short"][0]["kp_id"])
+
     def test_schema_failure_preserves_original_errors_exit_and_still_reports_body(self):
         self.seed("""
             CREATE TABLE knowledge_points(kp_id TEXT, body TEXT);

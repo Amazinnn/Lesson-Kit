@@ -11,6 +11,7 @@ from pathlib import Path
 
 from workbench.bridge import conversation_providers
 from workbench.data import content as content_data
+from workbench.data import typesetting as typesetting_data
 from workbench.domain import cards as card_rules
 from workbench.domain import content_identity
 from workbench.domain import markup
@@ -279,6 +280,8 @@ def apply(db_path, gate_path, backup_path=None):
         manifest_path = _write_manifest_snapshot(database, batch_id, snapshot)
         _backup_database(database, backup)
         if content_patch:
+            if content_patch["knowledge_points"]:
+                content_data.ensure_kp_batch_column(conn)
             for item in content_patch["knowledge_points"]:
                 fields = list(KP_FIELDS)
                 if item.get("difficulty") is not None:
@@ -288,11 +291,9 @@ def apply(db_path, gate_path, backup_path=None):
                     if field == "related_kp_ids" else item[field]
                     for field in fields
                 ]
-                conn.execute(
-                    f"INSERT INTO knowledge_points ({', '.join(fields)}) "
-                    f"VALUES ({', '.join('?' for _ in fields)})",
-                    values,
-                )
+                _insert_row(conn, "knowledge_points", {
+                    **dict(zip(fields, values)), "ingest_batch_id": batch_id,
+                })
         mappings = {
             item["problem"]: json.dumps(item["kp_ids"], ensure_ascii=False)
             for item in (content_patch or {}).get("mappings", [])
@@ -634,7 +635,7 @@ def inspect_content_bundle_typesetting(manifest):
         return typesetting.check([], available=False)
     if not isinstance(manifest, dict) or manifest.get("kind") != CONTENT_BUNDLE_KIND:
         raise ValueError("expected a content-bundle manifest")
-    return typesetting.check(manifest.get("knowledge_points", []))
+    return typesetting.check(typesetting_data.bundle_rows(manifest.get("knowledge_points") or []))
 
 
 def _bundle_list(manifest, field, errors):
@@ -1094,9 +1095,9 @@ def _gate_content_bundle(conn, manifest, course=""):
         "chapters": chapters,
         "knowledge_points": kp_plans, "problems": problem_plans,
         "flash_cards": card_plans,
-        "typesetting": typesetting.check([
-            {"kp_id": plan["kp_id"], "body": plan["fields"]["body"]}
-            for plan in kp_plans]),
+        "typesetting": typesetting.check(typesetting_data.bundle_rows([
+              {"kp_id": plan["kp_id"], "body": plan["fields"]["body"]}
+              for plan in kp_plans])),
     }
 
 

@@ -155,6 +155,28 @@ class ContentBundleTests(unittest.TestCase):
                                  [(str(body),)])
                 self.assertEqual(result["typesetting"]["short"][0]["min_visible_characters"], len(str(body)))
 
+    def test_typesetting_matches_stored_boolean_and_float_body_text(self):
+        for body in (True, False, 1e-7):
+            with self.subTest(body=body):
+                manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+                    {"key": "new", "knowledge_item": "Knowledge point", "body": body}]}
+                preview = ingest.inspect_content_bundle_typesetting(manifest)
+                result = self.apply(manifest)
+                kp_id = result["typesetting"]["short"][0]["kp_id"]
+                stored = self.query("SELECT body FROM knowledge_points WHERE kp_id=?", (kp_id,))[0][0]
+                self.assertEqual(preview["short"][0]["min_visible_characters"], len(stored))
+                self.assertEqual(result["typesetting"]["short"][0]["min_visible_characters"], len(stored))
+                self.assertIs(manifest["knowledge_points"][0]["body"], body)
+
+    def test_typesetting_inspection_accepts_optional_null_kp_list(self):
+        manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": None,
+                    "problems": [formal("p", ["dmath-ch06-kp-001"])]}
+        with open_db(self.db_path) as conn:
+            self.assertTrue(ingest._gate_content_bundle(conn, manifest, "dmath")["ok"])
+        report = ingest.inspect_content_bundle_typesetting(manifest)
+        self.assertTrue(report["available"])
+        self.assertEqual(report["summary"]["knowledge_points"], 0)
+
     def test_thirty_items_commit_under_one_batch_id(self):
         figure = self.image()
         problems = [
