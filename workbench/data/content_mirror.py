@@ -20,6 +20,14 @@ ENTITY_DIRS = {
     "problem": "problems",
     "relation": "relations",
 }
+# The mirror follows the governed data CRUD surface, except file-backed figure
+# attachment metadata. Figures have their own ingest/figure contract and will be
+# added only through that authority rather than by turning a path string into a
+# generic repository-editable field.
+MIRROR_FIELDS = {
+    entity_type: set(fields) for entity_type, fields in content.EDITABLE_FIELDS.items()
+}
+MIRROR_FIELDS["problem"].discard("figure_paths")
 ENVELOPE_FIELDS = {
     "schema_version", "entity_type", "entity_id", "revision", "content",
 }
@@ -128,7 +136,7 @@ def read_entity(path, course, expected_type=None):
     authored = value["content"]
     if not isinstance(authored, dict):
         raise MirrorError("content must be a JSON object")
-    allowed = content.EDITABLE_FIELDS[entity_type]
+    allowed = MIRROR_FIELDS[entity_type]
     unsupported = sorted(set(authored) - allowed)
     if unsupported:
         raise MirrorError(
@@ -142,7 +150,7 @@ def authored_projection(row, entity_type):
         return None
     return {
         field: row[field]
-        for field in sorted(content.EDITABLE_FIELDS[entity_type])
+        for field in sorted(MIRROR_FIELDS[entity_type])
         if field in row
     }
 
@@ -214,6 +222,7 @@ def _tracked(pool, entity_id=None):
 
 def _scan_repo(repo, course):
     found = {}
+    ambiguous = set()
     errors = []
     for entity_type, directory in ENTITY_DIRS.items():
         folder = _course_root(repo, course) / directory
@@ -223,12 +232,12 @@ def _scan_repo(repo, course):
             try:
                 envelope = read_entity(path, course, entity_type)
                 key = (entity_type, envelope["entity_id"])
-                if key in found:
-                    # Identity is inside JSON, not in the path.  Two files that
-                    # claim one identity are ambiguous, so neither may win by
-                    # scan order. Removing the first also prevents sync from
-                    # applying it while merely reporting the second as bad.
+                if key in found or key in ambiguous:
+                    # Identity is inside JSON, not in the path. Two or more files
+                    # that claim one identity are ambiguous, so none may win by
+                    # scan order — including a third or later duplicate.
                     found.pop(key, None)
+                    ambiguous.add(key)
                     raise MirrorError(f"duplicate entity_id: {envelope['entity_id']}")
                 found[key] = (path, envelope)
             except MirrorError as exc:
@@ -412,7 +421,7 @@ def plan(pool, repo, entity_id=None):
     for entity_type, identity in tracked:
         repo_entry = found.get((entity_type, identity))
         if repo_entry is None and parse_errors:
-            # An unreadable/ambiguous file has no trustworthy identity.  It may
+            # An unreadable/ambiguous file has no trustworthy identity. It may
             # be a renamed copy of this tracked entity, so treating absence as a
             # safe deletion-and-restore would risk overwriting authored work.
             results.append(_result(
