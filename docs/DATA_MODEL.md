@@ -12,7 +12,6 @@
 - **active**：当前正式字段，可以被新功能依赖。
 - **compat**：仍被当前实现读取，但主要用于兼容旧数据；新设计不得扩大依赖。
 - **legacy**：冻结遗留语义，只为旧 pipeline / 旧池保留。
-- **retired**：已由明确变更退役；新写入不得使用，迁移后的正式 schema 不再保留。
 - **unresolved**：当前资料或实现互相冲突；在决策前不得新增依赖、不得复用字段表达新含义。
 
 ## knowledge_points
@@ -31,7 +30,7 @@
 | `difficulty` | **legacy** | 旧知识内容复杂度 1–5；与正式题四维 objective difficulty 无换算关系 | 冻结 pipeline / 兼容查询 |
 | `fragile` | active | 易错/脆弱点备注；保存内容本身，不产生学习事件 | 知识点详情、兼容编辑 API |
 | `figure_paths` | **unresolved** | 该知识点引用的逻辑图片路径 JSON；**路径命名策略当前存在仓库级冲突** | 图像渲染/回滚 |
-| `ingest_batch_id` | active | 受治理内容创建/导入的批次 provenance；原地 problem-patch 的修改批次另由批次清单记录，不保证覆盖此列 | 回滚/审计 |
+| `ingest_batch_id` | active | 受治理 ingest/apply 的批次 provenance；原地修改的批次不保证覆盖此列，不能当作通用最后修改标记 | 回滚/审计 |
 | `created_at`, `updated_at` | active | 行生命周期时间戳；不得承载业务状态 | 审计/排序 |
 
 ### 知识关系双轨现状
@@ -85,7 +84,7 @@
 | `difficulty_transfer_distance` | active | 客观难度：迁移距离 1–5 |
 | `difficulty_construction_openness` | active | 客观难度：构造开放性 1–5 |
 | `difficulty_model` | active | 难度汇总模型 id；六个 difficulty 字段必须全空或全有 |
-| `ingest_batch_id` | active | 受治理内容创建/导入批次 provenance；原地修改的批次通过 problem-patch 清单与批次表追溯，不把该列视为最后修改批次 |
+| `ingest_batch_id` | active | 受治理 ingest/apply 批次 provenance；`problems` recipe 会在已有行上更新该列，problem-patch 与通用直接编辑不保证更新；后两者不把该列视为通用最后修改批次 |
 | `created_at`, `updated_at` | active | 行生命周期时间戳 |
 
 ### 三个最容易混淆的“题型”字段
