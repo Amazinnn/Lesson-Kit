@@ -3,7 +3,7 @@
 ## 1. Bootstrap repair and focused regressions
 
 - [x] 1.1 RED first: reproduce R2 with an unreadable renamed JSON whose bytes embed a pool entity id — init reports `valid=true` and creates the canonical file alongside it (disposable fixture only)
-- [x] 1.2 Account for every file under the course subtree in the init scan: collect unreadable files with repository-relative path and reason (invalid UTF-8, malformed JSON) into the report
+- [x] 1.2 Account for every file under the course subtree in the init scan: collect every failing file under the subtree with its path and reason (invalid UTF-8, malformed JSON) into the report
 - [x] 1.3 Refuse canonical creation for implicated entities (entity id in file name or replacement-decoded bytes), report the entity blocked naming the implicating file, leave the pool row and mirror state untouched, and keep unimplicated entities bootstrapping
 - [x] 1.4 GREEN: focused regressions for the three delta scenarios (implicated entity blocked, unattributable unreadable file reported without blocking, clean subtree reports nothing)
 - [x] 1.5 Assess the per-entity write-failure escape in the bootstrap loop; if confirmed, capture the exception as that entity's failed result and continue, with a focused regression (one failing write never aborts later siblings); if the repair widens v1 scope, record the finding and defer
@@ -26,8 +26,8 @@
 
 ## 4. Fresh independent review of the repaired HEAD
 
-- [ ] 4.1 Dispatch spec review and quality/broad review as independent subagents (max 3 concurrent; per handoff contract) against the repaired, documented HEAD
-- [ ] 4.2 Resolve any confirmed finding minimally and re-run the affected focused suites; record separate spec / quality / whole-branch verdicts
+- [x] 4.1 Dispatch spec review and quality/broad review as independent subagents (max 3 concurrent; per handoff contract) against the repaired, documented HEAD
+- [x] 4.2 Resolve any confirmed finding minimally and re-run the affected focused suites; record separate spec / quality / whole-branch verdicts
 
 ## 5. Isolated real-pool acceptance rerun on the final HEAD
 
