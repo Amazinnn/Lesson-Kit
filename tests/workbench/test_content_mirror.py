@@ -373,6 +373,118 @@ class ContentMirrorTests(unittest.TestCase):
         self.assertEqual(row["status"], "invalid")
         self.assertIn("remote creation", row["detail"])
 
+    def test_same_content_convergence_records_next_revision(self):
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.entity_json("kp", "c02-ch01-kp-001")
+        envelope["revision"] = 2
+        envelope["content"]["knowledge_item"] = "Converged name"
+        path.write_text(json.dumps(envelope, ensure_ascii=False), encoding="utf-8")
+        self.pool.connect().execute(
+            "UPDATE knowledge_points SET knowledge_item='Converged name' "
+            "WHERE kp_id='c02-ch01-kp-001'"
+        )
+        self.pool.connect().commit()
+
+        result = content_mirror.sync(self.pool, self.repo)
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["counts"].get("recovered"), 1)
+        state = self.pool.connect().execute(
+            "SELECT revision, content_json FROM content_mirror_state "
+            "WHERE entity_type='kp' AND entity_id='c02-ch01-kp-001'"
+        ).fetchone()
+        self.assertEqual(state["revision"], 2)
+        self.assertEqual(json.loads(state["content_json"])["knowledge_item"], "Converged name")
+        _path, converged = self.entity_json("kp", "c02-ch01-kp-001")
+        self.assertEqual(converged["revision"], 2)
+
+    def test_revision_jump_is_refused_until_it_advances_by_one(self):
+        content_mirror.init(self.pool, self.repo)
+        self.pool.connect().execute(
+            "UPDATE knowledge_points SET knowledge_item='Step two' "
+            "WHERE kp_id='c02-ch01-kp-001'"
+        )
+        self.pool.connect().commit()
+        content_mirror.sync(self.pool, self.repo)
+        path, envelope = self.entity_json("kp", "c02-ch01-kp-001")
+        envelope["revision"] = 4
+        envelope["content"]["body"] = "jumped past three"
+        path.write_text(json.dumps(envelope, ensure_ascii=False), encoding="utf-8")
+
+        jumped = content_mirror.sync(self.pool, self.repo)
+
+        item = next(i for i in jumped["items"] if i.get("entity_id") == "c02-ch01-kp-001")
+        self.assertEqual(item["status"], "invalid")
+        self.assertIn("2 -> 3", item["detail"])
+
+        envelope["revision"] = 3
+        path.write_text(json.dumps(envelope, ensure_ascii=False), encoding="utf-8")
+        fixed = content_mirror.sync(self.pool, self.repo)
+
+        self.assertEqual(fixed["counts"].get("applied"), 1)
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT body FROM knowledge_points WHERE kp_id='c02-ch01-kp-001'"
+            ).fetchone()[0],
+            "jumped past three",
+        )
+
+    def test_missing_pool_row_is_a_conflict_and_is_not_recreated(self):
+        content_mirror.init(self.pool, self.repo)
+        self.pool.connect().execute(
+            "DELETE FROM problems WHERE problem_id='c02-ch01-prob-001'"
+        )
+        self.pool.connect().commit()
+
+        result = content_mirror.sync(self.pool, self.repo)
+
+        item = next(i for i in result["items"] if i.get("entity_id") == "c02-ch01-prob-001")
+        self.assertEqual(item["status"], "conflict")
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT COUNT(*) FROM problems WHERE problem_id='c02-ch01-prob-001'"
+            ).fetchone()[0],
+            0,
+        )
+
+    def test_one_invalid_sibling_does_not_block_a_valid_entity(self):
+        content_mirror.init(self.pool, self.repo)
+        good_path, good = self.entity_json("kp", "c02-ch01-kp-001")
+        good["revision"] = 2
+        good["content"]["body"] = "valid repo edit"
+        good_path.write_text(json.dumps(good, ensure_ascii=False), encoding="utf-8")
+        bad_path, bad = self.entity_json("kp", "c02-ch01-kp-002")
+        bad["revision"] = 5
+        bad["content"]["body"] = "invalid jump"
+        bad_path.write_text(json.dumps(bad, ensure_ascii=False), encoding="utf-8")
+
+        result = content_mirror.sync(self.pool, self.repo)
+
+        self.assertFalse(result["valid"])
+        good_item = next(i for i in result["items"] if i.get("entity_id") == "c02-ch01-kp-001")
+        bad_item = next(i for i in result["items"] if i.get("entity_id") == "c02-ch01-kp-002")
+        self.assertEqual(good_item["status"], "applied")
+        self.assertEqual(bad_item["status"], "invalid")
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT body FROM knowledge_points WHERE kp_id='c02-ch01-kp-001'"
+            ).fetchone()[0],
+            "valid repo edit",
+        )
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT body FROM knowledge_points WHERE kp_id='c02-ch01-kp-002'"
+            ).fetchone()[0],
+            "A queue uses FIFO.",
+        )
+        revisions = dict(
+            (row["entity_id"], row["revision"]) for row in self.pool.connect().execute(
+                "SELECT entity_id, revision FROM content_mirror_state WHERE entity_type='kp'"
+            )
+        )
+        self.assertEqual(revisions["c02-ch01-kp-001"], 2)
+        self.assertEqual(revisions["c02-ch01-kp-002"], 1)
+
     def test_init_reports_unreadable_file_and_blocks_implicated_entity(self):
         nested = self.repo / "courses" / "c02" / "knowledge" / "nested"
         nested.mkdir(parents=True)
