@@ -3,7 +3,7 @@
 import sys
 
 
-EXTENSION_COMMANDS = {"experience"}
+EXTENSION_COMMANDS = {"experience", "mirror"}
 
 
 def command_names():
@@ -17,6 +17,9 @@ def lesson_kit_main(argv=None):
     if args and args[0] == "experience":
         from workbench.cli import experience
         return experience.main(args[1:], prog="lesson-kit experience")
+    if args and args[0] == "mirror":
+        from workbench.cli import mirror
+        return mirror.main(args[1:], prog="lesson-kit mirror")
     from workbench.cli import main
     return main.lesson_kit_main(args)
 

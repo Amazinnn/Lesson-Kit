@@ -29,7 +29,7 @@
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 | POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
-## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，22 条顶层命令）
+## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，24 条顶层命令）
 
 | 命令 | 性质 | 给谁 |
 |---|---|---|
@@ -43,6 +43,7 @@
 | `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检，apply 单事务多题，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容；`data <ws> audit` 只读报告重复、片段、标题和图片问题） | Agent |
+| `mirror`（`init/check/status/sync`；`--repo` 指向本地内容仓库 checkout；支持 `--entity` 与 `sync --dry-run`） | 读 + **显式变更**（在知识池与版本化 JSON authored-content projection 之间按单实体同步；不执行 Git 网络操作，不因仓库缺文件或删除请求删池内容） | Agent |
 | `bridge add / add-model / list` | 配置 provider 与**模型条目**（显示名自定，与 harness 解耦）/ 报告解析到的可执行文件、来源与条目 | 人 |
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |

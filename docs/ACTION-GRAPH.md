@@ -30,9 +30,9 @@
 | 总纲 | [action-graph/README.md](action-graph/README.md) | 分层模型、铁律、状态标记、队列 |
 | L0 数据层 | [action-graph/L0-data.md](action-graph/L0-data.md) | 表/文件/会话键：谁读谁写 |
 | L1 服务层 | [action-graph/L1-services.md](action-graph/L1-services.md) | 域逻辑模块与依赖 |
-| L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 30 路由 + CLI 20 命令 |
+| L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 36 路由 + CLI 24 命令 |
 | L3 动作层 | [action-graph/L3-actions.md](action-graph/L3-actions.md) | 动作登记（入口/权限/读写/状态）+ 留痕 |
-| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 四条主流程 + 15 条意外分支清单 |
+| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 九条主流程 + 37 条意外分支清单 |
 
 ## 总图
 
@@ -58,6 +58,7 @@ flowchart LR
   subgraph GOV[内容治理]
     ING[ingest 门禁]
     BK[备份/事务]
+    MIR[mirror 镜像同步]
   end
   subgraph BR[Agent 桥]
     CONV[对话轮次]
@@ -81,6 +82,7 @@ flowchart LR
   CONV --> PLAN --> A
   CONV -->|明确练习意图| SEL --> P
   CHK ==>|生成→校验→直接入池·批次 id| ING --> BK --> DB
+  CLI --> MIR -->|单实体事务| DB
   CLI --> DB & FS
   T -->|只读| DB
 ```
@@ -232,3 +234,8 @@ flowchart LR
 - 2026-10-10 恢复 PR106 题目标签删除（restore-pr106-problem-label-removal）：schema ensure
   物理删除 `problems.topic_label`，旧表重建不再保留该列；取代 PR111 的列保留语义。
   闪卡标签与其他内容/学习记录不变，外部备份承担历史恢复；不新增或改级 CLI/API 动作。
+- 2026-10-10 作者内容镜像 v1（json-content-repository-sync，PR110）：本地 JSON 作者内容
+  投影与 `lesson-kit mirror init/check/status/sync` 上线（CLI 顶层命令增至 24）；L0 登记
+  两张台账表，L1 登记内容镜像模块，L3 第三节新增三条动作，L4 新增 W9 与四条意外分支。
+  引导期加固：不可读仓库文件进入 init 报告并阻断被其点名实体的建档、逐实体写失败不再中断
+  整轮、缺失文件恢复在台账失败后可重试。不执行 Git 网络操作，不因仓库缺文件或删除请求删池内容。

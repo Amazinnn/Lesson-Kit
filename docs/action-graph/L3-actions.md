@@ -64,6 +64,9 @@
 | 全池备份 | ingest --backup | 同上 | pool/backups | 已实现 |
 | **Check 管线**（生成→校验→**直接入正式池**，无候选中间态；批次 id+整批回滚；候选组织并入校验环节） | CLI `ingest rollback --batch <id>` + 结果卡回滚按钮 + `POST /ingest/rollback` | Agent 主导 | 经门禁写池+批次标记+ingest_batches 登记 | **已实现**（introduce-check-pipeline，队列④） |
 | 抽取管线入池（教材→KP→题） | 管线脚本 | 人 | 全部内容表 | 已实现（一次性） |
+| 作者内容镜像引导（pool-first：池写修订号 1 JSON + 台账；已有同 id 文件按嵌入身份采纳/冲突拒绝；不可读文件进报告、被其点名 id 的实体拒绝建档、其余实体照常；逐实体可恢复） | CLI `mirror init --repo <checkout>`（`[--entity] [--dry-run]`） | Agent | 池 `content_mirror_state`/`content_mirror_log` + checkout JSON | 已实现（2026-10-10，json-content-repository-sync/PR110） |
+| 作者内容镜像只读分类（零写入；区分 noop/仓库→池/池→仓库/文件恢复/收敛/无效/冲突） | CLI `mirror check`·`mirror status --repo [--entity]` | Agent | — | 已实现（同上） |
+| 作者内容镜像同步（逐实体三方比较：仓库修改经既有内容/关系校验器写池，内容+状态+日志同事务；池修改导出下一修订；缺失文件按新修订恢复；收敛恢复；冲突/无效逐条报告、成功兄弟保留；删除请求只校验报告、永不执行；不碰 Git 网络） | CLI `mirror sync --repo [--entity] [--dry-run]` | Agent | 池内容（经 `data.content`/关系校验器）+ checkout JSON + 台账 | 已实现（同上） |
 
 ## 四、Agent 桥
 
@@ -198,3 +201,9 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   **两个关键词域**（题干/来源），各域空格多词 AND、跨域 AND，域定义只有一份并被搜索与选题共用；
   `origin_kind` 由单值升为第四个筛选维度（浮窗显示历年原题/改编/AI生成，CLI `--origin-kinds` 可重复）；
   旧 `?q=`、单值 `origin_kind`、旧浮窗存储键一律删除不兼容。
+- 2026-10-10 作者内容镜像 v1（json-content-repository-sync，PR110）：第三节新增三条动作——
+  `mirror init`（pool-first 引导、修订号 1、逐实体可恢复；既有同 id 文件按嵌入身份采纳；
+  不可读文件进报告并阻断被其点名实体的建档、逐实体写失败不再中断整轮）、
+  `mirror check/status`（零写入分类）、`mirror sync`（逐实体三方比较；仓库修改经既有
+  内容/关系校验器写池，内容+状态+日志同一池事务；缺失文件按新修订恢复、删除请求只报告
+  不执行、永不因仓库缺文件删池）。CLI 顶层命令增至 24；不执行 Git clone/pull/commit/push。
