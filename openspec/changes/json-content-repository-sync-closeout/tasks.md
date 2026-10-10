@@ -37,11 +37,11 @@
 
 ## 6. Full repository gates on the final HEAD
 
-- [ ] 6.1 `python -m pytest tests -q` with `PYTHONUTF8=1`
-- [ ] 6.2 All `tests/**/*.test.js` via `node --test`
-- [ ] 6.3 `python -m compileall -q lessonkit.py workbench pipeline pool tests`
-- [ ] 6.4 `openspec validate --all --strict --concurrency 3`
-- [ ] 6.5 `python lessonkit.py guard extract-problems --course dmath --chapter ch06` (problem-set guard only if its output exists)
+- [x] 6.1 `python -m pytest tests -q` with `PYTHONUTF8=1`
+- [x] 6.2 All `tests/**/*.test.js` via `node --test`
+- [x] 6.3 `python -m compileall -q lessonkit.py workbench pipeline pool tests`
+- [x] 6.4 `openspec validate --all --strict --concurrency 3`
+- [x] 6.5 `python lessonkit.py guard extract-problems --course dmath --chapter ch06` (problem-set guard only if its output exists)
 
 ## 7. Merge sequence for PR110
 

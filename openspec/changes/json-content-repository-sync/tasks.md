@@ -46,10 +46,10 @@
 - [x] 6.2 Confirm repository-only entity creation is refused by the focused v1 test; no cross-reference deferral fixture applies.
 - [x] 6.3 Add a deletion-request fixture and assert the target row plus runtime history remain unchanged.
 - [x] 6.4 Add round-trip tests: pool -> JSON -> edited JSON -> pool -> JSON preserves the supported authored projection exactly.
-- [ ] 6.5 Run `python -m pytest tests -q`.
-- [ ] 6.6 Run `python -m compileall -q lessonkit.py workbench pipeline pool tests`.
-- [ ] 6.7 Run `openspec validate --specs --strict`.
-- [ ] 6.8 Run the repository extract-problems guard required by `AGENTS.md`.
+- [x] 6.5 Run `python -m pytest tests -q`.
+- [x] 6.6 Run `python -m compileall -q lessonkit.py workbench pipeline pool tests`.
+- [x] 6.7 Run `openspec validate --specs --strict`.
+- [x] 6.8 Run the repository extract-problems guard required by `AGENTS.md`.
 
 ## 7. Content repository rollout
 
