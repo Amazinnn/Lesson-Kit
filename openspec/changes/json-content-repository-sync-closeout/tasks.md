@@ -21,8 +21,8 @@
 
 ## 3. Conversation-suite failure diagnosis (evidence, not assumption)
 
-- [ ] 3.1 Create a throwaway worktree at `origin/main`; run the two failing tests (`ConversationTests.test_a_quiet_command_gets_the_tool_budget`, `ConversationTests.test_output_past_the_budget_is_not_a_timeout`) with `PYTHONUTF8=1`; keep the output as evidence
-- [ ] 3.2 If they fail on main: document them as environment-owned (Windows subprocess spawn latency vs the 0.3s idle budget) in the PR body and handoff, with an explicit follow-up task on main; no code change in this PR. If they pass on main: escalate as a possible branch interaction before any merge step
+- [x] 3.1 Create a throwaway worktree at `origin/main`; run the two failing tests (`ConversationTests.test_a_quiet_command_gets_the_tool_budget`, `ConversationTests.test_output_past_the_budget_is_not_a_timeout`) with `PYTHONUTF8=1`; keep the output as evidence
+- [x] 3.2 If they fail on main: document them as environment-owned (Windows subprocess spawn latency vs the 0.3s idle budget) in the PR body and handoff, with an explicit follow-up task on main; no code change in this PR. If they pass on main: escalate as a possible branch interaction before any merge step
 
 ## 4. Fresh independent review of the repaired HEAD
 
