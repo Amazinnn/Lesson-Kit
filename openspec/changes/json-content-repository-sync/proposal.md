@@ -27,7 +27,7 @@ The first implementation covers the three content entities already exposed throu
 - durable problems (`problem`),
 - knowledge relations (`relation`).
 
-The repository contract is deliberately extensible to cards, figures, objective difficulty, and other authored content, but those are not silently folded into v1 until their existing specialized write contracts are routed through the same entity protocol.
+V1 is limited to knowledge points, durable problems, and knowledge relations. It does not mirror flash-card entities, figure bytes, or specialized problem-difficulty fields, and it refuses repository-only entity creation. Expanding that boundary requires a separate approved change that names the existing validation and mutation authority for each new entity or field.
 
 ## Non-goals
 

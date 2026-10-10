@@ -29,7 +29,7 @@
 - [ ] 4.2 Implement three-way planning from remembered normalized content, current pool projection, and current JSON content.
 - [ ] 4.3 Implement `repo_to_pool`, `pool_to_repo`, `restore_repo_file`, `recover_converged`, `noop`, `invalid`, and `conflict` outcomes without hashes.
 - [ ] 4.4 Route repository mutations through existing content/relation validators and refuse unsupported specialized fields rather than bypassing their contracts.
-- [ ] 4.5 Retry dependency-deferred entities once after the first pass.
+- [x] 4.5 Confirm repository-only entity creation is refused in v1, so creating or deferring references to new entities is outside this change.
 - [ ] 4.6 Store one success-log row with each successful semantic revision and prove retry idempotency after simulated interruption.
 - [ ] 4.7 Validate/report deletion requests while guaranteeing that mirror code cannot call content deletion because of a repository request or missing file.
 
@@ -43,7 +43,7 @@
 ## 6. Verification
 
 - [ ] 6.1 Unit-test bootstrap, unchanged state, repository edit, pool edit, same-content convergence, stale/jumped revision, two-sided conflict, missing file restoration, missing pool row, and partial success.
-- [ ] 6.2 Add a cross-reference fixture where a problem is deferred until its knowledge point is available.
+- [x] 6.2 Confirm repository-only entity creation is refused by the focused v1 test; no cross-reference deferral fixture applies.
 - [ ] 6.3 Add a deletion-request fixture and assert the target row plus runtime history remain unchanged.
 - [ ] 6.4 Add round-trip tests: pool -> JSON -> edited JSON -> pool -> JSON preserves the supported authored projection exactly.
 - [ ] 6.5 Run `python -m pytest tests -q`.

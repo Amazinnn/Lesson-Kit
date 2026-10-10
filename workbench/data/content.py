@@ -288,7 +288,7 @@ def update(pool, entity, object_id, data):
     if "updated_at" in columns:
         assignments.append("updated_at=datetime('now')")
     conn = pool.connect()
-    with conn:
+    with pool.transaction():
         cursor = conn.execute(
             f"UPDATE {table} SET {', '.join(assignments)} WHERE {id_column}=?",
             (*values, object_id),
@@ -315,7 +315,7 @@ def _update_problem(pool, problem_id, data):
     if "updated_at" in columns:
         assignments.append("updated_at=datetime('now')")
     conn = pool.connect()
-    with conn:
+    with pool.transaction():
         cursor = conn.execute(
             f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
             (*values, problem_id),

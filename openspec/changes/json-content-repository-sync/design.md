@@ -44,7 +44,7 @@ One repository holds many courses. Local workspace paths are irrelevant.
 
 `course-id` is the existing Course Identifier. File names are conventional for readability; entity identity comes from the JSON envelope. Moving/renaming a file without changing the envelope id does not create a new entity or delete the old one.
 
-The synchronizer scans only the selected course directory plus deletion requests targeting that course. A future Git changed-path optimization may reduce scanning, but paths are never semantic identity.
+The synchronizer scans the supported entity directories under the selected course, including nested folders, plus deletion requests targeting that course. A future Git changed-path optimization may reduce scanning, but paths are never semantic identity.
 
 ## 3. Entity envelope
 
@@ -65,22 +65,23 @@ Each entity file is strict JSON:
 
 Rules:
 
-- `schema_version` is an integer understood by the parser.
+- `schema_version` is the integer `1`; booleans and non-integer numeric values are rejected.
 - `entity_type` is one supported entity kind.
 - `entity_id` is immutable and must belong to the selected course.
 - `revision` is a positive, monotonically increasing integer managed by synchronization/export tooling; one semantic authored-content generation advances it once.
 - `content` contains authored fields only. Unknown fields fail validation; they are never silently dropped.
+- Fields stored as JSON arrays or objects retain those JSON types; stringified JSON is rejected.
 - JSON is UTF-8 and canonical output uses two-space indentation, `ensure_ascii=false`, sorted envelope/content field order as defined by the writer, and a final newline. Formatting differences alone never create a semantic revision.
 
 No hash, fingerprint, SHA field, or content-derived identifier is used.
 
 ## 4. Mirrored projection
 
-V1 mirrors the governed mutable fields already owned by `workbench.data.content` for `kp`, `problem`, and `relation`. The id is carried by the envelope and cannot be patched through `content`.
+V1 mirrors the governed mutable fields already owned by `workbench.data.content` for `kp`, `problem`, and `relation`. Flash-card entities, figure bytes, specialized problem-difficulty fields, and repository-only entity creation are outside v1. The id is carried by the envelope and cannot be patched through `content`.
 
 Database-only columns such as `created_at`, `updated_at`, batch bookkeeping, learner state, attempts, schedules, feedback, signals, and derived/cache values are excluded.
 
-Specialized authored fields that already have a separate mutation contract (notably objective problem difficulty) are not made writable by bypassing that contract. They are added to the mirror only when the synchronizer delegates to the same specialized validator/apply path. This is how the design maximizes editability without weakening existing invariants.
+Specialized authored fields that have a separate mutation contract are excluded until a separate approved change routes them through that authority.
 
 ## 5. Synchronization state without hashes
 
@@ -109,7 +110,7 @@ For a tracked entity:
 1. Read baseline revision/content from `content_mirror_state`.
 2. Read the current pool projection.
 3. Read and validate the JSON entity.
-4. Compare normalized structures, not file bytes.
+4. Run changed repository values through the existing entity validator and compare its normalized projection, not file bytes. A successful accepted edit rewrites the repository envelope with that normalized projection at the incoming revision.
 
 Classification:
 
@@ -134,7 +135,9 @@ For an untracked entity, normal `sync` does not guess which side wins when both 
 - It refuses if mirror state already exists for the course.
 - It writes one JSON file per supported pool entity at revision 1.
 - It records the same normalized content and revision 1 in mirror state.
-- If a target file already exists with different semantic content, initialization refuses that entity rather than overwriting it.
+- If a valid file with the same embedded identity exists anywhere under that entity directory, initialization adopts it when revision 1 content matches, regardless of its filename or nested location.
+- If the canonical target exists with a different embedded identity, initialization refuses that entity rather than overwriting it.
+- If a same-identity file is duplicated, initialization refuses that entity.
 - The operation is per-entity: successful entities remain initialized if a later entity fails, and rerunning resumes the rest.
 
 This makes the first synchronization deterministic for the existing `c02`/`c04` pools instead of asking the tool to infer ancestry from two independently populated stores.
@@ -143,13 +146,13 @@ This makes the first synchronization deterministic for the existing `c02`/`c04` 
 
 The transaction boundary is one entity, not one Git commit, folder, course, or batch.
 
-For repository-to-pool changes, validation happens before the transaction. The content mutation, mirror-state update, and success-log row are committed as one pool transaction wherever the delegated content writer supports the same connection boundary. Where an existing writer owns its own transaction, the synchronizer performs recovery classification on retry so a crash cannot duplicate a semantic change.
+For repository-to-pool changes, validation happens before the transaction. The content mutation, mirror-state update, and success-log row are committed in one pool transaction. Existing content writers participate in an enclosing `Pool.transaction`; a validation, mutation, or ledger error rolls back the content and mirror state together.
+
+The normalized JSON envelope is written before the pool transaction commits. If the transaction fails, the next run still sees the same incoming revision and can retry it; a failed envelope write rolls back the pool transaction.
 
 For pool-to-repository changes, the JSON writer writes a temporary sibling file and replaces the target. Mirror state is advanced only with a recoverable ordering: any crash leaves either the old state/file or a pair that the next comparison can classify as `recover_converged`/stale and repair without content loss.
 
-A run returns counts and per-entity results: `applied`, `exported`, `restored`, `recovered`, `noop`, `conflict`, `invalid`, `deferred`. One entity failure does not roll back prior successful entities.
-
-References are dependency-aware. An entity whose incoming payload references a not-yet-present knowledge point is `deferred`; after other entities have been applied the run retries deferred entities once. Remaining failures are reported explicitly.
+A run returns counts and per-entity results: `applied`, `exported`, `restored`, `recovered`, `noop`, `conflict`, and `invalid`. One entity failure does not roll back prior successful entities. Since v1 refuses repository-only entity creation, it does not create or defer references to new entities.
 
 ## 9. Deletion behavior
 

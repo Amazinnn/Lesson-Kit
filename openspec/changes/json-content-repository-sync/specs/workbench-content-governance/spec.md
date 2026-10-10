@@ -6,7 +6,7 @@ Lesson Kit SHALL support a checked-out repository that stores governed authored 
 
 For the initial supported projection, each knowledge point, durable problem, and knowledge relation SHALL be represented by one entity JSON object with exactly these envelope fields: `schema_version`, `entity_type`, `entity_id`, `revision`, and `content`. The entity id SHALL be the semantic identity. Moving or renaming the file SHALL NOT change identity, and changing `entity_id` in place SHALL be rejected as an identity change rather than treated as a rename.
 
-The projection SHALL contain authored fields only. Learner/runtime state including attempts, progress, feedback, schedules, learner signals, session state, caches, and derived statistics SHALL NOT be exported to the repository.
+The v1 projection SHALL contain authored fields only. It SHALL support knowledge points, durable problems, and knowledge relations. It SHALL NOT support flash-card entities, figure bytes, or specialized problem-difficulty fields. Repository-only entity creation SHALL be refused. Learner/runtime state including attempts, progress, feedback, schedules, learner signals, session state, caches, and derived statistics SHALL NOT be exported to the repository.
 
 No hash value, fingerprint, SHA value, or content-derived id SHALL be introduced for synchronization.
 
@@ -82,9 +82,9 @@ Bootstrap SHALL be resumable per entity. It SHALL NOT overwrite an existing enti
 
 The synchronization transaction boundary SHALL be one content entity. A course-level run MAY partially succeed: successful entities remain synchronized even when another entity is invalid, conflicting, or temporarily blocked by a missing reference.
 
-Each repository-to-pool entity write SHALL reuse the existing governed validator/mutation authority for that entity rather than issuing an unvalidated general SQL patch. Each successful operation SHALL update its remembered revision/content and append a readable synchronization-log row. Retrying after interruption SHALL NOT duplicate a semantic change.
+Each repository-to-pool entity write SHALL first produce the normalized projection returned by the existing governed validator for that entity. Planning and convergence checks SHALL compare that normalized projection with the pool and remembered content. After a successful repository edit, the JSON envelope SHALL be rewritten with the normalized content at the same revision.
 
-When an incoming entity references another entity that is part of the same run but is not yet available, synchronization SHALL defer it, process other entities, and retry deferred entities once before returning the final report.
+The content mutation, remembered revision/content update, and success-log row for a repository-to-pool edit SHALL commit in one SQLite transaction. If validation, mutation, or ledger writing fails, the entity content and mirror state SHALL remain unchanged. The normalized JSON rewrite SHALL occur in an order that permits a retry after interruption without losing the edit.
 
 #### Scenario: One bad entity does not roll back unrelated good entities
 
@@ -95,9 +95,17 @@ When an incoming entity references another entity that is part of the same run b
 
 #### Scenario: Reference dependency is retried
 
-- **GIVEN** a problem edit refers to a knowledge point that is also introduced earlier or later in the same synchronization set
-- **WHEN** the first attempt cannot satisfy that reference
-- **THEN** the problem is marked deferred and is retried once after other applicable entity operations have completed
+- **GIVEN** a repository file names an entity that does not exist in the pool
+- **WHEN** synchronization runs
+- **THEN** that repository-only entity is refused without allocating an id or writing pool content
+
+#### Scenario: Normalized repository edits converge atomically
+
+- **GIVEN** a tracked problem has `exam_year` set to `2022`
+- **AND** its next repository revision changes `exam_year` to the accepted empty value
+- **WHEN** synchronization applies the edit
+- **THEN** the pool, mirror ledger, and rewritten repository envelope all store the normalized empty value
+- **AND** if the mirror ledger write fails, the pool retains `2022` and the prior ledger revision
 
 ### Requirement: Repository absence and deletion requests never delete pool content
 
@@ -121,7 +129,7 @@ The repository MAY contain explicit deletion-request JSON documents. The mirror 
 
 The CLI SHALL expose a `mirror` command group over a registered workspace and local repository checkout. It SHALL provide bootstrap, validation/status, synchronization, and dry-run behavior without performing Git network/authentication operations.
 
-`check`, `status`, and `sync --dry-run` SHALL perform zero pool-content writes and zero entity-file writes. Their machine-readable report SHALL classify entities sufficiently to distinguish at least: no change, repository-to-pool, pool-to-repository, repository restoration, converged recovery, invalid, conflict, and deferred.
+`check`, `status`, and `sync --dry-run` SHALL perform zero pool-content writes and zero entity-file writes. Their machine-readable report SHALL classify entities sufficiently to distinguish at least: no change, repository-to-pool, pool-to-repository, repository restoration, converged recovery, invalid, and conflict.
 
 The command SHALL support restricting work to one entity id so interrupted or high-risk changes can be inspected and resumed precisely.
 

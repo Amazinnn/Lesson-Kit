@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 from pathlib import Path
 
 from workbench.data import content
@@ -28,6 +29,11 @@ MIRROR_FIELDS = {
     entity_type: set(fields) for entity_type, fields in content.EDITABLE_FIELDS.items()
 }
 MIRROR_FIELDS["problem"].discard("figure_paths")
+ARRAY_FIELDS = {
+    "kp": {"related_kp_ids"},
+    "problem": {"kp_ids", "practice_modes"},
+}
+OBJECT_FIELDS = {"problem": {"micro_quiz"}}
 ENVELOPE_FIELDS = {
     "schema_version", "entity_type", "entity_id", "revision", "content",
 }
@@ -105,6 +111,8 @@ def _load_json(path):
         value = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     except json.JSONDecodeError as exc:
         raise MirrorError(f"invalid JSON in {path}: {exc}") from exc
+    except UnicodeDecodeError as exc:
+        raise MirrorError(f"JSON is not valid UTF-8: {path}") from exc
     if not isinstance(value, dict):
         raise MirrorError(f"JSON document must be an object: {path}")
     return value
@@ -118,12 +126,13 @@ def read_entity(path, course, expected_type=None):
         raise MirrorError(f"unsupported envelope field(s): {', '.join(unknown)}")
     if missing:
         raise MirrorError(f"missing envelope field(s): {', '.join(missing)}")
-    if value["schema_version"] != SCHEMA_VERSION:
+    version = value["schema_version"]
+    if isinstance(version, bool) or not isinstance(version, int) or version != SCHEMA_VERSION:
         raise MirrorError(
-            f"unsupported schema_version {value['schema_version']!r}; expected {SCHEMA_VERSION}"
+            f"unsupported schema_version {version!r}; expected integer {SCHEMA_VERSION}"
         )
     entity_type = value["entity_type"]
-    if entity_type not in ENTITY_DIRS:
+    if not isinstance(entity_type, str) or entity_type not in ENTITY_DIRS:
         raise MirrorError(f"unsupported mirror entity type: {entity_type}")
     if expected_type and entity_type != expected_type:
         raise MirrorError(
@@ -142,6 +151,12 @@ def read_entity(path, course, expected_type=None):
         raise MirrorError(
             f"unsupported {entity_type} content field(s): {', '.join(unsupported)}"
         )
+    for field in ARRAY_FIELDS.get(entity_type, ()):
+        if field in authored and authored[field] is not None and not isinstance(authored[field], list):
+            raise MirrorError(f"{entity_type}.{field} must be a JSON array or null")
+    for field in OBJECT_FIELDS.get(entity_type, ()):
+        if field in authored and authored[field] is not None and not isinstance(authored[field], dict):
+            raise MirrorError(f"{entity_type}.{field} must be a JSON object or null")
     return value
 
 
@@ -186,13 +201,13 @@ def _state(pool, entity_type, entity_id):
 def _put_state(pool, entity_type, entity_id, revision, authored, direction):
     if direction not in SYNC_DIRECTIONS:
         raise MirrorError(f"unsupported synchronization direction: {direction}")
-    conn = pool.connect()
-    previous = conn.execute(
-        "SELECT revision FROM content_mirror_state WHERE entity_type=? AND entity_id=?",
-        (entity_type, entity_id),
-    ).fetchone()
-    previous_revision = int(previous[0]) if previous else None
-    with conn:
+    with pool.transaction():
+        conn = pool.connect()
+        previous = conn.execute(
+            "SELECT revision FROM content_mirror_state WHERE entity_type=? AND entity_id=?",
+            (entity_type, entity_id),
+        ).fetchone()
+        previous_revision = int(previous[0]) if previous else None
         conn.execute(
             "INSERT INTO content_mirror_state "
             "(entity_type, entity_id, revision, content_json, updated_at) "
@@ -228,7 +243,7 @@ def _scan_repo(repo, course):
         folder = _course_root(repo, course) / directory
         if not folder.exists():
             continue
-        for path in sorted(folder.glob("*.json")):
+        for path in sorted(folder.rglob("*.json")):
             try:
                 envelope = read_entity(path, course, entity_type)
                 key = (entity_type, envelope["entity_id"])
@@ -238,7 +253,13 @@ def _scan_repo(repo, course):
                     # scan order — including a third or later duplicate.
                     found.pop(key, None)
                     ambiguous.add(key)
-                    raise MirrorError(f"duplicate entity_id: {envelope['entity_id']}")
+                    errors.append({
+                        "path": str(path), "status": "invalid",
+                        "entity_type": entity_type,
+                        "entity_id": envelope["entity_id"],
+                        "error": f"duplicate entity_id: {envelope['entity_id']}",
+                    })
+                    continue
                 found[key] = (path, envelope)
             except MirrorError as exc:
                 errors.append({"path": str(path), "status": "invalid", "error": str(exc)})
@@ -262,11 +283,14 @@ def _read_delete_requests(repo, course):
                 if missing:
                     details.append("missing field(s): " + ", ".join(missing))
                 raise MirrorError("; ".join(details))
-            if value["schema_version"] != SCHEMA_VERSION:
+            version = value["schema_version"]
+            if isinstance(version, bool) or not isinstance(version, int) \
+                    or version != SCHEMA_VERSION:
                 raise MirrorError("unsupported deletion-request schema_version")
             if value["course_id"] != course:
                 continue
-            if value["entity_type"] not in ENTITY_DIRS:
+            if not isinstance(value["entity_type"], str) \
+                    or value["entity_type"] not in ENTITY_DIRS:
                 raise MirrorError("unsupported deletion-request entity_type")
             _validate_id(course, value["entity_id"])
             if not isinstance(value["request_id"], str) or not value["request_id"]:
@@ -285,6 +309,7 @@ def init(pool, repo, entity_id=None, dry_run=False):
     """Pool-first bootstrap. Existing matching files are adopted; conflicts are refused."""
     _require_tables(pool)
     repo = Path(repo).resolve()
+    found, parse_errors = _scan_repo(repo, pool.course)
     results = []
     for entity_type, identity, authored in _all_pool_entities(pool):
         if entity_id and identity != entity_id:
@@ -293,25 +318,44 @@ def init(pool, repo, entity_id=None, dry_run=False):
             results.append(_result(entity_type, identity, "noop", "already_tracked"))
             continue
         path = entity_path(repo, pool.course, entity_type, identity)
-        if path.exists():
+        duplicate = next((error for error in parse_errors
+                          if error.get("entity_type") == entity_type
+                          and error.get("entity_id") == identity), None)
+        if duplicate:
+            results.append(_result(
+                entity_type, identity, "invalid", duplicate["error"], path=duplicate["path"],
+            ))
+            continue
+        existing_entry = found.get((entity_type, identity))
+        existing_path, existing = existing_entry if existing_entry else (path, None)
+        if existing is None and existing_path.exists():
             try:
-                existing = read_entity(path, pool.course, entity_type)
-                if existing["entity_id"] != identity or existing["revision"] != 1 \
-                        or existing["content"] != authored:
+                existing = read_entity(existing_path, pool.course, entity_type)
+                if existing["entity_id"] != identity:
                     results.append(_result(
-                        entity_type, identity, "conflict",
-                        "existing JSON does not match pool bootstrap content",
-                        path=path,
+                        entity_type, identity, "invalid",
+                        "entity identity mismatch at its canonical path", path=existing_path,
                     ))
                     continue
             except MirrorError as exc:
-                results.append(_result(entity_type, identity, "invalid", str(exc), path=path))
+                results.append(_result(entity_type, identity, "invalid", str(exc), path=existing_path))
+                continue
+        if existing is not None:
+            if existing["revision"] != 1 or existing["content"] != authored:
+                results.append(_result(
+                    entity_type, identity, "conflict",
+                    "existing JSON does not match pool bootstrap content",
+                    path=existing_path,
+                ))
                 continue
         if not dry_run:
-            if not path.exists():
+            if existing is None:
                 _atomic_write(path, _envelope(entity_type, identity, 1, authored))
             _put_state(pool, entity_type, identity, 1, authored, "init")
-        results.append(_result(entity_type, identity, "initialized", revision=1, path=path))
+        results.append(_result(
+            entity_type, identity, "initialized", revision=1,
+            path=existing_path if existing is not None else path,
+        ))
     if entity_id and not any(item["entity_id"] == entity_id for item in results):
         results.append({"entity_id": entity_id, "status": "invalid", "error": "entity is not in this pool"})
     return _report(results, _read_delete_requests(repo, pool.course))
@@ -350,15 +394,18 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
     path, envelope = repo_entry
     if envelope["entity_id"] != entity_id:
         return _result(entity_type, entity_id, "invalid", "entity identity mismatch", path=path)
-    repo_now = envelope["content"]
-    repo_revision = envelope["revision"]
-    if set(repo_now) != set(baseline):
+    if set(envelope["content"]) != set(baseline):
         return _result(
             entity_type, entity_id, "invalid",
             "content fields must match the initialized authored projection exactly",
             revision, path=path,
         )
-
+    repo_now, error = _normalise_incoming(
+        pool, entity_type, entity_id, baseline, envelope["content"],
+    )
+    if error:
+        return _result(entity_type, entity_id, "invalid", error, revision, path=path)
+    repo_revision = envelope["revision"]
     pool_changed = pool_now != baseline
     repo_changed = repo_now != baseline
     if not repo_changed:
@@ -380,9 +427,6 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
             revision, path=path,
         )
     if not pool_changed:
-        error = _incoming_error(pool, entity_type, entity_id, baseline, repo_now)
-        if error:
-            return _result(entity_type, entity_id, "invalid", error, revision, path=path)
         return _result(entity_type, entity_id, "repo_to_pool", revision=repo_revision, path=path)
     if pool_now == repo_now:
         return _result(
@@ -395,20 +439,23 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
     )
 
 
-def _incoming_error(pool, entity_type, entity_id, baseline, incoming):
+def _normalise_incoming(pool, entity_type, entity_id, baseline, incoming):
     patch = {key: incoming[key] for key in incoming if incoming[key] != baseline[key]}
+    if not patch:
+        return incoming, None
     if entity_type == "problem":
         plan = content.plan_problem_update(pool, entity_id, patch)
         if plan["errors"]:
-            return "; ".join(plan["errors"])
+            return incoming, "; ".join(plan["errors"])
+        return {**baseline, **plan["fields"]}, None
     elif entity_type == "relation":
         from workbench.data import relations
         result = relations.check(pool, {"items": [{
             "action": "update", "relation_id": entity_id, **patch,
         }]})
         if not result["valid"]:
-            return "; ".join(item["message"] for item in result["errors"])
-    return None
+            return incoming, "; ".join(item["message"] for item in result["errors"])
+    return incoming, None
 
 
 def plan(pool, repo, entity_id=None):
@@ -430,6 +477,20 @@ def plan(pool, repo, entity_id=None):
                 "refusing missing-file restoration until it is repaired",
             ))
             continue
+        if repo_entry is None:
+            canonical = entity_path(repo, pool.course, entity_type, identity)
+            if canonical.exists():
+                try:
+                    envelope = read_entity(canonical, pool.course, entity_type)
+                except MirrorError as exc:
+                    results.append(_result(entity_type, identity, "invalid", str(exc), path=canonical))
+                    continue
+                if envelope["entity_id"] != identity:
+                    results.append(_result(
+                        entity_type, identity, "invalid",
+                        "entity identity mismatch at its canonical path", path=canonical,
+                    ))
+                    continue
         results.append(_plan_one(pool, repo_entry, entity_type, identity))
     for (entity_type, identity), (path, _envelope_value) in sorted(found.items()):
         if entity_id and identity != entity_id:
@@ -469,10 +530,14 @@ def _apply_one(pool, repo, item):
         )
     if status == "recover_converged":
         envelope = read_entity(path, pool.course, entity_type)
-        _put_state(
-            pool, entity_type, entity_id,
-            envelope["revision"], envelope["content"], status,
+        authored, error = _normalise_incoming(
+            pool, entity_type, entity_id, state["content"], envelope["content"],
         )
+        if error:
+            raise MirrorError(error)
+        with pool.transaction(immediate=True):
+            _atomic_write(path, _envelope(entity_type, entity_id, envelope["revision"], authored))
+            _put_state(pool, entity_type, entity_id, envelope["revision"], authored, status)
         return _result(
             entity_type, entity_id, "recovered",
             revision=envelope["revision"], path=path,
@@ -481,14 +546,21 @@ def _apply_one(pool, repo, item):
         envelope = read_entity(path, pool.course, entity_type)
         baseline = state["content"]
         incoming = envelope["content"]
-        patch = {key: incoming[key] for key in incoming if incoming[key] != baseline[key]}
-        content.update(pool, entity_type, entity_id, patch)
-        actual = pool_projection(pool, entity_type, entity_id)
-        if actual != incoming:
-            raise MirrorError(
-                f"governed mutation did not produce the requested projection for {entity_id}"
-            )
-        _put_state(pool, entity_type, entity_id, envelope["revision"], actual, status)
+        authored, error = _normalise_incoming(
+            pool, entity_type, entity_id, baseline, incoming,
+        )
+        if error:
+            raise MirrorError(error)
+        patch = {key: authored[key] for key in authored if authored[key] != baseline[key]}
+        with pool.transaction(immediate=True):
+            content.update(pool, entity_type, entity_id, patch)
+            actual = pool_projection(pool, entity_type, entity_id)
+            if actual != authored:
+                raise MirrorError(
+                    f"governed mutation did not produce the requested projection for {entity_id}"
+                )
+            _atomic_write(path, _envelope(entity_type, entity_id, envelope["revision"], actual))
+            _put_state(pool, entity_type, entity_id, envelope["revision"], actual, status)
         return _result(
             entity_type, entity_id, "applied", revision=envelope["revision"], path=path
         )
@@ -507,7 +579,7 @@ def sync(pool, repo, entity_id=None, dry_run=False):
             continue
         try:
             output.append(_apply_one(pool, Path(repo).resolve(), item))
-        except (MirrorError, ValueError, KeyError) as exc:
+        except (MirrorError, ValueError, KeyError, sqlite3.Error, OSError) as exc:
             output.append(_result(
                 item["entity_type"], item["entity_id"], "invalid", str(exc),
                 path=item.get("path"),

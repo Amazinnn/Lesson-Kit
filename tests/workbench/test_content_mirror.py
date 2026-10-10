@@ -184,6 +184,60 @@ class ContentMirrorTests(unittest.TestCase):
             "Edited from Git with $\\Theta(n)$ math.",
         )
 
+    def test_repository_problem_edit_normalizes_pool_ledger_and_json(self):
+        self.pool.connect().execute(
+            "UPDATE problems SET exam_year='2022' WHERE problem_id='c02-ch01-prob-001'"
+        )
+        self.pool.connect().commit()
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.entity_json("problem", "c02-ch01-prob-001")
+        envelope["revision"] = 2
+        envelope["content"]["exam_year"] = ""
+        path.write_text(json.dumps(envelope, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+        result = content_mirror.sync(self.pool, self.repo)
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["counts"]["applied"], 1)
+        self.assertIsNone(self.pool.problem("c02-ch01-prob-001")["exam_year"])
+        self.assertIsNone(self.entity_json("problem", "c02-ch01-prob-001")[1]["content"]["exam_year"])
+        state = self.pool.connect().execute(
+            "SELECT revision, content_json FROM content_mirror_state "
+            "WHERE entity_type='problem' AND entity_id='c02-ch01-prob-001'"
+        ).fetchone()
+        self.assertEqual(state["revision"], 2)
+        self.assertIsNone(json.loads(state["content_json"])["exam_year"])
+
+    def test_repository_edit_rolls_back_when_mirror_log_write_fails(self):
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.entity_json("problem", "c02-ch01-prob-001")
+        envelope["revision"] = 2
+        envelope["content"]["display_title"] = "Changed title"
+        path.write_text(json.dumps(envelope, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        self.pool.connect().execute(
+            "CREATE TRIGGER reject_mirror_log BEFORE INSERT ON content_mirror_log "
+            "WHEN NEW.direction='repo_to_pool' BEGIN "
+            "SELECT RAISE(ABORT, 'injected mirror log failure'); END"
+        )
+        self.pool.connect().commit()
+
+        result = content_mirror.sync(self.pool, self.repo)
+
+        self.assertFalse(result["valid"])
+        self.assertEqual(self.pool.problem("c02-ch01-prob-001")["display_title"], None)
+        state = self.pool.connect().execute(
+            "SELECT revision, content_json FROM content_mirror_state "
+            "WHERE entity_type='problem' AND entity_id='c02-ch01-prob-001'"
+        ).fetchone()
+        self.assertEqual(state["revision"], 1)
+        self.assertIsNone(json.loads(state["content_json"])["display_title"])
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT COUNT(*) FROM content_mirror_log WHERE direction='repo_to_pool'"
+            ).fetchone()[0],
+            0,
+        )
+
     def test_pool_edit_exports_as_next_revision(self):
         content_mirror.init(self.pool, self.repo)
         self.pool.connect().execute(
