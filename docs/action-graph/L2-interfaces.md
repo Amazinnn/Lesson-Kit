@@ -29,7 +29,7 @@
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 | POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
-## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，23 条顶层命令）
+## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，24 条顶层命令）
 
 | 命令 | 性质 | 给谁 |
 |---|---|---|

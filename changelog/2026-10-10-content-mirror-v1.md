@@ -33,7 +33,7 @@ The mirror ledger contract is registered in `docs/DATA_MODEL.md`
 boundaries); `FILE_CONTRACT.md` carries the repository layout, envelope,
 deletion-request, and unreadable-input contract; `docs/GLOSSARY.md`,
 `docs/ARCHITECTURE.md`, `docs/PRODUCT-MANUAL.md`, and the action-graph L0–L4
-layers are updated (CLI 22→23, new W9 workflow). The external rollout of real
+layers are updated (CLI 顶层命令增至 24, new W9 workflow). The external rollout of real
 course content remains open in the `json-content-repository-sync` change.
 
 ## Verification

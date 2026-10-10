@@ -3,14 +3,15 @@
 ### Requirement: Bootstrap requires readable repository inputs
 
 Bootstrap SHALL account for every existing file under the selected course's
-subtree in the checked-out content repository. A file that cannot be decoded as
-UTF-8 text or parsed as a JSON object SHALL NOT be dropped from the report; the
-bootstrap report SHALL list each unreadable file with its repository-relative
-path and reason.
+subtree in the checked-out content repository. Entity JSON under the entity
+directories is parsed as an entity candidate; every other `*.json` file SHALL
+be checked to parse as a JSON object, and every remaining file SHALL be checked
+to decode as UTF-8 text. A file that fails its check SHALL NOT be dropped from
+the report; the bootstrap report SHALL list it with its path and reason.
 
-An unreadable file SHALL implicate a pool entity when that entity's id appears
-in the file name or in the file's bytes decoded with replacement. Bootstrap
-SHALL NOT create a canonical file for an implicated entity. When no readable
+A reported file SHALL implicate a pool entity when that entity's id appears in
+the file name or in the file's bytes decoded with replacement. Bootstrap SHALL
+NOT create a canonical file for an implicated entity. When no readable
 repository file already establishes that entity, bootstrap SHALL report it as
 blocked while naming the implicating file, and SHALL leave the pool row and any
 mirror state untouched.
