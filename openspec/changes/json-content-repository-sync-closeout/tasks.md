@@ -11,13 +11,13 @@
 
 ## 2. Documentation and contract authority
 
-- [ ] 2.1 `docs/DATA_MODEL.md`: add the `content_mirror_state` / `content_mirror_log` field contract — columns, status lifecycle, writer/consumer boundaries (mirror engine writes; `check`/`status` read)
-- [ ] 2.2 Finish the four dirty drafts (`FILE_CONTRACT.md`, `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md`, `docs/PRODUCT-MANUAL.md`) without discarding existing edits, and commit them by explicit path
-- [ ] 2.3 `docs/ACTION-GRAPH.md`: register the mirror actions (`init`, `check`, `status`, `sync`) following existing conventions
-- [ ] 2.4 Update the changelog and document indexes for the mirror feature
-- [ ] 2.5 Sibling change `design.md`: replace the stale sentence saying bootstrap refuses when mirror state already exists with the implemented resumable skip-and-continue behavior
-- [ ] 2.6 Sibling change `tasks.md`: set checkboxes only where a named evidence artifact exists; leave rollout tasks 7.1–7.3 unchecked
-- [ ] 2.7 Verify every new design noun in the updated documents resolves in `docs/GLOSSARY.md`
+- [x] 2.1 `docs/DATA_MODEL.md`: add the `content_mirror_state` / `content_mirror_log` field contract — columns, status lifecycle, writer/consumer boundaries (mirror engine writes; `check`/`status` read)
+- [x] 2.2 Finish the four dirty drafts (`FILE_CONTRACT.md`, `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md`, `docs/PRODUCT-MANUAL.md`) without discarding existing edits, and commit them by explicit path
+- [x] 2.3 `docs/ACTION-GRAPH.md`: register the mirror actions (`init`, `check`, `status`, `sync`) following existing conventions
+- [x] 2.4 Update the changelog and document indexes for the mirror feature
+- [x] 2.5 Sibling change `design.md`: replace the stale sentence saying bootstrap refuses when mirror state already exists with the implemented resumable skip-and-continue behavior
+- [x] 2.6 Sibling change `tasks.md`: set checkboxes only where a named evidence artifact exists; leave rollout tasks 7.1–7.3 unchecked
+- [x] 2.7 Verify every new design noun in the updated documents resolves in `docs/GLOSSARY.md`
 
 ## 3. Conversation-suite failure diagnosis (evidence, not assumption)
 
