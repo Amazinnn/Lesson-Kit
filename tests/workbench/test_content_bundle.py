@@ -1,6 +1,7 @@
 """Atomic staged content bundles: knowledge points, problems, cards, figures."""
 
 import json
+import copy
 import sqlite3
 import unittest
 from pathlib import Path
@@ -84,6 +85,97 @@ class ContentBundleTests(unittest.TestCase):
         )
 
     # -- atomic multi-asset bundle ---------------------------------------
+
+    def test_typesetting_bundle_inspection_is_pure_and_distinguishes_missing_input(self):
+        self.assertTrue(hasattr(ingest, "inspect_content_bundle_typesetting"),
+                        "pre-apply typesetting inspection is missing")
+        manifest = {"kind": "content-bundle", "knowledge_points": [
+            {"key": "both", "body": "字" * 301 + "\n\n短"}]}
+        before = copy.deepcopy(manifest)
+        report = ingest.inspect_content_bundle_typesetting(manifest)
+        self.assertEqual(manifest, before)
+        self.assertEqual(report["over_long"][0]["kp_id"], "both")
+        self.assertFalse(ingest.inspect_content_bundle_typesetting(None)["available"])
+        self.assertTrue(ingest.inspect_content_bundle_typesetting(
+            {"kind": "content-bundle", "knowledge_points": []})["available"])
+
+    def test_typesetting_bundle_check_changes_no_rows_schema_or_batches(self):
+        manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+            {"key": "new", "knowledge_item": "新知识点", "body": "字" * 301}]}
+        before = copy.deepcopy(manifest)
+        with open_db(self.db_path) as conn:
+            snapshot = list(conn.iterdump())
+            changes = conn.total_changes
+            result = ingest._gate_content_bundle(conn, manifest, "dmath")
+            self.assertTrue(result["ok"], result)
+            self.assertIn("typesetting", result)
+            self.assertEqual(result["typesetting"]["over_long"][0]["over_long_paragraphs"], 1)
+            self.assertEqual(conn.total_changes, changes)
+            self.assertEqual(list(conn.iterdump()), snapshot)
+        self.assertEqual(manifest, before)
+
+    def test_typesetting_advisory_survives_successful_apply_and_batch_allowlist(self):
+        body = "字" * 301 + "\r\n \t\r\n短"
+        manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+            {"key": "new", "knowledge_item": "新知识点", "body": body}]}
+        result = self.apply(manifest)
+        self.assertIn("typesetting", result)
+        self.assertEqual(result["counts"]["knowledge_points"], 1)
+        kp_id = result["typesetting"]["over_long"][0]["kp_id"]
+        self.assertEqual(self.query("SELECT body FROM knowledge_points WHERE kp_id=?", (kp_id,)), [(body,)])
+        self.assertIn("accounting", result)
+        second = copy.deepcopy(manifest)
+        second["knowledge_points"][0]["key"] = "next"
+        second["knowledge_points"][0]["knowledge_item"] = "再一个知识点"
+        applied = ingest.apply_batch(self.db_path, second, source="cli", course="dmath",
+                                     backup_path=Path(self.fixture.tmp.name) / "batch-backup.db")
+        self.assertIn("typesetting", applied)
+        self.assertTrue(applied["ok"])
+        self.assertEqual(applied["typesetting"]["summary"]["knowledge_points"], 1)
+        self.assertEqual(len(applied["typesetting"]["over_long"]), 1)
+        self.assertEqual(applied["typesetting"]["short"], [])
+
+    def test_typesetting_does_not_accept_an_existing_malformed_bundle(self):
+        before = self.count("knowledge_points"), self.count("ingest_batches")
+        manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+            {"key": "new", "body": "字" * 301}]}
+        with self.assertRaisesRegex(ValueError, "knowledge_item is required"):
+            self.apply(manifest)
+        self.assertEqual((self.count("knowledge_points"), self.count("ingest_batches")), before)
+        self.assertFalse((Path(self.fixture.tmp.name) / "backup-001.db").exists())
+
+    def test_typesetting_does_not_refuse_previously_accepted_numeric_body(self):
+        for body in (123, 0):
+            with self.subTest(body=body):
+                manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+                    {"key": "new", "knowledge_item": "知识点", "body": body}]}
+                result = self.apply(manifest)
+                kp_id = result["typesetting"]["short"][0]["kp_id"]
+                self.assertEqual(self.query("SELECT body FROM knowledge_points WHERE kp_id=?", (kp_id,)),
+                                 [(str(body),)])
+                self.assertEqual(result["typesetting"]["short"][0]["min_visible_characters"], len(str(body)))
+
+    def test_typesetting_matches_stored_boolean_and_float_body_text(self):
+        for body in (True, False, 1e-7):
+            with self.subTest(body=body):
+                manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": [
+                    {"key": "new", "knowledge_item": "Knowledge point", "body": body}]}
+                preview = ingest.inspect_content_bundle_typesetting(manifest)
+                result = self.apply(manifest)
+                kp_id = result["typesetting"]["short"][0]["kp_id"]
+                stored = self.query("SELECT body FROM knowledge_points WHERE kp_id=?", (kp_id,))[0][0]
+                self.assertEqual(preview["short"][0]["min_visible_characters"], len(stored))
+                self.assertEqual(result["typesetting"]["short"][0]["min_visible_characters"], len(stored))
+                self.assertIs(manifest["knowledge_points"][0]["body"], body)
+
+    def test_typesetting_inspection_accepts_optional_null_kp_list(self):
+        manifest = {"kind": "content-bundle", "chapter": "ch06", "knowledge_points": None,
+                    "problems": [formal("p", ["dmath-ch06-kp-001"])]}
+        with open_db(self.db_path) as conn:
+            self.assertTrue(ingest._gate_content_bundle(conn, manifest, "dmath")["ok"])
+        report = ingest.inspect_content_bundle_typesetting(manifest)
+        self.assertTrue(report["available"])
+        self.assertEqual(report["summary"]["knowledge_points"], 0)
 
     def test_thirty_items_commit_under_one_batch_id(self):
         figure = self.image()

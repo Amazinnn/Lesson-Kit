@@ -167,12 +167,73 @@ class PullTests(unittest.TestCase):
         )["problems"]
         adapted_final = self.pull.select(
             self.pool, ["dmath-ch06-kp-001"], 20,
-            source_kind="final", origin_kind="adapted_problem",
+            source_kind="final", origin_kinds=["adapted_problem"],
         )["problems"]
         self.assertIn("exam", [row["problem_id"] for row in exam])
         self.assertNotIn("generated", [row["problem_id"] for row in exam])
         self.assertEqual([row["problem_id"] for row in generated], ["generated"])
         self.assertEqual(adapted_final, [])
+
+    def test_origin_kinds_keeps_any_of_the_named_ways(self):
+        conn = self.pool.connect()
+        conn.executemany(
+            "INSERT INTO problems (problem_id, kp_ids, problem_text, solution, "
+            "problem_type, source_kind, origin_kind) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                ("exam", '["dmath-ch06-kp-001"]', "E", "S", "calculation",
+                 "final", "source_problem"),
+                ("adapted", '["dmath-ch06-kp-001"]', "A", "S", "calculation",
+                 "final", "adapted_problem"),
+                ("generated", '["dmath-ch06-kp-001"]', "G", "S", "calculation",
+                 "final", "generated_grounded"),
+            ],
+        )
+        conn.commit()
+
+        picked = self.pull.select(
+            self.pool, ["dmath-ch06-kp-001"], 20,
+            origin_kinds=["source_problem", "adapted_problem"],
+        )["problems"]
+        ids = [row["problem_id"] for row in picked]
+
+        # the two fixture rows default to source_problem, so the generated one
+        # is the only row the pair of names drops
+        self.assertIn("exam", ids)
+        self.assertIn("adapted", ids)
+        self.assertNotIn("generated", ids)
+
+    def test_stem_and_source_keywords_narrow_by_domain(self):
+        conn = self.pool.connect()
+        conn.execute(
+            "UPDATE problems SET problem_text=?, source_evidence=?, exam_year=?"
+            " WHERE problem_id=?",
+            ("【2023期末】【合集A】计算 1+2+3", "题库/final·合集A.md 第1题",
+             "2023-2024秋冬", "dmath-ch06-prob-001"),
+        )
+        conn.execute(
+            "UPDATE problems SET problem_text=?, source_evidence=?, exam_year=?"
+            " WHERE problem_id=?",
+            ("证明鸽巢原理", "题库/final·合集B.md 第2题", "2019-2020秋冬",
+             "dmath-ch06-prob-002"),
+        )
+        conn.commit()
+        kp_ids = ["dmath-ch06-kp-001", "dmath-ch06-kp-002"]
+
+        def ids(**kwargs):
+            return [p["problem_id"] for p in
+                    self.pull.select(self.pool, kp_ids, 10, mode="weak", **kwargs)["problems"]]
+
+        self.assertEqual(ids(stem_keywords=["计算 合集a"]), ["dmath-ch06-prob-001"])
+        # a source-only word cannot be reached through the stem domain
+        self.assertEqual(ids(stem_keywords=["计算 final"]), [])
+        self.assertEqual(ids(source_keywords=["final 合集a"]), ["dmath-ch06-prob-001"])
+        # the 【…】 tags are part of the source domain
+        self.assertEqual(ids(source_keywords=["2023期末"]), ["dmath-ch06-prob-001"])
+        # both domains given is an AND across them
+        self.assertEqual(ids(stem_keywords=["计算"], source_keywords=["合集b"]), [])
+        self.assertEqual(
+            ids(stem_keywords=["计算"], source_keywords=["2023"]), ["dmath-ch06-prob-001"],
+        )
 
     def test_explicit_difficulty_ranges_exclude_unrated_problems(self):
         conn = self.pool.connect()

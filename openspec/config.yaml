@@ -13,6 +13,20 @@ context: |
   source material — helping them return to it. Near-source by default, honest
   about unknown territory, pain-point-first practice.
 
+  ## Contract authority
+
+  Authority is partitioned by responsibility, not by file recency:
+  - openspec/specs/: current observable behavior and capability contracts.
+  - docs/DATA_MODEL.md: persistent-field meaning, lifecycle/status, and writer/consumer boundaries.
+  - docs/GLOSSARY.md: design-term definitions.
+  - FILE_CONTRACT.md: Agent/CLI artifact and manifest contracts.
+  - docs/ARCHITECTURE.md: layering and module boundaries.
+  - docs/PRODUCT-MANUAL.md: user-facing operation and presentation.
+  - openspec/changes/: proposed/in-progress deltas; archive/ is history only.
+  If authorities or implementation evidence disagree on the same fact, treat it as contract drift:
+  make the conflict explicit and reconcile it through the owning contract instead of choosing by
+  timestamp or silently following whichever implementation happens to exist.
+
   ## Confirmed architecture (see docs/adr/0009)
 
   Five layers, one-way dependencies (shell → learning model → data; content
@@ -106,6 +120,7 @@ context: |
 
   docs/design/philosophy.md (Chinese), docs/GLOSSARY.md (authoritative term
   definitions — every design noun in formal docs must resolve here),
+  docs/DATA_MODEL.md (authoritative persistent-field semantics and field lifecycle),
   docs/PENDING-DEFINITIONS.md (undefined concepts are quarantined here),
   docs/PRODUCT-MANUAL.md (user-facing product manual — update the matching
   chapter with every feature change), CONTEXT.md (legacy pipeline terms,

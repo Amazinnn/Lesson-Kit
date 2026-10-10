@@ -3,6 +3,7 @@
 import json
 import re
 
+from workbench.domain import facets
 from workbench.domain import micro_quiz
 from workbench.domain import markup
 
@@ -131,12 +132,25 @@ def list_items(pool, entity):
     return [_row(row) for row in rows]
 
 
+def ensure_kp_batch_column(conn):
+    """Add the declared nullable provenance column for a legacy explicit apply."""
+    if "ingest_batch_id" not in {row[1] for row in conn.execute("PRAGMA table_info(knowledge_points)")}:
+        conn.execute("ALTER TABLE knowledge_points ADD COLUMN ingest_batch_id TEXT")
+
+
 def search(pool, entity, query):
-    needle = query.casefold()
-    return [
-        item for item in list_items(pool, entity)
-        if needle in json.dumps(item, ensure_ascii=False).casefold()
-    ]
+    """Every whitespace-separated keyword must be in the row (AND), casefolded."""
+    words = facets.keyword_words(query)
+    if not words:
+        return []
+    hits = []
+    for item in list_items(pool, entity):
+        searchable = ({key: value for key, value in item.items() if key != "topic_label"}
+                      if entity == "problem" else item)
+        row_text = json.dumps(searchable, ensure_ascii=False).casefold()
+        if facets.matches_all(row_text, words):
+            hits.append(item)
+    return hits
 
 
 def history(pool, entity, object_id):

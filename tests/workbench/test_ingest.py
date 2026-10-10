@@ -675,6 +675,54 @@ class ContentPatchIngestTests(unittest.TestCase):
             "\n".join(refused["errors"]),
         )
 
+    def test_gate_report_legacy_column_is_added_after_recoverable_backup(self):
+        solutions, audits, content, content_audit = self.qualified_files()
+        gate_path = self.root / "legacy-gate.json"
+        ingest.gate(self.db_path, solutions, audits, gate_path, content, content_audit)
+        before = self.snapshot()
+        backup = self.root / "legacy-stamped.db"
+        applied = ingest.apply(self.db_path, gate_path, backup)
+        self.assertEqual(self.snapshot(backup), before)
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertEqual(conn.execute(
+                "SELECT kp_id,ingest_batch_id FROM knowledge_points ORDER BY kp_id"
+            ).fetchall(), [("kp-1", None), ("kp-2", None), ("kp-3", applied["batch_id"])])
+        finally:
+            conn.close()
+
+    def test_gate_report_stamps_new_knowledge_points_and_restores_baseline(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.execute("ALTER TABLE knowledge_points ADD COLUMN ingest_batch_id TEXT")
+        conn.execute("CREATE TABLE flash_cards (card_id TEXT PRIMARY KEY, kp_id TEXT, "
+                     "ingest_batch_id TEXT)")
+        conn.execute("ALTER TABLE knowledge_relations ADD COLUMN source_kp_id TEXT")
+        conn.execute("ALTER TABLE knowledge_relations ADD COLUMN target_kp_id TEXT")
+        conn.commit()
+        conn.close()
+        solutions, audits, content, content_audit = self.qualified_files()
+        gate_path = self.root / "gate.json"
+        ingest.gate(self.db_path, solutions, audits, gate_path, content, content_audit)
+        before = self.snapshot()
+
+        applied = ingest.apply(self.db_path, gate_path, self.root / "stamped-backup.db")
+
+        conn = sqlite3.connect(self.db_path)
+        try:
+            self.assertEqual(conn.execute(
+                "SELECT ingest_batch_id FROM knowledge_points WHERE kp_id='kp-3'"
+            ).fetchone(), (applied["batch_id"],))
+            self.assertEqual(conn.execute(
+                "SELECT kp_id, ingest_batch_id FROM knowledge_points "
+                "WHERE kp_id IN ('kp-1', 'kp-2') ORDER BY kp_id"
+            ).fetchall(), [("kp-1", None), ("kp-2", None)])
+        finally:
+            conn.close()
+        rolled = ingest.rollback_batch(self.db_path, applied["batch_id"],
+                                       self.root / "stamped-rollback.db")
+        self.assertEqual(rolled["counts"], {"problems": 2, "knowledge_points": 1})
+        self.assertEqual(self.snapshot(), before)
+
     def test_apply_uses_one_backup_and_transaction_for_solutions_kps_and_mappings(self):
         solutions, audits, content, content_audit = self.qualified_files()
         gate_path = self.root / "gate.json"

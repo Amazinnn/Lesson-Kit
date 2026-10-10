@@ -21,6 +21,10 @@ Intelligence（Bridge）       ← 旁挂：任务+契约+外部 CLI；只被 Sh
   Bridge 不 import Server。
 - **依赖注入**：Domain 函数接收 `Pool`（Data 层对象），不自己开连接。
 - 现有 `pipeline/`、`pool/scripts/`、`lessonkit.py` 一律不动；工作台是新增旁挂树。
+  `pool_schema.py` 既有 ensure 路径的授权迁移例外包括恢复 PR106：旧表重建不含
+  `problems.topic_label`，当前表直接删除该列；不改变闪卡同名列或其他层的边界。
+  `kp-text-typesetting-check` 授权的唯一例外是 `pipeline/scripts/validate-pool.py`
+  的只读排版检出调用与既有报告输出；它不扩展其他 frozen-layer 行为。
 
 ## 1. 目录契约（workbench/ 全部 stdlib-only）
 
@@ -97,7 +101,7 @@ workbench/
   作答和自评共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
 - 新表 `practice_runs(id, source_kind, source_ref, source_label, kp_ids_json, practice_mode, rating_mode, items_json, status, started_at, finished_at)`：只在一轮 active practice 完成或被显式替换 / 清除时写一条最小快照；逐题证据仍留在 attempts / feedback，统计图实时聚合，不复制统计值。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
-- 题目与闪卡可增量拥有 `display_title`（可读短标题）与 `topic_label`（单一主题标签）；它们是内容展示字段，不替代稳定 ID。
+- 题目可增量拥有 `display_title`（可读短标题）；闪卡可增量拥有 `topic_label`（单一主题标签）。它们是内容展示字段，不替代稳定 ID。
 - 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
 - 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
 - 新列：`knowledge_points.figure_paths`、`problems.figure_paths`（逻辑路径 JSON）、
@@ -119,9 +123,10 @@ workbench/
 - `registry`：`load() / save() / register(path, name?) -> Workspace / list() -> [Workspace] /
   get(name) -> Workspace`；Workspace = dataclass(name, path, db, active_course, active_chapter)。
 - `domain.weak.score(pool, course, chapter, now) -> [(kp, score, reasons)]`——原因可解释。
-- `domain.pull.select(pool, kp_ids, n, mode, source_kind?, origin_kind?, source_group?,
-  difficulty_ranges?, strategy?) -> {problems:[...],
+- `domain.pull.select(pool, kp_ids, n, mode, source_kind?, origin_kinds?, source_group?,
+  difficulty_ranges?, strategy?, stem_keywords?, source_keywords?) -> {problems:[...],
   shortage:[kp_id...]}`——永不伪造内容；候选机制已物理移除（2026-08-30）。
+- `domain.facets.stem_text / source_text`：题干域与来源域的**唯一**字段清单，搜索与选题都读它。
 - `domain.difficulty`：唯一模型 `cognitive-v1-equal-mean`；四维等权 Decimal
   `ROUND_HALF_UP` 一位小数，并提供 balanced 使用的 1–5 档位投影。
 - `domain.cards.select(cards, schedule_rows, preference, excluded_*) -> [card action]`——把内容方向能力展开为独立练习动作并按各自调度行排序，零 IO。
@@ -168,6 +173,11 @@ workbench/
   `data.content` 里事后补写（按该题 `quiz_type` 校验形状，空值清回无键）。
 - `ingest`：`prepare/run/gate/apply/apply_batch/rollback_batch`；生成内容只有通过
   确定性门禁后才能以批次事务写入，并保留整批回滚边界。
+- `domain.typesetting.check/render_text`：正文段落的纯测量与共用报告措辞；
+  `data.typesetting.read_rows` 只从已有连接读取正文/id，不 ensure schema。
+  ingest 的 `inspect_content_bundle_typesetting` 是纯预检；有效 bundle check 与
+  成功 apply 增加 `typesetting`，CLI/Bridge 保留该报告。pipeline 使用自己仓库根目录
+  的相同规则，在旧 schema 提前返回前读取可用正文。检出不影响门禁、计数或退出码。
 - `ingest.problem-patch`（+ `data.content.plan_problem_patch`）：**原地**改已有题目——
   单题与批量共用同一份校验（未知字段/题号身份/难度归属/微题契约），批量记录批次号与
   每行改前旧值，`rollback_batch` 对它走「写回旧值」而不是「删行」，因此学习记录不受影响。

@@ -179,6 +179,128 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
         self.assertIn("display_summary", self.columns("problems"))
         self.assertIn("learning_current_state", self.table_names())
 
+    def test_retired_problem_labels_are_removed_during_legacy_rebuild(self):
+        self.conn.execute("ALTER TABLE problems ADD COLUMN topic_label TEXT")
+        self.conn.execute("UPDATE problems SET topic_label='Historical label'")
+        self.conn.executescript("""
+            CREATE TABLE flash_cards (
+                card_id TEXT PRIMARY KEY, kp_id TEXT NOT NULL, front TEXT NOT NULL,
+                back TEXT NOT NULL, source_evidence TEXT NOT NULL, topic_label TEXT,
+                directions TEXT NOT NULL DEFAULT '["forward"]', ingest_batch_id TEXT
+            );
+            INSERT INTO flash_cards VALUES
+                ('dmath-ch06-fc-001', 'dmath-ch06-kp-001', 'front', 'back', 'source',
+                 'Flash label', '["forward","reverse"]', 'batch-001');
+        """)
+        self.conn.execute(
+            "INSERT INTO problem_attempts (problem_id,status,note) VALUES (?,?,?)",
+            ("dmath-ch06-prob-001", "wrong", "Existing answer"))
+        self.conn.commit()
+        before_problems = self.conn.execute(
+            "SELECT problem_id,kp_ids,problem_text,solution,problem_type,source_kind "
+            "FROM problems ORDER BY problem_id").fetchall()
+        before_attempts = self.conn.execute(
+            "SELECT id,problem_id,status,note FROM problem_attempts ORDER BY id").fetchall()
+        before_cards = self.conn.execute("SELECT * FROM flash_cards").fetchall()
+        for pass_number in range(2):
+            changes = pool_schema.ensure_workbench_schema(self.conn)
+            self.conn.commit()
+            self.assertNotIn("topic_label", self.columns("problems"))
+            self.assertEqual(self.conn.execute(
+                "SELECT problem_id,kp_ids,problem_text,solution,problem_type,source_kind "
+                "FROM problems ORDER BY problem_id"
+            ).fetchall(), before_problems)
+            self.assertEqual(self.conn.execute(
+                "SELECT id,problem_id,status,note FROM problem_attempts ORDER BY id"
+            ).fetchall(), before_attempts)
+            self.assertEqual(self.conn.execute("SELECT * FROM flash_cards").fetchall(),
+                             before_cards)
+            if pass_number:
+                self.assertEqual(changes, [])
+
+    def test_current_schema_drops_only_problem_label_and_external_backup_recovers_it(self):
+        pool_schema.ensure_workbench_schema(self.conn)
+        pool_schema.ensure_learning_state_schema(self.conn)
+        self.conn.execute("INSERT INTO problem_progress (problem_id,status,note) VALUES (?,?,?)",
+                          ("dmath-ch06-prob-001", "wrong", "progress note"))
+        self.conn.execute("INSERT INTO review_schedule VALUES (?,?,?,?,?,?,?,?,?,?)", (
+            "problem", "dmath-ch06-prob-001", "", "review", 2, 2.1, 3.0,
+            "2026-10-12", 2, "2026-10-09",
+        ))
+        self.conn.execute(
+            "INSERT INTO feedback_events (item_type,item_id,rating,note,attempt_id) "
+            "VALUES ('problem','dmath-ch06-prob-001',2,'feedback note',1)")
+        self.conn.execute(
+            "INSERT INTO learning_current_state (item_type,item_id,state) "
+            "VALUES ('problem','dmath-ch06-prob-001','review')")
+        self.conn.execute(
+            "INSERT INTO learner_signals "
+            "(signal_id,target_type,target_id,signal_type,weight,note) "
+            "VALUES ('sig-001','node','dmath-ch06-kp-001','weak_node','high','signal note')")
+        self.conn.execute("INSERT INTO flash_cards VALUES (?,?,?,?,?,?,?,?)", (
+            "dmath-ch06-fc-001", "dmath-ch06-kp-001", "front", "back", "source",
+            "Flash label", '["forward","reverse"]', "batch-001",
+        ))
+        self.conn.executescript("""
+            ALTER TABLE problems ADD COLUMN topic_label TEXT;
+            UPDATE problems SET topic_label='Historical label', display_title='Title',
+                source_evidence='Source', source_answer='Answer', solution_origin='source',
+                exam_year='2023', figure_paths='["figures/test.png"]',
+                display_summary='Summary', practice_modes='["exam"]',
+                ingest_batch_id='batch-001', difficulty=2.3,
+                difficulty_knowledge_breadth=2, difficulty_reasoning_depth=2,
+                difficulty_transfer_distance=2, difficulty_construction_openness=3,
+                difficulty_model='cognitive-v1-equal-mean';
+            CREATE INDEX idx_problem_title ON problems(display_title);
+            CREATE TRIGGER problem_title_check AFTER UPDATE OF display_title ON problems
+                BEGIN SELECT 1; END;
+            CREATE VIEW problem_titles AS SELECT problem_id,display_title FROM problems;
+        """)
+        self.conn.commit()
+        self.conn.execute("PRAGMA foreign_keys=ON")
+        problem_columns = [name for name in pool_schema.column_names(self.conn, "problems")
+                           if name != "topic_label"]
+        before_problems = self.conn.execute(
+            f"SELECT {','.join(problem_columns)} FROM problems ORDER BY problem_id").fetchall()
+        other_tables = self.table_names() - {"problems"}
+        before_rows = {table: self.conn.execute(f"SELECT * FROM {table}").fetchall()
+                       for table in other_tables}
+        before_objects = self.conn.execute(
+            "SELECT type,name,sql FROM sqlite_master WHERE name != 'problems' "
+            "ORDER BY type,name").fetchall()
+        before_dump = list(self.conn.iterdump())
+        backup = sqlite3.connect(Path(self.tmp.name) / "before-removal.db")
+        try:
+            self.conn.backup(backup)
+            first = pool_schema.ensure_workbench_schema(self.conn)
+            self.conn.commit()
+            self.assertEqual(first, ["problems.topic_label-retired"])
+            self.assertEqual(self.table_names(), other_tables | {"problems"})
+            self.assertNotIn("topic_label", self.columns("problems"))
+            self.assertEqual(self.conn.execute(
+                f"SELECT {','.join(problem_columns)} FROM problems ORDER BY problem_id"
+            ).fetchall(), before_problems)
+            self.assertEqual({table: self.conn.execute(f"SELECT * FROM {table}").fetchall()
+                              for table in other_tables}, before_rows)
+            self.assertEqual(self.conn.execute(
+                "SELECT type,name,sql FROM sqlite_master WHERE name != 'problems' "
+                "ORDER BY type,name").fetchall(), before_objects)
+            self.assertEqual(self.conn.execute("PRAGMA foreign_keys").fetchone()[0], 1)
+            self.assertEqual(self.conn.execute("PRAGMA foreign_key_check").fetchall(), [])
+            schema_version = self.conn.execute("PRAGMA schema_version").fetchone()[0]
+            self.assertEqual(pool_schema.ensure_workbench_schema(self.conn), [])
+            self.conn.commit()
+            self.assertEqual(self.conn.execute("PRAGMA schema_version").fetchone()[0],
+                             schema_version)
+            recovered = sqlite3.connect(Path(self.tmp.name) / "recovered.db")
+            try:
+                backup.backup(recovered)
+                self.assertEqual(list(recovered.iterdump()), before_dump)
+            finally:
+                recovered.close()
+        finally:
+            backup.close()
+
     def test_migration_rebuilds_problem_difficulty_and_provenance(self):
         self.conn.execute("ALTER TABLE problems ADD COLUMN difficulty INTEGER")
         self.conn.execute(
@@ -245,6 +367,7 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
                     source_kind TEXT NOT NULL CHECK (source_kind IN (
                         'textbook', 'quiz', 'midterm', 'final', 'makeup', 'other'
                     )),
+                    topic_label TEXT,
                     created_at TEXT NOT NULL DEFAULT (datetime('now')),
                     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
@@ -275,6 +398,7 @@ class WorkbenchSchemaMigrationTests(unittest.TestCase):
 
             self.assertIn("problems.provenance-difficulty-v1", first)
             self.assertEqual(second, [])
+            self.assertNotIn("topic_label", pool_schema.column_names(conn, "problems"))
             self.assertEqual(conn.execute("PRAGMA foreign_keys").fetchone()[0], 1)
             self.assertEqual(conn.execute("PRAGMA foreign_key_check").fetchall(), [])
             self.assertEqual(

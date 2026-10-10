@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 import random
 
+from workbench.domain import facets
 from workbench.domain import weak as weak_rules
 
 PRACTICE_MODES = {"exam", "micro", "yes_no"}
@@ -11,12 +12,13 @@ DRIVERS = ("weak", "due", "wrong")
 WRONG_STATUSES = {"wrong", "stuck"}
 
 
-def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
+def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kinds=None,
            source_group=None, exclude_ids=None, seed=None, include_ids=None,
            difficulty_min=None, difficulty_max=None, difficulty_dimensions=None,
            difficulty_strategy=None, exam_year=None, explicit_ids=None,
            drivers=None, with_reasons=False, coverage=False, today=None,
-           source_kinds=None, exam_years=None, evidence_docs=None):
+           source_kinds=None, exam_years=None, evidence_docs=None,
+           stem_keywords=None, source_keywords=None):
     """Pull durable problems and report gaps.
 
     Never fabricates content: whatever cannot be filled is listed in
@@ -36,6 +38,12 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
         Prefix match on the recorded source year, so ``2023`` finds
         ``2023-2024秋冬``.
 
+    ``origin_kinds`` keeps rows produced in any of the named ways (历年原题 /
+    改编 / AI生成). ``stem_keywords`` and ``source_keywords`` are the two
+    keyword domains of `domain.facets`: several words per domain, all of which
+    must match inside that domain, and both domains narrowing at once when both
+    are given.
+
     ``with_reasons`` annotates every returned problem with why it was selected
     (``explicit``, ``wrong``, ``due``, ``weak``, or ``scope``); the reason order is
     the precedence order, strongest first. ``coverage`` orders the candidates so
@@ -53,11 +61,15 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
     source_kinds = [item for item in (source_kinds or []) if item]
     exam_years = [item for item in (exam_years or []) if item]
     evidence_docs = [item for item in (evidence_docs or []) if item]
+    origin_kinds = {item for item in (origin_kinds or []) if item}
+    stem_words = facets.keyword_words(stem_keywords)
+    source_words = facets.keyword_words(source_keywords)
     practice_mode = mode if mode in PRACTICE_MODES else None
     order_mode = "weak" if practice_mode else mode
     today = today or date.today()
-    conditional = bool(source_kind or origin_kind or source_group or exam_year
-                       or source_kinds or exam_years or evidence_docs) or (
+    conditional = bool(source_kind or origin_kinds or source_group or exam_year
+                       or source_kinds or exam_years or evidence_docs
+                       or stem_words or source_words) or (
         difficulty_min is not None or difficulty_max is not None
         or bool(difficulty_dimensions)
     )
@@ -81,8 +93,8 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
 
     if practice_mode:
         problems = [p for p in problems if _eligible_for_mode(p, practice_mode)]
-    if origin_kind:
-        problems = [p for p in problems if p.get("origin_kind") == origin_kind]
+    if origin_kinds:
+        problems = [p for p in problems if p.get("origin_kind") in origin_kinds]
     if source_group:
         problems = [p for p in problems if _source_group(p) == source_group]
     if exam_year:
@@ -96,6 +108,12 @@ def select(pool, kp_ids, n, mode="weak", source_kind=None, origin_kind=None,
     if evidence_docs:
         problems = [p for p in problems
                     if any(_matches_evidence(p, doc) for doc in evidence_docs)]
+    if stem_words:
+        problems = [p for p in problems
+                    if facets.matches_all(facets.stem_text(p), stem_words)]
+    if source_words:
+        problems = [p for p in problems
+                    if facets.matches_all(facets.source_text(p), source_words)]
     if difficulty_min is not None or difficulty_max is not None or difficulty_dimensions:
         problems = [
             p for p in problems

@@ -204,6 +204,95 @@ class ActivePracticeTests(unittest.TestCase):
             {(method, pattern) for method, pattern, _handler in app.ROUTES},
         )
 
+    def test_off_round_derives_learning_state_from_the_verdict(self):
+        from workbench.data import active_practice, attempts
+
+        self.add_problem("dmath-ch06-prob-002")
+        active_practice.create(
+            self.pool, {**self.payload("dmath-ch06-prob-001", "dmath-ch06-prob-002"),
+                        "rating_mode": "off"})
+
+        wrong = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-001", answer_text="B", verdict=0,
+            request_id="off-1", practice_position=0)
+        self.assertEqual(wrong["derived_state"], "wrong")
+
+        right = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-002", answer_text="A", verdict=1,
+            request_id="off-2", practice_position=1)
+        self.assertEqual(right["derived_state"], "mastered")
+
+        # Progress and schedule moved; no rated feedback event was synthesized.
+        conn = self.pool.connect()
+        progress = dict(conn.execute(
+            "SELECT problem_id, status FROM problem_progress "
+            "WHERE problem_id LIKE 'dmath-ch06-prob-00%'").fetchall())
+        self.assertEqual(progress, {
+            "dmath-ch06-prob-001": "wrong",
+            "dmath-ch06-prob-002": "mastered",
+        })
+        events = conn.execute(
+            "SELECT COUNT(*) FROM feedback_events WHERE rating IS NOT NULL").fetchone()[0]
+        self.assertEqual(events, 0)
+        due = conn.execute(
+            "SELECT due_at FROM review_schedule WHERE item_id='dmath-ch06-prob-001' "
+            "AND direction=''").fetchone()[0]
+        self.assertIsNotNone(due)
+
+    def test_rated_round_still_defers_learning_state_to_the_rating(self):
+        from workbench.data import active_practice, attempts
+
+        active_practice.create(
+            self.pool, self.payload("dmath-ch06-prob-001"))
+
+        result = attempts.record_browser_attempt(
+            self.pool, "dmath-ch06-prob-001", answer_text="A", verdict=1,
+            request_id="rated-1", practice_position=0)
+
+        self.assertNotIn("derived_state", result)
+        conn = self.pool.connect()
+        moved = conn.execute(
+            "SELECT COUNT(*) FROM problem_progress WHERE problem_id='dmath-ch06-prob-001'"
+        ).fetchone()[0]
+        self.assertEqual(moved, 0)
+
+    def test_off_card_checkpoints_archive_without_learning_writes(self):
+        from workbench.data import active_practice
+        from workbench.server import api
+
+        conn = self.pool.connect()
+        conn.execute(
+            "INSERT INTO flash_cards (card_id,kp_id,front,back,source_evidence,directions) "
+            "VALUES (?,?,?,?,?,?)",
+            ("dmath-ch06-fc-901", "dmath-ch06-kp-001", "Front", "Back", "Test",
+             '["forward","reverse"]'))
+        self.pool.commit()
+        learning_tables = ("problem_attempts", "feedback_events", "problem_progress",
+                           "learning_current_state", "review_schedule", "learner_signals")
+        before = {table: [tuple(row) for row in conn.execute(f"SELECT * FROM {table}")]
+                  for table in learning_tables}
+        for count in (1, 2):
+            with self.subTest(directions=count):
+                active_practice.create(self.pool, {
+                    "source_kind": "quick", "kp_ids": ["dmath-ch06-kp-001"],
+                    "practice_mode": "flash_card", "rating_mode": "off",
+                    "items": [{"item_type": "card", "item_id": "dmath-ch06-fc-901",
+                               "direction": direction}
+                              for direction in ("forward", "reverse")[:count]],
+                })
+                for position in range(count):
+                    result = api.active_practice_update(self.pool, {}, {}, {
+                        "position": position, "state": "answered"})
+                    self.assertEqual(result["completed"], position == count - 1)
+                self.assertIsNone(active_practice.current(self.pool))
+                archived = conn.execute(
+                    "SELECT status,rating_mode FROM practice_runs ORDER BY id DESC LIMIT 1"
+                ).fetchone()
+                self.assertEqual(tuple(archived), ("completed", "off"))
+                after = {table: [tuple(row) for row in conn.execute(f"SELECT * FROM {table}")]
+                         for table in learning_tables}
+                self.assertEqual(after, before)
+
 
 if __name__ == "__main__":
     unittest.main()

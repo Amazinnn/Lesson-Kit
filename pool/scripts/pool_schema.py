@@ -158,7 +158,6 @@ def _ensure_problem_contract(conn: sqlite3.Connection) -> List[str]:
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             figure_paths TEXT,
             display_title TEXT,
-            topic_label TEXT,
             display_summary TEXT,
             practice_modes TEXT,
             micro_quiz TEXT,
@@ -198,7 +197,7 @@ def _ensure_problem_contract(conn: sqlite3.Connection) -> List[str]:
     target_columns = [
         "problem_id", "kp_ids", "problem_text", "solution", "problem_type",
         "source_kind", "origin_kind", "created_at", "updated_at", "figure_paths",
-        "display_title", "topic_label", "display_summary", "practice_modes",
+        "display_title", "display_summary", "practice_modes",
         "micro_quiz", "ingest_batch_id", "difficulty",
         *PROBLEM_DIFFICULTY_COLUMNS, "difficulty_model",
     ]

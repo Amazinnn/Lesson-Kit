@@ -6,6 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from workbench.data.records import overview as records_overview
+from workbench.domain import facets
 
 
 def hub_stats(pool):
@@ -140,24 +141,33 @@ def _attempt_rows(pool, attempts):
     return decorated
 
 
-def search_problems(pool, query, limit=20):
-    """Casefold substring match over the fields a learner would search by."""
-    needle = (query or "").casefold().strip()
-    if not needle:
+def search_problems(pool, stem_q=None, source_q=None, limit=20):
+    """Two keyword domains over the pool: what a problem says, and where it came from.
+
+    Each parameter splits on whitespace and every one of its keywords must be in
+    that domain's own text (AND inside a domain); when both parameters carry
+    words, a problem must satisfy both. Two empty parameters find nothing — a
+    search with no words is not a request to list the pool.
+    """
+    stem_words = facets.keyword_words(stem_q)
+    source_words = facets.keyword_words(source_q)
+    if not stem_words and not source_words:
         return {"count": 0, "problems": []}
     hits = []
     for problem in pool.problems_all():
-        haystack = " ".join(filter(None, (
-            problem.get("display_title"), problem.get("problem_text"),
-            problem.get("source_evidence"),
-        ))).casefold()
-        if needle in haystack:
-            hits.append({
-                "problem_id": problem["problem_id"],
-                "title": problem.get("display_title")
-                or problem.get("problem_text", "")[:60],
-                "source_evidence": problem.get("source_evidence"),
-            })
+        if stem_words and not facets.matches_all(facets.stem_text(problem), stem_words):
+            continue
+        if source_words and not facets.matches_all(
+            facets.source_text(problem), source_words
+        ):
+            continue
+        text = problem.get("problem_text") or ""
+        hits.append({
+            "problem_id": problem["problem_id"],
+            "title": problem.get("display_title") or text[:60],
+            "stem": " ".join(text.split())[:80],
+            "source_evidence": problem.get("source_evidence"),
+        })
         if len(hits) >= limit:
             break
     return {"count": len(hits), "problems": hits}

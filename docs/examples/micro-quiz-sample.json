@@ -8,8 +8,7 @@
       "quiz_type": "yes_no",
       "answer_key": "否",
       "error_reason": "依次完成的两步用乘法：总数 = n × m，不是求和。",
-      "source_evidence": "Rosen, Discrete Mathematics, §6.1 The Product Rule",
-      "topic_label": "乘法规则"
+      "source_evidence": "Rosen, Discrete Mathematics, §6.1 The Product Rule"
     },
     {
       "problem_id": "dmath-ch06-mq-002",
@@ -19,8 +18,7 @@
       "options": ["有序放球（可空盒）", "不可区分盒分配", "Surjection 计数（无空盒）", "排队问题"],
       "answer_key": "Surjection 计数（无空盒）",
       "error_reason": "每人至少一本即盒子非空，对应到 surjection 的计数模型。",
-      "source_evidence": "Rosen, Discrete Mathematics, §6.5 例 4",
-      "topic_label": "满射计数"
+      "source_evidence": "Rosen, Discrete Mathematics, §6.5 例 4"
     },
     {
       "problem_id": "dmath-ch06-mq-003",
@@ -30,8 +28,7 @@
       "options": ["7", "12", "15", "20"],
       "answer_key": "12",
       "error_reason": "两步独立选择相乘：3 × 4 = 12。",
-      "source_evidence": "Rosen, Discrete Mathematics, §6.1 例 1",
-      "topic_label": "乘法规则"
+      "source_evidence": "Rosen, Discrete Mathematics, §6.1 例 1"
     }
   ]
 }

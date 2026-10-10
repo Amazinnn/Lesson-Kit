@@ -14,6 +14,8 @@ from workbench.domain import (
 )
 from workbench.server import context as agent_context
 
+ORIGIN_KINDS = {"source_problem", "adapted_problem", "generated_grounded"}
+
 
 class ApiError(Exception):
     def __init__(self, status, message):
@@ -200,9 +202,13 @@ def pull_problems(pool, workspace, params, body):
         raise ApiError(400, "include_ids must be a non-empty string list")
     if include_ids and mode == "all":
         raise ApiError(400, "include_ids cannot be combined with mode all")
-    origin_kind = body.get("origin_kind")
-    if origin_kind not in {None, "source_problem", "adapted_problem", "generated_grounded"}:
-        raise ApiError(400, "invalid origin_kind")
+    origin_kinds = body.get("origin_kinds") or []
+    if not isinstance(origin_kinds, list) or not all(
+        isinstance(item, str) and item for item in origin_kinds
+    ):
+        raise ApiError(400, "origin_kinds must be a string list")
+    if not set(origin_kinds) <= ORIGIN_KINDS:
+        raise ApiError(400, "invalid origin_kinds")
     source_group = body.get("source_group")
     if source_group not in {None, "textbook", "exam", "ai_generated", "other"}:
         raise ApiError(400, "invalid source_group")
@@ -234,7 +240,7 @@ def pull_problems(pool, workspace, params, body):
     filters = body.get("filters", {})
     if not isinstance(filters, dict):
         raise ApiError(400, "filters must be an object")
-    unknown = set(filters) - {"source_kinds", "exam_years", "docs"}
+    unknown = set(filters) - {"source_kinds", "exam_years", "docs", "origin_kinds"}
     if unknown:
         raise ApiError(400, f"filters has unknown dimension(s): {sorted(unknown)}")
     def _dimension(name):
@@ -251,9 +257,13 @@ def pull_problems(pool, workspace, params, body):
         not isinstance(exam_year_single, str) or not exam_year_single
     ):
         raise ApiError(400, "exam_year must be a string")
+    filter_origins = _dimension("origin_kinds")
+    if filter_origins and not set(filter_origins) <= ORIGIN_KINDS:
+        raise ApiError(400, "invalid origin_kinds")
     return pull.select(
         pool, kp_ids, n=n, mode=mode, source_kind=body.get("source_kind"),
-        origin_kind=origin_kind, source_group=source_group,
+        origin_kinds=set(origin_kinds) | set(filter_origins),
+        source_group=source_group,
         exclude_ids=set(exclude_ids), include_ids=set(include_ids),
         difficulty_min=difficulty_min, difficulty_max=difficulty_max,
         difficulty_dimensions=dimension_ranges,
@@ -273,9 +283,10 @@ def pull_facets(pool, workspace, params, body):
 
 
 def search_problems(pool, workspace, params, body):
-    """A lightweight picker feed for the filter panel's search box."""
-    query = params.get("q", "")
-    return queries.search_problems(pool, query)
+    """A lightweight picker feed for the filter panel's two keyword boxes."""
+    return queries.search_problems(
+        pool, stem_q=params.get("stem"), source_q=params.get("source"),
+    )
 
 
 def records_overview(pool, workspace, params, body):
@@ -379,8 +390,8 @@ def practice_set_start(pool, workspace, params, body):
     rating_mode = body.get("rating_mode", "immediate")
     if practice_mode not in {"exam", "micro", "yes_no"}:
         raise ApiError(400, "practice_mode must be exam, micro, or yes_no")
-    if rating_mode not in {"immediate", "batch"}:
-        raise ApiError(400, "rating_mode must be immediate or batch")
+    if rating_mode not in {"immediate", "batch", "off"}:
+        raise ApiError(400, "rating_mode must be immediate, batch, or off")
     try:
         record = practice_sets.get_saved(pool, params["practice_set_id"])
         problem_ids = [item["problem_id"] for item in record["plan"]["items"]]

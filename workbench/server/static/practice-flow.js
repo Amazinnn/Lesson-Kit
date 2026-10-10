@@ -17,6 +17,7 @@
     var patch = deps.patch;
     var store = deps.store;
     var load = deps.load;
+    var showRatingEnabled = deps.showRatingEnabled || function () { return true; };
     var renderMath = deps.renderMath;
     var escapeHtml = deps.escapeHtml;
     var richText = deps.richText;
@@ -197,6 +198,7 @@
     var cardNav = document.getElementById("card-nav");
     var cardPrev = document.getElementById("card-prev");
     var cardNext = document.getElementById("card-next");
+    var nextProblem = document.getElementById("next-problem");
     var pulling = false;
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
@@ -337,9 +339,15 @@
       }
     }
 
+    // The learner preference is the third rating mode: off hides every rating
+    // surface and starts rounds with rating_mode "off".
+    function ratingOff() {
+      return !showRatingEnabled();
+    }
+
     function readyToStart() {
       var content = selectedContentMode() || (legacyModeControls ? "exam" : "");
-      return !!content && !!selectedRatingMode()
+      return !!content && (ratingOff() || !!selectedRatingMode())
         && (legacyModeControls || selectedKpIds().length > 0);
     }
 
@@ -374,6 +382,139 @@
       }).filter(function (option) { return option.text; });
     }
 
+    // problem_text sometimes already ends in the very same A./B./C. block that
+    // micro_quiz.options carries. The card prints the text and then the option
+    // fieldset, so such a row showed its options twice. Strip the inlined copy
+    // from the text we render - never from what is stored, and never unless the
+    // block provably repeats micro_quiz.options - and the fieldset stays the one
+    // place the options appear. A block we cannot prove is a duplicate is left
+    // alone, so the worst case is today's rendering.
+    var INLINE_SPACE = /[\s\u3000]/;
+    var INLINE_OPEN = /[\uff08(]/;
+    var INLINE_CLOSE = /[\uff09)]/;
+    var INLINE_DOT = /[\uff0e.\u3001]/;
+    var INLINE_DECORATION = /(`+|\*\*|__|\\(?=[$%&#_{}]))/g;
+    var INLINE_WHITESPACE = /[\s\u3000]+/g;
+
+    function inlineOptionSpans(line) {
+      var spans = [], size = line.length;
+      for (var start = 0; start < size; start += 1) {
+        // a label only opens a line or follows whitespace, so the P of "PSP"
+        // never reads as an option
+        if (start > 0 && !INLINE_SPACE.test(line.charAt(start - 1))) continue;
+        var i = start;
+        if (INLINE_OPEN.test(line.charAt(i))) i += 1;
+        var label = line.charAt(i);
+        if (label < "A" || label > "Z") continue;
+        var j = i + 1;
+        if (INLINE_DOT.test(line.charAt(j))) j += 1;
+        else if (INLINE_CLOSE.test(line.charAt(j))) j += 1;
+        else continue;
+        while (j < size && INLINE_SPACE.test(line.charAt(j))) j += 1;
+        if (j >= size) continue;
+        spans.push({ label: label, labelStart: start, bodyStart: j });
+      }
+      return spans;
+    }
+
+    function inlineOptionLine(line) {
+      var spans = inlineOptionSpans(line);
+      if (!spans.length) return null;
+      var options = spans.map(function (span, index) {
+        var end = index + 1 < spans.length ? spans[index + 1].labelStart : line.length;
+        return {
+          label: span.label,
+          body: line.slice(span.bodyStart, end).replace(/[\s\u3000]+$/, ""),
+        };
+      });
+      // a label with nothing after it is not an option line
+      if (options.some(function (option) { return !option.body; })) return null;
+      return {
+        // text ahead of the first label: a block must open the line, or the
+        // sentence carrying it would be dropped with the block
+        leading: line.slice(0, spans[0].labelStart),
+        options: options,
+      };
+    }
+
+    function optionLabelUp(label, steps) {
+      var code = label.charCodeAt(0) + steps;
+      return code <= 90 ? String.fromCharCode(code) : "";
+    }
+
+    function optionLabelDown(label, steps) {
+      var code = label.charCodeAt(0) - steps;
+      return code >= 65 ? String.fromCharCode(code) : "";
+    }
+
+    function inlineOptionBlock(text) {
+      if (!text) return null;
+      var lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+      var j = lines.length - 1;
+      while (j >= 0 && !lines[j].trim()) j -= 1;
+      if (j < 0) return null;
+      var blocks = [], top = j, expected = null, broken = false;
+      while (j >= 0 && !broken) {
+        var line = lines[j];
+        if (!line.trim()) { j -= 1; continue; }
+        var found = inlineOptionLine(line);
+        if (!found || (expected !== null && found.options[0].label !== expected)
+            || (!blocks.length && found.leading.trim())) {
+          broken = true;
+        }
+        else {
+          found.options.forEach(function (option, index) {
+            if (option.label !== optionLabelUp(found.options[0].label, index)) broken = true;
+          });
+          if (broken) break;
+          blocks.unshift(found.options);
+          top = j;
+          expected = optionLabelDown(found.options[0].label, 1);
+          j -= 1;
+        }
+      }
+      var flat = [];
+      blocks.forEach(function (block) {
+        flat = flat.concat(block);
+      });
+      if (flat.length < 2 || flat[0].label !== "A") return null;
+      // the block is the whole text or follows a blank line, so a phrase that
+      // merely looks like a label inside a sentence is never read as a block
+      if (top > 0 && lines[top - 1].trim()) return null;
+      return {
+        stem: lines.slice(0, top).join("\n").replace(/[\s\u3000]+$/, ""),
+        options: flat,
+      };
+    }
+
+    // What richText() never displays: code fences, bold markers, backslash
+    // escapes. Nothing else is folded away - typography such as \u300c\u300d or a
+    // curly apostrophe stays a real difference between the two copies.
+    function optionDisplayText(text) {
+      return String(text == null ? "" : text)
+        .replace(INLINE_DECORATION, "")
+        .replace(INLINE_WHITESPACE, "");
+    }
+
+    function sameOptionText(inlineText, optionText) {
+      return optionDisplayText(inlineText) === optionDisplayText(optionText);
+    }
+
+    // problem_text as the card should show it. Rows without a micro quiz, and
+    // rows whose inlined block is not a provable duplicate, come back untouched.
+    function problemTextFor(problem) {
+      var text = problem && problem.problem_text ? String(problem.problem_text) : "";
+      if (!microQuiz(problem)) return text;
+      var options = problemOptions(problem);
+      if (!options.length) return text;
+      var block = inlineOptionBlock(text);
+      if (!block || block.options.length !== options.length) return text;
+      for (var i = 0; i < options.length; i += 1) {
+        if (!sameOptionText(block.options[i].body, options[i].text)) return text;
+      }
+      return block.stem;
+    }
+
     function showComposer(show) {
       if (composer) composer.classList.toggle("hidden", !show);
       if (sessionEntry) sessionEntry.classList.toggle("hidden", !show);
@@ -396,13 +537,20 @@
     }
 
     function ratingNow() {
+      if (offNow()) return false;
       return sessionStorage.getItem(RATING_MODE_KEY) === "immediate"
         || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "immediate");
     }
 
     function batchNow() {
+      if (offNow()) return false;
       return sessionStorage.getItem(RATING_MODE_KEY) === "batch"
         || (legacyModeControls && sessionStorage.getItem(MODE_KEY) === "batch");
+    }
+
+    // An off round: no rating surfaces, no session-end, verdict-derived state.
+    function offNow() {
+      return sessionStorage.getItem(RATING_MODE_KEY) === "off";
     }
 
     function deckItemAnswered(item) {
@@ -485,7 +633,11 @@
     function updateCardNav(item) {
       var isCard = item.kind === "card";
       if (cardNav) cardNav.classList.toggle("hidden", !isCard);
-      if (!isCard) return;
+      if (!isCard) {
+        if (offNow()) syncNextProblem();
+        else if (nextProblem) nextProblem.classList.add("hidden");
+        return;
+      }
       if (cardPrev) cardPrev.disabled = practiceDeck.cursor <= 0;
       if (cardNext) cardNext.disabled = pulling;
     }
@@ -530,7 +682,7 @@
         + "<p class='context-line'>练习题</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
-        + "<div class='problem-text rich-text'>" + richText(problem.problem_text || "") + "</div>"
+        + "<div class='problem-text rich-text'>" + richText(problemTextFor(problem)) + "</div>"
         + optionHtmlFor(item) + keylessLine(item) + verdictLine(item) + "</article>";
       renderMath(stream);
       setComposerLayout(
@@ -542,11 +694,13 @@
         submitAnswer.classList.add("hidden");
         actions.classList.remove("hidden");
         feedbackArea.classList.add("hidden");
+        syncNextProblem();
       } else {
         answerBox.disabled = false;
         submitAnswer.classList.remove("hidden");
         actions.classList.add("hidden");
         feedbackArea.classList.add("hidden");
+        if (nextProblem) nextProblem.classList.add("hidden");
         answerBox.focus();
       }
     }
@@ -593,7 +747,7 @@
       sessionStorage.removeItem(SIMILAR_KEY);
       showComposer(false);
       setPracticeFocus(false);
-      if (ratingMode === "batch") window.location = "session-end";
+      if (ratingMode === "batch" && !offNow()) window.location = "session-end";
       else {
         sessionStorage.removeItem(MODE_KEY);
         sessionStorage.removeItem(RATING_MODE_KEY);
@@ -622,6 +776,7 @@
     // verdict hold one rule instead of two.
     function advance() {
       cancelScheduledAdvance();
+      if (nextProblem) nextProblem.classList.add("hidden");
       if (!PracticeDeck.atEnd(practiceDeck)) {
         renderDeckItem(PracticeDeck.goTo(practiceDeck, practiceDeck.cursor + 1));
         persistDeck();
@@ -872,6 +1027,7 @@
       var ratingMode = selectedRatingMode();
       if (legacyModeControls && !ratingMode) ratingMode = selectedRatingMode();
       if (!contentMode && legacyModeControls) contentMode = "exam";
+      if (ratingOff()) ratingMode = "off";
       if (!contentMode || !ratingMode) return;
       advanceToken += 1;
       if (!resumeCard) {
@@ -900,6 +1056,8 @@
 
     function syncSelectionActions() {
       var ready = readyToStart();
+      var ratingChoice = document.querySelector(".practice-rating-choice");
+      if (ratingChoice) ratingChoice.classList.toggle("hidden", ratingOff());
       if (startPractice) startPractice.disabled = !ready;
       if (savePracticeSet) {
         savePracticeSet.disabled = !ready || selectedContentMode() === "flash_card";
@@ -921,10 +1079,12 @@
     bindMode(modeBatch);
     bindMode(ratingImmediate);
     bindMode(ratingBatch);
+    bindMode(document.getElementById("setting-show-rating"));
     var restoredMode = sessionStorage.getItem(MODE_KEY);
     var restoredFlashDirection = sessionStorage.getItem(FLASH_DIRECTION_KEY) || "forward";
     if (flashDirectionForward) flashDirectionForward.checked = restoredFlashDirection === "forward";
     if (flashDirectionReverse) flashDirectionReverse.checked = restoredFlashDirection === "reverse";
+    var ratingOffNow = ratingOff();
     var restoredRatingMode = sessionStorage.getItem(RATING_MODE_KEY)
       || (restoredMode === "batch" ? "batch" : "");
     var restoredItem = currentProblem();
@@ -959,17 +1119,23 @@
 
     /* ---------- 来源筛选浮窗 ---------- */
 
-    var FILTER_KEY = "wb_practice_filters_" + WS;
+    var FILTER_KEY = "wb_practice_filters_v2_" + WS;
+    var ORIGIN_LABELS = {
+      source_problem: "历年原题",
+      adapted_problem: "改编",
+      generated_grounded: "AI生成",
+    };
     var filterLaunch = document.getElementById("filter-launch");
     var filterCount = document.getElementById("filter-count");
     var filterPopup = document.getElementById("filter-popup");
     var filterFacets = null;
     var filterState = load(FILTER_KEY, null)
-      || { source_kinds: [], exam_years: [], docs: [], picked: {} };
+      || { source_kinds: [], origin_kinds: [], exam_years: [], docs: [], picked: {} };
     if (!filterState.picked) filterState.picked = {};
 
     function filterActiveCount() {
-      return filterState.source_kinds.length + filterState.exam_years.length
+      return filterState.source_kinds.length + filterState.origin_kinds.length
+        + filterState.exam_years.length
         + filterState.docs.length + Object.keys(filterState.picked).length;
     }
 
@@ -987,7 +1153,7 @@
 
     function applyFiltersToPullBody(pullBody) {
       var dimensions = {};
-      ["source_kinds", "exam_years", "docs"].forEach(function (key) {
+      ["source_kinds", "origin_kinds", "exam_years", "docs"].forEach(function (key) {
         if (filterState[key] && filterState[key].length) {
           dimensions[key] = filterState[key].slice();
         }
@@ -997,13 +1163,14 @@
       if (pickedIds.length) pullBody.include_ids = pickedIds;
     }
 
-    function filterDimension(name, label, entries) {
+    function filterDimension(name, label, entries, labels) {
       var state = filterState[name] || [];
       var options = entries.map(function (facet) {
         var checked = state.indexOf(facet.value) >= 0;
+        var text = (labels && labels[facet.value]) || facet.value;
         return "<label class='filter-option'><input type='checkbox' data-filter-dimension='"
           + escapeHtml(name) + "' value='" + escapeHtml(facet.value) + "'"
-          + (checked ? " checked" : "") + "> " + escapeHtml(facet.value)
+          + (checked ? " checked" : "") + "> " + escapeHtml(text)
           + " <span class='count'>" + facet.count + "</span></label>";
       }).join("");
       return "<div class='filter-dimension'><h3>" + escapeHtml(label) + "</h3>"
@@ -1014,11 +1181,16 @@
       if (!filterPopup) return;
       filterPopup.innerHTML =
         filterDimension("source_kinds", "来源类型", filterFacets.source_kinds || [])
+        + filterDimension("origin_kinds", "题目来源方式",
+          filterFacets.origin_kinds || [], ORIGIN_LABELS)
         + filterDimension("exam_years", "考查年份", filterFacets.exam_years || [])
         + filterDimension("docs", "来源文档", filterFacets.docs || [])
         + "<div class='filter-dimension'><h3>搜索选题</h3>"
-        + "<div class='filter-search'><input id='filter-search-box' type='search' "
-        + "placeholder='题面 / 标题 / 来源…'>"
+        + "<div class='filter-search'>"
+        + "<input id='filter-search-stem' type='search' "
+        + "placeholder='题干关键词（空格分隔）'>"
+        + "<input id='filter-search-source' type='search' "
+        + "placeholder='来源关键词（空格分隔）'>"
         + "<button id='filter-search-go' class='outline sm'>搜</button></div>"
         + "<div id='filter-search-results' class='filter-search-results'></div></div>"
         + "<div class='filter-actions'>"
@@ -1034,23 +1206,37 @@
         });
       });
       var searchGo = filterPopup.querySelector("#filter-search-go");
-      var searchBox = filterPopup.querySelector("#filter-search-box");
-      if (searchGo && searchBox) {
+      var stemBox = filterPopup.querySelector("#filter-search-stem");
+      var sourceBox = filterPopup.querySelector("#filter-search-source");
+      if (searchGo && stemBox && sourceBox) {
         var runSearch = function () {
-          var term = searchBox.value.trim();
+          // Two keyword domains: the stem box narrows what the problem says, the
+          // source box narrows where it came from, and each of them splits on
+          // whitespace into words that must all match inside its own domain.
+          var stemTerm = stemBox.value.trim();
+          var sourceTerm = sourceBox.value.trim();
           var target = filterPopup.querySelector("#filter-search-results");
-          if (!term) { target.innerHTML = ""; return; }
-          api("/search/problems?q=" + encodeURIComponent(term)).then(function (found) {
+          if (!stemTerm && !sourceTerm) { target.innerHTML = ""; return; }
+          var query = "?stem=" + encodeURIComponent(stemTerm)
+            + "&source=" + encodeURIComponent(sourceTerm);
+          api("/search/problems" + query).then(function (found) {
             if (!found.problems.length) {
               target.innerHTML = "<p class='muted'>没有匹配的题目。</p>";
               return;
             }
             target.innerHTML = found.problems.map(function (problem) {
               var checked = problem.problem_id in filterState.picked;
-              return "<label class='filter-option'><input type='checkbox' "
-                + "data-picked-id='" + escapeHtml(problem.problem_id) + "'"
-                + (checked ? " checked" : "") + "> "
-                + escapeHtml(problem.title) + "</label>";
+              var stem = problem.stem || problem.title || "";
+              var source = problem.source_evidence
+                ? "<span class='filter-hit-source'>" + escapeHtml(problem.source_evidence)
+                  + "</span>" : "";
+              return "<label class='filter-option filter-hit'>"
+                + "<input type='checkbox' data-picked-id='"
+                + escapeHtml(problem.problem_id) + "'"
+                + (checked ? " checked" : "") + ">"
+                + "<span class='filter-hit-text'>"
+                + "<span class='filter-hit-stem'>" + escapeHtml(stem) + "</span>"
+                + source + "</span></label>";
             }).join("");
             target.querySelectorAll("[data-picked-id]").forEach(function (box) {
               box.addEventListener("change", function () {
@@ -1058,7 +1244,8 @@
                   var hit = found.problems.filter(function (problem) {
                     return problem.problem_id === box.dataset.pickedId;
                   })[0];
-                  filterState.picked[box.dataset.pickedId] = hit ? hit.title : "";
+                  filterState.picked[box.dataset.pickedId] =
+                    (hit && (hit.stem || hit.title)) || "";
                 } else {
                   delete filterState.picked[box.dataset.pickedId];
                 }
@@ -1070,13 +1257,17 @@
           });
         };
         searchGo.addEventListener("click", runSearch);
-        searchBox.addEventListener("keydown", function (event) {
-          if (event.key === "Enter") runSearch();
+        [stemBox, sourceBox].forEach(function (box) {
+          box.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") runSearch();
+          });
         });
       }
       var clear = filterPopup.querySelector("#filter-clear");
       if (clear) clear.addEventListener("click", function () {
-        filterState = { source_kinds: [], exam_years: [], docs: [], picked: {} };
+        filterState = {
+          source_kinds: [], origin_kinds: [], exam_years: [], docs: [], picked: {},
+        };
         saveFilters();
         renderFilterPopup();
       });
@@ -1143,7 +1334,19 @@
         else advance();
         return;
       }
+      // Off rounds never rate: read the verdict and the solution, then 下一题.
+      if (offNow()) syncNextProblem();
     });
+
+    // Off rounds replace the rating panel with this one explicit action.
+    function syncNextProblem() {
+      if (!nextProblem) return;
+      var item = currentProblem();
+      var ready = !!(item && item.kind !== "card"
+        && offNow() && (item.verdict !== undefined || (item.answer_text || "").trim()
+          || (item.choices && item.choices.length)));
+      nextProblem.classList.toggle("hidden", !ready);
+    }
 
     if (showAnswer) showAnswer.addEventListener("click", function () {
       var item = currentProblem();
@@ -1167,14 +1370,16 @@
               + "<div class='rich-text'>" + richText(quiz.error_reason) + "</div>"
             : "";
           section = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
-            + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>";
+            + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>"
+            + practiceExplanationSection(detail.problem);
         } else {
           section = practiceSolutionHtml(detail.problem);
         }
         stream.innerHTML += section + attemptHistoryHtml(detail.attempts);
         renderMath(stream);
         showAnswer.classList.add("hidden");
-        if (!batchNow()) feedbackArea.classList.remove("hidden");
+        if (offNow()) syncNextProblem();
+        else if (!batchNow()) feedbackArea.classList.remove("hidden");
       }).catch(showPracticeError);
     });
 
@@ -1183,7 +1388,9 @@
       var item = currentProblem();
       if (!item) return;
       if (item.feedback_status === "saving") return;
-      if (rating < 1 || rating > 5) {
+      // parseInt("") is NaN and fails both bounds checks, so an empty input
+      // used to reach the server and die as "rating or note is required".
+      if (!(rating >= 1 && rating <= 5)) {
         showPracticeError("请输入 1-5 的评分");
         return;
       }
@@ -1228,11 +1435,11 @@
       var position = practiceDeck.cursor;
       var request;
       if (item.kind === "card") {
-        request = post("/feedback", {
+        request = (offNow() ? Promise.resolve() : post("/feedback", {
           item_type: "card", item_id: item.id, rating: 1,
           direction: item.direction || "forward",
           request_id: newPracticeRequestId(),
-        }).then(function () {
+        })).then(function () {
           return patch("/practice/current", {
             position: position, state: "stuck",
           });
@@ -1295,6 +1502,33 @@
       persistDeck();
     });
     if (cardNext) cardNext.addEventListener("click", function () {
+      if (pulling) return;
+      var item = currentProblem();
+      if (!offNow() || !activePractice || !item || item.kind !== "card"
+          || item.state !== "active") {
+        advance();
+        return;
+      }
+      pulling = true;
+      cardNext.disabled = true;
+      patch("/practice/current", {
+        position: practiceDeck.cursor,
+        state: item.revealed ? "answered" : "stuck",
+      }).then(function (progress) {
+        activePractice = progress.completed ? null : progress.practice;
+        renderResumeCard(activePractice);
+        updateSession(item.id, { state: item.revealed ? "unrated" : "skipped" }, item.direction);
+        pulling = false;
+        advance();
+      }).catch(function (error) {
+        pulling = false;
+        cardNext.disabled = false;
+        showPracticeError(error);
+      });
+    });
+    if (nextProblem) nextProblem.addEventListener("click", function () {
+      if (!offNow()) return;
+      nextProblem.classList.add("hidden");
       advance();
     });
   }
@@ -1349,7 +1583,7 @@
         }
         save.addEventListener("click", function () {
           var value = parseInt(rating.value, 10);
-          if (value < 1 || value > 5) {
+          if (!(value >= 1 && value <= 5)) {
             showCardError("请输入 1-5 的评分");
             return;
           }
@@ -1411,6 +1645,7 @@
                 ? "<p class='section-kicker'>为什么</p><div class='rich-text'>"
                   + richText(quiz.error_reason) + "</div>"
                 : "")
+              + practiceExplanationSection(problem)
             : "<p class='section-kicker'>解析</p><div class='rich-text'>"
               + richText(problem.solution || "（本题无解析）") + "</div>";
           buildRatingCard(
@@ -1438,6 +1673,19 @@
     });
   }
 
+  function practiceExplanationSection(problem) {
+    // The written solution belongs to every kind of problem, quiz rows
+    // included - a key plus a one-line reason is a verdict, not an analysis.
+    if (!problem) return "";
+    var solution = problem.solution;
+    if (!solution || !String(solution).trim()) return "";
+    var origin = problem.solution_origin;
+    var label = origin === "generated" ? "AI 生成解析"
+      : origin === "source" ? "教材解析" : "解析";
+    return "<section class='practice-solution'><p class='section-kicker'>" + label + "</p>"
+      + "<div class='rich-text'>" + richText(String(solution)) + "</div></section>";
+  }
+
   function practiceSolutionHtml(problem) {
     // A source answer, a source solution, and an AI explanation are three
     // different things and must not read as one.
@@ -1447,13 +1695,9 @@
       sections += "<section class='practice-solution'><p class='section-kicker'>教材答案</p>"
         + "<div class='rich-text'>" + richText(String(answer)) + "</div></section>";
     }
-    var origin = problem.solution_origin;
-    var label = origin === "generated" ? "AI 生成解析"
-      : origin === "source" ? "教材解析" : "解析";
-    var solution = problem.solution;
-    if (solution && String(solution).trim()) {
-      sections += "<section class='practice-solution'><p class='section-kicker'>" + label + "</p>"
-        + "<div class='rich-text'>" + richText(String(solution)) + "</div></section>";
+    var explanation = practiceExplanationSection(problem);
+    if (explanation) {
+      sections += explanation;
     } else if (!sections) {
       sections = "<section class='practice-solution'><p class='section-kicker'>解析</p>"
         + "<div class='rich-text'>（本题无解析，请基于自身作答自评）</div></section>";

@@ -13,9 +13,9 @@
 | GET `/calendar` | 读 | 查询 | 浏 |
 | GET `/plan` · POST `/plan/recalculate` | 读/写 | 计划 | 浏 |
 | GET·POST `/goals`；PATCH·DELETE·GET `/goals/{id}` | 读/写 | goals.json | 浏（UI 仅用创建） |
-| POST `/pull` | 读 | 拉取（`filters` 三维：来源类型/年份/文档，维度内 OR、维度间 AND） | 双 |
-| GET `/pull-facets` | 读 | 拉取（筛选浮窗的维度与计数，取自池内实际值） | 浏 |
-| GET `/search/problems` | 读 | 查询（浮窗搜索选题，命中后走 `include_ids`） | 浏 |
+| POST `/pull` | 读 | 拉取（`filters` 四维：来源类型/题目来源方式/年份/文档，维度内 OR、维度间 AND；顶层 `origin_kinds` 同义） | 双 |
+| GET `/pull-facets` | 读 | 拉取（筛选浮窗的四维与计数，取自池内实际值） | 浏 |
+| GET `/search/problems?stem=&source=` | 读 | 查询（浮窗两个关键词域搜索，各域多词 AND；命中后走 `include_ids`；旧 `q` 已删除） | 浏 |
 | POST `/pull-cards` | 读 | 拉卡（direction_mode + 独立方向排除） | 双 |
 | POST `/practice` | 写 | practice 记录 | 双 |
 | POST `/attempts` | 写 | 尝试（浏览器每次提交落一条：作答+选项+判定，不碰进度与调度） | 双 |
@@ -38,7 +38,7 @@
 | `dashboard` | 管理（确保服务在跑 + 打开浏览器；不新增页面） | 人 |
 | `doctor` | 读（环境自检：注册表/池库/provider/服务端口，只读不改） | 人 |
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |
-| `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；来源筛选 `--source-kind`·`--exam-year`·`--source-evidence` 均可重复；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
+| `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；来源筛选 `--source-kind`·`--origin-kinds`·`--exam-year`·`--source-evidence` 均可重复，另有 `--search-stem`/`--search-source` 两个关键词域；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检，apply 单事务多题，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |

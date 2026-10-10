@@ -123,6 +123,26 @@ class ContentAuditTests(unittest.TestCase):
         self.assertEqual(report["checks"], ["untitled"])
         self.assertEqual(report["findings"][0]["problem_ids"], ["dmath-ch06-prob-001"])
 
+    def test_independent_problem_with_its_own_answer_is_not_a_fragment(self):
+        self.insert_problem(
+            "dmath-ch06-prob-010", "Field strength equals x", solution="x",
+            source_evidence="textbook chapter 6 exercise 10",
+        )
+        self.insert_problem(
+            "dmath-ch06-prob-011", "Field strength equals x at point P", solution="x at P",
+            source_evidence="exam 2023 question 4",
+        )
+
+        fragments = [
+            item for item in audit(self.pool)["findings"]
+            if item["check"] == "fragments"
+        ]
+
+        self.assertFalse(any(item["problem_ids"] == ["dmath-ch06-prob-010"]
+                             for item in fragments))
+        self.assertFalse(any(item["problem_ids"] == ["dmath-ch06-prob-011"]
+                             for item in fragments))
+
 
 if __name__ == "__main__":
     unittest.main()

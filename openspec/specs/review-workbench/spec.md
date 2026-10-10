@@ -116,17 +116,23 @@ how many requested knowledge points a problem covers and is unchanged.
 ### Requirement: Practice session
 
 A workbench practice session SHALL present one problem at a time from a
-weak-point-first, non-repeating queue. The learner SHALL choose per-problem or
-end-of-session self-rating before the first pull. Merely showing a problem,
-drafting, revealing a solution, skipping, or ending a session SHALL NOT write
-learning records. A learner-requested Agent attempt CLI operation MAY record
-the active answer and an optional 1–5 learning rating. Scheduling SHALL never
-lock a problem.
+weak-point-first, non-repeating queue. Before the first pull the learner SHALL
+choose per-problem or end-of-session self-rating, unless the learner's
+show-rating preference is off, in which case the session starts with the rating
+mode `off` and no self-rating surface appears during the round. Merely showing
+a problem, drafting, revealing a solution, skipping, or ending a session SHALL
+NOT write learning records — except that in an `off` session, an objective
+problem's recorded verdict SHALL write the derived learning conclusion (对 →
+mastered, 错 → wrong) to progress, current state, and schedule exactly once,
+without a rating event. A learner-requested Agent attempt CLI operation MAY
+record the active answer and an optional 1–5 learning rating. Scheduling SHALL
+never lock a problem.
 
 #### Scenario: Skip a problem without a learning record
 
 - **WHEN** the learner skips the current problem
-- **THEN** the next unseen problem is shown and no learner-state table is changed
+- **THEN** the next unseen problem is shown and no learner-state table is
+  changed
 
 #### Scenario: Explicit rating records a learning conclusion
 
@@ -138,6 +144,35 @@ lock a problem.
 - **WHEN** the learner completes a problem and explicitly submits a rating
 - **THEN** the next unseen problem is shown after the single feedback write
 
+#### Scenario: An off session derives the conclusion from the verdict
+
+- **WHEN** a session with the rating mode `off` records an objective attempt
+  whose verdict is false
+- **THEN** the problem's progress becomes wrong and its schedule advances from
+  that conclusion exactly once, and no rated feedback event is written
+
+#### Scenario: An off session records a subjective attempt without deriving
+
+- **WHEN** a session with the rating mode `off` records a subjective attempt
+- **THEN** the attempt is stored and no learning conclusion is derived
+
+#### Scenario: An off session starts without a rating choice
+
+- **WHEN** the learner starts a round while the show-rating preference is off
+- **THEN** the round begins without the learner choosing a rating timing, and
+  the stored rating mode is `off`
+
+#### Scenario: Explicit off-card navigation completes execution without a rating
+
+- **WHEN** the learner explicitly advances an off-mode flash card
+- **THEN** the existing current-practice checkpoint records answered after reveal or stuck when skipped, without creating an attempt, feedback, learning state or schedule update
+- **AND** settling the last pending item archives the completed off round and clears the active resource, so refresh does not resurrect it
+
+#### Scenario: Revealing an off card does not complete it
+
+- **WHEN** an off-mode card is displayed, revealed, or revisited with backwards navigation
+- **THEN** no new execution completion or learning record is written until explicit forward completion of a pending item
+
 #### Scenario: Practice an un-due problem
 
 - **WHEN** the learner selects a problem that is not yet due
@@ -146,7 +181,8 @@ lock a problem.
 #### Scenario: Agent records at the learner's request
 
 - **WHEN** the learner asks the Agent to record the active answer
-- **THEN** only the explicit attempt CLI call writes it; viewing or discussing the draft alone does not
+- **THEN** only the explicit attempt CLI call writes it; viewing or discussing
+  the draft alone does not
 
 ### Requirement: Durable practice run archive
 
@@ -824,13 +860,27 @@ lens they are showing, so a whole-course page never claims to be a chapter.
 
 ### Requirement: Provenance-filtered problem pull
 
-Problem pull SHALL accept `source_kind`, `origin_kind`, and a derived mutually
-exclusive `source_group`. `ai_generated` contains generated origin; `exam`
-contains non-generated quiz/midterm/final/makeup sources; `textbook` contains
-non-generated textbook sources; all remaining rows are `other`. Multiple
-filters intersect. Pull MAY also filter by `exam_year`, matched as a prefix so
-that a value such as `2023` selects every problem whose recorded year starts
-with it.
+Problem pull SHALL accept `source_kind`, a derived mutually exclusive
+`source_group`, and `origin_kinds` as a list of the ways a row may have been
+produced (`source_problem`, `adapted_problem`, `generated_grounded`); a row is
+kept when its `origin_kind` is **any** of the named ways. `ai_generated`
+contains generated origin; `exam` contains non-generated
+quiz/midterm/final/makeup sources; `textbook` contains non-generated textbook
+sources; all remaining rows are `other`. Multiple filters intersect. Pull MAY
+also filter by `exam_year`, matched as a prefix so that a value such as `2023`
+selects every problem whose recorded year starts with it.
+
+Pull SHALL additionally accept two keyword groups, `stem_keywords` and
+`source_keywords`. Each group splits its input on whitespace, casefolds, and
+keeps only rows carrying **every** one of its words in that domain's own text.
+The two domains SHALL be defined once and read by every surface: the **stem**
+domain is `display_title` + `problem_text`; the **source**
+domain is `source_evidence` + `exam_year` + the leading run of `【…】` tags at
+the head of `problem_text` (`^\s*((?:【[^】]*】)+)`), which is where pools
+imported before the provenance fields existed still keep their source label.
+When both groups carry words, the groups intersect. The single-value
+`origin_kind` parameter SHALL NOT remain: a caller that cannot express more
+than one way would be the only way this axis is used.
 
 #### Scenario: AI exam-grounded problem stays in AI group
 
@@ -842,10 +892,27 @@ with it.
 - **WHEN** pull requests textbook material and adapted origin
 - **THEN** only rows satisfying both values are returned
 
+#### Scenario: More than one origin at a time
+
+- **WHEN** pull names `source_problem` and `adapted_problem`
+- **THEN** rows of both origins are returned and generated rows are not
+
 #### Scenario: Select one exam year
 
 - **WHEN** a pull carries an exam year
 - **THEN** only problems whose recorded year starts with that value are returned
+
+#### Scenario: Several stem words narrow together
+
+- **WHEN** the stem group carries two words and only one problem carries both
+- **THEN** that problem alone is returned
+
+#### Scenario: A source label carried only in the 【…】 prefix
+
+- **WHEN** a problem's `source_evidence` and `exam_year` are empty and its
+  `problem_text` opens with `【2023期末】【合集A】`
+- **THEN** a source keyword naming either tag selects it, and the tags are not
+  read as source text anywhere but at the head of the text
 
 ### Requirement: Every learning action is reachable from the CLI
 
@@ -979,16 +1046,18 @@ their linked ratings) from the already-served problem payload.
 ### Requirement: Multi-dimension source filters
 
 Problem selection SHALL accept list-valued source dimensions alongside the
-single-value ones: `source_kinds` (exact), `exam_years` (prefix), and
+single-value ones: `source_kinds` (exact), `exam_years` (prefix),
 `evidence_docs` (case-insensitive substring over the free-text source
-evidence). Within one dimension the values SHALL union; across dimensions they
-SHALL intersect. The system SHALL derive each dimension's offered values from
-the pool's actual rows with row counts, folding source evidence into one
-document key per source document (an `.md`-style path verbatim, textbook rows
-into 教材, otherwise the leading segment), and SHALL expose that census as a
-read-only endpoint plus repeatable CLI flags (`--source-kind`, the new
+evidence), and `origin_kinds` (any of the named production ways). Within one
+dimension the values SHALL union; across dimensions they SHALL intersect. The
+system SHALL derive each dimension's offered values from the pool's actual rows
+with row counts, folding source evidence into one document key per source
+document (an `.md`-style path verbatim, textbook rows into 教材, otherwise the
+leading segment), and SHALL expose that census as a read-only endpoint plus
+repeatable CLI flags (`--source-kind`, `--origin-kinds`, the new
 `--source-evidence`). The pull API SHALL also accept `exam_year`, which it
-previously ignored.
+previously ignored. The generic content search SHALL split its query on
+whitespace and keep only rows carrying every one of its words.
 
 #### Scenario: Dimensions union within and intersect across
 
@@ -1005,21 +1074,45 @@ previously ignored.
 - **WHEN** the filter dimensions are requested
 - **THEN** every offered value exists on at least one row, carries its row count, and one value per source document is offered
 
+#### Scenario: Origin is a dimension like the others
+
+- **WHEN** the filter dimensions are requested
+- **THEN** the response carries a fourth dimension listing each production way
+  present in the pool with its row count, in the same shape as the other three
+
+#### Scenario: A content search with several words
+
+- **WHEN** a content search is given two words and only one row carries both
+- **THEN** that row alone is returned
+
 ### Requirement: Source filter panel on the practice page
 
 The practice page SHALL offer a filter panel, opened from a launch button and
 rendered as a floating panel: one checkbox group per filter dimension (values
-and counts derived from the pool), a search box that finds problems by their
-text, title, label, or evidence and lets the learner pick them into the
-selection, and a clear-all action. Active filter selections SHALL persist per
-workspace for the session, the launch button SHALL show the active count, and
-the next pull SHALL combine the dimensions (and the picked problems) with the
-existing scope and mode.
+and counts derived from the pool), two search boxes — one for the **stem**
+domain and one for the **source** domain — that find problems and let the
+learner pick them into the selection, and a clear-all action. The origin
+dimension SHALL be labelled in the learner's words: 历年原题, 改编, AI生成. Each
+search box SHALL accept several whitespace-separated words, every word of which
+must be found in that box's own domain, and a result row SHALL show the stem
+summary together with its source line. Active filter selections SHALL persist
+per workspace for the session under a versioned storage key, the launch button
+SHALL show the active count, and the next pull SHALL combine the dimensions (and
+the picked problems) with the existing scope and mode. The search endpoint SHALL
+take one query parameter per domain and SHALL NOT accept a single combined
+parameter: there is no alias for the retired one, because its meaning — one
+haystack — is what the two domains replace. A search with no word in either box
+SHALL return nothing rather than list the pool.
 
 #### Scenario: Dimensions and picked problems reach the pull
 
-- **WHEN** the learner ticks a document, a year, and picks two problems from the search results, then starts a round
-- **THEN** the pull request carries those dimensions and the picked problem ids, and the returned items all match
+- **WHEN** the learner ticks a document, a year, an origin, and picks two problems from the search results, then starts a round
+- **THEN** the pull request carries those dimensions — including the origin — and the picked problem ids, and the returned items all match
+
+#### Scenario: Two boxes, two domains
+
+- **WHEN** the learner types a word in the stem box and another in the source box and searches
+- **THEN** the request carries one parameter per box, and a problem matching only one of the two words is not returned
 
 #### Scenario: Filters persist and clear
 

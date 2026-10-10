@@ -4,6 +4,7 @@ import html
 import json
 import re
 from datetime import date
+from urllib.parse import quote
 
 from workbench.data import queries
 from workbench.server import records as records_view
@@ -189,6 +190,7 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<div id='composer' class='practice-answer-card hidden'><div id='composer-row'><textarea id='answer-box' rows='3' placeholder='写下你的作答'></textarea>"
         "<button id='answer-submit' class='primary'>提交作答</button></div><div id='composer-actions' class='hidden'>"
         "<button id='show-answer' class='outline'>查看解析</button>"
+        "<button id='next-problem' class='primary hidden' type='button'>下一题</button>"
         "<span id='card-nav' class='hidden'><button id='card-prev' class='ghost' type='button'>上一张</button>"
         "<button id='card-next' class='ghost' type='button'>下一张</button></span></div><div id='feedback-area' class='feedback-card hidden'>"
         "<label class='visually-hidden' for='rating-input'>自评分（1–5）</label>"
@@ -497,8 +499,15 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             rows.append(
                 "<li class='practice-set-item' data-problem-id='"
                 + html.escape(item["problem_id"]) + "'>"
+                + "<details class='practice-set-item-body'><summary>"
                 + "<span class='practice-set-item-index'>" + str(index + 1) + "</span>"
                 + "<span class='practice-set-item-title'>" + html.escape(str(title)[:120]) + "</span>"
+                + "</summary>"
+                + "<div class='linked-problem-text rich-text'>"
+                + _render_markdown(problem.get("problem_text") or "", workspace["name"], "")
+                + "</div>"
+                + _linked_problem_source(problem)
+                + "</details>"
                 + "<span class='practice-set-item-actions'>"
                 + "<button class='ghost sm' type='button' data-set-up aria-label='上移题目'>↑</button>"
                 + "<button class='ghost sm' type='button' data-set-down aria-label='下移题目'>↓</button>"
@@ -508,7 +517,9 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         cards.append(
             "<article class='practice-set-card card' data-practice-set-id='"
             + html.escape(record["practice_set_id"]) + "'>"
-            + "<header class='practice-set-card-head'><div>"
+            + "<details class='practice-set-card-body'>"
+            + "<summary class='practice-set-card-head'>"
+            + "<div class='practice-set-card-title'>"
             + "<p class='section-kicker'>试卷</p><h2>"
             + html.escape(record["title"]) + "</h2><p class='muted'>"
             + str(record["count"]) + " 题 · 只保存题目与顺序</p></div>"
@@ -517,8 +528,9 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "<button class='outline sm' type='button' data-set-rename>改名</button>"
             + "<button class='outline sm' type='button' data-set-export>导出</button>"
             + "<button class='ghost sm' type='button' data-set-delete>删除</button>"
-            + "</div></header>"
+            + "</div></summary>"
             + "<ol class='practice-set-items'>" + "".join(rows) + "</ol>"
+            + "</details>"
             + "<p class='inline-error practice-set-status hidden' aria-live='polite'></p>"
             + "</article>"
         )
@@ -625,6 +637,11 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<nav class='side-section primary-nav' aria-label='工作台导航'>"
         "<p class='side-label'>页面</p>"
         f"{nav}</nav>"
+        "<section class='side-section settings-section'>"
+        "<p class='side-label'>设置</p>"
+        "<label class='setting-row'><input id='setting-show-rating' type='checkbox' checked> "
+        "练习与组卷显示自评</label>"
+        "</section>"
         "<section class='side-section weak-section'>"
         f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"
         f"<div class='weak-list'>{weak_html or empty_weak}</div>"
@@ -728,10 +745,98 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
 
 
 _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)
+_DISPLAY_BLOCK_RE = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
+_FENCE_LINE_RE = re.compile(r"^\s*```\s*([\w-]*)\s*$")
 _TABLE_DELIMITER_CELL = re.compile(r":?-{1,}:?")
 _THEMATIC_BREAK = re.compile(
     r"\s*(?:\*(?:\s*\*){2,}|-(?:\s*-){2,}|_(?:\s*_){2,})\s*"
 )
+
+# Emphasis must not fire on a delimiter LaTeX escaped (`\_`, `\*`, `\_\_`), so
+# every delimiter carries a lookaround that also rejects a preceding backslash.
+# `***…***` is matched first, otherwise `**` would split it and nest the tags
+# across each other (`<strong><em>x</strong></em>`).
+_STRONG_EM_RE = re.compile(r"(?<![\\*])\*\*\*(?!\*)(.+?)(?<![\\*])\*\*\*(?!\*)")
+_STRONG_STAR_RE = re.compile(r"(?<![\\*])\*\*(?!\*)(.+?)(?<![\\*])\*\*(?!\*)")
+_STRONG_UNDERSCORE_RE = re.compile(r"(?<![A-Za-z0-9_\\])__(.+?)__(?![A-Za-z0-9_\\])")
+_EM_STAR_RE = re.compile(r"(?<![\\*])\*(?!\*)([^*\n]+?)\*(?![\\*])")
+_EM_UNDERSCORE_RE = re.compile(r"(?<![A-Za-z0-9_\\])_([^_\n]+)_(?![A-Za-z0-9_\\])")
+_CODE_RE = re.compile(r"`([^`\n]+)`")
+
+# Stash placeholders use private-use code points, which course text can never
+# contain, so a forged placeholder cannot index `tokens` and 500 the page.
+_DISPLAY_MARKS = ("\ue000", "\ue001", "\ue002", "\ue003", "\ue004",)
+_INLINE_MARKS = ("\ue010", "\ue011", "\ue012", "\ue013", "\ue014",)
+
+
+def _pick_mark(text, marks):
+    """First placeholder delimiter that the body text does not already contain."""
+    for mark in marks:
+        if mark not in text:
+            return mark
+    return marks[0]
+
+
+def _restore_tokens(text, mark, tokens):
+    """Swap stash placeholders back for their fragments, in place."""
+    if not tokens:
+        return text
+
+    def replace(match):
+        index = int(match.group(1))
+        return tokens[index] if index < len(tokens) else match.group(0)
+
+    return re.compile(re.escape(mark) + r"(\d+)" + re.escape(mark)).sub(replace, text)
+
+
+def _url_component(value):
+    """Percent-encode one URL path component (workspace names are identifiers)."""
+    return quote(str(value), safe="")
+
+
+def _display_span(expr):
+    """One `$$…$$` block, escaped exactly once so KaTeX sees the raw TeX."""
+    return f"<span class='math display'>{html.escape(expr)}</span>"
+
+
+def _stash_display_blocks(text):
+    """Pull whole `$$…$$` blocks out before the line loop runs.
+
+    `_rich` is called one line at a time, so a block whose delimiters own their
+    own lines could never match there. Each block collapses to a one-line
+    placeholder that `_rich` cannot touch, and is restored after the loop.
+    """
+    mark = _pick_mark(text, _DISPLAY_MARKS)
+    spans = []
+
+    def replace(match):
+        fragment = match.group(0)
+        if not fragment.startswith("$$"):
+            return fragment  # Code and link/image attributes are literal.
+        # Strip the newlines the block delimiters own; KaTeX wants the body.
+        spans.append(_display_span(fragment[2:-2].strip("\n")))
+        return f"{mark}{len(spans) - 1}{mark}"
+
+    blocks = re.compile("|".join((
+        _CODE_RE.pattern, r"!\[[^\]]*\]\([^)]+\)",
+        r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]",
+        r"\[[^\]]+\]\(https?://[^\s)]+\)", _DISPLAY_BLOCK_RE.pattern)), re.DOTALL)
+
+    out, buffer, in_code = [], [], False
+    for line in text.split("\n"):
+        if _FENCE_LINE_RE.match(line):
+            if buffer:
+                out.append(blocks.sub(replace, "\n".join(buffer)))
+                buffer = []
+            out.append(line)
+            in_code = not in_code
+        elif in_code:
+            out.append(line)
+        else:
+            buffer.append(line)
+    if buffer:
+        out.append(blocks.sub(replace, "\n".join(buffer)))
+    return "\n".join(out), spans, mark
 
 
 def _table_cells(line):
@@ -785,6 +890,9 @@ def _render_markdown(text, workspace_name, kp_id):
     """Render the same small safe Markdown subset used by the browser."""
     if not text:
         return ""
+    text, display_spans, display_mark = _stash_display_blocks(
+        text.replace("\r\n", "\n").replace("\r", "\n")
+    )
     out, paragraph, list_tag = [], [], None
     in_code, code_lang, code_lines = False, "", []
     skip_until = -1
@@ -860,59 +968,94 @@ def _render_markdown(text, workspace_name, kp_id):
     flush_paragraph(); close_list()
     if in_code:
         out.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
-    return "".join(out)
+    return _restore_tokens("".join(out), display_mark, display_spans)
 
 
 def _rich(text, workspace_name):
-    """Escape first, then inject math/wiki/image markup (order matters)."""
+    """Escape each fragment exactly once, in this order (order matters).
+
+    Inline code is literal; math and `<sup>/<sub>` are stashed before the remaining text is escaped,
+    so no Markdown rule below can ever see LaTeX source, and each stashed
+    fragment is escaped exactly once. Escaping a math fragment twice is what
+    used to hand KaTeX `a&amp;lt;b`, so every formula holding `<`, `>` or `'`
+    failed to parse.
+    """
     tokens = []
+    mark = _pick_mark(text, _INLINE_MARKS)
 
-    def preserve_script(match):
-        tokens.append(
-            f"<{match.group(1)}>{html.escape(match.group(2))}</{match.group(1)}>"
-        )
-        return f"\x00{len(tokens) - 1}\x00"
+    def stash(fragment):
+        fragment = _restore_tokens(fragment, mark, tokens)
+        tokens.append(fragment)
+        return f"{mark}{len(tokens) - 1}{mark}"
 
-    text = re.sub(r"<(sup|sub)>([^<>]+)</\1>", preserve_script, text)
+    def protect(match):
+        fragment = match.group(0)
+        if fragment.startswith("`"):
+            return stash(f"<code>{html.escape(fragment[1:-1])}</code>")
+        if fragment.startswith("$"):
+            return stash(_math_span(_MATH_RE.fullmatch(fragment)))
+        if fragment.startswith("!["):
+            return stash(_image_replace(html.escape(fragment), workspace_name))
+        if fragment.startswith("[["):
+            return stash(_wiki_replace(html.escape(fragment), workspace_name))
+        link = re.fullmatch(r"\[([^\]]+)\]\((https?://[^\s)]+)\)", fragment)
+        return stash(
+            f"<a href='{html.escape(link.group(2))}' target='_blank' "
+            f"rel='noopener noreferrer'>{_rich(link.group(1), workspace_name)}</a>")
+
+    # A whole link/image owns its attributes; only visible link labels are rich text.
+    text = re.sub("|".join((
+        _CODE_RE.pattern, _MATH_RE.pattern, r"!\[[^\]]*\]\([^)]+\)",
+        r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]",
+        r"\[[^\]]+\]\(https?://[^\s)]+\)")), protect, text)
+    text = re.sub(r"<(sup|sub)>([^<>]+)</\1>",
+                  lambda match: stash(
+                      f"<{match.group(1)}>{html.escape(match.group(2))}"
+                      f"</{match.group(1)}>"), text)
     text = html.escape(text)
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"(?<![A-Za-z0-9_])__(.+?)__(?![A-Za-z0-9_])", r"<strong>\1</strong>", text)
-    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", r"<em>\1</em>", text)
-    text = re.sub(r"(?<![A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])", r"<em>\1</em>", text)
-    text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
-    text = _MATH_RE.sub(_math_replace, text)
-    text = _wiki_replace(text, workspace_name)
-    text = re.sub(
-        r"\[([^\]]+)\]\((https?://[^\s)]+)\)",
-        lambda match: (
-            f"<a href='{html.escape(match.group(2), quote=True)}' "
-            f"target='_blank' rel='noopener noreferrer'>{match.group(1)}</a>"
-        ),
-        text,
-    )
-    text = _image_replace(text, workspace_name)
-    return re.sub(r"\x00(\d+)\x00", lambda match: tokens[int(match.group(1))], text)
+    text = _STRONG_EM_RE.sub(r"<strong><em>\1</em></strong>", text)
+    text = _STRONG_STAR_RE.sub(r"<strong>\1</strong>", text)
+    text = _STRONG_UNDERSCORE_RE.sub(r"<strong>\1</strong>", text)
+    text = _EM_STAR_RE.sub(r"<em>\1</em>", text)
+    text = _EM_UNDERSCORE_RE.sub(r"<em>\1</em>", text)
+    # A LaTeX-escaped underscore outside math is a fill-in blank, so render the
+    # underscore the author meant. Safe here: every math fragment is already
+    # stashed out of this text.
+    text = text.replace("\\_", "_")
+    return _restore_tokens(text, mark, tokens)
 
 
-def _math_replace(match):
+def _math_span(match):
+    """Wrap a `$…$` / `$$…$$` match; the expression is escaped exactly once."""
     expr = match.group(1) or match.group(2)
     if match.group(1) is not None:
-        return f"<span class='math display'>{html.escape(expr)}</span>"
+        # The delimiters own the surrounding newlines; KaTeX wants the body.
+        return _display_span(expr.strip("\n"))
     return f"<span class='math'>{html.escape(expr)}</span>"
 
 
 def _wiki_replace(line, workspace_name):
     def repl(match):
-        kp_id = match.group(1)
-        return f"<a href='/w/{workspace_name}/kp/{kp_id}'>{html.escape(kp_id)}</a>"
-    return re.sub(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]", repl, line)
+        kp_id, label = match.group(1).strip(), match.group(2)
+        label = _rich(html.unescape(label or kp_id), workspace_name)
+        if not re.fullmatch(r"[\w-]+", kp_id):
+            return label
+        return (f"<a href='/w/{_url_component(workspace_name)}/kp/"
+                f"{_url_component(kp_id)}'>{label}</a>")
+    return re.sub(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]", repl, line)
 
 
 def _image_replace(line, workspace_name):
     def repl(match):
         alt, path = match.group(1), match.group(2)
-        return (f"<img alt='{html.escape(alt)}' "
-                f"src='/api/w/{workspace_name}/figures/{path.lstrip('/')}'>")
+        if re.match(r"^/(?:api/w/|static/)", path):
+            resolved = path
+        elif re.fullmatch(r"[\w./-]+", path):
+            resolved = (f"/api/w/{_url_component(workspace_name)}/figures/"
+                        f"{path.lstrip('/')}")
+        else:
+            return alt
+        return f"<img alt='{alt}' src='{resolved}'>"
     return re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", repl, line)
 
 
