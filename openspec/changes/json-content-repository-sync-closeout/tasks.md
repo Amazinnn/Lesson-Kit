@@ -31,9 +31,9 @@
 
 ## 5. Isolated real-pool acceptance rerun on the final HEAD
 
-- [ ] 5.1 c02 ledger-failure case: persist the pre-call full DB snapshot and requested JSON bytes before the operation, then assert DB atomicity and file normalization as two separate checks
-- [ ] 5.2 c04 mirror E2E against the recorded post-legacy-upgrade baseline (`pr110-acceptance-c04-legacy-upgrade.json`)
-- [ ] 5.3 Confirm zero writes to the 17 registered learner databases (read-only opens + final metadata readback) and zero writes to the external `Lesson-Kit-Content` snapshot
+- [x] 5.1 c02 ledger-failure case: persist the pre-call full DB snapshot and requested JSON bytes before the operation, then assert DB atomicity and file normalization as two separate checks
+- [x] 5.2 c04 mirror E2E against the recorded post-legacy-upgrade baseline (`pr110-acceptance-c04-legacy-upgrade.json`)
+- [x] 5.3 Confirm zero writes to the 17 registered learner databases (read-only opens + final metadata readback) and zero writes to the external `Lesson-Kit-Content` snapshot
 
 ## 6. Full repository gates on the final HEAD
 
