@@ -34,6 +34,12 @@ ARRAY_FIELDS = {
     "problem": {"kp_ids", "practice_modes"},
 }
 OBJECT_FIELDS = {"problem": {"micro_quiz"}}
+# Empty-string JSON columns are tolerated in legacy pool rows; the authored
+# projection canonicalizes them so a written envelope is always readable back.
+EMPTY_JSON_DEFAULTS = {
+    "kp": {"related_kp_ids": []},
+    "problem": {"kp_ids": [], "practice_modes": None, "micro_quiz": None},
+}
 ENVELOPE_FIELDS = {
     "schema_version", "entity_type", "entity_id", "revision", "content",
 }
@@ -113,6 +119,8 @@ def _load_json(path):
         raise MirrorError(f"invalid JSON in {path}: {exc}") from exc
     except UnicodeDecodeError as exc:
         raise MirrorError(f"JSON is not valid UTF-8: {path}") from exc
+    except OSError as exc:
+        raise MirrorError(f"cannot read {path}: {exc}") from exc
     if not isinstance(value, dict):
         raise MirrorError(f"JSON document must be an object: {path}")
     return value
@@ -163,11 +171,16 @@ def read_entity(path, course, expected_type=None):
 def authored_projection(row, entity_type):
     if row is None:
         return None
-    return {
-        field: row[field]
-        for field in sorted(MIRROR_FIELDS[entity_type])
-        if field in row
-    }
+    defaults = EMPTY_JSON_DEFAULTS.get(entity_type, {})
+    projected = {}
+    for field in sorted(MIRROR_FIELDS[entity_type]):
+        if field not in row:
+            continue
+        value = row[field]
+        if value == "" and field in defaults:
+            value = defaults[field]
+        projected[field] = value
+    return projected
 
 
 def pool_projection(pool, entity_type, entity_id):
@@ -239,11 +252,19 @@ def _scan_repo(repo, course):
     found = {}
     ambiguous = set()
     errors = []
-    for entity_type, directory in ENTITY_DIRS.items():
-        folder = _course_root(repo, course) / directory
-        if not folder.exists():
+    root = _course_root(repo, course)
+    if not root.exists():
+        return found, errors
+    directories = {
+        directory: entity_type for entity_type, directory in ENTITY_DIRS.items()
+    }
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
             continue
-        for path in sorted(folder.rglob("*.json")):
+        relative = path.relative_to(root)
+        directory = relative.parts[0] if len(relative.parts) > 1 else None
+        entity_type = directories.get(directory)
+        if entity_type and path.suffix == ".json":
             try:
                 envelope = read_entity(path, course, entity_type)
                 key = (entity_type, envelope["entity_id"])
@@ -263,6 +284,23 @@ def _scan_repo(repo, course):
                 found[key] = (path, envelope)
             except MirrorError as exc:
                 errors.append({"path": str(path), "status": "invalid", "error": str(exc)})
+            continue
+        # Every other file under the course subtree is still accounted for: a
+        # *.json file must parse as a JSON object, anything else must decode as
+        # UTF-8 text. Unreadable files are reported, never silently dropped.
+        try:
+            text = path.read_bytes().decode("utf-8-sig")
+            if path.suffix == ".json":
+                value = json.loads(text)
+                if not isinstance(value, dict):
+                    raise MirrorError(f"JSON document must be an object: {path}")
+        except MirrorError as exc:
+            errors.append({"path": str(path), "status": "invalid", "error": str(exc)})
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            errors.append({
+                "path": str(path), "status": "invalid",
+                "error": f"cannot be read as UTF-8 JSON text: {path} ({exc})",
+            })
     return found, errors
 
 
@@ -274,6 +312,11 @@ def _read_delete_requests(repo, course):
     for path in sorted(folder.glob("*.json")):
         try:
             value = _load_json(path)
+            target = value.get("course_id")
+            if isinstance(target, str) and target != course:
+                # Only requests that explicitly target this course are read;
+                # a malformed request for another course stays out of the report.
+                continue
             unknown = sorted(set(value) - DELETE_FIELDS)
             missing = sorted(DELETE_FIELDS - set(value))
             if unknown or missing:

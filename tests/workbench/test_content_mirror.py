@@ -584,5 +584,96 @@ class ContentMirrorTests(unittest.TestCase):
         self.assertEqual(retry["counts"].get("noop"), 3)
 
 
+    def test_init_reports_corrupt_json_outside_entity_directories(self):
+        backup = self.repo / "courses" / "c02" / "backup"
+        backup.mkdir(parents=True)
+        corrupt = backup / "c02-ch01-kp-001.json"
+        corrupt.write_bytes(b'{"entity_id": "c02-ch01-kp-001" \xff')
+
+        result = content_mirror.init(self.pool, self.repo)
+
+        self.assertFalse(result["valid"])
+        canonical = content_mirror.entity_path(self.repo, "c02", "kp", "c02-ch01-kp-001")
+        self.assertFalse(canonical.exists())
+        blocked = next(
+            item for item in result["items"] if item.get("entity_id") == "c02-ch01-kp-001"
+        )
+        self.assertEqual(blocked["status"], "invalid")
+        self.assertEqual(blocked["path"], str(corrupt))
+        self.assertEqual(result["counts"].get("initialized"), 3)
+        self.assertTrue(
+            any(
+                item.get("path") == str(corrupt) and item.get("error")
+                for item in result["items"]
+            )
+        )
+
+    def test_init_reports_undecodable_file_inside_entity_directory(self):
+        folder = self.repo / "courses" / "c02" / "knowledge"
+        folder.mkdir(parents=True)
+        corrupt = folder / "renamed-kp.json.bak"
+        corrupt.write_bytes(b"c02-ch01-kp-001 \xff\xfe")
+
+        result = content_mirror.init(self.pool, self.repo)
+
+        self.assertFalse(result["valid"])
+        canonical = content_mirror.entity_path(self.repo, "c02", "kp", "c02-ch01-kp-001")
+        self.assertFalse(canonical.exists())
+        blocked = next(
+            item for item in result["items"] if item.get("entity_id") == "c02-ch01-kp-001"
+        )
+        self.assertEqual(blocked["status"], "invalid")
+        self.assertIn(str(corrupt), blocked["detail"])
+        self.assertEqual(result["counts"].get("initialized"), 3)
+
+    def test_init_tolerates_a_directory_named_like_json(self):
+        bogus = self.repo / "courses" / "c02" / "knowledge" / "bogus.json"
+        bogus.mkdir(parents=True)
+
+        result = content_mirror.init(self.pool, self.repo)
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["counts"].get("initialized"), 4)
+
+    def test_init_roundtrip_tolerates_empty_string_json_columns(self):
+        self.pool.connect().execute(
+            "UPDATE knowledge_points SET related_kp_ids='' "
+            "WHERE kp_id='c02-ch01-kp-001'"
+        )
+        self.pool.connect().execute(
+            "UPDATE problems SET kp_ids='' WHERE problem_id='c02-ch01-prob-001'"
+        )
+        self.pool.connect().commit()
+
+        result = content_mirror.init(self.pool, self.repo)
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["counts"].get("initialized"), 4)
+        _path, kp = self.entity_json("kp", "c02-ch01-kp-001")
+        self.assertEqual(kp["content"]["related_kp_ids"], [])
+        _path, problem = self.entity_json("problem", "c02-ch01-prob-001")
+        self.assertEqual(problem["content"]["kp_ids"], [])
+        again = content_mirror.plan(self.pool, self.repo)
+        self.assertTrue(again["valid"])
+        self.assertEqual(again["counts"].get("noop"), 4)
+
+    def test_foreign_course_delete_request_is_not_reported_in_this_course(self):
+        content_mirror.init(self.pool, self.repo)
+        folder = self.repo / "delete-requests"
+        folder.mkdir(parents=True)
+        (folder / "foreign.json").write_text(json.dumps({
+            "schema_version": 1,
+            "request_id": "request-c03",
+            "course_id": "c03",
+            "entity_type": "problem",
+            "entity_id": "c03-ch01-prob-001",
+        }), encoding="utf-8")
+
+        result = content_mirror.sync(self.pool, self.repo)
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["delete_requests"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

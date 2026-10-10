@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import sqlite3
 
 from workbench.cli import main as cli_main
 from workbench.data import content_mirror
@@ -60,7 +61,7 @@ def main(argv=None, prog="lesson-kit mirror"):
             )
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return _exit_code(report)
-    except (content_mirror.MirrorError, OSError, ValueError) as exc:
+    except (content_mirror.MirrorError, sqlite3.Error, OSError, ValueError) as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False, indent=2))
         return 2
     finally:
