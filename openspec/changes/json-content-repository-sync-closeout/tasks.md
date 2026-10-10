@@ -1,13 +1,13 @@
-# Tasks
+﻿# Tasks
 
 ## 1. Bootstrap repair and focused regressions
 
-- [ ] 1.1 RED first: reproduce R2 with an unreadable renamed JSON whose bytes embed a pool entity id — init reports `valid=true` and creates the canonical file alongside it (disposable fixture only)
-- [ ] 1.2 Account for every file under the course subtree in the init scan: collect unreadable files with repository-relative path and reason (invalid UTF-8, malformed JSON) into the report
-- [ ] 1.3 Refuse canonical creation for implicated entities (entity id in file name or replacement-decoded bytes), report the entity blocked naming the implicating file, leave the pool row and mirror state untouched, and keep unimplicated entities bootstrapping
-- [ ] 1.4 GREEN: focused regressions for the three delta scenarios (implicated entity blocked, unattributable unreadable file reported without blocking, clean subtree reports nothing)
-- [ ] 1.5 Assess the per-entity write-failure escape in the bootstrap loop; if confirmed, capture the exception as that entity's failed result and continue, with a focused regression (one failing write never aborts later siblings); if the repair widens v1 scope, record the finding and defer
-- [ ] 1.6 Re-run the R1 restoration-retry regression (b66eb03) plus the focused mirror suite (21) and related suite (13); record evidence
+- [x] 1.1 RED first: reproduce R2 with an unreadable renamed JSON whose bytes embed a pool entity id — init reports `valid=true` and creates the canonical file alongside it (disposable fixture only)
+- [x] 1.2 Account for every file under the course subtree in the init scan: collect unreadable files with repository-relative path and reason (invalid UTF-8, malformed JSON) into the report
+- [x] 1.3 Refuse canonical creation for implicated entities (entity id in file name or replacement-decoded bytes), report the entity blocked naming the implicating file, leave the pool row and mirror state untouched, and keep unimplicated entities bootstrapping
+- [x] 1.4 GREEN: focused regressions for the three delta scenarios (implicated entity blocked, unattributable unreadable file reported without blocking, clean subtree reports nothing)
+- [x] 1.5 Assess the per-entity write-failure escape in the bootstrap loop; if confirmed, capture the exception as that entity's failed result and continue, with a focused regression (one failing write never aborts later siblings); if the repair widens v1 scope, record the finding and defer
+- [x] 1.6 Re-run the R1 restoration-retry regression (b66eb03) plus the focused mirror suite (21) and related suite (13); record evidence
 
 ## 2. Documentation and contract authority
 
