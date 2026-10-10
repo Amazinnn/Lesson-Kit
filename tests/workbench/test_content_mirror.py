@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from workbench.data import content_mirror
 from workbench.data.pool import Pool
@@ -371,6 +372,104 @@ class ContentMirrorTests(unittest.TestCase):
         row = next(item for item in result["items"] if item.get("entity_id") == "c02-ch01-kp-999")
         self.assertEqual(row["status"], "invalid")
         self.assertIn("remote creation", row["detail"])
+
+    def test_init_reports_unreadable_file_and_blocks_implicated_entity(self):
+        nested = self.repo / "courses" / "c02" / "knowledge" / "nested"
+        nested.mkdir(parents=True)
+        corrupt = nested / "renamed-kp.json"
+        corrupt.write_bytes(
+            b'{"schema_version": 1, "entity_type": "kp", '
+            b'"entity_id": "c02-ch01-kp-001", "revision": 1, '
+            b'"content": {"knowledge_item": "Stack"}}\xff'
+        )
+
+        result = content_mirror.init(self.pool, self.repo)
+
+        self.assertFalse(result["valid"])
+        canonical = content_mirror.entity_path(self.repo, "c02", "kp", "c02-ch01-kp-001")
+        self.assertFalse(canonical.exists())
+        file_entry = next(
+            item for item in result["items"]
+            if item.get("path") == str(corrupt) and item.get("error")
+        )
+        self.assertIn("UTF-8", file_entry["error"])
+        blocked = next(
+            item for item in result["items"] if item.get("entity_id") == "c02-ch01-kp-001"
+        )
+        self.assertEqual(blocked["status"], "invalid")
+        self.assertEqual(blocked["path"], str(corrupt))
+        self.assertIn(str(corrupt), blocked["detail"])
+        self.assertEqual(result["counts"].get("initialized"), 3)
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT COUNT(*) FROM content_mirror_state "
+                "WHERE entity_id='c02-ch01-kp-001'"
+            ).fetchone()[0],
+            0,
+        )
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT COUNT(*) FROM knowledge_points WHERE kp_id='c02-ch01-kp-001'"
+            ).fetchone()[0],
+            1,
+        )
+
+    def test_init_reports_unattributable_unreadable_file_without_blocking(self):
+        junk = self.repo / "courses" / "c02" / "problems" / "junk"
+        junk.mkdir(parents=True)
+        corrupt = junk / "notes.json"
+        corrupt.write_bytes(b"\xff\xfe\x00 not a document")
+
+        result = content_mirror.init(self.pool, self.repo)
+
+        self.assertFalse(result["valid"])
+        self.assertEqual(result["counts"].get("initialized"), 4)
+        for entity_type, entity_id in (
+            ("kp", "c02-ch01-kp-001"),
+            ("kp", "c02-ch01-kp-002"),
+            ("problem", "c02-ch01-prob-001"),
+            ("relation", "c02-ch01-rel-001"),
+        ):
+            self.assertTrue(
+                content_mirror.entity_path(
+                    self.repo, "c02", entity_type, entity_id
+                ).exists()
+            )
+        file_entry = next(
+            item for item in result["items"]
+            if item.get("path") == str(corrupt) and item.get("error")
+        )
+        self.assertIn("UTF-8", file_entry["error"])
+
+    def test_init_clean_subtree_reports_no_unreadable_files(self):
+        result = content_mirror.init(self.pool, self.repo)
+
+        self.assertTrue(result["valid"])
+        self.assertEqual(result["counts"].get("initialized"), 4)
+        self.assertFalse([item for item in result["items"] if item.get("error")])
+
+    def test_init_isolates_one_entity_write_failure(self):
+        original = content_mirror._atomic_write
+        calls = {"count": 0}
+
+        def flaky(path, value):
+            calls["count"] += 1
+            if calls["count"] == 1:
+                raise OSError("injected bootstrap write failure")
+            return original(path, value)
+
+        with mock.patch.object(content_mirror, "_atomic_write", flaky):
+            first = content_mirror.init(self.pool, self.repo)
+
+        self.assertFalse(first["valid"])
+        self.assertEqual(first["counts"].get("initialized"), 3)
+        self.assertEqual(first["counts"].get("invalid"), 1)
+
+        retry = content_mirror.init(self.pool, self.repo)
+
+        self.assertTrue(retry["valid"])
+        self.assertEqual(retry["counts"].get("initialized"), 1)
+        self.assertEqual(retry["counts"].get("noop"), 3)
 
 
 if __name__ == "__main__":

@@ -305,12 +305,36 @@ def _read_delete_requests(repo, course):
     return items
 
 
+def _unreadable_texts(parse_errors):
+    """Every parse error without a trustworthy identity, decoded with replacement."""
+    items = []
+    for error in parse_errors:
+        if error.get("entity_id"):
+            continue
+        path = Path(error["path"])
+        try:
+            text = path.read_bytes().decode("utf-8", "replace")
+        except OSError:
+            text = ""
+        items.append((path, text))
+    return items
+
+
+def _implicating_path(unreadable, identity):
+    """The first unreadable file whose name or bytes name this entity id."""
+    for path, text in unreadable:
+        if identity in path.name or identity in text:
+            return path
+    return None
+
+
 def init(pool, repo, entity_id=None, dry_run=False):
     """Pool-first bootstrap. Existing matching files are adopted; conflicts are refused."""
     _require_tables(pool)
     repo = Path(repo).resolve()
     found, parse_errors = _scan_repo(repo, pool.course)
-    results = []
+    unreadable = _unreadable_texts(parse_errors)
+    results = list(parse_errors)
     for entity_type, identity, authored in _all_pool_entities(pool):
         if entity_id and identity != entity_id:
             continue
@@ -328,6 +352,15 @@ def init(pool, repo, entity_id=None, dry_run=False):
             continue
         existing_entry = found.get((entity_type, identity))
         existing_path, existing = existing_entry if existing_entry else (path, None)
+        if existing is None:
+            implicating = _implicating_path(unreadable, identity)
+            if implicating is not None:
+                results.append(_result(
+                    entity_type, identity, "invalid",
+                    f"an unreadable repository file may already name this entity: {implicating}",
+                    path=implicating,
+                ))
+                continue
         if existing is None and existing_path.exists():
             try:
                 existing = read_entity(existing_path, pool.course, entity_type)
@@ -349,14 +382,21 @@ def init(pool, repo, entity_id=None, dry_run=False):
                 ))
                 continue
         if not dry_run:
-            if existing is None:
-                _atomic_write(path, _envelope(entity_type, identity, 1, authored))
-            _put_state(pool, entity_type, identity, 1, authored, "init")
+            try:
+                if existing is None:
+                    _atomic_write(path, _envelope(entity_type, identity, 1, authored))
+                _put_state(pool, entity_type, identity, 1, authored, "init")
+            except (MirrorError, ValueError, KeyError, sqlite3.Error, OSError) as exc:
+                results.append(_result(
+                    entity_type, identity, "invalid", f"bootstrap write failed: {exc}",
+                    path=existing_path if existing is not None else path,
+                ))
+                continue
         results.append(_result(
             entity_type, identity, "initialized", revision=1,
             path=existing_path if existing is not None else path,
         ))
-    if entity_id and not any(item["entity_id"] == entity_id for item in results):
+    if entity_id and not any(item.get("entity_id") == entity_id for item in results):
         results.append({"entity_id": entity_id, "status": "invalid", "error": "entity is not in this pool"})
     return _report(results, _read_delete_requests(repo, pool.course))
 
