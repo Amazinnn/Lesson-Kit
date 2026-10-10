@@ -17,6 +17,8 @@
 | `review_schedule` | 调度行（每题/每卡/每方向一行：间隔/熟悉度/到期） | 四件套之一；图谱状态编辑 | due/weak/日历工作量 |
 | `ingest_batches` 的批次 | 一次导入按章各一行（batch-NNN + kind + counts + 快照路径 + 备份 + 回滚时刻）；内容行带自己的批次标记，因此可按章撤销 | CLI `ingest apply`/桥内容动作 | `ingest batches`、rollback、结果卡 |
 | `attempt_operations` | Agent 代录尝试的操作留痕：请求标识（幂等）、尝试 id、kind、评分、两条内容指纹、结果 JSON、effect 前后的投影快照（更正守卫用） | CLI `attempts apply|correct` | CLI `attempts check|get`、更正守卫 |
+| `content_mirror_state` | 作者内容镜像同步状态：每实体最后同步修订号 + 规范化作者内容（无哈希） | `data.content_mirror`（init/sync 成功路径） | `mirror check/status/sync` |
+| `content_mirror_log` | 只追加的成功方向台账（五个方向枚举 + 前后修订号） | 同上 | 审计/证据 |
 
 ## 工作区文件（`.lessonkit/`，注册表 `LESSONKIT_WB_HOME` 下）
 

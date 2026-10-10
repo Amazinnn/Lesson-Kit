@@ -112,6 +112,29 @@
 | `directions` | active | `["forward"]` 或 `["forward","reverse"]` |
 | `ingest_batch_id` | active | ingest 批次 provenance |
 
+## content_mirror_state / content_mirror_log（作者内容镜像台账）
+
+两张表由 `pool/scripts/pool_schema.py` 的 `ensure_content_mirror_schema` 增量创建，
+只服务 `workbench/data/content_mirror.py` 的本地 JSON 作者内容投影；不存哈希、指纹
+或 Git 对象 id。它们是同步**状态与成功记录**，不是第二份内容，也不是学习者状态。
+
+| 字段 | 表 | 状态 | 语义 / 写入边界 | 当前主要消费者 |
+|---|---|---|---|---|
+| `entity_type`, `entity_id` | state | active | 复合主键；只限 `kp`/`problem`/`relation`（CHECK 约束）。id 是语义身份，与文件路径无关 | 镜像规划/应用器 |
+| `revision` | state | active | 最后同步的作者内容正整数修订号；只随被接受的修改 +1，不倒退、不由哈希派生 | 三方比较（池/仓库/记住的内容） |
+| `content_json` | state | active | 上次同步的规范化作者内容 JSON（排序键、无哈希）；比较基线 | `mirror check/status/sync` |
+| `updated_at` | state | active | 行生命周期时间戳 | 审计 |
+| `entity_type`, `entity_id` | log | active | 同 state；只追加成功记录 | 审计 |
+| `direction` | log | active | 成功方向枚举（CHECK）：`init` / `repo_to_pool` / `pool_to_repo` / `restore_repo_file` / `recover_converged` | 审计/证据 |
+| `from_revision`, `to_revision` | log | active | 该次成功同步的前后修订号；`from_revision` 可为空（首次），`to_revision` 必须为正 | 审计 |
+| `created_at` | log | active | 行生命周期时间戳 | 审计 |
+
+写入边界：只有 `data.content_mirror` 的受治理路径写这两张表；`repo_to_pool` 的内容更新、
+状态与成功日志在同一个池事务内提交，失败一起回滚，其余方向以「中断后下一次比较能收敛
+或可重试」的顺序推进状态与文件。`mirror check`、`status`、`sync --dry-run` 零写入；
+失败/冲突/无效不写日志行。闪卡实体、图片字节、专用难度字段与学习者/运行时状态
+不进入镜像台账。
+
 ## 与学习状态字段的边界
 
 以下字段名称相似，但不是一个状态机，禁止互相覆盖或“统一”：

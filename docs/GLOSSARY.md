@@ -43,6 +43,26 @@ _Avoid_：章节数据库、压缩包版本
 _Avoid_：工作区镜像、数据库镜像、学习状态同步
 出处：ADR 0024；`openspec/changes/json-content-repository-sync/`
 
+### 作者内容镜像 / Authored-Content Mirror
+`lesson-kit mirror` 命令组与其同步机制的整体称呼：把「作者内容投影」在知识池与本地作者内容仓库之间按单实体对齐。概念定义以「作者内容投影」为准；本文档不再为镜像另立语义。
+_Avoid_：工作区镜像、数据库镜像（避免与整库快照混淆）
+出处：ADR 0024；`json-content-repository-sync` change；FILE_CONTRACT.md「Git Authored-Content Repository」
+
+### 本地作者内容仓库 / Local Authored-Content Repository
+由用户提供路径的本地 Git checkout，按课程标识符保存作者内容投影 JSON。`lesson-kit mirror` 只读写所选课程目录和目标课程的删除请求；Git clone/pull/commit/push 不属于 Lesson Kit 的职责。
+_Avoid_：工作区备份、知识池数据库副本、自动远端同步
+出处：ADR 0024；`FILE_CONTRACT.md`「Git Authored-Content Repository」
+
+### 作者内容修订号 / Authored-Content Revision
+某一实体作者内容的正整数版本。每次被接受的语义修改向前增加一版；它用于比较池、仓库文件与上次同步内容，不通过哈希计算，也不会因格式整理而倒退。
+_Avoid_：Git commit id、数据库主键、内容哈希
+出处：ADR 0024；`json-content-repository-sync` change
+
+### 删除请求 / Deletion Request
+本地作者内容仓库中的 JSON 意图记录，点名课程和实体并附理由。镜像会校验并报告它，但不据此删除池记录、实体文件或学习历史。
+_Avoid_：删除命令、可执行删除清单
+出处：`FILE_CONTRACT.md`「Git Authored-Content Repository」；`json-content-repository-sync` spec
+
 ### 章 / Chapter
 一本教材（课程）内部的内容分段，只以内容 id 的前缀段存在：`dmath-ch06-kp-001` 里的 `<course>-<chapter>-`（`<course>` 即「课程标识符」；知识点、正式题、微测、闪卡同理）。一个池（`pool/<course>.db`）容纳多章（「单库多章」）；章的名单从池内容派生，不是一张表、也没有登记动作。工作台的**章透镜**（顶栏那个「章」开关）把注册表的 `active_chapter` 指向某一章，关掉开关 = 空值 = 全课程；透镜只改"看什么"（知识点页/图谱页/复习/练习建议），不改选区，也不锁题。
 _Avoid_：章节数据库、chapters 表的行、跨库切章、把透镜当练习范围

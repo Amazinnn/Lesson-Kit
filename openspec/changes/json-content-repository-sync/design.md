@@ -132,7 +132,7 @@ For an untracked entity, normal `sync` does not guess which side wins when both 
 
 `lesson-kit mirror <workspace> init --repo <path>` initializes one course projection from the existing pool.
 
-- It refuses if mirror state already exists for the course.
+- It resumes per entity: entities with existing mirror state are skipped as `already_tracked` and uninitialized entities continue.
 - It writes one JSON file per supported pool entity at revision 1.
 - It records the same normalized content and revision 1 in mirror state.
 - If a valid file with the same embedded identity exists anywhere under that entity directory, initialization adopts it when revision 1 content matches, regardless of its filename or nested location.

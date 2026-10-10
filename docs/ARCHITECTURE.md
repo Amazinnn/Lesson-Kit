@@ -53,6 +53,7 @@ workbench/
 │   ├── queries.py     # 通用视图查询（hub 统计、练习页合流列表/到期提醒/日历）
 │   ├── records.py     # 记录中心只读查询（概览聚合 + 轮次快照读取）
 │   ├── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联
+│   ├── content_mirror.py # 本地 JSON 作者内容投影、规范化比较与逐实体同步
 │   ├── content_audit.py # 只读题库卫生检查
 │   ├── difficulty.py  # 显式难度 check/apply 整批事务
 │   ├── attempts.py    # Agent 代录尝试：清单校验、单事务 apply、快照守卫的 correct
@@ -101,6 +102,11 @@ workbench/
   作答和自评共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
 - 新表 `practice_runs(id, source_kind, source_ref, source_label, kp_ids_json, practice_mode, rating_mode, items_json, status, started_at, finished_at)`：只在一轮 active practice 完成或被显式替换 / 清除时写一条最小快照；逐题证据仍留在 attempts / feedback，统计图实时聚合，不复制统计值。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
+- 新表 `content_mirror_state(entity_type, entity_id, revision, content_json, updated_at)` 与
+  `content_mirror_log(...)` 由 `pool_schema.py` 增量创建：前者保存最后同步的整数修订号和规范化作者内容，
+  后者记录成功方向；不存哈希或 Git 对象 id。仓库写入题目时，内容更新、状态和日志在同一池事务内提交。
+- `data.content_mirror` 只投影知识点、正式题与知识关系的既有受治理作者字段。闪卡实体、图片字节、专用
+  难度字段、仓库侧新建 id 和任何学习者/运行时状态均不属于 v1；变更继续走 `data.content` 或关系校验器。
 - 题目可增量拥有 `display_title`（可读短标题）；闪卡可增量拥有 `topic_label`（单一主题标签）。它们是内容展示字段，不替代稳定 ID。
 - 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
 - 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
@@ -137,6 +143,8 @@ workbench/
 - 图谱指标投影完全位于浏览器表示层：`graph-physics.js` 只为现有节点计算内存中的目标位置、目标半径与过渡力；关系结构/题量/重要性/学习状态均不产生数据写入。
 - 图谱状态筛选分群完全位于浏览器表示层：四个既有状态按多选并集决定可见子图，`graph-physics.js` 只计算内存聚类目标；筛选值仅随页面上下文提供给 Agent，不写 Pool。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
+- `data.content_mirror`：扫描所选课程本地 JSON、按嵌入 id 比较三方规范化内容、调用现有内容校验/写入权威，
+  并将单实体内容与镜像状态/日志原子提交；不调用 Git，也不因文件缺失或删除请求删池内容。
 - `domain.content_identity` 是入库拒重与 `data.content_audit` 重复组报告的共同身份规则；全题干比较，不截断。`data.content_audit` 只读报告重复题、疑似片段、未标注练习模式的客观题、缺标题、失效图片引用和孤儿图片；有发现时 CLI 返回 1。
 - `data.difficulty.check/apply`：1–N 题完整清单的零写入预览与整批原子覆盖；内容语义变化
   统一清空整组评级，未评级不影响任何主流程。

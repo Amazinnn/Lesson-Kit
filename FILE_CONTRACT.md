@@ -164,6 +164,77 @@ Successful applies store a manifest snapshot under the pool's ingest area and
 stamp a readable batch id. Failed gates write no content. There is no candidate
 artifact, candidate table, promotion step, or staging state.
 
+## Git Authored-Content Repository
+
+`lesson-kit mirror` reads and writes a local checkout containing versioned JSON
+for the authored content projection. The workspace's Course Identifier selects
+the course directory; the workspace name and physical path do not.
+
+```text
+<repo>/
+├── courses/<course-id>/
+│   ├── knowledge/<entity-id>.json
+│   ├── problems/<entity-id>.json
+│   └── relations/<entity-id>.json
+└── delete-requests/<request-id>.json
+```
+
+Nested folders under `knowledge/`, `problems/`, or `relations/` are allowed.
+Files are located recursively, and their embedded `entity_id` is the identity;
+renaming or moving a valid file within its entity directory does not create or
+delete an entity. Two files with the same entity type and id are invalid.
+
+Each entity file is a UTF-8 JSON object with exactly these envelope fields:
+
+```json
+{
+  "schema_version": 1,
+  "entity_type": "problem",
+  "entity_id": "c02-ch01-prob-001",
+  "revision": 1,
+  "content": {}
+}
+```
+
+`schema_version` is integer `1` (`true` and `1.0` are invalid). `entity_id` is
+an immutable id belonging to the selected course. `revision` is a positive
+integer; booleans, fractions, zero, and negative values are invalid. Content
+fields are limited to the existing governed authored fields:
+
+- `kp`: `knowledge_item`, `graph_label`, `source_location`, `knowledge_type`,
+  `related_kp_ids`, `importance`, `learning_action`, `body`, `difficulty`,
+  `fragile`.
+- `problem`: `kp_ids`, `problem_text`, `solution`, `problem_type`, `source_kind`,
+  `origin_kind`, `display_title`, `display_summary`, `exam_year`,
+  `source_evidence`, `source_answer`, `solution_origin`, `practice_modes`,
+  `micro_quiz`.
+- `relation`: `source_kp_id`, `target_kp_id`, `relation_type`, `direction`,
+  `strength`.
+
+JSON arrays and objects stay arrays and objects in the file. `kp_ids` must be an
+array; `related_kp_ids` and `practice_modes` may be arrays or null; `micro_quiz`
+may be an object or null. A JSON string containing serialized array/object text
+is invalid. Unknown fields and changed embedded identity are refused. The
+mirror does not include flash-card entities, figure bytes, specialized problem
+difficulty, or learner/runtime state. It cannot create a repository-only id.
+
+A deletion request has exactly `schema_version`, `request_id`, `course_id`,
+`entity_type`, `entity_id`, and `reason`. It is validated and reported as
+pending; it never deletes pool content. Likewise, a missing entity JSON file is
+restored from an existing tracked pool row at a new revision.
+
+`mirror init` explicitly establishes pool-first revision-1 state and adopts an
+existing matching file by embedded identity. A file that cannot be read as
+UTF-8 JSON is reported with its path and reason; an entity whose id such an
+unreadable file names is refused a canonical file until it is repaired, while
+unrelated entities still bootstrap. `check`, `status`, and
+`sync --dry-run` write neither pool content nor entity JSON. `sync` handles one
+entity at a time through existing content validation; successful entities may
+remain applied when a sibling is invalid or conflicting. Repository edits,
+pool edits, and the remembered normalized content use monotonically increasing
+integer revisions without hashes. The command only reads/writes the supplied
+local checkout; clone, pull, commit, and push remain external Git operations.
+
 ## Course Learning Network
 
 Low-level audited relations may be added after KP extraction.

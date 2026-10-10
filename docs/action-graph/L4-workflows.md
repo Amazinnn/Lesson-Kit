@@ -237,6 +237,36 @@ flowchart TD
 > `practice_runs` 表与 `active_practice.source_label` 列，已有行零改动。错题视图按**值**判
 > verdict（sqlite 返回 0/1，不是布尔），作答明细与错题在触到载入上限时如实说明截断。
 
+## W9 · 作者内容镜像审阅与同步（2026-10-10，PR110）
+
+```mermaid
+flowchart TD
+  A[准备本地 checkout<br/>clone 等 Git 操作自理] --> B[mirror init --dry-run → init]
+  B --> C{仓库既有文件}
+  C -- 无 --> D[写修订号 1 JSON + 台账]
+  C -- 同 id 同内容 --> E[采纳该文件路径]
+  C -- 同 id 不同内容 --> F[conflict·不覆盖]
+  C -- 不可读文件点名该 id --> G[报告文件·该实体拒绝建档·其余照常]
+  D --> H[在 checkout 编辑 JSON<br/>或经既有通道改池]
+  E --> H
+  H --> I[mirror check/status/sync --dry-run]
+  I --> J{单实体分类}
+  J -- noop --> K[跳过]
+  J -- repo_to_pool --> L[经 data.content/关系校验器写池<br/>内容+状态+日志同事务]
+  J -- pool_to_repo --> M[导出下一修订 JSON]
+  J -- 缺失文件 --> N[按下一修订恢复文件<br/>永不删池行]
+  J -- 收敛/冲突/无效/孤实体 --> O[收敛恢复或零写入报告]
+  L --> P[逐条结果·成功兄弟保留]
+  M --> P
+  N --> P
+  O --> P
+  P --> Q[提交/推送 checkout 自理]
+  X1[双边改成不同内容] -.conflict·零写入·不选边.-> P
+  X2[改内容不带修订号/跳跃] -.invalid·零写入.-> P
+  X3[仓库单方面新建 id] -.拒绝·不分配 id.-> P
+  X4[删除请求 JSON] -.只校验报告·永不执行.-> P
+```
+
 ## 意外分支总清单（防"想当然"复查用）
 
 | # | 意外 | 落点 |
@@ -274,3 +304,7 @@ flowchart TD
 | 31 | 错题视图拿到 sqlite 的 verdict=0（不是布尔 False） | 按值判定：0 计入错题，NULL 才是未判定（W8） |
 | 32 | 池还没迁移就打开记录中心 | 只读聚合照常工作；练习轮次功能等 `practice_runs` 表出现后自动可用（W8） |
 | 33 | 载入窗口外的更早记录 | 明细/错题页顶部提示「已载入最近 N 条」，不假装是全部（W8） |
+| 34 | 仓库缺实体文件 | 不视为删除；池行保留，按新修订恢复文件（W9） |
+| 35 | 仓库出现不可读 JSON | 报告文件；被其点名 id 的实体拒绝建档，其余实体照常（W9） |
+| 36 | 池与仓库两边改成不同内容 | conflict 零写入，不静默选边（W9） |
+| 37 | 仓库单方面新建 id | 拒绝，不分配 id、不写池（W9） |
