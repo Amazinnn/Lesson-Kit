@@ -125,6 +125,14 @@ The repository MAY contain explicit deletion-request JSON documents. The mirror 
 - **WHEN** synchronization runs
 - **THEN** the request is reported as pending/non-executed and the durable problem remains unchanged
 
+#### Scenario: Missing-file restore retries after a ledger failure
+
+- **GIVEN** a tracked repository file is missing and its pool row still exists
+- **AND** the mirror-log write fails while synchronization prepares the restoration revision
+- **WHEN** synchronization runs
+- **THEN** the entity file remains missing and the prior mirror revision remains intact
+- **AND** after the ledger failure is removed, the same restoration can be retried at the next revision
+
 ### Requirement: Read-only validation and dry-run surface
 
 The CLI SHALL expose a `mirror` command group over a registered workspace and local repository checkout. It SHALL provide bootstrap, validation/status, synchronization, and dry-run behavior without performing Git network/authentication operations.

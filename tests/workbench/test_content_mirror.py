@@ -299,6 +299,41 @@ class ContentMirrorTests(unittest.TestCase):
         ).fetchone()[0]
         self.assertEqual(attempts, 1)
 
+    def test_missing_file_restore_retries_when_mirror_log_write_fails(self):
+        content_mirror.init(self.pool, self.repo)
+        path, _envelope = self.entity_json("problem", "c02-ch01-prob-001")
+        path.unlink()
+        self.pool.connect().execute(
+            "CREATE TRIGGER reject_restore_log BEFORE INSERT ON content_mirror_log "
+            "WHEN NEW.direction='restore_repo_file' BEGIN "
+            "SELECT RAISE(ABORT, 'injected restore log failure'); END"
+        )
+        self.pool.connect().commit()
+
+        first = content_mirror.sync(self.pool, self.repo)
+
+        self.assertFalse(first["valid"])
+        self.assertFalse(path.exists())
+        state = self.pool.connect().execute(
+            "SELECT revision FROM content_mirror_state "
+            "WHERE entity_type='problem' AND entity_id='c02-ch01-prob-001'"
+        ).fetchone()
+        self.assertEqual(state["revision"], 1)
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT COUNT(*) FROM content_mirror_log WHERE direction='restore_repo_file'"
+            ).fetchone()[0],
+            0,
+        )
+
+        self.pool.connect().execute("DROP TRIGGER reject_restore_log")
+        self.pool.connect().commit()
+        second = content_mirror.sync(self.pool, self.repo)
+
+        self.assertTrue(second["valid"])
+        self.assertEqual(second["counts"].get("restored"), 1)
+        self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["revision"], 2)
+
     def test_deletion_request_is_reported_but_never_executed(self):
         content_mirror.init(self.pool, self.repo)
         folder = self.repo / "delete-requests"

@@ -518,15 +518,21 @@ def _apply_one(pool, repo, item):
     path = Path(item["path"]) if item.get("path") else entity_path(
         repo, pool.course, entity_type, entity_id
     )
-    if status in {"pool_to_repo", "restore_repo_file"}:
+    if status == "pool_to_repo":
         authored = pool_projection(pool, entity_type, entity_id)
         revision = state["revision"] + 1
         _atomic_write(path, _envelope(entity_type, entity_id, revision, authored))
         _put_state(pool, entity_type, entity_id, revision, authored, status)
         return _result(
-            entity_type, entity_id,
-            "exported" if status == "pool_to_repo" else "restored",
-            revision=revision, path=path,
+            entity_type, entity_id, "exported", revision=revision, path=path,
+        )
+    if status == "restore_repo_file":
+        authored = pool_projection(pool, entity_type, entity_id)
+        revision = state["revision"] + 1
+        _put_state(pool, entity_type, entity_id, revision, authored, status)
+        _atomic_write(path, _envelope(entity_type, entity_id, revision, authored))
+        return _result(
+            entity_type, entity_id, "restored", revision=revision, path=path,
         )
     if status == "recover_converged":
         envelope = read_entity(path, pool.course, entity_type)

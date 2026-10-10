@@ -150,6 +150,8 @@ For repository-to-pool changes, validation happens before the transaction. The c
 
 The normalized JSON envelope is written before the pool transaction commits. If the transaction fails, the next run still sees the same incoming revision and can retry it; a failed envelope write rolls back the pool transaction.
 
+For a missing-file restoration, the pool revision and restore-log row are committed before writing the JSON file. If the ledger write fails, the file stays missing and the prior revision remains, so the same next revision can be retried. This ordering does not permit an arbitrary unchanged file to advance its revision.
+
 For pool-to-repository changes, the JSON writer writes a temporary sibling file and replaces the target. Mirror state is advanced only with a recoverable ordering: any crash leaves either the old state/file or a pair that the next comparison can classify as `recover_converged`/stale and repair without content loss.
 
 A run returns counts and per-entity results: `applied`, `exported`, `restored`, `recovered`, `noop`, `conflict`, and `invalid`. One entity failure does not roll back prior successful entities. Since v1 refuses repository-only entity creation, it does not create or defer references to new entities.
