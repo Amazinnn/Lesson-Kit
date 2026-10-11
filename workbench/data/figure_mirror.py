@@ -1,12 +1,14 @@
 """Binary figure projection for the version-controlled authored-content repository.
 
-Figure bytes stay outside SQLite.  The pool owns the logical references, while a
-checked-out content repository may version the corresponding bytes under
-``figures/<course>/...``.  Git transport remains outside Lesson Kit.
+Figure bytes stay outside SQLite. The pool owns logical references, while a
+checked-out content repository versions the corresponding bytes under
+``figures/<course>/...``. A derived UTF-8 index makes old hash-named figures
+locatable by problem/knowledge-point id without turning that index into a second
+authority. Git transport remains outside Lesson Kit.
 
 During the layout transition a workspace may hold the same logical figure in the
 new top-level ``figures/`` area or in the legacy ``.lessonkit/figures/`` runtime
-area.  Push prefers the top-level copy and falls back to the legacy copy.  Pull
+area. Push prefers the top-level copy and falls back to the legacy copy. Pull
 writes both so today's workbench keeps rendering while local agents can migrate
 without a flag day.
 """
@@ -25,6 +27,7 @@ FIGURE_TABLES = (
     ("problem", "problems", "problem_id"),
 )
 DIRECTIONS = {"check", "push", "pull"}
+INDEX_SCHEMA_VERSION = 1
 
 
 class FigureMirrorError(ValueError):
@@ -61,6 +64,8 @@ def _decode_paths(raw, owner_id):
 
 def _logical_path(course, logical):
     """Validate one pool-stored POSIX logical path without normalizing damage away."""
+    if not isinstance(course, str) or not course:
+        raise FigureMirrorError("workspace has no active course for figure synchronization")
     if not isinstance(logical, str) or not logical:
         raise FigureMirrorError("figure path must be a non-empty string")
     if "\\" in logical or logical.startswith("/"):
@@ -105,23 +110,61 @@ def references(pool):
     ]
 
 
-def _safe_target(root, logical):
+def _safe_target(root, course, logical):
     root = Path(root).resolve()
-    path = _logical_path(PurePosixPath(logical).parts[0], logical)
+    path = _logical_path(course, logical)
     target = (root / Path(*path.parts)).resolve()
     if not target.is_relative_to(root):
         raise FigureMirrorError(f"figure path leaves its asset root: {logical}")
     return target
 
 
-def repo_path(repo, logical):
-    return _safe_target(Path(repo).resolve() / "figures", logical)
+def repo_path(repo, course, logical):
+    return _safe_target(Path(repo).resolve() / "figures", course, logical)
 
 
 def workspace_paths(pool, logical):
-    canonical = _safe_target(pool.root / "figures", logical)
-    legacy = _safe_target(pool.root / ".lessonkit" / "figures", logical)
+    canonical = _safe_target(pool.root / "figures", pool.course, logical)
+    legacy = _safe_target(pool.root / ".lessonkit" / "figures", pool.course, logical)
     return canonical, legacy
+
+
+def index_path(repo, course):
+    if not isinstance(course, str) or not course or "/" in course or "\\" in course:
+        raise FigureMirrorError(f"invalid course id for figure index: {course!r}")
+    return Path(repo).resolve() / "figures" / course / "_index.json"
+
+
+def _index_value(course, refs):
+    return {
+        "schema_version": INDEX_SCHEMA_VERSION,
+        "course_id": course,
+        "figures": [
+            {"logical_path": item["logical"], "owners": item["owners"]}
+            for item in refs
+        ],
+    }
+
+
+def _index_bytes(course, refs):
+    return (json.dumps(_index_value(course, refs), ensure_ascii=False, indent=2)
+            + "\n").encode("utf-8")
+
+
+def _index_status(repo, course, refs):
+    path = index_path(repo, course)
+    expected = _index_bytes(course, refs)
+    if not path.is_file():
+        return {"path": str(path), "status": "missing"}
+    try:
+        actual = path.read_bytes()
+        value = json.loads(actual.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return {"path": str(path), "status": "invalid", "error": str(exc)}
+    if not isinstance(value, dict):
+        return {"path": str(path), "status": "invalid",
+                "error": "figure index must be a JSON object"}
+    return {"path": str(path), "status": "same" if actual == expected else "different"}
 
 
 def _workspace_source(pool, logical):
@@ -151,11 +194,12 @@ def plan(pool, repo, direction="check"):
         return {
             "kind": "figure-mirror", "course": pool.course, "direction": direction,
             "valid": False, "items": [{"status": "invalid", "error": str(exc)}],
+            "index": {"status": "not_checked"},
         }
 
     for ref in refs:
         logical = ref["logical"]
-        target = repo_path(repo, logical)
+        target = repo_path(repo, pool.course, logical)
         source, source_kind = _workspace_source(pool, logical)
         canonical, legacy = workspace_paths(pool, logical)
         item = {
@@ -204,12 +248,14 @@ def plan(pool, repo, direction="check"):
                 item.update({"status": "different", "source": source_kind})
         items.append(item)
 
+    index = _index_status(repo, pool.course, refs)
     return {
         "kind": "figure-mirror",
         "course": pool.course,
         "direction": direction,
         "valid": not any(item["status"] == "invalid" for item in items),
         "items": items,
+        "index": index,
     }
 
 
@@ -220,6 +266,18 @@ def _atomic_copy(source, target):
     temporary = target.with_name(target.name + ".tmp")
     try:
         shutil.copyfile(source, temporary)
+        os.replace(temporary, target)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def _atomic_write_bytes(target, content):
+    target = Path(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_name(target.name + ".tmp")
+    try:
+        temporary.write_bytes(content)
         os.replace(temporary, target)
     finally:
         if temporary.exists():
@@ -243,7 +301,7 @@ def sync(pool, repo, direction, dry_run=False):
         if item["status"] == "noop":
             continue
         logical = item["logical"]
-        target = repo_path(repo, logical)
+        target = repo_path(repo, pool.course, logical)
         if direction == "push":
             source, _ = _workspace_source(pool, logical)
             if source is None:  # plan already guarded this; keep the write boundary explicit.
@@ -256,5 +314,10 @@ def sync(pool, repo, direction, dry_run=False):
             _atomic_copy(target, canonical)
             _atomic_copy(target, legacy)
         item["status"] = "applied"
+
+    if direction == "push":
+        refs = references(pool)
+        _atomic_write_bytes(index_path(repo, pool.course), _index_bytes(pool.course, refs))
+        report["index"] = {"path": str(index_path(repo, pool.course)), "status": "applied"}
     report["applied"] = sum(item["status"] == "applied" for item in report["items"])
     return report
