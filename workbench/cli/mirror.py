@@ -50,9 +50,14 @@ def build_parser(prog="lesson-kit mirror"):
 
 def _exit_code(report):
     bad = {"invalid", "conflict"}
-    return 2 if any(item.get("status") in bad for item in report.get("items", [])) \
-        or any(item.get("status") == "invalid"
-               for item in report.get("delete_requests", [])) else 0
+    invalid_item = any(
+        item.get("status") in bad for item in report.get("items", [])
+    )
+    invalid_delete = any(
+        item.get("status") == "invalid" for item in report.get("delete_requests", [])
+    )
+    invalid_index = report.get("index", {}).get("status") == "invalid"
+    return 2 if invalid_item or invalid_delete or invalid_index else 0
 
 
 def main(argv=None, prog="lesson-kit mirror"):
