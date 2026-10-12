@@ -43,6 +43,7 @@ workbench/
 │   ├── difficulty.py  # 四维客观题目难度校验、Decimal 汇总与档位投影
 │   ├── practice_set.py # 练习集渲染纯规则（题号、遮答案、缺解写「待补」、泄漏扫描）
 │   ├── cards.py       # 闪卡内容规则
+│   ├── practice_focus.py # 练习页明确相对指代的纯焦点规则
 │   ├── micro_quiz.py  # 微题内容规则与判分
 │   ├── content_identity.py # 完整题干的保守规范化身份（无 IO）
 │   └── markup.py      # 题面/标签共享标记校验
@@ -82,7 +83,7 @@ workbench/
 │   ├── __init__.py
 │   ├── app.py         # BaseHTTPRequestHandler 路由（单进程单端口 127.0.0.1）
 │   ├── api.py         # JSON API 处理器（hub/weak/pull/practice/feedback/schedule/figures/ai）
-│   ├── context.py     # 按路由/对象 ID 重建 Agent 权威页面上下文（练习页额外附带限长的聚焦草稿）
+│   ├── context.py     # 按路由与 Pool 重建 Agent 页面上下文；练习页附页面锚点、同轮近期题和限长草稿
 │   ├── pages.py       # 服务端页面壳与通用页面 HTML
 │   ├── records.py     # 记录中心页面 HTML（四个视图）
 │   └── static/
@@ -143,6 +144,7 @@ workbench/
 - `domain.difficulty`：唯一模型 `cognitive-v1-equal-mean`；四维等权 Decimal
   `ROUND_HALF_UP` 一位小数，并提供 balanced 使用的 1–5 档位投影。
 - `domain.cards.select(cards, schedule_rows, preference, excluded_*) -> [card action]`——把内容方向能力展开为独立练习动作并按各自调度行排序，零 IO。
+- `domain.practice_focus.resolve(message, visible_problem_id, previous_problem_ids)`：纯规则；明确指向上一题或近期题组时选同一练习里的已解析题，否定、竞争目标或多种相对范围保留页面默认焦点。
 - `domain.feedback.apply(pool, item_type, item_id, rating?, note?, direction?, attempt_id?) -> changes`——映射规则全在
   feedback.py，单测覆盖关键词表；`attempt_id` 只把事件链回尝试，不改映射语义。
 - `domain.schedule.after_result(pool, item, result, now)`——SM-2 变体；`due(pool, days) -> [...]`。
@@ -196,7 +198,7 @@ workbench/
 - `ingest.problem-patch`（+ `data.content.plan_problem_patch`）：**原地**改已有题目——
   单题与批量共用同一份校验（未知字段/题号身份/难度归属/微题契约），批量记录批次号与
   每行改前旧值，`rollback_batch` 对它走「写回旧值」而不是「删行」，因此学习记录不受影响。
-- `server.context`：按浏览器提供的路由与对象 ID 重新读取 Pool，生成权威 Agent 上下文；不接收整页 DOM。
+- `server.context`：用浏览器路由与对象 ID 查询 Pool，只有可解析的正式题才作为页面锚点；只有该题属于同一 active practice 时才附最多四道前序已结算正式题，并调用纯 Domain 规则确定轮次焦点；不接收整页 DOM，也不写学习记录。
 - `server.api`：handler 注册表 {method, path_pattern, handler(pool, ws, args) -> json}；
   HTML 页面经 pages.py，JSON 经 api.py，二者不混。
 

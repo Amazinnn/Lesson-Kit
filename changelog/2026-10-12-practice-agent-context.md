@@ -1,0 +1,7 @@
+# 练习页 Agent 上下文修复 — 2026-10-12
+
+练习页只把已解析的正式题作为页面锚点。前序题仅在可见题属于同一 active practice 时附带，最多四道已结算题；闪卡和未知 id 不形成正式题焦点。明确的上一题/近期题组指代可改变轮次焦点，否定或竞争当前目标时保留页面默认。纯目标规则位于 Domain，Server 负责 Pool 查询与上下文投影。
+
+保留既有 `resolve=False` 活跃练习读取和最多四道前序题加当前题的内容展开上限。上下文生成不移动游标，也不写尝试、反馈、状态或排期。
+
+Focused context and Domain tests: **22 passed**. `python -m compileall -q lessonkit.py workbench pipeline pool tests` passed. `openspec validate --specs --strict` passed (18 specs). `git diff --check` passed. Repository full-suite and independent acceptance review remain with the acceptance runner.
