@@ -18,7 +18,7 @@ class AgentContractTests(unittest.TestCase):
         self.assertIn("problem-patch", content)
         self.assertIn("staged_manifest_dir", content)
         self.assertIn("source_evidence", content)
-        self.assertIn("zero writes", content)
+        self.assertIn("zero-write", content)
 
     def test_contract_module_is_a_read_only_discovery_cli(self):
         from workbench.bridge import agent_contracts
