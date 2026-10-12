@@ -1,5 +1,7 @@
 """Rebuild bounded Agent context from browser identifiers and Pool data."""
 
+import json
+
 from workbench.data import active_practice, experience, practice_sets, queries
 
 
@@ -81,9 +83,9 @@ def _practice(pool, payload, result):
     problem_id = payload.get("problem_id")
     result["anchor"]["problem_id"] = problem_id
     try:
-        # Resolve once, then expose only a small ordered slice below. This keeps
-        # recent settled answers available without dumping the whole practice.
-        active = active_practice.current(pool, resolve=True)
+        # Keep the run itself lightweight; only the selected working items are
+        # resolved to full managed content below.
+        active = active_practice.current(pool, resolve=False)
     except active_practice.ActivePracticeError:
         active = None
     active_summary = _active_summary(active)
@@ -160,11 +162,11 @@ def _practice_working_items(pool, active, problem_id):
     result = []
     for index, item in enumerate(previous):
         result.append(_practice_problem_context(
-            item, relation=f"previous_{len(previous) - index}"
+            pool, item, relation=f"previous_{len(previous) - index}"
         ))
 
     if visible is not None:
-        result.append(_practice_problem_context(visible, relation="current"))
+        result.append(_practice_problem_context(pool, visible, relation="current"))
     elif problem_id and (problem := pool.problem(problem_id)) is not None:
         result.append({
             "relation": "current",
@@ -175,17 +177,28 @@ def _practice_working_items(pool, active, problem_id):
     return result
 
 
-def _practice_problem_context(item, relation):
+def _practice_problem_context(pool, item, relation):
     value = {
         "relation": relation,
         "position": item.get("position"),
         "state": item.get("state"),
-        "problem": item.get("payload"),
+        "problem": pool.problem(item.get("item_id")),
     }
-    if item.get("attempt") is not None:
-        value["attempt"] = item["attempt"]
-    if item.get("feedback") is not None:
-        value["feedback"] = item["feedback"]
+    attempt_id = item.get("attempt_id")
+    if attempt_id:
+        attempt = pool.attempt(attempt_id)
+        if attempt is not None:
+            attempt = dict(attempt)
+            choices = attempt.get("choices")
+            if isinstance(choices, str) and choices:
+                try:
+                    attempt["choices"] = json.loads(choices)
+                except json.JSONDecodeError:
+                    attempt["choices"] = []
+            value["attempt"] = attempt
+            feedback = pool.feedback_event_for_attempt(attempt_id)
+            if feedback is not None:
+                value["feedback"] = feedback
     return value
 
 
