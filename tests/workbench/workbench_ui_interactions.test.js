@@ -743,6 +743,13 @@ test("previous problem review is read-only and supplies focused Agent context", 
   assert.equal(choiceA.checked, true);
   assert.equal(choiceB.checked, false);
   assert.equal(storage.getItem("wb_session_alpha"), before);
+  elements["ai-input"].value = "解释当前题";
+  elements["ai-send"].click();
+  await flush();
+  const turns = calls.filter((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
+  const currentBody = JSON.parse(turns[1].options.body);
+  assert.equal(currentBody.problem_id, "p-2");
+  assert.equal(currentBody.draft_answer, "unsent current draft");
   assert.equal(calls.some((call) => call.options &&
     (/\/(attempts|feedback)$/.test(call.url)
       || (call.url.endsWith("/practice/current") && call.options.method === "PATCH"))), false);
