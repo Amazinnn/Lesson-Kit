@@ -61,6 +61,8 @@ workbench/
 │   ├── goals.py       # 工作区本地目标存储
 │   ├── mastery.py     # 掌握度实验的只读数据投影
 │   └── display_metadata.py # 展示字段回填
+├── experiments/
+│   └── retrieval.py   # 开发者诊断：通过 Data 只读接口评估检索事实
 ├── bridge/
 │   ├── __init__.py
 │   ├── conversation_providers.py # Agent harness 发现、统一模型目标、原生新建/续聊命令与轮次预算
@@ -128,6 +130,7 @@ workbench/
 
 - `registry`：`load() / save() / register(path, name?) -> Workspace / list() -> [Workspace] /
   get(name) -> Workspace`；Workspace = dataclass(name, path, db, active_course, active_chapter)。
+- `experiments.retrieval`：开发者运行的确定性诊断编排，读取现有 Data 接口、在本地计算指标并输出 JSON；不直接访问 SQLite，不写学习状态，不调用 LLM/提供方，也不改变产品检索排序。它不是新的架构层。
 - `domain.weak.score(pool, course, chapter, now) -> [(kp, score, reasons)]`——原因可解释。
 - `domain.pull.select(pool, kp_ids, n, mode, source_kind?, origin_kinds?, source_group?,
   difficulty_ranges?, strategy?, stem_keywords?, source_keywords?) -> {problems:[...],

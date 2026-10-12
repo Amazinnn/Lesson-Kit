@@ -26,12 +26,17 @@ The evidence query SHALL return recorded facts and SHALL NOT itself label the le
 
 ### Requirement: Evidence reads are zero-write operations
 
-Reading learning evidence SHALL NOT create or modify attempts, feedback, signals, current learning state, schedules, practices, or content.
+Reading learning evidence SHALL NOT create or modify attempts, feedback, signals, current learning state, schedules, practices, content, or the workspace database file. The Data query and installed CLI SHALL reject a missing or non-file database before connecting to SQLite.
 
 #### Scenario: Agent inspects history
 
 - **WHEN** the Agent reads knowledge-point evidence during an ordinary tutoring turn
 - **THEN** all managed learner and content state remains unchanged
+
+#### Scenario: Workspace database is missing
+
+- **WHEN** the Data query or installed CLI is given a registered workspace whose database path is absent or is not a regular file
+- **THEN** the read fails before connecting and leaves that path absent or unchanged
 
 ### Requirement: Evidence volume is explicitly bounded
 

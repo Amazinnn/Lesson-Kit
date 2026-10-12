@@ -3,6 +3,7 @@
 import argparse
 import json
 import sqlite3
+from pathlib import Path
 
 from workbench.data import evidence
 
@@ -35,6 +36,12 @@ def main(argv=None, prog="lesson-kit evidence"):
 
     args = build_parser(prog).parse_args(argv)
     workspace = cli._workspace(args.name)
+    db_path = Path(workspace["path"]) / workspace["db"]
+    if not db_path.is_file():
+        print(json.dumps({
+            "error": f"workspace database is not a regular file: {db_path}"
+        }, ensure_ascii=False))
+        return 2
     pool = cli._pool(workspace)
     try:
         result = execute(pool, args.entity, args.target, limit=args.limit)

@@ -2,6 +2,8 @@
 
 import json
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 
 from tests.workbench.fixtures import WorkspaceFixture
 
@@ -113,6 +115,34 @@ class KnowledgePointEvidenceTests(unittest.TestCase):
         from workbench.cli import entry
 
         self.assertIn("evidence", entry.command_names())
+
+    def test_data_query_rejects_missing_database_without_creating_it(self):
+        from workbench.data import evidence
+
+        self.pool.close()
+        db_path = self.fixture.db_path
+        db_path.unlink()
+
+        with self.assertRaisesRegex(FileNotFoundError, "database"):
+            evidence.for_kp(self.pool, "dmath-ch06-kp-001")
+        self.assertFalse(db_path.exists())
+
+    def test_installed_cli_rejects_missing_database_without_creating_it(self):
+        from workbench.cli import entry
+
+        self.pool.close()
+        db_path = self.fixture.db_path
+        db_path.unlink()
+        output = StringIO()
+
+        with redirect_stdout(output):
+            status = entry.lesson_kit_main([
+                "evidence", "dmath", "kp", "dmath-ch06-kp-001",
+            ])
+
+        self.assertEqual(status, 2)
+        self.assertIn("database", output.getvalue())
+        self.assertFalse(db_path.exists())
 
 
 if __name__ == "__main__":

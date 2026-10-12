@@ -21,6 +21,10 @@ def for_kp(pool, kp_id, *, limit=DEFAULT_LIMIT):
     """
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= MAX_LIMIT:
         raise ValueError(f"limit must be an integer from 1 to {MAX_LIMIT}")
+    if not pool.db_path.is_file():
+        raise FileNotFoundError(
+            f"workspace database is not a regular file: {pool.db_path}"
+        )
     kp = pool.kp(kp_id)
     if kp is None:
         raise KeyError(kp_id)
