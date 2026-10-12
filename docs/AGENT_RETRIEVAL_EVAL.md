@@ -1,39 +1,69 @@
 # Agent retrieval evaluation
 
-Lesson Kit should improve Agent retrieval from measured failures, not from a guessed RAG architecture.
+Lesson Kit should improve Agent retrieval from measured failures, not from a guessed RAG architecture. The developer-only diagnostic lives at `workbench.experiments.retrieval`; it calls existing Data read interfaces, computes metrics locally, and never invokes an LLM or provider. It does not change product retrieval ordering or learner state.
 
-The deterministic evaluator lives at `workbench.experiments.retrieval`. It calls the same read-only content primitives available to the Agent-facing data layer and never invokes an LLM. A manifest describes synthetic questions and the facts that must be recoverable.
-
-Run it against a registered workspace with:
+Run it against a registered workspace from the repository root:
 
 ```text
 python -m workbench.experiments.retrieval <workspace> --input <manifest.json>
 ```
 
-## Metrics
+The workspace database must already be a regular file. A missing path or a directory is rejected before SQLite connects, without creating or changing that path. Evaluation leaves existing database contents unchanged.
 
-Each scenario reports:
+## Manifest
 
-- `recall`: required facts found / required facts expected;
-- `primitive_reads`: the minimum explicit retrieval calls made by the evaluator;
-- `passed`: whether all required facts were recovered;
-- scenario detail, including whether historical evidence is understandable without a second id lookup.
+The UTF-8 JSON file contains a `scenarios` array. The current scenario kinds are:
 
-The evaluator intentionally does not judge prose quality. It measures whether the data layer can place the necessary evidence in front of an Agent.
+| Kind | Required fields | Reads |
+|---|---|---:|
+| `search` | `entity` (`kp`, `problem`, `relation`), non-empty `query`, non-empty `expected_ids` | 1 |
+| `compare` | optional `entity` (defaults to `kp`), non-empty `left_query`, `right_query`, and `expected_ids` | 2 |
+| `kp_history` | `kp_id`, complete expected `expected_problem_text` | 1 |
+
+For example:
+
+```json
+{
+  "scenarios": [
+    {
+      "name": "find a knowledge point",
+      "kind": "search",
+      "entity": "kp",
+      "query": "Pigeonhole Principle",
+      "expected_ids": ["dmath-ch07-kp-001"]
+    },
+    {
+      "name": "compare across chapters",
+      "kind": "compare",
+      "left_query": "Counting",
+      "right_query": "Pigeonhole Principle",
+      "expected_ids": ["dmath-ch06-kp-001", "dmath-ch07-kp-001"]
+    },
+    {
+      "name": "recover a recorded problem",
+      "kind": "kp_history",
+      "kp_id": "dmath-ch06-kp-001",
+      "expected_problem_text": "The complete problem_text value stored for this attempt"
+    }
+  ]
+}
+```
+
+Search and comparison expectations are exact IDs; duplicate expected IDs count once. Historical problem text is matched by case-insensitive full-text equality, so `P1` does not match `P10`. A history row counts only when it has nonblank problem text and a concrete outcome: a recognized attempt status (`new`, `answered`, `wrong`, `stuck`, `reviewing`, `mastered`), nonblank `answer_text` or `note`, a numeric rating from 1 through 5, or a Boolean verdict (including false and SQLite `0`/`1`). Timestamps alone, blank text, and unrecognized statuses are not learner outcomes. The evaluator does not require a private attempt identifier or any one specific outcome field.
+
+Unknown scenario kinds and malformed required fields fail with a diagnostic; they are not skipped or guessed. An empty `scenarios` array is valid and reports zero scenarios, zero reads, and recall `1.0`.
+
+## Report
+
+The command prints a JSON object to stdout with `summary` and `results`. `summary` contains `scenarios`, `passed`, `failed`, `recall`, and `primitive_reads`. Each result contains `name`, `kind`, `passed`, `expected_count`, `found_count`, `recall`, `primitive_reads`, and `detail`. A missing name becomes `scenario-N`. Per-scenario recall is matched expected facts divided by distinct expected facts; total recall uses the same ratio across all scenarios. `passed` means all expected facts for that scenario were found.
+
+`detail` records the inputs relevant to each scenario. Search includes `query` and `entity`; compare includes `left_query`, `right_query`, and `entity`; history includes `kp_id`, the number of rows with concrete learner evidence, and the one-read evidence requirement. `primitive_reads` counts explicit retrieval calls made by the evaluator, not internal SQL statements or runtime cost.
 
 ## Initial synthetic baseline
 
-The regression fixture covers three representative questions:
+The regression fixture covers three representative questions: find a knowledge point outside the active chapter by name; retrieve two knowledge points for a cross-chapter comparison; and answer “did I previously make this kind of mistake?” from a knowledge-point history read.
 
-1. Find a knowledge point outside the current chapter by name.
-2. Retrieve two knowledge points for a cross-chapter comparison.
-3. Answer “did I previously make this kind of mistake?” for a knowledge point using recorded problem attempts.
-
-With the current data primitives, the first two scenarios pass. Exact keyword search already finds knowledge points course-wide, so there is no evidence yet that Lesson Kit needs embeddings or a vector database for these cases.
-
-The third scenario fails the single-read evidence criterion. `data history <workspace> kp <id>` returns knowledge-point feedback/state/schedule/signals, but it does not include the attempted problems under that knowledge point together with their readable question text. An Agent can reconstruct the answer by fanning out from the KP to related problems and then reading each problem's history, but that is a retrieval-cost and reliability problem rather than a semantic-search problem.
-
-Fixture baseline:
+The current baseline remains:
 
 ```text
 scenarios:       3
@@ -43,11 +73,11 @@ recall:          0.75
 primitive_reads: 4
 ```
 
+The first two scenarios pass because exact keyword search already finds knowledge points course-wide. The history scenario fails because `data history <workspace> kp <id>` returns knowledge-point feedback/state/schedule/signals, but not attempted problems together with readable question text. An Agent can reconstruct the answer by reading linked problems and their history, but that adds retrieval calls and opportunities to miss evidence. This is a retrieval-cost and reliability gap, not evidence for semantic search.
+
 ## Decision rule
 
-Do not add vector search, a memory Agent, or a second planning layer because a scenario sounds semantic.
-
-For each observed miss:
+Do not add vector search, a memory Agent, or another planning layer because a scenario sounds semantic. For each observed miss:
 
 1. reproduce it as a deterministic scenario;
 2. distinguish missing facts from excessive fan-out;
@@ -55,4 +85,4 @@ For each observed miss:
 4. rerun the same scenario;
 5. only consider heavier retrieval machinery if keyword/data retrieval still misses relevant objects after the cheaper fix.
 
-The first measured target is therefore **knowledge-point historical evidence aggregation**, not semantic embeddings.
+The first measured target remains knowledge-point historical evidence aggregation, not semantic embeddings.
