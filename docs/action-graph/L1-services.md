@@ -10,6 +10,8 @@
 | **feedback 四件套** | 一次自评原子写四件事：事件→信号→状态→调度；支持 item_type=problem/card + direction 键 | feedback_events、learner_signals、kp 状态、review_schedule | `/feedback`（API/CLI）、收束页 |
 | **practice 记录** | 记一次尝试（作答原文/卡点/状态） | problem_attempts | `/practice`（API/CLI） |
 | **attempts 代录与更正**（2026-09-24） | 尝试清单校验（字段白名单、题目存在、评分 1–5、题内不重复）→ check 零写入预检 → apply 单事务写尝试 + 复用 feedback 四件套（带评分时）+ 操作留痕（含 effect 前后投影快照）；同 `request_id` 同内容幂等回放、异内容拒绝；correct 按 attempt-id 整体替换：先比对快照（投影被更晚活动改过、或还有更晚尝试即拒），再恢复前快照、按新评分重算、更新快照；无评分的尝试不碰任何投影 | problem_attempts、feedback_events、attempt_operations、learner_signals、learning_current_state、problem_progress、review_schedule | CLI `attempts`（check/apply/correct/list/get） |
+| **学习证据查询**（2026-10-12） | 按知识点读取最多 20 条最新作答，附当前题面及实际记录的作答、判定、评分/评语与时间；只读且不推断学习特征 | knowledge_points、problems、problem_attempts、feedback_events | CLI `evidence` |
+| **按需 Agent 契约披露**（`bridge.agent_contracts`） | 只读打印已安装的 `commands`、`attempts`、`practice`、`actions`、`content` 五个静态契约主题；不访问学习数据 | — | `python -m workbench.bridge.agent_contracts <topic>` |
 | **答卷目录 sources**（2026-09-24） | 每工作区一份只读目录清单（可位于工作区之外）；只存目录路径，不复制图片、不建索引 | answer-sources.json | CLI `attempts sources add/list/remove` |
 | **内容批次 content-bundle**（2026-09-23；2026-09-25 起可跨章） | 一份清单同时含知识点/正式题/微题/闪卡/必需原图：整批预检（引用、契约、来源证据、图片字节、目标冲突）→一份备份→单事务 apply→**按章各一个批次 id**；条数无上限、章数无上限；每项可声明自己的 `chapter`（缺省顶层；推不出章即点名拒收，**不回退当前章**），发号/图片目录/重复检查都跟随该项的章；内联清单照收（`kind` 或 `type` 写 `content-bundle`）；任一条不合法或缺图即整批零写入；图片按原始字节落对应章的 `.lessonkit/figures/{course}/{chapter}/`。**题型在入库时可选**：不给 `quiz_type`=综合题，`yes_no`=判断，`single_choice`/`multiple_choice`=小测；**客观题允许无答案键**（不判分、计入 `keyless` 计数并披露，可事后用 `data update problem` 补键）；普通题声明小测/判断模式而不给 `quiz_type` 即拒收并给修法 | knowledge_points、problems、flash_cards、figures | 桥内容动作、CLI `ingest` |
 | **门禁配方 micro-quiz** | manifest（micro-quiz-patch）确定性校验→备份→单事务 apply；重复 id 拒收；**id 前缀必须等于本工作区课程**；**难度可选（1-5 + 依据同现，依据不落盘）**（2026-09-21；2026-09-23 起为兼容通道，推荐 content-bundle） | problems | CLI `ingest recipe` |
@@ -19,13 +21,16 @@
 | **作者内容镜像 content_mirror**（2026-10-10） | 本地 JSON 作者内容投影：扫描 checkout、按嵌入 id 三方比较、逐实体同步；仓库修改经 `data.content`/关系校验器写池，内容+状态+日志同一池事务；缺失文件按新修订恢复、删除请求只报告不执行、仓库缺文件永不删池；不可读文件进报告并阻断被点名实体建档；不执行 Git 网络操作 | content_mirror_state、content_mirror_log、knowledge_points、problems、knowledge_relations、本地 checkout JSON | CLI `mirror`（init/check/status/sync） |
 | **ingest 链** | prepare/run/gate/apply/render 六环节编排与中间产物 | 中间产物目录 | CLI `ingest` 家族 |
 | **对话 conversations** | provider 原生会话的建立/轮次/事件流/取消/最小镜像；失败原因含进程退出码、超时、取消与**流内错误**（provider 退出码为 0 也算失败）；会话/轮次 id 只认 `conv-NNN`/`turn-NNN`，越界拼路径直接拒绝（2026-09-21）；**Pi 走每对话一个隐藏 `--mode rpc` 常驻进程**（空闲 30 分钟回收、abort 优先、接受后崩溃不重放），Codex/Claude 仍每轮一进程，全部子进程 Windows 无窗口（2026-09-23）；**轮次预算是静默预算**（输出行/事件重置时钟、命令在飞时用更长的工具预算），只截停真正静默的轮次（2026-09-25） | jobs/conv-### | `/ai/sessions/*` |
+| **练习焦点判定**（`domain.practice_focus`） | 纯规则：明确的上一题/近期题组指代映射到已解析的前序正式题；否定、竞争或多种相对范围保留页面默认焦点 | —（零 IO） | `server.context` |
+| **Agent 页面上下文**（`server.context`） | 从 Pool 重建页面锚点与练习证据；仅当可见正式题属于同一 active practice 时附最多四道前序已结算正式题；保留草稿限长；只读、不移动游标、不写学习数据 | knowledge_points、problems、active_practice、active_practice_items、problem_attempts、feedback_events、learning_current_state、review_schedule | `/ai/sessions/{id}/turns` |
 | **provider 发现/配置** | 单一发现口径：先取 bridges.json 为该 provider 配置的 `command`，否则退回 PATH 探测；配置另可覆盖 args / model / 两个轮次预算（`timeout_s` 静默、`tool_timeout_s` 工具在飞），生效值经归一化（工具预算不低于静默预算，Pi 再压到 RPC 空闲窗以内） | bridges.json | `/ai/providers`、CLI `bridge add`/`bridge list` |
 | **后台服务 service** | 工作台服务的 pid 记录、分离启动、终止与存活探测；`start` 只在端口应答后报成功，`stop` 拒绝终止已被回收的进程号 | `~/.lessonkit-workbench/daemon.json`、`daemon.log` | CLI `daemon start\|stop\|status`、`dashboard` |
 | **查询 queries** | hub 统计（四项整课程口径）/due 列表/图谱模型/kp 详情/review 概览（标签全长）；章透镜下的取数走 `Pool.scope_prefix()` | 全表只读 | 多个 GET API |
 | **计划 planning** | 每日建议（≤3 条人话）+ 失败保留上次结果 | 全表只读 + plan.json | `/plan`、建议区 |
 
-> `bridge/` 现存两个模块：`conversation_providers.py`（发现 + 命令构建 + 事件归一化）
-> 与 `conversations.py`（轮次生命周期）。旧的 runner/contracts/teacher 三件套与
+> `bridge/` 会话核心由 `conversation_providers.py`（发现 + 命令构建 + 事件归一化）
+> 与 `conversations.py`（轮次生命周期）协作；`conversation_actions.py` 与 `pi_rpc.py` 提供动作处理和 Pi RPC 支持。
+> `agent_contracts.py` 是单独的只读模块入口，输出按需读取的五个详细契约主题。旧的 runner/contracts/teacher 三件套与
 > `lesson-kit ai` 子命令、`GET /ai/task-providers` 门槛端点已于 remove-explain-diagnose 退役。
 >
 > `surface.py`（接口归属表）不是服务，是登记：每条路由/命令的受众，由测试与真实

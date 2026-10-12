@@ -1370,7 +1370,7 @@ class CheckIngestActionExtractionTests(unittest.TestCase):
         self.assertNotIn("wb ingest", prompt)
         self.assertIn("topic_label", prompt)
         self.assertIn("数学乘号一律用 ×", prompt)
-        self.assertIn("证明题", prompt)
+        self.assertIn("proof = 证明题", prompt)
         self.assertNotIn("dmath", prompt)
         # The pre-release six-item ceiling and its id bookkeeping are gone.
         self.assertNotIn("3–6", prompt)

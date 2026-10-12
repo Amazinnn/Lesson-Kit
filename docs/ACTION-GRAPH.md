@@ -48,6 +48,7 @@ flowchart LR
     PULL[拉题/拉卡]
     ANS[作答+判分横幅]
     REV[揭示/回翻]
+    PREV[普通题上一题结果回看<br/>只读]
     RATE[自评 1-5]
     END[收束页统一评分]
   end
@@ -74,7 +75,9 @@ flowchart LR
   DB[(池数据库)]
   FS[(工作区文件)]
 
-  P --> PULL & ANS & REV & RATE & END
+  P --> PULL & ANS & REV & PREV & RATE & END
+  PREV -->|返回当前题| P
+  PREV -->|本轮聚焦上下文| A
   PULL --> DB
   RATE & END --> FB --> DB
   K --> GSTATE --> DB
@@ -96,6 +99,11 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-10-12 普通题上一题结果回看（practice-review）：下一道未答普通题出现后，上一题结果可只读查看并作为本轮 Agent 焦点；回看不移动练习游标、不写尝试或反馈，也不证明浏览器提交已持久保存。闪卡仍沿用上一张/下一张游标导航。见 L3 动作登记。
+- 2026-10-12 学习证据查询（agent-learning-evidence）：新增只读 CLI `evidence`，按知识点
+  返回最多 20 条近期作答及当前题面/实际记录结果；缺库时拒绝连接且不建文件。L0/L1/L2/L3
+  登记既有表读取者、查询服务、命令与只读动作；L4 在需要历史依据的 Agent 对话中登记按需读取。
+- 2026-10-12 练习页 Agent 上下文（agent-context）：保留可解析正式题作为页面锚点，仅从同一 active practice 附最多四道前序已结算正式题；明确上一题/近期指代才改变轮次焦点，否定或竞争目标保留页面默认，未知题号与闪卡号不成为题目焦点。构建上下文只读、不移动游标、不写学习记录。见 L1/L2/L3/W4。
 - 2026-10-09 正文排版检出（implement-kp-text-typesetting-check）：既有内容清单
   有效检查/成功 apply 与 pool validator 报告新增同口径的 `typesetting` 结果，
   Bridge 动作结果保留它；纯检查不新增写入动作、门禁、CLI 选项或退出码。
@@ -208,7 +216,7 @@ flowchart LR
   提供 `--json`；删除两处死面（`ingest render` 的无用 target、`ingest gate/apply` 收了又拒的
   entity 取值）。L0/L1/L2/L3/L4、GLOSSARY、PRODUCT-MANUAL、REQUIREMENTS 同步。
 - 2026-09-25 跨章内容批次（cross-chapter-content-bundles）：**一份清单可以跨章**——每个知识点/
-  题目/闪卡可写自己的 `chapter`（缺省顶层再缺省当前章，推不出即点名拒收），发号、图片目录、
+  题目/闪卡可写自己的 `chapter`（缺省用清单顶层章；两者都缺失即点名拒收，不回退当前章；与当前 ai-teacher-bridge spec 和 FILE_CONTRACT.md 一致），发号、图片目录、
   微题 id、重复检查全部跟随该项的章，显式 id 必须与该项章同名（原先 ch14 的 id 塞进 ch12 清单
   会把图落错目录）；一次预检、一份备份、一个事务不变，但**按章各记一个批次**，因此
   `ingest rollback`/结果卡可**只撤其中一章**（回滚本就按批次删行+删无引用图片，无章的假设）；

@@ -160,7 +160,7 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（状态 `answered`，带选项文本与客观判定），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定」的关闭自评规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
+与一道正式题的一次已持久记录的交互，保存当时的作答文本、卡点标记与评分。学生在练习页提交后，服务端接受写入时创建状态为 `answered` 的行（含选项文本与客观判定）；浏览器已提交但写入尚未确认的内容仍是浏览器状态，不等于一条已保存的尝试。另一来源是学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定」的关闭自评规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
 _Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
 
@@ -208,6 +208,21 @@ _Avoid_：历史更正流水、静默改写后续学习记录
 练习页上**尚未提交**的作答文本、已选选项、评语备注与当前可见图片引用。学生从练习页发消息时随该轮一起送给 Agent，只作这一轮的临时上下文，不是池事实、不是尝试，也不写会话镜像；页面上的草稿本身照旧随标签页消失。
 _Avoid_：把草稿当尝试、把浏览器内容当权威事实、整页 DOM
 出处：workbench-ui spec「Authoritative page context for Agent turns」
+
+### 页面锚点 / Page Anchor
+练习页当前可见、并已由知识池解析出的正式题。它标明学生正在看的题；即使消息明确把轮次焦点指向上一题或近期题目组，页面锚点仍保留当前题。
+_Avoid_：随轮次焦点移动、把浏览器提交的裸 id 当题目事实
+出处：`agent-context` spec「Current page is an anchor rather than a forced turn target」
+
+### 近期练习工作集 / Recent Practice Working Set
+练习页 Agent 轮次中的有界题目上下文：先包含页面锚点对应的正式题；仅当该题也是同一 active practice 的题目时，再附最近最多四道已结算的前序正式题。前序题按练习顺序选取，闪卡不占题目槽；题面、尝试与反馈由服务端从知识池重建。
+_Avoid_：整轮次展开、从别的 active practice 借前序题、把闪卡当正式题
+出处：`agent-context` spec「Practice turns carry bounded recent settled problem context」
+
+### 轮次焦点 / Turn Focus
+当前 Agent 轮次要回答的题目目标。练习页默认以页面锚点为焦点；只有消息明确且无歧义地指向同一 active practice 中的上一道题或近期题目组时，才改用对应的已解析正式题。否定相对指代或同时提及当前与前序目标时，保留页面默认焦点；没有可解析的页面正式题时不构造题目焦点。
+_Avoid_：被否定的目标、浏览器原始 id、由上下文窗口替学生消解歧义
+出处：`agent-context` spec「Current page is an anchor rather than a forced turn target」
 
 ### 练习集 / Practice Set（界面称「试卷」）
 一份**可复用的有序题目集合**。保存后使用稳定 `ps-NNN` 标识并存于工作区 `.lessonkit/practice-sets/`；编辑它只改变「以后想做什么」，不会产生尝试、进度或评分。开始试卷时把当时的有序题目复制进唯一 active practice，之后执行进度与试卷定义彼此独立。打印/导出仍复用同一清单生成学生卷和解答卷。
@@ -373,6 +388,11 @@ _Avoid_：评分方式（与 1–5 自评本身混淆）
 _Avoid_：Agent 对话会话（另一个「会话」，见该条）
 出处：review-workbench spec「Practice session」「Session interruption recovery」
 
+### 上一题结果视图 / Previous Result View
+练习已进入下一道未答普通题时，回看紧邻上一道普通题的只读界面。它显示浏览器当前持有的已提交答案或「不会」状态、已有判定和可用答案/解析；可把这道题和提交答案作为本轮 Agent 上下文。它不移动练习游标、不写尝试或反馈，也不证明对应提交已持久保存。闪卡仍使用「上一张 / 下一张」移动游标。
+_Avoid_：把回看当作重新作答、把浏览器已提交视为服务端已保存、把闪卡回翻当作本视图
+出处：practice-review spec
+
 ### 自评 / Self-Rating
 学习者对一道完成题的显式 1–5 打分（可带自然语言备注），写入对应反馈并按评分更新学习投影。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可另按 off 规则折算。
 _Avoid_：把自动判定伪装成自评分、浏览即掌握
@@ -515,6 +535,11 @@ _Avoid_：伪造证据、自动标弱
 _Avoid_：练习会话（同词两义，注意上下文）
 出处：workbench-ui spec；ai-teacher-bridge spec
 
+### 按需契约披露 / On-demand Contract Disclosure
+Agent 每轮只收到精简能力地图；它可通过 `python -m workbench.bridge.agent_contracts list` 发现五个既有主题，并在执行对应专门动作前读取相关主题的完整操作契约。该模块只打印静态说明，不是新的 `lesson-kit` 顶层命令，也不读取或写入学习数据。
+_Avoid_：每轮重复注入整本操作手册、为每个主题新增顶层命令
+出处：ai-teacher-bridge spec「On-demand Agent contract disclosure」
+
 ### Agent 提供方 / Provider
 一次 Agent 对话创建时固定的底层 Agent 命令行（codex / claude / pi）。对话**不会中途换 harness**；换的是同一个 harness 上的**模型条目**（见下），且只在下一轮生效。未配置 provider 时如实提示。
 _Avoid_：模型热切换（当前轮不改）、把显示名当 harness 名
@@ -556,9 +581,9 @@ _Avoid_：普通对话代填、跳过人确认直接创建
 出处：complete-goals-loop 归档；ai-teacher-bridge spec
 
 ### 内容批次动作 / content bundle action
-Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`，再缺省用当前章，某项因此推不出所属章即被点名拒收；服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的回滚标记，可单独撤销）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
+Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`；两者都未提供时该项会被点名拒收，**不回退到工作区当前章**。服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的回滚标记，可单独撤销）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
 _Avoid_：关键词意图门、静默丢弃不合格条目、跳过门禁直写池、显式命令面板
-出处：ai-teacher-bridge spec（first-use-conversation-content-fidelity）
+出处：ai-teacher-bridge spec「Atomic staged content bundle」；FILE_CONTRACT.md
 
 ### 暂存清单 / Staged manifest
 写在 `.lessonkit/jobs/conv-NNN/` 下、随对话保留的完整内容清单。服务端只接受该对话目录内的相对 `.json` 路径；绝对路径、`..` 与非 JSON 一律拒绝，回答正文不承载清单本身。
@@ -581,6 +606,16 @@ _Avoid_：逐条手工删行、全池回退、静默丢弃练习记录
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 
 ## 工程与流程
+
+### 学习证据查询 / Learning Evidence Query
+按知识点读取一组有上限的近期作答记录，并附上可读题面与数据库里实际记录的作答、判定、自评或时间。题面来自当前题库内容，不是作答时的历史快照；该查询不推断薄弱、粗心或进步等学习特征。
+_Avoid_：题目原始版本快照、学习者画像、自动薄弱判断
+出处：`agent-learning-evidence` OpenSpec
+
+### 检索评估 / Retrieval Evaluation
+开发者运行的确定性诊断：读取已注册工作区，通过现有只读数据接口检查清单中指定事实能否被找回，并报告结果与读取次数。它不调用模型或提供方、不写入学习数据、不改变产品检索排序，也不是学生功能。
+_Avoid_：产品检索、学习者能力评分、语义检索系统
+出处：`retrieval-evaluation` OpenSpec；`docs/AGENT_RETRIEVAL_EVAL.md`
 
 ### 运行时状态 / Runtime State
 仓库内 `.lessonkit/state.yaml` 检查点：激活课程/章节、命令、阶段、必需产物、最近门禁结果、阻塞与下一步。命令按 CWD 在仓库根运行。

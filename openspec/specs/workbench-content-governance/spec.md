@@ -279,12 +279,21 @@ problem's wording, numerical conditions, answer form, and problem type. A
 source exercise SHALL use `origin_kind=source_problem`; it SHALL become a micro
 quiz only when the source is already that type or the learner explicitly asks
 for a micro adaptation. Generated simple choice/judgement questions remain
-allowed with `origin_kind=generated_grounded`.
+allowed with `origin_kind=generated_grounded`. A stored `problem_type` SHALL use
+one of the English machine values `calculation`, `proof`, `modeling`,
+`explanation`, `experiment`, `design`, `application`, `counterexample`, or
+`other`; a localized display label is explanatory and SHALL NOT be accepted as
+the stored value.
 
 #### Scenario: Import a textbook proof
 
 - **WHEN** a learner asks to import a textbook proof exercise without requesting adaptation
 - **THEN** a formal source problem is created and no choice options are invented
+
+#### Scenario: A localized label is not a problem type value for an ordinary problem
+
+- **WHEN** an ordinary formal-problem manifest item without `quiz_type` or `micro_quiz` supplies `problem_type` as the Chinese label `证明题`
+- **THEN** the deterministic gate rejects it without writing, while the English value `proof` remains valid
 
 #### Scenario: Explicit micro adaptation
 
