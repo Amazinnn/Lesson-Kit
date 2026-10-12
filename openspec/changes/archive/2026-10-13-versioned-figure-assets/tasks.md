@@ -35,7 +35,7 @@
 - [x] 4.1 Define the repository `figures/<course>/...` binary asset area.
 - [x] 4.2 Keep figure bytes outside JSON envelopes and SQLite.
 - [x] 4.3 Document the temporary dual workspace layout while current bulk repair runs.
-- [ ] 4.4 Run exact-head repository CI and resolve any contract/test failures.
+- [x] 4.4 Run exact-head repository CI and resolve any contract/test failures (6d8150e; GitHub Actions 38318316270, Python 3.11/3.12 passed).
 - [x] 4.5 Open a reviewable PR without merging it while the owner is occupied with local repair work.
 - [x] 4.6 Reconcile the glossary, capability delta, file contract, DATA_MODEL, architecture, manual, and action graph after the PR113 audit.
 - [x] 4.7 Record the bounded fix and its per-file atomicity limit in the dated handoff.

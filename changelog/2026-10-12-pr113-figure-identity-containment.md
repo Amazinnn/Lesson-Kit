@@ -22,12 +22,15 @@ The contract documents now define the binary projection and derived index, show
 the index envelope, distinguish it from JSON mirror state, and document explicit
 directions, exit behavior, no pruning/Git transport, current runtime layout, and
 per-file replacement limits. The broader figure naming strategy and any runtime
-root migration remain unresolved follow-up work. No current-spec synchronization
-or archive is claimed here.
+root migration remain unresolved follow-up work. OpenSpec CLI archived this change as
+`2026-10-13-versioned-figure-assets` and added its seven requirements to the
+current `workbench-content-governance` specification.
 
 Focused figure and existing JSON mirror checks: 56 passed, including the
 missing/non-file database CLI regression. Compile, strict OpenSpec validation,
-diff check, and the existing invalid-index CLI exit-code check passed. Full
-repository exact-head CI and archive acceptance remain pending in the root
-workflow. All filesystem fixtures were confined to temporary test directories;
+diff check, and the existing invalid-index CLI exit-code check passed. Independent full validation passed 972 Python and 142 Node tests. Exact-head
+GitHub Actions run `38318316270` passed on Python 3.11 and 3.12 at `6d8150e`;
+two test fixture helpers now create their parents before POSIX symlink creation.
+After CLI archive, strict validation passed all 23 active changes/specs. Final
+publication and merge-commit CI remain root-owned gates. All filesystem fixtures were confined to temporary test directories;
 no real course database or image files were written.
