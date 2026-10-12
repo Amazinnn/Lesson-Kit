@@ -55,6 +55,7 @@ workbench/
 │   ├── records.py     # 记录中心只读查询（概览聚合 + 轮次快照读取）
 │   ├── content.py     # Agent 内容 CRUD/历史/顺序 ID/事务级联
 │   ├── content_mirror.py # 本地 JSON 作者内容投影、规范化比较与逐实体同步
+│   ├── figure_mirror.py # 池已引用图像文件与本地作者内容仓库间的显式投影
 │   ├── content_audit.py # 只读题库卫生检查
 │   ├── difficulty.py  # 显式难度 check/apply 整批事务
 │   ├── attempts.py    # Agent 代录尝试：清单校验、单事务 apply、快照守卫的 correct
@@ -155,6 +156,9 @@ workbench/
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
 - `data.content_mirror`：扫描所选课程本地 JSON、按嵌入 id 比较三方规范化内容、调用现有内容校验/写入权威，
   并将单实体内容与镜像状态/日志原子提交；不调用 Git，也不因文件缺失或删除请求删池内容。
+- `data.figure_mirror`：只读池中已有 `figure_paths`，按明确方向在工作区兼容目录与指定本地 checkout
+  之间复制原始图像字节，并从池引用生成派生归属索引；不写池、不修改引用、不调用 Git 网络操作。
+  资产根、目标和索引路径都必须解析在注册工作区或指定 checkout 内。
 - `domain.content_identity` 是入库拒重与 `data.content_audit` 重复组报告的共同身份规则；全题干比较，不截断。`data.content_audit` 只读报告重复题、疑似片段、未标注练习模式的客观题、缺标题、失效图片引用和孤儿图片；有发现时 CLI 返回 1。
 - `data.difficulty.check/apply`：1–N 题完整清单的零写入预览与整批原子覆盖；内容语义变化
   统一清空整组评级，未评级不影响任何主流程。

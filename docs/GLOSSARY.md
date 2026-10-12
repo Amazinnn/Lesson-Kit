@@ -275,6 +275,16 @@ _Avoid_：靠文档计数描述接口覆盖（会漂移）、把归属当许可�
 _Avoid_：`{owner_id}-fig-{NNN}.png`（旧命名规则，2026-09-20 作废）、图片入库（base64）、任意路径引用
 出处：knowledge-figures spec「Declared figure area / Gated figure patch channel / Legacy source-image migration」；ADR 0017
 
+### 图像文件投影 / Figure file projection
+把池中 `figure_paths` 已引用的图像字节显式复制到本地作者内容仓库 `figures/<logical-path>` 的文件系统投影；它与逐实体 JSON 作者内容镜像相邻，但不是 JSON 实体、池表或第二份成员关系。`check` 只读，`push` / `pull` 由调用者明确选方向；不修剪未引用文件，也不调用 Git 网络操作。转换期间，旧身份检查通过后，push 优先读工作区顶层 `figures/`，缺失时读现有 `.lessonkit/figures/`；pull 写两处以保留当前渲染与入库布局。既有文件名主体为 64 个字符的小写十六进制时仍表示旧内容哈希身份，不能把字节差异当普通编辑来覆盖；更广泛的命名策略仍未决定。
+_Avoid_：把图像字节装进 JSON/SQLite、由投影创建池引用、把文件投影称为 JSON 镜像台账
+出处：versioned-figure-assets change「Version-controlled figure assets」
+
+### 图像归属索引 / Figure owner index
+本地作者内容仓库 `figures/<course-id>/_index.json` 中由当前池引用推导出的 UTF-8 导航文件，列出逻辑图像路径及其知识点/题目所有者，供仓库浏览器查找图像。它是派生物：只在 push 时按池重写，不能增加、删除或改写 `figure_paths` 引用。
+_Avoid_：把索引当作内容权威、当成 `content_mirror_state`、用索引反向导入题目或知识点
+出处：versioned-figure-assets change「Version-controlled figure assets」
+
 ## 工作区与工作台
 
 ### 工作区 / Workspace

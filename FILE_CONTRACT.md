@@ -167,8 +167,9 @@ artifact, candidate table, promotion step, or staging state.
 ## Git Authored-Content Repository
 
 `lesson-kit mirror` reads and writes a local checkout containing versioned JSON
-for the authored content projection. The workspace's Course Identifier selects
-the course directory; the workspace name and physical path do not.
+for the authored-content projection and a separate binary figure projection.
+The workspace's Course Identifier selects the course directory; the workspace
+name and physical path do not.
 
 ```text
 <repo>/
@@ -176,6 +177,9 @@ the course directory; the workspace name and physical path do not.
 │   ├── knowledge/<entity-id>.json
 │   ├── problems/<entity-id>.json
 │   └── relations/<entity-id>.json
+├── figures/<course-id>/
+│   ├── _index.json
+│   └── <chapter>/...
 └── delete-requests/<request-id>.json
 ```
 
@@ -183,6 +187,68 @@ Nested folders under `knowledge/`, `problems/`, or `relations/` are allowed.
 Files are located recursively, and their embedded `entity_id` is the identity;
 renaming or moving a valid file within its entity directory does not create or
 delete an entity. Two files with the same entity type and id are invalid.
+
+### Binary figure projection
+
+Each binary file is stored at `figures/<logical-path>`, where the pool logical
+path starts with the selected course id (for example,
+`dmath/ch06/<sha256>.png` becomes `figures/dmath/ch06/<sha256>.png`). Image bytes
+remain outside SQLite and JSON entity envelopes. Only paths referenced by
+`knowledge_points.figure_paths` or `problems.figure_paths` participate.
+
+`figures/<course-id>/_index.json` is UTF-8 JSON derived from those pool
+references. Push writes it even when no figure is referenced. Its exact envelope
+is:
+
+```json
+{
+  "schema_version": 1,
+  "course_id": "dmath",
+  "figures": [
+    {
+      "logical_path": "dmath/ch06/<sha256>.png",
+      "owners": [
+        {"owner_type": "problem", "owner_id": "dmath-ch06-prob-001"}
+      ]
+    }
+  ]
+}
+```
+
+`owner_type` is `kp` or `problem`. The index is navigation metadata, not a
+membership authority; changing it never changes pool rows or their `figure_paths`.
+`check` reports a missing, matching, different, or invalid index without
+rewriting it.
+
+`mirror <workspace> figures --repo <checkout> --direction check|push|pull`
+requires an explicit direction. `check` and `--dry-run` write nothing. After
+legacy identity checks pass, push prefers the workspace's top-level
+`figures/<logical-path>` and falls back to
+`.lessonkit/figures/<logical-path>`; pull writes both to preserve the current
+renderer and ingest layout. Each replacement is atomic for its individual file;
+the operation does not roll back previously replaced files after a later
+operating-system write failure. It never prunes unreferenced files or invokes
+Git network operations.
+
+Figure synchronization reads an existing regular pool database with both the
+`knowledge_points` (`kp_id`) and `problems` (`problem_id`) tables. A missing/non-file database or missing
+owner table/id column is invalid, not an empty figure set; the command never
+creates a database. For older pools, an existing owner table without a
+`figure_paths` column is accepted as having no references and is not migrated.
+
+All resolved figure roots and targets must stay inside the registered workspace
+or the supplied checkout. The derived index path is checked against the checkout
+before any figure copy, including pushes with no references. A symlink or
+junction that redirects an asset root or target outside its anchor is refused.
+
+An existing logical filename whose stem is 64 lowercase hexadecimal characters
+retains its legacy content-hash identity. If any existing workspace/repository
+copies differ, the whole planned operation is refused before writing. Pull also
+refuses a repository-only legacy hash file when neither workspace copy provides
+a local baseline. An existing local copy may seed the repository or a matching
+compatibility copy. Other existing non-hash logical paths remain editable
+through an explicit direction. The broader figure naming strategy remains unresolved;
+this contract adds no hash computation, rename, or migration.
 
 Each entity file is a UTF-8 JSON object with exactly these envelope fields:
 
@@ -294,14 +360,15 @@ Runtime assets follow the hidden dot-directory convention and live under
 ```text
 .lessonkit/
 ├── state.yaml                                   # runtime state (tracked)
-├── figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png   # tracked
+├── figures/{course}/{chapter}/{sha256}.{ext}      # tracked
 └── jobs/conv-NNN/                               # provider state/events/mirror (gitignored)
 ```
 
 ### Figure Area
 
 - Path: `.lessonkit/figures/{course}/{chapter}/`
-- Naming: `{owner_id}-fig-{NNN}.png`, owner is a knowledge point or problem id.
+- Naming: `{sha256}.{ext}`, the lowercase SHA-256 of the original bytes plus
+  their supported source extension; the figure-patch gate derives this name.
 - The pool stores only logical paths on `knowledge_points.figure_paths` and
   `problems.figure_paths`; each display surface resolves them (workbench static
   service; exported Markdown computes document-relative paths).

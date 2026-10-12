@@ -1,17 +1,17 @@
-"""Installed CLI extension for the checked-out JSON content repository."""
+"""Installed CLI extension for the checked-out authored-content repository."""
 
 import argparse
 import json
 import sqlite3
 
 from workbench.cli import main as cli_main
-from workbench.data import content_mirror
+from workbench.data import content_mirror, figure_mirror
 
 
 def build_parser(prog="lesson-kit mirror"):
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="synchronize governed authored content with a local JSON repository checkout",
+        description="synchronize governed authored content with a local repository checkout",
     )
     parser.add_argument("workspace")
     sub = parser.add_subparsers(dest="action", required=True)
@@ -29,17 +29,35 @@ def build_parser(prog="lesson-kit mirror"):
         action.add_argument("--repo", required=True)
         action.add_argument("--entity")
 
-    action = sub.add_parser("sync", help="synchronize independent entities")
+    action = sub.add_parser("sync", help="synchronize independent JSON entities")
     action.add_argument("--repo", required=True)
     action.add_argument("--entity")
+    action.add_argument("--dry-run", action="store_true")
+
+    action = sub.add_parser(
+        "figures",
+        help="check, push, or pull pool-referenced binary figure assets",
+    )
+    action.add_argument("--repo", required=True)
+    action.add_argument(
+        "--direction", required=True, choices=("check", "push", "pull"),
+        help="check is read-only; push copies workspace figures to the repository; "
+             "pull copies repository figures into the workspace",
+    )
     action.add_argument("--dry-run", action="store_true")
     return parser
 
 
 def _exit_code(report):
     bad = {"invalid", "conflict"}
-    return 2 if any(item.get("status") in bad for item in report["items"]) \
-        or any(item.get("status") == "invalid" for item in report["delete_requests"]) else 0
+    invalid_item = any(
+        item.get("status") in bad for item in report.get("items", [])
+    )
+    invalid_delete = any(
+        item.get("status") == "invalid" for item in report.get("delete_requests", [])
+    )
+    invalid_index = report.get("index", {}).get("status") == "invalid"
+    return 2 if invalid_item or invalid_delete or invalid_index else 0
 
 
 def main(argv=None, prog="lesson-kit mirror"):
@@ -55,13 +73,23 @@ def main(argv=None, prog="lesson-kit mirror"):
                 report["dry_run"] = True
         elif args.action in {"check", "status"}:
             report = content_mirror.plan(pool, args.repo, entity_id=args.entity)
+        elif args.action == "figures":
+            report = figure_mirror.sync(
+                pool, args.repo, direction=args.direction, dry_run=args.dry_run
+            )
         else:
             report = content_mirror.sync(
                 pool, args.repo, entity_id=args.entity, dry_run=args.dry_run
             )
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return _exit_code(report)
-    except (content_mirror.MirrorError, sqlite3.Error, OSError, ValueError) as exc:
+    except (
+        content_mirror.MirrorError,
+        figure_mirror.FigureMirrorError,
+        sqlite3.Error,
+        OSError,
+        ValueError,
+    ) as exc:
         print(json.dumps({"error": str(exc)}, ensure_ascii=False, indent=2))
         return 2
     finally:
