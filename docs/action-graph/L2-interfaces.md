@@ -25,11 +25,11 @@
 | GET `/graph/model` · POST `/graph/state` · POST `/graph/kp` | 读/写 | 查询+图谱编辑 | 浏（模型可双） |
 | GET `/ai/providers` | 读 | 对话 provider（PATH 发现+overrides） | 浏 |
 | GET·POST `/ai/sessions`；PATCH·DELETE·GET `/ai/sessions/{id}` | 读/写 | 对话（id 必须是 `conv-NNN`，越界 400） | 浏 |
-| POST `/ai/sessions/{id}/turns` · GET `…/turns/{turn}` · POST `…/cancel` | 读/写 | 对话（turn 必须是 `turn-NNN`） | 浏 |
+| POST `/ai/sessions/{id}/turns` · GET `…/turns/{turn}` · POST `…/cancel` | 读/写 | 对话（turn 必须是 `turn-NNN`；练习上下文由 Pool 重建，焦点只解析同一练习内明确的相对指代） | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 | POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
-## CLI 命令（`python -m workbench.cli.main …` / `lesson-kit …`，24 条顶层命令）
+## CLI 命令（`python -m workbench.cli.main …` / 安装入口 `lesson-kit …`；可用命令以 `workbench.cli.entry` 为准）
 
 | 命令 | 性质 | 给谁 |
 |---|---|---|
@@ -41,6 +41,7 @@
 | `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；来源筛选 `--source-kind`·`--origin-kinds`·`--exam-year`·`--source-evidence` 均可重复，另有 `--search-stem`/`--search-source` 两个关键词域；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检，apply 单事务多题，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
+| `evidence <workspace> kp <kp-id> [--limit 1..20]` | 读（按知识点返回有界近期作答、可读题面及实际记录结果；默认 8 条并报告 `has_more`） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容；`data <ws> audit` 只读报告重复、片段、标题和图片问题） | Agent |
 | `mirror`（`init/check/status/sync`；`--repo` 指向本地内容仓库 checkout；支持 `--entity` 与 `sync --dry-run`） | 读 + **显式变更**（在知识池与版本化 JSON authored-content projection 之间按单实体同步；不执行 Git 网络操作，不因仓库缺文件或删除请求删池内容） | Agent |

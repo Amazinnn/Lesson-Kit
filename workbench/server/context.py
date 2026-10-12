@@ -1,6 +1,9 @@
 """Rebuild bounded Agent context from browser identifiers and Pool data."""
 
+import json
+
 from workbench.data import active_practice, experience, practice_sets, queries
+from workbench.domain import practice_focus
 
 
 # Focused practice drafts ride along with one turn only. They are learner input,
@@ -15,7 +18,7 @@ SELECTED_KPS = 30
 ACTIVE_ITEMS = 30
 PRACTICE_SETS = 20
 RECORDS = 20
-
+PRACTICE_RECENT_PROBLEMS = 4
 
 def build(pool, workspace, payload):
     page_type = payload.get("page_type") or "unknown"
@@ -69,6 +72,8 @@ def _practice(pool, payload, result):
     problem_id = payload.get("problem_id")
     result["anchor"]["problem_id"] = problem_id
     try:
+        # Keep the run itself lightweight; only the selected working items are
+        # resolved to full managed content below.
         active = active_practice.current(pool, resolve=False)
     except active_practice.ActivePracticeError:
         active = None
@@ -84,7 +89,10 @@ def _practice(pool, payload, result):
         "active_practice": active_summary,
         "selection": _practice_selection(payload.get("practice_selection")),
     }
-    problem = pool.problem(problem_id) if problem_id else None
+    problem = (
+        pool.problem(problem_id)
+        if isinstance(problem_id, str) and problem_id else None
+    )
     if problem:
         result["current"]["problem"] = problem
         result["current"]["knowledge_points"] = [
@@ -93,8 +101,100 @@ def _practice(pool, payload, result):
         result["current"]["submitted_attempts"] = pool.attempts(problem_id)[-10:]
         result["current"]["schedule"] = pool.schedule_get("problem", problem_id)
         result["current"]["state"] = pool.current_state("problem", problem_id)
+    working_items = _practice_working_items(pool, active, problem)
+    if working_items:
+        result["working_set"] = {
+            "kind": "practice",
+            "items": working_items,
+        }
+    previous_problem_ids = [
+        item["problem"]["problem_id"] for item in working_items
+        if str(item.get("relation") or "").startswith("previous_")
+        and isinstance(item.get("problem"), dict)
+        and item["problem"].get("problem_id")
+    ]
+    focus = practice_focus.resolve(
+        payload.get("message"),
+        problem.get("problem_id") if problem else None,
+        previous_problem_ids,
+    )
+    if focus:
+        result["focus"] = focus
     if payload.get("include_draft") is True:
         result["current"]["draft"] = _draft(payload)
+
+
+def _practice_working_items(pool, active, problem):
+    """Return the managed visible problem and bounded same-run predecessors."""
+    if not problem:
+        return []
+    if not active:
+        return [{
+            "relation": "current",
+            "position": None,
+            "state": None,
+            "problem": problem,
+        }]
+
+    problem_items = [
+        item for item in (active.get("items") or [])
+        if item.get("item_type") == "problem"
+    ]
+    visible = next(
+        (item for item in problem_items
+         if item.get("item_id") == problem["problem_id"]),
+        None,
+    )
+    if visible is None:
+        return [{
+            "relation": "current",
+            "position": None,
+            "state": None,
+            "problem": problem,
+        }]
+
+    visible_position = visible.get("position")
+    previous = [
+        item for item in problem_items
+        if isinstance(visible_position, int)
+        and isinstance(item.get("position"), int)
+        and item["position"] < visible_position
+        and item.get("state") in {"answered", "stuck"}
+    ][-PRACTICE_RECENT_PROBLEMS:]
+
+    result = []
+    for index, item in enumerate(previous):
+        result.append(_practice_problem_context(
+            pool, item, relation=f"previous_{len(previous) - index}"
+        ))
+
+    result.append(_practice_problem_context(pool, visible, relation="current"))
+    return result
+
+
+def _practice_problem_context(pool, item, relation):
+    value = {
+        "relation": relation,
+        "position": item.get("position"),
+        "state": item.get("state"),
+        "problem": pool.problem(item.get("item_id")),
+    }
+    attempt_id = item.get("attempt_id")
+    if attempt_id:
+        attempt = pool.attempt(attempt_id)
+        if attempt is not None:
+            attempt = dict(attempt)
+            choices = attempt.get("choices")
+            if isinstance(choices, str) and choices:
+                try:
+                    attempt["choices"] = json.loads(choices)
+                except json.JSONDecodeError:
+                    attempt["choices"] = []
+            value["attempt"] = attempt
+            feedback = pool.feedback_event_for_attempt(attempt_id)
+            if feedback is not None:
+                value["feedback"] = feedback
+    return value
 
 
 def _active_summary(active):
@@ -120,7 +220,6 @@ def _active_summary(active):
         ],
         "items_truncated": len(items) > ACTIVE_ITEMS,
     }
-
 
 
 def _draft(payload):
