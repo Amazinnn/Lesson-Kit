@@ -656,6 +656,135 @@ test("durable practice resumes the server cursor without pulling again", async (
   assert.equal(calls.some((call) => call.url.endsWith("/pull")), false);
 });
 
+test("previous problem review is read-only and supplies focused Agent context", async () => {
+  const pageLayout = layout();
+  pageLayout.dataset.page = "practice";
+  const elements = {
+    layout: pageLayout, ...durablePracticeElements(), ...aiElements(),
+    "composer-row": new FakeElement("composer-row"),
+  };
+  const choiceA = new FakeElement("choice-a", { value: "A", checked: true });
+  const choiceB = new FakeElement("choice-b", { value: "B" });
+  elements.stream.queryAll = (selector) => selector === "[data-choice-option]:checked"
+    ? [choiceA]
+    : selector === "[data-choice-option]" ? [choiceA, choiceB] : [];
+  const practice = {
+    source_kind: "quick", kp_ids: ["kp-1"], practice_mode: "exam",
+    rating_mode: "batch", cursor: 1,
+    progress: { total: 2, completed: 1, answered: 1, stuck: 0, remaining: 1 },
+    items: [
+      { position: 0, item_type: "problem", item_id: "p-1", state: "answered",
+        attempt_id: 11, attempt: { answer_text: "submitted answer", choices: ["A"], verdict: true },
+        payload: { problem_id: "p-1", display_title: "Previous", problem_text: "Q1",
+          source_answer: "42", solution: "Worked solution",
+          micro_quiz: { quiz_type: "multiple_choice", answer_key: ["A"],
+            options: [{ id: "A", text: "alpha" }, { id: "B", text: "beta" }] } } },
+      { position: 1, item_type: "problem", item_id: "p-2", state: "pending",
+        payload: { problem_id: "p-2", display_title: "Current", problem_text: "Q2",
+          micro_quiz: { quiz_type: "multiple_choice", answer_key: ["B"],
+            options: [{ id: "A", text: "alpha" }, { id: "B", text: "beta" }] } } },
+    ],
+  };
+  const calls = [];
+  const storage = new FakeStorage();
+  runWorkbench({
+    elements, storage, setTimeoutFn: (callback) => setImmediate(callback),
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current") && !options) return jsonResponse({ practice });
+      if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
+      if (url.endsWith("/ai/sessions") && !options) return jsonResponse([
+        { conversation_id: "conv-001", provider: "codex", status: "idle" }]);
+      if (url.endsWith("/ai/sessions/conv-001")) return jsonResponse({
+        conversation_id: "conv-001", provider: "codex", status: "idle", messages: [],
+      });
+      if (url.endsWith("/ai/sessions/conv-001/turns")) return jsonResponse({ turn_id: "turn-001" });
+      if (url.includes("/ai/sessions/conv-001/turns/turn-001")) return jsonResponse({
+        turn: { status: "done" }, events: [],
+      });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  elements["resume-practice"].click();
+  elements["answer-box"].value = "unsent current draft";
+  const before = storage.getItem("wb_session_alpha");
+  assert.equal(JSON.parse(before).cursor, 1);
+
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /Previous/);
+  assert.match(elements.stream.innerHTML, /submitted answer/);
+  assert.match(elements.stream.innerHTML, /回答正确/);
+  assert.match(elements.stream.innerHTML, /Worked solution/);
+  assert.match(elements.stream.innerHTML, /class='problem-options' disabled/);
+  assert.equal(elements["card-next"].textContent, "返回当前题");
+  assert.equal(elements["answer-box"].disabled, true);
+  for (const id of ["composer-row", "answer-submit", "show-answer", "feedback-area",
+    "session-end-entry", "next-problem"]) {
+    assert.equal(elements[id].classList.contains("hidden"), true, id);
+  }
+  assert.equal(storage.getItem("wb_session_alpha"), before);
+
+  await openFirstAiSession(elements);
+  elements["ai-input"].value = "解释上一题";
+  elements["ai-send"].click();
+  await flush();
+  const turn = calls.find((call) => call.url.endsWith("/ai/sessions/conv-001/turns"));
+  const body = JSON.parse(turn.options.body);
+  assert.equal(body.problem_id, "p-1");
+  assert.equal(body.draft_answer, "submitted answer");
+  assert.deepEqual(body.draft_choices, ["A"]);
+
+  choiceA.checked = false;
+  choiceB.checked = true;
+  elements["card-next"].click();
+  assert.match(elements.stream.innerHTML, /Current/);
+  assert.equal(elements["answer-box"].value, "unsent current draft");
+  assert.equal(choiceA.checked, true);
+  assert.equal(choiceB.checked, false);
+  assert.equal(storage.getItem("wb_session_alpha"), before);
+  assert.equal(calls.some((call) => call.options &&
+    (/\/(attempts|feedback)$/.test(call.url)
+      || (call.url.endsWith("/practice/current") && call.options.method === "PATCH"))), false);
+});
+
+test("previous result review does not imply a failed attempt was saved", async () => {
+  const elements = {
+    layout: layout(), ...durablePracticeElements(),
+    "composer-row": new FakeElement("composer-row"),
+  };
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 1, items: [
+      { problem_id: "p-1", state: "unrated", answer_text: "browser-submitted answer",
+        attempt_status: "failed", attempt_request: { request_id: "req-1", payload: {
+          request_id: "req-1", problem_id: "p-1", answer_text: "browser-submitted answer",
+        } }, payload: { problem_id: "p-1", display_title: "Previous", problem_text: "Q1" } },
+      { problem_id: "p-2", state: "active",
+        payload: { problem_id: "p-2", display_title: "Current", problem_text: "Q2" } },
+    ] }),
+    wb_practice_mode_alpha: "exam",
+    wb_practice_rating_mode_alpha: "batch",
+  });
+  const calls = [];
+  runWorkbench({
+    elements, storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/attempts")) return Promise.resolve({ ok: false, status: 500,
+        json: () => Promise.resolve({ error: "failed to save" }) });
+      return jsonResponse({});
+    },
+  });
+  await flush();
+  const retryCount = calls.filter((call) => call.url.endsWith("/attempts")).length;
+  assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).items[0].attempt_status, "failed");
+
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /browser-submitted answer/);
+  assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).items[0].attempt_status, "failed");
+  assert.equal(calls.filter((call) => call.url.endsWith("/attempts")).length, retryCount);
+});
+
 test("pausing a durable practice does not settle the current item", async () => {
   const calls = [];
   const elements = { layout: layout(), ...durablePracticeElements() };
