@@ -752,7 +752,7 @@ test("previous problem review is read-only and supplies focused Agent context", 
   assert.equal(currentBody.draft_answer, "unsent current draft");
   assert.equal(calls.some((call) => call.options &&
     (/\/(attempts|feedback)$/.test(call.url)
-      || (call.url.endsWith("/practice/current") && call.options.method === "PATCH"))), false);
+      || (call.url.endsWith("/practice/current") && call.options.method !== "GET"))), false);
 });
 
 test("previous result review does not imply a failed attempt was saved", async () => {
