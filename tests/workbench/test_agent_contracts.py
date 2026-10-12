@@ -30,7 +30,7 @@ class AgentContractTests(unittest.TestCase):
         self.assertEqual(output.getvalue().splitlines(), agent_contracts.topics())
 
     def test_turn_prompt_is_a_map_not_the_full_manual(self):
-        from workbench.bridge import conversations
+        from workbench.bridge import agent_contracts, conversations
 
         prompt = conversations._prompt("我上一题为什么错了？", {
             "workspace": {"name": "dmath", "course": "dmath", "chapter": "ch06"},
@@ -47,9 +47,67 @@ class AgentContractTests(unittest.TestCase):
         self.assertIn("主动读取 Lesson Kit 数据", prompt)
         self.assertIn("python -m workbench.bridge.agent_contracts list", prompt)
         self.assertIn("普通教学问答无需读取无关契约", prompt)
+        for topic in agent_contracts.topics():
+            self.assertIn(topic, prompt)
         # A normal turn should carry a map and a compact schema reminder, not
         # the many-page operational manual that existed before disclosure.
         self.assertLess(len(prompt), 7000)
+
+    def test_problem_type_guidance_matches_the_machine_enum(self):
+        from workbench import ingest
+        from workbench.bridge import agent_contracts, conversations
+
+        prompt = conversations._prompt("q", {})
+        compact = prompt.split("6) 题目字段：", 1)[1].split("7) 练习题型", 1)[0]
+        compact_values = compact.split("machine enum: ", 1)[1].split(";", 1)[0].split("/")
+        content = agent_contracts.get("content")
+        detailed = next(line for line in content.splitlines()
+                        if "problem_type` (required; machine enum:" in line)
+        detailed_values = (
+            detailed.split("machine enum: ", 1)[1].split(";", 1)[0].split("/")
+        )
+
+        self.assertEqual(set(compact_values), ingest.PROBLEM_TYPES)
+        self.assertEqual(set(detailed_values), ingest.PROBLEM_TYPES)
+        self.assertIn("proof = 证明题", compact)
+        self.assertIn("proof = 证明题", detailed)
+        self.assertNotIn("证明题", compact_values)
+        self.assertNotIn("证明题", detailed_values)
+
+    def test_detailed_micro_contract_covers_new_and_in_place_items(self):
+        from workbench.bridge import agent_contracts
+
+        content = agent_contracts.get("content")
+        self.assertIn(
+            "Every new micro quiz and in-place micro conversion MUST map to "
+            "exactly one knowledge point in `kp_ids`.",
+            content,
+        )
+        self.assertIn(
+            "`yes_no` answer key is one scalar option string",
+            content,
+        )
+        self.assertIn(
+            "`single_choice` answer key is one scalar option string contained in `options`",
+            content,
+        )
+        self.assertIn(
+            "`multiple_choice` answer key is a non-empty list of option strings",
+            content,
+        )
+
+    def test_commands_contract_documents_read_only_evidence_access(self):
+        from workbench.bridge import agent_contracts
+
+        commands = agent_contracts.get("commands")
+        self.assertIn(
+            "lesson-kit evidence <workspace> kp <kp-id> [--limit 1..20]",
+            commands,
+        )
+        self.assertIn("default 8, maximum 20", commands)
+        self.assertIn("read-only", commands)
+        self.assertIn("recorded facts", commands)
+        self.assertIn("do not infer learning labels", commands)
 
     def test_historical_claims_require_human_readable_evidence(self):
         from workbench.bridge import conversations

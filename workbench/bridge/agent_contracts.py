@@ -20,6 +20,7 @@ _CONTRACTS = {
 - Use `lesson-kit <command> --help` when argument order or flags are uncertain; do not guess.
 - Workspace-aware commands put the workspace name immediately after the command, for example:
   `lesson-kit data <工作区名> create kp --input <清单文件>`.
+- For a historical learning claim, query `lesson-kit evidence <workspace> kp <kp-id> [--limit 1..20]` (default 8, maximum 20). It is read-only and reports recorded facts; do not infer learning labels from missing evidence.
 - Run each Lesson Kit command independently. Do not hide its exit status with pipelines, `|| true`, or a chained `&&`/`;` command.
 - If output is too long, redirect the complete output to a file and read that file. If an exit code is needed, inspect it explicitly.
 - Claim success only when the command actually exits successfully and its result contains no error. On failure, report the real reason, consult help, and make at most a corrected independent invocation rather than repeating the same broken command.
@@ -104,15 +105,16 @@ A small manifest may be inline. Inline `kind:"content-bundle"` and `type:"conten
 `knowledge_item` (required), `knowledge_type`, `importance`, `source_location`, `body`, `graph_label`, `related_kp_ids`, `fragile`.
 
 7. Problem fields:
-`problem_text` (required), `problem_type` (required: calculation/proof/modeling/explanation/experiment/design/application/counterexample/other), `kp_ids`, `source_kind`, `origin_kind`, `source_evidence` (required), `source_answer`, `solution`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, and `figures`.
+`problem_text` (required), `problem_type` (required; machine enum: calculation/proof/modeling/explanation/experiment/design/application/counterexample/other; Chinese display label is explanatory only: proof = 证明题), `kp_ids`, `source_kind`, `origin_kind`, `source_evidence` (required), `source_answer`, `solution`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, and `figures`.
 `problem_type` describes the disciplinary form, not the practice UI. A yes/no or choice problem normally uses `problem_type:"other"`; the practice form is expressed by `quiz_type`, `options`, and `answer_key`.
 
 8. Practice forms:
+Every new micro quiz and in-place micro conversion MUST map to exactly one knowledge point in `kp_ids`.
 - ordinary/open problem: omit `quiz_type`; learner self-rates.
 - yes/no: `quiz_type:"yes_no"`; options may be omitted (是/否 default).
 - single choice: `quiz_type:"single_choice"`, 2–6 options.
 - multiple choice: `quiz_type:"multiple_choice"`, 2–6 options.
-Objective source problems are still imported when the source has no known answer key: omit `answer_key` or set it to null. Such problems are not auto-graded and remain learner-self-rated. When an answer key exists, include it; `error_reason` is required when an answer key is present and optional otherwise. Do not convert a keyless objective source problem into an open problem merely because the key is unavailable.
+Objective source problems are still imported when the source has no known answer key: omit `answer_key` or set it to null. Such problems are not auto-graded and remain learner-self-rated. When an answer key exists, include it; `error_reason` is required when an answer key is present and optional otherwise. Do not convert a keyless objective source problem into an open problem merely because the key is unavailable. A `yes_no` answer key is one scalar option string (`是` or `否`); a `single_choice` answer key is one scalar option string contained in `options`; a `multiple_choice` answer key is a non-empty list of option strings drawn from `options`.
 
 9. Source fidelity: textbook/exam source problems preserve the original wording, numbers, options, answer form, and disciplinary problem type. Use `origin_kind:"source_problem"`. Only convert/adapt when the source itself is objective or the learner explicitly asks for an adaptation; adapted problems use `origin_kind:"adapted_problem"`, generated grounded objective problems use `generated_grounded`. OCR mistakes may be corrected against the source page; otherwise do not silently rewrite source text.
 
