@@ -124,6 +124,8 @@ class RetrievalEvalTests(unittest.TestCase):
             {"problem_text": "Timestamp only", "created_at": "2026-10-01"},
             {"problem_text": "Blank status", "status": "  "},
             {"problem_text": "Unknown status", "status": "maybe"},
+            {"problem_text": "Object status", "status": {}},
+            {"problem_text": "List status", "status": []},
             {"problem_text": "Blank answer", "answer_text": " \n"},
             {"problem_text": "Blank note", "note": "\t"},
         ])

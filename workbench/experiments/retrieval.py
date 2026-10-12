@@ -143,7 +143,7 @@ def _human_problem_evidence(value):
 
 def _has_concrete_outcome(row):
     status = row.get("status")
-    if status in ATTEMPT_STATUSES:
+    if isinstance(status, str) and status in ATTEMPT_STATUSES:
         return True
     if any(isinstance(row.get(key), str) and row[key].strip()
            for key in ("answer_text", "note")):
