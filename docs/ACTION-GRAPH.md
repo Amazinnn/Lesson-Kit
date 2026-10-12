@@ -216,7 +216,7 @@ flowchart LR
   提供 `--json`；删除两处死面（`ingest render` 的无用 target、`ingest gate/apply` 收了又拒的
   entity 取值）。L0/L1/L2/L3/L4、GLOSSARY、PRODUCT-MANUAL、REQUIREMENTS 同步。
 - 2026-09-25 跨章内容批次（cross-chapter-content-bundles）：**一份清单可以跨章**——每个知识点/
-  题目/闪卡可写自己的 `chapter`（缺省顶层再缺省当前章，推不出即点名拒收），发号、图片目录、
+  题目/闪卡可写自己的 `chapter`（缺省用清单顶层章；两者都缺失即点名拒收，不回退当前章；与当前 ai-teacher-bridge spec 和 FILE_CONTRACT.md 一致），发号、图片目录、
   微题 id、重复检查全部跟随该项的章，显式 id 必须与该项章同名（原先 ch14 的 id 塞进 ch12 清单
   会把图落错目录）；一次预检、一份备份、一个事务不变，但**按章各记一个批次**，因此
   `ingest rollback`/结果卡可**只撤其中一章**（回滚本就按批次删行+删无引用图片，无章的假设）；

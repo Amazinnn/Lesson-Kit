@@ -66,6 +66,11 @@ from legacy problem-type values, and SHALL NOT accept the retired types
 - **WHEN** the learner or the Agent fills in the answer key of a keyless item through the problem update path
 - **THEN** the key is validated against that item's own quiz type and stored, and clearing it returns the item to keyless
 
+#### Scenario: Answer keys use the quiz type's value shape
+
+- **WHEN** an objective micro quiz carries an answer key
+- **THEN** `yes_no` and `single_choice` use one option string (with `yes_no` limited to 是 or 否), while `multiple_choice` uses a non-empty list of option strings contained in its options
+
 #### Scenario: An existing problem becomes a micro quiz in place
 
 - **WHEN** an explicitly requested patch gives an existing problem a quiz type, options, and its practice-mode marking

@@ -535,6 +535,11 @@ _Avoid_：伪造证据、自动标弱
 _Avoid_：练习会话（同词两义，注意上下文）
 出处：workbench-ui spec；ai-teacher-bridge spec
 
+### 按需契约披露 / On-demand Contract Disclosure
+Agent 每轮只收到精简能力地图；它可通过 `python -m workbench.bridge.agent_contracts list` 发现五个既有主题，并在执行对应专门动作前读取相关主题的完整操作契约。该模块只打印静态说明，不是新的 `lesson-kit` 顶层命令，也不读取或写入学习数据。
+_Avoid_：每轮重复注入整本操作手册、为每个主题新增顶层命令
+出处：openspec/specs/agent-contract-disclosure/spec.md「Ordinary turns receive a small context map rather than the full operation manual」
+
 ### Agent 提供方 / Provider
 一次 Agent 对话创建时固定的底层 Agent 命令行（codex / claude / pi）。对话**不会中途换 harness**；换的是同一个 harness 上的**模型条目**（见下），且只在下一轮生效。未配置 provider 时如实提示。
 _Avoid_：模型热切换（当前轮不改）、把显示名当 harness 名
@@ -576,9 +581,9 @@ _Avoid_：普通对话代填、跳过人确认直接创建
 出处：complete-goals-loop 归档；ai-teacher-bridge spec
 
 ### 内容批次动作 / content bundle action
-Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`，再缺省用当前章，某项因此推不出所属章即被点名拒收；服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的回滚标记，可单独撤销）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
+Agent 在对话中**新增**学习内容的结构化动作：合法的纯新增动作自动执行，不再依赖浏览器关键词意图（`check_intent` 已删除）；修改、删除、回滚与难度评级仍然只按学生的明确指令执行。清单（`content-bundle`）可同时包含新知识点、正式题、微题、闪卡与必需原图，条数没有上限；大清单先暂存到本对话的 jobs 目录，区块里只写文件名。服务端一次预检（引用、字段契约、来源、图片字节、目标冲突）、一份可恢复备份；**一份清单可以跨章**：每个知识点/题目/闪卡都可以写自己的 `chapter`，缺省用清单顶层的 `chapter`；两者都未提供时该项会被点名拒收，**不回退到工作区当前章**。服务端按每一项的章发号、按章落图、**按章各记一个批次**（各带自己的回滚标记，可单独撤销）。任一条不合法或缺必需图片即整批零写入，并逐条给出原因，Agent 修正整份清单后重提。一轮回复里的每个 content-bundle 区块都会被依次应用。成功以结果卡片呈现（每章一行：批次号、章、资产类型与数量、来源分布、工作区、备份、当前回滚状态）。
 _Avoid_：关键词意图门、静默丢弃不合格条目、跳过门禁直写池、显式命令面板
-出处：ai-teacher-bridge spec（first-use-conversation-content-fidelity）
+出处：ai-teacher-bridge spec「Atomic staged content bundle」；FILE_CONTRACT.md
 
 ### 暂存清单 / Staged manifest
 写在 `.lessonkit/jobs/conv-NNN/` 下、随对话保留的完整内容清单。服务端只接受该对话目录内的相对 `.json` 路径；绝对路径、`..` 与非 JSON 一律拒绝，回答正文不承载清单本身。
