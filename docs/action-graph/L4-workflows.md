@@ -104,6 +104,8 @@ flowchart TD
   B -- 无 --> Z1[降级: 暂无可用 Agent 提示<br/>非 AI 功能全部照常]
   B -- 有 --> C[选 provider · 创建即锁定]
   C --> D[发消息 · 自动附页面上下文<br/>当前题/模式/进度/图谱选择]
+  D -. 问题需要历史依据 .-> D1[CLI evidence<br/>按知识点读有界作答事实]
+  D1 --> E
   D --> E[provider 原生运行 · 事件流回传]
   E -- done --> F[结果进对话流]
   E -- 掉线/退出 --> F1[如实报错 · 不换 provider 不装死]
