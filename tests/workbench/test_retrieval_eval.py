@@ -73,24 +73,21 @@ class RetrievalEvalTests(unittest.TestCase):
             },
         ]}
 
-    def test_baseline_separates_recall_from_historical_evidence(self):
+    def test_measured_baseline_has_human_historical_evidence(self):
         from workbench.experiments import retrieval
 
         report = retrieval.evaluate(self.pool, self.manifest())
 
-        # Current exact-keyword retrieval already handles another KP and a
-        # cross-chapter comparison. The known gap is historical learner evidence:
-        # one KP history read does not yet carry the text of attempted problems.
         self.assertEqual(report["summary"], {
             "scenarios": 3,
-            "passed": 2,
-            "failed": 1,
-            "recall": 0.75,
+            "passed": 3,
+            "failed": 0,
+            "recall": 1.0,
             "primitive_reads": 4,
         })
         history = report["results"][2]
-        self.assertFalse(history["passed"])
-        self.assertEqual(history["detail"]["human_evidence_rows"], 0)
+        self.assertTrue(history["passed"])
+        self.assertEqual(history["detail"]["human_evidence_rows"], 1)
         self.assertIn("problem text", history["detail"]["requirement"])
 
     def test_evaluation_is_read_only(self):
