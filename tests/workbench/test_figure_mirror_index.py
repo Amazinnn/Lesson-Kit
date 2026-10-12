@@ -52,6 +52,7 @@ class FigureMirrorIndexTests(unittest.TestCase):
 
     def _redirect_directory(self, link, target):
         target.mkdir(parents=True, exist_ok=True)
+        link.parent.mkdir(parents=True, exist_ok=True)
         if os.name == "nt":
             quote = lambda path: "'" + str(path).replace("'", "''") + "'"
             command = (
