@@ -1,5 +1,7 @@
 """Pure focus rules for a practice-page Agent turn."""
 
+import re
+
 
 _PREVIOUS_PROBLEM_REFERENCES = (
     "上一题", "上一道题", "上题", "前一题", "前一道题",
@@ -12,16 +14,34 @@ _RECENT_PROBLEM_REFERENCES = (
     "最近几题", "最近几道题",
 )
 _COMPETING_CURRENT_REFERENCES = (
-    "这题", "这道题", "本题", "当前题",
+    "这题", "这道题", "这一题", "本题", "当前题",
 )
-_NEGATED_RELATIVE_REFERENCES = (
-    "不是上一题", "不是上一道题", "不是上题", "不是前一题", "不是前一道题",
-    "不要解释上一题", "不要解释上一道题", "不要讨论上一题", "不要讲上一题",
-    "不解释上一题", "不讨论上一题", "不讲上一题",
-    "别解释上一题", "别讨论上一题", "别讲上一题",
-    "前几题不用管", "前几道题不用管", "前面几题不用管", "前面几道题不用管",
-    "最近几题不用管", "最近几道题不用管",
+_NEGATION_PREFIXES = ("不是", "并不是")
+_NEGATORS = _NEGATION_PREFIXES + ("不要", "不需要", "不用", "不必", "不想", "别", "不")
+_REFERENCE_OPERATIONS = (
+    "解释", "讨论", "讲", "说", "看", "提", "聊", "管", "问", "分析", "复习",
 )
+_NEGATED_OPERATION = (
+    rf"(?:{'|'.join(_NEGATORS)})\s*(?:(?:再|在)\s*)?"
+    rf"(?:{'|'.join(_REFERENCE_OPERATIONS)})"
+)
+_REJECTION_BEFORE = re.compile(
+    rf"(?:{'|'.join(_NEGATION_PREFIXES)}|{_NEGATED_OPERATION}"
+    rf"(?:\s*一下)?)\s*$"
+)
+_REJECTION_AFTER = re.compile(rf"^\s*{_NEGATED_OPERATION}")
+
+
+def _rejects_relative_reference(text, references):
+    for reference in references:
+        start = text.find(reference)
+        while start >= 0:
+            before = text[:start]
+            after = text[start + len(reference):]
+            if _REJECTION_BEFORE.search(before) or _REJECTION_AFTER.match(after):
+                return True
+            start = text.find(reference, start + len(reference))
+    return False
 
 
 def resolve(message, visible_problem_id, previous_problem_ids):
@@ -46,7 +66,9 @@ def resolve(message, visible_problem_id, previous_problem_ids):
         return page_focus
     if any(phrase in text for phrase in _COMPETING_CURRENT_REFERENCES):
         return page_focus
-    if any(phrase in text for phrase in _NEGATED_RELATIVE_REFERENCES):
+    if _rejects_relative_reference(
+        text, _PREVIOUS_PROBLEM_REFERENCES + _RECENT_PROBLEM_REFERENCES
+    ):
         return page_focus
     selected_ids = previous_ids if asks_recent else previous_ids[-1:]
     if not selected_ids:
