@@ -86,10 +86,20 @@ def _logical_path(course, logical):
 
 def references(pool):
     """Return unique logical figures and every authored object that references them."""
+    if not Path(pool.db_path).is_file():
+        raise FigureMirrorError("figure synchronization requires an existing pool database file")
     conn = pool.connect()
     grouped = {}
     for owner_type, table, id_column in FIGURE_TABLES:
         columns = _columns(conn, table)
+        if not columns:
+            raise FigureMirrorError(
+                f"pool database is missing required figure owner table: {table}"
+            )
+        if id_column not in columns:
+            raise FigureMirrorError(
+                f"pool database figure owner table is missing {id_column}: {table}"
+            )
         if "figure_paths" not in columns:
             continue
         rows = conn.execute(

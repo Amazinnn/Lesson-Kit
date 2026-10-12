@@ -108,6 +108,56 @@ class FigureMirrorIndexTests(unittest.TestCase):
 
         self.assertEqual(outside_index.read_text(encoding="utf-8"), "keep\n")
 
+    def test_empty_or_unmanaged_databases_are_not_valid_empty_figure_pools(self):
+        empty_db = self.fixture.ws / "pool" / "empty.db"
+        empty_db.touch()
+        unmanaged_db = self.fixture.ws / "pool" / "unmanaged.db"
+        conn = sqlite3.connect(unmanaged_db)
+        try:
+            conn.execute("CREATE TABLE unrelated (value TEXT)")
+            conn.commit()
+        finally:
+            conn.close()
+
+        for db_path in (empty_db, unmanaged_db):
+            with self.subTest(db_path=db_path):
+                pool = pool_mod.Pool(
+                    root=self.fixture.ws,
+                    db_path=db_path,
+                    course="dmath",
+                    chapter="ch06",
+                )
+                try:
+                    report = figure_mirror.plan(pool, self.repo, "check")
+                finally:
+                    pool.close()
+
+                self.assertFalse(report["valid"])
+                self.assertEqual(report["items"][0]["status"], "invalid")
+
+    def test_old_pool_without_figure_paths_columns_has_no_references(self):
+        old_db = self.fixture.ws / "pool" / "pre-figure-paths.db"
+        conn = sqlite3.connect(old_db)
+        try:
+            conn.execute("CREATE TABLE knowledge_points (kp_id TEXT PRIMARY KEY)")
+            conn.execute("CREATE TABLE problems (problem_id TEXT PRIMARY KEY)")
+            conn.commit()
+        finally:
+            conn.close()
+        pool = pool_mod.Pool(
+            root=self.fixture.ws,
+            db_path=old_db,
+            course="dmath",
+            chapter="ch06",
+        )
+        try:
+            report = figure_mirror.plan(pool, self.repo, "check")
+        finally:
+            pool.close()
+
+        self.assertTrue(report["valid"])
+        self.assertEqual(report["items"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
