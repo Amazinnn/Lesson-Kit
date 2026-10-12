@@ -17,6 +17,7 @@ from workbench.data import pool as pool_mod
 
 KINDS = {"search", "compare", "kp_history"}
 ID_FIELDS = {"kp": "kp_id", "problem": "problem_id", "relation": "relation_id"}
+ATTEMPT_STATUSES = {"new", "answered", "wrong", "stuck", "reviewing", "mastered"}
 
 
 def evaluate(pool, manifest):
@@ -103,8 +104,9 @@ def _kp_history(pool, scenario):
 
     history = content.history(pool, "kp", kp_id)
     evidence = _human_problem_evidence(history)
+    expected_folded = expected_text.casefold()
     found = {expected_text} if any(
-        expected_text.casefold() in row["problem_text"].casefold()
+        expected_folded == row["problem_text"].casefold()
         for row in evidence
     ) else set()
     return _result(
@@ -128,10 +130,8 @@ def _human_problem_evidence(value):
     rows = []
     if isinstance(value, dict):
         problem_text = value.get("problem_text")
-        has_outcome = any(value.get(key) is not None for key in (
-            "status", "answer_text", "rating", "verdict", "note", "created_at"
-        ))
-        if isinstance(problem_text, str) and problem_text and has_outcome:
+        has_outcome = _has_concrete_outcome(value)
+        if isinstance(problem_text, str) and problem_text.strip() and has_outcome:
             rows.append(value)
         for child in value.values():
             rows.extend(_human_problem_evidence(child))
@@ -139,6 +139,23 @@ def _human_problem_evidence(value):
         for child in value:
             rows.extend(_human_problem_evidence(child))
     return rows
+
+
+def _has_concrete_outcome(row):
+    status = row.get("status")
+    if status in ATTEMPT_STATUSES:
+        return True
+    if any(isinstance(row.get(key), str) and row[key].strip()
+           for key in ("answer_text", "note")):
+        return True
+    rating = row.get("rating")
+    if (isinstance(rating, (int, float)) and not isinstance(rating, bool)
+            and 1 <= rating <= 5):
+        return True
+    verdict = row.get("verdict")
+    return isinstance(verdict, bool) or (
+        isinstance(verdict, int) and verdict in (0, 1)
+    )
 
 
 def _expected_ids(scenario):
@@ -163,9 +180,12 @@ def _result(expected, found, primitive_reads, detail):
 
 def _pool(workspace):
     root = Path(workspace["path"])
+    db_path = root / workspace["db"]
+    if not db_path.is_file():
+        raise FileNotFoundError(f"workspace database is not a regular file: {db_path}")
     return pool_mod.Pool(
         root=root,
-        db_path=root / workspace["db"],
+        db_path=db_path,
         course=workspace.get("active_course", ""),
         chapter=workspace.get("active_chapter", ""),
     )

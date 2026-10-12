@@ -97,18 +97,11 @@ class RetrievalEvalTests(unittest.TestCase):
         from workbench.experiments import retrieval
 
         conn = self.pool.connect()
-        before = {
-            table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            for table in ("knowledge_points", "problems", "problem_attempts",
-                          "feedback_events", "learner_signals")
-        }
+        before = list(conn.iterdump())
 
         retrieval.evaluate(self.pool, self.manifest())
 
-        after = {
-            table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            for table in before
-        }
+        after = list(conn.iterdump())
         self.assertEqual(after, before)
 
     def test_human_evidence_check_does_not_require_an_internal_field_name(self):
@@ -123,6 +116,66 @@ class RetrievalEvalTests(unittest.TestCase):
         })
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["problem_text"], "Readable question")
+
+    def test_human_evidence_requires_a_concrete_valid_outcome(self):
+        from workbench.experiments import retrieval
+
+        rows = retrieval._human_problem_evidence([
+            {"problem_text": "Timestamp only", "created_at": "2026-10-01"},
+            {"problem_text": "Blank status", "status": "  "},
+            {"problem_text": "Unknown status", "status": "maybe"},
+            {"problem_text": "Blank answer", "answer_text": " \n"},
+            {"problem_text": "Blank note", "note": "\t"},
+        ])
+
+        self.assertEqual(rows, [])
+
+    def test_human_evidence_preserves_false_verdicts_and_numeric_ratings(self):
+        from workbench.experiments import retrieval
+
+        rows = retrieval._human_problem_evidence([
+            {"problem_text": "Incorrect answer", "verdict": False},
+            {"problem_text": "Stored false verdict", "verdict": 0},
+            {"problem_text": "Rated answer", "rating": 4.0},
+        ])
+
+        self.assertEqual([row["problem_text"] for row in rows],
+                         ["Incorrect answer", "Stored false verdict", "Rated answer"])
+
+    def test_kp_history_matches_the_complete_expected_problem_text(self):
+        from unittest.mock import patch
+        from workbench.experiments import retrieval
+
+        history = [{"problem_text": "P10", "status": "wrong"}]
+        with patch.object(retrieval.content, "history", return_value=history):
+            prefix = retrieval._kp_history(None, {
+                "kp_id": "kp-1", "expected_problem_text": "P1",
+            })
+            full = retrieval._kp_history(None, {
+                "kp_id": "kp-1", "expected_problem_text": "P10",
+            })
+
+        self.assertFalse(prefix["passed"])
+        self.assertTrue(full["passed"])
+
+    def test_evaluator_rejects_missing_or_nonfile_database_before_connect(self):
+        from workbench.experiments import retrieval
+
+        self.pool.close()
+        db_path = self.fixture.db_path
+        db_path.unlink()
+
+        with self.assertRaisesRegex(FileNotFoundError, "database"):
+            retrieval._pool(self.workspace)
+        self.assertFalse(db_path.exists())
+
+        db_path.mkdir()
+        try:
+            with self.assertRaisesRegex(FileNotFoundError, "database"):
+                retrieval._pool(self.workspace)
+            self.assertTrue(db_path.is_dir())
+        finally:
+            db_path.rmdir()
 
     def test_invalid_manifest_is_rejected_without_guessing(self):
         from workbench.experiments import retrieval
