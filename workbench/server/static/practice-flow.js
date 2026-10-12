@@ -75,6 +75,13 @@
     return PracticeDeck.current(practiceDeck);
   }
 
+  function contextProblem() {
+    if (reviewingPrevious && practiceDeck.cursor > 0) {
+      return practiceDeck.items[practiceDeck.cursor - 1] || currentProblem();
+    }
+    return currentProblem();
+  }
+
   function session() {
     return practiceDeck.items;
   }
@@ -796,7 +803,8 @@
       } else {
         answerBox.disabled = false;
         submitAnswer.classList.remove("hidden");
-        actions.classList.add("hidden");
+        if (showAnswer) showAnswer.classList.add("hidden");
+        if (actions) actions.classList.toggle("hidden", !canReviewPrevious(item));
         feedbackArea.classList.add("hidden");
         if (nextProblem) nextProblem.classList.add("hidden");
         answerBox.focus();
@@ -1844,11 +1852,15 @@
     }
 
     return {
-      currentProblem: currentProblem,
+      currentProblem: contextProblem,
       session: session,
       visiblePracticeImages: visiblePracticeImages,
-      draftAnswer: function () { return answerBox ? answerBox.value : ""; },
-      draftNote: function () { return feedbackNote ? feedbackNote.value : ""; },
+      draftAnswer: function () {
+        var item = contextProblem();
+        if (reviewingPrevious && item) return item.answer_text || "";
+        return answerBox ? answerBox.value : "";
+      },
+      draftNote: function () { return reviewingPrevious ? "" : (feedbackNote ? feedbackNote.value : ""); },
       selectionContext: selectionContext,
     };
   }
