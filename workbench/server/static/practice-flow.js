@@ -200,6 +200,8 @@
     var cardNext = document.getElementById("card-next");
     var nextProblem = document.getElementById("next-problem");
     var pulling = false;
+    var reviewingPrevious = false;
+    var reviewDraft = null;
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
 
@@ -529,9 +531,9 @@
 
     function setComposerLayout(mode) {
       // "card": no answer row (reveal instead); "choice": options only;
-      // "text": textarea + submit (ordinary exam answers).
+      // "text": textarea + submit; "review": previous result only.
       var row = document.getElementById("composer-row");
-      if (row) row.classList.toggle("hidden", mode === "card");
+      if (row) row.classList.toggle("hidden", mode === "card" || mode === "review");
       if (answerBox) answerBox.classList.toggle("hidden", mode !== "text");
       if (showAnswer) showAnswer.textContent = mode === "card" ? "揭示另一面" : "查看解析";
     }
@@ -558,6 +560,31 @@
       return !!(item.choices && item.choices.length)
         || !!(item.answer_text || "").trim()
         || item.state === "unrated" || item.state === "rated";
+    }
+
+    function canReviewPrevious(item) {
+      if (!item || item.kind === "card" || practiceDeck.cursor <= 0
+          || item.state !== "active" || deckItemAnswered(item)) return false;
+      var previous = practiceDeck.items[practiceDeck.cursor - 1];
+      return !!(previous && previous.kind !== "card"
+        && (deckItemAnswered(previous) || previous.state === "skipped"));
+    }
+
+    function captureProblemDraft() {
+      var choices = (stream && stream.querySelectorAll)
+        ? Array.prototype.slice.call(stream.querySelectorAll("[data-choice-option]:checked"))
+          .map(function (input) { return input.value; })
+        : [];
+      return { answer: answerBox ? answerBox.value : "", choices: choices };
+    }
+
+    function restoreProblemDraft(snapshot) {
+      if (!snapshot) return;
+      if (answerBox) answerBox.value = snapshot.answer || "";
+      if (!stream || !stream.querySelectorAll) return;
+      Array.prototype.slice.call(stream.querySelectorAll("[data-choice-option]")).forEach(function (input) {
+        input.checked = (snapshot.choices || []).indexOf(input.value) >= 0;
+      });
     }
 
     function verdictLine(item) {
@@ -607,14 +634,14 @@
         + attempts.length + " 条</summary>" + rows.join("") + "</details>";
     }
 
-    function optionHtmlFor(item) {
+    function optionHtmlFor(item, forceAnswered) {
       var problem = item.payload || {};
       var quiz = microQuiz(problem);
       var options = problemOptions(problem);
       if (!options.length) return "";
       var multiple = !!quiz && quiz.quiz_type === "multiple_choice";
-      var answered = deckItemAnswered(item);
-      var keyList = multiple ? (quiz.answer_key || []) : [quiz.answer_key];
+      var answered = !!forceAnswered || deckItemAnswered(item);
+      var keyList = quiz ? (multiple ? (quiz.answer_key || []) : [quiz.answer_key]) : [];
       return "<fieldset class='problem-options'" + (answered ? " disabled" : "") + "><legend>选择答案</legend>"
         + options.map(function (option) {
           var selected = answered && (item.choices || []).indexOf(option.id) >= 0;
@@ -630,20 +657,75 @@
         }).join("") + "</fieldset>";
     }
 
-    function updateCardNav(item) {
-      var isCard = item.kind === "card";
-      if (cardNav) cardNav.classList.toggle("hidden", !isCard);
-      if (!isCard) {
-        if (offNow()) syncNextProblem();
-        else if (nextProblem) nextProblem.classList.add("hidden");
-        return;
+    function reviewResultHtml(item) {
+      var problem = item.payload || {};
+      var quiz = microQuiz(problem);
+      var answer = item.answer_text && String(item.answer_text).trim()
+        ? String(item.answer_text) : "（未作答）";
+      var status = item.state === "skipped"
+        ? "<p class='muted'>本题当时标记为“不会”。</p>" : "";
+      var solution;
+      if (quiz) {
+        var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
+        var why = quiz.error_reason
+          ? "<p class='section-kicker'>为什么</p><div class='rich-text'>"
+            + richText(quiz.error_reason) + "</div>"
+          : "";
+        solution = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
+          + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>"
+          + practiceExplanationSection(problem);
+      } else {
+        solution = practiceSolutionHtml(problem);
       }
-      if (cardPrev) cardPrev.disabled = practiceDeck.cursor <= 0;
-      if (cardNext) cardNext.disabled = pulling;
+      return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
+        + "<div class='rich-text'>" + richText(answer) + "</div></section>"
+        + status + solution;
     }
 
-    function renderDeckItem(item) {
-      updateCardNav(item);
+    function updateCardNav(item, reviewOnly) {
+      if (item.kind === "card") {
+        if (cardNav) cardNav.classList.remove("hidden");
+        if (cardPrev) {
+          cardPrev.textContent = "上一张";
+          cardPrev.classList.remove("hidden");
+          cardPrev.disabled = practiceDeck.cursor <= 0;
+        }
+        if (cardNext) {
+          cardNext.textContent = "下一张";
+          cardNext.classList.remove("hidden");
+          cardNext.disabled = pulling;
+        }
+        return;
+      }
+      if (reviewOnly) {
+        if (cardNav) cardNav.classList.remove("hidden");
+        if (cardPrev) cardPrev.classList.add("hidden");
+        if (cardNext) {
+          cardNext.textContent = "返回当前题";
+          cardNext.classList.remove("hidden");
+          cardNext.disabled = false;
+        }
+        if (nextProblem) nextProblem.classList.add("hidden");
+        return;
+      }
+      var canReview = canReviewPrevious(item);
+      if (cardNav) cardNav.classList.toggle("hidden", !canReview);
+      if (cardPrev) {
+        cardPrev.textContent = "回看上一题";
+        cardPrev.classList.toggle("hidden", !canReview);
+        cardPrev.disabled = !canReview;
+      }
+      if (cardNext) {
+        cardNext.textContent = "返回当前题";
+        cardNext.classList.add("hidden");
+      }
+      if (offNow()) syncNextProblem();
+      else if (nextProblem) nextProblem.classList.add("hidden");
+    }
+
+    function renderDeckItem(item, reviewOnly) {
+      reviewOnly = !!reviewOnly;
+      updateCardNav(item, reviewOnly);
       if (item.kind === "card") {
         var sides = cardSides(item);
         var directionLabel = item.direction === "reverse" ? "反向" : "正向";
@@ -677,16 +759,32 @@
         return;
       }
       var problem = item.payload || {};
-      var answered = deckItemAnswered(item);
+      var answered = reviewOnly || deckItemAnswered(item);
       stream.innerHTML = "<article class='practice-question-card card'>"
-        + "<p class='context-line'>练习题</p><h2>"
+        + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
         + "<div class='problem-text rich-text'>" + richText(problemTextFor(problem)) + "</div>"
-        + optionHtmlFor(item) + keylessLine(item) + verdictLine(item) + "</article>";
+        + optionHtmlFor(item, reviewOnly) + keylessLine(item) + verdictLine(item)
+        + (reviewOnly ? reviewResultHtml(item) : "") + "</article>";
       renderMath(stream);
+      if (reviewOnly) {
+        setComposerLayout("review");
+        if (answerBox) {
+          answerBox.value = "";
+          answerBox.disabled = true;
+        }
+        if (submitAnswer) submitAnswer.classList.add("hidden");
+        if (showAnswer) showAnswer.classList.add("hidden");
+        if (actions) actions.classList.remove("hidden");
+        if (feedbackArea) feedbackArea.classList.add("hidden");
+        if (sessionEntry) sessionEntry.classList.add("hidden");
+        if (nextProblem) nextProblem.classList.add("hidden");
+        return;
+      }
       setComposerLayout(
         microQuiz(problem) && problemOptions(problem).length ? "choice" : "text");
+      if (showAnswer) showAnswer.classList.remove("hidden");
       answerBox.value = (answered && !(item.choices && item.choices.length))
         ? (item.answer_text || "") : "";
       if (answered) {
@@ -775,6 +873,8 @@
     // new pull happen. This is what makes flash-card paging and the batch
     // verdict hold one rule instead of two.
     function advance() {
+      reviewingPrevious = false;
+      reviewDraft = null;
       cancelScheduledAdvance();
       if (nextProblem) nextProblem.classList.add("hidden");
       if (!PracticeDeck.atEnd(practiceDeck)) {
@@ -1496,12 +1596,29 @@
     });
 
     if (cardPrev) cardPrev.addEventListener("click", function () {
+      var item = currentProblem();
+      if (item && item.kind !== "card") {
+        if (!canReviewPrevious(item)) return;
+        reviewDraft = captureProblemDraft();
+        reviewingPrevious = true;
+        renderDeckItem(practiceDeck.items[practiceDeck.cursor - 1], true);
+        return;
+      }
       if (practiceDeck.cursor <= 0) return;
       cancelScheduledAdvance();
       renderDeckItem(PracticeDeck.goTo(practiceDeck, practiceDeck.cursor - 1));
       persistDeck();
     });
     if (cardNext) cardNext.addEventListener("click", function () {
+      if (reviewingPrevious) {
+        var snapshot = reviewDraft;
+        reviewingPrevious = false;
+        reviewDraft = null;
+        renderDeckItem(currentProblem());
+        showComposer(true);
+        restoreProblemDraft(snapshot);
+        return;
+      }
       if (pulling) return;
       var item = currentProblem();
       if (!offNow() || !activePractice || !item || item.kind !== "card"
