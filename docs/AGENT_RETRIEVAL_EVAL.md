@@ -2,7 +2,7 @@
 
 Lesson Kit should improve Agent retrieval from measured failures, not from a guessed RAG architecture.
 
-The deterministic evaluator lives at `workbench.experiments.retrieval`. It calls the same read-only content primitives available to the Agent-facing data layer and never invokes an LLM. A manifest describes synthetic questions and the facts that must be recoverable.
+The deterministic evaluator lives at `workbench.experiments.retrieval`. It calls the same read-only primitives available to the Agent-facing data layer and never invokes an LLM. A manifest describes synthetic questions and the facts that must be recoverable.
 
 Run it against a registered workspace with:
 
@@ -21,7 +21,7 @@ Each scenario reports:
 
 The evaluator intentionally does not judge prose quality. It measures whether the data layer can place the necessary evidence in front of an Agent.
 
-## Initial synthetic baseline
+## Synthetic baseline
 
 The regression fixture covers three representative questions:
 
@@ -29,17 +29,23 @@ The regression fixture covers three representative questions:
 2. Retrieve two knowledge points for a cross-chapter comparison.
 3. Answer “did I previously make this kind of mistake?” for a knowledge point using recorded problem attempts.
 
-With the current data primitives, the first two scenarios pass. Exact keyword search already finds knowledge points course-wide, so there is no evidence yet that Lesson Kit needs embeddings or a vector database for these cases.
+Exact keyword search already handles the first two scenarios course-wide, so there is still no evidence that Lesson Kit needs embeddings or a vector database for these cases.
 
-The third scenario fails the single-read evidence criterion. `data history <workspace> kp <id>` returns knowledge-point feedback/state/schedule/signals, but it does not include the attempted problems under that knowledge point together with their readable question text. An Agent can reconstruct the answer by fanning out from the KP to related problems and then reading each problem's history, but that is a retrieval-cost and reliability problem rather than a semantic-search problem.
+The original third scenario exposed a fan-out gap: `data history <workspace> kp <id>` did not carry the attempted problems under that knowledge point together with readable question text and learner outcomes. The first measured production fix adds a dedicated read-only evidence view:
 
-Fixture baseline:
+```text
+lesson-kit evidence <workspace> kp <kp-id> [--limit N]
+```
+
+It returns a bounded newest-first set of actual attempt evidence with problem text, learner answer/choices when recorded, verdict/status, linked rating/feedback when available, and time. Internal ids remain available for provenance, but the result itself contains the human-readable facts an Agent should cite to the learner.
+
+Current fixture result after that fix:
 
 ```text
 scenarios:       3
-passed:          2
-failed:          1
-recall:          0.75
+passed:          3
+failed:          0
+recall:          1.0
 primitive_reads: 4
 ```
 
@@ -55,4 +61,4 @@ For each observed miss:
 4. rerun the same scenario;
 5. only consider heavier retrieval machinery if keyword/data retrieval still misses relevant objects after the cheaper fix.
 
-The first measured target is therefore **knowledge-point historical evidence aggregation**, not semantic embeddings.
+The next evaluator expansion should target temporal and practice-scoped history questions before any broader retrieval architecture is added.
