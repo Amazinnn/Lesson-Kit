@@ -538,7 +538,7 @@ _Avoid_：练习会话（同词两义，注意上下文）
 ### 按需契约披露 / On-demand Contract Disclosure
 Agent 每轮只收到精简能力地图；它可通过 `python -m workbench.bridge.agent_contracts list` 发现五个既有主题，并在执行对应专门动作前读取相关主题的完整操作契约。该模块只打印静态说明，不是新的 `lesson-kit` 顶层命令，也不读取或写入学习数据。
 _Avoid_：每轮重复注入整本操作手册、为每个主题新增顶层命令
-出处：ai-teacher-bridge spec「On-demand Agent contract disclosure」
+出处：openspec/specs/agent-contract-disclosure/spec.md「Ordinary turns receive a small context map rather than the full operation manual」
 
 ### Agent 提供方 / Provider
 一次 Agent 对话创建时固定的底层 Agent 命令行（codex / claude / pi）。对话**不会中途换 harness**；换的是同一个 harness 上的**模型条目**（见下），且只在下一轮生效。未配置 provider 时如实提示。
