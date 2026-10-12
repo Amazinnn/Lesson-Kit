@@ -1,7 +1,9 @@
 """Derived Git figure index keeps hash-named assets discoverable by owner id."""
 
 import json
+import os
 import sqlite3
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -38,6 +40,33 @@ class FigureMirrorIndexTests(unittest.TestCase):
         self.pool.close()
         self.fixture.cleanup()
 
+    def _set_all_paths(self, paths):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            encoded = json.dumps(paths)
+            conn.execute("UPDATE problems SET figure_paths=?", (encoded,))
+            conn.execute("UPDATE knowledge_points SET figure_paths=?", (encoded,))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _redirect_directory(self, link, target):
+        target.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            quote = lambda path: "'" + str(path).replace("'", "''") + "'"
+            command = (
+                f"New-Item -ItemType Junction -Path {quote(link)} "
+                f"-Target {quote(target)} | Out-Null"
+            )
+            subprocess.run(
+                ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        else:
+            link.symlink_to(target, target_is_directory=True)
+
     def test_push_writes_owner_searchable_index(self):
         report = figure_mirror.sync(self.pool, self.repo, "push")
 
@@ -63,6 +92,21 @@ class FigureMirrorIndexTests(unittest.TestCase):
 
         self.assertEqual(report["index"]["status"], "different")
         self.assertEqual(index_path.read_text(encoding="utf-8"), "{}\n")
+
+    def test_empty_push_rejects_an_index_root_outside_the_checkout(self):
+        self._set_all_paths([])
+        self.assertEqual(figure_mirror.references(self.pool), [])
+        outside_course = Path(self.fixture.tmp.name) / "outside-index-course"
+        self._redirect_directory(
+            self.repo / "figures" / "dmath", outside_course
+        )
+        outside_index = outside_course / "_index.json"
+        outside_index.write_text("keep\n", encoding="utf-8")
+
+        with self.assertRaises(figure_mirror.FigureMirrorError):
+            figure_mirror.sync(self.pool, self.repo, "push")
+
+        self.assertEqual(outside_index.read_text(encoding="utf-8"), "keep\n")
 
 
 if __name__ == "__main__":

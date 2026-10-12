@@ -110,29 +110,47 @@ def references(pool):
     ]
 
 
-def _safe_target(root, course, logical):
+def _safe_target(root, course, logical, anchor):
+    anchor = Path(anchor).resolve()
     root = Path(root).resolve()
+    if not root.is_relative_to(anchor):
+        raise FigureMirrorError("figure asset root leaves its workspace or checkout")
     path = _logical_path(course, logical)
     target = (root / Path(*path.parts)).resolve()
-    if not target.is_relative_to(root):
+    if not target.is_relative_to(root) or not target.is_relative_to(anchor):
         raise FigureMirrorError(f"figure path leaves its asset root: {logical}")
     return target
 
 
 def repo_path(repo, course, logical):
-    return _safe_target(Path(repo).resolve() / "figures", course, logical)
+    repo_root = Path(repo).resolve()
+    return _safe_target(repo_root / "figures", course, logical, repo_root)
 
 
 def workspace_paths(pool, logical):
-    canonical = _safe_target(pool.root / "figures", pool.course, logical)
-    legacy = _safe_target(pool.root / ".lessonkit" / "figures", pool.course, logical)
+    workspace_root = Path(pool.root).resolve()
+    canonical = _safe_target(
+        workspace_root / "figures", pool.course, logical, workspace_root
+    )
+    legacy = _safe_target(
+        workspace_root / ".lessonkit" / "figures", pool.course, logical,
+        workspace_root,
+    )
     return canonical, legacy
 
 
 def index_path(repo, course):
-    if not isinstance(course, str) or not course or "/" in course or "\\" in course:
+    if (not isinstance(course, str) or not course or course in {".", ".."}
+            or "/" in course or "\\" in course):
         raise FigureMirrorError(f"invalid course id for figure index: {course!r}")
-    return Path(repo).resolve() / "figures" / course / "_index.json"
+    repo_root = Path(repo).resolve()
+    asset_root = (repo_root / "figures").resolve()
+    if not asset_root.is_relative_to(repo_root):
+        raise FigureMirrorError("figure index asset root leaves its checkout")
+    target = (asset_root / course / "_index.json").resolve()
+    if not target.is_relative_to(asset_root) or not target.is_relative_to(repo_root):
+        raise FigureMirrorError("figure index path leaves its checkout")
+    return target
 
 
 def _index_value(course, refs):
@@ -180,6 +198,11 @@ def _same_bytes(left, right):
     return left.is_file() and right.is_file() and left.read_bytes() == right.read_bytes()
 
 
+def _legacy_hash_identity(logical):
+    stem = PurePosixPath(logical).stem
+    return len(stem) == 64 and all(char in "0123456789abcdef" for char in stem)
+
+
 def plan(pool, repo, direction="check"):
     """Classify every pool-referenced figure without writing any file."""
     if direction not in DIRECTIONS:
@@ -197,6 +220,7 @@ def plan(pool, repo, direction="check"):
             "index": {"status": "not_checked"},
         }
 
+    index = _index_status(repo, pool.course, refs)
     for ref in refs:
         logical = ref["logical"]
         target = repo_path(repo, pool.course, logical)
@@ -208,6 +232,23 @@ def plan(pool, repo, direction="check"):
             "workspace_path": str(canonical),
             "legacy_workspace_path": str(legacy),
         }
+        if _legacy_hash_identity(logical):
+            copies = [path for path in (target, canonical, legacy) if path.is_file()]
+            if (direction == "pull" and target.is_file()
+                    and not canonical.is_file() and not legacy.is_file()):
+                item.update({
+                    "status": "conflict",
+                    "error": "hash-named repository figure has no workspace baseline",
+                })
+                items.append(item)
+                continue
+            if copies and any(not _same_bytes(copies[0], path) for path in copies[1:]):
+                item.update({
+                    "status": "conflict",
+                    "error": "existing hash-named figure copies contain different bytes",
+                })
+                items.append(item)
+                continue
         if direction == "push":
             if source is None:
                 item.update({
@@ -248,12 +289,11 @@ def plan(pool, repo, direction="check"):
                 item.update({"status": "different", "source": source_kind})
         items.append(item)
 
-    index = _index_status(repo, pool.course, refs)
     return {
         "kind": "figure-mirror",
         "course": pool.course,
         "direction": direction,
-        "valid": not any(item["status"] == "invalid" for item in items),
+        "valid": not any(item["status"] in {"invalid", "conflict"} for item in items),
         "items": items,
         "index": index,
     }

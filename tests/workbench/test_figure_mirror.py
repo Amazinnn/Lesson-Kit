@@ -1,7 +1,9 @@
 """Version-controlled binary figure projection and legacy workspace compatibility."""
 
 import json
+import os
 import sqlite3
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -53,6 +55,23 @@ class FigureMirrorTests(unittest.TestCase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(payload)
 
+    def _redirect_directory(self, link, target):
+        target.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            quote = lambda path: "'" + str(path).replace("'", "''") + "'"
+            command = (
+                f"New-Item -ItemType Junction -Path {quote(link)} "
+                f"-Target {quote(target)} | Out-Null"
+            )
+            subprocess.run(
+                ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", command],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        else:
+            link.symlink_to(target, target_is_directory=True)
+
     def test_push_imports_a_legacy_runtime_figure(self):
         self._write(self._legacy(), b"legacy-bytes")
 
@@ -83,6 +102,117 @@ class FigureMirrorTests(unittest.TestCase):
         self.assertEqual(report["applied"], 1)
         self.assertEqual(self._canonical().read_bytes(), b"github-edited-bytes")
         self.assertEqual(self._legacy().read_bytes(), b"github-edited-bytes")
+
+    def test_pull_refuses_changed_bytes_at_a_legacy_hash_identity(self):
+        logical = (
+            "dmath/ch06/ba7816bf8f01cfea414140de5dae2223"
+            "b00361a396177a9cb410ff61f20015ad.png"
+        )
+        self._set_paths([logical])
+        canonical, legacy, repository = (
+            self._canonical(logical), self._legacy(logical), self._repo(logical)
+        )
+        self._write(canonical, b"abc")
+        self._write(legacy, b"abc")
+        self._write(repository, b"edited-repository-bytes")
+
+        report = figure_mirror.sync(self.pool, self.repo, "pull")
+
+        self.assertFalse(report["valid"])
+        self.assertEqual(report["items"][0]["status"], "conflict")
+        self.assertEqual(canonical.read_bytes(), b"abc")
+        self.assertEqual(legacy.read_bytes(), b"abc")
+        self.assertEqual(repository.read_bytes(), b"edited-repository-bytes")
+
+    def test_pull_refuses_a_legacy_hash_without_a_workspace_baseline(self):
+        logical = (
+            "dmath/ch06/ba7816bf8f01cfea414140de5dae2223"
+            "b00361a396177a9cb410ff61f20015ad.png"
+        )
+        self._set_paths([logical])
+        repository = self._repo(logical)
+        self._write(repository, b"repo-only-bytes")
+
+        report = figure_mirror.sync(self.pool, self.repo, "pull")
+
+        self.assertFalse(report["valid"])
+        self.assertEqual(report["items"][0]["status"], "conflict")
+        self.assertFalse(self._canonical(logical).exists())
+        self.assertFalse(self._legacy(logical).exists())
+        self.assertEqual(repository.read_bytes(), b"repo-only-bytes")
+
+    def test_a_workspace_hash_copy_can_seed_and_restore_matching_repository_bytes(self):
+        logical = (
+            "dmath/ch06/ba7816bf8f01cfea414140de5dae2223"
+            "b00361a396177a9cb410ff61f20015ad.png"
+        )
+        self._set_paths([logical])
+        canonical, legacy, repository = (
+            self._canonical(logical), self._legacy(logical), self._repo(logical)
+        )
+        self._write(canonical, b"abc")
+
+        pushed = figure_mirror.sync(self.pool, self.repo, "push")
+        pulled = figure_mirror.sync(self.pool, self.repo, "pull")
+
+        self.assertTrue(pushed["valid"])
+        self.assertEqual(repository.read_bytes(), b"abc")
+        self.assertTrue(pulled["valid"])
+        self.assertEqual(canonical.read_bytes(), b"abc")
+        self.assertEqual(legacy.read_bytes(), b"abc")
+
+    def test_push_refuses_changed_bytes_at_a_legacy_hash_identity(self):
+        logical = (
+            "dmath/ch06/ba7816bf8f01cfea414140de5dae2223"
+            "b00361a396177a9cb410ff61f20015ad.png"
+        )
+        self._set_paths([logical])
+        canonical, legacy, repository = (
+            self._canonical(logical), self._legacy(logical), self._repo(logical)
+        )
+        self._write(canonical, b"edited-workspace-bytes")
+        self._write(legacy, b"edited-workspace-bytes")
+        self._write(repository, b"abc")
+
+        report = figure_mirror.sync(self.pool, self.repo, "push")
+
+        self.assertFalse(report["valid"])
+        self.assertEqual(report["items"][0]["status"], "conflict")
+        self.assertEqual(canonical.read_bytes(), b"edited-workspace-bytes")
+        self.assertEqual(legacy.read_bytes(), b"edited-workspace-bytes")
+        self.assertEqual(repository.read_bytes(), b"abc")
+
+    def test_top_level_figure_root_cannot_redirect_outside_workspace(self):
+        outside = Path(self.fixture.tmp.name) / "outside-top-level"
+        self._redirect_directory(self.ws / "figures", outside)
+        self._write(self._repo(), b"repository-bytes")
+
+        with self.assertRaises(figure_mirror.FigureMirrorError):
+            figure_mirror.sync(self.pool, self.repo, "pull")
+
+        self.assertFalse((outside / self.logical).exists())
+
+    def test_legacy_figure_root_cannot_redirect_outside_workspace(self):
+        outside = Path(self.fixture.tmp.name) / "outside-legacy"
+        self._redirect_directory(self.ws / ".lessonkit" / "figures", outside)
+        self._write(self._repo(), b"repository-bytes")
+
+        with self.assertRaises(figure_mirror.FigureMirrorError):
+            figure_mirror.sync(self.pool, self.repo, "pull")
+
+        self.assertFalse((outside / self.logical).exists())
+        self.assertFalse(self._canonical().exists())
+
+    def test_repository_figure_root_cannot_redirect_outside_checkout(self):
+        outside = Path(self.fixture.tmp.name) / "outside-repository"
+        self._redirect_directory(self.repo / "figures", outside)
+        self._write(outside / self.logical, b"repository-bytes")
+
+        with self.assertRaises(figure_mirror.FigureMirrorError):
+            figure_mirror.sync(self.pool, self.repo, "pull")
+
+        self.assertFalse(self._canonical().exists())
+        self.assertFalse(self._legacy().exists())
 
     def test_check_is_read_only_and_reports_differences(self):
         self._write(self._canonical(), b"local")
