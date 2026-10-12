@@ -41,7 +41,7 @@
 | `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；来源筛选 `--source-kind`·`--origin-kinds`·`--exam-year`·`--source-evidence` 均可重复，另有 `--search-stem`/`--search-source` 两个关键词域；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
 | `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检，apply 单事务多题，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
-| `evidence <workspace> kp <kp-id> [--limit 1..20]` | 读（按知识点返回有界近期作答、可读题面及实际记录结果；默认 8 条并报告 `has_more`） | Agent |
+| `evidence <workspace> kp <kp-id> [--limit 1..20]` | 只读（按知识点返回有界近期作答、可读题面及实际记录结果；默认 8 条并报告 `has_more`，不推断学习标签） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容；`data <ws> audit` 只读报告重复、片段、标题和图片问题） | Agent |
 | `mirror`（`init/check/status/sync`；`--repo` 指向本地内容仓库 checkout；支持 `--entity` 与 `sync --dry-run`） | 读 + **显式变更**（在知识池与版本化 JSON authored-content projection 之间按单实体同步；不执行 Git 网络操作，不因仓库缺文件或删除请求删池内容） | Agent |
@@ -49,6 +49,10 @@
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
+
+## 已安装的 Agent 契约模块
+
+`python -m workbench.bridge.agent_contracts list` 列出 `commands`、`attempts`、`practice`、`actions`、`content` 五个主题；`python -m workbench.bridge.agent_contracts <topic>` 只打印对应静态契约，不读取或写入学习数据。这是模块入口，不增加 `lesson-kit` 顶层命令。
 
 > **机器权威**：每条路由与命令的受众（Agent / 人 / 双 / 仅浏览器）与状态登记在
 > `workbench/surface.py`，由 `tests/workbench/test_cli_surface.py` 与真实 parser /

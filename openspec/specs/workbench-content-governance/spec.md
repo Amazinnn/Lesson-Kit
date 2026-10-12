@@ -290,9 +290,9 @@ the stored value.
 - **WHEN** a learner asks to import a textbook proof exercise without requesting adaptation
 - **THEN** a formal source problem is created and no choice options are invented
 
-#### Scenario: A localized label is not a problem type value
+#### Scenario: A localized label is not a problem type value for an ordinary problem
 
-- **WHEN** a manifest supplies `problem_type` as the Chinese label `证明题`
+- **WHEN** an ordinary formal-problem manifest item without `quiz_type` or `micro_quiz` supplies `problem_type` as the Chinese label `证明题`
 - **THEN** the deterministic gate rejects it without writing, while the English value `proof` remains valid
 
 #### Scenario: Explicit micro adaptation

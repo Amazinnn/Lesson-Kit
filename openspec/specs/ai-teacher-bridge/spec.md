@@ -574,32 +574,6 @@ corrected invocation without automatically failing the whole conversation.
 - **WHEN** the Agent corrects a failed invocation and issues a new successful call
 - **THEN** both activities retain their own outcomes and the Agent reports success only from the successful result
 
-### Requirement: On-demand Agent contract disclosure
-
-The turn prompt SHALL provide a compact map to the read-only installed module
-`python -m workbench.bridge.agent_contracts`. Its `list` topic SHALL enumerate
-exactly the existing `commands`, `attempts`, `practice`, `actions`, and `content`
-topics; requesting one of those topics SHALL print its detailed contract without
-reading or writing learner data. Before a specialized action, the Agent SHALL
-read the matching topic. Ordinary tutoring SHALL NOT require unrelated topics.
-This module SHALL remain a module entry point and SHALL NOT add a `lesson-kit`
-top-level command.
-
-#### Scenario: Discover and read an existing contract topic
-
-- **WHEN** an Agent needs the content action rules
-- **THEN** it can list the five existing topics and read `content` through the installed module before preparing the action
-
-#### Scenario: Ordinary tutoring keeps the compact map
-
-- **WHEN** an Agent answers an ordinary tutoring question
-- **THEN** the turn prompt does not require loading unrelated detailed topics
-
-#### Scenario: The commands topic includes historical evidence access
-
-- **WHEN** an Agent needs evidence for a historical learning claim
-- **THEN** the `commands` topic identifies the read-only `lesson-kit evidence <workspace> kp <kp-id> [--limit 1..20]` route, its default of 8 and maximum of 20 records, and that it reports recorded facts without inferred learning labels
-
 ### Requirement: Learner-requested Agent attempt recording
 
 The Agent MAY inspect accessible workspace material and use the public

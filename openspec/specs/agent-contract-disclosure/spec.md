@@ -9,6 +9,11 @@ Keep ordinary tutoring turns focused on the learner's current question while pre
 Every external-Agent turn SHALL receive the rebuilt Lesson Kit context, the learner message, the read/write boundary, and a compact map of available Lesson Kit capabilities. Detailed manifests and mutation schemas SHALL NOT need to be repeated in full on every ordinary tutoring turn.
 
 The compact map SHALL tell the Agent how to discover the installed detailed contracts at runtime. Contract discovery SHALL work from a learner workspace without requiring access to the Lesson Kit source checkout.
+The installed module SHALL expose exactly the existing `commands`, `attempts`,
+`practice`, `actions`, and `content` topics through
+`python -m workbench.bridge.agent_contracts list`; requesting one topic SHALL
+print its static contract without reading or writing learner data. The module
+route SHALL NOT add a `lesson-kit` top-level command.
 
 #### Scenario: Ordinary tutoring question
 
@@ -19,6 +24,11 @@ The compact map SHALL tell the Agent how to discover the installed detailed cont
 
 - **WHEN** the Agent needs the exact contract for commands, attempts, practice composition, UI actions, or managed content
 - **THEN** it can load that contract on demand from the installed Lesson Kit runtime before performing the action
+
+#### Scenario: Discover the existing contract topics
+
+- **WHEN** the Agent lists the installed detailed contracts from a learner workspace
+- **THEN** it receives exactly `commands`, `attempts`, `practice`, `actions`, and `content`, and can request one topic without requiring the source checkout
 
 ### Requirement: Read scope may expand proactively while writes remain intent-gated
 

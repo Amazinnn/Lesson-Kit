@@ -11,6 +11,7 @@
 | **practice 记录** | 记一次尝试（作答原文/卡点/状态） | problem_attempts | `/practice`（API/CLI） |
 | **attempts 代录与更正**（2026-09-24） | 尝试清单校验（字段白名单、题目存在、评分 1–5、题内不重复）→ check 零写入预检 → apply 单事务写尝试 + 复用 feedback 四件套（带评分时）+ 操作留痕（含 effect 前后投影快照）；同 `request_id` 同内容幂等回放、异内容拒绝；correct 按 attempt-id 整体替换：先比对快照（投影被更晚活动改过、或还有更晚尝试即拒），再恢复前快照、按新评分重算、更新快照；无评分的尝试不碰任何投影 | problem_attempts、feedback_events、attempt_operations、learner_signals、learning_current_state、problem_progress、review_schedule | CLI `attempts`（check/apply/correct/list/get） |
 | **学习证据查询**（2026-10-12） | 按知识点读取最多 20 条最新作答，附当前题面及实际记录的作答、判定、评分/评语与时间；只读且不推断学习特征 | knowledge_points、problems、problem_attempts、feedback_events | CLI `evidence` |
+| **按需 Agent 契约披露**（`bridge.agent_contracts`） | 只读打印已安装的 `commands`、`attempts`、`practice`、`actions`、`content` 五个静态契约主题；不访问学习数据 | — | `python -m workbench.bridge.agent_contracts <topic>` |
 | **答卷目录 sources**（2026-09-24） | 每工作区一份只读目录清单（可位于工作区之外）；只存目录路径，不复制图片、不建索引 | answer-sources.json | CLI `attempts sources add/list/remove` |
 | **内容批次 content-bundle**（2026-09-23；2026-09-25 起可跨章） | 一份清单同时含知识点/正式题/微题/闪卡/必需原图：整批预检（引用、契约、来源证据、图片字节、目标冲突）→一份备份→单事务 apply→**按章各一个批次 id**；条数无上限、章数无上限；每项可声明自己的 `chapter`（缺省顶层；推不出章即点名拒收，**不回退当前章**），发号/图片目录/重复检查都跟随该项的章；内联清单照收（`kind` 或 `type` 写 `content-bundle`）；任一条不合法或缺图即整批零写入；图片按原始字节落对应章的 `.lessonkit/figures/{course}/{chapter}/`。**题型在入库时可选**：不给 `quiz_type`=综合题，`yes_no`=判断，`single_choice`/`multiple_choice`=小测；**客观题允许无答案键**（不判分、计入 `keyless` 计数并披露，可事后用 `data update problem` 补键）；普通题声明小测/判断模式而不给 `quiz_type` 即拒收并给修法 | knowledge_points、problems、flash_cards、figures | 桥内容动作、CLI `ingest` |
 | **门禁配方 micro-quiz** | manifest（micro-quiz-patch）确定性校验→备份→单事务 apply；重复 id 拒收；**id 前缀必须等于本工作区课程**；**难度可选（1-5 + 依据同现，依据不落盘）**（2026-09-21；2026-09-23 起为兼容通道，推荐 content-bundle） | problems | CLI `ingest recipe` |
@@ -27,8 +28,9 @@
 | **查询 queries** | hub 统计（四项整课程口径）/due 列表/图谱模型/kp 详情/review 概览（标签全长）；章透镜下的取数走 `Pool.scope_prefix()` | 全表只读 | 多个 GET API |
 | **计划 planning** | 每日建议（≤3 条人话）+ 失败保留上次结果 | 全表只读 + plan.json | `/plan`、建议区 |
 
-> `bridge/` 现存两个模块：`conversation_providers.py`（发现 + 命令构建 + 事件归一化）
-> 与 `conversations.py`（轮次生命周期）。旧的 runner/contracts/teacher 三件套与
+> `bridge/` 会话核心由 `conversation_providers.py`（发现 + 命令构建 + 事件归一化）
+> 与 `conversations.py`（轮次生命周期）协作；`conversation_actions.py` 与 `pi_rpc.py` 提供动作处理和 Pi RPC 支持。
+> `agent_contracts.py` 是单独的只读模块入口，输出按需读取的五个详细契约主题。旧的 runner/contracts/teacher 三件套与
 > `lesson-kit ai` 子命令、`GET /ai/task-providers` 门槛端点已于 remove-explain-diagnose 退役。
 >
 > `surface.py`（接口归属表）不是服务，是登记：每条路由/命令的受众，由测试与真实
