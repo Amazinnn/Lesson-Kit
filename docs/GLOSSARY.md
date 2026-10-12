@@ -160,7 +160,7 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次被记录的交互，保存当时的作答文本、卡点标记与评分。来源有两条：学生在练习页**每次提交作答**都会落一行（状态 `answered`，带选项文本与客观判定），或学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定」的关闭自评规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
+与一道正式题的一次已持久记录的交互，保存当时的作答文本、卡点标记与评分。学生在练习页提交后，服务端接受写入时创建状态为 `answered` 的行（含选项文本与客观判定）；浏览器已提交但写入尚未确认的内容仍是浏览器状态，不等于一条已保存的尝试。另一来源是学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定」的关闭自评规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
 _Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
 
@@ -372,6 +372,11 @@ _Avoid_：评分方式（与 1–5 自评本身混淆）
 一次进行中的练习：单一练习模式 + 不重复的题目队列 + 当前题 + 已见题集合。标签页级存在（sessionStorage），刷新同标签页可恢复；关闭标签页不留任何未提交记录。
 _Avoid_：Agent 对话会话（另一个「会话」，见该条）
 出处：review-workbench spec「Practice session」「Session interruption recovery」
+
+### 上一题结果视图 / Previous Result View
+练习已进入下一道未答普通题时，回看紧邻上一道普通题的只读界面。它显示浏览器当前持有的已提交答案或「不会」状态、已有判定和可用答案/解析；可把这道题和提交答案作为本轮 Agent 上下文。它不移动练习游标、不写尝试或反馈，也不证明对应提交已持久保存。闪卡仍使用「上一张 / 下一张」移动游标。
+_Avoid_：把回看当作重新作答、把浏览器已提交视为服务端已保存、把闪卡回翻当作本视图
+出处：practice-review spec
 
 ### 自评 / Self-Rating
 学习者对一道完成题的显式 1–5 打分（可带自然语言备注），写入对应反馈并按评分更新学习投影。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可另按 off 规则折算。

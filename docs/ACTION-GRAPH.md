@@ -48,6 +48,7 @@ flowchart LR
     PULL[拉题/拉卡]
     ANS[作答+判分横幅]
     REV[揭示/回翻]
+    PREV[普通题上一题结果回看<br/>只读]
     RATE[自评 1-5]
     END[收束页统一评分]
   end
@@ -74,7 +75,9 @@ flowchart LR
   DB[(池数据库)]
   FS[(工作区文件)]
 
-  P --> PULL & ANS & REV & RATE & END
+  P --> PULL & ANS & REV & PREV & RATE & END
+  PREV -->|返回当前题| P
+  PREV -->|本轮聚焦上下文| A
   PULL --> DB
   RATE & END --> FB --> DB
   K --> GSTATE --> DB
@@ -96,6 +99,7 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-10-12 普通题上一题结果回看（practice-review）：下一道未答普通题出现后，上一题结果可只读查看并作为本轮 Agent 焦点；回看不移动练习游标、不写尝试或反馈，也不证明浏览器提交已持久保存。闪卡仍沿用上一张/下一张游标导航。见 L3 动作登记。
 - 2026-10-12 学习证据查询（agent-learning-evidence）：新增只读 CLI `evidence`，按知识点
   返回最多 20 条近期作答及当前题面/实际记录结果；缺库时拒绝连接且不建文件。L0/L1/L2/L3
   登记既有表读取者、查询服务、命令与只读动作；L4 在需要历史依据的 Agent 对话中登记按需读取。
