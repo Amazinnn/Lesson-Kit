@@ -209,6 +209,21 @@ _Avoid_：历史更正流水、静默改写后续学习记录
 _Avoid_：把草稿当尝试、把浏览器内容当权威事实、整页 DOM
 出处：workbench-ui spec「Authoritative page context for Agent turns」
 
+### 页面锚点 / Page Anchor
+练习页当前可见、并已由知识池解析出的正式题。它标明学生正在看的题；即使消息明确把轮次焦点指向上一题或近期题目组，页面锚点仍保留当前题。
+_Avoid_：随轮次焦点移动、把浏览器提交的裸 id 当题目事实
+出处：`agent-context` spec「Current page is an anchor rather than a forced turn target」
+
+### 近期练习工作集 / Recent Practice Working Set
+练习页 Agent 轮次中的有界题目上下文：先包含页面锚点对应的正式题；仅当该题也是同一 active practice 的题目时，再附最近最多四道已结算的前序正式题。前序题按练习顺序选取，闪卡不占题目槽；题面、尝试与反馈由服务端从知识池重建。
+_Avoid_：整轮次展开、从别的 active practice 借前序题、把闪卡当正式题
+出处：`agent-context` spec「Practice turns carry bounded recent settled problem context」
+
+### 轮次焦点 / Turn Focus
+当前 Agent 轮次要回答的题目目标。练习页默认以页面锚点为焦点；只有消息明确且无歧义地指向同一 active practice 中的上一道题或近期题目组时，才改用对应的已解析正式题。否定相对指代或同时提及当前与前序目标时，保留页面默认焦点；没有可解析的页面正式题时不构造题目焦点。
+_Avoid_：被否定的目标、浏览器原始 id、由上下文窗口替学生消解歧义
+出处：`agent-context` spec「Current page is an anchor rather than a forced turn target」
+
 ### 练习集 / Practice Set（界面称「试卷」）
 一份**可复用的有序题目集合**。保存后使用稳定 `ps-NNN` 标识并存于工作区 `.lessonkit/practice-sets/`；编辑它只改变「以后想做什么」，不会产生尝试、进度或评分。开始试卷时把当时的有序题目复制进唯一 active practice，之后执行进度与试卷定义彼此独立。打印/导出仍复用同一清单生成学生卷和解答卷。
 _Avoid_：把试卷本身当作一次作答、把执行进度写回试卷定义
