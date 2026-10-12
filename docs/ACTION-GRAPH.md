@@ -247,3 +247,7 @@ flowchart LR
   两张台账表，L1 登记内容镜像模块，L3 第三节新增三条动作，L4 新增 W9 与四条意外分支。
   引导期加固：不可读仓库文件进入 init 报告并阻断被其点名实体的建档、逐实体写失败不再中断
   整轮、缺失文件恢复在台账失败后可重试。不执行 Git 网络操作，不因仓库缺文件或删除请求删池内容。
+- 2026-10-12/13 图像文件投影修复（versioned-figure-assets，PR113）：新增 `mirror figures` 的
+  工作区/checkout 根目录锚定、派生归属索引预检与旧 64-hex 内容身份保护；L0 登记 checkout
+  二进制文件和索引，L1/L2/L3 登记 Data 模块与 CLI 动作，L4 增加 W10；GLOSSARY、
+  FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL 与 OpenSpec change delta 同步。

@@ -21,9 +21,9 @@ without requiring an immediate workspace rewrite.
 - `lesson-kit mirror <workspace> figures` gains explicit `check`, `push`, and
   `pull` directions.  It operates only on the supplied local checkout and never
   invokes Git network commands.
-- Workspace figure lookup for mirror operations prefers the future top-level
-  `figures/` asset area and falls back to the existing `.lessonkit/figures/`
-  runtime area.
+- After legacy identity checks pass, workspace figure lookup for mirror
+  operations prefers the future top-level `figures/` asset area and falls back
+  to the existing `.lessonkit/figures/` runtime area.
 - Pull writes both the top-level asset copy and the legacy runtime copy during
   the transition, so the existing workbench continues rendering without a flag
   day.

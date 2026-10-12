@@ -45,6 +45,7 @@
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容；`data <ws> audit` 只读报告重复、片段、标题和图片问题） | Agent |
 | `mirror`（`init/check/status/sync`；`--repo` 指向本地内容仓库 checkout；支持 `--entity` 与 `sync --dry-run`） | 读 + **显式变更**（在知识池与版本化 JSON authored-content projection 之间按单实体同步；不执行 Git 网络操作，不因仓库缺文件或删除请求删池内容） | Agent |
+| `mirror <workspace> figures --repo <checkout> --direction check|push|pull [--dry-run]` | 读 + 显式文件复制（池引用是成员关系；检查根目录和目标路径；push 写派生索引；不改池、不修剪、不执行 Git 网络操作） | Agent |
 | `bridge add / add-model / list` | 配置 provider 与**模型条目**（显示名自定，与 harness 解耦）/ 报告解析到的可执行文件、来源与条目 | 人 |
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |

@@ -35,6 +35,13 @@
 | 练习清单 JSON（任意路径） | 一次练习选题的输入清单：标题 + 逐题 id/reason + 复现输入 | CLI `pull --plan` | 已实现（2026-09-25；是输入不是学习记录） |
 | `output/{course}/{chapter}/{chapter}-problem-set.md` · `-solutions.md` | 练习集两份 Markdown（学生卷不含答案与内部标识；缺解「待补」） | CLI `pull --print`（或手工视图流程） | 已实现（2026-09-25 起 CLI 可产出） |
 
+## 本地作者内容仓库 checkout（由调用者提供）
+
+| 文件/目录 | 存什么 | 谁写 | 谁读 |
+|---|---|---|---|
+| `figures/<logical-path>` | 池已引用的原始图像字节；不是 JSON 实体 | CLI `mirror figures --direction push|pull` | workbench / 仓库浏览器 |
+| `figures/<course-id>/_index.json` | 从池当前 `figure_paths` 推导的 UTF-8 图像归属索引；不能更改池引用 | CLI `mirror figures --direction push` | 仓库浏览器 |
+
 ## 浏览器 sessionStorage（标签页本地，v2 会话牌组）
 
 | 键（`_{ws}` 后缀） | 存什么 | 写者 |

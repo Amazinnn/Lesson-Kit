@@ -30,26 +30,33 @@ entity scanner never attempts to decode PNG/JPEG/SVG bytes as UTF-8 entity
 files.
 
 The repository path is exactly `figures/<logical figure path>`. Existing pools
-therefore remain compatible with current hash-based names such as
-`dmath/ch06/<sha256>.png`. Future owner-scoped paths such as
-`dmath/ch06/dmath-ch06-prob-017/fig-001.png` fit the same contract without a
-second storage scheme.
+therefore keep their current hash-based logical paths such as
+`dmath/ch06/<sha256>.png`; this byte projection does not rename them. A legacy
+64-lowercase-hex filename remains a content-hash identity, not a mutable stable
+path. Other existing non-hash paths, including
+`dmath/ch06/dmath-ch06-prob-017/fig-001.png`, can be edited through an explicit
+direction. The repository project does not settle the broader naming strategy.
 
 `figures/<course-id>/_index.json` is a derived navigation index generated from
-the pool references on push. It records each logical path and every problem/KP
-owner so a Git/GitHub client can find a legacy hash-named figure by authored
-object id. It is not a second authority: editing the index never changes pool
-membership or `figure_paths`, and the next push rewrites it canonically.
+the pool references on every push, including an empty reference list. Its UTF-8
+JSON envelope is `{schema_version: 1, course_id, figures}`; each `figures` item
+contains its full `logical_path` and all `{owner_type, owner_id}` pairs. It
+records each problem/KP owner so a repository browser can find a legacy
+hash-named figure by authored object id. It is not a second authority: editing
+the index never changes pool membership or `figure_paths`, and the next push
+rewrites it canonically. The resolved index path is checked against the supplied
+checkout before any figure copy, even when there are no figure references.
 
 ## 3. Workspace compatibility
 
-Mirror operations resolve a logical figure in this order:
+After the legacy identity check passes, mirror operations resolve a logical
+figure in this order:
 
 1. `<workspace>/figures/<logical>` — the future visible authored-asset area;
 2. `<workspace>/.lessonkit/figures/<logical>` — the current runtime/ingest area.
 
-Push uses the first existing copy. Pull writes the repository bytes to both
-locations. This dual-write is transitional: the current workbench server and
+For eligible assets, push uses the first existing copy. Pull writes the
+repository bytes to both locations. This dual-write is transitional: the current workbench server and
 ingest rollback logic continue reading `.lessonkit/figures`, while local Agents
 may begin using the top-level `figures/` area immediately.
 
@@ -64,13 +71,21 @@ provides three explicit directions:
 
 - `check`: read-only comparison. Reports same, different, repository-missing,
   workspace-missing, or invalid, and reports the index state separately.
-- `push`: workspace bytes are authoritative for this invocation and are copied
-  to the repository; the owner index is then written canonically.
+- `push`: for assets that pass legacy identity checks, workspace bytes are
+  authoritative for this invocation and are copied to the repository; the
+  owner index is then written canonically.
 - `pull`: repository bytes are authoritative for this invocation and are copied
   to the workspace canonical and legacy compatibility locations.
 
-There is no automatic winner. A differing file is not silently overwritten by
-`check`; the caller must choose push or pull.
+There is no automatic winner. `check` never overwrites a differing file.
+Other existing non-hash paths may be overwritten only by an explicit push or
+pull. For a legacy hash identity, every existing workspace and
+repository copy must contain the same bytes; any mismatch is a conflict and
+blocks the full planned operation before file writes. Pull also refuses a
+repository-only hash file when both workspace copies are missing, because no
+local baseline can establish that the bytes still match the identity. A local
+copy may seed the repository or a matching compatibility copy. No new hash is
+computed and no logical path is renamed.
 
 `--dry-run` computes the same push/pull plan without writing.
 
@@ -91,7 +106,12 @@ files are validated. Logical paths must:
 If any referenced source required by the selected direction is missing, the
 operation writes nothing. Individual file replacement and index replacement use
 a temporary sibling plus `os.replace` so readers do not observe half-written
-bytes.
+bytes. These are per-file replacements, not an all-file transaction; a later
+operating-system write failure may leave earlier files applied. Resolved
+workspace asset roots/targets must remain inside the registered workspace, and
+resolved repository asset roots/targets/index must remain inside the supplied
+checkout. This includes roots or targets redirected by symlinks or Windows
+junctions. Unsafe paths are rejected before they are read or written.
 
 This version never deletes or prunes an extra repository/workspace image. That
 is intentionally conservative because Git history already handles obsolete

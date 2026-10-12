@@ -25,14 +25,20 @@
 - [x] 3.5 Cover all-source prevalidation and path traversal/foreign-course refusal.
 - [x] 3.6 Cover a logical figure shared by multiple authored owners.
 - [x] 3.7 Cover canonical owner-index generation and stale-index reporting.
+- [x] 3.8 Refuse differing existing copies at a legacy 64-hex content identity and refuse a repo-only pull without a workspace baseline.
+- [x] 3.9 Cover workspace/repository root redirection with Windows junctions or symlinks.
+- [x] 3.10 Preflight the derived index path before copies, including an empty reference list.
+- [x] 3.11 Reject missing/non-file or unmanaged pool databases while preserving legacy owner tables without `figure_paths` columns.
 
 ## 4. Contract and handoff
 
 - [x] 4.1 Define the repository `figures/<course>/...` binary asset area.
 - [x] 4.2 Keep figure bytes outside JSON envelopes and SQLite.
 - [x] 4.3 Document the temporary dual workspace layout while current bulk repair runs.
-- [x] 4.4 Run repository CI and resolve any contract/test failures.
+- [ ] 4.4 Run exact-head repository CI and resolve any contract/test failures.
 - [x] 4.5 Open a reviewable PR without merging it while the owner is occupied with local repair work.
+- [x] 4.6 Reconcile the glossary, capability delta, file contract, DATA_MODEL, architecture, manual, and action graph after the PR113 audit.
+- [x] 4.7 Record the bounded fix and its per-file atomicity limit in the dated handoff.
 
 ## Follow-up, intentionally out of scope
 
