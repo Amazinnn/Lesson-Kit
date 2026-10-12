@@ -29,10 +29,10 @@ The JSON report SHALL include one result per scenario with its name, kind, pass 
 - **WHEN** a history row contains a Boolean false verdict and readable problem text
 - **THEN** it counts as learner evidence
 
-#### Scenario: Preserve the retrieval baseline
+#### Scenario: Current evidence query closes the retrieval gap
 
-- **WHEN** the current three-scenario fixture runs against the existing data primitives
-- **THEN** it reports 2 of 3 scenarios passed, recall `0.75`, and 4 primitive reads
+- **WHEN** the current three-scenario fixture runs against the existing data primitives, including the bounded knowledge-point evidence query
+- **THEN** it reports 3 of 3 scenarios passed, recall `1.0`, and 4 primitive reads
 
 ### Requirement: Keep the diagnostic read-only and local
 

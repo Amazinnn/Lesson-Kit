@@ -96,6 +96,9 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-10-12 学习证据查询（agent-learning-evidence）：新增只读 CLI `evidence`，按知识点
+  返回最多 20 条近期作答及当前题面/实际记录结果；缺库时拒绝连接且不建文件。L0/L1/L2/L3
+  登记既有表读取者、查询服务、命令与只读动作；L4 在需要历史依据的 Agent 对话中登记按需读取。
 - 2026-10-09 正文排版检出（implement-kp-text-typesetting-check）：既有内容清单
   有效检查/成功 apply 与 pool validator 报告新增同口径的 `typesetting` 结果，
   Bridge 动作结果保留它；纯检查不新增写入动作、门禁、CLI 选项或退出码。

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from workbench import registry
 from workbench.data import content
+from workbench.data import evidence
 from workbench.data import pool as pool_mod
 
 
@@ -102,19 +103,19 @@ def _kp_history(pool, scenario):
     if not isinstance(expected_text, str) or not expected_text:
         raise ValueError("kp_history scenario requires expected_problem_text")
 
-    history = content.history(pool, "kp", kp_id)
-    evidence = _human_problem_evidence(history)
+    history = evidence.for_kp(pool, kp_id)
+    rows = _human_problem_evidence(history)
     expected_folded = expected_text.casefold()
     found = {expected_text} if any(
         expected_folded == row["problem_text"].casefold()
-        for row in evidence
+        for row in rows
     ) else set()
     return _result(
         {expected_text}, found, primitive_reads=1,
         detail={
             "kp_id": kp_id,
-            "human_evidence_rows": len(evidence),
-            "requirement": "one history read should include problem text plus learning evidence",
+            "human_evidence_rows": len(rows),
+            "requirement": "one evidence read should include problem text plus learning evidence",
         },
     )
 
