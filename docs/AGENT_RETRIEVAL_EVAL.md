@@ -73,7 +73,7 @@ recall:          0.75
 primitive_reads: 4
 ```
 
-The first two scenarios pass because exact keyword search already finds knowledge points course-wide. The history scenario fails because the generic history read returns knowledge-point feedback/state/schedule/signals, but not attempted problems together with readable question text. An Agent can reconstruct the answer by reading linked problems and their history, but that adds retrieval calls and opportunities to miss evidence. This is a retrieval-cost and reliability gap, not evidence for semantic search. An earlier 3/3 result from the uncorrected evaluator was a false green: timestamps and substring matches could satisfy the history scenario without retrieving the expected problem and a concrete learner outcome.
+The first two scenarios pass because exact keyword search already finds knowledge points course-wide. The history scenario fails because the generic history read returns knowledge-point feedback/state/schedule/signals, but not attempted problems together with readable question text. An Agent can reconstruct the answer by reading linked problems and their history, but that adds retrieval calls and opportunities to miss evidence. This is a retrieval-cost and reliability gap, not evidence for semantic search. The original PR118 fixture also measured 3/3: its `P1` history row had a valid recorded outcome and exactly matched the expected text. However, that evaluator could produce false greens on other inputs: a timestamp-only row could count as learner evidence, and `P1` could match `P10`. Those reproduced classifier defects motivated the PR117 correction; they do not invalidate that fixture's exact result.
 
 ## Current synthetic baseline after the evidence query
 

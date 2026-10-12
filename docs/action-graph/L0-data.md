@@ -6,13 +6,13 @@
 
 | 表 | 存什么 | 谁写 | 谁读 |
 |---|---|---|---|
-| `knowledge_points` | 知识点：条目名/正文/类型/重要性 | 抽取管线（一次性）；图谱编辑（正文） | 拉取、图谱、覆盖审计 |
+| `knowledge_points` | 知识点：条目名/正文/类型/重要性 | 抽取管线（一次性）；图谱编辑（正文） | 拉取、图谱、覆盖审计、`data.evidence` |
 | `knowledge_relations` | KP 关系（类型/方向/强度） | 抽取管线 | 图谱布局 |
-| `problems` | 正式题目（题干/解答/kp_ids/micro_quiz/难度可空 1-5/`exam_year` 可空来源年份） | 门禁配方 ingest、content-bundle、CLI `data` | 拉取、选题组练习、练习 |
+| `problems` | 正式题目（题干/解答/kp_ids/micro_quiz/难度可空 1-5/`exam_year` 可空来源年份） | 门禁配方 ingest、content-bundle、CLI `data` | 拉取、选题组练习、练习、`data.evidence` |
 | `candidate_problems` | **已物理移除**（2026-08-30 remove-candidate-store：表 DROP，pipeline 侧脚本成为无调用方退役物） | —— | —— |
 | `flash_cards` | 闪卡内容 + directions 方向能力（缺省 forward，双向不复制内容行） | 门禁配方 ingest | 拉卡、收束页 |
-| `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点） | `POST /practice`、CLI `practice`、CLI `attempts apply|correct`（2026-09-24） | Agent 上下文、查询、CLI `attempts list|get` |
-| `feedback_events` | 自评事件（评分/备注，含 item_type=card；Agent 代录的事件用 `attempt_id` 指回那次尝试） | `POST /feedback`（四件套之一）、CLI `attempts`（带评分的尝试） | 查询、信号 |
+| `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点） | `POST /practice`、CLI `practice`、CLI `attempts apply|correct`（2026-09-24） | Agent 上下文、查询、CLI `attempts list|get`、`data.evidence` |
+| `feedback_events` | 自评事件（评分/备注，含 item_type=card；Agent 代录的事件用 `attempt_id` 指回那次尝试） | `POST /feedback`（四件套之一）、CLI `attempts`（带评分的尝试） | 查询、信号、`data.evidence` |
 | `learner_signals` | 弱项信号（只加强不自动消除） | 四件套之一 | 建议排序、Agent 上下文 |
 | `review_schedule` | 调度行（每题/每卡/每方向一行：间隔/熟悉度/到期） | 四件套之一；图谱状态编辑 | due/weak/日历工作量 |
 | `ingest_batches` 的批次 | 一次导入按章各一行（batch-NNN + kind + counts + 快照路径 + 备份 + 回滚时刻）；内容行带自己的批次标记，因此可按章撤销 | CLI `ingest apply`/桥内容动作 | `ingest batches`、rollback、结果卡 |

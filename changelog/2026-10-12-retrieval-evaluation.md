@@ -4,7 +4,7 @@ The developer-only retrieval evaluator now counts historical problem evidence on
 
 Historical problem matching now compares the complete text case-insensitively, so `P1` cannot match `P10`. The evaluator refuses a missing or non-file workspace database before connecting, preventing a read from creating a database file. With those PR117 corrections, the existing generic history read measured 2/3 scenarios, recall 0.75, and 4 primitive reads; this is the dated pre-evidence baseline.
 
-The PR118 evidence query replaces the history scenario's generic read. The current fixture now passes 3/3 scenarios with recall 1.0 and 4 primitive reads. The earlier 3/3 result from the uncorrected evaluator was a false green and is not treated as a valid baseline.
+The PR118 evidence query replaces the history scenario's generic read. The current fixture now passes 3/3 scenarios with recall 1.0 and 4 primitive reads under the corrected outcome and full-text rules. The original PR118 fixture also measured 3/3 with a valid `P1` row; its evaluator nevertheless allowed false greens for other timestamp-only and substring-match inputs, as reproduced in the audit.
 
 The current OpenSpec and architecture describe this as a developer diagnostic over existing Data readers. It makes no learner-state writes, provider calls, or product-ordering changes.
 

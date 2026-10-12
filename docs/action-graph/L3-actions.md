@@ -51,6 +51,7 @@
 | 尝试清单预检（零写入） | CLI `attempts check` | Agent | — | 已实现（同上） |
 | 指定尝试更正（撤回旧评分后重算；有更晚活动即零写入拒绝） | CLI `attempts correct <attempt-id>` | Agent（学生明确要求） | attempts 原文/评语/状态 + 事件/信号/状态/进度/调度 + 快照更新 | 已实现（同上） |
 | 尝试与操作留痕读取 | CLI `attempts list\|get` | Agent | — | 已实现（同上） |
+| 按知识点读取学习证据（有界近期作答 + 可读题面，不推断学习特征） | CLI `lesson-kit evidence <workspace> kp <kp-id> [--limit N]` | Agent | —（只读） | 已实现（agent-learning-evidence） |
 | 答卷目录登记（只存路径，不复制图片） | CLI `attempts sources add\|list\|remove` | Agent | `answer-sources.json` | 已实现（同上） |
 | 图谱状态显式编辑（不记反馈） | UI | 人 | 状态+调度 | 已实现 |
 | 图谱关系强度管线与有限消交叉 | UI | 系统 | —（纯视图） | 已实现（graph-relation-pipes） |

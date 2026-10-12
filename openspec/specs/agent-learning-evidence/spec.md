@@ -40,9 +40,9 @@ Reading learning evidence SHALL NOT create or modify attempts, feedback, signals
 
 ### Requirement: Evidence volume is explicitly bounded
 
-The installed CLI SHALL default to a small recent evidence window and SHALL reject invalid or excessive limits rather than silently returning an unbounded history dump.
+The installed CLI SHALL default to 8 recent evidence rows, SHALL accept integer limits from 1 through 20, and SHALL reject invalid or excessive limits rather than silently returning an unbounded history dump. The result SHALL report whether older evidence exists.
 
 #### Scenario: Default evidence read
 
 - **WHEN** the Agent runs `lesson-kit evidence <workspace> kp <kp-id>` without a limit
-- **THEN** Lesson Kit returns at most the configured default recent evidence window and reports whether older evidence exists
+- **THEN** Lesson Kit returns at most 8 recent evidence rows and reports whether older evidence exists
