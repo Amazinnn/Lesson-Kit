@@ -1,0 +1,16 @@
+# Retrieval evaluation repair — 2026-10-12
+
+The developer-only retrieval evaluator now counts historical problem evidence only when the row has nonblank problem text and a concrete outcome. Blank or unrecognized statuses, timestamps alone, and blank answer/note text do not qualify; recognized attempt statuses, numeric 1–5 ratings, and false/true verdicts do. Malformed status values such as lists or objects are ignored safely.
+
+Historical problem matching now compares the complete text case-insensitively, so `P1` cannot match `P10`. The evaluator refuses a missing or non-file workspace database before connecting, preventing a read from creating a database file. Existing manifest fields and the 2/3, 0.75, 4-read baseline remain unchanged.
+
+The current OpenSpec and architecture describe this as a developer diagnostic over existing Data readers. It makes no learner-state writes, provider calls, or product-ordering changes.
+
+Focused verification passed:
+
+- `python -m pytest tests/workbench/test_retrieval_eval.py -q -p no:cacheprovider` — 8 passed.
+- `python -m compileall -q workbench/experiments/retrieval.py tests/workbench/test_retrieval_eval.py` — passed.
+- `openspec validate --specs --strict` — 15 specs passed.
+- `git diff --check` — passed.
+
+Full-suite, installed-runtime, and release/archive acceptance remain with the independent acceptance runner and should be checked against the final commit.
