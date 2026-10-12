@@ -139,6 +139,7 @@ COMMANDS = {
     "attempts": (AGENT, ""),
     "data": (AGENT, "reads/writes current content and runs a read-only content audit"),
     "difficulty": (AGENT, ""),
+    "evidence": (AGENT, "bounded read-only human-readable learner evidence for historical claims"),
     "experience": (AGENT, "explicit CRUD for learner-owned knowledge-point practice experience"),
     "ingest": (AGENT, ""),
     "mirror": (AGENT, "validates and synchronizes the checked-out authored-content JSON projection"),
