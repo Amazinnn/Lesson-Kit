@@ -113,6 +113,18 @@ class AgentPracticeContextTests(unittest.TestCase):
         })
         self.assertEqual(result["working_set"]["kind"], "practice")
 
+    def test_negative_learning_state_words_do_not_cancel_an_affirmative_reference(self):
+        ids = self._start_six_problem_practice()
+
+        for message in ("上一题我不会做", "上一题为什么做不出来"):
+            with self.subTest(message=message):
+                result = self._context(ids[-1], message)
+
+                self.assertEqual(result["focus"]["problem_ids"], [ids[-2]])
+
+        recent = self._context(ids[-1], "前几题我都没理解")
+        self.assertEqual(recent["focus"]["problem_ids"], ids[1:-1])
+
     def test_current_page_remains_default_focus_when_message_has_no_reference(self):
         ids = self._start_six_problem_practice()
 
@@ -123,6 +135,94 @@ class AgentPracticeContextTests(unittest.TestCase):
             "problem_ids": [ids[-1]],
             "basis": "page_anchor",
         })
+
+    def test_previous_reference_is_not_applied_to_a_managed_problem_outside_active_run(self):
+        self._start_six_problem_practice()
+        visible_id = "dmath-ch06-prob-007"
+        self.pool.connect().execute(
+            "INSERT INTO problems "
+            "(problem_id, kp_ids, problem_text, solution, problem_type, source_kind) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (visible_id, '["dmath-ch06-kp-001"]', "Problem 7", "Solution 7",
+             "calculation", "textbook"),
+        )
+        self.pool.commit()
+
+        result = self._context(visible_id, "上一题为什么错了？")
+
+        self.assertEqual(result["focus"], {
+            "type": "problem",
+            "problem_ids": [visible_id],
+            "basis": "page_anchor",
+        })
+        self.assertEqual(
+            [item["problem"]["problem_id"] for item in result["working_set"]["items"]],
+            [visible_id],
+        )
+
+    def test_unknown_visible_id_never_becomes_problem_focus_or_borrows_run_history(self):
+        self._start_six_problem_practice()
+
+        result = self._context("dmath-ch06-prob-999", "上一题为什么错了？")
+
+        self.assertNotIn("focus", result)
+        self.assertNotIn("working_set", result)
+
+    def test_flash_card_visible_id_never_becomes_problem_focus_or_previous_problem(self):
+        from workbench.data import active_practice
+
+        ids = self._start_six_problem_practice()
+        card_id = "dmath-ch06-fc-901"
+        self.pool.connect().execute(
+            "INSERT INTO flash_cards (card_id, kp_id, front, back, source_evidence, directions) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (card_id, "dmath-ch06-kp-001", "Front", "Back", "Test",
+             '["forward", "reverse"]'),
+        )
+        self.pool.commit()
+        active_practice.create(self.pool, {
+            "source_kind": "quick",
+            "source_label": "Mixed context test",
+            "kp_ids": ["dmath-ch06-kp-001"],
+            "practice_mode": "flash_card",
+            "rating_mode": "off",
+            "items": [
+                {"item_type": "problem", "item_id": ids[0]},
+                {"item_type": "card", "item_id": card_id, "direction": "forward"},
+            ],
+        }, replace=True)
+        attempt_id = self.pool.insert_attempt(ids[0], "mastered", choices=[])
+        active_practice.mark(self.pool, 0, "answered", attempt_id=attempt_id)
+
+        result = self._context(card_id, "上一题为什么错了？")
+
+        self.assertNotIn("focus", result)
+        self.assertNotIn("working_set", result)
+
+    def test_negated_or_competing_reference_keeps_visible_problem_as_default_focus(self):
+        ids = self._start_six_problem_practice()
+        messages = (
+            "不是上一题，是这题",
+            "不要解释上一题，只解释当前这题",
+            "前几题不用管，只讲这题",
+            "上一题和这题有什么区别",
+            "上一题和前几题有什么关系",
+        )
+
+        for message in messages:
+            with self.subTest(message=message):
+                result = self._context(ids[-1], message)
+
+                self.assertEqual(result["focus"], {
+                    "type": "problem",
+                    "problem_ids": [ids[-1]],
+                    "basis": "page_anchor",
+                })
+                self.assertEqual(
+                    [item["problem"]["problem_id"]
+                     for item in result["working_set"]["items"]],
+                    ids[1:],
+                )
 
     def test_building_working_context_is_read_only(self):
         ids = self._start_six_problem_practice()

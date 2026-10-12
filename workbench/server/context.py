@@ -3,6 +3,7 @@
 import json
 
 from workbench.data import active_practice, experience, practice_sets, queries
+from workbench.domain import practice_focus
 
 
 # Focused practice drafts ride along with one turn only. They are learner input,
@@ -18,18 +19,6 @@ ACTIVE_ITEMS = 30
 PRACTICE_SETS = 20
 RECORDS = 20
 PRACTICE_RECENT_PROBLEMS = 4
-
-_PREVIOUS_PROBLEM_PHRASES = (
-    "上一题", "上一道题", "上题", "前一题", "前一道题",
-    "前面那题", "前面那道题", "刚才那题", "刚才那道题",
-    "刚刚那题", "刚刚那道题",
-)
-_RECENT_PROBLEMS_PHRASES = (
-    "前几题", "前几道题", "前面几题", "前面几道题",
-    "刚才几题", "刚才几道题", "刚刚几题", "刚刚几道题",
-    "最近几题", "最近几道题",
-)
-
 
 def build(pool, workspace, payload):
     page_type = payload.get("page_type") or "unknown"
@@ -100,7 +89,10 @@ def _practice(pool, payload, result):
         "active_practice": active_summary,
         "selection": _practice_selection(payload.get("practice_selection")),
     }
-    problem = pool.problem(problem_id) if problem_id else None
+    problem = (
+        pool.problem(problem_id)
+        if isinstance(problem_id, str) and problem_id else None
+    )
     if problem:
         result["current"]["problem"] = problem
         result["current"]["knowledge_points"] = [
@@ -109,55 +101,66 @@ def _practice(pool, payload, result):
         result["current"]["submitted_attempts"] = pool.attempts(problem_id)[-10:]
         result["current"]["schedule"] = pool.schedule_get("problem", problem_id)
         result["current"]["state"] = pool.current_state("problem", problem_id)
-    working_items = _practice_working_items(pool, active, problem_id)
+    working_items = _practice_working_items(pool, active, problem)
     if working_items:
         result["working_set"] = {
             "kind": "practice",
             "items": working_items,
         }
-    focus = _practice_focus(payload.get("message"), problem_id, working_items)
+    previous_problem_ids = [
+        item["problem"]["problem_id"] for item in working_items
+        if str(item.get("relation") or "").startswith("previous_")
+        and isinstance(item.get("problem"), dict)
+        and item["problem"].get("problem_id")
+    ]
+    focus = practice_focus.resolve(
+        payload.get("message"),
+        problem.get("problem_id") if problem else None,
+        previous_problem_ids,
+    )
     if focus:
         result["focus"] = focus
     if payload.get("include_draft") is True:
         result["current"]["draft"] = _draft(payload)
 
 
-def _practice_working_items(pool, active, problem_id):
-    """Return the visible problem plus a few preceding settled problems.
-
-    Practice order is the authority. A browser id only selects which managed
-    problem is visible; it never supplies problem or attempt content.
-    """
+def _practice_working_items(pool, active, problem):
+    """Return the managed visible problem and bounded same-run predecessors."""
+    if not problem:
+        return []
     if not active:
-        problem = pool.problem(problem_id) if problem_id else None
-        return ([{
+        return [{
             "relation": "current",
             "position": None,
             "state": None,
             "problem": problem,
-        }] if problem else [])
+        }]
 
     problem_items = [
         item for item in (active.get("items") or [])
         if item.get("item_type") == "problem"
     ]
     visible = next(
-        (item for item in problem_items if item.get("item_id") == problem_id),
+        (item for item in problem_items
+         if item.get("item_id") == problem["problem_id"]),
         None,
     )
-    if visible is not None:
-        visible_position = visible.get("position")
-    else:
-        visible_position = active.get("cursor")
+    if visible is None:
+        return [{
+            "relation": "current",
+            "position": None,
+            "state": None,
+            "problem": problem,
+        }]
 
-    previous = []
-    if isinstance(visible_position, int):
-        previous = [
-            item for item in problem_items
-            if isinstance(item.get("position"), int)
-            and item["position"] < visible_position
-            and item.get("state") in {"answered", "stuck"}
-        ][-PRACTICE_RECENT_PROBLEMS:]
+    visible_position = visible.get("position")
+    previous = [
+        item for item in problem_items
+        if isinstance(visible_position, int)
+        and isinstance(item.get("position"), int)
+        and item["position"] < visible_position
+        and item.get("state") in {"answered", "stuck"}
+    ][-PRACTICE_RECENT_PROBLEMS:]
 
     result = []
     for index, item in enumerate(previous):
@@ -165,15 +168,7 @@ def _practice_working_items(pool, active, problem_id):
             pool, item, relation=f"previous_{len(previous) - index}"
         ))
 
-    if visible is not None:
-        result.append(_practice_problem_context(pool, visible, relation="current"))
-    elif problem_id and (problem := pool.problem(problem_id)) is not None:
-        result.append({
-            "relation": "current",
-            "position": None,
-            "state": None,
-            "problem": problem,
-        })
+    result.append(_practice_problem_context(pool, visible, relation="current"))
     return result
 
 
@@ -200,36 +195,6 @@ def _practice_problem_context(pool, item, relation):
             if feedback is not None:
                 value["feedback"] = feedback
     return value
-
-
-def _practice_focus(message, problem_id, working_items):
-    """Resolve only obvious relative references; leave ambiguous language to the Agent."""
-    text = message if isinstance(message, str) else ""
-    previous = [
-        item for item in working_items
-        if str(item.get("relation") or "").startswith("previous_")
-        and isinstance(item.get("problem"), dict)
-        and item["problem"].get("problem_id")
-    ]
-    if previous and any(phrase in text for phrase in _RECENT_PROBLEMS_PHRASES):
-        return {
-            "type": "problem",
-            "problem_ids": [item["problem"]["problem_id"] for item in previous],
-            "basis": "user_recent_reference",
-        }
-    if previous and any(phrase in text for phrase in _PREVIOUS_PROBLEM_PHRASES):
-        return {
-            "type": "problem",
-            "problem_ids": [previous[-1]["problem"]["problem_id"]],
-            "basis": "user_previous_reference",
-        }
-    if isinstance(problem_id, str) and problem_id:
-        return {
-            "type": "problem",
-            "problem_ids": [problem_id],
-            "basis": "page_anchor",
-        }
-    return None
 
 
 def _active_summary(active):
