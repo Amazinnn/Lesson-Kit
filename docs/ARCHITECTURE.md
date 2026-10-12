@@ -57,10 +57,13 @@ workbench/
 │   ├── content_audit.py # 只读题库卫生检查
 │   ├── difficulty.py  # 显式难度 check/apply 整批事务
 │   ├── attempts.py    # Agent 代录尝试：清单校验、单事务 apply、快照守卫的 correct
+│   ├── evidence.py    # 按知识点读取有界、可读的近期学习证据
 │   ├── practice_sets.py # 练习清单校验/解析与出卷（两份 Markdown，零写入预检）
 │   ├── goals.py       # 工作区本地目标存储
 │   ├── mastery.py     # 掌握度实验的只读数据投影
 │   └── display_metadata.py # 展示字段回填
+├── experiments/
+│   └── retrieval.py   # 开发者诊断：通过 Data 只读接口评估检索事实
 ├── bridge/
 │   ├── __init__.py
 │   ├── conversation_providers.py # Agent harness 发现、统一模型目标、原生新建/续聊命令与轮次预算
@@ -72,6 +75,8 @@ workbench/
 │   └── artifacts.py   # UTF-8 JSON 工件读写与会话暂存清单读取
 ├── cli/
 │   ├── __init__.py
+│   ├── entry.py       # 安装入口的 extension dispatch
+│   ├── evidence.py    # lesson-kit evidence：参数校验与只读 Data 调用
 │   └── main.py        # lesson-kit 入口（argparse；纯数据命令，无教学语义）
 ├── server/
 │   ├── __init__.py
@@ -128,6 +133,8 @@ workbench/
 
 - `registry`：`load() / save() / register(path, name?) -> Workspace / list() -> [Workspace] /
   get(name) -> Workspace`；Workspace = dataclass(name, path, db, active_course, active_chapter)。
+- `experiments.retrieval`：开发者运行的确定性诊断编排，读取现有 Data 接口、在本地计算指标并输出 JSON；不直接访问 SQLite，不写学习状态，不调用 LLM/提供方，也不改变产品检索排序。它不是新的架构层。
+- `data.evidence.for_kp(pool, kp_id, limit=8)`：读取一个知识点下最多 20 条近期作答证据，连同当前题面和可用的已记录结果；缺失或非文件数据库在连接前拒绝。`cli.evidence` 在安装入口再次检查数据库路径，再调用此 Data 查询。
 - `domain.weak.score(pool, course, chapter, now) -> [(kp, score, reasons)]`——原因可解释。
 - `domain.pull.select(pool, kp_ids, n, mode, source_kind?, origin_kinds?, source_group?,
   difficulty_ranges?, strategy?, stem_keywords?, source_keywords?) -> {problems:[...],
