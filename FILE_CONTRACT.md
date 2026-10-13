@@ -269,20 +269,42 @@ fields are limited to the existing governed authored fields:
 
 - `kp`: `knowledge_item`, `graph_label`, `source_location`, `knowledge_type`,
   `related_kp_ids`, `importance`, `learning_action`, `body`, `difficulty`,
-  `fragile`.
+  `fragile`, `figure_paths`.
 - `problem`: `kp_ids`, `problem_text`, `solution`, `problem_type`, `source_kind`,
   `origin_kind`, `display_title`, `display_summary`, `exam_year`,
   `source_evidence`, `source_answer`, `solution_origin`, `practice_modes`,
-  `micro_quiz`.
+  `micro_quiz`, `figure_paths`, `difficulty_knowledge_breadth`,
+  `difficulty_reasoning_depth`, `difficulty_transfer_distance`,
+  `difficulty_construction_openness`, `difficulty`, `difficulty_model`.
 - `relation`: `source_kp_id`, `target_kp_id`, `relation_type`, `direction`,
   `strength`.
 
 JSON arrays and objects stay arrays and objects in the file. `kp_ids` must be an
-array; `related_kp_ids` and `practice_modes` may be arrays or null; `micro_quiz`
-may be an object or null. A JSON string containing serialized array/object text
-is invalid. Unknown fields and changed embedded identity are refused. The
-mirror does not include flash-card entities, figure bytes, specialized problem
-difficulty, or learner/runtime state. It cannot create a repository-only id.
+array; `related_kp_ids`, `practice_modes`, and `figure_paths` may be arrays or
+null; `micro_quiz` may be an object or null. A JSON string containing serialized
+array/object text is invalid. Unknown fields and changed embedded identity are
+refused. Figure entries must be non-empty strings accepted by the existing
+course-relative POSIX path rules: `<course-id>/<chapter>/<filename>` with no
+empty, `.` or `..` segments and a supported figure extension. These are logical
+references only; JSON mirror sync does not create or transfer figure bytes or
+choose a repository-wide naming policy.
+
+The four problem difficulty dimensions, derived `difficulty`, and
+`difficulty_model` form one all-null or complete group. Repository edits change
+the dimensions; the mirror recomputes the derived fields through the existing
+difficulty checker, and a derived-only edit is invalid. A content-axis edit
+clears stale difficulty only for columns present in the pool. Explicit ratings
+requiring an unavailable group are invalid during check; the mirror does not
+migrate or invent pool columns. An older schema omits fields it does not expose.
+The mirror remains limited to knowledge points, durable problems, and
+relations; it excludes flash-card entities and learner/runtime state, and it
+cannot create a repository-only id.
+
+These approved fields are an additive projection within `schema_version: 1`.
+An older v1 baseline or file may omit them. A local pool projection is exported
+at the next revision; another workspace may adopt a complete matching
+projection only at exactly its expected next revision. Revision spoofing,
+wrong-revision payloads, and divergent edits remain invalid or conflicting.
 
 A deletion request has exactly `schema_version`, `request_id`, `course_id`,
 `entity_type`, `entity_id`, and `reason`. It is validated and reported as

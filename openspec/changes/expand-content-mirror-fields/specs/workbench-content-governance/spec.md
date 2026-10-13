@@ -61,9 +61,10 @@ Adding the approved fields SHALL be an additive projection upgrade within JSON
 were not in the earlier projection. When an incoming full projection at exactly
 the expected next revision normalizes to the current pool projection, the
 mirror SHALL allow the older workspace to adopt that revision once and record
-the full baseline. Read-only commands SHALL remain zero-write. A repository
-revision mismatch without this exact projection-upgrade convergence SHALL be
-invalid; a genuine two-sided conflict SHALL remain a conflict.
+the full baseline. Read-only commands SHALL remain zero-write. An unchanged
+repository projection with a mismatched revision SHALL be invalid unless it
+meets this exact projection-upgrade convergence case; changed payloads SHALL
+continue to follow the one-step revision and conflict rules.
 
 #### Scenario: A second workspace adopts the first workspace's projection upgrade
 

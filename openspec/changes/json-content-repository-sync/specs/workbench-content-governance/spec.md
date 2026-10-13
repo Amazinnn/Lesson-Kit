@@ -6,7 +6,7 @@ Lesson Kit SHALL support a checked-out repository that stores governed authored 
 
 For the initial supported projection, each knowledge point, durable problem, and knowledge relation SHALL be represented by one entity JSON object with exactly these envelope fields: `schema_version`, `entity_type`, `entity_id`, `revision`, and `content`. The entity id SHALL be the semantic identity. Moving or renaming the file SHALL NOT change identity, and changing `entity_id` in place SHALL be rejected as an identity change rather than treated as a rename.
 
-The v1 projection SHALL contain authored fields only. It SHALL support knowledge points, durable problems, and knowledge relations. It SHALL NOT support flash-card entities, figure bytes, or specialized problem-difficulty fields. Repository-only entity creation SHALL be refused. Learner/runtime state including attempts, progress, feedback, schedules, learner signals, session state, caches, and derived statistics SHALL NOT be exported to the repository.
+The v1 projection SHALL contain only the governed authored fields in its current field contract. It SHALL support knowledge points, durable problems, and knowledge relations, but SHALL NOT support flash-card entities or figure bytes. Repository-only entity creation SHALL be refused. Learner/runtime state including attempts, progress, feedback, schedules, learner signals, session state, caches, and derived statistics SHALL NOT be exported to the repository.
 
 No hash value, fingerprint, SHA value, or content-derived id SHALL be introduced for synchronization.
 
