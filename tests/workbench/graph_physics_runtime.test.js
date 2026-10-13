@@ -1,10 +1,20 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const test = require("node:test");
+const vm = require("node:vm");
 
 const publicPhysics = require("../../workbench/server/static/graph-physics.js");
 const corePhysics = require("../../workbench/server/static/graph-physics-core.js");
+const loaderSource = fs.readFileSync(
+  require.resolve("../../workbench/server/static/graph-physics.js"),
+  "utf8"
+);
+const coreSource = fs.readFileSync(
+  require.resolve("../../workbench/server/static/graph-physics-core.js"),
+  "utf8"
+);
 
 function node(id, extra) {
   return Object.assign({
@@ -52,4 +62,40 @@ test("graph physics public seam exposes the semantic core contract", () => {
     "the public seam must expose the current core implementation without a second solver"
   );
   assert.deepEqual(settle(corePhysics), settle(publicPhysics));
+});
+
+test("parser-inserted core can load after the public loader returns", async () => {
+  const insertedScripts = [];
+  const browser = vm.createContext({
+    document: {
+      readyState: "loading",
+      write(markup) {
+        const match = markup.match(/<script src="([^"]+)"><\/script>/);
+        assert.ok(match, "the loader writes one external script");
+        insertedScripts.push(match[1]);
+      },
+    },
+  });
+
+  assert.doesNotThrow(() => vm.runInContext(loaderSource, browser));
+  assert.deepEqual(insertedScripts, ["/static/graph-physics-core.js"]);
+  assert.equal(vm.runInContext("typeof GraphPhysics", browser), "undefined");
+
+  await new Promise((resolve) => setImmediate(resolve));
+  vm.runInContext(coreSource, browser);
+  assert.equal(
+    vm.runInContext("typeof GraphPhysics.create === 'function'", browser),
+    true
+  );
+});
+
+test("browser loader still refuses non-parser loading", () => {
+  const browser = vm.createContext({
+    document: { readyState: "complete", write() {} },
+  });
+
+  assert.throws(
+    () => vm.runInContext(loaderSource, browser),
+    /must be parser-loaded before workbench\.js/
+  );
 });

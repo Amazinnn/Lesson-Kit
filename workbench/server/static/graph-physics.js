@@ -16,5 +16,4 @@
     throw new Error("graph-physics.js must be parser-loaded before workbench.js");
   }
   root.document.write('<script src="/static/graph-physics-core.js"><\/script>');
-  if (!root.GraphPhysics) throw new Error("graph physics core failed to load");
 }(typeof globalThis === "object" ? globalThis : this));
