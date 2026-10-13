@@ -124,12 +124,12 @@ Learning content SHALL be escaped before rendering and SHALL promote only balanc
 
 ### Requirement: Component-aware graph presentation
 
-The complete graph SHALL identify connected components and choose deterministic seed coordinates for each nontrivial component from six initial layouts using edge crossings, label collisions, and spatial waste in that order. Those packed seeds SHALL then enter one unified elastic field, while isolates retain separate initial regions. Stronger semantic edges SHALL have shorter targets than weaker edges, every pair of node circles SHALL retain at least 24 pixels of logical clearance, and labels SHALL NOT enlarge physical collision radii. Remaining obstructed edges SHALL use deterministic shallow curves while preserving their semantic endpoints. A settled simulation SHALL stop updating until an explicit interaction or model/viewport change reheats it, and no idle breathing displacement SHALL be applied.
+The complete graph SHALL identify connected components and choose deterministic seed coordinates for each nontrivial component from six initial layouts using edge crossings, label collisions, and spatial waste in that order. Those packed seeds SHALL then enter one unified elastic field, while isolates retain separate initial regions. Stronger semantic edges SHALL have shorter targets than weaker edges, every pair of node circles SHALL retain at least 24 pixels of logical clearance, and labels SHALL NOT enlarge physical collision radii. Remaining obstructed edges SHALL use deterministic shallow curves while preserving their semantic endpoints. A settled simulation SHALL stop updating until an explicit interaction or model/viewport change reheats it, and no idle breathing displacement SHALL be applied. Coordinate reuse SHALL follow the optional exact-identity local layout seed contract in the workbench-ui graph requirement.
 
 #### Scenario: Interaction reheats a quiet graph
 
 - **WHEN** the learner drags a node or changes the graph view controls
-- **THEN** the unified simulation resumes from its current in-memory positions and settles again without persisting coordinates
+- **THEN** the unified simulation resumes from its current in-memory positions and settles again; any local layout seed is updated only after settlement and does not become authored graph data
 
 #### Scenario: Separate disconnected components
 
@@ -167,15 +167,12 @@ Selecting a graph node SHALL fully emphasize and gently expand its one-hop neigh
 
 ### Requirement: Existing-metric projections
 
-The graph MAY project existing `problem_count`, `importance`, `state`, or edge
-`attraction` into visual emphasis. The structural relationship layout SHALL
-remain the default, projections SHALL be deterministic, and coordinates SHALL
-not be persisted.
+The graph MAY project existing `problem_count`, `importance`, `state`, or edge `attraction` into visual emphasis. The structural relationship layout SHALL remain the default, projections SHALL be deterministic, and projection selection SHALL NOT be persisted. Coordinate reuse SHALL follow the optional exact-identity local layout seed contract in the workbench-ui graph requirement.
 
 #### Scenario: Switch projection
+
 - **WHEN** the learner selects an existing-metric projection
-- **THEN** the graph changes visual emphasis without changing its edges,
-  selection, or persisted data
+- **THEN** the graph changes visual emphasis without changing its edges, selection, authored content, or learning data; any settled coordinate seed remains tied to the current graph identity
 
 ### Requirement: Gated figure patch channel
 
@@ -256,4 +253,3 @@ referenced by another row SHALL remain.
 
 - **WHEN** another surviving problem still references the same logical image
 - **THEN** rollback removes only the rolled-back row's reference and retains the file
-

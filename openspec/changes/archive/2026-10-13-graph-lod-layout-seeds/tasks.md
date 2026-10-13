@@ -13,4 +13,4 @@
 ## 3. Focused verification
 
 - [x] 3.1 Run the existing graph seed, renderer, Worker, runtime, and Workbench interaction Node checks.
-- [ ] 3.2 Independent full-suite, browser, and release/archive acceptance remains with the root integration owner.
+- [x] 3.2 Complete independent full-suite (972 Python / 164 Node), actual browser and archive acceptance at `845f3b08`; evidence is recorded in the dated handoff. Final archive-head CI and actual merge CI remain root publication gates tracked separately.
