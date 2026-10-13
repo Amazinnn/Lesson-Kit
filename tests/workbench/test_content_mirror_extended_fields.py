@@ -31,7 +31,8 @@ class ExtendedContentMirrorFieldTests(unittest.TestCase):
                 learning_action TEXT,
                 body TEXT,
                 difficulty INTEGER,
-                fragile TEXT
+                fragile TEXT,
+                figure_paths TEXT
             );
             CREATE TABLE problems (
                 problem_id TEXT PRIMARY KEY,
@@ -86,6 +87,15 @@ class ExtendedContentMirrorFieldTests(unittest.TestCase):
             """
         )
         conn.execute(
+            "INSERT INTO knowledge_points ("
+            "kp_id, knowledge_item, related_kp_ids, figure_paths"
+            ") VALUES (?, ?, ?, ?)",
+            (
+                "c02-ch01-kp-001", "Stack", "[]",
+                '["c02/ch01/c02-ch01-kp-001-fig-001.png"]',
+            ),
+        )
+        conn.execute(
             "INSERT INTO problems ("
             "problem_id, kp_ids, problem_text, solution, problem_type, source_kind, origin_kind, "
             "figure_paths, difficulty, difficulty_knowledge_breadth, difficulty_reasoning_depth, "
@@ -106,16 +116,25 @@ class ExtendedContentMirrorFieldTests(unittest.TestCase):
         self.pool.close()
         self.tmp.cleanup()
 
-    def problem_json(self):
-        path = content_mirror.entity_path(
-            self.repo, "c02", "problem", "c02-ch01-prob-001"
-        )
+    def entity_json(self, entity_type, entity_id):
+        path = content_mirror.entity_path(self.repo, "c02", entity_type, entity_id)
         return path, json.loads(path.read_text(encoding="utf-8"))
+
+    def problem_json(self):
+        return self.entity_json("problem", "c02-ch01-prob-001")
+
+    def kp_json(self):
+        return self.entity_json("kp", "c02-ch01-kp-001")
 
     def test_bootstrap_includes_figure_paths_and_full_difficulty_group(self):
         result = content_mirror.init(self.pool, self.repo)
 
         self.assertTrue(result["valid"])
+        _path, kp = self.kp_json()
+        self.assertEqual(
+            kp["content"]["figure_paths"],
+            ["c02/ch01/c02-ch01-kp-001-fig-001.png"],
+        )
         _path, envelope = self.problem_json()
         content = envelope["content"]
         self.assertEqual(
@@ -148,7 +167,7 @@ class ExtendedContentMirrorFieldTests(unittest.TestCase):
         self.assertEqual(rewritten["content"]["difficulty"], 2.5)
         self.assertEqual(rewritten["content"]["difficulty_model"], "cognitive-v1-equal-mean")
 
-    def test_repository_figure_paths_round_trip_as_json_array(self):
+    def test_repository_problem_figure_paths_round_trip_as_json_array(self):
         content_mirror.init(self.pool, self.repo)
         path, envelope = self.problem_json()
         envelope["revision"] = 2
@@ -165,6 +184,25 @@ class ExtendedContentMirrorFieldTests(unittest.TestCase):
         ).fetchone()[0]
         self.assertEqual(
             json.loads(raw), ["c02/ch01/c02-ch01-prob-001-fig-002.png"]
+        )
+
+    def test_repository_kp_figure_paths_round_trip_as_json_array(self):
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.kp_json()
+        envelope["revision"] = 2
+        envelope["content"]["figure_paths"] = [
+            "c02/ch01/c02-ch01-kp-001-fig-002.png"
+        ]
+        path.write_text(json.dumps(envelope, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+        result = content_mirror.sync(self.pool, self.repo)
+
+        self.assertTrue(result["valid"])
+        raw = self.pool.connect().execute(
+            "SELECT figure_paths FROM knowledge_points WHERE kp_id='c02-ch01-kp-001'"
+        ).fetchone()[0]
+        self.assertEqual(
+            json.loads(raw), ["c02/ch01/c02-ch01-kp-001-fig-002.png"]
         )
 
     def test_existing_v1_projection_upgrades_without_becoming_invalid(self):
