@@ -32,20 +32,22 @@ PROBLEM_DIFFICULTY_FIELDS = {
     "difficulty", "difficulty_model", *PROBLEM_DIFFICULTY_DIMENSIONS,
 }
 # Mirror the governed authored CRUD surface plus the separately governed problem
-# difficulty rating. Runtime/learner rows and batch/timestamp metadata stay local.
+# difficulty rating and logical figure references. Runtime/learner rows and
+# batch/timestamp metadata stay local.
 MIRROR_FIELDS = {
     entity_type: set(fields) for entity_type, fields in content.EDITABLE_FIELDS.items()
 }
+MIRROR_FIELDS["kp"].add("figure_paths")
 MIRROR_FIELDS["problem"].update(PROBLEM_DIFFICULTY_FIELDS)
 ARRAY_FIELDS = {
-    "kp": {"related_kp_ids"},
+    "kp": {"related_kp_ids", "figure_paths"},
     "problem": {"kp_ids", "practice_modes", "figure_paths"},
 }
 OBJECT_FIELDS = {"problem": {"micro_quiz"}}
 # Empty-string JSON columns are tolerated in legacy pool rows; the authored
 # projection canonicalizes them so a written envelope is always readable back.
 EMPTY_JSON_DEFAULTS = {
-    "kp": {"related_kp_ids": []},
+    "kp": {"related_kp_ids": [], "figure_paths": None},
     "problem": {
         "kp_ids": [], "practice_modes": None, "micro_quiz": None,
         "figure_paths": None,
@@ -283,9 +285,6 @@ def _scan_repo(repo, course):
                 envelope = read_entity(path, course, entity_type)
                 key = (entity_type, envelope["entity_id"])
                 if key in found or key in ambiguous:
-                    # Identity is inside JSON, not in the path. Two or more files
-                    # that claim one identity are ambiguous, so none may win by
-                    # scan order — including a third or later duplicate.
                     found.pop(key, None)
                     ambiguous.add(key)
                     errors.append({
@@ -299,9 +298,6 @@ def _scan_repo(repo, course):
             except MirrorError as exc:
                 errors.append({"path": str(path), "status": "invalid", "error": str(exc)})
             continue
-        # Every other file under the course subtree is still accounted for: a
-        # *.json file must parse as a JSON object, anything else must decode as
-        # UTF-8 text. Unreadable files are reported, never silently dropped.
         try:
             text = path.read_bytes().decode("utf-8-sig")
             if path.suffix == ".json":
@@ -328,8 +324,6 @@ def _read_delete_requests(repo, course):
             value = _load_json(path)
             target = value.get("course_id")
             if isinstance(target, str) and target != course:
-                # Only requests that explicitly target this course are read;
-                # a malformed request for another course stays out of the report.
                 continue
             unknown = sorted(set(value) - DELETE_FIELDS)
             missing = sorted(DELETE_FIELDS - set(value))
@@ -363,7 +357,6 @@ def _read_delete_requests(repo, course):
 
 
 def _unreadable_texts(parse_errors):
-    """Every parse error without a trustworthy identity, decoded with replacement."""
     items = []
     for error in parse_errors:
         if error.get("entity_id"):
@@ -378,7 +371,6 @@ def _unreadable_texts(parse_errors):
 
 
 def _implicating_path(unreadable, identity):
-    """The first unreadable file whose name or bytes name this entity id."""
     for path, text in unreadable:
         if identity in path.name or identity in text:
             return path
@@ -634,9 +626,6 @@ def plan(pool, repo, entity_id=None):
     for entity_type, identity in tracked:
         repo_entry = found.get((entity_type, identity))
         if repo_entry is None and parse_errors:
-            # An unreadable/ambiguous file has no trustworthy identity. It may
-            # be a renamed copy of this tracked entity, so treating absence as a
-            # safe deletion-and-restore would risk overwriting authored work.
             results.append(_result(
                 entity_type, identity, "invalid",
                 "repository contains unreadable or duplicate entity JSON; "
@@ -701,6 +690,28 @@ def _apply_problem_patch(pool, entity_id, patch):
         )
         if cursor.rowcount == 0:
             raise KeyError(entity_id)
+
+
+def _apply_kp_patch(pool, entity_id, patch):
+    content_patch = dict(patch)
+    figure_paths = content_patch.pop("figure_paths", ...)
+    if content_patch:
+        content.update(pool, "kp", entity_id, content_patch)
+    if figure_paths is ...:
+        return
+    columns = {row[1] for row in pool.connect().execute("PRAGMA table_info(knowledge_points)")}
+    if "figure_paths" not in columns:
+        raise MirrorError("knowledge_points.figure_paths is unavailable in this pool schema")
+    assignments = ["figure_paths=?"]
+    if "updated_at" in columns:
+        assignments.append("updated_at=datetime('now')")
+    value = None if figure_paths is None else json.dumps(figure_paths, ensure_ascii=False)
+    cursor = pool.connect().execute(
+        f"UPDATE knowledge_points SET {', '.join(assignments)} WHERE kp_id=?",
+        (value, entity_id),
+    )
+    if cursor.rowcount == 0:
+        raise KeyError(entity_id)
 
 
 def _apply_one(pool, repo, item):
@@ -768,6 +779,8 @@ def _apply_one(pool, repo, item):
         with pool.transaction(immediate=True):
             if entity_type == "problem":
                 _apply_problem_patch(pool, entity_id, patch)
+            elif entity_type == "kp":
+                _apply_kp_patch(pool, entity_id, patch)
             else:
                 content.update(pool, entity_type, entity_id, patch)
             actual = pool_projection(pool, entity_type, entity_id)
