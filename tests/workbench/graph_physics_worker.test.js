@@ -32,14 +32,26 @@ class FakeWorker {
   terminate() { this.terminated = true; }
 }
 
+function rendererStub() {
+  return {
+    attach(runtime) {
+      runtime.rendererAttached = true;
+      return {
+        destroy() { runtime.rendererDestroyed = true; },
+      };
+    },
+  };
+}
+
 function browserContext() {
   const context = {
     console,
     Worker: FakeWorker,
     GraphPhysics: corePhysics,
+    GraphRenderer: rendererStub(),
     document: {
       readyState: "loading",
-      write() { throw new Error("core is already loaded; no parser write expected"); },
+      write() { throw new Error("dependencies are already loaded; no parser write expected"); },
     },
   };
   context.globalThis = context;
@@ -64,6 +76,7 @@ test("browser module preserves the graph runtime interface while delegating step
   assert.equal(runtime.nodes.length, 2);
   assert.equal(typeof runtime.tick, "function");
   assert.equal(typeof runtime.edgePath, "function");
+  assert.equal(runtime.rendererAttached, true);
 
   runtime.graph.gravity = 70;
   runtime.nodes[0].visible = false;
@@ -106,6 +119,7 @@ test("browser module preserves the graph runtime interface while delegating step
   assert.equal(runtime.graph.alpha, 0);
   assert.equal(runtime.graph.settled, true);
   runtime.dispose();
+  assert.equal(runtime.rendererDestroyed, true);
   assert.equal(worker.terminated, true);
 });
 
@@ -113,6 +127,7 @@ test("browser module fails explicitly when Worker support is unavailable", () =>
   const context = {
     console,
     GraphPhysics: corePhysics,
+    GraphRenderer: rendererStub(),
     document: { readyState: "loading", write() {} },
   };
   context.globalThis = context;

@@ -4,7 +4,7 @@
  *
  * The semantic rules live in graph-physics-core.js. Browsers execute that one
  * implementation through a Worker; Node tests export the same core directly.
- * There is no browser fallback to a second execution path.
+ * The current renderer is a separate module with one active implementation.
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) {
@@ -22,12 +22,23 @@
     core = root.GraphPhysics;
   }
   if (!core) throw new Error("graph physics core failed to load");
+
+  var renderer = root.GraphRenderer;
+  if (!renderer) {
+    if (!root.document || root.document.readyState !== "loading"
+        || typeof root.document.write !== "function") {
+      throw new Error("graph renderer must be parser-loaded before workbench.js");
+    }
+    root.document.write('<script src="/static/graph-renderer.js"><\/script>');
+    renderer = root.GraphRenderer;
+  }
+  if (!renderer) throw new Error("graph renderer failed to load");
   if (typeof root.Worker !== "function") {
     throw new Error("Lesson Kit knowledge graph requires Web Worker support");
   }
 
-  root.GraphPhysics = factory(root, core);
-}(typeof globalThis === "object" ? globalThis : this, function (root, core) {
+  root.GraphPhysics = factory(root, core, renderer);
+}(typeof globalThis === "object" ? globalThis : this, function (root, core, renderer) {
   function controlsFor(state) {
     return {
       view: state.graph.view,
@@ -61,6 +72,7 @@
     var revision = 0;
     var appliedRevision = -1;
     var controlRevision = 0;
+    var rendererInstance = null;
     var worker = new root.Worker("/static/graph-physics-worker.js", {
       name: "lesson-kit-graph-physics",
     });
@@ -183,9 +195,13 @@
       clusterCenters: mirror.clusterCenters,
       congestion: mirror.congestion,
       dispose: function () {
+        if (rendererInstance) rendererInstance.destroy();
         worker.terminate();
       },
     };
+
+    rendererInstance = renderer.attach(runtime, root);
+    runtime.renderer = rendererInstance;
     return runtime;
   }
 
