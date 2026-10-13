@@ -44,8 +44,6 @@ ARRAY_FIELDS = {
     "problem": {"kp_ids", "practice_modes", "figure_paths"},
 }
 OBJECT_FIELDS = {"problem": {"micro_quiz"}}
-# Empty-string JSON columns are tolerated in legacy pool rows; the authored
-# projection canonicalizes them so a written envelope is always readable back.
 EMPTY_JSON_DEFAULTS = {
     "kp": {"related_kp_ids": [], "figure_paths": None},
     "problem": {
@@ -661,10 +659,8 @@ def plan(pool, repo, entity_id=None):
     return _report(results, _read_delete_requests(repo, pool.course))
 
 
-def _apply_problem_patch(pool, entity_id, patch):
-    difficulty_patch = {
-        key: value for key, value in patch.items() if key in PROBLEM_DIFFICULTY_FIELDS
-    }
+def _apply_problem_patch(pool, entity_id, patch, authored):
+    difficulty_changed = bool(set(patch) & PROBLEM_DIFFICULTY_FIELDS)
     content_patch = {
         key: value for key, value in patch.items() if key not in PROBLEM_DIFFICULTY_FIELDS
     }
@@ -674,7 +670,7 @@ def _apply_problem_patch(pool, entity_id, patch):
         )
     if content_patch:
         content.update(pool, "problem", entity_id, content_patch)
-    if difficulty_patch:
+    if difficulty_changed:
         columns = [
             "difficulty",
             "difficulty_knowledge_breadth",
@@ -686,7 +682,7 @@ def _apply_problem_patch(pool, entity_id, patch):
         cursor = pool.connect().execute(
             "UPDATE problems SET " + ", ".join(f"{column}=?" for column in columns)
             + " WHERE problem_id=?",
-            tuple(difficulty_patch.get(column) for column in columns) + (entity_id,),
+            tuple(authored.get(column) for column in columns) + (entity_id,),
         )
         if cursor.rowcount == 0:
             raise KeyError(entity_id)
@@ -778,7 +774,7 @@ def _apply_one(pool, repo, item):
         patch = {key: authored[key] for key in authored if authored[key] != baseline[key]}
         with pool.transaction(immediate=True):
             if entity_type == "problem":
-                _apply_problem_patch(pool, entity_id, patch)
+                _apply_problem_patch(pool, entity_id, patch, authored)
             elif entity_type == "kp":
                 _apply_kp_patch(pool, entity_id, patch)
             else:
