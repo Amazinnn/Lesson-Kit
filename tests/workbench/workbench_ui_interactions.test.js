@@ -7,6 +7,9 @@ const test = require("node:test");
 const vm = require("node:vm");
 const GraphPhysics = require("../../workbench/server/static/graph-physics.js");
 const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
+const GRAPH_PHYSICS_SOURCE = fs.readFileSync(
+  path.resolve(__dirname, "../../workbench/server/static/graph-physics.js"), "utf8",
+);
 const PRACTICE_FLOW_SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/practice-flow.js"), "utf8",
 );
@@ -1712,6 +1715,131 @@ test("a settled graph renders one circular body per node and typed ported edges"
   const rafCalls = app.rafCalls;
   await settleGraph(20);
   assert.equal(app.rafCalls, rafCalls, "an idle graph stops scheduling frames");
+});
+
+test("graph renderer follows solver, camera, and drag signals without idle paints", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const renderCalls = [];
+  let runtime;
+  let ticks = 0;
+  const physics = Object.assign({ workerBacked: true }, GraphPhysics, {
+    create(nodes, edges, options) {
+      runtime = GraphPhysics.create(nodes, edges, options);
+      runtime.reheat = function () {
+        ticks = 0;
+        runtime.graph.alpha = 1;
+        runtime.graph.settled = false;
+      };
+      runtime.tick = function () {
+        ticks += 1;
+        runtime.graph.solveStep += 1;
+        runtime.nodes[0].x += 1;
+        runtime.graph.alpha = ticks >= 3 ? 0 : 1;
+        runtime.graph.settled = ticks >= 3;
+      };
+      runtime.renderer = {
+        render() {
+          renderCalls.push({ tick: ticks, alpha: runtime.graph.alpha, settled: runtime.graph.settled });
+        },
+      };
+      return runtime;
+    },
+  });
+  const app = runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
+    physics,
+    fetch: () => jsonResponse({
+      nodes: [1, 2].map((id) => ({ id: "kp-" + id, title: "知识点 " + id, problem_count: 1 })),
+      edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
+        relation_type: "prerequisite", direction: "directed", strength: "medium" }],
+    }),
+  });
+
+  await flush();
+  await settleGraph(12);
+  assert.ok(renderCalls.some((call) => call.tick > 0), "solver frame paints reach the relation renderer");
+  const idlePaints = renderCalls.length;
+  await settleGraph(12);
+  assert.equal(renderCalls.length, idlePaints, "the parked graph does not request relation paints");
+
+  canvas.trigger("wheel", { clientX: 320, clientY: 240, deltaY: -100, preventDefault() {} });
+  assert.equal(renderCalls.length, idlePaints + 1, "camera zoom requests one viewport repaint");
+
+  const stage = canvas.children[0];
+  const wrap = stage.children.find((child) => child.dataset.kpId === "kp-1");
+  const button = wrap.children.find((child) => child.className === "node");
+  button.trigger("pointerdown", { pointerId: 7, clientX: 100, clientY: 100, stopPropagation() {} });
+  canvas.trigger("pointermove", { pointerId: 7, clientX: 125, clientY: 130 });
+  await settleGraph(12);
+  assert.ok(renderCalls.length > idlePaints + 1, "drag updates request relation repaints");
+  assert.ok(renderCalls.some((call) => call.tick > 0), "dragged Worker-backed positions reach a paint");
+  const settledPaints = renderCalls.length;
+  await settleGraph(12);
+  assert.equal(renderCalls.length, settledPaints, "drag settling returns to idle");
+  assert.ok(app.rafCalls > 0);
+});
+
+test("reduced-motion graph paints only its stable solver result", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const renderCalls = [];
+  let runtime;
+  let initialX;
+  class FixtureWorker {
+    constructor() { this.messages = []; FixtureWorker.last = this; }
+    postMessage(message) {
+      this.messages.push(message);
+      if (message.type !== "step") return;
+      queueMicrotask(() => this.onmessage({ data: {
+        type: "snapshot",
+        kind: "step",
+        revision: message.revision,
+        nodes: message.controls.nodes.map((point) => ({
+          id: point.id, x: point.x + 1, y: point.y, vx: 0, vy: 0,
+          guideX: point.x + 1, guideY: point.y,
+        })),
+        graph: { alpha: 0, stableFrames: 15, settleWatch: 0, solveStep: 1, settled: true, layoutInflation: 1 },
+      } }));
+    }
+    terminate() { this.terminated = true; }
+  }
+  const adapterContext = {
+    console,
+    Worker: FixtureWorker,
+    GraphPhysics,
+    GraphRenderer: {
+      attach(graphRuntime) {
+        runtime = graphRuntime;
+        initialX = runtime.nodes[0].x;
+        return {
+          render() {
+            renderCalls.push({ alpha: runtime.graph.alpha, settled: runtime.graph.settled, x: runtime.nodes[0].x });
+          },
+          destroy() {},
+        };
+      },
+    },
+    document: { readyState: "loading", write() {} },
+  };
+  adapterContext.globalThis = adapterContext;
+  vm.runInNewContext(GRAPH_PHYSICS_SOURCE, adapterContext, { filename: "graph-physics.js" });
+  const app = runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
+    reducedMotion: true,
+    physics: adapterContext.GraphPhysics,
+    fetch: () => jsonResponse({ nodes: [{ id: "kp-a", title: "A", problem_count: 1 }], edges: [] }),
+  });
+
+  await flush();
+  await settleGraph(12);
+  assert.deepEqual(renderCalls, [{ alpha: 0, settled: true, x: initialX + 1 }]);
+  assert.equal(FixtureWorker.last.messages.filter((message) => message.type === "step").length, 1,
+    "the stable paint follows the Worker snapshot consumed by the Workbench frame");
+  const frameCalls = app.rafCalls;
+  await settleGraph(12);
+  assert.equal(renderCalls.length, 1, "stable reduced-motion rendering does not paint again");
+  assert.equal(app.rafCalls, frameCalls, "the reduced-motion solver parks after its terminal layout");
+  runtime.dispose();
+  assert.equal(FixtureWorker.last.terminated, true);
 });
 
 test("graph projections resize metrics in place and keep the same stage", async () => {

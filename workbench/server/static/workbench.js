@@ -806,6 +806,7 @@
     var graphLastPaintedScale = 0;
     var graphRenderDirty = true;
     var graphFrameHandle = null;
+    var graphAutoFitInFrame = false;
 
     function graphSolver(solving) {
       if (!graphSolverState) return;
@@ -1148,6 +1149,13 @@
       });
       graphPaintNodes();
       graphNotePaint("viewport");
+      if (!graphAutoFitInFrame) graphRenderRelations();
+    }
+
+    function graphRenderRelations() {
+      if (!sim || !sim.renderer) return;
+      if (graphTideState.reduced && !sim.graph.settled) return;
+      sim.renderer.render();
     }
 
     function graphNotePaint(kind) {
@@ -1320,6 +1328,7 @@
         }
       });
       graphNotePaint("full");
+      graphRenderRelations();
     }
 
     function graphFrame() {
@@ -1344,7 +1353,9 @@
       }
       if (sim.graph.settled && sim.graph.autoFitAfterSettle && !graphView.userMoved) {
         sim.graph.autoFitAfterSettle = false;
+        graphAutoFitInFrame = true;
         graphFit();
+        graphAutoFitInFrame = false;
       }
       if (wasSolving !== (sim.graph.alpha > 0)) {
         graphSolver(sim.graph.alpha > 0);
@@ -1363,6 +1374,10 @@
         else if (sim.nodes.length > 120) stride = 8;
       }
       var paintNow = graphRenderDirty || !solving || sim.graph.solveStep % stride === 0;
+      if (graphTideState.reduced && solving) {
+        graphRenderDirty = true;
+        paintNow = false;
+      }
       if (paintNow) {
         graphRenderFrame();
         graphRenderDirty = false;
@@ -1549,10 +1564,10 @@
     }
 
     function graphStartTide() {
+      graphTideState.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
       if (!graphTide || graphTideState.live) return;
       graphTideCtx = graphTide.getContext && graphTide.getContext("2d", { alpha: true });
       if (!graphTideCtx) return;
-      graphTideState.reduced = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
       graphTideState.live = true;
       if (typeof ResizeObserver === "function") {
         new ResizeObserver(function () {
