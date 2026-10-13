@@ -659,6 +659,8 @@
     var graphEdges = document.getElementById("graph-edges");
     var graphTide = document.getElementById("graph-tide");
     var graphToast = document.getElementById("graph-toast");
+    var graphToastTimer = null;
+    var graphToastPersistent = false;
     var graphZoomIn = document.getElementById("graph-zoom-in");
     var graphZoomOut = document.getElementById("graph-zoom-out");
     var graphZoomReset = document.getElementById("graph-reset");
@@ -797,6 +799,8 @@
     var graphEdgeEls = [];    // {edge, path}
     var graphEls = new Map(); // id -> {wrap, node, label, meta, value, satellite}
     var sim = null;
+    var graphPhysicsAvailable = typeof GraphPhysics !== "undefined"
+      && GraphPhysics && GraphPhysics.workerBacked === true;
     var graphView = { scale: .7, panX: 52, panY: -18, userMoved: false };
     var graphPathScaled = 1;
     var graphLastPaintedScale = 0;
@@ -829,11 +833,24 @@
       });
     }
 
-    function graphToastShow(text) {
-      if (!graphToast) return;
+    function graphToastShow(text, persistent) {
+      if (!graphToast || (graphToastPersistent && !persistent)) return;
+      if (graphToastTimer !== null) clearTimeout(graphToastTimer);
       graphToast.textContent = text;
       graphToast.classList.add("show");
-      setTimeout(function () { graphToast.classList.remove("show"); }, 1300);
+      graphToastPersistent = !!persistent;
+      if (graphToastPersistent) return;
+      graphToastTimer = setTimeout(function () {
+        graphToastTimer = null;
+        graphToast.classList.remove("show");
+      }, 1300);
+    }
+
+    function graphFailureShow(message) {
+      graphSolver(false);
+      if (graphSolverText) graphSolverText.textContent = "计算已停止";
+      graphToastShow(message || "图谱计算失败，布局已停止。刷新页面后可重试。", true);
+      graphRenderDirty = false;
     }
 
     function graphUpdateGapLegend() {
@@ -859,6 +876,10 @@
     }
 
     function graphBuild(model) {
+      if (!graphPhysicsAvailable) {
+        graphFailureShow("图谱计算无法启动：浏览器不支持 Worker，或图谱资源加载失败。请刷新页面，或使用支持 Worker 的浏览器。");
+        return;
+      }
       graphNodeData = (model.nodes || []).map(function (node) {
         return {
           id: node.id,
@@ -897,6 +918,10 @@
         gravity: graphGravity ? Number(graphGravity.value) : 30,
         hiddenEdgeTypes: graphHiddenEdgeTypes,
       });
+      if (sim.failed) {
+        graphFailureShow(sim.error);
+        return;
+      }
       graphEdgeBudget = { told: false };
       graphEdgeBudgetEl = graphEdgeBudgetEl || document.getElementById("graph-edge-budget");
       graphApplyEdgeVisibility();
@@ -1300,6 +1325,10 @@
     function graphFrame() {
       graphFrameHandle = null;
       if (!sim) return;
+      if (sim.failed) {
+        graphFailureShow(sim.error);
+        return;
+      }
       var wasSolving = sim.graph.alpha > 0;
       // One physics step per frame is plenty for a normal pool; a couple of
       // hundred nodes get a few steps per frame so the settle finishes in a
@@ -1308,6 +1337,10 @@
       while (steps > 0 && sim.graph.alpha > 0) {
         sim.tick();
         steps -= 1;
+        if (sim.failed) {
+          graphFailureShow(sim.error);
+          return;
+        }
       }
       if (sim.graph.settled && sim.graph.autoFitAfterSettle && !graphView.userMoved) {
         sim.graph.autoFitAfterSettle = false;
@@ -1341,6 +1374,7 @@
     }
 
     function graphEnsureLoop() {
+      if (!graphPhysicsAvailable || (sim && sim.failed)) return;
       if (graphFrameHandle === null) graphFrameHandle = requestAnimationFrame(graphFrame);
     }
 
@@ -1761,17 +1795,22 @@
     if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
     if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
     showGraphPanel(true);
-    graphStartTide();
-    api("/graph/model").then(function (model) {
-      graphBuild(model);
+    if (!graphPhysicsAvailable) {
+      if (typeof GraphPhysics !== "undefined") GraphPhysics = undefined;
+      graphFailureShow("图谱计算无法启动：浏览器不支持 Worker，或图谱资源加载失败。请刷新页面，或使用支持 Worker 的浏览器。");
+    } else {
       graphStartTide();
-      graphEnsureLoop();
-    }).catch(function (error) {
-      if (typeof console !== "undefined" && console.error) {
-        console.error("graph: model render failed", error && error.stack ? error.stack : error);
-      }
-      if (graphCanvas) graphCanvas.textContent = "图谱暂时无法读取。";
-    });
+      api("/graph/model").then(function (model) {
+        graphBuild(model);
+        graphStartTide();
+        graphEnsureLoop();
+      }).catch(function (error) {
+        if (typeof console !== "undefined" && console.error) {
+          console.error("graph: model render failed", error && error.stack ? error.stack : error);
+        }
+        if (graphCanvas) graphCanvas.textContent = "图谱暂时无法读取。";
+      });
+    }
   }
 
   /* ---------- practice flow ---------- */

@@ -304,9 +304,20 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='graph-canvas'", body)
         self.assertIn("id='graph-detail-tab'", body)
         self.assertIn("id='ai-teacher-tab'", body)
-        self.assertIn("<script src='/static/graph-physics.js'></script>", body)
+        core_script = "<script src='/static/graph-physics-core.js'></script>"
+        adapter_script = "<script src='/static/graph-physics.js'></script>"
+        caller_script = "<script src='/static/workbench.js'></script>"
+        self.assertIn(core_script, body)
+        self.assertIn(adapter_script, body)
+        self.assertLess(body.index(core_script), body.index(adapter_script))
+        self.assertLess(body.index(adapter_script), body.index(caller_script))
         self.assertIn("<script src='/static/practice-flow.js'></script>", body)
         self.assertNotIn("<iframe", body)
+
+        status, practice = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertNotIn(core_script, practice)
+        self.assertNotIn(adapter_script, practice)
 
     def test_practice_flow_static_module_is_served(self):
         status, body = self.fetch("/static/practice-flow.js")
