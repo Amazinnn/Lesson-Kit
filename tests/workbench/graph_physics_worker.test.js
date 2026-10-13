@@ -61,7 +61,7 @@ function browserContext() {
   return context;
 }
 
-function rendererEnvironment({ webgl = true, failFragment = false, failFrame = false } = {}) {
+function rendererEnvironment({ webgl = true, failFragment = false, failInsert = false, reducedMotion = false } = {}) {
   const frames = new Map();
   const createdShaders = [];
   const deletedShaders = [];
@@ -70,6 +70,7 @@ function rendererEnvironment({ webgl = true, failFragment = false, failFrame = f
   const createdBuffers = [];
   const deletedBuffers = [];
   const drawCalls = [];
+  const bufferUploads = [];
   const gl = {
     VERTEX_SHADER: 1, FRAGMENT_SHADER: 2, COMPILE_STATUS: 3, LINK_STATUS: 4,
     ARRAY_BUFFER: 5, DYNAMIC_DRAW: 6, FLOAT: 7, TRIANGLES: 8,
@@ -103,7 +104,7 @@ function rendererEnvironment({ webgl = true, failFragment = false, failFrame = f
     viewport() {},
     useProgram() {},
     bindBuffer() {},
-    bufferData() {},
+    bufferData() { bufferUploads.push(true); },
     getAttribLocation(_program, name) { return name === "a_pos" ? 0 : 1; },
     enableVertexAttribArray() {},
     vertexAttribPointer() {},
@@ -120,6 +121,7 @@ function rendererEnvironment({ webgl = true, failFragment = false, failFrame = f
     firstChild: null,
     style: { transform: "" },
     insertBefore(element) {
+      if (failInsert) throw new Error("canvas insertion failed");
       element.parentNode = this;
       children.push(element);
     },
@@ -169,8 +171,8 @@ function rendererEnvironment({ webgl = true, failFragment = false, failFrame = f
       },
     },
     devicePixelRatio: 1,
+    matchMedia() { return { matches: reducedMotion }; },
     requestAnimationFrame(callback) {
-      if (failFrame) throw new Error("animation frame setup failed");
       const id = nextFrame++;
       frames.set(id, callback);
       return id;
@@ -180,8 +182,15 @@ function rendererEnvironment({ webgl = true, failFragment = false, failFrame = f
   context.globalThis = context;
   return {
     context, frames, createdShaders, deletedShaders, createdPrograms, deletedPrograms,
-    createdBuffers, deletedBuffers, drawCalls, stage, canvasHost, children, styles,
+    createdBuffers, deletedBuffers, drawCalls, bufferUploads, stage, canvasHost, children, styles,
   };
+}
+
+function paintNextFrame(surface) {
+  const next = surface.frames.entries().next().value;
+  assert.ok(next, "a paint was requested");
+  surface.frames.delete(next[0]);
+  next[1]();
 }
 
 test("browser module preserves the graph runtime interface while delegating steps", () => {
@@ -338,7 +347,7 @@ test("real renderer startup failure terminates its Worker and returns a failed r
   assert.equal(surface.canvasHost.classList.contains("graph-renderer-active"), false);
 });
 
-test("real renderer paints through the Worker adapter and stops its frame on disposal", () => {
+test("real renderer paints on invalidation, parks after each frame, and coalesces requests", () => {
   const surface = rendererEnvironment();
   vm.runInNewContext(adapterSource, surface.context, { filename: "graph-physics.js" });
   const runtime = surface.context.GraphPhysics.create(
@@ -346,16 +355,49 @@ test("real renderer paints through the Worker adapter and stops its frame on dis
     { stageWidth: 1800, stageHeight: 1550, gravity: 30 }
   );
   const worker = FakeWorker.last;
-  const [frameId, paint] = surface.frames.entries().next().value;
-  surface.frames.delete(frameId);
-  paint();
+
+  assert.equal(surface.frames.size, 0, "attach waits for the Workbench paint signal");
+  runtime.renderer.render();
+  runtime.renderer.render();
+  assert.equal(surface.frames.size, 1, "multiple normal-motion invalidations share one frame");
+  paintNextFrame(surface);
 
   assert.equal(surface.drawCalls.length, 1);
   assert.ok(surface.drawCalls[0] > 0, "the graph relation is painted with WebGL");
-  assert.equal(surface.frames.size, 1, "the active renderer schedules its next paint");
+  assert.equal(surface.bufferUploads.length, 1);
+  assert.ok(runtime.state.portSlots.size > 0, "the physics geometry supplies edge ports");
+  assert.equal(surface.frames.size, 0, "a completed paint does not schedule an idle frame");
+
+  runtime.renderer.resize();
+  assert.equal(surface.frames.size, 1, "resize requests one paint");
+  paintNextFrame(surface);
+  assert.equal(surface.drawCalls.length, 2);
+  assert.equal(surface.frames.size, 0);
+
+  runtime.renderer.render();
+  assert.equal(surface.frames.size, 1);
   runtime.dispose();
   assert.equal(surface.frames.size, 0);
   assert.equal(worker.terminated, true);
+});
+
+test("reduced-motion renderer paints synchronously without requesting animation frames", () => {
+  const surface = rendererEnvironment({ reducedMotion: true });
+  vm.runInNewContext(adapterSource, surface.context, { filename: "graph-physics.js" });
+  const runtime = surface.context.GraphPhysics.create(
+    [node("a"), node("b")], [edge("a", "b")],
+    { stageWidth: 1800, stageHeight: 1550, gravity: 30 }
+  );
+
+  assert.equal(surface.frames.size, 0);
+  assert.equal(surface.drawCalls.length, 0, "attachment waits for the stable Workbench paint");
+  runtime.renderer.render();
+  assert.equal(surface.drawCalls.length, 1);
+  assert.equal(surface.frames.size, 0);
+  runtime.renderer.resize();
+  assert.equal(surface.drawCalls.length, 2);
+  assert.equal(surface.frames.size, 0);
+  runtime.dispose();
 });
 
 test("renderer shader setup failure deletes partial GL resources before rethrowing", () => {
@@ -371,8 +413,8 @@ test("renderer shader setup failure deletes partial GL resources before rethrowi
   assert.equal(surface.frames.size, 0);
 });
 
-test("renderer attach failure after setup releases GL, canvas, style, and patched hooks", () => {
-  const surface = rendererEnvironment({ failFrame: true });
+test("renderer attach failure after GL setup releases its partial resources", () => {
+  const surface = rendererEnvironment({ failInsert: true });
   const routePorts = function () {};
   const routePath = function () {};
   const runtime = {
@@ -384,7 +426,7 @@ test("renderer attach failure after setup releases GL, canvas, style, and patche
   };
   assert.throws(
     () => graphRenderer.attach(runtime, surface.context),
-    /animation frame setup failed/
+    /canvas insertion failed/
   );
   assert.equal(surface.deletedPrograms.length, 1);
   assert.equal(surface.deletedBuffers.length, 1);

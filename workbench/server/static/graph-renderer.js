@@ -124,6 +124,8 @@
 
   function attach(runtime, root) {
     root = root || (typeof globalThis === "object" ? globalThis : null);
+    var reducedMotion = !!(root && root.matchMedia
+      && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var document = root && root.document;
     if (!document || !runtime || !runtime.state) {
       throw new Error("GraphRenderer requires a browser graph runtime");
@@ -153,7 +155,7 @@
     var destroyed = false;
     var runtimePatched = false;
 
-    function resize() {
+    function resizeCanvas() {
       var dpr = clamp(Number(root.devicePixelRatio) || 1, 1, 2);
       var cssWidth = Math.max(1, state.stageWidth), cssHeight = Math.max(1, state.stageHeight);
       var width = Math.round(cssWidth * dpr), height = Math.round(cssHeight * dpr);
@@ -183,7 +185,7 @@
     function draw() {
       frame = null;
       if (destroyed) return;
-      resize();
+      resizeCanvas();
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.enable(gl.BLEND);
@@ -222,7 +224,15 @@
         }
       });
       bindEdges(vertices);
-      frame = root.requestAnimationFrame(draw);
+    }
+
+    function render() {
+      if (destroyed) return;
+      if (reducedMotion) {
+        draw();
+      } else if (frame === null) {
+        frame = root.requestAnimationFrame(draw);
+      }
     }
 
     function cleanup() {
@@ -259,15 +269,14 @@
       runtime.computePortSlots = function () { return state.portSlots; };
       runtime.edgePath = function () { return "M 0 0"; };
       runtimePatched = true;
-      frame = root.requestAnimationFrame(draw);
     } catch (error) {
       cleanup();
       throw error;
     }
 
     return {
-      render: draw,
-      resize: resize,
+      render: render,
+      resize: render,
       destroy: cleanup,
     };
   }
