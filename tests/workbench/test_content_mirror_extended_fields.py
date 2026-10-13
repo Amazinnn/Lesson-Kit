@@ -257,6 +257,284 @@ class ExtendedContentMirrorFieldTests(unittest.TestCase):
         for field in content_mirror.PROBLEM_DIFFICULTY_FIELDS:
             self.assertIsNone(rewritten["content"][field])
 
+    def _mirror_snapshot(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            tables = ("knowledge_points", "problems", "content_mirror_state", "content_mirror_log")
+            database = {
+                table: tuple(tuple(row) for row in conn.execute(f"SELECT * FROM {table}"))
+                for table in tables
+            }
+        finally:
+            conn.close()
+        files = {
+            str(path.relative_to(self.repo)): path.read_bytes()
+            for path in self.repo.rglob("*") if path.is_file()
+        }
+        return database, files
+
+    def _set_old_problem_baseline(self):
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.problem_json()
+        full_content = envelope["content"]
+        old_fields = {"figure_paths", *content_mirror.PROBLEM_DIFFICULTY_FIELDS}
+        old_content = {
+            key: value for key, value in full_content.items() if key not in old_fields
+        }
+        self.pool.connect().execute(
+            "UPDATE content_mirror_state SET content_json=? "
+            "WHERE entity_type='problem' AND entity_id='c02-ch01-prob-001'",
+            (json.dumps(old_content, ensure_ascii=False),),
+        )
+        self.pool.connect().commit()
+        envelope["content"] = old_content
+        envelope["revision"] = 1
+        path.write_text(json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8")
+        return path, full_content
+
+    def test_invalid_repository_figure_references_are_zero_write(self):
+        content_mirror.init(self.pool, self.repo)
+        invalid_cases = (
+            ("kp", [{"not": "a path"}]),
+            ("problem", [""]),
+            ("problem", ["../escape.png"]),
+            ("problem", ["other/ch01/a.png"]),
+            ("problem", ["c02/ch01/a.bmp"]),
+        )
+        for entity_type, value in invalid_cases:
+            with self.subTest(entity_type=entity_type, value=value):
+                path, envelope = self.entity_json(
+                    entity_type,
+                    "c02-ch01-kp-001" if entity_type == "kp" else "c02-ch01-prob-001",
+                )
+                envelope["revision"] = 2
+                envelope["content"]["figure_paths"] = value
+                path.write_text(
+                    json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8"
+                )
+                before = self._mirror_snapshot()
+
+                checked = content_mirror.check(self.pool, self.repo)
+
+                self.assertFalse(checked["valid"])
+                self.assertEqual(before, self._mirror_snapshot())
+                synced = content_mirror.sync(self.pool, self.repo)
+                self.assertFalse(synced["valid"])
+                self.assertEqual(before, self._mirror_snapshot())
+
+    def test_invalid_pool_figure_reference_blocks_export_without_writes(self):
+        content_mirror.init(self.pool, self.repo)
+        self.pool.connect().execute(
+            "UPDATE problems SET figure_paths='[\"../escape.png\"]' "
+            "WHERE problem_id='c02-ch01-prob-001'"
+        )
+        self.pool.connect().commit()
+        before = self._mirror_snapshot()
+
+        checked = content_mirror.check(self.pool, self.repo)
+
+        self.assertFalse(checked["valid"])
+        self.assertEqual(before, self._mirror_snapshot())
+        synced = content_mirror.sync(self.pool, self.repo)
+        self.assertFalse(synced["valid"])
+        self.assertEqual(before, self._mirror_snapshot())
+
+    def test_second_workspace_adopts_matching_next_revision_projection_once(self):
+        path, full_content = self._set_old_problem_baseline()
+        envelope = json.loads(path.read_text(encoding="utf-8"))
+        envelope["content"] = full_content
+        envelope["revision"] = 2
+        path.write_text(json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8")
+        before = self._mirror_snapshot()
+
+        checked = content_mirror.check(self.pool, self.repo)
+
+        self.assertTrue(checked["valid"])
+        self.assertEqual(checked["counts"].get("recover_converged"), 1)
+        self.assertEqual(before, self._mirror_snapshot())
+        synced = content_mirror.sync(self.pool, self.repo)
+        self.assertTrue(synced["valid"])
+        self.assertEqual(synced["counts"].get("recovered"), 1)
+        row = self.pool.connect().execute(
+            "SELECT revision, content_json FROM content_mirror_state "
+            "WHERE entity_type='problem' AND entity_id='c02-ch01-prob-001'"
+        ).fetchone()
+        self.assertEqual(row[0], 2)
+        self.assertEqual(json.loads(row[1]), full_content)
+        log_count = self.pool.connect().execute(
+            "SELECT COUNT(*) FROM content_mirror_log "
+            "WHERE entity_type='problem' AND entity_id='c02-ch01-prob-001' "
+            "AND direction='recover_converged'"
+        ).fetchone()[0]
+        self.assertEqual(log_count, 1)
+        repeated = content_mirror.sync(self.pool, self.repo)
+        self.assertTrue(repeated["valid"])
+        self.assertEqual(
+            next(item["status"] for item in repeated["items"]
+                 if item.get("entity_id") == "c02-ch01-prob-001"),
+            "noop",
+        )
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT COUNT(*) FROM content_mirror_log "
+                "WHERE entity_type='problem' AND entity_id='c02-ch01-prob-001' "
+                "AND direction='recover_converged'"
+            ).fetchone()[0],
+            1,
+        )
+
+    def test_projection_upgrade_revision_spoofs_remain_invalid(self):
+        path, full_content = self._set_old_problem_baseline()
+        envelope = json.loads(path.read_text(encoding="utf-8"))
+        envelope["content"] = full_content
+        for revision in (1, 3):
+            with self.subTest(revision=revision):
+                envelope["revision"] = revision
+                path.write_text(
+                    json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8"
+                )
+                before = self._mirror_snapshot()
+                checked = content_mirror.check(self.pool, self.repo)
+                self.assertFalse(checked["valid"])
+                self.assertEqual(before, self._mirror_snapshot())
+                synced = content_mirror.sync(self.pool, self.repo)
+                self.assertFalse(synced["valid"])
+                self.assertEqual(before, self._mirror_snapshot())
+
+    def test_genuine_two_sided_content_conflict_is_preserved(self):
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.problem_json()
+        self.pool.connect().execute(
+            "UPDATE problems SET problem_text='Pool edit' "
+            "WHERE problem_id='c02-ch01-prob-001'"
+        )
+        self.pool.connect().commit()
+        envelope["revision"] = 2
+        envelope["content"]["problem_text"] = "Repository edit"
+        path.write_text(json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8")
+        before = self._mirror_snapshot()
+
+        checked = content_mirror.check(self.pool, self.repo)
+
+        self.assertFalse(checked["valid"])
+        self.assertEqual(checked["counts"].get("conflict"), 1)
+        self.assertEqual(before, self._mirror_snapshot())
+        synced = content_mirror.sync(self.pool, self.repo)
+        self.assertFalse(synced["valid"])
+        self.assertEqual(synced["counts"].get("conflict"), 1)
+        self.assertEqual(before, self._mirror_snapshot())
+
+    def test_projection_upgrade_does_not_choose_between_new_field_values(self):
+        path, full_content = self._set_old_problem_baseline()
+        self.pool.connect().execute(
+            "UPDATE problems SET figure_paths='[\"c02/ch01/pool-version.png\"]' "
+            "WHERE problem_id='c02-ch01-prob-001'"
+        )
+        self.pool.connect().commit()
+        envelope = json.loads(path.read_text(encoding="utf-8"))
+        envelope["content"] = full_content
+        envelope["revision"] = 2
+        path.write_text(json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8")
+        before = self._mirror_snapshot()
+
+        checked = content_mirror.check(self.pool, self.repo)
+
+        self.assertFalse(checked["valid"])
+        self.assertEqual(checked["counts"].get("conflict"), 1)
+        self.assertEqual(before, self._mirror_snapshot())
+        synced = content_mirror.sync(self.pool, self.repo)
+        self.assertFalse(synced["valid"])
+        self.assertEqual(synced["counts"].get("conflict"), 1)
+        self.assertEqual(before, self._mirror_snapshot())
+
+    def test_content_edit_on_schema_without_difficulty_columns_is_valid(self):
+        conn = self.pool.connect()
+        for column in content_mirror.PROBLEM_DIFFICULTY_FIELDS:
+            conn.execute(f"ALTER TABLE problems DROP COLUMN {column}")
+        conn.commit()
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.problem_json()
+        self.assertTrue(
+            content_mirror.PROBLEM_DIFFICULTY_FIELDS.isdisjoint(envelope["content"])
+        )
+        envelope["revision"] = 2
+        envelope["content"]["problem_text"] = "Changed without rating columns"
+        path.write_text(json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8")
+        before = self._mirror_snapshot()
+
+        checked = content_mirror.check(self.pool, self.repo)
+
+        self.assertTrue(checked["valid"])
+        self.assertEqual(checked["counts"].get("repo_to_pool"), 1)
+        self.assertEqual(before, self._mirror_snapshot())
+        synced = content_mirror.sync(self.pool, self.repo)
+        self.assertTrue(synced["valid"])
+        self.assertEqual(
+            self.pool.connect().execute(
+                "SELECT problem_text FROM problems WHERE problem_id='c02-ch01-prob-001'"
+            ).fetchone()[0],
+            "Changed without rating columns",
+        )
+        columns = {
+            row[1] for row in self.pool.connect().execute("PRAGMA table_info(problems)")
+        }
+        self.assertTrue(content_mirror.PROBLEM_DIFFICULTY_FIELDS.isdisjoint(columns))
+
+    def test_content_edit_on_partial_difficulty_schema_clears_only_present_fields(self):
+        conn = self.pool.connect()
+        for column in ("difficulty", "difficulty_model", "difficulty_construction_openness"):
+            conn.execute(f"ALTER TABLE problems DROP COLUMN {column}")
+        conn.commit()
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.problem_json()
+        envelope["revision"] = 2
+        envelope["content"]["problem_text"] = "Changed with partial rating columns"
+        path.write_text(json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8")
+        before = self._mirror_snapshot()
+
+        checked = content_mirror.check(self.pool, self.repo)
+
+        self.assertTrue(checked["valid"])
+        self.assertEqual(checked["counts"].get("repo_to_pool"), 1)
+        self.assertEqual(before, self._mirror_snapshot())
+        synced = content_mirror.sync(self.pool, self.repo)
+        self.assertTrue(synced["valid"])
+        row = self.pool.connect().execute(
+            "SELECT difficulty_knowledge_breadth, difficulty_reasoning_depth, "
+            "difficulty_transfer_distance FROM problems WHERE problem_id='c02-ch01-prob-001'"
+        ).fetchone()
+        self.assertEqual(tuple(row), (None, None, None))
+        _path, rewritten = self.problem_json()
+        self.assertTrue(
+            {"difficulty_knowledge_breadth", "difficulty_reasoning_depth", "difficulty_transfer_distance"}
+            <= set(rewritten["content"])
+        )
+        self.assertTrue(
+            {"difficulty", "difficulty_model", "difficulty_construction_openness"}.isdisjoint(
+                rewritten["content"]
+            )
+        )
+
+    def test_explicit_rating_on_partial_difficulty_schema_fails_check(self):
+        conn = self.pool.connect()
+        for column in ("difficulty", "difficulty_model"):
+            conn.execute(f"ALTER TABLE problems DROP COLUMN {column}")
+        conn.commit()
+        content_mirror.init(self.pool, self.repo)
+        path, envelope = self.problem_json()
+        envelope["revision"] = 2
+        envelope["content"]["difficulty_reasoning_depth"] = 4
+        path.write_text(json.dumps(envelope, ensure_ascii=False) + "\n", encoding="utf-8")
+        before = self._mirror_snapshot()
+
+        checked = content_mirror.check(self.pool, self.repo)
+
+        self.assertFalse(checked["valid"])
+        self.assertEqual(before, self._mirror_snapshot())
+        synced = content_mirror.sync(self.pool, self.repo)
+        self.assertFalse(synced["valid"])
+        self.assertEqual(before, self._mirror_snapshot())
+
 
 if __name__ == "__main__":
     unittest.main()

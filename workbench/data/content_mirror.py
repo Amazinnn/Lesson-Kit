@@ -12,8 +12,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-from workbench.data import content
-from workbench.domain import difficulty as difficulty_rules
+from workbench.data import content, difficulty as difficulty_data, figure_mirror
 
 
 SCHEMA_VERSION = 1
@@ -28,9 +27,10 @@ PROBLEM_DIFFICULTY_DIMENSIONS = {
     "difficulty_transfer_distance": "transfer_distance",
     "difficulty_construction_openness": "construction_openness",
 }
-PROBLEM_DIFFICULTY_FIELDS = {
-    "difficulty", "difficulty_model", *PROBLEM_DIFFICULTY_DIMENSIONS,
-}
+PROBLEM_DIFFICULTY_COLUMNS = (
+    "difficulty", *PROBLEM_DIFFICULTY_DIMENSIONS, "difficulty_model",
+)
+PROBLEM_DIFFICULTY_FIELDS = set(PROBLEM_DIFFICULTY_COLUMNS)
 # Mirror the governed authored CRUD surface plus the separately governed problem
 # difficulty rating and logical figure references. Runtime/learner rows and
 # batch/timestamp metadata stay local.
@@ -499,6 +499,18 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
             "tracked pool row is missing; repository synchronization never deletes or recreates it implicitly",
             revision,
         )
+    newly_projected_fields = set(pool_now) - set(baseline)
+    if entity_type in {"kp", "problem"}:
+        try:
+            figure_mirror.validate_references(
+                pool.course, pool_now.get("figure_paths"), entity_id,
+            )
+            if repo_entry is not None:
+                figure_mirror.validate_references(
+                    pool.course, repo_entry[1]["content"].get("figure_paths"), entity_id,
+                )
+        except figure_mirror.FigureMirrorError as exc:
+            return _result(entity_type, entity_id, "invalid", str(exc), revision)
     if repo_entry is None:
         return _result(entity_type, entity_id, "restore_repo_file", revision=revision + 1)
 
@@ -518,11 +530,42 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
     repo_revision = envelope["revision"]
     pool_changed = pool_now != baseline
     repo_changed = repo_now != baseline
+    present_new_fields = newly_projected_fields & set(envelope["content"])
+    if present_new_fields and present_new_fields != newly_projected_fields:
+        return _result(
+            entity_type, entity_id, "invalid",
+            "projection upgrade must include every newly available field",
+            revision, path=path,
+        )
+    if present_new_fields and any(
+        repo_now[field] != pool_now[field] for field in present_new_fields
+    ):
+        return _result(
+            entity_type, entity_id, "conflict",
+            "newly projected fields differ from the current pool projection",
+            revision, path=path,
+        )
     if not repo_changed:
         if repo_revision != revision:
+            if (
+                projection_upgrade
+                and repo_revision == revision + 1
+                and set(pool_now) <= set(envelope["content"])
+                and repo_now == pool_now
+            ):
+                return _result(
+                    entity_type, entity_id, "recover_converged",
+                    revision=repo_revision, path=path,
+                )
             return _result(
                 entity_type, entity_id, "invalid",
                 f"unchanged content must keep revision {revision}", revision, path=path,
+            )
+        if present_new_fields:
+            return _result(
+                entity_type, entity_id, "invalid",
+                f"new projection fields must advance revision {revision} -> {revision + 1}",
+                revision, path=path,
             )
         if pool_changed or projection_upgrade:
             return _result(
@@ -549,17 +592,22 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
     )
 
 
-def _normalise_problem_difficulty(incoming, changed):
+def _normalise_problem_difficulty(pool, entity_id, baseline, incoming, changed):
     dimension_columns = set(PROBLEM_DIFFICULTY_DIMENSIONS)
     if changed & {"difficulty", "difficulty_model"} and not changed & dimension_columns:
         return None, (
             "difficulty and difficulty_model are derived; edit the four difficulty dimensions"
         )
+    available = set(baseline) & PROBLEM_DIFFICULTY_FIELDS
     dimensions = {
         column: incoming.get(column) for column in PROBLEM_DIFFICULTY_DIMENSIONS
     }
     if all(value is None for value in dimensions.values()):
-        return {field: None for field in PROBLEM_DIFFICULTY_FIELDS}, None
+        return {
+            field: None for field in PROBLEM_DIFFICULTY_COLUMNS if field in available
+        }, None
+    if available != PROBLEM_DIFFICULTY_FIELDS:
+        return None, "the complete difficulty group is unavailable in this pool schema"
     if any(value is None for value in dimensions.values()):
         return None, "difficulty dimensions must be all null or all present"
     vector = {
@@ -567,13 +615,17 @@ def _normalise_problem_difficulty(incoming, changed):
         for column, rule_name in PROBLEM_DIFFICULTY_DIMENSIONS.items()
     }
     try:
-        total = float(difficulty_rules.score(vector))
+        checked = difficulty_data.check(pool, {"items": [{"problem_id": entity_id, **vector}]})
     except ValueError as exc:
         return None, str(exc)
+    item = checked["items"][0]
     return {
-        **dimensions,
-        "difficulty": total,
-        "difficulty_model": difficulty_rules.MODEL_ID,
+        **{
+            column: item[rule_name]
+            for column, rule_name in PROBLEM_DIFFICULTY_DIMENSIONS.items()
+        },
+        "difficulty": item["difficulty"],
+        "difficulty_model": item["difficulty_model"],
     }, None
 
 
@@ -597,12 +649,16 @@ def _normalise_incoming(pool, entity_type, entity_id, baseline, incoming):
             normalized = dict(baseline)
             clears_difficulty = False
         if difficulty_changed:
-            rating, error = _normalise_problem_difficulty(incoming, difficulty_changed)
+            rating, error = _normalise_problem_difficulty(
+                pool, entity_id, baseline, incoming, difficulty_changed,
+            )
             if error:
                 return incoming, error
             normalized.update(rating)
         elif clears_difficulty:
-            normalized.update({field: None for field in PROBLEM_DIFFICULTY_FIELDS})
+            normalized.update({
+                field: None for field in PROBLEM_DIFFICULTY_COLUMNS if field in baseline
+            })
         return normalized, None
     elif entity_type == "relation":
         from workbench.data import relations
@@ -671,14 +727,7 @@ def _apply_problem_patch(pool, entity_id, patch, authored):
     if content_patch:
         content.update(pool, "problem", entity_id, content_patch)
     if difficulty_changed:
-        columns = [
-            "difficulty",
-            "difficulty_knowledge_breadth",
-            "difficulty_reasoning_depth",
-            "difficulty_transfer_distance",
-            "difficulty_construction_openness",
-            "difficulty_model",
-        ]
+        columns = [field for field in PROBLEM_DIFFICULTY_COLUMNS if field in authored]
         cursor = pool.connect().execute(
             "UPDATE problems SET " + ", ".join(f"{column}=?" for column in columns)
             + " WHERE problem_id=?",
