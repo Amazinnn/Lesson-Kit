@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const publicPhysics = require("../../workbench/server/static/graph-physics.js");
-const localPhysics = require("../../workbench/server/static/graph-physics-local.js");
+const corePhysics = require("../../workbench/server/static/graph-physics-core.js");
 
 function node(id, extra) {
   return Object.assign({
@@ -45,11 +45,11 @@ function settle(api) {
   };
 }
 
-test("graph physics local runtime preserves the public solver contract", () => {
+test("graph physics public seam exposes the semantic core contract", () => {
   assert.deepEqual(
-    Object.keys(localPhysics).sort(),
+    Object.keys(corePhysics).sort(),
     Object.keys(publicPhysics).sort(),
-    "the isolated local runtime starts as the exact public solver contract"
+    "the public seam must expose the current core implementation without a second solver"
   );
-  assert.deepEqual(settle(localPhysics), settle(publicPhysics));
+  assert.deepEqual(settle(corePhysics), settle(publicPhysics));
 });
