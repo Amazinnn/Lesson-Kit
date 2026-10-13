@@ -2,6 +2,7 @@
 
 - [x] 1.1 Add and validate the scoped OpenSpec proposal and behavior delta before production edits.
 - [x] 1.2 Reconcile the existing mirror field, writer/consumer, architecture, product, action, glossary, and changelog contracts.
+- [x] 1.3 Modify the current difficulty and figure capability requirements for the explicit rating replacement and reference-only mirror boundaries, preserving all six prior scenarios and the gated byte-hash behavior.
 
 ## 2. Regression cases
 

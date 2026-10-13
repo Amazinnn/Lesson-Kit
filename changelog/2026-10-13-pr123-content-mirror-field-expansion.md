@@ -1,18 +1,27 @@
 # PR123 content mirror field expansion
 
-The v1 JSON content projection now declares validated `figure_paths` references
-for knowledge points and problems, plus the complete objective difficulty group
-for problems. Reference validation reuses the figure mirror's existing logical
-path rules; figure bytes remain in the separate directional mirror. Difficulty
-normalization reuses `data.difficulty.check`; old schemas are not migrated, and
-content edits clear only difficulty columns present in the pool projection.
+The v1 JSON content projection declares validated `figure_paths` references for
+knowledge points and problems, plus the complete objective difficulty group
+for problems. An explicit content edit may retain a rating only when the same
+JSON revision supplies a complete validated replacement vector; content-only
+edits still clear the existing rating without rerating. An explicit JSON mirror
+revision may update logical references for an already-tracked owner, but it
+does not assert byte existence or create, copy, rename, or transport figure
+bytes. New image generation and byte attachment remain behind the gated figure
+patch channel; its byte-hash checks stay unchanged and repository-wide naming
+remains unresolved. Difficulty normalization reuses `data.difficulty.check`;
+old schemas are not migrated, and stale clearing touches only represented
+fields.
 
 An older v1 mirror baseline can adopt a complete matching projection from the
 exact next revision once. Read-only checks remain zero-write, revision spoofing
 is rejected, and divergent edits remain conflicts. `schema_version` stays 1.
 
 The field, data-model, architecture, product-manual, glossary, and existing
-mirror action contracts are updated. No CLI action or pool migration is added.
+mirror action contracts are updated. The current `problem-difficulty` and
+`knowledge-figures` capabilities now also state the explicit replacement-rating
+and reference-only writer boundaries while preserving their prior scenarios.
+No CLI action or pool migration is added.
 
 ## Focused verification
 
@@ -21,5 +30,7 @@ mirror action contracts are updated. No CLI action or pool migration is added.
 - `openspec validate --all --strict --concurrency 3` — 24 passed, 0 failed.
 - `git diff --check` — passed.
 
-Full-suite, isolated-environment, and release acceptance remain with the
-independent final gate.
+Independent full-suite and isolated acceptance passed before this docs-only
+specification follow-up. The follow-up is checked with `openspec validate
+--all --strict --concurrency 3`, old-scenario equality proof, and `git diff
+--check`. OpenSpec archive and final integration remain root-owned.

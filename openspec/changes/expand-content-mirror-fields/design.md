@@ -22,9 +22,11 @@ See `proposal.md` for motivation and `specs/workbench-content-governance/spec.md
 3. **Keep schema handling projection-based.** Derive the stale-clear and SQL update field set from fields actually present in the authored projection. Explicit non-null ratings require the complete group. A schema migration or guessed null columns would make old pools behave differently and is not needed.
 4. **Reuse `recover_converged` for remote projection adoption.** The planner will allow that existing classification only when the repository revision is exactly the local revision plus one, the incoming payload contains the current pool projection, and normalized content equals the pool. The existing apply path then records the revision and full baseline once; the next plan is a no-op. A new status or a general relaxation of revision checks would widen the interface.
 
+5. **Reconcile current rating and figure capabilities at their narrow boundaries.** A content-only edit continues to clear the complete existing objective rating without automatic rerating. A JSON mirror revision that explicitly includes all four replacement dimensions with a content-axis edit instead validates and stores that complete vector, deriving the total and model through the existing authority. For figures, an explicit mirror revision may update the logical reference array of an already-tracked owner after the existing path checks; it does not create, inspect, copy, rename, or transport bytes, or claim that bytes exist. New image generation and asset attachment remain under the existing gated manifest, review, and byte-hash checks. The repository-wide figure naming policy remains unresolved.
+
 ## Risks / Trade-offs
 
-- [A pool may contain an invalid legacy logical figure reference] → Preflight checks both sides and refuses the entity before mirror writes; byte existence remains the separate figure-sync contract.
+- [A pool may contain an invalid legacy logical figure reference] → Preflight checks both sides and refuses the entity before mirror writes; missing-file behavior remains under the existing figure and binary checks, and a valid reference does not assert byte existence.
 - [An older v1 client may not recognize the additive fields] → Keep the documented revisioned projection upgrade and require callers to check before syncing; do not claim cross-version writes are transparent.
 - [SQLite schema may contain only some difficulty columns] → Keep projection and SQL writes limited to present fields, while refusing explicit ratings that need the whole group.
 
