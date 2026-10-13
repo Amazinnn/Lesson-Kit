@@ -64,29 +64,22 @@ test("graph physics public seam exposes the semantic core contract", () => {
   assert.deepEqual(settle(corePhysics), settle(publicPhysics));
 });
 
-test("parser-inserted core can load after the public loader returns", async () => {
-  const insertedScripts = [];
+test("browser adapter refuses to publish when the parser-loaded core is missing", () => {
+  let writes = 0;
   const browser = vm.createContext({
+    Worker: function Worker() {},
     document: {
       readyState: "loading",
-      write(markup) {
-        const match = markup.match(/<script src="([^"]+)"><\/script>/);
-        assert.ok(match, "the loader writes one external script");
-        insertedScripts.push(match[1]);
-      },
+      write() { writes += 1; },
     },
   });
 
-  assert.doesNotThrow(() => vm.runInContext(loaderSource, browser));
-  assert.deepEqual(insertedScripts, ["/static/graph-physics-core.js"]);
-  assert.equal(vm.runInContext("typeof GraphPhysics", browser), "undefined");
-
-  await new Promise((resolve) => setImmediate(resolve));
-  vm.runInContext(coreSource, browser);
-  assert.equal(
-    vm.runInContext("typeof GraphPhysics.create === 'function'", browser),
-    true
+  assert.throws(
+    () => vm.runInContext(loaderSource, browser),
+    /graph physics core failed to load/
   );
+  assert.equal(writes, 0, "the adapter does not insert a second script");
+  assert.equal(vm.runInContext("typeof GraphPhysics", browser), "undefined");
 });
 
 test("browser loader still refuses non-parser loading", () => {

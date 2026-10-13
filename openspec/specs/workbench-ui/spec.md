@@ -228,7 +228,7 @@ The knowledge point list and the left weak-point rail SHALL use each knowledge p
 
 ### Requirement: Knowledge graph page
 
-The knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, problem-count radius, focus, and the concise dashboard. Coordinates, soft anchors, motion, and interactions SHALL remain memory-only.
+When browser Web Worker support and the graph physics resources are available, the knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, problem-count radius, focus, and the concise dashboard. Coordinates, soft anchors, motion, and interactions SHALL remain memory-only. If Web Worker support or graph physics loading is unavailable, the page SHALL show a readable graph error and SHALL NOT run the synchronous solver as a fallback.
 
 #### Scenario: Read semantic spacing
 
@@ -288,12 +288,22 @@ The knowledge graph page SHALL render the live complete chapter graph in a middl
 #### Scenario: Open the knowledge graph
 
 - **WHEN** the learner activates the knowledge-graph navigation entry
-- **THEN** the middle area displays the live complete chapter graph
+- **THEN** the middle area displays the live complete chapter graph when graph execution is available, or a readable graph error when it is not
 
 #### Scenario: Graph artifact missing
 
 - **WHEN** no rendered graph artifact exists on disk
 - **THEN** the graph remains available from current workspace data
+
+#### Scenario: Graph execution is unavailable
+
+- **WHEN** the browser lacks Web Worker support or graph physics resources fail to load
+- **THEN** the graph status explains that graph execution is unavailable, no synchronous solver is exposed or started, and authored and learning data remain unchanged
+
+#### Scenario: Worker execution fails
+
+- **WHEN** the Web Worker reports an execution error while the graph is settling
+- **THEN** the Worker is terminated, the solver stops posting steps and scheduling solver frames, the graph status shows a readable error, and authored and learning data remain unchanged
 
 #### Scenario: Focus a selected neighborhood
 
