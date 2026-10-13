@@ -514,6 +514,11 @@ _Avoid_：日历应用、自动重排
 _Avoid_：Obsidian、数据库编辑器
 出处：workbench-ui spec；REQUIREMENTS.md 2026-08-27 段
 
+### WebGL2 图谱渲染 / WebGL2 Graph Rendering
+知识图谱关系线的唯一当前绘制路径，要求浏览器提供 WebGL2。关系几何仍由图谱物理核心提供，DOM 节点继续承担节点外观、选择、拖拽与无障碍交互；渲染初始化失败时显示错误并停止本次图谱运行，不回退到 SVG。
+_Avoid_：可选 WebGL 增强、运行时 SVG 回退
+出处：graph-webgl-rendering change；ADR 0027
+
 ### 指标投影 / Metric Projection
 知识图谱对同一组节点的只读视觉重排：当前指标越高，节点越大且越靠近中心，并使用对应色谱；切换时节点以力场目标连续迁移。关系结构仍以知识关系决定位置。投影不新增指标、不改变选区、不写数据。
 _Avoid_：排行榜、自动学习决策、持久布局
