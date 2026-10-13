@@ -16,7 +16,7 @@ Keep both behaviors inside the modules that already own them.
 
 1. `graph-renderer.js` owns viewport culling and label/meta LOD. Off-screen DOM wrappers are hidden without removing nodes from graph physics. Selected, hovered, and high-focus labels remain visible at lower zoom.
 2. `graph-physics.js` owns the local settled-coordinate seed because it owns the Worker runtime and coordinate authority.
-3. Store at most one layout seed per workspace in browser `localStorage`. The stored value contains a readable, deterministic graph identity (sorted node IDs and relation tuples) plus node coordinates. Do not introduce a graph hash or opaque cache identifier.
+3. Store at most one layout seed per workspace in browser `localStorage`, under `lk_graph_layout_v1_<workspace>`. The stored value contains a readable, deterministic identity made from sorted node IDs and sorted `source|target|type|direction` relation tuples, plus node coordinates. This topology identity does not include edge strength, titles, metrics, or learner state. Do not introduce a graph hash or opaque cache identifier.
 4. A seed is accepted only when its stored graph identity exactly matches the current graph identity.
 5. Restored coordinates become temporary anchors, are sent through the existing Worker control channel, then are released and reheated. The cache never becomes authored layout truth.
 6. Missing, stale, corrupt, or unavailable local storage simply means there is no seed; the same Worker implementation starts from its deterministic initial layout. This is absence of optional cached state, not a fallback implementation.

@@ -55,7 +55,7 @@
 | 按知识点读取学习证据（有界近期作答 + 可读题面，不推断学习特征） | CLI `lesson-kit evidence <workspace> kp <kp-id> [--limit N]` | Agent | —（只读） | 已实现（agent-learning-evidence） |
 | 答卷目录登记（只存路径，不复制图片） | CLI `attempts sources add\|list\|remove` | Agent | `answer-sources.json` | 已实现（同上） |
 | 图谱状态显式编辑（不记反馈） | UI | 人 | 状态+调度 | 已实现 |
-| 图谱关系强度管线与有限消交叉（WebGL2 单一关系绘制路径；启动失败停止本次图谱运行） | UI | 系统 | —（纯视图） | 已实现（graph-relation-pipes） |
+| 图谱关系绘制与 viewport/label LOD（WebGL2 单一路径；启动失败停止本次运行；可选本地布局种子不改图谱事实） | UI | 系统 | 浏览器可选布局缓存；不写 Pool | 已实现（graph-relation-pipes；graph-lod-layout-seeds） |
 | 方向写入（最终使用的 direction 键） | UI/API | 双 | 方向调度行 | 已实现 |
 
 ## 三、内容治理（唯一合法写池）

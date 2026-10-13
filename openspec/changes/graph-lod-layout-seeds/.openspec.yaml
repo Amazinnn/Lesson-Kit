@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-13
+goal: Add paint-only graph LOD and a recoverable local settled layout seed
+  without changing authored or learning data.
