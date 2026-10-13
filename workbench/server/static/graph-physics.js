@@ -39,6 +39,67 @@
 
   root.GraphPhysics = factory(root, core, renderer);
 }(typeof globalThis === "object" ? globalThis : this, function (root, core, renderer) {
+  var LAYOUT_CACHE_VERSION = 1;
+
+  function graphIdentity(nodes, edges) {
+    var nodeIds = (nodes || []).map(function (node) { return String(node.id); }).sort();
+    var relations = (edges || []).map(function (edge) {
+      return [
+        String(edge.s === undefined ? edge.source : edge.s),
+        String(edge.t === undefined ? edge.target : edge.t),
+        String(edge.type === undefined ? edge.relation_type || "" : edge.type || ""),
+        String(edge.direction || ""),
+      ].join("|");
+    }).sort();
+    return JSON.stringify({ nodes: nodeIds, edges: relations });
+  }
+
+  function layoutStorageKey() {
+    var layout = root.document && root.document.getElementById
+      ? root.document.getElementById("layout") : null;
+    var workspace = layout && layout.dataset ? layout.dataset.workspace : "default";
+    return "lk_graph_layout_v" + LAYOUT_CACHE_VERSION + "_" + String(workspace || "default");
+  }
+
+  function storage() {
+    try { return root.localStorage || null; }
+    catch (_) { return null; }
+  }
+
+  function readLayoutSeed(identity) {
+    var store = storage();
+    if (!store) return null;
+    try {
+      var value = JSON.parse(store.getItem(layoutStorageKey()) || "null");
+      if (!value || value.version !== LAYOUT_CACHE_VERSION || value.identity !== identity || !value.positions) {
+        return null;
+      }
+      return value.positions;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeLayoutSeed(identity, state) {
+    var store = storage();
+    if (!store) return false;
+    var positions = {};
+    state.nodes.forEach(function (node) {
+      if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+      positions[node.id] = [Math.round(node.x * 10) / 10, Math.round(node.y * 10) / 10];
+    });
+    try {
+      store.setItem(layoutStorageKey(), JSON.stringify({
+        version: LAYOUT_CACHE_VERSION,
+        identity: identity,
+        positions: positions,
+      }));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function controlsFor(state) {
     return {
       view: state.graph.view,
@@ -64,7 +125,10 @@
   }
 
   function create(inputNodes, inputEdges, options) {
-    var mirror = core.create(inputNodes || [], inputEdges || [], options || {});
+    inputNodes = inputNodes || [];
+    inputEdges = inputEdges || [];
+    var identity = graphIdentity(inputNodes, inputEdges);
+    var mirror = core.create(inputNodes, inputEdges, options || {});
     var state = mirror.state;
     var graph = mirror.graph;
     var latest = null;
@@ -73,6 +137,7 @@
     var appliedRevision = -1;
     var controlRevision = 0;
     var rendererInstance = null;
+    var savedThisSettle = false;
     var worker = new root.Worker("/static/graph-physics-worker.js", {
       name: "lesson-kit-graph-physics",
     });
@@ -109,6 +174,12 @@
         graph.settled = latest.graph.settled;
         graph.layoutInflation = latest.graph.layoutInflation;
       }
+      if (graph.settled && !savedThisSettle) {
+        writeLayoutSeed(identity, state);
+        savedThisSettle = true;
+      } else if (!graph.settled) {
+        savedThisSettle = false;
+      }
       if (latest.kind === "step") stepPending = false;
       latest = null;
     }
@@ -128,8 +199,8 @@
     };
 
     controlRevision = send("init", {
-      nodes: inputNodes || [],
-      edges: inputEdges || [],
+      nodes: inputNodes,
+      edges: inputEdges,
       options: {
         stageWidth: state.stageWidth,
         stageHeight: state.stageHeight,
@@ -142,6 +213,7 @@
 
     function reheat(alpha, autoFit) {
       mirror.reheat(alpha, autoFit);
+      savedThisSettle = false;
       controlRevision = send("reheat", {
         alpha: alpha,
         autoFit: autoFit,
@@ -202,6 +274,38 @@
 
     rendererInstance = renderer.attach(runtime, root);
     runtime.renderer = rendererInstance;
+
+    var seed = readLayoutSeed(identity);
+    if (seed) {
+      var seeded = [];
+      state.nodes.forEach(function (node) {
+        var point = seed[node.id];
+        if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+        node.x = point[0];
+        node.y = point[1];
+        node.vx = 0;
+        node.vy = 0;
+        node.anchorX = point[0];
+        node.anchorY = point[1];
+        seeded.push(node);
+      });
+      if (seeded.length) {
+        runtime.reheat(.34, false);
+        var schedule = typeof root.requestAnimationFrame === "function"
+          ? root.requestAnimationFrame.bind(root)
+          : root.setTimeout.bind(root);
+        schedule(function () {
+          schedule(function () {
+            seeded.forEach(function (node) {
+              node.anchorX = null;
+              node.anchorY = null;
+            });
+            runtime.reheat(.28, true);
+          });
+        });
+      }
+    }
+
     return runtime;
   }
 

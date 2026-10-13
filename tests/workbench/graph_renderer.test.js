@@ -20,9 +20,14 @@ test("renderer consumes the exact cubic path produced by graph physics", () => {
   assert.equal(renderer.parseCurve("not a graph path"), null);
 });
 
-test("renderer keeps stroke compensation tied to the Workbench stage scale", () => {
-  assert.equal(renderer.stageScale({ style: { transform: "translate(12px,-4px) scale(0.5)" } }), .5);
-  assert.equal(renderer.stageScale({ style: { transform: "" } }), 1);
+test("renderer derives viewport and LOD geometry from the Workbench camera", () => {
+  const stage = { style: { transform: "translate(120px,-40px) scale(0.5)" } };
+  const host = { clientWidth: 800, clientHeight: 600 };
+  const viewport = renderer.viewportFor(stage, host, 0);
+  assert.deepEqual(viewport, { x0: -240, y0: 80, x1: 1360, y1: 1280, scale: .5 });
+  assert.equal(renderer.nodeInViewport({ x: 100, y: 100, size: 40 }, viewport), true);
+  assert.equal(renderer.nodeInViewport({ x: 3000, y: 3000, size: 40 }, viewport), false);
+  assert.equal(renderer.stageScale(stage), .5);
 });
 
 test("renderer fails explicitly without its browser surface", () => {
