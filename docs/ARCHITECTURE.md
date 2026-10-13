@@ -151,8 +151,8 @@ workbench/
   feedback.py，单测覆盖关键词表；`attempt_id` 只把事件链回尝试，不改映射语义。
 - `domain.schedule.after_result(pool, item, result, now)`——SM-2 变体；`due(pool, days) -> [...]`。
 - 图谱状态动作经 Domain 规则映射到现有调度质量值；Shell 不直接写 SQLite，Data 层执行覆盖式存储。
-- 图谱指标投影完全位于浏览器表示层：`graph-physics.js` 只为现有节点计算内存中的目标位置、目标半径与过渡力；关系结构/题量/重要性/学习状态均不产生数据写入。
-- 图谱状态筛选分群完全位于浏览器表示层：四个既有状态按多选并集决定可见子图，`graph-physics.js` 只计算内存聚类目标；筛选值仅随页面上下文提供给 Agent，不写 Pool。
+- 图谱指标投影完全位于浏览器表示层：graph-physics-core.js 保持唯一语义核心；graph-physics.js 提供 Worker 适配器与页面镜像，graph-physics-worker.js 执行迭代布局；graph-renderer.js 使用 WebGL2 绘制物理核心提供的关系几何，DOM 节点继续承担节点外观与交互。图谱页按 core、renderer、adapter 顺序加载；WebGL2 或 renderer 初始化失败时走现有状态提示并终止本次运行。关系结构/题量/重要性/学习状态均不产生数据写入。
+- 图谱状态筛选分群也完全位于浏览器表示层：四个既有状态按多选并集决定可见子图；布局仅更新内存坐标；筛选值仅随页面上下文提供给 Agent，不写 Pool。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
 - `data.content_mirror`：扫描所选课程本地 JSON、按嵌入 id 比较三方规范化内容、调用现有内容校验/写入权威，
   并将单实体内容与镜像状态/日志原子提交；不调用 Git，也不因文件缺失或删除请求删池内容。

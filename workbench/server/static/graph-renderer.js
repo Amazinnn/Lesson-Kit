@@ -3,8 +3,9 @@
 /* Current Lesson Kit graph renderer implementation.
  *
  * Relations are painted with WebGL2. DOM nodes remain the canonical visual,
- * interaction and accessibility layer. Viewport culling and label LOD belong
- * here because they are paint policy, not graph semantics.
+ * interaction and accessibility layer. This module is the one renderer used by
+ * the current release; unsupported WebGL is an explicit failure, not a switch
+ * to the retired SVG renderer.
  */
 (function (root, factory) {
   var api = factory();
@@ -94,13 +95,24 @@
 
   function program(gl, vertex, fragment) {
     var out = gl.createProgram();
-    gl.attachShader(out, compile(gl, gl.VERTEX_SHADER, vertex));
-    gl.attachShader(out, compile(gl, gl.FRAGMENT_SHADER, fragment));
-    gl.linkProgram(out);
-    if (!gl.getProgramParameter(out, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(out) || "program link failed");
+    var vertexShader = null;
+    var fragmentShader = null;
+    try {
+      vertexShader = compile(gl, gl.VERTEX_SHADER, vertex);
+      fragmentShader = compile(gl, gl.FRAGMENT_SHADER, fragment);
+      gl.attachShader(out, vertexShader);
+      gl.attachShader(out, fragmentShader);
+      gl.linkProgram(out);
+      if (!gl.getProgramParameter(out, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(out) || "program link failed");
+      }
+      return out;
+    } catch (error) {
+      if (vertexShader) gl.deleteShader(vertexShader);
+      if (fragmentShader) gl.deleteShader(fragmentShader);
+      gl.deleteProgram(out);
+      throw error;
     }
-    return out;
   }
 
   function pushVertex(out, point, color, alpha) {
@@ -128,7 +140,7 @@
   }
 
   function addStyle(document) {
-    if (document.getElementById("graph-renderer-style")) return;
+    if (document.getElementById("graph-renderer-style")) return null;
     var style = document.createElement("style");
     style.id = "graph-renderer-style";
     style.textContent = [
@@ -136,10 +148,13 @@
       "#graph-canvas.graph-renderer-active .graph-edges{display:none}",
     ].join("\n");
     (document.head || document.documentElement).appendChild(style);
+    return style;
   }
 
   function attach(runtime, root) {
     root = root || (typeof globalThis === "object" ? globalThis : null);
+    var reducedMotion = !!(root && root.matchMedia
+      && root.matchMedia("(prefers-reduced-motion: reduce)").matches);
     var document = root && root.document;
     if (!document || !runtime || !runtime.state) {
       throw new Error("GraphRenderer requires a browser graph runtime");
@@ -159,26 +174,43 @@
     });
     if (!gl) throw new Error("Lesson Kit knowledge graph requires WebGL2");
 
-    var edgeProgram = program(gl,
-      "#version 300 es\nin vec2 a_pos;in vec4 a_color;uniform vec2 u_size;out vec4 v_color;void main(){vec2 p=(a_pos/u_size)*2.0-1.0;gl_Position=vec4(p.x,-p.y,0,1);v_color=a_color;}",
-      "#version 300 es\nprecision mediump float;in vec4 v_color;out vec4 outColor;void main(){outColor=v_color;}"
-    );
-    var edgeBuffer = gl.createBuffer();
     var state = runtime.state;
     var routePorts = runtime.computePortSlots;
     var routePath = runtime.edgePath;
+    var edgeProgram = null;
+    var edgeBuffer = null;
+    var styleElement = null;
     var wrappers = new Map();
     var frame = null;
     var destroyed = false;
-    var frameCount = 0;
+    var runtimePatched = false;
 
-    canvas.className = "graph-renderer-layer";
-    stage.insertBefore(canvas, stage.firstChild || null);
-    addStyle(document);
-    canvasHost.classList.add("graph-renderer-active");
+    function resizeCanvas() {
+      var dpr = clamp(Number(root.devicePixelRatio) || 1, 1, 2);
+      var cssWidth = Math.max(1, state.stageWidth), cssHeight = Math.max(1, state.stageHeight);
+      var width = Math.round(cssWidth * dpr), height = Math.round(cssHeight * dpr);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width; canvas.height = height;
+        canvas.style.width = cssWidth + "px"; canvas.style.height = cssHeight + "px";
+      }
+      gl.viewport(0, 0, width, height);
+    }
 
-    runtime.computePortSlots = function () { return state.portSlots; };
-    runtime.edgePath = function () { return "M 0 0"; };
+    function bindEdges(vertices) {
+      if (!vertices.length) return;
+      gl.useProgram(edgeProgram);
+      gl.bindBuffer(gl.ARRAY_BUFFER, edgeBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
+      var stride = 6 * 4;
+      var pos = gl.getAttribLocation(edgeProgram, "a_pos");
+      var color = gl.getAttribLocation(edgeProgram, "a_color");
+      gl.enableVertexAttribArray(pos);
+      gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(color);
+      gl.vertexAttribPointer(color, 4, gl.FLOAT, false, stride, 2 * 4);
+      gl.uniform2f(gl.getUniformLocation(edgeProgram, "u_size"), state.stageWidth, state.stageHeight);
+      gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6);
+    }
 
     function refreshWrappers() {
       wrappers = new Map();
@@ -208,37 +240,10 @@
       });
     }
 
-    function resize() {
-      var dpr = clamp(Number(root.devicePixelRatio) || 1, 1, 2);
-      var cssWidth = Math.max(1, state.stageWidth), cssHeight = Math.max(1, state.stageHeight);
-      var width = Math.round(cssWidth * dpr), height = Math.round(cssHeight * dpr);
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width; canvas.height = height;
-        canvas.style.width = cssWidth + "px"; canvas.style.height = cssHeight + "px";
-      }
-      gl.viewport(0, 0, width, height);
-    }
-
-    function bindEdges(vertices) {
-      if (!vertices.length) return;
-      gl.useProgram(edgeProgram);
-      gl.bindBuffer(gl.ARRAY_BUFFER, edgeBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
-      var stride = 6 * 4;
-      var pos = gl.getAttribLocation(edgeProgram, "a_pos");
-      var color = gl.getAttribLocation(edgeProgram, "a_color");
-      gl.enableVertexAttribArray(pos);
-      gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, stride, 0);
-      gl.enableVertexAttribArray(color);
-      gl.vertexAttribPointer(color, 4, gl.FLOAT, false, stride, 2 * 4);
-      gl.uniform2f(gl.getUniformLocation(edgeProgram, "u_size"), state.stageWidth, state.stageHeight);
-      gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6);
-    }
-
     function draw() {
       frame = null;
       if (destroyed) return;
-      resize();
+      resizeCanvas();
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.enable(gl.BLEND);
@@ -277,45 +282,79 @@
         }
       });
       bindEdges(vertices);
-      frameCount += 1;
-      if (frameCount % 3 === 0) applyLod();
-      frame = root.requestAnimationFrame(draw);
+      applyLod();
     }
 
-    applyLod();
-    frame = root.requestAnimationFrame(draw);
+    function render() {
+      if (destroyed) return;
+      if (reducedMotion) {
+        draw();
+      } else if (frame === null) {
+        frame = root.requestAnimationFrame(draw);
+      }
+    }
 
-    return {
-      resize: resize,
-      destroy: function () {
-        if (destroyed) return;
-        destroyed = true;
-        if (frame !== null) root.cancelAnimationFrame(frame);
+    function cleanup() {
+      if (destroyed) return;
+      destroyed = true;
+      if (frame !== null) {
+        root.cancelAnimationFrame(frame);
+        frame = null;
+      }
+      if (runtimePatched) {
         runtime.computePortSlots = routePorts;
         runtime.edgePath = routePath;
-        canvasHost.classList.remove("graph-renderer-active");
-        wrappers.forEach(function (wrap) {
-          wrap.style.visibility = "";
-          if (!wrap.querySelector) return;
-          var label = wrap.querySelector(".label");
-          var meta = wrap.querySelector(".meta");
-          if (label) label.style.visibility = "";
-          if (meta) meta.style.visibility = "";
-        });
-        if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-        gl.deleteBuffer(edgeBuffer);
-        gl.deleteProgram(edgeProgram);
-      },
+        runtimePatched = false;
+      }
+      canvasHost.classList.remove("graph-renderer-active");
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      if (styleElement && styleElement.parentNode) styleElement.parentNode.removeChild(styleElement);
+      wrappers.forEach(function (wrap) {
+        wrap.style.visibility = "";
+        if (!wrap.querySelector) return;
+        var label = wrap.querySelector(".label");
+        var meta = wrap.querySelector(".meta");
+        if (label) label.style.visibility = "";
+        if (meta) meta.style.visibility = "";
+      });
+      if (edgeBuffer) gl.deleteBuffer(edgeBuffer);
+      if (edgeProgram) gl.deleteProgram(edgeProgram);
+    }
+
+    try {
+      edgeProgram = program(gl,
+        "#version 300 es\nin vec2 a_pos;in vec4 a_color;uniform vec2 u_size;out vec4 v_color;void main(){vec2 p=(a_pos/u_size)*2.0-1.0;gl_Position=vec4(p.x,-p.y,0,1);v_color=a_color;}",
+        "#version 300 es\nprecision mediump float;in vec4 v_color;out vec4 outColor;void main(){outColor=v_color;}"
+      );
+      edgeBuffer = gl.createBuffer();
+      canvas.className = "graph-renderer-layer";
+      stage.insertBefore(canvas, stage.firstChild || null);
+      styleElement = addStyle(document);
+      canvasHost.classList.add("graph-renderer-active");
+
+      // Keep routing in the physics contract while the renderer owns paint.
+      runtime.computePortSlots = function () { return state.portSlots; };
+      runtime.edgePath = function () { return "M 0 0"; };
+      runtimePatched = true;
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
+
+    return {
+      render: render,
+      resize: render,
+      destroy: cleanup,
     };
   }
 
   return {
     attach: attach,
     cubic: cubic,
-    nodeInViewport: nodeInViewport,
     parseCurve: parseCurve,
     stageScale: stageScale,
     viewTransform: viewTransform,
     viewportFor: viewportFor,
+    nodeInViewport: nodeInViewport,
   };
 }));

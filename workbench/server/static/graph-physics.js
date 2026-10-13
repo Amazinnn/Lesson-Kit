@@ -4,7 +4,7 @@
  *
  * The semantic rules live in graph-physics-core.js. Browsers execute that one
  * implementation through a Worker; Node tests export the same core directly.
- * The current renderer is a separate module with one active implementation.
+ * There is no browser fallback to a second execution path.
  */
 (function (root, factory) {
   if (typeof module === "object" && module.exports) {
@@ -13,25 +13,12 @@
   }
 
   var core = root.GraphPhysics;
-  if (!core) {
-    if (!root.document || root.document.readyState !== "loading"
-        || typeof root.document.write !== "function") {
-      throw new Error("graph physics core must be parser-loaded before workbench.js");
-    }
-    root.document.write('<script src="/static/graph-physics-core.js"><\/script>');
-    core = root.GraphPhysics;
+  delete root.GraphPhysics;
+  if (!root.document || root.document.readyState !== "loading") {
+    throw new Error("graph-physics.js must be parser-loaded before workbench.js");
   }
   if (!core) throw new Error("graph physics core failed to load");
-
   var renderer = root.GraphRenderer;
-  if (!renderer) {
-    if (!root.document || root.document.readyState !== "loading"
-        || typeof root.document.write !== "function") {
-      throw new Error("graph renderer must be parser-loaded before workbench.js");
-    }
-    root.document.write('<script src="/static/graph-renderer.js"><\/script>');
-    renderer = root.GraphRenderer;
-  }
   if (!renderer) throw new Error("graph renderer failed to load");
   if (typeof root.Worker !== "function") {
     throw new Error("Lesson Kit knowledge graph requires Web Worker support");
@@ -125,31 +112,71 @@
   }
 
   function create(inputNodes, inputEdges, options) {
-    inputNodes = inputNodes || [];
-    inputEdges = inputEdges || [];
-    var identity = graphIdentity(inputNodes, inputEdges);
-    var mirror = core.create(inputNodes, inputEdges, options || {});
+    var mirror = core.create(inputNodes || [], inputEdges || [], options || {});
     var state = mirror.state;
     var graph = mirror.graph;
     var latest = null;
     var stepPending = false;
+    var failed = false;
     var revision = 0;
     var appliedRevision = -1;
     var controlRevision = 0;
     var rendererInstance = null;
+    var identity = graphIdentity(inputNodes, inputEdges);
     var savedThisSettle = false;
-    var worker = new root.Worker("/static/graph-physics-worker.js", {
-      name: "lesson-kit-graph-physics",
-    });
+    var worker = null;
+    var runtime = null;
+    var failureMessage = "图谱计算失败，布局已停止。刷新页面后可重试。";
+    var rendererFailureMessage = "图谱无法启动：浏览器不支持 WebGL2 或图谱渲染资源初始化失败。请刷新页面，或使用支持 WebGL2 的浏览器。";
+
+    function destroyRenderer() {
+      if (!rendererInstance) return;
+      var current = rendererInstance;
+      rendererInstance = null;
+      current.destroy();
+    }
+
+    function terminateWorker() {
+      if (!worker) return;
+      var current = worker;
+      worker = null;
+      current.onmessage = null;
+      current.onerror = null;
+      current.terminate();
+    }
+
+    function stop(message, error) {
+      if (failed) return;
+      failed = true;
+      stepPending = false;
+      latest = null;
+      graph.alpha = 0;
+      graph.settled = true;
+      if (runtime) {
+        runtime.failed = true;
+        runtime.error = message;
+      }
+      terminateWorker();
+      destroyRenderer();
+      if (error && typeof console !== "undefined" && console.error) {
+        console.error("graph runtime failed", error.message || error);
+      }
+    }
 
     function send(type, payload) {
+      if (failed || !worker) return null;
       revision += 1;
-      worker.postMessage(Object.assign({ type: type, revision: revision }, payload || {}));
+      try {
+        worker.postMessage(Object.assign({ type: type, revision: revision }, payload || {}));
+      } catch (error) {
+        stop(failureMessage, error);
+        return null;
+      }
       return revision;
     }
 
     function applyLatest() {
-      if (!latest) return;
+      if (failed || !latest) return;
       if (latest.revision < appliedRevision || latest.revision < controlRevision) {
         latest = null;
         return;
@@ -184,34 +211,8 @@
       latest = null;
     }
 
-    worker.onmessage = function (event) {
-      var message = event.data || {};
-      if (message.type !== "snapshot") return;
-      if (message.kind === "step") stepPending = false;
-      if (message.revision < controlRevision) return;
-      latest = message;
-    };
-    worker.onerror = function (event) {
-      stepPending = false;
-      if (typeof console !== "undefined" && console.error) {
-        console.error("graph physics worker failed", event.message || event);
-      }
-    };
-
-    controlRevision = send("init", {
-      nodes: inputNodes,
-      edges: inputEdges,
-      options: {
-        stageWidth: state.stageWidth,
-        stageHeight: state.stageHeight,
-        view: graph.view,
-        gravity: graph.gravity,
-        hiddenEdgeTypes: graph.hiddenEdgeTypes,
-        hiddenEdgeIds: Array.from(graph.hiddenEdgeIds || []),
-      },
-    });
-
     function reheat(alpha, autoFit) {
+      if (failed) return;
       mirror.reheat(alpha, autoFit);
       savedThisSettle = false;
       controlRevision = send("reheat", {
@@ -221,35 +222,42 @@
       });
     }
 
-    var runtime = {
+    runtime = {
       state: state,
+      failed: false,
+      error: "",
       nodes: state.nodes,
       edges: state.edges,
       byId: state.byId,
       graph: graph,
       scoreFor: mirror.scoreFor,
       updateProjection: function () {
+        if (failed) return;
         mirror.updateProjection();
       },
       setEdgeVisibility: function (next) {
+        if (failed) return;
         next = next || {};
         graph.hiddenEdgeTypes = next.types || {};
         graph.hiddenEdgeIds = next.ids || new Set();
         reheat(.85, true);
       },
       setView: function (view) {
+        if (failed) return;
         graph.view = view;
         graph.userMovedViewport = false;
         mirror.updateProjection();
         reheat(1, true);
       },
       setGravity: function (gravity) {
+        if (failed) return;
         graph.gravity = core.clamp(Number(gravity) || 0, 0, 100);
         graph.userMovedViewport = false;
         reheat(.62, true);
       },
       reheat: reheat,
       tick: function () {
+        if (failed) return;
         applyLatest();
         if (graph.alpha <= 0 || stepPending) return;
         stepPending = true;
@@ -267,50 +275,88 @@
       clusterCenters: mirror.clusterCenters,
       congestion: mirror.congestion,
       dispose: function () {
-        if (rendererInstance) rendererInstance.destroy();
-        worker.terminate();
+        stop("", null);
       },
     };
 
-    rendererInstance = renderer.attach(runtime, root);
-    runtime.renderer = rendererInstance;
-
-    var seed = readLayoutSeed(identity);
-    if (seed) {
-      var seeded = [];
-      state.nodes.forEach(function (node) {
-        var point = seed[node.id];
-        if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
-        node.x = point[0];
-        node.y = point[1];
-        node.vx = 0;
-        node.vy = 0;
-        node.anchorX = point[0];
-        node.anchorY = point[1];
-        seeded.push(node);
+    try {
+      worker = new root.Worker("/static/graph-physics-worker.js", {
+        name: "lesson-kit-graph-physics",
       });
-      if (seeded.length) {
-        runtime.reheat(.34, false);
-        var schedule = typeof root.requestAnimationFrame === "function"
-          ? root.requestAnimationFrame.bind(root)
-          : root.setTimeout.bind(root);
-        schedule(function () {
-          schedule(function () {
-            seeded.forEach(function (node) {
-              node.anchorX = null;
-              node.anchorY = null;
-            });
-            runtime.reheat(.28, true);
-          });
-        });
+    } catch (error) {
+      stop(failureMessage, error);
+    }
+    if (worker) {
+      worker.onmessage = function (event) {
+        if (failed) return;
+        var message = event.data || {};
+        if (message.type !== "snapshot") return;
+        if (message.kind === "step") stepPending = false;
+        if (message.revision < controlRevision) return;
+        latest = message;
+      };
+      worker.onerror = function (event) {
+        stop(failureMessage, event && event.message ? event.message : event);
+      };
+      controlRevision = send("init", {
+        nodes: inputNodes || [],
+        edges: inputEdges || [],
+        options: {
+          stageWidth: state.stageWidth,
+          stageHeight: state.stageHeight,
+          view: graph.view,
+          gravity: graph.gravity,
+          hiddenEdgeTypes: graph.hiddenEdgeTypes,
+          hiddenEdgeIds: Array.from(graph.hiddenEdgeIds || []),
+        },
+      });
+    }
+    if (!failed) {
+      try {
+        rendererInstance = renderer.attach(runtime, root);
+        runtime.renderer = rendererInstance;
+      } catch (error) {
+        stop(rendererFailureMessage, error);
       }
     }
-
+    if (!failed) {
+      var seed = readLayoutSeed(identity);
+      if (seed) {
+        var seeded = [];
+        state.nodes.forEach(function (node) {
+          var point = seed[node.id];
+          if (!point || !Number.isFinite(point[0]) || !Number.isFinite(point[1])) return;
+          node.x = point[0];
+          node.y = point[1];
+          node.vx = 0;
+          node.vy = 0;
+          node.anchorX = point[0];
+          node.anchorY = point[1];
+          seeded.push(node);
+        });
+        if (seeded.length) {
+          runtime.reheat(.34, false);
+          var schedule = typeof root.requestAnimationFrame === "function"
+            ? root.requestAnimationFrame.bind(root)
+            : root.setTimeout.bind(root);
+          schedule(function () {
+            schedule(function () {
+              seeded.forEach(function (node) {
+                node.anchorX = null;
+                node.anchorY = null;
+              });
+              runtime.reheat(.28, true);
+            });
+          });
+        }
+      }
+    }
     return runtime;
   }
 
   var api = {};
   Object.keys(core).forEach(function (key) { api[key] = core[key]; });
   api.create = create;
+  Object.defineProperty(api, "workerBacked", { value: true });
   return api;
 }));
