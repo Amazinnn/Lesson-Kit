@@ -228,7 +228,7 @@ The knowledge point list and the left weak-point rail SHALL use each knowledge p
 
 ### Requirement: Knowledge graph page
 
-When browser Web Worker support and the graph physics resources are available, the knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, problem-count radius, focus, and the concise dashboard. Coordinates, soft anchors, motion, and interactions SHALL remain memory-only. If Web Worker support or graph physics loading is unavailable, the page SHALL show a readable graph error and SHALL NOT run the synchronous solver as a fallback.
+When browser Web Worker support, graph physics resources, and WebGL2 support are available, the knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. Relationship rendering SHALL preserve the existing physics-provided ports, lanes, bends, arrow direction, and endpoint clearance; DOM nodes SHALL remain the accessible and interactive source for node appearance, labels, selection, and drag input. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, problem-count radius, focus, and the concise dashboard. Coordinates, soft anchors, motion, and interactions SHALL remain memory-only. If Web Worker support, graph physics resources, WebGL2, or renderer initialization is unavailable, the page SHALL show a readable graph error; a renderer startup failure after Worker creation SHALL terminate that Worker and release partial renderer resources. The page SHALL NOT run the synchronous solver or fall back to SVG.
 
 #### Scenario: Read semantic spacing
 
@@ -288,7 +288,7 @@ When browser Web Worker support and the graph physics resources are available, t
 #### Scenario: Open the knowledge graph
 
 - **WHEN** the learner activates the knowledge-graph navigation entry
-- **THEN** the middle area displays the live complete chapter graph when graph execution is available, or a readable graph error when it is not
+- **THEN** the middle area displays the live complete chapter graph when graph execution and rendering are available, or a readable graph error when either is unavailable
 
 #### Scenario: Graph artifact missing
 
@@ -300,10 +300,20 @@ When browser Web Worker support and the graph physics resources are available, t
 - **WHEN** the browser lacks Web Worker support or graph physics resources fail to load
 - **THEN** the graph status explains that graph execution is unavailable, no synchronous solver is exposed or started, and authored and learning data remain unchanged
 
+#### Scenario: Renderer startup fails
+
+- **WHEN** the browser lacks WebGL2 support or graph renderer initialization fails after the Worker starts
+- **THEN** the graph status shows a readable renderer error, the Worker terminates, pending solver and render frames stop, partial renderer resources are released, and authored and learning data remain unchanged
+
 #### Scenario: Worker execution fails
 
 - **WHEN** the Web Worker reports an execution error while the graph is settling
 - **THEN** the Worker is terminated, the solver stops posting steps and scheduling solver frames, the graph status shows a readable error, and authored and learning data remain unchanged
+
+#### Scenario: Preserve relationship geometry
+
+- **WHEN** the relationship-structure view paints directed and parallel relations
+- **THEN** their existing ports, lanes, bends, arrow direction, and endpoint clearance remain intact while graph nodes keep their labels, hit targets, selection, drag behavior, and accessibility
 
 #### Scenario: Focus a selected neighborhood
 
