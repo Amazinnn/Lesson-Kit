@@ -13,6 +13,7 @@ import sqlite3
 from pathlib import Path
 
 from workbench.data import content
+from workbench.domain import difficulty as difficulty_rules
 
 
 SCHEMA_VERSION = 1
@@ -21,24 +22,34 @@ ENTITY_DIRS = {
     "problem": "problems",
     "relation": "relations",
 }
-# The mirror follows the governed data CRUD surface, except file-backed figure
-# attachment metadata. Figures have their own ingest/figure contract and will be
-# added only through that authority rather than by turning a path string into a
-# generic repository-editable field.
+PROBLEM_DIFFICULTY_DIMENSIONS = {
+    "difficulty_knowledge_breadth": "knowledge_breadth",
+    "difficulty_reasoning_depth": "reasoning_depth",
+    "difficulty_transfer_distance": "transfer_distance",
+    "difficulty_construction_openness": "construction_openness",
+}
+PROBLEM_DIFFICULTY_FIELDS = {
+    "difficulty", "difficulty_model", *PROBLEM_DIFFICULTY_DIMENSIONS,
+}
+# Mirror the governed authored CRUD surface plus the separately governed problem
+# difficulty rating. Runtime/learner rows and batch/timestamp metadata stay local.
 MIRROR_FIELDS = {
     entity_type: set(fields) for entity_type, fields in content.EDITABLE_FIELDS.items()
 }
-MIRROR_FIELDS["problem"].discard("figure_paths")
+MIRROR_FIELDS["problem"].update(PROBLEM_DIFFICULTY_FIELDS)
 ARRAY_FIELDS = {
     "kp": {"related_kp_ids"},
-    "problem": {"kp_ids", "practice_modes"},
+    "problem": {"kp_ids", "practice_modes", "figure_paths"},
 }
 OBJECT_FIELDS = {"problem": {"micro_quiz"}}
 # Empty-string JSON columns are tolerated in legacy pool rows; the authored
 # projection canonicalizes them so a written envelope is always readable back.
 EMPTY_JSON_DEFAULTS = {
     "kp": {"related_kp_ids": []},
-    "problem": {"kp_ids": [], "practice_modes": None, "micro_quiz": None},
+    "problem": {
+        "kp_ids": [], "practice_modes": None, "micro_quiz": None,
+        "figure_paths": None,
+    },
 }
 ENVELOPE_FIELDS = {
     "schema_version", "entity_type", "entity_id", "revision", "content",
@@ -172,6 +183,7 @@ def authored_projection(row, entity_type):
     if row is None:
         return None
     defaults = EMPTY_JSON_DEFAULTS.get(entity_type, {})
+    arrays = ARRAY_FIELDS.get(entity_type, ())
     projected = {}
     for field in sorted(MIRROR_FIELDS[entity_type]):
         if field not in row:
@@ -179,6 +191,8 @@ def authored_projection(row, entity_type):
         value = row[field]
         if value == "" and field in defaults:
             value = defaults[field]
+        elif field in arrays and isinstance(value, str):
+            value = json.loads(value) if value else defaults.get(field)
         projected[field] = value
     return projected
 
@@ -455,6 +469,30 @@ def _result(entity_type, entity_id, status, detail=None, revision=None, path=Non
     return result
 
 
+def _align_projection(baseline, pool_now, incoming):
+    """Adopt newly mirrored pool fields without invalidating an older v1 ledger/file."""
+    baseline_fields = set(baseline)
+    pool_fields = set(pool_now)
+    incoming_fields = set(incoming)
+    missing = sorted(baseline_fields - incoming_fields)
+    if missing:
+        return baseline, incoming, False, (
+            "content fields cannot remove initialized field(s): " + ", ".join(missing)
+        )
+    unavailable = sorted(incoming_fields - (baseline_fields | pool_fields))
+    if unavailable:
+        return baseline, incoming, False, (
+            "content field(s) are unavailable in this pool schema: " + ", ".join(unavailable)
+        )
+    added = pool_fields - baseline_fields
+    effective_baseline = {
+        **baseline,
+        **{field: pool_now[field] for field in added},
+    }
+    effective_incoming = {**effective_baseline, **incoming}
+    return effective_baseline, effective_incoming, bool(added), None
+
+
 def _plan_one(pool, repo_entry, entity_type, entity_id):
     state = _state(pool, entity_type, entity_id)
     if state is None:
@@ -477,14 +515,13 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
     path, envelope = repo_entry
     if envelope["entity_id"] != entity_id:
         return _result(entity_type, entity_id, "invalid", "entity identity mismatch", path=path)
-    if set(envelope["content"]) != set(baseline):
-        return _result(
-            entity_type, entity_id, "invalid",
-            "content fields must match the initialized authored projection exactly",
-            revision, path=path,
-        )
+    baseline, incoming, projection_upgrade, error = _align_projection(
+        baseline, pool_now, envelope["content"]
+    )
+    if error:
+        return _result(entity_type, entity_id, "invalid", error, revision, path=path)
     repo_now, error = _normalise_incoming(
-        pool, entity_type, entity_id, baseline, envelope["content"],
+        pool, entity_type, entity_id, baseline, incoming,
     )
     if error:
         return _result(entity_type, entity_id, "invalid", error, revision, path=path)
@@ -497,7 +534,7 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
                 entity_type, entity_id, "invalid",
                 f"unchanged content must keep revision {revision}", revision, path=path,
             )
-        if pool_changed:
+        if pool_changed or projection_upgrade:
             return _result(
                 entity_type, entity_id, "pool_to_repo", revision=revision + 1, path=path
             )
@@ -522,15 +559,61 @@ def _plan_one(pool, repo_entry, entity_type, entity_id):
     )
 
 
+def _normalise_problem_difficulty(incoming, changed):
+    dimension_columns = set(PROBLEM_DIFFICULTY_DIMENSIONS)
+    if changed & {"difficulty", "difficulty_model"} and not changed & dimension_columns:
+        return None, (
+            "difficulty and difficulty_model are derived; edit the four difficulty dimensions"
+        )
+    dimensions = {
+        column: incoming.get(column) for column in PROBLEM_DIFFICULTY_DIMENSIONS
+    }
+    if all(value is None for value in dimensions.values()):
+        return {field: None for field in PROBLEM_DIFFICULTY_FIELDS}, None
+    if any(value is None for value in dimensions.values()):
+        return None, "difficulty dimensions must be all null or all present"
+    vector = {
+        rule_name: dimensions[column]
+        for column, rule_name in PROBLEM_DIFFICULTY_DIMENSIONS.items()
+    }
+    try:
+        total = float(difficulty_rules.score(vector))
+    except ValueError as exc:
+        return None, str(exc)
+    return {
+        **dimensions,
+        "difficulty": total,
+        "difficulty_model": difficulty_rules.MODEL_ID,
+    }, None
+
+
 def _normalise_incoming(pool, entity_type, entity_id, baseline, incoming):
     patch = {key: incoming[key] for key in incoming if incoming[key] != baseline[key]}
     if not patch:
         return incoming, None
     if entity_type == "problem":
-        plan = content.plan_problem_update(pool, entity_id, patch)
-        if plan["errors"]:
-            return incoming, "; ".join(plan["errors"])
-        return {**baseline, **plan["fields"]}, None
+        difficulty_changed = set(patch) & PROBLEM_DIFFICULTY_FIELDS
+        content_patch = {
+            key: value for key, value in patch.items()
+            if key not in PROBLEM_DIFFICULTY_FIELDS
+        }
+        if content_patch:
+            plan = content.plan_problem_update(pool, entity_id, content_patch)
+            if plan["errors"]:
+                return incoming, "; ".join(plan["errors"])
+            normalized = {**baseline, **plan["fields"]}
+            clears_difficulty = plan["clear_difficulty"]
+        else:
+            normalized = dict(baseline)
+            clears_difficulty = False
+        if difficulty_changed:
+            rating, error = _normalise_problem_difficulty(incoming, difficulty_changed)
+            if error:
+                return incoming, error
+            normalized.update(rating)
+        elif clears_difficulty:
+            normalized.update({field: None for field in PROBLEM_DIFFICULTY_FIELDS})
+        return normalized, None
     elif entity_type == "relation":
         from workbench.data import relations
         result = relations.check(pool, {"items": [{
@@ -589,6 +672,37 @@ def plan(pool, repo, entity_id=None):
     return _report(results, _read_delete_requests(repo, pool.course))
 
 
+def _apply_problem_patch(pool, entity_id, patch):
+    difficulty_patch = {
+        key: value for key, value in patch.items() if key in PROBLEM_DIFFICULTY_FIELDS
+    }
+    content_patch = {
+        key: value for key, value in patch.items() if key not in PROBLEM_DIFFICULTY_FIELDS
+    }
+    if "figure_paths" in content_patch and content_patch["figure_paths"] is not None:
+        content_patch["figure_paths"] = json.dumps(
+            content_patch["figure_paths"], ensure_ascii=False
+        )
+    if content_patch:
+        content.update(pool, "problem", entity_id, content_patch)
+    if difficulty_patch:
+        columns = [
+            "difficulty",
+            "difficulty_knowledge_breadth",
+            "difficulty_reasoning_depth",
+            "difficulty_transfer_distance",
+            "difficulty_construction_openness",
+            "difficulty_model",
+        ]
+        cursor = pool.connect().execute(
+            "UPDATE problems SET " + ", ".join(f"{column}=?" for column in columns)
+            + " WHERE problem_id=?",
+            tuple(difficulty_patch.get(column) for column in columns) + (entity_id,),
+        )
+        if cursor.rowcount == 0:
+            raise KeyError(entity_id)
+
+
 def _apply_one(pool, repo, item):
     status = item["status"]
     if status in {"noop", "invalid", "conflict"}:
@@ -619,8 +733,14 @@ def _apply_one(pool, repo, item):
         )
     if status == "recover_converged":
         envelope = read_entity(path, pool.course, entity_type)
+        pool_now = pool_projection(pool, entity_type, entity_id)
+        baseline, incoming, _upgrade, error = _align_projection(
+            state["content"], pool_now, envelope["content"]
+        )
+        if error:
+            raise MirrorError(error)
         authored, error = _normalise_incoming(
-            pool, entity_type, entity_id, state["content"], envelope["content"],
+            pool, entity_type, entity_id, baseline, incoming,
         )
         if error:
             raise MirrorError(error)
@@ -633,8 +753,12 @@ def _apply_one(pool, repo, item):
         )
     if status == "repo_to_pool":
         envelope = read_entity(path, pool.course, entity_type)
-        baseline = state["content"]
-        incoming = envelope["content"]
+        pool_now = pool_projection(pool, entity_type, entity_id)
+        baseline, incoming, _upgrade, error = _align_projection(
+            state["content"], pool_now, envelope["content"]
+        )
+        if error:
+            raise MirrorError(error)
         authored, error = _normalise_incoming(
             pool, entity_type, entity_id, baseline, incoming,
         )
@@ -642,7 +766,10 @@ def _apply_one(pool, repo, item):
             raise MirrorError(error)
         patch = {key: authored[key] for key in authored if authored[key] != baseline[key]}
         with pool.transaction(immediate=True):
-            content.update(pool, entity_type, entity_id, patch)
+            if entity_type == "problem":
+                _apply_problem_patch(pool, entity_id, patch)
+            else:
+                content.update(pool, entity_type, entity_id, patch)
             actual = pool_projection(pool, entity_type, entity_id)
             if actual != authored:
                 raise MirrorError(
