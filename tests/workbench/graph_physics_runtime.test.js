@@ -1,10 +1,20 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
 const test = require("node:test");
+const vm = require("node:vm");
 
 const publicPhysics = require("../../workbench/server/static/graph-physics.js");
 const corePhysics = require("../../workbench/server/static/graph-physics-core.js");
+const loaderSource = fs.readFileSync(
+  require.resolve("../../workbench/server/static/graph-physics.js"),
+  "utf8"
+);
+const coreSource = fs.readFileSync(
+  require.resolve("../../workbench/server/static/graph-physics-core.js"),
+  "utf8"
+);
 
 function node(id, extra) {
   return Object.assign({
@@ -52,4 +62,33 @@ test("graph physics public seam exposes the semantic core contract", () => {
     "the public seam must expose the current core implementation without a second solver"
   );
   assert.deepEqual(settle(corePhysics), settle(publicPhysics));
+});
+
+test("browser adapter refuses to publish when the parser-loaded core is missing", () => {
+  let writes = 0;
+  const browser = vm.createContext({
+    Worker: function Worker() {},
+    document: {
+      readyState: "loading",
+      write() { writes += 1; },
+    },
+  });
+
+  assert.throws(
+    () => vm.runInContext(loaderSource, browser),
+    /graph physics core failed to load/
+  );
+  assert.equal(writes, 0, "the adapter does not insert a second script");
+  assert.equal(vm.runInContext("typeof GraphPhysics", browser), "undefined");
+});
+
+test("browser loader still refuses non-parser loading", () => {
+  const browser = vm.createContext({
+    document: { readyState: "complete", write() {} },
+  });
+
+  assert.throws(
+    () => vm.runInContext(loaderSource, browser),
+    /must be parser-loaded before workbench\.js/
+  );
 });

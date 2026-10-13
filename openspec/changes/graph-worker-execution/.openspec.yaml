@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-13
+goal: Specify unsupported and failed graph execution before repairing the
+  adapter and page loop.

@@ -24,6 +24,7 @@ Make the Web Worker the single browser execution implementation behind `graph-ph
 8. Large graphs preserve the existing three-ticks-per-frame intent by batching three solver ticks in one Worker request.
 9. Browser environments without Worker support fail explicitly. Returning to the old execution model is a version rollback, not a runtime branch.
 10. No WASM, SharedArrayBuffer, renderer replacement, graph-data change, or layout-algorithm change is included here.
+11. The graph route parser-loads the core before the public adapter. If the core or Worker support is unavailable, the adapter does not leave the synchronous core as GraphPhysics. Worker construction or execution failure is terminal for that runtime: terminate it, stop further posts and solver frames, and report the failure through the graph status without writing authored or learning data.
 
 ## Consequences
 

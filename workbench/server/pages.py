@@ -97,7 +97,8 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{middle_html}</main>"
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
-        + ("<script src='/static/graph-physics.js'></script>" if graph_mode else "")
+        + ("<script src='/static/graph-physics-core.js'></script>"
+           "<script src='/static/graph-physics.js'></script>" if graph_mode else "")
         + "<script src='/static/practice-deck.js'></script>"
         + "<script src='/static/practice-flow.js'></script>"
         + "<script src='/static/workbench.js'></script>"

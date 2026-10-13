@@ -26,19 +26,21 @@ class FakeWorker {
     this.options = options;
     this.messages = [];
     this.terminated = false;
+    this.terminateCount = 0;
     FakeWorker.last = this;
   }
   postMessage(message) { this.messages.push(message); }
-  terminate() { this.terminated = true; }
+  terminate() {
+    this.terminated = true;
+    this.terminateCount += 1;
+  }
 }
 
 function rendererStub() {
   return {
     attach(runtime) {
       runtime.rendererAttached = true;
-      return {
-        destroy() { runtime.rendererDestroyed = true; },
-      };
+      return { destroy() { runtime.rendererDestroyed = true; } };
     },
   };
 }
@@ -51,7 +53,7 @@ function browserContext() {
     GraphRenderer: rendererStub(),
     document: {
       readyState: "loading",
-      write() { throw new Error("dependencies are already loaded; no parser write expected"); },
+      write() { throw new Error("core is already loaded; no parser write expected"); },
     },
   };
   context.globalThis = context;
@@ -77,6 +79,11 @@ test("browser module preserves the graph runtime interface while delegating step
   assert.equal(typeof runtime.tick, "function");
   assert.equal(typeof runtime.edgePath, "function");
   assert.equal(runtime.rendererAttached, true);
+  assert.equal(api.workerBacked, true);
+  assert.deepEqual(Object.keys(api).sort(), Object.keys(corePhysics).sort());
+  assert.deepEqual(Object.keys(api).sort(), Object.keys(corePhysics).sort());
+  runtime.tick();
+  assert.equal(worker.messages.at(-1).type, "step", "a successful runtime submits a solver step");
 
   runtime.graph.gravity = 70;
   runtime.nodes[0].visible = false;
@@ -135,6 +142,38 @@ test("browser module fails explicitly when Worker support is unavailable", () =>
     () => vm.runInNewContext(adapterSource, context, { filename: "graph-physics.js" }),
     /requires Web Worker support/
   );
+  assert.equal(context.GraphPhysics, undefined, "the synchronous core is not left as the public API");
+});
+
+test("a Worker error terminates the runtime and prevents every later post", () => {
+  const context = browserContext();
+  const logged = [];
+  context.console = { error() { logged.push(Array.from(arguments)); } };
+  vm.runInNewContext(adapterSource, context, { filename: "graph-physics.js" });
+  const runtime = context.GraphPhysics.create(
+    [node("a"), node("b")], [edge("a", "b")],
+    { stageWidth: 1800, stageHeight: 1550, gravity: 30 }
+  );
+  const worker = FakeWorker.last;
+
+  runtime.tick();
+  assert.equal(worker.messages.at(-1).type, "step");
+  const messageCount = worker.messages.length;
+
+  worker.onerror({ message: "worker crashed" });
+  assert.equal(worker.terminated, true);
+  assert.equal(worker.terminateCount, 1);
+  assert.equal(runtime.failed, true);
+  assert.equal(runtime.graph.alpha, 0);
+  assert.match(runtime.error, /图谱计算失败/);
+
+  runtime.tick();
+  runtime.reheat(1, true);
+  worker.onerror({ message: "duplicate error" });
+  runtime.dispose();
+  assert.equal(worker.messages.length, messageCount, "failure is terminal and posts no retry");
+  assert.equal(worker.terminateCount, 1, "the Worker is terminated once");
+  assert.equal(logged.length, 1, "the failure is reported once");
 });
 
 test("worker protocol runs the single semantic core and publishes snapshots", () => {

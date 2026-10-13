@@ -217,7 +217,7 @@ class FakeStorage {
 
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
-  reducedMotion = false, physics = GraphPhysics, setTimeoutFn = () => 0,
+  reducedMotion = false, physics = Object.assign({ workerBacked: true }, GraphPhysics), setTimeoutFn = () => 0,
   promptFn = undefined, confirmFn = undefined, selectors = {},
 }) {
   const document = {
@@ -1598,11 +1598,84 @@ test("practice pull failures stay visible beside the active study flow", async (
   assert.equal(elements["retry-practice"].classList.contains("hidden"), false);
 });
 
+test("graph startup reports missing Worker-backed physics instead of using the core", async () => {
+  const toast = new FakeElement("graph-toast");
+  const requests = [];
+  runWorkbench({
+    elements: graphElements({
+      layout: layout(), "graph-canvas": new FakeElement("graph-canvas"),
+      "graph-toast": toast,
+    }),
+    physics: GraphPhysics,
+    setTimeoutFn(callback, delay) {
+      if (delay === 1300) callback();
+      return 1;
+    },
+    fetch(url) {
+      requests.push(url);
+      return jsonResponse({ nodes: [], edges: [] });
+    },
+  });
+
+  await flush();
+  assert.match(toast.textContent, /图谱计算无法启动/);
+  assert.equal(toast.classList.contains("show"), true, "the startup error remains visible");
+  assert.equal(requests.some((url) => url.endsWith("/graph/model")), false,
+    "an unavailable runtime does not start graph rendering");
+});
+
+test("a failed graph runtime keeps one readable error and stops solver frames", async () => {
+  const message = "图谱计算失败，布局已停止。刷新页面后可重试。";
+  const physics = Object.assign({ workerBacked: true }, GraphPhysics, {
+    create(nodes, edges, options) {
+      const runtime = GraphPhysics.create(nodes, edges, options);
+      runtime.tick = function () {
+        runtime.failed = true;
+        runtime.error = message;
+        runtime.graph.alpha = 0;
+      };
+      return runtime;
+    },
+  });
+  const canvas = new FakeElement("graph-canvas");
+  const toast = new FakeElement("graph-toast");
+  const solverText = new FakeElement("graph-solver-text");
+  const app = runWorkbench({
+    elements: graphElements({
+      layout: layout(), "graph-canvas": canvas, "graph-toast": toast,
+      "graph-solver-text": solverText,
+    }),
+    physics,
+    fetch: () => jsonResponse({
+      nodes: [{ id: "kp-a", title: "A", problem_count: 1 }],
+      edges: [],
+    }),
+    setTimeoutFn(callback, delay) {
+      if (delay === 1300) callback();
+      return 1;
+    },
+  });
+
+  await flush();
+  await settleGraph(12);
+  assert.equal(toast.textContent, message);
+  assert.equal(toast.classList.contains("show"), true, "terminal errors stay visible");
+  assert.equal(solverText.textContent, "计算已停止");
+  const rafCalls = app.rafCalls;
+  await settleGraph(12);
+  assert.equal(app.rafCalls, rafCalls, "a failed solver does not reschedule graph frames");
+});
+
 test("a settled graph renders one circular body per node and typed ported edges", async () => {
   const canvas = new FakeElement("graph-canvas");
   const edges = new FakeElement("graph-edges");
+  const solverState = new FakeElement("graph-solver-state");
+  const solverText = new FakeElement("graph-solver-text");
   const app = runWorkbench({
-    elements: graphElements({ layout: layout(), "graph-canvas": canvas, "graph-edges": edges }),
+    elements: graphElements({
+      layout: layout(), "graph-canvas": canvas, "graph-edges": edges,
+      "graph-solver-state": solverState, "graph-solver-text": solverText,
+    }),
     reducedMotion: true,
     fetch: () => jsonResponse({
       nodes: [1, 2, 3].map((id) => ({ id: "kp-" + id, title: "知识点 " + id, problem_count: id })),
@@ -1635,6 +1708,7 @@ test("a settled graph renders one circular body per node and typed ported edges"
   assert.match(edges.children[2].getAttribute("class"), /graph-edge legacy/);
   await settleGraph();
   assert.match(edges.children[0].getAttribute("d"), /^M .* C /);
+  assert.equal(solverText.textContent, "已收敛", "normal settling clears the solving label");
   const rafCalls = app.rafCalls;
   await settleGraph(20);
   assert.equal(app.rafCalls, rafCalls, "an idle graph stops scheduling frames");
