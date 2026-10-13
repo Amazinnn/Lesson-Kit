@@ -66,13 +66,24 @@
 
   function program(gl, vertex, fragment) {
     var out = gl.createProgram();
-    gl.attachShader(out, compile(gl, gl.VERTEX_SHADER, vertex));
-    gl.attachShader(out, compile(gl, gl.FRAGMENT_SHADER, fragment));
-    gl.linkProgram(out);
-    if (!gl.getProgramParameter(out, gl.LINK_STATUS)) {
-      throw new Error(gl.getProgramInfoLog(out) || "program link failed");
+    var vertexShader = null;
+    var fragmentShader = null;
+    try {
+      vertexShader = compile(gl, gl.VERTEX_SHADER, vertex);
+      fragmentShader = compile(gl, gl.FRAGMENT_SHADER, fragment);
+      gl.attachShader(out, vertexShader);
+      gl.attachShader(out, fragmentShader);
+      gl.linkProgram(out);
+      if (!gl.getProgramParameter(out, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(out) || "program link failed");
+      }
+      return out;
+    } catch (error) {
+      if (vertexShader) gl.deleteShader(vertexShader);
+      if (fragmentShader) gl.deleteShader(fragmentShader);
+      gl.deleteProgram(out);
+      throw error;
     }
-    return out;
   }
 
   function pushVertex(out, point, color, alpha) {
@@ -100,7 +111,7 @@
   }
 
   function addStyle(document) {
-    if (document.getElementById("graph-renderer-style")) return;
+    if (document.getElementById("graph-renderer-style")) return null;
     var style = document.createElement("style");
     style.id = "graph-renderer-style";
     style.textContent = [
@@ -108,6 +119,7 @@
       "#graph-canvas.graph-renderer-active .graph-edges{display:none}",
     ].join("\n");
     (document.head || document.documentElement).appendChild(style);
+    return style;
   }
 
   function attach(runtime, root) {
@@ -131,27 +143,15 @@
     });
     if (!gl) throw new Error("Lesson Kit knowledge graph requires WebGL2");
 
-    var edgeProgram = program(gl,
-      "#version 300 es\nin vec2 a_pos;in vec4 a_color;uniform vec2 u_size;out vec4 v_color;void main(){vec2 p=(a_pos/u_size)*2.0-1.0;gl_Position=vec4(p.x,-p.y,0,1);v_color=a_color;}",
-      "#version 300 es\nprecision mediump float;in vec4 v_color;out vec4 outColor;void main(){outColor=v_color;}"
-    );
-    var edgeBuffer = gl.createBuffer();
     var state = runtime.state;
     var routePorts = runtime.computePortSlots;
     var routePath = runtime.edgePath;
+    var edgeProgram = null;
+    var edgeBuffer = null;
+    var styleElement = null;
     var frame = null;
     var destroyed = false;
-
-    canvas.className = "graph-renderer-layer";
-    stage.insertBefore(canvas, stage.firstChild || null);
-    addStyle(document);
-    canvasHost.classList.add("graph-renderer-active");
-
-    // The legacy Workbench SVG loop still calls these two hooks. The current
-    // renderer owns routing and paint, so make those legacy calls cheap while
-    // retaining the exact semantic routing helpers privately here.
-    runtime.computePortSlots = function () { return state.portSlots; };
-    runtime.edgePath = function () { return "M 0 0"; };
+    var runtimePatched = false;
 
     function resize() {
       var dpr = clamp(Number(root.devicePixelRatio) || 1, 1, 2);
@@ -225,22 +225,50 @@
       frame = root.requestAnimationFrame(draw);
     }
 
-    frame = root.requestAnimationFrame(draw);
+    function cleanup() {
+      if (destroyed) return;
+      destroyed = true;
+      if (frame !== null) {
+        root.cancelAnimationFrame(frame);
+        frame = null;
+      }
+      if (runtimePatched) {
+        runtime.computePortSlots = routePorts;
+        runtime.edgePath = routePath;
+        runtimePatched = false;
+      }
+      canvasHost.classList.remove("graph-renderer-active");
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      if (styleElement && styleElement.parentNode) styleElement.parentNode.removeChild(styleElement);
+      if (edgeBuffer) gl.deleteBuffer(edgeBuffer);
+      if (edgeProgram) gl.deleteProgram(edgeProgram);
+    }
+
+    try {
+      edgeProgram = program(gl,
+        "#version 300 es\nin vec2 a_pos;in vec4 a_color;uniform vec2 u_size;out vec4 v_color;void main(){vec2 p=(a_pos/u_size)*2.0-1.0;gl_Position=vec4(p.x,-p.y,0,1);v_color=a_color;}",
+        "#version 300 es\nprecision mediump float;in vec4 v_color;out vec4 outColor;void main(){outColor=v_color;}"
+      );
+      edgeBuffer = gl.createBuffer();
+      canvas.className = "graph-renderer-layer";
+      stage.insertBefore(canvas, stage.firstChild || null);
+      styleElement = addStyle(document);
+      canvasHost.classList.add("graph-renderer-active");
+
+      // Keep routing in the physics contract while the renderer owns paint.
+      runtime.computePortSlots = function () { return state.portSlots; };
+      runtime.edgePath = function () { return "M 0 0"; };
+      runtimePatched = true;
+      frame = root.requestAnimationFrame(draw);
+    } catch (error) {
+      cleanup();
+      throw error;
+    }
 
     return {
       render: draw,
       resize: resize,
-      destroy: function () {
-        if (destroyed) return;
-        destroyed = true;
-        if (frame !== null) root.cancelAnimationFrame(frame);
-        runtime.computePortSlots = routePorts;
-        runtime.edgePath = routePath;
-        canvasHost.classList.remove("graph-renderer-active");
-        if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
-        gl.deleteBuffer(edgeBuffer);
-        gl.deleteProgram(edgeProgram);
-      },
+      destroy: cleanup,
     };
   }
 

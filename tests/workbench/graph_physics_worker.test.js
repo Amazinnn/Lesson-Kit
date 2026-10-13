@@ -8,6 +8,7 @@ const vm = require("node:vm");
 
 const ROOT = path.join(__dirname, "../..");
 const corePhysics = require(path.join(ROOT, "workbench/server/static/graph-physics-core.js"));
+const graphRenderer = require(path.join(ROOT, "workbench/server/static/graph-renderer.js"));
 const adapterSource = fs.readFileSync(
   path.join(ROOT, "workbench/server/static/graph-physics.js"), "utf8"
 );
@@ -58,6 +59,129 @@ function browserContext() {
   };
   context.globalThis = context;
   return context;
+}
+
+function rendererEnvironment({ webgl = true, failFragment = false, failFrame = false } = {}) {
+  const frames = new Map();
+  const createdShaders = [];
+  const deletedShaders = [];
+  const createdPrograms = [];
+  const deletedPrograms = [];
+  const createdBuffers = [];
+  const deletedBuffers = [];
+  const drawCalls = [];
+  const gl = {
+    VERTEX_SHADER: 1, FRAGMENT_SHADER: 2, COMPILE_STATUS: 3, LINK_STATUS: 4,
+    ARRAY_BUFFER: 5, DYNAMIC_DRAW: 6, FLOAT: 7, TRIANGLES: 8,
+    COLOR_BUFFER_BIT: 9, BLEND: 10, SRC_ALPHA: 11, ONE_MINUS_SRC_ALPHA: 12,
+    createShader(type) {
+      const shader = { type };
+      createdShaders.push(shader);
+      return shader;
+    },
+    shaderSource() {},
+    compileShader(shader) { shader.failed = failFragment && shader.type === this.FRAGMENT_SHADER; },
+    getShaderParameter(shader) { return !shader.failed; },
+    getShaderInfoLog() { return "shader compile failed"; },
+    deleteShader(shader) { deletedShaders.push(shader); },
+    createProgram() {
+      const program = {};
+      createdPrograms.push(program);
+      return program;
+    },
+    attachShader() {},
+    linkProgram() {},
+    getProgramParameter() { return true; },
+    getProgramInfoLog() { return "program link failed"; },
+    deleteProgram(program) { deletedPrograms.push(program); },
+    createBuffer() {
+      const buffer = {};
+      createdBuffers.push(buffer);
+      return buffer;
+    },
+    deleteBuffer(buffer) { deletedBuffers.push(buffer); },
+    viewport() {},
+    useProgram() {},
+    bindBuffer() {},
+    bufferData() {},
+    getAttribLocation(_program, name) { return name === "a_pos" ? 0 : 1; },
+    enableVertexAttribArray() {},
+    vertexAttribPointer() {},
+    getUniformLocation() { return {}; },
+    uniform2f() {},
+    drawArrays(_mode, _first, count) { drawCalls.push(count); },
+    clearColor() {},
+    clear() {},
+    enable() {},
+    blendFunc() {},
+  };
+  const children = [];
+  const stage = {
+    firstChild: null,
+    style: { transform: "" },
+    insertBefore(element) {
+      element.parentNode = this;
+      children.push(element);
+    },
+    removeChild(element) {
+      const index = children.indexOf(element);
+      if (index >= 0) children.splice(index, 1);
+      element.parentNode = null;
+    },
+  };
+  const classes = new Set();
+  const canvasHost = { classList: {
+    add(name) { classes.add(name); },
+    remove(name) { classes.delete(name); },
+    contains(name) { return classes.has(name); },
+  } };
+  const styles = [];
+  const head = {
+    appendChild(style) { style.parentNode = this; styles.push(style); },
+    removeChild(style) {
+      const index = styles.indexOf(style);
+      if (index >= 0) styles.splice(index, 1);
+      style.parentNode = null;
+    },
+  };
+  let nextFrame = 1;
+  const context = {
+    console,
+    Worker: FakeWorker,
+    GraphPhysics: corePhysics,
+    GraphRenderer: graphRenderer,
+    document: {
+      readyState: "loading",
+      head,
+      getElementById(id) {
+        if (id === "graph-stage") return stage;
+        if (id === "graph-canvas") return canvasHost;
+        if (id === "graph-renderer-style") return styles.find((style) => style.id === id) || null;
+        return null;
+      },
+      createElement(tag) {
+        if (tag === "style") return { id: "", textContent: "" };
+        return {
+          className: "",
+          style: {},
+          getContext(name) { return name === "webgl2" && webgl ? gl : null; },
+        };
+      },
+    },
+    devicePixelRatio: 1,
+    requestAnimationFrame(callback) {
+      if (failFrame) throw new Error("animation frame setup failed");
+      const id = nextFrame++;
+      frames.set(id, callback);
+      return id;
+    },
+    cancelAnimationFrame(id) { frames.delete(id); },
+  };
+  context.globalThis = context;
+  return {
+    context, frames, createdShaders, deletedShaders, createdPrograms, deletedPrograms,
+    createdBuffers, deletedBuffers, drawCalls, stage, canvasHost, children, styles,
+  };
 }
 
 test("browser module preserves the graph runtime interface while delegating steps", () => {
@@ -145,6 +269,18 @@ test("browser module fails explicitly when Worker support is unavailable", () =>
   assert.equal(context.GraphPhysics, undefined, "the synchronous core is not left as the public API");
 });
 
+test("browser adapter requires the renderer to be loaded without writing scripts", () => {
+  const context = browserContext();
+  context.GraphRenderer = undefined;
+  let writes = 0;
+  context.document.write = () => { writes += 1; };
+  assert.throws(
+    () => vm.runInNewContext(adapterSource, context, { filename: "graph-physics.js" }),
+    /graph renderer failed to load/
+  );
+  assert.equal(writes, 0);
+});
+
 test("a Worker error terminates the runtime and prevents every later post", () => {
   const context = browserContext();
   const logged = [];
@@ -159,21 +295,105 @@ test("a Worker error terminates the runtime and prevents every later post", () =
   runtime.tick();
   assert.equal(worker.messages.at(-1).type, "step");
   const messageCount = worker.messages.length;
+  const onerror = worker.onerror;
 
   worker.onerror({ message: "worker crashed" });
   assert.equal(worker.terminated, true);
   assert.equal(worker.terminateCount, 1);
+  assert.equal(worker.onmessage, null);
+  assert.equal(worker.onerror, null);
   assert.equal(runtime.failed, true);
   assert.equal(runtime.graph.alpha, 0);
   assert.match(runtime.error, /图谱计算失败/);
 
   runtime.tick();
   runtime.reheat(1, true);
-  worker.onerror({ message: "duplicate error" });
+  onerror({ message: "duplicate error" });
   runtime.dispose();
   assert.equal(worker.messages.length, messageCount, "failure is terminal and posts no retry");
   assert.equal(worker.terminateCount, 1, "the Worker is terminated once");
   assert.equal(logged.length, 1, "the failure is reported once");
+});
+
+test("real renderer startup failure terminates its Worker and returns a failed runtime", () => {
+  const surface = rendererEnvironment({ webgl: false });
+  surface.context.console = { error() {} };
+  vm.runInNewContext(adapterSource, surface.context, { filename: "graph-physics.js" });
+
+  const runtime = surface.context.GraphPhysics.create(
+    [node("a"), node("b")], [edge("a", "b")],
+    { stageWidth: 1800, stageHeight: 1550, gravity: 30 }
+  );
+  const worker = FakeWorker.last;
+
+  assert.equal(runtime.failed, true);
+  assert.match(runtime.error, /WebGL2|渲染/);
+  assert.equal(worker.terminated, true);
+  assert.equal(worker.terminateCount, 1);
+  assert.equal(worker.onmessage, null);
+  assert.equal(worker.onerror, null);
+  assert.equal(surface.frames.size, 0);
+  assert.equal(surface.children.length, 0);
+  assert.equal(surface.styles.length, 0);
+  assert.equal(surface.canvasHost.classList.contains("graph-renderer-active"), false);
+});
+
+test("real renderer paints through the Worker adapter and stops its frame on disposal", () => {
+  const surface = rendererEnvironment();
+  vm.runInNewContext(adapterSource, surface.context, { filename: "graph-physics.js" });
+  const runtime = surface.context.GraphPhysics.create(
+    [node("a"), node("b")], [edge("a", "b")],
+    { stageWidth: 1800, stageHeight: 1550, gravity: 30 }
+  );
+  const worker = FakeWorker.last;
+  const [frameId, paint] = surface.frames.entries().next().value;
+  surface.frames.delete(frameId);
+  paint();
+
+  assert.equal(surface.drawCalls.length, 1);
+  assert.ok(surface.drawCalls[0] > 0, "the graph relation is painted with WebGL");
+  assert.equal(surface.frames.size, 1, "the active renderer schedules its next paint");
+  runtime.dispose();
+  assert.equal(surface.frames.size, 0);
+  assert.equal(worker.terminated, true);
+});
+
+test("renderer shader setup failure deletes partial GL resources before rethrowing", () => {
+  const surface = rendererEnvironment({ failFragment: true });
+  assert.throws(
+    () => graphRenderer.attach({ state: {} }, surface.context),
+    /shader compile failed/
+  );
+  assert.equal(surface.deletedShaders.length, 2);
+  assert.equal(surface.deletedPrograms.length, 1);
+  assert.equal(surface.children.length, 0);
+  assert.equal(surface.styles.length, 0);
+  assert.equal(surface.frames.size, 0);
+});
+
+test("renderer attach failure after setup releases GL, canvas, style, and patched hooks", () => {
+  const surface = rendererEnvironment({ failFrame: true });
+  const routePorts = function () {};
+  const routePath = function () {};
+  const runtime = {
+    state: { stageWidth: 800, stageHeight: 600, graph: {}, byId: new Map(), portSlots: new Map() },
+    computePortSlots: routePorts,
+    edgePath: routePath,
+    visibleEdges() { return []; },
+    edgeStyle() { return {}; },
+  };
+  assert.throws(
+    () => graphRenderer.attach(runtime, surface.context),
+    /animation frame setup failed/
+  );
+  assert.equal(surface.deletedPrograms.length, 1);
+  assert.equal(surface.deletedBuffers.length, 1);
+  assert.equal(surface.children.length, 0);
+  assert.equal(surface.styles.length, 0);
+  assert.equal(surface.frames.size, 0);
+  assert.equal(surface.canvasHost.classList.contains("graph-renderer-active"), false);
+  assert.equal(runtime.computePortSlots, routePorts);
+  assert.equal(runtime.edgePath, routePath);
 });
 
 test("worker protocol runs the single semantic core and publishes snapshots", () => {

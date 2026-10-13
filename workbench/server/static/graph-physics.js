@@ -19,14 +19,6 @@
   }
   if (!core) throw new Error("graph physics core failed to load");
   var renderer = root.GraphRenderer;
-  if (!renderer) {
-    if (!root.document || root.document.readyState !== "loading"
-        || typeof root.document.write !== "function") {
-      throw new Error("graph renderer must be parser-loaded before workbench.js");
-    }
-    root.document.write('<script src="/static/graph-renderer.js"><\/script>');
-    renderer = root.GraphRenderer;
-  }
   if (!renderer) throw new Error("graph renderer failed to load");
   if (typeof root.Worker !== "function") {
     throw new Error("Lesson Kit knowledge graph requires Web Worker support");
@@ -72,6 +64,7 @@
     var worker = null;
     var runtime = null;
     var failureMessage = "图谱计算失败，布局已停止。刷新页面后可重试。";
+    var rendererFailureMessage = "图谱无法启动：浏览器不支持 WebGL2 或图谱渲染资源初始化失败。请刷新页面，或使用支持 WebGL2 的浏览器。";
 
     function destroyRenderer() {
       if (!rendererInstance) return;
@@ -84,6 +77,8 @@
       if (!worker) return;
       var current = worker;
       worker = null;
+      current.onmessage = null;
+      current.onerror = null;
       current.terminate();
     }
 
@@ -101,7 +96,7 @@
       terminateWorker();
       destroyRenderer();
       if (error && typeof console !== "undefined" && console.error) {
-        console.error("graph physics worker failed", error.message || error);
+        console.error("graph runtime failed", error.message || error);
       }
     }
 
@@ -247,8 +242,12 @@
       });
     }
     if (!failed) {
-      rendererInstance = renderer.attach(runtime, root);
-      runtime.renderer = rendererInstance;
+      try {
+        rendererInstance = renderer.attach(runtime, root);
+        runtime.renderer = rendererInstance;
+      } catch (error) {
+        stop(rendererFailureMessage, error);
+      }
     }
     return runtime;
   }
