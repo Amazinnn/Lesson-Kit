@@ -18,4 +18,4 @@
 ## 4. Focused acceptance and handoff
 
 - [x] 4.1 Run the requested focused RED/GREEN regressions, existing mirror/difficulty/figure/API tests, and strict OpenSpec validation.
-- [ ] 4.2 Record exact commits, commands, outcomes, and remaining independent acceptance gates in the PR123 fix report.
+- [x] 4.2 Record exact commits, commands, outcomes, and remaining independent acceptance gates in the PR123 fix report.
