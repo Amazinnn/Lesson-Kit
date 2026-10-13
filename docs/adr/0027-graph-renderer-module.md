@@ -14,7 +14,7 @@ The renderer needs a real module seam: it should consume the existing graph runt
 
 Introduce `workbench/server/static/graph-renderer.js` as the single current graph-renderer implementation.
 
-1. `GraphRenderer.attach(runtime, root)` consumes the existing graph runtime interface and owns its paint loop. It returns only lifecycle controls needed by its owner (`resize`, `destroy`).
+1. `GraphRenderer.attach(runtime, root)` consumes the existing graph runtime interface and owns relation drawing. Its handle accepts explicit render and resize requests, coalesces ordinary-motion requests into one frame, and parks after each draw; reduced-motion requests draw synchronously without scheduling renderer frames. The handle also exposes `destroy` for lifecycle cleanup.
 2. The current implementation paints relation strokes and directed arrows with native WebGL2. DOM nodes remain authoritative for node appearance, labels, hit targets, selection, drag input, and accessibility.
 3. Relation geometry is not reimplemented. The renderer privately consumes the exact `computePortSlots` and `edgePath` geometry from graph physics, preserving the existing per-node ports, lanes, relation bends, and endpoint clearance.
 4. The retired SVG relation layer is hidden and its legacy path calls are reduced to inert hooks. It is not a runtime fallback. WebGL2 or shader initialization failure is explicit.

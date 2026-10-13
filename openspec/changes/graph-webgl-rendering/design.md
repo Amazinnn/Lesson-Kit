@@ -14,7 +14,7 @@ Accepted PR120 is now in the live base: the browser uses the Worker-backed graph
 
 - Add an SVG fallback, another rendering path, a retry loader, a dependency, or a new error API.
 - Change layout algorithms, graph data, or persistence behavior.
-- Optimize settled idle frames in this repair.
+- Add a generic frame budget or a second renderer scheduling subsystem.
 
 ## Decisions
 
@@ -22,6 +22,7 @@ Accepted PR120 is now in the live base: the browser uses the Worker-backed graph
 2. **Keep failure ownership in the existing adapter lifecycle.** Renderer attachment is caught by the adapter and converted into its existing failed-runtime result. The terminal stop path marks the graph failed, clears Worker callbacks, terminates the Worker, and destroys an attached renderer. `workbench.js` continues to present the error through its existing graph status helper; a separate page error API is unnecessary.
 3. **Make renderer attachment clean up partial initialization before rethrowing.** The renderer owns cleanup for GL programs and buffers, its canvas and style, runtime geometry hooks, and any scheduled animation frame. The adapter then handles Worker and graph lifecycle cleanup. This keeps each resource with the module that creates it.
 4. **Keep WebGL2 as the only current relation renderer.** Relationship geometry continues to come from the existing physics interface, while DOM nodes remain responsible for node labels, hit targets, selection, drag input, and accessibility. Retaining an SVG fallback would create the competing renderer that ADR 0027 explicitly excludes.
+5. **Drive relation paints from existing Workbench signals.** The Workbench already knows when the solver, graph content, or viewport needs a paint and parks when the graph is settled. Ordinary-motion requests coalesce into one renderer frame; reduced motion draws synchronously only after the solver reaches its stable result. A self-repeating renderer loop would duplicate those signals and continue after settlement.
 
 ## Risks / Trade-offs
 
@@ -31,4 +32,4 @@ Accepted PR120 is now in the live base: the browser uses the Worker-backed graph
 
 ## Migration Plan
 
-No user data or database migration is required. Ship the explicit asset order and cleanup behavior with the documented graph contract. If the renderer change must be rolled back, revert the PR121 code and contract together; no persisted graph state needs conversion.
+No user data or database migration is required. Ship the explicit asset order, signal-driven paint scheduling, and cleanup behavior with the documented graph contract. If the renderer change must be rolled back, revert the PR121 code and contract together; no persisted graph state needs conversion.
