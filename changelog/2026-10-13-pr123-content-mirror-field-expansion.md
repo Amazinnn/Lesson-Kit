@@ -3,8 +3,10 @@
 The v1 JSON content projection declares validated `figure_paths` references for
 knowledge points and problems, plus the complete objective difficulty group
 for problems. An explicit content edit may retain a rating only when the same
-JSON revision supplies a complete validated replacement vector; content-only
-edits still clear the existing rating without rerating. An explicit JSON mirror
+JSON revision supplies all four non-null dimensions and at least one differs
+from the synchronized baseline; other dimension values may stay the same.
+Carrying the unchanged vector through a content edit still clears the stale
+rating, and an all-null group continues to clear it without rerating. An explicit JSON mirror
 revision may update logical references for an already-tracked owner, but it
 does not assert byte existence or create, copy, rename, or transport figure
 bytes. New image generation and byte attachment remain behind the gated figure
