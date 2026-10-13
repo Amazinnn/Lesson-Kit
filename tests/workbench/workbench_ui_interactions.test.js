@@ -1977,9 +1977,26 @@ test("the edge budget keeps each point's strongest relation and drops the rest",
 
 test("panning and zooming repaint the viewport, not the whole graph", async () => {
   const canvas = new FakeElement("graph-canvas");
-  runWorkbench({
+  let relationPaints = 0;
+  let reheats = 0;
+  let runtime;
+  const physics = Object.assign({}, GraphPhysics, {
+    workerBacked: true,
+    create(nodes, edges, options) {
+      runtime = GraphPhysics.create(nodes, edges, options);
+      const reheat = runtime.reheat.bind(runtime);
+      runtime.reheat = function (...args) {
+        reheats += 1;
+        return reheat(...args);
+      };
+      runtime.renderer = { render() { relationPaints += 1; } };
+      return runtime;
+    },
+  });
+  const app = runWorkbench({
     elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
     reducedMotion: true,
+    physics,
     fetch: () => jsonResponse({
       nodes: [1, 2, 3].map((id) => ({ id: "kp-" + id, title: "知识点 " + id, problem_count: 1 })),
       edges: [[1, 2], [2, 3]].map(([source, target], index) => ({
@@ -1991,14 +2008,36 @@ test("panning and zooming repaint the viewport, not the whole graph", async () =
   await flush();
   await settleGraph(600);
   const stage = canvas.children[0];
+  const wrappers = stage.children.filter((child) => child.dataset.kpId);
+  const wrap = wrappers.find((child) => child.dataset.kpId === "kp-2");
+  wrap.children.find((child) => child.className === "node").click();
+  await settleGraph(40);
+  assert.equal(wrap.classList.contains("selected"), true);
   assert.equal(stage.dataset.lastPaint, "full", "settling paints the full frame");
+  const baselinePaints = relationPaints;
   canvas.trigger("wheel", { clientX: 400, clientY: 300, deltaY: -100, preventDefault() {} });
   assert.equal(stage.dataset.lastPaint, "viewport",
     "a wheel zoom only rescales strokes and labels, never rebuilds paths");
-  const wrap = stage.children.find((child) => child.dataset.kpId === "kp-2");
-  wrap.children.find((child) => child.className === "node").click();
+  assert.equal(relationPaints, baselinePaints + 1, "zoom requests one relation repaint");
+  const panPaints = relationPaints;
+  const panReheats = reheats;
+  const panFrames = app.rafCalls;
+  const edgePath = stage.children.find((child) => child.id === "graph-edges").children[0].getAttribute("d");
+  canvas.trigger("pointerdown", { clientX: 100, clientY: 100, pointerId: 9 });
+  canvas.trigger("pointermove", { clientX: 145, clientY: 135, pointerId: 9 });
+  assert.equal(relationPaints, panPaints + 1,
+    "fixed-scale panning refreshes viewport culling while the pointer is still down");
+  assert.equal(runtime.graph.alpha, 0, "camera panning does not reheat the solver");
+  assert.equal(reheats, panReheats, "camera panning does not send a solver reheat");
+  assert.equal(app.rafCalls, panFrames, "reduced-motion panning paints synchronously");
+  assert.equal(stage.children.filter((child) => child.dataset.kpId).length, wrappers.length,
+    "viewport culling leaves graph nodes in the page model");
+  assert.equal(wrap.classList.contains("selected"), true, "panning preserves node selection");
+  assert.equal(stage.children.find((child) => child.id === "graph-edges").children[0].getAttribute("d"), edgePath,
+    "camera panning reuses settled edge geometry");
+  canvas.trigger("pointerup", { pointerId: 9 });
   await settleGraph(60);
-  assert.equal(stage.dataset.lastPaint, "full", "a selection change is a real repaint");
+  assert.equal(relationPaints, panPaints + 1, "the settled renderer parks again after panning");
 });
 
 test("legend items toggle relation types and start with derived links hidden", async () => {

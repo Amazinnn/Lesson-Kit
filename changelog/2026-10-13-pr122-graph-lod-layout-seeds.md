@@ -19,3 +19,11 @@ The source integration preserves PR121's explicit core/renderer/adapter loading,
 - `node --check workbench/server/static/graph-renderer.js` — passed.
 - `node --test tests/workbench/graph_layout_seed.test.js tests/workbench/graph_renderer.test.js tests/workbench/graph_physics_worker.test.js tests/workbench/graph_physics_runtime.test.js tests/workbench/workbench_ui_interactions.test.js` — **130 passed, 0 failed**.
 - Independent full-suite, browser, archive, and release acceptance remains with the root integration owner.
+
+## Fixed-scale pan invalidation repair
+
+Independent PR122 acceptance found that `graphApplyView()` repainted the viewport only when scale changed. During a native fixed-scale pan, the camera moved but the parked renderer received no invalidation, so nodes culled in the old viewport stayed hidden until a later background click. The accepted Edge fixture measured all four nodes back inside the viewport while their wrappers remained hidden; renderer draws stayed at 108 until pointer release, then rose to 109.
+
+The shared camera-apply path now requests the existing coalesced renderer paint when the camera translates at unchanged scale. Auto-fit-in-frame suppression remains in place, the Worker does not reheat, and the normal reduced-motion path paints synchronously. The focused UI regression first failed on the original source (`relationPaints` 3, expected 4) and passed after the fix while also checking selection, settled edge geometry, no solver reheat, no extra reduced-motion frame, and idle parking.
+
+Fresh focused checks after the repair: both modified JavaScript files pass `node --check`; the five-file graph/Worker/Workbench Node run is **130/130**. This implementation run did not replay the browser case; resumed browser and full-suite acceptance remain with the independent root reviewer.
