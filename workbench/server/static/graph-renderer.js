@@ -24,11 +24,40 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function viewTransform(stage) {
+    var value = String(stage && stage.style ? stage.style.transform || "" : "");
+    var match = value.match(/translate\(\s*(-?[\d.]+)px\s*,\s*(-?[\d.]+)px\s*\)\s*scale\(\s*([\d.]+)\s*\)/);
+    if (!match) return { panX: 0, panY: 0, scale: 1 };
+    var scale = Number(match[3]);
+    return {
+      panX: Number(match[1]) || 0,
+      panY: Number(match[2]) || 0,
+      scale: Number.isFinite(scale) && scale > 0 ? scale : 1,
+    };
+  }
+
   function stageScale(stage) {
-    if (!stage || !stage.style) return 1;
-    var match = String(stage.style.transform || "").match(/scale\(([^)]+)\)/);
-    var value = match ? Number(match[1]) : 1;
-    return Number.isFinite(value) && value > 0 ? value : 1;
+    return viewTransform(stage).scale;
+  }
+
+  function viewportFor(stage, host, margin) {
+    margin = margin === undefined ? 180 : margin;
+    var view = viewTransform(stage);
+    var width = Number(host && host.clientWidth) || 0;
+    var height = Number(host && host.clientHeight) || 0;
+    return {
+      x0: -view.panX / view.scale - margin,
+      y0: -view.panY / view.scale - margin,
+      x1: (width - view.panX) / view.scale + margin,
+      y1: (height - view.panY) / view.scale + margin,
+      scale: view.scale,
+    };
+  }
+
+  function nodeInViewport(node, viewport) {
+    var radius = Math.max(90, (Number(node.size) || 40) / 2 + 78);
+    return node.x + radius >= viewport.x0 && node.x - radius <= viewport.x1
+      && node.y + radius >= viewport.y0 && node.y - radius <= viewport.y1;
   }
 
   function parseCurve(path) {
@@ -151,6 +180,7 @@
     var edgeProgram = null;
     var edgeBuffer = null;
     var styleElement = null;
+    var wrappers = new Map();
     var frame = null;
     var destroyed = false;
     var runtimePatched = false;
@@ -180,6 +210,34 @@
       gl.vertexAttribPointer(color, 4, gl.FLOAT, false, stride, 2 * 4);
       gl.uniform2f(gl.getUniformLocation(edgeProgram, "u_size"), state.stageWidth, state.stageHeight);
       gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6);
+    }
+
+    function refreshWrappers() {
+      wrappers = new Map();
+      var rows = document.querySelectorAll ? document.querySelectorAll(".node-wrap[data-kp-id]") : [];
+      Array.prototype.forEach.call(rows, function (wrap) {
+        if (wrap.dataset && wrap.dataset.kpId) wrappers.set(wrap.dataset.kpId, wrap);
+      });
+    }
+
+    function applyLod() {
+      if (!wrappers.size || wrappers.size < state.nodes.length) refreshWrappers();
+      var viewport = viewportFor(stage, canvasHost, 180);
+      var selected = state.graph.selected, hover = state.graph.hover;
+      state.nodes.forEach(function (node) {
+        var wrap = wrappers.get(String(node.id));
+        if (!wrap) return;
+        var onScreen = node.visible && nodeInViewport(node, viewport);
+        wrap.style.visibility = onScreen ? "" : "hidden";
+        if (!onScreen || !wrap.querySelector) return;
+        var label = wrap.querySelector(".label");
+        var meta = wrap.querySelector(".meta");
+        var priority = node.id === selected || node.id === hover || node.focusWeight >= .9;
+        var labelVisible = priority || viewport.scale >= .62 || (viewport.scale >= .48 && node.size >= 50);
+        var metaVisible = node.id === selected || viewport.scale >= .86;
+        if (label) label.style.visibility = labelVisible ? "" : "hidden";
+        if (meta) meta.style.visibility = metaVisible ? "" : "hidden";
+      });
     }
 
     function draw() {
@@ -224,6 +282,7 @@
         }
       });
       bindEdges(vertices);
+      applyLod();
     }
 
     function render() {
@@ -250,6 +309,14 @@
       canvasHost.classList.remove("graph-renderer-active");
       if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
       if (styleElement && styleElement.parentNode) styleElement.parentNode.removeChild(styleElement);
+      wrappers.forEach(function (wrap) {
+        wrap.style.visibility = "";
+        if (!wrap.querySelector) return;
+        var label = wrap.querySelector(".label");
+        var meta = wrap.querySelector(".meta");
+        if (label) label.style.visibility = "";
+        if (meta) meta.style.visibility = "";
+      });
       if (edgeBuffer) gl.deleteBuffer(edgeBuffer);
       if (edgeProgram) gl.deleteProgram(edgeProgram);
     }
@@ -286,5 +353,8 @@
     cubic: cubic,
     parseCurve: parseCurve,
     stageScale: stageScale,
+    viewTransform: viewTransform,
+    viewportFor: viewportFor,
+    nodeInViewport: nodeInViewport,
   };
 }));

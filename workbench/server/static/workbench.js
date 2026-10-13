@@ -1125,12 +1125,15 @@
     function graphApplyView() {
       if (!sim) return;
       graphStage.style.transform = "translate(" + graphView.panX + "px," + graphView.panY + "px) scale(" + graphView.scale + ")";
-      // Panning moves the existing picture and nothing else, and zooming only
-      // changes stroke compensation and label thresholds. Rebuilding every edge
-      // path on each wheel tick is what made a whole-course graph feel frozen,
-      // so the viewport takes the light pass and geometry waits for the solver
-      // or an interaction that actually moves nodes.
-      if (graphView.scale !== graphLastPaintedScale) graphPaintViewport();
+      // Camera movement never reheats the solver. Zoom uses the light
+      // stroke/label pass; fixed-scale translation invalidates the parked
+      // renderer so viewport culling follows the camera.
+      if (graphView.scale !== graphLastPaintedScale) {
+        graphPaintViewport();
+      } else if (!graphAutoFitInFrame) {
+        // Translation changes renderer viewport culling even at fixed zoom.
+        graphRenderRelations();
+      }
     }
 
     function graphPaintViewport() {

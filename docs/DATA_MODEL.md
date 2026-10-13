@@ -165,3 +165,11 @@
 - 新增一个近义字段绕过旧字段的语义冲突；
 - 从 archive change 推导当前字段含义；
 - 把本次审计快照当成长期规范。
+
+## 本地图谱布局种子（浏览器缓存）
+
+这不是 SQLite 字段、作者内容或学习事实。浏览器键为 `lk_graph_layout_v1_<workspace>`；当前页面没有工作区标签时使用 `lk_graph_layout_v1_default`。值为 JSON：`version` 是数字 `1`，`identity` 是可读拓扑 JSON，`positions` 是节点 ID 到 `[x, y]` 坐标的对象（有限坐标按 0.1 像素取整）。
+
+`identity` 包含排序后的节点 ID 字符串，以及排序后的关系元组字符串 `source|target|type|direction`；它不包含关系强度、标题、指标或学习状态。`workbench/server/static/graph-physics.js` 是该键的唯一 reader/writer：在 Worker 首次报告布局稳定时写入一次；创建图谱时只读取版本与身份完全匹配的值，并把坐标作为临时锚点送入同一 Worker，随后释放锚点并继续求解。
+
+清除、损坏、过期或无法读取/写入该键时，布局种子缺席，图谱仍从原确定性 Worker 初始化开始。失去此缓存只会失去显示布局的起点，不会删除或改变 Pool、作者内容或学习记录。这里没有 SQLite schema 变化。

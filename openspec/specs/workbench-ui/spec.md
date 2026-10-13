@@ -228,7 +228,7 @@ The knowledge point list and the left weak-point rail SHALL use each knowledge p
 
 ### Requirement: Knowledge graph page
 
-When browser Web Worker support, graph physics resources, and WebGL2 support are available, the knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. Relationship rendering SHALL preserve the existing physics-provided ports, lanes, bends, arrow direction, and endpoint clearance; DOM nodes SHALL remain the accessible and interactive source for node appearance, labels, selection, and drag input. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, problem-count radius, focus, and the concise dashboard. Coordinates, soft anchors, motion, and interactions SHALL remain memory-only. If Web Worker support, graph physics resources, WebGL2, or renderer initialization is unavailable, the page SHALL show a readable graph error; a renderer startup failure after Worker creation SHALL terminate that Worker and release partial renderer resources. The page SHALL NOT run the synchronous solver or fall back to SVG.
+When browser Web Worker support, graph physics resources, and WebGL2 support are available, the knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. Relationship rendering SHALL preserve the existing physics-provided ports, lanes, bends, arrow direction, and endpoint clearance; DOM nodes SHALL remain the accessible and interactive source for node appearance, labels, selection, and drag input. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, problem-count radius, focus, and the concise dashboard. Viewport culling and label/meta LOD SHALL affect paint only; for on-screen nodes, selected, hovered, and high-focus labels SHALL remain visible at reduced zoom, and graph membership and selection SHALL remain available. When browser `localStorage` is available, the graph runtime SHALL keep at most one optional settled local layout seed per workspace. Its readable identity SHALL contain the sorted node IDs and sorted relationship tuples of source, target, type, and direction. The graph SHALL read a seed only when its identity exactly matches the current graph, restore its coordinates as temporary anchors through the existing Worker, then release those anchors and reheat that same Worker. Filters, selection, motion, active anchors, authored content, and learning state SHALL NOT be restored from the seed. Missing, stale, corrupt, or unavailable storage SHALL leave the deterministic Worker startup unchanged. If Web Worker support, graph physics resources, WebGL2, or renderer initialization is unavailable, the page SHALL show a readable graph error; a renderer startup failure after Worker creation SHALL terminate that Worker and release partial renderer resources. The page SHALL NOT run the synchronous solver or fall back to SVG.
 
 #### Scenario: Read semantic spacing
 
@@ -273,12 +273,12 @@ When browser Web Worker support, graph physics resources, and WebGL2 support are
 #### Scenario: Filter or resize the graph
 
 - **WHEN** the learner searches, filters, or changes the available size
-- **THEN** visible nodes receive deterministic seeds and the unified field reheats without persisting coordinates
+- **THEN** visible nodes receive deterministic seeds and the unified field reheats without restoring filters or selection from a local layout seed
 
 #### Scenario: Filter the visible graph
 
 - **WHEN** the learner searches or applies an available filter
-- **THEN** visible nodes are reseeded and enter the unified field without persisting removed coordinates
+- **THEN** visible nodes are reseeded and enter the unified field while filter state remains page-only and stale topology seeds are not reused
 
 #### Scenario: Inspect a focused node
 
@@ -328,12 +328,32 @@ When browser Web Worker support, graph physics resources, and WebGL2 support are
 #### Scenario: Reheat after interaction
 
 - **WHEN** the learner filters, resizes, drags, focuses, or clears focus
-- **THEN** the unified field reheats without persisting coordinates
+- **THEN** the unified field reheats from current in-memory positions and any later settled seed remains limited to the current graph identity
 
 #### Scenario: Prefer reduced motion
 
 - **WHEN** the browser reports reduced motion
 - **THEN** the graph settles and draws once without idle breathing
+
+#### Scenario: Restore a matching local layout seed
+
+- **WHEN** a settled seed exists for the current workspace and its readable graph identity exactly matches the current nodes and relationships
+- **THEN** its coordinates become temporary Worker anchors, are released, and the same deterministic Worker reheats and settles the graph
+
+#### Scenario: Ignore an unusable local layout seed
+
+- **WHEN** the stored seed is stale, corrupt, has an unsupported version, or browser storage is blocked or unavailable
+- **THEN** the graph starts with the normal deterministic Worker layout without a graph error or a fallback solver
+
+#### Scenario: Keep the layout seed outside authored and learning data
+
+- **WHEN** the graph reads, writes, or loses its optional local layout seed
+- **THEN** authored relations, content, filters, selection, learner state, signals, and schedules remain unchanged, and clearing the browser cache loses only the layout starting point
+
+#### Scenario: Keep viewport LOD paint-only
+
+- **WHEN** the learner changes zoom or viewport or the renderer repaints
+- **THEN** off-screen node wrappers may be hidden and label/meta detail may be reduced, while graph membership and selection remain available and on-screen selected, hovered, and high-focus labels remain visible at reduced zoom
 
 ### Requirement: Free Agent conversation column
 
