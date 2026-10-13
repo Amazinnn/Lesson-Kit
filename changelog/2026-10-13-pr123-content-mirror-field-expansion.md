@@ -36,3 +36,18 @@ Independent full-suite and isolated acceptance passed before this docs-only
 specification follow-up. The follow-up is checked with `openspec validate
 --all --strict --concurrency 3`, old-scenario equality proof, and `git diff
 --check`. OpenSpec archive and final integration remain root-owned.
+
+Independent source acceptance at `020755e4` passed 988 Python, 164 Node,
+24 strict OpenSpec checks, compile and extraction guard. Temporary isolation
+covered 7 groups / 1,433 assertions: duplicate old-v1 workspaces, revision and
+conflict counterexamples, absent/partial/full schema, invalid refs and ratings,
+stale/replacement behavior, actual CLI JSON-to-binary roundtrip, and injected
+transaction rollback. Read-only commands preserved raw database/file bytes;
+explicit writes preserved learner/provenance/schema state. No live course or
+content bootstrap was modified or claimed as verified.
+Docs-only acceptance at `02f76abc` resolved the live rating/ref-only boundaries;
+all six prior scenarios remain, unchanged carried-over ratings still clear,
+and gated image-byte/hash checks remain unchanged. CLI archived
+`2026-10-13-expand-content-mirror-fields` and synchronized three current specs;
+strict all validation passed 23/23. Final archive-head and actual merge CI
+remain root publication gates.
