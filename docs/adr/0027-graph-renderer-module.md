@@ -21,6 +21,7 @@ Introduce `workbench/server/static/graph-renderer.js` as the single current grap
 5. `graph-physics.js` composes the current renderer through its stable interface when a graph runtime is created. It does not monkey-patch `GraphPhysics.create`, retry-load optional modules, or choose between renderers at runtime.
 6. Do not introduce Pixi, a bundler, WASM, or another rendering dependency.
 7. Replacing the renderer later means replacing the module implementation while preserving its interface; returning to the old SVG implementation is a version rollback.
+8. WebGL2 is a browser prerequisite. The graph page loads the renderer before its adapter; unavailable WebGL2 or renderer initialization failure is a readable terminal startup failure that terminates the newly created Worker and releases partial renderer resources. There is no dynamic script loader, retry, or SVG fallback.
 
 ## Backend boundary
 
