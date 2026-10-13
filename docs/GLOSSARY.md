@@ -39,9 +39,9 @@ _Avoid_：章节数据库、压缩包版本
 出处：CONTEXT.md（迁入）；pool_schema.py
 
 ### 作者内容投影 / Authored-Content Projection
-知识池中受治理的作者字段在独立 Git 内容仓库中的 JSON 表示。它允许审阅和提出字段编辑；Lesson Kit 仍须通过现有内容校验与写入路径接收编辑，学习者状态只留在知识池。v1 只投影知识点、正式题和知识关系，不支持闪卡实体、图片字节、专用难度字段或仓库侧创建新实体。
+知识池中受治理的作者字段在独立 Git 内容仓库中的 JSON 表示。它允许审阅和提出字段编辑；Lesson Kit 仍须通过现有内容校验与写入路径接收编辑，学习者状态只留在知识池。v1 投影知识点、正式题和知识关系，包括知识点/题目的逻辑图像引用与正式题四维客观难度组；不投影闪卡实体、图片字节或学习者状态，也不支持仓库侧创建新实体。逻辑图像引用的投影不决定全仓库的图片命名策略。
 _Avoid_：工作区镜像、数据库镜像、学习状态同步
-出处：ADR 0024；`openspec/changes/json-content-repository-sync/`
+出处：ADR 0024；`json-content-repository-sync` 与 `expand-content-mirror-fields` changes
 
 ### 作者内容镜像 / Authored-Content Mirror
 `lesson-kit mirror` 命令组与其同步机制的整体称呼：把「作者内容投影」在知识池与本地作者内容仓库之间按单实体对齐。概念定义以「作者内容投影」为准；本文档不再为镜像另立语义。

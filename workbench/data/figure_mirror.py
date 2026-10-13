@@ -84,6 +84,12 @@ def _logical_path(course, logical):
     return path
 
 
+def validate_references(course, paths, owner_id):
+    """Validate logical references without inspecting or copying figure bytes."""
+    for logical in _decode_paths(paths, owner_id):
+        _logical_path(course, logical)
+
+
 def references(pool):
     """Return unique logical figures and every authored object that references them."""
     if not Path(pool.db_path).is_file():

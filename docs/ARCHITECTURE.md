@@ -113,8 +113,10 @@ workbench/
 - 新表 `content_mirror_state(entity_type, entity_id, revision, content_json, updated_at)` 与
   `content_mirror_log(...)` 由 `pool_schema.py` 增量创建：前者保存最后同步的整数修订号和规范化作者内容，
   后者记录成功方向；不存哈希或 Git 对象 id。仓库写入题目时，内容更新、状态和日志在同一池事务内提交。
-- `data.content_mirror` 只投影知识点、正式题与知识关系的既有受治理作者字段。闪卡实体、图片字节、专用
-  难度字段、仓库侧新建 id 和任何学习者/运行时状态均不属于 v1；变更继续走 `data.content` 或关系校验器。
+- `data.content_mirror` 投影知识点、正式题与知识关系的受治理作者字段，包括知识点/题目的逻辑
+  `figure_paths` 与正式题完整四维难度组。图像引用由 `figure_mirror` 的既有路径规则预检；图片字节、
+  闪卡实体、仓库侧新建 id 和学习者/运行时状态不进入 JSON 投影。难度仍由 `data.difficulty.check`
+  校验和重算，镜像事务不另行调用 Domain 或嵌套 `apply`。
 - 题目可增量拥有 `display_title`（可读短标题）；闪卡可增量拥有 `topic_label`（单一主题标签）。它们是内容展示字段，不替代稳定 ID。
 - 闪卡可增量拥有 `directions`：只存 `["forward"]` 或 `["forward", "reverse"]`；旧卡缺省单向，双向内容仍只占一行，练习方向复用 `review_schedule` 复合键。
 - 当前学习状态是知识点/题目的覆盖式值（`needs_work` / `review` / `mastered`），与 `feedback_events` 的追加历史分离；图谱直接编辑当前状态时只更新该值与调度。
@@ -154,8 +156,9 @@ workbench/
 - 图谱视觉呈现完全位于浏览器表示层：graph-physics-core.js 保持唯一语义核心；graph-physics.js 提供 Worker 适配器、页面镜像与本地布局种子的唯一读写；graph-physics-worker.js 执行迭代布局；graph-renderer.js 使用 WebGL2 绘制物理核心提供的关系几何，并负责 viewport culling 和标签/元信息 LOD，DOM 节点继续承担节点外观与交互。图谱页按 core、renderer、adapter 顺序加载；WebGL2 或 renderer 初始化失败时走现有状态提示并终止本次运行。可选坐标种子只在图谱稳定后写入浏览器 localStorage，并按可读的节点/关系拓扑身份读取；它不改变关系结构、题量、重要性、学习状态或作者内容，也不写入 SQLite。
 - 图谱状态筛选分群也完全位于浏览器表示层：四个既有状态按多选并集决定可见子图；布局更新运行时内存坐标，稳定后可由 `graph-physics.js` 写入可选的本地布局种子；筛选值仅随页面上下文提供给 Agent，不写 Pool，也不从种子恢复。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
-- `data.content_mirror`：扫描所选课程本地 JSON、按嵌入 id 比较三方规范化内容、调用现有内容校验/写入权威，
-  并将单实体内容与镜像状态/日志原子提交；不调用 Git，也不因文件缺失或删除请求删池内容。
+- `data.content_mirror`：扫描所选课程本地 JSON、按嵌入 id 比较三方规范化内容、调用现有内容/关系校验权威，
+  经现有图像路径校验写入逻辑引用、通过 `data.difficulty.check` 校验题目难度，并将单实体内容与镜像状态/日志
+  原子提交；旧 v1 投影可按下一修订号升级，完全匹配的远端投影可收敛一次；不调用 Git，也不因文件缺失或删除请求删池内容。
 - `data.figure_mirror`：只读池中已有 `figure_paths`，按明确方向在工作区兼容目录与指定本地 checkout
   之间复制原始图像字节，并从池引用生成派生归属索引；不写池、不修改引用、不调用 Git 网络操作。
   资产根、目标和索引路径都必须解析在注册工作区或指定 checkout 内。

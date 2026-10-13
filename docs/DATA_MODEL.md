@@ -29,7 +29,7 @@
 | `body` | active | 知识点正式正文 | 知识点详情页、Agent 内容读取 |
 | `difficulty` | **legacy** | 旧知识内容复杂度 1–5；与正式题四维 objective difficulty 无换算关系 | 冻结 pipeline / 兼容查询 |
 | `fragile` | active | 易错/脆弱点备注；保存内容本身，不产生学习事件 | 知识点详情、兼容编辑 API |
-| `figure_paths` | **unresolved** | 该知识点引用的逻辑图片路径 JSON；**路径命名策略当前存在仓库级冲突** | 图像渲染/回滚、`data.figure_mirror`（只读投影） |
+| `figure_paths` | **unresolved** | 该知识点引用的逻辑图片路径 JSON；**路径命名策略当前存在仓库级冲突**。`data.content_mirror` 可在显式 JSON 同步中写入通过既有路径校验的引用；`data.figure_mirror` 只读消费池引用并同步图像文件 | 图像渲染/回滚、`data.content_mirror`、`data.figure_mirror` |
 | `ingest_batch_id` | active | 受治理 ingest/apply 的批次 provenance；原地修改的批次不保证覆盖此列，不能当作通用最后修改标记 | 回滚/审计 |
 | `created_at`, `updated_at` | active | 行生命周期时间戳；不得承载业务状态 | 审计/排序 |
 
@@ -76,8 +76,8 @@
 | `display_summary` | **unresolved** | 当前 ingest 允许 ≤200；旧 backfill validator 要求 ≤48 且长题才允许；当前主页面无实际消费 | 
 | `practice_modes` | active | 存储的练习 shell 资格 JSON。空值 = exam-only；客观题时必须与 `micro_quiz.quiz_type` 相容 |
 | `micro_quiz` | active | 客观交互 payload JSON：`quiz_type/options/answer_key/error_reason/source_evidence` 等；决定判断/单选/多选 |
-| `figure_paths` | **unresolved** | 题目逻辑图片路径 JSON；文件命名策略存在仓库级冲突；`data.figure_mirror` 只读消费，不是 writer |
-| `difficulty` | active | 四维客观难度的派生 REAL 总分；不得由内容 ingest 直接赋值 |
+| `figure_paths` | **unresolved** | 题目逻辑图片路径 JSON；文件命名策略存在仓库级冲突。`data.content_mirror` 可在显式 JSON 同步中写入通过既有路径校验的引用；`data.figure_mirror` 只读消费池引用并同步图像文件 |
+| `difficulty` | active | 四维客观难度的派生 REAL 总分；不得由内容 ingest 直接赋值，显式评级与 JSON 镜像均须使用既有难度校验 |
 | `difficulty_knowledge_breadth` | active | 客观难度：知识跨度 1–5 |
 | `difficulty_reasoning_depth` | active | 客观难度：推理深度 1–5 |
 | `difficulty_transfer_distance` | active | 客观难度：迁移距离 1–5 |
@@ -86,7 +86,9 @@
 | `ingest_batch_id` | active | 受治理 ingest/apply 批次 provenance；`problems` recipe 会在已有行上更新该列，problem-patch 与通用直接编辑不保证更新；后两者不把该列视为通用最后修改批次 |
 | `created_at`, `updated_at` | active | 行生命周期时间戳 |
 
-对知识点与题目的 `figure_paths`，`data.figure_mirror` 都只是只读消费者，不写入或改名这些逻辑路径。现有文件名主体为 64 个小写十六进制字符的路径继续按 `knowledge-figures` 的内容哈希身份处理；mirror 在无法从现存副本保留该身份时拒绝同步。全仓库的图片命名策略仍为 unresolved。
+对知识点与题目的 `figure_paths`，`data.content_mirror` 是受治理的 JSON 引用 writer：写入前复用现有课程相对路径规则预检两侧引用；它不创建、复制或改名图像字节。`data.figure_mirror` 仍只读消费池引用并按显式方向同步文件。现有文件名主体为 64 个小写十六进制字符的路径继续按 `knowledge-figures` 的内容哈希身份处理；mirror 在无法从现存副本保留该身份时拒绝同步。全仓库的图片命名策略仍为 unresolved。
+
+正式题的四维难度、派生总分与模型必须全空或全有。`data.difficulty.check/apply` 保持现有校验/事务 authority；`data.content_mirror` 只在显式仓库同步时接受四维评级，先调用 `data.difficulty.check` 重算总分与模型，再在其逐实体事务内写入完整组。内容轴变更清除当前池投影中实际存在的难度列；旧 schema 不迁移列，显式评级要求完整组。
 
 已删除字段：`problems.topic_label`。schema ensure 物理删除旧池同名列，重建表也不含该列；
 这取代 PR111 的普通 ensure 保留语义。历史值仅可留在数据库之外的恢复备份，不能留在当前池
@@ -134,8 +136,8 @@
 写入边界：只有 `data.content_mirror` 的受治理路径写这两张表；`repo_to_pool` 的内容更新、
 状态与成功日志在同一个池事务内提交，失败一起回滚，其余方向以「中断后下一次比较能收敛
 或可重试」的顺序推进状态与文件。`mirror check`、`status`、`sync --dry-run` 零写入；
-失败/冲突/无效不写日志行。闪卡实体、图片字节、专用难度字段与学习者/运行时状态
-不进入镜像台账。
+失败/冲突/无效不写日志行。闪卡实体、图片字节与学习者/运行时状态不进入镜像台账；
+作者内容 JSON（包括经校验的逻辑图像引用和可用的题目难度组）属于比较基线。
 
 ## 与学习状态字段的边界
 

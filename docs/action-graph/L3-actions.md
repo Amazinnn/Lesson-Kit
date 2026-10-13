@@ -68,7 +68,7 @@
 | 抽取管线入池（教材→KP→题） | 管线脚本 | 人 | 全部内容表 | 已实现（一次性） |
 | 作者内容镜像引导（pool-first：池写修订号 1 JSON + 台账；已有同 id 文件按嵌入身份采纳/冲突拒绝；不可读文件进报告、被其点名 id 的实体拒绝建档、其余实体照常；逐实体可恢复） | CLI `mirror init --repo <checkout>`（`[--entity] [--dry-run]`） | Agent | 池 `content_mirror_state`/`content_mirror_log` + checkout JSON | 已实现（2026-10-10，json-content-repository-sync/PR110） |
 | 作者内容镜像只读分类（零写入；区分 noop/仓库→池/池→仓库/文件恢复/收敛/无效/冲突） | CLI `mirror check`·`mirror status --repo [--entity]` | Agent | — | 已实现（同上） |
-| 作者内容镜像同步（逐实体三方比较：仓库修改经既有内容/关系校验器写池，内容+状态+日志同事务；池修改导出下一修订；缺失文件按新修订恢复；收敛恢复；冲突/无效逐条报告、成功兄弟保留；删除请求只校验报告、永不执行；不碰 Git 网络） | CLI `mirror sync --repo [--entity] [--dry-run]` | Agent | 池内容（经 `data.content`/关系校验器）+ checkout JSON + 台账 | 已实现（同上） |
+| 作者内容镜像同步（逐实体三方比较：仓库修改经既有内容/关系校验器写池；逻辑图像引用先按现有路径规则预检，题目难度经 `data.difficulty.check` 规范化；内容+状态+日志同事务；池修改导出下一修订；旧投影按下一修订升级；收敛恢复；冲突/无效逐条报告、成功兄弟保留；删除请求只校验报告、永不执行；不碰 Git 网络） | CLI `mirror sync --repo [--entity] [--dry-run]` | Agent | 池内容（经 `data.content`/关系校验器/难度校验）+ checkout JSON + 台账 | 已实现（字段扩展：expand-content-mirror-fields/PR123） |
 | 图像文件投影（仅池中已引用路径；显式 check/push/pull；64-hex 旧身份冲突或缺少 pull 基线时拒绝；根/目标/索引均受工作区或 checkout 锚定；push 写派生归属索引；不修剪、不碰 Git 网络） | CLI `mirror <workspace> figures --repo <checkout> --direction check|push|pull [--dry-run]` | Agent | 工作区/checkout 图像文件 + checkout `figures/<course>/_index.json`；池只读 | 已实现（2026-10-12/13，versioned-figure-assets/PR113） |
 
 ## 四、Agent 桥

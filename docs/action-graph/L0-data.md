@@ -6,9 +6,9 @@
 
 | 表 | 存什么 | 谁写 | 谁读 |
 |---|---|---|---|
-| `knowledge_points` | 知识点：条目名/正文/类型/重要性 | 抽取管线（一次性）；图谱编辑（正文） | 拉取、图谱、覆盖审计、`data.evidence` |
+| `knowledge_points` | 知识点：条目名/正文/类型/重要性及逻辑 `figure_paths` 引用 | 抽取管线（一次性）；图谱编辑（正文）；`data.content_mirror`（仅显式同步时写入已校验引用） | 拉取、图谱、覆盖审计、`data.evidence`、`data.figure_mirror` |
 | `knowledge_relations` | KP 关系（类型/方向/强度） | 抽取管线 | 图谱布局 |
-| `problems` | 正式题目（题干/解答/kp_ids/micro_quiz/难度可空 1-5/`exam_year` 可空来源年份） | 门禁配方 ingest、content-bundle、CLI `data` | 拉取、选题组练习、练习、`data.evidence` |
+| `problems` | 正式题目（题干/解答/kp_ids/micro_quiz/`exam_year` 可空来源年份/逻辑 `figure_paths`/可空完整四维客观难度组） | 门禁配方 ingest、content-bundle、CLI `data`；`data.content_mirror`（校验引用；难度经 `data.difficulty.check`） | 拉取、选题组练习、练习、`data.evidence`、`data.figure_mirror` |
 | `candidate_problems` | **已物理移除**（2026-08-30 remove-candidate-store：表 DROP，pipeline 侧脚本成为无调用方退役物） | —— | —— |
 | `flash_cards` | 闪卡内容 + directions 方向能力（缺省 forward，双向不复制内容行） | 门禁配方 ingest | 拉卡、收束页 |
 | `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点） | `POST /practice`、CLI `practice`、CLI `attempts apply|correct`（2026-09-24） | Agent 上下文、查询、CLI `attempts list|get`、`data.evidence` |
@@ -17,7 +17,7 @@
 | `review_schedule` | 调度行（每题/每卡/每方向一行：间隔/熟悉度/到期） | 四件套之一；图谱状态编辑 | due/weak/日历工作量 |
 | `ingest_batches` 的批次 | 一次导入按章各一行（batch-NNN + kind + counts + 快照路径 + 备份 + 回滚时刻）；内容行带自己的批次标记，因此可按章撤销 | CLI `ingest apply`/桥内容动作 | `ingest batches`、rollback、结果卡 |
 | `attempt_operations` | Agent 代录尝试的操作留痕：请求标识（幂等）、尝试 id、kind、评分、两条内容指纹、结果 JSON、effect 前后的投影快照（更正守卫用） | CLI `attempts apply|correct` | CLI `attempts check|get`、更正守卫 |
-| `content_mirror_state` | 作者内容镜像同步状态：每实体最后同步修订号 + 规范化作者内容（无哈希） | `data.content_mirror`（init/sync 成功路径） | `mirror check/status/sync` |
+| `content_mirror_state` | 作者内容镜像同步状态：每实体最后同步修订号 + 规范化作者内容（无哈希，含有效扩展字段） | `data.content_mirror`（init/sync 成功路径） | `mirror check/status/sync` |
 | `content_mirror_log` | 只追加的成功方向台账（五个方向枚举 + 前后修订号） | 同上 | 审计/证据 |
 
 ## 工作区文件（`.lessonkit/`，注册表 `LESSONKIT_WB_HOME` 下）
