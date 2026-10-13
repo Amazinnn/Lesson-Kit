@@ -21,7 +21,6 @@
     root.document.write('<script src="/static/graph-physics-core.js"><\/script>');
     core = root.GraphPhysics;
   }
-  if (!core) throw new Error("graph physics core failed to load");
   if (typeof root.Worker !== "function") {
     throw new Error("Lesson Kit knowledge graph requires Web Worker support");
   }
