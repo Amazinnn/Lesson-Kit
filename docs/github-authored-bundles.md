@@ -9,6 +9,7 @@ the SQLite pool remains the canonical runtime source of truth.
 ```text
 <authored-content-repo>/
 ├── authored-bundles/<course-id>/<chapter>/<name>.json
+├── authored-selections/<course-id>/<chapter>/<name>.json
 ├── courses/<course-id>/
 │   ├── knowledge/<entity-id>.json
 │   ├── problems/<entity-id>.json
@@ -17,14 +18,18 @@ the SQLite pool remains the canonical runtime source of truth.
 └── delete-requests/<request-id>.json
 ```
 
-The two trees have different responsibilities:
+The trees have different responsibilities:
 
 - `authored-bundles/` is an input/review surface. A pull request may create a
   new bundle from source material before the local pool has allocated ids.
+- `authored-selections/` is a reviewable recipe for choosing and ordering
+  problems from one authored bundle. It is consumed by the local practice-set
+  workflow and is never inserted into the pool or mirrored as an entity.
 - `courses/` is the canonical authored-content projection produced from rows
   that already exist in the pool. `lesson-kit mirror` owns that projection.
 
-A file in `authored-bundles/` does not itself create a Lesson-Kit entity.
+A file in `authored-bundles/` or `authored-selections/` does not itself create a
+Lesson-Kit entity.
 
 ## Identity rule
 
@@ -73,12 +78,56 @@ and the existing rollback semantics remain unchanged.
 `--backup <path>` may override the normal recoverable-copy path when applying.
 It is invalid for a read-only check.
 
+## Practice-set selections
+
+A `practice-set-selection` deliberately is **not** a fourth durable content
+entity. It stores only presentation/workflow intent over an authored bundle:
+
+```json
+{
+  "kind": "practice-set-selection",
+  "chapter": "ch02",
+  "title": "Chapter 2 comprehensive",
+  "total_points": 100,
+  "items": [
+    {"problem_key": "p-001", "points": 4},
+    {"problem_key": "p-017", "points": 6}
+  ]
+}
+```
+
+Keys must exist in the bundle, may appear only once, and points must be positive
+integers whose sum matches `total_points` when it is declared. Check mode can
+resolve the recipe against the canonical ids that governed ingest plans without
+writing anything:
+
+```bash
+lesson-kit ingest <workspace> bundle \
+  --input authored-bundles/<course>/<chapter>/<bundle>.json \
+  --selection authored-selections/<course>/<chapter>/<set>.json
+```
+
+To ingest and immediately render the selected set through the existing
+`workbench.domain.practice_set` renderer:
+
+```bash
+lesson-kit ingest <workspace> bundle \
+  --input authored-bundles/<course>/<chapter>/<bundle>.json --apply \
+  --selection authored-selections/<course>/<chapter>/<set>.json \
+  --student-out /tmp/ch02-student.md \
+  --solutions-out /tmp/ch02-solutions.md
+```
+
+After apply, local keys are resolved from the rows carrying that ingest batch's
+canonical ids. The selection itself is not written to SQLite and never appears
+under `courses/<course-id>/`.
+
 ## Canonical projection after apply
 
 After a successful apply, `lesson-kit mirror ... push` may export the canonical
-rows to `courses/<course-id>/...`. The authored bundle may remain in Git as the
-reviewed source proposal and audit trail; it is not synchronized as an entity
-mirror and its local keys never become canonical ids.
+rows to `courses/<course-id>/...`. The authored bundle and selection may remain
+in Git as reviewed source proposals and audit trail; neither is synchronized as
+an entity mirror and their local keys never become canonical ids.
 
 No staging database, candidate table, promotion state, or alternate mutation
 channel is introduced by this workflow. Git clone/pull/commit/push operations
