@@ -23,6 +23,12 @@ def lesson_kit_main(argv=None):
     if args and args[0] == "mirror":
         from workbench.cli import mirror
         return mirror.main(args[1:], prog="lesson-kit mirror")
+    if len(args) >= 3 and args[0] == "ingest" and args[2] == "bundle":
+        from workbench.cli import content_bundle
+        return content_bundle.main(
+            [args[1], *args[3:]],
+            prog=f"lesson-kit ingest {args[1]} bundle",
+        )
     from workbench.cli import main
     return main.lesson_kit_main(args)
 
