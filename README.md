@@ -168,6 +168,34 @@ python lessonkit.py guard extract-problems --course dmath --chapter ch06 --db po
 python lessonkit.py guard problem-set --course dmath --chapter ch06
 ```
 
+## GitHub Co-authoring
+
+A companion authored-content repository may carry proposed `content-bundle`
+manifests under `authored-bundles/<course>/<chapter>/`. These files are review
+and versioning inputs, not canonical entity mirrors. On this Git-authored path,
+items use bundle-local `key` values and omit `kp_id`, `problem_id`, and
+`card_id`; the governed pool ingest owns canonical identity.
+
+Check a reviewed bundle without writing anything:
+
+```bash
+lesson-kit ingest <workspace> bundle --input <bundle.json>
+```
+
+Apply the same bundle through the existing transaction boundary:
+
+```bash
+lesson-kit ingest <workspace> bundle --input <bundle.json> --apply
+```
+
+Apply revalidates the complete bundle, allocates canonical ids, writes the
+normal recoverable backup and ingest batches, and preserves the existing
+rollback behavior. `lesson-kit mirror` may then export the resulting canonical
+entities under `courses/<course>/...`. GitHub is therefore a transport and
+review surface, not a second content authority.
+
+See `docs/github-authored-bundles.md` for the repository-side contract.
+
 ## Versioning
 
 Git commits and tags are the version source of truth. Zip packages may still be
@@ -180,7 +208,9 @@ Pre-release. Extraction and legacy rendered views remain available, while the
 active product is the five-page local workbench (practice, paper building,
 knowledge points, knowledge graph, and practice records) with goals/calendar
 workload, governed flash-card and micro-quiz ingestion, transactional batch
-rollback, and provider-native Agent conversation. Check ingest is the only Agent content channel; no staging or
+rollback, and provider-native Agent conversation. Governed Check ingest remains
+the only content mutation boundary: Agent replies and Git-reviewed authored
+bundles both enter through the existing content-bundle gate; no staging or
 promotion store exists in the active workbench.
 
 ## License
