@@ -64,6 +64,8 @@ Selection map:
 - `--plan <file>` writes a reproducible plan, `--check` validates without writing, `--print <dir>` writes student and solution Markdown sheets. Selection and printing do not mutate the learning pool.
 
 When importing a sourced exam problem, `exam_year` is optional. If known it begins with a four-digit year (for example `2023` or `2023-2024秋冬`) and is at most 20 characters. Do not invent it.
+
+`pull --plan` exports a practice manifest and `pull --print` writes Markdown sheets; neither saves a reusable paper in Workbench. When the learner asks to save the paper or make it available in Workbench, run `lesson-kit papers <workspace> save --input <manifest>`. Report a managed save only after exit 0 and a JSON receipt; use its title, count, and `url`. A job artifact or printed sheet alone is not proof that the paper appears in the saved-paper list. Export-only requests remain supported.
 """,
     "actions": r"""Lesson Kit UI action contract
 

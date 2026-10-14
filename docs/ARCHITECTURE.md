@@ -60,7 +60,7 @@ workbench/
 │   ├── difficulty.py  # 显式难度 check/apply 整批事务
 │   ├── attempts.py    # Agent 代录尝试：清单校验、单事务 apply、快照守卫的 correct
 │   ├── evidence.py    # 按知识点读取有界、可读的近期学习证据
-│   ├── practice_sets.py # 练习清单校验/解析与出卷（两份 Markdown，零写入预检）
+│   ├── practice_sets.py # 练习清单校验/出卷与复用试卷写入
 │   ├── goals.py       # 工作区本地目标存储
 │   ├── mastery.py     # 掌握度实验的只读数据投影
 │   └── display_metadata.py # 展示字段回填
@@ -80,6 +80,7 @@ workbench/
 │   ├── __init__.py
 │   ├── entry.py       # 安装入口的 extension dispatch
 │   ├── evidence.py    # lesson-kit evidence：参数校验与只读 Data 调用
+│   ├── papers.py      # lesson-kit papers：校验已导出的练习清单并委托 Data 保存
 │   └── main.py        # lesson-kit 入口（argparse；纯数据命令，无教学语义）
 ├── server/
 │   ├── __init__.py
@@ -167,7 +168,7 @@ workbench/
   统一清空整组评级，未评级不影响任何主流程。
 - `domain.practice_set.render_*`：练习集两份 Markdown 的纯文本规则（连续题号、学生卷
   不含答案与内部标识、缺解写「待补」、`leaks` 扫描）；`data.practice_sets` 负责清单
-  校验/解析与出卷，写文件由 Shell 完成。
+  校验/解析、出卷及复用试卷 JSON 写入；`save_manifest` 校验后委托现有原子 writer，CLI 只编排。
 - `data.attempts.record_result`：`/practice` 与 CLI `practice` 共用的单事务写法
   （尝试 + 进度 + 调度一起写，未知题拒写）。
 - `data.attempts.record_browser_attempt/record_browser_feedback`：浏览器在发送前把请求

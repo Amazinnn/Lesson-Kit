@@ -392,6 +392,30 @@ files exactly as stored, so the exported set must be read with a
 math-capable Markdown viewer (or rendered later) — the workbench page renders
 it with KaTeX, the raw file does not.
 
+## Agent Saved Papers
+
+`lesson-kit pull --plan` exports a `practice-set` manifest; `pull --print` writes
+student and solution Markdown. Those exports are not managed papers. To add a
+manifest to the Workbench saved-paper list, run:
+
+```bash
+lesson-kit papers <workspace> save --input <manifest>
+```
+
+The manifest uses the existing top-level fields `kind`, `title`, optional
+`course`, optional object `request`, optional export-only `shortage`, and
+`items`. Each item has `problem_id` and optional `reason`. Save validates the
+kind and allowed fields, requires a non-empty ordered list of unique IDs that
+exist in the selected workspace, checks any supplied course against that
+workspace's active course, and requires a non-empty title and an object request
+when supplied. It leaves the input manifest and SQLite unchanged. A successful
+command returns `practice_set_id`, `title`, `count`, and the workspace-relative
+`url`; a job file or printed sheet is not evidence of a managed save.
+
+Managed papers live at `.lessonkit/practice-sets/ps-NNN.json`. The existing
+Data writer stores the paper plan and stable ID atomically; the browser list
+reads that same store. Saving does not write learning state or course SQLite.
+
 ## Workbench Runtime Areas
 
 Runtime assets follow the hidden dot-directory convention and live under
@@ -401,6 +425,7 @@ Runtime assets follow the hidden dot-directory convention and live under
 .lessonkit/
 ├── state.yaml                                   # runtime state (tracked)
 ├── figures/{course}/{chapter}/{sha256}.{ext}      # tracked
+├── practice-sets/ps-NNN.json                    # reusable saved papers
 └── jobs/conv-NNN/                               # provider state/events/mirror (gitignored)
 ```
 

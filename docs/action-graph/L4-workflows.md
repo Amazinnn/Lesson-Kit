@@ -156,12 +156,17 @@ flowchart TD
   B -- 单题 --> E[--problem 追加·不受筛选与上限约束]
   C & D & E --> F[逐题 reason：scope/weak/due/wrong/explicit]
   F --> G{要固定吗?}
-  G -- --plan --> H[练习清单 JSON] --> I{要重跑?}
+  G -- --plan --> H[练习清单 JSON（导出）] --> I{要重跑?}
+  H --> Q{要加入组卷页列表?}
+  Q -- 要 --> R[lesson-kit papers <workspace> save --input <manifest>] --> S{退出码 0 并收到 JSON 回执?}
+  S -- 是 --> T[浏览器组卷页列表显示试卷]
+  S -- 否 --> U[如实报告失败；不声称已保存]
+  Q -- 否 --> I
   I -- --input --> J[同一批题<br/>零写入] --> K{出卷?}
   G -- 否 --> L[打印题目行<br/>--ids 只看题号]
   K -- --check --> M[零写入预检<br/>题数/缺口/缺解/重复/泄漏]
   M -- 泄漏或重复 --> N[非零退出·逐条原因]
-  K -- --print --> O[学生卷 + 解答卷<br/>题号对齐·缺解「待补」]
+  K -- --print --> O[学生卷 + 解答卷<br/>题号对齐·缺解「待补」<br/>仅导出]
   Y1[新池上 --weak/--due/--wrong] -.空集是诚实结果.-> L
   Y2[未迁移池用 --exam-year] -.报错给 migrate 命令.-> Z[(池不变)]
 ```

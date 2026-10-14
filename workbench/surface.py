@@ -51,7 +51,7 @@ ROUTES = {
     ("GET", "/api/w/{name}/practice-sets"): (
         BROWSER, (), "the browser lists reusable saved papers"),
     ("POST", "/api/w/{name}/practice-sets"): (
-        BROWSER, (), "the browser saves the current selected problems as a paper"),
+        BOTH, ("papers",), "the browser or Agent saves a reusable paper"),
     ("GET", "/api/w/{name}/practice-sets/{practice_set_id}"): (
         BROWSER, (), "the browser opens one saved paper"),
     ("PATCH", "/api/w/{name}/practice-sets/{practice_set_id}"): (
@@ -141,6 +141,7 @@ COMMANDS = {
     "difficulty": (AGENT, ""),
     "evidence": (AGENT, "bounded read-only human-readable learner evidence for historical claims"),
     "experience": (AGENT, "explicit CRUD for learner-owned knowledge-point practice experience"),
+    "papers": (AGENT, "saves a validated practice manifest as a reusable paper"),
     "ingest": (AGENT, ""),
     "mirror": (AGENT, "validates and synchronizes the checked-out authored-content JSON projection"),
 }

@@ -441,7 +441,7 @@ def _prompt(message, context):
         "不要用 `|| true` 或命令串掩盖退出码。输出太长可 `lesson-kit … > out.txt` 后读取；"
         "需要确认退出码时检查 `echo $?`。只有真实成功才能宣称成功，不要谎报成功。\n"
         "详细操作规则按需读取，而不是每轮重复背诵：`" + contract_cli + " list`。"
-        "可用主题：commands（命令/退出码）、attempts（记录/更正作答）、practice（组卷/选题）、"
+        "可用主题：commands（命令/退出码）、attempts（记录/更正作答）、practice（组卷/选题/保存试卷）、"
         "actions（前端动作）、content（新增/修改学习内容）。执行对应专门动作前先读取相应主题；"
         "普通教学问答无需读取无关契约。\n"
         "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
