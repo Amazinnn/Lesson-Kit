@@ -13,6 +13,8 @@
 | GET `/calendar` | 读 | 查询 | 浏 |
 | GET `/plan` · POST `/plan/recalculate` | 读/写 | 计划 | 浏 |
 | GET·POST `/goals`；PATCH·DELETE·GET `/goals/{id}` | 读/写 | goals.json | 浏（UI 仅用创建） |
+| GET `/practice-sets` | 读 | 已保存试卷 JSON 列表 | 浏览器 |
+| POST `/practice-sets` | 写 | 验证并保存一份可复用试卷，使用现有 Data 写入器 | 双 |
 | POST `/pull` | 读 | 拉取（`filters` 四维：来源类型/题目来源方式/年份/文档，维度内 OR、维度间 AND；顶层 `origin_kinds` 同义） | 双 |
 | GET `/pull-facets` | 读 | 拉取（筛选浮窗的四维与计数，取自池内实际值） | 浏 |
 | GET `/search/problems?stem=&source=` | 读 | 查询（浮窗两个关键词域搜索，各域多词 AND；命中后走 `include_ids`；旧 `q` 已删除） | 浏 |
@@ -50,6 +52,7 @@
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
+| `papers <workspace> save --input <manifest>` | 写（验证已导出的练习清单并保存到组卷页列表；返回 JSON 回执） | Agent |
 
 ## 已安装的 Agent 契约模块
 

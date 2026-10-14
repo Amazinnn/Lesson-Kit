@@ -151,6 +151,12 @@
 
 修改这些表之前，必须先读取对应 live OpenSpec；本文档目前只用于划清边界，不重写其完整状态转移规则。
 
+## 可复用试卷写入边界
+
+练习集是工作区 `.lessonkit/practice-sets/` 下的 JSON 记录，不是 SQLite 行或学习状态。
+`data.practice_sets.save_manifest` 校验导出的练习清单及其课程，再委托给现有原子 JSON 写入器
+`create_saved`。保存记录保留题目顺序与 request 元数据；这条写入路径不改 SQLite。
+
 ## 字段变更纪律
 
 任何持久字段的新增、删除、改名、枚举变化或语义变化，必须在**同一个 PR**：

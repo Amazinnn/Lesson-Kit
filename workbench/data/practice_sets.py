@@ -282,6 +282,19 @@ def create_saved(pool, title, problem_ids, request=None):
     return get_saved(pool, practice_set_id)
 
 
+def save_manifest(pool, manifest):
+    """Validate an exported manifest, then store it as one reusable paper."""
+    plan, _ = resolve(pool, manifest)
+    if "course" in plan and plan["course"] != pool.course:
+        raise ValueError("manifest course does not match the selected workspace course")
+    return create_saved(
+        pool,
+        plan.get("title"),
+        [item["problem_id"] for item in plan["items"]],
+        request=plan.get("request"),
+    )
+
+
 def update_saved(pool, practice_set_id, *, title=None, problem_ids=None, request=None):
     current = get_saved(pool, practice_set_id)
     plan = current["plan"]

@@ -3,7 +3,7 @@
 import sys
 
 
-EXTENSION_COMMANDS = {"evidence", "experience", "mirror"}
+EXTENSION_COMMANDS = {"evidence", "experience", "mirror", "papers"}
 
 
 def command_names():
@@ -23,6 +23,9 @@ def lesson_kit_main(argv=None):
     if args and args[0] == "mirror":
         from workbench.cli import mirror
         return mirror.main(args[1:], prog="lesson-kit mirror")
+    if args and args[0] == "papers":
+        from workbench.cli import papers
+        return papers.main(args[1:], prog="lesson-kit papers")
     if len(args) >= 3 and args[0] == "ingest" and args[2] == "bundle":
         from workbench.cli import content_bundle
         return content_bundle.main(

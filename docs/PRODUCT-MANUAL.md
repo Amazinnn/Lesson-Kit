@@ -82,7 +82,10 @@ lesson-kit pull <工作区> --n 20 --ids                           # 只看题�
 lesson-kit pull <工作区> --kp … --n 10 --plan plan.json                    # 存清单（可重跑，不是学习记录）
 lesson-kit pull <工作区> --input plan.json --check                        # 零写入预检：题数、缺解、重复、泄漏
 lesson-kit pull <工作区> --input plan.json --print output/c01/ch06 --base ch06
+lesson-kit papers <工作区> save --input plan.json                         # 把清单存入组卷页
 ```
+
+`pull --plan` 和 `pull --print` 是导出清单或打印稿。若要让这份卷出现在组卷页的已保存列表，另运行 `lesson-kit papers <工作区> save --input <清单>`；只有命令成功并返回 JSON 回执后，才算保存完成。回执含试卷编号、标题、题数和组卷页链接。
 
 `--print` 出两份 Markdown：学生卷只有题干（不含答案，也不含 `problem_id`/`kp_id`/材料类型），解答卷题号与它逐条对齐、没存解析的写「待补」。默认文件名用章号，跨章的卷（关掉章透镜后组的那种）用 `--base` 自己起名。**跨章卷**就是期末复习要的那种：把章透镜关掉（`lesson-kit use dmath ""`）或把要练的知识点逐个 `--kp` 列出来，再选题目。
 
@@ -156,6 +159,8 @@ lesson-kit pull <工作区> --input plan.json --print output/c01/ch06 --base ch0
 > 范围三个知识点，够今天练了。选「综合题」+「每题作答后自评」，「开始本轮练习」点亮，点下去。今天的学习开始。下方时间安排里，08-31 的目标轨道安静地待在月历上——不急，还有两天。
 
 ### 2.7 组卷页：把一份选题存下来
+
+Agent 也可用 `lesson-kit papers <工作区> save --input <清单>` 保存已有练习清单；清单导出或打印本身不会把试卷加入此列表。
 
 练习页选好题后，除了直接开练，还可以点「**保存为试卷**」把它存成一张试卷（稳定编号 `ps-001` 起，存在工作区 `.lessonkit/practice-sets/`）。试卷只保存**题目与顺序**，不保存进度：开始它时，当时的题目顺序被复制进当轮练习；之后改试卷不动已有作答记录，删试卷也不删任何一条记录。
 
