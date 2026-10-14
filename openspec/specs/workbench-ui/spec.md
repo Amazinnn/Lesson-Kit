@@ -1273,3 +1273,10 @@ next round's start; a running round keeps the mode it started with.
 - **WHEN** the preference is on
 - **THEN** the rating-timing choice, per-problem rating, and session-end
   unified rating behave as before
+
+### Requirement: Long provider lists remain navigable
+At desktop widths, when the visible new-conversation provider picker has more model options than fit in the available height, the system SHALL allow the learner to scroll the options with native wheel input while keeping the picker heading and helper text visible.
+
+#### Scenario: Scroll a long provider list
+- **WHEN** the learner opens the provider picker with a long model list and wheels up or down over the options at desktop width
+- **THEN** the options move in the requested direction while the picker heading and helper text remain visible

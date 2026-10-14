@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-14
+goal: Allow native wheel scrolling through the picker options while keeping its
+  heading visible.
