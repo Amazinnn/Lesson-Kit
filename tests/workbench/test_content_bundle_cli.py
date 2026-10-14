@@ -60,8 +60,9 @@ class ContentBundleCliTests(unittest.TestCase):
                 "problem_text": "Explain the Git reviewed concept.",
                 "solution": "It enters through governed ingest.",
                 "problem_type": "explanation",
-                "source_kind": "original",
-                "origin_kind": "generated_ungrounded",
+                "source_kind": "other",
+                "origin_kind": "generated_grounded",
+                "source_evidence": "Git-reviewed content bundle test fixture",
                 "solution_origin": "generated",
             }
         ]
