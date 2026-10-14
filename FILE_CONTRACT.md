@@ -164,15 +164,27 @@ Successful applies store a manifest snapshot under the pool's ingest area and
 stamp a readable batch id. Failed gates write no content. There is no candidate
 artifact, candidate table, promotion step, or staging state.
 
+A reviewed Git checkout may additionally supply a `content-bundle` from
+`authored-bundles/<course-id>/<chapter>/<name>.json`. This is an input artifact,
+not a canonical entity projection. On this path new items MUST use bundle-local
+`key` values and MUST omit `kp_id`, `problem_id`, and `card_id`. Check it with
+`lesson-kit ingest <workspace> bundle --input <file>`; add `--apply` to enter the
+same governed `apply_batch(..., source="cli")` transaction described above.
+The read-only form writes no rows, batches, figures, or backup. Apply revalidates
+the whole manifest and only the pool allocates canonical ids. The full
+repository-side rules live in `docs/github-authored-bundles.md`.
+
 ## Git Authored-Content Repository
 
 `lesson-kit mirror` reads and writes a local checkout containing versioned JSON
 for the authored-content projection and a separate binary figure projection.
-The workspace's Course Identifier selects the course directory; the workspace
-name and physical path do not.
+The same checkout may also carry reviewed bundle inputs. The workspace's Course
+Identifier selects the course directory; the workspace name and physical path
+do not.
 
 ```text
 <repo>/
+├── authored-bundles/<course-id>/<chapter>/<name>.json
 ├── courses/<course-id>/
 │   ├── knowledge/<entity-id>.json
 │   ├── problems/<entity-id>.json
@@ -182,6 +194,12 @@ name and physical path do not.
 │   └── <chapter>/...
 └── delete-requests/<request-id>.json
 ```
+
+`authored-bundles/` is a review/versioning input surface. `courses/` is the
+canonical authored-content projection of rows that already exist in the pool.
+An authored-bundle file therefore never creates a repository-only canonical id;
+a successful governed apply creates pool rows first, after which `mirror push`
+may export those entities under `courses/`.
 
 Nested folders under `knowledge/`, `problems/`, or `relations/` are allowed.
 Files are located recursively, and their embedded `entity_id` is the identity;
