@@ -19,6 +19,7 @@
 | 落练习清单（可重跑，零写入读取） | CLI `pull --plan` / `--input` | Agent | 练习清单 JSON（非池数据） | 已实现（2026-09-25） |
 | 出练习集两份 Markdown（学生卷无答案/无内部标识，解答卷题号对齐、缺解「待补」） | CLI `pull --print` | Agent | `output/…-problem-set.md` + `-solutions.md` | 已实现（2026-09-25） |
 | 练习集零写入预检（题数/缺口/缺解/重复/泄漏） | CLI `pull --check` | Agent | — | 已实现（2026-09-25） |
+| 保存练习集为试卷（只在学生明确要求加入工作区时调用；保留题目顺序与 request） | CLI `lesson-kit papers <workspace> save --input <manifest>` | Agent（学生明确要求） | `.lessonkit/practice-sets/ps-NNN.json`（现有原子写入器；不写 SQLite/学习状态） | 已实现（agent-save-reusable-papers, 2026-10-14） |
 | 浏览已保存试卷（折叠卡片、展开题目预览） | UI `/practice-sets` | 人 | —（只读；卡片展开状态按标签页保存在 sessionStorage） | 已实现（2026-10-06/07） |
 | 作答+本地判分（横幅 2s+高亮） | UI | 人 | 浏览器牌组与待确认请求；服务端接受后写一条 attempts 行（作答/选项/判定） | 已实现 |
 | 上一题结果视图（普通题提交或标记「不会」并进入下一题后回看；返回保留当前草稿、Agent 聚焦跟随） | UI 练习页「回看上一题」/「返回当前题」 | 人 | —（不移动游标、不改完成状态、不写 attempts/feedback；本视图不确认保存状态） | 已实现（practice-review）；闪卡仍通过上一张/下一张移动游标 |

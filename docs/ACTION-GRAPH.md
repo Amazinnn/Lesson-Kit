@@ -257,4 +257,4 @@ flowchart LR
   工作区/checkout 根目录锚定、派生归属索引预检与旧 64-hex 内容身份保护；L0 登记 checkout
   二进制文件和索引，L1/L2/L3 登记 Data 模块与 CLI 动作，L4 增加 W10；GLOSSARY、
   FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL 与 OpenSpec change delta 同步。
-- 2026-10-14 Agent 保存试卷：新增 `lesson-kit papers <workspace> save --input <manifest>`；校验导出的练习清单并委托给现有试卷写入器。`pull --plan`/`--print` 仍表示导出，只有成功的 JSON 回执才能确认试卷已加入组卷页列表。L2/L3/L4、FILE_CONTRACT、DATA_MODEL、PRODUCT-MANUAL 同步。
+- 2026-10-14 Agent 保存试卷：新增 `lesson-kit papers <workspace> save --input <manifest>`；校验已导出的练习清单并委托给现有试卷写入器。`pull --plan`/`--print` 仍表示导出，只有成功的 JSON 回执才能确认试卷已加入组卷页列表。L2/L3/L4、FILE_CONTRACT、DATA_MODEL、PRODUCT-MANUAL 同步；L3 登记 Agent 保存练习集动作，W6 明确“练习清单导出 → CLI 保存为试卷 → 成功回执 → 组卷页列表”；`pull --print` 仍仅生成打印稿。
