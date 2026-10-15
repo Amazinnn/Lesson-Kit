@@ -8,6 +8,8 @@ from tests.workbench.fixtures import load_script
 
 
 class PaperSourceSchemaTests(unittest.TestCase):
+    """Legacy rows survive while canonical Paper execution becomes writable."""
+
     def test_legacy_execution_tables_are_widened_without_losing_rows(self):
         conn = sqlite3.connect(":memory:")
         try:
