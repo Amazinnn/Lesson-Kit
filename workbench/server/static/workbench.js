@@ -2372,6 +2372,9 @@
   }
 
   function aiHandleActivity(activity) {
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.activity) {
+      AgentUISurfaces.activity(activity);
+    }
     if (aiCurrentProvider === "pi") aiUpsertPiActivity(activity);
     else aiUpsertActivity(activity);
   }
@@ -2392,7 +2395,12 @@
   function aiSetRunning(running) {
     if (aiSend) aiSend.disabled = running || !aiConversation;
     if (aiStop) aiStop.classList.toggle("hidden", !running);
-    if (aiInput) aiInput.disabled = running;
+    // Keep the composer editable while a turn runs. The send button remains
+    // gated until the backend can accept a redirect/queued turn explicitly.
+    if (aiInput) aiInput.disabled = false;
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.setRunning) {
+      AgentUISurfaces.setRunning(running);
+    }
   }
 
   function aiApplyAction(action) {
@@ -2615,27 +2623,41 @@
   }
 
   function aiRollbackBatch(batchId, button) {
-    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？该批全部内容行将从池中撤销。")) return;
-    button.disabled = true;
-    api("/ingest/rollback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ batch_id: batchId }),
-    }).then(function (result) {
-      var card = button.closest(".check-card");
-      if (card) {
-        var detail = card.querySelector(".check-card-detail");
-        if (detail) {
-          detail.textContent = "批次 " + batchId + " 已整批回滚（撤销 "
-            + (result && result.deleted != null ? result.deleted : "?") + " 行）。";
+    function executeRollback() {
+      button.disabled = true;
+      api("/ingest/rollback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batch_id: batchId }),
+      }).then(function (result) {
+        var card = button.closest(".check-card");
+        if (card) {
+          var detail = card.querySelector(".check-card-detail");
+          if (detail) {
+            detail.textContent = "批次 " + batchId + " 已整批回滚（撤销 "
+              + (result && result.deleted != null ? result.deleted : "?") + " 行）。";
+          }
         }
-      }
-      button.remove();
-      aiSetStatus("批次已回滚");
-    }).catch(function (err) {
-      button.disabled = false;
-      aiSetStatus("回滚失败：" + (err && err.message ? err.message : "未知错误"));
-    });
+        button.remove();
+        aiSetStatus("批次已回滚");
+      }).catch(function (err) {
+        button.disabled = false;
+        aiSetStatus("回滚失败：" + (err && err.message ? err.message : "未知错误"));
+      });
+    }
+
+    var approval = {
+      title: "整批回滚 " + batchId,
+      reason: "这是低可逆性的内容变更，需要你明确确认。",
+      impact: "该批写入的内容会从学习池撤销。",
+      approveLabel: "确认回滚",
+    };
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.confirm
+        && AgentUISurfaces.confirm(approval, executeRollback)) {
+      return;
+    }
+    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？该批全部内容行将从池中撤销。")) return;
+    executeRollback();
   }
 
   function aiRecordRecent(type, id) {
@@ -2823,24 +2845,40 @@
       aiPollSequence = Math.max(aiPollSequence, event.sequence || 0);
       if (event.kind === "text") aiAppendAssistantText(event.text || "");
       else if (event.kind === "activity") aiHandleActivity(event);
-      else if (event.kind === "error") aiSetStatus(event.text || "Agent 返回错误");
+      else if (event.kind === "error") {
+        var eventError = event.text || "Agent 返回错误";
+        aiSetStatus(eventError);
+        if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+          AgentUISurfaces.failure(eventError);
+        }
+      }
     });
     if (!data.turn) return;
     if (data.turn.status === "done") {
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("");
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.finishTurn) {
+        AgentUISurfaces.finishTurn();
+      }
       aiApplyAction(data.turn.action);
       aiLoadConversation(aiConversation);
       if (typeof aiRefreshSessionList === "function") aiRefreshSessionList();
     } else if (data.turn.status === "failed") {
       aiTurn = null;
       aiSetRunning(false);
-      aiSetStatus("Agent 失败：" + (data.turn.error || "未知错误"));
+      var turnError = "Agent 失败：" + (data.turn.error || "未知错误");
+      aiSetStatus(turnError);
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+        AgentUISurfaces.failure(turnError);
+      }
     } else if (data.turn.status === "cancelled") {
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("本轮已停止。");
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.finishTurn) {
+        AgentUISurfaces.finishTurn();
+      }
     }
   }
 
@@ -2857,6 +2895,9 @@
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("无法读取 Agent 进度。");
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+        AgentUISurfaces.failure("无法读取 Agent 进度。可检查连接后重新发送。 ");
+      }
     });
   }
 
@@ -2866,6 +2907,9 @@
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
+      AgentUISurfaces.resetTurn();
+    }
     aiAddMarkdown(message, "user");
     aiInput.value = "";
     aiSetRunning(true);
@@ -2877,7 +2921,11 @@
         aiPollConversationTurn();
       }).catch(function (err) {
         aiSetRunning(false);
-        aiSetStatus("发送失败：" + (err.message || "未知错误"));
+        var sendError = "发送失败：" + (err.message || "未知错误");
+        aiSetStatus(sendError);
+        if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+          AgentUISurfaces.failure(sendError);
+        }
       });
   }
 
