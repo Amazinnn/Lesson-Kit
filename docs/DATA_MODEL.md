@@ -171,6 +171,9 @@
 
 v1 兼容输入和历史行可保留 `quick`、`practice_set`、`agent`。schema 增量迁移只扩展两个字段的
 CHECK 约束，保留已存在的 active 行与 `practice_runs` 历史值；读取或重放旧轮次不会改写旧行。
+既有工作区必须先显式运行池迁移，再使用 Paper 执行写入：
+`python pool/scripts/migrate-progress.py --db pool/dmath.db`（将数据库路径替换为该工作区的池路径）。
+表已存在不代表旧 `source_kind` CHECK 已接受 `paper`；`lesson-kit doctor` 与正常启动均不自动迁移。
 `data.active_practice.replay` 读取这两类来源的历史轮次，使用归档的固定题目顺序开始新的
 `paper` 执行。已保存 Paper 通过 `source_ref` 保留稳定 `ps-NNN` 身份，`source_label` 保存标题。
 
