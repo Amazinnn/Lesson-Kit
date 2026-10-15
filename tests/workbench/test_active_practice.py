@@ -25,6 +25,8 @@ class ActivePracticeTests(unittest.TestCase):
         self.fixture.cleanup()
 
     def payload(self, *problem_ids):
+        # Keep the historical browser value here on purpose: creation accepts
+        # the old assembly label but the persisted execution must be a Paper.
         return {
             "source_kind": "quick",
             "kp_ids": ["dmath-ch06-kp-001"],
@@ -52,6 +54,7 @@ class ActivePracticeTests(unittest.TestCase):
         self.add_problem("dmath-ch06-prob-002")
         first = active_practice.create(
             self.pool, self.payload("dmath-ch06-prob-001", "dmath-ch06-prob-002"))
+        self.assertEqual(first["source_kind"], "paper")
         self.assertEqual(first["progress"]["total"], 2)
         self.assertEqual(first["cursor"], 0)
 
@@ -61,6 +64,7 @@ class ActivePracticeTests(unittest.TestCase):
 
         replaced = active_practice.create(
             self.pool, self.payload("dmath-ch06-prob-002"), replace=True)
+        self.assertEqual(replaced["source_kind"], "paper")
         self.assertEqual(
             [item["item_id"] for item in replaced["items"]],
             ["dmath-ch06-prob-002"],
@@ -154,10 +158,12 @@ class ActivePracticeTests(unittest.TestCase):
         active_practice.mark(self.pool, 0, "stuck")
 
         rows = self.pool.connect().execute(
-            "SELECT status, source_label, items_json FROM practice_runs ORDER BY id"
+            "SELECT status, source_kind, source_label, items_json "
+            "FROM practice_runs ORDER BY id"
         ).fetchall()
         self.assertEqual([row["status"] for row in rows], ["abandoned", "completed"])
-        self.assertEqual(rows[0]["source_label"], "临时练习")
+        self.assertEqual([row["source_kind"] for row in rows], ["paper", "paper"])
+        self.assertEqual(rows[0]["source_label"], "临时试卷")
         self.assertIn('"state": "stuck"', rows[0]["items_json"])
 
     def test_archived_practice_can_be_replayed_without_new_history_fields(self):
@@ -176,7 +182,7 @@ class ActivePracticeTests(unittest.TestCase):
         ).fetchone()["id"]
 
         replayed = active_practice.replay(self.pool, run_id)
-        self.assertEqual(replayed["source_kind"], "quick")
+        self.assertEqual(replayed["source_kind"], "paper")
         self.assertEqual(
             [item["item_id"] for item in replayed["items"]],
             ["dmath-ch06-prob-001"],
@@ -190,6 +196,31 @@ class ActivePracticeTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(active_practice.ActivePracticeError, "unknown problem"):
             active_practice.replay(self.pool, run_id)
+
+    def test_legacy_archived_source_replays_as_paper(self):
+        from workbench.data import active_practice
+
+        conn = self.pool.connect()
+        conn.execute(
+            "INSERT INTO practice_runs "
+            "(source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
+            "rating_mode, items_json, status, started_at) VALUES (?,?,?,?,?,?,?,?,datetime('now'))",
+            (
+                "practice_set", "ps-007", "旧试卷",
+                '["dmath-ch06-kp-001"]', "exam", "immediate",
+                '[{"position":0,"item_type":"problem","item_id":"dmath-ch06-prob-001",'
+                '"direction":"","state":"answered","attempt_id":null}]',
+                "completed",
+            ),
+        )
+        run_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        self.pool.commit()
+
+        replayed = active_practice.replay(self.pool, run_id)
+
+        self.assertEqual(replayed["source_kind"], "paper")
+        self.assertEqual(replayed["source_ref"], "ps-007")
+        self.assertEqual(replayed["source_label"], "旧试卷")
 
     def test_routes_expose_the_single_current_practice_resource(self):
         from workbench.server import app
@@ -280,15 +311,18 @@ class ActivePracticeTests(unittest.TestCase):
                                "direction": direction}
                               for direction in ("forward", "reverse")[:count]],
                 })
+                current = active_practice.current(self.pool)
+                self.assertEqual(current["source_kind"], "paper")
                 for position in range(count):
                     result = api.active_practice_update(self.pool, {}, {}, {
                         "position": position, "state": "answered"})
                     self.assertEqual(result["completed"], position == count - 1)
                 self.assertIsNone(active_practice.current(self.pool))
                 archived = conn.execute(
-                    "SELECT status,rating_mode FROM practice_runs ORDER BY id DESC LIMIT 1"
+                    "SELECT status,source_kind,rating_mode FROM practice_runs "
+                    "ORDER BY id DESC LIMIT 1"
                 ).fetchone()
-                self.assertEqual(tuple(archived), ("completed", "off"))
+                self.assertEqual(tuple(archived), ("completed", "paper", "off"))
                 after = {table: [tuple(row) for row in conn.execute(f"SELECT * FROM {table}")]
                          for table in learning_tables}
                 self.assertEqual(after, before)
