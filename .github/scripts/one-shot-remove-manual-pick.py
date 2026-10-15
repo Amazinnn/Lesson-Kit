@@ -104,12 +104,22 @@ replace_once(
     "filter clear",
 )
 
+replace_once(
+    '''          docs: (filterState.docs || []).slice(),
+          picked_problem_ids: Object.keys(filterState.picked || {}),
+''',
+    '''          docs: (filterState.docs || []).slice(),
+''',
+    "page context picked ids",
+)
+
 for token in (
     "INCLUDE_KEY",
     "wb_practice_include_",
     "include_ids",
     "data-picked-id",
     "filterState.picked",
+    "picked_problem_ids",
     "搜索选题",
 ):
     if token in flow:
@@ -140,7 +150,7 @@ if marker not in test:
 
         for retired in (
             "wb_practice_include_", "include_ids", "filterState.picked",
-            "data-picked-id", "搜索选题",
+            "picked_problem_ids", "data-picked-id", "搜索选题",
         ):
             self.assertNotIn(retired, flow)
         self.assertNotIn("wb_practice_include_", workbench)
