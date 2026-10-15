@@ -24,7 +24,7 @@ jobs:
         run: python .github/scripts/one-shot-retire-picker-tests.py
       - name: Run focused tests
         run: |
-          python -m pytest tests/workbench/test_retired_manual_problem_include.py tests/workbench/test_api.py -q
+          python -m unittest tests.workbench.test_retired_manual_problem_include tests.workbench.test_api
           node --test tests/workbench/workbench_ui_interactions.test.js tests/workbench/agent_session.test.js
       - name: Commit migrated tests and remove one-shot workflow
         run: |
