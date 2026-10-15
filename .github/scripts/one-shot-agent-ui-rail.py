@@ -65,16 +65,18 @@ def _agent_aux_surfaces():
 pages = pages.replace(marker, aux + marker, 1)
 pages_path.write_text(pages, encoding="utf-8")
 
-# The migration must leave the v1 shell with one instance of each surface.
-for token in (
+for dom_id in (
     "agent-activity-float", "agent-bottom-dock", "agent-artifact-split",
-    "ai-context-chips", "ai-composer-shell", "/static/agent-ui.css", "/static/agent-ui.js",
+    "ai-context-chips", "ai-composer-shell",
 ):
-    if pages.count(token) != 1:
-        raise SystemExit(f"unexpected count for {token}: {pages.count(token)}")
+    needle = "id='" + dom_id + "'"
+    if pages.count(needle) != 1:
+        raise SystemExit(f"unexpected DOM id count for {dom_id}: {pages.count(needle)}")
+for asset in ("/static/agent-ui.css", "/static/agent-ui.js"):
+    if pages.count(asset) != 1:
+        raise SystemExit(f"unexpected asset count for {asset}: {pages.count(asset)}")
 
-# Self-delete migration plumbing before the commit.
-(Path(__file__)).unlink()
+Path(__file__).unlink()
 workflow = ROOT / ".github/workflows/one-shot-agent-ui-rail.yml"
 if workflow.exists():
     workflow.unlink()
