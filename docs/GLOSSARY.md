@@ -227,22 +227,22 @@ _Avoid_：被否定的目标、浏览器原始 id、由上下文窗口替学生�
 ### 试卷 / Paper
 Lesson Kit 的**最小可执行作答单位**：开始、暂停、继续、提交与完成状态都围绕一张已经冻结 item 顺序的 Paper 发生。Paper 可以由 Agent、预先编排、题库筛选或其他组卷方式产生；知识范围和题型策略只约束组卷，不在 Practice Run 中动态改题。当前 `.lessonkit/practice-sets/`、`ps-NNN`、manifest `kind: practice-set` 与 `/practice-sets/...` 是迁移期兼容实现名，不改变本条产品定义。
 _Avoid_：Practice Run 本身、动态知识点查询、把兼容名 practice-set 当产品题单
-出处：lesson-kit-product-design.md「试卷」；practice-set-export spec「Paper is the Practice Run boundary」
+出处：practice-set-export spec「Paper is the Practice Run boundary」；review-workbench spec「Paper-backed Practice Run」「Practice Run interruption recovery」；workbench-ui spec「Flash card item stacked presentation」
 
 ### 题单 / Practice Set
 **组织多份 Paper 的容器**，用于按课程进度、专题能力、真题来源等组织练习路径；题单本身不直接进入作答。地图形、桶形等只是题单的视觉布局，不产生新的内容类型。v1 允许题单容器尚未完整实现，但不得再把一张可执行 Paper 命名为产品级 Practice Set。
 _Avoid_：试卷、一次 Practice Run、旧 `.lessonkit/practice-sets/` 目录名的字面解释
-出处：lesson-kit-product-design.md「题单」
+出处：practice-set-export spec「Paper manifest」「Managed saved Paper」；FILE_CONTRACT.md「Agent Saved Papers」
 
 ### 练习轮次 / Practice Run
 对**一张已经确定的 Paper**从开始到完成，或到被显式替换 / 清除的一次执行。运行中仍只有一个 `active_practice`；新执行的来源语义统一为 `paper`，结束时把 Paper 身份、固定 item 顺序、最终状态与时间写入 `practice_runs` 最小快照。逐题作答、判定、自评仍以 `problem_attempts` / `feedback_events` 为学习证据。
 _Avoid_：第二套 attempt 表、动态拉题器、把 Practice Run 当 Paper 定义
-出处：lesson-kit-product-design.md「试卷」；practice-set-export spec「Paper is the Practice Run boundary」；review-workbench spec「Durable practice run archive」
+出处：practice-set-export spec「Paper is the Practice Run boundary」；review-workbench spec「Paper-backed Practice Run」「Durable practice run archive」
 
 ### 试卷清单 / Paper Manifest
-`pull --plan <文件>` 写出的 UTF-8 JSON：标题、按序 item 身份与入卷理由，以及复现本次组卷所需的范围、筛选、驱动和上限。`pull --input <文件>` 可重放同一组卷结果；它是 **Paper 的可复现输入/交换工件**，不是学习记录。v1 的 wire-level `kind: practice-set` 属兼容 token。
+`pull --plan <文件>` 写出的 v1 UTF-8 JSON：标题、按序排列且各含 `problem_id` 与可选 `reason` 的 `items`，以及复现这些问题组卷所需的输入。v1 清单只编码问题条目，不编码闪卡条目；Paper 产品模型可以包含闪卡 item。`pull --input <文件>` 可重放同一有序问题结果；清单是 **Paper 的可复现输入 / 交换工件**，不是学习记录。v1 wire-level `kind: practice-set` 属兼容 token。
 _Avoid_：Practice Set 容器、学习记录、在清单里塞题目正文
-出处：practice-set-export spec「Paper manifest」
+出处：practice-set-export spec「Paper manifest」；FILE_CONTRACT.md「Agent Saved Papers」；workbench-ui spec「Flash card item stacked presentation」
 
 ### 考察年份 / Exam Year
 正式题可空的一个来源事实：这道题的**来源考试属于哪一届**，例如 `2023` 或 `2023-2024秋冬`。填了必须以 4 位年份开头、不超过 20 字符；不填就是「不知道」。`pull --exam-year 2023` 按**前缀匹配**（所以能命中 `2023-2024秋冬`）。它是 `source_kind`（材料类型）与 `origin_kind`（产生方式）之外的第三项可选来源事实，不是卷面分。
@@ -252,7 +252,7 @@ _Avoid_：卷面分、难度、把年份当 id 或当作试卷实体
 ### 组卷 / Paper Assembly
 生成或挑选一张具体 Paper 内容的过程。`lesson-kit pull` 当前是确定性组卷引擎：范围（`--kp`）、来源/难度等条件筛选、薄弱 / 到期 / 错题驱动共同决定候选与排序。`--problem` 精确题号能力只作为 Agent/CLI 的**作者工具**保留，用于确定性固定某题；它不得重新暴露成学生在练习页、知识点页或图谱里逐题手选的入口。每个结果仍回报 `scope` / `weak` / `due` / `wrong` / `explicit` 等入卷理由。
 _Avoid_：手动选题 UI、把组卷直接等同 Practice Run、把 `--problem` 当学生侧练习动作
-出处：lesson-kit-product-design.md「组卷」「手动选题」；practice-set-export spec「Paper assembly」
+出处：practice-set-export spec「Paper assembly」；review-workbench spec「Paper assembly engine」；workbench-ui spec「Practice page」
 
 ### 筛选维度 / Filter Dimension
 来源筛选的四个**多值**维度：`source_kinds`（来源类型）、`origin_kinds`（题目来源方式）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**：勾中的同一维度里任意一个命中即可（`final` 或 `midterm`），不同维度必须同时满足（是 final **且** 属于 2023）。浏览器中的来源维度只用于约束 Paper Assembly：按维度分组勾选并显示池内实际计数；`origin_kinds` 一组显示为历年原题 / 改编 / AI生成。浏览器不再提供「搜索后挑某一道题加入练习」的 `include_ids` 产品语义；CLI 的精确题号只属于作者工具。其余多值维度仍遵循维度内 OR、维度间 AND。
@@ -330,17 +330,17 @@ Lesson Kit 的视觉语言：暖纸色与深色结构线占主体，蓝/黄/红�
 ### 范围 / Scope
 用户用知识点、图谱区域或其他课程语义明确的**组卷边界**。范围回答「想练什么」，用于约束 Paper Assembly；它本身不是待执行题目清单，也不能直接开始 Practice Run。弱项、到期与建议可以影响组卷排序或成为新的范围建议，但不得静默扩大用户已经明确的范围。
 _Avoid_：待练题目列表、Practice Run 的内容本体、弱项自动抓题、把知识点选择直接当成一次练习
-出处：lesson-kit-product-design.md「组卷」「手动选题」；practice-set-export spec「Paper assembly」
+出处：review-workbench spec「Chapter lens scoping」；workbench-ui spec「Practice page」
 
 ### 准备练习列表 / Staged Practice List（已退役）
 **已退役（2026-10-15）**。历史含义是把知识点选区在练习页再显示成一份「真正要练的」清单，并由它直接拉题开练。Paper 成为最小作答单位后，这个中间层不再有产品身份：知识范围直接进入组卷，组卷得到 Paper，Practice Run 只执行已经冻结的 Paper。
 _Avoid_：重新建立「知识点队列 → 直接练习」中间态、把范围列表称为试卷
-出处：lesson-kit-product-design.md「试卷」「组卷」「手动选题」；2026-10-15 practice-model cleanup
+出处：workbench-ui spec「Practice page suggestions and assembly entry」
 
 ### 建议 / Suggestion
 练习页按需给出的**组卷起点或练习方向建议**，可来自每日计划、到期调度、薄弱证据等。建议可以预填范围、题型策略或触发「据此组卷」，但不直接向当前 Practice Run 加题，也不维护一份独立的待练知识点队列。
 _Avoid_：Staged Practice List、自动扩充正在执行的 Paper、到期列表（已废弃的常驻视图）
-出处：lesson-kit-product-design.md「练习页」「组卷」；daily-learning-plan spec
+出处：workbench-ui spec「Practice page suggestions and assembly entry」；review-workbench spec「Chapter lens scoping」；daily-learning-plan spec
 
 ### 原因短语 / Reason Phrase
 建议行里的唯一一句人话解释：`拖了 N 天`（逾期）/ `今天到期` / `覆盖仍低`（计划命中，沿用计划原因文案）。纯函数生成，零调度参数外露，不拼接。
@@ -350,12 +350,12 @@ _Avoid_：徽标、日期数字、ease/interval 等裸参数
 ### 练习模式 / Content Mode（兼容实现名）
 存量内容与执行代码使用的兼容分类：exam / micro / yes_no / flash_card，用于判断某个内容可以怎样呈现和作答。**它不再定义「开始一轮时四选一」的产品模型，也不要求一张 Paper 只能包含一种形式。** `practice_modes` 等既有字段继续表达内容兼容性；题目的学科形态仍由 `problem_type` 表达。
 _Avoid_：把 Content Mode 当成 Paper 类型、要求整张试卷单一题型、practice path（旧别名）
-出处：lesson-kit-product-design.md「练习规则 / 题型策略」；兼容实现 `practice_mode`
+出处：review-workbench spec「Paper-backed Practice Run」；workbench-ui spec「Practice page」；docs/DATA_MODEL.md「practice_modes」
 
 ### 题型策略 / Practice Format Policy
 规定某类课程内容适合以哪些作答形式练习或检测的**组卷约束**。例如知识点内容可偏判断，记忆型内容可用闪卡，阶段检测可混合多种形式。策略作用于 Paper Assembly，不把整张 Paper 锁成一种题型；用户可以限定策略，但不因此逐题手选。
 _Avoid_：Practice Run 模式开关、单题学科形态 `problem_type`、一卷单一题型
-出处：lesson-kit-product-design.md「练习规则 / 题型策略」
+出处：review-workbench spec「Paper-backed Practice Run」；workbench-ui spec「Practice page」「Flash card item stacked presentation」
 
 ### 原地改题 / In-place Problem Edit
 不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key/error_reason）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
@@ -375,17 +375,17 @@ _Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、�
 ### 综合题模式 / Exam Mode
 Paper 中常规正式题的一种兼容作答形式：自由作答 → 查看解析 → 按当前自评设置记录学习结论。未标注 `practice_modes` 的存量题仍按 exam 兼容。它不是一种独立 Practice Run，也不要求 Paper 中只能出现综合题。
 _Avoid_：考试模式、独立练习入口、一卷单一 exam 模式
-出处：lesson-kit-product-design.md「练习规则 / 题型策略」；review-workbench spec「Grading input modes」
+出处：review-workbench spec「Grading input modes」「Paper-backed Practice Run」；docs/DATA_MODEL.md「practice_modes」
 
 ### 小测模式 / Micro Mode
 Paper 中微题选择题（single_choice / multiple_choice）的兼容作答形式：点选后本地判分并显示错因，再按当前自评设置记录学习结论。它描述 item 的交互形态，不是独立 Practice Run。**原名「闪卡模式」，2026-08-29 正名出让**。
 _Avoid_：闪卡（现指另一内容形式）、自由文本作答、一卷单一 micro 模式
-出处：introduce-flash-card；micro-quiz-content spec；lesson-kit-product-design.md
+出处：micro-quiz-content spec「Micro quiz content contract」「Type-aware practice rendering」；review-workbench spec「Grading input modes」「Paper-backed Practice Run」
 
 ### 闪卡 / Flash Card
 从知识点解构出的键值对记忆卡（类似 dict 的一条键值对）：正面（front）→回忆→揭示背面（back）→按当前自评设置记录学习结论，无选项、无自动判分。知识点是唯一事实源（Note），卡是派生视图（Card），一卡只放一个原子事实；每卡一行独立调度。闪卡可以作为 Paper 的 item 形式之一，也可用于背单词、背概念等场景。
 _Avoid_：小测（微题的卡片式渲染，旧「闪卡」）、把闪卡另建成绕过 Paper 的独立 Practice Run
-出处：introduce-flash-card；openspec/specs/flash-card；lesson-kit-product-design.md「练习规则 / 题型策略」
+出处：flash-card spec「Flash card practice mode」「Flash card session direction」；workbench-ui spec「Flash card item stacked presentation」
 
 ### 闪卡方向能力 / Flash-card Direction Capability
 闪卡内容声明允许怎样提问：`["forward"]` 表示只能以正面问、背面答；`["forward", "reverse"]` 表示正反都具有教学意义。方向能力属于内容事实，缺省按单向兼容；它不等于当前练习采用的方向。
@@ -395,7 +395,7 @@ _Avoid_：把一张双向卡复制成两张内容卡、从文字长度猜方向
 ### 判断模式 / Yes-No Mode
 Paper 中判断题（是/否）的兼容作答形式：有答案键时浏览器本地判分并显示错因；是否继续自评由当前设置决定。无答案键的题不判分、不折算。它描述 item 的交互形态，不是独立 Practice Run。
 _Avoid_：主观题自动评分、浏览即掌握、一卷单一 yes_no 模式
-出处：micro-quiz-content spec；workbench.js gradeMicroQuiz；lesson-kit-product-design.md
+出处：micro-quiz-content spec「Explicit mode marking for Micro and Yes/No」；review-workbench spec「Grading input modes」
 
 ### 自评时机 / Rating Mode
 一轮练习保存的自评安排：每题作答后自评（immediate）、完成后统一自评（batch），或关闭自评（off）。开启自评时开始前选择前两种时机；偏好关闭时直接以 off 开始。偏好变化只影响下一轮，进行中的轮次保留原安排。
@@ -405,7 +405,7 @@ _Avoid_：评分方式（与 1–5 自评本身混淆）
 ### 练习会话 / Practice Session（已退役产品术语）
 **已退役（2026-10-15）**。历史上指「单一练习模式 + 动态题目队列 + 当前题」的标签页状态。产品层统一使用「试卷 / Paper」描述固定作答内容，使用「练习轮次 / Practice Run」描述一次开始、暂停、继续到结束的执行。代码中的 sessionStorage key 或旧 spec 标题可以暂时保留为兼容实现名，但不得继续据此设计新的产品行为。
 _Avoid_：把 Practice Session 与 Practice Run 并列成两种执行实体、把单一模式队列重新定义成练习本体
-出处：lesson-kit-product-design.md「试卷」；2026-10-15 practice-model cleanup
+出处：review-workbench spec「Paper-backed Practice Run」「Practice Run interruption recovery」；workbench-ui spec「Practice page」
 
 ### 上一题结果视图 / Previous Result View
 练习已进入下一道未答普通题时，回看紧邻上一道普通题的只读界面。它显示浏览器当前持有的已提交答案或「不会」状态、已有判定和可用答案/解析；可把这道题和提交答案作为本轮 Agent 上下文。它不移动练习游标、不写尝试或反馈，也不证明对应提交已持久保存。闪卡仍使用「上一张 / 下一张」移动游标。
