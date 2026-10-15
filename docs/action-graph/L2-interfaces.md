@@ -1,6 +1,6 @@
 # L2 · 接口层登记（API 路由 + CLI 命令）
 
-> 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者。
+> 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者；**只读 API** = 可供查询，不是浏览器选题入口。
 
 ## API 路由（`/api/w/{ws}` 前缀，36 条）
 
@@ -17,7 +17,7 @@
 | POST `/practice-sets` | 写 | 验证并保存一份可复用试卷，使用现有 Data 写入器 | 双 |
 | POST `/pull` | 读 | 拉取（`filters` 四维：来源类型/题目来源方式/年份/文档，维度内 OR、维度间 AND；顶层 `origin_kinds` 同义） | 双 |
 | GET `/pull-facets` | 读 | 拉取（筛选浮窗的四维与计数，取自池内实际值） | 浏 |
-| GET `/search/problems?stem=&source=` | 读 | 查询（浮窗两个关键词域搜索，各域多词 AND；命中后走 `include_ids`；旧 `q` 已删除） | 浏 |
+| GET `/search/problems?stem=&source=` | 读 | 只读题目发现（题干/来源域多词 AND）；不接入浏览器选题或 Paper 组装，精确题号仍由 Agent/CLI `pull --problem` 在组卷前指定 | 只读 API |
 | POST `/pull-cards` | 读 | 拉卡（direction_mode + 独立方向排除） | 双 |
 | POST `/practice` | 写 | practice 记录 | 双 |
 | POST `/attempts` | 写 | 尝试（浏览器每次提交落一条：作答+选项+判定，不碰进度与调度） | 双 |
