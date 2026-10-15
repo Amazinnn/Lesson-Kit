@@ -1,0 +1,33 @@
+name: one-shot Agent UI runtime surfaces
+
+on:
+  push:
+    branches:
+      - feat/agent-ui-runtime-surfaces
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/agent-ui-runtime-surfaces
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply runtime wiring
+        run: python .github/scripts/one-shot-agent-ui-runtime.py
+      - name: Run focused Agent UI tests
+        run: node --test tests/workbench/agent_ui_v1.test.js tests/workbench/agent_session_ui.test.js
+      - name: Commit runtime wiring and remove one-shot files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: map Agent runtime state to v1 surfaces"
+          git push origin feat/agent-ui-runtime-surfaces
