@@ -1,3 +1,5 @@
+"""Regression coverage for widening legacy practice execution sources to Paper."""
+
 import sqlite3
 import unittest
 from pathlib import Path
