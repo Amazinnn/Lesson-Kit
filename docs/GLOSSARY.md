@@ -581,17 +581,17 @@ _Avoid_：任务状态码、思维链、后台日志墙
 出处：ai-teacher-bridge spec「Readable execution plan」
 
 ### Agent 对话栏 / Agent Rail
-工作台右侧持续存在的 Agent 交互栏，是对话的主表面：消息、模型选择、上下文提示与输入均以会话为中心组织。Tool、持续任务、审批与 Artifact 的额外工作面只在运行时需要时出现，不得把右栏演化成常驻任务面板；视觉直接继承「柔和蒙德里安」与 `workbench.css` 现有 token，不建立独立深色 Agent 主题。
+工作台壳层中始终可用的 Agent 对话主表面；“始终可用”指它属于会话壳层，不表示始终展开：桌面端右列可折叠，窄屏下的右列抽屉可关闭并返回中栏。消息、模型选择、上下文提示与输入均以会话为中心组织。Tool、持续任务、审批与 Artifact 的额外工作面只在运行时需要时出现，不得把右栏演化成常驻任务面板；视觉直接继承「柔和蒙德里安」与 `workbench.css` 现有 token，不建立独立深色 Agent 主题。
 _Avoid_：独立 AI 应用壳、常驻 Tool Dashboard、与 Lesson Kit 脱节的深色主题岛
-出处：docs/design/AGENT-UI-V1.md；workbench-ui spec
+出处：docs/design/AGENT-UI-V1.md；workbench-ui spec「Three-column shell with navigation」
 
 ### 工具调用卡 / Tool Call Card
-对一次工具、命令、搜索或确定性动作的**语义化执行摘要**，嵌在 Agent 对话流中：显示人能读懂的动作名、简短结果与运行状态；失败时同一结构给出影响范围和恢复动作。原始参数、底层事件与错误日志默认折叠，只能由显式查看展开；它不是隐藏推理的替代展示。
+Agent UI v1 规划中的单次工具、命令、搜索或确定性动作执行摘要，拟在对话流中显示可读动作名、简短结果与状态。当前契约只规定 provider-neutral 活动归一化、Pi 活动以独立紧凑消息呈现且输出默认折叠，以及失败摘要经过净化；统一卡片、可见影响范围和恢复操作是设计目标，不是现有规范要求，落地前须由后续 OpenSpec change 定义。
 _Avoid_：原始协议事件墙、完整终端日志、思维链、把每个底层事件拆成独立卡片
-出处：docs/design/AGENT-UI-V1.md；ai-teacher-bridge spec「Readable execution plan」
+出处：docs/design/AGENT-UI-V1.md（规划）；workbench-ui spec「Pi activities are conversation messages」「Failed activities expose a concise error summary」；ai-teacher-bridge spec「Readable execution plan」
 
 ### Agent 工件 / Agent Artifact
-Agent 产生的、值得交接或后续继续操作的结果对象，例如生成完成的试卷。它与 Tool Call Card 区分：Tool 表示“做了什么”，Artifact 表示“做出了什么”。Artifact 可在对话中以结果卡出现，并可由辅助工作面预览；完成 Artifact **不会自动切换当前 Lesson Kit 页面**，进入其正式页面必须由用户显式触发。
+Agent 产生的、值得交接或后续继续操作的结果对象，例如生成完成的试卷。它与 Tool Call Card 区分：Tool 表示“做了什么”，Artifact 表示“做出了什么”。Artifact 可在对话中以结果卡出现，并可由辅助工作面预览；完成 Artifact **不会自动切换当前 Lesson Kit 页面**，进入其正式页面必须由用户显式触发。此词条只定义 UI 交接概念，不引入持久化结构或试卷生命周期；保存语义归 paper model 契约。
 _Avoid_：工具日志、一次 Tool 的返回文本、完成即自动跳页、把所有回复都称为 Artifact
 出处：docs/design/AGENT-UI-V1.md
 
