@@ -75,7 +75,7 @@ flowchart LR
   DB[(池数据库)]
   FS[(工作区文件)]
 
-  P --> PULL & ANS & REV & PREV & RATE & END
+  P --> PAPER & ANS & REV & PREV & RATE & END
   PREV -->|返回当前题| P
   PREV -->|本轮聚焦上下文| A
   PAPER --> DB
