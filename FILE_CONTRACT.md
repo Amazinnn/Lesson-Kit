@@ -416,6 +416,12 @@ Managed papers live at `.lessonkit/practice-sets/ps-NNN.json`. The existing
 Data writer stores the paper plan and stable ID atomically; the browser list
 reads that same store. Saving does not write learning state or course SQLite.
 
+These names are v1 compatibility surface: the manifest kind `practice-set`,
+the save receipt field `practice_set_id`, the `ps-NNN` IDs, the
+`.lessonkit/practice-sets/` store, and `/practice-sets/...` routes remain valid
+while the product object is a saved Paper. New active execution and history
+rows use `source_kind: paper`; no manifest or saved-file shape changes.
+
 ## Workbench Runtime Areas
 
 Runtime assets follow the hidden dot-directory convention and live under

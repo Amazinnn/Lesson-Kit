@@ -52,7 +52,7 @@ class CurrentLearningContextTests(unittest.TestCase):
                     "source_kinds": ["final"],
                     "exam_years": ["2024"],
                     "docs": ["题库/final.md"],
-                    "picked_problem_ids": ["dmath-ch06-prob-001"],
+                    "picked_problem_ids": ["dmath-ch06-prob-999"],
                 },
             },
         })
@@ -65,6 +65,8 @@ class CurrentLearningContextTests(unittest.TestCase):
         )
         self.assertEqual(
             built["current"]["selection"]["filters"]["source_kinds"], ["final"])
+        self.assertNotIn(
+            "picked_problem_ids", built["current"]["selection"]["filters"])
         self.assertEqual(
             built["selection"]["kp_ids"], ["dmath-ch06-kp-001"])
 

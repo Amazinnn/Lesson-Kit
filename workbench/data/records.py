@@ -193,7 +193,9 @@ def _practice_sets(conn, limit):
     linked_feedback = "attempt_id" in feedback_columns
     rows = conn.execute(
         "SELECT * FROM practice_runs "
-        "WHERE source_kind='practice_set' AND status='completed' "
+        "WHERE status='completed' AND (source_kind='practice_set' OR "
+        "(source_kind='paper' AND source_ref GLOB 'ps-[0-9]*' "
+        "AND substr(source_ref, 4) NOT GLOB '*[^0-9]*')) "
         "ORDER BY id DESC LIMIT ?",
         (limit,),
     ).fetchall()

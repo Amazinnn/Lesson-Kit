@@ -44,7 +44,7 @@ ROUTES = {
         "filters directly by flag"),
     ("GET", "/api/w/{name}/search/problems"): (
         BROWSER, (),
-        "the filter panel's search picker; `data search problem` covers the CLI"),
+        "read-only problem discovery; `data search problem` covers the CLI"),
     ("POST", "/api/w/{name}/pull-cards"): (
         BROWSER, (),
         "flash cards are practised in the page; the CLI has no card command yet"),
