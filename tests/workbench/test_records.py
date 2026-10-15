@@ -127,6 +127,72 @@ class RecordsBoundaryTests(unittest.TestCase):
         self.assertIn("第一章试卷", rendered)
         self.assertIn("题目或顺序曾变化", rendered)
 
+    def test_saved_paper_history_groups_canonical_and_legacy_runs_by_saved_id(self):
+        from workbench.data import active_practice, practice_sets, records
+        from workbench.server import api
+
+        first = practice_sets.create_saved(
+            self.pool, "相同标题", ["dmath-ch06-prob-001"])
+        second = practice_sets.create_saved(
+            self.pool, "相同标题", ["dmath-ch06-prob-001"])
+        started = api.practice_set_start(
+            self.pool, {}, {"practice_set_id": first["practice_set_id"]},
+            {"practice_mode": "exam", "rating_mode": "immediate"},
+        )
+        self.assertEqual(started["source_kind"], "paper")
+        active_practice.mark(self.pool, 0, "stuck")
+        canonical_run_id = self.pool.connect().execute(
+            "SELECT id FROM practice_runs WHERE source_ref=? AND source_kind='paper'",
+            (first["practice_set_id"],),
+        ).fetchone()["id"]
+
+        conn = self.pool.connect()
+        for source_kind, source_ref, label in (
+            ("practice_set", first["practice_set_id"], "旧保存试卷"),
+            ("paper", second["practice_set_id"], "相同标题"),
+            ("paper", "ps-ad-hoc", "临时试卷"),
+        ):
+            conn.execute(
+                "INSERT INTO practice_runs "
+                "(source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
+                "rating_mode, items_json, status, started_at, finished_at) "
+                "VALUES (?, ?, ?, '[]', 'exam', 'immediate', '[]', 'completed', "
+                "'2026-09-20 10:00:00', '2026-09-20 10:20:00')",
+                (source_kind, source_ref, label),
+            )
+
+        overview = records.overview(self.pool)
+
+        grouped = {item["source_ref"]: item for item in overview["practice_sets"]}
+        self.assertEqual(set(grouped), {
+            first["practice_set_id"], second["practice_set_id"]})
+        self.assertEqual(grouped[first["practice_set_id"]]["count"], 2)
+        self.assertEqual(grouped[second["practice_set_id"]]["count"], 1)
+        self.assertIn(
+            canonical_run_id,
+            [run["run_id"] for run in grouped[first["practice_set_id"]]["runs"]],
+        )
+        latest_saved = records.overview(self.pool, limit=1)["practice_sets"]
+        self.assertEqual(
+            [item["source_ref"] for item in latest_saved],
+            [second["practice_set_id"]],
+        )
+
+    def test_records_run_card_labels_canonical_paper_as_paper(self):
+        from workbench.server import records as records_view
+
+        rendered = records_view._run_card({
+            "source_kind": "paper",
+            "source_label": "固定标题",
+            "status": "completed",
+            "practice_mode": "exam",
+            "rating_mode": "off",
+            "progress": {"completed": 1, "total": 1},
+        })
+
+        self.assertIn("试卷 · 综合题", rendered)
+        self.assertIn("固定标题", rendered)
+
     def test_unchanged_paper_runs_merge_without_the_warning(self):
         from workbench.data import records
         from workbench.server import records as records_view

@@ -254,7 +254,7 @@ def _archive(pool, record, status):
         " rating_mode, items_json, status, started_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
-            record["source_kind"],
+            "paper",
             record.get("source_ref"),
             record.get("source_label"),
             json.dumps(record["kp_ids"], ensure_ascii=False),
