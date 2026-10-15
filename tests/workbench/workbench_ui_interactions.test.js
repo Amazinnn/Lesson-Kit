@@ -3204,7 +3204,7 @@ test("the filter popup loads facets and renders every dimension with counts", as
   assert.equal(calls.filter((call) => call.url.endsWith("/pull-facets")).length, 1);
 });
 
-test("a pull carries the saved dimensions and the picked ids", async () => {
+test("a pull carries source dimensions and ignores legacy picked-problem state", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
   const storage = new FakeStorage({
@@ -3213,7 +3213,7 @@ test("a pull carries the saved dimensions and the picked ids", async () => {
       origin_kinds: ["source_problem", "adapted_problem"],
       exam_years: ["2023-2024秋冬"],
       docs: ["题库/final·A.md"],
-      picked: { "prob-7": "第七题" },
+      picked: { "prob-7": "retired legacy state" },
     }),
   });
   runWorkbench({
@@ -3222,12 +3222,29 @@ test("a pull carries the saved dimensions and the picked ids", async () => {
     fetch: (url, options) => {
       calls.push({ url, body: options && options.body ? JSON.parse(options.body) : null });
       if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull-facets")) return jsonResponse({
+        source_kinds: [{ value: "final", count: 9 }],
+        origin_kinds: [
+          { value: "source_problem", count: 4 },
+          { value: "adapted_problem", count: 3 },
+        ],
+        exam_years: [{ value: "2023-2024秋冬", count: 5 }],
+        docs: [{ value: "题库/final·A.md", count: 6 }],
+      });
       return jsonResponse({ problems: [] });
     },
   });
-  // The badge counts every chosen option, dimensions and picked problems alike.
-  assert.equal(elements["filter-count"].textContent, "6");
-  assert.equal(elements["filter-count"].classList.contains("hidden"), false);
+
+  // Four dimensions contribute five selected values; retired picked state is ignored.
+  assert.equal(elements["filter-count"].textContent, "5");
+  elements["filter-launch"].click();
+  await flush();
+  await flush();
+  const popup = elements["filter-popup"].innerHTML;
+  assert.ok(!popup.includes("搜索选题"), popup);
+  assert.ok(!popup.includes("filter-search-stem"), popup);
+  assert.ok(!popup.includes("filter-search-source"), popup);
+
   elements["practice-mode-immediate"].checked = true;
   elements["practice-mode-immediate"].trigger("change");
   elements["start-practice"].click();
@@ -3240,113 +3257,7 @@ test("a pull carries the saved dimensions and the picked ids", async () => {
     exam_years: ["2023-2024秋冬"],
     docs: ["题库/final·A.md"],
   });
-  assert.deepEqual(pull.body.include_ids, ["prob-7"]);
-});
-
-test("the two search boxes send one parameter each and pick by problem id", async () => {
-  const calls = [];
-  const elements = { layout: layout(), ...practiceElements() };
-  // The real page builds the boxes from the popup's innerHTML; the fake has to
-  // hand them back for querySelector so the wiring can be exercised.
-  const stemBox = new FakeElement("filter-search-stem");
-  const sourceBox = new FakeElement("filter-search-source");
-  const go = new FakeElement("filter-search-go");
-  const results = new FakeElement("filter-search-results");
-  const boxes = {
-    "#filter-search-stem": stemBox,
-    "#filter-search-source": sourceBox,
-    "#filter-search-go": go,
-    "#filter-search-results": results,
-  };
-  elements["filter-popup"].queryOne = (selector) => boxes[selector] || null;
-  runWorkbench({
-    elements,
-    fetch: (url, options) => {
-      calls.push({ url, body: options && options.body ? JSON.parse(options.body) : null });
-      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
-      if (url.endsWith("/pull-facets")) return jsonResponse({
-        source_kinds: [], origin_kinds: [], exam_years: [], docs: [],
-      });
-      if (url.includes("/search/problems")) {
-        return jsonResponse({
-          count: 1,
-          problems: [{
-            problem_id: "prob-7",
-            title: "计数原理",
-            stem: "【2023期末】计算 1+2+3 的和",
-            source_evidence: "题库/final·合集A.md 第2题",
-          }],
-        });
-      }
-      return jsonResponse({ problems: [] });
-    },
-  });
-  elements["filter-launch"].click();
-  await flush();
-  await flush();
-  stemBox.value = "计数 期末";
-  sourceBox.value = "合集A";
-  const hit = new FakeElement("hit", { dataset: { pickedId: "prob-7" } });
-  results.queryAll = () => [hit];
-  go.click();
-  await flush();
-  const search = calls.find((call) => call.url.includes("/search/problems"));
-  assert.ok(search, "the picker must search");
-  assert.ok(search.url.includes("stem=" + encodeURIComponent("计数 期末")), search.url);
-  assert.ok(search.url.includes("source=" + encodeURIComponent("合集A")), search.url);
-  // the result row shows the stem summary and the source line
-  assert.ok(results.innerHTML.includes("【2023期末】计算 1+2+3 的和"), results.innerHTML);
-  assert.ok(results.innerHTML.includes("题库/final·合集A.md 第2题"), results.innerHTML);
-  // checking the row names the problem for the pull body
-  hit.checked = true;
-  hit.trigger("change");
-  assert.equal(
-    calls.filter((call) => call.url.endsWith("/pull")).length, 0,
-    "searching alone must not pull",
-  );
-  elements["practice-mode-immediate"].checked = true;
-  elements["practice-mode-immediate"].trigger("change");
-  elements["start-practice"].click();
-  await flush();
-  const pulled = calls.find((call) => call.url.endsWith("/pull"));
-  assert.deepEqual(pulled.body.include_ids, ["prob-7"]);
-});
-
-test("a search with both boxes empty clears the result list instead of listing the pool", async () => {
-  const calls = [];
-  const elements = { layout: layout(), ...practiceElements() };
-  const stemBox = new FakeElement("filter-search-stem");
-  const sourceBox = new FakeElement("filter-search-source");
-  const go = new FakeElement("filter-search-go");
-  const results = new FakeElement("filter-search-results");
-  results._innerHTML = "<p>stale</p>";
-  const boxes = {
-    "#filter-search-stem": stemBox,
-    "#filter-search-source": sourceBox,
-    "#filter-search-go": go,
-    "#filter-search-results": results,
-  };
-  elements["filter-popup"].queryOne = (selector) => boxes[selector] || null;
-  runWorkbench({
-    elements,
-    fetch: (url) => {
-      calls.push({ url });
-      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
-      if (url.endsWith("/pull-facets")) {
-        return jsonResponse({
-          source_kinds: [], origin_kinds: [], exam_years: [], docs: [],
-        });
-      }
-      return jsonResponse({ problems: [] });
-    },
-  });
-  elements["filter-launch"].click();
-  await flush();
-  await flush();
-  go.click();
-  await flush();
-  assert.equal(calls.filter((call) => call.url.includes("/search/problems")).length, 0);
-  assert.equal(results.innerHTML, "");
+  assert.equal(Object.hasOwn(pull.body, "include_ids"), false);
 });
 
 test("micro quiz renders yes/no options and grades the objective answer", async () => {

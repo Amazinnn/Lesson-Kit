@@ -29,7 +29,6 @@
     var CURRENT_KEY = "wb_current_" + WS;
     var SIMILAR_KEY = "wb_similar_round_" + WS;
     var MODE_KEY = "wb_practice_mode_" + WS;
-    var INCLUDE_KEY = "wb_practice_include_" + WS;
     var RATING_MODE_KEY = "wb_practice_rating_mode_" + WS;
     var FLASH_DIRECTION_KEY = "wb_flash_direction_" + WS;
   /* ---------- practice session ---------- */
@@ -899,7 +898,6 @@
       var mode = sessionStorage.getItem(MODE_KEY);
       if (!kps.length || !mode || pulling) return;
       var exclude = PracticeDeck.ids(practiceDeck);
-      var includeIds = load(INCLUDE_KEY, null);
       clearPracticeError();
       pulling = true;
       if (mode === "flash_card") {
@@ -942,19 +940,12 @@
         exclude_ids: exclude,
       };
       applyFiltersToPullBody(pullBody);
-      if (includeIds && includeIds.length) {
-        pullBody.include_ids = (pullBody.include_ids || []).concat(
-          includeIds.filter(function (id) {
-            return (pullBody.include_ids || []).indexOf(id) < 0;
-          }));
-      }
       api("/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pullBody),
       }).then(function (result) {
         pulling = false;
-        sessionStorage.removeItem(INCLUDE_KEY);
         if (!result.problems.length) {
           finishExhausted();
           return;
@@ -999,8 +990,6 @@
 
       var pullBody = { kp_ids: kps, n: count, mode: contentMode };
       applyFiltersToPullBody(pullBody);
-      var includeIds = load(INCLUDE_KEY, null);
-      if (includeIds && includeIds.length) pullBody.include_ids = includeIds.slice();
       var request = JSON.parse(JSON.stringify(pullBody));
       return api("/pull", {
         method: "POST",
@@ -1047,7 +1036,6 @@
       }).then(function (practice) {
         pulling = false;
         activePractice = practice;
-        sessionStorage.removeItem(INCLUDE_KEY);
         sessionStorage.setItem(MODE_KEY, contentMode);
         sessionStorage.setItem(RATING_MODE_KEY, ratingMode);
         if (contentMode === "flash_card") {
@@ -1083,7 +1071,6 @@
         });
       }).then(function () {
         pulling = false;
-        sessionStorage.removeItem(INCLUDE_KEY);
         window.location = "/w/" + encodeURIComponent(WS) + "/practice-sets";
       }).catch(function (error) {
         pulling = false;
@@ -1237,14 +1224,17 @@
     var filterCount = document.getElementById("filter-count");
     var filterPopup = document.getElementById("filter-popup");
     var filterFacets = null;
-    var filterState = load(FILTER_KEY, null)
-      || { source_kinds: [], origin_kinds: [], exam_years: [], docs: [], picked: {} };
-    if (!filterState.picked) filterState.picked = {};
+    var storedFilterState = load(FILTER_KEY, null) || {};
+    var filterState = {
+      source_kinds: storedFilterState.source_kinds || [],
+      origin_kinds: storedFilterState.origin_kinds || [],
+      exam_years: storedFilterState.exam_years || [],
+      docs: storedFilterState.docs || [],
+    };
 
     function filterActiveCount() {
       return filterState.source_kinds.length + filterState.origin_kinds.length
-        + filterState.exam_years.length
-        + filterState.docs.length + Object.keys(filterState.picked).length;
+        + filterState.exam_years.length + filterState.docs.length;
     }
 
     function updateFilterBadge() {
@@ -1267,8 +1257,6 @@
         }
       });
       if (Object.keys(dimensions).length) pullBody.filters = dimensions;
-      var pickedIds = Object.keys(filterState.picked || {});
-      if (pickedIds.length) pullBody.include_ids = pickedIds;
     }
 
     function filterDimension(name, label, entries, labels) {
@@ -1293,14 +1281,6 @@
           filterFacets.origin_kinds || [], ORIGIN_LABELS)
         + filterDimension("exam_years", "考查年份", filterFacets.exam_years || [])
         + filterDimension("docs", "来源文档", filterFacets.docs || [])
-        + "<div class='filter-dimension'><h3>搜索选题</h3>"
-        + "<div class='filter-search'>"
-        + "<input id='filter-search-stem' type='search' "
-        + "placeholder='题干关键词（空格分隔）'>"
-        + "<input id='filter-search-source' type='search' "
-        + "placeholder='来源关键词（空格分隔）'>"
-        + "<button id='filter-search-go' class='outline sm'>搜</button></div>"
-        + "<div id='filter-search-results' class='filter-search-results'></div></div>"
         + "<div class='filter-actions'>"
         + "<button id='filter-clear' class='ghost sm'>清除全部</button>"
         + "<button id='filter-close' class='outline sm'>关闭</button></div>";
@@ -1313,68 +1293,10 @@
           saveFilters();
         });
       });
-      var searchGo = filterPopup.querySelector("#filter-search-go");
-      var stemBox = filterPopup.querySelector("#filter-search-stem");
-      var sourceBox = filterPopup.querySelector("#filter-search-source");
-      if (searchGo && stemBox && sourceBox) {
-        var runSearch = function () {
-          // Two keyword domains: the stem box narrows what the problem says, the
-          // source box narrows where it came from, and each of them splits on
-          // whitespace into words that must all match inside its own domain.
-          var stemTerm = stemBox.value.trim();
-          var sourceTerm = sourceBox.value.trim();
-          var target = filterPopup.querySelector("#filter-search-results");
-          if (!stemTerm && !sourceTerm) { target.innerHTML = ""; return; }
-          var query = "?stem=" + encodeURIComponent(stemTerm)
-            + "&source=" + encodeURIComponent(sourceTerm);
-          api("/search/problems" + query).then(function (found) {
-            if (!found.problems.length) {
-              target.innerHTML = "<p class='muted'>没有匹配的题目。</p>";
-              return;
-            }
-            target.innerHTML = found.problems.map(function (problem) {
-              var checked = problem.problem_id in filterState.picked;
-              var stem = problem.stem || problem.title || "";
-              var source = problem.source_evidence
-                ? "<span class='filter-hit-source'>" + escapeHtml(problem.source_evidence)
-                  + "</span>" : "";
-              return "<label class='filter-option filter-hit'>"
-                + "<input type='checkbox' data-picked-id='"
-                + escapeHtml(problem.problem_id) + "'"
-                + (checked ? " checked" : "") + ">"
-                + "<span class='filter-hit-text'>"
-                + "<span class='filter-hit-stem'>" + escapeHtml(stem) + "</span>"
-                + source + "</span></label>";
-            }).join("");
-            target.querySelectorAll("[data-picked-id]").forEach(function (box) {
-              box.addEventListener("change", function () {
-                if (box.checked) {
-                  var hit = found.problems.filter(function (problem) {
-                    return problem.problem_id === box.dataset.pickedId;
-                  })[0];
-                  filterState.picked[box.dataset.pickedId] =
-                    (hit && (hit.stem || hit.title)) || "";
-                } else {
-                  delete filterState.picked[box.dataset.pickedId];
-                }
-                saveFilters();
-              });
-            });
-          }).catch(function () {
-            target.innerHTML = "<p class='inline-error'>搜索失败。</p>";
-          });
-        };
-        searchGo.addEventListener("click", runSearch);
-        [stemBox, sourceBox].forEach(function (box) {
-          box.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") runSearch();
-          });
-        });
-      }
       var clear = filterPopup.querySelector("#filter-clear");
       if (clear) clear.addEventListener("click", function () {
         filterState = {
-          source_kinds: [], origin_kinds: [], exam_years: [], docs: [], picked: {},
+          source_kinds: [], origin_kinds: [], exam_years: [], docs: [],
         };
         saveFilters();
         renderFilterPopup();
@@ -1846,7 +1768,6 @@
           source_kinds: (filterState.source_kinds || []).slice(),
           exam_years: (filterState.exam_years || []).slice(),
           docs: (filterState.docs || []).slice(),
-          picked_problem_ids: Object.keys(filterState.picked || {}),
         },
       };
     }

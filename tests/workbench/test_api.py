@@ -461,21 +461,14 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(len(data), 1)
 
-    def test_pull_include_ids_restricts_scope(self):
-        status, data = self.post("/api/w/dmath/pull", {
+    def test_pull_include_ids_is_retired_for_browser_practice(self):
+        status, data = self.post_error("/api/w/dmath/pull", {
             "kp_ids": ["dmath-ch06-kp-001"], "n": 5, "mode": "weak",
             "include_ids": ["dmath-ch06-prob-001"],
         })
-        self.assertEqual(status, 200)
-        self.assertEqual(
-            [p["problem_id"] for p in data["problems"]], ["dmath-ch06-prob-001"])
-
-    def test_pull_include_ids_with_all_mode_rejected(self):
-        status, data = self.post_error("/api/w/dmath/pull", {
-            "kp_ids": ["dmath-ch06-kp-001"], "n": 5, "mode": "all",
-            "include_ids": ["dmath-ch06-prob-001"],
-        })
         self.assertEqual(status, 400)
+        self.assertIn("include_ids is retired", data["error"])
+        self.assertIn("compose a paper", data["error"])
 
     def test_feedback_direction_targets_schedule_row(self):
         import datetime
