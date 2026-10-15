@@ -45,7 +45,7 @@ flowchart LR
     A[AI 面板]
   end
   subgraph LOOP[练习回路]
-    PULL[拉题/拉卡]
+    PAPER[组卷 / Paper Assembly]
     ANS[作答+判分横幅]
     REV[揭示/回翻]
     PREV[普通题上一题结果回看<br/>只读]
@@ -64,7 +64,7 @@ flowchart LR
   subgraph BR[Agent 桥]
     CONV[对话轮次]
     PLAN[执行计划]
-    SEL[replace_practice_selection]
+    SCOPE[replace_practice_selection<br/>设置组卷 Scope]
     CHK[Check 管线·已实现]
   end
   subgraph CLI[CLI 数据接口]
@@ -78,12 +78,12 @@ flowchart LR
   P --> PULL & ANS & REV & PREV & RATE & END
   PREV -->|返回当前题| P
   PREV -->|本轮聚焦上下文| A
-  PULL --> DB
+  PAPER --> DB
   RATE & END --> FB --> DB
   K --> GSTATE --> DB
   A --> CONV
   CONV --> PLAN --> A
-  CONV -->|明确练习意图| SEL --> P
+  CONV -->|明确练习意图| SCOPE --> P
   CHK ==>|生成→校验→直接入池·批次 id| ING --> BK --> DB
   CLI --> MIR -->|单实体事务| DB
   CLI --> DB & FS
