@@ -84,6 +84,7 @@ class ApiTests(unittest.TestCase):
             [p["problem_id"] for p in data["problems"]],
             ["dmath-ch06-prob-001"],
         )
+        self.assertEqual(data["problems"][0]["reason"], "scope")
         self.assertEqual(data["shortage"], ["dmath-ch06-kp-001"])
 
     def test_pull_endpoint_accepts_provenance_and_difficulty_filters(self):
