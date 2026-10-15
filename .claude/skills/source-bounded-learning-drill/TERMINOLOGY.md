@@ -2,6 +2,7 @@
 
 > 用途：作为 `source-bounded-learning-drill` Skill 的术语与设计规则单一真源。  
 > 规则：除非现有体系确实无法表达新的设计概念，否则不新增术语、不为已有概念另造同义词。
+> 范围：仅约束本 Skill 的出题设计；不覆盖 Lesson Kit 的 OpenSpec、DATA_MODEL、FILE_CONTRACT 或 GLOSSARY，不改变既有题目、产品可用题型或持久字段。
 
 ## 1. 顶层出题模式
 

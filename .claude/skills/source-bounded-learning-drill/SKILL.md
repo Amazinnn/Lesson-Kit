@@ -15,6 +15,8 @@ Generate **材料约束型随堂练习** from a bounded source while preserving 
 
 Read `TERMINOLOGY.md` first. Treat it as the single source of truth for the frozen vocabulary and conceptual model. This file defines the executable workflow and acceptance gates.
 
+This authority is local to this Skill's question-design workflow. Lesson Kit's OpenSpec, DATA_MODEL, FILE_CONTRACT and GLOSSARY retain their respective product-contract responsibilities. This Skill restricts its own generated output; it does not retire other response formats supported by Lesson Kit or migrate existing questions.
+
 ## Non-negotiable output contract
 
 ### 1. Generated questions are objective-only
@@ -77,7 +79,7 @@ For every graded objective item:
 - keep `solution` as the compact answer explanation / reasoning, not as a request for free-form response;
 - keep semantic `problem_type` separate from `quiz_type`.
 
-When targeting Lesson Kit's current `micro_quiz` persistence contract, emit exactly one `kp_id` for each objective question. If planning identifies several relevant knowledge points, choose the dominant tested knowledge point for persistence rather than emitting an invalid multi-KP micro item.
+When targeting Lesson Kit's current `micro_quiz` persistence contract, emit exactly one knowledge-point reference in `kp_ids` (a one-element list) for each objective question. If planning identifies several relevant knowledge points, choose the dominant tested knowledge point for persistence rather than emitting an invalid multi-KP micro item.
 
 ## Inputs
 
