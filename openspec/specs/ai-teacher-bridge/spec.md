@@ -149,10 +149,10 @@ papers, practices, or other learning writes.
 - **WHEN** the learner asks about a practice problem or unfinished practice visible in the workbench
 - **THEN** the provider receives the durable active-practice progress and current Pool problem context without requiring the learner to paste the question
 
-#### Scenario: Discuss the current selection before starting
+#### Scenario: Discuss the current Paper assembly focus
 
-- **WHEN** the learner is choosing knowledge points, source filters, years, or explicitly picked problems
-- **THEN** the provider receives a bounded representation of that visible selection while the Pool remains the authority for resolved learning objects
+- **WHEN** the learner is choosing knowledge-point scope, source filters, or years for Paper assembly
+- **THEN** the provider receives a bounded representation of that assembly-focus context while the Pool remains the authority for resolved learning objects
 
 #### Scenario: Discuss a saved paper
 
