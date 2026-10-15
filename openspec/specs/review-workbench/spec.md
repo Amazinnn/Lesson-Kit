@@ -90,8 +90,10 @@ a read operation with zero learning writes. When durable problems are exhausted,
 it SHALL report the shortage per knowledge point instead of inventing content.
 Every selected problem SHALL carry the reason it entered the Paper.
 
-Exact problem ids MAY be supplied by an Agent or CLI authoring workflow to pin a
-known problem while composing a Paper. That exact-id capability is an authoring
+Exact problem ids supplied by an Agent or CLI authoring workflow SHALL be
+included in the Paper when they resolve to existing durable problems, with
+reason `explicit`, even when they fall outside the requested scope or filters or
+exceed the requested problem count. This exact-id capability is an authoring
 primitive, not a learner-facing practice control: the browser SHALL NOT expose a
 per-problem picker that injects named problems into an active Practice Run.
 
@@ -107,8 +109,8 @@ per-problem picker that injects named problems into an active Practice Run.
 
 #### Scenario: Agent pins an exact problem while authoring
 
-- **WHEN** an Agent or CLI authoring workflow names an exact durable problem id
-- **THEN** that problem may be included with reason `explicit` without creating a learner-side manual-pick affordance
+- **WHEN** an Agent or CLI authoring workflow supplies an exact id for an existing durable problem while composing a Paper
+- **THEN** the Paper SHALL include that problem with reason `explicit`, even if it falls outside the requested scope or filters or exceeds the requested problem count, without creating a learner-side manual-pick affordance
 
 #### Scenario: Learner evidence guides assembly
 
