@@ -7,12 +7,13 @@
 
 ```mermaid
 flowchart TD
-  A[明确 Scope<br/>知识点页/图谱/建议/Agent] --> B[Paper Assembly<br/>来源·难度·薄弱·到期·错题]
+  A[明确 Scope<br/>知识点页/图谱/建议/Agent] --> A1[当前 UI 选择一个兼容模式<br/>exam/micro/yes_no/flash_card]
+  A1 --> B[Paper Assembly<br/>按所选模式与来源·难度·薄弱·到期·错题组卷]
   B --> C{组卷有内容?}
   C -- 否 --> C0[诚实空态<br/>调整 Scope/约束后重组] --> B
   C -- 是 --> D[冻结 Paper item 顺序]
-  D --> E[开始 / 恢复 Practice Run]
-  E --> F{当前 item 形式}
+  D --> E[开始 / 恢复 Practice Run<br/>当前 UI 每轮固定一种内容模式]
+  E --> F{本轮选定的 item 形式}
   F -- 闪卡 --> G[回忆→揭示]
   F -- 微题/判断 --> H[点选→本地判定]
   F -- 综合题 --> I[作答→揭示解析]
@@ -41,6 +42,8 @@ flowchart TD
 任何建议、筛选、调度或对话都不得向运行中的 Paper 动态加题；“再练同类”永远组新 Paper。
 刷新恢复 frozen items 与游标而不重新组卷；提前结束仍走既有 batch 收束规则；网络失败原位重试；
 直接关闭只保留已经落盘的事实。跳过继续保持现有“不凭空写学习证据”的语义。
+
+当前练习 UI 仍用单一兼容模式组装和启动每轮；混合格式 Paper 的 learner UI 尚未交付。
 
 ## W2 · 内容入库（唯一合法写池通道）
 
@@ -108,7 +111,8 @@ flowchart TD
   E -- 运行中再发 --> F2[409 拒绝 · 单轮次串行]
   E -- 点停止 --> F3[本轮 cancelled · 不留半截记录]
   F --> G{产出带结构化动作?}
-  G -- 有明确练习意图 --> H[replace_practice_selection<br/>选区一次性替换]
+  G -- 有明确练习意图 --> H[replace_practice_selection<br/>仅替换组卷 Paper Scope]
+  H --> H1[返回练习出发页<br/>组装 Paper / 开始 Practice Run 仍需单独操作]
   G -- 普通对话 --> I[绝不写任何学习记录]
 ```
 
@@ -181,11 +185,9 @@ flowchart TD
 
   P[来源筛选按钮] --> Q[浮窗: 四维多选 + 池内计数]
   Q -- 勾选 --> R[维度内 OR · 维度间 AND<br/>filters 随 /pull 上送]
-  Q -- 题干关键词/来源关键词 --> S[命中题按 include_ids 显式指定<br/>不受筛选与上限约束]
-  S -- 勾选 --> S1[结果行: 题面摘要 + 来源行]
-  R & S --> T[pull 只回那一批]
+  R --> T[Paper Assembly · pull<br/>按四维条件返回题目]
   Q -.sessionStorage 按工作区·键 wb_practice_filters_v2_<ws>·关标签页即散.-> Z
-  S -.两框都空则搜不出东西·不是列出全池.-> Z
+  X[只读题目发现<br/>GET /search/problems] --> X1[结果用于查看/作者工作<br/>不接入浏览器 Paper 选题]
 
   M1[新建对话] --> M2{有模型条目?}
   M2 -- 无 --> M3[回退: 一个 harness 一条]
@@ -203,6 +205,8 @@ flowchart TD
 > 读得成一行；记录只增不改，学习状态仍只由自评驱动。**筛选**：来源维度在
 > CLI、API 与练习页浮窗同一语义——维度内 OR、维度间 AND；文档键把两套证据书写格式折成一份文档
 > 一个键，计数取自池内实际值。
+>
+> **历史状态（2026-10-16）**：下方 2026-10-06 描述中的浏览器关键词搜索结果勾选并注入 `include_ids` 路径，已随 PR130 退役；保留原记录说明当时的变更。四维来源筛选与 CLI 关键词筛选继续可用，题目搜索仅作只读发现/作者工作。
 >
 > 2026-10-06（problem-search-and-origin-filter）：来源维度由三个增为**四个**（多一个题目来源方式
 > `origin_kinds`，浮窗显示历年原题/改编/AI生成，CLI 改可重复的 `--origin-kinds`，单值 `origin_kind`

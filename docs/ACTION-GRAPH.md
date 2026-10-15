@@ -32,7 +32,7 @@
 | L1 服务层 | [action-graph/L1-services.md](action-graph/L1-services.md) | 域逻辑模块与依赖 |
 | L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 36 路由 + CLI 24 命令 |
 | L3 动作层 | [action-graph/L3-actions.md](action-graph/L3-actions.md) | 动作登记（入口/权限/读写/状态）+ 留痕 |
-| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 九条主流程 + 37 条意外分支清单 |
+| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 十条主流程 + 42 条意外分支清单 |
 
 ## 总图
 
@@ -64,7 +64,7 @@ flowchart LR
   subgraph BR[Agent 桥]
     CONV[对话轮次]
     PLAN[执行计划]
-    SCOPE[replace_practice_selection<br/>设置组卷 Scope]
+    SCOPE[replace_practice_selection<br/>仅设置组卷 Scope]
     CHK[Check 管线·已实现]
   end
   subgraph CLI[CLI 数据接口]
@@ -231,7 +231,7 @@ flowchart LR
   所以「12–14 章都导进来」一次回答即可；提示词写明清单可跨章、按章成批、遇多区块继续。
   顺手修：回滚改写 `related_kp_ids` 前先查列（老池缺列不再报错）。L0/L1/L2/L3/L4、GLOSSARY、
   PRODUCT-MANUAL、REQUIREMENTS 同步。
-- 2026-10-06 搜索与来源维度升级（problem-search-and-origin-filter）：**一个搜索框变成两个关键词
+- 2026-10-06 搜索与来源维度升级（problem-search-and-origin-filter；历史记录：练习页浮窗搜索选题已于 2026-10-16 随 PR130 退役）：**一个搜索框变成两个关键词
   域**——`GET /search/problems` 收 `stem` 与 `source`（旧 `q` 删除，不映射、不兼容），题干域
   = 标题+题面，来源域 = 来源证据+考查年份+题面开头的 `【…】` 标签段（老池把卷面
   身份只写在那里的事实）；每域按空格切多词、域内 AND、跨域 AND，两参数都空返回空集而非全池。
