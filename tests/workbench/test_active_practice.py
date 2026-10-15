@@ -166,6 +166,31 @@ class ActivePracticeTests(unittest.TestCase):
         self.assertEqual(rows[0]["source_label"], "临时试卷")
         self.assertIn('"state": "stuck"', rows[0]["items_json"])
 
+    def test_archiving_legacy_active_row_normalizes_only_the_new_history_row(self):
+        from workbench.data import active_practice
+
+        active_practice.create(self.pool, self.payload("dmath-ch06-prob-001"))
+        conn = self.pool.connect()
+        conn.execute(
+            "UPDATE active_practice SET source_kind='quick' WHERE singleton=1"
+        )
+        conn.execute(
+            "INSERT INTO practice_runs "
+            "(source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
+            "rating_mode, items_json, status, started_at) "
+            "VALUES ('practice_set', 'ps-007', '旧试卷', '[]', 'exam', "
+            "'immediate', '[]', 'completed', '2026-09-01 10:00:00')"
+        )
+        self.pool.commit()
+
+        active_practice.clear(self.pool)
+
+        rows = conn.execute(
+            "SELECT source_kind, source_ref FROM practice_runs ORDER BY id"
+        ).fetchall()
+        self.assertEqual([row["source_kind"] for row in rows], ["practice_set", "paper"])
+        self.assertEqual(rows[0]["source_ref"], "ps-007")
+
     def test_archived_practice_can_be_replayed_without_new_history_fields(self):
         from workbench.data import active_practice
 

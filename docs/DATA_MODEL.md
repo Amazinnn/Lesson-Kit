@@ -151,11 +151,25 @@
 
 修改这些表之前，必须先读取对应 live OpenSpec；本文档目前只用于划清边界，不重写其完整状态转移规则。
 
-## 可复用试卷写入边界
+## Paper 执行来源与持久化边界
 
-练习集是工作区 `.lessonkit/practice-sets/` 下的 JSON 记录，不是 SQLite 行或学习状态。
+保存的 Paper 是工作区 `.lessonkit/practice-sets/` 下的 JSON 记录，不是 SQLite 行或学习状态。
 `data.practice_sets.save_manifest` 校验导出的练习清单及其课程，再委托给现有原子 JSON 写入器
 `create_saved`。保存记录保留题目顺序与 request 元数据；这条写入路径不改 SQLite。
+
+`active_practice.source_kind` 与 `practice_runs.source_kind` 的新执行值为 `paper`：
+一个 Paper 在开始执行前固定有序题目，来源筛选或组卷方式不构成另一种执行类型。
+`data.active_practice.create` 写入 `paper`；完成、替换或清除时，
+`data.active_practice._archive` 也将新快照写成 `paper`，即使迁移后仍在执行的旧 active 行保留了历史来源值。
+
+v1 兼容输入和历史行可保留 `quick`、`practice_set`、`agent`。schema 增量迁移只扩展两个字段的
+CHECK 约束，保留已存在的 active 行与 `practice_runs` 历史值；读取或重放旧轮次不会改写旧行。
+`data.active_practice.replay` 读取这两类来源的历史轮次，使用归档的固定题目顺序开始新的
+`paper` 执行。已保存 Paper 通过 `source_ref` 保留稳定 `ps-NNN` 身份，`source_label` 保存标题。
+
+`data.records._practice_sets` 汇总已完成的保存 Paper 轮次：读取新 `paper` 行与旧
+`practice_set` 行，并按 `source_ref` 的保存 Paper ID 分组；临时或其他未关联保存 Paper 的
+`paper` 轮次不进入该分组。逐题作答、自评仍只由 attempts / feedback 提供学习证据。
 
 ## 字段变更纪律
 
