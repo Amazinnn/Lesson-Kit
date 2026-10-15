@@ -1,0 +1,33 @@
+name: one-shot Paper source test expectations
+
+on:
+  push:
+    branches:
+      - paper-practice-run-boundary
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: paper-practice-run-boundary
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply expectation migration
+        run: python .github/scripts/one-shot-paper-source-test-expectations.py
+      - name: Run focused tests
+        run: python -m unittest tests.workbench.test_saved_practice_sets tests.workbench.test_ui_routes tests.workbench.test_paper_source_schema
+      - name: Commit migrated expectations and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test: align practice execution expectations to Paper"
+          git push origin paper-practice-run-boundary
