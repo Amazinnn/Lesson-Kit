@@ -4,8 +4,8 @@ The workbench UI is the minimal consumption surface of lesson-kit: a three-colum
 shell with a left navigation column (practice, knowledge points, knowledge
 graph), a middle page area, a session-end self-rating step, and a right AI
 conversation column whose context display prioritizes the current problem
-without ever limiting what the agent can see. Visual style copies the DeepSeek
-Harness design system.
+without ever limiting what the agent can see. Visual style follows the Soft
+Mondrian visual foundation defined by this specification.
 ## Requirements
 ### Requirement: Three-column shell with navigation
 
