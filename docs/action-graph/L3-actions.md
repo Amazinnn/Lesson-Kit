@@ -8,11 +8,11 @@
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | 切换章透镜（关 = 全课程；开着时选一章） | UI 顶栏「章」开关 | 人 | 注册表 `active_chapter`（与 `use` 同源） | 已实现（dashboard-chapter-filter） |
-| 选定练习范围（选择是唯一来源） | UI 勾选 | 人 | 选区键 | 已实现 |
-| 加入今日要练 | UI 建议区 | 人 | 选区键 | 已实现 |
-| 开始本轮练习（模式+自评时机必选） | UI | 人 | 牌组 | 已实现 |
-| 拉题/拉卡 | API/CLI | 双 | 牌组 | 已实现 |
-| 组一次练习（范围/单题/条件筛选/薄弱·到期·错题；逐题 reason） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-09-25） |
+| 选定组卷 Scope（回答「想练什么」） | UI 勾选 / 范围托盘 | 人 | 选区键 | 已实现（兼容 UI） |
+| 接受建议作为组卷范围 | UI 建议区 | 人 | 选区键 | 已实现（按钮文案可继续迁移） |
+| 组装 Paper（Scope/条件筛选/薄弱·到期·错题；逐题 reason） | UI / CLI `pull` | 双 | —（只读选择） | 已实现（v1 兼容组卷） |
+| 精确固定题目进 Paper | CLI `pull --problem` / Agent | Agent | —（只读选择） | 已实现；**非学生手选入口** |
+| 开始 Practice Run（执行固定 Paper） | UI / active-practice API | 人 | active practice checkpoint | 已实现；新来源语义 `paper` |
 | 按来源证据筛题（`--source-evidence` 子串、可重复；与 `--source-kind`/`--origin-kinds`/`--exam-year` 同为「维度内 OR、维度间 AND」） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-09-26） |
 | 按题目来源方式筛题（`--origin-kinds` 可重复：历年原题/改编/AI生成，取并集） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
 | 按题干/来源关键词筛题（`--search-stem`/`--search-source`，空格多词、域内 AND、跨域 AND） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
