@@ -52,10 +52,6 @@ class RetiredManualProblemIncludeTests(unittest.TestCase):
         self.assertIn("unknown workspace", body["error"])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class RetiredManualPickerStaticTests(unittest.TestCase):
     def test_browser_bundle_has_no_manual_problem_picker_or_include_state(self):
         from pathlib import Path
@@ -70,3 +66,7 @@ class RetiredManualPickerStaticTests(unittest.TestCase):
         ):
             self.assertNotIn(retired, flow)
         self.assertNotIn("wb_practice_include_", workbench)
+
+
+if __name__ == "__main__":
+    unittest.main()
