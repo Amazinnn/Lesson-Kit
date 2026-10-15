@@ -34,10 +34,13 @@ replace_once(
       || { source_kinds: [], origin_kinds: [], exam_years: [], docs: [], picked: {} };
     if (!filterState.picked) filterState.picked = {};
 ''',
-    '''    var filterState = load(FILTER_KEY, null)
-      || { source_kinds: [], origin_kinds: [], exam_years: [], docs: [] };
-    // Old saved picker state is discarded; source dimensions still constrain Paper assembly.
-    if (filterState.picked) delete filterState.picked;
+    '''    var storedFilterState = load(FILTER_KEY, null) || {};
+    var filterState = {
+      source_kinds: storedFilterState.source_kinds || [],
+      origin_kinds: storedFilterState.origin_kinds || [],
+      exam_years: storedFilterState.exam_years || [],
+      docs: storedFilterState.docs || [],
+    };
 ''',
     "filter state",
 )
@@ -101,20 +104,16 @@ replace_once(
     "filter clear",
 )
 
-# `filterState.picked` is allowed only in the one migration line that discards
-# stale browser storage; no live read/write path may remain.
 for token in (
     "INCLUDE_KEY",
     "wb_practice_include_",
     "include_ids",
     "data-picked-id",
+    "filterState.picked",
     "搜索选题",
 ):
     if token in flow:
         raise SystemExit(f"practice-flow still contains retired token: {token}")
-if flow.count("filterState.picked") != 2:
-    # one condition + one delete on the same migration statement
-    raise SystemExit("unexpected live filterState.picked usage remains")
 flow_path.write_text(flow, encoding="utf-8")
 
 wb_path = Path("workbench/server/static/workbench.js")
@@ -140,12 +139,11 @@ if marker not in test:
         workbench = (root / "workbench/server/static/workbench.js").read_text(encoding="utf-8")
 
         for retired in (
-            "wb_practice_include_", "include_ids", "data-picked-id", "搜索选题",
+            "wb_practice_include_", "include_ids", "filterState.picked",
+            "data-picked-id", "搜索选题",
         ):
             self.assertNotIn(retired, flow)
         self.assertNotIn("wb_practice_include_", workbench)
-        self.assertNotIn("Object.keys(filterState.picked", flow)
-        self.assertNotIn("filterState.picked[", flow)
 '''
     test_path.write_text(test, encoding="utf-8")
 
