@@ -390,6 +390,14 @@
     return true;
   }
 
+  function resetConversation() {
+    state.renderedArtifacts = {};
+    state.latestArtifact = null;
+    setHidden(byId("agent-artifact-split"), true);
+    var middle = byId("middle");
+    if (middle && middle.classList) middle.classList.remove("agent-split-open");
+  }
+
   function resetTurn() {
     state.userCollapsed = false;
     state.running = false;
@@ -432,6 +440,7 @@
   var api = {
     init: init,
     renderContext: renderContext,
+    resetConversation: resetConversation,
     resetTurn: resetTurn,
     setRunning: setRunning,
     finishTurn: finishTurn,
