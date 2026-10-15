@@ -3,23 +3,23 @@
 Status: **accepted v1 baseline**  
 Decision date: 2026-10-15
 
-This note freezes the first implementable Agent UI shape. It is intentionally a baseline, not a claim that the interface is final.
+This note records the accepted v1 design target, not current runtime behavior. Existing activity and failure presentations remain governed by their OpenSpec contracts until a follow-up change defines any additions.
 
 ## Core invariant
 
 - The **central Lesson Kit page remains primary**.
-- The **right Agent rail remains conversation-first**.
+- The **right Agent rail remains conversation-first and available**; it may be collapsed on desktop or dismissed as a drawer at narrow widths, per the existing workbench UI contract.
 - Tool progress, approvals, long-running work and artifacts appear only when runtime state requires them.
 - Transient work UI must not become permanent chrome.
 - Agent surfaces reuse Lesson Kit's existing **Soft Mondrian** palette and tokens. The Agent rail does **not** establish an independent dark theme.
 
-## Presentation states
+## Proposed presentation states
 
-| Runtime need | Primary presentation |
+| Runtime need | Proposed v1 presentation |
 | --- | --- |
 | ordinary conversation / idle | Agent rail only |
 | short tool call | inline Tool Call Card; optional replaceable Activity Float |
-| tool failure | semantic failure Tool Call Card; raw diagnostics folded; recovery actions visible |
+| tool failure | planned semantic failure Tool Call Card; raw diagnostics folded; proposed recovery actions |
 | sustained multi-step work | Bottom Dock for current milestones while conversation remains usable |
 | completed handoff-worthy result | Agent Artifact card; Adaptive Split may preview the latest artifact |
 | risk / low-reversibility action requiring consent | Approval Gate temporarily replaces the normal composer |
@@ -42,7 +42,7 @@ A decision surface for an action that needs explicit user consent. While active,
 
 ## Tool and artifact distinction
 
-A **Tool Call Card** represents execution activity. It shows a semantic label, concise outcome and state; raw parameters/logs are folded behind explicit inspection.
+A **Tool Call Card** is the proposed v1 presentation for execution activity. It shows a semantic label, concise outcome and state; raw parameters/logs are folded behind explicit inspection. A unified card, visible impact scope, and recovery controls on failure are design targets, not requirements in the current activity contracts.
 
 An **Agent Artifact** represents a result worth handing off or revisiting, such as a generated practice paper. Artifact completion does not automatically navigate away from the user's current page.
 
@@ -58,6 +58,12 @@ Use the existing `workbench.css` tokens and Soft Mondrian semantics:
 - existing success green for successful execution state.
 
 Status must never rely on color alone; retain text and/or geometry cues.
+
+## Follow-up handoff
+
+The next step is a dedicated OpenSpec change for Agent UI v1 observable behavior, including rail availability and collapse/dismissal, Tool Call Card presentation and failure recovery controls, auxiliary surfaces, and approval interaction. Implement those behaviors only after that contract is accepted. This baseline adds no runtime features.
+
+The generated practice paper is an Agent Artifact example only. Preview, saving, and canonical-page navigation depend on the paper-model work in PR130–134; follow that work's persisted model and lifecycle semantics instead of adding a parallel schema or paper lifecycle here.
 
 ## Explicit non-goals for v1
 
