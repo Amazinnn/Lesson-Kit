@@ -3260,6 +3260,110 @@ test("a pull carries source dimensions and ignores legacy picked-problem state",
   assert.equal(Object.hasOwn(pull.body, "include_ids"), false);
 });
 
+test("fixed practice reports each selection reason and shortage before starting", async () => {
+  const calls = [];
+  const elements = {
+    layout: layout(),
+    ...durablePracticeElements(),
+    "scope-tray": new FakeElement("scope-tray", {
+      dataset: { kpNames: JSON.stringify({ "kp-1": "代数基础", "kp-2": "线性方程组" }) },
+    }),
+  };
+  const storage = new FakeStorage();
+  let reportAtRunStart = "";
+  let runBody = null;
+  runWorkbench({
+    elements,
+    storage,
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current") && !options) {
+        return jsonResponse({ practice: null });
+      }
+      if (url.includes("/weak?")) return jsonResponse([
+        { kp_id: "kp-1" }, { kp_id: "kp-2" },
+      ]);
+      if (url.endsWith("/pull")) return jsonResponse({
+        problems: [
+          { problem_id: "p-1", display_title: "代数题", reason: "scope" },
+          { problem_id: "p-2", display_title: "复习题", reason: "due" },
+        ],
+        shortage: ["kp-2"],
+      });
+      if (url.endsWith("/practice/current")) {
+        reportAtRunStart = elements["practice-error"].textContent;
+        runBody = JSON.parse(options.body);
+        return jsonResponse({
+          practice_id: "run-1", source_kind: "quick",
+          kp_ids: ["kp-1", "kp-2"], practice_mode: "exam",
+          rating_mode: "immediate", cursor: 0,
+          items: runBody.items.map((item, position) => ({
+            ...item, position, state: "pending",
+            payload: { problem_id: item.item_id, display_title: item.item_id },
+          })),
+        });
+      }
+      return jsonResponse({});
+    },
+  });
+
+  await flush();
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-rating-immediate"].checked = true;
+  elements["start-practice"].click();
+  await flush();
+  await flush();
+
+  assert.match(reportAtRunStart, /代数题.*范围匹配/);
+  assert.match(reportAtRunStart, /复习题.*到期复习/);
+  assert.match(reportAtRunStart, /线性方程组/);
+  assert.match(reportAtRunStart, /Check 管线/);
+  assert.deepEqual(runBody.items, [
+    { item_type: "problem", item_id: "p-1" },
+    { item_type: "problem", item_id: "p-2" },
+  ]);
+  assert.equal(elements["practice-error"].textContent, reportAtRunStart);
+  assert.equal(calls.filter((call) =>
+    call.url.endsWith("/practice/current") && !!call.options).length, 1);
+});
+
+test("empty fixed practice reports the Check pipeline and does not start an empty run", async () => {
+  const calls = [];
+  const elements = {
+    layout: layout(),
+    ...durablePracticeElements(),
+    "scope-tray": new FakeElement("scope-tray", {
+      dataset: { kpNames: JSON.stringify({ "kp-1": "代数基础" }) },
+    }),
+  };
+  runWorkbench({
+    elements,
+    storage: new FakeStorage(),
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith("/practice/current")) return jsonResponse({ practice: null });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      if (url.endsWith("/pull")) return jsonResponse({
+        problems: [], shortage: ["kp-1"],
+      });
+      return jsonResponse({});
+    },
+  });
+
+  await flush();
+  elements["practice-mode-immediate"].checked = true;
+  elements["practice-rating-immediate"].checked = true;
+  elements["start-practice"].click();
+  await flush();
+  await flush();
+
+  assert.match(elements["practice-error"].textContent, /0\/10/);
+  assert.match(elements["practice-error"].textContent, /代数基础/);
+  assert.match(elements["practice-error"].textContent, /Check 管线/);
+  assert.equal(calls.some((call) =>
+    call.url.endsWith("/practice/current") && !!call.options), false);
+});
+
 test("micro quiz renders yes/no options and grades the objective answer", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };

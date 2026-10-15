@@ -225,6 +225,45 @@
       if (retryPractice) retryPractice.classList.add("hidden");
     }
 
+    function showAssemblyReport(selection, requested) {
+      if (!practiceError) return;
+      var items = selection.items || [];
+      var shortage = Array.isArray(selection.shortage) ? selection.shortage : [];
+      var reasonLabels = {
+        explicit: "作者指定", wrong: "此前答错", due: "到期复习",
+        weak: "薄弱点优先", scope: "范围匹配",
+      };
+      var itemReasons = items.map(function (item, index) {
+        var title = String(item.title || item.item_id || "题目")
+          .replace(/\s+/g, " ").trim();
+        if (title.length > 72) title = title.slice(0, 72) + "…";
+        return (index + 1) + ". “" + title + "”（"
+          + (reasonLabels[item.reason] || "原因未提供") + "）";
+      });
+      var report = items.length
+        ? "本轮组卷：" + items.length + "/" + requested + " 道。"
+        : "本轮无法组题（0/" + requested + " 道），当前范围没有可用题目。";
+      if (itemReasons.length) report += " 逐题依据：" + itemReasons.join("；") + "。";
+
+      var tray = document.getElementById("scope-tray");
+      var names = {};
+      if (tray && tray.dataset && tray.dataset.kpNames) {
+        try { names = JSON.parse(tray.dataset.kpNames) || {}; } catch (_) {}
+      }
+      var shortKps = shortage.map(function (kpId) {
+        return names[kpId] || kpId;
+      });
+      if (shortKps.length) {
+        report += " 可用题数少于请求量的知识点：" + shortKps.join("、") + "。";
+      }
+      if (!items.length || items.length < requested || shortKps.length) {
+        report += "请检查筛选条件；若正式题目不足，可通过 Check 管线检查并补充。系统不会虚构题目。";
+      }
+      practiceError.textContent = report;
+      practiceError.classList.remove("hidden");
+      if (retryPractice) retryPractice.classList.add("hidden");
+    }
+
     function activeToDeck(practice) {
       var deck = PracticeDeck.createDeck();
       (practice.items || []).forEach(function (row) {
@@ -998,8 +1037,13 @@
       }).then(function (result) {
         return {
           request: request,
+          shortage: result.shortage || [],
           items: (result.problems || []).map(function (problem) {
-            return { item_type: "problem", item_id: problem.problem_id };
+            return {
+              item_type: "problem", item_id: problem.problem_id,
+              title: problem.display_title || problem.problem_text || problem.problem_id,
+              reason: problem.reason,
+            };
           }),
         };
       });
@@ -1024,16 +1068,28 @@
       clearPracticeError();
       pulling = true;
       selectFixedItems(kps, contentMode).then(function (selection) {
-        if (!selection.items.length) throw new Error("当前范围没有可用题目。");
+        if (contentMode !== "flash_card") {
+          showAssemblyReport(selection, selection.request.n);
+        }
+        if (!selection.items.length) {
+          if (contentMode === "flash_card") throw new Error("当前范围没有可用闪卡。");
+          pulling = false;
+          return null;
+        }
         return post("/practice/current", {
           source_kind: "quick",
           kp_ids: kps,
           practice_mode: contentMode,
           rating_mode: ratingMode,
-          items: selection.items,
+          items: selection.items.map(function (item) {
+            var fixed = { item_type: item.item_type, item_id: item.item_id };
+            if (item.direction) fixed.direction = item.direction;
+            return fixed;
+          }),
           replace: replace,
         });
       }).then(function (practice) {
+        if (!practice) return;
         pulling = false;
         activePractice = practice;
         sessionStorage.setItem(MODE_KEY, contentMode);

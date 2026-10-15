@@ -332,7 +332,7 @@ def _practice_selection(value):
                 if isinstance(item, str)
             ] if isinstance(values := filters.get(key), list) else []
             for key in (
-                "source_kinds", "exam_years", "docs", "picked_problem_ids"
+                "source_kinds", "exam_years", "docs"
             )
         },
     }
