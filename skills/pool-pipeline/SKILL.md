@@ -6,7 +6,7 @@
 
 ## 权威与边界
 
-1. **当前 OpenSpec、实际 `lesson-kit` CLI、当前 SQLite schema 是权威事实**；本 skill 不覆盖产品契约。
+1. **契约按职责分工**：OpenSpec 管可观察行为，DATA_MODEL 管持久字段，FILE_CONTRACT 管工件，GLOSSARY 管名词。实际 CLI/schema 是实现证据，不能覆盖契约；冲突必须显式登记。本 skill 不覆盖产品契约。
 2. problem schema、ingest/content CRUD、difficulty、relations、practice experience 或相关 CLI 改动时，同一 PR 必须同步本目录。
 3. `KnowledgePoint ↔ Problem` 只有正式的 `problems.kp_ids` 直接关系；不要恢复 `topic_label` 或任何题目分组摘要层。
 4. 课程特有策略放在课程工作区自己的 `policy-override.md`；`references/examples/` 只作格式示例，不得跨课程自动套用。
@@ -25,6 +25,15 @@
 - 单题小改：直接用 `lesson-kit data ... update problem`；
 - 只查统计：直接跑查询/审计；
 - 讲义/论文等非题目材料。
+
+## 入库与试卷交付是两步
+
+开始前读 `references/managed-paper-delivery.md`，明确用户要的是题库、页面可见试卷、打印文件，还是评级/评审材料。
+
+- 新题入库成功，以**正式工作区**中的题号、题面、答案、出处和批次读回核对为准；临时验收库、评级卡和评审包不是正式入库回执。
+- 用户要求组好并保存为试卷时，入库后还须执行 `lesson-kit papers <工作区> save --input <练习清单>`，读回核对题目数量、顺序和页面可见性，才算交付。
+- `pull --plan` / `--print`、`practice-set-selection`、出卷 Markdown 都不等于保存到组卷列表；只要题库已存在那些题，就不要为补试卷重复入库。
+- 只要求建库、审计、评级或导出时，不擅自创建试卷。若本机缺保存命令，明确报告“题目已入库，试卷未保存”，不能用导出文件冒充完成。
 
 ## 核心形状：一次全局理解 + 单题判定 + 机械校验
 
@@ -94,18 +103,25 @@ B. ...
 来源过滤：
 
 ```bash
-lesson-kit pull <ws> --source-kind final --origin-kind source_problem --exam-year 2023
+lesson-kit pull <ws> --source-kind final --origin-kinds source_problem --exam-year 2023
 lesson-kit pull <ws> --source-evidence "合集A"
 ```
 
 当前维度：
 - `--source-kind`：可重复；
-- `--origin-kind`：单值；
+- `--origin-kinds`：可重复；
 - `--source-group`：单值；
 - `--exam-year`：前缀匹配；
 - `--source-evidence`：可重复、子串匹配。
 
-当前 CLI **没有** `--search-stem` / `--search-source`。关键词定位用：
+题干和来源分开搜索；每个参数内按空格分词，词间 AND。题干域只含 `display_title` / `problem_text`，不含已退役的 `topic_label`：
+
+```bash
+lesson-kit pull <ws> --search-stem "关键词一 关键词二"
+lesson-kit pull <ws> --search-source "文档名 年份"
+```
+
+整行 JSON 的连续子串定位另用：
 
 ```bash
 lesson-kit data <ws> search problem "关键词"
@@ -201,6 +217,7 @@ lesson-kit data <ws> audit --check duplicates
 ## 参考
 
 - `references/policy-defaults.md`：默认题型/答案/去重/KP/图片判据
+- `references/managed-paper-delivery.md`：正式入库、保存试卷、导出和评级材料的交付边界与验收
 - `references/examples/physics-ii-policy-override.md`：**仅示例**课程 override 写法
 - `references/prompt-t1.md`：单题一次调用模板
 - `references/sugar.md`：文本糖规范
