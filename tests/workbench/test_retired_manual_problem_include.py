@@ -54,3 +54,19 @@ class RetiredManualProblemIncludeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RetiredManualPickerStaticTests(unittest.TestCase):
+    def test_browser_bundle_has_no_manual_problem_picker_or_include_state(self):
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2]
+        flow = (root / "workbench/server/static/practice-flow.js").read_text(encoding="utf-8")
+        workbench = (root / "workbench/server/static/workbench.js").read_text(encoding="utf-8")
+
+        for retired in (
+            "wb_practice_include_", "include_ids", "filterState.picked",
+            "picked_problem_ids", "data-picked-id", "搜索选题",
+        ):
+            self.assertNotIn(retired, flow)
+        self.assertNotIn("wb_practice_include_", workbench)
