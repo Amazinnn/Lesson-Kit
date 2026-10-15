@@ -13,6 +13,8 @@
     activities: {},
     activityOrder: [],
     approvalOpen: false,
+    latestArtifact: null,
+    renderedArtifacts: {},
   };
 
   function byId(id) {
@@ -211,6 +213,123 @@
     }
   }
 
+  function workspaceName() {
+    var layout = byId("layout");
+    return layout && layout.dataset ? String(layout.dataset.workspace || "") : "";
+  }
+
+  function paperHref() {
+    var workspace = workspaceName();
+    return workspace ? "/w/" + encodeURIComponent(workspace) + "/practice-sets" : "#";
+  }
+
+  function cleanArtifact(raw) {
+    if (!raw || raw.type !== "paper_artifact") return null;
+    var id = String(raw.practice_set_id || "").trim();
+    if (!/^ps-\d+$/.test(id)) return null;
+    var title = String(raw.title || id).trim().slice(0, 120) || id;
+    var summary = String(raw.summary || "").trim().slice(0, 300);
+    var count = Number.isInteger(raw.item_count) && raw.item_count >= 0 && raw.item_count <= 10000
+      ? raw.item_count : null;
+    return {
+      type: "paper_artifact",
+      practice_set_id: id,
+      title: title,
+      summary: summary,
+      item_count: count,
+    };
+  }
+
+  function artifactMeta(action) {
+    var meta = document.createElement("p");
+    meta.className = "agent-artifact-meta";
+    meta.textContent = action.practice_set_id
+      + (action.item_count != null ? " · " + action.item_count + " 题" : "");
+    return meta;
+  }
+
+  function artifactLink() {
+    var link = document.createElement("a");
+    link.className = "outline sm agent-artifact-open";
+    link.href = paperHref();
+    link.textContent = "打开组卷页";
+    return link;
+  }
+
+  function openArtifact(raw, explicit) {
+    var action = cleanArtifact(raw);
+    if (!action) return false;
+    state.latestArtifact = action;
+    if (explicit) state.userCollapsed = false;
+    if (state.userCollapsed) return false;
+    var surface = byId("agent-artifact-split");
+    var title = byId("agent-artifact-title");
+    var body = byId("agent-artifact-body");
+    var actions = byId("agent-artifact-actions");
+    var middle = byId("middle");
+    if (!surface || !title || !body || !actions) return false;
+    title.textContent = action.title;
+    clear(body);
+    clear(actions);
+    body.appendChild(artifactMeta(action));
+    if (action.summary) {
+      var summary = document.createElement("p");
+      summary.className = "agent-artifact-summary";
+      summary.textContent = action.summary;
+      body.appendChild(summary);
+    }
+    actions.appendChild(artifactLink());
+    setHidden(byId("agent-activity-float"), true);
+    setHidden(byId("agent-bottom-dock"), true);
+    setHidden(surface, false);
+    if (middle && middle.classList) middle.classList.add("agent-split-open");
+    return true;
+  }
+
+  function renderArtifactCard(action) {
+    var messages = byId("ai-messages");
+    if (!messages || state.renderedArtifacts[action.practice_set_id]) return;
+    state.renderedArtifacts[action.practice_set_id] = true;
+    var card = document.createElement("section");
+    card.className = "msg ai agent-artifact-card";
+    if (card.dataset) card.dataset.artifactId = action.practice_set_id;
+    var kicker = document.createElement("p");
+    kicker.className = "agent-surface-kicker";
+    kicker.textContent = "Artifact · Paper";
+    var title = document.createElement("strong");
+    title.className = "agent-artifact-card-title";
+    title.textContent = action.title;
+    card.appendChild(kicker);
+    card.appendChild(title);
+    card.appendChild(artifactMeta(action));
+    if (action.summary) {
+      var summary = document.createElement("p");
+      summary.className = "agent-artifact-summary";
+      summary.textContent = action.summary;
+      card.appendChild(summary);
+    }
+    var controls = document.createElement("div");
+    controls.className = "agent-artifact-card-actions";
+    var preview = document.createElement("button");
+    preview.type = "button";
+    preview.className = "ghost sm";
+    preview.textContent = "预览";
+    preview.addEventListener("click", function () { openArtifact(action, true); });
+    controls.appendChild(preview);
+    controls.appendChild(artifactLink());
+    card.appendChild(controls);
+    messages.appendChild(card);
+  }
+
+  function artifact(raw, options) {
+    var action = cleanArtifact(raw);
+    if (!action) return false;
+    state.latestArtifact = action;
+    renderArtifactCard(action);
+    if (!(options && options.restore)) openArtifact(action, false);
+    return true;
+  }
+
   function restoreComposer() {
     state.approvalOpen = false;
     setHidden(byId("ai-approval-slot"), true);
@@ -276,10 +395,14 @@
     state.running = false;
     state.activities = {};
     state.activityOrder = [];
+    state.latestArtifact = null;
     setHidden(byId("agent-activity-float"), true);
     setHidden(byId("agent-bottom-dock"), true);
+    setHidden(byId("agent-artifact-split"), true);
     clear(byId("agent-activity-body"));
     clear(byId("agent-bottom-dock-body"));
+    var middle = byId("middle");
+    if (middle && middle.classList) middle.classList.remove("agent-split-open");
     restoreComposer();
   }
 
@@ -316,6 +439,8 @@
     failure: failure,
     confirm: confirm,
     restoreComposer: restoreComposer,
+    artifact: artifact,
+    openArtifact: openArtifact,
     collapseAux: collapseAux,
     autosizeInput: autosizeInput,
     state: state,
