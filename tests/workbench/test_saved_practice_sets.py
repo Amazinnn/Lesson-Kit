@@ -80,7 +80,7 @@ class SavedPracticeSetTests(unittest.TestCase):
             self.pool, {}, {"practice_set_id": saved["practice_set_id"]},
             {"practice_mode": "exam", "rating_mode": "immediate"})
 
-        self.assertEqual(started["source_kind"], "practice_set")
+        self.assertEqual(started["source_kind"], "paper")
         self.assertEqual(started["source_ref"], "ps-001")
         self.assertEqual(started["source_label"], "卷子")
         self.assertEqual(

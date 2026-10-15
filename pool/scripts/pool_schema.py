@@ -428,6 +428,47 @@ def _widen_item_type_check(conn, table, create_sql):
     return [f"{table}_item_type_card"]
 
 
+def _widen_practice_source_kind_check(conn, table):
+    """Add canonical Paper execution source without discarding legacy rows."""
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (table,)
+    ).fetchone()
+    if not row:
+        return []
+    create_sql = row[0] or ""
+    if "'paper'" in create_sql:
+        return []
+    legacy = "source_kind IN ('quick', 'practice_set', 'agent')"
+    if legacy not in create_sql:
+        raise sqlite3.OperationalError(
+            f"cannot widen {table}.source_kind: unrecognized CHECK constraint"
+        )
+
+    old_table = f"{table}_paper_source_old"
+    if table_exists(conn, old_table):
+        raise sqlite3.OperationalError(
+            f"cannot widen {table}.source_kind: stale migration table {old_table} exists"
+        )
+
+    widened_sql = create_sql.replace(
+        legacy,
+        "source_kind IN ('paper', 'quick', 'practice_set', 'agent')",
+        1,
+    )
+    conn.execute(f"ALTER TABLE {table} RENAME TO {old_table}")
+    conn.execute(widened_sql)
+
+    old_columns = column_names(conn, old_table)
+    new_columns = set(column_names(conn, table))
+    common = [column for column in old_columns if column in new_columns]
+    quoted = ", ".join(f'"{column}"' for column in common)
+    conn.execute(
+        f"INSERT INTO {table} ({quoted}) SELECT {quoted} FROM {old_table}"
+    )
+    conn.execute(f"DROP TABLE {old_table}")
+    return [f"{table}.source_kind-paper"]
+
+
 def _widen_content_sequences_check(conn, create_sql):
     """Rebuild content_sequences whose entity_type CHECK predates 'batch' rows."""
     row = conn.execute(
@@ -579,7 +620,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             CREATE TABLE active_practice (
                 singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
                 source_kind TEXT NOT NULL CHECK (
-                    source_kind IN ('quick', 'practice_set', 'agent')
+                    source_kind IN ('paper', 'quick', 'practice_set', 'agent')
                 ),
                 source_ref TEXT,
                 source_label TEXT,
@@ -596,6 +637,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     changes.extend(
         ensure_columns(conn, "active_practice", [("source_label", "TEXT")])
     )
+    changes.extend(_widen_practice_source_kind_check(conn, "active_practice"))
 
     if not table_exists(conn, "active_practice_items"):
         conn.execute(
@@ -621,7 +663,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             CREATE TABLE practice_runs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 source_kind TEXT NOT NULL CHECK (
-                    source_kind IN ('quick', 'practice_set', 'agent')
+                    source_kind IN ('paper', 'quick', 'practice_set', 'agent')
                 ),
                 source_ref TEXT,
                 source_label TEXT,
@@ -636,6 +678,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             """
         )
         changes.append("practice_runs")
+    changes.extend(_widen_practice_source_kind_check(conn, "practice_runs"))
 
     if not table_exists(conn, "learning_current_state"):
         conn.execute(
