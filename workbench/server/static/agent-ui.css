@@ -2,26 +2,14 @@
    This file intentionally reuses the Workbench Soft Mondrian tokens. */
 
 #ai-column.agent-rail,
-#ai-column:has(.agent-rail-home) {
-  background: var(--dsw-bg-layer-1);
-}
-
-.agent-rail-home,
-#ai-chat-view {
-  min-height: 0;
-}
-
-.ai-session-list-head,
-#ai-chat-head {
-  min-height: 34px;
-}
-
+#ai-column:has(.agent-rail-home) { background: var(--dsw-bg-layer-1); }
+.agent-rail-home, #ai-chat-view { min-height: 0; }
+.ai-session-list-head, #ai-chat-head { min-height: 34px; }
 #ai-chat-head {
   flex: none;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--lk-ink);
 }
-
 #ai-model-switch {
   min-width: 0;
   height: 30px;
@@ -29,16 +17,8 @@
   background: var(--lk-paper);
   font-size: 12px;
 }
-
-.ai-conversation {
-  border-top: 0 !important;
-  padding-top: 12px !important;
-}
-
-#ai-messages {
-  min-height: 0;
-  scrollbar-gutter: stable;
-}
+.ai-conversation { border-top: 0 !important; padding-top: 12px !important; }
+#ai-messages { min-height: 0; scrollbar-gutter: stable; }
 
 .agent-context-chips {
   display: flex;
@@ -77,7 +57,6 @@
   border-top: 1px solid var(--dsw-border-l2);
   background: var(--dsw-bg-layer-1);
 }
-
 #ai-input-row.ai-input-row {
   align-items: flex-end;
   gap: 8px;
@@ -96,15 +75,36 @@
   box-shadow: none;
 }
 #ai-input:focus { outline: none; }
-.ai-send-actions {
-  align-self: flex-end;
-  flex: none;
-}
+.ai-send-actions { align-self: flex-end; flex: none; }
 #ai-status {
   min-height: 20px;
   margin: 4px 2px 0;
   font-size: 11px;
   color: var(--dsw-label-tertiary);
+}
+
+/* Existing provider activity rows become semantic Tool Call Cards. Raw output
+   stays behind the existing details disclosure. */
+#ai-messages .ai-activity,
+#ai-messages .ai-plan {
+  border: 1px solid var(--dsw-border-l2);
+  border-left: 3px solid var(--lk-blue);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-bg-layer-2);
+  box-shadow: none;
+}
+#ai-messages .ai-activity.is-done,
+#ai-messages .ai-plan-step.is-done { border-left-color: var(--dsw-state-success); }
+#ai-messages .ai-activity.is-failed,
+#ai-messages .ai-plan-step.is-failed { border-left-color: var(--lk-red); }
+#ai-messages .ai-plan-state {
+  font-size: 11px;
+  font-weight: 700;
+}
+#ai-messages .ai-plan-output {
+  margin-top: 7px;
+  color: var(--dsw-label-secondary);
+  font-size: 11px;
 }
 
 /* The central Lesson Kit page remains primary. These surfaces are inert until
@@ -117,7 +117,6 @@
   background: var(--lk-paper);
   box-shadow: var(--dsw-shadow-lv3);
 }
-
 .agent-activity-float {
   position: sticky;
   top: 12px;
@@ -127,7 +126,6 @@
   padding: 10px 12px;
   border-radius: var(--dsw-radius-md);
 }
-
 .agent-bottom-dock {
   position: sticky;
   bottom: 12px;
@@ -136,7 +134,6 @@
   padding: 12px 14px;
   border-radius: 12px;
 }
-
 .agent-artifact-split {
   position: absolute;
   inset: 0 0 0 auto;
@@ -147,10 +144,7 @@
   border-width: 0 0 0 1px;
   box-shadow: -8px 0 28px rgb(0 0 0 / 6%);
 }
-#middle.agent-split-open {
-  padding-right: calc(min(44%, 520px) + 28px);
-}
-
+#middle.agent-split-open { padding-right: calc(min(44%, 520px) + 28px); }
 .agent-surface-head {
   display: flex;
   align-items: center;
@@ -165,33 +159,87 @@
   letter-spacing: .04em;
   text-transform: uppercase;
 }
-.agent-surface-title {
-  margin: 2px 0 0;
-  font-size: 14px;
-  line-height: 20px;
+.agent-surface-title { margin: 2px 0 0; font-size: 14px; line-height: 20px; }
+.agent-aux-collapse { width: 28px; padding: 0; }
+
+.agent-milestone {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 7px;
+  padding: 8px 0;
+  border-top: 1px solid var(--dsw-border-l1);
+}
+.agent-milestone:first-child { border-top: 0; }
+.agent-milestone-marker {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 1px solid var(--lk-ink);
+  border-radius: 50%;
+  color: var(--lk-ink);
+  font-size: 11px;
+  font-weight: 800;
+}
+.agent-milestone.is-running .agent-milestone-marker {
+  border-color: var(--lk-blue);
+  color: var(--lk-blue);
+}
+.agent-milestone.is-done .agent-milestone-marker {
+  border-color: var(--dsw-state-success);
+  color: var(--dsw-state-success);
+}
+.agent-milestone.is-failed .agent-milestone-marker {
+  border-color: var(--lk-red);
+  color: var(--lk-red);
+}
+.agent-milestone-body { min-width: 0; }
+.agent-milestone-body strong { display: block; font-size: 12px; line-height: 18px; }
+.agent-milestone-state {
+  display: block;
+  margin-top: 1px;
+  color: var(--dsw-label-tertiary);
+  font-size: 11px;
+}
+.agent-milestone-body p {
+  margin: 4px 0 0;
+  color: var(--dsw-label-secondary);
+  font-size: 11px;
+  line-height: 17px;
 }
 
-.agent-aux-collapse {
-  width: 28px;
-  padding: 0;
+/* Approval Gate replaces only the composer, never the conversation history. */
+.agent-approval-slot { padding: 0 0 4px; }
+.agent-approval-card {
+  padding: 11px 12px;
+  border: 1px solid var(--lk-ink);
+  border-left: 4px solid var(--lk-yellow);
+  border-radius: 12px;
+  background: #fff9df;
+}
+.agent-approval-title { display: block; margin-top: 3px; font-size: 13px; }
+.agent-approval-reason,
+.agent-approval-impact {
+  margin: 5px 0 0;
+  color: var(--dsw-label-secondary);
+  font-size: 11px;
+  line-height: 17px;
+}
+.agent-approval-impact { color: var(--lk-ink); }
+.agent-approval-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 10px;
 }
 
 @media (max-width: 1100px) {
-  .agent-artifact-split {
-    width: min(52%, 480px);
-  }
-  #middle.agent-split-open {
-    padding-right: calc(min(52%, 480px) + 22px);
-  }
+  .agent-artifact-split { width: min(52%, 480px); }
+  #middle.agent-split-open { padding-right: calc(min(52%, 480px) + 22px); }
 }
-
 @media (max-width: 760px) {
-  .agent-activity-float,
-  .agent-bottom-dock {
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-  }
+  .agent-activity-float, .agent-bottom-dock { width: 100%; margin-left: 0; margin-right: 0; }
   .agent-artifact-split {
     position: fixed;
     inset: 52px 0 0 0;
