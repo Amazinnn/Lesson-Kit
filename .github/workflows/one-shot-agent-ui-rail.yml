@@ -1,0 +1,33 @@
+name: one-shot Agent UI rail foundation
+
+on:
+  push:
+    branches:
+      - feat/agent-ui-rail-foundation
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/agent-ui-rail-foundation
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply Agent UI shell migration
+        run: python .github/scripts/one-shot-agent-ui-rail.py
+      - name: Run focused browser test
+        run: node --test tests/workbench/agent_ui_v1.test.js tests/workbench/agent_session_ui.test.js
+      - name: Commit foundation and remove one-shot files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: establish Agent UI v1 rail foundation"
+          git push origin feat/agent-ui-rail-foundation
