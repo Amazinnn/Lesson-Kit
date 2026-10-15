@@ -162,8 +162,18 @@
 `data.active_practice.create` 写入 `paper`；完成、替换或清除时，
 `data.active_practice._archive` 也将新快照写成 `paper`，即使迁移后仍在执行的旧 active 行保留了历史来源值。
 
+`active_practice.practice_mode` 与 `practice_runs.practice_mode` 是当前单模式界面的兼容选择 / 渲染元数据，
+不是 Paper 身份或题目队列。schema 没有枚举 CHECK；Data writer 只要求非空字符串，并在开始、归档与重放时保留该值。
+当前浏览器选项是 `exam`、`micro`、`yes_no`、`flash_card`；保存 Paper 的 start API 接受前三者，
+记录读取器原样返回该字段，记录页为这四个值显示对应标签。固定题目身份与顺序分别存于保存 Paper、
+`active_practice_items` 与 `practice_runs.items_json`；`practice_mode` 不构造或动态补充执行队列。
+它不同于题目能力字段 `problems.practice_modes`；`rating_mode` 则单独表示反馈时机。
+
 v1 兼容输入和历史行可保留 `quick`、`practice_set`、`agent`。schema 增量迁移只扩展两个字段的
 CHECK 约束，保留已存在的 active 行与 `practice_runs` 历史值；读取或重放旧轮次不会改写旧行。
+既有工作区必须先显式运行池迁移，再使用 Paper 执行写入：
+`python pool/scripts/migrate-progress.py --db pool/dmath.db`（将数据库路径替换为该工作区的池路径）。
+表已存在不代表旧 `source_kind` CHECK 已接受 `paper`；`lesson-kit doctor` 与正常启动均不自动迁移。
 `data.active_practice.replay` 读取这两类来源的历史轮次，使用归档的固定题目顺序开始新的
 `paper` 执行。已保存 Paper 通过 `source_ref` 保留稳定 `ps-NNN` 身份，`source_label` 保存标题。
 
