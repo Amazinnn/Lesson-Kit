@@ -16,6 +16,7 @@
     latestArtifact: null,
     renderedArtifacts: {},
   };
+  var approvalSequence = 0;
 
   function byId(id) {
     return document && document.getElementById ? document.getElementById(id) : null;
@@ -331,6 +332,7 @@
   }
 
   function restoreComposer() {
+    approvalSequence += 1;
     state.approvalOpen = false;
     setHidden(byId("ai-approval-slot"), true);
     setHidden(byId("ai-input-row"), false);
@@ -341,6 +343,7 @@
     var slot = byId("ai-approval-slot");
     var inputRow = byId("ai-input-row");
     if (!slot || !inputRow) return false;
+    var currentApproval = ++approvalSequence;
     state.approvalOpen = true;
     clear(slot);
     var card = document.createElement("section");
@@ -370,6 +373,7 @@
     deny.className = "outline sm";
     deny.textContent = "取消";
     deny.addEventListener("click", function () {
+      if (!state.approvalOpen || currentApproval !== approvalSequence) return;
       restoreComposer();
       if (onDeny) onDeny();
     });
@@ -378,6 +382,7 @@
     approve.className = "primary sm";
     approve.textContent = spec && spec.approveLabel ? spec.approveLabel : "确认";
     approve.addEventListener("click", function () {
+      if (!state.approvalOpen || currentApproval !== approvalSequence) return;
       restoreComposer();
       if (onApprove) onApprove();
     });
@@ -400,7 +405,7 @@
 
   function resetTurn() {
     state.userCollapsed = false;
-    state.running = false;
+    setRunning(false);
     state.activities = {};
     state.activityOrder = [];
     state.latestArtifact = null;
