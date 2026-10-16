@@ -2776,7 +2776,7 @@
   }
 
   function aiLoadConversation(conversationId) {
-    if (!conversationId) return Promise.resolve();
+    if (!conversationId) return Promise.resolve(null);
     if (aiSurfaceConversation !== conversationId) {
       aiResetConversationRuntime();
       aiSurfaceConversation = conversationId;
@@ -2791,6 +2791,24 @@
           || aiConversation !== conversationId) return null;
       aiRenderConversation(record);
       return record;
+    }, function (error) {
+      if (sequence !== aiConversationSequence
+          || loadSequence !== aiConversationLoadSequence
+          || aiConversation !== conversationId) return null;
+      if (error.status === 404) {
+        aiConversation = "";
+        aiSurfaceConversation = "";
+        sessionStorage.removeItem(AI_CONVERSATION_KEY);
+        aiResetConversationRuntime();
+        aiSetRunning(false);
+        aiSetView("list");
+        return null;
+      }
+      aiSetView("chat");
+      aiSetRunning(false);
+      if (aiSend) aiSend.disabled = true;
+      aiSetStatus("读取对话失败：" + (error.message || "未知错误") + "。刷新页面可重试。");
+      return null;
     });
   }
 
@@ -2855,9 +2873,11 @@
           // The reload repaints the header, so the notice is set after it.
           return aiLoadConversation(aiConversation);
         })
-        .then(function () {
+        .then(function (record) {
+          if (!record) return null;
           aiSetStatus(failure ? "无法切换模型：" + failure
                               : "模型已切换，下一轮生效。");
+          return record;
         });
     });
   }
@@ -3230,29 +3250,7 @@
       // The Agent rail is independent of the middle view: reopening a page
       // restores the conversation the learner left open instead of the list.
       if (!aiConversation) return null;
-      var restoredConversation = aiConversation;
-      var restoreRequest = aiLoadConversation(restoredConversation);
-      var restoreSequence = aiConversationSequence;
-      var restoreLoadSequence = aiConversationLoadSequence;
-      return restoreRequest.catch(function (error) {
-        if (aiConversation !== restoredConversation
-            || aiConversationSequence !== restoreSequence
-            || aiConversationLoadSequence !== restoreLoadSequence) return null;
-        if (error.status === 404) {
-          aiConversation = "";
-          aiSurfaceConversation = "";
-          sessionStorage.removeItem(AI_CONVERSATION_KEY);
-          aiResetConversationRuntime();
-          aiSetRunning(false);
-          aiSetView("list");
-          return null;
-        }
-        aiSetView("chat");
-        aiSetRunning(false);
-        if (aiSend) aiSend.disabled = true;
-        aiSetStatus("读取对话失败：" + (error.message || "未知错误") + "。刷新页面可重试。");
-        return null;
-      });
+      return aiLoadConversation(aiConversation);
     });
   }
   if (layout.dataset.objectType && layout.dataset.objectId) {
