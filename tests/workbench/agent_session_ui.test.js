@@ -66,8 +66,12 @@ class Storage {
   removeItem(key) { this.values.delete(key); }
 }
 
-function response(value) {
-  return Promise.resolve({ ok: true, json: () => Promise.resolve(value) });
+function response(value, status = 200) {
+  return Promise.resolve({
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(value),
+  });
 }
 
 function setup(fetch, options = {}) {
@@ -487,7 +491,7 @@ test("a stored conversation that no longer exists falls back to the list", async
     if (url.endsWith("/ai/providers")) return response([]);
     if (url.endsWith("/ai/sessions") && !options) return response([]);
     if (url.endsWith("/ai/sessions/conv-gone")) {
-      return Promise.reject(new Error("unknown conversation"));
+      return response({ error: "unknown conversation" }, 404);
     }
     return response({});
   }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-gone") } });
@@ -497,4 +501,46 @@ test("a stored conversation that no longer exists falls back to the list", async
   assert.equal(app.window.sessionStorage.getItem("wb_ai_conversation_alpha"), null);
   assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
   assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+});
+
+test("a 503 while restoring keeps the conversation selected and shows a retryable error", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-temporary")]);
+    if (url.endsWith("/ai/sessions/conv-temporary")) {
+      return response({ error: "service unavailable" }, 503);
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-temporary") } });
+  await flush();
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-temporary",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+  assert.match(app.elements["ai-status"].textContent, /刷新页面可重试/);
+  assert.equal(app.elements["ai-send"].disabled, true);
+});
+
+test("a network failure while restoring keeps the conversation selected and shows a retryable error", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-network")]);
+    if (url.endsWith("/ai/sessions/conv-network")) {
+      return Promise.reject(new Error("Failed to fetch"));
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-network") } });
+  await flush();
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-network",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+  assert.match(app.elements["ai-status"].textContent, /刷新页面可重试/);
+  assert.equal(app.elements["ai-send"].disabled, true);
 });

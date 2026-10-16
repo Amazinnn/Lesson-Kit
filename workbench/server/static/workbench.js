@@ -244,7 +244,11 @@
   function api(path, options) {
     return fetch("/api/w/" + WS + path, options).then(function (resp) {
       return resp.json().catch(function () { return {}; }).then(function (data) {
-        if (!resp.ok) throw new Error(data.error || resp.status);
+        if (!resp.ok) {
+          var error = new Error(data.error || resp.status);
+          error.status = resp.status;
+          throw error;
+        }
         return data;
       });
     });
@@ -3219,9 +3223,20 @@
       // The Agent rail is independent of the middle view: reopening a page
       // restores the conversation the learner left open instead of the list.
       if (!aiConversation) return null;
-      return aiLoadConversation(aiConversation).catch(function () {
-        aiConversation = "";
-        sessionStorage.removeItem(AI_CONVERSATION_KEY);
+      return aiLoadConversation(aiConversation).catch(function (error) {
+        if (error.status === 404) {
+          aiConversation = "";
+          aiSurfaceConversation = "";
+          sessionStorage.removeItem(AI_CONVERSATION_KEY);
+          aiResetConversationRuntime();
+          aiSetRunning(false);
+          aiSetView("list");
+          return null;
+        }
+        aiSetView("chat");
+        aiSetRunning(false);
+        if (aiSend) aiSend.disabled = true;
+        aiSetStatus("读取对话失败：" + (error.message || "未知错误") + "。刷新页面可重试。");
         return null;
       });
     });

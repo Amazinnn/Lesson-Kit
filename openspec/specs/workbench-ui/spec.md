@@ -433,7 +433,8 @@ central Lesson Kit view changes or the page reloads in the same tab. Returning
 to the conversation list SHALL be an explicit learner action. When the
 conversation that would be restored no longer exists, the rail SHALL fall back
 to the conversation list without an error wall and SHALL NOT create a
-conversation.
+conversation. Other read failures SHALL keep that conversation selected and
+show a recoverable read error without discarding the selection.
 
 #### Scenario: Switch the central view
 
@@ -454,6 +455,10 @@ conversation.
 
 - **WHEN** the conversation left open no longer exists in the workspace
 - **THEN** the rail falls back to the conversation list without an error wall and creates no conversation
+
+#### Scenario: Restoring the open conversation temporarily fails
+- **WHEN** reading the conversation fails for a reason other than a confirmed missing conversation
+- **THEN** the rail keeps that conversation selected, displays a recoverable read error, and preserves the selection for a later retry
 
 ### Requirement: Provider is selected once
 New-session flow SHALL require an explicit available provider choice before creation. A created session SHALL display its provider as read-only.
