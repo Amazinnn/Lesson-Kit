@@ -28,6 +28,7 @@
   function saveSelectedKpIds(ids) {
     var unique = Array.from(new Set((ids || []).filter(Boolean)));
     store(SELECTION_KEY, unique);
+    if (window.AgentUISurfaces) window.AgentUISurfaces.renderContext();
     document.querySelectorAll("[data-kp-selection]").forEach(function (input) {
       var id = input.dataset.selectionKpId || input.dataset.kpId;
       input.checked = unique.indexOf(id) >= 0;
