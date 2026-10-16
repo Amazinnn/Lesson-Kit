@@ -75,7 +75,25 @@ test("surface controller renders compact context chips and respects explicit col
   assert.equal(elements["ai-context-chips"].children.length, 3);
   assert.equal(elements["ai-context-chips"].children[0].textContent, "知识点");
   assert.equal(elements["ai-context-chips"].children[2].textContent, "范围 2 个知识点");
+  storage.set("wb_kp_selection_alpha", JSON.stringify(["kp-1"]));
+  ui.renderContext();
+  assert.ok(elements["ai-context-chips"].children[2].textContent.includes("1"));
   ui.collapseAux();
   assert.equal(ui.state.userCollapsed, true);
   assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), true);
 });
+  const panel = [...css.matchAll(/\.agent-artifact-split\s*\{[^}]*\}/g)]
+    .map((match) => match[0])
+    .find((block) => block.includes("position: absolute"));
+  assert.ok(panel, "the split panel rule must be positioned inside the central column");
+  assert.ok(panel.includes("width: var(--agent-split-width)"), "panel width must use the shared variable");
+  assert.ok(panel.includes("min-width: 0"), "a minimum width can outgrow the reserved space");
+  assert.match(css, /#middle\s*\{\s*--agent-split-width:\s*\d+px;\s*\}/);
+  const open = css.match(/#middle\.agent-split-open\s*\{[^}]*\}/)[0];
+  assert.ok(
+    open.includes("padding-right: calc(var(--agent-split-width) + 22px)"),
+    "the open state must reserve the panel width plus its gap",
+  );
+  const narrow = css.match(/@media \(max-width: 1100px\)\s*\{[\s\S]*?\n\}/)[0];
+  assert.ok(narrow.includes("position: fixed"), "narrow viewports fall back to an explicit overlay");
+  assert.ok(!/@media \(min-width: \d+px\) and \(max-width: \d+px\)/.test(css), "no width band may split the two branches");
