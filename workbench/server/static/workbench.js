@@ -244,7 +244,11 @@
   function api(path, options) {
     return fetch("/api/w/" + WS + path, options).then(function (resp) {
       return resp.json().catch(function () { return {}; }).then(function (data) {
-        if (!resp.ok) throw new Error(data.error || resp.status);
+        if (!resp.ok) {
+          var error = new Error(data.error || resp.status);
+          error.status = resp.status;
+          throw error;
+        }
         return data;
       });
     });
@@ -2184,6 +2188,7 @@
   var aiConversation = load(AI_CONVERSATION_KEY, "");
   var aiSurfaceConversation = "";
   var aiConversationSequence = 0;
+  var aiConversationLoadSequence = 0;
   var aiTurn = null;
   var aiSendPending = false;
   var aiProgressReadFailed = false;
@@ -2771,7 +2776,7 @@
   }
 
   function aiLoadConversation(conversationId) {
-    if (!conversationId) return Promise.resolve();
+    if (!conversationId) return Promise.resolve(null);
     if (aiSurfaceConversation !== conversationId) {
       aiResetConversationRuntime();
       aiSurfaceConversation = conversationId;
@@ -2779,10 +2784,31 @@
     aiConversation = conversationId;
     store(AI_CONVERSATION_KEY, conversationId);
     var sequence = aiConversationSequence;
+    var loadSequence = ++aiConversationLoadSequence;
     return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
-      if (sequence !== aiConversationSequence || aiConversation !== conversationId) return null;
+      if (sequence !== aiConversationSequence
+          || loadSequence !== aiConversationLoadSequence
+          || aiConversation !== conversationId) return null;
       aiRenderConversation(record);
       return record;
+    }, function (error) {
+      if (sequence !== aiConversationSequence
+          || loadSequence !== aiConversationLoadSequence
+          || aiConversation !== conversationId) return null;
+      if (error.status === 404) {
+        aiConversation = "";
+        aiSurfaceConversation = "";
+        sessionStorage.removeItem(AI_CONVERSATION_KEY);
+        aiResetConversationRuntime();
+        aiSetRunning(false);
+        aiSetView("list");
+        return null;
+      }
+      aiSetView("chat");
+      aiSetRunning(false);
+      if (aiSend) aiSend.disabled = true;
+      aiSetStatus("读取对话失败：" + (error.message || "未知错误") + "。刷新页面可重试。");
+      return null;
     });
   }
 
@@ -2847,9 +2873,11 @@
           // The reload repaints the header, so the notice is set after it.
           return aiLoadConversation(aiConversation);
         })
-        .then(function () {
+        .then(function (record) {
+          if (!record) return null;
           aiSetStatus(failure ? "无法切换模型：" + failure
                               : "模型已切换，下一轮生效。");
+          return record;
         });
     });
   }
@@ -3151,6 +3179,7 @@
 
   function aiShowProviderPicker() {
     if (!aiProviderOptions) return;
+    aiConversationLoadSequence += 1;
     aiSetView("picker");
     // Show the last known catalog immediately; then refresh it without leaving
     // the picker blank while runtime discovery is in flight.
@@ -3206,6 +3235,7 @@
   });
   if (aiSessionList) {
     aiSetView("list");
+    var startupLoadSequence = aiConversationLoadSequence;
     var providerRequest = aiRefreshProviders().then(function () {
       if (aiProviderLoadError && aiSessionEmpty) {
         aiSessionEmpty.textContent = aiProviderLoadError;
@@ -3215,7 +3245,13 @@
     Promise.all([
       providerRequest,
       aiRefreshSessionList(),
-    ]);
+    ]).then(function () {
+      if (startupLoadSequence !== aiConversationLoadSequence) return null;
+      // The Agent rail is independent of the middle view: reopening a page
+      // restores the conversation the learner left open instead of the list.
+      if (!aiConversation) return null;
+      return aiLoadConversation(aiConversation);
+    });
   }
   if (layout.dataset.objectType && layout.dataset.objectId) {
     aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);

@@ -66,12 +66,17 @@ class Storage {
   removeItem(key) { this.values.delete(key); }
 }
 
-function response(value) {
-  return Promise.resolve({ ok: true, json: () => Promise.resolve(value) });
+function response(value, status = 200) {
+  return Promise.resolve({
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(value),
+  });
 }
 
 function setup(fetch, options = {}) {
   const storage = new Storage();
+  Object.entries(options.seed || {}).forEach(([key, value]) => storage.setItem(key, value));
   const elements = {
     layout: new Element("layout", { dataset: { workspace: "alpha", page: "kp" } }),
     "ai-session-list-view": new Element("ai-session-list-view"),
@@ -454,3 +459,347 @@ test("the finished turn artifact keeps its preview across the conversation reloa
 function deepText(element) {
   return (element.children || []).map(deepText).join(" ") + " " + (element.textContent || "");
 }
+test("reopening a page restores the Agent conversation instead of the list", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response({
+      ...session("conv-a"),
+      messages: [{ role: "assistant", content: "上一轮的回复", action: null }],
+    });
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+  await flush();
+
+  assert.equal(
+    app.elements["ai-chat-view"].classList.contains("hidden"), false,
+    "the open conversation stays open when the middle view changes",
+  );
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+  assert.deepEqual(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-a");
+  assert.ok(
+    app.elements["ai-messages"].children.some(
+      (child) => child.innerHTML.includes("上一轮的回复")),
+    "the restored conversation renders its durable messages",
+  );
+});
+
+test("a stored conversation that no longer exists falls back to the list", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([]);
+    if (url.endsWith("/ai/sessions/conv-gone")) {
+      return response({ error: "unknown conversation" }, 404);
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-gone") } });
+  await flush();
+  await flush();
+
+  assert.equal(app.window.sessionStorage.getItem("wb_ai_conversation_alpha"), null);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+});
+
+test("a stale 404 cannot clear a newer conversation selected during restore", async () => {
+  const initial = deferred();
+  const selected = deferred();
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([session("conv-old"), session("conv-new")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-old")) return initial.promise;
+    if (url.endsWith("/ai/sessions/conv-new")) return selected.promise;
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-old") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  initial.resolve({
+    ok: false, status: 404, json: () => Promise.resolve({ error: "gone" }),
+  });
+  await flush();
+  selected.resolve({ ok: true, status: 200, json: () => Promise.resolve(session("conv-new")) });
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-new",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+});
+
+test("a stale 503 does not show a restore error over a newer selection", async () => {
+  const initial = deferred();
+  const selected = deferred();
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([session("conv-old"), session("conv-new")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-old")) return initial.promise;
+    if (url.endsWith("/ai/sessions/conv-new")) return selected.promise;
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-old") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  initial.resolve({
+    ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
+  });
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-new",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-status"].textContent, "");
+
+  selected.resolve({ ok: true, status: 200, json: () => Promise.resolve(session("conv-new")) });
+  await flush();
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+});
+
+test("a stale same-session failure cannot override a newer successful load", async () => {
+  const initial = deferred();
+  const retry = deferred();
+  let calls = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      calls += 1;
+      return calls === 1 ? initial.promise : retry.promise;
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  retry.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      ...session("conv-a"), messages: [{ role: "assistant", content: "较新的会话内容" }],
+    }),
+  });
+  await flush();
+  initial.resolve({
+    ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
+  });
+  await flush();
+
+  assert.equal(app.elements["ai-status"].textContent, "");
+  assert.equal(app.elements["ai-send"].disabled, false);
+  assert.ok(app.elements["ai-messages"].children.some(
+    (child) => child.innerHTML.includes("较新的会话内容"),
+  ));
+});
+
+test("a stale same-session success cannot replace the latest conversation content", async () => {
+  const initial = deferred();
+  const retry = deferred();
+  let calls = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      calls += 1;
+      return calls === 1 ? initial.promise : retry.promise;
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  retry.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      ...session("conv-a"), messages: [{ role: "assistant", content: "最新的会话内容" }],
+    }),
+  });
+  await flush();
+  initial.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      ...session("conv-a"), messages: [{ role: "assistant", content: "过期的会话内容" }],
+    }),
+  });
+  await flush();
+
+  assert.ok(app.elements["ai-messages"].children.some(
+    (child) => child.innerHTML.includes("最新的会话内容"),
+  ));
+  assert.equal(app.elements["ai-messages"].children.some(
+    (child) => child.innerHTML.includes("过期的会话内容"),
+  ), false);
+});
+
+test("a current same-session retry failure stays visible after stale startup success", async () => {
+  const initial = deferred();
+  const retry = deferred();
+  const unhandled = [];
+  let calls = 0;
+  const onUnhandled = (error) => unhandled.push(error);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const app = setup((url, options) => {
+      if (url.endsWith("/ai/providers")) return response([]);
+      if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+      if (url.endsWith("/ai/sessions/conv-a")) {
+        calls += 1;
+        return calls === 1 ? initial.promise : retry.promise;
+      }
+      return response({});
+    }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+    await flush();
+
+    app.elements["ai-session-list"].children[0].children[0].click();
+    retry.resolve({
+      ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
+    });
+    await flush();
+    initial.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        ...session("conv-a"), messages: [{ role: "assistant", content: "stale startup content" }],
+      }),
+    });
+    await flush();
+
+    assert.equal(
+      JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-a",
+    );
+    assert.match(app.elements["ai-status"].textContent, /unavailable/);
+    assert.equal(app.elements["ai-send"].disabled, true);
+    assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+    assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+    assert.equal(app.elements["ai-messages"].children.some(
+      (child) => child.innerHTML.includes("stale startup content"),
+    ), false);
+    assert.equal(unhandled.length, 0);
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandled);
+  }
+});
+
+test("a current 404 while opening a conversation returns to the list", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-gone")]);
+    if (url.endsWith("/ai/sessions/conv-gone")) {
+      return response({ error: "unknown conversation" }, 404);
+    }
+    return response({});
+  });
+  await flush();
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  assert.equal(app.window.sessionStorage.getItem("wb_ai_conversation_alpha"), null);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-status"].textContent, "");
+});
+
+test("opening the provider picker supersedes an in-flight conversation restore", async () => {
+  const initial = deferred();
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return initial.promise;
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-new-session"].click();
+  await flush();
+  initial.resolve({ ok: true, status: 200, json: () => Promise.resolve(session("conv-a")) });
+  await flush();
+
+  assert.equal(app.elements["ai-provider-picker"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+});
+
+test("opening the provider picker before startup restore prevents that restore", async () => {
+  const providers = deferred();
+  let providerCalls = 0;
+  let restoreReads = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) {
+      providerCalls += 1;
+      return providerCalls === 1 ? providers.promise : response([]);
+    }
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      restoreReads += 1;
+      return response(session("conv-a"));
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-new-session"].click();
+  await flush();
+  providers.resolve(response([]));
+  await flush();
+
+  assert.equal(restoreReads, 0);
+  assert.equal(app.elements["ai-provider-picker"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+});
+
+test("a 503 while restoring keeps the conversation selected and shows a retryable error", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-temporary")]);
+    if (url.endsWith("/ai/sessions/conv-temporary")) {
+      return response({ error: "service unavailable" }, 503);
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-temporary") } });
+  await flush();
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-temporary",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+  assert.match(app.elements["ai-status"].textContent, /刷新页面可重试/);
+  assert.equal(app.elements["ai-send"].disabled, true);
+});
+
+test("a network failure while restoring keeps the conversation selected and shows a retryable error", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-network")]);
+    if (url.endsWith("/ai/sessions/conv-network")) {
+      return Promise.reject(new Error("Failed to fetch"));
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-network") } });
+  await flush();
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-network",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+  assert.match(app.elements["ai-status"].textContent, /刷新页面可重试/);
+  assert.equal(app.elements["ai-send"].disabled, true);
+});
