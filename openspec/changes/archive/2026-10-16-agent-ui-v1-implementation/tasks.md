@@ -26,6 +26,8 @@
 
 ## 4. Combined acceptance and handoff
 
-- [ ] 4.1 Independently review the combined PR135–137 implementation against this change and resolve any code/contract drift.
-- [ ] 4.2 Complete the required combined repository gates and record their exact results.
-- [ ] 4.3 Reconcile every task checkbox with review and gate evidence, then archive the change only after acceptance.
+- [x] 4.1 Independently review the combined PR135–137 implementation against this change and resolve any code/contract drift.
+- [x] 4.2 Complete the required combined repository gates and record their exact results.
+- [x] 4.3 Reconcile every task checkbox with review and gate evidence, then archive the change only after acceptance.
+
+Acceptance evidence: `docs/audits/2026-10-16-agent-ui-closeout.md`. Live specs already contain the accepted deltas, including the reload scenario; CLI archival uses `--skip-specs` to preserve later independently reviewed rail contracts.
