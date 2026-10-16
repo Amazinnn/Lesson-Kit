@@ -101,6 +101,7 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-10-16 Agent 工件交付（agent-ui-v1-implementation，PR129/135/136/137）：Agent 只能按已保存 Paper 记录产出 `paper_artifact` 工件卡（标题/题数取自记录，丢布模型 URL）；最新工件可临时展开 Adaptive Split 预览，历史工件卡不自动展开，打开组卷页始终是显式操作。
 - 2026-10-13 作者内容镜像字段扩展（expand-content-mirror-fields/PR123）：既有 `mirror`
   读写动作增加通过现有路径校验的逻辑图像引用和经难度 authority 校验的完整题目评级组；旧
   schema 不迁移列，旧投影只按下一修订升级。L0/L1/L3 更新既有读写责任，无新增 CLI 动作、图像

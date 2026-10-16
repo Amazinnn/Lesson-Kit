@@ -84,6 +84,7 @@
 | 对话内切换模型（头部下拉；丢弃缓存进程、下一轮生效；运行中 409；跨模型续接失败则开新会话并写明） | UI / API `PATCH /ai/sessions/{id}` | 人 | conversations `model` | 已实现（2026-09-26） |
 | 停止轮次 | UI | 人 | turn=cancelled | 已实现 |
 | replace_practice_selection（明确练习意图才生效；只替换组卷 Paper Scope，不组卷或开始 Practice Run） | 对话产出动作 | Agent | 练习 Scope | 已实现 |
+| paper_artifact（保存成功后的 Paper 工件卡：只按已保存 ps-NNN 记录展示标题/题数，不含 URL、零写入；打开组卷页是显式动作） | 对话产出动作 | Agent | —（只读已保存 Paper 记录） | 已实现（2026-10-16 PR137） |
 | content-bundle（内容批次：合法的纯新增动作自动执行，无关键词意图门；大清单暂存本对话 jobs 后由区块引用、小清单内联（`kind`/`type` 都认）→整份清单预检→一份备份→单事务 apply；**清单可跨章**，按每项声明的章发号/落图并**按章各记一个批次**，推不出章的条目点名拒收；**一轮里每个区块都应用**，学生说清几章就一轮导完；**题型（综合题/判断/小测）入库时可选，客观题允许无答案键**；失败逐条显式回对话流、零写入） | 对话产出动作 | Agent | 池内容 + `.lessonkit/figures/{course}/{chapter}/`（经门禁+按章批次标记）；补答案键走 `data update problem` | 已实现（2026-09-23；2026-09-25 跨章与多区块、题型与无键客观题） |
 | problem-patch（原地改已有题目：补答案键/改题型/补来源/把选项从题面拆进 `options`；单题 `data update problem`、批量 `ingest recipe problem-patch --apply`；未知字段与难度字段拒收，题号不可改；批次记旧值可回滚） | 对话产出动作 / CLI | Agent（仅明确指令）+人 | problems（原地 UPDATE，不插入不删行） | 已实现（2026-09-25） |
 | 内容审计（重复题/疑似片段/未标客观题/缺标题/图片引用；只读，可 `--check` 筛选、`--json` 输出） | CLI `data <ws> audit` | Agent | —（数据库与文件零写入；有发现返回 1） | 已实现（content-dedup-and-audit） |

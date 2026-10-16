@@ -114,6 +114,8 @@ flowchart TD
   G -- 有明确练习意图 --> H[replace_practice_selection<br/>仅替换组卷 Paper Scope]
   H --> H1[返回练习出发页<br/>组装 Paper / 开始 Practice Run 仍需单独操作]
   G -- 普通对话 --> I[绝不写任何学习记录]
+  A5[工件动作 paper_artifact<br/>只按已保存试卷记录] --> A6[对话内工件卡<br/>最新一张可临时预览]
+  A6 --> A7[显式点击后去组卷页]
 ```
 
 > 2026-10-12（agent-context）：当前可解析正式题是页面锚点；只有它属于同一 active practice 时才附前序题。否定或同时比较当前/上一题的表达保留页面默认焦点，未知题号与闪卡号不形成正式题焦点；这条上下文读取不写学习记录或移动游标。
