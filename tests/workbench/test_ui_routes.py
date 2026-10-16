@@ -367,6 +367,10 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("topbar", body)
         self.assertIn("<a class='brand' href='/'>lesson-kit</a>", body)
         self.assertNotIn("ai-identity", body)
+        self.assertLess(
+            body.index("id='agent-activity-float'"),
+            body.index("class='page-header'"),
+        )
 
     def test_ai_column_is_free_conversation_not_task_shortcuts(self):
         for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph"):

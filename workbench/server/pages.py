@@ -94,7 +94,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
         + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
-        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{middle_html}</main>"
+        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{_agent_activity_float()}{middle_html}{_agent_aux_surfaces()}</main>"
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics-core.js'></script>"
@@ -102,6 +102,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
            "<script src='/static/graph-physics.js'></script>" if graph_mode else "")
         + "<script src='/static/practice-deck.js'></script>"
         + "<script src='/static/practice-flow.js'></script>"
+        + "<script src='/static/agent-ui.js'></script>"
         + "<script src='/static/workbench.js'></script>"
     )
     return _base(f"workbench {workspace['name']}", body)
@@ -125,6 +126,37 @@ def _practice_scope_tray(kp_titles=None):
         "<button id='scope-tray-practice' class='primary scope-tray-practice' "
         "type='button' disabled>练习这些知识点</button>"
         "</section></aside></div>"
+    )
+
+
+
+def _agent_activity_float():
+    return (
+        "<section id='agent-activity-float' class='agent-activity-float hidden' aria-live='polite'>"
+        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent activity</p>"
+        "<h2 class='agent-surface-title'>正在处理</h2></div>"
+        "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
+        "aria-label='收起 Agent 活动'>×</button></div>"
+        "<div id='agent-activity-body'></div></section>"
+    )
+
+
+def _agent_aux_surfaces():
+    """Transient central surfaces owned by Agent runtime, not permanent page chrome."""
+    return (
+        "<section id='agent-bottom-dock' class='agent-bottom-dock hidden' aria-label='Agent 工作进度'>"
+        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>当前工作</p>"
+        "<h2 class='agent-surface-title'>执行进度</h2></div>"
+        "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
+        "aria-label='收起 Agent 工作进度'>×</button></div>"
+        "<div id='agent-bottom-dock-body'></div></section>"
+        "<aside id='agent-artifact-split' class='agent-artifact-split hidden' aria-label='Agent 工件预览'>"
+        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Artifact</p>"
+        "<h2 id='agent-artifact-title' class='agent-surface-title'>最新工件</h2></div>"
+        "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
+        "aria-label='关闭工件预览'>×</button></div>"
+        "<div id='agent-artifact-body'></div>"
+        "<div id='agent-artifact-actions'></div></aside>"
     )
 
 
@@ -700,7 +732,7 @@ def _problem_text(problem):
 
 def _ai_column(workspace_name, graph_mode=False, page_type=""):
     teacher = (
-        "<section id='ai-session-controls' aria-label='对话'>"
+        "<section id='ai-session-controls' class='agent-rail-home' aria-label='对话'>"
         "<div id='ai-session-list-view'>"
         "<div class='ai-session-list-head'><p class='side-label'>对话</p>"
         "<button id='ai-new-session' class='outline sm'>新建</button></div>"
@@ -720,13 +752,15 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<select id='ai-model-switch' class='ai-model-switch' title='切换模型或 Agent（下一轮生效）'>"
         "<option value=''>当前模型</option></select>"
         "</div>"
-        "<section class='ai-conversation'><div id='ai-messages'></div>"
-        "<p id='ai-status' class='muted' aria-live='polite'></p></section>"
+        "<section class='ai-conversation'><div id='ai-messages'></div></section>"
+        "<div id='ai-context-chips' class='agent-context-chips' aria-label='当前上下文'></div>"
+        "<div id='ai-composer-shell' class='agent-composer-shell'>"
+        "<div id='ai-approval-slot' class='agent-approval-slot hidden' aria-live='polite'></div>"
         "<div id='ai-input-row' class='ai-input-row'>"
         "<textarea id='ai-input' rows='2' placeholder='输入问题'></textarea>"
         "<div class='ai-send-actions'><button id='ai-stop' class='outline sm hidden'>停止</button>"
         "<button id='ai-send' class='primary sm' disabled>发送</button></div>"
-        "</div></section>"
+        "</div><p id='ai-status' class='muted' aria-live='polite'></p></div></section>"
     )
     if not graph_mode:
         return teacher
@@ -1067,6 +1101,7 @@ def _base(title, body):
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         f"<title>{html.escape(title)}</title>"
         "<link rel='stylesheet' href='/static/workbench.css'>"
+        "<link rel='stylesheet' href='/static/agent-ui.css'>"
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"
         "<script src='/static/katex/katex.min.js'></script>"
         f"</head><body>{body}</body></html>"

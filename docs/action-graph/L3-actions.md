@@ -77,6 +77,7 @@
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | 对话轮次（自动带页面上下文） | UI/CLI | 双 | conv 留痕 | 已实现 |
+| 收起 Agent 辅助工作面（本轮记住收起状态） | Activity Float / Bottom Dock / Artifact Split 折叠控件 | 人 | 当前浏览器对话轮次内存状态 | 已定义未实现（PR135 已有展示基础；运行状态映射见 PR136） |
 | 执行计划（命令/工具/搜索/回答活动归一化，同行状态更新，成功轮次可恢复） | UI 对话流 | 双 | conv 成功留痕 | 已实现（render-agent-execution-plan） |
 | 新建会话/选 provider（harness 锁定不换） | UI | 人 | conversations | 已实现 |
 | 模型条目配置（显示名自定、与 harness 解耦；无条目时回退「一 harness 一条」） | CLI `bridge add-model` | 人 | bridges.json `models` | 已实现（2026-09-26） |

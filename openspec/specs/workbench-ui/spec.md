@@ -1215,3 +1215,22 @@ At desktop widths, when the visible new-conversation provider picker has more mo
 #### Scenario: Scroll a long provider list
 - **WHEN** the learner opens the provider picker with a long model list and wheels up or down over the options at desktop width
 - **THEN** the options move in the requested direction while the picker heading and helper text remain visible
+
+### Requirement: Agent rail presentation keeps the learning page primary
+
+The Agent rail SHALL remain a conversation surface within the existing workbench shell, and the current Lesson Kit page SHALL remain the primary learning surface. The rail SHALL show compact chips for the current page and available page context without changing the context sent to the provider. Its text composer SHALL grow to fit entered text within the rail. Agent presentation SHALL reuse the existing workbench visual tokens; an idle rail SHALL NOT leave an auxiliary work surface open.
+
+#### Scenario: Read the current Agent context
+
+- **WHEN** the learner opens an Agent conversation on a workbench page
+- **THEN** the rail shows the current page and available page context as compact chips while the current Lesson Kit page remains visible
+
+#### Scenario: Enter a longer message
+
+- **WHEN** the learner enters multiple lines in the Agent composer
+- **THEN** the composer grows to show the entered text without replacing the conversation with a task dashboard
+
+#### Scenario: No runtime activity is present
+
+- **WHEN** the Agent is idle and no Artifact preview is active
+- **THEN** the central page remains unobstructed by an Activity Float or Bottom Dock

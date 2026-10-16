@@ -1,0 +1,206 @@
+/* Agent UI v1 — conversation-first rail and transient work surfaces.
+   This file intentionally reuses the Workbench Soft Mondrian tokens. */
+
+#ai-column.agent-rail,
+#ai-column:has(.agent-rail-home) {
+  background: var(--dsw-bg-layer-1);
+}
+
+.agent-rail-home,
+#ai-chat-view {
+  min-height: 0;
+}
+
+.ai-session-list-head,
+#ai-chat-head {
+  min-height: 34px;
+}
+
+#ai-chat-head {
+  flex: none;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--lk-ink);
+}
+
+#ai-model-switch {
+  min-width: 0;
+  height: 30px;
+  border-color: var(--dsw-border-l2);
+  background: var(--lk-paper);
+  font-size: 12px;
+}
+
+.ai-conversation {
+  border-top: 0 !important;
+  padding-top: 12px !important;
+}
+
+#ai-messages {
+  min-height: 0;
+  scrollbar-gutter: stable;
+}
+
+.agent-context-chips {
+  display: flex;
+  flex: none;
+  gap: 5px;
+  min-height: 28px;
+  padding: 8px 0 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.agent-context-chips::-webkit-scrollbar { display: none; }
+.agent-context-chip {
+  flex: none;
+  max-width: 190px;
+  padding: 2px 8px;
+  border: 1px solid var(--dsw-border-l2);
+  border-radius: 999px;
+  background: var(--lk-paper);
+  color: var(--dsw-label-secondary);
+  font-size: 11px;
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-context-chip.is-primary {
+  border-color: var(--lk-ink);
+  box-shadow: inset 3px 0 0 var(--lk-blue);
+  color: var(--lk-ink);
+}
+
+.agent-composer-shell {
+  position: relative;
+  flex: none;
+  padding-top: 8px;
+  border-top: 1px solid var(--dsw-border-l2);
+  background: var(--dsw-bg-layer-1);
+}
+
+#ai-input-row.ai-input-row {
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--lk-ink);
+  border-radius: 16px;
+  background: var(--lk-paper);
+  box-shadow: var(--dsw-shadow-lv1);
+}
+#ai-input {
+  min-height: 40px;
+  max-height: 160px;
+  resize: none;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#ai-input:focus {
+  outline: 2px solid var(--lk-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.ai-send-actions {
+  align-self: flex-end;
+  flex: none;
+}
+#ai-status {
+  min-height: 20px;
+  margin: 4px 2px 0;
+  font-size: 11px;
+  color: var(--dsw-label-tertiary);
+}
+
+/* The central Lesson Kit page remains primary. These surfaces are inert until
+   Agent runtime state asks for them. */
+.agent-activity-float,
+.agent-bottom-dock,
+.agent-artifact-split {
+  z-index: 9;
+  border: 1px solid var(--lk-ink);
+  background: var(--lk-paper);
+  box-shadow: var(--dsw-shadow-lv3);
+}
+
+.agent-activity-float {
+  position: sticky;
+  top: 12px;
+  float: right;
+  width: min(320px, calc(100% - 24px));
+  margin: -22px 0 12px 16px;
+  padding: 10px 12px;
+  border-radius: var(--dsw-radius-md);
+}
+
+.agent-bottom-dock {
+  position: sticky;
+  bottom: 12px;
+  width: min(860px, calc(100% - 16px));
+  margin: 18px auto 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.agent-artifact-split {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: var(--agent-split-width);
+  min-width: 0;
+  padding: 18px;
+  overflow-y: auto;
+  border-width: 0 0 0 1px;
+  box-shadow: -8px 0 28px rgb(0 0 0 / 6%);
+}
+#middle.agent-split-open {
+  padding-right: calc(var(--agent-split-width) + 22px);
+}
+
+/* The panel width and the space reserved for it come from one variable, so a
+   narrow central column can never let the preview ride over the Lesson Kit
+   page. Too little room turns the preview into an explicit overlay instead. */
+#middle { --agent-split-width: 340px; }
+
+.agent-surface-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.agent-surface-kicker {
+  margin: 0;
+  color: var(--dsw-label-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.agent-surface-title {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.agent-aux-collapse {
+  width: 28px;
+  padding: 0;
+}
+
+@media (max-width: 1100px) {
+  .agent-artifact-split {
+    position: fixed;
+    inset: 52px 12px 12px;
+    width: auto;
+    min-width: 0;
+    border: 0;
+  }
+  #middle.agent-split-open { padding-right: 40px; }
+}
+
+@media (max-width: 760px) {
+  .agent-activity-float,
+  .agent-bottom-dock {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
