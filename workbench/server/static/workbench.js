@@ -2189,6 +2189,7 @@
   var aiConversation = load(AI_CONVERSATION_KEY, "");
   var aiSurfaceConversation = "";
   var aiConversationSequence = 0;
+  var aiConversationLoadSequence = 0;
   var aiTurn = null;
   var aiSendPending = false;
   var aiProgressReadFailed = false;
@@ -2830,8 +2831,11 @@
     aiConversation = conversationId;
     store(AI_CONVERSATION_KEY, conversationId);
     var sequence = aiConversationSequence;
+    var loadSequence = ++aiConversationLoadSequence;
     return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
-      if (sequence !== aiConversationSequence || aiConversation !== conversationId) return null;
+      if (sequence !== aiConversationSequence
+          || loadSequence !== aiConversationLoadSequence
+          || aiConversation !== conversationId) return null;
       aiRenderConversation(record);
       return record;
     });
@@ -3203,6 +3207,7 @@
 
   function aiShowProviderPicker() {
     if (!aiProviderOptions) return;
+    aiConversationLoadSequence += 1;
     aiSetView("picker");
     // Show the last known catalog immediately; then refresh it without leaving
     // the picker blank while runtime discovery is in flight.
@@ -3258,6 +3263,7 @@
   });
   if (aiSessionList) {
     aiSetView("list");
+    var startupLoadSequence = aiConversationLoadSequence;
     var providerRequest = aiRefreshProviders().then(function () {
       if (aiProviderLoadError && aiSessionEmpty) {
         aiSessionEmpty.textContent = aiProviderLoadError;
@@ -3268,10 +3274,18 @@
       providerRequest,
       aiRefreshSessionList(),
     ]).then(function () {
+      if (startupLoadSequence !== aiConversationLoadSequence) return null;
       // The Agent rail is independent of the middle view: reopening a page
       // restores the conversation the learner left open instead of the list.
       if (!aiConversation) return null;
-      return aiLoadConversation(aiConversation).catch(function (error) {
+      var restoredConversation = aiConversation;
+      var restoreRequest = aiLoadConversation(restoredConversation);
+      var restoreSequence = aiConversationSequence;
+      var restoreLoadSequence = aiConversationLoadSequence;
+      return restoreRequest.catch(function (error) {
+        if (aiConversation !== restoredConversation
+            || aiConversationSequence !== restoreSequence
+            || aiConversationLoadSequence !== restoreLoadSequence) return null;
         if (error.status === 404) {
           aiConversation = "";
           aiSurfaceConversation = "";
