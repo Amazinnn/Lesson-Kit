@@ -221,7 +221,7 @@ class FakeStorage {
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
   reducedMotion = false, physics = Object.assign({ workerBacked: true }, GraphPhysics), setTimeoutFn = () => 0,
-  promptFn = undefined, confirmFn = undefined, selectors = {},
+  promptFn = undefined, confirmFn = undefined, selectors = {}, agentUISurfaces = null,
 }) {
   const document = {
     hidden: false,
@@ -243,8 +243,8 @@ function runWorkbench({
       });
       return element;
     },
-    querySelectorAll() {
-      return [];
+    querySelectorAll(selector) {
+      return selectors[selector] || [];
     },
     querySelector(selector) {
       return selectors[selector] || null;
@@ -260,6 +260,7 @@ function runWorkbench({
     prompt: promptFn,
     confirm: confirmFn,
     localStorage: local,
+    AgentUISurfaces: agentUISurfaces,
   };
   const sandbox = {
     document,
@@ -449,6 +450,30 @@ test("practice scope tray expands, removes items, collapses, and keeps the selec
   assert.equal(JSON.parse(storage.getItem("wb_scope_tray_open_alpha")), false);
   elements["scope-tray-practice"].click();
   assert.equal(app.window.location, "/w/alpha/practice");
+});
+
+test("central scope writer refreshes Agent context chips after scope changes", () => {
+  const storage = new FakeStorage();
+  const selection = new FakeElement("kp-selection", { dataset: { kpId: "kp-3" } });
+  const contextUpdates = [];
+  const agentUISurfaces = {
+    renderContext() {
+      contextUpdates.push(JSON.parse(storage.getItem("wb_kp_selection_alpha")));
+    },
+  };
+  runWorkbench({
+    elements: { layout: layout() },
+    storage,
+    fetch: () => jsonResponse({}),
+    selectors: { "[data-kp-selection]": [selection] },
+    agentUISurfaces,
+  });
+
+  selection.checked = true;
+  selection.trigger("change");
+
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-3"]);
+  assert.deepEqual(contextUpdates.at(-1), ["kp-3"]);
 });
 
 test("corrupt session state is discarded instead of breaking page startup", () => {

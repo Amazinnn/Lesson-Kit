@@ -74,8 +74,15 @@
   background: transparent;
   box-shadow: none;
 }
-#ai-input:focus { outline: none; }
-.ai-send-actions { align-self: flex-end; flex: none; }
+#ai-input:focus {
+  outline: 2px solid var(--lk-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.ai-send-actions {
+  align-self: flex-end;
+  flex: none;
+}
 #ai-status {
   min-height: 20px;
   margin: 4px 2px 0;
@@ -137,14 +144,22 @@
 .agent-artifact-split {
   position: absolute;
   inset: 0 0 0 auto;
-  width: min(44%, 520px);
-  min-width: 320px;
+  width: var(--agent-split-width);
+  min-width: 0;
   padding: 18px;
   overflow-y: auto;
   border-width: 0 0 0 1px;
   box-shadow: -8px 0 28px rgb(0 0 0 / 6%);
 }
-#middle.agent-split-open { padding-right: calc(min(44%, 520px) + 28px); }
+#middle.agent-split-open {
+  padding-right: calc(var(--agent-split-width) + 22px);
+}
+
+/* The panel width and the space reserved for it come from one variable, so a
+   narrow central column can never let the preview ride over the Lesson Kit
+   page. Too little room turns the preview into an explicit overlay instead. */
+#middle { --agent-split-width: 340px; }
+
 .agent-surface-head {
   display: flex;
   align-items: center;
@@ -235,17 +250,20 @@
 }
 
 @media (max-width: 1100px) {
-  .agent-artifact-split { width: min(52%, 480px); }
-  #middle.agent-split-open { padding-right: calc(min(52%, 480px) + 22px); }
-}
-@media (max-width: 760px) {
-  .agent-activity-float, .agent-bottom-dock { width: 100%; margin-left: 0; margin-right: 0; }
   .agent-artifact-split {
     position: fixed;
-    inset: 52px 0 0 0;
-    width: 100%;
+    inset: 52px 12px 12px;
+    width: auto;
     min-width: 0;
     border: 0;
   }
   #middle.agent-split-open { padding-right: 40px; }
+}
+@media (max-width: 760px) {
+  .agent-activity-float,
+  .agent-bottom-dock {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+  }
 }

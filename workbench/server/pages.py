@@ -94,7 +94,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
         + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
-        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{middle_html}{_agent_aux_surfaces()}</main>"
+        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{_agent_activity_float()}{middle_html}{_agent_aux_surfaces()}</main>"
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics-core.js'></script>"
@@ -130,8 +130,7 @@ def _practice_scope_tray(kp_titles=None):
 
 
 
-def _agent_aux_surfaces():
-    """Transient central surfaces owned by Agent runtime, not permanent page chrome."""
+def _agent_activity_float():
     return (
         "<section id='agent-activity-float' class='agent-activity-float hidden' aria-live='polite'>"
         "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent activity</p>"
@@ -139,6 +138,12 @@ def _agent_aux_surfaces():
         "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
         "aria-label='收起 Agent 活动'>×</button></div>"
         "<div id='agent-activity-body'></div></section>"
+    )
+
+
+def _agent_aux_surfaces():
+    """Transient central surfaces owned by Agent runtime, not permanent page chrome."""
+    return (
         "<section id='agent-bottom-dock' class='agent-bottom-dock hidden' aria-label='Agent 工作进度'>"
         "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>当前工作</p>"
         "<h2 class='agent-surface-title'>执行进度</h2></div>"
