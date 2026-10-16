@@ -419,6 +419,13 @@ function liveArtifactMarker(conversationId = "conv-a", previewRoute = route) {
   });
 }
 
+function artifactPreviewButton(app) {
+  const card = app.elements["ai-messages"].children.find((child) =>
+    child.className === "msg ai agent-artifact-card");
+  assert.ok(card, "the restored conversation contains an Artifact card");
+  return card.children[card.children.length - 1].children[0];
+}
+
 test("the finished turn artifact keeps its preview across the conversation reload", async () => {
   let loads = 0;
   const app = setup((url, options) => {
@@ -453,6 +460,14 @@ test("the finished turn artifact keeps its preview across the conversation reloa
     practice_set_id: "ps-001",
     route,
   });
+  app.ui.collapseAux();
+  assert.equal(app.window.sessionStorage.getItem(liveArtifactKey), null);
+  artifactPreviewButton(app).click();
+  assert.deepEqual(JSON.parse(app.window.sessionStorage.getItem(liveArtifactKey)), {
+    conversation_id: "conv-a",
+    practice_set_id: "ps-001",
+    route,
+  }, "explicitly reopening the current live Artifact restores its reload marker");
   assert.equal(
     app.elements["agent-artifact-split"].classList.contains("hidden"), false,
     "the newest artifact of a finished turn still previews after the reload",
@@ -550,6 +565,62 @@ test("starting a new user turn clears the live Artifact reload marker", async ()
   app.elements["ai-input"].value = "new question";
   app.elements["ai-send"].click();
 
+  assert.equal(app.window.sessionStorage.getItem(liveArtifactKey), null);
+});
+
+test("goal-assist turns clear the live Artifact marker through the shared submit path", async () => {
+  const calls = [];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([{ provider: "codex", name: "codex" }]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      return response({ ...session("conv-a"), messages: [{
+        role: "assistant", content: "saved ps-001.", action: paperArtifact,
+      }] });
+    }
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ turn_id: "turn-goal" });
+    }
+    return response({});
+  }, {
+    seed: {
+      wb_ai_conversation_alpha: JSON.stringify("conv-a"),
+      [liveArtifactKey]: liveArtifactMarker(),
+    },
+    setTimeout: () => 1,
+    clearTimeout: () => {},
+  });
+  await flush();
+  await flush();
+  assert.ok(app.window.sessionStorage.getItem(liveArtifactKey));
+
+  app.elements["goal-nl"].value = "add a study goal";
+  app.elements["goal-assist-send"].click();
+
+  assert.equal(app.window.sessionStorage.getItem(liveArtifactKey), null);
+  assert.ok(calls.some((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST"));
+});
+
+test("explicit preview of a restored historical Artifact does not create a live reload marker", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      return response({ ...session("conv-a"), messages: [{
+        role: "assistant", content: "saved ps-001.", action: paperArtifact,
+      }] });
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+  await flush();
+
+  assert.equal(app.elements["agent-artifact-split"].classList.contains("hidden"), true);
+  artifactPreviewButton(app).click();
+
+  assert.equal(app.elements["agent-artifact-split"].classList.contains("hidden"), false);
   assert.equal(app.window.sessionStorage.getItem(liveArtifactKey), null);
 });
 
