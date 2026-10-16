@@ -2187,6 +2187,7 @@
   var aiTurn = null;
   var aiSendPending = false;
   var aiProgressReadFailed = false;
+  var aiLiveArtifact = null;
   var aiPollTimer = null;
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
@@ -2449,6 +2450,7 @@
   function aiApplyAction(action) {
     if (!action) return;
     if (action.type === "paper_artifact") {
+      aiLiveArtifact = action;
       if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
         AgentUISurfaces.artifact(action);
       }
@@ -2750,7 +2752,10 @@
         });
         if (message.action && message.action.type === "paper_artifact"
             && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
-          AgentUISurfaces.artifact(message.action, { restore: true });
+          var livePreview = !!(aiLiveArtifact && message.action.practice_set_id
+            && aiLiveArtifact.practice_set_id === message.action.practice_set_id);
+          aiLiveArtifact = null;
+          AgentUISurfaces.artifact(message.action, { restore: !livePreview });
         } else if (!actions.length && message.action && message.action.type === "check_ingest") {
           aiApplyCheckAction(message.action);
         }

@@ -100,6 +100,9 @@ function setup(fetch, options = {}) {
     "agent-bottom-dock": new Element("agent-bottom-dock"),
     "agent-bottom-dock-body": new Element("agent-bottom-dock-body"),
     "agent-artifact-split": new Element("agent-artifact-split"),
+    "agent-artifact-title": new Element("agent-artifact-title"),
+    "agent-artifact-body": new Element("agent-artifact-body"),
+    "agent-artifact-actions": new Element("agent-artifact-actions"),
   };
   ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split", "ai-approval-slot"]
     .forEach((id) => elements[id].classList.add("hidden"));
@@ -392,3 +395,62 @@ test("a temporary progress read failure keeps the turn pending and does not invi
   assert.equal(calls.some((call) => call.options?.method === "POST"
     && call.url.endsWith("/ai/sessions/conv-a/turns")), false);
 });
+
+const paperArtifact = {
+  type: "paper_artifact", practice_set_id: "ps-001",
+  title: "Managed paper", item_count: 2,
+};
+
+test("the finished turn artifact keeps its preview across the conversation reload", async () => {
+  let loads = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([
+      session("conv-a", "running", "turn-a"), session("conv-b"),
+    ]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      loads += 1;
+      // The first load still reports the running turn, so one poll observes the
+      // finished answer; every later load is the durable record.
+      return response({
+        ...session("conv-a", loads === 1 ? "running" : "idle", loads === 1 ? "turn-a" : null),
+        messages: [{
+          role: "assistant", content: "saved ps-001.", action: paperArtifact,
+        }],
+      });
+    }
+    if (url.endsWith("/ai/sessions/conv-b")) return response(session("conv-b"));
+    if (url.includes("/ai/sessions/conv-a/turns/turn-a?")) {
+      return response({ events: [], turn: { status: "done", action: paperArtifact } });
+    }
+    return response({});
+  });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  assert.equal(app.ui.state.latestArtifact.practice_set_id, "ps-001");
+  assert.equal(
+    app.elements["agent-artifact-split"].classList.contains("hidden"), false,
+    "the newest artifact of a finished turn still previews after the reload",
+  );
+
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  assert.equal(app.elements["agent-artifact-split"].classList.contains("hidden"), true);
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  assert.equal(
+    app.elements["agent-artifact-split"].classList.contains("hidden"), true,
+    "restored history cards stay closed and never auto-preview",
+  );
+  assert.ok(
+    deepText(app.elements["ai-messages"]).includes("Managed paper"),
+    "the artifact card itself is still restored in the conversation",
+  );
+});
+
+function deepText(element) {
+  return (element.children || []).map(deepText).join(" ") + " " + (element.textContent || "");
+}
