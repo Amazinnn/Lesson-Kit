@@ -12,7 +12,6 @@
   var CURRENT_KEY = "wb_current_" + WS;
   var SIMILAR_KEY = "wb_similar_round_" + WS;
   var MODE_KEY = "wb_practice_mode_" + WS;
-  var INCLUDE_KEY = "wb_practice_include_" + WS;
   var RATING_MODE_KEY = "wb_practice_rating_mode_" + WS;
   var FLASH_DIRECTION_KEY = "wb_flash_direction_" + WS;
   var SELECTION_KEY = "wb_kp_selection_" + WS;

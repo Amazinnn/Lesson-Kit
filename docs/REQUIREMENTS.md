@@ -15,7 +15,7 @@ Lesson Kit 把课程源材料整理为课程级 SQLite 知识池，并提供每�
 - 五页工作台：练习、组卷、知识点、知识图谱、记录；顶栏章透镜只改变浏览范围，不改变练习选区。
 - 课程级知识池保存知识点、正式题、微题、闪卡、学习信号、反馈、调度、目标与计划。
 - `lesson-kit` 是唯一公开 CLI；Shell 只编排，Domain 保存纯规则，Data 是唯一 SQLite 写层。
-- 练习由弱项、显式选区、题型、来源、到期和可选难度条件拉取；任何排序都不得锁题。
+- 练习先由显式 Scope、题型策略、来源/难度条件和弱项/到期/错题证据**组装 Paper**；Practice Run 只执行已经冻结的 Paper items，任何排序或调度都不得锁题或中途注入新题。
 - 开放题遵循“先作答、再揭晓、后自评”；机器可判题按内容契约判分。
 - 普通 Agent 对话零学习写入；内容写入只经显式 Data 命令或带意图门的 Check 管线。
 - Check 管线直接把合规闪卡/微题写入正式池并记录批次；失败整批零写入，成功批次可整批回滚。
@@ -105,7 +105,7 @@ Agent 提供隐藏分布和建议配比，学生界面不显示裸分、分维�
   来源域）。每个域的词按空白切分、casefold，**域内 AND**；两域都给则跨域 AND。
 - `GET /pull-facets` 返回池内实际值及其计数，含 `origin_kinds` 第四维（浮窗不为空选项
   撒谎）；`GET /search/problems?stem=&source=` 按上面两个域搜索（旧 `q` 参数已删除，不映射），
-  两参数都空返回空集而非全池，命中后由浮窗按 `include_ids` 显式指定。
+  两参数都空返回空集而非全池；命中结果只用于只读发现或 Agent/CLI 作者工作流，浏览器不再通过 `include_ids` 把具体题注入练习。
 - `lesson-kit data search` 的查询同样按空白切成多词并要求全部命中。
 - 四个入口同一语义：CLI
   `--source-kind`/`--origin-kinds`/`--exam-year`/`--source-evidence`（均可重复）、
@@ -113,22 +113,15 @@ Agent 提供隐藏分布和建议配比，学生界面不显示裸分、分维�
   `origin_kinds`（外加此前缺失的单值 `exam_year`）、练习页的来源筛选浮窗（按工作区存
   sessionStorage，键为 `wb_practice_filters_v2_<ws>`，与知识点选区互不干扰，闪卡不受影响）。
 
-## 组一次练习与打印
+## 组卷、Paper 与打印
 
-- `lesson-kit pull` 是组练习的唯一入口，一次调用可组合六种选题方式：范围（`--kp`，缺省
-  章透镜）、单题指定（`--problem`，显式追加且不受筛选与上限约束）、条件筛选
-  （`source_kind`/`origin_kinds`/`source_group`/`exam_year`/`source_evidence`/难度四维/
-  `search_stem`/`search_source`；前四个可重复，语义见「来源筛选」）、薄弱（`--weak`，
-  用 `domain.weak` 的薄弱分）、到期（`--due`）、错题（`--wrong`，进度或最近尝试为错）。
-  范围决定候选集，条件筛选收窄，三个驱动在候选集内取并集，单题最后追加；每题回报
-  `reason`（`scope`/`weak`/`due`/`wrong`/`explicit`），缺口仍进 `shortage`，全程零写入。
-- 输出默认是**完整题目行**（与 `/pull` 一致），`--ids` 保留旧的题号形状。
-- `--plan` 落练习清单（UTF-8 JSON：标题 + 逐题 id/reason + 复现所需的输入），
-  `--input` 可重跑同一份清单得到同一批题；清单是输入，不落池、不是学习记录。
-- `--print <目录>` 出两份 Markdown：学生卷只含题干（无答案、无 `problem_id`/`kp_id`/
-  `source_kind`），解答卷题号逐条对齐、缺解写「待补」；默认文件名用章号，跨章卷用 `--base`。
-- `--check` 零写入预检：题数、缺口、缺解、重复、以及会泄漏进学生卷的内部标识。
-- 三个驱动都基于已有学习证据；新池上为空，先用范围或条件筛选。
+- `lesson-kit pull` 是当前确定性 **Paper Assembly** 引擎：可组合 Scope（`--kp`，缺省章透镜）、条件筛选、薄弱（`--weak`）、到期（`--due`）、错题（`--wrong`）和上限；每题回报 `scope / weak / due / wrong / explicit` 等入卷理由。
+- `--problem <id>` 只作为 Agent/CLI **作者工具**保留，用来在组卷时精确固定某题；浏览器不提供手动逐题选择，也不允许 `include_ids` 改变 Practice Run。
+- `--plan` 写可复现的 Paper manifest；v1 wire-level `kind: practice-set` 与 `ps-NNN` / `.lessonkit/practice-sets/` 仍是兼容实现名，不把产品级 Practice Set 定义成可执行对象。
+- `lesson-kit papers <workspace> save --input <manifest>` 把一张 Paper 保存到工作台兼容存储；产品级 Practice Set 是组织多张 Paper 的容器，本身不执行。
+- `--print <目录>` 输出学生卷与解答卷；`--check` 零写入检查题数、缺口、缺解、重复和泄漏。
+- 新 Practice Run 的产品来源语义统一为 `paper`。历史 `quick / practice_set / agent` 可读、可重放，但重放的新执行按 Paper 语义创建。
+- “练习某知识点”“建议复习”“再练同类”都先形成一个新的 Paper；已经开始或已经结束的 Paper 不会被动态追加题目。
 
 ## 接口归属
 

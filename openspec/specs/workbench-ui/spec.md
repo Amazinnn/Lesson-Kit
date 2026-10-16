@@ -4,8 +4,8 @@ The workbench UI is the minimal consumption surface of lesson-kit: a three-colum
 shell with a left navigation column (practice, knowledge points, knowledge
 graph), a middle page area, a session-end self-rating step, and a right AI
 conversation column whose context display prioritizes the current problem
-without ever limiting what the agent can see. Visual style copies the DeepSeek
-Harness design system.
+without ever limiting what the agent can see. Visual style follows the Soft
+Mondrian visual foundation defined by this specification.
 ## Requirements
 ### Requirement: Three-column shell with navigation
 
@@ -43,58 +43,40 @@ The workbench SHALL render a three-column desktop layout: a left navigation colu
 
 ### Requirement: Practice page
 
-The practice page SHALL require a non-empty selected knowledge-point scope,
-one content mode (`exam`, `micro`, `yes_no`, or `flash_card`), and one rating
-mode (`immediate` or `batch`) before pulling. The content mode SHALL remain
-fixed for the session and the rating mode SHALL determine only when feedback
-is written. Starting a session in any content mode SHALL collapse the study
-arrangement region (goal cards, staged list, suggestions, mode selection, and
-time view) so the middle column shows only the running practice flow, and
-SHALL restore that region when the session is exhausted or ended.
+The practice page SHALL be the departure surface for deciding what to practise
+and for resuming/running the current Paper. With no active Practice Run it MAY
+show scope, source/difficulty filters, suggestions, saved/recent Papers, rating
+preference, and other assembly inputs; these inputs constrain Paper Assembly and
+are not themselves an executable queue. Starting from a knowledge scope SHALL
+first determine a Paper's ordered items, then start the Practice Run from that
+fixed Paper.
 
-#### Scenario: Missing mode
-- **WHEN** scope, content mode, or rating mode is missing
-- **THEN** start remains disabled and no pull request is sent
+The learner-facing page SHALL NOT expose per-problem manual selection. Existing
+content-mode controls MAY remain temporarily as compatibility inputs while the
+mixed-format Paper UI is migrated, but they SHALL NOT define the product identity
+of a Paper or authorize dynamic pulling after execution begins. During an active
+run, the middle column MAY collapse arrangement controls so the fixed Paper's
+answering flow is primary; ending the run returns to the departure surface.
 
-#### Scenario: Unified rating
-- **WHEN** the learner selects `batch` and submits several answers
-- **THEN** answers remain in the tab session and no feedback is written until
-  the final review explicitly saves a rating
+#### Scenario: Start from an explicit scope
 
-#### Scenario: Structured choices
-- **WHEN** a selected problem supplies valid options and a correct option id
-- **THEN** the card renders those options with an accessible answer control
-- **AND** missing options never cause a mode fallback
+- **WHEN** the learner chooses a knowledge scope and starts practice
+- **THEN** Lesson Kit assembles a Paper from that scope before execution and the resulting Practice Run keeps that ordered item list fixed
 
-#### Scenario: Start with a selected mode
-- **WHEN** the learner opens a new practice session
-- **THEN** no problem is pulled until exactly one rating mode is selected and the learner starts
+#### Scenario: Resume an active Paper
 
-#### Scenario: Restore an active card
-- **WHEN** the learner refreshes practice in the same tab with an active card
-- **THEN** the same titled card and mode return without clearing the seen ids or pending unified ratings
+- **WHEN** the learner returns to practice with an unfinished active run
+- **THEN** the same Paper and progress are offered for resume without re-running assembly
 
-#### Scenario: Practice with reveal-then-feedback
-- **WHEN** a learner submits an answer in per-problem mode
-- **THEN** the card reveals its non-empty solution before rating is accepted
+#### Scenario: Filters do not mutate a running Paper
 
-#### Scenario: No repeats in a session
-- **WHEN** the page pulls a later problem
-- **THEN** every prior seen id is excluded and no card repeats
+- **WHEN** source, difficulty, or suggestion inputs change while a Paper is already running
+- **THEN** the current run is unchanged and those inputs apply only to a later Paper Assembly
 
-#### Scenario: Reject an invalid rating in place
-- **WHEN** the learner enters a value outside 1-5
-- **THEN** the visible card reports the validation error and no feedback request is sent
+#### Scenario: No manual problem picker
 
-#### Scenario: End a unified-rating session early
-- **WHEN** the learner ends a unified-rating session before exhaustion
-- **THEN** completed cards enter unified self-rating without a persistent write before each rating submission
-
-#### Scenario: Session focus
-
-- **WHEN** the learner starts a practice session in any content mode
-- **THEN** the middle column collapses to the practice flow and the study
-  arrangement region returns after the session ends
+- **WHEN** the learner opens the practice departure controls
+- **THEN** scope and filter controls may be present but no control can hand-pick a concrete problem into the Practice Run
 
 ### Requirement: Compact per-problem self-rating
 
@@ -136,61 +118,53 @@ empty or out-of-range rating SHALL be rejected inline at the input.
 
 ### Requirement: Session-end unified self-rating
 
-The session-end view SHALL present completed, unrated cards only for a unified-rating session. Each card SHALL show the learner answer and solution with a 1–5 input and optional note. Submitting a card’s score SHALL use the ordinary feedback behavior once and remove the scored card; skipped and unfinished problems SHALL not appear.
+The session-end view SHALL present completed, unrated Paper items only when the
+run uses unified self-rating. Each eligible item SHALL show the learner answer
+and solution with a 1–5 input and optional note. Submitting a score SHALL use the
+ordinary feedback behavior once and remove the scored item; skipped and
+unfinished items SHALL not be fabricated as completed ratings.
 
-#### Scenario: Rate completed cards at session end
+A practice-similar action MAY use the finished Paper's results and knowledge
+scope as inputs to **assemble a new Paper**. It SHALL NOT reopen, extend, or
+mutate the completed Practice Run.
 
-- **WHEN** the learner submits a score for one completed card
-- **THEN** feedback is recorded once and that card is removed while other cards remain
+#### Scenario: Rate completed items at run end
 
-#### Scenario: Rate pending problems at session end
+- **WHEN** the learner submits a score for one completed Paper item
+- **THEN** feedback is recorded once and that item is removed while other unrated completed items remain
 
-- **WHEN** the learner completes a unified-rating session with unrated cards
-- **THEN** only completed, unrated cards are listed for scoring
+#### Scenario: Practice similar after the run
 
-#### Scenario: Practice similar from the session end
-
-- **WHEN** the learner clicks the single practice-similar entry after a session ends
-- **THEN** a new session begins for the same weak knowledge-point groups and does not reuse the prior seen-id set
+- **WHEN** the learner chooses the practice-similar action
+- **THEN** Lesson Kit starts a new Paper Assembly from relevant scope/evidence and does not reuse the prior run as a mutable queue
 
 ### Requirement: Knowledge point display page
 
-The knowledge-point page SHALL render the body as its primary reading content and provide one prominent `练习此知识点` action. Activating it SHALL start a continuous non-repeating practice session scoped to that knowledge point. Linked formal problems SHALL remain reading-only and SHALL be listed directly under the knowledge point with no stored topic/group layer; each row SHALL show `display_title` and the complete safe-rendered problem statement without summary text, truncation, ellipsis, raw ids, or per-problem practice controls. Raw signal and scheduler parameters SHALL not be shown.
+The knowledge-point page SHALL render the body as its primary reading content and
+provide one prominent `练习此知识点` action. Activating it SHALL transfer that
+knowledge point as a Paper-assembly scope and open the practice departure flow;
+it SHALL NOT directly create a dynamic, non-repeating Practice Session.
 
-#### Scenario: Practice one knowledge point
+Linked formal problems SHALL remain reading-only and SHALL be listed directly
+under the knowledge point with no stored topic/group layer. Each row SHALL show
+`display_title` and the complete safe-rendered problem statement without summary
+text, truncation, ellipsis, raw ids, or per-problem practice controls. Raw signal
+and scheduler parameters SHALL not be shown.
+
+#### Scenario: Practise one knowledge point
 
 - **WHEN** a learner activates `练习此知识点`
-- **THEN** practice opens with that knowledge point as the pull scope and continues through unseen linked problems
+- **THEN** practice opens with that knowledge point as the Paper-assembly scope and concrete items are chosen by assembly rather than by direct per-problem controls
 
 #### Scenario: Browse linked problems directly
 
 - **WHEN** a knowledge point has several linked formal problems
-- **THEN** the page lists those problems directly without a synthetic topic or group heading
+- **THEN** the page lists those problems directly without a synthetic topic/group heading or an independent practice button per problem
 
 #### Scenario: Read a complete linked problem
 
 - **WHEN** the learner opens a knowledge-point page with linked problems
-- **THEN** each row shows the title and complete rendered statement without summary, truncation, raw id, or an independent practice button
-
-#### Scenario: Read a long linked problem
-
-- **WHEN** a linked problem exceeds 500 normalized characters
-- **THEN** its complete statement is shown and any compatible display summary is not rendered
-
-#### Scenario: Read a short linked problem
-
-- **WHEN** a linked problem is at most 500 normalized characters
-- **THEN** its complete statement is shown without generated summary or truncation
-
-#### Scenario: Missing long-problem summary
-
-- **WHEN** a long linked problem has no display summary
-- **THEN** its title and complete statement remain readable without fallback excerpt or ellipsis
-
-#### Scenario: Long statement has no summary
-
-- **WHEN** a long statement's compatible summary field is empty
-- **THEN** the linked row does not create or display a summary layer
+- **THEN** each row shows the title and complete rendered statement without summary, truncation, raw id, or manual-add action
 
 #### Scenario: Missing display title
 
@@ -201,11 +175,6 @@ The knowledge-point page SHALL render the body as its primary reading content an
 
 - **WHEN** rendered knowledge content contains a valid workspace knowledge-point wiki link
 - **THEN** activating it opens that formal knowledge-point route
-
-#### Scenario: See signal reasons
-
-- **WHEN** the Agent receives authoritative context for this knowledge point
-- **THEN** complete signal reasons remain available there while the student page shows only a concise action reminder
 
 #### Scenario: Hide implementation state
 
@@ -652,56 +621,35 @@ based on existing data.
 - **THEN** order alternates ascending, descending, ascending without changing
   selection or writing a learning record
 
-### Requirement: Practice page staged list and on-demand suggestions
+### Requirement: Practice page suggestions and assembly entry
 
-The practice page SHALL show one staged practice list that is a row view of the
-current explicit knowledge-point selection: each row SHALL carry the knowledge
-point name and a remove action, and removing a row SHALL deselect that point
-with the knowledge list, graph, and practice page kept in sync. The page SHALL
-offer one on-demand suggestion entry labeled with the current suggestion count;
-expanding it SHALL show candidate rows of `knowledge point name · one phrase ·
-join action`, sourced from the daily plan queue and due scheduling state,
-deduplicated to one row per knowledge point with at most one human-readable
-reason phrase (overdue phrases take precedence over plan phrases). Knowledge
-points already in the selection SHALL NOT appear as candidates, and candidate
-rows SHALL NOT show badges, dates, numbers, or raw scheduler parameters. The
-practice page SHALL also show the time view section (goal deadline month grid
-and 14-day workload bars) parallel to the study arrangement section, stacking
-below it on narrow viewports. Empty states SHALL be one sentence with at most
-one action.
+The practice page SHALL NOT maintain a Staged Practice List as a second product
+object between knowledge scope and Paper. The learner's explicit knowledge-point
+selection is Paper-assembly scope and may be summarized compactly; removing a
+scope item SHALL update that selection everywhere it is represented.
 
-#### Scenario: A due knowledge point appears as an on-demand suggestion
+The page MAY offer one on-demand suggestion entry sourced from the daily plan and
+due scheduling state, deduplicated to one row per knowledge point with at most
+one human-readable reason phrase. A suggestion action SHALL mean `据此组卷` (or
+equivalent assembly intent): it can establish/prefill a Paper scope, but it
+SHALL NOT join a knowledge point to an executable queue or inject concrete
+problems into an active Practice Run. Raw scheduler parameters remain hidden.
+The time view MAY remain beside the departure controls.
 
-- **WHEN** a schedule row is overdue by three days for a knowledge point that
-  is not currently selected
-- **THEN** expanding the suggestion entry shows that point with a single
-  reason phrase such as `拖了 3 天` and a join action, with no badge, date, or
-  scheduler parameter
+#### Scenario: A due knowledge point appears as an assembly suggestion
 
-#### Scenario: Joining a suggestion stages it for practice
+- **WHEN** a knowledge point is overdue and not already in the explicit assembly scope
+- **THEN** the suggestion surface may show it with one reason phrase and an action to assemble from it, without a staged-list join action
 
-- **WHEN** the learner joins a suggested knowledge point
-- **THEN** it appears in the staged practice list, disappears from the
-  suggestions, and the suggestion count decreases by one
+#### Scenario: Remove a scope item
 
-#### Scenario: Removing a staged row deselects it everywhere
+- **WHEN** the learner removes one knowledge point from the practice departure scope summary
+- **THEN** that point is deselected in the knowledge list, graph, and scope tray without altering any running Paper
 
-- **WHEN** the learner removes a staged row on the practice page
-- **THEN** the knowledge point is deselected and its checkbox in the knowledge
-  list and graph is unchecked in sync
+#### Scenario: Nothing selected and nothing suggested
 
-#### Scenario: Time view sits beside the study arrangement
-
-- **WHEN** the learner opens the practice page on a wide viewport
-- **THEN** the study arrangement and the time view render as parallel
-  sections, stacking vertically on narrow viewports
-
-#### Scenario: Nothing staged and nothing to suggest
-
-- **WHEN** the learner opens the practice page with no selection and no plan
-  or due suggestions
-- **THEN** the staged list shows one sentence with one action, and the
-  suggestion entry states there is nothing to add
+- **WHEN** no assembly scope, saved/recent Paper, or suggestion is available
+- **THEN** the practice departure page shows an honest compact empty state rather than inventing a staged practice queue
 
 ### Requirement: Complete text display across surfaces
 
@@ -724,41 +672,31 @@ a content-naming matter — the UI SHALL NOT mitigate it by hiding text.
 
 ### Requirement: Cross-page practice-scope tray
 
-Every workspace page SHALL expose one compact practice-scope control at the
-upper-right of the middle column. Activating it SHALL open a tray that lists
-the complete names of the knowledge points in the current explicit selection,
-allows an item to be removed, and offers one action to enter practice with the
-remaining selection. The list SHALL scroll vertically inside a bounded panel
-when it grows, and a minus control SHALL collapse the tray back to the compact
-button. Selection and open/collapsed state SHALL remain in sync while the
-learner navigates workspace pages in the same tab. The tray SHALL reuse the
-existing tab-local selection and SHALL NOT create server-side state.
+Every workspace page SHALL expose one compact Paper-assembly scope control at the
+upper-right of the middle column. Activating it SHALL open a tray that lists the
+complete names of explicitly selected knowledge points, allows an item to be
+removed, and offers one action to enter the practice departure page with that
+scope. The tray SHALL reuse existing tab-local selection and SHALL NOT create
+server-side learning or execution state.
 
-#### Scenario: Inspect a long selection
+The tray action SHALL NOT directly start a Practice Run. Scope answers what the
+learner wants to practise; the practice page/Agent determines the concrete Paper
+before execution. Open/collapsed state may remain browser-only.
 
-- **WHEN** the learner opens the tray with more selected knowledge points than
-  fit in its bounded list area
-- **THEN** every selected name remains available through vertical scrolling
-  inside the tray without expanding the page header
+#### Scenario: Inspect a long scope
+
+- **WHEN** the learner opens the tray with more selected knowledge points than fit in its bounded list area
+- **THEN** every selected name remains available through vertical scrolling without expanding the page header
 
 #### Scenario: Remove a selected point from the tray
 
 - **WHEN** the learner removes one knowledge point in the tray
-- **THEN** it disappears from the tray and is deselected in the knowledge list,
-  graph, and staged practice list through the existing selection state
+- **THEN** it disappears from the tray and is deselected in other scope representations without changing a running Paper
 
-#### Scenario: Collapse and navigate
+#### Scenario: Enter practice from the tray
 
-- **WHEN** the learner collapses the tray with the minus control and navigates
-  to another page in the same workspace tab
-- **THEN** the compact button remains visible, the tray remains collapsed, and
-  the selected knowledge points are unchanged
-
-#### Scenario: Start practice from the tray
-
-- **WHEN** at least one knowledge point is selected and the learner activates
-  the tray's practice action
-- **THEN** the practice page opens with that same explicit selection
+- **WHEN** at least one knowledge point is selected and the learner activates the tray action
+- **THEN** the practice departure page opens with the same Paper-assembly scope and no Practice Run begins until a Paper is determined
 
 ### Requirement: Metric projection morphology
 
@@ -970,31 +908,28 @@ change the current practice choreography.
 - **WHEN** a learner reaches the related-problem section
 - **THEN** the section is separated from the knowledge body and linked problems remain a direct, quiet list
 
-### Requirement: Flash card stacked presentation
+### Requirement: Flash card item stacked presentation
 
-Every flash card in a session SHALL render as two fully overlapped card
-faces: the prompt face on top and the other face completely hidden behind
-it, with no edges visible before the reveal. Selecting Flash Card SHALL
-offer exactly a forward or reverse session preference, forward by default,
-chosen once before the first pull and fixed for the whole session. The
-workbench SHALL NOT offer a direction switch during the session, and every
-saved card rating SHALL carry the session direction. One explicit reveal
-action SHALL disclose the hidden face: the top face SHALL drift a short
-distance counterclockwise and settle, and the bottom face SHALL drift a
-short distance clockwise before sliding out beneath it, fully visible with
-a slight tilt, while the page grows to fit both faces. Reduced-motion
-preferences SHALL show the same final state directly without positional
-animation.
+A flash-card item inside a Paper SHALL render as two fully overlapped card faces:
+the prompt face on top and the other face hidden behind it until the explicit
+reveal action. Revealing SHALL preserve the current stacked-card motion and
+reduced-motion terminal state.
+
+Direction is item/assembly metadata, not a separate executable Practice Session.
+A card-only compatibility flow MAY apply one forward/reverse preference to all
+cards when assembling its Paper; once a card item is in a running Paper, its
+direction SHALL remain fixed for that item and no swap control SHALL mutate it in
+place.
 
 #### Scenario: Reveal the hidden face
 
-- **WHEN** the learner activates the single reveal action on an unrevealed card
-- **THEN** the prompt face settles tilted aside, the other face becomes fully visible beneath it with a slight tilt, and no third control appears
+- **WHEN** the learner activates reveal on an unrevealed flash-card item
+- **THEN** the prompt and answer faces reach the existing readable revealed presentation
 
-#### Scenario: Direction is fixed per session
+#### Scenario: Direction is fixed after Paper assembly
 
-- **WHEN** a session starts with the reverse preference
-- **THEN** every card prompts from the back, the forward preference cannot be changed until the session ends, and no swap control exists
+- **WHEN** a flash-card item enters a Practice Run with reverse direction
+- **THEN** that item prompts from the back and its direction does not change during the run
 
 #### Scenario: Reduced motion reveal
 
@@ -1280,3 +1215,118 @@ At desktop widths, when the visible new-conversation provider picker has more mo
 #### Scenario: Scroll a long provider list
 - **WHEN** the learner opens the provider picker with a long model list and wheels up or down over the options at desktop width
 - **THEN** the options move in the requested direction while the picker heading and helper text remain visible
+
+### Requirement: Agent rail presentation keeps the learning page primary
+
+The Agent rail SHALL remain a conversation surface within the existing workbench shell, and the current Lesson Kit page SHALL remain the primary learning surface. The rail SHALL show compact chips for the current page and available page context without changing the context sent to the provider. Its text composer SHALL grow to fit entered text within the rail. Agent presentation SHALL reuse the existing workbench visual tokens; an idle rail SHALL NOT leave an auxiliary work surface open.
+
+#### Scenario: Read the current Agent context
+
+- **WHEN** the learner opens an Agent conversation on a workbench page
+- **THEN** the rail shows the current page and available page context as compact chips while the current Lesson Kit page remains visible
+
+#### Scenario: Enter a longer message
+
+- **WHEN** the learner enters multiple lines in the Agent composer
+- **THEN** the composer grows to show the entered text without replacing the conversation with a task dashboard
+
+#### Scenario: No runtime activity is present
+
+- **WHEN** the Agent is idle and no Artifact preview is active
+- **THEN** the central page remains unobstructed by an Activity Float or Bottom Dock
+
+### Requirement: Agent runtime work uses transient auxiliary surfaces
+
+Short provider activity SHALL use a replaceable Activity Float that presents the latest activity. Sustained multi-step activity SHALL use a temporary Bottom Dock that presents current milestones and latest status while the Agent rail remains usable. These surfaces SHALL NOT replace the existing conversation activity or execution history, accumulate as a separate task history, or expose a raw provider-event wall. A confirmed failure SHALL show a concise semantic summary while detailed output remains behind the existing collapsed disclosure. A failed progress read SHALL be represented as unavailable progress, not as proof that the provider turn failed.
+
+#### Scenario: A short activity is visible
+
+- **WHEN** a provider reports a short activity
+- **THEN** the Activity Float shows its readable label and current state, and a later short activity replaces that float content
+
+#### Scenario: Work continues across milestones
+
+- **WHEN** a provider reports sustained multi-step work
+- **THEN** the Bottom Dock shows the current milestones and latest status while the conversation remains available in the Agent rail
+
+#### Scenario: Detailed output is available
+
+- **WHEN** an activity includes provider output
+- **THEN** the transient surface keeps the semantic summary visible and the detailed output remains behind the existing closed disclosure in the conversation
+
+#### Scenario: A provider confirms a failure
+
+- **WHEN** the provider reports that the current turn failed
+- **THEN** the work surface shows a concise failure summary and retains detailed output behind the existing closed disclosure
+
+#### Scenario: Progress cannot be read
+
+- **WHEN** a progress request fails while the provider turn has no authoritative terminal status
+- **THEN** the interface reports that progress is unavailable, keeps the current turn gated against another send, and does not label the provider turn as failed
+
+### Requirement: Explicit collapse applies to the current Agent turn
+
+When the learner collapses an Activity Float or Bottom Dock, later activity updates in the same user turn SHALL NOT automatically reopen an auxiliary surface. A new user turn SHALL reset this suppression. Switching to another conversation SHALL clear the prior conversation's transient surfaces and collapse state.
+
+#### Scenario: Collapse while work is running
+
+- **WHEN** the learner collapses the Activity Float or Bottom Dock during a user turn and another activity arrives
+- **THEN** the new activity remains in the conversation history and no auxiliary surface automatically reopens for that turn
+
+#### Scenario: Start a later user turn
+
+- **WHEN** the learner sends a new message after the previous turn has ended
+- **THEN** automatic auxiliary-surface presentation is enabled for the new turn
+
+#### Scenario: Switch conversations
+
+- **WHEN** the learner opens a different conversation
+- **THEN** no activity surface or collapse state from the previous conversation appears in the new one
+
+### Requirement: Agent sending is single-flight and session-bound
+
+The Agent text composer SHALL remain editable while a turn is active, but the send action SHALL be gated from the first submit attempt until the current request is rejected or its turn reaches an authoritative terminal state. Click and Enter submission SHALL share this gate, including while the initial send request is awaiting its turn identifier. A conversation change SHALL invalidate pending approvals, activities, polling position, and callbacks owned by the previous conversation. Late responses from the previous conversation SHALL NOT update or act on the newly selected conversation.
+
+#### Scenario: Type during a running turn
+
+- **WHEN** an Agent turn is active
+- **THEN** the learner can continue editing the composer, but Send and Enter cannot submit another turn
+
+#### Scenario: Submit twice before receiving a turn identifier
+
+- **WHEN** the learner activates Send and then presses Enter before the first send request returns
+- **THEN** only one turn-creation request is sent
+
+#### Scenario: Switch sessions with pending runtime state
+
+- **WHEN** the learner switches conversations while an activity, progress request, or approval is pending
+- **THEN** the old state is cleared and any late callback is ignored without mutating or sending an action for the new conversation
+
+#### Scenario: Progress polling fails before a terminal response
+
+- **WHEN** the progress endpoint is temporarily unavailable while a turn is active
+- **THEN** the interface keeps the active turn identity and send gate, and reports unavailable progress without creating a retry turn
+
+### Requirement: Low-reversibility rollback requires an Approval Gate
+
+A content-batch rollback initiated from an Agent result card SHALL require an Approval Gate before the existing rollback operation is called. The gate SHALL identify the batch, explain the reason and impact, and replace the normal composer until the learner approves or cancels. Approval SHALL call the existing rollback operation once. Cancellation SHALL restore the composer without issuing a rollback request. Ordinary reversible provider activity SHALL NOT use this gate. A conversation change SHALL invalidate any approval callback from the prior conversation.
+
+#### Scenario: Review a rollback request
+
+- **WHEN** the learner selects the rollback control on a content-batch result
+- **THEN** the Approval Gate replaces the composer and identifies the batch and the effect of rollback
+
+#### Scenario: Approve rollback
+
+- **WHEN** the learner approves the displayed rollback
+- **THEN** the existing rollback operation is issued once for the displayed batch
+
+#### Scenario: Cancel rollback
+
+- **WHEN** the learner cancels the displayed rollback
+- **THEN** the composer returns and no rollback request is issued
+
+#### Scenario: Switch conversations while approval is open
+
+- **WHEN** the learner changes conversations before deciding on a rollback
+- **THEN** the gate closes and its old callback cannot roll back the prior batch

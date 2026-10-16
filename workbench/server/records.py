@@ -55,6 +55,7 @@ def _run_card(run):
     else:
         state = "已结束"
     kind = {
+        "paper": "试卷",
         "practice_set": "试卷",
         "agent": "Agent",
         "quick": "练习",

@@ -928,7 +928,7 @@ class UiRouteTests(unittest.TestCase):
         status, runs = self.fetch("/w/dmath/records?view=runs")
         self.assertEqual(status, 200)
         self.assertIn("已完成", runs)
-        self.assertIn("临时练习", runs)
+        self.assertIn("临时试卷", runs)
         self.assertIn("1 个不会", runs)
 
         status, attempts = self.fetch("/w/dmath/records?view=attempts")
@@ -991,7 +991,7 @@ class UiRouteTests(unittest.TestCase):
         status, payload = self.post_json(
             f"/api/w/dmath/practice/runs/{run_id}/replay", {})
         self.assertEqual(status, 200)
-        self.assertEqual(payload["source_kind"], "quick")
+        self.assertEqual(payload["source_kind"], "paper")
         self.assertEqual(
             [item["item_id"] for item in payload["items"]],
             ["dmath-ch06-prob-001"],

@@ -157,6 +157,15 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             if not isinstance(body, dict):
                 self._send_json(400, {"error": "request body must be a JSON object"})
                 return
+            if method == "POST" and path.startswith("/api/w/") and path.endswith("/pull") \
+                    and "include_ids" in body:
+                self._send_json(400, {
+                    "error": (
+                        "include_ids is retired from browser practice; "
+                        "compose a paper before starting a practice run"
+                    )
+                })
+                return
 
         name = params.pop("name", None)
         if name is None:

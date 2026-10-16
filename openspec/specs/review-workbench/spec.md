@@ -1,8 +1,10 @@
 ## Purpose
 
 The review workbench is the consumption side of lesson-kit: a browser workbench
-and shared CLI that turn the SQLite pool into weak-point-first daily practice,
-with flexible feedback and a forgetting curve used as background guidance only.
+and shared CLI that turn the SQLite pool into **Paper assembly** and Paper-backed
+Practice Runs. Weakness evidence, due state, scope, and source filters guide how a
+Paper is assembled; once a Practice Run starts, its ordered Paper items are fixed.
+Flexible feedback and forgetting-curve scheduling remain background guidance only.
 ## Requirements
 ### Requirement: Workspace registry
 
@@ -79,140 +81,125 @@ out: everything stays reachable, ordering only prioritizes pain points.
 - **WHEN** the user searches or browses beyond the ordered weak list
 - **THEN** all knowledge points of the course are still visible and selectable
 
-### Requirement: Problem pull engine
+### Requirement: Paper assembly engine
 
-The pull engine SHALL return problems linked to the requested knowledge points,
-ordered for weakness, with repeat practice in the same session de-prioritized.
-When durable problems are exhausted it SHALL report the shortage per knowledge
-point instead of inventing content; no candidate staging exists to fall back on.
-A pull MAY additionally accept explicitly named problem ids, which SHALL be
-included even when they fall outside the requested knowledge points or the
-active filters, and MAY select by learner evidence — weak knowledge points, due
-problems, and previously wrong problems. Every returned problem SHALL carry the
-reason it was selected. The weakness order used by learner-driven selection is
-the weak-point score; the `weak` ordering mode of a session pull orders by
-how many requested knowledge points a problem covers and is unchanged.
+The pull engine SHALL assemble the ordered problem portion of a Paper from an
+explicit knowledge-point scope, conditional source/difficulty filters, and
+learner evidence such as weak, due, or previously wrong items. Assembly SHALL be
+a read operation with zero learning writes. When durable problems are exhausted,
+it SHALL report the shortage per knowledge point instead of inventing content.
+Every selected problem SHALL carry the reason it entered the Paper.
 
-#### Scenario: Pull problems for a weak knowledge point
+Exact problem ids supplied by an Agent or CLI authoring workflow SHALL be
+included in the Paper when they resolve to existing durable problems, with
+reason `explicit`, even when they fall outside the requested scope or filters or
+exceed the requested problem count. This exact-id capability is an authoring
+primitive, not a learner-facing practice control: the browser SHALL NOT expose a
+per-problem picker that injects named problems into an active Practice Run.
 
-- **WHEN** the user starts practice for a selected weak knowledge point
-- **THEN** the engine returns durable problems for that point, weakness-ordered, with none repeated within the same session
+#### Scenario: Assemble a Paper for one weak knowledge point
+
+- **WHEN** the learner uses one weak knowledge point as the requested practice scope
+- **THEN** the engine assembles durable problems for a Paper constrained to that scope and reports the selection reasons before execution begins
 
 #### Scenario: Pool shortage is reported
 
-- **WHEN** a knowledge point has fewer durable problems than requested
-- **THEN** the response lists the shortfall per knowledge point and the UI points to the Check pipeline as the content path instead of fabricating problems
+- **WHEN** a knowledge point has fewer durable problems than requested for the Paper
+- **THEN** the assembly result lists the shortfall per knowledge point and points to the Check pipeline instead of fabricating problems
 
-#### Scenario: Explicitly named problems always come back
+#### Scenario: Agent pins an exact problem while authoring
 
-- **WHEN** a pull names a problem id outside the requested knowledge points
-- **THEN** that problem is returned with its selection reason while the scope still governs the rest
+- **WHEN** an Agent or CLI authoring workflow supplies an exact id for an existing durable problem while composing a Paper
+- **THEN** the Paper SHALL include that problem with reason `explicit`, even if it falls outside the requested scope or filters or exceeds the requested problem count, without creating a learner-side manual-pick affordance
 
-#### Scenario: Learner evidence selects problems
+#### Scenario: Learner evidence guides assembly
 
-- **WHEN** a pull selects by weak knowledge points, by due problems, or by previously wrong problems
-- **THEN** the returned problems are exactly those its evidence marks, and each carries the matching reason
+- **WHEN** Paper assembly is driven by weak knowledge points, due problems, or previously wrong problems
+- **THEN** the returned problems reflect that evidence and each carries the matching reason
 
-### Requirement: Practice session
+### Requirement: Paper-backed Practice Run
 
-A workbench practice session SHALL present one problem at a time from a
-weak-point-first, non-repeating queue. Before the first pull the learner SHALL
-choose per-problem or end-of-session self-rating, unless the learner's
-show-rating preference is off, in which case the session starts with the rating
-mode `off` and no self-rating surface appears during the round. Merely showing
-a problem, drafting, revealing a solution, skipping, or ending a session SHALL
-NOT write learning records — except that in an `off` session, an objective
-problem's recorded verdict SHALL write the derived learning conclusion (对 →
-mastered, 错 → wrong) to progress, current state, and schedule exactly once,
-without a rating event. A learner-requested Agent attempt CLI operation MAY
-record the active answer and an optional 1–5 learning rating. Scheduling SHALL
-never lock a problem.
+A Practice Run SHALL execute one already determined Paper. The run SHALL preserve
+the Paper's ordered item identities for its lifetime: viewing, answering,
+skipping, rating, scheduling updates, or Agent discussion SHALL NOT dynamically
+pull extra items into the running Paper. At most one active run exists per
+workspace execution resource.
 
-#### Scenario: Skip a problem without a learning record
+A Paper is not defined by one product-level content-mode choice. Existing
+`practice_mode` fields and card/problem rendering branches MAY remain as v1
+compatibility metadata while mixed-format execution is migrated, but they SHALL
+NOT restore the retired model in which selecting a mode creates a dynamic queue.
+The learner's rating preference controls feedback timing only. Merely displaying,
+drafting, revealing, skipping, or ending work SHALL NOT manufacture a learning
+record; existing explicit attempt/verdict/rating rules remain authoritative.
+Scheduling SHALL never lock an item.
 
-- **WHEN** the learner skips the current problem
-- **THEN** the next unseen problem is shown and no learner-state table is
-  changed
+#### Scenario: Start from an assembled Paper
+
+- **WHEN** a Paper's ordered items are fixed and the learner starts it
+- **THEN** those exact items become the Practice Run and no later scope or scheduler change mutates the run
+
+#### Scenario: Skip an item without a learning record
+
+- **WHEN** the learner skips the current Paper item without an explicit recorded conclusion
+- **THEN** execution advances according to the existing skip rules and no learner-state row is manufactured
 
 #### Scenario: Explicit rating records a learning conclusion
 
 - **WHEN** the learner submits a 1–5 self-rating for a completed problem
-- **THEN** the feedback, derived learner state, and schedule are persisted once
+- **THEN** feedback, derived learner state, and schedule are persisted once
 
-#### Scenario: Answer a problem in a session
+#### Scenario: Off-mode verdict remains compatible
 
-- **WHEN** the learner completes a problem and explicitly submits a rating
-- **THEN** the next unseen problem is shown after the single feedback write
+- **WHEN** a Paper item is objective and the run uses the compatibility rating mode `off`
+- **THEN** its recorded verdict derives the existing learning conclusion exactly once without synthesizing a rating event
 
-#### Scenario: An off session derives the conclusion from the verdict
-
-- **WHEN** a session with the rating mode `off` records an objective attempt
-  whose verdict is false
-- **THEN** the problem's progress becomes wrong and its schedule advances from
-  that conclusion exactly once, and no rated feedback event is written
-
-#### Scenario: An off session records a subjective attempt without deriving
-
-- **WHEN** a session with the rating mode `off` records a subjective attempt
-- **THEN** the attempt is stored and no learning conclusion is derived
-
-#### Scenario: An off session starts without a rating choice
-
-- **WHEN** the learner starts a round while the show-rating preference is off
-- **THEN** the round begins without the learner choosing a rating timing, and
-  the stored rating mode is `off`
-
-#### Scenario: Explicit off-card navigation completes execution without a rating
-
-- **WHEN** the learner explicitly advances an off-mode flash card
-- **THEN** the existing current-practice checkpoint records answered after reveal or stuck when skipped, without creating an attempt, feedback, learning state or schedule update
-- **AND** settling the last pending item archives the completed off round and clears the active resource, so refresh does not resurrect it
-
-#### Scenario: Revealing an off card does not complete it
-
-- **WHEN** an off-mode card is displayed, revealed, or revisited with backwards navigation
-- **THEN** no new execution completion or learning record is written until explicit forward completion of a pending item
-
-#### Scenario: Practice an un-due problem
-
-- **WHEN** the learner selects a problem that is not yet due
-- **THEN** it is shown and practiced normally with no lock or refusal
-
-#### Scenario: Agent records at the learner's request
+#### Scenario: Agent records only at the learner's request
 
 - **WHEN** the learner asks the Agent to record the active answer
-- **THEN** only the explicit attempt CLI call writes it; viewing or discussing
-  the draft alone does not
+- **THEN** only the explicit attempt CLI call writes it; viewing or discussing the draft alone does not
 
 ### Requirement: Durable practice run archive
 
-The single active-practice resource SHALL remain the execution authority. When
-that practice completes or is explicitly replaced or cleared, the workbench
-SHALL append one minimal `practice_runs` snapshot before deleting the active
-execution state. The snapshot SHALL preserve source identity, modes, ordered
-item identities/final states, and timestamps only. It SHALL NOT replace,
-duplicate, edit, or delete `problem_attempts` or `feedback_events`.
+The single active-practice resource SHALL remain the execution authority for one
+Paper-backed Practice Run. Every newly created execution SHALL use the product
+source semantic `paper`; historical `quick`, `practice_set`, or `agent` source
+values MAY remain readable as migration data, and replaying such history SHALL
+create a new Paper-sourced execution from the archived fixed items.
+
+When a run completes or is explicitly replaced or cleared, the workbench SHALL
+append one minimal `practice_runs` snapshot before deleting active execution
+state. The snapshot SHALL preserve Paper source identity/reference/label, ordered
+item identities and final states, rating compatibility metadata, and timestamps
+only. It SHALL NOT replace, duplicate, edit, or delete `problem_attempts` or
+`feedback_events`.
 
 #### Scenario: Completing the last item archives the run
 
-- **WHEN** the final pending item of an active practice is answered or marked stuck
-- **THEN** one completed run snapshot is appended and the active singleton is cleared
+- **WHEN** the final pending item of an active Paper is answered or marked stuck
+- **THEN** one completed Paper run snapshot is appended and the active singleton is cleared
 
-#### Scenario: Replacing an unfinished practice keeps both histories honest
+#### Scenario: Replacing an unfinished run keeps both histories honest
 
-- **WHEN** the learner explicitly replaces an unfinished active practice
-- **THEN** the old run is archived as abandoned, its existing attempts remain unchanged, and the new active practice starts independently
+- **WHEN** the learner explicitly replaces an unfinished Paper run
+- **THEN** the old run is archived as abandoned, its existing attempts remain unchanged, and the new Paper starts independently
 
-### Requirement: Reverse review from wrong results
+#### Scenario: Replay legacy history through the Paper boundary
 
-After a wrong or stuck result, the session SHALL offer to practice the same
-knowledge-point group again immediately, so the learner works the pain point
-until it yields.
+- **WHEN** a historical run labelled `quick`, `practice_set`, or `agent` is replayed
+- **THEN** its archived item order is reused but the new active execution stores the Paper source semantic
 
-#### Scenario: Re-practice after a wrong answer
+### Requirement: Re-assembly after wrong results
 
-- **WHEN** a problem is answered wrong or stuck
-- **THEN** the UI offers a "practice the same knowledge points again" action that pulls a fresh set for that group
+A wrong or stuck result MAY offer a follow-up action that assembles a **new
+Paper** from the relevant knowledge scope or learning evidence. The completed or
+running Paper SHALL never be extended in place, and the follow-up SHALL not
+silently inherit an old seen-id queue as its execution identity.
+
+#### Scenario: Build a follow-up Paper after a wrong answer
+
+- **WHEN** a problem is answered wrong or stuck and the learner chooses to practise similar material
+- **THEN** Lesson Kit assembles a new Paper from the relevant scope/evidence and starts it only after its item list is determined
 
 ### Requirement: Flexible feedback
 
@@ -245,50 +232,49 @@ request or create a feedback log.
 ### Requirement: Forgetting-curve scheduling as background
 
 The system SHALL maintain per-item scheduling state (repetitions, ease,
-interval, due date) updated on practice results. Scheduling SHALL influence
-ordering and on-demand suggestions only; it SHALL never hide, lock, or refuse
-items, and due items SHALL NOT be surfaced as a standing due list or through a
-separate review page. Due knowledge points SHALL be reachable as on-demand
-suggestions inside the practice page's staged-list flow, each with at most one
-human-readable reason phrase.
+interval, due date) updated on recorded practice results. Scheduling SHALL
+influence ordering, suggestions, and Paper Assembly only; it SHALL never hide,
+lock, refuse, or inject items into an already running Paper. Due items SHALL NOT
+be surfaced as a standing due list or through a separate review page.
 
-#### Scenario: Due items are reminded
+Due knowledge points MAY appear as on-demand practice suggestions with at most
+one human-readable reason phrase. Acting on such a suggestion SHALL establish or
+prefill a Paper-assembly scope; it SHALL NOT add a knowledge point or problem to
+a staged execution queue.
 
-- **WHEN** the workspace home is opened with due schedule rows whose knowledge
-  points are not currently selected
-- **THEN** the practice page's suggestion entry shows their count, and
-  expanding it lists each due knowledge point with one human reason phrase,
-  never raw scheduler parameters
+#### Scenario: Due items are suggested for Paper assembly
+
+- **WHEN** due schedule rows exist for knowledge points outside the learner's current assembly scope
+- **THEN** the practice departure surface can suggest those points with one human reason phrase and an action to assemble from them, never raw scheduler parameters
 
 #### Scenario: Schedule state updates after practice
 
 - **WHEN** a problem result is recorded
-- **THEN** its repetitions, ease, interval, and due date are updated in the
-  scheduling table
+- **THEN** its repetitions, ease, interval, and due date are updated in the scheduling table without mutating the running Paper
 
-### Requirement: Session interruption recovery
+### Requirement: Practice Run interruption recovery
 
-Recorded learning conclusions SHALL remain durable in the pool. The active practice mode, current problem, seen-problem set, and unified-rating queue SHALL remain tab-scoped in the existing browser session storage and SHALL be restored after refresh or page navigation in the same tab. Closing the tab MAY end unsubmitted active-session state and SHALL NOT manufacture a durable learning record.
+Recorded learning conclusions SHALL remain durable in the pool. The active
+Paper execution checkpoint — Paper source identity, fixed ordered items, cursor,
+and item completion states — SHALL be recoverable through the single active
+practice resource after refresh or navigation. Browser-only draft answer text,
+unsent notes, transient reveal state, and other unsubmitted interaction state MAY
+remain tab-scoped and SHALL NOT manufacture durable learning records when lost.
 
-#### Scenario: Resume after refreshing practice
+#### Scenario: Resume the same Paper after refresh
 
-- **WHEN** the learner refreshes or leaves and returns to practice in the same tab
-- **THEN** the selected mode, current problem, seen-problem set, and pending unified ratings are restored without pulling a duplicate problem
+- **WHEN** the learner refreshes or leaves and returns while a Practice Run is active
+- **THEN** the same fixed Paper items and execution progress are restored rather than re-running Paper Assembly
 
 #### Scenario: Recorded results survive browser closure
 
-- **WHEN** the learner closes the browser after submitting ratings and later reopens the workspace
-- **THEN** those recorded results remain in the pool and are reflected in later ordering
+- **WHEN** the learner closes the browser after recording results and later reopens the workspace
+- **THEN** those results remain in the pool and any surviving active Paper checkpoint remains the execution authority
 
-#### Scenario: Resume after closing the browser
+#### Scenario: Unsubmitted browser state creates no record
 
-- **WHEN** the learner closes the browser mid-session and later reopens the workspace
-- **THEN** recorded results are intact and practice can begin from current pool state without inventing records for the closed tab's unfinished actions
-
-#### Scenario: Unsubmitted state creates no record
-
-- **WHEN** the browser tab ends with a draft, skipped item, or pending unsubmitted rating
-- **THEN** no attempt, feedback, signal, progress, or schedule row is added for that unfinished action
+- **WHEN** a tab ends with an unsent draft, note, reveal state, or pending unsubmitted rating
+- **THEN** no attempt, feedback, signal, progress, or schedule row is fabricated from that transient state
 
 ### Requirement: Grading input modes
 
@@ -511,29 +497,27 @@ exists.
 - **THEN** the workbench starts the requested mode directly without offering
   or requiring a card session
 
-### Requirement: Scoped include filter
+### Requirement: Browser manual include filter is retired
 
-A scoped pull MAY carry `include_ids`; returned problems SHALL then be
-restricted to those identifiers within the requested knowledge-point scope.
-Combining `include_ids` with the unscoped `all` mode SHALL be rejected, and
-the shortage report SHALL keep reflecting the remaining unfilled demand. The
-super CLI SHALL expose the same filter, so a caller that can reach `/pull` is
-not limited to the browser for it.
+`include_ids` SHALL NOT be a learner-facing browser practice capability. Browser
+`POST /pull` callers that send it SHALL be refused rather than silently changing
+which concrete problems enter a Practice Run. Exact problem selection remains
+available only through the explicit Agent/CLI Paper-authoring primitive (for
+example `--problem`) and SHALL occur before the Paper starts.
 
-#### Scenario: Pull one due problem
+Low-level or historical CLI compatibility code MAY continue to understand a
+scoped include filter during migration, but live product documentation and new
+UI behavior SHALL NOT treat it as a practice control.
 
-- **WHEN** a scoped pull carries `include_ids` with one durable problem id
-- **THEN** only that problem is returned
+#### Scenario: Stale browser caller sends include ids
 
-#### Scenario: Include filter with unscoped all mode
+- **WHEN** a browser practice pull carries `include_ids`
+- **THEN** the request is rejected with an explicit migration message and no Practice Run is changed
 
-- **WHEN** a pull carries `include_ids` together with `mode: all`
-- **THEN** the request is rejected with 400 and nothing is pulled
+#### Scenario: Agent pins a problem through Paper authoring
 
-#### Scenario: Agent uses the include filter
-
-- **WHEN** the Agent passes the include filter to the CLI
-- **THEN** the same restriction applies and the response reports the same shortage
+- **WHEN** an Agent needs one known problem in a Paper
+- **THEN** it uses the exact-problem authoring path before execution rather than the retired browser include filter
 
 ### Requirement: Directional feedback key
 
@@ -829,34 +813,21 @@ identifier exists and SHALL disappear only when that content does.
 
 ### Requirement: Chapter lens scoping
 
-The chapter lens SHALL scope the reading surfaces — the knowledge point list
-page, the knowledge point detail page, the knowledge graph page, and the
-practice page's suggestion range — and SHALL NOT constrain the practice
-selection (the staged list). A selection MAY span chapters and SHALL survive
-chapter switching. Ordering rules (weakness first, due reminders as background)
-SHALL remain unchanged inside any lens, and no item SHALL ever be locked or
-hidden by the lens beyond the reading scope it sets. The pages SHALL name the
-lens they are showing, so a whole-course page never claims to be a chapter.
+The chapter lens SHALL scope reading surfaces — knowledge-point list/detail,
+knowledge graph, and practice suggestions — and MAY provide the default scope for
+Paper Assembly. It SHALL NOT define or mutate the contents of a running Paper.
+An explicitly chosen Paper-assembly scope MAY span chapters and SHALL survive
+chapter-lens changes in the same tab until the learner changes that scope.
 
-#### Scenario: Views follow the lens
+#### Scenario: Lens narrows default assembly suggestions
 
-- **WHEN** a chapter is selected
-- **THEN** the knowledge point list, the knowledge point detail, the knowledge graph, and the practice suggestions show only that chapter's items
+- **WHEN** one chapter is active and the learner has not established another explicit assembly scope
+- **THEN** practice suggestions and default Paper Assembly use that chapter without creating an executable knowledge-point queue
 
-#### Scenario: Selection survives switching
+#### Scenario: Explicit scope survives lens changes
 
-- **WHEN** the learner has staged knowledge points from two chapters and then switches the lens to one of them
-- **THEN** the staged list still holds both chapters' knowledge points and practice still draws from the full selection
-
-#### Scenario: Whole-course lens shows everything
-
-- **WHEN** the lens is off
-- **THEN** every chapter's items are visible on the reading surfaces
-
-#### Scenario: The pages say which lens is active
-
-- **WHEN** the lens is off, and again when a chapter is selected
-- **THEN** the page header names the whole course in the first case and the chapter in the second, and the knowledge-point heading says 全部知识点 or 本章知识点 to match
+- **WHEN** the learner has explicitly selected knowledge points across chapters and changes the reading lens
+- **THEN** the selected assembly scope remains unchanged while the reading surfaces follow the new lens
 
 ### Requirement: Provenance-filtered problem pull
 
@@ -1087,34 +1058,28 @@ whitespace and keep only rows carrying every one of its words.
 
 ### Requirement: Source filter panel on the practice page
 
-The practice page SHALL offer a filter panel, opened from a launch button and
-rendered as a floating panel: one checkbox group per filter dimension (values
-and counts derived from the pool), two search boxes — one for the **stem**
-domain and one for the **source** domain — that find problems and let the
-learner pick them into the selection, and a clear-all action. The origin
-dimension SHALL be labelled in the learner's words: 历年原题, 改编, AI生成. Each
-search box SHALL accept several whitespace-separated words, every word of which
-must be found in that box's own domain, and a result row SHALL show the stem
-summary together with its source line. Active filter selections SHALL persist
-per workspace for the session under a versioned storage key, the launch button
-SHALL show the active count, and the next pull SHALL combine the dimensions (and
-the picked problems) with the existing scope and mode. The search endpoint SHALL
-take one query parameter per domain and SHALL NOT accept a single combined
-parameter: there is no alias for the retired one, because its meaning — one
-haystack — is what the two domains replace. A search with no word in either box
-SHALL return nothing rather than list the pool.
+The practice departure page SHALL offer a floating source-filter panel with one
+checkbox group per filter dimension, using values and counts derived from the
+pool. Active dimension selections SHALL persist per workspace for the browser
+session and SHALL constrain the next Paper Assembly together with its scope.
+Dimension semantics remain OR within a dimension and AND across dimensions.
 
-#### Scenario: Dimensions and picked problems reach the pull
+The panel SHALL NOT provide search-result checkboxes, a picked-problem set, or
+any other per-problem learner control. Stem/source keyword search endpoints MAY
+remain available for read-only discovery and Agent/authoring workflows, but a
+search hit SHALL NOT be injected into learner practice through `include_ids`.
 
-- **WHEN** the learner ticks a document, a year, an origin, and picks two problems from the search results, then starts a round
-- **THEN** the pull request carries those dimensions — including the origin — and the picked problem ids, and the returned items all match
+#### Scenario: Filter dimensions reach Paper Assembly
 
-#### Scenario: Two boxes, two domains
+- **WHEN** the learner selects a document, year, and origin before assembling a Paper
+- **THEN** those dimensions constrain the assembly and the Paper is fixed before a Practice Run begins
 
-- **WHEN** the learner types a word in the stem box and another in the source box and searches
-- **THEN** the request carries one parameter per box, and a problem matching only one of the two words is not returned
+#### Scenario: No per-problem picking in the filter panel
 
-#### Scenario: Filters persist and clear
+- **WHEN** the learner opens the source-filter panel
+- **THEN** the panel exposes dimension filters but no checkbox or action that adds a specific search result to practice
 
-- **WHEN** the learner reloads the page with filters active and later presses clear-all
-- **THEN** the badge and the panel restore exactly, and the cleared state sends no filter dimensions
+#### Scenario: Clearing filters changes no running Paper
+
+- **WHEN** the learner clears source filters while a Practice Run already exists
+- **THEN** the active Paper items remain unchanged and the cleared filters affect only later assembly

@@ -29,7 +29,6 @@
     var CURRENT_KEY = "wb_current_" + WS;
     var SIMILAR_KEY = "wb_similar_round_" + WS;
     var MODE_KEY = "wb_practice_mode_" + WS;
-    var INCLUDE_KEY = "wb_practice_include_" + WS;
     var RATING_MODE_KEY = "wb_practice_rating_mode_" + WS;
     var FLASH_DIRECTION_KEY = "wb_flash_direction_" + WS;
   /* ---------- practice session ---------- */
@@ -223,6 +222,45 @@
       if (!practiceError) return;
       practiceError.textContent = "";
       practiceError.classList.add("hidden");
+      if (retryPractice) retryPractice.classList.add("hidden");
+    }
+
+    function showAssemblyReport(selection, requested) {
+      if (!practiceError) return;
+      var items = selection.items || [];
+      var shortage = Array.isArray(selection.shortage) ? selection.shortage : [];
+      var reasonLabels = {
+        explicit: "作者指定", wrong: "此前答错", due: "到期复习",
+        weak: "薄弱点优先", scope: "范围匹配",
+      };
+      var itemReasons = items.map(function (item, index) {
+        var title = String(item.title || item.item_id || "题目")
+          .replace(/\s+/g, " ").trim();
+        if (title.length > 72) title = title.slice(0, 72) + "…";
+        return (index + 1) + ". “" + title + "”（"
+          + (reasonLabels[item.reason] || "原因未提供") + "）";
+      });
+      var report = items.length
+        ? "本轮组卷：" + items.length + "/" + requested + " 道。"
+        : "本轮无法组题（0/" + requested + " 道），当前范围没有可用题目。";
+      if (itemReasons.length) report += " 逐题依据：" + itemReasons.join("；") + "。";
+
+      var tray = document.getElementById("scope-tray");
+      var names = {};
+      if (tray && tray.dataset && tray.dataset.kpNames) {
+        try { names = JSON.parse(tray.dataset.kpNames) || {}; } catch (_) {}
+      }
+      var shortKps = shortage.map(function (kpId) {
+        return names[kpId] || kpId;
+      });
+      if (shortKps.length) {
+        report += " 可用题数少于请求量的知识点：" + shortKps.join("、") + "。";
+      }
+      if (!items.length || items.length < requested || shortKps.length) {
+        report += "请检查筛选条件；若正式题目不足，可通过 Check 管线检查并补充。系统不会虚构题目。";
+      }
+      practiceError.textContent = report;
+      practiceError.classList.remove("hidden");
       if (retryPractice) retryPractice.classList.add("hidden");
     }
 
@@ -899,7 +937,6 @@
       var mode = sessionStorage.getItem(MODE_KEY);
       if (!kps.length || !mode || pulling) return;
       var exclude = PracticeDeck.ids(practiceDeck);
-      var includeIds = load(INCLUDE_KEY, null);
       clearPracticeError();
       pulling = true;
       if (mode === "flash_card") {
@@ -942,19 +979,12 @@
         exclude_ids: exclude,
       };
       applyFiltersToPullBody(pullBody);
-      if (includeIds && includeIds.length) {
-        pullBody.include_ids = (pullBody.include_ids || []).concat(
-          includeIds.filter(function (id) {
-            return (pullBody.include_ids || []).indexOf(id) < 0;
-          }));
-      }
       api("/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pullBody),
       }).then(function (result) {
         pulling = false;
-        sessionStorage.removeItem(INCLUDE_KEY);
         if (!result.problems.length) {
           finishExhausted();
           return;
@@ -999,8 +1029,6 @@
 
       var pullBody = { kp_ids: kps, n: count, mode: contentMode };
       applyFiltersToPullBody(pullBody);
-      var includeIds = load(INCLUDE_KEY, null);
-      if (includeIds && includeIds.length) pullBody.include_ids = includeIds.slice();
       var request = JSON.parse(JSON.stringify(pullBody));
       return api("/pull", {
         method: "POST",
@@ -1009,8 +1037,13 @@
       }).then(function (result) {
         return {
           request: request,
+          shortage: result.shortage || [],
           items: (result.problems || []).map(function (problem) {
-            return { item_type: "problem", item_id: problem.problem_id };
+            return {
+              item_type: "problem", item_id: problem.problem_id,
+              title: problem.display_title || problem.problem_text || problem.problem_id,
+              reason: problem.reason,
+            };
           }),
         };
       });
@@ -1035,19 +1068,30 @@
       clearPracticeError();
       pulling = true;
       selectFixedItems(kps, contentMode).then(function (selection) {
-        if (!selection.items.length) throw new Error("当前范围没有可用题目。");
+        if (contentMode !== "flash_card") {
+          showAssemblyReport(selection, selection.request.n);
+        }
+        if (!selection.items.length) {
+          if (contentMode === "flash_card") throw new Error("当前范围没有可用闪卡。");
+          pulling = false;
+          return null;
+        }
         return post("/practice/current", {
           source_kind: "quick",
           kp_ids: kps,
           practice_mode: contentMode,
           rating_mode: ratingMode,
-          items: selection.items,
+          items: selection.items.map(function (item) {
+            var fixed = { item_type: item.item_type, item_id: item.item_id };
+            if (item.direction) fixed.direction = item.direction;
+            return fixed;
+          }),
           replace: replace,
         });
       }).then(function (practice) {
+        if (!practice) return;
         pulling = false;
         activePractice = practice;
-        sessionStorage.removeItem(INCLUDE_KEY);
         sessionStorage.setItem(MODE_KEY, contentMode);
         sessionStorage.setItem(RATING_MODE_KEY, ratingMode);
         if (contentMode === "flash_card") {
@@ -1083,7 +1127,6 @@
         });
       }).then(function () {
         pulling = false;
-        sessionStorage.removeItem(INCLUDE_KEY);
         window.location = "/w/" + encodeURIComponent(WS) + "/practice-sets";
       }).catch(function (error) {
         pulling = false;
@@ -1237,14 +1280,17 @@
     var filterCount = document.getElementById("filter-count");
     var filterPopup = document.getElementById("filter-popup");
     var filterFacets = null;
-    var filterState = load(FILTER_KEY, null)
-      || { source_kinds: [], origin_kinds: [], exam_years: [], docs: [], picked: {} };
-    if (!filterState.picked) filterState.picked = {};
+    var storedFilterState = load(FILTER_KEY, null) || {};
+    var filterState = {
+      source_kinds: storedFilterState.source_kinds || [],
+      origin_kinds: storedFilterState.origin_kinds || [],
+      exam_years: storedFilterState.exam_years || [],
+      docs: storedFilterState.docs || [],
+    };
 
     function filterActiveCount() {
       return filterState.source_kinds.length + filterState.origin_kinds.length
-        + filterState.exam_years.length
-        + filterState.docs.length + Object.keys(filterState.picked).length;
+        + filterState.exam_years.length + filterState.docs.length;
     }
 
     function updateFilterBadge() {
@@ -1267,8 +1313,6 @@
         }
       });
       if (Object.keys(dimensions).length) pullBody.filters = dimensions;
-      var pickedIds = Object.keys(filterState.picked || {});
-      if (pickedIds.length) pullBody.include_ids = pickedIds;
     }
 
     function filterDimension(name, label, entries, labels) {
@@ -1293,14 +1337,6 @@
           filterFacets.origin_kinds || [], ORIGIN_LABELS)
         + filterDimension("exam_years", "考查年份", filterFacets.exam_years || [])
         + filterDimension("docs", "来源文档", filterFacets.docs || [])
-        + "<div class='filter-dimension'><h3>搜索选题</h3>"
-        + "<div class='filter-search'>"
-        + "<input id='filter-search-stem' type='search' "
-        + "placeholder='题干关键词（空格分隔）'>"
-        + "<input id='filter-search-source' type='search' "
-        + "placeholder='来源关键词（空格分隔）'>"
-        + "<button id='filter-search-go' class='outline sm'>搜</button></div>"
-        + "<div id='filter-search-results' class='filter-search-results'></div></div>"
         + "<div class='filter-actions'>"
         + "<button id='filter-clear' class='ghost sm'>清除全部</button>"
         + "<button id='filter-close' class='outline sm'>关闭</button></div>";
@@ -1313,68 +1349,10 @@
           saveFilters();
         });
       });
-      var searchGo = filterPopup.querySelector("#filter-search-go");
-      var stemBox = filterPopup.querySelector("#filter-search-stem");
-      var sourceBox = filterPopup.querySelector("#filter-search-source");
-      if (searchGo && stemBox && sourceBox) {
-        var runSearch = function () {
-          // Two keyword domains: the stem box narrows what the problem says, the
-          // source box narrows where it came from, and each of them splits on
-          // whitespace into words that must all match inside its own domain.
-          var stemTerm = stemBox.value.trim();
-          var sourceTerm = sourceBox.value.trim();
-          var target = filterPopup.querySelector("#filter-search-results");
-          if (!stemTerm && !sourceTerm) { target.innerHTML = ""; return; }
-          var query = "?stem=" + encodeURIComponent(stemTerm)
-            + "&source=" + encodeURIComponent(sourceTerm);
-          api("/search/problems" + query).then(function (found) {
-            if (!found.problems.length) {
-              target.innerHTML = "<p class='muted'>没有匹配的题目。</p>";
-              return;
-            }
-            target.innerHTML = found.problems.map(function (problem) {
-              var checked = problem.problem_id in filterState.picked;
-              var stem = problem.stem || problem.title || "";
-              var source = problem.source_evidence
-                ? "<span class='filter-hit-source'>" + escapeHtml(problem.source_evidence)
-                  + "</span>" : "";
-              return "<label class='filter-option filter-hit'>"
-                + "<input type='checkbox' data-picked-id='"
-                + escapeHtml(problem.problem_id) + "'"
-                + (checked ? " checked" : "") + ">"
-                + "<span class='filter-hit-text'>"
-                + "<span class='filter-hit-stem'>" + escapeHtml(stem) + "</span>"
-                + source + "</span></label>";
-            }).join("");
-            target.querySelectorAll("[data-picked-id]").forEach(function (box) {
-              box.addEventListener("change", function () {
-                if (box.checked) {
-                  var hit = found.problems.filter(function (problem) {
-                    return problem.problem_id === box.dataset.pickedId;
-                  })[0];
-                  filterState.picked[box.dataset.pickedId] =
-                    (hit && (hit.stem || hit.title)) || "";
-                } else {
-                  delete filterState.picked[box.dataset.pickedId];
-                }
-                saveFilters();
-              });
-            });
-          }).catch(function () {
-            target.innerHTML = "<p class='inline-error'>搜索失败。</p>";
-          });
-        };
-        searchGo.addEventListener("click", runSearch);
-        [stemBox, sourceBox].forEach(function (box) {
-          box.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") runSearch();
-          });
-        });
-      }
       var clear = filterPopup.querySelector("#filter-clear");
       if (clear) clear.addEventListener("click", function () {
         filterState = {
-          source_kinds: [], origin_kinds: [], exam_years: [], docs: [], picked: {},
+          source_kinds: [], origin_kinds: [], exam_years: [], docs: [],
         };
         saveFilters();
         renderFilterPopup();
@@ -1846,7 +1824,6 @@
           source_kinds: (filterState.source_kinds || []).slice(),
           exam_years: (filterState.exam_years || []).slice(),
           docs: (filterState.docs || []).slice(),
-          picked_problem_ids: Object.keys(filterState.picked || {}),
         },
       };
     }
