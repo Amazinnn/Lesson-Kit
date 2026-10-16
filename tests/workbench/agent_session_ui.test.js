@@ -567,6 +567,132 @@ test("a stale 503 does not show a restore error over a newer selection", async (
   assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
 });
 
+test("a stale same-session failure cannot override a newer successful load", async () => {
+  const initial = deferred();
+  const retry = deferred();
+  let calls = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      calls += 1;
+      return calls === 1 ? initial.promise : retry.promise;
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  retry.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      ...session("conv-a"), messages: [{ role: "assistant", content: "较新的会话内容" }],
+    }),
+  });
+  await flush();
+  initial.resolve({
+    ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
+  });
+  await flush();
+
+  assert.equal(app.elements["ai-status"].textContent, "");
+  assert.equal(app.elements["ai-send"].disabled, false);
+  assert.ok(app.elements["ai-messages"].children.some(
+    (child) => child.innerHTML.includes("较新的会话内容"),
+  ));
+});
+
+test("a stale same-session success cannot replace the latest conversation content", async () => {
+  const initial = deferred();
+  const retry = deferred();
+  let calls = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      calls += 1;
+      return calls === 1 ? initial.promise : retry.promise;
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  retry.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      ...session("conv-a"), messages: [{ role: "assistant", content: "最新的会话内容" }],
+    }),
+  });
+  await flush();
+  initial.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({
+      ...session("conv-a"), messages: [{ role: "assistant", content: "过期的会话内容" }],
+    }),
+  });
+  await flush();
+
+  assert.ok(app.elements["ai-messages"].children.some(
+    (child) => child.innerHTML.includes("最新的会话内容"),
+  ));
+  assert.equal(app.elements["ai-messages"].children.some(
+    (child) => child.innerHTML.includes("过期的会话内容"),
+  ), false);
+});
+
+test("opening the provider picker supersedes an in-flight conversation restore", async () => {
+  const initial = deferred();
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return initial.promise;
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-new-session"].click();
+  await flush();
+  initial.resolve({ ok: true, status: 200, json: () => Promise.resolve(session("conv-a")) });
+  await flush();
+
+  assert.equal(app.elements["ai-provider-picker"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+});
+
+test("opening the provider picker before startup restore prevents that restore", async () => {
+  const providers = deferred();
+  let providerCalls = 0;
+  let restoreReads = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) {
+      providerCalls += 1;
+      return providerCalls === 1 ? providers.promise : response([]);
+    }
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      restoreReads += 1;
+      return response(session("conv-a"));
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+
+  app.elements["ai-new-session"].click();
+  await flush();
+  providers.resolve(response([]));
+  await flush();
+
+  assert.equal(restoreReads, 0);
+  assert.equal(app.elements["ai-provider-picker"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+});
+
 test("a 503 while restoring keeps the conversation selected and shows a retryable error", async () => {
   const app = setup((url, options) => {
     if (url.endsWith("/ai/providers")) return response([]);
