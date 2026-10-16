@@ -10,6 +10,7 @@ const SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/workbench.js"), "utf8",
 );
 const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
+const AgentUISurfaces = require("../../workbench/server/static/agent-ui.js");
 const PRACTICE_FLOW_SOURCE = fs.readFileSync(
   path.resolve(__dirname, "../../workbench/server/static/practice-flow.js"), "utf8",
 );
@@ -69,7 +70,8 @@ function response(value) {
   return Promise.resolve({ ok: true, json: () => Promise.resolve(value) });
 }
 
-function setup(fetch) {
+function setup(fetch, options = {}) {
+  const storage = new Storage();
   const elements = {
     layout: new Element("layout", { dataset: { workspace: "alpha", page: "kp" } }),
     "ai-session-list-view": new Element("ai-session-list-view"),
@@ -81,11 +83,29 @@ function setup(fetch) {
     "ai-chat-view": new Element("ai-chat-view"),
     "ai-session-back": new Element("ai-session-back"),
     "ai-messages": new Element("ai-messages"),
+    "ai-column": new Element("ai-column"),
+    "ai-context-chips": new Element("ai-context-chips"),
     "ai-input": new Element("ai-input"),
+    "ai-input-row": new Element("ai-input-row"),
+    "ai-approval-slot": new Element("ai-approval-slot"),
     "ai-send": new Element("ai-send"),
     "ai-stop": new Element("ai-stop"),
     "ai-status": new Element("ai-status"),
+    "goal-form": new Element("goal-form"),
+    "goal-nl": new Element("goal-nl"),
+    "goal-assist-send": new Element("goal-assist-send"),
+    "goal-form-status": new Element("goal-form-status"),
+    "agent-activity-float": new Element("agent-activity-float"),
+    "agent-activity-body": new Element("agent-activity-body"),
+    "agent-bottom-dock": new Element("agent-bottom-dock"),
+    "agent-bottom-dock-body": new Element("agent-bottom-dock-body"),
+    "agent-artifact-split": new Element("agent-artifact-split"),
+    "agent-artifact-title": new Element("agent-artifact-title"),
+    "agent-artifact-body": new Element("agent-artifact-body"),
+    "agent-artifact-actions": new Element("agent-artifact-actions"),
   };
+  ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split", "ai-approval-slot"]
+    .forEach((id) => elements[id].classList.add("hidden"));
   const document = {
     getElementById(id) { return elements[id] || null; },
     createElement(tag) { return new Element(tag); },
@@ -96,16 +116,22 @@ function setup(fetch) {
     location: "", innerWidth: 1280, addEventListener() {},
     matchMedia() { return { matches: false }; },
     prompt() { return "我的会话"; }, confirm() { return true; },
+    sessionStorage: storage,
   };
+  const ui = AgentUISurfaces(document, window);
   const sandbox = {
-    document, window, fetch, PracticeDeck, sessionStorage: new Storage(), localStorage: new Storage(), console,
-    setInterval, clearInterval, setTimeout, clearTimeout, requestAnimationFrame: (callback) => setImmediate(() => callback(0)),
+    document, window, fetch, PracticeDeck, AgentUISurfaces: ui,
+    sessionStorage: storage, localStorage: new Storage(), console,
+    setInterval, clearInterval,
+    setTimeout: options.setTimeout || setTimeout,
+    clearTimeout: options.clearTimeout || clearTimeout,
+    requestAnimationFrame: (callback) => setImmediate(() => callback(0)),
     cancelAnimationFrame: clearImmediate,
   };
   const context = vm.createContext(sandbox);
   vm.runInContext(PRACTICE_FLOW_SOURCE, context, { filename: "practice-flow.js" });
   vm.runInContext(SOURCE, context, { filename: "workbench.js" });
-  return { elements, window };
+  return { elements, window, ui };
 }
 
 async function flush() {
@@ -177,3 +203,254 @@ test("legacy provider-memory and daily-create branches are absent", () => {
   assert.equal(SOURCE.includes("aiTask("), false);
   assert.equal(SOURCE.includes("wb_plan_heartbeat_"), false);
 });
+
+function session(conversationId, status = "idle", currentTurnId = null) {
+  return {
+    conversation_id: conversationId, provider: "codex", title: conversationId,
+    status, current_turn_id: currentTurnId, messages: [],
+  };
+}
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
+  return { promise, resolve, reject };
+}
+
+test("two Enter presses cannot submit another turn before the first POST is accepted", async () => {
+  const calls = [];
+  const timers = [];
+  const firstPost = deferred();
+  let turnPosts = 0;
+  let polls = 0;
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([{ provider: "codex", name: "codex" }]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response(session("conv-a"));
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      turnPosts += 1;
+      return turnPosts === 1 ? firstPost.promise : response({ turn_id: "turn-b" });
+    }
+    if (url.includes("/ai/sessions/conv-a/turns/turn-a?")) {
+      polls += 1;
+      return response({ events: [], turn: { status: polls === 1 ? "running" : "done" } });
+    }
+    if (url.includes("/ai/sessions/conv-a/turns/turn-b?")) {
+      return response({ events: [], turn: { status: "running" } });
+    }
+    return response({});
+  }, {
+    setTimeout: (callback) => { timers.push(callback); return timers.length; },
+    clearTimeout: () => {},
+  });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  let prevented = 0;
+  const input = app.elements["ai-input"];
+  input.value = "first message";
+  input.trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() { prevented += 1; } });
+  input.value = "second message";
+  input.trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() { prevented += 1; } });
+
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST").length, 1);
+  assert.equal(input.value, "second message");
+  assert.equal(input.disabled, false);
+  assert.equal(prevented, 2);
+  app.elements["goal-nl"].value = "a goal request";
+  app.elements["goal-assist-send"].click();
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST").length, 1);
+  assert.match(app.elements["goal-form-status"].textContent, /仍在提交/);
+
+  firstPost.resolve({ ok: true, json: () => Promise.resolve({ turn_id: "turn-a" }) });
+  await flush();
+  input.trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() {} });
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST").length, 1);
+  assert.equal(timers.length, 1);
+  assert.equal(input.value, "second message");
+
+  timers[0]();
+  await flush();
+  input.trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() {} });
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST").length, 2);
+});
+
+test("switching conversations clears approval and activity state and reloads events from zero", async () => {
+  const calls = [];
+  let timerId = 0;
+  const timers = new Map();
+  const stalePoll = deferred();
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([
+      session("conv-a", "running", "turn-a"), session("conv-b", "running", "turn-b"),
+    ]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response(session("conv-a", "running", "turn-a"));
+    if (url.endsWith("/ai/sessions/conv-b")) return response(session("conv-b", "running", "turn-b"));
+    if (url.endsWith("/ai/sessions/conv-a/turns/turn-a?after=0")) return response({
+      events: [{ sequence: 50, kind: "activity", activity_id: "a-activity", label: "A", status: "running" }],
+      turn: { status: "running" },
+    });
+    if (url.endsWith("/ai/sessions/conv-a/turns/turn-a?after=50")) return stalePoll.promise;
+    if (url.includes("/ai/sessions/conv-b/turns/turn-b?")) return response({
+      events: [
+        { sequence: 1, kind: "activity", activity_id: "b-1", label: "B one", status: "running" },
+        { sequence: 2, kind: "activity", activity_id: "b-2", label: "B two", status: "running" },
+      ],
+      turn: { status: "running" },
+    });
+    return response({});
+  }, {
+    setTimeout: (callback) => { const id = ++timerId; timers.set(id, callback); return id; },
+    clearTimeout: (id) => timers.delete(id),
+  });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  assert.equal(app.ui.state.activities["a-activity"].label, "A");
+  assert.equal(app.ui.state.running, true);
+  const [pollTimerId, pollTimer] = timers.entries().next().value;
+  timers.delete(pollTimerId);
+  pollTimer();
+  await flush();
+  assert.ok(calls.some((call) => call.url.endsWith("/ai/sessions/conv-a/turns/turn-a?after=50")));
+
+  let staleApprovalRuns = 0;
+  app.ui.collapseAux();
+  app.ui.confirm({ title: "Rollback A" }, () => { staleApprovalRuns += 1; });
+  const staleApprove = app.elements["ai-approval-slot"].children[0].children[3].children[1];
+
+  app.elements["ai-session-back"].click();
+  await flush();
+  assert.equal(app.ui.state.userCollapsed, false);
+  assert.deepEqual(app.ui.state.activityOrder, []);
+  assert.deepEqual(app.ui.state.activities, {});
+  assert.equal(app.ui.state.approvalOpen, false);
+  assert.equal(app.elements["ai-approval-slot"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-input-row"].classList.contains("hidden"), false);
+  staleApprove.click();
+  assert.equal(staleApprovalRuns, 0);
+
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  assert.ok(calls.some((call) => call.url.endsWith("/ai/sessions/conv-b/turns/turn-b?after=0")));
+  assert.deepEqual(app.ui.state.activityOrder, ["b-1", "b-2"]);
+  assert.equal(app.ui.state.activities["a-activity"], undefined);
+  assert.equal(app.ui.state.running, true);
+  assert.equal(timers.size, 1);
+
+  stalePoll.resolve({ ok: true, json: () => Promise.resolve({
+    events: [{ sequence: 51, kind: "activity", activity_id: "a-stale", label: "A stale", status: "running" }],
+    turn: { status: "running" },
+  }) });
+  await flush();
+  assert.equal(app.ui.state.activities["a-stale"], undefined);
+  assert.deepEqual(app.ui.state.activityOrder, ["b-1", "b-2"]);
+  assert.equal(timers.size, 1);
+});
+
+test("a temporary progress read failure keeps the turn pending and does not invite resend", async () => {
+  const calls = [];
+  const timers = [];
+  let pollCount = 0;
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a", "running", "turn-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response(session("conv-a", "running", "turn-a"));
+    if (url.includes("/ai/sessions/conv-a/turns/turn-a?")) {
+      pollCount += 1;
+      if (pollCount === 1) return Promise.reject(new Error("network unavailable"));
+      return response({ events: [], turn: { status: "running" } });
+    }
+    return response({});
+  }, { setTimeout: (callback) => { timers.push(callback); return timers.length; } });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  assert.equal(pollCount, 1);
+  assert.equal(app.ui.state.running, true);
+  assert.equal(app.elements["ai-send"].disabled, true);
+  assert.equal(app.elements["ai-stop"].classList.contains("hidden"), false);
+  assert.match(app.elements["ai-status"].textContent, /状态暂时未知/);
+  assert.equal(app.ui.state.activities["turn-failure"], undefined);
+  assert.equal(timers.length, 1);
+
+  timers[0]();
+  await flush();
+  assert.equal(pollCount, 2);
+  assert.equal(app.ui.state.running, true);
+  assert.equal(app.elements["ai-status"].textContent, "Agent 正在处理…");
+  app.elements["ai-input"].value = "duplicate";
+  app.elements["ai-input"].trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() {} });
+  assert.equal(calls.some((call) => call.options?.method === "POST"
+    && call.url.endsWith("/ai/sessions/conv-a/turns")), false);
+});
+
+const paperArtifact = {
+  type: "paper_artifact", practice_set_id: "ps-001",
+  title: "Managed paper", item_count: 2,
+};
+
+test("the finished turn artifact keeps its preview across the conversation reload", async () => {
+  let loads = 0;
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([
+      session("conv-a", "running", "turn-a"), session("conv-b"),
+    ]);
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      loads += 1;
+      // The first load still reports the running turn, so one poll observes the
+      // finished answer; every later load is the durable record.
+      return response({
+        ...session("conv-a", loads === 1 ? "running" : "idle", loads === 1 ? "turn-a" : null),
+        messages: [{
+          role: "assistant", content: "saved ps-001.", action: paperArtifact,
+        }],
+      });
+    }
+    if (url.endsWith("/ai/sessions/conv-b")) return response(session("conv-b"));
+    if (url.includes("/ai/sessions/conv-a/turns/turn-a?")) {
+      return response({ events: [], turn: { status: "done", action: paperArtifact } });
+    }
+    return response({});
+  });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  assert.equal(app.ui.state.latestArtifact.practice_set_id, "ps-001");
+  assert.equal(
+    app.elements["agent-artifact-split"].classList.contains("hidden"), false,
+    "the newest artifact of a finished turn still previews after the reload",
+  );
+
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  assert.equal(app.elements["agent-artifact-split"].classList.contains("hidden"), true);
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  assert.equal(
+    app.elements["agent-artifact-split"].classList.contains("hidden"), true,
+    "restored history cards stay closed and never auto-preview",
+  );
+  assert.ok(
+    deepText(app.elements["ai-messages"]).includes("Managed paper"),
+    "the artifact card itself is still restored in the conversation",
+  );
+});
+
+function deepText(element) {
+  return (element.children || []).map(deepText).join(" ") + " " + (element.textContent || "");
+}

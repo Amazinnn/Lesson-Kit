@@ -2153,6 +2153,10 @@
         goalStatus("暂无可用 Agent。请先配置一个提供方，或手动填写字段。");
         return;
       }
+      if (aiSendPending) {
+        goalStatus("Agent 请求仍在提交，请稍候。");
+        return;
+      }
       if (!aiConversation || aiTurn) {
         if (typeof aiShowProviderPicker === "function") aiShowProviderPicker();
         goalStatus("请先在右侧选择 Agent 开始对话，再点一次「让 Agent 填」。");
@@ -2161,12 +2165,7 @@
       var body = aiContextBody(text);
       body.goal_intent = true;
       goalStatus("已发给 Agent，等待代填…");
-      post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns", body)
-        .then(function (turn) {
-          aiTurn = turn.turn_id;
-          aiPollSequence = 0;
-          aiPollConversationTurn();
-        })
+      aiPostTurn(body)
         .catch(function (error) {
           goalStatus("发送失败：" + (error.message || "未知错误"));
         });
@@ -2182,13 +2181,58 @@
   var aiStop = document.getElementById("ai-stop");
   var aiStatus = document.getElementById("ai-status");
   var aiConversation = load(AI_CONVERSATION_KEY, "");
+  var aiSurfaceConversation = "";
+  var aiConversationSequence = 0;
   var aiTurn = null;
+  var aiSendPending = false;
+  var aiProgressReadFailed = false;
+  var aiLiveArtifact = null;
   var aiPollTimer = null;
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
   var aiExecutionPlan = null;
   var aiCurrentProvider = "";
   var aiPiActivities = {};
+
+  function aiResetConversationRuntime() {
+    aiConversationSequence += 1;
+    aiTurn = null;
+    aiSendPending = false;
+    aiProgressReadFailed = false;
+    aiPollSequence = 0;
+    if (aiPollTimer) clearTimeout(aiPollTimer);
+    aiPollTimer = null;
+    aiStreamingMessage = null;
+    aiExecutionPlan = null;
+    aiCurrentProvider = "";
+    aiPiActivities = {};
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
+      AgentUISurfaces.resetTurn();
+    }
+    aiSetStatus("");
+  }
+
+  function aiPostTurn(body) {
+    if (!aiConversation || aiTurn || aiSendPending) {
+      return Promise.reject(new Error("conversation already has a pending turn"));
+    }
+    var conversationId = aiConversation;
+    var sequence = aiConversationSequence;
+    aiSendPending = true;
+    return post("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns", body)
+      .then(function (turn) {
+        if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+        aiSendPending = false;
+        aiTurn = turn.turn_id;
+        aiPollSequence = 0;
+        aiPollConversationTurn();
+        return turn;
+      }, function (error) {
+        if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+        aiSendPending = false;
+        throw error;
+      });
+  }
 
   function aiAddMarkdown(text, cls) {
     aiAdd(richText(text || ""), cls);
@@ -2405,6 +2449,7 @@
   function aiApplyAction(action) {
     if (!action) return;
     if (action.type === "paper_artifact") {
+      aiLiveArtifact = action;
       if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
         AgentUISurfaces.artifact(action);
       }
@@ -2706,7 +2751,10 @@
         });
         if (message.action && message.action.type === "paper_artifact"
             && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
-          AgentUISurfaces.artifact(message.action, { restore: true });
+          var livePreview = !!(aiLiveArtifact && message.action.practice_set_id
+            && aiLiveArtifact.practice_set_id === message.action.practice_set_id);
+          aiLiveArtifact = null;
+          AgentUISurfaces.artifact(message.action, { restore: !livePreview });
         } else if (!actions.length && message.action && message.action.type === "check_ingest") {
           aiApplyCheckAction(message.action);
         }
@@ -2723,9 +2771,15 @@
 
   function aiLoadConversation(conversationId) {
     if (!conversationId) return Promise.resolve();
+    if (aiSurfaceConversation !== conversationId) {
+      aiResetConversationRuntime();
+      aiSurfaceConversation = conversationId;
+    }
     aiConversation = conversationId;
     store(AI_CONVERSATION_KEY, conversationId);
+    var sequence = aiConversationSequence;
     return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
+      if (sequence !== aiConversationSequence || aiConversation !== conversationId) return null;
       aiRenderConversation(record);
       return record;
     });
@@ -2900,25 +2954,41 @@
   function aiPollConversationTurn() {
     if (!aiConversation || !aiTurn) return;
     if (aiPollTimer) clearTimeout(aiPollTimer);
-    api("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns/"
-      + encodeURIComponent(aiTurn) + "?after=" + aiPollSequence).then(function (data) {
+    var conversationId = aiConversation;
+    var turnId = aiTurn;
+    var sequence = aiConversationSequence;
+    var after = aiPollSequence;
+    function isCurrentTurn() {
+      return sequence === aiConversationSequence
+        && conversationId === aiConversation && turnId === aiTurn;
+    }
+    function scheduleNextPoll() {
+      aiPollTimer = setTimeout(function () {
+        if (isCurrentTurn()) aiPollConversationTurn();
+      }, 350);
+    }
+    api("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns/"
+      + encodeURIComponent(turnId) + "?after=" + after).then(function (data) {
+      if (!isCurrentTurn()) return;
+      if (aiProgressReadFailed) {
+        aiProgressReadFailed = false;
+        aiSetStatus("Agent 正在处理…");
+      }
       aiAppendEvents(data);
       if (data.turn && (data.turn.status === "running" || data.turn.status === "queued")) {
-        aiPollTimer = setTimeout(aiPollConversationTurn, 350);
+        scheduleNextPoll();
       }
     }).catch(function () {
-      aiTurn = null;
-      aiSetRunning(false);
-      aiSetStatus("无法读取 Agent 进度。");
-      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
-        AgentUISurfaces.failure("无法读取 Agent 进度。可检查连接后重新发送。 ");
-      }
+      if (!isCurrentTurn()) return;
+      aiProgressReadFailed = true;
+      aiSetStatus("无法读取 Agent 进度，当前轮次状态暂时未知。请检查连接或重新打开此对话。");
+      scheduleNextPoll();
     });
   }
 
   function aiSendMessage() {
     var message = aiInput ? aiInput.value.trim() : "";
-    if (!message || !aiConversation || aiTurn) return;
+    if (!message || !aiConversation || aiTurn || aiSendPending) return;
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
@@ -2929,19 +2999,14 @@
     aiInput.value = "";
     aiSetRunning(true);
     aiSetStatus("正在发送…");
-    post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns", aiContextBody(message))
-      .then(function (turn) {
-        aiTurn = turn.turn_id;
-        aiPollSequence = 0;
-        aiPollConversationTurn();
-      }).catch(function (err) {
-        aiSetRunning(false);
-        var sendError = "发送失败：" + (err.message || "未知错误");
-        aiSetStatus(sendError);
-        if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
-          AgentUISurfaces.failure(sendError);
-        }
-      });
+    aiPostTurn(aiContextBody(message)).catch(function (err) {
+      aiSetRunning(false);
+      var sendError = "发送失败：" + (err.message || "未知错误");
+      aiSetStatus(sendError);
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+        AgentUISurfaces.failure(sendError);
+      }
+    });
   }
 
   if (aiSend) aiSend.addEventListener("click", aiSendMessage);
@@ -3131,7 +3196,8 @@
 
   if (aiNewSession) aiNewSession.addEventListener("click", aiShowProviderPicker);
   if (aiSessionBack) aiSessionBack.addEventListener("click", function () {
-    aiTurn = null;
+    aiResetConversationRuntime();
+    aiSurfaceConversation = "";
     aiConversation = "";
     sessionStorage.removeItem(AI_CONVERSATION_KEY);
     aiSetView("list");
