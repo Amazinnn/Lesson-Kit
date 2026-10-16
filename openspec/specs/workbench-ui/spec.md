@@ -1373,6 +1373,10 @@ Artifact of the current turn MAY open a temporary Adaptive Split preview beside
 the central Lesson Kit page; the page SHALL remain present and readable, and the
 preview SHALL NOT navigate away from it. Older Artifact cards restored from
 history SHALL be shown collapsed and SHALL NOT open the split on their own.
+An open live preview SHALL be retained in tab-scoped state with its conversation,
+Paper, and route identity, and a same-tab reload SHALL restore it only when the
+conversation and route still match. Explicit collapse, a new user turn, a
+conversation switch, or native navigation SHALL clear that live-preview state.
 Opening the Paper's canonical page remains an explicit learner action that goes
 to the workspace's saved-paper page.
 
@@ -1390,6 +1394,12 @@ to the workspace's saved-paper page.
 
 - **WHEN** the learner opens a conversation whose earlier turn already had an Artifact
 - **THEN** that Artifact card is restored in the conversation without opening the split
+
+#### Scenario: Keep a live preview across reload
+
+- **WHEN** the latest Artifact preview remains open after its turn completes
+  and the learner reloads the same tab on the same route
+- **THEN** that live preview is restored only for the same conversation and route, without changing the current Lesson Kit page
 
 #### Scenario: The learner opens the Paper page
 
