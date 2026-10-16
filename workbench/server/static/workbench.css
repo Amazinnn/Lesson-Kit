@@ -1479,13 +1479,6 @@ img { max-width: 100%; }
 .filter-popup .filter-dimension h3 { margin: 0 0 6px; font-size: 13px; }
 .filter-popup .filter-option { display: inline-flex; align-items: center; gap: 4px; margin: 2px 8px 2px 0; font-size: 13px; }
 .filter-popup .filter-option .count { color: #57606a; font-size: 12px; }
-.filter-popup .filter-search { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-.filter-popup .filter-search input { flex: 1 1 160px; }
-.filter-popup .filter-search-results { max-height: 180px; overflow: auto; margin-top: 6px; }
-.filter-popup .filter-hit { display: flex; align-items: flex-start; width: 100%; margin: 4px 0; }
-.filter-popup .filter-hit-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.filter-popup .filter-hit-stem { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.filter-popup .filter-hit-source { color: #57606a; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .filter-popup .filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 .filter-count-active { background: var(--dsw-interactive-bg-hover); border-radius: 999px; padding: 0 8px; font-size: 12px; }
 

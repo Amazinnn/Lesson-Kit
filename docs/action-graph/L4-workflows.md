@@ -3,49 +3,47 @@
 > 本层是 v2 的灵魂：**不许只画 happy path**。用户会回退、放弃、跳过、直接关闭——
 > 每个出口都要有分支和落点。每条边可回溯 L3 动作；每个写库节点可回溯 L0。
 
-## W1 · 练习回路
+## W1 · Paper → Practice Run 练习回路
 
 ```mermaid
 flowchart TD
-  A[选范围<br/>图谱勾选/知识点页/建议区/kp 直达] --> B{模式+自评时机<br/>都选了吗?}
-  B -- 否 --> B1[开始按钮禁用·等待] --> B
-  B -- 是 --> C[开始本轮练习 · 会话聚焦]
-  C --> D{内容类型}
-  D -- 闪卡 --> E[看正面→揭示背面]
-  D -- 微题/判断 --> F[点选作答→本地判分横幅]
-  D -- 综合题 --> G[写解答→提交→查看解析]
-  E -- immediate --> H[即时自评 1-5]
-  E -- batch --> I[标记 unrated · 等收束]
-  F -- batch: 横幅停 2s --> J[自动推进]
-  F -- batch: 不想等 --> K[跳到下一道 · 立即走]
-  F -- immediate --> H
-  G --> H
-  H --> L[四件套原子写<br/>事件/信号/状态/调度] --> M{还有下一张?}
-  I --> N[上一张/下一张自由回翻<br/>状态保留 · 末尾才拉新]
-  N --> M
-  J --> M
-  K --> M
-  M -- 有 --> D
-  M -- 拉空·诚实空态 --> O{自评时机}
-  O -- batch --> P[自动进收束页]
-  O -- immediate --> Q[空态提示+回模式选择区]
-  M -- 提前结束 --> O2{自评时机}
-  O2 -- batch --> P
-  O2 -- immediate --> Q
-  P --> R[逐题补分→四件套写入] --> S[再练同类?]
-  S -- 是 --> C2[同 KP 新一轮] --> C
-  S -- 否 --> T[结束 · 恢复学习安排区]
-  X1[中途刷新] -.恢复游标+揭示/判分态.-> D
-  X2[直接关标签页] -.草稿蒸发·已评分在池安全.-> Z[(池不变)]
-  X3[batch 耗尽后又回 practice] -.ended 标志.-> P
-  X4[网络失败] -.原位报错+重试.-> M
-  X5[kp 直达且范围不符] -.丢弃旧会话重开.-> C
-  X6[手写答案/练习页发消息问 Agent] -.只带聚焦草稿·零写入.-> Z
+  A[明确 Scope<br/>知识点页/图谱/建议/Agent] --> A1[当前 UI 选择一个兼容模式<br/>exam/micro/yes_no/flash_card]
+  A1 --> B[Paper Assembly<br/>按所选模式与来源·难度·薄弱·到期·错题组卷]
+  B --> C{组卷有内容?}
+  C -- 否 --> C0[诚实空态<br/>调整 Scope/约束后重组] --> B
+  C -- 是 --> D[冻结 Paper item 顺序]
+  D --> E[开始 / 恢复 Practice Run<br/>当前 UI 每轮固定一种内容模式]
+  E --> F{本轮选定的 item 形式}
+  F -- 闪卡 --> G[回忆→揭示]
+  F -- 微题/判断 --> H[点选→本地判定]
+  F -- 综合题 --> I[作答→揭示解析]
+  F -- 跳过 --> N
+  G & H & I --> J{当前自评设置}
+  J -- immediate --> K[记录自评/学习结论]
+  J -- batch --> L[保留待统一自评状态]
+  J -- off --> M[按既有 off 规则结算]
+  K & L & M --> N{Paper 还有 pending item?}
+  N -- 有 --> F
+  N -- 无 --> O{需要 batch 收束?}
+  O -- 是 --> P[统一自评收束页] --> Q[归档 Practice Run]
+  O -- 否 --> Q
+  E -- 提前结束 --> O
+  Q --> R{再练同类?}
+  R -- 是 --> B2[据结果与 Scope<br/>重新组新 Paper] --> C
+  R -- 否 --> S[回练习出发页]
+  X1[中途刷新] -.恢复 frozen items + cursor<br/>不重新组卷.-> E
+  X2[直接关标签页] -.已落盘结算保留<br/>未提交草稿按既有恢复策略.-> Z[(当前 Paper 不变)]
+  X3[网络失败] -.原位报错 + 重试<br/>不换 Paper.-> E
+  X4[运行中改 Scope/筛选/章透镜] -.只影响下次组卷.-> B
+  X5[练习页发消息问 Agent] -.只带聚焦上下文·零写入.-> Z
 ```
 
-要点：跳过不降级（已作答/已揭示的条目保持 unrated 等收束）；横幅纯本地不写库；
-刷新恢复到"翻到哪一张、揭示没揭示"；耗尽与提前结束在 batch 下同归收束页。
-手写答案走 W5（Agent 代录），不在这条回路上写库。
+核心不变量：**Scope 回答想练什么，Paper 回答这次具体做什么，Practice Run 只负责把这张 Paper 做完。**
+任何建议、筛选、调度或对话都不得向运行中的 Paper 动态加题；“再练同类”永远组新 Paper。
+刷新恢复 frozen items 与游标而不重新组卷；提前结束仍走既有 batch 收束规则；网络失败原位重试；
+直接关闭只保留已经落盘的事实。跳过继续保持现有“不凭空写学习证据”的语义。
+
+当前练习 UI 仍用单一兼容模式组装和启动每轮；混合格式 Paper 的 learner UI 尚未交付。
 
 ## W2 · 内容入库（唯一合法写池通道）
 
@@ -113,7 +111,8 @@ flowchart TD
   E -- 运行中再发 --> F2[409 拒绝 · 单轮次串行]
   E -- 点停止 --> F3[本轮 cancelled · 不留半截记录]
   F --> G{产出带结构化动作?}
-  G -- 有明确练习意图 --> H[replace_practice_selection<br/>选区一次性替换]
+  G -- 有明确练习意图 --> H[replace_practice_selection<br/>仅替换组卷 Paper Scope]
+  H --> H1[返回练习出发页<br/>组装 Paper / 开始 Practice Run 仍需单独操作]
   G -- 普通对话 --> I[绝不写任何学习记录]
 ```
 
@@ -146,30 +145,27 @@ flowchart TD
   Y1[只读草稿/只读图片/只问答] -.零写入.-> Z[(池不变)]
 ```
 
-## W6 · 组一次练习并打印（2026-09-25）
+## W6 · 组一张 Paper、保存与打印
 
 ```mermaid
 flowchart TD
-  A[确定范围<br/>章透镜/ --kp / 关透镜=整门课] --> B{选题方式}
-  B -- 条件筛选 --> C[source_kind / origin_kinds / exam_year / source_evidence<br/>search_stem / search_source 两个关键词域 / 难度]
-  B -- 学习证据 --> D[--weak 薄弱 / --due 到期 / --wrong 错题]
-  B -- 单题 --> E[--problem 追加·不受筛选与上限约束]
-  C & D & E --> F[逐题 reason：scope/weak/due/wrong/explicit]
-  F --> G{要固定吗?}
-  G -- --plan --> H[练习清单 JSON（导出）] --> I{要重跑?}
-  H --> Q{要加入组卷页列表?}
-  Q -- 要 --> R[lesson-kit papers <workspace> save --input <manifest>] --> S{退出码 0 并收到 JSON 回执?}
-  S -- 是 --> T[浏览器组卷页列表显示试卷]
-  S -- 否 --> U[如实报告失败；不声称已保存]
-  Q -- 否 --> I
-  I -- --input --> J[同一批题<br/>零写入] --> K{出卷?}
-  G -- 否 --> L[打印题目行<br/>--ids 只看题号]
-  K -- --check --> M[零写入预检<br/>题数/缺口/缺解/重复/泄漏]
-  M -- 泄漏或重复 --> N[非零退出·逐条原因]
-  K -- --print --> O[学生卷 + 解答卷<br/>题号对齐·缺解「待补」<br/>仅导出]
-  Y1[新池上 --weak/--due/--wrong] -.空集是诚实结果.-> L
-  Y2[未迁移池用 --exam-year] -.报错给 migrate 命令.-> Z[(池不变)]
+  A[确定 Scope<br/>章透镜/--kp/显式知识点] --> B[加入组卷约束<br/>来源/难度/weak/due/wrong]
+  B --> C[Paper Assembly · pull]
+  X[Agent/CLI 需要精确某题] -.作者工具 --problem.-> C
+  C --> D[固定顺序 + reason<br/>scope/weak/due/wrong/explicit]
+  D --> E{下一步}
+  E -- 直接开始 --> F[Practice Run<br/>执行固定 Paper]
+  E -- --plan --> G[Paper manifest<br/>v1 kind: practice-set 兼容]
+  G --> H{保存到工作台?}
+  H -- 是 --> I[lesson-kit papers save] --> J[保存的 Paper]
+  H -- 否 --> K{导出/检查?}
+  J --> F
+  K -- --check --> L[零写入预检]
+  K -- --print --> M[学生卷 + 解答卷]
+  Y[浏览器学生侧] -.不提供逐题搜索勾选/include_ids.-> C
 ```
+
+`--problem` 只属于 Agent/CLI Paper authoring；学生控制 Scope 和策略，不逐题手选。产品级 Practice Set 是组织多张 Paper 的容器，不在本工作流直接执行。
 
 ## W7 · 做题记录、来源筛选与对话内换模型（2026-09-26）
 
@@ -189,11 +185,9 @@ flowchart TD
 
   P[来源筛选按钮] --> Q[浮窗: 四维多选 + 池内计数]
   Q -- 勾选 --> R[维度内 OR · 维度间 AND<br/>filters 随 /pull 上送]
-  Q -- 题干关键词/来源关键词 --> S[命中题按 include_ids 显式指定<br/>不受筛选与上限约束]
-  S -- 勾选 --> S1[结果行: 题面摘要 + 来源行]
-  R & S --> T[pull 只回那一批]
+  R --> T[Paper Assembly · pull<br/>按四维条件返回题目]
   Q -.sessionStorage 按工作区·键 wb_practice_filters_v2_<ws>·关标签页即散.-> Z
-  S -.两框都空则搜不出东西·不是列出全池.-> Z
+  X[只读题目发现<br/>GET /search/problems] --> X1[结果用于查看/作者工作<br/>不接入浏览器 Paper 选题]
 
   M1[新建对话] --> M2{有模型条目?}
   M2 -- 无 --> M3[回退: 一个 harness 一条]
@@ -211,6 +205,8 @@ flowchart TD
 > 读得成一行；记录只增不改，学习状态仍只由自评驱动。**筛选**：来源维度在
 > CLI、API 与练习页浮窗同一语义——维度内 OR、维度间 AND；文档键把两套证据书写格式折成一份文档
 > 一个键，计数取自池内实际值。
+>
+> **历史状态（2026-10-16）**：下方 2026-10-06 描述中的浏览器关键词搜索结果勾选并注入 `include_ids` 路径，已随 PR130 退役；保留原记录说明当时的变更。四维来源筛选与 CLI 关键词筛选继续可用，题目搜索仅作只读发现/作者工作。
 >
 > 2026-10-06（problem-search-and-origin-filter）：来源维度由三个增为**四个**（多一个题目来源方式
 > `origin_kinds`，浮窗显示历年原题/改编/AI生成，CLI 改可重复的 `--origin-kinds`，单值 `origin_kind`

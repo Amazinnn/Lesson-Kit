@@ -1,14 +1,16 @@
-"""One workspace-local active practice plus a tiny durable run archive.
+"""One workspace-local active Paper execution plus a tiny durable run archive.
 
-The active singleton remains execution state. Completed or replaced runs are
-snapshotted for the records page; attempts and feedback remain the learning
+The active singleton remains execution state. Every newly created execution is
+normalized to a Paper source before it is stored. Completed or replaced runs
+are snapshotted for the records page; attempts and feedback remain the learning
 evidence.
 """
 
 import json
 
 
-SOURCE_KINDS = {"quick", "practice_set", "agent"}
+SOURCE_KINDS = {"paper"}
+LEGACY_SOURCE_KINDS = {"quick", "practice_set", "agent"}
 ITEM_TYPES = {"problem", "card"}
 ITEM_STATES = {"pending", "answered", "stuck"}
 MIGRATION_COMMAND = "python pool/scripts/migrate-progress.py --db {}"
@@ -53,9 +55,16 @@ def _json_list(value, name):
 def _normalize(pool, payload):
     if not isinstance(payload, dict):
         raise ActivePracticeError("active practice must be a JSON object")
-    source_kind = payload.get("source_kind", "quick")
-    if source_kind not in SOURCE_KINDS:
-        raise ActivePracticeError("source_kind must be quick, practice_set, or agent")
+    requested_source_kind = payload.get("source_kind", "paper")
+    if requested_source_kind not in SOURCE_KINDS | LEGACY_SOURCE_KINDS:
+        raise ActivePracticeError(
+            "source_kind must be paper (legacy quick/practice_set/agent inputs are accepted)"
+        )
+    # `quick`, `practice_set`, and `agent` were historical execution-source
+    # categories. They described how items were assembled, not what was being
+    # executed. v1 keeps them as input aliases only so old browser/CLI callers
+    # continue to work while every newly persisted run obeys Paper -> Run.
+    source_kind = "paper"
     source_ref = payload.get("source_ref")
     if source_ref is not None and (
         not isinstance(source_ref, str) or not source_ref.strip()
@@ -67,11 +76,14 @@ def _normalize(pool, payload):
     ):
         raise ActivePracticeError("source_label must be a non-empty string or null")
     if source_label is None:
-        source_label = (
-            f"试卷 {source_ref.strip()}" if source_kind == "practice_set" and source_ref
-            else "Agent 练习" if source_kind == "agent"
-            else "临时练习"
-        )
+        if requested_source_kind == "quick":
+            source_label = "临时试卷"
+        elif requested_source_kind == "agent":
+            source_label = "Agent 试卷"
+        elif source_ref:
+            source_label = f"试卷 {source_ref.strip()}"
+        else:
+            source_label = "试卷"
     practice_mode = payload.get("practice_mode")
     rating_mode = payload.get("rating_mode")
     if not isinstance(practice_mode, str) or not practice_mode:
@@ -242,7 +254,7 @@ def _archive(pool, record, status):
         " rating_mode, items_json, status, started_at) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
-            record["source_kind"],
+            "paper",
             record.get("source_ref"),
             record.get("source_label"),
             json.dumps(record["kp_ids"], ensure_ascii=False),
@@ -256,7 +268,7 @@ def _archive(pool, record, status):
 
 
 def replay(pool, run_id, *, replace=False):
-    """Start the exact items stored by one archived practice."""
+    """Start the exact Paper items stored by one archived practice run."""
     _require_schema(pool)
     if isinstance(run_id, bool) or not isinstance(run_id, int) or run_id <= 0:
         raise ActivePracticeError("run_id must be a positive integer")
@@ -272,6 +284,8 @@ def replay(pool, run_id, *, replace=False):
     except json.JSONDecodeError as exc:
         raise ActivePracticeError(f"practice run {run_id} is invalid") from exc
     return create(pool, {
+        # Historical rows may say quick/practice_set/agent. create() accepts
+        # those aliases and normalizes the new execution to Paper semantics.
         "source_kind": record["source_kind"],
         "source_ref": record.get("source_ref"),
         "source_label": record.get("source_label"),

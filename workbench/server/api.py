@@ -272,6 +272,7 @@ def pull_problems(pool, workspace, params, body):
         source_kinds=_dimension("source_kinds"),
         exam_years=_dimension("exam_years"),
         evidence_docs=_dimension("docs"),
+        with_reasons=True,
     )
 
 
