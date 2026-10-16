@@ -17,6 +17,7 @@
     renderedArtifacts: {},
   };
   var approvalSequence = 0;
+  var collapseHandler = null;
 
   function byId(id) {
     return document && document.getElementById ? document.getElementById(id) : null;
@@ -95,11 +96,16 @@
 
   function collapseAux() {
     state.userCollapsed = true;
+    if (collapseHandler) collapseHandler();
     ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split"].forEach(function (id) {
       setHidden(byId(id), true);
     });
     var middle = byId("middle");
     if (middle && middle.classList) middle.classList.remove("agent-split-open");
+  }
+
+  function setCollapseHandler(handler) {
+    collapseHandler = typeof handler === "function" ? handler : null;
   }
 
   function bindAuxCollapse() {
@@ -456,6 +462,7 @@
     artifact: artifact,
     openArtifact: openArtifact,
     collapseAux: collapseAux,
+    setCollapseHandler: setCollapseHandler,
     autosizeInput: autosizeInput,
     state: state,
   };

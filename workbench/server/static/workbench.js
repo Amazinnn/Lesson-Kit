@@ -17,6 +17,7 @@
   var SELECTION_KEY = "wb_kp_selection_" + WS;
   var SCOPE_TRAY_KEY = "wb_scope_tray_open_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
+  var AI_LIVE_ARTIFACT_KEY = "wb_ai_live_artifact_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
   var selectedGraphKpId = null;
 
@@ -2191,7 +2192,6 @@
   var aiTurn = null;
   var aiSendPending = false;
   var aiProgressReadFailed = false;
-  var aiLiveArtifact = null;
   var aiPollTimer = null;
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
@@ -2199,8 +2199,50 @@
   var aiCurrentProvider = "";
   var aiPiActivities = {};
 
-  function aiResetConversationRuntime() {
+  function aiPreviewRoute() {
+    var location = window.location || {};
+    return (location.pathname || "") + (location.search || "") + (location.hash || "");
+  }
+
+  function aiClearLiveArtifact() {
+    sessionStorage.removeItem(AI_LIVE_ARTIFACT_KEY);
+  }
+
+  function aiGetLiveArtifact(conversationId) {
+    var marker = load(AI_LIVE_ARTIFACT_KEY, null);
+    if (!marker) return null;
+    if (!conversationId || marker.conversation_id !== conversationId
+        || !marker.practice_set_id || marker.route !== aiPreviewRoute()) {
+      aiClearLiveArtifact();
+      return null;
+    }
+    return marker;
+  }
+
+  function aiSaveLiveArtifact(action) {
+    if (!aiConversation || !action || !action.practice_set_id) return;
+    store(AI_LIVE_ARTIFACT_KEY, {
+      conversation_id: aiConversation,
+      practice_set_id: action.practice_set_id,
+      route: aiPreviewRoute(),
+    });
+  }
+
+  function aiHasLiveArtifact(conversationId, practiceSetId) {
+    var marker = aiGetLiveArtifact(conversationId);
+    return !!(marker && marker.practice_set_id === practiceSetId);
+  }
+
+  if (aiConversation) aiGetLiveArtifact(aiConversation);
+  else aiClearLiveArtifact();
+
+  function aiResetConversationRuntime(preserveLiveArtifactConversationId) {
     aiConversationSequence += 1;
+    if (preserveLiveArtifactConversationId) {
+      aiGetLiveArtifact(preserveLiveArtifactConversationId);
+    } else {
+      aiClearLiveArtifact();
+    }
     aiTurn = null;
     aiSendPending = false;
     aiProgressReadFailed = false;
@@ -2215,6 +2257,10 @@
       AgentUISurfaces.resetTurn();
     }
     aiSetStatus("");
+  }
+
+  if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.setCollapseHandler) {
+    AgentUISurfaces.setCollapseHandler(aiClearLiveArtifact);
   }
 
   function aiPostTurn(body) {
@@ -2454,9 +2500,10 @@
   function aiApplyAction(action) {
     if (!action) return;
     if (action.type === "paper_artifact") {
-      aiLiveArtifact = action;
       if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
-        AgentUISurfaces.artifact(action);
+        var previewAllowed = AgentUISurfaces.state && !AgentUISurfaces.state.userCollapsed;
+        if (AgentUISurfaces.artifact(action) && previewAllowed) aiSaveLiveArtifact(action);
+        else aiClearLiveArtifact();
       }
       return;
     }
@@ -2756,9 +2803,8 @@
         });
         if (message.action && message.action.type === "paper_artifact"
             && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
-          var livePreview = !!(aiLiveArtifact && message.action.practice_set_id
-            && aiLiveArtifact.practice_set_id === message.action.practice_set_id);
-          aiLiveArtifact = null;
+          var livePreview = aiHasLiveArtifact(
+            record.conversation_id || aiConversation, message.action.practice_set_id);
           AgentUISurfaces.artifact(message.action, { restore: !livePreview });
         } else if (!actions.length && message.action && message.action.type === "check_ingest") {
           aiApplyCheckAction(message.action);
@@ -2777,7 +2823,8 @@
   function aiLoadConversation(conversationId) {
     if (!conversationId) return Promise.resolve();
     if (aiSurfaceConversation !== conversationId) {
-      aiResetConversationRuntime();
+      var initialRestore = !aiSurfaceConversation && aiConversation === conversationId;
+      aiResetConversationRuntime(initialRestore ? conversationId : "");
       aiSurfaceConversation = conversationId;
     }
     aiConversation = conversationId;
@@ -2994,6 +3041,7 @@
   function aiSendMessage() {
     var message = aiInput ? aiInput.value.trim() : "";
     if (!message || !aiConversation || aiTurn || aiSendPending) return;
+    aiClearLiveArtifact();
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
