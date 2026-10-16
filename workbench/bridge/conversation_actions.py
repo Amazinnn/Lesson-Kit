@@ -13,13 +13,15 @@ FLASH_CARD_KIND = "flash-card-patch"
 MICRO_QUIZ_KIND = "micro-quiz-patch"
 CONTENT_BUNDLE_KIND = "content-bundle"
 PROBLEM_PATCH_KIND = "problem-patch"
+PAPER_ARTIFACT_TYPE = "paper_artifact"
+_PAPER_ID_RE = re.compile(r"^ps-\d+$")
 _MANIFEST_KINDS = {FLASH_CARD_KIND, MICRO_QUIZ_KIND, CONTENT_BUNDLE_KIND,
                    PROBLEM_PATCH_KIND}
 _CONTENT_LISTS = ("knowledge_points", "problems", "flash_cards")
 
 
 def extract_action(answer, context, folder=None):
-    """Return visible text, content actions, and an intent-gated notice."""
+    """Return visible text, content actions, and one validated UI notice action."""
     blocks = list(_ACTION_BLOCK_RE.finditer(answer))
     if not blocks:
         return answer, [], None
@@ -38,7 +40,15 @@ def extract_action(answer, context, folder=None):
             continue
         action = None
         raw_type = raw.get("type")
-        if raw_type in ("replace_practice_selection", "prefill_goal_form"):
+        if raw_type == PAPER_ARTIFACT_TYPE:
+            # Artifact handoff is presentational, not a learner-state mutation, so
+            # it does not depend on a page intent. Invalid/untrusted shapes are
+            # silently discarded rather than partially rendered.
+            recognized = True
+            matched_intent = True
+            if notice is None:
+                notice = _clean_paper_artifact_action(raw)
+        elif raw_type in ("replace_practice_selection", "prefill_goal_form"):
             recognized = True
             if notice is not None:
                 continue
@@ -73,6 +83,31 @@ def extract_action(answer, context, folder=None):
             "error": "回复包含 lessonkit-action 区块，但没有区块符合已知动作契约，未写入任何内容",
         }
     return answer, [], None
+
+
+def _clean_paper_artifact_action(raw):
+    """Accept only receipt-derived Paper identity; never trust model-provided URLs."""
+    practice_set_id = str(raw.get("practice_set_id") or "").strip()
+    if not _PAPER_ID_RE.fullmatch(practice_set_id):
+        return None
+    title = str(raw.get("title") or "").strip()[:120]
+    if not title:
+        title = practice_set_id
+    summary = str(raw.get("summary") or "").strip()[:300]
+    item_count = raw.get("item_count")
+    if isinstance(item_count, bool) or not isinstance(item_count, int):
+        item_count = None
+    elif item_count < 0 or item_count > 10000:
+        item_count = None
+    action = {
+        "type": PAPER_ARTIFACT_TYPE,
+        "practice_set_id": practice_set_id,
+        "title": title,
+        "summary": summary,
+    }
+    if item_count is not None:
+        action["item_count"] = item_count
+    return action
 
 
 def _looks_like_content_block(raw):

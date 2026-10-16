@@ -34,6 +34,7 @@ class Element {
     this.scrollHeight = 40;
     this._text = "";
     this.type = "";
+    this.href = "";
   }
   appendChild(child) { this.children.push(child); return child; }
   addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
@@ -49,6 +50,7 @@ function setup() {
   const elements = {
     layout: new Element("layout", { workspace: "alpha", page: "kp", objectId: "kp-7" }),
     "ai-column": new Element("ai-column"),
+    "ai-messages": new Element("ai-messages"),
     "ai-context-chips": new Element("ai-context-chips"),
     "ai-input": new Element("ai-input"),
     "ai-input-row": new Element("ai-input-row"),
@@ -59,6 +61,9 @@ function setup() {
     "agent-bottom-dock": new Element("agent-bottom-dock"),
     "agent-bottom-dock-body": new Element("agent-bottom-dock-body"),
     "agent-artifact-split": new Element("agent-artifact-split"),
+    "agent-artifact-title": new Element("agent-artifact-title"),
+    "agent-artifact-body": new Element("agent-artifact-body"),
+    "agent-artifact-actions": new Element("agent-artifact-actions"),
   };
   ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split", "ai-approval-slot"].forEach((id) => {
     elements[id].classList.add("hidden");
@@ -163,9 +168,50 @@ test("Approval Gate replaces the composer and restores it after an explicit deci
   assert.equal(approved, 1);
 });
 
-test("Workbench runtime keeps typing available while a turn runs and forwards runtime state", () => {
+test("Paper Artifact stays in chat and opens only a native safe Adaptive Split target", () => {
+  const { elements, ui } = setup();
+  const first = {
+    type: "paper_artifact", practice_set_id: "ps-017", title: "期中复习",
+    item_count: 12, summary: "覆盖薄弱知识点。", url: "https://evil.invalid/",
+  };
+  assert.equal(ui.artifact(first), true);
+  assert.equal(elements["ai-messages"].children.length, 1);
+  assert.equal(elements["agent-artifact-split"].classList.contains("hidden"), false);
+  assert.equal(elements.middle.classList.contains("agent-split-open"), true);
+  assert.equal(elements["agent-artifact-actions"].children[0].href, "/w/alpha/practice-sets");
+  assert.notEqual(elements["agent-artifact-actions"].children[0].href, first.url);
+
+  ui.collapseAux();
+  assert.equal(ui.artifact({
+    type: "paper_artifact", practice_set_id: "ps-018", title: "第二张卷",
+  }), true);
+  assert.equal(elements["ai-messages"].children.length, 2);
+  assert.equal(elements["agent-artifact-split"].classList.contains("hidden"), true,
+    "an artifact must not force open a surface the user collapsed");
+
+  const secondCard = elements["ai-messages"].children[1];
+  const controls = secondCard.children[secondCard.children.length - 1];
+  controls.children[0].click();
+  assert.equal(elements["agent-artifact-split"].classList.contains("hidden"), false,
+    "an explicit Preview action may reopen the split");
+  assert.equal(elements["agent-artifact-actions"].children[0].href, "/w/alpha/practice-sets");
+});
+
+test("restored historical Artifact cards do not take over the current page", () => {
+  const { elements, ui } = setup();
+  assert.equal(ui.artifact({
+    type: "paper_artifact", practice_set_id: "ps-021", title: "历史试卷",
+  }, { restore: true }), true);
+  assert.equal(elements["ai-messages"].children.length, 1);
+  assert.equal(elements["agent-artifact-split"].classList.contains("hidden"), true);
+  assert.equal(elements.middle.classList.contains("agent-split-open"), false);
+});
+
+test("Workbench runtime keeps typing available and maps runtime and Artifact state", () => {
   assert.equal(workbench.includes("aiInput.disabled = running"), false);
   assert.ok(workbench.includes("AgentUISurfaces.activity"));
   assert.ok(workbench.includes("AgentUISurfaces.confirm"));
   assert.ok(workbench.includes("AgentUISurfaces.resetTurn"));
+  assert.ok(workbench.includes("AgentUISurfaces.artifact"));
+  assert.ok(workbench.includes("paper_artifact"));
 });

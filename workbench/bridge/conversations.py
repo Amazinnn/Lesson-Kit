@@ -11,6 +11,7 @@ from pathlib import Path
 
 from workbench import ingest
 from workbench.bridge import conversation_actions, conversation_providers, pi_rpc
+from workbench.data import practice_sets
 from workbench.data.pool import Pool
 
 
@@ -869,12 +870,51 @@ def _batch_label(applied):
         f"{batch['batch_id']}（{batch.get('chapter') or '?'}）" for batch in batches
     )
 
+def _verified_paper_artifact(notice, root, workspace, event_path):
+    """Show an Artifact only for a managed Paper that actually exists.
+
+    The contract asks the model to emit this action only after a successful
+    `lesson-kit papers ... save` receipt, so an unknown id means the claim is
+    wrong. The managed record is the only source for identity, title and count.
+    """
+    record = None
+    pool = None
+    try:
+        pool = Pool(
+            root=root,
+            db_path=root / workspace["db"],
+            course=workspace.get("active_course", ""),
+            chapter=workspace.get("active_chapter", ""),
+        )
+        record = practice_sets.get_saved(pool, notice["practice_set_id"])
+    except (FileNotFoundError, KeyError, ValueError, OSError):
+        record = None
+    finally:
+        if pool is not None:
+            pool.close()
+    if record is None:
+        _append_event(
+            event_path, "activity", activity_id="paper-artifact",
+            activity_type="tool", status="error",
+            label=f"未找到已保存试卷 {notice.get('practice_set_id')}，不显示工件",
+        )
+        return None
+    return {
+        "type": "paper_artifact",
+        "practice_set_id": record["practice_set_id"],
+        "title": str(record.get("title") or record["practice_set_id"])[:120],
+        "summary": str(notice.get("summary") or "")[:300],
+        "item_count": record.get("count"),
+    }
+
 
 def _store_answer(folder, conversation_path, turn_path, event_path, root, workspace,
                   conversation_id, turn_id, message, context, answer,
                   pi_messages=False):
     """Store one finished answer: actions, ingestion, mirror, done event."""
     answer, content_actions, notice = _extract_action(answer, context, folder)
+    if notice is not None and notice.get("type") == "paper_artifact":
+        notice = _verified_paper_artifact(notice, root, workspace, event_path)
     if not pi_messages:
         _append_event(
             event_path, "activity", activity_id="answer",

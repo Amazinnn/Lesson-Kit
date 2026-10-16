@@ -1330,3 +1330,34 @@ A content-batch rollback initiated from an Agent result card SHALL require an Ap
 
 - **WHEN** the learner changes conversations before deciding on a rollback
 - **THEN** the gate closes and its old callback cannot roll back the prior batch
+
+### Requirement: Agent Artifact handoff previews the saved Paper
+
+A completed Agent turn that hands off a managed Paper SHALL show one Artifact card
+in the conversation carrying the saved Paper's title and item count. The newest
+Artifact of the current turn MAY open a temporary Adaptive Split preview beside
+the central Lesson Kit page; the page SHALL remain present and readable, and the
+preview SHALL NOT navigate away from it. Older Artifact cards restored from
+history SHALL be shown collapsed and SHALL NOT open the split on their own.
+Opening the Paper's canonical page remains an explicit learner action that goes
+to the workspace's saved-paper page.
+
+#### Scenario: A finished turn previews its Artifact
+
+- **WHEN** a turn finishes with a managed Paper Artifact
+- **THEN** one card appears in the conversation and its preview opens beside the central page
+
+#### Scenario: The preview does not take over navigation
+
+- **WHEN** the Artifact preview is open
+- **THEN** the central Lesson Kit page remains present and no navigation occurs
+
+#### Scenario: History restores cards without previewing
+
+- **WHEN** the learner opens a conversation whose earlier turn already had an Artifact
+- **THEN** that Artifact card is restored in the conversation without opening the split
+
+#### Scenario: The learner opens the Paper page
+
+- **WHEN** the learner activates the card's open action
+- **THEN** the workspace's saved-paper page opens as an explicit navigation

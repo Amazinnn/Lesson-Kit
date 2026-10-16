@@ -259,6 +259,53 @@
   }
   #middle.agent-split-open { padding-right: 40px; }
 }
+
+
+/* Artifact = durable result handoff. The chat card is the record; Adaptive Split
+   is only the latest-result preview and never performs navigation by itself. */
+.agent-artifact-card {
+  padding: 11px 12px !important;
+  border: 1px solid var(--lk-ink) !important;
+  border-left: 4px solid var(--lk-blue) !important;
+  border-radius: 10px !important;
+  background: var(--lk-paper) !important;
+}
+.agent-artifact-card-title {
+  display: block;
+  margin-top: 3px;
+  color: var(--lk-ink);
+  font-size: 13px;
+  line-height: 19px;
+}
+.agent-artifact-meta {
+  margin: 5px 0 0;
+  color: var(--dsw-label-tertiary);
+  font-family: var(--dsw-font-code);
+  font-size: 10px;
+}
+.agent-artifact-summary {
+  margin: 7px 0 0;
+  color: var(--dsw-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.agent-artifact-card-actions,
+#agent-artifact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 11px;
+}
+.agent-artifact-open {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+#agent-artifact-body {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--dsw-border-l2);
+
 @media (max-width: 760px) {
   .agent-activity-float,
   .agent-bottom-dock {

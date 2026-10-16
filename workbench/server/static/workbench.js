@@ -2187,6 +2187,7 @@
   var aiTurn = null;
   var aiSendPending = false;
   var aiProgressReadFailed = false;
+  var aiLiveArtifact = null;
   var aiPollTimer = null;
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
@@ -2448,6 +2449,13 @@
 
   function aiApplyAction(action) {
     if (!action) return;
+    if (action.type === "paper_artifact") {
+      aiLiveArtifact = action;
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
+        AgentUISurfaces.artifact(action);
+      }
+      return;
+    }
     if (action.type === "replace_practice_selection") {
       if (!Array.isArray(action.kp_ids) || !action.kp_ids.length) return;
       saveSelectedKpIds(action.kp_ids);
@@ -2716,6 +2724,9 @@
     if (!messages) return;
     if (aiChatView) aiSetView("chat");
     messages.innerHTML = "";
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetConversation) {
+      AgentUISurfaces.resetConversation();
+    }
     aiCurrentProvider = record.provider || "";
     aiSyncModelSwitch(record);
     aiStreamingMessage = null;
@@ -2728,14 +2739,24 @@
         aiPiActivities = {};
         aiRenderActivities(message.activities || []);
         aiAddMarkdown(message.content || "", "ai");
-        // A single-action turn records both keys; render the list, and fall back
-        // to the single action only when the list is absent (one card, never two).
+        // Restore durable presentational results only. Mutable actions such as
+        // practice selection and goal prefills are never replayed from history.
         var actions = message.actions || [];
-        if (actions.length) {
-          actions.forEach(function (restored) {
-            if (restored && restored.type === "check_ingest") aiApplyCheckAction(restored);
-          });
-        } else if (message.action && message.action.type === "check_ingest") {
+        actions.forEach(function (restored) {
+          if (!restored) return;
+          if (restored.type === "check_ingest") aiApplyCheckAction(restored);
+          else if (restored.type === "paper_artifact"
+              && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
+            AgentUISurfaces.artifact(restored, { restore: true });
+          }
+        });
+        if (message.action && message.action.type === "paper_artifact"
+            && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
+          var livePreview = !!(aiLiveArtifact && message.action.practice_set_id
+            && aiLiveArtifact.practice_set_id === message.action.practice_set_id);
+          aiLiveArtifact = null;
+          AgentUISurfaces.artifact(message.action, { restore: !livePreview });
+        } else if (!actions.length && message.action && message.action.type === "check_ingest") {
           aiApplyCheckAction(message.action);
         }
         aiExecutionPlan = null;

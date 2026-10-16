@@ -422,6 +422,13 @@ the save receipt field `practice_set_id`, the `ps-NNN` IDs, the
 while the product object is a saved Paper. New active execution and history
 rows use `source_kind: paper`; no manifest or saved-file shape changes.
 
+A conversation may end with one `paper_artifact` action that references a
+managed Paper by its saved `ps-NNN` id. It carries no manifest, writes nothing,
+and is only accepted when that id resolves to a record in the selected
+workspace; the Bridge then reads the stored title and item count instead of
+model-supplied values. The action has no URL field, and the Workbench derives
+the workspace's own `/practice-sets` destination.
+
 ## Workbench Runtime Areas
 
 Runtime assets follow the hidden dot-directory convention and live under

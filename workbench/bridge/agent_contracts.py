@@ -83,6 +83,12 @@ Goal form prefill:
 ```
 Use only when the learner is asking from the goal-form flow; ordinary chat must not prefill it.
 
+Managed Paper handoff:
+```lessonkit-action
+{"type":"paper_artifact","practice_set_id":"ps-001","title":"…","item_count":12,"summary":"…"}
+```
+Emit this only after a successful `lesson-kit papers <workspace> save --input <manifest>` command returns exit 0 and a JSON receipt. `practice_set_id`, title, and item count must come from that receipt; do not invent them. Do not include or invent a navigation URL in the action. The Workbench derives its own native destination, and presenting an Artifact must not navigate automatically.
+
 After any successful write, summarize the affected objects and user-accessible result in concise Chinese. Do not expose shell commands, SQL, tool logs, hashes, database keys, or implementation-only paths as the learner-facing evidence.
 """,
     "content": r"""Lesson Kit content action contract — content-bundle v2 (2026-09-25)
