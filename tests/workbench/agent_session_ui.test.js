@@ -891,6 +891,75 @@ test("a stale same-session success cannot replace the latest conversation conten
   ), false);
 });
 
+test("a current same-session retry failure stays visible after stale startup success", async () => {
+  const initial = deferred();
+  const retry = deferred();
+  const unhandled = [];
+  let calls = 0;
+  const onUnhandled = (error) => unhandled.push(error);
+  process.on("unhandledRejection", onUnhandled);
+  try {
+    const app = setup((url, options) => {
+      if (url.endsWith("/ai/providers")) return response([]);
+      if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+      if (url.endsWith("/ai/sessions/conv-a")) {
+        calls += 1;
+        return calls === 1 ? initial.promise : retry.promise;
+      }
+      return response({});
+    }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+    await flush();
+
+    app.elements["ai-session-list"].children[0].children[0].click();
+    retry.resolve({
+      ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
+    });
+    await flush();
+    initial.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        ...session("conv-a"), messages: [{ role: "assistant", content: "stale startup content" }],
+      }),
+    });
+    await flush();
+
+    assert.equal(
+      JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-a",
+    );
+    assert.match(app.elements["ai-status"].textContent, /unavailable/);
+    assert.equal(app.elements["ai-send"].disabled, true);
+    assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+    assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+    assert.equal(app.elements["ai-messages"].children.some(
+      (child) => child.innerHTML.includes("stale startup content"),
+    ), false);
+    assert.equal(unhandled.length, 0);
+  } finally {
+    process.removeListener("unhandledRejection", onUnhandled);
+  }
+});
+
+test("a current 404 while opening a conversation returns to the list", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-gone")]);
+    if (url.endsWith("/ai/sessions/conv-gone")) {
+      return response({ error: "unknown conversation" }, 404);
+    }
+    return response({});
+  });
+  await flush();
+
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  assert.equal(app.window.sessionStorage.getItem("wb_ai_conversation_alpha"), null);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-status"].textContent, "");
+});
+
 test("opening the provider picker supersedes an in-flight conversation restore", async () => {
   const initial = deferred();
   const app = setup((url, options) => {
