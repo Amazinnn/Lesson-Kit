@@ -2154,6 +2154,10 @@
         goalStatus("暂无可用 Agent。请先配置一个提供方，或手动填写字段。");
         return;
       }
+      if (aiSendPending) {
+        goalStatus("Agent 请求仍在提交，请稍候。");
+        return;
+      }
       if (!aiConversation || aiTurn) {
         if (typeof aiShowProviderPicker === "function") aiShowProviderPicker();
         goalStatus("请先在右侧选择 Agent 开始对话，再点一次「让 Agent 填」。");
@@ -2162,12 +2166,7 @@
       var body = aiContextBody(text);
       body.goal_intent = true;
       goalStatus("已发给 Agent，等待代填…");
-      post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns", body)
-        .then(function (turn) {
-          aiTurn = turn.turn_id;
-          aiPollSequence = 0;
-          aiPollConversationTurn();
-        })
+      aiPostTurn(body)
         .catch(function (error) {
           goalStatus("发送失败：" + (error.message || "未知错误"));
         });
@@ -2183,13 +2182,57 @@
   var aiStop = document.getElementById("ai-stop");
   var aiStatus = document.getElementById("ai-status");
   var aiConversation = load(AI_CONVERSATION_KEY, "");
+  var aiSurfaceConversation = "";
+  var aiConversationSequence = 0;
   var aiTurn = null;
+  var aiSendPending = false;
+  var aiProgressReadFailed = false;
   var aiPollTimer = null;
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
   var aiExecutionPlan = null;
   var aiCurrentProvider = "";
   var aiPiActivities = {};
+
+  function aiResetConversationRuntime() {
+    aiConversationSequence += 1;
+    aiTurn = null;
+    aiSendPending = false;
+    aiProgressReadFailed = false;
+    aiPollSequence = 0;
+    if (aiPollTimer) clearTimeout(aiPollTimer);
+    aiPollTimer = null;
+    aiStreamingMessage = null;
+    aiExecutionPlan = null;
+    aiCurrentProvider = "";
+    aiPiActivities = {};
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
+      AgentUISurfaces.resetTurn();
+    }
+    aiSetStatus("");
+  }
+
+  function aiPostTurn(body) {
+    if (!aiConversation || aiTurn || aiSendPending) {
+      return Promise.reject(new Error("conversation already has a pending turn"));
+    }
+    var conversationId = aiConversation;
+    var sequence = aiConversationSequence;
+    aiSendPending = true;
+    return post("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns", body)
+      .then(function (turn) {
+        if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+        aiSendPending = false;
+        aiTurn = turn.turn_id;
+        aiPollSequence = 0;
+        aiPollConversationTurn();
+        return turn;
+      }, function (error) {
+        if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+        aiSendPending = false;
+        throw error;
+      });
+  }
 
   function aiAddMarkdown(text, cls) {
     aiAdd(richText(text || ""), cls);
@@ -2372,6 +2415,9 @@
   }
 
   function aiHandleActivity(activity) {
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.activity) {
+      AgentUISurfaces.activity(activity);
+    }
     if (aiCurrentProvider === "pi") aiUpsertPiActivity(activity);
     else aiUpsertActivity(activity);
   }
@@ -2392,7 +2438,12 @@
   function aiSetRunning(running) {
     if (aiSend) aiSend.disabled = running || !aiConversation;
     if (aiStop) aiStop.classList.toggle("hidden", !running);
-    if (aiInput) aiInput.disabled = running;
+    // Keep the composer editable while a turn runs. The send button remains
+    // gated until the backend can accept a redirect/queued turn explicitly.
+    if (aiInput) aiInput.disabled = false;
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.setRunning) {
+      AgentUISurfaces.setRunning(running);
+    }
   }
 
   function aiApplyAction(action) {
@@ -2615,27 +2666,41 @@
   }
 
   function aiRollbackBatch(batchId, button) {
-    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？该批全部内容行将从池中撤销。")) return;
-    button.disabled = true;
-    api("/ingest/rollback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ batch_id: batchId }),
-    }).then(function (result) {
-      var card = button.closest(".check-card");
-      if (card) {
-        var detail = card.querySelector(".check-card-detail");
-        if (detail) {
-          detail.textContent = "批次 " + batchId + " 已整批回滚（撤销 "
-            + (result && result.deleted != null ? result.deleted : "?") + " 行）。";
+    function executeRollback() {
+      button.disabled = true;
+      api("/ingest/rollback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batch_id: batchId }),
+      }).then(function (result) {
+        var card = button.closest(".check-card");
+        if (card) {
+          var detail = card.querySelector(".check-card-detail");
+          if (detail) {
+            detail.textContent = "批次 " + batchId + " 已整批回滚（撤销 "
+              + (result && result.deleted != null ? result.deleted : "?") + " 行）。";
+          }
         }
-      }
-      button.remove();
-      aiSetStatus("批次已回滚");
-    }).catch(function (err) {
-      button.disabled = false;
-      aiSetStatus("回滚失败：" + (err && err.message ? err.message : "未知错误"));
-    });
+        button.remove();
+        aiSetStatus("批次已回滚");
+      }).catch(function (err) {
+        button.disabled = false;
+        aiSetStatus("回滚失败：" + (err && err.message ? err.message : "未知错误"));
+      });
+    }
+
+    var approval = {
+      title: "整批回滚 " + batchId,
+      reason: "这是低可逆性的内容变更，需要你明确确认。",
+      impact: "该批写入的内容会从学习池撤销。",
+      approveLabel: "确认回滚",
+    };
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.confirm
+        && AgentUISurfaces.confirm(approval, executeRollback)) {
+      return;
+    }
+    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？该批全部内容行将从池中撤销。")) return;
+    executeRollback();
   }
 
   function aiRecordRecent(type, id) {
@@ -2686,9 +2751,15 @@
 
   function aiLoadConversation(conversationId) {
     if (!conversationId) return Promise.resolve();
+    if (aiSurfaceConversation !== conversationId) {
+      aiResetConversationRuntime();
+      aiSurfaceConversation = conversationId;
+    }
     aiConversation = conversationId;
     store(AI_CONVERSATION_KEY, conversationId);
+    var sequence = aiConversationSequence;
     return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
+      if (sequence !== aiConversationSequence || aiConversation !== conversationId) return null;
       aiRenderConversation(record);
       return record;
     });
@@ -2823,62 +2894,99 @@
       aiPollSequence = Math.max(aiPollSequence, event.sequence || 0);
       if (event.kind === "text") aiAppendAssistantText(event.text || "");
       else if (event.kind === "activity") aiHandleActivity(event);
-      else if (event.kind === "error") aiSetStatus(event.text || "Agent 返回错误");
+      else if (event.kind === "error") {
+        var eventError = event.text || "Agent 返回错误";
+        aiSetStatus(eventError);
+        if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+          AgentUISurfaces.failure(eventError);
+        }
+      }
     });
     if (!data.turn) return;
     if (data.turn.status === "done") {
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("");
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.finishTurn) {
+        AgentUISurfaces.finishTurn();
+      }
       aiApplyAction(data.turn.action);
       aiLoadConversation(aiConversation);
       if (typeof aiRefreshSessionList === "function") aiRefreshSessionList();
     } else if (data.turn.status === "failed") {
       aiTurn = null;
       aiSetRunning(false);
-      aiSetStatus("Agent 失败：" + (data.turn.error || "未知错误"));
+      var turnError = "Agent 失败：" + (data.turn.error || "未知错误");
+      aiSetStatus(turnError);
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+        AgentUISurfaces.failure(turnError);
+      }
     } else if (data.turn.status === "cancelled") {
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("本轮已停止。");
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.finishTurn) {
+        AgentUISurfaces.finishTurn();
+      }
     }
   }
 
   function aiPollConversationTurn() {
     if (!aiConversation || !aiTurn) return;
     if (aiPollTimer) clearTimeout(aiPollTimer);
-    api("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns/"
-      + encodeURIComponent(aiTurn) + "?after=" + aiPollSequence).then(function (data) {
+    var conversationId = aiConversation;
+    var turnId = aiTurn;
+    var sequence = aiConversationSequence;
+    var after = aiPollSequence;
+    function isCurrentTurn() {
+      return sequence === aiConversationSequence
+        && conversationId === aiConversation && turnId === aiTurn;
+    }
+    function scheduleNextPoll() {
+      aiPollTimer = setTimeout(function () {
+        if (isCurrentTurn()) aiPollConversationTurn();
+      }, 350);
+    }
+    api("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns/"
+      + encodeURIComponent(turnId) + "?after=" + after).then(function (data) {
+      if (!isCurrentTurn()) return;
+      if (aiProgressReadFailed) {
+        aiProgressReadFailed = false;
+        aiSetStatus("Agent 正在处理…");
+      }
       aiAppendEvents(data);
       if (data.turn && (data.turn.status === "running" || data.turn.status === "queued")) {
-        aiPollTimer = setTimeout(aiPollConversationTurn, 350);
+        scheduleNextPoll();
       }
     }).catch(function () {
-      aiTurn = null;
-      aiSetRunning(false);
-      aiSetStatus("无法读取 Agent 进度。");
+      if (!isCurrentTurn()) return;
+      aiProgressReadFailed = true;
+      aiSetStatus("无法读取 Agent 进度，当前轮次状态暂时未知。请检查连接或重新打开此对话。");
+      scheduleNextPoll();
     });
   }
 
   function aiSendMessage() {
     var message = aiInput ? aiInput.value.trim() : "";
-    if (!message || !aiConversation || aiTurn) return;
+    if (!message || !aiConversation || aiTurn || aiSendPending) return;
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
+      AgentUISurfaces.resetTurn();
+    }
     aiAddMarkdown(message, "user");
     aiInput.value = "";
     aiSetRunning(true);
     aiSetStatus("正在发送…");
-    post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns", aiContextBody(message))
-      .then(function (turn) {
-        aiTurn = turn.turn_id;
-        aiPollSequence = 0;
-        aiPollConversationTurn();
-      }).catch(function (err) {
-        aiSetRunning(false);
-        aiSetStatus("发送失败：" + (err.message || "未知错误"));
-      });
+    aiPostTurn(aiContextBody(message)).catch(function (err) {
+      aiSetRunning(false);
+      var sendError = "发送失败：" + (err.message || "未知错误");
+      aiSetStatus(sendError);
+      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+        AgentUISurfaces.failure(sendError);
+      }
+    });
   }
 
   if (aiSend) aiSend.addEventListener("click", aiSendMessage);
@@ -3068,7 +3176,8 @@
 
   if (aiNewSession) aiNewSession.addEventListener("click", aiShowProviderPicker);
   if (aiSessionBack) aiSessionBack.addEventListener("click", function () {
-    aiTurn = null;
+    aiResetConversationRuntime();
+    aiSurfaceConversation = "";
     aiConversation = "";
     sessionStorage.removeItem(AI_CONVERSATION_KEY);
     aiSetView("list");

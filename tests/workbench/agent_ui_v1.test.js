@@ -8,6 +8,7 @@ const test = require("node:test");
 const root = path.resolve(__dirname, "../..");
 const pages = fs.readFileSync(path.join(root, "workbench/server/pages.py"), "utf8");
 const css = fs.readFileSync(path.join(root, "workbench/server/static/agent-ui.css"), "utf8");
+const workbench = fs.readFileSync(path.join(root, "workbench/server/static/workbench.js"), "utf8");
 const factory = require("../../workbench/server/static/agent-ui.js");
 
 class ClassList {
@@ -32,13 +33,47 @@ class Element {
     this.style = {};
     this.scrollHeight = 40;
     this._text = "";
+    this.type = "";
   }
   appendChild(child) { this.children.push(child); return child; }
   addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
+  trigger(name, event = {}) { (this.listeners[name] || []).forEach((fn) => fn({ target: this, ...event })); }
+  click() { this.trigger("click"); }
   set innerHTML(value) { this.children = []; this._text = String(value); }
   get innerHTML() { return this._text; }
   set textContent(value) { this._text = String(value); }
   get textContent() { return this._text; }
+}
+
+function setup() {
+  const elements = {
+    layout: new Element("layout", { workspace: "alpha", page: "kp", objectId: "kp-7" }),
+    "ai-column": new Element("ai-column"),
+    "ai-context-chips": new Element("ai-context-chips"),
+    "ai-input": new Element("ai-input"),
+    "ai-input-row": new Element("ai-input-row"),
+    "ai-approval-slot": new Element("ai-approval-slot"),
+    middle: new Element("middle"),
+    "agent-activity-float": new Element("agent-activity-float"),
+    "agent-activity-body": new Element("agent-activity-body"),
+    "agent-bottom-dock": new Element("agent-bottom-dock"),
+    "agent-bottom-dock-body": new Element("agent-bottom-dock-body"),
+    "agent-artifact-split": new Element("agent-artifact-split"),
+  };
+  ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split", "ai-approval-slot"].forEach((id) => {
+    elements[id].classList.add("hidden");
+  });
+  const document = {
+    getElementById(id) { return elements[id] || null; },
+    createElement(tag) { return new Element(tag); },
+    querySelectorAll() { return []; },
+  };
+  const storage = new Map([["wb_kp_selection_alpha", JSON.stringify(["kp-1", "kp-2"])]]);
+  const window = { sessionStorage: {
+    getItem(key) { return storage.get(key) || null; },
+    setItem(key, value) { storage.set(key, String(value)); },
+  } };
+  return { elements, ui: factory(document, window), storage };
 }
 
 test("server shell loads Agent UI v1 foundation and declares transient surfaces", () => {
@@ -54,24 +89,7 @@ test("server shell loads Agent UI v1 foundation and declares transient surfaces"
 });
 
 test("surface controller renders compact context chips and respects explicit collapse", () => {
-  const elements = {
-    layout: new Element("layout", { workspace: "alpha", page: "kp", objectId: "kp-7" }),
-    "ai-column": new Element("ai-column"),
-    "ai-context-chips": new Element("ai-context-chips"),
-    "ai-input": new Element("ai-input"),
-    middle: new Element("middle"),
-    "agent-activity-float": new Element("agent-activity-float"),
-    "agent-bottom-dock": new Element("agent-bottom-dock"),
-    "agent-artifact-split": new Element("agent-artifact-split"),
-  };
-  const document = {
-    getElementById(id) { return elements[id] || null; },
-    createElement(tag) { return new Element(tag); },
-    querySelectorAll() { return []; },
-  };
-  const storage = new Map([["wb_kp_selection_alpha", JSON.stringify(["kp-1", "kp-2"])]]);
-  const window = { sessionStorage: { getItem(key) { return storage.get(key) || null; } } };
-  const ui = factory(document, window);
+  const { elements, ui, storage } = setup();
   assert.equal(elements["ai-context-chips"].children.length, 3);
   assert.equal(elements["ai-context-chips"].children[0].textContent, "知识点");
   assert.equal(elements["ai-context-chips"].children[2].textContent, "范围 2 个知识点");
@@ -81,7 +99,6 @@ test("surface controller renders compact context chips and respects explicit col
   ui.collapseAux();
   assert.equal(ui.state.userCollapsed, true);
   assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), true);
-});
   const panel = [...css.matchAll(/\.agent-artifact-split\s*\{[^}]*\}/g)]
     .map((match) => match[0])
     .find((block) => block.includes("position: absolute"));
@@ -97,3 +114,58 @@ test("surface controller renders compact context chips and respects explicit col
   const narrow = css.match(/@media \(max-width: 1100px\)\s*\{[\s\S]*?\n\}/)[0];
   assert.ok(narrow.includes("position: fixed"), "narrow viewports fall back to an explicit overlay");
   assert.ok(!/@media \(min-width: \d+px\) and \(max-width: \d+px\)/.test(css), "no width band may split the two branches");
+});
+
+test("one activity uses the float and multi-step work graduates to the bottom dock", () => {
+  const { elements, ui } = setup();
+  ui.resetTurn();
+  ui.activity({ activity_id: "a1", label: "读取题库", status: "running", activity_type: "tool" });
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), false);
+  assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), true);
+  ui.activity({ activity_id: "a1", label: "读取题库", status: "done", activity_type: "tool" });
+  ui.activity({ activity_id: "a2", label: "生成试卷", status: "running", activity_type: "tool" });
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), true);
+  assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), false);
+  assert.equal(elements["agent-bottom-dock-body"].children.length, 2);
+});
+
+test("explicit collapse prevents runtime from reopening auxiliary work until the next turn", () => {
+  const { elements, ui } = setup();
+  ui.resetTurn();
+  ui.activity({ activity_id: "a1", label: "检索", status: "running" });
+  ui.collapseAux();
+  ui.activity({ activity_id: "a2", label: "整理", status: "running" });
+  assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), true);
+  ui.resetTurn();
+  ui.activity({ activity_id: "b1", label: "新一轮", status: "running" });
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), false);
+});
+
+test("Approval Gate replaces the composer and restores it after an explicit decision", () => {
+  const { elements, ui } = setup();
+  let approved = 0;
+  let denied = 0;
+  assert.equal(ui.confirm({
+    title: "整批回滚",
+    reason: "这会撤销当前入库批次。",
+    impact: "该批内容会从池中删除。",
+    approveLabel: "确认回滚",
+  }, () => { approved += 1; }, () => { denied += 1; }), true);
+  assert.equal(elements["ai-input-row"].classList.contains("hidden"), true);
+  assert.equal(elements["ai-approval-slot"].classList.contains("hidden"), false);
+  const card = elements["ai-approval-slot"].children[0];
+  const actions = card.children[card.children.length - 1];
+  actions.children[0].click();
+  assert.equal(denied, 1);
+  assert.equal(elements["ai-input-row"].classList.contains("hidden"), false);
+  ui.confirm({ title: "整批回滚" }, () => { approved += 1; });
+  elements["ai-approval-slot"].children[0].children.slice(-1)[0].children[1].click();
+  assert.equal(approved, 1);
+});
+
+test("Workbench runtime keeps typing available while a turn runs and forwards runtime state", () => {
+  assert.equal(workbench.includes("aiInput.disabled = running"), false);
+  assert.ok(workbench.includes("AgentUISurfaces.activity"));
+  assert.ok(workbench.includes("AgentUISurfaces.confirm"));
+  assert.ok(workbench.includes("AgentUISurfaces.resetTurn"));
+});

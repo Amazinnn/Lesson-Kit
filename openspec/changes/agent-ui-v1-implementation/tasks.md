@@ -18,7 +18,7 @@
 
 ## 3. PR137 — Managed Paper Artifact handoff
 
-- [ ] 3.1 Accept `paper_artifact` only after a successful managed-Paper save receipt and resolve its id against the selected workspace's managed record.
+- [ ] 3.1 Instruct the Agent to emit `paper_artifact` only after observing a successful managed-Paper save receipt, and separately require the Workbench to resolve the id against the selected workspace's managed record.
 - [ ] 3.2 Populate Artifact identity, title, and item count from the managed record; discard model URLs and derive the native workspace destination.
 - [ ] 3.3 Render one Artifact card per managed Paper per conversation; support a latest live preview that survives same-tab reload while historical cards stay closed and do not navigate.
 - [ ] 3.4 Update the live `workbench-ui` and `ai-teacher-bridge` specs, FILE_CONTRACT, Product Manual, and action graph.

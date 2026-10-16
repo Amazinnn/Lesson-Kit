@@ -44,9 +44,9 @@ An Artifact card is a presentational handoff attached to the successful conversa
 
 ### Resolve Artifact identity from the managed Paper record
 
-A successful `lesson-kit papers save` receipt is required to establish that the save operation succeeded. Its `practice_set_id` must resolve to a record in the selected workspace's existing managed Paper store. The normalized Artifact takes its id, title, and item count from that record; model-provided title/count are never authoritative. An optional summary is presentation text only. Any model-provided URL is discarded; the UI derives the native `/w/<workspace>/practice-sets` destination from the active workspace.
+The Agent's on-demand action contract instructs it to emit a `paper_artifact` only after observing exit code 0 and a JSON receipt from `lesson-kit papers save`. The Workbench then checks that the id resolves to a record in the selected workspace's existing managed Paper store. The normalized Artifact takes its id, title, and item count from that record; model-provided title/count are never authoritative. The action block is not a receipt ledger and does not prove which command produced the id. An optional summary is presentation text only. Any model-provided URL is discarded; the UI derives the native `/w/<workspace>/practice-sets` destination from the active workspace.
 
-The saved-Paper store and receipt were chosen over model-only claims or a new Artifact schema because they already define the managed Paper lifecycle and identity. If the record cannot be resolved, the conversation receives no Artifact card; the saved Paper remains discoverable from the existing Paper list.
+The saved-Paper store and provider-observed receipt were chosen over model-only claims or a new Artifact schema because they already define the managed Paper lifecycle and identity. This change adds no command-provenance ledger. If the record cannot be resolved, the conversation receives no Artifact card; the saved Paper remains discoverable from the existing Paper list.
 
 ### Restore only a live preview, not historical navigation
 

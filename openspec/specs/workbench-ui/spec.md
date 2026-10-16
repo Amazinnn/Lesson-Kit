@@ -1234,3 +1234,99 @@ The Agent rail SHALL remain a conversation surface within the existing workbench
 
 - **WHEN** the Agent is idle and no Artifact preview is active
 - **THEN** the central page remains unobstructed by an Activity Float or Bottom Dock
+
+### Requirement: Agent runtime work uses transient auxiliary surfaces
+
+Short provider activity SHALL use a replaceable Activity Float that presents the latest activity. Sustained multi-step activity SHALL use a temporary Bottom Dock that presents current milestones and latest status while the Agent rail remains usable. These surfaces SHALL NOT replace the existing conversation activity or execution history, accumulate as a separate task history, or expose a raw provider-event wall. A confirmed failure SHALL show a concise semantic summary while detailed output remains behind the existing collapsed disclosure. A failed progress read SHALL be represented as unavailable progress, not as proof that the provider turn failed.
+
+#### Scenario: A short activity is visible
+
+- **WHEN** a provider reports a short activity
+- **THEN** the Activity Float shows its readable label and current state, and a later short activity replaces that float content
+
+#### Scenario: Work continues across milestones
+
+- **WHEN** a provider reports sustained multi-step work
+- **THEN** the Bottom Dock shows the current milestones and latest status while the conversation remains available in the Agent rail
+
+#### Scenario: Detailed output is available
+
+- **WHEN** an activity includes provider output
+- **THEN** the transient surface keeps the semantic summary visible and the detailed output remains behind the existing closed disclosure in the conversation
+
+#### Scenario: A provider confirms a failure
+
+- **WHEN** the provider reports that the current turn failed
+- **THEN** the work surface shows a concise failure summary and retains detailed output behind the existing closed disclosure
+
+#### Scenario: Progress cannot be read
+
+- **WHEN** a progress request fails while the provider turn has no authoritative terminal status
+- **THEN** the interface reports that progress is unavailable, keeps the current turn gated against another send, and does not label the provider turn as failed
+
+### Requirement: Explicit collapse applies to the current Agent turn
+
+When the learner collapses an Activity Float or Bottom Dock, later activity updates in the same user turn SHALL NOT automatically reopen an auxiliary surface. A new user turn SHALL reset this suppression. Switching to another conversation SHALL clear the prior conversation's transient surfaces and collapse state.
+
+#### Scenario: Collapse while work is running
+
+- **WHEN** the learner collapses the Activity Float or Bottom Dock during a user turn and another activity arrives
+- **THEN** the new activity remains in the conversation history and no auxiliary surface automatically reopens for that turn
+
+#### Scenario: Start a later user turn
+
+- **WHEN** the learner sends a new message after the previous turn has ended
+- **THEN** automatic auxiliary-surface presentation is enabled for the new turn
+
+#### Scenario: Switch conversations
+
+- **WHEN** the learner opens a different conversation
+- **THEN** no activity surface or collapse state from the previous conversation appears in the new one
+
+### Requirement: Agent sending is single-flight and session-bound
+
+The Agent text composer SHALL remain editable while a turn is active, but the send action SHALL be gated from the first submit attempt until the current request is rejected or its turn reaches an authoritative terminal state. Click and Enter submission SHALL share this gate, including while the initial send request is awaiting its turn identifier. A conversation change SHALL invalidate pending approvals, activities, polling position, and callbacks owned by the previous conversation. Late responses from the previous conversation SHALL NOT update or act on the newly selected conversation.
+
+#### Scenario: Type during a running turn
+
+- **WHEN** an Agent turn is active
+- **THEN** the learner can continue editing the composer, but Send and Enter cannot submit another turn
+
+#### Scenario: Submit twice before receiving a turn identifier
+
+- **WHEN** the learner activates Send and then presses Enter before the first send request returns
+- **THEN** only one turn-creation request is sent
+
+#### Scenario: Switch sessions with pending runtime state
+
+- **WHEN** the learner switches conversations while an activity, progress request, or approval is pending
+- **THEN** the old state is cleared and any late callback is ignored without mutating or sending an action for the new conversation
+
+#### Scenario: Progress polling fails before a terminal response
+
+- **WHEN** the progress endpoint is temporarily unavailable while a turn is active
+- **THEN** the interface keeps the active turn identity and send gate, and reports unavailable progress without creating a retry turn
+
+### Requirement: Low-reversibility rollback requires an Approval Gate
+
+A content-batch rollback initiated from an Agent result card SHALL require an Approval Gate before the existing rollback operation is called. The gate SHALL identify the batch, explain the reason and impact, and replace the normal composer until the learner approves or cancels. Approval SHALL call the existing rollback operation once. Cancellation SHALL restore the composer without issuing a rollback request. Ordinary reversible provider activity SHALL NOT use this gate. A conversation change SHALL invalidate any approval callback from the prior conversation.
+
+#### Scenario: Review a rollback request
+
+- **WHEN** the learner selects the rollback control on a content-batch result
+- **THEN** the Approval Gate replaces the composer and identifies the batch and the effect of rollback
+
+#### Scenario: Approve rollback
+
+- **WHEN** the learner approves the displayed rollback
+- **THEN** the existing rollback operation is issued once for the displayed batch
+
+#### Scenario: Cancel rollback
+
+- **WHEN** the learner cancels the displayed rollback
+- **THEN** the composer returns and no rollback request is issued
+
+#### Scenario: Switch conversations while approval is open
+
+- **WHEN** the learner changes conversations before deciding on a rollback
+- **THEN** the gate closes and its old callback cannot roll back the prior batch
