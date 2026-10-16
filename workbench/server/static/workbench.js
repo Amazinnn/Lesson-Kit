@@ -3223,7 +3223,12 @@
       // The Agent rail is independent of the middle view: reopening a page
       // restores the conversation the learner left open instead of the list.
       if (!aiConversation) return null;
-      return aiLoadConversation(aiConversation).catch(function (error) {
+      var restoredConversation = aiConversation;
+      var restoreRequest = aiLoadConversation(restoredConversation);
+      var restoreSequence = aiConversationSequence;
+      return restoreRequest.catch(function (error) {
+        if (aiConversation !== restoredConversation
+            || aiConversationSequence !== restoreSequence) return null;
         if (error.status === 404) {
           aiConversation = "";
           aiSurfaceConversation = "";

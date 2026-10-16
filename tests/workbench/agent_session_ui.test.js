@@ -503,6 +503,70 @@ test("a stored conversation that no longer exists falls back to the list", async
   assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
 });
 
+test("a stale 404 cannot clear a newer conversation selected during restore", async () => {
+  const initial = deferred();
+  const selected = deferred();
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([session("conv-old"), session("conv-new")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-old")) return initial.promise;
+    if (url.endsWith("/ai/sessions/conv-new")) return selected.promise;
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-old") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  initial.resolve({
+    ok: false, status: 404, json: () => Promise.resolve({ error: "gone" }),
+  });
+  await flush();
+  selected.resolve({ ok: true, status: 200, json: () => Promise.resolve(session("conv-new")) });
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-new",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+});
+
+test("a stale 503 does not show a restore error over a newer selection", async () => {
+  const initial = deferred();
+  const selected = deferred();
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([session("conv-old"), session("conv-new")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-old")) return initial.promise;
+    if (url.endsWith("/ai/sessions/conv-new")) return selected.promise;
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-old") } });
+  await flush();
+
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  initial.resolve({
+    ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
+  });
+  await flush();
+
+  assert.equal(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-new",
+  );
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-status"].textContent, "");
+
+  selected.resolve({ ok: true, status: 200, json: () => Promise.resolve(session("conv-new")) });
+  await flush();
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+});
+
 test("a 503 while restoring keeps the conversation selected and shows a retryable error", async () => {
   const app = setup((url, options) => {
     if (url.endsWith("/ai/providers")) return response([]);
