@@ -72,6 +72,7 @@ function response(value) {
 
 function setup(fetch, options = {}) {
   const storage = new Storage();
+  Object.entries(options.seed || {}).forEach(([key, value]) => storage.setItem(key, value));
   const elements = {
     layout: new Element("layout", { dataset: { workspace: "alpha", page: "kp" } }),
     "ai-session-list-view": new Element("ai-session-list-view"),
@@ -454,3 +455,46 @@ test("the finished turn artifact keeps its preview across the conversation reloa
 function deepText(element) {
   return (element.children || []).map(deepText).join(" ") + " " + (element.textContent || "");
 }
+test("reopening a page restores the Agent conversation instead of the list", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response({
+      ...session("conv-a"),
+      messages: [{ role: "assistant", content: "上一轮的回复", action: null }],
+    });
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
+  await flush();
+  await flush();
+
+  assert.equal(
+    app.elements["ai-chat-view"].classList.contains("hidden"), false,
+    "the open conversation stays open when the middle view changes",
+  );
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
+  assert.deepEqual(
+    JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-a");
+  assert.ok(
+    app.elements["ai-messages"].children.some(
+      (child) => child.innerHTML.includes("上一轮的回复")),
+    "the restored conversation renders its durable messages",
+  );
+});
+
+test("a stored conversation that no longer exists falls back to the list", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([]);
+    if (url.endsWith("/ai/sessions/conv-gone")) {
+      return Promise.reject(new Error("unknown conversation"));
+    }
+    return response({});
+  }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-gone") } });
+  await flush();
+  await flush();
+
+  assert.equal(app.window.sessionStorage.getItem("wb_ai_conversation_alpha"), null);
+  assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+});

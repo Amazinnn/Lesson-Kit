@@ -2189,7 +2189,7 @@ test("selecting a node focuses its neighborhood and clears on empty click", asyn
   assert.equal(wrap("kp-5").classList.contains("dim"), false);
 });
 
-test("AI column discovers providers but opens a conversation only after selection", async () => {
+test("AI column discovers providers and restores the conversation left open", async () => {
   const elements = { layout: layout(), ...aiElements() };
   const calls = [];
   runWorkbench({
@@ -2213,9 +2213,10 @@ test("AI column discovers providers but opens a conversation only after selectio
   });
   await flush();
   assert.ok(calls.some((url) => url.endsWith("/ai/providers")));
-  assert.equal(calls.some((url) => url.endsWith("/ai/sessions/conv-001")), false);
-  await openFirstAiSession(elements);
-  assert.ok(calls.some((url) => url.endsWith("/ai/sessions/conv-001")));
+  assert.ok(
+    calls.some((url) => url.endsWith("/ai/sessions/conv-001")),
+    "the stored conversation is restored on page load instead of the picker",
+  );
   assert.equal(elements["ai-messages"].children.length, 2);
   assert.match(elements["ai-messages"].children[1].innerHTML, /分步选择时相乘/);
 });

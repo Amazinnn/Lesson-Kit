@@ -3215,7 +3215,16 @@
     Promise.all([
       providerRequest,
       aiRefreshSessionList(),
-    ]);
+    ]).then(function () {
+      // The Agent rail is independent of the middle view: reopening a page
+      // restores the conversation the learner left open instead of the list.
+      if (!aiConversation) return null;
+      return aiLoadConversation(aiConversation).catch(function () {
+        aiConversation = "";
+        sessionStorage.removeItem(AI_CONVERSATION_KEY);
+        return null;
+      });
+    });
   }
   if (layout.dataset.objectType && layout.dataset.objectId) {
     aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);

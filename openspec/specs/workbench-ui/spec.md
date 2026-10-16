@@ -400,7 +400,7 @@ Partial Agent text events SHALL update one assistant message until the turn comp
 - **THEN** the UI shows one growing assistant message and renders the combined Markdown
 
 ### Requirement: The default Agent view is a session list
-The Agent column SHALL initially show the complete local conversation list without opening or creating a session. New conversation creation SHALL require one explicit provider selection; the provider SHALL be immutable after creation. Rename and delete SHALL be available from compact history-row menus only.
+When the current tab has no open conversation, the Agent column SHALL initially show the complete local conversation list without opening or creating a session. New conversation creation SHALL require one explicit provider selection; the provider SHALL be immutable after creation. Rename and delete SHALL be available from compact history-row menus only.
 
 The chat state SHALL contain only an icon-only return-to-list control with an accessible label, the message stream, the input area, and a stop control while a turn is running. It SHALL NOT show provider settings, session settings, identity labels, current-page context text, daily-create controls, or chat-page rename/delete controls.
 
@@ -413,7 +413,7 @@ The client SHALL NOT read or write provider-memory or daily-create browser keys,
 
 #### Scenario: History is the first view
 
-- **WHEN** a workbench page loads
+- **WHEN** a workbench page loads with no conversation open in the current tab
 - **THEN** the Agent column shows the session list and no session is opened or created
 
 #### Scenario: Return to history
@@ -425,6 +425,35 @@ The client SHALL NOT read or write provider-memory or daily-create browser keys,
 
 - **WHEN** the learner chooses rename or delete from a history-row menu
 - **THEN** the corresponding local mirror action runs; those controls are absent from chat view
+
+### Requirement: Agent rail keeps the open conversation across page navigation
+
+The Agent rail SHALL keep the conversation the learner left open when the
+central Lesson Kit view changes or the page reloads in the same tab. Returning
+to the conversation list SHALL be an explicit learner action. When the
+conversation that would be restored no longer exists, the rail SHALL fall back
+to the conversation list without an error wall and SHALL NOT create a
+conversation.
+
+#### Scenario: Switch the central view
+
+- **WHEN** the learner has a conversation open and moves to another workbench page
+- **THEN** the rail restores that conversation instead of the conversation list
+
+#### Scenario: Reload the page
+
+- **WHEN** the learner reloads the workbench page in the same tab
+- **THEN** the rail restores the conversation that was open
+
+#### Scenario: Return to the list explicitly
+
+- **WHEN** the learner activates the return-to-list control
+- **THEN** the conversation list returns and later page changes or reloads keep the list
+
+#### Scenario: The open conversation disappears
+
+- **WHEN** the conversation left open no longer exists in the workspace
+- **THEN** the rail falls back to the conversation list without an error wall and creates no conversation
 
 ### Requirement: Provider is selected once
 New-session flow SHALL require an explicit available provider choice before creation. A created session SHALL display its provider as read-only.
