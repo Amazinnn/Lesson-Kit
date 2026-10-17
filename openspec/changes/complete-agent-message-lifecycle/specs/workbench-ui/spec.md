@@ -73,17 +73,6 @@ The composer SHALL remain editable during execution. Its per-submission network 
 
 ## ADDED Requirements
 
-### Requirement: Failed and uncertain user messages remain recoverable
-The UI SHALL preserve outgoing text/context before clearing the composer. A rejected/unacknowledged send SHALL remain visibly recoverable across refresh without overwriting a newer draft. Accepted provider failures SHALL preserve the user's message in canonical history and link available failure/partial-output information. Unknown acceptance SHALL be visibly distinct from rejection and SHALL reconcile the same identity before resend. Retrying SHALL be explicit; the original message SHALL NOT disappear or be silently duplicated.
-
-#### Scenario: Send request is rejected
-- **WHEN** the message POST fails before confirmed acceptance
-- **THEN** original text remains visible with retry/edit recovery and survives refresh instead of being swallowed
-
-#### Scenario: Accepted work fails and history reloads
-- **WHEN** the provider fails for an accepted message and the conversation is reopened
-- **THEN** original user text and failed status remain visible even with no assistant answer
-
 ### Requirement: Running-send preference and pending controls are explicit
 Running-send default SHALL be queue, configurable through existing workspace settings. Queue and interrupt-and-send SHALL remain explicit choices. Pending entries SHALL show retained text/order/status with edit/remove/continue controls appropriate to state. Changing the preference SHALL affect future submissions only. Failures and priority interruption SHALL visibly pause the retained older queue rather than silently continuing it.
 
@@ -95,9 +84,9 @@ Running-send default SHALL be queue, configurable through existing workspace set
 - **WHEN** D interrupts A while B/C are queued and D finishes
 - **THEN** the UI still shows B/C paused and requires explicit continuation instead of resuming A or automatically dispatching B
 
-### Requirement: Tool and approval controls report real effects
-A Tool Call Card SHALL show a semantic action/state/outcome, known completed/failed impact and folded redacted diagnostics. Recovery controls SHALL correspond to actual backend-supported actions. Unsupported selective retry SHALL NOT be presented as working. Existing governed Paper-reset and rollback confirmations SHALL show their exact impact and remain bound to the intended workspace/conversation/message/revision; cancellation or stale approval SHALL perform no write.
+### Requirement: Existing approval controls remain truthful and scoped
+Existing governed Paper-reset and rollback confirmations SHALL show their exact impact and remain bound to the intended workspace/conversation/message/revision; cancellation or stale approval SHALL perform no write. This change adds no new approval gate.
 
-#### Scenario: Partly committed operation fails
-- **WHEN** a Tool has known completed effects and a failed part
-- **THEN** its card distinguishes those effects and offers only supported scoped recovery or explicit new/read-only assistance, never an automatic replay of successful writes
+#### Scenario: Cancel an existing Paper reset approval
+- **WHEN** the learner cancels a governed Paper-reset approval or switches conversations before deciding
+- **THEN** no Paper write occurs and the existing approval callback cannot act on the new conversation

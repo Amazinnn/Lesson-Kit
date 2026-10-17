@@ -595,9 +595,9 @@ _Avoid_：独立 AI 应用壳、常驻 Tool Dashboard、与 Lesson Kit 脱节的
 出处：docs/design/AGENT-UI-V1.md；workbench-ui spec「Three-column shell with navigation」
 
 ### 工具调用卡 / Tool Call Card
-Agent UI v1 规划中的单次工具、命令、搜索或确定性动作执行摘要，拟在对话流中显示可读动作名、简短结果与状态。当前契约只规定 provider-neutral 活动归一化、Pi 活动以独立紧凑消息呈现且输出默认折叠，以及失败摘要经过净化；统一卡片、可见影响范围和恢复操作是设计目标，不是现有规范要求，落地前须由后续 OpenSpec change 定义。
+单次工具、命令、搜索或确定性动作的语义执行摘要，在对话流中显示可读动作名、实际状态与有证据支持的结果/影响；未知影响必须如实标为未知。诊断信息经过净化并默认折叠，摘要不超过 240 个字符。恢复控件只对应后端实际支持的操作。
 _Avoid_：原始协议事件墙、完整终端日志、思维链、把每个底层事件拆成独立卡片
-出处：docs/design/AGENT-UI-V1.md（规划）；workbench-ui spec「Pi activities are conversation messages」「Failed activities expose a concise error summary」；ai-teacher-bridge spec「Readable execution plan」
+出处：`preserve-agent-messages-and-tool-outcomes`；workbench-ui spec「Provider activity cards show evidenced outcomes」
 
 ### Agent 工件 / Agent Artifact
 Agent 产生的、值得交接或后续继续操作的结果对象，例如生成完成的试卷。它与 Tool Call Card 区分：Tool 表示“做了什么”，Artifact 表示“做出了什么”。Artifact 可在对话中以结果卡出现，并可由辅助工作面预览；完成 Artifact **不会自动切换当前 Lesson Kit 页面**，进入其正式页面必须由用户显式触发。此词条只定义 UI 交接概念，不引入持久化结构或试卷生命周期；保存语义归 paper model 契约。
