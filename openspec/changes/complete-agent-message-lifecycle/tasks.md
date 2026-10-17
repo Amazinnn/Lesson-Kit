@@ -10,6 +10,9 @@
 - [ ] 2.4 Pause retained queue on actual failure/unexpected interruption/service recovery; progress-read loss alone remains nonterminal.
 
 ## 3. Persistent right rail and real recovery UI
+
+The base navigation lifecycle and context refresh are delivered by `preserve-agent-rail-across-navigation`. The tasks below retain only their remaining message/queue integration and recovery obligations; do not reimplement the delivered navigation.
+
 - [ ] 3.1 Mount rail outside middle navigation lifecycle; preserve its DOM/controller/draft/scroll/tasks/queue across all same-workspace middle views and back/forward.
 - [ ] 3.2 Refresh context chips for the selected page without changing accepted-message context; dispose/reinitialize only middle-owned resources.
 - [ ] 3.3 Complete semantic Tool Call Card/failure-impact/folded-diagnostics interactions using normalized evidence; expose only backend-supported retry/read-only recovery.

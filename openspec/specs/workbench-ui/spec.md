@@ -1275,51 +1275,84 @@ The Agent rail SHALL remain a conversation surface within the existing workbench
 
 ### Requirement: Agent runtime work uses transient auxiliary surfaces
 
-Short provider activity SHALL use a replaceable Activity Float that presents the latest activity. Sustained multi-step activity SHALL use a temporary Bottom Dock that presents current milestones and latest status while the Agent rail remains usable. These surfaces SHALL NOT replace the existing conversation activity or execution history, accumulate as a separate task history, or expose a raw provider-event wall. A confirmed failure SHALL show a concise semantic summary while detailed output remains behind the existing collapsed disclosure. A failed progress read SHALL be represented as unavailable progress, not as proof that the provider turn failed.
+Short and sustained provider activity SHALL use only the top-right replaceable
+Activity Float for progress and current milestones. A Bottom Dock SHALL NOT
+open or reserve middle-page height during work. The Float SHALL remain bounded
+and SHALL NOT become a history dashboard or raw event wall. Existing
+conversation activity/history SHALL remain authoritative.
 
 #### Scenario: A short activity is visible
 
 - **WHEN** a provider reports a short activity
-- **THEN** the Activity Float shows its readable label and current state, and a later short activity replaces that float content
+- **THEN** the Activity Float shows its readable label and current state, and a
+  later short activity replaces that float content
 
 #### Scenario: Work continues across milestones
 
 - **WHEN** a provider reports sustained multi-step work
-- **THEN** the Bottom Dock shows the current milestones and latest status while the conversation remains available in the Agent rail
+- **THEN** the same top-right Activity Float summarizes current milestones and
+  latest status while the middle page keeps its height and no Bottom Dock opens
 
 #### Scenario: Detailed output is available
 
 - **WHEN** an activity includes provider output
-- **THEN** the transient surface keeps the semantic summary visible and the detailed output remains behind the existing closed disclosure in the conversation
+- **THEN** the transient surface keeps the semantic summary visible and the
+  detailed output remains behind the existing closed disclosure in the
+  conversation
 
 #### Scenario: A provider confirms a failure
 
 - **WHEN** the provider reports that the current turn failed
-- **THEN** the work surface shows a concise failure summary and retains detailed output behind the existing closed disclosure
+- **THEN** the work surface shows a concise failure summary and retains detailed
+  output behind the existing closed disclosure
 
 #### Scenario: Progress cannot be read
 
-- **WHEN** a progress request fails while the provider turn has no authoritative terminal status
-- **THEN** the interface reports that progress is unavailable, keeps the current turn gated against another send, and does not label the provider turn as failed
+- **WHEN** a progress request fails while the provider turn has no authoritative
+  terminal status
+- **THEN** the interface reports that progress is unavailable, keeps the
+  current turn gated against another send, and does not label the provider turn
+  as failed
 
 ### Requirement: Explicit collapse applies to the current Agent turn
 
-When the learner collapses an Activity Float or Bottom Dock, later activity updates in the same user turn SHALL NOT automatically reopen an auxiliary surface. A new user turn SHALL reset this suppression. Switching to another conversation SHALL clear the prior conversation's transient surfaces and collapse state.
+A small keyboard-accessible control SHALL expand or collapse the Activity
+Float with a truthful label and `aria-expanded`. Collapsing SHALL leave a
+compact reopening control while runtime progress is available. Later activity
+updates in the same user turn SHALL NOT automatically reopen the Float;
+explicit expansion MAY reopen it. A new user turn SHALL reset this suppression.
+Switching conversations SHALL clear the prior conversation's transient
+surfaces and collapse state. Idle SHALL NOT leave an empty Float or placeholder
+panel.
 
 #### Scenario: Collapse while work is running
 
-- **WHEN** the learner collapses the Activity Float or Bottom Dock during a user turn and another activity arrives
-- **THEN** the new activity remains in the conversation history and no auxiliary surface automatically reopens for that turn
+- **WHEN** the learner collapses the Activity Float during a user turn and
+  another activity arrives
+- **THEN** the new activity remains in the conversation history, the Float
+  stays closed and the small reopening control remains available
 
 #### Scenario: Start a later user turn
 
 - **WHEN** the learner sends a new message after the previous turn has ended
-- **THEN** automatic auxiliary-surface presentation is enabled for the new turn
+- **THEN** automatic Activity Float presentation is enabled for the new turn
 
 #### Scenario: Switch conversations
 
 - **WHEN** the learner opens a different conversation
-- **THEN** no activity surface or collapse state from the previous conversation appears in the new one
+- **THEN** no activity surface or collapse state from the previous conversation
+  appears in the new one
+
+#### Scenario: Reopen the current Float explicitly
+
+- **WHEN** the learner activates the collapsed Float's small control
+- **THEN** current progress reopens without changing the selected middle page or
+  starting another task
+
+#### Scenario: No runtime activity remains
+
+- **WHEN** the current Agent turn has ended and no activity remains
+- **THEN** the Activity Float and its reopening control are removed
 
 ### Requirement: Agent sending is single-flight and session-bound
 
@@ -1409,3 +1442,49 @@ to the workspace's saved-paper page.
 
 - **WHEN** the learner activates the card's open action
 - **THEN** the workspace's saved-paper page opens as an explicit navigation
+
+### Requirement: Same-workspace middle navigation preserves the Agent rail
+
+Navigating between pages and query states within one workspace SHALL update
+only the middle page content and its route-owned lifecycle. The existing
+`#ai-column` DOM and Agent controller SHALL remain mounted. Browser back and
+forward SHALL follow the same behavior. Navigation SHALL update current page
+context for future submissions while preserving the context already captured
+by accepted work. External, cross-workspace, modified-click, download, and
+explicitly targeted links SHALL keep native browser navigation.
+The server-rendered `#ai-column` SHALL have the same structure on graph and
+non-graph pages. Graph-only dashboard content SHALL belong to the graph middle
+page, and selecting a graph node SHALL NOT hide or replace the Agent chat.
+
+#### Scenario: Navigate within the workspace
+
+- **WHEN** the learner follows a same-workspace page link from navigation, a
+  page card, or middle content
+- **THEN** the middle page changes while the existing Agent rail and its
+  controller remain in place
+
+#### Scenario: Navigate back or forward
+
+- **WHEN** the learner uses browser Back or Forward after a same-workspace
+  navigation
+- **THEN** the middle page and its route-owned behavior change without
+  rebuilding the Agent rail
+
+#### Scenario: Send after navigating
+
+- **WHEN** the learner sends a new message after changing the middle page
+- **THEN** the request uses the current page context while previously accepted
+  work retains its submitted context
+
+#### Scenario: Enter and leave the graph page
+
+- **WHEN** the learner enters or leaves the graph page within the same workspace
+- **THEN** the graph dashboard mounts or disposes with the middle page while the
+  same Agent rail remains visible and usable
+
+#### Scenario: Follow a native navigation
+
+- **WHEN** the learner uses a modified click, download, external link, or link
+  to another workspace
+- **THEN** the browser performs its normal navigation without middle-page
+  interception

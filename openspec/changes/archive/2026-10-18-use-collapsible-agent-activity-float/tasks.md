@@ -13,4 +13,4 @@
 
 - [x] 3.1 Add focused regressions for Float-only sustained activity, collapse/reopen behavior, conversation cleanup, and idle cleanup.
 - [x] 3.2 Run the focused Agent UI test file and report the result for independent acceptance.
-- [ ] 3.3 Independent browser acceptance confirms the Float preserves usable middle-page height when open and collapsed.
+- [x] 3.3 Independent Chromium acceptance confirms the Float preserves usable middle-page height when open and collapsed (848/848/1217 height/clientHeight/scrollHeight unchanged).

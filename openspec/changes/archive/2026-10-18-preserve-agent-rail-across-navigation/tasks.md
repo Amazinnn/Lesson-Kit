@@ -8,4 +8,4 @@
 
 ## Acceptance
 
-- [ ] 2.1 Independently verify literal rail node/controller identity, navigation, back/forward, page lifecycle, and dynamic context in Chromium; see `complete-agent-message-lifecycle` acceptance 4.3.
+- [x] 2.1 Independently verify literal rail node/controller identity, navigation, back/forward, page lifecycle, and dynamic context in Chromium; see `complete-agent-message-lifecycle` acceptance 4.3.
