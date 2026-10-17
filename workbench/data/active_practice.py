@@ -207,6 +207,16 @@ def current(pool, *, resolve=True):
         "remaining": len(items) - answered - stuck,
         "total": len(items),
     }
+    source_ref = record.get('source_ref') or ''
+    if resolve and source_ref.startswith('ps-') and paper_progress.available(pool.connect()):
+        from workbench.data import practice_sets
+        try:
+            record['continuation'] = practice_sets.get_saved(pool, source_ref)['continuation']
+        except FileNotFoundError:
+            record['continuation'] = dict(
+                available=False, reason='对应的保存试卷已不存在，不能继续。',
+                execution=dict(progress={"total": len(items), "completed": answered + stuck}),
+                unavailable_item_ids=[])
     return record
 
 
@@ -448,12 +458,17 @@ def start_saved(pool, paper_id, *, practice_mode='exam', rating_mode='immediate'
     with pool.transaction(immediate=True):
         paper = practice_sets.get_saved(pool, paper_id)
         if paper['missing_problem_ids']:
-            raise ActivePracticeError('unavailable questions: '+', '.join(paper['missing_problem_ids']))
+            raise ActivePracticeError('试卷引用的题目不可用：'+', '.join(paper['missing_problem_ids']))
         ids = [item['problem_id'] for item in paper['plan']['items']]
         if not ids:
             raise ActivePracticeError('empty Paper cannot start')
         if paper['validation_errors']:
             raise ActivePracticeError('; '.join(paper['validation_errors']))
+        if paper['start_block_reason']:
+            raise ActivePracticeConflict(paper['start_block_reason'])
+        continuation = paper['continuation']
+        if continuation and not continuation['available']:
+            raise ActivePracticeConflict(continuation['reason'])
         existing = current(pool, resolve=False)
         if existing and existing.get('source_ref') == paper_id:
             if ids != [item['item_id'] for item in existing['items']]:
@@ -468,8 +483,8 @@ def start_saved(pool, paper_id, *, practice_mode='exam', rating_mode='immediate'
         state = paper_progress.ensure_state(pool.connect(), paper_id)
         if state['checkpoint_json']:
             record = json.loads(state['checkpoint_json'])
-            if [item['item_id'] for item in record['items']] != ids:
-                raise ActivePracticeConflict('legacy Paper checkpoint does not match its container')
+            if not continuation or not continuation['available']:
+                raise ActivePracticeConflict((continuation or {}).get('reason') or '试卷执行进度无法验证，不能继续。')
             _restore(pool, record)
             pool.connect().execute('UPDATE paper_state SET checkpoint_json=NULL WHERE paper_id=?', (paper_id,))
         else:

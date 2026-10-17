@@ -265,3 +265,4 @@ flowchart LR
   FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL 与 OpenSpec change delta 同步。
 - 2026-10-14 Agent 保存试卷：新增 `lesson-kit papers <workspace> save --input <manifest>`；校验已导出的练习清单并委托给现有试卷写入器。`pull --plan`/`--print` 仍表示导出，只有成功的 JSON 回执才能确认试卷已加入组卷页列表。L2/L3/L4、FILE_CONTRACT、DATA_MODEL、PRODUCT-MANUAL 同步；L3 登记 Agent 保存练习集动作，W6 明确“练习清单导出 → CLI 保存为试卷 → 成功回执 → 组卷页列表”；`pull --print` 仍仅生成打印稿。
 - 2026-10-17 Paper 独立进度：切卷改为暂停/恢复，不归档放弃；新增草稿保存、原卷影响预览确认和 CLI list/get/preview/update/delete。手工结构修改只清该卷未完成状态；修题只重置受影响题；删题保留其他进度及历史身份。删卷不删题。退役重复「AI 生成解析」独立展示，保留正常解析与来源字段。同步 L0/L2/L3/L4 与职责文档。
+- 2026-10-17 Paper 执行状态对齐（align-paper-execution-status）：保存卷列表、当前练习、开始和暂停共用执行续练校验；题目身份/顺序、版本、可用性或清单校验不匹配时说明原因，不把旧进度显示成当前试卷进度。当前卷不能暂停时，其他卷的开始状态显示阻塞原因并保留其自身进度。有效的改名、导出和删除仍可单独执行；不新增、退役或改级动作。

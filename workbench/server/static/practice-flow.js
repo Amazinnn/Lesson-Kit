@@ -206,6 +206,8 @@
     var resumeCard = document.getElementById("active-practice-resume");
     var resumeTitle = document.getElementById("active-practice-title");
     var resumeMeta = document.getElementById("active-practice-meta");
+    var resumeContinuationDetails = document.getElementById("active-practice-continuation-details");
+    var resumeContinuationMeta = document.getElementById("active-practice-continuation-meta");
     var resumeFill = document.getElementById("active-practice-progress-fill");
     var resumeButton = document.getElementById("resume-practice");
     var practiceError = document.getElementById("practice-error");
@@ -326,19 +328,48 @@
         resumeCard.classList.add("hidden");
         return;
       }
-      var progress = practice.progress || {};
+      var continuation = practice.continuation;
+      var executionProgress = continuation && continuation.execution
+        ? continuation.execution.progress : null;
+      var progress = continuation && !continuation.available ? {}
+        : continuation ? Object.assign({}, practice.progress || {}, executionProgress || {})
+          : practice.progress || {};
       var total = progress.total || 0;
       var completed = progress.completed || 0;
       var percent = total ? Math.round(completed * 100 / total) : 0;
       if (resumeTitle) resumeTitle.textContent = "未完成练习";
-      var missing = practice.unavailable_item_ids || [];
-      if (resumeButton) resumeButton.disabled = missing.length > 0;
+      var missing = continuation
+        ? continuation.unavailable_item_ids || [] : practice.unavailable_item_ids || [];
+      var canResume = continuation ? continuation.available : missing.length === 0;
+      if (resumeButton) resumeButton.disabled = !canResume;
       if (resumeMeta) {
-        resumeMeta.textContent = completed + " / " + total
-          + " · " + (progress.answered || 0) + " 已作答 · "
-          + (progress.stuck || 0) + " 不会 · "
-          + (progress.remaining || 0) + " 待完成";
-        if (missing.length) resumeMeta.textContent += " · 旧进度引用的题目不可用，需明确修复：" + missing.join("、");
+        if (continuation && !continuation.available) {
+          var oldProgress = executionProgress || {};
+          resumeMeta.textContent = (continuation.reason || "旧执行与当前试卷不一致，不能继续")
+            + " 当前试卷 " + (continuation.paper_count || 0) + " 题；旧执行 "
+            + (oldProgress.total || 0) + " 题。";
+        } else if (!continuation && missing.length) {
+          resumeMeta.textContent = "旧进度引用了不可用题目，不能继续。";
+        } else {
+          resumeMeta.textContent = completed + " / " + total
+            + " · " + (progress.answered || 0) + " 已作答 · "
+            + (progress.stuck || 0) + " 不会 · "
+            + (progress.remaining || 0) + " 待完成";
+        }
+      }
+      if (resumeContinuationDetails) {
+        var showOldExecution = (continuation && !continuation.available) || missing.length > 0;
+        resumeContinuationDetails.classList.toggle("hidden", !showOldExecution);
+        if (showOldExecution) {
+          var oldProgress = continuation && continuation.execution
+            ? continuation.execution.progress : practice.progress || {};
+          resumeContinuationDetails.open = false;
+          if (resumeContinuationMeta) {
+            resumeContinuationMeta.textContent = "旧执行进度："
+              + (oldProgress.completed || 0) + " / " + (oldProgress.total || 0)
+              + (missing.length ? " · 不可用题目 ID：" + missing.join("、") : "");
+          }
+        }
       }
       if (resumeFill && resumeFill.style) resumeFill.style.width = percent + "%";
       resumeCard.classList.remove("hidden");
@@ -346,7 +377,8 @@
 
     function resumeActivePractice() {
       if (!activePractice) return;
-      if ((activePractice.unavailable_item_ids || []).length) return;
+      var continuation = activePractice.continuation;
+      if (continuation ? !continuation.available : (activePractice.unavailable_item_ids || []).length > 0) return;
       practiceDeck = activeToDeck(activePractice);
       persistDeck();
       sessionStorage.setItem(MODE_KEY, activePractice.practice_mode || "exam");

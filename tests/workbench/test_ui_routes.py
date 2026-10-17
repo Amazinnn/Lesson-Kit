@@ -226,6 +226,103 @@ class UiRouteTests(unittest.TestCase):
         self.assertGreater(
             body.index("practice-set-status"), body.rindex("</details>"))
 
+    def test_mismatched_execution_keeps_paper_management_and_folds_legacy_ids(self):
+        status, saved = self.request_json(
+            "POST", "/api/w/dmath/practice-sets",
+            {"title": "当前试卷", "problem_ids": ["dmath-ch06-prob-001"]},
+        )
+        self.assertEqual(status, 200)
+        paper_id = saved["practice_set_id"]
+        status, _ = self.request_json(
+            "POST", f"/api/w/dmath/practice-sets/{paper_id}/start", {"rating_mode": "off"},
+        )
+        self.assertEqual(status, 200)
+
+        conn = sqlite3.connect(self.fixture.ws / "pool" / "dmath.db")
+        conn.execute("UPDATE active_practice_items SET item_id=? WHERE position=0",
+                     ("old-legacy-question-with-a-long-id",))
+        conn.commit()
+        conn.close()
+
+        status, body = self.fetch("/w/dmath/practice-sets")
+        self.assertEqual(status, 200)
+        self.assertIn("data-set-start disabled", body)
+        self.assertIn("data-set-export>导出</button>", body)
+        self.assertIn("data-set-rename", body)
+        self.assertIn("data-set-delete", body)
+        self.assertIn("无法继续旧执行：当前试卷或旧执行引用了不可用题目", body)
+        self.assertIn("当前试卷 1 题；旧执行仍保留 1 题", body)
+        detail_start = body.index("<details class='practice-set-unavailable-items'>")
+        detail_end = body.index("</details>", detail_start)
+        self.assertIn("old-legacy-question-with-a-long-id", body[detail_start:detail_end])
+        self.assertNotIn("old-legacy-question-with-a-long-id", body[:detail_start])
+
+    def test_other_paper_readiness_reports_unparkable_active_paper(self):
+        _, target = self.request_json(
+            "POST", "/api/w/dmath/practice-sets",
+            {"title": "目标卷", "problem_ids": ["dmath-ch06-prob-001"]},
+        )
+        _, active = self.request_json(
+            "POST", "/api/w/dmath/practice-sets",
+            {"title": "当前卷", "problem_ids": ["dmath-ch06-prob-001"]},
+        )
+        self.request_json("POST", f"/api/w/dmath/practice-sets/{target['practice_set_id']}/start",
+                          {"rating_mode": "off"})
+        conn = sqlite3.connect(self.fixture.ws / "pool" / "dmath.db")
+        conn.execute("UPDATE active_practice_items SET state='stuck' WHERE position=0")
+        conn.commit()
+        conn.close()
+        self.request_json("POST", f"/api/w/dmath/practice-sets/{active['practice_set_id']}/start",
+                          {"rating_mode": "off"})
+        conn = sqlite3.connect(self.fixture.ws / "pool" / "dmath.db")
+        conn.execute("UPDATE active_practice_items SET item_id='missing-active-question' WHERE position=0")
+        conn.commit()
+        conn.close()
+
+        status, target_record = self.fetch_json(
+            f"/api/w/dmath/practice-sets/{target['practice_set_id']}")
+        self.assertEqual(status, 200)
+        self.assertTrue(target_record["continuation"]["available"])
+        self.assertEqual(target_record["progress"], {"total": 1, "completed": 1})
+        self.assertFalse(target_record["can_start"])
+        self.assertIn("当前活动试卷无法暂停", target_record["start_block_reason"])
+        with self.assertRaises(HTTPError) as raised:
+            self.request_json("POST", f"/api/w/dmath/practice-sets/{target['practice_set_id']}/start",
+                              {"rating_mode": "off"})
+        self.assertEqual(raised.exception.code, 409)
+
+        status, body = self.fetch("/w/dmath/practice-sets")
+        self.assertEqual(status, 200)
+        card_start = body.index(
+            "<article class='practice-set-card card' data-practice-set-id='"
+            + target["practice_set_id"] + "'>")
+        card_end = body.index("</article>", card_start)
+        target_card = body[card_start:card_end]
+        self.assertIn("data-set-start disabled", target_card)
+        self.assertIn("data-set-export>导出</button>", target_card)
+        self.assertIn("data-set-rename", target_card)
+        self.assertIn("data-set-delete", target_card)
+        self.assertIn("当前活动试卷无法暂停", target_card)
+        self.assertIn("已完成 1/1", target_card)
+
+    def test_active_practice_api_includes_saved_manifest_validation_readiness(self):
+        _, saved = self.request_json(
+            "POST", "/api/w/dmath/practice-sets",
+            {"title": "校验试卷", "problem_ids": ["dmath-ch06-prob-001"]},
+        )
+        self.request_json("POST", f"/api/w/dmath/practice-sets/{saved['practice_set_id']}/start",
+                          {"rating_mode": "off"})
+        path = self.fixture.ws / ".lessonkit" / "practice-sets" / (saved["practice_set_id"] + ".json")
+        record = json.loads(path.read_text(encoding="utf-8"))
+        record["plan"]["unsupported_field"] = "stale contract"
+        path.write_text(json.dumps(record), encoding="utf-8")
+
+        status, response = self.fetch_json("/api/w/dmath/practice/current")
+
+        self.assertEqual(status, 200)
+        self.assertFalse(response["practice"]["continuation"]["available"])
+        self.assertIn("内容校验失败", response["practice"]["continuation"]["reason"])
+
     def test_session_end_page_mentions_cards(self):
         status, body = self.fetch("/w/dmath/session-end")
         self.assertEqual(status, 200)
