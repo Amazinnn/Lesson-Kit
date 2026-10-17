@@ -1,9 +1,9 @@
 ## Implementation
 
-- [ ] 1.1 Add a middle-page wrapper and same-workspace navigation with back/forward support.
-- [ ] 1.2 Add explicit middle-view mount/dispose while keeping the Agent rail mounted.
-- [ ] 1.3 Refresh page context and active navigation without changing accepted request context.
-- [ ] 1.4 Add focused navigation and lifecycle regressions; update affected architecture/manual/action documentation.
+- [x] 1.1 Add a middle-page wrapper and same-workspace navigation with back/forward support.
+- [x] 1.2 Add explicit middle-view mount/dispose while keeping the Agent rail mounted.
+- [x] 1.3 Refresh page context and active navigation without changing accepted request context.
+- [x] 1.4 Add focused navigation and lifecycle regressions; update affected architecture/manual/action documentation.
 
 ## Acceptance
 

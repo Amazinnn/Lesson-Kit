@@ -92,6 +92,7 @@ workbench/
 │   └── static/
 │       ├── agent-ui.css   # Agent 栏、composer 与临时工作面的样式，复用 workbench.css tokens
 │       ├── agent-ui.js    # Agent 展示层：context chips、composer sizing、辅助面折叠
+│       ├── middle-navigation.js # 同工作区中栏导航，复用已挂载的 workbench shell
 │       ├── practice-deck.js # 练习 session 纯数据状态
 │       └── practice-flow.js # 练习页 DOM 与请求生命周期
 └── tests/             # pytest；tests/test_*.py 与 tests/workbench/ 分开
@@ -179,6 +180,7 @@ workbench/
   返回结果。同 id 改内容返回冲突，页面刷新后仍能重试首次请求。
 - `server.static.practice-deck` 只维护练习 session 的数据、游标与序列化；`practice-flow` 绑定 DOM、发送练习请求并管理保存/结算状态，页面入口仍由 `workbench.js` 启动。
 - `server.static.agent-ui` 只维护 Agent 展示层：页内上下文标签、composer 尺寸和临时工作面控件；provider 事件、会话、轮次与动作仍由 `workbench.js` 编排。
+- `server.static.middle-navigation` 获取服务端页面 HTML，只替换 `#middle-page`，同步路由元数据并调用 `WorkbenchMiddlePage.dispose/mount`；`workbench.js` 与 Agent 栏控制器保持单次初始化。
 - `data.attempts.check/apply/correct/list/get`：Agent 代录尝试的零写入预检、单事务多题、
   按 attempt-id 的守卫式更正与只读回看；带评分的条目在**同一事务内**调用既有
   `domain.feedback.apply(..., attempt_id=…)`（不经过 categorical 的 `practice` 映射），
