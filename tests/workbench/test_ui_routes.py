@@ -226,6 +226,37 @@ class UiRouteTests(unittest.TestCase):
         self.assertGreater(
             body.index("practice-set-status"), body.rindex("</details>"))
 
+    def test_mismatched_execution_keeps_paper_management_and_folds_legacy_ids(self):
+        status, saved = self.request_json(
+            "POST", "/api/w/dmath/practice-sets",
+            {"title": "当前试卷", "problem_ids": ["dmath-ch06-prob-001"]},
+        )
+        self.assertEqual(status, 200)
+        paper_id = saved["practice_set_id"]
+        status, _ = self.request_json(
+            "POST", f"/api/w/dmath/practice-sets/{paper_id}/start", {"rating_mode": "off"},
+        )
+        self.assertEqual(status, 200)
+
+        conn = sqlite3.connect(self.fixture.ws / "pool" / "dmath.db")
+        conn.execute("UPDATE active_practice_items SET item_id=? WHERE position=0",
+                     ("old-legacy-question-with-a-long-id",))
+        conn.commit()
+        conn.close()
+
+        status, body = self.fetch("/w/dmath/practice-sets")
+        self.assertEqual(status, 200)
+        self.assertIn("data-set-start disabled", body)
+        self.assertIn("data-set-export>导出</button>", body)
+        self.assertIn("data-set-rename", body)
+        self.assertIn("data-set-delete", body)
+        self.assertIn("无法继续旧执行：当前试卷或旧执行引用了不可用题目", body)
+        self.assertIn("当前试卷 1 题；旧执行仍保留 1 题", body)
+        detail_start = body.index("<details class='practice-set-unavailable-items'>")
+        detail_end = body.index("</details>", detail_start)
+        self.assertIn("old-legacy-question-with-a-long-id", body[detail_start:detail_end])
+        self.assertNotIn("old-legacy-question-with-a-long-id", body[:detail_start])
+
     def test_session_end_page_mentions_cards(self):
         status, body = self.fetch("/w/dmath/session-end")
         self.assertEqual(status, 200)

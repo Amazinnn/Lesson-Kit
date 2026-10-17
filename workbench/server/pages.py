@@ -190,6 +190,8 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         + "<section id='active-practice-resume' class='active-practice-resume card hidden' aria-live='polite'>"
         "<div><p class='section-kicker'>继续上次练习</p><h2 id='active-practice-title'>未完成练习</h2>"
         "<p id='active-practice-meta' class='muted'></p>"
+        "<details id='active-practice-continuation-details' class='active-practice-continuation-details hidden'>"
+        "<summary>查看旧执行情况</summary><p id='active-practice-continuation-meta'></p></details>"
         "<div class='active-practice-progress' aria-hidden='true'><span id='active-practice-progress-fill'></span></div></div>"
         "<button id='resume-practice' class='primary' type='button'>继续练习</button></section>"
         + "<section id='start-area' class='practice-intro'><p class='section-kicker'>本轮练习</p>"
@@ -527,12 +529,29 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     cards = []
     for record in practice_sets_data.list_saved(pool):
         invalid = bool(record['validation_errors'] or record['missing_problem_ids'] or not record['count'])
-        disabled = " disabled" if invalid else ""
+        start_disabled = " disabled" if not record.get('can_start') else ""
+        export_disabled = " disabled" if invalid else ""
         progress = record.get('progress')
         progress_text = (" · 已完成 " + str(progress['completed']) + "/" + str(progress['total'])) if progress else ""
-        availability = ("<p class='inline-error'>无法开始：" + html.escape(
-            "缺少题目 " + ', '.join(record['missing_problem_ids']) if record['missing_problem_ids']
-            else '; '.join(record['validation_errors']) or '试卷为空') + "</p>") if invalid else ""
+        continuation = record.get('continuation')
+        if invalid:
+            reason = ("缺少题目 " + str(len(record['missing_problem_ids'])) + " 道，详情见下方折叠项"
+                      if record['missing_problem_ids'] else '; '.join(record['validation_errors']) or '试卷为空')
+            availability = "<p class='inline-error'>无法开始：" + html.escape(reason) + "</p>"
+        elif continuation and not continuation['available']:
+            availability = "<p class='inline-error'>无法继续旧执行：" + html.escape(
+                continuation['reason'] or '执行状态与当前试卷不一致') + "</p>"
+        else:
+            availability = ""
+        unavailable_ids = ((continuation or {}).get('unavailable_item_ids') or record['missing_problem_ids'])
+        unavailable_details = ("<details class='practice-set-unavailable-items'><summary>查看不可用题目 ID（"
+            + str(len(unavailable_ids)) + "）</summary><p>" + html.escape('、'.join(unavailable_ids))
+            + "</p></details>") if unavailable_ids else ""
+        execution = continuation.get('execution', {}).get('progress') if continuation else None
+        continuation_details = ("<details class='practice-set-continuation-details'><summary>查看旧执行情况</summary><p>当前试卷 "
+            + str(continuation['paper_count']) + " 题；旧执行仍保留 " + str(execution['total'])
+            + " 题，已完成 " + str(execution['completed']) + " 题。</p></details>") \
+            if continuation and not continuation['available'] else ""
         rows = []
         for index, item in enumerate(record["plan"]["items"]):
             problem = pool.problem(item["problem_id"]) or {}
@@ -565,12 +584,13 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + html.escape(record["title"]) + "</h2><p class='muted'>"
             + str(record["count"]) + " 题" + progress_text + "</p>" + availability + "</div>"
             + "<div class='practice-set-card-actions'>"
-            + "<button class='primary sm' type='button' data-set-start" + disabled + ">"
+            + "<button class='primary sm' type='button' data-set-start" + start_disabled + ">"
             + ("继续练习" if progress else "开始练习") + "</button>"
             + "<button class='outline sm' type='button' data-set-rename>改名</button>"
-            + "<button class='outline sm' type='button' data-set-export" + disabled + ">导出</button>"
+            + "<button class='outline sm' type='button' data-set-export" + export_disabled + ">导出</button>"
             + "<button class='ghost sm' type='button' data-set-delete>删除</button>"
             + "</div></summary>"
+            + continuation_details + unavailable_details
             + "<ol class='practice-set-items'>" + "".join(rows) + "</ol>"
             + "</details>"
             + "<p class='inline-error practice-set-status hidden' aria-live='polite'></p>"

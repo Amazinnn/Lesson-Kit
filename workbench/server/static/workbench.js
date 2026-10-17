@@ -1897,6 +1897,19 @@
     status.classList.toggle("hidden", !message);
   }
 
+  function refreshPracticeSetStart(card, practiceSetId, error) {
+    return api("/practice-sets/" + encodeURIComponent(practiceSetId)).then(function (record) {
+      var button = card.querySelector("[data-set-start]");
+      if (button) button.disabled = !record.can_start;
+      var continuation = record.continuation;
+      var message = continuation && !continuation.available && continuation.reason
+        ? continuation.reason : (error.message || "无法开始练习");
+      practiceSetStatus(card, message);
+    }).catch(function () {
+      practiceSetStatus(card, error.message || "无法开始练习");
+    });
+  }
+
   function reloadPage() {
     if (window.location && typeof window.location.reload === "function") {
       window.location.reload();
@@ -1944,10 +1957,10 @@
             post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
               window.location = "/w/" + encodeURIComponent(WS) + "/practice";
             }).catch(function (retryError) {
-              practiceSetStatus(card, retryError.message || "无法开始练习");
+              refreshPracticeSetStart(card, practiceSetId, retryError);
             });
           } else {
-            practiceSetStatus(card, error.message || "当前练习未完成");
+            refreshPracticeSetStart(card, practiceSetId, error);
           }
         });
         return;

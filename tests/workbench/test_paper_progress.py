@@ -57,6 +57,146 @@ def test_switch_keeps_both_progress_drafts_and_rating_preference(pool):
     assert resumed['items'][1]['draft']['answer'] == 'unfinished'
     assert evidence(pool) == before
     assert pool.connect().execute('SELECT COUNT(*) FROM practice_runs').fetchone()[0] == 0
+    assert practice_sets.get_saved(pool, a)['continuation']['available'] is True
+    assert practice_sets.get_saved(pool, a)['progress'] == {'total': 2, 'completed': 1}
+
+
+def test_saved_read_does_not_attach_count_mismatched_execution(pool):
+    paper_id = paper(pool, 'A', [Q, R])
+    active = start(pool, paper_id)
+    active_practice.mark(pool, 0, 'stuck')
+    pool.connect().execute(
+        "INSERT INTO active_practice_items(position,item_type,item_id,direction,state,"
+        "attempt_id,content_revision,draft_json,draft_sequence) "
+        "VALUES (2,'problem',?,'','pending',NULL,1,'{}',0)", ('dmath-ch06-prob-003',))
+    pool.commit()
+
+    saved = practice_sets.get_saved(pool, paper_id)
+    current = active_practice.current(pool)
+
+    assert saved['count'] == 2
+    assert saved['progress'] is None
+    assert saved['continuation']['available'] is False
+    assert '名单或顺序' in saved['continuation']['reason']
+    assert saved['continuation']['execution']['progress'] == {'total': 3, 'completed': 1}
+    assert current['continuation'] == saved['continuation']
+    assert current['execution_id'] == active['execution_id']
+    before_items = [tuple(row) for row in pool.connect().execute(
+        'SELECT * FROM active_practice_items ORDER BY position')]
+    before_evidence = evidence(pool)
+    with pytest.raises(active_practice.ActivePracticeConflict, match='名单或顺序'):
+        start(pool, paper_id)
+    assert [tuple(row) for row in pool.connect().execute(
+        'SELECT * FROM active_practice_items ORDER BY position')] == before_items
+    assert evidence(pool) == before_evidence
+
+
+def test_same_count_with_different_order_is_not_continuable(pool):
+    paper_id = paper(pool, 'A', [Q, R])
+    start(pool, paper_id)
+    conn = pool.connect()
+    conn.execute('UPDATE active_practice_items SET item_id=? WHERE position=0', ('dmath-ch06-prob-003',))
+    conn.execute('UPDATE active_practice_items SET item_id=? WHERE position=1', (Q,))
+    conn.execute('UPDATE active_practice_items SET item_id=? WHERE position=0', (R,))
+    pool.commit()
+
+    saved = practice_sets.get_saved(pool, paper_id)
+
+    assert saved['count'] == saved['continuation']['execution']['progress']['total'] == 2
+    assert saved['progress'] is None
+    assert '名单或顺序' in saved['continuation']['reason']
+    with pytest.raises(active_practice.ActivePracticeConflict, match='名单或顺序'):
+        start(pool, paper_id)
+
+
+def test_same_count_with_changed_available_id_is_not_continuable(pool):
+    paper_id = paper(pool, 'A', [Q, R])
+    start(pool, paper_id)
+    pool.connect().execute('UPDATE active_practice_items SET item_id=? WHERE position=0',
+                           ('dmath-ch06-prob-003',))
+    pool.commit()
+
+    saved = practice_sets.get_saved(pool, paper_id)
+    current = active_practice.current(pool)
+
+    assert saved['count'] == saved['continuation']['execution']['progress']['total'] == 2
+    assert saved['continuation']['unavailable_item_ids'] == []
+    assert saved['continuation']['available'] is False
+    assert current['continuation'] == saved['continuation']
+    assert saved['progress'] is None
+    with pytest.raises(active_practice.ActivePracticeConflict, match='名单或顺序'):
+        start(pool, paper_id)
+
+
+def test_unavailable_execution_item_is_reported_without_repairing_history(pool):
+    paper_id = paper(pool, 'A', [Q, R])
+    active = start(pool, paper_id)
+    active_practice.mark(pool, 0, 'stuck')
+    before = [tuple(row) for row in pool.connect().execute(
+        'SELECT * FROM active_practice_items ORDER BY position')]
+
+    pool.connect().execute('DELETE FROM problems WHERE problem_id=?', (Q,))
+    pool.commit()
+
+    saved = practice_sets.get_saved(pool, paper_id)
+    current = active_practice.current(pool)
+    assert saved['continuation']['available'] is False
+    assert saved['continuation']['unavailable_item_ids'] == [Q]
+    assert '不可用题目' in saved['continuation']['reason']
+    assert saved['progress'] is None
+    assert current['continuation'] == saved['continuation']
+    with pytest.raises(active_practice.ActivePracticeError, match='题目不可用'):
+        start(pool, paper_id)
+    assert [tuple(row) for row in pool.connect().execute(
+        'SELECT * FROM active_practice_items ORDER BY position')] == before
+    assert current['execution_id'] == active['execution_id']
+
+
+def test_active_execution_generation_and_content_revision_are_revalidated(pool):
+    paper_id = paper(pool, 'A', [Q, R])
+    start(pool, paper_id)
+    assert practice_sets.get_saved(pool, paper_id)['continuation']['available'] is True
+
+    pool.connect().execute('UPDATE paper_state SET generation=generation+1 WHERE paper_id=?', (paper_id,))
+    pool.commit()
+    status = practice_sets.get_saved(pool, paper_id)['continuation']
+    assert status['available'] is False
+    assert '结构版本' in status['reason']
+    with pytest.raises(active_practice.ActivePracticeConflict, match='结构版本'):
+        start(pool, paper_id)
+
+    pool.connect().execute('UPDATE paper_state SET generation=generation-1 WHERE paper_id=?', (paper_id,))
+    pool.connect().execute('INSERT INTO problem_revisions(problem_id,revision) VALUES (?,2) '
+                           'ON CONFLICT(problem_id) DO UPDATE SET revision=2', (Q,))
+    pool.commit()
+    status = practice_sets.get_saved(pool, paper_id)['continuation']
+    assert status['available'] is False
+    assert '作答内容已变化' in status['reason']
+    with pytest.raises(active_practice.ActivePracticeConflict, match='作答内容已变化'):
+        start(pool, paper_id)
+
+
+def test_parked_execution_mismatch_stays_visible_and_blocks_resume(pool):
+    a = paper(pool, 'A', [Q, R])
+    b = paper(pool, 'B', [Q, R])
+    start(pool, a)
+    start(pool, b)
+    checkpoint = practice_sets.get_saved(pool, a)['continuation']
+    assert checkpoint['available'] is True
+    record = __import__('json').loads(
+        pool.connect().execute('SELECT checkpoint_json FROM paper_state WHERE paper_id=?', (a,)).fetchone()[0])
+    record['items'][1]['item_id'] = 'dmath-ch06-prob-003'
+    pool.connect().execute('UPDATE paper_state SET checkpoint_json=? WHERE paper_id=?',
+                           (__import__('json').dumps(record), a))
+    pool.commit()
+
+    saved = practice_sets.get_saved(pool, a)
+    assert saved['continuation']['available'] is False
+    assert saved['progress'] is None
+    with pytest.raises(active_practice.ActivePracticeConflict, match='名单或顺序'):
+        start(pool, a)
+    assert active_practice.current(pool)['source_ref'] == b
+    assert practice_sets.get_saved(pool, a)['continuation']['execution']['progress']['total'] == 2
 
 
 def test_metadata_preserves_progress_structure_requires_confirmed_preview(pool):
@@ -119,7 +259,7 @@ def test_invalid_and_empty_containers_remain_manageable(pool):
     pool.connect().execute('DELETE FROM problems WHERE problem_id=?', (Q,)); pool.commit()
     assert len(practice_sets.list_saved(pool)) == 1
     assert practice_sets.get_saved(pool, a)['missing_problem_ids'] == [Q]
-    with pytest.raises(ValueError, match='missing|unavailable'):
+    with pytest.raises(ValueError, match='题目不可用'):
         start(pool, a)
     practice_sets.delete_saved(pool, a)
     assert practice_sets.list_saved(pool) == []

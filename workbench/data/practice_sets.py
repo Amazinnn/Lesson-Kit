@@ -216,6 +216,9 @@ def _saved_record(pool, practice_set_id, plan, created_at, updated_at):
     # Container management must survive unavailable items and an empty list.
     missing = [item['problem_id'] for item in checked.get('items', [])
                if isinstance(item, dict) and item.get('problem_id') and pool.problem(item['problem_id']) is None]
+    continuation = paper_progress.continuation(pool, practice_set_id, checked.get('items', []))
+    progress = (continuation['execution']['progress']
+                if continuation and continuation['available'] else None)
     return {
         "practice_set_id": practice_set_id,
         "title": checked.get("title") or "练习",
@@ -225,7 +228,10 @@ def _saved_record(pool, practice_set_id, plan, created_at, updated_at):
         "plan": checked,
         "missing_problem_ids": missing,
         "validation_errors": errors,
-        "progress": paper_progress.summary(pool, practice_set_id),
+        "continuation": continuation,
+        "can_start": bool(checked["items"]) and not missing and not errors
+            and (continuation is None or continuation['available']),
+        "progress": progress,
         "generation": paper_progress.state(pool.connect(), practice_set_id)['generation']
             if paper_progress.available(pool.connect()) else 1,
     }
