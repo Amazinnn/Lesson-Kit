@@ -1,6 +1,8 @@
 """Small schema helpers shared by pool maintenance scripts."""
 
+import re
 import sqlite3
+import warnings
 from typing import Iterable, List
 
 
@@ -485,58 +487,118 @@ def _widen_content_sequences_check(conn, create_sql):
 
 
 def _widen_problem_attempts_status_check(conn):
-    """Rebuild problem_attempts whose status CHECK predates 'answered' rows.
+    """Widen the original CHECK and repair legacy temporary-parent references.
 
-    A browser-answered item that has not been rated yet is neither new nor
-    wrong: its outcome lives in the verdict column, and the row needs a status
-    that says exactly that. The rebuild copies every column the old shape
-    actually has — the table's shape evolved (answer_text, then verdict and
-    choices), so a positional INSERT ... SELECT would not line up.
+    Rebuild from original DDL, never rename the live parent out from under its
+    children. FK enforcement must be disabled outside a transaction; with FK
+    already disabled a savepoint keeps this operation in the caller's transaction.
     """
-    row = conn.execute(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='problem_attempts'"
-    ).fetchone()
-    if not row or "'answered'" in (row[0] or ""):
+    parent = "problem_attempts"
+    obsolete = "problem_attempts_widening_old"
+    tables = list(conn.execute(
+        "SELECT name, sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL"
+    ))
+    repairs = {}
+    changes = []
+    quote = lambda name: '"' + name.replace('"', '""') + '"'
+    for name, sql in tables:
+        updated = sql
+        if name == parent and "'answered'" not in sql:
+            updated, count = re.subn(
+                r"(CHECK\s*\(\s*[\"`\[]?status[\"`\]]?\s+IN\s*\()(.*?)\)",
+                lambda match: match[1] + match[2] + ", 'answered')",
+                updated, count=1, flags=re.I | re.S,
+            )
+            if count:
+                changes.append("problem_attempts_status_answered")
+        targets = [row[2] for row in conn.execute(f"PRAGMA foreign_key_list({quote(name)})")]
+        if obsolete in [target.lower() for target in targets]:
+            updated = re.sub(
+                r'''(?is)'(?:''|[^'])*'|"(?:""|[^"])*"|--[^\n]*|/\*.*?\*/|'''
+                r'(?P<reference>\bREFERENCES\s+)(?:"problem_attempts_widening_old"|'
+                r'`problem_attempts_widening_old`|\[problem_attempts_widening_old\]|'
+                r"'problem_attempts_widening_old'|problem_attempts_widening_old\b)",
+                lambda match: (match['reference'] + quote(parent)
+                               if match['reference'] else match[0]), updated,
+            )
+            changes.append(name + ".attempt_foreign_key")
+        if updated != sql:
+            repairs[name] = updated
+    if not repairs:
         return []
-    old_columns = [item[1] for item in conn.execute("PRAGMA table_info(problem_attempts)")]
-    conn.execute("ALTER TABLE problem_attempts RENAME TO problem_attempts_widening_old")
-    conn.execute(
-        """
-        CREATE TABLE problem_attempts (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            problem_id TEXT NOT NULL REFERENCES problems(problem_id),
-            status     TEXT NOT NULL
-                       CHECK (status IN (
-                           'new', 'answered', 'wrong', 'stuck', 'reviewing', 'mastered'
-                       )),
-            note       TEXT,
-            answer_text TEXT,
-            verdict    INTEGER,
-            choices    TEXT,
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
-        )
-        """
-    )
-    common = [name for name in (
-        "id", "problem_id", "status", "note", "answer_text", "verdict",
-        "choices", "created_at",
-    ) if name in old_columns]
-    names = ", ".join(common)
-    conn.execute(
-        f"INSERT INTO problem_attempts ({names})"
-        f" SELECT {names} FROM problem_attempts_widening_old"
-    )
-    conn.execute("DROP TABLE problem_attempts_widening_old")
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_problem_attempts_problem_id"
-        " ON problem_attempts(problem_id)"
-    )
-    return ["problem_attempts_status_answered"]
+    if not table_exists(conn, parent):
+        raise sqlite3.OperationalError("cannot repair references: problem_attempts is missing")
+    foreign_keys = conn.execute("PRAGMA foreign_keys").fetchone()[0]
+    if foreign_keys and conn.in_transaction:
+        raise sqlite3.OperationalError("attempt migration requires no active transaction")
+    legacy_alter = conn.execute("PRAGMA legacy_alter_table").fetchone()[0]
+    conn.execute("PRAGMA foreign_keys=OFF")
+    conn.execute("PRAGMA legacy_alter_table=ON")
+    conn.execute("SAVEPOINT attempt_schema_repair")
+    try:
+        for name, sql in repairs.items():
+            temporary = name + "_attempt_repair_new"
+            objects = list(conn.execute(
+                "SELECT sql FROM sqlite_master WHERE tbl_name=? "
+                "AND type IN ('index', 'trigger') AND sql IS NOT NULL", (name,)
+            ))
+            sequence = None
+            if table_exists(conn, "sqlite_sequence"):
+                sequence = conn.execute(
+                    "SELECT seq FROM sqlite_sequence WHERE name=?", (name,)
+                ).fetchone()
+            # Keep constraints, defaults, extra and generated columns verbatim.
+            conn.execute("CREATE TABLE " + quote(temporary) + sql[sql.index("("):])
+            columns = [row[1] for row in conn.execute(f"PRAGMA table_xinfo({quote(name)})")
+                       if row[6] == 0]
+            if "WITHOUT ROWID" not in sql.upper() and not any(
+                col.lower() in {"rowid", "_rowid_", "oid"} for col in columns
+            ):
+                columns.insert(0, "_rowid_")
+            names = ", ".join(quote(col) for col in columns)
+            conn.execute(f"INSERT INTO {quote(temporary)} ({names}) "
+                         f"SELECT {names} FROM {quote(name)}")
+            conn.execute(f"DROP TABLE {quote(name)}")
+            conn.execute(f"ALTER TABLE {quote(temporary)} RENAME TO {quote(name)}")
+            for (object_sql,) in objects:
+                conn.execute(object_sql)
+            if sequence:
+                conn.execute("DELETE FROM sqlite_sequence WHERE name=?", (name,))
+                conn.execute("INSERT INTO sqlite_sequence(name, seq) VALUES (?, ?)",
+                             (name, sequence[0]))
+        violations = [tuple(row) for row in conn.execute("PRAGMA foreign_key_check")]
+        if violations:
+            missing = {}
+            for name, _ in tables:
+                for fk in conn.execute(f"PRAGMA foreign_key_list({quote(name)})"):
+                    if fk[2] == parent and fk[4] == "id":
+                        values = list(conn.execute(
+                            f"SELECT DISTINCT {quote(fk[3])} FROM {quote(name)} "
+                            f"WHERE {quote(fk[3])} IS NOT NULL AND {quote(fk[3])} "
+                            "NOT IN (SELECT id FROM problem_attempts)"
+                        ))
+                        if values:
+                            missing[name] = [row[0] for row in values]
+            warnings.warn(
+                f"attempt schema repaired; unresolved foreign keys: {violations}; "
+                f"missing attempt IDs: {missing}; no learning evidence recovered",
+                RuntimeWarning, stacklevel=2,
+            )
+        conn.execute("RELEASE attempt_schema_repair")
+    except BaseException:
+        conn.execute("ROLLBACK TO attempt_schema_repair")
+        conn.execute("RELEASE attempt_schema_repair")
+        raise
+    finally:
+        conn.execute(f"PRAGMA legacy_alter_table={legacy_alter}")
+        conn.execute(f"PRAGMA foreign_keys={foreign_keys}")
+    return changes
 
 
 def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
+    changes.extend(_widen_problem_attempts_status_check(conn))
     if table_exists(conn, "problems"):
         # This rebuild may temporarily toggle PRAGMA foreign_keys, which SQLite
         # only permits before any other ensure opens a transaction.
@@ -871,10 +933,7 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
             "WHERE practice_modes LIKE '%flash_card%'"
         )
     if table_exists(conn, "problem_attempts"):
-        # The status widening rebuilds the table with the full modern shape
-        # (including verdict/choices), so it must run before the column adder:
-        # a positional SELECT * across a half-migrated shape would not line up.
-        changes.extend(_widen_problem_attempts_status_check(conn))
+        # The preflight preserves the original shape; add modern nullable fields.
         changes.extend(
             ensure_columns(
                 conn,

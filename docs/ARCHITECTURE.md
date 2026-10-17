@@ -232,5 +232,10 @@ workbench/
 
 ## 5. 工程约束（硬规则）
 
+Attempt 旧状态约束及临时父表外键修复归既有 `pool/scripts/pool_schema.py` ensure 边界。
+`ensure_workbench_schema` 先执行该修复，再运行其他可能开启事务的 ensure；沿用原始 DDL 重建，
+不先改名正式父表。savepoint 保证局部失败回滚，不提交调用方已有事务；外键开启且已在事务内时
+拒绝需重建的调用。正常启动与 doctor 不因此新增自动迁移。缺失历史作答只报告，不在迁移中恢复。
+
 stdlib-only；单进程单端口；无哈希；无防御性编程（不写不可能分支、不包 try 兜底一切）；
 函数短小、单一职责；每个 domain 模块配一个测试文件；改动同步本文档与 OpenSpec。

@@ -151,6 +151,20 @@
 
 修改这些表之前，必须先读取对应 live OpenSpec；本文档目前只用于划清边界，不重写其完整状态转移规则。
 
+### Attempt 状态约束迁移与外键修复
+
+`pool/scripts/pool_schema.py` 的 `ensure_workbench_schema` 在其他 ensure 写入前，
+扩展旧 `problem_attempts.status` 的枚举 CHECK 并修复指向
+`problem_attempts_widening_old` 的子表声明。无枚举 CHECK 的旧表已允许 `answered`，无需重建。
+重建沿用原始 DDL，保留额外列、约束、行值、ID、自增序号、索引和触发器；现代可空字段仍由
+既有列增量路径补齐。不重命名原父表，因此健康的其他入向引用保持原目标。
+
+迁移使用 savepoint，失败回滚本次结构和数据改动；保留调用方的 `foreign_keys` 与
+`legacy_alter_table` 设置。外键开启且调用方已有事务时，在写入前拒绝，调用方必须先自行处理事务；
+外键关闭时允许嵌入现有事务，不提交调用方写入。健康当前结构重复执行无变化。
+结构修复后执行外键检查；缺失父记录以 `RuntimeWarning` 报告表、行及可解析的缺失 attempt ID，
+保留子记录，不补造作答，不删除进度。结构修复成功不等于学习证据恢复。
+
 ## Paper 执行来源与持久化边界
 
 保存的 Paper 是工作区 `.lessonkit/practice-sets/` 下的 JSON 记录，不是 SQLite 行或学习状态。
