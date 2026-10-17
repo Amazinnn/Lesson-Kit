@@ -38,7 +38,12 @@ class InformationArchitectureFinishTests(unittest.TestCase):
     def test_graph_detail_is_dashboard_not_duplicate_editor(self):
         body = self.fetch("/w/dmath/graph")
         self.assertIn("学习看板", body)
-        self.assertIn("打开知识点", body)
+        middle_start = body.index("<div id='middle-page'>")
+        dashboard = body.index("<aside id='graph-detail-panel'")
+        ai_column = body.index("<aside id='ai-column'>")
+        self.assertLess(middle_start, dashboard)
+        self.assertLess(dashboard, ai_column)
+        self.assertIn("选择一个节点", body[middle_start:ai_column])
         self.assertNotIn("id='graph-body'", body)
         self.assertNotIn("id='graph-fragile'", body)
         self.assertNotIn("graph-problem-save", body)
