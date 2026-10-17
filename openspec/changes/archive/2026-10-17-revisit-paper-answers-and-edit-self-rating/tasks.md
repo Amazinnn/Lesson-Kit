@@ -16,5 +16,7 @@
 
 - [x] 3.1 Deterministic regressions for at least four-item repeated navigation, return-current drafts/cursor preservation, default hidden answers on re-entry, unconfirmed submits, no-key cases, Paper switching and reload.
 - [x] 3.2 Focused Data tests for repeated in-place rating/note edits to an earlier item in this round: no added attempts/feedback rows, unchanged answers/verdicts/projections/schedule/other rounds; invalid or stale targets reject and retries do not duplicate writes.
-- [ ] 3.3 Independent browser acceptance of current-run navigation, actual hidden reference material, in-place score editing and failure retention using isolated fixture pools; no new archived-history surface or real-course test writes.
-- [ ] 3.4 Run required pytest (PYTHONUTF8=1), official Node tests, compileall, strict live/all OpenSpec and extract-problems guard; record evidence, independently accept, then sync and archive through OpenSpec CLI.
+- [x] 3.3 Independent browser acceptance of current-run navigation, actual hidden reference material, in-place score editing and failure retention using isolated fixture pools; no new archived-history surface or real-course test writes.
+- [x] 3.4 Run required pytest (PYTHONUTF8=1), official Node tests, compileall, strict live/all OpenSpec and extract-problems guard; record evidence, independently accept, then sync and archive through OpenSpec CLI.
+
+Acceptance: independent review passed source f9195914; final Node208/208, fixed pytest wrapper1 and Data1 pass; required compile/spec/guard checks pass. The initial complete Python run found only the now-fixed Node wrapper failure (1049 pass/1 fail); final full CI on the exact delivery head is a mandatory parent merge gate. No duplicate local full-suite rerun was performed.

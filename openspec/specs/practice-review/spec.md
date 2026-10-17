@@ -2,46 +2,112 @@
 
 ## Purpose
 
-Let a learner briefly inspect the immediately previous problem after an answer is submitted or marked `不会`, without reopening that problem for mutation or moving durable practice progress backward.
+Let a learner review recorded answers throughout the current Paper run without moving practice progress, reveal reference material explicitly, and overwrite the linked self-rating within that run. Legacy practice and flash-card navigation retain their existing behavior.
 
 ## Requirements
+### Requirement: Review is an overlay, not practice navigation
 
-### Requirement: Review the immediately previous ordinary problem
+Review browsing and answer reveal SHALL NOT move the durable practice cursor, alter completion state, create an Attempt, write feedback, or reopen an original answer for submission. Only an explicit self-rating save under this capability MAY change the linked self-rating as defined below. Flash-card previous/next navigation SHALL retain its existing cursor-based behavior. Where an existing interface already opens individual submissions of a completed execution, review SHALL remain available without restarting it. This change SHALL NOT require a new archived-run review entry point.
 
-When an ordinary problem has a browser-submitted answer or is marked `不会`, and practice has advanced to the next unanswered ordinary problem, the practice page SHALL offer `回看上一题`. Activating it SHALL render the previous problem as a read-only result view containing the browser-submitted answer or `不会` state, any available verdict, and the available answer or solution. This view reflects browser-held submission state; its availability SHALL NOT imply that the corresponding attempt write has been durably saved. Submission, skip, reveal, and rating controls SHALL NOT mutate the reviewed problem.
+#### Scenario: Review leaves progress unchanged
+
+- **WHEN** the learner opens, navigates, reveals reference material and closes review without explicitly saving a self-rating
+- **THEN** durable cursor, attempts, feedback and completion state remain unchanged
+
+#### Scenario: Review a completed execution
+
+- **GIVEN** an existing interface already opens individual submissions of a completed Paper execution
+- **WHEN** the learner uses that existing review interface
+- **THEN** recorded items remain reviewable without restarting it or creating an unanswered item
+
+### Requirement: Agent context follows the visible reviewed problem
+
+While review is open, a new Agent turn from the practice page SHALL identify the visible reviewed problem and its submitted answer as focused context. Navigating among reviewed items SHALL update that focus without moving durable practice progress. Returning to the current problem SHALL restore ordinary current-problem context. Previously accepted messages SHALL retain their submission-time context.
+
+#### Scenario: Ask the Agent while reviewing
+
+- **WHEN** the learner sends an Agent message while a reviewed result is visible
+- **THEN** that reviewed problem and its submitted answer are the focused context without moving practice progress
+
+#### Scenario: Navigate after sending
+
+- **WHEN** the learner sends a message while reviewing A and then views B
+- **THEN** a new message uses B while the accepted message keeps A's context
+
+### Requirement: Review completed ordinary problems throughout a Paper run
+
+Saved Papers and temporary fixed executions with a server execution_id SHALL both support this review. Legacy practice without a server execution identity SHALL retain its existing immediately-previous-result behavior.
+
+For ordinary problems with a submitted answer or a recorded `不会` state in the selected Paper's same Practice Run, the practice page SHALL allow repeated backward and forward review through all such items, without a one-item or visit-count limit. The view SHALL show the problem, learner answer or `不会`, available verdict and existing self-rating. Reference answers and solutions SHALL be collapsed on every entry, including re-entry to the same reviewed problem, and SHALL appear only after an explicit reveal action. An unavailable verdict SHALL be stated as unavailable rather than inferred from self-rating. Browser-held unconfirmed submission state MAY be shown with an explicit unconfirmed label and SHALL NOT be represented as a durably saved Attempt. Original answering and skip controls SHALL NOT mutate the reviewed submission.
 
 #### Scenario: Review after advancing
 
 - **WHEN** the browser has submitted an answer or marked the ordinary problem `不会` and advanced to the next unanswered ordinary problem
-- **THEN** `回看上一题` is available
-- **AND** activating it shows the previous problem's browser-held result directly
+- **THEN** `回看上一题` is available and shows that answer or state with any available verdict
+- **AND** reference answers and solutions remain collapsed
 
 #### Scenario: Review while the attempt write is unconfirmed
 
-- **WHEN** the browser holds a submitted answer, the attempt write has not been confirmed, and practice has advanced to the next unanswered ordinary problem
-- **THEN** `回看上一题` still shows the browser-held answer
-- **AND** the view does not imply that the attempt was durably saved
+- **WHEN** the browser holds a submitted answer, its write remains unconfirmed, and practice has advanced
+- **THEN** review still shows the browser-held answer explicitly labelled unconfirmed
+- **AND** it does not imply durable persistence or allow a self-rating write against an unconfirmed Attempt
 
 #### Scenario: Return to the current problem
 
-- **WHEN** the learner activates `返回当前题` from the previous-result view
-- **THEN** the current unanswered problem is shown again
-- **AND** any unsent text answer or selected choices from that current problem are restored
+- **WHEN** the learner activates `返回当前题` from any reviewed item
+- **THEN** the selected execution's current problem is shown with its unsent text or selected choices restored
 
-### Requirement: Review is an overlay, not practice navigation
+#### Scenario: Review more than one earlier problem repeatedly
 
-Reviewing the previous problem SHALL NOT move the practice cursor, alter durable practice progress, create an attempt, write feedback, or reopen the previous problem for answering. Flash-card previous/next navigation SHALL retain its existing cursor-based behavior.
+- **GIVEN** at least four ordinary problems have recorded answers in one execution
+- **WHEN** the learner repeatedly navigates backward to the first and forward to the last recorded problem
+- **THEN** all are reachable without a visit-count limit and boundary controls are disabled rather than wrapping
+- **AND** each entry hides reference answers and solutions even if they were revealed on an earlier visit
 
-#### Scenario: Review leaves progress unchanged
+#### Scenario: Explicit reveal and unavailable verdict
 
-- **WHEN** the learner opens and closes the previous-result view
-- **THEN** the durable practice cursor and all attempt, feedback, and completion state remain unchanged
+- **WHEN** the learner opens a reviewed problem without a recorded verdict
+- **THEN** it shows the learner answer and a truthful unavailable-verdict state without revealing the answer key
+- **AND** an explicit reveal action may show available reference material without creating learning evidence
 
-### Requirement: Agent context follows the visible reviewed problem
+#### Scenario: Restore persisted review after reload or Paper switching
 
-While the previous-result view is open, a new Agent turn from the practice page SHALL identify the reviewed problem as the focused problem and SHALL expose its submitted answer as the focused answer. Returning to the current problem SHALL restore ordinary current-problem context.
+- **WHEN** the learner reloads or leaves and resumes the same Paper execution
+- **THEN** its persisted reviewed submissions remain accessible independently of other Papers
+- **AND** missing original submissions are not fabricated from the current answer key
 
-#### Scenario: Ask the Agent while reviewing
+### Requirement: Explicit self-rating editing for a reviewed submission
 
-- **WHEN** the learner sends an Agent message while the previous-result view is visible
-- **THEN** the reviewed problem and its submitted answer are the focused practice context without moving practice progress
+When self-rating is enabled for the selected Paper execution, a durably saved reviewed submission in that same run SHALL allow editing its linked 1–5 self-rating and optional feedback note, including an earlier item in the run. Following the owner's 2026-10-17 decision, saving an edit SHALL overwrite that submission's previous rating and note in place, preserving its learner answer, objective verdict and Attempt identity. It SHALL NOT append another feedback event or Attempt, reapply signals/current-state/schedule effects, replay global learning history, or modify another Paper or run. The first rating, when none exists, SHALL retain the existing rating flow. Cancellation SHALL write nothing. Saves SHALL validate the exact execution/Attempt identity and current expected rating, and retry safely. Failed saves SHALL retain edits and report failure truthfully. Disabled self-rating SHALL retain the execution's existing preference behavior.
+
+#### Scenario: Edit an existing self-rating
+
+- **WHEN** the learner explicitly saves a different valid rating for a reviewed submission
+- **THEN** its existing rating and note are overwritten without a new feedback event or Attempt and without changing the answer, verdict, cursor, completion state, signals or schedule
+
+#### Scenario: Repeated edits remain scoped to this Paper run
+
+- **GIVEN** an earlier item in the selected Paper run has a saved self-rating and the problem also has records in another run
+- **WHEN** the learner edits the earlier item's rating and note more than once
+- **THEN** the same linked feedback record contains the last saved values, other runs remain unchanged, and no additional evidence or scheduling effects are produced
+
+#### Scenario: Cancel or reject invalid input
+
+- **WHEN** the learner cancels editing or tries to save a rating outside the existing integer 1–5 scale
+- **THEN** no learning records are changed and invalid input receives a readable error
+
+#### Scenario: Retry a lost response
+
+- **WHEN** an identical save is retried after its response is lost
+- **THEN** it returns the same effective result without duplicating feedback contributions or advancing progress
+
+#### Scenario: Stale target and delayed response
+
+- **WHEN** the reviewed target has changed or been invalidated before the save is applied
+- **THEN** the stale write is rejected without changes
+- **AND** an explicit save initiated for A may finish after switching to B, but it updates only the original A target and its delayed response cannot overwrite B's state or draft
+
+#### Scenario: Save failure retains the editor
+
+- **WHEN** a self-rating save fails
+- **THEN** the edited rating and note remain available for retry or cancellation and the UI does not claim success
