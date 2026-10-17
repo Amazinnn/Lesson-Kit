@@ -13,6 +13,7 @@
 - 删卷只删容器与未完成进度；删题自动清当前引用，但保留其他题进度、历史学习证据和历史轮次。
 - 区分可读取/可修复的容器与可开始执行的卷；缺失引用不得让原卷从列表静默消失或无法删除/修复。
 - 所有相关提交核验当前卷和题目版本，防止旧页面提交到已经变化的内容。
+- 按所有者追加确认，去掉重复的“AI 生成解析”独立展示；保留正常答案/解析及已有内容、来源字段。
 
 ## Capabilities
 
@@ -26,6 +27,7 @@ None.
 - `review-workbench`: per-Paper durable progress, pause/resume, scoped reset and historical evidence preservation.
 - `micro-quiz-content`: per-item rendering and type correction without identity replacement.
 - `workbench-content-governance`: coordinated in-place edits and question deletion across current references.
+- `workbench-ui`: remove duplicate explanation presentation while preserving useful normal analysis and stored provenance.
 
 ## Impact
 

@@ -316,6 +316,17 @@ def overview(pool, limit=100, problem_id=None):
             "created_at": row["created_at"],
         })
     active_run, runs = _runs(pool, limit)
+    from workbench.data.practice_sets import _saved_path
+    papers = _practice_sets(conn, limit)
+    for run in [*runs, *papers]:
+        source = run.get('source_ref') or ''
+        try:
+            run['source_deleted'] = source.startswith('ps-') and not _saved_path(pool, source).is_file()
+        except ValueError:
+            run['source_deleted'] = False
+    for record in records:
+        problem = titles.get(record['problem_id'])
+        record['deleted_content'] = problem is None or bool(dict(problem).get('deleted_at'))
     return {
         "count": len(records),
         "records": records,
@@ -325,5 +336,5 @@ def overview(pool, limit=100, problem_id=None):
         "ratings": _rating_distribution(conn, problem_id, linked),
         "active_run": active_run,
         "runs": runs,
-        "practice_sets": _practice_sets(conn, limit),
+        "practice_sets": papers,
     }

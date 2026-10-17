@@ -6,6 +6,7 @@ import re
 from workbench.domain import facets
 from workbench.domain import micro_quiz
 from workbench.domain import markup
+from workbench.data import paper_progress
 
 
 TABLES = {
@@ -121,7 +122,8 @@ def get(pool, entity, object_id):
     row = pool.connect().execute(
         f"SELECT * FROM {table} WHERE {id_column}=?", (object_id,)
     ).fetchone()
-    return _row(row)
+    result = _row(row)
+    return None if entity == 'problem' and result and result.get('deleted_at') else result
 
 
 def list_items(pool, entity):
@@ -129,7 +131,8 @@ def list_items(pool, entity):
     rows = pool.connect().execute(
         f"SELECT * FROM {table} ORDER BY {id_column}"
     ).fetchall()
-    return [_row(row) for row in rows]
+    items = [_row(row) for row in rows]
+    return [item for item in items if entity != 'problem' or not item.get('deleted_at')]
 
 
 def ensure_kp_batch_column(conn):
@@ -299,6 +302,11 @@ def update(pool, entity, object_id, data):
 
 
 def _update_problem(pool, problem_id, data):
+    with pool.transaction(immediate=True):
+        return _apply_problem_update(pool, problem_id, data)
+
+
+def _apply_problem_update(pool, problem_id, data):
     """Apply one in-place problem patch through the shared plan."""
     plan = plan_problem_update(pool, problem_id, data)
     if plan["errors"]:
@@ -316,7 +324,7 @@ def _update_problem(pool, problem_id, data):
         assignments.append("updated_at=datetime('now')")
     conn = pool.connect()
     with pool.transaction():
-        cursor = conn.execute(
+        cursor = paper_progress.update_question(conn,
             f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
             (*values, problem_id),
         )
@@ -530,28 +538,29 @@ def delete(pool, entity, object_id):
         return
     table, id_column = _entity(entity)
     conn = pool.connect()
-    with conn:
+    with pool.transaction(immediate=True):
         exists = conn.execute(
             f"SELECT 1 FROM {table} WHERE {id_column}=?", (object_id,)
         ).fetchone()
         if exists is None:
             raise KeyError(object_id)
         if entity == "problem":
-            _delete_problem(conn, object_id)
+            _delete_problem(conn, object_id, pool)
         elif entity == "kp":
-            _delete_kp(conn, object_id)
+            _delete_kp(conn, object_id, pool)
         else:
             conn.execute(
                 "DELETE FROM knowledge_relations WHERE relation_id=?", (object_id,)
             )
+    paper_progress.flush_files(pool)
 
 
-def _delete_problem(conn, problem_id):
-    conn.execute("DELETE FROM problem_progress WHERE problem_id=?", (problem_id,))
-    conn.execute("DELETE FROM problem_attempts WHERE problem_id=?", (problem_id,))
-    _delete_learning_rows(conn, "problem", problem_id)
-    conn.execute("DELETE FROM learner_signals WHERE target_id=?", (problem_id,))
-    conn.execute("DELETE FROM problems WHERE problem_id=?", (problem_id,))
+def _delete_problem(conn, problem_id, pool=None):
+    if 'deleted_at' not in {row[1] for row in conn.execute('PRAGMA table_info(problems)')}:
+        raise ValueError('migrate the pool before deleting questions with retained history')
+    if pool is not None:
+        paper_progress.remove_question(pool, problem_id)
+    conn.execute("UPDATE problems SET deleted_at=datetime('now') WHERE problem_id=?", (problem_id,))
 
 def _delete_learning_rows(conn, item_type, item_id):
     for table in ("feedback_events", "review_schedule", "learning_current_state"):
@@ -561,7 +570,7 @@ def _delete_learning_rows(conn, item_type, item_id):
         )
 
 
-def _delete_kp(conn, kp_id):
+def _delete_kp(conn, kp_id, pool=None):
     card_ids = [
         row[0] for row in conn.execute(
             "SELECT card_id FROM flash_cards WHERE kp_id=?", (kp_id,)
@@ -612,7 +621,7 @@ def _delete_kp(conn, kp_id):
                 (json.dumps(remaining, ensure_ascii=False), row[0]),
             )
         else:
-            _delete_problem(conn, row[0])
+            _delete_problem(conn, row[0], pool)
 
     rows = conn.execute(
         "SELECT kp_id, related_kp_ids FROM knowledge_points "

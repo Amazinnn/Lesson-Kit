@@ -53,6 +53,9 @@
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
 | `papers <workspace> save --input <manifest>` | 写（验证已导出的练习清单并保存到组卷页列表；返回 JSON 回执） | Agent |
+| `papers <workspace> list/get <ps-id>` | 读（缺失题目不隐藏容器，返回独立进度） | Agent |
+| `papers <workspace> preview/update <ps-id> --input <manifest> [--confirmation <preview.json>]` | 显式原卷更新；结构修改须确认精确影响，不启动执行 | Agent |
+| `papers <workspace> delete <ps-id>` | 仅删除容器与未完成状态，不删题目及学习证据 | Agent |
 
 ## 已安装的 Agent 契约模块
 

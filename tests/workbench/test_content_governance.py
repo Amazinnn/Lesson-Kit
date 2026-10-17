@@ -101,7 +101,7 @@ class ContentGovernanceTests(unittest.TestCase):
         self.assertEqual(content.history(self.pool, "problem", "dmath-ch06-prob-003")["attempts"], [])
         self.assertEqual(conn.total_changes, before)
 
-    def test_problem_delete_atomically_clears_dependent_learning_rows(self):
+    def test_problem_delete_atomically_preserves_dependent_learning_rows(self):
         from workbench.data import content
 
         conn = self.pool.connect()
@@ -147,7 +147,7 @@ class ContentGovernanceTests(unittest.TestCase):
             count = conn.execute(
                 f"SELECT COUNT(*) FROM {table} WHERE {column}=?", (problem_id,)
             ).fetchone()[0]
-            self.assertEqual(count, 0, table)
+            self.assertEqual(count, 1, table)
 
     def test_kp_delete_removes_membership_and_deletes_zero_owner_problem(self):
         from workbench.data import content
@@ -193,7 +193,7 @@ class ContentGovernanceTests(unittest.TestCase):
         )
         self.assertIsNone(
             conn.execute(
-                "SELECT 1 FROM problems WHERE problem_id='dmath-ch06-prob-004'"
+                "SELECT 1 FROM problems WHERE problem_id='dmath-ch06-prob-004' AND deleted_at IS NULL"
             ).fetchone()
         )
         self.assertEqual(
@@ -267,7 +267,7 @@ class ContentGovernanceTests(unittest.TestCase):
         conn = self.pool.connect()
         conn.executescript(
             """
-            CREATE TRIGGER reject_problem_delete BEFORE DELETE ON problems
+            CREATE TRIGGER reject_problem_delete BEFORE UPDATE OF deleted_at ON problems
             BEGIN SELECT RAISE(ABORT, 'stop'); END;
             """
         )

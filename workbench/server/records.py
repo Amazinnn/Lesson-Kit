@@ -18,6 +18,8 @@ def _attempt_rows(workspace_name, records):
             badge, verdict_class = "错", "record-verdict-bad"
         rating = record.get("rating")
         title = html.escape(record.get("title") or "未命名题目")
+        if record.get('deleted_content'):
+            title += '（题目已删除）'
         answer = html.escape((record.get("answer_text") or "").strip())
         note = html.escape(
             (record.get("feedback_note") or record.get("note") or "").strip())
@@ -76,6 +78,8 @@ def _run_card(run):
     total = int(progress.get("total") or 0)
     stuck = int(progress.get("stuck") or 0)
     label = html.escape(run.get("source_label") or "临时练习")
+    if run.get('source_deleted'):
+        label += '（试卷已删除）'
     when = run.get("finished_at") or run.get("started_at") or ""
     meta = " · ".join(filter(None, [
         kind, mode, rating_mode, f"{completed}/{total} 项",
@@ -154,7 +158,7 @@ def _practice_set_history(practice_sets):
         )
         cards.append(
             "<article class='record-run card'>"
-            f"<h3>{html.escape(item.get('source_label') or '未命名试卷')}</h3>"
+            f"<h3>{html.escape(item.get('source_label') or '未命名试卷')}{'（试卷已删除）' if item.get('source_deleted') else ''}</h3>"
             f"<p class='muted'>{html.escape(' · '.join(meta))}</p>"
             + changed
             + "<ul>"

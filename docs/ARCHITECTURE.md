@@ -158,7 +158,8 @@ workbench/
 - 图谱状态动作经 Domain 规则映射到现有调度质量值；Shell 不直接写 SQLite，Data 层执行覆盖式存储。
 - 图谱视觉呈现完全位于浏览器表示层：graph-physics-core.js 保持唯一语义核心；graph-physics.js 提供 Worker 适配器、页面镜像与本地布局种子的唯一读写；graph-physics-worker.js 执行迭代布局；graph-renderer.js 使用 WebGL2 绘制物理核心提供的关系几何，并负责 viewport culling 和标签/元信息 LOD，DOM 节点继续承担节点外观与交互。图谱页按 core、renderer、adapter 顺序加载；WebGL2 或 renderer 初始化失败时走现有状态提示并终止本次运行。可选坐标种子只在图谱稳定后写入浏览器 localStorage，并按可读的节点/关系拓扑身份读取；它不改变关系结构、题量、重要性、学习状态或作者内容，也不写入 SQLite。
 - 图谱状态筛选分群也完全位于浏览器表示层：四个既有状态按多选并集决定可见子图；布局更新运行时内存坐标，稳定后可由 `graph-physics.js` 写入可选的本地布局种子；筛选值仅随页面上下文提供给 Agent，不写 Pool，也不从种子恢复。
-- `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；所有物理删除级联由一个 SQLite 事务完成。
+- `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；题目删除保留历史行和学习证据，清理当前引用。SQLite 修改和 `paper_state` 待发布文件意图同事务提交，Data 在读取试卷前幂等恢复 JSON 发布。其他内容删除的关系清理仍在一个 SQLite 事务内完成。
+- `data.paper_progress`：保存卷暂停快照、执行/结构/题目版本、草稿与文件发布协调；`domain.answering_content` 只比较作答语义，零 IO。`active_practice` 是当前选中卷而非全部未完成进度。删除题目的调度证据仍留池，当前 due/mastery 读取排除历史题。批次回滚遇到现有 Paper/进度引用则拒绝，不能借回滚绕过当前引用清理和历史保护。
 - `data.content_mirror`：扫描所选课程本地 JSON、按嵌入 id 比较三方规范化内容、调用现有内容/关系校验权威，
   经现有图像路径校验写入逻辑引用、通过 `data.difficulty.check` 校验题目难度，并将单实体内容与镜像状态/日志
   原子提交；旧 v1 投影可按下一修订号升级，完全匹配的远端投影可收敛一次；不调用 Git，也不因文件缺失或删除请求删池内容。

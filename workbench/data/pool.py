@@ -47,7 +47,7 @@ class Pool:
         """Commit a group of Pool writes together, with nested-call support."""
         conn = self.connect()
         outermost = self._transaction_depth == 0
-        if outermost:
+        if outermost and not conn.in_transaction:
             conn.execute("BEGIN IMMEDIATE" if immediate else "BEGIN")
         self._transaction_depth += 1
         try:
@@ -106,20 +106,20 @@ class Pool:
         requested = set(kp_ids)
         return [
             problem for problem in (self._problem_row(row) for row in rows)
-            if requested.intersection(problem["kp_ids"])
+            if requested.intersection(problem["kp_ids"]) and not problem.get('deleted_at')
         ]
 
     def problems_all(self):
         rows = self.connect().execute(
             "SELECT * FROM problems ORDER BY problem_id"
         ).fetchall()
-        return [self._problem_row(r) for r in rows]
+        return [self._problem_row(r) for r in rows if not dict(r).get('deleted_at')]
 
     def problem(self, problem_id):
         row = self.connect().execute(
             "SELECT * FROM problems WHERE problem_id=?", (problem_id,)
         ).fetchone()
-        return self._problem_row(row) if row else None
+        return self._problem_row(row) if row and not dict(row).get('deleted_at') else None
 
     @staticmethod
     def _problem_row(row):
@@ -343,7 +343,8 @@ class Pool:
         rows = self.connect().execute(
             "SELECT * FROM review_schedule ORDER BY due_at"
         ).fetchall()
-        return [dict(r) for r in rows]
+        return [dict(r) for r in rows
+                if r['item_type'] != 'problem' or self.problem(r['item_id']) is not None]
 
     # -- feedback events --------------------------------------------------
 

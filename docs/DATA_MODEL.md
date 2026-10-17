@@ -176,7 +176,7 @@
 `data.active_practice.create` 写入 `paper`；完成、替换或清除时，
 `data.active_practice._archive` 也将新快照写成 `paper`，即使迁移后仍在执行的旧 active 行保留了历史来源值。
 
-`active_practice.practice_mode` 与 `practice_runs.practice_mode` 是当前单模式界面的兼容选择 / 渲染元数据，
+`active_practice.practice_mode` 与 `practice_runs.practice_mode` 是界面的兼容选择 / 渲染元数据，
 不是 Paper 身份或题目队列。schema 没有枚举 CHECK；Data writer 只要求非空字符串，并在开始、归档与重放时保留该值。
 当前浏览器选项是 `exam`、`micro`、`yes_no`、`flash_card`；保存 Paper 的 start API 接受前三者，
 记录读取器原样返回该字段，记录页为这四个值显示对应标签。固定题目身份与顺序分别存于保存 Paper、
@@ -184,7 +184,7 @@
 它不同于题目能力字段 `problems.practice_modes`；`rating_mode` 则单独表示反馈时机。
 
 v1 兼容输入和历史行可保留 `quick`、`practice_set`、`agent`。schema 增量迁移只扩展两个字段的
-CHECK 约束，保留已存在的 active 行与 `practice_runs` 历史值；读取或重放旧轮次不会改写旧行。
+CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 行与 `practice_runs` 历史值；读取或重放旧轮次不会改写旧行。
 既有工作区必须先显式运行池迁移，再使用 Paper 执行写入：
 `python pool/scripts/migrate-progress.py --db pool/dmath.db`（将数据库路径替换为该工作区的池路径）。
 表已存在不代表旧 `source_kind` CHECK 已接受 `paper`；`lesson-kit doctor` 与正常启动均不自动迁移。
@@ -211,6 +211,30 @@ CHECK 约束，保留已存在的 active 行与 `practice_runs` 历史值；读�
 - 新增一个近义字段绕过旧字段的语义冲突；
 - 从 archive change 推导当前字段含义；
 - 把本次审计快照当成长期规范。
+
+## Paper 独立进度与题目历史身份
+
+以下字段均为 active，经 `ensure_workbench_schema` 显式增量迁移；正常启动不自动迁移。
+
+| 表/字段 | 语义 | writer / consumer |
+|---|---|---|
+| `paper_state.paper_id/generation` | 稳定 ps-NNN 和递增结构版本；删除后保留身份禁止复用 | Data Paper / 提交校验 |
+| `paper_state.checkpoint_json` | 暂停卷的执行快照：题序、游标、状态、attempt 关联、草稿与版本；选中卷在 active 表 | Data 切卷/修题/删题 |
+| `paper_state.pending_json/pending_delete` | 与进度变动同事务提交的待发布 JSON/删除意图；提交后幂等发布，后续读取恢复 | Data 文件协调 |
+| `practice_execution_ids.id` | 自增执行身份，不复用 | Data 执行器 |
+| `active_practice.execution_id/paper_generation` | 选中执行及对应结构版本 | Data 执行器 / 浏览器上下文 |
+| `active_practice_items.content_revision` | 该题作答内容版本 | Data 修题 / 提交校验 |
+| `active_practice_items.draft_json/draft_sequence` | 未提交文本/选择草稿和单调顺序；迟到写入拒绝，不是学习事实 | 浏览器经 Data 保存 / 恢复 |
+| `problem_revisions.problem_id/revision` | 作答语义版本，缺行等价 1 | 共用 Data 更新规则 / 提交校验 |
+| `practice_runs.execution_id/paper_generation` | 归档执行及结构版本；旧 execution_id 可为空 | Data 归档 / 反馈校验 |
+| `problems.deleted_at` | 空为当前题，非空为历史保留题目；保留 ID，当前查询/修改排除 | Data 删除 / 记录页 |
+
+旧健康 active 执行只补执行身份和默认版本，不改题序、attempt 关联或学习表。旧缺失引用显式报告，不补造或重绑。
+题面、选项、答案键、作答类型/能力变化仅重置各未完成卷中的该题及其草稿；解析、标题、KP、来源、难度变化不重置。
+手工改卷名单/题序须精确影响预览确认，重置该卷未完成状态；删题清当前引用是例外，保留其他题进度。
+这些操作不删除或重新判分历史 attempts、反馈、信号、学习状态、调度和已归档轮次。删卷保留历史 source_ref/source_label，记录读取派生已删除状态。
+浏览器提交的 `practice_context` 包含 execution_id、paper_id、paper_generation、item_id、content_revision、position；学习写入前核验。
+本地草稿失败出站箱键 `wb_paper_draft_<workspace>_<execution_id>_<position>` 保留未确认写入；恢复要求上下文匹配，确认相同版本才清除。
 
 ## 本地图谱布局种子（浏览器缓存）
 

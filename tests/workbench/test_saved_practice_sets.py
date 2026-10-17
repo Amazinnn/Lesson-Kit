@@ -58,6 +58,9 @@ class SavedPracticeSetTests(unittest.TestCase):
             self.pool, saved["practice_set_id"],
             title="重排后的卷子",
             problem_ids=["dmath-ch06-prob-002", "dmath-ch06-prob-001"],
+            confirmation=practice_sets.preview_update(
+                self.pool, saved['practice_set_id'], title='重排后的卷子',
+                problem_ids=['dmath-ch06-prob-002', 'dmath-ch06-prob-001'])['confirmation'],
         )
         rendered = practice_sets.render_saved(self.pool, saved["practice_set_id"])
 

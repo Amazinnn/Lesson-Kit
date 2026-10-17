@@ -49,19 +49,23 @@ ROUTES = {
         BROWSER, (),
         "flash cards are practised in the page; the CLI has no card command yet"),
     ("GET", "/api/w/{name}/practice-sets"): (
-        BROWSER, (), "the browser lists reusable saved papers"),
+        BOTH, ("papers",), "list reusable saved papers and their progress"),
     ("POST", "/api/w/{name}/practice-sets"): (
         BOTH, ("papers",), "the browser or Agent saves a reusable paper"),
     ("GET", "/api/w/{name}/practice-sets/{practice_set_id}"): (
-        BROWSER, (), "the browser opens one saved paper"),
+        BOTH, ("papers",), "inspect one saved paper, including unavailable references"),
     ("PATCH", "/api/w/{name}/practice-sets/{practice_set_id}"): (
-        BROWSER, (), "the browser renames or replaces one paper's ordered problems"),
+        BOTH, ("papers",), "update one paper under its explicit identity and confirmed impact"),
     ("DELETE", "/api/w/{name}/practice-sets/{practice_set_id}"): (
-        BROWSER, (), "the browser deletes only the saved paper"),
+        BOTH, ("papers",), "delete only the saved paper and unfinished execution"),
     ("GET", "/api/w/{name}/practice-sets/{practice_set_id}/render"): (
         BROWSER, (), "the browser reuses the existing student/solution renderer"),
     ("POST", "/api/w/{name}/practice-sets/{practice_set_id}/start"): (
-        BROWSER, (), "the browser copies one paper into the single active practice"),
+        BROWSER, (), "the browser selects or resumes a Paper without clearing other Papers"),
+    ("POST", "/api/w/{name}/practice-sets/{practice_set_id}/preview"): (
+        BOTH, ("papers",), "preview an explicit Paper update and its progress-reset impact"),
+    ("POST", "/api/w/{name}/practice/draft"): (
+        BROWSER, (), "persist unsubmitted per-Paper answer drafts without learning evidence"),
     ("GET", "/api/w/{name}/practice/current"): (
         BROWSER, (), "the browser resumes the workspace's single active practice"),
     ("POST", "/api/w/{name}/practice/current"): (

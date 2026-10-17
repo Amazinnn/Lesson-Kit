@@ -12,6 +12,7 @@ import json
 from datetime import date
 
 from workbench.data import active_practice
+from workbench.data import paper_progress
 from workbench.domain import feedback as feedback_rules
 from workbench.domain import learning_state
 from workbench.domain import schedule as schedule_rules
@@ -384,7 +385,7 @@ def correction_conflict(pool, attempt, operation):
 # -- reading ------------------------------------------------------------------
 
 def record_result(pool, problem_id, result, note=None, answer_text=None, now=None,
-                  practice_position=None):
+                  practice_position=None, practice_context=None):
     """Record one practice result atomically, the way the practice page does.
 
     Both surfaces call this, so the CLI cannot write a different shape than the
@@ -397,6 +398,10 @@ def record_result(pool, problem_id, result, note=None, answer_text=None, now=Non
     if pool.problem(problem_id) is None:
         raise ValueError(f"unknown problem: {problem_id}")
     with pool.transaction():
+        if practice_context is not None:
+            paper_progress.guard(pool, practice_context, problem_id, practice_position)
+        elif practice_position is not None and paper_progress.selected_saved(pool):
+            raise active_practice.ActivePracticeConflict('stale practice page: refresh before submitting')
         attempt_id = pool.insert_attempt(problem_id, status, note, answer_text)
         pool.upsert_problem_progress(problem_id, status, note)
         state = pool.schedule_get("problem", problem_id) or schedule_rules.default_state(
@@ -455,7 +460,7 @@ def _round_rating_mode(pool):
 
 def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
                            choices=None, request_id=None, practice_position=None,
-                           stuck=False):
+                           stuck=False, practice_context=None):
     """Persist one answer the practice page just submitted.
 
     The attempt row is the learner's durable record; progress, schedule, and
@@ -483,12 +488,20 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
                                answer_text=answer_text, verdict=verdict,
                                choices=choices, practice_position=practice_position,
                                stuck=stuck)
+    if practice_context is not None:
+        payload = json.dumps(dict(json.loads(payload), practice_context=practice_context), sort_keys=True)
     if request_id is not None:
         _require_browser_schema(pool)
     with pool.transaction(immediate=request_id is not None):
         replay = _browser_replay(pool, request_id, payload)
         if replay is not None:
             return replay
+        if practice_context is not None:
+            paper_progress.guard(pool, practice_context, problem_id, practice_position)
+        elif practice_position is not None:
+            active = active_practice.current(pool, resolve=False)
+            if active and (active.get('source_ref') or '').startswith('ps-'):
+                raise active_practice.ActivePracticeConflict('stale practice page: refresh before submitting')
         if pool.problem(problem_id) is None:
             raise ManifestError(f"unknown problem: {problem_id}")
         derive = verdict is not None and _round_rating_mode(pool) == "off"
@@ -538,17 +551,25 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
 
 
 def record_browser_feedback(pool, item_type, item_id, rating=None, note=None,
-                            direction="", attempt_id=None, request_id=None):
+                            direction="", attempt_id=None, request_id=None, practice_context=None):
     """Apply a rating and its retry marker in one serialized transaction."""
     payload = _browser_payload("feedback", item_type=item_type, item_id=item_id,
                                rating=rating, note=note, direction=direction,
                                attempt_id=attempt_id)
+    if practice_context is not None:
+        payload = json.dumps(dict(json.loads(payload), practice_context=practice_context), sort_keys=True)
     if request_id is not None:
         _require_browser_schema(pool)
     with pool.transaction(immediate=request_id is not None):
         replay = _browser_replay(pool, request_id, payload)
         if replay is not None:
             return replay
+        if practice_context is not None:
+            paper_progress.guard(pool, practice_context, item_id if item_type == 'problem' else None,
+                                 feedback=True)
+        elif item_type == 'problem' and attempt_id is not None and (
+                paper_progress.selected_saved(pool) or paper_progress.saved_attempt(pool, attempt_id)):
+            raise active_practice.ActivePracticeConflict('stale practice page: refresh before rating')
         result = feedback_rules.apply(
             pool, item_type, item_id, rating=rating, note=note,
             direction=direction, attempt_id=attempt_id)

@@ -101,6 +101,9 @@
     if (item.attempt_status) data.attempt_status = item.attempt_status;
     if (item.feedback_request) data.feedback_request = item.feedback_request;
     if (item.feedback_status) data.feedback_status = item.feedback_status;
+    if (item.practice_context) data.practice_context = item.practice_context;
+    if (item.draft) data.draft = item.draft;
+    if (item.draft_sequence) data.draft_sequence = item.draft_sequence;
     return data;
   }
 
@@ -128,6 +131,9 @@
       attempt_status: data.attempt_status === "saving" ? "failed" : (data.attempt_status || ""),
       feedback_request: data.feedback_request || null,
       feedback_status: data.feedback_status === "saving" ? "failed" : (data.feedback_status || ""),
+      practice_context: data.practice_context || null,
+      draft: data.draft || null,
+      draft_sequence: data.draft_sequence || 0,
       state: data.state || "active",
       direction: card ? (data.direction || "forward") : "",
     };

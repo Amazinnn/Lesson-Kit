@@ -54,4 +54,4 @@
 | `wb_similar_round` | 同类轮标志 | 再练同类 |
 | `wb_ai_conversation` / `wb_ai_recent` | 当前对话 id / 最近对象（供上下文） | AI 面板 |
 
-> 关键性质：关标签页 = 牌组与草稿全部蒸发（设计如此，不补写）；已保存评分在池里不受影响。
+> 保存试卷的未完成进度与文本/选择草稿由 SQLite 独立保存（DATA_MODEL 的 paper_state / active_practice）；浏览器关闭不清除。草稿失败出站箱 `wb_paper_draft_<workspace>_<execution_id>_<position>` 用上下文和顺序校验恢复，不制造学习记录。其他临时牌组缓存沿用既有规则。
