@@ -2141,9 +2141,11 @@
 
     function dispose() {
       if (disposed) return;
-      persistProblemDraft();
+      if (stream) {
+        if (answerBox) persistProblemDraft();
+        cancelScheduledAdvance();
+      }
       disposed = true;
-      cancelScheduledAdvance();
     }
 
     return {

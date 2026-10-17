@@ -21,6 +21,7 @@
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
   var selectedGraphKpId = null;
   var practiceRuntime = null;
+  var middlePageGeneration = 0;
   var currentProblem = function () { return null; };
   var session = function () { return []; };
   var visiblePracticeImages = function () { return []; };
@@ -1886,6 +1887,8 @@
   }
 
   function mountPracticeViews() {
+  var pageGeneration = middlePageGeneration;
+  function routeIsCurrent() { return pageGeneration === middlePageGeneration; }
   /* ---------- practice flow ---------- */
 
   practiceRuntime = PracticeFlow.start({
@@ -1942,6 +1945,7 @@
   }
 
   function practiceSetStatus(card, message) {
+    if (!routeIsCurrent()) return;
     var status = card.querySelector(".practice-set-status");
     if (!status) return;
     status.textContent = message || "";
@@ -1950,6 +1954,7 @@
 
   function refreshPracticeSetStart(card, practiceSetId, error) {
     return api("/practice-sets/" + encodeURIComponent(practiceSetId)).then(function (record) {
+      if (!routeIsCurrent()) return;
       var button = card.querySelector("[data-set-start]");
       if (button) {
         button.disabled = !record.can_start;
@@ -1972,7 +1977,7 @@
   }
 
   function reloadPage() {
-    refreshMiddle();
+    if (routeIsCurrent()) refreshMiddle();
   }
 
   function downloadPaper(title, suffix, text) {
@@ -2006,17 +2011,18 @@
         // choice: off starts a no-rating round, on keeps the old default.
         var paperStartBody = { rating_mode: showRatingEnabled() ? "immediate" : "off" };
         post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
-          navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
+          if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
         }).catch(function (error) {
+          if (!routeIsCurrent()) return;
           if (error.status === 409 && error.message === "an unfinished temporary practice already exists"
               && window.confirm && window.confirm(
             "当前有未完成的临时练习。替换临时练习后开始此卷？其他已保存试卷的进度会保留。"
           )) {
             paperStartBody.replace = true;
             post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
-              navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
+              if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
             }).catch(function (retryError) {
-              refreshPracticeSetStart(card, practiceSetId, retryError);
+              if (routeIsCurrent()) refreshPracticeSetStart(card, practiceSetId, retryError);
             });
           } else {
             refreshPracticeSetStart(card, practiceSetId, error);
@@ -2033,7 +2039,7 @@
         if (!title || !title.trim()) return;
         patch("/practice-sets/" + encoded, { title: title.trim() })
           .then(reloadPage)
-          .catch(function (error) { practiceSetStatus(card, error.message); });
+          .catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
         return;
       }
 
@@ -2041,17 +2047,18 @@
         if (window.confirm && !window.confirm("删除这张试卷？做题记录不会被删除。")) return;
         api("/practice-sets/" + encoded, { method: "DELETE" })
           .then(reloadPage)
-          .catch(function (error) { practiceSetStatus(card, error.message); });
+          .catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
         return;
       }
 
       if (button.hasAttribute("data-set-export")) {
         api("/practice-sets/" + encoded + "/render").then(function (rendered) {
+          if (!routeIsCurrent()) return;
           var heading = card.querySelector("h2");
           var title = heading ? heading.textContent : practiceSetId;
           downloadPaper(title, "-problem-set.md", rendered.practice_set || "");
           downloadPaper(title, "-solutions.md", rendered.solutions || "");
-        }).catch(function (error) { practiceSetStatus(card, error.message); });
+        }).catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
         return;
       }
 
@@ -2074,6 +2081,7 @@
         return;
       }
       post("/practice-sets/" + encoded + "/preview", { problem_ids: ids }).then(function (impact) {
+        if (!routeIsCurrent()) return;
         var message = "修改本卷题目顺序或名单，将清除本卷的未完成进度和草稿。"
           + "当前已完成 " + (impact.completed_items || 0) + " 题，草稿 "
           + (impact.draft_items || 0) + " 题；历史作答与其他试卷不变。继续吗？";
@@ -2084,7 +2092,7 @@
         return patch("/practice-sets/" + encoded, { problem_ids: ids, confirmation: impact.confirmation });
       })
         .then(reloadPage)
-        .catch(function (error) { practiceSetStatus(card, error.message); });
+        .catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
     });
   }
 
@@ -2096,16 +2104,18 @@
       var runId = encodeURIComponent(button.dataset.runReplay);
       button.disabled = true;
       post("/practice/runs/" + runId + "/replay", {}).then(function () {
-        navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
+        if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
       }).catch(function (error) {
+        if (!routeIsCurrent()) return;
         button.disabled = false;
         if (error.message === "an unfinished practice already exists"
             && window.confirm
             && window.confirm("当前还有一轮练习没有完成。重新开始会清除旧进度，继续吗？")) {
           button.disabled = true;
           post("/practice/runs/" + runId + "/replay", { replace: true }).then(function () {
-            navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
+            if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
           }).catch(function (retryError) {
+            if (!routeIsCurrent()) return;
             button.disabled = false;
             if (window.alert) window.alert(retryError.message || "无法重新开始");
           });
@@ -2123,9 +2133,10 @@
     recalculatePlan.addEventListener("click", function () {
       recalculatePlan.disabled = true;
       post("/plan/recalculate", {}).then(function () {
+        if (!routeIsCurrent()) return;
         recalculatePlan.disabled = false;
         refreshMiddle();
-      }).catch(function () { recalculatePlan.disabled = false; });
+      }).catch(function () { if (routeIsCurrent()) recalculatePlan.disabled = false; });
     });
   }
 
@@ -2139,6 +2150,7 @@
     var goalAssistSend = document.getElementById("goal-assist-send");
 
     function goalStatus(text) {
+      if (!routeIsCurrent()) return;
       var status = document.getElementById("goal-form-status");
       if (status) status.textContent = text || "";
     }
@@ -2180,7 +2192,7 @@
         var id = card.dataset.goalId;
         if (!id || (window.confirm && !window.confirm("删除这个目标？"))) return;
         api("/goals/" + encodeURIComponent(id), { method: "DELETE" })
-          .then(refreshMiddle)
+          .then(function () { if (routeIsCurrent()) refreshMiddle(); })
           .catch(function (error) { goalStatus("删除失败：" + (error.message || "未知错误")); });
       });
     });
@@ -2219,7 +2231,7 @@
           })
         : post("/goals", payload);
       request.then(function () {
-        refreshMiddle();
+        if (routeIsCurrent()) refreshMiddle();
       }).catch(function (error) {
         goalStatus("保存失败：" + (error.message || "未知错误"));
       });
@@ -3698,6 +3710,7 @@
 
   function disposeMiddlePage() {
     if (!middlePageMounted) return;
+    middlePageGeneration += 1;
     if (practiceRuntime && practiceRuntime.dispose) practiceRuntime.dispose();
     if (graphPageDispose) graphPageDispose();
     if (timeViewDispose) timeViewDispose();

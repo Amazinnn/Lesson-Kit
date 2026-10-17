@@ -4462,6 +4462,106 @@ test("disposing a middle page cancels its delayed practice advance", async () =>
   assert.equal(calls.filter(call => call.url.endsWith("/pull")).length, 1);
 });
 
+test("disposing a practice page persists the final editor value", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const practice = {
+    source_ref: "ps-001", execution_id: 10, paper_generation: 1,
+    kp_ids: [], practice_mode: "exam", rating_mode: "off", cursor: 0,
+    progress: { completed: 0, total: 1, remaining: 1 },
+    items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+      content_revision: 3, payload: { problem_id: "p-1", problem_text: "Q1" } }],
+  };
+  const app = runWorkbench({ elements, fetch: (url, options) => {
+    calls.push({ url, options });
+    return jsonResponse(url.endsWith("/practice/current") ? { practice } : {});
+  } });
+  await flush();
+  elements["resume-practice"].click();
+  elements["answer-box"].value = "final value before leaving";
+
+  app.window.WorkbenchMiddlePage.dispose();
+  await flush();
+
+  const saved = calls.find(call => call.url.endsWith("/practice/draft"));
+  assert.ok(saved);
+  assert.equal(saved.options.keepalive, true);
+  assert.equal(JSON.parse(saved.options.body).draft.answer, "final value before leaving");
+});
+
+test("disposing a non-practice page does not replace a cached paper draft with an empty answer", async () => {
+  const calls = [];
+  const context = { execution_id: 10, paper_id: "ps-001", paper_generation: 1,
+    item_id: "p-1", content_revision: 3, position: 0 };
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 0, items: [{ problem_id: "p-1",
+      state: "active", practice_context: context, draft: { answer: "saved answer", choices: [] },
+      payload: { problem_id: "p-1", problem_text: "Q1" } }] }),
+  });
+  const app = runWorkbench({ elements: { layout: layout() }, storage, fetch: (url, options) => {
+    calls.push({ url, options });
+    return jsonResponse({});
+  } });
+
+  app.window.WorkbenchMiddlePage.dispose();
+  await flush();
+
+  assert.equal(calls.some(call => call.url.endsWith("/practice/draft")), false);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_session_alpha")).items[0].draft,
+    { answer: "saved answer", choices: [] });
+});
+
+test("a completed goal save does not refresh a later middle page", async () => {
+  let resolveSave;
+  let refreshes = 0;
+  const goalForm = new FakeElement("goal-form");
+  const title = new FakeElement("goal-title", { value: "Keep this goal" });
+  const app = runWorkbench({
+    elements: { layout: layout(), "goal-form": goalForm, "goal-title": title },
+    fetch: () => new Promise(resolve => { resolveSave = resolve; }),
+  });
+  app.window.WorkbenchNavigation = {
+    navigate() { throw new Error("goal save should not navigate"); },
+    refresh() { refreshes += 1; return Promise.resolve(); },
+  };
+
+  goalForm.trigger("submit", { preventDefault() {} });
+  app.window.WorkbenchMiddlePage.dispose();
+  resolveSave({ ok: true, json: () => Promise.resolve({}) });
+  await flush();
+
+  assert.equal(refreshes, 0);
+});
+
+test("a completed paper start does not navigate after leaving its middle page", async () => {
+  let resolveStart;
+  const navigations = [];
+  const list = new FakeElement("practice-set-list");
+  const card = new FakeElement("article", { dataset: { practiceSetId: "ps-001" } });
+  card.className = "practice-set-card";
+  const start = new FakeElement("button");
+  start.setAttribute("data-set-start", "");
+  start.closest = selector => selector === "button" ? start
+    : selector === ".practice-set-card" ? card : null;
+  card.queryOne = selector => selector === "[data-set-start]" ? start : null;
+  list.queryAll = selector => selector === ".practice-set-card" ? [card] : [];
+  const app = runWorkbench({
+    elements: { layout: layout(), "practice-set-list": list },
+    fetch: () => new Promise(resolve => { resolveStart = resolve; }),
+  });
+  app.window.WorkbenchNavigation = {
+    navigate(url) { navigations.push(url); },
+    refresh() { return Promise.resolve(); },
+  };
+
+  list.trigger("click", { target: start, preventDefault() {} });
+  app.window.WorkbenchMiddlePage.dispose();
+  resolveStart({ ok: true, json: () => Promise.resolve({}) });
+  await flush();
+
+  assert.deepEqual(navigations, []);
+});
+
 test("flash cards page back and forth through history and only pull at the end", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
