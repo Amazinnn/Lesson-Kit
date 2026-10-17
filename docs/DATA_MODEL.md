@@ -151,6 +151,10 @@
 
 修改这些表之前，必须先读取对应 live OpenSpec；本文档目前只用于划清边界，不重写其完整状态转移规则。
 
+### feedback_events 与 Paper 作答回看
+
+浏览器第一次自评仍使用现有反馈写入并更新学习信号、当前状态、进度和调度。选中 Paper Practice Run 后，回看中再次保存只允许原位覆盖该执行、该题目位置及其确切 `attempt_id` 所关联的 `feedback_events.rating` 和 `feedback_events.note`；写入前同时校验执行、题目内容版本以及预期旧评分与评语。它不新建 Attempt 或反馈行，也不改答案、客观判定、自评时机或学习投影/调度。请求 id 仅对这种原位编辑必需，用于相同载荷的安全重试；普通首次反馈沿用既有兼容行为。临时固定练习与已保存 Paper 均以服务端 `execution_id` 界定本轮，`paper_id` 可以为空。Agent Attempt Correction 仍是独立写入路径。
+
 ### Attempt 状态约束迁移与外键修复
 
 `pool/scripts/pool_schema.py` 的 `ensure_workbench_schema` 在其他 ensure 写入前，
