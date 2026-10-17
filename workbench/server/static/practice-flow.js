@@ -10,6 +10,7 @@
       visiblePracticeImages: function () { return []; },
       draftAnswer: function () { return ""; },
       draftNote: function () { return ""; },
+      dispose: function () {},
     };
     var WS = layout.dataset.workspace;
     var api = deps.api;
@@ -24,6 +25,8 @@
     var selectedKpIds = deps.selectedKpIds;
     var saveSelectedKpIds = deps.saveSelectedKpIds;
     var recordRecent = deps.recordRecent;
+    var navigate = deps.navigate || function (target) { window.location = target; };
+    var disposed = false;
     var SESSION_KEY = "wb_session_" + WS;
     var KPS_KEY = "wb_kps_" + WS;
     var CURRENT_KEY = "wb_current_" + WS;
@@ -228,9 +231,10 @@
     var ratingEditOpen = false;
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
+    var advanceTimer = null;
 
     function showPracticeError(error, retryable) {
-      if (!practiceError) return;
+      if (disposed || !practiceError) return;
       practiceError.textContent = "请求未完成：" + (error.message || error || "未知错误");
       practiceError.classList.remove("hidden");
       if (retryPractice) retryPractice.classList.toggle("hidden", !retryable);
@@ -1103,7 +1107,7 @@
       sessionStorage.removeItem(SIMILAR_KEY);
       showComposer(false);
       setPracticeFocus(false);
-      if (ratingMode === "batch" && !offNow()) window.location = "session-end";
+      if (ratingMode === "batch" && !offNow()) navigate("session-end");
       else {
         sessionStorage.removeItem(MODE_KEY);
         sessionStorage.removeItem(RATING_MODE_KEY);
@@ -1117,12 +1121,18 @@
 
     function cancelScheduledAdvance() {
       advanceToken += 1;
+      if (advanceTimer !== null) {
+        clearTimeout(advanceTimer);
+        advanceTimer = null;
+      }
     }
 
     function scheduleAdvance() {
+      if (disposed) return;
       var token = advanceToken;
-      setTimeout(function () {
-        if (token !== advanceToken) return;
+      advanceTimer = setTimeout(function () {
+        advanceTimer = null;
+        if (disposed || token !== advanceToken) return;
         advance();
       }, VERDICT_HOLD_MS);
     }
@@ -1131,6 +1141,7 @@
     // new pull happen. This is what makes flash-card paging and the batch
     // verdict hold one rule instead of two.
     function advance() {
+      if (disposed) return;
       reviewingPrevious = false;
       reviewIndex = -1;
       reviewDraft = null;
@@ -1147,6 +1158,7 @@
     }
 
     function loadNext() {
+      if (disposed) return;
       var kps = currentKps();
       var mode = sessionStorage.getItem(MODE_KEY);
       if (!kps.length || !mode || pulling) return;
@@ -1164,6 +1176,7 @@
           }),
         }).then(function (result) {
           pulling = false;
+          if (disposed) return;
           var card = (result.cards || [])[0];
           if (!card) {
             finishExhausted();
@@ -1184,7 +1197,7 @@
           ratingInput.value = "";
           feedbackNote.value = "";
           showComposer(true);
-        }).catch(function (error) { pulling = false; showPracticeError(error, true); });
+        }).catch(function (error) { pulling = false; if (!disposed) showPracticeError(error, true); });
         return;
       }
       var pullBody = {
@@ -1199,6 +1212,7 @@
         body: JSON.stringify(pullBody),
       }).then(function (result) {
         pulling = false;
+        if (disposed) return;
         if (!result.problems.length) {
           finishExhausted();
           return;
@@ -1211,7 +1225,7 @@
         recordRecent("problem", problem.problem_id);
         renderDeckItem(PracticeDeck.current(practiceDeck));
         showComposer(true);
-      }).catch(function (error) { pulling = false; showPracticeError(error, true); });
+      }).catch(function (error) { pulling = false; if (!disposed) showPracticeError(error, true); });
     }
 
     function selectFixedItems(kps, contentMode) {
@@ -1282,6 +1296,7 @@
       clearPracticeError();
       pulling = true;
       selectFixedItems(kps, contentMode).then(function (selection) {
+        if (disposed) return null;
         if (contentMode !== "flash_card") {
           showAssemblyReport(selection, selection.request.n);
         }
@@ -1303,7 +1318,7 @@
           replace: replace,
         });
       }).then(function (practice) {
-        if (!practice) return;
+        if (!practice || disposed) return;
         pulling = false;
         activePractice = practice;
         sessionStorage.setItem(MODE_KEY, contentMode);
@@ -1315,7 +1330,7 @@
         resumeActivePractice();
       }).catch(function (error) {
         pulling = false;
-        showPracticeError(error, true);
+        if (!disposed) showPracticeError(error, true);
       });
     }
 
@@ -1333,6 +1348,7 @@
       pulling = true;
       if (savePracticeSet) savePracticeSet.disabled = true;
       selectFixedItems(kps, contentMode).then(function (selection) {
+        if (disposed) return null;
         if (!selection.items.length) throw new Error("当前范围没有可保存的题目。");
         return post("/practice-sets", {
           title: title.trim(),
@@ -1341,7 +1357,7 @@
         });
       }).then(function () {
         pulling = false;
-        window.location = "/w/" + encodeURIComponent(WS) + "/practice-sets";
+        if (!disposed) navigate("/w/" + encodeURIComponent(WS) + "/practice-sets");
       }).catch(function (error) {
         pulling = false;
         if (savePracticeSet) savePracticeSet.disabled = !readyToStart();
@@ -1457,7 +1473,7 @@
       return item.state === "unrated";
     });
     if (!resumeCard && hasPendingRatings && restoredItem && practiceDeck.ended) {
-      window.location = "session-end";
+      navigate("session-end");
     } else if (!resumeCard && restoredMode && restoredItem) {
       if (modeExam) modeExam.checked = restoredMode === "exam";
       if (modeMicro) modeMicro.checked = restoredMode === "micro";
@@ -1838,7 +1854,7 @@
         }
         cancelScheduledAdvance();
         showComposer(false);
-        if (batchNow()) window.location = "session-end";
+        if (batchNow()) navigate("session-end");
         else {
           sessionStorage.removeItem(MODE_KEY);
           sessionStorage.removeItem(RATING_MODE_KEY);
@@ -2064,7 +2080,7 @@
         saveSelectedKpIds(scope);
       }
       sessionStorage.setItem(SIMILAR_KEY, "1");
-      window.location = "practice";
+      navigate("practice");
     });
   }
 
@@ -2123,6 +2139,15 @@
       };
     }
 
+    function dispose() {
+      if (disposed) return;
+      if (stream) {
+        if (answerBox) persistProblemDraft();
+        cancelScheduledAdvance();
+      }
+      disposed = true;
+    }
+
     return {
       currentProblem: contextProblem,
       session: session,
@@ -2134,6 +2159,7 @@
       },
       draftNote: function () { return reviewingPrevious ? "" : (feedbackNote ? feedbackNote.value : ""); },
       selectionContext: selectionContext,
+      dispose: dispose,
     };
   }
 

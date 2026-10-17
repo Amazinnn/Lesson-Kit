@@ -12,11 +12,10 @@
     return;
   }
 
+  if (root.GraphPhysics && root.GraphPhysics.workerBacked) return;
   var core = root.GraphPhysics;
   delete root.GraphPhysics;
-  if (!root.document || root.document.readyState !== "loading") {
-    throw new Error("graph-physics.js must be parser-loaded before workbench.js");
-  }
+  if (!root.document) throw new Error("graph physics requires a document");
   if (!core) throw new Error("graph physics core failed to load");
   var renderer = root.GraphRenderer;
   if (!renderer) throw new Error("graph renderer failed to load");

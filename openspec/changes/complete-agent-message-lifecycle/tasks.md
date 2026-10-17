@@ -10,11 +10,15 @@
 - [ ] 2.4 Pause retained queue on actual failure/unexpected interruption/service recovery; progress-read loss alone remains nonterminal.
 
 ## 3. Persistent right rail and real recovery UI
+
+The base navigation lifecycle and context refresh are delivered by `preserve-agent-rail-across-navigation`. The tasks below retain only their remaining message/queue integration and recovery obligations; do not reimplement the delivered navigation.
+
 - [ ] 3.1 Mount rail outside middle navigation lifecycle; preserve its DOM/controller/draft/scroll/tasks/queue across all same-workspace middle views and back/forward.
 - [ ] 3.2 Refresh context chips for the selected page without changing accepted-message context; dispose/reinitialize only middle-owned resources.
 - [ ] 3.3 Complete semantic Tool Call Card/failure-impact/folded-diagnostics interactions using normalized evidence; expose only backend-supported retry/read-only recovery.
 - [ ] 3.4 Integrate explicit Paper progress-reset approval, retain existing rollback gate and invalidate obsolete callbacks. Do not implement HTML styling/tuning/preset controls as product features.
-- [ ] 3.5 Retire Bottom Dock progress and use only the bounded top-right Float with a small accessible expand/collapse button, preserved while collapsed. Cover same-turn no-reopen, explicit reopen, new-turn reset, idle cleanup and unchanged usable middle-page height; register retirement in Action Graph.
+
+Activity progress-surface ownership is handled by the independent `use-collapsible-agent-activity-float` change.
 
 ## 4. Independent acceptance
 - [ ] 4.1 Reproduce swallowed messages with rejected POST and failed fake provider, then prove persistence across reload, history reopen and navigation.

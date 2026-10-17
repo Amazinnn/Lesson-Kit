@@ -33,11 +33,14 @@ class Element {
     this.style = {};
     this.scrollHeight = 40;
     this._text = "";
+    this.attributes = {};
     this.type = "";
     this.href = "";
   }
   appendChild(child) { this.children.push(child); return child; }
   addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
+  setAttribute(name, value) { this.attributes[name] = String(value); }
+  getAttribute(name) { return this.attributes[name] ?? null; }
   trigger(name, event = {}) { (this.listeners[name] || []).forEach((fn) => fn({ target: this, ...event })); }
   click() { this.trigger("click"); }
   set innerHTML(value) { this.children = []; this._text = String(value); }
@@ -58,14 +61,13 @@ function setup() {
     middle: new Element("middle"),
     "agent-activity-float": new Element("agent-activity-float"),
     "agent-activity-body": new Element("agent-activity-body"),
-    "agent-bottom-dock": new Element("agent-bottom-dock"),
-    "agent-bottom-dock-body": new Element("agent-bottom-dock-body"),
+    "agent-activity-toggle": new Element("agent-activity-toggle"),
     "agent-artifact-split": new Element("agent-artifact-split"),
     "agent-artifact-title": new Element("agent-artifact-title"),
     "agent-artifact-body": new Element("agent-artifact-body"),
     "agent-artifact-actions": new Element("agent-artifact-actions"),
   };
-  ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split", "ai-approval-slot"].forEach((id) => {
+  ["agent-activity-float", "agent-artifact-split", "ai-approval-slot"].forEach((id) => {
     elements[id].classList.add("hidden");
   });
   const document = {
@@ -84,8 +86,10 @@ function setup() {
 test("server shell loads Agent UI v1 foundation and declares transient surfaces", () => {
   for (const id of [
     "ai-context-chips", "ai-composer-shell", "ai-approval-slot",
-    "agent-activity-float", "agent-bottom-dock", "agent-artifact-split",
+    "agent-activity-float", "agent-activity-toggle", "agent-artifact-split",
   ]) assert.ok(pages.includes(id), `${id} missing from shell`);
+  assert.equal(pages.includes("agent-bottom-dock"), false, "task progress must not render a Bottom Dock");
+  assert.ok(pages.includes("aria-controls='agent-activity-body'"));
   assert.ok(pages.includes("/static/agent-ui.css"));
   assert.ok(pages.includes("/static/agent-ui.js"));
   assert.ok(css.includes("var(--lk-paper)"));
@@ -103,7 +107,6 @@ test("surface controller renders compact context chips and respects explicit col
   assert.ok(elements["ai-context-chips"].children[2].textContent.includes("1"));
   ui.collapseAux();
   assert.equal(ui.state.userCollapsed, true);
-  assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), true);
   const panel = [...css.matchAll(/\.agent-artifact-split\s*\{[^}]*\}/g)]
     .map((match) => match[0])
     .find((block) => block.includes("position: absolute"));
@@ -121,29 +124,62 @@ test("surface controller renders compact context chips and respects explicit col
   assert.ok(!/@media \(min-width: \d+px\) and \(max-width: \d+px\)/.test(css), "no width band may split the two branches");
 });
 
-test("one activity uses the float and multi-step work graduates to the bottom dock", () => {
+test("short and sustained Agent work use only the latest Activity Float summary", () => {
   const { elements, ui } = setup();
   ui.resetTurn();
   ui.activity({ activity_id: "a1", label: "读取题库", status: "running", activity_type: "tool" });
   assert.equal(elements["agent-activity-float"].classList.contains("hidden"), false);
-  assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), true);
   ui.activity({ activity_id: "a1", label: "读取题库", status: "done", activity_type: "tool" });
   ui.activity({ activity_id: "a2", label: "生成试卷", status: "running", activity_type: "tool" });
-  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), true);
-  assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), false);
-  assert.equal(elements["agent-bottom-dock-body"].children.length, 2);
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), false);
+  assert.equal(elements["agent-activity-body"].children.length, 1);
+  assert.equal(elements["agent-activity-body"].children[0].children[1].children[0].textContent, "生成试卷");
+  assert.equal(css.includes(".agent-bottom-dock"), false, "task progress must not add bottom-page layout");
 });
 
-test("explicit collapse prevents runtime from reopening auxiliary work until the next turn", () => {
+test("Activity Float collapse keeps a compact control, supports reopen, resets next turn, and clears at idle", () => {
   const { elements, ui } = setup();
   ui.resetTurn();
   ui.activity({ activity_id: "a1", label: "检索", status: "running" });
-  ui.collapseAux();
+  const toggle = elements["agent-activity-toggle"];
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  toggle.click();
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), false);
+  assert.equal(elements["agent-activity-float"].classList.contains("is-collapsed"), true);
+  assert.equal(toggle.getAttribute("aria-expanded"), "false");
+  assert.equal(toggle.getAttribute("aria-label"), "展开 Agent 活动");
   ui.activity({ activity_id: "a2", label: "整理", status: "running" });
-  assert.equal(elements["agent-bottom-dock"].classList.contains("hidden"), true);
+  assert.equal(elements["agent-activity-float"].classList.contains("is-collapsed"), true,
+    "same-turn activity must not force the Float open");
+  assert.equal(elements["agent-activity-toggle"].getAttribute("aria-expanded"), "false");
+  toggle.click();
+  assert.equal(elements["agent-activity-float"].classList.contains("is-collapsed"), false);
+  assert.equal(toggle.getAttribute("aria-expanded"), "true");
+  assert.equal(elements["agent-activity-body"].children[0].children[1].children[0].textContent, "整理");
+
+  toggle.click();
   ui.resetTurn();
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), true);
+  assert.equal(elements["agent-activity-float"].classList.contains("is-collapsed"), false);
   ui.activity({ activity_id: "b1", label: "新一轮", status: "running" });
   assert.equal(elements["agent-activity-float"].classList.contains("hidden"), false);
+  assert.equal(elements["agent-activity-toggle"].getAttribute("aria-expanded"), "true");
+  ui.finishTurn();
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), true,
+    "the Float and its toggle must disappear when no runtime activity remains");
+});
+
+test("switching conversations clears transient activity and collapse state", () => {
+  const { elements, ui } = setup();
+  ui.resetTurn();
+  ui.activity({ activity_id: "a1", label: "read", status: "running" });
+  elements["agent-activity-toggle"].click();
+  ui.resetConversation();
+  assert.equal(elements["agent-activity-float"].classList.contains("hidden"), true);
+  assert.equal(elements["agent-activity-float"].classList.contains("is-collapsed"), false);
+  assert.equal(elements["agent-activity-body"].children.length, 0);
+  assert.equal(ui.state.activityOrder.length, 0);
+  assert.equal(ui.state.userCollapsed, false);
 });
 
 test("Approval Gate replaces the composer and restores it after an explicit decision", () => {

@@ -50,47 +50,7 @@ A full same-tab reload SHALL restore the selected conversation and supported dur
 - **WHEN** the user changes the middle route and then uses browser Back during streaming
 - **THEN** only the middle route changes; the same turn/poll ownership, unsent draft and deliberate scroll position survive
 
-### Requirement: Agent runtime work uses transient auxiliary surfaces
-Short and sustained provider activity SHALL use only the top-right replaceable Activity Float for progress and current milestones. A Bottom Dock SHALL NOT open or reserve middle-page height during work. The Float SHALL be bounded/collapsible and SHALL NOT become a history dashboard or raw event wall. Existing conversation activity/history SHALL remain authoritative. Confirmed failures SHALL show a semantic summary with folded diagnostics. Failed progress reads SHALL remain unavailable progress, not proof of provider failure.
-
-#### Scenario: A short activity is visible
-- **WHEN** a provider reports short activity
-- **THEN** the Float shows its readable label/state and newer activity replaces its current summary
-
-#### Scenario: Work continues across milestones
-- **WHEN** a provider reports sustained multi-step work
-- **THEN** the same top-right Float summarizes current milestones/status while the middle page keeps its height and no Bottom Dock opens
-
-#### Scenario: Detailed output is available
-- **WHEN** provider output accompanies activity
-- **THEN** the Float retains a bounded semantic summary and detailed output stays behind the closed conversation disclosure
-
-#### Scenario: A provider confirms a failure
-- **WHEN** the current turn is authoritatively failed
-- **THEN** a concise failure summary and known impact are available, with long/raw diagnostics folded
-
-#### Scenario: Progress cannot be read
-- **WHEN** polling fails without authoritative terminal status
-- **THEN** the UI preserves current turn ownership, reports unavailable progress and does not dispatch a second task as if the first had failed
-
-### Requirement: Explicit collapse applies to the current Agent turn
-A small accessible control SHALL expand/collapse the Activity Float with a truthful label and `aria-expanded`. Collapsing SHALL leave a compact reopening control while runtime progress is available. Later same-turn activity SHALL NOT force reopening; explicit expansion MAY reopen it. A new turn SHALL reset suppression; switching conversations SHALL clear the old transient state. Idle SHALL NOT leave a placeholder panel. Existing explicit Artifact preview remains separate from task-progress display.
-
-#### Scenario: Collapse while work is running
-- **WHEN** the learner collapses the Float and another activity arrives in that turn
-- **THEN** activity remains in history, the Float stays closed and the small reopen control remains available
-
-#### Scenario: Start a later user turn
-- **WHEN** a later turn begins after the prior one ended
-- **THEN** automatic Float presentation is enabled for that turn
-
-#### Scenario: Switch conversations
-- **WHEN** the learner opens another conversation
-- **THEN** old activity/collapse state does not appear in the new conversation
-
-#### Scenario: Reopen the current Float explicitly
-- **WHEN** the learner activates the collapsed Float's small control
-- **THEN** current progress reopens without changing the selected middle page or starting another task
+Activity progress surfaces, Float collapse/reopen behavior, idle cleanup, and Bottom Dock retirement are specified only in the independent `use-collapsible-agent-activity-float` change.
 
 ### Requirement: Agent sending is single-flight and session-bound
 The composer SHALL remain editable during execution. Its per-submission network request SHALL be single-flight/idempotent, while distinct new messages MAY be accepted into the pending queue or explicit interrupt-and-send path. Same-conversation provider execution SHALL remain single-worker. Click/Enter SHALL share acceptance identity/gating; duplicate input events SHALL NOT create duplicate work. Conversation changes SHALL invalidate obsolete callbacks and approvals without moving messages into another conversation. Unknown progress SHALL NOT release permission to run a second task.

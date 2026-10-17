@@ -94,7 +94,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
         + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
-        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{_agent_activity_float()}{middle_html}{_agent_aux_surfaces()}</main>"
+        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{_agent_activity_float()}<div id='middle-page'>{middle_html}</div>{_agent_aux_surfaces()}</main>"
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics-core.js'></script>"
@@ -104,6 +104,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + "<script src='/static/practice-flow.js'></script>"
         + "<script src='/static/agent-ui.js'></script>"
         + "<script src='/static/workbench.js'></script>"
+        + "<script src='/static/middle-navigation.js'></script>"
     )
     return _base(f"workbench {workspace['name']}", body)
 
@@ -135,8 +136,9 @@ def _agent_activity_float():
         "<section id='agent-activity-float' class='agent-activity-float hidden' aria-live='polite'>"
         "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent activity</p>"
         "<h2 class='agent-surface-title'>正在处理</h2></div>"
-        "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
-        "aria-label='收起 Agent 活动'>×</button></div>"
+        "<button id='agent-activity-toggle' class='ghost sm icon-only agent-activity-toggle' type='button' "
+        "aria-controls='agent-activity-body' aria-expanded='true' aria-label='收起 Agent 活动' "
+        "title='收起'>−</button></div>"
         "<div id='agent-activity-body'></div></section>"
     )
 
@@ -144,12 +146,6 @@ def _agent_activity_float():
 def _agent_aux_surfaces():
     """Transient central surfaces owned by Agent runtime, not permanent page chrome."""
     return (
-        "<section id='agent-bottom-dock' class='agent-bottom-dock hidden' aria-label='Agent 工作进度'>"
-        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>当前工作</p>"
-        "<h2 class='agent-surface-title'>执行进度</h2></div>"
-        "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
-        "aria-label='收起 Agent 工作进度'>×</button></div>"
-        "<div id='agent-bottom-dock-body'></div></section>"
         "<aside id='agent-artifact-split' class='agent-artifact-split hidden' aria-label='Agent 工件预览'>"
         "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Artifact</p>"
         "<h2 id='agent-artifact-title' class='agent-surface-title'>最新工件</h2></div>"
@@ -479,6 +475,7 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<button class='icon-btn' id='graph-focus' type='button' title='聚焦选中节点' aria-label='聚焦选中节点'>◎</button>"
         "<button class='icon-btn' id='graph-fit' type='button' title='适应画布' aria-label='适应画布'>⌗</button>"
         "</header>"
+        "<div class='graph-workspace'>"
         "<section class='graph-shell' id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'>"
         "<div class='floating controls'>"
         "<div class='control-head'><strong>图谱控制</strong><span>保留原版语义</span></div>"
@@ -517,7 +514,11 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<button id='graph-zoom-in' type='button' title='放大' aria-label='放大'>＋</button>"
         "<button id='graph-reset' type='button' title='重置为 1:1' aria-label='重置为 1:1'>1:1</button></div>"
         "<div class='toast' id='graph-toast' role='status' aria-live='polite'></div>"
-        "</section></div>")
+        "</section>"
+        "<aside id='graph-detail-panel' class='graph-dashboard' role='region' aria-label='学习看板'>"
+        "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
+        "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>"
+        "</aside></div></div>")
     return shell(
         workspace, workspaces, weak_items, middle, "graph", graph_mode=True,
         page_type="graph", kp_titles=kp_titles,
@@ -797,22 +798,7 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<button id='ai-send' class='primary sm' disabled>发送</button></div>"
         "</div><p id='ai-status' class='muted' aria-live='polite'></p></div></section>"
     )
-    if not graph_mode:
-        return teacher
-    return (
-        "<div id='right-tabs' role='tablist' aria-label='图谱侧栏'>"
-        "<button id='graph-detail-tab' class='right-tab active' role='tab' "
-        "aria-selected='true'>学习看板</button>"
-        "<button id='ai-teacher-tab' class='right-tab' role='tab' "
-        "aria-selected='false'>对话</button></div>"
-        "<section id='graph-detail-panel' role='tabpanel'>"
-        "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
-        "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>"
-        "<a id='graph-open-kp' class='graph-dashboard-link hidden' href='#'>打开知识点</a>"
-        "</section>"
-        "<div id='ai-teacher-panel' class='hidden' role='tabpanel'>"
-        f"{teacher}</div>"
-    )
+    return teacher
 
 
 _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)

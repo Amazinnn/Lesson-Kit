@@ -465,6 +465,7 @@ class FakeStorage {
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
   reducedMotion = false, physics = Object.assign({ workerBacked: true }, GraphPhysics), setTimeoutFn = () => 0,
+  clearTimeoutFn = clearTimeout,
   promptFn = undefined, confirmFn = undefined, selectors = {}, agentUISurfaces = null,
 }) {
   const document = {
@@ -509,6 +510,7 @@ function runWorkbench({
   const sandbox = {
     document,
     window,
+    AgentUISurfaces: agentUISurfaces || undefined,
     GraphPhysics: physics,
     PracticeDeck,
     sessionStorage: storage,
@@ -518,7 +520,7 @@ function runWorkbench({
     setInterval,
     clearInterval,
     setTimeout: setTimeoutFn,
-    clearTimeout,
+    clearTimeout: clearTimeoutFn,
     requestAnimationFrame(callback) {
       rafCalls += 1;
       return setImmediate(() => callback(0));
@@ -1492,19 +1494,24 @@ test("batch self-rating writes only from its final review card", async () => {
 test("graph detail renders the knowledge-point card and toggles the practice scope", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
+  const agentChat = new FakeElement("ai-chat-view");
+  const agentPanel = new FakeElement("ai-teacher-panel");
+  agentPanel.appendChild(agentChat);
   const toggle = new FakeElement("graph-scope-toggle");
   const toast = new FakeElement("graph-toast");
   const storage = new FakeStorage();
   const calls = [];
-  runWorkbench({
-    elements: graphElements({
+  const elements = graphElements({
       layout: layout(), "graph-canvas": canvas,
       "graph-detail-tab": new FakeElement("graph-detail-tab"),
       "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
       "graph-detail-panel": detail,
-      "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
+      "ai-teacher-panel": agentPanel,
+      "ai-chat-view": agentChat,
       "graph-scope-toggle": toggle, "graph-toast": toast,
-    }),
+    });
+  runWorkbench({
+    elements,
     storage,
     reducedMotion: true,
     fetch: (url) => {
@@ -1523,6 +1530,7 @@ test("graph detail renders the knowledge-point card and toggles the practice sco
     },
   });
   await flush();
+  assert.equal(agentPanel.classList.contains("hidden"), false);
   const stage = canvas.children[0];
   const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
   node.children.find((child) => child.className === "node").click();
@@ -1532,6 +1540,8 @@ test("graph detail renders the knowledge-point card and toggles the practice sco
   assert.match(detail.innerHTML, /<b>4<\/b>/);
   assert.match(detail.innerHTML, /先修/);
   assert.match(detail.innerHTML, /kp-1/);
+  assert.equal(agentPanel.classList.contains("hidden"), false);
+  assert.equal(elements["ai-chat-view"], agentChat);
   assert.equal(calls.some((url) => url.endsWith("/graph/state")), false);
 
   toggle.click();
@@ -4417,6 +4427,150 @@ test("batch wrong answers hold the verdict with the correct option before advanc
   assert.deepEqual(JSON.parse(pulls[1].options.body).exclude_ids, ["p-1"]);
 });
 
+test("disposing a middle page cancels its delayed practice advance", async () => {
+  const calls = [];
+  const timers = new Map();
+  const cleared = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  let nextTimer = 0;
+  const app = runWorkbench({
+    elements,
+    setTimeoutFn(callback, delay) {
+      const id = ++nextTimer;
+      timers.set(id, { callback, delay });
+      return id;
+    },
+    clearTimeoutFn(id) { cleared.push(id); },
+    fetch(url, options) {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      const body = JSON.parse((options && options.body) || "{}");
+      return jsonResponse({ problems: [{
+        problem_id: (body.exclude_ids || []).length ? "p-2" : "p-1",
+        problem_text: "棰樼洰",
+        micro_quiz: { quiz_type: "yes_no", answer_key: "yes" },
+      }] });
+    },
+  });
+  elements["practice-mode-batch"].checked = true;
+  elements["practice-mode-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements.stream.queryAll = selector => selector === "[data-choice-option]:checked"
+    ? [{ value: "no" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  const held = Array.from(timers.entries()).find(([, timer]) => timer.delay === 2000);
+  assert.ok(held);
+
+  assert.equal(typeof app.window.WorkbenchMiddlePage, "object");
+  app.window.WorkbenchMiddlePage.dispose();
+  assert.ok(cleared.includes(held[0]));
+  held[1].callback();
+  await flush();
+  assert.equal(calls.filter(call => call.url.endsWith("/pull")).length, 1);
+});
+
+test("disposing a practice page persists the final editor value", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const practice = {
+    source_ref: "ps-001", execution_id: 10, paper_generation: 1,
+    kp_ids: [], practice_mode: "exam", rating_mode: "off", cursor: 0,
+    progress: { completed: 0, total: 1, remaining: 1 },
+    items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+      content_revision: 3, payload: { problem_id: "p-1", problem_text: "Q1" } }],
+  };
+  const app = runWorkbench({ elements, fetch: (url, options) => {
+    calls.push({ url, options });
+    return jsonResponse(url.endsWith("/practice/current") ? { practice } : {});
+  } });
+  await flush();
+  elements["resume-practice"].click();
+  elements["answer-box"].value = "final value before leaving";
+
+  app.window.WorkbenchMiddlePage.dispose();
+  await flush();
+
+  const saved = calls.find(call => call.url.endsWith("/practice/draft"));
+  assert.ok(saved);
+  assert.equal(saved.options.keepalive, true);
+  assert.equal(JSON.parse(saved.options.body).draft.answer, "final value before leaving");
+});
+
+test("disposing a non-practice page does not replace a cached paper draft with an empty answer", async () => {
+  const calls = [];
+  const context = { execution_id: 10, paper_id: "ps-001", paper_generation: 1,
+    item_id: "p-1", content_revision: 3, position: 0 };
+  const storage = new FakeStorage({
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 0, items: [{ problem_id: "p-1",
+      state: "active", practice_context: context, draft: { answer: "saved answer", choices: [] },
+      payload: { problem_id: "p-1", problem_text: "Q1" } }] }),
+  });
+  const app = runWorkbench({ elements: { layout: layout() }, storage, fetch: (url, options) => {
+    calls.push({ url, options });
+    return jsonResponse({});
+  } });
+
+  app.window.WorkbenchMiddlePage.dispose();
+  await flush();
+
+  assert.equal(calls.some(call => call.url.endsWith("/practice/draft")), false);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_session_alpha")).items[0].draft,
+    { answer: "saved answer", choices: [] });
+});
+
+test("a completed goal save does not refresh a later middle page", async () => {
+  let resolveSave;
+  let refreshes = 0;
+  const goalForm = new FakeElement("goal-form");
+  const title = new FakeElement("goal-title", { value: "Keep this goal" });
+  const app = runWorkbench({
+    elements: { layout: layout(), "goal-form": goalForm, "goal-title": title },
+    fetch: () => new Promise(resolve => { resolveSave = resolve; }),
+  });
+  app.window.WorkbenchNavigation = {
+    navigate() { throw new Error("goal save should not navigate"); },
+    refresh() { refreshes += 1; return Promise.resolve(); },
+  };
+
+  goalForm.trigger("submit", { preventDefault() {} });
+  app.window.WorkbenchMiddlePage.dispose();
+  resolveSave({ ok: true, json: () => Promise.resolve({}) });
+  await flush();
+
+  assert.equal(refreshes, 0);
+});
+
+test("a completed paper start does not navigate after leaving its middle page", async () => {
+  let resolveStart;
+  const navigations = [];
+  const list = new FakeElement("practice-set-list");
+  const card = new FakeElement("article", { dataset: { practiceSetId: "ps-001" } });
+  card.className = "practice-set-card";
+  const start = new FakeElement("button");
+  start.setAttribute("data-set-start", "");
+  start.closest = selector => selector === "button" ? start
+    : selector === ".practice-set-card" ? card : null;
+  card.queryOne = selector => selector === "[data-set-start]" ? start : null;
+  list.queryAll = selector => selector === ".practice-set-card" ? [card] : [];
+  const app = runWorkbench({
+    elements: { layout: layout(), "practice-set-list": list },
+    fetch: () => new Promise(resolve => { resolveStart = resolve; }),
+  });
+  app.window.WorkbenchNavigation = {
+    navigate(url) { navigations.push(url); },
+    refresh() { return Promise.resolve(); },
+  };
+
+  list.trigger("click", { target: start, preventDefault() {} });
+  app.window.WorkbenchMiddlePage.dispose();
+  resolveStart({ ok: true, json: () => Promise.resolve({}) });
+  await flush();
+
+  assert.deepEqual(navigations, []);
+});
+
 test("flash cards page back and forth through history and only pull at the end", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };
@@ -4480,6 +4634,16 @@ test("flash cards page back and forth through history and only pull at the end",
 
 test("goal cards edit and delete drive the API, and the agent prefill action fills the form", async () => {
   const calls = [];
+  let turnResets = 0;
+  const agentSurface = {
+    state: { userCollapsed: false },
+    resetTurn() { turnResets += 1; this.state.userCollapsed = false; },
+    resetConversation() {},
+    renderContext() {},
+    setCollapseHandler() {},
+    setArtifactPreviewHandler() {},
+    setRunning() {},
+  };
   const card = new FakeElement("goal-card");
   card.dataset = {
     goalId: "goal-001", goalTitle: "期末掌握计数", goalKind: "stage",
@@ -4506,6 +4670,7 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   };
   runWorkbench({
     elements,
+    agentUISurfaces: agentSurface,
     fetch: (url, options) => {
       calls.push({ url, options, method: options && options.method });
       if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
@@ -4551,8 +4716,12 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   elements["ai-session-list"].children[0].children[0].click();
   await flush();
   elements["goal-nl"].value = "期末前掌握第六章计数";
+  const resetsBeforeGoalAssist = turnResets;
+  agentSurface.state.userCollapsed = true;
   elements["goal-assist-send"].click();
   await flush();
+  assert.equal(turnResets, resetsBeforeGoalAssist + 1);
+  assert.equal(agentSurface.state.userCollapsed, false);
   const turnPost = calls.find((call) => call.url.endsWith("/turns") && call.options);
   assert.deepEqual(JSON.parse(turnPost.options.body).goal_intent, true);
   assert.equal(elements["goal-title"].value, "Agent 填的目标");

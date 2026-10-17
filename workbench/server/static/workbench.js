@@ -20,6 +20,25 @@
   var AI_LIVE_ARTIFACT_KEY = "wb_ai_live_artifact_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
   var selectedGraphKpId = null;
+  var practiceRuntime = null;
+  var middlePageGeneration = 0;
+  var currentProblem = function () { return null; };
+  var session = function () { return []; };
+  var visiblePracticeImages = function () { return []; };
+  var draftAnswer = function () { return ""; };
+  var draftNote = function () { return ""; };
+  var practiceSelectionContext = function () { return {}; };
+  var currentGraphContext = function () { return null; };
+
+  function navigateMiddle(target) {
+    if (window.WorkbenchNavigation) return window.WorkbenchNavigation.navigate(target);
+    window.location = target;
+  }
+
+  function refreshMiddle() {
+    if (window.WorkbenchNavigation) return window.WorkbenchNavigation.refresh();
+    if (window.location && typeof window.location.reload === "function") window.location.reload();
+  }
 
   function selectedKpIds() {
     var ids = load(SELECTION_KEY, []);
@@ -85,7 +104,7 @@
     if (!lens || !toggle || !select) return;
     function applyChapter(chapter) {
       post("/chapter", { chapter: chapter }).then(function () {
-        window.location.reload();
+        refreshMiddle();
       }, function (error) {
         window.alert("切换章节失败：" + error.message);
         window.location.reload();
@@ -119,7 +138,7 @@
     });
     if (practice) practice.addEventListener("click", function () {
       if (selectedKpIds().length) {
-        window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+        navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
       }
     });
     setScopeTrayOpen(!!load(SCOPE_TRAY_KEY, false));
@@ -142,7 +161,6 @@
 
   bindChapterLens();
   bindScopeTray();
-  bindSelectionControls();
 
   /* ---------- staged practice list (selection view + on-demand suggestions) ---------- */
 
@@ -179,32 +197,36 @@
     toggle.textContent = "＋ 加今天要练的" + (visible ? "（" + visible + "）" : "");
   }
 
-  var stagedListEl = document.getElementById("staged-list");
-  if (stagedListEl) {
-    stagedListEl.addEventListener("click", function (event) {
-      var target = event.target;
-      var button = target && target.closest ? target.closest(".staged-remove") : null;
-      if (!button) return;
-      saveSelectedKpIds(selectedKpIds().filter(function (id) {
-        return id !== button.dataset.kpId;
-      }));
-    });
-    var suggestionsToggle = document.getElementById("suggestions-toggle");
-    var suggestionsBox = document.getElementById("suggestions");
-    if (suggestionsToggle) suggestionsToggle.addEventListener("click", function () {
-      var open = false;
-      if (suggestionsBox) open = suggestionsBox.classList.toggle("hidden") === false;
-      suggestionsToggle.setAttribute("aria-expanded", open ? "true" : "false");
-    });
-    if (suggestionsBox) suggestionsBox.addEventListener("click", function (event) {
-      var target = event.target;
-      var button = target && target.closest ? target.closest(".suggestion-join") : null;
-      if (!button) return;
-      var next = selectedKpIds();
-      if (next.indexOf(button.dataset.kpId) < 0) next.push(button.dataset.kpId);
-      saveSelectedKpIds(next);
-    });
-    renderStagedList();
+  function mountSelectionPage() {
+    bindSelectionControls();
+    var stagedListEl = document.getElementById("staged-list");
+    if (stagedListEl) {
+      stagedListEl.addEventListener("click", function (event) {
+        var target = event.target;
+        var button = target && target.closest ? target.closest(".staged-remove") : null;
+        if (!button) return;
+        saveSelectedKpIds(selectedKpIds().filter(function (id) {
+          return id !== button.dataset.kpId;
+        }));
+      });
+      var suggestionsToggle = document.getElementById("suggestions-toggle");
+      var suggestionsBox = document.getElementById("suggestions");
+      if (suggestionsToggle) suggestionsToggle.addEventListener("click", function () {
+        var open = false;
+        if (suggestionsBox) open = suggestionsBox.classList.toggle("hidden") === false;
+        suggestionsToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      if (suggestionsBox) suggestionsBox.addEventListener("click", function (event) {
+        var target = event.target;
+        var button = target && target.closest ? target.closest(".suggestion-join") : null;
+        if (!button) return;
+        var next = selectedKpIds();
+        if (next.indexOf(button.dataset.kpId) < 0) next.push(button.dataset.kpId);
+        saveSelectedKpIds(next);
+      });
+      renderStagedList();
+    }
+    bindKnowledgeSort();
   }
 
   function bindKnowledgeSort() {
@@ -237,8 +259,6 @@
     if (direction) direction.addEventListener("click", function () { descending = !descending; apply(); });
     apply();
   }
-
-  bindKnowledgeSort();
 
   /* ---------- helpers ---------- */
 
@@ -643,9 +663,14 @@
     toggleDrawer("ai-drawer-open");
   });
 
+  function mountGraphPage() {
   /* ---------- native knowledge graph (implementation blueprint port) ---------- */
 
   var graphCanvas = document.getElementById("graph-canvas");
+  if (!graphCanvas) return null;
+  var graphDisposed = false;
+  var graphResizeObserver = null;
+  var graphResizeHandler = null;
   if (graphCanvas) {
     var graphSearch = document.getElementById("graph-search");
     var graphViews = document.getElementById("graph-views");
@@ -671,9 +696,6 @@
     var graphZoomReset = document.getElementById("graph-reset");
     var graphDetail = document.getElementById("graph-detail-panel");
     var graphEdgeBudgetEl = null;
-    var graphDetailTab = document.getElementById("graph-detail-tab");
-    var teacherTab = document.getElementById("ai-teacher-tab");
-    var teacherPanel = document.getElementById("ai-teacher-panel");
 
     var STATE_LABEL = { work: "重点练习", review: "可以复习", mastered: "已掌握", new: "未标记" };
     var STATE_SHORT = { work: "练", review: "复", mastered: "熟", new: "新" };
@@ -688,19 +710,6 @@
     var PROJECTION_TEXT = {
       structure: "关系", problem_count: "题目", importance: "重要性", state: "关注度",
     };
-
-    function showGraphPanel(detailOpen) {
-      if (graphDetail) graphDetail.classList.toggle("hidden", !detailOpen);
-      if (teacherPanel) teacherPanel.classList.toggle("hidden", detailOpen);
-      if (graphDetailTab) {
-        graphDetailTab.classList.toggle("active", detailOpen);
-        graphDetailTab.setAttribute("aria-selected", detailOpen ? "true" : "false");
-      }
-      if (teacherTab) {
-        teacherTab.classList.toggle("active", !detailOpen);
-        teacherTab.setAttribute("aria-selected", detailOpen ? "false" : "true");
-      }
-    }
 
     function mapGraphState(state) {
       if (!state) return "new";
@@ -804,6 +813,9 @@
     var graphEdgeEls = [];    // {edge, path}
     var graphEls = new Map(); // id -> {wrap, node, label, meta, value, satellite}
     var sim = null;
+    currentGraphContext = function () {
+      return sim && sim.graph ? { selectedKpId: selectedGraphKpId, filters: sim.graph.filters } : null;
+    };
     var graphPhysicsAvailable = typeof GraphPhysics !== "undefined"
       && GraphPhysics && GraphPhysics.workerBacked === true;
     var graphView = { scale: .7, panX: 52, panY: -18, userMoved: false };
@@ -1341,7 +1353,7 @@
 
     function graphFrame() {
       graphFrameHandle = null;
-      if (!sim) return;
+      if (!sim || graphDisposed) return;
       if (sim.failed) {
         graphFailureShow(sim.error);
         return;
@@ -1397,7 +1409,7 @@
     }
 
     function graphEnsureLoop() {
-      if (!graphPhysicsAvailable || (sim && sim.failed)) return;
+      if (graphDisposed || !graphPhysicsAvailable || (sim && sim.failed)) return;
       if (graphFrameHandle === null) graphFrameHandle = requestAnimationFrame(graphFrame);
     }
 
@@ -1578,17 +1590,19 @@
       if (!graphTideCtx) return;
       graphTideState.live = true;
       if (typeof ResizeObserver === "function") {
-        new ResizeObserver(function () {
+        graphResizeObserver = new ResizeObserver(function () {
           graphTideResize();
           graphMarkDirty();
           graphEnsureLoop();
-        }).observe(graphCanvas);
+        });
+        graphResizeObserver.observe(graphCanvas);
       }
-      window.addEventListener("resize", function () {
+      graphResizeHandler = function () {
         graphTideResize();
         graphMarkDirty();
         graphEnsureLoop();
-      });
+      };
+      window.addEventListener("resize", graphResizeHandler);
       graphTideResize();
       if (graphTideState.reduced) graphTideFrame(0);
       else graphTideState.frame = requestAnimationFrame(graphTideFrame);
@@ -1815,19 +1829,18 @@
       });
     }
 
-    if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
-    if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
-    showGraphPanel(true);
     if (!graphPhysicsAvailable) {
       if (typeof GraphPhysics !== "undefined") GraphPhysics = undefined;
       graphFailureShow("图谱计算无法启动：浏览器不支持 Worker，或图谱资源加载失败。请刷新页面，或使用支持 Worker 的浏览器。");
     } else {
       graphStartTide();
       api("/graph/model").then(function (model) {
+        if (graphDisposed) return;
         graphBuild(model);
         graphStartTide();
         graphEnsureLoop();
       }).catch(function (error) {
+        if (graphDisposed) return;
         if (typeof console !== "undefined" && console.error) {
           console.error("graph: model render failed", error && error.stack ? error.stack : error);
         }
@@ -1836,9 +1849,30 @@
     }
   }
 
+  return function disposeGraphPage() {
+    graphDisposed = true;
+    if (graphFrameHandle !== null && window.cancelAnimationFrame) {
+      window.cancelAnimationFrame(graphFrameHandle);
+    }
+    if (graphTideState.frame !== null && window.cancelAnimationFrame) {
+      window.cancelAnimationFrame(graphTideState.frame);
+    }
+    graphTideState.live = false;
+    if (graphResizeObserver) graphResizeObserver.disconnect();
+    if (graphResizeHandler) window.removeEventListener("resize", graphResizeHandler);
+    if (graphToastTimer !== null) clearTimeout(graphToastTimer);
+    if (sim && typeof sim.dispose === "function") sim.dispose();
+    currentGraphContext = function () { return null; };
+    selectedGraphKpId = null;
+  };
+  }
+
+  function mountPracticeViews() {
+  var pageGeneration = middlePageGeneration;
+  function routeIsCurrent() { return pageGeneration === middlePageGeneration; }
   /* ---------- practice flow ---------- */
 
-  var practiceRuntime = PracticeFlow.start({
+  practiceRuntime = PracticeFlow.start({
     api: api,
     post: post,
     patch: patch,
@@ -1848,16 +1882,17 @@
     renderMath: renderMath,
     escapeHtml: escapeHtml,
     richText: richText,
+    navigate: navigateMiddle,
     selectedKpIds: selectedKpIds,
     saveSelectedKpIds: saveSelectedKpIds,
     recordRecent: recordRecent,
   });
-  var currentProblem = practiceRuntime.currentProblem;
-  var session = practiceRuntime.session;
-  var visiblePracticeImages = practiceRuntime.visiblePracticeImages;
-  var draftAnswer = practiceRuntime.draftAnswer;
-  var draftNote = practiceRuntime.draftNote;
-  var practiceSelectionContext = practiceRuntime.selectionContext
+  currentProblem = practiceRuntime.currentProblem;
+  session = practiceRuntime.session;
+  visiblePracticeImages = practiceRuntime.visiblePracticeImages;
+  draftAnswer = practiceRuntime.draftAnswer;
+  draftNote = practiceRuntime.draftNote;
+  practiceSelectionContext = practiceRuntime.selectionContext
     || function () { return {}; };
 
   /* ---------- saved papers ---------- */
@@ -1891,6 +1926,7 @@
   }
 
   function practiceSetStatus(card, message) {
+    if (!routeIsCurrent()) return;
     var status = card.querySelector(".practice-set-status");
     if (!status) return;
     status.textContent = message || "";
@@ -1899,6 +1935,7 @@
 
   function refreshPracticeSetStart(card, practiceSetId, error) {
     return api("/practice-sets/" + encodeURIComponent(practiceSetId)).then(function (record) {
+      if (!routeIsCurrent()) return;
       var button = card.querySelector("[data-set-start]");
       if (button) {
         button.disabled = !record.can_start;
@@ -1921,9 +1958,7 @@
   }
 
   function reloadPage() {
-    if (window.location && typeof window.location.reload === "function") {
-      window.location.reload();
-    }
+    if (routeIsCurrent()) refreshMiddle();
   }
 
   function downloadPaper(title, suffix, text) {
@@ -1957,17 +1992,18 @@
         // choice: off starts a no-rating round, on keeps the old default.
         var paperStartBody = { rating_mode: showRatingEnabled() ? "immediate" : "off" };
         post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
-          window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+          if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
         }).catch(function (error) {
+          if (!routeIsCurrent()) return;
           if (error.status === 409 && error.message === "an unfinished temporary practice already exists"
               && window.confirm && window.confirm(
             "当前有未完成的临时练习。替换临时练习后开始此卷？其他已保存试卷的进度会保留。"
           )) {
             paperStartBody.replace = true;
             post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
-              window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+              if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
             }).catch(function (retryError) {
-              refreshPracticeSetStart(card, practiceSetId, retryError);
+              if (routeIsCurrent()) refreshPracticeSetStart(card, practiceSetId, retryError);
             });
           } else {
             refreshPracticeSetStart(card, practiceSetId, error);
@@ -1984,7 +2020,7 @@
         if (!title || !title.trim()) return;
         patch("/practice-sets/" + encoded, { title: title.trim() })
           .then(reloadPage)
-          .catch(function (error) { practiceSetStatus(card, error.message); });
+          .catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
         return;
       }
 
@@ -1992,17 +2028,18 @@
         if (window.confirm && !window.confirm("删除这张试卷？做题记录不会被删除。")) return;
         api("/practice-sets/" + encoded, { method: "DELETE" })
           .then(reloadPage)
-          .catch(function (error) { practiceSetStatus(card, error.message); });
+          .catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
         return;
       }
 
       if (button.hasAttribute("data-set-export")) {
         api("/practice-sets/" + encoded + "/render").then(function (rendered) {
+          if (!routeIsCurrent()) return;
           var heading = card.querySelector("h2");
           var title = heading ? heading.textContent : practiceSetId;
           downloadPaper(title, "-problem-set.md", rendered.practice_set || "");
           downloadPaper(title, "-solutions.md", rendered.solutions || "");
-        }).catch(function (error) { practiceSetStatus(card, error.message); });
+        }).catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
         return;
       }
 
@@ -2025,6 +2062,7 @@
         return;
       }
       post("/practice-sets/" + encoded + "/preview", { problem_ids: ids }).then(function (impact) {
+        if (!routeIsCurrent()) return;
         var message = "修改本卷题目顺序或名单，将清除本卷的未完成进度和草稿。"
           + "当前已完成 " + (impact.completed_items || 0) + " 题，草稿 "
           + (impact.draft_items || 0) + " 题；历史作答与其他试卷不变。继续吗？";
@@ -2035,7 +2073,7 @@
         return patch("/practice-sets/" + encoded, { problem_ids: ids, confirmation: impact.confirmation });
       })
         .then(reloadPage)
-        .catch(function (error) { practiceSetStatus(card, error.message); });
+        .catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
     });
   }
 
@@ -2047,16 +2085,18 @@
       var runId = encodeURIComponent(button.dataset.runReplay);
       button.disabled = true;
       post("/practice/runs/" + runId + "/replay", {}).then(function () {
-        window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+        if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
       }).catch(function (error) {
+        if (!routeIsCurrent()) return;
         button.disabled = false;
         if (error.message === "an unfinished practice already exists"
             && window.confirm
             && window.confirm("当前还有一轮练习没有完成。重新开始会清除旧进度，继续吗？")) {
           button.disabled = true;
           post("/practice/runs/" + runId + "/replay", { replace: true }).then(function () {
-            window.location = "/w/" + encodeURIComponent(WS) + "/practice";
+            if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
           }).catch(function (retryError) {
+            if (!routeIsCurrent()) return;
             button.disabled = false;
             if (window.alert) window.alert(retryError.message || "无法重新开始");
           });
@@ -2074,11 +2114,10 @@
     recalculatePlan.addEventListener("click", function () {
       recalculatePlan.disabled = true;
       post("/plan/recalculate", {}).then(function () {
+        if (!routeIsCurrent()) return;
         recalculatePlan.disabled = false;
-        if (window.location && typeof window.location.reload === "function") {
-          window.location.reload();
-        }
-      }).catch(function () { recalculatePlan.disabled = false; });
+        refreshMiddle();
+      }).catch(function () { if (routeIsCurrent()) recalculatePlan.disabled = false; });
     });
   }
 
@@ -2092,6 +2131,7 @@
     var goalAssistSend = document.getElementById("goal-assist-send");
 
     function goalStatus(text) {
+      if (!routeIsCurrent()) return;
       var status = document.getElementById("goal-form-status");
       if (status) status.textContent = text || "";
     }
@@ -2133,7 +2173,7 @@
         var id = card.dataset.goalId;
         if (!id || (window.confirm && !window.confirm("删除这个目标？"))) return;
         api("/goals/" + encodeURIComponent(id), { method: "DELETE" })
-          .then(function () { window.location.reload(); })
+          .then(function () { if (routeIsCurrent()) refreshMiddle(); })
           .catch(function (error) { goalStatus("删除失败：" + (error.message || "未知错误")); });
       });
     });
@@ -2172,11 +2212,7 @@
           })
         : post("/goals", payload);
       request.then(function () {
-        if (window.location && typeof window.location.reload === "function") {
-          window.location.reload();
-        } else {
-          window.location = "/w/" + encodeURIComponent(WS) + "/practice";
-        }
+        if (routeIsCurrent()) refreshMiddle();
       }).catch(function (error) {
         goalStatus("保存失败：" + (error.message || "未知错误"));
       });
@@ -2210,6 +2246,7 @@
         });
     }
     if (goalAssistSend) goalAssistSend.addEventListener("click", sendGoalAssist);
+  }
   }
 
   /* ---------- AI column ---------- */
@@ -2313,6 +2350,9 @@
   function aiPostTurn(body) {
     if (!aiConversation || aiTurn || aiSendPending) {
       return Promise.reject(new Error("conversation already has a pending turn"));
+    }
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
+      AgentUISurfaces.resetTurn();
     }
     aiForgetLiveArtifact();
     var conversationId = aiConversation;
@@ -3019,8 +3059,9 @@
       }
     }
     if (layout.dataset.page === "graph") {
-      body.selected_kp_id = selectedGraphKpId;
-      var activeGraphFilters = sim && sim.graph ? sim.graph.filters : null;
+      var graphContext = currentGraphContext();
+      body.selected_kp_id = graphContext ? graphContext.selectedKpId : null;
+      var activeGraphFilters = graphContext ? graphContext.filters : null;
       body.graph_filter = {
         query: (document.getElementById("graph-search") || {}).value || "",
         states: ["needs_work", "review", "mastered", "null"].filter(function (state) {
@@ -3116,9 +3157,6 @@
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
-    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
-      AgentUISurfaces.resetTurn();
-    }
     aiAddMarkdown(message, "user");
     aiInput.value = "";
     aiSetRunning(true);
@@ -3354,7 +3392,8 @@
 
   /* ---------- page init ---------- */
 
-  var middleRoot = document.getElementById("middle");
+  function mountMiddlePageRender() {
+  var middleRoot = document.getElementById("middle-page");
   if (middleRoot) {
     renderMath(middleRoot);
     middleRoot.querySelectorAll("img").forEach(function (img) {
@@ -3363,6 +3402,8 @@
         img.outerHTML = "<span class='fig-missing'>（图缺失：" + escapeHtml(alt) + "）</span>";
       });
     });
+  }
+
   }
 
   function fitAiColumn() {
@@ -3419,9 +3460,12 @@
   applyColumnWidths();
   window.addEventListener("resize", function () { fitAiColumn(); applyColumnWidths(); });
 
+  function mountTimeView() {
   /* ---------- time view (calendar + workload) ---------- */
 
   var timeView = document.getElementById("time-view");
+  var timeViewDisposed = false;
+  if (!timeView) return null;
   if (timeView) {
     var timeViewContent = document.getElementById("time-view-content");
     var calendarGrid = document.getElementById("calendar-grid");
@@ -3607,6 +3651,7 @@
     }
 
     api("/calendar").then(function (data) {
+      if (timeViewDisposed) return;
       var goals = data.goals || [];
       var days = data.days || [];
       var hasWorkload = days.some(function (day) { return day.count > 0; });
@@ -3636,5 +3681,48 @@
       });
     }
   }
+
+  return function disposeTimeView() { timeViewDisposed = true; };
+  }
+
+  var middlePageMounted = false;
+  var graphPageDispose = null;
+  var timeViewDispose = null;
+
+  function disposeMiddlePage() {
+    if (!middlePageMounted) return;
+    middlePageGeneration += 1;
+    if (practiceRuntime && practiceRuntime.dispose) practiceRuntime.dispose();
+    if (graphPageDispose) graphPageDispose();
+    if (timeViewDispose) timeViewDispose();
+    graphPageDispose = null;
+    timeViewDispose = null;
+    practiceRuntime = null;
+    currentProblem = function () { return null; };
+    session = function () { return []; };
+    visiblePracticeImages = function () { return []; };
+    draftAnswer = function () { return ""; };
+    draftNote = function () { return ""; };
+    practiceSelectionContext = function () { return {}; };
+    currentGraphContext = function () { return null; };
+    middlePageMounted = false;
+  }
+
+  function mountMiddlePage() {
+    disposeMiddlePage();
+    mountSelectionPage();
+    graphPageDispose = mountGraphPage();
+    mountPracticeViews();
+    mountMiddlePageRender();
+    timeViewDispose = mountTimeView();
+    if (layout.dataset.objectType && layout.dataset.objectId) {
+      recordRecent(layout.dataset.objectType, layout.dataset.objectId);
+      aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);
+    }
+    middlePageMounted = true;
+  }
+
+  window.WorkbenchMiddlePage = { mount: mountMiddlePage, dispose: disposeMiddlePage };
+  mountMiddlePage();
 
 })();
