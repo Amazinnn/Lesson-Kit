@@ -12,18 +12,19 @@
 - 共用 Domain 作答语义比较；内容更新、批量 patch 和镜像走同一 Data 失效规则。学习写入前核验执行/结构/内容版本。
 - 题目删除用历史行保留身份和证据；清当前引用时保留其他题进度。卷 JSON 修改使用提交后的持久文件意图；多题删除失败注入证明事务回滚不改文件。
 - `papers` CLI 增加显式 ID 的 list/get/preview/update/delete；结构修改必须确认当前影响。保存清单原有回执与不写 SQLite 边界保留。
-- Python 完整套件 1037 passed（200.30 秒）；最后浏览器缓存修复后官方 Node 全集 202 passed，Python 的 Node 包装检查也通过。compileall、extract-problems guard、diff check 均通过。OpenSpec 暂在 active change，最终同步/归档后再记录严格检查结果。
+- 独立验收在准确代码提交 `3812b42fadbc6e374c591ada19fef615ac114ecc` 上运行 Python 完整套件：1037 passed（203.18 秒）；官方 Node 全集 202 passed。compileall、extract-problems guard、19/19 live specs strict 均通过。主线程此前完整 Python 1037 passed（200.30 秒），并检查所有 MODIFIED requirement 保留原 15 个 scenario。最终同步归档由 OpenSpec CLI 完成。
 - 独立浏览器验收曾发现服务端已切 B 但页面保留 A 缓存的真实缺陷。已修复选中执行的缓存同步；相同题号也按执行/版本区分，A 的迟到回执不能污染 B。同一执行未确认的提交请求保留原请求用于重试。两项 Node 回归测试覆盖这两个边界。
+- OpenSpec CLI 已同步五个 capability 并归档到 `openspec/changes/archive/2026-10-17-decouple-paper-progress-and-content/`；新增 7、修改 5、重命名 1 个 requirement，不删除旧 scenario。归档后 `openspec validate --all --strict --concurrency 3` 为 25/25。CLI 产生的多余文件末尾空行已清理，diff check 通过。
 
 ## 副本与真实数据边界
 
-17 个正式注册池的迁移副本均通过原字段/原行投影保留、完整性及幂等检查；临时 `c05-thin-tempval` 和 `w5-replica` 排除。证据与可重复脚本：
+17 个正式注册池的迁移副本均通过原字段/原行投影保留、完整性及幂等检查；只处理正式池。证据与可重复脚本：
 `C:\Users\yanwei\AppData\Local\Temp\lesson-kit-paper-all-course-20261017\batch-report.json` / `batch_migrate.py`。
 
 独立验收另取大学物理乙 II、高级数据结构与算法分析、计算机组成的 SQLite backup 副本和隔离注册表。迁移前后全部原字段/原行保持，Physics 120 项/cursor 3、ADS 98 条 attempts、CO 原异常均保留。证据：
 `C:\Users\yanwei\AppData\Local\Temp\lesson-kit-paper-acceptance-20261017\review-run-02\migration-preservation.json`。
 
-本项新增字段在真实库中的应用与隔离浏览器验收结果应在发布段追加；上面的副本结果本身不代表真实库已更新。复核由独立 gpt-6-luna max 执行运行验收，主线程负责代码与契约审查；本运行环境无法确认 constrained reviewer 的强制只读隔离，因此不使用其自动 ACCEPT 门。
+17 个真实正式池随后全部留新备份并应用迁移，与已验证副本完全一致，原学习/内容字段值保留；未在原库提交测试作答。见 [真实池迁移快照](audits/2026-10-17-paper-progress-live-migration.md)。复核由独立 gpt-6-luna max 执行运行验收与最终仓库检查，主线程负责代码与契约审查；本运行环境无法确认 constrained reviewer 的强制只读隔离，因此不使用其自动 ACCEPT 门。生产运行状态以该快照链接的运行回执为准。
 
 ## CO 恢复单独处理
 

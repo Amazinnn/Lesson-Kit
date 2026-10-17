@@ -1,5 +1,5 @@
 ## 1. Contracts and storage boundary
-- [ ] 1.1 Reconcile the proposed glossary, live specs, DATA_MODEL, affected FILE_CONTRACT, Architecture, Product Manual and Action Graph in the implementation PR; preserve existing scenarios.
+- [x] 1.1 Reconcile the proposed glossary, live specs, DATA_MODEL, affected FILE_CONTRACT, Architecture, Product Manual and Action Graph in the implementation PR; preserve existing scenarios.
 - [x] 1.2 Add Data-owned per-Paper unfinished progress/drafts and a separate selected execution; migrate healthy legacy state on an isolated copy, preserving attempts, ratings and schedule rows.
 - [x] 1.3 Resolve the separate legacy attempt-FK repair before accepting migration on affected pools; report existing missing-parent rows explicitly.
 
@@ -16,6 +16,6 @@
 
 ## 4. Independent acceptance
 - [x] 4.1 Prove reset boundaries with before/after learning-table preservation assertions and fault-injection checks; demonstrate stale request zero-write behavior.
-- [ ] 4.2 Run the required Python, official JS, compileall, strict all-OpenSpec and extraction-guard gates on exact candidate heads.
-- [ ] 4.3 Independently walk through switching multiple unfinished Papers, mixed types, semantic correction and deletion in a copied pool; record limitations and handoff.
+- [x] 4.2 Run the required Python, official JS, compileall, strict all-OpenSpec and extraction-guard gates on exact candidate heads.
+- [x] 4.3 Independently walk through switching multiple unfinished Papers, mixed types, semantic correction and deletion in a copied pool; record limitations and handoff.
 - [x] 4.4 Record real CO recovery as separate blocked work requiring verified backups/mappings and explicit approval; do not claim recovery from this feature's tests or fabricate attempts. See STATUS-paper-progress-2026-10-17.md.
