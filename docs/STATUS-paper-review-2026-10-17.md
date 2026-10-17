@@ -10,4 +10,4 @@
 
 同一分支另按用户明确确认归档 repair-attempt-migration-references，未为此重跑真实课程迁移。
 
-?????? source f9195914??????/API ?????C:/Users/yanwei/AppData/Local/Temp/paper_review_acceptance.py?OpenSpec CLI ???? change??????????????????? CI ?????????
+Independent review passed source f9195914. Isolated browser/API acceptance script: C:/Users/yanwei/AppData/Local/Temp/paper_review_acceptance.py. OpenSpec CLI archived the change, retaining all five original scenario names. Final complete CI remains a mandatory pre-merge gate.
