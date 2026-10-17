@@ -77,18 +77,18 @@ While review is open, a new Agent turn from the practice page SHALL identify the
 
 ### Requirement: Explicit self-rating editing for a reviewed submission
 
-When self-rating is enabled for the execution, a durably saved reviewed submission SHALL allow editing its linked 1–5 self-rating and optional feedback note, including an earlier submission followed by later learning activity. Saving SHALL preserve its original learner answer, objective verdict and Attempt identity. A changed rating SHALL replace that submission's effective rating contribution rather than accumulate a duplicate; later learning activities and their records SHALL be preserved and learning projections and schedules SHALL reflect the corrected contribution consistently. Cancellation SHALL write nothing. The save SHALL use exact target identity, concurrency validation and idempotent request handling. Failed saves SHALL preserve unsaved edits and report failure truthfully. Disabling self-rating SHALL retain the execution's existing preference behavior.
+When self-rating is enabled for the selected Paper execution, a durably saved reviewed submission in that same run SHALL allow editing its linked 1–5 self-rating and optional feedback note, including an earlier item in the run. Following the owner's 2026-10-17 decision, saving an edit SHALL overwrite that submission's previous rating and note in place, preserving its learner answer, objective verdict and Attempt identity. It SHALL NOT append another feedback event or Attempt, reapply signals/current-state/schedule effects, replay global learning history, or modify another Paper or run. The first rating, when none exists, SHALL retain the existing rating flow. Cancellation SHALL write nothing. Saves SHALL validate the exact execution/Attempt identity and current expected rating, and retry safely. Failed saves SHALL retain edits and report failure truthfully. Disabled self-rating SHALL retain the execution's existing preference behavior.
 
 #### Scenario: Edit an existing self-rating
 
 - **WHEN** the learner explicitly saves a different valid rating for a reviewed submission
-- **THEN** the linked effective rating and learning effects are updated once, without a new Attempt or a changed answer, verdict, cursor or completion state
+- **THEN** its existing rating and note are overwritten without a new feedback event or Attempt and without changing the answer, verdict, cursor, completion state, signals or schedule
 
-#### Scenario: Preserve later learning activities
+#### Scenario: Repeated edits remain scoped to this Paper run
 
-- **GIVEN** a reviewed submission has a self-rating and later learning activities affect the same problem or knowledge points
-- **WHEN** that earlier self-rating is changed
-- **THEN** later records and contributions are preserved, the former rating contribution is not duplicated, and projections and schedules consistently incorporate the change
+- **GIVEN** an earlier item in the selected Paper run has a saved self-rating and the problem also has records in another run
+- **WHEN** the learner edits the earlier item's rating and note more than once
+- **THEN** the same linked feedback record contains the last saved values, other runs remain unchanged, and no additional evidence or scheduling effects are produced
 
 #### Scenario: Cancel or reject invalid input
 
