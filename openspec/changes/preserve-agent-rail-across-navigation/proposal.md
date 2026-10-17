@@ -11,6 +11,8 @@ persistent-navigation slice already approved in
   inside the existing shell, including browser back/forward navigation.
 - Keep the existing Agent rail DOM and controller mounted; refresh only the
   page context used for future sends.
+- Keep the Agent rail markup identical on every page; place graph-only
+  learning-dashboard content inside the graph middle page.
 - Dispose and mount route-owned view behavior as middle content changes.
 - Keep external, cross-workspace, modified-click, download, and explicitly
   targeted navigation native.

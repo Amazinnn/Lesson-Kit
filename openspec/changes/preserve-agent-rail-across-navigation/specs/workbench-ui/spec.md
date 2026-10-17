@@ -9,6 +9,9 @@ forward SHALL follow the same behavior. Navigation SHALL update current page
 context for future submissions while preserving the context already captured
 by accepted work. External, cross-workspace, modified-click, download, and
 explicitly targeted links SHALL keep native browser navigation.
+The server-rendered `#ai-column` SHALL have the same structure on graph and
+non-graph pages. Graph-only dashboard content SHALL belong to the graph middle
+page, and selecting a graph node SHALL NOT hide or replace the Agent chat.
 
 #### Scenario: Navigate within the workspace
 
@@ -29,6 +32,12 @@ explicitly targeted links SHALL keep native browser navigation.
 - **WHEN** the learner sends a new message after changing the middle page
 - **THEN** the request uses the current page context while previously accepted
   work retains its submitted context
+
+#### Scenario: Enter and leave the graph page
+
+- **WHEN** the learner enters or leaves the graph page within the same workspace
+- **THEN** the graph dashboard mounts or disposes with the middle page while the
+  same Agent rail remains visible and usable
 
 #### Scenario: Follow a native navigation
 

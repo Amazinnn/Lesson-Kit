@@ -3,6 +3,9 @@
 Fetch the destination's normal server-rendered page, then replace only the
 middle page wrapper. Keep the `#ai-column` and its controller untouched, along
 with the existing scope tray, Activity Float, and Agent auxiliary surfaces.
+The server emits the same Agent rail on graph and non-graph pages. The graph
+learning dashboard belongs to the graph middle page and is mounted and disposed
+with that page; selecting graph nodes never hides or replaces the Agent chat.
 Update the existing layout metadata, active navigation state, scope names, and
 browser URL, then rerender context chips for the next submission. A request's
 already captured context does not change.
