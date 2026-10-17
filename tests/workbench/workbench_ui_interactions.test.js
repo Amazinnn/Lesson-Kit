@@ -510,6 +510,7 @@ function runWorkbench({
   const sandbox = {
     document,
     window,
+    AgentUISurfaces: agentUISurfaces || undefined,
     GraphPhysics: physics,
     PracticeDeck,
     sessionStorage: storage,
@@ -1493,19 +1494,24 @@ test("batch self-rating writes only from its final review card", async () => {
 test("graph detail renders the knowledge-point card and toggles the practice scope", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
+  const agentChat = new FakeElement("ai-chat-view");
+  const agentPanel = new FakeElement("ai-teacher-panel");
+  agentPanel.appendChild(agentChat);
   const toggle = new FakeElement("graph-scope-toggle");
   const toast = new FakeElement("graph-toast");
   const storage = new FakeStorage();
   const calls = [];
-  runWorkbench({
-    elements: graphElements({
+  const elements = graphElements({
       layout: layout(), "graph-canvas": canvas,
       "graph-detail-tab": new FakeElement("graph-detail-tab"),
       "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
       "graph-detail-panel": detail,
-      "ai-teacher-panel": new FakeElement("ai-teacher-panel"),
+      "ai-teacher-panel": agentPanel,
+      "ai-chat-view": agentChat,
       "graph-scope-toggle": toggle, "graph-toast": toast,
-    }),
+    });
+  runWorkbench({
+    elements,
     storage,
     reducedMotion: true,
     fetch: (url) => {
@@ -1524,6 +1530,7 @@ test("graph detail renders the knowledge-point card and toggles the practice sco
     },
   });
   await flush();
+  assert.equal(agentPanel.classList.contains("hidden"), false);
   const stage = canvas.children[0];
   const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
   node.children.find((child) => child.className === "node").click();
@@ -1533,6 +1540,8 @@ test("graph detail renders the knowledge-point card and toggles the practice sco
   assert.match(detail.innerHTML, /<b>4<\/b>/);
   assert.match(detail.innerHTML, /先修/);
   assert.match(detail.innerHTML, /kp-1/);
+  assert.equal(agentPanel.classList.contains("hidden"), false);
+  assert.equal(elements["ai-chat-view"], agentChat);
   assert.equal(calls.some((url) => url.endsWith("/graph/state")), false);
 
   toggle.click();
@@ -4625,6 +4634,16 @@ test("flash cards page back and forth through history and only pull at the end",
 
 test("goal cards edit and delete drive the API, and the agent prefill action fills the form", async () => {
   const calls = [];
+  let turnResets = 0;
+  const agentSurface = {
+    state: { userCollapsed: false },
+    resetTurn() { turnResets += 1; this.state.userCollapsed = false; },
+    resetConversation() {},
+    renderContext() {},
+    setCollapseHandler() {},
+    setArtifactPreviewHandler() {},
+    setRunning() {},
+  };
   const card = new FakeElement("goal-card");
   card.dataset = {
     goalId: "goal-001", goalTitle: "期末掌握计数", goalKind: "stage",
@@ -4651,6 +4670,7 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   };
   runWorkbench({
     elements,
+    agentUISurfaces: agentSurface,
     fetch: (url, options) => {
       calls.push({ url, options, method: options && options.method });
       if (url.endsWith("/ai/providers")) return jsonResponse([{ name: "codex" }]);
@@ -4696,8 +4716,12 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   elements["ai-session-list"].children[0].children[0].click();
   await flush();
   elements["goal-nl"].value = "期末前掌握第六章计数";
+  const resetsBeforeGoalAssist = turnResets;
+  agentSurface.state.userCollapsed = true;
   elements["goal-assist-send"].click();
   await flush();
+  assert.equal(turnResets, resetsBeforeGoalAssist + 1);
+  assert.equal(agentSurface.state.userCollapsed, false);
   const turnPost = calls.find((call) => call.url.endsWith("/turns") && call.options);
   assert.deepEqual(JSON.parse(turnPost.options.body).goal_intent, true);
   assert.equal(elements["goal-title"].value, "Agent 填的目标");

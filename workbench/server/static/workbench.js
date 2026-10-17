@@ -696,9 +696,6 @@
     var graphZoomReset = document.getElementById("graph-reset");
     var graphDetail = document.getElementById("graph-detail-panel");
     var graphEdgeBudgetEl = null;
-    var graphDetailTab = document.getElementById("graph-detail-tab");
-    var teacherTab = document.getElementById("ai-teacher-tab");
-    var teacherPanel = document.getElementById("ai-teacher-panel");
 
     var STATE_LABEL = { work: "重点练习", review: "可以复习", mastered: "已掌握", new: "未标记" };
     var STATE_SHORT = { work: "练", review: "复", mastered: "熟", new: "新" };
@@ -713,19 +710,6 @@
     var PROJECTION_TEXT = {
       structure: "关系", problem_count: "题目", importance: "重要性", state: "关注度",
     };
-
-    function showGraphPanel(detailOpen) {
-      if (graphDetail) graphDetail.classList.toggle("hidden", !detailOpen);
-      if (teacherPanel) teacherPanel.classList.toggle("hidden", detailOpen);
-      if (graphDetailTab) {
-        graphDetailTab.classList.toggle("active", detailOpen);
-        graphDetailTab.setAttribute("aria-selected", detailOpen ? "true" : "false");
-      }
-      if (teacherTab) {
-        teacherTab.classList.toggle("active", !detailOpen);
-        teacherTab.setAttribute("aria-selected", detailOpen ? "false" : "true");
-      }
-    }
 
     function mapGraphState(state) {
       if (!state) return "new";
@@ -1845,9 +1829,6 @@
       });
     }
 
-    if (graphDetailTab) graphDetailTab.addEventListener("click", function () { showGraphPanel(true); });
-    if (teacherTab) teacherTab.addEventListener("click", function () { showGraphPanel(false); });
-    showGraphPanel(true);
     if (!graphPhysicsAvailable) {
       if (typeof GraphPhysics !== "undefined") GraphPhysics = undefined;
       graphFailureShow("图谱计算无法启动：浏览器不支持 Worker，或图谱资源加载失败。请刷新页面，或使用支持 Worker 的浏览器。");
@@ -2369,6 +2350,9 @@
   function aiPostTurn(body) {
     if (!aiConversation || aiTurn || aiSendPending) {
       return Promise.reject(new Error("conversation already has a pending turn"));
+    }
+    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
+      AgentUISurfaces.resetTurn();
     }
     aiForgetLiveArtifact();
     var conversationId = aiConversation;
@@ -3173,9 +3157,6 @@
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
-    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
-      AgentUISurfaces.resetTurn();
-    }
     aiAddMarkdown(message, "user");
     aiInput.value = "";
     aiSetRunning(true);

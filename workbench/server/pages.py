@@ -475,6 +475,7 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<button class='icon-btn' id='graph-focus' type='button' title='聚焦选中节点' aria-label='聚焦选中节点'>◎</button>"
         "<button class='icon-btn' id='graph-fit' type='button' title='适应画布' aria-label='适应画布'>⌗</button>"
         "</header>"
+        "<div class='graph-workspace'>"
         "<section class='graph-shell' id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'>"
         "<div class='floating controls'>"
         "<div class='control-head'><strong>图谱控制</strong><span>保留原版语义</span></div>"
@@ -513,7 +514,11 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<button id='graph-zoom-in' type='button' title='放大' aria-label='放大'>＋</button>"
         "<button id='graph-reset' type='button' title='重置为 1:1' aria-label='重置为 1:1'>1:1</button></div>"
         "<div class='toast' id='graph-toast' role='status' aria-live='polite'></div>"
-        "</section></div>")
+        "</section>"
+        "<aside id='graph-detail-panel' class='graph-dashboard' role='region' aria-label='学习看板'>"
+        "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
+        "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>"
+        "</aside></div></div>")
     return shell(
         workspace, workspaces, weak_items, middle, "graph", graph_mode=True,
         page_type="graph", kp_titles=kp_titles,
@@ -793,22 +798,7 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<button id='ai-send' class='primary sm' disabled>发送</button></div>"
         "</div><p id='ai-status' class='muted' aria-live='polite'></p></div></section>"
     )
-    if not graph_mode:
-        return teacher
-    return (
-        "<div id='right-tabs' role='tablist' aria-label='图谱侧栏'>"
-        "<button id='graph-detail-tab' class='right-tab active' role='tab' "
-        "aria-selected='true'>学习看板</button>"
-        "<button id='ai-teacher-tab' class='right-tab' role='tab' "
-        "aria-selected='false'>对话</button></div>"
-        "<section id='graph-detail-panel' role='tabpanel'>"
-        "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
-        "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>"
-        "<a id='graph-open-kp' class='graph-dashboard-link hidden' href='#'>打开知识点</a>"
-        "</section>"
-        "<div id='ai-teacher-panel' class='hidden' role='tabpanel'>"
-        f"{teacher}</div>"
-    )
+    return teacher
 
 
 _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)

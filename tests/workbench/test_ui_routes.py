@@ -401,8 +401,7 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/graph")
         self.assertEqual(status, 200)
         self.assertIn("id='graph-canvas'", body)
-        self.assertIn("id='graph-detail-tab'", body)
-        self.assertIn("id='ai-teacher-tab'", body)
+        self.assertIn("id='graph-detail-panel'", body)
         core_script = "<script src='/static/graph-physics-core.js'></script>"
         renderer_script = "<script src='/static/graph-renderer.js'></script>"
         adapter_script = "<script src='/static/graph-physics.js'></script>"
@@ -476,6 +475,12 @@ class UiRouteTests(unittest.TestCase):
         )
 
     def test_ai_column_is_free_conversation_not_task_shortcuts(self):
+        from workbench.server import pages
+
+        self.assertEqual(
+            pages._ai_column("dmath"),
+            pages._ai_column("dmath", graph_mode=True, page_type="graph"),
+        )
         for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph"):
             status, body = self.fetch(path)
             self.assertEqual(status, 200)
@@ -493,6 +498,17 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='ai-input'", body)
         self.assertIn("id='ai-send'", body)
         self.assertIn("id='ai-stop'", body)
+
+    def test_graph_dashboard_belongs_to_middle_page(self):
+        status, body = self.fetch("/w/dmath/graph")
+        self.assertEqual(status, 200)
+        middle_start = body.index("<div id='middle-page'>")
+        dashboard = body.index("id='graph-detail-panel'")
+        ai_column = body.index("<aside id='ai-column'>")
+        self.assertLess(middle_start, dashboard)
+        self.assertLess(dashboard, ai_column)
+        self.assertNotIn("id='right-tabs'", body)
+        self.assertNotIn("id='ai-teacher-panel'", body)
 
     def test_chat_never_offers_a_draft_attachment_setting(self):
         _, practice = self.fetch("/w/dmath/practice")
