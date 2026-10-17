@@ -135,8 +135,9 @@ def _agent_activity_float():
         "<section id='agent-activity-float' class='agent-activity-float hidden' aria-live='polite'>"
         "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent activity</p>"
         "<h2 class='agent-surface-title'>正在处理</h2></div>"
-        "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
-        "aria-label='收起 Agent 活动'>×</button></div>"
+        "<button id='agent-activity-toggle' class='ghost sm icon-only agent-activity-toggle' type='button' "
+        "aria-controls='agent-activity-body' aria-expanded='true' aria-label='收起 Agent 活动' "
+        "title='收起'>−</button></div>"
         "<div id='agent-activity-body'></div></section>"
     )
 
@@ -144,12 +145,6 @@ def _agent_activity_float():
 def _agent_aux_surfaces():
     """Transient central surfaces owned by Agent runtime, not permanent page chrome."""
     return (
-        "<section id='agent-bottom-dock' class='agent-bottom-dock hidden' aria-label='Agent 工作进度'>"
-        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>当前工作</p>"
-        "<h2 class='agent-surface-title'>执行进度</h2></div>"
-        "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
-        "aria-label='收起 Agent 工作进度'>×</button></div>"
-        "<div id='agent-bottom-dock-body'></div></section>"
         "<aside id='agent-artifact-split' class='agent-artifact-split hidden' aria-label='Agent 工件预览'>"
         "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Artifact</p>"
         "<h2 id='agent-artifact-title' class='agent-surface-title'>最新工件</h2></div>"

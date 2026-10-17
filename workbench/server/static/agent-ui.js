@@ -33,6 +33,19 @@
     if (element) element.innerHTML = "";
   }
 
+  function setActivityCollapsed(collapsed) {
+    state.userCollapsed = !!collapsed;
+    var surface = byId("agent-activity-float");
+    var toggle = byId("agent-activity-toggle");
+    if (surface && surface.classList) surface.classList.toggle("is-collapsed", state.userCollapsed);
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", state.userCollapsed ? "false" : "true");
+      toggle.setAttribute("aria-label", state.userCollapsed ? "展开 Agent 活动" : "收起 Agent 活动");
+      toggle.setAttribute("title", state.userCollapsed ? "展开" : "收起");
+      toggle.textContent = state.userCollapsed ? "+" : "−";
+    }
+  }
+
   function pageLabel(page) {
     return ({
       practice: "练习",
@@ -96,9 +109,9 @@
   }
 
   function collapseAux() {
-    state.userCollapsed = true;
+    setActivityCollapsed(true);
     if (collapseHandler) collapseHandler();
-    ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split"].forEach(function (id) {
+    ["agent-artifact-split"].forEach(function (id) {
       setHidden(byId(id), true);
     });
     var middle = byId("middle");
@@ -119,6 +132,16 @@
       if (button.__agentUiBound) return;
       button.__agentUiBound = true;
       button.addEventListener("click", collapseAux);
+    });
+  }
+
+  function bindActivityToggle() {
+    var toggle = byId("agent-activity-toggle");
+    if (!toggle || toggle.__agentUiBound) return;
+    toggle.__agentUiBound = true;
+    toggle.addEventListener("click", function () {
+      if (!latestActivity()) return;
+      setActivityCollapsed(!state.userCollapsed);
     });
   }
 
@@ -175,18 +198,8 @@
       return;
     }
     body.appendChild(activityLine(item, false));
-    if (!state.userCollapsed) setHidden(surface, false);
-  }
-
-  function renderBottomDock() {
-    var surface = byId("agent-bottom-dock");
-    var body = byId("agent-bottom-dock-body");
-    if (!surface || !body) return;
-    clear(body);
-    activityValues().forEach(function (item) {
-      body.appendChild(activityLine(item, true));
-    });
-    if (!state.userCollapsed) setHidden(surface, false);
+    setActivityCollapsed(state.userCollapsed);
+    setHidden(surface, false);
   }
 
   function activity(item) {
@@ -197,14 +210,7 @@
       state.activityOrder.push(id);
     }
     Object.keys(item).forEach(function (key) { state.activities[id][key] = item[key]; });
-    if (state.userCollapsed) return;
-    if (state.activityOrder.length > 1) {
-      setHidden(byId("agent-activity-float"), true);
-      renderBottomDock();
-    } else {
-      setHidden(byId("agent-bottom-dock"), true);
-      renderActivityFloat();
-    }
+    renderActivityFloat();
   }
 
   function failure(message) {
@@ -216,13 +222,7 @@
       status: "failed",
       summary: String(message || "未知错误"),
     };
-    if (state.userCollapsed) return;
-    if (state.activityOrder.length > 1) {
-      setHidden(byId("agent-activity-float"), true);
-      renderBottomDock();
-    } else {
-      renderActivityFloat();
-    }
+    renderActivityFloat();
   }
 
   function workspaceName() {
@@ -272,8 +272,7 @@
     var action = cleanArtifact(raw);
     if (!action) return false;
     state.latestArtifact = action;
-    if (explicit) state.userCollapsed = false;
-    if (state.userCollapsed) return false;
+    if (state.userCollapsed && !explicit) return false;
     var surface = byId("agent-artifact-split");
     var title = byId("agent-artifact-title");
     var body = byId("agent-artifact-body");
@@ -291,8 +290,6 @@
       body.appendChild(summary);
     }
     actions.appendChild(artifactLink());
-    setHidden(byId("agent-activity-float"), true);
-    setHidden(byId("agent-bottom-dock"), true);
     setHidden(surface, false);
     if (middle && middle.classList) middle.classList.add("agent-split-open");
     if (explicit && artifactPreviewHandler) artifactPreviewHandler(action);
@@ -410,22 +407,25 @@
   function resetConversation() {
     state.renderedArtifacts = {};
     state.latestArtifact = null;
+    state.activities = {};
+    state.activityOrder = [];
+    setActivityCollapsed(false);
+    setHidden(byId("agent-activity-float"), true);
+    clear(byId("agent-activity-body"));
     setHidden(byId("agent-artifact-split"), true);
     var middle = byId("middle");
     if (middle && middle.classList) middle.classList.remove("agent-split-open");
   }
 
   function resetTurn() {
-    state.userCollapsed = false;
+    setActivityCollapsed(false);
     setRunning(false);
     state.activities = {};
     state.activityOrder = [];
     state.latestArtifact = null;
     setHidden(byId("agent-activity-float"), true);
-    setHidden(byId("agent-bottom-dock"), true);
     setHidden(byId("agent-artifact-split"), true);
     clear(byId("agent-activity-body"));
-    clear(byId("agent-bottom-dock-body"));
     var middle = byId("middle");
     if (middle && middle.classList) middle.classList.remove("agent-split-open");
     restoreComposer();
@@ -434,7 +434,6 @@
   function finishTurn() {
     state.running = false;
     setHidden(byId("agent-activity-float"), true);
-    setHidden(byId("agent-bottom-dock"), true);
   }
 
   function setRunning(running) {
@@ -451,6 +450,7 @@
     renderContext();
     bindComposer();
     bindAuxCollapse();
+    bindActivityToggle();
     return api;
   }
 

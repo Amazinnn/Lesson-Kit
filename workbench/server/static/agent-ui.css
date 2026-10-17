@@ -117,7 +117,6 @@
 /* The central Lesson Kit page remains primary. These surfaces are inert until
    Agent runtime state asks for them. */
 .agent-activity-float,
-.agent-bottom-dock,
 .agent-artifact-split {
   z-index: 9;
   border: 1px solid var(--lk-ink);
@@ -133,14 +132,16 @@
   padding: 10px 12px;
   border-radius: var(--dsw-radius-md);
 }
-.agent-bottom-dock {
-  position: sticky;
-  bottom: 12px;
-  width: min(860px, calc(100% - 16px));
-  margin: 18px auto 0;
-  padding: 12px 14px;
-  border-radius: 12px;
+.agent-activity-float.is-collapsed {
+  width: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
+.agent-activity-float.is-collapsed .agent-surface-head { justify-content: flex-end; }
+.agent-activity-float.is-collapsed .agent-surface-head > div,
+.agent-activity-float.is-collapsed #agent-activity-body { display: none; }
 .agent-artifact-split {
   position: absolute;
   inset: 0 0 0 auto;
@@ -175,7 +176,8 @@
   text-transform: uppercase;
 }
 .agent-surface-title { margin: 2px 0 0; font-size: 14px; line-height: 20px; }
-.agent-aux-collapse { width: 28px; padding: 0; }
+.agent-aux-collapse,
+.agent-activity-toggle { width: 28px; padding: 0; }
 
 .agent-milestone {
   display: grid;
@@ -307,8 +309,7 @@
   border-top: 1px solid var(--dsw-border-l2);
 
 @media (max-width: 760px) {
-  .agent-activity-float,
-  .agent-bottom-dock {
+  .agent-activity-float {
     width: 100%;
     margin-left: 0;
     margin-right: 0;
