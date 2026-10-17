@@ -97,6 +97,7 @@
     if (typeof item.verdict === "boolean") data.verdict = item.verdict;
     if (item.revealed) data.revealed = true;
     if (item.attempt_id) data.attempt_id = item.attempt_id;
+    if (item.feedback) data.feedback = item.feedback;
     if (item.attempt_request) data.attempt_request = item.attempt_request;
     if (item.attempt_status) data.attempt_status = item.attempt_status;
     if (item.feedback_request) data.feedback_request = item.feedback_request;
@@ -127,6 +128,7 @@
       verdict: typeof data.verdict === "boolean" ? data.verdict : null,
       revealed: !!data.revealed,
       attempt_id: data.attempt_id || null,
+      feedback: data.feedback || null,
       attempt_request: data.attempt_request || null,
       attempt_status: data.attempt_status === "saving" ? "failed" : (data.attempt_status || ""),
       feedback_request: data.feedback_request || null,
@@ -163,6 +165,36 @@
       .map(function (item) { return item.id + ":" + item.direction; });
   }
 
+  function reviewableProblemIndexes(deck, executionId) {
+    var indexes = [];
+    deck.items.forEach(function (item, index) {
+      var submitted = item.attempt_id || item.attempt_request
+        || item.state === "skipped" || item.state === "unrated" || item.state === "rated"
+        || !!String(item.answer_text || "").trim()
+        || !!(item.choices && item.choices.length);
+      var sameExecution = executionId === undefined
+        || (item.practice_context && item.practice_context.execution_id === executionId);
+      if (item.kind !== "card" && submitted && sameExecution) indexes.push(index);
+    });
+    return indexes;
+  }
+
+  function previousReviewIndex(deck, beforeIndex, executionId) {
+    var indexes = reviewableProblemIndexes(deck, executionId);
+    for (var i = indexes.length - 1; i >= 0; i -= 1) {
+      if (indexes[i] < beforeIndex) return indexes[i];
+    }
+    return null;
+  }
+
+  function nextReviewIndex(deck, afterIndex, executionId) {
+    var indexes = reviewableProblemIndexes(deck, executionId);
+    for (var i = 0; i < indexes.length; i += 1) {
+      if (indexes[i] > afterIndex) return indexes[i];
+    }
+    return null;
+  }
+
   return {
     createDeck: createDeck,
     makeItem: makeItem,
@@ -176,5 +208,8 @@
     directionKeys: directionKeys,
     serialize: serialize,
     deserialize: deserialize,
+    reviewableProblemIndexes: reviewableProblemIndexes,
+    previousReviewIndex: previousReviewIndex,
+    nextReviewIndex: nextReviewIndex,
   };
 }));

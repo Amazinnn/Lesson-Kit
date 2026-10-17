@@ -147,7 +147,8 @@ def flush_files(pool):
                                     'WHERE paper_id=?', (row['paper_id'],))
 
 
-def guard(pool, context, problem_id=None, position=None, *, feedback=False):
+def guard(pool, context, problem_id=None, position=None, *, feedback=False,
+          attempt_id=None):
     from workbench.data.active_practice import ActivePracticeConflict
     if not available(pool.connect()) or not isinstance(context, dict):
         raise ActivePracticeConflict('stale practice page: refresh before submitting')
@@ -155,6 +156,7 @@ def guard(pool, context, problem_id=None, position=None, *, feedback=False):
     active = conn.execute('SELECT * FROM active_practice WHERE singleton=1').fetchone()
     execution = context.get('execution_id')
     record = dict(active) if active and active['execution_id'] == execution else None
+    active_execution = record is not None
     if feedback and record is None:
         archived = conn.execute('SELECT * FROM practice_runs WHERE execution_id=?', (execution,)).fetchone()
         if archived:
@@ -179,6 +181,29 @@ def guard(pool, context, problem_id=None, position=None, *, feedback=False):
             raise ActivePracticeConflict('stale Paper position: reload the current Paper')
         if item[1] != context.get('content_revision'):
             raise ActivePracticeConflict('stale answering content: reload the corrected question')
+    if attempt_id is not None:
+        target_position = context.get('position')
+        if isinstance(target_position, bool) or not isinstance(target_position, int):
+            raise ActivePracticeConflict('stale rating target: reload the current Paper')
+        if active_execution:
+            target = conn.execute(
+                'SELECT item_type,item_id,attempt_id FROM active_practice_items WHERE position=?',
+                (target_position,)).fetchone()
+            matches = bool(target and target['item_type'] == 'problem'
+                           and target['item_id'] == problem_id
+                           and target['attempt_id'] == attempt_id)
+        else:
+            items = record.get('items')
+            if items is None:
+                items = json.loads(record.get('items_json') or '[]')
+            target = next((item for item in items
+                           if item.get('position') == target_position), None)
+            matches = bool(target and target.get('item_type') == 'problem'
+                           and target.get('item_id') == problem_id
+                           and target.get('attempt_id') == attempt_id)
+        if not matches:
+            raise ActivePracticeConflict(
+                'stale rating target: attempt is not part of this Paper run')
 
 
 def selected_saved(pool):

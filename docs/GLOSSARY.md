@@ -180,7 +180,7 @@ _Avoid_：把设置当学习记录、按工作区写进数据库、对进行中�
 出处：rating-toggle-setting change「Learner settings in the left rail」
 
 ### 做题记录 / Practice Record
-把尝试、判定与自评合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及左侧「记录」中心的**作答明细 / 错题**视图（可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——自评通过 `attempt_id` 链回那次提交。**记录只增不改**：修错了重新作答并自评，不改写旧行。
+把尝试、判定与自评合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及左侧「记录」中心的**作答明细 / 错题**视图（可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——自评通过 `attempt_id` 链回那次提交。**作答记录只增不改**：重新作答会追加 Attempt。唯一相关例外是浏览器在同一 Paper Practice Run 回看中再次保存自评时，只原位覆盖该 Attempt 关联反馈的评分和评语；不新增 Attempt/反馈，也不重放学习影响。此例外不扩展 Agent Attempt Correction。
 _Avoid_：学习状态、排期表、把记录页当批改结果
 出处：review-workbench spec「Durable practice records」；workbench-ui spec
 
@@ -408,12 +408,12 @@ _Avoid_：把 Practice Session 与 Practice Run 并列成两种执行实体、�
 出处：review-workbench spec「Paper-backed Practice Run」「Practice Run interruption recovery」；workbench-ui spec「Practice page」
 
 ### 上一题结果视图 / Previous Result View
-练习已进入下一道未答普通题时，回看紧邻上一道普通题的只读界面。它显示浏览器当前持有的已提交答案或「不会」状态、已有判定和可用答案/解析；可把这道题和提交答案作为本轮 Agent 上下文。它不移动练习游标、不写尝试或反馈，也不证明对应提交已持久保存。闪卡仍使用「上一张 / 下一张」移动游标。
+练习页已有的只读作答回看界面。没有服务端 Practice Run 身份时，仍只回看紧邻上一道普通题；选中 Paper Practice Run 时，可在同一次执行内往返浏览所有已有作答或「不会」状态的普通题，且不设回看次数上限。Paper 回看位置独立于练习游标；每次进入都先显示自己的作答、已有判定和自评，参考答案与解析收起，需主动展开。未确认提交明确标注且不可评分；不可用的判定如实显示。返回当前题恢复草稿，新 Agent 消息聚焦当前可见回看题。回看不移动练习游标，也不表示浏览器提交已持久保存。闪卡仍使用「上一张 / 下一张」移动游标。
 _Avoid_：把回看当作重新作答、把浏览器已提交视为服务端已保存、把闪卡回翻当作本视图
 出处：practice-review spec
 
 ### 自评 / Self-Rating
-学习者对一道完成题的显式 1–5 打分（可带自然语言备注），写入对应反馈并按评分更新学习投影。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可另按 off 规则折算。
+学习者对一道完成题的显式 1–5 打分（可带自然语言备注），首次评分写入对应反馈并按评分更新学习投影。Paper 回看中再次保存只覆盖同一执行、同一 Attempt 关联反馈里的评分与评语，不新建作答或反馈，不重复更新学习投影；Agent Attempt Correction 是独立路径。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可另按 off 规则折算。
 _Avoid_：把自动判定伪装成自评分、浏览即掌握
 出处：review-workbench spec「Flexible feedback」
 

@@ -896,6 +896,117 @@ class ScenarioTests(AttemptsTestCase):
         self.assertEqual(self.rows("SELECT evidence_count FROM learner_signals")[0][
             "evidence_count"], 1)
 
+    def test_browser_rating_edit_is_in_place_and_bound_to_its_paper_run(self):
+        from workbench.data import active_practice, attempts as attempts_data
+        from workbench.data.pool import Pool
+        from workbench.server.api import ApiError, feedback_record
+
+        pool = Pool(root=self.ws, db_path=self.db_path, course="dmath", chapter="ch12")
+        problem_id = "dmath-ch12-prob-001"
+
+        def submit_run(paper_id, prefix):
+            practice = active_practice.create(pool, {
+                "source_kind": "paper", "source_ref": paper_id,
+                "practice_mode": "exam", "rating_mode": "immediate",
+                "kp_ids": ["dmath-ch12-kp-001"],
+                "items": [{"item_type": "problem", "item_id": problem_id}],
+            })
+            context = active_practice.submission_context(practice, 0)
+            attempt = attempts_data.record_browser_attempt(
+                pool, problem_id, answer_text=prefix + " answer", verdict=True,
+                request_id=prefix + "-answer", practice_position=0,
+                practice_context=context)
+            attempts_data.record_browser_feedback(
+                pool, "problem", problem_id, rating=2, note=prefix + " note",
+                attempt_id=attempt["attempt_id"], request_id=prefix + "-rating",
+                practice_context=context)
+            return context, attempt["attempt_id"]
+
+        try:
+            first_context, first_attempt = submit_run("ps-001", "first")
+            second_context, second_attempt = submit_run("ps-002", "second")
+            before = self.learning_rows()
+
+            edit_body = {
+                "item_type": "problem", "item_id": problem_id,
+                "attempt_id": second_attempt, "rating": 5, "note": "second edit",
+                "practice_context": second_context, "request_id": "second-edit-1",
+                "edit_existing": True, "expected_rating": 2,
+                "expected_note": "second note",
+            }
+            before_missing_id = self.learning_rows()
+            without_request_id = {key: value for key, value in edit_body.items()
+                                  if key != "request_id"}
+            with self.assertRaises(ApiError) as missing_request:
+                feedback_record(pool, "course", {}, without_request_id)
+            self.assertEqual(missing_request.exception.status, 400)
+            self.assertEqual(self.learning_rows(), before_missing_id)
+
+            edited = feedback_record(pool, "course", {}, edit_body)
+            self.assertEqual(feedback_record(pool, "course", {}, edit_body), edited)
+
+            after = self.learning_rows()
+            self.assertEqual(len(after["problem_attempts"]), len(before["problem_attempts"]))
+            self.assertEqual(len(after["feedback_events"]), len(before["feedback_events"]))
+            events = self.rows(
+                "SELECT id, attempt_id, rating, note FROM feedback_events ORDER BY id")
+            self.assertEqual(events[0]["attempt_id"], first_attempt)
+            self.assertEqual((events[0]["rating"], events[0]["note"]), (2, "first note"))
+            self.assertEqual(events[1]["attempt_id"], second_attempt)
+            self.assertEqual((events[1]["rating"], events[1]["note"]), (5, "second edit"))
+            for table in ("learner_signals", "problem_progress", "learning_current_state",
+                          "review_schedule"):
+                self.assertEqual(after[table], before[table], table)
+            self.assertEqual(after["problem_attempts"], before["problem_attempts"])
+
+            with self.assertRaises(ApiError):
+                feedback_record(pool, "course", {}, {
+                    "item_type": "problem", "item_id": problem_id,
+                    "attempt_id": first_attempt, "rating": 4, "note": "wrong run",
+                    "practice_context": second_context, "request_id": "cross-run-edit",
+                    "edit_existing": True, "expected_rating": 2,
+                    "expected_note": "first note",
+                })
+            self.assertEqual(self.learning_rows(), after)
+
+            with self.assertRaises(ApiError):
+                feedback_record(pool, "course", {}, {
+                    **edit_body, "request_id": "stale-edit",
+                    "rating": 4, "expected_rating": 2,
+                    "expected_note": "second note",
+                })
+            self.assertEqual(self.learning_rows(), after)
+
+            temporary_context, temporary_attempt = submit_run(None, "temporary")
+            self.assertIsNone(temporary_context["paper_id"])
+            self.assertIsNotNone(temporary_context["execution_id"])
+            before_temporary_edit = self.learning_rows()
+            temporary_edit = feedback_record(pool, "course", {}, {
+                "item_type": "problem", "item_id": problem_id,
+                "attempt_id": temporary_attempt, "rating": 4, "note": "temporary edit",
+                "practice_context": temporary_context, "request_id": "temporary-edit-1",
+                "edit_existing": True, "expected_rating": 2,
+                "expected_note": "temporary note",
+            })
+            self.assertTrue(temporary_edit["edited"])
+            after_temporary_edit = self.learning_rows()
+            self.assertEqual(len(after_temporary_edit["problem_attempts"]),
+                             len(before_temporary_edit["problem_attempts"]))
+            self.assertEqual(len(after_temporary_edit["feedback_events"]),
+                             len(before_temporary_edit["feedback_events"]))
+            self.assertEqual(after_temporary_edit["problem_attempts"],
+                             before_temporary_edit["problem_attempts"])
+            for table in ("learner_signals", "problem_progress", "learning_current_state",
+                          "review_schedule"):
+                self.assertEqual(after_temporary_edit[table],
+                                 before_temporary_edit[table], table)
+            event = self.rows("SELECT attempt_id, rating, note FROM feedback_events "
+                              "WHERE attempt_id=?", (temporary_attempt,))[0]
+            self.assertEqual((event["attempt_id"], event["rating"], event["note"]),
+                             (temporary_attempt, 4, "temporary edit"))
+        finally:
+            pool.close()
+
     def test_the_session_rating_links_back_to_the_attempt(self):
         from workbench.data import attempts as attempts_data
         from workbench.data.pool import Pool

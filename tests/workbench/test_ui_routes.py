@@ -165,6 +165,8 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn(
             "id='save-rating' class='primary sm'>记录并下一题", body
         )
+        self.assertIn("id='review-rating-action'", body)
+        self.assertIn("id='cancel-rating'", body)
         self.assertNotIn("class='rate'", body)
 
     def test_practice_page_uses_explicit_scope_and_single_content_modes(self):

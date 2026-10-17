@@ -579,6 +579,8 @@ function practiceElements() {
     "feedback-note": new FakeElement("feedback-note"),
     "rating-input": new FakeElement("rating-input"),
     "save-rating": new FakeElement("save-rating"),
+    "review-rating-action": new FakeElement("review-rating-action"),
+    "cancel-rating": new FakeElement("cancel-rating"),
     "next-problem": new FakeElement("next-problem", { dataset: {} }),
     "practice-mode-immediate": new FakeElement("practice-mode-immediate"),
     "practice-mode-batch": new FakeElement("practice-mode-batch"),
@@ -1027,6 +1029,213 @@ test("previous problem review is read-only and supplies focused Agent context", 
   assert.equal(calls.some((call) => call.options &&
     (/\/(attempts|feedback)$/.test(call.url)
       || (call.url.endsWith("/practice/current") && call.options.method !== "GET"))), false);
+});
+
+test("temporary fixed practice with server execution identity supports review and rating edits", async () => {
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const practice = {
+    source_kind: "paper", source_ref: null, execution_id: 23, paper_generation: 1,
+    kp_ids: [], practice_mode: "exam", rating_mode: "immediate", cursor: 2,
+    items: [
+      { position: 0, item_type: "problem", item_id: "temp-1", state: "answered",
+        attempt_id: 31, attempt: { answer_text: "temporary first answer", verdict: true },
+        feedback: { item_type: "problem", item_id: "temp-1", attempt_id: 31,
+          rating: 2, note: "temporary note" }, content_revision: 1,
+        payload: { problem_id: "temp-1", display_title: "Temporary first", problem_text: "Q1" } },
+      { position: 1, item_type: "problem", item_id: "temp-2", state: "answered",
+        attempt_id: 32, attempt: { answer_text: "temporary second answer", verdict: false },
+        feedback: { item_type: "problem", item_id: "temp-2", attempt_id: 32,
+          rating: 3, note: "second note" }, content_revision: 1,
+        payload: { problem_id: "temp-2", display_title: "Temporary second", problem_text: "Q2" } },
+      { position: 2, item_type: "problem", item_id: "temp-3", state: "pending",
+        content_revision: 1,
+        payload: { problem_id: "temp-3", display_title: "Temporary current", problem_text: "Q3" } },
+    ],
+  };
+  const calls = [];
+  let feedbackCalls = 0;
+  const storage = new FakeStorage({ wb_practice_mode_alpha: "exam",
+    wb_practice_rating_mode_alpha: "immediate" });
+  runWorkbench({ elements, storage, fetch: (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/practice/current") && !options) return jsonResponse({ practice });
+    if (url.endsWith("/feedback")) {
+      feedbackCalls += 1;
+      return feedbackCalls === 1 ? jsonResponse({ edited: true })
+        : Promise.reject(new Error("offline"));
+    }
+    return jsonResponse({});
+  } });
+  await flush();
+  elements["resume-practice"].click();
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /Temporary second/);
+  assert.equal(elements["card-prev"].classList.contains("hidden"), false);
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /Temporary first/);
+  assert.equal(elements["review-rating-action"].classList.contains("hidden"), false);
+  elements["review-rating-action"].click();
+  elements["rating-input"].value = "4";
+  elements["feedback-note"].value = "updated temporary rating";
+  elements["save-rating"].click();
+  await flush();
+  const request = calls.findLast(call => call.url.endsWith("/feedback"));
+  const body = JSON.parse(request.options.body);
+  assert.equal(body.attempt_id, 31);
+  assert.equal(body.edit_existing, true);
+  assert.equal(body.practice_context.execution_id, 23);
+  assert.equal(body.practice_context.paper_id, null);
+
+  elements["review-rating-action"].click();
+  elements["rating-input"].value = "5";
+  elements["feedback-note"].value = "pending temporary edit";
+  elements["save-rating"].click();
+  await flush();
+  const pendingRequest = calls.filter(call => call.url.endsWith("/feedback")).at(-1);
+  const pendingBody = JSON.parse(pendingRequest.options.body);
+  assert.notEqual(pendingBody.request_id, body.request_id);
+  assert.equal(pendingBody.expected_rating, 4);
+
+  elements["rating-input"].value = "3";
+  elements["feedback-note"].value = "changed while pending";
+  elements["save-rating"].click();
+  await flush();
+  const retry = calls.filter(call => call.url.endsWith("/feedback")).at(-1);
+  assert.deepEqual(JSON.parse(retry.options.body), pendingBody);
+  assert.equal(elements["rating-input"].value, "3");
+  assert.equal(elements["feedback-note"].value, "changed while pending");
+});
+
+test("Paper review browses submitted items, hides references, preserves the current draft, and edits one rating in place", async () => {
+  const elements = {
+    layout: layout(), ...durablePracticeElements(),
+    "composer-row": new FakeElement("composer-row"),
+  };
+  const choiceA = new FakeElement("choice-a", { value: "A", checked: true });
+  const choiceB = new FakeElement("choice-b", { value: "B" });
+  elements.stream.queryAll = (selector) => selector === "[data-choice-option]:checked"
+    ? [choiceA]
+    : selector === "[data-choice-option]" ? [choiceA, choiceB] : [];
+  const practice = {
+    source_kind: "paper", source_ref: "ps-001", execution_id: 10, paper_generation: 1,
+    kp_ids: ["kp-1"], practice_mode: "exam", rating_mode: "immediate", cursor: 3,
+    progress: { total: 4, completed: 2, answered: 1, stuck: 1, remaining: 2 },
+    items: [
+      { position: 0, item_type: "problem", item_id: "p-1", state: "answered",
+        attempt_id: 11, attempt: { answer_text: "first answer", choices: ["A"], verdict: false },
+        feedback: { id: 21, item_type: "problem", item_id: "p-1", attempt_id: 11,
+          rating: 2, note: "first note" }, content_revision: 1,
+        payload: { problem_id: "p-1", display_title: "First", problem_text: "Q1",
+          source_answer: "42", solution: "first solution",
+          micro_quiz: { quiz_type: "single_choice", answer_key: "B",
+            options: [{ id: "A", text: "alpha" }, { id: "B", text: "beta" }] } } },
+      { position: 1, item_type: "problem", item_id: "p-2", state: "stuck",
+        attempt_id: 12, attempt: { answer_text: "stuck answer", verdict: null },
+        feedback: { id: 22, item_type: "problem", item_id: "p-2", attempt_id: 12,
+          rating: 3, note: "stuck note" }, content_revision: 1,
+        payload: { problem_id: "p-2", display_title: "Second", problem_text: "Q2",
+          source_answer: "B", solution: "second solution" } },
+      { position: 2, item_type: "problem", item_id: "p-3", state: "pending",
+        content_revision: 1,
+        payload: { problem_id: "p-3", display_title: "Unconfirmed", problem_text: "Q3" } },
+      { position: 3, item_type: "problem", item_id: "p-4", state: "pending",
+        draft: { answer: "unsent current draft", choices: ["A"] }, content_revision: 1,
+        payload: { problem_id: "p-4", display_title: "Current", problem_text: "Q4",
+          micro_quiz: { quiz_type: "single_choice", answer_key: "A",
+            options: [{ id: "A", text: "alpha" }, { id: "B", text: "beta" }] } } },
+    ],
+  };
+  const pendingContext = { execution_id: 10, paper_id: "ps-001", paper_generation: 1,
+    item_id: "p-3", content_revision: 1, position: 2 };
+  const calls = [];
+  const storage = new FakeStorage({ wb_practice_mode_alpha: "exam",
+    wb_practice_rating_mode_alpha: "immediate",
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 2, items: [{
+      problem_id: "p-3", state: "active", answer_text: "unconfirmed answer",
+      attempt_status: "failed", practice_context: pendingContext,
+      attempt_request: { request_id: "pending-p3", payload: {
+        request_id: "pending-p3", problem_id: "p-3", answer_text: "unconfirmed answer",
+        practice_context: pendingContext,
+      } },
+    }] }) });
+  runWorkbench({ elements, storage, fetch: (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/practice/current") && !options) return jsonResponse({ practice });
+    if (url.endsWith("/attempts")) return Promise.resolve({ ok: false, status: 503,
+      json: () => Promise.resolve({ error: "attempt remains unconfirmed" }) });
+    if (url.endsWith("/feedback")) return jsonResponse({ edited: true });
+    return jsonResponse({});
+  } });
+  await flush();
+  elements["resume-practice"].click();
+  assert.equal(elements["answer-box"].value, "unsent current draft");
+
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /Unconfirmed/);
+  assert.match(elements.stream.innerHTML, /尚未确认保存/);
+  assert.equal(elements["review-rating-action"].classList.contains("hidden"), true);
+  assert.equal(calls.filter(call => call.url.endsWith("/feedback")).length, 0);
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /Second/);
+  assert.match(elements.stream.innerHTML, /stuck answer/);
+  assert.match(elements.stream.innerHTML, /<details class='practice-reference'>/);
+  assert.doesNotMatch(elements.stream.innerHTML, /<details class='practice-reference' open/);
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /First/);
+  assert.match(elements.stream.innerHTML, /first answer/);
+  assert.match(elements.stream.innerHTML, /first note/);
+  assert.match(elements.stream.innerHTML, /回答错误/);
+  assert.doesNotMatch(elements.stream.innerHTML, /option-correct/);
+  assert.doesNotMatch(elements.stream.innerHTML, /<details class='practice-reference' open/);
+
+  elements["review-rating-action"].click();
+  assert.equal(elements["rating-input"].value, 2);
+  assert.equal(elements["feedback-note"].value, "first note");
+  elements["rating-input"].value = "4";
+  elements["feedback-note"].value = "edited once";
+  elements["save-rating"].click();
+  await flush();
+  assert.match(elements.stream.innerHTML, /First/);
+  assert.match(elements.stream.innerHTML, /edited once/);
+  const firstEdit = calls.filter(call => call.url.endsWith("/feedback")).at(-1);
+  const firstBody = JSON.parse(firstEdit.options.body);
+  assert.equal(firstBody.item_id, "p-1");
+  assert.equal(firstBody.attempt_id, 11);
+  assert.equal(firstBody.edit_existing, true);
+  assert.equal(firstBody.expected_rating, 2);
+  assert.equal(firstBody.expected_note, "first note");
+
+  elements["review-rating-action"].click();
+  assert.equal(elements["rating-input"].value, 4);
+  assert.equal(elements["feedback-note"].value, "edited once");
+  elements["rating-input"].value = "5";
+  elements["feedback-note"].value = "edited twice";
+  elements["save-rating"].click();
+  await flush();
+  const edits = calls.filter(call => call.url.endsWith("/feedback"));
+  const secondBody = JSON.parse(edits.at(-1).options.body);
+  assert.equal(secondBody.item_id, "p-1");
+  assert.equal(secondBody.attempt_id, 11);
+  assert.equal(secondBody.edit_existing, true);
+  assert.equal(secondBody.expected_rating, 4);
+  assert.equal(secondBody.expected_note, "edited once");
+  assert.notEqual(secondBody.request_id, firstBody.request_id);
+  assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).cursor, 3);
+
+  elements["card-next"].click();
+  assert.match(elements.stream.innerHTML, /Second/);
+  assert.doesNotMatch(elements.stream.innerHTML, /<details class='practice-reference' open/);
+  elements["card-next"].click();
+  assert.match(elements.stream.innerHTML, /Unconfirmed/);
+  assert.doesNotMatch(elements.stream.innerHTML, /<details class='practice-reference' open/);
+  elements["card-next"].click();
+  assert.match(elements.stream.innerHTML, /Current/);
+  assert.equal(elements["answer-box"].value, "unsent current draft");
+  assert.equal(choiceA.checked, true);
+  assert.equal(choiceB.checked, false);
+  assert.equal(JSON.parse(storage.getItem("wb_session_alpha")).cursor, 3);
+  assert.equal(calls.filter(call => call.url.endsWith("/attempts")).length, 1);
+  assert.equal(calls.filter(call => call.url.endsWith("/feedback")).length, 2);
 });
 
 test("previous result review does not imply a failed attempt was saved", async () => {
