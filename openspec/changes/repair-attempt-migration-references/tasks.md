@@ -8,6 +8,7 @@
 - [ ] 2.2 Independently run required gates and isolated migration before/after preservation checks; hand off prerequisite status to the Paper progress implementation.
 - [ ] 2.3 Keep real CO repair pending unless separately authorized and proven on a copied pool; record exact remaining violations and backup provenance.
 - [x] 2.4 Perform owner-requested real-course-copy acceptance with isolated registry/port: compare rows and unrelated schema, reproduce the Physics Paper failure, migrate the copy, exercise answer/feedback and restart recovery; record actual effects and unresolved CO references.
+- [x] 2.5 With explicit owner authorization, back up and migrate the original Physics pool after fresh-copy verification; compare all existing rows, validate integrity and foreign keys, and verify production service read-back without submitting practice answers.
 
 Implementation handoff: `docs/STATUS-attempt-reference-repair-2026-10-17.md`.
 Task 2.3 records the pending boundary and existing dated evidence only; no real CO repair or fresh backup validation was performed.

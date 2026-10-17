@@ -1,5 +1,14 @@
 # Attempt 外键修复实施交接 · 2026-10-17
 
+**11:50 追加：用户明确授权后，已备份并迁移大学物理乙II真实 `pool/c01.db`。**
+新副本先行验证，正式库结果与副本完全一致；25 张表的所有原有行保留，694 道题未改，
+只新增预期内部 `practice_runs` 序号 0。外键检查为空，integrity_check 为 `ok`。
+备份：原库旁 `c01.db.pre-attempt-paper-20261017-115045`。
+正式服务的试卷列表与 `ps-001` 读取均返回 HTTP 200，120 题仍在。
+未在正式库提交测试作答或开始新轮次，未重启正式服务。CO 原库仍未迁移。
+详细报告：`C:\Users\yanwei\AppData\Local\Temp\lesson-kit-physics-live-migration-20261017-115045-f8046kca\live-migration-report.json`。
+以下较早记录中的“真实物理库未写入”已由本条明确授权操作取代；CO 与独立审查边界不变。
+
 追加：按用户要求已完成真实物理/CO 库副本与浏览器验收，见
 [真实副本验收](audits/2026-10-17-attempt-real-copy-acceptance.md)。以下原实施记录中的
 “仅合成测试”“未创建快照”描述是该次实施结束时的状态，由本次验收记录补充；原始课程库仍未写入。
