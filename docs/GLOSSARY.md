@@ -701,6 +701,21 @@ _Avoid_：人工审阅、完工宣言
 _Avoid_：人工抽查、事后补审
 出处：review-workbench spec「Past-paper coverage gate」；micro-quiz-content spec；workbench/ingest
 
+### 试卷执行进度 / Paper Execution Progress
+一张 Paper 的未完成 Practice Run 所附带的执行状态，包括题目完成标记、当前游标和未提交作答草稿；不等于题目本体，也不等于逐题作答、评分、调度等学习证据。目标行为允许各卷分别保留一份未完成进度，同一工作区同一时刻只激活一卷。
+_Avoid_：把题目掌握度当作卷内游标、把清卷进度当作删除学习证据
+出处：2026-10-17 所有者需求确认；`decouple-paper-progress-and-content` 提议（尚未实现）
+
+### 待发消息 / Pending Message
+用户已经提交、尚未开始由 Agent 处理的消息。它保留原文和提交时的页面上下文，可属于某个对话的有序队列；同一对话始终最多执行一个轮次。待发状态不是 Agent 已开始工作，也不是已经回答。
+_Avoid_：同一对话并发执行多个任务、按稍后页面覆盖原消息上下文
+出处：2026-10-17 所有者纠正并确认；`complete-agent-message-lifecycle` 提议（尚未实现）
+
+### 中断后发送 / Interrupt and Send
+用户显式中断当前 Agent 轮次，保留已经完成的操作，在确认当前轮次停止后处理指定的新消息。处理完新消息不自动续原任务；这不是自动回滚，也不是把新消息与旧任务同时运行。
+_Avoid_：无停止确认就并发启动、自动恢复原任务、把未完成工作标为成功
+出处：2026-10-17 所有者需求确认；`complete-agent-message-lifecycle` 提议（尚未实现）
+
 ### 走查 / Scratch Walkthrough
 交付前的真实浏览器验证：在池数据库副本 + 隔离注册表 + 独立端口上种子数据逐项点检（截图自检清单）。**永不写真实池。**
 _Avoid_：测试通过即完成（明确的反模式）
