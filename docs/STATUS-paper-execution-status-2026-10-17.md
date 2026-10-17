@@ -38,4 +38,18 @@ git diff --check
 passed
 ```
 
-`openspec validate align-paper-execution-status --strict` passed. The acceptance agent still owns full-suite and isolated browser/API acceptance, repository-wide compile/extraction gates, and release/archive checks. Those checks have not been run by this implementation handoff.
+## Independent final acceptance
+
+Final production/tests are frozen at `a7a57c28d5bf377c0233545c2e3f94afb1ede2b4`; subsequent commits contain documentation only. Final fresh Python suite: **1049 passed in 206.26 seconds**, exit 0 with `PYTHONUTF8=1`. All 10 official Node test files: **205 passed**. Required compileall, extraction guard, strict live specifications (19/19), strict all OpenSpec before archive (27/27), and diff checks passed.
+
+Independent local Chromium and API acceptance passed 17 assertion groups, including all three defects found during review: stale-card count/progress/button-label refresh, another active Paper blocking the target start without attaching its progress, and invalid active manifests disabling practice resume. Counts 70/19 versus 22, same-count order mismatch, folded unavailable IDs, revision/generation conflicts, valid continuation and independent export/download/rename/delete were exercised. Full table and manifest snapshots confirmed no changes on reads or rejected actions; drafts and learning evidence were preserved. No real course data was used or changed.
+
+Evidence: `C:/Users/yanwei/AppData/Local/Temp/lesson-kit-paper-final-09979438bc0f42d2b53024b76b0014fb/`, including `result.json`, numbered snapshots/screenshots, driver script and `cleanup.json`. The isolated server on port 53768 and its browser were stopped; harness exit code 0.
+
+The implementation and initial independent review used gpt-6-luna max. After its quota was exhausted, a fresh gpt-6.1-sol agent completed independent final review and verification; the controller reviewed the result. This is ordinary independent acceptance, not a calibrated constrained-reviewer ACCEPT gate, because enforced read-only isolation was unavailable.
+
+Earlier planning documents written through a PowerShell stdin pipeline contained literal question marks instead of Chinese. The controller repaired those documents using UTF-8 file edits, checked actual readable text and reran strict OpenSpec. No product code or tests changed during that repair.
+
+Delivery entry: PR #143, https://github.com/Amazinnn/Lesson-Kit/pull/143. Its merge commit and final CI remain recorded by GitHub. The sibling `revisit-paper-answers-and-edit-self-rating` remains planning-only.
+
+OpenSpec CLI archived the completed change as `2026-10-17-align-paper-execution-status`, adding one requirement without modifying or removing existing requirements/scenarios. Post-archive strict all validation: **26/26 passed**.

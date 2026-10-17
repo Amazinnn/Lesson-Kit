@@ -12,5 +12,5 @@
 ## 3. Acceptance
 
 - [x] 3.1 Deterministic tests: count mismatch, same-count identity/order mismatch, unavailable questions, active and parked states, valid continuation and stale actions.
-- [ ] 3.2 Independent isolated browser/API acceptance: consistent progress, labels, controls and non-destructive failure; no real-course test writes.
-- [ ] 3.3 Required Python/Node/compileall/OpenSpec/extraction checks, evidence handoff and independent acceptance before CLI archive. Planning completeness does not complete these tasks.
+- [x] 3.2 Independent isolated browser/API acceptance: consistent progress, labels, controls and non-destructive failure; no real-course test writes.
+- [x] 3.3 Required Python/Node/compileall/OpenSpec/extraction checks, evidence handoff and independent acceptance before CLI archive. Planning completeness does not complete these tasks.
