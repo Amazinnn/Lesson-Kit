@@ -1031,6 +1031,57 @@ test("previous problem review is read-only and supplies focused Agent context", 
       || (call.url.endsWith("/practice/current") && call.options.method !== "GET"))), false);
 });
 
+test("temporary fixed practice with server execution identity supports review and rating edits", async () => {
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const practice = {
+    source_kind: "paper", source_ref: null, execution_id: 23, paper_generation: 1,
+    kp_ids: [], practice_mode: "exam", rating_mode: "immediate", cursor: 2,
+    items: [
+      { position: 0, item_type: "problem", item_id: "temp-1", state: "answered",
+        attempt_id: 31, attempt: { answer_text: "temporary first answer", verdict: true },
+        feedback: { item_type: "problem", item_id: "temp-1", attempt_id: 31,
+          rating: 2, note: "temporary note" }, content_revision: 1,
+        payload: { problem_id: "temp-1", display_title: "Temporary first", problem_text: "Q1" } },
+      { position: 1, item_type: "problem", item_id: "temp-2", state: "answered",
+        attempt_id: 32, attempt: { answer_text: "temporary second answer", verdict: false },
+        feedback: { item_type: "problem", item_id: "temp-2", attempt_id: 32,
+          rating: 3, note: "second note" }, content_revision: 1,
+        payload: { problem_id: "temp-2", display_title: "Temporary second", problem_text: "Q2" } },
+      { position: 2, item_type: "problem", item_id: "temp-3", state: "pending",
+        content_revision: 1,
+        payload: { problem_id: "temp-3", display_title: "Temporary current", problem_text: "Q3" } },
+    ],
+  };
+  const calls = [];
+  const storage = new FakeStorage({ wb_practice_mode_alpha: "exam",
+    wb_practice_rating_mode_alpha: "immediate" });
+  runWorkbench({ elements, storage, fetch: (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/practice/current") && !options) return jsonResponse({ practice });
+    if (url.endsWith("/feedback")) return jsonResponse({ edited: true });
+    return jsonResponse({});
+  } });
+  await flush();
+  elements["resume-practice"].click();
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /Temporary second/);
+  assert.equal(elements["card-prev"].classList.contains("hidden"), false);
+  elements["card-prev"].click();
+  assert.match(elements.stream.innerHTML, /Temporary first/);
+  assert.equal(elements["review-rating-action"].classList.contains("hidden"), false);
+  elements["review-rating-action"].click();
+  elements["rating-input"].value = "4";
+  elements["feedback-note"].value = "updated temporary rating";
+  elements["save-rating"].click();
+  await flush();
+  const request = calls.findLast(call => call.url.endsWith("/feedback"));
+  const body = JSON.parse(request.options.body);
+  assert.equal(body.attempt_id, 31);
+  assert.equal(body.edit_existing, true);
+  assert.equal(body.practice_context.execution_id, 23);
+  assert.equal(body.practice_context.paper_id, null);
+});
+
 test("Paper review browses submitted items, hides references, preserves the current draft, and edits one rating in place", async () => {
   const elements = {
     layout: layout(), ...durablePracticeElements(),

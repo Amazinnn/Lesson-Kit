@@ -555,6 +555,8 @@ def record_browser_feedback(pool, item_type, item_id, rating=None, note=None,
                             practice_context=None, edit_existing=False,
                             expected_rating=None, expected_note=None):
     """Apply a rating and its retry marker in one serialized transaction."""
+    if edit_existing and (not isinstance(request_id, str) or not request_id.strip()):
+        raise ManifestError("an in-place Paper self-rating edit requires a request_id")
     payload = _browser_payload("feedback", item_type=item_type, item_id=item_id,
                                rating=rating, note=note, direction=direction,
                                attempt_id=attempt_id)

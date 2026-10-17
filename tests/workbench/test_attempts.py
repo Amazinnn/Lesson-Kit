@@ -934,6 +934,14 @@ class ScenarioTests(AttemptsTestCase):
                 "edit_existing": True, "expected_rating": 2,
                 "expected_note": "second note",
             }
+            before_missing_id = self.learning_rows()
+            without_request_id = {key: value for key, value in edit_body.items()
+                                  if key != "request_id"}
+            with self.assertRaises(ApiError) as missing_request:
+                feedback_record(pool, "course", {}, without_request_id)
+            self.assertEqual(missing_request.exception.status, 400)
+            self.assertEqual(self.learning_rows(), before_missing_id)
+
             edited = feedback_record(pool, "course", {}, edit_body)
             self.assertEqual(feedback_record(pool, "course", {}, edit_body), edited)
 
@@ -968,6 +976,34 @@ class ScenarioTests(AttemptsTestCase):
                     "expected_note": "second note",
                 })
             self.assertEqual(self.learning_rows(), after)
+
+            temporary_context, temporary_attempt = submit_run(None, "temporary")
+            self.assertIsNone(temporary_context["paper_id"])
+            self.assertIsNotNone(temporary_context["execution_id"])
+            before_temporary_edit = self.learning_rows()
+            temporary_edit = feedback_record(pool, "course", {}, {
+                "item_type": "problem", "item_id": problem_id,
+                "attempt_id": temporary_attempt, "rating": 4, "note": "temporary edit",
+                "practice_context": temporary_context, "request_id": "temporary-edit-1",
+                "edit_existing": True, "expected_rating": 2,
+                "expected_note": "temporary note",
+            })
+            self.assertTrue(temporary_edit["edited"])
+            after_temporary_edit = self.learning_rows()
+            self.assertEqual(len(after_temporary_edit["problem_attempts"]),
+                             len(before_temporary_edit["problem_attempts"]))
+            self.assertEqual(len(after_temporary_edit["feedback_events"]),
+                             len(before_temporary_edit["feedback_events"]))
+            self.assertEqual(after_temporary_edit["problem_attempts"],
+                             before_temporary_edit["problem_attempts"])
+            for table in ("learner_signals", "problem_progress", "learning_current_state",
+                          "review_schedule"):
+                self.assertEqual(after_temporary_edit[table],
+                                 before_temporary_edit[table], table)
+            event = self.rows("SELECT attempt_id, rating, note FROM feedback_events "
+                              "WHERE attempt_id=?", (temporary_attempt,))[0]
+            self.assertEqual((event["attempt_id"], event["rating"], event["note"]),
+                             (temporary_attempt, 4, "temporary edit"))
         finally:
             pool.close()
 

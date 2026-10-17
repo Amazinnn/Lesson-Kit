@@ -688,7 +688,8 @@
     }
 
     function isPaperReviewItem(item) {
-      return !!(item && item.practice_context && item.practice_context.paper_id);
+      return !!(item && item.practice_context
+        && Number.isInteger(item.practice_context.execution_id));
     }
 
     function previousReviewIndex(index, item) {
