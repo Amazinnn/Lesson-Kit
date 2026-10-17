@@ -1900,7 +1900,16 @@
   function refreshPracticeSetStart(card, practiceSetId, error) {
     return api("/practice-sets/" + encodeURIComponent(practiceSetId)).then(function (record) {
       var button = card.querySelector("[data-set-start]");
-      if (button) button.disabled = !record.can_start;
+      if (button) {
+        button.disabled = !record.can_start;
+        button.textContent = record.progress ? "继续练习" : "开始练习";
+      }
+      var progress = card.querySelector("[data-set-progress]");
+      if (progress) {
+        var progressText = record.progress
+          ? " · 已完成 " + record.progress.completed + "/" + record.progress.total : "";
+        progress.textContent = (record.count || 0) + " 题" + progressText;
+      }
       var continuation = record.continuation;
       var message = continuation && !continuation.available && continuation.reason
         ? continuation.reason : (error.message || "无法开始练习");

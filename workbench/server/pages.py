@@ -581,7 +581,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "<summary class='practice-set-card-head'>"
             + "<div class='practice-set-card-title'>"
             + "<p class='section-kicker'>试卷</p><h2>"
-            + html.escape(record["title"]) + "</h2><p class='muted'>"
+            + html.escape(record["title"]) + "</h2><p class='muted' data-set-progress>"
             + str(record["count"]) + " 题" + progress_text + "</p>" + availability + "</div>"
             + "<div class='practice-set-card-actions'>"
             + "<button class='primary sm' type='button' data-set-start" + start_disabled + ">"

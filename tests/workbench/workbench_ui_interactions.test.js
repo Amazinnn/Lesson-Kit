@@ -122,12 +122,16 @@ test("a rejected stale paper start refreshes readiness without replacing local e
   card.className = "practice-set-card card";
   const start = new FakeElement("button");
   start.setAttribute("data-set-start", "");
+  start.textContent = "继续练习";
   const status = new FakeElement("p");
+  const progress = new FakeElement("p");
+  progress.textContent = "70 题 · 已完成 19/70";
   const heading = new FakeElement("h2", { value: "Paper" });
   const localEdit = { value: "unsaved reordered list" };
   card.localEdit = localEdit;
   card.queryOne = (selector) => selector === ".practice-set-status" ? status
-    : selector === "h2" ? heading : selector === "[data-set-start]" ? start : null;
+    : selector === "h2" ? heading : selector === "[data-set-start]" ? start
+      : selector === "[data-set-progress]" ? progress : null;
   start.closest = (selector) => selector === "button" ? start
     : selector === ".practice-set-card" ? card : null;
   list.queryAll = (selector) => selector === ".practice-set-card" ? [card] : [];
@@ -136,7 +140,7 @@ test("a rejected stale paper start refreshes readiness without replacing local e
     if (options && options.method === "POST") {
       return Promise.resolve({ ok: false, status: 409, json: () => Promise.resolve({ error: "execution is stale" }) });
     }
-    return jsonResponse({ can_start: false, continuation: {
+    return jsonResponse({ count: 22, progress: null, can_start: false, continuation: {
       available: false, reason: "旧执行与当前试卷名单或顺序不一致",
     } });
   } });
@@ -147,6 +151,9 @@ test("a rejected stale paper start refreshes readiness without replacing local e
 
   assert.equal(calls.filter((call) => call.url.endsWith("/practice-sets/ps-001")).length, 1);
   assert.equal(start.disabled, true);
+  assert.equal(start.textContent, "开始练习");
+  assert.equal(progress.textContent, "22 题");
+  assert.doesNotMatch(progress.textContent, /19\/70|70/);
   assert.match(status.textContent, /名单或顺序/);
   assert.equal(card.localEdit, localEdit);
   assert.equal(localEdit.value, "unsaved reordered list");
