@@ -7,12 +7,12 @@
 
 ### Requirement: Review completed ordinary problems throughout a Paper run
 
-For ordinary problems with a submitted answer or a recorded `??` state in the selected Paper's same Practice Run, the practice page SHALL allow repeated backward and forward review through all such items, without a one-item or visit-count limit. The view SHALL show the problem, learner answer or `??`, available verdict and existing self-rating. Reference answers and solutions SHALL be collapsed on every entry, including re-entry to the same reviewed problem, and SHALL appear only after an explicit reveal action. An unavailable verdict SHALL be stated as unavailable rather than inferred from self-rating. Browser-held unconfirmed submission state MAY be shown with an explicit unconfirmed label and SHALL NOT be represented as a durably saved Attempt. Original answering and skip controls SHALL NOT mutate the reviewed submission.
+For ordinary problems with a submitted answer or a recorded `不会` state in the selected Paper's same Practice Run, the practice page SHALL allow repeated backward and forward review through all such items, without a one-item or visit-count limit. The view SHALL show the problem, learner answer or `不会`, available verdict and existing self-rating. Reference answers and solutions SHALL be collapsed on every entry, including re-entry to the same reviewed problem, and SHALL appear only after an explicit reveal action. An unavailable verdict SHALL be stated as unavailable rather than inferred from self-rating. Browser-held unconfirmed submission state MAY be shown with an explicit unconfirmed label and SHALL NOT be represented as a durably saved Attempt. Original answering and skip controls SHALL NOT mutate the reviewed submission.
 
 #### Scenario: Review after advancing
 
-- **WHEN** the browser has submitted an answer or marked the ordinary problem `??` and advanced to the next unanswered ordinary problem
-- **THEN** `?????` is available and shows that answer or state with any available verdict
+- **WHEN** the browser has submitted an answer or marked the ordinary problem `不会` and advanced to the next unanswered ordinary problem
+- **THEN** `回看上一题` is available and shows that answer or state with any available verdict
 - **AND** reference answers and solutions remain collapsed
 
 #### Scenario: Review while the attempt write is unconfirmed
@@ -23,7 +23,7 @@ For ordinary problems with a submitted answer or a recorded `??` state in the se
 
 #### Scenario: Return to the current problem
 
-- **WHEN** the learner activates `?????` from any reviewed item
+- **WHEN** the learner activates `返回当前题` from any reviewed item
 - **THEN** the selected execution's current problem is shown with its unsent text or selected choices restored
 
 #### Scenario: Review more than one earlier problem repeatedly
@@ -77,7 +77,7 @@ While review is open, a new Agent turn from the practice page SHALL identify the
 
 ### Requirement: Explicit self-rating editing for a reviewed submission
 
-When self-rating is enabled for the execution, a durably saved reviewed submission SHALL allow editing its linked 1?5 self-rating and optional feedback note, including an earlier submission followed by later learning activity. Saving SHALL preserve its original learner answer, objective verdict and Attempt identity. A changed rating SHALL replace that submission's effective rating contribution rather than accumulate a duplicate; later learning activities and their records SHALL be preserved and learning projections and schedules SHALL reflect the corrected contribution consistently. Cancellation SHALL write nothing. The save SHALL use exact target identity, concurrency validation and idempotent request handling. Failed saves SHALL preserve unsaved edits and report failure truthfully. Disabling self-rating SHALL retain the execution's existing preference behavior.
+When self-rating is enabled for the execution, a durably saved reviewed submission SHALL allow editing its linked 1–5 self-rating and optional feedback note, including an earlier submission followed by later learning activity. Saving SHALL preserve its original learner answer, objective verdict and Attempt identity. A changed rating SHALL replace that submission's effective rating contribution rather than accumulate a duplicate; later learning activities and their records SHALL be preserved and learning projections and schedules SHALL reflect the corrected contribution consistently. Cancellation SHALL write nothing. The save SHALL use exact target identity, concurrency validation and idempotent request handling. Failed saves SHALL preserve unsaved edits and report failure truthfully. Disabling self-rating SHALL retain the execution's existing preference behavior.
 
 #### Scenario: Edit an existing self-rating
 
@@ -92,7 +92,7 @@ When self-rating is enabled for the execution, a durably saved reviewed submissi
 
 #### Scenario: Cancel or reject invalid input
 
-- **WHEN** the learner cancels editing or tries to save a rating outside the existing integer 1?5 scale
+- **WHEN** the learner cancels editing or tries to save a rating outside the existing integer 1–5 scale
 - **THEN** no learning records are changed and invalid input receives a readable error
 
 #### Scenario: Retry a lost response
