@@ -526,6 +526,13 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
 
     cards = []
     for record in practice_sets_data.list_saved(pool):
+        invalid = bool(record['validation_errors'] or record['missing_problem_ids'] or not record['count'])
+        disabled = " disabled" if invalid else ""
+        progress = record.get('progress')
+        progress_text = (" · 已完成 " + str(progress['completed']) + "/" + str(progress['total'])) if progress else ""
+        availability = ("<p class='inline-error'>无法开始：" + html.escape(
+            "缺少题目 " + ', '.join(record['missing_problem_ids']) if record['missing_problem_ids']
+            else '; '.join(record['validation_errors']) or '试卷为空') + "</p>") if invalid else ""
         rows = []
         for index, item in enumerate(record["plan"]["items"]):
             problem = pool.problem(item["problem_id"]) or {}
@@ -556,11 +563,12 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "<div class='practice-set-card-title'>"
             + "<p class='section-kicker'>试卷</p><h2>"
             + html.escape(record["title"]) + "</h2><p class='muted'>"
-            + str(record["count"]) + " 题 · 只保存题目与顺序</p></div>"
+            + str(record["count"]) + " 题" + progress_text + "</p>" + availability + "</div>"
             + "<div class='practice-set-card-actions'>"
-            + "<button class='primary sm' type='button' data-set-start>开始练习</button>"
+            + "<button class='primary sm' type='button' data-set-start" + disabled + ">"
+            + ("继续练习" if progress else "开始练习") + "</button>"
             + "<button class='outline sm' type='button' data-set-rename>改名</button>"
-            + "<button class='outline sm' type='button' data-set-export>导出</button>"
+            + "<button class='outline sm' type='button' data-set-export" + disabled + ">导出</button>"
             + "<button class='ghost sm' type='button' data-set-delete>删除</button>"
             + "</div></summary>"
             + "<ol class='practice-set-items'>" + "".join(rows) + "</ol>"
@@ -577,7 +585,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     middle = (
         _page_header(
             "练习 / 组卷", "组卷",
-            "试卷只保存题目与顺序；开始后仍进入同一个练习执行过程。",
+            "每份试卷独立保存作答进度，切换后可以继续。",
             "<a class='outline button-link' href='/w/"
             + html.escape(workspace["name"]) + "/practice'>去练习页选题</a>",
         )

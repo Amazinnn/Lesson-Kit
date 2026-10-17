@@ -29,4 +29,22 @@ Proposed schema/field changes must be documented in DATA_MODEL and migrated only
 
 ## Acceptance and handoff
 
-Use isolated course copies and explicit operator authorization for real-data changes. Test A/B switching across refresh/server restart, semantic vs metadata edits, deleted items in several Papers, stale submissions and absence of learning-row changes. Full tests, compileall, strict OpenSpec, extraction guard and an independent isolated browser walkthrough are release gates. This conversation does not execute them as product acceptance.
+### Implementation storage and coordination
+
+Keep `active_practice` and its items as the selected execution. Add a Data-owned `paper_state`
+row per saved Paper with an integer structure generation and a parked checkpoint JSON; switching
+parks/restores the existing execution shape. Add monotonic execution IDs and question-content
+revisions. Selected items store their content revision and answer/choice draft separately from attempts.
+All new schema is added through `ensure_workbench_schema`; no normal startup silently migrates a pool.
+
+Question semantic comparison is one pure Domain rule; Data content updates and batch patches invoke
+the same revision invalidation inside their existing transactions. Dormant checkpoints reconcile their
+stored item revisions before being resumed. Tombstoned question rows reserve their identity and keep
+historical foreign keys valid, while active pool queries omit them.
+
+Paper JSON and SQLite changes use a durable pending-file value in `paper_state`. Reset/deletion and
+the file intent commit together; file publication is idempotent and retried before Paper access.
+An unfinished publication blocks affected Paper use until it can be reconciled. No separate persistence
+service, dependency, hash ID or attempt reconstruction is introduced.
+
+Use isolated course copies and explicit operator authorization for real-data changes. Test A/B switching across refresh/server restart, semantic vs metadata edits, deleted items in several Papers, stale submissions and absence of learning-row changes. Full tests, compileall, strict OpenSpec, extraction guard and an independent isolated browser walkthrough are release gates. Record implementation and acceptance evidence in `docs/STATUS-paper-progress-2026-10-17.md`; a planning artifact alone never proves runtime acceptance.

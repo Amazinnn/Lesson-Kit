@@ -11,6 +11,7 @@ from pathlib import Path
 
 from workbench.bridge import conversation_providers
 from workbench.data import content as content_data
+from workbench.data import paper_progress
 from workbench.data import typesetting as typesetting_data
 from workbench.domain import cards as card_rules
 from workbench.domain import content_identity
@@ -310,14 +311,14 @@ def apply(db_path, gate_path, backup_path=None):
         )
         for item in solutions["items"]:
             if item["problem"] in mappings:
-                cursor = conn.execute(
+                cursor = paper_progress.update_question(conn,
                     "UPDATE problems SET solution=?, kp_ids=?, ingest_batch_id=?"
                     f"{rating_reset} WHERE problem_id=?",
                     (item["solution"], mappings[item["problem"]], batch_id,
                      item["problem"]),
                 )
             else:
-                cursor = conn.execute(
+                cursor = paper_progress.update_question(conn,
                     "UPDATE problems SET solution=?, ingest_batch_id=?"
                     f"{rating_reset} WHERE problem_id=?",
                     (item["solution"], batch_id, item["problem"]),
@@ -1782,7 +1783,7 @@ def _apply_problem_patch(database, manifest, backup, course=None):
                 if plan["previous"].get("difficulty") is not None:
                     cleared += 1
             assignments.append("updated_at=datetime('now')")
-            cursor = conn.execute(
+            cursor = paper_progress.update_question(conn,
                 f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
                 (*values, plan["problem_id"]),
             )
@@ -1828,7 +1829,7 @@ def _rollback_problem_patch(conn, batch_id):
         assignments = [f"{field}=?" for field in fields]
         values = list(fields.values())
         assignments.append("updated_at=datetime('now')")
-        conn.execute(
+        paper_progress.update_question(conn,
             f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
             (*values, entry["problem_id"]),
         )
@@ -1846,7 +1847,7 @@ def _rollback_gate_report(conn, batch_id):
     for entry in snapshot.get("previous", []):
         fields = entry.get("fields") or {}
         assignments = [f"{field}=?" for field in fields]
-        conn.execute(
+        paper_progress.update_question(conn,
             f"UPDATE problems SET {', '.join(assignments)} WHERE problem_id=?",
             (*fields.values(), entry["problem_id"]),
         )
@@ -1922,7 +1923,7 @@ def _apply_figure_patch(database, manifest, backup_path=None, course=None):
             item = next(i for i in manifest["items"] if i.get("owner_id") == plan["owner_id"])
             paths = _merge_figure_paths(
                 plan["previous"][1], [entry["logical"] for entry in plan["files"]])
-            conn.execute(
+            paper_progress.update_question(conn,
                 "UPDATE problems SET problem_text=?, figure_paths=? WHERE problem_id=?",
                 (item["text"], json.dumps(paths, ensure_ascii=False), plan["owner_id"]),
             )
@@ -2123,7 +2124,7 @@ def _rollback_figure_patch(conn, batch_id):
     snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
     restored = 0
     for previous in snapshot.get("previous", []):
-        conn.execute(
+        paper_progress.update_question(conn,
             "UPDATE problems SET problem_text=?, figure_paths=? WHERE problem_id=?",
             (previous["text"], previous["figure_paths"], previous["owner_id"]),
         )
@@ -2173,6 +2174,25 @@ def _rollback_blockers(conn, batch_id):
             continue
         for row in conn.execute(query, params):
             blockers.append(f"{table}: {':'.join(str(value) for value in row)}")
+    # Rollback remains a refusal boundary, not an implicit Paper edit.
+    ids = {row[0] for row in conn.execute('SELECT problem_id FROM problems WHERE ingest_batch_id=?', (batch_id,))}
+    if ids and paper_progress.available(conn):
+        for row in conn.execute("SELECT item_id FROM active_practice_items WHERE item_type='problem'"):
+            if row[0] in ids:
+                blockers.append('active_practice: ' + row[0])
+        for row in conn.execute('SELECT checkpoint_json,pending_json FROM paper_state'):
+            for raw in row:
+                if not raw:
+                    continue
+                record = json.loads(raw)
+                items = record.get('plan', record).get('items', [])
+                if any(item.get('problem_id', item.get('item_id')) in ids for item in items):
+                    blockers.append('paper_state: current question reference')
+        database = Path(conn.execute('PRAGMA database_list').fetchone()[2])
+        for path in (database.parent.parent / '.lessonkit' / 'practice-sets').glob('ps-*.json'):
+            record = json.loads(path.read_text(encoding='utf-8'))
+            if any(item.get('problem_id') in ids for item in record.get('plan', {}).get('items', [])):
+                blockers.append('saved Paper: ' + path.stem)
     return blockers
 
 

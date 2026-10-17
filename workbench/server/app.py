@@ -59,6 +59,8 @@ ROUTES = [
     ("DELETE", "/api/w/{name}/practice-sets/{practice_set_id}", api_mod.practice_set_delete),
     ("GET", "/api/w/{name}/practice-sets/{practice_set_id}/render", api_mod.practice_set_render),
     ("POST", "/api/w/{name}/practice-sets/{practice_set_id}/start", api_mod.practice_set_start),
+    ("POST", "/api/w/{name}/practice-sets/{practice_set_id}/preview", api_mod.practice_set_preview),
+    ("POST", "/api/w/{name}/practice/draft", api_mod.practice_draft),
     ("GET", "/api/w/{name}/practice/current", api_mod.active_practice_get),
     ("POST", "/api/w/{name}/practice/current", api_mod.active_practice_create),
     ("PATCH", "/api/w/{name}/practice/current", api_mod.active_practice_update),

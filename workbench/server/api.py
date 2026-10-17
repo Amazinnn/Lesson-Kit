@@ -352,7 +352,7 @@ def practice_set_get(pool, workspace, params, body):
 
 def practice_set_update(pool, workspace, params, body):
     body = _request_object(body)
-    allowed = {"title", "problem_ids", "request"}
+    allowed = {"title", "problem_ids", "request", "description", "confirmation"}
     extra = set(body) - allowed
     if extra:
         raise ApiError(400, f"unsupported practice-set field: {sorted(extra)[0]}")
@@ -363,7 +363,8 @@ def practice_set_update(pool, workspace, params, body):
             pool, params["practice_set_id"],
             title=body.get("title"),
             problem_ids=body.get("problem_ids"),
-            request=body.get("request"))
+            request=body.get("request"), description=body.get("description"),
+            confirmation=body.get("confirmation"))
     except ValueError as exc:
         raise ApiError(400, str(exc)) from exc
 
@@ -394,26 +395,9 @@ def practice_set_start(pool, workspace, params, body):
     if rating_mode not in {"immediate", "batch", "off"}:
         raise ApiError(400, "rating_mode must be immediate, batch, or off")
     try:
-        record = practice_sets.get_saved(pool, params["practice_set_id"])
-        problem_ids = [item["problem_id"] for item in record["plan"]["items"]]
-        kp_ids = []
-        for problem_id in problem_ids:
-            problem = pool.problem(problem_id)
-            for kp_id in (problem or {}).get("kp_ids", []):
-                if kp_id not in kp_ids:
-                    kp_ids.append(kp_id)
-        return active_practice.create(pool, {
-            "source_kind": "practice_set",
-            "source_ref": record["practice_set_id"],
-            "source_label": record["title"],
-            "kp_ids": kp_ids,
-            "practice_mode": practice_mode,
-            "rating_mode": rating_mode,
-            "items": [
-                {"item_type": "problem", "item_id": problem_id}
-                for problem_id in problem_ids
-            ],
-        }, replace=replace)
+        return active_practice.start_saved(pool, params['practice_set_id'],
+                                           practice_mode=practice_mode,
+                                           rating_mode=rating_mode, replace=replace)
     except active_practice.ActivePracticeConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except (active_practice.ActivePracticeError, ValueError) as exc:
@@ -447,6 +431,13 @@ def active_practice_update(pool, workspace, params, body):
     state = body.get("state")
     attempt_id = body.get("attempt_id")
     try:
+        from workbench.data import paper_progress
+        if body.get('practice_context') is not None:
+            with pool.transaction(immediate=True):
+                paper_progress.guard(pool, body['practice_context'], position=position)
+                return active_practice.mark(pool, position, state, attempt_id=attempt_id)
+        if paper_progress.selected_saved(pool):
+            raise active_practice.ActivePracticeConflict('stale practice page: refresh before advancing')
         return active_practice.mark(
             pool, position, state, attempt_id=attempt_id)
     except active_practice.ActivePracticeConflict as exc:
@@ -458,6 +449,27 @@ def active_practice_update(pool, workspace, params, body):
 def active_practice_delete(pool, workspace, params, body):
     try:
         return active_practice.clear(pool)
+    except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_set_preview(pool, workspace, params, body):
+    try:
+        return practice_sets.preview_update(pool, params['practice_set_id'], **_request_object(body))
+    except (TypeError, ValueError) as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_draft(pool, workspace, params, body):
+    body = _request_object(body)
+    if not isinstance(body.get('practice_context'), dict):
+        raise ApiError(409, 'stale draft: reload the current Paper')
+    try:
+        return active_practice.save_draft(pool, body.get('execution_id'), body.get('position'),
+                                          body.get('draft'), context=body['practice_context'],
+                                          sequence=body.get('sequence'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
     except active_practice.ActivePracticeError as exc:
         raise ApiError(400, str(exc)) from exc
 
@@ -494,10 +506,13 @@ def practice(pool, workspace, params, body):
         or practice_position < 0
     ):
         raise ApiError(400, "practice_position must be a non-negative integer")
-    return attempts_data.record_result(
-        pool, problem_id, result, note=body.get("note"),
-        answer_text=body.get("answer_text"),
-        practice_position=practice_position)
+    try:
+        return attempts_data.record_result(
+            pool, problem_id, result, note=body.get("note"),
+            answer_text=body.get("answer_text"), practice_position=practice_position,
+            practice_context=body.get('practice_context'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
 
 
 def feedback_record(pool, workspace, params, body):
@@ -542,10 +557,12 @@ def feedback_record(pool, workspace, params, body):
         return attempts_data.record_browser_feedback(
             pool, item_type, item_id, rating=rating, note=note,
             direction=direction, attempt_id=attempt_id,
-            request_id=_browser_request_id(body))
+            request_id=_browser_request_id(body), practice_context=body.get('practice_context'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
     except attempts_data.RequestConflict as exc:
         raise ApiError(409, str(exc)) from exc
-    except attempts_data.ManifestError as exc:
+    except (attempts_data.ManifestError, active_practice.ActivePracticeError) as exc:
         raise ApiError(400, str(exc)) from exc
 
 
@@ -581,10 +598,13 @@ def attempt_record(pool, workspace, params, body):
             pool, problem_id, answer_text=answer_text,
             verdict=None if verdict is None else int(verdict), choices=choices,
             request_id=_browser_request_id(body),
-            practice_position=practice_position, stuck=stuck)
+            practice_position=practice_position, stuck=stuck,
+            practice_context=body.get('practice_context'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
     except attempts_data.RequestConflict as exc:
         raise ApiError(409, str(exc)) from exc
-    except attempts_data.ManifestError as exc:
+    except (attempts_data.ManifestError, active_practice.ActivePracticeError) as exc:
         raise ApiError(400, str(exc)) from exc
 
 

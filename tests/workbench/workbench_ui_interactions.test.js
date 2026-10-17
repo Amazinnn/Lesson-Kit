@@ -4,7 +4,165 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+
+test("saved Paper drafts restore separately from submitted answers and persist with revision context", async () => {
+  const calls = [];
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const practice = {
+    source_kind: "paper", source_ref: "ps-001", execution_id: 10, paper_generation: 1,
+    kp_ids: [], practice_mode: "exam", rating_mode: "off", cursor: 0,
+    progress: { completed: 0, answered: 0, stuck: 0, remaining: 1, total: 1 },
+    items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+      content_revision: 3, draft: { answer: "server draft", choices: [] },
+      payload: { problem_id: "p-1", problem_text: "Q1" } }],
+  };
+  runWorkbench({ elements, fetch: (url, options) => {
+    calls.push({ url, options });
+    return jsonResponse(url.endsWith("/practice/current") ? { practice } : {});
+  } });
+  await flush();
+  elements["resume-practice"].click();
+  assert.equal(elements["answer-box"].value, "server draft");
+  assert.equal(elements["answer-box"].disabled, false);
+  elements["answer-box"].value = "edited draft";
+  elements["answer-box"].trigger("input");
+  await flush();
+  const saved = calls.find(call => call.url.endsWith("/practice/draft"));
+  assert.ok(saved);
+  assert.equal(saved.options.keepalive, true);
+  const body = JSON.parse(saved.options.body);
+  assert.equal(body.draft.answer, "edited draft");
+  assert.equal(body.practice_context.execution_id, 10);
+  assert.equal(body.practice_context.content_revision, 3);
+  assert.equal(calls.some(call => call.url.endsWith("/attempts")), false);
+});
 const vm = require("node:vm");
+
+test("selecting B replaces A's cached deck even for a shared question and ignores A's late acknowledgement", async () => {
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const tokenA = { execution_id: 1, paper_id: "ps-001", paper_generation: 1, item_id: "shared", content_revision: 1, position: 0 };
+  const tokenB = { ...tokenA, execution_id: 2, paper_id: "ps-002" };
+  const storage = new FakeStorage({
+    wb_practice_mode_alpha: "exam", wb_practice_rating_mode_alpha: "off",
+    wb_session_alpha: JSON.stringify({ v: 2, cursor: 0, items: [{
+      problem_id: "shared", state: "active", practice_context: tokenA,
+      payload: { problem_id: "shared", problem_text: "A cached question" },
+      attempt_request: { request_id: "old-A", payload: { problem_id: "shared", practice_context: tokenA } },
+    }] }),
+  });
+  let acknowledgeA;
+  runWorkbench({ elements, storage, fetch: (url) => {
+    if (url.endsWith("/attempts")) return new Promise(resolve => { acknowledgeA = resolve; });
+    return jsonResponse({ practice: {
+      execution_id: 2, source_ref: "ps-002", paper_generation: 1, kp_ids: [],
+      practice_mode: "exam", rating_mode: "off", cursor: 0,
+      progress: { completed: 0, total: 1, remaining: 1 },
+      items: [{ position: 0, item_type: "problem", item_id: "shared", state: "pending", content_revision: 1,
+        payload: { problem_id: "shared", problem_text: "B current question" } }],
+    } });
+  } });
+  await flush();
+  assert.equal(elements.stream.innerHTML, "");
+  assert.deepEqual(JSON.parse(storage.getItem("wb_session_alpha")).items[0].practice_context, tokenB);
+  acknowledgeA(jsonResponse({ attempt_id: 99 })); await flush();
+  const b = JSON.parse(storage.getItem("wb_session_alpha")).items[0];
+  assert.equal(b.attempt_id, undefined);
+  assert.equal(b.practice_context.execution_id, 2);
+  elements["resume-practice"].click();
+  assert.match(elements.stream.innerHTML, /B current question/);
+  assert.doesNotMatch(elements.stream.innerHTML, /A cached question/);
+});
+
+test("resuming the same execution preserves its unacknowledged answer request", async () => {
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  const token = { execution_id: 7, paper_id: "ps-001", paper_generation: 1, item_id: "p-1", content_revision: 1, position: 0 };
+  const request = { request_id: "pending-original", payload: { problem_id: "p-1", answer_text: "my answer", practice_context: token } };
+  const storage = new FakeStorage({ wb_practice_mode_alpha: "exam", wb_session_alpha: JSON.stringify({
+    v: 2, cursor: 0, items: [{ problem_id: "p-1", state: "unrated", answer_text: "my answer", practice_context: token,
+      attempt_request: request, attempt_status: "failed", payload: { problem_id: "p-1", problem_text: "Q" } }],
+  }) });
+  runWorkbench({ elements, storage, fetch: (url) => {
+    if (url.endsWith("/attempts")) return Promise.reject(new Error("offline"));
+    return jsonResponse({ practice: { execution_id: 7, source_ref: "ps-001", paper_generation: 1,
+      practice_mode: "exam", rating_mode: "immediate", kp_ids: [], cursor: 0,
+      progress: { completed: 0, total: 1, remaining: 1 },
+      items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending", content_revision: 1,
+        payload: { problem_id: "p-1", problem_text: "Q" } }],
+    } });
+  } });
+  await flush(); elements["resume-practice"].click(); await flush();
+  const item = JSON.parse(storage.getItem("wb_session_alpha")).items[0];
+  assert.deepEqual(item.attempt_request, request);
+  assert.equal(item.answer_text, "my answer");
+});
+
+test("broken legacy progress stays visible and refuses to resume missing questions", async () => {
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  runWorkbench({ elements, fetch: () => jsonResponse({ practice: {
+    unavailable_item_ids: ["old-question"], kp_ids: [], cursor: 0,
+    progress: { completed: 1, total: 70, stuck: 1, remaining: 69 },
+    items: [{ item_id: "old-question", item_type: "problem", state: "pending", payload: null }],
+  } }) });
+  await flush();
+  assert.equal(elements["resume-practice"].disabled, true);
+  assert.match(elements["active-practice-meta"].textContent, /old-question/);
+  elements["resume-practice"].click();
+  assert.equal(elements.stream.innerHTML, "");
+});
+
+test("a failed draft write survives reload and retries without creating an attempt", async () => {
+  const local = new FakeStorage();
+  const practice = {
+    source_ref: "ps-001", execution_id: 42, paper_generation: 1,
+    kp_ids: [], practice_mode: "exam", rating_mode: "off", cursor: 0,
+    progress: { completed: 0, remaining: 1, total: 1 },
+    items: [{ position: 0, item_type: "problem", item_id: "p-1", state: "pending",
+      content_revision: 1, payload: { problem_id: "p-1", problem_text: "Q" } }],
+  };
+  const first = { layout: layout(), ...durablePracticeElements() };
+  runWorkbench({ elements: first, local, fetch: (url) => {
+    if (url.endsWith("/practice/draft")) return Promise.reject(new Error("offline"));
+    return jsonResponse({ practice });
+  } });
+  await flush(); first["resume-practice"].click();
+  first["answer-box"].value = "keep my draft";
+  first["answer-box"].trigger("input"); await flush();
+  assert.ok(local.getItem("wb_paper_draft_alpha_42_0"));
+  const second = { layout: layout(), ...durablePracticeElements() };
+  const calls = [];
+  runWorkbench({ elements: second, local, fetch: (url, options) => {
+    calls.push({ url, options });
+    return jsonResponse(url.endsWith("/practice/current") ? { practice } : {});
+  } });
+  await flush(); second["resume-practice"].click(); await flush();
+  assert.equal(second["answer-box"].value, "keep my draft");
+  assert.equal(local.getItem("wb_paper_draft_alpha_42_0"), null);
+  assert.ok(calls.some(call => call.url.endsWith("/practice/draft")));
+  assert.equal(calls.some(call => call.url.endsWith("/attempts")), false);
+});
+
+test("duplicate quiz explanation appears once while a distinct useful explanation stays visible", async () => {
+  for (const item of [
+    { solution: "matching reason", error_reason: "matching reason", source_answer: "short answer" },
+    { solution: "useful source answer", error_reason: "different reason", source_answer: "useful source answer" },
+  ]) {
+    const elements = { layout: layout(), ...practiceElements() };
+    const problem = { problem_id: "mq-1", problem_text: "Question", ...item,
+      solution_origin: "generated", micro_quiz: { quiz_type: "yes_no", answer_key: "否", error_reason: item.error_reason } };
+    elements.stream.queryAll = selector => selector === "[data-choice-option]:checked" ? [{ value: "否" }] : [];
+    runWorkbench({ elements, fetch: (url) => {
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      return jsonResponse(url.endsWith("/problem/mq-1") ? { problem } : { problems: [problem] });
+    } });
+    elements["practice-mode-immediate"].checked = true;
+    elements["practice-mode-immediate"].trigger("change");
+    elements["start-practice"].click(); await flush();
+    elements["answer-submit"].click(); await flush();
+    elements["show-answer"].click(); await flush();
+    assert.equal(elements.stream._innerHTML.split(item.solution).length - 1, 1);
+    assert.doesNotMatch(elements.stream._innerHTML, /AI 生成解析/);
+  }
+});
 const GraphPhysics = require("../../workbench/server/static/graph-physics.js");
 const PracticeDeck = require("../../workbench/server/static/practice-deck.js");
 const GRAPH_PHYSICS_SOURCE = fs.readFileSync(
@@ -3612,7 +3770,8 @@ test("revealing a micro quiz also shows its written explanation", async () => {
   assert.ok(html.includes("为什么"));
   assert.ok(html.includes("只有一个正因数"));
   // The verdict and the analysis are separate sections, both visible.
-  assert.match(html, /section-kicker'>AI 生成解析</);
+  assert.match(html, /section-kicker'>解析</);
+  assert.doesNotMatch(html, /AI 生成解析/);
   assert.match(html, /按定义不是质数/);
   assert.equal(html.indexOf("只有一个正因数") < html.indexOf("按定义不是质数"), true);
   assert.equal(elements["feedback-area"].classList.contains("hidden"), false);
@@ -3699,7 +3858,8 @@ test("the reveal tells a source answer, a source solution, and an AI explanation
   fresh["show-answer"].click();
   await flush();
   html = fresh.stream._innerHTML;
-  assert.match(html, /AI 生成解析/);
+  assert.match(html, /section-kicker'>解析</);
+  assert.doesNotMatch(html, /AI 生成解析/);
   assert.match(html, /AI 推导/);
   assert.match(html, /教材答案/);
 });

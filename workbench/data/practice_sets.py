@@ -11,11 +11,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from workbench.domain import practice_set as render_rules
+from workbench.data import paper_progress
 
 FIGURE_REFERENCE = re.compile(r"!\[[^\]]*\]\(([^)]+)\)")
 
 KIND = "practice-set"
-FIELDS = {"kind", "title", "course", "request", "shortage", "items"}
+FIELDS = {"kind", "title", "course", "request", "shortage", "items", "description"}
 ITEM_FIELDS = {"problem_id", "reason"}
 
 
@@ -176,6 +177,11 @@ def _next_saved_id(pool):
     # scan must include it: reusing a freed id would merge two different
     # papers into one run-history group.
     maximum = 0
+    if paper_progress.available(pool.connect()):
+        for (ref,) in pool.connect().execute('SELECT paper_id FROM paper_state'):
+            match = SAVED_ID.fullmatch(ref or '')
+            if match:
+                maximum = max(maximum, int(match.group(1)))
     folder = _saved_dir(pool)
     if folder.is_dir():
         for path in folder.glob("ps-*.json"):
@@ -207,8 +213,9 @@ def _atomic_json(path, value):
 
 def _saved_record(pool, practice_set_id, plan, created_at, updated_at):
     checked, errors = _validated(pool, plan)
-    if errors:
-        raise ValueError("; ".join(errors))
+    # Container management must survive unavailable items and an empty list.
+    missing = [item['problem_id'] for item in checked.get('items', [])
+               if isinstance(item, dict) and item.get('problem_id') and pool.problem(item['problem_id']) is None]
     return {
         "practice_set_id": practice_set_id,
         "title": checked.get("title") or "练习",
@@ -216,11 +223,22 @@ def _saved_record(pool, practice_set_id, plan, created_at, updated_at):
         "updated_at": updated_at,
         "count": len(checked["items"]),
         "plan": checked,
+        "missing_problem_ids": missing,
+        "validation_errors": errors,
+        "progress": paper_progress.summary(pool, practice_set_id),
+        "generation": paper_progress.state(pool.connect(), practice_set_id)['generation']
+            if paper_progress.available(pool.connect()) else 1,
     }
 
 
 def list_saved(pool):
     """List reusable papers without creating any learning evidence."""
+    with pool.transaction(immediate=True):
+        return _list_saved(pool)
+
+
+def _list_saved(pool):
+    paper_progress.flush_files(pool)
     folder = _saved_dir(pool)
     if not folder.is_dir():
         return []
@@ -228,6 +246,12 @@ def list_saved(pool):
     for path in sorted(folder.glob("ps-*.json")):
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
+            if paper_progress.available(pool.connect()):
+                pending = paper_progress.state(pool.connect(), raw['practice_set_id'])
+                if pending['pending_delete']:
+                    continue
+                if pending['pending_json']:
+                    raw = json.loads(pending['pending_json'])
             record = _saved_record(
                 pool, raw["practice_set_id"], raw["plan"],
                 raw["created_at"], raw["updated_at"])
@@ -238,7 +262,20 @@ def list_saved(pool):
 
 
 def get_saved(pool, practice_set_id):
+    with pool.transaction(immediate=True):
+        return _get_saved(pool, practice_set_id)
+
+
+def _get_saved(pool, practice_set_id):
+    paper_progress.flush_files(pool)
     path = _saved_path(pool, practice_set_id)
+    if paper_progress.available(pool.connect()):
+        pending = paper_progress.state(pool.connect(), practice_set_id)
+        if pending['pending_delete']:
+            raise FileNotFoundError(f'unknown practice set: {practice_set_id}')
+        if pending['pending_json']:
+            raw = json.loads(pending['pending_json'])
+            return _saved_record(pool, practice_set_id, raw['plan'], raw['created_at'], raw['updated_at'])
     if not path.is_file():
         raise FileNotFoundError(f"unknown practice set: {practice_set_id}")
     raw = json.loads(path.read_text(encoding="utf-8"))
@@ -265,11 +302,19 @@ def _plan_from_ids(pool, title, problem_ids, request=None):
     return plan
 
 
-def create_saved(pool, title, problem_ids, request=None):
+def create_saved(pool, title, problem_ids, request=None, description=None):
+    with pool.transaction(immediate=True):
+        return _create_saved(pool, title, problem_ids, request=request, description=description)
+
+
+def _create_saved(pool, title, problem_ids, request=None, description=None):
     if not isinstance(title, str) or not title.strip():
         raise ValueError("title is required")
     if request is not None and not isinstance(request, dict):
         raise ValueError("request must be an object")
+    if problem_ids is not None and (not isinstance(problem_ids, list) or not all(
+            isinstance(item, str) and item for item in problem_ids)):
+        raise ValueError('problem_ids must be a string list')
     practice_set_id = _next_saved_id(pool)
     now = _timestamp()
     record = {
@@ -278,6 +323,10 @@ def create_saved(pool, title, problem_ids, request=None):
         "updated_at": now,
         "plan": _plan_from_ids(pool, title.strip(), problem_ids, request=request),
     }
+    if description is not None:
+        if not isinstance(description, str):
+            raise ValueError('description must be a string')
+        record['plan']['description'] = description
     _atomic_json(_saved_path(pool, practice_set_id), record)
     return get_saved(pool, practice_set_id)
 
@@ -292,11 +341,11 @@ def save_manifest(pool, manifest):
         plan.get("title"),
         [item["problem_id"] for item in plan["items"]],
         request=plan.get("request"),
+        description=plan.get('description'),
     )
 
 
-def update_saved(pool, practice_set_id, *, title=None, problem_ids=None, request=None):
-    current = get_saved(pool, practice_set_id)
+def _updated_plan(pool, current, *, title=None, problem_ids=None, request=None, description=None):
     plan = current["plan"]
     next_title = plan.get("title") or "练习"
     if title is not None:
@@ -305,24 +354,73 @@ def update_saved(pool, practice_set_id, *, title=None, problem_ids=None, request
         next_title = title.strip()
     if request is not None and not isinstance(request, dict):
         raise ValueError("request must be an object")
-    if problem_ids is None:
-        problem_ids = [item["problem_id"] for item in plan["items"]]
-    next_plan = _plan_from_ids(
-        pool, next_title, problem_ids,
-        request=plan.get("request") if request is None else request)
-    raw = {
-        "practice_set_id": practice_set_id,
-        "created_at": current["created_at"],
-        "updated_at": _timestamp(),
-        "plan": next_plan,
-    }
-    _atomic_json(_saved_path(pool, practice_set_id), raw)
+    if problem_ids is not None and (not isinstance(problem_ids, list) or not all(
+            isinstance(item, str) and item for item in problem_ids)):
+        raise ValueError('problem_ids must be a string list')
+    if problem_ids is not None and problem_ids != [item['problem_id'] for item in plan['items']]:
+        next_request = plan.get('request') if request is None else request
+        next_plan = (_plan_from_ids(pool, next_title, problem_ids, request=next_request)
+                     if problem_ids else build(next_title, [], request=next_request))
+        next_plan['course'] = pool.course
+        if 'description' in plan:
+            next_plan['description'] = plan['description']
+    else:
+        next_plan = {**plan, 'title': next_title}
+    if request is not None:
+        next_plan['request'] = request
+    if description is not None:
+        if not isinstance(description, str):
+            raise ValueError('description must be a string')
+        next_plan['description'] = description
+    return next_plan
+
+
+def preview_update(pool, practice_set_id, **fields):
+    from workbench.data import active_practice
+    current = get_saved(pool, practice_set_id)
+    next_plan = _updated_plan(pool, current, **fields)
+    changed = [i['problem_id'] for i in current['plan']['items']] != [i['problem_id'] for i in next_plan['items']]
+    active = active_practice.current(pool, resolve=False)
+    checkpoint = active if active and active.get('source_ref') == practice_set_id else None
+    if checkpoint is None and paper_progress.available(pool.connect()):
+        parked = paper_progress.state(pool.connect(), practice_set_id)['checkpoint_json']
+        checkpoint = json.loads(parked) if parked else None
+    items = (checkpoint or {}).get('items', [])
+    confirmation = dict(generation=current['generation'],
+                        problem_ids=[i['problem_id'] for i in next_plan['items']],
+                        execution_id=(checkpoint or {}).get('execution_id'),
+                        progress=[dict(position=i['position'], state=i['state'],
+                                       attempt_id=i.get('attempt_id'), draft=i.get('draft')) for i in items])
+    return dict(practice_set_id=practice_set_id, generation=current['generation'],
+                structure_changed=changed, resets_progress=bool(changed and checkpoint),
+                completed_items=sum(i['state'] != 'pending' for i in items),
+                draft_items=sum(bool(i.get('draft')) for i in items), confirmation=confirmation)
+
+
+def update_saved(pool, practice_set_id, *, confirmation=None, **fields):
+    with pool.transaction(immediate=True):
+        current = get_saved(pool, practice_set_id)
+        next_plan = _updated_plan(pool, current, **fields)
+        preview = preview_update(pool, practice_set_id, **fields)
+        if preview['structure_changed']:
+            if confirmation != preview['confirmation']:
+                raise ValueError('confirm the current Paper update preview before changing its items')
+            paper_progress.reset(pool, practice_set_id)
+        if next_plan == current['plan']:
+            return current
+        raw = dict(practice_set_id=practice_set_id, created_at=current['created_at'],
+                   updated_at=_timestamp(), plan=next_plan)
+        paper_progress.queue_file(pool, practice_set_id, raw)
+    paper_progress.flush_files(pool)
     return get_saved(pool, practice_set_id)
 
 
 def delete_saved(pool, practice_set_id):
-    current = get_saved(pool, practice_set_id)
-    _saved_path(pool, practice_set_id).unlink()
+    with pool.transaction(immediate=True):
+        current = get_saved(pool, practice_set_id)
+        paper_progress.reset(pool, practice_set_id)
+        paper_progress.queue_file(pool, practice_set_id, None)
+    paper_progress.flush_files(pool)
     return {"deleted": True, "practice_set_id": practice_set_id, "title": current["title"]}
 
 

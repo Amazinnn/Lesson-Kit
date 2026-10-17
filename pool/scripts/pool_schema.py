@@ -986,4 +986,29 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         "CREATE INDEX IF NOT EXISTS idx_review_schedule_due "
         "ON review_schedule(due_at)"
     )
+    for name, ddl in (
+        ("paper_state", "paper_id TEXT PRIMARY KEY, generation INTEGER NOT NULL DEFAULT 1, checkpoint_json TEXT, pending_json TEXT, pending_delete INTEGER NOT NULL DEFAULT 0"),
+        ("problem_revisions", "problem_id TEXT PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1"),
+        ("practice_execution_ids", "id INTEGER PRIMARY KEY AUTOINCREMENT"),
+    ):
+        if not table_exists(conn, name):
+            conn.execute(f"CREATE TABLE {name} ({ddl})")
+            changes.append(name)
+    changes.extend(ensure_columns(conn, "active_practice", [
+        ("execution_id", "INTEGER NOT NULL DEFAULT 0"),
+        ("paper_generation", "INTEGER NOT NULL DEFAULT 1"),
+    ]))
+    changes.extend(ensure_columns(conn, "active_practice_items", [
+        ("content_revision", "INTEGER NOT NULL DEFAULT 1"), ("draft_json", "TEXT"),
+        ("draft_sequence", "INTEGER NOT NULL DEFAULT 0"),
+    ]))
+    changes.extend(ensure_columns(conn, "practice_runs", [
+        ("execution_id", "INTEGER"), ("paper_generation", "INTEGER NOT NULL DEFAULT 1")]))
+    if table_exists(conn, "problems"):
+        changes.extend(ensure_columns(conn, "problems", [("deleted_at", "TEXT")]))
+    legacy = conn.execute("SELECT execution_id FROM active_practice WHERE singleton=1").fetchone()
+    if legacy and legacy[0] == 0:
+        execution_id = conn.execute("INSERT INTO practice_execution_ids DEFAULT VALUES").lastrowid
+        conn.execute("UPDATE active_practice SET execution_id=? WHERE singleton=1", (execution_id,))
+        changes.append("active_practice.execution-identity")
     return changes

@@ -5,10 +5,11 @@ import json
 
 def snapshot(conn):
     """Return the evaluator's plain input rows using SELECT-only queries."""
+    active = ' WHERE deleted_at IS NULL' if any(row[1] == 'deleted_at' for row in conn.execute('PRAGMA table_info(problems)')) else ''
     problems = [
         {"id": row["problem_id"], "kp_ids": json.loads(row["kp_ids"]),
          "attempts": [], "feedback": [], "schedule": None}
-        for row in _rows(conn, "SELECT problem_id, kp_ids FROM problems ORDER BY problem_id")
+        for row in _rows(conn, "SELECT problem_id, kp_ids FROM problems" + active + " ORDER BY problem_id")
     ]
     kps = [
         {"id": row["kp_id"], "feedback": [], "schedule": None}

@@ -1936,8 +1936,9 @@
         post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
           window.location = "/w/" + encodeURIComponent(WS) + "/practice";
         }).catch(function (error) {
-          if (window.confirm && window.confirm(
-            "当前还有一轮练习没有完成。开始这张试卷会清除旧进度，继续吗？"
+          if (error.status === 409 && error.message === "an unfinished temporary practice already exists"
+              && window.confirm && window.confirm(
+            "当前有未完成的临时练习。替换临时练习后开始此卷？其他已保存试卷的进度会保留。"
           )) {
             paperStartBody.replace = true;
             post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
@@ -2000,7 +2001,16 @@
         reloadPage();
         return;
       }
-      patch("/practice-sets/" + encoded, { problem_ids: ids })
+      post("/practice-sets/" + encoded + "/preview", { problem_ids: ids }).then(function (impact) {
+        var message = "修改本卷题目顺序或名单，将清除本卷的未完成进度和草稿。"
+          + "当前已完成 " + (impact.completed_items || 0) + " 题，草稿 "
+          + (impact.draft_items || 0) + " 题；历史作答与其他试卷不变。继续吗？";
+        if (!window.confirm || !window.confirm(message)) {
+          reloadPage();
+          return;
+        }
+        return patch("/practice-sets/" + encoded, { problem_ids: ids, confirmation: impact.confirmation });
+      })
         .then(reloadPage)
         .catch(function (error) { practiceSetStatus(card, error.message); });
     });

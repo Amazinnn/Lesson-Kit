@@ -416,6 +416,21 @@ Managed papers live at `.lessonkit/practice-sets/ps-NNN.json`. The existing
 Data writer stores the paper plan and stable ID atomically; the browser list
 reads that same store. Saving does not write learning state or course SQLite.
 
+Corrections target identities explicitly; `save` always creates a new Paper,
+never an inferred overwrite by title or similar stem. Optional `description`
+is container metadata. Use `papers <workspace> list`, `get <ps-id>`,
+`preview <ps-id> --input <manifest>`, `update <ps-id> --input <manifest>
+--confirmation <preview.json>`, or `delete <ps-id>`. Preview/update accept an
+explicit item list and/or metadata. Metadata and effective no-op updates retain
+progress. Changing membership/order requires the current preview's confirmation
+object: target order, structure generation and exact unfinished states/drafts.
+If those change, obtain and confirm a fresh preview. Updates retain the ID and
+do not start practice. Question corrections use `data update problem <existing-id>`
+or `problem-patch`; changing answering type does not allocate a new question ID.
+Deleting a Paper leaves questions and evidence. Empty/unavailable containers
+stay inspectable, repairable and deletable, but cannot start/export. Pending
+file publication is Data-owned SQLite state, not manifest content (DATA_MODEL).
+
 These names are v1 compatibility surface: the manifest kind `practice-set`,
 the save receipt field `practice_set_id`, the `ps-NNN` IDs, the
 `.lessonkit/practice-sets/` store, and `/practice-sets/...` routes remain valid

@@ -99,12 +99,19 @@
     }).filter(function (src) { return !!src; });
   }
 
-  function updateSession(problemId, values, direction) {
+  function updateSession(problemId, values, direction, context) {
+    if (context !== undefined) {
+      var target = practiceDeck.items.find(function (item) {
+        return item.id === problemId && (item.direction || "") === (direction || "");
+      });
+      if (!target || JSON.stringify(target.practice_context || null) !== JSON.stringify(context)) return false;
+    }
     var active = currentProblem();
     var concreteDirection = direction === undefined && active && active.kind === "card"
       ? active.direction : direction;
     PracticeDeck.settle(practiceDeck, problemId, values, concreteDirection);
     persistDeck();
+    return true;
   }
 
   function newPracticeRequestId() {
@@ -121,17 +128,18 @@
     if (pendingAttemptRequests[saved.request_id]) {
       return pendingAttemptRequests[saved.request_id];
     }
-    updateSession(item.id, { attempt_status: "saving" }, item.direction);
+    updateSession(item.id, { attempt_status: "saving" }, item.direction, item.practice_context || null);
     var request = post("/attempts", saved.payload).then(function (recorded) {
-      updateSession(item.id, { attempt_id: recorded.attempt_id, attempt_status: "saved" },
-        item.direction);
-      if (recorded.practice) {
+      if (item.practice_context) localStorage.removeItem(draftKey(item));
+      var selected = updateSession(item.id, { attempt_id: recorded.attempt_id, attempt_status: "saved" },
+        item.direction, item.practice_context || null);
+      if (selected && recorded.practice) {
         activePractice = recorded.practice.completed ? null : recorded.practice.practice;
         renderResumeCard(activePractice);
       }
       return recorded.attempt_id;
     }).catch(function (error) {
-      updateSession(item.id, { attempt_status: "failed" }, item.direction);
+      updateSession(item.id, { attempt_status: "failed" }, item.direction, item.practice_context || null);
       throw error;
     });
     pendingAttemptRequests[saved.request_id] = request;
@@ -141,18 +149,19 @@
   }
 
   function saveItemFeedback(item, payload) {
+    if (item.practice_context) payload.practice_context = item.practice_context;
     var saved = item.feedback_request;
     if (!saved) {
       payload.request_id = newPracticeRequestId();
       saved = { request_id: payload.request_id, payload: payload };
-      updateSession(item.id, { feedback_request: saved }, item.direction);
+      updateSession(item.id, { feedback_request: saved }, item.direction, item.practice_context || null);
     }
-    updateSession(item.id, { feedback_status: "saving" }, item.direction);
+    updateSession(item.id, { feedback_status: "saving" }, item.direction, item.practice_context || null);
     return post("/feedback", saved.payload).then(function (result) {
-      updateSession(item.id, { state: "rated", feedback_status: "saved" }, item.direction);
+      updateSession(item.id, { state: "rated", feedback_status: "saved" }, item.direction, item.practice_context || null);
       return result;
     }).catch(function (error) {
-      updateSession(item.id, { feedback_status: "failed" }, item.direction);
+      updateSession(item.id, { feedback_status: "failed" }, item.direction, item.practice_context || null);
       throw error;
     });
   }
@@ -282,6 +291,27 @@
               : (row.feedback ? "rated" : "unrated"),
         });
         if (row.attempt_id) item.attempt_id = row.attempt_id;
+        if (practice.execution_id) {
+          item.practice_context = {
+            execution_id: practice.execution_id, paper_id: practice.source_ref || null,
+            paper_generation: practice.paper_generation, item_id: row.item_id,
+            content_revision: row.content_revision, position: row.position,
+          };
+          item.draft = row.draft || null;
+          item.draft_sequence = row.draft_sequence || 0;
+          var cached = practiceDeck.items.find(function (old) {
+            return JSON.stringify(old.practice_context) === JSON.stringify(item.practice_context);
+          });
+          if (cached && cached.attempt_request && !item.attempt_id) {
+            ["attempt_request", "attempt_status", "answer_text", "choices", "verdict", "revealed", "state"].forEach(function (key) {
+              item[key] = cached[key];
+            });
+          }
+          if (cached && cached.feedback_request && !row.feedback) {
+            item.feedback_request = cached.feedback_request;
+            item.feedback_status = cached.feedback_status;
+          }
+        }
       });
       deck.cursor = Math.max(0, Math.min(
         typeof practice.cursor === "number" ? practice.cursor : 0,
@@ -301,11 +331,14 @@
       var completed = progress.completed || 0;
       var percent = total ? Math.round(completed * 100 / total) : 0;
       if (resumeTitle) resumeTitle.textContent = "未完成练习";
+      var missing = practice.unavailable_item_ids || [];
+      if (resumeButton) resumeButton.disabled = missing.length > 0;
       if (resumeMeta) {
         resumeMeta.textContent = completed + " / " + total
           + " · " + (progress.answered || 0) + " 已作答 · "
           + (progress.stuck || 0) + " 不会 · "
           + (progress.remaining || 0) + " 待完成";
+        if (missing.length) resumeMeta.textContent += " · 旧进度引用的题目不可用，需明确修复：" + missing.join("、");
       }
       if (resumeFill && resumeFill.style) resumeFill.style.width = percent + "%";
       resumeCard.classList.remove("hidden");
@@ -313,6 +346,7 @@
 
     function resumeActivePractice() {
       if (!activePractice) return;
+      if ((activePractice.unavailable_item_ids || []).length) return;
       practiceDeck = activeToDeck(activePractice);
       persistDeck();
       sessionStorage.setItem(MODE_KEY, activePractice.practice_mode || "exam");
@@ -332,6 +366,7 @@
       return api("/practice/current").then(function (result) {
         if (!result || !Object.prototype.hasOwnProperty.call(result, "practice")) return null;
         activePractice = result.practice || null;
+        stream.innerHTML = "";
         if (!activePractice) {
           sessionStorage.removeItem(SESSION_KEY);
           sessionStorage.removeItem(CURRENT_KEY);
@@ -341,6 +376,12 @@
           setPracticeFocus(false);
           if (startArea) startArea.classList.remove("hidden");
           return null;
+        }
+        var nextDeck = activeToDeck(activePractice);
+        var contexts = function (deck) { return deck.items.map(function (item) { return item.practice_context || null; }); };
+        if (JSON.stringify(contexts(practiceDeck)) !== JSON.stringify(contexts(nextDeck))) {
+          practiceDeck = nextDeck;
+          persistDeck();
         }
         renderResumeCard(activePractice);
         showComposer(false);
@@ -632,6 +673,59 @@
       });
     }
 
+    function draftKey(item) {
+      return "wb_paper_draft_" + WS + "_" + item.practice_context.execution_id
+        + "_" + item.practice_context.position;
+    }
+
+    function sendDraft(item, body) {
+      var key = draftKey(item);
+      var serialized = JSON.stringify(body);
+      localStorage.setItem(key, serialized);
+      return api("/practice/draft", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: serialized, keepalive: true,
+      }).then(function () {
+        if (localStorage.getItem(key) === serialized) localStorage.removeItem(key);
+      }).catch(function (error) {
+        if (!item.attempt_id && item.state === "active") {
+          showPracticeError("草稿尚未保存：" + (error.message || error));
+        }
+      });
+    }
+
+    function persistProblemDraft() {
+      var item = currentProblem();
+      if (!item || !item.practice_context || item.kind === "card"
+          || item.state !== "active" || item.attempt_id || reviewingPrevious) return;
+      item.draft = captureProblemDraft();
+      item.draft_sequence = Math.max(Date.now() * 1000, (item.draft_sequence || 0) + 1);
+      persistDeck();
+      sendDraft(item, { execution_id: item.practice_context.execution_id,
+        position: item.practice_context.position, practice_context: item.practice_context,
+        sequence: item.draft_sequence, draft: item.draft });
+    }
+
+    function restoreDurableDraft(item) {
+      if (!item.practice_context) return;
+      var raw = localStorage.getItem(draftKey(item));
+      if (raw) {
+        var pending = JSON.parse(raw);
+        if (JSON.stringify(pending.practice_context) === JSON.stringify(item.practice_context)
+            && pending.sequence >= (item.draft_sequence || 0)) {
+          item.draft = pending.draft;
+          item.draft_sequence = pending.sequence;
+          sendDraft(item, pending);
+        } else {
+          localStorage.removeItem(draftKey(item));
+        }
+      }
+      restoreProblemDraft(item.draft);
+    }
+
+    if (answerBox) answerBox.addEventListener("input", persistProblemDraft);
+    if (stream) stream.addEventListener("change", persistProblemDraft);
+
     function verdictLine(item) {
       if (typeof item.verdict !== "boolean") return "";
       var quiz = microQuiz(item.payload) || {};
@@ -846,6 +940,7 @@
         feedbackArea.classList.add("hidden");
         if (nextProblem) nextProblem.classList.add("hidden");
         answerBox.focus();
+        restoreDurableDraft(item);
       }
     }
 
@@ -1242,9 +1337,9 @@
     var hasPendingRatings = restoredRatingMode === "batch" && session().some(function (item) {
       return item.state === "unrated";
     });
-    if (hasPendingRatings && restoredItem && practiceDeck.ended) {
+    if (!resumeCard && hasPendingRatings && restoredItem && practiceDeck.ended) {
       window.location = "session-end";
-    } else if (restoredMode && restoredItem) {
+    } else if (!resumeCard && restoredMode && restoredItem) {
       if (modeExam) modeExam.checked = restoredMode === "exam";
       if (modeMicro) modeMicro.checked = restoredMode === "micro";
       if (modeFlashCard) modeFlashCard.checked = restoredMode === "flash_card";
@@ -1402,6 +1497,7 @@
         answer_text: answer, choices: choiceTexts.length ? choiceTexts.slice() : undefined,
         verdict: graded === null ? undefined : graded,
         practice_position: activePractice ? practiceDeck.cursor : undefined,
+        practice_context: item.practice_context || undefined,
       };
       patch.attempt_id = null;
       patch.attempt_request = { request_id: attemptPayload.request_id, payload: attemptPayload };
@@ -1494,7 +1590,7 @@
       }).then(function () {
         if (item.kind !== "card" || !activePractice) return null;
         return patch("/practice/current", {
-          position: practiceDeck.cursor, state: "answered",
+          position: practiceDeck.cursor, state: "answered", practice_context: item.practice_context || undefined,
         }).then(function (result) {
           activePractice = result.completed ? null : result.practice;
           renderResumeCard(activePractice);
@@ -1527,7 +1623,7 @@
           request_id: newPracticeRequestId(),
         })).then(function () {
           return patch("/practice/current", {
-            position: position, state: "stuck",
+            position: position, state: "stuck", practice_context: item.practice_context || undefined,
           });
         });
       } else {
@@ -1537,6 +1633,7 @@
           answer_text: "",
           stuck: true,
           practice_position: position,
+          practice_context: item.practice_context || undefined,
         }).then(function (result) {
           return result.practice || null;
         });
@@ -1617,6 +1714,7 @@
       patch("/practice/current", {
         position: practiceDeck.cursor,
         state: item.revealed ? "answered" : "stuck",
+          practice_context: item.practice_context || undefined,
       }).then(function (progress) {
         activePractice = progress.completed ? null : progress.practice;
         renderResumeCard(activePractice);
@@ -1782,9 +1880,12 @@
     if (!problem) return "";
     var solution = problem.solution;
     if (!solution || !String(solution).trim()) return "";
+    var normalized = function (value) { return String(value || "").replace(/\s+/g, "").trim(); };
+    var quiz = microQuiz(problem);
+    if ((quiz && normalized(solution) === normalized(quiz.error_reason))
+        || (!quiz && normalized(solution) === normalized(problem.source_answer))) return "";
     var origin = problem.solution_origin;
-    var label = origin === "generated" ? "AI 生成解析"
-      : origin === "source" ? "教材解析" : "解析";
+    var label = origin === "source" ? "教材解析" : "解析";
     return "<section class='practice-solution'><p class='section-kicker'>" + label + "</p>"
       + "<div class='rich-text'>" + richText(String(solution)) + "</div></section>";
   }

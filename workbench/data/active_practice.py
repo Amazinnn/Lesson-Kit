@@ -8,6 +8,8 @@ evidence.
 
 import json
 
+from workbench.data import paper_progress
+
 
 SOURCE_KINDS = {"paper"}
 LEGACY_SOURCE_KINDS = {"quick", "practice_set", "agent"}
@@ -24,13 +26,16 @@ class ActivePracticeConflict(ActivePracticeError):
     pass
 
 
-def _require_schema(pool):
+def _require_schema(pool, *, writing=False):
     names = {
         row[0] for row in pool.connect().execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         )
     }
-    if {"active_practice", "active_practice_items", "practice_runs"} <= names:
+    required = {"active_practice", "active_practice_items", "practice_runs"}
+    if writing:
+        required.add("paper_state")
+    if required <= names:
         return
     try:
         db = pool.db_path.relative_to(pool.root).as_posix()
@@ -165,6 +170,7 @@ def current(pool, *, resolve=True):
     answered = stuck = 0
     for raw in rows:
         item = dict(raw)
+        item['draft'] = json.loads(item.pop('draft_json', None) or '{}')
         if item["state"] == "answered":
             answered += 1
         elif item["state"] == "stuck":
@@ -192,6 +198,8 @@ def current(pool, *, resolve=True):
                         item["feedback"] = event
         items.append(item)
     record["items"] = items
+    if resolve:
+        record['unavailable_item_ids'] = [item['item_id'] for item in items if item.get('payload') is None]
     record["progress"] = {
         "completed": answered + stuck,
         "answered": answered,
@@ -203,13 +211,28 @@ def current(pool, *, resolve=True):
 
 
 def create(pool, payload, *, replace=False):
-    _require_schema(pool)
+    _require_schema(pool, writing=True)
     normalized = _normalize(pool, payload)
     with pool.transaction(immediate=True):
+        source = normalized.get('source_ref') or ''
+        if source.startswith('ps-'):
+            from workbench.data import practice_sets
+            path = practice_sets._saved_path(pool, source)
+            if path.is_file():
+                saved = practice_sets.get_saved(pool, source)
+                if [i['problem_id'] for i in saved['plan']['items']] != [i['item_id'] for i in normalized['items']]:
+                    raise ActivePracticeConflict('Paper execution does not match its saved container')
+                selected = _row(pool)
+                parked = paper_progress.state(pool.connect(), source)['checkpoint_json']
+                if parked or (selected and selected['source_ref'] == source):
+                    return start_saved(pool, source, practice_mode=normalized['practice_mode'],
+                                       rating_mode=normalized['rating_mode'], replace=replace)
         if _row(pool) is not None:
             if not replace:
                 raise ActivePracticeConflict("an unfinished practice already exists")
-            _archive(pool, current(pool, resolve=False), "abandoned")
+            previous = current(pool, resolve=False)
+            if not paper_progress.park(pool, previous):
+                _archive(pool, previous, "abandoned")
             _delete(pool)
         pool.connect().execute(
             "INSERT INTO active_practice "
@@ -233,6 +256,15 @@ def create(pool, payload, *, replace=False):
                 for item in normalized["items"]
             ],
         )
+        if paper_progress.available(pool.connect()):
+            execution = pool.connect().execute('INSERT INTO practice_execution_ids DEFAULT VALUES').lastrowid
+            generation = paper_progress.ensure_state(pool.connect(), normalized['source_ref'])['generation'] if normalized['source_ref'] else 1
+            pool.connect().execute('UPDATE active_practice SET execution_id=?,paper_generation=? WHERE singleton=1',
+                                   (execution, generation))
+            for item in normalized['items']:
+                if item['item_type'] == 'problem':
+                    pool.connect().execute('UPDATE active_practice_items SET content_revision=? WHERE position=?',
+                                           (paper_progress.revision(pool.connect(), item['item_id']), item['position']))
     return current(pool)
 
 
@@ -251,8 +283,8 @@ def _archive(pool, record, status):
     pool.connect().execute(
         "INSERT INTO practice_runs "
         "(source_kind, source_ref, source_label, kp_ids_json, practice_mode, "
-        " rating_mode, items_json, status, started_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " rating_mode, items_json, status, started_at, execution_id, paper_generation) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             "paper",
             record.get("source_ref"),
@@ -263,6 +295,8 @@ def _archive(pool, record, status):
             json.dumps(items, ensure_ascii=False),
             status,
             record["started_at"],
+            record.get('execution_id'),
+            record.get('paper_generation', 1),
         ),
     )
 
@@ -283,11 +317,19 @@ def replay(pool, run_id, *, replace=False):
         kp_ids = json.loads(record["kp_ids_json"] or "[]")
     except json.JSONDecodeError as exc:
         raise ActivePracticeError(f"practice run {run_id} is invalid") from exc
+    source_ref = record.get('source_ref')
+    if source_ref and source_ref.startswith('ps-'):
+        from workbench.data import practice_sets
+        path = practice_sets._saved_path(pool, source_ref)
+        if path.is_file():
+            saved = practice_sets.get_saved(pool, source_ref)
+            if [i['problem_id'] for i in saved['plan']['items']] != [i['item_id'] for i in items]:
+                source_ref = None  # Historical order is a temporary Paper, not a mutation of today's container.
     return create(pool, {
         # Historical rows may say quick/practice_set/agent. create() accepts
         # those aliases and normalizes the new execution to Paper semantics.
         "source_kind": record["source_kind"],
-        "source_ref": record.get("source_ref"),
+        "source_ref": source_ref,
         "source_label": record.get("source_label"),
         "kp_ids": kp_ids,
         "practice_mode": record["practice_mode"],
@@ -309,7 +351,7 @@ def _delete(pool):
 
 
 def clear(pool):
-    _require_schema(pool)
+    _require_schema(pool, writing=True)
     before = current(pool)
     if before is None:
         return {"cleared": False, "practice": None}
@@ -320,7 +362,7 @@ def clear(pool):
 
 
 def mark(pool, position, state, *, attempt_id=None):
-    _require_schema(pool)
+    _require_schema(pool, writing=True)
     if isinstance(position, bool) or not isinstance(position, int) or position < 0:
         raise ActivePracticeError("position must be a non-negative integer")
     if state not in {"answered", "stuck"}:
@@ -352,7 +394,7 @@ def mark(pool, position, state, *, attempt_id=None):
                 raise ActivePracticeError("attempt_id does not belong to this practice item")
 
         pool.connect().execute(
-            "UPDATE active_practice_items SET state=?, attempt_id=? WHERE position=?",
+            "UPDATE active_practice_items SET state=?, attempt_id=?,draft_json=NULL WHERE position=?",
             (state, attempt_id, position),
         )
         pending = pool.connect().execute(
@@ -375,3 +417,99 @@ def mark(pool, position, state, *, attempt_id=None):
             (next_position,),
         )
     return {"completed": False, "replay": False, "practice": current(pool)}
+
+
+def _restore(pool, record):
+    """Restore the existing singleton representation without new learning effects."""
+    pool.connect().execute(
+        'INSERT INTO active_practice(singleton,source_kind,source_ref,source_label,kp_ids_json,'
+        'practice_mode,rating_mode,cursor,started_at,updated_at,execution_id,paper_generation) '
+        'VALUES (1,?,?,?,?,?,?,?,?,?,?,?)',
+        (record['source_kind'], record.get('source_ref'), record.get('source_label'),
+         json.dumps(record['kp_ids'], ensure_ascii=False), record['practice_mode'],
+         record['rating_mode'], record['cursor'], record['started_at'], record['updated_at'],
+         record['execution_id'], record['paper_generation']))
+    for item in record['items']:
+        pool.connect().execute(
+            'INSERT INTO active_practice_items(position,item_type,item_id,direction,state,'
+            'attempt_id,content_revision,draft_json,draft_sequence) VALUES (?,?,?,?,?,?,?,?,?)',
+            (item['position'], item['item_type'], item['item_id'], item.get('direction') or '',
+             item['state'], item.get('attempt_id'), item.get('content_revision', 1),
+             json.dumps(item.get('draft') or {}, ensure_ascii=False), item.get('draft_sequence', 0)))
+
+
+def start_saved(pool, paper_id, *, practice_mode='exam', rating_mode='immediate', replace=False):
+    from workbench.data import practice_sets
+    _require_schema(pool)
+    if not paper_progress.available(pool.connect()):
+        raise ActivePracticeError('migrate the pool for independent Paper progress')
+    if pool._transaction_depth == 0:
+        paper_progress.flush_files(pool)
+    with pool.transaction(immediate=True):
+        paper = practice_sets.get_saved(pool, paper_id)
+        if paper['missing_problem_ids']:
+            raise ActivePracticeError('unavailable questions: '+', '.join(paper['missing_problem_ids']))
+        ids = [item['problem_id'] for item in paper['plan']['items']]
+        if not ids:
+            raise ActivePracticeError('empty Paper cannot start')
+        if paper['validation_errors']:
+            raise ActivePracticeError('; '.join(paper['validation_errors']))
+        existing = current(pool, resolve=False)
+        if existing and existing.get('source_ref') == paper_id:
+            if ids != [item['item_id'] for item in existing['items']]:
+                raise ActivePracticeConflict('legacy Paper execution does not match its container; explicit repair is required')
+            return current(pool)
+        if existing:
+            if not paper_progress.park(pool, existing):
+                if not replace:
+                    raise ActivePracticeConflict('an unfinished temporary practice already exists')
+                _archive(pool, existing, 'abandoned')
+            _delete(pool)
+        state = paper_progress.ensure_state(pool.connect(), paper_id)
+        if state['checkpoint_json']:
+            record = json.loads(state['checkpoint_json'])
+            if [item['item_id'] for item in record['items']] != ids:
+                raise ActivePracticeConflict('legacy Paper checkpoint does not match its container')
+            _restore(pool, record)
+            pool.connect().execute('UPDATE paper_state SET checkpoint_json=NULL WHERE paper_id=?', (paper_id,))
+        else:
+            return create(pool, dict(source_ref=paper_id, source_label=paper['title'],
+                                     kp_ids=list(dict.fromkeys(kp for q in ids for kp in pool.problem(q)['kp_ids'])),
+                                     practice_mode=practice_mode, rating_mode=rating_mode,
+                                     items=[dict(item_type='problem',item_id=q) for q in ids]))
+    return current(pool)
+
+
+def submission_context(practice, position):
+    item = practice['items'][position]
+    return dict(execution_id=practice['execution_id'], paper_id=practice.get('source_ref'),
+                paper_generation=practice['paper_generation'], item_id=item['item_id'],
+                content_revision=item['content_revision'], position=position)
+
+
+def save_draft(pool, execution_id, position, draft, *, context=None, sequence=None):
+    if not isinstance(draft, dict) or set(draft)-{'answer','choices'}:
+        raise ActivePracticeError('draft must contain answer/choices only')
+    if not isinstance(draft.get('answer', ''), str) or not isinstance(draft.get('choices', []), list) \
+            or not all(isinstance(item, str) for item in draft.get('choices', [])):
+        raise ActivePracticeError('invalid answer/choice draft')
+    with pool.transaction(immediate=True):
+        active = current(pool, resolve=False)
+        if not active or active['execution_id'] != execution_id:
+            raise ActivePracticeConflict('stale draft execution')
+        if not isinstance(position, int) or isinstance(position, bool) or not 0 <= position < len(active['items']):
+            raise ActivePracticeError('unknown draft position')
+        item = active['items'][position]
+        if context is not None:
+            paper_progress.guard(pool, context, item['item_id'], position)
+        if item['state'] != 'pending':
+            raise ActivePracticeConflict('cannot replace a submitted answer with a draft')
+        if sequence is None:
+            sequence = item['draft_sequence'] + 1
+        if isinstance(sequence, bool) or not isinstance(sequence, int) or not 0 <= sequence <= 9007199254740991:
+            raise ActivePracticeError('invalid draft sequence')
+        if sequence < item['draft_sequence'] or (sequence == item['draft_sequence'] and draft != item['draft']):
+            raise ActivePracticeConflict('stale draft: a newer draft has already been saved')
+        pool.connect().execute('UPDATE active_practice_items SET draft_json=?,draft_sequence=? WHERE position=?',
+                               (json.dumps(draft, ensure_ascii=False), sequence, position))
+    return {'saved': True}
