@@ -148,12 +148,13 @@
     return request;
   }
 
-  function saveItemFeedback(item, payload) {
+  function saveItemFeedback(item, payload, pendingRetry) {
     if (item.practice_context) payload.practice_context = item.practice_context;
     var saved = item.feedback_request;
     var savedPayload = saved && Object.assign({}, saved.payload);
     if (savedPayload) delete savedPayload.request_id;
-    if (!saved || JSON.stringify(savedPayload) !== JSON.stringify(payload)) {
+    var samePayload = savedPayload && JSON.stringify(savedPayload) === JSON.stringify(payload);
+    if (!saved || (payload.edit_existing && !pendingRetry && !samePayload)) {
       payload.request_id = newPracticeRequestId();
       saved = { request_id: payload.request_id, payload: payload };
       updateSession(item.id, { feedback_request: saved }, item.direction, item.practice_context || null);
@@ -1744,10 +1745,11 @@
         feedback.expected_note = previousFeedback.note == null ? null : previousFeedback.note;
       }
       if (item.kind === "card") feedback.direction = item.direction;
+      var pendingFeedbackRetry = !!item.feedback_request && item.feedback_status !== "saved";
       updateSession(item.id, { feedback_status: "saving" }, item.direction);
       ensureAttempt(item).then(function (attemptId) {
         if (item.kind !== "card" && attemptId) feedback.attempt_id = attemptId;
-        return saveItemFeedback(item, feedback);
+        return saveItemFeedback(item, feedback, pendingFeedbackRetry);
       }).then(function () {
         if (reviewingItem) {
           item.feedback = Object.assign({}, item.feedback || {}, {
@@ -1984,6 +1986,8 @@
           };
           var origin = item;
           if (origin.feedback_status === "saving") return;
+          var pendingFeedbackRetry = !!origin.feedback_request
+            && origin.feedback_status !== "saved";
           if (itemType !== "card") {
             // Link the rating back to the attempt the submission created.
             if (origin.attempt_id) feedback.attempt_id = origin.attempt_id;
@@ -1992,7 +1996,7 @@
           updateSession(origin.id, { feedback_status: "saving" }, origin.direction);
           ensureAttempt(origin).then(function (attemptId) {
             if (itemType !== "card" && attemptId) feedback.attempt_id = attemptId;
-            return saveItemFeedback(origin, feedback);
+            return saveItemFeedback(origin, feedback, pendingFeedbackRetry);
           }).then(function () {
             card.remove();
             remaining -= 1;

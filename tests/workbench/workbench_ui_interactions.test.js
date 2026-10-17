@@ -1053,12 +1053,17 @@ test("temporary fixed practice with server execution identity supports review an
     ],
   };
   const calls = [];
+  let feedbackCalls = 0;
   const storage = new FakeStorage({ wb_practice_mode_alpha: "exam",
     wb_practice_rating_mode_alpha: "immediate" });
   runWorkbench({ elements, storage, fetch: (url, options) => {
     calls.push({ url, options });
     if (url.endsWith("/practice/current") && !options) return jsonResponse({ practice });
-    if (url.endsWith("/feedback")) return jsonResponse({ edited: true });
+    if (url.endsWith("/feedback")) {
+      feedbackCalls += 1;
+      return feedbackCalls === 1 ? jsonResponse({ edited: true })
+        : Promise.reject(new Error("offline"));
+    }
     return jsonResponse({});
   } });
   await flush();
@@ -1080,6 +1085,25 @@ test("temporary fixed practice with server execution identity supports review an
   assert.equal(body.edit_existing, true);
   assert.equal(body.practice_context.execution_id, 23);
   assert.equal(body.practice_context.paper_id, null);
+
+  elements["review-rating-action"].click();
+  elements["rating-input"].value = "5";
+  elements["feedback-note"].value = "pending temporary edit";
+  elements["save-rating"].click();
+  await flush();
+  const pendingRequest = calls.filter(call => call.url.endsWith("/feedback")).at(-1);
+  const pendingBody = JSON.parse(pendingRequest.options.body);
+  assert.notEqual(pendingBody.request_id, body.request_id);
+  assert.equal(pendingBody.expected_rating, 4);
+
+  elements["rating-input"].value = "3";
+  elements["feedback-note"].value = "changed while pending";
+  elements["save-rating"].click();
+  await flush();
+  const retry = calls.filter(call => call.url.endsWith("/feedback")).at(-1);
+  assert.deepEqual(JSON.parse(retry.options.body), pendingBody);
+  assert.equal(elements["rating-input"].value, "3");
+  assert.equal(elements["feedback-note"].value, "changed while pending");
 });
 
 test("Paper review browses submitted items, hides references, preserves the current draft, and edits one rating in place", async () => {
