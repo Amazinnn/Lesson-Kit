@@ -553,11 +553,26 @@ def feedback_record(pool, workspace, params, body):
         attempt = pool.attempt(attempt_id)
         if attempt is None or attempt["problem_id"] != item_id:
             raise ApiError(400, "attempt_id does not belong to this item")
+    edit_existing = body.get("edit_existing", False)
+    if not isinstance(edit_existing, bool):
+        raise ApiError(400, "edit_existing must be a boolean")
+    expected_rating = body.get("expected_rating")
+    expected_note = body.get("expected_note")
+    if edit_existing:
+        if item_type != "problem" or attempt_id is None:
+            raise ApiError(400, "an in-place self-rating edit requires a problem attempt")
+        if (isinstance(expected_rating, bool) or not isinstance(expected_rating, int)
+                or expected_rating not in range(1, 6)):
+            raise ApiError(400, "expected_rating must be an integer from 1 to 5")
+        if expected_note is not None and not isinstance(expected_note, str):
+            raise ApiError(400, "expected_note must be a string or null")
     try:
         return attempts_data.record_browser_feedback(
             pool, item_type, item_id, rating=rating, note=note,
             direction=direction, attempt_id=attempt_id,
-            request_id=_browser_request_id(body), practice_context=body.get('practice_context'))
+            request_id=_browser_request_id(body), practice_context=body.get('practice_context'),
+            edit_existing=edit_existing, expected_rating=expected_rating,
+            expected_note=expected_note)
     except active_practice.ActivePracticeConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except attempts_data.RequestConflict as exc:

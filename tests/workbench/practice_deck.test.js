@@ -39,6 +39,36 @@ test("goTo navigates history and rejects out-of-range indexes", () => {
   assert.equal(deck.current(d).id, "p-2");
 });
 
+test("review visits every submitted ordinary item without moving the practice cursor", () => {
+  const d = deck.createDeck();
+  deck.append(d, problemItem("p-1"));
+  deck.settle(d, "p-1", { attempt_id: 11, state: "unrated",
+    practice_context: { execution_id: 10 } });
+  deck.append(d, problemItem("p-2"));
+  deck.settle(d, "p-2", { state: "skipped",
+    practice_context: { execution_id: 10 } });
+  deck.append(d, problemItem("p-3"));
+  deck.settle(d, "p-3", { answer_text: "held locally",
+    attempt_request: { request_id: "pending" }, state: "active",
+    practice_context: { execution_id: 10 } });
+  deck.append(d, cardItem("card-1"));
+  const otherRun = deck.append(d, problemItem("p-1"));
+  Object.assign(otherRun, { attempt_id: 99, state: "rated",
+    practice_context: { execution_id: 11 } });
+  deck.append(d, problemItem("p-4"));
+  deck.current(d).practice_context = { execution_id: 10 };
+  const cursor = d.cursor;
+
+  const indexes = typeof deck.reviewableProblemIndexes === "function"
+    ? deck.reviewableProblemIndexes(d, 10) : [];
+  assert.deepEqual(indexes, [0, 1, 2]);
+  assert.equal(deck.previousReviewIndex(d, cursor, 10), 2);
+  assert.equal(deck.previousReviewIndex(d, 2, 10), 1);
+  assert.equal(deck.nextReviewIndex(d, 1, 10), 2);
+  assert.equal(deck.nextReviewIndex(d, 2, 10), null);
+  assert.equal(d.cursor, cursor);
+});
+
 test("settle merges a patch into the item with the given id", () => {
   const d = deck.createDeck();
   deck.append(d, problemItem("p-1"));
@@ -86,11 +116,13 @@ test("pending answer and rating requests survive refresh with their exact payloa
     rating: 2, attempt_id: 42 };
   deck.settle(d, "p-1", {
     attempt_id: 42, attempt_request: { request_id: "answer-1", payload: answer },
+    feedback: { attempt_id: 42, rating: 4, note: "review note" },
     attempt_status: "saving", feedback_request: { request_id: "rating-1", payload: rating },
     feedback_status: "saving", state: "unrated",
   });
   const restored = deck.deserialize(JSON.parse(JSON.stringify(deck.serialize(d)))).items[0];
   assert.equal(restored.attempt_id, 42);
+  assert.deepEqual(restored.feedback, { attempt_id: 42, rating: 4, note: "review note" });
   assert.deepEqual(restored.attempt_request.payload, answer);
   assert.deepEqual(restored.feedback_request.payload, rating);
   assert.equal(restored.attempt_status, "failed");

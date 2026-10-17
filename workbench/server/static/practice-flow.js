@@ -75,8 +75,8 @@
   }
 
   function contextProblem() {
-    if (reviewingPrevious && practiceDeck.cursor > 0) {
-      return practiceDeck.items[practiceDeck.cursor - 1] || currentProblem();
+    if (reviewingPrevious && reviewIndex >= 0) {
+      return practiceDeck.items[reviewIndex] || currentProblem();
     }
     return currentProblem();
   }
@@ -151,7 +151,9 @@
   function saveItemFeedback(item, payload) {
     if (item.practice_context) payload.practice_context = item.practice_context;
     var saved = item.feedback_request;
-    if (!saved) {
+    var savedPayload = saved && Object.assign({}, saved.payload);
+    if (savedPayload) delete savedPayload.request_id;
+    if (!saved || JSON.stringify(savedPayload) !== JSON.stringify(payload)) {
       payload.request_id = newPracticeRequestId();
       saved = { request_id: payload.request_id, payload: payload };
       updateSession(item.id, { feedback_request: saved }, item.direction, item.practice_context || null);
@@ -199,6 +201,8 @@
     var ratingInput = document.getElementById("rating-input");
     var feedbackNote = document.getElementById("feedback-note");
     var saveRating = document.getElementById("save-rating");
+    var reviewRatingAction = document.getElementById("review-rating-action");
+    var cancelRating = document.getElementById("cancel-rating");
     var sessionEntry = document.getElementById("session-end-entry");
     var startArea = document.getElementById("start-area");
     var practiceCount = document.getElementById("practice-count");
@@ -218,7 +222,9 @@
     var nextProblem = document.getElementById("next-problem");
     var pulling = false;
     var reviewingPrevious = false;
+    var reviewIndex = -1;
     var reviewDraft = null;
+    var ratingEditOpen = false;
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
 
@@ -293,6 +299,7 @@
               : (row.feedback ? "rated" : "unrated"),
         });
         if (row.attempt_id) item.attempt_id = row.attempt_id;
+        if (row.feedback) item.feedback = row.feedback;
         if (practice.execution_id) {
           item.practice_context = {
             execution_id: practice.execution_id, paper_id: practice.source_ref || null,
@@ -680,12 +687,40 @@
         || item.state === "unrated" || item.state === "rated";
     }
 
+    function isPaperReviewItem(item) {
+      return !!(item && item.practice_context && item.practice_context.paper_id);
+    }
+
+    function previousReviewIndex(index, item) {
+      if (isPaperReviewItem(item)) {
+        return PracticeDeck.previousReviewIndex(
+          practiceDeck, index, item.practice_context.execution_id);
+      }
+      var previous = practiceDeck.items[index - 1];
+      return previous && previous.kind !== "card"
+          && (deckItemAnswered(previous) || previous.state === "skipped")
+        ? index - 1 : null;
+    }
+
+    function nextReviewIndex(index, item) {
+      return isPaperReviewItem(item)
+        ? PracticeDeck.nextReviewIndex(
+          practiceDeck, index, item.practice_context.execution_id)
+        : null;
+    }
+
     function canReviewPrevious(item) {
       if (!item || item.kind === "card" || practiceDeck.cursor <= 0
           || item.state !== "active" || deckItemAnswered(item)) return false;
-      var previous = practiceDeck.items[practiceDeck.cursor - 1];
-      return !!(previous && previous.kind !== "card"
-        && (deckItemAnswered(previous) || previous.state === "skipped"));
+      return previousReviewIndex(practiceDeck.cursor, item) !== null;
+    }
+
+    function renderReviewedItem(index) {
+      if (index === null || index < 0) return;
+      reviewIndex = index;
+      ratingEditOpen = false;
+      if (feedbackArea) feedbackArea.classList.add("hidden");
+      renderDeckItem(practiceDeck.items[reviewIndex], true);
     }
 
     function captureProblemDraft() {
@@ -758,8 +793,11 @@
     if (answerBox) answerBox.addEventListener("input", persistProblemDraft);
     if (stream) stream.addEventListener("change", persistProblemDraft);
 
-    function verdictLine(item) {
-      if (typeof item.verdict !== "boolean") return "";
+    function verdictLine(item, reviewOnly, paperReview) {
+      if (typeof item.verdict !== "boolean") {
+        return reviewOnly && paperReview
+          ? "<p class='muted'>本次作答没有可用的判定。</p>" : "";
+      }
       var quiz = microQuiz(item.payload) || {};
       // error_reason goes through richText: it renders its $…$ and, unlike the
       // old string concat, cannot inject markup.
@@ -767,7 +805,8 @@
         + (item.verdict ? "ok" : "bad") + "'>"
         + (item.verdict
           ? "回答正确。"
-          : "回答错误。 " + richText(quiz.error_reason || "")) + "</p>";
+            : "回答错误。 " + (reviewOnly && paperReview ? "" : richText(quiz.error_reason || "")))
+        + "</p>";
     }
 
     function keylessLine(item) {
@@ -805,7 +844,7 @@
         + attempts.length + " 条</summary>" + rows.join("") + "</details>";
     }
 
-    function optionHtmlFor(item, forceAnswered) {
+    function optionHtmlFor(item, forceAnswered, paperReview) {
       var problem = item.payload || {};
       var quiz = microQuiz(problem);
       var options = problemOptions(problem);
@@ -819,7 +858,10 @@
           var correct = keyList.indexOf(option.id) >= 0;
           var classes = [];
           if (selected) classes.push("option-selected");
-          if (answered && item.verdict === false && correct) classes.push("option-correct");
+          if (answered && (!paperReview || !forceAnswered)
+              && item.verdict === false && correct) {
+            classes.push("option-correct");
+          }
           return "<label" + (classes.length ? " class='" + classes.join(" ") + "'" : "") + ">"
             + "<input data-choice-option type='" + (multiple ? "checkbox" : "radio")
             + "' name='problem-option' value='" + escapeHtml(option.id) + "'"
@@ -828,13 +870,16 @@
         }).join("") + "</fieldset>";
     }
 
-    function reviewResultHtml(item) {
+    function reviewResultHtml(item, paperReview) {
       var problem = item.payload || {};
       var quiz = microQuiz(problem);
       var answer = item.answer_text && String(item.answer_text).trim()
         ? String(item.answer_text) : "（未作答）";
       var status = item.state === "skipped"
         ? "<p class='muted'>本题当时标记为“不会”。</p>" : "";
+      if (paperReview && item.attempt_request && !item.attempt_id) {
+        status += "<p class='muted'>本次提交尚未确认保存，确认前不能为这次作答自评。</p>";
+      }
       var solution;
       if (quiz) {
         var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
@@ -848,12 +893,29 @@
       } else {
         solution = practiceSolutionHtml(problem);
       }
+      var feedback = item.feedback || {};
+      var selfRating = feedback.rating == null
+        ? "<p class='muted'>尚未自评。</p>"
+        : "<p>我的自评：" + "★".repeat(feedback.rating)
+          + "☆".repeat(5 - feedback.rating) + "（" + feedback.rating + "/5）</p>"
+          + (feedback.note
+            ? "<div class='muted rich-text'>" + richText(feedback.note) + "</div>" : "");
+      if (!paperReview) {
+        return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
+          + "<div class='rich-text'>" + richText(answer) + "</div></section>"
+          + status + solution;
+      }
       return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
         + "<div class='rich-text'>" + richText(answer) + "</div></section>"
-        + status + solution;
+        + status + "<section class='practice-solution'><p class='section-kicker'>我的自评</p>"
+        + selfRating + "</section><details class='practice-reference'><summary>查看参考答案与解析</summary>"
+        + solution + "</details>";
     }
 
     function updateCardNav(item, reviewOnly) {
+      if (reviewRatingAction) reviewRatingAction.classList.toggle("hidden",
+        !reviewOnly || offNow() || !item.attempt_id);
+      if (cancelRating) cancelRating.classList.add("hidden");
       if (item.kind === "card") {
         if (cardNav) cardNav.classList.remove("hidden");
         if (cardPrev) {
@@ -869,12 +931,22 @@
         return;
       }
       if (reviewOnly) {
+        var paperReview = isPaperReviewItem(item);
+        var previousReview = previousReviewIndex(reviewIndex, item);
+        var nextReview = nextReviewIndex(reviewIndex, item);
         if (cardNav) cardNav.classList.remove("hidden");
-        if (cardPrev) cardPrev.classList.add("hidden");
+        if (cardPrev) {
+          cardPrev.textContent = "上一题";
+          cardPrev.classList.toggle("hidden", !paperReview);
+          cardPrev.disabled = paperReview && previousReview === null;
+        }
         if (cardNext) {
-          cardNext.textContent = "返回当前题";
+          cardNext.textContent = paperReview && nextReview !== null ? "下一题" : "返回当前题";
           cardNext.classList.remove("hidden");
           cardNext.disabled = false;
+        }
+        if (reviewRatingAction) {
+          reviewRatingAction.classList.toggle("hidden", !paperReview || offNow() || !item.attempt_id);
         }
         if (nextProblem) nextProblem.classList.add("hidden");
         return;
@@ -890,6 +962,7 @@
         cardNext.textContent = "返回当前题";
         cardNext.classList.add("hidden");
       }
+      if (reviewRatingAction) reviewRatingAction.classList.add("hidden");
       if (offNow()) syncNextProblem();
       else if (nextProblem) nextProblem.classList.add("hidden");
     }
@@ -931,13 +1004,15 @@
       }
       var problem = item.payload || {};
       var answered = reviewOnly || deckItemAnswered(item);
+      var paperReview = reviewOnly && isPaperReviewItem(item);
       stream.innerHTML = "<article class='practice-question-card card'>"
         + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
         + "<div class='problem-text rich-text'>" + richText(problemTextFor(problem)) + "</div>"
-        + optionHtmlFor(item, reviewOnly) + keylessLine(item) + verdictLine(item)
-        + (reviewOnly ? reviewResultHtml(item) : "") + "</article>";
+        + optionHtmlFor(item, reviewOnly, paperReview) + keylessLine(item)
+        + verdictLine(item, reviewOnly, paperReview)
+        + (reviewOnly ? reviewResultHtml(item, paperReview) : "") + "</article>";
       renderMath(stream);
       if (reviewOnly) {
         setComposerLayout("review");
@@ -948,13 +1023,21 @@
         if (submitAnswer) submitAnswer.classList.add("hidden");
         if (showAnswer) showAnswer.classList.add("hidden");
         if (actions) actions.classList.remove("hidden");
-        if (feedbackArea) feedbackArea.classList.add("hidden");
+        if (feedbackArea) feedbackArea.classList.toggle("hidden", !ratingEditOpen);
+        if (saveRating) saveRating.textContent = "保存自评";
+        if (reviewRatingAction) {
+          reviewRatingAction.textContent = item.feedback && item.feedback.rating != null
+            ? "编辑自评" : "填写自评";
+          reviewRatingAction.classList.toggle("hidden", !paperReview || offNow() || !item.attempt_id);
+        }
+        if (cancelRating) cancelRating.classList.toggle("hidden", !ratingEditOpen);
         if (sessionEntry) sessionEntry.classList.add("hidden");
         if (nextProblem) nextProblem.classList.add("hidden");
         return;
       }
       setComposerLayout(
         microQuiz(problem) && problemOptions(problem).length ? "choice" : "text");
+      if (saveRating) saveRating.textContent = "记录并下一题";
       if (showAnswer) showAnswer.classList.remove("hidden");
       answerBox.value = (answered && !(item.choices && item.choices.length))
         ? (item.answer_text || "") : "";
@@ -1047,7 +1130,9 @@
     // verdict hold one rule instead of two.
     function advance() {
       reviewingPrevious = false;
+      reviewIndex = -1;
       reviewDraft = null;
+      ratingEditOpen = false;
       cancelScheduledAdvance();
       if (nextProblem) nextProblem.classList.add("hidden");
       if (!PracticeDeck.atEnd(practiceDeck)) {
@@ -1597,10 +1682,47 @@
       }).catch(showPracticeError);
     });
 
+    if (reviewRatingAction) reviewRatingAction.addEventListener("click", function () {
+      if (!reviewingPrevious) return;
+      var item = contextProblem();
+      if (!isPaperReviewItem(item) || !item.attempt_id || offNow()) return;
+      var pending = item.feedback_request && item.feedback_request.payload;
+      var feedback = item.feedback || {};
+      ratingInput.value = pending ? pending.rating
+        : (feedback.rating == null ? "" : feedback.rating);
+      feedbackNote.value = pending ? (pending.note || "") : (feedback.note || "");
+      ratingEditOpen = true;
+      reviewRatingAction.classList.add("hidden");
+      if (cancelRating) cancelRating.classList.remove("hidden");
+      if (feedbackArea) feedbackArea.classList.remove("hidden");
+    });
+
+    if (cancelRating) cancelRating.addEventListener("click", function () {
+      if (!reviewingPrevious) return;
+      var item = contextProblem();
+      ratingEditOpen = false;
+      if (feedbackArea) feedbackArea.classList.add("hidden");
+      if (cancelRating) cancelRating.classList.add("hidden");
+      if (reviewRatingAction) {
+        reviewRatingAction.textContent = item && item.feedback && item.feedback.rating != null
+          ? "编辑自评" : "填写自评";
+        reviewRatingAction.classList.toggle("hidden", !item || !item.attempt_id || offNow());
+      }
+      clearPracticeError();
+    });
+
     if (saveRating) saveRating.addEventListener("click", function () {
       var rating = parseInt(ratingInput.value, 10);
       var item = currentProblem();
+      var reviewingItem = reviewingPrevious ? contextProblem() : null;
+      var targetReviewIndex = reviewingPrevious ? reviewIndex : -1;
+      if (reviewingItem) item = reviewingItem;
       if (!item) return;
+      if (reviewingItem && (!isPaperReviewItem(item) || !ratingEditOpen)) return;
+      if (reviewingItem && !item.attempt_id) {
+        showPracticeError("本次作答尚未确认保存，不能写入自评。");
+        return;
+      }
       if (item.feedback_status === "saving") return;
       // parseInt("") is NaN and fails both bounds checks, so an empty input
       // used to reach the server and die as "rating or note is required".
@@ -1614,12 +1736,33 @@
         item_id: item.id,
         rating: rating, note: feedbackNote.value.trim(),
       };
+      var previousFeedback = item.feedback || null;
+      if (reviewingItem && previousFeedback && previousFeedback.rating != null) {
+        feedback.edit_existing = true;
+        feedback.expected_rating = previousFeedback.rating;
+        feedback.expected_note = previousFeedback.note == null ? null : previousFeedback.note;
+      }
       if (item.kind === "card") feedback.direction = item.direction;
       updateSession(item.id, { feedback_status: "saving" }, item.direction);
       ensureAttempt(item).then(function (attemptId) {
         if (item.kind !== "card" && attemptId) feedback.attempt_id = attemptId;
         return saveItemFeedback(item, feedback);
       }).then(function () {
+        if (reviewingItem) {
+          item.feedback = Object.assign({}, item.feedback || {}, {
+            attempt_id: item.attempt_id, rating: rating, note: feedback.note,
+          });
+          persistDeck();
+          if (reviewIndex === targetReviewIndex && contextProblem() === item) {
+            updateSession(item.id, { state: "rated", feedback_status: "saved" },
+              item.direction, item.practice_context || null);
+            ratingEditOpen = false;
+            if (feedbackArea) feedbackArea.classList.add("hidden");
+            if (cancelRating) cancelRating.classList.add("hidden");
+            renderDeckItem(item, true);
+          }
+          return null;
+        }
         if (item.kind !== "card" || !activePractice) return null;
         return patch("/practice/current", {
           position: practiceDeck.cursor, state: "answered", practice_context: item.practice_context || undefined,
@@ -1628,7 +1771,7 @@
           renderResumeCard(activePractice);
         });
       }).then(function () {
-        advance();
+        if (!reviewingItem) advance();
       }).catch(function (error) {
         updateSession(item.id, { feedback_status: "failed" }, item.direction);
         showPracticeError(error);
@@ -1713,10 +1856,16 @@
     if (cardPrev) cardPrev.addEventListener("click", function () {
       var item = currentProblem();
       if (item && item.kind !== "card") {
+        if (reviewingPrevious) {
+          if (!isPaperReviewItem(contextProblem())) return;
+          var previousReview = previousReviewIndex(reviewIndex, contextProblem());
+          if (previousReview !== null) renderReviewedItem(previousReview);
+          return;
+        }
         if (!canReviewPrevious(item)) return;
         reviewDraft = captureProblemDraft();
         reviewingPrevious = true;
-        renderDeckItem(practiceDeck.items[practiceDeck.cursor - 1], true);
+        renderReviewedItem(previousReviewIndex(practiceDeck.cursor, item));
         return;
       }
       if (practiceDeck.cursor <= 0) return;
@@ -1726,9 +1875,17 @@
     });
     if (cardNext) cardNext.addEventListener("click", function () {
       if (reviewingPrevious) {
+        var reviewed = contextProblem();
+        var nextReview = nextReviewIndex(reviewIndex, reviewed);
+        if (nextReview !== null) {
+          renderReviewedItem(nextReview);
+          return;
+        }
         var snapshot = reviewDraft;
         reviewingPrevious = false;
+        reviewIndex = -1;
         reviewDraft = null;
+        ratingEditOpen = false;
         renderDeckItem(currentProblem());
         showComposer(true);
         restoreProblemDraft(snapshot);

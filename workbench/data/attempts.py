@@ -551,11 +551,24 @@ def record_browser_attempt(pool, problem_id, answer_text=None, verdict=None,
 
 
 def record_browser_feedback(pool, item_type, item_id, rating=None, note=None,
-                            direction="", attempt_id=None, request_id=None, practice_context=None):
+                            direction="", attempt_id=None, request_id=None,
+                            practice_context=None, edit_existing=False,
+                            expected_rating=None, expected_note=None):
     """Apply a rating and its retry marker in one serialized transaction."""
     payload = _browser_payload("feedback", item_type=item_type, item_id=item_id,
                                rating=rating, note=note, direction=direction,
                                attempt_id=attempt_id)
+    if edit_existing:
+        if item_type != "problem" or attempt_id is None or practice_context is None:
+            raise ManifestError("an in-place Paper self-rating edit requires its saved attempt and run")
+        if (isinstance(expected_rating, bool) or not isinstance(expected_rating, int)
+                or expected_rating not in range(1, 6)):
+            raise ManifestError("expected_rating must be an integer from 1 to 5")
+        if expected_note is not None and not isinstance(expected_note, str):
+            raise ManifestError("expected_note must be a string or null")
+        payload = json.dumps(dict(json.loads(payload), edit_existing=True,
+                                  expected_rating=expected_rating,
+                                  expected_note=expected_note), sort_keys=True)
     if practice_context is not None:
         payload = json.dumps(dict(json.loads(payload), practice_context=practice_context), sort_keys=True)
     if request_id is not None:
@@ -566,13 +579,28 @@ def record_browser_feedback(pool, item_type, item_id, rating=None, note=None,
             return replay
         if practice_context is not None:
             paper_progress.guard(pool, practice_context, item_id if item_type == 'problem' else None,
-                                 feedback=True)
+                                 feedback=True,
+                                 **({"attempt_id": attempt_id} if attempt_id is not None else {}))
         elif item_type == 'problem' and attempt_id is not None and (
                 paper_progress.selected_saved(pool) or paper_progress.saved_attempt(pool, attempt_id)):
             raise active_practice.ActivePracticeConflict('stale practice page: refresh before rating')
-        result = feedback_rules.apply(
-            pool, item_type, item_id, rating=rating, note=note,
-            direction=direction, attempt_id=attempt_id)
+        if edit_existing:
+            event = pool.feedback_event_for_attempt(attempt_id)
+            if (event is None or event["item_type"] != "problem"
+                    or event["item_id"] != item_id
+                    or event["rating"] != expected_rating
+                    or event["note"] != expected_note):
+                raise active_practice.ActivePracticeConflict(
+                    "stale self-rating: reload the reviewed answer before saving")
+            pool.connect().execute(
+                "UPDATE feedback_events SET rating=?, note=? WHERE id=? AND attempt_id=?",
+                (rating, note, event["id"], attempt_id))
+            result = {"edited": True, "attempt_id": attempt_id,
+                      "feedback_event_id": event["id"]}
+        else:
+            result = feedback_rules.apply(
+                pool, item_type, item_id, rating=rating, note=note,
+                direction=direction, attempt_id=attempt_id)
         _save_browser_operation(pool, request_id, payload, result)
     return result
 
