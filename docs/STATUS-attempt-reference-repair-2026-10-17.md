@@ -1,5 +1,9 @@
 # Attempt 外键修复实施交接 · 2026-10-17
 
+追加：按用户要求已完成真实物理/CO 库副本与浏览器验收，见
+[真实副本验收](audits/2026-10-17-attempt-real-copy-acceptance.md)。以下原实施记录中的
+“仅合成测试”“未创建快照”描述是该次实施结束时的状态，由本次验收记录补充；原始课程库仍未写入。
+
 Change：`repair-attempt-migration-references`。实施分支：`fix/attempt-migration-references`，
 基于文档提交 `351eeeb0`，隔离目录 `.worktrees/repair-attempt-references/`。
 
