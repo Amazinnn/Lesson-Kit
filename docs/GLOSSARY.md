@@ -605,20 +605,20 @@ _Avoid_：工具日志、一次 Tool 的返回文本、完成即自动跳页、�
 出处：docs/design/AGENT-UI-V1.md
 
 ### 辅助工作面 / Auxiliary Work Surface
-中央 Lesson Kit 页面之外、由 Agent 运行状态临时唤起的工作表面总称。v1 只允许三种形态：短时活动用「活动浮层」，持续多步工作用「底部工作坞」，最新 Artifact 的可视交接用「自适应分栏」。它们都服从“中央页面优先、右栏对话优先”，并在状态结束或用户收起后退出；**不得固化成永久 chrome**。
-_Avoid_：第二主页面、常驻任务中心、把所有 Tool 都强制展开到中央区域
-出处：docs/design/AGENT-UI-V1.md
+中央 Lesson Kit 页面之外、由 Agent 运行状态临时唤起的工作面总称。当前包含顶部右侧 Activity Float（短时与持续任务进度）和 Adaptive Split（用户显式预览 Artifact）；活动结束后清理，不固定为永久 chrome。
 
+_Avoid_：第二主页面、常驻任务中心、强制展开到中央区域
+出处：docs/design/AGENT-UI-V1.md
 ### 活动浮层 / Activity Float
-位于中央工作区右上方的**可替换短时活动层**，用于轻量 Tool、失败恢复或短暂进度。新活动替换旧活动，不累积成历史任务列表；历史仍由对话流与执行计划承担。
+位于中央工作区右上方的有界、可替换活动层，用于短时活动及持续任务的当前里程碑与最新状态。新活动替换显示内容，不累积为历史任务列表；用户可用小型可访问控件收起或展开。同一用户轮次的后续更新不会自动重新展开，新轮次恢复自动展示；活动结束后消失。历史仍由对话流与执行计划承载。
+
 _Avoid_：通知中心、历史任务抽屉、永久悬浮工具栏
 出处：docs/design/AGENT-UI-V1.md
-
 ### 底部工作坞 / Bottom Dock
-中央工作区底部为**持续多步任务**临时展开的工作面，展示当前里程碑与最新状态；Agent 对话栏同时保持可用。它只承载正在进行的工作，不复制完整对话、不展示原始 provider 事件，任务结束后应退出。
-_Avoid_：第二聊天窗口、后台日志面板、永久状态栏
-出处：docs/design/AGENT-UI-V1.md
+已退役：当前实现不为任务进度渲染底部工作区，短时与持续任务统一使用 Activity Float。此名称仅用于解释历史文档或旧设计，不表示当前能力。
 
+_Avoid_：第二聊天窗口、后台日志面板、永久状态栏
+出处：openspec/changes/use-collapsible-agent-activity-float
 ### 自适应分栏 / Adaptive Split
 当最新 Agent Artifact 需要可视预览时，对中央工作区进行的**临时分栏**：原 Lesson Kit 页面仍在，Artifact 预览占用辅助一侧；它是交接面而不是导航结果。用户显式进入 Artifact 的正式页面后，分栏可结束。用户已主动收起辅助工作面时，Artifact 不得强制重新展开它。
 _Avoid_：完成即页面接管、自动导航、永久双栏布局
