@@ -152,6 +152,64 @@ def test_unavailable_execution_item_is_reported_without_repairing_history(pool):
     assert current['execution_id'] == active['execution_id']
 
 
+def test_existing_card_item_is_not_reported_as_unavailable(pool, monkeypatch):
+    paper_id = paper(pool, 'A', [Q, R])
+    start(pool, paper_id)
+    monkeypatch.setattr(pool, 'card', lambda card_id: {'card_id': card_id})
+    pool.connect().execute(
+        "UPDATE active_practice_items SET item_type='card',item_id='card-existing' WHERE position=0")
+    pool.commit()
+
+    status = practice_sets.get_saved(pool, paper_id)['continuation']
+
+    assert status['unavailable_item_ids'] == []
+    assert status['available'] is False
+    assert '名单或顺序' in status['reason']
+
+
+def test_parked_paper_readiness_reports_unparkable_active_paper(pool):
+    target = paper(pool, 'Target', [Q, R])
+    active_id = paper(pool, 'Active', [Q, R])
+    start(pool, target)
+    active_practice.mark(pool, 0, 'stuck')
+    start(pool, active_id)
+    pool.connect().execute('UPDATE active_practice_items SET item_id=? WHERE position=0',
+                           ('legacy-missing-question',))
+    pool.commit()
+
+    target_status = practice_sets.get_saved(pool, target)
+    current_before = active_practice.current(pool)
+
+    assert target_status['continuation']['available'] is True
+    assert target_status['progress'] == {'total': 2, 'completed': 1}
+    assert target_status['can_start'] is False
+    assert '当前活动试卷' in target_status['start_block_reason']
+    with pytest.raises(active_practice.ActivePracticeConflict, match='当前活动试卷'):
+        start(pool, target)
+    assert active_practice.current(pool)['source_ref'] == active_id
+    assert active_practice.current(pool)['execution_id'] == current_before['execution_id']
+
+
+def test_active_resume_readiness_includes_saved_container_validation(pool):
+    paper_id = paper(pool, 'A', [Q, R])
+    start(pool, paper_id)
+    path = practice_sets._saved_path(pool, paper_id)
+    plan = __import__('json').loads(path.read_text(encoding='utf-8'))
+    plan['plan']['unsupported_field'] = 'stale contract'
+    path.write_text(__import__('json').dumps(plan), encoding='utf-8')
+
+    saved = practice_sets.get_saved(pool, paper_id)
+    current = active_practice.current(pool)
+
+    assert saved['validation_errors']
+    assert saved['continuation']['available'] is False
+    assert '内容校验失败' in saved['continuation']['reason']
+    assert saved['progress'] is None
+    assert current['continuation'] == saved['continuation']
+    with pytest.raises(active_practice.ActivePracticeError, match='unsupported manifest field'):
+        start(pool, paper_id)
+
+
 def test_active_execution_generation_and_content_revision_are_revalidated(pool):
     paper_id = paper(pool, 'A', [Q, R])
     start(pool, paper_id)

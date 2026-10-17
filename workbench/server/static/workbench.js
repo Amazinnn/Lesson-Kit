@@ -1911,8 +1911,9 @@
         progress.textContent = (record.count || 0) + " 题" + progressText;
       }
       var continuation = record.continuation;
-      var message = continuation && !continuation.available && continuation.reason
-        ? continuation.reason : (error.message || "无法开始练习");
+      var message = record.start_block_reason
+        || (continuation && !continuation.available && continuation.reason)
+        || error.message || "无法开始练习";
       practiceSetStatus(card, message);
     }).catch(function () {
       practiceSetStatus(card, error.message || "无法开始练习");

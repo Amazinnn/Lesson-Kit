@@ -536,8 +536,13 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         continuation = record.get('continuation')
         if invalid:
             reason = ("缺少题目 " + str(len(record['missing_problem_ids'])) + " 道，详情见下方折叠项"
-                      if record['missing_problem_ids'] else '; '.join(record['validation_errors']) or '试卷为空')
+                      if record['missing_problem_ids'] else
+                      "当前试卷内容校验失败：" + '; '.join(record['validation_errors'])
+                      if record['validation_errors'] else '试卷为空')
             availability = "<p class='inline-error'>无法开始：" + html.escape(reason) + "</p>"
+        elif record.get('start_block_reason'):
+            availability = "<p class='inline-error'>暂时无法开始：" + html.escape(
+                record['start_block_reason']) + "</p>"
         elif continuation and not continuation['available']:
             availability = "<p class='inline-error'>无法继续旧执行：" + html.escape(
                 continuation['reason'] or '执行状态与当前试卷不一致') + "</p>"

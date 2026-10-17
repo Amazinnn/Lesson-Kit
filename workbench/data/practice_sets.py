@@ -216,7 +216,9 @@ def _saved_record(pool, practice_set_id, plan, created_at, updated_at):
     # Container management must survive unavailable items and an empty list.
     missing = [item['problem_id'] for item in checked.get('items', [])
                if isinstance(item, dict) and item.get('problem_id') and pool.problem(item['problem_id']) is None]
-    continuation = paper_progress.continuation(pool, practice_set_id, checked.get('items', []))
+    continuation = paper_progress.continuation(
+        pool, practice_set_id, checked.get('items', []), errors)
+    start_block_reason = paper_progress.start_blocker(pool, practice_set_id)
     progress = (continuation['execution']['progress']
                 if continuation and continuation['available'] else None)
     return {
@@ -229,8 +231,9 @@ def _saved_record(pool, practice_set_id, plan, created_at, updated_at):
         "missing_problem_ids": missing,
         "validation_errors": errors,
         "continuation": continuation,
+        "start_block_reason": start_block_reason,
         "can_start": bool(checked["items"]) and not missing and not errors
-            and (continuation is None or continuation['available']),
+            and (continuation is None or continuation['available']) and not start_block_reason,
         "progress": progress,
         "generation": paper_progress.state(pool.connect(), practice_set_id)['generation']
             if paper_progress.available(pool.connect()) else 1,

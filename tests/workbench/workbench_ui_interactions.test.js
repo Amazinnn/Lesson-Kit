@@ -140,9 +140,9 @@ test("a rejected stale paper start refreshes readiness without replacing local e
     if (options && options.method === "POST") {
       return Promise.resolve({ ok: false, status: 409, json: () => Promise.resolve({ error: "execution is stale" }) });
     }
-    return jsonResponse({ count: 22, progress: null, can_start: false, continuation: {
-      available: false, reason: "旧执行与当前试卷名单或顺序不一致",
-    } });
+    return jsonResponse({ count: 22, progress: null, can_start: false,
+      start_block_reason: "当前活动试卷无法暂停，不能开始另一张试卷：旧执行与当前试卷名单或顺序不一致",
+      continuation: null });
   } });
 
   list.trigger("click", { target: start, preventDefault() {} });
@@ -154,7 +154,7 @@ test("a rejected stale paper start refreshes readiness without replacing local e
   assert.equal(start.textContent, "开始练习");
   assert.equal(progress.textContent, "22 题");
   assert.doesNotMatch(progress.textContent, /19\/70|70/);
-  assert.match(status.textContent, /名单或顺序/);
+  assert.match(status.textContent, /当前活动试卷无法暂停/);
   assert.equal(card.localEdit, localEdit);
   assert.equal(localEdit.value, "unsaved reordered list");
 });
@@ -172,6 +172,26 @@ test("active paper readiness blocks resume when same-count question IDs changed"
   await flush();
   assert.equal(elements["resume-practice"].disabled, true);
   assert.match(elements["active-practice-meta"].textContent, /当前试卷 2 题；旧执行 2 题/);
+  elements["resume-practice"].click();
+  assert.equal(elements.stream.innerHTML, "");
+});
+
+test("active paper readiness blocks resume when the saved manifest fails validation", async () => {
+  const elements = { layout: layout(), ...durablePracticeElements() };
+  runWorkbench({ elements, fetch: () => jsonResponse({ practice: {
+    source_kind: "paper", source_ref: "ps-001", kp_ids: [], cursor: 0,
+    progress: { completed: 1, total: 2, stuck: 1, remaining: 1 },
+    continuation: { available: false, reason: "当前试卷内容校验失败，不能继续：unsupported manifest field",
+      paper_count: 2, execution: { progress: { completed: 1, total: 2 } }, unavailable_item_ids: [] },
+    unavailable_item_ids: [],
+    items: [{ item_id: "p-1", item_type: "problem", state: "stuck", payload: null }],
+  } }) });
+
+  await flush();
+
+  assert.equal(elements["resume-practice"].disabled, true);
+  assert.match(elements["active-practice-meta"].textContent, /内容校验失败/);
+  assert.match(elements["active-practice-continuation-meta"].textContent, /1 \/ 2/);
   elements["resume-practice"].click();
   assert.equal(elements.stream.innerHTML, "");
 });

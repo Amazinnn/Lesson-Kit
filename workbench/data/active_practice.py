@@ -464,6 +464,8 @@ def start_saved(pool, paper_id, *, practice_mode='exam', rating_mode='immediate'
             raise ActivePracticeError('empty Paper cannot start')
         if paper['validation_errors']:
             raise ActivePracticeError('; '.join(paper['validation_errors']))
+        if paper['start_block_reason']:
+            raise ActivePracticeConflict(paper['start_block_reason'])
         continuation = paper['continuation']
         if continuation and not continuation['available']:
             raise ActivePracticeConflict(continuation['reason'])

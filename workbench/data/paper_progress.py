@@ -100,7 +100,7 @@ def park(pool, record):
     if not practice_sets._saved_path(pool, paper_id).is_file():
         return False
     paper = practice_sets.get_saved(pool, paper_id)
-    status = continuation(pool, paper_id, paper['plan']['items'])
+    status = paper['continuation']
     if not status or not status['available']:
         raise ActivePracticeConflict((status or {}).get('reason') or '试卷执行进度无法验证，不能暂停。')
     ensure_state(pool.connect(), paper_id)
@@ -201,7 +201,7 @@ def saved_attempt(pool, attempt_id):
     return any(item.get('attempt_id') == attempt_id for record in snapshots for item in record['items'])
 
 
-def continuation(pool, paper_id, plan_items):
+def continuation(pool, paper_id, plan_items, validation_errors=()):
     """Compare saved Paper membership with its active or parked execution."""
     conn = pool.connect()
     if not available(conn):
@@ -224,7 +224,7 @@ def continuation(pool, paper_id, plan_items):
     unavailable = []
     for item_type, item_id in expected + actual:
         present = (pool.problem(item_id) if item_type == 'problem'
-                   else pool.card(item_id) if item_type == 'flash_card' else None)
+                   else pool.card(item_id) if item_type == 'card' else None)
         if present is None and item_id not in unavailable:
             unavailable.append(item_id)
 
@@ -234,6 +234,8 @@ def continuation(pool, paper_id, plan_items):
         reason = '当前试卷或旧执行引用了不可用题目，不能继续。'
     elif expected != actual:
         reason = '旧执行的题目名单或顺序与当前试卷不一致，不能继续。'
+    elif validation_errors:
+        reason = '当前试卷内容校验失败，不能继续：' + '；'.join(validation_errors)
     elif record.get('paper_generation') != state(conn, paper_id)['generation']:
         reason = '旧执行对应的试卷结构版本已过期，不能继续。'
     elif any(item.get('item_type') == 'problem'
@@ -242,6 +244,29 @@ def continuation(pool, paper_id, plan_items):
         reason = '旧执行引用的题目作答内容已变化，不能继续。'
     return dict(available=reason is None, reason=reason, paper_count=len(plan_items),
                 execution=dict(progress=progress), unavailable_item_ids=unavailable)
+
+
+def start_blocker(pool, paper_id):
+    """Return why another saved Paper cannot start because the active one cannot park."""
+    conn = pool.connect()
+    if not available(conn):
+        return None
+    active = conn.execute('SELECT source_ref FROM active_practice WHERE singleton=1').fetchone()
+    active_id = active['source_ref'] if active else None
+    if not isinstance(active_id, str) or not active_id.startswith('ps-') or active_id == paper_id:
+        return None
+    from workbench.data import practice_sets
+    if not practice_sets._saved_path(pool, active_id).is_file():
+        return None
+    try:
+        current = practice_sets.get_saved(pool, active_id)
+    except FileNotFoundError:
+        return None
+    status = current['continuation']
+    if status and status['available'] and not current['validation_errors'] and not current['missing_problem_ids']:
+        return None
+    reason = (status or {}).get('reason') or '当前活动试卷执行状态无法验证。'
+    return '当前活动试卷无法暂停，不能开始另一张试卷：' + reason
 
 
 def remove_question(pool, problem_id):
