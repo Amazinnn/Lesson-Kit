@@ -460,6 +460,8 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("left-column", body)
+        self.assertIn("<div id='middle-page'>", body)
+        self.assertIn("<script src='/static/middle-navigation.js'></script>", body)
         self.assertIn("id='left-resizer'", body)
         self.assertIn("id='right-resizer'", body)
         self.assertIn("ai-column", body)

@@ -6,6 +6,7 @@ const test = require("node:test");
 const vm = require("node:vm");
 
 const publicPhysics = require("../../workbench/server/static/graph-physics.js");
+const graphRenderer = require("../../workbench/server/static/graph-renderer.js");
 const corePhysics = require("../../workbench/server/static/graph-physics-core.js");
 const loaderSource = fs.readFileSync(
   require.resolve("../../workbench/server/static/graph-physics.js"),
@@ -64,7 +65,7 @@ test("graph physics public seam exposes the semantic core contract", () => {
   assert.deepEqual(settle(corePhysics), settle(publicPhysics));
 });
 
-test("browser adapter refuses to publish when the parser-loaded core is missing", () => {
+test("browser adapter refuses to publish when the core is missing", () => {
   let writes = 0;
   const browser = vm.createContext({
     Worker: function Worker() {},
@@ -82,13 +83,17 @@ test("browser adapter refuses to publish when the parser-loaded core is missing"
   assert.equal(vm.runInContext("typeof GraphPhysics", browser), "undefined");
 });
 
-test("browser loader still refuses non-parser loading", () => {
+test("browser loader supports one dynamic load after document parsing", () => {
   const browser = vm.createContext({
+    Worker: function Worker() {},
     document: { readyState: "complete", write() {} },
+    GraphPhysics: corePhysics,
+    GraphRenderer: graphRenderer,
   });
 
-  assert.throws(
-    () => vm.runInContext(loaderSource, browser),
-    /must be parser-loaded before workbench\.js/
-  );
+  vm.runInContext(loaderSource, browser);
+  const adapter = vm.runInContext("GraphPhysics", browser);
+  assert.equal(adapter.workerBacked, true);
+  vm.runInContext(loaderSource, browser);
+  assert.equal(vm.runInContext("GraphPhysics", browser), adapter, "loading the adapter twice is idempotent");
 });

@@ -94,7 +94,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
         + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
-        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{_agent_activity_float()}{middle_html}{_agent_aux_surfaces()}</main>"
+        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{_agent_activity_float()}<div id='middle-page'>{middle_html}</div>{_agent_aux_surfaces()}</main>"
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics-core.js'></script>"
@@ -104,6 +104,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + "<script src='/static/practice-flow.js'></script>"
         + "<script src='/static/agent-ui.js'></script>"
         + "<script src='/static/workbench.js'></script>"
+        + "<script src='/static/middle-navigation.js'></script>"
     )
     return _base(f"workbench {workspace['name']}", body)
 

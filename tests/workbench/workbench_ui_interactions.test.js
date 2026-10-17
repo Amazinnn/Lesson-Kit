@@ -465,6 +465,7 @@ class FakeStorage {
 function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
   reducedMotion = false, physics = Object.assign({ workerBacked: true }, GraphPhysics), setTimeoutFn = () => 0,
+  clearTimeoutFn = clearTimeout,
   promptFn = undefined, confirmFn = undefined, selectors = {}, agentUISurfaces = null,
 }) {
   const document = {
@@ -518,7 +519,7 @@ function runWorkbench({
     setInterval,
     clearInterval,
     setTimeout: setTimeoutFn,
-    clearTimeout,
+    clearTimeout: clearTimeoutFn,
     requestAnimationFrame(callback) {
       rafCalls += 1;
       return setImmediate(() => callback(0));
@@ -4415,6 +4416,50 @@ test("batch wrong answers hold the verdict with the correct option before advanc
   const pulls = calls.filter((call) => call.url.endsWith("/pull"));
   assert.equal(pulls.length, 2);
   assert.deepEqual(JSON.parse(pulls[1].options.body).exclude_ids, ["p-1"]);
+});
+
+test("disposing a middle page cancels its delayed practice advance", async () => {
+  const calls = [];
+  const timers = new Map();
+  const cleared = [];
+  const elements = { layout: layout(), ...practiceElements() };
+  let nextTimer = 0;
+  const app = runWorkbench({
+    elements,
+    setTimeoutFn(callback, delay) {
+      const id = ++nextTimer;
+      timers.set(id, { callback, delay });
+      return id;
+    },
+    clearTimeoutFn(id) { cleared.push(id); },
+    fetch(url, options) {
+      calls.push({ url, options });
+      if (url.includes("/weak?")) return jsonResponse([{ kp_id: "kp-1" }]);
+      const body = JSON.parse((options && options.body) || "{}");
+      return jsonResponse({ problems: [{
+        problem_id: (body.exclude_ids || []).length ? "p-2" : "p-1",
+        problem_text: "棰樼洰",
+        micro_quiz: { quiz_type: "yes_no", answer_key: "yes" },
+      }] });
+    },
+  });
+  elements["practice-mode-batch"].checked = true;
+  elements["practice-mode-batch"].trigger("change");
+  elements["start-practice"].click();
+  await flush();
+  elements.stream.queryAll = selector => selector === "[data-choice-option]:checked"
+    ? [{ value: "no" }] : [];
+  elements["answer-submit"].click();
+  await flush();
+  const held = Array.from(timers.entries()).find(([, timer]) => timer.delay === 2000);
+  assert.ok(held);
+
+  assert.equal(typeof app.window.WorkbenchMiddlePage, "object");
+  app.window.WorkbenchMiddlePage.dispose();
+  assert.ok(cleared.includes(held[0]));
+  held[1].callback();
+  await flush();
+  assert.equal(calls.filter(call => call.url.endsWith("/pull")).length, 1);
 });
 
 test("flash cards page back and forth through history and only pull at the end", async () => {
