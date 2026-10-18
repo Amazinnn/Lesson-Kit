@@ -1554,6 +1554,13 @@ img { max-width: 100%; }
   gap: 12px;
   padding-top: 12px;
 }
+/* The learning dashboard starts closed and opens only when a point is selected: it has
+ * nothing to say until then, and while closed the canvas takes its whole column back.
+ * Nothing remembers the state between visits — every visit starts from the canvas. */
+.graph-workspace[data-dashboard='collapsed'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.graph-workspace[data-dashboard='collapsed'] .graph-dashboard { display: none; }
 .graph-shell { min-width: 0; }
 .graph-dashboard {
   min-width: 0;
@@ -1729,6 +1736,24 @@ img { max-width: 100%; }
   box-shadow: var(--shadow); border-radius: 5px;
 }
 .controls { left: 16px; top: 16px; width: 230px; padding: 14px; }
+/* Closed, the control card is only its own title. It floats over the canvas, so folding it
+ * does not change the canvas size — unlike the dashboard — but it uncovers a corner of the
+ * graph, which is the point. Open/closed is not remembered; every visit starts closed. */
+.controls[data-collapsed='true'] { width: auto; padding: 0; }
+.controls[data-collapsed='true'] .control-body { display: none; }
+.control-toggle {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 10px 14px; border: 0; border-radius: 5px; background: transparent;
+  cursor: pointer; color: inherit; font: inherit; text-align: left;
+}
+.controls[data-collapsed='true'] .control-toggle { padding: 8px 12px; }
+.control-toggle:hover { background: rgba(61, 52, 37, .06); }
+.control-toggle:focus-visible { outline: 2px solid #d3a914; outline-offset: 1px; }
+.control-toggle strong { font-family: Georgia, "Songti SC", "SimSun", serif; font-size: 12px; letter-spacing: .02em; color: #2b2925; }
+.control-caret { margin-left: auto; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid #9a9388; }
+.controls[data-collapsed='true'] .control-caret { border-top: 0; border-bottom: 5px solid #9a9388; }
+.control-body { padding: 0 14px 14px; }
+.control-note { font-size: 9px; color: #9a9388; margin-bottom: 10px; }
 .control-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .control-head strong { font-family: Georgia, "Songti SC", "SimSun", serif; font-size: 12px; letter-spacing: .02em; color: #2b2925; }
 .control-head span { font-size: 9px; color: #9a9388; }

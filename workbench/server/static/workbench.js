@@ -560,7 +560,19 @@
     var graphZoomOut = document.getElementById("graph-zoom-out");
     var graphZoomReset = document.getElementById("graph-reset");
     var graphDetail = document.getElementById("graph-detail-panel");
+    var graphControls = document.getElementById("graph-controls");
+    var graphControlsToggle = document.getElementById("graph-controls-toggle");
     var graphEdgeBudgetEl = null;
+
+    // The control card starts folded — the server renders it that way, so there is no flash
+    // — and this only has to keep the button and the card in step.
+    if (graphControls && graphControlsToggle) {
+      graphControlsToggle.addEventListener("click", function () {
+        var collapsed = graphControls.dataset.collapsed !== "true";
+        graphControls.dataset.collapsed = collapsed ? "true" : "false";
+        graphControlsToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      });
+    }
 
     var STATE_LABEL = { work: "重点练习", review: "可以复习", mastered: "已掌握", new: "未标记" };
     var STATE_SHORT = { work: "练", review: "复", mastered: "熟", new: "新" };
@@ -1113,10 +1125,34 @@
       if (graphStage.dataset) graphStage.dataset.lastPaint = kind;
     }
 
+    /* The learning dashboard is closed until a point is chosen, because until then it has
+     * nothing to show and it costs the canvas a whole column. Opening and closing changes
+     * the canvas width, so the view is re-fitted afterwards — otherwise the panel would
+     * fold away and the graph would stay at the zoom it needed while the panel was there,
+     * which reads as "the panel closed but the picture did not move".
+     * The state is deliberately not remembered: every visit starts from the canvas. */
+    function graphSetDashboard(open) {
+      var workspace = document.getElementById("graph-workspace");
+      if (!workspace) return;
+      var next = open ? "open" : "collapsed";
+      if (workspace.dataset.dashboard === next) return;
+      workspace.dataset.dashboard = next;
+      if (!sim) return;
+      // One frame later, so the grid has re-laid out and clientWidth is the new width.
+      var schedule = typeof requestAnimationFrame === "function"
+        ? requestAnimationFrame.bind(null)
+        : setTimeout.bind(null);
+      schedule(function () {
+        graphFit();
+        graphMarkDirty();
+      });
+    }
+
     function graphSelect(id, centerIt) {
       sim.graph.selected = id;
       selectedGraphKpId = id;
       recordRecent("kp", id);
+      graphSetDashboard(Boolean(id));
       graphApplyVisibility();
       graphRenderDetail(sim.byId.get(id));
       if (centerIt) graphCenterOn(sim.byId.get(id), true);
