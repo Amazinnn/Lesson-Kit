@@ -70,6 +70,8 @@ Conversation history SHALL include accepted turn messages independently of succe
 - **WHEN** a conversation contains successful transcript exchanges created before this change
 - **THEN** each exchange remains readable once and no missing failed-message text is synthesized
 
+## ADDED Requirements
+
 ### Requirement: Interrupt-and-send waits for the old turn to stop
 
 An explicit interrupt-and-send SHALL durably accept its message and bind its cancellation request to the running turn that was current at acceptance. It SHALL start the interrupt message only after that captured turn's provider worker reaches an authoritative terminal state. A stop request, timeout, or missing progress response alone SHALL NOT authorize concurrent execution. The bridge SHALL preserve already completed effects and SHALL NOT resume or roll back the old task automatically. Messages queued before the interrupt SHALL remain paused after the interrupt message, including when it succeeds. While an interrupt message is waiting for stop confirmation, another distinct interrupt submission SHALL be rejected as a conflict without discarding the accepted one.

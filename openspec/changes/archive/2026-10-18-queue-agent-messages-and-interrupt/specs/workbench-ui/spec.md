@@ -78,6 +78,8 @@ provider operation or its writes.
 - **WHEN** the learner explicitly retries a failed accepted turn
 - **THEN** a new turn links to the original message, uses its current accepted text and original context, and both turns remain in history
 
+## ADDED Requirements
+
 ### Requirement: Running-send preference and pending controls are explicit
 
 The workspace's existing browser settings SHALL store the default action for a
