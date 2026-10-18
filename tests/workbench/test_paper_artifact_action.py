@@ -1,5 +1,6 @@
 """Managed Paper handoff is a validated presentation action, not model navigation."""
 
+import json
 import unittest
 
 from tests.workbench.fixtures import REPO_ROOT, WorkspaceFixture
@@ -97,9 +98,14 @@ class VerifiedPaperArtifactTests(unittest.TestCase):
         })
 
         self.assertIsNone(notice)
-        recorded = self.events.read_text(encoding="utf-8")
-        self.assertIn("ps-999999", recorded)
-        self.assertIn("error", recorded)
+        recorded = [
+            json.loads(line)
+            for line in self.events.read_text(encoding="utf-8").splitlines()
+        ]
+        self.assertEqual(len(recorded), 1)
+        self.assertEqual(recorded[0]["kind"], "activity")
+        self.assertEqual(recorded[0]["status"], "failed")
+        self.assertIn("ps-999999", recorded[0]["label"])
 
 
 if __name__ == "__main__":

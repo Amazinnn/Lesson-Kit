@@ -407,14 +407,15 @@ class PiConversationTurnTests(unittest.TestCase):
         self.assertEqual(len(restored["messages"]), 6)
         self.assertIn("第 3 轮回答", restored["messages"][-1]["content"])
 
-    def test_cancel_sends_rpc_abort_and_mirrors_nothing(self):
+    def test_cancel_sends_rpc_abort_and_keeps_user_without_success_transcript(self):
         self.launcher.fake_mode = "slow"
         slow = self.provider
+        message_text = "慢慢来"
         with mock.patch.object(self.providers, "get", return_value=slow):
             conversation = conversations.create(self.pool, "pi")
             turn = conversations.start_turn(
                 self.pool, self.workspace, conversation["conversation_id"],
-                "慢慢来", {"anchor": {"page_type": "kps"}},
+                message_text, {"anchor": {"page_type": "kps"}},
             )
             # Wait until the fake is genuinely mid-turn, then cancel.
             deadline = time.time() + 10
@@ -426,16 +427,27 @@ class PiConversationTurnTests(unittest.TestCase):
         self.assertEqual(done["status"], "cancelled", done)
         self.assertEqual(len(self.entries("abort")), 1)
         restored = conversations.get(self.pool, conversation["conversation_id"])
-        self.assertEqual(restored["messages"], [])
+        self.assertEqual(len(restored["messages"]), 1)
+        user = restored["messages"][0]
+        self.assertEqual(user["role"], "user")
+        self.assertEqual(user["content"], message_text)
+        self.assertEqual(user["turn_id"], turn["turn_id"])
+        self.assertEqual(user["status"], "cancelled")
+        self.assertFalse(any(row["role"] == "assistant" for row in restored["messages"]))
+        transcript = conversations._conversation_dir(
+            self.pool, conversation["conversation_id"]
+        ) / "transcript.jsonl"
+        self.assertFalse(transcript.exists())
 
     def test_crash_after_acceptance_is_not_replayed(self):
         self.launcher.fake_mode = "crash-after-accept"
         crash = self.provider
+        message_text = "会崩"
         with mock.patch.object(self.providers, "get", return_value=crash):
             conversation = conversations.create(self.pool, "pi")
             turn = conversations.start_turn(
                 self.pool, self.workspace, conversation["conversation_id"],
-                "会崩", {"anchor": {"page_type": "kps"}},
+                message_text, {"anchor": {"page_type": "kps"}},
             )
             done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
 
@@ -443,7 +455,17 @@ class PiConversationTurnTests(unittest.TestCase):
         self.assertIn("rpc", (done["error"] or "").lower())
         self.assertEqual(len(self.entries("prompt")), 1)
         restored = conversations.get(self.pool, conversation["conversation_id"])
-        self.assertEqual(restored["messages"], [])
+        self.assertEqual(len(restored["messages"]), 1)
+        user = restored["messages"][0]
+        self.assertEqual(user["role"], "user")
+        self.assertEqual(user["content"], message_text)
+        self.assertEqual(user["turn_id"], turn["turn_id"])
+        self.assertEqual(user["status"], "failed")
+        self.assertFalse(any(row["role"] == "assistant" for row in restored["messages"]))
+        transcript = conversations._conversation_dir(
+            self.pool, conversation["conversation_id"]
+        ) / "transcript.jsonl"
+        self.assertFalse(transcript.exists())
         events = conversations.events(
             self.pool, conversation["conversation_id"], turn["turn_id"])
         self.assertIn("error", [event["kind"] for event in events])
