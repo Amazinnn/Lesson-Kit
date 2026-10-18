@@ -21,8 +21,14 @@
       （含 `wide levels wrap into stacked rows…` 与
       `an unwrapped graph keeps the blueprint's single-band stage`）
 - [x] 3.2 `node --test tests/workbench/` 全部 JS 测试无回归（11 个文件 / 224 条全绿）
-- [x] 3.3 真实数据验收（86 点 / 0 边）：各向异性 3.49 → **1.62**、
-      bbox 2780×1268 → 1841×949、收敛 169 tick、拥塞遗留 0 对
+- [x] 3.3 真实数据验收（86 点 / 0 边）：各向异性 2.92 → **1.84**、
+      bbox 2839×1422 → 1932×949、收敛 173 tick、拥塞遗留 0 对
+- [x] 3.3a **更正（2026-10-18）**：3.3 原先写的是「3.49 → 1.62 / 2780×1268 → 1841×949
+      / 169 tick」，那是拿 `graph_label` 当标题测的。`docs/DATA_MODEL.md:23` 明确
+      `graph_label` 是 **unresolved** 字段且「主图模型仍使用 `knowledge_item`」，
+      而 `workbench/data/queries.py:215` 实际读的也是 `knowledge_item`。改用正确字段
+      重测后得到上面这组数字。提交 `9ce2f033` 的信息里引用了旧数字，文字不改写，
+      以本条为准。测量脚本：`tools/verify-flat-cluster.js`。
 - [x] 3.4 多档规模验收（12 / 13 / 40 / 86 点单层）：13 点 7.76→1.34、
       40 点 10.05→1.08、86 点 4.23→1.30；12 点走原路径不变
 - [x] 3.5 有 prereq 的多层图验收：4 组夹具（3 层链 / 23 点混合 / 5 层×4 点 /
