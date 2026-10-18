@@ -1074,7 +1074,11 @@
       });
       var width = maxX - minX + 90;
       var height = maxY - minY + 100;
-      graphView.scale = Math.max(.38, Math.min(1.05,
+      // The floor used to be .38, sized for the old layouts, which the row grid held
+      // near 1100px — a 1200px viewport never came close to it. A free force field
+      // finds its own extent and can be several times that, so .38 stopped being a
+      // readability floor and started cropping the graph. Fit should fit.
+      graphView.scale = Math.max(.1, Math.min(1.05,
         (graphCanvas.clientWidth - 36) / width,
         (graphCanvas.clientHeight - 36) / height));
       graphView.panX = graphCanvas.clientWidth / 2 - (minX + maxX) / 2 * graphView.scale;

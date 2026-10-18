@@ -328,9 +328,11 @@
     var dist = Math.max(1, dist2d(dx, dy));
     var ux = dx / dist;
     var uy = dy / dist;
-    var semantic = (a.size + b.size) * .48
-      + baseGapForStrength(edge.strength) * layoutSpread(state);
-    // Relation strength is a preference. Readability is a hard floor.
+    var semantic = ((a.size + b.size) * .48
+      + baseGapForStrength(edge.strength) * layoutSpread(state)) * LAYOUT_SCALE;
+    // Relation strength is a preference. Readability is a hard floor, and it is
+    // deliberately the one thing LAYOUT_SCALE does not touch: it is a lower bound
+    // set by how wide the labels are, so it cannot shrink by scaling the layout.
     return Math.max(semantic, readabilityFloor(state, a, b, ux, uy, densityMap));
   }
 
@@ -786,7 +788,18 @@
   // scale it is balancing against. A relation's strength sets linkDistance per edge,
   // so the scale is also per edge; BH_STRENGTH is the value that holds for the
   // dmath spread and is re-tuned with tools/calibrate-bh-strength.js.
-  var BH_STRENGTH = 4000;
+  // Obsidian ships linkDistance 250 and repelStrength 1000, and its graph settles at
+  // a few times the first of those. At the semantic distance our relations ask for
+  // (~500) 31 points came out at 5529x6036 — three times the stage, past what
+  // graphFit can pull back, since its scale floor is .38. LAYOUT_SCALE brings the
+  // physics distance back to Obsidian's own absolute value, which is what makes the
+  // graph roughly the size Obsidian's own would be at this point count.
+  var LAYOUT_SCALE = .55;
+  // Obsidian's own numbers are linkDistance 250, repelStrength -1000, collideRadius
+  // 60 — all three in one pixel scale. BH_STRENGTH has to hold Obsidian's ratio to
+  // linkDistance (1000 at 250, so 0.016 * L^2) or the graph either collapses or
+  // spreads without bound; at L = 275 that is about 1200.
+  var BH_STRENGTH = 1200;
   // d3 forceLink's linkStrength. Obsidian ships 1.
   var LINK_STRENGTH = 1;
   // Obsidian's cooldown: alpha += (alphaTarget - alpha) * (1 - 0.001^(1/300)).
@@ -952,7 +965,7 @@
    * unbounded kick, and no alpha term, so colliding does not fade as the solve
    * cools. Each pair is taken once, from the lower index. */
   function bhCollide(root, node) {
-    var twoR = BH_COLLIDE_R * BH_COLLIDE_R ? BH_COLLIDE_R + BH_COLLIDE_R : 0;
+    var twoR = BH_COLLIDE_R * 2;
     var twoR2 = twoR * twoR;
     var cx = node.x + node.vx, cy = node.y + node.vy;
     (function walk(tree) {
