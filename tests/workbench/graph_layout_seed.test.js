@@ -54,7 +54,7 @@ function makeContext(values, frames) {
   return context;
 }
 
-test("layout cache stores readable graph identity and restores it only as a seed", () => {
+test("layout cache stores readable graph identity and adopts a restored layout as-is", () => {
   const values = new Map();
   const frames = [];
   const context = makeContext(values, frames);
@@ -93,14 +93,40 @@ test("layout cache stores readable graph identity and restores it only as a seed
   const secondWorker = FakeWorker.last;
   const restore = secondWorker.messages.find((message) => message.type === "reheat");
   assert.ok(restore, "restored coordinates are sent through the same Worker runtime");
-  assert.equal(restore.controls.nodes[0].anchorX, 111);
+  assert.equal(restore.controls.nodes[0].anchorX, 111,
+    "the coordinates travel in the anchors, which is how the Worker reads them in");
   assert.equal(second.nodes[0].x, 111);
-  assert.equal(frames.length, 1);
-
-  frames.shift()();
-  frames.shift()();
-  assert.equal(second.nodes[0].anchorX, null);
+  assert.equal(restore.settle, true,
+    "a complete seat is adopted, not re-solved: the anchor/release/reheat dance is gone");
+  assert.equal(second.nodes[0].anchorX, null, "the mirror is not left pinned");
   assert.equal(second.nodes[1].anchorY, null);
-  assert.equal(secondWorker.messages.at(-1).type, "reheat");
-  assert.equal(secondWorker.messages.at(-1).autoFit, true);
+  assert.equal(frames.length, 0, "nothing is scheduled after a restored layout");
+  assert.equal(
+    secondWorker.messages.filter((message) => message.type === "reheat").length, 1,
+    "one restore, not a reheat followed by a second one"
+  );
+});
+
+test("a partial seat is still solved, because it is not the layout the learner left", () => {
+  const values = new Map();
+  const frames = [];
+  const key = "lk_graph_layout_v1_course";
+  // Only one of the two points was cached.
+  values.set(key, JSON.stringify({
+    version: 1,
+    identity: JSON.stringify({ nodes: ["a", "b"], edges: ["a|b|prereq|forward"] }),
+    positions: { a: [111, 222] },
+  }));
+  const context = makeContext(values, frames);
+  const api = context.GraphPhysics;
+  const nodes = [node("a"), node("b")];
+
+  const sim = api.create(nodes, [edge("a", "b")], {
+    stageWidth: 1800, stageHeight: 1550, gravity: 30,
+  });
+  const worker = FakeWorker.last;
+  const restore = worker.messages.find((message) => message.type === "reheat");
+  assert.equal(restore.settle, false, "a partial seat keeps the existing reheat path");
+  assert.equal(restore.alpha, .34);
+  assert.equal(sim.nodes[0].x, 111, "the cached point still starts where it was");
 });

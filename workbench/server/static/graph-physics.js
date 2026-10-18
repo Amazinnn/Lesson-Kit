@@ -210,13 +210,18 @@
       latest = null;
     }
 
-    function reheat(alpha, autoFit) {
+    // `settle` is the restored-layout path: adopt the coordinates that come in with
+    // the controls and stop, instead of re-solving them. ADR 0028 used to restore
+    // the seed as anchors, reheat at .34, release the anchors and reheat again —
+    // three rounds of visible motion to arrive back where the learner already was.
+    function reheat(alpha, autoFit, settle) {
       if (failed) return;
       mirror.reheat(alpha, autoFit);
       savedThisSettle = false;
       controlRevision = send("reheat", {
         alpha: alpha,
         autoFit: autoFit,
+        settle: settle === true,
         controls: controlsFor(state),
       });
     }
@@ -333,20 +338,22 @@
           node.anchorY = point[1];
           seeded.push(node);
         });
-        if (seeded.length) {
-          runtime.reheat(.34, false);
-          var schedule = typeof root.requestAnimationFrame === "function"
-            ? root.requestAnimationFrame.bind(root)
-            : root.setTimeout.bind(root);
-          schedule(function () {
-            schedule(function () {
-              seeded.forEach(function (node) {
-                node.anchorX = null;
-                node.anchorY = null;
-              });
-              runtime.reheat(.28, true);
-            });
+        if (seeded.length === state.nodes.length) {
+          // Every point has a seat, so this is the layout the learner left. Adopt it
+          // and stop: no anchors to release later, no re-solve to watch.
+          seeded.forEach(function (node) {
+            node.anchorX = node.x;
+            node.anchorY = node.y;
           });
+          runtime.reheat(0, true, true);
+          seeded.forEach(function (node) {
+            node.anchorX = null;
+            node.anchorY = null;
+          });
+        } else if (seeded.length) {
+          // A partial seat is not the layout the learner left, so it still has to
+          // be solved — from where those points already are.
+          runtime.reheat(.34, true);
         }
       }
     }

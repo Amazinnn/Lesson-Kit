@@ -70,6 +70,19 @@ self.onmessage = function (event) {
   if (message.type === "reheat") {
     applyControls(message.controls);
     sim.reheat(message.alpha, message.autoFit);
+    if (message.settle) {
+      // A restored layout is adopted, not re-solved: the coordinates arrived with
+      // the controls, the anchors that carried them in are dropped again so the
+      // next interaction can still move the nodes, and the solver stops here.
+      sim.nodes.forEach(function (node) {
+        node.anchorX = null;
+        node.anchorY = null;
+        node.vx = 0;
+        node.vy = 0;
+      });
+      sim.graph.alpha = 0;
+      sim.graph.settled = true;
+    }
     snapshot(message.revision, "reheat");
     return;
   }
