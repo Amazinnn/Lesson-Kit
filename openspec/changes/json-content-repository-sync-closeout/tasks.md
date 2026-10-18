@@ -1,5 +1,10 @@
 ﻿# Tasks
 
+> Closeout update: PR #110 has merged. Existing checks in sections 1–6 reflect
+> the evidence recorded at the time and were not rerun for this documentation
+> update. Sections 7–8 are checked against the merge, CI, and neutral-CWD CLI
+> evidence in the [status handoff](../../../docs/STATUS-content-mirror-closeout-2026-10-18.md).
+
 ## 1. Bootstrap repair and focused regressions
 
 - [x] 1.1 RED first: reproduce R2 with an unreadable renamed JSON whose bytes embed a pool entity id — init reports `valid=true` and creates the canonical file alongside it (disposable fixture only)
@@ -45,15 +50,15 @@
 
 ## 7. Merge sequence for PR110
 
-- [ ] 7.1 Refresh the remote PR head; fast-forward push the local HEAD to `feat/canonical-content-sync` using the per-command credential override (do not modify global credentials)
-- [ ] 7.2 Update the PR110 body to the final scope and evidence
-- [ ] 7.3 Wait for the 3.11 / 3.12 checks, then merge with `--match-head-commit`
-- [ ] 7.4 Verify CI on the actual merge commit
+- [x] 7.1 Verify the accepted PR head was the remote head at merge — it is the merge commit's second parent; push and credential mechanics are not asserted here; see status handoff
+- [x] 7.2 Update the PR110 body to the final scope and evidence — final PR body recorded; see status handoff
+- [x] 7.3 Verify the PR merged after its recorded checks — the merge commit contains the exact accepted PR head; no specific merge-command flag is asserted here; see status handoff
+- [x] 7.4 Verify CI on the actual merge commit — passed; see status handoff
 
 ## 8. Post-merge wrap-up
 
-- [ ] 8.1 Repoint the installed editable CLI to the accepted worktree and verify it from a neutral CWD
-- [ ] 8.2 Update the handoff/status document with the delivered PR link, merge commit, check results, DB impact, and pending follow-ups
-- [ ] 8.3 Record explicit follow-ups for a future change: sibling rollout tasks 7.1–7.3, the conversation-bridge timing fix on main, and (if deferred) the write-isolation widening assessment
+- [x] 8.1 Verify the installed editable CLI from a neutral CWD — it already resolves to current main containing the accepted merge, so no repoint was needed; see status handoff
+- [x] 8.2 Update the handoff/status document with the delivered PR link, merge commit, check results, DB impact, and pending follow-ups — see status handoff
+- [x] 8.3 Record explicit follow-ups for a future change — sibling rollout tasks 7.1–7.3, the main-owned conversation timing follow-up, and the previously recorded SQLite authored-JSON error-context follow-up are in the status handoff; write-isolation repair shipped in PR #110
 
 Out of scope for this change (tracked in the sibling change or a follow-up): external `Lesson-Kit-Content` bootstrap and rollout samples, real-course synchronization, any learner-database write, re-removal of `problems.topic_label`, and archiving the sibling change while its rollout tasks remain open.

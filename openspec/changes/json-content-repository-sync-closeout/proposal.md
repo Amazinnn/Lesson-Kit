@@ -1,5 +1,10 @@
 # Proposal: JSON content repository sync closeout
 
+> Historical planning record: this proposal was written before PR #110 merged.
+> Its original gaps and merge sequence describe the plan at that time, not the
+> current delivery state. PR #110 merged on 2026-10-10; see the
+> [delivered closeout and evidence](../../../docs/STATUS-content-mirror-closeout-2026-10-18.md).
+
 ## Why
 
 PR110 implements the Git-backed JSON authored-content mirror under change
