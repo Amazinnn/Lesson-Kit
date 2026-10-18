@@ -961,6 +961,110 @@
     })(root);
   }
 
+  /* Where to seat the graph before anything is simulated.
+   *
+   * The guide grid was a row layout, and rows say nothing about relationships: two points
+   * one cell apart in the grid are usually not linked, while two points that ARE linked
+   * often sit rows apart. Measured on dmath, the average link spanned about six times the
+   * closest grid spacing, so seeding on it made every spring pull at once on the first
+   * frame — 93px, the same class of teleport the spiral fix removed, arrived at from a
+   * different direction.
+   *
+   * Scaling the grid cannot repair that, and the failure is provable rather than a matter
+   * of tuning. The two conditions bind different pairs of points: link length wants the
+   * seat about three times smaller, while the closest grid pair is already on the
+   * readability floor and cannot go below it. Measured, a uniform shrink that matched link
+   * length dragged the closest pair from 155px to 51px — it started the solve already
+   * overlapping. Adding the floor as a lower bound made the whole scale a no-op: 155px and
+   * 93px, exactly what it was before.
+   *
+   * So the shape is fixed instead of the size. Points are walked in breadth-first order
+   * from the densest one, and consecutive order goes to consecutive cells of a square
+   * spiral one link-length apart. Linked points then land next to each other, which means
+   * the seat is already at the layout's own scale and there is nothing left to yank. */
+  function seatPositions(state, pitch) {
+    var nodes = state.nodes;
+    if (nodes.length < 2) return nodes.map(function (n) { return { id: n.id, x: 0, y: 0 }; });
+
+    var adjacency = new Map();
+    nodes.forEach(function (n) { adjacency.set(n.id, []); });
+    visibleEdges(state).forEach(function (e) {
+      if (!adjacency.has(e.s) || !adjacency.has(e.t)) return;
+      adjacency.get(e.s).push(e.t);
+      adjacency.get(e.t).push(e.s);
+    });
+
+    // Breadth-first from the densest point outwards, then from whatever is still unvisited,
+    // so an unlinked point still gets a cell near the middle rather than being flung out.
+    var order = [];
+    var seen = new Set();
+    var byDegree = nodes.slice().sort(function (a, b) {
+      var d = adjacency.get(b.id).length - adjacency.get(a.id).length;
+      return d || (a.id < b.id ? -1 : 1);
+    });
+    byDegree.forEach(function (start) {
+      if (seen.has(start.id)) return;
+      var queue = [start.id];
+      seen.add(start.id);
+      while (queue.length) {
+        var id = queue.shift();
+        order.push(id);
+        adjacency.get(id).forEach(function (next) {
+          if (seen.has(next)) return;
+          seen.add(next);
+          queue.push(next);
+        });
+      }
+    });
+
+    // Square spiral, one pitch per step: 0,0 then right, down, left left, up up, ...
+    var cells = [{ x: 0, y: 0 }];
+    var cx = 0;
+    var cy = 0;
+    var dir = 0;
+    var dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+    var leg = 1;
+    while (cells.length < order.length) {
+      for (var rep = 0; rep < 2 && cells.length < order.length; rep += 1) {
+        for (var s = 0; s < leg && cells.length < order.length; s += 1) {
+          cx += dirs[dir][0];
+          cy += dirs[dir][1];
+          cells.push({ x: cx, y: cy });
+        }
+        dir = (dir + 1) % 4;
+      }
+      leg += 1;
+    }
+
+    return order.map(function (id, i) {
+      return { id: id, x: cells[i].x * pitch, y: cells[i].y * pitch };
+    });
+  }
+
+  /* The pitch the seat should use: the length the force field will actually hold a link
+   * at. Falls back to the semantic distance alone if there are no links to average. */
+  function seatPitch(state) {
+    var dense = new Map();
+    var edges = visibleEdges(state);
+    var sum = 0;
+    var counted = 0;
+    edges.forEach(function (edge) {
+      var a = state.byId.get(edge.s);
+      var b = state.byId.get(edge.t);
+      if (!a || !b) return;
+      sum += desiredEdgeLength(state, edge, dense);
+      counted += 1;
+    });
+    if (counted) return sum / counted;
+    // No links at all: fall back to the floor two average-sized points would need, so an
+    // unlinked pool is spaced legibly instead of piled up.
+    var nodes = state.nodes;
+    if (!nodes.length) return 160;
+    var mid = nodes[Math.floor(nodes.length / 2)];
+    var half = footprint(mid);
+    return (half.left + half.right) + (half.top + half.bottom) + 20;
+  }
+
   var BH_COLLIDE_DV = .25;
   // Obsidian's default centerStrength. See the comment at its use site.
   var CENTER_STRENGTH = .1;
@@ -1440,18 +1544,28 @@
     state.byId = new Map(state.nodes.map(function (n) { return [n.id, n]; }));
 
     recomputeLayoutGuides(state);
-    // Start the solve on the guide grid, not on the seed spiral. The spiral sat up
-    // to 1135px from the point's own guide (p50 666px), and the only thing standing
-    // between that and the first frame was the hierarchy band clamp — which answers
-    // by teleporting y to guideY +/- band, measured at 953px on real dmath data.
-    // Contracted toward the centre so the learner still sees the graph grow out;
-    // nothing has been simulated yet here, so the seat costs no layout quality.
-    // Contracted in y only, so the learner still sees the rows fan out; x keeps the
-    // guide spacing it already has, and nothing starts overlapping.
+    /* Start the solve on the guide grid, not on the seed spiral. The spiral sat up to
+     * 1135px from the point's own guide (p50 666px) and the only thing between that and
+     * the first frame was the hierarchy band clamp, which answered by teleporting y to
+     * guideY +/- band — measured at 953px on real dmath data.
+     *
+     * The guide grid is then scaled so the seat's own link lengths match what the force
+     * field will hold them at. Those two used to be wildly different: the guides were
+     * sized for the old row layout, where a relationship was meant to span a long way,
+     * while a free layout rests at LAYOUT_SCALE times that. Seeding on the raw guides
+     * therefore made every single link yank on frame one — measured at 93px, which is
+     * the same class of teleport the spiral fix was for, just arrived at differently.
+     *
+     * Only the scale changes: the rows keep their shape, so the learner still watches the
+     * graph fan out from a readable starting arrangement, and nothing starts overlapping
+     * because the whole seat shrinks together. */
     var seat = { x: state.stageWidth / 2, y: state.stageHeight / 2 };
-    state.nodes.forEach(function (n) {
-      n.x = n.guideX;
-      n.y = seat.y + (n.guideY - seat.y) * SEED_CONTRACTION_Y;
+    var pitch = seatPitch(state);
+    seatPositions(state, pitch).forEach(function (p) {
+      var node = state.byId.get(p.id);
+      if (!node) return;
+      node.x = seat.x + p.x;
+      node.y = seat.y + p.y * SEED_CONTRACTION_Y;
     });
     reheat(state, ALPHA_INIT, true);
 
