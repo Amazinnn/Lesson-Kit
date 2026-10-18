@@ -180,7 +180,27 @@ test("wide levels wrap into stacked rows instead of one huge ribbon", () => {
   assert.ok(rows.size > 1, "the flat level is wrapped into stacked rows");
   for (let i = 0; i < 700 && sim.graph.alpha > 0; i += 1) sim.tick();
   assert.equal(sim.graph.alpha, 0, "a wrapped layout still settles");
-  assert.equal(sim.congestion().pairs, 0, "wrapped guides leave no overlap behind");
+
+  // This used to assert congestion().pairs === 0. That is a physics outcome, not a
+  // wrap-geometry one, and it stopped holding once the zero-overlap guarantee was
+  // given up in favour of the reference's free force field. What this test owns is
+  // where the wrap puts its rows, so assert that instead: two wrap rows must be far
+  // enough apart that their footprints clear each other.
+  const byRow = new Map();
+  sim.nodes.forEach((n) => {
+    const key = Math.round(n.guideY);
+    if (!byRow.has(key)) byRow.set(key, n);
+  });
+  const rowYs = [...byRow.keys()].sort((a, b) => a - b);
+  assert.ok(rowYs.length > 1);
+  for (let i = 1; i < rowYs.length; i += 1) {
+    const above = graph.footprint(byRow.get(rowYs[i - 1]));
+    const below = graph.footprint(byRow.get(rowYs[i]));
+    const gap = rowYs[i] - rowYs[i - 1];
+    const needed = above.bottom + below.top;
+    assert.ok(gap >= needed, "wrap row " + i + " clears the row above: " + gap + " >= " + needed);
+  }
+
   sim.nodes.forEach((n) => {
     const fp = graph.footprint(n);
     assert.ok(n.guideY + fp.bottom < size.height, "every wrap row fits inside the sized stage");

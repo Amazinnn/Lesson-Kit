@@ -962,6 +962,13 @@
   }
 
   var BH_COLLIDE_DV = .25;
+  // Obsidian's default centerStrength. See the comment at its use site.
+  var CENTER_STRENGTH = .1;
+  // Obsidian's alphaInit. This matters more than it looks like it should: alpha scales
+  // every force, so starting at 1 instead of .3 makes the first frame's forces 3.3x the
+  // reference's. With the centre force at full measured strength that put a 325px jump
+  // into the first frame — the same class of teleport the guide seed was fixed for.
+  var ALPHA_INIT = .3;
 
   /* Upper bound on collideRadius, used only to prune subtrees during the collide
    * walk. Keeping it generous costs a few extra descents; keeping it too tight would
@@ -1144,8 +1151,17 @@
           n.vy += (125 + rowIndexOf(n) * 155 * spread - n.y) * .0028 * alpha;
         }
       }
-      n.vx += (center.x - n.x) * .00025 * alpha;
-      n.vy += (center.y - n.y) * .00025 * alpha;
+      // Obsidian's centring force. Measured in isolation against its own module: the
+      // velocity change is -pos * alpha * centerStrength, coefficient exactly 1.0, and
+      // the default centerStrength is 0.1. Ours was 0.00025, four hundred times weaker,
+      // and that is the whole reason an unlinked point drifts out of the picture: it
+      // has no spring holding it to anything, so the only force pointing inward was set
+      // to a four-hundredth of what the reference uses. At 0.1 an unlinked point settles
+      // well inside the cluster instead of outside it.
+      // Note this fades with alpha exactly as the reference does, so it steers the point
+      // during the solve and then stops; the position it reached is what stays.
+      n.vx += (center.x - n.x) * CENTER_STRENGTH * alpha;
+      n.vy += (center.y - n.y) * CENTER_STRENGTH * alpha;
       // Obsidian's complete(x, y, 0.6): damp, then integrate. No velocity clamp —
       // the damping is the limiter, and it is what caps per-frame motion instead of
       // a cutoff that leaves the fastest nodes pinned at the ceiling.
@@ -1437,7 +1453,7 @@
       n.x = n.guideX;
       n.y = seat.y + (n.guideY - seat.y) * SEED_CONTRACTION_Y;
     });
-    reheat(state, 1, true);
+    reheat(state, ALPHA_INIT, true);
 
     return {
       state: state,
