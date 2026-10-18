@@ -272,3 +272,4 @@ flowchart LR
 - 2026-10-17 Paper 独立进度：切卷改为暂停/恢复，不归档放弃；新增草稿保存、原卷影响预览确认和 CLI list/get/preview/update/delete。手工结构修改只清该卷未完成状态；修题只重置受影响题；删题保留其他进度及历史身份。删卷不删题。退役重复「AI 生成解析」独立展示，保留正常解析与来源字段。同步 L0/L2/L3/L4 与职责文档。
 - 2026-10-17 Paper 执行状态对齐（align-paper-execution-status）：保存卷列表、当前练习、开始和暂停共用执行续练校验；题目身份/顺序、版本、可用性或清单校验不匹配时说明原因，不把旧进度显示成当前试卷进度。当前卷不能暂停时，其他卷的开始状态显示阻塞原因并保留其自身进度。有效的改名、导出和删除仍可单独执行；不新增、退役或改级动作。
 - 2026-10-18 Agent 消息队列与中断后发送（queue-agent-messages-and-interrupt）：运行中接受 FIFO 消息或显式中断；中断等待捕获轮次终态和 worker 清理，优先消息结束后旧队列仍暂停。待处理消息可编辑/移除并显式继续。L0/L2/L3/L4、FILE_CONTRACT、ARCHITECTURE 与 PRODUCT-MANUAL 同步；无 Pool 字段。
+- 2026-10-18 Agent 既有 Paper 更新确认（complete-agent-message-lifecycle）：Agent 只提议成员/顺序变化；页面展示精确进度/草稿影响，用户批准后复用现有 writer。过期快照零写入并刷新影响；待确认期间 composer 可用但队列暂停，取消或批准后仍需手动继续。见 L3/L4 与 PRODUCT-MANUAL。

@@ -102,6 +102,11 @@ function setup(fetch, options = {}) {
     "ai-pending-list": new Element("ai-pending-list"),
     "ai-queue-status": new Element("ai-queue-status"),
     "ai-queue-continue": new Element("ai-queue-continue"),
+    "ai-paper-approval": new Element("ai-paper-approval"),
+    "ai-paper-approval-status": new Element("ai-paper-approval-status"),
+    "ai-paper-approval-details": new Element("ai-paper-approval-details"),
+    "ai-paper-approval-approve": new Element("ai-paper-approval-approve"),
+    "ai-paper-approval-cancel": new Element("ai-paper-approval-cancel"),
     "setting-running-send": new Element("setting-running-send", { value: "queue" }),
     "ai-stop": new Element("ai-stop"),
     "ai-status": new Element("ai-status"),
@@ -118,7 +123,8 @@ function setup(fetch, options = {}) {
     "agent-artifact-body": new Element("agent-artifact-body"),
     "agent-artifact-actions": new Element("agent-artifact-actions"),
   };
-  ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split", "ai-approval-slot"]
+  ["agent-activity-float", "agent-bottom-dock", "agent-artifact-split", "ai-approval-slot",
+    "ai-paper-approval"]
     .forEach((id) => elements[id].classList.add("hidden"));
   const document = {
     getElementById(id) { return elements[id] || null; },
@@ -223,6 +229,28 @@ function session(conversationId, status = "idle", currentTurnId = null) {
   return {
     conversation_id: conversationId, provider: "codex", title: conversationId,
     status, current_turn_id: currentTurnId, messages: [],
+  };
+}
+
+function paperApproval(overrides = {}) {
+  return {
+    conversation_id: "conv-a", turn_id: "turn-a", revision: 1, status: "pending",
+    practice_set_id: "ps-001", title: "微积分复习",
+    current_problem_ids: ["p-1", "p-2"], proposed_problem_ids: ["p-2", "p-3"],
+    added_problem_ids: ["p-3"], removed_problem_ids: ["p-1"],
+    order_changed: false, structure_changed: true, resets_progress: true,
+    completed_items: 2, draft_items: 1,
+    ...overrides,
+  };
+}
+
+function paperProposalMessage(approval) {
+  return {
+    role: "assistant", turn_id: "turn-a", content: "我建议更新这张 Paper。",
+    action: {
+      type: "paper_update_proposal", practice_set_id: approval.practice_set_id,
+      problem_ids: approval.proposed_problem_ids, paper_approval: approval,
+    },
   };
 }
 
@@ -752,6 +780,226 @@ test("pending messages can be edited, removed, and continued after reload", asyn
     && call.options?.method === "POST"));
   assert.equal(app.ui.state.running, true);
   assert.equal(app.elements["ai-stop"].classList.contains("hidden"), false);
+});
+
+test("pending Paper approval restores beside the composer and accepts sends into the paused queue", async () => {
+  const calls = [];
+  const approval = paperApproval({ confirmation: "opaque-confirmation", draft_answer: "private answer" });
+  const queued = [
+    { role: "user", content: "Queued B", turn_id: "turn-b", status: "queued", queue_revision: 1 },
+  ];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a"), queue_paused: true,
+      pending_paper_approval: approval,
+      messages: [...queued, paperProposalMessage(approval)],
+    });
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      const body = JSON.parse(options.body);
+      queued.push({ role: "user", content: body.message, turn_id: "turn-c", status: "queued",
+        queue_revision: 1, submission_id: body.submission_id });
+      return response({ turn_id: "turn-c", status: "queued", message: body.message });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+  await flush();
+
+  const panel = app.elements["ai-paper-approval"];
+  assert.equal(panel.classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-queue-continue"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-input"].disabled, false);
+  const approvalText = app.elements["ai-paper-approval-status"].textContent
+    + deepText(app.elements["ai-paper-approval-details"]);
+  assert.match(approvalText, /微积分复习/);
+  assert.match(approvalText, /p-1.*p-2/);
+  assert.match(approvalText, /p-2.*p-3/);
+  assert.match(approvalText, /未完成练习中的进度（当前已完成 2 项）/);
+  assert.match(approvalText, /草稿 1 份/);
+  assert.doesNotMatch(approvalText, /opaque-confirmation|private answer/);
+
+  app.elements["ai-input"].value = "Queued C";
+  app.elements["ai-send"].click();
+  await flush();
+  await flush();
+
+  assert.equal(app.elements["ai-input"].disabled, false);
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-queue-continue"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-pending-list"].children.length, 2);
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST").length, 1);
+  assert.equal(calls.some((call) => call.url.endsWith("/queue/continue")), false);
+  assert.equal(calls.some((call) => call.url.includes("/turns/turn-c?")), false);
+});
+
+test("stale Paper approval refreshes impact and requires a second click", async () => {
+  const calls = [];
+  let approval = paperApproval();
+  const queued = [{ role: "user", content: "Queued B", turn_id: "turn-b", status: "queued",
+    queue_revision: 1 }];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a"), queue_paused: true,
+      pending_paper_approval: approval,
+      messages: [...queued, paperProposalMessage(approval)],
+    });
+    if (url.endsWith("/paper-approval") && options?.method === "POST") {
+      const body = JSON.parse(options.body);
+      if (body.expected_revision === 1) {
+        approval = paperApproval({ revision: 2, completed_items: 3, draft_items: 2 });
+        return response({ conversation_id: "conv-a", turn_id: "turn-a", approval,
+          queue_paused: true, stale: true });
+      }
+      approval = paperApproval({ revision: 2, status: "approved", completed_items: 3,
+        draft_items: 2 });
+      return response({ conversation_id: "conv-a", turn_id: "turn-a", approval,
+        queue_paused: true, stale: false });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+  await flush();
+
+  app.elements["ai-paper-approval-approve"].click();
+  app.elements["ai-paper-approval-approve"].click();
+  await flush();
+  await flush();
+  const firstDecision = calls.find((call) => call.url.endsWith("/paper-approval"));
+  assert.deepEqual(JSON.parse(firstDecision.options.body), {
+    turn_id: "turn-a", expected_revision: 1, decision: "approve",
+  });
+  assert.equal(calls.filter((call) => call.url.endsWith("/paper-approval")).length, 1,
+    "a repeated click cannot submit while the first decision is being reconciled");
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), false);
+  assert.match(app.elements["ai-paper-approval-status"].textContent, /已变化/);
+  const refreshedImpact = deepText(app.elements["ai-paper-approval-details"]);
+  assert.match(refreshedImpact, /未完成练习中的进度（当前已完成 3 项）/);
+  assert.match(refreshedImpact, /草稿 2 份/);
+
+  app.elements["ai-paper-approval-approve"].click();
+  await flush();
+  await flush();
+  const decisions = calls.filter((call) => call.url.endsWith("/paper-approval"));
+  assert.equal(decisions.length, 2);
+  assert.equal(JSON.parse(decisions[1].options.body).expected_revision, 2);
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-queue-continue"].classList.contains("hidden"), false);
+  assert.match(deepText(app.elements["ai-messages"]), /已批准/);
+  assert.equal(calls.some((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST"), false);
+});
+
+test("a late Paper approval response cannot change the newly selected conversation", async () => {
+  const pendingPost = deferred();
+  const calls = [];
+  const approval = paperApproval();
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a"), session("conv-b")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a"), queue_paused: true, pending_paper_approval: approval,
+      messages: [paperProposalMessage(approval)],
+    });
+    if (url.endsWith("/ai/sessions/conv-b") && !options) return response({
+      ...session("conv-b"), messages: [{ role: "assistant", content: "B 的历史。" }],
+    });
+    if (url.endsWith("/paper-approval") && options?.method === "POST") return pendingPost.promise;
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+  await flush();
+
+  app.elements["ai-paper-approval-approve"].click();
+  app.elements["ai-session-back"].click();
+  await flush();
+  assert.equal(app.elements["ai-session-list"].children.length, 2);
+  app.elements["ai-session-list"].children[1].children[0].click();
+  await flush();
+  await flush();
+  assert.equal(JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-b");
+  pendingPost.resolve(response({ conversation_id: "conv-a", turn_id: "turn-a",
+    approval: paperApproval({ status: "approved" }), queue_paused: true, stale: false }));
+  await flush();
+  await flush();
+
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), true);
+  assert.ok(deepHtml(app.elements["ai-messages"]).includes("B 的历史。"));
+  assert.doesNotMatch(deepHtml(app.elements["ai-messages"]), /已批准/);
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a")
+    && !call.options).length, 1, "the stale response does not refresh or replace conversation B");
+});
+
+test("cancelling a restored Paper approval leaves the queue paused for manual continuation", async () => {
+  const calls = [];
+  let approval = paperApproval();
+  let continued = false;
+  const queued = [{ role: "user", content: "Queued B", turn_id: "turn-b", status: "queued",
+    queue_revision: 1 }];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a", continued ? "running" : "idle", continued ? "turn-b" : null),
+      queue_paused: !continued,
+      pending_paper_approval: approval.status === "pending" ? approval : null,
+      messages: continued ? [{ ...queued[0], status: "running" }, paperProposalMessage(approval)]
+        : [...queued, paperProposalMessage(approval)],
+    });
+    if (url.endsWith("/paper-approval") && options?.method === "POST") {
+      approval = paperApproval({ status: "cancelled" });
+      return response({ conversation_id: "conv-a", turn_id: "turn-a", approval,
+        queue_paused: true, stale: false });
+    }
+    if (url.endsWith("/queue/continue") && options?.method === "POST") {
+      continued = true;
+      return response({ conversation_id: "conv-a", queue_paused: false,
+        turn: { turn_id: "turn-b", status: "running" } });
+    }
+    if (url.includes("/turns/turn-b?")) {
+      return response({ events: [], turn: { turn_id: "turn-b", status: "running" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+  await flush();
+
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), false,
+    "a full page reopen restores the pending approval");
+  app.elements["ai-paper-approval-cancel"].click();
+  await flush();
+  await flush();
+
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), true);
+  assert.equal(app.elements["ai-pending-list"].children.length, 1);
+  assert.equal(app.elements["ai-queue-continue"].classList.contains("hidden"), false);
+  assert.equal(calls.some((call) => call.url.endsWith("/queue/continue")), false);
+  assert.match(deepText(app.elements["ai-messages"]), /已取消/);
+
+  app.elements["ai-queue-continue"].click();
+  await flush();
+  assert.equal(calls.filter((call) => call.url.endsWith("/queue/continue")).length, 1);
+  assert.equal(continued, true);
 });
 
 test("completed queued turns are adopted when continue finishes before polling", async () => {

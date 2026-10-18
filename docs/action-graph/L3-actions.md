@@ -82,6 +82,7 @@ Paper 操作补充（2026-10-17）：人可从组卷页在未完成卷间切换�
 | 对话轮次（自动带页面上下文；接收前持久化用户消息与上下文；可选 `submission_id` 同内容幂等返回原轮次，变更内容冲突；失败/取消也保留用户消息、真实状态和实际部分回答；旧成功镜像只显示一次） | UI/CLI | 双 | conv turn artifacts + 成功 transcript | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 运行中发送（默认排队；单条可选排队或中断后发送，保留活动轮次与提交上下文） | Agent composer / `POST /turns` | 人 | 现有 turn artifacts；中断绑定捕获的活动轮次 | 已实现（queue-agent-messages-and-interrupt） |
 | 编辑/移除待处理消息并显式继续暂停队列 | Pending controls / `PATCH`·`DELETE /turns/{turn}` / `POST /queue/continue` | 人 | 现有 turn/conversation JSON；移除保留 cancelled 记录 | 已实现（queue-agent-messages-and-interrupt） |
+| 批准/取消 Agent 提议的既有 Paper 更新（显示当前与拟议题序及进度/草稿影响；过期预览刷新后须重新点击） | Paper approval card / `POST /paper-approval` | 人 | 仅批准时更新目标 Paper，并清除受影响的未完成进度/草稿；取消零写入，历史作答与其他 Paper 保留 | 已实现（complete-agent-message-lifecycle） |
 | 设置运行中发送默认动作 | 工作区浏览器设置 | 人 | `runningSendAction`；只影响后续提交 | 已实现（queue-agent-messages-and-interrupt） |
 | 恢复未确认或被拒绝的 Agent 消息（本地发送箱；核对时复用原提交标识/内容；不覆盖新草稿） | UI 对话流 | 人 | 浏览器 localStorage + 原 turn | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 显式重试已接收的失败轮次（新 turn 通过 `retry_of` 关联原消息；不自动重放） | UI 对话流 | 人 | 新 turn artifact | 已实现（preserve-agent-messages-and-tool-outcomes） |
