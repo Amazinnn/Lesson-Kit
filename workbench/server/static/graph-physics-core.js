@@ -72,8 +72,14 @@
     return Math.min(168, Math.max(62, Array.from(String(title || "")).length * 12 + 18));
   }
 
+  /* The room a point needs. This is not only about a label not covering its
+   * neighbours: labelWidth is what the readability floor is built from, so the width
+   * here also decides how close two points may sit, how small the whole graph can be,
+   * and therefore how far Fit zooms out. The graph shows an abbreviated title, so the
+   * room is measured from the abbreviation — otherwise the layout pays for text that
+   * is not on screen. The full title still travels with the point for the hover. */
   function footprint(node) {
-    var half = Math.max(node.size / 2 + 13, labelWidth(node.title) / 2);
+    var half = Math.max(node.size / 2 + 13, labelWidth(node.shortTitle || node.title) / 2);
     return {
       left: half,
       right: half,
@@ -144,7 +150,7 @@
   // NaN here: the stage is sized before create() gives nodes their real size, so only
   // the pre-layout fields are safe to read.
   function clusterCellWidth(node) {
-    return Math.max(labelWidth(node.title), (node.targetSize || 0) + 34, 96);
+    return Math.max(labelWidth(node.shortTitle || node.title), (node.targetSize || 0) + 34, 96);
   }
 
   function clusterCellHeight(node) {
@@ -206,7 +212,7 @@
     var widestSingleRow = 0;
     var wrapped = false;
     groups.forEach(function (group) {
-      var widths = group.map(function (n) { return Math.max(labelWidth(n.title), 96); });
+      var widths = group.map(function (n) { return Math.max(labelWidth(n.shortTitle || n.title), 96); });
       var rows = bandRows(widths, gap);
       if (rows.length > 1) wrapped = true;
       rowCount += rows.length;
@@ -617,10 +623,10 @@
       ordered.levels.forEach(function (level) {
         var group = ordered.groups.get(level) || [];
         var widths = group.map(function (n) {
-          return Math.max(labelWidth(n.title), n.targetSize + 34);
+          return Math.max(labelWidth(n.shortTitle || n.title), n.targetSize + 34);
         });
         var bandWidths = group.map(function (n) {
-          return Math.max(labelWidth(n.title), 96);
+          return Math.max(labelWidth(n.shortTitle || n.title), 96);
         });
         bandRows(bandWidths, gap).forEach(function (indexes) {
           var total = 0;
@@ -1390,6 +1396,10 @@
       return {
         id: node.id,
         title: node.title || node.id,
+        // View-layer abbreviation, supplied by the workbench. Everything that measures
+        // how much room a point needs reads this, so the layout is sized for the text
+        // actually on screen; the full title stays here for the hover and the detail.
+        shortTitle: node.shortTitle || node.title || node.id,
         kind: node.kind || "core",
         state: node.state || "new",
         importance: Number(node.importance) || 0,
