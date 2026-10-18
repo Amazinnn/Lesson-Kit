@@ -379,17 +379,25 @@ def _text(value):
 
 
 def _activity(activity_id, activity_type, status, label, detail="", output=""):
+    if status == "error":
+        status = "failed"
+    safe_label = _pi_safe_text(label, _PI_SUMMARY_LIMIT) if label else ""
+    safe_detail = _pi_safe_text(detail, _PI_DETAIL_LIMIT) if detail else ""
+    safe_output = _pi_safe_text(output, _PI_OUTPUT_LIMIT) if output else ""
     event = {
         "kind": "activity",
         "activity_id": str(activity_id),
         "activity_type": activity_type,
         "status": status,
-        "label": label,
     }
-    if detail:
-        event["detail"] = _text(detail)
-    if output:
-        event["output"] = _text(output)
+    if safe_label:
+        event["label"] = safe_label
+    if safe_detail:
+        event["detail"] = safe_detail
+    if safe_output:
+        event["output"] = safe_output
+        if status == "failed":
+            event["summary"] = _pi_failure_summary(safe_output)
     return event
 
 
@@ -543,18 +551,11 @@ def _pi_tool_activity(tool_id, tool_name, status, args=None, result=None):
     detail = _pi_safe_text(_pi_tool_detail(args), _PI_DETAIL_LIMIT)
     output = _pi_safe_text(_pi_tool_output(result), _PI_OUTPUT_LIMIT)
     activity_id = tool_id or "pi-tool"
-    if not detail and status != "running":
-        event = {"kind": "activity", "activity_id": str(activity_id), "status": status}
-        if output:
-            event["output"] = output
-        if status == "failed":
-            event["summary"] = _pi_failure_summary(output)
-        return event
     activity_type, label = _pi_activity_identity(tool_name, detail)
     event = _activity(activity_id, activity_type, status, label, detail, output)
     if status == "failed":
         # The reason must be readable without expanding the folded output.
-        event["summary"] = _pi_failure_summary(output)
+        event.setdefault("summary", _pi_failure_summary(output))
     return event
 
 
@@ -676,14 +677,10 @@ def normalize_event(provider_name, data):
         result = next((item for item in blocks if item.get("type") == "tool_result"), None)
         if result:
             status = "failed" if result.get("is_error") else "done"
-            activity = {
-                "kind": "activity",
-                "activity_id": str(result.get("tool_use_id") or "claude-tool"),
-                "status": status,
-            }
-            if result.get("content") not in (None, ""):
-                activity["output"] = _text(result["content"])
-            return activity
+            return _activity(
+                result.get("tool_use_id") or "claude-tool", "tool", status,
+                None, output=result.get("content", ""),
+            )
         return {"kind": "phase", "label": "provider.working"}
     if event_type == "stream_event":
         event = data.get("event") or {}

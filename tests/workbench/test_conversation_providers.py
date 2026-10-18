@@ -516,6 +516,23 @@ class ConversationProviderTests(unittest.TestCase):
         self.assertEqual(completed["status"], "done")
         self.assertEqual(completed["output"], "2 problems")
 
+    def test_codex_failed_activity_has_sanitized_summary_and_no_guessed_impact(self):
+        from workbench.bridge import conversation_providers
+
+        event = conversation_providers.normalize_event("codex", {
+            "type": "item.completed",
+            "item": {
+                "id": "item-failed", "type": "command_execution",
+                "command": "tool token=private-value", "exit_code": 1,
+                "aggregated_output": "failure token=private-value",
+            },
+        })
+
+        self.assertEqual(event["status"], "failed")
+        self.assertEqual(event["summary"], "failure token=[REDACTED]")
+        self.assertNotIn("private-value", event["detail"])
+        self.assertNotIn("impact", event)
+
     def test_normalizes_claude_bash_and_tool_result(self):
         from workbench.bridge import conversation_providers
 

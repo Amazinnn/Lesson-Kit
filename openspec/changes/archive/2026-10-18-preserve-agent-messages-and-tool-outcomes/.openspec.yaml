@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-18
+goal: Persist accepted user messages across failed turns and make provider
+  activity outcomes inspectable with supported recovery

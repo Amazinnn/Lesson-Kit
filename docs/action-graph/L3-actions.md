@@ -39,7 +39,7 @@ Paper 操作补充（2026-10-17）：人可从组卷页在未完成卷间切换�
 | 刷新恢复（游标+视图态） | 被动 | 人 | — | 已实现 |
 | 切换图谱指标投影（大小/色谱/气泡式过渡） | UI | 人 | — | 已实现（只读、内存） |
 | 图谱多状态筛选与分群 | UI | 人 | — | 已实现（只读、内存） |
-| 练习页发消息附页面锚点与近期练习工作集（可见正式题 + 同一练习最多四道前序已结算正式题；明确相对指代才改轮次焦点；未提交作答/选项/备注/可见图片草稿由服务端限长） | UI 对话 | 人 | 上下文读取不写池、不移动游标；草稿与完整工作载荷不写会话镜像，成功轮次镜像保留既有 `context_anchor` 元数据 | 已实现（2026-09-24；Agent focus 2026-10-12） |
+| 练习页发消息附页面锚点与近期练习工作集（可见正式题 + 同一练习最多四道前序已结算正式题；明确相对指代才改轮次焦点；显式附带的未提交作答/选项/备注/可见图片由服务端限长并只保存在本轮上下文快照，不写 Pool；成功 transcript 仍只保留既有 `context_anchor` 元数据） | UI 对话 | 人 | 上下文读取不写池、不移动游标；快照供同标识核对；显式重试创建新关联轮次，后续普通轮次不自动继承原草稿 | 已实现（2026-09-24；Agent focus 2026-10-12；preserve-agent-messages-and-tool-outcomes） |
 
 ## 二、记录与调度
 
@@ -79,9 +79,11 @@ Paper 操作补充（2026-10-17）：人可从组卷页在未完成卷间切换�
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
-| 对话轮次（自动带页面上下文） | UI/CLI | 双 | conv 留痕 | 已实现 |
+| 对话轮次（自动带页面上下文；接收前持久化用户消息与上下文；可选 `submission_id` 同内容幂等返回原轮次，变更内容冲突；失败/取消也保留用户消息、真实状态和实际部分回答；旧成功镜像只显示一次） | UI/CLI | 双 | conv turn artifacts + 成功 transcript | 已实现（preserve-agent-messages-and-tool-outcomes） |
+| 恢复未确认或被拒绝的 Agent 消息（本地发送箱；核对时复用原提交标识/内容；不覆盖新草稿） | UI 对话流 | 人 | 浏览器 localStorage + 原 turn | 已实现（preserve-agent-messages-and-tool-outcomes） |
+| 显式重试已接收的失败轮次（新 turn 通过 `retry_of` 关联原消息；不自动重放） | UI 对话流 | 人 | 新 turn artifact | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 收起 Agent 辅助工作面（本轮记住收起状态） | Activity Float / Bottom Dock / Artifact Split 折叠控件 | 人 | 当前浏览器对话轮次内存状态 | 已定义未实现（PR135 已有展示基础；运行状态映射见 PR136） |
-| 执行计划（命令/工具/搜索/回答活动归一化，同行状态更新，成功轮次可恢复） | UI 对话流 | 双 | conv 成功留痕 | 已实现（render-agent-execution-plan） |
+| 执行计划与工具结果卡（命令/工具/搜索/回答活动归一化；错误为终态失败；仅展示有证据的影响，否则未知；折叠脱敏诊断；不展示不支持的单步重试） | UI 对话流 | 双 | conv 活动记录 | 已实现（preserve-agent-messages-and-tool-outcomes；render-agent-execution-plan） |
 | 新建会话/选 provider（harness 锁定不换） | UI | 人 | conversations | 已实现 |
 | 模型条目配置（显示名自定、与 harness 解耦；无条目时回退「一 harness 一条」） | CLI `bridge add-model` | 人 | bridges.json `models` | 已实现（2026-09-26） |
 | 对话内切换模型（头部下拉；丢弃缓存进程、下一轮生效；运行中 409；跨模型续接失败则开新会话并写明） | UI / API `PATCH /ai/sessions/{id}` | 人 | conversations `model` | 已实现（2026-09-26） |

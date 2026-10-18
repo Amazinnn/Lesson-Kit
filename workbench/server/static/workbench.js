@@ -2270,6 +2270,9 @@
   var aiExecutionPlan = null;
   var aiCurrentProvider = "";
   var aiPiActivities = {};
+  var aiCurrentSubmissionId = "";
+  var aiRecoveryContainer = null;
+  var AI_OUTBOX_PREFIX = "wb_ai_message_outbox_" + WS + "_";
 
   function aiPreviewRoute() {
     var location = window.location || {};
@@ -2332,6 +2335,8 @@
     aiExecutionPlan = null;
     aiCurrentProvider = "";
     aiPiActivities = {};
+    aiCurrentSubmissionId = "";
+    aiRecoveryContainer = null;
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
       AgentUISurfaces.resetTurn();
     }
@@ -2347,10 +2352,214 @@
     });
   }
 
-  function aiPostTurn(body) {
+  function aiOutboxKey(conversationId) {
+    return AI_OUTBOX_PREFIX + conversationId;
+  }
+
+  function aiReadOutbox(conversationId) {
+    try {
+      return JSON.parse(window.localStorage.getItem(aiOutboxKey(conversationId)) || "{}") || {};
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function aiWriteOutbox(conversationId, records) {
+    try {
+      if (Object.keys(records).length) {
+        window.localStorage.setItem(aiOutboxKey(conversationId), JSON.stringify(records));
+      } else {
+        window.localStorage.removeItem(aiOutboxKey(conversationId));
+      }
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function aiSaveOutbox(item) {
+    var records = aiReadOutbox(item.conversation_id);
+    records[item.submission_id] = item;
+    return aiWriteOutbox(item.conversation_id, records);
+  }
+
+  function aiUpdateOutbox(conversationId, submissionId, update) {
+    if (!submissionId) return;
+    var records = aiReadOutbox(conversationId);
+    if (!records[submissionId]) return;
+    records[submissionId] = Object.assign({}, records[submissionId], update);
+    aiWriteOutbox(conversationId, records);
+  }
+
+  function aiRemoveOutbox(conversationId, submissionId) {
+    if (!submissionId) return;
+    var records = aiReadOutbox(conversationId);
+    delete records[submissionId];
+    aiWriteOutbox(conversationId, records);
+  }
+
+  function aiNewSubmissionId() {
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+  }
+
+  function aiPrepareSubmission(body, existing) {
+    var request = Object.assign({}, body || {});
+    request.submission_id = request.submission_id || aiNewSubmissionId();
+    var item = existing || {
+      conversation_id: aiConversation,
+      submission_id: request.submission_id,
+      body: request,
+      status: "sending",
+      created_at: Date.now(),
+    };
+    item.body = request;
+    item.status = "sending";
+    return aiSaveOutbox(item) ? item : null;
+  }
+
+  function aiOutboxAction(item, label, callback) {
+    var button = document.createElement("button");
+    button.className = "outline sm";
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", callback);
+    item.appendChild(button);
+  }
+
+  function aiSyncOutboxWithHistory(record) {
+    var conversationId = record.conversation_id || aiConversation;
+    var outbox = aiReadOutbox(conversationId);
+    var changed = false;
+    Object.keys(outbox).forEach(function (submissionId) {
+      var item = outbox[submissionId];
+      var accepted = (record.messages || []).find(function (message) {
+        return message.role === "user" && message.submission_id === submissionId;
+      });
+      if (accepted) {
+        if (accepted.status === "done") {
+          delete outbox[submissionId];
+        } else if (accepted.status === "failed" || accepted.status === "cancelled") {
+          item.status = "failed";
+          item.turn_id = accepted.turn_id;
+          item.error = accepted.error || "Agent did not complete this turn";
+          outbox[submissionId] = item;
+        } else if (accepted.status === "running") {
+          item.status = "accepted";
+          item.turn_id = accepted.turn_id;
+          outbox[submissionId] = item;
+        }
+        changed = true;
+      } else if (item.status === "sending") {
+        item.status = "unknown";
+        outbox[submissionId] = item;
+        changed = true;
+      }
+    });
+    if (changed) aiWriteOutbox(conversationId, outbox);
+    if (record.status === "running" && record.current_turn_id) {
+      Object.keys(outbox).some(function (submissionId) {
+        if (outbox[submissionId].turn_id === record.current_turn_id) {
+          aiCurrentSubmissionId = submissionId;
+          return true;
+        }
+        return false;
+      });
+    }
+    return outbox;
+  }
+
+  function aiRenderOutbox() {
+    if (!messages || !aiConversation) return;
+    var records = aiReadOutbox(aiConversation);
+    var items = Object.keys(records).map(function (key) { return records[key]; })
+      .sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
+    var actionable = items.filter(function (item) {
+      return item.status === "unknown" || item.status === "rejected"
+        || item.status === "failed";
+    });
+    if (!actionable.length) {
+      if (aiRecoveryContainer) aiRecoveryContainer.innerHTML = "";
+      return;
+    }
+    if (!aiRecoveryContainer) {
+      aiRecoveryContainer = document.createElement("section");
+      aiRecoveryContainer.className = "ai-send-recoveries";
+      aiRecoveryContainer.setAttribute("aria-label", "未完成的消息发送");
+      messages.appendChild(aiRecoveryContainer);
+    } else {
+      aiRecoveryContainer.innerHTML = "";
+    }
+    actionable.forEach(function (record) {
+      var card = document.createElement("div");
+      card.className = "ai-send-recovery";
+      var label = document.createElement("p");
+      if (record.status === "unknown") {
+        label.textContent = "发送状态未知。可用同一消息编号核对，避免重复执行。";
+      } else if (record.status === "rejected") {
+        label.textContent = "这条消息被服务端拒绝；原文仍保存在本机。";
+      } else {
+        label.textContent = "Agent 未完成这条消息；可以明确重试一次。";
+      }
+      card.appendChild(label);
+      var savedMessage = document.createElement("p");
+      savedMessage.textContent = (record.body && record.body.message) || "";
+      card.appendChild(savedMessage);
+      if (record.status === "unknown") {
+        aiOutboxAction(card, "核对发送状态", function () {
+          aiRetryOutbox(record, false);
+        });
+      } else if (record.status === "rejected") {
+        aiOutboxAction(card, "恢复原文", function () {
+          if (!aiInput || aiInput.value.trim()) {
+            aiSetStatus("输入框已有草稿；为保护草稿，未覆盖它。请先清空输入框再恢复。没有执行整轮重试。");
+            return;
+          }
+          aiInput.value = record.body.message || "";
+          aiInput.focus();
+          aiSetStatus("已恢复原文，请编辑后重新发送。");
+        });
+      } else {
+        aiOutboxAction(card, "重试这条消息", function () {
+          aiRetryOutbox(record, true);
+        });
+      }
+      aiRecoveryContainer.appendChild(card);
+    });
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  function aiRetryOutbox(item, newAttempt) {
+    if (!aiConversation || aiTurn || aiSendPending) return;
+    var body = Object.assign({}, item.body || {});
+    if (newAttempt) {
+      body.submission_id = aiNewSubmissionId();
+      body.retry_of = item.turn_id;
+      aiAddMarkdown(body.message || "", "user");
+    }
+    var submission = aiPrepareSubmission(body, newAttempt ? null : item);
+    if (!submission) {
+      aiSetStatus("无法在本机保存发送记录；原文仍保留在恢复卡片中，请复制后再试。");
+      return;
+    }
+    aiSetRunning(true);
+    aiSetStatus(newAttempt ? "正在重试…" : "正在核对发送状态…");
+    aiPostTurn(submission.body, submission).catch(function (error) {
+      aiSetRunning(false);
+      aiSetStatus("发送未确认：" + (error.message || "未知错误"));
+      aiRenderOutbox();
+    });
+  }
+
+  function aiPostTurn(body, existingOutbox) {
     if (!aiConversation || aiTurn || aiSendPending) {
       return Promise.reject(new Error("conversation already has a pending turn"));
     }
+    var requestBody = Object.assign({}, body || {});
+    var submission = aiPrepareSubmission(requestBody, existingOutbox);
+    if (!submission) {
+      return Promise.reject(new Error("无法在本机保存发送记录；输入尚未发送"));
+    }
+    requestBody = submission.body;
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
       AgentUISurfaces.resetTurn();
     }
@@ -2358,15 +2567,24 @@
     var conversationId = aiConversation;
     var sequence = aiConversationSequence;
     aiSendPending = true;
-    return post("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns", body)
+    return post("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns", requestBody)
       .then(function (turn) {
+        aiUpdateOutbox(conversationId, requestBody.submission_id, {
+          status: "accepted", turn_id: turn.turn_id,
+        });
         if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
         aiSendPending = false;
         aiTurn = turn.turn_id;
+        aiCurrentSubmissionId = requestBody.submission_id;
         aiPollSequence = 0;
         aiPollConversationTurn();
         return turn;
       }, function (error) {
+        var rejected = error.status >= 400 && error.status < 500;
+        aiUpdateOutbox(conversationId, requestBody.submission_id, {
+          status: rejected ? "rejected" : "unknown", error: error.message,
+        });
+        if (conversationId === aiConversation) aiRenderOutbox();
         if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
         aiSendPending = false;
         throw error;
@@ -2403,8 +2621,34 @@
 
   function aiActivityState(status) {
     if (status === "done") return "已完成";
-    if (status === "failed") return "失败";
+    if (status === "failed" || status === "error") return "失败";
     return "进行中";
+  }
+
+  function aiActivityStatus(status) {
+    if (status === "done") return "done";
+    if (status === "failed" || status === "error") return "failed";
+    return "running";
+  }
+
+  function aiUpdateActivitySemantics(parts, activity) {
+    var summary = activity.summary || "";
+    if (parts.summary) {
+      parts.summary.textContent = String(summary);
+      parts.summary.classList.toggle("hidden", !summary);
+    }
+    if (parts.impact) {
+      var evidence = activity.impact;
+      if (evidence && evidence.status === "known" && evidence.summary) {
+        parts.impact.textContent = "已知影响：" + String(evidence.summary);
+      } else if (["tool", "command", "file", "file-read", "file-write", "lesson-kit", "search"]
+          .indexOf(activity.activity_type) !== -1) {
+        parts.impact.textContent = "影响未知";
+      } else {
+        parts.impact.textContent = "";
+      }
+      parts.impact.classList.toggle("hidden", !parts.impact.textContent);
+    }
   }
 
   function aiCreateExecutionPlan() {
@@ -2447,16 +2691,24 @@
       heading.appendChild(state);
       var detail = document.createElement("div");
       detail.className = "ai-plan-detail hidden";
+      var summary = document.createElement("div");
+      summary.className = "ai-plan-summary hidden";
+      var impact = document.createElement("div");
+      impact.className = "ai-plan-impact hidden";
       body.appendChild(heading);
       body.appendChild(detail);
+      body.appendChild(summary);
+      body.appendChild(impact);
       row.appendChild(marker);
       row.appendChild(body);
-      row.activityParts = { label: label, state: state, detail: detail, body: body };
+      row.activityParts = {
+        label: label, state: state, detail: detail, summary: summary,
+        impact: impact, body: body,
+      };
       plan.rows[id] = row;
       plan.list.appendChild(row);
     }
-    var status = activity.status === "done" || activity.status === "failed"
-      ? activity.status : "running";
+    var status = aiActivityStatus(activity.status);
     row.className = "ai-plan-step is-" + status;
     if (activity.label != null || !row.activityParts.label.textContent) {
       row.activityParts.label.textContent = activity.label || "执行步骤";
@@ -2464,6 +2716,7 @@
     row.activityParts.state.textContent = aiActivityState(status);
     if (activity.detail != null) row.activityParts.detail.textContent = activity.detail || "";
     row.activityParts.detail.classList.toggle("hidden", !row.activityParts.detail.textContent);
+    aiUpdateActivitySemantics(row.activityParts, activity);
     if (activity.output != null && String(activity.output).length) {
       if (!row.activityParts.output) {
         var disclosure = document.createElement("details");
@@ -2508,19 +2761,21 @@
       detail.className = "ai-plan-detail hidden";
       var summary = document.createElement("div");
       summary.className = "ai-plan-summary hidden";
+      var impact = document.createElement("div");
+      impact.className = "ai-plan-impact hidden";
       body.appendChild(heading);
       body.appendChild(detail);
       body.appendChild(summary);
+      body.appendChild(impact);
       row.appendChild(body);
       row.activityParts = {
-        label: label, state: state, detail: detail, summary: summary, body: body,
+        label: label, state: state, detail: detail, summary: summary, impact: impact, body: body,
         disclosure: null, output: null,
       };
       aiPiActivities[id] = row;
       messages.appendChild(row);
     }
-    var status = activity.status === "done" || activity.status === "failed"
-      ? activity.status : "running";
+    var status = aiActivityStatus(activity.status);
     row.className = "msg ai-activity is-" + status;
     if (activity.label != null || !row.activityParts.label.textContent) {
       row.activityParts.label.textContent = activity.label || "调用工具";
@@ -2528,13 +2783,8 @@
     row.activityParts.state.textContent = aiActivityState(status);
     if (activity.detail != null) row.activityParts.detail.textContent = activity.detail || "";
     row.activityParts.detail.classList.toggle("hidden", !row.activityParts.detail.textContent);
-    if (activity.summary != null) {
-      row.activityParts.summary.textContent = String(activity.summary);
-    }
-    // A provider-reported failure shows its reason without expanding anything.
-    var hasSummary = activity.status === "failed"
-      && !!row.activityParts.summary.textContent;
-    row.activityParts.summary.classList.toggle("hidden", !hasSummary);
+    // Provider summaries and explicit write evidence remain visible; output stays folded.
+    aiUpdateActivitySemantics(row.activityParts, activity);
     if (activity.output != null && String(activity.output).length) {
       if (!row.activityParts.output) {
         var disclosure = document.createElement("details");
@@ -2864,6 +3114,7 @@
     if (!messages) return;
     if (aiChatView) aiSetView("chat");
     messages.innerHTML = "";
+    aiRecoveryContainer = null;
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetConversation) {
       AgentUISurfaces.resetConversation();
     }
@@ -2875,10 +3126,19 @@
     (record.messages || []).forEach(function (message) {
       if (message.role === "user") {
         aiAddMarkdown(message.content || "", "user");
+        if (message.status === "failed" || message.status === "cancelled") {
+          var statusText = message.status === "cancelled" ? "本轮已停止。" : "本轮未完成。";
+          if (message.error) statusText += " " + message.error;
+          aiAddMarkdown(statusText, "ai");
+        }
       } else {
         aiPiActivities = {};
         aiRenderActivities(message.activities || []);
-        aiAddMarkdown(message.content || "", "ai");
+        var restoredText = message.content || "";
+        if (message.partial && restoredText) {
+          restoredText = "部分回答（本轮未完成）\n\n" + restoredText;
+        }
+        if (restoredText) aiAddMarkdown(restoredText, "ai");
         // Restore durable presentational results only. Mutable actions such as
         // practice selection and goal prefills are never replayed from history.
         var actions = message.actions || [];
@@ -2901,6 +3161,8 @@
         aiExecutionPlan = null;
       }
     });
+    aiSyncOutboxWithHistory(record);
+    aiRenderOutbox();
     aiSetRunning(record.status === "running");
     aiSetStatus(record.status === "running" ? "Agent 正在处理…" : "");
     if (record.status === "running" && record.current_turn_id) {
@@ -3036,8 +3298,8 @@
       body.problem_id = active.id;
       body.practice_mode = sessionStorage.getItem(MODE_KEY) || "";
       body.progress = { seen: session().length };
-      // Attached for this turn only: the server bounds these and stores none of
-      // them, so an unsent draft never becomes a learning record.
+      // Opted-in fields are bounded and captured only in this turn snapshot;
+      // they never become learning records or a later turn's draft.
       body.include_draft = true;
       body.draft_answer = draftAnswer();
       body.draft_note = draftNote();
@@ -3089,6 +3351,8 @@
     });
     if (!data.turn) return;
     if (data.turn.status === "done") {
+      aiRemoveOutbox(aiConversation, aiCurrentSubmissionId);
+      aiCurrentSubmissionId = "";
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("");
@@ -3099,6 +3363,11 @@
       aiLoadConversation(aiConversation);
       if (typeof aiRefreshSessionList === "function") aiRefreshSessionList();
     } else if (data.turn.status === "failed") {
+      aiUpdateOutbox(aiConversation, aiCurrentSubmissionId, {
+        status: "failed", turn_id: data.turn.turn_id || aiTurn,
+        error: data.turn.error || "Agent did not complete this turn",
+      });
+      aiCurrentSubmissionId = "";
       aiTurn = null;
       aiSetRunning(false);
       var turnError = "Agent 失败：" + (data.turn.error || "未知错误");
@@ -3106,13 +3375,20 @@
       if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
         AgentUISurfaces.failure(turnError);
       }
+      aiLoadConversation(aiConversation);
     } else if (data.turn.status === "cancelled") {
+      aiUpdateOutbox(aiConversation, aiCurrentSubmissionId, {
+        status: "failed", turn_id: data.turn.turn_id || aiTurn,
+        error: "This turn was cancelled",
+      });
+      aiCurrentSubmissionId = "";
       aiTurn = null;
       aiSetRunning(false);
       aiSetStatus("本轮已停止。");
       if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.finishTurn) {
         AgentUISurfaces.finishTurn();
       }
+      aiLoadConversation(aiConversation);
     }
   }
 
@@ -3154,17 +3430,24 @@
   function aiSendMessage() {
     var message = aiInput ? aiInput.value.trim() : "";
     if (!message || !aiConversation || aiTurn || aiSendPending) return;
+    var submission = aiPrepareSubmission(aiContextBody(message));
+    if (!submission) {
+      aiSetStatus("无法在本机保存发送记录；消息仍留在输入框中，没有发送。");
+      return;
+    }
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiPiActivities = {};
     aiAddMarkdown(message, "user");
-    aiInput.value = "";
     aiSetRunning(true);
     aiSetStatus("正在发送…");
-    aiPostTurn(aiContextBody(message)).catch(function (err) {
+    var request = aiPostTurn(submission.body, submission);
+    aiInput.value = "";
+    request.catch(function (err) {
       aiSetRunning(false);
       var sendError = "发送失败：" + (err.message || "未知错误");
       aiSetStatus(sendError);
+      aiRenderOutbox();
       if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
         AgentUISurfaces.failure(sendError);
       }

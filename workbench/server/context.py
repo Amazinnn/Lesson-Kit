@@ -223,7 +223,7 @@ def _active_summary(active):
 
 
 def _draft(payload):
-    """The focused turn's unsent learner input: bounded, ephemeral, unwritten."""
+    """Bounded opt-in learner input captured in a turn snapshot, not learning records."""
     answer, cut = _bounded_text(payload.get("draft_answer"), DRAFT_ANSWER_CHARS)
     note, note_cut = _bounded_text(payload.get("draft_note"), DRAFT_NOTE_CHARS)
     choices, choices_cut = _bounded_list(

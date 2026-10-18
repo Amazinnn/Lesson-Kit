@@ -144,21 +144,99 @@ def get(pool, conversation_id):
     )
     record.setdefault("title", "")
     record.setdefault("title_source", "unset")
-    messages = []
+    transcript_by_turn = {}
+    transcript_without_turn = []
     transcript = _conversation_dir(pool, conversation_id) / "transcript.jsonl"
     with _LOCK:
         lines = transcript.read_text(encoding="utf-8").splitlines() if transcript.is_file() else []
     for line in lines:
         exchange = json.loads(line)
+        turn_id = exchange.get("turn_id")
+        if turn_id:
+            transcript_by_turn[turn_id] = exchange
+        else:
+            transcript_without_turn.append(exchange)
+
+    turns = []
+    folder = _conversation_dir(pool, conversation_id)
+    for path in folder.glob("turn-*.json"):
+        try:
+            turn = _read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        turns.append((turn.get("turn_id") or path.stem, turn))
+    turns.sort(key=lambda item: int(item[0][5:]) if TURN_ID.fullmatch(item[0]) else 0)
+
+    messages = []
+    # Exchanges without turn ids predate durable turn artifacts. Show them
+    # before all new turn projections so a later accepted turn cannot reorder
+    # that legacy history to the bottom.
+    for exchange in transcript_without_turn:
         assistant = {"role": "assistant", "content": exchange["assistant"]}
-        if exchange.get("actions"):
-            assistant["actions"] = exchange["actions"]
-        if exchange.get("action"):
-            assistant["action"] = exchange["action"]
-        if exchange.get("activities"):
-            assistant["activities"] = exchange["activities"]
+        for key in ("actions", "action", "activities"):
+            if exchange.get(key):
+                assistant[key] = exchange[key]
         messages.extend([
             {"role": "user", "content": exchange["user"]},
+            assistant,
+        ])
+    for turn_id, turn in turns:
+        exchange = transcript_by_turn.pop(turn_id, None)
+        if exchange is not None:
+            user = {
+                "role": "user", "content": exchange["user"], "turn_id": turn_id,
+                "status": "done",
+            }
+            if turn.get("submission_id"):
+                user["submission_id"] = turn["submission_id"]
+            messages.append(user)
+            assistant = {"role": "assistant", "content": exchange["assistant"],
+                         "turn_id": turn_id}
+            for key in ("actions", "action", "activities"):
+                if exchange.get(key):
+                    assistant[key] = exchange[key]
+            messages.append(assistant)
+            continue
+        accepted_message = turn.get("message")
+        # Old incomplete turn artifacts did not persist user input. Do not
+        # invent a message for them.
+        if not isinstance(accepted_message, str):
+            continue
+        user = {
+            "role": "user", "content": accepted_message, "turn_id": turn_id,
+            "status": turn.get("status", "failed"),
+        }
+        if turn.get("submission_id"):
+            user["submission_id"] = turn["submission_id"]
+        if turn.get("error"):
+            user["error"] = conversation_providers._pi_safe_text(
+                turn["error"], conversation_providers._PI_SUMMARY_LIMIT,
+            )
+        messages.append(user)
+        activities = _coalesced_activities(
+            _events_file(pool, conversation_id, turn_id),
+        )
+        partial = turn.get("partial_output")
+        if activities or (isinstance(partial, str) and partial):
+            assistant = {"role": "assistant", "turn_id": turn_id,
+                         "status": turn.get("status", "failed")}
+            if activities:
+                assistant["activities"] = activities
+            if isinstance(partial, str) and partial:
+                assistant.update({"content": partial, "partial": True})
+            messages.append(assistant)
+
+    for turn_id, exchange in sorted(
+        transcript_by_turn.items(),
+        key=lambda item: int(item[0][5:]) if TURN_ID.fullmatch(item[0]) else 0,
+    ):
+        assistant = {"role": "assistant", "content": exchange["assistant"],
+                     "turn_id": turn_id}
+        for key in ("actions", "action", "activities"):
+            if exchange.get(key):
+                assistant[key] = exchange[key]
+        messages.extend([
+            {"role": "user", "content": exchange["user"], "turn_id": turn_id},
             assistant,
         ])
     record["messages"] = messages
@@ -283,7 +361,44 @@ def get_turn(pool, conversation_id, turn_id):
     _recover_interrupted(
         pool, _read_json(_conversation_file(pool, conversation_id))
     )
+    return _turn_response(_read_json(_turn_file(pool, conversation_id, turn_id)))
+
+
+def _get_turn_record(pool, conversation_id, turn_id):
+    _recover_interrupted(
+        pool, _read_json(_conversation_file(pool, conversation_id))
+    )
     return _read_json(_turn_file(pool, conversation_id, turn_id))
+
+
+def _turn_response(turn):
+    """Keep captured prompt context and client payload out of public turn reads."""
+    return {
+        key: value for key, value in turn.items()
+        if key in {
+            "turn_id", "status", "error", "created_at", "updated_at",
+            "partial_output", "action", "actions", "submission_id", "retry_of",
+        }
+    }
+
+
+def find_submission(pool, conversation_id, message, submission_id, submitted_fields):
+    """Return an accepted turn for an idempotent retry, or raise on changed input."""
+    if submission_id is None:
+        return None
+    if not isinstance(submission_id, str) or not submission_id.strip():
+        raise ValueError("submission_id must be a non-empty string")
+    folder = _conversation_dir(pool, conversation_id)
+    with _LOCK:
+        for path in folder.glob("turn-*.json"):
+            prior = _read_json(path)
+            if prior.get("submission_id") != submission_id.strip():
+                continue
+            if prior.get("message") != message \
+                    or prior.get("submitted_fields", {}) != submitted_fields:
+                raise ConversationConflict("submission_id was already used with different input")
+            return _turn_response(prior)
+    return None
 
 
 def _recover_interrupted(pool, record):
@@ -298,16 +413,40 @@ def _recover_interrupted(pool, record):
         current = _read_json(_conversation_file(pool, record["conversation_id"]))
         if current.get("status") != "running" or current.get("current_turn_id") != turn_id:
             return current
-        error = "workbench restarted while the provider turn was running"
+        transcript = _conversation_dir(pool, record["conversation_id"]) / "transcript.jsonl"
+        with _LOCK:
+            transcript_lines = transcript.read_text(encoding="utf-8").splitlines() \
+                if transcript.is_file() else []
+        completed = False
+        for line in transcript_lines:
+            try:
+                if json.loads(line).get("turn_id") == turn_id:
+                    completed = True
+                    break
+            except json.JSONDecodeError:
+                continue
+        error = None if completed else "workbench restarted while the provider turn was running"
         turn_path = _turn_file(pool, record["conversation_id"], turn_id)
         if turn_path.is_file():
             turn = _read_json(turn_path)
-            turn.update({"status": "failed", "error": error, "updated_at": _now()})
+            turn.update({
+                "status": "done" if completed else "failed",
+                "error": error, "updated_at": _now(),
+            })
+            if not completed:
+                partial_output = _partial_output_from_events(
+                    _events_file(pool, record["conversation_id"], turn_id),
+                )
+                if partial_output:
+                    turn["partial_output"] = conversation_providers._pi_safe_text(
+                        partial_output, conversation_providers._PI_OUTPUT_LIMIT,
+                    )
             _write_json(turn_path, turn)
-            _append_event(
-                _events_file(pool, record["conversation_id"], turn_id),
-                "error", text=error,
-            )
+            if error:
+                _append_event(
+                    _events_file(pool, record["conversation_id"], turn_id),
+                    "error", text=error,
+                )
         current.update({"status": "idle", "current_turn_id": None, "updated_at": _now()})
         _write_json(_conversation_file(pool, record["conversation_id"]), current)
         return current
@@ -322,12 +461,47 @@ def events(pool, conversation_id, turn_id, after=0):
 
 
 def _append_event(path, kind, **fields):
+    if kind == "error" and fields.get("text"):
+        fields["text"] = conversation_providers._pi_safe_text(
+            fields["text"], conversation_providers._PI_SUMMARY_LIMIT,
+        )
+    elif kind == "activity":
+        for field, limit in (("detail", conversation_providers._PI_DETAIL_LIMIT),
+                             ("output", conversation_providers._PI_OUTPUT_LIMIT),
+                             ("summary", conversation_providers._PI_SUMMARY_LIMIT)):
+            if fields.get(field):
+                fields[field] = conversation_providers._pi_safe_text(fields[field], limit)
+        impact = fields.get("impact")
+        if isinstance(impact, dict) and impact.get("summary"):
+            impact = dict(impact)
+            impact["summary"] = conversation_providers._pi_safe_text(
+                impact["summary"], conversation_providers._PI_SUMMARY_LIMIT,
+            )
+            fields["impact"] = impact
     with _LOCK:
         existing = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
         event = {"sequence": len(existing) + 1, "kind": kind, **fields}
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(event, ensure_ascii=False) + "\n")
     return event
+
+
+def _partial_output_from_events(path):
+    """Rebuild only assistant text already streamed for an interrupted turn."""
+    with _LOCK:
+        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+    text_parts = []
+    result_text = ""
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("kind") == "text":
+            text_parts.append(event.get("text", ""))
+        elif event.get("kind") == "result":
+            result_text = event.get("text", "")
+    return result_text or "".join(text_parts)
 
 
 def _coalesced_activities(path):
@@ -555,24 +729,57 @@ def _notice_outcome(action):
     return f"上一轮内容动作区块无效：{error}。请重新提交符合契约的完整区块。"
 
 
-def start_turn(pool, workspace, conversation_id, message, context):
+def start_turn(pool, workspace, conversation_id, message, context, *,
+               submission_id=None, submitted_fields=None, retry_of=None):
     folder = _conversation_dir(pool, conversation_id)
     conversation_path = folder / "conversation.json"
     _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
         conversation = _read_json(conversation_path)
+        fields = submitted_fields if isinstance(submitted_fields, dict) else {}
+        if retry_of is not None and submission_id is None:
+            raise ValueError("submission_id is required for an explicit retry")
+        prior = find_submission(pool, conversation_id, message, submission_id, fields)
+        if prior:
+            return prior
+        if submission_id is not None:
+            submission_id = submission_id.strip()
         if conversation["status"] == "running":
             raise ConversationConflict("conversation already has a running turn")
+        retry_context = None
+        if retry_of is not None:
+            retry_id = _require_id(retry_of, TURN_ID, "turn")
+            retry_path = _turn_file(pool, conversation_id, retry_id)
+            if not retry_path.is_file():
+                raise ConversationConflict("retry source turn does not exist")
+            previous = _read_json(retry_path)
+            if previous.get("status") not in {"failed", "cancelled"} \
+                    or previous.get("message") != message:
+                raise ConversationConflict("only the same accepted failed turn can be retried")
+            if fields != previous.get("submitted_fields", {}):
+                raise ConversationConflict("retry input must match the original accepted message")
+            retry_context = previous.get("context")
         turn_number = _next_number(folder.glob("turn-*.json"), "turn-")
         turn_id = f"turn-{turn_number:03d}"
         now = _now()
+        turn_context = dict(retry_context if retry_context is not None else context)
+        last_check_outcome = _last_check_outcome(folder)
+        if last_check_outcome:
+            turn_context["last_check_outcome"] = last_check_outcome
         turn = {
             "turn_id": turn_id,
             "status": "running",
             "error": None,
+            "message": message,
+            "context": turn_context,
             "created_at": now,
             "updated_at": now,
         }
+        if submission_id is not None:
+            turn["submission_id"] = submission_id
+            turn["submitted_fields"] = fields
+        if retry_of is not None:
+            turn["retry_of"] = retry_of
         _write_json(folder / f"{turn_id}.json", turn)
         conversation.update({"status": "running", "current_turn_id": turn_id, "updated_at": now})
         _write_json(conversation_path, conversation)
@@ -580,10 +787,6 @@ def start_turn(pool, workspace, conversation_id, message, context):
         _ACTIVE_TURNS.add(key)
         _CANCEL_REQUESTS.discard(key)
         _TIMEOUTS.discard(key)
-        turn_context = dict(context)
-        last_check_outcome = _last_check_outcome(folder)
-        if last_check_outcome:
-            turn_context["last_check_outcome"] = last_check_outcome
         thread = threading.Thread(
             target=_run_turn_safely,
             args=(
@@ -592,8 +795,15 @@ def start_turn(pool, workspace, conversation_id, message, context):
             ),
             daemon=True,
         )
-        thread.start()
-    return turn
+        try:
+            thread.start()
+        except Exception as exc:
+            _finish(
+                folder, conversation_id, turn_id, "failed",
+                f"provider launch failed: {exc}",
+            )
+            turn = _read_json(_turn_file(pool, conversation_id, turn_id))
+    return _turn_response(turn)
 
 
 def _run_turn_safely(*args):
@@ -608,7 +818,12 @@ def _run_turn_safely(*args):
                 folder / f"{turn_id}.events.jsonl", "error",
                 text=f"provider turn failed: {exc}",
             )
-            _finish(folder, conversation_id, turn_id, "failed", f"provider turn failed: {exc}")
+            _finish(
+                folder, conversation_id, turn_id, "failed", f"provider turn failed: {exc}",
+                partial_output=_partial_output_from_events(
+                    folder / f"{turn_id}.events.jsonl",
+                ),
+            )
 
 
 def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, context):
@@ -723,7 +938,10 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 event_path, "activity", activity_id="provider-turn",
                 activity_type="progress", status="failed", label="本轮已停止",
             )
-        _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+        _finish(
+            folder, conversation_id, turn_id, "cancelled", "cancelled",
+            partial_output=result_text or "".join(text_parts),
+        )
         return
     if key in _TIMEOUTS:
         if not pi_messages:
@@ -731,7 +949,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 event_path, "activity", activity_id="provider-turn",
                 activity_type="progress", status="failed", label="Agent 处理超时",
             )
-        _finish(folder, conversation_id, turn_id, "failed", "provider timed out")
+        _finish(folder, conversation_id, turn_id, "failed", "provider timed out",
+                partial_output=state["result_text"] or "".join(state["text_parts"]))
         return
     if return_code != 0:
         if not pi_messages:
@@ -739,7 +958,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 event_path, "activity", activity_id="provider-turn",
                 activity_type="progress", status="failed", label="Agent 处理失败",
             )
-        _finish(folder, conversation_id, turn_id, "failed", f"provider exit code {return_code}")
+        _finish(folder, conversation_id, turn_id, "failed", f"provider exit code {return_code}",
+                partial_output=state["result_text"] or "".join(state["text_parts"]))
         return
     answer = result_text or "".join(text_parts)
     if not answer:
@@ -750,7 +970,8 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 label="Agent 处理失败" if error_text else "Agent 未返回回答",
             )
         _finish(folder, conversation_id, turn_id, "failed",
-                error_text or "provider returned no assistant text")
+                error_text or "provider returned no assistant text",
+                partial_output=state["result_text"] or "".join(state["text_parts"]))
         return
 
     if not pi_messages:
@@ -849,6 +1070,7 @@ def _apply_content_action(action, root, workspace, conversation_id, turn_id,
             event_path, "activity", activity_id=activity_id,
             activity_type="tool", status="done", label="学习内容已入库",
             output=_batch_label(applied),
+            impact={"status": "known", "summary": _batch_label(applied)},
         )
     except Exception as exc:
         action["error"] = str(exc)
@@ -895,7 +1117,7 @@ def _verified_paper_artifact(notice, root, workspace, event_path):
     if record is None:
         _append_event(
             event_path, "activity", activity_id="paper-artifact",
-            activity_type="tool", status="error",
+            activity_type="tool", status="failed",
             label=f"未找到已保存试卷 {notice.get('practice_set_id')}，不显示工件",
         )
         return None
@@ -1075,15 +1297,18 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
             # The agent did not stop on its own: terminate/kill is the fallback.
             PI_RPC.discard(str(folder), process)
             process.close()
-        _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+        _finish(folder, conversation_id, turn_id, "cancelled", "cancelled",
+                partial_output=state["result_text"] or "".join(state["text_parts"]))
         return
     if key in _TIMEOUTS:
-        _finish(folder, conversation_id, turn_id, "failed", "provider timed out")
+        _finish(folder, conversation_id, turn_id, "failed", "provider timed out",
+                partial_output=state["result_text"] or "".join(state["text_parts"]))
         return
     answer = state["result_text"] or "".join(state["text_parts"])
     if not answer:
         _finish(folder, conversation_id, turn_id, "failed",
-                state["error_text"] or "provider returned no assistant text")
+                state["error_text"] or "provider returned no assistant text",
+                partial_output=state["result_text"] or "".join(state["text_parts"]))
         return
     _store_answer(
         folder, conversation_path, turn_path, event_path, root, workspace,
@@ -1094,7 +1319,7 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
 _extract_action = conversation_actions.extract_action
 
 
-def _finish(folder, conversation_id, turn_id, status, error):
+def _finish(folder, conversation_id, turn_id, status, error, partial_output=None):
     now = _now()
     key = (str(folder), turn_id)
     with _LOCK:
@@ -1104,7 +1329,17 @@ def _finish(folder, conversation_id, turn_id, status, error):
         _write_json(conversation_path, conversation)
         turn_path = folder / f"{turn_id}.json"
         turn = _read_json(turn_path)
-        turn.update({"status": status, "error": error, "updated_at": now})
+        turn.update({
+            "status": status,
+            "error": conversation_providers._pi_safe_text(
+                error, conversation_providers._PI_SUMMARY_LIMIT,
+            ) if error else None,
+            "updated_at": now,
+        })
+        if status in {"failed", "cancelled"} and partial_output:
+            turn["partial_output"] = conversation_providers._pi_safe_text(
+                partial_output, conversation_providers._PI_OUTPUT_LIMIT,
+            )
         _write_json(turn_path, turn)
         _ACTIVE_TURNS.discard(key)
         _CANCEL_REQUESTS.discard(key)

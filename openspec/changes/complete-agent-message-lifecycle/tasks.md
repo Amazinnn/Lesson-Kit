@@ -1,7 +1,6 @@
 ## 1. Reliable message acceptance and reads
-- [ ] 1.1 Reconcile glossary/live specs, FILE_CONTRACT, affected DATA_MODEL, Architecture, Product Manual and Action Graph; preserve legacy transcript compatibility.
-- [ ] 1.2 Persist outgoing identity/text/context before composer clearing and server acceptance before dispatch; deduplicate lost-response retries and distinguish unknown acceptance.
-- [ ] 1.3 Return accepted failed/cancelled/pending messages in history with truthful output/status and safe edit/retry controls; never overwrite a newer draft or silently remove the original message.
+
+Owned by `preserve-agent-messages-and-tool-outcomes`. This change depends on its accepted-turn history and idempotent acceptance; it adds no duplicate implementation tasks here.
 
 ## 2. Single-worker queue and interruption
 - [ ] 2.1 Add ordered accepted pending messages to existing conversation artifacts; one worker per conversation, durable queue and submission-time context.
@@ -15,7 +14,7 @@ The base navigation lifecycle and context refresh are delivered by `preserve-age
 
 - [ ] 3.1 Mount rail outside middle navigation lifecycle; preserve its DOM/controller/draft/scroll/tasks/queue across all same-workspace middle views and back/forward.
 - [ ] 3.2 Refresh context chips for the selected page without changing accepted-message context; dispose/reinitialize only middle-owned resources.
-- [ ] 3.3 Complete semantic Tool Call Card/failure-impact/folded-diagnostics interactions using normalized evidence; expose only backend-supported retry/read-only recovery.
+- 3.3 Semantic Tool Call Card and message recovery are owned by `preserve-agent-messages-and-tool-outcomes`.
 - [ ] 3.4 Integrate explicit Paper progress-reset approval, retain existing rollback gate and invalidate obsolete callbacks. Do not implement HTML styling/tuning/preset controls as product features.
 
 Activity progress-surface ownership is handled by the independent `use-collapsible-agent-activity-float` change.

@@ -569,6 +569,11 @@ Agent 每轮只收到精简能力地图；它可通过 `python -m workbench.brid
 _Avoid_：每轮重复注入整本操作手册、为每个主题新增顶层命令
 出处：openspec/specs/agent-contract-disclosure/spec.md「Ordinary turns receive a small context map rather than the full operation manual」
 
+### 本地发送箱 / Local Agent Outbox
+按工作区和对话保存在浏览器本地的消息恢复记录，包含原消息、提交时请求上下文与发送状态。状态未知时用原提交标识核对；服务端拒绝时可恢复原文；已接收但失败时，只有用户明确操作才创建关联新轮次。成功完成后清除。它不排队自动发送，也不自动重放工具操作或写入。
+_Avoid_：待发消息队列、自动重试
+出处：`preserve-agent-messages-and-tool-outcomes`
+
 ### Agent 提供方 / Provider
 一次 Agent 对话创建时固定的底层 Agent 命令行（codex / claude / pi）。对话**不会中途换 harness**；换的是同一个 harness 上的**模型条目**（见下），且只在下一轮生效。未配置 provider 时如实提示。
 _Avoid_：模型热切换（当前轮不改）、把显示名当 harness 名
@@ -595,9 +600,9 @@ _Avoid_：独立 AI 应用壳、常驻 Tool Dashboard、与 Lesson Kit 脱节的
 出处：docs/design/AGENT-UI-V1.md；workbench-ui spec「Three-column shell with navigation」
 
 ### 工具调用卡 / Tool Call Card
-Agent UI v1 规划中的单次工具、命令、搜索或确定性动作执行摘要，拟在对话流中显示可读动作名、简短结果与状态。当前契约只规定 provider-neutral 活动归一化、Pi 活动以独立紧凑消息呈现且输出默认折叠，以及失败摘要经过净化；统一卡片、可见影响范围和恢复操作是设计目标，不是现有规范要求，落地前须由后续 OpenSpec change 定义。
+单次工具、命令、搜索或确定性动作的语义执行摘要，在对话流中显示可读动作名、实际状态与有证据支持的结果/影响；未知影响必须如实标为未知。诊断信息经过净化并默认折叠，摘要不超过 240 个字符。恢复控件只对应后端实际支持的操作。
 _Avoid_：原始协议事件墙、完整终端日志、思维链、把每个底层事件拆成独立卡片
-出处：docs/design/AGENT-UI-V1.md（规划）；workbench-ui spec「Pi activities are conversation messages」「Failed activities expose a concise error summary」；ai-teacher-bridge spec「Readable execution plan」
+出处：`preserve-agent-messages-and-tool-outcomes`；workbench-ui spec「Provider activity cards show evidenced outcomes」
 
 ### Agent 工件 / Agent Artifact
 Agent 产生的、值得交接或后续继续操作的结果对象，例如生成完成的试卷。它与 Tool Call Card 区分：Tool 表示“做了什么”，Artifact 表示“做出了什么”。Artifact 可在对话中以结果卡出现，并可由辅助工作面预览；完成 Artifact **不会自动切换当前 Lesson Kit 页面**，进入其正式页面必须由用户显式触发。此词条只定义 UI 交接概念，不引入持久化结构或试卷生命周期；保存语义归 paper model 契约。

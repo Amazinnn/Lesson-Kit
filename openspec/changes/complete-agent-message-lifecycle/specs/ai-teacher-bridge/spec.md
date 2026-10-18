@@ -1,20 +1,5 @@
 ## ADDED Requirements
 
-### Requirement: Accepted user messages survive unsuccessful turns
-The bridge SHALL durably record a submitted user message, its stable submission identity and captured context before acknowledging acceptance or launching a provider. History SHALL include accepted queued/running/failed/cancelled messages independently of a successful assistant exchange. Repeating the same submission identity and payload SHALL return the same accepted message without duplicate execution; conflicting payload reuse SHALL fail explicitly. Legacy successful transcripts SHALL remain readable without duplicate user entries. Missing text from historical legacy failures SHALL NOT be fabricated.
-
-#### Scenario: Provider fails before producing an answer
-- **WHEN** an accepted message encounters provider startup or runtime failure
-- **THEN** reopening or refreshing history still shows the original user text with its failed turn and available public output/diagnostics
-
-#### Scenario: Acceptance response is lost
-- **WHEN** the server accepted a message but the browser did not receive the response and retries its same identity
-- **THEN** the bridge resolves to the same message/turn and does not start another execution
-
-#### Scenario: Read old successful history
-- **WHEN** a conversation with legacy transcript exchanges is opened after the change
-- **THEN** each original user/assistant exchange remains readable once and no missing failed-message text is invented
-
 ### Requirement: Running messages use a single-worker conversation queue
 A conversation SHALL have at most one executing provider turn. Further accepted messages SHALL enter an ordered pending queue unless explicitly submitted as interrupt-and-send. Queued messages SHALL preserve submission-time context, remain inspectable/editable/removable until execution begins, and survive page navigation/refresh. A successful ordinary turn MAY dispatch the next queued message; a failed or unexpectedly interrupted turn SHALL pause and retain the queue until explicit continuation. Service recovery SHALL pause retained work after an unowned running turn rather than silently launching it. Progress-read failure alone SHALL NOT count as a terminal provider failure.
 
@@ -44,10 +29,3 @@ An explicit interrupt-and-send SHALL retain the priority message, request cancel
 #### Scenario: Stop acknowledgement is unavailable
 - **WHEN** cancellation of A cannot be confirmed
 - **THEN** D stays visibly waiting for stop confirmation and no second executing turn is launched
-
-### Requirement: Recovery does not replay successful effects blindly
-Retry of an accepted failed message SHALL be an explicit linked attempt with preserved original history. Unknown submission status SHALL first reconcile by its original identity. A UI tool-recovery operation SHALL execute only a backend-supported scoped action; it SHALL NOT blindly replay a provider command whose completed effects are unknown.
-
-#### Scenario: A tool partly succeeds before failure
-- **WHEN** recovery is offered for a turn with committed effects and a failed operation
-- **THEN** known completed effects remain visible and recovery targets only a supported safe action or explicit new Agent instruction, not automatic full-write replay

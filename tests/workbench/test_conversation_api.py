@@ -218,6 +218,103 @@ class ConversationApiTests(unittest.TestCase):
         self.assertEqual(error["error"], "after must be an integer")
 
     @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_submission_id_reuses_original_turn_when_server_context_changes(self, get_provider):
+        from workbench.bridge import conversation_providers
+
+        get_provider.return_value = self.provider
+        provider_launches = []
+
+        def build_command(_provider, session_id=None):
+            provider_launches.append(session_id)
+            return [sys.executable, str(self.script)]
+
+        with mock.patch.object(conversation_providers, "build_command", build_command), \
+             mock.patch("workbench.server.api.agent_context.build", side_effect=[
+                 {"anchor": {"route": "/first"}, "current": {
+                     "revision": 1,
+                     "draft": {"answer": "unfinished answer", "note": "stuck here",
+                               "choices": ["A", "B"], "images": []},
+                 }},
+                 {"anchor": {"route": "/first"}, "current": {"revision": 2}},
+                 {"anchor": {"route": "/changed"}, "current": {"revision": 3}},
+             ]):
+            _, created = self.post("/api/w/dmath/ai/sessions", {"provider": "codex"})
+            path = f"/api/w/dmath/ai/sessions/{created['conversation_id']}/turns"
+            payload = {
+                "message": "Explain this",
+                "submission_id": "send-api-stable",
+                "route": "/w/dmath/kp/kp-1",
+                "page_type": "kp",
+                "kp_id": "kp-1",
+                "include_draft": True,
+                "draft_answer": "unfinished answer",
+                "draft_note": "stuck here",
+                "draft_choices": ["A", "B"],
+                "dom": "must not be persisted",
+            }
+            _, first = self.post(path, payload)
+            for _ in range(100):
+                _, current = self.get(
+                    f"/api/w/dmath/ai/sessions/{created['conversation_id']}"
+                    f"/turns/{first['turn_id']}?after=0"
+                )
+                if current["turn"]["status"] not in {"queued", "running"}:
+                    break
+                time.sleep(0.02)
+            _, duplicate = self.post(path, payload)
+            status, conflict = self.post_error(path, {**payload, "route": "/w/dmath/other"})
+
+        turn_path = (
+            self.fixture.ws / ".lessonkit" / "jobs" / created["conversation_id"]
+            / f"{first['turn_id']}.json"
+        )
+        stored = json.loads(turn_path.read_text(encoding="utf-8"))
+        self.assertEqual(first["turn_id"], duplicate["turn_id"])
+        self.assertEqual(stored["context"]["current"]["revision"], 1)
+        self.assertEqual(stored["context"]["current"]["draft"]["answer"], "unfinished answer")
+        self.assertNotIn("dom", stored["submitted_fields"])
+        self.assertEqual(stored["submitted_fields"]["draft_answer"], "unfinished answer")
+        self.assertEqual(stored["submitted_fields"]["draft_choices"], ["A", "B"])
+        self.assertEqual(provider_launches, [None])
+        self.assertEqual(status, 409)
+        self.assertIn("submission", conflict["error"])
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_draft_fields_without_opt_in_are_not_stored_in_turn_snapshot(self, get_provider):
+        from workbench.bridge import conversation_providers
+
+        get_provider.return_value = self.provider
+        with mock.patch.object(
+            conversation_providers, "build_command",
+            return_value=[sys.executable, str(self.script)],
+        ), mock.patch(
+            "workbench.server.api.agent_context.build",
+            return_value={"anchor": {"route": "/w/dmath/practice"}},
+        ):
+            _, created = self.post("/api/w/dmath/ai/sessions", {"provider": "codex"})
+            _, turn = self.post(
+                f"/api/w/dmath/ai/sessions/{created['conversation_id']}/turns",
+                {"message": "Question", "submission_id": "send-unopted-draft",
+                 "draft_answer": "must not persist", "draft_note": "must not persist"},
+            )
+            for _ in range(100):
+                _, data = self.get(
+                    f"/api/w/dmath/ai/sessions/{created['conversation_id']}"
+                    f"/turns/{turn['turn_id']}?after=0"
+                )
+                if data["turn"]["status"] not in {"queued", "running"}:
+                    break
+                time.sleep(0.02)
+
+        turn_path = (
+            self.fixture.ws / ".lessonkit" / "jobs" / created["conversation_id"]
+            / f"{turn['turn_id']}.json"
+        )
+        stored = json.loads(turn_path.read_text(encoding="utf-8"))
+        self.assertNotIn("draft_answer", stored["submitted_fields"])
+        self.assertNotIn("draft_note", stored["submitted_fields"])
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
     def test_pi_turn_streams_deltas_and_keeps_its_native_session(self, get_provider):
         # Pi answers over its persistent RPC process; the mirror keeps the
         # streamed answer and the native session for resuming.

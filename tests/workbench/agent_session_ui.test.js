@@ -76,7 +76,9 @@ function response(value, status = 200) {
 
 function setup(fetch, options = {}) {
   const storage = new Storage();
+  const localStorage = new Storage();
   Object.entries(options.seed || {}).forEach(([key, value]) => storage.setItem(key, value));
+  Object.entries(options.localSeed || {}).forEach(([key, value]) => localStorage.setItem(key, value));
   const route = options.route || "/w/alpha/kp/kp-7";
   const elements = {
     layout: new Element("layout", { dataset: { workspace: "alpha", page: "kp" } }),
@@ -123,12 +125,12 @@ function setup(fetch, options = {}) {
     innerWidth: 1280, addEventListener() {},
     matchMedia() { return { matches: false }; },
     prompt() { return "我的会话"; }, confirm() { return true; },
-    sessionStorage: storage,
+    sessionStorage: storage, localStorage,
   };
   const ui = AgentUISurfaces(document, window);
   const sandbox = {
     document, window, fetch, PracticeDeck, AgentUISurfaces: ui,
-    sessionStorage: storage, localStorage: new Storage(), console,
+    sessionStorage: storage, localStorage, console,
     setInterval, clearInterval,
     setTimeout: options.setTimeout || setTimeout,
     clearTimeout: options.clearTimeout || clearTimeout,
@@ -138,7 +140,7 @@ function setup(fetch, options = {}) {
   const context = vm.createContext(sandbox);
   vm.runInContext(PRACTICE_FLOW_SOURCE, context, { filename: "practice-flow.js" });
   vm.runInContext(SOURCE, context, { filename: "workbench.js" });
-  return { elements, window, ui };
+  return { elements, window, localStorage, ui };
 }
 
 async function flush() {
@@ -287,6 +289,205 @@ test("two Enter presses cannot submit another turn before the first POST is acce
   input.trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() {} });
   assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
     && call.options?.method === "POST").length, 2);
+});
+
+test("an unknown send survives reload and reconciles with the same identity without replacing a draft", async () => {
+  const outboxKey = "wb_ai_message_outbox_alpha_conv-a";
+  const firstCalls = [];
+  const first = setup((url, options) => {
+    firstCalls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response(session("conv-a"));
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ error: "temporary outage" }, 503);
+    }
+    return response({});
+  });
+  await flush();
+  first.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  first.elements["ai-input"].value = "Keep this message";
+  first.elements["ai-send"].click();
+  await flush();
+
+  const initialPost = firstCalls.find((call) => call.options?.method === "POST");
+  const initialBody = JSON.parse(initialPost.options.body);
+  assert.ok(initialBody.submission_id);
+  assert.equal(first.elements["ai-input"].value, "");
+  const saved = JSON.parse(first.localStorage.getItem(outboxKey));
+  assert.equal(saved[initialBody.submission_id].status, "unknown");
+  assert.equal(saved[initialBody.submission_id].body.message, "Keep this message");
+
+  const retryCalls = [];
+  const reopened = setup((url, options) => {
+    retryCalls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response(session("conv-a"));
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ turn_id: "turn-reconciled" });
+    }
+    if (url.includes("/ai/sessions/conv-a/turns/turn-reconciled?")) {
+      return response({ events: [], turn: { status: "running" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    localSeed: { [outboxKey]: JSON.stringify(saved) },
+    setTimeout: () => 1,
+  });
+  await flush();
+  assert.equal(retryCalls.some((call) => call.options?.method === "POST"), false,
+    "reopening must not automatically replay a possibly accepted send");
+  const recovery = reopened.elements["ai-messages"].children.find((item) =>
+    item.className === "ai-send-recoveries");
+  assert.ok(recovery);
+  reopened.elements["ai-input"].value = "newer draft";
+  recovery.children[0].children[2].click();
+  await flush();
+  const retry = retryCalls.find((call) => call.options?.method === "POST");
+  const retryBody = JSON.parse(retry.options.body);
+  assert.equal(retryBody.submission_id, initialBody.submission_id);
+  assert.equal(retryBody.message, initialBody.message);
+  assert.equal(reopened.elements["ai-input"].value, "newer draft");
+});
+
+test("a rejected send keeps its message recoverable and will not overwrite a newer draft", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response(session("conv-a"));
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ error: "invalid request" }, 400);
+    }
+    return response({});
+  });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  app.elements["ai-input"].value = "Rejected but saved";
+  app.elements["ai-send"].click();
+  await flush();
+
+  const recovery = app.elements["ai-messages"].children.find((item) =>
+    item.className === "ai-send-recoveries");
+  assert.ok(recovery);
+  assert.match(recovery.children[0].children[0].textContent, /被服务端拒绝/);
+  app.elements["ai-input"].value = "Do not replace me";
+  recovery.children[0].children[2].click();
+  assert.equal(app.elements["ai-input"].value, "Do not replace me");
+});
+
+test("a failed accepted send offers a new linked attempt from its saved context", async () => {
+  const outboxKey = "wb_ai_message_outbox_alpha_conv-a";
+  const original = {
+    conversation_id: "conv-a", submission_id: "send-original", status: "accepted",
+    turn_id: "turn-001", created_at: 1,
+    body: { message: "Retry me", route: "/w/alpha/kp/kp-7", submission_id: "send-original" },
+  };
+  const calls = [];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a")) return response({
+      ...session("conv-a"), messages: [
+        { role: "user", content: "Retry me", status: "failed", turn_id: "turn-001",
+          submission_id: "send-original", error: "provider exit code 3" },
+        { role: "assistant", content: "Partial reply", partial: true, status: "failed" },
+      ],
+    });
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ turn_id: "turn-002" });
+    }
+    if (url.includes("/ai/sessions/conv-a/turns/turn-002?")) {
+      return response({ events: [], turn: { status: "running" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    localSeed: { [outboxKey]: JSON.stringify({ [original.submission_id]: original }) },
+    setTimeout: () => 1,
+  });
+  await flush();
+
+  const recovery = app.elements["ai-messages"].children.find((item) =>
+    item.className === "ai-send-recoveries");
+  assert.ok(recovery);
+  recovery.children[0].children[2].click();
+  await flush();
+  const retry = calls.find((call) => call.options?.method === "POST");
+  const body = JSON.parse(retry.options.body);
+  assert.notEqual(body.submission_id, "send-original");
+  assert.equal(body.retry_of, "turn-001");
+  assert.equal(body.message, "Retry me");
+  assert.equal(body.route, "/w/alpha/kp/kp-7");
+});
+
+test("tool activity cards show terminal failures and only explicit known impact", async () => {
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([session("conv-a", "running", "turn-1")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a")) {
+      return response(session("conv-a", "running", "turn-1"));
+    }
+    if (url.includes("/ai/sessions/conv-a/turns/turn-1?")) return response({
+      events: [
+        { sequence: 1, kind: "activity", activity_id: "failed-write", activity_type: "tool",
+          label: "Write file", status: "error", output: "permission denied" },
+        { sequence: 2, kind: "activity", activity_id: "provider-command", activity_type: "command",
+          label: "Run command", status: "done", output: "exit code 0" },
+        { sequence: 3, kind: "activity", activity_id: "verified-ingest", activity_type: "tool",
+          label: "Store batch", status: "done", impact: { status: "known", summary: "batch-9 applied" } },
+      ],
+      turn: { status: "running" },
+    });
+    return response({});
+  }, { setTimeout: () => 1 });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+  const rows = app.elements["ai-messages"].children[0].children[1].children;
+  const failed = rows.find((item) => item.activityParts?.label.textContent === "Write file");
+  const command = rows.find((item) => item.activityParts?.label.textContent === "Run command");
+  const verified = rows.find((item) => item.activityParts?.label.textContent === "Store batch");
+  assert.ok(failed.className.includes("is-failed"));
+  assert.equal(failed.activityParts.state.textContent, "失败");
+  assert.equal(failed.activityParts.impact.textContent, "影响未知");
+  assert.equal(command.activityParts.impact.textContent, "影响未知");
+  assert.equal(verified.activityParts.impact.textContent, "已知影响：batch-9 applied");
+});
+
+test("reloaded failed history renders saved activities without a blank assistant answer", async () => {
+  const app = setup((url) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !url.includes("/conv-a")) {
+      return response([session("conv-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a")) return response({
+      ...session("conv-a"),
+      messages: [
+        { role: "user", content: "Inspect", status: "failed", turn_id: "turn-001" },
+        { role: "assistant", turn_id: "turn-001", status: "failed", activities: [
+          { activity_id: "cmd-failed", activity_type: "command", label: "运行命令",
+            status: "failed", output: "permission denied" },
+        ] },
+      ],
+    });
+    return response({});
+  });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  const children = app.elements["ai-messages"].children;
+  assert.ok(children.some((child) => child.className === "ai-plan"));
+  assert.equal(children.filter((child) => child.className === "msg ai").length, 1,
+    "the only assistant bubble is the real failure status, with no empty answer bubble");
+  assert.match(deepHtml(app.elements["ai-messages"]), /permission denied/);
 });
 
 test("switching conversations clears approval and activity state and reloads events from zero", async () => {
