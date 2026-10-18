@@ -1142,6 +1142,16 @@
     state.byId = new Map(state.nodes.map(function (n) { return [n.id, n]; }));
 
     recomputeLayoutGuides(state);
+    // Start the solve on the guide grid, not on the seed spiral. The spiral sat up
+    // to 1135px from the point's own guide (p50 666px), and the only thing standing
+    // between that and the first frame was the hierarchy band clamp — which answers
+    // by teleporting y to guideY +/- band, measured at 953px on real dmath data.
+    // Nothing has been simulated yet at this point, so seeding on the guides costs
+    // no layout quality; it only removes a jump the learner can see.
+    state.nodes.forEach(function (n) {
+      n.x = n.guideX;
+      n.y = n.guideY;
+    });
     reheat(state, 1, true);
 
     return {
