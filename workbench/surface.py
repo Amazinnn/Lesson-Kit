@@ -114,6 +114,12 @@ ROUTES = {
         BROWSER, (), "conversations are native to the page; the CLI has no session command"),
     ("GET", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}"): (
         BROWSER, (), "conversations are native to the page; the CLI has no session command"),
+    ("PATCH", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}"): (
+        BROWSER, (), "conversations are native to the page; the CLI has no session command"),
+    ("DELETE", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}"): (
+        BROWSER, (), "conversations are native to the page; the CLI has no session command"),
+    ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/queue/continue"): (
+        BROWSER, (), "conversations are native to the page; the CLI has no session command"),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/cancel"): (
         BROWSER, (), "conversations are native to the page; the CLI has no session command"),
     ("GET", "/api/w/{name}/graph"): (

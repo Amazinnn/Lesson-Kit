@@ -642,7 +642,6 @@ class ConversationTests(unittest.TestCase):
             def terminate(self):
                 self.cancelled = True
                 self.return_code = -15
-                first_release.set()
 
             def kill(self):
                 self.terminate()
@@ -691,12 +690,15 @@ class ConversationTests(unittest.TestCase):
                 submission_id="D-id", queue_action="interrupt",
             )
             self.assertEqual(d["status"], "waiting_for_stop")
-            with self.assertRaises(conversations.ConversationConflict):
-                conversations.start_turn(
-                    self.pool, self.workspace, conversation_id, "Second interrupt",
-                    {"anchor": {"route": "/e"}}, submission_id="E-interrupt",
-                    queue_action="interrupt",
-                )
+            try:
+                with self.assertRaises(conversations.ConversationConflict):
+                    conversations.start_turn(
+                        self.pool, self.workspace, conversation_id, "Second interrupt",
+                        {"anchor": {"route": "/e"}}, submission_id="E-interrupt",
+                        queue_action="interrupt",
+                    )
+            finally:
+                first_release.set()
             self.assertEqual(started, [0])
             done_a = self.wait_turn(conversation_id, a["turn_id"])
             self.assertEqual(done_a["status"], "cancelled")
