@@ -569,6 +569,11 @@ Agent 每轮只收到精简能力地图；它可通过 `python -m workbench.brid
 _Avoid_：每轮重复注入整本操作手册、为每个主题新增顶层命令
 出处：openspec/specs/agent-contract-disclosure/spec.md「Ordinary turns receive a small context map rather than the full operation manual」
 
+### 本地发送箱 / Local Agent Outbox
+按工作区和对话保存在浏览器本地的消息恢复记录，包含原消息、提交时请求上下文与发送状态。状态未知时用原提交标识核对；服务端拒绝时可恢复原文；已接收但失败时，只有用户明确操作才创建关联新轮次。成功完成后清除。它不排队自动发送，也不自动重放工具操作或写入。
+_Avoid_：待发消息队列、自动重试
+出处：`preserve-agent-messages-and-tool-outcomes`
+
 ### Agent 提供方 / Provider
 一次 Agent 对话创建时固定的底层 Agent 命令行（codex / claude / pi）。对话**不会中途换 harness**；换的是同一个 harness 上的**模型条目**（见下），且只在下一轮生效。未配置 provider 时如实提示。
 _Avoid_：模型热切换（当前轮不改）、把显示名当 harness 名

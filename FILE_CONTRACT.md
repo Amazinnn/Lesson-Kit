@@ -474,10 +474,21 @@ Runtime assets follow the hidden dot-directory convention and live under
 
 - Path: `.lessonkit/jobs/conv-NNN/`
 - Provider-native storage remains the full conversation authority. Lesson Kit
-  stores provider session pointers, turn events, and successful mirrored
-  exchanges for navigation and display.
-- Failed/cancelled output, hidden reasoning, raw protocol events, and ordinary
-  navigation are not durable transcript content.
+  stores provider session pointers, per-turn artifacts/events, and successful
+  mirrored exchanges for navigation and display. Before provider dispatch, a
+  turn artifact stores the accepted user text and captured context; when a
+  `submission_id` is supplied, it also stores that identity and the stable
+  submitted fields. An explicit retry links its new turn with `retry_of`.
+- Practice draft answer, note, choices, and visible images enter that turn
+  snapshot only when the request opts in with `include_draft`; the bridge bounds
+  them. They are not Pool learning records, are not copied to the successful
+  transcript, and are not inherited by later turns.
+- History projects accepted messages and truthful terminal status from turn
+  artifacts alongside the successful transcript. Legacy successful exchanges
+  remain visible once. Failed/cancelled turns may retain only actual, bounded,
+  redacted public partial output; missing messages or output are never invented.
+- Hidden reasoning and raw protocol events are not durable transcript content.
+  Tool activity summaries, details, and outputs are sanitized and bounded.
 - The whole jobs area is excluded from version control.
 
 ## Rules
