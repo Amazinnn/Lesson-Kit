@@ -5,7 +5,8 @@
 ## What Changes
 
 - 清点学生可见的选题、筛选、组卷入口及相应操作文档，清理用户确认退役的渠道。
-- 用户已要求立项；是否一并移除 Scope、题量和条件组卷控件，仍在提问确认。未确定范围不作为已批准实现契约。
+- 用户已确认移除所有学生侧选题、筛选和组卷控件，包括知识点范围、题量、来源/难度筛选、跨页范围托盘、建议一键组卷及手动编辑题目名单/顺序；由 Agent 组卷，页面只管理和练习已有试卷。Agent/CLI 的组卷、精确题号、筛选及保存能力保留。
+- 阅读知识点/图谱、搜索和阅读题目、章节阅读镜头不属于组卷控件，不因本 change 被删除或暗中触发选题。试卷管理保留阅读、改名、导出、删除容器、开始/继续；删除容器仍沿用保留题目与记录的既有规则。
 - 保留 Paper 作为练习容器，以及已有试卷的练习、进度和记录；本 change 不授权删除真实题目、试卷或作答记录。
 - 与 `free-navigation-paper-practice` 协调开始页，避免重复保留退役控件。
 
@@ -18,6 +19,8 @@ None.
 ### Modified Capabilities
 
 - `workbench-ui`: learner-facing Paper assembly and selection entry points.
+- `review-workbench`: retire the source-filter panel and distinguish reading context from Agent/CLI assembly scope.
+- `practice-set-export`: retain authoring assembly and saved-Paper execution without a manual assembly UI.
 
 ## Impact
 

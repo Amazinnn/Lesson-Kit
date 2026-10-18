@@ -33,3 +33,13 @@
 文字题提交后才展开答案并锁定；新开始页仅显示试卷信息、展示方式与开始/继续。保留自评设置，文字题按展示方式在逐题提交后或交卷后自评，可修改，未自评不阻止交卷。完成页提供统计、查看答卷、再练一次及返回列表；查看答卷后可返回同一完成页，再练创建新轮并保留历史。
 
 用户另外要求清理手动选题渠道。已用 OpenSpec CLI 创建 `remove-learner-manual-paper-selection`。当前规范已禁止逐题手选，但允许 Scope/筛选组卷；不能据此声称逐题手选控件实际仍存在。第五轮确认清理是否包括全部学生侧条件组卷，同时确认未逐题提交内容的最终交卷处理及恢复规则。此后才能收束完整 specs/design/tasks。
+
+## 第五轮回答与设计交接
+
+用户确认学生侧所有选题、筛选和组卷控件退役，Agent/CLI 保留；交卷时已有非空输入直接提交，完全空白才记为不会，无额外确认；恢复本轮完整状态，答案展示方式不变。此前待决问题已收束，历史轮次记录保留、产品术语按既有职责协调。
+
+两个 change 已补 proposal、delta specs、design、tasks；答案展示方式在 GLOSSARY 中以计划术语定义。实现任务全部未勾选，本交付只有文档，不代表 main 已发布、服务已更新或真实验收已完成。当前分支 `docs/free-paper-navigation`，用户自行分派实现者。
+
+交接要点：自由导航改 Data/Domain 生命周期后再接 UI，不能只加前端按钮；清理 change 删除学生渠道但不删组卷引擎。两者共享开始页模板，实施时协调以防互相恢复旧控件。仅在隔离测试库检查新行为，真实课程数据不在本轮授权范围内。
+
+文档验证：`openspec validate free-navigation-paper-practice --strict` 与 `openspec validate remove-learner-manual-paper-selection --strict` 均通过；两项 CLI status 均显示 4/4 planning artifacts complete。未运行产品测试，因为没有产品代码变更；这不构成功能验收。
