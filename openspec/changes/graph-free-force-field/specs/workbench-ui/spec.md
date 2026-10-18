@@ -179,6 +179,37 @@ written to learning records.
 
 ## MODIFIED Requirements
 
+### Requirement: Layered knowledge relationships
+
+The structure projection SHALL draw each visible relationship as a single stroked curve.
+Existing attraction strength SHALL monotonically control that curve's width and darkness.
+Weak relationships SHALL be painted before strong ones, so that where two relationships
+overlap the stronger one is the one you see. These visual channels SHALL NOT alter
+relationship data or learning state.
+
+A layered pipe — a soft shadow, a body and a narrow highlight — was required before this
+change and is deliberately not restored. Only the body layer carried information; the two
+outer layers were constant decoration that made a flat line look like a tube. Drawing three
+curves per segment also triples the per-frame vertex work, and the refresh rate is already
+the open complaint about this view, so paying three times the cost for a material effect
+that encodes nothing is the wrong trade. The requirement is amended rather than the code,
+and the reason is recorded here rather than left implicit.
+
+#### Scenario: Compare weak and strong relationships
+
+- **WHEN** two visible relationships have different attraction strength
+- **THEN** the stronger relationship is wider, darker, and painted after the weaker one
+
+#### Scenario: Relationship remains attached during motion
+
+- **WHEN** connected nodes move through the force simulation
+- **THEN** both ends of the curve stay on their own points' rings and the curve is redrawn on the same path each frame
+
+#### Scenario: Overlapping relationships resolve to the stronger one
+
+- **WHEN** two visible relationships cross on screen
+- **THEN** the stronger one is drawn over the weaker one, because the paint order is ascending by strength and the last thing painted wins
+
 ### Requirement: Complete primary learning text
 
 The workbench SHALL display user-authored knowledge titles, questions, notes, goal titles,

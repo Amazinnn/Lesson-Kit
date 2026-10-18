@@ -2049,14 +2049,30 @@ test("a settled graph renders one circular body per node and typed ported edges"
     assert.ok(button.children.some((child) => child.className === "node-satellite"));
   });
   assert.equal(edges.children.length, 3);
-  assert.match(edges.children[0].getAttribute("class"), /graph-edge prereq/);
-  assert.equal(edges.children[0].getAttribute("marker-end"), "url(#graph-arrow-blue)");
-  assert.match(edges.children[1].getAttribute("class"), /graph-edge contrast/);
-  assert.equal(edges.children[1].getAttribute("marker-end"), null,
+  // Look edges up by id rather than by index: this test is about which class and which
+  // arrow each relation type gets, which has nothing to do with the order they are
+  // painted in, and asserting by index made it fail the moment the paint order became a
+  // contract of its own.
+  const edgeByScope = new Map(edges.children.map((child) => [child.dataset.edgeId, child]));
+  assert.equal(edgeByScope.size, 3, "every relation is painted once");
+  const prereqPath = edgeByScope.get("r-1");
+  const contrastPath = edgeByScope.get("r-2");
+  const legacyPath = edgeByScope.get("legacy:kp-1:kp-3");
+  assert.match(prereqPath.getAttribute("class"), /graph-edge prereq/);
+  assert.equal(prereqPath.getAttribute("marker-end"), "url(#graph-arrow-blue)");
+  assert.match(contrastPath.getAttribute("class"), /graph-edge contrast/);
+  assert.equal(contrastPath.getAttribute("marker-end"), null,
     "symmetric relations carry no one-way arrow");
-  assert.match(edges.children[2].getAttribute("class"), /graph-edge legacy/);
+  assert.match(legacyPath.getAttribute("class"), /graph-edge legacy/);
+  // The paint order is a contract now, not an accident of the input array: weak first, so
+  // the last child wins where two relationships overlap and strong evidence stays visible.
+  assert.deepEqual(
+    edges.children.map((child) => child.dataset.edgeId),
+    ["legacy:kp-1:kp-3", "r-2", "r-1"],
+    "weak relationships are painted before strong ones"
+  );
   await settleGraph();
-  assert.match(edges.children[0].getAttribute("d"), /^M .* C /);
+  assert.match(edgeByScope.get("r-1").getAttribute("d"), /^M .* C /);
   assert.equal(solverText.textContent, "已收敛", "normal settling clears the solving label");
   const rafCalls = app.rafCalls;
   await settleGraph(20);

@@ -252,6 +252,18 @@
       var vertices = [];
       var activeEdges = runtime.visibleEdges();
       routePorts(activeEdges);
+      // Weak relationships first. Everything goes into one vertex buffer in push order and
+      // the blend keeps the later segment, so ordering the batch ascending by strength is
+      // what puts strong evidence on top. The spec requires this and it had been missing
+      // since the WebGL renderer replaced the layered one — the sort is nearly free, and
+      // unlike the three-layer pipe it actually carries meaning: it decides which
+      // relationship you see when two of them overlap.
+      // Ties break on id so the draw order stays deterministic frame to frame.
+      activeEdges = activeEdges.slice().sort(function (x, y) {
+        var d = (Number(x.strength) || 0) - (Number(y.strength) || 0);
+        if (d) return d;
+        return x.id < y.id ? -1 : x.id > y.id ? 1 : 0;
+      });
       var selected = state.graph.selected;
       var scale = stageScale(stage);
 

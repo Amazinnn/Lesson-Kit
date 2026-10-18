@@ -900,7 +900,15 @@
         + "<marker id='graph-arrow-yellow' viewBox='0 0 8 8' refX='7' refY='4' markerWidth='6' markerHeight='6' orient='auto'>"
         + "<path d='M0 0 L8 4 L0 8Z' fill='#c3a128' opacity='.72'></path></marker>"
         + "</defs>";
-      graphEdgeEls = sim.edges.map(function (edge) {
+      // Weak relationships first: SVG paints in document order, so appending ascending by
+      // strength is what puts strong evidence on top. Same rule as the WebGL pass — this
+      // is the fallback layer, and it should not disagree with the primary one about which
+      // relationship wins when two overlap.
+      graphEdgeEls = sim.edges.slice().sort(function (x, y) {
+        var d = (Number(x.strength) || 0) - (Number(y.strength) || 0);
+        if (d) return d;
+        return String(x.id) < String(y.id) ? -1 : String(x.id) > String(y.id) ? 1 : 0;
+      }).map(function (edge) {
         var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         path.setAttribute("class", "graph-edge " + edge.type);
         if (edge.id !== undefined && path.dataset) path.dataset.edgeId = String(edge.id);
