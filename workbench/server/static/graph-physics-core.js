@@ -780,7 +780,13 @@
    * 降级为"结算后外接框"，否则自由力场会被边界钳制顶在墙上。 */
   var BH_THETA = .9;
   var BH_DISTANCE_MIN2 = 30;
-  var BH_STRENGTH = 50;
+  // Calibrated against VELOCITY_DECAY: the terminal speed is force/(1 - decay), so
+  // changing the damping from .81 to .6 halves it, and the strength has to follow
+  // or the whole graph contracts. See tools/calibrate-bh-strength.js.
+  var BH_STRENGTH = 60;
+  // Obsidian's complete() uses 0.6; the old integrator used .81 with a hard 7px/tick
+  // clamp on top. The clamp is gone, so this is now the only limiter.
+  var VELOCITY_DECAY = .6;
 
   function bhBuild(nodes) {
     var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -1029,10 +1035,11 @@
       }
       n.vx += (center.x - n.x) * .00025 * alpha;
       n.vy += (center.y - n.y) * .00025 * alpha;
-      n.vx *= .81;
-      n.vy *= .81;
-      var speed = dist2d(n.vx, n.vy);
-      if (speed > 7) { n.vx *= 7 / speed; n.vy *= 7 / speed; }
+      // Obsidian's complete(x, y, 0.6): damp, then integrate. No velocity clamp —
+      // the damping is the limiter, and it is what caps per-frame motion instead of
+      // a cutoff that leaves the fastest nodes pinned at the ceiling.
+      n.vx *= VELOCITY_DECAY;
+      n.vy *= VELOCITY_DECAY;
       n.x += n.vx;
       n.y += n.vy;
     });
