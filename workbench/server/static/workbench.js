@@ -883,6 +883,8 @@
         graphFailureShow(sim.error);
         return;
       }
+      // The fit follows the canvas size from here on, rather than a one-shot moment.
+      graphWatchCanvasSize();
       graphEdgeBudget = { told: false };
       graphEdgeBudgetEl = graphEdgeBudgetEl || document.getElementById("graph-edge-budget");
       graphApplyEdgeVisibility();
@@ -1126,10 +1128,9 @@
     }
 
     /* The learning dashboard is closed until a point is chosen, because until then it has
-     * nothing to show and it costs the canvas a whole column. Opening and closing changes
-     * the canvas width, so the view is re-fitted afterwards — otherwise the panel would
-     * fold away and the graph would stay at the zoom it needed while the panel was there,
-     * which reads as "the panel closed but the picture did not move".
+     * nothing to show and it costs the canvas a whole column. Folding it changes the canvas
+     * width and the resize watcher re-fits from that — the panel's own job is only to
+     * change the layout, not to reach in and re-zoom the graph itself.
      * The state is deliberately not remembered: every visit starts from the canvas. */
     function graphSetDashboard(open) {
       var workspace = document.getElementById("graph-workspace");
@@ -1137,15 +1138,6 @@
       var next = open ? "open" : "collapsed";
       if (workspace.dataset.dashboard === next) return;
       workspace.dataset.dashboard = next;
-      if (!sim) return;
-      // One frame later, so the grid has re-laid out and clientWidth is the new width.
-      var schedule = typeof requestAnimationFrame === "function"
-        ? requestAnimationFrame.bind(null)
-        : setTimeout.bind(null);
-      schedule(function () {
-        graphFit();
-        graphMarkDirty();
-      });
     }
 
     function graphSelect(id, centerIt) {
@@ -1166,6 +1158,38 @@
       graphView.panY = graphCanvas.clientHeight / 2 - node.y * graphView.scale;
       graphView.userMoved = true;
       graphApplyView();
+    }
+
+    /* Fit whenever the canvas actually changes size.
+     *
+     * The auto-fit was a one-shot: it fired at whatever moment the solver reported itself
+     * settled, then cleared its own flag so it could never run again. Measured with a probe
+     * on the condition, that moment arrived while the grid was still 474px wide — the layout
+     * had not settled into its final width yet — so the graph was fitted for a canvas about
+     * a third of its real size and stayed that way. At a 1780px canvas the applied transform
+     * was still translate(52px,-18px) scale(.7), which is the hardcoded initial value, and
+     * identical at 1140px and 1780px wide, which is what proved the fit never ran again.
+     *
+     * Two visible consequences, both of which this fixes: the graph sat off-centre, since the
+     * pan had been computed against the narrow width, and every point rendered 33% smaller
+     * than it should, since .7 was doing the work the fit would have given 1.05.
+     *
+     * Watching the size rather than guessing a moment also covers the dashboard folding and
+     * the window resizing, neither of which the old trigger could see. It re-fits even after
+     * the learner has panned or zoomed, which is a deliberate choice (decision D2): a view
+     * that fits the space it is in beats a view that keeps a zoom chosen for a different
+     * amount of space.
+     */
+    var graphCanvasWatcher = null;
+
+    function graphWatchCanvasSize() {
+      if (typeof ResizeObserver !== "function" || !graphCanvas) return;
+      graphCanvasWatcher = new ResizeObserver(function () {
+        if (!sim) return;
+        graphFit();
+        graphMarkDirty();
+      });
+      graphCanvasWatcher.observe(graphCanvas);
     }
 
     function graphFit() {
