@@ -813,7 +813,7 @@ def ai_turn_start(pool, workspace, params, body):
     draft_fields = {"draft_answer", "draft_note", "draft_choices", "draft_images"}
     submitted_fields = {
         key: value for key, value in body.items()
-        if key not in {"message", "submission_id", "retry_of", "dom", "draft_truncated"}
+        if key not in {"message", "submission_id", "retry_of", "queue_action", "dom", "draft_truncated"}
         and key not in draft_fields
     }
     if body.get("include_draft") is True:
@@ -844,7 +844,7 @@ def ai_turn_start(pool, workspace, params, body):
         return conversations.start_turn(
             pool, workspace, params["conversation_id"], message.strip(), context,
             submission_id=submission_id, submitted_fields=submitted_fields,
-            retry_of=retry_of,
+            retry_of=retry_of, queue_action=body.get("queue_action", "queue"),
         )
     except conversations.InvalidIdentifier as exc:
         raise ApiError(400, str(exc)) from exc
@@ -870,6 +870,49 @@ def ai_turn_events(pool, workspace, params, body):
 def ai_turn_cancel(pool, workspace, params, body):
     try:
         return conversations.cancel(pool, params["conversation_id"])
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+
+
+def ai_turn_pending_update(pool, workspace, params, body):
+    body = _request_object(body)
+    revision = body.get("expected_revision")
+    if not isinstance(revision, int) or revision < 1:
+        raise ApiError(400, "expected_revision must be a positive integer")
+    try:
+        return conversations.edit_pending(
+            pool, params["conversation_id"], params["turn_id"],
+            body.get("message"), expected_revision=revision,
+        )
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def ai_turn_pending_delete(pool, workspace, params, body):
+    body = _request_object(body)
+    revision = body.get("expected_revision")
+    if not isinstance(revision, int) or revision < 1:
+        raise ApiError(400, "expected_revision must be a positive integer")
+    try:
+        return conversations.remove_pending(
+            pool, params["conversation_id"], params["turn_id"],
+            expected_revision=revision,
+        )
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+
+
+def ai_queue_continue(pool, workspace, params, body):
+    try:
+        return conversations.continue_queue(pool, workspace, params["conversation_id"])
     except conversations.InvalidIdentifier as exc:
         raise ApiError(400, str(exc)) from exc
     except conversations.ConversationConflict as exc:

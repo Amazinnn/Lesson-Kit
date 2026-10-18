@@ -291,6 +291,14 @@
     });
   }
 
+  function del(path, body) {
+    return api(path, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+  }
+
   function store(key, value) {
     sessionStorage.setItem(key, JSON.stringify(value));
   }
@@ -640,6 +648,16 @@
     showRatingBox.checked = showRatingEnabled();
     showRatingBox.addEventListener("change", function () {
       saveSetting("showRating", showRatingBox.checked);
+    });
+  }
+
+  var runningSendSetting = document.getElementById("setting-running-send");
+  if (runningSendSetting) {
+    runningSendSetting.value = loadSetting("runningSendAction", "queue");
+    runningSendSetting.addEventListener("change", function () {
+      var action = runningSendSetting.value === "interrupt" ? "interrupt" : "queue";
+      runningSendSetting.value = action;
+      saveSetting("runningSendAction", action);
     });
   }
 
@@ -2232,7 +2250,7 @@
         goalStatus("Agent 请求仍在提交，请稍候。");
         return;
       }
-      if (!aiConversation || aiTurn) {
+      if (!aiConversation) {
         if (typeof aiShowProviderPicker === "function") aiShowProviderPicker();
         goalStatus("请先在右侧选择 Agent 开始对话，再点一次「让 Agent 填」。");
         return;
@@ -2265,6 +2283,8 @@
   var aiProgressReadFailed = false;
   var aiLiveArtifactId = "";
   var aiPollTimer = null;
+  var aiQueuePollTimer = null;
+  var aiQueueEditingTurn = "";
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
   var aiExecutionPlan = null;
@@ -2272,6 +2292,8 @@
   var aiPiActivities = {};
   var aiCurrentSubmissionId = "";
   var aiRecoveryContainer = null;
+  var aiRenderedDoneTurns = {};
+  var aiHistoryReconciling = false;
   var AI_OUTBOX_PREFIX = "wb_ai_message_outbox_" + WS + "_";
 
   function aiPreviewRoute() {
@@ -2330,13 +2352,18 @@
     aiProgressReadFailed = false;
     aiPollSequence = 0;
     if (aiPollTimer) clearTimeout(aiPollTimer);
+    if (aiQueuePollTimer) clearTimeout(aiQueuePollTimer);
     aiPollTimer = null;
+    aiQueuePollTimer = null;
+    aiQueueEditingTurn = "";
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiCurrentProvider = "";
     aiPiActivities = {};
     aiCurrentSubmissionId = "";
     aiRecoveryContainer = null;
+    aiRenderedDoneTurns = {};
+    aiHistoryReconciling = false;
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
       AgentUISurfaces.resetTurn();
     }
@@ -2442,10 +2469,17 @@
           item.status = "failed";
           item.turn_id = accepted.turn_id;
           item.error = accepted.error || "Agent did not complete this turn";
+          if (typeof accepted.content === "string" && item.body) {
+            item.body.message = accepted.content;
+          }
           outbox[submissionId] = item;
-        } else if (accepted.status === "running") {
+        } else if (accepted.status === "running" || accepted.status === "queued"
+                   || accepted.status === "waiting_for_stop") {
           item.status = "accepted";
           item.turn_id = accepted.turn_id;
+          if (typeof accepted.content === "string" && item.body) {
+            item.body.message = accepted.content;
+          }
           outbox[submissionId] = item;
         }
         changed = true;
@@ -2466,6 +2500,159 @@
       });
     }
     return outbox;
+  }
+
+  function aiPendingMessages(record) {
+    return (record.messages || []).filter(function (message) {
+      return message.role === "user"
+        && (message.status === "queued" || message.status === "waiting_for_stop");
+    });
+  }
+
+  function aiRenderPendingQueue(record) {
+    var panel = document.getElementById("ai-pending-queue");
+    var list = document.getElementById("ai-pending-list");
+    var status = document.getElementById("ai-queue-status");
+    var continueButton = document.getElementById("ai-queue-continue");
+    if (!panel || !list) return;
+    var pending = aiPendingMessages(record);
+    var paused = record.queue_paused === true;
+    panel.classList.toggle("hidden", !pending.length);
+    if (continueButton) {
+      continueButton.classList.toggle("hidden", !paused || !pending.length
+        || record.status === "running");
+    }
+    if (status) {
+      status.textContent = paused
+        ? "队列已暂停；继续后会按顺序发送。"
+        : pending.some(function (message) { return message.status === "waiting_for_stop"; })
+          ? "等待当前任务确认停止；优先消息尚未开始。"
+          : pending.length ? "当前任务结束后会按顺序发送。" : "";
+    }
+    if (aiQueueEditingTurn && !pending.some(function (message) {
+      return message.turn_id === aiQueueEditingTurn;
+    })) aiQueueEditingTurn = "";
+    list.innerHTML = "";
+    pending.forEach(function (message) {
+      var card = document.createElement("article");
+      card.className = "ai-pending-message";
+      var label = document.createElement("p");
+      label.className = "ai-pending-status";
+      label.textContent = message.status === "waiting_for_stop"
+        ? "等待确认停止；尚未开始"
+        : paused ? "已接受，队列已暂停" : "已接受，等待执行";
+      card.appendChild(label);
+      if (message.turn_id === aiQueueEditingTurn) {
+        aiEditPendingMessage(message, record, card);
+      } else {
+        var content = document.createElement("p");
+        content.className = "ai-pending-content";
+        content.textContent = message.content || "";
+        card.appendChild(content);
+        var actions = document.createElement("div");
+        actions.className = "ai-pending-actions";
+        aiOutboxAction(actions, "编辑", function () {
+          aiQueueEditingTurn = message.turn_id;
+          aiRenderPendingQueue(record);
+          var editorIndex = pending.findIndex(function (item) {
+            return item.turn_id === message.turn_id;
+          });
+          var editor = list.children[editorIndex] && list.children[editorIndex].children[1];
+          if (editor && editor.focus) editor.focus();
+        });
+        aiOutboxAction(actions, "移出队列", function () {
+          del("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns/"
+            + encodeURIComponent(message.turn_id), { expected_revision: message.queue_revision || 1 })
+            .then(function () {
+              aiSetStatus("消息已移出队列；接受记录保留为已取消。");
+              aiRefreshQueue();
+            }).catch(function (error) {
+              aiSetStatus(error.status === 409
+                ? "消息已变化；已刷新队列，请再试一次。"
+                : "移出队列失败：" + (error.message || "未知错误"));
+              aiRefreshQueue();
+            });
+        });
+        card.appendChild(actions);
+      }
+      list.appendChild(card);
+    });
+  }
+
+  function aiRefreshQueue() {
+    if (!aiConversation) return Promise.resolve(null);
+    var conversationId = aiConversation;
+    var sequence = aiConversationSequence;
+    return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
+      if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+      aiSyncOutboxWithHistory(record);
+      aiRenderOutbox();
+      aiRenderPendingQueue(record);
+      var completedNotRendered = (record.messages || []).some(function (message) {
+        return message.role === "user" && message.status === "done" && message.turn_id
+          && !aiRenderedDoneTurns[message.turn_id];
+      });
+      if (completedNotRendered && !aiHistoryReconciling) {
+        aiHistoryReconciling = true;
+        return aiLoadConversation(conversationId).then(function (loaded) {
+          if (!loaded) aiHistoryReconciling = false;
+          return loaded;
+        });
+      }
+      if (record.status === "running" && record.current_turn_id
+          && record.current_turn_id !== aiTurn) {
+        return aiLoadConversation(conversationId);
+      }
+      var pending = aiPendingMessages(record);
+      if (aiQueuePollTimer) clearTimeout(aiQueuePollTimer);
+      aiQueuePollTimer = null;
+      var waitingForStop = pending.some(function (message) {
+        return message.status === "waiting_for_stop";
+      });
+      var queuedCanRun = !record.queue_paused
+        && pending.some(function (message) { return message.status === "queued"; });
+      if (waitingForStop || queuedCanRun) {
+        aiQueuePollTimer = setTimeout(function () {
+          if (sequence === aiConversationSequence && conversationId === aiConversation) {
+            aiRefreshQueue();
+          }
+        }, 350);
+      }
+      return record;
+    }).catch(function () { return null; });
+  }
+
+  function aiEditPendingMessage(message, record, card) {
+    var textarea = document.createElement("textarea");
+    textarea.className = "ai-pending-editor";
+    textarea.value = message.content || "";
+    var actions = document.createElement("div");
+    actions.className = "ai-pending-actions";
+    aiOutboxAction(actions, "保存", function () {
+      if (!textarea.value.trim()) {
+        aiSetStatus("消息不能为空。");
+        return;
+      }
+      patch("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns/"
+        + encodeURIComponent(message.turn_id), {
+          message: textarea.value, expected_revision: message.queue_revision || 1,
+        }).then(function () {
+          aiQueueEditingTurn = "";
+          aiRefreshQueue();
+        }).catch(function (error) {
+          aiQueueEditingTurn = "";
+          aiSetStatus(error.status === 409
+            ? "消息已开始执行或被修改；已刷新队列。"
+            : "编辑队列消息失败：" + (error.message || "未知错误"));
+          aiRefreshQueue();
+        });
+    });
+    aiOutboxAction(actions, "取消", function () {
+      aiQueueEditingTurn = "";
+      aiRenderPendingQueue(record);
+    });
+    card.appendChild(textarea);
+    card.appendChild(actions);
   }
 
   function aiRenderOutbox() {
@@ -2529,44 +2716,44 @@
   }
 
   function aiRetryOutbox(item, newAttempt) {
-    if (!aiConversation || aiTurn || aiSendPending) return;
+    if (!aiConversation || aiSendPending) return;
     var body = Object.assign({}, item.body || {});
     if (newAttempt) {
       body.submission_id = aiNewSubmissionId();
       body.retry_of = item.turn_id;
-      aiAddMarkdown(body.message || "", "user");
     }
     var submission = aiPrepareSubmission(body, newAttempt ? null : item);
     if (!submission) {
       aiSetStatus("无法在本机保存发送记录；原文仍保留在恢复卡片中，请复制后再试。");
       return;
     }
-    aiSetRunning(true);
+    aiSetRunning(Boolean(aiTurn));
     aiSetStatus(newAttempt ? "正在重试…" : "正在核对发送状态…");
     aiPostTurn(submission.body, submission).catch(function (error) {
-      aiSetRunning(false);
+      aiSetRunning(Boolean(aiTurn));
       aiSetStatus("发送未确认：" + (error.message || "未知错误"));
       aiRenderOutbox();
     });
   }
 
   function aiPostTurn(body, existingOutbox) {
-    if (!aiConversation || aiTurn || aiSendPending) {
-      return Promise.reject(new Error("conversation already has a pending turn"));
+    if (!aiConversation || aiSendPending) {
+      return Promise.reject(new Error("a message is already being submitted"));
     }
     var requestBody = Object.assign({}, body || {});
+    var sendAction = document.getElementById("ai-send-action");
+    var selectedAction = sendAction ? sendAction.value : "default";
+    requestBody.queue_action = selectedAction === "queue" || selectedAction === "interrupt"
+      ? selectedAction : loadSetting("runningSendAction", "queue");
     var submission = aiPrepareSubmission(requestBody, existingOutbox);
     if (!submission) {
       return Promise.reject(new Error("无法在本机保存发送记录；输入尚未发送"));
     }
     requestBody = submission.body;
-    if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
-      AgentUISurfaces.resetTurn();
-    }
-    aiForgetLiveArtifact();
     var conversationId = aiConversation;
     var sequence = aiConversationSequence;
     aiSendPending = true;
+    aiSetRunning(Boolean(aiTurn));
     return post("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns", requestBody)
       .then(function (turn) {
         aiUpdateOutbox(conversationId, requestBody.submission_id, {
@@ -2574,10 +2761,29 @@
         });
         if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
         aiSendPending = false;
-        aiTurn = turn.turn_id;
-        aiCurrentSubmissionId = requestBody.submission_id;
-        aiPollSequence = 0;
-        aiPollConversationTurn();
+        if (!turn.status || turn.status === "running") {
+          if (aiTurn !== turn.turn_id) {
+            if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
+              AgentUISurfaces.resetTurn();
+            }
+            aiForgetLiveArtifact();
+            aiStreamingMessage = null;
+            aiExecutionPlan = null;
+            aiPiActivities = {};
+            aiAddMarkdown(requestBody.message || "", "user");
+            aiTurn = turn.turn_id;
+            aiCurrentSubmissionId = requestBody.submission_id;
+            aiPollSequence = 0;
+            aiPollConversationTurn();
+          }
+          aiSetRunning(true);
+          aiRefreshQueue();
+        } else {
+          aiSetRunning(Boolean(aiTurn));
+          aiSetStatus(turn.status === "waiting_for_stop"
+            ? "已接受，等待当前任务确认停止。" : "已加入队列，当前任务结束后执行。");
+          aiRefreshQueue();
+        }
         return turn;
       }, function (error) {
         var rejected = error.status >= 400 && error.status < 500;
@@ -2587,6 +2793,7 @@
         if (conversationId === aiConversation) aiRenderOutbox();
         if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
         aiSendPending = false;
+        aiSetRunning(Boolean(aiTurn));
         throw error;
       });
   }
@@ -2825,10 +3032,10 @@
   }
 
   function aiSetRunning(running) {
-    if (aiSend) aiSend.disabled = running || !aiConversation;
+    if (aiSend) aiSend.disabled = aiSendPending || !aiConversation;
     if (aiStop) aiStop.classList.toggle("hidden", !running);
-    // Keep the composer editable while a turn runs. The send button remains
-    // gated until the backend can accept a redirect/queued turn explicitly.
+    // Each submission is gated independently; an active provider does not
+    // prevent another accepted message from joining the durable queue.
     if (aiInput) aiInput.disabled = false;
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.setRunning) {
       AgentUISurfaces.setRunning(running);
@@ -3113,6 +3320,10 @@
   function aiRenderConversation(record) {
     if (!messages) return;
     if (aiChatView) aiSetView("chat");
+    aiTurn = null;
+    aiCurrentSubmissionId = "";
+    aiRenderedDoneTurns = {};
+    aiHistoryReconciling = false;
     messages.innerHTML = "";
     aiRecoveryContainer = null;
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetConversation) {
@@ -3125,6 +3336,10 @@
     aiPiActivities = {};
     (record.messages || []).forEach(function (message) {
       if (message.role === "user") {
+        if (message.status === "queued" || message.status === "waiting_for_stop") return;
+        if (message.status === "done" && message.turn_id) {
+          aiRenderedDoneTurns[message.turn_id] = true;
+        }
         aiAddMarkdown(message.content || "", "user");
         if (message.status === "failed" || message.status === "cancelled") {
           var statusText = message.status === "cancelled" ? "本轮已停止。" : "本轮未完成。";
@@ -3163,12 +3378,14 @@
     });
     aiSyncOutboxWithHistory(record);
     aiRenderOutbox();
+    aiRenderPendingQueue(record);
     aiSetRunning(record.status === "running");
     aiSetStatus(record.status === "running" ? "Agent 正在处理…" : "");
     if (record.status === "running" && record.current_turn_id) {
       aiTurn = record.current_turn_id;
       aiPollConversationTurn();
     }
+    if (aiPendingMessages(record).length) aiRefreshQueue();
   }
 
   function aiLoadConversation(conversationId) {
@@ -3416,7 +3633,7 @@
         aiSetStatus("Agent 正在处理…");
       }
       aiAppendEvents(data);
-      if (data.turn && (data.turn.status === "running" || data.turn.status === "queued")) {
+      if (data.turn && data.turn.status === "running") {
         scheduleNextPoll();
       }
     }).catch(function () {
@@ -3429,30 +3646,42 @@
 
   function aiSendMessage() {
     var message = aiInput ? aiInput.value.trim() : "";
-    if (!message || !aiConversation || aiTurn || aiSendPending) return;
+    if (!message || !aiConversation || aiSendPending) return;
     var submission = aiPrepareSubmission(aiContextBody(message));
     if (!submission) {
       aiSetStatus("无法在本机保存发送记录；消息仍留在输入框中，没有发送。");
       return;
     }
-    aiStreamingMessage = null;
-    aiExecutionPlan = null;
-    aiPiActivities = {};
-    aiAddMarkdown(message, "user");
-    aiSetRunning(true);
+    aiSetRunning(Boolean(aiTurn));
     aiSetStatus("正在发送…");
     var request = aiPostTurn(submission.body, submission);
     aiInput.value = "";
     request.catch(function (err) {
-      aiSetRunning(false);
+      aiSetRunning(Boolean(aiTurn));
       var sendError = "发送失败：" + (err.message || "未知错误");
       aiSetStatus(sendError);
       aiRenderOutbox();
-      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
+      if (!aiTurn && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
         AgentUISurfaces.failure(sendError);
       }
     });
   }
+
+  var aiQueueContinue = document.getElementById("ai-queue-continue");
+  if (aiQueueContinue) aiQueueContinue.addEventListener("click", function () {
+    if (!aiConversation || aiTurn || aiSendPending) return;
+    aiQueueContinue.disabled = true;
+    post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/queue/continue", {})
+      .then(function () {
+        aiSetStatus("正在继续队列…");
+        return aiRefreshQueue();
+      }).catch(function (error) {
+        aiSetStatus(error.status === 409
+          ? "当前任务尚未结束，暂时无法继续队列。"
+          : "继续队列失败：" + (error.message || "未知错误"));
+        return aiRefreshQueue();
+      }).finally(function () { aiQueueContinue.disabled = false; });
+  });
 
   if (aiSend) aiSend.addEventListener("click", aiSendMessage);
   if (aiInput) aiInput.addEventListener("keydown", function (event) {

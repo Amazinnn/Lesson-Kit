@@ -3246,7 +3246,7 @@ test("a running native turn exposes stop and calls only its cancel endpoint", as
     },
   });
   await openFirstAiSession(elements);
-  assert.equal(elements["ai-send"].disabled, true);
+  assert.equal(elements["ai-send"].disabled, false);
   assert.equal(elements["ai-stop"].classList.contains("hidden"), false);
   elements["ai-stop"].click();
   await flush();

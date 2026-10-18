@@ -97,6 +97,12 @@ function setup(fetch, options = {}) {
     "ai-input-row": new Element("ai-input-row"),
     "ai-approval-slot": new Element("ai-approval-slot"),
     "ai-send": new Element("ai-send"),
+    "ai-send-action": new Element("ai-send-action", { value: "default" }),
+    "ai-pending-queue": new Element("ai-pending-queue"),
+    "ai-pending-list": new Element("ai-pending-list"),
+    "ai-queue-status": new Element("ai-queue-status"),
+    "ai-queue-continue": new Element("ai-queue-continue"),
+    "setting-running-send": new Element("setting-running-send", { value: "queue" }),
     "ai-stop": new Element("ai-stop"),
     "ai-status": new Element("ai-status"),
     "goal-form": new Element("goal-form"),
@@ -227,7 +233,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-test("two Enter presses cannot submit another turn before the first POST is accepted", async () => {
+test("one POST is gated until acceptance, then another message can queue behind the active turn", async () => {
   const calls = [];
   const timers = [];
   const firstPost = deferred();
@@ -240,7 +246,8 @@ test("two Enter presses cannot submit another turn before the first POST is acce
     if (url.endsWith("/ai/sessions/conv-a")) return response(session("conv-a"));
     if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
       turnPosts += 1;
-      return turnPosts === 1 ? firstPost.promise : response({ turn_id: "turn-b" });
+      return turnPosts === 1 ? firstPost.promise
+        : response({ turn_id: "turn-b", status: "queued" });
     }
     if (url.includes("/ai/sessions/conv-a/turns/turn-a?")) {
       polls += 1;
@@ -279,16 +286,13 @@ test("two Enter presses cannot submit another turn before the first POST is acce
   firstPost.resolve({ ok: true, json: () => Promise.resolve({ turn_id: "turn-a" }) });
   await flush();
   input.trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() {} });
-  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
-    && call.options?.method === "POST").length, 1);
+  const posts = calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST");
+  assert.equal(posts.length, 2);
+  assert.equal(JSON.parse(posts[1].options.body).message, "second message");
+  assert.equal(JSON.parse(posts[1].options.body).queue_action, "queue");
   assert.equal(timers.length, 1);
-  assert.equal(input.value, "second message");
-
-  timers[0]();
-  await flush();
-  input.trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() {} });
-  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
-    && call.options?.method === "POST").length, 2);
+  assert.equal(input.value, "");
 });
 
 test("an unknown send survives reload and reconciles with the same identity without replacing a draft", async () => {
@@ -565,7 +569,7 @@ test("switching conversations clears approval and activity state and reloads eve
   assert.equal(timers.size, 1);
 });
 
-test("a temporary progress read failure keeps the turn pending and does not invite resend", async () => {
+test("a temporary progress read failure keeps the turn pending and permits a distinct queued message", async () => {
   const calls = [];
   const timers = [];
   let pollCount = 0;
@@ -587,7 +591,7 @@ test("a temporary progress read failure keeps the turn pending and does not invi
 
   assert.equal(pollCount, 1);
   assert.equal(app.ui.state.running, true);
-  assert.equal(app.elements["ai-send"].disabled, true);
+  assert.equal(app.elements["ai-send"].disabled, false);
   assert.equal(app.elements["ai-stop"].classList.contains("hidden"), false);
   assert.match(app.elements["ai-status"].textContent, /状态暂时未知/);
   assert.equal(app.ui.state.activities["turn-failure"], undefined);
@@ -599,9 +603,204 @@ test("a temporary progress read failure keeps the turn pending and does not invi
   assert.equal(app.ui.state.running, true);
   assert.equal(app.elements["ai-status"].textContent, "Agent 正在处理…");
   app.elements["ai-input"].value = "duplicate";
-  app.elements["ai-input"].trigger("keydown", { key: "Enter", shiftKey: false, preventDefault() {} });
   assert.equal(calls.some((call) => call.options?.method === "POST"
-    && call.url.endsWith("/ai/sessions/conv-a/turns")), false);
+    && call.url.endsWith("/ai/sessions/conv-a/turns")), false,
+  "a different message is only sent after the learner explicitly submits it");
+});
+
+test("a queued send keeps the active stream and uses the saved interrupt preference", async () => {
+  const calls = [];
+  const activeMessages = [{
+    role: "user", content: "A", turn_id: "turn-a", status: "running",
+  }];
+  const timers = [];
+  let acceptedB = false;
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([
+      session("conv-a", "running", "turn-a"),
+    ]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a", "running", "turn-a"),
+      current_turn_id: "turn-a", queue_paused: false,
+      messages: acceptedB ? [...activeMessages, {
+        role: "user", content: "B", turn_id: "turn-b", status: "queued",
+        queue_revision: 1, submission_id: "send-b",
+      }] : activeMessages,
+    });
+    if (url.includes("/ai/sessions/conv-a/turns/turn-a?")) return response({
+      turn: { turn_id: "turn-a", status: "running" },
+      events: [{ sequence: 1, kind: "text", text: "A is still streaming" }],
+    });
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      acceptedB = true;
+      return response({ turn_id: "turn-b", status: "queued", message: "B" });
+    }
+    return response({
+      ...session("conv-a", "running", "turn-a"),
+      current_turn_id: "turn-a", queue_paused: false,
+      messages: [...activeMessages, {
+        role: "user", content: "B", turn_id: "turn-b", status: "queued",
+        queue_revision: 1, submission_id: "send-b",
+      }],
+    });
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    localSeed: { wb_settings_alpha: JSON.stringify({ runningSendAction: "interrupt" }) },
+    setTimeout: (callback) => { timers.push(callback); return timers.length; },
+  });
+  await flush();
+  assert.equal(app.elements["ai-send"].disabled, false);
+  assert.equal(app.elements["setting-running-send"].value, "interrupt");
+  const stream = app.elements["ai-messages"].children.find((child) =>
+    child.innerHTML.includes("A is still streaming"));
+  assert.ok(stream);
+
+  app.elements["ai-input"].value = "B";
+  app.elements["ai-send"].click();
+  await flush();
+
+  const send = calls.find((call) => call.options?.method === "POST"
+    && call.url.endsWith("/ai/sessions/conv-a/turns"));
+  assert.equal(JSON.parse(send.options.body).queue_action, "interrupt");
+  assert.equal(app.elements["ai-send"].disabled, false);
+  assert.equal(app.ui.state.running, true);
+  assert.ok(app.elements["ai-messages"].children.includes(stream));
+  assert.equal(calls.some((call) => call.url.includes("/turns/turn-b?")), false);
+  assert.equal(app.elements["ai-pending-queue"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-pending-list"].children.length, 1);
+  assert.ok(timers.length >= 1, "the original turn poll remains scheduled");
+
+  app.elements["setting-running-send"].value = "queue";
+  app.elements["setting-running-send"].trigger("change");
+  assert.equal(JSON.parse(app.localStorage.getItem("wb_settings_alpha")).runningSendAction, "queue");
+});
+
+test("pending messages can be edited, removed, and continued after reload", async () => {
+  const calls = [];
+  let messageB = "Queued B";
+  let revisionB = 1;
+  let statusB = "queued";
+  let launchedC = false;
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([
+      session("conv-a", launchedC ? "running" : "idle", launchedC ? "turn-c" : null),
+    ]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a", launchedC ? "running" : "idle", launchedC ? "turn-c" : null),
+      queue_paused: !launchedC,
+      messages: [
+        { role: "user", content: messageB, turn_id: "turn-b", status: statusB,
+          queue_revision: revisionB, submission_id: "send-b" },
+        { role: "user", content: "Queued C", turn_id: "turn-c",
+          status: launchedC ? "running" : "queued", queue_revision: 1, submission_id: "send-c" },
+      ],
+    });
+    if (url.endsWith("/turns/turn-b") && options?.method === "PATCH") {
+      const body = JSON.parse(options.body);
+      messageB = body.message;
+      revisionB += 1;
+      return response({ turn_id: "turn-b", status: "queued", message: messageB,
+        queue_revision: revisionB });
+    }
+    if (url.endsWith("/turns/turn-b") && options?.method === "DELETE") {
+      statusB = "cancelled";
+      return response({ turn_id: "turn-b", status: statusB });
+    }
+    if (url.endsWith("/queue/continue") && options?.method === "POST") {
+      launchedC = true;
+      return response({ conversation_id: "conv-a", queue_paused: false,
+        turn: { turn_id: "turn-c", status: "running" } });
+    }
+    if (url.includes("/turns/turn-c?")) {
+      return response({ events: [], turn: { turn_id: "turn-c", status: "running" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+
+  assert.equal(app.elements["ai-pending-queue"].classList.contains("hidden"), false);
+  assert.equal(app.elements["ai-queue-continue"].classList.contains("hidden"), false);
+  let card = app.elements["ai-pending-list"].children[0];
+  card.children[2].children[0].click();
+  card = app.elements["ai-pending-list"].children[0];
+  assert.equal(card.children[1].value, "Queued B");
+  card.children[1].value = "Edited B";
+  card.children[2].children[0].click();
+  await flush();
+  const edit = calls.find((call) => call.options?.method === "PATCH");
+  assert.equal(JSON.parse(edit.options.body).message, "Edited B");
+  assert.equal(JSON.parse(edit.options.body).expected_revision, 1);
+  card = app.elements["ai-pending-list"].children[0];
+  card.children[2].children[1].click();
+  await flush();
+
+  const remove = calls.find((call) => call.options?.method === "DELETE");
+  assert.equal(JSON.parse(remove.options.body).expected_revision, 2);
+  assert.equal(statusB, "cancelled");
+  assert.equal(app.elements["ai-pending-list"].children.length, 1);
+
+  app.elements["ai-queue-continue"].click();
+  await flush();
+  assert.ok(calls.some((call) => call.url.endsWith("/queue/continue")
+    && call.options?.method === "POST"));
+  assert.equal(app.ui.state.running, true);
+  assert.equal(app.elements["ai-stop"].classList.contains("hidden"), false);
+});
+
+test("completed queued turns are adopted when continue finishes before polling", async () => {
+  const calls = [];
+  let continued = false;
+  const messages = () => continued ? [
+    { role: "user", content: "A", turn_id: "turn-a", status: "cancelled" },
+    { role: "user", content: "D", turn_id: "turn-d", status: "done" },
+    { role: "assistant", content: "Answer D", turn_id: "turn-d" },
+    { role: "user", content: "B", turn_id: "turn-b", status: "done" },
+    { role: "assistant", content: "Answer B", turn_id: "turn-b" },
+    { role: "user", content: "C", turn_id: "turn-c", status: "done" },
+    { role: "assistant", content: "Answer C", turn_id: "turn-c" },
+  ] : [
+    { role: "user", content: "A", turn_id: "turn-a", status: "cancelled" },
+    { role: "user", content: "D", turn_id: "turn-d", status: "done" },
+    { role: "assistant", content: "Answer D", turn_id: "turn-d" },
+    { role: "user", content: "B", turn_id: "turn-b", status: "queued", queue_revision: 1 },
+    { role: "user", content: "C", turn_id: "turn-c", status: "queued", queue_revision: 1 },
+  ];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([
+      session("conv-a", "idle"),
+    ]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a", "idle"), queue_paused: !continued, messages: messages(),
+    });
+    if (url.endsWith("/queue/continue") && options?.method === "POST") {
+      continued = true;
+      return response({ conversation_id: "conv-a", queue_paused: false, turn: null });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+
+  assert.ok(deepHtml(app.elements["ai-messages"]).includes("Answer D"));
+  app.elements["ai-queue-continue"].click();
+  await flush();
+  await flush();
+
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a")
+    && !call.options).length >= 3, true, "continue refreshes history after completion");
+  assert.ok(deepHtml(app.elements["ai-messages"]).includes("Answer B"));
+  assert.ok(deepHtml(app.elements["ai-messages"]).includes("Answer C"));
 });
 
 const paperArtifact = {
@@ -765,6 +964,7 @@ test("starting a new user turn clears the live Artifact reload marker", async ()
 
   app.elements["ai-input"].value = "new question";
   app.elements["ai-send"].click();
+  await flush();
 
   assert.equal(app.window.sessionStorage.getItem(liveArtifactKey), null);
 });
@@ -798,6 +998,7 @@ test("goal-assist turns clear the live Artifact marker through the shared submit
 
   app.elements["goal-nl"].value = "add a study goal";
   app.elements["goal-assist-send"].click();
+  await flush();
 
   assert.equal(app.window.sessionStorage.getItem(liveArtifactKey), null);
   assert.ok(calls.some((call) => call.url.endsWith("/ai/sessions/conv-a/turns")

@@ -112,9 +112,12 @@ class ConversationApiTests(unittest.TestCase):
         with urllib.request.urlopen(request) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
 
-    def delete(self, path):
+    def delete(self, path, payload=None):
+        data = json.dumps(payload).encode("utf-8") if payload is not None else None
+        headers = {"Content-Type": "application/json"} if data is not None else {}
         request = urllib.request.Request(
-            f"http://127.0.0.1:{self.port}{path}", method="DELETE"
+            f"http://127.0.0.1:{self.port}{path}", data=data, headers=headers,
+            method="DELETE",
         )
         with urllib.request.urlopen(request) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
@@ -216,6 +219,79 @@ class ConversationApiTests(unittest.TestCase):
         )
         self.assertEqual(status, 400)
         self.assertEqual(error["error"], "after must be an integer")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_pending_message_routes_edit_remove_idempotence_and_continue(self, get_provider):
+        from workbench.bridge import conversation_providers
+
+        get_provider.return_value = self.provider
+        launches = []
+
+        def build_command(_provider, session_id=None):
+            mode = "slow" if not launches else "answer"
+            launches.append(mode)
+            script = self.script if mode == "answer" else Path(self.fixture.tmp.name) / "slow_turn.py"
+            if mode == "slow":
+                script.write_text(SLOW_TURN, encoding="utf-8")
+            return [sys.executable, str(script)]
+
+        with mock.patch.object(conversation_providers, "build_command", build_command):
+            _, created = self.post("/api/w/dmath/ai/sessions", {"provider": "codex"})
+            conversation_id = created["conversation_id"]
+            base = f"/api/w/dmath/ai/sessions/{conversation_id}"
+            _, a = self.post(base + "/turns", {"message": "A", "route": "/a"})
+            b_payload = {
+                "message": "B original", "submission_id": "B-id",
+                "route": "/captured-b", "page_type": "kp",
+            }
+            _, b = self.post(base + "/turns", b_payload)
+            self.assertEqual(b["status"], "queued")
+            _, edited = self.patch(
+                base + f"/turns/{b['turn_id']}",
+                {"message": "B edited", "expected_revision": 1},
+            )
+            _, duplicate = self.post(
+                base + "/turns", {**b_payload, "queue_action": "interrupt"},
+            )
+            self.assertEqual(duplicate["turn_id"], b["turn_id"])
+            self.assertEqual(duplicate["message"], "B edited")
+            self.assertEqual(edited["queue_revision"], 2)
+            _, c = self.post(base + "/turns", {"message": "C", "route": "/c"})
+            _, restored = self.get(base)
+            pending_b = next(
+                message for message in restored["messages"]
+                if message.get("turn_id") == b["turn_id"] and message["role"] == "user"
+            )
+            self.assertEqual(pending_b["content"], "B edited")
+            self.assertEqual(pending_b["queue_revision"], 2)
+            status, stale = self.patch_error(
+                base + f"/turns/{b['turn_id']}",
+                {"message": "stale", "expected_revision": 1},
+            )
+            self.assertEqual(status, 409)
+            self.assertIn("pending message changed", stale["error"])
+            _, removed = self.delete(
+                base + f"/turns/{b['turn_id']}", {"expected_revision": 2},
+            )
+            self.assertEqual(removed["status"], "cancelled")
+            self.post(base + "/cancel", {})
+            self.post(base + "/queue/continue", {})
+            data = None
+            for _ in range(100):
+                _, data = self.get(base + f"/turns/{c['turn_id']}?after=0")
+                if data["turn"]["status"] not in {"queued", "running"}:
+                    break
+                time.sleep(0.02)
+
+        self.assertEqual(data["turn"]["status"], "done")
+        self.assertEqual(launches, ["slow", "answer"])
+        _, restored = self.get(base)
+        removed_b = next(
+            message for message in restored["messages"]
+            if message.get("turn_id") == b["turn_id"] and message["role"] == "user"
+        )
+        self.assertEqual(removed_b["content"], "B edited")
+        self.assertEqual(removed_b["status"], "cancelled")
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_submission_id_reuses_original_turn_when_server_context_changes(self, get_provider):

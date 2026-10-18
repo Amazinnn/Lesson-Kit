@@ -175,10 +175,17 @@ class PiRpcProcess:
 
     def request(self, payload, timeout):
         """Send one command and return its response `data` (empty when absent)."""
+        request_id = self._begin_request(payload)
+        return self._wait_response(request_id, timeout)
+
+    def _begin_request(self, payload):
         self._requests += 1
         request_id = f"lk-{self._requests}"
         envelope = {**payload, "id": request_id}
         self._send(envelope)
+        return request_id
+
+    def _wait_response(self, request_id, timeout):
         while True:
             record = self._next_record(timeout)
             if record.get("type") != "response" or record.get("id") != request_id:
@@ -227,7 +234,21 @@ class PiRpcProcess:
     def prompt(self, message):
         """Accept one prompt; returns after acceptance, not completion."""
         try:
-            self.request({"type": "prompt", "message": message}, PROMPT_ACCEPT_SECONDS)
+            self.wait_prompt(self.begin_prompt(message))
+        except PiRpcError as exc:
+            raise PiRpcRejected(str(exc)) from exc
+
+    def begin_prompt(self, message):
+        """Send a prompt without waiting for acceptance."""
+        try:
+            return self._begin_request({"type": "prompt", "message": message})
+        except PiRpcError as exc:
+            raise PiRpcRejected(str(exc)) from exc
+
+    def wait_prompt(self, request_id):
+        """Wait for a previously sent prompt's acceptance response."""
+        try:
+            return self._wait_response(request_id, PROMPT_ACCEPT_SECONDS)
         except PiRpcError as exc:
             raise PiRpcRejected(str(exc)) from exc
 

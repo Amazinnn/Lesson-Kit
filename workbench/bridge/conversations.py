@@ -117,6 +117,7 @@ def create(pool, provider_name, title="", model=None, entry=None):
             "provider_session_id": None,
             "status": "idle",
             "current_turn_id": None,
+            "queue_paused": False,
             "created_at": now,
             "updated_at": now,
         }
@@ -206,6 +207,9 @@ def get(pool, conversation_id):
             "role": "user", "content": accepted_message, "turn_id": turn_id,
             "status": turn.get("status", "failed"),
         }
+        for key in ("queue_revision", "queue_action", "interrupt_target_turn_id"):
+            if key in turn:
+                user[key] = turn[key]
         if turn.get("submission_id"):
             user["submission_id"] = turn["submission_id"]
         if turn.get("error"):
@@ -378,6 +382,7 @@ def _turn_response(turn):
         if key in {
             "turn_id", "status", "error", "created_at", "updated_at",
             "partial_output", "action", "actions", "submission_id", "retry_of",
+            "message", "queue_revision", "queue_action", "interrupt_target_turn_id",
         }
     }
 
@@ -394,7 +399,7 @@ def find_submission(pool, conversation_id, message, submission_id, submitted_fie
             prior = _read_json(path)
             if prior.get("submission_id") != submission_id.strip():
                 continue
-            if prior.get("message") != message \
+            if prior.get("accepted_message", prior.get("message")) != message \
                     or prior.get("submitted_fields", {}) != submitted_fields:
                 raise ConversationConflict("submission_id was already used with different input")
             return _turn_response(prior)
@@ -448,7 +453,14 @@ def _recover_interrupted(pool, record):
                     "error", text=error,
                 )
         current.update({"status": "idle", "current_turn_id": None, "updated_at": _now()})
+        current["queue_paused"] = True
         _write_json(_conversation_file(pool, record["conversation_id"]), current)
+        for queued_path in _conversation_dir(pool, record["conversation_id"]).glob("turn-*.json"):
+            queued = _read_json(queued_path)
+            if queued.get("status") == "waiting_for_stop":
+                queued["status"] = "queued"
+                queued["updated_at"] = _now()
+                _write_json(queued_path, queued)
         return current
 
 
@@ -730,13 +742,16 @@ def _notice_outcome(action):
 
 
 def start_turn(pool, workspace, conversation_id, message, context, *,
-               submission_id=None, submitted_fields=None, retry_of=None):
+               submission_id=None, submitted_fields=None, retry_of=None,
+               queue_action="queue"):
     folder = _conversation_dir(pool, conversation_id)
     conversation_path = folder / "conversation.json"
     _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
         conversation = _read_json(conversation_path)
         fields = submitted_fields if isinstance(submitted_fields, dict) else {}
+        if queue_action not in {"queue", "interrupt"}:
+            raise ValueError("queue_action must be 'queue' or 'interrupt'")
         if retry_of is not None and submission_id is None:
             raise ValueError("submission_id is required for an explicit retry")
         prior = find_submission(pool, conversation_id, message, submission_id, fields)
@@ -744,8 +759,12 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
             return prior
         if submission_id is not None:
             submission_id = submission_id.strip()
-        if conversation["status"] == "running":
-            raise ConversationConflict("conversation already has a running turn")
+        if queue_action == "interrupt" and conversation.get("status") == "running":
+            for path in folder.glob("turn-*.json"):
+                pending = _read_json(path)
+                if pending.get("status") == "waiting_for_stop":
+                    raise ConversationConflict(
+                        "an interrupt message is already waiting for stop confirmation")
         retry_context = None
         if retry_of is not None:
             retry_id = _require_id(retry_of, TURN_ID, "turn")
@@ -768,42 +787,201 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
             turn_context["last_check_outcome"] = last_check_outcome
         turn = {
             "turn_id": turn_id,
-            "status": "running",
+            "status": "queued",
             "error": None,
+            "accepted_message": message,
             "message": message,
             "context": turn_context,
+            "queue_revision": 1,
+            "queue_action": queue_action,
             "created_at": now,
             "updated_at": now,
         }
+        interrupt_target = None
+        if queue_action == "interrupt" and conversation.get("status") == "running":
+            interrupt_target = conversation.get("current_turn_id")
+            turn["status"] = "waiting_for_stop"
+            turn["interrupt_target_turn_id"] = interrupt_target
+            conversation["queue_paused"] = True
         if submission_id is not None:
             turn["submission_id"] = submission_id
             turn["submitted_fields"] = fields
         if retry_of is not None:
             turn["retry_of"] = retry_of
         _write_json(folder / f"{turn_id}.json", turn)
-        conversation.update({"status": "running", "current_turn_id": turn_id, "updated_at": now})
+        if conversation.get("status") != "running":
+            conversation.setdefault("queue_paused", False)
+        conversation["updated_at"] = now
         _write_json(conversation_path, conversation)
-        key = (str(folder), turn_id)
-        _ACTIVE_TURNS.add(key)
+        if interrupt_target:
+            key = (str(folder), interrupt_target)
+            _CANCEL_REQUESTS.add(key)
+            process = _PROCESSES.get(key)
+            if process is not None:
+                _signal_process(process)
+        elif conversation.get("status") != "running" \
+                and not _active_for_folder(folder) \
+                and (not conversation.get("queue_paused") or retry_of is not None):
+            _start_turn_locked(
+                pool.root, pool.jobs_dir(), workspace, conversation_id, turn,
+            )
+        turn = _read_json(_turn_file(pool, conversation_id, turn_id))
+    return _turn_response(turn)
+
+
+def _start_turn_locked(root, jobs_dir, workspace, conversation_id, turn):
+    """Claim a pending turn and start its worker while holding conversation ownership."""
+    folder = jobs_dir / conversation_id
+    conversation_path = folder / "conversation.json"
+    conversation = _read_json(conversation_path)
+    if conversation.get("status") == "running" or _active_for_folder(folder):
+        raise ConversationConflict("conversation already has a running turn")
+    turn_path = _turn_file_from_folder(folder, turn["turn_id"])
+    turn = _read_json(turn_path)
+    if turn.get("status") not in {"queued", "waiting_for_stop"}:
+        raise ConversationConflict("pending message has already started or was removed")
+    now = _now()
+    turn.update({"status": "running", "error": None, "updated_at": now})
+    _write_json(turn_path, turn)
+    conversation.update({
+        "status": "running", "current_turn_id": turn["turn_id"],
+        "updated_at": now,
+    })
+    _write_json(conversation_path, conversation)
+    key = (str(folder), turn["turn_id"])
+    _ACTIVE_TURNS.add(key)
+    _CANCEL_REQUESTS.discard(key)
+    _TIMEOUTS.discard(key)
+    thread = threading.Thread(
+        target=_run_turn_safely,
+        args=(root, jobs_dir, workspace, conversation_id, turn["turn_id"],
+              turn["message"], turn.get("context") or {}),
+        daemon=True,
+    )
+    try:
+        thread.start()
+    except Exception as exc:
+        _finish(folder, conversation_id, turn["turn_id"], "failed",
+                f"provider launch failed: {exc}")
+        _ACTIVE_TURNS.discard(key)
         _CANCEL_REQUESTS.discard(key)
         _TIMEOUTS.discard(key)
-        thread = threading.Thread(
-            target=_run_turn_safely,
-            args=(
-                pool.root, pool.jobs_dir(), workspace, conversation_id, turn_id,
-                message, turn_context,
-            ),
-            daemon=True,
+    return _turn_response(_read_json(turn_path))
+
+
+def _turn_id_number(turn):
+    value = turn.get("turn_id", "")
+    return int(value[5:]) if isinstance(value, str) and TURN_ID.fullmatch(value) else 0
+
+
+def _active_for_folder(folder):
+    folder_name = str(folder)
+    return any(key[0] == folder_name for key in _ACTIVE_TURNS)
+
+
+def _dispatch_next_locked(root, jobs_dir, workspace, conversation_id):
+    folder = jobs_dir / conversation_id
+    conversation_path = folder / "conversation.json"
+    conversation = _read_json(conversation_path)
+    if conversation.get("status") == "running" or _active_for_folder(folder):
+        return None
+    turns = []
+    for path in folder.glob("turn-*.json"):
+        turn = _read_json(path)
+        if turn.get("status") in {"queued", "waiting_for_stop"}:
+            turns.append(turn)
+    turns.sort(key=_turn_id_number)
+    interrupt = None
+    for turn in turns:
+        target_id = turn.get("interrupt_target_turn_id")
+        if turn.get("queue_action") != "interrupt" or not target_id:
+            continue
+        target_path = _turn_file_from_folder(folder, target_id)
+        if not target_path.is_file():
+            continue
+        target = _read_json(target_path)
+        if target.get("status") not in {"queued", "waiting_for_stop", "running"}:
+            interrupt = turn
+            break
+    if interrupt is not None:
+        return _start_turn_locked(root, jobs_dir, workspace, conversation_id, interrupt)
+    # An explicit retry is its own requested turn. Run it while retaining any
+    # older paused queue; only Continue opens that ordinary backlog.
+    retry = next((turn for turn in turns
+                  if turn.get("status") == "queued" and turn.get("retry_of")), None)
+    if retry is not None:
+        return _start_turn_locked(root, jobs_dir, workspace, conversation_id, retry)
+    if conversation.get("queue_paused"):
+        return None
+    ordinary = next((turn for turn in turns if turn.get("status") == "queued"), None)
+    if ordinary is None:
+        return None
+    return _start_turn_locked(root, jobs_dir, workspace, conversation_id, ordinary)
+
+
+def _turn_file_from_folder(folder, turn_id):
+    _require_id(turn_id, TURN_ID, "turn")
+    return folder / f"{turn_id}.json"
+
+
+def _dispatch_next(root, jobs_dir, workspace, conversation_id):
+    with _LOCK:
+        return _dispatch_next_locked(root, jobs_dir, workspace, conversation_id)
+
+
+def edit_pending(pool, conversation_id, turn_id, message, *, expected_revision):
+    if not isinstance(message, str) or not message.strip():
+        raise ValueError("message is required")
+    _require_id(turn_id, TURN_ID, "turn")
+    path = _turn_file(pool, conversation_id, turn_id)
+    with _LOCK:
+        turn = _read_json(path)
+        revision = turn.get("queue_revision", 1)
+        if turn.get("status") not in {"queued", "waiting_for_stop"}:
+            raise ConversationConflict("message is no longer pending")
+        if expected_revision != revision:
+            raise ConversationConflict("pending message changed; reload before editing")
+        turn.update({
+            "message": message.strip(), "queue_revision": revision + 1,
+            "updated_at": _now(),
+        })
+        _write_json(path, turn)
+        return _turn_response(turn)
+
+
+def remove_pending(pool, conversation_id, turn_id, *, expected_revision):
+    _require_id(turn_id, TURN_ID, "turn")
+    path = _turn_file(pool, conversation_id, turn_id)
+    with _LOCK:
+        turn = _read_json(path)
+        revision = turn.get("queue_revision", 1)
+        if turn.get("status") not in {"queued", "waiting_for_stop"}:
+            raise ConversationConflict("message is no longer pending")
+        if expected_revision != revision:
+            raise ConversationConflict("pending message changed; reload before removing")
+        turn.update({"status": "cancelled", "error": "removed before execution",
+                     "updated_at": _now()})
+        _write_json(path, turn)
+        return _turn_response(turn)
+
+
+def continue_queue(pool, workspace, conversation_id):
+    folder = _conversation_dir(pool, conversation_id)
+    with _LOCK:
+        conversation = _read_json(folder / "conversation.json")
+        if conversation.get("status") == "running":
+            raise ConversationConflict("conversation already has a running turn")
+        conversation["queue_paused"] = False
+        conversation["updated_at"] = _now()
+        _write_json(folder / "conversation.json", conversation)
+        started = _dispatch_next_locked(
+            pool.root, pool.jobs_dir(), workspace, conversation_id,
         )
-        try:
-            thread.start()
-        except Exception as exc:
-            _finish(
-                folder, conversation_id, turn_id, "failed",
-                f"provider launch failed: {exc}",
-            )
-            turn = _read_json(_turn_file(pool, conversation_id, turn_id))
-    return _turn_response(turn)
+        return {
+            "conversation_id": conversation_id,
+            "queue_paused": _read_json(folder / "conversation.json").get("queue_paused", False),
+            "turn": started,
+        }
 
 
 def _run_turn_safely(*args):
@@ -824,6 +1002,15 @@ def _run_turn_safely(*args):
                     folder / f"{turn_id}.events.jsonl",
                 ),
             )
+    finally:
+        key = (str(folder), turn_id)
+        with _LOCK:
+            _ACTIVE_TURNS.discard(key)
+            _CANCEL_REQUESTS.discard(key)
+            _TIMEOUTS.discard(key)
+            turn_path = folder / f"{turn_id}.json"
+            if turn_path.is_file() and _read_json(turn_path).get("status") != "running":
+                _dispatch_next_locked(args[0], jobs_dir, args[2], conversation_id)
 
 
 def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, context):
@@ -875,6 +1062,9 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
         return
     with _LOCK:
         _PROCESSES[key] = process
+        cancelled_before_prompt = key in _CANCEL_REQUESTS
+        if cancelled_before_prompt:
+            _signal_process(process)
 
     def timeout_process():
         with _LOCK:
@@ -900,8 +1090,11 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
     }
     try:
         try:
-            process.stdin.write(_prompt(message, context))
-            process.stdin.close()
+            with _LOCK:
+                cancelled_before_prompt = key in _CANCEL_REQUESTS
+                if not cancelled_before_prompt:
+                    process.stdin.write(_prompt(message, context))
+                    process.stdin.close()
         except OSError:
             # A provider that died before reading its prompt (timeout, cancel, or
             # a launch that never came up) is reported by the checks below; a
@@ -1221,6 +1414,14 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
         return
     with _LOCK:
         _PROCESSES[key] = process
+        cancelled_before_prompt = key in _CANCEL_REQUESTS
+        if cancelled_before_prompt:
+            _PROCESSES.pop(key, None)
+    if cancelled_before_prompt:
+        _append_event(event_path, "activity", activity_id="provider-turn",
+                      activity_type="progress", status="failed", label="鏈疆宸插仠姝?")
+        _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+        return
     # RPC mode reports its native session through the handshake, not through an
     # event, so the mirror has to record it here to be able to resume later.
     session_id = getattr(process, "session_id", None)
@@ -1234,9 +1435,27 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
     settled = False
     try:
         try:
-            process.prompt(_prompt(message, context))
+            with _LOCK:
+                if key in _CANCEL_REQUESTS:
+                    cancelled_before_prompt = True
+                else:
+                    prompt_request = process.begin_prompt(_prompt(message, context))
+                    cancelled_before_prompt = False
+            if cancelled_before_prompt:
+                with _LOCK:
+                    _PROCESSES.pop(key, None)
+                _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+                return
+            process.wait_prompt(prompt_request)
             accepted = True
         except pi_rpc.PiRpcRejected as exc:
+            with _LOCK:
+                cancelled_before_prompt = key in _CANCEL_REQUESTS
+                if cancelled_before_prompt:
+                    _PROCESSES.pop(key, None)
+            if cancelled_before_prompt:
+                _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+                return
             # Rejected before acceptance: nothing ran, so one clean restart is safe.
             PI_RPC.discard(str(folder), process)
             process.close()
@@ -1247,9 +1466,26 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
                 )
                 with _LOCK:
                     _PROCESSES[key] = process
-                process.prompt(_prompt(message, context))
+                    if key in _CANCEL_REQUESTS:
+                        _PROCESSES.pop(key, None)
+                        cancelled_before_prompt = True
+                        prompt_request = None
+                    else:
+                        prompt_request = process.begin_prompt(_prompt(message, context))
+                        cancelled_before_prompt = False
+                if cancelled_before_prompt:
+                    _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+                    return
+                process.wait_prompt(prompt_request)
                 accepted = True
             except (pi_rpc.PiRpcError, OSError) as retry_exc:
+                with _LOCK:
+                    cancelled_before_prompt = key in _CANCEL_REQUESTS
+                    if cancelled_before_prompt:
+                        _PROCESSES.pop(key, None)
+                if cancelled_before_prompt:
+                    _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+                    return
                 _append_event(event_path, "error", text=f"provider launch failed: {retry_exc}")
                 _finish(folder, conversation_id, turn_id, "failed",
                         f"provider launch failed: {retry_exc}")
@@ -1325,7 +1561,11 @@ def _finish(folder, conversation_id, turn_id, status, error, partial_output=None
     with _LOCK:
         conversation_path = folder / "conversation.json"
         conversation = _read_json(conversation_path)
-        conversation.update({"status": "idle", "current_turn_id": None, "updated_at": now})
+        if conversation.get("current_turn_id") == turn_id:
+            conversation.update({"status": "idle", "current_turn_id": None})
+        if status in {"failed", "cancelled"}:
+            conversation["queue_paused"] = True
+        conversation["updated_at"] = now
         _write_json(conversation_path, conversation)
         turn_path = folder / f"{turn_id}.json"
         turn = _read_json(turn_path)
@@ -1341,9 +1581,6 @@ def _finish(folder, conversation_id, turn_id, status, error, partial_output=None
                 partial_output, conversation_providers._PI_OUTPUT_LIMIT,
             )
         _write_json(turn_path, turn)
-        _ACTIVE_TURNS.discard(key)
-        _CANCEL_REQUESTS.discard(key)
-        _TIMEOUTS.discard(key)
 
 
 def _stop_process(process):
@@ -1355,6 +1592,18 @@ def _stop_process(process):
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
+
+
+def _signal_process(process):
+    """Send a nonblocking stop signal to the captured provider process."""
+    try:
+        if isinstance(process, pi_rpc.PiRpcProcess):
+            process.abort()
+        elif process.poll() is None:
+            process.terminate()
+    except (OSError, pi_rpc.PiRpcError):
+        # The owning worker still observes the durable request and settles it.
+        pass
 
 
 def cancel(pool, conversation_id):
