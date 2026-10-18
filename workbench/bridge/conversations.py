@@ -194,7 +194,9 @@ def get(pool, conversation_id):
             assistant = {"role": "assistant", "content": exchange["assistant"],
                          "turn_id": turn_id}
             for key in ("actions", "action", "activities"):
-                if exchange.get(key):
+                if key == "action" and turn.get(key):
+                    assistant[key] = turn[key]
+                elif exchange.get(key):
                     assistant[key] = exchange[key]
             messages.append(assistant)
             continue
@@ -221,13 +223,15 @@ def get(pool, conversation_id):
             _events_file(pool, conversation_id, turn_id),
         )
         partial = turn.get("partial_output")
-        if activities or (isinstance(partial, str) and partial):
+        if activities or (isinstance(partial, str) and partial) or turn.get("action"):
             assistant = {"role": "assistant", "turn_id": turn_id,
                          "status": turn.get("status", "failed")}
             if activities:
                 assistant["activities"] = activities
             if isinstance(partial, str) and partial:
                 assistant.update({"content": partial, "partial": True})
+            if turn.get("action"):
+                assistant["action"] = turn["action"]
             messages.append(assistant)
 
     for turn_id, exchange in sorted(
@@ -244,6 +248,7 @@ def get(pool, conversation_id):
             assistant,
         ])
     record["messages"] = messages
+    record["pending_paper_approval"] = _pending_paper_approval_projection(folder)
     return record
 
 
@@ -377,7 +382,7 @@ def _get_turn_record(pool, conversation_id, turn_id):
 
 def _turn_response(turn):
     """Keep captured prompt context and client payload out of public turn reads."""
-    return {
+    response = {
         key: value for key, value in turn.items()
         if key in {
             "turn_id", "status", "error", "created_at", "updated_at",
@@ -385,6 +390,48 @@ def _turn_response(turn):
             "message", "queue_revision", "queue_action", "interrupt_target_turn_id",
         }
     }
+    approval = turn.get("paper_approval")
+    if isinstance(approval, dict):
+        response["paper_approval"] = _paper_approval_projection(approval)
+    return response
+
+
+def _paper_approval_projection(approval):
+    projection = approval.get("projection")
+    return dict(projection) if isinstance(projection, dict) else {}
+
+
+def _pending_paper_approval(folder):
+    """Return the oldest pending Paper decision from its owning turn artifact."""
+    pending = []
+    for path in folder.glob("turn-*.json"):
+        try:
+            turn = _read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        approval = turn.get("paper_approval")
+        if isinstance(approval, dict) and approval.get("status") == "pending":
+            pending.append((turn, approval))
+    pending.sort(key=lambda item: _turn_id_number(item[0]))
+    return pending[0] if pending else None
+
+
+def _pending_paper_approval_projection(folder):
+    pending = _pending_paper_approval(folder)
+    return _paper_approval_projection(pending[1]) if pending else None
+
+
+def _ensure_approval_pause(pool, record):
+    folder = _conversation_dir(pool, record["conversation_id"])
+    if _pending_paper_approval(folder) is None:
+        return record
+    with _LOCK:
+        current = _read_json(_conversation_file(pool, record["conversation_id"]))
+        if not current.get("queue_paused"):
+            current["queue_paused"] = True
+            current["updated_at"] = _now()
+            _write_json(_conversation_file(pool, record["conversation_id"]), current)
+        return current
 
 
 def find_submission(pool, conversation_id, message, submission_id, submitted_fields):
@@ -408,6 +455,7 @@ def find_submission(pool, conversation_id, message, submission_id, submitted_fie
 
 def _recover_interrupted(pool, record):
     """Turn a persisted running state with no live worker into an honest failure."""
+    record = _ensure_approval_pause(pool, record)
     if record.get("status") != "running" or not record.get("current_turn_id"):
         return record
     turn_id = record["current_turn_id"]
@@ -461,7 +509,7 @@ def _recover_interrupted(pool, record):
                 queued["status"] = "queued"
                 queued["updated_at"] = _now()
                 _write_json(queued_path, queued)
-        return current
+        return _ensure_approval_pause(pool, current)
 
 
 def events(pool, conversation_id, turn_id, after=0):
@@ -630,7 +678,8 @@ def _prompt(message, context):
         "详细操作规则按需读取，而不是每轮重复背诵：`" + contract_cli + " list`。"
         "可用主题：commands（命令/退出码）、attempts（记录/更正作答）、practice（组卷/选题/保存试卷）、"
         "actions（前端动作）、content（新增/修改学习内容）。执行对应专门动作前先读取相应主题；"
-        "普通教学问答无需读取无关契约。\n"
+        "普通教学问答无需读取无关契约。若学生明确要求调整现有已保存试卷的题目成员或顺序，"
+        "读取 actions 并提交 paper_update_proposal 请求人工批准；不得直接运行 papers update 或修改试卷文件。\n"
         "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
         "普通问答不要附带动作。格式为 ```lessonkit-action {\"type\":\"replace_practice_selection\","
         "\"kp_ids\":[\"知识点ID\"]} ```。"
@@ -749,6 +798,9 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
     _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
         conversation = _read_json(conversation_path)
+        if _pending_paper_approval(folder) is not None:
+            conversation["queue_paused"] = True
+            _write_json(conversation_path, conversation)
         fields = submitted_fields if isinstance(submitted_fields, dict) else {}
         if queue_action not in {"queue", "interrupt"}:
             raise ValueError("queue_action must be 'queue' or 'interrupt'")
@@ -821,6 +873,7 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
                 _signal_process(process)
         elif conversation.get("status") != "running" \
                 and not _active_for_folder(folder) \
+                and _pending_paper_approval(folder) is None \
                 and (not conversation.get("queue_paused") or retry_of is not None):
             _start_turn_locked(
                 pool.root, pool.jobs_dir(), workspace, conversation_id, turn,
@@ -834,6 +887,10 @@ def _start_turn_locked(root, jobs_dir, workspace, conversation_id, turn):
     folder = jobs_dir / conversation_id
     conversation_path = folder / "conversation.json"
     conversation = _read_json(conversation_path)
+    if _pending_paper_approval(folder) is not None:
+        conversation["queue_paused"] = True
+        _write_json(conversation_path, conversation)
+        raise ConversationConflict("resolve the pending Paper approval before continuing")
     if conversation.get("status") == "running" or _active_for_folder(folder):
         raise ConversationConflict("conversation already has a running turn")
     turn_path = _turn_file_from_folder(folder, turn["turn_id"])
@@ -884,6 +941,12 @@ def _dispatch_next_locked(root, jobs_dir, workspace, conversation_id):
     conversation_path = folder / "conversation.json"
     conversation = _read_json(conversation_path)
     if conversation.get("status") == "running" or _active_for_folder(folder):
+        return None
+    if _pending_paper_approval(folder) is not None:
+        if not conversation.get("queue_paused"):
+            conversation["queue_paused"] = True
+            conversation["updated_at"] = _now()
+            _write_json(conversation_path, conversation)
         return None
     turns = []
     for path in folder.glob("turn-*.json"):
@@ -971,6 +1034,11 @@ def continue_queue(pool, workspace, conversation_id):
         conversation = _read_json(folder / "conversation.json")
         if conversation.get("status") == "running":
             raise ConversationConflict("conversation already has a running turn")
+        if _pending_paper_approval(folder) is not None:
+            conversation["queue_paused"] = True
+            conversation["updated_at"] = _now()
+            _write_json(folder / "conversation.json", conversation)
+            raise ConversationConflict("resolve the pending Paper approval before continuing")
         conversation["queue_paused"] = False
         conversation["updated_at"] = _now()
         _write_json(folder / "conversation.json", conversation)
@@ -1323,6 +1391,260 @@ def _verified_paper_artifact(notice, root, workspace, event_path):
     }
 
 
+def _paper_update_preview(pool, conversation_id, turn_id, workspace_name,
+                          revision, practice_set_id, problem_ids):
+    saved = practice_sets.get_saved(pool, practice_set_id)
+    preview = practice_sets.preview_update(
+        pool, practice_set_id, problem_ids=problem_ids,
+    )
+    current_ids = [item["problem_id"] for item in saved["plan"]["items"]]
+    projection = {
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "revision": revision,
+        "status": "pending",
+        "practice_set_id": practice_set_id,
+        "title": saved["title"],
+        "current_problem_ids": current_ids,
+        "proposed_problem_ids": list(problem_ids),
+        "added_problem_ids": [item for item in problem_ids if item not in current_ids],
+        "removed_problem_ids": [item for item in current_ids if item not in problem_ids],
+        "order_changed": set(current_ids) == set(problem_ids) and current_ids != problem_ids,
+        "structure_changed": preview["structure_changed"],
+        "resets_progress": preview["resets_progress"],
+        "completed_items": preview["completed_items"],
+        "draft_items": preview["draft_items"],
+    }
+    return projection, preview["confirmation"]
+
+
+def _invalid_paper_approval(conversation_id, turn_id, workspace_name,
+                            proposal, revision, error):
+    projection = {
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "revision": revision,
+        "status": "invalid",
+        "error": conversation_providers._pi_safe_text(
+            str(error), conversation_providers._PI_SUMMARY_LIMIT,
+        ),
+    }
+    if proposal:
+        projection["practice_set_id"] = proposal["practice_set_id"]
+        projection["proposed_problem_ids"] = list(proposal["problem_ids"])
+    return {
+        "conversation_id": conversation_id,
+        "turn_id": turn_id,
+        "workspace_name": workspace_name,
+        "status": "invalid",
+        "revision": revision,
+        "proposal": proposal,
+        "confirmation": None,
+        "projection": projection,
+    }
+
+
+def _prepare_paper_approval(action, root, workspace, conversation_id, turn_id):
+    workspace_name = workspace.get("name")
+    revision = 1
+    proposal = None
+    if "error" not in action:
+        proposal = {
+            "practice_set_id": action["practice_set_id"],
+            "problem_ids": list(action["problem_ids"]),
+        }
+    if proposal is None:
+        return _invalid_paper_approval(
+            conversation_id, turn_id, workspace_name, proposal, revision,
+            action.get("error") or "invalid Paper update proposal",
+        )
+
+    pool = None
+    try:
+        pool = Pool(
+            root=root,
+            db_path=root / workspace["db"],
+            course=workspace.get("active_course", ""),
+            chapter=workspace.get("active_chapter", ""),
+        )
+        projection, confirmation = _paper_update_preview(
+            pool, conversation_id, turn_id, workspace_name, revision,
+            proposal["practice_set_id"], proposal["problem_ids"],
+        )
+        return {
+            "conversation_id": conversation_id,
+            "turn_id": turn_id,
+            "workspace_name": workspace_name,
+            "status": "pending",
+            "revision": revision,
+            "proposal": proposal,
+            "confirmation": confirmation,
+            "projection": projection,
+        }
+    except Exception as exc:
+        return _invalid_paper_approval(
+            conversation_id, turn_id, workspace_name, proposal, revision, exc,
+        )
+    finally:
+        if pool is not None:
+            pool.close()
+
+
+def _sync_paper_approval_action(turn, approval):
+    action = turn.get("action")
+    if isinstance(action, dict) and action.get("type") == "paper_update_proposal":
+        action["paper_approval"] = _paper_approval_projection(approval)
+        if approval.get("status") == "invalid":
+            action["error"] = _paper_approval_projection(approval).get("error")
+
+
+def _approval_response(conversation_id, turn, conversation, *, stale=False):
+    approval = turn.get("paper_approval") or {}
+    return {
+        "conversation_id": conversation_id,
+        "turn_id": turn["turn_id"],
+        "approval": _paper_approval_projection(approval),
+        "queue_paused": bool(conversation.get("queue_paused", False)),
+        "stale": stale,
+    }
+
+
+def resolve_paper_approval(pool, workspace, conversation_id, turn_id, *,
+                           expected_revision, decision):
+    """Resolve one persisted proposal with Data's existing Paper preview/writer."""
+    _require_id(turn_id, TURN_ID, "turn")
+    if isinstance(expected_revision, bool) or not isinstance(expected_revision, int) \
+            or expected_revision < 1:
+        raise ValueError("expected_revision must be a positive integer")
+    if not isinstance(decision, str) or decision not in {"approve", "cancel"}:
+        raise ValueError("decision must be 'approve' or 'cancel'")
+    folder = _conversation_dir(pool, conversation_id)
+    conversation_path = _conversation_file(pool, conversation_id)
+    turn_path = _turn_file(pool, conversation_id, turn_id)
+    workspace_name = workspace.get("name") if isinstance(workspace, dict) else None
+    with _LOCK:
+        conversation = _read_json(conversation_path)
+        turn = _read_json(turn_path)
+        approval = turn.get("paper_approval")
+        if not isinstance(approval, dict):
+            raise ConversationConflict("turn has no Paper approval")
+        if approval.get("conversation_id") != conversation_id \
+                or approval.get("turn_id") != turn_id \
+                or approval.get("workspace_name") != workspace_name:
+            raise ConversationConflict("Paper approval belongs to a different conversation")
+        status = approval.get("status")
+        resolution = "approved" if decision == "approve" else "cancelled"
+        if status in {"approved", "cancelled"}:
+            if status != resolution:
+                raise ConversationConflict("Paper approval was already resolved")
+            return _approval_response(conversation_id, turn, conversation)
+        if status != "pending":
+            raise ConversationConflict("Paper approval is no longer available")
+        if not conversation.get("queue_paused"):
+            conversation["queue_paused"] = True
+            conversation["updated_at"] = _now()
+            _write_json(conversation_path, conversation)
+        if expected_revision != approval.get("revision"):
+            return _approval_response(conversation_id, turn, conversation, stale=True)
+
+        if decision == "cancel":
+            approval["status"] = "cancelled"
+            approval["projection"]["status"] = "cancelled"
+            approval["resolved_at"] = _now()
+            conversation["queue_paused"] = True
+            conversation["updated_at"] = _now()
+            _sync_paper_approval_action(turn, approval)
+            turn["paper_approval"] = approval
+            turn["updated_at"] = _now()
+            _write_json(turn_path, turn)
+            _write_json(conversation_path, conversation)
+            return _approval_response(conversation_id, turn, conversation)
+
+        proposal = approval.get("proposal") or {}
+        practice_set_id = proposal.get("practice_set_id")
+        problem_ids = proposal.get("problem_ids")
+        try:
+            projection, confirmation = _paper_update_preview(
+                pool, conversation_id, turn_id, workspace_name,
+                approval["revision"], practice_set_id, problem_ids,
+            )
+        except Exception as exc:
+            approval = _invalid_paper_approval(
+                conversation_id, turn_id, workspace_name, proposal,
+                approval["revision"], exc,
+            )
+            conversation["queue_paused"] = True
+            conversation["updated_at"] = _now()
+            turn["paper_approval"] = approval
+            _sync_paper_approval_action(turn, approval)
+            turn["updated_at"] = _now()
+            _write_json(turn_path, turn)
+            _write_json(conversation_path, conversation)
+            return _approval_response(conversation_id, turn, conversation, stale=True)
+
+        if confirmation != approval.get("confirmation"):
+            approval["revision"] += 1
+            projection["revision"] = approval["revision"]
+            approval["projection"] = projection
+            approval["confirmation"] = confirmation
+            _sync_paper_approval_action(turn, approval)
+            turn["paper_approval"] = approval
+            turn["updated_at"] = _now()
+            conversation["queue_paused"] = True
+            conversation["updated_at"] = _now()
+            _write_json(turn_path, turn)
+            _write_json(conversation_path, conversation)
+            return _approval_response(conversation_id, turn, conversation, stale=True)
+
+        try:
+            practice_sets.update_saved(
+                pool, practice_set_id, problem_ids=problem_ids,
+                confirmation=approval["confirmation"],
+            )
+        except ValueError as exc:
+            try:
+                refreshed, refreshed_confirmation = _paper_update_preview(
+                    pool, conversation_id, turn_id, workspace_name,
+                    approval["revision"], practice_set_id, problem_ids,
+                )
+            except Exception as refresh_error:
+                approval = _invalid_paper_approval(
+                    conversation_id, turn_id, workspace_name, proposal,
+                    approval["revision"], refresh_error,
+                )
+            else:
+                if refreshed_confirmation != approval.get("confirmation"):
+                    approval["revision"] += 1
+                    refreshed["revision"] = approval["revision"]
+                    approval["projection"] = refreshed
+                    approval["confirmation"] = refreshed_confirmation
+                else:
+                    approval = _invalid_paper_approval(
+                        conversation_id, turn_id, workspace_name, proposal,
+                        approval["revision"], exc,
+                    )
+            conversation["queue_paused"] = True
+            conversation["updated_at"] = _now()
+            turn["paper_approval"] = approval
+            _sync_paper_approval_action(turn, approval)
+            turn["updated_at"] = _now()
+            _write_json(turn_path, turn)
+            _write_json(conversation_path, conversation)
+            return _approval_response(conversation_id, turn, conversation, stale=True)
+
+        approval["status"] = "approved"
+        approval["projection"]["status"] = "approved"
+        approval["resolved_at"] = _now()
+        conversation["queue_paused"] = True
+        conversation["updated_at"] = _now()
+        _sync_paper_approval_action(turn, approval)
+        turn["paper_approval"] = approval
+        turn["updated_at"] = _now()
+        _write_json(turn_path, turn)
+        _write_json(conversation_path, conversation)
+        return _approval_response(conversation_id, turn, conversation)
+
+
 def _store_answer(folder, conversation_path, turn_path, event_path, root, workspace,
                   conversation_id, turn_id, message, context, answer,
                   pi_messages=False):
@@ -1330,6 +1652,12 @@ def _store_answer(folder, conversation_path, turn_path, event_path, root, worksp
     answer, content_actions, notice = _extract_action(answer, context, folder)
     if notice is not None and notice.get("type") == "paper_artifact":
         notice = _verified_paper_artifact(notice, root, workspace, event_path)
+    paper_approval = None
+    if notice is not None and notice.get("type") == "paper_update_proposal":
+        paper_approval = _prepare_paper_approval(
+            notice, root, workspace, conversation_id, turn_id,
+        )
+        notice["paper_approval"] = _paper_approval_projection(paper_approval)
     if not pi_messages:
         _append_event(
             event_path, "activity", activity_id="answer",
@@ -1351,6 +1679,8 @@ def _store_answer(folder, conversation_path, turn_path, event_path, root, worksp
         turn["action"] = notice
     elif len(content_actions) == 1:
         turn["action"] = content_actions[0]
+    if paper_approval is not None:
+        turn["paper_approval"] = paper_approval
     _write_json(turn_path, turn)
     exchange = {
         "turn_id": turn_id,
@@ -1566,14 +1896,15 @@ def _finish(folder, conversation_id, turn_id, status, error, partial_output=None
     with _LOCK:
         conversation_path = folder / "conversation.json"
         conversation = _read_json(conversation_path)
+        turn_path = folder / f"{turn_id}.json"
+        turn = _read_json(turn_path)
         if conversation.get("current_turn_id") == turn_id:
             conversation.update({"status": "idle", "current_turn_id": None})
-        if status in {"failed", "cancelled"}:
+        if status in {"failed", "cancelled"} \
+                or (turn.get("paper_approval") or {}).get("status") == "pending":
             conversation["queue_paused"] = True
         conversation["updated_at"] = now
         _write_json(conversation_path, conversation)
-        turn_path = folder / f"{turn_id}.json"
-        turn = _read_json(turn_path)
         turn.update({
             "status": status,
             "error": conversation_providers._pi_safe_text(

@@ -2294,6 +2294,12 @@
   var aiRecoveryContainer = null;
   var aiRenderedDoneTurns = {};
   var aiHistoryReconciling = false;
+  var aiCurrentPaperApproval = null;
+  var aiPaperApprovalOwner = null;
+  var aiPaperApprovalNotice = null;
+  var aiPaperApprovalUnknownKey = "";
+  var aiPaperApprovalInFlight = {};
+  var aiPaperProposalCards = {};
   var AI_OUTBOX_PREFIX = "wb_ai_message_outbox_" + WS + "_";
 
   function aiPreviewRoute() {
@@ -2364,6 +2370,11 @@
     aiRecoveryContainer = null;
     aiRenderedDoneTurns = {};
     aiHistoryReconciling = false;
+    aiCurrentPaperApproval = null;
+    aiPaperApprovalOwner = null;
+    aiPaperApprovalNotice = null;
+    aiPaperApprovalUnknownKey = "";
+    aiPaperProposalCards = {};
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetTurn) {
       AgentUISurfaces.resetTurn();
     }
@@ -2509,6 +2520,290 @@
     });
   }
 
+  function aiPaperApprovalDecisionKey(conversationId, approval) {
+    return JSON.stringify([WS, conversationId, approval.turn_id, approval.practice_set_id,
+      approval.revision]);
+  }
+
+  function aiPaperApprovalProposalKey(conversationId, approval) {
+    return JSON.stringify([WS, conversationId, approval.turn_id, approval.practice_set_id]);
+  }
+
+  function aiPaperText(host, tag, className, value) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    node.textContent = value;
+    host.appendChild(node);
+    return node;
+  }
+
+  function aiPaperOrder(host, label, ids) {
+    if (!Array.isArray(ids)) return;
+    aiPaperText(host, "p", "ai-paper-approval-order-label", label);
+    var list = document.createElement("ol");
+    list.className = "ai-paper-approval-order";
+    ids.forEach(function (id) {
+      aiPaperText(list, "li", "", String(id));
+    });
+    host.appendChild(list);
+  }
+
+  function aiPaperApprovalDetails(host, approval, fallbackProposedIds) {
+    var paperId = approval.practice_set_id || "";
+    var title = approval.title || paperId;
+    aiPaperText(host, "p", "ai-paper-approval-paper", "Paper：" + title
+      + (paperId && title !== paperId ? "（" + paperId + "）" : ""));
+    var added = Array.isArray(approval.added_problem_ids) ? approval.added_problem_ids : [];
+    var removed = Array.isArray(approval.removed_problem_ids) ? approval.removed_problem_ids : [];
+    var changes = [];
+    if (added.length) changes.push("加入 " + added.join("、"));
+    if (removed.length) changes.push("移除 " + removed.join("、"));
+    if (approval.order_changed) changes.push("调整题目顺序");
+    if (!changes.length) changes.push("成员与顺序未变化");
+    aiPaperText(host, "p", "ai-paper-approval-change", changes.join("；"));
+    if (Array.isArray(approval.current_problem_ids)) {
+      aiPaperOrder(host, "当前顺序", approval.current_problem_ids);
+    }
+    var proposedIds = Array.isArray(approval.proposed_problem_ids)
+      ? approval.proposed_problem_ids : fallbackProposedIds;
+    aiPaperOrder(host, "更新后顺序", proposedIds);
+    if (approval.resets_progress) {
+      aiPaperText(host, "p", "ai-paper-approval-impact",
+        "将清除这张 Paper 未完成练习中的进度（当前已完成 "
+          + Number(approval.completed_items || 0) + " 项）和草稿 "
+          + Number(approval.draft_items || 0) + " 份；历史作答与评分保留。");
+    } else if (approval.status !== "invalid") {
+      aiPaperText(host, "p", "ai-paper-approval-impact",
+        "不会清除未完成进度或草稿；历史作答与评分保留。");
+    }
+  }
+
+  function aiPaperActionStatus(approval) {
+    if (!approval) return "提议已记录";
+    if (approval.status === "approved") return "已批准";
+    if (approval.status === "cancelled") return "已取消";
+    if (approval.status === "invalid") return "无法应用";
+    return "等待确认";
+  }
+
+  function aiRenderPaperProposalHistory(action, turnId) {
+    if (!action || action.type !== "paper_update_proposal" || !messages) return;
+    var approval = action.paper_approval || {};
+    var id = String(turnId || approval.turn_id || action.turn_id
+      || action.practice_set_id || "proposal");
+    var card = aiPaperProposalCards[id];
+    if (!card) {
+      card = document.createElement("article");
+      card.className = "msg ai ai-paper-proposal-history";
+      aiPaperProposalCards[id] = card;
+      messages.appendChild(card);
+    }
+    card.innerHTML = "";
+    aiPaperText(card, "strong", "ai-paper-approval-history-title",
+      "Agent 提议更新 Paper · " + (approval.title || action.practice_set_id || "现有试卷"));
+    aiPaperText(card, "p", "ai-paper-approval-history-status", aiPaperActionStatus(approval));
+    if (approval.status === "invalid") {
+      aiPaperText(card, "p", "ai-paper-approval-impact",
+        "这个提议无法应用：" + (approval.error || "请检查目标 Paper 或题目。"));
+      if (Array.isArray(action.problem_ids)) aiPaperOrder(card, "提议顺序", action.problem_ids);
+      return;
+    }
+    aiPaperApprovalDetails(card, Object.assign({}, approval, {
+      practice_set_id: action.practice_set_id || approval.practice_set_id,
+    }), action.problem_ids);
+  }
+
+  function aiUpdatePaperProposalHistory(record) {
+    (record.messages || []).forEach(function (message) {
+      if (message.role !== "assistant") return;
+      (message.actions || []).forEach(function (action) {
+        aiRenderPaperProposalHistory(action, message.turn_id);
+      });
+      aiRenderPaperProposalHistory(message.action, message.turn_id);
+    });
+  }
+
+  function aiSetPaperApprovalOwner(record) {
+    if (!record || (record.conversation_id && record.conversation_id !== aiConversation)) return;
+    var approval = record.pending_paper_approval;
+    if (approval && approval.conversation_id === aiConversation) {
+      aiPaperApprovalOwner = {
+        conversation_id: approval.conversation_id, turn_id: approval.turn_id,
+        practice_set_id: approval.practice_set_id, revision: approval.revision,
+      };
+      return;
+    }
+    for (var i = (record.messages || []).length - 1; i >= 0; i -= 1) {
+      var message = record.messages[i];
+      if (message.role !== "assistant") continue;
+      var actions = (message.actions || []).concat(message.action ? [message.action] : []);
+      for (var j = actions.length - 1; j >= 0; j -= 1) {
+        var action = actions[j];
+        var projection = action && action.paper_approval;
+        if (!action || action.type !== "paper_update_proposal" || !projection) continue;
+        aiPaperApprovalOwner = {
+          conversation_id: record.conversation_id || aiConversation,
+          turn_id: projection.turn_id || message.turn_id,
+          practice_set_id: action.practice_set_id || projection.practice_set_id,
+          revision: projection.revision,
+        };
+        return;
+      }
+    }
+    aiPaperApprovalOwner = null;
+  }
+
+  function aiRenderPaperApproval(approval) {
+    var panel = document.getElementById("ai-paper-approval");
+    var status = document.getElementById("ai-paper-approval-status");
+    var details = document.getElementById("ai-paper-approval-details");
+    var approve = document.getElementById("ai-paper-approval-approve");
+    var cancel = document.getElementById("ai-paper-approval-cancel");
+    if (!panel) return;
+    var current = approval && approval.status === "pending"
+      && approval.conversation_id === aiConversation ? approval : null;
+    aiCurrentPaperApproval = current;
+    panel.classList.toggle("hidden", !current);
+    if (details) details.innerHTML = "";
+    if (!current) {
+      if (status) status.textContent = "";
+      if (approve) approve.disabled = false;
+      if (cancel) cancel.disabled = false;
+      aiPaperApprovalNotice = null;
+      aiPaperApprovalUnknownKey = "";
+      return;
+    }
+    var proposalKey = aiPaperApprovalProposalKey(aiConversation, current);
+    var decisionKey = aiPaperApprovalDecisionKey(aiConversation, current);
+    var inFlight = !!aiPaperApprovalInFlight[proposalKey];
+    var unknown = aiPaperApprovalUnknownKey === decisionKey;
+    var notice = aiPaperApprovalNotice;
+    if (notice && (notice.conversation_id !== aiConversation
+        || notice.turn_id !== current.turn_id
+        || notice.practice_set_id !== current.practice_set_id
+        || notice.revision !== current.revision)) {
+      aiPaperApprovalNotice = null;
+      notice = null;
+    }
+    if (status) status.textContent = notice ? notice.text
+      : "确认前不会修改 Paper；批准或取消后，队列仍需手动继续。";
+    if (details) aiPaperApprovalDetails(details, current);
+    if (approve) approve.disabled = inFlight || unknown;
+    if (cancel) cancel.disabled = inFlight || unknown;
+  }
+
+  function aiPaperApprovalDecisionOwnerMatches(context, revision) {
+    var owner = aiPaperApprovalOwner;
+    return context.workspace === WS && context.conversation_id === aiConversation
+      && context.sequence === aiConversationSequence && owner
+      && owner.conversation_id === context.conversation_id
+      && owner.turn_id === context.turn_id
+      && owner.practice_set_id === context.practice_set_id
+      && (owner.revision === context.revision
+        || owner.revision === (revision === undefined ? context.revision : revision));
+  }
+
+  function aiDecidePaperApproval(decision) {
+    var approval = aiCurrentPaperApproval;
+    var conversationId = aiConversation;
+    if (!approval || approval.status !== "pending" || !conversationId) return;
+    var context = {
+      workspace: WS, conversation_id: conversationId,
+      turn_id: approval.turn_id, practice_set_id: approval.practice_set_id,
+      revision: approval.revision, sequence: aiConversationSequence,
+    };
+    var proposalKey = aiPaperApprovalProposalKey(conversationId, approval);
+    var decisionKey = aiPaperApprovalDecisionKey(conversationId, approval);
+    if (aiPaperApprovalInFlight[proposalKey] || aiPaperApprovalUnknownKey === decisionKey) return;
+    aiPaperApprovalInFlight[proposalKey] = decisionKey;
+    aiPaperApprovalNotice = {
+      conversation_id: conversationId, turn_id: approval.turn_id,
+      practice_set_id: approval.practice_set_id, revision: approval.revision,
+      text: decision === "approve" ? "正在提交批准并核对最新状态…" : "正在取消并核对最新状态…",
+    };
+    aiRenderPaperApproval(approval);
+    var responseApproval = null;
+    var requestFailed = false;
+    post("/ai/sessions/" + encodeURIComponent(conversationId) + "/paper-approval", {
+      turn_id: approval.turn_id, expected_revision: approval.revision, decision: decision,
+    }).then(function (result) {
+      responseApproval = result.approval || null;
+      var responseRevision = responseApproval && responseApproval.revision;
+      var responseMatches = result.conversation_id === context.conversation_id
+        && result.turn_id === context.turn_id && responseApproval
+        && responseApproval.conversation_id === context.conversation_id
+        && responseApproval.turn_id === context.turn_id
+        && responseApproval.practice_set_id === context.practice_set_id;
+      if (!responseMatches || !aiPaperApprovalDecisionOwnerMatches(context, responseRevision)) {
+        return null;
+      }
+      if (result.stale && responseApproval) {
+        aiPaperApprovalOwner = {
+          conversation_id: responseApproval.conversation_id,
+          turn_id: responseApproval.turn_id,
+          practice_set_id: responseApproval.practice_set_id,
+          revision: responseApproval.revision,
+        };
+        aiPaperApprovalNotice = {
+          conversation_id: conversationId, turn_id: approval.turn_id,
+          practice_set_id: approval.practice_set_id, revision: responseApproval.revision,
+          text: "Paper 或练习进度已变化。请核对下面的最新影响，再次点击「"
+            + (decision === "approve" ? "批准更新" : "取消更新") + "」。",
+        };
+        aiRenderPaperApproval(responseApproval);
+      } else {
+        aiPaperApprovalNotice = null;
+      }
+      return result;
+    }, function () {
+      requestFailed = true;
+      if (aiPaperApprovalDecisionOwnerMatches(context)) {
+        aiPaperApprovalNotice = {
+          conversation_id: conversationId, turn_id: approval.turn_id,
+          practice_set_id: approval.practice_set_id, revision: approval.revision,
+          text: "正在重新读取 Paper 状态；在核对完成前不会再次提交。",
+        };
+      }
+      return null;
+    }).then(function () {
+      if (!aiPaperApprovalDecisionOwnerMatches(context,
+          responseApproval && responseApproval.revision || context.revision)) return null;
+      return aiRefreshQueue().then(function (record) {
+        if (context.sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+        if (!record) {
+          var unresolved = aiCurrentPaperApproval || approval;
+          var unresolvedKey = aiPaperApprovalDecisionKey(conversationId, unresolved);
+          aiPaperApprovalUnknownKey = unresolvedKey;
+          aiPaperApprovalNotice = {
+            conversation_id: conversationId, turn_id: unresolved.turn_id,
+            practice_set_id: unresolved.practice_set_id, revision: unresolved.revision,
+            text: "无法确认这次操作的结果。请刷新页面重新读取状态后再操作。",
+          };
+          aiRenderPaperApproval(aiCurrentPaperApproval);
+          return null;
+        }
+        var current = record.pending_paper_approval;
+        if (requestFailed && current && current.turn_id === approval.turn_id
+            && current.practice_set_id === approval.practice_set_id
+            && current.revision === approval.revision) {
+          aiPaperApprovalNotice = {
+            conversation_id: conversationId, turn_id: approval.turn_id,
+            practice_set_id: approval.practice_set_id, revision: approval.revision,
+            text: "上次操作未能确认；当前 Paper 仍待确认。请核对影响后重试。",
+          };
+        }
+        return record;
+      });
+    }).finally(function () {
+      if (aiPaperApprovalInFlight[proposalKey] === decisionKey) {
+        delete aiPaperApprovalInFlight[proposalKey];
+      }
+      if (context.sequence === aiConversationSequence && conversationId === aiConversation) {
+        aiRenderPaperApproval(aiCurrentPaperApproval);
+      }
+    });
+  }
+
   function aiRenderPendingQueue(record) {
     var panel = document.getElementById("ai-pending-queue");
     var list = document.getElementById("ai-pending-list");
@@ -2517,13 +2812,18 @@
     if (!panel || !list) return;
     var pending = aiPendingMessages(record);
     var paused = record.queue_paused === true;
+    var approvalPending = record.pending_paper_approval
+      && record.pending_paper_approval.status === "pending"
+      && record.pending_paper_approval.conversation_id === aiConversation;
     panel.classList.toggle("hidden", !pending.length);
     if (continueButton) {
       continueButton.classList.toggle("hidden", !paused || !pending.length
-        || record.status === "running");
+        || record.status === "running" || !!approvalPending);
     }
     if (status) {
-      status.textContent = paused
+      status.textContent = approvalPending
+        ? "Paper 更新待确认；批准或取消后，仍需手动继续队列。"
+        : paused
         ? "队列已暂停；继续后会按顺序发送。"
         : pending.some(function (message) { return message.status === "waiting_for_stop"; })
           ? "等待当前任务确认停止；优先消息尚未开始。"
@@ -2585,6 +2885,9 @@
     var sequence = aiConversationSequence;
     return api("/ai/sessions/" + encodeURIComponent(conversationId)).then(function (record) {
       if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+      aiSetPaperApprovalOwner(record);
+      aiUpdatePaperProposalHistory(record);
+      aiRenderPaperApproval(record.pending_paper_approval);
       aiSyncOutboxWithHistory(record);
       aiRenderOutbox();
       aiRenderPendingQueue(record);
@@ -3324,12 +3627,14 @@
     aiCurrentSubmissionId = "";
     aiRenderedDoneTurns = {};
     aiHistoryReconciling = false;
+    aiPaperProposalCards = {};
     messages.innerHTML = "";
     aiRecoveryContainer = null;
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetConversation) {
       AgentUISurfaces.resetConversation();
     }
     aiCurrentProvider = record.provider || "";
+    aiSetPaperApprovalOwner(record);
     aiSyncModelSwitch(record);
     aiStreamingMessage = null;
     aiExecutionPlan = null;
@@ -3360,6 +3665,9 @@
         actions.forEach(function (restored) {
           if (!restored) return;
           if (restored.type === "check_ingest") aiApplyCheckAction(restored);
+          else if (restored.type === "paper_update_proposal") {
+            aiRenderPaperProposalHistory(restored, message.turn_id);
+          }
           else if (restored.type === "paper_artifact"
               && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.artifact) {
             AgentUISurfaces.artifact(restored, { restore: true });
@@ -3372,12 +3680,15 @@
           AgentUISurfaces.artifact(message.action, { restore: !livePreview });
         } else if (!actions.length && message.action && message.action.type === "check_ingest") {
           aiApplyCheckAction(message.action);
+        } else if (message.action && message.action.type === "paper_update_proposal") {
+          aiRenderPaperProposalHistory(message.action, message.turn_id);
         }
         aiExecutionPlan = null;
       }
     });
     aiSyncOutboxWithHistory(record);
     aiRenderOutbox();
+    aiRenderPaperApproval(record.pending_paper_approval);
     aiRenderPendingQueue(record);
     aiSetRunning(record.status === "running");
     aiSetStatus(record.status === "running" ? "Agent 正在处理…" : "");
@@ -3669,7 +3980,8 @@
 
   var aiQueueContinue = document.getElementById("ai-queue-continue");
   if (aiQueueContinue) aiQueueContinue.addEventListener("click", function () {
-    if (!aiConversation || aiTurn || aiSendPending) return;
+    if (!aiConversation || aiTurn || aiSendPending
+        || (aiCurrentPaperApproval && aiCurrentPaperApproval.status === "pending")) return;
     aiQueueContinue.disabled = true;
     post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/queue/continue", {})
       .then(function () {
@@ -3681,6 +3993,15 @@
           : "继续队列失败：" + (error.message || "未知错误"));
         return aiRefreshQueue();
       }).finally(function () { aiQueueContinue.disabled = false; });
+  });
+
+  var aiPaperApprovalApprove = document.getElementById("ai-paper-approval-approve");
+  var aiPaperApprovalCancel = document.getElementById("ai-paper-approval-cancel");
+  if (aiPaperApprovalApprove) aiPaperApprovalApprove.addEventListener("click", function () {
+    aiDecidePaperApproval("approve");
+  });
+  if (aiPaperApprovalCancel) aiPaperApprovalCancel.addEventListener("click", function () {
+    aiDecidePaperApproval("cancel");
   });
 
   if (aiSend) aiSend.addEventListener("click", aiSendMessage);

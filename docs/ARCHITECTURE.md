@@ -193,6 +193,7 @@ workbench/
   轮次预算是**静默预算**而非总时长：任一输出行或事件都重置时钟，命令/工具在飞时改用
   更长的工具预算（`bridge add --timeout/--tool-timeout`），因此长回答与慢命令都不会被
   截停；真正卡住的轮次仍如实记为 `provider timed out`。
+- 试卷进度重置审批复用会话/轮次 JSON：Bridge 在当前 worker 释放前保存待审批方案并暂停该对话队列，不保持 provider 等待用户。页面批准请求由薄 API 交给 Bridge 校验归属与版本，再委托既有 Data 试卷预览/更新逻辑；普通发送与继续队列不能绕过待审批决定。刷新恢复待审批状态，不自动写入；批准/取消后仍须手动继续。题目实体与历史作答不由审批存储管理，不新增 SQLite 审批表或调度服务。
 - `bridge.conversation_actions` 只解析模型回复里的动作区块并校验包装形状；会话并发、持久化、执行与失败提示仍由 `bridge.conversations` 编排。
 - Agent 会话在创建时绑定一个不可变的 harness；模型目标记录 model/entry args，只允许在该 harness 内切换。Codex 通过 app-server `model/list` 枚举，Claude Code 使用其支持模型 catalog，Pi 使用 RPC `get_available_models`；Pi 同 harness 优先 RPC `set_model` 原生切换。更换 harness 必须新建会话。
 - Pi 在同一 normalized activity + 350ms polling 链路上把读、写、搜索、命令和

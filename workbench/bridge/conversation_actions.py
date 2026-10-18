@@ -14,6 +14,7 @@ MICRO_QUIZ_KIND = "micro-quiz-patch"
 CONTENT_BUNDLE_KIND = "content-bundle"
 PROBLEM_PATCH_KIND = "problem-patch"
 PAPER_ARTIFACT_TYPE = "paper_artifact"
+PAPER_UPDATE_PROPOSAL_TYPE = "paper_update_proposal"
 _PAPER_ID_RE = re.compile(r"^ps-\d+$")
 _MANIFEST_KINDS = {FLASH_CARD_KIND, MICRO_QUIZ_KIND, CONTENT_BUNDLE_KIND,
                    PROBLEM_PATCH_KIND}
@@ -48,6 +49,11 @@ def extract_action(answer, context, folder=None):
             matched_intent = True
             if notice is None:
                 notice = _clean_paper_artifact_action(raw)
+        elif raw_type == PAPER_UPDATE_PROPOSAL_TYPE:
+            recognized = True
+            matched_intent = True
+            if notice is None:
+                notice = _clean_paper_update_proposal(raw)
         elif raw_type in ("replace_practice_selection", "prefill_goal_form"):
             recognized = True
             if notice is not None:
@@ -108,6 +114,29 @@ def _clean_paper_artifact_action(raw):
     if item_count is not None:
         action["item_count"] = item_count
     return action
+
+
+def _clean_paper_update_proposal(raw):
+    """Keep the Agent proposal to one existing Paper and an ordered id list."""
+    practice_set_id = raw.get("practice_set_id")
+    problem_ids = raw.get("problem_ids")
+    error = None
+    if not isinstance(practice_set_id, str) or not _PAPER_ID_RE.fullmatch(practice_set_id):
+        error = "practice_set_id must be an existing ps-NNN id"
+    elif not isinstance(problem_ids, list) or not problem_ids \
+            or not all(isinstance(item, str) and item for item in problem_ids):
+        error = "problem_ids must be a non-empty string list"
+    elif len(set(problem_ids)) != len(problem_ids):
+        error = "problem_ids must not contain duplicates"
+    elif set(raw) != {"type", "practice_set_id", "problem_ids"}:
+        error = "paper_update_proposal supports only practice_set_id and problem_ids"
+    if error:
+        return {"type": PAPER_UPDATE_PROPOSAL_TYPE, "error": error}
+    return {
+        "type": PAPER_UPDATE_PROPOSAL_TYPE,
+        "practice_set_id": practice_set_id,
+        "problem_ids": list(problem_ids),
+    }
 
 
 def _looks_like_content_block(raw):

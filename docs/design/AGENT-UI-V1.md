@@ -40,6 +40,8 @@ A temporary split of the central workspace used to preview the latest Agent Arti
 ### Approval Gate
 A decision surface for an action that needs explicit user consent. While active, it replaces the normal composer with the reason, impact and approve/deny actions. It is not a generic confirmation for every tool call.
 
+Paper progress-reset approval follows its later capability contract: its decision surface coexists with the composer, and messages accepted while it is pending join the paused queue. Resolving the approval does not automatically continue the queue. This Paper-specific interaction does not change the existing rollback composer replacement.
+
 ## Tool and artifact distinction
 
 A **Tool Call Card** is the proposed v1 presentation for execution activity. It shows a semantic label, concise outcome and state; raw parameters/logs are folded behind explicit inspection. A unified card, visible impact scope, and recovery controls on failure are design targets, not requirements in the current activity contracts.
