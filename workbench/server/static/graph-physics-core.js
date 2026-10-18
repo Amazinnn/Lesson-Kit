@@ -1037,16 +1037,14 @@
       if (Math.abs(target - graph.layoutInflation) > .008) recomputeLayoutGuides(state);
     }
 
-    active.forEach(function (n) {
-      var fp = footprint(n);
-      var m = nodeSafetyMargin(state, n, densityMap) * .35;
-      var left = fp.left + m + 22;
-      var right = state.stageWidth - fp.right - m - 22;
-      var top = fp.top + m + 22;
-      var bottom = state.stageHeight - fp.bottom - m - 22;
-      n.x = Math.max(left, Math.min(right, n.x));
-      n.y = Math.max(top, Math.min(bottom, n.y));
-    });
+    // The stage is no longer a wall. Measured on real data, a free force field
+    // pins against it instead of finding its own extent: growing the charge 56x
+    // (strength 200 -> 11200) moved the mean edge only 638 -> 758 and left the
+    // bounding box at 1636 against a usable width of 1560 — the clamp, not the
+    // physics, was deciding the layout. Nothing needs the wall: graphFit() fits
+    // the node extent rather than the stage box, and .graph-edges is
+    // overflow: visible, so a node outside the stage still draws.
+    // state.stageWidth/stageHeight now only place the centre and size the DOM box.
 
     var avg = 0;
     active.forEach(function (n) { avg += dist2d(n.vx, n.vy); });
