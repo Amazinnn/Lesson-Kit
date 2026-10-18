@@ -810,10 +810,22 @@ def ai_turn_start(pool, workspace, params, body):
         raise ApiError(400, "message is required")
     submission_id = body.get("submission_id")
     retry_of = body.get("retry_of")
+    draft_fields = {"draft_answer", "draft_note", "draft_choices", "draft_images"}
     submitted_fields = {
         key: value for key, value in body.items()
-        if key not in {"message", "submission_id", "retry_of", "dom"}
+        if key not in {"message", "submission_id", "retry_of", "dom", "draft_truncated"}
+        and key not in draft_fields
     }
+    if body.get("include_draft") is True:
+        draft = agent_context._draft(body)
+        submitted_fields.update({
+            "draft_answer": draft["answer"],
+            "draft_note": draft["note"],
+            "draft_choices": draft["choices"],
+            "draft_images": draft["images"],
+        })
+        if draft.get("truncated"):
+            submitted_fields["draft_truncated"] = True
     # The conversation owns the staged-manifest directory; the body cannot pick it.
     framed = {**body, "conversation_id": params["conversation_id"]}
     try:

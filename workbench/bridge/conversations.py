@@ -168,6 +168,18 @@ def get(pool, conversation_id):
     turns.sort(key=lambda item: int(item[0][5:]) if TURN_ID.fullmatch(item[0]) else 0)
 
     messages = []
+    # Exchanges without turn ids predate durable turn artifacts. Show them
+    # before all new turn projections so a later accepted turn cannot reorder
+    # that legacy history to the bottom.
+    for exchange in transcript_without_turn:
+        assistant = {"role": "assistant", "content": exchange["assistant"]}
+        for key in ("actions", "action", "activities"):
+            if exchange.get(key):
+                assistant[key] = exchange[key]
+        messages.extend([
+            {"role": "user", "content": exchange["user"]},
+            assistant,
+        ])
     for turn_id, turn in turns:
         exchange = transcript_by_turn.pop(turn_id, None)
         if exchange is not None:
@@ -201,22 +213,19 @@ def get(pool, conversation_id):
                 turn["error"], conversation_providers._PI_SUMMARY_LIMIT,
             )
         messages.append(user)
+        activities = _coalesced_activities(
+            _events_file(pool, conversation_id, turn_id),
+        )
         partial = turn.get("partial_output")
-        if isinstance(partial, str) and partial:
-            messages.append({
-                "role": "assistant", "content": partial, "turn_id": turn_id,
-                "partial": True, "status": turn.get("status", "failed"),
-            })
+        if activities or (isinstance(partial, str) and partial):
+            assistant = {"role": "assistant", "turn_id": turn_id,
+                         "status": turn.get("status", "failed")}
+            if activities:
+                assistant["activities"] = activities
+            if isinstance(partial, str) and partial:
+                assistant.update({"content": partial, "partial": True})
+            messages.append(assistant)
 
-    for exchange in transcript_without_turn:
-        assistant = {"role": "assistant", "content": exchange["assistant"]}
-        for key in ("actions", "action", "activities"):
-            if exchange.get(key):
-                assistant[key] = exchange[key]
-        messages.extend([
-            {"role": "user", "content": exchange["user"]},
-            assistant,
-        ])
     for turn_id, exchange in sorted(
         transcript_by_turn.items(),
         key=lambda item: int(item[0][5:]) if TURN_ID.fullmatch(item[0]) else 0,
@@ -786,7 +795,14 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
             ),
             daemon=True,
         )
-        thread.start()
+        try:
+            thread.start()
+        except Exception as exc:
+            _finish(
+                folder, conversation_id, turn_id, "failed",
+                f"provider launch failed: {exc}",
+            )
+            turn = _read_json(_turn_file(pool, conversation_id, turn_id))
     return _turn_response(turn)
 
 
@@ -922,7 +938,10 @@ def _run_turn(root, jobs_dir, workspace, conversation_id, turn_id, message, cont
                 event_path, "activity", activity_id="provider-turn",
                 activity_type="progress", status="failed", label="本轮已停止",
             )
-        _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
+        _finish(
+            folder, conversation_id, turn_id, "cancelled", "cancelled",
+            partial_output=result_text or "".join(text_parts),
+        )
         return
     if key in _TIMEOUTS:
         if not pi_messages:

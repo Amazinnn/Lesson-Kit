@@ -3134,9 +3134,11 @@
       } else {
         aiPiActivities = {};
         aiRenderActivities(message.activities || []);
-        aiAddMarkdown(message.partial
-          ? "部分回答（本轮未完成）\n\n" + (message.content || "")
-          : (message.content || ""), "ai");
+        var restoredText = message.content || "";
+        if (message.partial && restoredText) {
+          restoredText = "部分回答（本轮未完成）\n\n" + restoredText;
+        }
+        if (restoredText) aiAddMarkdown(restoredText, "ai");
         // Restore durable presentational results only. Mutable actions such as
         // practice selection and goal prefills are never replayed from history.
         var actions = message.actions || [];
@@ -3296,8 +3298,8 @@
       body.problem_id = active.id;
       body.practice_mode = sessionStorage.getItem(MODE_KEY) || "";
       body.progress = { seen: session().length };
-      // Attached for this turn only: the server bounds these and stores none of
-      // them, so an unsent draft never becomes a learning record.
+      // Opted-in fields are bounded and captured only in this turn snapshot;
+      // they never become learning records or a later turn's draft.
       body.include_draft = true;
       body.draft_answer = draftAnswer();
       body.draft_note = draftNote();

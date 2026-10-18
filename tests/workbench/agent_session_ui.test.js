@@ -461,6 +461,35 @@ test("tool activity cards show terminal failures and only explicit known impact"
   assert.equal(verified.activityParts.impact.textContent, "已知影响：batch-9 applied");
 });
 
+test("reloaded failed history renders saved activities without a blank assistant answer", async () => {
+  const app = setup((url) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !url.includes("/conv-a")) {
+      return response([session("conv-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a")) return response({
+      ...session("conv-a"),
+      messages: [
+        { role: "user", content: "Inspect", status: "failed", turn_id: "turn-001" },
+        { role: "assistant", turn_id: "turn-001", status: "failed", activities: [
+          { activity_id: "cmd-failed", activity_type: "command", label: "运行命令",
+            status: "failed", output: "permission denied" },
+        ] },
+      ],
+    });
+    return response({});
+  });
+  await flush();
+  app.elements["ai-session-list"].children[0].children[0].click();
+  await flush();
+
+  const children = app.elements["ai-messages"].children;
+  assert.ok(children.some((child) => child.className === "ai-plan"));
+  assert.equal(children.filter((child) => child.className === "msg ai").length, 1,
+    "the only assistant bubble is the real failure status, with no empty answer bubble");
+  assert.match(deepHtml(app.elements["ai-messages"]), /permission denied/);
+});
+
 test("switching conversations clears approval and activity state and reloads events from zero", async () => {
   const calls = [];
   let timerId = 0;
