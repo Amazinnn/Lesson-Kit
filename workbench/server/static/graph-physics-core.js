@@ -784,6 +784,14 @@
   // changing the damping from .81 to .6 halves it, and the strength has to follow
   // or the whole graph contracts. See tools/calibrate-bh-strength.js.
   var BH_STRENGTH = 60;
+  // Obsidian's cooldown: alpha += (alphaTarget - alpha) * (1 - 0.001^(1/300)).
+  // Its alphaTarget is 0 and so is ours, so this is the same shape the old
+  // alpha *= .962 already had — only the rate differs, and the slower one is better
+  // on both axes that matter (tools/sweep-alpha-rate.js):
+  //   dmath  travel 43 -> 53px, per-frame p50 0.26 -> 0.19, p95 3.57 -> 3.23
+  //   c02    travel 81 -> 101px, per-frame p50 0.55 -> 0.40, p95 5.62 -> 5.50
+  // Cost: settle 103 -> 164 ticks, about 1.7s -> 2.7s at 60fps.
+  var ALPHA_DECAY = 1 - Math.pow(0.001, 1 / 300);
   // Obsidian's complete() uses 0.6; the old integrator used .81 with a hard 7px/tick
   // clamp on top. The clamp is gone, so this is now the only limiter.
   var VELOCITY_DECAY = .6;
@@ -1073,7 +1081,7 @@
     active.forEach(function (n) { avg += dist2d(n.vx, n.vy); });
     avg /= Math.max(1, active.length);
     var finalStats = congestionStats(state, active, densityMap);
-    graph.alpha *= .962;
+    graph.alpha += (0 - graph.alpha) * ALPHA_DECAY;
     if (finalStats.pairs === 0 && graph.alpha < .032 && avg < .075) graph.stableFrames += 1;
     else graph.stableFrames = 0;
     // Safety valve: forces have faded (alpha < .01) and the resolver has had
