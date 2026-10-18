@@ -270,10 +270,18 @@
         var alpha = Math.min(a.opacity, b.opacity) * edgeFocus * style.baseOpacity;
         var width = style.width / Math.max(.25, scale);
         var previous = cubic(curve, 0);
-        for (var i = 1; i <= 16; i += 1) {
-          var point = cubic(curve, i / 16);
-          var paint = edge.type === "contrast" ? i % 2 === 0
-            : edge.type === "legacy" ? i % 3 === 1 : true;
+        var SEGMENTS = 16;
+        for (var i = 1; i <= SEGMENTS; i += 1) {
+          var point = cubic(curve, i / SEGMENTS);
+          // Every style paints the first and the last segment. Without that the line
+          // stops short of the node at that end: contrast (i % 2 === 0) never painted
+          // the segment it left from, and legacy's 1-in-3 started on the node but left
+          // a double gap, so a run of it read as loose dots rather than as a connection.
+          // legacy is 2 on / 2 off, which keeps it visibly dashed while still reading
+          // as a line between the two points it joins.
+          var paint = i === 1 || i === SEGMENTS
+            || (edge.type === "contrast" ? i % 2 === 0
+              : edge.type === "legacy" ? i % 4 < 2 : true);
           if (paint) pushSegment(vertices, previous, point, width, color, alpha);
           previous = point;
         }

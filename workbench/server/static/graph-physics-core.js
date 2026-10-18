@@ -1267,18 +1267,26 @@
     var baseAB = Math.atan2(b.y - a.y, b.x - a.x);
     var sa = state.portSlots.get(edge.index + "|" + a.id) || { slot: 0, count: 1, angle: baseAB };
     var sb = state.portSlots.get(edge.index + "|" + b.id) || { slot: 0, count: 1, angle: baseAB + Math.PI };
-    var ra = a.size / 2 + 10;
-    var rb = b.size / 2 + 11;
+    var ra = a.size / 2 + 2;
+    var rb = b.size / 2 + 2;
     var ga = Math.min(12, 5 + a.size * .06);
     var gb = Math.min(12, 5 + b.size * .06);
-    var ua = { x: Math.cos(sa.angle), y: Math.sin(sa.angle) };
-    var ta = { x: -ua.y, y: ua.x };
-    var ub = { x: Math.cos(sb.angle), y: Math.sin(sb.angle) };
-    var tb = { x: -ub.y, y: ub.x };
-    var x1 = a.x + ua.x * ra + ta.x * sa.slot * ga;
-    var y1 = a.y + ua.y * ra + ta.y * sa.slot * ga;
-    var x2 = b.x + ub.x * rb + tb.x * sb.slot * gb;
-    var y2 = b.y + ub.y * rb + tb.y * sb.slot * gb;
+    // +10/+11 used to sit the endpoint outside the ring, leaving a gap at both ends
+    // that read as the edge failing to reach its node. +2 sits it on the ring.
+    // The port spread is an arc along the boundary, not a sideways shift. A tangential
+    // shift leaves the circle: at slot 4 on a 57-unit node the endpoint landed 16 units
+    // outside the ring and 50 degrees away from the direction it was meant to leave in,
+    // so the line both missed the node and aimed at the wrong place. Dividing the arc
+    // by the radius converts it to the equivalent angle, which keeps the endpoint on
+    // the ring and keeps the fan converging toward the far node.
+    var angA = sa.angle + (sa.slot * ga) / Math.max(1, ra);
+    var angB = sb.angle + (sb.slot * gb) / Math.max(1, rb);
+    var ua = { x: Math.cos(angA), y: Math.sin(angA) };
+    var ub = { x: Math.cos(angB), y: Math.sin(angB) };
+    var x1 = a.x + ua.x * ra;
+    var y1 = a.y + ua.y * ra;
+    var x2 = b.x + ub.x * rb;
+    var y2 = b.y + ub.y * rb;
     var dx = x2 - x1;
     var dy = y2 - y1;
     var len = Math.max(1, dist2d(dx, dy));
@@ -1289,10 +1297,10 @@
     var shift = Math.max(-40, Math.min(40, base + lane));
     var outA = 18 + Math.abs(sa.slot) * 4 + Math.min(12, len * .06);
     var outB = 18 + Math.abs(sb.slot) * 4 + Math.min(12, len * .06);
-    var c1x = x1 + ua.x * outA + ta.x * sa.slot * 2.5 + px * shift;
-    var c1y = y1 + ua.y * outA + ta.y * sa.slot * 2.5 + py * shift;
-    var c2x = x2 + ub.x * outB + tb.x * sb.slot * 2.5 + px * shift;
-    var c2y = y2 + ub.y * outB + tb.y * sb.slot * 2.5 + py * shift;
+    var c1x = x1 + ua.x * outA + px * shift;
+    var c1y = y1 + ua.y * outA + py * shift;
+    var c2x = x2 + ub.x * outB + px * shift;
+    var c2y = y2 + ub.y * outB + py * shift;
     return "M " + x1.toFixed(1) + " " + y1.toFixed(1)
       + " C " + c1x.toFixed(1) + " " + c1y.toFixed(1)
       + " " + c2x.toFixed(1) + " " + c2y.toFixed(1)
