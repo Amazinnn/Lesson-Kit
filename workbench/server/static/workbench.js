@@ -605,8 +605,13 @@
      * relations (习概: 192 points, 728 relations), and drawing them all is a
      * hairball nobody can read. Each knowledge point keeps its single strongest
      * relation, then the remaining slots go by weight, so low-weight links drop
-     * out of both the picture and the layout instead of papering over it. */
-    var GRAPH_EDGE_BUDGET_RATIO = 0.5;
+     * out of both the picture and the layout instead of papering over it.
+     *
+     * The ratio is edges per point, and since sum(degree) = 2E it is also half the
+     * average degree. At 0.5 every point showed on average one relation, which
+     * measured as 24 of dmath's 35 relations — a third of the authored graph was
+     * invisible. 1.5 shows all of dmath's 35 and still caps 习概 at 288 of 728. */
+    var GRAPH_EDGE_BUDGET_RATIO = 1.5;
 
     function graphEdgeWeight(edge) {
       var typeWeight = edge.type === "prereq" ? 1

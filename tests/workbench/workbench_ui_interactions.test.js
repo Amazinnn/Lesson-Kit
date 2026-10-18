@@ -2280,7 +2280,7 @@ test("the edge budget keeps each point's strongest relation and drops the rest",
   const nodes = [];
   for (let i = 0; i < 40; i += 1) nodes.push({ id: "kp-" + i, title: "知识点 " + i, problem_count: 1 });
   // every point gets one strong prerequisite link in a chain plus a pile of weak
-  // author relations, so the 0.5x budget must trim while never isolating a point
+  // author relations, so the budget must trim while never isolating a point
   const edges = [];
   for (let i = 0; i < 39; i += 1) {
     edges.push({ id: "chain-" + i, source: "kp-" + i, target: "kp-" + (i + 1),
@@ -2303,8 +2303,9 @@ test("the edge budget keeps each point's strongest relation and drops the rest",
   const paths = layer.children.filter((child) => (child.attributes.class || "").includes("graph-edge"));
   const shown = paths.filter((child) => child.style.display !== "none");
   const ids = new Set(shown.map((child) => child.dataset.edgeId));
-  assert.ok(shown.length <= 40, "the 0.5x budget caps a 40-point course at ~20-40 edges, got " + shown.length);
-  assert.ok(shown.length >= 20, "and it does not over-trim, got " + shown.length);
+  assert.equal(edges.length, 79, "39 strong links plus 40 weak ones");
+  assert.ok(shown.length < edges.length,
+    "the budget trims rather than drawing everything, got " + shown.length);
   // The floor is connectivity, not identity: a point may lose one specific edge
   // as long as it still shows some relation, so assert incident-ness.
   for (let i = 0; i < 40; i += 1) {
@@ -2316,8 +2317,20 @@ test("the edge budget keeps each point's strongest relation and drops the rest",
     assert.ok(kept, "every point keeps at least one relation (" + i + ")");
   }
   assert.ok(ids.has("chain-0"), "a strong prerequisite link outranks a weak author link");
-  assert.equal(ids.size, [...ids].filter((id) => id.startsWith("chain-")).length,
-    "no weak author link survives while stronger links are still being dropped");
+  // What the budget promises is weight ordering, not a particular ratio: nothing
+  // dropped may outweigh anything kept. Pinning the ratio here instead made the test
+  // fail the moment the ratio moved, with no behaviour regression behind it.
+  const weight = (edge) => {
+    const type = edge.relation_type === "prerequisite" ? 1 : .6;
+    const strength = edge.strength === "high" ? 1 : edge.strength === "low" ? .6 : .8;
+    return type * strength;
+  };
+  const keptWeights = edges.filter((edge) => ids.has(edge.id)).map(weight);
+  const droppedWeights = edges.filter((edge) => !ids.has(edge.id)).map(weight);
+  assert.ok(
+    Math.min(...keptWeights) >= Math.max(...droppedWeights),
+    "no dropped relation outweighs a kept one"
+  );
   assert.ok((budget.textContent || "").includes("/"), "the readout reports shown / total: " + budget.textContent);
 });
 
