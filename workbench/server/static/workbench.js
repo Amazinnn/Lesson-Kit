@@ -897,8 +897,17 @@
         wrap.appendChild(button);
         wrap.appendChild(label);
         wrap.appendChild(meta);
+        var pressAt = null;
         button.addEventListener("click", function (event) {
           if (event.stopPropagation) event.stopPropagation();
+          // A drag is not a click. With pointer capture the browser still fires click
+          // when the press and the release both land on the button, however far the
+          // pointer travelled in between, so moving a node used to open its panel.
+          var travelled = pressAt
+            ? Math.hypot(event.clientX - pressAt.x, event.clientY - pressAt.y)
+            : 0;
+          pressAt = null;
+          if (travelled > 4) return;
           graphSelect(node.id, true);
         });
         button.addEventListener("mouseenter", function () {
@@ -912,6 +921,7 @@
         button.addEventListener("pointerdown", function (event) {
           if (event.stopPropagation) event.stopPropagation();
           sim.graph.drag = { id: node.id, pointerId: event.pointerId };
+          pressAt = { x: event.clientX, y: event.clientY };
           wrap.classList.add("dragging");
           if (button.setPointerCapture && event.pointerId !== undefined) {
             button.setPointerCapture(event.pointerId);
@@ -1476,7 +1486,13 @@
         dragged.vy = 0;
         dragged.anchorX = point.x;
         dragged.anchorY = point.y;
-        sim.reheat(.34, false);
+        // No reheat per move. pointermove runs at 60-120Hz, and reheat() bumps
+        // controlRevision, which makes the Worker drop every snapshot older than it
+        // (graph-physics.js:299) — so reheating here froze the rest of the graph for
+        // the whole drag. The coordinates already reach the Worker through the step
+        // controls (controlsFor carries x/y and the anchor marks the node as dragged),
+        // so the only thing a move needs is to wake a solver that has gone to sleep.
+        if (sim.graph.alpha <= 0) sim.reheat(.34, false);
         graphSolver(true);
         graphEnsureLoop();
         return;
