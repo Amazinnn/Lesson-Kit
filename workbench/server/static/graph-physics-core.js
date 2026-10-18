@@ -125,6 +125,73 @@
       : node.rowIndex;
   }
 
+  /* A pool with no directed prerequisite relation has no hierarchy at all: every
+   * point lands on one level, and row wrapping alone can only answer a wide level
+   * with a longer ribbon — 86 points became a 2780x1268 diagonal band. Past this
+   * many points a flat level is clustered in two dimensions instead. */
+  var FLAT_LEVEL_CLUSTER_MIN = 12;
+  // Roughly landscape; keeps the cluster inside a workbench canvas without a Fit
+  // zoom that shrinks labels away. ponytail: fixed ratio, derive from the real
+  // canvas if the projection ever moves away from the stage model.
+  var CLUSTER_ASPECT = 1.35;
+
+  function flatLevel(nodes, edges) {
+    return nodes.length > FLAT_LEVEL_CLUSTER_MIN
+      && new Set(nodes.map(function (n) { return n.level || 0; })).size === 1;
+  }
+
+  // Cell size is derived from label width and targetSize only. footprint() would be
+  // NaN here: the stage is sized before create() gives nodes their real size, so only
+  // the pre-layout fields are safe to read.
+  function clusterCellWidth(node) {
+    return Math.max(labelWidth(node.title), (node.targetSize || 0) + 34, 96);
+  }
+
+  function clusterCellHeight(node) {
+    return (node.targetSize || 28) + 55 + 12 + 14;
+  }
+
+  // Needs the same grid the guides will use, and only one of the two callers owns the
+  // state object — so it is self-contained: degrees come off the shared neighbour index.
+  function clusterGeometry(nodes, edges, center) {
+    if (!flatLevel(nodes, edges)) return null;
+    var index = neighborIndex(edges);
+    function degreeOf(node) {
+      var seen = new Set();
+      (index.get(node.id) || []).forEach(function (other) {
+        if (nodes.indexOf(other) >= 0) seen.add(other.id);
+      });
+      return seen.size;
+    }
+    var cellWidth = 0;
+    var cellHeight = 0;
+    nodes.forEach(function (n) {
+      var margin = 12 + Math.min(28, degreeOf(n) * 1.15);
+      cellWidth = Math.max(cellWidth, clusterCellWidth(n) + margin);
+      cellHeight = Math.max(cellHeight, clusterCellHeight(n) + margin);
+    });
+    var columns = Math.max(1, Math.round(Math.sqrt(nodes.length * CLUSTER_ASPECT)));
+    var rows = Math.ceil(nodes.length / columns);
+    var anchor = center || { x: 0, y: 0 };
+    return {
+      columns: columns,
+      rows: rows,
+      cellWidth: cellWidth,
+      cellHeight: cellHeight,
+      x0: anchor.x - columns * cellWidth / 2,
+      y0: anchor.y - rows * cellHeight / 2,
+    };
+  }
+
+  function clusterCellCenter(geometry, index) {
+    var column = index % geometry.columns;
+    var row = Math.floor(index / geometry.columns);
+    return {
+      x: geometry.x0 + (column + .5) * geometry.cellWidth,
+      y: geometry.y0 + (row + .5) * geometry.cellHeight,
+    };
+  }
+
   function structureStageSize(nodes, levels, gravity) {
     var spread = spreadFactor(gravity);
     var gap = 64 + 38 * spread;
@@ -149,12 +216,25 @@
         widestSingleRow = Math.max(widestSingleRow, width);
       }
     });
-    var size = {
-      width: wrapped
-        ? BAND_MAX_WIDTH + 320
-        : Math.max(1800, widestSingleRow + 260),
-      height: Math.max(1550, 125 + rowCount * pitch + 420),
-    };
+    // A pool with no directed relation sorts every point onto one level, and row
+    // wrapping answers it with a longer ribbon — 86 points became a 2780x1268
+    // diagonal band. Past the threshold the guides become a 2-D cluster, so the
+    // stage has to follow that cluster instead of the band ceiling.
+    var flatOnly = new Set(nodes.map(function (n) { return levels.get(n.id) || 0; })).size === 1;
+    var geometry = flatOnly
+      ? clusterGeometry(nodes, [], null)
+      : null;
+    var size = geometry
+      ? {
+        width: Math.max(1800, geometry.columns * geometry.cellWidth + 260),
+        height: Math.max(1550, geometry.rows * geometry.cellHeight + 420),
+      }
+      : {
+        width: wrapped
+          ? BAND_MAX_WIDTH + 320
+          : Math.max(1800, widestSingleRow + 260),
+        height: Math.max(1550, 125 + rowCount * pitch + 420),
+      };
     size.width = Math.round(size.width);
     size.height = Math.round(size.height);
     return size;
@@ -507,6 +587,23 @@
 
     if (state.graph.view === "structure") {
       var ordered = structureOrdering(state, active);
+      // Flat pool (no directed relation, one level, many points): a ribbon cannot
+      // hold it, so the points cluster in two dimensions. Same footprint spacing,
+      // only the arrangement changes.
+      var geometry = clusterGeometry(active, visibleEdges(state), center);
+      if (geometry) {
+        var cluster = active.slice().sort(function (a, b) {
+          return (b.targetSize - a.targetSize)
+            || String(a.id).localeCompare(String(b.id));
+        });
+        cluster.forEach(function (n, index) {
+          var cell = clusterCellCenter(geometry, index);
+          n.guideX = cell.x;
+          n.guideY = cell.y;
+          n.rowIndex = Math.floor(index / geometry.columns);
+        });
+        return;
+      }
       // Structure guides follow gravity only. Layout inflation must not move
       // them: the stage is sized from these same numbers, and a guide grid that
       // grows past its stage can only be answered by boundary clamping, which
