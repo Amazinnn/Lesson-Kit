@@ -2729,7 +2729,14 @@
     }).then(function (result) {
       responseApproval = result.approval || null;
       var responseRevision = responseApproval && responseApproval.revision;
-      if (!aiPaperApprovalDecisionOwnerMatches(context, responseRevision)) return null;
+      var responseMatches = result.conversation_id === context.conversation_id
+        && result.turn_id === context.turn_id && responseApproval
+        && responseApproval.conversation_id === context.conversation_id
+        && responseApproval.turn_id === context.turn_id
+        && responseApproval.practice_set_id === context.practice_set_id;
+      if (!responseMatches || !aiPaperApprovalDecisionOwnerMatches(context, responseRevision)) {
+        return null;
+      }
       if (result.stale && responseApproval) {
         aiPaperApprovalOwner = {
           conversation_id: responseApproval.conversation_id,
@@ -2740,7 +2747,8 @@
         aiPaperApprovalNotice = {
           conversation_id: conversationId, turn_id: approval.turn_id,
           practice_set_id: approval.practice_set_id, revision: responseApproval.revision,
-          text: "Paper 或练习进度已变化。请核对下面的最新影响，再次点击「批准更新」。",
+          text: "Paper 或练习进度已变化。请核对下面的最新影响，再次点击「"
+            + (decision === "approve" ? "批准更新" : "取消更新") + "」。",
         };
         aiRenderPaperApproval(responseApproval);
       } else {

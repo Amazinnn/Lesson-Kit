@@ -902,6 +902,54 @@ test("stale Paper approval refreshes impact and requires a second click", async 
     && call.options?.method === "POST"), false);
 });
 
+test("stale Paper cancellation asks for a fresh cancel decision", async () => {
+  const calls = [];
+  let approval = paperApproval();
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a"), queue_paused: true, pending_paper_approval: approval,
+      messages: [paperProposalMessage(approval)],
+    });
+    if (url.endsWith("/paper-approval") && options?.method === "POST") {
+      const body = JSON.parse(options.body);
+      if (body.expected_revision === 1) {
+        approval = paperApproval({ revision: 2, completed_items: 3, draft_items: 2 });
+        return response({ conversation_id: "conv-a", turn_id: "turn-a", approval,
+          queue_paused: true, stale: true });
+      }
+      approval = paperApproval({ revision: 2, status: "cancelled" });
+      return response({ conversation_id: "conv-a", turn_id: "turn-a", approval,
+        queue_paused: true, stale: false });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+  await flush();
+
+  app.elements["ai-paper-approval-cancel"].click();
+  await flush();
+  await flush();
+  assert.match(app.elements["ai-paper-approval-status"].textContent, /再次点击「取消更新」/);
+  assert.doesNotMatch(app.elements["ai-paper-approval-status"].textContent, /批准更新/);
+
+  app.elements["ai-paper-approval-cancel"].click();
+  await flush();
+  await flush();
+  const decisions = calls.filter((call) => call.url.endsWith("/paper-approval"));
+  assert.equal(decisions.length, 2);
+  assert.deepEqual(JSON.parse(decisions[1].options.body), {
+    turn_id: "turn-a", expected_revision: 2, decision: "cancel",
+  });
+  assert.equal(app.elements["ai-paper-approval"].classList.contains("hidden"), true);
+  assert.match(deepText(app.elements["ai-messages"]), /已取消/);
+});
+
 test("a late Paper approval response cannot change the newly selected conversation", async () => {
   const pendingPost = deferred();
   const calls = [];
