@@ -3,7 +3,7 @@
 > Historical design record from pre-merge closeout planning. The Context and
 > decisions below preserve their original point-in-time rationale; they are
 > not a statement of current status. PR #110 merged on 2026-10-10. See the
-> [delivered closeout and evidence](../../../docs/STATUS-content-mirror-closeout-2026-10-18.md).
+> [delivered closeout and evidence](../../../../docs/STATUS-content-mirror-closeout-2026-10-18.md).
 
 ## Context
 

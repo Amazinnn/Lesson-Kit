@@ -1,7 +1,7 @@
 # JSON content mirror closeout status — 2026-10-18
 
 PR [#110](https://github.com/Amazinnn/Lesson-Kit/pull/110) merged on
-2026-10-10 at 12:03 UTC. Its head was
+2026-10-10 at 20:03 (Asia/Shanghai, UTC+8). Its head was
 [`0be80cda`](https://github.com/Amazinnn/Lesson-Kit/commit/0be80cda59bdff5dab602ef177f5f727b03428df);
 merge commit
 [`d773a7e`](https://github.com/Amazinnn/Lesson-Kit/commit/d773a7e96c8d1eb5d2dfbc6888f55d6c4c3bbb0f)
@@ -53,3 +53,8 @@ The per-entity bootstrap write-isolation repair shipped in PR #110, so it is
 not a deferred follow-up. The original closeout tasks' merge and post-merge
 checks now point here; sections 1–6 retain their historical evidence and were
 not rerun for this document update.
+
+OpenSpec CLI archived `json-content-repository-sync-closeout` as
+`2026-10-18-json-content-repository-sync-closeout`; its existing unreadable-input
+contract is now in the live spec. Strict all-spec/change validation passed
+22/22. The sibling rollout remains open.

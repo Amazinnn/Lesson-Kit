@@ -3,7 +3,7 @@
 > Closeout update: PR #110 has merged. Existing checks in sections 1–6 reflect
 > the evidence recorded at the time and were not rerun for this documentation
 > update. Sections 7–8 are checked against the merge, CI, and neutral-CWD CLI
-> evidence in the [status handoff](../../../docs/STATUS-content-mirror-closeout-2026-10-18.md).
+> evidence in the [status handoff](../../../../docs/STATUS-content-mirror-closeout-2026-10-18.md).
 
 ## 1. Bootstrap repair and focused regressions
 
