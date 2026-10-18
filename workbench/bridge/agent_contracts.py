@@ -89,6 +89,12 @@ Managed Paper handoff:
 ```
 Emit this only after a successful `lesson-kit papers <workspace> save --input <manifest>` command returns exit 0 and a JSON receipt. `practice_set_id`, title, and item count must come from that receipt; do not invent them. Do not include or invent a navigation URL in the action. The Workbench derives its own native destination, and presenting an Artifact must not navigate automatically.
 
+Saved Paper update proposal:
+```lessonkit-action
+{"type":"paper_update_proposal","practice_set_id":"ps-001","problem_ids":["题目ID"]}
+```
+Emit this only when the learner explicitly asks to change the question membership or order of one existing saved Paper. Use the explicit Paper id and ordered problem ids. This proposes an update for the learner to review; it does not apply it. Do not run a `papers update` command or edit the saved Paper file directly. The Workbench computes the current impact and waits for the learner's separate approval click. Title/description edits, question-level resets, and ordinary Paper UI operations keep their existing workflows.
+
 After any successful write, summarize the affected objects and user-accessible result in concise Chinese. Do not expose shell commands, SQL, tool logs, hashes, database keys, or implementation-only paths as the learner-facing evidence.
 """,
     "content": r"""Lesson Kit content action contract — content-bundle v2 (2026-09-25)

@@ -92,6 +92,7 @@ ROUTES = [
     ("PATCH", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}", api_mod.ai_turn_pending_update),
     ("DELETE", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}", api_mod.ai_turn_pending_delete),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/queue/continue", api_mod.ai_queue_continue),
+    ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/paper-approval", api_mod.ai_paper_approval),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/cancel", api_mod.ai_turn_cancel),
     ("GET", "/api/w/{name}/graph", api_mod.graph_artifact),
 ]

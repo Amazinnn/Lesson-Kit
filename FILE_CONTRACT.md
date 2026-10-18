@@ -500,6 +500,39 @@ Runtime assets follow the hidden dot-directory convention and live under
 - Session reads expose pending messages, their revisions, and queue state, but
   not captured context. `POST .../queue/continue` returns
   `{conversation_id, queue_paused, turn}`; `turn` may be null for a handoff.
+- An Agent may propose a membership/order change to one existing saved Paper in
+  a `paper_update_proposal` action containing only `practice_set_id` and ordered
+  `problem_ids`. The bridge resolves the Paper in the selected workspace and
+  stores the proposal and Data preview snapshot in that proposing turn's
+  `paper_approval` artifact. This artifact binds `workspace_name`,
+  `conversation_id`, `turn_id`, Paper id, and an approval `revision`; its
+  `confirmation` is the private `practice_sets.preview_update` snapshot used by
+  the existing writer. No Paper update occurs when the proposal is emitted.
+- Session GET exposes `pending_paper_approval` (the current public projection,
+  or null). The proposing assistant message keeps an `action` envelope with
+  `type: paper_update_proposal`, the proposal fields, and its current
+  `paper_approval` projection. The projection includes the current and proposed
+  ordered question ids, additions/removals, order and reset flags, and
+  preview-derived completed-item and draft counts; it does not expose the
+  private confirmation snapshot.
+- `POST .../paper-approval` accepts
+  `{turn_id, expected_revision, decision}` where decision is `approve` or
+  `cancel`. It returns
+  `{conversation_id, turn_id, approval, queue_paused, stale}`. Approve
+  revalidates the stored Data snapshot before delegating to
+  `practice_sets.update_saved`; cancel changes only the approval artifact.
+  When the Paper/progress snapshot changed, the response has `stale: true`, a
+  refreshed pending projection, and a new revision; it performs no Paper write
+  and requires another click with that revision. A resolved same-decision
+  retry returns the stored result without running the writer again. Invalid or
+  unavailable proposals resolve as `invalid` and never recreate a Paper.
+- A pending approval pauses its conversation before the proposing turn hands
+  off to queued work. It blocks queued and interrupt dispatch and manual queue
+  continuation. New messages remain queued. Approval or cancellation leaves
+  the backlog paused for explicit manual continuation. Reload/recovery restores
+  the pending projection and pause from the existing conversation/turn files;
+  no new approval database or event kind is introduced. Other conversations
+  are independent. Existing manual Paper CLI and UI workflows remain unchanged.
 - Practice draft answer, note, choices, and visible images enter that turn
   snapshot only when the request opts in with `include_draft`; the bridge bounds
   them. They are not Pool learning records, are not copied to the successful

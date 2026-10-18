@@ -919,6 +919,31 @@ def ai_queue_continue(pool, workspace, params, body):
         raise ApiError(409, str(exc)) from exc
 
 
+def ai_paper_approval(pool, workspace, params, body):
+    body = _request_object(body)
+    if set(body) != {"turn_id", "expected_revision", "decision"}:
+        raise ApiError(400, "turn_id, expected_revision, and decision are required")
+    revision = body.get("expected_revision")
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision < 1:
+        raise ApiError(400, "expected_revision must be a positive integer")
+    decision = body.get("decision")
+    if not isinstance(decision, str) or decision not in {"approve", "cancel"}:
+        raise ApiError(400, "decision must be approve or cancel")
+    try:
+        return conversations.resolve_paper_approval(
+            pool, workspace, params["conversation_id"], body.get("turn_id"),
+            expected_revision=revision, decision=decision,
+        )
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except FileNotFoundError as exc:
+        raise ApiError(404, "conversation or approval turn was not found") from exc
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
 def graph_artifact(pool, workspace, params, body):
     """Serve the rendered graph HTML, or 404 with a generation hint."""
     course = workspace.get("active_course", "")
