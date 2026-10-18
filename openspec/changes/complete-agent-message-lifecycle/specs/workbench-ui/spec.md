@@ -55,8 +55,40 @@ Activity progress surfaces, Float collapse/reopen behavior, idle cleanup, and Bo
 ## ADDED Requirements
 
 ### Requirement: Existing approval controls remain truthful and scoped
-Existing governed Paper-reset and rollback confirmations SHALL show their exact impact and remain bound to the intended workspace/conversation/message/revision; cancellation or stale approval SHALL perform no write. This change adds no new approval gate.
+Governed Paper-reset and rollback confirmations SHALL show their exact impact and remain bound to the intended workspace/conversation/message/revision; cancellation or stale approval SHALL perform no write. Paper approval SHALL identify the existing Paper, proposed item membership/order change, and affected unfinished completion/draft counts from the existing backend preview. The Agent SHALL propose rather than apply this Paper update; a learner click SHALL cause the page to request the existing validated update. A preview snapshot or chat reply alone SHALL NOT constitute that click. This change adds no generic approval gate to ordinary tools.
+
+Paper approval SHALL coexist with the ordinary composer. New messages SHALL be retained in the paused queue with their submission-time contexts; neither sending nor choosing interrupt SHALL bypass the pending approval. Pending approval SHALL prevent queue continuation. Approval or cancellation SHALL leave the queue paused until the learner explicitly continues it. Existing rollback SHALL retain its composer-replacement interaction.
+
+If the Paper or progress snapshot changed before approval, the UI SHALL perform no update, display a refreshed impact for the same proposed update and require a new approval click without requiring another Agent turn. Reload/reopen SHALL restore the pending approval and paused queue without automatic writes or provider execution. Missing/invalid targets SHALL produce actionable feedback without creating a replacement Paper. Duplicate approval attempts SHALL NOT reset progress twice.
 
 #### Scenario: Cancel an existing Paper reset approval
 - **WHEN** the learner cancels a governed Paper-reset approval or switches conversations before deciding
 - **THEN** no Paper write occurs and the existing approval callback cannot act on the new conversation
+
+#### Scenario: Approve the displayed Paper update
+- **WHEN** the learner approves the current displayed Paper impact
+- **THEN** the page requests the exact proposed update with its current confirmation; Paper ID, questions, historical attempts/ratings and other Papers remain unchanged, while only the target Paper's affected unfinished progress/drafts reset
+
+#### Scenario: Continue composing while approval is pending
+- **WHEN** B/C are already queued and the learner sends another message while a Paper update awaits approval
+- **THEN** the composer stays usable and the new message joins the paused queue; no queued provider runs and Continue cannot bypass the approval
+
+#### Scenario: Resolve approval before continuing the queue
+- **WHEN** the learner approves or cancels the pending Paper update
+- **THEN** the queue remains paused and requires explicit continuation, regardless of whether the update was approved or cancelled
+
+#### Scenario: Practice advances before approval
+- **WHEN** the learner answers more questions or the Paper changes before the approval request is validated
+- **THEN** no update/reset occurs from the old confirmation, the latest impact is displayed for another click, and no additional Agent request is required
+
+#### Scenario: Restore a pending Paper approval
+- **WHEN** the learner reloads or reopens the owning conversation after a Paper approval was persisted
+- **THEN** the pending decision and paused queue reappear, with no automatic update or provider launch and with impact revalidation before execution
+
+#### Scenario: Navigate or switch conversations during approval
+- **WHEN** middle navigation or a conversation switch occurs while approval is pending
+- **THEN** middle navigation preserves the decision; switching conversations makes old callbacks inert, and any restored approval remains bound to its original workspace/conversation/turn/Paper/revision
+
+#### Scenario: Repeat an approval request
+- **WHEN** an approval is double-clicked or its response is lost and the decision is submitted again
+- **THEN** the operation is not executed a second time and the UI does not claim a second reset
