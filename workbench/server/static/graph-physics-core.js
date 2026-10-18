@@ -764,6 +764,162 @@
     });
   }
 
+  /* -------------------------------------------------------- Barnes-Hut --- */
+  /* Obsidian 1.14.4 的电荷律（wasm visitCharge）：远场按 quad 质心折叠成点电荷，
+   *   判据 d2 >= size2 / theta²，theta = 0.9；
+   *   近场（d < sqrt(30)）用 distanceMin2 做软下限，避免 d -> 0 时力发散。
+   * 实测口径（tools/charge-probe.js）：d >= 121 时与解析式 strength/d² 比值 1.0000。
+   * 这里只取远场解析式——近场另有 readabilityFloor 与 congestion 兜底，
+   * 官方那段近场增益来自其四叉树内部聚合路径，不是可推导的力律。
+   * S 标定：BH 的 |Δv| = S/d（Δ 是向量，故除 d² 后仍带一个 d），旧式的 |Δv| = 11200/d²,
+   * 两者在 d = 224（实测典型点距）处相等 → S = 11200/224 = 50。
+   * 实测（tools/calibrate-bh-strength.js，dmath 31 点）：S=50 给出平均边长 497、
+   * bbox 1099×837、各向异性 1.49、103 tick 收敛，与旧式的 494 / 1045×842 / 1.46 / 103
+   * 逐项吻合，故这一步是纯实现替换：O(n²) → O(n log n)，观感不变。
+   * 想真正采用 Obsidian 的量级（其 UI 默认 repel = 10³）需要先把舞台从"约束"
+   * 降级为"结算后外接框"，否则自由力场会被边界钳制顶在墙上。 */
+  var BH_THETA = .9;
+  var BH_DISTANCE_MIN2 = 30;
+  var BH_STRENGTH = 50;
+
+  function bhBuild(nodes) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    var i, n;
+    for (i = 0; i < nodes.length; i += 1) {
+      n = nodes[i];
+      if (n.x < x0) x0 = n.x;
+      if (n.x > x1) x1 = n.x;
+      if (n.y < y0) y0 = n.y;
+      if (n.y > y1) y1 = n.y;
+    }
+    var root = {
+      x0: x0, y0: y0, x1: x1, y1: y1,
+      leaf: null, bucket: null, kids: null,
+      cx: 0, cy: 0, value: 0,
+    };
+    if (!nodes.length) return root;
+
+    function makeChild(px0, py0, px1, py1, fig) {
+      var mx = (px0 + px1) / 2, my = (py0 + py1) / 2;
+      var c = { leaf: null, bucket: null, kids: null, cx: 0, cy: 0, value: 0 };
+      if (fig === 0) { c.x0 = px0; c.y0 = py0; c.x1 = mx; c.y1 = my; }
+      else if (fig === 1) { c.x0 = mx; c.y0 = py0; c.x1 = px1; c.y1 = my; }
+      else if (fig === 2) { c.x0 = px0; c.y0 = my; c.x1 = mx; c.y1 = py1; }
+      else { c.x0 = mx; c.y0 = my; c.x1 = px1; c.y1 = py1; }
+      return c;
+    }
+
+    for (i = 0; i < nodes.length; i += 1) {
+      n = nodes[i];
+      var node = root;
+      var px0 = root.x0, py0 = root.y0, px1 = root.x1, py1 = root.y1;
+      for (;;) {
+        var mx = (px0 + px1) / 2, my = (py0 + py1) / 2;
+        var ax = n.x >= mx ? 1 : 0, ay = n.y >= my ? 1 : 0;
+        var fig = (ax << 1) | ay;
+        if (node.leaf || node.bucket) {
+          var other = node.leaf || node.bucket[0];
+          if (n.x === other.x && n.y === other.y) {
+            // 完全重合：顺链挂同一格，避免无限下钻
+            if (node.leaf) { node.bucket = [node.leaf, n]; node.leaf = null; }
+            else node.bucket.push(n);
+            break;
+          }
+          node.kids = [null, null, null, null];
+          var prev = node.leaf ? [node.leaf] : node.bucket.slice();
+          node.leaf = null; node.bucket = null;
+          for (var p = 0; p < prev.length; p += 1) {
+            var q = prev[p];
+            var pmx = (px0 + px1) / 2, pmy = (py0 + py1) / 2;
+            var pf = ((q.x >= pmx ? 1 : 0) << 1) | (q.y >= pmy ? 1 : 0);
+            var child = makeChild(px0, py0, px1, py1, pf);
+            child.leaf = q;
+            node.kids[pf] = child;
+          }
+        }
+        if (!node.kids) { node.leaf = n; break; }
+        if (!node.kids[fig]) node.kids[fig] = makeChild(px0, py0, px1, py1, fig);
+        node = node.kids[fig];
+        if (ax) px0 = mx; else px1 = mx;
+        if (ay) py0 = my; else py1 = my;
+      }
+    }
+
+    // 自底向上汇总质心与电荷和；包围盒取子节点并集（叶子收紧到点）。
+    // 少了收紧这一步，远场判据会误判，斥力被系统性放大。
+    (function accumulate(node) {
+      var x0i = Infinity, y0i = Infinity, x1i = -Infinity, y1i = -Infinity;
+      if (node.leaf || node.bucket) {
+        var list = node.bucket || [node.leaf];
+        var v = 0, cx = 0, cy = 0;
+        for (var k = 0; k < list.length; k += 1) {
+          var e = list[k];
+          v += 1; cx += e.x; cy += e.y;
+          if (e.x < x0i) x0i = e.x;
+          if (e.x > x1i) x1i = e.x;
+          if (e.y < y0i) y0i = e.y;
+          if (e.y > y1i) y1i = e.y;
+        }
+        node.value = v; node.cx = cx / v; node.cy = cy / v;
+        node.x0 = x0i; node.y0 = y0i; node.x1 = x1i; node.y1 = y1i;
+        return;
+      }
+      var vv = 0, ccx = 0, ccy = 0;
+      for (var j = 0; j < 4; j += 1) {
+        var kid = node.kids[j];
+        if (!kid) continue;
+        accumulate(kid);
+        vv += kid.value;
+        ccx += kid.cx * kid.value;
+        ccy += kid.cy * kid.value;
+        if (kid.x0 < x0i) x0i = kid.x0;
+        if (kid.y0 < y0i) y0i = kid.y0;
+        if (kid.x1 > x1i) x1i = kid.x1;
+        if (kid.y1 > y1i) y1i = kid.y1;
+      }
+      node.value = vv;
+      node.x0 = x0i; node.y0 = y0i; node.x1 = x1i; node.y1 = y1i;
+      if (vv) { node.cx = ccx / vv; node.cy = ccy / vv; }
+    })(root);
+    return root;
+  }
+
+  function bhApply(root, node, strength) {
+    var theta2 = BH_THETA * BH_THETA;
+    (function walk(tree) {
+      if (!tree.value) return;
+      if (tree.leaf || tree.bucket) {
+        var list = tree.bucket || [tree.leaf];
+        for (var k = 0; k < list.length; k += 1) {
+          var o = list[k];
+          if (o === node) continue;
+          var ddx = o.x - node.x, ddy = o.y - node.y;
+          var dd2 = ddx * ddx + ddy * ddy;
+          if (dd2 === 0) continue;
+          if (ddx === 0) ddx = 1e-6;
+          if (ddy === 0) ddy = 1e-6;
+          var denom = dd2 < BH_DISTANCE_MIN2 ? Math.sqrt(dd2 * BH_DISTANCE_MIN2) : dd2;
+          var kk = strength / denom;
+          node.vx += ddx * kk;
+          node.vy += ddy * kk;
+        }
+        return;
+      }
+      var dx = tree.cx - node.x, dy = tree.cy - node.y;
+      var d2 = dx * dx + dy * dy;
+      var span = Math.max(tree.x1 - tree.x0, tree.y1 - tree.y0);
+      if (d2 * theta2 >= span * span) {
+        if (d2 === 0) return;
+        var den = d2 < BH_DISTANCE_MIN2 ? Math.sqrt(d2 * BH_DISTANCE_MIN2) : d2;
+        var gain = (strength * tree.value) / den;
+        node.vx += dx * gain;
+        node.vy += dy * gain;
+        return;
+      }
+      for (var j = 0; j < 4; j += 1) if (tree.kids[j]) walk(tree.kids[j]);
+    })(root);
+  }
+
   function enforceHierarchyBands(state, active) {
     if (state.graph.view !== "structure") return;
     var band = 42 + 8 * layoutSpread(state);
@@ -809,26 +965,16 @@
       if (movable(state, b)) { b.vx -= f * ux; b.vy -= f * uy; }
     });
 
-    // Density-aware repulsion: crowded hubs automatically get more personal
-    // space. The user does not need to tune another slider for this.
-    for (var i = 0; i < active.length; i += 1) {
-      for (var j = i + 1; j < active.length; j += 1) {
-        var a = active[i];
-        var b = active[j];
-        var dx = b.x - a.x;
-        var dy = b.y - a.y;
-        var dist = Math.max(1, dist2d(dx, dy));
-        var ux = dx / dist;
-        var uy = dy / dist;
-        var densityBoost = 1 + Math.min(1.8, ((densityMap.get(a.id) || 0) + (densityMap.get(b.id) || 0)) * .10);
-        var floor = readabilityFloor(state, a, b, ux, uy, densityMap);
-        var nearBoost = dist < floor * 1.45 ? 1.8 : 1;
-        var rep = Math.min(1.18, 11200 / (dist * dist)) * densityBoost * nearBoost
-          * (.74 + .20 * layoutSpread(state)) * alpha;
-        if (movable(state, a)) { a.vx -= rep * ux; a.vy -= rep * uy; }
-        if (movable(state, b)) { b.vx += rep * ux; b.vy += rep * uy; }
-      }
-    }
+    // Charge becomes Barnes-Hut (Obsidian's visitCharge): one quadtree per tick,
+    // distant subtrees fold into a single point charge. Same far-field magnitude
+    // as the old min(1.18, 11200/d^2) — it was already 11200/d^2 above d = 97 —
+    // but the hard cap that made the near field non-physical is gone, and the
+    // cost drops from every pair to n log n.
+    var chargeTree = bhBuild(active);
+    var chargeStrength = -BH_STRENGTH * alpha * (.74 + .20 * layoutSpread(state));
+    active.forEach(function (n) {
+      if (movable(state, n)) bhApply(chargeTree, n, chargeStrength);
+    });
 
     // A big pool keeps every hard constraint on every tick, but the purely
     // cosmetic spacing passes run on a rota: their frames average out and the
