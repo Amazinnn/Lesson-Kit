@@ -1412,12 +1412,18 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
         _append_event(event_path, "error", text=f"provider launch failed: {exc}")
         _finish(folder, conversation_id, turn_id, "failed", f"provider launch failed: {exc}")
         return
+
+    def close_unaccepted_process():
+        PI_RPC.discard(str(folder), process)
+        process.close()
+
     with _LOCK:
         _PROCESSES[key] = process
         cancelled_before_prompt = key in _CANCEL_REQUESTS
-        if cancelled_before_prompt:
-            _PROCESSES.pop(key, None)
     if cancelled_before_prompt:
+        close_unaccepted_process()
+        with _LOCK:
+            _PROCESSES.pop(key, None)
         _append_event(event_path, "activity", activity_id="provider-turn",
                       activity_type="progress", status="failed", label="鏈疆宸插仠姝?")
         _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
@@ -1442,8 +1448,7 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
                     prompt_request = process.begin_prompt(_prompt(message, context))
                     cancelled_before_prompt = False
             if cancelled_before_prompt:
-                with _LOCK:
-                    _PROCESSES.pop(key, None)
+                close_unaccepted_process()
                 _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
                 return
             process.wait_prompt(prompt_request)
@@ -1451,9 +1456,10 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
         except pi_rpc.PiRpcRejected as exc:
             with _LOCK:
                 cancelled_before_prompt = key in _CANCEL_REQUESTS
-                if cancelled_before_prompt:
-                    _PROCESSES.pop(key, None)
             if cancelled_before_prompt:
+                # A rejected wait can mean that prompt acceptance timed out.
+                # The abort request alone does not prove the provider stopped.
+                close_unaccepted_process()
                 _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
                 return
             # Rejected before acceptance: nothing ran, so one clean restart is safe.
@@ -1467,13 +1473,13 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
                 with _LOCK:
                     _PROCESSES[key] = process
                     if key in _CANCEL_REQUESTS:
-                        _PROCESSES.pop(key, None)
                         cancelled_before_prompt = True
                         prompt_request = None
                     else:
                         prompt_request = process.begin_prompt(_prompt(message, context))
                         cancelled_before_prompt = False
                 if cancelled_before_prompt:
+                    close_unaccepted_process()
                     _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
                     return
                 process.wait_prompt(prompt_request)
@@ -1481,9 +1487,8 @@ def _run_rpc_turn(root, folder, workspace, conversation, conversation_path,
             except (pi_rpc.PiRpcError, OSError) as retry_exc:
                 with _LOCK:
                     cancelled_before_prompt = key in _CANCEL_REQUESTS
-                    if cancelled_before_prompt:
-                        _PROCESSES.pop(key, None)
                 if cancelled_before_prompt:
+                    close_unaccepted_process()
                     _finish(folder, conversation_id, turn_id, "cancelled", "cancelled")
                     return
                 _append_event(event_path, "error", text=f"provider launch failed: {retry_exc}")

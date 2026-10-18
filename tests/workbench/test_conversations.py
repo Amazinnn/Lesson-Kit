@@ -968,6 +968,96 @@ class ConversationTests(unittest.TestCase):
                 release_stream.set()
 
     @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_pi_no_prompt_ack_keeps_priority_turn_waiting_until_process_close(
+        self, get_provider,
+    ):
+        from workbench.bridge import conversations, pi_rpc
+
+        get_provider.return_value = {"name": "pi", "timeout_s": 2, "tool_timeout_s": 2}
+        prompt_waiting = threading.Event()
+        release_prompt = threading.Event()
+        abort_sent = threading.Event()
+        close_started = threading.Event()
+        release_close = threading.Event()
+        close_finished = threading.Event()
+        priority_launch_started = threading.Event()
+
+        class NoAckPiProcess(pi_rpc.PiRpcProcess):
+            def __init__(self, is_original):
+                self.is_original = is_original
+
+            def begin_prompt(self, _message):
+                return "prompt-id"
+
+            def wait_prompt(self, _request_id):
+                if self.is_original:
+                    prompt_waiting.set()
+                    release_prompt.wait(3)
+                    raise pi_rpc.PiRpcRejected("prompt acknowledgement timed out")
+
+            def abort(self):
+                abort_sent.set()
+                return True
+
+            def close(self):
+                if self.is_original:
+                    close_started.set()
+                    release_close.wait(3)
+                    close_finished.set()
+
+            def stream(self, *_args):
+                return iter(())
+
+        processes = [NoAckPiProcess(True), NoAckPiProcess(False)]
+        launch_count = 0
+        launch_lock = threading.Lock()
+
+        def launch(*_args):
+            nonlocal launch_count
+            with launch_lock:
+                launch_count += 1
+                if launch_count > 1:
+                    priority_launch_started.set()
+                return processes[launch_count - 1]
+
+        with mock.patch.object(conversations.PI_RPC, "launch_with_retry", side_effect=launch), \
+                mock.patch.object(conversations.PI_RPC, "discard"):
+            conversation = conversations.create(self.pool, "pi")
+            conversation_id = conversation["conversation_id"]
+            original = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "A", {},
+            )
+            self.assertTrue(prompt_waiting.wait(2))
+            priority = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "D", {},
+                queue_action="interrupt",
+            )
+            self.assertEqual(priority["status"], "waiting_for_stop")
+            self.assertTrue(abort_sent.wait(1))
+
+            release_prompt.set()
+            self.assertTrue(close_started.wait(2))
+            self.assertFalse(priority_launch_started.wait(0.1))
+            self.assertEqual(
+                conversations.get_turn(self.pool, conversation_id, original["turn_id"])["status"],
+                "running",
+            )
+            self.assertEqual(
+                conversations.get_turn(self.pool, conversation_id, priority["turn_id"])["status"],
+                "waiting_for_stop",
+            )
+
+            release_close.set()
+            self.assertEqual(
+                self.wait_turn(conversation_id, original["turn_id"])["status"],
+                "cancelled",
+            )
+            self.wait_turn(conversation_id, priority["turn_id"])
+
+        self.assertTrue(close_finished.is_set())
+        self.assertTrue(priority_launch_started.is_set())
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
     def test_edited_failed_message_retry_keeps_original_context_and_new_routing(self, get_provider):
         from workbench.bridge import conversation_providers, conversations
 
