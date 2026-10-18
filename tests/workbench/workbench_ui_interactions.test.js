@@ -2297,7 +2297,11 @@ test("the edge budget keeps each point's strongest relation and drops the rest",
     fetch: () => jsonResponse({ nodes, edges }),
   });
   await flush();
-  await settleGraph(200);
+  // The solver settles in about 300 ticks now — Obsidian's cooldown reaches
+  // alpha = 0.001 at 1 - 0.001^(1/300) per tick, and it is that cooldown that
+  // decides the tick count, not the old .962. 200 turns was enough for the old
+  // cadence and left this assertion reading a layout that had not settled yet.
+  await settleGraph(600);
   const stage = canvas.children[0];
   const layer = stage.children.find((child) => child.id === "graph-edges") || stage;
   const paths = layer.children.filter((child) => (child.attributes.class || "").includes("graph-edge"));

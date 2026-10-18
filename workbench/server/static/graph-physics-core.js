@@ -780,10 +780,15 @@
    * 降级为"结算后外接框"，否则自由力场会被边界钳制顶在墙上。 */
   var BH_THETA = .9;
   var BH_DISTANCE_MIN2 = 30;
-  // Calibrated against VELOCITY_DECAY: the terminal speed is force/(1 - decay), so
-  // changing the damping from .81 to .6 halves it, and the strength has to follow
-  // or the whole graph contracts. See tools/calibrate-bh-strength.js.
-  var BH_STRENGTH = 60;
+  // Obsidian's own numbers are linkDistance 250, repelStrength -1000, collideRadius
+  // 60 — all three in one pixel scale, the one its graph actually settles at. Our
+  // points rest about 500 apart, k = 2 of that, and the charge has to follow the
+  // scale it is balancing against. A relation's strength sets linkDistance per edge,
+  // so the scale is also per edge; BH_STRENGTH is the value that holds for the
+  // dmath spread and is re-tuned with tools/calibrate-bh-strength.js.
+  var BH_STRENGTH = 4000;
+  // d3 forceLink's linkStrength. Obsidian ships 1.
+  var LINK_STRENGTH = 1;
   // Obsidian's cooldown: alpha += (alphaTarget - alpha) * (1 - 0.001^(1/300)).
   // Its alphaTarget is 0 and so is ours, so this is the same shape the old
   // alpha *= .962 already had — only the rate differs, and the slower one is better
@@ -801,6 +806,9 @@
     var i, n;
     for (i = 0; i < nodes.length; i += 1) {
       n = nodes[i];
+      // Collide takes each pair once, from the lower index, so both sides agree on
+      // which of them owns the pair and the impulse is applied exactly once.
+      n.__idx = i;
       if (n.x < x0) x0 = n.x;
       if (n.x > x1) x1 = n.x;
       if (n.y < y0) y0 = n.y;
@@ -934,6 +942,47 @@
     })(root);
   }
 
+  var BH_COLLIDE_R = 60;
+  var BH_COLLIDE_DV = .25;
+
+  /* Collide, Obsidian's. Walks the same tree the charge uses: a subtree can be
+   * skipped when its centre is further than 2R plus the subtree's own span, which
+   * only prunes pairs that provably cannot touch. dv = 0.25 * (120 - d) — no
+   * division by d, so a fully overlapping pair gets a finite 30 instead of an
+   * unbounded kick, and no alpha term, so colliding does not fade as the solve
+   * cools. Each pair is taken once, from the lower index. */
+  function bhCollide(root, node) {
+    var twoR = BH_COLLIDE_R * BH_COLLIDE_R ? BH_COLLIDE_R + BH_COLLIDE_R : 0;
+    var twoR2 = twoR * twoR;
+    var cx = node.x + node.vx, cy = node.y + node.vy;
+    (function walk(tree) {
+      if (!tree.value) return;
+      if (tree.leaf || tree.bucket) {
+        var list = tree.bucket || [tree.leaf];
+        for (var k = 0; k < list.length; k += 1) {
+          var o = list[k];
+          if (o === node) continue;
+          if (o.__idx <= node.__idx) continue;
+          var dx = (o.x + o.vx) - cx, dy = (o.y + o.vy) - cy;
+          var d2 = dx * dx + dy * dy;
+          if (!(d2 < twoR2)) continue;
+          var d = Math.sqrt(d2) || 1e-6;
+          var ux = dx / d, uy = dy / d;
+          var dv = BH_COLLIDE_DV * (twoR - d);
+          node.vx -= ux * dv;
+          node.vy -= uy * dv;
+          o.vx += ux * dv;
+          o.vy += uy * dv;
+        }
+        return;
+      }
+      var mx = tree.cx - cx, my = tree.cy - cy;
+      var span = Math.max(tree.x1 - tree.x0, tree.y1 - tree.y0);
+      if (Math.sqrt(mx * mx + my * my) - span > twoR) return;
+      for (var j = 0; j < 4; j += 1) if (tree.kids[j]) walk(tree.kids[j]);
+    })(root);
+  }
+
   /* A flat enough graph has no hierarchy to seed from, so its seat is the guide
    * grid itself. A contracted seat was tried and does not work here: the guide grid
    * already sits on the readability floor, so any spatial contraction creates
@@ -970,29 +1019,31 @@
     graph.solveStep += 1;
     if (graph.solveStep % 12 === 1 && alpha > .14) recomputeLayoutGuides(state);
 
-    // Relation strength asks for a distance; it can never pull beneath the
-    // direction-aware readability floor.
+    // d3 forceLink, the form Obsidian runs. Four things it does that the previous
+    // spring did not:
+    //   · no dead zone — every link pulls every tick, so a resting layout is still
+    //     being held rather than drifting until the gap passes a threshold
+    //   · the error is relative, divided by the current distance, so what is applied
+    //     is |d - linkDistance| * alpha * linkStrength / min(count)
+    //   · k is divided by min(count) of the two ends, so a hub cannot yank a leaf
+    //   · the split follows count_s / (count_s + count_t) instead of an even half
+    // It also reads positions as (pos + vel), so the force acts on where the node is
+    // going rather than where it is, which is what removes the last-frame overshoot.
+    // linkDistance stays lesson-kit's own: a relation's strength asks for a distance,
+    // and Obsidian has no equivalent of that. The law around it is now d3's.
     activeEdges.forEach(function (edge) {
       var a = state.byId.get(edge.s);
       var b = state.byId.get(edge.t);
-      var dx = b.x - a.x;
-      var dy = b.y - a.y;
-      var dist = Math.max(1, dist2d(dx, dy));
-      var ux = dx / dist;
-      var uy = dy / dist;
-      var desired = desiredEdgeLength(state, edge, densityMap);
-      var error = dist - desired;
-      var dead = 16 + desired * .03;
-      if (Math.abs(error) <= dead) return;
-      var da = Math.max(1, state.degreeCount.get(a.id) || 1);
-      var db = Math.max(1, state.degreeCount.get(b.id) || 1);
-      var hubNorm = Math.min(1, 1.66 / Math.sqrt(da * db));
-      var strength = .70 + .46 * strength01(edge.strength);
-      var magnitude = Math.min(1.45, Math.max(0, (Math.abs(error) - dead) / Math.max(96, desired) * 1.42))
-        * hubNorm * (TYPE_WEIGHT[edge.type] || .58) * strength * alpha;
-      var f = Math.sign(error) * magnitude;
-      if (movable(state, a)) { a.vx += f * ux; a.vy += f * uy; }
-      if (movable(state, b)) { b.vx -= f * ux; b.vy -= f * uy; }
+      var countA = Math.max(1, state.degreeCount.get(a.id) || 1);
+      var countB = Math.max(1, state.degreeCount.get(b.id) || 1);
+      var k = alpha * LINK_STRENGTH / Math.min(countA, countB);
+      var dx = (b.x + b.vx) - (a.x + a.vx);
+      var dy = (b.y + b.vy) - (a.y + a.vy);
+      var d = Math.max(1, dist2d(dx, dy));
+      var f = (d - desiredEdgeLength(state, edge, densityMap)) / d * k;
+      var w = countA / (countA + countB);
+      if (movable(state, b)) { b.vx -= dx * f * w; b.vy -= dy * f * w; }
+      if (movable(state, a)) { a.vx += dx * f * (1 - w); a.vy += dy * f * (1 - w); }
     });
 
     // Charge becomes Barnes-Hut (Obsidian's visitCharge): one quadtree per tick,
@@ -1004,6 +1055,15 @@
     var chargeStrength = -BH_STRENGTH * alpha * (.74 + .20 * layoutSpread(state));
     active.forEach(function (n) {
       if (movable(state, n)) bhApply(chargeTree, n, chargeStrength);
+    });
+
+    // Collide, Obsidian's: dv = 0.25 * (120 - d), alpha-independent, and not divided
+    // by d, so a fully overlapping pair gets 30 rather than an unbounded kick. It is
+    // the only thing keeping nodes apart now — there is no readability floor pushing
+    // them and no congestion resolver shoving them, and Obsidian's graph does let
+    // labels overlap rather than pay for legibility with a hard constraint.
+    active.forEach(function (n) {
+      if (movable(state, n)) bhCollide(chargeTree, n);
     });
 
     // A big pool keeps every hard constraint on every tick, but the purely
@@ -1029,8 +1089,12 @@
         var gx = n.guideX === undefined || n.guideX === null ? n.x : n.guideX;
         var gy = n.guideY === undefined || n.guideY === null ? n.y : n.guideY;
         if (graph.view === "structure") {
-          n.vx += (gx - n.x) * .016 * alpha;
-          n.vy += (gy - n.y) * .072 * alpha;
+          // No guide force. Obsidian's graph has no rows to sit in: the link springs
+          // set the extent (charge pushes out, springs pull in, equilibrium lands at
+          // a few times linkDistance) and the only positional anchor is the weak
+          // centring below, which exists to stop the whole graph translating, not to
+          // shape it. Pulling y onto a guide grid is what made every extra unit of
+          // charge widen the graph instead of spreading it.
         } else if (graph.view === "state") {
           n.vx += (gx - n.x) * .015 * alpha;
           n.vy += (gy - n.y) * .015 * alpha;
@@ -1052,17 +1116,19 @@
       n.y += n.vy;
     });
 
-    // Hierarchy is semantically strong, but readability wins conflicts.
-    enforceHierarchyBands(state, active);
-    var before = congestionStats(state, active, densityMap);
-    var after = before.pairs > 0 ? resolveCongestion(state, active, densityMap, 10) : before;
+    // Hierarchy bands and the congestion resolver are both gone. They were the two
+    // hard positional writers, and between them they were what made the layout a row
+    // grid no matter which force law ran underneath: the band pinned y to guideY
+    // +/- 49, and the resolver shoved pairs apart after every tick. Obsidian has
+    // neither. What holds the graph apart now is collide, and what holds it together
+    // is the link springs, so the layout is whatever those two settle on.
+    // The cost is real and is Obsidian's own: labels can overlap.
 
     // If the logical area is still under pressure, expand the layout footprint
     // and let Fit zoom out. Never respond by shrinking the readability floor.
-    if (graph.solveStep % 10 === 0) {
-      var pressure = before.pairs + after.pairs * 2 + Math.min(4, before.maxOverlap / 12);
+    if (false && graph.solveStep % 10 === 0) {
+      var pressure = 0;
       var target = 1;
-      if (pressure > 0) target = Math.min(1.50, 1 + .024 * pressure);
       graph.layoutInflation += (target - graph.layoutInflation) * (pressure > 0 ? .24 : .07);
       graph.layoutInflation = Math.max(1, Math.min(1.50, graph.layoutInflation));
       if (Math.abs(target - graph.layoutInflation) > .008) recomputeLayoutGuides(state);
@@ -1091,18 +1157,8 @@
     else graph.settleWatch = 0;
     if (graph.settleWatch > 120) graph.stableFrames = 15;
     if (graph.stableFrames > 14) {
-      // Final order matters: semantic band first, then the hard readability
-      // projection, and it has to be the last writer. A dense row can need a
-      // few passes (every pass can jostle the next pair), and the boundary
-      // clamp earlier in this tick may well have re-created a contact, so the
-      // cleanup repeats until the packing is actually clean.
-      enforceHierarchyBands(state, active);
-      var passes = 0;
-      var clean = congestionStats(state, active, densityMap);
-      while (clean.pairs > 0 && passes < 12) {
-        clean = resolveCongestion(state, active, densityMap, 14);
-        passes += 1;
-      }
+      // No cleanup projection. Obsidian ends on the forces alone: it stops when
+      // alpha runs out, and whatever the layout looks like then is the layout.
       graph.alpha = 0;
       active.forEach(function (n) { n.vx = 0; n.vy = 0; });
       graph.settled = true;
