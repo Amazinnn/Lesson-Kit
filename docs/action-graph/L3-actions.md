@@ -80,6 +80,9 @@ Paper 操作补充（2026-10-17）：人可从组卷页在未完成卷间切换�
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | 对话轮次（自动带页面上下文；接收前持久化用户消息与上下文；可选 `submission_id` 同内容幂等返回原轮次，变更内容冲突；失败/取消也保留用户消息、真实状态和实际部分回答；旧成功镜像只显示一次） | UI/CLI | 双 | conv turn artifacts + 成功 transcript | 已实现（preserve-agent-messages-and-tool-outcomes） |
+| 运行中发送（默认排队；单条可选排队或中断后发送，保留活动轮次与提交上下文） | Agent composer / `POST /turns` | 人 | 现有 turn artifacts；中断绑定捕获的活动轮次 | 已实现（queue-agent-messages-and-interrupt） |
+| 编辑/移除待处理消息并显式继续暂停队列 | Pending controls / `PATCH`·`DELETE /turns/{turn}` / `POST /queue/continue` | 人 | 现有 turn/conversation JSON；移除保留 cancelled 记录 | 已实现（queue-agent-messages-and-interrupt） |
+| 设置运行中发送默认动作 | 工作区浏览器设置 | 人 | `runningSendAction`；只影响后续提交 | 已实现（queue-agent-messages-and-interrupt） |
 | 恢复未确认或被拒绝的 Agent 消息（本地发送箱；核对时复用原提交标识/内容；不覆盖新草稿） | UI 对话流 | 人 | 浏览器 localStorage + 原 turn | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 显式重试已接收的失败轮次（新 turn 通过 `retry_of` 关联原消息；不自动重放） | UI 对话流 | 人 | 新 turn artifact | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 收起 Agent 辅助工作面（本轮记住收起状态） | Activity Float / Bottom Dock / Artifact Split 折叠控件 | 人 | 当前浏览器对话轮次内存状态 | 已定义未实现（PR135 已有展示基础；运行状态映射见 PR136） |
@@ -127,6 +130,7 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
 
 ## 变更留痕
 
+- 2026-10-18 Agent 消息队列与中断后发送（queue-agent-messages-and-interrupt）：运行中接受 FIFO 消息或显式中断；中断等待捕获轮次终态和 worker 清理，旧队列在失败、恢复及优先消息完成后保持暂停。待处理消息可按 revision 编辑/移除，并可显式继续。无 Pool 字段。
 - 2026-10-12 普通题上一题结果回看（practice-review）：登记只读回看入口、返回时保留当前草稿、Agent 焦点跟随可见题，以及不移动游标/不写尝试或反馈；闪卡上一张/下一张仍保留游标导航。
 - 2026-10-17 Paper 作答回看与自评编辑（revisit-paper-answers-and-edit-self-rating）：同一 Paper execution 内所有已提交/不会普通题可反复回看，参考答案默认收起；自评仅在再次保存时覆盖确切 Attempt 关联评分/评语，不追加记录、不重放学习影响。闪卡和无服务端执行身份的旧行为保留。
 - 2026-08-29 建图（v1 六域表）；同日 v2 分层化 + 新增权限列。

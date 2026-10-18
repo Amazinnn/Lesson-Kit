@@ -491,12 +491,15 @@ Runtime assets follow the hidden dot-directory convention and live under
   `queue_paused`; missing on older conversations means false. Failures,
   unexpected interruption, service recovery, and a completed interrupt turn
   leave retained work paused until an explicit queue continuation.
-- The turn API accepts optional `queue_action` (`queue` by default or
-  `interrupt`). Pending edits use `PATCH .../turns/{turn_id}` with
-  `expected_revision`; pending removal uses `DELETE` on the same path with
-  `expected_revision` and retains a cancelled history entry. Explicit
-  continuation uses `POST .../queue/continue`. Stale or already-running
-  mutations conflict without changing the turn.
+- `POST .../turns` accepts optional `queue_action` (`queue` by default or
+  `interrupt`) and returns the accepted turn fields at the top level. Pending
+  edits use `PATCH .../turns/{turn_id}` with `expected_revision`; pending
+  removal uses `DELETE` on the same path with `expected_revision` and retains a
+  cancelled history entry. Stale or already-running mutations conflict without
+  changing the turn.
+- Session reads expose pending messages, their revisions, and queue state, but
+  not captured context. `POST .../queue/continue` returns
+  `{conversation_id, queue_paused, turn}`; `turn` may be null for a handoff.
 - Practice draft answer, note, choices, and visible images enter that turn
   snapshot only when the request opts in with `include_draft`; the bridge bounds
   them. They are not Pool learning records, are not copied to the successful

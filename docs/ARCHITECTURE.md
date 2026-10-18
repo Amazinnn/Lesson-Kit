@@ -132,7 +132,7 @@ workbench/
 - 内容批次：一次门禁 apply 一份清单、一次预检、一份可恢复备份；清单可跨章，按每一项声明的章发号与落图（`figures/{course}/{chapter}/`），并**按章各记一个批次**，因此 rollback 的粒度是「一章」而不是「一次导入」。
 - 运行时布局：`.lessonkit/figures/{course}/{chapter}/{owner_id}-fig-{NNN}.png`（跟踪；`{course}`
   是「课程标识符」而不是工作区名）、
-  `.lessonkit/jobs/conv-###/`（provider 会话指针、运行事件与成功问答镜像，gitignored）、
+  `.lessonkit/jobs/conv-###/`（provider 会话指针、带队列状态的会话/轮次 JSON、运行事件与成功问答镜像，gitignored）、
   `.lessonkit/plan.json` 与 `.lessonkit/goals.json`（工作区本地计划/目标；目标可含
   `start_date`→`deadline` 展示区间，旧目标无开始日期兼容）、
   `~/.lessonkit-workbench/workspaces.json` + `bridges.json`（用户级，JSON——stdlib 无 YAML 解析）。
@@ -185,9 +185,11 @@ workbench/
   按 attempt-id 的守卫式更正与只读回看；带评分的条目在**同一事务内**调用既有
   `domain.feedback.apply(..., attempt_id=…)`（不经过 categorical 的 `practice` 映射），
   无评分的条目只落尝试文本，任何投影都不改。
-- `bridge.conversations`：每工作区 `list/create/get/start/cancel`；同一会话单轮串行，
-  provider 事件归一为命令/工具/搜索/回答活动，成功轮次将合并后的执行计划随答案镜像；
-  隐藏推理与原始协议包不进镜像，完整上下文仍留在 provider 原生 store。
+- `bridge.conversations`：每会话最多一个 provider worker；普通成功轮次在 worker 返回后派发下一条，
+  失败、取消或服务恢复会暂停保留队列。中断后发送绑定接受时捕获的轮次，等待其终态和清理后
+  才派发优先消息，旧队列随后仍暂停；进度读取失败本身不改变轮次状态。provider 事件归一为
+  命令/工具/搜索/回答活动，成功轮次将合并后的执行计划随答案镜像；隐藏推理与原始协议包不进镜像，
+  完整上下文仍留在 provider 原生 store。
   轮次预算是**静默预算**而非总时长：任一输出行或事件都重置时钟，命令/工具在飞时改用
   更长的工具预算（`bridge add --timeout/--tool-timeout`），因此长回答与慢命令都不会被
   截停；真正卡住的轮次仍如实记为 `provider timed out`。
