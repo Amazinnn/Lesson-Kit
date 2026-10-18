@@ -794,12 +794,12 @@
   // graphFit can pull back, since its scale floor is .38. LAYOUT_SCALE brings the
   // physics distance back to Obsidian's own absolute value, which is what makes the
   // graph roughly the size Obsidian's own would be at this point count.
-  var LAYOUT_SCALE = .55;
+  var LAYOUT_SCALE = .28;
   // Obsidian's own numbers are linkDistance 250, repelStrength -1000, collideRadius
   // 60 — all three in one pixel scale. BH_STRENGTH has to hold Obsidian's ratio to
   // linkDistance (1000 at 250, so 0.016 * L^2) or the graph either collapses or
   // spreads without bound; at L = 275 that is about 1200.
-  var BH_STRENGTH = 1200;
+  var BH_STRENGTH = 314;
   // d3 forceLink's linkStrength. Obsidian ships 1.
   var LINK_STRENGTH = 1;
   // Obsidian's cooldown: alpha += (alphaTarget - alpha) * (1 - 0.001^(1/300)).
@@ -955,18 +955,21 @@
     })(root);
   }
 
-  var BH_COLLIDE_R = 60;
   var BH_COLLIDE_DV = .25;
 
-  /* Collide, Obsidian's. Walks the same tree the charge uses: a subtree can be
-   * skipped when its centre is further than 2R plus the subtree's own span, which
-   * only prunes pairs that provably cannot touch. dv = 0.25 * (120 - d) — no
-   * division by d, so a fully overlapping pair gets a finite 30 instead of an
-   * unbounded kick, and no alpha term, so colliding does not fade as the solve
-   * cools. Each pair is taken once, from the lower index. */
+  /* Upper bound on collideRadius, used only to prune subtrees during the collide
+   * walk. Keeping it generous costs a few extra descents; keeping it too tight would
+   * silently drop real contacts. */
+  var BH_COLLIDE_MAX_R = 220;
+
+  /* Collide, Obsidian's shape. Walks the same tree the charge uses; a subtree is
+   * skipped when its centre is further than the pair radius plus the subtree's own
+   * span, which only prunes pairs that provably cannot touch. dv = 0.25 * (R - d) —
+   * no division by d, so a fully overlapping pair gets a finite kick instead of an
+   * unbounded one, and no alpha term, so colliding does not fade as the solve cools.
+   * Each pair is taken once, from the lower index. */
   function bhCollide(root, node) {
-    var twoR = BH_COLLIDE_R * 2;
-    var twoR2 = twoR * twoR;
+    var rNode = collideRadius(node);
     var cx = node.x + node.vx, cy = node.y + node.vy;
     (function walk(tree) {
       if (!tree.value) return;
@@ -976,9 +979,10 @@
           var o = list[k];
           if (o === node) continue;
           if (o.__idx <= node.__idx) continue;
+          var twoR = rNode + collideRadius(o);
           var dx = (o.x + o.vx) - cx, dy = (o.y + o.vy) - cy;
           var d2 = dx * dx + dy * dy;
-          if (!(d2 < twoR2)) continue;
+          if (!(d2 < twoR * twoR)) continue;
           var d = Math.sqrt(d2) || 1e-6;
           var ux = dx / d, uy = dy / d;
           var dv = BH_COLLIDE_DV * (twoR - d);
@@ -991,21 +995,37 @@
       }
       var mx = tree.cx - cx, my = tree.cy - cy;
       var span = Math.max(tree.x1 - tree.x0, tree.y1 - tree.y0);
-      if (Math.sqrt(mx * mx + my * my) - span > twoR) return;
+      if (Math.sqrt(mx * mx + my * my) - span > rNode + BH_COLLIDE_MAX_R) return;
       for (var j = 0; j < 4; j += 1) if (tree.kids[j]) walk(tree.kids[j]);
     })(root);
   }
 
-  /* A flat enough graph has no hierarchy to seed from, so its seat is the guide
-   * grid itself. A contracted seat was tried and does not work here: the guide grid
-   * already sits on the readability floor, so any spatial contraction creates
-   * overlaps and resolveCongestion answers with a first-frame shove.
-   *   uniform 0.7  -> start min pair 108.5px (floor is 150.8), 88 congested pairs,
-   *                   first frame 593.8px on dmath and 968.6px on c02
-   *   y-only 0.55  -> start min pair 85.3px, first frame 615.4px and 1150.9px
-   * Seeding exactly on the guides costs nothing and measures 28.5px / 31.3px.
-   * Visible growth needs room the row grid does not have; it comes back with the
-   * hub-node clustering, where the seat is a cluster rather than a packed floor. */
+  /* Radius the collision impulse works from, per node. Obsidian's number is a flat
+   * 60, and that is the honest value *for its dots* — it draws a node as a small
+   * circle and lets labels overlap. Our nodes carry their label in their footprint,
+   * so the faithful port of "60" is the node's own footprint, not the constant.
+   * The constant was also too small to reach the readability floor: with 2R = 120
+   * against a floor near 150, collide settled every graph at a 120px minimum pair
+   * distance and the floor could never be met, which is what kept overlaps on screen.
+   * Reading the node radius instead lets a wide label claim the room it needs. */
+  function collideRadius(node) {
+    var fp = footprint(node);
+    var halfW = (fp.left + fp.right) / 2;
+    var halfH = (fp.top + fp.bottom) / 2;
+    // Half the diagonal of the footprint: a circle that covers the label box, so two
+    // nodes are pushed apart until their boxes clear rather than until their circles do.
+    return Math.sqrt(halfW * halfW + halfH * halfH);
+  }
+  /* The seat is still the guide grid. With the bands and the resolver gone nothing
+   * holds the points there once the solve starts, so it is only a starting frame —
+   * but it is a well-spread one, and the graph then opens out of it into whatever
+   * the free force field settles on. That is where the visible growth comes from:
+   * measured travel went from 53px to 1195px when the guides stopped being a
+   * destination and became a departure point.
+   * A contracted seat still does not work, for the original reason — the guide grid
+   * already sits on the readability floor, so contracting it creates the overlaps
+   * that resolveCongestion used to shove apart at 593.8px (uniform 0.7) and 615.4px
+   * (y-only 0.55) on the first frame. */
   var SEED_CONTRACTION_Y = 1;
 
   function enforceHierarchyBands(state, active) {
