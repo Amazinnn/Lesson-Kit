@@ -4,4 +4,4 @@ The focused queue change is implemented in `f1481580` and `c9d05d15`. Existing `
 
 Focused conversation/API checks (122) and the added Pi no-ack barrier/prompt-lock checks (2) pass. Official Node checks (224), compileall, the `extract-problems` guard, strict OpenSpec validation, and the isolated Chromium smoke pass. The smoke covered streaming with navigation, rail identity, reload with pending work, A/D/B/C ordering, pause/manual continuation, one active worker, captured contexts, and fast-finish results.
 
-Full Python PR CI is pending. No live provider assertion is claimed. The broader `complete-agent-message-lifecycle` change remains unarchived: Paper progress-reset approval task 3.4 stays open, and aggregate gate 4.4 remains open until full Python CI completes.
+Queue PR #147 and its merge commit passed Python 3.11/3.12 CI. The remaining Paper approval integration was subsequently implemented in PR #148; its design, evidence and aggregate OpenSpec closeout are recorded in `STATUS-paper-reset-approval-2026-10-18.md`. No live provider assertion is claimed.
