@@ -48,6 +48,10 @@ elif mode == "quiet-command":
 elif mode == "fail":
     print(json.dumps({"type":"error","message":"provider exploded"}), flush=True)
     raise SystemExit(3)
+elif mode == "partial-fail":
+    print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"Partial api_key=secret-value"}}), flush=True)
+    print(json.dumps({"type":"error","message":"provider failed token=private-value"}), flush=True)
+    raise SystemExit(3)
 elif mode == "activities":
     print(json.dumps({"type":"item.started","item":{"id":"cmd-1","type":"command_execution","command":"wb pull"}}), flush=True)
     print(json.dumps({"type":"item.completed","item":{"id":"cmd-1","type":"command_execution","command":"wb pull","aggregated_output":"2 problems","exit_code":0}}), flush=True)
@@ -290,7 +294,7 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(launcher.modes, ["rpc"])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
-    def test_failure_is_literal_and_not_mirrored(self, get_provider):
+    def test_failure_keeps_accepted_user_message_in_history(self, get_provider):
         from workbench.bridge import conversation_providers, conversations
 
         get_provider.return_value = self.provider
@@ -304,7 +308,134 @@ class ConversationTests(unittest.TestCase):
 
         self.assertEqual(done["status"], "failed")
         self.assertIn("exit code 3", done["error"])
-        self.assertEqual(conversations.get(self.pool, conversation["conversation_id"])["messages"], [])
+        messages = conversations.get(self.pool, conversation["conversation_id"])["messages"]
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0]["role"], "user")
+        self.assertEqual(messages[0]["content"], "Fail")
+        self.assertEqual(messages[0]["status"], "failed")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_accepted_turn_retains_sanitized_partial_output(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        with mock.patch.object(conversation_providers, "build_command", self.command("partial-fail", [])):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Partial",
+                {"anchor": {"page_type": "practice", "route": "/w/dmath/practice"}},
+                submission_id="send-partial",
+                submitted_fields={"route": "/w/dmath/practice"},
+            )
+            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        self.assertEqual(done["status"], "failed")
+        self.assertEqual(done["partial_output"], "Partial api_key=[REDACTED]")
+        messages = conversations.get(self.pool, conversation["conversation_id"])["messages"]
+        self.assertEqual(messages[0]["status"], "failed")
+        self.assertEqual(messages[1]["content"], "Partial api_key=[REDACTED]")
+        self.assertTrue(messages[1]["partial"])
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_duplicate_submission_uses_original_turn_and_context(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        command_calls = []
+        with mock.patch.object(conversation_providers, "build_command", self.command("slow", command_calls)):
+            conversation = conversations.create(self.pool, "codex")
+            conversation_id = conversation["conversation_id"]
+            submitted_fields = {"route": "/w/dmath/kp/kp-1"}
+            original = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "Explain",
+                {"anchor": {"route": "/w/dmath/kp/kp-1"}, "current": {"revision": 1}},
+                submission_id="send-stable",
+                submitted_fields=submitted_fields,
+            )
+            duplicate = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "Explain",
+                {"anchor": {"route": "/w/dmath/kp/kp-1"}, "current": {"revision": 2}},
+                submission_id="send-stable",
+                submitted_fields=submitted_fields,
+            )
+            with self.assertRaises(conversations.ConversationConflict):
+                conversations.start_turn(
+                    self.pool, self.workspace, conversation_id, "Explain",
+                    {"anchor": {"route": "/w/dmath/kp/kp-1"}},
+                    submission_id="send-stable",
+                    submitted_fields={"route": "/w/dmath/other"},
+                )
+            stored = conversations._read_json(
+                conversations._turn_file(self.pool, conversation_id, original["turn_id"])
+            )
+            conversations.cancel(self.pool, conversation_id)
+            self.wait_turn(conversation_id, original["turn_id"])
+
+        self.assertEqual(duplicate["turn_id"], original["turn_id"])
+        self.assertEqual(stored["context"]["current"]["revision"], 1)
+        self.assertEqual(command_calls, [None])
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_explicit_retry_links_a_new_attempt_and_reuses_accepted_context(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        modes = iter(["fail", "answer"])
+
+        def build_command(_provider, _session_id=None):
+            return [sys.executable, str(self.script), next(modes)]
+
+        fields = {"route": "/w/dmath/kp/kp-1"}
+        with mock.patch.object(conversation_providers, "build_command", build_command):
+            conversation = conversations.create(self.pool, "codex")
+            conversation_id = conversation["conversation_id"]
+            original = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "Please explain",
+                {"anchor": {"route": "/w/dmath/kp/kp-1"}, "revision": 1},
+                submission_id="send-original", submitted_fields=fields,
+            )
+            failed = self.wait_turn(conversation_id, original["turn_id"])
+            retry = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "Please explain",
+                {"anchor": {"route": "/w/dmath/kp/kp-1"}, "revision": 2},
+                submission_id="send-retry", submitted_fields=fields,
+                retry_of=original["turn_id"],
+            )
+            done = self.wait_turn(conversation_id, retry["turn_id"])
+
+        self.assertEqual(failed["status"], "failed")
+        self.assertEqual(done["status"], "done")
+        self.assertEqual(done["retry_of"], original["turn_id"])
+        retry_record = conversations._get_turn_record(
+            self.pool, conversation_id, retry["turn_id"],
+        )
+        self.assertEqual(retry_record["context"]["revision"], 1)
+        messages = conversations.get(self.pool, conversation_id)["messages"]
+        self.assertEqual([message["role"] for message in messages], [
+            "user", "user", "assistant",
+        ])
+        self.assertEqual(messages[0]["status"], "failed")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_successful_accepted_turn_is_listed_once_with_legacy_transcript(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        with mock.patch.object(conversation_providers, "build_command", self.command("answer", [])):
+            conversation = conversations.create(self.pool, "codex")
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Accepted",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+                submission_id="send-success",
+                submitted_fields={"route": "/w/dmath/kps"},
+            )
+            self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+
+        messages = conversations.get(self.pool, conversation["conversation_id"])["messages"]
+        self.assertEqual([message["role"] for message in messages], ["user", "assistant"])
+        self.assertEqual(messages[0]["content"], "Accepted")
+        self.assertEqual(messages[0]["submission_id"], "send-success")
+        self.assertEqual(sum(message.get("turn_id") == turn["turn_id"] for message in messages), 2)
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_running_turn_rejects_second_send_and_can_be_cancelled(self, get_provider):
@@ -326,7 +457,9 @@ class ConversationTests(unittest.TestCase):
             done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
 
         self.assertEqual(done["status"], "cancelled")
-        self.assertEqual(conversations.get(self.pool, conversation["conversation_id"])["messages"], [])
+        messages = conversations.get(self.pool, conversation["conversation_id"])["messages"]
+        self.assertEqual(messages[0]["content"], "Slow")
+        self.assertEqual(messages[0]["status"], "cancelled")
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_provider_launch_failure_does_not_leave_conversation_running(self, get_provider):
@@ -363,7 +496,9 @@ class ConversationTests(unittest.TestCase):
 
         self.assertEqual(done["status"], "failed")
         self.assertEqual(done["error"], "provider timed out")
-        self.assertEqual(conversations.get(self.pool, conversation["conversation_id"])["messages"], [])
+        messages = conversations.get(self.pool, conversation["conversation_id"])["messages"]
+        self.assertEqual(messages[0]["content"], "Slow")
+        self.assertEqual(messages[0]["status"], "failed")
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_output_past_the_budget_is_not_a_timeout(self, get_provider):
@@ -479,7 +614,11 @@ class ConversationTests(unittest.TestCase):
         (folder / "conversation.json").write_text(json.dumps(record), encoding="utf-8")
         (folder / "turn-001.json").write_text(json.dumps({
             "turn_id": "turn-001", "status": "running", "error": None,
+            "message": "accepted before restart", "context": {"anchor": {"route": "/w"}},
         }), encoding="utf-8")
+        (folder / "turn-001.events.jsonl").write_text(json.dumps({
+            "sequence": 1, "kind": "text", "text": "partial token=private-value",
+        }) + "\n", encoding="utf-8")
 
         restored = conversations.get(self.pool, conversation["conversation_id"])
         turn = conversations.get_turn(
@@ -490,6 +629,9 @@ class ConversationTests(unittest.TestCase):
         self.assertIsNone(restored["current_turn_id"])
         self.assertEqual(turn["status"], "failed")
         self.assertIn("workbench restarted", turn["error"])
+        self.assertEqual(turn["partial_output"], "partial token=[REDACTED]")
+        self.assertEqual(restored["messages"][0]["content"], "accepted before restart")
+        self.assertEqual(restored["messages"][1]["content"], "partial token=[REDACTED]")
         self.assertEqual(
             conversations.events(
                 self.pool, conversation["conversation_id"], "turn-001"
@@ -621,6 +763,12 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(kwargs["source"], "bridge")
         self.assertTrue(str(kwargs["backup_path"]).endswith(
             f"{conversation['conversation_id']}-{turn['turn_id']}-ingest-backup"))
+        activities = conversations.get(self.pool, conversation["conversation_id"])[
+            "messages"][-1]["activities"]
+        applied_activity = next(item for item in activities if item["activity_id"] == "check-ingest")
+        self.assertEqual(applied_activity["impact"], {
+            "status": "known", "summary": "批次 batch-001",
+        })
 
     @mock.patch("workbench.bridge.conversation_providers.normalize_event")
     @mock.patch("workbench.bridge.conversation_providers.get")

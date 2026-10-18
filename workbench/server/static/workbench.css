@@ -742,6 +742,21 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+.ai-plan-impact {
+  margin-top: 4px;
+  color: var(--dsw-label-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.ai-send-recoveries { margin-top: 8px; }
+.ai-send-recovery {
+  margin: 6px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--dsw-border-l2);
+  background: #fffdf7;
+}
+.ai-send-recovery p { margin: 0 0 6px; font-size: 12px; }
+.ai-send-recovery button { margin-right: 6px; }
 
 .rich-text { line-height: 1.7; overflow-wrap: anywhere; }
 .rich-text > :first-child { margin-top: 0; }

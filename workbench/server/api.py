@@ -808,17 +808,38 @@ def ai_turn_start(pool, workspace, params, body):
     message = body.get("message")
     if not isinstance(message, str) or not message.strip():
         raise ApiError(400, "message is required")
+    submission_id = body.get("submission_id")
+    retry_of = body.get("retry_of")
+    submitted_fields = {
+        key: value for key, value in body.items()
+        if key not in {"message", "submission_id", "retry_of", "dom"}
+    }
     # The conversation owns the staged-manifest directory; the body cannot pick it.
     framed = {**body, "conversation_id": params["conversation_id"]}
-    context = agent_context.build(pool, workspace, framed)
     try:
+        accepted = conversations.find_submission(
+            pool, params["conversation_id"], message.strip(),
+            submission_id, submitted_fields,
+        )
+        if accepted:
+            return accepted
+        if retry_of is not None:
+            context = conversations._get_turn_record(
+                pool, params["conversation_id"], retry_of,
+            ).get("context") or {}
+        else:
+            context = agent_context.build(pool, workspace, framed)
         return conversations.start_turn(
-            pool, workspace, params["conversation_id"], message.strip(), context
+            pool, workspace, params["conversation_id"], message.strip(), context,
+            submission_id=submission_id, submitted_fields=submitted_fields,
+            retry_of=retry_of,
         )
     except conversations.InvalidIdentifier as exc:
         raise ApiError(400, str(exc)) from exc
     except conversations.ConversationConflict as exc:
         raise ApiError(409, str(exc)) from exc
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
 
 
 def ai_turn_events(pool, workspace, params, body):
