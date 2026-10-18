@@ -920,9 +920,25 @@
     })(root);
   }
 
+  /* A flat enough graph has no hierarchy to seed from, so its seat is the guide
+   * grid itself. A contracted seat was tried and does not work here: the guide grid
+   * already sits on the readability floor, so any spatial contraction creates
+   * overlaps and resolveCongestion answers with a first-frame shove.
+   *   uniform 0.7  -> start min pair 108.5px (floor is 150.8), 88 congested pairs,
+   *                   first frame 593.8px on dmath and 968.6px on c02
+   *   y-only 0.55  -> start min pair 85.3px, first frame 615.4px and 1150.9px
+   * Seeding exactly on the guides costs nothing and measures 28.5px / 31.3px.
+   * Visible growth needs room the row grid does not have; it comes back with the
+   * hub-node clustering, where the seat is a cluster rather than a packed floor. */
+  var SEED_CONTRACTION_Y = 1;
+
   function enforceHierarchyBands(state, active) {
     if (state.graph.view !== "structure") return;
-    var band = 42 + 8 * layoutSpread(state);
+    // The band tightens as the solve cools. A contracted seat puts every point up
+    // to 0.3 * half-spread away from its own guide (116px on dmath, ~156px on
+    // c02); holding those to the final 49px band on frame one is exactly the
+    // 953px snap this replaced. Wide while alpha is high, exact once it is gone.
+    var band = (42 + 8 * layoutSpread(state)) * (1 + 4 * state.graph.alpha);
     active.forEach(function (n) {
       if (!movable(state, n)) return;
       var dy = n.y - n.guideY;
@@ -1290,11 +1306,14 @@
     // to 1135px from the point's own guide (p50 666px), and the only thing standing
     // between that and the first frame was the hierarchy band clamp — which answers
     // by teleporting y to guideY +/- band, measured at 953px on real dmath data.
-    // Nothing has been simulated yet at this point, so seeding on the guides costs
-    // no layout quality; it only removes a jump the learner can see.
+    // Contracted toward the centre so the learner still sees the graph grow out;
+    // nothing has been simulated yet here, so the seat costs no layout quality.
+    // Contracted in y only, so the learner still sees the rows fan out; x keeps the
+    // guide spacing it already has, and nothing starts overlapping.
+    var seat = { x: state.stageWidth / 2, y: state.stageHeight / 2 };
     state.nodes.forEach(function (n) {
       n.x = n.guideX;
-      n.y = n.guideY;
+      n.y = seat.y + (n.guideY - seat.y) * SEED_CONTRACTION_Y;
     });
     reheat(state, 1, true);
 
