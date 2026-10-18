@@ -697,9 +697,9 @@ class ConversationTests(unittest.TestCase):
                         {"anchor": {"route": "/e"}}, submission_id="E-interrupt",
                         queue_action="interrupt",
                     )
+                self.assertEqual(started, [0])
             finally:
                 first_release.set()
-            self.assertEqual(started, [0])
             done_a = self.wait_turn(conversation_id, a["turn_id"])
             self.assertEqual(done_a["status"], "cancelled")
             done_d = self.wait_turn(conversation_id, d["turn_id"])
