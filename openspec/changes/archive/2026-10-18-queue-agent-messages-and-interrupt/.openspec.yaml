@@ -1,0 +1,4 @@
+schema: spec-driven
+created: 2026-10-18
+goal: Queue accepted messages per conversation and run interrupt messages only
+  after the active provider turn has actually terminated.

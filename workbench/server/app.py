@@ -89,6 +89,9 @@ ROUTES = [
     ("GET", "/api/w/{name}/ai/sessions/{conversation_id}", api_mod.ai_session_get),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/turns", api_mod.ai_turn_start),
     ("GET", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}", api_mod.ai_turn_events),
+    ("PATCH", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}", api_mod.ai_turn_pending_update),
+    ("DELETE", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}", api_mod.ai_turn_pending_delete),
+    ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/queue/continue", api_mod.ai_queue_continue),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/cancel", api_mod.ai_turn_cancel),
     ("GET", "/api/w/{name}/graph", api_mod.graph_artifact),
 ]
@@ -142,32 +145,36 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
             return
 
         body = None
-        if method in {"POST", "PATCH"}:
-            content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
-            if content_type != "application/json":
-                self._send_json(415, {"error": "Content-Type must be application/json"})
-                return
-            try:
-                length = int(self.headers.get("Content-Length", 0))
-                if length < 0 or length > MAX_JSON_BODY_BYTES:
-                    raise ValueError("request body is too large")
-                raw = self.rfile.read(length) if length else b"{}"
-                body = json.loads(raw.decode("utf-8")) if raw else {}
-            except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-                self._send_json(400, {"error": f"invalid JSON request: {exc}"})
-                return
-            if not isinstance(body, dict):
-                self._send_json(400, {"error": "request body must be a JSON object"})
-                return
-            if method == "POST" and path.startswith("/api/w/") and path.endswith("/pull") \
-                    and "include_ids" in body:
-                self._send_json(400, {
-                    "error": (
-                        "include_ids is retired from browser practice; "
-                        "compose a paper before starting a practice run"
-                    )
-                })
-                return
+        if method in {"POST", "PATCH", "DELETE"}:
+            has_body = bool(self.headers.get("Content-Length"))
+            if method == "DELETE" and not has_body:
+                body = {}
+            else:
+                content_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+                if content_type != "application/json":
+                    self._send_json(415, {"error": "Content-Type must be application/json"})
+                    return
+                try:
+                    length = int(self.headers.get("Content-Length", 0))
+                    if length < 0 or length > MAX_JSON_BODY_BYTES:
+                        raise ValueError("request body is too large")
+                    raw = self.rfile.read(length) if length else b"{}"
+                    body = json.loads(raw.decode("utf-8")) if raw else {}
+                except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    self._send_json(400, {"error": f"invalid JSON request: {exc}"})
+                    return
+                if not isinstance(body, dict):
+                    self._send_json(400, {"error": "request body must be a JSON object"})
+                    return
+                if method == "POST" and path.startswith("/api/w/") and path.endswith("/pull") \
+                        and "include_ids" in body:
+                    self._send_json(400, {
+                        "error": (
+                            "include_ids is retired from browser practice; "
+                            "compose a paper before starting a practice run"
+                        )
+                    })
+                    return
 
         name = params.pop("name", None)
         if name is None:

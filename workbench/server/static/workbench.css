@@ -641,8 +641,18 @@ textarea:focus, input:focus { border-color: var(--dsw-brand-primary); outline: n
 #ai-messages .msg { font-size: 14px; line-height: 22px; padding: 10px 2px; margin-bottom: 4px; }
 #ai-input-row { display: flex; gap: 6px; margin-top: 12px; align-items: flex-end; }
 #ai-input { flex: 1; min-height: 32px; }
+#ai-send-action { width: 104px; flex: none; font-size: 12px; }
 .ai-send-actions { display: flex; gap: 5px; }
 #ai-status { min-height: 18px; margin: 6px 0 0; }
+.ai-pending-queue { max-height: 190px; overflow-y: auto; border-top: 1px solid var(--dsw-border-l1); padding-top: 8px; }
+.ai-pending-heading, .ai-pending-actions { display: flex; align-items: center; gap: 6px; }
+.ai-pending-heading { justify-content: space-between; }
+.ai-pending-heading .side-label, .ai-pending-status, .ai-pending-content { margin: 0; }
+.ai-pending-message { padding: 7px 0; border-top: 1px solid var(--dsw-border-l1); }
+.ai-pending-status { color: var(--dsw-label-secondary); font-size: 11px; }
+.ai-pending-content { overflow-wrap: anywhere; font-size: 12px; white-space: pre-wrap; }
+.ai-pending-actions { margin-top: 5px; }
+.ai-pending-editor { width: 100%; min-height: 54px; margin-top: 5px; }
 .ai-plan {
   min-width: 0;
   margin: 8px 0 10px;

@@ -97,7 +97,7 @@ class ConversationTests(unittest.TestCase):
         deadline = time.time() + timeout
         while time.time() < deadline:
             turn = conversations.get_turn(self.pool, conversation_id, turn_id)
-            if turn["status"] not in {"queued", "running"}:
+            if turn["status"] not in {"queued", "running", "waiting_for_stop"}:
                 return turn
             time.sleep(0.02)
         self.fail("turn did not finish")
@@ -554,21 +554,23 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(sum(message.get("turn_id") == turn["turn_id"] for message in messages), 2)
 
     @mock.patch("workbench.bridge.conversation_providers.get")
-    def test_running_turn_rejects_second_send_and_can_be_cancelled(self, get_provider):
+    def test_running_turn_accepts_second_send_into_paused_queue_after_cancel(self, get_provider):
         from workbench.bridge import conversation_providers, conversations
 
         get_provider.return_value = self.provider
-        with mock.patch.object(conversation_providers, "build_command", self.command("slow", [])):
+        calls = []
+        with mock.patch.object(conversation_providers, "build_command", self.command("slow", calls)):
             conversation = conversations.create(self.pool, "codex")
             turn = conversations.start_turn(
                 self.pool, self.workspace, conversation["conversation_id"], "Slow",
                 {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
             )
-            with self.assertRaises(conversations.ConversationConflict):
-                conversations.start_turn(
-                    self.pool, self.workspace, conversation["conversation_id"], "Second",
-                    {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
-                )
+            queued = conversations.start_turn(
+                self.pool, self.workspace, conversation["conversation_id"], "Second",
+                {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
+                submission_id="queued-second",
+            )
+            self.assertEqual(queued["status"], "queued")
             conversations.cancel(self.pool, conversation["conversation_id"])
             done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
 
@@ -576,6 +578,575 @@ class ConversationTests(unittest.TestCase):
         messages = conversations.get(self.pool, conversation["conversation_id"])["messages"]
         self.assertEqual(messages[0]["content"], "Slow")
         self.assertEqual(messages[0]["status"], "cancelled")
+        user_messages = [message for message in messages if message["role"] == "user"]
+        self.assertEqual(user_messages[1]["status"], "queued")
+        self.assertTrue(conversations.get(self.pool, conversation["conversation_id"])["queue_paused"])
+        self.assertEqual(len(calls), 1)
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_interrupt_waits_for_worker_return_then_pauses_fifo_until_continue(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        started = []
+        starts_lock = threading.Lock()
+        first_ready = threading.Event()
+        first_release = threading.Event()
+        active = {"count": 0, "max": 0}
+        active_lock = threading.Lock()
+
+        class FakeProcess:
+            def __init__(self, index):
+                self.index = index
+                self.cancelled = False
+                self.return_code = None
+                self.prompt = ""
+                self.stdin = self
+                self.stdout = self
+                with starts_lock:
+                    started.append(index)
+                with active_lock:
+                    active["count"] += 1
+                    active["max"] = max(active["max"], active["count"])
+
+            def write(self, value):
+                self.prompt += value
+
+            def close(self):
+                pass
+
+            def __iter__(self):
+                yield json.dumps({"type": "thread.started", "thread_id": "fake"})
+                yield json.dumps({"type": "turn.started"})
+                if self.index == 0:
+                    first_ready.set()
+                    first_release.wait(3)
+                if not self.cancelled:
+                    yield json.dumps({
+                        "type": "item.completed",
+                        "item": {"type": "agent_message", "text": "answer"},
+                    })
+                    yield json.dumps({"type": "turn.completed"})
+
+            def poll(self):
+                return self.return_code
+
+            def wait(self, timeout=None):
+                if self.return_code is None:
+                    self.return_code = -15 if self.cancelled else 0
+                with active_lock:
+                    if active["count"]:
+                        active["count"] -= 1
+                return self.return_code
+
+            def terminate(self):
+                self.cancelled = True
+                self.return_code = -15
+
+            def kill(self):
+                self.terminate()
+
+        def fake_popen(*_args, **_kwargs):
+            with starts_lock:
+                index = len(started)
+            return FakeProcess(index)
+
+        with mock.patch.object(conversation_providers, "build_command", return_value=["fake"]), \
+                mock.patch.object(conversations.subprocess, "Popen", side_effect=fake_popen):
+            conversation = conversations.create(self.pool, "codex")
+            conversation_id = conversation["conversation_id"]
+            a = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "A", {"anchor": {"route": "/a"}},
+            )
+            self.assertTrue(first_ready.wait(2))
+            b = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "B", {"anchor": {"route": "/b"}},
+                submission_id="B-id",
+            )
+            c = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "C", {"anchor": {"route": "/c"}},
+                submission_id="C-id",
+            )
+            e = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "E", {"anchor": {"route": "/e"}},
+                submission_id="E-id",
+            )
+            edited_b = conversations.edit_pending(
+                self.pool, conversation_id, b["turn_id"], "B edited", expected_revision=1,
+            )
+            removed_e = conversations.remove_pending(
+                self.pool, conversation_id, e["turn_id"], expected_revision=1,
+            )
+            duplicate_b = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "B",
+                {"anchor": {"route": "/new-page"}}, submission_id="B-id",
+                submitted_fields={}, queue_action="interrupt",
+            )
+            self.assertEqual(duplicate_b["turn_id"], b["turn_id"])
+            self.assertEqual(conversations._get_turn_record(
+                self.pool, conversation_id, b["turn_id"])["message"], "B edited")
+            d = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "D", {"anchor": {"route": "/d"}},
+                submission_id="D-id", queue_action="interrupt",
+            )
+            self.assertEqual(d["status"], "waiting_for_stop")
+            try:
+                with self.assertRaises(conversations.ConversationConflict):
+                    conversations.start_turn(
+                        self.pool, self.workspace, conversation_id, "Second interrupt",
+                        {"anchor": {"route": "/e"}}, submission_id="E-interrupt",
+                        queue_action="interrupt",
+                    )
+                self.assertEqual(started, [0])
+            finally:
+                first_release.set()
+            done_a = self.wait_turn(conversation_id, a["turn_id"])
+            self.assertEqual(done_a["status"], "cancelled")
+            done_d = self.wait_turn(conversation_id, d["turn_id"])
+            self.assertEqual(done_d["status"], "done")
+            self.assertEqual(started, [0, 1])
+            self.assertTrue(conversations.get(self.pool, conversation_id)["queue_paused"])
+            self.assertEqual(conversations._get_turn_record(
+                self.pool, conversation_id, b["turn_id"])["context"]["anchor"]["route"], "/b")
+            continued = conversations.continue_queue(
+                self.pool, self.workspace, conversation_id,
+            )
+            self.assertEqual(continued["turn"]["turn_id"], b["turn_id"])
+            with self.assertRaises(conversations.ConversationConflict):
+                conversations.edit_pending(
+                    self.pool, conversation_id, b["turn_id"], "stale edit",
+                    expected_revision=2,
+                )
+            with self.assertRaises(conversations.ConversationConflict):
+                conversations.remove_pending(
+                    self.pool, conversation_id, b["turn_id"], expected_revision=2,
+                )
+            done_b = self.wait_turn(conversation_id, b["turn_id"])
+            self.assertEqual(done_b["status"], "done")
+            done_c = self.wait_turn(conversation_id, c["turn_id"])
+            self.assertEqual(done_c["status"], "done")
+
+        self.assertEqual(started, [0, 1, 2, 3])
+        self.assertEqual(active["max"], 1)
+        self.assertFalse(conversations.get(self.pool, conversation_id)["queue_paused"])
+        self.assertEqual(edited_b["queue_revision"], 2)
+        self.assertEqual(removed_e["status"], "cancelled")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_worker_cleanup_dispatch_keeps_fifo_ahead_of_a_racing_send(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        first_ready = threading.Event()
+        release_first = threading.Event()
+        release_later = threading.Event()
+        cleanup_seen = threading.Event()
+        gap_open = threading.Event()
+        release_cleanup = threading.Event()
+        target = {"key": None}
+        launched = []
+        active = {"count": 0, "max": 0}
+        guard = threading.Lock()
+
+        class ActiveTurns(set):
+            def discard(self, key):
+                super().discard(key)
+                if key == target["key"]:
+                    cleanup_seen.set()
+
+        class CleanupGate:
+            def __init__(self):
+                self.inner = threading.RLock()
+                self.gated = False
+
+            def __enter__(self):
+                self.inner.acquire()
+                return self
+
+            def __exit__(self, *_args):
+                self.inner.release()
+                if (not self.inner._is_owned() and cleanup_seen.is_set()
+                        and threading.current_thread() is not threading.main_thread()
+                        and not self.gated):
+                    self.gated = True
+                    gap_open.set()
+                    release_cleanup.wait(3)
+
+        class FakeProcess:
+            def __init__(self):
+                self.prompt = ""
+                self.return_code = None
+                self.stdin = self
+                self.stdout = self
+                self.label = ""
+                with guard:
+                    active["count"] += 1
+                    active["max"] = max(active["max"], active["count"])
+
+            def write(self, value):
+                self.prompt += value
+
+            def close(self):
+                self.label = next(label for label in ("A", "B", "D")
+                                  if f'"route": "{label}"' in self.prompt)
+                with guard:
+                    launched.append(self.label)
+
+            def __iter__(self):
+                yield json.dumps({"type": "thread.started", "thread_id": "fake"})
+                yield json.dumps({"type": "turn.started"})
+                if self.label == "A":
+                    first_ready.set()
+                    release_first.wait(3)
+                else:
+                    release_later.wait(3)
+                yield json.dumps({
+                    "type": "item.completed",
+                    "item": {"type": "agent_message", "text": f"answer {self.label}"},
+                })
+                yield json.dumps({"type": "turn.completed"})
+
+            def poll(self):
+                return self.return_code
+
+            def wait(self, timeout=None):
+                if self.return_code is None:
+                    self.return_code = 0
+                with guard:
+                    active["count"] -= 1
+                return self.return_code
+
+        gate = CleanupGate()
+        with mock.patch.object(conversation_providers, "build_command", return_value=["fake"]), \
+                mock.patch.object(conversations.subprocess, "Popen", side_effect=lambda *_a, **_k: FakeProcess()), \
+                mock.patch.object(conversations, "_LOCK", gate), \
+                mock.patch.object(conversations, "_ACTIVE_TURNS", ActiveTurns()):
+            conversation = conversations.create(self.pool, "codex")
+            conversation_id = conversation["conversation_id"]
+            a = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "A",
+                {"anchor": {"route": "A"}},
+            )
+            target["key"] = (str(self.pool.jobs_dir() / conversation_id), a["turn_id"])
+            self.assertTrue(first_ready.wait(2))
+            b = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "B",
+                {"anchor": {"route": "B"}},
+            )
+            release_first.set()
+            try:
+                self.assertTrue(gap_open.wait(1))
+                d = conversations.start_turn(
+                    self.pool, self.workspace, conversation_id, "D",
+                    {"anchor": {"route": "D"}},
+                )
+                # With atomic cleanup, B already owns the worker; D follows it.
+                self.assertEqual(d["status"], "queued")
+            finally:
+                release_cleanup.set()
+                release_later.set()
+                for turn in (a, b, *([d] if "d" in locals() else [])):
+                    self.wait_turn(conversation_id, turn["turn_id"])
+
+        for turn in (a, b, d):
+            self.assertEqual(conversations.get_turn(
+                self.pool, conversation_id, turn["turn_id"],
+            )["status"], "done")
+
+        self.assertEqual(launched, ["A", "B", "D"])
+        self.assertEqual(active["max"], 1)
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_thread_start_failure_releases_worker_ownership_for_manual_continue(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        real_start = threading.Thread.start
+        starts = {"count": 0}
+
+        def start_once_fails(thread):
+            starts["count"] += 1
+            if starts["count"] == 1:
+                raise RuntimeError("thread start failed")
+            return real_start(thread)
+
+        with mock.patch.object(conversation_providers, "build_command", self.command("answer", [])), \
+                mock.patch.object(threading.Thread, "start", start_once_fails):
+            conversation = conversations.create(self.pool, "codex")
+            conversation_id = conversation["conversation_id"]
+            failed = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "A", {},
+            )
+            self.assertEqual(failed["status"], "failed")
+            queued = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "B", {},
+            )
+            self.assertEqual(queued["status"], "queued")
+            resumed = conversations.continue_queue(
+                self.pool, self.workspace, conversation_id,
+            )
+            self.assertEqual(resumed["turn"]["turn_id"], queued["turn_id"])
+            done = self.wait_turn(conversation_id, queued["turn_id"])
+
+        self.assertEqual(done["status"], "done")
+        self.assertFalse(any(key[0] == str(self.pool.jobs_dir() / conversation_id)
+                             for key in conversations._ACTIVE_TURNS))
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_pi_prompt_acceptance_wait_does_not_hold_global_queue_lock(self, get_provider):
+        from workbench.bridge import conversations, pi_rpc
+
+        get_provider.return_value = {"name": "pi", "timeout_s": 2, "tool_timeout_s": 2}
+        prompt_waiting = threading.Event()
+        release_prompt = threading.Event()
+        stream_waiting = threading.Event()
+        release_stream = threading.Event()
+        aborted = threading.Event()
+
+        class BlockingPiProcess(pi_rpc.PiRpcProcess):
+            def __init__(self, block):
+                self.block = block
+
+            def begin_prompt(self, _message):
+                return "prompt-id"
+
+            def wait_prompt(self, _request_id):
+                if self.block:
+                    prompt_waiting.set()
+                    release_prompt.wait(3)
+
+            def prompt(self, message):
+                self.wait_prompt(self.begin_prompt(message))
+
+            def abort(self):
+                aborted.set()
+                return True
+
+            def stream(self, *_args):
+                stream_waiting.set()
+                release_stream.wait(3)
+                yield {"type": "agent_settled"}
+
+            def close(self):
+                return None
+
+        processes = iter([BlockingPiProcess(True), BlockingPiProcess(False)])
+        start_result = []
+        start_returned = threading.Event()
+        with mock.patch.object(conversations.PI_RPC, "launch_with_retry",
+                               side_effect=lambda *_args: next(processes)), \
+                mock.patch.object(conversations.PI_RPC, "discard"):
+            conversation = conversations.create(self.pool, "pi")
+            conversation_id = conversation["conversation_id"]
+            a = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "A", {},
+            )
+            self.assertTrue(prompt_waiting.wait(2))
+
+            def interrupt():
+                start_result.append(conversations.start_turn(
+                    self.pool, self.workspace, conversation_id, "D", {},
+                    queue_action="interrupt",
+                ))
+                start_returned.set()
+
+            submitter = threading.Thread(target=interrupt)
+            submitter.start()
+            accepted_before_prompt_release = start_returned.wait(0.5)
+            try:
+                self.assertTrue(accepted_before_prompt_release)
+                self.assertEqual(start_result[0]["status"], "waiting_for_stop")
+                self.assertTrue(aborted.wait(1))
+            finally:
+                release_prompt.set()
+                submitter.join(2)
+                self.assertTrue(stream_waiting.wait(2))
+                release_stream.set()
+            try:
+                self.assertEqual(self.wait_turn(conversation_id, a["turn_id"])["status"], "cancelled")
+                self.wait_turn(conversation_id, start_result[0]["turn_id"])
+            finally:
+                release_prompt.set()
+                release_stream.set()
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_pi_no_prompt_ack_keeps_priority_turn_waiting_until_process_close(
+        self, get_provider,
+    ):
+        from workbench.bridge import conversations, pi_rpc
+
+        get_provider.return_value = {"name": "pi", "timeout_s": 2, "tool_timeout_s": 2}
+        prompt_waiting = threading.Event()
+        release_prompt = threading.Event()
+        abort_sent = threading.Event()
+        close_started = threading.Event()
+        release_close = threading.Event()
+        close_finished = threading.Event()
+        priority_launch_started = threading.Event()
+
+        class NoAckPiProcess(pi_rpc.PiRpcProcess):
+            def __init__(self, is_original):
+                self.is_original = is_original
+
+            def begin_prompt(self, _message):
+                return "prompt-id"
+
+            def wait_prompt(self, _request_id):
+                if self.is_original:
+                    prompt_waiting.set()
+                    release_prompt.wait(3)
+                    raise pi_rpc.PiRpcRejected("prompt acknowledgement timed out")
+
+            def abort(self):
+                abort_sent.set()
+                return True
+
+            def close(self):
+                if self.is_original:
+                    close_started.set()
+                    release_close.wait(3)
+                    close_finished.set()
+
+            def stream(self, *_args):
+                return iter(())
+
+        processes = [NoAckPiProcess(True), NoAckPiProcess(False)]
+        launch_count = 0
+        launch_lock = threading.Lock()
+
+        def launch(*_args):
+            nonlocal launch_count
+            with launch_lock:
+                launch_count += 1
+                if launch_count > 1:
+                    priority_launch_started.set()
+                return processes[launch_count - 1]
+
+        with mock.patch.object(conversations.PI_RPC, "launch_with_retry", side_effect=launch), \
+                mock.patch.object(conversations.PI_RPC, "discard"):
+            conversation = conversations.create(self.pool, "pi")
+            conversation_id = conversation["conversation_id"]
+            original = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "A", {},
+            )
+            self.assertTrue(prompt_waiting.wait(2))
+            priority = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "D", {},
+                queue_action="interrupt",
+            )
+            self.assertEqual(priority["status"], "waiting_for_stop")
+            self.assertTrue(abort_sent.wait(1))
+
+            release_prompt.set()
+            self.assertTrue(close_started.wait(2))
+            self.assertFalse(priority_launch_started.wait(0.1))
+            self.assertEqual(
+                conversations.get_turn(self.pool, conversation_id, original["turn_id"])["status"],
+                "running",
+            )
+            self.assertEqual(
+                conversations.get_turn(self.pool, conversation_id, priority["turn_id"])["status"],
+                "waiting_for_stop",
+            )
+
+            release_close.set()
+            self.assertEqual(
+                self.wait_turn(conversation_id, original["turn_id"])["status"],
+                "cancelled",
+            )
+            self.wait_turn(conversation_id, priority["turn_id"])
+
+        self.assertTrue(close_finished.is_set())
+        self.assertTrue(priority_launch_started.is_set())
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_edited_failed_message_retry_keeps_original_context_and_new_routing(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        modes = iter(["fail", "answer", "answer"])
+        with mock.patch.object(
+            conversation_providers, "build_command",
+            side_effect=lambda *_args: [sys.executable, str(self.script), next(modes)],
+        ):
+            conversation = conversations.create(self.pool, "codex")
+            conversation_id = conversation["conversation_id"]
+            path = self.pool.jobs_dir() / conversation_id / "conversation.json"
+            record = json.loads(path.read_text(encoding="utf-8"))
+            record["queue_paused"] = True
+            path.write_text(json.dumps(record), encoding="utf-8")
+            original_context = {"anchor": {"route": "/captured-page"}}
+            turn = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "B original", original_context,
+                submission_id="B-original", submitted_fields={"page_type": "kp"},
+            )
+            edited = conversations.edit_pending(
+                self.pool, conversation_id, turn["turn_id"], "B edited",
+                expected_revision=1,
+            )
+            retained = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "C retained",
+                {"anchor": {"route": "/older-queue"}},
+            )
+            conversations.continue_queue(self.pool, self.workspace, conversation_id)
+            failed = self.wait_turn(conversation_id, turn["turn_id"])
+            self.assertEqual(failed["status"], "failed")
+            retry = conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "B edited",
+                {"anchor": {"route": "/newly-selected-page"}},
+                submission_id="B-retry", submitted_fields={"page_type": "kp"},
+                retry_of=turn["turn_id"], queue_action="interrupt",
+            )
+            retried = self.wait_turn(conversation_id, retry["turn_id"])
+            queued_after_retry = conversations.get_turn(
+                self.pool, conversation_id, retained["turn_id"],
+            )
+            paused_after_retry = conversations.get(
+                self.pool, conversation_id,
+            )["queue_paused"]
+            conversations.continue_queue(self.pool, self.workspace, conversation_id)
+            retained_done = self.wait_turn(conversation_id, retained["turn_id"])
+
+        retry_record = conversations._get_turn_record(
+            self.pool, conversation_id, retry["turn_id"],
+        )
+        self.assertEqual(edited["queue_revision"], 2)
+        self.assertEqual(retry_record["message"], "B edited")
+        self.assertEqual(retry_record["accepted_message"], "B edited")
+        self.assertEqual(retry_record["context"], original_context)
+        self.assertEqual(retry_record["queue_action"], "interrupt")
+        self.assertEqual(retried["status"], "done")
+        self.assertEqual(queued_after_retry["status"], "queued")
+        self.assertTrue(paused_after_retry)
+        self.assertEqual(retained_done["status"], "done")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_recovery_marks_running_turn_failed_and_pauses_retained_work(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        with mock.patch.object(conversation_providers, "build_command", return_value=["unused"]):
+            conversation = conversations.create(self.pool, "codex")
+            conversation_id = conversation["conversation_id"]
+            folder = self.pool.jobs_dir() / conversation_id
+            conversation_path = folder / "conversation.json"
+            record = json.loads(conversation_path.read_text(encoding="utf-8"))
+            record.update({"status": "running", "current_turn_id": "turn-001"})
+            conversations._write_json(conversation_path, record)
+            conversations._write_json(folder / "turn-001.json", {
+                "turn_id": "turn-001", "status": "running", "message": "A",
+                "context": {"anchor": {"route": "/a"}},
+            })
+            conversations._write_json(folder / "turn-002.json", {
+                "turn_id": "turn-002", "status": "queued", "message": "B",
+                "accepted_message": "B", "context": {"anchor": {"route": "/b"}},
+                "queue_revision": 1,
+            })
+
+        recovered = conversations.get(self.pool, conversation_id)
+        self.assertEqual(recovered["messages"][0]["status"], "failed")
+        self.assertTrue(recovered["queue_paused"])
+        self.assertEqual(recovered["messages"][1]["status"], "queued")
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_provider_launch_failure_does_not_leave_conversation_running(self, get_provider):
@@ -1432,7 +2003,7 @@ class ConversationTests(unittest.TestCase):
             "不要让学生再说一次「继续」。",
         )
         self.assertIsNot(captured, original)
-        self.assertIs(captured["anchor"], original["anchor"])
+        self.assertEqual(captured["anchor"], original["anchor"])
         self.assertNotIn("last_check_outcome", original)
 
     @mock.patch("workbench.bridge.conversation_providers.get")

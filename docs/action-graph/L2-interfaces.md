@@ -27,7 +27,7 @@
 | GET `/graph/model` · POST `/graph/state` · POST `/graph/kp` | 读/写 | 查询+图谱编辑 | 浏（模型可双） |
 | GET `/ai/providers` | 读 | 对话 provider（PATH 发现+overrides） | 浏 |
 | GET·POST `/ai/sessions`；PATCH·DELETE·GET `/ai/sessions/{id}` | 读/写 | 对话（id 必须是 `conv-NNN`，越界 400） | 浏 |
-| POST `/ai/sessions/{id}/turns` · GET `…/turns/{turn}` · POST `…/cancel` | 读/写 | 对话（turn 必须是 `turn-NNN`；POST 可带 `submission_id` 幂等识别，带 `retry_of` 显式建立失败轮次的新关联尝试；比较稳定的调用方字段，保留首次捕获上下文；练习上下文由 Pool 重建，焦点只解析同一练习内明确的相对指代） | 浏 |
+| POST `/ai/sessions/{id}/turns` · GET/PATCH/DELETE `…/turns/{turn}` · POST `…/queue/continue` · POST `…/cancel` | 读/写 | 对话（turn 必须是 `turn-NNN`；POST 可带 `submission_id`、`retry_of` 和 `queue_action`；编辑/删除带 `expected_revision`；continue 返回 `{conversation_id, queue_paused, turn}`，`turn` 可为 null；pending 读取不暴露捕获上下文） | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 | POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 

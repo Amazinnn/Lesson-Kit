@@ -27,7 +27,7 @@
 | `workspaces.json` | 工作区注册表 | CLI `init` | 已实现 |
 | `bridges.json` | 任务 provider 配置（`lesson-kit bridge add`） | CLI `bridge` | 已实现 |
 | `answer-sources.json` | 答卷目录清单（工作区名 → 目录路径数组；只存路径，不含单图路径与图片字节） | CLI `attempts sources add/remove` | 已实现（2026-09-24） |
-| `jobs/conv-NNN/` | provider 会话引用、`turn-NNN.json` 轮次记录（已接收用户文本/原始上下文、可选提交标识和稳定字段、状态及实际部分回答）；`include_draft=true` 时上下文可含有界答案/备注/选项/可见图片快照；不写 Pool 学习记录；事件和成功 `transcript.jsonl`；历史合并时旧成功交换只出现一次 | 桥 | 已实现（preserve-agent-messages-and-tool-outcomes） |
+| `jobs/conv-NNN/` | `conversation.json.queue_paused`; provider 会话引用、事件及成功 `transcript.jsonl`；`turn-NNN.json` 的 `message`、不可变 `accepted_message`、可选提交标识和稳定字段、状态、实际部分回答、`queue_revision`、`queue_action`、可选 `interrupt_target_turn_id` 与提交时上下文；`include_draft=true` 时上下文可含有界答案/备注/选项/可见图片快照；`queued` / `waiting_for_stop` 表示 provider 尚未开始；历史合并时旧成功交换只出现一次；不写 Pool 学习记录 | 桥 | 已实现（preserve-agent-messages-and-tool-outcomes；queue-agent-messages-and-interrupt） |
 | `explain/{course}/{chapter}/` | （已移除，remove-explain-diagnose） | — | 已删除 |
 | `goals.json` | 目标（顶层 JSON 数组；可选 start_date + deadline 时间区间） | `POST/PATCH/DELETE /goals` | 已实现 |
 | `plan.json` | 每日计划缓存 | `POST /plan/recalculate` | 已实现 |
@@ -56,3 +56,9 @@
 | `wb_ai_message_outbox_<workspace>_<conversation>` | 按提交标识保存消息、原始请求上下文及 `sending/rejected/unknown/accepted/failed` 状态；成功完成后清除 | AI 面板 |
 
 > 保存试卷的未完成进度与文本/选择草稿由 SQLite 独立保存（DATA_MODEL 的 paper_state / active_practice）；浏览器关闭不清除。草稿失败出站箱 `wb_paper_draft_<workspace>_<execution_id>_<position>` 用上下文和顺序校验恢复，不制造学习记录。其他临时牌组缓存沿用既有规则。
+
+## 浏览器 localStorage（工作区偏好）
+
+| 键 | 存什么 | 写者 |
+|---|---|---|
+| `wb_settings_<workspace>` | 工作区偏好，包括 `runningSendAction`（默认 `queue`，可选 `interrupt`；只影响之后的提交） | Agent 设置 |
