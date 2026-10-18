@@ -242,7 +242,11 @@ test("an unwrapped graph keeps the blueprint's single-band stage", () => {
   const size = graph.structureStageSize(nodes, levels, 30);
   assert.equal(size.width, 1800, "narrow graphs keep the base stage width");
   assert.equal(size.height, 1550, "three levels fit the base stage height");
-  const sim = graph.create(nodes, edges, { stageWidth: size.width, stageHeight: size.height });
+  // gravity is passed explicitly rather than inherited: the stage size above was computed
+  // for 30, and the guide rows below depend on the same value. Leaving it off made this test
+  // silently depend on whatever the default happened to be, and it broke the moment the
+  // default moved to 85.
+  const sim = graph.create(nodes, edges, { stageWidth: size.width, stageHeight: size.height, gravity: 30 });
   assert.deepEqual(
     [...new Set(sim.nodes.map((n) => Math.round(n.guideY)))].sort((a, b) => a - b),
     [125, 285, 446].map((y) => Math.round(y)),

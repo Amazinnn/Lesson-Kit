@@ -442,9 +442,9 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
             for key, label in filters)
         + "</div>"
         "<div class='slider-block'>"
-        "<div class='slider-label'><span>关系聚散 / Gravity</span><b id='graph-gravity-value'>30</b></div>"
-        "<input id='graph-gravity' type='range' min='0' max='100' value='30' aria-label='关系聚散'>"
-        "<div class='hint'>越右越紧凑，但会在可读性下限处饱和：强关系仍优先更短，节点与标签绝不以重叠换取“聚集”。</div>"
+        "<div class='slider-label'><span>节点间距</span><b id='graph-gravity-value'>85</b></div>"
+        "<input id='graph-gravity' type='range' min='0' max='100' value='85' aria-label='节点间距，越右越窄'>"
+        "<div class='hint'>往左拉更宽，往右拉更窄；窄到可读性下限就到底了，再往右不会再变。</div>"
         "<div class='distance-scale'>"
         "<div class='distance-cell'><b id='graph-strong-gap'>—</b><span>强关系</span></div>"
         "<div class='distance-cell'><b id='graph-medium-gap'>—</b><span>中关系</span></div>"

@@ -157,10 +157,22 @@ NOT change; only the runtime presentation layout is affected.
 ### Requirement: Node spacing control
 
 The existing 0–100 in-memory control SHALL control how closely points settle, by scaling
-the repulsive force. It SHALL NOT be a centre-gravity control. Its default SHALL be 30.
-Raising it SHALL settle the graph tighter and lowering it SHALL let the graph spread, by a
-margin visible across the control's full travel. The value SHALL NOT be persisted or
-written to learning records.
+the repulsive force. It SHALL NOT be a centre-gravity control. Its default SHALL be 85.
+Raising it SHALL settle the graph tighter and lowering it SHALL let the graph spread, with
+every position on the track producing a measurable change. The value SHALL NOT be persisted
+or written to learning records.
+
+Two findings shaped the range. First, the control was already wired to the repulsive force,
+but through a multiplier that ran from .998 to .916 across the whole track — a 4% range, so
+turning it did nothing. The coupling was never missing; the gain was. Second, below a charge
+of about 314 the layout is against the readability floor, and tightening further moves the
+fit by under 1%, so a track whose top end reached for smaller values would spend most of its
+travel on nothing. The track therefore maps onto the range that has an effect, and the
+default sits at the tight end of it. Measured across the track the settled graph's fitted
+scale moves 0.52 to 1.05 on a 31-point course and 0.32 to 0.68 on an 86-point one.
+
+The centring force was measured as the alternative binding and rejected: moving it from .02
+to .5 changed the graph's diagonal by 1.2x, against 3.5x for the repulsive force.
 
 #### Scenario: Tighten the graph
 
@@ -172,10 +184,15 @@ written to learning records.
 - **WHEN** the learner lowers the control
 - **THEN** the simulation reheats with weaker repulsion and the settled graph is visibly larger
 
-#### Scenario: The control is not decorative
+#### Scenario: No dead travel
 
-- **WHEN** the settled graph is measured at the lowest and the highest setting
-- **THEN** its size differs by a margin large enough to see on screen, not by a few percent
+- **WHEN** the learner moves the control by any tenth of its track
+- **THEN** the settled graph changes size measurably, rather than only responding at one end
+
+#### Scenario: The control reaches its limit honestly
+
+- **WHEN** the graph is as tight as the readability floor allows
+- **THEN** further tightening changes nothing, and the control's own hint says so rather than implying more travel remains
 
 ## MODIFIED Requirements
 

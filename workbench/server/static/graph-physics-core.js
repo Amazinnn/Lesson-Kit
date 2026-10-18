@@ -786,14 +786,44 @@
    * 逐项吻合，故这一步是纯实现替换：O(n²) → O(n log n)，观感不变。
    * 想真正采用 Obsidian 的量级（其 UI 默认 repel = 10³）需要先把舞台从"约束"
    * 降级为"结算后外接框"，否则自由力场会被边界钳制顶在墙上。 */
+  // The spacing control drives the charge, which measurement says is the quantity that
+  // actually sets how tightly the graph settles. Swept across its travel (tools/
+  // probe-gravity-travel.js, canvas 1634x1086):
+  //   charge  200 -> fit 1.05 on dmath, 0.68 on c02
+  //   charge  314 -> fit 1.05 on dmath, 0.68 on c02   <- where it settles today
+  //   charge 4000 -> fit 0.52 on dmath, 0.32 on c02
+  // The centre force was measured as the alternative and is much weaker: moving it from .02
+  // to .5 shifted the diagonal by 1.2x against the charge's 3.5x.
+  //
+  // It was already wired to the charge, but through a multiplier that ran from .998 to .916
+  // across the whole track — a 4% range, which is why turning it did nothing. The range was
+  // never the problem; the gain was.
+  //
+  // Below 314 nothing happens, and that is arithmetic rather than tuning: the layout is
+  // against the readability floor, so tightening further moves the fit by under 1%. Mapping
+  // the track's top end to that floor rather than to some smaller number is what keeps the
+  // whole track live instead of spending most of it on a range with no effect. The default
+  // moved to where it lands on today's value, so the starting look is unchanged and only the
+  // knob's position is different.
+  var CHARGE_AT_TIGHT = 254;
+  var CHARGE_AT_LOOSE = 4000;
+  var GRAVITY_DEFAULT = 85;
+
+  function chargeStrengthFor(state) {
+    var t = Math.max(0, Math.min(100, Number(state.graph.gravity) || 0)) / 100;
+    // Geometric: the effect is multiplicative, so a linear map would leave almost all of the
+    // visible change in the first third of the track.
+    return CHARGE_AT_LOOSE * Math.pow(CHARGE_AT_TIGHT / CHARGE_AT_LOOSE, t);
+  }
+
   var BH_THETA = .9;
   var BH_DISTANCE_MIN2 = 30;
   // Obsidian's own numbers are linkDistance 250, repelStrength -1000, collideRadius
   // 60 — all three in one pixel scale, the one its graph actually settles at. Our
   // points rest about 500 apart, k = 2 of that, and the charge has to follow the
   // scale it is balancing against. A relation's strength sets linkDistance per edge,
-  // so the scale is also per edge; BH_STRENGTH is the value that holds for the
-  // dmath spread and is re-tuned with tools/calibrate-bh-strength.js.
+  // so the scale is also per edge; the charge that balances it is chargeStrengthFor,
+  // and tools/probe-gravity-travel.js is what measures it.
   // Obsidian ships linkDistance 250 and repelStrength 1000, and its graph settles at
   // a few times the first of those. At the semantic distance our relations ask for
   // (~500) 31 points came out at 5529x6036 — three times the stage, past what
@@ -802,10 +832,8 @@
   // graph roughly the size Obsidian's own would be at this point count.
   var LAYOUT_SCALE = .28;
   // Obsidian's own numbers are linkDistance 250, repelStrength -1000, collideRadius
-  // 60 — all three in one pixel scale. BH_STRENGTH has to hold Obsidian's ratio to
   // linkDistance (1000 at 250, so 0.016 * L^2) or the graph either collapses or
   // spreads without bound; at L = 275 that is about 1200.
-  var BH_STRENGTH = 314;
   // d3 forceLink's linkStrength. Obsidian ships 1.
   var LINK_STRENGTH = 1;
   // Obsidian's cooldown: alpha += (alphaTarget - alpha) * (1 - 0.001^(1/300)).
@@ -1202,7 +1230,7 @@
     // but the hard cap that made the near field non-physical is gone, and the
     // cost drops from every pair to n log n.
     var chargeTree = bhBuild(active);
-    var chargeStrength = -BH_STRENGTH * alpha * (.74 + .20 * layoutSpread(state));
+    var chargeStrength = -chargeStrengthFor(state) * alpha;
     active.forEach(function (n) {
       if (movable(state, n)) bhApply(chargeTree, n, chargeStrength);
     });
@@ -1483,7 +1511,7 @@
       portSlots: new Map(),
       graph: {
         view: options.view || "structure",
-        gravity: options.gravity === undefined ? 30 : options.gravity,
+        gravity: options.gravity === undefined ? GRAVITY_DEFAULT : options.gravity,
         selected: null,
         filters: new Set(),
         drag: null,
