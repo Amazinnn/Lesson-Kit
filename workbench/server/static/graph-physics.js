@@ -115,7 +115,20 @@
     var state = mirror.state;
     var graph = mirror.graph;
     var latest = null;
-    var stepPending = false;
+    // Steps allowed to be in flight at once.
+    //
+    // This used to be a single boolean, so a step could only be sent after the previous
+    // snapshot came back: one physics tick per round trip, and since positions only change
+    // when a snapshot is applied, the picture advanced at the round-trip rate rather than the
+    // frame rate. Measured during a solve, rAF was delivering 39-56 frames a second while node
+    // positions changed 10-21 times a second, which is what "the refresh rate feels low" was.
+    //
+    // Pipelining hides the latency instead of waiting on it. The worker processes messages in
+    // order, so the newest snapshot is always the furthest along, and applyLatest() — which
+    // runs once per frame — now finds something new on essentially every frame. The physics
+    // still advances by the same number of ticks; only the waiting is gone.
+    var stepsInFlight = 0;
+    var MAX_STEPS_IN_FLIGHT = 4;
     var failed = false;
     var revision = 0;
     var appliedRevision = -1;
@@ -147,7 +160,7 @@
     function stop(message, error) {
       if (failed) return;
       failed = true;
-      stepPending = false;
+      stepsInFlight = 0;
       latest = null;
       graph.alpha = 0;
       graph.settled = true;
@@ -206,7 +219,9 @@
       } else if (!graph.settled) {
         savedThisSettle = false;
       }
-      if (latest.kind === "step") stepPending = false;
+      // The slot is released in the worker message handler, on arrival — not here. Doing
+      // it in both places would decrement twice for one step and let the pipeline run
+      // unbounded, which would queue steps faster than the worker can retire them.
       latest = null;
     }
 
@@ -263,8 +278,8 @@
       tick: function () {
         if (failed) return;
         applyLatest();
-        if (graph.alpha <= 0 || stepPending) return;
-        stepPending = true;
+        if (graph.alpha <= 0 || stepsInFlight >= MAX_STEPS_IN_FLIGHT) return;
+        stepsInFlight += 1;
         send("step", {
           count: state.nodes.length > 120 ? 3 : 1,
           controls: controlsFor(state),
@@ -295,7 +310,9 @@
         if (failed) return;
         var message = event.data || {};
         if (message.type !== "snapshot") return;
-        if (message.kind === "step") stepPending = false;
+        // Decremented before the revision gate below: a discarded snapshot still means the
+        // worker finished a step, and leaving the slot occupied would stall the pipeline.
+        if (message.kind === "step") stepsInFlight = Math.max(0, stepsInFlight - 1);
         if (message.revision < controlRevision) return;
         latest = message;
       };
