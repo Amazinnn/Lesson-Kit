@@ -883,8 +883,8 @@
         graphFailureShow(sim.error);
         return;
       }
-      // The fit follows the canvas size from here on, rather than a one-shot moment.
-      graphWatchCanvasSize();
+      // The fit follows the window, not the canvas — see graphWatchWindowSize.
+      graphWatchWindowSize();
       graphEdgeBudget = { told: false };
       graphEdgeBudgetEl = graphEdgeBudgetEl || document.getElementById("graph-edge-budget");
       graphApplyEdgeVisibility();
@@ -1160,36 +1160,27 @@
       graphApplyView();
     }
 
-    /* Fit whenever the canvas actually changes size.
+    /* Fit once after the first settle, and when the WINDOW changes size — not when the canvas
+     * changes size.
      *
-     * The auto-fit was a one-shot: it fired at whatever moment the solver reported itself
-     * settled, then cleared its own flag so it could never run again. Measured with a probe
-     * on the condition, that moment arrived while the grid was still 474px wide — the layout
-     * had not settled into its final width yet — so the graph was fitted for a canvas about
-     * a third of its real size and stayed that way. At a 1780px canvas the applied transform
-     * was still translate(52px,-18px) scale(.7), which is the hardcoded initial value, and
-     * identical at 1140px and 1780px wide, which is what proved the fit never ran again.
+     * That distinction is the whole point. The dashboard is a column of the graph grid, so
+     * opening it narrows the canvas, and re-fitting there re-zoomed the entire picture on every
+     * selection: the learner picks a point to read about it and the view jumps to a new zoom,
+     * sliding the very point they were looking at. Selecting a point is a change of subject,
+     * not a change of viewport, and it should not move the camera.
      *
-     * Two visible consequences, both of which this fixes: the graph sat off-centre, since the
-     * pan had been computed against the narrow width, and every point rendered 33% smaller
-     * than it should, since .7 was doing the work the fit would have given 1.05.
+     * A window resize is a different thing. The space genuinely changed and nobody wants a graph
+     * left cropped because the browser got narrower, so that one still re-fits.
      *
-     * Watching the size rather than guessing a moment also covers the dashboard folding and
-     * the window resizing, neither of which the old trigger could see. It re-fits even after
-     * the learner has panned or zoomed, which is a deliberate choice (decision D2): a view
-     * that fits the space it is in beats a view that keeps a zoom chosen for a different
-     * amount of space.
-     */
-    var graphCanvasWatcher = null;
-
-    function graphWatchCanvasSize() {
-      if (typeof ResizeObserver !== "function" || !graphCanvas) return;
-      graphCanvasWatcher = new ResizeObserver(function () {
+     * The fit button still fits on demand, and the first settle still fits once — the initial
+     * view is not affected by this. */
+    function graphWatchWindowSize() {
+      if (typeof window === "undefined" || !window.addEventListener) return;
+      window.addEventListener("resize", function () {
         if (!sim) return;
         graphFit();
         graphMarkDirty();
       });
-      graphCanvasWatcher.observe(graphCanvas);
     }
 
     function graphFit() {
@@ -1641,9 +1632,11 @@
     }
 
     var graphPanDrag = null;
+    var graphCanvasPress = null;
 
     graphCanvas.addEventListener("pointerdown", function (event) {
       if (event.target.closest && event.target.closest(".node-wrap, .controls, .zoom, .legend")) return;
+      graphCanvasPress = { x: event.clientX, y: event.clientY };
       graphPanDrag = {
         x: event.clientX, y: event.clientY,
         panX: graphView.panX, panY: graphView.panY,
@@ -1700,13 +1693,28 @@
 
     graphCanvas.addEventListener("click", function (event) {
       if (!sim) return;
-      if (event.target === graphCanvas || event.target === graphStage) {
-        sim.graph.selected = null;
-        selectedGraphKpId = null;
-        graphApplyVisibility();
-        graphRenderDetail(null);
-        graphMarkDirty();
+      if (event.target !== graphCanvas && event.target !== graphStage) {
+        // A node button, a control, the legend or the zoom buttons. Not our business — but the
+        // press record is cleared so it cannot leak into a later click on empty space and
+        // suppress it with a stale travel distance.
+        graphCanvasPress = null;
+        return;
       }
+      // A click always follows a drag, because the browser synthesises one when the press and
+      // the release land on the same element — so panning the canvas used to clear the
+      // selection every time. The learner nudged the view to read something and lost the point
+      // they had opened; "drag" is not "click on empty space". The node buttons already had this
+      // travel test (graphNodePress); the canvas itself did not.
+      if (graphCanvasPress) {
+        var travelled = Math.hypot(event.clientX - graphCanvasPress.x, event.clientY - graphCanvasPress.y);
+        graphCanvasPress = null;
+        if (travelled > 4) return;
+      }
+      sim.graph.selected = null;
+      selectedGraphKpId = null;
+      graphApplyVisibility();
+      graphRenderDetail(null);
+      graphMarkDirty();
     });
 
     graphCanvas.addEventListener("wheel", function (event) {
