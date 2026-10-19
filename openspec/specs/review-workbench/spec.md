@@ -95,11 +95,11 @@ included in the Paper when they resolve to existing durable problems, with
 reason `explicit`, even when they fall outside the requested scope or filters or
 exceed the requested problem count. This exact-id capability is an authoring
 primitive, not a learner-facing practice control: the browser SHALL NOT expose a
-per-problem picker that injects named problems into an active Practice Run.
+per-problem picker or scope/filter/quantity assembly controls. Browser Paper-list management SHALL not edit item membership or order; authoring through Agent/CLI remains available.
 
 #### Scenario: Assemble a Paper for one weak knowledge point
 
-- **WHEN** the learner uses one weak knowledge point as the requested practice scope
+- **WHEN** the learner asks the Agent to use one weak knowledge point as the requested practice scope
 - **THEN** the engine assembles durable problems for a Paper constrained to that scope and reports the selection reasons before execution begins
 
 #### Scenario: Pool shortage is reported
@@ -120,7 +120,7 @@ per-problem picker that injects named problems into an active Practice Run.
 ### Requirement: Paper-backed Practice Run
 A Practice Run SHALL execute one already determined Paper and preserve its ordered item identities. Viewing, answering, skipping, rating, scheduling or Agent discussion SHALL NOT dynamically pull extra items into it. At most one selected active run exists per workspace execution resource, but each saved Paper MAY retain its own unfinished execution independently. Switching selection SHALL pause rather than abandon the previous Paper and SHALL NOT require completing it first. Only explicit governed content edits/deletion under this change may alter or reset unfinished execution state; those are not scheduler-driven assembly.
 
-A Paper SHALL NOT be defined by one product-level content-mode choice. Each item SHALL use its actual validated answering type. Existing `practice_mode` fields MAY remain compatibility metadata but SHALL NOT force every item into the same form or recreate a dynamic queue. Rating preference controls feedback timing only. Displaying, drafting, revealing, skipping or ending work SHALL NOT manufacture learning evidence. Scheduling SHALL never lock an item.
+A Paper SHALL NOT be defined by one product-level content-mode choice. Each item SHALL use its actual validated answering type. Existing `practice_mode` fields MAY remain compatibility metadata but SHALL NOT force every item into the same form or recreate a dynamic queue. Self-rating preference controls learning feedback only; Answer Reveal Timing separately controls result disclosure and answer locking. Displaying, drafting, revealing, skipping or ending work SHALL NOT manufacture learning evidence. Scheduling SHALL never lock an item.
 
 #### Scenario: Start from an assembled Paper
 - **WHEN** a Paper's ordered items are fixed and the learner starts it
@@ -154,17 +154,18 @@ source semantic `paper`; historical `quick`, `practice_set`, or `agent` source
 values MAY remain readable as migration data, and replaying such history SHALL
 create a new Paper-sourced execution from the archived fixed items.
 
-When a run completes or is explicitly replaced or cleared, the workbench SHALL
+When the learner explicitly submits the Paper, or a run is explicitly replaced or cleared, the workbench SHALL
 append one minimal `practice_runs` snapshot before deleting active execution
 state. The snapshot SHALL preserve Paper source identity/reference/label, ordered
-item identities and final states, rating compatibility metadata, and timestamps
-only. It SHALL NOT replace, duplicate, edit, or delete `problem_attempts` or
+item identities and final states, rating compatibility metadata, timestamps, and the submitted per-item answer references and presentation state needed to reopen the completed answer sheet. It SHALL NOT replace, duplicate, edit, or delete `problem_attempts` or
 `feedback_events`.
 
 #### Scenario: Completing the last item archives the run
 
+- **GIVEN** the learner has explicitly requested final Paper submission
 - **WHEN** the final pending item of an active Paper is answered or marked stuck
-- **THEN** one completed Paper run snapshot is appended and the active singleton is cleared
+- **THEN** one completed snapshot is appended and active execution is cleared exactly once as part of that explicit submission
+- **AND** answering the last item outside explicit final submission does not archive the run
 
 #### Scenario: Replacing an unfinished run keeps both histories honest
 
@@ -178,14 +179,13 @@ only. It SHALL NOT replace, duplicate, edit, or delete `problem_attempts` or
 
 ### Requirement: Re-assembly after wrong results
 
-A wrong or stuck result MAY offer a follow-up action that assembles a **new
-Paper** from the relevant knowledge scope or learning evidence. The completed or
+A wrong or stuck result MAY be discussed with the Agent to request authoring a new Paper from relevant knowledge scope or learning evidence. It SHALL NOT expose a learner-operated assemble-similar button. The completed or
 running Paper SHALL never be extended in place, and the follow-up SHALL not
 silently inherit an old seen-id queue as its execution identity.
 
 #### Scenario: Build a follow-up Paper after a wrong answer
 
-- **WHEN** a problem is answered wrong or stuck and the learner chooses to practise similar material
+- **WHEN** a problem is answered wrong or stuck and the learner asks the Agent to author similar material
 - **THEN** Lesson Kit assembles a new Paper from the relevant scope/evidence and starts it only after its item list is determined
 
 ### Requirement: Flexible feedback
@@ -240,7 +240,7 @@ a staged execution queue.
 - **THEN** its repetitions, ease, interval, and due date are updated in the scheduling table without mutating the running Paper
 
 ### Requirement: Practice Run interruption recovery
-Recorded learning conclusions SHALL remain durable. Each saved Paper's unfinished checkpoint SHALL durably preserve source identity, fixed ordered items, cursor, completion states and unsubmitted answer/choice drafts across navigation, refresh and browser/service restart. Selecting another Paper SHALL NOT clear it. Draft persistence SHALL NOT create an attempt, verdict, feedback, signal, learning-progress or schedule entry. Submitted evidence and completed historical runs SHALL NOT be reconstructed from drafts or markers.
+Recorded learning conclusions SHALL remain durable. Each saved Paper's unfinished checkpoint SHALL durably preserve source identity, fixed ordered items, cursor, Answer Reveal Timing, submission locks, reference-view facts, stuck marks, completion states, self-ratings and unsubmitted answer/choice drafts across navigation, refresh and browser/service restart. Selecting another Paper SHALL NOT clear it. Draft persistence SHALL NOT create an attempt, verdict, feedback, signal, learning-progress or schedule entry. Submitted evidence and completed historical runs SHALL NOT be reconstructed from drafts or markers.
 
 #### Scenario: Resume the same Paper after refresh
 - **WHEN** the learner refreshes or leaves and returns to an unfinished Paper
@@ -252,7 +252,7 @@ Recorded learning conclusions SHALL remain durable. Each saved Paper's unfinishe
 
 #### Scenario: Unsubmitted browser state creates no record
 - **WHEN** the tab ends with an unsubmitted draft, note, reveal state or rating
-- **THEN** no learning evidence is fabricated; supported answer/choice drafts are preserved as execution state only
+- **THEN** no learning evidence is fabricated; supported inputs and presentation state are preserved as execution state only, and already confirmed ratings remain durable
 
 ### Requirement: Grading input modes
 
@@ -795,7 +795,7 @@ The chapter lens SHALL scope reading surfaces — knowledge-point list/detail,
 knowledge graph, and practice suggestions — and MAY provide the default scope for
 Paper Assembly. It SHALL NOT define or mutate the contents of a running Paper.
 An explicitly chosen Paper-assembly scope MAY span chapters and SHALL survive
-chapter-lens changes in the same tab until the learner changes that scope.
+chapter-lens changes in the same tab until an explicit Agent/CLI authoring request changes that scope.
 
 #### Scenario: Lens narrows default assembly suggestions
 
@@ -804,8 +804,10 @@ chapter-lens changes in the same tab until the learner changes that scope.
 
 #### Scenario: Explicit scope survives lens changes
 
-- **WHEN** the learner has explicitly selected knowledge points across chapters and changes the reading lens
+- **WHEN** the learner has explicitly requested an Agent/CLI assembly scope spanning chapters and changes the reading lens
 - **THEN** the selected assembly scope remains unchanged while the reading surfaces follow the new lens
+
+Reading-lens and graph selection controls SHALL remain reading controls and SHALL NOT accumulate a learner-managed Paper Assembly scope.
 
 ### Requirement: Provenance-filtered problem pull
 
@@ -1034,34 +1036,6 @@ whitespace and keep only rows carrying every one of its words.
 - **WHEN** a content search is given two words and only one row carries both
 - **THEN** that row alone is returned
 
-### Requirement: Source filter panel on the practice page
-
-The practice departure page SHALL offer a floating source-filter panel with one
-checkbox group per filter dimension, using values and counts derived from the
-pool. Active dimension selections SHALL persist per workspace for the browser
-session and SHALL constrain the next Paper Assembly together with its scope.
-Dimension semantics remain OR within a dimension and AND across dimensions.
-
-The panel SHALL NOT provide search-result checkboxes, a picked-problem set, or
-any other per-problem learner control. Stem/source keyword search endpoints MAY
-remain available for read-only discovery and Agent/authoring workflows, but a
-search hit SHALL NOT be injected into learner practice through `include_ids`.
-
-#### Scenario: Filter dimensions reach Paper Assembly
-
-- **WHEN** the learner selects a document, year, and origin before assembling a Paper
-- **THEN** those dimensions constrain the assembly and the Paper is fixed before a Practice Run begins
-
-#### Scenario: No per-problem picking in the filter panel
-
-- **WHEN** the learner opens the source-filter panel
-- **THEN** the panel exposes dimension filters but no checkbox or action that adds a specific search result to practice
-
-#### Scenario: Clearing filters changes no running Paper
-
-- **WHEN** the learner clears source filters while a Practice Run already exists
-- **THEN** the active Paper items remain unchanged and the cleared filters affect only later assembly
-
 ### Requirement: Question corrections reset only affected unfinished items
 Changing a question's stem/embedded answering content, options, answer key or answering type SHALL retain its identity and Paper memberships/order, reset only that question to pending in unfinished Paper executions, and discard only its stale answer/choice drafts. Other items' progress SHALL survive. Explanation/title/KP/difficulty/source-only changes and no-op edits SHALL NOT trigger reset. Historical attempts/ratings/runs SHALL remain historical and SHALL NOT be automatically regraded. A submit made against superseded Paper structure or answering content SHALL be rejected before any learning write, with a recoverable explanation.
 
@@ -1083,3 +1057,30 @@ Deleting a question SHALL clean its current memberships and unfinished item/draf
 #### Scenario: Delete a question shared by multiple unfinished Papers
 - **WHEN** Q is deleted from the pool while A/B both reference it
 - **THEN** Q disappears from both current memberships/checkpoints, all other progress survives, and previous historical evidence stays readable as deleted content
+
+### Requirement: Explicit final Paper submission
+
+Only explicit `提交试卷` SHALL finish an ordinary-problem run. Final submission SHALL preserve explicit stuck marks, submit other existing nonblank input not already submitted, mark remaining blank items stuck, freeze final answers and archive one completed run. An explicit stuck mark SHALL take precedence over unchanged earlier input until a new answer edit clears the mark; retained draft text SHALL not be graded as the final answer of a stuck item. It SHALL NOT ask for an additional blank-item confirmation or wait for self-rating. Previously submitted items SHALL not create duplicate Attempts, feedback or learning effects. A whole-Paper editable draft or revisable stuck mark SHALL NOT become an immutable Attempt before final submission. Per-item explicit submissions and locked stuck marks SHALL use the existing submission/evidence flow; navigation and draft saving SHALL never create evidence.
+
+Submission SHALL be retry-safe and validate execution, Paper generation and item content revisions. A failed submission SHALL retain recoverable input and show failure rather than show completion. A lost response SHALL be resolvable without resubmitting evidence or archiving again. Existing immutable historical Attempts SHALL NOT be rewritten to emulate editable drafts.
+
+#### Scenario: Submit filled and blank items
+- **WHEN** a run is finally submitted with saved inputs, some unsubmitted multiple-choice/text answers and some blank items
+- **THEN** filled inputs are submitted as answers, only blank items become stuck, and the run completes without a second confirmation or mandatory rating
+
+#### Scenario: Last per-item result is not final submission
+- **WHEN** the last pending item receives a per-item answer or stuck submission
+- **THEN** the learner may still browse the run and only explicit final submission archives it
+
+#### Scenario: Explicit stuck mark overrides unchanged draft
+- **WHEN** a learner enters an answer, marks it stuck in whole-Paper mode, and submits without a new answer edit
+- **THEN** the final item remains stuck without grading the unchanged draft as a submitted answer
+- **AND** a new nonblank answer edit before final submission may clear the mark without erasing the reference-view fact
+
+#### Scenario: Retry after a lost final response
+- **WHEN** the same final submission is retried after its response is lost
+- **THEN** the original completed result is recovered without duplicate Attempts, feedback, learning effects or run snapshots
+
+#### Scenario: Failed or stale submission
+- **WHEN** final submission fails or a referenced revision is stale
+- **THEN** no successful completion is claimed and saved input remains recoverable under the existing revision/reset rules

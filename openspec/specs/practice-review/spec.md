@@ -2,79 +2,19 @@
 
 ## Purpose
 
-Let a learner review recorded answers throughout the current Paper run without moving practice progress, reveal reference material explicitly, and overwrite the linked self-rating within that run. Legacy practice and flash-card navigation retain their existing behavior.
-
+Let learners freely navigate ordinary Paper items before and after explicit final submission, disclose results according to the run's Answer Reveal Timing, and overwrite linked self-ratings without replaying learning effects. Navigation changes no answer conclusion. Flash-card-specific navigation retains its existing behavior.
 ## Requirements
-### Requirement: Review is an overlay, not practice navigation
-
-Review browsing and answer reveal SHALL NOT move the durable practice cursor, alter completion state, create an Attempt, write feedback, or reopen an original answer for submission. Only an explicit self-rating save under this capability MAY change the linked self-rating as defined below. Flash-card previous/next navigation SHALL retain its existing cursor-based behavior. Where an existing interface already opens individual submissions of a completed execution, review SHALL remain available without restarting it. This change SHALL NOT require a new archived-run review entry point.
-
-#### Scenario: Review leaves progress unchanged
-
-- **WHEN** the learner opens, navigates, reveals reference material and closes review without explicitly saving a self-rating
-- **THEN** durable cursor, attempts, feedback and completion state remain unchanged
-
-#### Scenario: Review a completed execution
-
-- **GIVEN** an existing interface already opens individual submissions of a completed Paper execution
-- **WHEN** the learner uses that existing review interface
-- **THEN** recorded items remain reviewable without restarting it or creating an unanswered item
-
 ### Requirement: Agent context follows the visible reviewed problem
 
-While review is open, a new Agent turn from the practice page SHALL identify the visible reviewed problem and its submitted answer as focused context. Navigating among reviewed items SHALL update that focus without moving durable practice progress. Returning to the current problem SHALL restore ordinary current-problem context. Previously accepted messages SHALL retain their submission-time context.
+A new Agent turn from ordinary Paper practice SHALL use the visible problem and that run's answer or draft as focused context, whether answering, browsing a locked item, or viewing a completed answer sheet. Previously accepted messages SHALL retain submission-time context. Changing the visible item SHALL NOT submit an answer or create learning evidence.
 
 #### Scenario: Ask the Agent while reviewing
-
 - **WHEN** the learner sends an Agent message while a reviewed result is visible
-- **THEN** that reviewed problem and its submitted answer are the focused context without moving practice progress
+- **THEN** that problem and submitted answer are focused context without another submission
 
 #### Scenario: Navigate after sending
-
-- **WHEN** the learner sends a message while reviewing A and then views B
+- **WHEN** the learner sends a message while viewing A and then views B
 - **THEN** a new message uses B while the accepted message keeps A's context
-
-### Requirement: Review completed ordinary problems throughout a Paper run
-
-Saved Papers and temporary fixed executions with a server execution_id SHALL both support this review. Legacy practice without a server execution identity SHALL retain its existing immediately-previous-result behavior.
-
-For ordinary problems with a submitted answer or a recorded `不会` state in the selected Paper's same Practice Run, the practice page SHALL allow repeated backward and forward review through all such items, without a one-item or visit-count limit. The view SHALL show the problem, learner answer or `不会`, available verdict and existing self-rating. Reference answers and solutions SHALL be collapsed on every entry, including re-entry to the same reviewed problem, and SHALL appear only after an explicit reveal action. An unavailable verdict SHALL be stated as unavailable rather than inferred from self-rating. Browser-held unconfirmed submission state MAY be shown with an explicit unconfirmed label and SHALL NOT be represented as a durably saved Attempt. Original answering and skip controls SHALL NOT mutate the reviewed submission.
-
-#### Scenario: Review after advancing
-
-- **WHEN** the browser has submitted an answer or marked the ordinary problem `不会` and advanced to the next unanswered ordinary problem
-- **THEN** `回看上一题` is available and shows that answer or state with any available verdict
-- **AND** reference answers and solutions remain collapsed
-
-#### Scenario: Review while the attempt write is unconfirmed
-
-- **WHEN** the browser holds a submitted answer, its write remains unconfirmed, and practice has advanced
-- **THEN** review still shows the browser-held answer explicitly labelled unconfirmed
-- **AND** it does not imply durable persistence or allow a self-rating write against an unconfirmed Attempt
-
-#### Scenario: Return to the current problem
-
-- **WHEN** the learner activates `返回当前题` from any reviewed item
-- **THEN** the selected execution's current problem is shown with its unsent text or selected choices restored
-
-#### Scenario: Review more than one earlier problem repeatedly
-
-- **GIVEN** at least four ordinary problems have recorded answers in one execution
-- **WHEN** the learner repeatedly navigates backward to the first and forward to the last recorded problem
-- **THEN** all are reachable without a visit-count limit and boundary controls are disabled rather than wrapping
-- **AND** each entry hides reference answers and solutions even if they were revealed on an earlier visit
-
-#### Scenario: Explicit reveal and unavailable verdict
-
-- **WHEN** the learner opens a reviewed problem without a recorded verdict
-- **THEN** it shows the learner answer and a truthful unavailable-verdict state without revealing the answer key
-- **AND** an explicit reveal action may show available reference material without creating learning evidence
-
-#### Scenario: Restore persisted review after reload or Paper switching
-
-- **WHEN** the learner reloads or leaves and resumes the same Paper execution
-- **THEN** its persisted reviewed submissions remain accessible independently of other Papers
-- **AND** missing original submissions are not fabricated from the current answer key
 
 ### Requirement: Explicit self-rating editing for a reviewed submission
 
@@ -111,3 +51,49 @@ When self-rating is enabled for the selected Paper execution, a durably saved re
 
 - **WHEN** a self-rating save fails
 - **THEN** the edited rating and note remain available for retry or cancellation and the UI does not claim success
+
+### Requirement: Free navigation throughout a Paper
+
+An ordinary-problem Paper SHALL expose previous, next, and explicit `不会` controls. Previous/next and numbered status dots SHALL reach every item, including unanswered and locked items, without a visit-count limit. First previous and last next SHALL be disabled without wrapping or submitting the Paper. Navigation SHALL preserve input and SHALL NOT submit, mark stuck, rate, or complete an item. Locked items SHALL remain viewable without accepting another answer or a new stuck mark. Flash-card-specific behavior SHALL remain outside this ordinary-problem replacement.
+
+#### Scenario: Traverse the whole Paper repeatedly
+- **GIVEN** a Paper has at least five items with mixed unanswered, answered and stuck states
+- **WHEN** the learner moves from the fifth to the first and back, including dot jumps
+- **THEN** all items remain reachable and answer states remain unchanged
+
+#### Scenario: Leave an unsubmitted item
+- **WHEN** the learner types text or checks several options and navigates away without submitting
+- **THEN** input is preserved without navigation creating a verdict or Attempt
+
+#### Scenario: Navigate a completed answer sheet
+- **WHEN** the learner opens the completed run's answer sheet
+- **THEN** every item is viewable with its recorded answer/state and truthful available verdict, without reopening the run
+
+### Requirement: Mode-specific answer reveal and locking
+
+Answer Reveal Timing SHALL be selected before a new run and remain fixed for it. In per-item mode, single-choice or yes/no selection SHALL submit the answer; multiple-choice and text items SHALL instead expose `提交答案` and submit only on activation. Successful submission SHALL lock the answer and automatically expand available verdict, reference answer and solution. Text and keyless items SHALL NOT receive invented verdicts. Explicit `不会` SHALL reveal available reference material and lock the item as stuck. Unconfirmed writes SHALL be labelled truthfully and remain recoverable; the UI SHALL NOT claim durable success before confirmation.
+
+In whole-Paper mode, inputs SHALL auto-save and remain editable until final submission, without per-item submit controls or premature verdict/reference reveal. Explicit `不会` SHALL reveal reference material and set a revisable stuck mark. Entering a new answer SHALL clear that mark while preserving that reference material was viewed. Navigation SHALL not clear a mark. An already disclosed answer SHALL NOT be treated as unseen.
+
+#### Scenario: Submit a single-choice item
+- **WHEN** the learner selects an option in per-item mode
+- **THEN** the answer is submitted and, after success, results and reference material appear with the answer locked
+
+#### Scenario: Submit multiple-choice or text
+- **WHEN** input changes without activating submit in per-item mode
+- **THEN** it remains editable and reference material stays hidden
+- **AND** activating submit submits the input, locks it after success, and expands reference material
+
+#### Scenario: Mark stuck in each mode
+- **WHEN** the learner activates `不会`
+- **THEN** available reference material is shown immediately
+- **AND** per-item mode locks the stuck state while whole-Paper mode allows a new answer to clear it before final submission
+
+#### Scenario: Reference material is unavailable
+- **WHEN** an item has no recorded answer, solution or usable key
+- **THEN** absent material and unavailable verdict are stated honestly rather than generated or inferred from self-rating
+
+#### Scenario: Restore reveal state
+- **WHEN** the learner revisits or resumes a per-item submitted problem
+- **THEN** recorded results and reference material remain expanded and the answer locked
+- **AND** whole-Paper unsubmitted items still hide results except reference material explicitly disclosed through `不会`

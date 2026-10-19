@@ -53,3 +53,9 @@
 独立工作单元检查：后端 focused 176 项通过；控制器 focused 13 项通过；原交互测试 120 项、页面/API 测试 106 项通过。最终全量检查与整组代码复核由独立子代理负责，结果以新增审计报告为准。
 
 实际 Chromium 走查已在 WorkspaceFixture 测试库、隔离注册表及临时端口完成：五题反复前后与圆点跳题，两份保存 Paper 直接切换和暂停/刷新恢复，两种答案展示方式，多选/文字显式提交及锁定，交卷查看答卷再返回完成页，再练创建新轮次，最后一题作答不自动交卷。两轮共 10 条 Attempt，查看/返回不增加记录。脚本位于系统 TEMP 的 `free-paper-navigation-browser.py`，截图 `free-paper-navigation-completed.png`；进程退出 0。浏览器主动关闭请求产生的连接中断仅在走查脚本中忽略，没有为此修改服务端。
+
+扩展走查同样退出 0：真实 `/feedback` 首次打 3 分、同轮覆盖为 4 分后只有一条关联反馈，学习信号、进度、当前状态及调度快照均未因覆盖而重放；旧闪卡轮次的兼容容器可见，继续后能看到正面并揭示背面。复核中发现的真实 API 回执形状、兼容容器显示、临时题卷与单选已选项恢复均有专门回归测试；不能用虚构的评分返回形状代替实际接口。
+
+最终代码 `cd9587ed`；控制器 focused suite 为 16 项。独立子代理全量检查完成：pytest 1097、Node 236 项通过，compileall、OpenSpec 24 项与 dmath guard 通过；随后子代理因额度中断，未提交完整复核结论，控制器接手问题闭环与文档归档。详见 `docs/audits/2026-10-19-free-paper-navigation-review.md`。本轮未迁移真实课程库、未更新运行服务，不将代码交付等同于 dashboard 已上线。
+
+两项 change 均已通过 CLI archive，进入 `openspec/changes/archive/2026-10-19-*`，当前四份能力规范已同步。归档后 `openspec validate --all --strict --concurrency 3` 为 22 passed、0 failed（两项已完成 change 不再作为活动项计数）。当前文档与实现提交在同一交付分支；真实池迁移与服务切换尚未执行。
