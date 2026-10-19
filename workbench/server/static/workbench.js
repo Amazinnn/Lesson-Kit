@@ -1262,6 +1262,28 @@
         + "</div>";
     }
 
+    /* A point's label appears once the point is big enough on screen to hold it.
+     *
+     * That is how the reference behaves: its renderer draws a node's text when the node's
+     * drawn radius clears a threshold, so a big point earns its label at a lower zoom than a
+     * small one, and zooming out drops the small ones first. The old rule here was a single
+     * global cutoff (scale > .60), which meant every point's label appeared at the same moment
+     * no matter how big the point was — size and legibility had nothing to do with each other.
+     *
+     * 14px is calibrated against the old behaviour rather than picked: the median point is 52px
+     * across, which used to appear at .60 and now appears at 14/26 = .538 — near enough the
+     * same. What changes is the spread around it. The largest point (80px across) earns its
+     * label at .35; the smallest (20px across) waits for 1.4, which the zoom controls can reach
+     * but only near their top end.
+     *
+     * Read against node.size — the animated value — rather than targetSize, so the threshold
+     * tracks the circle actually on screen. */
+    var LABEL_MIN_RADIUS_PX = 14;
+
+    function labelScaleThreshold(node) {
+      return LABEL_MIN_RADIUS_PX / Math.max(1, node.size / 2);
+    }
+
     function graphPaintNodes() {
       if (!sim) return;
       var focus = sim.graph.selected ? sim.neighbors(sim.graph.selected) : null;
@@ -1278,8 +1300,19 @@
         elements.wrap.style.setProperty("--size", node.size + "px");
         var focused = sim.graph.selected
           && (node.id === sim.graph.selected || focus.one.has(node.id));
-        var labelVisible = graphView.scale > .60 || focused || sim.graph.hover === node.id;
-        elements.label.style.opacity = (labelVisible ? node.opacity : 0).toFixed(3);
+        // The selected point always shows its label: it is the one the learner just picked,
+        // and answering "what did I click" must not depend on the zoom.
+        //
+        // Its neighbours do NOT get a pass. They are held to the same size rule as everything
+        // else, which is the whole point of the rule — a large neighbour earns its label at
+        // this zoom and a small one waits until the learner zooms in. They are still marked as
+        // related, but through weight rather than by overriding legibility: a heavier label
+        // than the rest, still subject to the same threshold.
+        var labelVisible = node.id === sim.graph.selected
+          || sim.graph.hover === node.id
+          || graphView.scale >= labelScaleThreshold(node);
+        var labelWeight = focused && node.id !== sim.graph.selected ? .7 : 1;
+        elements.label.style.opacity = (labelVisible ? node.opacity * labelWeight : 0).toFixed(3);
         elements.meta.style.opacity = ((graphView.scale > .84 || node.id === sim.graph.selected ? .9 : 0) * node.opacity).toFixed(3);
       });
     }
