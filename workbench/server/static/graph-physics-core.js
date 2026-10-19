@@ -45,8 +45,20 @@
     return clamp(((Number(value) || 1) - .75) / 1.125, 0, 1);
   }
 
+  /* Node diameter from a 0..1 importance score.
+   *
+   * The floor and the ceiling are four to one, which is the widest ratio the layout can carry
+   * while still leaving the smallest point clickable: a 20px circle is the smallest that reads
+   * as a target, and 80px is the largest that does not crowd its own label. The square root
+   * keeps the middle of the range reachable — a linear map would put most courses' points in
+   * the bottom quarter, since scores cluster low.
+   *
+   * The floor came down from 28 and the ceiling went up from 62 to widen the ratio from 2.2:1
+   * to 4:1 without inflating every point: the median lands slightly above where it used to.
+   * Widening it further costs layout space, because the node's own footprint is what the
+   * collision force has to keep clear. */
   function sizeFor(score) {
-    return 28 + 34 * Math.sqrt(clamp(Number(score) || 0, 0, 1));
+    return 20 + 60 * Math.sqrt(clamp(Number(score) || 0, 0, 1));
   }
 
   function stateAttention(state) {
@@ -1358,7 +1370,11 @@
     state.graph.settleWatch = 0;
     state.graph.solveStep = 0;
     state.graph.layoutInflation = Math.max(1, state.graph.layoutInflation * .94);
-    state.graph.autoFitAfterSettle = autoFit === undefined ? true : autoFit;
+    // autoFitAfterSettle is deliberately NOT touched here. Letting a reheat arm the fit means
+    // every force change ends with the picture re-zooming and re-centring the moment the
+    // layout stops moving — measured, one slide of the spacing control left the camera at
+    // 0.211 having started at 0.313. Only create() arms it, so exactly one fit happens, after
+    // the first settle, when the layout's extent is finally the real one.
     state.graph.settled = false;
     recomputeLayoutGuides(state);
   }
@@ -1596,6 +1612,10 @@
       node.y = seat.y + p.y * SEED_CONTRACTION_Y;
     });
     reheat(state, ALPHA_INIT, true);
+    // Arm the one fit this graph gets. reheat no longer touches this flag, so the fit happens
+    // exactly once — after the first settle, when the layout's extent is the real one rather
+    // than the seat's — and never again when a force change re-settles it.
+    state.graph.autoFitAfterSettle = true;
 
     return {
       state: state,

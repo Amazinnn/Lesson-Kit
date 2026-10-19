@@ -1350,6 +1350,16 @@
           return;
         }
       }
+      // Exactly one fit, after the first settle.
+      //
+      // The flag is armed by create() alone, so a reheat from a control cannot arm it. That is
+      // the whole difference between "the view finds the graph once it has stopped moving" and
+      // "the view jumps every time you touch the spacing control": the first is what the build
+      // needs, the second was the bug — measured, one slide left the camera at 0.211 having
+      // started at 0.313, and the picture also re-centred.
+      //
+      // Fitting on the seat instead of on the settled layout is not an option either: measured
+      // that way the graph overflowed the canvas at 112% of its width at load.
       if (sim.graph.settled && sim.graph.autoFitAfterSettle && !graphView.userMoved) {
         sim.graph.autoFitAfterSettle = false;
         graphAutoFitInFrame = true;

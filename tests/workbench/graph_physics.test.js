@@ -21,8 +21,12 @@ function edge(s, t, type, strength) {
 }
 
 test("node size stays monotonic and bounded", () => {
-  assert.equal(graph.sizeFor(0), 28);
-  assert.equal(graph.sizeFor(1), 62);
+  // The ratio is the point of this test, not the two numbers: the smallest point has to stay
+  // clickable and the largest has to stay under four times that, which is the widest spread the
+  // owner asked for and the most the collision force can clear without inflating the layout.
+  assert.equal(graph.sizeFor(0), 20);
+  assert.equal(graph.sizeFor(1), 80);
+  assert.equal(graph.sizeFor(1) / graph.sizeFor(0), 4, "the size ratio is four to one");
   assert.ok(graph.sizeFor(.6) > graph.sizeFor(.2));
   assert.equal(graph.sizeFor(2), graph.sizeFor(1), "score clamps at 1");
 });

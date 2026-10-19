@@ -1561,6 +1561,15 @@ img { max-width: 100%; }
   grid-template-columns: minmax(0, 1fr);
 }
 .graph-workspace[data-dashboard='collapsed'] .graph-dashboard { display: none; }
+/* Dragging the graph must never select anything. The stage is a canvas, not a document:
+ * without this, one pan sweeps a selection across every label that passes under the cursor,
+ * which looks like the app misbehaved and leaves the search field's text half-highlighted.
+ * The learning dashboard is deliberately left out — it is the one place where the learner may
+ * genuinely want to copy a title or note out. */
+.graph-shell, .graph-stage, .graph-shell .legend, .graph-shell .zoom, .graph-shell .floating {
+  user-select: none;
+  -webkit-user-select: none;
+}
 .graph-shell { min-width: 0; }
 .graph-dashboard {
   min-width: 0;
