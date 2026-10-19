@@ -5,38 +5,32 @@
 
 ## 一、练习回路
 
-Paper 操作补充（2026-10-17）：人可从组卷页在未完成卷间切换，Data 暂停/恢复各自的游标和草稿；不是结束轮次。Agent 使用 `papers list/get/preview/update/delete` 管理显式 ID。题序/名单修改须确认精确影响；取消零修改，确认仅清该卷未完成状态。删除 Paper 保留题目，删除题目清当前引用但保留其他题进度和历史证据。重复的 AI 解析展示退役，正常解析和来源数据保留。
+Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供学习者选题、组卷条件、数量、成员或题序编辑。切卷暂停/恢复各自的游标和草稿；新一轮选择答案展示方式，继续轮次恢复原设置。Agent 使用 `papers list/get/preview/update/delete` 管理显式 ID；更新预览与确认保留既有治理边界。删除 Paper 保留题目，删除题目清当前引用但保留其他 Paper 进度和历史证据。重复的 AI 解析展示退役，正常解析和来源数据保留。
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
-| 切换章透镜（关 = 全课程；开着时选一章） | UI 顶栏「章」开关 | 人 | 注册表 `active_chapter`（与 `use` 同源） | 已实现（dashboard-chapter-filter） |
-| 选定组卷 Scope（回答「想练什么」） | UI 勾选 / 范围托盘 | 人 | 选区键 | 已实现（兼容 UI） |
-| 接受建议作为组卷范围 | UI 建议区 | 人 | 选区键 | 已实现（按钮文案可继续迁移） |
-| 组装 Paper（Scope/条件筛选/薄弱·到期·错题；逐题 reason） | UI / CLI `pull` | 双 | —（只读选择） | 已实现（v1 兼容组卷） |
-| 精确固定题目进 Paper | CLI `pull --problem` / Agent | Agent | —（只读选择） | 已实现；**非学生手选入口** |
-| 开始 Practice Run（执行固定 Paper） | UI / active-practice API | 人 | active practice checkpoint | 已实现；新来源语义 `paper` |
-| 按来源证据筛题（`--source-evidence` 子串、可重复；与 `--source-kind`/`--origin-kinds`/`--exam-year` 同为「维度内 OR、维度间 AND」） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-09-26） |
-| 按题目来源方式筛题（`--origin-kinds` 可重复：历年原题/改编/AI生成，取并集） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
-| 按题干/来源关键词筛题（`--search-stem`/`--search-source`，空格多词、域内 AND、跨域 AND） | CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
+| 切换章透镜（关 = 全课程；开着时选一章） | UI 顶栏「章」开关 | 人 | 注册表 `active_chapter`（与 `use` 同源） | 已实现（dashboard-chapter-filter；只影响阅读） |
+| 查看、改名、导出或删除既有 Paper | UI「试卷」页 | 人 | 改名/容器删除；不改题目成员与顺序 | 已实现；删除不删题目或学习证据 |
+| 开始或继续既有 Paper | UI「试卷」页 | 人 | 该 Paper 的 active checkpoint | 已实现；继续恢复独立进度 |
+| 选择答案展示方式 | UI 开始 Paper 时 | 人 | `reveal_timing`：`per_item` 或 `on_submit`，随轮次持久化 | 已实现（free-navigation-paper-practice） |
+| Paper 自由导航（上一题/下一题/题号点；首尾不循环） | UI 练习页 | 人 | 当前题位置与未提交草稿；不提交、不判定、不锁题 | 已实现；可访问未答、已答及「不会」题 |
+| 逐题提交普通 Paper 答案 | UI 练习页 | 人 | 原子写 Attempt；成功后锁题并展示可用结果/参考材料 | 已实现；单选/判断自动提交，多选/文字显式提交 |
+| 标记「不会」并查看参考材料 | UI 练习页 | 人 | `per_item` 立即写卡点 Attempt 并锁题；`on_submit` 保存可改的 `stuck` 草稿 | 已实现；修改答案可清除卡点标记，保留 `reference_viewed` 事实 |
+| 显式提交普通 Paper | UI 练习页 | 人 | 保存未提交且未标记不会的答案；空白或仍标记不会的题作为卡点 Attempt；锁定并归档 Practice Run | 已实现；到达末题、导航和暂停均不自动提交 |
+| 完成页查看答卷并返回 | 完成页 / 答卷页 | 人 | —（只读；返回不重复提交） | 已实现 |
+| 再练一次 | 完成页 | 人 | 新 Practice Run；保留原完成轮次 | 已实现 |
+| 普通 Paper 可选自评 1–5 | UI 练习页 / 完成答卷 | 人 | 按已提交 Attempt 写或更新关联 feedback | 已实现；可跳过，不阻止交卷 |
+| 按来源证据筛题（`--source-evidence` 子串、可重复；与 `--source-kind`/`--origin-kinds`/`--exam-year` 同为「维度内 OR、维度间 AND」） | Agent/CLI `pull` | Agent | —（只读选择） | 已实现（2026-09-26） |
+| 按题目来源方式筛题（`--origin-kinds` 可重复：历年原题/改编/AI生成，取并集） | Agent/CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
+| 按题干/来源关键词筛题（`--search-stem`/`--search-source`，空格多词、域内 AND、跨域 AND） | Agent/CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
 | 落练习清单（可重跑，零写入读取） | CLI `pull --plan` / `--input` | Agent | 练习清单 JSON（非池数据） | 已实现（2026-09-25） |
 | 出练习集两份 Markdown（学生卷无答案/无内部标识，解答卷题号对齐、缺解「待补」） | CLI `pull --print` | Agent | `output/…-problem-set.md` + `-solutions.md` | 已实现（2026-09-25） |
 | 练习集零写入预检（题数/缺口/缺解/重复/泄漏） | CLI `pull --check` | Agent | — | 已实现（2026-09-25） |
-| 保存练习集为试卷（只在学生明确要求加入工作区时调用；保留题目顺序与 request） | CLI `lesson-kit papers <workspace> save --input <manifest>` | Agent（学生明确要求） | `.lessonkit/practice-sets/ps-NNN.json`（现有原子写入器；不写 SQLite/学习状态） | 已实现（agent-save-reusable-papers, 2026-10-14） |
-| 浏览已保存试卷（折叠卡片、展开题目预览） | UI `/practice-sets` | 人 | —（只读；卡片展开状态按标签页保存在 sessionStorage） | 已实现（2026-10-06/07） |
-| 作答+本地判分（横幅 2s+高亮） | UI | 人 | 浏览器牌组与待确认请求；服务端接受后写一条 attempts 行（作答/选项/判定） | 已实现 |
-| Paper 同轮作答回看（普通题提交或标记「不会」后往返查看；参考答案每次进入都收起，返回保留当前草稿、Agent 聚焦跟随） | UI 练习页回看/返回当前题 | 人 | —（独立于练习游标；不改完成状态、不写 attempts/feedback；不确认保存状态） | 已实现（practice-review）；无服务端执行身份时保留紧邻上一题行为；闪卡仍通过上一张/下一张移动游标 |
-| 修改 Paper 回看中的已有自评 | UI 练习页回看中的自评编辑 | 人 | 原位覆盖当前 execution 内确切 Attempt 关联的 feedback rating/note；不新增证据或重放学习影响 | 已实现（revisit-paper-answers-and-edit-self-rating）；首次自评仍走原四件套 |
-| 来源筛选浮窗（四维多选 + 池内计数；存 `wb_practice_filters_v2_<ws>`，不改池） | UI 练习页 | 人 | —（只读筛选，选择随标签页） | 已实现（2026-09-26；关键词域仅保留为只读发现/CLI 作者筛选，浏览器选题已由 PR130 退役） |
-| 揭示（卡背/解析） | UI | 人 | 牌组 | 已实现 |
-| 闪卡方向偏好与 ⇄ 交换 | UI | 人 | 牌组方向 | 已实现 |
-| 闪卡回翻（上一张/下一张，在本轮固定卡片间移动；末尾不追加） | UI | 人 | 牌组游标 | 已实现 |
-| 即时自评 1–5 | UI | 人 | 四件套 | 已实现 |
-| 学习者设置：练习与组卷显示自评（左栏勾选框，localStorage 持久；off 轮客观题判定折算为学习结论，不写评分事件） | UI | 人 | 浏览器偏好（不写池）+ off 轮判定落库时的折算写入 | 已实现（2026-10-07） |
-| 关闭自评轮次的「下一题」（判分/解析后显式点击推进，无反馈写入） | UI | 人 | 牌组游标 | 已实现（2026-10-07） |
-| 跳到下一道（已答/已玩不降级） | UI | 人 | 牌组 state | 已实现 |
-| 提前结束→收束页统一评分 | UI | 人 | 四件套×未评 | 已实现 |
-| 再练同类 | UI 收束页 | 人 | 新 session | 已实现 |
-| 刷新恢复（游标+视图态） | 被动 | 人 | — | 已实现 |
+| 保存练习集为 Paper（保留题目顺序与 request） | CLI `lesson-kit papers <workspace> save --input <manifest>` | Agent（明确 authoring 请求） | `.lessonkit/practice-sets/ps-NNN.json`（现有原子写入器；不写 SQLite/学习状态） | 已实现（agent-save-reusable-papers, 2026-10-14） |
+| 闪卡揭示、方向偏好与 ⇄ 交换 | UI | 人 | 牌组方向与视图态 | 既有语义保留 |
+| 兼容自评时机设置（immediate/batch/off） | 旧练习/闪卡路径 | 人 | 既有浏览器偏好与旧反馈语义 | 旧记录兼容；不决定普通 Paper 的展示/锁定 |
+| 闪卡回翻（上一张/下一张，在本轮固定卡片间移动；末尾不追加） | UI | 人 | 牌组游标 | 已实现；闪卡沿用既有揭示与自评语义 |
+| 刷新或切换 Paper 后恢复（游标、草稿、展示时机） | 被动 / UI「试卷」页 | 人 | 独立 Paper checkpoint | 已实现 |
 | 切换图谱指标投影（大小/色谱/气泡式过渡） | UI | 人 | — | 已实现（只读、内存） |
 | 图谱多状态筛选与分群 | UI | 人 | — | 已实现（只读、内存） |
 | 练习页发消息附页面锚点与近期练习工作集（可见正式题 + 同一练习最多四道前序已结算正式题；明确相对指代才改轮次焦点；显式附带的未提交作答/选项/备注/可见图片由服务端限长并只保存在本轮上下文快照，不写 Pool；成功 transcript 仍只保留既有 `context_anchor` 元数据） | UI 对话 | 人 | 上下文读取不写池、不移动游标；快照供同标识核对；显式重试创建新关联轮次，后续普通轮次不自动继承原草稿 | 已实现（2026-09-24；Agent focus 2026-10-12；preserve-agent-messages-and-tool-outcomes） |
@@ -93,7 +87,7 @@ Paper 操作补充（2026-10-17）：人可从组卷页在未完成卷间切换�
 | 对话内切换模型（头部下拉；丢弃缓存进程、下一轮生效；运行中 409；跨模型续接失败则开新会话并写明） | UI / API `PATCH /ai/sessions/{id}` | 人 | conversations `model` | 已实现（2026-09-26） |
 | 停止轮次 | UI | 人 | turn=cancelled | 已实现 |
 | replace_practice_selection（明确练习意图才生效；只替换组卷 Paper Scope，不组卷或开始 Practice Run） | 对话产出动作 | Agent | 练习 Scope | 已实现 |
-| paper_artifact（保存成功后的 Paper 工件卡：只按已保存 ps-NNN 记录展示标题/题数，不含 URL、零写入；打开组卷页是显式动作） | 对话产出动作 | Agent | —（只读已保存 Paper 记录） | 已实现（2026-10-16 PR137） |
+| paper_artifact（保存成功后的 Paper 工件卡：只按已保存 ps-NNN 记录展示标题/题数，不含 URL、零写入；打开试卷页是显式动作） | 对话产出动作 | Agent | —（只读已保存 Paper 记录） | 已实现（2026-10-16 PR137） |
 | content-bundle（内容批次：合法的纯新增动作自动执行，无关键词意图门；大清单暂存本对话 jobs 后由区块引用、小清单内联（`kind`/`type` 都认）→整份清单预检→一份备份→单事务 apply；**清单可跨章**，按每项声明的章发号/落图并**按章各记一个批次**，推不出章的条目点名拒收；**一轮里每个区块都应用**，学生说清几章就一轮导完；**题型（综合题/判断/小测）入库时可选，客观题允许无答案键**；失败逐条显式回对话流、零写入） | 对话产出动作 | Agent | 池内容 + `.lessonkit/figures/{course}/{chapter}/`（经门禁+按章批次标记）；补答案键走 `data update problem` | 已实现（2026-09-23；2026-09-25 跨章与多区块、题型与无键客观题） |
 | problem-patch（原地改已有题目：补答案键/改题型/补来源/把选项从题面拆进 `options`；单题 `data update problem`、批量 `ingest recipe problem-patch --apply`；未知字段与难度字段拒收，题号不可改；批次记旧值可回滚） | 对话产出动作 / CLI | Agent（仅明确指令）+人 | problems（原地 UPDATE，不插入不删行） | 已实现（2026-09-25） |
 | 内容审计（重复题/疑似片段/未标客观题/缺标题/图片引用；只读，可 `--check` 筛选、`--json` 输出） | CLI `data <ws> audit` | Agent | —（数据库与文件零写入；有发现返回 1） | 已实现（content-dedup-and-audit） |

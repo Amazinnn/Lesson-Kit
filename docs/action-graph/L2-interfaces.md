@@ -2,7 +2,7 @@
 
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者；**只读 API** = 可供查询，不是浏览器选题入口。
 
-## API 路由（`/api/w/{ws}` 前缀，36 条）
+## API 路由（`/api/w/{ws}` 前缀，62 条）
 
 | 方法 路径 | 读写 | 服务层 | 给谁 |
 |---|---|---|---|
@@ -13,14 +13,25 @@
 | GET `/calendar` | 读 | 查询 | 浏 |
 | GET `/plan` · POST `/plan/recalculate` | 读/写 | 计划 | 浏 |
 | GET·POST `/goals`；PATCH·DELETE·GET `/goals/{id}` | 读/写 | goals.json | 浏（UI 仅用创建） |
-| GET `/practice-sets` | 读 | 已保存试卷 JSON 列表 | 浏览器 |
-| POST `/practice-sets` | 写 | 验证并保存一份可复用试卷，使用现有 Data 写入器 | 双 |
-| POST `/pull` | 读 | 拉取（`filters` 四维：来源类型/题目来源方式/年份/文档，维度内 OR、维度间 AND；顶层 `origin_kinds` 同义） | 双 |
-| GET `/pull-facets` | 读 | 拉取（筛选浮窗的四维与计数，取自池内实际值） | 浏 |
+| GET `/practice-sets` | 读 | 已保存 Paper 列表与独立进度 | 浏览器；Agent `papers list` |
+| POST `/practice-sets` | 写 | 保存 Agent/CLI authoring 产出的 Paper，使用现有 Data 写入器 | Agent/CLI |
+| GET `/practice-sets/{practice_set_id}` | 读 | 显式 Paper 详情与不可用题目引用 | 浏览器预览；Agent `papers get` |
+| PATCH `/practice-sets/{practice_set_id}` | 写 | 浏览器可直接改标题；结构性成员/顺序更新仍经有影响预览与确认的 Agent 审批 | 浏览器改标题；Agent/CLI + 审批流程改结构 |
+| DELETE `/practice-sets/{practice_set_id}` | 写 | 删除 Paper 容器和未完成状态，不删题目与学习证据 | 浏览器；Agent `papers delete` |
+| GET `/practice-sets/{practice_set_id}/render` | 读 | 已保存 Paper 题面与导出渲染 | 浏览器 |
+| POST `/practice-sets/{practice_set_id}/start` | 写 | 开始或继续既有 Paper；恢复该卷独立进度 | 浏览器 |
+| POST `/practice-sets/{practice_set_id}/preview` | 读 | 预览 Agent 更新与其进度影响 | 浏览器审批流程；Agent `papers preview` |
+| POST `/pull` | 读 | Agent/CLI authoring 拉取（`filters` 四维：来源类型/题目来源方式/年份/文档，维度内 OR、维度间 AND；顶层 `origin_kinds` 同义） | Agent/CLI；无学习者选题页 |
+| GET `/pull-facets` | 读 | 兼容筛选维度与计数查询；浏览器不再呈现来源筛选浮窗 | 只读 API |
 | GET `/search/problems?stem=&source=` | 读 | 只读题目发现（题干/来源域多词 AND）；不接入浏览器选题或 Paper 组装，精确题号仍由 Agent/CLI `pull --problem` 在组卷前指定 | 只读 API |
 | POST `/pull-cards` | 读 | 拉卡（direction_mode + 独立方向排除） | 双 |
 | POST `/practice` | 写 | practice 记录 | 双 |
 | POST `/attempts` | 写 | 尝试（浏览器每次提交落一条：作答+选项+判定，不碰进度与调度） | 双 |
+| POST `/practice/current/navigate` | 写 | 保存 Paper 内任意题目导航位置与草稿，不提交 | 浏览器 |
+| POST `/practice/current/stuck` | 写 | `per_item` 立即写卡点 Attempt 并锁题；`on_submit` 更新可改草稿；两种方式均披露可用参考材料 | 浏览器 |
+| POST `/practice/current/submit` | 写 | 显式提交并归档普通 Paper；未提交且未标卡点的答案与空白/仍标卡点 Attempt 和完成快照同事务写入 | 浏览器 |
+| GET `/practice/runs/{run_id}` | 读 | 读取已完成 Practice Run 的答卷 | 浏览器 |
+| POST `/practice/runs/{run_id}/replay` | 写 | 从已完成轮次创建独立的新 Practice Run | 浏览器 |
 | GET `/records` | 读 | 记录中心页（概览/练习·试卷/作答明细/错题，`?view=` 切换、`?problem=` 过滤） | 浏 |
 | POST `/feedback` | 写 | 四件套（可带 `attempt_id` 链回本次作答） | 双 |
 | GET `/problem/{id}` · GET `/kp/{id}` | 读 | 查询 | 双 |
@@ -52,7 +63,7 @@
 | `guard` | 工作台守卫 | 双 |
 | `ingest`（+ `prepare/run/gate/apply/render/recipe/rollback/migrate-figures` 八子链；`run --provider` 支持 codex/claude/pi；`recipe figures` 与 `migrate-figures` 落图入池） | 内容治理唯一写池通道（apply 记批次、跨章清单按章各一批；rollback 按批次撤销；figure-patch 回滚恢复前值） | 双 |
 | `experiment` | 只读实验评估器 | 人 |
-| `papers <workspace> save --input <manifest>` | 写（验证已导出的练习清单并保存到组卷页列表；返回 JSON 回执） | Agent |
+| `papers <workspace> save --input <manifest>` | 写（验证已导出的练习清单并保存到试卷列表；返回 JSON 回执） | Agent |
 | `papers <workspace> list/get <ps-id>` | 读（缺失题目不隐藏容器，返回独立进度） | Agent |
 | `papers <workspace> preview/update <ps-id> --input <manifest> [--confirmation <preview.json>]` | 显式原卷更新；结构修改须确认精确影响，不启动执行 | Agent |
 | `papers <workspace> delete <ps-id>` | 仅删除容器与未完成状态，不删题目及学习证据 | Agent |

@@ -112,7 +112,7 @@ workbench/
   「还能不能改」并在能改时精确撤回旧评分影响。
 - 新表 `practice_request_operations(request_id, payload, result, created_at)`：浏览器的
   作答和自评共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
-- 新表 `practice_runs(id, source_kind, source_ref, source_label, kp_ids_json, practice_mode, rating_mode, items_json, status, started_at, finished_at)`：只在一轮 active practice 完成或被显式替换 / 清除时写一条最小快照；逐题证据仍留在 attempts / feedback，统计图实时聚合，不复制统计值。
+- 新表 `practice_runs(...)` 保存 Paper 轮次最小快照。普通题执行使用可空答案展示方式：逐题模式显式提交答案或标记「不会」时写入对应 Attempt；整卷模式在明确交卷时写入未提交答案与空白/仍标记为「不会」的卡点 Attempt 并归档。最后一题的逐题提交不会自动完成；切换 Paper 只暂停，不归档为完成。历史 `NULL` 模式继续沿旧执行语义读取。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
 - 新表 `content_mirror_state(entity_type, entity_id, revision, content_json, updated_at)` 与
   `content_mirror_log(...)` 由 `pool_schema.py` 增量创建：前者保存最后同步的整数修订号和规范化作者内容，
@@ -160,7 +160,9 @@ workbench/
 - 图谱视觉呈现完全位于浏览器表示层：graph-physics-core.js 保持唯一语义核心；graph-physics.js 提供 Worker 适配器、页面镜像与本地布局种子的唯一读写；graph-physics-worker.js 执行迭代布局；graph-renderer.js 使用 WebGL2 绘制物理核心提供的关系几何，并负责 viewport culling 和标签/元信息 LOD，DOM 节点继续承担节点外观与交互。图谱页按 core、renderer、adapter 顺序加载；WebGL2 或 renderer 初始化失败时走现有状态提示并终止本次运行。可选坐标种子只在图谱稳定后写入浏览器 localStorage，并按可读的节点/关系拓扑身份读取；它不改变关系结构、题量、重要性、学习状态或作者内容，也不写入 SQLite。
 - 图谱状态筛选分群也完全位于浏览器表示层：四个既有状态按多选并集决定可见子图；布局更新运行时内存坐标，稳定后可由 `graph-physics.js` 写入可选的本地布局种子；筛选值仅随页面上下文提供给 Agent，不写 Pool，也不从种子恢复。
 - `data.content`：结构化读、显式 CRUD、状态与门禁/晋升编排；题目删除保留历史行和学习证据，清理当前引用。SQLite 修改和 `paper_state` 待发布文件意图同事务提交，Data 在读取试卷前幂等恢复 JSON 发布。其他内容删除的关系清理仍在一个 SQLite 事务内完成。
-- `data.paper_progress`：保存卷暂停快照、执行/结构/题目版本、草稿与文件发布协调；同一 continuation 检查供保存卷读取、当前练习、开始和暂停共用，检查题目身份及顺序、版本、可用性与当前清单校验。它只返回状态和原因，不修复旧执行；切换到另一张保存卷前，Data 也会报告当前卷无法暂停的阻塞原因。`domain.answering_content` 只比较作答语义，零 IO。`active_practice` 是当前选中卷而非全部未完成进度。删除题目的调度证据仍留池，当前 due/mastery 读取排除历史题。批次回滚遇到现有 Paper/进度引用则拒绝，不能借回滚绕过当前引用清理和历史保护。
+- `data.paper_progress`：保存每卷暂停快照、执行/结构/题目版本、草稿与文件发布协调；同一 continuation 检查供保存卷读取、当前练习、开始和暂停共用，检查题目身份及顺序、版本、可用性与当前清单校验。每张 Paper 有自己的 unfinished checkpoint，同一工作区仅当前选择的一卷处于 active；切换会先暂停，不结束或清空原卷。它只返回状态和原因，不修复旧执行。
+- `data.active_practice.navigate` 只更新固定 Paper 内的题目位置与输入草稿；`mark_stuck_draft` 按答案展示方式记录显式「不会」与参考材料查看事实；逐题提交复用现有 Attempt 写入，`submit` 负责一次性提交整卷答案与卡点并归档，`get_run` 读取已完成答卷。最终写入校验 execution、Paper generation 和题目版本；失败保留可恢复状态。
+- `domain.answering_content` 只比较作答语义，零 IO；`domain.practice_submission.grade_answer` 提供纯判定规则，由 API 注入 Data 提交流程，避免 Data 依赖 Domain。`domain.micro_quiz` 保留微题载荷与内容规则。Data 是唯一写 SQLite 的层，Shell/API 仅编排接口调用。
 - `data.content_mirror`：扫描所选课程本地 JSON、按嵌入 id 比较三方规范化内容、调用现有内容/关系校验权威，
   经现有图像路径校验写入逻辑引用、通过 `data.difficulty.check` 校验题目难度，并将单实体内容与镜像状态/日志
   原子提交；旧 v1 投影可按下一修订号升级，完全匹配的远端投影可收敛一次；不调用 Git，也不因文件缺失或删除请求删池内容。
@@ -178,7 +180,7 @@ workbench/
 - `data.attempts.record_browser_attempt/record_browser_feedback`：浏览器在发送前把请求
   id 与完整载荷放进 sessionStorage；Data 用即时事务串行比较 id、写入尝试或评分及其
   返回结果。同 id 改内容返回冲突，页面刷新后仍能重试首次请求。
-- `server.static.practice-deck` 只维护练习 session 的数据、游标与序列化；`practice-flow` 绑定 DOM、发送练习请求并管理保存/结算状态，页面入口仍由 `workbench.js` 启动。
+- `server.static.practice-deck` 继续维护兼容练习 session 的数据、游标与序列化；普通 Paper UI 由 `practice-flow` 维护服务端确认的当前题、答案展示方式、任意题号导航、逐题提交/显式交卷、可选自评及完成答卷往返。页面入口仍由 `workbench.js` 启动。上一题/下一题/题号跳转只保存输入与位置，不提交学习证据。
 - `server.static.agent-ui` 只维护 Agent 展示层：页内上下文标签、composer 尺寸和临时工作面控件；provider 事件、会话、轮次与动作仍由 `workbench.js` 编排。
 - `server.static.middle-navigation` 获取服务端页面 HTML，只替换 `#middle-page`，同步路由元数据并调用 `WorkbenchMiddlePage.dispose/mount`；`workbench.js` 与所有路由共用的 Agent 栏控制器保持单次初始化。图谱学习看板属于图谱中栏内容，与图谱行为一起挂载和释放。
 - `data.attempts.check/apply/correct/list/get`：Agent 代录尝试的零写入预检、单事务多题、
@@ -233,8 +235,7 @@ workbench/
   flex/grid 子项显式允许收缩，避免改变三栏几何。
 - 视觉 token 以暖纸、墨线、学习蓝、阳光黄、注意红为固定角色；页面不得把
   颜色作为状态的唯一信息载体。
-- 练习题与知识正文共享主阅读层级；模式选择、解析和关联题只作次级表面，
-  不改变练习状态机或任何写入契约。
+- 普通 Paper 题目与知识正文共享主阅读层级；答案展示方式、结果与可选自评作次级表面。答案显示/锁定由 per-item 或 on-submit 规则决定，不由自评或调度决定。闪卡与旧练习会话保留其既有方向、揭示和导航语义；本变更不增加闪卡创建界面。
 
 ## 5. 工程约束（硬规则）
 

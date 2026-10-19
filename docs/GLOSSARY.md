@@ -225,7 +225,7 @@ _Avoid_：被否定的目标、浏览器原始 id、由上下文窗口替学生�
 出处：`agent-context` spec「Current page is an anchor rather than a forced turn target」
 
 ### 试卷 / Paper
-Lesson Kit 的**最小可执行作答单位**：开始、暂停、继续、提交与完成状态都围绕一张已经冻结 item 顺序的 Paper 发生。Paper 可以由 Agent、预先编排、题库筛选或其他组卷方式产生；知识范围和题型策略只约束组卷，不在 Practice Run 中动态改题。当前 `.lessonkit/practice-sets/`、`ps-NNN`、manifest `kind: practice-set` 与 `/practice-sets/...` 是迁移期兼容实现名，不改变本条产品定义。
+Lesson Kit 的**最小可执行作答单位**：开始、暂停、继续、提交与完成状态都围绕一张已经冻结 item 顺序的 Paper 发生。Paper 可由 Agent / CLI authoring 按明确范围和筛选组装；浏览器管理和练习已有 Paper，不提供手工选题或组卷。内容与题序在 Practice Run 中不动态改变。当前 `.lessonkit/practice-sets/`、`ps-NNN`、manifest `kind: practice-set` 与 `/practice-sets/...` 是迁移期兼容实现名，不改变本条产品定义。
 _Avoid_：Practice Run 本身、动态知识点查询、把兼容名 practice-set 当产品题单
 出处：practice-set-export spec「Paper is the Practice Run boundary」；review-workbench spec「Paper-backed Practice Run」「Practice Run interruption recovery」；workbench-ui spec「Flash card item stacked presentation」
 
@@ -235,7 +235,7 @@ _Avoid_：试卷、一次 Practice Run、旧 `.lessonkit/practice-sets/` 目录�
 出处：practice-set-export spec「Paper manifest」「Managed saved Paper」；FILE_CONTRACT.md「Agent Saved Papers」
 
 ### 练习轮次 / Practice Run
-对**一张已经确定的 Paper**从开始到完成，或到被显式替换 / 清除的一次执行。运行中仍只有一个 `active_practice`；新执行的来源语义统一为 `paper`，结束时把 Paper 身份、固定 item 顺序、最终状态与时间写入 `practice_runs` 最小快照。逐题作答、判定、自评仍以 `problem_attempts` / `feedback_events` 为学习证据。
+对**一张已经确定的 Paper**从开始到完成，或到被显式替换 / 清除的一次执行。运行中仍只有一个 `active_practice`；每张已保存 Paper 可独立保留自己的未完成进度。新执行的来源语义统一为 `paper`。普通题 Practice Run 只有显式提交整卷才完成归档；逐题作答、判定和可选自评仍以 `problem_attempts` / `feedback_events` 为学习证据。
 _Avoid_：第二套 attempt 表、动态拉题器、把 Practice Run 当 Paper 定义
 出处：practice-set-export spec「Paper is the Practice Run boundary」；review-workbench spec「Paper-backed Practice Run」「Durable practice run archive」
 
@@ -250,12 +250,12 @@ _Avoid_：卷面分、难度、把年份当 id 或当作试卷实体
 出处：practice-set-export-and-cli-audit spec；workbench-content-governance spec「Problem provenance axes」
 
 ### 组卷 / Paper Assembly
-生成或挑选一张具体 Paper 内容的过程。`lesson-kit pull` 当前是确定性组卷引擎：范围（`--kp`）、来源/难度等条件筛选、薄弱 / 到期 / 错题驱动共同决定候选与排序。`--problem` 精确题号能力只作为 Agent/CLI 的**作者工具**保留，用于确定性固定某题；它不得重新暴露成学生在练习页、知识点页或图谱里逐题手选的入口。每个结果仍回报 `scope` / `weak` / `due` / `wrong` / `explicit` 等入卷理由。
+生成或挑选一张具体 Paper 内容的过程。`lesson-kit pull` 当前是确定性组卷引擎：Agent / CLI authoring 可用范围（`--kp`）、来源/难度条件、薄弱 / 到期 / 错题证据决定候选与排序。`--problem` 精确题号能力只作为 Agent/CLI 的作者工具保留。知识点阅读、图谱筛选与节点聚焦不建立组卷边界；浏览器不提供学生手工组卷入口。每个结果仍回报 `scope` / `weak` / `due` / `wrong` / `explicit` 等入卷理由。
 _Avoid_：手动选题 UI、把组卷直接等同 Practice Run、把 `--problem` 当学生侧练习动作
 出处：practice-set-export spec「Paper assembly」；review-workbench spec「Paper assembly engine」；workbench-ui spec「Practice page」
 
 ### 筛选维度 / Filter Dimension
-来源筛选的四个**多值**维度：`source_kinds`（来源类型）、`origin_kinds`（题目来源方式）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**：勾中的同一维度里任意一个命中即可（`final` 或 `midterm`），不同维度必须同时满足（是 final **且** 属于 2023）。浏览器中的来源维度只用于约束 Paper Assembly：按维度分组勾选并显示池内实际计数；`origin_kinds` 一组显示为历年原题 / 改编 / AI生成。浏览器不再提供「搜索后挑某一道题加入练习」的 `include_ids` 产品语义；CLI 的精确题号只属于作者工具。其余多值维度仍遵循维度内 OR、维度间 AND。
+Paper authoring 的来源筛选有四个**多值**维度：`source_kinds`（来源类型）、`origin_kinds`（题目来源方式）、`exam_years`（考察年份，仍按前缀）、`docs`（来源文档，对 `source_evidence` 做不区分大小写的子串匹配，值就是「文档键」）。语义是**维度内 OR、维度间 AND**。这些筛选由 Agent / CLI `pull` authoring 使用；浏览器不提供练习页来源筛选面板，也不提供「搜索后挑某一道题加入练习」的 `include_ids` 产品语义。只读题目搜索与图谱状态筛选仍是阅读功能。CLI 精确题号只属于作者工具。
 _Avoid_：把维度内的多个值当 AND、把筛选当扩范围、手动挑题进入 Practice Run
 出处：review-workbench spec「Source dimensions and facets」；workbench-ui spec
 
@@ -328,8 +328,8 @@ Lesson Kit 的视觉语言：暖纸色与深色结构线占主体，蓝/黄/红�
 ## 选择与练习
 
 ### 范围 / Scope
-用户用知识点、图谱区域或其他课程语义明确的**组卷边界**。范围回答「想练什么」，用于约束 Paper Assembly；它本身不是待执行题目清单，也不能直接开始 Practice Run。弱项、到期与建议可以影响组卷排序或成为新的范围建议，但不得静默扩大用户已经明确的范围。
-_Avoid_：待练题目列表、Practice Run 的内容本体、弱项自动抓题、把知识点选择直接当成一次练习
+Agent / CLI authoring 请求中由知识点或其他课程语义明确的**组卷边界**。范围回答「这次 Paper 按什么约束组装」，它不是待执行题目清单，也不能直接开始 Practice Run。知识点页阅读、图谱搜索/筛选/聚焦、章透镜与建议不会隐式建立浏览器侧范围；弱项、到期等证据不得静默扩大明确范围。
+_Avoid_：待练题目列表、Practice Run 的内容本体、弱项自动抓题、把知识点阅读选择直接当成一次练习
 出处：review-workbench spec「Chapter lens scoping」；workbench-ui spec「Practice page」
 
 ### 准备练习列表 / Staged Practice List（已退役）
@@ -338,8 +338,8 @@ _Avoid_：重新建立「知识点队列 → 直接练习」中间态、把范�
 出处：workbench-ui spec「Practice page suggestions and assembly entry」
 
 ### 建议 / Suggestion
-练习页按需给出的**组卷起点或练习方向建议**，可来自每日计划、到期调度、薄弱证据等。建议可以预填范围、题型策略或触发「据此组卷」，但不直接向当前 Practice Run 加题，也不维护一份独立的待练知识点队列。
-_Avoid_：Staged Practice List、自动扩充正在执行的 Paper、到期列表（已废弃的常驻视图）
+按需给出的只读练习方向提示，可来自每日计划、到期调度或薄弱证据。建议不会预填浏览器组卷表单、选择题目、改变 Paper 或直接启动组卷；Agent / CLI authoring 需要你明确提出请求。
+_Avoid_：Staged Practice List、自动扩充正在执行的 Paper、把建议当作题目选择或组卷动作
 出处：workbench-ui spec「Practice page suggestions and assembly entry」；review-workbench spec「Chapter lens scoping」；daily-learning-plan spec
 
 ### 原因短语 / Reason Phrase
@@ -353,7 +353,7 @@ _Avoid_：把 Content Mode 当成 Paper 类型、要求整张试卷单一题型�
 出处：review-workbench spec「Paper-backed Practice Run」；workbench-ui spec「Practice page」；docs/DATA_MODEL.md「practice_modes」
 
 ### 题型策略 / Practice Format Policy
-规定某类课程内容适合以哪些作答形式练习或检测的**组卷约束**。例如知识点内容可偏判断，记忆型内容可用闪卡，阶段检测可混合多种形式。策略作用于 Paper Assembly，不把整张 Paper 锁成一种题型；用户可以限定策略，但不因此逐题手选。
+规定某类课程内容适合以哪些作答形式练习或检测的**组卷约束**。例如知识点内容可偏判断，记忆型内容可用闪卡，阶段检测可混合多种形式。策略作用于 Agent / CLI Paper Assembly，不把整张 Paper 锁成一种题型；浏览器不提供学生侧策略或数量组卷控件。
 _Avoid_：Practice Run 模式开关、单题学科形态 `problem_type`、一卷单一题型
 出处：review-workbench spec「Paper-backed Practice Run」；workbench-ui spec「Practice page」「Flash card item stacked presentation」
 
@@ -368,7 +368,7 @@ _Avoid_：改写题目文字、把没有选项的题硬凑选项
 出处：in-place-problem-edits
 
 ### 无答案键客观题 / Keyless Objective Item
-判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析自评」，作答文本仍记录，学习状态仍由 1–5 自评写入。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
+判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习显示自评」开启时可另行自评更新学习状态，不评分时不推导判定或自评分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
 _Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、给无键题判分
 出处：ingest-mode-choice-and-contract-parity；micro-quiz-content spec
 
@@ -398,39 +398,44 @@ _Avoid_：主观题自动评分、浏览即掌握、一卷单一 yes_no 模式
 出处：micro-quiz-content spec「Explicit mode marking for Micro and Yes/No」；review-workbench spec「Grading input modes」
 
 ### 自评时机 / Rating Mode
-一轮练习保存的自评安排：每题作答后自评（immediate）、完成后统一自评（batch），或关闭自评（off）。开启自评时开始前选择前两种时机；偏好关闭时直接以 off 开始。偏好变化只影响下一轮，进行中的轮次保留原安排。
+旧练习会话兼容的自评安排：每题作答后自评（immediate）、完成后统一自评（batch）或关闭自评（off）。它不决定普通 Paper 的答案展示或锁定；普通 Paper 的自评可跳过且不阻止交卷，答案展示由「答案展示方式」单独决定。
 _Avoid_：评分方式（与 1–5 自评本身混淆）
-出处：workbench-ui spec「Practice session」
+出处：review-workbench spec「Paper-backed Practice Run」；`free-navigation-paper-practice`
 
 ### 练习会话 / Practice Session（已退役产品术语）
 **已退役（2026-10-15）**。历史上指「单一练习模式 + 动态题目队列 + 当前题」的标签页状态。产品层统一使用「试卷 / Paper」描述固定作答内容，使用「练习轮次 / Practice Run」描述一次开始、暂停、继续到结束的执行。代码中的 sessionStorage key 或旧 spec 标题可以暂时保留为兼容实现名，但不得继续据此设计新的产品行为。
 _Avoid_：把 Practice Session 与 Practice Run 并列成两种执行实体、把单一模式队列重新定义成练习本体
 出处：review-workbench spec「Paper-backed Practice Run」「Practice Run interruption recovery」；workbench-ui spec「Practice page」
 
-### 上一题结果视图 / Previous Result View
-练习页已有的只读作答回看界面。没有服务端 Practice Run 身份时，仍只回看紧邻上一道普通题；选中 Paper Practice Run 时，可在同一次执行内往返浏览所有已有作答或「不会」状态的普通题，且不设回看次数上限。Paper 回看位置独立于练习游标；每次进入都先显示自己的作答、已有判定和自评，参考答案与解析收起，需主动展开。未确认提交明确标注且不可评分；不可用的判定如实显示。返回当前题恢复草稿，新 Agent 消息聚焦当前可见回看题。回看不移动练习游标，也不表示浏览器提交已持久保存。闪卡仍使用「上一张 / 下一张」移动游标。
-_Avoid_：把回看当作重新作答、把浏览器已提交视为服务端已保存、把闪卡回翻当作本视图
-出处：practice-review spec
+### 自由导航 / Free Navigation
+普通 Paper 的作答与查看方式：上一题、下一题和题号点可到达所有题目，包括未答、已提交、标记「不会」和完成答卷中的题目。导航保存位置与输入，不提交、不判定、不锁题；首尾不循环。已锁定答案仍可查看，不能在原轮次重新作答。闪卡继续沿用自己的方向、揭示与上一张/下一张语义。
+_Avoid_：把普通题回看当作独立只读覆盖层、把导航当作提交或完成
+出处：`free-navigation-paper-practice`「Free navigation throughout a Paper」
+
+### 完成页 / Paper Completion Page
+普通 Paper 显式交卷成功后显示的完成信息页。它可打开同一轮次的答卷，返回同一完成页、再练一次或回试卷列表；查看答卷与返回不会重新交卷，重练会建立新的独立 Practice Run。完成不表示全对，也不等待自评。
+_Avoid_：自动收束页、要求先完成所有自评的结束页
+出处：`free-navigation-paper-practice`「Paper completion and answer-sheet return」
 
 ### 自评 / Self-Rating
-学习者对一道完成题的显式 1–5 打分（可带自然语言备注），首次评分写入对应反馈并按评分更新学习投影。Paper 回看中再次保存只覆盖同一执行、同一 Attempt 关联反馈里的评分与评语，不新建作答或反馈，不重复更新学习投影；Agent Attempt Correction 是独立路径。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可另按 off 规则折算。
+学习者对一道已作答题目的可选 1–5 打分（可带自然语言备注）。启用自评时可保存，也可跳过；首次评分写入对应反馈并按评分更新学习投影。普通 Paper 中再次保存只覆盖同一执行、同一 Attempt 关联反馈里的评分与评语，不新建作答或反馈，不重复更新学习投影；自评不控制导航或交卷。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可按既有 off 规则折算。
 _Avoid_：把自动判定伪装成自评分、浏览即掌握
 出处：review-workbench spec「Flexible feedback」
 
 ### 揭示再自评 / Reveal-then-Rate
-开放题的作答约定：先自己作答 → 查看解析 → 再打分。系统不自动判开放题。
+开放题的作答约定：自己作答后按当前 Answer Reveal Timing 查看参考材料；自评启用时可以再打分。系统不自动判开放题。
 _Avoid_：机器判卷
 出处：review-workbench spec「Grading input modes」
 
 ### 跳题 / Skip
-不提交任何记录跳到下一题。跳题、草稿、查看解析、翻看计划都**不写**任何学习记录。
-_Avoid_：放弃（无贬义，也无记录代价）
-出处：review-workbench spec「Practice session」
+**普通 Paper 不再有独立的「跳题」动作。**旧练习会话里的跳题只是把游标移到下一题，不提交答案或生成 Attempt；普通 Paper 统一使用自由导航。「不会」是独立的作答状态动作；跳过自评也不等于跳过题目。
+_Avoid_：把导航离开未答题目说成放弃、把跳题当成「不会」或交卷
+出处：review-workbench spec「Practice session」（旧语义）；`free-navigation-paper-practice`
 
 ### 会话末统一自评 / Unified (Session-End) Rating
-batch 时机下的收束页：只列尚未评分的题，逐题补 1–5 分或跳过全部；「再练同类」若提供，只能据当前结果重新组一张 Paper，不能给已结束的 Practice Run 动态加题。
-_Avoid_：批量评分历史、补打卡
-出处：DISCUSSION-RECORD B6.5；workbench-ui spec
+旧练习会话 `batch` 时机下的兼容收束页，只适用于保留旧语义的记录与闪卡路径。普通 Paper 的完成页由显式整卷交卷触发；自评可关闭、可跳过，不是完成条件。
+_Avoid_：把它当成普通 Paper 的必经完成页、把完成和自评绑定
+出处：DISCUSSION-RECORD B6.5；workbench-ui spec（旧语义）；`free-navigation-paper-practice`
 
 ### 微题 / Micro Quiz
 带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。前端本地判分提供即时反馈；显式提交且自评关闭时，已记录的客观判定按「判定」的关闭自评规则更新学习投影，其余轮次等待自评。题干不限长度；答案键可以缺（见「无答案键客观题」），缺键不判分、不折算。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
@@ -711,7 +716,7 @@ _Avoid_：人工抽查、事后补审
 出处：review-workbench spec「Past-paper coverage gate」；micro-quiz-content spec；workbench/ingest
 
 ### 试卷执行进度 / Paper Execution Progress
-一张 Paper 的未完成 Practice Run 所附带的执行状态，包括题目完成标记、当前游标和未提交作答草稿；不等于题目本体，也不等于逐题作答、评分、调度等学习证据。目标行为允许各卷分别保留一份未完成进度，同一工作区同一时刻只激活一卷。
+一张 Paper 的未完成 Practice Run 所附带的执行状态，包括固定题序、当前游标、答案展示方式、未提交草稿、显式不会标记、提交/锁定状态和已显示参考材料的事实；不等于题目本体，也不等于 Attempt、自评或调度等学习证据。每张 Paper 可分别保留一份未完成进度，同一工作区同一时刻只激活一卷。普通 Paper 的整卷完成只由显式提交产生。
 _Avoid_：把题目掌握度当作卷内游标、把清卷进度当作删除学习证据
 出处：2026-10-17 所有者需求确认；`decouple-paper-progress-and-content`
 
@@ -736,7 +741,7 @@ _Avoid_：无停止确认就并发启动、自动恢复原任务、把未完成�
 _Avoid_：测试通过即完成（明确的反模式）
 出处：2026-08-29 交接文档；FUTURE-DEVELOPMENT-NOTES UX 清单
 
-### 答案展示方式 / Answer Reveal Timing（计划变更）
-在 `free-navigation-paper-practice` 中定义的普通题 Paper 轮次选项：逐题显示，或交卷后统一显示。控制答案、解析和判定的展示与本轮回答何时锁定，不等同于自评开关或旧 Rating Mode；开始时选定，本轮恢复时不变。统一显示时主动点击不会仍立即展示参考答案。此条仅定义已确认的计划术语，不声明当前运行时已支持。
-_Avoid_：将答案展示方式当作题型、组卷方式或自评开关
-出处：2026-10-19 用户需求访谈；`free-navigation-paper-practice`
+### 答案展示方式 / Answer Reveal Timing
+普通题 Paper Practice Run 开始时选择的答案披露与锁定安排：逐题显示（`per_item`）或交卷后统一显示（`on_submit`）。它与题目类型、组卷方式和可选自评相互独立，并在暂停、恢复与完成答卷查看时保持不变。逐题显示时，单选/判断选择会自动提交，多选/文字需明确提交；交卷后统一显示时输入可改至整卷提交。任何模式中显式点「不会」都可提前展示可用参考材料；逐题模式会锁定该题，统一模式允许交卷前改答案并清除不会标记，但保留已看参考材料的事实。
+_Avoid_：把答案展示方式当成题型、组卷方式或自评开关
+出处：`free-navigation-paper-practice`「Mode-specific answer reveal and locking」
