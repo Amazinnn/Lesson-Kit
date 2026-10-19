@@ -313,3 +313,23 @@
       B. 减少每帧的边几何量：727 条边 × 16 段，大课上把段数降到 6–8
       C. 主线程用快照里已有的速度做帧间外推，让画面在两次快照之间也平滑
       D. 让物理 tick 更便宜（Barnes-Hut 已经用上了；剩下的空间在电荷与碰撞的 pass 数）
+
+## 22. 删掉最后三个自研力、清孤儿函数、移除一条失效规格（ABC）
+
+- [x] 22.1 **A**：`Finite crossing optimization` 要求的「候选布局 + 位置交换优化 + 四段字典序评分」
+      在代码里完全不存在——自由力场只产生一个布局，没有候选可比较。已作为 `REMOVED` 记入 delta
+- [x] 22.2 **B**：删掉孤儿函数 `weightedNeighbors`、`enforceHierarchyBands`，
+      以及被导出但无人调用的 `resolveCongestion` 的导出项（内核函数数 54 → 49）
+- [x] 22.3 **C**：删掉 tick 里最后三个自研力——`applyAngularDispersion`、
+      `equalizeSpatialDensity`、`edgeCorridorRepulsion`。它们是 Obsidian 四项力之外的东西，
+      与「照搬他的算法」直接冲突
+- [x] 22.4 实测（习概 192 点 / 727 边）单 tick：**中位 15.83 → 8.35ms（−47%）**、
+      p95 37.3 → 11.94ms、最大 82.3 → 16.57ms。tick 已经低于 60fps 的一帧
+- [x] 22.5 实测布局质量**没有变差，反而更好**：最小点距 123.8 → 144.4、
+      重叠对数 10 → 8、平均边长 259 → 269；bbox 830×881 → 1188×1265（三个力原本在压缩它）
+- [x] 22.6 实测：`tests/workbench` 225/225
+- [ ] 22.7 **需要你复测**：tick 降到 8.35ms 之后，求解器不再是帧率天花板。
+      同上脚本（`runs/fps-probe-snippet.js`），预期「间隔中位毫秒」从 25 再降，
+      接近 16.7（60fps）。同时请确认形态你没有觉得变散了
+- [ ] 22.8 遗留：`resolveCongestion` 的函数本体还在（已无调用者、已删导出），
+      以及 `congestionStats` 只被测试导出使用。要不要一起清由你定

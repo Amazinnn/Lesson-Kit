@@ -19,6 +19,20 @@ by 1.6%, because the mechanism actually deciding the layout was not the one the 
 moved. The owner's decision (D4) is to rebind it to repulsion, which is a different
 control with a different meaning, so it is removed and replaced by `Node spacing control`.
 
+### Requirement: Finite crossing optimization
+
+**Reason**: It describes machinery that no longer exists and cannot exist in the current
+architecture. It requires each deterministic candidate layout to receive a deterministic
+position-swap pass, retained only when it improves a lexicographic score over crossings,
+label collisions, total edge length and occupied area. The free force field produces one
+layout by simulation — there are no candidate layouts to compare, no swap pass, and no
+score. Searching the physics module for swap, crossing or candidate machinery finds nothing
+but a comment.
+
+The requirement was not removed when the machinery was; it simply stopped being true while
+staying in the spec. That is the same failure as the three-layer relationship pipe: a
+capability disappearing without the document noticing. It is recorded here rather than
+quietly deleted so the next reader can see that the decision was made, and when.
 ## ADDED Requirements
 
 ### Requirement: Frame motion is continuous
