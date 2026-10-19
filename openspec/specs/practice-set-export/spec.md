@@ -174,7 +174,7 @@ execution from the archived fixed items.
 
 #### Scenario: Knowledge-point entry assembles before execution
 
-- **WHEN** the learner chooses to practice one knowledge point
+- **WHEN** the learner requests Agent/CLI authoring for one knowledge point
 - **THEN** that knowledge point constrains Paper assembly, and the Practice Run begins only after the Paper's item list is fixed
 
 #### Scenario: Old quick caller is normalized
@@ -186,6 +186,8 @@ execution from the archived fixed items.
 
 - **WHEN** an archived run created under `quick`, `practice_set`, or `agent` is replayed
 - **THEN** the exact archived items are reused and the new execution stores `source_kind = paper`
+
+Learner pages SHALL manage and practise existing Papers without manual item selection, condition-based assembly or membership/order editing. Agent/CLI authoring SHALL retain existing scope, filter, exact-id and save contracts.
 
 ### Requirement: Saved Paper updates preserve container identity
 An update explicitly targeting an existing Paper SHALL retain its Paper ID. Effective title/description-only or no-op changes SHALL retain unfinished execution progress. A manual change to item membership or order SHALL first report its exact progress impact and require confirmation, then reset only that Paper's unfinished progress/drafts without modifying questions, historical attempts, ratings or other Papers. Cancellation SHALL leave both content and progress unchanged. Saving SHALL NOT automatically start practice.
@@ -262,3 +264,19 @@ Saved Paper reads SHALL distinguish its current container membership from any in
 
 - **WHEN** an incompatible execution references unavailable items
 - **THEN** the reason is shown directly and the item identifiers remain inside collapsed details in the list or practice resume card
+
+### Requirement: Paper practice presentation state remains independent
+
+Each ordinary-problem Paper's unfinished run SHALL independently retain Answer Reveal Timing, ordered items, position, inputs, stuck marks, submission locks, reference-view facts and self-ratings. Switching Paper, pausing, refreshing or restarting browser/service SHALL restore confirmed state without clearing another Paper. Timing SHALL remain fixed until completion. Completed answer sheets SHALL remain associated with original runs rather than reconstructed from new runs or current drafts. Existing stale content/container validation SHALL continue; restoration SHALL NOT silently remap unavailable problems or override an approved reset.
+
+#### Scenario: Switch Papers and reload
+- **WHEN** the learner partly fills A in whole-Paper mode, answers B in per-item mode, reloads and returns to A
+- **THEN** both retain separate choices, positions, inputs, locks, marks and ratings without new runs or implicit submission
+
+#### Scenario: Container changes after saving input
+- **WHEN** a content or structure revision invalidates a saved practice write
+- **THEN** existing stale-write/reset rules apply and the UI reports readiness without silently losing input or claiming successful submission
+
+#### Scenario: A repeated Paper has two answer sheets
+- **WHEN** a completed Paper is started again
+- **THEN** new progress cannot overwrite the previous answer sheet or self-ratings

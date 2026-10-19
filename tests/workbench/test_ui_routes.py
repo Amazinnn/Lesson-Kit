@@ -12,6 +12,24 @@ from tests.workbench.fixtures import WorkspaceFixture
 
 
 class UiRouteTests(unittest.TestCase):
+    def test_student_pages_manage_papers_without_assembly_controls(self):
+        for route in ("practice", "kps", "kp/dmath-ch06-kp-001", "graph", "practice-sets"):
+            with self.subTest(route=route):
+                status, body = self.fetch("/w/dmath/" + route)
+                self.assertEqual(status, 200)
+                for retired in (
+                    "id='scope-tray'", "id='scope-tray-toggle'", "data-kp-selection",
+                    "id='graph-scope-toggle'", "id='practice-kp'", "id='filter-launch'",
+                    "id='practice-count'", "id='save-practice-set'", "id='staged-list'",
+                    "id='staged-practice'", "id='suggestions-toggle'", "id='suggestion-list'",
+                    "data-set-remove", "data-set-up", "data-set-down",
+                ):
+                    self.assertNotIn(retired, body)
+        _, body = self.fetch("/w/dmath/practice")
+        self.assertIn("id='paper-practice'", body)
+        self.assertIn("id='paper-reveal-timing'", body)
+        self.assertIn("id='paper-final-submit'", body)
+
     def setUp(self):
         self.fixture = WorkspaceFixture()
         from workbench.server import app
@@ -131,72 +149,52 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='session-end-entry'", body)
         self.assertIn("id='goto-session-end'", body)
 
-    def test_practice_page_requires_an_explicit_content_mode(self):
+    def test_practice_page_requires_saved_paper_setup(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("id='practice-mode-exam'", body)
-        self.assertIn("id='practice-mode-micro'", body)
-        self.assertIn("id='practice-mode-flash_card'", body)
-        self.assertIn("id='practice-mode-yes_no'", body)
-        self.assertIn("id='flash-direction-choice'", body)
-        self.assertIn("id='flash-direction-forward'", body)
-        self.assertIn("id='flash-direction-reverse'", body)
-        self.assertIn("checked> 正向 · 概念先行", body)
-        self.assertNotIn("flash-direction-mixed", body)
-        self.assertNotIn("card-direction-switch", body)
-        self.assertIn("> 小测<", body)
-        self.assertIn("> 闪卡<", body)
-        self.assertIn("id='practice-rating-immediate'", body)
-        self.assertIn("id='practice-rating-batch'", body)
-        self.assertIn("id='start-practice' class='primary' disabled", body)
+        self.assertIn("id='paper-practice'", body)
+        self.assertIn("id='paper-setup'", body)
+        self.assertIn("id='paper-start'", body)
+        self.assertIn("value='per_item'", body)
+        self.assertIn("value='on_submit'", body)
+        legacy = body.split("id='legacy-practice'", 1)[1]
+        self.assertIn("class='hidden'", legacy[:80])
+        self.assertNotIn("id='practice-mode-exam'", body)
+        self.assertNotIn("id='practice-mode-micro'", body)
+        self.assertNotIn("id='filter-launch'", body)
 
-    def test_practice_page_uses_compact_direct_rating_input(self):
+    def test_practice_page_uses_paper_scoped_rating_region(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn(
-            "id='rating-input' type='number' min='1' max='5' step='1'",
-            body,
-        )
-        self.assertIn("placeholder='自评 1–5'", body)
-        self.assertIn(
-            "class='visually-hidden' for='rating-input'", body
-        )
-        self.assertIn("class='feedback-note-row'", body)
-        self.assertIn(
-            "id='save-rating' class='primary sm'>记录并下一题", body
-        )
-        self.assertIn("id='review-rating-action'", body)
-        self.assertIn("id='cancel-rating'", body)
-        self.assertNotIn("class='rate'", body)
+        self.assertIn("id='paper-rating'", body)
+        self.assertIn("id='paper-reveal-timing'", body)
+        self.assertNotIn("id='practice-rating-immediate'", body)
+        self.assertNotIn("id='practice-rating-batch'", body)
 
-    def test_practice_page_uses_explicit_scope_and_single_content_modes(self):
+    def test_practice_page_has_one_paper_navigation_surface(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("id='staged-list'", body)
-        self.assertIn("id='staged-empty'", body)
-        for mode in ("exam", "micro", "flash_card", "yes_no"):
-            self.assertIn(f"id='practice-mode-{mode}'", body)
-        self.assertIn("id='practice-columns'", body)
-        self.assertIn("id='practice-rating-immediate'", body)
-        self.assertIn("id='practice-rating-batch'", body)
+        for control in (
+            "id='paper-toolbar'", "id='paper-pause'", "id='paper-final-submit'",
+            "id='paper-dots'", "id='paper-question'", "id='paper-prev'",
+            "id='paper-next'", "id='paper-stuck'",
+        ):
+            self.assertIn(control, body)
 
-    def test_practice_page_exposes_direct_practice_and_save_as_paper(self):
+    def test_practice_page_links_to_saved_papers_without_assembly(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("id='start-practice'", body)
-        self.assertIn("id='save-practice-set'", body)
-        self.assertIn("保存为试卷", body)
+        self.assertIn("href='/w/dmath/practice-sets'", body)
+        self.assertNotIn("data-set-start", body)
+        self.assertNotIn("id='save-practice-set'", body)
 
     def test_left_rail_carries_the_learner_settings_section(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("class='side-section settings-section'", body)
         self.assertIn("id='setting-show-rating'", body)
-        self.assertIn("练习与组卷显示自评", body)
-        self.assertIn("<button id='next-problem' class='primary hidden' type='button'>下一题</button>", body)
-        # The composer's next action sits beside 查看解析, outside the rating area.
-        self.assertLess(body.index("id='show-answer'"), body.index("id='next-problem'"))
-        self.assertLess(body.index("id='next-problem'"), body.index("id='feedback-area'"))
+        self.assertIn("id='paper-rating'", body)
+        self.assertIn("id='paper-reveal-timing'", body)
 
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
@@ -330,45 +328,41 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn("题目与闪卡", body)
 
-    def test_workspace_pages_expose_one_shared_selection_tray(self):
+    def test_workspace_pages_omit_the_student_selection_tray(self):
         for path in (
             "/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph",
             "/w/dmath/kp/dmath-ch06-kp-001", "/w/dmath/session-end",
         ):
             status, body = self.fetch(path)
             self.assertEqual(status, 200)
-            self.assertIn("id='scope-tray-toggle'", body)
-            self.assertIn("aria-controls='scope-tray-panel'", body)
-            self.assertIn("id='scope-tray-panel'", body)
-            self.assertIn("id='scope-tray-list'", body)
-            self.assertIn("id='scope-tray-collapse'", body)
-            self.assertIn("id='scope-tray-practice'", body)
-            self.assertIn("dmath-ch06-kp-001", body)
+            self.assertNotIn("id='scope-tray'", body)
+            self.assertNotIn("data-kp-selection", body)
+            self.assertNotIn("data-practice-kp-id", body)
+            self.assertNotIn("id='graph-scope-toggle'", body)
         for path in ("/w/dmath/kps", "/w/dmath/graph"):
             body = self.fetch(path)[1]
-            self.assertIn("data-kp-selection", body)
             self.assertNotIn("id='practice-selected'", body)
 
-    def test_plan_keeps_goal_cards_and_dissolves_the_queue_into_suggestions(self):
+    def test_plan_keeps_goal_and_time_views_without_assembly_queue(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
+        self.assertIn("class='practice-planning'", body)
+        self.assertIn("id='daily-plan'", body)
         self.assertIn("class='goal-cards'", body)
         self.assertNotIn("plan-queue-item", body)
         self.assertNotIn("data-queue-kp-ids", body)
         self.assertNotIn("data-practice-path='", body)
-        self.assertIn("id='recalculate-plan'", body)
+        self.assertNotIn("id='recalculate-plan'", body)
 
-    def test_practice_page_shows_staged_list_and_suggestions(self):
+    def test_practice_page_has_no_staged_assembly_controls(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
+        self.assertIn("class='practice-planning'", body)
         self.assertIn("id='daily-plan'", body)
-        self.assertIn("学习安排", body)
-        self.assertIn("id='staged-practice'", body)
-        self.assertIn("id='suggestions-toggle'", body)
-        self.assertIn("id='suggestion-list'", body)
-        self.assertIn("id='suggestions-empty'", body)
-        self.assertNotIn("逐题", body)
-        self.assertNotIn("data-practice-path='", body)
+        self.assertNotIn("id='staged-practice'", body)
+        self.assertNotIn("id='staged-list'", body)
+        self.assertNotIn("id='suggestions-toggle'", body)
+        self.assertNotIn("id='suggestion-list'", body)
 
     def test_daily_plan_api_is_available_without_agent(self):
         status, payload = self.fetch_json("/api/w/dmath/plan")
@@ -546,13 +540,14 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("重点练习", body)
         self.assertNotIn("可以复习", body)
 
-    def test_kp_page_has_one_scoped_practice_handoff_and_no_raw_study_parameters(self):
+    def test_kp_page_is_read_only_without_student_practice_handoff(self):
         _, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
-        self.assertIn("id='practice-kp'", body)
-        self.assertIn("data-practice-kp-id='dmath-ch06-kp-001'", body)
-        self.assertNotIn("<h3>信号</h3>", body)
-        self.assertNotIn("<h3>调度</h3>", body)
+        self.assertNotIn("id='practice-kp'", body)
+        self.assertNotIn("data-practice-kp-id", body)
+        self.assertIn("data-page='kp'", body)
         self.assertNotIn("reps=", body)
+        self.assertNotIn("ease", body)
+        self.assertNotIn("interval_days", body)
 
     def test_pages_have_editorial_landmarks(self):
         for path in ("/w/dmath/practice", "/w/dmath/kps", "/w/dmath/graph",
@@ -598,13 +593,14 @@ class UiRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertNotIn("wbKpId", body)
 
-    def test_left_nav_has_three_entries(self):
+    def test_left_nav_exposes_papers_and_learning_views(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn(">练习<", body)
         self.assertIn(">知识点<", body)
         self.assertIn(">知识图谱<", body)
-        self.assertIn(">组卷<", body)
+        self.assertIn(">试卷<", body)
+        self.assertIn(">记录<", body)
 
     def test_kps_page_lists_knowledge_points(self):
         status, body = self.fetch("/w/dmath/kps")
@@ -793,21 +789,14 @@ class UiRouteTests(unittest.TestCase):
         conn.commit()
         conn.close()
 
-    def test_practice_page_suggestions_carry_one_phrase_and_hide_scheduler_parameters(self):
+    def test_schedule_data_does_not_create_student_assembly_controls(self):
         self.seed_schedule("kp", "dmath-ch06-kp-001", -2)
         self.seed_schedule("kp", "dmath-ch06-kp-002", 0)
         self.seed_schedule("kp", "dmath-ch06-kp-003", 3, direction="reverse")
         self.seed_schedule("problem", "dmath-ch06-prob-001", 0)
-        self.seed_schedule("kp", "dmath-ch06-kp-004", 10)
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        # the due problem row is folded into its knowledge point; kp-001 keeps
-        # its overdue phrase and kp-002 its due-today phrase; future rows stay out
-        self.assertIn("id='suggestions-toggle'", body)
-        self.assertIn("拖了 2 天", body)
-        self.assertIn("今天到期", body)
-        self.assertNotIn("3 天后", body)
-        self.assertNotIn("badge", body)
+        self.assertNotIn("id='suggestions-toggle'", body)
         self.assertNotIn("data-include-id", body)
         self.assertNotIn("ease", body)
         self.assertNotIn("interval_days", body)
@@ -846,22 +835,6 @@ class UiRouteTests(unittest.TestCase):
                 {"kp_id": "kp-9", "title": "未到期项", "reason": "覆盖仍低"},
             ],
         )
-
-    def test_suggestion_rows_capped_at_twenty(self):
-        import datetime
-        from workbench.server import pages
-        today = datetime.date.today()
-        due_items = [
-            {"item_type": "kp", "item_id": f"kp-{i:02d}",
-             "due_at": (today - datetime.timedelta(days=1)).isoformat(),
-             "label": f"知识点 {i:02d}"}
-            for i in range(1, 26)
-        ]
-        rows = pages.suggestion_rows([], due_items, today=today)
-        self.assertEqual(len(rows), 25)
-        staged = pages._staged_practice_html("ws", rows)
-        self.assertIn("还有 5 条", staged)
-        self.assertEqual(staged.count("suggestion-row"), 20)
 
     def test_review_page_is_gone(self):
         status, body = self.fetch("/w/dmath/review")

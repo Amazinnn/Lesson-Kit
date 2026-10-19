@@ -94,41 +94,20 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
         + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
-        + f"<main id='middle'>{_practice_scope_tray(kp_titles)}{_agent_activity_float()}<div id='middle-page'>{middle_html}</div>{_agent_aux_surfaces()}</main>"
+        + f"<main id='middle'>{_agent_activity_float()}<div id='middle-page'>{middle_html}</div>{_agent_aux_surfaces()}</main>"
         + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics-core.js'></script>"
            "<script src='/static/graph-renderer.js'></script>"
            "<script src='/static/graph-physics.js'></script>" if graph_mode else "")
         + "<script src='/static/practice-deck.js'></script>"
+        + "<script src='/static/paper-practice.js'></script>"
         + "<script src='/static/practice-flow.js'></script>"
         + "<script src='/static/agent-ui.js'></script>"
         + "<script src='/static/workbench.js'></script>"
         + "<script src='/static/middle-navigation.js'></script>"
     )
     return _base(f"workbench {workspace['name']}", body)
-
-
-def _practice_scope_tray(kp_titles=None):
-    names_json = html.escape(json.dumps(kp_titles or {}, ensure_ascii=False))
-    return (
-        "<div class='scope-tray-anchor'><aside id='scope-tray' class='scope-tray' "
-        "aria-label='练习范围托盘' data-kp-names='" + names_json + "'>"
-        "<button id='scope-tray-toggle' class='outline sm scope-tray-trigger' type='button' "
-        "aria-controls='scope-tray-panel' aria-expanded='false' aria-label='展开练习范围'>"
-        "练习范围 <span id='scope-tray-trigger-count'>0</span></button>"
-        "<section id='scope-tray-panel' class='scope-tray-panel hidden'>"
-        "<header class='scope-tray-header'><div><span class='side-label'>练习范围</span>"
-        "<strong id='scope-tray-count'>已选 0 个</strong></div>"
-        "<button id='scope-tray-collapse' class='ghost sm icon-only' type='button' "
-        "aria-label='收起练习范围' title='收起'>−</button></header>"
-        "<ol id='scope-tray-list' class='scope-tray-list' aria-label='已选知识点'></ol>"
-        "<p id='scope-tray-empty' class='muted scope-tray-empty'>还没有选择知识点。</p>"
-        "<button id='scope-tray-practice' class='primary scope-tray-practice' "
-        "type='button' disabled>练习这些知识点</button>"
-        "</section></aside></div>"
-    )
-
 
 
 def _agent_activity_float():
@@ -174,15 +153,13 @@ def _page_header(context, title, summary="", actions=""):
 
 def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None,
                   kp_titles=None):
-    """Render practice: staged selection list + on-demand suggestions + time view."""
+    """Practise a saved Paper; authoring is delegated to Agent/CLI."""
     plan = plan or {"goals": [], "queue": [], "totals": {}}
     middle = (
-        _page_header("学习 / 明确范围", "练习", "先选定要练的知识点，再选择一种练习模式。")
+        _page_header("学习 / 试卷", "练习", "选择已有试卷开始，或继续上次的进度。")
         + "<div class='page-content practice-content'>"
-        + "<div class='practice-columns' id='practice-columns'>"
-        + "<div class='practice-main'>"
-        + _daily_plan(plan)
-        + _staged_practice_html(workspace["name"], suggestions or [], kp_titles or {})
+        + _paper_practice_html(workspace["name"]) + "<div id='legacy-practice' class='hidden'>"
+
         + "<section id='active-practice-resume' class='active-practice-resume card hidden' aria-live='polite'>"
         "<div><p class='section-kicker'>继续上次练习</p><h2 id='active-practice-title'>未完成练习</h2>"
         "<p id='active-practice-meta' class='muted'></p>"
@@ -190,33 +167,6 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<summary>查看旧执行情况</summary><p id='active-practice-continuation-meta'></p></details>"
         "<div class='active-practice-progress' aria-hidden='true'><span id='active-practice-progress-fill'></span></div></div>"
         "<button id='resume-practice' class='primary' type='button'>继续练习</button></section>"
-        + "<section id='start-area' class='practice-intro'><p class='section-kicker'>本轮练习</p>"
-        "<h2>选择一种练习模式</h2>"
-        "<p id='practice-scope-summary'>当前范围由知识点视图明确选择；本轮不会自动扩展范围。</p>"
-        "<fieldset class='practice-mode-choice'><legend>练习模式（必选其一）</legend>"
-        "<label><input id='practice-mode-exam' type='radio' name='practice-mode' value='exam'> 综合题</label>"
-        "<label><input id='practice-mode-micro' type='radio' name='practice-mode' value='micro'> 小测</label>"
-        "<label><input id='practice-mode-yes_no' type='radio' name='practice-mode' value='yes_no'> 判断</label>"
-        "<label><input id='practice-mode-flash_card' type='radio' name='practice-mode' value='flash_card'> 闪卡</label></fieldset>"
-        "<fieldset id='flash-direction-choice' class='flash-direction-choice hidden'><legend>闪卡方向</legend>"
-        "<label><input id='flash-direction-forward' type='radio' name='flash-direction' value='forward' checked> 正向 · 概念先行</label>"
-        "<label><input id='flash-direction-reverse' type='radio' name='flash-direction' value='reverse'> 反向 · 阐释先行</label>"
-        "<p>会话内方向固定：双向卡在反向会话按背面提问，单向卡始终按正面提问。</p></fieldset>"
-        "<fieldset class='practice-rating-choice'><legend>自评时机（必选其一）</legend>"
-        "<label><input id='practice-rating-immediate' type='radio' name='practice-rating-mode' value='immediate'> 每题作答后自评</label>"
-        "<label><input id='practice-rating-batch' type='radio' name='practice-rating-mode' value='batch'> 完成后统一自评</label></fieldset>"
-        "<div class='start-row'>"
-        "<label class='practice-count-label' for='practice-count'>题量 "
-        "<select id='practice-count'><option value='5'>5</option><option value='10' selected>10</option>"
-        "<option value='20'>20</option></select></label>"
-        "<button id='start-practice' class='primary' disabled>开始本轮练习</button>"
-        "<button id='save-practice-set' class='outline' type='button' disabled>保存为试卷</button>"
-        "<button id='filter-launch' class='outline' type='button' aria-expanded='false'>来源筛选<span id='filter-count' class='filter-count-active hidden'></span></button>"
-        "</div>"
-        "<div id='filter-popup' class='filter-popup card hidden' aria-label='来源筛选'></div></section>"
-        + "</div>"
-        + "<section class='practice-time'>" + time_view_html() + "</section>"
-        + "</div>"
         + "<section class='practice-flow' aria-label='练习过程'><p id='practice-error' class='inline-error hidden' aria-live='polite'></p>"
         "<button id='retry-practice' class='outline sm hidden' type='button'>重试</button><div id='stream' class='practice-card-area'></div>"
         "<div id='composer' class='practice-answer-card hidden'><div id='composer-row'><textarea id='answer-box' rows='3' placeholder='写下你的作答'></textarea>"
@@ -232,12 +182,55 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='卡点或心得（可选）'></textarea>"
         "<button id='save-rating' class='primary sm'>记录并下一题</button>"
         "<button id='cancel-rating' class='ghost sm hidden' type='button'>取消</button></div></div></div></section>"
-        "<div id='session-end-entry' class='session-end-entry hidden'><span>本题未提交的内容只保留在当前会话。</span><div>"
-        "<button id='no-time' class='ghost'>不会，下一题</button><button id='goto-session-end' class='outline'>暂停本轮</button></div></div></div>"
+        "<div id='session-end-entry' class='session-end-entry hidden'>"
+        "<div>"
+        "<button id='no-time' class='ghost'>不会，下一题</button><button id='goto-session-end' class='outline'>暂停练习</button></div></div></div>"
+        + "</div>"
+        + "<details class='practice-planning'><summary>目标与时间安排</summary>"
+        + _daily_plan(plan) + time_view_html() + "</details>"
     )
     return shell(
         workspace, workspaces, weak_items, middle, "practice",
         page_type="practice", kp_titles=kp_titles,
+    )
+
+
+def _paper_practice_html(workspace_name):
+    papers = "/w/" + html.escape(workspace_name, quote=True) + "/practice-sets"
+    return (
+        "<section id='paper-practice' aria-label='试卷练习'>"
+        "<p id='paper-error' class='inline-error' role='status' aria-live='polite'></p>"
+        "<section id='paper-setup' class='card'>"
+        "<h2 id='paper-title'>选择一份试卷</h2><p id='paper-count' class='muted'></p>"
+        "<label for='paper-reveal-timing'>答案展示方式</label>"
+        "<select id='paper-reveal-timing'><option value='per_item'>做一题显示一题</option>"
+        "<option value='on_submit'>交卷后统一显示</option></select>"
+        "<button id='paper-start' class='primary' type='button' disabled>开始练习</button>"
+        "<a class='outline button-link' href='" + papers + "'>试卷列表</a></section>"
+        "<section id='paper-work' class='hidden'>"
+        "<div id='paper-toolbar' class='paper-toolbar'>"
+        "<button id='paper-return' class='outline hidden' type='button'>返回完成页</button>"
+        "<button id='paper-pause' class='outline' type='button'>暂停练习</button>"
+        "<button id='paper-final-submit' class='primary' type='button'>提交试卷</button></div>"
+        "<nav id='paper-dots' class='paper-dots' aria-label='答题情况与题号'></nav>"
+        "<article id='paper-question' class='practice-question-card rich-text'></article>"
+        "<div id='paper-options' class='paper-options'></div>"
+        "<label class='visually-hidden' for='paper-answer'>你的作答</label>"
+        "<textarea id='paper-answer' rows='5' placeholder='写下你的作答'></textarea>"
+        "<button id='paper-item-submit' class='primary hidden' type='button'>提交答案</button>"
+        "<div id='paper-reference' class='practice-solution rich-text hidden'></div>"
+        "<section id='paper-rating' class='hidden' aria-label='自评'></section>"
+        "<nav class='paper-navigation' aria-label='题目导航'>"
+        "<button id='paper-prev' class='outline' type='button'>上一题</button>"
+        "<button id='paper-next' class='primary' type='button'>下一题</button>"
+        "<button id='paper-stuck' class='ghost' type='button'>不会</button></nav></section>"
+        "<section id='paper-completion' class='card hidden' aria-labelledby='paper-completion-title'>"
+        "<p class='section-kicker'>Congratulations!</p><h2 id='paper-completion-title'>完成练习</h2>"
+        "<div id='paper-completion-stats'></div><div class='paper-toolbar'>"
+        "<button id='paper-review' class='primary' type='button'>查看本次答卷</button>"
+        "<button id='paper-again' class='outline' type='button'>再练一次</button>"
+        "<a class='outline button-link' href='" + papers + "'>返回试卷列表</a>"
+        "</div></section></section>"
     )
 
 
@@ -332,43 +325,6 @@ def suggestion_rows(plan_queue, due_items, problem_kps=None, kp_titles=None, tod
     return rows
 
 
-def _staged_practice_html(workspace_name, suggestions, kp_titles=None):
-    kp_titles = kp_titles or {}
-    names_json = html.escape(json.dumps(kp_titles, ensure_ascii=False))
-    total = len(suggestions)
-    rows = "".join(
-        "<li class='suggestion-row' data-kp-id='" + html.escape(row["kp_id"]) + "'>"
-        "<span class='suggestion-title'>" + html.escape(row["title"]) + "</span>"
-        "<span class='suggestion-reason'>" + html.escape(row["reason"]) + "</span>"
-        "<button class='outline sm suggestion-join' type='button' data-kp-id='"
-        + html.escape(row["kp_id"]) + "'>加入</button></li>"
-        for row in suggestions[:SUGGESTION_LIMIT]
-    )
-    more = total - SUGGESTION_LIMIT
-    more_html = (
-        f"<p id='suggestions-more' class='muted'>还有 {more} 条。</p>"
-        if more > 0 else ""
-    )
-    return (
-        "<section id='staged-practice' class='staged-practice' aria-label='准备练习'>"
-        "<div class='section-heading'><div><p class='section-kicker'>准备练习</p>"
-        "<h2>今天要练的</h2></div></div>"
-        "<ol id='staged-list' class='staged-list' aria-label='已选定的知识点' "
-        f"data-kp-names='{names_json}'></ol>"
-        "<p id='staged-empty' class='muted staged-empty'>还没选定要练的知识点——"
-        f"<a href='/w/{html.escape(workspace_name)}/kps'>去知识点页挑一个</a>。</p>"
-        "<div class='suggestion-entry'>"
-        "<button id='suggestions-toggle' class='outline sm' type='button' "
-        "aria-expanded='false' data-total='" + str(total) + "'>"
-        "＋ 加今天要练的" + (f"（{total}）" if total else "") + "</button>"
-        "<div id='suggestions' class='suggestions hidden'>"
-        "<ol id='suggestion-list' class='suggestion-list'>" + rows + "</ol>"
-        + more_html
-        + "<p id='suggestions-empty' class='muted hidden'>今天没有建议。</p>"
-        "<button id='recalculate-plan' class='ghost sm' type='button'>重新安排</button>"
-        "</div></div></section>"
-    )
-
 
 def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
     detail = queries.kp_detail(pool, kp_id)
@@ -385,11 +341,7 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
         and schedule["due_at"] <= date.today().isoformat() else ""
     )
     reminder_html = f"<p class='action-reminder'>{reminder}</p>" if reminder else ""
-    practice_action = (
-        f"<a id='practice-kp' class='primary kp-practice-action' "
-        f"data-practice-kp-id='{html.escape(kp_id)}' "
-        f"href='/w/{workspace['name']}/practice?kp={html.escape(kp_id)}'>练习此知识点</a>"
-    )
+    practice_action = ""
     empty_problems = '<p class="muted">—</p>'
     middle = (
         _page_header(
@@ -429,17 +381,17 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         + "' data-kp-problem-count='" + str(problem_counts.get(item["kp_id"], 0))
         + "' data-kp-state='" + html.escape(states.get(item["kp_id"], "unmarked"))
         + "' data-kp-importance='" + html.escape(item.get("importance") or "supplementary") + "'>"
-        "<label><input type='checkbox' data-kp-selection data-kp-id='" + html.escape(item["kp_id"]) + "'> "
+        "<div>"
         "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
         "<span class='knowledge-meta'>" + str(problem_counts.get(item["kp_id"], 0)) + " 题"
         + (" · " + state_labels[states[item["kp_id"]]] if states.get(item["kp_id"]) in state_labels else "")
-        + "</span></label></li>"
+        + "</span></div></li>"
         for index, item in enumerate(source_kps)
     )
     empty_items = '<li class="muted">暂无知识点</li>'
     middle = (_page_header(
         _lens_label(workspace, "学习 / 当前章节", "学习 / 全课程"),
-        "知识点", "明确选择本轮练习范围；阅读和导航不会改变选择。")
+        "知识点", "阅读课程内容与关联题目；练习请使用已有试卷。")
         + "<div class='page-content'><div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
         + "<option value='source' selected>课程顺序</option><option value='title'>名称</option>"
         + "<option value='problem_count'>题目数量</option><option value='state'>学习状态</option>"
@@ -476,7 +428,7 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<button class='icon-btn' id='graph-fit' type='button' title='适应画布' aria-label='适应画布'>⌗</button>"
         "</header>"
         "<div class='graph-workspace'>"
-        "<section class='graph-shell' id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'>"
+        "<section class='graph-shell' id='graph-canvas' tabindex='0' aria-label='知识图谱画布'>"
         "<div class='floating controls'>"
         "<div class='control-head'><strong>图谱控制</strong><span>保留原版语义</span></div>"
         "<div class='filter-row' id='graph-filters'>"
@@ -576,11 +528,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
                 + "</div>"
                 + _linked_problem_source(problem)
                 + "</details>"
-                + "<span class='practice-set-item-actions'>"
-                + "<button class='ghost sm' type='button' data-set-up aria-label='上移题目'>↑</button>"
-                + "<button class='ghost sm' type='button' data-set-down aria-label='下移题目'>↓</button>"
-                + "<button class='ghost sm' type='button' data-set-remove>移除</button>"
-                + "</span></li>"
+                + "</li>"
             )
         cards.append(
             "<article class='practice-set-card card' data-practice-set-id='"
@@ -606,16 +554,16 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         )
     empty = (
         "<section class='card practice-set-empty'><h2>还没有试卷</h2>"
-        "<p class='muted'>去练习页选题后，可直接练习，也可保存为试卷再编辑。</p>"
+        "<p class='muted'>请在右侧对话中让 Agent 组卷并保存，之后可在这里开始练习。</p>"
         "<a class='primary button-link' href='/w/" + html.escape(workspace["name"])
-        + "/practice'>去选题</a></section>"
+        + "/practice'>返回练习</a></section>"
     )
     middle = (
         _page_header(
-            "练习 / 组卷", "组卷",
+            "练习 / 试卷", "试卷",
             "每份试卷独立保存作答进度，切换后可以继续。",
             "<a class='outline button-link' href='/w/"
-            + html.escape(workspace["name"]) + "/practice'>去练习页选题</a>",
+            + html.escape(workspace["name"]) + "/practice'>返回练习</a>",
         )
         + "<div class='page-content'><section id='practice-set-list' class='practice-set-list'>"
         + ("".join(cards) if cards else empty)
@@ -675,7 +623,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     )
     nav_items = [
         ("practice", "练习"),
-        ("practice-sets", "组卷"),
+        ("practice-sets", "试卷"),
         ("kps", "知识点"),
         ("graph", "知识图谱"),
         ("records", "记录"),
@@ -714,7 +662,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<option value='queue'>排队发送</option>"
         "<option value='interrupt'>中断后发送</option></select>"
         "<label class='setting-row'><input id='setting-show-rating' type='checkbox' checked> "
-        "练习与组卷显示自评</label>"
+        "练习显示自评</label>"
         "</section>"
         "<section class='side-section weak-section'>"
         f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"

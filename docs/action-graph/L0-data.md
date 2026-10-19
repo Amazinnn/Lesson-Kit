@@ -11,7 +11,9 @@
 | `problems` | 正式题目（题干/解答/kp_ids/micro_quiz/`exam_year` 可空来源年份/逻辑 `figure_paths`/可空完整四维客观难度组） | 门禁配方 ingest、content-bundle、CLI `data`；`data.content_mirror`（校验引用；难度经 `data.difficulty.check`） | 拉取、选题组练习、练习、`data.evidence`、`data.figure_mirror` |
 | `candidate_problems` | **已物理移除**（2026-08-30 remove-candidate-store：表 DROP，pipeline 侧脚本成为无调用方退役物） | —— | —— |
 | `flash_cards` | 闪卡内容 + directions 方向能力（缺省 forward，双向不复制内容行） | 门禁配方 ingest | 拉卡、收束页 |
-| `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点） | `POST /practice`、CLI `practice`、CLI `attempts apply|correct`（2026-09-24） | Agent 上下文、查询、CLI `attempts list|get`、`data.evidence` |
+| `active_practice` + `active_practice_items` | 当前选中的 Paper 执行及其固定题序、游标、可空 `reveal_timing`（`per_item` / `on_submit`；旧轮次保持 `NULL`）和每题草稿/不会/参考材料已查看/锁定状态；按 Paper 独立保存检查点，同一工作区只激活一卷。仅 draft 不构成学习证据 | `data.active_practice`（开始、导航、显式不会、提交、暂停） | 练习页、`data.paper_progress`、Agent 页面上下文 |
+| `practice_runs` | 已提交或显式替换/清除的轮次快照；普通题保留 `reveal_timing` 与答卷/展示事实，整卷只在显式交卷后归档；旧 `NULL` 模式/闪卡轮次沿原兼容路径 | `data.active_practice.submit`（Attempt 与快照同事务）；既有替换/清理流程 | 记录中心、完成页/本次答卷、Agent 页面上下文 |
+| `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点）；`per_item` 的逐题答案提交或「不会」立即写 Attempt；`on_submit` 只在整卷交卷时写未标卡点答案，空白或仍标「不会」的题写卡点 Attempt | 浏览器 `/attempts` 与显式 Paper submit、`POST /practice`、CLI `practice`、CLI `attempts apply|correct`（2026-09-24） | Agent 上下文、查询、CLI `attempts list|get`、`data.evidence` |
 | `feedback_events` | 自评事件（评分/备注，含 item_type=card；Agent 代录的事件用 `attempt_id` 指回那次尝试）；Paper 同轮回看可原位覆盖确切 Attempt 的评分/评语，不新增事件或重放学习影响 | `POST /feedback`（首次评分及受限的同轮编辑）、CLI `attempts`（带评分的尝试） | 查询、信号、`data.evidence` |
 | `learner_signals` | 弱项信号（只加强不自动消除） | 四件套之一 | 建议排序、Agent 上下文 |
 | `review_schedule` | 调度行（每题/每卡/每方向一行：间隔/熟悉度/到期） | 四件套之一；图谱状态编辑 | due/weak/日历工作量 |
@@ -48,10 +50,10 @@
 |---|---|---|
 | `wb_session` | 会话牌组 v2：`{v:2, items[], cursor, ended?}`——每项含 id/载荷/作答/选项/判分/揭示/状态 | 练习回路各动作 |
 | `wb_current` | 遗留当前项载荷（v1 兼容读，仅恢复时采纳） | （不再写） |
-| `wb_kps` / `wb_kp_selection` | 本轮范围 / 跨页选择集（选择是唯一范围来源） | 选择动作、开始会话 |
-| `wb_practice_mode` / `wb_practice_rating_mode` | 内容模式 / 自评时机 | 开始会话 |
-| `wb_practice_include` | 同类轮的 include ids | 再练同类 |
-| `wb_similar_round` | 同类轮标志 | 再练同类 |
+| `wb_agent_scope_<workspace>` | Agent 明确请求的 Paper authoring 范围；只作 Agent 上下文，不是学生组卷选择器 | Agent `replace_practice_selection` 兼容动作 |
+| `wb_kps` / `wb_kp_selection` | 旧练习范围/跨页选区键；不再用于普通 Paper 练习或学生手工组卷 | 旧页面恢复兼容（若仍有旧标签页） |
+| `wb_practice_mode` / `wb_practice_rating_mode` | 内容模式 / 自评时机兼容偏好；不配置新的普通 Paper 执行 | 闪卡与旧练习会话 |
+| `wb_practice_include` / `wb_similar_round` | 旧同类轮临时参数；不用于新普通 Paper 重练 | 旧练习会话兼容 |
 | `wb_ai_conversation` / `wb_ai_recent` | 当前对话 id / 最近对象（供上下文） | AI 面板 |
 | `wb_ai_message_outbox_<workspace>_<conversation>` | 按提交标识保存消息、原始请求上下文及 `sending/rejected/unknown/accepted/failed` 状态；成功完成后清除 | AI 面板 |
 

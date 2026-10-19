@@ -10,7 +10,7 @@ from workbench.bridge import conversation_providers, conversations, pi_rpc
 from workbench.data import active_practice, attempts as attempts_data, goals, practice_sets, queries
 from workbench.domain import (
     cards as card_rules, difficulty as difficulty_rules, feedback, learning_state, planning, pull,
-    schedule as schedule_rules, signals as signal_rules, weak,
+    practice_submission, schedule as schedule_rules, signals as signal_rules, weak,
 )
 from workbench.server import context as agent_context
 
@@ -390,14 +390,18 @@ def practice_set_start(pool, workspace, params, body):
         raise ApiError(400, "replace must be a boolean")
     practice_mode = body.get("practice_mode", "exam")
     rating_mode = body.get("rating_mode", "immediate")
+    reveal_timing = body.get("reveal_timing")
     if practice_mode not in {"exam", "micro", "yes_no"}:
         raise ApiError(400, "practice_mode must be exam, micro, or yes_no")
     if rating_mode not in {"immediate", "batch", "off"}:
         raise ApiError(400, "rating_mode must be immediate, batch, or off")
+    if reveal_timing not in {None, "per_item", "on_submit"}:
+        raise ApiError(400, "reveal_timing must be per_item or on_submit")
     try:
         return active_practice.start_saved(pool, params['practice_set_id'],
                                            practice_mode=practice_mode,
-                                           rating_mode=rating_mode, replace=replace)
+                                           rating_mode=rating_mode,
+                                           reveal_timing=reveal_timing, replace=replace)
     except active_practice.ActivePracticeConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except (active_practice.ActivePracticeError, ValueError) as exc:
@@ -447,9 +451,69 @@ def active_practice_update(pool, workspace, params, body):
 
 
 def active_practice_delete(pool, workspace, params, body):
+    body = _request_object(body)
     try:
-        return active_practice.clear(pool)
+        return active_practice.clear(
+            pool, execution_id=body.get('execution_id'),
+            practice_context=body.get('practice_context'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
     except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_navigate(pool, workspace, params, body):
+    body = _request_object(body)
+    try:
+        return active_practice.navigate(
+            pool, body.get('execution_id'), body.get('position'),
+            context=body.get('practice_context'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_stuck(pool, workspace, params, body):
+    body = _request_object(body)
+    _browser_request_id(body)
+    try:
+        return active_practice.mark_stuck_draft(
+            pool, body.get('execution_id'), body.get('position'),
+            request_id=body.get('request_id'), context=body.get('practice_context'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except attempts_data.RequestConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_submit(pool, workspace, params, body):
+    body = _request_object(body)
+    _browser_request_id(body)
+    try:
+        return active_practice.submit(
+            pool, body.get('execution_id'), body.get('request_id'),
+            grade_answer=practice_submission.grade_answer, drafts=body.get('drafts'))
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except attempts_data.RequestConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except (attempts_data.ManifestError, active_practice.ActivePracticeError) as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_run_get(pool, workspace, params, body):
+    try:
+        run_id = int(params['run_id'])
+    except (TypeError, ValueError) as exc:
+        raise ApiError(400, 'run_id must be a positive integer') from exc
+    try:
+        return active_practice.get_run(pool, run_id)
+    except active_practice.ActivePracticeError as exc:
+        if str(exc).startswith('unknown practice run:'):
+            raise ApiError(404, str(exc)) from exc
         raise ApiError(400, str(exc)) from exc
 
 

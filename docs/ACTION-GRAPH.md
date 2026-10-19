@@ -40,9 +40,9 @@
 | 总纲 | [action-graph/README.md](action-graph/README.md) | 分层模型、铁律、状态标记、队列 |
 | L0 数据层 | [action-graph/L0-data.md](action-graph/L0-data.md) | 表/文件/会话键：谁读谁写 |
 | L1 服务层 | [action-graph/L1-services.md](action-graph/L1-services.md) | 域逻辑模块与依赖 |
-| L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 36 路由 + CLI 24 命令 |
+| L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 62 路由 + CLI 24 命令 |
 | L3 动作层 | [action-graph/L3-actions.md](action-graph/L3-actions.md) | 动作登记（入口/权限/读写/状态）+ 留痕 |
-| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 十条主流程 + 42 条意外分支清单 |
+| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 十条主流程 + 意外分支总清单 |
 
 ## 总图
 
@@ -55,12 +55,14 @@ flowchart LR
     A[AI 面板]
   end
   subgraph LOOP[练习回路]
-    PAPER[组卷 / Paper Assembly]
-    ANS[作答+判分横幅]
-    REV[揭示/回翻]
-    PREV[普通题作答回看<br/>原作答只读 / 本轮自评可改]
-    RATE[自评 1-5]
-    END[收束页统一评分]
+    LIST[已保存 Paper 列表]
+    START[开始/继续<br/>新轮选答案展示方式]
+    NAV[自由导航<br/>上一题/下一题/题号点]
+    ANS[单题提交或编辑草稿]
+    REVEAL[按展示方式揭示并锁定]
+    END[显式提交整卷]
+    DONE[完成页 / 答卷往返]
+    RATE[可选自评]
   end
   subgraph REC[记录与调度]
     FB[feedback 四件套]
@@ -74,7 +76,7 @@ flowchart LR
   subgraph BR[Agent 桥]
     CONV[对话轮次]
     PLAN[执行计划]
-    SCOPE[replace_practice_selection<br/>仅设置组卷 Scope]
+    AUTHOR[Agent/CLI Paper authoring<br/>pull · manifest · papers save]
     CHK[Check 管线·已实现]
   end
   subgraph CLI[CLI 数据接口]
@@ -85,20 +87,28 @@ flowchart LR
   DB[(池数据库)]
   FS[(工作区文件)]
 
-  P --> PAPER & ANS & REV & PREV & RATE & END
-  PREV -->|返回当前题| P
-  PREV -->|本轮聚焦上下文| A
-  PAPER --> DB
-  RATE & END --> FB --> DB
+  P --> LIST --> START --> NAV --> ANS
+  NAV -->|保存位置/草稿| DB
+  ANS -->|per_item 提交成功| REVEAL --> NAV
+  ANS -->|on_submit 草稿| NAV
+  NAV -->|明确「不会」| REVEAL
+  NAV -->|显式提交整卷| END --> DONE
+  END -->|Attempt / run 快照| DB
+  DONE -->|可读答卷| NAV
+  DONE -->|再练一次·新轮次| START
+  RATE -.可选.-> FB --> DB
+  AUTHOR --> DB
   K --> GSTATE --> DB
   A --> CONV
   CONV --> PLAN --> A
-  CONV -->|明确练习意图| SCOPE --> P
   CHK ==>|生成→校验→直接入池·批次 id| ING --> BK --> DB
   CLI --> MIR -->|单实体事务| DB
   CLI --> DB & FS
   T -->|只读| DB
 ```
+
+普通 Paper 由浏览器从已保存列表开始或继续；浏览器不提供学习者手工选题与组卷。Agent/CLI authoring 保留。
+导航、到达最后一题和暂停都不提交；普通 Paper 只在明确交卷后完成，自评可跳过。旧记录与闪卡继续走既有兼容语义。
 
 ## 队列（2026-08-29 问卷后所有者确认）
 
@@ -109,6 +119,7 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-10-19 Paper 自由导航与 Agent/CLI authoring 边界（free-navigation-paper-practice、remove-learner-manual-paper-selection）：普通 Paper 增加 `per_item` / `on_submit` 答案展示方式、全卷自由导航、逐题提交与显式交卷、完成页答卷往返及独立重练轮次；只有显式交卷归档，普通 Paper 自评可跳过。学习者练习页只管理既有 Paper，不再手工选题或调整成员/顺序；Agent/CLI 的 pull、筛选、精确题号与保存 authoring 保留。章透镜、图谱筛选与节点聚焦仍是阅读功能；闪卡和旧轮次语义保留。见 L0–L4。
 - 2026-10-16 Agent 工件交付（agent-ui-v1-implementation，PR129/135/136/137）：Agent 只能按已保存 Paper 记录产出 `paper_artifact` 工件卡（标题/题数取自记录，丢布模型 URL）；最新工件可临时展开 Adaptive Split 预览，历史工件卡不自动展开，打开组卷页始终是显式操作。
 - 2026-10-13 作者内容镜像字段扩展（expand-content-mirror-fields/PR123）：既有 `mirror`
   读写动作增加通过现有路径校验的逻辑图像引用和经难度 authority 校验的完整题目评级组；旧
@@ -116,7 +127,7 @@ flowchart LR
   字节传输或学习记录写入。
 - 2026-10-13 图谱关系渲染（graph-webgl-rendering）：既有关系显示使用唯一 WebGL2 绘制路径；渲染无法启动时以可读状态终止本次图谱运行，不回退 SVG、不新增数据写入或用户动作。L3 既有图谱关系责任同步。
 - 2026-10-13 图谱 viewport/label LOD 与本地布局种子（graph-lod-layout-seeds）：仅更新现有图谱读取责任；viewport culling 不改变图成员或选择，已稳定坐标仅以可选的精确拓扑缓存恢复为临时锚点，随后由同一 Worker 继续求解。无新增用户动作、Pool 写入或 SQLite 字段；L3 现有图谱绘制责任同步。
-- 2026-10-12/17 普通题结果回看（practice-review、revisit-paper-answers-and-edit-self-rating）：无服务端执行身份时仍回看紧邻上一题；Paper 同轮可往返查看所有已有作答或「不会」普通题，参考答案每次进入都收起、游标与当前草稿独立，Agent 焦点跟随可见题。修改已有自评只覆盖确切 Attempt 关联评分/评语，不新增记录或重放学习影响。闪卡仍沿用上一张/下一张游标导航。见 L3 动作登记。
+- 2026-10-12/17 普通题结果回看（practice-review、revisit-paper-answers-and-edit-self-rating）：旧行为是在没有服务端执行身份时回看紧邻上一题，并在 Paper 同轮回看已有作答或「不会」普通题时每次收起参考答案；游标与当前草稿独立，Agent 焦点跟随可见题。此回看/收起规则已由 2026-10-19 普通 Paper 全卷自由导航与答案展示方式覆盖，当前行为见 W1。修改已有自评只覆盖确切 Attempt 关联评分/评语，不新增记录或重放学习影响。闪卡仍沿用上一张/下一张游标导航。见 L3 动作登记。
 - 2026-10-12 学习证据查询（agent-learning-evidence）：新增只读 CLI `evidence`，按知识点
   返回最多 20 条近期作答及当前题面/实际记录结果；缺库时拒绝连接且不建文件。L0/L1/L2/L3
   登记既有表读取者、查询服务、命令与只读动作；L4 在需要历史依据的 Agent 对话中登记按需读取。

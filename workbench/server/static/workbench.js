@@ -14,8 +14,7 @@
   var MODE_KEY = "wb_practice_mode_" + WS;
   var RATING_MODE_KEY = "wb_practice_rating_mode_" + WS;
   var FLASH_DIRECTION_KEY = "wb_flash_direction_" + WS;
-  var SELECTION_KEY = "wb_kp_selection_" + WS;
-  var SCOPE_TRAY_KEY = "wb_scope_tray_open_" + WS;
+  var SELECTION_KEY = "wb_agent_scope_" + WS;
   var AI_CONVERSATION_KEY = "wb_ai_conversation_" + WS;
   var AI_LIVE_ARTIFACT_KEY = "wb_ai_live_artifact_" + WS;
   var AI_RECENT_KEY = "wb_ai_recent_" + WS;
@@ -49,52 +48,7 @@
     var unique = Array.from(new Set((ids || []).filter(Boolean)));
     store(SELECTION_KEY, unique);
     if (window.AgentUISurfaces) window.AgentUISurfaces.renderContext();
-    document.querySelectorAll("[data-kp-selection]").forEach(function (input) {
-      var id = input.dataset.selectionKpId || input.dataset.kpId;
-      input.checked = unique.indexOf(id) >= 0;
-    });
-    renderScopeTray();
-    renderStagedList();
     return unique;
-  }
-
-  function scopeTrayNames() {
-    var tray = document.getElementById("scope-tray");
-    if (!tray) return {};
-    try { return JSON.parse(tray.dataset.kpNames || "{}") || {}; }
-    catch (_) { return {}; }
-  }
-
-  function renderScopeTray() {
-    var list = document.getElementById("scope-tray-list");
-    if (!list) return;
-    var ids = selectedKpIds();
-    var names = scopeTrayNames();
-    list.innerHTML = ids.map(function (id) {
-      var title = names[id] || id;
-      return "<li class='scope-tray-item'><span>" + escapeHtml(title) + "</span>"
-        + "<button class='ghost sm icon-only scope-tray-remove' type='button' "
-        + "data-kp-id='" + escapeHtml(id) + "' aria-label='移除 "
-        + escapeHtml(title) + "'>×</button></li>";
-    }).join("");
-    var count = document.getElementById("scope-tray-count");
-    if (count) count.textContent = "已选 " + ids.length + " 个";
-    var triggerCount = document.getElementById("scope-tray-trigger-count");
-    if (triggerCount) triggerCount.textContent = String(ids.length);
-    var empty = document.getElementById("scope-tray-empty");
-    if (empty) empty.classList.toggle("hidden", ids.length > 0);
-    var practice = document.getElementById("scope-tray-practice");
-    if (practice) practice.disabled = !ids.length;
-  }
-
-  function setScopeTrayOpen(open) {
-    var toggle = document.getElementById("scope-tray-toggle");
-    var panel = document.getElementById("scope-tray-panel");
-    if (!toggle || !panel) return;
-    toggle.classList.toggle("hidden", open);
-    panel.classList.toggle("hidden", !open);
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    store(SCOPE_TRAY_KEY, !!open);
   }
 
   function bindChapterLens() {
@@ -118,116 +72,9 @@
     });
   }
 
-  function bindScopeTray() {
-    var toggle = document.getElementById("scope-tray-toggle");
-    var collapse = document.getElementById("scope-tray-collapse");
-    var list = document.getElementById("scope-tray-list");
-    var practice = document.getElementById("scope-tray-practice");
-    if (!toggle) return;
-    toggle.addEventListener("click", function () { setScopeTrayOpen(true); });
-    if (collapse) collapse.addEventListener("click", function () {
-      setScopeTrayOpen(false);
-    });
-    if (list) list.addEventListener("click", function (event) {
-      var target = event.target;
-      var button = target && target.closest ? target.closest(".scope-tray-remove") : null;
-      if (!button) return;
-      saveSelectedKpIds(selectedKpIds().filter(function (id) {
-        return id !== button.dataset.kpId;
-      }));
-    });
-    if (practice) practice.addEventListener("click", function () {
-      if (selectedKpIds().length) {
-        navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
-      }
-    });
-    setScopeTrayOpen(!!load(SCOPE_TRAY_KEY, false));
-    renderScopeTray();
-  }
-
-  function bindSelectionControls() {
-    var ids = selectedKpIds();
-    document.querySelectorAll("[data-kp-selection]").forEach(function (input) {
-      var id = input.dataset.selectionKpId || input.dataset.kpId;
-      input.checked = ids.indexOf(id) >= 0;
-      input.addEventListener("change", function () {
-        var next = selectedKpIds().filter(function (item) { return item !== id; });
-        if (input.checked) next.push(id);
-        saveSelectedKpIds(next);
-      });
-    });
-    saveSelectedKpIds(ids);
-  }
-
   bindChapterLens();
-  bindScopeTray();
 
-  /* ---------- staged practice list (selection view + on-demand suggestions) ---------- */
-
-  function renderStagedList() {
-    var list = document.getElementById("staged-list");
-    if (!list) return;
-    var names = {};
-    try { names = JSON.parse(list.dataset.kpNames || "{}") || {}; } catch (_) { names = {}; }
-    var ids = selectedKpIds();
-    list.innerHTML = ids.map(function (id) {
-      return "<li class='staged-row' data-kp-id='" + escapeHtml(id) + "'>"
-        + "<span class='staged-title'>" + escapeHtml(names[id] || id) + "</span>"
-        + "<button class='ghost sm staged-remove' type='button' data-kp-id='"
-        + escapeHtml(id) + "' aria-label='移除'>✕</button></li>";
-    }).join("");
-    var empty = document.getElementById("staged-empty");
-    if (empty) empty.classList.toggle("hidden", ids.length > 0);
-    updateSuggestions();
-  }
-
-  function updateSuggestions() {
-    var toggle = document.getElementById("suggestions-toggle");
-    if (!toggle) return;
-    var container = document.getElementById("suggestion-list");
-    var selected = selectedKpIds();
-    var visible = 0;
-    (container ? container.querySelectorAll(".suggestion-row") : []).forEach(function (row) {
-      var staged = selected.indexOf(row.dataset.kpId) >= 0;
-      row.classList.toggle("hidden", staged);
-      if (!staged) visible += 1;
-    });
-    var emptyLine = document.getElementById("suggestions-empty");
-    if (emptyLine) emptyLine.classList.toggle("hidden", visible > 0);
-    toggle.textContent = "＋ 加今天要练的" + (visible ? "（" + visible + "）" : "");
-  }
-
-  function mountSelectionPage() {
-    bindSelectionControls();
-    var stagedListEl = document.getElementById("staged-list");
-    if (stagedListEl) {
-      stagedListEl.addEventListener("click", function (event) {
-        var target = event.target;
-        var button = target && target.closest ? target.closest(".staged-remove") : null;
-        if (!button) return;
-        saveSelectedKpIds(selectedKpIds().filter(function (id) {
-          return id !== button.dataset.kpId;
-        }));
-      });
-      var suggestionsToggle = document.getElementById("suggestions-toggle");
-      var suggestionsBox = document.getElementById("suggestions");
-      if (suggestionsToggle) suggestionsToggle.addEventListener("click", function () {
-        var open = false;
-        if (suggestionsBox) open = suggestionsBox.classList.toggle("hidden") === false;
-        suggestionsToggle.setAttribute("aria-expanded", open ? "true" : "false");
-      });
-      if (suggestionsBox) suggestionsBox.addEventListener("click", function (event) {
-        var target = event.target;
-        var button = target && target.closest ? target.closest(".suggestion-join") : null;
-        if (!button) return;
-        var next = selectedKpIds();
-        if (next.indexOf(button.dataset.kpId) < 0) next.push(button.dataset.kpId);
-        saveSelectedKpIds(next);
-      });
-      renderStagedList();
-    }
-    bindKnowledgeSort();
-  }
+  function mountSelectionPage() { bindKnowledgeSort(); }
 
   function bindKnowledgeSort() {
     var list = document.getElementById("knowledge-list");
@@ -1082,20 +929,6 @@
           node: node, wrap: wrap, button: button, label: label, meta: meta,
           value: value, unit: unit,
         });
-        var select = document.createElement("input");
-        select.type = "checkbox";
-        select.className = "graph-kp-selection visually-hidden";
-        select.dataset.selectionKpId = node.id;
-        select.setAttribute("data-kp-selection", "");
-        select.checked = selected.indexOf(node.id) >= 0;
-        select.addEventListener("change", function () {
-          var next = selectedKpIds().filter(function (id) { return id !== node.id; });
-          if (select.checked) next.push(node.id);
-          saveSelectedKpIds(next);
-          graphSyncScope();
-        });
-        graphStage.appendChild(select);
-        graphEls.get(node.id).select = select;
         graphUpdateNodeAppearance(node);
       });
       graphSyncScope();
@@ -1123,14 +956,7 @@
       }
     }
 
-    function graphSyncScope() {
-      var selected = selectedKpIds();
-      graphEls.forEach(function (elements, id) {
-        var member = selected.indexOf(id) >= 0;
-        elements.wrap.classList.toggle("in-scope", member);
-        if (elements.select) elements.select.checked = member;
-      });
-    }
+    function graphSyncScope() {}
 
     function graphApplyVisibility() {
       var filters = sim.graph.filters;
@@ -1282,23 +1108,7 @@
         + "<div class='detail-actions'>"
         + "<a class='ghost' href='/w/" + encodeURIComponent(WS) + "/kps?kp=" + encodeURIComponent(node.id)
         + "'>打开知识点</a>"
-        + "<button type='button' class='primary' id='graph-scope-toggle'>"
-        + (member ? "移出练习范围" : "加入练习范围") + "</button></div>";
-      var toggle = document.getElementById("graph-scope-toggle");
-      if (toggle && !toggle.dataset.scopeBound) {
-        toggle.dataset.scopeBound = "1";
-        toggle.addEventListener("click", function () {
-          var ids = selectedKpIds();
-          var member2 = ids.indexOf(node.id) >= 0;
-          var next = member2
-            ? ids.filter(function (id) { return id !== node.id; })
-            : ids.concat([node.id]);
-          saveSelectedKpIds(next);
-          graphSyncScope();
-          graphRenderDetail(node);
-          graphToastShow(member2 ? "已移出练习范围" : "已加入练习范围");
-        });
-      }
+        + "</div>";
     }
 
     function graphPaintNodes() {
@@ -1937,42 +1747,12 @@
       });
   }
 
-  function practiceSetIds(card) {
-    return Array.prototype.slice.call(
-      card.querySelectorAll(".practice-set-item")
-    ).map(function (row) { return row.dataset.problemId; });
-  }
-
   function practiceSetStatus(card, message) {
     if (!routeIsCurrent()) return;
     var status = card.querySelector(".practice-set-status");
     if (!status) return;
     status.textContent = message || "";
     status.classList.toggle("hidden", !message);
-  }
-
-  function refreshPracticeSetStart(card, practiceSetId, error) {
-    return api("/practice-sets/" + encodeURIComponent(practiceSetId)).then(function (record) {
-      if (!routeIsCurrent()) return;
-      var button = card.querySelector("[data-set-start]");
-      if (button) {
-        button.disabled = !record.can_start;
-        button.textContent = record.progress ? "继续练习" : "开始练习";
-      }
-      var progress = card.querySelector("[data-set-progress]");
-      if (progress) {
-        var progressText = record.progress
-          ? " · 已完成 " + record.progress.completed + "/" + record.progress.total : "";
-        progress.textContent = (record.count || 0) + " 题" + progressText;
-      }
-      var continuation = record.continuation;
-      var message = record.start_block_reason
-        || (continuation && !continuation.available && continuation.reason)
-        || error.message || "无法开始练习";
-      practiceSetStatus(card, message);
-    }).catch(function () {
-      practiceSetStatus(card, error.message || "无法开始练习");
-    });
   }
 
   function reloadPage() {
@@ -2006,27 +1786,7 @@
       var encoded = encodeURIComponent(practiceSetId);
 
       if (button.hasAttribute("data-set-start")) {
-        // A paper never had a rating-timing UI; the learner preference is the
-        // choice: off starts a no-rating round, on keeps the old default.
-        var paperStartBody = { rating_mode: showRatingEnabled() ? "immediate" : "off" };
-        post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
-          if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
-        }).catch(function (error) {
-          if (!routeIsCurrent()) return;
-          if (error.status === 409 && error.message === "an unfinished temporary practice already exists"
-              && window.confirm && window.confirm(
-            "当前有未完成的临时练习。替换临时练习后开始此卷？其他已保存试卷的进度会保留。"
-          )) {
-            paperStartBody.replace = true;
-            post("/practice-sets/" + encoded + "/start", paperStartBody).then(function () {
-              if (routeIsCurrent()) navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice");
-            }).catch(function (retryError) {
-              if (routeIsCurrent()) refreshPracticeSetStart(card, practiceSetId, retryError);
-            });
-          } else {
-            refreshPracticeSetStart(card, practiceSetId, error);
-          }
-        });
+        navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice?paper=" + encoded);
         return;
       }
 
@@ -2061,43 +1821,17 @@
         return;
       }
 
-      var row = button.closest(".practice-set-item");
-      if (!row) return;
-      var list = row.parentNode;
-      if (button.hasAttribute("data-set-up") && row.previousElementSibling) {
-        list.insertBefore(row, row.previousElementSibling);
-      } else if (button.hasAttribute("data-set-down") && row.nextElementSibling) {
-        list.insertBefore(row.nextElementSibling, row);
-      } else if (button.hasAttribute("data-set-remove")) {
-        row.remove();
-      } else {
-        return;
-      }
-      var ids = practiceSetIds(card);
-      if (!ids.length) {
-        practiceSetStatus(card, "试卷至少需要一道题；如不再需要请删除整张试卷。");
-        reloadPage();
-        return;
-      }
-      post("/practice-sets/" + encoded + "/preview", { problem_ids: ids }).then(function (impact) {
-        if (!routeIsCurrent()) return;
-        var message = "修改本卷题目顺序或名单，将清除本卷的未完成进度和草稿。"
-          + "当前已完成 " + (impact.completed_items || 0) + " 题，草稿 "
-          + (impact.draft_items || 0) + " 题；历史作答与其他试卷不变。继续吗？";
-        if (!window.confirm || !window.confirm(message)) {
-          reloadPage();
-          return;
-        }
-        return patch("/practice-sets/" + encoded, { problem_ids: ids, confirmation: impact.confirmation });
-      })
-        .then(reloadPage)
-        .catch(function (error) { if (routeIsCurrent()) practiceSetStatus(card, error.message); });
     });
   }
 
   var recordsCenter = document.querySelector(".records-center");
   if (recordsCenter) {
     recordsCenter.addEventListener("click", function (event) {
+      var view = event.target.closest && event.target.closest("[data-run-view]");
+      if (view) {
+        navigateMiddle("/w/" + encodeURIComponent(WS) + "/practice?run=" + encodeURIComponent(view.dataset.runView));
+        return;
+      }
       var button = event.target.closest && event.target.closest("[data-run-replay]");
       if (!button) return;
       var runId = encodeURIComponent(button.dataset.runReplay);

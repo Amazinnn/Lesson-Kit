@@ -1867,3 +1867,22 @@ img { max-width: 100%; }
   }
   .graph-dashboard { max-height: 32vh; }
 }
+.paper-toolbar, .paper-navigation { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0; }
+.paper-toolbar { justify-content: flex-end; }
+.paper-navigation { justify-content: center; }
+.paper-dots { display: flex; flex-wrap: wrap; gap: 8px; max-height: 140px; overflow-y: auto; padding: 10px 6px; margin: 12px 0; }
+.paper-dot { width: 34px; height: 34px; min-width: 34px; border-radius: 50%; padding: 0; border: 1px solid var(--dsw-label-secondary); background: var(--lk-paper); color: var(--dsw-label-primary); }
+.paper-dot.state-filled { background: var(--lk-yellow); color: #332900; }
+.paper-dot.state-locked { background: #dce7ff; color: #193f91; }
+.paper-dot.state-correct { background: #d9ebdd; color: #245d32; }
+.paper-dot.state-wrong, .paper-dot.state-stuck { background: #f6d8d5; color: #922d26; }
+.paper-dot.is-current { outline: 3px solid var(--lk-blue); outline-offset: 2px; }
+.paper-options label { display: flex; gap: 12px; align-items: baseline; padding: 12px; margin: 6px 0; border: 1px solid var(--dsw-border, #ddd); border-radius: 8px; }
+#paper-answer { width: 100%; box-sizing: border-box; margin: 12px 0; resize: vertical; }
+#paper-reference, #paper-rating { margin-top: 16px; }
+#paper-rating form { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+#paper-rating input[type=number] { width: 90px; }
+#paper-setup > select { margin: 12px; max-width: 100%; }
+#paper-completion { border-top: 5px solid var(--lk-yellow); }
+#paper-completion-stats { line-height: 1.9; }
+.practice-planning { margin-top: 24px; }

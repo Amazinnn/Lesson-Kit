@@ -2,7 +2,7 @@
 
 The workbench UI is the minimal consumption surface of lesson-kit: a three-column
 shell with a left navigation column (practice, knowledge points, knowledge
-graph), a middle page area, a session-end self-rating step, and a right AI
+graph), a middle page area with Paper practice and optional self-rating, and a right AI
 conversation column whose context display prioritizes the current problem
 without ever limiting what the agent can see. Visual style follows the Soft
 Mondrian visual foundation defined by this specification.
@@ -43,100 +43,23 @@ The workbench SHALL render a three-column desktop layout: a left navigation colu
 
 ### Requirement: Practice page
 
-The practice page SHALL be the departure surface for deciding what to practise
-and for resuming/running the current Paper. With no active Practice Run it MAY
-show scope, source/difficulty filters, suggestions, saved/recent Papers, rating
-preference, and other assembly inputs; these inputs constrain Paper Assembly and
-are not themselves an executable queue. Starting from a knowledge scope SHALL
-first determine a Paper's ordered items, then start the Practice Run from that
-fixed Paper.
-
-The learner-facing page SHALL NOT expose per-problem manual selection. Existing
-content-mode controls MAY remain temporarily as compatibility inputs while the
-mixed-format Paper UI is migrated, but they SHALL NOT define the product identity
-of a Paper or authorize dynamic pulling after execution begins. During an active
-run, the middle column MAY collapse arrangement controls so the fixed Paper's
-answering flow is primary; ending the run returns to the departure surface.
+The practice page SHALL list/manage existing Papers and offer start/continue, not learner-operated selection or assembly. It SHALL NOT expose per-problem pickers, knowledge-point assembly selectors, quantity/source/difficulty assembly controls, content-mode assembly inputs, suggestion-to-assembly actions, manual Paper membership/order edits, or a scope tray. Agent/CLI Paper Assembly and saving SHALL remain available. Reading, graph navigation and chapter-lens changes SHALL NOT select or assemble practice items. Existing Paper progress SHALL remain independent of these reading actions.
 
 #### Scenario: Start from an explicit scope
-
-- **WHEN** the learner chooses a knowledge scope and starts practice
-- **THEN** Lesson Kit assembles a Paper from that scope before execution and the resulting Practice Run keeps that ordered item list fixed
+- **WHEN** the learner asks the Agent to assemble from an explicit knowledge scope
+- **THEN** the Agent authors/saves the fixed Paper and the page offers that saved Paper for practice without a learner scope-selection form
 
 #### Scenario: Resume an active Paper
-
-- **WHEN** the learner returns to practice with an unfinished active run
-- **THEN** the same Paper and progress are offered for resume without re-running assembly
+- **WHEN** the learner returns with an unfinished run
+- **THEN** its Paper and progress are offered for continuation without assembly
 
 #### Scenario: Filters do not mutate a running Paper
-
-- **WHEN** source, difficulty, or suggestion inputs change while a Paper is already running
-- **THEN** the current run is unchanged and those inputs apply only to a later Paper Assembly
+- **WHEN** Agent/CLI authoring filters or reading context change
+- **THEN** the running Paper remains fixed and any authoring inputs apply only to a separately authored Paper
 
 #### Scenario: No manual problem picker
-
-- **WHEN** the learner opens the practice departure controls
-- **THEN** scope and filter controls may be present but no control can hand-pick a concrete problem into the Practice Run
-
-### Requirement: Compact per-problem self-rating
-
-In per-problem mode with the learner's show-rating preference on, the revealed
-feedback area SHALL use a compact two-surface form: one direct numeric 1–5
-input and one optional note surface with the explicit `记录并下一题` action. It
-SHALL retain accessible field names and SHALL NOT expand the rating into five
-separate choice controls. Rating validation and feedback-write timing SHALL
-remain unchanged. With the preference off, the feedback area SHALL NOT appear;
-an objective problem's verdict and the revealed solution SHALL be followed by a
-single explicit `下一题` action that advances without a feedback write, and an
-empty or out-of-range rating SHALL be rejected inline at the input.
-
-#### Scenario: Enter a compact per-problem rating
-
-- **WHEN** the learner reaches self-rating in per-problem mode with rating shown
-- **THEN** the feedback area shows a direct numeric 1–5 input and an optional
-  note in two compact rounded surfaces
-- **AND** one explicit `记录并下一题` action records the feedback and advances
-- **AND** no five-choice rating group is rendered
-
-#### Scenario: Reject an invalid compact rating in place
-
-- **WHEN** the learner enters a value outside 1-5 — or leaves the input empty —
-  in the compact form
-- **THEN** the visible card reports the validation error and no feedback
-  request is sent
-
-#### Scenario: Off mode advances without a feedback write
-
-- **WHEN** the preference is off and the learner submits a problem, then presses
-  `下一题`
-- **THEN** the next unseen problem is shown and no feedback request is sent
-
-#### Scenario: Off mode hides the rating surface entirely
-
-- **WHEN** the preference is off and a problem's solution is revealed
-- **THEN** no rating input, note surface, or `记录并下一题` action appears
-
-### Requirement: Session-end unified self-rating
-
-The session-end view SHALL present completed, unrated Paper items only when the
-run uses unified self-rating. Each eligible item SHALL show the learner answer
-and solution with a 1–5 input and optional note. Submitting a score SHALL use the
-ordinary feedback behavior once and remove the scored item; skipped and
-unfinished items SHALL not be fabricated as completed ratings.
-
-A practice-similar action MAY use the finished Paper's results and knowledge
-scope as inputs to **assemble a new Paper**. It SHALL NOT reopen, extend, or
-mutate the completed Practice Run.
-
-#### Scenario: Rate completed items at run end
-
-- **WHEN** the learner submits a score for one completed Paper item
-- **THEN** feedback is recorded once and that item is removed while other unrated completed items remain
-
-#### Scenario: Practice similar after the run
-
-- **WHEN** the learner chooses the practice-similar action
-- **THEN** Lesson Kit starts a new Paper Assembly from relevant scope/evidence and does not reuse the prior run as a mutable queue
+- **WHEN** the learner visits practice, knowledge points, graph or saved-Paper surfaces
+- **THEN** no learner action selects concrete questions, accumulates assembly scope, changes a Paper's item list/order or directly assembles a Paper
 
 ### Requirement: Knowledge point display page
 
@@ -646,36 +569,6 @@ based on existing data.
 - **THEN** order alternates ascending, descending, ascending without changing
   selection or writing a learning record
 
-### Requirement: Practice page suggestions and assembly entry
-
-The practice page SHALL NOT maintain a Staged Practice List as a second product
-object between knowledge scope and Paper. The learner's explicit knowledge-point
-selection is Paper-assembly scope and may be summarized compactly; removing a
-scope item SHALL update that selection everywhere it is represented.
-
-The page MAY offer one on-demand suggestion entry sourced from the daily plan and
-due scheduling state, deduplicated to one row per knowledge point with at most
-one human-readable reason phrase. A suggestion action SHALL mean `据此组卷` (or
-equivalent assembly intent): it can establish/prefill a Paper scope, but it
-SHALL NOT join a knowledge point to an executable queue or inject concrete
-problems into an active Practice Run. Raw scheduler parameters remain hidden.
-The time view MAY remain beside the departure controls.
-
-#### Scenario: A due knowledge point appears as an assembly suggestion
-
-- **WHEN** a knowledge point is overdue and not already in the explicit assembly scope
-- **THEN** the suggestion surface may show it with one reason phrase and an action to assemble from it, without a staged-list join action
-
-#### Scenario: Remove a scope item
-
-- **WHEN** the learner removes one knowledge point from the practice departure scope summary
-- **THEN** that point is deselected in the knowledge list, graph, and scope tray without altering any running Paper
-
-#### Scenario: Nothing selected and nothing suggested
-
-- **WHEN** no assembly scope, saved/recent Paper, or suggestion is available
-- **THEN** the practice departure page shows an honest compact empty state rather than inventing a staged practice queue
-
 ### Requirement: Complete text display across surfaces
 
 Item labels and chips across the workbench SHALL display their complete text:
@@ -694,34 +587,6 @@ a content-naming matter — the UI SHALL NOT mitigate it by hiding text.
 - **WHEN** a day cell holds a goal whose title is longer than the cell width
 - **THEN** the goal chip wraps inside the cell and the cell grows to show
   the full title
-
-### Requirement: Cross-page practice-scope tray
-
-Every workspace page SHALL expose one compact Paper-assembly scope control at the
-upper-right of the middle column. Activating it SHALL open a tray that lists the
-complete names of explicitly selected knowledge points, allows an item to be
-removed, and offers one action to enter the practice departure page with that
-scope. The tray SHALL reuse existing tab-local selection and SHALL NOT create
-server-side learning or execution state.
-
-The tray action SHALL NOT directly start a Practice Run. Scope answers what the
-learner wants to practise; the practice page/Agent determines the concrete Paper
-before execution. Open/collapsed state may remain browser-only.
-
-#### Scenario: Inspect a long scope
-
-- **WHEN** the learner opens the tray with more selected knowledge points than fit in its bounded list area
-- **THEN** every selected name remains available through vertical scrolling without expanding the page header
-
-#### Scenario: Remove a selected point from the tray
-
-- **WHEN** the learner removes one knowledge point in the tray
-- **THEN** it disappears from the tray and is deselected in other scope representations without changing a running Paper
-
-#### Scenario: Enter practice from the tray
-
-- **WHEN** at least one knowledge point is selected and the learner activates the tray action
-- **THEN** the practice departure page opens with the same Paper-assembly scope and no Practice Run begins until a Paper is determined
 
 ### Requirement: Metric projection morphology
 
@@ -1145,67 +1010,39 @@ silent.
 
 ### Requirement: Saved paper items preview their problem
 
-The 组卷 page SHALL let a learner read the problems a saved paper holds without
-leaving the page. Each item SHALL be an expandable block whose summary keeps the
-index, title and reorder/remove controls it has today, and whose opened body
-shows the problem's full text together with its recorded source line when one
-exists. The body SHALL render through the same safe Markdown subset as the
-knowledge point page's linked problems, so mathematics, figures and code render
-identically on both surfaces. Items SHALL arrive collapsed, and the disclosure
-affordance SHALL be visible on every item. Expanding an item SHALL change
-nothing about the paper: the preview is a reading surface, never a second
-editor.
+The saved-Paper page SHALL allow reading each item's full text and source in a collapsed-by-default expandable block using the shared safe Markdown subset, including math, figures and code. Summaries SHALL show index and title without reorder/remove controls. Preview SHALL change no Paper or practice state.
 
 #### Scenario: Read one problem of a saved paper
-
-- **WHEN** a learner opens an item of a saved paper card
-- **THEN** the problem's own text appears under the item title, with its source
-  line when one is recorded
+- **WHEN** an item is expanded
+- **THEN** its text and recorded source appear without leaving the page
 
 #### Scenario: A long paper stays scannable
-
-- **WHEN** a saved paper holds dozens of problems
-- **THEN** every item is collapsed on arrival and the card lists titles only
+- **WHEN** a Paper contains many items
+- **THEN** items arrive collapsed with visible disclosure controls
 
 #### Scenario: Preview does not disturb the paper
-
-- **WHEN** items are expanded and the learner then moves or removes items
-- **THEN** those controls act on the same item rows as before, and only the
-  saved order changes
+- **WHEN** items are expanded or collapsed
+- **THEN** membership, order and execution state remain unchanged, and no learner reorder/remove controls appear
 
 ### Requirement: Saved paper cards fold
 
-The 组卷 page SHALL present every saved paper as a foldable card: the head — the
-paper's title, its size, and its controls — stays visible while the problem list
-folds away beneath it. Cards SHALL arrive folded, so the page reads as the
-learner's papers rather than the concatenation of their problems. Within a
-browser tab, a card the learner opened SHALL come back open after the reload an
-edit performs: moving or removing items must not require re-opening the paper
-after every click. Folding SHALL be a reading state only — opening or closing a
-card sends no request and changes no stored order. A control in the head SHALL
-act on the paper without folding the card as a side effect.
+Saved Paper cards SHALL arrive folded with title, count and management controls visible. Learners SHALL retain preview, rename, export, container deletion and start/continue as applicable, without membership/order editing. Fold state SHALL be reading-only, persist within the tab across management refreshes, and not change because a head control is activated. Errors SHALL remain visible on folded cards.
 
 #### Scenario: A folded card shows its head only
-
-- **WHEN** the 组卷 page renders saved papers
-- **THEN** each card shows its title, its size and its controls, with its
-  problem list folded away
+- **WHEN** the saved-Paper page renders
+- **THEN** title, count and management controls remain visible while items fold away
 
 #### Scenario: An edit leaves the paper open
-
-- **WHEN** a learner opens a paper, moves one of its problems, and the page
-  reloads the saved order
-- **THEN** that paper is open again in that tab
+- **WHEN** a learner renames an open Paper and its management view refreshes
+- **THEN** the card remains open in that tab
 
 #### Scenario: A control does not fold the card
-
-- **WHEN** a learner presses 导出 or 开始练习 on an open card
-- **THEN** the control runs and the card stays as the learner left it
+- **WHEN** rename or start/continue is activated
+- **THEN** the action runs without toggling the card
 
 #### Scenario: An error remains visible on a folded card
-
-- **WHEN** a rename or export command fails while its paper card is folded
-- **THEN** the error status remains visible outside the folded problem list
+- **WHEN** rename or export fails on a folded card
+- **THEN** its readable error remains visible outside the item list
 
 ### Requirement: Learner settings in the left rail
 
@@ -1628,3 +1465,60 @@ If the Paper or progress snapshot changed before approval, the UI SHALL perform 
 #### Scenario: Repeat an approval request
 - **WHEN** an approval is double-clicked or its response is lost and the decision is submitted again
 - **THEN** the operation is not executed a second time and the UI does not claim a second reset
+
+### Requirement: Minimal Paper start and practice controls
+
+The start surface SHALL show selected Paper title, item count, Answer Reveal Timing and start action. An unfinished run SHALL instead offer continuation with original timing, without restarting or changing timing. The old content-mode, rating-timing, quantity, save-from-selection and source-filter configuration block SHALL be absent. Ordinary navigation SHALL retain `上一题`, `下一题`, `不会`, plus `提交答案` only for multiple-choice and text in per-item mode. Paper-level `提交试卷` and `暂停练习` SHALL remain available; the obsolete session-only unsaved-content hint SHALL be removed. Locked-item mutation controls SHALL be disabled or absent without blocking navigation or self-rating edits.
+
+#### Scenario: Start and resume
+- **WHEN** a learner starts and later resumes a Paper
+- **THEN** start selects timing and continuation restores it without the old setup block
+
+#### Scenario: Navigate without submitting
+- **WHEN** a learner navigates, pauses, or reaches the final item
+- **THEN** the Paper is not submitted and pause is labelled `暂停练习`
+
+### Requirement: Accessible Paper status dots
+
+A compact numbered status-dot panel SHALL navigate to every item. Whole-Paper mode before submission SHALL distinguish unanswered, filled and stuck without showing correctness. Per-item mode SHALL show correct/wrong only with usable verdicts, and distinguish filled-but-unsubmitted from submitted-without-verdict. Current item SHALL have an outline or equivalent non-color cue. Statuses SHALL have readable accessible names, not color alone; many items SHALL not obscure the question or navigation.
+
+#### Scenario: No premature grading cues
+- **WHEN** answers are filled in whole-Paper mode before submission
+- **THEN** colors, text, badges and summaries show filled status without exposing right/wrong
+
+#### Scenario: Jump and read status
+- **WHEN** any numbered dot is activated
+- **THEN** the question appears with accessible status and a distinct current-item indicator
+
+### Requirement: Independent self-rating during Paper practice
+
+The run SHALL preserve its existing self-rating preference. When enabled, eligible items SHALL expose compact numeric 1–5 input and optional note after per-item submission or whole-Paper submission according to Answer Reveal Timing. Self-rating SHALL be optional, SHALL NOT gate navigation or completion, and SHALL remain editable through the existing same-run overwrite rule. Missing self-rating SHALL NOT mean correctness. Invalid or failed saves SHALL retain edits and report errors. When disabled, self-rating controls SHALL be absent and existing verdict-driven learning semantics SHALL remain unchanged. No record-and-next action SHALL be required.
+
+#### Scenario: Rate a text answer
+- **WHEN** a text answer is submitted in per-item mode with self-rating enabled
+- **THEN** the learner may compare the reference and save a rating or continue without one
+
+#### Scenario: Whole-Paper answers and optional ratings
+- **WHEN** final submission contains eligible unrated items
+- **THEN** completion succeeds and items remain available for later self-rating
+
+#### Scenario: Edit or reject a rating
+- **WHEN** a linked rating is edited
+- **THEN** valid edits overwrite only that same-run rating/note without replaying learning effects
+- **AND** empty or out-of-range saves are rejected without writes and the editor stays usable
+
+#### Scenario: Self-rating disabled
+- **WHEN** self-rating is disabled
+- **THEN** answers/results work without rating inputs, note fields or feedback save actions
+
+### Requirement: Paper completion and answer-sheet return
+
+Successful explicit final submission SHALL show a congratulations-style surface with total items, objective correct/wrong, stuck and pending self-rating counts. Counts SHALL be truthful; overlapping stuck/wrong SHALL not be presented as disjoint totals, unavailable verdict SHALL not become wrong, and completion SHALL not claim all answers are correct. Actions SHALL include `查看本次答卷`, `再练一次`, `返回试卷列表`. Answer-sheet review SHALL permit arbitrary navigation with fixed recorded answers and editable eligible self-ratings, with an explicit return to the same run's completion surface without resubmission. Starting again SHALL create a distinct run and preserve the completed one.
+
+#### Scenario: Review and return
+- **WHEN** the learner views an answer sheet, changes item or self-rating, and returns to completion
+- **THEN** the same run's completion and current rating counts appear without another Attempt or archive
+
+#### Scenario: Practice again
+- **WHEN** the learner starts again from completion
+- **THEN** a new run starts from that Paper with a fresh start choice and the previous answer sheet remains intact

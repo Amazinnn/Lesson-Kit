@@ -2,7 +2,7 @@
 (function (root, factory) {
   root.PracticeFlow = factory();
 }(typeof globalThis === "object" ? globalThis : this, function () {
-  function start(deps) {
+  function startLegacy(deps) {
     var layout = document.getElementById("layout");
     if (!layout) return {
       currentProblem: function () { return null; },
@@ -2163,5 +2163,11 @@
     };
   }
 
+  function start(deps) {
+    if (document.getElementById("paper-practice") && typeof PaperPractice !== "undefined") {
+      return PaperPractice.start(deps, function () { return startLegacy(deps); });
+    }
+    return startLegacy(deps);
+  }
   return { start: start };
 }));

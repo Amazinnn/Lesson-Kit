@@ -4,11 +4,12 @@
 
 | 模块 | 职责 | 依赖 | 被谁调用 |
 |---|---|---|---|
-| **拉取 pull** | 按选区 KP + 模式拉题：exclude 已见、到期优先、n 条、诚实空态 | problems、review_schedule | `/pull`（API/CLI）、练习页 |
-| **选题组练习**（2026-09-25） | 六种方式组合：范围/单题追加/条件筛选（含 `exam_year` 前缀）/薄弱（`weak` 薄弱分）/到期/错题（进度或最近尝试为错）；每题回报 reason，缺口进 shortage，零写入；练习清单校验与出卷（两份 Markdown 纯规则渲染 + 泄漏扫描） | problems、problem_progress、problem_attempts、review_schedule、learner_signals | CLI `pull`（含 `--plan`/`--print`/`--check`） |
+| **拉取 pull** | 按显式 authoring 范围、模式和条件拉题：exclude 已见、到期优先、数量、诚实空态 | problems、review_schedule | Agent/CLI `pull`；保留的 `/pull` API |
+| **选题组练习**（2026-09-25） | Agent/CLI authoring 的六种方式组合：范围/单题追加/条件筛选（含 `exam_year` 前缀）/薄弱（`weak` 薄弱分）/到期/错题（进度或最近尝试为错）；每题回报 reason，缺口进 shortage，零写入；练习清单校验与出卷（两份 Markdown 纯规则渲染 + 泄漏扫描）。浏览器阅读、建议与图谱筛选不建立组卷范围 | problems、problem_progress、problem_attempts、review_schedule、learner_signals | Agent/CLI `pull`（含 `--plan`/`--print`/`--check`） |
 | **拉取 pull-cards** | 闪卡按方向能力展开；选区过滤、每方向到期优先、整卡/方向键排除 | flash_cards、review_schedule | `/pull-cards`、练习页 |
 | **feedback 四件套** | 首次自评原子写事件→信号→状态→调度；Paper 同轮回看的原位覆盖仅由浏览器 API 提供，按精确 execution/Attempt 与预期旧值更新已关联评分/评语，不重复写学习影响；CLI 仍沿用原反馈行为，支持 item_type=problem/card + direction 键 | feedback_events、learner_signals、kp 状态、review_schedule | `/feedback`（普通 API/CLI；原位编辑限浏览器 API）、收束页、练习回看 |
 | **practice 记录** | 记一次尝试（作答原文/卡点/状态） | problem_attempts | `/practice`（API/CLI） |
+| **Paper Practice Run**（2026-10-19） | 普通 Paper 在 `per_item` 与 `on_submit` 两种答案展示时机下自由导航；保存每卷独立检查点、草稿、卡点与参考材料查看事实；`per_item` 答案提交或标记卡点时立即写 Attempt，`on_submit` 卡点只更新可改草稿；整卷显式提交写入未提交答案，空白或仍标记卡点的题写卡点 Attempt 并归档；完成后读取答卷或建立独立重练轮次。旧记录与闪卡使用 NULL/legacy 语义 | active_practice、active_practice_items、practice_runs、problem_attempts、feedback_events | `data.active_practice`、`data.paper_progress`；浏览器练习 API |
 | **attempts 代录与更正**（2026-09-24） | 尝试清单校验（字段白名单、题目存在、评分 1–5、题内不重复）→ check 零写入预检 → apply 单事务写尝试 + 复用 feedback 四件套（带评分时）+ 操作留痕（含 effect 前后投影快照）；同 `request_id` 同内容幂等回放、异内容拒绝；correct 按 attempt-id 整体替换：先比对快照（投影被更晚活动改过、或还有更晚尝试即拒），再恢复前快照、按新评分重算、更新快照；无评分的尝试不碰任何投影 | problem_attempts、feedback_events、attempt_operations、learner_signals、learning_current_state、problem_progress、review_schedule | CLI `attempts`（check/apply/correct/list/get） |
 | **学习证据查询**（2026-10-12） | 按知识点读取最多 20 条最新作答，附当前题面及实际记录的作答、判定、评分/评语与时间；只读且不推断学习特征 | knowledge_points、problems、problem_attempts、feedback_events | CLI `evidence` |
 | **按需 Agent 契约披露**（`bridge.agent_contracts`） | 只读打印已安装的 `commands`、`attempts`、`practice`、`actions`、`content` 五个静态契约主题；不访问学习数据 | — | `python -m workbench.bridge.agent_contracts <topic>` |
