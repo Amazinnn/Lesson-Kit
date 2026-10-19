@@ -997,13 +997,17 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     changes.extend(ensure_columns(conn, "active_practice", [
         ("execution_id", "INTEGER NOT NULL DEFAULT 0"),
         ("paper_generation", "INTEGER NOT NULL DEFAULT 1"),
+        # NULL preserves the established lifecycle for old active runs.
+        ("reveal_timing", "TEXT"),
     ]))
     changes.extend(ensure_columns(conn, "active_practice_items", [
         ("content_revision", "INTEGER NOT NULL DEFAULT 1"), ("draft_json", "TEXT"),
         ("draft_sequence", "INTEGER NOT NULL DEFAULT 0"),
     ]))
     changes.extend(ensure_columns(conn, "practice_runs", [
-        ("execution_id", "INTEGER"), ("paper_generation", "INTEGER NOT NULL DEFAULT 1")]))
+        ("execution_id", "INTEGER"), ("paper_generation", "INTEGER NOT NULL DEFAULT 1"),
+        # NULL marks historical runs whose presentation policy was not recorded.
+        ("reveal_timing", "TEXT")]))
     if table_exists(conn, "problems"):
         changes.extend(ensure_columns(conn, "problems", [("deleted_at", "TEXT")]))
     legacy = conn.execute("SELECT execution_id FROM active_practice WHERE singleton=1").fetchone()

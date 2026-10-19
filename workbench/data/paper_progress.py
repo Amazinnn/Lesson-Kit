@@ -268,7 +268,9 @@ def continuation(pool, paper_id, plan_items, validation_errors=()):
              for item in items):
         reason = '旧执行引用的题目作答内容已变化，不能继续。'
     return dict(available=reason is None, reason=reason, paper_count=len(plan_items),
-                execution=dict(progress=progress), unavailable_item_ids=unavailable)
+                execution=dict(progress=progress, execution_id=record.get('execution_id'),
+                               reveal_timing=record.get('reveal_timing')),
+                unavailable_item_ids=unavailable)
 
 
 def start_blocker(pool, paper_id):

@@ -347,6 +347,419 @@ def test_draft_sequence_and_preview_token_reject_late_writes(pool):
     assert active_practice.current(pool)['items'][0]['draft'] == {'answer': 'new'}
 
 
+def test_explicit_reveal_timing_navigation_and_pause_restore_independent_state(pool):
+    a = paper(pool, 'A', [Q, R])
+    started = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    assert started['reveal_timing'] == 'on_submit'
+    context = active_practice.submission_context(started, 1)
+    marked = api.practice_stuck(pool, {}, {}, {
+        'execution_id': started['execution_id'], 'position': 1,
+        'request_id': 'draft-stuck-1', 'practice_context': context,
+    })['practice']
+    assert marked['items'][1]['state'] == 'pending'
+    assert marked['items'][1]['attempt_id'] is None
+    assert marked['items'][1]['draft']['reference_viewed'] is True
+    replay = api.practice_stuck(pool, {}, {}, {
+        'execution_id': started['execution_id'], 'position': 1,
+        'request_id': 'draft-stuck-1', 'practice_context': context,
+    })
+    assert replay['replay'] is True
+    navigated = api.practice_navigate(pool, {}, {}, {
+        'execution_id': started['execution_id'], 'position': 1,
+        'practice_context': context,
+    })['practice']
+    assert navigated['cursor'] == 1
+    assert navigated['items'][1]['state'] == 'pending'
+    assert pool.attempts(R) == []
+
+    api.practice_draft(pool, {}, {}, {
+        'execution_id': started['execution_id'], 'position': 1,
+        'practice_context': context, 'sequence': 2,
+        'draft': {'answer': 'new answer', 'choices': [], 'stuck': False,
+                  'reference_viewed': False},
+    })
+    updated = active_practice.current(pool)['items'][1]['draft']
+    assert updated == {'answer': 'new answer', 'choices': [], 'stuck': False,
+                       'reference_viewed': True}
+
+    with pytest.raises(api.ApiError) as stale_pause:
+        api.active_practice_delete(pool, {}, {}, {
+            'execution_id': started['execution_id'] + 1,
+            'practice_context': context,
+        })
+    assert stale_pause.value.status == 409
+    assert active_practice.current(pool)['execution_id'] == started['execution_id']
+
+    paused = api.active_practice_delete(pool, {}, {}, {
+        'execution_id': started['execution_id'], 'practice_context': context,
+    })
+    assert paused['paused'] is True
+    assert active_practice.current(pool) is None
+    continuation = practice_sets.get_saved(pool, a)['continuation']['execution']
+    assert continuation['execution_id'] == started['execution_id']
+    assert continuation['reveal_timing'] == 'on_submit'
+    resumed = active_practice.start_saved(pool, a, reveal_timing='per_item')
+    assert resumed['execution_id'] == started['execution_id']
+    assert resumed['reveal_timing'] == 'on_submit'
+    assert resumed['cursor'] == 1
+    assert resumed['items'][1]['draft']['answer'] == 'new answer'
+    assert resumed['items'][1]['draft']['reference_viewed'] is True
+
+
+def test_navigate_adopts_legacy_saved_execution_without_resetting_attempts(pool):
+    a = paper(pool, 'A', [Q, R])
+    legacy = active_practice.start_saved(pool, a)
+    first = attempts.record_browser_attempt(
+        pool, Q, answer_text='existing answer', request_id='legacy-paper-answer',
+        practice_position=0,
+        practice_context=active_practice.submission_context(legacy, 0))
+    assert first['practice']['completed'] is False
+
+    adopted = api.practice_navigate(pool, {}, {}, {
+        'execution_id': legacy['execution_id'], 'position': 1,
+        'practice_context': active_practice.submission_context(legacy, 1),
+    })['practice']
+
+    assert adopted['execution_id'] == legacy['execution_id']
+    assert adopted['reveal_timing'] == 'per_item'
+    assert adopted['cursor'] == 1
+    assert adopted['items'][0]['state'] == 'answered'
+    assert adopted['items'][0]['attempt_id'] == first['attempt_id']
+    assert adopted['items'][0]['attempt']['answer_text'] == 'existing answer'
+    assert pool.connect().execute(
+        'SELECT reveal_timing FROM active_practice WHERE singleton=1').fetchone()[0] == 'per_item'
+
+
+def test_navigate_adopts_legacy_temporary_problem_run_but_not_cards(pool):
+    temporary = active_practice.create(pool, {
+        'source_kind': 'quick', 'kp_ids': ['dmath-ch06-kp-001'],
+        'practice_mode': 'exam', 'rating_mode': 'off',
+        'items': [{'item_type': 'problem', 'item_id': Q},
+                  {'item_type': 'problem', 'item_id': R}],
+    })
+    adopted = active_practice.navigate(
+        pool, temporary['execution_id'], 0,
+        context=active_practice.submission_context(temporary, 0))['practice']
+    assert adopted['source_ref'] is None
+    assert adopted['reveal_timing'] == 'per_item'
+
+    card_id = 'legacy-card-for-navigation'
+    pool.connect().execute(
+        'INSERT INTO flash_cards(card_id,kp_id,front,back,source_evidence,directions) '
+        "VALUES (?, 'dmath-ch06-kp-001', 'front', 'back', 'test', '[\"forward\"]')",
+        (card_id,))
+    pool.commit()
+    # Replacing through the legacy execution API archives the first run; this
+    # fresh card execution must retain its established NULL-mode semantics.
+    card = active_practice.create(pool, {
+        'source_kind': 'quick', 'kp_ids': [], 'practice_mode': 'exam',
+        'rating_mode': 'off', 'items': [{'item_type': 'card', 'item_id': card_id}],
+    }, replace=True)
+    navigated = active_practice.navigate(
+        pool, card['execution_id'], 0,
+        context=active_practice.submission_context(card, 0))['practice']
+    assert navigated['reveal_timing'] is None
+
+
+def test_explicit_start_adopts_active_or_parked_legacy_saved_execution_as_per_item(pool):
+    a = paper(pool, 'A', [Q, R])
+    legacy = active_practice.start_saved(pool, a)
+    attempt = attempts.record_browser_attempt(
+        pool, Q, answer_text='old evidence', request_id='start-adopt-answer',
+        practice_position=0,
+        practice_context=active_practice.submission_context(legacy, 0))
+
+    active = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    assert active['execution_id'] == legacy['execution_id']
+    assert active['reveal_timing'] == 'per_item'
+    assert active['items'][0]['attempt_id'] == attempt['attempt_id']
+    assert len(pool.attempts(Q)) == 1
+
+    paused = active_practice.clear(
+        pool, execution_id=active['execution_id'],
+        practice_context=active_practice.submission_context(active, 1))
+    assert paused['paused'] is True
+    restored = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    assert restored['execution_id'] == legacy['execution_id']
+    assert restored['reveal_timing'] == 'per_item'
+    assert restored['items'][0]['attempt_id'] == attempt['attempt_id']
+    assert len(pool.attempts(Q)) == 1
+
+
+def test_on_submit_finalization_records_saved_answers_atomically_and_replays(pool):
+    a = paper(pool, 'A', [Q, R])
+    run = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    for position, draft in enumerate((
+        {'answer': 'response', 'choices': [], 'stuck': False,
+         'reference_viewed': False},
+        {'answer': '', 'choices': [], 'stuck': True,
+         'reference_viewed': True},
+    )):
+        token = active_practice.submission_context(run, position)
+        active_practice.save_draft(pool, run['execution_id'], position, draft,
+                                   context=token, sequence=1)
+
+    request = {'execution_id': run['execution_id'], 'request_id': 'paper-submit-1'}
+    first = api.practice_submit(pool, {}, {}, request)
+    assert first['completed'] is True
+    assert first['replay'] is False
+    assert isinstance(first['run_id'], int)
+    assert active_practice.current(pool) is None
+    assert pool.attempts(Q)[-1]['answer_text'] == 'response'
+    assert pool.attempts(R)[-1]['status'] == 'stuck'
+
+    replay = api.practice_submit(pool, {}, {}, request)
+    assert replay['run_id'] == first['run_id']
+    assert replay['replay'] is True
+    assert len(pool.attempts(Q)) == 1
+    assert len(pool.attempts(R)) == 1
+
+    sheet = api.practice_run_get(pool, {}, {'run_id': str(first['run_id'])}, {})
+    assert sheet['execution_id'] == run['execution_id']
+    assert sheet['reveal_timing'] == 'on_submit'
+    assert [item['item_id'] for item in sheet['items']] == [Q, R]
+    assert sheet['items'][0]['attempt']['answer_text'] == 'response'
+    assert sheet['items'][1]['state'] == 'stuck'
+    assert sheet['items'][1]['draft']['reference_viewed'] is True
+    assert sheet['items'][0]['payload']['problem_id'] == Q
+
+
+def test_on_submit_stuck_wins_over_unchanged_nonblank_draft(pool):
+    a = paper(pool, 'A', [Q, R])
+    run = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    context = active_practice.submission_context(run, 0)
+    active_practice.save_draft(
+        pool, run['execution_id'], 0,
+        {'answer': 'tentative work', 'choices': []}, context=context, sequence=1)
+    marked = api.practice_stuck(pool, {}, {}, {
+        'execution_id': run['execution_id'], 'position': 0,
+        'request_id': 'stuck-after-draft', 'practice_context': context,
+    })['practice']
+    assert marked['items'][0]['draft']['answer'] == 'tentative work'
+    assert marked['items'][0]['draft']['stuck'] is True
+    assert pool.attempts(Q) == []
+
+    completed = api.practice_submit(pool, {}, {}, {
+        'execution_id': run['execution_id'], 'request_id': 'stuck-after-draft-final',
+        'drafts': [{
+            'position': 0,
+            'draft': {'answer': 'tentative work', 'choices': [], 'stuck': True,
+                      'reference_viewed': True},
+            'sequence': 2, 'practice_context': context,
+        }],
+    })
+    sheet = api.practice_run_get(pool, {}, {'run_id': str(completed['run_id'])}, {})
+    item = sheet['items'][0]
+    assert item['state'] == 'stuck'
+    assert item['attempt']['status'] == 'stuck'
+    assert item['attempt']['answer_text'] is None
+    assert item['attempt']['verdict'] is None
+    assert item['draft']['answer'] == 'tentative work'
+    assert item['draft']['stuck'] is True
+
+
+def test_new_nonblank_answer_edit_clears_stuck_and_preserves_reference_viewed(pool):
+    a = paper(pool, 'A', [Q, R])
+    run = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    context = active_practice.submission_context(run, 0)
+    active_practice.save_draft(
+        pool, run['execution_id'], 0, {'answer': 'first draft'}, context=context, sequence=1)
+    api.practice_stuck(pool, {}, {}, {
+        'execution_id': run['execution_id'], 'position': 0,
+        'request_id': 'stuck-before-edit', 'practice_context': context,
+    })
+
+    saved = api.practice_draft(pool, {}, {}, {
+        'execution_id': run['execution_id'], 'position': 0, 'sequence': 3,
+        'practice_context': context,
+        'draft': {'answer': 'revised answer', 'choices': [], 'stuck': True,
+                  'reference_viewed': False},
+    })
+    current = active_practice.current(pool)
+    assert saved['sequence'] == 3
+    assert current['items'][0]['draft']['stuck'] is False
+    assert current['items'][0]['draft']['reference_viewed'] is True
+
+    completed = api.practice_submit(pool, {}, {}, {
+        'execution_id': run['execution_id'], 'request_id': 'edited-answer-final',
+    })
+    sheet = api.practice_run_get(pool, {}, {'run_id': str(completed['run_id'])}, {})
+    assert sheet['items'][0]['state'] == 'answered'
+    assert sheet['items'][0]['attempt']['answer_text'] == 'revised answer'
+
+
+def test_per_item_last_attempt_waits_for_explicit_submit_and_legacy_still_autoarchives(pool):
+    a = paper(pool, 'A', [Q, R])
+    run = active_practice.start_saved(pool, a, reveal_timing='per_item')
+    for position, problem_id in enumerate((Q, R)):
+        result = attempts.record_browser_attempt(
+            pool, problem_id, answer_text='response', request_id=f'per-item-{position}',
+            practice_position=position,
+            practice_context=active_practice.submission_context(run, position))
+        assert result['practice']['completed'] is False
+    assert active_practice.current(pool)['progress']['remaining'] == 0
+    assert pool.connect().execute('SELECT COUNT(*) FROM practice_runs').fetchone()[0] == 0
+    completed = api.practice_submit(pool, {}, {}, {
+        'execution_id': run['execution_id'], 'request_id': 'per-item-final',
+    })
+    assert completed['completed'] is True
+    assert pool.connect().execute('SELECT COUNT(*) FROM practice_runs').fetchone()[0] == 1
+
+    legacy = active_practice.start_saved(pool, a)
+    active_practice.mark(pool, 0, 'stuck')
+    active_practice.mark(pool, 1, 'stuck')
+    assert active_practice.current(pool) is None
+    assert legacy['reveal_timing'] is None
+
+
+def test_new_navigation_endpoints_are_declared_in_the_interface_surface():
+    from workbench.server import app
+    from workbench import surface
+
+    expected = {
+        ('POST', '/api/w/{name}/practice/current/navigate'),
+        ('POST', '/api/w/{name}/practice/current/stuck'),
+        ('POST', '/api/w/{name}/practice/current/submit'),
+        ('GET', '/api/w/{name}/practice/runs/{run_id}'),
+    }
+    actual = {(method, path) for method, path, _handler in app.ROUTES}
+    assert expected <= actual
+    assert expected <= set(surface.ROUTES)
+
+
+def test_completed_run_read_returns_not_found_for_unknown_archive(pool):
+    with pytest.raises(api.ApiError) as missing:
+        api.practice_run_get(pool, {}, {'run_id': '99999'}, {})
+    assert missing.value.status == 404
+    with pytest.raises(api.ApiError) as invalid:
+        api.practice_run_get(pool, {}, {'run_id': 'not-an-id'}, {})
+    assert invalid.value.status == 400
+
+
+def test_old_pool_rejects_explicit_mode_with_migration_hint_but_keeps_legacy_runs(pool):
+    a = paper(pool, 'A', [Q, R])
+    conn = pool.connect()
+    conn.execute('ALTER TABLE active_practice DROP COLUMN reveal_timing')
+    conn.execute('ALTER TABLE practice_runs DROP COLUMN reveal_timing')
+    pool.commit()
+
+    with pytest.raises(active_practice.ActivePracticeError, match='not migrated.*migrate-progress.py'):
+        active_practice.start_saved(pool, a, reveal_timing='on_submit')
+
+    legacy = active_practice.start_saved(pool, a)
+    assert legacy.get('reveal_timing') is None
+    with pytest.raises(active_practice.ActivePracticeError, match='not migrated.*migrate-progress.py'):
+        active_practice.navigate(
+            pool, legacy['execution_id'], 0,
+            context=active_practice.submission_context(legacy, 0))
+    active_practice.mark(pool, 0, 'stuck')
+    active_practice.mark(pool, 1, 'stuck')
+    assert active_practice.current(pool) is None
+    assert conn.execute('SELECT status FROM practice_runs').fetchone()[0] == 'completed'
+
+
+def test_finalization_checks_locked_item_content_revision_before_archiving(pool):
+    a = paper(pool, 'A', [Q, R])
+    run = active_practice.start_saved(pool, a, reveal_timing='per_item')
+    attempts.record_browser_attempt(
+        pool, Q, answer_text='locked answer', request_id='locked-before-final',
+        practice_position=0,
+        practice_context=active_practice.submission_context(run, 0))
+    # Simulate an out-of-band content revision that bypassed the normal
+    # reconcile path. Finalization must still validate already-locked items.
+    pool.connect().execute(
+        'INSERT INTO problem_revisions(problem_id,revision) VALUES (?,2) '
+        'ON CONFLICT(problem_id) DO UPDATE SET revision=revision+1', (Q,))
+    pool.commit()
+
+    with pytest.raises(api.ApiError, match='stale answering content') as stale:
+        api.practice_submit(pool, {}, {}, {
+            'execution_id': run['execution_id'], 'request_id': 'final-after-correction',
+        })
+    assert stale.value.status == 409
+
+    current = active_practice.current(pool)
+    assert current['items'][0]['state'] == 'answered'
+    assert current['items'][1]['state'] == 'pending'
+    assert pool.attempts(R) == []
+    assert pool.connect().execute('SELECT COUNT(*) FROM practice_runs').fetchone()[0] == 0
+
+
+def test_failed_final_attempt_rolls_back_earlier_attempts_and_keeps_drafts(pool):
+    a = paper(pool, 'A', [Q, R])
+    run = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    for position, answer in enumerate(('first answer', 'second answer')):
+        active_practice.save_draft(
+            pool, run['execution_id'], position, {'answer': answer, 'choices': []},
+            context=active_practice.submission_context(run, position), sequence=1)
+    pool.connect().execute(
+        "CREATE TRIGGER reject_second_final BEFORE INSERT ON problem_attempts "
+        f"WHEN NEW.problem_id='{R}' BEGIN SELECT RAISE(ABORT,'injected final failure'); END")
+    pool.commit()
+
+    with pytest.raises(Exception, match='injected final failure'):
+        api.practice_submit(pool, {}, {}, {
+            'execution_id': run['execution_id'], 'request_id': 'atomic-final-1',
+        })
+
+    current = active_practice.current(pool)
+    assert current['items'][0]['state'] == 'pending'
+    assert current['items'][0]['draft']['answer'] == 'first answer'
+    assert current['items'][1]['draft']['answer'] == 'second answer'
+    assert pool.attempts(Q) == []
+    assert pool.attempts(R) == []
+    assert pool.connect().execute('SELECT COUNT(*) FROM practice_runs').fetchone()[0] == 0
+
+
+def test_final_submit_grades_only_usable_keys_and_archive_ratings_stay_linked(pool):
+    import json
+
+    pool.connect().execute(
+        'UPDATE problems SET micro_quiz=?,practice_modes=? WHERE problem_id=?',
+        (json.dumps({'quiz_type': 'single_choice', 'options': ['A', 'B'],
+                     'answer_key': 'B'}), '["micro"]', Q))
+    pool.connect().execute(
+        'UPDATE problems SET micro_quiz=?,practice_modes=? WHERE problem_id=?',
+        (json.dumps({'quiz_type': 'single_choice', 'options': ['A', 'B']}), '["micro"]', R))
+    pool.commit()
+    a = paper(pool, 'A', [Q, R])
+    run = active_practice.start_saved(pool, a, reveal_timing='on_submit')
+    latest_drafts = []
+    for position, choices in enumerate((['B'], ['A'])):
+        latest_drafts.append({
+            'position': position,
+            'draft': {'answer': '', 'choices': choices, 'stuck': False,
+                      'reference_viewed': False},
+            'sequence': 1,
+            'practice_context': active_practice.submission_context(run, position),
+        })
+    submitted = api.practice_submit(pool, {}, {}, {
+        'execution_id': run['execution_id'], 'request_id': 'graded-final-1',
+        'drafts': latest_drafts,
+    })
+    sheet = api.practice_run_get(pool, {}, {'run_id': str(submitted['run_id'])}, {})
+    assert sheet['items'][0]['attempt']['verdict'] == 1
+    assert sheet['items'][1]['attempt']['verdict'] is None
+    assert sheet['result_counts'] == {
+        'correct': 1, 'incorrect': 0, 'ungraded': 1, 'stuck': 0, 'total': 2,
+    }
+
+    token = active_practice.submission_context(sheet, 0)
+    attempt_id = sheet['items'][0]['attempt_id']
+    attempts.record_browser_feedback(
+        pool, 'problem', Q, rating=4, note='first rating', attempt_id=attempt_id,
+        request_id='sheet-rating-1', practice_context=token)
+    attempts.record_browser_feedback(
+        pool, 'problem', Q, rating=5, note='edited rating', attempt_id=attempt_id,
+        request_id='sheet-rating-edit', practice_context=token, edit_existing=True,
+        expected_rating=4, expected_note='first rating')
+    reread = api.practice_run_get(pool, {}, {'run_id': str(submitted['run_id'])}, {})
+    assert reread['items'][0]['feedback']['rating'] == 5
+    assert pool.connect().execute(
+        'SELECT COUNT(*) FROM feedback_events WHERE attempt_id=?', (attempt_id,)
+    ).fetchone()[0] == 1
+
+
 def test_metadata_and_noop_preserve_drafts_and_content_revision(pool):
     a = paper(pool, 'A', [Q, R]); run = start(pool, a)
     token = active_practice.submission_context(run, 0)

@@ -72,8 +72,16 @@ ROUTES = {
         BROWSER, (), "the browser starts or explicitly replaces the active practice"),
     ("PATCH", "/api/w/{name}/practice/current"): (
         BROWSER, (), "the browser advances one fixed practice item"),
+    ("POST", "/api/w/{name}/practice/current/navigate"): (
+        BROWSER, (), "the browser persists arbitrary Paper navigation without submitting"),
+    ("POST", "/api/w/{name}/practice/current/stuck"): (
+        BROWSER, (), "the browser reveals a revisable stuck mark in on-submit mode"),
+    ("POST", "/api/w/{name}/practice/current/submit"): (
+        BROWSER, (), "the browser submits and archives one explicit-mode Paper execution"),
     ("DELETE", "/api/w/{name}/practice/current"): (
-        BROWSER, (), "the browser explicitly clears only execution state"),
+        BROWSER, (), "the browser pauses a saved Paper or clears legacy execution state"),
+    ("GET", "/api/w/{name}/practice/runs/{run_id}"): (
+        BROWSER, (), "the browser reads one completed Paper answer sheet"),
     ("POST", "/api/w/{name}/practice/runs/{run_id}/replay"): (
         BROWSER, (), "the browser replays one archived run into the active practice"),
     ("POST", "/api/w/{name}/practice"): (BOTH, ("practice",), ""),
