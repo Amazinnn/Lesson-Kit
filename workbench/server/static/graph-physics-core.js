@@ -1431,18 +1431,38 @@
     return { width: 1.05 + score * 2.35, baseOpacity: .15 + score * .43 };
   }
 
+  /* Where an edge should meet its node.
+   *
+   * It used to be size/2 + 2 — the corner of the node's BOX — but the circle the learner
+   * actually sees is not the whole box. `.node-face` is `inset: 7%`, so the filled circle's
+   * radius is size * (1 - .14) / 2 = size * .43, and the box corners reach size/2. On a 70px
+   * point the endpoint therefore sat 7 units outside the visible circle, which reads as the
+   * line failing to reach its node rather than meeting it.
+   *
+   * The tuck subtracted at the end keeps the round line cap from poking past the circle's
+   * antialiased edge; the node is painted over the edge, so a unit inside is invisible.
+   *
+   * If the face's inset ever changes, this constant has to change with it. */
+  var NODE_FACE_INSET = .07;
+
+  function endpointRadius(node) {
+    return Math.max(1, node.size * (1 - NODE_FACE_INSET * 2) / 2 - 1);
+  }
+
   function edgePath(state, edge) {
     var a = state.byId.get(edge.s);
     var b = state.byId.get(edge.t);
     var baseAB = Math.atan2(b.y - a.y, b.x - a.x);
     var sa = state.portSlots.get(edge.index + "|" + a.id) || { slot: 0, count: 1, angle: baseAB };
     var sb = state.portSlots.get(edge.index + "|" + b.id) || { slot: 0, count: 1, angle: baseAB + Math.PI };
-    var ra = a.size / 2 + 2;
-    var rb = b.size / 2 + 2;
+    var ra = endpointRadius(a);
+    var rb = endpointRadius(b);
     var ga = Math.min(12, 5 + a.size * .06);
     var gb = Math.min(12, 5 + b.size * .06);
-    // +10/+11 used to sit the endpoint outside the ring, leaving a gap at both ends
-    // that read as the edge failing to reach its node. +2 sits it on the ring.
+    // The endpoint radius comes from endpointRadius() above, which follows the circle that is
+    // actually drawn rather than the node's box: +10/+11 sat it well outside the ring, and the
+    // size/2 + 2 that replaced them still sat it outside the visible circle, because the circle
+    // is inset from the box.
     // The port spread is an arc along the boundary, not a sideways shift. A tangential
     // shift leaves the circle: at slot 4 on a 57-unit node the endpoint landed 16 units
     // outside the ring and 50 degrees away from the direction it was meant to leave in,
