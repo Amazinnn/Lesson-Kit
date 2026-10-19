@@ -182,10 +182,10 @@
 
 `active_practice.practice_mode` 与 `practice_runs.practice_mode` 是界面的兼容选择 / 渲染元数据，
 不是 Paper 身份或题目队列。schema 没有枚举 CHECK；Data writer 只要求非空字符串，并在开始、归档与重放时保留该值。
-当前浏览器选项是 `exam`、`micro`、`yes_no`、`flash_card`；保存 Paper 的 start API 接受前三者，
+兼容元数据可为 `exam`、`micro`、`yes_no`、`flash_card`；新浏览器不再提供按模式选题控件，保存 Paper 的 start API 保留前三者作为兼容输入，
 记录读取器原样返回该字段，记录页为这四个值显示对应标签。固定题目身份与顺序分别存于保存 Paper、
 `active_practice_items` 与 `practice_runs.items_json`；`practice_mode` 不构造或动态补充执行队列。
-它不同于题目能力字段 `problems.practice_modes`；`rating_mode` 则单独表示反馈时机。
+它不同于题目能力字段 `problems.practice_modes`；`rating_mode` 保留原反馈兼容语义，`reveal_timing` 单独表示答案展示与锁定时机。
 
 v1 兼容输入和历史行可保留 `quick`、`practice_set`、`agent`。schema 增量迁移只扩展两个字段的
 CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 行与 `practice_runs` 历史值；读取或重放旧轮次不会改写旧行。
@@ -228,12 +228,18 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 | `practice_execution_ids.id` | 自增执行身份，不复用 | Data 执行器 |
 | `active_practice.execution_id/paper_generation` | 选中执行及对应结构版本 | Data 执行器 / 浏览器上下文 |
 | `active_practice_items.content_revision` | 该题作答内容版本 | Data 修题 / 提交校验 |
-| `active_practice_items.draft_json/draft_sequence` | 未提交文本/选择草稿和单调顺序；迟到写入拒绝，不是学习事实 | 浏览器经 Data 保存 / 恢复 |
+| `active_practice_items.draft_json/draft_sequence` | 文本/选择输入及 `stuck`、`reference_viewed` 执行标记与单调顺序；迟到写入拒绝，本身不是学习事实 | 浏览器经 Data 保存 / 恢复 |
 | `problem_revisions.problem_id/revision` | 作答语义版本，缺行等价 1 | 共用 Data 更新规则 / 提交校验 |
 | `practice_runs.execution_id/paper_generation` | 归档执行及结构版本；旧 execution_id 可为空 | Data 归档 / 反馈校验 |
+| `active_practice.reveal_timing` | 普通题轮次的 `per_item` 或 `on_submit` 答案展示方式，开始后固定；NULL 为旧轮次兼容语义 | Data 执行器 / 练习页恢复 |
+| `practice_runs.reveal_timing` | 已结束轮次的答案展示方式快照，NULL 为历史兼容 | Data 归档 / 答卷读取 |
 | `problems.deleted_at` | 空为当前题，非空为历史保留题目；保留 ID，当前查询/修改排除 | Data 删除 / 记录页 |
 
 旧健康 active 执行只补执行身份和默认版本，不改题序、attempt 关联或学习表。旧缺失引用显式报告，不补造或重绑。
+
+显式指定 `reveal_timing` 的普通题轮次只在整卷提交时完成；最后一题作答不自动归档。导航只更新位置，输入保存只更新执行状态。`per_item` 题目明确提交后由既有 Attempt 路径形成锁定记录；`on_submit` 的输入和可修改不会标记直到交卷前都保留在执行状态，交卷时非空输入成为正式提交，空题按不会处理。已存在 Attempt 不重写、不重复生成，首次自评和同轮自评覆盖沿用既有学习效果边界。
+
+新 `practice_runs.items_json` 保留每题 `content_revision`、`draft` 和 `draft_sequence`（以及原有题目身份、状态、Attempt 链接）。`draft.reference_viewed` 表示曾披露参考答案，不等于作答正确或不会；新答案清除可修改的不会标记时不清除此事实。暂停卷检查点同样携带轮次展示方式及题目执行状态。完成答卷读取以原执行/Attempt 为准，不用当前输入拼造历史作答；旧数据未记录的事实不补造。结构、内容修订及删除仍使用原有版本校验与记录保留规则。
 读取保存试卷时，Data 只有在执行题目身份及顺序、试卷结构版本、作答内容版本、题目可用性和当前试卷校验都匹配时，才把未完成状态作为当前试卷进度提供。列表、读取、当前练习与开始/暂停共用这项判断；不匹配时返回原因和仍保留的旧执行状态，旧执行不被改写、重绑或自动清除。它是读取结果，不增加持久字段或 schema。
 题面、选项、答案键、作答类型/能力变化仅重置各未完成卷中的该题及其草稿；解析、标题、KP、来源、难度变化不重置。
 手工改卷名单/题序须精确影响预览确认，重置该卷未完成状态；删题清当前引用是例外，保留其他题进度。

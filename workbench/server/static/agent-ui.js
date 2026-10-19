@@ -63,7 +63,7 @@
     var workspace = layout.dataset && layout.dataset.workspace;
     if (!workspace) return 0;
     try {
-      var raw = window.sessionStorage.getItem("wb_kp_selection_" + workspace);
+      var raw = window.sessionStorage.getItem("wb_agent_scope_" + workspace);
       var value = raw ? JSON.parse(raw) : [];
       return Array.isArray(value) ? value.filter(Boolean).length : 0;
     } catch (_) {

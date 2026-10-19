@@ -75,7 +75,7 @@ function setup() {
     createElement(tag) { return new Element(tag); },
     querySelectorAll() { return []; },
   };
-  const storage = new Map([["wb_kp_selection_alpha", JSON.stringify(["kp-1", "kp-2"])]]);
+  const storage = new Map([["wb_agent_scope_alpha", JSON.stringify(["kp-1", "kp-2"])]]);
   const window = { sessionStorage: {
     getItem(key) { return storage.get(key) || null; },
     setItem(key, value) { storage.set(key, String(value)); },
@@ -102,7 +102,7 @@ test("surface controller renders compact context chips and respects explicit col
   assert.equal(elements["ai-context-chips"].children.length, 3);
   assert.equal(elements["ai-context-chips"].children[0].textContent, "知识点");
   assert.equal(elements["ai-context-chips"].children[2].textContent, "范围 2 个知识点");
-  storage.set("wb_kp_selection_alpha", JSON.stringify(["kp-1"]));
+  storage.set("wb_agent_scope_alpha", JSON.stringify(["kp-1"]));
   ui.renderContext();
   assert.ok(elements["ai-context-chips"].children[2].textContent.includes("1"));
   ui.collapseAux();

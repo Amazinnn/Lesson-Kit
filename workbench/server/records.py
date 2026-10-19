@@ -89,6 +89,9 @@ def _run_card(run):
     if run.get("run_id") is not None:
         replay = (
             "<div class='record-run-actions'>"
+            + (f"<button type='button' data-run-view='{int(run['run_id'])}'>查看本次答卷</button>"
+               if run.get("status") == "completed" else "")
+            +
             f"<button type='button' data-run-replay='{int(run['run_id'])}'>再做一次</button>"
             "</div>"
         )
