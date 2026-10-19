@@ -246,6 +246,23 @@ test("a legacy ordinary saved-Paper run adopts per-item mode before interaction"
   assert.equal(app.runtime.session()[0].state, "pending");
 });
 
+test("a fixed temporary ordinary execution adopts free navigation without a saved-Paper ID", async () => {
+  const legacy = { ...practice({ revealTiming: null }), source_ref: null, source_label: "CLI practice" };
+  const adopted = { ...legacy, reveal_timing: "per_item" };
+  const app = fixture({
+    active: legacy,
+    writeHandlers: {
+      "POST /practice/current/navigate": () => ({ practice: adopted }),
+    },
+  });
+  await flush();
+
+  assert.equal(app.legacyCalls.length, 0);
+  assert.equal(app.ids["paper-work"].hidden, false);
+  assert.ok(app.calls.some((call) => call.path === "/practice/current/navigate"));
+  assert.match(app.ids["paper-question"].innerHTML, /CLI practice/);
+});
+
 test("single-choice selection submits once and shows the returned locked result", async () => {
   const answered = practice({ items: [{
     position: 0, item_type: "problem", item_id: "p-1", content_revision: 7,
@@ -434,5 +451,22 @@ test("pause parks the current run with context and returns to the saved-Paper li
   assert.ok(pause);
   assert.equal(pause.body.execution_id, 91);
   assert.equal(pause.body.practice_context.position, 0);
+  assert.equal(app.events.navigated, "/w/alpha/practice-sets");
+});
+
+test("pausing a temporary ordinary execution flushes drafts without parking its active singleton", async () => {
+  const temporary = { ...practice(), source_ref: null, source_label: "CLI practice" };
+  const app = fixture({ active: temporary });
+  await flush();
+
+  app.ids["paper-answer"].value = "temporary answer";
+  app.ids["paper-answer"].dispatch("input");
+  await app.ids["paper-pause"].dispatch("click");
+  await flush();
+
+  const draft = app.calls.find((call) => call.path === "/practice/draft");
+  assert.ok(draft);
+  assert.equal(draft.body.draft.answer, "temporary answer");
+  assert.equal(app.calls.some((call) => call.method === "DELETE" && call.path === "/practice/current"), false);
   assert.equal(app.events.navigated, "/w/alpha/practice-sets");
 });

@@ -170,10 +170,16 @@
     }
 
     function isPaperRun(record) {
-      return !!record && typeof record.source_ref === "string"
-        && record.source_ref.indexOf("ps-") === 0
+      return !!record && record.execution_id !== undefined && record.execution_id !== null
+        && String(record.execution_id) !== ""
         && Array.isArray(record.items)
+        && record.items.length > 0
         && record.items.every(function (item) { return item.item_type === "problem"; });
+    }
+
+    function isSavedPaperRun(record) {
+      return !!record && typeof record.source_ref === "string"
+        && record.source_ref.indexOf("ps-") === 0;
     }
 
     function currentMode() {
@@ -1313,6 +1319,7 @@
         return flushDraft(key);
       });
       return Promise.all(pendingDrafts).then(function () {
+        if (!isSavedPaperRun(run)) return null;
         var body = { execution_id: run.execution_id, practice_context: contextFor(run, item, position) };
         return api("/practice/current", {
           method: "DELETE",
