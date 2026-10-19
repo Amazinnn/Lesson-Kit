@@ -59,6 +59,7 @@
     var savedPaper = null;
     var run = null;
     var archived = null;
+    var archivedRecord = null;
     var local = null;
     var localKey = "";
     var legacy = null;
@@ -280,6 +281,8 @@
     }
 
     function delegateLegacy() {
+      setVisible(root, false);
+      setVisible(document.getElementById("legacy-practice"), true);
       if (legacy) return legacy;
       if (typeof legacyStart === "function") legacy = legacyStart(deps) || EMPTY;
       else legacy = EMPTY;
@@ -304,6 +307,7 @@
         renderCompletion();
       } else {
         archived = null;
+        archivedRecord = null;
         setVisible(ids.toolbar, true);
         renderCurrent();
         if (shouldAdoptMode) adoptLegacyMode();
@@ -442,13 +446,37 @@
       ids.start.disabled = true;
       clearError();
       var continuation = savedPaper.continuation;
-      var body = {
-        practice_mode: "exam",
-        rating_mode: showRatingEnabled() ? "immediate" : "off",
-      };
-      if (!continuation) body.reveal_timing = ids.timing && ids.timing.value === "on_submit"
-        ? "on_submit" : "per_item";
-      return post("/practice-sets/" + encodeURIComponent(savedPaper.practice_set_id) + "/start", body)
+      var body;
+      var startRequest;
+      if (archivedRecord) {
+        var replay = archivedRecord;
+        body = {
+          source_kind: "paper",
+          source_ref: null,
+          source_label: replay.source_label || savedPaper.title || "练习试卷",
+          kp_ids: Array.isArray(replay.kp_ids) ? replay.kp_ids.slice() : [],
+          practice_mode: replay.practice_mode || "exam",
+          rating_mode: showRatingEnabled() ? "immediate" : "off",
+          reveal_timing: ids.timing && ids.timing.value === "on_submit" ? "on_submit" : "per_item",
+          items: (replay.items || []).map(function (item) {
+            return {
+              item_type: item.item_type,
+              item_id: item.item_id,
+              direction: item.direction || "",
+            };
+          }),
+        };
+        startRequest = post("/practice/current", body);
+      } else {
+        body = {
+          practice_mode: "exam",
+          rating_mode: showRatingEnabled() ? "immediate" : "off",
+        };
+        if (!continuation) body.reveal_timing = ids.timing && ids.timing.value === "on_submit"
+          ? "on_submit" : "per_item";
+        startRequest = post("/practice-sets/" + encodeURIComponent(savedPaper.practice_set_id) + "/start", body);
+      }
+      return startRequest
         .then(function (response) {
           var started = extractPractice(response);
           if (!started) throw new Error("服务端未返回已开始的练习。");
@@ -688,6 +716,20 @@
       return item.feedback || null;
     }
 
+    function confirmedFeedback(item, body, response) {
+      var feedback = Object.assign({}, feedbackFor(item) || {});
+      if (response && response.feedback && typeof response.feedback === "object") {
+        feedback = Object.assign(feedback, response.feedback);
+      }
+      feedback.attempt_id = body.attempt_id;
+      feedback.rating = body.rating;
+      feedback.note = body.note;
+      if (response && response.feedback_event_id !== undefined) {
+        feedback.id = response.feedback_event_id;
+      }
+      return feedback;
+    }
+
     function canRate(item) {
       return !!(run && run.rating_mode !== "off" && item.item_type === "problem"
         && item.attempt_id && (item.state === "answered" || item.state === "stuck")
@@ -766,7 +808,7 @@
       if (feedback && feedback.rating && !pending) {
         body.edit_existing = true;
         body.expected_rating = feedback.rating;
-        body.expected_note = feedback.note || "";
+        body.expected_note = feedback.note === undefined ? null : feedback.note;
       }
       local.pendingRatings[key] = { payload: jsonCopy(body) };
       saveRatingDraft(item);
@@ -776,7 +818,7 @@
         if (disposed) return;
         var current = rowAt(position);
         var target = run.items.find(function (candidate) { return candidate.item_id === item.item_id; });
-        if (target) target.feedback = response.feedback || response;
+        if (target) target.feedback = confirmedFeedback(target, body, response);
         delete local.pendingRatings[key];
         delete local.ratingDrafts[key];
         persistLocal();
@@ -1237,7 +1279,7 @@
         var saved = local.pendingRatings[key];
         if (item && saved && saved.payload) {
           post("/feedback", saved.payload).then(function (response) {
-            item.feedback = response.feedback || response;
+            item.feedback = confirmedFeedback(item, saved.payload, response);
             delete local.pendingRatings[key];
             delete local.ratingDrafts[key];
             persistLocal();
@@ -1361,6 +1403,34 @@
     if (ids.review) ids.review.addEventListener("click", function () { openReview(0); });
     if (ids.return) ids.return.addEventListener("click", returnToCompletion);
     function again() {
+      if (archived && isPaperRun(archived) && !isSavedPaperRun(archived)) {
+        var replay = archived;
+        archivedRecord = replay;
+        savedPaper = {
+          title: replay.source_label || "练习试卷",
+          count: (replay.items || []).length,
+          plan: { items: (replay.items || []).map(function (item) { return { problem_id: item.item_id }; }) },
+        };
+        var base = "/w/" + encodeURIComponent(workspaceName()) + "/practice";
+        if (window.history && typeof window.history.replaceState === "function") {
+          window.history.replaceState(null, "", base);
+          address = new URL(window.location.href);
+          requestedPaperId = "";
+          requestedRunId = "";
+        }
+        run = null;
+        archived = null;
+        local = null;
+        localKey = "";
+        renderingArchived = false;
+        reviewing = false;
+        setVisible(ids.completion, false);
+        setVisible(ids.work, false);
+        setVisible(ids.toolbar, false);
+        clearError();
+        showSetup(savedPaper);
+        return;
+      }
       var paperId = (archived && archived.source_ref) || requestedPaperId;
       if (!paperId) {
         navigate("/w/" + encodeURIComponent(workspaceName()) + "/practice-sets");

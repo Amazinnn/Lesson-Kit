@@ -58,6 +58,7 @@ const PAPER_IDS = [
   "paper-prev", "paper-next", "paper-stuck", "paper-final-submit", "paper-dots",
   "paper-pause", "paper-completion", "paper-completion-stats", "paper-review",
   "paper-return", "paper-again", "paper-links",
+  "legacy-practice",
 ];
 
 function problem(id, quizType, answerKey, options) {
@@ -101,6 +102,8 @@ function fixture(options = {}) {
   const events = {};
   const calls = [];
   const ids = Object.fromEntries(PAPER_IDS.map((id) => [id, element(id)]));
+  ids["legacy-practice"].hidden = true;
+  ids["legacy-practice"].classList.add("hidden");
   ids["paper-reveal-timing"].value = "per_item";
   const document = {
     getElementById(id) { return ids[id] || null; },
@@ -263,6 +266,17 @@ test("a fixed temporary ordinary execution adopts free navigation without a save
   assert.match(app.ids["paper-question"].innerHTML, /CLI practice/);
 });
 
+test("card executions reveal the legacy practice surface when delegated", async () => {
+  const active = { ...practice(), items: [{ position: 0, item_type: "card", item_id: "card-1" }] };
+  const app = fixture({ active });
+  await flush();
+
+  assert.equal(app.legacyCalls.length, 1);
+  assert.equal(app.ids["paper-practice"].hidden, true);
+  assert.equal(app.ids["legacy-practice"].hidden, false);
+  assert.equal(app.ids["legacy-practice"].classList.contains("hidden"), false);
+});
+
 test("single-choice selection submits once and shows the returned locked result", async () => {
   const answered = practice({ items: [{
     position: 0, item_type: "problem", item_id: "p-1", content_revision: 7,
@@ -377,7 +391,7 @@ test("per-item finalization submits only still-pending draft rows", async () => 
   assert.equal(final.body.drafts[0].draft.answer, "still thinking");
 });
 
-test("stuck Attempts can be rated and then edited against the same run feedback", async () => {
+test("first feedback list response becomes editable and edits use the real object response", async () => {
   const stuck = practice({ items: [{
     position: 0, item_type: "problem", item_id: "p-1", content_revision: 7,
     state: "stuck", attempt_id: 502,
@@ -389,7 +403,9 @@ test("stuck Attempts can be rated and then edited against the same run feedback"
   const app = fixture({
     active: stuck,
     writeHandlers: {
-      "POST /feedback": (body) => ({ feedback: { rating: body.rating, note: body.note } }),
+      "POST /feedback": (body) => body.edit_existing
+        ? { edited: true, attempt_id: body.attempt_id, feedback_event_id: 818 }
+        : ["event logged", "progress updated"],
     },
   });
   await flush();
@@ -400,6 +416,8 @@ test("stuck Attempts can be rated and then edited against the same run feedback"
   fields[2].children[0].value = "needs another pass";
   fields[3].dispatch("click");
   await flush();
+  assert.equal(app.ids["paper-rating"].children[1].children[0].value, "5");
+  assert.equal(app.ids["paper-rating"].children[2].children[0].value, "needs another pass");
   fields = app.ids["paper-rating"].children;
   fields[1].children[0].value = "4";
   fields[2].children[0].value = "reviewed once";
@@ -408,11 +426,37 @@ test("stuck Attempts can be rated and then edited against the same run feedback"
 
   const feedback = app.calls.filter((call) => call.path === "/feedback");
   assert.equal(feedback.length, 2);
+  assert.equal(feedback[0].body.edit_existing, undefined);
   assert.equal(feedback[0].body.attempt_id, 502);
   assert.equal(feedback[0].body.practice_context.execution_id, 91);
   assert.equal(feedback[1].body.edit_existing, true);
   assert.equal(feedback[1].body.expected_rating, 5);
   assert.equal(feedback[1].body.expected_note, "needs another pass");
+  assert.equal(app.runtime.session()[0].feedback.rating, 4);
+  assert.equal(app.runtime.session()[0].feedback.note, "reviewed once");
+});
+
+test("editing a historical feedback event preserves its null note token", async () => {
+  const stuck = practice({ items: [{
+    position: 0, item_type: "problem", item_id: "p-1", content_revision: 7,
+    state: "stuck", attempt_id: 502,
+    draft: { answer: "", choices: [], stuck: true, reference_viewed: true },
+    attempt: { attempt_id: 502, answer_text: "", stuck: true },
+    feedback: { id: 818, attempt_id: 502, rating: 3, note: null },
+    payload: problem("p-1", "text", null),
+  }] });
+  const app = fixture({ active: stuck });
+  await flush();
+
+  const fields = app.ids["paper-rating"].children;
+  fields[1].children[0].value = "4";
+  fields[2].children[0].value = "updated";
+  fields[3].dispatch("click");
+  await flush();
+
+  const feedback = app.calls.find((call) => call.path === "/feedback");
+  assert.equal(feedback.body.expected_rating, 3);
+  assert.equal(feedback.body.expected_note, null);
 });
 
 test("archived answer-sheet review returns to completion without resubmitting", async () => {
@@ -430,6 +474,7 @@ test("archived answer-sheet review returns to completion without resubmitting", 
   await app.ids["paper-review"].dispatch("click");
   assert.equal(app.ids["paper-work"].hidden, false);
   assert.equal(app.ids["paper-answer"].disabled, true);
+  assert.equal(app.ids["paper-options"].children[0].children[1].children[0].checked, true);
   await app.ids["paper-return"].dispatch("click");
   assert.equal(app.ids["paper-completion"].hidden, false);
   assert.equal(app.calls.some((call) => call.path === "/practice/current/submit"), false);
@@ -438,6 +483,57 @@ test("archived answer-sheet review returns to completion without resubmitting", 
   assert.equal(app.ids["paper-setup"].hidden, false);
   assert.equal(app.ids["paper-start"].disabled, false);
   assert.match(app.window.location.href, /paper=ps-017/);
+});
+
+test("Again starts a fresh temporary Paper run from the archived item order", async () => {
+  const archived = {
+    ...practice(), id: 113, run_id: 113, source_ref: null, source_label: "CLI practice",
+    kp_ids: ["kp-2", "kp-1"], practice_mode: "exam", rating_mode: "off",
+    items: [
+      { position: 0, item_type: "problem", item_id: "p-2", direction: "", payload: problem("p-2", "text", null) },
+      { position: 1, item_type: "problem", item_id: "p-1", direction: "", payload: problem("p-1", "text", null) },
+    ],
+  };
+  const app = fixture({
+    href: "http://lesson-kit.test/w/alpha/practice?run=113",
+    archived,
+    writeHandlers: {
+      "POST /practice/current": (body) => ({ practice: {
+        ...practice({ revealTiming: body.reveal_timing }),
+        source_ref: null,
+        source_label: body.source_label,
+        items: body.items.map((item, index) => ({
+          ...item, position: index, state: "pending", draft: { answer: "", choices: [] },
+          payload: problem(item.item_id, "text", null),
+        })),
+      } }),
+    },
+  });
+  await flush();
+
+  await app.ids["paper-again"].dispatch("click");
+  await flush();
+  assert.equal(app.ids["paper-setup"].hidden, false);
+  assert.equal(app.ids["paper-title"].textContent, "CLI practice");
+  assert.equal(app.ids["paper-count"].textContent, "2");
+  assert.equal(app.ids["paper-reveal-timing"].disabled, false);
+  assert.equal(new URL(app.window.location.href).pathname, "/w/alpha/practice");
+  assert.equal(new URL(app.window.location.href).searchParams.has("run"), false);
+
+  app.ids["paper-reveal-timing"].value = "on_submit";
+  await app.ids["paper-start"].dispatch("click");
+  await flush();
+  const start = app.calls.find((call) => call.method === "POST" && call.path === "/practice/current");
+  assert.deepEqual(JSON.parse(JSON.stringify(start.body)), {
+    source_kind: "paper", source_ref: null, source_label: "CLI practice",
+    kp_ids: ["kp-2", "kp-1"], practice_mode: "exam", rating_mode: "immediate",
+    reveal_timing: "on_submit",
+    items: [
+      { item_type: "problem", item_id: "p-2", direction: "" },
+      { item_type: "problem", item_id: "p-1", direction: "" },
+    ],
+  });
+  assert.equal(app.ids["paper-work"].hidden, false);
 });
 
 test("pause parks the current run with context and returns to the saved-Paper list", async () => {
