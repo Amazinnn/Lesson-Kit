@@ -78,7 +78,7 @@ Recorded learning conclusions SHALL remain durable. Each saved Paper's unfinishe
 
 ### Requirement: Explicit final Paper submission
 
-Only explicit `提交试卷` SHALL finish an ordinary-problem run. Final submission SHALL submit every existing nonblank input not already submitted, mark remaining blank items stuck, freeze final answers and archive one completed run. It SHALL NOT ask for an additional blank-item confirmation or wait for self-rating. Previously submitted items SHALL not create duplicate Attempts, feedback or learning effects. A whole-Paper editable draft or revisable stuck mark SHALL NOT become an immutable Attempt before final submission. Per-item explicit submissions and locked stuck marks SHALL use the existing submission/evidence flow; navigation and draft saving SHALL never create evidence.
+Only explicit `提交试卷` SHALL finish an ordinary-problem run. Final submission SHALL preserve explicit stuck marks, submit other existing nonblank input not already submitted, mark remaining blank items stuck, freeze final answers and archive one completed run. An explicit stuck mark SHALL take precedence over unchanged earlier input until a new answer edit clears the mark; retained draft text SHALL not be graded as the final answer of a stuck item. It SHALL NOT ask for an additional blank-item confirmation or wait for self-rating. Previously submitted items SHALL not create duplicate Attempts, feedback or learning effects. A whole-Paper editable draft or revisable stuck mark SHALL NOT become an immutable Attempt before final submission. Per-item explicit submissions and locked stuck marks SHALL use the existing submission/evidence flow; navigation and draft saving SHALL never create evidence.
 
 Submission SHALL be retry-safe and validate execution, Paper generation and item content revisions. A failed submission SHALL retain recoverable input and show failure rather than show completion. A lost response SHALL be resolvable without resubmitting evidence or archiving again. Existing immutable historical Attempts SHALL NOT be rewritten to emulate editable drafts.
 
@@ -89,6 +89,11 @@ Submission SHALL be retry-safe and validate execution, Paper generation and item
 #### Scenario: Last per-item result is not final submission
 - **WHEN** the last pending item receives a per-item answer or stuck submission
 - **THEN** the learner may still browse the run and only explicit final submission archives it
+
+#### Scenario: Explicit stuck mark overrides unchanged draft
+- **WHEN** a learner enters an answer, marks it stuck in whole-Paper mode, and submits without a new answer edit
+- **THEN** the final item remains stuck without grading the unchanged draft as a submitted answer
+- **AND** a new nonblank answer edit before final submission may clear the mark without erasing the reference-view fact
 
 #### Scenario: Retry after a lost final response
 - **WHEN** the same final submission is retried after its response is lost

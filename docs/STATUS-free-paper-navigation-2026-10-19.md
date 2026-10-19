@@ -43,3 +43,13 @@
 交接要点：自由导航改 Data/Domain 生命周期后再接 UI，不能只加前端按钮；清理 change 删除学生渠道但不删组卷引擎。两者共享开始页模板，实施时协调以防互相恢复旧控件。仅在隔离测试库检查新行为，真实课程数据不在本轮授权范围内。
 
 文档验证：`openspec validate free-navigation-paper-practice --strict` 与 `openspec validate remove-learner-manual-paper-selection --strict` 均通过；两项 CLI status 均显示 4/4 planning artifacts complete。未运行产品测试，因为没有产品代码变更；这不构成功能验收。
+
+## 实现阶段（用户随后授权）
+
+实现提交：`bcedaefa` 新练习控制器，`e92fabcb` 测试契约协调，`8cc9d23d` 页面接入与学生选题入口退役，`d2560e8a` 后端显式交卷与恢复生命周期，`6c9ad0af` 临时固定题卷兼容。原文档阶段“不实现”的限制已由用户“请你实现”解除；真实课程数据及运行服务仍未变更。
+
+后端使用两个增量 `reveal_timing` 字段、原检查点输入/标记、原 request_id 与 Attempt/反馈机制；纯判定规则由 Domain 提供并从 API 注入，不增加 Data 到 Domain 的依赖。学生侧选题/筛选/组卷及卷内名单顺序编辑入口退役，Agent/CLI 作者接口保留；目标与时间安排保留在折叠区域。
+
+独立工作单元检查：后端 focused 176 项通过；控制器 focused 13 项通过；原交互测试 120 项、页面/API 测试 106 项通过。最终全量检查与整组代码复核由独立子代理负责，结果以新增审计报告为准。
+
+实际 Chromium 走查已在 WorkspaceFixture 测试库、隔离注册表及临时端口完成：五题反复前后与圆点跳题，两份保存 Paper 直接切换和暂停/刷新恢复，两种答案展示方式，多选/文字显式提交及锁定，交卷查看答卷再返回完成页，再练创建新轮次，最后一题作答不自动交卷。两轮共 10 条 Attempt，查看/返回不增加记录。脚本位于系统 TEMP 的 `free-paper-navigation-browser.py`，截图 `free-paper-navigation-completed.png`；进程退出 0。浏览器主动关闭请求产生的连接中断仅在走查脚本中忽略，没有为此修改服务端。
