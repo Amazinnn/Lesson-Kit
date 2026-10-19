@@ -223,20 +223,19 @@
     function applyLod() {
       if (!wrappers.size || wrappers.size < state.nodes.length) refreshWrappers();
       var viewport = viewportFor(stage, canvasHost, 180);
-      var selected = state.graph.selected, hover = state.graph.hover;
       state.nodes.forEach(function (node) {
         var wrap = wrappers.get(String(node.id));
         if (!wrap) return;
         var onScreen = node.visible && nodeInViewport(node, viewport);
+        // Only culling belongs here. Label and meta visibility used to be decided here as
+        // well, by a second rule (priority || scale >= .62 || (scale >= .48 && size >= 50)) —
+        // and because this sets `visibility`, which beats `opacity`, that rule silently
+        // overrode the workbench's own size-based one. Two owners for one decision, and the
+        // one the reader saw was not the one the code review looked at.
+        //
+        // Now the workbench decides whether a label is shown (labelScaleThreshold) and how
+        // strong it is; this pass only says whether the wrapper is on screen at all.
         wrap.style.visibility = onScreen ? "" : "hidden";
-        if (!onScreen || !wrap.querySelector) return;
-        var label = wrap.querySelector(".label");
-        var meta = wrap.querySelector(".meta");
-        var priority = node.id === selected || node.id === hover || node.focusWeight >= .9;
-        var labelVisible = priority || viewport.scale >= .62 || (viewport.scale >= .48 && node.size >= 50);
-        var metaVisible = node.id === selected || viewport.scale >= .86;
-        if (label) label.style.visibility = labelVisible ? "" : "hidden";
-        if (meta) meta.style.visibility = metaVisible ? "" : "hidden";
       });
     }
 
