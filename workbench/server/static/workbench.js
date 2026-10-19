@@ -706,6 +706,13 @@
     var graphRenderDirty = true;
     var graphFrameHandle = null;
     var graphAutoFitInFrame = false;
+    // Smoothed milliseconds for one whole graph frame, paint included. Decides whether the next
+    // frame paints — see the note in graphFrame. Null until the first frame has been measured.
+    var graphFrameCostMs = null;
+
+    function nowMs() {
+      return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    }
 
     function graphSolver(solving) {
       if (!graphSolverState) return;
@@ -1361,6 +1368,7 @@
         graphFailureShow(sim.error);
         return;
       }
+      var frameStarted = nowMs();
       var wasSolving = sim.graph.alpha > 0;
       // One physics step per frame is plenty for a normal pool; a couple of
       // hundred nodes get a few steps per frame so the settle finishes in a
@@ -1396,26 +1404,46 @@
       } else if (wasSolving) {
         graphUpdateGapLegend();
       }
-      // A big pool makes one graph paint far more expensive than one physics
-      // step, so the canvas repaints on a stride while the solver runs; every
-      // interaction still forces a frame through graphRenderDirty, and the
-      // settle frame always paints.
+      // Paint every frame, unless the previous frames were running long.
+      //
+      // This used to be a fixed stride by point count: skip every eighth frame above 120 points,
+      // every twelfth above 300. Two things were wrong with that. It was written when the
+      // physics ran on this thread and a skipped paint bought more solve per second — the
+      // physics is in a worker now, so a skipped paint buys nothing, it only makes the picture
+      // older. And a point count is a bad proxy for cost: it cannot tell an expensive graph from
+      // a cheap one, so the threshold that protects a slow renderer makes a fast one stutter.
+      //
+      // Measured on 习概 (192 points): the browser ran at 59.7 frames a second while positions
+      // changed every 137ms — 8.2 frames, the stride exactly. The learner's words were "it
+      // settles quickly but there is no smooth slide, it just jumps".
+      //
+      // The cost is a smoothed measurement of how long a whole frame takes, paint included, so
+      // the loop settles at whatever rate the machine can actually sustain: a fast renderer
+      // never skips, a slow one skips only as often as it must.
       var solving = sim.graph.alpha > 0;
-      var stride = 1;
-      if (solving) {
-        if (sim.nodes.length > 300) stride = 12;
-        else if (sim.nodes.length > 120) stride = 8;
-      }
-      var paintNow = graphRenderDirty || !solving || sim.graph.solveStep % stride === 0;
-      if (graphTideState.reduced && solving) {
-        graphRenderDirty = true;
-        paintNow = false;
-      }
+      // 20ms against a 60fps budget of 16.7ms: a machine that is comfortably keeping up never
+      // trips it, and one that is not starts skipping rather than falling further behind. The
+      // threshold sits above one frame on purpose — sitting exactly on the budget would make the
+      // loop oscillate across it, painting and skipping in alternation.
+      //
+      // Only while solving. An idle graph has nothing to gain from a skipped paint and everything
+      // to lose: the frame after a solve has to show the final layout, and skipping there would
+      // leave the loop alive with nothing drawn.
+      var overBudget = solving && graphFrameCostMs !== null && graphFrameCostMs > 20;
+      var paintNow = !overBudget && !(graphTideState.reduced && solving);
+      if (!paintNow) graphRenderDirty = true;
       if (paintNow) {
         graphRenderFrame();
         graphRenderDirty = false;
       }
       graphTideSurge(solving ? .06 : 0);
+      // Feed the smoothed frame cost that decides whether the next frame paints. The cost
+      // includes the paint itself, so a renderer that cannot keep up raises it, which skips the
+      // next paint, which lowers it again — the loop settles where the paint just fits.
+      var frameCost = nowMs() - frameStarted;
+      graphFrameCostMs = graphFrameCostMs === null
+        ? frameCost
+        : graphFrameCostMs * .82 + frameCost * .18;
       // keep animating only while the solver runs or a frame was requested;
       // interactions call graphEnsureLoop() again when they change something
       if (solving || graphRenderDirty) graphEnsureLoop();
