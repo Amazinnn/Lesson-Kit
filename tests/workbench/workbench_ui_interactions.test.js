@@ -115,48 +115,29 @@ test("broken legacy progress stays visible and refuses to resume missing questio
   assert.equal(elements.stream.innerHTML, "");
 });
 
-test("a rejected stale paper start refreshes readiness without replacing local edits", async () => {
+test("saved Paper start navigates to its practice route without starting an execution", () => {
   const calls = [];
   const list = new FakeElement("practice-set-list");
   const card = new FakeElement("article", { dataset: { practiceSetId: "ps-001" } });
   card.className = "practice-set-card card";
   const start = new FakeElement("button");
   start.setAttribute("data-set-start", "");
-  start.textContent = "继续练习";
-  const status = new FakeElement("p");
-  const progress = new FakeElement("p");
-  progress.textContent = "70 题 · 已完成 19/70";
-  const heading = new FakeElement("h2", { value: "Paper" });
-  const localEdit = { value: "unsaved reordered list" };
-  card.localEdit = localEdit;
-  card.queryOne = (selector) => selector === ".practice-set-status" ? status
-    : selector === "h2" ? heading : selector === "[data-set-start]" ? start
-      : selector === "[data-set-progress]" ? progress : null;
   start.closest = (selector) => selector === "button" ? start
     : selector === ".practice-set-card" ? card : null;
   list.queryAll = (selector) => selector === ".practice-set-card" ? [card] : [];
-  runWorkbench({ elements: { layout: layout(), "practice-set-list": list }, fetch: (url, options) => {
-    calls.push({ url, options });
-    if (options && options.method === "POST") {
-      return Promise.resolve({ ok: false, status: 409, json: () => Promise.resolve({ error: "execution is stale" }) });
-    }
-    return jsonResponse({ count: 22, progress: null, can_start: false,
-      start_block_reason: "当前活动试卷无法暂停，不能开始另一张试卷：旧执行与当前试卷名单或顺序不一致",
-      continuation: null });
-  } });
+  const app = runWorkbench({
+    elements: { layout: layout(), "practice-set-list": list },
+    fetch: (url, options) => {
+      calls.push({ url, options });
+      return jsonResponse({});
+    },
+  });
 
   list.trigger("click", { target: start, preventDefault() {} });
-  await flush();
-  await flush();
 
-  assert.equal(calls.filter((call) => call.url.endsWith("/practice-sets/ps-001")).length, 1);
-  assert.equal(start.disabled, true);
-  assert.equal(start.textContent, "开始练习");
-  assert.equal(progress.textContent, "22 题");
-  assert.doesNotMatch(progress.textContent, /19\/70|70/);
-  assert.match(status.textContent, /当前活动试卷无法暂停/);
-  assert.equal(card.localEdit, localEdit);
-  assert.equal(localEdit.value, "unsaved reordered list");
+  assert.equal(app.window.location, "/w/alpha/practice?paper=ps-001");
+  assert.equal(calls.some((call) => call.options?.method === "POST"), false);
+  assert.equal(calls.some((call) => call.url.endsWith("/practice-sets/ps-001")), false);
 });
 
 test("active paper readiness blocks resume when same-count question IDs changed", async () => {
@@ -660,71 +641,9 @@ test("workspace selector navigates to the selected workspace practice page", () 
   assert.equal(app.window.location, "/w/beta/practice");
 });
 
-test("practice scope tray expands, removes items, collapses, and keeps the selection", () => {
-  const elements = {
-    layout: layout(),
-    "scope-tray": new FakeElement("scope-tray", {
-      dataset: { kpNames: JSON.stringify({ "kp-1": "集合计数", "kp-2": "乘法规则" }) },
-    }),
-    "scope-tray-toggle": new FakeElement("scope-tray-toggle"),
-    "scope-tray-panel": new FakeElement("scope-tray-panel"),
-    "scope-tray-collapse": new FakeElement("scope-tray-collapse"),
-    "scope-tray-list": new FakeElement("scope-tray-list"),
-    "scope-tray-count": new FakeElement("scope-tray-count"),
-    "scope-tray-trigger-count": new FakeElement("scope-tray-trigger-count"),
-    "scope-tray-empty": new FakeElement("scope-tray-empty"),
-    "scope-tray-practice": new FakeElement("scope-tray-practice"),
-  };
-  elements["scope-tray-panel"].classList.add("hidden");
-  const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
-  });
-  const app = runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
 
-  assert.equal(elements["scope-tray-trigger-count"].textContent, "2");
-  assert.equal(elements["scope-tray-count"].textContent, "已选 2 个");
-  assert.ok(elements["scope-tray-list"].innerHTML.includes("集合计数"));
-  assert.ok(elements["scope-tray-list"].innerHTML.includes("乘法规则"));
-  elements["scope-tray-toggle"].click();
-  assert.equal(elements["scope-tray-panel"].classList.contains("hidden"), false);
-  assert.equal(elements["scope-tray-toggle"].classList.contains("hidden"), true);
 
-  const remove = new FakeElement("remove", { dataset: { kpId: "kp-1" } });
-  remove.className = "scope-tray-remove";
-  elements["scope-tray-list"].trigger("click", { target: remove });
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
-  assert.equal(elements["scope-tray-trigger-count"].textContent, "1");
 
-  elements["scope-tray-collapse"].click();
-  assert.equal(elements["scope-tray-panel"].classList.contains("hidden"), true);
-  assert.equal(JSON.parse(storage.getItem("wb_scope_tray_open_alpha")), false);
-  elements["scope-tray-practice"].click();
-  assert.equal(app.window.location, "/w/alpha/practice");
-});
-
-test("central scope writer refreshes Agent context chips after scope changes", () => {
-  const storage = new FakeStorage();
-  const selection = new FakeElement("kp-selection", { dataset: { kpId: "kp-3" } });
-  const contextUpdates = [];
-  const agentUISurfaces = {
-    renderContext() {
-      contextUpdates.push(JSON.parse(storage.getItem("wb_kp_selection_alpha")));
-    },
-  };
-  runWorkbench({
-    elements: { layout: layout() },
-    storage,
-    fetch: () => jsonResponse({}),
-    selectors: { "[data-kp-selection]": [selection] },
-    agentUISurfaces,
-  });
-
-  selection.checked = true;
-  selection.trigger("change");
-
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-3"]);
-  assert.deepEqual(contextUpdates.at(-1), ["kp-3"]);
-});
 
 test("corrupt session state is discarded instead of breaking page startup", () => {
   const storage = new FakeStorage({ wb_session_alpha: "{broken" });
@@ -736,58 +655,7 @@ test("corrupt session state is discarded instead of breaking page startup", () =
   assert.equal(storage.getItem("wb_session_alpha"), null);
 });
 
-test("saving a paper reuses the same fixed problem selection contract", async () => {
-  const calls = [];
-  const elements = { layout: layout(), ...durablePracticeElements() };
-  const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
-    wb_practice_filters_v2_alpha: JSON.stringify({
-      source_kinds: ["final"], origin_kinds: [], exam_years: ["2024"], docs: [],
-      picked: {},
-    }),
-  });
-  const app = runWorkbench({
-    elements, storage, promptFn: () => "期中热身卷",
-    fetch: (url, options) => {
-      calls.push({ url, options });
-      if (url.endsWith("/practice/current")) return jsonResponse({ practice: null });
-      if (url.endsWith("/pull")) return jsonResponse({ problems: [
-        { problem_id: "p-1", problem_text: "题一" },
-        { problem_id: "p-2", problem_text: "题二" },
-      ] });
-      if (url.endsWith("/practice-sets")) return jsonResponse({
-        practice_set_id: "ps-001", title: "期中热身卷", count: 2,
-      });
-      return jsonResponse({});
-    },
-  });
-  await flush();
-  elements["practice-mode-exam"] = elements["practice-mode-exam"]
-    || new FakeElement("practice-mode-exam");
-  // The durable helper is used by older-mode controls; choose the legacy exam
-  // surface explicitly through its immediate mode.
-  elements["practice-mode-immediate"].checked = true;
-  elements["practice-mode-immediate"].trigger("change");
-  elements["save-practice-set"].click();
-  await flush();
-  await flush();
 
-  const pull = calls.find((call) => call.url.endsWith("/pull"));
-  assert.ok(pull);
-  const request = JSON.parse(pull.options.body);
-  assert.equal(request.n, 10);
-  assert.deepEqual(request.filters, {
-    source_kinds: ["final"], exam_years: ["2024"],
-  });
-  const save = calls.find((call) =>
-    call.url.endsWith("/practice-sets") && call.options && call.options.method === "POST");
-  assert.ok(save);
-  const body = JSON.parse(save.options.body);
-  assert.equal(body.title, "期中热身卷");
-  assert.deepEqual(body.problem_ids, ["p-1", "p-2"]);
-  assert.deepEqual(body.request, request);
-  assert.equal(app.window.location, "/w/alpha/practice-sets");
-});
 
 test("a saved paper folds away its problem list and the fold outlives a reload", () => {
   const list = new FakeElement("practice-set-list");
@@ -1393,7 +1261,7 @@ test("practice similar returns to the mode chooser without auto-pulling", async 
   const storage = new FakeStorage({
     wb_session_alpha: JSON.stringify([{ problem_id: "p-0" }]),
     wb_kps_alpha: JSON.stringify(["kp-1", "kp-2"]),
-    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
+    wb_agent_scope_alpha: JSON.stringify(["kp-1", "kp-2"]),
   });
   const similar = new FakeElement("practice-similar");
   const pending = new FakeElement("pending-ratings");
@@ -1407,7 +1275,7 @@ test("practice similar returns to the mode chooser without auto-pulling", async 
   await flush();
   assert.equal(storage.getItem("wb_session_alpha"), null);
   assert.equal(storage.getItem("wb_practice_mode_alpha"), null);
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-1", "kp-2"]);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_agent_scope_alpha")), ["kp-1", "kp-2"]);
   assert.equal(sessionEndCalls.some((url) => url.includes("/weak?")), false);
   assert.equal(sessionEnd.window.location, "practice");
 
@@ -1491,25 +1359,22 @@ test("batch self-rating writes only from its final review card", async () => {
   });
 });
 
-test("graph detail renders the knowledge-point card and toggles the practice scope", async () => {
+test("graph detail renders knowledge-point context without changing Agent scope", async () => {
   const canvas = new FakeElement("graph-canvas");
   const detail = new FakeElement("graph-detail-panel");
   const agentChat = new FakeElement("ai-chat-view");
   const agentPanel = new FakeElement("ai-teacher-panel");
   agentPanel.appendChild(agentChat);
-  const toggle = new FakeElement("graph-scope-toggle");
-  const toast = new FakeElement("graph-toast");
   const storage = new FakeStorage();
   const calls = [];
   const elements = graphElements({
-      layout: layout(), "graph-canvas": canvas,
-      "graph-detail-tab": new FakeElement("graph-detail-tab"),
-      "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
-      "graph-detail-panel": detail,
-      "ai-teacher-panel": agentPanel,
-      "ai-chat-view": agentChat,
-      "graph-scope-toggle": toggle, "graph-toast": toast,
-    });
+    layout: layout(), "graph-canvas": canvas,
+    "graph-detail-tab": new FakeElement("graph-detail-tab"),
+    "ai-teacher-tab": new FakeElement("ai-teacher-tab"),
+    "graph-detail-panel": detail,
+    "ai-teacher-panel": agentPanel,
+    "ai-chat-view": agentChat,
+  });
   runWorkbench({
     elements,
     storage,
@@ -1519,8 +1384,8 @@ test("graph detail renders the knowledge-point card and toggles the practice sco
       if (url.endsWith("/graph/model")) {
         return jsonResponse({
           nodes: [
-            { id: "kp-1", title: "加法规则", state: "review", problem_count: 4 },
-            { id: "kp-2", title: "乘法规则", state: "needs_work", problem_count: 2 },
+            { id: "kp-1", title: "Addition rules", state: "review", problem_count: 4 },
+            { id: "kp-2", title: "Multiplication rules", state: "needs_work", problem_count: 2 },
           ],
           edges: [{ id: "r-1", source: "kp-1", target: "kp-2",
             relation_type: "prerequisite", direction: "directed", strength: "high" }],
@@ -1534,22 +1399,13 @@ test("graph detail renders the knowledge-point card and toggles the practice sco
   const stage = canvas.children[0];
   const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
   node.children.find((child) => child.className === "node").click();
-  assert.match(detail.innerHTML, /加法规则/);
-  assert.match(detail.innerHTML, /可以复习/);
-  assert.match(detail.innerHTML, /关联题目/);
+  assert.match(detail.innerHTML, /Addition rules/);
   assert.match(detail.innerHTML, /<b>4<\/b>/);
-  assert.match(detail.innerHTML, /先修/);
   assert.match(detail.innerHTML, /kp-1/);
   assert.equal(agentPanel.classList.contains("hidden"), false);
   assert.equal(elements["ai-chat-view"], agentChat);
   assert.equal(calls.some((url) => url.endsWith("/graph/state")), false);
-
-  toggle.click();
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-1"]);
-  assert.equal(toast.classList.contains("show"), true);
-  toggle.click();
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), []);
-  assert.equal(node.classList.contains("in-scope"), false);
+  assert.equal(storage.getItem("wb_agent_scope_alpha"), null);
 });
 
 test("content-mode practice uses only the explicit knowledge selection", async () => {
@@ -1563,7 +1419,7 @@ test("content-mode practice uses only the explicit knowledge selection", async (
   elements["practice-mode-yes_no"] = new FakeElement("practice-mode-yes_no");
   elements["practice-empty-state"] = new FakeElement("practice-empty-state");
   const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
+    wb_agent_scope_alpha: JSON.stringify(["kp-1", "kp-2"]),
   });
   runWorkbench({
     elements, storage,
@@ -1593,7 +1449,7 @@ test("micro choice items hide the free-text answer box", async () => {
   delete elements["practice-mode-batch"];
   elements["practice-mode-micro"] = new FakeElement("practice-mode-micro");
   const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+    wb_agent_scope_alpha: JSON.stringify(["kp-1"]),
   });
   runWorkbench({
     elements, storage,
@@ -1631,7 +1487,7 @@ test("flash card session pulls cards, reveals the back, and rates as card", asyn
   elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
   elements["practice-columns"] = new FakeElement("practice-columns");
   const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+    wb_agent_scope_alpha: JSON.stringify(["kp-1"]),
   });
   runWorkbench({
     elements, storage,
@@ -1688,7 +1544,7 @@ test("reverse session prompts from the back and reveals the front", async () => 
   elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
   elements["practice-columns"] = new FakeElement("practice-columns");
   const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+    wb_agent_scope_alpha: JSON.stringify(["kp-1"]),
   });
   runWorkbench({
     elements, storage,
@@ -1736,7 +1592,7 @@ test("batch flash cards mark played cards unrated for session-end", async () => 
   delete elements["practice-mode-batch"];
   elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
   const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+    wb_agent_scope_alpha: JSON.stringify(["kp-1"]),
   });
   runWorkbench({
     elements, storage,
@@ -2893,11 +2749,14 @@ test("graph conversation context carries every selected state filter", async () 
   assert.deepEqual(body.graph_filter, { query: "计数", states: ["review", "mastered"] });
 });
 
-test("explicit practice intent applies an Agent selection replacement", async () => {
+test("explicit practice intent replaces the Agent context scope and ignores legacy student selection", async () => {
   const pageLayout = layout();
   pageLayout.dataset.page = "kps";
   const elements = { layout: pageLayout, ...aiElements() };
-  const storage = new FakeStorage({ wb_kp_selection_alpha: JSON.stringify(["kp-1"]) });
+  const storage = new FakeStorage({
+    wb_agent_scope_alpha: JSON.stringify(["kp-1"]),
+    wb_kp_selection_alpha: JSON.stringify(["legacy-kp"]),
+  });
   runWorkbench({
     elements, storage,
     fetch: (url, options) => {
@@ -2917,11 +2776,12 @@ test("explicit practice intent applies an Agent selection replacement", async ()
     },
   });
   await openFirstAiSession(elements);
-  elements["ai-input"].value = "帮我安排练习";
+  elements["ai-input"].value = "Schedule some practice";
   elements["ai-send"].click();
   await flush();
   await flush();
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_agent_scope_alpha")), ["kp-2"]);
+  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["legacy-kp"]);
 });
 
 function checkIngestHarness(turnAction, sessionMessages, batches = []) {
@@ -4198,85 +4058,6 @@ test("ordinary problems render without a verdict element or micro quiz controls"
   assert.equal(elements["feedback-area"].classList.contains("hidden"), true);
 });
 
-function stagedElements(names = {}, rows = []) {
-  const elements = { layout: layout() };
-  elements["staged-list"] = new FakeElement("staged-list", {
-    dataset: { kpNames: JSON.stringify(names) },
-  });
-  elements["staged-empty"] = new FakeElement("staged-empty");
-  elements["suggestions-toggle"] = new FakeElement("suggestions-toggle");
-  elements["suggestions"] = new FakeElement("suggestions");
-  elements["suggestions"].classList.add("hidden");
-  elements["suggestion-list"] = new FakeElement("suggestion-list");
-  elements["suggestion-list"].queryAll = (selector) =>
-    selector === ".suggestion-row" ? rows : [];
-  elements["suggestions-empty"] = new FakeElement("suggestions-empty");
-  elements["suggestions-empty"].classList.add("hidden");
-  return elements;
-}
-
-test("staged list renders the selection with names and removes rows in sync", () => {
-  const elements = stagedElements({ "kp-1": "数列极限", "kp-2": "导数定义" });
-  const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1", "kp-2"]),
-  });
-  runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
-  assert.ok(elements["staged-list"]._innerHTML.includes("数列极限"));
-  assert.ok(elements["staged-list"]._innerHTML.includes("导数定义"));
-  assert.equal(elements["staged-empty"].classList.contains("hidden"), true);
-  const remove = new FakeElement("remove");
-  remove.dataset.kpId = "kp-1";
-  remove.closest = (selector) =>
-    selector === ".staged-remove" ? remove : null;
-  elements["staged-list"].trigger("click", { target: remove });
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-2"]);
-  assert.ok(elements["staged-list"]._innerHTML.includes("导数定义"));
-  assert.equal(elements["staged-list"]._innerHTML.includes("数列极限"), false);
-});
-
-test("joining a suggestion stages it, hides its row, and lowers the count", () => {
-  const row1 = new FakeElement("row-1");
-  row1.dataset.kpId = "kp-1";
-  const row2 = new FakeElement("row-2");
-  row2.dataset.kpId = "kp-2";
-  const elements = stagedElements({ "kp-1": "数列极限", "kp-2": "导数定义" }, [row1, row2]);
-  const storage = new FakeStorage();
-  runWorkbench({ elements, storage, fetch: () => jsonResponse({}) });
-  assert.equal(elements["suggestions-toggle"]._textContent, "＋ 加今天要练的（2）");
-  const join = new FakeElement("join");
-  join.dataset.kpId = "kp-1";
-  join.closest = (selector) =>
-    selector === ".suggestion-join" ? join : null;
-  elements["suggestions"].trigger("click", { target: join });
-  assert.deepEqual(JSON.parse(storage.getItem("wb_kp_selection_alpha")), ["kp-1"]);
-  assert.equal(row1.classList.contains("hidden"), true);
-  assert.equal(row2.classList.contains("hidden"), false);
-  assert.equal(elements["suggestions-toggle"]._textContent, "＋ 加今天要练的（1）");
-  assert.ok(elements["staged-list"]._innerHTML.includes("数列极限"));
-  assert.equal(elements["staged-empty"].classList.contains("hidden"), true);
-});
-
-test("the suggestion entry expands and collapses with honest empty state", () => {
-  const elements = stagedElements();
-  runWorkbench({
-    elements,
-    storage: new FakeStorage(),
-    fetch: () => jsonResponse({}),
-  });
-  assert.equal(elements["suggestions-toggle"]._textContent, "＋ 加今天要练的");
-  assert.equal(elements["suggestions-empty"].classList.contains("hidden"), false);
-  elements["suggestions-toggle"].click();
-  assert.equal(elements["suggestions"].classList.contains("hidden"), false);
-  assert.equal(
-    elements["suggestions-toggle"].getAttribute("aria-expanded"), "true",
-  );
-  elements["suggestions-toggle"].click();
-  assert.equal(elements["suggestions"].classList.contains("hidden"), true);
-  assert.equal(
-    elements["suggestions-toggle"].getAttribute("aria-expanded"), "false",
-  );
-});
-
 function timeElements() {
   const elements = {
     layout: layout(),
@@ -4542,34 +4323,7 @@ test("a completed goal save does not refresh a later middle page", async () => {
   assert.equal(refreshes, 0);
 });
 
-test("a completed paper start does not navigate after leaving its middle page", async () => {
-  let resolveStart;
-  const navigations = [];
-  const list = new FakeElement("practice-set-list");
-  const card = new FakeElement("article", { dataset: { practiceSetId: "ps-001" } });
-  card.className = "practice-set-card";
-  const start = new FakeElement("button");
-  start.setAttribute("data-set-start", "");
-  start.closest = selector => selector === "button" ? start
-    : selector === ".practice-set-card" ? card : null;
-  card.queryOne = selector => selector === "[data-set-start]" ? start : null;
-  list.queryAll = selector => selector === ".practice-set-card" ? [card] : [];
-  const app = runWorkbench({
-    elements: { layout: layout(), "practice-set-list": list },
-    fetch: () => new Promise(resolve => { resolveStart = resolve; }),
-  });
-  app.window.WorkbenchNavigation = {
-    navigate(url) { navigations.push(url); },
-    refresh() { return Promise.resolve(); },
-  };
 
-  list.trigger("click", { target: start, preventDefault() {} });
-  app.window.WorkbenchMiddlePage.dispose();
-  resolveStart({ ok: true, json: () => Promise.resolve({}) });
-  await flush();
-
-  assert.deepEqual(navigations, []);
-});
 
 test("flash cards page back and forth through history and only pull at the end", async () => {
   const calls = [];
@@ -4581,7 +4335,7 @@ test("flash cards page back and forth through history and only pull at the end",
   delete elements["practice-mode-batch"];
   elements["practice-mode-flash_card"] = new FakeElement("practice-mode-flash_card");
   const storage = new FakeStorage({
-    wb_kp_selection_alpha: JSON.stringify(["kp-1"]),
+    wb_agent_scope_alpha: JSON.stringify(["kp-1"]),
   });
   const cards = [
     { card_id: "c-1", kp_id: "kp-1", front: "正面一", back: "背面一" },
@@ -4785,7 +4539,7 @@ test("an off round starts without a timing choice, never shows rating, and advan
   assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
 });
 
-test("the rating preference persists through localStorage and the paper start carries it", async () => {
+test("the learner rating preference persists through localStorage", async () => {
   const elements = { layout: layout(), ...practiceElements() };
   elements["setting-show-rating"] = new FakeElement("setting-show-rating");
   const local = new FakeStorage();
@@ -4808,31 +4562,6 @@ test("the rating preference persists through localStorage and the paper start ca
   });
   assert.equal(reopened.checked, false);
 });
-
-for (const initiallyOn of [true, false]) {
-  test(`rating preference ${initiallyOn ? "on to off" : "off to on"} updates current-page start controls`, () => {
-    const elements = { layout: layout(), ...durablePracticeElements() };
-    delete elements["practice-mode-immediate"];
-    delete elements["practice-mode-batch"];
-    elements["practice-mode-exam"] = new FakeElement("practice-mode-exam", { checked: true });
-    elements["setting-show-rating"] = new FakeElement("setting-show-rating");
-    const timing = new FakeElement("rating-choice");
-    runWorkbench({
-      elements,
-      storage: new FakeStorage({ wb_kp_selection_alpha: JSON.stringify(["kp-1"]) }),
-      local: new FakeStorage({ wb_settings_alpha: JSON.stringify({ showRating: initiallyOn }) }),
-      selectors: { ".practice-rating-choice": timing },
-      fetch: () => jsonResponse({ practice: null }),
-    });
-    assert.equal(elements["start-practice"].disabled, initiallyOn);
-    const box = elements["setting-show-rating"];
-    box.checked = !initiallyOn;
-    box.trigger("change");
-    assert.equal(elements["start-practice"].disabled, !initiallyOn);
-    assert.equal(elements["save-practice-set"].disabled, !initiallyOn);
-    assert.equal(timing.classList.contains("hidden"), initiallyOn);
-  });
-}
 
 for (const count of [1, 2]) {
   test(`off card round checkpoints ${count} directions only on explicit next`, async () => {
