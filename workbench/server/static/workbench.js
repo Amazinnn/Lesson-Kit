@@ -2266,6 +2266,13 @@
   var aiPollTimer = null;
   var aiQueuePollTimer = null;
   var aiQueueEditingTurn = "";
+  var aiQueueEdit = null;
+  var aiQueueSnapshot = null;
+  var aiQueueRenderedSignature = "";
+  var aiQueueDragTurn = "";
+  var aiQueueDragContext = null;
+  var aiQueueFocusTurnId = "";
+  var aiQueueFocusControl = null;
   var aiPollSequence = 0;
   var aiStreamingMessage = null;
   var aiExecutionPlan = null;
@@ -2273,6 +2280,7 @@
   var aiPiActivities = {};
   var aiCurrentSubmissionId = "";
   var aiRecoveryContainer = null;
+  var aiOutboxRenderedSignature = "";
   var aiRenderedDoneTurns = {};
   var aiHistoryReconciling = false;
   var aiCurrentPaperApproval = null;
@@ -2343,12 +2351,20 @@
     aiPollTimer = null;
     aiQueuePollTimer = null;
     aiQueueEditingTurn = "";
+    aiQueueEdit = null;
+    aiQueueSnapshot = null;
+    aiQueueRenderedSignature = "";
+    aiQueueDragTurn = "";
+    aiQueueDragContext = null;
+    aiQueueFocusTurnId = "";
+    aiQueueFocusControl = null;
     aiStreamingMessage = null;
     aiExecutionPlan = null;
     aiCurrentProvider = "";
     aiPiActivities = {};
     aiCurrentSubmissionId = "";
     aiRecoveryContainer = null;
+    aiOutboxRenderedSignature = "";
     aiRenderedDoneTurns = {};
     aiHistoryReconciling = false;
     aiCurrentPaperApproval = null;
@@ -2436,13 +2452,27 @@
     return aiSaveOutbox(item) ? item : null;
   }
 
-  function aiOutboxAction(item, label, callback) {
+  function aiOutboxAction(item, label, callback, action) {
     var button = document.createElement("button");
     button.className = "outline sm";
     button.type = "button";
     button.textContent = label;
+    if (action) button.dataset.action = action;
+    var turnId = item.dataset && item.dataset.turnId;
+    if (turnId) {
+      button.dataset.turnId = turnId;
+      button.addEventListener("focus", function () {
+        aiQueueFocusControl = { turn_id: turnId, action: action };
+      });
+      button.addEventListener("blur", function () {
+        if (aiQueueFocusControl && aiQueueFocusControl.turn_id === turnId
+            && aiQueueFocusControl.action === action) aiQueueFocusControl = null;
+      });
+      if (item.queueControls) item.queueControls[action] = button;
+    }
     button.addEventListener("click", callback);
     item.appendChild(button);
+    return button;
   }
 
   function aiSyncOutboxWithHistory(record) {
@@ -2495,10 +2525,68 @@
   }
 
   function aiPendingMessages(record) {
-    return (record.messages || []).filter(function (message) {
+    var pending = (record.messages || []).filter(function (message) {
       return message.role === "user"
-        && (message.status === "queued" || message.status === "waiting_for_stop");
+        && message.status === "queued";
     });
+    if (Array.isArray(record.queue_order)) {
+      var positions = {};
+      record.queue_order.forEach(function (turnId, index) {
+        positions[String(turnId)] = index;
+      });
+      pending.sort(function (left, right) {
+        var leftPosition = positions[String(left.turn_id)];
+        var rightPosition = positions[String(right.turn_id)];
+        if (leftPosition === undefined) return rightPosition === undefined ? 0 : 1;
+        if (rightPosition === undefined) return -1;
+        return leftPosition - rightPosition;
+      });
+    }
+    return pending;
+  }
+
+  function aiWaitingForStopMessages(record) {
+    return (record.messages || []).filter(function (message) {
+      return message.role === "user" && message.status === "waiting_for_stop";
+    });
+  }
+
+  function aiQueueRenderKey(snapshot) {
+    return JSON.stringify([
+      snapshot.workspace,
+      snapshot.conversation_id,
+      snapshot.sequence,
+      snapshot.items,
+      snapshot.approval_pending,
+      aiQueueEditingTurn,
+      aiQueueEdit && [aiQueueEdit.turn_id, aiQueueEdit.revision, aiQueueEdit.text],
+    ]);
+  }
+
+  function aiCaptureConversationMutation(conversationId) {
+    return {
+      workspace: WS,
+      conversation_id: conversationId || aiConversation,
+      sequence: aiConversationSequence,
+    };
+  }
+
+  function aiCaptureQueueMutation(message) {
+    var context = aiCaptureConversationMutation(aiConversation);
+    context.turn_id = message.turn_id;
+    context.revision = message.queue_revision || 1;
+    context.expected_order = aiQueueSnapshot ? aiQueueSnapshot.order.slice() : [];
+    return context;
+  }
+
+  function aiMutationIsCurrent(context) {
+    return !!context && context.workspace === WS
+      && context.conversation_id === aiConversation
+      && context.sequence === aiConversationSequence;
+  }
+
+  function aiRefreshQueueForMutation(context) {
+    return aiMutationIsCurrent(context) ? aiRefreshQueue() : Promise.resolve(null);
   }
 
   function aiPaperApprovalDecisionKey(conversationId, approval) {
@@ -2789,14 +2877,31 @@
     var panel = document.getElementById("ai-pending-queue");
     var list = document.getElementById("ai-pending-list");
     var status = document.getElementById("ai-queue-status");
+    var handoffStatus = document.getElementById("ai-handoff-status");
     var continueButton = document.getElementById("ai-queue-continue");
     if (!panel || !list) return;
     var pending = aiPendingMessages(record);
+    var waitingForStop = aiWaitingForStopMessages(record);
     var paused = record.queue_paused === true;
     var approvalPending = record.pending_paper_approval
       && record.pending_paper_approval.status === "pending"
       && record.pending_paper_approval.conversation_id === aiConversation;
+    aiQueueSnapshot = {
+      workspace: WS,
+      conversation_id: record.conversation_id || aiConversation,
+      sequence: aiConversationSequence,
+      approval_pending: !!approvalPending,
+      order: pending.map(function (message) { return message.turn_id; }),
+      items: pending.map(function (message) {
+        return [message.turn_id, message.content || "", message.queue_revision || 1];
+      }),
+    };
     panel.classList.toggle("hidden", !pending.length);
+    if (handoffStatus) {
+      handoffStatus.textContent = waitingForStop.length
+        ? "正在等待当前回复停止，随后发送。" : "";
+      handoffStatus.classList.toggle("hidden", !waitingForStop.length);
+    }
     if (continueButton) {
       continueButton.classList.toggle("hidden", !paused || !pending.length
         || record.status === "running" || !!approvalPending);
@@ -2806,57 +2911,176 @@
         ? "Paper 更新待确认；批准或取消后，仍需手动继续队列。"
         : paused
         ? "队列已暂停；继续后会按顺序发送。"
-        : pending.some(function (message) { return message.status === "waiting_for_stop"; })
-          ? "等待当前任务确认停止；优先消息尚未开始。"
-          : pending.length ? "当前任务结束后会按顺序发送。" : "";
+        : pending.length ? "当前回复结束后按顺序发送；列表中的消息尚未开始。" : "";
     }
     if (aiQueueEditingTurn && !pending.some(function (message) {
       return message.turn_id === aiQueueEditingTurn;
-    })) aiQueueEditingTurn = "";
+    })) {
+      aiQueueEditingTurn = "";
+      aiQueueEdit = null;
+    }
+    var renderSignature = aiQueueRenderKey(aiQueueSnapshot);
+    if (renderSignature === aiQueueRenderedSignature && list.children.length === pending.length) {
+      return;
+    }
+    aiQueueRenderedSignature = renderSignature;
+    var focusedControl = aiQueueFocusControl;
     list.innerHTML = "";
     pending.forEach(function (message) {
       var card = document.createElement("article");
       card.className = "ai-pending-message";
-      var label = document.createElement("p");
-      label.className = "ai-pending-status";
-      label.textContent = message.status === "waiting_for_stop"
-        ? "等待确认停止；尚未开始"
-        : paused ? "已接受，队列已暂停" : "已接受，等待执行";
-      card.appendChild(label);
+      card.dataset.turnId = message.turn_id;
+      card.setAttribute("data-turn-id", message.turn_id);
+      card.queueControls = { handle: null, editor: null };
+      var context = aiCaptureQueueMutation(message);
+      var handle = document.createElement("button");
+      handle.className = "ai-pending-handle";
+      handle.type = "button";
+      handle.textContent = "↕";
+      handle.setAttribute("aria-label", "调整消息顺序；使用上、下方向键移动");
+      handle.setAttribute("draggable", "true");
+      handle.draggable = true;
+      handle.dataset.turnId = message.turn_id;
+      handle.addEventListener("focus", function () {
+        aiQueueFocusControl = { turn_id: message.turn_id, action: "handle" };
+      });
+      handle.addEventListener("blur", function () {
+        if (aiQueueFocusControl && aiQueueFocusControl.turn_id === message.turn_id
+            && aiQueueFocusControl.action === "handle") aiQueueFocusControl = null;
+      });
+      handle.addEventListener("keydown", function (event) {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        if (event.preventDefault) event.preventDefault();
+        var order = context.expected_order.slice();
+        var index = order.indexOf(message.turn_id);
+        var next = index + (event.key === "ArrowUp" ? -1 : 1);
+        if (index < 0 || next < 0 || next >= order.length) return;
+        order.splice(index, 1);
+        order.splice(next, 0, message.turn_id);
+        aiReorderPendingMessages(context, order);
+      });
+      handle.addEventListener("dragstart", function (event) {
+        aiQueueDragTurn = message.turn_id;
+        aiQueueDragContext = context;
+        if (event.dataTransfer && event.dataTransfer.setData) {
+          event.dataTransfer.setData("text/plain", message.turn_id);
+          event.dataTransfer.effectAllowed = "move";
+        }
+      });
+      handle.addEventListener("dragend", function () {
+        aiQueueDragTurn = "";
+        aiQueueDragContext = null;
+      });
+      card.addEventListener("dragover", function (event) {
+        if (event.preventDefault) event.preventDefault();
+      });
+      card.addEventListener("drop", function (event) {
+        if (event.preventDefault) event.preventDefault();
+        var draggedTurn = event.dataTransfer && event.dataTransfer.getData
+          ? event.dataTransfer.getData("text/plain") : aiQueueDragTurn;
+        var dragContext = aiQueueDragContext || context;
+        var order = dragContext.expected_order.slice();
+        var from = order.indexOf(draggedTurn);
+        var to = order.indexOf(message.turn_id);
+        if (from < 0 || to < 0 || from === to) return;
+        order.splice(from, 1);
+        order.splice(to, 0, draggedTurn);
+        aiReorderPendingMessages(dragContext, order);
+        aiQueueDragTurn = "";
+        aiQueueDragContext = null;
+      });
+      card.appendChild(handle);
+      card.queueControls.handle = handle;
       if (message.turn_id === aiQueueEditingTurn) {
-        aiEditPendingMessage(message, record, card);
+        card.className += " is-editing";
+        aiEditPendingMessage(message, aiQueueEdit || context, card);
       } else {
         var content = document.createElement("p");
         content.className = "ai-pending-content";
         content.textContent = message.content || "";
+        content.title = message.content || "";
         card.appendChild(content);
         var actions = document.createElement("div");
         actions.className = "ai-pending-actions";
-        aiOutboxAction(actions, "编辑", function () {
-          aiQueueEditingTurn = message.turn_id;
-          aiRenderPendingQueue(record);
-          var editorIndex = pending.findIndex(function (item) {
-            return item.turn_id === message.turn_id;
-          });
-          var editor = list.children[editorIndex] && list.children[editorIndex].children[1];
-          if (editor && editor.focus) editor.focus();
-        });
-        aiOutboxAction(actions, "移出队列", function () {
-          del("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns/"
-            + encodeURIComponent(message.turn_id), { expected_revision: message.queue_revision || 1 })
-            .then(function () {
-              aiSetStatus("消息已移出队列；接受记录保留为已取消。");
-              aiRefreshQueue();
+        actions.dataset.turnId = message.turn_id;
+        actions.queueControls = card.queueControls;
+        aiOutboxAction(actions, "立即发送", function () {
+          if (!aiMutationIsCurrent(context)) return;
+          if (approvalPending) {
+            aiSetStatus("Paper 更新待确认；请先处理审批，再立即发送。");
+            return;
+          }
+          post("/ai/sessions/" + encodeURIComponent(context.conversation_id) + "/turns/"
+            + encodeURIComponent(context.turn_id) + "/interrupt", {
+              expected_revision: context.revision,
+            }).then(function (turn) {
+              if (!aiMutationIsCurrent(context)) return null;
+              aiSetStatus(turn.status === "waiting_for_stop"
+                ? "消息已提升，等待当前回复停止。" : "消息已提升为立即发送。");
+              return aiRefreshQueueForMutation(context);
             }).catch(function (error) {
+              if (!aiMutationIsCurrent(context)) return;
+              aiSetStatus(error.status === 409
+                ? "消息状态已变化；已刷新队列，请确认后重试。"
+                : "立即发送失败：" + (error.message || "未知错误"));
+              aiRefreshQueueForMutation(context);
+            });
+        }, "send-now");
+        aiOutboxAction(actions, "编辑", function () {
+          if (!aiMutationIsCurrent(context)) return;
+          aiQueueEditingTurn = message.turn_id;
+          aiQueueEdit = Object.assign({}, context, { text: message.content || "" });
+          aiQueueFocusControl = { turn_id: message.turn_id, action: "editor" };
+          aiRenderPendingQueue(record);
+        }, "edit");
+        aiOutboxAction(actions, "移出队列", function () {
+          if (!aiMutationIsCurrent(context)) return;
+          del("/ai/sessions/" + encodeURIComponent(context.conversation_id) + "/turns/"
+            + encodeURIComponent(context.turn_id), { expected_revision: context.revision })
+            .then(function () {
+              if (!aiMutationIsCurrent(context)) return null;
+              aiSetStatus("消息已移出队列；接受记录保留为已取消。");
+              return aiRefreshQueueForMutation(context);
+            }).catch(function (error) {
+              if (!aiMutationIsCurrent(context)) return;
               aiSetStatus(error.status === 409
                 ? "消息已变化；已刷新队列，请再试一次。"
                 : "移出队列失败：" + (error.message || "未知错误"));
-              aiRefreshQueue();
+              aiRefreshQueueForMutation(context);
             });
-        });
+        }, "remove");
         card.appendChild(actions);
       }
       list.appendChild(card);
+      if (aiQueueFocusTurnId === message.turn_id && handle.focus) {
+        handle.focus();
+        aiQueueFocusTurnId = "";
+      } else if (focusedControl && focusedControl.turn_id === message.turn_id) {
+        var focusTarget = card.queueControls[focusedControl.action];
+        if (!focusTarget && (focusedControl.action === "save"
+            || focusedControl.action === "cancel")) {
+          focusTarget = card.queueControls.edit;
+        }
+        if (focusTarget && focusTarget.focus) focusTarget.focus();
+      }
+    });
+  }
+
+  function aiReorderPendingMessages(context, turnIds) {
+    if (!aiMutationIsCurrent(context)) return;
+    aiQueueFocusTurnId = context.turn_id;
+    post("/ai/sessions/" + encodeURIComponent(context.conversation_id) + "/queue/reorder", {
+      expected_order: context.expected_order.slice(), turn_ids: turnIds.slice(),
+    }).then(function () {
+      if (!aiMutationIsCurrent(context)) return null;
+      return aiRefreshQueueForMutation(context);
+    }).catch(function (error) {
+      if (!aiMutationIsCurrent(context)) return;
+      aiQueueFocusTurnId = "";
+      aiSetStatus(error.status === 409
+        ? "队列已变化；当前显示服务器确认的顺序。"
+        : "调整队列顺序失败：" + (error.message || "未知错误"));
+      return aiRefreshQueueForMutation(context);
     });
   }
 
@@ -2890,9 +3114,7 @@
       var pending = aiPendingMessages(record);
       if (aiQueuePollTimer) clearTimeout(aiQueuePollTimer);
       aiQueuePollTimer = null;
-      var waitingForStop = pending.some(function (message) {
-        return message.status === "waiting_for_stop";
-      });
+      var waitingForStop = aiWaitingForStopMessages(record).length > 0;
       var queuedCanRun = !record.queue_paused
         && pending.some(function (message) { return message.status === "queued"; });
       if (waitingForStop || queuedCanRun) {
@@ -2906,37 +3128,69 @@
     }).catch(function () { return null; });
   }
 
-  function aiEditPendingMessage(message, record, card) {
+  function aiEditPendingMessage(message, context, card) {
     var textarea = document.createElement("textarea");
     textarea.className = "ai-pending-editor";
-    textarea.value = message.content || "";
+    textarea.dataset.turnId = message.turn_id;
+    textarea.addEventListener("focus", function () {
+      aiQueueFocusControl = { turn_id: message.turn_id, action: "editor" };
+    });
+    textarea.addEventListener("blur", function () {
+      if (aiQueueFocusControl && aiQueueFocusControl.turn_id === message.turn_id
+          && aiQueueFocusControl.action === "editor") aiQueueFocusControl = null;
+    });
+    var edit = aiQueueEdit && aiQueueEdit.turn_id === message.turn_id
+      ? aiQueueEdit : context;
+    textarea.value = edit.text || "";
+    textarea.addEventListener("input", function () {
+      if (!aiMutationIsCurrent(edit) || !aiQueueEdit
+          || aiQueueEdit.turn_id !== message.turn_id) return;
+      aiQueueEdit.text = textarea.value;
+      aiQueueRenderedSignature = aiQueueRenderKey(aiQueueSnapshot);
+      if (typeof textarea.selectionStart === "number") {
+        aiQueueEdit.selectionStart = textarea.selectionStart;
+        aiQueueEdit.selectionEnd = textarea.selectionEnd;
+      }
+    });
     var actions = document.createElement("div");
     actions.className = "ai-pending-actions";
+    actions.dataset.turnId = message.turn_id;
+    actions.queueControls = card.queueControls;
     aiOutboxAction(actions, "保存", function () {
+      if (!aiMutationIsCurrent(edit)) return;
       if (!textarea.value.trim()) {
         aiSetStatus("消息不能为空。");
         return;
       }
-      patch("/ai/sessions/" + encodeURIComponent(aiConversation) + "/turns/"
-        + encodeURIComponent(message.turn_id), {
-          message: textarea.value, expected_revision: message.queue_revision || 1,
+      edit.text = textarea.value;
+      patch("/ai/sessions/" + encodeURIComponent(edit.conversation_id) + "/turns/"
+        + encodeURIComponent(edit.turn_id), {
+          message: edit.text, expected_revision: edit.revision,
         }).then(function () {
+          if (!aiMutationIsCurrent(edit)) return null;
           aiQueueEditingTurn = "";
-          aiRefreshQueue();
+          aiQueueEdit = null;
+          return aiRefreshQueueForMutation(edit);
         }).catch(function (error) {
-          aiQueueEditingTurn = "";
+          if (!aiMutationIsCurrent(edit)) return;
           aiSetStatus(error.status === 409
-            ? "消息已开始执行或被修改；已刷新队列。"
+            ? "消息已开始执行或被修改；草稿仍保留，请复制后取消或重新读取。"
             : "编辑队列消息失败：" + (error.message || "未知错误"));
-          aiRefreshQueue();
+          aiRefreshQueueForMutation(edit);
         });
-    });
+    }, "save");
     aiOutboxAction(actions, "取消", function () {
+      if (!aiMutationIsCurrent(edit)) return;
       aiQueueEditingTurn = "";
-      aiRenderPendingQueue(record);
-    });
+      aiQueueEdit = null;
+      aiRefreshQueueForMutation(edit);
+    }, "cancel");
     card.appendChild(textarea);
+    card.queueControls.editor = textarea;
     card.appendChild(actions);
+    if (typeof edit.selectionStart === "number" && textarea.setSelectionRange) {
+      textarea.setSelectionRange(edit.selectionStart, edit.selectionEnd);
+    }
   }
 
   function aiRenderOutbox() {
@@ -2945,21 +3199,36 @@
     var items = Object.keys(records).map(function (key) { return records[key]; })
       .sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
     var actionable = items.filter(function (item) {
-      return item.status === "unknown" || item.status === "rejected"
-        || item.status === "failed";
+      return item.status === "unknown" || item.status === "rejected";
     });
+    var renderSignature = JSON.stringify([WS, aiConversation, aiConversationSequence, actionable]);
     if (!actionable.length) {
-      if (aiRecoveryContainer) aiRecoveryContainer.innerHTML = "";
+      if (renderSignature !== aiOutboxRenderedSignature && aiRecoveryContainer) {
+        aiRecoveryContainer.innerHTML = "";
+        aiRecoveryContainer.classList.add("hidden");
+      }
+      aiOutboxRenderedSignature = renderSignature;
       return;
     }
+    if (renderSignature === aiOutboxRenderedSignature && aiRecoveryContainer) return;
+    aiOutboxRenderedSignature = renderSignature;
+    var wasOpen = aiRecoveryContainer && aiRecoveryContainer.open === true;
     if (!aiRecoveryContainer) {
-      aiRecoveryContainer = document.createElement("section");
+      aiRecoveryContainer = document.createElement("details");
       aiRecoveryContainer.className = "ai-send-recoveries";
       aiRecoveryContainer.setAttribute("aria-label", "未完成的消息发送");
       messages.appendChild(aiRecoveryContainer);
     } else {
       aiRecoveryContainer.innerHTML = "";
     }
+    aiRecoveryContainer.classList.remove("hidden");
+    aiRecoveryContainer.open = wasOpen;
+    var summary = document.createElement("summary");
+    summary.textContent = "需要处理的发送（" + actionable.length + "）";
+    aiRecoveryContainer.appendChild(summary);
+    var recoveryList = document.createElement("div");
+    recoveryList.className = "ai-send-recovery-list";
+    aiRecoveryContainer.appendChild(recoveryList);
     actionable.forEach(function (record) {
       var card = document.createElement("div");
       card.className = "ai-send-recovery";
@@ -2975,12 +3244,15 @@
       var savedMessage = document.createElement("p");
       savedMessage.textContent = (record.body && record.body.message) || "";
       card.appendChild(savedMessage);
+      var context = aiCaptureConversationMutation(record.conversation_id || aiConversation);
       if (record.status === "unknown") {
         aiOutboxAction(card, "核对发送状态", function () {
-          aiRetryOutbox(record, false);
-        });
+          if (!aiMutationIsCurrent(context)) return;
+          aiRetryOutbox(record, false, context);
+        }, "reconcile");
       } else if (record.status === "rejected") {
         aiOutboxAction(card, "恢复原文", function () {
+          if (!aiMutationIsCurrent(context)) return;
           if (!aiInput || aiInput.value.trim()) {
             aiSetStatus("输入框已有草稿；为保护草稿，未覆盖它。请先清空输入框再恢复。没有执行整轮重试。");
             return;
@@ -2988,23 +3260,21 @@
           aiInput.value = record.body.message || "";
           aiInput.focus();
           aiSetStatus("已恢复原文，请编辑后重新发送。");
-        });
-      } else {
-        aiOutboxAction(card, "重试这条消息", function () {
-          aiRetryOutbox(record, true);
-        });
+        }, "restore");
       }
-      aiRecoveryContainer.appendChild(card);
+      recoveryList.appendChild(card);
     });
     messages.scrollTop = messages.scrollHeight;
   }
 
-  function aiRetryOutbox(item, newAttempt) {
-    if (!aiConversation || aiSendPending) return;
+  function aiRetryOutbox(item, newAttempt, context) {
+    context = context || aiCaptureConversationMutation(item.conversation_id || aiConversation);
+    if (!aiMutationIsCurrent(context) || aiSendPending) return;
     var body = Object.assign({}, item.body || {});
     if (newAttempt) {
       body.submission_id = aiNewSubmissionId();
       body.retry_of = item.turn_id;
+      delete body.queue_action;
     }
     var submission = aiPrepareSubmission(body, newAttempt ? null : item);
     if (!submission) {
@@ -3014,6 +3284,7 @@
     aiSetRunning(Boolean(aiTurn));
     aiSetStatus(newAttempt ? "正在重试…" : "正在核对发送状态…");
     aiPostTurn(submission.body, submission).catch(function (error) {
+      if (!aiMutationIsCurrent(context)) return;
       aiSetRunning(Boolean(aiTurn));
       aiSetStatus("发送未确认：" + (error.message || "未知错误"));
       aiRenderOutbox();
@@ -3036,6 +3307,7 @@
     requestBody = submission.body;
     var conversationId = aiConversation;
     var sequence = aiConversationSequence;
+    var workspace = WS;
     aiSendPending = true;
     aiSetRunning(Boolean(aiTurn));
     return post("/ai/sessions/" + encodeURIComponent(conversationId) + "/turns", requestBody)
@@ -3043,7 +3315,8 @@
         aiUpdateOutbox(conversationId, requestBody.submission_id, {
           status: "accepted", turn_id: turn.turn_id,
         });
-        if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+        if (workspace !== WS || sequence !== aiConversationSequence
+            || conversationId !== aiConversation) return null;
         aiSendPending = false;
         if (!turn.status || turn.status === "running") {
           if (aiTurn !== turn.turn_id) {
@@ -3075,7 +3348,8 @@
           status: rejected ? "rejected" : "unknown", error: error.message,
         });
         if (conversationId === aiConversation) aiRenderOutbox();
-        if (sequence !== aiConversationSequence || conversationId !== aiConversation) return null;
+        if (workspace !== WS || sequence !== aiConversationSequence
+            || conversationId !== aiConversation) return null;
         aiSendPending = false;
         aiSetRunning(Boolean(aiTurn));
         throw error;
@@ -3083,7 +3357,7 @@
   }
 
   function aiAddMarkdown(text, cls) {
-    aiAdd(richText(text || ""), cls);
+    return aiAdd(richText(text || ""), cls);
   }
 
   function aiAdd(html, cls) {
@@ -3093,6 +3367,7 @@
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     renderMath(div);
+    return div;
   }
 
   function aiAppendAssistantText(text) {
@@ -3611,6 +3886,10 @@
     aiPaperProposalCards = {};
     messages.innerHTML = "";
     aiRecoveryContainer = null;
+    aiOutboxRenderedSignature = "";
+    var conversationId = record.conversation_id || aiConversation;
+    aiSyncOutboxWithHistory(record);
+    var outboxRecords = aiReadOutbox(conversationId);
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetConversation) {
       AgentUISurfaces.resetConversation();
     }
@@ -3626,11 +3905,23 @@
         if (message.status === "done" && message.turn_id) {
           aiRenderedDoneTurns[message.turn_id] = true;
         }
-        aiAddMarkdown(message.content || "", "user");
+        var userMessage = aiAddMarkdown(message.content || "", "user");
         if (message.status === "failed" || message.status === "cancelled") {
           var statusText = message.status === "cancelled" ? "本轮已停止。" : "本轮未完成。";
           if (message.error) statusText += " " + message.error;
-          aiAddMarkdown(statusText, "ai");
+          var status = document.createElement("p");
+          status.className = "ai-turn-inline-status";
+          status.textContent = statusText;
+          userMessage.appendChild(status);
+          var recovery = message.submission_id && outboxRecords[message.submission_id];
+          if (message.status === "failed" && recovery && recovery.status === "failed") {
+            var retryContext = aiCaptureConversationMutation(conversationId);
+            var retryButton = aiOutboxAction(userMessage, "基于此消息重试", function () {
+              if (!aiMutationIsCurrent(retryContext)) return;
+              aiRetryOutbox(recovery, true, retryContext);
+            }, "retry-failed");
+            retryButton.className += " ai-inline-retry";
+          }
         }
       } else {
         aiPiActivities = {};
@@ -3667,7 +3958,6 @@
         aiExecutionPlan = null;
       }
     });
-    aiSyncOutboxWithHistory(record);
     aiRenderOutbox();
     aiRenderPaperApproval(record.pending_paper_approval);
     aiRenderPendingQueue(record);
@@ -3677,7 +3967,9 @@
       aiTurn = record.current_turn_id;
       aiPollConversationTurn();
     }
-    if (aiPendingMessages(record).length) aiRefreshQueue();
+    if (aiPendingMessages(record).length || aiWaitingForStopMessages(record).length) {
+      aiRefreshQueue();
+    }
   }
 
   function aiLoadConversation(conversationId) {
@@ -3963,16 +4255,19 @@
   if (aiQueueContinue) aiQueueContinue.addEventListener("click", function () {
     if (!aiConversation || aiTurn || aiSendPending
         || (aiCurrentPaperApproval && aiCurrentPaperApproval.status === "pending")) return;
+    var context = aiCaptureConversationMutation(aiConversation);
     aiQueueContinue.disabled = true;
-    post("/ai/sessions/" + encodeURIComponent(aiConversation) + "/queue/continue", {})
+    post("/ai/sessions/" + encodeURIComponent(context.conversation_id) + "/queue/continue", {})
       .then(function () {
+        if (!aiMutationIsCurrent(context)) return null;
         aiSetStatus("正在继续队列…");
-        return aiRefreshQueue();
+        return aiRefreshQueueForMutation(context);
       }).catch(function (error) {
+        if (!aiMutationIsCurrent(context)) return null;
         aiSetStatus(error.status === 409
           ? "当前任务尚未结束，暂时无法继续队列。"
           : "继续队列失败：" + (error.message || "未知错误"));
-        return aiRefreshQueue();
+        return aiRefreshQueueForMutation(context);
       }).finally(function () { aiQueueContinue.disabled = false; });
   });
 

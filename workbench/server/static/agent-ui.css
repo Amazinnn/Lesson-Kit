@@ -57,9 +57,108 @@
   border-top: 1px solid var(--dsw-border-l2);
   background: var(--dsw-bg-layer-1);
 }
+.ai-handoff-status {
+  margin: 0 0 5px;
+  padding: 4px 8px;
+  border-left: 3px solid var(--lk-yellow);
+  color: var(--dsw-label-secondary);
+  font-size: 11px;
+}
+.ai-pending-queue {
+  flex: none;
+  margin: 0 0 2px;
+  padding-top: 5px;
+  border-top: 1px solid var(--dsw-border-l1);
+}
+.ai-pending-heading,
+.ai-pending-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ai-pending-heading { justify-content: space-between; }
+.ai-pending-heading .side-label { margin: 0; }
+#ai-queue-status { margin: 2px 0 4px; font-size: 11px; }
+#ai-pending-list {
+  max-height: 184px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.ai-pending-message {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  min-height: 46px;
+  padding: 4px 2px;
+  border-top: 1px solid var(--dsw-border-l1);
+}
+.ai-pending-handle {
+  width: 24px;
+  min-width: 24px;
+  padding: 0;
+  cursor: grab;
+  touch-action: none;
+}
+.ai-pending-handle:focus-visible,
+.ai-pending-actions button:focus-visible {
+  outline: 2px solid var(--lk-blue);
+  outline-offset: 1px;
+}
+.ai-pending-content {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--dsw-label-primary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-pending-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.ai-pending-actions button { margin: 0; padding: 4px 7px; font-size: 11px; }
+.ai-pending-editor {
+  grid-column: 2 / -1;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  margin: 2px 0;
+}
+.ai-pending-message.is-editing {
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: start;
+}
+.ai-pending-message.is-editing .ai-pending-actions {
+  grid-column: 2 / -1;
+  justify-content: flex-start;
+}
+.ai-send-recoveries {
+  margin-top: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--dsw-border-l2);
+  border-radius: var(--dsw-radius-sm);
+  background: var(--lk-paper-shade);
+  color: var(--dsw-label-secondary);
+  font-size: 12px;
+}
+.ai-send-recoveries > summary { cursor: pointer; color: var(--lk-ink); font-weight: 600; }
+.ai-send-recovery-list { max-height: 180px; overflow-y: auto; }
+.ai-send-recovery {
+  margin: 6px 0;
+  padding: 8px;
+  border: 1px solid var(--dsw-border-l1);
+  background: var(--lk-paper);
+}
+.ai-send-recovery p { margin: 0 0 6px; overflow-wrap: anywhere; font-size: 12px; }
+.ai-send-recovery button { margin-right: 6px; }
+.ai-turn-inline-status { margin: 4px 0; color: var(--dsw-state-error); font-size: 12px; }
+.ai-inline-retry { margin-top: 4px; }
 #ai-input-row.ai-input-row {
   align-items: flex-end;
   gap: 8px;
+  margin-top: 0;
   padding: 8px;
   border: 1px solid var(--lk-ink);
   border-radius: 16px;
@@ -88,6 +187,15 @@
   margin: 4px 2px 0;
   font-size: 11px;
   color: var(--dsw-label-tertiary);
+}
+
+@media (max-width: 720px) {
+  .ai-pending-message { grid-template-columns: 26px minmax(0, 1fr); }
+  .ai-pending-actions { grid-column: 2 / -1; justify-content: flex-start; }
+  #ai-input-row.ai-input-row { flex-wrap: wrap; }
+  #ai-send-action { width: auto; min-width: 108px; }
+  #ai-input { flex-basis: 100%; }
+  .ai-send-actions { margin-left: auto; }
 }
 
 /* Existing provider activity rows become semantic Tool Call Cards. Raw output

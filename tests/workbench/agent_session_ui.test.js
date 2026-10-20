@@ -56,7 +56,7 @@ class Element {
   removeAttribute(name) { delete this.attributes[name]; }
   querySelectorAll() { return []; }
   querySelector() { return null; }
-  focus() {}
+  focus() { this.focused = true; this.trigger("focus"); }
 }
 
 class Storage {
@@ -102,6 +102,7 @@ function setup(fetch, options = {}) {
     "ai-pending-list": new Element("ai-pending-list"),
     "ai-queue-status": new Element("ai-queue-status"),
     "ai-queue-continue": new Element("ai-queue-continue"),
+    "ai-handoff-status": new Element("ai-handoff-status"),
     "ai-paper-approval": new Element("ai-paper-approval"),
     "ai-paper-approval-status": new Element("ai-paper-approval-status"),
     "ai-paper-approval-details": new Element("ai-paper-approval-details"),
@@ -230,6 +231,31 @@ function session(conversationId, status = "idle", currentTurnId = null) {
     conversation_id: conversationId, provider: "codex", title: conversationId,
     status, current_turn_id: currentTurnId, messages: [],
   };
+}
+
+function nodesWithClass(root, className) {
+  const found = [];
+  const visit = (node) => {
+    if (typeof node.className === "string"
+        && node.className.split(/\s+/).includes(className)) found.push(node);
+    for (const child of node.children || []) visit(child);
+  };
+  visit(root);
+  return found;
+}
+
+function queueRowIds(list) {
+  return list.children.map((row) => row.dataset.turnId);
+}
+
+function queueAction(row, action) {
+  return nodesWithClass(row, "ai-pending-actions")[0].children.find((node) =>
+    node.dataset.action === action);
+}
+
+function recoveryAction(root, action) {
+  return nodesWithClass(root, "ai-send-recovery").flatMap((card) => card.children)
+    .find((node) => node.dataset.action === action);
 }
 
 function paperApproval(overrides = {}) {
@@ -376,7 +402,7 @@ test("an unknown send survives reload and reconciles with the same identity with
     item.className === "ai-send-recoveries");
   assert.ok(recovery);
   reopened.elements["ai-input"].value = "newer draft";
-  recovery.children[0].children[2].click();
+  recoveryAction(recovery, "reconcile").click();
   await flush();
   const retry = retryCalls.find((call) => call.options?.method === "POST");
   const retryBody = JSON.parse(retry.options.body);
@@ -405,9 +431,9 @@ test("a rejected send keeps its message recoverable and will not overwrite a new
   const recovery = app.elements["ai-messages"].children.find((item) =>
     item.className === "ai-send-recoveries");
   assert.ok(recovery);
-  assert.match(recovery.children[0].children[0].textContent, /被服务端拒绝/);
+  assert.ok(nodesWithClass(recovery, "ai-send-recovery")[0].children[0].textContent);
   app.elements["ai-input"].value = "Do not replace me";
-  recovery.children[0].children[2].click();
+  recoveryAction(recovery, "restore").click();
   assert.equal(app.elements["ai-input"].value, "Do not replace me");
 });
 
@@ -444,10 +470,9 @@ test("a failed accepted send offers a new linked attempt from its saved context"
   });
   await flush();
 
-  const recovery = app.elements["ai-messages"].children.find((item) =>
-    item.className === "ai-send-recoveries");
-  assert.ok(recovery);
-  recovery.children[0].children[2].click();
+  const inlineRetry = nodesWithClass(app.elements["ai-messages"], "ai-inline-retry")[0];
+  assert.ok(inlineRetry, "accepted failures expose their retry in conversation history");
+  inlineRetry.click();
   await flush();
   const retry = calls.find((call) => call.options?.method === "POST");
   const body = JSON.parse(retry.options.body);
@@ -517,8 +542,10 @@ test("reloaded failed history renders saved activities without a blank assistant
 
   const children = app.elements["ai-messages"].children;
   assert.ok(children.some((child) => child.className === "ai-plan"));
-  assert.equal(children.filter((child) => child.className === "msg ai").length, 1,
-    "the only assistant bubble is the real failure status, with no empty answer bubble");
+  assert.equal(children.filter((child) => child.className === "msg ai").length, 0,
+    "a failure with no assistant text does not render an empty answer bubble");
+  assert.ok(nodesWithClass(children[0], "ai-turn-inline-status").length,
+    "the failed user turn carries its truthful inline failure status");
   assert.match(deepHtml(app.elements["ai-messages"]), /permission denied/);
 });
 
@@ -756,17 +783,18 @@ test("pending messages can be edited, removed, and continued after reload", asyn
   assert.equal(app.elements["ai-pending-queue"].classList.contains("hidden"), false);
   assert.equal(app.elements["ai-queue-continue"].classList.contains("hidden"), false);
   let card = app.elements["ai-pending-list"].children[0];
-  card.children[2].children[0].click();
+  queueAction(card, "edit").click();
   card = app.elements["ai-pending-list"].children[0];
-  assert.equal(card.children[1].value, "Queued B");
-  card.children[1].value = "Edited B";
-  card.children[2].children[0].click();
+  let editor = nodesWithClass(card, "ai-pending-editor")[0];
+  assert.equal(editor.value, "Queued B");
+  editor.value = "Edited B";
+  queueAction(card, "save").click();
   await flush();
   const edit = calls.find((call) => call.options?.method === "PATCH");
   assert.equal(JSON.parse(edit.options.body).message, "Edited B");
   assert.equal(JSON.parse(edit.options.body).expected_revision, 1);
   card = app.elements["ai-pending-list"].children[0];
-  card.children[2].children[1].click();
+  queueAction(card, "remove").click();
   await flush();
 
   const remove = calls.find((call) => call.options?.method === "DELETE");
@@ -780,6 +808,244 @@ test("pending messages can be edited, removed, and continued after reload", asyn
     && call.options?.method === "POST"));
   assert.equal(app.ui.state.running, true);
   assert.equal(app.elements["ai-stop"].classList.contains("hidden"), false);
+});
+
+test("waiting-for-stop is outside the queue and does not keep an empty queue panel visible", async () => {
+  const timers = [];
+  const app = setup((url) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !url.includes("/conv-a")) {
+      return response([session("conv-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a")) return response({
+      ...session("conv-a", "running", "turn-a"),
+      queue_order: [],
+      messages: [
+        { role: "user", content: "Interrupt D", turn_id: "turn-d",
+          status: "waiting_for_stop", queue_revision: 3 },
+      ],
+    });
+    if (url.includes("/turns/turn-a?")) {
+      return response({ events: [], turn: { turn_id: "turn-a", status: "running" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: (callback, delay) => { timers.push({ callback, delay }); return timers.length; },
+  });
+  await flush();
+
+  assert.equal(app.elements["ai-pending-queue"].classList.contains("hidden"), true);
+  assert.deepEqual(queueRowIds(app.elements["ai-pending-list"]), []);
+  assert.ok(app.elements["ai-handoff-status"].textContent);
+  assert.ok(timers.some((timer) => timer.delay === 350),
+    "waiting-for-stop keeps polling after it leaves the queued-only list");
+});
+
+test("keyboard reorder and send-now use the confirmed order and captured revision", async () => {
+  const calls = [];
+  const timers = [];
+  let queueOrder = ["turn-b", "turn-c"];
+  let statusC = "queued";
+  const queued = {
+    "turn-b": { role: "user", content: "Queued B", turn_id: "turn-b",
+      status: "queued", queue_revision: 2 },
+    "turn-c": { role: "user", content: "Queued C", turn_id: "turn-c",
+      status: "queued", queue_revision: 7 },
+  };
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !url.includes("/conv-a")) {
+      return response([session("conv-a", "running", "turn-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a") && !options) {
+      return response({ ...session("conv-a", "running", "turn-a"), queue_order: queueOrder,
+        messages: [
+          { role: "user", content: "Running A", turn_id: "turn-a", status: "running" },
+          ...queueOrder.map((id) => ({ ...queued[id],
+            status: id === "turn-c" ? statusC : "queued" })),
+          ...(statusC === "waiting_for_stop"
+            ? [{ ...queued["turn-c"], status: "waiting_for_stop" }] : []),
+        ],
+      });
+    }
+    if (url.endsWith("/queue/reorder") && options?.method === "POST") {
+      const body = JSON.parse(options.body);
+      queueOrder = body.turn_ids;
+      return response({ conversation_id: "conv-a", queue_order: queueOrder });
+    }
+    if (url.endsWith("/turns/turn-c/interrupt") && options?.method === "POST") {
+      statusC = "waiting_for_stop";
+      queueOrder = queueOrder.filter((id) => id !== "turn-c");
+      return response({ turn_id: "turn-c", status: "waiting_for_stop" });
+    }
+    if (url.includes("/turns/turn-a?")) {
+      return response({ events: [], turn: { turn_id: "turn-a", status: "running" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: (callback, delay) => { timers.push({ callback, delay }); return timers.length; },
+  });
+  await flush();
+
+  assert.deepEqual(queueRowIds(app.elements["ai-pending-list"]), ["turn-b", "turn-c"]);
+  let cHandle = nodesWithClass(app.elements["ai-pending-list"], "ai-pending-handle")
+    .find((node) => node.dataset.turnId === "turn-c");
+  assert.ok(cHandle, "each row exposes a keyboard-operable drag handle");
+  const originalRow = app.elements["ai-pending-list"].children.find((row) =>
+    row.dataset.turnId === "turn-c");
+  cHandle.focus();
+  const queuePoll = timers.find((timer) => timer.delay === 350);
+  assert.ok(queuePoll, "queued work keeps its refresh poll active");
+  queuePoll.callback();
+  await flush();
+  cHandle = nodesWithClass(app.elements["ai-pending-list"], "ai-pending-handle")
+    .find((node) => node.dataset.turnId === "turn-c");
+  const polledRow = app.elements["ai-pending-list"].children.find((row) =>
+    row.dataset.turnId === "turn-c");
+  assert.strictEqual(polledRow, originalRow, "an unchanged row keeps its DOM node across polling");
+  assert.equal(cHandle.focused, true, "polling preserves focus on the same row handle");
+  cHandle.trigger("keydown", { key: "ArrowUp", preventDefault() {} });
+  await flush();
+
+  const reorder = calls.find((call) => call.url.endsWith("/queue/reorder"));
+  assert.ok(reorder, "keyboard movement is confirmed by the reorder endpoint");
+  assert.deepEqual(JSON.parse(reorder.options.body), {
+    expected_order: ["turn-b", "turn-c"], turn_ids: ["turn-c", "turn-b"],
+  });
+  assert.deepEqual(queueRowIds(app.elements["ai-pending-list"]), ["turn-c", "turn-b"]);
+
+  const cRow = app.elements["ai-pending-list"].children.find((row) =>
+    row.dataset.turnId === "turn-c");
+  queueAction(cRow, "send-now").click();
+  await flush();
+  const sendNow = calls.find((call) => call.url.endsWith("/turns/turn-c/interrupt"));
+  assert.ok(sendNow);
+  assert.deepEqual(JSON.parse(sendNow.options.body), { expected_revision: 7 });
+  assert.deepEqual(queueRowIds(app.elements["ai-pending-list"]), ["turn-b"]);
+  assert.ok(app.elements["ai-handoff-status"].textContent);
+});
+
+test("queue polling preserves an edit draft and focus while saving with its original revision", async () => {
+  const calls = [];
+  const timers = [];
+  let revision = 1;
+  let queuedText = "Queued B";
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !url.includes("/conv-a")) {
+      return response([session("conv-a", "running", "turn-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a") && !options) {
+      return response({ ...session("conv-a", "running", "turn-a"), queue_order: ["turn-b"],
+        messages: [
+          { role: "user", content: "Running A", turn_id: "turn-a", status: "running" },
+          { role: "user", content: queuedText, turn_id: "turn-b", status: "queued",
+            queue_revision: revision },
+        ],
+      });
+    }
+    if (url.includes("/turns/turn-a?")) {
+      return response({ events: [], turn: { turn_id: "turn-a", status: "running" } });
+    }
+    if (url.endsWith("/turns/turn-b") && options?.method === "PATCH") {
+      return response({ turn_id: "turn-b", status: "queued" });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: (callback, delay) => { timers.push({ callback, delay }); return timers.length; },
+  });
+  await flush();
+
+  let row = app.elements["ai-pending-list"].children[0];
+  const editAction = queueAction(row, "edit");
+  assert.ok(editAction, "queued rows expose an edit action");
+  editAction.click();
+  let editor = nodesWithClass(app.elements["ai-pending-list"], "ai-pending-editor")[0];
+  editor.value = "Learner's unsaved draft";
+  editor.trigger("input");
+  revision = 2;
+  const queuePoll = timers.find((timer) => timer.delay === 350);
+  assert.ok(queuePoll, "queued work keeps its refresh poll active");
+  queuePoll.callback();
+  await flush();
+
+  row = app.elements["ai-pending-list"].children[0];
+  editor = nodesWithClass(row, "ai-pending-editor")[0];
+  assert.ok(editor, "the row remains in edit mode after polling");
+  assert.equal(editor.value, "Learner's unsaved draft");
+  assert.equal(editor.focused, true);
+  queueAction(row, "save").click();
+  await flush();
+  const save = calls.find((call) => call.url.endsWith("/turns/turn-b")
+    && call.options?.method === "PATCH");
+  assert.deepEqual(JSON.parse(save.options.body), {
+    message: "Learner's unsaved draft", expected_revision: 1,
+  });
+});
+
+test("recovery summary is compact and accepted failures retry inline with captured context", async () => {
+  const outboxKey = "wb_ai_message_outbox_alpha_conv-a";
+  const records = {
+    unknown: { conversation_id: "conv-a", submission_id: "uncertain", status: "unknown",
+      created_at: 1, body: { message: "Unknown send", submission_id: "uncertain" } },
+    rejected: { conversation_id: "conv-a", submission_id: "rejected", status: "rejected",
+      created_at: 2, body: { message: "Rejected send", submission_id: "rejected" } },
+    "failed-send": { conversation_id: "conv-a", submission_id: "failed-send", status: "accepted",
+      turn_id: "turn-failed", created_at: 3,
+      body: { message: "Accepted failed", route: "/w/alpha/kp/kp-7",
+        selected_kp_ids: ["kp-7"], queue_action: "interrupt", submission_id: "failed-send" } },
+  };
+  const calls = [];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !url.includes("/conv-a")) {
+      return response([session("conv-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response({
+      ...session("conv-a"),
+      messages: [
+        { role: "user", content: "Accepted failed", status: "failed", turn_id: "turn-failed",
+          submission_id: "failed-send", error: "provider exit code 3" },
+        { role: "assistant", content: "Partial output", partial: true,
+          status: "failed", turn_id: "turn-failed" },
+      ],
+    });
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ turn_id: "turn-retry", status: "queued" });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    localSeed: { [outboxKey]: JSON.stringify(records) },
+    setTimeout: () => 1,
+  });
+  await flush();
+
+  const recoveries = nodesWithClass(app.elements["ai-messages"], "ai-send-recoveries");
+  assert.equal(recoveries.length, 1);
+  assert.match(recoveries[0].children[0].textContent, /2/);
+  assert.equal(nodesWithClass(recoveries[0], "ai-send-recovery").length, 2);
+  assert.equal(nodesWithClass(app.elements["ai-messages"], "ai-inline-retry").length, 1);
+  assert.match(nodesWithClass(app.elements["ai-messages"], "ai-turn-inline-status")[0].textContent,
+    /provider exit code 3/);
+
+  nodesWithClass(app.elements["ai-messages"], "ai-inline-retry")[0].click();
+  await flush();
+  const retry = calls.find((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST");
+  const body = JSON.parse(retry.options.body);
+  assert.equal(body.message, "Accepted failed");
+  assert.equal(body.route, "/w/alpha/kp/kp-7");
+  assert.deepEqual(body.selected_kp_ids, ["kp-7"]);
+  assert.equal(body.retry_of, "turn-failed");
+  assert.notEqual(body.submission_id, "failed-send");
+  assert.equal(body.queue_action, "queue");
 });
 
 test("pending Paper approval restores beside the composer and accepts sends into the paused queue", async () => {

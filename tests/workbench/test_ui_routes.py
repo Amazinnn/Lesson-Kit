@@ -492,6 +492,12 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='ai-input'", body)
         self.assertIn("id='ai-send'", body)
         self.assertIn("id='ai-stop'", body)
+        self.assertIn("id='ai-handoff-status'", body)
+        composer = body.index("id='ai-composer-shell'")
+        queue = body.index("id='ai-pending-queue'")
+        input_row = body.index("id='ai-input-row'")
+        self.assertLess(composer, queue)
+        self.assertLess(queue, input_row)
 
     def test_graph_dashboard_belongs_to_middle_page(self):
         status, body = self.fetch("/w/dmath/graph")
