@@ -484,7 +484,8 @@ test("a rejected send keeps its message recoverable and will not overwrite a new
   assert.equal(app.elements["ai-input"].value, "Do not replace me");
 });
 
-test("a failed accepted send offers a new linked attempt from its saved context", async () => {
+for (const terminalStatus of ["failed", "cancelled"]) {
+test(`a ${terminalStatus} accepted send offers a new linked attempt from its saved context`, async () => {
   const outboxKey = "wb_ai_message_outbox_alpha_conv-a";
   const original = {
     conversation_id: "conv-a", submission_id: "send-original", status: "accepted",
@@ -498,9 +499,9 @@ test("a failed accepted send offers a new linked attempt from its saved context"
     if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
     if (url.endsWith("/ai/sessions/conv-a")) return response({
       ...session("conv-a"), messages: [
-        { role: "user", content: "Retry me", status: "failed", turn_id: "turn-001",
+        { role: "user", content: "Retry me", status: terminalStatus, turn_id: "turn-001",
           submission_id: "send-original", error: "provider exit code 3" },
-        { role: "assistant", content: "Partial reply", partial: true, status: "failed" },
+        { role: "assistant", content: "Partial reply", partial: true, status: terminalStatus },
       ],
     });
     if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
@@ -528,6 +529,7 @@ test("a failed accepted send offers a new linked attempt from its saved context"
   assert.equal(body.message, "Retry me");
   assert.equal(body.route, "/w/alpha/kp/kp-7");
 });
+}
 
 test("tool activity cards show terminal failures and only explicit known impact", async () => {
   const app = setup((url, options) => {
@@ -1034,6 +1036,70 @@ test("queue polling preserves an edit draft and focus while saving with its orig
     message: "Learner's unsaved draft", expected_revision: 1,
   });
 });
+
+for (const newerTurn of ["turn-b", "turn-c"]) {
+test(`a completed queue save preserves newer editing on ${newerTurn}`, async () => {
+  const saved = deferred();
+  const patches = [];
+  let revision = 1;
+  let savedText = "Queued B";
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([session("conv-a", "running", "turn-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a") && !options) {
+      return response({ ...session("conv-a", "running", "turn-a"),
+        queue_order: ["turn-b", "turn-c"], messages: [
+          { role: "user", content: "Running A", turn_id: "turn-a", status: "running" },
+          { role: "user", content: savedText, turn_id: "turn-b", status: "queued",
+            queue_revision: revision },
+          { role: "user", content: "Queued C", turn_id: "turn-c", status: "queued",
+            queue_revision: 1 },
+        ],
+      });
+    }
+    if (url.endsWith("/turns/turn-b") && options?.method === "PATCH") {
+      patches.push(JSON.parse(options.body));
+      savedText = patches.at(-1).message;
+      revision += 1;
+      return patches.length === 1 ? saved.promise : response({ queue_revision: revision });
+    }
+    if (url.includes("/turns/turn-a?")) {
+      return response({ events: [], turn: { status: "running", turn_id: "turn-a" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") }, setTimeout: () => 1,
+  });
+  await flush();
+  const row = (id) => app.elements["ai-pending-list"].children
+    .find((candidate) => candidate.dataset.turnId === id);
+  queueAction(row("turn-b"), "edit").click();
+  let editor = nodesWithClass(row("turn-b"), "ai-pending-editor")[0];
+  editor.value = "B submitted text";
+  editor.trigger("input");
+  queueAction(row("turn-b"), "save").click();
+  if (newerTurn === "turn-c") queueAction(row("turn-c"), "edit").click();
+  editor = nodesWithClass(row(newerTurn), "ai-pending-editor")[0];
+  editor.value = "New unsaved text after saving B";
+  editor.trigger("input");
+  saved.resolve(await response({ turn_id: "turn-b", status: "queued", queue_revision: 2 }));
+  await flush();
+
+  editor = nodesWithClass(row(newerTurn), "ai-pending-editor")[0];
+  assert.ok(editor, "the old save response does not close the newer editor");
+  assert.equal(editor.value, "New unsaved text after saving B");
+  assert.deepEqual(patches, [{ message: "B submitted text", expected_revision: 1 }]);
+  if (newerTurn === "turn-b") {
+    queueAction(row("turn-b"), "save").click();
+    await flush();
+    assert.deepEqual(patches[1], {
+      message: "New unsaved text after saving B", expected_revision: 2,
+    }, "continued editing uses the revision confirmed by its own completed save");
+  }
+});
+}
 
 test("a queue edit stays recoverable after a 409 removes its target without replacing a newer composer draft", async () => {
   const calls = [];

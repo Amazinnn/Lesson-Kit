@@ -3173,17 +3173,24 @@
         aiSetStatus("消息不能为空。");
         return;
       }
-      edit.text = textarea.value;
+      var submittedText = textarea.value;
+      edit.text = submittedText;
       patch("/ai/sessions/" + encodeURIComponent(edit.conversation_id) + "/turns/"
         + encodeURIComponent(edit.turn_id), {
-          message: edit.text, expected_revision: edit.revision,
-        }).then(function () {
+          message: submittedText, expected_revision: edit.revision,
+        }).then(function (saved) {
           if (!aiMutationIsCurrent(edit)) return null;
-          aiQueueEditingTurn = "";
-          aiQueueEdit = null;
+          if (aiQueueEdit === edit) {
+            if (edit.text === submittedText) {
+              aiQueueEditingTurn = "";
+              aiQueueEdit = null;
+            } else {
+              edit.revision = saved.queue_revision;
+            }
+          }
           return aiRefreshQueueForMutation(edit);
         }).catch(function (error) {
-          if (!aiMutationIsCurrent(edit)) return;
+          if (!aiMutationIsCurrent(edit) || aiQueueEdit !== edit) return;
           aiSetStatus(error.status === 409
             ? "消息已开始执行或被修改；草稿仍保留，请复制后取消或重新读取。"
             : "编辑队列消息失败：" + (error.message || "未知错误"));
@@ -3958,7 +3965,7 @@
           status.textContent = statusText;
           userMessage.appendChild(status);
           var recovery = message.submission_id && outboxRecords[message.submission_id];
-          if (message.status === "failed" && recovery && recovery.status === "failed") {
+          if (recovery && recovery.status === "failed") {
             var retryContext = aiCaptureConversationMutation(conversationId);
             var retryButton = aiOutboxAction(userMessage, "基于此消息重试", function () {
               if (!aiMutationIsCurrent(retryContext)) return;
