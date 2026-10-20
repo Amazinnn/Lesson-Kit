@@ -2916,8 +2916,15 @@
     if (aiQueueEditingTurn && !pending.some(function (message) {
       return message.turn_id === aiQueueEditingTurn;
     })) {
+      var lostEditTurn = aiQueueEditingTurn;
       aiQueueEditingTurn = "";
-      aiQueueEdit = null;
+      if (aiQueueEdit && aiQueueEdit.turn_id === lostEditTurn) {
+        aiQueueEdit.recoverable = true;
+        aiSetStatus("该排队消息已开始或离开队列；未保存的编辑草稿保留在恢复摘要中。");
+        aiRenderOutbox();
+      } else {
+        aiQueueEdit = null;
+      }
     }
     var renderSignature = aiQueueRenderKey(aiQueueSnapshot);
     if (renderSignature === aiQueueRenderedSignature && list.children.length === pending.length) {
@@ -3028,6 +3035,10 @@
         }, "send-now");
         aiOutboxAction(actions, "编辑", function () {
           if (!aiMutationIsCurrent(context)) return;
+          if (aiQueueEdit && aiQueueEdit.recoverable) {
+            aiSetStatus("请先从恢复摘要处理未保存的排队编辑草稿，再编辑其他排队消息。");
+            return;
+          }
           aiQueueEditingTurn = message.turn_id;
           aiQueueEdit = Object.assign({}, context, { text: message.content || "" });
           aiQueueFocusControl = { turn_id: message.turn_id, action: "editor" };
@@ -3201,8 +3212,11 @@
     var actionable = items.filter(function (item) {
       return item.status === "unknown" || item.status === "rejected";
     });
-    var renderSignature = JSON.stringify([WS, aiConversation, aiConversationSequence, actionable]);
-    if (!actionable.length) {
+    var queueEditRecovery = aiQueueEdit && aiQueueEdit.recoverable ? aiQueueEdit : null;
+    var renderSignature = JSON.stringify([WS, aiConversation, aiConversationSequence, actionable,
+      queueEditRecovery && [queueEditRecovery.turn_id, queueEditRecovery.revision,
+        queueEditRecovery.text]]);
+    if (!actionable.length && !queueEditRecovery) {
       if (renderSignature !== aiOutboxRenderedSignature && aiRecoveryContainer) {
         aiRecoveryContainer.innerHTML = "";
         aiRecoveryContainer.classList.add("hidden");
@@ -3224,7 +3238,7 @@
     aiRecoveryContainer.classList.remove("hidden");
     aiRecoveryContainer.open = wasOpen;
     var summary = document.createElement("summary");
-    summary.textContent = "需要处理的发送（" + actionable.length + "）";
+    summary.textContent = "需要处理的消息（" + (actionable.length + (queueEditRecovery ? 1 : 0)) + "）";
     aiRecoveryContainer.appendChild(summary);
     var recoveryList = document.createElement("div");
     recoveryList.className = "ai-send-recovery-list";
@@ -3264,6 +3278,34 @@
       }
       recoveryList.appendChild(card);
     });
+    if (queueEditRecovery) {
+      var edit = queueEditRecovery;
+      var editContext = aiCaptureConversationMutation(edit.conversation_id || aiConversation);
+      var editCard = document.createElement("div");
+      editCard.className = "ai-send-recovery";
+      editCard.dataset.turnId = edit.turn_id;
+      var editLabel = document.createElement("p");
+      editLabel.textContent = "这条排队消息已开始或离开队列；未保存的编辑文本仍可手动恢复。";
+      editCard.appendChild(editLabel);
+      var editText = document.createElement("p");
+      editText.textContent = edit.text || "";
+      editCard.appendChild(editText);
+      aiOutboxAction(editCard, "恢复编辑草稿", function () {
+        if (!aiMutationIsCurrent(editContext) || !aiQueueEdit
+            || aiQueueEdit.turn_id !== edit.turn_id || !aiQueueEdit.recoverable) return;
+        if (!aiInput || aiInput.value.trim()) {
+          aiSetStatus("输入框已有草稿；为保护草稿，未覆盖它。请先清空输入框再恢复。");
+          return;
+        }
+        aiInput.value = edit.text || "";
+        aiQueueEdit = null;
+        aiQueueEditingTurn = "";
+        aiInput.focus();
+        aiSetStatus("已恢复未保存的排队编辑文本，请检查后决定是否发送。");
+        aiRenderOutbox();
+      }, "restore-queue-edit");
+      recoveryList.appendChild(editCard);
+    }
     messages.scrollTop = messages.scrollHeight;
   }
 
@@ -3296,7 +3338,7 @@
       return Promise.reject(new Error("a message is already being submitted"));
     }
     var requestBody = Object.assign({}, body || {});
-    if (!preserveQueueAction || !requestBody.queue_action) {
+    if (!preserveQueueAction) {
       var sendAction = document.getElementById("ai-send-action");
       var selectedAction = sendAction ? sendAction.value : "default";
       requestBody.queue_action = selectedAction === "queue" || selectedAction === "interrupt"

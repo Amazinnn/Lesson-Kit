@@ -419,6 +419,45 @@ test("an unknown send survives reload and reconciles with the same identity with
   assert.equal(reopened.elements["ai-input"].value, "newer draft");
 });
 
+test("reconciling a legacy unknown send leaves its omitted queue action unchanged", async () => {
+  const outboxKey = "wb_ai_message_outbox_alpha_conv-a";
+  const record = {
+    legacy: { conversation_id: "conv-a", submission_id: "legacy-send", status: "unknown",
+      created_at: 1, body: { message: "Legacy send", submission_id: "legacy-send" } },
+  };
+  const calls = [];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response(session("conv-a"));
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ turn_id: "turn-reconciled" });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    localSeed: {
+      [outboxKey]: JSON.stringify(record),
+      wb_settings_alpha: JSON.stringify({ runningSendAction: "interrupt" }),
+    },
+  });
+  await flush();
+
+  app.elements["ai-send-action"].value = "interrupt";
+  const recovery = app.elements["ai-messages"].children.find((item) =>
+    item.className === "ai-send-recoveries");
+  recoveryAction(recovery, "reconcile").click();
+  await flush();
+
+  const post = calls.find((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST");
+  const body = JSON.parse(post.options.body);
+  assert.equal(body.submission_id, "legacy-send");
+  assert.equal(Object.hasOwn(body, "queue_action"), false,
+    "an older outbox body with no route keeps the backend's default route");
+});
+
 test("a rejected send keeps its message recoverable and will not overwrite a newer draft", async () => {
   const app = setup((url, options) => {
     if (url.endsWith("/ai/providers")) return response([]);
@@ -994,6 +1033,87 @@ test("queue polling preserves an edit draft and focus while saving with its orig
   assert.deepEqual(JSON.parse(save.options.body), {
     message: "Learner's unsaved draft", expected_revision: 1,
   });
+});
+
+test("a queue edit stays recoverable after a 409 removes its target without replacing a newer composer draft", async () => {
+  const calls = [];
+  let targetQueued = true;
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([session("conv-a", "running", "turn-a")]);
+    }
+    if (url.endsWith("/ai/sessions/conv-a") && !options) {
+      return response({
+        ...session("conv-a", "running", "turn-a"),
+        queue_order: targetQueued ? ["turn-b", "turn-c"] : ["turn-c"],
+        messages: [
+          { role: "user", content: "Running A", turn_id: "turn-a", status: "running" },
+          ...(targetQueued ? [{ role: "user", content: "Queued B", turn_id: "turn-b",
+            status: "queued", queue_revision: 4 }] : []),
+          { role: "user", content: "Queued C", turn_id: "turn-c",
+            status: "queued", queue_revision: 2 },
+        ],
+      });
+    }
+    if (url.endsWith("/turns/turn-b") && options?.method === "PATCH") {
+      targetQueued = false;
+      return response({ error: "message is no longer queued" }, 409);
+    }
+    if (url.includes("/turns/turn-a?")) {
+      return response({ events: [], turn: { turn_id: "turn-a", status: "running" } });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    setTimeout: () => 1,
+  });
+  await flush();
+
+  const row = app.elements["ai-pending-list"].children[0];
+  queueAction(row, "edit").click();
+  const editor = nodesWithClass(app.elements["ai-pending-list"], "ai-pending-editor")[0];
+  editor.value = "Unsent queue edit draft";
+  editor.trigger("input");
+  app.elements["ai-input"].value = "Keep my newer composer draft";
+  queueAction(app.elements["ai-pending-list"].children[0], "save").click();
+  await flush();
+
+  const patchCalls = calls.filter((call) => call.url.endsWith("/turns/turn-b")
+    && call.options?.method === "PATCH");
+  assert.equal(patchCalls.length, 1);
+  assert.deepEqual(JSON.parse(patchCalls[0].options.body), {
+    message: "Unsent queue edit draft", expected_revision: 4,
+  });
+  assert.deepEqual(queueRowIds(app.elements["ai-pending-list"]), ["turn-c"],
+    "a target that has left the queue is not kept as a queue row");
+  assert.equal(app.elements["ai-input"].value, "Keep my newer composer draft");
+  const recovery = nodesWithClass(app.elements["ai-messages"], "ai-send-recovery")
+    .find((card) => card.children.some((child) =>
+      child.textContent === "Unsent queue edit draft"));
+  assert.ok(recovery, "the unsaved text is available in an explicit recovery card");
+  queueAction(app.elements["ai-pending-list"].children[0], "edit").click();
+  assert.equal(nodesWithClass(app.elements["ai-pending-list"], "ai-pending-editor").length, 0,
+    "editing another queued row cannot overwrite an unresolved recovered edit");
+  assert.ok(recovery.children.some((child) => child.textContent === "Unsent queue edit draft"));
+  assert.equal(app.elements["ai-input"].value, "Keep my newer composer draft");
+  assert.match(app.elements["ai-status"].textContent, /恢复摘要/);
+  recoveryAction(recovery, "restore-queue-edit").click();
+  assert.equal(app.elements["ai-input"].value, "Keep my newer composer draft",
+    "recovery does not overwrite an existing composer draft");
+
+  app.elements["ai-input"].value = "";
+  recoveryAction(recovery, "restore-queue-edit").click();
+  assert.equal(app.elements["ai-input"].value, "Unsent queue edit draft",
+    "the learner can explicitly restore the edit after clearing the newer draft");
+  assert.equal(app.elements["ai-stop"].classList.contains("hidden"), false,
+    "the original running turn remains active");
+  assert.equal(calls.some((call) => call.url.endsWith("/turns/turn-a/interrupt")), false);
+  assert.equal(calls.filter((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
+    && call.options?.method === "POST").length, 0,
+  "restoring the text does not send it");
+  assert.equal(patchCalls.length, 1, "recovery does not retry the stale revision");
 });
 
 test("recovery summary is compact and accepted failures retry inline with captured context", async () => {
