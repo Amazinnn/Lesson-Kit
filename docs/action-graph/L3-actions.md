@@ -74,7 +74,9 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | 对话轮次（自动带页面上下文；接收前持久化用户消息与上下文；可选 `submission_id` 同内容幂等返回原轮次，变更内容冲突；失败/取消也保留用户消息、真实状态和实际部分回答；旧成功镜像只显示一次） | UI/CLI | 双 | conv turn artifacts + 成功 transcript | 已实现（preserve-agent-messages-and-tool-outcomes） |
-| 运行中发送（默认排队；单条可选排队或中断后发送，保留活动轮次与提交上下文） | Agent composer / `POST /turns` | 人 | 现有 turn artifacts；中断绑定捕获的活动轮次 | 已实现（queue-agent-messages-and-interrupt） |
+| 运行中发送（默认排队；中断消息独立停止交接，不入普通队列，保留活动轮次与提交上下文） | Agent composer / `POST /turns` | 人 | 现有 turn artifacts；中断绑定捕获的活动轮次 | 已实现（queue-agent-messages-and-interrupt） |
+| 重排待发消息（拖动或键盘，完整顺序 CAS） | Composer / `POST /queue/reorder` | 人 | conversation.queue_order；消息身份、文字和上下文不变 | 已实现（compact-agent-queue-and-direct-interrupt） |
+| 立即发送原待发消息（独立停止交接，不新增提交） | Pending row / `POST /turns/{turn}/interrupt` | 人 | 原 turn 路由及队列顺序；保留身份、当前文字与原上下文，其他消息暂停 | 已实现（compact-agent-queue-and-direct-interrupt） |
 | 编辑/移除待处理消息并显式继续暂停队列 | Pending controls / `PATCH`·`DELETE /turns/{turn}` / `POST /queue/continue` | 人 | 现有 turn/conversation JSON；移除保留 cancelled 记录 | 已实现（queue-agent-messages-and-interrupt） |
 | 批准/取消 Agent 提议的既有 Paper 更新（显示当前与拟议题序及进度/草稿影响；过期预览刷新后须重新点击） | Paper approval card / `POST /paper-approval` | 人 | 仅批准时更新目标 Paper，并清除受影响的未完成进度/草稿；取消零写入，历史作答与其他 Paper 保留 | 已实现（complete-agent-message-lifecycle） |
 | 设置运行中发送默认动作 | 工作区浏览器设置 | 人 | `runningSendAction`；只影响后续提交 | 已实现（queue-agent-messages-and-interrupt） |
@@ -219,3 +221,5 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   `mirror check/status`（零写入分类）、`mirror sync`（逐实体三方比较；仓库修改经既有
   内容/关系校验器写池，内容+状态+日志同一池事务；缺失文件按新修订恢复、删除请求只报告
   不执行、永不因仓库缺文件删池）。CLI 顶层命令增至 24；不执行 Git clone/pull/commit/push。
+
+2026-10-20 新增/改级（compact-agent-queue-and-direct-interrupt）：输入区拖动或键盘重排待发消息（人 → 薄 API → Bridge，读写 queue_order）；排队行立即发送（人 → 薄 API → Bridge，复用原 turn 并停止交接）；中断后发送从队列优先项改为独立交接。编辑/删除/继续保持原责任层级。待审批或另一停止交接时拒绝立即发送，恢复原文不覆盖草稿。

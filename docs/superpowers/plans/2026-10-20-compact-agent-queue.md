@@ -1,4 +1,4 @@
-﻿# Compact Agent Queue Implementation Plan
+# Compact Agent Queue Implementation Plan
 
 Goal: implement the approved d3762157 change and local browser preview using existing Soft Mondrian theme tokens.
 Architecture: Shell renders and invokes thin API routes; Bridge owns order, serial provider ownership and stop handoffs; Domain/Data remain unchanged. Existing conversation/turn JSON is the sole durable message authority.

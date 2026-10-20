@@ -39,6 +39,8 @@
 | GET `/ai/providers` | 读 | 对话 provider（PATH 发现+overrides） | 浏 |
 | GET·POST `/ai/sessions`；PATCH·DELETE·GET `/ai/sessions/{id}` | 读/写 | 对话（id 必须是 `conv-NNN`，越界 400） | 浏 |
 | POST `/ai/sessions/{id}/turns` · GET/PATCH/DELETE `…/turns/{turn}` · POST `…/queue/continue` · POST `…/cancel` | 读/写 | 对话（turn 必须是 `turn-NNN`；POST 可带 `submission_id`、`retry_of` 和 `queue_action`；编辑/删除带 `expected_revision`；continue 返回 `{conversation_id, queue_paused, turn}`，`turn` 可为 null；pending 读取不暴露捕获上下文） | 浏 |
+| POST `/ai/sessions/{id}/queue/reorder` | 读/写 | `{expected_order,turn_ids}`：完整队列排列的顺序 CAS；返回 `{conversation_id,queue_order}`，不改变消息上下文 | 浏 |
+| POST `/ai/sessions/{id}/turns/{turn}/interrupt` | 读/写 | `{expected_revision}`：原待发消息立即发送；复用身份与原上下文，审批/交接/过期版本冲突不修改 | 浏 |
 | GET `/graph`（artifact 页） | 读 | 管线产物 | 浏 |
 | POST `/ingest/rollback` | 写 | Check 整批回滚 | 双 |
 
@@ -84,3 +86,5 @@
 > 计划与目标文件都在其中；会话 id、轮次 id、附图课程/章都先按裸名字校验再拼路径
 > （2026-09-21 workspace-file-isolation）。多个工作区注册时，不带名的命令拒绝猜，
 > 报错给出「`lesson-kit <cmd> <工作区名>`」的可粘贴形式。
+
+2026-10-20 新增同会话操作：`POST /ai/sessions/{id}/queue/reorder` 接收 `{expected_order,turn_ids}`，返回 `{conversation_id,queue_order}`；`POST /ai/sessions/{id}/turns/{turn}/interrupt` 接收 `{expected_revision}`，返回该原 turn 的 canonical response。重排仅接受完整排列和匹配的旧顺序；revision/dispatch/审批/另一中断冲突返回 409 且无变更，非法请求 400。重复已提升 turn 的立即发送返回同一结果，不重跑。

@@ -189,13 +189,13 @@ workbench/
   无评分的条目只落尝试文本，任何投影都不改。
 - `bridge.conversations`：每会话最多一个 provider worker；普通成功轮次在 worker 返回后派发下一条，
   失败、取消或服务恢复会暂停保留队列。中断后发送绑定接受时捕获的轮次，等待其终态和清理后
-  才派发优先消息，旧队列随后仍暂停；进度读取失败本身不改变轮次状态。provider 事件归一为
+  才直接交接指定消息，停止交接不进入普通队列；旧队列随后仍暂停。显式 queue_order 统一展示和执行顺序，缺字段的旧会话按数字轮次顺序读取，重排使用完整顺序 CAS，立即发送复用既有消息身份与上下文；进度读取失败本身不改变轮次状态。provider 事件归一为
   命令/工具/搜索/回答活动，成功轮次将合并后的执行计划随答案镜像；隐藏推理与原始协议包不进镜像，
   完整上下文仍留在 provider 原生 store。
   轮次预算是**静默预算**而非总时长：任一输出行或事件都重置时钟，命令/工具在飞时改用
   更长的工具预算（`bridge add --timeout/--tool-timeout`），因此长回答与慢命令都不会被
   截停；真正卡住的轮次仍如实记为 `provider timed out`。
-- 试卷进度重置审批复用会话/轮次 JSON：Bridge 在当前 worker 释放前保存待审批方案并暂停该对话队列，不保持 provider 等待用户。页面批准请求由薄 API 交给 Bridge 校验归属与版本，再委托既有 Data 试卷预览/更新逻辑；普通发送与继续队列不能绕过待审批决定。刷新恢复待审批状态，不自动写入；批准/取消后仍须手动继续。题目实体与历史作答不由审批存储管理，不新增 SQLite 审批表或调度服务。
+- 试卷进度重置审批复用会话/轮次 JSON：Bridge 在当前 worker 释放前保存待审批方案并暂停该对话队列，不保持 provider 等待用户。页面批准请求由薄 API 交给 Bridge 校验归属与版本，再委托既有 Data 试卷预览/更新逻辑；显式排队消息可保留，但中断/立即发送被拒绝而不降级为排队，继续队列不能绕过待审批决定。刷新恢复待审批状态，不自动写入；批准/取消后仍须手动继续。题目实体与历史作答不由审批存储管理，不新增 SQLite 审批表或调度服务。
 - `bridge.conversation_actions` 只解析模型回复里的动作区块并校验包装形状；会话并发、持久化、执行与失败提示仍由 `bridge.conversations` 编排。
 - Agent 会话在创建时绑定一个不可变的 harness；模型目标记录 model/entry args，只允许在该 harness 内切换。Codex 通过 app-server `model/list` 枚举，Claude Code 使用其支持模型 catalog，Pi 使用 RPC `get_available_models`；Pi 同 harness 优先 RPC `set_model` 原生切换。更换 harness 必须新建会话。
 - Pi 在同一 normalized activity + 350ms polling 链路上把读、写、搜索、命令和

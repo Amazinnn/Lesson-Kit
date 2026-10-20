@@ -29,7 +29,7 @@
 | `workspaces.json` | 工作区注册表 | CLI `init` | 已实现 |
 | `bridges.json` | 任务 provider 配置（`lesson-kit bridge add`） | CLI `bridge` | 已实现 |
 | `answer-sources.json` | 答卷目录清单（工作区名 → 目录路径数组；只存路径，不含单图路径与图片字节） | CLI `attempts sources add/remove` | 已实现（2026-09-24） |
-| `jobs/conv-NNN/` | `turn-NNN.json.paper_approval` (proposal, impact snapshot, decision); `conversation.json.queue_paused`; provider 会话引用、事件及成功 `transcript.jsonl`；`turn-NNN.json` 的 `message`、不可变 `accepted_message`、可选提交标识和稳定字段、状态、实际部分回答、`queue_revision`、`queue_action`、可选 `interrupt_target_turn_id` 与提交时上下文；`include_draft=true` 时上下文可含有界答案/备注/选项/可见图片快照；`queued` / `waiting_for_stop` 表示 provider 尚未开始；历史合并时旧成功交换只出现一次；不写 Pool 学习记录 | 桥 | 已实现（preserve-agent-messages-and-tool-outcomes；queue-agent-messages-and-interrupt） |
+| `jobs/conv-NNN/` | `turn-NNN.json.paper_approval` (proposal, impact snapshot, decision); `conversation.json.queue_paused` 与仅包含 queued turn 的 `queue_order`（旧工件缺省数字 ID FIFO）；provider 会话引用、事件及成功 `transcript.jsonl`；`turn-NNN.json` 的 `message`、不可变 `accepted_message`、可选提交标识和稳定字段、状态、实际部分回答、`queue_revision`、`queue_action`、可选 `interrupt_target_turn_id` 与提交时上下文；`include_draft=true` 时上下文可含有界答案/备注/选项/可见图片快照；`queued` / `waiting_for_stop` 表示 provider 尚未开始；历史合并时旧成功交换只出现一次；不写 Pool 学习记录 | 桥 | 已实现（preserve-agent-messages-and-tool-outcomes；queue-agent-messages-and-interrupt） |
 | `explain/{course}/{chapter}/` | （已移除，remove-explain-diagnose） | — | 已删除 |
 | `goals.json` | 目标（顶层 JSON 数组；可选 start_date + deadline 时间区间） | `POST/PATCH/DELETE /goals` | 已实现 |
 | `plan.json` | 每日计划缓存 | `POST /plan/recalculate` | 已实现 |
@@ -64,3 +64,5 @@
 | 键 | 存什么 | 写者 |
 |---|---|---|
 | `wb_settings_<workspace>` | 工作区偏好，包括 `runningSendAction`（默认 `queue`，可选 `interrupt`；只影响之后的提交） | Agent 设置 |
+
+2026-10-20：`conversation.json.queue_order` 只存 queued turn ID 的确认顺序；缺字段时兼容数字 ID FIFO。等待停止的 interrupt 不入此数组，原 turn 的身份、当前文字和原上下文继续保存在同一工件，不新增 Pool 字段。

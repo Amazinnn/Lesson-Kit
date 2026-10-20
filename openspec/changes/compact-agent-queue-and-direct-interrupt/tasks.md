@@ -29,4 +29,4 @@
 
 本轮仅创建 change 的 proposal / design / delta specs / tasks。未改产品代码、测试、真实会话、数据库或当前职责规范；用户所给第二张截图是紧凑列表参照，第一张截图是待消除的大卡堆叠问题。四项行操作按参照纳入提议；执行默认 FIFO，不按视觉“栈”引入 LIFO。
 
-?????`openspec validate compact-agent-queue-and-direct-interrupt --strict` ???`openspec validate --all --strict --concurrency 3` 26/26????? MODIFIED requirements??? Scenario ????????????????????
+提案校验：单项 strict 通过；全量 strict 26/26，MODIFIED requirements 的原有场景标题均保留。提案阶段未运行实现测试。

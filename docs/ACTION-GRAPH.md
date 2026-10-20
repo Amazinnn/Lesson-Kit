@@ -20,6 +20,8 @@
 
 2026-10-18 Agent 消息可靠性与工具结果：发送前本地保存消息/上下文/标识，未知接收结果用同一标识核对；已接收失败轮次保留用户消息、真实状态和实际部分回答，显式重试新建关联轮次；工具卡显示实际终态、证据支持的影响及折叠脱敏诊断。见 L0/L2/L3/L4 与 preserve-agent-messages-and-tool-outcomes。
 
+2026-10-20 紧凑 Agent 待发列表与直接中断：输入区一份列表、拖动/键盘重排和既有消息立即发送；Bridge 持久顺序与 ownership 串行交接，不将停止等待混进队列。恢复摘要与真实失败历史分开，审批期间拒绝中断而不隐式排队。见 L0/L2/L3/L4 与 compact-agent-queue-and-direct-interrupt。
+
 ## 铁律（所有者钦定）
 
 2026-10-17：既有 `migrate-progress.py` 的 schema ensure 修复 attempt 临时父表外键，
