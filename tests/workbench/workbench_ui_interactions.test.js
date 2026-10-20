@@ -1499,6 +1499,28 @@ test("graph labels keep extending when the first three punctuation breaks still 
   assert.equal(new Set(labels).size, labels.length);
 });
 
+test("graph labels use node IDs when complete titles are identical", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const nodes = ["kp-a", "kp-b"].map((id) => ({
+    id, title: "Repeated title", state: "new", problem_count: 0,
+  }));
+  runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({ nodes, edges: [] }),
+  });
+  await flush();
+
+  const stage = canvas.children[0];
+  const labels = nodes.map(({ id }) => {
+    const node = stage.children.find((child) => child.dataset.kpId === id);
+    return node.children.find((child) => child.className === "label").textContent;
+  });
+
+  assert.deepEqual(labels, ["Repeated title · kp-a", "Repeated title · kp-b"]);
+  assert.equal(new Set(labels).size, labels.length);
+});
+
 test("content-mode practice uses only the explicit knowledge selection", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };

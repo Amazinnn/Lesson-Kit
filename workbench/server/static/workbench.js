@@ -843,7 +843,7 @@
         });
         if (!extended) {
           clashing.forEach(function (group) {
-            group.forEach(function (node) { out.set(node.id, String(node.title || node.id)); });
+            group.forEach(function (node) { out.set(node.id, String(node.title || node.id) + " · " + node.id); });
           });
           break;
         }

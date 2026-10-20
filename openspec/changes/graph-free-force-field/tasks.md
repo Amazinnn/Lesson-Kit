@@ -343,12 +343,18 @@
       覆盖空白点击与筛选隐藏当前选中节点；平移保留 selection。
 - [x] 23.3 修复 partial seed 锚点泄漏：部分缓存命中首帧定位后释放 `anchorX/Y`，同一 worker 恢复求解；
       完整命中仍直接采纳，不重启求解。
-- [x] 23.4 补齐短标题唯一性：按后续标点扩展直到消除冲突；没有更多区分文本时回退完整标题，再以 ID 兜底。
+- [x] 23.4 补齐短标题唯一性：按后续标点扩展直到消除冲突；完整标题仍相同时追加节点 ID 区分。
 - [x] 23.5 同步 OpenSpec delta、PRODUCT-MANUAL 和 ACTION-GRAPH；保留 `Living graph motion and readable labels` 为 REMOVED，
       交互与 partial seed 场景放在现有非 REMOVED requirement 中，没有恢复完整换行/禁止截断条款。
 - [x] 23.6 回归证据：全量 pytest 初轮 1095 passed / 2 failed，失败为两条 UI route 对已退休属性的断言；
       修复后目标 route 测试 2/2、图谱 JS 文件 125/125。OpenSpec strict 25/25、compileall 与 guard 在修复前已通过；
       集成控制器将在本提交后重跑完整检查。
 - [x] 23.7 浏览器/性能记录：使用隔离服务与数据库端口 3092（保留旧 3091 进程）；课程图谱 192 节点 / 727 关系，
-      8 秒位置更新中位数 33.3ms、p95 200ms，未复现 18ms。缩放 0.555 时屏内 58 个标签最小 46.48px，
-      屏外 88 个标签最大 46.16px，LOD 尺寸分级生效。
+      8 秒位置更新中位数 33.3ms、p95 200ms，未复现 18ms。缩放 0.555 时，屏内 58 个显示标签所对应节点直径最小 46.48px，
+      屏内 88 个隐藏标签所对应节点直径最大 46.16px；测量值为节点直径，不是标签宽度，也不是屏外节点。
+- [x] 23.8 第二轮全量 pytest：1096 passed / 1 failed in 652.36s；唯一失败为
+      `test_conversations.py::ConversationTests::test_thread_start_failure_releases_worker_ownership_for_manual_continue`（892 行）。
+      该测试立即单独复跑为 1 passed in 0.76s；未修改 Agent 文件，记录为并发时序敏感结果，不在本修复范围内。
+      集成控制器将在本次 F4 和交接文档提交后再跑最终全套。
+- [x] 23.9 F4 复审补例：两个节点具有完全相同的完整标题时，初始测试复现标签冲突；fallback 现追加节点 ID，
+      `node --test tests/workbench/workbench_ui_interactions.test.js tests/workbench/graph_layout_seed.test.js` 为 126/126 通过。
