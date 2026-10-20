@@ -128,6 +128,10 @@ ROUTES = {
         BROWSER, (), "conversations are native to the page; the CLI has no session command"),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/queue/continue"): (
         BROWSER, (), "conversations are native to the page; the CLI has no session command"),
+    ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/queue/reorder"): (
+        BROWSER, (), "conversations are native to the page; the CLI has no session command"),
+    ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/turns/{turn_id}/interrupt"): (
+        BROWSER, (), "conversations are native to the page; the CLI has no session command"),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/paper-approval"): (
         BROWSER, (), "Paper approval is native to the Workbench; the CLI has no conversation approval command"),
     ("POST", "/api/w/{name}/ai/sessions/{conversation_id}/cancel"): (
