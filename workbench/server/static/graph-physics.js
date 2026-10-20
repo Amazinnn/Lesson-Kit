@@ -369,8 +369,21 @@
           });
         } else if (seeded.length) {
           // A partial seat is not the layout the learner left, so it still has to
-          // be solved — from where those points already are.
-          runtime.reheat(.34, true);
+          // be solved — from where those points already are. Keep the cached seats
+          // for the first paint, then release them before the solve resumes.
+          runtime.reheat(.34, false);
+          var schedule = typeof root.requestAnimationFrame === "function"
+            ? root.requestAnimationFrame.bind(root)
+            : root.setTimeout.bind(root);
+          schedule(function () {
+            schedule(function () {
+              seeded.forEach(function (node) {
+                node.anchorX = null;
+                node.anchorY = null;
+              });
+              runtime.reheat(.28, true);
+            });
+          });
         }
       }
     }

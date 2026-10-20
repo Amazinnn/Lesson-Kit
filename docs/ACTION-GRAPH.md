@@ -126,7 +126,7 @@ flowchart LR
   schema 不迁移列，旧投影只按下一修订升级。L0/L1/L3 更新既有读写责任，无新增 CLI 动作、图像
   字节传输或学习记录写入。
 - 2026-10-13 图谱关系渲染（graph-webgl-rendering）：既有关系显示使用唯一 WebGL2 绘制路径；渲染无法启动时以可读状态终止本次图谱运行，不回退 SVG、不新增数据写入或用户动作。L3 既有图谱关系责任同步。
-- 2026-10-13 图谱 viewport/label LOD 与本地布局种子（graph-lod-layout-seeds）：仅更新现有图谱读取责任；viewport culling 不改变图成员或选择，已稳定坐标仅以可选的精确拓扑缓存恢复为临时锚点，随后由同一 Worker 继续求解。无新增用户动作、Pool 写入或 SQLite 字段；L3 现有图谱绘制责任同步。
+- 2026-10-13 图谱 viewport/label LOD 与本地布局种子（graph-lod-layout-seeds）：仅更新现有图谱读取责任；viewport culling 不改变图成员或选择，完整拓扑命中直接采用缓存坐标并停止求解，部分命中只在首帧作为临时锚点，释放后由同一 Worker 继续求解。无新增用户动作、Pool 写入或 SQLite 字段；L3 现有图谱绘制责任同步。
 - 2026-10-12/17 普通题结果回看（practice-review、revisit-paper-answers-and-edit-self-rating）：旧行为是在没有服务端执行身份时回看紧邻上一题，并在 Paper 同轮回看已有作答或「不会」普通题时每次收起参考答案；游标与当前草稿独立，Agent 焦点跟随可见题。此回看/收起规则已由 2026-10-19 普通 Paper 全卷自由导航与答案展示方式覆盖，当前行为见 W1。修改已有自评只覆盖确切 Attempt 关联评分/评语，不新增记录或重放学习影响。闪卡仍沿用上一张/下一张游标导航。见 L3 动作登记。
 - 2026-10-12 学习证据查询（agent-learning-evidence）：新增只读 CLI `evidence`，按知识点
   返回最多 20 条近期作答及当前题面/实际记录结果；缺库时拒绝连接且不建文件。L0/L1/L2/L3

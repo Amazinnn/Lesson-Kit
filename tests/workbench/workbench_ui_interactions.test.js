@@ -1408,6 +1408,97 @@ test("graph detail renders knowledge-point context without changing Agent scope"
   assert.equal(storage.getItem("wb_agent_scope_alpha"), null);
 });
 
+test("a blank graph click clears selection and closes the dashboard without fitting", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const workspace = new FakeElement("graph-workspace", { dataset: { dashboard: "collapsed" } });
+  const detail = new FakeElement("graph-detail-panel");
+  runWorkbench({
+    elements: graphElements({
+      layout: layout(), "graph-canvas": canvas,
+      "graph-workspace": workspace, "graph-detail-panel": detail,
+    }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [{ id: "kp-1", title: "Addition rules", state: "review", problem_count: 4 }],
+      edges: [],
+    }),
+  });
+  await flush();
+  await settleGraph(500);
+  const stage = canvas.children[0];
+  const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
+  node.children.find((child) => child.className === "node").click();
+  assert.equal(workspace.dataset.dashboard, "open");
+  const camera = stage.style.transform;
+
+  canvas.trigger("click", { target: canvas, clientX: 5, clientY: 5 });
+
+  assert.equal(node.classList.contains("selected"), false);
+  assert.equal(workspace.dataset.dashboard, "collapsed");
+  assert.match(detail.innerHTML, /选择一个节点/);
+  assert.equal(stage.style.transform, camera, "closing the dashboard does not fit or move the camera");
+});
+
+test("filtering out the selected node also closes the graph dashboard", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const workspace = new FakeElement("graph-workspace", { dataset: { dashboard: "collapsed" } });
+  const detail = new FakeElement("graph-detail-panel");
+  const filters = new FakeElement("graph-filters");
+  runWorkbench({
+    elements: graphElements({
+      layout: layout(), "graph-canvas": canvas, "graph-workspace": workspace,
+      "graph-detail-panel": detail, "graph-filters": filters,
+    }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: [{ id: "kp-1", title: "Addition rules", state: "review", problem_count: 4 }],
+      edges: [],
+    }),
+  });
+  await flush();
+  const stage = canvas.children[0];
+  const node = stage.children.find((child) => child.dataset.kpId === "kp-1");
+  node.children.find((child) => child.className === "node").click();
+  assert.equal(workspace.dataset.dashboard, "open");
+
+  filters.trigger("click", { target: { dataset: { filter: "work" } } });
+
+  assert.equal(node.classList.contains("selected"), false);
+  assert.equal(workspace.dataset.dashboard, "collapsed");
+  assert.match(detail.innerHTML, /选择一个节点/);
+});
+
+test("graph labels keep extending when the first three punctuation breaks still collide", async () => {
+  const canvas = new FakeElement("graph-canvas");
+  const titles = [
+    "Top·One·Two·Three·First·More",
+    "Top·One·Two·Three·Second·More",
+  ];
+  runWorkbench({
+    elements: graphElements({ layout: layout(), "graph-canvas": canvas }),
+    reducedMotion: true,
+    fetch: () => jsonResponse({
+      nodes: titles.map((title, index) => ({
+        id: "kp-" + index, title, state: "new", problem_count: 0,
+      })),
+      edges: [],
+    }),
+  });
+  await flush();
+
+  const stage = canvas.children[0];
+  const labels = ["kp-0", "kp-1"].map((id) => {
+    const node = stage.children.find((child) => child.dataset.kpId === id);
+    return node.children.find((child) => child.className === "label").textContent;
+  });
+
+  assert.deepEqual(labels, [
+    "Top·One·Two·Three·First",
+    "Top·One·Two·Three·Second",
+  ]);
+  assert.equal(new Set(labels).size, labels.length);
+});
+
 test("content-mode practice uses only the explicit knowledge selection", async () => {
   const calls = [];
   const elements = { layout: layout(), ...practiceElements() };

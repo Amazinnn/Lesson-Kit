@@ -129,4 +129,15 @@ test("a partial seat is still solved, because it is not the layout the learner l
   assert.equal(restore.settle, false, "a partial seat keeps the existing reheat path");
   assert.equal(restore.alpha, .34);
   assert.equal(sim.nodes[0].x, 111, "the cached point still starts where it was");
+  assert.equal(frames.length, 1, "partial cached anchors get a delayed release after the initial paint");
+  frames.shift()();
+  assert.equal(frames.length, 1, "anchor release waits for the next frame");
+  frames.shift()();
+  assert.equal(sim.nodes[0].anchorX, null, "a partial cached point is released to the force field");
+  assert.equal(sim.nodes[0].anchorY, null);
+  const reheats = worker.messages.filter((message) => message.type === "reheat");
+  assert.deepEqual(reheats.map(({ alpha, autoFit, settle }) => ({ alpha, autoFit, settle })), [
+    { alpha: .34, autoFit: false, settle: false },
+    { alpha: .28, autoFit: true, settle: false },
+  ]);
 });

@@ -80,6 +80,13 @@ The starting arrangement SHALL be derived from the graph's own connectivity rath
 from a page-layout grid, so that linked points begin near each other and the first
 simulated frame is not a jump.
 
+An optional local layout seed MAY initialize the force field. A complete match of node
+IDs and relationship endpoints, types, and directions SHALL be adopted directly and stop
+the solver. A partial match SHALL use matching coordinates only as temporary anchors for
+the first paint; those anchors SHALL then be released and the same worker SHALL continue
+solving. The seed SHALL NOT restore graph selection, filters, learning state, or authored
+content.
+
 #### Scenario: A wider force setting produces a wider graph
 
 - **WHEN** the learner raises the repulsion
@@ -105,6 +112,16 @@ simulated frame is not a jump.
 - **WHEN** the same course is laid out
 - **THEN** the graph's aspect ratio is not driven by the shape of the stage or of any guide grid
 
+#### Scenario: Adopt a complete local layout seed
+
+- **WHEN** every node and relationship identity matches a saved local seed
+- **THEN** the saved coordinates are adopted directly and force solving stops
+
+#### Scenario: Release a partial local layout seed
+
+- **WHEN** only some nodes in the current graph match a saved local seed
+- **THEN** their saved coordinates are used for the first paint, their temporary anchors are released, and the same worker continues solving
+
 ### Requirement: Living graph motion and quiet labels
 
 The graph SHALL remain fully static after the force simulation settles. It SHALL reheat
@@ -127,6 +144,11 @@ SHALL NOT advertise a guarantee it does not enforce.
 
 The projection pipeline (how artifacts are derived from source material at ingest) SHALL
 NOT change; only the runtime presentation layout is affected.
+
+The graph dashboard and graph controls SHALL start collapsed on each visit. Selecting a
+node SHALL open the dashboard; clearing selection SHALL close it. Panning SHALL preserve
+selection. Opening or closing the dashboard or controls SHALL NOT fit or otherwise change
+the viewport. The first settled layout SHALL fit once.
 
 #### Scenario: Settled graph is quiet
 
@@ -167,6 +189,31 @@ NOT change; only the runtime presentation layout is affected.
 
 - **WHEN** the simulation settles
 - **THEN** the great majority of point pairs are at or above their target spacing, and any that are not are a documented consequence of the free layout rather than a hidden failure
+
+#### Scenario: Blank canvas clears selection and closes the dashboard
+
+- **WHEN** the learner clicks an empty part of the canvas while a node is selected
+- **THEN** the selection is cleared and the dashboard closes without changing the viewport
+
+#### Scenario: Filtering out the selected node closes the dashboard
+
+- **WHEN** a filter hides the selected node
+- **THEN** the selection is cleared and the dashboard closes
+
+#### Scenario: Panning preserves selection
+
+- **WHEN** the learner drags the empty canvas to pan
+- **THEN** the selected node remains selected and the viewport is not fit
+
+#### Scenario: Dashboard and controls start collapsed
+
+- **WHEN** the learner visits the graph
+- **THEN** the dashboard and graph controls are collapsed until opened
+
+#### Scenario: Opening and closing panels does not fit the graph
+
+- **WHEN** the learner opens or closes the dashboard or graph controls
+- **THEN** the current viewport transform is preserved
 
 ### Requirement: Node spacing control
 

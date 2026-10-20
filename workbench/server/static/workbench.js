@@ -822,7 +822,7 @@
       // Any name more than one point would share gets one more stop, so the group is
       // told apart without dragging every other label longer.
       var best = graphTitleCut;
-      for (var stops = 0; stops < 3; stops += 1) {
+      for (var stops = 0; ; stops += 1) {
         var byLabel = new Map();
         nodes.forEach(function (node) {
           var label = out.get(node.id);
@@ -832,11 +832,21 @@
         var clashing = [];
         byLabel.forEach(function (group) { if (group.length > 1) clashing.push(group); });
         if (!clashing.length) break;
+        var extended = false;
         clashing.forEach(function (group) {
           group.forEach(function (node) {
-            out.set(node.id, best(node.title, stops + 1));
+            var label = best(node.title, stops + 1);
+            if (label === out.get(node.id)) label = String(node.title || node.id);
+            if (label !== out.get(node.id)) extended = true;
+            out.set(node.id, label);
           });
         });
+        if (!extended) {
+          clashing.forEach(function (group) {
+            group.forEach(function (node) { out.set(node.id, String(node.title || node.id)); });
+          });
+          break;
+        }
       }
       return out;
     }
@@ -1219,6 +1229,7 @@
     function graphRenderDetail(node) {
       if (!graphDetail) return;
       if (!node) {
+        graphSetDashboard(false);
         graphDetail.innerHTML =
           "<p class='side-label'>学习看板</p><h2>选择一个节点</h2>"
           + "<p class='muted'>点击图中的知识点，查看掌握状态、关联题数与关系强度。</p>";

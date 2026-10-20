@@ -428,7 +428,7 @@ def graph_page(workspace, workspaces, weak_items, has_artifact, kp_titles=None):
         "<button class='icon-btn' id='graph-fit' type='button' title='适应画布' aria-label='适应画布'>⌗</button>"
         "</header>"
         "<div class='graph-workspace' id='graph-workspace' data-dashboard='collapsed'>"
-        "<section class='graph-shell' id='graph-canvas' data-kp-selection-surface tabindex='0' aria-label='知识图谱画布'>"
+        "<section class='graph-shell' id='graph-canvas' tabindex='0' aria-label='知识图谱画布'>"
         "<div class='floating controls' id='graph-controls' data-collapsed='true'>"
         "<button type='button' class='control-toggle' id='graph-controls-toggle'"
         " aria-expanded='false' aria-controls='graph-controls-body'>"
