@@ -366,12 +366,14 @@ test("an unknown send survives reload and reconciles with the same identity with
   first.elements["ai-session-list"].children[0].children[0].click();
   await flush();
   first.elements["ai-input"].value = "Keep this message";
+  first.elements["ai-send-action"].value = "interrupt";
   first.elements["ai-send"].click();
   await flush();
 
   const initialPost = firstCalls.find((call) => call.options?.method === "POST");
   const initialBody = JSON.parse(initialPost.options.body);
   assert.ok(initialBody.submission_id);
+  assert.equal(initialBody.queue_action, "interrupt");
   assert.equal(first.elements["ai-input"].value, "");
   const saved = JSON.parse(first.localStorage.getItem(outboxKey));
   assert.equal(saved[initialBody.submission_id].status, "unknown");
@@ -392,7 +394,10 @@ test("an unknown send survives reload and reconciles with the same identity with
     return response({});
   }, {
     seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
-    localSeed: { [outboxKey]: JSON.stringify(saved) },
+    localSeed: {
+      [outboxKey]: JSON.stringify(saved),
+      wb_settings_alpha: JSON.stringify({ runningSendAction: "queue" }),
+    },
     setTimeout: () => 1,
   });
   await flush();
@@ -402,12 +407,15 @@ test("an unknown send survives reload and reconciles with the same identity with
     item.className === "ai-send-recoveries");
   assert.ok(recovery);
   reopened.elements["ai-input"].value = "newer draft";
+  reopened.elements["ai-send-action"].value = "queue";
   recoveryAction(recovery, "reconcile").click();
   await flush();
   const retry = retryCalls.find((call) => call.options?.method === "POST");
   const retryBody = JSON.parse(retry.options.body);
   assert.equal(retryBody.submission_id, initialBody.submission_id);
   assert.equal(retryBody.message, initialBody.message);
+  assert.equal(retryBody.queue_action, "interrupt",
+    "reconciliation keeps the original queue action despite changed UI routing preference");
   assert.equal(reopened.elements["ai-input"].value, "newer draft");
 });
 

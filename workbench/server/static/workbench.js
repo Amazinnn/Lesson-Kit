@@ -3283,7 +3283,7 @@
     }
     aiSetRunning(Boolean(aiTurn));
     aiSetStatus(newAttempt ? "正在重试…" : "正在核对发送状态…");
-    aiPostTurn(submission.body, submission).catch(function (error) {
+    aiPostTurn(submission.body, submission, !newAttempt).catch(function (error) {
       if (!aiMutationIsCurrent(context)) return;
       aiSetRunning(Boolean(aiTurn));
       aiSetStatus("发送未确认：" + (error.message || "未知错误"));
@@ -3291,15 +3291,17 @@
     });
   }
 
-  function aiPostTurn(body, existingOutbox) {
+  function aiPostTurn(body, existingOutbox, preserveQueueAction) {
     if (!aiConversation || aiSendPending) {
       return Promise.reject(new Error("a message is already being submitted"));
     }
     var requestBody = Object.assign({}, body || {});
-    var sendAction = document.getElementById("ai-send-action");
-    var selectedAction = sendAction ? sendAction.value : "default";
-    requestBody.queue_action = selectedAction === "queue" || selectedAction === "interrupt"
-      ? selectedAction : loadSetting("runningSendAction", "queue");
+    if (!preserveQueueAction || !requestBody.queue_action) {
+      var sendAction = document.getElementById("ai-send-action");
+      var selectedAction = sendAction ? sendAction.value : "default";
+      requestBody.queue_action = selectedAction === "queue" || selectedAction === "interrupt"
+        ? selectedAction : loadSetting("runningSendAction", "queue");
+    }
     var submission = aiPrepareSubmission(requestBody, existingOutbox);
     if (!submission) {
       return Promise.reject(new Error("无法在本机保存发送记录；输入尚未发送"));
