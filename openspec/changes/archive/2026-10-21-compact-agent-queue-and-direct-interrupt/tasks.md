@@ -22,8 +22,8 @@
 - [x] 4.1 Bridge 测试：A 运行、B/C 排队与重排；提升 C；旧工件顺序；无队列的 D 中断；停止竞态/无确认/第二条中断；审批拒绝；去重和原上下文保持。
 - [x] 4.2 UI 测试：列表行和操作顺序、重排409、编辑/删除/立即发送竞态、仅 interrupt 时无队列、四行高度与键盘、恢复摘要去重、草稿不覆盖。
 - [x] 4.3 数据库副本 + 隔离注册表 + 独立端口走查，验证截图所示长恢复卡不再挤满输入区、队列与中断各自行为；不写真实池。
-- [ ] 4.4 跑仓库要求的 pytest / compileall / OpenSpec strict / extract-problems guard；按对应产物条件运行 problem-set guard。
-- [ ] 4.5 更新交接、完成独立审查和实现验收后再归档；本次提案交付不勾选上述实施任务。
+- [x] 4.4 跑仓库要求的 pytest / compileall / OpenSpec strict / extract-problems guard；按对应产物条件运行 problem-set guard。
+- [x] 4.5 Update handoff, complete independent review and implementation acceptance, then archive this change.
 
 ## Proposal handoff — 2026-10-20
 
@@ -31,6 +31,10 @@
 
 提案校验：单项 strict 通过；全量 strict 26/26，MODIFIED requirements 的原有场景标题均保留。提案阶段未运行实现测试。
 
-## Implementation handoff ? 2026-10-20
+## Implementation handoff - 2026-10-21
 
-Backend commits: `9455cc66`, `f0080208`. Focused Bridge/API/Paper-approval tests: 123 passed with PYTHONUTF8=1; compile/whitespace checks passed. Independent Task1 review closed both Important findings (edited promoted-message retry and empty-backlog continuation). Isolated real-HTTP walkthrough verified C/B reorder, same-turn C promotion after stopping A, idempotent repeat, direct D, and B retained paused; no real provider or pool was used. Frontend commits: 409712ad, 147f298a, 5f900195. Independent Task2 review approved after closing uncertain-send routing and edit-versus-dispatch draft loss. Agent UI 45/45 and all Node tests 247/247 passed; isolated browser behavior/layout/recovery/conflict checks passed. Final full-suite run and whole-branch acceptance are in progress; runtime is unchanged until acceptance.
+Final code: 24ec1715. Full Python suite: 1117 passed in 343.12s; all Node tests: 250 passed. Compileall, strict all OpenSpec 26/26, strict specs 19/19 and dmath/ch06 extraction guard passed. No generated output exists for the conditional problem-set guard.
+
+Independent backend, frontend and whole-branch reviews closed findings covering promotion idempotence, empty-backlog continuation, original uncertain-send routing, edit recovery, late-save editor races, cancelled accepted-turn retry, and shared FIFO/reorder dispatch for queued retries. The final test-only fixture review approved startup margin changes: chatty duration remains above idle budget and quiet tool duration remains between idle/tool budgets. Production timeout behavior is unchanged.
+
+Isolated real HTTP/browser acceptance verified desktop/narrow layout, reorder/CAS, same-turn promotion, direct interrupt outside the queue, retained paused peers, explicit recovery and draft preservation. A final HTTP regression confirmed an older ordinary queued turn runs before a later queued retry. No real provider or course writes were used. Archive and runtime receipts are recorded in the delivery status.
