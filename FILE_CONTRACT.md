@@ -524,10 +524,11 @@ Runtime assets follow the hidden dot-directory convention and live under
   interrupt-and-send path. It returns that turn's canonical top-level response
   and preserves its accepted identity, current edited text, submitted fields,
   and captured context. A promoted turn is durably marked in its existing turn
-  artifact so repeating the same request at the current revision returns that
-  turn without a second cancellation or execution. A changed revision, a
-  started ordinary target, an ineligible target, another handoff, or pending
-  Paper approval returns HTTP 409 without changing the queued item. If idle,
+  artifact so repeating the same request returns that turn's current canonical
+  state, even if its revision has advanced, without a second cancellation or
+  execution. A revision mismatch before first promotion, a started ordinary
+  target, an ineligible target, another handoff, or pending Paper approval
+  returns HTTP 409 without changing the queued item. If idle,
   the promoted message starts directly even when older queued work is paused;
   those peers retain their order and paused state. If a turn is running, the
   promotion waits for that captured worker's terminal state and release.

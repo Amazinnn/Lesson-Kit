@@ -1175,11 +1175,11 @@ def interrupt_pending(pool, workspace, conversation_id, turn_id, *, expected_rev
         if not turn_path.is_file():
             raise ConversationConflict("pending message is no longer available")
         turn = _read_json(turn_path)
+        if turn.get("promoted_from_queue") is True:
+            return _turn_response(turn)
         revision = turn.get("queue_revision", 1)
         if expected_revision != revision:
             raise ConversationConflict("pending message changed; reload before sending now")
-        if turn.get("promoted_from_queue") is True:
-            return _turn_response(turn)
         if turn.get("status") != "queued" or turn.get("queue_action", "queue") != "queue":
             raise ConversationConflict("message is no longer eligible for send-now")
         current_order = _queue_order(folder, conversation)
@@ -2109,6 +2109,10 @@ def _finish(folder, conversation_id, turn_id, status, error, partial_output=None
         if status in {"failed", "cancelled"} \
                 or (turn.get("paper_approval") or {}).get("status") == "pending":
             conversation["queue_paused"] = True
+        elif status == "done" and turn.get("queue_action") == "interrupt":
+            # Keep an older queue paused, but do not leave an empty queue
+            # paused solely because this interrupt needed a handoff.
+            conversation["queue_paused"] = bool(_queue_order(folder, conversation))
         conversation["updated_at"] = now
         _write_json(conversation_path, conversation)
         turn.update({

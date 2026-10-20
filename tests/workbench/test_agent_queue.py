@@ -226,6 +226,39 @@ class QueueBridgeTests(unittest.TestCase):
         self.assertEqual(current["status"], "running")
         self.assertNotIn(key, self.conversations._CANCEL_REQUESTS)
 
+    def test_send_now_retry_after_waiting_turn_edit_returns_current_canonical_turn(self):
+        conversation = self.create()
+        conversation_id = conversation["conversation_id"]
+        self.running_turn(conversation_id)
+        queued = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "B original", {},
+        )
+        accepted = self.conversations.interrupt_pending(
+            self.pool, self.workspace, conversation_id, queued["turn_id"],
+            expected_revision=1,
+        )
+        self.assertEqual(accepted["status"], "waiting_for_stop")
+        edited = self.conversations.edit_pending(
+            self.pool, conversation_id, queued["turn_id"], "B edited while waiting",
+            expected_revision=1,
+        )
+        cancel_requests = set(self.conversations._CANCEL_REQUESTS)
+
+        with mock.patch.object(self.conversations, "_signal_process") as signal, \
+                mock.patch.object(self.conversations, "_start_turn_locked") as start:
+            repeated = self.conversations.interrupt_pending(
+                self.pool, self.workspace, conversation_id, queued["turn_id"],
+                expected_revision=1,
+            )
+
+        self.assertEqual(repeated["turn_id"], queued["turn_id"])
+        self.assertEqual(repeated["status"], "waiting_for_stop")
+        self.assertEqual(repeated["message"], "B edited while waiting")
+        self.assertEqual(repeated["queue_revision"], edited["queue_revision"])
+        self.assertEqual(set(self.conversations._CANCEL_REQUESTS), cancel_requests)
+        signal.assert_not_called()
+        start.assert_not_called()
+
     def test_send_now_racing_with_finish_waits_for_worker_release(self):
         conversation = self.create()
         conversation_id = conversation["conversation_id"]
@@ -281,6 +314,74 @@ class QueueBridgeTests(unittest.TestCase):
             )
         self.assertEqual(dispatched["turn_id"], handoff["turn_id"])
         self.assertEqual(start.call_args.args[-1]["turn_id"], handoff["turn_id"])
+
+    def test_successful_interrupt_with_empty_backlog_allows_next_message_to_start(self):
+        conversation = self.create()
+        conversation_id = conversation["conversation_id"]
+        folder = self.pool.jobs_dir() / conversation_id
+        old_key = self.running_turn(conversation_id)
+        handoff = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "D", {},
+            queue_action="interrupt",
+        )
+
+        self.conversations._finish(folder, conversation_id, "turn-001", "done", None)
+        self.conversations._ACTIVE_TURNS.discard(old_key)
+        with mock.patch.object(threading.Thread, "start", return_value=None):
+            direct = self.conversations._dispatch_next(
+                self.pool.root, self.pool.jobs_dir(), self.workspace, conversation_id,
+            )
+            direct_key = (str(folder), handoff["turn_id"])
+            self.addCleanup(self.conversations._ACTIVE_TURNS.discard, direct_key)
+            self.conversations._finish(
+                folder, conversation_id, handoff["turn_id"], "done", None,
+            )
+            self.conversations._ACTIVE_TURNS.discard(direct_key)
+            next_turn = self.conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "E", {},
+            )
+            self.addCleanup(
+                self.conversations._ACTIVE_TURNS.discard,
+                (str(folder), next_turn["turn_id"]),
+            )
+
+        self.assertEqual(direct["turn_id"], handoff["turn_id"])
+        self.assertEqual(next_turn["status"], "running")
+        self.assertEqual(
+            self.conversations.get(self.pool, conversation_id)["current_turn_id"],
+            next_turn["turn_id"],
+        )
+
+    def test_successful_interrupt_keeps_existing_older_backlog_paused(self):
+        conversation = self.create()
+        conversation_id = conversation["conversation_id"]
+        folder = self.pool.jobs_dir() / conversation_id
+        old_key = self.running_turn(conversation_id)
+        queued = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "B", {},
+        )
+        handoff = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "D", {},
+            queue_action="interrupt",
+        )
+
+        self.conversations._finish(folder, conversation_id, "turn-001", "done", None)
+        self.conversations._ACTIVE_TURNS.discard(old_key)
+        with mock.patch.object(threading.Thread, "start", return_value=None):
+            direct = self.conversations._dispatch_next(
+                self.pool.root, self.pool.jobs_dir(), self.workspace, conversation_id,
+            )
+            direct_key = (str(folder), handoff["turn_id"])
+            self.addCleanup(self.conversations._ACTIVE_TURNS.discard, direct_key)
+            self.conversations._finish(
+                folder, conversation_id, handoff["turn_id"], "done", None,
+            )
+            self.conversations._ACTIVE_TURNS.discard(direct_key)
+
+        session = self.conversations.get(self.pool, conversation_id)
+        self.assertEqual(direct["turn_id"], handoff["turn_id"])
+        self.assertTrue(session["queue_paused"])
+        self.assertEqual(session["queue_order"], [queued["turn_id"]])
 
     def test_new_interrupt_starts_directly_when_idle_with_paused_queue(self):
         conversation = self.create()
