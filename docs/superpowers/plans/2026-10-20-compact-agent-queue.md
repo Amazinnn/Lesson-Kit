@@ -28,11 +28,11 @@ Interfaces produced:
 - Existing queue_action=interrupt never falls back to ordinary queue, starts directly while idle even when ordinary peers paused, binds old running worker and waits for actual release while active; rejects another handoff or pending approval before accepting a distinct submission.
 
 Steps:
-- [ ] Read contracts and call sites; synchronize FILE_CONTRACT with the change before modifying behavior.
-- [ ] Add and run focused failing tests for order CAS, legacy order, promotion identity/idempotence and revision/dispatch races, no-queue interrupt, idle paused peers, approval rejection, stop/finish races, recovery no replay.
-- [ ] Minimal implementation using existing ownership and artifacts. Keep normal FIFO and manual continuation behavior.
-- [ ] Run covering Python suites including existing conversation and API cases; report commands/results and commit only owned files.
-- [ ] Write full implementation report .superpowers/sdd/backend-report.md; return status, commit and short results only.
+- [x] Read contracts and call sites; synchronize FILE_CONTRACT with the change before modifying behavior.
+- [x] Add and run focused failing tests for order CAS, legacy order, promotion identity/idempotence and revision/dispatch races, no-queue interrupt, idle paused peers, approval rejection, stop/finish races, recovery no replay.
+- [x] Minimal implementation using existing ownership and artifacts. Keep normal FIFO and manual continuation behavior.
+- [x] Run covering Python suites including existing conversation and API cases; report commands/results and commit only owned files.
+- [x] Write full implementation report .superpowers/sdd/backend-report.md; return status, commit and short results only.
 
 ## Task 2: Composer UI (fresh worker after backend)
 
@@ -40,12 +40,12 @@ Files: workbench/server/pages.py, workbench/server/static/{workbench.js,agent-ui
 Interfaces: use Task 1 API paths/payloads/canonical queue_order; all existing edit/delete/continue endpoints and event streaming stay compatible.
 
 Steps:
-- [ ] Read current UI mounting, outbox/history, theme and DOM test helpers. Add and demonstrate failing checks before production code.
-- [ ] Put one compact queue directly above input in composer shell, rows with preview/tooltip, drag handle and keyboard reorder, send-now, edit/save/cancel, remove; four-row max height and internal scrolling. One heading/status/continue, no per-row repeated status copy. Empty queue hides panel entirely.
-- [ ] Distinct waiting-for-stop status outside list; filter pending list to queued only. Preserve polls while waiting for stop and active reply streaming on acceptance.
-- [ ] Compact recoverable outbox summary with count and expandable per-item actions, preserve existing identities, original text/context, explicit reconcile/retry, and newer draft. Failed accepted messages remain truthful in history rather than repeated giant cards.
-- [ ] Capture workspace/conversation/sequence/revision for mutations and async callbacks; stale conflicts refresh authoritative state, do not overwrite executing work or another conversation. Keyboard focus usable after rows refresh.
-- [ ] Use project CSS variables; do not copy preview dark green. Run focused JS/UI route tests, report evidence and commit owned files. Report .superpowers/sdd/frontend-report.md.
+- [x] Read current UI mounting, outbox/history, theme and DOM test helpers. Add and demonstrate failing checks before production code.
+- [x] Put one compact queue directly above input in composer shell, rows with preview/tooltip, drag handle and keyboard reorder, send-now, edit/save/cancel, remove; four-row max height and internal scrolling. One heading/status/continue, no per-row repeated status copy. Empty queue hides panel entirely.
+- [x] Distinct waiting-for-stop status outside list; filter pending list to queued only. Preserve polls while waiting for stop and active reply streaming on acceptance.
+- [x] Compact recoverable outbox summary with count and expandable per-item actions, preserve existing identities, original text/context, explicit reconcile/retry, and newer draft. Failed accepted messages remain truthful in history rather than repeated giant cards.
+- [x] Capture workspace/conversation/sequence/revision for mutations and async callbacks; stale conflicts refresh authoritative state, do not overwrite executing work or another conversation. Keyboard focus usable after rows refresh.
+- [x] Use project CSS variables; do not copy preview dark green. Run focused JS/UI route tests, report evidence and commit owned files. Report .superpowers/sdd/frontend-report.md.
 
 ## Task 3: Contract closeout and acceptance (controller)
 
