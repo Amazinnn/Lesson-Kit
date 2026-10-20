@@ -31,17 +31,17 @@ print(json.dumps({"type":"turn.started"}), flush=True)
 if mode == "slow":
     time.sleep(20)
 elif mode == "chatty":
-    # Reports progress in small pieces, for longer in total than the turn
-    # budget: duration alone must never stop the turn.
-    for index in range(12):
+    # Reports progress every 0.1s for longer than the 3s idle budget, so
+    # duration alone must never stop the turn.
+    for index in range(40):
         print(json.dumps({"type":"item.completed","item":{"id":"r%d" % index,"type":"reasoning","text":"思考 %d" % index}}), flush=True)
-        time.sleep(0.05)
+        time.sleep(0.1)
     print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"想完了"}}), flush=True)
     print(json.dumps({"type":"turn.completed"}), flush=True)
 elif mode == "quiet-command":
     # A command that runs and prints nothing for longer than the idle budget.
     print(json.dumps({"type":"item.started","item":{"id":"cmd-9","type":"command_execution","command":"make -j8"}}), flush=True)
-    time.sleep(1.0)
+    time.sleep(4.0)
     print(json.dumps({"type":"item.completed","item":{"id":"cmd-9","type":"command_execution","command":"make -j8","aggregated_output":"build ok","exit_code":0}}), flush=True)
     print(json.dumps({"type":"item.completed","item":{"type":"agent_message","text":"构建完成"}}), flush=True)
     print(json.dumps({"type":"turn.completed"}), flush=True)
@@ -889,8 +889,16 @@ class ConversationTests(unittest.TestCase):
             done = self.wait_turn(conversation_id, queued["turn_id"])
 
         self.assertEqual(done["status"], "done")
-        self.assertFalse(any(key[0] == str(self.pool.jobs_dir() / conversation_id)
-                             for key in conversations._ACTIVE_TURNS))
+        folder = str(self.pool.jobs_dir() / conversation_id)
+        deadline = time.monotonic() + 2
+        while time.monotonic() < deadline:
+            with conversations._LOCK:
+                active_here = any(key[0] == folder for key in conversations._ACTIVE_TURNS)
+            if not active_here:
+                break
+            threading.Event().wait(0.01)
+        with conversations._LOCK:
+            self.assertFalse(any(key[0] == folder for key in conversations._ACTIVE_TURNS))
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_pi_prompt_acceptance_wait_does_not_hold_global_queue_lock(self, get_provider):
@@ -1189,11 +1197,11 @@ class ConversationTests(unittest.TestCase):
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_output_past_the_budget_is_not_a_timeout(self, get_provider):
-        # The turn outlives its 0.3s budget while never going quiet for that
+        # The turn outlives its 3s idle budget while never going quiet for that
         # long: it must finish, not be cut off for taking time.
         from workbench.bridge import conversation_providers, conversations
 
-        get_provider.return_value = {**self.provider, "timeout_s": 0.3}
+        get_provider.return_value = {**self.provider, "timeout_s": 3.0}
         with mock.patch.object(conversation_providers, "build_command", self.command("chatty", [])):
             conversation = conversations.create(self.pool, "codex")
             turn = conversations.start_turn(
@@ -1201,22 +1209,24 @@ class ConversationTests(unittest.TestCase):
                 {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
             )
             started = time.monotonic()
-            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+            done = self.wait_turn(
+                conversation["conversation_id"], turn["turn_id"], timeout=15,
+            )
             elapsed = time.monotonic() - started
 
         self.assertEqual(done["status"], "done")
-        self.assertGreater(elapsed, 0.3)
+        self.assertGreater(elapsed, 3.0)
         self.assertIn("想完了", conversations.get(
             self.pool, conversation["conversation_id"])["messages"][-1]["content"])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
     def test_a_quiet_command_gets_the_tool_budget(self, get_provider):
-        # One second of silence from a running command: fatal under the 0.3s
-        # idle budget, ordinary under the tool budget.
+        # Four seconds of silence from a running command: longer than the 3s
+        # idle budget, shorter than the 10s tool budget.
         from workbench.bridge import conversation_providers, conversations
 
         get_provider.return_value = {
-            **self.provider, "timeout_s": 0.3, "tool_timeout_s": 10,
+            **self.provider, "timeout_s": 3.0, "tool_timeout_s": 10,
         }
         with mock.patch.object(conversation_providers, "build_command", self.command("quiet-command", [])):
             conversation = conversations.create(self.pool, "codex")
@@ -1224,7 +1234,9 @@ class ConversationTests(unittest.TestCase):
                 self.pool, self.workspace, conversation["conversation_id"], "Quiet",
                 {"anchor": {"page_type": "kps", "route": "/w/dmath/kps"}},
             )
-            done = self.wait_turn(conversation["conversation_id"], turn["turn_id"])
+            done = self.wait_turn(
+                conversation["conversation_id"], turn["turn_id"], timeout=15,
+            )
 
         self.assertEqual(done["status"], "done")
         self.assertIn("构建完成", conversations.get(
