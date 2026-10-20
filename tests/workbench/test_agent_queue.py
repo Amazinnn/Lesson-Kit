@@ -150,6 +150,112 @@ class QueueBridgeTests(unittest.TestCase):
         )
         self.assertEqual(self.conversations.get(self.pool, conversation_id)["queue_order"], [])
 
+    def test_queued_retry_follows_older_ordinary_message(self):
+        conversation = self.create()
+        conversation_id = conversation["conversation_id"]
+        old_key = self.running_turn(conversation_id)
+        older = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "B", {},
+        )
+        self.write_turn(conversation_id, "turn-003", status="failed", message="F")
+        retry = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "F", {},
+            submission_id="retry-F", retry_of="turn-003",
+        )
+        self.assertEqual(
+            self.conversations.get(self.pool, conversation_id)["queue_order"],
+            [older["turn_id"], retry["turn_id"]],
+        )
+
+        self.conversations._finish(
+            self.pool.jobs_dir() / conversation_id, conversation_id, "turn-001", "done", None,
+        )
+        self.conversations._ACTIVE_TURNS.discard(old_key)
+        with mock.patch.object(threading.Thread, "start", return_value=None):
+            dispatched = self.conversations._dispatch_next(
+                self.pool.root, self.pool.jobs_dir(), self.workspace, conversation_id,
+            )
+
+        self.assertEqual(dispatched["turn_id"], older["turn_id"])
+        self.assertEqual(self.conversations.get(self.pool, conversation_id)["queue_order"],
+                         [retry["turn_id"]])
+        self.addCleanup(
+            self.conversations._ACTIVE_TURNS.discard,
+            (str(self.pool.jobs_dir() / conversation_id), older["turn_id"]),
+        )
+
+    def test_multiple_retries_follow_explicit_reorder_with_ordinary_peer(self):
+        conversation = self.create()
+        conversation_id = conversation["conversation_id"]
+        folder = self.pool.jobs_dir() / conversation_id
+        old_key = self.running_turn(conversation_id)
+        older = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "B", {},
+        )
+        failed_a = self.write_turn(
+            conversation_id, "turn-003", status="failed", message="F1",
+        )
+        failed_b = self.write_turn(
+            conversation_id, "turn-004", status="failed", message="F2",
+        )
+        retry_a = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "F1", {},
+            submission_id="retry-F1", retry_of=failed_a["turn_id"],
+        )
+        retry_b = self.conversations.start_turn(
+            self.pool, self.workspace, conversation_id, "F2", {},
+            submission_id="retry-F2", retry_of=failed_b["turn_id"],
+        )
+        initial_order = [older["turn_id"], retry_a["turn_id"], retry_b["turn_id"]]
+        reordered = [retry_b["turn_id"], older["turn_id"], retry_a["turn_id"]]
+        self.conversations.reorder_queue(
+            self.pool, conversation_id, initial_order, reordered,
+        )
+
+        self.conversations._finish(folder, conversation_id, "turn-001", "done", None)
+        self.conversations._ACTIVE_TURNS.discard(old_key)
+        with mock.patch.object(threading.Thread, "start", return_value=None):
+            observed = []
+            for expected_id in reordered:
+                started = self.conversations._dispatch_next(
+                    self.pool.root, self.pool.jobs_dir(), self.workspace, conversation_id,
+                )
+                observed.append(started["turn_id"])
+                self.addCleanup(
+                    self.conversations._ACTIVE_TURNS.discard,
+                    (str(folder), started["turn_id"]),
+                )
+                self.conversations._finish(
+                    folder, conversation_id, started["turn_id"], "done", None,
+                )
+                self.conversations._ACTIVE_TURNS.discard((str(folder), started["turn_id"]))
+
+        self.assertEqual(observed, reordered)
+
+    def test_queued_retry_does_not_resume_paused_older_messages(self):
+        conversation = self.create()
+        conversation_id = conversation["conversation_id"]
+        folder = self.pool.jobs_dir() / conversation_id
+        older = self.write_turn(conversation_id, "turn-001", message="B")
+        failed = self.write_turn(
+            conversation_id, "turn-002", status="failed", message="F",
+        )
+        conversation_path, record = self.record(conversation_id)
+        record.update({"queue_paused": True, "queue_order": [older["turn_id"]]})
+        self.conversations._write_json(conversation_path, record)
+
+        with mock.patch.object(threading.Thread, "start", return_value=None):
+            retry = self.conversations.start_turn(
+                self.pool, self.workspace, conversation_id, "F", {},
+                submission_id="retry-F", retry_of=failed["turn_id"],
+                queue_action="queue",
+            )
+
+        self.assertEqual(retry["status"], "queued")
+        session = self.conversations.get(self.pool, conversation_id)
+        self.assertTrue(session["queue_paused"])
+        self.assertEqual(session["queue_order"], [older["turn_id"], retry["turn_id"]])
+
     def test_send_now_keeps_identity_and_is_idempotent_after_a_later_turn_starts(self):
         conversation = self.create()
         conversation_id = conversation["conversation_id"]

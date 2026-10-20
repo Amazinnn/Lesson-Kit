@@ -913,14 +913,15 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
             turn["submitted_fields"] = fields
         if retry_of is not None:
             turn["retry_of"] = retry_of
+        order = _queue_order(folder, conversation)
         start_now = queue_action == "interrupt" and interrupt_target is None or (
             queue_action == "queue"
             and conversation.get("status") != "running"
             and not _active_for_folder(folder)
             and not approval_pending
-            and (not conversation.get("queue_paused") or retry_of is not None)
+            and (not conversation.get("queue_paused")
+                 or (retry_of is not None and not order))
         )
-        order = _queue_order(folder, conversation)
         if turn["status"] == "queued" and queue_action == "queue" and not start_now:
             order.append(turn_id)
         conversation["queue_order"] = order
@@ -1061,12 +1062,6 @@ def _dispatch_next_locked(root, jobs_dir, workspace, conversation_id):
             break
     if interrupt is not None:
         return _start_turn_locked(root, jobs_dir, workspace, conversation_id, interrupt)
-    # An explicit retry is its own requested turn. Run it while retaining any
-    # older paused queue; only Continue opens that ordinary backlog.
-    retry = next((turn for turn in turns
-                  if turn.get("status") == "queued" and turn.get("retry_of")), None)
-    if retry is not None:
-        return _start_turn_locked(root, jobs_dir, workspace, conversation_id, retry)
     if conversation.get("queue_paused"):
         return None
     ordinary_by_id = {
