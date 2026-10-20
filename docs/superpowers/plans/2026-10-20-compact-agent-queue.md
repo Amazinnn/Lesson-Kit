@@ -56,6 +56,7 @@ Files: docs/{GLOSSARY,ARCHITECTURE,PRODUCT-MANUAL,ACTION-GRAPH}.md and affected 
 - [x] Full pytest tests, compileall, strict all/spec OpenSpec and dmath extract guard; problem-set guard only if matching generated output exists.
 - [x] Isolated registered pool copy and fake provider real HTTP/browser walkthrough of ordering, promotion, interrupt-only, restore, conflicts/approval, desktop+narrow theme, and unchanged practice shell. Never use real provider or real course writes for walkthrough.
 - [x] Reconcile/archive only this completed change with existing OpenSpec CLI; leave unrelated active graph/ingestion changes alone. Run final OpenSpec strict and changed checks.
-- [ ] Integrate to main preserving preexisting dirty files, push authorized feature delivery, check actual final commit CI.
-- [ ] Update running 3081 only once idle and no stop handoff; close only its idle owned provider descendants, restart using managed daemon command from main; verify actual HTTP page and static bytes against final checkout. This feature requires no database migration.
-- [ ] Durable handoff with evidence and limitations; leave user's existing worktrees/data untouched.
+- [x] Integrate to main preserving preexisting dirty files.
+- [ ] Push authorized delivery and check final commit CI (external deployment receipt records the result).
+- [x] Update running 3081 only once idle and no stop handoff; close only its idle owned provider descendants, restart using managed daemon command from main; verify actual HTTP page and static bytes against final checkout. This feature requires no database migration.
+- [x] Durable handoff with evidence and limitations; leave user's existing worktrees/data untouched.
