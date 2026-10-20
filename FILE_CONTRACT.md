@@ -484,13 +484,24 @@ Runtime assets follow the hidden dot-directory convention and live under
   routing metadata, not part of task identity. An explicit retry links its new
   turn with `retry_of`, uses the current accepted text, and reuses the original
   captured context.
+- `conversation.json` stores `queue_order`, the ordered turn IDs whose current
+  status is `queued`. New conversations start with an empty array. A legacy
+  conversation with no field reads queued turns in numeric turn-ID order and
+  is not rewritten by reads; the first successful queue mutation writes the
+  explicit order. Accepted ordinary queue messages append to this order;
+  removal, dispatch, and send-now promotion remove the corresponding ID.
+  `waiting_for_stop` handoffs never appear in `queue_order`. Session GET
+  exposes the confirmed `queue_order`, and each message includes its current
+  `queue_revision`.
 - Turn artifact status `queued` or `waiting_for_stop` denotes accepted work
-  that has not begun provider execution. Numeric turn IDs define FIFO order;
-  the interrupt turn records its captured `interrupt_target_turn_id` and runs
-  only after that turn is terminal. `conversation.json` may include
+  that has not begun provider execution. The interrupt turn records its
+  captured `interrupt_target_turn_id` and runs only after that turn is terminal
+  and its worker releases ownership. `conversation.json` may include
   `queue_paused`; missing on older conversations means false. Failures,
   unexpected interruption, service recovery, and a completed interrupt turn
-  leave retained work paused until an explicit queue continuation.
+  leave retained ordinary work paused until an explicit queue continuation.
+  Recovery never converts an unstarted interrupt handoff into queued work or
+  replays it automatically.
 - `POST .../turns` accepts optional `queue_action` (`queue` by default or
   `interrupt`) and returns the accepted turn fields at the top level. Pending
   edits use `PATCH .../turns/{turn_id}` with `expected_revision`; pending
@@ -500,6 +511,26 @@ Runtime assets follow the hidden dot-directory convention and live under
 - Session reads expose pending messages, their revisions, and queue state, but
   not captured context. `POST .../queue/continue` returns
   `{conversation_id, queue_paused, turn}`; `turn` may be null for a handoff.
+- `POST .../queue/reorder` accepts
+  `{expected_order, turn_ids}`. Both are complete arrays of turn IDs;
+  `turn_ids` must be an exact permutation of `expected_order`. Under the same
+  conversation ownership lock used by dispatch, the service compares
+  `expected_order` with the current confirmed queued order and verifies that
+  every member remains eligible. A malformed request returns HTTP 400; a
+  stale order or ineligible queued entry returns HTTP 409 with no mutation.
+  Success returns `{conversation_id, queue_order}`.
+- `POST .../turns/{turn_id}/interrupt` accepts
+  `{expected_revision}` to promote one existing queued message into the direct
+  interrupt-and-send path. It returns that turn's canonical top-level response
+  and preserves its accepted identity, current edited text, submitted fields,
+  and captured context. A promoted turn is durably marked in its existing turn
+  artifact so repeating the same request at the current revision returns that
+  turn without a second cancellation or execution. A changed revision, a
+  started ordinary target, an ineligible target, another handoff, or pending
+  Paper approval returns HTTP 409 without changing the queued item. If idle,
+  the promoted message starts directly even when older queued work is paused;
+  those peers retain their order and paused state. If a turn is running, the
+  promotion waits for that captured worker's terminal state and release.
 - An Agent may propose a membership/order change to one existing saved Paper in
   a `paper_update_proposal` action containing only `practice_set_id` and ordered
   `problem_ids`. The bridge resolves the Paper in the selected workspace and

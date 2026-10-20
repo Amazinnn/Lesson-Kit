@@ -974,6 +974,53 @@ def ai_turn_pending_delete(pool, workspace, params, body):
         raise ApiError(409, str(exc)) from exc
 
 
+def ai_queue_reorder(pool, workspace, params, body):
+    body = _request_object(body)
+    if set(body) != {"expected_order", "turn_ids"}:
+        raise ApiError(400, "expected_order and turn_ids are required")
+    expected_order = body.get("expected_order")
+    turn_ids = body.get("turn_ids")
+    if not isinstance(expected_order, list) or not isinstance(turn_ids, list):
+        raise ApiError(400, "expected_order and turn_ids must be arrays")
+    if any(not isinstance(value, str) or not conversations.TURN_ID.fullmatch(value)
+           for value in [*expected_order, *turn_ids]):
+        raise ApiError(400, "queue entries must be valid turn ids")
+    if len(set(expected_order)) != len(expected_order) \
+            or len(set(turn_ids)) != len(turn_ids) \
+            or set(turn_ids) != set(expected_order):
+        raise ApiError(400, "turn_ids must be an exact permutation of expected_order")
+    try:
+        return conversations.reorder_queue(
+            pool, params["conversation_id"], expected_order, turn_ids,
+        )
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def ai_turn_interrupt(pool, workspace, params, body):
+    body = _request_object(body)
+    if set(body) != {"expected_revision"}:
+        raise ApiError(400, "expected_revision is required")
+    revision = body.get("expected_revision")
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision < 1:
+        raise ApiError(400, "expected_revision must be a positive integer")
+    try:
+        return conversations.interrupt_pending(
+            pool, workspace, params["conversation_id"], params["turn_id"],
+            expected_revision=revision,
+        )
+    except conversations.InvalidIdentifier as exc:
+        raise ApiError(400, str(exc)) from exc
+    except conversations.ConversationConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except ValueError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
 def ai_queue_continue(pool, workspace, params, body):
     try:
         return conversations.continue_queue(pool, workspace, params["conversation_id"])

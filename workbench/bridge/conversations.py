@@ -118,6 +118,7 @@ def create(pool, provider_name, title="", model=None, entry=None):
             "status": "idle",
             "current_turn_id": None,
             "queue_paused": False,
+            "queue_order": [],
             "created_at": now,
             "updated_at": now,
         }
@@ -208,8 +209,9 @@ def get(pool, conversation_id):
         user = {
             "role": "user", "content": accepted_message, "turn_id": turn_id,
             "status": turn.get("status", "failed"),
+            "queue_revision": turn.get("queue_revision", 1),
         }
-        for key in ("queue_revision", "queue_action", "interrupt_target_turn_id"):
+        for key in ("queue_action", "interrupt_target_turn_id"):
             if key in turn:
                 user[key] = turn[key]
         if turn.get("submission_id"):
@@ -248,6 +250,7 @@ def get(pool, conversation_id):
             assistant,
         ])
     record["messages"] = messages
+    record["queue_order"] = _queue_order(folder, record)
     record["pending_paper_approval"] = _pending_paper_approval_projection(folder)
     return record
 
@@ -453,19 +456,51 @@ def find_submission(pool, conversation_id, message, submission_id, submitted_fie
     return None
 
 
+def _fail_orphaned_interrupts(pool, record):
+    folder = _conversation_dir(pool, record["conversation_id"])
+    with _LOCK:
+        current = _read_json(folder / "conversation.json")
+        changed = False
+        for path in folder.glob("turn-*.json"):
+            turn = _read_json(path)
+            is_queued_interrupt = turn.get("status") == "queued" \
+                and turn.get("queue_action") == "interrupt"
+            if turn.get("status") == "waiting_for_stop" or is_queued_interrupt:
+                turn_id = turn.get("turn_id") or path.stem
+                key = (str(folder), turn_id)
+                target_key = (str(folder), turn.get("interrupt_target_turn_id"))
+                if key in _ACTIVE_TURNS or (
+                    not is_queued_interrupt and target_key in _ACTIVE_TURNS
+                ):
+                    continue
+                turn.update({
+                    "status": "failed",
+                    "error": "service restarted before the interrupt handoff could start",
+                    "updated_at": _now(),
+                })
+                _write_json(path, turn)
+                changed = True
+        if changed:
+            current["queue_paused"] = True
+            current["updated_at"] = _now()
+            current["queue_order"] = _queue_order(folder, current)
+            _write_json(folder / "conversation.json", current)
+        return current
+
+
 def _recover_interrupted(pool, record):
     """Turn a persisted running state with no live worker into an honest failure."""
     record = _ensure_approval_pause(pool, record)
     if record.get("status") != "running" or not record.get("current_turn_id"):
-        return record
+        return _fail_orphaned_interrupts(pool, record)
     turn_id = record["current_turn_id"]
     key = (str(_conversation_dir(pool, record["conversation_id"])), turn_id)
     with _LOCK:
         if key in _ACTIVE_TURNS:
-            return record
+            return _fail_orphaned_interrupts(pool, record)
         current = _read_json(_conversation_file(pool, record["conversation_id"]))
         if current.get("status") != "running" or current.get("current_turn_id") != turn_id:
-            return current
+            return _fail_orphaned_interrupts(pool, current)
         transcript = _conversation_dir(pool, record["conversation_id"]) / "transcript.jsonl"
         with _LOCK:
             transcript_lines = transcript.read_text(encoding="utf-8").splitlines() \
@@ -506,10 +541,13 @@ def _recover_interrupted(pool, record):
         for queued_path in _conversation_dir(pool, record["conversation_id"]).glob("turn-*.json"):
             queued = _read_json(queued_path)
             if queued.get("status") == "waiting_for_stop":
-                queued["status"] = "queued"
-                queued["updated_at"] = _now()
+                queued.update({
+                    "status": "failed",
+                    "error": "service restarted before the interrupt handoff could start",
+                    "updated_at": _now(),
+                })
                 _write_json(queued_path, queued)
-        return _ensure_approval_pause(pool, current)
+        return _fail_orphaned_interrupts(pool, _ensure_approval_pause(pool, current))
 
 
 def events(pool, conversation_id, turn_id, after=0):
@@ -797,10 +835,9 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
     conversation_path = folder / "conversation.json"
     _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
+        _recover_interrupted(pool, _read_json(conversation_path))
         conversation = _read_json(conversation_path)
-        if _pending_paper_approval(folder) is not None:
-            conversation["queue_paused"] = True
-            _write_json(conversation_path, conversation)
+        approval_pending = _pending_paper_approval(folder) is not None
         fields = submitted_fields if isinstance(submitted_fields, dict) else {}
         if queue_action not in {"queue", "interrupt"}:
             raise ValueError("queue_action must be 'queue' or 'interrupt'")
@@ -809,14 +846,32 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
         prior = find_submission(pool, conversation_id, message, submission_id, fields)
         if prior:
             return prior
+        if approval_pending and queue_action == "interrupt":
+            raise ConversationConflict("resolve the pending Paper approval before interrupting")
+        if approval_pending:
+            conversation["queue_paused"] = True
+            _write_json(conversation_path, conversation)
         if submission_id is not None:
             submission_id = submission_id.strip()
-        if queue_action == "interrupt" and conversation.get("status") == "running":
+        if queue_action == "interrupt":
             for path in folder.glob("turn-*.json"):
                 pending = _read_json(path)
                 if pending.get("status") == "waiting_for_stop":
                     raise ConversationConflict(
                         "an interrupt message is already waiting for stop confirmation")
+        interrupt_target = None
+        active_turn_id = _active_turn_for_folder(folder)
+        if queue_action == "interrupt":
+            if conversation.get("status") == "running":
+                interrupt_target = conversation.get("current_turn_id")
+                if not isinstance(interrupt_target, str) \
+                        or not TURN_ID.fullmatch(interrupt_target) \
+                        or active_turn_id != interrupt_target:
+                    raise ConversationConflict("conversation has no captured running turn")
+            elif active_turn_id is not None:
+                # A provider may have finished just before acceptance while its
+                # worker still owns the release handoff.
+                interrupt_target = active_turn_id
         retry_context = None
         if retry_of is not None:
             retry_id = _require_id(retry_of, TURN_ID, "turn")
@@ -849,9 +904,7 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
             "created_at": now,
             "updated_at": now,
         }
-        interrupt_target = None
-        if queue_action == "interrupt" and conversation.get("status") == "running":
-            interrupt_target = conversation.get("current_turn_id")
+        if interrupt_target:
             turn["status"] = "waiting_for_stop"
             turn["interrupt_target_turn_id"] = interrupt_target
             conversation["queue_paused"] = True
@@ -860,6 +913,17 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
             turn["submitted_fields"] = fields
         if retry_of is not None:
             turn["retry_of"] = retry_of
+        start_now = queue_action == "interrupt" and interrupt_target is None or (
+            queue_action == "queue"
+            and conversation.get("status") != "running"
+            and not _active_for_folder(folder)
+            and not approval_pending
+            and (not conversation.get("queue_paused") or retry_of is not None)
+        )
+        order = _queue_order(folder, conversation)
+        if turn["status"] == "queued" and queue_action == "queue" and not start_now:
+            order.append(turn_id)
+        conversation["queue_order"] = order
         _write_json(folder / f"{turn_id}.json", turn)
         if conversation.get("status") != "running":
             conversation.setdefault("queue_paused", False)
@@ -871,10 +935,7 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
             process = _PROCESSES.get(key)
             if process is not None:
                 _signal_process(process)
-        elif conversation.get("status") != "running" \
-                and not _active_for_folder(folder) \
-                and _pending_paper_approval(folder) is None \
-                and (not conversation.get("queue_paused") or retry_of is not None):
+        elif start_now:
             _start_turn_locked(
                 pool.root, pool.jobs_dir(), workspace, conversation_id, turn,
             )
@@ -904,6 +965,7 @@ def _start_turn_locked(root, jobs_dir, workspace, conversation_id, turn):
         "status": "running", "current_turn_id": turn["turn_id"],
         "updated_at": now,
     })
+    conversation["queue_order"] = _queue_order(folder, conversation)
     _write_json(conversation_path, conversation)
     key = (str(folder), turn["turn_id"])
     _ACTIVE_TURNS.add(key)
@@ -931,9 +993,40 @@ def _turn_id_number(turn):
     return int(value[5:]) if isinstance(value, str) and TURN_ID.fullmatch(value) else 0
 
 
+def _queue_order(folder, conversation):
+    queued = {}
+    for path in folder.glob("turn-*.json"):
+        turn = _read_json(path)
+        turn_id = turn.get("turn_id") or path.stem
+        if turn.get("status") == "queued" and isinstance(turn_id, str) \
+                and TURN_ID.fullmatch(turn_id):
+            queued[turn_id] = turn
+    order = []
+    seen = set()
+    stored = conversation.get("queue_order")
+    if isinstance(stored, list):
+        for turn_id in stored:
+            if isinstance(turn_id, str) and turn_id in queued and turn_id not in seen:
+                order.append(turn_id)
+                seen.add(turn_id)
+    order.extend(
+        turn_id for turn_id in sorted(queued, key=lambda value: int(value[5:]))
+        if turn_id not in seen
+    )
+    return order
+
+
 def _active_for_folder(folder):
     folder_name = str(folder)
     return any(key[0] == folder_name for key in _ACTIVE_TURNS)
+
+
+def _active_turn_for_folder(folder):
+    folder_name = str(folder)
+    turns = [turn_id for key_folder, turn_id in _ACTIVE_TURNS if key_folder == folder_name]
+    if len(turns) > 1:
+        raise ConversationConflict("conversation has multiple active provider owners")
+    return turns[0] if turns else None
 
 
 def _dispatch_next_locked(root, jobs_dir, workspace, conversation_id):
@@ -976,7 +1069,13 @@ def _dispatch_next_locked(root, jobs_dir, workspace, conversation_id):
         return _start_turn_locked(root, jobs_dir, workspace, conversation_id, retry)
     if conversation.get("queue_paused"):
         return None
-    ordinary = next((turn for turn in turns if turn.get("status") == "queued"), None)
+    ordinary_by_id = {
+        turn["turn_id"]: turn for turn in turns
+        if turn.get("status") == "queued" and turn.get("turn_id")
+    }
+    ordinary = next((ordinary_by_id[turn_id]
+                     for turn_id in _queue_order(folder, conversation)
+                     if turn_id in ordinary_by_id), None)
     if ordinary is None:
         return None
     return _start_turn_locked(root, jobs_dir, workspace, conversation_id, ordinary)
@@ -1025,7 +1124,114 @@ def remove_pending(pool, conversation_id, turn_id, *, expected_revision):
         turn.update({"status": "cancelled", "error": "removed before execution",
                      "updated_at": _now()})
         _write_json(path, turn)
+        folder = _conversation_dir(pool, conversation_id)
+        conversation_path = folder / "conversation.json"
+        conversation = _read_json(conversation_path)
+        conversation["queue_order"] = _queue_order(folder, conversation)
+        conversation["updated_at"] = _now()
+        _write_json(conversation_path, conversation)
         return _turn_response(turn)
+
+
+def reorder_queue(pool, conversation_id, expected_order, turn_ids):
+    if not isinstance(expected_order, list) or not isinstance(turn_ids, list):
+        raise ValueError("expected_order and turn_ids must be arrays")
+    if any(not isinstance(value, str) or not TURN_ID.fullmatch(value)
+           for value in [*expected_order, *turn_ids]):
+        raise ValueError("queue entries must be valid turn ids")
+    if len(set(expected_order)) != len(expected_order) \
+            or len(set(turn_ids)) != len(turn_ids) \
+            or set(turn_ids) != set(expected_order):
+        raise ValueError("turn_ids must be an exact permutation of expected_order")
+    folder = _conversation_dir(pool, conversation_id)
+    with _LOCK:
+        conversation_path = folder / "conversation.json"
+        conversation = _read_json(conversation_path)
+        current_order = _queue_order(folder, conversation)
+        if expected_order != current_order:
+            raise ConversationConflict("queue changed; reload before reordering")
+        for turn_id in current_order:
+            turn = _read_json(_turn_file_from_folder(folder, turn_id))
+            if turn.get("status") != "queued" or turn.get("queue_action", "queue") != "queue":
+                raise ConversationConflict("queue contains an ineligible message")
+        conversation["queue_order"] = list(turn_ids)
+        conversation["updated_at"] = _now()
+        _write_json(conversation_path, conversation)
+        return {"conversation_id": conversation_id, "queue_order": list(turn_ids)}
+
+
+def interrupt_pending(pool, workspace, conversation_id, turn_id, *, expected_revision):
+    if isinstance(expected_revision, bool) or not isinstance(expected_revision, int) \
+            or expected_revision < 1:
+        raise ValueError("expected_revision must be a positive integer")
+    _require_id(turn_id, TURN_ID, "turn")
+    folder = _conversation_dir(pool, conversation_id)
+    conversation_path = folder / "conversation.json"
+    _recover_interrupted(pool, _read_json(conversation_path))
+    with _LOCK:
+        _recover_interrupted(pool, _read_json(conversation_path))
+        conversation = _read_json(conversation_path)
+        turn_path = _turn_file_from_folder(folder, turn_id)
+        if not turn_path.is_file():
+            raise ConversationConflict("pending message is no longer available")
+        turn = _read_json(turn_path)
+        revision = turn.get("queue_revision", 1)
+        if expected_revision != revision:
+            raise ConversationConflict("pending message changed; reload before sending now")
+        if turn.get("promoted_from_queue") is True:
+            return _turn_response(turn)
+        if turn.get("status") != "queued" or turn.get("queue_action", "queue") != "queue":
+            raise ConversationConflict("message is no longer eligible for send-now")
+        current_order = _queue_order(folder, conversation)
+        if turn_id not in current_order:
+            raise ConversationConflict("message is no longer in the ordinary queue")
+        if _pending_paper_approval(folder) is not None:
+            raise ConversationConflict("resolve the pending Paper approval before sending now")
+        if any(
+            pending.get("status") == "waiting_for_stop"
+            for path in folder.glob("turn-*.json")
+            if (pending := _read_json(path))
+        ):
+            raise ConversationConflict("another interrupt handoff is already waiting")
+
+        active_turn_id = _active_turn_for_folder(folder)
+        if conversation.get("status") == "running":
+            interrupt_target = conversation.get("current_turn_id")
+            if not isinstance(interrupt_target, str) \
+                    or not TURN_ID.fullmatch(interrupt_target) \
+                    or active_turn_id != interrupt_target:
+                raise ConversationConflict("conversation has no captured running turn")
+            target_path = _turn_file_from_folder(folder, interrupt_target)
+            if not target_path.is_file() or _read_json(target_path).get("status") != "running":
+                raise ConversationConflict("captured running turn changed before send-now")
+        else:
+            interrupt_target = active_turn_id
+
+        turn.update({
+            "queue_action": "interrupt",
+            "promoted_from_queue": True,
+            "updated_at": _now(),
+        })
+        if interrupt_target:
+            turn["status"] = "waiting_for_stop"
+            turn["interrupt_target_turn_id"] = interrupt_target
+            conversation["queue_paused"] = True
+        turn_order = [queued_id for queued_id in current_order if queued_id != turn_id]
+        conversation["queue_order"] = turn_order
+        conversation["updated_at"] = _now()
+        _write_json(turn_path, turn)
+        _write_json(conversation_path, conversation)
+
+        if interrupt_target:
+            key = (str(folder), interrupt_target)
+            _CANCEL_REQUESTS.add(key)
+            process = _PROCESSES.get(key)
+            if process is not None:
+                _signal_process(process)
+            return _turn_response(turn)
+        return _start_turn_locked(
+            pool.root, pool.jobs_dir(), workspace, conversation_id, turn,
+        )
 
 
 def continue_queue(pool, workspace, conversation_id):

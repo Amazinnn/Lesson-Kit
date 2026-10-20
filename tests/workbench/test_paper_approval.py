@@ -187,11 +187,22 @@ class PaperApprovalTests(unittest.TestCase):
         queued = self.conversations.start_turn(
             self.pool, self.workspace, "conv-001", "C", {},
             queue_action="queue")
-        interrupted = self.conversations.start_turn(
-            self.pool, self.workspace, "conv-001", "D", {},
-            queue_action="interrupt")
         self.assertEqual(queued["status"], "queued")
-        self.assertEqual(interrupted["status"], "queued")
+        with self.assertRaises(self.conversations.ConversationConflict):
+            self.conversations.start_turn(
+                self.pool, self.workspace, "conv-001", "D", {},
+                queue_action="interrupt")
+        conversation = json.loads((folder / "conversation.json").read_text(encoding="utf-8"))
+        queued_message = json.loads((folder / f"{queued['turn_id']}.json").read_text(
+            encoding="utf-8"))
+        self.assertEqual(conversation["queue_order"], ["turn-002", queued["turn_id"]])
+        self.assertEqual(queued_message["message"], "C")
+        self.assertFalse((folder / "turn-004.json").exists())
+        self.assertEqual(
+            json.loads((folder / "turn-001.json").read_text(encoding="utf-8"))[
+                "paper_approval"]["projection"]["status"],
+            "pending",
+        )
 
         result = self.conversations.resolve_paper_approval(
             self.pool, self.workspace, "conv-001", "turn-001",
