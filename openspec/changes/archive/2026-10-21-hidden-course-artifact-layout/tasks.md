@@ -10,5 +10,7 @@
 - [x] 5. Complete independent review and focused checks.
 - [x] 6. Pass full pytest, compileall, strict all/spec OpenSpec and extraction guard.
 - [x] 7. Verify isolated ADS migration with file/database preservation and functional read/write evidence.
-- [ ] 8. Archive this change only, integrate, explicitly migrate ADS while idle and restart/verify service.
+- [x] 8. Archive this change only, integrate, explicitly migrate ADS while idle and restart/verify service.
 - [ ] 9. Push, confirm final main CI and record durable handoff.
+
+Runtime migration and HTTP acceptance passed from main99765c0f. Final push/CI closure is recorded in ~/.lessonkit-workbench/deployments/20261021-hidden-course-layout/runtime-receipt.json and STATUS.md (this archived checklist is the pre-push snapshot).

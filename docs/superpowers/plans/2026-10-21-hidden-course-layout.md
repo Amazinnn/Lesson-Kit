@@ -38,5 +38,7 @@ Owned files: glossary, FILE_CONTRACT, architecture, manual, action graph, runtim
 - [x] Run full pytest tests, compileall, strict all/spec OpenSpec, dmath/ch06 extraction guard; conditional problem-set guard only with generated output.
 - [x] Copy ADS internal directories to an isolated workspace/registry; preview/apply and verify byte-level preservation, database schema/rows and references; prove no source/nested/export changes.
 - [x] Archive only this change once accepted; preserve existing current-spec scenarios and validate again.
-- [ ] Audit service/turns, integrate accepted branch preserving user work, stop managed service, perform explicit ADS migration with before/after evidence, restart and verify actual HTTP plus db registration/path.
+- [x] Audit service/turns, integrate accepted branch preserving user work, stop managed service, perform explicit ADS migration with before/after evidence, restart and verify actual HTTP plus db registration/path.
 - [ ] Push and verify final main CI; record durable runtime/migration receipt and leave feature worktree clean.
+
+Runtime accepted from main99765c0f; final push/CI evidence is recorded in the external deployment receipt. This plan is the pre-push snapshot.
