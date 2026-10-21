@@ -18,6 +18,15 @@ packages govern current lesson-kit work.
 
 ## Runtime First
 
+For a new or explicitly migrated workspace, use the registered
+`.lessonkit/pool/<course>.db`, place internal work under `.lessonkit/`, and run
+`lesson-kit guard <workspace> <gate> [--apply]` so the Workbench adapter resolves
+hidden artifacts. Unmigrated courses keep their registered root pool and legacy
+pipeline paths. Direct `python lessonkit.py ...` examples below describe the
+unchanged legacy pipeline contract; do not run them blindly against a hidden
+workspace or recreate root directories to satisfy them. An external export
+destination must come from the user's explicit request.
+
 If `.lessonkit/state.yaml` exists, read it before routing work. Do not infer
 the current workflow state only from directory contents or chat history.
 

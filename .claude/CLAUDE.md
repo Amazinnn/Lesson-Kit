@@ -6,6 +6,8 @@
 
 ## Runtime Map
 
+下图中的 `pipeline/`、`pool/scripts/` 是项目代码位置，不是要求在每个课程中复制这棵树。新建/已显式迁移课程的数据库位于 `.lessonkit/pool/{course}.db`；未迁移课程以注册表中的旧池路径为准。内部脚本、报告、清单、修复与构建工件写入课程 `.lessonkit/intermediate/` 或 `.lessonkit/jobs/`，不要自行在课程根目录新建 `pool/`、`intermediate/`、`repair/`、`output/`。用户明确指定的导出位置除外。
+
 ```text
 pipeline/
 ├── commands/
@@ -84,7 +86,7 @@ Git commits and tags are the version source of truth. Zip packages may still be 
 
 ## Important Constraints
 
-- One course, one DB: `pool/{course}.db`.
+- One course, one registered DB: hidden `.lessonkit/pool/{course}.db`, or legacy `pool/{course}.db` until explicit migration.
 - Query chapter rows by full prefix, e.g. `dmath-ch06`.
 - Intermediate files are audit artifacts and should not be replaced by private reasoning.
 - Durable problems are ingested by `pipeline/commands/extract-problems.md`; problem-set rendering must not invent new problems in v1.
