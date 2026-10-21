@@ -32,6 +32,8 @@ Intelligence（Bridge）       ← 旁挂：任务+契约+外部 CLI；只被 Sh
 workbench/
 ├── __init__.py
 ├── registry.py        # 工作区注册表（~/.lessonkit-workbench/workspaces.json）
+├── workspace_layout.py # 旧/隐藏布局路径、显式目录迁移与历史路径解析；无 SQLite 写入
+├── guards.py          # 在独立命名空间适配 frozen guard 的工件路径；不改 frozen 源码
 ├── surface.py         # 接口归属表：每个路由/命令的受众，测试与真实 parser/ROUTES 对账
 ├── domain/            # 学习模型层（纯规则）
 │   ├── __init__.py
