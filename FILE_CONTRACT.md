@@ -37,6 +37,15 @@ Legacy image-reference planning can read newly hidden internal images as well
 as existing root intermediate images. Conflicting same-name images across the
 two areas must be reported instead of silently selecting different content.
 
+The migration command returns UTF-8 JSON with `workspace`, boolean `applied`,
+`moves` (`source`/`destination` pairs), `registration` (`before`/`after` pool
+paths), and `link_changes`. Each link-change entry names its relocated `path`,
+original-byte `backup`, and `targets` (`before`/`after` tokens). A successful
+nonempty apply also returns `receipt`, stored at
+`.lessonkit/layout-migration/receipt.json`; original changed Markdown bytes are
+kept under `.lessonkit/layout-migration/before/<old-workspace-relative-path>`.
+An empty repeat has no moves and does not create another receipt or copy.
+
 ## KP Extraction
 
 Path:
