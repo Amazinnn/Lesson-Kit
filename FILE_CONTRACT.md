@@ -3,6 +3,33 @@
 Intermediate files are explicit agent-facing artifacts. Do not replace them
 with private reasoning, final prose, or a claim that a step was considered.
 
+## Workspace layout and artifact roots
+
+New workspaces put their pool at `.lessonkit/pool/<course>.db`; an unmigrated
+legacy workspace continues using its registered root `pool/<course>.db`.
+Workbench resolves the workspace from its registered path, not by assuming the
+database is always two levels below the course root. Pool-adjacent ingest batch
+records and backups follow the selected pool directory.
+
+The pipeline-relative `intermediate/...` and default `output/...` paths below
+are resolved under `.lessonkit/` for hidden-layout workspaces. Existing legacy
+pipeline artifacts retain their old workspace-relative paths until explicit
+migration. The Workbench adapter preserves frozen pipeline command contracts;
+direct legacy `lessonkit.py` commands keep their original CWD-based behavior.
+Agent-created internal work uses `.lessonkit/intermediate/` or the owning
+conversation's `.lessonkit/jobs/` even when reading an unmigrated pool. A
+user-specified export path is honored; without one, generated internal work must
+not create directories in the course root. Source materials stay in place.
+
+`lesson-kit workspace <name> migrate-layout` previews without writes; `--apply`
+explicitly moves only root `pool/` and `intermediate/` into `.lessonkit/` and
+updates registration. All backups, batch manifests and history are retained;
+known legacy path references are resolved at their consumers. Relative Markdown
+link targets may be narrowly rebased to preserve the same existing target after
+the move; such edits must be enumerated, not applied as a blanket text rewrite.
+No schema/content/learning change, history pruning, destination merging, root
+symlink aliases, nested-workspace traversal or external-tool relocation occurs.
+
 ## KP Extraction
 
 Path:

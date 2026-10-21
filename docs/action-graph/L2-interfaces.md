@@ -50,6 +50,7 @@
 |---|---|---|
 | `init`（空文件夹自动先建池+骨架；`path` 可省=当前目录，course 取 `--course` › 已有池名 › ASCII 文件夹名 › 自动顺序短码 `c01`+；显式值必须是 slug；池候选排除 ingest 备份，同文件夹多份池时必须用 `--course` 指名）/ `use`（换课程/章节，course 与 chapter 同样校验）/ `ls / open / serve` | 管理（创建+注册/切换/列表/URL/前台起服务） | 人 + Agent |
 | `daemon start\|stop\|status` | 管理（后台服务生命周期；pid 与日志在用户级注册表目录） | 人 |
+| `workspace <name> migrate-layout [--apply]` | 管理（默认只读预览；显式应用只迁移该课程根目录的 pool/intermediate，保留历史并更新注册） | 人 |
 | `dashboard` | 管理（确保服务在跑 + 打开浏览器；不新增页面） | 人 |
 | `doctor` | 读（环境自检：注册表/池库/provider/服务端口，只读不改） | 人 |
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |

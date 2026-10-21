@@ -26,7 +26,14 @@
 - 只查统计：直接跑查询/审计；
 - 讲义/论文等非题目材料。
 
-## 入库与试卷交付是两步
+## 工作文件位置
+
+- 新课程由 `lesson-kit init` 创建隐藏布局：池在 `.lessonkit/pool/<course>.db`；已有课程以注册表中的实际池路径为准，不自行另建池。
+- 审计、修复、题卡、仲裁、清单、临时脚本及默认报告等内部工作一律写入课程 `.lessonkit/intermediate/`，会话暂存仍可用 `.lessonkit/jobs/conv-NNN/`。不要自行创建课程根目录的 `intermediate/`、`repair/`、`output/` 等文件夹。
+- 只有用户明确指定外部导出位置，才将可阅读交付物写到该位置；未指定时留在 `.lessonkit/`。这条规则不移动原始材料、不清理旧目录、不配置外部工具自身的缓存目录。
+- 旧课程布局迁移使用 `lesson-kit workspace <工作区名> migrate-layout` 先预览，显式 `--apply` 才执行；不要手动移动数据库，也不要自行迁移未授权课程。
+
+## 入库与试卷交付是两步（交付标准）
 
 开始前读 `references/managed-paper-delivery.md`，明确用户要的是题库、页面可见试卷、打印文件，还是评级/评审材料。
 

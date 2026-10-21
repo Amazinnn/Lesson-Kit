@@ -100,6 +100,8 @@ workbench/
 
 ## 2. 数据契约（全部增量，ADR 0017/0019）
 
+- 工作区布局：新建工作区的池位于 `.lessonkit/pool/<course>.db`，构建中间产物位于 `.lessonkit/intermediate/`；未迁移工作区保留根目录布局。注册数据库路径是当前池的依据，不通过固定 `parent.parent` 推断课程根。显式布局迁移只移动已确认的根目录 `pool/`、`intermediate/` 并更新路径，不改变 SQLite schema 或学习事实。路径/目录编排不进入 Domain；需要读取历史持久引用时在对应消费者解析，不批量改写历史数据库。
+
 - 新表 `review_schedule(item_type, item_id, direction, state, repetitions, ease,
   interval_days, due_at, last_rating, last_reviewed_at)`，PK `(item_type, item_id, direction)`，
   direction 默认空串（普通项无方向；卡片按方向独立调度）。
