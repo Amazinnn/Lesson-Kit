@@ -16,6 +16,10 @@ are resolved under `.lessonkit/` for hidden-layout workspaces. Existing legacy
 pipeline artifacts retain their old workspace-relative paths until explicit
 migration. The Workbench adapter preserves frozen pipeline command contracts;
 direct legacy `lessonkit.py` commands keep their original CWD-based behavior.
+Workbench guards also consume newly hidden gate-specific artifacts for an
+unmigrated pool: a present hidden gate directory is authoritative; otherwise
+the existing root gate directory remains supported. Incomplete hidden work must
+fail its check instead of silently passing against stale root artifacts.
 Agent-created internal work uses `.lessonkit/intermediate/` or the owning
 conversation's `.lessonkit/jobs/` even when reading an unmigrated pool. A
 user-specified export path is honored; without one, generated internal work must
@@ -29,6 +33,9 @@ link targets may be narrowly rebased to preserve the same existing target after
 the move; such edits must be enumerated, not applied as a blanket text rewrite.
 No schema/content/learning change, history pruning, destination merging, root
 symlink aliases, nested-workspace traversal or external-tool relocation occurs.
+Legacy image-reference planning can read newly hidden internal images as well
+as existing root intermediate images. Conflicting same-name images across the
+two areas must be reported instead of silently selecting different content.
 
 ## KP Extraction
 
