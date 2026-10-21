@@ -25,6 +25,24 @@ New workspaces SHALL place the Knowledge Pool in `.lessonkit/pool/<course>.db` a
 - **THEN** it writes under `.lessonkit/` without creating a course-root output directory
 - **AND** an explicitly requested export to another destination remains supported
 
+#### Scenario: Validate new hidden work while the pool remains legacy
+
+- **WHEN** an unmigrated course creates hidden gate-specific artifacts
+- **THEN** the installed Workbench guard validates that hidden directory without requiring a local copy of `lessonkit.py`
+- **AND** incomplete hidden work fails instead of passing against stale root artifacts, while root-only legacy work remains supported
+
+#### Scenario: Resolve legacy images across old and new internal work
+
+- **WHEN** legacy image-reference planning finds a referenced image in the new hidden intermediate area or the old root area
+- **THEN** it can read that source without relocating the pool
+- **AND** conflicting same-name images across both areas are reported before application instead of silently choosing different content
+
+#### Scenario: Keep default results hidden for an unmigrated course
+
+- **WHEN** an unmigrated course runs an ingest task without an explicit result destination
+- **THEN** the result is written under `.lessonkit/`, even when the input task is external
+- **AND** the input task remains intact and an explicit external result destination is still honored
+
 ### Requirement: Explicit workspace layout migration
 
 The human CLI SHALL expose `lesson-kit workspace <name> migrate-layout`, with preview as the default and mutation requiring `--apply`. Migration SHALL move only the workspace-root `pool/` and `intermediate/` into `.lessonkit/`, preserve all contained history/backups, update database registration and keep affected internal path references resolvable. It SHALL NOT alter content/schema/learning semantics, prune history, move existing exports/course materials/external tool directories, or traverse and merge nested workspace copies. It SHALL preflight conflicts/containment, refuse unsafe active-work mutation, and leave usable registration and source files on failure. A completed migration SHALL be safe to repeat without creating copies.
