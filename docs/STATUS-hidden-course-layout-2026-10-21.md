@@ -1,0 +1,15 @@
+# Hidden course artifact layout - 2026-10-21
+
+Approved scope: `806e8cd2`, docs/design/2026-10-21-course-artifact-layout-alignment.md. New courses use `.lessonkit/pool/`; legacy courses remain usable until explicit migration. `workspace <name> migrate-layout` previews; `--apply` relocates only owned root pool/intermediate directories. No schema change, new dependency, course-content repair, history pruning, nested-copy cleanup or external-tool output configuration.
+
+Implementation: `99424bc6`; new-init regression expectations `a8721f7e`; balanced-parenthesis Markdown preservation repair `8215c0ae`. Registered pool paths, ingest roots/history/rollback, hidden guards, graph artifacts and default ingest-run results are coordinated. Explicit output destinations remain supported. Frozen pipeline sources/contracts are unchanged.
+
+Contracts: glossary, FILE_CONTRACT, architecture, user manual, action graph and maintained Agent/pool-pipeline instructions updated. DATA_MODEL has no affected field semantics. Existing persistent provenance is preserved and resolved at consumers instead of rewriting history. Relative Markdown edits are limited to actual affected link destinations, backed up and enumerated in the migration receipt.
+
+Verification so far: covering250 tests passed; final focused72 passed; corrected CLI-daemon41 passed; layout22 passed after the independent review's parenthesized-link finding. Compileall, strict all OpenSpec26/26, strict current specs19/19 and dmath/ch06 extraction guard passed. The first full run had1132 passes and6 stale fresh-init path assertion failures; those six were corrected without changing legacy cases. A fresh complete run is in progress. No generated output exists for the conditional problem-set guard.
+
+Isolated ADS acceptance: copied pool144 files/intermediate164 files and existing hidden261 files. Before the preservation baseline, only copied fixture provenance prefixes were normalized to the isolated root, keeping writes isolated. Migration then preserved all308 moved files and database bytes, schema and29 tables/2494 rows; no Markdown edits were needed. All108 historical batches are readable; data CLI read, hidden internal write, explicit external output, preview zero-write and repeat no-op passed. Real HTTP practice200 and hub86 KPs/534 problems/87 due passed on port3095. The isolated service and its sole console child were stopped; no live provider was invoked.
+
+Independent task review found one Important issue (balanced parentheses in Markdown links); the repair has been submitted for incremental review. Final whole-branch review, final full-suite gate, archive, main integration and real ADS migration/runtime verification remain pending.
+
+Migration reverses caught operational failures; it is not a filesystem/registry transaction across process crashes. Real rollout requires an idle service/provider audit, an external before-copy and before/after preservation evidence. Durable receipts are under `~/.lessonkit-workbench/deployments/20261021-hidden-course-layout/`.
