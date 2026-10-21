@@ -11,8 +11,44 @@ from workbench import registry
 
 
 OWNED_DIRECTORIES = ("pool", "intermediate")
-_LINK = re.compile(r'\]\((<[^>\r\n]+>|(?:\\.|[^\\\s()])+)(?=[ \t]*[\)"\'])')
 _REFERENCE = re.compile(r'^ {0,3}\[[^\]\r\n]+\]:[ \t]*(<[^>\r\n]+>|(?:\\.|[^\\\s])+)', re.MULTILINE)
+
+
+def _rewrite_inline_links(text, rewrite):
+    """Scan one non-code line segment, balancing bare destination parentheses."""
+    parts, previous = [], 0
+    for match in re.finditer(r"\]\([ \t]*", text):
+        if match.start() < previous:
+            continue
+        start = end = match.end()
+        depth = 0
+        if text[start:start + 1] == "<":
+            closing = text.find(">", start + 1)
+            if closing < 0:
+                continue
+            end = closing + 1
+        else:
+            while end < len(text):
+                char = text[end]
+                if char == "\\":
+                    end += 2
+                    continue
+                if char == "(":
+                    depth += 1
+                elif char == ")":
+                    if depth == 0:
+                        break
+                    depth -= 1
+                elif char.isspace():
+                    break
+                end += 1
+        following = text[end:].lstrip(" \t")
+        if depth or end == start or not following or following[0] not in ")\"'":
+            continue
+        parts.extend((text[previous:start], rewrite(text[start:end])))
+        previous = end
+    parts.append(text[previous:])
+    return "".join(parts)
 
 
 def _relocated(path, moves):
@@ -35,22 +71,21 @@ def _markdown_changes(moves):
             relocated = destination / path.relative_to(source)
             targets = []
 
-            def replace(match):
-                token = match.group(1)
+            def replace(token):
                 angle = token.startswith("<")
                 raw = token[1:-1] if angle else token
                 decoded = re.sub(r"\\([ !\"#$%&'()*+,\-./:;<=>?@\[\]^_`{|}~])", r"\1", raw)
                 if re.match(r"(?:[a-zA-Z][\w+.-]*:|//|#)", decoded):
-                    return match.group(0)
+                    return token
                 url = urlsplit(decoded)
                 if url.scheme or url.netloc or not url.path or Path(unquote(url.path)).is_absolute():
-                    return match.group(0)
+                    return token
                 old_target = (path.parent / unquote(url.path)).resolve()
                 if not old_target.exists():
-                    return match.group(0)
+                    return token
                 new_target = _relocated(old_target, moves)
                 if (relocated.parent / unquote(url.path)).resolve() == new_target:
-                    return match.group(0)
+                    return token
                 # Rebase the original spelling as well, retaining escapes/Unicode.
                 prefix = Path(os.path.relpath(new_target, relocated.parent)).as_posix()
                 old_parts = unquote(url.path).replace("\\", "/").split("/")
@@ -66,8 +101,7 @@ def _markdown_changes(moves):
                 if angle:
                     replacement = "<" + replacement + ">"
                 targets.append({"before": token, "after": replacement})
-                start, end = match.span(1)
-                return match.group(0)[:start - match.start()] + replacement + match.group(0)[end - match.start():]
+                return replacement
 
             lines = []
             fence = None
@@ -85,7 +119,10 @@ def _markdown_changes(moves):
                 else:
                     # Code spans are examples, not navigable Markdown links.
                     parts = re.split(r"(`+[^`]*`+)", line)
-                    lines.append("".join(part if i % 2 else _REFERENCE.sub(replace, _LINK.sub(replace, part))
+                    def references(match):
+                        return match.group(0)[:match.start(1) - match.start()] + replace(match.group(1))
+
+                    lines.append("".join(part if i % 2 else _REFERENCE.sub(references, _rewrite_inline_links(part, replace))
                                          for i, part in enumerate(parts)))
             after = "".join(lines).encode("utf-8")
             if after != before:

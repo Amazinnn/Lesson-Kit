@@ -366,3 +366,31 @@ def test_hidden_provider_result_defaults_inside_hidden_area_and_honors_explicit_
         assert code == 0, output
         assert exported.is_file()
     assert list(source.parent.iterdir()) == [source]
+
+
+def test_migration_rebases_balanced_parenthesis_link_destinations(course):
+    for name in ("lecture(1).md", "lecture(unit(1)).md"):
+        (course / "sources" / name).write_bytes(b"source")
+    original = (
+        "[ordinary](../sources/lecture(1).md#section)\r\n"
+        "[nested](../sources/lecture(unit(1)).md \"read first\")\r\n"
+        "[escaped](../sources/lecture\\(1\\).md)\r\n"
+        "[angle](<../sources/lecture(unit(1)).md>)\r\n"
+        "`[code](../sources/lecture(1).md)`\r\n"
+        "```md\r\n[nested](../sources/lecture(unit(1)).md)\r\n```\r\n"
+        "prose ../sources/lecture(1).md\r\n"
+    ).encode("utf-8")
+    history = course / "intermediate" / "parentheses.md"
+    history.write_bytes(original)
+    code, preview = run("workspace", "ads", "migrate-layout")
+    assert code == 0 and history.read_bytes() == original
+    targets = json.loads(preview)["link_changes"][0]["targets"]
+    assert len(targets) == 4
+    code, output = run("workspace", "ads", "migrate-layout", "--apply")
+    assert code == 0, output
+    expected = original.replace(b"](../sources/", b"](../../sources/")
+    expected = expected.replace(b"](<../sources/", b"](<../../sources/")
+    expected = expected.replace(b"`[code](../../sources/", b"`[code](../sources/")
+    expected = expected.replace(b"```md\r\n[nested](../../sources/", b"```md\r\n[nested](../sources/")
+    assert (course / ".lessonkit" / "intermediate" / "parentheses.md").read_bytes() == expected
+    assert Path(json.loads(output)["link_changes"][0]["backup"]).read_bytes() == original
