@@ -7,8 +7,8 @@
 
 ## Acceptance
 
-- [ ] 5. Complete independent review and focused checks.
-- [ ] 6. Pass full pytest, compileall, strict all/spec OpenSpec and extraction guard.
+- [x] 5. Complete independent review and focused checks.
+- [x] 6. Pass full pytest, compileall, strict all/spec OpenSpec and extraction guard.
 - [x] 7. Verify isolated ADS migration with file/database preservation and functional read/write evidence.
 - [ ] 8. Archive this change only, integrate, explicitly migrate ADS while idle and restart/verify service.
 - [ ] 9. Push, confirm final main CI and record durable handoff.

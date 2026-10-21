@@ -34,9 +34,9 @@ Owned files: workbench/** and tests/**. Controller owns docs/specs/skills.
 Owned files: glossary, FILE_CONTRACT, architecture, manual, action graph, runtime Agent contract coordination and pool-pipeline documentation; change specs/tasks; delivery status.
 
 - [x] Record requirements before implementation; reconcile affected authorities only. No DATA_MODEL change unless implementation must change persistent field semantics.
-- [ ] Review complete implementation and contracts independently; repair any correctness findings.
-- [ ] Run full pytest tests, compileall, strict all/spec OpenSpec, dmath/ch06 extraction guard; conditional problem-set guard only with generated output.
+- [x] Review complete implementation and contracts independently; repair any correctness findings.
+- [x] Run full pytest tests, compileall, strict all/spec OpenSpec, dmath/ch06 extraction guard; conditional problem-set guard only with generated output.
 - [x] Copy ADS internal directories to an isolated workspace/registry; preview/apply and verify byte-level preservation, database schema/rows and references; prove no source/nested/export changes.
-- [ ] Archive only this change once accepted; preserve existing current-spec scenarios and validate again.
+- [x] Archive only this change once accepted; preserve existing current-spec scenarios and validate again.
 - [ ] Audit service/turns, integrate accepted branch preserving user work, stop managed service, perform explicit ADS migration with before/after evidence, restart and verify actual HTTP plus db registration/path.
 - [ ] Push and verify final main CI; record durable runtime/migration receipt and leave feature worktree clean.
