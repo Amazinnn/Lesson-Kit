@@ -244,7 +244,7 @@ class BootstrapInitTests(unittest.TestCase):
 
         self.assertEqual(code, 0)
         self.assertIn("registered workspace", out)
-        self.assertTrue((self.empty / "pool" / "geo.db").is_file())
+        self.assertTrue((self.empty / ".lessonkit" / "pool" / "geo.db").is_file())
         for name in ("figures", "explain", "jobs"):
             self.assertTrue((self.empty / ".lessonkit" / name).is_dir(), name)
         from workbench import registry
@@ -253,7 +253,7 @@ class BootstrapInitTests(unittest.TestCase):
         self.assertEqual(workspace["active_course"], "geo")
         self.assertEqual(workspace["active_chapter"], "ch01")
 
-        conn = sqlite3.connect(self.empty / "pool" / "geo.db")
+        conn = sqlite3.connect(self.empty / ".lessonkit" / "pool" / "geo.db")
         tables = {row[0] for row in conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table'")}
         conn.close()
@@ -274,7 +274,7 @@ class BootstrapInitTests(unittest.TestCase):
         code, out = self.run_cli("init", "--course", "geo")
 
         self.assertEqual(code, 0)
-        self.assertTrue((self.empty / "pool" / "geo.db").is_file())
+        self.assertTrue((self.empty / ".lessonkit" / "pool" / "geo.db").is_file())
         from workbench import registry
 
         workspace = registry.get_workspace("fresh")
@@ -288,7 +288,7 @@ class BootstrapInitTests(unittest.TestCase):
         code, out = self.run_cli("init", str(folder))
 
         self.assertEqual(code, 0)
-        self.assertTrue((folder / "pool" / "linear-algebra-spring.db").is_file())
+        self.assertTrue((folder / ".lessonkit" / "pool" / "linear-algebra-spring.db").is_file())
 
     def test_init_in_the_current_directory_derives_from_its_resolved_name(self):
         folder = Path(self.fixture.tmp.name) / "Graph Theory"
@@ -298,7 +298,7 @@ class BootstrapInitTests(unittest.TestCase):
         code, out = self.run_cli("init")
 
         self.assertEqual(code, 0)
-        self.assertTrue((folder / "pool" / "graph-theory.db").is_file())
+        self.assertTrue((folder / ".lessonkit" / "pool" / "graph-theory.db").is_file())
 
     def test_init_on_an_existing_pool_takes_the_course_from_the_database(self):
         folder = Path(self.fixture.tmp.name) / "已建好的库"
@@ -320,7 +320,7 @@ class BootstrapInitTests(unittest.TestCase):
         code, out = self.run_cli("init", str(folder))
 
         self.assertEqual(code, 0)
-        self.assertTrue((folder / "pool" / "c01.db").is_file())
+        self.assertTrue((folder / ".lessonkit" / "pool" / "c01.db").is_file())
         from workbench import registry
 
         self.assertEqual(registry.get_workspace("大学物理")["active_course"], "c01")
@@ -334,8 +334,8 @@ class BootstrapInitTests(unittest.TestCase):
             code, out = self.run_cli("init", str(folder))
             self.assertEqual(code, 0)
 
-        self.assertTrue((first / "pool" / "c01.db").is_file())
-        self.assertTrue((second / "pool" / "c02.db").is_file())
+        self.assertTrue((first / ".lessonkit" / "pool" / "c01.db").is_file())
+        self.assertTrue((second / ".lessonkit" / "pool" / "c02.db").is_file())
 
     def test_an_explicit_course_must_be_a_lowercase_ascii_slug(self):
         for bad in ("大学物理", "Graph Theory", "Geo"):
