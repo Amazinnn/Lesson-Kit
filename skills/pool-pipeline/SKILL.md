@@ -9,7 +9,7 @@
 1. **契约按职责分工**：OpenSpec 管可观察行为，DATA_MODEL 管持久字段，FILE_CONTRACT 管工件，GLOSSARY 管名词。实际 CLI/schema 是实现证据，不能覆盖契约；冲突必须显式登记。本 skill 不覆盖产品契约。
 2. problem schema、ingest/content CRUD、difficulty、relations、practice experience 或相关 CLI 改动时，同一 PR 必须同步本目录。
 3. `KnowledgePoint ↔ Problem` 只有正式的 `problems.kp_ids` 直接关系；不要恢复 `topic_label` 或任何题目分组摘要层。
-4. 课程特有策略放在课程工作区自己的 `policy-override.md`；`references/examples/` 只作格式示例，不得跨课程自动套用。
+4. 新建课程特有策略放在课程 `.lessonkit/policy-override.md`；已有根目录 `policy-override.md` 可继续读取，本轮不自动迁移。`references/examples/` 只作格式示例，不得跨课程自动套用。
 5. 批量修池不自动写“做题经验”；经验是用户拥有的学习总结，只在用户明确要求时通过 `lesson-kit experience` 写入。
 6. 本 skill 不修改 Lesson Kit 产品代码。发现产品契约/渲染器/门禁本身有 bug，记录证据并转到 Lesson Kit 开发任务。
 
@@ -182,7 +182,7 @@ lesson-kit experience <ws> delete <kp-id> --expected-revision <N>
 
 ## 提交前流程
 
-1. 读课程自己的 `policy-override.md`（没有就用默认策略）。
+1. 读课程自己的 `.lessonkit/policy-override.md`（兼容已有根目录 `policy-override.md`，都没有就用默认策略）。
 2. 全局审计：源清单、重复率、缺陷占比、题型/答案证据可用率。
 3. 若材料边界不稳，先生成并 `scripts/sugar.py check` 第一版。
 4. 单题判定；损伤/视觉/跨源冲突才升级。

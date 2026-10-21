@@ -7,7 +7,7 @@ packages govern current lesson-kit work.
 |---|---|---|
 | "extract this chapter", "build the KP pool" | `pipeline/commands/extract-chapter.md` | `pool-insert-manifest.json` |
 | "extract the exercises/problems", "build the problem pool" | `pipeline/commands/extract-problems.md` | `full-problem-bank.md` |
-| "批量整理/修复/去重题库", "把多份试卷/题库并入已有池" | `skills/pool-pipeline/SKILL.md` | source inventory；只有课程特有策略才新增 workspace-local `policy-override.md` |
+| "批量整理/修复/去重题库", "把多份试卷/题库并入已有池" | `skills/pool-pipeline/SKILL.md` | source inventory；只有课程特有策略才新增 `.lessonkit/policy-override.md`（兼容读取已有根目录版本） |
 | "import these exercises", "add knowledge points or figures", "generate checks", "add flash cards/micro quizzes" | Agent content action (`content-bundle`; legacy `flash-card-patch` / `micro-quiz-patch` still accepted) | complete governed manifest, staged under `.lessonkit/jobs/conv-NNN/` |
 | "print a paper / practice set for chapter X", "give me my wrong problems" | `lesson-kit pull <workspace> … --plan/--print` | a composed practice manifest (or the two rendered Markdown files) |
 | "save this paper", "make this paper available in Workbench" | `lesson-kit papers <workspace> save --input <manifest>` | successful JSON receipt with saved-paper id, title, count, and page URL |
