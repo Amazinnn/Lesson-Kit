@@ -387,7 +387,22 @@ XP 与倍率、COMBO 连击、心/能量限流、连胜 streak + 冻结卡、每
 现状是 52px 一条挤着 logo、工作区名、章透镜、设置图标。
 
 ### 9.4 章节透镜 → **自绘下拉面板**
-保留下拉交互但完全自绘：圆角、弹出面板带阴影与分隔、每项带章节名与知识点计数。
+保留下拉交互但完全自绘：圆角、弹出面板带阴影与分隔、每项带章节名。
+
+> ⚠️ **2026-10-22 契约冲突修正**：本条原写作「每项带章节名与**知识点计数**」，
+> 该细节由我在选项文案里顺带加入，并非用户单独决策过。
+> 既有契约 `openspec/specs/workbench-ui/spec.md` 的
+> `### Requirement: Chapter switch in the top bar` 明确写着
+> 「SHALL show **no** per-chapter statistics, counts, or selection reasons」。
+> 按 AGENTS.md「契约权威与冲突处理」——live OpenSpec 是当前可观察行为的权威，
+> 本文件只是决策记录、不是权威 —— 故**删除知识点计数**，保留自绘下拉的形态决策。
+> 若确实要显示每章计数，必须作为独立决策提出并 MODIFIED 那条既有 Requirement，
+> 不能由选项文案顺带带出。
+
+（2026-10-22 补记：另有一条同类小冲突在 G02 复核时被拦下——
+`Chapter switch in the top bar` 的「不得显示每章统计/计数/选择理由」与
+「章节下拉每项带知识点计数」互斥。G02 因此在 `Three-column shell with navigation`
+里**只写顶栏三段式、完全不碰章节面板内容**，把裁决留给契约漂移登记。）
 （章节一多就不能用分段控件或顶栏标签页。）
 
 ---
