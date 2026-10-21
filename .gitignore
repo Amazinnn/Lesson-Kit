@@ -46,3 +46,7 @@ pool/backups/
 # ingest recipe 运行时输出
 .lessonkit/out-*/
 .lessonkit/pr_payload.json
+
+# 前端审计与预览工作区（临时工件，非源码）
+tmp/
+.playwright-mcp/
