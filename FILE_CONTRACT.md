@@ -478,6 +478,8 @@ Runtime assets follow the hidden dot-directory convention and live under
 
 ```text
 .lessonkit/
+├── pool/{course}.db                             # new/explicitly migrated workspace
+├── intermediate/                               # internal build/audit artifacts
 ├── state.yaml                                   # runtime state (tracked)
 ├── figures/{course}/{chapter}/{sha256}.{ext}      # tracked
 ├── practice-sets/ps-NNN.json                    # reusable saved papers
