@@ -705,15 +705,8 @@ def cmd_difficulty(args):
 
 def cmd_guard(args):
     workspace = _workspace(_resolve_name(args))
-    if workspace_layout.hidden_database(workspace["db"]):
-        from workbench import guards
-        return guards.run_hidden(workspace, args.gate, args.apply)
-    cmd = [sys.executable, "lessonkit.py", "guard", args.gate,
-           "--course", workspace.get("active_course", ""),
-           "--chapter", workspace.get("active_chapter", "")]
-    if args.apply:
-        cmd.append("--apply")
-    return subprocess.call(cmd, cwd=workspace["path"])
+    from workbench import guards
+    return guards.run(workspace, args.gate, args.apply)
 
 
 def cmd_ingest(args):

@@ -338,11 +338,13 @@ def test_migrated_pool_still_honors_explicit_practice_exports(tmp_path, monkeypa
     assert not (root / "pool").exists()
 
 
-def test_hidden_provider_result_defaults_inside_hidden_area_and_honors_explicit_output(course):
+@pytest.mark.parametrize("migrate", [False, True])
+def test_hidden_provider_result_defaults_inside_hidden_area_and_honors_explicit_output(course, migrate):
     from workbench import ingest
     from workbench.ingest.artifacts import write_artifact
 
-    assert run("workspace", "ads", "migrate-layout", "--apply")[0] == 0
+    if migrate:
+        assert run("workspace", "ads", "migrate-layout", "--apply")[0] == 0
     source = course.parent / "incoming" / "task.json"
     source.parent.mkdir()
     source.write_text('{"kind":"ingest-task"}', encoding="utf-8")
@@ -394,3 +396,83 @@ def test_migration_rebases_balanced_parenthesis_link_destinations(course):
     expected = expected.replace(b"```md\r\n[nested](../../sources/", b"```md\r\n[nested](../sources/")
     assert (course / ".lessonkit" / "intermediate" / "parentheses.md").read_bytes() == expected
     assert Path(json.loads(output)["link_changes"][0]["backup"]).read_bytes() == original
+
+
+@pytest.mark.parametrize("area", ["", ".lessonkit"])
+def test_unmigrated_course_guard_reads_existing_or_new_hidden_work_without_local_script(course, area):
+    import lessonkit
+
+    registry.update_active("ads", "ads", "ch01")
+    required, _ = lessonkit.render_paths("extract-problems", "ads", "ch01")
+    for relative in required:
+        path = course / area / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("PASS", encoding="utf-8")
+    assert not (course / "lessonkit.py").exists()
+    code, output = run("guard", "ads", "extract-problems", "--apply")
+    assert code == 0, output
+    assert registry.get_workspace("ads")["db"] == "pool/ads.db"
+    assert (course / ".lessonkit/state.yaml").is_file()
+
+
+def test_new_hidden_guard_work_cannot_pass_against_stale_legacy_artifacts(course):
+    import lessonkit
+
+    registry.update_active("ads", "ads", "ch01")
+    required, _ = lessonkit.render_paths("extract-problems", "ads", "ch01")
+    for area in ("", ".lessonkit"):
+        for relative in required:
+            path = course / area / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("PASS", encoding="utf-8")
+    (course / ".lessonkit" / required[0]).unlink()
+    code, output = run("guard", "ads", "extract-problems", "--apply")
+    assert code == 2 and "Result: FAIL" in output, output
+    assert ".lessonkit/intermediate/" in output
+
+
+def test_guard_records_hidden_outputs_when_both_hidden_and_legacy_exports_exist(course):
+    import lessonkit
+
+    registry.update_active("ads", "ads", "ch01")
+    required, outputs = lessonkit.render_paths("problem-set", "ads", "ch01")
+    for area in ("", ".lessonkit"):
+        for relative in required + outputs:
+            path = course / area / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("PASS", encoding="utf-8")
+    code, output = run("guard", "ads", "problem-set", "--apply")
+    assert code == 0, output
+    state = lessonkit.read_state(course)
+    assert ".lessonkit/" + outputs[0] in state["required_artifacts"]
+    assert outputs[0] not in state["required_artifacts"]
+
+
+@pytest.mark.parametrize("areas", ["legacy", "hidden", "equal", "conflict"])
+def test_legacy_image_planning_reads_new_hidden_work_without_silently_switching_content(tmp_path, areas):
+    from tests.workbench.fixtures import build_fixture_db, open_db
+    from workbench import ingest
+
+    root = tmp_path / "course"
+    database = root / "pool/dmath.db"
+    database.parent.mkdir(parents=True)
+    with open_db(database) as conn:
+        build_fixture_db(conn)
+        conn.execute("UPDATE problems SET problem_text=? WHERE problem_id=?",
+                     ("P1 ![image](images/legacy.png)", "dmath-ch06-prob-001"))
+        conn.commit()
+    for area in ("", ".lessonkit"):
+        if (area == "" and areas == "hidden") or (area and areas == "legacy"):
+            continue
+        image = root / area / "intermediate/ch06/images/legacy.png"
+        image.parent.mkdir(parents=True)
+        image.write_bytes(b"different" if area and areas == "conflict" else b"original")
+    before = database.read_bytes()
+    result = ingest.build_legacy_figure_manifest(database, root)
+    assert database.read_bytes() == before
+    if areas == "conflict":
+        assert not result["ok"] and any("conflict" in e for e in result["errors"]), result
+    else:
+        assert result["ok"], result
+        image = result["manifests"][0]["items"][0]["figure_files"][0]["source_path"]
+        assert Path(image).read_bytes() == b"original"

@@ -9,7 +9,7 @@ import sqlite3
 import subprocess
 from pathlib import Path
 
-from workbench.workspace_layout import internal_path, resolve_history_path, workspace_root
+from workbench.workspace_layout import hidden_database, resolve_history_path, workspace_root
 from workbench.bridge import conversation_providers
 from workbench.data import content as content_data
 from workbench.data import paper_progress
@@ -1978,6 +1978,9 @@ def build_legacy_figure_manifest(db_path, workspace_path):
     finally:
         conn.close()
     workspace = Path(workspace_path)
+    image_areas = [workspace / ".lessonkit" / "intermediate"]
+    if not hidden_database(db_path):
+        image_areas.append(workspace / "intermediate")
     errors = []
     grouped = {}
     for problem_id, text in rows:
@@ -1988,12 +1991,17 @@ def build_legacy_figure_manifest(db_path, workspace_path):
         course, chapter = owner.group(1), owner.group(2)
         files, new_text = [], text
         for legacy_name in sorted(set(_LEGACY_IMAGE_REF.findall(text))):
-            hits = sorted(internal_path(workspace, db_path, "intermediate").glob(f"**/images/{legacy_name}"))
+            matches = [sorted(area.glob(f"**/images/{legacy_name}")) for area in image_areas]
+            hits = [path for area in matches for path in area]
             if not hits:
                 errors.append(f"{problem_id}: source image not found: {legacy_name}")
                 continue
             source = hits[0]
-            true_name = _figure_name(source.read_bytes(), source)
+            image_bytes = source.read_bytes()
+            if len(matches) > 1 and all(matches) and any(path.read_bytes() != image_bytes for path in hits[1:]):
+                errors.append(f"{problem_id}: conflicting source images across intermediate areas: {legacy_name}")
+                continue
+            true_name = _figure_name(image_bytes, source)
             files.append({"source_path": str(source.resolve())})
             new_text = new_text.replace(
                 f"](images/{legacy_name})",

@@ -142,14 +142,8 @@ def hidden_database(database):
     return path.parent.name == "pool" and path.parent.parent.name == ".lessonkit"
 
 
-def internal_path(root, database, name):
-    return Path(root) / (".lessonkit" if hidden_database(database) else "") / name
-
-
 def ingest_result_path(workspace, task):
     task = Path(task)
-    if not hidden_database(workspace["db"]):
-        return task / "result.json"
     root = Path(workspace["path"]) / ".lessonkit"
     source_dir = task if task.is_dir() else task.parent
     if source_dir.resolve().is_relative_to(root.resolve()):
