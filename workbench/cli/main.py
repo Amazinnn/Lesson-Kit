@@ -10,6 +10,7 @@ from datetime import date
 from pathlib import Path
 
 from workbench import registry
+from workbench import workspace_layout
 from workbench import ingest
 from workbench.bridge import conversation_providers
 from workbench.data import pool as pool_mod
@@ -99,9 +100,7 @@ def _optional_slug(value, kind):
 def _next_course_code(folder):
     """Sequential short code (c01, c02, …) for a folder name that yields no slug."""
     used = {w.get("active_course", "") for w in registry.list_workspaces()}
-    pool_dir = folder / "pool"
-    if pool_dir.is_dir():
-        used |= {db.stem for db in pool_dir.glob("*.db")}
+    used |= {Path(db).stem for db in registry.pool_candidates(folder)}
     numbers = [
         int(match.group(1)) for name in used
         if (match := re.fullmatch(r"c(\d+)", name or ""))
@@ -144,13 +143,23 @@ def _bootstrap_workspace(folder, course):
     script = repo_root / "pipeline" / "scripts" / "create-tables.py"
     try:
         subprocess.run(
-            [sys.executable, str(script), "--db", f"pool/{course}.db"],
+            [sys.executable, str(script), "--db", f".lessonkit/pool/{course}.db"],
             cwd=str(folder), check=True,
         )
     except subprocess.CalledProcessError as exc:
         raise SystemExit(f"creating the pool database failed (exit {exc.returncode})")
     for name in ("figures", "explain", "jobs"):
         (folder / ".lessonkit" / name).mkdir(parents=True, exist_ok=True)
+
+
+def cmd_workspace(args):
+    try:
+        result = workspace_layout.migrate(_workspace(args.name), apply=args.apply)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    except (ValueError, OSError, json.JSONDecodeError) as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
 
 
 def cmd_use(args):
@@ -696,6 +705,9 @@ def cmd_difficulty(args):
 
 def cmd_guard(args):
     workspace = _workspace(_resolve_name(args))
+    if workspace_layout.hidden_database(workspace["db"]):
+        from workbench import guards
+        return guards.run_hidden(workspace, args.gate, args.apply)
     cmd = [sys.executable, "lessonkit.py", "guard", args.gate,
            "--course", workspace.get("active_course", ""),
            "--chapter", workspace.get("active_chapter", "")]
@@ -716,7 +728,7 @@ def cmd_ingest(args):
             result = ingest.prepare(args.operation, args.input, output)
         elif args.action == "run":
             task = Path(args.target)
-            output = Path(args.output) if args.output else task / "result.json"
+            output = Path(args.output) if args.output else workspace_layout.ingest_result_path(workspace, task)
             result = ingest.run(
                 task / "task.json" if task.is_dir() else task,
                 output, args.provider, workspace["path"],
@@ -877,6 +889,13 @@ def build_parser(prog="lesson-kit"):
                         "next free short code)")
     p.add_argument("--chapter")
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser("workspace", help="explicit workspace filesystem maintenance")
+    p.add_argument("name")
+    actions = p.add_subparsers(dest="action", required=True)
+    action = actions.add_parser("migrate-layout", help="preview relocation into .lessonkit; --apply moves")
+    action.add_argument("--apply", action="store_true")
+    action.set_defaults(func=cmd_workspace)
 
     p = sub.add_parser("use", help="switch the active course and chapter of a workspace")
     p.add_argument("course")

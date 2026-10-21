@@ -142,6 +142,7 @@ ROUTES = {
 
 # command -> (audience, note)
 COMMANDS = {
+    "workspace": (HUMAN, "previews workspace layout relocation; --apply explicitly migrates"),
     "init": (HUMAN, ""),
     "use": (HUMAN, ""),
     "ls": (HUMAN, "prints text by default and JSON with --json"),

@@ -310,10 +310,8 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         )[:20]
 
     def _graph_artifact(self, workspace):
-        course = workspace.get("active_course", "")
-        chapter = workspace.get("active_chapter", "")
-        return (Path(workspace["path"]) / "output" / course / chapter
-                / f"{chapter}-graph.html")
+        from workbench.workspace_layout import graph_artifact_path
+        return graph_artifact_path(workspace)
 
     def _send_figure(self, path):
         parts = [unquote(s) for s in path.split("/")]

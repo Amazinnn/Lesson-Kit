@@ -199,17 +199,15 @@ def add_model(name, provider, model, args=None):
 def looks_like_workspace(folder):
     if (folder / "lessonkit.py").is_file():
         return True
-    pool_dir = folder / "pool"
-    return pool_dir.is_dir() and any(pool_dir.glob("*.db"))
+    return bool(pool_candidates(folder))
 
 
 def pool_candidates(folder):
     """Candidate pools of a folder, in name order; ingest backups are never candidates."""
-    pool_dir = folder / "pool"
-    if not pool_dir.is_dir():
-        return []
     return [
-        f"pool/{db.name}" for db in sorted(pool_dir.glob("*.db"))
+        db.relative_to(folder).as_posix()
+        for name in ("pool", ".lessonkit/pool")
+        for db in sorted((folder / name).glob("*.db"))
         if not db.name.endswith(".ingest-backup")
     ]
 
@@ -222,14 +220,15 @@ def find_pool(folder, course=""):
     alphabetically first would register the wrong database.
     """
     candidates = pool_candidates(folder)
-    if course and f"pool/{course}.db" in candidates:
-        return f"pool/{course}.db"
+    matching = [path for path in candidates if Path(path).stem == course]
+    if course and len(matching) == 1:
+        return matching[0]
     if len(candidates) == 1:
         return candidates[0]
     if not candidates:
         return ""
     raise ValueError(
         f"{folder} holds several pool databases "
-        f"({', '.join(Path(c).name for c in candidates)})\n"
+        f"({', '.join(candidates)})\n"
         f"Pick one: lesson-kit init {folder} --course <name>"
     )

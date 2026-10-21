@@ -9,6 +9,7 @@ import sqlite3
 import subprocess
 from pathlib import Path
 
+from workbench.workspace_layout import internal_path, resolve_history_path, workspace_root
 from workbench.bridge import conversation_providers
 from workbench.data import content as content_data
 from workbench.data import paper_progress
@@ -1351,12 +1352,17 @@ def _apply_content_bundle(database, manifest, backup, course=None):
     return result
 
 
+def _history_path(conn, reference):
+    database = conn.execute("PRAGMA database_list").fetchone()[2]
+    return resolve_history_path(database, reference)
+
+
 def _rollback_content_bundle(conn, database, batch_id):
     """Delete this bundle's rows, then its now-unreferenced figure files."""
     row = conn.execute(
         "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
     ).fetchone()
-    snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
+    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
     applied = snapshot.get("_applied") or {}
     blockers = []
     for kp_id in applied.get("knowledge_points", []):
@@ -1403,7 +1409,7 @@ def _rollback_content_bundle(conn, database, batch_id):
                 )
         conn.execute("DELETE FROM knowledge_points WHERE kp_id=?", (kp_id,))
         counts["knowledge_points"] += 1
-    root = database.resolve().parent.parent
+    root = workspace_root(database)
     for logical in applied.get("figures", []):
         if _figure_is_referenced(conn, logical):
             counts["figures_kept"] += 1
@@ -1473,7 +1479,7 @@ def _save_post_state(conn, database, path, snapshot, row_specs, *,
             "batch_scoped": spec.get("batch_scoped", True),
             "rows": rows,
         }
-    root = database.resolve().parent.parent / ".lessonkit" / "figures"
+    root = workspace_root(database) / ".lessonkit" / "figures"
     figure_states = []
     for logical in sorted(set(figures)):
         target = (root / logical).resolve()
@@ -1575,7 +1581,7 @@ def _rollback_conflicts(conn, database, kind, batch_id, snapshot):
             if field in actual and actual[field] != expected:
                 conflicts.append(f"problems: {object_id}.{field} changed after apply")
 
-    root = (database.resolve().parent.parent / ".lessonkit" / "figures").resolve()
+    root = (workspace_root(database) / ".lessonkit" / "figures").resolve()
     for figure in post_state.get("figures", []):
         logical = figure.get("logical")
         path = (root / logical).resolve()
@@ -1820,7 +1826,7 @@ def _rollback_problem_patch(conn, batch_id):
     row = conn.execute(
         "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
     ).fetchone()
-    snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
+    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
     restored = 0
     for entry in snapshot.get("previous", []):
         fields = entry.get("fields") or {}
@@ -1842,7 +1848,7 @@ def _rollback_gate_report(conn, batch_id):
     row = conn.execute(
         "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
     ).fetchone()
-    snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
+    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
     restored = 0
     for entry in snapshot.get("previous", []):
         fields = entry.get("fields") or {}
@@ -1861,7 +1867,7 @@ def _rollback_gate_report(conn, batch_id):
 
 def _figures_root(database, course, chapter):
     """The figures directory of one course/chapter, which must stay in the workspace."""
-    workspace = database.resolve().parent.parent
+    workspace = workspace_root(database)
     figures = (workspace / ".lessonkit" / "figures").resolve()
     root = (figures / course / chapter).resolve()
     if not root.is_relative_to(figures):
@@ -1982,7 +1988,7 @@ def build_legacy_figure_manifest(db_path, workspace_path):
         course, chapter = owner.group(1), owner.group(2)
         files, new_text = [], text
         for legacy_name in sorted(set(_LEGACY_IMAGE_REF.findall(text))):
-            hits = sorted(workspace.glob(f"intermediate/**/images/{legacy_name}"))
+            hits = sorted(internal_path(workspace, db_path, "intermediate").glob(f"**/images/{legacy_name}"))
             if not hits:
                 errors.append(f"{problem_id}: source image not found: {legacy_name}")
                 continue
@@ -2037,7 +2043,7 @@ def list_batches(db_path):
             "counts": json.loads(counts_json),
             "applied_at": applied_at,
             "rolled_back_at": rolled_back_at,
-            "backup_path": backup_path,
+            "backup_path": str(resolve_history_path(db_path, backup_path)),
         }
         for batch_id, kind, counts_json, applied_at, rolled_back_at, backup_path in rows
     ]
@@ -2070,7 +2076,7 @@ def rollback_batch(db_path, batch_id, backup_path=None):
         manifest_path = conn.execute(
             "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
         ).fetchone()[0]
-        snapshot = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+        snapshot = json.loads(resolve_history_path(database, manifest_path).read_text(encoding="utf-8"))
         conflicts = _rollback_conflicts(conn, database, batch[0], batch_id, snapshot)
         if conflicts:
             raise ValueError(
@@ -2121,7 +2127,7 @@ def _rollback_figure_patch(conn, batch_id):
     row = conn.execute(
         "SELECT manifest_path FROM ingest_batches WHERE batch_id=?", (batch_id,),
     ).fetchone()
-    snapshot = json.loads(Path(row[0]).read_text(encoding="utf-8"))
+    snapshot = json.loads(_history_path(conn, row[0]).read_text(encoding="utf-8"))
     restored = 0
     for previous in snapshot.get("previous", []):
         paper_progress.update_question(conn,
@@ -2189,7 +2195,7 @@ def _rollback_blockers(conn, batch_id):
                 if any(item.get('problem_id', item.get('item_id')) in ids for item in items):
                     blockers.append('paper_state: current question reference')
         database = Path(conn.execute('PRAGMA database_list').fetchone()[2])
-        for path in (database.parent.parent / '.lessonkit' / 'practice-sets').glob('ps-*.json'):
+        for path in (workspace_root(database) / '.lessonkit' / 'practice-sets').glob('ps-*.json'):
             record = json.loads(path.read_text(encoding='utf-8'))
             if any(item.get('problem_id') in ids for item in record.get('plan', {}).get('items', [])):
                 blockers.append('saved Paper: ' + path.stem)

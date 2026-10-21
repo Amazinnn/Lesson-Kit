@@ -1059,13 +1059,13 @@ def graph_artifact(pool, workspace, params, body):
     """Serve the rendered graph HTML, or 404 with a generation hint."""
     course = workspace.get("active_course", "")
     chapter = workspace.get("active_chapter", "")
-    path = (Path(workspace["path"]) / "output" / course / chapter
-            / f"{chapter}-graph.html")
+    from workbench.workspace_layout import graph_artifact_path
+    path = graph_artifact_path(workspace)
     if not path.is_file():
         raise ApiError(
             404,
             "graph artifact missing — run: python pool/scripts/render-graph-html.py "
             f"--db {workspace['db']} --course {course} --chapter {chapter} "
-            f"--course-name \"...\" --out output/{course}/{chapter}",
+            f"--course-name \"...\" --out .lessonkit/output/{course}/{chapter}",
         )
     return {"html": path.read_text(encoding="utf-8")}

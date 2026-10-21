@@ -18,6 +18,7 @@ _CONTRACTS = {
 - Read Lesson Kit data proactively when it is relevant to the learner's question. Reading needs no confirmation.
 - Mutate Lesson Kit data only when the learner explicitly asks to change content or submit a learning result.
 - Use `lesson-kit <command> --help` when argument order or flags are uncertain; do not guess.
+- Keep internal manifests, scratch files and default generated artifacts in the workspace's `.lessonkit/intermediate/`. Write outside `.lessonkit/` only when the learner explicitly requests an export destination; honor that destination. Read course source materials in place.
 - Workspace-aware commands put the workspace name immediately after the command, for example:
   `lesson-kit data <工作区名> create kp --input <清单文件>`.
 - For a historical learning claim, query `lesson-kit evidence <workspace> kp <kp-id> [--limit 1..20]` (default 8, maximum 20). It is read-only and reports recorded facts; do not infer learning labels from missing evidence.
