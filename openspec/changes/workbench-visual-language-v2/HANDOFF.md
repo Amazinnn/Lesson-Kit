@@ -4,6 +4,10 @@
 > 分支：`feat/workbench-visual-language-v2` —— **不要并入 main**
 > 仓库根：`D:\Projects\Academic Workflow\lesson-kit`
 > 本文件是这两个变更的**唯一入口文档**；所有细节都能从这里指到具体文件。
+>
+> ⚠️ **实现已开工**（2026-10-22）。接手时请**先读 `IMPLEMENTATION-LOG.md`** ——
+> 它记录波次进度、已落地的提交、已裁决的实现期新增裁决、以及当前在跑的 agent。
+> 本文件是**范围与操作提示**；`IMPLEMENTATION-LOG.md` 是**进度与连续性**。
 
 ---
 
