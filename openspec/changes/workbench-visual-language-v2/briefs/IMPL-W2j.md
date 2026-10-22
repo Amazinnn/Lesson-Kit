@@ -72,6 +72,19 @@
   ⚠️ 这条 N1 没能触达（无 AI 会话）⇒ **你要顺带核一遍 `agent-ui.css` 里还有没有别的硬编码浅色**
   （`grep -nE "#[0-9a-fA-F]{6}" agent-ui.css`），一并改成 token。
 
+## 八之三、A-103：会话列表**没有滚动容器**（120 条会话只有前 ~20 条够得着）
+
+**事实**（走查实测，播了 120 条会话 / 120 条记录）：
+`#ai-column { overflow: hidden }` + `#ai-session-list` **无 `overflow-y`**
+⇒ **整条链上没有任何滚动容器** ⇒ **静默裁切**（清单 `3.4-6` / `3.7-2` 判 **FAIL**）。
+
+**修法**（`walkthrough-harness.md` §7.5.5 给的口径）：
+- `#ai-session-list` 加 `overflow-y: auto`（并给一个 `max-height` / `flex: 1` 之类的高度约束）；
+- `#ai-session-list-view` 定高（§7.5.5 指定的容器）。
+⚠️ **别把 `#ai-column` 的 `overflow: hidden` 去掉**（那是为了让装饰层不吃点击）——
+**滚动容器加在列表自己身上**。
+⚠️ 加完要实测：120 条会话时**最后一条能滚到可视区**（`elementFromPoint` / `scrollTop` 到位）。
+
 ## 八之二、A-97：另外三处「红色用在非失败语义」要改掉
 
 | 位置 | 现在 | 改成 |
