@@ -910,6 +910,36 @@ button.rate {
 }
 button.rate:hover:not(:disabled) { background: var(--veil-hover); }
 
+/* ---- 图标按钮（spec §4.4 · IMPL-W2g 第 1 条）------------------------------
+   markup：`<button class="ghost sm icon-only" aria-label="…">☰</button>`
+   （`pages.py` 5 处 + `workbench.js` 2 处；CSS 此前**零命中** ⇒ 借了文字按钮的底子，
+   图标按钮和文字按钮长得一模一样，只有内容不同。）
+   · **正方形**：宽 == 高（32×32 —— 图标按钮的最小点击区；`min-width` 防 flex 压扁）
+   · **图标居中**：`button` 基类已是 inline-flex + 双向居中，这里只把内距清零
+   · 圆角 `--r-md`（12px）；**不描边**（D-2）
+   · 悬停：底色沿用 `button.ghost:hover`（`--veil-hover`），这里只把**图标色**
+     提到 `--ink-strong`（spec §4.4 的默认 / 悬停两档）
+   · 焦点环：走权威表的 `--focus-outer` / `--focus-offset`（透明底控件 = 单圈，
+     权威表 §8 规则 1）
+   · ⚠️ 图标目前是**字符**（☰ ◌ − ×）不是 SVG ⇒ **保留现状**（换图标是资产问题，
+     不在本波）；这里只定尺寸 / 形状 / 焦点 / 悬停态
+   · ⚠️ 本块必须排在 `button.sm` **之后**：两者特异度相同（0,1,1），靠后者胜 */
+button.icon-only {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border-radius: var(--r-md);
+  color: var(--ink-muted);
+  font-size: var(--fs-sub);
+  line-height: 1;
+}
+button.icon-only:hover:not(:disabled) { color: var(--ink-strong); }
+button.icon-only:focus-visible {
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+}
+
 /* inputs */
 textarea, input[type="text"], input[type="number"], input:not([type]) {
   width: 100%;
@@ -1185,6 +1215,134 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
 }
 .lk-dot--check::before { width: 4px; left: 3px; top: 50%; margin-top: -1px; transform: rotate(45deg); }
 .lk-dot--check::after { width: 6px; left: 5.5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
+
+/* ============================================================================
+   组件族 · 开关 / 分段控件（spec §4.10 / §4.11 · IMPL-W2g 第 1 条）
+   ---------------------------------------------------------------------------
+   这两个类名**markup 早就在用**（`pages.py` 的设置视图），而 CSS 里**零命中**
+   ⇒ 渲染出来是「一条裸文字 + 两个空 span」。本块给它们接上**基本可用的形态**
+   （**不是**「挑形态」—— 形态归样式板裁决）。
+
+   **开关 `.lk-switch`**（`pages.py` 9 处命中 / 3 个设置项）
+     markup：`<label class="lk-switch"><input type="checkbox">
+               <span class="lk-switch__track"><span class="lk-switch__thumb"></span></span></label>`
+     · 轨道 44×26 **胶囊**（`--r-pill`）：`--r-round` 50% 会把 26px 高的轨道压成椭圆角
+     · 滑块 20×20 **正圆**（`--r-round` —— 正方形元素上的真圆）
+     · **滑块位置只由 `transform: translateX()` 切换**（不许动 `left` / `width`）
+     · 开 = `--role-blue`（蓝 = 当前选中，R1）/ 关 = `--ink-disabled`
+       （中性墨，**不是第四色**）
+     · **状态色瞬切**（motion-spec §2：`background-color` 不进 transition）；
+       只有滑块的位移走 `transform` 过渡（唯一允许插值的属性）
+     · 原生 checkbox **视觉隐藏但仍可聚焦**（不能用 `display:none` / `visibility:hidden`）
+       ⇒ 焦点环画在**轨道**上（`input:focus-visible + .lk-switch__track`）
+     · 命中区：整行 ≥ 44px（`min-height: 44px`；轨道本体 26px 不单独算命中区）
+
+   **分段控件 `.lk-seg`**（`pages.py` 3 处命中 / 1 组 × 2 项）
+     markup：`<span class="lk-seg" role="radiogroup"><label class="lk-seg__item">
+               <input type="radio" checked>衬线</label>…</span>`
+     · 容器 = **沉底面**（`--surface-sunken`）+ 1px 内发丝线（`--rule-hair`）：
+       沉底块与卡面同用 `--r-md` 圆角、不带柔影；**不描边**（D-2）
+     · 选中项 = **色块**：角色蓝 `--role-blue` + `--ink-on-role` 文字
+       （蓝 = 当前选中，R1）。⚠️ **不用** `--role-blue-wash`：它与沉底面几乎同明度
+       （A-31：沉底面旁不得放蓝洗底块，否则会被误读成「被选中的行」）
+     · 层级只由「沉底槽 + 选中色块」分层（**不描边**）
+     · 原生 radio **视觉隐藏但仍可聚焦** ⇒ 焦点环画在**项**上
+     · 命中区：容器 44px（项 36 + 上下 padding 4）
+   ========================================================================= */
+.lk-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+.lk-switch input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;            /* 视觉隐藏；仍可聚焦、仍可点 */
+  cursor: pointer;
+}
+.lk-switch__track {
+  width: 44px;
+  height: 26px;
+  flex: none;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--ink-disabled);
+}
+.lk-switch__thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-round);
+  background: var(--surface-card);
+  box-shadow: var(--elev-1);
+  transform: translateX(0);
+  transition: transform var(--dur-base) var(--ease-rebound);
+}
+.lk-switch input:checked + .lk-switch__track { background: var(--role-blue); }
+.lk-switch input:checked + .lk-switch__track .lk-switch__thumb { transform: translateX(18px); }
+/* 焦点环落在**轨道**上（原生 checkbox 是隐藏的）：内圈纸色 + 外圈蓝（权威表 §8 规则 2） */
+.lk-switch input:focus-visible + .lk-switch__track {
+  outline: var(--focus-width) solid transparent;
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
+}
+.lk-seg {
+  position: relative;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+}
+.lk-seg__item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.lk-seg__item input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;            /* 视觉隐藏；仍可聚焦、仍可点（label 包着它） */
+  cursor: pointer;
+}
+.lk-seg__item:hover { color: var(--ink-strong); background: var(--veil-hover); }
+/* 选中项 = 角色蓝色块 + 深底文字（颜色 + 字重双通道，不靠颜色单通道） */
+.lk-seg__item:has(input:checked) {
+  background: var(--role-blue);
+  color: var(--ink-on-role);
+  font-weight: 600;
+}
+/* 焦点环落在**项**上：内圈 = 项所在面的色（沉底面），外圈 = 蓝 */
+.lk-seg__item:has(input:focus-visible) {
+  outline: var(--focus-width) solid transparent;
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 2px var(--surface-sunken), 0 0 0 4px var(--focus-outer);
+}
+/* 选中项（角色填充）⇒ 内圈换成纸色（权威表 §8 规则 2） */
+.lk-seg__item:has(input:checked):has(input:focus-visible) {
+  box-shadow: 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus-outer);
+}
 
 /* ---- 章节知识点计数条（tasks.md 18.5 · IMPL-W2e 第 9 条）------------------
    18.5 的 markup 已落地（`pages.py` 的 `_knowledge_count_bar`）：
