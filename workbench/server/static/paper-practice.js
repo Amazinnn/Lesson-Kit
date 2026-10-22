@@ -48,6 +48,7 @@
       pause: document.getElementById("paper-pause"),
       completion: document.getElementById("paper-completion"),
       completionStats: document.getElementById("paper-completion-stats"),
+      completionFigures: document.getElementById("paper-completion-figures"),
       review: document.getElementById("paper-review"),
       return: document.getElementById("paper-return"),
       again: document.getElementById("paper-again"),
@@ -1334,24 +1335,47 @@
     function ensureCelebrationAnchor() {
       var completion = ids.completion;
       if (!completion) return null;
-      if (celebrationAnchorEl) return celebrationAnchorEl;
-      var existing = completion.querySelectorAll
-        ? completion.querySelectorAll("[data-lk-celebrate-anchor]")
-        : [];
-      if (existing.length) {
-        celebrationAnchorEl = existing[0];
-        return celebrationAnchorEl;
+      if (!celebrationAnchorEl) {
+        var existing = completion.querySelectorAll
+          ? completion.querySelectorAll("[data-lk-celebrate-anchor]")
+          : [];
+        celebrationAnchorEl = existing.length ? existing[0] : null;
       }
+      if (!celebrationAnchorEl) {
+        var anchor = document.createElement("div");
+        anchor.setAttribute("data-lk-celebrate-anchor", "");
+        anchor.className = "lk-celebrate-anchor";
+        completion.appendChild(anchor);
+        celebrationAnchorEl = anchor;
+      }
+      /* Layout, not an animation start state: the burst is absolutely
+         positioned, so the anchor needs a box of its own. */
       if (completion.style) completion.style.position = "relative";
-      var anchor = document.createElement("div");
-      anchor.setAttribute("data-lk-celebrate-anchor", "");
-      anchor.className = "lk-celebrate-anchor";
-      anchor.style.position = "absolute";
-      anchor.style.inset = "0";
-      anchor.style.pointerEvents = "none";
-      completion.appendChild(anchor);
-      celebrationAnchorEl = anchor;
-      return anchor;
+      if (celebrationAnchorEl.style) {
+        celebrationAnchorEl.style.position = "absolute";
+        celebrationAnchorEl.style.inset = "0";
+        celebrationAnchorEl.style.pointerEvents = "none";
+      }
+      return celebrationAnchorEl;
+    }
+
+    /* The completion figures (tasks.md 16.7 ①): the counts this round really
+       has — no invented statistics, no percentages, no new measure.  Every
+       number carries `data-lk-value`, so the shared ticker rolls it; the
+       label sits beside the number, never inside it, because the ticker
+       rewrites the number element's text. */
+    function completionFiguresHtml(stats) {
+      return [
+        { value: stats.total, label: "总题数" },
+        { value: stats.correct, label: "客观正确" },
+        { value: stats.wrong, label: "错误" },
+        { value: stats.stuck, label: "不会" },
+        { value: stats.pendingRatings, label: "待自评" },
+      ].map(function (figure) {
+        return "<p class='lk-stat'><span class='lk-stat__value' data-lk-value='"
+          + figure.value + "'>" + figure.value + "</span>"
+          + "<span class='lk-stat__label'>" + figure.label + "</span></p>";
+      }).join("");
     }
 
     function renderCompletion() {
@@ -1365,6 +1389,9 @@
         ids.completionStats.textContent = "共 " + stats.total + " 题；客观正确 " + stats.correct
           + " 题，错误 " + stats.wrong + " 题；不会 " + stats.stuck
           + " 题；待自评 " + stats.pendingRatings + " 题。";
+      }
+      if (ids.completionFigures) {
+        ids.completionFigures.innerHTML = completionFiguresHtml(stats);
       }
       if (ids.links) {
         ids.links.replaceChildren();
