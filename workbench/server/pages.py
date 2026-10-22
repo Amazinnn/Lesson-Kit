@@ -313,7 +313,10 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
     """Practise a saved Paper; authoring is delegated to Agent/CLI."""
     plan = plan or {"goals": [], "queue": [], "totals": {}}
     middle = (
-        _page_header("学习 / 试卷", "练习", "选择已有试卷开始，或继续上次的进度。")
+        # 少字原则：页头那句「选择已有试卷开始，或继续上次的进度。」是说明句，
+        # 页面上的「开始练习」「继续练习」两个动作已经说清（copy-table §3 第 2 条
+        # ⇒ 删）。它不进标题区，标题区只留栏目名与标题。
+        _page_header("学习 / 试卷", "练习")
         + "<div class='page-content practice-content'>"
         + _paper_practice_html(workspace["name"]) + "<div id='legacy-practice' class='hidden'>"
 
@@ -454,8 +457,11 @@ def _daily_plan(plan):
         "<button type='button' class='outline sm hidden' id='goal-cancel'>取消编辑</button></div>"
         "<p id='goal-form-status' class='inline-error' aria-live='polite'></p>"
         "<div class='goal-assist'>"
-        "<label for='goal-nl'>说不清字段？一句话让 Agent 帮你填</label>"
-        "<textarea id='goal-nl' rows='2' placeholder='例如：期末前掌握第六章计数，重点补鸽巢和组合'></textarea>"
+        # 少字原则：「说不清字段？一句话让 Agent 帮你填」是疑问句 + 教学说明，
+        # 属注释性文字（copy-table §2.5 P-92 ⇒ 删）。字段的可访问名称搬进
+        # aria-label（一个字不丢），可见的那句由旁边的按钮承担。
+        "<textarea id='goal-nl' rows='2' aria-label='让 Agent 代填' "
+        "placeholder='例如：期末前掌握第六章计数，重点补鸽巢和组合'></textarea>"
         "<button type='button' class='outline sm' id='goal-assist-send'>让 Agent 填</button>"
         "</div>"
         "</form></details></section>"
@@ -1489,8 +1495,7 @@ def _base(title, body, workspace=None):
 def time_view_html():
     return (
         "<section id='time-view' class='card lk-card time-view hidden' aria-label='时间安排'>"
-        "<div class='section-heading'><div><p class='section-kicker'>实验视图</p>"
-        "<h2>时间安排</h2></div></div>"
+        "<div class='section-heading'><div><h2>时间安排</h2></div></div>"
         "<div id='time-view-content' class='time-view-content'>"
         "<section class='time-calendar' aria-labelledby='calendar-title'>"
         "<div class='time-module-heading'><div><p class='time-module-kicker'>目标跑道</p>"
