@@ -2203,8 +2203,17 @@ img { max-width: 100%; }
 ::-webkit-scrollbar-thumb { background: rgb(0 0 0 / 10%); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgb(0 0 0 / 16%); }
 
-/* focus */
-:focus-visible { outline: 2px solid var(--role-blue); outline-offset: 1px; }
+/* focus —— 全局焦点环走权威表 §8 规则 1（IMPL-W2h 第 2 条）：
+   外圈色 `--focus-outer` + 外圈宽 `--focus-width` + 偏移 `--focus-offset`（2px）。
+   ⚠️ 此前这里是 `outline: 2px solid var(--role-blue); outline-offset: 1px` ——
+     颜色与 `--focus-outer` 同值，但**偏移 1px ≠ 2px** ⇒ 与输入框那几处
+     （`input` / `textarea` / `select` / `#answer-box`，W2g 已改）**两套焦点环**。
+   ⇒ 统一成同一套 token。`--focus-width` / `--focus-offset` 在 §3.7 已定义
+     （浅色与夜纸同值 2px / 2px，权威表 §3.7 已登记），此处不新增 token。 */
+:focus-visible {
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+}
 
 /* motion — 分级降级闸门见本文件末尾「动效系统」区块
    （decisions.md A-2：系统 reduce + 偏好未设 ⇒ 弱动效档；显式「开」⇒ 恢复完整动效；
