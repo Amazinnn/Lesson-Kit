@@ -564,6 +564,12 @@ GATES_WITHOUT_COLLECTOR = {
     "G-8": "needs the focus-sequence probe collector (§7.2)",
 }
 
+#: The phase of the requests a **collector** produced on its own (the
+#: motion frames).  It is left out of the G-1 diff: the collector only
+#: runs on the after side, so its writes would make the two sides differ
+#: for a reason that has nothing to do with the product.
+COLLECTOR_PHASE = "frames"
+
 #: The gate verdicts the pool export produces (``dbexport.build_gates``).
 DB_GATES = ("G-2", "G-3", "G-4", "G-6")
 
@@ -613,6 +619,12 @@ def build_report(evidence_dir, out_dir=None, purpose="walkthrough"):
     # ── G-1: request sequence (§2.6) ────────────────────────────────────
     before_events = _read_jsonl(evidence_dir / "before" / "requests.jsonl")
     after_events = _read_jsonl(evidence_dir / "after" / "requests.jsonl")
+    # The motion frames drive a real paper run; they only run on the after
+    # side, so their writes are tagged with their own phase and left out
+    # of the request-sequence diff (otherwise the two sides would differ
+    # by the collector's own writes).
+    before_events = [e for e in before_events if e.get("phase") != COLLECTOR_PHASE]
+    after_events = [e for e in after_events if e.get("phase") != COLLECTOR_PHASE]
     if before_events and after_events:
         diff = diff_sequences(before_events, after_events)
         (out_dir / "requests.diff.json").write_text(

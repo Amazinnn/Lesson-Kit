@@ -866,12 +866,36 @@ MUTE_JS = """
 """
 
 
+def set_phase(base_url, phase, group="frames"):
+    """Tag the requests of this collector.
+
+    The frames drive a **real paper run** (the celebration trigger), so
+    their writes land in the request stream.  They are tagged with their
+    own phase, and the G-1 diff leaves them out: the frames only run on
+    the after side, so leaving them in would make the two sides differ
+    by the collector's own writes.
+    """
+    import json as _json
+    import urllib.request
+
+    request = urllib.request.Request(
+        f"{base_url.rstrip('/')}/__walkthrough__/phase",
+        data=_json.dumps({"phase": phase, "group": group}).encode("utf-8"),
+        headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            response.read()
+    except Exception as error:      # the control endpoint is not a product route
+        raise RuntimeError(f"could not tag the phase: {error}")
+
+
 def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
                    paper_id=None, muted=False):
     """Capture one motion: the strip, the metadata and the reduced twin."""
     from playwright.sync_api import sync_playwright  # noqa: F401  (documented)
 
     motion = MOTIONS[motion_id]
+    set_phase(base_url, "frames", "frames")
     out_dir = Path(out_dir)
     frames_dir = out_dir / motion_id
     watch = WATCH
