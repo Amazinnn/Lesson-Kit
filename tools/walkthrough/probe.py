@@ -48,7 +48,6 @@ never writes the pool, never changes a request, never touches product code.
 import argparse
 import difflib
 import json
-import math
 import re
 import sys
 from pathlib import Path

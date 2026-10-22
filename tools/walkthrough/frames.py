@@ -908,8 +908,6 @@ def set_phase(base_url, phase, group="frames"):
 def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
                    paper_id=None, muted=False):
     """Capture one motion: the strip, the metadata and the reduced twin."""
-    from playwright.sync_api import sync_playwright  # noqa: F401  (documented)
-
     motion = MOTIONS[motion_id]
     set_phase(base_url, "frames", "frames")
     out_dir = Path(out_dir)
