@@ -413,9 +413,10 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 **字体资产落地**
 
 - `@font-face` 放在 `workbench.css` 顶部（`:root` 之前），文件名
-  `workbench/server/static/fonts/SourceHanSerifSC-Regular.woff2` 与
-  `-SemiBold.woff2`，`font-weight: 400 / 600`，`font-display: swap`
-  （**不用** KaTeX 的 `block`，见 `static/katex/katex.min.css:1`）。
+  `workbench/server/static/fonts/SourceHanSerifSC-Regular.woff2`，`font-weight: 400`，
+  `font-display: swap`（**不用** KaTeX 的 `block`，见 `static/katex/katex.min.css:1`）。
+  ⚠️ **只声明 400**：600 字重因子集化后体积超标被裁掉（实测见本节「体积实测」），
+  `SourceHanSerifSC-SemiBold.woff2` **不存在**，不要为它写 `@font-face`。
 - 授权：SIL Open Font License 1.1，许可证文件与字体同目录
   `workbench/server/static/fonts/LICENSE-OFL.txt`，字体文件旁再放一份 `README.md`
   记录来源版本与子集化命令（仓库已有 woff2 先例：`static/katex/fonts/*.woff2` 20 个）。
@@ -435,9 +436,41 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
   （用户自建课程，字符集无法提前枚举）。完全消除它需要打包全量（8–20 MB）。
 - 兜底链必须完整（`Source Han Serif SC → Noto Serif CJK SC → Songti SC → SimSun → serif`），
   `font-display: swap` 保证字体未到时**先显示 fallback 的可读文字**，不出现空白页。
-- **体积待核**：上述压缩率是量级估算，实施时必须用
+- **体积待核（已于 2026-10-22 实测回填，见下）**：上述压缩率是量级估算，实施时必须用
   `pyftsubset SourceHanSerifSC.otf --unicodes-file=gb2312.txt --flavor=woff2`
   实测，并把实测值回填到本节；子集字表若要更大，必须同步下调「≤1.2 MB」的承诺。
+
+**体积实测（2026-10-22 回填 · 5.1 / 5.2 已落地）**
+
+原件：Adobe **Source Han Serif SC 2.003**（OTF/CFF，65,535 字形，
+`OTF/SimplifiedChinese/SourceHanSerifSC-Regular.otf`，24,543,332 B），
+子集器 `pyftsubset` 4.61.1 + brotli。字表：`gb2312.txt` = GB2312 一级字表 **3755 字**
+＋ 中文标点 ＋ 数字 ＋ 拉丁 ＋ 常用符号 ＋ 希腊字母，**请求 4840 码位 / 命中 4343**。
+
+| 字重 | 字节 | KB | 字形数 | 字节/字形 |
+|---|---|---|---|---|
+| **400 Regular（已入库）** | **946,148** | **924.0** | 4,344 | 218 |
+| 600 SemiBold（**未入库**） | 967,348 | 944.7 | 4,344 | 223 |
+| 两字重合计 | 1,913,496 | 1,868.7 | — | — |
+
+- **承诺值由「2 字重合计 ≤ 1.2 MB」改为「已入库 1 字重 924.0 KB ≤ 1.2 MB」**：
+  实测 2 字重合计 **1.83 MB**，超标 52%，按 `tasks.md` 5.1 明文规则
+  「**超标时先砍字重（只留 400）而不是砍字表**」→ **只入库 400 字重，
+  GB2312 一级字表 3755 字零缺字保留**。上表的「≤1.2 MB / 2 字重」不再是本轮的承诺值。
+- **实测压缩率 218 字节/字**（原估 ~130–200 字节/字，**偏乐观**）：思源宋体 SC 是 CFF 轮廓，
+  单字形比估算更重；GB2312 一级字表 3755 字单字重就需约 0.9 MB，2 字重不可能进 1.2 MB。
+- **子集化参数（决定体积的关键）**：`--layout-features=ccmp`（**不保留 `locl`**）、
+  `--desubroutinize`、`--name-IDs=1,2,3,4,5,6,13,14`。
+  保留 `locl` 会让 pyftsubset 闭合 3,147 个 JP/KR/TC 地区异体字形，
+  单字重 1,025,096 B → 1,812,316 B（**+787 KB**），而 `hani` 脚本下 `ZHS`（简体中文）
+  只用到 `locl` 的 17 条标点/宽度微调，**汉字字形不受影响**。
+- 落地：`workbench/server/static/fonts/SourceHanSerifSC-Regular.woff2`（946,148 B）、
+  `LICENSE-OFL.txt`（SIL OFL 1.1 全文 4,463 B）、`README.md`
+  （来源 URL / 版本 / 可复跑命令 / 字表清单 / 实测体积 / 已知取舍）。
+  随机抽 400 字形，轮廓与字宽与原件**逐点一致**。
+- ⚠️ **CSS 侧注意**：`@font-face` **只声明 400**。600 字重文件不存在，
+  写 `font-weight: 600` 的 `@font-face` 会 404（浏览器落到 `Songti SC`/`SimSun` 兜底）。
+  需要半粗衬线时用 `font-weight: 400 600` 的可变声明让浏览器合成。
 
 **理由**
 
@@ -458,7 +491,8 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 
 **代价**
 
-- 仓库增加 0.8–2.6 MB 二进制；首次阅读会经历 fallback → 打包字体的替换（`swap`）。
+- 仓库增加 0.8–2.6 MB 二进制（**实测 924.0 KB**：1 字重 946,148 B，见本节「体积实测」）；
+  首次阅读会经历 fallback → 打包字体的替换（`swap`）。
 - 教材正文中超出子集的字形不统一（见上）。
 - 两字族的**字面高度差**需要实测校准：衬线在 17px 下视觉上比无衬线小，
   阅读面可能需要 +0.5–1px 的光学补偿。这属于实施期校准，不在本文固化。
@@ -1305,9 +1339,11 @@ every motion SHALL degrade to a direct state change」，
 1. **夜纸下图标圆底色块的具体色阶**：方向已定（降饱和 + 提亮，`decisions.md` 16.2），
    但每个图标圆底落到三角色里的具体值、以及暗色下要不要再降一档，留到实施时按
    截图定；不影响「只用三角色」这条配额。
-2. **思源宋体子集的确切字表与实测体积**：D-4 的「≤1.2 MB / 2 字重 / GB2312 一级字表」
-   是**基于压缩率的量级估算**，不是实测。实施时用 `pyftsubset` 实测后回填；
-   若实测显著超标，先砍字重（只留 400）而不是砍字表 —— 这条实施细节不改变契约。
+2. ~~**思源宋体子集的确切字表与实测体积**~~：**已于 2026-10-22 实测并回填 D-4**。
+   D-4 的「≤1.2 MB / 2 字重 / GB2312 一级字表」原是**基于压缩率的量级估算**，不是实测。
+   实测结果：1 字重 **924.0 KB**、2 字重合计 **1.83 MB**（超标 52%）→ 按预定路径
+   **先砍字重（只留 400）而不是砍字表**，GB2312 一级字表 3755 字零缺字保留。
+   实测值、子集化参数与取舍理由见 D-4「体积实测」一节。
 3. **记录卡片流是否按日期分组**：今天每条记录带自己的时间戳但没有组头
    （F05 P-07 建议按日期分组）。分组与否只影响实现，不影响「六项字段 + 卡片形态」这条契约；
    收口基线未点名，故不新开议题。
