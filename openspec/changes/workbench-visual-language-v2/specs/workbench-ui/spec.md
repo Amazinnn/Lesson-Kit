@@ -69,6 +69,50 @@ and SHALL NOT change the order or timing of any request.
 - **WHEN** the learner changes the theme preference
 - **THEN** no pool record, learning fact or statistics row is written or changed
 
+### Requirement: Lamp transition carries the theme change
+
+This requirement is the detailed form of the lamp transition (台灯转场) named by
+the theme requirement above; where the two speak of the same behaviour, this
+one states the sequence and the fallbacks.
+
+The theme change SHALL be narrated in four steps: a desk lamp leans out from the
+corner of the surface, it lights up, the change of ground colour ripples
+outward from the lamp until it covers the surface, and the lamp withdraws. The
+ripple SHALL carry the change of the ground only — the cards, columns and
+readable surfaces on the page SHALL keep their own shape and their own layering
+and SHALL NOT be flattened by the passing colour.
+
+The transition SHALL NOT block pointer or keyboard input while it plays, and
+SHALL NOT change the order or the timing of any request the workbench issues.
+When scripting is unavailable, or when motion is off or reduced, the theme
+SHALL change directly — no lamp and no ripple — and the surface SHALL end in
+exactly the state the animated version would have ended in.
+
+#### Scenario: The theme change is narrated in four steps
+
+- **WHEN** the learner changes the theme preference
+- **THEN** a desk lamp leans out, lights up, the change of ground colour
+  ripples outward from it until it covers the surface, and the lamp withdraws
+
+#### Scenario: The ripple carries the ground only
+
+- **WHEN** the lamp transition is playing
+- **THEN** the cards and columns keep their shape and their layering, and only
+  the ground colour changes underneath them
+
+#### Scenario: The transition does not interrupt the learner
+
+- **WHEN** the lamp transition is playing
+- **THEN** pointer and keyboard input still reach the surface, and no request
+  the workbench issues is reordered or delayed
+
+#### Scenario: Without motion the theme changes directly
+
+- **WHEN** scripting is unavailable, or motion is off or reduced
+- **THEN** the theme changes directly without a lamp and without a ripple, and
+  the surface ends in the same final state the animated version would have
+  reached
+
 ### Requirement: Reading face and interface face
 
 The visual language SHALL use three type families with distinct duties. Reading
@@ -102,27 +146,22 @@ by this visual language.
 
 ### Requirement: Motion system and reduced-motion downgrade
 
+This requirement is the general rule that every motion in the workbench obeys.
+The user-perceivable motions themselves — the layered completion celebration,
+the lamp transition, the consecutive-correct escalation, the view transition
+with its skeleton, and the key feedback audio cues — are stated by their own
+requirements; this requirement is not their substitute.
+
 The workbench SHALL animate across four surfaces — interaction feedback, the data
 layer, view transition, and milestone ceremony — and SHALL NOT add a global
 background canvas, cursor tracking, parallax, or cursor glow. Interaction
 feedback SHALL complete within 120–180ms and scene motion within 240–520ms. A
-confirmed answer SHALL use a squash-and-stretch rebound; newly revealed content
-SHALL rise and fade in; a newly loaded middle page SHALL show a container-level
-transition together with a skeleton of grey blocks crossed by a travelling
-highlight.
+confirmed answer SHALL use a squash-and-stretch rebound. Every motion SHALL use
+the shared duration and easing scales, SHALL animate only `transform` and
+`opacity`, and SHALL stay within a budget that keeps the interface responsive
+to input.
 
-Completing a round SHALL be celebrated in layers: an ordinary completion gets a
-rolling number and a progress band, and a milestone — a fully correct round, a
-new record, a chapter completed for the first time — adds geometric bursts and
-paper flutter on top. A run of consecutive correct answers SHALL be shown by a
-three-tier counter whose tone changes as the run grows, and SHALL interject one
-banner at five and at ten in a row; the banner SHALL be a single parameterised
-banner rather than one banner per number. The streak progress SHALL itself be
-animated so that it grows visibly with the run. Answering wrong while the run is
-above four SHALL give an explicit negative signal rather than silence.
-
-Motion SHALL NOT change request timing, ordering or payload, and SHALL stay
-within a budget that keeps the interface responsive to input. When the motion
+Motion SHALL NOT change request timing, ordering or payload. When the motion
 preference (动效偏好) is off, every motion SHALL degrade to a direct state
 change. When the system asks for reduced motion and the learner has made no
 explicit choice, the motion preference SHALL follow that request and every
@@ -131,42 +170,24 @@ directly, a celebration lands on its final state, and a streak counter updates
 without animating. An explicit learner choice to enable motion SHALL take
 precedence over the system setting.
 
+Every motion SHALL end in the same final state with motion enabled as it does
+with motion disabled. The static style of an animated surface SHALL already be
+that final state — a starting state such as an invisible or displaced element
+SHALL be written inside the motion's own keyframes rather than in the surface's
+ordinary rule — so that degrading a motion never leaves a surface hidden,
+displaced or half finished.
+
 #### Scenario: An answer is confirmed
 
 - **WHEN** the learner submits an answer and a verdict appears
 - **THEN** the confirmed element gives a squash-and-stretch rebound within the
   interaction duration band
 
-#### Scenario: A new middle page arrives
+#### Scenario: The motion budget holds
 
-- **WHEN** the learner navigates to another middle page
-- **THEN** the page area transitions as one container and shows a skeleton of
-  grey blocks with a travelling highlight before the content settles
-
-#### Scenario: An ordinary completion is celebrated lightly
-
-- **WHEN** a round finishes with at least one wrong answer
-- **THEN** the completion shows rolling numbers and a progress band without
-  geometric bursts or paper flutter
-
-#### Scenario: A milestone is celebrated fully
-
-- **WHEN** a round finishes fully correct, or a chapter is completed for the
-  first time
-- **THEN** the completion adds geometric bursts and paper flutter on top of the
-  rolling numbers and the progress band
-
-#### Scenario: The streak reaches five in a row
-
-- **WHEN** the learner answers five consecutive items correctly
-- **THEN** one streak banner is shown, and the same banner is reused for the run
-  of ten with a different count
-
-#### Scenario: The streak breaks
-
-- **WHEN** the learner answers wrongly while the run of consecutive correct
-  answers is above four
-- **THEN** an explicit negative signal is shown and the run counter is reset
+- **WHEN** any surface animates
+- **THEN** the animation moves only `transform` and `opacity`, and the interface
+  stays responsive to input while it runs
 
 #### Scenario: Reduced motion is requested
 
@@ -175,11 +196,216 @@ precedence over the system setting.
 - **THEN** the ground changes directly, the celebration lands on its final state,
   and the streak counter updates without animating
 
+#### Scenario: The end state is the same either way
+
+- **WHEN** the same celebration, banner, counter or transition is shown with
+  motion enabled and again with motion disabled
+- **THEN** both end on the same figures, the same layout and the same actions,
+  and neither ends at an intermediate or partial state
+
 #### Scenario: Motion does not change what is sent
 
 - **WHEN** the learner confirms an answer while a celebration is playing
 - **THEN** the request and its payload are the same as when no motion is
   enabled
+
+### Requirement: Round completion celebration in two tiers
+
+Finishing a round SHALL be celebrated in two tiers. The ordinary tier SHALL
+consist of the completion surface entering, the figures it reports rolling up
+to their values, and a progress band filling from empty to full. The milestone
+tier SHALL consist of everything in the ordinary tier plus geometric bursts and
+paper flutter flying across the surface.
+
+A round SHALL reach the milestone tier when it is finished fully correct, when
+it beats the learner's own record for the same paper, or when it completes a
+chapter for the first time. A round that meets none of these three conditions
+SHALL stay in the ordinary tier, and the ordinary tier SHALL NOT include
+geometric bursts or paper flutter.
+
+The celebration SHALL begin only after the response that ends the round has
+arrived, SHALL NOT change the request sequence or its payload, and SHALL NOT
+cover the primary action of the completion surface.
+
+#### Scenario: An ordinary round is celebrated lightly
+
+- **WHEN** a round finishes with at least one wrong answer and meets none of the
+  milestone conditions
+- **THEN** the completion surface enters, its figures roll up to their values,
+  and a progress band fills from empty to full, with no geometric burst and no
+  paper flutter
+
+#### Scenario: A fully correct round reaches the milestone tier
+
+- **WHEN** a round finishes with every answer correct
+- **THEN** the milestone tier is used, adding geometric bursts and paper flutter
+  on top of the rolling figures and the filling progress band
+
+#### Scenario: A new record reaches the milestone tier
+
+- **WHEN** a round finishes and its result beats the learner's previous record
+  for the same paper
+- **THEN** the milestone tier is used, adding geometric bursts and paper flutter
+
+#### Scenario: The first completion of a chapter reaches the milestone tier
+
+- **WHEN** a round finishes and completes a chapter the learner has not
+  completed before
+- **THEN** the milestone tier is used, adding geometric bursts and paper flutter
+
+#### Scenario: The primary action stays reachable
+
+- **WHEN** a milestone celebration is playing
+- **THEN** the primary action of the completion surface remains visible and
+  usable throughout
+
+#### Scenario: The celebration waits for the response
+
+- **WHEN** the learner submits the round
+- **THEN** the celebration begins only after the response that ends the round
+  arrives, and the request sequence and its payload are the same as they would
+  be without the celebration
+
+### Requirement: Consecutive-correct escalation feedback
+
+A run of consecutive correct answers SHALL be shown by a counter that stays on
+the practice surface throughout the round. The counter SHALL have three tiers,
+told by tone and shape rather than by a written label: grey at zero, yellow
+once the run has started, and a yellow-to-blue gradient at the highest tier.
+The counter's figure SHALL roll to its new value rather than snap to it.
+
+At five consecutive correct answers and at ten, the workbench SHALL interject
+one banner. That banner SHALL be a single banner whose count is supplied as a
+parameter; the workbench SHALL NOT carry a separate banner per number. The
+run's progress SHALL itself be an animated indicator whose clusters light up one
+after another as the run grows, so that the length of the run is carried by a
+shape as well as by a figure.
+
+Answering wrongly while the run is above four SHALL give an explicit negative
+signal and reset the counter; the workbench SHALL NOT stay silent in that case.
+
+#### Scenario: The counter has three tiers
+
+- **WHEN** the learner answers correctly and the run grows
+- **THEN** the counter changes tone across three tiers — grey, then yellow, then
+  a yellow-to-blue gradient — and its figure rolls to the new value
+
+#### Scenario: The banner is interjected at five
+
+- **WHEN** the learner answers five consecutive items correctly
+- **THEN** one banner is interjected and shows the count of five
+
+#### Scenario: The same banner serves ten
+
+- **WHEN** the learner answers ten consecutive items correctly
+- **THEN** the same banner is interjected with the count of ten supplied as a
+  parameter, and no separate banner exists for that number
+
+#### Scenario: The run's progress lights up as it grows
+
+- **WHEN** the learner answers correctly and the run grows
+- **THEN** the run's indicator lights up one cluster after another, so the
+  length of the run is visible as a shape and not only as a figure
+
+#### Scenario: Breaking the run is never silent
+
+- **WHEN** the learner answers wrongly while the run is above four
+- **THEN** an explicit negative signal is shown and the counter is reset
+
+#### Scenario: The run is not carried by the counter alone
+
+- **WHEN** the run is shown at any length
+- **THEN** the growing indicator shows the run as well, so the run survives the
+  counter being out of view
+
+### Requirement: View transition and skeleton loading state
+
+When the learner moves to another middle page, the page area SHALL show a
+skeleton of grey blocks crossed by a travelling highlight while the content is
+being fetched, and the content SHALL rise and fade in once it has settled.
+
+The transition SHALL be carried by the page container itself, because the middle
+navigation replaces the whole content of that container in one step; the
+workbench SHALL NOT rely on a class added to the individual pieces of content,
+because such a class is discarded when the content is replaced. The transition
+SHALL NOT leave a blank area, SHALL NOT hold back what the learner can act on,
+and SHALL NOT change the order or the timing of any request.
+
+When motion is off or reduced, the skeleton SHALL NOT sweep and the content
+SHALL appear directly in its final state, with the same content, the same
+positions and the same actions as the animated version ends with.
+
+#### Scenario: The skeleton appears while the page is fetched
+
+- **WHEN** the learner navigates to another middle page
+- **THEN** the page area shows grey blocks with a highlight travelling across
+  them while the content is being fetched
+
+#### Scenario: The content rises into place
+
+- **WHEN** the new page's content has arrived
+- **THEN** the content rises by a small distance and fades in as one container,
+  and no blank area is left behind
+
+#### Scenario: The transition survives the content being replaced
+
+- **WHEN** the middle navigation replaces the whole content of the page area in
+  one step
+- **THEN** the transition still plays, because it is carried by the page
+  container rather than by the individual pieces of content
+
+#### Scenario: The transition does not block or reorder
+
+- **WHEN** the page is transitioning
+- **THEN** the learner can act on what is on screen, and the order and the
+  timing of the workbench's requests are unchanged
+
+#### Scenario: Without motion the content is simply there
+
+- **WHEN** motion is off or reduced
+- **THEN** the skeleton does not sweep, the content appears directly in its
+  final state, and it shows the same content and the same actions as the
+  animated version ends with
+
+### Requirement: Key feedback audio cues
+
+Four events SHALL carry a short audio cue: an answer judged correct, an answer
+judged wrong, a round completed, and a milestone reached. Each cue SHALL be
+shorter than 200 ms, and no other event, surface or state change SHALL produce
+sound.
+
+The cues SHALL obey the sound preference (声音偏好), which is held by the
+workbench settings view: while the preference is on the four cues play, and
+while it is off none of them plays and no visual feedback is removed or
+altered. The workbench SHALL make no sound on load: the first cue SHALL NOT play
+before the learner has interacted with the page, and the absence of that sound
+SHALL NOT be reported as a failure.
+
+#### Scenario: The four events are audible
+
+- **WHEN** the sound preference is on and the learner gets an answer right, gets
+  one wrong, finishes a round, or reaches a milestone
+- **THEN** exactly one cue shorter than 200 ms plays for that event and nothing
+  else sounds
+
+#### Scenario: The preference silences the cues
+
+- **WHEN** the learner turns the sound preference off and then produces the same
+  four events
+- **THEN** no cue plays and the visual feedback of each event is unchanged
+
+#### Scenario: Nothing sounds before the learner has acted
+
+- **WHEN** the workbench has loaded and the learner has not yet interacted with
+  it
+- **THEN** no cue plays, and the page reports no failure for the absence of
+  sound
+
+#### Scenario: The first cue follows an interaction
+
+- **WHEN** the learner interacts with the page for the first time
+- **THEN** the four cues become available, and the cue belonging to that
+  interaction plays normally
 
 ### Requirement: Focus visibility and contrast floors
 
@@ -833,12 +1059,30 @@ beside the page title or under the title band.
       `Same-workspace middle navigation preserves the Agent rail` /
       `Three-column shell with navigation`。
 - [x] 没有 `## Purpose`（既有能力 delta 不写 Purpose）。
-- [x] 每个 Requirement ≥ 1 个 Scenario：MODIFIED 9 条、ADDED 10 条，共 19 条 Requirement。
+- [x] 每个 Requirement ≥ 1 个 Scenario：MODIFIED 9 条、ADDED 15 条，共 24 条 Requirement。
       （ADDED 第 10 条 = `Accumulated work made visible on existing learning facts`，
       即第 5 组 5.2「进度与成就的可见反馈」的落点：只呈现**已有事实的计数**
       ——章节知识点总数与三态计数、已完成练习轮次、近 14 天每天的作答次数；
       **不新增任何口径**（无正确率 / 掌握度 / 完成度百分比），
       「连续学习天数」因**无现成数据源**而不在本 delta 承诺（已登记为待确认漂移）。）
+- [x] **`decisions.md` A-27.3 已兑现：M-F…M-N 升为首类 ADDED Requirement**，
+      每条各配 ≥2 个 `#### Scenario:`，不再折叠在一条总则里 ——
+      M-F / M-G = `Round completion celebration in two tiers`（日常档 / 里程碑档 +
+      里程碑判定三条件：全对 / 破纪录 / 章节首次完成）；
+      M-L = `Lamp transition carries the theme change`（探出 → 点亮 → 涟漪 → 收回 +
+      无 JS / 降级时直接切换）；
+      M-H / M-I / M-J / M-K = `Consecutive-correct escalation feedback`
+      （三级计数器 + 一份参数化横幅 + 火苗簇 + combo > 4 的明确负反馈）；
+      M-D / M-E = `View transition and skeleton loading state`
+      （骨架 + 容器级上浮淡入，并写明「整体替换 innerHTML ⇒ 必须是容器动画」这条实现约束）；
+      M-N = `Key feedback audio cues`（四条 <200ms + 静音偏好 + 自动播放限制）。
+      `Motion system and reduced-motion downgrade` **保留为总则**（时长档、缓动档、
+      只动 transform/opacity、分级降级规则），并**补了一条**「每条动效在 reduced-motion
+      下的终态必须与开启时一致，不得停在中间态」，另配 `The end state is the same
+      either way` 场景。
+- [x] 新增的 5 条 Requirement **未引入新名词**：台灯转场 / 动效偏好 / 声音偏好
+      三个词已见 `docs/GLOSSARY.md`；其余一律用可观察行为的描述性表述
+      （庆祝分层、连对升级、骨架屏、关键反馈音效均以句子写出，未登记为术语）。
 - [x] 所有 Scenario 用 `####`（4 个 #）+ `- **WHEN** …` / `- **THEN** …`。
 - [x] 没有触碰任何图谱相关 Requirement：`Knowledge graph page`、`Living graph motion and
       readable labels`、`Metric projection *`、`State cluster layout`、`Layered knowledge

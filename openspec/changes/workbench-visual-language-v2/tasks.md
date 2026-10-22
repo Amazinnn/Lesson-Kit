@@ -8,7 +8,7 @@
 > `specs/workbench-settings/spec.md`（新能力，7 需求 / 25 场景）、
 > `specs/calendar-workload/spec.md`（delta，1 需求 / 14 场景）。
 > **验收口径依据**：`acceptance.md`（§0 底线守卫 G-1…G-8、§1 对照截图 S-1…S-12、
-> §2 关键帧 M-1…M-10、§3 交互清单、§4 通过标准、§5 走查协议）。
+> §2 关键帧 M-1…M-13、§3 交互清单、§4 通过标准、§5 走查协议）。
 > **补充规格**：`design-notes/asset-spec.md`（SVG 资产规格）、
 > `design-notes/motion-spec.md`（动效规格）、`design-notes/component-spec.md`（组件规格）、
 > `design-notes/copy-table.md`（全站文案对照表）。
@@ -54,15 +54,16 @@
 
 ## 3. 纸面层级与抬升 （design.md D-2）
 
-- [ ] 3.1 落四层纸面 token（取值 = 权威表 §3.1）：底 `--surface-base` #fdf8ef / #1c1a16、卡 `--surface-card` #fffdf7 / #232019、浮起 `--surface-raised` #ffffff / #2b2620、墨块 `--surface-ink` #221f1a / #14120f；**一个元素只处于一层**。验证：grep 页面全部 surface 类，卡 / 浮起 / 墨块的 background 各自只对应一个 token；墨块用于代码面与选中项，圆角同为 12px。
+- [ ] 3.1 落四层纸面 token（取值 = 权威表 §3.1）：底 `--surface-base` #fdf8ef / #1c1a16、卡 `--surface-card` #fffdf7 / #232019、浮起 `--surface-raised` #ffffff / #2b2620、**沉底 `--surface-sunken` #f2ece1 / #272319**（**A-23**：原「墨块」层改为浅底深字的沉底层；内容块——作答区、用户消息、强调块——一律用它）；**近黑面另有 `--surface-code` #221f1a / #14120f（由原 `--surface-ink` 更名，语义收窄为「仅代码块 / 等宽代码区的反白面」，取值不变）**；**一个元素只处于一层**。验证：grep 页面全部 surface 类，卡 / 浮起 / 沉底的 background 各自只对应一个 token；**除代码块外，全站不得再出现 `--surface-code`**（内容块用沉底）；沉底层圆角同为 12px 且**不带柔影**（凹层）。
+- [ ] 3.1b **A-23：沉底与卡面的边界**（权威表 §3.1【A-23-3】/ §6.3 例外 4）：沉底层**不是深色块**，没有「深色自证」可依赖 → 必须补「**底色差 + 1px 内发丝线**」：底色差实测浅色 ΔL\* 5.73 / 夜纸 1.49，内发丝线用 `--rule-hair`（亮 #e6dcc4 / 夜 #332d25）以 `box-shadow: inset 0 0 0 1px …` 落地（**不用 `border`**，不改盒模型）。验证：作答区 / 用户消息与所在卡面**一眼可分**（两主题各截一处）；`grep -n -- "--surface-code" workbench.css` 的命中点**只有代码块相关规则**。
 - [ ] 3.2 抬升用**暖调柔影**三档：`--elev-1/2/3` 色基 `rgb(61 52 37 / α)`（权威表 §3.6；夜纸改为明度阶 + 顶光 + 暖辉），替换 `--dsw-shadow-lv1..lv3`（L36-39 的 `rgb(0 0 0 / …)`）；`--elev-1` 第一层 `0 1px 2px` **不得省**（卡 / 底明度差只有 1.04:1，卡片边界完全靠影子读出）。验证：非图谱区 `grep -n "rgb(0 0 0 /"` 归零；卡片边界在 100% 缩放下可辨。
 - [ ] 3.3 取消描边：56 处 `--dsw-border-l1/l2/l3`（L31-33）引用改为「留白 + 圆角 + 字重」；**唯一保留的发丝线**是控件边界 `--rule-control`（亮 #847552 / 夜 #7d7361）与内容层单侧结构线 `--rule-structure`（亮 #221f1a / 夜 #ece3d3）。验证：`grep -n -- "--dsw-border-l" workbench.css` 归零；输入框 / 下拉框在两主题下都找得到边界（实测 ≥3:1）。
-- [ ] 3.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.6 + §0 G-5 走查；截图走查范围＝纸面四层的层次关系（底 / 卡 / 浮起 / 墨块各取一处），确认页面底色为**纯色无纹理无暗角**。
+- [ ] 3.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.6 + §0 G-5 走查；截图走查范围＝纸面四层的层次关系（底 / 卡 / 浮起 / **沉底**各取一处），确认页面底色为**纯色无纹理无暗角**。
 
 ## 4. 色彩收编：三角色配额与墨阶 （design.md D-3）
 
 - [ ] 4.1 落角色 token（语义配额不变；取值 = 权威表 §3.4 的 11 个 token）：`--role-blue` #2b62e8 / #7291de、`--role-blue-press` #1f4fc4 / #8fa9e8、`--role-blue-wash` #f2f0ef / #292929、`--role-blue-soft` #e0e3ee / #31343c、`--role-yellow` #f5c518 / #e0c151、`--role-yellow-deep` #8a6a00 / #f0d98a、`--role-yellow-soft` #fcf0cd / #3d3721、`--role-red` #d1392b / #d4736b、`--role-red-ink` #b8331f / #e08878、`--role-red-wash` #f9e9df / #352821、`--role-red-soft` #f6d9d0 / #432f28；`:root` 上方写配额注释（蓝＝主按钮 + 链接 + 当前选中；黄＝当前项 + 复习强调 + 连对进度；红＝失败 + 阻塞）。验证：11 个 token 各一个定义点；新增色相为 0；黄色**只承载面积与形状**，不承载文字（承载语义一律走 `--role-yellow-deep`）。
-- [ ] 4.2 按 design.md D-3 收编表逐条映射 22 个硬编码色（35 处引用）：`#2864dc`×5 → `--role-blue`、`#57606a`×5 → `--ink-muted`、`#b42318`/`#b62f28` → `--role-red-ink`、`#d12c2c` → `--role-red`、`#d97706`/`#b58b00`/`#e1aa12` → `--role-yellow-deep`、`#e5e7eb` → `--rule-hair`、`#333` → `--ink-body`、`#fff` → `--ink-on-role`、`#111318` → `--ink-strong`、`#fdeceb` → `--role-red-wash`、`#f7f7f4` → `--surface-ink`、`#faf8f2` → `--surface-base`；契约外绿 `#1a7f37` / `#e6f4ea` **在权威表里没有 token 名**（本轮整体移除，见 4.4）。验证：非图谱区硬编码 hex 只剩 token 声明行内的值；`grep -nE "#[0-9a-fA-F]{3,6}" workbench.css` 每处命中都在 token 段内。
+- [ ] 4.2 按 design.md D-3 收编表逐条映射 22 个硬编码色（35 处引用）：`#2864dc`×5 → `--role-blue`、`#57606a`×5 → `--ink-muted`、`#b42318`/`#b62f28` → `--role-red-ink`、`#d12c2c` → `--role-red`、`#d97706`/`#b58b00`/`#e1aa12` → `--role-yellow-deep`、`#e5e7eb` → `--rule-hair`、`#333` → `--ink-body`、`#fff` → `--ink-on-role`、`#111318` → `--ink-strong`、`#fdeceb` → `--role-red-wash`、`#f7f7f4` → `--surface-code`（**代码面**；A-23 更名，原 `--surface-ink`）、`#faf8f2` → `--surface-base`；契约外绿 `#1a7f37` / `#e6f4ea` **在权威表里没有 token 名**（本轮整体移除，见 4.4）。验证：非图谱区硬编码 hex 只剩 token 声明行内的值；`grep -nE "#[0-9a-fA-F]{3,6}" workbench.css` 每处命中都在 token 段内。
 - [ ] 4.3 墨阶收敛为 **4 级文字灰 + 1 级失活灰**（取值 = 权威表 §3.2）：`--ink-strong` #221f1a / #f4ede0、`--ink-body` #3b3630 / #e7dfd0、`--ink-muted` #6b6459 / #c2b8a5、`--ink-faint` #8d8578 / #978d7c、`--ink-disabled` #8a8275 / #7a7162；把 `--dsw-label-tertiary`（33 处）、`--dsw-label-caption`（5 处）、`--dsw-label-dimmed`（1 处 `::placeholder`）并入 `--ink-faint`，`--dsw-state-warn`（2 处）并入 `--role-yellow-deep`。验证：`--ink-faint` 对暖奶油底 3.45:1、对夜纸底 5.31:1（实测复核，权威表 §4.2 / §4.3；三级文字判定线 ≥3:1）；`::placeholder` 不再靠 fallback `#68707b` 存活；4 级台阶在 100% 缩放下仍可辨。
 - [ ] 4.4 **契约外绿整体移除 ——「答对」改中性墨 + 勾形几何**：按 `decisions.md` A-20 第 3 条，**答对不再用绿色** ——「答对」= **中性墨 `--ink-strong` + 勾形几何**，「答错」= `--role-red`（既有语义不变）；**不新造绿 token**，权威表 §3.4 仍只收蓝 / 黄 / 红三角色。实现范围 4 处：① `workbench.css:1211` `.micro-verdict.ok` 绿字「判定：正确」→ 中性墨 + 勾形几何；② `workbench.css:1214` `.problem-options label.option-correct` **绿环** → **墨色环 + 勾形标记**；③ `workbench.css:1462` `.record-verdict-ok` 绿底绿字药丸 → 「结构块 + 勾形几何 + 文字」三通道（见 D-13）；④ `workbench.css:1892` `.paper-dot.state-correct` 绿底绿字 → 中性墨 + 勾形几何（见 `component-spec.md` §4.17 题号格）。绑定点同步核对：`paper-practice.js:672`（判定文案）、`practice-flow.js:810`（微测判定）、`practice-flow.js:869`（正确项标记）、`records.py:16,39`（判定徽章）。绿此前是「现状兼容例外」（契约外第四色），登记在第 27 组漂移表（CD-071 / CD-072），**本轮实现时移除，例外不再保留**。验证：`grep -rnE "#1a7f37|#e6f4ea|#d9ebdd|#245d32" workbench/` 归零；练习页正确环 / 记录页判定徽章 / 试卷题号格三处均无绿色像素；「答对」与「答错」在灰度下仍可区分（勾形 vs 红叉 / 红面）；权威表无新增色相。**范围外**：`--dsw-state-success`（`#22c55e`）是 DSH 的 success 态、不表达「答对」，本条不动它。
 - [ ] 4.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.1（对比度）与 §3.4（红色仅用于失败与阻塞）走查；截图走查范围＝三角色各自的典型承载面（主按钮 / 链接 / 当前选中 / 当前项 / 复习强调 / 失败 / 阻塞）。
@@ -99,6 +100,10 @@
 - [ ] 8.4 JS 编排只留三处：①统计数字滚动（rAF 写 `textContent`）②连对计数器（写已有计数器的值与 class）③台灯转场（写已存在装饰层的 `transform`）；三处都**不新增节点、不新增事件绑定**。验证：新增 JS 只触碰既有元素的 `textContent` / `style`。
 - [ ] 8.5 性能红线与黑名单：只动 `transform` / `opacity`；单帧 ≤16ms；同屏合成层 ≤30；`will-change` 只在动画期间加、结束后移除；黑名单＝全局背景 canvas、鼠标跟随、视差、光标辉光、**常驻循环动画**、`transition: all`、用 `width/height/top/left` 做过渡。验证：逐帧录屏确认；grep 无 `transition: all` 与常驻 `infinite` 动画；台灯转场（约 700ms）作为例外预算单独记账。
 - [ ] 8.6 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 走查 M-7（挤压回弹）、M-8（视图转场）、M-9（骨架屏）；截图走查范围＝按钮 hover/active、卡片入场、空态入场三处动效（逐帧截图或录屏）。
+- [ ] 8.7 **台灯转场的四段实现**（A-27 **M-L**；spec 新 Requirement「Lamp transition carries the theme change」）：在 `workbench/server/static/workbench.css` 落三个 `position: fixed` 装饰层 —— `.lk-lamp`（内联 `assets/illustrations/lamp.svg`，第 9 组产出）、`.lk-ripple`（承载**目标主题**的 `--surface-base`）、`.lk-ripple-glow`（灯下暖光）；三层一律 `pointer-events: none`（底线守卫 G-7）。时序照 `design-notes/motion-spec.md` §3.5 + §4.3：探出 ~180ms → 点亮 → 涟漪扩散 ~450ms → 收回，共 ~700ms（`--dur-ceremony`）。⚠️ **涟漪层取 `--z-base`（0，在内容层之下）**、灯层取 `--z-lamp`（在内容之上）—— **涟漪不得压平卡片**（`decisions.md` A-1）；涟漪只动 `transform: scale()` 与 `opacity`，**不得**动画化 `mask-image` 的渐变半径（那属逐帧重绘，违反动效红线）。验证：切主题时逐帧录屏可见四段齐全；涟漪全程卡片轮廓清晰未被压平；`grep -n "mask-image" workbench.css` 命中处不与任何 `animation` / `transition` 同声明。
+- [ ] 8.8 **两档庆祝的 keyframes 与数字滚动落地**（A-27 **M-F / M-G**；spec 新 Requirement「Round completion celebration in two tiers」）：把 `design-notes/motion-spec.md` §3.4 / §3.7 的片段抄进 CSS 与 JS —— `lk-progress-fill`（只动 `scaleX`，`transform-origin: left center`）、`lk-celebrate-burst`（圆环扩散 + 淡出）、`lk-confetti-fall`（纸片位移 + 旋转）、`lk-ticker-*` 逐位数字滚动（vanilla rAF，只写 `textContent` 与 `transform`，**不引第三方库**）。⚠️ **日常档不得触发** burst / confetti —— 触发与否由第 17 组的档位判定控制，本条只保证两套片段可用且彼此独立。验证：逐帧录屏确认日常档只出现数字滚动 + 进度带；里程碑档多出爆点与纸片；庆祝作用域内 `grep -n "url(" workbench.css` 无位图引用。
+- [ ] 8.9 **reduced-motion 终态一致铁律落地**（spec 总则「Motion system and reduced-motion downgrade」补入的终态条款）：把 `workbench.css:1126-1131` 的全局兜底 `@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }` 从「一刀切 none」改成**分级降级闸门**（系统 reduce + 偏好未设 ⇒ 弱动效档；系统 reduce + 偏好显式「开」⇒ 覆盖恢复；偏好显式「关」⇒ 全直切），并逐条保证**每个动效元素的静态样式 == 其终态** —— 起始态（`opacity: 0` / 位移 / 缩放）**只写在 `@keyframes` 内部**，不写进基础规则；逐条落 `design-notes/motion-spec.md` §7.2 降级矩阵的终态。验证：每条动效各出一张降级帧，与动效帧的终态**逐像素比对**（数字、进度带、计数器档位、灯与涟漪层、纸片、火苗簇、内容位置均不得停在中间态）；动效作用域内 `grep -n "opacity: *0"` 命中 0。
+- [ ] 8.10 阶段验收（补充：新增动效分镜与降级对照）：按 `acceptance.md` §2 的 M-1（台灯转场）、M-2 / M-3（两档庆祝）、M-5 / M-6（连对计数器与火苗簇）、M-8 / M-9（视图转场与骨架屏）各采一条**分镜条**，并各出一张 reduced-motion 降级对照帧；通用判据＝只用 `transform` / `opacity`、降级帧与动效帧**终态一致**。
 
 ## 9. 静物 SVG 资产（可独立验收） （design-notes/asset-spec.md + spec「A navigation graphic depicts its target」）
 
@@ -113,6 +118,9 @@
 - [ ] 10.2 绕过浏览器自动播放限制：首次音效必须发生在**一次用户手势之后**（首次交互时解锁音频上下文），并给出控制台不报错的处理路径。验证：首屏加载后不发声且控制台无自动播放告警；首次点击后可发声。
 - [ ] 10.3 声音偏好联动与 MIME：开关并入第 11 组的「声音」偏好；关闭后**立即生效、无需刷新**，且**不移除任何视觉反馈**（声音不是唯一通道）；在 `workbench/server/app.py` 的 `CONTENT_TYPES`（L26-34）补 `.mp3` / `.ogg`。验证：关闭后四个时刻都不发声、动效与视觉反馈完整；请求音频返回正确 Content-Type。
 - [ ] 10.4 阶段验收（音效资产独立验收）：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.3 走查；确认音效不进入任何学习事实或持久化路径（无对应 API 调用、池内无新增记录）。
+- [ ] 10.5 **四个音效的触发点落位**（A-27 **M-N**；spec 新 Requirement「Key feedback audio cues」）：把四个触发点落到具体文件与具体分支 —— 答对 → `practice-flow.js` 的**判定正确**分支（与 `.micro-verdict.ok` / `.option-correct` 同一处）；答错 → 同一分支的**判定错误**侧；完成 → 练习轮次结束、进入完成页的那一次响应（`pages.py:227` 的 `#paper-completion` 对应流程）；里程碑 → 庆祝**进入里程碑档**的那一拍（与 `lk-celebrate-burst` 同拍，`design-notes/motion-spec.md` §3.7 b 行的 400ms）。⚠️ **只在这四处发声** —— 其它任何表面、事件或状态变化（hover、展开、导航、加载）一律不发声。验证：`grep -rn "playCue\|new Audio\|Audio(" workbench/` 的**调用点**恰好 4 处且分别对应上列四个事件；构造答对 / 答错 / 完成 / 里程碑四个场景各录一次音频波形，确认每个场景只触发一条、且没有第五条。
+- [ ] 10.6 **音效与动效同步 + 静音即时生效**：里程碑音效必须与几何爆点**落在同一拍**（400ms），不得提前于爆点、不得晚于爆点退场；声音偏好关时四个触发点**都不调用播放**，且**不移除任何视觉反馈**（庆祝动效、答对回弹、答错摆动、连对负反馈全部照常）。验证：静音开关切换后**无需刷新**即生效；静音后录屏确认庆祝动效仍完整播放、四个反馈的视觉通道一个不少；音频四波形与动效帧的时间轴对齐。
+- [ ] 10.7 阶段验收（补充：声音与动效同步）：按 `acceptance.md` §3.3 + §2 **M-13**（关键反馈音效）走查 —— 四个时刻各一条 <200ms、首次音效发生在一次用户手势之后、加载后零发声、静音后零发声且视觉反馈完整；截图 / 录屏走查范围＝答对 / 答错 / 完成 / 里程碑四个时刻的声画对照。
 
 ## 11. 工作台设置视图与偏好存储 （design.md D-9 + D-8）
 
@@ -126,10 +134,12 @@
 
 ## 12. 夜纸值集与对比度复测 （design.md D-2 夜纸值 + D-3 / D-12 对比度）
 
-- [ ] 12.1 落夜纸值集 `:root[data-theme="night"]`（取值 = 权威表 §3）：表面（`--surface-base` #1c1a16 / `--surface-card` #232019 / `--surface-raised` #2b2620 / `--surface-ink` #14120f）、墨阶（§3.2）、三角色（`--role-blue` #7291de、`--role-blue-press` #8fa9e8、`--role-blue-wash` #292929、`--role-blue-soft` #31343c、`--role-yellow` #e0c151、`--role-yellow-deep` #f0d98a、`--role-yellow-soft` #3d3721、`--role-red` #d4736b、`--role-red-ink` #e08878、`--role-red-wash` #352821、`--role-red-soft` #432f28）、控件边界 `--rule-control` #7d7361。验证：切主题后 computed 值全部命中上表；夜纸**只是同一套三角色的第二套值**，不是新色系。
+- [ ] 12.1 落夜纸值集 `:root[data-theme="night"]`（取值 = 权威表 §3）：表面（`--surface-base` #1c1a16 / `--surface-card` #232019 / `--surface-raised` #2b2620 / **`--surface-sunken` #272319**（A-23 沉底层）/ **`--surface-code` #14120f**（A-23 更名，语义 = 仅代码块反白面））、墨阶（§3.2）、三角色（`--role-blue` #7291de、`--role-blue-press` #8fa9e8、`--role-blue-wash` #292929、`--role-blue-soft` #31343c、`--role-yellow` #e0c151、`--role-yellow-deep` #f0d98a、`--role-yellow-soft` #3d3721、`--role-red` #d4736b、`--role-red-ink` #e08878、`--role-red-wash` #352821、`--role-red-soft` #432f28）、控件边界 `--rule-control` #7d7361。验证：切主题后 computed 值全部命中上表；夜纸**只是同一套三角色的第二套值**，不是新色系。
 - [ ] 12.2 夜纸下的资产处理：圆底图标**降饱和 + 提亮**；渐变换更暗色阶与更弱高光；插画与图标用同一套 SVG 换变量、不另画一份。验证：夜纸下图标与插画可见且不刺眼；资产文件数不变；**本变更不做暗色下的图谱**（夜纸下的图谱适配归 `graph-node-visual-language` change，见 `decisions.md` A-8）。
 - [ ] 12.3 对比度复测并出表：正文 ≥4.5:1、次要文字 ≥4.5:1、控件边界与非文本状态标记 ≥3:1，两套主题各测一遍，把实测值写成对照表（逐项重测 design.md D-3 与 D-12 的表）。验证：表中无低于阈值项；`--ink-faint` 亮 3.45:1 / 夜 5.31:1 复核通过（权威表 §4.2 / §4.3，三级文字判定线 ≥3:1）；黄色填充在两主题下都**只承载面积与形状**。
 - [ ] 12.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.2 走查；截图走查范围＝6 类页面的亮 / 暗双主题对照；确认本变更**未改动图谱**（图谱页观感零变化，即 `acceptance.md` G-5 的否定式断言；夜纸下的图谱适配归 `graph-node-visual-language` change，见 `decisions.md` A-8）。
+- [ ] 12.5 **台灯涟漪在夜纸下的取值与层级检查**（A-27 **M-L** 的夜纸侧；配合第 8 组的 8.7）：涟漪层承载的是**目标主题**的 `--surface-base`（切夜纸 ⇒ `#1c1a16`，切回暖纸 ⇒ `#fdf8ef`），由 JS 在转场**开始时**写入（不是结束时 —— 否则会出现「旧色闪一帧」）；涟漪层与暖光层取 `--z-base`（0），三栏与卡片 z-index ≥ 1（A-1：**不得压平卡片**）；暖光用 `mix-blend-mode: screen`，若 DevTools 显示该层掉帧则退化为 `normal` + 降低暖光不透明度（观感损失可接受）。⚠️ 涟漪层是**底色层**，不得接到会随主题变的卡面 token 上（否则涟漪结束时底色会跳变）。验证：切到夜纸时涟漪前沿的颜色 == 夜纸底色（实测 RGB 一致）；涟漪全程卡片轮廓清晰；暖光层不掉帧；两方向（→夜纸 / →暖纸）各录一次。
+- [ ] 12.6 阶段验收（补充：夜纸涟漪）：按 `acceptance.md` §2 **M-1**（台灯主题转场）+ §3.2 走查；截图走查范围＝台灯转场在夜纸方向的中间帧 + 终帧，确认终帧与第 8 组 8.7 的四段时序一致、夜纸值集整套换上、涟漪层未压平卡片。
 
 ## 13. 三栏几何单一真值 （design.md D-10）
 
@@ -157,10 +167,12 @@
 
 - [ ] 16.1 题面成为**一张独立的纸** + 24px 大号题号：`#paper-question`（`pages.py:216`）从卡片内段落改为独立纸面（比卡片更亮一级 + 淡结构线）；题号做成 24px 大数字（像书的章节号）。验证：题号 computed font-size = 24px；题面与卡片的层级差可辨；题面**不做装饰性阴影强调**。
 - [ ] 16.2 解析与题面**同级**：`#paper-reference`（L221）改为同规格的另一张纸（不再是灰掉的小脚注），只用小标题区隔。验证：解析与题面处于同一 paper level；解析字号 17px。
-- [ ] 16.3 作答区成为**独立标记块**：`#paper-answer`（L219）前加淡结构线 + 「你的作答」标签 + 墨块；题面内的非 stem 文字（来源行与作答标签）**降一档到 16px**，stem 保持阅读字号。验证：题 / 答两段一眼可分；标签与来源行 computed 16px。
+- [ ] 16.3 作答区成为**独立标记块**：`#paper-answer`（L219）前加淡结构线 + 「你的作答」标签 + **沉底块 `--surface-sunken`**（**A-23**：作答区不再用近黑墨块，改浅底深字；边界靠底色差 + 1px 内发丝线）；题面内的非 stem 文字（来源行与作答标签）**降一档到 16px**，stem 保持阅读字号。验证：题 / 答两段一眼可分；标签与来源行 computed 16px；**作答区与所在卡面一眼可分**（两主题）。
 - [ ] 16.4 题号导航冗余编码：`#paper-dots`（L215、`workbench.css:1888`）每项加彩色圆点，已答 / 未答 / 不会 / 未判定四态各有**几何形状 + 颜色**（零可见文字）；当前题加非颜色提示（轮廓或等价物）；整板为紧凑圆角块，**不遮挡题面与导航**；题号显示为大号数字。验证：四态在灰度下仍可区分；每点带可访问名（`aria-label`）。
 - [ ] 16.5 setup 区、完成页与时间安排层级：`#paper-setup`（L203）、`#paper-completion`（L227）、`#practice-planning` + `_daily_plan`（L237）统一到新卡片规格；时间安排降级为可展开的次级信息。验证：三处层级一致；完成页容器可挂第 17 组的数字滚动与进度带。
 - [ ] 16.6 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0 G-1…G-4（请求序列 / 持久化 / 学习投影 / 复习建议不变）+ §1 S-2 / S-3 走查；截图走查范围＝练习全流程（setup → 题面 → 作答 → 解析 → 自评 → 完成页）。
+- [ ] 16.7 **完成页为分层庆祝预留承载位**（A-27 **M-F / M-G** 的承载侧；配合第 8 组的 8.8 与第 17 组的 17.6 / 17.7）：`#paper-completion`（`pages.py:227`）先具备三处承载位 —— ① **统计数字槽位**（可挂 `lk-ticker` 逐位滚动）；② **进度带**（`.lk-progress` + `.lk-progress__fill`，`transform-origin: left center`，只动 `scaleX`）；③ **里程碑锚点容器**（承载几何爆点与纸片，`pointer-events: none`，**不得覆盖完成页 CTA**）。⚠️ **承载位的静态样式必须等于其终态** —— 数字直接显示最终值、进度带静态为 `scaleX(1)`、爆点与纸片静态不出现；起始态只写在 `@keyframes` 内部（否则降级后元素永远停在「从未出现」的状态，见第 8 组 8.9 与 `design-notes/motion-spec.md` §7.1）。验证：关闭动效时完成页直接显示最终数字与满格进度带、CTA 可点；里程碑锚点容器不覆盖 CTA（点击穿透）。
+- [ ] 16.8 阶段验收（补充：完成页承载位）：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §1 **S-3** + §2 **M-2 / M-3** 走查；截图走查范围＝完成页静帧（数字 + 进度带 + CTA 可点）与降级帧（终态与动效帧一致）。
 
 ## 17. 连对反馈与分层庆祝 （spec「Motion system」+ decisions 15.3 / 15.4）
 
@@ -169,6 +181,10 @@
 - [ ] 17.3 连对中断负反馈：连对 **> 4** 时答错**必须**给明确负反馈（`lk-error-nudge` 等），**不得沉默**，并把计数器复位。验证：构造连对 5 次后答错的场景，界面出现明确信号且计数器归零。
 - [ ] 17.4 分层庆祝：日常档（至少有一道错）＝完成页入场 + 数字滚动 + 进度带 0→100%，**无**几何爆点与纸片；里程碑档（全对 / 破纪录 / 章节首次完成）＝再叠几何爆点 + 彩带 / 纸片飞散。验证：两档表现明显不同；里程碑档不遮挡完成页 CTA；庆祝全部在响应到达后触发，请求时序未变。
 - [ ] 17.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 走查 M-2 / M-3 / M-4 / M-5 / M-6 / M-7；截图走查范围＝连对 1 / 3 / 5 / 10 连四个时点 + 里程碑庆祝 + 降级对照帧。
+- [ ] 17.6 **里程碑判定三条件落地**（A-27 **M-F / M-G** 的判定侧；spec 新 Requirement「Round completion celebration in two tiers」）：里程碑档在下列**任一**条件成立时启用 —— ① 本轮**全对**；② **破纪录**（本轮结果优于同一试卷的既有最好结果）；③ **章节首次完成**。⚠️ 「破纪录」的比较必须**复用既有存储**（`practice_runs` 表与既有 attempts 的结果），**不得新造指标**（GLOSSARY `_Avoid_`：正确率 / 掌握度 / 完成度百分比）；**无可比记录时该条件不触发**（不得静默判为达成）；若口径仍无法确定，登记到第 27 组漂移表（27.2）备查，不得由实现期自行发明。三个条件**任一**成立即进里程碑档，不要求同时成立。验证：三个条件各造一个场景均能触发里程碑档；一个普通轮次（有错 + 无纪录 + 非章节首完）**不**触发；判定**不新增请求、不写池**（`acceptance.md` G-1 / G-2 / G-6）。
+- [ ] 17.7 **几何爆点与彩带 / 纸片的资产与锚点**（A-27 **M-G**；配合第 8 组的 8.8 与第 16 组的 16.7）：纸片用**内联 SVG** 三种小形状（细条 / 圆片 / 三角）+ 写意线稿淡彩语言（与第 9 组的 `assets/illustrations/` **同一支笔、同一套线宽与圆角**），**不用位图、不用图片序列**；几何爆点为圆环扩散 + 淡出；两者都挂在完成页的里程碑锚点容器内（`pointer-events: none`，**不得遮挡 CTA**），**日常档不挂这两样**。⚠️ 渐变只允许出现在图标与插画内部（权威表 §3.3 的插画语言规则），彩带不得用整屏渐变背景。验证：里程碑档逐帧录屏可见爆点与纸片；日常档两者都不出现；纸片 SVG 与 `assets/illustrations/` 同一笔触语言；纸片落在完成页容器内、不出视口、不盖 CTA。
+- [ ] 17.8 **连对火苗簇的逐簇点亮与熄灭**（A-27 **M-J / M-K**）：火苗为**内联 SVG**（灰 / 黄两层交叉淡入，只动 `opacity`，避免用颜色过渡 —— 动效红线），随连对数**逐簇点亮**；连对断裂时**逐簇熄灭**并给出明确负反馈（`lk-error-nudge`：水平摆动 ≤4px、160ms 内结束、**不做屏幕级震动**），同时计数器复位。⚠️ 火苗簇是**连对进度的几何冗余通道** —— 计数器被滚出视口时，长度仍可读（spec「The run is not carried by the counter alone」）。验证：连对 1 / 3 / 5 / 10 时簇数逐格增长；断裂时簇全灭 + 出现明确负反馈信号 + 计数器归零；负反馈不得只是颜色变化（须有可辨的形状或位置变化）。
+- [ ] 17.9 阶段验收（补充：连对与里程碑分镜）：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §2 **M-2 / M-3 / M-4 / M-5 / M-6 / M-11** 各采一条分镜条，并各出一张 reduced-motion 降级对照帧（终态与开启时一致）；截图走查范围＝连对 1 / 3 / 5 / 10 连四个时点 + 三个里程碑条件各一次 + 一次断裂负反馈。
 
 ## 18. 知识点页 （spec「Redundant state cues」+ D-5）
 
@@ -200,14 +216,20 @@
 - [ ] 21.2 空态 / 加载态 / 错误态**三态各有组件**：`.empty-state`（插画 + 一句 + 满宽主按钮）、`.skeleton`、错误块；错误态用红色且**红色仅用于失败与阻塞**。验证：三种状态各有可触发路径与对应渲染。
 - [ ] 21.3 焦点不被抢走：转场与浮层出现时**不得**抢焦点；装饰层一律 `pointer-events: none`，可交互元素不在装饰层内。验证：切页后焦点仍在原处或落到新页首个可交互元素（按既有行为）；装饰层 pointer-events 检查通过。
 - [ ] 21.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 M-8 / M-9 + §0 G-7 走查；截图走查范围＝练习 ⇄ 知识点 ⇄ 记录三次客户端换页的中间帧。
+- [ ] 21.5 **容器级转场的实现约束落地**（A-27 **M-D / M-E**；spec 新 Requirement「View transition and skeleton loading state」）：`middle-navigation.js` 每次切页**整体替换 `#middle-page` 的 innerHTML**（`installPageContent`），因此转场**必须是 `#middle-page` 自身的 animation**（`#middle-page > *` 挂 `lk-rise-in-8` / `lk-rise-in-12`），**不得**靠 JS 给子元素加一次性类名 —— 切页后该类名会被 innerHTML 替换冲掉；骨架屏同样挂容器（`#middle-page` 先呈骨架、内容到位后由容器动画接管），加载态带 `aria-busy`。⚠️ 图谱页的 `#middle-page` 是**全站共用容器**（`pages.py:97`）⇒ 转场作用域**排除图谱页**（`#layout:not([data-page="graph"]) #middle-page > *`，见 `design-notes/graph-isolation.md` F-6），且**不含 `scale`** —— `scale` 会改变 `graphCanvas.getBoundingClientRect()`，导致环境色 canvas 与真实画布错位。验证：切页后动画**仍播放**（不是只在首次加载播放）；`grep -n "classList.add" middle-navigation.js` 无一次性动效类名；进入图谱页时**不**播放上浮淡入，图谱页观感零变化（`acceptance.md` G-5）。
+- [ ] 21.6 **降级下骨架与内容的终态一致**：reduced-motion 或动效偏好关时，骨架**不扫光**、内容**直接以终态出现**（位置、层级、可点元素与动效版一致）；**不得**停在「骨架永久停留」或「内容半透明」的状态 —— 骨架块的静态样式必须等于「内容已就位」的状态（起始态只写在 `@keyframes` 内，见第 8 组 8.9 与 `design-notes/motion-spec.md` §7.1）。验证：降级帧与动效帧的终态**逐像素一致**（内容区无残留骨架块、无半透明内容）；`aria-busy` 在降级下同样正确置位与复位。
+- [ ] 21.7 阶段验收（补充：视图转场与骨架）：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §2 **M-8 / M-9** + §0 **G-7** 走查；截图走查范围＝练习 ⇄ 知识点 ⇄ 记录三次客户端换页的中间帧 + 各自的 reduced-motion 降级对照帧（终态一致）。
 
-## 22. 样板线验收关卡（`acceptance.md` G / S / M） （acceptance.md G-1…G-8 / S-1…S-12 / M-1…M-10）
+## 22. 样板线验收关卡（`acceptance.md` G / S / M） （acceptance.md G-1…G-8 / S-1…S-12 / M-1…M-13）
 
 - [ ] 22.1 **底线守卫 G-1…G-8**：按 `acceptance.md` §0 逐条执行并留证 —— 脚本化跑一遍练习并 diff 请求方法 / 路径 / 载荷键集合；比对池中 `problem_attempts` / `feedback_events` / `practice_runs` 的行数与关键列；比对学习投影与复习建议集合；图谱页像素比对；池 schema 零变更；装饰层 `pointer-events` 检查；改造前后焦点序列对比。**任何一条红即整体 FAIL，不进入后续评审**。
 - [ ] 22.2 **对照截图 S-1…S-12**：按 `acceptance.md` §1 产出改造前 / 改造后并排图（基线在 `tmp/frontend-audit/00-baseline-*.png`；S-3 练习进行中 / S-7 作答明细 / S-9 设置视图 / S-10 夜纸 / S-11 窄屏 / S-12 空态 需新建基线）；比对标准＝同尺寸并排，**不得出现「配色被改」「圆角被改」「信息被删」**，文字除文案清理项外逐字一致。
-- [ ] 22.3 **关键帧 M-1…M-10**：按 `acceptance.md` §2 每条动效采帧拼分镜条（台灯转场 6 帧、日常庆祝 5 帧、里程碑庆祝 5 帧、连对插播 5 帧、连对计数器 3 档、火苗簇 3 帧、挤压回弹 7 帧、视图转场 4 帧、骨架屏 3 帧、数据层 3 帧），并各出一张 reduced-motion 降级对照帧；通用判据＝所有动效只用 `transform` / `opacity`。
-- [ ] 22.4 **交互清单与关卡提交**：按 `acceptance.md` §3.1–§3.7 逐条勾选（未勾选项逐条列出并说明为何可接受）；把截图组 + 分镜条 + 勾选表 + 未过项清单一并提交所有者；**验收通过前不得启动第 23–28 组**（铺开段）。
+- [ ] 22.3 **关键帧 M-1…M-13**：按 `acceptance.md` §2 每条动效采帧拼分镜条（台灯转场 6 帧、日常庆祝 5 帧、里程碑庆祝 5 帧、连对插播 5 帧、连对计数器 3 档、火苗簇 3 帧、**连对断裂负反馈 4 帧**、挤压回弹 7 帧、视图转场 4 帧、骨架屏 3 帧、数据层 3 帧、**降级分级 4 帧**、**音效波形 4 段**），并各出一张 reduced-motion 降级对照帧；通用判据＝所有动效只用 `transform` / `opacity`。
+- [ ] 22.4 **交互清单与关卡提交**：按 `acceptance.md` §3.1–§3.8 逐条勾选（未勾选项逐条列出并说明为何可接受）；把截图组 + 分镜条 + 勾选表 + 未过项清单一并提交所有者；**验收通过前不得启动第 23–28 组**（铺开段）。
 - [ ] 22.5 阶段验收：跑 AGENTS.md 四条验证命令（pytest / compileall / `openspec validate --specs --strict` / `guard extract-problems --course dmath --chapter ch06`）并贴输出；确认 `acceptance.md` §4 的四项通过标准全部满足。
+- [ ] 22.6 **动效分镜条专项**（`acceptance.md` §2 **M-1…M-13**；A-27.1「mockup 是静态评审件，不能替代分镜条」）：按 §2 的 13 条**逐条**产出分镜条 —— 台灯 6 帧、日常庆祝 5 帧、里程碑庆祝 5 帧、连对插播 5 帧、连对计数器 3 档、火苗簇 3 帧、连对断裂负反馈 4 帧、挤压回弹 7 帧、视图转场 4 帧、骨架屏 3 帧、数据层 3 帧、降级分级 4 帧、音效波形 4 段；每条附一行判据核对结果。⚠️ **缺一条分镜条即视为该动效未实现** —— 不得以静态截图、mockup 或「代码里写了 animation」代替分镜条。验证：分镜条清单与 §2 的 13 行**逐行对应**、无缺项；每条都能看出运动过程（不是同一帧的复制）。
+- [ ] 22.7 **每条动效的 reduced-motion 降级对照帧**：为 §2 的每一条动效各出一张降级对照帧，判据＝**终态与开启时一致**（数字、进度带、计数器档位、灯与涟漪层、纸片、火苗簇、内容位置逐项比对，**不得停在中间态**）；四种组合（系统 reduce + 偏好未设 / 系统 reduce + 偏好显式开 / 系统允许 + 偏好未设 / 系统允许 + 偏好关）各出一张；⚠️ **音频不受动效降级影响** —— 声音偏好与动效偏好相互独立，音效仍按声音偏好发声。验证：每条动效的降级帧与动效帧终态逐像素一致；四组偏好 / 系统组合各一张；关闭动效后庆祝音效**仍然播放**（静音时才不播）。
+- [ ] 22.8 阶段验收（补充：动效关卡）：把 22.6 的分镜条组与 22.7 的降级对照帧组一并提交；两张表**逐条勾选**，未过项逐条列出并说明为何可接受；**动效分镜条缺一条即整体 FAIL**（与底线守卫同级）；确认动效全程**未改变请求序列、持久化结果与池 schema**（G-1 / G-2 / G-6 复跑一次）。
 
 ---
 
@@ -228,7 +250,7 @@
 ## 25. Agent 右栏 （spec「Agent rail presentation keeps the learning page primary」）
 
 - [ ] 25.1 会话列表**补滚动容器 + 分组**：现状 `#ai-session-list`（`workbench.css:611`）无滚动容器（`overflow:visible` + 祖先 `overflow:hidden` ⇒ 被静默裁掉）；补内部滚动容器，并按「今天 / 昨天 / 更早」分组，每组小标题 + 组内圆角小块（标题 + provider 圆点 + 日期）。验证：长列表可滚到末条且不再被裁；三组结构成立。
-- [ ] 25.2 消息流改**圆角卡片流**：每条消息一张圆角卡（Agent 消息可展开详情）；**不得演化成常驻任务面板**（既有 spec：右栏不取代中栏学习面）；Agent 长文挂 `.wb-reading`。验证：卡片流可滚且无常驻面板；长文排版与知识点正文同层。
+- [ ] 25.2 消息流改**圆角卡片流**：每条消息一张圆角卡（Agent 消息可展开详情）；**不得演化成常驻任务面板**（既有 spec：右栏不取代中栏学习面）；Agent 长文挂 `.wb-reading`。**A-23：用户消息（用户在对话里的话）的底色改「沉底 `--surface-sunken`」（浅底深字），不再用近黑墨块**；Agent 消息仍是卡级纸面；两者靠「底色差 + 1px 内发丝线」分开。验证：卡片流可滚且无常驻面板；长文排版与知识点正文同层；**用户消息与 Agent 消息一眼可分**（两主题）。
 - [ ] 25.3 composer、执行计划与活动浮层：composer 贴底、大圆角、聚焦变蓝 + 轻微抬起，且**随输入增高**（不把对话换成任务面板）；执行计划改**圆点时间线**（圆点 + 细线 + 文字），工具调用折叠成 ≤240 字摘要（展开看详情）；活动浮层改右上角圆角小卡，可收起、活动结束即消失，**空闲时不得留下任何辅助工作面**挡住中栏；窄屏抽屉保持「会话列表 + 消息 + composer」同一结构。验证：输入多行时 composer 增高且消息区不被替换；摘要长度受限；空闲时中栏不被遮挡；抽屉里 composer 仍可达。
 - [ ] 25.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.4（会话列表可滚动）+ §1 S-11 走查；截图走查范围＝Agent 右栏（会话列表 / 消息流 / composer / 执行计划 / 活动浮层）；确认右栏交互的请求序列与载荷未变。
 
@@ -265,7 +287,18 @@
 - [ ] 覆盖 design.md D-1…D-15 全部十五条决策，每条至少一条任务
 - [ ] 第 5 组 5.2b「进度与成就的可见反馈」已落点：18.5（章节知识点计数）+
       19.4（记录中心累计量 + 连续学习天数待确认）+ 27.2（漂移登记）+
-      `specs/workbench-ui/spec.md` 的新增 Requirement（ADDED 10 条）
+      `specs/workbench-ui/spec.md` 的新增 Requirement（ADDED 15 条）
+- [ ] **`decisions.md` A-27.2 的 M-F…M-N 已落成实现任务**（每条首类 Requirement 都有对应组）：
+      交卷庆祝分两层（M-F / M-G）→ **8.8**（keyframes 与数字滚动）+ **16.7**（完成页承载位）+
+      **17.6**（里程碑判定三条件：全对 / 破纪录 / 章节首次完成）+ **17.7**（爆点与彩带 / 纸片）；
+      台灯主题转场（M-L）→ **8.7**（四段实现）+ **12.5**（夜纸取值与层级检查）；
+      连对升级（M-H / M-I / M-J / M-K）→ **17.1 / 17.2 / 17.8**（三级计数器 / 一份参数化横幅 / 火苗簇与负反馈）；
+      视图转场与骨架屏（M-D / M-E）→ **21.1 / 21.5**（容器动画约束，含「整体替换 innerHTML ⇒ 必须容器动画」）+
+      **21.6**（降级终态一致）；
+      关键反馈音效（M-N）→ **10.1 / 10.5 / 10.6**（资产 / 四个触发点 / 声画同步）；
+      动效偏好与分级降级（M-M）→ **8.9**（终态一致铁律）+ **11.6**（A-2 语义）
+- [ ] 动效验收已进关卡：**22.6**（动效分镜条，对应 `acceptance.md` §2 的 M-1…M-13）+
+      **22.7**（每条动效的 reduced-motion 降级对照帧，终态与开启时一致）+ **22.8**（动效关卡，缺一条分镜条即 FAIL）
 - [ ] 覆盖三份 spec delta 的每条 Requirement（含 workbench-settings 7 条、calendar-workload 1 条）
 - [ ] 每组有验收任务，含 AGENTS.md 的四条验证命令 + `acceptance.md` 对应小节
 - [ ] 新增测试任务存在（D-6 的 `tests/test_markdown_render_parity.py`）

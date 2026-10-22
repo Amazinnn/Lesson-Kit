@@ -27,7 +27,7 @@
 | 中文名 | English term | 在本文件中的用法 |
 |---|---|---|
 | 柔和蒙德里安 v2 | Soft Mondrian v2 | 本规格所描述的视觉语言总纲 |
-| 纸面层级 | Paper level | §3.4 四层纸面（底 / 卡 / 浮起 / 墨块） |
+| 纸面层级 | Paper level | §3.4 四层纸面（底 / 卡 / 浮起 / **沉底**） |
 | 夜纸 | Night paper | 暗色主题值集（底 `#1c1a16`） |
 | 冗余状态通道 | Redundant state channel | 状态点「颜色 + 几何」双编码（§3.6） |
 | 主题偏好 | Theme preference | 亮 / 暗，按工作区存储 |
@@ -53,7 +53,7 @@
 | 底色（暗 / 夜纸） | `#1c1a16` |
 | 墨色（亮） | `#221f1a`（暗色下反相为暖浅色 `#f2ede3`） |
 | 圆角 | **12px 统一**（按钮 / 卡片 / 标签 / 输入框 / 下拉 / 面板） |
-| 纸面层级 | 底 / 卡 / 浮起 / 墨块（4 层），靠圆角 + 柔影分层，**不用描边** |
+| 纸面层级 | 底 / 卡 / 浮起 / **沉底**（4 层），靠圆角 + 柔影分层，**不用描边**（沉底层例外：1px **内**发丝线，见 §4.19 / 权威表 §6.3 例外 4） |
 | 阴影 | 暖调柔影（非纯黑） |
 | 背景图案 | **不用**（纯色，无纹理无网点） |
 | 描边 | **不用**；唯一例外是**控件边界**（输入框 / 下拉触发器 / 复选框 / 单选），用 1px 发丝线 |
@@ -123,7 +123,7 @@
     Menlo, monospace;
 
   /* 字号（权威表 §2.3；行高与字号成对，随行高档见各 fs 的注释） */
-  --fs-hero: 36px;      /* 英雄数字：空态大标题 / 庆祝数字 / 墨块大数字；行高 44px */
+  --fs-hero: 36px;      /* 英雄数字：空态大标题 / 庆祝数字 / 沉底块大数字；行高 44px */
   --fs-display: 28px;   /* 次级展示层（页面大标题）；行高 36px */
   --fs-stat: 24px;      /* 统计数字；行高 30px */
   --fs-question: 24px;  /* 题号大数字；行高 30px */
@@ -169,7 +169,8 @@
   --surface-base: #fdf8ef;      /* 页面底 */
   --surface-card: #fffdf7;      /* 卡面 */
   --surface-raised: #ffffff;    /* 浮起面 */
-  --surface-ink: #221f1a;       /* 墨块面 */
+  --surface-sunken: #f2ece1;    /* 沉底面（内容块：作答区 / 用户消息 / 强调块） */
+  --surface-code: #221f1a;      /* 代码块反白面（仅代码块 / 等宽代码区） */
 
   /* 墨与文字（权威表 §3.2） */
   --ink-strong: #221f1a;        /* 标题 / 强调文字 */
@@ -179,7 +180,7 @@
   --ink-disabled: #8a8275;      /* 失活控件文字（≥3:1） */
   --ink-on-role: #fffdf7;       /* 蓝 / 红角色面上的文字 */
   --ink-on-warm: #221f1a;       /* 黄色暖面上的文字 */
-  --ink-inverse: #fffdf7;       /* 墨块面上的文字（反白） */
+  --ink-inverse: #fffdf7;       /* 代码块反白面上的文字（仅 --surface-code） */
 
   /* 规则线（权威表 §3.3） */
   --rule-hair: #e6dcc4;         /* 分隔线（装饰性） */
@@ -202,6 +203,7 @@
   /* 交互面纱（权威表 §3.5） */
   --veil-hover: rgb(61 52 37 / 6%);
   --veil-active: rgb(61 52 37 / 11%);
+  --veil-modal: rgb(33 31 26 / 42%);
 
   /* 抬升（权威表 §3.6） */
   --elev-1: 0 1px 2px rgb(61 52 37 / 6%), 0 4px 12px rgb(61 52 37 / 4%);
@@ -217,7 +219,8 @@
   --surface-base: #1c1a16;
   --surface-card: #232019;
   --surface-raised: #2b2620;
-  --surface-ink: #14120f;
+  --surface-sunken: #272319;
+  --surface-code: #14120f;
 
   --ink-strong: #f4ede0;
   --ink-body: #e7dfd0;
@@ -246,6 +249,7 @@
 
   --veil-hover: rgb(255 244 224 / 6%);
   --veil-active: rgb(255 244 224 / 12%);
+  --veil-modal: rgb(20 18 15 / 58%);
 
   --elev-1: 0 1px 2px rgb(0 0 0 / 30%), inset 0 1px 0 rgb(255 238 210 / 5%);
   --elev-2: 0 10px 28px rgb(0 0 0 / 38%), 0 0 24px rgb(255 236 200 / 5%), inset 0 1px 0 rgb(255 238 210 / 7%);
@@ -350,9 +354,18 @@
 | L0 | 底 | `--surface-base` | 页面底、栏底 | — | 无 |
 | L1 | 卡 | `--surface-card` | 卡片、输入框、列表项、内层面板 | 12px | `--elev-1` |
 | L2 | 浮起 | `--surface-raised` | 下拉面板、吐司、对话框、悬浮工具条 | 12px | `--elev-3` |
-| L3 | 墨块 | `--surface-ink` | 强调块、题号大字块、连对计数器底、墨底吐司 | 12px | `--elev-2` |
+| L3 | **沉底** | `--surface-sunken` | **内容块**：作答区、用户消息、强调块、题号大字块、连对计数器底 | 12px | 无（**凹层**） |
+
+> **A-23（2026-10-22）**：L3 由「**墨块**」改为「**沉底**」。
+> 原 L3 = 近黑深底（`--surface-ink` #221f1a / #14120f），**退出内容块**：
+> 该 token **更名为 `--surface-code`**，语义收窄为「**仅代码块 / 等宽代码区的反白面**」
+> （取值不变，代码块不因本裁决改动），**不再是一层纸面**。
+> L3 沉底 = **浅色主题比卡面略深的暖灰米底 + 墨字**（#f2ece1），
+> **夜纸反向 = 比卡面略亮 + 浅墨字**（#272319）。
 
 **分层铁律**：相邻两级靠 **圆角 + 柔影** 拉开，不靠描边、不靠背景图案、不靠渐变。
+**L3 沉底是唯一的例外**：它是**凹层**，不抬升（无柔影），
+边界靠「**底色差 + 1px 内发丝线**」与 L1 卡面分开（权威表 §3.1【A-23-3】/ §6.3 例外 4）。
 
 ```css
 .lk-paper-l0 { background: var(--surface-base); }
@@ -360,8 +373,10 @@
   box-shadow: var(--elev-1); }
 .lk-paper-l2 { background: var(--surface-raised); border-radius: var(--r-md);
   box-shadow: var(--elev-3); }
-.lk-paper-l3 { background: var(--surface-ink); color: var(--ink-inverse);
-  border-radius: var(--r-md); box-shadow: var(--elev-2); }
+/* L3 = 沉底：凹层，不抬升；1px 内发丝线用 inset 阴影（不引入 border，不改盒模型） */
+.lk-paper-l3 { background: var(--surface-sunken); color: var(--ink-strong);
+  border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px var(--rule-hair); }
 ```
 
 ### 3.5 角色色配额速查
@@ -385,7 +400,7 @@
 | 题号格 | 蓝 / 黄 / 红 / 中性（每格 1） | R1 |
 | 卡片 | 无（选中蓝 + 状态点） | R0 / R2 |
 | 纸面 L0–L3 | 无 | R0 |
-| 墨块 | 无（可嵌 1 个角色色块） | R0 / R1 |
+| 沉底块 | 无（可嵌 1 个角色色块） | R0 / R1 |
 | 空态 | 蓝（主按钮） | R1 |
 | 骨架屏 | 无 | R0 |
 | 吐司 | 红点（错误时） | R0 / R1 |
@@ -1058,7 +1073,7 @@
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: var(--surface-ink)`；`color: var(--ink-inverse)`（中性计数，如未读） |
+| 默认 | `background: var(--surface-sunken)`；`color: var(--ink-strong)`（中性计数，如未读）。**A-23**：不再用近黑墨块 |
 | hover / active | 不适用 |
 | focus-visible | 不适用（徽标本身不可聚焦） |
 | disabled | 不适用 |
@@ -1074,7 +1089,7 @@
 .lk-badge {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 20px; height: 20px; padding: 0 6px;
-  border-radius: var(--r-round); background: var(--surface-ink); color: var(--ink-inverse);
+  border-radius: var(--r-round); background: var(--surface-sunken); color: var(--ink-strong);
   font-family: var(--font-ui); font-size: var(--fs-label); font-weight: 700;
   font-variant-numeric: tabular-nums; line-height: 1;
 }
@@ -1360,7 +1375,13 @@
 | L0 | 底 | `--surface-base` | 页面底、左栏 / 中栏 / 右栏底 | — | 无 |
 | L1 | 卡 | `--surface-card` | 卡片、输入框、下拉触发器、列表行、内层面板 | 12px | `--elev-1` |
 | L2 | 浮起 | `--surface-raised` | 下拉面板、吐司、对话框、悬浮条、hover 抬起的次按钮 | 12px | `--elev-3` |
-| L3 | 墨块 | `--surface-ink` | 题号大字块、连对计数器底、墨底吐司、强调引文 | 12px | `--elev-2` |
+| L3 | **沉底** | `--surface-sunken` | **内容块**：作答区、用户消息、题号大字块、连对计数器底、强调引文 | 12px | 无（**凹层**）+ 1px 内发丝线 |
+
+> **A-23（2026-10-22）**：L3 由「**墨块**」改为「**沉底**」——
+> 近黑深底退出内容块，该 token **更名为 `--surface-code`**（语义 = 仅代码块 / 等宽代码区反白面，
+> 取值不变，**不再是一层纸面**）。L3 沉底 = 浅底深字（浅 #f2ece1 / 夜 #272319）。
+> ⚠️ L3 是**凹层**：它**不抬升**（无 `--elev-*`），边界靠「**底色差 + 1px 内发丝线**」
+> 与 L1 卡面分开（权威表 §3.1【A-23-3】/ §6.3 例外 4）。
 
 - 状态：
 
@@ -1370,16 +1391,17 @@
 | hover | 面**不变**，靠内部元素反馈；可点击面整体 `translateY(-2px)` + 升一级阴影 |
 | active | `translateY(0)` + 回落一级阴影 |
 | focus-visible | 双环焦点环，内环取该面的纸色 |
-| disabled | `opacity: .6`（墨块降到 `--ink-muted`） |
+| disabled | `opacity: .6`（沉底降到 `--ink-muted`） |
 | loading | 保持面的尺寸，内容换骨架屏 |
 | selected | 内环 2px 蓝（`inset 0 0 0 2px var(--role-blue)`），**不加边框** |
 | error | 面不变，加红状态点 |
 
 - 角色色：R0（面本身不带角色色）。
 - **深浅差异**：夜纸下 L0 `#1c1a16` → L1 `#232019` → L2 `#2b2620` 逐级提亮，
-  **L3 墨块反相为深块 `#14120f`**（比页面底更深 = 读作「洞」而不是「抬起」，
-  与浅色主题「墨块比底更深」同构 —— 权威表 §3.1【A-18-6】复核结论）；
+  **L3 沉底 `#272319` 取卡与浮起的中点（比卡面略亮 +1.49、比浮起略暗 −1.66）**——
+  A-23 要求夜纸**反向**（沉底比卡面略亮 + 浅墨字）；
   阴影改为**更深的不透明黑**（因为夜纸底色已深，暖调柔影不可见）。
+  ⚠️ 夜纸的沉底与卡面**底色差只有 ΔL\* 1.49** → **必须靠内发丝线兜底**，不得省。
 
 ```css
 .lk-surface-0 { background: var(--surface-base); }
@@ -1387,53 +1409,63 @@
   box-shadow: var(--elev-1); }
 .lk-surface-2 { background: var(--surface-raised); border-radius: var(--r-md);
   box-shadow: var(--elev-3); }
-.lk-surface-3 { background: var(--surface-ink); color: var(--ink-inverse); border-radius: var(--r-md);
-  box-shadow: var(--elev-2); }
+/* L3 = 沉底：凹层，不抬升；文字是墨字（不是反白） */
+.lk-surface-3 { background: var(--surface-sunken); color: var(--ink-strong);
+  border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--rule-hair); }
 ```
 
 ```css
 /* 相邻层差的唯一实现：只靠圆角 + 柔影，不加描边、不加图案 */
 .lk-surface-1 { box-shadow: var(--elev-1); }
 .lk-surface-2 { box-shadow: var(--elev-3); }
-.lk-surface-3 { box-shadow: var(--elev-2); }
 /* 浮起层在夜纸下改用更深的墨色垫圈，避免与 L1 糊在一起 */
 [data-theme="night"] .lk-surface-2 { box-shadow: 0 0 0 1px var(--rule-hair), var(--elev-3); }
 ```
 
-### 4.20 墨块（Ink block）
+### 4.20 沉底块（Sunken block）
 
-**定位**：**最强的一层强调**。用于：题面里的大号题号、连对计数器底、墨底吐司、
+**定位**：**最强的一层强调**（凹层）。用于：题面里的大号题号、连对计数器底、
 引文 / 结论块、以及「唯一主角」区域。
+
+> **A-23（2026-10-22）**：本节原为「**墨块**（Ink block）」，用近黑深底做强调。
+> 所有者反馈「这些黑色底色太突兀了」→ 改为**沉底块**：**浅底深字**，
+> 强调力由**近黑反差**改为「**尺度 + 挖坑感**」（36px 英雄数字仍是主角）。
+> 原近黑 token **更名为 `--surface-code`**，只服务代码块，**本节不再使用**。
 
 - 圆角：`--r-md`（12px）
 - 内外边距：`padding: var(--sp-5)`（24px）；紧凑块 `12px 16px`
-- 背景：`--surface-ink`（浅色 `#221f1a` ／ 夜纸 `#14120f`，两主题都是深墨块）
-- 文字：`--ink-inverse`；**大号数字 `--fs-hero`（36px）/ 700 / `tabular-nums`**
+- 背景：`--surface-sunken`（浅色 `#f2ece1` ／ 夜纸 `#272319`）——**浅底深字**
+- 边界：**1px 内发丝线** `--rule-hair`（浅 `#e6dcc4` ／ 夜 `#332d25`），
+  以 `inset` 阴影落地（**不用 `border`**）；它与卡面的**底色差**共同把「坑」读出来
+- 文字：`--ink-strong`（标题 / 数字）/ `--ink-body`（正文）；
+  **大号数字 `--fs-hero`（36px）/ 700 / `tabular-nums`**
   （庆祝数字 / 连对计数器主数字同此档 —— A-18：不得压到 `--fs-display` 28px）
-- **禁止**：墨块上放黄色文字（黄不承载文字）；墨块上只用墨 / 纸两色 + 至多 1 个角色色块
+- **禁止**：沉底块上放黄色文字（黄不承载文字）；只用墨 / 纸两色 + 至多 1 个角色色块
+- **不带柔影**：凹层不抬升（权威表 §3.1【A-23-3】）
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `--surface-ink` 底 + `--ink-inverse` 字 + `--elev-2` |
+| 默认 | `--surface-sunken` 底 + `--ink-strong` 字 + 内发丝线 |
 | hover | 不适用（静态强调块） |
 | active | 不适用 |
 | focus-visible | 内部若含可聚焦元素，焦点环落在该元素上 |
-| disabled | `background: var(--ink-muted)`；`color: var(--surface-base)` |
+| disabled | `opacity: .6` |
 | loading | 数字位跑「滚动数字」动效（庆祝动效规格定义）；未定义时保持原值 |
 | selected | 不适用 |
-| error | 改为红底？→ **不**：失败语义用**红状态点 + 白字**表达，墨块本身保持中性墨 |
+| error | 改为红底？→ **不**：失败语义用**红状态点 + 墨字**表达，沉底块本身保持中性 |
 
 - 角色色：R0（可嵌 1 个角色色块 → R1）。
 
 ```css
-.lk-inkblock {
-  background: var(--surface-ink); color: var(--ink-inverse);
-  border-radius: var(--r-md); box-shadow: var(--elev-2);
+.lk-sunkenblock {
+  background: var(--surface-sunken); color: var(--ink-strong);
+  border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
   padding: var(--sp-5);
 }
-.lk-inkblock__figure { font-family: var(--font-ui); font-size: var(--fs-hero);
+.lk-sunkenblock__figure { font-family: var(--font-ui); font-size: var(--fs-hero);
   font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-.lk-inkblock:disabled, .lk-inkblock[aria-disabled="true"] { background: var(--ink-muted); color: var(--surface-base); }
+.lk-sunkenblock:disabled, .lk-sunkenblock[aria-disabled="true"] { opacity: .6; }
 ```
 
 ### 4.21 空态（Empty state）
@@ -1532,7 +1564,9 @@
 
 - 尺寸：`max-width: 320px`，`min-width: 240px`，`padding: 12px 16px`
 - 圆角：`--r-md`（12px）
-- 背景：**墨块**（L3）：`--surface-ink` 底 + `--ink-inverse` 字
+- 背景：**浮起面**（L2）：`--surface-raised` 底 + `--ink-strong` 字
+  ⚠️ **A-23**：原为「**墨块**（近黑深底 + 白字）」，近黑面已退出内容块
+  （`--surface-code` 只服务代码块）→ 吐司改**浅底深字**，靠 `--elev-3` 柔影 + 状态点读出「浮起」
 - 字号：`--fs-meta`（13px）/ `line-height: 1.4`
 - 左侧可选 10px 状态点（§4.14）
 - 阴影：`--elev-3`；`z-index: var(--z-toast)`
@@ -1542,14 +1576,14 @@
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | 墨块 + 白字；进入用「上浮 8px + 淡入」160ms |
+| 默认 | 浮起面 + 墨字；进入用「上浮 8px + 淡入」160ms |
 | hover | `transform: translateY(-2px)`；阴影升一级 |
 | active | `translateY(0)` |
 | focus-visible | 吐司**不抢焦点**（`pointer-events: none` 于容器，`auto` 于内部按钮）；内部按钮有焦点环 |
 | disabled | 不适用 |
 | loading | 不适用（吐司不做加载态） |
 | selected | 不适用 |
-| error | 左侧 **红状态点**（`--role-red` / `filled`）+ 文字仍取 `--ink-inverse`（不用红底）；`role="alert"` |
+| error | 左侧 **红状态点**（`--role-red` / `filled`）+ 文字仍取 `--ink-strong`（不用红底）；`role="alert"` |
 | 成功 | 左侧 **蓝状态点**；`role="status"`；`aria-live="polite"` |
 
 - 角色色：R0 / R1（错误红点）。
@@ -1560,7 +1594,7 @@
   position: fixed; top: 16px; right: 16px; z-index: var(--z-toast);
   display: flex; align-items: flex-start; gap: var(--sp-2);
   min-width: 240px; max-width: 320px; padding: 12px 16px;
-  border-radius: var(--r-md); background: var(--surface-ink); color: var(--ink-inverse);
+  border-radius: var(--r-md); background: var(--surface-raised); color: var(--ink-strong);
   box-shadow: var(--elev-3); pointer-events: none;
   font-family: var(--font-ui); font-size: var(--fs-meta); line-height: 20px;
   opacity: 0; transform: translateY(-8px);
@@ -1575,7 +1609,11 @@
 
 **定位**：**需要打断**的模态（确认删除、组卷确认、放弃作答）。轻反馈一律用吐司。
 
-- 遮罩：`background: var(--surface-ink)` + `opacity`（亮 `.42` = `#221f1a`/42%，夜纸 `.58`）——**权威表 §3 无「模态遮罩」token**，借墨块面色 + 不透明度落地（→ 待裁决是否补一个遮罩 token）；**不用 backdrop-filter 模糊**（禁玻璃拟态）
+- 遮罩：`background: var(--veil-modal)`（**暖墨半透明面纱**：亮 42% / 夜纸 58%）——
+  **遮罩是面纱、不是纸面**，不占用任何 `--surface-*` token
+  （`--surface-code` 只服务代码块，A-23；权威表 §3.5 已补 `--veil-modal`）；
+  半透明落在**背景色自身**上（不用容器的 `opacity`），避免把面板一起变半透明；
+  **不用 backdrop-filter 模糊**（禁玻璃拟态）
 - 面板：`--surface-raised` 底，圆角 `--r-md`（12px），`padding: 24px`
 - 宽度：`min(480px, calc(100vw - 32px))`；最大高 `min(70vh, 640px)`，内容区可滚
 - 阴影：`--elev-3`；`z-index: var(--z-modal)`
@@ -1598,8 +1636,7 @@
 
 ```css
 .lk-dialog-backdrop { position: fixed; inset: 0; z-index: var(--z-modal);
-  background: var(--surface-ink); opacity: .42; display: flex; align-items: center; justify-content: center; }
-[data-theme="night"] .lk-dialog-backdrop { opacity: .58; }
+  background: var(--veil-modal); display: flex; align-items: center; justify-content: center; }
 .lk-dialog {
   width: min(480px, calc(100vw - 32px)); max-height: min(70vh, 640px);
   background: var(--surface-raised); color: var(--ink-strong);
@@ -1947,7 +1984,7 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 | 分段进度条 | 同上 | — |
 | 题号格 | 原生 `<button>` + `aria-label="第 N 题"`（含状态文字在 `aria-label` 内，**视觉上零文字**）+ `aria-current="step"` | `Enter`/`Space` 跳转；方向键在网格内移动 |
 | 卡片 | 容器 `<article>` 或 `<li>`；可点击卡用 `<button>` / `role="button"` + `aria-pressed` | `Enter`/`Space` 激活 |
-| 纸面 / 墨块 | 静态容器；`aria-hidden` 不适用（内容需读出） | — |
+| 纸面 / 沉底块 | 静态容器；`aria-hidden` 不适用（内容需读出） | — |
 | 空态 | 容器 `role="status"`？→ **否**（静态内容不抢播报）；主按钮正常可聚焦 | `Tab` 到主按钮 |
 | 骨架屏 | 容器 `aria-busy="true"`；骨架块 `aria-hidden="true"`；容器内 `.visually-hidden` 的「加载中」 | 期间不可聚焦 |
 | 吐司 | 成功 `role="status" aria-live="polite"`；错误 `role="alert"` | **不抢焦点**；内部按钮可聚焦 |
@@ -1973,7 +2010,7 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 ├──────────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                              │
 │  ┌── 纸面层级 ─────────────────────────────────────────────────────────────────────────────┐ │
-│  │  L0 底 #fdf8ef    L1 卡 #fffdf7    L2 浮起 #ffffff    L3 墨块 #221f1a                   │ │
+│  │  L0 底 #fdf8ef    L1 卡 #fffdf7    L2 浮起 #ffffff    L3 沉底 #f2ece1                   │ │
 │  │  ▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢▢  │ │
 │  └────────────────────────────────────────────────────────────────────────────────────────┘ │
 │                                                                                              │
@@ -1989,12 +2026,12 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 │  │ └────┴────┴────┘    │ └───────────────────┘ │  ● 失败   ✕ 阻塞                          │  │
 │  └─────────────────────┘                       └──────────────────────────────────────────┘  │
 │                                                                                              │
-│  ┌── 进度 ──────────────┐ ┌── 题号格 ──────────┐ ┌── 卡片 / 墨块 ────────────────────────┐  │
+│  ┌── 进度 ──────────────┐ ┌── 题号格 ──────────┐ ┌── 卡片 / 沉底块 ─────────────────────┐  │
 │  │ ▓▓▓▓▓▓▓▓░░░░░░      │ │  1  2  3  4  5  6  │ │ ┌─────────────────────────────┐      │  │
 │  │ ▓▓▓▓▓▓░░░░░░ (分段) │ │  ◯  ●  ●  ▨  ●  ✕ │ │ │ 标题                [状态点] │      │  │
 │  └─────────────────────┘ └───────────────────┘ │ └─────────────────────────────┘      │  │
 │                                               │ ┌──────────────┐                       │  │
-│  ┌── Tab ─────────────────────┐ ┌── 折叠段 ────┐ │ │   墨 块      │ ← L3 反相           │  │
+│  ┌── Tab ─────────────────────┐ ┌── 折叠段 ────┐ │ │   沉 底      │ ← L3 凹层           │  │
 │  │  概览  作答明细  错题  负荷 │ │ ▸ 计划详情  ⌄ │ │ │   36 24px    │                       │  │
 │  └────────────────────────────┘ └──────────────┘ └───────────────────────────────┘      │  │
 │                                                                                              │
