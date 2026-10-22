@@ -10,16 +10,66 @@ VIEWS = {"overview", "runs", "attempts", "wrong"}
 _MINI_HEIGHT = 28
 
 
+def _verdict_mark(kind):
+    """判定的几何符号（§3.6 冗余状态通道：勾 / 叉 / 空心环）。
+
+    「对」的勾形由 CSS 侧 `.record-verdict-ok::before/::after` 画（墨色 2px 双段），
+    这里只补 CSS 侧尚未画的两种：错 = 红叉、未判定 = 淡墨空心环。
+    """
+    if kind == "bad":
+        return (
+            "<svg class='record-verdict-mark' width='9' height='9' viewBox='0 0 10 10' "
+            "aria-hidden='true' focusable='false' "
+            "style='vertical-align:-1px;margin-right:4px'>"
+            "<path d='M1.6 1.6 L8.4 8.4 M8.4 1.6 L1.6 8.4' fill='none' "
+            "style='stroke:var(--role-red-ink);stroke-width:2;stroke-linecap:round'/>"
+            "</svg>"
+        )
+    return (
+        "<svg class='record-verdict-mark' width='9' height='9' viewBox='0 0 10 10' "
+        "aria-hidden='true' focusable='false' "
+        "style='vertical-align:-1px;margin-right:4px'>"
+        "<circle cx='5' cy='5' r='3.2' fill='none' "
+        "style='stroke:var(--ink-muted);stroke-width:1.6'/>"
+        "</svg>"
+    )
+
+
+def _rating_marks(rating):
+    """自评 = 彩色圆点 + 星级形状（零文字标签）。"""
+    if not isinstance(rating, int) or not 1 <= rating <= 5:
+        return ""
+    return (
+        "<span class='record-rating'>"
+        "<svg class='record-rating-dot' width='8' height='8' viewBox='0 0 8 8' "
+        "aria-hidden='true' focusable='false' "
+        "style='vertical-align:-1px;margin-right:4px'>"
+        "<circle cx='4' cy='4' r='4' style='fill:var(--role-yellow)'/></svg>"
+        f"{'★' * rating}{'☆' * (5 - rating)}"
+        "</span>"
+    )
+
+
 def _attempt_rows(workspace_name, records):
+    """作答明细 = 圆角小卡流（12px、不描边、靠留白 + `--elev-1` 分隔）。
+
+    六项字段一个不少：题目 + 评语 + 摘录（题目下第二、三行）· 判定（结构块 +
+    几何符号 + 文字三通道）· 自评（彩色圆点 + 星级形状，零文字标签）·
+    时间（卡片右上角，次级墨）。
+    """
     rows = []
     for record in records:
         verdict = record.get("verdict")
         if verdict is None:
             badge, verdict_class = "未判定", "record-verdict-open"
+            # 「对」的勾形在 CSS 侧；其余两态的几何符号在这里补上。
+            mark = _verdict_mark("open")
         elif verdict:
             badge, verdict_class = "对", "record-verdict-ok"
+            mark = ""
         else:
             badge, verdict_class = "错", "record-verdict-bad"
+            mark = _verdict_mark("bad")
         rating = record.get("rating")
         title = html.escape(record.get("title") or "未命名题目")
         if record.get('deleted_content'):
@@ -31,22 +81,16 @@ def _attempt_rows(workspace_name, records):
             f"/w/{html.escape(workspace_name, quote=True)}/practice"
             f"?problem={html.escape(record['problem_id'], quote=True)}"
         )
-        stars = ""
-        if isinstance(rating, int) and 1 <= rating <= 5:
-            stars = (
-                f"<span class='record-rating'>{'★' * rating}"
-                f"{'☆' * (5 - rating)}</span>"
-            )
         rows.append(
-            "<article class='record-row card'>"
+            "<article class='record-row card record-attempt' style='border:0'>"
             f"<header><a class='record-title' href='{link}'>{title}</a>"
-            f"<span class='record-verdict {verdict_class}'>{badge}</span>"
-            + stars
+            f"<span class='record-verdict {verdict_class}'>{mark}{badge}</span>"
+            + _rating_marks(rating)
             + "<time class='record-time'>"
             + html.escape(str(record.get("created_at") or ""))
             + "</time></header>"
-            + (f"<p class='record-answer'>{answer}</p>" if answer else "")
             + (f"<p class='record-note muted'>{note}</p>" if note else "")
+            + (f"<p class='record-answer'>{answer}</p>" if answer else "")
             + "</article>"
         )
     return "".join(rows) or "<p class='muted'>这里还没有记录。</p>"
