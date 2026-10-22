@@ -1245,10 +1245,23 @@ textarea:focus-visible, input:focus-visible {
   vertical-align: -1px;
 }
 /* 颜色主通道：红 = 重点练习 / 黄 = 可以复习 / 墨 = 掌握。
-   符号用「挖空」色（`--ink-on-role` / `--ink-on-warm`）⇒ 两主题下都够对比。 */
+   符号用「挖空」色（`--ink-on-role` / `--ink-on-warm`）⇒ 两主题下都够对比。
+   ⚠️ **黄色走标记档 `--role-yellow-deep`**（权威表 §4.4-10；IMPL-W2j 第 6 条）：
+     面积档 `--role-yellow`（浅 `#f5c518`）当圆点填色 ⇒ 亮色主题下
+     「可以复习」的黄点落在卡面上只有 **1.60:1** ❌（非文本图形判定线 3:1）。
+     改标记档后：亮色 `#8a6a00` = **4.98:1** ✅、夜纸 `#f0d98a` = **11.61:1** ✅
+     （挖空符号仍用 `--ink-on-warm`：亮色 **3.24:1** / 夜纸 **13.35:1**，都 ≥ 3:1）。
+   ⚠️ **墨点改弱档 `--ink-faint`**（IMPL-W2j 第 4 条第 3 项 · N1 §3.4）：
+     原来用 `--ink-strong` ⇒ 夜纸下是 `#f4ede0` 的**亮白点**（卡面上 13.96:1），
+     反而成了三点里最亮的一个 ⇒ **语义与视觉相反**（浅色主题下 `--ink-strong`
+     是深墨，恰好是「弱」，所以这是夜纸才暴露的语义漂移）。
+     改弱档后：夜纸 `#978d7c` = **4.97:1**、亮色 `#8d8578` = **3.59:1**
+     （仍 ≥ 3:1，且比红/黄两点弱）。
+     ⚠️ **语义待裁**：「已掌握」还是「未标记」尚未定论 ⇒ 本次**按 N1 的建议**
+     落地（`--ink-faint`），语义由主会话裁决。 */
 .lk-dot--red { --dot-fill: var(--role-red); --dot-mark: var(--ink-on-role); }
-.lk-dot--yellow { --dot-fill: var(--role-yellow); --dot-mark: var(--ink-on-warm); }
-.lk-dot--ink { --dot-fill: var(--ink-strong); --dot-mark: var(--ink-on-role); }
+.lk-dot--yellow { --dot-fill: var(--role-yellow-deep); --dot-mark: var(--ink-on-warm); }
+.lk-dot--ink { --dot-fill: var(--ink-faint); --dot-mark: var(--ink-on-role); }
 /* 几何冗余通道：三态**形状各不相同**（叉 / 横杠 / 勾） */
 .lk-dot--cross::before,
 .lk-dot--cross::after {
@@ -2472,7 +2485,13 @@ img { max-width: 100%; }
 .calendar-day { font-size: 13px; font-weight: 600; color: var(--ink-faint); }
 .calendar-cell.today .calendar-day {
   display: inline-grid; place-items: center; min-width: 24px; height: 24px;
-  margin: -1px 0 0 -1px; border-radius: 999px; color: var(--ink-strong); background: var(--role-yellow);
+  margin: -1px 0 0 -1px; border-radius: 999px;
+  /* 黄面上的文字走 `--ink-on-warm`（权威表 §3.4 / §5）：
+     改造前用 `--ink-strong` ⇒ 夜纸下是浅墨 `#f4ede0` 落在夜纸黄 `#e0c151` 上
+     ⇒ **1.51:1**，「今天是哪天」读不出来；改后夜纸 **10.61:1** ✅、
+     亮色 **10.07:1**（`--ink-on-warm` 浅色值 = `--ink-strong` 浅色值
+     ⇒ **亮色主题零变化**）。 */
+  color: var(--ink-on-warm); background: var(--role-yellow);
 }
 .calendar-goal {
   --track-color: var(--role-yellow-deep);
@@ -3431,7 +3450,11 @@ img { max-width: 100%; }
 .lk-combo-banner__count {
   display: inline-block;
   transform: translate3d(0, 0, 0);
-  color: var(--role-yellow);
+  /* 数字是**文字** ⇒ 走标记档 `--role-yellow-deep`（权威表 §3.4：
+     黄色只承载面积，承载文字一律 `--role-yellow-deep`）。
+     改造前用面积档 `--role-yellow` ⇒ 亮色主题下 **1.54:1** ❌（判定线 3:1）；
+     改后亮色 `#8a6a00` = **4.98:1** ✅、夜纸 `#f0d98a` = **11.61:1** ✅。 */
+  color: var(--role-yellow-deep);
   font-size: var(--fs-hero);
 }
 .lk-combo-banner.is-large.is-on {
