@@ -390,6 +390,12 @@
     if (!root || !root.querySelectorAll) return 0;
     var bands = root.querySelectorAll(".lk-progress");
     Array.prototype.forEach.call(bands, function (band) {
+      /* The markup carries `is-filled` so that the band's static style is its
+         final style; the growth is replayed here, when the completion surface
+         appears — without it the keyframe would have run while the section
+         was still hidden. */
+      band.classList.remove("is-filled");
+      void band.offsetWidth;          /* let the removal land before the replay */
       band.classList.add("is-filled");
     });
     return bands.length;
@@ -576,6 +582,8 @@
     if (!surface || !surface.querySelector) return null;
     return surface.querySelector("[data-lk-celebrate-anchor]")
       || surface.querySelector(".lk-celebrate-anchor")
+      || surface.querySelector("#paper-milestone-anchor")
+      || surface.querySelector(".lk-milestone-anchor")
       || surface.querySelector("#paper-completion-stats")
       || surface;
   }
@@ -5340,8 +5348,9 @@
   }
 
   /* ---------- three-column geometry (design.md D-10 / tasks.md 13.2 / 13.3) ----------
-     The stylesheet owns the grid template (`#layout` reads --shell-col-left and
-     --shell-col-right); this side writes the two values only.  The old inline
+     The stylesheet owns the grid template (`#layout` reads --wb-col-left and
+     --wb-col-right, which forward to the authoritative --shell-col-* pair);
+     this side writes the two values only.  The old inline
      `grid-template-columns` overrode the stylesheet on every paint, so the CSS
      rule was dead code and the two files each carried their own numbers. */
 
@@ -5374,16 +5383,18 @@
   function applyColumnWidths() {
     if (!layout || !layout.style) return;
     if (window.innerWidth < 1024) {
-      layout.style.removeProperty("--shell-col-left");
-      layout.style.removeProperty("--shell-col-right");
+      layout.style.removeProperty("--wb-col-left");
+      layout.style.removeProperty("--wb-col-right");
       return;
     }
     var bounds = columnBounds();
     var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
     leftWidth = Math.max(COLUMN_MIN.left, Math.min(bounds.left, Math.min(leftWidth, available - rightWidth)));
     rightWidth = Math.max(COLUMN_MIN.right, Math.min(bounds.right, Math.min(rightWidth, available - leftWidth)));
-    layout.style.setProperty("--shell-col-left", leftWidth + "px");
-    layout.style.setProperty("--shell-col-right", rightWidth + "px");
+    /* The stylesheet's write point for these two values (workbench.css
+       `#layout`): it forwards them to the authoritative --shell-col-* pair. */
+    layout.style.setProperty("--wb-col-left", leftWidth + "px");
+    layout.style.setProperty("--wb-col-right", rightWidth + "px");
   }
 
   function bindColumnResizer(id, side, min, max) {
