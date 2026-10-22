@@ -216,17 +216,22 @@ def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
             "flow", "--base-url", base_url, "--ws", ws,
             "--out", str(out_dir), "--side", side,
             "--repo-root", str(repo_root)])))
+    if wants("G-2") or wants("G-3") or wants("G-4") or wants("G-6"):
+        # The export is taken **before** the motion frames: the frames
+        # drive a real paper run (the celebration trigger), which writes
+        # to the pool.  The export has to sit on the same point of the
+        # sequence on both sides, otherwise the sides would differ by
+        # the frames' own writes.
+        pool_copy = _pool_copy(scratch)
+        if pool_copy:
+            steps.append(("db export", run_module("dbexport.py", [
+                "export", "--pool", str(pool_copy), "--out", str(out_dir / "db")])))
     if wants("M-") and side == "after":
         # The motion only exists after the change; the before side has
         # nothing to record (and the strip would be a lie).
         steps.append(("frames", run_module("frames.py", [
             "--base-url", base_url, "--ws", ws,
             "--out", str(out_dir.parent / "diff")])))
-    if wants("G-2") or wants("G-3") or wants("G-4") or wants("G-6"):
-        pool_copy = _pool_copy(scratch)
-        if pool_copy:
-            steps.append(("db export", run_module("dbexport.py", [
-                "export", "--pool", str(pool_copy), "--out", str(out_dir / "db")])))
     if wants("G-5"):
         steps.append(("g5 capture", run_module("g5.py", [
             "capture", "--base-url", base_url, "--ws", ws,

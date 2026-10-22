@@ -2227,14 +2227,21 @@ def probe_g7(ctx):
     return _ok(data, "装饰层全部让开了指针事件")
 
 
-def focus_sequence(page, steps=80):
-    """The Tab walk of §7.2 — the *semantic* description of every stop."""
+def focus_sequence(page, steps=120):
+    """The Tab walk of §7.2 — the *semantic* description of every stop.
+
+    The walk stops when the focus cycle closes (the first stop comes
+    back): the focus order is a **cycle**, and the change may add one
+    entry to it.  A fixed number of steps would then compare two cycles
+    that start at different places.
+    """
     page.evaluate("""() => {
       if (document.activeElement && document.activeElement !== document.body) {
         document.activeElement.blur();
       }
     }""")
     sequence = []
+    first = None
     for _ in range(steps):
         page.keyboard.press("Tab")
         stop = page.evaluate("""() => {
@@ -2253,6 +2260,11 @@ def focus_sequence(page, steps=80):
             focusVisible: el.matches ? el.matches(":focus-visible") : null,
           };
         }""")
+        semantic = stop.get("semantic")
+        if first is None:
+            first = semantic
+        elif semantic == first:
+            break
         sequence.append(stop)
     return sequence
 
@@ -2604,16 +2616,49 @@ def _semantic_key(entry):
     return str(entry or "")
 
 
+def _rotate(sequence, offset):
+    return sequence[offset:] + sequence[:offset]
+
+
+def _mismatch_count(before, after):
+    """The number of differing positions of two equally long lists."""
+    if len(before) != len(after):
+        return max(len(before), len(after))
+    return sum(1 for left, right in zip(before, after) if left != right)
+
+
+def _align_cycles(before, after):
+    """Align two focus cycles.
+
+    The focus order is a **cycle**: the walk starts wherever the browser
+    starts, and the change may have added one entry to the cycle.  The
+    two cycles are therefore rotated against each other and the rotation
+    with the fewest differences is taken — the *order inside* the cycle
+    is what has to stay the same.
+    """
+    if not before or not after:
+        return before, after
+    best = None
+    for offset in range(len(after)):
+        rotated = _rotate(after, offset)
+        score = _mismatch_count(before, rotated)
+        if best is None or score < best[0]:
+            best = (score, rotated)
+    return before, best[1]
+
+
 def diff_focus(before_sequence, after_sequence):
     """G-8 — compare the two focus orders (§7.2).
 
-    The comparison is **semantic** (tag + role + name), never by id: the
-    change restructures the DOM, but the *order* of the focus must not
-    change.  The two entries the acceptance explicitly excuses — the new
-    settings entry and the theme switch — are reported as ADDED-EXPECTED.
+    The comparison is **semantic** (tag + role + accessible name), never
+    by id: the change restructures the DOM, but the *order* of the focus
+    must not change.  The two entries the acceptance explicitly excuses
+    — the new settings entry and the theme switch — are reported as
+    ADDED-EXPECTED.
     """
     before = [_semantic_key(stop) for stop in before_sequence]
     after = [_semantic_key(stop) for stop in after_sequence]
+    before, after = _align_cycles(before, after)
     matcher = difflib.SequenceMatcher(a=before, b=after, autojunk=False)
     added_expected, unexpected, missing, changed, order = [], [], [], [], []
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
