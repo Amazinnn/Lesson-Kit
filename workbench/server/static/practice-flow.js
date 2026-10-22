@@ -277,14 +277,9 @@
         : "本轮无法组题（0/" + requested + " 道），当前范围没有可用题目。";
       if (itemReasons.length) report += " 逐题依据：" + itemReasons.join("；") + "。";
 
-      var tray = document.getElementById("scope-tray");
-      var names = {};
-      if (tray && tray.dataset && tray.dataset.kpNames) {
-        try { names = JSON.parse(tray.dataset.kpNames) || {}; } catch (_) {}
-      }
-      var shortKps = shortage.map(function (kpId) {
-        return names[kpId] || kpId;
-      });
+      /* The scope tray is retired: the page never renders it, so the report
+         names the knowledge points by id (tasks.md 14.1 —— 死代码归零). */
+      var shortKps = shortage.slice();
       if (shortKps.length) {
         report += " 可用题数少于请求量的知识点：" + shortKps.join("、") + "。";
       }
