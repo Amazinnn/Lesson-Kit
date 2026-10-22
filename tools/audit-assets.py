@@ -181,7 +181,10 @@ def audit(data):
             _check(results, key, "外接框贴住 §3.12 实测表（±2u）", worst <= TOLERANCE_U,
                    f"偏差 ≤{TOLERANCE_U}u", f"最大偏差 {worst}u {dev}", "§3.12")
             longest = max(meas[1] - meas[0], meas[3] - meas[2])
-            _check(results, key, "最长边 60–125u", 60 <= longest <= 125, "60–125", round(longest, 1))
+            # 上限 132 = asset-spec §3.0 的「60 – 132 u」（2026-10-22 修正：
+            # §3.12 表里 empty-vase 是 130 且判 ✓ ⇒ 与高度上限 132 u 对齐）。
+            # 旧写法 125 是 §3.0 修正前的旧值，与 §3.12 表自相矛盾。
+            _check(results, key, "最长边 60–132u", 60 <= longest <= 132, "60–132", round(longest, 1))
             _check(results, key, "器物高 ≤ 132u", (meas[3] - meas[2]) <= 132, "≤132",
                    round(meas[3] - meas[2], 1))
             _check(results, key, "左右留白 ≥ 40u",
