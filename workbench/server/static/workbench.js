@@ -70,6 +70,126 @@
     select.addEventListener("change", function () {
       applyChapter(select.value);
     });
+
+    /* ---- 15.4 自绘章节面板 ----------------------------------------------
+       面板是**选章器**：开合 / Esc 关闭 / 点外部关闭 / 关闭后焦点归位到开关 /
+       打开时焦点进面板 / `aria-expanded` 同步 / 键盘可达
+       （↑↓ 移动、Enter·Space 选中、Home·End 首尾）。
+       ⚠️ 选中一项走的是 `#chapter-lens-select` 已在用的那条 `applyChapter`
+       路径 —— 同一个端点、同一个载荷键 `{chapter}`，**不新增请求**。
+       ⚠️ 面板内**只有章节名**：不显示每章计数 / 统计 / 选择理由
+       （`openspec/specs/workbench-ui/spec.md`「Chapter switch in the top bar」）。
+       原生 `<select>` 保留作无 JS 兜底（不删、不改），它的 `value` 仍承载
+       当前章 id —— 面板选章时同步写回，两条路径共用同一个载体。 */
+    var panel = document.getElementById("chapter-lens-panel");
+    if (!panel) return;
+    var options = Array.from(panel.querySelectorAll(".chapter-lens-option"));
+    toggle.setAttribute("aria-expanded", "false");
+
+    function panelOpen() { return !panel.hidden; }
+
+    function markChapter(chapter) {
+      options.forEach(function (option) {
+        if (chapter && option.getAttribute("data-chapter") === chapter) {
+          option.setAttribute("aria-selected", "true");
+        } else {
+          option.removeAttribute("aria-selected");
+        }
+      });
+    }
+
+    function openPanel() {
+      if (panelOpen()) return;
+      panel.hidden = false;
+      toggle.setAttribute("aria-expanded", "true");
+      var target = null;
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].getAttribute("aria-selected") === "true") { target = options[i]; break; }
+      }
+      if (!target) target = options[0];
+      if (target) target.focus();
+    }
+
+    function closePanel(restoreFocus) {
+      if (!panelOpen()) return;
+      panel.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+      if (restoreFocus) toggle.focus();
+    }
+
+    function chooseChapter(option) {
+      var chapter = option.getAttribute("data-chapter");
+      if (!chapter) return;
+      markChapter(chapter);
+      select.value = chapter;            /* 原生 select 继续承载当前章 id */
+      closePanel(true);
+      applyChapter(chapter);             /* 既有的章节切换路径，不新增请求 */
+    }
+
+    function moveFocus(key) {
+      if (!options.length) return;
+      var index = -1;
+      for (var i = 0; i < options.length; i++) {
+        if (options[i] === document.activeElement) { index = i; break; }
+      }
+      if (index < 0) index = 0;
+      var next = index;
+      if (key === "ArrowDown") next = Math.min(index + 1, options.length - 1);
+      else if (key === "ArrowUp") next = Math.max(index - 1, 0);
+      else if (key === "Home") next = 0;
+      else if (key === "End") next = options.length - 1;
+      options[next].focus();
+    }
+
+    /* 开关是面板的触发器：点它开面板。开关本身的透镜语义（勾上 = 恰好一章）
+       一字未动 —— 勾选/取消仍走上面的 `change` → `applyChapter`。 */
+    toggle.addEventListener("click", function () {
+      markChapter(toggle.checked ? select.value : "");
+      openPanel();
+    });
+
+    options.forEach(function (option) {
+      option.addEventListener("click", function () { chooseChapter(option); });
+    });
+
+    panel.addEventListener("keydown", function (event) {
+      var key = event.key;
+      if (key === "Escape" || key === "Esc") {
+        event.preventDefault();
+        closePanel(true);
+        return;
+      }
+      if (key === "ArrowDown" || key === "ArrowUp" || key === "Home" || key === "End") {
+        event.preventDefault();
+        moveFocus(key);
+        return;
+      }
+      if (key === "Enter" || key === " " || key === "Spacebar") {
+        event.preventDefault();
+        var option = event.target && event.target.closest
+          ? event.target.closest(".chapter-lens-option") : null;
+        if (option) chooseChapter(option);
+      }
+    });
+
+    /* 点面板外关闭。焦点归位只做在**焦点会丢**的情形：用户点的是别的控件，
+       焦点就该留在那儿；点的是不可聚焦的地方（焦点会掉回 body），才还回开关。
+       （`layout-spec.md` §2.3 只要求 `Esc` 关闭并把焦点还给 chip。） */
+    document.addEventListener("click", function (event) {
+      if (!panelOpen()) return;
+      if (event.target && lens.contains(event.target)) return;
+      closePanel(false);
+      if (!document.activeElement || document.activeElement === document.body) toggle.focus();
+    });
+
+    /* 焦点走到透镜之外的另一个控件（Tab 走人）时，面板跟着收起；
+       焦点掉到 body（点空白处）时不在这里收 —— 由上面的点外部关闭接手。 */
+    lens.addEventListener("focusout", function (event) {
+      if (!panelOpen()) return;
+      var next = event.relatedTarget;
+      if (!next || lens.contains(next)) return;
+      closePanel(false);
+    });
   }
 
   bindChapterLens();
