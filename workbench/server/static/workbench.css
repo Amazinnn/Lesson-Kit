@@ -1442,9 +1442,22 @@ textarea:focus-visible, input:focus-visible {
 .settings-view {
   font-family: var(--font-ui);
   box-shadow: inset 0 -1px 0 var(--rule-hair);  /* 偏好区的收口发丝线（不是描边） */
+  /* A-87：三列（名称 | 当前值 | 控件）由**容器一次定下**，
+     四行共用同一套列 ⇒ 值列起点一致、控件右缘一致，**零宽度魔数**。
+     · 名称列 = `max-content` ⇒ 取四行里最宽的那个（「阅读字面」）；
+     · 值列 = `1fr`（当前值左对齐，见下）；
+     · 控件列 = `auto`（控件自身宽度：分段控件最宽）⇒ 控件右对齐。 */
+  display: grid;
+  grid-template-columns: max-content 1fr auto;
+  column-gap: var(--sp-4);
+  row-gap: 0;
 }
 .preference-row {
-  display: flex;
+  display: grid;
+  /* 不支持 subgrid 时的回落（逐行三列）；支持时由**容器**统一给列（下面那条）。 */
+  grid-template-columns: max-content 1fr auto;
+  grid-template-columns: subgrid;   /* ← 列来自 `.settings-view`，四行共用 */
+  grid-column: 1 / -1;              /* 一行占满三列 */
   align-items: center;
   gap: var(--sp-4);
   min-height: 44px;              /* 命中区下限（同 `.lk-switch` / `.lk-seg`） */
@@ -1457,25 +1470,23 @@ textarea:focus-visible, input:focus-visible {
   box-shadow: inset 0 1px 0 var(--rule-hair);  /* 行间内发丝线（不描边、不加框） */
 }
 .preference-name {
-  flex: none;                    /* 左端：名称 */
   color: var(--ink-strong);
   font-family: var(--font-ui);
   font-size: var(--fs-body);
   font-weight: var(--fw-regular);
 }
 .preference-value {
-  flex: 1 1 auto;               /* 中段：当前值 */
   min-width: 0;
   color: var(--ink-muted);       /* 次级墨（不是强调色） */
   font-size: var(--fs-meta);
   line-height: 20px;
-  text-align: center;
+  text-align: start;             /* 值列**左对齐**（A-87）：起点 = 值列起点 */
   overflow-wrap: anywhere;
 }
 /* 控件（右端）：尺寸与形态归 `.lk-switch` / `.lk-seg`，本块只定位 */
 .preference-row > .lk-switch,
 .preference-row > .lk-seg {
-  flex: none;
+  justify-self: end;             /* 右对齐 ⇒ 四行控件的右缘一致 */
 }
 
 /* ---- 章节知识点计数条（tasks.md 18.5 · IMPL-W2e 第 9 条）------------------
