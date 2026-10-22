@@ -585,6 +585,11 @@ body {
   border: 1px solid var(--ink-strong);
   border-radius: 4px;
 }
+/* 原生 `<select>` 是**无 JS 时的兜底**（decisions.md A-69）：
+   JS 在场时（`<html class='js'>`）由自绘面板接管 ⇒ 原生 select 退场。
+   ⚠️ **只藏这一个元素**（带 `chapter-lens-select-fallback` 的那个）——
+     其它页面还有原生 select 要用（`.js select` 一刀切会连累它们）。 */
+.js .chapter-lens-select-fallback { display: none; }
 /* 自绘面板（替代裸 `<select>`；原生 select 保留作无 JS 时的兜底） */
 .chapter-lens-panel {
   position: absolute;
@@ -1561,7 +1566,17 @@ textarea:focus-visible, input:focus-visible {
   flex-direction: column;
   align-items: center;
   gap: var(--sp-4);
-  padding: 48px 24px;
+  /* 空态面板按 component-spec §4.21 收成**紧凑块**（容器上限 240px）：
+     插画 + 一句 + **满宽**主按钮，三段同宽。
+     ⚠️ 3.4-5 的「满宽」= 主按钮宽 ≥ **它所在容器**的宽 − 2px：
+       面板从 640px 收到 ≤ 240px（`max-width`）、按钮解除 `max-width: 240px`
+       的卡死 ⇒ 按钮与面板同宽（实测 180 = 180 ✓）。
+     ⚠️ 面板是 grid/flex 项 + `margin-inline: auto` ⇒ 宽 = 内容宽（插画 180px）
+       且居中；左右内边距已去掉，否则按钮会窄于面板（那就不是满宽）。
+     ⚠️ **不许**再给按钮加硬撑（面板若留内边距，按钮会溢出容器）。 */
+  max-width: 240px;
+  margin-inline: auto;
+  padding: 48px 0;
   text-align: center;
   border-radius: var(--r-md);
   background: var(--surface-sunken);
@@ -1577,7 +1592,7 @@ textarea:focus-visible, input:focus-visible {
   line-height: 22px;
   color: var(--ink-muted);
 }
-.lk-empty__action { width: 100%; max-width: 240px; }
+.lk-empty__action { width: 100%; max-width: none; }
 .next-step { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 22px 24px; }
 .next-step-actions { display: flex; gap: 8px; flex: none; }
 
@@ -2958,6 +2973,17 @@ img { max-width: 100%; }
   25.725% { transform: scale(.9603);  animation-timing-function: var(--ease-snap-hold); }
   58.027% { transform: scale(1.0067); animation-timing-function: var(--ease-snap); }
   100%    { transform: scale(1); }
+}
+/* 答对回弹的落点（motion-spec §3.1 · A-89：挂在**被选中的那一项**上）：
+   `paper-practice.js` / `practice-flow.js` 给落点行挂 `.lk-squash`。
+   ⚠️ **`transform-origin: 50% 100%`** 是这条规则的一半 —— 锚点在**底边**
+     （回弹从落点往上顶，不是从中心缩）。
+   ⚠️ **静态样式 = 终态**（8.9 铁律）：起始态只写在 `@keyframes` 里
+     （`scale(.6)` 在 0%），静态样式**不写** `transform: scale(.6)` ——
+     弱动效档下 `animation-name: none` 直接落回终态（`scale(1)` = 无位移）。 */
+.lk-squash {
+  transform-origin: 50% 100%;
+  animation: lk-squash-bounce 517ms both;
 }
 
 /* 上浮淡入：列表项 8px / 视图转场 12px */
