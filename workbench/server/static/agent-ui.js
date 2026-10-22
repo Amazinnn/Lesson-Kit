@@ -49,7 +49,7 @@
   function pageLabel(page) {
     return ({
       practice: "练习",
-      "practice-sets": "组卷",
+      "practice-sets": "试卷",
       kp: "知识点",
       kps: "知识点",
       graph: "知识图谱",
