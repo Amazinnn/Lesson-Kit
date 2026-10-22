@@ -3,7 +3,8 @@
 > **范围依据**：`proposal.md`（范围与冻结）、`design.md` **D-1…D-14**（十四条决策，任务逐条对应）。
 > **视觉语言依据**：`../workbench-visual-language-v2/decisions.md` 的
 > **A-24**（图谱节点改 Obsidian 式）、**A-26**（图谱算法冻结）、
-> **A-28**（用 Obsidian 源码实测值修正 A-24 的参数）、**A-7 / A-8**（夜纸归本变更）、
+> **A-28**（用 Obsidian 源码实测值修正 A-24 的参数）、
+> **A-34**（量值投影的半径读法：改写 A-33 第 ① 条）、**A-7 / A-8**（夜纸归本变更）、
 > **A-10**（归档顺序）、**A-12**（自带门禁）、**A-14**（比对范围与可复现前提）、
 > **A-15**（标签字号 12px）、**A-16**（图谱纸面 token 名）。
 > **参数的第一来源**：`tmp/frontend-audit/OBSIDIAN-GRAPH.md`
@@ -28,7 +29,7 @@
 > - **不碰** `openspec/changes/workbench-visual-language-v2/` 下的任何文件（第 12 组只做
 >   「合入后 re-base」的动作，不提前改动 v2）。
 >
-> **三处已知的上游裁决覆盖**（以 v2 `decisions.md` 的 A-15 / A-16 与 **A-28** 为准）：
+> **四处已知的上游裁决覆盖**（以 v2 `decisions.md` 的 A-15 / A-16 与 **A-28 / A-34** 为准）：
 > ① **标签字号 12 屏幕 px**（A-15 裁决，A-28 确认不变）；
 > ② **节点半径 5–13 屏幕 px、标签偏移 r+5、标签对数淡出、边宽屏幕恒定 1.25px、
 >    非邻接 alpha 0.2、选中态加 1px 描边环**（A-28 用 Obsidian 源码实测值定案，
@@ -39,6 +40,10 @@
 >   「图谱纸面恒为 `#fffdf7`、不参与夜纸换值」**存在张力** —— A-16 那条是 v2 不碰图谱
 >   （A-8）语境下的性质，夜纸适配已整体划归本变更；**该冲突按 AGENTS.md 的
 >   contract drift 显式登记**，落地时在第 10 组任务里定稿并同步登记。
+> ④ **量值投影的半径读法**（**A-34** 改写 A-33 第 ① 条 / A-28 的字面取值）：
+>   **半径下限 6.5px（直径 13px）+ 随量映射**（`6.5 + 6.5·√score`），**不是**恒 13px
+>   —— 恒定会同时杀死量值投影的「值越大点越大」编码 ⇒ 两份 delta 已按此改写
+>   （见第 12 组 12.7 与 `design.md` D-3.4）。
 >
 > **每组末尾的「阶段验收」任务统一要求跑 AGENTS.md 的四条验证命令**：
 > `python -m pytest tests -q`、`python -m compileall -q lessonkit.py workbench pipeline pool tests`、
@@ -47,19 +52,21 @@
 > 独立端口**上点检，**永不写真实池**（`acceptance.md` §5）。
 >
 > **design.md 的 Open Questions**（7 条：底噪预渲染倍率、标签让位权重、量值分档阈值、
-> 夜纸底噪透明度、关系线 alpha 分级、**A-28 的「半径下限 13px」是否只针对数字**、
-> 标签淡出常数）全部是**实现参数**（第 6 条会改一处 delta 文本，已在
-> `design.md` 里写明两条路），按 `design.md`「Open Questions」的自我声明就地定稿即可，
-> **不需要先问所有者**；第 6 条在实现时若被推翻，只改「数值投影的半径是否随量值变化」
-> 这一处。
+> 夜纸底噪透明度、关系线 alpha 分级、**量值投影的半径读法（已由 A-34 裁决）**、
+> 标签淡出常数）：除第 6 条外全部是**实现参数**，按 `design.md`「Open Questions」的
+> 自我声明就地定稿即可，**不需要先问所有者**；**第 6 条已关闭** ——
+> **A-34 裁决：量值投影半径 = `clamp(6.5 + 6.5·√score, 6.5, 13)`**
+> （下限 6.5px = 直径 13px，**随量映射**，**不是**恒 13px），四个投影的半径**都随量映射**
+> ⇒ 实现按 1.2 / 2.7 的公式落地；`workbench-ui` delta 里 `Metric projection morphology`
+> 的旧口径一句**已按 A-34 改写**（见第 12 组 12.7）。
 
 ---
 
 ## 1. 屏幕空间缩放补偿（最高优先级，D-1 / G-24 / A-28.2）
 
 - [ ] 1.1 在 `workbench/server/static/workbench.js` 的 `graphApplyView()`（`:1104-1107`）里，把当前相机缩放**在写 `transform` 的同一次调用中**写到 `.graph-stage` 上：`--stage-scale`（= `graphView.scale`）与 `--inv-scale`（= `1 / scale`）。**一次相机变化 = 一次变量写入**；不引入任何新状态对象、不做逐节点的 JS 计算。验证：`graphApplyView()` 只多出两条 `style.setProperty`；`--inv-scale` 在 CSS 中**只有一处定义**（其余全是消费点）。
-- [ ] 1.2 在 `workbench/server/static/graph-physics.js` 的 runtime 门面（`runtime = {...}`，`:254-300`）新增 `nodeScreenRadius(node)`：返回**屏幕像素**的绘制半径，按 D-3 的三条公式（结构投影用度数 5–13；状态投影用 `score` 5–13；两个数值投影恒 13）。这是**全仓唯一的绘制半径公式来源**（画节点与修 WebGL 端点共用，见第 5 组 5.3）。验证：`grep -n "nodeScreenRadius" workbench/server/static/*.js` 命中 1 处定义；同一 `node` 在同一投影下返回值稳定（相等量值 ⇒ 相等半径）。
-- [ ] 1.3 在 `workbench/server/static/workbench.js` 的 `graphPaintNodes()`（`:1296-1325`）里，每帧为每个节点往 `elements.wrap`（`.node-wrap`）写 CSS 变量：`--node-d`（**屏幕 px** 的绘制直径，形如 `26px`）与 `--node-box`（舞台 px 的盒子尺寸 = `calc(var(--node-d) * var(--inv-scale))`，写成字符串交给 CSS 求值）。**不写数值缩放**（不在 JS 里算除法），避免两处漂移。验证：`getComputedStyle(wrap).getPropertyValue('--node-d')` 返回带 `px` 的屏幕直径；860×460 画布 Fit 后该值落在 10–26px（数值投影恒 26px）。
+- [ ] 1.2 在 `workbench/server/static/graph-physics.js` 的 runtime 门面（`runtime = {...}`，`:254-300`）新增 `nodeScreenRadius(node)`：返回**屏幕像素**的绘制半径，按 D-3 的三条公式（结构投影用度数 `clamp(5 + 2.2·√degree, 5, 13)`；状态投影用 `score` `clamp(5 + 8·√score, 5, 13)`；两个数值投影用 `clamp(6.5 + 6.5·√score, 6.5, 13)` —— **A-34：下限 6.5px（直径 13px，容得下 12px 的数字），随量映射，不是恒 13px**）。这是**全仓唯一的绘制半径公式来源**（画节点与修 WebGL 端点共用，见第 5 组 5.3）。验证：`grep -n "nodeScreenRadius" workbench/server/static/*.js` 命中 1 处定义；同一 `node` 在同一投影下返回值稳定（相等量值 ⇒ 相等半径）。
+- [ ] 1.3 在 `workbench/server/static/workbench.js` 的 `graphPaintNodes()`（`:1296-1325`）里，每帧为每个节点往 `elements.wrap`（`.node-wrap`）写 CSS 变量：`--node-d`（**屏幕 px** 的绘制直径，形如 `26px`）与 `--node-box`（舞台 px 的盒子尺寸 = `calc(var(--node-d) * var(--inv-scale))`，写成字符串交给 CSS 求值）。**不写数值缩放**（不在 JS 里算除法），避免两处漂移。验证：`getComputedStyle(wrap).getPropertyValue('--node-d')` 返回带 `px` 的屏幕直径；860×460 画布 Fit 后该值落在 10–26px（两个数值投影 13–26px 随量映射，A-34）。
 - [ ] 1.4 在 `workbench/server/static/workbench.css` 的 `.node`（`:1659-1663`）把 `width/height: var(--size)` 改为 `var(--node-box)`，保留 `background: transparent` / `border: 0` / `padding: 0` / `overflow: visible` / `cursor: grab`。**命中区 = max(绘制直径, 24 屏幕 px)**（D-3：小点也要点得中），命中区**完全不可见**。验证：`elementFromPoint` 在圆盘可见外缘 ±2px 处命中该节点；`--size` 在图谱节点样式里 0 引用。
 - [ ] 1.5 在 `workbench/server/static/workbench.css` 新增 `.node-dot` 的**几何骨架**（配色在第 3 组落实）：`position: absolute; inset: 0; border-radius: 50%; background: var(--node-fill);` **无 border、无 box-shadow、无渐变、无 ::before 高光**（A-28.1：Obsidian 官方只有一次 `beginFill` + `drawCircle`）。盒尺寸随 `.node` 走，**没有独立的世界像素尺寸**。验证：computed `width` = `.node` 盒宽；`border-width` = 0；`box-shadow` = none。
 - [ ] 1.6 在 `workbench/server/static/workbench.css` 把排版单位屏幕化：`.label`（`:1710-1715`）的 `font-size: 12px` → `calc(12px * var(--inv-scale))`（A-15 / A-28 不变）、`max-width: 168px` → `calc(168px * var(--inv-scale))`；`.node-value`（`:1686-1691`）的 `clamp(11px, calc(var(--size) * .28), 18px)` → `calc(12px * var(--inv-scale))`（**A-28：圆心数字固定 12px**）。验证：取 `getComputedStyle(label).fontSize` **× 当前 scale** ≈ **12 屏幕 px**、`.node-value` 的**视觉**字号 = 12 屏幕 px。
@@ -71,7 +78,7 @@
 ## 2. 节点形态与尺寸映射（D-2 / D-3 / A-28 / G-1 / G-13 / G-17）
 
 - [ ] 2.1 **〔护栏，先做〕确认 `sizeFor()` 不动**：`workbench/server/static/graph-physics-core.js` 的 `sizeFor(score)`（`:60-61`）**一行不改**（世界直径仍是 20–80）。旧设计曾把它改成 28–60 —— **那已越过 A-26 的冻结线，本变更撤销该改动**。验证：`git diff workbench/server/static/graph-physics-core.js` 中 `sizeFor` **零改动**；节点的世界尺寸全部落在 20–80。
-- [ ] 2.2 把**绘制半径**收敛成**单一来源**：`graph-physics.js` 的 `nodeScreenRadius()`（1.2）是唯一实现，`workbench.js` 与 `graph-renderer.js` 都调它，**不得各写一份公式**。验证：`grep -nE "5 \+ 2\.2|5 \+ 8" workbench/server/static/*.js` 的**定义点**只有 1 处（其余全是调用）。
+- [ ] 2.2 把**绘制半径**收敛成**单一来源**：`graph-physics.js` 的 `nodeScreenRadius()`（1.2）是唯一实现，`workbench.js` 与 `graph-renderer.js` 都调它，**不得各写一份公式**。验证：`grep -nE "5 \+ 2\.2|5 \+ 8|6\.5 \+ 6\.5" workbench/server/static/*.js` 的**定义点**只有 1 处（其余全是调用）。
 - [ ] 2.3 在 `workbench/server/static/workbench.js` 的 `graphCreateNodes()`（`:957-1053`）把节点子层从「五层叠一个圆」改为「**单层实心圆 + 可选数字 + 交互态描边环**」：新增 `.node-dot`（由 `:979` 的 `.node-face` 改造而来）与 `.node-focus-ring`（新元素，**常态 `display: none`**，仅交互态出现），保留 `.node-value`（`:981`），**删除** `.metric-track`（`:975`）与 `.status-ring`（`:977`）的 DOM 创建。对应 CSS 规则的删除归第 8 组。验证：`graphCreateNodes()` 产出的节点 DOM 只含 `.node-dot` / `.node-focus-ring` / `.node-value` 三件 + 外层 `.label`；`grep -c "metric-track\|status-ring" workbench.js` = 0。
 - [ ] 2.4 在 `workbench/server/static/workbench.css` 落实「**单层实心圆、无描边、无投影、无内高光**」（A-28.1）：`.node-dot` 只有 `background` + `border-radius`；删 `.node-face` 的 `box-shadow`、`inset 0 0 0 1px rgba(255,255,255,.82)`、`border: 1px solid …` 与 `.node-face::before` 的径向高光。验证：常态截图里节点**读作一枚平涂的实心点**；computed `border-width` = 0、`box-shadow` = none、`background-image` = none。
 - [ ] 2.5 落实「**命中区只作命中、不得有可见痕迹**」（A-28）：`.node` 盒透明（`background: transparent`、`border: 0`），命中区下限 24 屏幕 px（1.4），**不得**出现任何常驻 halo / 光晕。验证：节点周围没有可见的半透明圈；`grep -c "halo" workbench.css` 在图谱节点规则里 = 0。
@@ -81,7 +88,7 @@
   - **题目数量**投影 → 数字 = 该节点的**正式题数**（`node.problems`）；
   - **重要性**投影 → 数字 = `Math.round(node.importance * 100)`（**不含 `%`**：现状 `.node-unit{display:none}` 从未显示过 `%`，单位由图例承载）。
   验证：结构 / 状态投影下节点**没有数字**；两个数值投影下数字 = 该投影的量；`STATE_SHORT`（`:578`）在图谱区段 0 引用。
-- [ ] 2.7 落实「**数值投影的半径取 13px**」（A-28：容下 12px 的圆心数字）：`nodeScreenRadius()` 在两个数值投影下返回常数 13；结构投影用 `clamp(5 + 2.2·√degree, 5, 13)`；状态投影用 `clamp(5 + 8·√score, 5, 13)`。**〔口径〕** 在 5–13 的区间里「下限 = 13」等价于「半径恒为 13」⇒ 这两档投影里量值由**数字 + 色阶**承载；`workbench-ui` delta 的 `Metric projection morphology` 已按此改写（见第 12 组 12.7）。验证：数值投影下 31 个节点的绘制半径**全部 = 13**；结构投影下半径随度数**单调**、落在 5–13。
+- [ ] 2.7 落实「**量值投影的半径下限 6.5px、随量映射**」（**A-34**：A-28 的**目的**是给 12px 的字腾出**直径 13px** 的空间 ⇒ **半径下限 6.5px**；**不是**恒 13px —— 恒定会同时杀死量值投影的「值越大点越大」编码）：`nodeScreenRadius()` 在两个数值投影下用 `clamp(6.5 + 6.5·√score, 6.5, 13)`；结构投影用 `clamp(5 + 2.2·√degree, 5, 13)`；状态投影用 `clamp(5 + 8·√score, 5, 13)`。**〔口径〕** 四个投影的半径**都随量映射**（相等量值 ⇒ 相等半径）；量值投影里量值由**数字 + 色阶 + 大小**三条通道共同承载。**A-33 第 ① 条的字面读（恒 13px）作废。**验证：两个数值投影下半径随 `score` **单调**、落在 **6.5–13px**（`score = 1` ⇒ 13.0px）；结构投影下随度数**单调**、落在 5–13px；`nodeScreenRadius()` 里**没有**对数值投影返回常数 13 的分支。
 - [ ] 2.8 保证圆心数字**压在点之上**且不溢出：`.node-value` 的 `z-index` 高于 `.node-dot`；字号 12 屏幕 px；直径 26px 的圆里放 12px 的字留有边距。验证：在 1440×900 与 860×460 两个视口下，节点中心的数字完整可读、不被点边缘切断。
 - [ ] 2.9 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0.3 **AV-1** 判据①②③④⑤⑥逐条走查（节点数量与 id 不变、位置不变、圆心数字按投影决定且无状态文字、量值 → 尺寸映射单调且区间落在 5–13 屏幕 px、常态点无描边无投影）；并核对 §1 **S-L1** 的「单层实心圆 + 圆心数字按投影」。
 
@@ -206,7 +213,7 @@
 - [ ] 12.4 同步 `docs/PRODUCT-MANUAL.md` 的**知识图谱页章节**：节点形态（单层实心圆点、半径 5–13 屏幕 px、无描边无投影）、标签规则（点下方 5px、12px 恒定、不截断、重叠让位、缩放 < 0.5 对数淡出、无状态文字）、关系线（屏幕恒定 1.25px、箭头语义、非邻接 alpha 0.2）、选中态（换色 + 1px 环 + 放大 + 标签提亮）、图例两块结构与随投影切换、夜纸表现、缩放语义（放大 = 拉开间距）。验证：产品手册能逐条对上本变更的用户可观察行为。
 - [ ] 12.5 `docs/GLOSSARY.md` **不引入新的正式设计名词**（D-14 第 5 条）：「实心小圆点 / 绘制半径 / 物理半径 / 色键」是几何与实现描述词，**不是**契约名词；若实现中确需新词，**先**在 `docs/GLOSSARY.md` 建条目，否则只能进 `docs/PENDING-DEFINITIONS.md`，**不得**以挂名状态混进正式文档。验证：`docs/PENDING-DEFINITIONS.md` 里没有本变更遗留的未定义名词；正式文档里的每个名词都能在 GLOSSARY 解析。
 - [ ] 12.6 同步 `docs/ACTION-GRAPH.md`：本变更**不新增、不退役、不改级**任何动作 —— **复核**后写明「无变更」。验证：ACTION-GRAPH 有对应记录（哪怕是「无变更」的显式记录）。
-- [ ] 12.7 **登记既有契约漂移**（本变更触及、但不改变其行为）：① `.meta` 行的存在与 `workbench-ui:245-248` 的「label/meta LOD」措辞 ⇒ delta 里去掉 `meta`；②「Node labels SHALL always display their complete text」与实现的简称截断（`workbench.js:806-817` `graphTitleCut`）⇒ delta 里改写成与实现一致的表述；③ **A-28 的「半径下限 13px」在两个数值投影里等价于「半径恒定」** ⇒ `Metric projection morphology` 的「值越大点越大」一句被**显式改写**（量值由**圆心数字 + 色阶**承载）；**若 A-28 的原意是 8px，则本项撤回**（见 `design.md` Open Questions 第 6 条）。验证：三条漂移在 delta 里有对应改写，且 §2 的 `Complete primary learning text` 不被破坏。
+- [ ] 12.7 **登记既有契约漂移**（本变更触及、但不改变其行为）：① `.meta` 行的存在与 `workbench-ui:245-248` 的「label/meta LOD」措辞 ⇒ delta 里去掉 `meta`；②「Node labels SHALL always display their complete text」与实现的简称截断（`workbench.js:806-817` `graphTitleCut`）⇒ delta 里改写成与实现一致的表述；③ **量值投影的半径读法**（**A-34 已裁决**：A-28 的**目的**是给 12px 的字腾出**直径 13px** ⇒ 半径**下限 6.5px**，且**随量映射**，**不是**恒 13px）：`graph-visual-language` delta 的 `Screen-space sizing` 已按 A-34 改写（见第 1 组 1.2 与本组 2.7）；`workbench-ui` delta 的 `Metric projection morphology` 里原「the node radius SHALL be held at the value that fits the centre number」一句（A-33 的旧口径）**已按 A-34 改写**为「半径随量映射且不小于 6.5 屏幕 px」⇒ **量值投影的「值越大点越大」重新成立**，量值由**数字 + 色阶 + 大小**共同承载。**〔收口〕该句已改**（原先按 `design.md` R-4b 与 Open Questions 第 6 条登记为漂移；现两份 delta 口径一致，漂移关闭）。验证：三条漂移在 delta 里有对应改写，且 §2 的 `Complete primary learning text` 不被破坏。
 - [ ] 12.8 落实 **A-10.2 的硬性归档顺序**（不可颠倒）：归档时**两个动作缺一不可** —— ① **先归档 `workbench-visual-language-v2`**，再归档本变更；② 归档本变更前**逐字复核**这两条需求的最终文本，确认是合流结果而非旧基线。验证：归档顺序在提交历史里可查；复核记录留痕。
 - [ ] 12.9 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0.1 **G-5**（无新增学习事实）复核职责文件的同步情况：`docs/PRODUCT-MANUAL.md` / `docs/GLOSSARY.md` / `docs/ACTION-GRAPH.md` / `openspec/specs/review-workbench/spec.md`（不动）；并确认 `openspec/specs/workbench-ui/spec.md` 的最终文本与 v2 合流一致。
 

@@ -66,8 +66,11 @@ projection the radius SHALL follow the node's relationship degree
 monotonically, and under the learning-state projection it SHALL follow the
 active projection's metric monotonically, so that equal metric values receive
 equal radii. Under the formal-problem-count and importance projections the
-radius SHALL be 13 screen pixels, so that the centre number fits inside the
-circle. Node label text SHALL be rendered at 12 screen pixels. The drawn
+radius SHALL likewise follow the active projection's metric monotonically, so
+that a higher metric value still takes a larger node, and SHALL NOT be smaller
+than 6.5 screen pixels — a diameter of 13 screen pixels — so that the centre
+number fits inside the circle without the radius being held at a constant
+size. Node label text SHALL be rendered at 12 screen pixels. The drawn
 radius SHALL be derived from the node's metric in the same order as the
 physical radius used by the layout, and the physical radius SHALL NOT be
 changed by this language.
@@ -75,7 +78,7 @@ changed by this language.
 #### Scenario: A fitted graph stays legible
 
 - **WHEN** a chapter graph is fitted to the viewport
-- **THEN** every drawn node radius stays between 5 and 13 screen pixels, and each node's centre number and label stay readable without zooming in
+- **THEN** every drawn node radius stays between 5 and 13 screen pixels — and under the formal-problem-count and importance projections never below 6.5 screen pixels — and each node's centre number and label stay readable without zooming in
 
 #### Scenario: Labels use the pinned screen-space size
 
@@ -90,7 +93,7 @@ changed by this language.
 #### Scenario: Equal values get equal sizes
 
 - **WHEN** two nodes have the same value in the active projection
-- **THEN** they are drawn with the same radius
+- **THEN** they are drawn with the same radius, in every projection including the formal-problem-count and importance projections
 
 #### Scenario: The layout radius is not changed by the drawing
 
