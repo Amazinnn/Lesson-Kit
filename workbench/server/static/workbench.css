@@ -1188,7 +1188,9 @@ textarea:focus-visible, input:focus-visible {
   border-radius: var(--r-md);
   padding: 10px 16px;
   border-bottom: none;
-  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  /* §4.20 竖线沉底：左侧 4px **黄竖线**（黄只承载面积，不承载文字）
+     + 1px 内发丝线；两段都是 inset 阴影（不用 border、不改盒模型）。 */
+  box-shadow: inset 4px 0 0 0 var(--role-yellow), inset 0 0 0 1px var(--rule-hair);
 }
 .msg .meta { font-size: 12px; color: var(--ink-faint); margin-bottom: 4px; }
 /* 卡片基类 —— **不描边**（design.md D-2 / D-13；tasks.md 3.3）：
@@ -1196,18 +1198,19 @@ textarea:focus-visible, input:focus-visible {
    描边一律取消（`.card` 基类原来那条 `border: 1px solid var(--ink-strong)`
    让运行卡 / 图表卡 / 统计卡 / 记录条目全都带一圈黑边）。
    ⚠️ 控件边界（输入框 / 下拉框）与单侧结构线是「不用描边」的两个例外，
-   走 `--rule-control` / `--rule-structure`，不受这里影响。 */
+   走 `--rule-control` / `--rule-structure`，不受这里影响。
+   ⚠️ **留白 24px**（§4.18 `card-spec` · A-115 裁定；旧的 18px 作废）。 */
 .card {
   background: var(--surface-card);
   border-radius: var(--r-md);
   box-shadow: var(--elev-1);
-  padding: 18px;
+  padding: var(--sp-5);
   margin-bottom: 18px;
 }
-/* ---- 这一族卡片自己的规格（IMPL-W2e 追加 2）------------------------------
+/* ---- 这一族卡片自己的规格（IMPL-W2e 追加 2 · §4.18 `card-spec`）------------
    `pages.py` 的完成页等处用 `class='card lk-card'`，但 CSS 里 `.lk-card`
    **零命中** ⇒ 卡片规格只由 `.card` 基类承担。
-   `.lk-card` 与 `.card` 基类**同规格**（12px 圆角 / 18px 留白 /
+   `.lk-card` 与 `.card` 基类**同规格**（12px 圆角 / **24px 留白** /
    `--elev-1` 柔影 / **无描边**）⇒ 这里**显式复述一遍**，给这一族卡片一个
    自己的规格落点（将来改卡片语言时，这一处与基类一起改），
    **不另起一套卡片语言**（两个取值不同就会长出第二种卡片）。
@@ -1216,7 +1219,7 @@ textarea:focus-visible, input:focus-visible {
   background: var(--surface-card);
   border-radius: var(--r-md);
   box-shadow: var(--elev-1);
-  padding: 18px;
+  padding: var(--sp-5);
 }
 .solution-block {
   border-left: 2px solid var(--rule-structure);
@@ -1252,12 +1255,13 @@ textarea:focus-visible, input:focus-visible {
 .section-heading p:last-child { margin: 0; color: var(--ink-faint); font-size: 13px; }
 .support-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 /* 强调块 —— 沉底面（A-23）：底色差 + 1px 内发丝线，**不带柔影**（凹层不抬升）；
-   圆角同为 12px（沉底层的统一圆角，权威表 §2.1） */
+   圆角同为 12px（沉底层的统一圆角，权威表 §2.1）；
+   §4.20 竖线沉底：面左 4px **黄竖线**（黄只承载面积）。 */
 .detail-block {
   padding: 14px;
   background: var(--surface-sunken);
   border-radius: var(--r-md);
-  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  box-shadow: inset 4px 0 0 0 var(--role-yellow), inset 0 0 0 1px var(--rule-hair);
 }
 .detail-block h3 { margin: 0 0 6px; font-size: 14px; }
 .detail-block p { margin: 0; color: var(--ink-muted); }
@@ -1467,6 +1471,60 @@ textarea:focus-visible, input:focus-visible {
 .lk-dot--filled::after {
   content: none;
 }
+
+/* ============================================================================
+   §4.19 纸面层级 · 四层（`surface-spec` · A-115 形态裁定）
+   ---------------------------------------------------------------------------
+   底 / 卡 / 浮起 / 沉底四层，靠**圆角 + 柔影 + 内发丝线**分层；
+   **不用描边、不用背景图案、不用渐变**。
+   · L0 底 `--surface-base`  · L1 卡 `--surface-card` + `--elev-1`
+   · L2 浮起 `--surface-raised` + `--elev-3`
+   · L3 沉底 `--surface-sunken`（**凹层**：不抬升、无柔影）+ 1px 内发丝线
+   ⚠️ 夜纸下 L2 与 L1 的底色差很小 ⇒ 浮起面补一圈发丝线，避免糊在一起。
+   ⚠️ 这四个类**不是新的一套语言**：它们只是把 token 层已有的四层
+     **显式命名出来**，供吐司 / 空态 / 浮层等直接引用（避免每个组件
+     各写一遍 `background` + `box-shadow`）。
+   ========================================================================= */
+.lk-surface-0 { background: var(--surface-base); }
+.lk-surface-1 {
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+}
+.lk-surface-2 {
+  background: var(--surface-raised);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-3);
+}
+/* L3 = 沉底：凹层，不抬升；文字是墨字（不是反白） */
+.lk-surface-3 {
+  background: var(--surface-sunken);
+  color: var(--ink-strong);
+  border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+}
+/* 浮起层在夜纸下改用更深的墨色垫圈，避免与 L1 糊在一起 */
+html[data-theme="night"] .lk-surface-2 {
+  box-shadow: 0 0 0 1px var(--rule-hair), var(--elev-3);
+}
+
+/* ============================================================================
+   §4.20 沉底块 · 竖线沉底（`sunken-rail` · A-115 形态裁定）
+   ---------------------------------------------------------------------------
+   **沉底面 + 左侧 4px 黄竖线**；黄**只承载面积、不承载文字**（权威表 §3.4）。
+   借用「单侧结构线」语言；`.msg.user` 同一形态（A-23 的沉底面不变，
+   竖线是面左的一条线）。
+   ⚠️ 竖线用 **inset 阴影**落地（`inset 4px 0 0 0`）——**不用 border**、
+     不改盒模型；黄条压在原来的 1px 内发丝线之上。
+   ⚠️ 三个落点（各自就地改，不另立一套类）：
+     · `.msg.user`         用户消息
+     · `.detail-block`     强调块
+     · `.paper-answer-block` 作答区
+     —— 都是「**唯一主角**」级的强调块（§4.20 的定位）。
+   ⚠️ `.lk-streak`（连对计数器底）**不套这条**：它左侧那根 4px 条是
+     **档位色条**（灰 → 黄 → 黄蓝渐变），本身就是状态通道，再叠一根黄竖线
+     会让两套语义打架（档位色条保留，黄竖线不套）。
+   ========================================================================= */
 
 /* ============================================================================
    组件族 · 开关 / 分段控件（spec §4.10 / §4.11 · IMPL-W2g 第 1 条）
@@ -1761,37 +1819,34 @@ textarea:focus-visible, input:focus-visible {
   font-size: 17px;
 }
 .empty-state { max-width: 640px; }
-/* ---- 空态三段（component-spec §4.21 · IMPL-W2e 追加 1）--------------------
+/* ---- 空态三段（component-spec §4.21 · A-115 形态裁定 **B 卡面空态**）-------
    `pages.py` 已输出 `.lk-empty` > `.lk-empty__art` / `.lk-empty__text` /
    `.lk-empty__action`，CSS 里**零命中** ⇒ 结构在、样式没接上，看不出效果。
    · 形态固定为 **静物插画 + 一句 + 满宽主按钮**（§4.21）；
    · 一句 = `--font-ui` / `--fs-body`（14px）/ `--ink-muted`；
    · 按钮**满宽**（容器 max-width 240px），文案**就是动作**；
    · **少字原则**：除这一句外不再加任何解释性文字；
-   · **面**：选 **沉底块（L3）**—— 空态在这里是**独立面板**
-     （知识点列表的 `<li>`，不在卡片里）：卡面是「有内容的面」，空态没有
-     内容；沉底（底色差 + 1px 内发丝线 + **不带柔影**）既不与上方的卡面
-     抢层级，又能把「这里还没有东西」读成一块被挖下去的白板。 */
+   · **面**：§4.21 裁定改 **卡面 + 柔影**（`empty-card`）——
+     旧的沉底形态（底色差 + 内发丝线 + 不带柔影）作废：
+     空态是「**一块内容卡**」，不是「一块空地」。
+   ⚠️ 3.4-5 的「满宽」= 主按钮宽 ≥ **它所在容器**的宽 − 2px：
+     面板从 640px 收到 ≤ 240px（`max-width`）、按钮解除 `max-width: 240px`
+     的卡死 ⇒ 按钮与面板同宽（实测 180 = 180 ✓）。
+   ⚠️ 面板是 grid/flex 项 + `margin-inline: auto` ⇒ 宽 = 内容宽（插画 180px）
+     且居中；左右内边距已去掉，否则按钮会窄于面板（那就不是满宽）。
+   ⚠️ **不许**再给按钮加硬撑（面板若留内边距，按钮会溢出容器）。 */
 .lk-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--sp-4);
-  /* 空态面板按 component-spec §4.21 收成**紧凑块**（容器上限 240px）：
-     插画 + 一句 + **满宽**主按钮，三段同宽。
-     ⚠️ 3.4-5 的「满宽」= 主按钮宽 ≥ **它所在容器**的宽 − 2px：
-       面板从 640px 收到 ≤ 240px（`max-width`）、按钮解除 `max-width: 240px`
-       的卡死 ⇒ 按钮与面板同宽（实测 180 = 180 ✓）。
-     ⚠️ 面板是 grid/flex 项 + `margin-inline: auto` ⇒ 宽 = 内容宽（插画 180px）
-       且居中；左右内边距已去掉，否则按钮会窄于面板（那就不是满宽）。
-     ⚠️ **不许**再给按钮加硬撑（面板若留内边距，按钮会溢出容器）。 */
   max-width: 240px;
   margin-inline: auto;
   padding: 48px 0;
   text-align: center;
   border-radius: var(--r-md);
-  background: var(--surface-sunken);
-  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  background: var(--surface-card);
+  box-shadow: var(--elev-1);
 }
 .lk-empty__art { display: block; width: 180px; max-width: 100%; }
 .lk-empty__art svg { display: block; width: 100%; height: auto; }
@@ -3905,7 +3960,8 @@ html[data-motion="off"] *::after {
   padding: var(--sp-4);
   border-radius: var(--r-md);
   background: var(--surface-sunken);
-  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  /* §4.20 竖线沉底：面左 4px **黄竖线**（黄只承载面积）+ 1px 内发丝线 */
+  box-shadow: inset 4px 0 0 0 var(--role-yellow), inset 0 0 0 1px var(--rule-hair);
 }
 .paper-answer-label {
   font-family: var(--font-ui);
@@ -4390,26 +4446,43 @@ html[data-motion="off"] *::after {
 .paper-toolbar { justify-content: flex-end; }
 .paper-navigation { justify-content: center; }
 .paper-dots { display: flex; flex-wrap: wrap; gap: 8px; max-height: 140px; overflow-y: auto; padding: 10px 6px; margin: 12px 0; }
-.paper-dot { width: 34px; height: 34px; min-width: 34px; border-radius: 50%; padding: 0; border: 1px solid var(--ink-muted); background: var(--surface-sheet); color: var(--ink-strong); position: relative; }
+/* ---- §4.17 题号格（`qcell-spec` · A-115 形态裁定）--------------------------
+   **36px 方 + 12px 圆角**（旧的 34px 圆作废）+ 六态；
+   「当前」用**黄实心**（不是 outline）。
+   ⚠️ **命中区**：格 36px + 间隙 8px = **44px 步距**（§3.1 的「尺寸补偿法」）✔
+   ⚠️ **几何不只靠颜色**（INC-05 · A-94）：每个状态都有冗余的形状通道
+     ⇒ 灰度下也读得出状态。 */
+.paper-dot {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);      /* 36px 方 + 12px 圆角 */
+  background: var(--surface-card);
+  color: var(--ink-muted);
+  /* 未作答 = 2px 空心环（不用 border，不改盒模型） */
+  box-shadow: inset 0 0 0 2px var(--ink-disabled);
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
 /* 题号格的状态几何（INC-05 · A-94 · spec「Accessible Paper status dots」）------
    契约：**每个状态点都要有冗余通道** —— 颜色说一次，**形状再说一次**
    ⇒ 灰度下也读得出状态（权威表 §4.17「几何不只靠颜色」）。
-   改造前：只有 `correct` 有几何（内墨环 + 勾）⇒ `wrong` / `stuck` **同一行规则**
-   ⇒ 灰度下**完全不可分**；`filled`（黄实心）/ `unanswered`（纸面 + 细环）**只差颜色**。
-   ⇒ 复用 `.lk-dot--cross` / `--dash` / `--check` 的**同一支笔**
-     （2px 线宽、1px 圆角、纯 CSS 伪元素画线），另加两个「盘形」档：
-       · `unanswered` = **空心**（纸面透出 + 细环）
-       · `filled`     = **实心盘**（黄面铺满）
-     ⇒ 形状通道不靠颜色。
-   ⚠️ **角标画在盘的右上角**（题号必须始终可读 —— 权威表 §4.17「不把数字换成符号」）：
-     角标墨迹落在盘内 x 20…28 / y 3…9，与居中的题号（1 位数字字身 x 13…21、
-     2 位 x 9…25，y 10…24）**基本不重叠**。
-     ⚠️ 改造前的勾画在盘的**中下**（x 20…33 / y 17…27），**压在题号上** ——
-       这次一并挪到角标位（同一支笔，尺寸不变）。
+   六态与颜色的对应（§4.17 的状态表）：
+     未作答 = 纸面 + 淡墨空心环（基类）
+     已作答 = 角色蓝**实心**
+     当前题 = 角色黄**实心**（`.is-current`，写在状态之后）
+     判定正确 = 纸面 + 中性墨环 + 角标勾形（不用绿、不用蓝，A-20-3）
+     判定错误 = 角色红**实心** + 角标叉形
+     卡住 / 阻塞 = 纸面 + 红环 + 角标叉形
    ⚠️ **只改 CSS**：类名由 `paper-practice.js:611` 产出（`paper-dot state-<status>`），
      markup 一行未动。 */
-.paper-dot.state-filled { background: var(--role-yellow); color: var(--ink-on-warm); }
-.paper-dot.state-locked { background: var(--role-blue-wash); color: var(--role-blue); --dot-mark: var(--role-blue); }
+.paper-dot.state-filled { background: var(--role-blue); color: var(--ink-on-role); box-shadow: none; }
+.paper-dot.state-locked { background: var(--role-blue); color: var(--ink-on-role); box-shadow: none; --dot-mark: var(--ink-on-role); }
 /* 题号格：判定正确 = 中性墨环 + 角标勾形（题号保留，不换成符号） */
 .paper-dot.state-correct {
   position: relative;
@@ -4418,8 +4491,22 @@ html[data-motion="off"] *::after {
   box-shadow: inset 0 0 0 2px var(--ink-strong);
   --dot-mark: var(--ink-strong);
 }
-.paper-dot.state-wrong, .paper-dot.state-stuck { background: var(--role-red-wash); color: var(--role-red-ink); --dot-mark: var(--role-red-ink); }
-/* 角标公共形制：右上角、2px 线宽、1px 圆角（与 `.lk-dot--*` 同一支笔） */
+/* 判定错误 = 红实心面 + 角标叉形（几何 = filled，与「卡住」的 cross 区分） */
+.paper-dot.state-wrong {
+  background: var(--role-red);
+  color: var(--ink-on-role);
+  box-shadow: none;
+  --dot-mark: var(--ink-on-role);
+}
+/* 卡住 / 不会 = 纸面 + 红环 + 角标叉形（几何 = cross） */
+.paper-dot.state-stuck {
+  background: var(--surface-card);
+  color: var(--role-red);
+  box-shadow: inset 0 0 0 2px var(--role-red);
+  --dot-mark: var(--role-red);
+}
+/* 角标公共形制：右上角、2px 线宽、1px 圆角（与 `.lk-dot--*` 同一支笔）
+   ⚠️ 坐标按 **36px** 的格子重算（旧的 34px 坐标整体右移 2px）。 */
 .paper-dot.state-correct::before,
 .paper-dot.state-correct::after,
 .paper-dot.state-wrong::before,
@@ -4434,21 +4521,30 @@ html[data-motion="off"] *::after {
 /* 勾（判定正确）：短臂 4px + 长臂 6px（与 `.lk-dot--check` 同尺寸） */
 .paper-dot.state-correct::before,
 .paper-dot.state-correct::after { height: 2px; transform-origin: 0 50%; }
-.paper-dot.state-correct::before { width: 4px; left: 20px; top: 6px; transform: rotate(45deg); }
-.paper-dot.state-correct::after { width: 6px; left: 22.5px; top: 8px; transform: rotate(-45deg); }
-/* 叉（判定错误）：两臂 7px、±45°（与 `.lk-dot--cross` 同尺寸） */
+.paper-dot.state-correct::before { width: 4px; left: 22px; top: 6px; transform: rotate(45deg); }
+.paper-dot.state-correct::after { width: 6px; left: 24.5px; top: 8px; transform: rotate(-45deg); }
+/* 叉（判定错误 / 卡住）：两臂 6px、±45°（与 `.lk-dot--cross` 同尺寸） */
 .paper-dot.state-wrong::before,
-.paper-dot.state-wrong::after {
-  left: 24px; top: 6.5px; width: 7px; height: 2px; margin: -1px 0 0 -3.5px;
+.paper-dot.state-wrong::after,
+.paper-dot.state-stuck::before,
+.paper-dot.state-stuck::after {
+  left: 25px; top: 6.5px; width: 6px; height: 2px; margin: -1px 0 0 -3px;
   transform-origin: 50% 50%;
 }
-.paper-dot.state-wrong::before { transform: rotate(45deg); }
-.paper-dot.state-wrong::after { transform: rotate(-45deg); }
-/* 横杠（卡住 / 不会）：一根 8px 的短横（与 `.lk-dot--dash` 同尺寸） */
-.paper-dot.state-stuck::before { left: 20px; top: 6.5px; width: 8px; height: 2px; margin-top: -1px; }
+.paper-dot.state-wrong::before,
+.paper-dot.state-stuck::before { transform: rotate(45deg); }
+.paper-dot.state-wrong::after,
+.paper-dot.state-stuck::after { transform: rotate(-45deg); }
 /* 实心小点（已提交、暂无判定）：`.lk-dot--filled` 的缩小版（唯一的盘形角标） */
-.paper-dot.state-locked::before { left: 22px; top: 4px; width: 4px; height: 4px; border-radius: 50%; }
-.paper-dot.is-current { outline: 3px solid var(--role-blue); outline-offset: 2px; }
+.paper-dot.state-locked::before { left: 24px; top: 4px; width: 4px; height: 4px; border-radius: 50%; }
+/* 当前题 = **黄实心**（§4.17 裁定；旧的蓝色 outline 作废）+ 1.06 回弹放大。
+   ⚠️ 必须写在状态规则**之后**（同特异度 0,2,0 ⇒ 靠后者胜）。 */
+.paper-dot.is-current {
+  background: var(--role-yellow);
+  color: var(--ink-on-warm);
+  box-shadow: none;
+  transform: scale(1.06);
+}
 .paper-options label { display: flex; gap: 12px; align-items: baseline; padding: 12px; margin: 6px 0; border: 1px solid var(--rule-hair); border-radius: 8px; }
 #paper-answer { width: 100%; box-sizing: border-box; margin: 12px 0; resize: vertical; }
 #paper-reference, #paper-rating { margin-top: 16px; }
