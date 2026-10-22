@@ -231,7 +231,7 @@ def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
         # nothing to record (and the strip would be a lie).
         steps.append(("frames", run_module("frames.py", [
             "--base-url", base_url, "--ws", ws,
-            "--out", str(out_dir.parent / "diff")])))
+            "--out", str(out_dir.parent / "diff"), "--mute-check"])))
     if wants("G-5"):
         steps.append(("g5 capture", run_module("g5.py", [
             "capture", "--base-url", base_url, "--ws", ws,
