@@ -213,12 +213,12 @@ def _paper_practice_html(workspace_name):
         "<button id='paper-pause' class='outline' type='button'>暂停练习</button>"
         "<button id='paper-final-submit' class='primary' type='button'>提交试卷</button></div>"
         "<nav id='paper-dots' class='paper-dots' aria-label='答题情况与题号'></nav>"
-        "<article id='paper-question' class='practice-question-card rich-text'></article>"
+        "<article id='paper-question' class='practice-question-card wb-reading'></article>"
         "<div id='paper-options' class='paper-options'></div>"
         "<label class='visually-hidden' for='paper-answer'>你的作答</label>"
         "<textarea id='paper-answer' rows='5' placeholder='写下你的作答'></textarea>"
         "<button id='paper-item-submit' class='primary hidden' type='button'>提交答案</button>"
-        "<div id='paper-reference' class='practice-solution rich-text hidden'></div>"
+        "<div id='paper-reference' class='practice-solution wb-reading hidden'></div>"
         "<section id='paper-rating' class='hidden' aria-label='自评'></section>"
         "<nav class='paper-navigation' aria-label='题目导航'>"
         "<button id='paper-prev' class='outline' type='button'>上一题</button>"
@@ -350,7 +350,7 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
             "先读正文，再按需要继续练习相关题目。", practice_action,
         )
         + "<div class='page-content'>"
-        f"<article class='knowledge-body card'>{_render_markdown(kp.get('body') or '', workspace['name'], kp_id)}</article>"
+        f"<article class='knowledge-body card wb-reading'>{_render_markdown(kp.get('body') or '', workspace['name'], kp_id)}</article>"
         + reminder_html
         + "<section class='support-section linked-problems'>"
         "<div class='section-heading'><div>"
@@ -527,7 +527,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
                 + "<span class='practice-set-item-index'>" + str(index + 1) + "</span>"
                 + "<span class='practice-set-item-title'>" + html.escape(str(title)[:120]) + "</span>"
                 + "</summary>"
-                + "<div class='linked-problem-text rich-text'>"
+                + "<div class='linked-problem-text wb-reading'>"
                 + _render_markdown(problem.get("problem_text") or "", workspace["name"], "")
                 + "</div>"
                 + _linked_problem_source(problem)
@@ -741,7 +741,7 @@ def _linked_problems(problems, workspace_name, kp_id):
         + "".join(
             "<li class='linked-problem'>"
             f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
-            + f"<div class='linked-problem-text rich-text'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
+            + f"<div class='linked-problem-text wb-reading'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
             + _linked_problem_source(problem)
             + "</li>"
             for problem in problems

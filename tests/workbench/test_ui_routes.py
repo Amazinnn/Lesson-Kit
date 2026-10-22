@@ -196,6 +196,20 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='paper-rating'", body)
         self.assertIn("id='paper-reveal-timing'", body)
 
+    def test_pages_use_the_shared_reading_layer(self):
+        # 6.2 / 6.3 (decisions.md A-41): every reading surface the server
+        # renders carries `.wb-reading`; `.rich-text` is retired here.
+        for path in ("/w/dmath/practice", "/w/dmath/kps",
+                     "/w/dmath/kp/dmath-ch06-kp-001", "/w/dmath/practice-sets"):
+            status, body = self.fetch(path)
+            self.assertEqual(status, 200)
+            self.assertNotIn("rich-text", body)
+        status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertIn("class='knowledge-body card wb-reading'", body)
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertIn("class='practice-question-card wb-reading'", body)
+        self.assertIn("class='practice-solution wb-reading hidden'", body)
+
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
             "POST", "/api/w/dmath/practice-sets",
@@ -215,7 +229,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("7 / 10", body)
         # Each item previews the problem it names, collapsed on arrival.
         self.assertIn("<details class='practice-set-item-body'><summary>", body)
-        self.assertIn("<div class='linked-problem-text rich-text'><p>P1</p></div>", body)
+        self.assertIn("<div class='linked-problem-text wb-reading'><p>P1</p></div>", body)
         self.assertNotIn("<details class='practice-set-item-body' open", body)
         # The card itself folds too, with its controls in the fold's head.
         self.assertIn("<details class='practice-set-card-body'>", body)
