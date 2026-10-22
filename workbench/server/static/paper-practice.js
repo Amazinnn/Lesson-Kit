@@ -33,6 +33,7 @@
       start: document.getElementById("paper-start"),
       error: document.getElementById("paper-error"),
       work: document.getElementById("paper-work"),
+      stemIndex: document.getElementById("paper-stem-index"),
       question: document.getElementById("paper-question"),
       answer: document.getElementById("paper-answer"),
       options: document.getElementById("paper-options"),
@@ -755,6 +756,11 @@
       var title = problem.display_title || problem.title || "未命名题目";
       var prompt = problem.problem_text || "题面暂不可用。";
       var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
+      /* 16.1 题号槽位：服务端只给槽位，值必须由客户端写 —— 题号随题序变，
+         服务端不知道当前第几题。编号与题号点（#paper-dots）、完成页逐题链接
+         同一口径（题序，从 1 起）；槽位自带 aria-hidden='true'，只写值，
+         不改成可读文本，也不加内联字号/颜色（样式归 workbench.css）。 */
+      if (ids.stemIndex) ids.stemIndex.textContent = String(position + 1);
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
         /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里。
            回看已完成的答卷时不挂 —— 那不是一轮练习。 */
