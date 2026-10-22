@@ -1212,7 +1212,7 @@ def _run_content_bundle(args):
 
     args.workspace = args.name
     return content_bundle.run(args, content_bundle._parser(
-        f"lesson-kit ingest {args.name} bundle"))
+        f"lesson-kit ingest {args.name} bundle", include_workspace=False))
 
 
 def command_names(parser=None):

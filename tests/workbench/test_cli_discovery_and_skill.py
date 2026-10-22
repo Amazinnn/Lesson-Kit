@@ -50,6 +50,20 @@ class CliDiscoveryTests(unittest.TestCase):
             parser.parse_args(["papers", "dmath", "save", "--invented"])
         self.assertEqual(raised.exception.code, 2)
 
+    def test_bundle_semantic_error_uses_the_actual_nested_command(self):
+        env = {**os.environ, "PYTHONUTF8": "1"}
+        for module in ("workbench.cli.main", "workbench.cli.entry"):
+            with self.subTest(module=module):
+                run = subprocess.run(
+                    [sys.executable, "-m", module, "ingest", "dmath", "bundle",
+                     "--input", "unused.json", "--backup", "backup.db"],
+                    cwd=ROOT, env=env, capture_output=True, text=True,
+                )
+                self.assertEqual(run.returncode, 2)
+                self.assertIn("--backup requires --apply", run.stderr)
+                self.assertIn("usage: lesson-kit ingest dmath bundle", run.stderr)
+                self.assertNotIn(" workspace", run.stderr)
+
     def test_papers_save_list_and_get_reach_the_same_data_from_both_entry_forms(self):
         import contextlib
         import io
