@@ -107,10 +107,10 @@
 
 ## 9. 静物 SVG 资产（可独立验收） （design-notes/asset-spec.md + spec「A navigation graphic depicts its target」）
 
-- [ ] 9.1 按 `design-notes/asset-spec.md` 产出 5 枚导航图标：`icon-practice.svg`（翻开的书）、`icon-practice-sets.svg`（一叠纸）、`icon-kps.svg`（书签）、`icon-records.svg`（笔记本）、`icon-graph.svg`（节点连线），落在 `workbench/server/static/assets/icons/`；必须是**具象静物**、不是抽象占位形状（图案适配原则），且与背景由同一套视觉规则推导。验证：5 个文件存在；SVG 不含 `<text>`；不外链字体。
-- [ ] 9.2 按 asset-spec 产出空态静物插画（同一支笔、同一套线宽与圆角语言）：`empty-vase.svg`、`empty-fruit-basket.svg`、`empty-canvas.svg`、`empty-cup.svg`、`empty-books.svg`、`empty-compass.svg`、`empty-globe.svg`、`empty-inkwell.svg`、`empty-pen.svg`、`empty-pencil-cup.svg` 与 `lamp.svg`，落在 `workbench/server/static/assets/illustrations/`；写意线稿 + 淡彩晕染 + 克制高光。验证：文件存在；单文件色值数受限；图形是具象器物而非抽象几何团块；台灯与其它静物同笔触。
-- [ ] 9.3 圆底只用三角色色（不同功能区对应不同角色色），**深浅两主题共用同一批 SVG 文件**、用 CSS 变量换前景 / 背景色，不另画一套；渐变只允许出现在图标与插画内部，且用一套有限渐变语言（同一方向、同一组色阶）。验证：切夜纸后图标与插画自动反相；资产目录文件数不随主题变化；`grep -n "linear-gradient" workbench.css` 全部落在图标 / 插画作用域内。
-- [ ] 9.4 阶段验收（SVG 资产独立验收）：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.6 走查；截图走查范围＝左栏 5 项图标 + 各类空态插画 + 台灯，在亮 / 暗两主题下的特写；确认资产目录内无构建脚本、无 base64 内联、无外链、无图标字体、无位图。
+- [x] 9.1 按 `design-notes/asset-spec.md` 产出 5 枚导航图标：`icon-practice.svg`（翻开的书）、`icon-practice-sets.svg`（一叠纸）、`icon-kps.svg`（书签）、`icon-records.svg`（笔记本）、`icon-graph.svg`（节点连线），落在 `workbench/server/static/assets/icons/`；必须是**具象静物**、不是抽象占位形状（图案适配原则），且与背景由同一套视觉规则推导。验证：5 个文件存在；SVG 不含 `<text>`；不外链字体。
+- [x] 9.2 按 asset-spec 产出空态静物插画（同一支笔、同一套线宽与圆角语言）：`empty-vase.svg`、`empty-fruit-basket.svg`、`empty-canvas.svg`、`empty-cup.svg`、`empty-books.svg`、`empty-compass.svg`、`empty-globe.svg`、`empty-inkwell.svg`、`empty-pen.svg`、`empty-pencil-cup.svg` 与 `lamp.svg`，落在 `workbench/server/static/assets/illustrations/`；写意线稿 + 淡彩晕染 + 克制高光。验证：文件存在；单文件色值数受限；图形是具象器物而非抽象几何团块；台灯与其它静物同笔触。
+- [x] 9.3 圆底只用三角色色（不同功能区对应不同角色色），**深浅两主题共用同一批 SVG 文件**、用 CSS 变量换前景 / 背景色，不另画一套；渐变只允许出现在图标与插画内部，且用一套有限渐变语言（同一方向、同一组色阶）。验证：切夜纸后图标与插画自动反相；资产目录文件数不随主题变化；`grep -n "linear-gradient" workbench.css` 全部落在图标 / 插画作用域内。
+- [x] 9.4 阶段验收（SVG 资产独立验收）：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.6 走查；截图走查范围＝左栏 5 项图标 + 各类空态插画 + 台灯，在亮 / 暗两主题下的特写；确认资产目录内无构建脚本、无 base64 内联、无外链、无图标字体、无位图。
 
 ## 10. 关键反馈音效资产（可独立验收） （specs/workbench-settings「Sound preference」+ decisions 8.3）
 

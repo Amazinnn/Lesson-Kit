@@ -1544,6 +1544,29 @@ mockup 修正后仍有意保留了近黑底，并主动问「发送按钮要不�
 > 这条与 `tasks.md` 5.4（静态资源缓存策略）同源 ——
 > 改了 CSS 或字体必须**立刻**到达用户，否则改��等于没改。
 
+### A-40 资产路径与命名的唯一口径（第 9 组落地后固化）
+
+第 9 组交付 16 个 SVG 后，暴露出**三套并存的路径/命名**。裁决：
+
+1. **唯一权威 = `design-notes/asset-spec.md` §1.8 / §5.1**：
+   - `workbench/server/static/assets/icons/`（5 枚导航图标）
+   - `workbench/server/static/assets/empty/`（10 张空态插画）
+   - `workbench/server/static/assets/motion/lamp.svg`（台灯，三姿态同一文件）
+2. **作废**：`tasks.md` 9.2 写的 `assets/illustrations/`，以及 8.7 / 17.7 引用的
+   `assets/illustrations/lamp.svg` —— 与 asset-spec 冲突。**第 8 组内联台灯时用
+   `assets/motion/lamp.svg`。**
+3. **作废**：`component-spec.md` 里的第三套命名（`asset-icon-*.svg` / `asset-still-*.svg` /
+   `asset-lamp.svg`，且图标 20×20）—— 与 asset-spec 的 48×48 图标规格冲突，
+   一律以 asset-spec 为准。
+4. **`asset-spec` §5.2 的 `grep "http://"` 零命中要求本身是假阳性** ——
+   §1.8 同时强制每个 SVG 写 `xmlns="http://www.w3.org/2000/svg"`。
+   判定改为：**除 `xmlns` 与 `xmlns:xlink` 外，不得出现任何 http(s) 外链**。
+5. **`--asset-lamp-warm` 权威表无对应 token**（asset-spec §1.7 自标「待裁决」）——
+   实现取 `#f7c46b`；要进权威表需另立一条。
+6. **sprite 未做**：asset-spec §1.12 / §5.2 #4 要求每件**自包含**、禁 `<use>` 指向外部 sprite，
+   §5.1 又断言文件数恒为 16 ⇒ 用 `assets/preview.html` 内联全部资产来满足「一眼看全」，
+   而不是 sprite。（这条同时解释了为什么 mockup 的图标 sprite 是评审件、不是产品做法。）
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，
