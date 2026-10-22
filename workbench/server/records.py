@@ -35,31 +35,6 @@ _CALENDAR_CELL_MAX_PX = 28   # 最高档的格子高度
 _CALENDAR_ROW_PX = 30        # 日历行高（每行等高 ⇒ 行内共享一条基线）
 
 
-def _verdict_mark(kind):
-    """判定的几何符号（§3.6 冗余状态通道：勾 / 叉 / 空心环）。
-
-    「对」的勾形由 CSS 侧 `.record-verdict-ok::before/::after` 画（墨色 2px 双段），
-    这里只补 CSS 侧尚未画的两种：错 = 红叉、未判定 = 淡墨空心环。
-    """
-    if kind == "bad":
-        return (
-            "<svg class='record-verdict-mark' width='9' height='9' viewBox='0 0 10 10' "
-            "aria-hidden='true' focusable='false' "
-            "style='vertical-align:-1px;margin-right:4px'>"
-            "<path d='M1.6 1.6 L8.4 8.4 M8.4 1.6 L1.6 8.4' fill='none' "
-            "style='stroke:var(--role-red-ink);stroke-width:2;stroke-linecap:round'/>"
-            "</svg>"
-        )
-    return (
-        "<svg class='record-verdict-mark' width='9' height='9' viewBox='0 0 10 10' "
-        "aria-hidden='true' focusable='false' "
-        "style='vertical-align:-1px;margin-right:4px'>"
-        "<circle cx='5' cy='5' r='3.2' fill='none' "
-        "style='stroke:var(--ink-muted);stroke-width:1.6'/>"
-        "</svg>"
-    )
-
-
 def _rating_marks(rating):
     """自评 = 彩色圆点 + 星级形状（零文字标签）。"""
     if not isinstance(rating, int) or not 1 <= rating <= 5:
@@ -103,14 +78,10 @@ def _attempt_rows(workspace_name, records, wrong=False):
         verdict = record.get("verdict")
         if verdict is None:
             badge, verdict_class = "未判定", "record-verdict-open"
-            # 「对」的勾形在 CSS 侧；其余两态的几何符号在这里补上。
-            mark = _verdict_mark("open")
         elif verdict:
             badge, verdict_class = "对", "record-verdict-ok"
-            mark = ""
         else:
             badge, verdict_class = "错", "record-verdict-bad"
-            mark = _verdict_mark("bad")
         rating = record.get("rating")
         title = html.escape(record.get("title") or "未命名题目")
         if record.get('deleted_content'):
@@ -125,9 +96,9 @@ def _attempt_rows(workspace_name, records, wrong=False):
         reason = _wrong_reason(record) if wrong else ""
         if wrong:
             card = ("<article class='record-row card record-wrong' "
-                    "style='border:0;box-shadow:var(--elev-2)'>")
+                    "style='box-shadow:var(--elev-2)'>")
         else:
-            card = "<article class='record-row card record-attempt' style='border:0'>"
+            card = "<article class='record-row card record-attempt'>"
         summary = ""
         if reason or note:
             summary = (
@@ -139,7 +110,7 @@ def _attempt_rows(workspace_name, records, wrong=False):
         rows.append(
             card
             + f"<header><a class='record-title' href='{link}'>{title}</a>"
-            f"<span class='record-verdict {verdict_class}'>{mark}{badge}</span>"
+            f"<span class='record-verdict {verdict_class}'>{badge}</span>"
             + _rating_marks(rating)
             + "<time class='record-time'>"
             + html.escape(str(record.get("created_at") or ""))
@@ -428,27 +399,32 @@ def _verdict_distribution(summary):
 
     数据源是现成读路径 `overview['summary']`（attempts / judged / correct），
     零新增查询、零写入。条长按「全部作答数」归一，三段之和即全部作答数。
+
+    类名走 `.record-verdict-dist*` 一族（判定是三态语义，自评是星级语义，两族分开；
+    `.record-rating-*` 留给 `_rating_chart` 的自评分布）。
+    条形颜色由**状态类**给（`--ok` / `--bad` / `--open`），不再内联覆盖。
     """
     attempts = int(summary.get("attempts") or 0)
     judged = int(summary.get("judged") or 0)
     correct = int(summary.get("correct") or 0)
     rows = [
-        ("对", correct, "var(--ink-strong)"),
-        ("错", max(judged - correct, 0), "var(--role-red-ink)"),
-        ("未判定", max(attempts - judged, 0), "var(--ink-faint)"),
+        ("对", correct, "record-verdict-dist-fill--ok"),
+        ("错", max(judged - correct, 0), "record-verdict-dist-fill--bad"),
+        ("未判定", max(attempts - judged, 0), "record-verdict-dist-fill--open"),
     ]
     items = []
-    for label, count, color in rows:
+    for label, count, fill_class in rows:
         width = count / attempts * 100 if attempts else 0
         items.append(
-            "<div class='record-rating-row'>"
-            f"<span style='white-space:nowrap'>{label}</span>"
-            "<div class='record-rating-track'>"
-            f"<span style='width:{width:.1f}%;background:{color}'></span></div>"
-            f"<strong>{count}</strong></div>"
+            "<div class='record-verdict-dist-row'>"
+            f"<span class='record-verdict-dist-label'>{label}</span>"
+            "<div class='record-verdict-dist-track'>"
+            f"<span class='record-verdict-dist-fill {fill_class}' "
+            f"style='width:{width:.1f}%'></span></div>"
+            f"<strong class='record-verdict-dist-count'>{count}</strong></div>"
         )
     return (
-        "<div class='record-rating-chart' aria-label='判定分布'>"
+        "<div class='record-verdict-dist' aria-label='判定分布'>"
         + "".join(items)
         + "</div>"
     )
