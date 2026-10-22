@@ -206,6 +206,25 @@ def _resolve_target(page, spec, base_url, ws):
     return base_url + path, None
 
 
+def _settle_animations(page, timeout_ms=2000):
+    """Wait until no *finite* animation is running, then report the state.
+
+    `networkidle` says nothing about CSS animations: a view transition
+    animates `#middle-page > *` in from `opacity: 0` for 240ms, so a shot
+    taken right after networkidle catches a blank middle column.  Waiting
+    here keeps the screenshot honest (and the comparison fair).
+    """
+    deadline = time.monotonic() + (timeout_ms / 1000.0)
+    running = []
+    while True:
+        running = page.evaluate(_JS_RUNNING_ANIMATIONS)
+        if not running:
+            break
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(0.05)
+    return {"running": running, "settled": not running}
+
 def capture(base_url, ws, out_dir, only=None, seed=None):
     """Take the screenshots of one side and write ``index.json``."""
     from playwright.sync_api import sync_playwright
@@ -246,7 +265,13 @@ def capture(base_url, ws, out_dir, only=None, seed=None):
                     except Exception:
                         pass
                     fonts = page.evaluate(_JS_FONTS)
-                    running = page.evaluate(_JS_RUNNING_ANIMATIONS)
+                    # Settle before shooting: a view transition animates
+                    # `#middle-page > *` in from `opacity: 0`, and networkidle
+                    # does not wait for it — screenshotting straight after
+                    # networkidle catches a **blank middle column** and the
+                    # comparison then blames the CSS for a tool race.
+                    settled = _settle_animations(page, timeout_ms=2000)
+                    running = settled["running"]
                     name = f"{spec['id']}-{spec['slug']}-{spec['variant']}"
                     path = out_dir / f"{name}.png"
                     page.screenshot(path=str(path))
