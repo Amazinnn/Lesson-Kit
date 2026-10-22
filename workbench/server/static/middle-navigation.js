@@ -6,9 +6,11 @@
   var middlePage = document.getElementById("middle-page");
   if (!layout || !middlePage || !window.fetch || !window.history) return;
 
+  var middle = document.getElementById("middle");
   var workspace = layout.dataset.workspace;
   var sequence = 0;
   var graphScriptsPromise = null;
+  var middleScrollTop = 0;
 
   function sameWorkspace(url) {
     if (url.origin !== window.location.origin) return false;
@@ -40,6 +42,54 @@
         });
     }
     return graphScriptsPromise;
+  }
+
+  /* ---- 加载态：骨架屏（tasks.md 21.1 / 21.5）--------------------------------
+     切页时 `#middle-page` 的 innerHTML 会被整体替换 ⇒ 进场动效只能由 CSS 的
+     容器动画接管（`#layout:not([data-page="graph"]) #middle-page > *` 挂
+     `lk-rise-in-12`），JS 不给子元素加一次性动效类名 —— 那类名会随 innerHTML
+     一起被冲掉。JS 在这里只做「切页前把容器切成骨架态」这一件事：
+     切页前呈骨架，内容到位后由容器动画接管。
+     图谱页的转场作用域由 CSS 的 `#layout:not([data-page="graph"])` 排除，
+     JS 侧不重复实现、也不给图谱页加任何特判。 */
+
+  /* 骨架块：一条标题 + 一张卡 + 三行正文，与阅读列同宽。
+     每个中栏页面各画一套占位形状的成本不低（design.md D-7「代价」），
+     先取一个通用形状。 */
+  var SKELETON_BLOCKS = [
+    { height: 26, width: "46%", gap: 0 },
+    { height: 128, width: "100%", gap: 22 },
+    { height: 15, width: "92%", gap: 20 },
+    { height: 15, width: "76%", gap: 10 },
+    { height: 15, width: "86%", gap: 10 }
+  ];
+
+  function skeletonBlock(block) {
+    var style = "height:" + block.height + "px;width:" + block.width
+      + (block.gap ? ";margin-top:" + block.gap + "px" : "");
+    /* 灰块 + 微光扫过：灰块与扫光都来自 CSS 的 `.lk-skeleton`
+       （`lk-skeleton-sweep` 只动覆盖层的 transform），JS 不写动效。 */
+    return '<div class="lk-skeleton" style="' + style + '"></div>';
+  }
+
+  function skeletonMarkup() {
+    var blocks = [];
+    for (var i = 0; i < SKELETON_BLOCKS.length; i += 1) {
+      blocks.push(skeletonBlock(SKELETON_BLOCKS[i]));
+    }
+    /* 装饰层：`aria-hidden` + `pointer-events:none` —— 可交互元素一律不在
+       装饰层内，浮层出现时也不抢焦点（tasks.md 21.3）。 */
+    return '<div data-lk-skeleton="1" aria-hidden="true"'
+      + ' style="pointer-events:none;max-width:800px;margin:0 auto">'
+      + blocks.join("") + "</div>";
+  }
+
+  /* 切页前：容器先呈骨架 + `aria-busy` 置位；内容到位后由
+     `installPageContent` 复位（骨架随 innerHTML 一起被内容替换）。 */
+  function showLoadingState() {
+    if (middle) middleScrollTop = middle.scrollTop;
+    middlePage.setAttribute("aria-busy", "true");
+    middlePage.innerHTML = skeletonMarkup();
   }
 
   function updateLayout(nextLayout) {
@@ -85,6 +135,12 @@
     updateActiveNavigation(nextDocument);
     updateScopeNames(nextDocument);
     middlePage.innerHTML = nextPage.innerHTML;
+    /* 骨架被内容替换 —— 容器动画此刻接管；加载态复位。 */
+    middlePage.setAttribute("aria-busy", "false");
+    if (middle && middleScrollTop) {
+      middle.scrollTop = middleScrollTop;
+      middleScrollTop = 0;
+    }
     if (window.WorkbenchMiddlePage) window.WorkbenchMiddlePage.mount();
     if (window.AgentUISurfaces && window.AgentUISurfaces.renderContext) {
       window.AgentUISurfaces.renderContext();
@@ -105,6 +161,7 @@
       if (options.replace) window.history.replaceState({ middle: true }, "", url.href);
       else window.history.pushState({ middle: true }, "", url.href);
     }
+    showLoadingState();
     return window.fetch(url.href, { headers: { Accept: "text/html" } })
       .then(function (response) {
         if (!response.ok) throw new Error("page request failed");
