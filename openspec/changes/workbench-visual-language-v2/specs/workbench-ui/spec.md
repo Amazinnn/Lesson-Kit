@@ -337,8 +337,17 @@ signal and reset the counter; the workbench SHALL NOT stay silent in that case.
 ### Requirement: View transition and skeleton loading state
 
 When the learner moves to another middle page, the page area SHALL show a
-skeleton of grey blocks crossed by a travelling highlight while the content is
-being fetched, and the content SHALL rise and fade in once it has settled.
+skeleton of grey blocks whose base colour **breathes** — the blocks grow
+slightly lighter and slightly darker in turn, so that the loading state is
+legible without a highlight travelling across them — while the content is being
+fetched, and the content SHALL rise and fade in once it has settled.
+
+The breathing SHALL be the only motion the skeleton carries: the skeleton SHALL
+NOT be crossed by a travelling highlight, and the blocks SHALL NOT be given a
+surface gradient. The breathing SHALL change the **appearance of the blocks**
+rather than their position, and the blocks SHALL keep a visible size
+throughout, so that a learner can tell that something is being loaded rather
+than that the page is empty.
 
 The transition SHALL be carried by the page container itself, because the middle
 navigation replaces the whole content of that container in one step; the
@@ -347,7 +356,7 @@ because such a class is discarded when the content is replaced. The transition
 SHALL NOT leave a blank area, SHALL NOT hold back what the learner can act on,
 and SHALL NOT change the order or the timing of any request.
 
-When motion is off or reduced, the skeleton SHALL NOT sweep and the content
+When motion is off or reduced, the skeleton SHALL NOT breathe and the content
 SHALL appear directly in its final state, with the same content, the same
 positions and the same actions as the animated version ends with.
 
