@@ -205,7 +205,7 @@
 
 ## 20. 时间视图负荷柱（`calendar-workload`） （specs/calendar-workload delta + D-7）
 
-- [x] 20.1 14 天负荷柱从共享基线**逐柱错峰 24ms** 生长，只动 `transform` / `opacity`，时长落在交互 / 场景档内；零负荷日**不画柱**、不错位占位，并保留在共享基线上的位置。验证：录帧确认逐柱错峰与基线不变；柱高比例与精确计数一致。
+- [ ] 20.1 14 天负荷柱从共享基线**逐柱错峰 24ms** 生长，只动 `transform` / `opacity`，时长落在交互 / 场景档内；零负荷日**不画柱**、不错位占位，并保留在共享基线上的位置。验证：录帧确认逐柱错峰与基线不变；柱高比例与精确计数一致。
 - [x] 20.2 峰值日与重日的双通道表达：峰值日按**形态 + 颜色**区分；重日（达非零日均的两倍）加**几何**冗余通道标记，**不得靠一堆解释文字**；精确数值标在各自柱上方。验证：重日在无色觉条件下仍可识别；数值与柱一一对应。
 - [x] 20.3 降级与空态：动效偏好关、或系统 reduced-motion 生效且无显式覆盖时，柱**立即出现在最终高度**，数值、峰值标记与重日标记同时就位（**不得**停在中间高度或缺标记）；空态 = 一句 + 可选非交互静物插画，且**除这一句外不得再加任何注释**。验证：降级帧与动效帧终态一致；空态无额外注释；该视图不重排、不写入、不改任何学习数据。
 - [ ] 20.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 M-10 走查；截图走查范围＝时间视图的负荷柱、峰值 / 重日标记、空态。

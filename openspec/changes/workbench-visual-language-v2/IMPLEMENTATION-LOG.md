@@ -36,7 +36,7 @@
 | 用途 | 路径 |
 |---|---|
 | 裁决总账（**冲突时以它为准**） | `decisions.md`（A-1…A-36 · G-1…G-24 · P-1/P-2 · F-1） |
-| 实现方案 | `design.md`（D-1…D-16） |
+| 实现方案 | `design.md`（D-1…D-15） |
 | 任务清单 | `tasks.md`（28 组 / 167 条） |
 | 验收口径 | `acceptance.md`（G-1…G-8 · S-1…S-12 · M-1…M-13 · §3.1–§3.8） |
 | **token 唯一权威** | `design-notes/night-paper-tokens.md`（结构 66 + 值 52，两主题） |
