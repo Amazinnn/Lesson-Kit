@@ -846,8 +846,14 @@ _Avoid_：独立 AI 应用壳、常驻 Tool Dashboard、与 Lesson Kit 脱节的
 
 ### 工具调用卡 / Tool Call Card
 单次工具、命令、搜索或确定性动作的语义执行摘要，在对话流中显示可读动作名、实际状态与有证据支持的结果/影响；未知影响必须如实标为未知。诊断信息经过净化并默认折叠，摘要不超过 240 个字符。恢复控件只对应后端实际支持的操作。
-_Avoid_：原始协议事件墙、完整终端日志、思维链、把每个底层事件拆成独立卡片
-出处：`preserve-agent-messages-and-tool-outcomes`；workbench-ui spec「Provider activity cards show evidenced outcomes」
+
+**形态（单行流水）**：**一行头**（状态点 + 工具名 + 耗时 + 展开按钮）+
+**一行摘要**（不展开即可读）+ **默认收起的详情区**。耗时**只取活动自报值**，
+没有就**整格不显示**（不猜、不补）。失败由**状态点**承担，**不加红字**。
+展开 / 收起用真按钮（`aria-expanded` + `aria-controls`），不用原生 `<details>`。
+_Avoid_：原始协议事件墙、完整终端日志、思维链、把每个底层事件拆成独立卡片、工具日志、调用记录
+出处：`preserve-agent-messages-and-tool-outcomes`；workbench-ui spec「Provider activity cards show evidenced outcomes」；
+openspec/changes/workbench-component-forms（§4.25 · 形态裁定 A-115）
 
 ### Agent 工件 / Agent Artifact
 Agent 产生的、值得交接或后续继续操作的结果对象，例如生成完成的试卷。它与 Tool Call Card 区分：Tool 表示“做了什么”，Artifact 表示“做出了什么”。Artifact 可在对话中以结果卡出现，并可由辅助工作面预览；完成 Artifact **不会自动切换当前 Lesson Kit 页面**，进入其正式页面必须由用户显式触发。此词条只定义 UI 交接概念，不引入持久化结构或试卷生命周期；保存语义归 paper model 契约。
@@ -962,13 +968,6 @@ _Avoid_：焦点恢复、焦点复位
 它**不是控件**：不进 Tab 序列、不改值、不发请求。
 _Avoid_：步骤条、进度点、阶段指示器（那是泛称）、分段进度条（同义但本词更具体）
 出处：openspec/changes/workbench-component-forms（§4.16 / §4.30）
-
-### 工具调用卡（单行形态）/ Tool call card (single-line form)
-工具调用结果的展示形态：**一行头**（状态点 + 工具名 + 耗时 + 展开按钮）+
-**一行摘要**（不展开即可读）+ **默认收起的详情区**。耗时**只取活动自报值**，
-没有就不显示（不猜、不补）。失败由**状态点**承担，**不加红字**。
-_Avoid_：工具日志、调用记录、工具结果块
-出处：openspec/changes/workbench-component-forms（§4.25）
 
 ### 模态对话框 / Modal dialog
 **需要打断用户**的确认界面：背景 `inert`，**Esc 关闭**、**焦点陷阱**、
