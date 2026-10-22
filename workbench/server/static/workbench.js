@@ -188,6 +188,17 @@
     return loadSetting("showRating", true) !== false;
   }
 
+  /* The sound preference is one field of the same record (`sound`, boolean,
+     on by default — decisions.md A-38).  sfx.js reads the very same field, so
+     the two never disagree; before the module is there the record itself is
+     the answer. */
+  function soundEnabled() {
+    if (window.lkSfx && typeof window.lkSfx.isEnabled === "function") {
+      return window.lkSfx.isEnabled();
+    }
+    return loadSetting("sound", true) !== false;
+  }
+
   /* ---------- appearance preferences ----------
    * Theme, reading face, motion and sound are browser preferences of the
    * open workspace: they live in the same `wb_settings_<workspace>` record
@@ -269,7 +280,355 @@
   window.lkMotion = {
     mode: motionMode,
     isFull: function () { return motionMode() === "full"; },
+    isWeak: function () { return motionMode() === "weak"; },
     isOff: function () { return motionMode() === "off"; },
+    apply: applyMotion,
+  };
+
+  /* ---------- motion orchestration (tasks.md 8.4 / 8.7 / 8.8 · design.md D-7) ----------
+     The stylesheet owns every keyframe; this side switches classes, writes the
+     values of the counters that already exist and drives the timelines.  Three
+     rules hold everywhere below:
+
+       · an animated element's static style **is** its final style — the start
+         state (opacity 0 / offset / scale) lives inside the @keyframes only
+         (decisions.md A-2 derived rule / tasks.md 8.9);
+       · no new request, no new learning fact, no change to the request
+         sequence — the celebration starts only after the response that ends
+         the round has arrived;
+       · the motion tier is read from one place (`window.lkMotion.mode()`),
+         never from a second `matchMedia` of its own.  The four combinations
+         of A-2 hold: system reduce + unset ⇒ weak, system reduce + explicit
+         on ⇒ full (the learner's explicit choice wins), system allows +
+         unset ⇒ full, system allows + explicit off ⇒ straight cut.
+
+     The shared ticker below is the **only** ticker in the product: the streak
+     counter of group 17 calls this one instead of writing a second copy
+     (tasks.md 17.1).  */
+
+  var TICKER_DURATION_MS = 240;   /* motion-spec §2.1 item 8: 240 ms per digit */
+  var TICKER_STAGGER_MS = 40;     /* per-digit stagger */
+  var FLAME_STAGGER_MS = 80;      /* motion-spec §3.6: 80 ms between clusters */
+
+  function tickerFrame() {
+    return window.requestAnimationFrame
+      ? function (fn) { return window.requestAnimationFrame(fn); }
+      : function (fn) { return window.setTimeout(fn, 16); };
+  }
+
+  /* ① the shared ticker (tasks.md 8.4 ① / 17.1): vanilla rAF, writes
+     `textContent` only — it creates no node and binds no listener. */
+  function tickerSet(el, value, options) {
+    if (!el) return false;
+    var settings = options || {};
+    var target = Number(value);
+    if (!isFinite(target)) {
+      el.textContent = String(value == null ? "" : value);
+      return false;
+    }
+    var from = Number(settings.from);
+    if (!isFinite(from)) from = 0;
+    var duration = settings.duration == null ? TICKER_DURATION_MS : Number(settings.duration);
+    var delay = settings.delay == null ? 0 : Number(settings.delay);
+    /* A downgraded tier lands on the final value directly: the figure has to
+       be readable, and a moving figure is not readable while it moves. */
+    if (motionMode() !== "full" || !isFinite(duration) || duration <= 0) {
+      el.textContent = String(target);
+      return true;
+    }
+    var started = null;
+    var request = tickerFrame();
+    function step(now) {
+      if (started === null) started = now;
+      var elapsed = now - started - delay;
+      if (elapsed < 0) { request(step); return; }
+      var progress = Math.min(1, elapsed / duration);
+      var eased = 1 - Math.pow(1 - progress, 3);   /* the "out" curve */
+      el.textContent = String(Math.round(from + (target - from) * eased));
+      if (progress < 1) { request(step); return; }
+      el.textContent = String(target);
+    }
+    request(step);
+    return true;
+  }
+
+  window.lkTicker = {
+    set: tickerSet,
+    isFull: function () { return motionMode() === "full"; },
+  };
+
+  /* ② the flame clusters (tasks.md 8.4 ② / 17.8): the class only — the
+     ignition is a CSS keyframe, the clusters stagger by 80 ms. */
+  function setFlames(root, litCount) {
+    if (!root || !root.querySelectorAll) return 0;
+    var flames = root.querySelectorAll(".lk-flame");
+    var lit = Number(litCount) || 0;
+    Array.prototype.forEach.call(flames, function (flame, index) {
+      var on = index < lit;
+      flame.classList.toggle("is-lit", on);
+      /* The stagger is a delay, not a start state: the start state stays
+         inside the keyframes. */
+      flame.style.animationDelay = on ? (index * FLAME_STAGGER_MS) + "ms" : "";
+    });
+    return flames.length;
+  }
+
+  window.lkFlame = { set: setFlames };
+
+  /* ③ the progress band (tasks.md 8.4 ③ / 17.4): the static style is already
+     the final one (scaleX 1); `is-filled` replays the growth keyframe. */
+  function fillProgressBand(root) {
+    if (!root || !root.querySelectorAll) return 0;
+    var bands = root.querySelectorAll(".lk-progress");
+    Array.prototype.forEach.call(bands, function (band) {
+      band.classList.add("is-filled");
+    });
+    return bands.length;
+  }
+
+  window.lkProgress = { fill: fillProgressBand };
+
+  /* ---------- the lamp transition (tasks.md 8.7 / 12.5 · motion-spec §4) ----------
+     Four stages: lean out (140 ms) → light up (140–220 ms) → the ripple
+     spreads (140–590 ms) → the skin is swapped (590 ms) → retract and clear
+     (590–700 ms).
+
+     The ripple carries the **target** theme's ground colour and it is written
+     at the *start* of the transition — one frame later and the old colour
+     flashes for a frame (tasks.md 12.5).  The ripple is a ground layer: it
+     reads `--surface-base` (the page ground), never a card token that changes
+     with the theme (decisions.md A-1).  All three layers are decoration:
+     `pointer-events: none`, and the ripple stays below the content.  */
+
+  var LAMP_SWAP_MS = 590;
+  var LAMP_CLEAN_MS = 700;
+  var lampAsset = null;
+
+  function lampAssetText() {
+    if (!lampAsset) {
+      lampAsset = fetch("/static/assets/motion/lamp.svg")
+        .then(function (response) { return response.ok ? response.text() : ""; })
+        .catch(function () { return ""; });
+    }
+    return lampAsset;
+  }
+
+  /* The ground colour of a theme: `--surface-base` is one name with two value
+     sets, so the target theme is set for a moment and read back — inside the
+     same task, so nothing flashes (motion-spec §4.2). */
+  function themeBase(theme) {
+    var root = document.documentElement;
+    if (!root || !window.getComputedStyle) return "";
+    var previous = root.getAttribute("data-theme");
+    root.setAttribute("data-theme", theme === "night" ? "night" : "");
+    var value = window.getComputedStyle(root).getPropertyValue("--surface-base").trim();
+    if (previous === null) root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", previous);
+    return value;
+  }
+
+  function runLampTransition(nextTheme) {
+    /* The downgraded tiers never build the three layers: the theme is simply
+       swapped (motion-spec §4.6). */
+    if (motionMode() !== "full") {
+      applyTheme(nextTheme);
+      return;
+    }
+    var ripple = document.createElement("div");
+    ripple.className = "lk-ripple";
+    var glow = document.createElement("div");
+    glow.className = "lk-ripple-glow";
+    var lamp = document.createElement("div");
+    lamp.className = "lk-lamp";
+    /* The target ground colour goes in at the start of the transition.  The
+       stylesheet reads `--ripple-base` first and keeps `--lk-ripple-base` as
+       the transition alias; both names are written, on the layer that reads
+       them — the layer is removed at the end of the transition, so the value
+       never outlives it and cannot go stale on a later theme change. */
+    var base = themeBase(nextTheme);
+    ripple.style.setProperty("--ripple-base", base);
+    ripple.style.setProperty("--lk-ripple-base", base);
+    document.body.appendChild(ripple);
+    document.body.appendChild(glow);
+    document.body.appendChild(lamp);
+    lampAssetText().then(function (svg) {
+      if (svg && lamp.parentNode) lamp.innerHTML = svg;
+    });
+    /* ① lean out, ② light up, ③ ripple — the stylesheet carries the delays,
+       so the classes go on at once. */
+    lamp.classList.add("is-out", "is-lit");
+    ripple.classList.add("is-on", "is-clear");
+    glow.classList.add("is-on", "is-clear");
+    /* ④ skin swap: the ripple has covered the ground colour by now. */
+    window.setTimeout(function () {
+      applyTheme(nextTheme);
+    }, LAMP_SWAP_MS);
+    /* ⑤⑥ retract and clear — the terminal state is clean. */
+    window.setTimeout(function () {
+      if (ripple.parentNode) ripple.parentNode.removeChild(ripple);
+      if (glow.parentNode) glow.parentNode.removeChild(glow);
+      if (lamp.parentNode) lamp.parentNode.removeChild(lamp);
+    }, LAMP_CLEAN_MS);
+  }
+
+  window.lkTheme = {
+    effective: effectiveTheme,
+    apply: applyTheme,
+    transition: runLampTransition,
+  };
+
+  /* ---------- the two-tier celebration (tasks.md 8.8 / 17.4 / 17.6) ----------
+     A-29: the milestone tier has exactly **two** conditions — the round
+     finished fully correct, or it completes a chapter for the first time.
+     No proxy measure (such as "better than last time") may stand in for
+     them: its comparison scope does not exist in the contract.  The ordinary
+     tier never mounts the burst or the paper flutter.  */
+
+  var celebrationArmedAt = 0;
+  var celebrationFacts = null;
+
+  /* The two-condition judgment — the single place that decides the tier. */
+  function isMilestoneRound(facts) {
+    if (!facts) return false;
+    if (facts.chapterFirstCompletion === true) return true;
+    var total = Number(facts.total);
+    var correct = Number(facts.correct);
+    if (!isFinite(total) || !isFinite(correct)) return false;
+    return total > 0 && correct >= total;
+  }
+
+  /* The facts of the round are read from the completion surface itself: the
+     server writes `data-lk-total` / `data-lk-correct` / `data-lk-chapter-first`
+     on it.  A module that holds the round may hand the facts over instead
+     (`window.lkCelebrate.setFacts`).  Without facts the round stays in the
+     ordinary tier — the burst and the paper flutter are milestone only. */
+  function completionFacts(surface) {
+    var facts = celebrationFacts;
+    if (surface && surface.dataset) {
+      var data = surface.dataset;
+      if (data.lkTotal != null || data.lkCorrect != null) {
+        facts = {
+          total: Number(data.lkTotal) || 0,
+          correct: Number(data.lkCorrect) || 0,
+          chapterFirstCompletion: data.lkChapterFirst === "true",
+        };
+      } else if (data.lkChapterFirst === "true") {
+        facts = { total: 0, correct: 0, chapterFirstCompletion: true };
+      }
+    }
+    return facts || null;
+  }
+
+  /* The figures of the completion surface roll up to their values: a bare
+     number, or a slot that names its value in `data-lk-value` /
+     `data-lk-count`.  A slot that carries anything else (a unit, a label) is
+     left alone — its text is never rewritten. */
+  function rollCompletionFigures(surface) {
+    if (!surface || !surface.querySelectorAll) return 0;
+    var figures = surface.querySelectorAll("[data-lk-value], [data-lk-count], .lk-ticker");
+    var rolled = 0;
+    Array.prototype.forEach.call(figures, function (figure, index) {
+      var declared = figure.getAttribute("data-lk-value");
+      if (declared == null) declared = figure.getAttribute("data-lk-count");
+      var text = String(figure.textContent == null ? "" : figure.textContent).trim();
+      var target;
+      if (declared != null) target = Number(declared);
+      else if (/^\d+$/.test(text)) target = Number(text);
+      else return;
+      if (!isFinite(target)) return;
+      rolled += 1;
+      tickerSet(figure, target, { from: 0, delay: index * TICKER_STAGGER_MS });
+    });
+    return rolled;
+  }
+
+  /* The milestone anchor: the place the burst and the paper flutter hang in.
+     It is a decoration layer — it never sits over the primary action. */
+  function celebrationAnchor(surface) {
+    if (!surface || !surface.querySelector) return null;
+    return surface.querySelector("[data-lk-celebrate-anchor]")
+      || surface.querySelector(".lk-celebrate-anchor")
+      || surface.querySelector("#paper-completion-milestone")
+      || surface.querySelector("#paper-completion-stats")
+      || surface;
+  }
+
+  /* The burst and the paper flutter are created here and nowhere else: the
+     ordinary tier never has them in the document at all (tasks.md 8.8). */
+  var CONFETTI_SPOTS = [
+    [8, 12], [18, 26], [28, 8], [38, 30], [47, 14], [56, 26],
+    [65, 8], [74, 22], [83, 12], [91, 28], [14, 40], [60, 38],
+  ];
+
+  function mountMilestoneBurst(surface) {
+    var anchor = celebrationAnchor(surface);
+    if (!anchor) return null;
+    /* The burst is positioned absolutely, so the anchor needs a positioning
+       context.  This is layout, not an animation start state. */
+    if (window.getComputedStyle && window.getComputedStyle(anchor).position === "static") {
+      anchor.style.position = "relative";
+    }
+    var burst = document.createElement("div");
+    burst.className = "lk-celebrate-burst";
+    /* A-38: the burst carries the cue hook, so the milestone sound lands on
+       the same beat as the burst itself. */
+    burst.setAttribute("data-lk-cue", "milestone");
+    anchor.appendChild(burst);
+    return { burst: burst, pieces: [], anchor: anchor };
+  }
+
+  function mountConfetti(mounted) {
+    if (!mounted || !mounted.anchor) return;
+    CONFETTI_SPOTS.forEach(function (spot) {
+      var piece = document.createElement("div");
+      piece.className = "lk-confetti";
+      piece.style.left = spot[0] + "%";
+      piece.style.top = spot[1] + "%";
+      mounted.anchor.appendChild(piece);
+      mounted.pieces.push(piece);
+    });
+  }
+
+  function clearMilestone(mounted) {
+    if (!mounted) return;
+    if (mounted.burst && mounted.burst.parentNode) mounted.burst.parentNode.removeChild(mounted.burst);
+    mounted.pieces.forEach(function (piece) {
+      if (piece.parentNode) piece.parentNode.removeChild(piece);
+    });
+    mounted.pieces = [];
+  }
+
+  /* The celebration itself: the ordinary tier rolls the figures and fills the
+     progress band; the milestone tier adds the burst (400 ms — the same beat
+     as the milestone cue) and the paper flutter (800 ms). */
+  function celebrateCompletion(surface) {
+    var target = surface || document.getElementById("paper-completion");
+    if (!target) return;
+    var milestone = isMilestoneRound(completionFacts(target));
+    window.setTimeout(function () {
+      rollCompletionFigures(target);
+      fillProgressBand(target);
+    }, 150);
+    if (!milestone) return;
+    /* A downgraded tier does not draw the burst or the paper flutter at all
+       (motion-spec §7.2 row 14). */
+    if (motionMode() !== "full") return;
+    var mounted = null;
+    window.setTimeout(function () {
+      mounted = mountMilestoneBurst(target);
+    }, 400);
+    window.setTimeout(function () {
+      mountConfetti(mounted);
+    }, 800);
+    window.setTimeout(function () {
+      clearMilestone(mounted);
+    }, 1200);
+  }
+
+  window.lkCelebrate = {
+    isMilestone: isMilestoneRound,
+    setFacts: function (facts) { celebrationFacts = facts || null; },
+    play: celebrateCompletion,
   };
 
   function renderMath(root) {
@@ -661,7 +1020,7 @@
 
     var soundBox = document.getElementById("setting-sound");
     var soundValue = document.getElementById("setting-sound-value");
-    var soundOn = window.lkSfx ? window.lkSfx.isEnabled() : loadSetting("sound", true) !== false;
+    var soundOn = soundEnabled();
     if (soundBox) soundBox.checked = soundOn;
     if (soundValue) soundValue.textContent = soundOn ? "开" : "关";
   }
@@ -676,7 +1035,10 @@
       themeBox.addEventListener("change", function () {
         var theme = themeBox.checked ? "night" : "paper";
         saveSetting("theme", theme);
-        applyTheme(theme);
+        /* The theme change is carried by the lamp transition (tasks.md 8.7);
+           the preference is stored first, so the theme is the same whether
+           the transition plays or the tier is downgraded. */
+        runLampTransition(theme);
         renderAppearanceValues();
       });
     }
@@ -761,8 +1123,13 @@
     }
     if (ancestorWithId(target, "paper-final-submit")) {
       completionArmedAt = Date.now();
+      /* The celebration rides on the same gesture: it belongs to the round
+         that this submit ends, not to every later look at the completion
+         surface (tasks.md 8.8: the celebration waits for the response). */
+      celebrationArmedAt = Date.now();
     } else {
       completionArmedAt = 0;
+      celebrationArmedAt = 0;
     }
   }, true);
 
@@ -4914,6 +5281,29 @@
     });
   }
 
+  mountCompletionCelebration();
+  }
+
+  /* The celebration is armed by the final submit and fires when the response
+   * has arrived and the completion surface shows up (tasks.md 8.8: the
+   * celebration waits for the response, the request sequence is unchanged).
+   * The observer is bound per mount because the surface is rebuilt with the
+   * middle page. */
+  function mountCompletionCelebration() {
+    var surface = document.getElementById("paper-completion");
+    if (!surface || !window.MutationObserver) return;
+    var wasVisible = !surface.hidden
+      && !(surface.classList && surface.classList.contains("hidden"));
+    var observer = new MutationObserver(function () {
+      var visible = !surface.hidden
+        && !(surface.classList && surface.classList.contains("hidden"));
+      if (visible && !wasVisible && cueArmed(celebrationArmedAt)) {
+        celebrationArmedAt = 0;
+        celebrateCompletion(surface);
+      }
+      wasVisible = visible;
+    });
+    observer.observe(surface, { attributes: true, attributeFilter: ["class", "hidden"] });
   }
 
   function fitAiColumn() {
