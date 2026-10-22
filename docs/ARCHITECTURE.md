@@ -328,12 +328,23 @@ tests/                 # pytest；tests/test_*.py 与 tests/workbench/ 分开（
   ② **版式层统一**：共享阅读版式层 `.wb-reading`（题面变体 `.wb-reading--stem` 同刻度），
      题面 `.practice-question-card` 与知识点正文 `.knowledge-body` 同为 **17px / 1.75 / 38em**
      （`workbench/server/static/workbench.css` 的 `:is(.wb-reading, .wb-reading--stem)` 规则块），
-     两侧不再各有一套字号与行距。⚠️ **当前事实**：`.rich-text` 的 HTML 挂载点**已全部迁到
-     `.wb-reading`**（`workbench/` 下 `.rich-text` 命中 0），但 **`.rich-text` 的 CSS 规则
-     尚未删除**（2.3 收尾留到下一波），两条选择器目前逐项同值并存 —— 不得写成「已彻底退役」。
+     两侧不再各有一套字号与行距。✅ **`.rich-text` 已彻底退役**（2026-10-22，别名期收尾
+     / 任务 2.3）：HTML 挂载点早已全部迁到 `.wb-reading`，剩下的 **36 条死 CSS 规则**
+     同批删掉（并列选择器只去掉 `.rich-text` 那半，**保留 `.wb-reading` 那半，取值逐项
+     未动**）⇒ **现在 `workbench/` 下 `.rich-text` 只剩三行说明性注释，选择器命中 0**。
      答案展示方式、结果与可选自评作次级表面。答案显示/锁定由
      per-item 或 on-submit 规则决定，不由自评或调度决定。闪卡与旧练习会话保留其既有方向、
      揭示和导航语义；本变更不增加闪卡创建界面。
+- **视觉 token 层已无别名期**（**已兑现**，2026-10-22，别名期收尾 / 任务 2.3）：
+  `:root` 里那 23 条「旧名 = 新名」的别名定义（旧 `--dsw-*` 一族）连同块注释一并删除，
+  旧名的**引用点也一并改掉**；图谱作用域的**冻结块**同步改钉新 token 名（旧名 pin
+  一条不留）。唯一保留的旧名是 `--dsw-state-success` —— 它**不在本次契约范围内**
+  （任务书 4.4「本条不动它」）。⇒ **现在样式表里的 token 名只有新名一族**，
+  旧名只作为注释里的「改造前取值」说明出现。
+  ⚠️ **例外**：图谱作用域里另有**两个**专用 token（`--graph-page-caption` /
+  `--graph-page-dimmed`），它们**只在图谱页作用域存在**、各只有一个固定值，
+  非图谱页回落 `--ink-faint` —— 它们不是别名，是新名（见
+  `openspec/changes/workbench-visual-language-v2/design-notes/night-paper-tokens.md` §3.3 附）。
 
 ## 5. 工程约束（硬规则）
 
