@@ -408,6 +408,7 @@
 | `half` | 左半填充 | `linear-gradient` 被禁 → 用 `box-shadow: inset -5px 0 0 0 currentColor` 造半圆 |
 | `dash` | 45° 斜杠 | 2px 斜线（`transform: rotate(45deg)` 的细长方块） |
 | `cross` | 叉 | 两条 2px 细长方块交叉 |
+| `check` | 勾 | 两条 2px 细长方块组成勾形（左短 45° 下斜 + 右长 −45° 上斜，`transform-origin: 0 50%`）；**只用中性墨或红，不引入新色** |
 
 **状态 → （色，几何）映射表**（唯一映射，不得有两条状态共用同一组合）：
 
@@ -416,9 +417,10 @@
 | 未开始 / 待办 | 中性墨 `--ink-disabled` | `ring` | 最弱 |
 | 当前 · 交互层（导航 / Tab / 选中项） | 蓝 | `ring` | 空心蓝环 = 选中轮廓 |
 | 进行中 | 蓝 | `half` | 半填充 |
-| 已完成 / 通过 | 蓝 | `filled` | 实心蓝 |
+| 已完成 / 通过（流程进度） | 蓝 | `filled` | 实心蓝 |
 | 当前 · 内容层（当前题 / 复习强调 / 连对） | 黄 | `filled` | 实心黄 |
 | 到期 / 需复习 | 黄 | `dash` | 黄斜杠 |
+| 判定正确 / 答对 | 中性墨 `--ink-strong` | `check` | 墨色勾形（A-20-3：答对**不用绿、不用蓝**） |
 | 失败 / 错误 | 红 | `filled` | 实心红 |
 | 阻塞 / 卡住 | 红 | `cross` | 红叉 |
 
@@ -426,6 +428,14 @@
 > 二者的边界是：**交互层**（用户正在操作的对象：导航项、Tab、选项、当前页）用**蓝**；
 > **内容层**（内容本身的状态：当前题号、当前复习项、连对计数）用**黄**。
 > 这是一条**规格级裁决**，若与 token 层或 spec delta 冲突，以本条为准并回改冲突处。
+
+> **「答对」为什么是中性墨而不是绿 / 蓝**（`decisions.md` A-20 第 3 条）：
+> 权威表 §3.4 的三角色配额里**没有绿**，而「当前选中」已经占住蓝 —— 让「答对」也用蓝，
+> 「点我」和「我对了」就共用同一条通道。因此「答对」= **中性墨 `--ink-strong` + 勾形几何**，
+> 「答错」= `--role-red`（既有语义不变）；**不引入第四种颜色**，也不新造绿 token。
+> 现状里表示「答对」的绿（`#1a7f37` / `#e6f4ea` / `#d9ebdd` / `#245d32`）**本轮整体移除**，
+> 现状兼容例外登记在 `contract-drift.md`（CD-071 / CD-072）。
+> 几何仍是**第二通道**：墨色勾 vs 红色叉/红面，在灰度打印与色觉障碍下都能区分。
 
 ---
 
@@ -1077,7 +1087,7 @@
 
 - 尺寸：`10 × 10`（密集列表 8px，强调位置 12px）
 - 圆角：`--r-pill`（圆点用胶囊档，不用 `--r-round` —— 权威表 §2.1）
-- 几何集与映射：见 §3.6（`filled` / `ring` / `half` / `dash` / `cross`）
+- 几何集与映射：见 §3.6（`filled` / `ring` / `half` / `dash` / `cross` / `check`）
 - **不得**单独出现无颜色差异的灰点以外的中性点以外的无意义点
 
 | 状态 | 表现（色 / 几何） |
@@ -1085,9 +1095,10 @@
 | 未开始 / 待办 | `--ink-disabled` / `ring` |
 | 当前 · 交互层 | `--role-blue` / `ring` |
 | 进行中 | `--role-blue` / `half` |
-| 已完成 / 通过 | `--role-blue` / `filled` |
+| 已完成 / 通过（流程进度） | `--role-blue` / `filled` |
 | 当前 · 内容层 | `--role-yellow` / `filled` |
 | 到期 / 需复习 | `--role-yellow` / `dash` |
+| 判定正确 / 答对 | `--ink-strong` / `check`（墨色勾形；**不用绿、不用蓝**，见 §3.6 的 A-20-3 说明） |
 | 失败 / 错误 | `--role-red` / `filled` |
 | 阻塞 / 卡住 | `--role-red` / `cross` |
 | hover | 不适用（装饰性状态点不响应指针） |
@@ -1123,9 +1134,21 @@
   background: var(--_dot-color); transform: translateY(-50%) rotate(45deg);
 }
 .lk-dot--cross::after { transform: translateY(-50%) rotate(-45deg); }
+/* 勾形（判定正确 / 答对）：左短下斜 + 右长上斜，仍是 CSS 绘制，不引图标字体 */
+.lk-dot--check {
+  background: transparent; box-shadow: none; border-radius: 0;
+  position: relative;
+}
+.lk-dot--check::before, .lk-dot--check::after {
+  content: ""; position: absolute; left: 0; top: 0; height: 2px;
+  border-radius: 1px; background: var(--_dot-color); transform-origin: 0 50%;
+}
+.lk-dot--check::before { width: 4px; left: 1px; top: 6px; transform: rotate(45deg); }
+.lk-dot--check::after { width: 8px; left: 3px; top: 8px; transform: rotate(-45deg); }
 .lk-dot--blue { --_dot-color: var(--role-blue); }
 .lk-dot--yellow { --_dot-color: var(--role-yellow); }
 .lk-dot--red { --_dot-color: var(--role-red); }
+.lk-dot--ink { --_dot-color: var(--ink-strong); }
 .lk-dot--muted { --_dot-color: var(--ink-disabled); }
 ```
 
@@ -1220,13 +1243,15 @@
 - 内外边距：`padding: 0`
 - 字族字号：`--font-mono`（编号等宽）/ `--fs-meta`（13px）/ `font-weight: 600` / `tabular-nums`
 - 现状是 34px 圆 + 1px 描边 + 5 个硬编码色（`#f2c94c` / `#dce7ff` / `#d9ebdd` / `#f6d8d5`）→ 全部换成 §3.6 状态映射
+  （其中 `#d9ebdd` + `#245d32`（`workbench.css:1892` `.paper-dot.state-correct`）是**契约外绿**，
+  本轮随 A-20-3 退役：**答对改中性墨 `--ink-strong` + 勾形几何**，不设绿 token）
 
 | 状态 | 色 / 几何 |
 |---|---|
 | 未作答 | `--ink-disabled` / `ring`（`background: var(--surface-card)`，2px 环） |
 | 已作答 | `--role-blue` / `filled` |
 | 当前题 | `--role-yellow` / `filled`；`transform: scale(1.06)`（120ms 回弹） |
-| 判定正确 | `--role-blue` / `filled` |
+| 判定正确 | `--ink-strong` / `check`（墨色环 + 勾形标记；**不用绿、不用蓝**，见 §3.6 的 A-20-3 说明） |
 | 判定错误 | `--role-red` / `filled` |
 | 卡住 / 阻塞 | `--role-red` / `cross` |
 | hover | 未作答态 `border-color: var(--role-blue)`；已填态 `filter: brightness(1.06)` |
@@ -1238,7 +1263,10 @@
 | error | 判定错误即 error（红实心） |
 
 - 角色色：R1。
-- **几何不只靠颜色**：未答（环）与已答（实心）在灰度打印 / 色觉障碍下仍可区分。
+- **几何不只靠颜色**：未答（环）与已答（实心）在灰度打印 / 色觉障碍下仍可区分；
+  判定正确（墨环 + 勾）与判定错误（红面 + 叉）同样可区分。
+- **判定正确不替换题号**：它是**导航格**，题号必须始终可读 —— 判定态用
+  「中性墨环 + 角标勾形」叠加表达，**不**把数字换成符号（与 §3.6 的勾形通道一致）。
 
 ```css
 .lk-qcell {
@@ -1258,6 +1286,17 @@
 .lk-qcell:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
 .lk-qcell--answered { background: var(--role-blue); color: var(--ink-on-role); box-shadow: none; }
+/* 判定正确：题号保留（中性墨）+ 中性墨环 + 角标勾形（不用绿、不用蓝） */
+.lk-qcell--correct {
+  background: var(--surface-card); color: var(--ink-strong);
+  box-shadow: inset 0 0 0 2px var(--ink-strong); position: relative;
+}
+.lk-qcell--correct::before, .lk-qcell--correct::after {
+  content: ""; position: absolute; height: 2px; border-radius: 1px;
+  background: var(--ink-strong); transform-origin: 0 50%;
+}
+.lk-qcell--correct::before { width: 6px; left: 21px; top: 24px; transform: rotate(45deg); }
+.lk-qcell--correct::after { width: 12px; left: 25px; top: 28px; transform: rotate(-45deg); }
 .lk-qcell--current { background: var(--role-yellow); color: var(--ink-on-warm); box-shadow: none;
   transform: scale(1.06); }
 .lk-qcell--wrong { background: var(--role-red); color: var(--ink-on-role); box-shadow: none; }
@@ -1987,7 +2026,7 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 | S-3 | 每个组件都覆盖 默认 · hover · active · focus-visible · disabled · loading · selected · error | 逐节人工核对 | ✔ 全部 8 态给出（不适用者显式写「不适用」并给出替代承载） |
 | S-4 | CSS 片段不含硬编码色值 | `awk '/^### 4\./,0' component-spec.md \| awk '/^```css/,/^```$/' \| grep -n "#[0-9a-fA-F]\{3\}\|#[0-9a-fA-F]\{6\}\|rgb("` | 实跑 | ✔ **输出为空**；§4 片段只用 `var(--r-*)` / `var(--sp-*)` / `var(--fs-*)` / `var(--font-*)` / `var(--dur-*)` / `var(--ease-*)` / `var(--surface-*)` / `var(--ink-*)` / `var(--role-*)` / `var(--rule-*)` / `var(--veil-*)` / `var(--elev-*)` 等权威表 token；硬编码色值只出现在 §2.2 的 token 定义块 |
 | S-5 | 不新增颜色角色 | 核对 §2.2 / §3.6 | ✔ 只有蓝 / 黄 / 红 三个角色色 + 墨色中性 |
-| S-6 | 状态映射「色 + 几何」唯一，无两条状态共用组合 | 核对 §3.6 | ✔ 8 条唯一 |
+| S-6 | 状态映射「色 + 几何」唯一，无两条状态共用组合 | 核对 §3.6 | ✔ 9 条唯一（新增「判定正确 / 答对 = 中性墨 `--ink-strong` + `check`」，与「已作答 = 蓝 + `filled`」不再共用组合） |
 | S-7 | 黄色不承载文字 | 核对 §2.2 / §3.5 / §4.12 / §4.15 / §4.16 | ✔ 黄底文字一律取 `--ink-on-warm` |
 | S-8 | 无界面渐变 / 无玻璃拟态 / 无霓虹 / 无背景图案 | `grep -n "gradient\|backdrop-filter\|blur("` | ✔ 仅骨架屏用平移实色块（§4.22）；§4.24 遮罩为纯色不透明度 |
 | S-9 | 图标全部引用本地 SVG 资产名，不定义资产 | 核对 §4.4 / §4.11 / §4.21 / §4.25 / §4.27 | ✔ 只引用 `asset-icon-*.svg` / `asset-still-*.svg` |
