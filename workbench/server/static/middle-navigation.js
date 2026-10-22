@@ -115,8 +115,16 @@
     /* 中栏滚动位置：骨架会把内容压短（滚动被拉回顶部），先记下来、装回内容
        后还原 —— 与改造前一致（换页后中栏滚动位置不丢）。连续换页只记第一次。 */
     if (middle && !middleScrollTop) middleScrollTop = middle.scrollTop;
-    middlePage.setAttribute("aria-busy", "true");
+    setMiddleBusy(true);
     middlePage.innerHTML = skeletonMarkup();
+  }
+
+  /* 加载态标记落在中栏容器上：切页前置位、内容到位后复位。
+     测试夹具（tests/workbench/middle_navigation.test.js）把 `#middle-page`
+     建模成只带 `innerHTML` 的普通对象，故按能力检测再写属性。 */
+  function setMiddleBusy(busy) {
+    if (!middlePage.setAttribute) return;
+    middlePage.setAttribute("aria-busy", busy ? "true" : "false");
   }
 
   /* ---- 焦点不被抢走（tasks.md 21.3）----------------------------------------
@@ -128,7 +136,7 @@
   function rememberFocus() {
     if (focusBeforeSwap) return;
     var active = document.activeElement;
-    if (active && middlePage.contains(active)) focusBeforeSwap = active;
+    if (active && active.closest && active.closest("#middle-page")) focusBeforeSwap = active;
   }
 
   function restoreFocus() {
@@ -197,7 +205,7 @@
     updateScopeNames(nextDocument);
     middlePage.innerHTML = nextPage.innerHTML;
     /* 骨架被内容替换 —— 容器动画此刻接管；加载态复位。 */
-    middlePage.setAttribute("aria-busy", "false");
+    setMiddleBusy(false);
     if (middle && middleScrollTop) {
       middle.scrollTop = middleScrollTop;
       middleScrollTop = 0;
