@@ -2250,13 +2250,26 @@ img { max-width: 100%; }
    **已成孤儿**：趋势图改用 `.workload-bars` / `.bar-*` 组件后无任何引用
    ⇒ 本轮删除（连同它那条 `border: 1px solid var(--ink-strong)`）。 */
 .record-activity-card { overflow-x: auto; }
+/* 作答日历 —— **转置**成 D-14 要的「7 行 × 12 列」（design.md D-14）
+   服务端本来就按周从周一起排（`records.py::_activity` 的 `first` 是周一、
+   84 天连续）⇒ **转置不需要改 DOM**：CSS 侧 `grid-auto-flow: column` 即可。
+   · 列 = 周（12 列），行 = 星期（7 行），第一列给星期标签；
+   · 行高 30px（与服务端行内 `grid-auto-rows:30px` 同值）⇒ 每行等高、
+     行内共享一条基线，高度编码（4–28px）才读得出量级；
+   · 格宽 ~13px / gap 4px ⇒ 原来的 `repeat(7, 1fr)` 在 520px 宽里把单格
+     拉到 ~70px，那是「宽扁块」的根因。 */
 .record-activity {
   display: grid;
-  grid-template-columns: repeat(7, minmax(18px, 1fr));
-  gap: 5px;
-  width: min(100%, 520px);
+  grid-template-columns: auto repeat(12, minmax(13px, 1fr));
+  grid-template-rows: repeat(7, 30px);
+  grid-auto-flow: column;
+  gap: 4px;
+  width: min(100%, 220px);
 }
+/* 星期表头：贴各行顶端，不占满 30px 的行高（否则表头与首周之间多出一截空） */
 .record-activity-weekday {
+  align-self: start;
+  height: 14px;
   text-align: center;
   color: var(--ink-faint);
   font-size: 11px;
@@ -2273,12 +2286,14 @@ img { max-width: 100%; }
      `_CALENDAR_LEVELS` 独家判定，CSS 只认 `level-N` 这个类名。 */
 .record-activity-day {
   --level-bg: var(--surface-sunken);
-  aspect-ratio: 1;
-  min-width: 18px;
   min-height: 4px;              /* 零负荷日的占位高度（与服务端 _CALENDAR_CELL_MIN_PX 同值） */
   transform-origin: bottom center;
   background: var(--level-bg);
 }
+/* ⚠️ 原来那条 `aspect-ratio: 1` **删掉**：服务端已用行内 `aspect-ratio:auto`
+   解掉正方形比例（高度由双编码给），留着只在内联失效时把格子压成方块。
+   ⚠️ `min-width: 18px` 也一并去掉：转置后列宽 ~13px 由 `minmax(13px, 1fr)`
+   给定，留着 18px 的下限会把格子顶出格子列。 */
 /* ⚠️ 档位色**不在这里**逐档写死 —— 统一由下面的 `:is()` 档位表给
    （日历格子与图例色块共用同一取值，见「档位色」块）。 */
 .record-activity-day.future { visibility: hidden; }
