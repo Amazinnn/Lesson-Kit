@@ -438,9 +438,12 @@ PROBE_JS = r"""
         .forEach((el) => {
           const st = getComputedStyle(el);
           const after = getComputedStyle(el, "::after");
+          const rect = el.getBoundingClientRect();
           out.push({
             cls: String(el.className || ""),
             visible: visible(el),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
             background: st.backgroundColor,
             animationName: st.animationName,
             animationDuration: st.animationDuration,
@@ -1722,6 +1725,10 @@ def probe_skeleton(ctx, playwright):
             or item.get("animationName") not in (None, "none")]
     if not live:
         return _bad(data, "骨架屏没有微光动画")
+    sized = [item for item in elements
+             if (item.get("width") or 0) > 0 and (item.get("height") or 0) > 0]
+    if not sized:
+        return _bad(data, "骨架屏没有尺寸（0×0）—— 灰块与微光都无从显示")
     return _ok(data, "骨架屏带微光扫过")
 
 
