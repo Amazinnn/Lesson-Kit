@@ -17,11 +17,24 @@
     h3 { margin: 26px 0 10px; font-size: 13px; font-weight: 600; opacity: .65; letter-spacing: .04em; }
     p.lead { margin: 0 0 24px; opacity: .7; max-width: 900px; }
     .theme {
-      --asset-page: #fdf8ef; --asset-paper: #fffdf7; --asset-ink: #2a2620;
       border-radius: 12px; padding: 22px 20px 26px; margin: 0 0 26px;
       background: var(--asset-page); color: var(--asset-ink);
     }
-    .theme--night { color-scheme: dark; }
+    .theme--light {
+      --asset-page: #fdf8ef; --asset-paper: #fffdf7; --asset-ink: #2a2620;
+      --asset-ground-blue: #2b62e8; --asset-ground-yellow: #f5c518; --asset-ground-red: #d1392b;
+      --asset-ink-on-blue: #fffdf7; --asset-ink-on-yellow: #221f1a; --asset-ink-on-red: #fffdf7;
+      --asset-wash-blue: #e1e7f5; --asset-wash-yellow: #fdf3cf; --asset-wash-red: #f9e5df;
+      --asset-highlight: rgb(255 255 255 / 55%); --asset-lamp-warm: #f7c46b;
+    }
+    .theme--night {
+      --asset-page: #1c1a16; --asset-paper: #232019; --asset-ink: #e6ddcd;
+      --asset-ground-blue: #7291de; --asset-ground-yellow: #e0c151; --asset-ground-red: #d4736b;
+      --asset-ink-on-blue: #14120f; --asset-ink-on-yellow: #14120f; --asset-ink-on-red: #14120f;
+      --asset-wash-blue: #303239; --asset-wash-yellow: #3d3721; --asset-wash-red: #3c2c24;
+      --asset-highlight: rgb(255 240 214 / 8%); --asset-lamp-warm: #f7c46b;
+      color-scheme: dark;
+    }
     .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
     .card {
       margin: 0; padding: 12px; border-radius: 12px; background: var(--asset-paper);
@@ -59,7 +72,7 @@
 <body>
   <h1>静物 SVG 资产走查</h1>
   <p class="lead">第 9 组产物：5 枚导航图标 + 10 张空态插画 + 台灯三姿态。全部为纯手写 SVG（无位图 / 无外链 / 无字体 / 无第三方库），颜色一律走 <code>var(--asset-*)</code>，同一批文件在暖纸与夜纸两底各渲染一次 —— 变的是变量值，不是资产。</p>
-  <section class="theme theme--light" id="theme-light" style=" --asset-page:#fdf8ef; --asset-paper:#fffdf7; --asset-ink:#2a2620; --asset-ground-blue:#2b62e8; --asset-ground-yellow:#f5c518; --asset-ground-red:#d1392b; --asset-ink-on-blue:#fffdf7; --asset-ink-on-yellow:#221f1a; --asset-ink-on-red:#fffdf7; --asset-wash-blue:#e1e7f5; --asset-wash-yellow:#fdf3cf; --asset-wash-red:#f9e5df; --asset-highlight:rgb(255 255 255 / 55%); --asset-lamp-warm:#f7c46b;">
+  <section class="theme theme--light" id="theme-light">
     <h2>浅纸（暖纸）</h2>
     <h3>导航图标 · 32 / 24 / 16 px</h3>
     <div class="row row--icons">
@@ -889,7 +902,7 @@
   <g stroke-linecap="round" stroke-linejoin="round">
     <g class="asset-empty__shadow">
       <path d="M 36 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
-      <path d="M 66 133 L 168 167" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="4"/>
+      <path d="M 67 128.8 L 169 165.8 L 168.05 168.65 L 66.05 131.65 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
       <path d="M 69 123.2 L 171 159.2 L 170 162.5 L 68 126.5 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
@@ -913,7 +926,7 @@
   <g stroke-linecap="round" stroke-linejoin="round">
     <g class="asset-empty__shadow">
       <path d="M 36 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
-      <path d="M 66 133 L 168 167" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="4"/>
+      <path d="M 67 128.8 L 169 165.8 L 168.05 168.65 L 66.05 131.65 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
       <path d="M 69 123.2 L 171 159.2 L 170 162.5 L 68 126.5 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
@@ -1304,7 +1317,7 @@
       </figure>
     </div>
   </section>
-  <section class="theme theme--night" id="theme-night" style=" --asset-page:#1c1a16; --asset-paper:#232019; --asset-ink:#e6ddcd; --asset-ground-blue:#7291de; --asset-ground-yellow:#e0c151; --asset-ground-red:#d4736b; --asset-ink-on-blue:#14120f; --asset-ink-on-yellow:#14120f; --asset-ink-on-red:#14120f; --asset-wash-blue:#303239; --asset-wash-yellow:#3d3721; --asset-wash-red:#3c2c24; --asset-highlight:rgb(255 240 214 / 8%); --asset-lamp-warm:#f7c46b;">
+  <section class="theme theme--night" id="theme-night">
     <h2>夜纸</h2>
     <h3>导航图标 · 32 / 24 / 16 px</h3>
     <div class="row row--icons">
@@ -2134,7 +2147,7 @@
   <g stroke-linecap="round" stroke-linejoin="round">
     <g class="asset-empty__shadow">
       <path d="M 36 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
-      <path d="M 66 133 L 168 167" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="4"/>
+      <path d="M 67 128.8 L 169 165.8 L 168.05 168.65 L 66.05 131.65 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
       <path d="M 69 123.2 L 171 159.2 L 170 162.5 L 68 126.5 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
@@ -2158,7 +2171,7 @@
   <g stroke-linecap="round" stroke-linejoin="round">
     <g class="asset-empty__shadow">
       <path d="M 36 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
-      <path d="M 66 133 L 168 167" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="4"/>
+      <path d="M 67 128.8 L 169 165.8 L 168.05 168.65 L 66.05 131.65 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
       <path d="M 69 123.2 L 171 159.2 L 170 162.5 L 68 126.5 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>

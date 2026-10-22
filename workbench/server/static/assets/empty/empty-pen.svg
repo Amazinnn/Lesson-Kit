@@ -3,7 +3,7 @@
   <g stroke-linecap="round" stroke-linejoin="round">
     <g class="asset-empty__shadow">
       <path d="M 36 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
-      <path d="M 66 133 L 168 167" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="4"/>
+      <path d="M 67 128.8 L 169 165.8 L 168.05 168.65 L 66.05 131.65 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
       <path d="M 69 123.2 L 171 159.2 L 170 162.5 L 68 126.5 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
