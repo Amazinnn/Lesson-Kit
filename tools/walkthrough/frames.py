@@ -421,14 +421,21 @@ def prepare_celebration(page, ctx):
     """
     from exercise import (ITEM_KINDS, RADIO_OPTION_INDEX, RATING_VALUE,
                           ROUTE_ATTEMPT, ROUTE_CURRENT, ROUTE_FEEDBACK,
-                          ROUTE_PAPER_START, TEXT_ANSWER, Service, Waiter,
-                          seed_paper)
+                          ROUTE_PAPER_START, SEED_PROBLEM_IDS, TEXT_ANSWER,
+                          Service, Waiter)
 
     service = Service(ctx.base_url)
     waiter = Waiter(service)
     waiter.snapshot()
-    paper_id = ctx.paper_id or seed_paper(service, ctx.ws)
-    ctx.paper_id = paper_id
+    if ctx.paper_id:
+        paper_id = ctx.paper_id
+    else:
+        # The paper is created **without** switching the phase: the
+        # 建卷 request belongs to the frames, not to the product's own
+        # request flow, and it must not show up in the request diff.
+        paper_id = service.create_paper(ctx.ws, "走查分镜种子卷",
+                                        list(SEED_PROBLEM_IDS)).get("practice_set_id")
+        ctx.paper_id = paper_id
     page.goto(f"{ctx.base_url}/w/{ctx.ws}/practice?paper={paper_id}",
               wait_until="load", timeout=30000)
     waiter.wait_for(ROUTE_CURRENT)
@@ -930,6 +937,7 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
         prepare = PREPARE[motion["trigger"]]
         act = ACT[motion["trigger"]]
         prepare(page, ctx)
+        set_phase(base_url, "frames", "frames")
         meta = capture_strip(page, lambda: act(page, ctx), motion["frames_ms"],
                              frames_dir, watch)
         animated_terminal = terminal_state(page, watch)
@@ -1087,11 +1095,12 @@ def ensure_paper(base_url, ws, paper_id=None):
     """
     if paper_id:
         return paper_id
-    from exercise import Service, seed_paper
+    from exercise import SEED_PROBLEM_IDS, Service
 
     service = Service(base_url)
-    paper_id = seed_paper(service, ws)
-    return paper_id
+    # No phase switch here: the paper belongs to the frames.
+    return service.create_paper(ws, "走查分镜种子卷",
+                                 list(SEED_PROBLEM_IDS)).get("practice_set_id")
 
 
 def main(argv=None):
