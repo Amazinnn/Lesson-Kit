@@ -12,6 +12,11 @@
 5. `specs/workbench-ui/spec.md` 的 `Learner settings in the left rail`（MODIFIED 后的版本）
 6. `design-notes/component-spec.md`（设置视图与四个偏好控件的规格）
 
+> 🔴 **CSS 行号锚点已全部位移** —— 第 1–4 组在 `workbench.css` 的 `:root` 里插入了 318 行，
+> 该文件以下所有行号全部位移（且不均匀：+307 / +310 / +702，甚至 −100 / −127）。
+> **本任务书里的 `workbench.css:NNNN` 引用全部过期。**
+> **一律按选择器 / 声明 / 注释文本现场定位**（`grep -n "<选择器>" workbench/server/static/workbench.css`），
+> 交叉核对用 `briefs/ANCHOR-REMAP.md`。
 ## 硬约束
 - **只改** `workbench/server/pages.py` · `workbench/server/static/workbench.js` ·
   `workbench/server/app.py`。

@@ -12,6 +12,11 @@
   **若发现文件里有你没写过的改动 —— 那是正常的（前一个 agent 的），但若它正在被修改，停下报告。**
 - 权威值一律查 `design-notes/night-paper-tokens.md`（§2 结构 / §3 值 / §4 对比度实测）。
 
+> 🔴 **CSS 行号锚点已全部位移** —— 第 1–4 组在 `workbench.css` 的 `:root` 里插入了 318 行，
+> 该文件以下所有行号全部位移（且不均匀：+307 / +310 / +702，甚至 −100 / −127）。
+> **本任务书里的 `workbench.css:NNNN` 引用全部过期。**
+> **一律按选择器 / 声明 / 注释文本现场定位**（`grep -n "<选择器>" workbench/server/static/workbench.css`），
+> 交叉核对用 `briefs/ANCHOR-REMAP.md`。
 ## 硬约束
 - **只改 `workbench/server/static/workbench.css` 这一个文件。**
   不碰 `pages.py` / `workbench.js` / `app.py` / `records.py` / `docs/` / `openspec/`

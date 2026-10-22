@@ -17,6 +17,11 @@
 5. `design-notes/motion-spec.md`（20 条 `@keyframes` 与 19 行交互映射 —— **你的 keyframes 直接照它写**）
 6. `design-notes/component-spec.md`（哪些元素属于「阅读面」A 组 / 「界面面」B 组）
 
+> 🔴 **CSS 行号锚点已全部位移** —— 第 1–4 组在 `workbench.css` 的 `:root` 里插入了 318 行，
+> 该文件以下所有行号全部位移（且不均匀：+307 / +310 / +702，甚至 −100 / −127）。
+> **本任务书里的 `workbench.css:NNNN` 引用全部过期。**
+> **一律按选择器 / 声明 / 注释文本现场定位**（`grep -n "<选择器>" workbench/server/static/workbench.css`），
+> 交叉核对用 `briefs/ANCHOR-REMAP.md`。
 ## 硬约束
 - **只改 `workbench/server/static/workbench.css` 这一个文件。**
   不碰 `pages.py` / `workbench.js` / `records.py` / `practice-flow.js` / `paper-practice.js` /
