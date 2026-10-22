@@ -714,8 +714,8 @@ body {
 #left-column {
   position: relative;
   border-right: 1px solid var(--ink-strong);
-  background: var(--surface-sunken);
-  padding: 16px 12px 20px;
+  background: transparent;   /* 底色挪到 .side-sections（tasks.md 15.3「下半截空纸收敛」） */
+  padding: 0;
   overflow-y: auto;
   z-index: 1; /* 台灯涟漪在 --z-base（0）层；三栏必须在它之上（A-1） */
 }
@@ -798,6 +798,21 @@ body {
    · 徽标底色用 `--surface-card`（卡面），**不用** `--role-blue-wash` ——
      左栏底色就是 `--surface-sunken`，而沉底面与蓝洗底的亮度差只有 1.035:1，
      共邻会被误读成「被选中的行」（权威表 §3.1【A-31】硬约束）。 */
+
+/* ---- 左栏的**纸**随内容收口（tasks.md 15.3 · IMPL-W2e 追加 3）--------------
+   `pages.py` 把四个分区裹进 `.side-sections`（wrapper），CSS 里**零命中**。
+   15.3「下半截空纸收敛」靠它兑现：左栏的**底色**从 `#left-column` 挪到
+   `.side-sections` 上 ⇒ **纸随内容收口**，最后一个分区之下就是桌面
+   （body 的 `--surface-base`），不再是一大片说不清归属的空纸。
+   ⚠️ 挪底色要小心：`#left-column` 的底色**没有别的规则依赖**
+   （左栏只有这一层底色 + 一条 `border-right` 分栏线）⇒
+     · **分栏线与滚动**（`border-right` / `overflow-y: auto`）留在 `#left-column`；
+     · **内边距一起挪**（16px 12px 20px）⇒ 内容的横向位置**一字不动**；
+     · 不给 `.side-sections` 设 `min-height` ⇒ 纸的高度就等于内容的高度。 */
+.side-sections {
+  background: var(--surface-sunken);
+  padding: 16px 12px 20px;
+}
 .side-section + .side-section {
   margin-top: 26px;
   padding-top: 18px;
