@@ -460,6 +460,29 @@ body:has(#layout[data-page="graph"]) #ai-column { z-index: auto; }
 body:has(#layout[data-page="graph"]) .lk-ripple,
 body:has(#layout[data-page="graph"]) .lk-ripple-glow { display: none; }
 
+/* ---- 图谱页的「标题带」钉回（任务 14.1 / 14.3）---------------------------
+   任务 14.3 把标题带底边从 3px 纯黑换成 2px `--rule-structure`、并删掉那块
+   76×8 的装饰黄块；任务 14.1 删掉标题带右侧的死预留。
+   ⇒ 这三条对图谱页是**可见变化**，而图谱页必须逐像素零差异（G-5）——
+     在图谱页作用域内把它们钉回改造前的样子（取值全部取冻结块里的旧值：
+     `--ink-strong` #171717 / `--role-yellow` #f2c94c）。 */
+body:has(#layout[data-page="graph"]) .page-header {
+  border-bottom: 3px solid var(--ink-strong);
+}
+body:has(#layout[data-page="graph"]) .page-header::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  width: 76px;
+  height: 8px;
+  background: var(--role-yellow);
+  border: 1px solid var(--ink-strong);
+}
+/* ⚠️ 那条为退役 scope tray 留的死预留只影响标题带的**文字区**，而图谱页的标题
+   很短、左对齐 ⇒ 去掉它在图谱页上看不出差别（实测逐像素零差异）
+   ⇒ 这里**不**把它钉回来。 */
+
 * { box-sizing: border-box; }
 .visually-hidden {
   position: absolute;
@@ -616,61 +639,6 @@ body {
   min-width: 0;
   z-index: 1; /* 同上：涟漪不得压平卡片 */
 }
-.scope-tray-anchor {
-  position: sticky;
-  top: 12px;
-  z-index: 7;
-  height: 0;
-  display: flex;
-  justify-content: flex-end;
-  pointer-events: none;
-}
-.scope-tray { pointer-events: auto; }
-.scope-tray-trigger {
-  box-shadow: var(--elev-1);
-  background: var(--surface-card);
-}
-.scope-tray-trigger span {
-  min-width: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: var(--role-blue-wash);
-}
-.scope-tray-panel {
-  width: min(320px, calc(100vw - 36px));
-  padding: 14px;
-  border-radius: var(--r-md);
-  background: var(--surface-card);
-  box-shadow: var(--elev-3);
-}
-.scope-tray-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.scope-tray-header strong { display: block; margin-top: 2px; }
-.scope-tray-list {
-  display: grid;
-  gap: 4px;
-  max-height: 220px;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  list-style: none;
-}
-.scope-tray-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 2px 6px 8px;
-}
-.scope-tray-item span { overflow-wrap: anywhere; }
-.scope-tray-empty { margin: 8px; }
-.scope-tray-practice { width: 100%; margin-top: 12px; }
 #ai-column {
   position: relative;
   border-left: 1px solid var(--ink-strong);
@@ -688,25 +656,29 @@ body {
   min-width: 0;
 }
 
-/* centered reading column (DSH chat column ≈736px) */
+/* centered reading column —— 标题带与正文**共用同一条轨与同一条对齐线**
+   （design.md D-11 / tasks.md 14.2 / 14.3）
+   · 轨宽 = `--shell-measure`（**轨的宽**，880px；≠ `--measure` 的「行的长」38em）——
+     两者**不是同一个 token、值不同、禁止合并**（A-21-1 / A-21-2）。
+   · 行长仍由 `.wb-reading` 自己管（`--measure` = 38em ≈ 646px）：
+     轨 880px 与行长之间那 **234px** 正是「**有终点的阅读留白**」——
+     双轨机制必须保留，容器放宽**不会**把正文拉宽（A-21-4）。
+   · 标题带底边 = 2px `--rule-structure`（单侧结构线）；
+     **不再有 76×8 的装饰黄块**：黄色是稀缺语义色（当前 / 复习强调 / 连对进度），
+     挂在每页标题带末端当装订线 = 把语义色降级成装饰
+     （与「去掉试卷卡 5px 黄带」同源，decisions.md 11.4）。
+   · 标题带右侧那条为退役 scope tray 留的死预留已删：中栏不再被夹住，
+     标题带与标题下方**没有任何未认领的空白条**。 */
 .page-header,
-.page-content { max-width: 800px; margin-left: auto; margin-right: auto; }
-.page-header { padding-bottom: 24px; }
-#middle-page > .page-header { padding-right: 128px; }
+.page-content {
+  max-width: var(--shell-measure);
+  margin-left: auto;
+  margin-right: auto;
+}
 .page-header {
   position: relative;
   padding-bottom: 24px;
-  border-bottom: 3px solid var(--ink-strong);
-}
-.page-header::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: -3px;
-  width: 76px;
-  height: 8px;
-  background: var(--role-yellow);
-  border: 1px solid var(--ink-strong);
+  border-bottom: 2px solid var(--rule-structure);
 }
 .page-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .context-line,
@@ -1648,8 +1620,13 @@ img { max-width: 100%; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* workspace hub */
-.hub-page { width: min(100% - 48px, 960px); margin: 0 auto; padding: 56px 0; }
-.hub-page .page-header { max-width: none; }
+/* hub 首页与工作台**共用同一条轨**（tasks.md 14.2：hub 与工作台标题带左右边界对齐）——
+   标题带不再有自己的 `max-width: none`，跟工作台一样吃 `--shell-measure`。 */
+.hub-page {
+  width: min(100% - 48px, var(--shell-measure));
+  margin: 0 auto;
+  padding: 56px 0;
+}
 .workspace-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 28px; }
 .workspace-card { display: block; min-height: 150px; padding: 20px; color: var(--ink-strong); text-decoration: none;  border-radius: var(--r-md); background: var(--surface-card); box-shadow: var(--elev-1); transition: transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard); }
 .workspace-card:hover { color: var(--ink-strong); text-decoration: none; transform: translateY(-1px); box-shadow: var(--elev-2); }
@@ -1734,7 +1711,6 @@ img { max-width: 100%; }
   #layout.left-drawer-open #left-column { transform: translateX(0); }
   #layout.ai-drawer-open #ai-column { transform: translateX(0); }
   #middle { padding: 24px 18px 36px; }
-  .scope-tray-anchor { top: 8px; }
   #middle-page > .page-header { padding: 36px 0 24px; }
   .page-header h1 { font-size: 24px; line-height: 32px; }
   .section-heading,
@@ -1743,7 +1719,7 @@ img { max-width: 100%; }
   .support-grid { grid-template-columns: 1fr; }
   .next-step-actions { width: 100%; }
   .next-step-actions button { flex: 1; }
-  .hub-page { width: min(100% - 32px, 960px); padding: 36px 0; }
+  .hub-page { width: min(100% - 32px, var(--shell-measure)); padding: 36px 0; }
 }
 
 /* ---------- time view (calendar + workload) ---------- */
