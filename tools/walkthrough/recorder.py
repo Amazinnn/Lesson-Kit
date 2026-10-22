@@ -779,6 +779,7 @@ def build_report(evidence_dir, out_dir=None, purpose="walkthrough"):
         "shots": shots,
         "motion": motion,
         "checklist": checklist,
+        "seed": _seed_section(evidence_dir),
         "summary": summary,
         "unresolved": _unresolved(gates, shots, motion, checklist),
     }
@@ -787,6 +788,30 @@ def build_report(evidence_dir, out_dir=None, purpose="walkthrough"):
     (out_dir / "report.md").write_text(
         render_report_md(report, out_dir), encoding="utf-8")
     return report
+
+
+def _seed_section(evidence_dir):
+    """What this round was **fed** (seed.py) — one entry per side.
+
+    The report has to show how much data the run was given and whether
+    the round could reach the milestone tier, so that a PENDING can be
+    read as "the data was there, the criterion could not be decided" and
+    not as "the collector did not look".
+    """
+    section = {}
+    for side in ("before", "after"):
+        data = _read_json(Path(evidence_dir) / side / "seed" / "summary.json")
+        if not data:
+            continue
+        section[side] = {
+            "records": data.get("records"),
+            "sessions": data.get("sessions"),
+            "allCorrectRound": data.get("allCorrectRound"),
+            "realPoolUnchanged": data.get("realPoolUnchanged"),
+            "evidence": f"{side}/seed/summary.json",
+            "plan": f"{side}/seed/plan.json",
+        }
+    return section
 
 
 def _db_gate_detail(gate, found):
@@ -976,6 +1001,21 @@ def render_report_md(report, out_dir):
         lines.append(f"| {gate} | — | {_mark(value['verdict'])} | "
                      f"{', '.join(value['evidence']) or '—'} | {value.get('detail', '')} |")
     lines.append("")
+    seed = report.get("seed") or {}
+    if seed:
+        lines.append("## 0.1 本轮播下的种子（只在隔离副本里）")
+        lines.append("")
+        lines.append("| 侧 | 记录条数 | 会话条数 | 全对轮 | 真实池未变 | 证据 |")
+        lines.append("|---|---|---|---|---|---|")
+        for side, value in sorted(seed.items()):
+            plan = value.get("allCorrectRound") or {}
+            lines.append(
+                f"| {side} | {value.get('records')} | {value.get('sessions')} | "
+                f"{'是' if plan.get('planned') else '否'}"
+                f"（{', '.join(plan.get('problemIds') or []) or '—'}） | "
+                f"{'是' if value.get('realPoolUnchanged') else '否'} | "
+                f"`{value.get('evidence')}` |")
+        lines.append("")
     lines.append("## 1. 对照截图")
     lines.append("")
     if report["shots"]:
