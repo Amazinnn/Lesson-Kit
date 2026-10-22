@@ -50,12 +50,28 @@ def _rating_marks(rating):
     )
 
 
-def _attempt_rows(workspace_name, records):
+def _wrong_reason(record):
+    """错因摘要：只说现成字段已经记下的事实（判定 / 作答状态），不发明新口径。"""
+    reasons = []
+    verdict = record.get("verdict")
+    if verdict is not None and not verdict:
+        reasons.append("判定为错")
+    status = record.get("status")
+    if status == "stuck":
+        reasons.append("不会")
+    elif status == "wrong":
+        reasons.append("标记为错")
+    return " · ".join(reasons)
+
+
+def _attempt_rows(workspace_name, records, wrong=False):
     """作答明细 = 圆角小卡流（12px、不描边、靠留白 + `--elev-1` 分隔）。
 
     六项字段一个不少：题目 + 评语 + 摘录（题目下第二、三行）· 判定（结构块 +
     几何符号 + 文字三通道）· 自评（彩色圆点 + 星级形状，零文字标签）·
     时间（卡片右上角，次级墨）。
+
+    错题视图用同一族卡片，但**视觉重一档**（`--elev-2`）并补一行错因摘要。
     """
     rows = []
     for record in records:
@@ -81,15 +97,29 @@ def _attempt_rows(workspace_name, records):
             f"/w/{html.escape(workspace_name, quote=True)}/practice"
             f"?problem={html.escape(record['problem_id'], quote=True)}"
         )
+        reason = _wrong_reason(record) if wrong else ""
+        if wrong:
+            card = ("<article class='record-row card record-wrong' "
+                    "style='border:0;box-shadow:var(--elev-2)'>")
+        else:
+            card = "<article class='record-row card record-attempt' style='border:0'>"
+        summary = ""
+        if reason or note:
+            summary = (
+                "<p class='record-note'>"
+                + (f"<strong>{html.escape(reason)}</strong>" if reason else "")
+                + (f" {note}" if (reason and note) else note)
+                + "</p>"
+            )
         rows.append(
-            "<article class='record-row card record-attempt' style='border:0'>"
-            f"<header><a class='record-title' href='{link}'>{title}</a>"
+            card
+            + f"<header><a class='record-title' href='{link}'>{title}</a>"
             f"<span class='record-verdict {verdict_class}'>{mark}{badge}</span>"
             + _rating_marks(rating)
             + "<time class='record-time'>"
             + html.escape(str(record.get("created_at") or ""))
             + "</time></header>"
-            + (f"<p class='record-note muted'>{note}</p>" if note else "")
+            + summary
             + (f"<p class='record-answer'>{answer}</p>" if answer else "")
             + "</article>"
         )
@@ -480,7 +510,7 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
             "<section class='support-section'><div class='section-heading'><div>"
             "<p class='section-kicker'>错题</p><h2>需要回看的作答</h2></div>"
             f"<p>{len(filtered)} 条客观判错或卡住的记录。</p></div>"
-            + _attempt_rows(workspace_name, filtered)
+            + _attempt_rows(workspace_name, filtered, wrong=True)
             + "</section>"
         )
     else:
