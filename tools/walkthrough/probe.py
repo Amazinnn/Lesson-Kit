@@ -442,28 +442,42 @@ PROBE_JS = r"""
      parser inserts it, before the script that replaces it runs. */
   P.skeletonSeen = () => (window.__lkSkeletonSeen || []).slice();
 
-  /* §7.5.2 skeleton_probe — the loading marks and the shimmer. */
+  /* §7.5.2 skeleton_probe — the loading marks and the shimmer.
+     A-114 (iii): the degraded tier renders an equivalent **static** grey
+     block — it carries no ``.lk-skeleton`` class (that class is the
+     shimmer), only the ``data-lk-skeleton="1"`` wrapper.  The wrapper's
+     children are therefore part of the probe too, and every entry says
+     which role it plays and where it lives. */
   P.skeleton = () => {
     const out = [];
-    document.querySelectorAll(".lk-skeleton, [class*='skeleton'], [class*='shimmer']")
-        .forEach((el) => {
-          const st = getComputedStyle(el);
-          const after = getComputedStyle(el, "::after");
-          const rect = el.getBoundingClientRect();
-          out.push({
-            cls: String(el.className || ""),
-            visible: visible(el),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height),
-            background: st.backgroundColor,
-            animationName: st.animationName,
-            animationDuration: st.animationDuration,
-            afterContent: after ? after.content : "",
-            afterAnimation: after ? after.animationName : "",
-            afterDuration: after ? after.animationDuration : "",
-            afterPointerEvents: after ? after.pointerEvents : "",
-          });
-        });
+    const seen = new Set();
+    const push = (el, role) => {
+      if (seen.has(el)) return;
+      seen.add(el);
+      const st = getComputedStyle(el);
+      const after = getComputedStyle(el, "::after");
+      const rect = el.getBoundingClientRect();
+      const wrapper = el.closest ? el.closest("[data-lk-skeleton]") : null;
+      out.push({
+        role: role,
+        container: wrapper ? "middle" : "",
+        cls: String(el.className || ""),
+        visible: visible(el),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        background: st.backgroundColor,
+        animationName: st.animationName,
+        animationDuration: st.animationDuration,
+        afterContent: after ? after.content : "",
+        afterAnimation: after ? after.animationName : "",
+        afterDuration: after ? after.animationDuration : "",
+        afterPointerEvents: after ? after.pointerEvents : "",
+      });
+    };
+    document.querySelectorAll(".lk-skeleton")
+        .forEach((el) => push(el, "sweep"));
+    document.querySelectorAll("[data-lk-skeleton] > *")
+        .forEach((el) => push(el, "block"));
     return out;
   };
 
@@ -694,34 +708,155 @@ PROBE_JS = r"""
 """
 
 #: The observer that catches the transient loading mark (§7.5.2).
+#:
+#: A-114 (i): every record carries the **measured size** of the block
+#: (``getBoundingClientRect()``).  The judgement of 3.4-3 reads
+#: ``width`` / ``height``, and the old record never collected them ⇒
+#: ``sized`` was **always** empty ⇒ the item was a constant FAIL no
+#: matter what the product did.
+#:
+#: A-114 (iii): the **degraded tier** (reduced motion / the in-app motion
+#: preference off) renders an equivalent **static** grey block — it has
+#: **no** ``.lk-skeleton`` class (that class carries the loading mark),
+#: only the ``data-lk-skeleton="1"`` wrapper.  The observer therefore
+#: watches the wrapper's children too and says which role a block plays:
+#: ``"sweep"`` = the marked block, ``"block"`` = the static one.
+#:
+#: A-115: the loading mark is a **breathing** block — the block's own
+#: surface (its ``background-color`` / its ``opacity``) changes over
+#: time.  The record therefore carries
+#:
+#: * ``samples`` — the block's own ``background-color`` and ``opacity``
+#:   at three moments (t0, t0+400ms, t0+800ms) and ``surfaceChanged``;
+#: * ``ownAnimations`` — the animations running on the **element itself**
+#:   (``effect.pseudoElement === null``) with the properties their
+#:   keyframes actually vary;
+#: * ``pseudoAnimations`` — the animations running on a **pseudo element**
+#:   (``::after``) — the *old* form (a sheen sweeping across an overlay):
+#:   it moves the overlay, not the block's surface, so it is evidence
+#:   only and never satisfies the criterion.
+#:
+#: ``container`` says where the block lives: ``"middle"`` = the middle
+#: column's page-switch skeleton (``middle-navigation.js``), ``""`` = a
+#: block that belongs to some other loading mark (e.g. the paper list's
+#: own ``.lk-skeleton--text``).
 SKELETON_JS = r"""
 (() => {
   const seen = [];
   window.__lkSkeletonSeen = seen;
-  const record = () => {
-    document.querySelectorAll(".lk-skeleton").forEach((el) => {
-      if (seen.some((item) => item.cls === String(el.className || ""))) return;
-      const st = getComputedStyle(el);
-      const after = getComputedStyle(el, "::after");
-      seen.push({
-        cls: String(el.className || ""),
-        animationName: st.animationName,
-        animationDuration: st.animationDuration,
-        afterContent: after ? after.content : "",
-        afterAnimation: after ? after.animationName : "",
-        afterDuration: after ? after.animationDuration : "",
-        afterBackground: after ? after.backgroundImage : "",
-        afterTransform: after ? after.transform : "",
+  const recorded = new WeakSet();
+  const DELAYS = [400, 800];
+  const SKIP_KEYS = ["offset", "computedOffset", "easing", "composite"];
+  const norm = (name) => String(name || "").replace(/-/g, "").toLowerCase();
+
+  const surface = (el) => {
+    const st = getComputedStyle(el);
+    return {background: st.backgroundColor, opacity: st.opacity};
+  };
+
+  /* The running animations, split into "on the element" and "on a pseudo
+     element" — the breathing mark lives on the element itself. */
+  const animations = (el) => {
+    const own = [], pseudo = [];
+    let list = [];
+    try { list = el.getAnimations ? el.getAnimations() : []; } catch (e) { list = []; }
+    list.forEach((a) => {
+      const effect = a.effect || {};
+      const pseudoElement = effect.pseudoElement || null;
+      let frames = [];
+      try { frames = effect.getKeyframes ? effect.getKeyframes() : []; } catch (e) { frames = []; }
+      const properties = new Set();
+      const values = {};
+      frames.forEach((frame) => {
+        Object.keys(frame).forEach((key) => {
+          if (SKIP_KEYS.indexOf(key) >= 0) return;
+          const prop = key.indexOf(".") >= 0 ? key.split(".")[1] : key;
+          properties.add(prop);
+          if (!values[prop]) values[prop] = [];
+          if (values[prop].indexOf(String(frame[key])) < 0) {
+            values[prop].push(String(frame[key]));
+          }
+        });
       });
+      const entry = {
+        name: a.animationName || "",
+        playState: a.playState || "",
+        pseudoElement: pseudoElement,
+        properties: Array.from(properties),
+        varied: Array.from(properties).filter((p) => (values[p] || []).length > 1),
+      };
+      if (pseudoElement) pseudo.push(entry); else own.push(entry);
+    });
+    return {own: own, pseudo: pseudo};
+  };
+
+  const record = (el, role) => {
+    if (!el || recorded.has(el)) return;
+    recorded.add(el);
+    const st = getComputedStyle(el);
+    const after = getComputedStyle(el, "::after");
+    const rect = el.getBoundingClientRect();
+    const wrapper = el.closest ? el.closest("[data-lk-skeleton]") : null;
+    const first = surface(el);
+    const anims = animations(el);
+    const item = {
+      role: role,
+      container: wrapper ? "middle" : "",
+      cls: String(el.className || ""),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      background: first.background,
+      opacity: first.opacity,
+      animationName: st.animationName,
+      animationDuration: st.animationDuration,
+      afterContent: after ? after.content : "",
+      afterAnimation: after ? after.animationName : "",
+      afterDuration: after ? after.animationDuration : "",
+      afterBackground: after ? after.backgroundImage : "",
+      afterTransform: after ? after.transform : "",
+      ownAnimations: anims.own,
+      pseudoAnimations: anims.pseudo,
+      samples: [{delay: 0, background: first.background, opacity: first.opacity}],
+      surfaceChanged: false,
+    };
+    seen.push(item);
+    DELAYS.forEach((delay) => {
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        const now = surface(el);
+        item.samples.push({delay: delay, background: now.background,
+                           opacity: now.opacity});
+        const backgrounds = item.samples.map((s) => s.background);
+        const opacities = item.samples.map((s) => s.opacity);
+        item.surfaceChanged = backgrounds.some((v) => v !== backgrounds[0])
+          || opacities.some((v) => v !== opacities[0]);
+      }, delay);
     });
   };
+  const scan = () => {
+    document.querySelectorAll(".lk-skeleton").forEach((el) => record(el, "sweep"));
+    document.querySelectorAll("[data-lk-skeleton] > *").forEach((el) => record(el, "block"));
+  };
   try {
-    const observer = new MutationObserver(record);
+    const observer = new MutationObserver(scan);
     observer.observe(document, {childList: true, subtree: true});
-    document.addEventListener("DOMContentLoaded", record);
+    document.addEventListener("DOMContentLoaded", scan);
   } catch (e) { /* the observer is a nicety, not a requirement */ }
 })();
 """
+
+#: The motion tier the product is in (``window.lkMotion.mode()``):
+#: ``"full"`` / ``"weak"`` / ``"off"``.  A-114 (iii): the loading mark
+#: exists in the ``"full"`` tier only — the degraded tiers render the
+#: equivalent static grey block instead.
+MOTION_TIER_JS = """() => {
+  try {
+    if (window.lkMotion && typeof window.lkMotion.mode === "function") {
+      return String(window.lkMotion.mode());
+    }
+  } catch (e) { /* the product has no motion module — full tier */ }
+  return "full";
+}"""
 
 #: The audio shim (§7.5.2 audio_probe).  It wraps ``play`` and
 #: ``AudioContext.start`` to record every playback in the page.
@@ -1737,6 +1872,54 @@ def _parse_duration(value):
     return out
 
 
+#: The reading of the **candidate element itself** (A-114).
+#:
+#: ``document.elementFromPoint(x, y)`` answers "the **innermost** element
+#: under the pointer" — for a ``.nav-item`` that is the ``<a>`` inside it,
+#: for an ``.ai-session-entry`` button the ``<span>`` inside it.  Those
+#: inner elements carry **no** ``:active`` rule (the rule sits on
+#: ``.nav-item`` / ``button``), so the old probe read the **same inner
+#: element's** style on both sides ⇒ the hover side and the pressed side
+#: could never differ ⇒ 3.4-2 was a constant FAIL.
+#:
+#: The hit test is still done — it proves the candidate really is under
+#: the pointer — but the **style is read on the candidate**, on both the
+#: hover side and the pressed side.  ``relation`` says how the candidate
+#: relates to the hit element:
+#:
+#: * ``self``       — the candidate *is* the element under the pointer;
+#: * ``descendant`` — the pointer is on a descendant of the candidate
+#:   ⇒ the candidate is hovered **and** it is in the ``:active`` chain
+#:   (Chromium puts ``:active`` on the pressed element **and its
+#:   ancestors**);
+#: * ``ancestor``   — the pointer is on an ancestor of the candidate ⇒
+#:   the candidate is hovered, but it is **not** in the ``:active`` chain
+#:   (``:active`` never reaches a descendant of the pressed element);
+#: * ``other``      — the pointer is somewhere else entirely ⇒ the
+#:   candidate is not hovered at all.
+HOVER_READ_JS = """([index, x, y, watched]) => {
+  const el = (window.__lkHoverTargets || [])[index];
+  if (!el || !el.isConnected) return null;
+  const hit = document.elementFromPoint(x, y);
+  if (!hit) return null;
+  const st = getComputedStyle(el);
+  const state = {};
+  watched.forEach((name) => { state[name] = st.getPropertyValue(name); });
+  let relation = "other";
+  if (hit === el) relation = "self";
+  else if (el.contains(hit)) relation = "descendant";
+  else if (hit.contains(el)) relation = "ancestor";
+  return {
+    relation: relation,
+    tag: el.tagName.toLowerCase(),
+    cls: String(el.className || "").slice(0, 60),
+    hitTag: hit.tagName.toLowerCase(),
+    hitCls: String(hit.className || "").slice(0, 60),
+    state: state,
+  };
+}"""
+
+
 def probe_hover(ctx):
     """3.4-1 — the hover feedback must last 120–180 ms.
 
@@ -1744,10 +1927,36 @@ def probe_hover(ctx):
     under the pointer, and only an element that *changes* counts as a hover
     feedback (an element without a transition changes instantly, which is
     below the 120 ms floor and therefore a violation).
+
+    A-114: the readings are taken on **the candidate element itself**
+    (a stable index into ``window.__lkHoverTargets``) — the hover side
+    and the pressed side read the **same** element.  See
+    :data:`HOVER_READ_JS` for why the old ``elementFromPoint`` reading
+    could never see a difference.
+
+    The probe runs **two passes**:
+
+    * pass 1 measures the hover feedback (3.4-1) and **never presses**;
+    * pass 2 measures the pressed feedback (3.4-2) with the same
+      hover → press → read → release sequence as before.
+
+    The split exists because a press is a **click**: the product's own
+    click handler answers it by switching the page (the left column's
+    links swap the middle column), so a press in the middle of the old
+    single loop made the rest reading and the hover reading come from
+    **two different page states**.  The difference the old loop then
+    measured — the nav entry that has just become the active one — is a
+    navigation artifact, not a hover feedback.  Pass 1 keeps the rest
+    reading and the hover reading in one page state; pass 2 compares the
+    pressed state with the hovered state of the same candidate, which are
+    read one after the other and therefore always agree on the page
+    state.
     """
     page = ctx.page
     candidates = page.evaluate("""(watched) => {
       const out = [];
+      const targets = [];
+      window.__lkHoverTargets = targets;
       const selector = "button, a[href], .nav-item, .paper-dot, [role='button'], "
         + ".side-row, .setting-row, .lk-empty__action, .button-link, "
         + ".column-resizer, .chapter-lens-option";
@@ -1759,7 +1968,9 @@ def probe_hover(ctx):
         const st = getComputedStyle(el);
         const state = {};
         watched.forEach((name) => { state[name] = st.getPropertyValue(name); });
+        targets.push(el);
         out.push({
+          index: targets.length - 1,
           x: Math.round(rect.left + rect.width / 2),
           y: Math.round(rect.top + rect.height / 2),
           cls: String(el.className || "").slice(0, 60),
@@ -1779,20 +1990,30 @@ def probe_hover(ctx):
         return _pending({"candidates": 0}, "本页视口内没有可交互元素")
     page.mouse.move(2, 2)
     page.wait_for_timeout(60)
-    hover_offenders, active_offenders, hover_samples = [], [], []
+
+    # -- pass 1 — the hover feedback (3.4-1) ---------------------------
+    # This pass **never presses the mouse**: a press is a click, and the
+    # product's own click handler answers it by changing the page (the
+    # left column's links switch the middle column).  The rest state is
+    # read once, up front — so a press in the middle of the old single
+    # loop made the **rest** reading and the **hover** reading come from
+    # two different page states, and the difference (the nav entry that
+    # turns into the active one) was a navigation artifact, not a hover
+    # feedback.  With the presses moved to pass 2 the rest state stays
+    # valid for the whole pass.
+    hover_offenders, hover_samples, hovered = [], [], set()
     for candidate in candidates:
         page.mouse.move(candidate["x"], candidate["y"])
         page.wait_for_timeout(260)
-        hover_state = page.evaluate("""([x, y, watched]) => {
-          const el = document.elementFromPoint(x, y);
-          if (!el) return null;
-          const st = getComputedStyle(el);
-          const out = {};
-          watched.forEach((name) => { out[name] = st.getPropertyValue(name); });
-          return {tag: el.tagName.toLowerCase(),
-                  cls: String(el.className || "").slice(0, 60), state: out};
-        }""", [candidate["x"], candidate["y"], list(WATCHED_PROPERTIES)])
+        hover_state = page.evaluate(
+            HOVER_READ_JS,
+            [candidate["index"], candidate["x"], candidate["y"],
+             list(WATCHED_PROPERTIES)])
         if not hover_state:
+            continue
+        # The candidate has to be under the pointer (or be an ancestor of
+        # what is under it) — otherwise it is not hovered at all.
+        if hover_state["relation"] not in ("self", "descendant", "ancestor"):
             continue
         changed = [name for name in WATCHED_PROPERTIES
                    if hover_state["state"].get(name) != candidate["state"].get(name)]
@@ -1806,30 +2027,52 @@ def probe_hover(ctx):
             "text": candidate.get("text", ""),
             "changed": changed, "durationMs": duration,
             "transitionProperty": candidate["transitionProperty"],
+            "hitTag": hover_state["hitTag"], "hitCls": hover_state["hitCls"],
+            "relation": hover_state["relation"],
         }
         hover_samples.append(record)
+        hovered.add(candidate["index"])
         if duration < HOVER_MIN_MS or duration > HOVER_MAX_MS:
             hover_offenders.append(record)
-        # -- the pressed state -----------------------------------------
+
+    # -- pass 2 — the pressed feedback (3.4-2) -------------------------
+    # The same sequence as before — hover, press, read, release — but on
+    # the **same candidate** on both sides (A-114): the pressed state is
+    # compared with the hovered state of that very candidate, so a
+    # candidate that carries no ``:active`` rule of its own cannot
+    # borrow the difference of some inner element.
+    active_offenders = []
+    for candidate in candidates:
+        if candidate["index"] not in hovered:
+            continue
+        page.mouse.move(candidate["x"], candidate["y"])
+        page.wait_for_timeout(260)
+        hover_state = page.evaluate(
+            HOVER_READ_JS,
+            [candidate["index"], candidate["x"], candidate["y"],
+             list(WATCHED_PROPERTIES)])
+        if not hover_state:
+            continue
+        if hover_state["relation"] not in ("self", "descendant", "ancestor"):
+            continue
         page.mouse.down()
         page.wait_for_timeout(80)
-        active_state = page.evaluate("""([x, y, watched]) => {
-          const el = document.elementFromPoint(x, y);
-          if (!el) return null;
-          const st = getComputedStyle(el);
-          const out = {};
-          watched.forEach((name) => { out[name] = st.getPropertyValue(name); });
-          return out;
-        }""", [candidate["x"], candidate["y"], list(WATCHED_PROPERTIES)])
+        active_state = page.evaluate(
+            HOVER_READ_JS,
+            [candidate["index"], candidate["x"], candidate["y"],
+             list(WATCHED_PROPERTIES)])
         page.mouse.up()
         if active_state:
             pressed = [name for name in WATCHED_PROPERTIES
-                       if active_state.get(name) != hover_state["state"].get(name)]
+                       if active_state["state"].get(name) != hover_state["state"].get(name)]
             if pressed:
                 active_offenders.append({"cls": candidate["cls"],
                                          "id": candidate.get("id", ""),
                                          "text": candidate.get("text", ""),
-                                         "pressed": pressed})
+                                         "pressed": pressed,
+                                         "relation": active_state["relation"],
+                                         "hitTag": active_state["hitTag"],
+                                         "hitCls": active_state["hitCls"]})
     page.mouse.move(2, 2)
     data = {"hoverSamples": hover_samples, "hoverOffenders": hover_offenders,
             "pressedFeedback": active_offenders}
@@ -2005,78 +2248,223 @@ def probe_icon_night(ctx):
     return data  # SEMI → the runner turns this into PENDING
 
 
-def probe_skeleton(ctx, playwright):
-    """3.4-3 — the loading state has a skeleton with a moving sheen.
+def _skeleton_switch(playwright, base_url, ws, target="kps",
+                     reduced_motion=None):
+    """Catch the middle column's skeleton **during a page switch**.
 
-    The loading state is transient, so the probe **delays the API** that
-    feeds the paper list and looks at the DOM while the request is still
-    in flight.  That is the only way to see the skeleton at all.
+    A-114 (ii): the product renders the loading skeleton in
+    ``middle-navigation.js``'s ``showLoadingState()`` — that is, **only
+    when the middle column changes page**.  A first-screen load never
+    goes through it, so the old scenario (slow the paper list's API down
+    and reload) could not reproduce what the product actually does.
+
+    The probe therefore slows the **target page's** request down, clicks
+    the left column's link to that page (the product's own click handler
+    → ``navigate()`` → ``showLoadingState()``), and reads what the
+    observer recorded while the request was still in flight.
     """
     import time
 
-    skeleton = ctx.evaluate("() => window.__lkProbe.skeleton()")
-    seen = ctx.evaluate("() => window.__lkProbe.skeletonSeen()")
-    if seen:
-        skeleton = seen
+    browser = playwright.chromium.launch(
+        headless=True, args=list(CONSISTENCY["browser_args"]))
+    context = browser.new_context(
+        viewport={"width": VIEWPORTS["V1440"]["width"],
+                  "height": VIEWPORTS["V1440"]["height"]},
+        device_scale_factor=VIEWPORTS["V1440"]["device_scale_factor"],
+        color_scheme=CONSISTENCY["color_scheme"],
+        reduced_motion=reduced_motion or CONSISTENCY["reduced_motion"],
+        locale=CONSISTENCY["locale"],
+        timezone_id=CONSISTENCY["timezone_id"])
+    page = context.new_page()
+    try:
+        page.add_init_script(PROBE_JS)
+        page.add_init_script(SKELETON_JS)
+        href = PAGES[target].format(ws=ws)
+
+        def slow(route):
+            time.sleep(1.5)
+            route.continue_()
+
+        # The **target page's** request is the one that is slowed down.
+        page.route("**/w/*/" + target, slow)
+        page.goto(base_url.rstrip("/") + PAGES["practice"].format(ws=ws),
+                  wait_until="load", timeout=30000)
+        page.wait_for_timeout(400)
+        # The product's own click handler does the switch (it calls
+        # ``navigate()`` → ``showLoadingState()`` → fetch).
+        clicked = page.evaluate("""(href) => {
+          const links = Array.from(
+              document.querySelectorAll("#left-column a[href]"));
+          const link = links.find((a) => a.getAttribute("href") === href);
+          if (!link) return false;
+          link.click();
+          return true;
+        }""", href)
+        try:
+            page.wait_for_function(
+                "(path) => window.location.pathname === path",
+                arg=href, timeout=20000)
+        except Exception:
+            pass
+        page.wait_for_timeout(200)
+        items = page.evaluate("() => (window.__lkSkeletonSeen || []).slice()")
+        tier = page.evaluate(MOTION_TIER_JS)
+        return {"clicked": clicked, "tier": tier, "target": href,
+                "items": items}
+    finally:
+        try:
+            context.close()
+        finally:
+            browser.close()
+
+
+#: The properties a **breathing** loading mark may breathe with (A-115).
+#: The mark changes the block's **own surface** — its background colour
+#: or its opacity.  The old form (a sheen sweeping across an ``::after``
+#: overlay) moves the overlay, not the surface, so it never counts.
+BREATHING_PROPERTIES = ("opacity", "backgroundcolor", "background")
+
+
+def _norm_property(name):
+    """``background-color`` / ``backgroundColor`` → ``backgroundcolor``."""
+    return str(name or "").replace("-", "").lower()
+
+
+def _breathes(item):
+    """Does this block's **own surface** change while it is on screen?
+
+    Two independent pieces of evidence, either of which is enough:
+
+    * ``surfaceChanged`` — the block's own ``background-color`` or
+      ``opacity`` really differs between the samples the observer took
+      (t0 / t0+400ms / t0+800ms);
+    * an animation running **on the element itself** whose keyframes
+      vary ``opacity`` / ``background-color``.
+
+    An animation on a **pseudo element** (the old ``::after`` sweep) is
+    deliberately **not** accepted: it animates the overlay, the block's
+    own surface stays put.
+    """
+    if item.get("surfaceChanged"):
+        return True
+    for animation in item.get("ownAnimations") or []:
+        for prop in animation.get("varied") or []:
+            if _norm_property(prop) in BREATHING_PROPERTIES:
+                return True
+    return False
+
+
+def _skeleton_judgement(items):
+    """Split the recorded blocks into "has a body" and "breathes".
+
+    ``container == "middle"`` keeps only the middle column's page-switch
+    skeleton — the paper list has a loading mark of its own (a
+    ``.lk-skeleton--text``), and that one is not the scenario of 3.4-3.
+    """
+    blocks = [item for item in items if item.get("container") == "middle"]
+    sized = [item for item in blocks
+             if (item.get("width") or 0) > 0 and (item.get("height") or 0) > 0]
+    breathing = [item for item in blocks if _breathes(item)]
+    # The **old** form: a sheen sweeping across an ``::after`` overlay.
+    # Chromium's ``Element.getAnimations()`` does not hand the pseudo
+    # element's animation back, so the overlay is recognised by the
+    # computed ``::after`` animation name.  It is evidence, never a pass.
+    sweep_only = [item for item in blocks
+                  if not _breathes(item)
+                  and (item.get("afterAnimation") not in (None, "none")
+                       or item.get("pseudoAnimations"))]
+    return {"blocks": blocks, "sized": sized, "breathing": breathing,
+            "sweepOnly": sweep_only}
+
+
+def probe_skeleton(ctx, playwright):
+    """3.4-3 — the loading state has a skeleton that **breathes**.
+
+    A-114 (ii): the scenario is the **middle column's page switch** — the
+    product renders the skeleton in ``middle-navigation.js``'s
+    ``showLoadingState()``, which only runs when the middle column changes
+    page.  A first-screen load never goes through it.
+
+    A-114 (i): the blocks are measured (``getBoundingClientRect()``) and
+    the judgement reads those measurements — the old judgement read
+    ``width`` / ``height`` fields the probe had never collected, so
+    ``sized`` was always empty.
+
+    A-114 (iii): the judgement follows the **motion tier** the product is
+    in: the full tier has to show the loading mark, the degraded tier
+    (reduced motion / the in-app motion preference off) renders an
+    equivalent **static** grey block and is judged on its **body** alone.
+
+    A-115: the criterion is **"有体积 + 加载期动效（呼吸）"** — the block's
+    **own surface** (its ``background-color`` or its ``opacity``) has to
+    change while it is on screen.  A sheen sweeping across an ``::after``
+    overlay does **not** satisfy it (it moves the overlay, not the
+    surface).  See :func:`_breathes`.
+    """
     css_hit = []
     for path in ctx.own_css_files():
         text = path.read_text(encoding="utf-8", errors="replace")
         if "lk-skeleton" in text or "shimmer" in text:
             css_hit.append(path.name)
-    data = {"elements": skeleton, "cssFiles": css_hit}
 
-    if not skeleton:
-        # -- catch the loading state in a fresh page ---------------------
-        browser = playwright.chromium.launch(
-            headless=True, args=list(CONSISTENCY["browser_args"]))
-        context = browser.new_context(
-            viewport={"width": VIEWPORTS["V1440"]["width"],
-                      "height": VIEWPORTS["V1440"]["height"]},
-            device_scale_factor=VIEWPORTS["V1440"]["device_scale_factor"],
-            color_scheme=CONSISTENCY["color_scheme"],
-            reduced_motion=CONSISTENCY["reduced_motion"],
-            locale=CONSISTENCY["locale"],
-            timezone_id=CONSISTENCY["timezone_id"])
-        page = context.new_page()
-        try:
-            page.add_init_script(PROBE_JS)
+    # The loading marks the current page carries (the paper list's own
+    # ``.lk-skeleton--text`` among them).  They are **not** the scenario
+    # of 3.4-3 — the criterion is about the middle column's page switch —
+    # but they are kept as evidence.
+    page_marks = []
+    try:
+        page_marks = ctx.evaluate("() => window.__lkProbe.skeleton()")
+    except Exception:
+        page_marks = []
 
-            def slow(route):
-                time.sleep(1.5)
-                route.continue_()
+    # -- the scenario: the middle column changes page ------------------
+    primary = _skeleton_switch(playwright, ctx.base_url, ctx.ws,
+                                reduced_motion=CONSISTENCY["reduced_motion"])
+    tier = primary.get("tier") or "full"
+    judged = _skeleton_judgement(primary.get("items") or [])
+    blocks, sized = judged["blocks"], judged["sized"]
+    breathing, sweep_only = judged["breathing"], judged["sweepOnly"]
+    data = {"scenario": "middle-column switch", "tier": tier,
+            "elements": blocks, "cssFiles": css_hit,
+            "pageMarks": page_marks,
+            "switch": {k: v for k, v in primary.items() if k != "items"}}
 
-            page.route("**/api/w/*/practice-sets", slow)
-            page.goto(ctx.url("practice"), wait_until="commit", timeout=30000)
-            caught = []
-            for _ in range(24):
-                page.wait_for_timeout(100)
-                try:
-                    found = page.evaluate("() => window.__lkProbe.skeleton()")
-                except Exception:
-                    found = []
-                if found:
-                    caught = found
-                    break
-            data["duringLoad"] = caught
-        finally:
-            context.close()
-            browser.close()
+    # -- the degraded tier, as the second half of the evidence ---------
+    # (the same scenario with the system's reduced-motion tier on: the
+    # product renders the equivalent static grey block there).
+    degraded = None
+    try:
+        reduced = _skeleton_switch(playwright, ctx.base_url, ctx.ws,
+                                   reduced_motion="reduce")
+        reduced_judged = _skeleton_judgement(reduced.get("items") or [])
+        degraded = {
+            "tier": reduced.get("tier"),
+            "elements": reduced_judged["blocks"],
+            "sized": len(reduced_judged["sized"]),
+            "breathing": len(reduced_judged["breathing"]),
+            "switch": {k: v for k, v in reduced.items() if k != "items"},
+        }
+    except Exception as error:  # the extra evidence is a bonus, not the verdict
+        degraded = {"error": str(error)}
+    data["degradedTier"] = degraded
 
-    elements = data.get("duringLoad") or data.get("elements") or []
-    if not elements and not css_hit:
-        return _na(data, "既没有骨架屏元素，样式表里也没有骨架屏")
-    if not elements:
-        return _pending(data, "样式表里有骨架屏，但加载态没有被触达")
-    live = [item for item in elements
-            if item.get("afterAnimation") not in (None, "none")
-            or item.get("animationName") not in (None, "none")]
-    if not live:
-        return _bad(data, "骨架屏没有微光动画")
-    sized = [item for item in elements
-             if (item.get("width") or 0) > 0 and (item.get("height") or 0) > 0]
+    if not blocks:
+        return _pending(data, "中栏换页的加载态没有被触达（没有采到骨架块）")
     if not sized:
         return _bad(data, "骨架屏没有尺寸（0×0）—— 灰块与微光都无从显示")
-    return _ok(data, "骨架屏带微光扫过")
+    if tier != "full":
+        return _ok(data, "降级档：等价静态灰块有体积（动效档才要求加载期动效）")
+    # A-115: the loading mark has to **breathe** — the block's own surface
+    # (background colour / opacity) has to change while it is on screen.
+    if not breathing:
+        if sweep_only:
+            detail = ("骨架屏有体积 ✔，但加载期动效是 ::after 覆盖层横扫 ✖"
+                      "（块的自身底色 / 不透明度没有随时间变化）")
+        else:
+            detail = "骨架屏有体积 ✔，但加载期没有动效 ✖"
+        return _bad(data, detail + " —— 判据：有体积 + 加载期动效（呼吸："
+                                  "块的自身底色或 opacity 随时间变化）")
+    return _ok(data, "骨架屏有体积，且加载期有呼吸动效")
 
 
 def probe_error_colour(ctx):
