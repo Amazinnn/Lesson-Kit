@@ -41,7 +41,7 @@
 | 验收口径 | `acceptance.md`（G-1…G-8 · S-1…S-12 · M-1…M-13 · §3.1–§3.8） |
 | **token 唯一权威** | `design-notes/night-paper-tokens.md`（结构 66 + 值 52，两主题） |
 | 组件规格 / 动效规格 / 走查执行器 / 资产规格 / 文案表 / 版式 / 图谱移交 | `design-notes/{component-spec,motion-spec,walkthrough-harness,asset-spec,copy-table,layout-spec,graph-isolation}.md` |
-| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（169 条，`CD-001`…`CD-169`） |
+| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（171 条，`CD-001`…`CD-171`） |
 | 视觉评审件（`tmp/` 已 gitignore，不进版本库） | `tmp/frontend-audit/mockups/`（6 页 / 17 截图）· `tmp/frontend-audit/styleboard/` · `tmp/frontend-audit/motionlab/` |
 
 ---
@@ -135,7 +135,7 @@
 | 1 | **第 22 组验收关卡** | 等样板线跑完 → 交对照截图 + 关键帧分镜条 + 交互清单 → **所有者签字**才开第 23 组 |
 | 2 | **F-1 组件样式一览** | 已排队（F-1）。等方向定稿后**重做** `styleboard`（现版本是旧方向的 25 组/103 候选） |
 | 3 | 「破纪录」比较范围 | CD-164，待定义。**在此之前不得用代理指标近似触发里程碑** |
-| 4 | 169 条已登记漂移 | 刻意留账，需后续 change 逐批处理 |
+| 4 | 171 条已登记漂移 | 刻意留账，需后续 change 逐批处理 |
 | 5 | 夜纸下知识图谱 | 归 `graph-node-visual-language` change（与节点重画一起做，避免两次改图谱） |
 
 ---
@@ -462,3 +462,42 @@ python lessonkit.py guard extract-problems --course dmath --chapter ch06   # Res
 **W2c 漏交的一件，已让它补**：对比度复测的**脚本**没进版本库（表交了，复跑它的东西没交）
 ⇒ 已发回补 `tools/verify_tokens.py`（纯标准库、从 CSS 实际取值重算、低于判定线则退出码非 0）
 + `contrast-measurements.md`；**12.3 在这两样落盘前不勾**。
+
+### 9.9 第三批（W5 契约同步 / W3c 练习流程 / W2c 补交）收工记录
+
+**W5（第 28 组契约同步）** —— 六份职责文件落地：`GLOSSARY.md`（新增 5 条词条：沉底面 / 阅读面 /
+骨架屏 / 里程碑档 / 连对；改写 2 条既有条目）· `PRODUCT-MANUAL.md`（§10 改「已实现」+
+§6.11 连对 + §6.12 两档庆祝 + §7.1.2 记录中心 + §2.4 组卷报告口径）·
+`ACTION-GRAPH.md` + `L3-actions.md`（新增 2 / 退役 1 / 改级 1 / 改状态 2）·
+`ARCHITECTURE.md`（目录树与仓库实际对齐 + `tools/` 边界）· `specs/workbench-ui/spec.md`（五档日历阈值）。
+⚠️ 它**顺带挖出「标记已实现、样式没跟上」的一整批**（见 **CD-171**）——
+这是纯读代码发现不了的：**结构、类名、数据都在，CSS 规则不在** ⇒「功能在、界面没接上」。
+最明显的一条是**火苗完全不可见**（`.lk-flame-off` / `.lk-flame-on` 只有定位与透明度，没有底色或图形）。
+
+**W3c（练习流程 + 音效落点）** —— 26 处 `.rich-text` → `.wb-reading`；音效**全仓恰好 4 处**
+（它**没有新增**第 5 处，而是补齐了那 4 处依赖的 DOM 契约）；连对计数器 / 火苗簇 / 一份横幅 /
+断裂负反馈；完成页统计数字槽（五个真实计数，各带 `data-lk-value`）。
+⚠️ 它同时报出两条需要取舍的，已裁：**A-53**（降级档里程碑音效仍响）· **A-54**（连对反馈挂两个流）。
+
+**W2c 补交** —— `tools/verify_tokens.py`（310 行，纯标准库，**结果一律从 CSS 实际取值重算**，
+低于判定线则退出码非 0）+ `contrast-measurements.md`。
+主会话**已自己跑过**：退出码 0，**低于判定线的配对 0 项** ⇒ **12.3 可勾**。
+（该 agent 还报了一件它自己的失误：文件主体被并行 commit 的 `git add` 范围过宽带进仓库，
+它只补了最后 2 行修正 —— 文件在 HEAD 里是完整正确的。）
+
+**本批勾掉的 2 条**：12.3（对比度表 + 脚本已入库，主会话复跑退出码 0）· 17.3（连对 > 4 答错的
+明确负反馈 + 计数器归零）。
+**仍未勾但已实现的**：17.1 / 17.8 —— 逻辑与几何都在，但**三档配色与火苗形状的 CSS 缺失**
+⇒ 用户看不见 ⇒ 按「可见才算完成」的口径**不勾**（已在 **CD-171** 里登记）。
+
+### 9.10 下一波已派（3 个）
+| 波 | 任务书 | 文件 | 内容 |
+|---|---|---|---|
+| W3f2 | `briefs/IMPL-W3f2.md` | `records.py` | 日历 fill+height 双编码 · 五档阈值具名常量 · 档位图例 |
+| W3g2 | `briefs/IMPL-W3g2.md` | `paper-practice.js` + `workbench.js` | A-53 降级档里程碑音效 · A-54 连对反馈补到试卷流 |
+| W5b | `briefs/IMPL-W5b.md` | `docs/` | L4 工作流图同步 · §10.1 落地状态 · 未落地实现项清单 |
+
+**排队中（等文件腾空）**：
+- **CSS 补齐波**（`workbench.css`）—— CD-171 的六条 + 全部类名缺口 + 火苗形状 + `.level-0` +
+  作答区沉底块 —— **等 W2d 收工**（它也在改 `workbench.css`）。
+- **知识点分组卡片**（`pages.py`）—— 18.1 —— **等 W3b 收工**。
