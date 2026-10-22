@@ -232,6 +232,16 @@
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
     var advanceTimer = null;
+    /* 连对本轮状态（tasks.md 17.1 / 17.2 / 17.3 / 17.8）：
+       计数器三档＝灰（0）/ 黄（>0）/ 黄→蓝渐变（≥30）；横幅在 5 连 / 10 连 …；
+       连对 > 4 答错必须给明确负反馈；火苗簇逐簇点亮、断裂时逐簇熄灭。 */
+    var streakCount = 0;
+    var STREAK_TIER_HOT = 30;
+    var STREAK_FLAME_CAP = 10;
+    var STREAK_FLAME_STAGGER_MS = 80;
+    var STREAK_FLAME_STEP_MS = 40;
+    var STREAK_BANNER_EVERY = 5;
+    var STREAK_BREAK_OVER = 4;
 
     function showPracticeError(error, retryable) {
       if (disposed || !practiceError) return;
@@ -391,6 +401,7 @@
       if (!activePractice) return;
       var continuation = activePractice.continuation;
       if (continuation ? !continuation.available : (activePractice.unavailable_item_ids || []).length > 0) return;
+      streakCount = 0;   /* 新的一轮从零开始 */
       practiceDeck = activeToDeck(activePractice);
       persistDeck();
       sessionStorage.setItem(MODE_KEY, activePractice.practice_mode || "exam");
@@ -822,6 +833,96 @@
         + "本题未录入答案键，请对照课本或解析自评。</p>";
     }
 
+    /* ---------- 连对反馈（tasks.md 17.1 / 17.2 / 17.3 / 17.8） ----------
+       一个计数器、一个火苗簇、一份参数化横幅。数字由 workbench.js 的通用
+       Ticker 滚动（这里只调用，不另写一份）；火苗只切 class，熄灭的错峰由
+       每个火苗的 animation-delay 给出（motion-spec §3.6）。 */
+    function streakTier() {
+      if (streakCount <= 0) return 0;
+      return streakCount >= STREAK_TIER_HOT ? 2 : 1;
+    }
+
+    function streakHtml() {
+      var slots = Math.min(streakCount, STREAK_FLAME_CAP);
+      var flames = "";
+      for (var i = 0; i < slots; i += 1) {
+        flames += "<span class='lk-flame is-lit' style='animation-delay:"
+          + (i * STREAK_FLAME_STAGGER_MS) + "ms'>"
+          + "<span class='lk-flame-off'></span><span class='lk-flame-on'></span></span>";
+      }
+      var tier = streakTier();
+      return "<span class='lk-streak"
+        + (tier === 2 ? " is-hot" : tier === 1 ? " is-warm" : "")
+        + "' data-lk-streak-tier='" + tier + "'>"
+        + "<span class='lk-flames' aria-hidden='true'>" + flames + "</span>"
+        + "<span class='lk-ticker' data-value='" + streakCount + "' aria-label='连对 "
+        + streakCount + "'>" + streakCount + "</span></span>"
+        /* 一份横幅：5 连 / 10 连 … 共用同一份 DOM 与同一套动画，数字是参数 */
+        + "<span class='lk-combo-banner' aria-hidden='true'>"
+        + "<span class='lk-combo-banner__count'>" + streakCount + "</span></span>";
+    }
+
+    function streakFlames() {
+      if (!stream || !stream.querySelector) return null;
+      return stream.querySelector(".lk-flames");
+    }
+
+    function setStreakNumber(value, from) {
+      if (!stream || !stream.querySelector) return;
+      var ticker = stream.querySelector(".lk-ticker");
+      if (!ticker) return;
+      if (window.lkTicker && typeof window.lkTicker.set === "function") {
+        try {
+          window.lkTicker.set(ticker, value, { from: from == null ? value : from });
+          return;
+        } catch (error) {
+          /* 通用 Ticker 缺席时也要保证数字是对的（直接写最终值） */
+        }
+      }
+      ticker.textContent = String(value);
+    }
+
+    function showComboBanner(count) {
+      if (!stream || !stream.querySelector) return;
+      var banner = stream.querySelector(".lk-combo-banner");
+      if (!banner) return;
+      var number = banner.querySelector ? banner.querySelector(".lk-combo-banner__count") : null;
+      if (number) number.textContent = String(count);
+      /* 档位差异只由这一个语义类承担（motion-spec §6.4） */
+      banner.classList.toggle("is-large", count >= STREAK_BANNER_EVERY * 2);
+      banner.classList.add("is-on");
+    }
+
+    function growStreak(before) {
+      setStreakNumber(streakCount, before);
+      if (streakCount > 0 && streakCount % STREAK_BANNER_EVERY === 0) {
+        showComboBanner(streakCount);
+      }
+    }
+
+    function breakStreak(before, loud) {
+      var flames = streakFlames();
+      var lit = streakCount;
+      /* 逐簇熄灭：从最新的一簇开始，每簇错开 40ms（熄灭是纯 opacity 过渡） */
+      for (var remaining = lit - 1; remaining >= 0; remaining -= 1) {
+        (function (count) {
+          setTimeout(function () {
+            if (flames && window.lkFlame && typeof window.lkFlame.set === "function") {
+              window.lkFlame.set(flames, count);
+            }
+          }, (lit - 1 - count) * STREAK_FLAME_STEP_MS);
+        })(remaining);
+      }
+      streakCount = 0;
+      setStreakNumber(0, before);
+      if (!loud) return;
+      /* 连对 > 4 断裂必须明示：一次 ≤4px / 160ms 的水平摆动，不做屏幕级震动 */
+      var counter = stream && stream.querySelector ? stream.querySelector(".lk-streak") : null;
+      if (!counter) return;
+      counter.classList.add("lk-error-nudge");
+      counter.style.animation = "lk-error-nudge 160ms var(--ease-standard) both";
+    }
+
     function attemptHistoryHtml(attempts) {
       // Every past answer of this problem, oldest last; the record the current
       // session just wrote may not be in the payload yet, which is fine — the
@@ -1012,7 +1113,9 @@
       var answered = reviewOnly || deckItemAnswered(item);
       var paperReview = reviewOnly && isPaperReviewItem(item);
       stream.innerHTML = "<article class='practice-question-card card'>"
-        + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p><h2>"
+        + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p>"
+        /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里 */
+        + "<p class='practice-streak' style='position: relative'>" + streakHtml() + "</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
         + "<div class='problem-text wb-reading'>" + richText(problemTextFor(problem)) + "</div>"
@@ -1366,6 +1469,7 @@
     }
 
     function startLegacySession(contentMode, ratingMode) {
+      streakCount = 0;   /* 新的一轮从零开始 */
       practiceDeck = PracticeDeck.deserialize(null);
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
@@ -1627,6 +1731,17 @@
       if (choiceTexts.length) patch.choices = choiceTexts.slice();
       var graded = gradeMicroQuiz(item.payload, choiceTexts);
       if (graded !== null) patch.verdict = graded;
+      /* 连对：判定先落地，界面随后再动（数字滚动 / 火苗 / 横幅 / 断裂负反馈）。
+         断裂时连对数先留着，好让火苗逐簇熄灭，灭完再归零。 */
+      var streakBefore = streakCount;
+      var streakBreaking = false;
+      if (graded === true) {
+        streakCount += 1;
+      } else if (graded === false && streakCount > STREAK_BREAK_OVER) {
+        streakBreaking = true;
+      } else if (graded === false) {
+        streakCount = 0;
+      }
       var attemptPayload = {
         request_id: newPracticeRequestId(), problem_id: item.id,
         answer_text: answer, choices: choiceTexts.length ? choiceTexts.slice() : undefined,
@@ -1641,6 +1756,11 @@
       PracticeDeck.settle(practiceDeck, item.id, patch);
       persistDeck();
       renderDeckItem(currentProblem());
+      if (graded !== null) {
+        if (streakBreaking) breakStreak(streakBefore, true);
+        else if (graded === true) growStreak(streakBefore);
+        else setStreakNumber(streakCount, streakBefore);
+      }
       // The attempt itself is the durable record: one POST per submission,
       // before any rating. The session's rating later links back via attempt_id.
       ensureAttempt(currentProblem()).catch(showPracticeError);
