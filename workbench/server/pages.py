@@ -340,10 +340,10 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<button id='review-rating-action' class='outline sm hidden' type='button'>编辑自评</button>"
         "<span id='card-nav' class='hidden'><button id='card-prev' class='ghost' type='button'>上一张</button>"
         "<button id='card-next' class='ghost' type='button'>下一张</button></span></div><div id='feedback-area' class='feedback-card hidden'>"
-        "<label class='visually-hidden' for='rating-input'>自评分（1–5）</label>"
+        "<label class='visually-hidden' for='rating-input'>自评（1–5）</label>"
         "<input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='自评 1–5'>"
-        "<label class='visually-hidden' for='feedback-note'>卡点或心得（可选）</label>"
-        "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='卡点或心得（可选）'></textarea>"
+        "<label class='visually-hidden' for='feedback-note'>备注（可选）</label>"
+        "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='备注（可选）'></textarea>"
         "<button id='save-rating' class='primary sm'>记录并下一题</button>"
         "<button id='cancel-rating' class='ghost sm hidden' type='button'>取消</button></div></div></div></section>"
         "<div id='session-end-entry' class='session-end-entry hidden'>"
@@ -406,7 +406,7 @@ def _paper_practice_html(workspace_name):
         # 16.7 完成页 = 分层庆祝的三处承载位。承载位的静态样式必须等于终态：
         # 数字直接显示最终值、进度带静态满格、爆点与纸片静态不出现。
         "<section id='paper-completion' class='card lk-card hidden' aria-labelledby='paper-completion-title'>"
-        "<p class='section-kicker'>Congratulations!</p><h2 id='paper-completion-title'>完成练习</h2>"
+        "<p class='section-kicker'>本轮完成</p><h2 id='paper-completion-title'>完成练习</h2>"
         "<div id='paper-completion-stats' class='paper-completion-stats'></div>"
         # ① 统计数字槽位：JS 把逐项数字（带 data-lk-value）写进来，
         #    ticker 逐位滚动；写不进来的槽位保持空，不占位也不显示旧值。
