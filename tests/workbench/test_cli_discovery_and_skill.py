@@ -85,7 +85,7 @@ class CliDiscoveryTests(unittest.TestCase):
 
 
 class BundledSkillTests(unittest.TestCase):
-    def test_bundled_files_preserve_teaching_content_byte_for_byte(self):
+    def test_bundled_teaching_resources_are_readable(self):
         packaged = resources.files("workbench").joinpath("resources", "skills", SKILL_NAME)
         for name in ("SKILL.md", "TERMINOLOGY.md"):
             with self.subTest(name=name):
