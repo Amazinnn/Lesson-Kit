@@ -807,3 +807,39 @@ Home·End）。`aria-expanded` 全程同步。**面板内文本实测「ch06ch07
 
 **控制台 errors 0 / warnings 0**；token 取值全部命中（暖纸 `--surface-base` #fdf8ef ·
 夜纸 #1c1a16 · `--r-md` 12px · `--ink-strong` #221f1a）；导出实测降级路径生效。
+
+### 9.21 分组卡片 CSS + 完成页进度带落地（2 个 commit）
+
+| 项 | 改前 | 改后（运行时实测） |
+|---|---|---|
+| `.knowledge-group` | CSS 零命中 ⇒ 落回全局 `li` + `.knowledge-list li` 的 `12px 0` | `padding 0`、**无卡面**（`background` 透明 / `box-shadow` none / `border-width 0`）、组间 24px |
+| `.knowledge-group__title` | 零命中 ⇒ 落回全局 `h3`（14px/22px） | **12px / 18px / 600 / `--ink-muted`** ⇒ 是**标签不是卡**；上方留白 = 组间 24px（实测 24） |
+| `.knowledge-group__cards` | 零命中 | `display: flex` + `column` + `margin/padding 0` + `list-style: none` |
+| `.knowledge-row` | 裸 `li`（12px 0） | **卡面**：`--surface-card` / 12px 圆角 / `--elev-1` / **无描边** / 内距 8×16 / 行高 38px（夜纸同规格） |
+| **两条漏进嵌套的规则** | `.knowledge-list li` 与 `:first-child` **同时命中组 `<li>` 与每组首行** | 两条**删除**，改为只命中 `.knowledge-group__cards > .knowledge-row`；实测**三组的首行间距完全一致**（`margin-top 8` / `padding-top 8` / 间距 8），**排序换序后也不塌陷** |
+| `.lk-progress` 轨道 | **零命中** ⇒ `height 0`、无背景、填充是 `inline` ⇒ **整条带看不见** | 轨道 `height 10px` / `--surface-sunken` / 999px 圆角 / `overflow hidden`；填充 `block` / 铺满 / `--role-blue` / `transform-origin 0 5px`（left center）/ `scaleX(1)` |
+
+**进度带的「终态铁律」两条降级路径都实测过**：
+OS `prefers-reduced-motion: reduce` ⇒ `animation-name: none` + `scaleX(1)` + `fillRatio = 1`；
+应用内动效偏好关（`data-motion="off"`）⇒ 同上；
+且**完成页刚出现的那一刻**（early 采样）也是 `scaleX(1)` ⇒ **不停在 0**。
+
+**图谱零差异**（两个 commit 后各采一次）：区段 **20920 字节逐字节相同**（sha256 相同）、
+12 个裸名声明数各 1 次不变；**R-2 画布区 AE = 0**（按 `graph-isolation.md` §6.5 的九步协议采图：
+全新 context → `emulate_media(reduced_motion=reduce)` → `fonts.ready` → `scrollTo(0,0)` →
+等静止签名连续三次不变 → 断言滚动为 0 / 无 `.solving` / canvas 带 `.graph-renderer-active` /
+`#graph-tide` opacity 0.62 → `screenshot(animations:disabled)`）。
+
+**它为截图播种了一个多章池**（真实 `pool/dmath.db` 只有 ch06 一章 ⇒ 全课程口径下只有一组，
+看不出分组）：把 ch06 的知识点/题目/学习状态**重键**成 ch07(12) 与 ch08(8)，
+走查时透镜切「全课程」⇒ **3 组**（ch06 31 行 / ch07 12 行 / ch08 8 行）。
+
+**它报出的两处死规则**（`.knowledge-list .score` / `.reasons` / `.knowledge-row label`）
+⇒ 全仓无 markup 命中，**属于第 18 组该删的**（CD-056 / CD-109 早已登记），
+但删它们要同步改漂移登记表 ⇒ 留给文档同步那一轮一起做。
+
+**四条待裁决已裁**（**A-79**）：行内距**竖 8 / 横 16**（列表比卡片紧是对的）·
+组标题留白**留在组块外边距**（写在自己身上会撞 `li > h3` 的外边距折叠，
+要绕开就得 `display: flow-root` 新建布局上下文，代价大于收益）·
+**`.lk-progress` 轨道加 1px 内发丝线**（与记录页那三条轨道同语言；
+满格时被填充盖住看不见，但**庆祝生长过程中**会框住底槽 —— 那正是它该起作用的时候）。
