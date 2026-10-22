@@ -7,7 +7,7 @@
     </g>
     <g class="asset-empty__wash">
       <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116 C 166 122.1 145.6 127 120 127 C 94.4 127 74 122.1 74 116 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 138 88 Q 147.2 88.5 149.5 79.2 Q 140.3 78.7 138 88 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
       <circle cx="101" cy="108" r="15" fill="var(--asset-wash-yellow, #fdf3cf)"/>
       <circle cx="139" cy="100" r="13" fill="var(--asset-wash-red, #f9e5df)"/>
     </g>
@@ -27,8 +27,8 @@
       <circle cx="101" cy="108" r="15" stroke-width="3"/>
       <path d="M 101 93 L 104 85" stroke-width="2"/>
       <circle cx="139" cy="100" r="13" stroke-width="3"/>
-      <path d="M 138 88 Q 147.2 88.5 149.5 79.2 Q 140.3 78.7 138 88 Z" stroke-width="3"/>
-      <path d="M 138 88 L 146.1 82.4" stroke-width="1.5"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" stroke-width="3"/>
+      <path d="M 146 90 L 153.4 86.7" stroke-width="1.5"/>
     </g>
     <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
       <path d="M 86.2 105.4 A 15 15 0 0 1 93.5 95" stroke-width="1.5"/>
