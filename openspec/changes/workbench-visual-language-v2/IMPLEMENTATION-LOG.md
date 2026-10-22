@@ -52,12 +52,16 @@
 
 | 波 | 任务组 | 状态 | 备注 |
 |---|---|---|---|
-| W1 | 1–4 CSS 地基 | **进行中**（Step 1 `16d3ff89`、Step 2 收编 22 色 `4957c3bc` 已提交，剩 Step 3） | Step 1 = 新 token 层 + 旧 token 别名期，零 class/JS/结构变化 = 最安全回滚点 |
+| W1 | 1–4 CSS 地基 | ✅ **完成并提交**（Step 1 `16d3ff89`、Step 2 收编 22 色 `4957c3bc`） | Step 1 = 新 token 层 + 旧 token 别名期，零 class/JS/结构变化 = 最安全回滚点 |
 | W1 | 5.1–5.2 字体资产 | ✅ **完成并提交**（`072f540c`） | Regular 已落（923KB）。**600 字重因体积超标被砍**（规则：超标先砍字重不砍字表）→ 只声明 `font-weight: 400` |
 | W1 | 7 Markdown parity | ✅ **完成并提交** | 见 §4 |
-| W2 | 6 阅读层 · 8 动效 token · 5.3–5.4 @font-face · 11–15 设置视图+主题+壳层 | 待派 | **全部要动 `workbench.css` ⇒ 必须等 W1 的 F1 收工**（同一文件不可并行） |
+| W1 | 9 SVG 资产 · 10 音效 | ✅ **完成并提交** | 16 件 SVG + 4 条自制音效 |
+| W2 | 6 阅读层 · 8 动效 token · 5.3 @font-face | ⚠️ **CSS 侧已提交**（`e60fd920`），**JS 侧与 HTML 侧未做** | 见 **§8** 与 `decisions.md` **A-41 / A-42** |
+| W2 | 11 设置视图 · 5.4 缓存策略 | ✅ **完成并提交**（`eed1f138`） | 含主题 / 动效 / 声音三项外观偏好 |
+| W2 | `agent-ui.css` 旧名迁移（2.3 的前置） | ✅ **完成，零差异**（见 §8） | 75 处引用 → 0 处残留，全部精确落到别名目标 |
 | W3 | 16–17 练习页 · 18 知识点+试卷 · 19–20 记录中心+时间视图 | 待派 | 分属不同文件，可并行 |
-| W4 | 21 骨架屏+转场 · 9 SVG 资产 · 10 音效 · 22 验收关卡 | **9/10 已派**（不碰 CSS） | 21 与 22 待派 |
+| W2c | 12–15 夜纸值集 · 三栏几何 · 标志带 · 顶栏 | 待派 | 与第 6/8 组同改 `workbench.css` ⇒ 只能串行 |
+| W4 | 21 骨架屏+转场 · 22 验收关卡 | 待派 | 22 是所有者的签字关卡 |
 | W5 | 23–28 铺开 | 待派 | **等第 22 组关卡签字** |
 
 ### 已发现并已裁决的「实现期新增裁决」
@@ -199,3 +203,83 @@
   且不均匀（+307 / +702，甚至 −100）。**一律按选择器 / 声明 / 注释文本定位**
   （`grep -n "<选择器>" workbench/server/static/workbench.css`），
   `briefs/ANCHOR-REMAP.md` 只作交叉核对（它自己也已过期）。
+
+---
+
+## 8. 第二次收工快照（2026-10-22 17:2x，第 2 次关机前）
+
+> **本节是当前状态的唯一权威**（§7 是第 1 次关机时的快照，已过期但仍记录了当时的判断）。
+> 触发原因：两名实现 agent（W2a、F11）**在收尾阶段因供应商鉴权失败（Unauthorized）退出**，
+> 磁盘上的成果都还在，但**它们的最终回报没写出来** ⇒ 本节由主会话逐条核实后补写。
+
+### 8.1 分支与提交
+
+- 分支 `feat/workbench-visual-language-v2`（**未并入 main**），fork 点 `944b867c`。
+- 收工时的 HEAD：`ba650e20`（勾选第 11 组 + 5.4）。
+- 本次新增提交：W2a 的第 6/8 组 CSS（`e60fd920`）→ 随后补 F11 的 `agent-ui.css` 迁移与本节文档。
+
+### 8.2 三个 agent 的最终交付（实测数字）
+
+| agent | 范围 | 结果 | 提交 |
+|---|---|---|---|
+| W2b | 第 11 组设置视图 + 5.4 缓存策略 | ✅ 完成 | `eed1f138` |
+| W2a | 第 6 组阅读层 · 第 8 组动效 · 5.3 @font-face | ⚠️ **CSS 侧完成，JS/HTML 侧未做** | `e60fd920` |
+| F11 | `agent-ui.css` 旧名迁移（2.3 的前置） | ✅ **完成，零差异** | 本次提交 |
+
+**W2a 的 CSS 侧实测**（`workbench.css`，提交后 115,923 B）：
+
+- `@keyframes` 共 **23** 条，其中第 8 组要求的 20 条**全部在位**
+  （`lk-squash-bounce` / `lk-rise-in-8` / `lk-rise-in-12` / `lk-skeleton-sweep` /
+  `lk-error-nudge` / `lk-combo-in` / `lk-combo-out` / `lk-flame-ignite` / `lk-progress-fill` /
+  `lk-celebrate-burst` / `lk-confetti-fall` / `lk-flip-roll` / `lk-spin` +
+  台灯四段 7 条）。
+- 动效 token 五档时长 + 三档缓动**全部落位**；散落 transition 已收编到 token
+  （真实 `transition: all` 命中 **0**，只剩注释里的黑名单声明）。
+- 分级降级闸门**已取代**旧的一刀切 `none !important`（`workbench.css` L2452 起：
+  `animation-name: none !important` + `transition-property: opacity !important`），
+  且**起始态只写在 `@keyframes` 内部**（静态样式 = 终态）。
+- `@font-face`：`font-display: swap` + `unicode-range` 限中文 +
+  `font-weight: 400 600`（可变声明，**不引用不存在的 SemiBold 文件**）→ 5.3 **完成**。
+- **`.wb-reading--stem` 未实现**（全仓 0 命中）⇒ 6.1 暂不勾选。
+
+**F11 的迁移实测（零差异，已用脚本证明）**：
+
+- `agent-ui.css` 迁移前 **75 处**旧名引用（17 个不同名字），迁移后 **0 处**残留。
+- 逐条比对：每个旧名的**新名字 == 该旧名在 `workbench.css` 里的别名目标**
+  ⇒ **失配 0 条**，即**渲染结果零变化**。
+- 同步改了 `tests/workbench/agent_ui_v1.test.js` 与
+  `tests/workbench/test_ui_routes.py` 的**逐字断言**（旧名字面量 → 新名字面量）。
+
+### 8.3 基线验证（第 2 次收工时全绿）
+
+```bash
+python -m pytest tests -q                                  # 1164 passed in 272.07s
+python -m compileall -q lessonkit.py workbench pipeline pool tests   # OK
+openspec validate --specs --strict                        # ✓ 19 passed, 0 failed
+python lessonkit.py guard extract-problems --course dmath --chapter ch06   # Result: PASS
+```
+
+### 8.4 未完成清单（**下一波从这里接**）
+
+| 条目 | 卡在哪 | 谁来做 |
+|---|---|---|
+| 6.1 | `.wb-reading--stem` 变体未实现 | 拥有 `workbench.css` 的下一波（与 6.2/6.3 同波） |
+| 6.2 / 6.3 | 20 个 `.rich-text` 挂载点未改名；`.rich-text` 规则未删 | **必须**同时拥有 `pages.py` + `workbench.js` + `practice-flow.js` + `paper-practice.js` 的 agent（A-41 段二） |
+| 6.4 / 6.5 | 密度分区的「记录页 20 行高度小于基线」需浏览器实测；阶段验收未跑 | 第 22 组验收关卡 |
+| 8.4 / 8.7JS / 8.8JS | 统计数字滚动 / 火苗 / 进度带 / 台灯 JS 写色 / 两档庆祝落点 —— 全未做 | 动效 JS 编排小波（A-42） |
+| 8.6 / 8.10 / 11.7 等阶段验收 | 截图走查未跑 | 各组收工时 + 第 22 组 |
+| `--lk-ripple-base` | 新钩子落在 `--lk-*` 家族，会卡住 2.3 的「非图谱区 `--lk-` 归零」 | 下一波改 `workbench.css` 时顺带改名（A-42 第 2 条） |
+| 3 处 `--dsw-border-l1` | **图谱详情面板**元素，受冻结块保护，换名会破 G-5 | **留旧名**，等图谱 change 接手（A-42 第 3 条） |
+| 4.3 的 caption/dimmed | 同上 | **留旧名**（待所有者确认，见 §5） |
+
+### 8.5 下一波的顺序与文件所有权
+
+> **同一文件必串行** —— 本轮所有返工都源于此。
+
+| 顺序 | 波 | 内容 | 文件 |
+|---|---|---|---|
+| 1 | W2c | 第 12–15 组 + 6.1 的 `--stem` + `--lk-ripple-base` 改名 | 只动 `workbench.css` |
+| 2 | W3 | 第 16–20 组 + **6.2/6.3 的 HTML 迁移** + **动效 JS 编排** | `pages.py` / `workbench.js` / `practice-flow.js` / `paper-practice.js` / `records` 相关脚本 |
+| 3 | W4 | 第 21 组骨架屏+转场、第 22 组**验收关卡** | 依赖前面全部 |
+| 4 | W5 | 第 23–28 组铺开 | **等所有者签第 22 组关卡** |
+| 5 | 图谱 change | 126 任务 / 13 组 | 与 W2c / W3 正面冲突 ⇒ 排最后 |

@@ -92,8 +92,8 @@ test("server shell loads Agent UI v1 foundation and declares transient surfaces"
   assert.ok(pages.includes("aria-controls='agent-activity-body'"));
   assert.ok(pages.includes("/static/agent-ui.css"));
   assert.ok(pages.includes("/static/agent-ui.js"));
-  assert.ok(css.includes("var(--lk-paper)"));
-  assert.ok(css.includes("var(--lk-blue)"));
+  assert.ok(css.includes("var(--surface-card)"));
+  assert.ok(css.includes("var(--role-blue)"));
   assert.equal(css.includes("#0b0f19"), false, "Agent UI must not introduce a dark island");
 });
 

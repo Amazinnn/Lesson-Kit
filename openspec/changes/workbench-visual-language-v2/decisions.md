@@ -1567,6 +1567,67 @@ mockup 修正后仍有意保留了近黑底，并主动问「发送按钮要不�
    §5.1 又断言文件数恒为 16 ⇒ 用 `assets/preview.html` 内联全部资产来满足「一眼看全」，
    而不是 sprite。（这条同时解释了为什么 mockup 的图标 sprite 是评审件、不是产品做法。）
 
+### A-41 `.rich-text` 退役拆成两段落地（CSS 段已落，HTML 段待做）
+
+> 来源：W2a（第 6/8 组）收工。W2a 的任务书限定**只改 `workbench.css`**，
+> 而 `.rich-text` 的 20 个挂载点分布在 `pages.py`(4) / `workbench.js`(2) /
+> `practice-flow.js`(9) / `paper-practice.js`(4) —— **不在它的文件所有权范围内**。
+
+**实测现状**（提交 `e60fd920` 之后）：
+
+| 项 | 状态 |
+|---|---|
+| `.wb-reading` 规则层 | **已落**（`workbench.css` L1120–1300 一整块） |
+| `.rich-text` 规则 | **仍在**，且与 `.wb-reading` **逐项同值**（同一组选择器并列写） |
+| `.wb-reading` 的 HTML 挂载点 | **0 处**（`.wb-reading` 在 `workbench/` 全仓只出现在 CSS 与注释里） |
+| `.rich-text` 的 HTML 挂载点 | **20 处**（未动） |
+| `.wb-reading--stem`（题面变体） | **未实现**（全仓 0 命中） |
+
+**裁决**：
+
+1. **6.3「`.rich-text` 整体退役」拆成两段**：
+   - **段一（CSS 侧，已完成）**：阅读层自包含（自带 h1–h4、17px/1.75/0.7em/38em），
+     `.rich-text` 与 `.wb-reading` **同值并存** ⇒ 不存在「同挂一个元素时谁赢取决于文件顺序」
+     的老病（那是 `.rich-text` 旧规则与阅读层**冲突**才有的问题，现在两者一致）。
+   - **段二（HTML 侧，待做）**：把 20 个挂载点的 `class` 从 `rich-text` 改成 `wb-reading`
+     （题面处同时挂 `wb-reading--stem`），**再删掉 `.rich-text` 的全部选择器**。
+   ⇒ **段二没做完之前，6.2 / 6.3 不得勾选**，6.1 也因缺 `--stem` 变体而**暂不勾**。
+2. **段二必须由一个同时拥有 `pages.py` / `workbench.js` / `practice-flow.js` /
+   `paper-practice.js` 的 agent 做**，不得塞进 CSS-only 的波次（否则又是并行冲突）。
+3. **过渡期必须保证「零可见变化」**：段二落地前后各截一次图，逐像素比对为 0
+   （因为两侧规则同值）。若段二落地后出现差异，说明迁移漏了一处挂载点或改错了类名。
+
+### A-42 第 8 组的 JS 侧归属，与三处命名/引用残留
+
+W2a 只做了 CSS，**第 8 组里所有需要动 JS 的条目没有做**（不是漏做，是文件所有权之外）：
+
+| 条目 | CSS 侧 | JS 侧 | 归属 |
+|---|---|---|---|
+| 8.4 统计数字滚动 / 火苗 / 进度带 | 关键帧已在 | **未做** | 需拥有 `workbench.js` / `records` 页脚本的波次 |
+| 8.7 台灯转场三层 | 三层样式 + 关键帧已在 | **未做**（JS 未在转场**开始时**写目标主题底色） | 同上 |
+| 8.8 两档庆祝 + 数字滚动落地 | 关键帧已在 | **未做**（无落点、无两档判定） | 同上 |
+| 8.3 容器动画 | 已在（`#middle-page > *`，纯 CSS，无一次性类名） | — | **已完** |
+| 8.5 性能纪律与黑名单 | 已在（`transition: all` 真实命中 **0**；3 处 `infinite` 全是规范要求的常驻动画） | — | **已完** |
+| 8.9 分级降级闸门 | 已在（`workbench.css` L2452 起，`animation-name: none` + `transition-property: opacity`） | 偏好读取在第 11 组 | **已完** |
+
+**裁决**：
+
+1. **8.4 / 8.7JS / 8.8 拆出为独立的「动效 JS 编排」小波**，与第 16–20 组共用
+   `workbench.js` / `practice-flow.js` 的文件所有权，**不单独派**。
+2. **`--lk-ripple-base` 必须改名**：它是第 8 组**新造**的钩子变量
+   （`workbench.css` L2347 `background: var(--lk-ripple-base, var(--surface-base))`），
+   但落在了 `--lk-*` 家族里 ⇒ 会**卡住任务 2.3 的验收**（「非图谱区 `--lk-` / `--dsw-` 归零」）。
+   ⇒ 改名到不与旧别名冲突的名字（建议 `--ripple-base`），由拥有 `workbench.css` 的下一波顺带改。
+3. **图谱详情面板的 3 处 `--dsw-border-l1`**（`workbench.css` L915 / L918 / L947，
+   选择器是 `#graph-detail-panel .graph-dashboard-metrics` 与 `.graph-relation-row`）
+   **不是漏改**：这三处属**图谱页**元素，由「图谱页冻结块」
+   （`body:has(#layout[data-page="graph"])`，L330–407）把 `--dsw-border-l1` 钉回
+   `rgb(0 0 0 / 4%)` ⇒ 换名会破坏图谱逐像素一致（G-5）。
+   ⇒ 与 4.3 的 caption/dimmed **同属一类**：**留旧名**，等
+   `graph-node-visual-language` change 接手图谱自身适配时一起清。
+   （后果：3.3 的字面验收「`grep --dsw-border-l` 归零」**不成立**，改为
+   「非图谱页元素的 `--dsw-border-l` 归零」。）
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，
