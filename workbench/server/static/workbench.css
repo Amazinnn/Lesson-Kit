@@ -3,8 +3,9 @@
  * · 结构 token（权威表 §2，两主题同值）+ 值 token（权威表 §3，浅色一套 / 夜纸一套）：
  *   取值的**唯一权威**是 openspec/changes/workbench-visual-language-v2/design-notes/
  *   night-paper-tokens.md —— 本文件的每个值逐字转写自它，未自造、未换算。
- * · 旧 token（--lk-* / --dsw-*）走**别名期**：定义改成指向新 token，
- *   **引用点一个都没动** ⇒ 回滚 = 把别名定义改回原值（一条提交）。
+ * · 旧 token（--lk-* / --dsw-*）的**别名期已于任务 2.3 收尾**：别名定义与旧名
+ *   引用点一并删除；唯一保留的旧名是契约外的 `--dsw-state-success`
+ *   （tasks.md 4.4「本条不动它」）。
  * · 图谱兼容区：图谱有自己的 12 个裸名 token（图谱专用的根 token 块），新层与它们**零同名**；
  *   图谱页的外壳取值由下方「图谱页冻结块」钉回改造前的值
  *   （见 design.md D-1 与 design-notes/graph-isolation.md B-1…B-6）。
@@ -147,8 +148,9 @@
   --ink-on-warm: #221f1a;   /* 黄色暖面上的文字 */
   --ink-inverse: #fffdf7;   /* 代码块反白面上的文字 */
 
-  /* ---- §3.3 规则线（3）---- */
+  /* ---- §3.3 规则线（4）---- */
   --rule-hair: #e6dcc4;      /* 分隔线（装饰性，无对比度要求） */
+  --rule-faint: rgb(0 0 0 / 4%); /* 更弱一档的发丝线（内容块内的极弱分隔；图谱详情面板） */
   --rule-control: #847552;   /* 控件边界（≥3:1）——「不用描边」的例外 1 */
   --rule-structure: #221f1a; /* 单侧结构线 2px——「不用描边」的例外 3 */
 
@@ -235,39 +237,10 @@
   --color-scheme: light;
   color-scheme: var(--color-scheme); /* 接到 UA：原生控件 / 滚动条跟随主题 */
 
-  /* ==================================================================
-     别名期：旧 token 指向新 token —— **引用点一个都没动**
-     每条都带「别名期，勿新增引用」标记。别名期结束（任务 2.3）时
-     连同这些定义一起删掉；回滚只需把这里改回原值（一条提交）。
-     ================================================================== */
-  --lk-paper: var(--surface-card);          /* 别名期，勿新增引用 */
-  --lk-paper-shade: var(--surface-sunken);  /* 别名期，勿新增引用 */
-  --lk-ink: var(--ink-strong);              /* 别名期，勿新增引用 */
-  --lk-blue: var(--role-blue);              /* 别名期，勿新增引用 */
-  --lk-yellow: var(--role-yellow);          /* 别名期，勿新增引用 */
-  --lk-red: var(--role-red);                /* 别名期，勿新增引用 */
-  --dsw-font-code: var(--font-mono);        /* 别名期，勿新增引用 */
-  --dsw-bg-layer-1: var(--surface-card);    /* 别名期，勿新增引用 */
-  --dsw-bg-layer-2: var(--surface-sunken);  /* 别名期，勿新增引用 */
-  --dsw-sidebar-fill: var(--surface-sunken);/* 别名期，勿新增引用 */
-  --dsw-label-primary: var(--ink-strong);   /* 别名期，勿新增引用 */
-  --dsw-label-secondary: var(--ink-muted);  /* 别名期，勿新增引用 */
-  --dsw-label-tertiary: var(--ink-faint);   /* 别名期，勿新增引用 */
-  --dsw-label-dimmed: var(--ink-faint);     /* 别名期，勿新增引用 */
-  --dsw-label-caption: var(--ink-faint);    /* 别名期，勿新增引用 */
-  --dsw-border-l1: var(--rule-hair);        /* 别名期，勿新增引用 */
-  --dsw-border-l2: var(--rule-hair);        /* 别名期，勿新增引用 */
-  --dsw-shadow-lv1: var(--elev-1);          /* 别名期，勿新增引用 */
-  --dsw-shadow-lv2: var(--elev-2);          /* 别名期，勿新增引用 */
-  --dsw-shadow-lv3: var(--elev-3);          /* 别名期，勿新增引用 */
-  --dsw-state-error: var(--role-red);       /* 别名期，勿新增引用 */
-  /* ---- 补齐：4 个「引用了但从未定义」的变量（任务 2.2）----
-     ⚠️ --dsw-border-subtle 原本**没有 fallback** ⇒ 那条声明整条失效 ⇒ 表格线
-     回落成正文色；补齐后表格线变成「暖灰规则线」，属**可见变化**（已单独截图）。 */
-  --dsw-radius-sm: var(--r-xs);             /* 别名期，勿新增引用 */
-  --dsw-radius-md: var(--r-md);             /* 别名期，勿新增引用 */
-  /* 契约外遗留：DSH 的 success 态，**不表达「答对」**；权威表没有绿档，
-     处置随 token 收口另行决定（D-3「范围提示」），别名期暂留原值。 */
+  /* ---- 契约外遗留：DSH 的 success 态，**不表达「答对」**（权威表没有绿档，
+     「答对」= 中性墨 + 勾形几何，tasks.md 4.4）——
+     **本条按 4.4「本条不动它」保留原名原值**，它是这条自定义属性的**来源**，
+     引用点（`.status-dot.ok`）直接读它 ⇒ **全站唯一的旧名残留**。 */
   --dsw-state-success: #22c55e;
 }
 
@@ -295,6 +268,7 @@ html[data-theme="night"] {
   --ink-inverse: #f4ede0;
 
   --rule-hair: #332d25;
+  --rule-faint: rgb(255 238 210 / 4%);
   --rule-control: #7d7361;
   --rule-structure: #ece3d3;
 
@@ -356,7 +330,8 @@ html[data-theme="night"] {
    写法依据：design-notes/graph-isolation.md B-1（圆角）/ B-3（paper 系列）
    / B-6（body 底色）；作用域挂在 body 上是为了连 body 自身的底色与
    #topbar（顶栏在 #layout 之外）一起冻结。
-   ⚠️ 别名期结束（任务 2.3）时，这块要改成钉**新** token 名。
+   ✅ 别名期已结束（任务 2.3）：这块**只钉新 token 名** —— 旧名 pin（37 条）
+   随旧名一起消失（留着就是悬空定义），新名 pin 一条不动。
    ========================================================================= */
 body:has(#layout[data-page="graph"]) {
   /* 新 token 层的钉回值：引用点改用新 token 后，外壳取值仍与改造前一致 */
@@ -379,48 +354,25 @@ body:has(#layout[data-page="graph"]) {
   --r-md: 6px;                  /* 旧 --dsw-radius-md 值 */
   --r-lg: 22px;                 /* 旧 --dsw-radius-lg 值 */
   --rule-hair: rgb(0 0 0 / 10%);/* 旧 l2 值 */
+  --rule-faint: rgb(0 0 0 / 4%); /* 旧 --dsw-border-l1 值（更弱一档的发丝线） */
   --rule-control: rgb(0 0 0 / 10%); /* 旧 l2 值（控件边界） */
-  --lk-paper: #fffdf7;
-  --lk-paper-shade: #f3f1ea;
-  --lk-ink: #171717;
-  --lk-blue: #2457c5;
-  --lk-yellow: #f2c94c;
-  --lk-red: #d6453d;
-  --dsw-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
-    Helvetica, Arial, sans-serif;
-  --dsw-font-code: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
-    "Liberation Mono", Menlo, Courier, "PingFang SC", "Microsoft YaHei";
-  --dsw-bg-base: #fffdf7;
-  --dsw-bg-layer-1: #fffefa;
-  --dsw-bg-layer-2: #f3f1ea;
-  --dsw-sidebar-fill: #f3f1ea;
-  --dsw-label-primary: #171717;
-  --dsw-label-secondary: #61666b;
-  --dsw-label-tertiary: #81858c;
-  --dsw-label-dimmed: #e1e5ee;
-  --dsw-label-caption: #adb2b8;
-  --dsw-brand-primary: #2457c5;
-  --dsw-brand-hover: #1d469f;
-  --dsw-brand-accent: #2457c5;
-  --dsw-brand-accent-soft: #e7edff;
-  --dsw-bubble: #edf2ff;
-  --dsw-bubble-highlight: #d9e3ff;
-  --dsw-border-l1: rgb(0 0 0 / 4%);
-  --dsw-border-l2: rgb(0 0 0 / 10%);
-  --dsw-border-l3: rgb(0 0 0 / 12%);
-  --dsw-interactive-bg-hover: rgb(38 49 72 / 6%);
-  --dsw-interactive-bg-active: rgb(38 49 72 / 10%);
-  --dsw-shadow-lv1: 0 2px 4px rgb(0 0 0 / 5%);
-  --dsw-shadow-lv2: 0 4px 12px rgb(0 0 0 / 2%), 0 2px 8px rgb(0 0 0 / 4%);
-  --dsw-shadow-lv3: 0 0 1px rgb(0 0 0 / 20%), 0 0 4px rgb(0 0 0 / 2%),
-    0 12px 32px rgb(0 0 0 / 8%);
-  --dsw-state-success: #22c55e;
-  --dsw-state-warn: #b88700;
-  --dsw-state-error: #d6453d;
-  --dsw-radius-sm: 6px;
-  --dsw-radius-md: 6px;
-  --dsw-radius-lg: 22px;
+  /* ---- 图谱页的 caption / dimmed 两档（decisions.md A-43 写法乙）----
+     4.3 的字面合并把 `--dsw-label-caption`（5 处）与 `--dsw-label-dimmed`
+     （1 处 `::placeholder`）并进 `--ink-faint` ⇒ **非图谱页取值一字不变**
+     （旧别名本来就解析到 `--ink-faint`）。
+     ⚠️ 但**图谱页不能跟着变**：改造前这两个旧名在图谱页上取的是
+     `--dsw-label-caption: #adb2b8` / `--dsw-label-dimmed: #e1e5ee`，
+     与图谱作用域里 `--ink-faint` 的钉回值 `#81858c` **不是同一档**。
+     ⇒ 按 A-43 的**写法乙**：在图谱作用域里**新增图谱专用的两个 token 名**，
+     由那几条规则在图谱页改读它（非图谱页这两个名字**不存在** ⇒ 回落 `--ink-faint`）。
+     ⚠️ **不得**改成在图谱作用域里把 `--ink-faint` 钉成 `#adb2b8` —— 那会连带
+     改变图谱页上**其它** `--ink-faint` 消费者（`.weak-item .score` 等），反而破 G-5。
+     ⚠️ 写法甲（按规则选择器逐条钉 `color: #adb2b8`）**实测不可用**：
+     在图谱作用域里写一条 `::placeholder` 规则，会让浏览器重画原生控件，
+     图谱页顶栏的章节透镜 `<select>` 圆角边框出现 **22 px 的 ±1/255 抗锯齿差异**
+     （肉眼不可见，但 G-5 是「零差异」断言）⇒ 取写法乙，实测全页 AE = 0。 */
+  --graph-page-caption: #adb2b8; /* 旧 --dsw-label-caption 值 */
+  --graph-page-dimmed: #e1e5ee;  /* 旧 --dsw-label-dimmed 值 */
 
   /* ---- 资产派生层同样钉回「改造前」的取值（任务 12.2）----
      ⚠️ 为什么必须显式钉：自定义属性的 `var()` 替换发生在**声明它的那一层**——
@@ -598,7 +550,7 @@ body {
   margin-right: 34px;
 }
 #topbar .meta { color: var(--ink-muted); font-size: 13px; }
-.topbar-separator { color: var(--dsw-label-caption); }
+.topbar-separator { color: var(--graph-page-caption, var(--ink-faint)); }
 
 /* ---- 章节透镜 —— 自绘下拉面板（tasks.md 15.4 / spec「Chapter switch in the top bar」）
    面板：圆角（`--r-md`）+ 浮起面 + `--elev-3` 阴影 + 项间分隔线；
@@ -826,7 +778,7 @@ body {
 .setting-row input { margin-top: 2px; }
 #next-problem { margin-left: auto; }
 .side-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.side-heading span { color: var(--dsw-label-caption); font-size: 11px; }
+.side-heading span { color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; }
 /* 计数徽标：标题恒定、计数随内容变 */
 .count-badge {
   flex: none;
@@ -898,12 +850,12 @@ select:focus { border-color: var(--role-blue); outline: none; }
 }
 .weak-item:hover { background: var(--veil-hover); }
 .weak-item .id,
-.item-id { display: block; color: var(--dsw-label-caption); font-size: 11px; font-family: var(--font-mono); }
+.item-id { display: block; color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; font-family: var(--font-mono); }
 .weak-item .weak-title { display: block; color: var(--ink-strong); font-weight: 600; }
 .weak-item .score { color: var(--ink-faint); font-size: 12px; }
 .weak-item .reasons {
   grid-column: 1 / -1;
-  color: var(--dsw-label-caption);
+  color: var(--graph-page-caption, var(--ink-faint));
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
@@ -932,7 +884,7 @@ button {
 button:disabled { cursor: not-allowed; opacity: 0.4; }
 button.primary:disabled {
   background: var(--surface-sunken);
-  color: var(--dsw-label-caption);
+  color: var(--graph-page-caption, var(--ink-faint));
   opacity: 1;
 }
 button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; border-radius: 14px; }
@@ -971,7 +923,7 @@ textarea, input[type="text"], input[type="number"], input:not([type]) {
   color: var(--ink-strong);
 }
 textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
-::placeholder { color: var(--dsw-label-dimmed); }
+::placeholder { color: var(--graph-page-dimmed, var(--ink-faint)); }
 
 /* reading flow — teacher stays flat, learner replies form the only bubble */
 .msg {
@@ -1340,10 +1292,10 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
   margin: 16px 0;
-  border: 1px solid var(--dsw-border-l1);
+  border: 1px solid var(--rule-faint);
   border-radius: var(--r-xs);
   overflow: hidden;
-  background: var(--dsw-border-l1);
+  background: var(--rule-faint);
 }
 .column-resizer { position: absolute; top: 0; bottom: 0; width: 8px; z-index: 10; cursor: col-resize; }
 #left-resizer { right: -4px; }
@@ -1372,7 +1324,7 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   gap: 8px;
   align-items: start;
   padding: 8px 9px;
-  border: 1px solid var(--dsw-border-l1);
+  border: 1px solid var(--rule-faint);
   border-radius: var(--r-xs);
   background: var(--surface-card);
 }
@@ -1554,105 +1506,84 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
    共享阅读版式层 `.wb-reading` —— 内容排版（markdown 语义元素）
    （design.md D-5 / decisions.md A-6 / tasks.md 6.1）
 
-   **一份规则，三个挂载名**：
+   **一份规则，两个挂载名**：
    · `.wb-reading`       —— 共享阅读版式层（后续由 HTML 挂到六处阅读面）
    · `.wb-reading--stem` —— **题面变体**（tasks.md 6.1）：同刻度的语义变体，
      可**独立挂载**；取值与正文**逐项相同**（D-5）
-   · `.rich-text`  —— **过渡期挂载名**（HTML 迁移到 `.wb-reading` 后本条一并删除；
-     本波**保留**，等所有挂载点迁完的那一波统一删 —— decisions.md A-41）
 
-   三条路径的取值**逐项相同** ⇒ 同一元素同时挂 `.wb-reading` 与过渡期的
-   `.rich-text` 也不会出现「取决于 CSS 文件先后顺序」的契约漂移
-   （这正是 D-5 反对「两套并行规则」的核心诉求）。
+   ✅ **任务 2.3 已删掉过渡期挂载名 `.rich-text`**（decisions.md A-41）：
+     HTML 侧的挂载点**全仓归零**（`.py` / `.js` 命中 0）⇒ 那 36 处规则是**死规则**；
+     合并时只去掉 `.rich-text` 那半选择器，**保留 `.wb-reading` 那半**
+     （取值逐项未动 ⇒ 非图谱页像素不变）。
 
    ⚠️ 本块只管**内容排版**（段距 / 标题层级 / 列表 / 引用 / 代码 / 表格），
    **不管阅读刻度**（衬线字族 / 17px / 行高 1.75 / 行长 38em）——
    刻度只挂在真正的阅读面（见下方「阅读刻度」块）。原因：practice-flow.js 的
-   `.rich-text` 同时用在**选项 / 反馈 / 判定**等界面面（D-4 的 B 组）上，
-   那里必须留在 `--font-ui`。
+   选项 / 反馈 / 判定等界面面（D-4 的 B 组）必须留在 `--font-ui`。
    ========================================================================= */
-:is(.wb-reading, .wb-reading--stem),
-.rich-text {
+:is(.wb-reading, .wb-reading--stem) {
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
-:is(.wb-reading, .wb-reading--stem) > :first-child,
-.rich-text > :first-child {
+:is(.wb-reading, .wb-reading--stem) > :first-child {
   margin-top: 0;
 }
-:is(.wb-reading, .wb-reading--stem) > :last-child,
-.rich-text > :last-child {
+:is(.wb-reading, .wb-reading--stem) > :last-child {
   margin-bottom: 0;
 }
 :is(.wb-reading, .wb-reading--stem) h1,
 :is(.wb-reading, .wb-reading--stem) h2,
 :is(.wb-reading, .wb-reading--stem) h3,
-:is(.wb-reading, .wb-reading--stem) h4,
-.rich-text h1,
-.rich-text h2,
-.rich-text h3,
-.rich-text h4 {
+:is(.wb-reading, .wb-reading--stem) h4 {
   font-family: var(--font-ui);
   color: var(--ink-strong);
   line-height: 1.35;
 }
-:is(.wb-reading, .wb-reading--stem) h1,
-.rich-text h1 {
+:is(.wb-reading, .wb-reading--stem) h1 {
   margin: 18px 0 8px;
   font-size: 24px;
 }
-:is(.wb-reading, .wb-reading--stem) h2,
-.rich-text h2 {
+:is(.wb-reading, .wb-reading--stem) h2 {
   margin: 16px 0 7px;
   font-size: var(--fs-h2);
 }
-:is(.wb-reading, .wb-reading--stem) h3,
-.rich-text h3 {
+:is(.wb-reading, .wb-reading--stem) h3 {
   margin: 14px 0 6px;
   font-size: var(--fs-h3);
 }
-:is(.wb-reading, .wb-reading--stem) h4,
-.rich-text h4 {
+:is(.wb-reading, .wb-reading--stem) h4 {
   margin: 12px 0 6px;
   font-size: var(--fs-h4);
 }
-:is(.wb-reading, .wb-reading--stem) p,
-.rich-text p {
+:is(.wb-reading, .wb-reading--stem) p {
   margin: 0 0 .7em;
 }
 :is(.wb-reading, .wb-reading--stem) ul,
-:is(.wb-reading, .wb-reading--stem) ol,
-.rich-text ul,
-.rich-text ol {
+:is(.wb-reading, .wb-reading--stem) ol {
   margin: 0 0 .7em;
   padding-left: 1.5em;
 }
-:is(.wb-reading, .wb-reading--stem) li + li,
-.rich-text li + li {
+:is(.wb-reading, .wb-reading--stem) li + li {
   margin-top: 3px;
 }
-:is(.wb-reading, .wb-reading--stem) blockquote,
-.rich-text blockquote {
+:is(.wb-reading, .wb-reading--stem) blockquote {
   margin: 0 0 .7em;
   padding: 4px 12px;
   border-left: 2px solid var(--rule-structure);
   color: var(--ink-muted);
 }
-:is(.wb-reading, .wb-reading--stem) code,
-.rich-text code {
+:is(.wb-reading, .wb-reading--stem) code {
   font-family: var(--font-mono);
   font-size: .82em;
   background: var(--veil-hover);
   border-radius: 4px;
   padding: 1px 4px;
 }
-:is(.wb-reading, .wb-reading--stem) :not(pre) > code,
-.rich-text :not(pre) > code {
+:is(.wb-reading, .wb-reading--stem) :not(pre) > code {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-:is(.wb-reading, .wb-reading--stem) pre,
-.rich-text pre {
+:is(.wb-reading, .wb-reading--stem) pre {
   max-width: 100%;
   margin: 12px 0;
   padding: 12px 14px;
@@ -1660,60 +1591,48 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   border-radius: var(--r-md);
   background: var(--surface-sunken);
 }
-:is(.wb-reading, .wb-reading--stem) table,
-.rich-text table {
+:is(.wb-reading, .wb-reading--stem) table {
   border-collapse: collapse;
   width: 100%;
 }
-:is(.wb-reading, .wb-reading--stem) .rich-table-wrap,
-.rich-text .rich-table-wrap {
+:is(.wb-reading, .wb-reading--stem) .rich-table-wrap {
   max-width: 100%;
   margin: 10px 0;
   overflow-x: auto;
 }
 :is(.wb-reading, .wb-reading--stem) th,
-:is(.wb-reading, .wb-reading--stem) td,
-.rich-text th,
-.rich-text td {
+:is(.wb-reading, .wb-reading--stem) td {
   border: 1px solid var(--rule-hair);
   padding: 5px 9px;
   text-align: left;
   vertical-align: top;
 }
-:is(.wb-reading, .wb-reading--stem) th,
-.rich-text th {
+:is(.wb-reading, .wb-reading--stem) th {
   background: var(--surface-sunken);
   font-weight: 600;
 }
-:is(.wb-reading, .wb-reading--stem) .math.display,
-.rich-text .math.display {
+:is(.wb-reading, .wb-reading--stem) .math.display {
   max-width: 100%;
   overflow-x: auto;
 }
-:is(.wb-reading, .wb-reading--stem) pre code,
-.rich-text pre code {
+:is(.wb-reading, .wb-reading--stem) pre code {
   padding: 0;
   background: transparent;
 }
-:is(.wb-reading, .wb-reading--stem) a,
-.rich-text a {
+:is(.wb-reading, .wb-reading--stem) a {
   color: var(--role-blue);
   text-decoration: none;
 }
-:is(.wb-reading, .wb-reading--stem) a:hover,
-.rich-text a:hover {
+:is(.wb-reading, .wb-reading--stem) a:hover {
   text-decoration: underline;
 }
-:is(.wb-reading, .wb-reading--stem) img,
-.rich-text img {
+:is(.wb-reading, .wb-reading--stem) img {
   max-width: 100%;
   height: auto;
   border-radius: var(--r-xs);
 }
-/* Agent 消息容器里的阅读层：挂载名已迁到 `.wb-reading`（6.2 / 6.3）⇒
-   新旧两个类名都写（`.rich-text` 那份留给尚未迁移的挂载点，下一波统一删）。 */
-#ai-messages .msg > .wb-reading,
-#ai-messages .msg > .rich-text { padding: 0; }
+/* Agent 消息容器里的阅读层：挂载名已迁到 `.wb-reading`（6.2 / 6.3）。 */
+#ai-messages .msg > .wb-reading { padding: 0; }
 
 /* practice cards */
 #composer {
@@ -2677,10 +2596,9 @@ img { max-width: 100%; }
    ⚠️ **挂载点名已迁移**（tasks.md 6.2 / 6.3 的 JS 段：`workbench.js` 的
    `div.innerHTML = "<div class='wb-reading'>…"`）⇒ 选择器必须命中**新类名**，
    否则 Agent 长文掉回无衬线小字、整套阅读刻度失效。
-   两个名字都写：`.wb-reading` 是现行挂载名，`.rich-text` 留给尚未迁移的挂载点
-   （迁移全部完成的那一波统一删）。**只改选择器，不改取值。** */
-#ai-messages .msg.ai > .wb-reading,
-#ai-messages .msg.ai > .rich-text {
+   ✅ 任务 2.3：过渡期的旧名 `.rich-text` 那半已删（全仓挂载点归零），
+   **只改选择器，不改取值。** */
+#ai-messages .msg.ai > .wb-reading {
   font-family: var(--font-read);
   font-size: var(--fs-reading);
   line-height: 1.75;
@@ -2930,8 +2848,8 @@ img { max-width: 100%; }
    以前 `.lk-streak` / `.practice-streak` / `.lk-flames` 在 CSS 里**零命中**
    ⇒ 计数器没有配色、没有布局。现在补三档：
      档 0（0 连）      灰      —— 中性（灰 = 中性）
-     档 1（1–4 连）    黄      —— 黄 = 当前做得顺 / 连对进度
-     档 2（≥5 连）     黄→蓝  —— 最顺的一档，渐变到蓝
+     档 1（1–29 连）   黄      —— 黄 = 当前做得顺 / 连对进度
+     档 2（≥30 连）    黄→蓝  —— 最顺的一档，渐变到蓝（阈值 = JS 的 `STREAK_TIER_HOT`）
    （权威表 §3.4 的三角色配额：蓝 = 当前选中 / 主按钮、黄 = 当前做得顺、灰 = 中性。）
 
    · **档位色只落在两块小面积上**：左侧档位色条（`::before`）与点亮的火苗。
@@ -3119,9 +3037,10 @@ img { max-width: 100%; }
      （不是结束时，否则会「旧色闪一帧」）。
      ⚠️ **钩子名以 `--ripple-base` 为准**（附加 3：原 `--lk-ripple-base` 落在
      `--lk-*` 家族里会卡住任务 2.3 的「非图谱区 `--lk-` 归零」验收）。
-     读取顺序：`--ripple-base`（新名）→ `--lk-ripple-base`（旧名，**过渡别名**，
-     值与语义完全相同，供并行写这一变量的 agent 不被脱节）→ `--surface-base`（兜底）。
-     两个名字都**不在 CSS 里定义**：一旦定义就会遮蔽 JS 在 `:root` 上的 inline 写入。
+     ✅ **任务 2.3 已把旧名回退去掉**：读取顺序 = `--ripple-base`（JS 写的钩子名）
+     → `--surface-base`（兜底）。
+     ⚠️ `--ripple-base` **不在 CSS 里定义**：一旦定义就会遮蔽 JS 的 inline 写入
+     （JS 在转场**开始时**把它写在涟漪层上）。
      ⚠️ 涟漪层**不接** `--surface-card` 等会随主题变的**卡面** token ——
      否则涟漪结束时底色会跳变。
    · 暖光用 `mix-blend-mode: screen`（掉帧则退化 `normal` + 降不透明度）。
@@ -3139,7 +3058,7 @@ img { max-width: 100%; }
 }
 .lk-ripple {
   z-index: var(--z-base);
-  background: var(--ripple-base, var(--lk-ripple-base, var(--surface-base)));
+  background: var(--ripple-base, var(--surface-base));
   -webkit-mask-image: radial-gradient(circle at 88% 82%, #000 0, #000 22vmax, transparent 30vmax);
   mask-image: radial-gradient(circle at 88% 82%, #000 0, #000 22vmax, transparent 30vmax);
   transform: scale(.06);
