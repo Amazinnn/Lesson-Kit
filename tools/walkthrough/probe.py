@@ -1930,9 +1930,24 @@ def probe_drawer(ctx):
 
 
 def probe_assets(ctx):
-    """3.6-1 — every icon and illustration is a local SVG."""
+    """3.6-1 — every icon and illustration is a local SVG.
+
+    Per `decisions.md` **A-86**, the criterion covers the **UI** assets (icons,
+    empty-state illustrations, motion assets, badges).  A **content figure** (a
+    question picture served from the pool under `/api/w/{ws}/figures/…`) is
+    content, owned by the content pipeline — it is reported in its own bucket
+    and **never silently dropped**, but it does not fail this criterion.
+    """
     assets = ctx.evaluate("() => window.__lkProbe.assets()")
-    external, bitmaps, fonts = [], [], []
+    external, ui_bitmaps, content_figures, fonts = [], [], [], []
+    # Classify the <img> elements first: a question picture is content, not UI.
+    role_of = {}
+    for item in assets["imgs"]:
+        src = item.get("src") or ""
+        role = "icon-or-illustration"
+        if "/figures/" in src or "figure" in (item.get("parent") or "").lower():
+            role = "content-figure"
+        role_of[src] = role
     for item in assets["imgs"]:
         src = item["src"]
         if not src:
@@ -1940,46 +1955,48 @@ def probe_assets(ctx):
         if re.match(r"^(https?:)?//", src) or src.startswith("data:"):
             external.append(src)
         elif re.search(r"\.(png|jpe?g|webp|gif|bmp)(\?|$)", src, re.I):
-            bitmaps.append(src)
+            if role_of.get(src) == "content-figure":
+                content_figures.append(src)
+            else:
+                ui_bitmaps.append(src)
     for item in assets["backgrounds"]:
         url = item["url"]
         if re.match(r"^(https?:)?//", url):
             external.append(url)
         elif re.search(r"\.(png|jpe?g|webp|gif|bmp)(\?|$)", url, re.I):
-            bitmaps.append(url)
+            # A background-image is always UI.
+            ui_bitmaps.append(url)
     for path in ctx.own_css_files():
         text = path.read_text(encoding="utf-8", errors="replace")
         for match in re.finditer(r"@font-face\s*\{[^}]*\}", text, re.S):
             fonts.append({"file": path.name, "block": match.group(0)[:200]})
-    # The classification is **evidence**, not a loophole: the criterion
-    # covers the icons and the illustrations, and the design's probe method
-    # ("枚举所有 <img src> … 位图 → FAIL") does not carve anything out.  A
-    # content figure (a question picture) is therefore reported separately
-    # so that a human can see which file the failure is about.
     classified = []
     for item in assets["imgs"]:
         src = item["src"]
-        role = "icon-or-illustration"
-        if "/figures/" in src or "figure" in (item.get("parent") or "").lower():
-            role = "content-figure"
-        classified.append({**item, "role": role})
+        classified.append({**item, "role": role_of.get(src, "icon-or-illustration")})
     data = {
         "imgCount": len(assets["imgs"]),
         "svgCount": len(assets["svgs"]),
         "backgroundCount": len(assets["backgrounds"]),
         "external": external,
-        "bitmaps": bitmaps,
+        "bitmaps": ui_bitmaps,
+        "uiBitmaps": ui_bitmaps,
+        "contentFigures": content_figures,
         "fontFaces": fonts,
         "imgs": classified[:30],
-        "note": "位图若为题图（content-figure）仍按设计件的探针方法计为 FAIL，"
-                "分类只作为定位证据",
+        "note": "UI 资产（图标 / 插画）必须是内联 SVG；题图（content-figure，"
+                "来自题池 /api/w/{ws}/figures/…）是**内容资产**，由内容管线管，"
+                "单列一类、不计入本条判定，但**必须出现在报告里**（A-86）",
     }
     if not assets["imgs"] and not assets["svgs"] and not assets["backgrounds"]:
         return _na(data, "页面上没有任何图标 / 插画 / 背景图")
     if external:
         return _bad(data, f"{len(external)} 个外链资源")
-    if bitmaps:
-        return _bad(data, f"{len(bitmaps)} 个位图资源")
+    if ui_bitmaps:
+        return _bad(data, f"{len(ui_bitmaps)} 个 UI 位图资源")
+    if content_figures:
+        return _ok(data, f"UI 资产全部是本地 SVG；另有 {len(content_figures)} 个题图"
+                       f"（内容资产，另由内容管线核对）")
     return _ok(data, "全部资源都是本地 SVG")
 
 
