@@ -2196,8 +2196,22 @@ img { max-width: 100%; }
   gap: 8px; align-items: center; font-size: 12px;
 }
 .record-rating-row strong { text-align: right; font-variant-numeric: tabular-nums; }
+/* ---- A-55：三条轨道**去描边**（decisions.md A-55 / D-2「不用描边」）------
+   自评分布 / 判定分布 / 练习进度三条轨道以前各带一条
+   `border: 1px solid var(--ink-strong)` ⇒ 与全局「不用描边」的方向相悖。
+   现在统一改成「**沉底 + 1px 内发丝线**」：
+     · 描边（`border`）**删掉**；
+     · 边界用 `box-shadow: inset 0 0 0 1px var(--rule-hair)` 落地 ——
+       **不用 border** 画线 ⇒ 不引入新的盒模型；
+     · 底色 = `--surface-sunken`（沉底面；凹层不抬升 ⇒ 不带柔影）。
+   ⚠️ **两族一次性改**（A-55 明令）：不留「新族去描边、旧族还描边」的中间态。 */
+.record-rating-track,
+.record-verdict-dist-track,
+.record-run-progress {
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+}
 .record-rating-track {
-  height: 10px; overflow: hidden; border: 1px solid var(--ink-strong);
+  height: 10px; overflow: hidden;
   background: var(--surface-sunken);
 }
 .record-rating-track span { display: block; height: 100%; background: var(--role-yellow); }
@@ -2214,7 +2228,7 @@ img { max-width: 100%; }
 .record-verdict-dist-count,
 .record-verdict-dist-row strong { text-align: right; font-variant-numeric: tabular-nums; }
 .record-verdict-dist-track {
-  height: 10px; overflow: hidden; border: 1px solid var(--ink-strong);
+  height: 10px; overflow: hidden;
   background: var(--surface-sunken);
 }
 .record-verdict-dist-fill { display: block; height: 100%; background: var(--ink-strong); }
@@ -2231,7 +2245,7 @@ img { max-width: 100%; }
 .record-run time { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
 .record-run > p { margin: 7px 0 8px; }
 .record-run-progress {
-  height: 8px; overflow: hidden; border: 1px solid var(--ink-strong);
+  height: 8px; overflow: hidden;
   background: var(--surface-sunken);
 }
 .record-run-progress span { display: block; height: 100%; background: var(--role-blue); }
