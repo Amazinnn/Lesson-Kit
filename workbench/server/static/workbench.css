@@ -2381,14 +2381,23 @@ img { max-width: 100%; }
      · 边界用 `box-shadow: inset 0 0 0 1px var(--rule-hair)` 落地 ——
        **不用 border** 画线 ⇒ 不引入新的盒模型；
      · 底色 = `--surface-sunken`（沉底面；凹层不抬升 ⇒ 不带柔影）。
-   ⚠️ **两族一次性改**（A-55 明令）：不留「新族去描边、旧族还描边」的中间态。 */
+   ⚠️ **两族一次性改**（A-55 明令）：不留「新族去描边、旧族还描边」的中间态。
+   ⚠️ **A-67：去描边是「视觉」决策，不得顺带改变盒子尺寸** ——
+     `inset` 阴影**不占布局空间**，所以删掉 1px×2 的描边会让轨道**矮 2px**
+     ⇒ 那是**布局位移**，会让「只改视觉」的承诺破功。
+     ⇒ 三条轨道各自把 `height` **改回去描边前的内容盒高度**，使**外高与
+       改造前逐像素一致**：
+         · `.record-rating-track`     外高 12px（10px 内容 + 2px 描边）→ 12px
+         · `.record-verdict-dist-track` 外高 12px → 12px
+         · `.record-run-progress`      外高 10px（8px 内容 + 2px 描边）→ 10px
+       （本条比另两条细 2px 是**改造前就有**的层级差，不是本轮带来的。） */
 .record-rating-track,
 .record-verdict-dist-track,
 .record-run-progress {
   box-shadow: inset 0 0 0 1px var(--rule-hair);
 }
 .record-rating-track {
-  height: 10px; overflow: hidden;
+  height: 12px; overflow: hidden;   /* A-67：恢复去描边前的外高 12px */
   background: var(--surface-sunken);
 }
 .record-rating-track span { display: block; height: 100%; background: var(--role-yellow); }
@@ -2405,7 +2414,7 @@ img { max-width: 100%; }
 .record-verdict-dist-count,
 .record-verdict-dist-row strong { text-align: right; font-variant-numeric: tabular-nums; }
 .record-verdict-dist-track {
-  height: 10px; overflow: hidden;
+  height: 12px; overflow: hidden;   /* A-67：恢复去描边前的外高 12px */
   background: var(--surface-sunken);
 }
 .record-verdict-dist-fill { display: block; height: 100%; background: var(--ink-strong); }
@@ -2422,7 +2431,7 @@ img { max-width: 100%; }
 .record-run time { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
 .record-run > p { margin: 7px 0 8px; }
 .record-run-progress {
-  height: 8px; overflow: hidden;
+  height: 10px; overflow: hidden;   /* A-67：恢复去描边前的外高 10px（本条本就比另两条细 2px） */
   background: var(--surface-sunken);
 }
 .record-run-progress span { display: block; height: 100%; background: var(--role-blue); }
