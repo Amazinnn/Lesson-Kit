@@ -276,6 +276,19 @@
 - [x] 28.5 spec 补正与冲突收敛：把 D-14 的 5 档日历阈值（0 / 1 / 2–3 / 4–7 / ≥8，源自 `records.py:237`）写进 `specs/workbench-ui/spec.md` 的 Records center 需求（或按 AGENTS.md 登记为独立 change），并补 `.level-0` 的 CSS 与页面图例；同时**核对** `design.md` D-5 与 spec delta 关于 stem 字号的表述**一致**（题面与正文同为 **17px / 1.75 / 38em** —— 所有者裁决 A-6 的结论；`design.md` D-5 已按 A-6 修正，早年的「题面 16px / 1.70 / 42em」冲突**已不存在**，本条是**一致性核对**而非「冲突校正」）。验证：阈值成为可见契约（CSS + 图例 + 规格三处一致）；`design.md` D-5 与 spec delta 的 stem 字号三档数值（17px / 1.75 / 38em）逐项相同。
 - [ ] 28.6 最终验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）并贴输出；`openspec validate --specs --strict` 全绿；按 `acceptance.md` §1 补齐铺开段新增页面对应的对照截图（S-1 / S-8 / S-11）与 §3 增补项；确认**图谱页逐像素零变化、请求与持久化零变化、池 schema 零变更**；确认第 27 组的漂移登记表随变更归档。
 
+## 29. 实物插画精修（所有者追加：瓶 / 地球仪 / 书本等实物组件不够精致）
+
+> 触发：所有者看了已入库的 10 张空态插画与台灯，判断「不够精致」。
+> **权威仍是 `design-notes/asset-spec.md`** —— 本组不是「重画」，是**把实现贴回规格** +
+> 补规格没写死的「可辨认度」与「跨图一致性」。
+
+- [ ] 29.1 **建机检闸门** `tools/audit-assets.py`：逐张量 `getBBox()` 与 `asset-spec.md` §3.12 的实测表比对（容差 ±2 u），并查 §1.1–§1.6 / §3.0 的技术条款（viewBox · 根上无 width/height · 端点连接 round · 线宽 3:2:1.5 阶梯且不超三档 · 无 SVG filter · 淡彩用预混色不用 alpha · 四个语义组齐全 · 桌面横线 y=168 且长 144–168 u · 高光 ≤2 · 阴影不透明度 ≤12% · 延伸元素必须带 `asset-empty__extension`）。验证：`python tools/audit-assets.py --strict` 退出码 0。
+- [ ] 29.2 **修掉 §3.12 的实测偏差**：`empty-vase`（最长边 131.1 u 超上限 ⇒ 缩到 ≤132 u 口径内或按上限重画）· `empty-fruit-basket`（上缘偏 5.8 u）· `empty-pencil-cup`（左右各偏 4 u、离横线 164.6 u 未压到 165–168）· `empty-cup` 的蒸汽按 `asset-empty__extension` 归组（否则量到 44 u 偏差）· `empty-vase` 的花枝同上。验证：`audit-assets.py` 全部通过。
+- [ ] 29.3 **可辨认度**（清单 `3.6-4`「插画是**具象器物**，不是抽象几何块」）：`empty-compass` 现在读起来像**三脚架/旗杆**、`empty-canvas` 像**镜子**、`empty-globe` 的支架与球体网格不对称 —— 逐张改成**一眼能叫出名字**的器物。验证：三张渲染图旁边写得出正确名称（人工判读）。
+- [ ] 29.4 **跨图一致性**：十张并排时**同一张桌子**（桌面横线 y=168 齐平）· **视觉重量相当**（最长边极差 ≤1.6 倍）· 同一支笔（端点圆角一致、线宽同档）· 每张都有淡彩与高光（不许有的一张是纯线稿）。验证：十张并排渲染图（`tmp/asset-shots/grid.png` 那种）+ 逐条对应 audit 的检查项。
+- [ ] 29.5 **双主题**：同一份文件在暖纸 / 夜纸下**都成立**（淡彩走 `--asset-wash-*` 与 `color-mix`，线稿墨色夜纸自动反相）。验证：夜纸渲染图。
+- [ ] 29.6 阶段验收：跑 AGENTS.md 四条验证命令；`python tools/audit-assets.py --strict` 退出码 0；十张 + 台灯 + 五个图标的并排渲染图交出；**清单 `3.6-4` 由人工判读**。
+
 ---
 
 ## Self-check
