@@ -2261,38 +2261,42 @@ img { max-width: 100%; }
 .record-title { font-weight: 600; color: inherit; text-decoration: none; }
 .record-title:hover { text-decoration: underline; }
 /* 判定徽章 = 结构块 + 几何符号 + 文字，三通道（design.md D-13）——
-   **三态的符号一律由 CSS 伪元素画**（对 = 勾 / 错 = 叉 / 未判定 = 空心环）：
-   同一支笔 —— 2px 线宽、1px 圆角、9px 见方，**静态样式即终态**
-   （不依赖动画；动效偏好关或 reduced-motion 生效时符号照样在）。
+   **A-56：三态统一走同一个「结构块」形状**（同一形状、同一尺寸、同一内发丝线），
+   **颜色只承载语义**（中性墨 --ink-strong / 红 --role-red-ink / 淡墨 --ink-faint）。
+   ⇒ 灰度下靠**形状**（勾 / 叉 / 空心环）与**位置**仍可区分；
+     颜色不再是区分状态的唯一手段（decisions.md A-56）。
+   ⚠️ 三态的符号一律由 CSS 伪元素画（同一支笔 —— 2px 线宽、1px 圆角、
+     9px 见方，**静态样式即终态**，不依赖动画）。
    ⇒ `records.py` 侧那两处内联 SVG 必须删掉，否则**双标记**（符号画两遍）。 */
 .record-verdict { font-size: 12px; font-weight: 600; line-height: 18px; padding: 1px 8px; border-radius: 999px; }
-/* 三个状态共用「相对定位 + 左侧 20px 符号槽」 */
+/* 三个状态共用**同一套结构块**：相对定位 + 左侧 20px 符号槽 + 同一底 + 同一内发丝线 */
 .record-verdict-ok,
 .record-verdict-bad,
 .record-verdict-open {
+  --verdict-line: var(--ink-strong);
   position: relative;
   padding-left: 20px;
-}
-/* 对 = 中性墨结构块（细线块）+ 勾形几何 + 文字 */
-.record-verdict-ok {
-  color: var(--ink-strong);
   background: transparent;
-  box-shadow: inset 0 0 0 1px var(--ink-strong);
+  box-shadow: inset 0 0 0 1px var(--verdict-line);
 }
+/* 语义色（统一形状之后，三态之间**只差这一个色**） */
+.record-verdict-ok { --verdict-line: var(--ink-strong); color: var(--ink-strong); }
+.record-verdict-bad { --verdict-line: var(--role-red-ink); color: var(--role-red-ink); }
+.record-verdict-open { --verdict-line: var(--ink-faint); color: var(--ink-faint); }
+/* 对 = 勾形几何 */
 .record-verdict-ok::before,
 .record-verdict-ok::after {
   content: "";
   position: absolute;
   height: 2px;
   border-radius: 1px;
-  background: var(--ink-strong);
+  background: var(--verdict-line);
   transform-origin: 0 50%;
 }
 .record-verdict-ok::before { width: 5px; left: 2px; top: 50%; margin-top: -2px; transform: rotate(45deg); }
 .record-verdict-ok::after { width: 10px; left: 5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
-/* 错 = 红洗底 + 红叉几何（两段 2px 线交于一点，`transform-origin: 50% 50%`
+/* 错 = 叉形几何（两段 2px 线交于一点，`transform-origin: 50% 50%`
    让两段绕同一点反向转 45° ⇒ 叉号；线宽 / 圆角与勾形同一支笔） */
-.record-verdict-bad { background: var(--role-red-wash); color: var(--role-red-ink); }
 .record-verdict-bad::before,
 .record-verdict-bad::after {
   content: "";
@@ -2303,14 +2307,13 @@ img { max-width: 100%; }
   height: 2px;
   margin-top: -1px;
   border-radius: 1px;
-  background: var(--role-red-ink);
+  background: var(--verdict-line);
   transform-origin: 50% 50%;
 }
 .record-verdict-bad::before { transform: rotate(45deg); }
 .record-verdict-bad::after { transform: rotate(-45deg); }
-/* 未判定 = 淡墨底 + 空心环几何（内发丝线画环，**不用 border**，
+/* 未判定 = 空心环几何（内发丝线画环，**不用 border**，
    与沉底块同一套「底色差 + 内发丝线」的做法） */
-.record-verdict-open { background: var(--rule-hair); color: var(--ink-muted); }
 .record-verdict-open::before {
   content: "";
   position: absolute;
@@ -2320,7 +2323,7 @@ img { max-width: 100%; }
   height: 9px;
   margin-top: -4.5px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 2px var(--ink-muted);
+  box-shadow: inset 0 0 0 2px var(--verdict-line);
 }
 .record-rating { color: var(--role-yellow-deep); font-size: 12px; }
 .record-time { margin-left: auto; color: var(--ink-muted); font-size: 12px; line-height: 18px; }
