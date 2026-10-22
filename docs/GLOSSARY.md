@@ -646,6 +646,27 @@ _Avoid_：可选 WebGL 增强、运行时 SVG 回退
 知识图谱对同一组节点的只读视觉重排：当前指标越高，节点越大且越靠近中心，并使用对应色谱；切换时节点以力场目标连续迁移。关系结构仍以知识关系决定位置。投影不新增指标、不改变选区或写入 Pool；稳定坐标的可选本地缓存遵循本地布局种子规则。
 _Avoid_：排行榜、自动学习决策、持久投影状态
 出处：workbench-ui spec「Metric projection morphology」
+
+### 图谱暖色板 / Graph warm palette
+知识图谱自有的暖色板，**与全站「柔和蒙德里安 v2」的蓝 / 黄 / 红三角色配额是两套东西**：量值色相取橙（题目数量与重要性两个投影共用同一条橙色明度阶，值越大对纸面越强）；学习状态四色为未学 = 中性灰、复习 = 琥珀、掌握 = 橙、需突破 = 砖红；关系结构投影下节点色取墨阶三档（外环 / 圆内数字 / 内核填充），颜色不承载语义。**图谱不受三角色配额约束**，因为它是数据可视化区而不是操作界面；反过来，图谱的暖色也不占用全站的三个角色色。夜里（夜纸）同一批色相换成提亮、降饱和的夜纸值集，色相不变。
+_Avoid_：全站三角色色、图谱原有的蓝 / 黄 / 红旧色谱、把状态色当角色色、把它和「柔和蒙德里安 v2」当成同一套配额
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Projection colour keys」「Night paper graph adaptation」）；openspec/changes/workbench-visual-language-v2/decisions.md G-7 / G-16
+
+### 同心圆节点 / Concentric node
+知识图谱节点的形态：一个淡色内核圆片套在一个实色外环里（同一色相两档），读作一枚带边的圆片。圆心只放一个数字——该节点关联的**正式题数**，四个投影下都是同一个数。节点上不画进度弧、仪表、状态文字、状态点、阴影或光晕；外环粗细与半径一起承载当前投影的量值，选中 / 悬停时外环再加粗变实、节点轻微放大。学习状态由颜色与节点几何共同表达，状态名由学习看板、悬停提示与无障碍名承载。
+_Avoid_：五层叠加的节点、状态环、度量弧、进度仪表、节点上的状态文字、卫星点、节点阴影
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Node appearance language」「Selection and focus」）；openspec/changes/workbench-visual-language-v2/decisions.md G-1 / G-6 / G-9 / G-13 / G-15
+
+### 图谱色键 / Graph colour key
+一个图谱投影与「什么颜色对应什么类型」之间的对应关系。关系结构投影取墨阶三档（颜色不承载语义，关系类型由连线样式表达）；题目数量与重要性投影共用一条橙色明度阶（值越大颜色越重）；学习状态投影取图谱暖色板里的状态四色。图例分两块：上半是关系线型，下半是当前投影的节点颜色，并随投影切换。
+_Avoid_：全局配色方案、状态色即角色色、以为节点颜色永远表示学习状态、图例只有一套颜色含义
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Projection colour keys」「Graph colour legend follows the projection」）；openspec/changes/workbench-visual-language-v2/decisions.md G-8 / G-11 / G-12 / G-14
+
+### 屏幕空间尺寸 / Screen-space sizing
+知识图谱节点绘制尺寸的单位约定：节点的直径、标签字号与小点直径按**屏幕像素**定义，不随画布缩放一起缩小——缩放只改变节点之间的间距。节点半径在当前投影的量程内连续映射（值越大节点越大），因此整图缩放到「适应画布」后，节点的圆心数字与名称仍然可以直接读，不必再放大。
+_Avoid_：世界像素尺寸、随缩放一起变小的字号、按缩放阈值隐藏标签、把这套尺寸约定套到图谱以外的页面
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Screen-space sizing」）；openspec/changes/workbench-visual-language-v2/decisions.md G-24
+
 ### 状态筛选分群 / State Filter Clustering
 知识图谱的只读多选筛选：从 `needs_work / review / mastered / null` 选择一个或多个状态，按并集保留节点，并让不同状态围绕各自中心聚拢。无选项表示显示全图；筛选不改变指标投影、练习选区或学习数据。
 _Avoid_：状态修改器、自动分班、持久社区
