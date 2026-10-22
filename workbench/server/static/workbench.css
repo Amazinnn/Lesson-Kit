@@ -2377,6 +2377,19 @@ img { max-width: 100%; }
   100% { transform: translate3d(0, 0, 0); }
 }
 
+/* 断裂负反馈的**类规则**（IMPL-W2e 第 3 条）：以前这条 `@keyframes`
+   没有同名类规则配套 ⇒ JS 只能内联写 `style.animation` 兜底
+   （practice-flow.js:917 / paper-practice.js:726）。
+   这里补上类规则，JS 侧那两处内联兜底即可省掉（由主会话安排）。
+   · 摆动**水平 ≤4px**、**160ms 内结束**（= --dur-base）——**不做屏幕级震动**；
+   · **起始态只写在 `@keyframes` 内部**：本规则只声明「用哪条动画」，
+     静态样式 = 终态（不摆动）⇒ 降级后计数器照样读得出。
+   ⚠️ 负反馈的冗余通道不是颜色：断裂时**火苗逐簇熄灭**（形状变化），
+     摆动只是加强信号。 */
+.lk-error-nudge {
+  animation: lk-error-nudge var(--dur-base) var(--ease-standard) both;
+}
+
 /* 连对横幅：弹入 / 退场（档位差异只由 `.is-large` 的静态样式承担） */
 @keyframes lk-combo-in {
   0%   { opacity: 0; transform: translate3d(-50%, 12px, 0) scale(.88); }
