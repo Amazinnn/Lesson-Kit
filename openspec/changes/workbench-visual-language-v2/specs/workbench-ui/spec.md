@@ -217,10 +217,19 @@ to their values, and a progress band filling from empty to full. The milestone
 tier SHALL consist of everything in the ordinary tier plus geometric bursts and
 paper flutter flying across the surface.
 
-A round SHALL reach the milestone tier when it is finished fully correct or
-when it completes a chapter for the first time. A round that meets neither of
-these two conditions SHALL stay in the ordinary tier, and the ordinary tier
-SHALL NOT include geometric bursts or paper flutter.
+A round SHALL reach the milestone tier when it is finished fully correct. A
+round that is not fully correct SHALL stay in the ordinary tier, and the
+ordinary tier SHALL NOT include geometric bursts or paper flutter.
+
+> **Scope note (2026-10-22)**: a second milestone condition — "the first
+> completion of a chapter" — was specified earlier and is **deferred to a
+> separate change**. It is not a matter of taste: the persistence layer
+> (`practice_runs`) has no chapter column and no first-completion marker, and
+> the spec forbids approximating the condition with a proxy metric (the D-29
+> ruling). Until a change adds that column (with a matching
+> `docs/DATA_MODEL.md` update), the condition would be undecidable, and a
+> clause that cannot be evaluated is not a clause. The condition is to be
+> restored to this requirement when that change lands.
 
 The celebration SHALL begin only after the response that ends the round has
 arrived, SHALL NOT change the request sequence or its payload, and SHALL NOT
@@ -251,6 +260,9 @@ band states that the round is complete; it is not a score and not an accuracy.
 - **WHEN** a round finishes and completes a chapter the learner has not
   completed before
 - **THEN** the milestone tier is used, adding geometric bursts and paper flutter
+- **AND** this scenario is **pending** the separate change that adds a chapter
+  marker to the practice-run record; until that change lands, only a fully
+  correct round reaches the milestone tier
 
 #### Scenario: The primary action stays reachable
 
@@ -849,6 +861,13 @@ states these five ranges, so that the level of a day is readable without
 distinguishing colours, and the day that carries no answers SHALL have its own
 level rather than falling back to the grid's base surface. These ranges SHALL be
 the same in the page, in the stylesheet and in the product manual.
+
+The five levels SHALL be derived from a **theme surface token**, not from a
+literal colour: the tint that separates the levels from each other SHALL be
+mixed against the surface the calendar is drawn on, so that the ordering
+("more answers, deeper") holds in **both** themes. In the night theme the
+levels SHALL NOT remain light blocks, and the lightest level SHALL NOT become
+the most prominent one.
 
 The four summary figures — attempt count, completed practices, objective-question
 accuracy and mean self-rating — SHALL keep their present values and their
