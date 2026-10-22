@@ -48,6 +48,7 @@
 | `tools/walkthrough/dbexport.py` | 持久化与学习投影导出 | §4 |
 | `tools/walkthrough/shots.py` | 对照截图采集器 | §5 |
 | `tools/walkthrough/frames.py` | 关键帧序列采集器 | §6 |
+| `tools/walkthrough/probe.py` | 浏览器探针：38 条交互清单的 DOM/CSS/网络事实采集 | §7.5 |
 | `tools/walkthrough/report.py` | 判定与报告汇总 | §7 |
 | `tools/walkthrough/run.py` | 总编排：`before` / `after` / `diff` 三段 | §7.4 |
 | `tools/walkthrough/selftest.py` | §9 自检表里的每条断言 | §9 |
@@ -98,21 +99,31 @@
 │   ├── daemon.json                 #   隔离的守护进程状态（workbench/cli/service.py:15-16、:25-30）
 │   └── daemon.log
 ├── ws-before/                      # 改造前的隔离工作区（池副本）
-│   ├── pool/dmath.db               #   池副本（workbench/registry.py:208-212 认这种布局）
-│   └── .lessonkit/
-│       ├── figures/                #   图资源副本（workbench/server/app.py:326 由此读）
-│       ├── explain/
-│       ├── practice-sets/ps-001.json  # 试卷 JSON 副本（workbench/data/practice_sets.py:161-162）
-│       └── plan.json               #   daily_plan 缓存（workbench/server/api.py:105-121）
+│   ├── pool/dmath.db               #   池副本（workbench/registry.py:205-212 认这种布局）
+│   ├── .lessonkit/
+│   │   ├── figures/                #   图资源副本（workbench/server/app.py:326 由此读）
+│   │   ├── explain/
+│   │   └── practice-sets/ps-001.json  # 试卷 JSON 副本（workbench/data/practice_sets.py:161-162）
+│   ├── output/dmath/ch06/          #   图谱工件副本（graph_artifact_path 在 .lessonkit/output 与 output 间择一，workbench/workspace_layout.py:154-160）
+│   └── plan.json                   #   daily_plan 缓存（workbench/server/api.py:105-121）
 ├── ws-after/                       # 改造后的隔离工作区（同一 seed 复制而来）
 │   └── ...同上
 ├── before/                         # git worktree：改造前代码（只提供代码与静态资产）
 ├── after/                          # 当前工作树（只提供代码与静态资产）
 └── evidence/
-    ├── before/ requests.jsonl db.*.json due.json weak.json shots/ frames/
+    ├── before/ requests.jsonl db.*.json due.json weak.json shots/ frames/ probe/
     ├── after/  同上
     └── diff/    requests.diff.json db.*.diff.json report.md report.json
 ```
+
+> **三份「不是仓库资产」的种子必须在走查前先造出来**（否则副本是残的）：
+>
+> | 种子 | 来源 | 为什么不能从源工作区直接复制 |
+> |---|---|---|
+> | `pool/dmath.db` | 本机 `pool/dmath.db` | 被 `.gitignore:34` 的 `pool/*.db` 忽略，干净 checkout 上**不存在**（R-15） |
+> | `output/dmath/ch06/ch06-graph.html` | 本机 `output/` | `output/` 同样被 `.gitignore:1` 忽略（R-19） |
+> | `.lessonkit/practice-sets/ps-001.json` | **走查的 seed 段建一次卷** | 本机 `.lessonkit/practice-sets/` **不存在**——试卷是产物不是资产（R-21） |
+> | `.lessonkit/figures/` | 本机 `.lessonkit/figures/` | 未被忽略，可直接复制（R-20） |
 
 > `ws-before` 与 `ws-after` **必须从同一个 seed 复制**，否则持久化 diff 无意义。
 > 池副本用 `shutil.copy2`（保留 mtime，但比较时**忽略 mtime**，见 §4.3）。
@@ -136,6 +147,11 @@ cp -r "$REPO/.lessonkit/figures"    "$SCRATCH/ws-before/.lessonkit/" 2>/dev/null
 cp -r "$REPO/.lessonkit/figures"    "$SCRATCH/ws-after/.lessonkit/"  2>/dev/null
 cp -r "$REPO/.lessonkit/practice-sets" "$SCRATCH/ws-before/.lessonkit/" 2>/dev/null
 cp -r "$REPO/.lessonkit/practice-sets" "$SCRATCH/ws-after/.lessonkit/"  2>/dev/null
+# 图谱工件：graph_artifact_path 在 .lessonkit/output 与 output 之间择一，两边都没有就是空态
+cp -r "$REPO/output"                "$SCRATCH/ws-before/" 2>/dev/null
+cp -r "$REPO/output"                "$SCRATCH/ws-after/"  2>/dev/null
+# 注意：源工作区没有 .lessonkit/practice-sets/（试卷是产物不是资产），
+# 上面两行 practice-sets 复制在源缺失时静默跳过；实际种子由 §3.3 的 seed 段建卷后产出。
 
 # ── 2. 隔离注册表 + 注册工作区 ─────────────────────────────
 export LESSONKIT_WB_HOME="$SCRATCH/registry"
@@ -423,13 +439,50 @@ canonical_payload_shape(body) -> {key: shape}
 
 ### 2.5 状态码捕获
 
-`_dispatch` 用 `self._send_json(status, payload)` / `_send_html(status, text)` 收尾
-（`workbench/server/app.py:199-209`）。记录器再包一层 `_send_json`，
-把**最终状态码**记到该请求上。因为 `_dispatch` 是同步的，可以在 `_dispatch` 前后
-用「线程局部当前记录」把状态码挂回去。
+**拦截点必须是 `send_response`，不是 `_send_json`。**
 
-> 简化方案：包 `_send_json` / `_send_html`，用 `threading.local()` 存「当前记录」，
-> 在 `_dispatch` 的 `finally` 里统一落盘。
+本文件早先的草稿写的是「包 `_send_json` / `_send_html`」——**这是错的**，
+复核服务端全部出响应路径后发现：服务有**五条**出响应路径，其中**三条不经过**
+`_send_json` / `_send_html`：
+
+| 出响应路径 | 定义处 | 写法 | 会被 `_send_json` 包住吗 |
+|---|---|---|---|
+| `_send_json` | `workbench/server/app.py:379-385` | `self.send_response(status)` | ✅ |
+| `_send_html` | `workbench/server/app.py:387-393` | `self.send_response(status)` | ✅ |
+| `_send_static` | `workbench/server/app.py:214-231` | `self.send_response(200)`（`:226`） | ❌ |
+| `_send_figure` | `workbench/server/app.py:316-339` | `self.send_response(200)`（`:335`） | ❌ |
+| `_send_graph_artifact` | `workbench/server/app.py:341-359` | `self.send_response(200)`（`:355`） | ❌ |
+
+包 `_send_json` 会让**静态资源、题图、图谱工件**这三条路径的状态码**永远记不到**——
+而这恰恰是 G-5（图谱页像素级一致）最需要状态码的一类请求。
+
+**正确做法：包 `BaseHTTPRequestHandler.send_response`。**
+它是 `http.server` 的基类方法，五条路径**全部**经过它，是**唯一**的全覆盖咽喉点：
+
+```python
+# tools/walkthrough/recorder.py
+_original_send_response = app.WorkbenchHandler.send_response   # 继承自 http.server.BaseHTTPRequestHandler
+
+def _recording_send_response(self, code, message=None):
+    current = _local.record          # threading.local() 里的「当前记录」
+    if current is not None:
+        current["status"] = code
+    return _original_send_response(self, code, message)
+
+app.WorkbenchHandler.send_response = _recording_send_response
+```
+
+**归属机制**：`ThreadingHTTPServer`（`workbench/server/app.py:399-400`）每个请求一个线程，
+所以用 `threading.local()` 存「当前记录」，在 `_dispatch` 包装层的 `finally` 里取出并落盘。
+`send_response` 一定在 `_dispatch` 内部被调用（`_dispatch` 的所有分支都走那五条路径之一），
+因此「进入 `_dispatch` → 设置 current → 任何分支出响应 → `finally` 落盘」时序闭合。
+
+> **`send_response` 存在的断言**：§9 自检 D13 断言
+> `app.WorkbenchHandler.send_response is not http.server.BaseHTTPRequestHandler.send_response`
+> ——证明 monkeypatch 确实生效了，而不是静默打在一个副本上。
+
+**为什么不用 `self.wfile.write` 做咽喉点**：响应头在 `send_response` 里就已定型，
+且 `wfile.write` 会被多次调用（分块写），无法表达「一次请求一个状态码」。
 
 ### 2.6 diff 算法与证据文件
 
@@ -469,6 +522,45 @@ ops = sm.get_opcodes()   # 'equal' / 'replace' / 'delete' / 'insert'
 用于两件事：
 1. 证明「装了记录器不影响业务」（对照跑一次，见 §9 自检 D2）。
 2. 出现记录器自身 bug 时可绕开。
+
+### 2.8 完整性核对（G-1…G-4 的支撑是否齐全）
+
+> 本节回答「请求序列捕获器是否**完整**支撑 G-1…G-4」。逐条列**要求 → 落点**，
+> 供实现者与评审者逐行验收。
+
+| G-1 的要求（`acceptance.md:18`） | 本设计的落点 | 状态 |
+|---|---|---|
+| 「在池副本上脚本化跑一遍练习」 | §1.3 造隔离工作区 + §3 浏览器驱动脚本 | ✅ |
+| 「建卷 → 开始 → 逐题提交 → 自评 → 交卷 → 取答卷」 | §3.2 步骤表 E0–E9，**逐条映射到 UI 锚点**（`#paper-start` / `#paper-item-submit` / `#paper-rating` / `#paper-final-submit` 等） | ✅（建卷走 seed 段，见 §3.3 的覆盖缺口声明） |
+| 「记录服务端收到的**请求方法 + 路径 + 载荷键集合**」 | §2.2 记录格式：`method` + `route`（路径的**路由模板**形式）+ `body_keys`（顶层键，排序） | ✅ |
+| 「改造前后**各跑一次**并 diff」 | §7.4 三段式：段 1 before、段 2 after、段 3 diff | ✅ |
+| 「序列与载荷**逐条相同**」 | §2.4 规范化 + §2.6 `difflib.SequenceMatcher`，机器判定 `len(added)+len(removed)+len(changed) > 0` → FAIL | ✅ |
+| 「新增/删除/改名**任意一条**即 FAIL」 | §2.6 的 `replace` 段落分「载荷变了」与「请求被改名/替换」两种成因，**都判 FAIL** | ✅ |
+
+**G-2 / G-3 / G-4 的支撑**：
+
+| G | 要求 | 落点 | 状态 |
+|---|---|---|---|
+| G-2 | 「比对池中 `problem_attempts` / `feedback_events` / `practice_runs` 的**行数与关键列**」 | §4.1 表×列清单 + §4.3 导出格式 + §4.4 `diff_table` | ✅ |
+| G-3 | 「比对受影响知识点/题目的**当前状态与调度行**」 | §4.1 的 `learning_current_state` + `review_schedule` + `problem_progress` + `learner_signals` | ✅ |
+| G-4 | 「比对改造前后**同一时刻**的到期项集合与弱项排序」 | §3.6 衔接：`/due` + `/weak` 导出为 `due.json` / `weak.json`，集合与顺序均比 | ✅ |
+
+**捕获器自身的四个关键设计决定（评审要看的）**：
+
+| # | 决定 | 落点 | 为什么 |
+|---|---|---|---|
+| C-1 | **拦截点在服务进程内**（`app.py:128` 的 `_dispatch`），不是外部代理 | §2.1 | 全量覆盖（含静态资源与 404）、时序真实、零产品代码改动、载荷可见 |
+| C-2 | 记录格式是「**方法 + 路径 + 载荷键集合**」 | §2.2 | 与 `acceptance.md:18` 的字面口径**逐字对齐**，不多不少 |
+| C-3 | 排除 GET / 静态资源，但**双层报告**（L1 自动阻断 / L2 人工签字） | §2.4(e) | 严格读法含 GET，但自动判 FAIL 会误伤「多读一次设置项」；完全不报会漏「少发一次读请求」 |
+| C-4 | 规范化后 diff，**路径归一化复用服务自己的路由表** | §2.4(a) + §2.6 | 路由模板**就是** API 表面契约；模板变了 = API 变了 = FAIL |
+
+**已知覆盖缺口（必须在报告里显式声明，不得隐去）**：
+
+| 缺口 | 原因 | 声明位置 |
+|---|---|---|
+| 「建卷」不在浏览器路径上，无法用 UI 驱动 | 现状浏览器端 `post("/practice-sets")` 依赖的 `legacyModeControls` 要求的 `#practice-rating-immediate` / `#practice-rating-batch` 在 `pages.py` 中**不存在**（已 grep 确认 0 命中） | §3.3；报告的「建卷组」diff 表 + ⚠️ 覆盖缺口 |
+| GET 差异不自动判 FAIL | 见 C-3 | 报告 §0 的 L2 表，由人填「接受 / 不接受」 |
+| 草稿请求次数受打字节奏影响 | `queueDraft` 用 350ms 防抖（`paper-practice.js:952`） | §3.4；钉死为每题 1 次，否则降级为独立 diff 组 |
 
 ---
 
@@ -979,29 +1071,103 @@ frames/M-1/0000.png 0000.png ... 0700.png  →  evidence/diff/frames/M-1-strip.p
 
 ```markdown
 # 走查验收报告 — workbench-visual-language-v2
-生成时间：<ISO>   改造前代码：<commit>   改造后代码：<commit>
 
-## 0. 底线守卫（任一 FAIL ⇒ 整体 FAIL）
-| # | 检查项 | 结论 | 证据 |
+| | |
+|---|---|
+| 结论 | **PASS_WITH_PENDING**（底线全绿；38 条交互清单中 25 PASS / 1 FAIL / 12 PENDING） |
+| 生成时间 | <ISO8601> |
+| 改造前代码 | <commit sha>（worktree: <path>） |
+| 改造后代码 | <commit sha>（工作树: <repo 根>） |
+| 种子 | 池副本 sha256 <hex>；试卷 ps-001；题图 N 个；图谱工件 1 个 |
+| 端口 | before 3091 / after 3092（均 ≠ 3081） |
+
+## 0. 底线守卫（任一 FAIL ⇒ 整体 FAIL，不进入后续评审）
+
+| # | 检查项 | 结论 | 证据 | 说明 |
+|---|---|---|---|---|
+| G-1 | 请求序列不变 | ✅ PASS | `diff/requests.diff.md` | 写请求 12 条逐条相同；GET 差异 L2 表见下 |
+| G-2 | 持久化结果不变 | ✅ PASS | `diff/db.problem_attempts.diff.json` | 3 表行数与关键列逐行相同 |
+| G-3 | 学习投影不变 | ✅ PASS | `diff/db.learning_current_state.diff.json` | |
+| G-4 | 复习建议集合不变 | ✅ PASS | `diff/due.diff.json` / `diff/weak.diff.json` | 集合与顺序完全相同 |
+| G-5 | 图谱页观感不变 | ⬜ PENDING | `diff/shots/S-5-graph.png` / `-delta.png` | 差异率 0.0031（阈值 0.005），待人工判读 |
+| G-6 | 池 schema 零变更 | ✅ PASS | `diff/schema.diff.json` | schema diff = 0；真实池 schema 需人工核对（§4.5） |
+| G-7 | 装饰层不拦截交互 | ✅ PASS | `probe/3.5-3.json` | elementFromPoint 全部命中背景元素 |
+| G-8 | 焦点顺序未变 | ✅ PASS | `diff/focus-sequence.diff.md` | 序列相同；2 条 ADDED-EXPECTED（设置入口 / 主题开关） |
+
+**G-1 的 L2 表（GET 差异，需人工签字）**
+
+| # | GET 差异 | 接受？ | 签字 |
 |---|---|---|---|
-| G-1 | 请求序列不变 | ✅ PASS | evidence/diff/requests.diff.md |
-| G-2 | 持久化结果不变 | ✅ PASS | evidence/diff/db.problem_attempts.diff.json |
-...
+| L2-1 | after 多发 1 次 `GET /api/w/{name}/plan` | ☐ 接受 ☐ 不接受 | ______ |
+| L2-2 | after 少发 1 次 `GET /api/w/{name}/weak` | ☐ 接受 ☐ 不接受 | ______ |
 
 ## 1. 对照截图（S-1…S-12）
-| # | 条目 | 结论 | 差异率 | 对照图 |
-...
+
+| # | 条目 | 结论 | 差异率 | 对照图 | 说明 |
+|---|---|---|---|---|---|
+| S-1 | hub 首页 | ✅ PASS | 0.0000 | `diff/shots/S-1-hub.png` | |
+| S-7 | 记录中心 · 作答明细 | ⬜ PENDING | 0.0210 | `diff/shots/S-7-records-detail.png` | 差异集中在卡片流；无表格 |
+| S-9 | 设置视图 | ⬜ N/A | — | `diff/shots/S-9-settings.png` | 改造前不存在此页（before 侧 N/A，after 侧四偏好可切换） |
 
 ## 2. 关键帧序列（M-1…M-10）
-| # | 动效 | 结论 | 分镜条 | 降级帧 |
-...
 
-## 3. 交互清单（§3.1…§3.7，逐条勾选 + 未过说明）
+| # | 动效 | 结论 | 分镜条 | 降级帧 | 说明 |
+|---|---|---|---|---|---|
+| M-1 | 台灯主题转场 | ⬜ PENDING | `diff/frames/M-1-strip.png` | `M-1-reduced.png` | 四段均在；终态干净 |
+| M-2 | 交卷庆祝（日常档） | ✅ PASS | `diff/frames/M-2-strip.png` | `M-2-reduced.png` | 数字滚动 + 进度带；无彩带 |
+| M-7 | 挤压回弹 | ✅ PASS | `diff/frames/M-7-strip.png` | `M-7-reduced.png` | 0.92→1.06→1；总时长 517ms |
 
-## 4. 未过项清单（每条：现象、影响、复现命令、建议）
+## 3. 交互清单（§3.1…§3.7，38 条逐条）
 
-## 5. 隔离自检（真实池哈希、注册表哈希、断言 A1…A5）
+### 3.1 可访问性（8）
+| # | 检查项 | 结论 | 等级 | 证据 | 说明 |
+|---|---|---|---|---|---|
+| 3.1-1 | 可见焦点环 | ✅ PASS | AUTO | `probe/3.1-1.json` | 8 处 `outline:none` 已清 |
+| 3.1-2 | 对比度 | ⬜ PENDING | AUTO | `probe/3.1-2.json` | 亮色侧 9 对全部达标（最差 `--lk-red` 4.32:1 ≥ 4.5? **否** → 需复核阈值归属）；夜纸侧无 token → N/A |
+| 3.1-5 | 说明文字不增加 | ✅ PASS | AUTO | `diff/text-count.json` | before 1284 字 → after 1102 字 |
+| 3.1-8 | 图标可访问名 | ⬜ PENDING | AUTO | `probe/3.1-8.json` | 3 个装饰性图标无名称（无 aria-hidden） |
+
+### 3.4 交互反馈（7）
+| # | 检查项 | 结论 | 等级 | 证据 | 说明 |
+|---|---|---|---|---|---|
+| 3.4-6 | 会话列表可滚动 | ❌ FAIL | AUTO | `probe/3.4-6.json` | scrollHeight 812 > clientHeight 400，overflow-y: visible |
+| 3.4-7 | 章节透镜自绘 | ✅ PASS | AUTO | `probe/3.4-7.json` | 8 处原生 select 已换自绘，hidden input 保留 name/value |
+
+### 3.6 图案与资产（5）
+| # | 检查项 | 结论 | 等级 | 证据 | 说明 |
+|---|---|---|---|---|---|
+| 3.6-4 | 插画为具象器物 | ⬜ PENDING | MANUAL | `shots/S-12-*.png` | 审美判断 |
+
+（其余各节同理，逐条列出）
+
+## 4. 未过项清单
+
+| # | 现象 | 影响 | 复现命令 | 建议 |
+|---|---|---|---|---|
+| 3.4-6 | 会话列表被静默裁切（`#ai-session-list` 无 `overflow-y`） | 超过 400px 的会话历史不可达 | `python tools/walkthrough/run.py --only probe` | 给 `#ai-session-list` 加 `overflow-y: auto` 并给 `#ai-session-list-view` 定高 |
+| 3.1-2 | `--lk-red` 上正文对比度 4.32:1（若该处用红底承载正文则低于 4.5:1） | 红色承载面上的正文不达 WCAG AA | `python tools/walkthrough/run.py --only contrast` | 按 `decisions.md` A-4「红色只用于失败与阻塞」把该处正文移出红色；或加深 `--lk-red` 至 ≥ 4.5:1 |
+
+## 5. 隔离自检
+
+| 断言 | 结果 | 说明 |
+|---|---|---|
+| A1 LESSONKIT_WB_HOME 不指向真实注册表 | ✅ PASS | 指向 `<scratch>/registry` |
+| A2 隔离注册表每条 workspace 的 path/db 都在 $SCRATCH 下 | ✅ PASS | 1 条（walk） |
+| A3 副本池与真实池不是同一文件 | ✅ PASS | `samefile = False` |
+| A4 真实池 + 真实注册表 sha256/size/mtime 未变 | ✅ PASS | 池 `<hex>` → `<hex>` |
+| A5 `/api/hub/workspaces` 返回的 path 在 $SCRATCH 下 | ✅ PASS | |
+
+**被监视的文件（前后快照）**
+
+| 文件 | sha256 before | sha256 after | size | mtime |
+|---|---|---|---|---|
+| `pool/dmath.db` | `<hex>` | `<hex>` | 868352 | 未变 |
+| `~/.lessonkit-workbench/workspaces.json` | `<hex>` | `<hex>` | — | 未变 |
 ```
+
+> **报告里不许出现的两件事**：
+> 1. **把 PENDING 写成 PASS**（§7.6.3 的第三态）；
+> 2. **未过项缺四要素**（现象 / 影响 / 复现命令 / 建议，`acceptance.md:101`）。
 
 ### 7.2 编号映射（**四组**）
 
@@ -1012,7 +1178,7 @@ frames/M-1/0000.png 0000.png ... 0700.png  →  evidence/diff/frames/M-1-strip.p
 | **底线守卫** | G-1…G-8 | §2 捕获器 + §3 脚本 + §4 导出 + §5/§6 采集 | G-1…G-4 全自动；G-5 像素差自动；G-6 schema diff 自动；G-7 **需 CSS 扫描**；G-8 **需焦点遍历录制** | §0 |
 | **对照截图** | S-1…S-12 | §5 | 像素差自动 + 人工判读 | §1 |
 | **关键帧** | M-1…M-10 | §6 | 时序/时长自动 + 人工判读 | §2 |
-| **交互清单** | §3.1…§3.7（8 条可访问性 / 6 条主题暗色 / 5 条声音 / 8 条交互反馈 / 3 条响应式 / 6 条图案资产 / 4 条性能 = **42 条**） | §5/§6 + 浏览器探针 | 多数可半自动（见下） | §3 |
+| **交互清单** | §3.1…§3.7（8 条可访问性 / 6 条主题暗色 / 5 条声音 / **7** 条交互反馈 / 3 条响应式 / **5** 条图案资产 / 4 条性能 = **38 条**） | §5/§6 + 浏览器探针 | 多数可半自动（见 §7.5） | §3 |
 
 **G-7（装饰层不拦截交互）**：`acceptance.md:24` 要求「检查所有新增装饰层的 `pointer-events`」。
 自动做法：扫描 `workbench/server/static/*.css` 里所有新增选择器的 `pointer-events` 值，
@@ -1056,6 +1222,27 @@ for i in range(N):
 报告用 `⬜ 待人工判读` 而不是替人打勾——这是本设计的立场：
 **执行器提供证据，不替代评审。**
 
+#### 7.3.1 四组编号与报告章节的对应（一张表看完）
+
+| 组 | 编号范围 | 条数 | 判定方法 | 自动/半自动/人工 | 报告章节 | 采集器章节 |
+|---|---|---|---|---|---|---|
+| **底线守卫** | G-1…G-8 | 8 | 请求序列 diff / 持久化 diff / 学习投影 diff / 复习建议 diff / 像素差 / schema diff / `elementFromPoint` / 焦点序列 diff | G-1…G-4 **全自动**；G-5 **自动+人工**；G-6 **自动**；G-7 **自动**；G-8 **自动** | `report.md` §0 | §2、§3、§4、§5、§7.2 |
+| **对照截图** | S-1…S-12 | 12 | 像素差（`PIL.ImageChops`）+ 并排图 | 像素差**自动**，判读**人工** | `report.md` §1 | §5 |
+| **关键帧** | M-1…M-10 | 10（+10 降级帧） | 时序元数据 + 分镜条 | 时长/曲线**自动**，观感**人工** | `report.md` §2 | §6 |
+| **交互清单** | §3.1…§3.7 | **38** | 浏览器探针（20 个探针函数） | **34 AUTO** / **3 SEMI** / **1 MANUAL**（其中 11 条在改造前无对照物 + 1 条部分，before 侧记 N/A） | `report.md` §3 | §5、§6、§7.5 |
+| **合计** | | **68** | | | | |
+
+> **68 的来历**：8 底线 + 12 截图 + 10 动效 + 38 交互清单 = **68**。
+> 这个数与 `decisions.md` 收口「17 组 68 问」无关（那是决策问句数），
+> 但**恰好也是 68**——**不要混淆**，两者含义完全不同。
+
+#### 7.3.2 报告首屏必须显示的四件事
+
+1. `overall` 结论（`PASS` / `PASS_WITH_PENDING` / `FAIL`），**带 PENDING 计数**；
+2. 底线守卫 8 条的 PASS/FAIL/PENDING 状态条；
+3. **隔离自检** A1…A5 的结果（真实池 sha256 前后值）；
+4. 改造前/后的 commit 与 worktree 路径（可复现的前提）。
+
 ### 7.4 编排（`run.py`）
 
 ```bash
@@ -1086,6 +1273,390 @@ python tools/walkthrough/run.py \
 
 ---
 
+### 7.5 交互清单逐条对应表（38 条，`acceptance.md:80-130`）
+
+`acceptance.md` §3 是**逐条可勾选**的清单，共 **38 条**（不是 42 条——见 §7.2 的计数勘误）。
+本节把每一条落到「怎么测、证据在哪、谁来判」。
+
+#### 7.5.1 三个自动化等级
+
+| 等级 | 含义 | 报告里的记法 | 谁签字 |
+|---|---|---|---|
+| **AUTO** | 探针能给出**唯一**的二值结论 | `✅ AUTO` / `❌ AUTO` | 无人签字（机器说了算） |
+| **SEMI** | 探针能给出**证据**（数值 / 截图 / DOM 片段），但「是否可接受」要人判断 | `⬜ SEMI` + 证据链接 | **人签字**（执行器不代勾） |
+| **MANUAL** | 无可靠自动手段（如「图标是否有可访问名称」需看渲染结果） | `⬜ MANUAL` + 检查指引 | **人签字** |
+
+> **执行器的立场**：只有 AUTO 可以自动写 PASS/FAIL。SEMI / MANUAL 一律 `⬜`，
+> 报告里给证据与检查指引，**不替人打勾**（与 §7.3 的立场一致）。
+
+#### 7.5.2 探针机制
+
+所有 DOM 侧检查由**同一个探针脚本**在页面内执行，结果落 `evidence/probe/`：
+
+```python
+# tools/walkthrough/probe.py —— 伪代码
+def run_probe(page, out_dir):
+    results = []
+    for item in CHECKLIST:              # CHECKLIST 是本节表格的机器可读镜像
+        results.append({
+            "id": item.id,             # 如 "3.1-1"
+            "probe": item.probe,       # 探针函数名
+            "auto": item.auto,         # True / False
+            "data": item.fn(page),     # 探针返回的证据 dict
+        })
+    write(out_dir / "checklist.json", {"results": results})
+```
+
+每个探针函数只做**一件事**，返回**原始证据**（不返回结论）：
+
+| 探针 | 返回什么 | 用在哪 |
+|---|---|---|
+| `focus_ring_probe` | 遍历可聚焦元素，返回每个的 `outline-width / outline-style / outline-color` 与 `matches(':focus-visible')` | 3.1-1、3.1-7 |
+| `contrast_probe` | 对指定 token 对，返回 `fg / bg / ratio / 阈值 / 是否达标` | 3.1-2、3.2-2、3.2-3 |
+| `state_geometry_probe` | 返回状态元素的 `background / border-radius / 伪元素内容 / 形状` | 3.1-3、3.1-4 |
+| `text_count_probe` | 返回页面可见文本节点数、字数、注释性节点清单 | 3.1-5 |
+| `reduced_motion_probe` | 返回 `matchMedia` 结果 + 命中的 CSS 规则数 + 动画时长 | 3.1-6 |
+| `accessible_name_probe` | 返回每个图标的 `aria-label / title / 可见文本 / 字体来源` | 3.1-8、3.6-1 |
+| `theme_probe` | 返回当前 `data-theme` / `color-scheme` / 计算后的 token 值 / 偏好存储位置 | 3.2-1…3.2-6 |
+| `audio_probe` | 拦截 `Audio` / `AudioContext` 构造，返回播放记录（时机 / 时长 / 是否在手势后） | 3.3-1…3.3-5 |
+| `transition_probe` | 返回 hover / active 的 `transition-duration` / `transition-property` | 3.4-1、3.4-2 |
+| `skeleton_probe` | 返回加载态元素的 class 清单 + 微光动画是否在跑 | 3.4-3 |
+| `error_color_probe` | 返回所有红色 token 的使用点 + 每个的语义上下文 | 3.4-4 |
+| `empty_state_probe` | 返回空态容器内的子元素结构（插画 / 一句 / 满宽按钮） | 3.4-5 |
+| `scroll_probe` | 返回容器的 `scrollHeight / clientHeight / overflow-y / 可滚动` | 3.4-6、3.7-2 |
+| `custom_select_probe` | 返回 `select` 元素清单 + 是否有自绘面板替代 | 3.4-7 |
+| `responsive_probe` | 在 4 档视口下返回 `documentElement.scrollWidth` vs `clientWidth` | 3.5-1 |
+| `drawer_probe` | 768 下开抽屉，返回背景元素的 `elementFromPoint` 结果 | 3.5-2、3.5-3 |
+| `asset_probe` | 返回全部 `<img>` / `<svg>` / `background-image` 的来源与是否外链 | 3.6-1…3.6-5 |
+| `perf_probe` | 返回所有 `animation` / `transition` 涉及的属性名集合（是否只含 transform/opacity） | 3.7-1 |
+| `font_probe` | 返回 `@font-face` 清单 + `font-display` 值 + 实际加载的字体 | 3.7-3 |
+| `cache_probe` | 返回静态资源的响应头（`Cache-Control` / `ETag` / `Last-Modified`） | 3.7-4 |
+
+#### 7.5.3 逐条对应表
+
+**§3.1 可访问性（8 条，`acceptance.md:81-88`）**
+
+| # | 检查项 | 判定方法（探针 + 人工） | 证据 | 等级 | 改造前基线（实测锚点） |
+|---|---|---|---|---|---|
+| 3.1-1 | 可交互控件 Tab 有**可见焦点环**（不得被 `outline:none` 压死） | `focus_ring_probe`：Tab 遍历，逐个读 `getComputedStyle(el).outlineWidth`；宽度 = 0 且无 `box-shadow` 替代 → FAIL | `probe/3.1-1.json` | **AUTO** | **改造前已 FAIL**：全局有 `:focus-visible{outline:2px solid var(--dsw-brand-accent)}`（`workbench/server/static/workbench.css:1123`），但 `select:focus`（`:338`）、`textarea:focus, input:focus`（`:427`）、`#answer-box:focus`（`:833`）三处 `outline:none` **压死了它** |
+| 3.1-2 | 正文对比度 ≥ 4.5:1；次要 ≥ 3:1；大字号 ≥ 3:1 | `contrast_probe`：对 §7.5.4 的 token 对逐对算 WCAG 相对亮度比 | `probe/3.1-2.json` | **AUTO** | 现状有 6 个 `--lk-*` 强调 token（`workbench.css:5-10`）+ `--dsw-label-*` 文字色（`:23-27`），但**只有亮色一套**（`:root` 无暗色块）→ 亮色侧**可实测**，夜纸侧 N/A |
+| 3.1-3 | 状态**不只靠颜色**（有几何编码） | `state_geometry_probe`：状态元素须有 `border-radius` 圆形 / 伪元素 / 竖条之一 | `probe/3.1-3.json` | **AUTO** | 现状部分满足：题号点是圆点 + 状态 class（`workbench.css:1891-1894` `.paper-dot.state-*`），但**靠背景色区分**，几何形状全同 |
+| 3.1-4 | 每个状态都有**文字**（如 `aria-label`），但不靠文字承担主要表达 | `state_geometry_probe` + `accessible_name_probe` 联合 | `probe/3.1-4.json` | **AUTO** | 需逐个状态元素核对；`decisions.md` 收口「状态冗余通道 = 彩色圆点（零文字）」→ **文字是可选辅助，不是必需**，本条判据应读作「不禁止文字」 |
+| 3.1-5 | 改造后界面说明性文字**数量不增加** | `text_count_probe`：before/after 各取「可见文本节点数 + 总字数」，after > before → FAIL（**不设阈值**，按 `decisions.md` P-1「少字原则」零容忍） | `probe/3.1-5.json` + `diff/text-count.json` | **AUTO** | 可量化；注意排除 `aria-label` 等不可见文本 |
+| 3.1-6 | 动效全部尊重 `prefers-reduced-motion` | `reduced_motion_probe` + §6.3 的降级对照帧 | `probe/3.1-6.json` + `frames/M-*-reduced.png` | **AUTO** | 现状**已有**三处 media query（`workbench.css:733`、`:1126`、`:1863`），其中 `:1126-1131` 是全局兜底 `transition:none !important; animation:none !important`——**这条兜底会掩盖「起始态写在静态样式里」的缺陷**（见 `decisions.md` A-2 派生铁律） |
+| 3.1-7 | 页面转场与浮层出现时**焦点不被抢走** | `focus_ring_probe`：触发转场 / 浮层前后各读一次 `document.activeElement` 的语义描述，变了且新焦点不是浮层内元素 → FAIL | `probe/3.1-7.json` | **AUTO** | 与 G-8 的焦点序列录制共用同一套「语义描述」函数（§7.2 G-8） |
+| 3.1-8 | 图标有**可访问名称**（`aria-label` 或视觉隐藏文本） | `accessible_name_probe`：图标元素须有 `aria-label` / `title` / 视觉隐藏文本 / `alt` 之一 | `probe/3.1-8.json` | **AUTO** | 现状用 **Unicode 字形**（`pages.py:427-428` `◎` / `⌗`）配 `aria-label` → 名称有，但**非 SVG**（见 3.6-1） |
+
+**§3.2 主题与暗色（6 条，`acceptance.md:91-96`）**
+
+| # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
+|---|---|---|---|---|---|
+| 3.2-1 | 主题切换走**台灯转场**（不是瞬切） | M-1 分镜条 + `theme_probe` 读切换时是否有动画在跑 | `frames/M-1/` | **AUTO** | 改造前**无主题系统** → N/A（before 侧） |
+| 3.2-2 | 夜纸下正文对比度复测达标（**逐 token 实算，不目测**） | `contrast_probe`：夜纸 token 对逐对算比值 | `probe/3.2-2.json` | **AUTO** | 改造前无夜纸 → N/A |
+| 3.2-3 | 夜纸下图标圆底为「降饱和 + 提亮」版本 | `contrast_probe` + `asset_probe` 取圆底色，验 HSL 饱和度降、亮度升 | `probe/3.2-3.json` | **SEMI** | 数值可算（「降饱和 + 提亮」的方向可验），但**幅度**由人判 |
+| 3.2-4 | 夜纸下插画与图标用**同一套 SVG 换变量**，不另画一套 | `asset_probe`：数 SVG 文件数；dark 模式下的 SVG 源应与 light **同一 URL**，仅 CSS 变量不同 | `probe/3.2-4.json` | **AUTO** | 现状 0 个 SVG → N/A |
+| 3.2-5 | 主题偏好**按工作区存储**，切换工作区各自独立 | `theme_probe`：切换工作区后读偏好存储的 key 与内容 | `probe/3.2-5.json` | **AUTO** | **既有机制可复用**：`workbench.js:165` `var SETTINGS_KEY = "wb_settings_" + WS;` —— 偏好已按工作区名分键，主题偏好应沿用同一机制 |
+| 3.2-6 | 刷新与**重启**后主题偏好保持 | `theme_probe`：写入偏好 → 刷新页面读回 → **重启服务进程**后读回 | `probe/3.2-6.json` | **AUTO** | 存储在 `localStorage`（`workbench.js:169`/`:181`/`:184`）→ 跨刷新与跨服务重启都保持（浏览器 profile 不清） |
+
+**§3.3 声音（5 条，`acceptance.md:99-103`）**
+
+| # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
+|---|---|---|---|---|---|
+| 3.3-1 | **只有四个时刻**有音效：答对 / 答错 / 完成 / 里程碑，每条 < 200ms | `audio_probe`：全量拦截播放，断言「出现的时机集合 ⊆ 四时刻」且「每条时长 < 200ms」 | `probe/3.3-1.json` | **AUTO** | 改造前**零音效代码**（全仓 grep `Audio` / `AudioContext` 无命中）→ N/A |
+| 3.3-2 | 首次音效必须发生在一次**用户手势之后** | `audio_probe`：记录首次播放的调用栈上下文与「此前是否有 `userActivation`」 | `probe/3.3-2.json` | **AUTO** | 浏览器自动播放限制；Playwright 可用 `page.evaluate` 读 `navigator.userActivation.isActive` |
+| 3.3-3 | 有**静音开关**，且默认状态与用户偏好一致 | `audio_probe` + `theme_probe` 读偏好存储里的静音位 | `probe/3.3-3.json` | **AUTO** | 现状无 |
+| 3.3-4 | 静音后**所有**音效不再播放（**包括庆祝**） | `audio_probe`：开静音 → 跑完整练习 → 断言播放记录为空 | `probe/3.3-4.json` | **AUTO** | 现状无 |
+| 3.3-5 | 无音效时，动效与视觉反馈**仍完整可用**（声音不是唯一通道） | 关静音跑一遍 + 与开静音的分镜条**逐像素比对** | `frames/M-*/noaudio-*.png` | **AUTO** | 「声音不是唯一通道」的落地判据就是「帧序列不变」 |
+
+**§3.4 交互反馈（7 条，`acceptance.md:106-112`）**
+
+| # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
+|---|---|---|---|---|---|
+| 3.4-1 | hover 反馈可感知（**120–180ms**） | `transition_probe`：hover 目标元素的 `transition-duration` 落在 [120,180]ms | `probe/3.4-1.json` | **AUTO** | 现状**不达标**：hover 用 `background-color 100ms`（`workbench.css:315`、`:350`、`:383`），低于 120ms 下限；`:1680` 的 `.18s` 合规 |
+| 3.4-2 | active / pressed 反馈可感知 | `transition_probe`：`:active` 规则须命中目标元素且有可观测属性变化 | `probe/3.4-2.json` | **AUTO** | 现状**覆盖极稀疏**：全站仅 2 处 `:active`（`workbench.css:551` 列宽拖柄、`:1663` 图谱节点） |
+| 3.4-3 | 加载态有**骨架屏 + 微光扫过** | `skeleton_probe` + M-9 分镜条（0/400/900ms 验「微光位置变化可见」） | `frames/M-9/` + `probe/3.4-3.json` | **AUTO** | 现状**不存在**：全站 grep `skeleton` / `shimmer` **零命中** → 全新实现 |
+| 3.4-4 | 错误态明确（**红色仅用于失败与阻塞**） | `error_color_probe`：枚举所有红色 token 的使用点，逐点判语义 | `probe/3.4-4.json` | **SEMI** | 现状红色相关声明 22 处，需逐点判「是否真是失败/阻塞」——**机器列点，人判语义** |
+| 3.4-5 | 空态 = **插画 + 一句 + 满宽主按钮**，按钮文案就是动作 | `empty_state_probe`：空态容器须有插画元素、恰好一句说明、且一个满宽 `<button>`（文案为动作动词） | `probe/3.4-5.json` | **AUTO** | 现状有空态容器（`workbench.css:525` `.empty-state`、`:911` `.practice-set-empty`、`:1000` `.workload-empty`）但**无插画、无满宽主按钮** |
+| 3.4-6 | 会话列表**可滚动**（不静默裁切） | `scroll_probe`：`#ai-session-list` 的 `scrollHeight > clientHeight` 时 `overflow-y` 必须是 `auto/scroll` | `probe/3.4-6.json` | **AUTO** | 现状**FAIL**：`workbench.css:611` `#ai-session-list { display: grid; gap: 2px; }` **无 `overflow-y`** → 静默裁切；与 `decisions.md` 收口「⚠️ 必须补滚动容器（现状被裁掉）」一致 |
+| 3.4-7 | 章节透镜是**自绘下拉面板**，不是原生 `select` | `custom_select_probe`：全站 `select` 计数；`#chapter-lens-select` 须被自绘面板替代 | `probe/3.4-7.json` | **AUTO** | 现状是**原生 `select`**（`pages.py:62` `<select id='chapter-lens-select'>`）；全站共 **8 处**原生 `select`（`pages.py:62, 206, 263, 395, 657, 665, 744, 770`）→ 改自绘须守 `decisions.md` A-5「保留同名 hidden input 承载 `name`/`value`」 |
+
+**§3.5 响应式（3 条，`acceptance.md:115-117`）**
+
+| # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
+|---|---|---|---|---|---|
+| 3.5-1 | 1440 / 1280 / 1024 / 768 四档下三栏均可用，**无横向滚动条** | `responsive_probe`：四档各读 `documentElement.scrollWidth` vs `clientWidth`，前者 > 后者 → FAIL | `probe/3.5-1.json` | **AUTO** | 现状断点：1023px（`workbench.css:1059`、`:1174`）、900px（`:1871`）、640px（`:1133`、`:1487`、`:1877`）→ **1280 无专属断点** |
+| 3.5-2 | 768 下右栏为**抽屉**，可关闭并返回中栏 | `drawer_probe`：768 下开/关抽屉，断言右栏由 `position: fixed` 移出视口且中栏可交互 | `probe/3.5-2.json` | **AUTO** | 现状 1023px 起即抽屉化（`workbench.css:1174-1193`：`#left-column` / `#ai-column` 变 `position: fixed` + `transform: translateX(±105%)`），768 落在其内 → 机制已存在 |
+| 3.5-3 | 抽屉打开时**背景仍可交互**（装饰层 `pointer-events: none`） | `drawer_probe`：抽屉打开时对背景区取 `document.elementFromPoint`，命中背景元素而非装饰层 | `probe/3.5-3.json` | **AUTO** | 现状装饰层已有 `pointer-events: none` 惯例（`workbench.css:185`、`:1244`、`:1605`、`:1612`、`:1623`、`:1632`、`:1714`、`:1718`、`:1810`）→ 新增装饰层须沿用 |
+
+**§3.6 图案与资产（5 条，`acceptance.md:120-124`）**
+
+| # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
+|---|---|---|---|---|---|
+| 3.6-1 | 全部图标与插画是**本地 SVG**，无外链、无图标字体、无位图 | `asset_probe`：枚举所有 `<img src>` / `<svg>` / `background-image: url(...)`；外链（http/https/`//`）或位图（`.png/.jpg/.jpeg/.webp/.gif`）→ FAIL | `probe/3.6-1.json` | **AUTO** | 现状**全仓 0 个 `.svg`**；题图是 **`.jpg`**（`.lessonkit/figures/dmath/ch06/*.jpg`）；图标是 Unicode 字形（`pages.py:427-428`）→ 全新资产 |
+| 3.6-2 | 图标与插画在同一套**线宽与圆角语言**内（写意线稿 + 淡彩） | `asset_probe`：取全部 SVG 的 `stroke-width` 分布与 `rx/ry` 集合，人工核「是否同语言」 | `probe/3.6-2.json` | **SEMI** | 「同一套语言」是**审美判断**，机器只能列分布 → 人判 |
+| 3.6-3 | 图标圆底色**只用三角色色** | `asset_probe`：取全部圆底色，映射到三角色色集合；出现第 4 色 → FAIL | `probe/3.6-3.json` | **AUTO** | 需先有 `decisions.md` 收口的角色色值表作为参照系 |
+| 3.6-4 | 插画为**具象器物**（不出现抽象几何团块） | 人工看 `S-12` 空态插画与图标集 | `shots/S-12-*.png` | **MANUAL** | 审美判断，无可靠自动手段 |
+| 3.6-5 | 深浅两套主题**共用同一批 SVG 文件** | `asset_probe`：dark 模式下的 SVG 资源 URL 集合 ⊆ light 的集合 | `probe/3.6-5.json` | **AUTO** | 与 3.2-4 互为佐证（一条查 URL 集合，一条查 CSS 变量） |
+
+**§3.7 性能（4 条，`acceptance.md:127-130`）**
+
+| # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
+|---|---|---|---|---|---|
+| 3.7-1 | 动效**只动** `transform` / `opacity`（录一次逐帧确认） | `perf_probe`：枚举全部 `animation` / `transition` 涉及的属性名；出现 `transform`/`opacity` 之外的属性 → FAIL | `probe/3.7-1.json` | **AUTO** | 现状**有违规**：`grid-template-columns 200ms`（`workbench.css:161`）、`width 180ms`（`:866`）、`padding-bottom 300ms`（`:968`）、`background-color 100ms`（`:315`/`:350`/`:383`）、`box-shadow 300ms`（`:980`） |
+| 3.7-2 | 长列表（**98+ 条**记录）滚动流畅 | `scroll_probe`：灌入 ≥98 条记录，测滚动帧间隔；同时验 3.4-6 的容器可滚 | `probe/3.7-2.json` | **AUTO** | **现状池数据量不足**：实测 `pool/dmath.db` 中 `problem_attempts` 仅 **3** 行、`practice_runs` **0** 行、`feedback_events` 2 行 → **必须先造 ≥98 条种子数据**，否则本条无从测起 |
+| 3.7-3 | 首次加载**无字体闪烁**（`font-display` 策略正确） | `font_probe`：读 `@font-face` 的 `font-display`；缺省或 `auto` → FAIL | `probe/3.7-3.json` | **AUTO** | 现状**无 `@font-face`**（全站 0 处）→ 本变更新增思源宋体 woff2 时必须显式写 `font-display` |
+| 3.7-4 | 静态资源缓存策略正确：**改了 CSS 能立刻生效** | `cache_probe`：读 CSS 响应的 `Cache-Control` / `ETag` / `Last-Modified`；改一行 CSS 后重取须返回新内容 | `probe/3.7-4.json` | **AUTO** | 现状**无任何缓存头**：`app.py` 只发 `Content-Type` + `Content-Length`（`:226-228`、`:335-337`、`:355-357`），无 `Cache-Control` → 「立刻生效」当前成立，但无 `ETag`/`Last-Modified` 可支撑增量 |
+
+#### 7.5.4 对比度 token 对清单（3.1-2 / 3.2-2 / 3.2-3 的输入）
+
+对比度探针需要**一份待测 token 对清单**。清单从 `night-paper-tokens.md` 的 token 表
+（亮/夜纸两套值）派生，每个 token 对记一行：
+
+| 用途 | 前景 | 背景 | 阈值 | 来源 |
+|---|---|---|---|---|
+| 正文 | `--lk-ink` | `--lk-paper` | 4.5 | 正文 17px，非大字号 |
+| 次要文字 | `--lk-ink-muted` | `--lk-paper` | 3.0 | `acceptance.md:82`「次要文字 ≥ 3:1」 |
+| 大字号标题 | `--lk-ink` | `--lk-card` | 3.0 | ≥ 24px 或 ≥ 18.66px 粗体 |
+| 按钮文字 | `--lk-on-blue` | `--lk-blue` | 4.5 | 主按钮 |
+| 黄色承载面 | `--lk-ink` | `--lk-yellow` | 4.5 | `decisions.md` A-4「黄色一律不承载文字」→ 若有黄底文字，此对**必测** |
+| 红色失败态 | `--lk-on-red` | `--lk-red` | 4.5 | 错误态 |
+| 焦点环 | `--lk-blue` | 所在底色 | 3.0 | 非文本 UI 组件 |
+| 状态圆点 | 圆点色 | 所在底色 | 3.0 | 几何编码须可辨 |
+
+> 清单本身是**产物**，随本变更更新；探针只负责按清单算比值。
+> 清单里没有的 token 对 → 探针报 `MISSING`，**不静默跳过**。
+
+**改造前亮色侧的实测基线**（用 WCAG 相对亮度公式算，值已核实）：
+
+| 前景 | 背景 | 比值 | 阈值 | 达标 |
+|---|---|---|---|---|
+| `--lk-ink` `#171717` | `--lk-paper` `#fffdf7` | **17.62** | 4.5 | ✅ |
+| `--dsw-label-secondary` `#61666b` | `--lk-paper` | **5.70** | 4.5 | ✅ |
+| `--dsw-label-tertiary` `#81858c` | `--lk-paper` | **3.64** | 3.0 | ✅ |
+| `--lk-blue` `#2457c5` | `--lk-paper` | **6.36** | 4.5 | ✅ |
+| `--lk-red` `#d6453d` | `--lk-paper` | **4.32** | 4.5 | ❌ **差 0.18** |
+| `#332900` | `--lk-yellow` `#f2c94c` | **9.08** | 4.5 | ✅ |
+| `#193f91` | `#dce7ff` | **7.83** | 4.5 | ✅ |
+| `#245d32` | `#d9ebdd` | **6.28** | 4.5 | ✅ |
+| `#922d26` | `#f6d8d5` | **5.98** | 4.5 | ✅ |
+
+（底色值来自 `workbench.css:5-10` 的 `--lk-*` 与 `:1889-1893` 的状态色；
+比值用标准 WCAG 公式 `(L1+0.05)/(L2+0.05)` 实算。）
+
+> **唯一不达标的是 `--lk-red` 对 `--lk-paper` 的 4.32:1**（阈值 4.5，差 0.18）。
+> 但这条**是否算 FAIL 取决于红色承载什么**：`--lk-red` 在现状里用于
+> 「失败 / 阻塞」的**图标与边框**（非文本）→ 按 `acceptance.md:82`
+> 「大字号 ≥ 3:1」与「非文本 UI 组件 ≥ 3:1」的口径**达标**。
+> 只有当改造后有**正文文字**直接落在 `--lk-red` 底上时才判 FAIL。
+> **这正是「阈值归属」要逐对指定的原因**——不能一刀切用 4.5。
+
+#### 7.5.5 「改造前无对照物」的 11 条 + 1 条部分（before 侧记 N/A 的清单）
+
+**11 条完全无对照物**：对应的能力**在当前代码里根本不存在**，所以 before 侧
+**没有可比对象**，按 §7.6.2 记 `N/A`（**不是 PASS**）。after 侧照常自动判定。
+
+| # | 检查项 | 为什么改造前无对照物 | 现状证据 |
+|---|---|---|---|
+| 3.2-1 | 台灯主题转场 | 无主题系统 | 全站 grep `data-theme` / `color-scheme` **零命中** |
+| 3.2-2 | 夜纸对比度 | 无夜纸值集 | `:root` 只有亮色一套（`workbench.css:4-10`）；`night-paper-tokens.md` 是本变更**新增**的设计产物 |
+| 3.2-4 | 夜纸同套 SVG 换变量 | 无 SVG 资产 | 全仓 0 个 `.svg` |
+| 3.3-1 | 四个时刻的音效 | 无音效代码 | 全仓 grep `Audio` / `AudioContext` 零命中 |
+| 3.3-3 | 静音开关 | 无音效代码 | 同上 |
+| 3.3-4 | 静音后无播放 | 无音效代码 | 同上 |
+| 3.4-3 | 骨架屏 + 微光 | 无骨架屏 | 全站 grep `skeleton` / `shimmer` 零命中 |
+| 3.6-1 | 全本地 SVG | 无 SVG 资产 | 全仓 0 个 `.svg`；题图是 `.jpg` |
+| 3.6-3 | 图标圆底三角色色 | 无图标、无角色色表 | 角色色定义在 `decisions.md` 收口，是本变更**新增**基线 |
+| 3.6-5 | 深浅共用同一批 SVG | 无 SVG 资产 | 同 3.6-1 |
+| 3.7-3 | `font-display` | 无 web font | 全站 0 处 `@font-face` |
+
+**1 条部分可测**：**3.1-2（对比度）**——亮色侧**有** token 可算（`workbench.css:5-10`
+的 `--lk-*` + `:23-27` 的 `--dsw-label-*`），夜纸侧无。
+故本条在 before 侧记 **N/A（夜纸部分）** + 亮色部分的实测值，**不整条豁免**。
+
+> **「N/A ≠ PASS」是硬规则**（X-7）。这 12 条在 after 侧一旦实现出来，
+> 就必须给出 PASS/FAIL；写「N/A」蒙混过关的，报告会被驳回。
+
+---
+
+### 7.6 判定汇总算法（怎么从一堆结果汇总成「通过 / 不通过」）
+
+#### 7.6.1 三层判定
+
+```
+第 1 层  底线守卫 G-1…G-8   → 全 PASS 才继续
+第 2 层  S-1…S-12 / M-1…M-10 → 无回退
+第 3 层  交互清单 38 条     → 全过或有逐条说明
+```
+
+**第 1 层是硬闸**：`acceptance.md:137`「G-1…G-8 全绿（任何一条红即整体 FAIL，
+不进入后续评审）」。因此：
+
+```
+if any(gate.verdict == "FAIL" for gate in GATES):
+    overall = "FAIL"
+    reason  = "底线守卫未全绿，按 acceptance.md:137 不得进入后续评审"
+    # 注意：仍要跑完并出报告（收集全部证据），只是结论已定
+```
+
+#### 7.6.2 单项 verdict 的取值域
+
+| verdict | 含义 | 谁能产生 |
+|---|---|---|
+| `PASS` | 自动判定通过 | 探针 |
+| `FAIL` | 自动判定不通过 | 探针 |
+| `N/A` | 有据可依地不适用（如 S-9 改造前无设置页） | 采集器，需在报告写明依据 |
+| `PENDING` | 需人工判读，执行器**不代勾** | 探针产出证据后置 `PENDING` |
+| `BLOCKED` | 该项因上游 FAIL 无法执行（如 G-1 失败导致 G-2 无意义） | 汇总器 |
+
+#### 7.6.3 汇总伪代码
+
+```python
+# tools/walkthrough/report.py
+def aggregate(evidence):
+    gates     = aggregate_gates(evidence)        # G-1..G-8
+    shots     = aggregate_shots(evidence)        # S-1..S-12
+    motion    = aggregate_motion(evidence)       # M-1..M-10
+    checklist = aggregate_checklist(evidence)    # 38 条
+
+    # ── 第 1 层：底线守卫（硬闸） ──────────────────────────
+    gate_fail = [g for g in gates if g.verdict == "FAIL"]
+    if gate_fail:
+        overall = "FAIL"
+        blocked = downstream_blocked_by(gate_fail)   # 标注哪些项因硬闸而 BLOCKED
+    else:
+        # ── 第 2 层：视觉回退 ──────────────────────────────
+        visual_fail = [x for x in shots + motion if x.verdict == "FAIL"]
+        if visual_fail:
+            overall = "FAIL"
+        else:
+            # ── 第 3 层：交互清单 ─────────────────────────
+            # PENDING 不算 FAIL —— 它要求人签字，不阻塞机器结论
+            cl_fail = [c for c in checklist if c.verdict == "FAIL"]
+            pending = [c for c in checklist if c.verdict == "PENDING"]
+            overall = "FAIL" if cl_fail else "PASS_WITH_PENDING"
+    return {"overall": overall, "gates": gates, "shots": shots,
+            "motion": motion, "checklist": checklist}
+```
+
+**`PASS_WITH_PENDING` 是本设计刻意引入的第三态**，理由：
+- `acceptance.md:140` 允许「未勾选项逐条列出并说明为何可接受」——即**未判完不等于失败**；
+- 但把 PENDING 混进 PASS 会让「38 条里 20 条没人判」看起来像通过了。
+- 所以：**结论是「通过，但有 N 条待人工判读」**，报告首屏必须显示这个 N。
+
+#### 7.6.4 report.json 的完整结构
+
+```jsonc
+{
+  "schema_version": 1,
+  "generated_at": "<ISO8601>",
+  "run_id": "<scratch 目录名>",
+  "code": {
+    "before_commit": "<sha>",
+    "after_commit": "<sha>",
+    "before_worktree": "<path>",
+    "after_worktree": "<repo 根>"
+  },
+  "isolation": {
+    "A1_wb_home": "PASS", "A2_registry_paths": "PASS",
+    "A3_not_same_file": "PASS", "A4_real_pool_unchanged": "PASS",
+    "A5_hub_workspaces_in_scratch": "PASS",
+    "real_pool_sha256_before": "<hex>", "real_pool_sha256_after": "<hex>",
+    "real_registry_sha256_before": "<hex>", "real_registry_sha256_after": "<hex>"
+  },
+  "gates": {
+    "G-1": {"verdict": "PASS", "auto": true, "detail": "写请求序列逐条相同",
+            "evidence": ["diff/requests.diff.json", "diff/requests.diff.md"]},
+    "G-2": {"verdict": "PASS", "auto": true, "detail": "3 表行数与关键列逐行相同",
+            "evidence": ["diff/db.problem_attempts.diff.json"]},
+    "G-3": {"verdict": "PASS", "auto": true, "detail": "", "evidence": []},
+    "G-4": {"verdict": "PASS", "auto": true, "detail": "", "evidence": []},
+    "G-5": {"verdict": "PENDING", "auto": false, "detail": "像素差 0.0031，待人工判读",
+            "evidence": ["diff/shots/S-5-graph.png", "diff/shots/S-5-graph-delta.png"]},
+    "G-6": {"verdict": "PASS", "auto": true, "detail": "schema diff = 0", "evidence": []},
+    "G-7": {"verdict": "PASS", "auto": true, "detail": "elementFromPoint 全通过", "evidence": []},
+    "G-8": {"verdict": "PASS", "auto": true, "detail": "序列相同，2 条 ADDED-EXPECTED", "evidence": []}
+  },
+  "shots":   {"S-1": {"verdict": "PASS", "diff_ratio": 0.0, "pair": "..."}},
+  "motion":  {"M-1": {"verdict": "PENDING", "strip": "diff/frames/M-1-strip.png",
+                      "reduced": "diff/frames/M-1-reduced.png"}},
+  "checklist": {
+    "3.1-1": {"verdict": "PASS", "auto": true, "data": {"outline_none": 0},
+              "evidence": ["probe/3.1-1.json"]},
+    "3.4-6": {"verdict": "FAIL", "auto": true,
+              "data": {"scrollHeight": 812, "clientHeight": 400, "overflow_y": "visible"},
+              "evidence": ["probe/3.4-6.json"]},
+    "3.6-4": {"verdict": "PENDING", "auto": false, "data": {},
+              "note": "具象器物属审美判断，见 shots/S-12-*.png"}
+  },
+  "summary": {
+    "overall": "PASS_WITH_PENDING",
+    "gates_failed": [], "gates_pending": ["G-5"],
+    "shots_failed": [], "shots_pending": ["S-7"],
+    "motion_failed": [], "motion_pending": ["M-1", "M-3"],
+    "checklist_failed": ["3.4-6"], "checklist_pending": 12, "checklist_passed": 25
+  },
+  "unresolved": [
+    {"id": "3.4-6", "phenomenon": "会话列表被静默裁切",
+     "impact": "长会话历史不可达", "repro": "python tools/walkthrough/run.py --only probe",
+     "suggestion": "给 #ai-session-list 加 overflow-y: auto 并给父级定高"}
+  ]
+}
+```
+
+**`unresolved` 的每条必须四要素齐**（`acceptance.md:101` 原文：
+「每条：现象、影响、复现命令、建议」）——缺一项就是不合格的未过项清单。
+
+#### 7.6.5 报告生成的流程（`report.py`）
+
+```
+输入：evidence/before/、evidence/after/、evidence/diff/ 下的全部产物
+  ↓
+[1] 读 diff/requests.diff.json      → G-1（L1 自动；L2 转 PENDING 待签字）
+[2] 读 diff/db.*.diff.json          → G-2 / G-3
+[3] 读 diff/due.diff.json + weak.*  → G-4
+[4] 读 diff/schema.diff.json        → G-6
+[5] 跑 probe/G-7 探针（elementFromPoint）→ G-7
+[6] 跑 probe/G-8 焦点序列录制       → G-8
+[7] 读 diff/shots/*-delta.png 差异率 → S-1…S-12（阈值内转 PENDING）
+[8] 读 frames/*/index.json 时序元数据 → M-1…M-10
+[9] 读 probe/checklist.json（38 条）  → 交互清单
+  ↓
+[10] aggregate() 算 overall（§7.6.3）
+  ↓
+[11] 写 report.json（结构见 §7.6.4）
+  ↓
+[12] 渲染 report.md（骨架见 §7.1）
+  ↓
+[13] 生成 unresolved 清单（FAIL 项 + PENDING 项，各带四要素）
+  ↓
+[14] 写 exit code：0 = PASS，1 = FAIL，2 = PASS_WITH_PENDING
+```
+
+> **exit code = 2 是刻意设计的**：CI 里 `0` 表示「机器能判的都过了」，
+> `2` 表示「机器能判的都过了，但还有 N 条要人签字」——让流水线**不会把待判读当成全绿**。
+
+#### 7.6.6 「机器能判的」与「要人判的」的分界
+
+| 判定 | 判什么 | 例子 |
+|---|---|---|
+| **机器** | 有唯一二值答案的事实 | 请求序列是否逐条相同；行数是否相同；`overflow-y` 是不是 `auto`；`font-display` 是不是 `swap`；差异率是否超阈值 |
+| **人** | 没有唯一答案的判断 | 「观感是否回退」「插画是否具象」「差异率 0.003 能不能接受」「黄色底上的字够不够大」 |
+
+**分界的判据**：如果两个人独立判会得出**不同**结论 → 归「人」；
+如果判据能写成**可执行的布尔表达式** → 归「机器」。
+
+> 这条分界不是免责，是把「执行器不做人做的事」写成**可检验的规则**。
+> 38 条里：**34 条可完全自动**（AUTO），**3 条半自动**（机器列证据、人判语义：
+> 3.2-3 降饱和幅度、3.4-4 红色语义、3.6-2 线宽语言），**1 条纯人工**
+> （3.6-4 插画是否具象）。
+>
+> 另有 **11 条在改造前无对照物**（before 侧记 N/A，因为对应能力尚不存在）：
+> 3.2-1、3.2-2、3.2-4、3.3-1、3.3-3、3.3-4、3.4-3、3.6-1、3.6-3、3.6-5、3.7-3；
+> 另有 **1 条部分可测**（3.1-2：亮色有 token、夜纸没有）。
+> 这些在 **after 侧照常自动判**——N/A 只表示「没有 before 可比」，**不表示免检**。
+
+---
+
 ## 8. 风险与红线
 
 ### 8.1 执行器自身可能误伤真池的地方（逐条）
@@ -1106,6 +1677,20 @@ python tools/walkthrough/run.py \
 | R-12 | 草稿防抖造成 `/practice/draft` 次数抖动 | 350ms 防抖（`paper-practice.js:952`） | 脚本显式等待草稿落库（§3.4）；无法钉死时降级为独立 diff 组 |
 | R-13 | 浏览器把 `localStorage` 偏好带进 before/after 对比 | 主题偏好按工作区存（`decisions.md`「主题偏好」） | **每个 context 用全新 profile**（`browser.new_context()` 即隔离）；显式设 `localStorage` 初值 |
 | R-14 | `git worktree` 留下 `.git/worktrees` 残留 | worktree 机制本身 | 跑完 `git worktree remove` + `git worktree prune`；并在报告里记录 worktree 路径 |
+| R-15 | **种子池被 `.gitignore` 忽略**，干净 checkout 上 `pool/dmath.db` **不存在** | `.gitignore:34` 的 `pool/*.db` 规则（已用 `git check-ignore -v pool/dmath.db` 核实） | 走查**不依赖 git checkout 有池**：种子从本机既有 `pool/dmath.db` 复制；若无该文件则先 `lesson-kit init` 一份空工作区再由 `pipeline/scripts/create-tables.py` 建表 |
+| R-16 | `init` 的 `looks_like_workspace` 判定用的是 **`lessonkit.py` 文件或池候选**，两者都可能落空 | `workbench/registry.py:199-203`：`looks_like_workspace` 只看 `folder/lessonkit.py` 与 `pool_candidates(folder)` | 复制池副本**放在 `pool/<course>.db`**（`pool_candidates` 认 `pool` 与 `.lessonkit/pool` 两个位置，`registry.py:205-212`），确保候选非空 → `_bootstrap_workspace` 被跳过（`workbench/cli/main.py:129-130`）；事后断言副本池 sha256 与 seed 一致 |
+| R-17 | `_bootstrap_workspace` 会建**新库**，把副本顶掉 | `workbench/cli/main.py:140-152` 调 `pipeline/scripts/create-tables.py --db .lessonkit/pool/<course>.db` | 同 R-16：靠「先放好候选池」跳过；另加断言：跑完 `init` 后副本池 sha256 **必须不变** |
+| R-18 | `find_pool` 在**多候选**时拒绝而不是猜 | `workbench/registry.py:215-234`：候选 >1 且无 `course` 匹配 → `raise ValueError` | `init` 显式带 `--course dmath`（`workbench/cli/main.py:880-884`），使匹配唯一；副本目录里**只放一个** `.db` |
+| R-19 | 隔离工作区缺**图谱工件**，图谱页走空态，G-5 变成「两个空页对比」 | `graph_artifact_path` 在 `.lessonkit/output/` 与 `output/` 之间择一（`workbench/workspace_layout.py:154-160`）；本机工件在 `output/dmath/ch06/ch06-graph.html` | 一并复制 `output/` 到隔离工作区（§1.2 目录布局已含 `output/`）；断言工件存在 |
+| R-20 | 隔离工作区缺**题图**（`.jpg`），题目页图空 | figures 从工作区 `.lessonkit/figures` 读（`workbench/server/app.py:326-327`），且路径必须 `is_relative_to(base)` 否则 403 | 一并复制 `.lessonkit/figures`（§1.2 已含）；断言复制后文件数与源一致 |
+| R-21 | 试卷文件 `practice-sets/ps-NNN.json` **不存在**于源工作区 | 实测本机 `.lessonkit/practice-sets/` **不存在**（只有 `figures/`、`ingest/`、`jobs/` 等）→ 源文件是**产物**，不是仓库资产 | 走查前先用 §3.3 的 `seed` 段建一次卷，产出 `ps-001.json`，再从**产物**复制到 `ws-before` / `ws-after` 两侧（而不是从源工作区复制） |
+| R-22 | 走查脚本误用**已安装的** `lesson-kit` 命令，跑到真仓库 | `pip show lesson-kit` → 已安装（0.1.0，位置 `D:\Python\Lib\site-packages`）；console script 入口 `workbench.cli.entry:lesson_kit_main`（`pyproject.toml:17-18`） | 全程用 `python -m workbench.cli.main`（模块入口 `workbench/cli/main.py:1207-1209`）并显式设 `PYTHONPATH`；**禁用** `lesson-kit` 这个名字；启动后断言 `workbench.__file__` 落在期望 worktree 下 |
+| R-23 | 服务起在 **3081**（默认端口）撞上用户真实工作台 | `app.serve` 默认 3081（`workbench/server/app.py:403`） | 强制 `PORT_BEFORE=3091` / `PORT_AFTER=3092`（§1.5），并断言 `os.environ` 里的端口 ≠ 3081 |
+| R-24 | 探针**读**页面时改变了页面状态（副作用） | 探针在页面内跑 `page.evaluate` | 探针只读 DOM / `getComputedStyle` / `getBoundingClientRect`；**禁止**探针调用任何会改样式或发请求的 API；`theme_probe` 读偏好时只 `localStorage.getItem`（不 `setItem`） |
+| R-25 | `audio_probe` 拦截音频构造时**自己触发了播放** | 探针覆写 `Audio` 构造函数 | 探针只**记录**不**播放**：覆写后立即 `return` 一个 no-op 替身，绝不调用原构造；同时把「无音效时帧序列不变」（3.3-5）作为交叉验证 |
+| R-26 | 「98+ 条记录」需要**造数据**，造数据本身写了池 | 长列表性能项（3.7-2）需要足够长的列表 | 造数据**只在隔离副本里做**（`ws-before` / `ws-after` 各造一份**相同**的 98 条）；真实池不造；造完断言 A4 仍成立 |
+| R-27 | 对比度探针的 token 对清单**没覆盖新增 token** | 清单是从 `night-paper-tokens.md` 派生的静态表 | 探针对**每个**实际出现在计算样式里的前景色都算一遍；清单外的 token 报 `MISSING` 并**让该项判 PENDING 而非 PASS** |
+| R-28 | `PENDING` 被当成 PASS 汇总，整体结论虚高 | 38 条里若有大量 PENDING | `summary` 必须输出 `checklist_pending` 计数；`overall` 用第三态 `PASS_WITH_PENDING`（§7.6.3），**不允许**在有 PENDING 时输出裸 `PASS` |
 
 ### 8.2 「绝不写真实池」的硬断言位置（汇总）
 
@@ -1118,14 +1703,108 @@ python tools/walkthrough/run.py \
    db 逃出工作区就抛错；A3 再验一次「副本与真池不是同一文件」。
 4. **结果层**：真实池 + 真实注册表的 **sha256 + size + mtime** 整轮前后一致（A4）。
 
-**执行点**：
-- 起服务前：断言 A1…A3。
-- 每次 `phase()` 切换：断言 A1、A2。
-- 停服务后、导出前：断言 A4。
-- 整轮结束：断言 A4、A5 写进报告。
+**这四道防线的落点是「既有代码」还是「执行器新写」**：
 
-**任一断言失败 → 抛异常终止，并把已发生的写入列为「疑似污染」上报**，
-同时**保留现场**（不删 `$SCRATCH`）供人工核查。
+| 防线 | 落点 | 归属 |
+|---|---|---|
+| 配置层 | `workbench/registry.py:11-12` 的 `base_dir()` 读 `LESSONKIT_WB_HOME` | **既有**（不需新写） |
+| 注册层硬闸 | `workbench/registry.py:46-50`：`db` 逃出工作区 → `raise ValueError` | **既有** |
+| 数据层硬闸 | `workbench/data/pool.py:19-22`：`db_path` 逃出 `root` → `raise ValueError` | **既有** |
+| 全部断言 | `tools/walkthrough/env.py` 的 `assert_isolated()` | **新写**（在既有闸之外再加一层） |
+
+> **关键区别**：既有的两道硬闸（registry + pool）保证「**这个进程不可能写别的池**」；
+> 执行器的 A1–A5 保证「**我们跑的确实是隔离的那个**」。
+> 两者是**互补**的：配置错了，registry 闸照样放行「隔离目录里那个池」——
+> 只有 A1/A2/A3 能发现「隔离目录就是真实目录」这种配置事故。
+
+#### 8.2.1 硬断言的**执行点**（不是「测一次」，是「每个阶段前后」）
+
+断言写在 `tools/walkthrough/env.py`：
+
+```python
+def assert_isolated(scratch: Path, phase: str) -> None:
+    """在任何会触碰池的动作前后调用。失败即抛，绝不降级为警告。"""
+    # A1 —— 配置层
+    wb_home = Path(os.environ.get("LESSONKIT_WB_HOME", "")).resolve()
+    if wb_home == (Path.home() / ".lessonkit-workbench").resolve():
+        raise IsolationBreach(f"[{phase}] A1: LESSONKIT_WB_HOME 指向真实注册表")
+    if not wb_home.is_relative_to(scratch.resolve()):
+        raise IsolationBreach(f"[{phase}] A1: LESSONKIT_WB_HOME 不在 $SCRATCH 下")
+
+    # A2 —— 注册层
+    for ws in json.loads((wb_home / "workspaces.json").read_text())["workspaces"]:
+        for key in ("path", "db"):
+            if not Path(ws[key]).resolve().is_relative_to(scratch.resolve()):
+                raise IsolationBreach(f"[{phase}] A2: {key} 逃出 $SCRATCH: {ws[key]}")
+
+    # A3 —— 数据层
+    for ws in ...:   # 逐条
+        if os.path.samefile(ws["db"], REAL_POOL):
+            raise IsolationBreach(f"[{phase}] A3: 副本与真实池是同一文件")
+```
+
+**执行点表**（每一次都调，**不是**只在开头调一次）：
+
+| # | 执行点 | 调哪些断言 | 为什么是这里 |
+|---|---|---|---|
+| E1 | `init` 之后、起服务之前 | A1、A2、A3 | 注册表刚写完，配置层与注册层此刻最可能被改坏 |
+| E2 | 每个 `phase()` 切换（seed / measure / verify） | A1、A2 | phase 切换会跑子进程（建卷、脚本），是**最容易漏传环境变量**的地方 |
+| E3 | 每次 `subprocess` 调用前后 | A1 | `subprocess` 若显式传 `env=` 会丢掉 `LESSONKIT_WB_HOME`（R-5） |
+| E4 | 停服务之后、导出 db 之前 | A1、A2、A3 | 导出是唯一的读池动作，之前再验一次 |
+| E5 | 整轮结束、生成报告之前 | A1、A2、A3、**A4**、A5 | A4 是结果断言，只能在整轮末尾做 |
+| E6 | **每个子进程内部**（起进程后、干活前） | A1 | 防止子进程自己再 fork 出逃逸路径 |
+
+#### 8.2.2 A4 的具体做法
+
+```python
+def snapshot(path: Path) -> dict:
+    st = path.stat()
+    return {"sha256": sha256_file(path), "size": st.st_size, "mtime": st.st_mtime_ns}
+
+before = {p: snapshot(p) for p in WATCHED_PATHS}   # 真实池 + 真实注册表
+...                                          # 跑完整轮
+after  = {p: snapshot(p) for p in WATCHED_PATHS}
+if before != after:
+    raise IsolationBreach("A4: 真实池/注册表在走查期间发生变化")
+```
+
+`WATCHED_PATHS` 至少含：
+- `<repo>/pool/dmath.db`（真实池）
+- `<repo>/pool/` 下**所有** `.db`（防「误建新池」）
+- `Path.home()/".lessonkit-workbench"/"workspaces.json"`（真实注册表）
+- `Path.home()/".lessonkit-workbench"/"daemon.json"`（真实守护进程状态）
+
+> **不比对 mtime 精度以外的东西**：走查期间真实池**只读打开**，
+> mtime 不应变；若 mtime 变了说明有人写过 → 正是要抓的事。
+
+> **A4 失败时的处置**：**不删 `$SCRATCH`**，保留现场；把已发生的写入列为「疑似污染」上报（§8.2.3）。
+
+#### 8.2.3 断言失败后的处置（三步，顺序不可换）
+
+1. **抛异常终止**整个走查（不是警告，不是继续跑完）。
+2. **保留现场**：不删 `$SCRATCH`，不清理 worktree，把 `daemon.json` 留着不删
+   （否则停不掉可能仍在跑的服务进程）。
+3. **上报「疑似污染」**：在报告里写明
+   - 哪个断言失败、在哪个执行点；
+   - 真实池的 before/after 快照差异（哪几个文件、sha256 前后值）；
+   - 若服务还在跑，给出停服命令
+     （`LESSONKIT_WB_HOME=$SCRATCH/registry python -m workbench.cli.main daemon stop`），
+     **不要**用真实注册表去停。
+
+#### 8.2.4 硬断言与「不用 `daemon`」的关系
+
+`daemon` 子命令把 pid 状态写进 `registry.base_dir()`（`workbench/cli/service.py:15-16`、
+`:25-30`），隔离注册表**顺带隔离了守护进程状态**。但 `daemon start` 是**后台进程**，
+§1.7 的 monkeypatch 记录器要装进**该进程**——启动器无法保证这一点。
+
+**因此执行器只用 `serve`（前台、同进程）**：
+- 记录器与业务同进程 → monkeypatch 必然生效（§2.1 的核心优势）；
+- 停服 = 停前台进程，端口必然释放；
+- 不产生 daemon.json 的跨进程状态。
+
+这条已写进 R-1 的防线栏；**它是 §8.2 的硬性前提**：A4 的 mtime 比对假设
+「走查期间除了走查自己的进程，没有别的进程碰真实池」。用 `daemon` 会引入
+一个不受 `assert_isolated` 控制的常驻进程，破坏这个假设。
 
 ### 8.3 红线（执行器不得越过）
 
@@ -1137,6 +1816,12 @@ python tools/walkthrough/run.py \
 | X-4 | 执行器**不得**为了让 diff 通过而放宽规范（例：把 `/practice/draft` 移出主 diff 必须**在报告里显式标注**，不能静默降级） |
 | X-5 | 执行器**不得**在真实池目录里创建任何文件（连 `-wal` / `-shm` 也不行）。走查期间真实池**只读打开** |
 | X-6 | 执行器的产物（`evidence/`）**不进 git**（`tmp/` 或 `evidence/` 加进 `.gitignore`），除非所有者明确要求入库作为验收证据 |
+| X-7 | 执行器**不得**替人勾选交互清单条目。SEMI / MANUAL 等级一律 `PENDING` + 证据，**不写 PASS**（§7.5.1） |
+| X-8 | 执行器**不得**用「把 38 条里的 PENDING 排除出统计」的方式让整体结论看起来通过。`summary` 必须报 `checklist_pending` 计数（§7.6.3） |
+| X-9 | 执行器**不得**为了让「98+ 条记录」的性能项可测而向**真实池**灌数据。造数据只在隔离副本里做（R-26） |
+| X-10 | 执行器**不得**修改 `acceptance.md` 的任何判定口径来适配实现。若实现与验收标准冲突 → 报冲突，走 `openspec/changes/`，**不**就地改口径（`AGENTS.md` 契约权威条款） |
+| X-11 | 执行器**不得**引入新的注册表机制或服务框架。隔离靠 `LESSONKIT_WB_HOME`（`workbench/registry.py:11-12`），服务靠 `app.serve()`（`workbench/server/app.py:402-405`）——**复用，不另造** |
+| X-12 | 执行器**不得**在真实工作区目录（仓库根）里留下任何文件。所有产物进 `$SCRATCH`；`git worktree` 跑完 `remove` + `prune`（R-14） |
 
 ---
 
@@ -1156,6 +1841,12 @@ python tools/walkthrough/run.py \
 | D10 | 帧采样可复现 | 同一触发点采两次 | 两次的帧序列**逐像素相同**（因已 pause + 设 currentTime） |
 | D11 | 像素差工具可用 | `import PIL` + 对同一张图自比 | `import` 成功；自比差异率 `0` |
 | D12 | 端口隔离 | 同时占用 3091 后再起 3092 | 3092 正常起；`daemon start --port 3091` 报「already answers」 |
+| D13 | **记录器状态码覆盖全部响应路径** | 触发 `_send_json` / `_send_html` / `_send_static` / `_send_figure` / `_send_graph_artifact` 各一次 | 五条路径的 `status` **全部**出现在 `requests.jsonl`；`app.WorkbenchHandler.send_response is not http.server.BaseHTTPRequestHandler.send_response`（证明 monkeypatch 生效） |
+| D14 | 探针**无副作用** | 同一页面：探针跑前后的 `requests.jsonl` 行数 + DOM 快照 | 请求数**不变**；DOM 快照哈希**不变**（探针只读） |
+| D15 | 探针覆盖 38 条 | 跑一次 `probe.py` | `checklist.json` 的 `results` 长度 = **38**；id 集合与 §7.5 表格逐条对应，无遗漏无重复 |
+| D16 | 汇总状态机正确 | 构造四组假结果：全 PASS / 有底线 FAIL / 有 PENDING / 交互清单 FAIL | 分别得到 `PASS` / `FAIL` / `PASS_WITH_PENDING` / `FAIL`；有 PENDING 时**不得**输出裸 `PASS` |
+| D17 | 隔离断言在**每个阶段**都跑 | 在 `phase()` / `subprocess` 处打断点 | `assert_isolated` 的调用点覆盖 E1–E6（§8.2.1）全部六处 |
+| D18 | 真实池零变化 | 完整走查前后比对 `WATCHED_PATHS` | sha256 / size / mtime **三项均未变**；`pool/` 下**无新增** `.db` 文件 |
 
 ---
 
@@ -1173,6 +1864,21 @@ python tools/walkthrough/run.py \
 | W-8 | `lesson-kit papers save` 生成的 `ps-NNN` 是否两侧一致 | 两次建卷后比对文件名；不一致则改用**预置 JSON 种子**（§3.4） |
 | W-9 | `.gitignore` 是否已含 `evidence/` 或 `tmp/` | `cat .gitignore`；必要时补 `evidence/` |
 | W-10 | `docs/ACTION-GRAPH.md` 是否需登记执行器动作 | 按 `AGENTS.md` 开发纪律第 2 条，功能交付时同步登记；本设计阶段只在此**标注**，不擅自改该文件（其它 agent 正在写同目录文件） |
+
+**本轮（2026-10-22）已核实的待核项**（不再需要查证）：
+
+| # | 原待核 | 核实结果 | 依据 |
+|---|---|---|---|
+| W-2 | `tools/` 目录是否已存在 | **不存在** → 需新建（属新增目录，须符合仓库结构约定） | `ls tools/` → `No such file or directory`；仓库顶层现有 `commands/ gates/ skills/ templates/ views/` 等，无 `tools/` |
+| W-3 | Playwright 的 chromium 内核是否已装 | **已装**：`chromium-1223` 与 `chromium_headless_shell-1223` | `ls ~/AppData/Local/ms-playwright` |
+| W-4 | PIL 是否可用 | **可用，12.1.1** | `python -c "import PIL; print(PIL.__version__)"` |
+| W-5 | `attrib +R` 是否挡住 SQLite 的 `-wal` / `-shm` | **该担心不成立**：本机真实池的 `journal_mode` 是 **`delete`**（不是 WAL）→ 不产生 `-wal` / `-shm` 旁文件 | `pragma journal_mode` → `delete` |
+| W-8 | `lesson-kit papers save` 生成的 `ps-NNN` 是否两侧一致 | **不能靠它**：源工作区没有 `.lessonkit/practice-sets/`（试卷是产物）；且 `_next_saved_id` 会扫 `paper_state` / `practice_runs` 抢号（`workbench/data/practice_sets.py:175-198`） | 目录不存在 + `practice_sets.py:175-198` |
+| W-9 | `.gitignore` 是否已含 `evidence/` 或 `tmp/` | **含 `tmp/`**（末行 `tmp/`）；**不含 `evidence/`** → 证据放 `tmp/` 下即天然被忽略 | `.gitignore` 末段「前端审计与预览工作区（临时工件，非源码）`tmp/`」 |
+| W-11 | 走查要用的**种子**是否在仓库里 | **不在**：真实池 `pool/dmath.db` 被 `.gitignore:34` 的 `pool/*.db` 忽略；`output/` 被 `.gitignore:1` 忽略；试卷是产物 | `git check-ignore -v pool/dmath.db` → `.gitignore:34` |
+| W-12 | 「98+ 条记录」的长列表性能项能否测 | **当前不能**：实测 `pool/dmath.db` 中 `problem_attempts` 仅 3 行、`practice_runs` 0 行、`feedback_events` 2 行 → 必须先在隔离副本里造 ≥98 条（R-26） | 只读连接 `pragma`/计数查询 |
+| W-13 | `send_response` 是否是覆盖所有响应路径的咽喉点 | **是**：五条出响应路径（`_send_json` / `_send_html` / `_send_static` / `_send_figure` / `_send_graph_artifact`）全部调用 `self.send_response(...)` | `app.py:226`、`:335`、`:355`、`:381`、`:389` |
+| W-14 | 交互清单到底几条 | **38 条**（8/6/5/7/3/5/4）——本文件早先草稿写「42 条」是**错的**，已按 `acceptance.md` 实际勾选框计数修正 | `grep -c "^- \[ \]" acceptance.md` → 38 |
 
 ---
 
@@ -1194,22 +1900,56 @@ $SCRATCH/
     │   ├── db.active_practice.json
     │   ├── schema.json / due.json / weak.json
     │   ├── shots/{S-*.png, index.json}
-    │   └── frames/{M-1/0000.png …, index.json}
+    │   ├── frames/{M-1/0000.png …, index.json}
+    │   └── probe/{checklist.json, 3.1-1.json, 3.1-2.json, … 3.7-4.json}
     ├── after/                    # 同构
     └── diff/
         ├── requests.norm.json / requests.diff.json / requests.diff.md
         ├── db.*.diff.json
         ├── due.diff.json / weak.diff.json / schema.diff.json
+        ├── text-count.json
         ├── shots/{S-*.png, S-*-delta.png}
-        ├── frames/{M-*-strip.png, M-*-reduced.png}
+        ├── frames/{M-*-strip.png, M-*-reduced.png, M-*-noaudio.png}
         └── report.md / report.json
 ```
 
+**证据目录的三层读法**：
+
+| 层 | 目录 | 谁看 | 判什么 |
+|---|---|---|---|
+| 原始 | `evidence/<side>/` | 人（排障） | 「当时到底发生了什么」 |
+| 差异 | `evidence/diff/` | 人（判读） | 「哪里不一样」 |
+| 结论 | `evidence/diff/report.md` + `.json` | 人（裁决） | 「过没过、剩什么没过」 |
+
+`probe/` 放在 `<side>/` 下（原始层）：探针读的是**该侧自己的页面**，
+不比较 before/after 就能单独复现；比较发生在 `diff/` 与 `report.json` 里。
+
 ## 附录 B：编号速查
 
-| 组 | 编号 | 采集器章节 |
+| 组 | 编号 | 条数 | 采集器章节 |
+|---|---|---|---|
+| 底线守卫 | G-1 请求序列 / G-2 持久化 / G-3 学习投影 / G-4 复习建议 / G-5 图谱像素 / G-6 schema 零变更 / G-7 装饰层 pointer-events / G-8 焦点顺序 | 8 | §2、§3、§4、§5、§7.2、§7.6 |
+| 对照截图 | S-1…S-12 | 12 | §5 |
+| 关键帧 | M-1…M-10（+ 降级对照帧） | 10 | §6 |
+| 交互清单 | §3.1 可访问性(8) / §3.2 主题暗色(6) / §3.3 声音(5) / §3.4 交互反馈(7) / §3.5 响应式(3) / §3.6 图案资产(5) / §3.7 性能(4) | **38** | §7.5（逐条对应表）、§7.5.2（探针） |
+| **合计** | | **68** | |
+
+**G-1…G-4 的落点一句话**：
+
+| G | 一句话 | 章节 |
 |---|---|---|
-| 底线守卫 | G-1 请求序列 / G-2 持久化 / G-3 学习投影 / G-4 复习建议 / G-5 图谱像素 / G-6 schema 零变更 / G-7 装饰层 pointer-events / G-8 焦点顺序 | §2、§3、§4、§5、§7.2 |
-| 对照截图 | S-1…S-12 | §5 |
-| 关键帧 | M-1…M-10（+ 降级对照帧） | §6 |
-| 交互清单 | §3.1 可访问性(8) / §3.2 主题暗色(6) / §3.3 声音(5) / §3.4 交互反馈(8) / §3.5 响应式(3) / §3.6 图案资产(6) / §3.7 性能(4) | §5、§6、§7.2 |
+| G-1 | 浏览器驱动真实 UI → 服务进程内记录「方法 + 路径 + 载荷键集合」→ 规范化后 diff | §2、§3 |
+| G-2 | 同一脚本跑完后导出三张表 → 行数与关键列逐行 diff | §4.1、§4.3、§4.4 |
+| G-3 | 导出学习投影四张表 → 完全相同 | §4.1、§4.4 |
+| G-4 | 同一时刻导出 `/due` 与 `/weak` → 集合与顺序 diff | §3.6、§4.4 |
+
+**判定的三种结局**（`acceptance.md:140` 允许第三种）：
+
+| 结局 | 含义 | 报告记法 |
+|---|---|---|
+| 通过 | 自动判定全过 | `✅ PASS` |
+| 不通过 | 自动判定有 FAIL | `❌ FAIL` |
+| **待人工判读** | 机器给不出唯一结论 | `⬜ PENDING` + 证据 + 检查指引 |
+
+**执行器不下结论的场合**：G-5 的像素差观感、M-1…M-10 的观感、38 条里的 SEMI / MANUAL 条目、
+G-1 的 L2（GET 差异）表。**执行器提供证据，不替代评审。**
