@@ -3,25 +3,31 @@
   <g stroke-linecap="round" stroke-linejoin="round">
     <g class="asset-empty__shadow">
       <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
-      <ellipse cx="92" cy="166" rx="7" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
-      <ellipse cx="150" cy="166" rx="7" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="90" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="151" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
-      <path d="M 118.5 77.5 L 90.5 165.5 L 93.5 166.5 L 121.5 78.5 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 118.5 78.5 L 148.5 166.5 L 151.5 165.5 L 121.5 77.5 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 114.2 80 L 91.2 148 L 94 149 L 117 81 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 125.8 80 L 149.8 148 L 147 149 L 123 81 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 111 52 Q 111 43.5 120 43.5 L 122 43.7 L 122 64 L 120 64 Q 111 61 111 52 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122 43.7 Q 129 44 129 52 Q 129 61 120 64 L 122 64 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
-      <path d="M 120 78 L 92 166" stroke-width="3"/>
-      <path d="M 120 78 L 150 166" stroke-width="3"/>
-      <path d="M 106 110 L 136 102" stroke-width="2"/>
-      <circle cx="120" cy="54" r="11" stroke-width="3"/>
-      <path d="M 120 65 L 120 76" stroke-width="2"/>
-      <circle cx="120" cy="78" r="4" stroke-width="3"/>
-      <path d="M 92 166 L 88 154 L 97 155 Z" stroke-width="3"/>
-      <path d="M 150 166 L 145 154 L 154 155 Z" stroke-width="3"/>
+      <path d="M 111 52 Q 111 43.5 120 43.5 Q 129 44 129 52 Q 129 61 120 64 Q 111 61 111 52 Z" stroke-width="3"/>
+      <path d="M 120 64 L 120 75" stroke-width="2"/>
+      <circle cx="120" cy="78" r="4.5" stroke-width="3"/>
+      <path d="M 117 81 L 94 149" stroke-width="3"/>
+      <path d="M 123 81 L 147 149" stroke-width="3"/>
+      <path d="M 107 110 L 133 105" stroke-width="2"/>
+      <path d="M 118.4 99.5 L 121.6 115.5" stroke-width="2"/>
+      <circle cx="120" cy="107.5" r="4.5" stroke-width="2"/>
+      <path d="M 89.5 148 L 97.5 151" stroke-width="2"/>
+      <path d="M 92 152 L 97 153.5 L 93.5 162 L 88.5 160.5 Z" stroke-width="3"/>
+      <path d="M 88.5 160.5 L 93.5 162 L 89.5 166 Z" stroke-width="3"/>
+      <path d="M 151 166 L 147 153 L 154 153.5 Z" stroke-width="3"/>
     </g>
     <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
-      <path d="M 109.2 55.9 A 11 11 0 0 0 113.7 45" stroke-width="1.5"/>
+      <path d="M 113.6 51 Q 114 45.6 118.4 44.4" stroke-width="1.5"/>
     </g>
   </g>
 </svg>
