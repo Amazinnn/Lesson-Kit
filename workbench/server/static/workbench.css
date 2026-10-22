@@ -1091,13 +1091,83 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
 }
 .knowledge-body > :first-child { margin-top: 0; }
 .knowledge-body > :last-child { margin-bottom: 0; }
-.knowledge-list li { padding: 12px 0; }
-.knowledge-list li:first-child { padding-top: 0; }
+/* ---- 知识点列表 = 分组卡片（18.1 · IMPL-W2e）--------------------------------
+   markup（`pages.py` 的 `kps_page`）：
+     `.knowledge-list` > `.knowledge-group`（**组块**）
+       > `.knowledge-group__title`（组标题 = 章节 id）
+       > `.knowledge-group__cards`（组内卡列表）> `.knowledge-row`（一行）
+   ⚠️ **两条旧规则会漏进嵌套结构**：
+     `.knowledge-list li`            同时命中**组 `<li>`** 与**组内行**；
+     `.knowledge-list li:first-child` 命中**每一组**的首行
+        （`:first-child` 是「相对父元素」——每个组都各有一个首行）。
+   ⇒ 现在两条都收口到 `.knowledge-group__cards > .knowledge-row`：
+     · **组的 `<li>` 不再吃行内距**（它是分组结构，不是一行）；
+     · **每一组的首行都保留自己的上间距**（不再被 `:first-child` 抹平）。
+   · 空态那个无类名的 `<li>` 保持原间距（上 0 / 下 12px）。 */
+.knowledge-list > li:not(.knowledge-group) { padding: 0 0 var(--sp-3); }
+/* 组块 = **分组结构**，不是卡片：没有卡面、没有描边，只有间距。 */
+.knowledge-group {
+  margin: var(--sp-5) 0 0;        /* 与上一组的距离（首组为 0） */
+  padding: 0;                     /* 组块不是行：不吃行内距 */
+}
+.knowledge-group:first-child { margin-top: 0; }
+/* 组标题 = **分组标签**（不是卡片，也不抢正文层级）：
+   比全局 `h3`（14px / 22px）更轻 —— 次级墨 + 12px + 紧行高 18px；
+   上方留白由组块外边距承担（`--sp-5`），下方留白由组内首行的外边距承担。 */
+.knowledge-group__title {
+  margin: 0;
+  font-size: var(--fs-label);     /* 12px —— 比全局 h3 小一号 */
+  line-height: 18px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink-muted);        /* 次级墨 */
+}
+/* 组内 = 一叠圆角卡：`.knowledge-row` 自己拿卡面
+   （`--surface-card` / 12px 圆角 / `--elev-1` 柔影 / **无描边**，同 `.card` 基类）。
+   ⚠️ 行内距比 `.card`（18px）紧，也比原来的 12px 紧。 */
+.knowledge-group__cards {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.knowledge-group__cards > .knowledge-row {
+  margin-top: var(--sp-2);        /* 每行自带上间距（含每一组的首行） */
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+}
 .knowledge-list .score { margin-left: 8px; color: var(--ink-faint); font-size: 12px; }
 .knowledge-list .reasons { display: block; margin-top: 2px; color: var(--ink-faint); font-size: 13px; }
 .knowledge-sort-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 4px 0 14px; color: var(--ink-faint); font-size: 12px; }
 .knowledge-sort-bar select { width: 118px; }
 .knowledge-meta { float: right; color: var(--ink-faint); font-size: 12px; }
+/* ---- 组内一行的排布：知识点名 + 题数 + 状态圆点 ------------------------------
+   行的内层 `<div>` 只有两个子节点：`<a>`（知识点名）与 `.knowledge-meta`
+   （题数 + `lk-dot` 状态圆点）。
+   · 内层改 flex 一行：名字左（可收缩、可换行），元信息右（不换行）——
+     `float: right` 在长名字下会把圆点挤到行首、出现换行错位；
+   · `.knowledge-meta` 自身 inline-flex：题数与圆点之间留 6px、上下居中
+     （⚠️ 只改**容器**排布，`.lk-dot` 一族的几何一个字都不动）。 */
+.knowledge-row > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.knowledge-row > div > a {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.knowledge-row .knowledge-meta {
+  float: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  white-space: nowrap;
+}
 
 /* ---- 知识点状态圆点（tasks.md 18.2 · IMPL-W2e 第 8 条）--------------------
    18.2 的 markup 已用这些类名（`pages.py` 的 `_STATE_DOTS`）：
