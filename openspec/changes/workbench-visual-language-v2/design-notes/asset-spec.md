@@ -231,7 +231,7 @@
 | `--asset-wash-red` | `--art-wash-red` | `#f9e5df` | `#3c2c24` | 红色淡彩 |
 | `--asset-wash-neutral` | `color-mix(in oklab, var(--art-ink) 10%, var(--art-paper))` | 派生 | 派生 | 中性淡彩（背光面） |
 | `--asset-highlight` | `--art-highlight` | `rgb(255 255 255 / 55%)` | `rgb(255 240 214 / 8%)` | 克制高光 |
-| `--asset-lamp-warm` | `--lk-lamp-warm` | `#f7c46b` | `#f7c46b` | 台灯暖光 |
+| `--asset-lamp-warm` | （资产层自有变量；权威表无对应 token → 待裁决） | `#f7c46b` | `#f7c46b` | 台灯暖光 |
 
 > **命名规则**：派生变量一律写成 `var(--asset-xxx, #回退值)`，回退值即上表的浅色取值。
 > 回退值的作用是：资产文件被独立打开（没进页面 CSS 级联）时仍是一张可看的浅色主题插画。
@@ -1434,12 +1434,12 @@ workbench/server/static/assets/
 ### 4.6 涟漪层（不是资产）
 
 - 涟漪**不是 SVG 资产**，是宿主 CSS 的一层：一张放大的径向渐变遮罩
-  （中心在灯位 `--lk-lamp-x/--lk-lamp-y`），用 `transform: scale()` + `opacity` 扩散。
+  （中心在灯位，当前写死 `88%` / `82%`；权威表无对应 token → 待裁决），用 `transform: scale()` + `opacity` 扩散。
 - 约束（`decisions.md` §17.2 / motion-spec §4.5）：只动 `transform` / `opacity`；
   不阻塞交互（`pointer-events: none`）；不改请求时序。
 - `prefers-reduced-motion` 下降级为**整段跳过**（灯与涟漪层都不创建）。
 - 切回暖纸时，涟漪**反向收拢**（暖纸色由外向内铺满）。
-- 涟漪的目标色读 `--lk-ground-light` / `--lk-ground-night`（页面地面色），与资产无关。
+- 涟漪的目标色读 `--surface-base`（权威表 §3.1 页面地面色；同名变量两套值），与资产无关。
 
 ### 4.7 宿主契约（宿主必须提供的 CSS 与钩子）
 
@@ -1855,7 +1855,7 @@ ids.length === new Set(ids).size;
 | `--asset-ink-on-*` | `--surface-card` / `--surface-ink` | §3.1 + §5 表 |
 | `--asset-wash-*` | `--art-wash-blue/yellow/red` | §3.9 |
 | `--asset-highlight` | `--art-highlight` | §3.9 |
-| `--asset-lamp-warm` | `--lk-lamp-warm` | motion-spec §3.1 |
+| `--asset-lamp-warm` | （资产层自有变量；权威表无对应 token → 待裁决） | motion-spec §1.8 |
 
 ---
 

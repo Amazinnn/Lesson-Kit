@@ -63,75 +63,74 @@
 
 ```css
 :root {
-  /* ── 时长档 ───────────────────────────────── */
-  --lk-dur-tap: 120ms;        /* 微反馈：hover 淡入、按下、焦点环 */
-  --lk-dur-enter: 180ms;      /* 入场：列表项、统计卡、展开内容 */
-  --lk-dur-view: 240ms;       /* 视图转场、骨架一轮 */
-  --lk-dur-pop: 320ms;        /* 弹出：火苗点燃、爆点、进度带 */
-  --lk-dur-scene: 520ms;      /* 场景：挤压回弹满程、日常庆祝 */
-  --lk-dur-scene-long: 700ms; /* 长场景：台灯转场、连对横幅停留 */
+  /* ── 时长档（权威表 §2.6） ─────────────────────── */
+  --dur-fast: 120ms;      /* 微反馈：hover 淡入、按下、焦点环 */
+  --dur-base: 160ms;      /* 入场：列表项、统计卡、展开内容 */
+  --dur-slow: 240ms;      /* 视图转场、骨架一轮 */
+  --dur-scene: 400ms;     /* 弹出 / 场景：火苗点燃、爆点、进度带 */
+  --dur-ceremony: 700ms;  /* 里程碑：挤压回弹满程、日常庆祝、台灯转场、连对横幅停留 */
 
-  /* ── 缓动档 ───────────────────────────────── */
-  --lk-ease-out: cubic-bezier(.22, .61, .36, 1);      /* 离场/进入的减速 */
-  --lk-ease-standard: cubic-bezier(.4, 0, .2, 1);     /* 通用双向 */
-  --lk-ease-in: cubic-bezier(.55, .06, .68, .19);     /* 加速离场 */
-  --lk-ease-back-out: cubic-bezier(.34, 1.3, .64, 1); /* 轻微过冲（限幅 1.3） */
-  --lk-ease-ripple: cubic-bezier(.16, .84, .44, 1);   /* 涟漪：先快后慢 */
-  /* 多邻国三档回弹曲线（直译，见 §3.1） */
-  --lk-ease-snap-hold: cubic-bezier(.33, 0, .67, 1);
-  --lk-ease-snap-pull: cubic-bezier(.37, 0, .67, 1);
-  --lk-ease-snap: cubic-bezier(.17, 0, .67, 1);
-
-  /* ── 位移档 ───────────────────────────────── */
-  --lk-shift-nudge: 4px;   /* 答错水平摆动幅度 */
-  --lk-rise-list: 8px;     /* 列表项入场 */
-  --lk-rise-view: 12px;    /* 视图转场入场 */
-  --lk-shift-burst: 20px;  /* 纸片/爆点飞散距离 */
-
-  /* ── 缩放档 ───────────────────────────────── */
-  --lk-scale-tap: .92;     /* 答错轻压 */
-  --lk-scale-press: .96;   /* 按下 */
-  --lk-scale-pop: 1.06;    /* 通用弹出上限 */
-  --lk-scale-burst: 1.12;  /* 里程碑爆点峰值 */
-  --lk-scale-flame: 1.15;  /* 火苗点燃峰值 */
-
-  /* ── 透明度档 ─────────────────────────────── */
-  --lk-alpha-veil: .08;    /* 极淡：hover 覆盖层 */
-  --lk-alpha-soft: .35;    /* 弱：骨架底纹、辉光 */
-  --lk-alpha-mid: .6;      /* 中：折叠残影、灯罩溢光 */
-  --lk-alpha-strong: .85;  /* 强：爆点环、彩带片 */
-  --lk-alpha-full: 1;      /* 完全可见 */
+  /* ── 缓动档（权威表 §2.6，值以权威表为准） ─────── */
+  --ease-out: cubic-bezier(.22, .61, .36, 1);      /* 进入视线的减速 */
+  --ease-standard: cubic-bezier(.4, 0, .2, 1);     /* 通用双向 */
+  --ease-in: cubic-bezier(.55, .06, .68, .19);     /* 离开视线的加速 */
+  --ease-rebound: cubic-bezier(.34, 1.3, .64, 1);  /* 轻微过冲（限幅 1.3） */
+  --ease-ripple: cubic-bezier(.16, .84, .44, 1);   /* 涟漪专用（起手快、收尾慢） */
+  /* 挤压回弹 5 段的段内缓动（多邻国实测 PathInterpolator） */
+  --ease-snap-hold: cubic-bezier(.33, 0, .67, 1); /* 第 1、4 段 */
+  --ease-snap-pull: cubic-bezier(.37, 0, .67, 1); /* 第 2、3 段 */
+  --ease-snap: cubic-bezier(.17, 0, .67, 1);      /* 第 5 段（收敛） */
 }
 ```
 
+> **位移 / 缩放 / 透明度三档（§1.3 / §1.4 / §1.5）在权威表 §2 中没有对应 token**
+> （结构 token 53 个已封闭：圆角/间距/字号/字族/字重/线宽/时长/缓动/z-index）。
+> 因此本规格**不再把它们写成 token**：数值**原样内联**在用到它们的关键帧与规则里（见 §1.3–§1.5）。
+>
+> **缓动档已全部进权威表 §2.6（A-18-4 裁定）**：原先内联在本规格里的
+> 涟漪曲线与多邻国三条回弹段曲线，语义都与通用档不同，故在权威表里**各自独立命名**
+> （`--ease-ripple` / `--ease-snap-hold` / `--ease-snap-pull` / `--ease-snap`），
+> **不再出现同名不同值**。本规格只引用，不另定值。
+
 ### 1.1 时长档
 
-| 档 | 值 | 用于哪类交互 | 出处 |
+| 档（权威表 token） | 值 | 用于哪类交互 | 出处 |
 |---|---|---|---|
-| `tap` | 120ms | 极微反馈：hover 覆盖层淡入、按钮按下、焦点环显形 | 【决策】`decisions.md` 12.1「交互反馈 120–180ms」取下限 |
-| `enter` | 180ms | 列表项入场、统计卡弹入、展开/收起内容补间、连对数字替换 | 【决策】12.3「入场 180–240ms」取下限 |
-| `view` | 240ms | 视图转场（`#middle-page` 容器）、骨架微光一轮、连对横幅入退场 | 【决策】12.3 取上限；`acceptance.md` M-8 要求 0/60/120/240ms 四帧 |
-| `pop` | 320ms | 火苗逐簇点燃、几何爆点、进度带填充 | 【推断】取自 `duolingo` 结算统计卡错峰 80–120ms × 2–3 档的量级 |
-| `scene` | 520ms | 挤压回弹满程、日常庆祝总时长、里程碑彩带落程 | 【决策】12.1「场景动效 240–520ms」上限 |
-| `scene-long` | 700ms | 台灯转场总时长、10 连横幅停留 | 【决策】17.2「共 ~700ms」 |
+| `fast`（`--dur-fast`） | 120ms | 极微反馈：hover 覆盖层淡入、按钮按下、焦点环显形 | 【决策】`decisions.md` 12.1「交互反馈 120–180ms」取下限 |
+| `base`（`--dur-base`） | 160ms | 列表项入场、统计卡弹入、展开/收起内容补间、连对数字替换 | 【决策】12.3「入场 180–240ms」取下限（权威表取 160ms） |
+| `slow`（`--dur-slow`） | 240ms | 视图转场（`#middle-page` 容器）、骨架微光一轮、连对横幅入退场 | 【决策】12.3 取上限；`acceptance.md` M-8 要求 0/60/120/240ms 四帧 |
+| `scene`（`--dur-scene`） | 400ms | 火苗逐簇点燃、几何爆点、进度带填充 | 【推断】取自 `duolingo` 结算统计卡错峰 80–120ms × 2–3 档的量级 |
+| `ceremony`（`--dur-ceremony`） | 700ms | 挤压回弹满程、日常庆祝总时长、里程碑彩带落程、台灯转场总时长、10 连横幅停留 | 【决策】12.1「场景动效 240–520ms」上限 + 17.2「共 ~700ms」 |
 
 > **特例：挤压回弹 = 517ms**【实证】。多邻国 5 段时长 `17+33+83+167+217 = 517ms`
 > （`DUOLINGO-ANIM-IMPL.md` §3.1.6，`MidLessonDuoJumpView.JuicierScaleAnimationSection`）。
-> 517ms 落在 `scene`（520ms）档内；**关键帧百分比按 517ms 归一化**计算，
-> 520ms 档位仅作归档用，实际 `animation-duration` 写 `517ms` 以保证曲线形状不失真。
+> 517ms 落在 `ceremony`（700ms）档内；**关键帧百分比按 517ms 归一化**计算，
+> 700ms 档位仅作归档用，实际 `animation-duration` 写 `517ms` 以保证曲线形状不失真。
+>
+> ⚠️ **待裁决**：本表是**token 层**的时长档（权威表 §2.6 钉死的 5 档）；
+> 下文各节 CSS / 编排里**写死的字面量**（180ms / 320ms / 520ms 等）**本次未改** ——
+> 它们不是 `--lk-*` token，改它们会连带改动关键帧时长与编排时序（§2.1 / §3 / §4.5 / §6）。
+> 是否把这些字面量也改为引用权威 token（或反过来把权威档位调到与字面量一致）→ 待裁决。
 
 ### 1.2 缓动档
 
-| 档 | 曲线 | 语义 | 出处 |
+> **值以权威表 `design-notes/night-paper-tokens.md` §2.6 为准**（A-18-4：权威表补出每条
+> 缓动的 `cubic-bezier` 系数，本规格**只引用、不另定值**）。
+
+| 档（权威表 token） | 曲线 | 语义 | 出处 |
 |---|---|---|---|
-| `out` | `cubic-bezier(.22,.61,.36,1)` | 元素**进入**视线的减速（入场、淡入、弹入） | 【惯例】Material "decelerate" |
-| `standard` | `cubic-bezier(.4,0,.2,1)` | 通用双向（hover、骨架扫过、焦点环） | 【惯例】Material "standard" |
-| `in` | `cubic-bezier(.55,.06,.68,.19)` | 元素**离开**视线的加速（退场、收起） | 【惯例】Material "accelerate" |
-| `back-out` | `cubic-bezier(.34,1.3,.64,1)` | 轻微过冲（限幅在 1.3，避免廉价弹跳感） | 【推断】"overshoot 限幅"是动画通行做法 |
-| `ripple` | `cubic-bezier(.16,.84,.44,1)` | 涟漪：起手快、收尾慢，模拟光推开 | 【推断】由"灯亮 → 光扩散"的感知顺序推导 |
-| `snap-hold` | `cubic-bezier(.33,0,.67,1)` | 回弹第 1、4 段 | 【实证】多邻国 SECTION_1/4 |
-| `snap-pull` | `cubic-bezier(.37,0,.67,1)` | 回弹第 2、3 段 | 【实证】多邻国 SECTION_2/3 |
-| `snap` | `cubic-bezier(.17,0,.67,1)` | 回弹第 5 段（收敛） | 【实证】多邻国 SECTION_5 |
+| `out`（`--ease-out`） | `cubic-bezier(.22,.61,.36,1)` | 元素**进入**视线的减速（入场、淡入、弹入） | 【惯例】Material "decelerate" |
+| `standard`（`--ease-standard`） | `cubic-bezier(.4,0,.2,1)` | 通用双向（hover、骨架扫过、焦点环） | 【惯例】Material "standard" |
+| `in`（`--ease-in`） | `cubic-bezier(.55,.06,.68,.19)` | 元素**离开**视线的加速（退场、收起） | 【惯例】Material "accelerate" |
+| `rebound`（`--ease-rebound`） | `cubic-bezier(.34,1.3,.64,1)` | 轻微过冲（限幅在 1.3，避免廉价弹跳感）；挤压回弹的通用手感 | 【推断】"overshoot 限幅"是动画通行做法 |
+| `ripple`（`--ease-ripple`） | `cubic-bezier(.16,.84,.44,1)` | **涟漪专用**：起手快、收尾慢，模拟光推开 | 【推断】语义独立 → 权威表**独立命名**（A-18-4） |
+| `snap-hold`（`--ease-snap-hold`） | `cubic-bezier(.33,0,.67,1)` | 回弹第 1、4 段 | 【实证】多邻国 SECTION_1/4 |
+| `snap-pull`（`--ease-snap-pull`） | `cubic-bezier(.37,0,.67,1)` | 回弹第 2、3 段 | 【实证】多邻国 SECTION_2/3 |
+| `snap`（`--ease-snap`） | `cubic-bezier(.17,0,.67,1)` | 回弹第 5 段（收敛） | 【实证】多邻国 SECTION_5 |
+
+> 这 8 条曲线**全部**是权威表 §2.6 的 token（CSS 里写 `var(--ease-*)`；
+> WAAPI 的 `easing` 只接受字面量字符串，故 JS 调用处照抄权威表的同一系数，
+> **不得另写一套**——见 §4.5 的说明）。
 
 > **不要用** `ease` / `ease-in-out` 关键字，也不建议 `linear`：
 > `linear` 在本规格里只允许出现在**匀速旋转**（加载环）与**匀速扫过**（骨架微光）两处。
@@ -142,6 +141,8 @@
 
 ### 1.3 位移档
 
+> **不是 token**：权威表 §2 无位移 token，本档的数值**原样内联**在使用处（见 §2.2 / §3）。
+
 | 档 | 值 | 用于哪类交互 | 出处 |
 |---|---|---|---|
 | `nudge` | 4px | 答错的水平摆动幅度 | 【公开】`DUOLINGO-CELBRATION.md` §7.1 L0：「轻微左右位移（≤4px，≤160ms），不抖动」 |
@@ -150,6 +151,8 @@
 | `burst` | 20px | 纸片/爆点飞散位移基准 | 【推断】庆祝物的可读性位移上限 |
 
 ### 1.4 缩放档
+
+> **不是 token**：权威表 §2 无缩放 token，本档的数值**原样内联**在使用处（见 §2.2 / §3）。
 
 | 档 | 值 | 用于哪类交互 | 出处 |
 |---|---|---|---|
@@ -165,6 +168,9 @@
 > 详见 §3.1 与 §10 的漂移登记。
 
 ### 1.5 透明度档
+
+> **不是 token**：权威表 §2 无透明度 token，本档的数值**原样内联**在使用处。
+> hover 覆盖层例外 —— 它直接用权威表的 `--veil-hover` 面纱 token（自带透明度）。
 
 | 档 | 值 | 用于哪类交互 | 出处 |
 |---|---|---|---|
@@ -195,7 +201,11 @@
 
 ### 1.7 命名与注入位置
 
-- token 前缀 `--lk-`（lesson-kit motion），关键帧前缀 `lk-`。
+- **token 名字一律用权威表**（`design-notes/night-paper-tokens.md`）的
+  `--surface-*` / `--ink-*` / `--role-*` / `--rule-*` / `--veil-*` / `--elev-*` /
+  `--skeleton-*` / `--dur-*` / `--ease-*`；**不再有本规格自有的 token 命名族**
+  （`decisions.md` A-13：第三族 `--lk-*` 整体退役）。
+  关键帧前缀 `lk-` 与类名前缀 `lk-` 保留 —— 那是动画名与选择器名，**不是 token**。
 - token 定义在 `workbench/server/static/workbench.css` 的 `:root`；
   动效相关的 keyframes 集中在同文件尾部的 `/* ── motion ── */` 区块，
   便于一次性审查"只动 transform/opacity"。
@@ -209,22 +219,24 @@
 否则实现期会临时硬编码十六进制值（正是本次要消除的问题）。
 **建议命名**如下，供 token 层作者对齐：
 
-| token | 用途 | 备注 |
+| 权威表 token | 用途 | 备注 |
 |---|---|---|
-| `--lk-ink` | hover 覆盖层底色 | 建议取墨色，8% 透明度由 `opacity` 承担 |
-| `--lk-ink-soft` | 加载环的底圈 | 弱一档 |
-| `--lk-blue` | 学习蓝（答对几何标记、连对高档横幅、加载环前段） | 三角色色之一 |
-| `--lk-yellow` | 阳光黄（连对低档横幅、火苗已燃层） | 三角色色之一 |
-| `--lk-red` | 注意红（答错几何标记） | 三角色色之一；**仅用于失败与阻塞** |
-| `--lk-skeleton-base` | 骨架灰块 | — |
-| `--lk-skeleton-sheen` | 骨架微光高光 | 与 base 同色相、更高明度 |
-| `--lk-ground-light` / `--lk-ground-night` | 亮/暗主题的**页面地面色** | 台灯转场读这两个值作为涟漪的目标色 |
-| `--lk-lamp-warm` | 灯下暖光 | 台灯转场专用 |
-| `--lk-lamp-x` / `--lk-lamp-y` | 台灯在视口中的位置 | 同时供台灯定位与涟漪 `transform-origin` 使用 |
+| `--veil-hover` | hover 覆盖层底色 | 权威表 §3.5「交互面纱」：自带 6% 暖面纱，透明度不再另设 |
+| `--ink-faint` | 加载环的底圈 | 弱一档 |
+| `--role-blue` | 学习蓝（答对几何标记、连对高档横幅、加载环前段） | 三角色色之一 |
+| `--role-yellow` | 阳光黄（连对低档横幅、火苗已燃层） | 三角色色之一 |
+| `--role-red` | 注意红（答错几何标记） | 三角色色之一；**仅用于失败与阻塞** |
+| `--skeleton-base` | 骨架灰块 | — |
+| `--skeleton-sheen` | 骨架微光高光 | 与 base 同色相、更高明度 |
+| `--surface-base` | **页面地面色**（两主题各一套值） | 台灯转场读它作为涟漪的目标色 |
+| `--asset-lamp-warm` | 灯下暖光 | 台灯转场专用；由资产层提供（`asset-spec.md` §2） |
+| 灯位 | 台灯在视口中的位置 | 权威表无对应 token → 暂写死 `88%` / `82%`（→ 待裁决） |
 
 > **重要**：涟漪覆盖层的颜色必须**精确等于**新主题的页面地面色
-> （`--lk-ground-night` / `--lk-ground-light`），否则 §4.3 的第 ④ 步（换肤）
+> （`--surface-base` 的目标主题取值），否则 §4.3 的第 ④ 步（换肤）
 > 与第 ⑤ 步（退场）之间会出现可见的色差跳变。
+> 权威表的 `--surface-base` **在同一个变量名下随 `data-theme` 变化**，
+> 所以取「目标主题」的值必须在换肤前读出（见 §4.2 的 `themeBase()`）。
 
 ---
 
@@ -248,10 +260,10 @@
 | 12 | **成功（答对）** | 判定为正确 | 目标选项**挤压回弹**（5 段）+ 蓝色勾选几何标记瞬时出现 | 517ms | 三档 `snap-*` | 纯 CSS | **无回弹**；勾选几何标记瞬时出现（终态直落） |
 | 13 | **庆祝（日常档）** | 一份试卷完成 | 完成页容器上浮淡入 → 数字滚动 → 进度带 `scaleX 0→1` → 3 张统计卡错峰弹入 → CTA 滑入 | 900ms 总程 | `out` | 纯 CSS + vanilla JS（数字） | 全部元素**直接落终态**：数字直显、进度带 100%、统计卡已就位、CTA 可点；**无任何位移或淡入** |
 | 14 | **庆祝（里程碑档）** | 全对 / 破纪录 / 章节首次完成 | 日常档之上叠：几何爆点（圆环扩散）+ 纸片飞散 | 1200ms 总程 | `out` / `ripple` | 纯 CSS + 内联 SVG（纸片形状） | 只保留**最终静态构图**：一帧爆点 + 落定后的纸片静置（或直接不画纸片）；数字/进度带同日常档降级 |
-| 15 | **台灯转场** | 切换亮/暗主题 | 台灯从角落探出 → 点亮 → 涟漪铺满 → 收回（完整时序见 §4） | 700ms | `out` / `ripple` / `back-out` | vanilla JS（编排）+ 内联 SVG（台灯）+ 纯 CSS（涟漪层） | **整段跳过**：主题属性直接切换，台灯与涟漪层不创建；不播放任何音效 |
+| 15 | **台灯转场** | 切换亮/暗主题 | 台灯从角落探出 → 点亮 → 涟漪铺满 → 收回（完整时序见 §4） | 700ms | `out` / `ripple` / `rebound` | vanilla JS（编排）+ 内联 SVG（台灯）+ 纯 CSS（涟漪层） | **整段跳过**：主题属性直接切换，台灯与涟漪层不创建；不播放任何音效 |
 | 16 | **涟漪** | 台灯转场的第 ③ 段 | 新主题地面色以径向遮罩从灯位扩散铺满（详见 §4） | 450ms（扩散） | `ripple` | 纯 CSS（`transform: scale` + `mask-image` + `opacity`） | 直接切主题，涟漪层不创建 |
 | 17 | **火苗簇** | 连对数增长 | 火苗逐簇点燃（每簇 `scale .55→1.15→1` + 由灰到黄的**透明度交叉淡入**），簇间错峰 80ms | 320ms（每簇） | `out` | 纯 CSS + 内联 SVG（火苗形状） | 火苗**直接落终态**（该亮的直接是黄的），无逐簇过程、无缩放 |
-| 18 | **连对横幅** | 连对达到 5 / 10（插播） | **一份**横幅弹入 → 数字替换 → 退场（参数化，见 §6） | 700ms（5 连）/ 900ms（10 连） | `out` / `back-out` | 纯 CSS + vanilla JS（写 CSS 变量） | 横幅**直接落终态**（显示正确数字后立即可读），无弹入/退场补间 |
+| 18 | **连对横幅** | 连对达到 5 / 10（插播） | **一份**横幅弹入 → 数字替换 → 退场（参数化，见 §6） | 700ms（5 连）/ 900ms（10 连） | `out` / `rebound` | 纯 CSS + vanilla JS（写 CSS 变量） | 横幅**直接落终态**（显示正确数字后立即可读），无弹入/退场补间 |
 | 19 | **进度带** | 数据层负荷柱 / 日历扩散 / 庆祝进度 | `scaleX 0→1`（`transform-origin: left`），逐柱错峰 24ms | 320ms | `out` | 纯 CSS | 直接落终值（柱高 100%），无生长 |
 
 > **第 10 项与第 9 项的区别**：第 9 项是「有结构可占位」时用骨架；
@@ -268,14 +280,14 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--lk-ink);
+  background: var(--veil-hover);        /* 权威表 §3.5：面纱自带透明度 */
   opacity: 0;
   pointer-events: none;                 /* 装饰层不拦截交互：acceptance G-7 */
-  transition: opacity var(--lk-dur-tap) var(--lk-ease-standard);
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
-.lk-tappable:hover::after { opacity: var(--lk-alpha-veil); }
+.lk-tappable:hover::after { opacity: 1; }
 .lk-tappable:hover { transform: translate3d(0, -1px, 0); }
-.lk-tappable:active { transform: scale(var(--lk-scale-press)); }
+.lk-tappable:active { transform: scale(.96); }   /* 缩放档 §1.4 `press`，内联 */
 ```
 
 **（b）state class 命名**：一律 `is-*`（`is-revealed` / `is-correct` / `is-wrong` /
@@ -291,9 +303,11 @@ middlePage.innerHTML = nextPage.innerHTML;
 middlePage.animate(
   [{ opacity: 0, transform: "translate3d(0, 12px, 0)" },
    { opacity: 1, transform: "translate3d(0, 0, 0)" }],
-  { duration: 240, easing: "cubic-bezier(.22,.61,.36,1)", fill: "none" }
+  { duration: 240, easing: easeVar("--ease-out"), fill: "none" }
 );
 ```
+> `easeVar()` 是 §4.2 定义的取 token 助手（WAAPI 的 `easing` 只接受字面量字符串，
+> 所以值从权威表 §2.6 读，**不在 JS 里另抄一份系数**）。
 纯 CSS 方案（`#middle-page { animation: lk-rise-in-12 240ms both; }`）**只会在元素
 首次渲染时播放一次**，换页不会重放——故不采用。
 
@@ -317,7 +331,7 @@ CSS 关不掉）与**是否播放**音效
 （模式参考 `workbench.js:1639` 现有的 `matchMedia("(prefers-reduced-motion: reduce)")`
 判定写法）。
 
-> **优先级**【待核，见 §10 D-7】：系统 `prefers-reduced-motion: reduce`
+> **优先级**【待核，见 §10 D-6】：系统 `prefers-reduced-motion: reduce`
 > **恒定降级**（用户可在系统里关掉，不允许被 UI 覆盖）；
 > UI 开关只是在此之上**额外**关闭动效。二者取"或"。
 
@@ -347,11 +361,11 @@ CSS 关不掉）与**是否播放**音效
 
 ```css
 @keyframes lk-squash-bounce {
-  0%      { transform: scale(.6);     animation-timing-function: cubic-bezier(.33, 0, .67, 1); }
-  3.288%  { transform: scale(1.1);    animation-timing-function: cubic-bezier(.37, 0, .67, 1); }
-  9.671%  { transform: scale(1.1);    animation-timing-function: cubic-bezier(.37, 0, .67, 1); }
-  25.725% { transform: scale(.9603);  animation-timing-function: cubic-bezier(.33, 0, .67, 1); }
-  58.027% { transform: scale(1.0067); animation-timing-function: cubic-bezier(.17, 0, .67, 1); }
+  0%      { transform: scale(.6);     animation-timing-function: var(--ease-snap-hold); }
+  3.288%  { transform: scale(1.1);    animation-timing-function: var(--ease-snap-pull); }
+  9.671%  { transform: scale(1.1);    animation-timing-function: var(--ease-snap-pull); }
+  25.725% { transform: scale(.9603);  animation-timing-function: var(--ease-snap-hold); }
+  58.027% { transform: scale(1.0067); animation-timing-function: var(--ease-snap); }
   100%    { transform: scale(1); }
 }
 
@@ -382,7 +396,7 @@ CSS 关不掉）与**是否播放**音效
 }
 
 /* 用法：列表项 / 统计卡 */
-.lk-stagger > * { animation: lk-rise-in-8 180ms var(--lk-ease-out) both; }
+.lk-stagger > * { animation: lk-rise-in-8 180ms var(--ease-out) both; }
 .lk-stagger > :nth-child(1) { animation-delay: 0ms; }
 .lk-stagger > :nth-child(2) { animation-delay: 40ms; }
 .lk-stagger > :nth-child(3) { animation-delay: 80ms; }
@@ -405,7 +419,7 @@ CSS 关不掉）与**是否播放**音效
 .lk-skeleton {
   position: relative;
   overflow: hidden;
-  background: var(--lk-skeleton-base);            /* 灰块 */
+  background: var(--skeleton-base);            /* 灰块 */
 }
 .lk-skeleton::after {
   content: "";
@@ -413,12 +427,12 @@ CSS 关不掉）与**是否播放**音效
   inset: 0;
   background: linear-gradient(100deg,
       transparent 0%,
-      var(--lk-skeleton-sheen) 42%,
-      var(--lk-skeleton-sheen) 58%,
+      var(--skeleton-sheen) 42%,
+      var(--skeleton-sheen) 58%,
       transparent 100%);
   transform: translate3d(-100%, 0, 0);
   pointer-events: none;
-  animation: lk-skeleton-sweep 1200ms var(--lk-ease-standard) infinite;
+  animation: lk-skeleton-sweep 1200ms var(--ease-standard) infinite;
 }
 @keyframes lk-skeleton-sweep {
   from { transform: translate3d(-100%, 0, 0); }
@@ -458,8 +472,8 @@ CSS 关不掉）与**是否播放**音效
 .lk-ticker-strip {
   display: flex;
   flex-direction: column;
-  transform: translate3d(0, calc(var(--lk-digit, 0) * -1em), 0);
-  transition: transform 240ms var(--lk-ease-out);
+  transform: translate3d(0, 0, 0);
+  transition: transform 240ms var(--ease-out);
   will-change: transform;
 }
 .lk-ticker-glyph { height: 1em; line-height: 1; }
@@ -487,7 +501,9 @@ function setTicker(el, value) {
     });
   }
   Array.prototype.forEach.call(el.children, function (d, i) {
-    d.style.setProperty("--lk-digit", digits[i]);
+    /* 直接写 transform（过渡仍作用在 transform 上）；不再经由 CSS 变量中转 */
+    d.querySelector(".lk-ticker-strip").style.transform =
+      "translate3d(0," + (-digits[i]) + "em,0)";
   });
 }
 ```
@@ -521,7 +537,7 @@ function setTicker(el, value) {
 
 不采用的理由【推断】：① 需要 `perspective` + `preserve-3d`，比纯 `translateY`
 多一层合成上下文；② 表格数字用翻牌读数比滚动条更慢；
-③ 翻牌在 `--lk-dur-tap` 级别（120ms）内完成才不拖沓，而逐位翻至少要 200ms/位。
+③ 翻牌在 `--dur-fast` 级别（120ms）内完成才不拖沓，而逐位翻至少要 200ms/位。
 **保留此片段仅供后续取用**，实现期不落地。
 
 ### 3.5 台灯转场（探出 / 点亮 / 收回）
@@ -540,7 +556,7 @@ function setTicker(el, value) {
   pointer-events: none;                 /* 装饰层不拦截交互：G-7 */
   opacity: 0;
   transform-origin: 50% 100%;
-  z-index: 2147483001;
+  z-index: var(--z-lamp);                        /* 权威表 §2.7：灯层在所有 UI 层之上 */
   will-change: transform, opacity;
 }
 .lk-lamp__glow {                        /* 灯罩内亮起 + 暖色溢出 */
@@ -582,10 +598,10 @@ function setTicker(el, value) {
 .lk-flame-off, .lk-flame-on { position: absolute; inset: 0; }
 .lk-flame-on {
   opacity: 0;
-  transition: opacity 180ms var(--lk-ease-standard);
+  transition: opacity 180ms var(--ease-standard);
 }
 .lk-flame.is-lit .lk-flame-on { opacity: 1; }
-.lk-flame.is-lit { animation: lk-flame-ignite 320ms var(--lk-ease-out) both; }
+.lk-flame.is-lit { animation: lk-flame-ignite 320ms var(--ease-out) both; }
 
 @keyframes lk-flame-ignite {
   0%   { opacity: 0; transform: translate3d(0, 6px, 0) scale(.55); }
@@ -636,7 +652,7 @@ function setTicker(el, value) {
 .lk-progress__fill {
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 320ms var(--lk-ease-out);
+  transition: transform 320ms var(--ease-out);
 }
 .lk-progress.is-filled .lk-progress__fill { transform: scaleX(1); }
 
@@ -651,9 +667,8 @@ function setTicker(el, value) {
 @keyframes lk-confetti-fall {
   0%   { opacity: 0; transform: translate3d(0, -12px, 0) rotate(0deg) scale(.6); }
   12%  { opacity: 1; }
-  100% { opacity: 0; transform: translate3d(var(--lk-confetti-dx, 0),
-                    var(--lk-confetti-dy, 120px), 0)
-                    rotate(var(--lk-confetti-rot, 180deg)) scale(1); }
+  100% { opacity: 0; transform: translate3d(0, 120px, 0)
+                    rotate(180deg) scale(1); }
 }
 ```
 
@@ -677,9 +692,9 @@ function setTicker(el, value) {
 @keyframes lk-spin { to { transform: rotate(360deg); } }
 .lk-spinner {
   width: 24px; height: 24px;
-  border-radius: 50%;
-  border: 3px solid var(--lk-ink-soft);
-  border-top-color: var(--lk-blue);
+  border-radius: var(--r-round);              /* 正方形真圆（权威表 §2.1） */
+  border: 3px solid var(--ink-faint);
+  border-top-color: var(--role-blue);
   animation: lk-spin 700ms linear infinite;
 }
 ```
@@ -694,8 +709,8 @@ function setTicker(el, value) {
 
 做法（与任务书提示一致）：
 
-1. 一层 `position: fixed; inset: 0;` 的**覆盖层**，背景是**新主题的地面色**
-   （`--lk-ripple-target`）；
+1. 一层 `position: fixed; inset: 0;` 的**底色层**，背景是**新主题的地面色**
+   （目标主题的 `--surface-base`）；它位于**内容层之下**（A-1：卡片全程不被覆盖，见 §4.5）；
 2. 覆盖层挂 `mask-image: radial-gradient(circle at <灯位>, #000 0, #000 22vmax, transparent 30vmax)`
    —— 一个**静止的**径向遮罩；
 3. 覆盖层用 `transform: scale()` 从 `0.06` 放大到 `4.8`，
@@ -714,7 +729,8 @@ function setTicker(el, value) {
 /* ── 台灯转场：涟漪层 ─────────────────────────────────────────
    挂在 <body> 下的三个固定层，全部 pointer-events: none。
    .lk-ripple      底色前沿（承载新主题地面色）
-   .lk-ripple-glow 灯下暖光（跟在前沿外圈，纯装饰）           */
+   .lk-ripple-glow 灯下暖光（跟在前沿外圈，纯装饰）
+   前两层是**底色层**：位于内容层之下（A-1，勿压平卡片）      */
 
 .lk-ripple,
 .lk-ripple-glow {
@@ -722,29 +738,38 @@ function setTicker(el, value) {
   inset: 0;
   pointer-events: none;
   opacity: 0;
-  transform-origin: var(--lk-lamp-x, 88%) var(--lk-lamp-y, 82%);
+  transform-origin: 88% 82%;
   will-change: transform, opacity;
 }
 
 .lk-ripple {
-  z-index: 2147483000;
-  background: var(--lk-ripple-target);                 /* 新主题地面色 */
-  -webkit-mask-image: radial-gradient(circle at var(--lk-lamp-x, 88%) var(--lk-lamp-y, 82%),
+  z-index: var(--z-base);                        /* 底色层：在内容层之下（A-1，权威表 §2.7） */
+  background: var(--surface-base);                     /* 新主题地面色（JS 覆盖为目标主题取值） */
+  -webkit-mask-image: radial-gradient(circle at 88% 82%,
       #000 0, #000 22vmax, transparent 30vmax);
-          mask-image: radial-gradient(circle at var(--lk-lamp-x, 88%) var(--lk-lamp-y, 82%),
+          mask-image: radial-gradient(circle at 88% 82%,
       #000 0, #000 22vmax, transparent 30vmax);
   transform: scale(.06);
 }
 
 /* 暖光：略大于底色前沿，形成"光在推着颜色走"的观感 */
 .lk-ripple-glow {
-  z-index: 2147483001;
-  background: radial-gradient(circle at var(--lk-lamp-x, 88%) var(--lk-lamp-y, 82%),
-      var(--lk-lamp-warm) 0, transparent 62%);
+  z-index: var(--z-base);                        /* 同属底色层：在内容层之下（A-1） */
+  background: radial-gradient(circle at 88% 82%,
+      var(--asset-lamp-warm) 0, transparent 62%);
   mix-blend-mode: screen;                                /* 加色，不遮底 */
   transform: scale(.02);
 }
 ```
+
+> **A-1 铁律（涟漪不得压平卡片）**：`.lk-ripple` / `.lk-ripple-glow` 是**底色层**，
+> 必须待在**内容层之下** —— 三栏与卡片（`#left-column` / `#middle` / `#ai-column`
+> 及其内部卡片）须置于 `z-index ≥ 1`，涟漪层自身取 `--z-base`（`0`，权威表 §2.7）。
+> **不得**取负值（负值会落到页面底色之下，涟漪不可见），
+> 更**不得**抬到内容层之上 —— 整屏不透明色块压住卡片就是「压平」，
+> 已由 `decisions.md` A-1 明确否决（详见 §4.5）。
+> 灯层 `.lk-lamp`（`--z-lamp` = 400，高于 `--z-modal` 300）留在内容之上是对的：它是一盏台灯，
+> 不是铺满全屏的色块。
 
 > **`mix-blend-mode: screen` 的性能提示**：全屏混合会让合成器多读一层背景。
 > 本规格只在 450ms 的一次性转场里用它；若走查时 DevTools 显示该层掉帧，
@@ -776,6 +801,23 @@ function setTicker(el, value) {
 **编排（vanilla JS，`workbench.js` 主题切换入口）**：
 
 ```js
+/* 读目标主题的 --surface-base：权威表里它是「同名变量、两套值」，
+   所以必须临时把 data-theme 置为目标主题再读（同一任务内完成，不会产生闪烁）。 */
+function themeBase(theme) {
+  var el = document.documentElement;
+  var prev = el.getAttribute("data-theme");
+  el.setAttribute("data-theme", theme);
+  var v = getComputedStyle(el).getPropertyValue("--surface-base").trim();
+  if (prev === null) el.removeAttribute("data-theme"); else el.setAttribute("data-theme", prev);
+  return v;
+}
+
+/* 缓动值同样只从权威表 §2.6 取：WAAPI 的 easing 只接受字面量字符串，
+   所以在这里把 token 读成字符串，而不是在 JS 里另抄一份系数（A-18-4）。 */
+function easeVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function runLampTransition(nextTheme) {
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
             || document.documentElement.dataset.motion === "off";
@@ -787,23 +829,22 @@ function runLampTransition(nextTheme) {
   lamp.innerHTML = LAMP_SVG;                        /* 内联 SVG 字符串 */
   document.body.append(wash, glow, lamp);
 
-  wash.style.setProperty("--lk-ripple-target", getComputedStyle(document.documentElement)
-        .getPropertyValue(nextTheme === "night" ? "--lk-ground-night" : "--lk-ground-light").trim());
+  wash.style.background = themeBase(nextTheme);   /* 目标主题的 --surface-base */
 
   lamp.animate(
     [{ opacity: 0, transform: "translate3d(0,120%,0) scale(.86) rotate(-12deg)" },
      { opacity: 1, transform: "translate3d(0,0,0) scale(1) rotate(0deg)" }],
-    { duration: 140, easing: "cubic-bezier(.34,1.3,.64,1)", fill: "forwards" });
+    { duration: 140, easing: easeVar("--ease-rebound"), fill: "forwards" });
 
   lamp.querySelector(".lk-lamp__glow").animate(
     [{ opacity: 0, transform: "scale(.35)" },
      { opacity: 1, transform: "scale(1.12)", offset: .6 },
      { opacity: 1, transform: "scale(1)" }],
-    { duration: 80, delay: 140, easing: "cubic-bezier(.22,.61,.36,1)", fill: "forwards" });
+    { duration: 80, delay: 140, easing: easeVar("--ease-out"), fill: "forwards" });
 
   wash.animate(
     [{ transform: "scale(.06)" }, { transform: "scale(4.8)" }],
-    { duration: 450, delay: 140, easing: "cubic-bezier(.16,.84,.44,1)", fill: "forwards" });
+    { duration: 450, delay: 140, easing: easeVar("--ease-ripple"), fill: "forwards" });
   wash.animate(
     [{ opacity: 0 }, { opacity: 1, offset: .18 }, { opacity: 1 }],
     { duration: 450, delay: 140, easing: "linear", fill: "forwards" });
@@ -811,7 +852,7 @@ function runLampTransition(nextTheme) {
     [{ transform: "scale(.02)", opacity: 0 },
      { transform: "scale(3.2)", opacity: 1, offset: .12 },
      { transform: "scale(3.2)", opacity: 1 }],
-    { duration: 450, delay: 140, easing: "cubic-bezier(.16,.84,.44,1)", fill: "forwards" });
+    { duration: 450, delay: 140, easing: easeVar("--ease-ripple"), fill: "forwards" });
 
   /* 换肤：涟漪完全铺满的瞬间瞬时切换 */
   window.setTimeout(function () { applyTheme(nextTheme); }, 590);
@@ -819,13 +860,13 @@ function runLampTransition(nextTheme) {
   /* 退场：涟漪淡出 + 收灯 */
   window.setTimeout(function () {
     wash.animate([{ opacity: 1 }, { opacity: 0 }],
-      { duration: 110, easing: "cubic-bezier(.55,.06,.68,.19)", fill: "forwards" });
+      { duration: 110, easing: easeVar("--ease-in"), fill: "forwards" });
     glow.animate([{ opacity: 1 }, { opacity: 0 }],
-      { duration: 110, easing: "cubic-bezier(.55,.06,.68,.19)", fill: "forwards" });
+      { duration: 110, easing: easeVar("--ease-in"), fill: "forwards" });
     lamp.animate(
       [{ opacity: 1, transform: "translate3d(0,0,0) scale(1) rotate(0deg)" },
        { opacity: 0, transform: "translate3d(0,-28%,0) scale(.9) rotate(8deg)" }],
-      { duration: 110, easing: "cubic-bezier(.55,.06,.68,.19)", fill: "forwards" });
+      { duration: 110, easing: easeVar("--ease-in"), fill: "forwards" });
   }, 590);
 
   /* 收尾：移除节点（终态干净） */
@@ -841,7 +882,7 @@ function runLampTransition(nextTheme) {
 | ② 点亮 | 140 | 220 | 80 | `.lk-lamp__glow` | `opacity 0→1` + `scale(.35→1.12→1)`，暖色溢出 |
 | ③ 涟漪扩散 | 140 | 590 | 450 | `.lk-ripple` | `scale(.06→4.8)`，`opacity 0→1`（前 18% 淡入） |
 | ③' 暖光 | 140 | 590 | 450 | `.lk-ripple-glow` | `scale(.02→3.2)`，`opacity 0→1`，`mix-blend-mode: screen` |
-| ④ 换肤 | 590 | 590 | 瞬时 | `<html data-theme>` | 属性切换（被不透明涟漪完全遮住，用户不可见） |
+| ④ 换肤 | 590 | 590 | 瞬时 | `<html data-theme>` | 属性切换（底色已由涟漪带入新值，用户不可见；卡片主题值此刻整组换值，**结构与位置不变**） |
 | ⑤ 涟漪退场 | 590 | 700 | 110 | `.lk-ripple` / `.lk-ripple-glow` | `opacity 1→0` |
 | ⑥ 收灯 | 590 | 700 | 110 | `.lk-lamp` | `translate3d(0,0→-28%)` + `scale(1→.9)` + `rotate(0→8°)`，`opacity 1→0` |
 | ⑦ 清理 | 700 | 700 | — | 三层 | `remove()`，终态干净 |
@@ -873,25 +914,27 @@ scale ≥ distance(灯位, 最远角) / (22 × vmax)
 | 1440×900 | (50%, 50%) | ≈855px | 14.4px | 2.70 | **2.9** |
 | 390×844（手机竖） | (88%, 82%) | ≈772px | 8.44px | 4.16 | **4.4** |
 
-> 实现期**按实际灯位算一遍**，别把 4.8 写死成常量。灯位由 `--lk-lamp-x/y`
+> 实现期**按实际灯位算一遍**，别把 4.8 写死成常量。灯位（当前写死 `88%` / `82%`）
 > 决定，涟漪层与台灯共用同一组变量。
 
-### 4.5 已知取舍（必须在走查时判定）
+### 4.5 涟漪不压平卡片（A-1 唯一结论）
 
-**取舍**：涟漪覆盖层是**一整片新地面色**。在它铺满的过程中，它下面的卡片结构
-被"压平"成一块纯色，直到 590ms 换肤、700ms 淡出时才恢复成新主题的完整卡片。
+**裁决**（`decisions.md` A-1，所有者已拍板）：**不压平**。
+卡片全程不动，只有**底色**从灯下扩散；结构始终清晰，450ms 后一切如初。
 
-- **优点**：完全符合"底色从灯下扩散铺满"的原始创意；只动 `transform`/`opacity`；
-  实现简单；正反两个方向同一套代码。
-- **代价**：约 450ms 内被覆盖区域的卡片结构暂时不可辨。
+**本规格只有这一种实现** —— 不存在 A / B 变体，也不再留「走查时二选一」：
 
-**B 变体（保结构）**：在 140ms **立即换肤**（页面整体变为新主题），
-涟漪层改为**纯加色暖光**（不做颜色前沿），于是"扩散"读作灯光铺开而不是颜色铺开。
-结构全程保留，但"底色改变呈涟漪状扩散"的观感弱一档。
+- **涟漪层是底色层，不是盖在内容上的色块**：`.lk-ripple` / `.lk-ripple-glow` 位于
+  **内容层之下**（三栏与卡片置于 `z-index ≥ 1`），涟漪只让**底色**从灯位向外扩散。
+  任何把涟漪抬到内容层之上的实现（整屏不透明色块压住卡片）＝「压平」，**被 A-1 否决**。
+- **卡片全程不动**：卡片不参与扩散（无位移 / 缩放 / 透明度变化），不换位置、不换层级；
+  卡片自身的主题值在 ④ 换肤那一刻整组换值 —— **结构、圆角、柔影、层级关系始终清晰可辨**。
+- **450ms 后一切如初**：450ms 扩散（140→590ms）走完时底色已整屏是新主题地面色，
+  换肤随之完成，涟漪退场（590→700ms）露出同一片底色 ⇒ 终态干净，无残影、无遮罩。
+- **降级路径不变**：`prefers-reduced-motion` 下三层都不创建，主题直切（§4.6）。
 
-> **决策留痕**：A 变体为**默认**（忠实于 `decisions.md` 16.5 / 17.2 的用户原话
-> 「底色改变随之呈涟漪状扩散」）；B 变体作为**走查时的备选**，
-> 由所有者在样板线验收时二选一。此项已登记进 §10。
+> 旧版本把「压平」写成**默认变体**、把「保结构」写成走查时由所有者二选一的备选 ——
+> 那是把**已拍板**的 A-1 重新打开成待选项，与 `decisions.md` A-1 直接冲突，**已作废**。
 
 ### 4.6 降级
 
@@ -972,7 +1015,7 @@ scale ≥ distance(灯位, 最远角) / (22 × vmax)
 | 参数 | 对应多邻国 Rive 输入 | 类型 | 取值 | 视觉结果 |
 |---|---|---|---|---|
 | `count`（连对数） | 文案 + `text_lines_num` | int | 5, 6, 7, 8, 9, **10**, 11, … | 横幅主数字显示为该值；**≥10 时**文字整体上移 100px（多邻国 `LONG_STREAK_V2` 的 `setTranslationY(-100f)`），且改为**单行**结构（`text_lines_num = 0`；5 连为 `1`） |
-| `threshold`（阈值档） | `animation_num` | enum | `small`（=5） / `large`（≥10） | 决定入场节奏与停留时长：`small` 700ms、`large` 900ms；`large` 的入场多一个 `back-out` 过冲 |
+| `threshold`（阈值档） | `animation_num` | enum | `small`（=5） / `large`（≥10） | 决定入场节奏与停留时长：`small` 700ms、`large` 900ms；`large` 的入场多一个 `rebound`（`--ease-rebound`）过冲 |
 | `color`（颜色档） | `color_num` | enum | `0` 阳光黄 / `1` 学习蓝 | 横幅强调色与数字色。`1` 用于更高档（多邻国高档 combo 文字用高亮色 `juicyMacaw`）——本项目对应**学习蓝** |
 | `duration`（总时长） | — | ms | 700（5 连）/ 900（≥10 连） | 横幅**总程**：弹入动画的时长；退场在 `总程 − 180ms` 处开始（退场动画本身 180ms） |
 | `trigger`（触发） | `play_trig` | 事件 | `count` 跨过 5 或 10 的那一刻 | 播放一次。**同一道题只触发一次**（`count` 单调递增时的跨阈值检测） |
@@ -998,14 +1041,23 @@ scale ≥ distance(灯位, 最远角) / (22 × vmax)
   pointer-events: none;
 }
 .lk-combo-banner.is-on {
-  animation: lk-combo-in var(--lk-combo-dur, 700ms) var(--lk-ease-back-out) both,
-             lk-combo-out 180ms var(--lk-ease-in)
-                          calc(var(--lk-combo-dur, 700ms) - 180ms) both;
+  animation: lk-combo-in 700ms var(--ease-rebound) both,
+             lk-combo-out 180ms var(--ease-in) 520ms both;
 }
 .lk-combo-banner__count {
   display: inline-block;
-  transform: translate3d(0, var(--lk-combo-lift, 0px), 0);   /* 0 或 -100px */
-  color: var(--lk-combo-accent, var(--lk-yellow));
+  transform: translate3d(0, 0, 0);
+  color: var(--role-yellow);
+  font-size: var(--fs-hero);              /* 庆祝数字：权威表 §2.3（A-18：不得压到 --fs-display 28px） */
+}
+/* 10 连档：数字上移 100px、强调色转蓝、入场多一次过冲、停留 900ms */
+.lk-combo-banner.is-large.is-on {
+  animation: lk-combo-in 900ms var(--ease-rebound) both,
+             lk-combo-out 180ms var(--ease-in) 720ms both;
+}
+.lk-combo-banner.is-large .lk-combo-banner__count {
+  transform: translate3d(0, -100px, 0);
+  color: var(--role-blue);
 }
 @keyframes lk-combo-in {
   0%   { opacity: 0; transform: translate3d(-50%, 12px, 0) scale(.88); }
@@ -1019,20 +1071,17 @@ scale ≥ distance(灯位, 最远角) / (22 × vmax)
 ```
 
 ```js
-// 唯一的差异入口：写 4 个变量，DOM 结构与 @keyframes 都不变
+// 唯一的差异入口：切一个语义类，DOM 结构与 @keyframes 都不变
 banner.classList.toggle("is-large", count >= 10);
-banner.style.setProperty("--lk-combo-lift", count >= 10 ? "-100px" : "0px");
-banner.style.setProperty("--lk-combo-accent", count >= 10
-  ? "var(--lk-blue)" : "var(--lk-yellow)");
-banner.style.setProperty("--lk-combo-dur", count >= 10 ? "900ms" : "700ms");
 banner.querySelector(".lk-combo-banner__count").textContent = String(count);
 banner.classList.add("is-on");
 ```
 
-> `is-large` 只是给样式与测试用的**语义标记**（便于走查截图比对），
-> **不引入新的 `@keyframes`**；档位差异全部由上表 4 个 CSS 变量承担。
-> `is-large` 的样式差异仅剩：`.lk-combo-banner.is-large .lk-combo-banner__count
-> { font-size: … }`（数字更大一档）——同样只是静态样式。
+> `is-large` 是给样式与测试用的**语义标记**（便于走查截图比对），
+> **不引入新的 `@keyframes`**；档位差异（数字上移 100px、强调色转蓝、入场过冲、
+> 停留 900ms）全部由 `.is-large` 的静态样式承担。
+> ⚠️ 权威表 §2 无「横幅时长 / 位移 / 强调色」这类 per-element 运行时 token，
+> 因此**不再用 CSS 变量中转**（否则会自造 token 名）；数值原样保留在上面的 CSS 里。
 
 ---
 
@@ -1067,7 +1116,7 @@ banner.classList.add("is-on");
 
 | # | 动效 | 常规终态 | reduced-motion 终态 | 降级方式 |
 |---|---|---|---|---|
-| 1 | hover 覆盖层 | 覆盖层 `opacity .08` | 覆盖层**瞬时**显形（0ms）或直接不显示 | 去掉 `transition`；保留覆盖层作为静态提示亦可 |
+| 1 | hover 覆盖层 | 覆盖层 `opacity 1`（面纱 `--veil-hover` 自带 6% 暖面纱） | 覆盖层**瞬时**显形（0ms）或直接不显示 | 去掉 `transition`；保留覆盖层作为静态提示亦可 |
 | 2 | active 按下 | `scale 1` | `scale 1`（**不压缩**） | 去掉 `transition`；按下反馈改由状态色瞬切承担 |
 | 3 | focus 焦点环 | 环显形 | 环显形（本就瞬时） | 无需改动 |
 | 4 | focus-within 抬起 | `translateY(-1px)` | `translateY(0)` | 去掉 `transform` 过渡；**颜色瞬切保留** |
@@ -1214,18 +1263,21 @@ banner.classList.add("is-on");
 |---|---|---|---|---|
 | D-1 | **契约漂移（已裁决，需回写）** | `decisions.md` 12.2 prose 写「scale 0.92 → 1.06 → 1」，同一节又要求「直接抄多邻国的 5 段关键帧：17/33/83/167/217ms」——后者对应的实测值是 `0.6 → 1.1 → 0.9603 → 1.0067 → 1.0` | 采用**5 段实测值**（同一节明写"直接抄"，且有源码可查）；prose 的 0.92/1.06 归入**通用缩放档**（§1.4） | `design.md` / `decisions.md` 应把 12.2 的 prose 数字改成 5 段实测值，或标注"prose 为粗略描述" |
 | D-2 | **口径收紧** | `acceptance.md` §2/§3.7 要求"只动 transform/opacity"，但 hover/状态通常要变背景色 | 统一改为**伪元素覆盖层 + opacity** 做 hover；状态色**瞬切**不动画（§1.6、§2.2） | 若日后要颜色过渡，须先改 `acceptance.md` §2/§3.7 并走一次契约同步 |
-| D-3 | **设计取舍待验收** | 涟漪 A 变体会让被覆盖区域的卡片结构在 ~450ms 内被"压平"成纯色 | A 变体为默认（忠实于用户原话），B 变体（保结构）作为备选（§4.5） | **样板线走查时由所有者二选一**，结论写回 `decisions.md` |
-| D-4 | **资产来源待定** | 多邻国的 `right_answer.mp3` 等**有版权，不可直接复用** | 规格只定义**时序与同步关系**（§5），不指定音频内容 | 5 个音效（`sfx-right` / `sfx-wrong` / `sfx-complete` / `sfx-tick` / `sfx-milestone`）需自制：或用 Web Audio 合成短音，或人工录制。**需所有者拍板来源** |
-| D-5 | **既有实现需改** | `workbench.css:1126-1131` 的全局 `animation: none !important` 会让新动效在降级时停在"从未出现"的起始态 | 新增**实现铁律**：动效的静态样式必须等于终态（§7.1） | 实现期逐条自查；建议在 `workbench.css` 该处加注释说明这条铁律 |
-| D-6 | **待核** | 是否允许在"完成"时刻播放 3 声 tick（`acceptance.md` §3.3 写的是"只有四个时刻有音效"） | 理解为"四个**时刻**"而非"四个**文件**"：3 声 tick 属于"完成"这一时刻内部（§5.2） | 若所有者认为应严格限制为 4 个文件，则把 3 声 tick 去掉，统计卡改为**纯视觉**错峰 |
-| D-7 | **待核** | 页面级动效偏好开关（`data-motion="off"`）与系统 `prefers-reduced-motion` 的**优先级** | 规格假设：系统 reduce **恒定降级**（不可被 UI 覆盖）；UI 开关只是在系统允许时**额外**关闭动效 | 需在 `workbench-settings` 能力条款里写明这一优先级（由写 specs 的 agent 落） |
+| D-3 | **资产来源待定** | 多邻国的 `right_answer.mp3` 等**有版权，不可直接复用** | 规格只定义**时序与同步关系**（§5），不指定音频内容 | 5 个音效（`sfx-right` / `sfx-wrong` / `sfx-complete` / `sfx-tick` / `sfx-milestone`）需自制：或用 Web Audio 合成短音，或人工录制。**需所有者拍板来源** |
+| D-4 | **既有实现需改** | `workbench.css:1126-1131` 的全局 `animation: none !important` 会让新动效在降级时停在"从未出现"的起始态 | 新增**实现铁律**：动效的静态样式必须等于终态（§7.1） | 实现期逐条自查；建议在 `workbench.css` 该处加注释说明这条铁律 |
+| D-5 | **待核** | 是否允许在"完成"时刻播放 3 声 tick（`acceptance.md` §3.3 写的是"只有四个时刻有音效"） | 理解为"四个**时刻**"而非"四个**文件**"：3 声 tick 属于"完成"这一时刻内部（§5.2） | 若所有者认为应严格限制为 4 个文件，则把 3 声 tick 去掉，统计卡改为**纯视觉**错峰 |
+| D-6 | **待核** | 页面级动效偏好开关（`data-motion="off"`）与系统 `prefers-reduced-motion` 的**优先级** | 规格假设：系统 reduce **恒定降级**（不可被 UI 覆盖）；UI 开关只是在系统允许时**额外**关闭动效 | 需在 `workbench-settings` 能力条款里写明这一优先级（由写 specs 的 agent 落） |
+
+> 原 D-3「涟漪 A/B 变体待验收」已**删除**：A-1（不压平）已由所有者拍板，
+> 不再是待核项（见 §4.5）。本表现有 6 条（D-1…D-6）。
 
 ---
 
 ## Self-check
 
-- [x] §1 token 表：时长 6 档（120/180/240/320/520/700）+ 517 特例说明；
-      缓动 8 档（含 3 条多邻国实测贝塞尔）；位移 4 档（4/8/12/20）；
+- [x] §1 token 表：时长 5 档（120/160/240/400/700，以权威表 §2.6 为准）+ 517 特例说明；
+      缓动 8 档（**全部是权威表 §2.6 的 token**，含 3 条多邻国实测贝塞尔；A-18-4 后本规格不再内联曲线值）；
+      位移 4 档（4/8/12/20）；
       缩放 6 档 + 回弹专用组；透明度 5 档；每档标注「用于哪类交互」与出处。
 - [x] §2 映射表：19 行，覆盖任务书点名的 16 项（hover / active / focus /
       focus-within / 展开收起 / 视图转场 / 列表 stagger / 数字滚动 / 骨架微光 /
@@ -1243,7 +1295,7 @@ banner.classList.add("is-on");
       骨架微光、数字滚动（ticker 为主 + 逐位翻备选）、台灯探出/点亮/收回、
       火苗点燃、庆祝（进度带 / 爆点 / 纸片）、连对横幅、错误摆动、加载旋转。
 - [x] §4 涟漪：机制说明 + 完整可粘贴 CSS/JS + 700ms 时序表（7 段）+
-      缩放倍数取法（含三档视口验算）+ 降级 + 已知取舍（A/B 变体）。
+      缩放倍数取法（含三档视口验算）+ 降级 + **A-1 唯一结论（不压平）**。
 - [x] §5 音画同步表：答对 / 答错 / 完成 / 里程碑四时刻 + 统计卡 3 声节奏，
       共 9 行，逐条给出毫秒与伴随视觉动作。
 - [x] §6 参数化横幅输入表：5 个参数（连对数 / 阈值档 / 颜色档 / 总时长 /
@@ -1252,8 +1304,9 @@ banner.classList.add("is-on");
 - [x] §7 降级矩阵：19 行逐项终态 + 三条判定原则 + 既有全局兜底的事实与铁律。
 - [x] §8 性能红线：属性红线 / 单帧预算 / `will-change` 生命周期 / 长列表处置。
 - [x] §9 出处索引：42 条，每条标【实证】/【公开】/【惯例】/【决策】/【推断】。
-- [x] §10 漂移登记：7 条（D-1…D-7），均给出处理与待办。
-- [x] 文档规模：1256 行；10 个编号章节 + Self-check；25 个代码块
+- [x] §10 漂移登记：6 条（D-1…D-6），均给出处理与待办。
+      （原 D-3「涟漪 A/B 变体」已按 A-1 删除，条目重排为 D-3…D-6。）
+- [x] 文档规模：1303 行；10 个编号章节 + Self-check；25 个代码块
       （18 CSS / 4 JS / 3 HTML-示意），代码围栏配平（50 条）。
 - [x] 禁止项核对：无全局 canvas、无鼠标跟随、无视差、无光标辉光、无动画库、
       无外部资源；台灯/插画/火苗/纸片均为内联 SVG 或纯 CSS。
@@ -1262,5 +1315,5 @@ banner.classList.add("is-on");
 - [x] **只写了这一个文件**：未改 `proposal.md` / `design.md` / `tasks.md` /
       `specs/`，未改任何产品代码（`workbench/` / `pool/` / `pipeline/` /
       `lessonkit.py`）。
-- [ ] **未决**：D-3（涟漪 A/B 变体）、D-4（音效资产来源）、D-6（tick 声数量）
-      需所有者拍板；D-7 需写进 `workbench-settings` 能力条款。
+- [ ] **未决**：D-3（音效资产来源）、D-5（tick 声数量）需所有者拍板；
+      D-6 需写进 `workbench-settings` 能力条款。

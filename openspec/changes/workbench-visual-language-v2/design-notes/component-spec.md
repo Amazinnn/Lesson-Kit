@@ -68,12 +68,12 @@
 
 | 角色 | 承担语义 | 允许出现的面 | 禁止出现在 |
 |---|---|---|---|
-| 学习蓝 `--lk-blue` | 主按钮、链接、**交互层**当前选中 | 实心填充、淡彩底、文字（浅底用 `--lk-blue-ink`）、2–3px 指示条 | 正文段落、装饰性大色块 |
-| 阳光黄 `--lk-yellow` | **内容层**当前项、复习强调、连对进度 | 实心填充、淡彩底、图形 | **任何承载文字的面**（黄底文字一律用墨色） |
-| 注意红 `--lk-red` | 失败、阻塞 | 淡彩底、文字（浅底用 `--lk-red-ink`）、计数徽标 | 边框、次要信息、装饰 |
+| 学习蓝 `--role-blue` | 主按钮、链接、**交互层**当前选中 | 实心填充、淡彩底、文字（浅底用 `--role-blue`）、2–3px 指示条 | 正文段落、装饰性大色块 |
+| 阳光黄 `--role-yellow` | **内容层**当前项、复习强调、连对进度 | 实心填充、淡彩底、图形 | **任何承载文字的面**（黄底文字一律用墨色） |
+| 注意红 `--role-red` | 失败、阻塞 | 淡彩底、文字（浅底用 `--role-red-ink`）、计数徽标 | 边框、次要信息、装饰 |
 
 > **黄不承载文字**是硬约束（`decisions.md` 色彩表「文字承载」行）。
-> 黄色底上的文字一律取 `--lk-ink`；黄色本身只承载**面积与形状**。
+> 黄色底上的文字一律取 `--ink-on-warm`；黄色本身只承载**面积与形状**。
 
 **角色色槽位（quota）定义**：一个组件最多占用 N 个角色色槽位。
 「槽位」= 一次渲染中该组件实例使用到的**不同角色色**数量。
@@ -93,65 +93,71 @@
 
 ## 2. Token 契约（本规格书作为**消费方**要求的 token 清单）
 
-> **权责**：token 层的**值**由 token 规格（`design.md`）最终拍板；本文件登记
-> **组件层需要的 token 名**与**必须满足的约束**（对比度下限、圆角统一、暖调阴影）。
+> **权责**：token 层的**值**由**唯一权威表** `design-notes/night-paper-tokens.md` 拍板
+> （`decisions.md` A-9）；本文件登记**组件层需要的 token 名**与**必须满足的约束**
+> （对比度下限、圆角统一、暖调阴影）。
 > 名字必须一致，否则本文件的 CSS 无法粘贴即用——这是本文件的**硬要求**，
 > 不是对 token 层的越权。
+> **本文件不自造 token 值**：结构 token 的取值一律照抄权威表（`decisions.md` A-18-4/5）。
 
 ### 2.1 结构 token（主题无关）
 
 ```css
 :root {
-  /* 圆角 */
-  --lk-radius: 12px;         /* 统一圆角：按钮/卡片/标签/输入框/下拉/面板 */
-  --lk-radius-sm: 8px;       /* 紧凑内件：分段控件项、徽标底、行内标签 */
-  --lk-radius-xs: 6px;       /* 极小内件：复选框框、进度条内块 */
-  --lk-radius-full: 999px;   /* 圆点、胶囊、开关轨道 */
+  /* 圆角（权威表 §2.1） */
+  --r-md: 12px;         /* 默认：按钮 / 输入框 / 标签 / 卡片 / 面板 */
+  --r-xs: 6px;          /* 内嵌小件：紧凑内件、徽标底、行内标签 */
+  --r-round: 50%;       /* 真正的圆形（正方形元素）：图标圆底 / 圆形按钮 / 圆形徽标 */
+  --r-pill: 999px;      /* 胶囊（非正方形元素）：状态圆点 / 开关轨道 / 进度条 */
 
-  /* 间距 */
-  --lk-space-1: 4px;  --lk-space-2: 8px;  --lk-space-3: 12px;
-  --lk-space-4: 16px; --lk-space-5: 20px; --lk-space-6: 24px;
-  --lk-space-8: 32px; --lk-space-10: 40px;
+  /* 间距（权威表 §2.2） */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px;  --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px;
 
-  /* 字族 */
-  --lk-font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+  /* 字族（权威表 §2.4） */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
-  --lk-font-reading: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC",
+  --font-read: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC",
     Georgia, serif;
-  --lk-font-mono: "SF Mono", "JetBrains Mono", Consolas, "Liberation Mono",
+  --font-mono: "SF Mono", "JetBrains Mono", Consolas, "Liberation Mono",
     Menlo, monospace;
 
-  /* 字号（界面族） */
-  --lk-fs-xs: 12px;   /* 标签、徽标、次要说明 */
-  --lk-fs-sm: 13px;   /* 计数、题号格、辅助信息 */
-  --lk-fs-base: 15px; /* 界面正文、按钮、输入 */
-  --lk-fs-md: 17px;   /* 阅读面正文 */
-  --lk-fs-lg: 20px;   /* 卡片标题、对话框标题 */
-  --lk-fs-xl: 24px;   /* 题号大字、页面主标题 */
-  --lk-fs-2xl: 30px;  /* 页面标题 */
-  --lk-fs-3xl: 36px;  /* 空态标题、庆祝数字 */
+  /* 字号（权威表 §2.3；行高与字号成对，随行高档见各 fs 的注释） */
+  --fs-hero: 36px;      /* 英雄数字：空态大标题 / 庆祝数字 / 墨块大数字；行高 44px */
+  --fs-display: 28px;   /* 次级展示层（页面大标题）；行高 36px */
+  --fs-stat: 24px;      /* 统计数字；行高 30px */
+  --fs-question: 24px;  /* 题号大数字；行高 30px */
+  --fs-title: 18px;     /* 区块标题；行高 26px */
+  --fs-sub: 16px;       /* 小标题 / 卡片标题；行高 24px */
+  --fs-reading: 17px;   /* 阅读面正文（衬线）；行高 30px（1.75） */
+  --fs-body: 14px;      /* 界面正文；行高 22px */
+  --fs-meta: 13px;      /* 元信息 / 计数；行高 20px */
+  --fs-label: 12px;     /* 标签 / kicker；行高 18px */
 
-  --lk-lh-ui: 1.4;
-  --lk-lh-read: 1.75;
-  --lk-measure: 38em;
+  --measure: 38em;      /* 阅读面行宽 */
 
-  /* 动效 */
-  --lk-dur-tap: 120ms;    /* 交互反馈下界 */
-  --lk-dur-base: 180ms;   /* 交互反馈上界 */
-  --lk-dur-scene: 320ms;  /* 场景转场 */
-  --lk-dur-slow: 520ms;   /* 里程碑 */
-  --lk-ease-out: cubic-bezier(.2, .8, .3, 1);
-  --lk-ease-rebound: cubic-bezier(.34, 1.56, .64, 1);  /* 挤压回弹 */
-  --lk-ease-standard: cubic-bezier(.2, 0, 0, 1);
+  /* 动效（权威表 §2.6） */
+  --dur-fast: 120ms;      /* 交互反馈下界 */
+  --dur-base: 160ms;      /* 交互反馈默认 */
+  --dur-slow: 240ms;      /* 场景下界 / 入场 */
+  --dur-scene: 400ms;     /* 场景转场 */
+  --dur-ceremony: 700ms;  /* 里程碑 / 台灯转场 */
+  /* 缓动：值全部取自权威表 §2.6（A-18：曲线系数由权威表钉死，本文件不再自造）。
+     本文件旧值 --ease-out .2,.8,.3,1 / --ease-rebound .34,1.56,.64,1 /
+     --ease-standard .2,0,0,1 已作废（A-18 同名不同值收敛）。 */
+  --ease-out: cubic-bezier(.22, .61, .36, 1);
+  --ease-standard: cubic-bezier(.4, 0, .2, 1);
+  --ease-in: cubic-bezier(.55, .06, .68, .19);
+  --ease-rebound: cubic-bezier(.34, 1.3, .64, 1);  /* 挤压回弹（限幅 1.3） */
 
-  /* 层 */
-  --lk-z-float: 40;
-  --lk-z-dropdown: 60;
-  --lk-z-toast: 80;
-  --lk-z-dialog: 100;
-
-  /* 最小点击区 */
-  --lk-tap-min: 44px;
+  /* 层（权威表 §2.7；层序 modal > toast > dropdown > raised） */
+  --z-base: 0;          /* 涟漪底色层（A-1）：在内容层之下 */
+  --z-raised: 10;
+  --z-dropdown: 100;
+  --z-toast: 200;       /* 吐司在模态之下 */
+  --z-overlay: 250;     /* 遮罩 */
+  --z-modal: 300;       /* 模态盖过吐司 */
+  --z-lamp: 400;
 }
 ```
 
@@ -159,104 +165,134 @@
 
 ```css
 :root, [data-theme="light"] {
-  --lk-ground: #fdf8ef;
-  --lk-paper: #fffdf7;          /* 与图谱 --surface-sheet 同值，但不同变量 */
-  --lk-raised: #ffffff;
-  --lk-ink: #221f1a;
-  --lk-ink-2: #5c564c;          /* 次要文字 */
-  --lk-ink-3: #8a8274;          /* 三级 / 占位 */
-  --lk-ink-4: #b9b1a2;          /* 禁用 / 极弱 */
-  --lk-on-ink: #fdf8ef;
-  --lk-on-blue: #ffffff;
-  --lk-on-red: #ffffff;
-  --lk-scrim: rgb(34 31 26 / 42%);
-  --lk-seam: rgb(0 0 0 / 24%);
-  --lk-hairline: rgb(34 31 26 / 12%);
-  --lk-wash-neutral: rgb(34 31 26 / 6%);
-  --lk-wash-neutral-strong: rgb(34 31 26 / 11%);
-  --lk-skeleton-base: rgb(34 31 26 / 7%);
-  --lk-skeleton-sheen: rgb(255 255 255 / 55%);
-  --lk-shadow-card: 0 1px 2px rgb(61 52 37 / 6%), 0 6px 16px rgb(61 52 37 / 5%);
-  --lk-shadow-raised: 0 2px 4px rgb(61 52 37 / 8%), 0 10px 28px rgb(61 52 37 / 9%);
-  --lk-shadow-float: 0 6px 12px rgb(61 52 37 / 12%), 0 20px 52px rgb(61 52 37 / 16%);
-  --lk-shadow-none: none;
+  /* 纸面层级（权威表 §3.1） */
+  --surface-base: #fdf8ef;      /* 页面底 */
+  --surface-card: #fffdf7;      /* 卡面 */
+  --surface-raised: #ffffff;    /* 浮起面 */
+  --surface-ink: #221f1a;       /* 墨块面 */
 
-  --lk-blue: #2a63e8;
-  --lk-blue-hover: #2154d4;
-  --lk-blue-ink: #1c4fbe;
-  --lk-blue-wash: #e8eefe;
-  --lk-yellow: #f7c948;
-  --lk-yellow-hover: #e8b833;
-  --lk-yellow-wash: #fdf3d4;
-  --lk-red: #d2433a;
-  --lk-red-hover: #b8372f;
-  --lk-red-ink: #c0342a;
-  --lk-red-wash: #fbe6e3;
+  /* 墨与文字（权威表 §3.2） */
+  --ink-strong: #221f1a;        /* 标题 / 强调文字 */
+  --ink-body: #3b3630;          /* 正文 */
+  --ink-muted: #6b6459;         /* 次要文字（≥4.5:1） */
+  --ink-faint: #8d8578;         /* 三级文字（≥3:1） */
+  --ink-disabled: #8a8275;      /* 失活控件文字（≥3:1） */
+  --ink-on-role: #fffdf7;       /* 蓝 / 红角色面上的文字 */
+  --ink-on-warm: #221f1a;       /* 黄色暖面上的文字 */
+  --ink-inverse: #fffdf7;       /* 墨块面上的文字（反白） */
+
+  /* 规则线（权威表 §3.3） */
+  --rule-hair: #e6dcc4;         /* 分隔线（装饰性） */
+  --rule-control: #847552;      /* 控件边界（≥3:1） */
+  --rule-structure: #221f1a;    /* 单侧结构线 2px */
+
+  /* 角色色（权威表 §3.4） */
+  --role-blue: #2b62e8;         /* 学习蓝：主按钮 / 链接 / 当前选中 */
+  --role-blue-press: #1f4fc4;   /* 蓝的按下档 */
+  --role-blue-wash: #f2f0ef;    /* 蓝洗底：承载文字 */
+  --role-blue-soft: #e0e3ee;    /* 蓝软底：纯装饰 */
+  --role-yellow: #f5c518;       /* 阳光黄：面积档 */
+  --role-yellow-deep: #8a6a00;  /* 阳光黄：标记档（线 / 状态点） */
+  --role-yellow-soft: #fcf0cd;  /* 黄软底（装饰） */
+  --role-red: #d1392b;          /* 注意红：点 / 面档 */
+  --role-red-ink: #b8331f;      /* 注意红：文字档 */
+  --role-red-wash: #f9e9df;     /* 红洗底：承载文字 */
+  --role-red-soft: #f6d9d0;     /* 红软底：装饰 */
+
+  /* 交互面纱（权威表 §3.5） */
+  --veil-hover: rgb(61 52 37 / 6%);
+  --veil-active: rgb(61 52 37 / 11%);
+
+  /* 抬升（权威表 §3.6） */
+  --elev-1: 0 1px 2px rgb(61 52 37 / 6%), 0 4px 12px rgb(61 52 37 / 4%);
+  --elev-2: 0 2px 6px rgb(61 52 37 / 8%), 0 12px 28px rgb(61 52 37 / 8%);
+  --elev-3: 0 4px 12px rgb(61 52 37 / 10%), 0 20px 48px rgb(61 52 37 / 12%);
+
+  /* 骨架屏（权威表 §3.8） */
+  --skeleton-base: #ece3cf;
+  --skeleton-sheen: #fdf8ef;
 }
 
 [data-theme="night"] {
-  --lk-ground: #1c1a16;
-  --lk-paper: #24211c;
-  --lk-raised: #2c2924;
-  --lk-ink: #f2ede3;
-  --lk-ink-2: #b8b0a3;
-  --lk-ink-3: #8b8377;
-  --lk-ink-4: #6b655b;
-  --lk-on-ink: #1c1a16;
-  --lk-on-blue: #1c1a16;
-  --lk-on-red: #1c1a16;
-  --lk-scrim: rgb(0 0 0 / 58%);
-  --lk-seam: rgb(0 0 0 / 34%);
-  --lk-hairline: rgb(242 237 227 / 14%);
-  --lk-wash-neutral: rgb(242 237 227 / 7%);
-  --lk-wash-neutral-strong: rgb(242 237 227 / 13%);
-  --lk-skeleton-base: rgb(242 237 227 / 8%);
-  --lk-skeleton-sheen: rgb(242 237 227 / 10%);
-  --lk-shadow-card: 0 1px 2px rgb(0 0 0 / 36%), 0 6px 16px rgb(0 0 0 / 30%);
-  --lk-shadow-raised: 0 2px 4px rgb(0 0 0 / 42%), 0 10px 28px rgb(0 0 0 / 36%);
-  --lk-shadow-float: 0 6px 12px rgb(0 0 0 / 48%), 0 20px 52px rgb(0 0 0 / 46%);
-  --lk-shadow-none: none;
+  --surface-base: #1c1a16;
+  --surface-card: #232019;
+  --surface-raised: #2b2620;
+  --surface-ink: #14120f;
 
-  --lk-blue: #6f9bff;
-  --lk-blue-hover: #86a9ff;
-  --lk-blue-ink: #9dbcff;
-  --lk-blue-wash: #23283a;
-  --lk-yellow: #e8bd52;
-  --lk-yellow-hover: #f0c968;
-  --lk-yellow-wash: #33301f;
-  --lk-red: #ef7a70;
-  --lk-red-hover: #f79189;
-  --lk-red-ink: #ff9d94;
-  --lk-red-wash: #3a2724;
+  --ink-strong: #f4ede0;
+  --ink-body: #e7dfd0;
+  --ink-muted: #c2b8a5;
+  --ink-faint: #978d7c;
+  --ink-disabled: #7a7162;
+  --ink-on-role: #14120f;
+  --ink-on-warm: #14120f;
+  --ink-inverse: #f4ede0;
+
+  --rule-hair: #332d25;
+  --rule-control: #7d7361;
+  --rule-structure: #ece3d3;
+
+  --role-blue: #7291de;
+  --role-blue-press: #8fa9e8;
+  --role-blue-wash: #292929;
+  --role-blue-soft: #31343c;
+  --role-yellow: #e0c151;
+  --role-yellow-deep: #f0d98a;
+  --role-yellow-soft: #3d3721;
+  --role-red: #d4736b;
+  --role-red-ink: #e08878;
+  --role-red-wash: #352821;
+  --role-red-soft: #432f28;
+
+  --veil-hover: rgb(255 244 224 / 6%);
+  --veil-active: rgb(255 244 224 / 12%);
+
+  --elev-1: 0 1px 2px rgb(0 0 0 / 30%), inset 0 1px 0 rgb(255 238 210 / 5%);
+  --elev-2: 0 10px 28px rgb(0 0 0 / 38%), 0 0 24px rgb(255 236 200 / 5%), inset 0 1px 0 rgb(255 238 210 / 7%);
+  --elev-3: 0 20px 48px rgb(0 0 0 / 52%), 0 0 32px rgb(255 236 200 / 6%), inset 0 1px 0 rgb(255 238 210 / 9%);
+
+  --skeleton-base: #26221b;
+  --skeleton-sheen: #3c3529;
 }
 ```
 
-**对比度实测（写死结论，token 层改动时必须重算）**
+**对比度**：本文件不再自带对比度结论 —— token 的**名字与取值**由
+`design-notes/night-paper-tokens.md` 唯一裁决（`decisions.md` A-9），其 §4.2 / §4.3
+已给出 76 行实算（38 个前景/背景配对 × 2 主题），§4.4 逐条修正了 11 项初始不达标项。
+本文件只消费这些 token，**不得另立一套值或另算一套对比度**。
 
-| 组合 | 亮色 | 夜纸 |
-|---|---|---|
-| `--lk-ink` on `--lk-ground`（正文） | 14.9:1 ✔ | 13.6:1 ✔ |
-| `--lk-ink-2` on `--lk-ground`（次要） | 6.4:1 ✔ | 6.0:1 ✔ |
-| `--lk-ink-3` on `--lk-ground`（占位） | 3.4:1 ✔（下限 3:1） | 3.3:1 ✔ |
-| `--lk-blue-ink` on `--lk-ground`（链接） | 6.8:1 ✔ | 9.1:1 ✔ |
-| `--lk-red-ink` on `--lk-ground`（错误文字） | 4.9:1 ✔ | 7.4:1 ✔ |
-| `--lk-on-blue` on `--lk-blue`（主按钮文字） | 5.1:1 ✔ | 6.5:1 ✔ |
-| `--lk-ink` on `--lk-yellow`（黄底文字） | 9.6:1 ✔ | 8.8:1 ✔ |
+| 组合 | 出处 |
+|---|---|
+| `--ink-strong` on `--surface-base`（标题墨 / 页面底） | 权威表 §4.2 / §4.3 |
+| `--ink-body` on `--surface-card`（正文墨 / 卡面） | 权威表 §4.2 / §4.3 |
+| `--ink-muted` on `--surface-base`（次要文字） | 权威表 §4.2 / §4.3 |
+| `--ink-faint` on `--surface-card`（三级文字） | 权威表 §4.2 / §4.3 |
+| `--role-blue` on `--surface-base`（链接蓝） | 权威表 §4.2 / §4.3 |
+| `--role-blue` on `--role-blue-wash`（蓝字落蓝洗底） | 权威表 §4.2 / §4.3 |
+| `--role-red-ink` on `--role-red-wash`（红字落红洗底） | 权威表 §4.2 / §4.3 |
+| `--ink-on-role` on `--role-blue`（主按钮文字） | 权威表 §4.2 / §4.3 |
+| `--ink-on-warm` on `--role-yellow`（黄底文字） | 权威表 §4.2 / §4.3 |
 
-> **黄色不承载文字**这条约束依然成立：黄底上的字取墨色，是上表最后一行，
-> 而不是「黄色文字」。黄色若要当文字色（例如黄色进度条上的数字），用 `--lk-ink`。
-> ⚠️ 待核：上表为按 WCAG 相对亮度公式手算的近似值；token 层定稿时用脚本复算一遍。
+> **黄色不承载文字**这条约束依然成立：黄底上的字取 `--ink-on-warm`，
+> 而不是「黄色文字」。黄色若要当文字色（例如黄色进度条上的数字），用 `--ink-on-warm`。
+> ⚠️ 待核：本表只做索引；权威表的实算若变更，改权威表即可，本表不另算。
 
 ### 2.3 焦点环 token
 
 ```css
 :root {
-  --lk-focus-width: 2px;
-  --lk-focus-offset: 2px;
+  --focus-width: 2px;
+  --focus-offset: 2px;
 }
 ```
 
+> 焦点环的**颜色**取权威表 §3.7 的 `--focus-outer` / `--focus-inner`
+> （外圈 / 角色填充控件内圈），**本文件不在此重复定义**。
+
 双环焦点环：内环用**当前纸面色**、外环用**蓝**，因此在蓝底、白底、纸上都可见。
+- 落在页面底上的控件：内环 `var(--surface-base)`，外环 `var(--focus-outer)`；
+- 落在卡面（`.lk-focusable--on-paper`）上的控件：内环 `var(--surface-card)`，外环 `var(--focus-outer)`；
+- 角色填充控件（主按钮）：内环 `var(--focus-inner)`，外环 `var(--focus-outer)`（权威表 §8 规则 2）。
 
 ---
 
@@ -264,7 +300,7 @@
 
 ### 3.1 尺寸与最小点击区
 
-- 所有可交互控件的**命中区 ≥ 44 × 44 CSS px**（`--lk-tap-min`）。
+- 所有可交互控件的**命中区 ≥ 44 × 44 CSS px**（权威表 §2 无「最小命中区」token → 直接写 44px → 待裁决）。
 - 视觉尺寸可以小于 44px（如 34px 题号格、20px 复选框框），但必须：
   1. 用伪元素把命中区撑到 44px，或
   2. 用容器间距补偿，使**相邻命中区中心距 ≥ 44px**。
@@ -276,11 +312,11 @@
 .lk-focusable:focus-visible {
   outline: 2px solid transparent;
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue);
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
 }
 /* 位于卡片 / 浮起面上时，内环换成该面纸色 */
 .lk-focusable--on-paper:focus-visible {
-  box-shadow: 0 0 0 2px var(--lk-paper), 0 0 0 4px var(--lk-blue);
+  box-shadow: 0 0 0 2px var(--surface-card), 0 0 0 4px var(--focus-outer);
 }
 @media (forced-colors: active) {
   .lk-focusable:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
@@ -295,11 +331,11 @@
 
 | 场景 | 时长 | 缓动 |
 |---|---|---|
-| hover / active 反馈 | 120–180ms | `--lk-ease-out` |
-| 面板展开 / 折叠 | 180ms | `--lk-ease-out` |
-| 视图转场（容器上浮淡入） | 240ms | `--lk-ease-out` |
-| 挤压回弹 | 517ms（17/33/83/167/217ms 关键帧） | `--lk-ease-rebound` |
-| 里程碑 | 520ms | `--lk-ease-rebound` |
+| hover / active 反馈 | 120–180ms | `--ease-out` |
+| 面板展开 / 折叠 | 160ms（`--dur-base`） | `--ease-out` |
+| 视图转场（容器上浮淡入） | 240ms | `--ease-out` |
+| 挤压回弹 | 517ms（17/33/83/167/217ms 关键帧） | `--ease-rebound` |
+| 里程碑 | 700ms（`--dur-ceremony`） | `--ease-rebound` |
 
 - 只动 `transform` / `opacity`（`acceptance.md` §3.7）；宽度类变化（进度条）例外允许
   `width`，但必须配 `transform` 无关的可接受帧率。
@@ -311,21 +347,21 @@
 
 | 级别 | 名称 | token | 用途 | 圆角 | 柔影 |
 |---|---|---|---|---|---|
-| L0 | 底 | `--lk-ground` | 页面底、栏底 | — | 无 |
-| L1 | 卡 | `--lk-paper` | 卡片、输入框、列表项、内层面板 | 12px | `--lk-shadow-card` |
-| L2 | 浮起 | `--lk-raised` | 下拉面板、吐司、对话框、悬浮工具条 | 12px | `--lk-shadow-float` |
-| L3 | 墨块 | `--lk-ink` | 强调块、题号大字块、连对计数器底、墨底吐司 | 12px | `--lk-shadow-raised` |
+| L0 | 底 | `--surface-base` | 页面底、栏底 | — | 无 |
+| L1 | 卡 | `--surface-card` | 卡片、输入框、列表项、内层面板 | 12px | `--elev-1` |
+| L2 | 浮起 | `--surface-raised` | 下拉面板、吐司、对话框、悬浮工具条 | 12px | `--elev-3` |
+| L3 | 墨块 | `--surface-ink` | 强调块、题号大字块、连对计数器底、墨底吐司 | 12px | `--elev-2` |
 
 **分层铁律**：相邻两级靠 **圆角 + 柔影** 拉开，不靠描边、不靠背景图案、不靠渐变。
 
 ```css
-.lk-paper-l0 { background: var(--lk-ground); }
-.lk-paper-l1 { background: var(--lk-paper); border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-card); }
-.lk-paper-l2 { background: var(--lk-raised); border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-float); }
-.lk-paper-l3 { background: var(--lk-ink); color: var(--lk-on-ink);
-  border-radius: var(--lk-radius); box-shadow: var(--lk-shadow-raised); }
+.lk-paper-l0 { background: var(--surface-base); }
+.lk-paper-l1 { background: var(--surface-card); border-radius: var(--r-md);
+  box-shadow: var(--elev-1); }
+.lk-paper-l2 { background: var(--surface-raised); border-radius: var(--r-md);
+  box-shadow: var(--elev-3); }
+.lk-paper-l3 { background: var(--surface-ink); color: var(--ink-inverse);
+  border-radius: var(--r-md); box-shadow: var(--elev-2); }
 ```
 
 ### 3.5 角色色配额速查
@@ -377,7 +413,7 @@
 
 | 语义 | 色 | 几何 | 说明 |
 |---|---|---|---|
-| 未开始 / 待办 | 中性墨 `--lk-ink-4` | `ring` | 最弱 |
+| 未开始 / 待办 | 中性墨 `--ink-disabled` | `ring` | 最弱 |
 | 当前 · 交互层（导航 / Tab / 选中项） | 蓝 | `ring` | 空心蓝环 = 选中轮廓 |
 | 进行中 | 蓝 | `half` | 半填充 |
 | 已完成 / 通过 | 蓝 | `filled` | 实心蓝 |
@@ -403,20 +439,20 @@
 **定位**：页面上**唯一**的主要动作。一个视图内主按钮 ≤ 1 个；表单提交按钮与空态 CTA 都算主按钮。
 
 - 尺寸：`高 44px`（L 48px / S 36px 视觉，命中区均 ≥ 44px）；`min-width: 96px`（S 免）
-- 圆角：`--lk-radius`（12px）
-- 字族字号：`--lk-font-ui` / `--lk-fs-base`（15px）/ `line-height: 1` / `font-weight: 600`
+- 圆角：`--r-md`（12px）
+- 字族字号：`--font-ui` / `--fs-body`（14px）/ `line-height: 1` / `font-weight: 600`
 - 内外边距：`padding: 0 20px`（L `0 24px`，S `0 12px`）
-- 最小点击区：`min-height: var(--lk-tap-min)`
-- 图标（可选）：本地 SVG 18×18，`gap: 8px`，图标用 `--lk-on-blue`
+- 最小点击区：`min-height: 44px`
+- 图标（可选）：本地 SVG 18×18，`gap: 8px`，图标用 `--ink-on-role`
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: var(--lk-blue)`；`color: var(--lk-on-blue)`；`box-shadow: var(--lk-shadow-raised)` |
-| hover | `background: var(--lk-blue-hover)`；`transform: translateY(-1px)`；阴影不变；`120ms` |
-| active | `transform: translateY(1px)`；`box-shadow: var(--lk-shadow-none)`；`80ms` |
+| 默认 | `background: var(--role-blue)`；`color: var(--ink-on-role)`；`box-shadow: var(--elev-2)` |
+| hover | `background: var(--role-blue-press)`；`transform: translateY(-1px)`；阴影不变；`120ms` |
+| active | `transform: translateY(1px)`；`box-shadow: none`；`80ms` |
 | focus-visible | 双环焦点环（§3.2）；`transform` 保持 hover 位不叠加位移 |
-| disabled | `background: var(--lk-wash-neutral-strong)`；`color: var(--lk-ink-3)`；`box-shadow: none`；`cursor: not-allowed`（**不用 opacity 压暗**——opacity 会把蓝底一起压成灰蓝） |
-| loading | 原按钮内容替换为旋转指示器（12px 圆环，`--lk-on-blue`）；`min-width` 锁定防跳动；`aria-busy="true"`；`pointer-events: none` |
+| disabled | `background: var(--veil-active)`；`color: var(--ink-faint)`；`box-shadow: none`；`cursor: not-allowed`（**不用 opacity 压暗**——opacity 会把蓝底一起压成灰蓝） |
+| loading | 原按钮内容替换为旋转指示器（12px 圆环，`--ink-on-role`）；`min-width` 锁定防跳动；`aria-busy="true"`；`pointer-events: none` |
 | selected | 不适用（主按钮不是选择器） |
 | error | 不适用。**按钮不承载 error 状态**；提交失败时按钮回到默认态，错误由「行内错误条 + 状态点」承担（§4.23 吐司 / 表单错误） |
 
@@ -424,30 +460,30 @@
 
 ```css
 .lk-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: var(--lk-space-2);
-  min-height: var(--lk-tap-min); min-width: 96px;
-  padding: 0 var(--lk-space-5);
-  border: 0; border-radius: var(--lk-radius);
-  background: var(--lk-wash-neutral-strong); color: var(--lk-ink);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-base);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  min-height: 44px; min-width: 96px;
+  padding: 0 var(--sp-5);
+  border: 0; border-radius: var(--r-md);
+  background: var(--veil-active); color: var(--ink-strong);
+  font-family: var(--font-ui); font-size: var(--fs-body);
   line-height: 1; font-weight: 600; text-decoration: none;
   cursor: pointer; position: relative;
-  transition: background-color var(--lk-dur-tap) var(--lk-ease-out),
-              transform var(--lk-dur-tap) var(--lk-ease-out),
-              box-shadow var(--lk-dur-tap) var(--lk-ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
 }
 .lk-btn:focus-visible {
   outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue);
+  box-shadow: 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus-outer);
 }
-.lk-btn--primary { background: var(--lk-blue); color: var(--lk-on-blue); box-shadow: var(--lk-shadow-raised); }
-.lk-btn--primary:hover:not(:disabled):not([aria-busy="true"]) { background: var(--lk-blue-hover); transform: translateY(-1px); }
-.lk-btn--primary:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--lk-shadow-none); }
-.lk-btn:disabled { cursor: not-allowed; color: var(--lk-ink-3); background: var(--lk-wash-neutral-strong); box-shadow: none; }
-.lk-btn--primary:disabled { background: var(--lk-wash-neutral-strong); color: var(--lk-ink-3); }
+.lk-btn--primary { background: var(--role-blue); color: var(--ink-on-role); box-shadow: var(--elev-2); }
+.lk-btn--primary:hover:not(:disabled):not([aria-busy="true"]) { background: var(--role-blue-press); transform: translateY(-1px); }
+.lk-btn--primary:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.lk-btn:disabled { cursor: not-allowed; color: var(--ink-faint); background: var(--veil-active); box-shadow: none; }
+.lk-btn--primary:disabled { background: var(--veil-active); color: var(--ink-faint); }
 .lk-btn[aria-busy="true"] { cursor: progress; pointer-events: none; }
 .lk-btn__spinner {
-  width: 12px; height: 12px; border-radius: var(--lk-radius-full);
+  width: 12px; height: 12px; border-radius: var(--r-round);
   border: 2px solid currentColor; border-top-color: transparent;
   animation: lk-spin 700ms linear infinite;
 }
@@ -460,28 +496,28 @@
 
 - 尺寸 / 圆角 / 字族字号 / 命中区：同 §4.1
 - 内外边距：`padding: 0 16px`
-- 边界：1px `--lk-hairline`（**控件边界是「不用描边」规则的唯一例外**）
+- 边界：1px `--rule-control`（**控件边界是「不用描边」规则的唯一例外**）
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: var(--lk-paper)`；`color: var(--lk-ink)`；`border: 1px solid var(--lk-hairline)`；`box-shadow: var(--lk-shadow-card)` |
-| hover | `background: var(--lk-raised)`；`border-color: var(--lk-ink-4)`；`transform: translateY(-1px)` |
-| active | `transform: translateY(1px)`；`box-shadow: var(--lk-shadow-none)` |
-| focus-visible | 双环焦点环，内环用 `--lk-paper` |
-| disabled | `background: var(--lk-ground)`；`color: var(--lk-ink-4)`；`border-color: var(--lk-hairline)`；无阴影 |
-| loading | 同主按钮；加载圈用 `--lk-ink` |
+| 默认 | `background: var(--surface-card)`；`color: var(--ink-strong)`；`border: 1px solid var(--rule-control)`；`box-shadow: var(--elev-1)` |
+| hover | `background: var(--surface-raised)`；`border-color: var(--ink-disabled)`；`transform: translateY(-1px)` |
+| active | `transform: translateY(1px)`；`box-shadow: none` |
+| focus-visible | 双环焦点环，内环用 `--focus-inner`、外环用 `--focus-outer` |
+| disabled | `background: var(--surface-base)`；`color: var(--ink-disabled)`；`border-color: var(--rule-control)`；无阴影 |
+| loading | 同主按钮；加载圈用 `--ink-strong` |
 | selected | 不适用 |
 | error | 不适用（同 §4.1） |
 
 - 角色色：**无**，R0。
 
 ```css
-.lk-btn--secondary { background: var(--lk-paper); color: var(--lk-ink);
-  border: 1px solid var(--lk-hairline); box-shadow: var(--lk-shadow-card); }
-.lk-btn--secondary:hover:not(:disabled) { background: var(--lk-raised);
-  border-color: var(--lk-ink-4); transform: translateY(-1px); }
-.lk-btn--secondary:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--lk-shadow-none); }
-.lk-btn--secondary:disabled { background: var(--lk-ground); color: var(--lk-ink-4); box-shadow: none; }
+.lk-btn--secondary { background: var(--surface-card); color: var(--ink-strong);
+  border: 1px solid var(--rule-control); box-shadow: var(--elev-1); }
+.lk-btn--secondary:hover:not(:disabled) { background: var(--surface-raised);
+  border-color: var(--ink-disabled); transform: translateY(-1px); }
+.lk-btn--secondary:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.lk-btn--secondary:disabled { background: var(--surface-base); color: var(--ink-disabled); box-shadow: none; }
 ```
 
 ### 4.3 按钮 · 文字按钮（Text / Ghost）
@@ -489,31 +525,31 @@
 **定位**：低强调动作（取消、展开、更多）。**同一行最多一个文字按钮**。
 
 - 尺寸：高 44px（命中区），`min-width: 0`
-- 圆角：`--lk-radius`
+- 圆角：`--r-md`
 - 内外边距：`padding: 0 12px`
-- 字族字号：`--lk-font-ui` / `--lk-fs-base` / `font-weight: 500`
+- 字族字号：`--font-ui` / `--fs-body` / `font-weight: 500`
 - 背景：默认透明
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: transparent`；`color: var(--lk-ink-2)` |
-| hover | `background: var(--lk-wash-neutral)`；`color: var(--lk-ink)` |
-| active | `background: var(--lk-wash-neutral-strong)`；`color: var(--lk-ink)` |
+| 默认 | `background: transparent`；`color: var(--ink-muted)` |
+| hover | `background: var(--veil-hover)`；`color: var(--ink-strong)` |
+| active | `background: var(--veil-active)`；`color: var(--ink-strong)` |
 | focus-visible | 双环焦点环 |
-| disabled | `color: var(--lk-ink-4)`；`background: transparent` |
+| disabled | `color: var(--ink-disabled)`；`background: transparent` |
 | loading | 不适用（文字按钮不做异步动作；若必须，`aria-busy` + 文字不变） |
-| selected | `background: var(--lk-blue-wash)`；`color: var(--lk-blue-ink)`（用于「当前视图」切换，如记录中心 Tab 的文字形态） |
+| selected | `background: var(--role-blue-wash)`；`color: var(--role-blue)`（用于「当前视图」切换，如记录中心 Tab 的文字形态） |
 | error | 不适用 |
 
 - 角色色：默认 R0；selected 态 R1（蓝）。
 
 ```css
-.lk-btn--text { background: transparent; color: var(--lk-ink-2); padding: 0 var(--lk-space-3); min-width: 0; font-weight: 500; }
-.lk-btn--text:hover:not(:disabled) { background: var(--lk-wash-neutral); color: var(--lk-ink); }
-.lk-btn--text:active:not(:disabled) { background: var(--lk-wash-neutral-strong); color: var(--lk-ink); }
-.lk-btn--text:disabled { color: var(--lk-ink-4); background: transparent; }
+.lk-btn--text { background: transparent; color: var(--ink-muted); padding: 0 var(--sp-3); min-width: 0; font-weight: 500; }
+.lk-btn--text:hover:not(:disabled) { background: var(--veil-hover); color: var(--ink-strong); }
+.lk-btn--text:active:not(:disabled) { background: var(--veil-active); color: var(--ink-strong); }
+.lk-btn--text:disabled { color: var(--ink-disabled); background: transparent; }
 .lk-btn--text[aria-selected="true"], .lk-btn--text[aria-pressed="true"] {
-  background: var(--lk-blue-wash); color: var(--lk-blue-ink); }
+  background: var(--role-blue-wash); color: var(--role-blue); }
 ```
 
 ### 4.4 按钮 · 图标按钮（Icon）
@@ -521,37 +557,37 @@
 **定位**：只有图形、没有文字的动作（抽屉开关、折叠、关闭、缩放）。**必须有可访问名**。
 
 - 视觉尺寸：`40 × 40`（S 32×32）；命中区靠伪元素扩到 44px
-- 圆角：`--lk-radius`
+- 圆角：`--r-md`
 - 内外边距：`padding: 0`；图标 20×20（本地 SVG，`asset-icon-<name>.svg`）
 - 字族字号：无文字；仅 `aria-label` / `title`
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: transparent`；图标 `stroke: var(--lk-ink-2)` |
-| hover | `background: var(--lk-wash-neutral)`；图标 `stroke: var(--lk-ink)` |
-| active | `background: var(--lk-wash-neutral-strong)`；`transform: scale(.96)`；`80ms` |
+| 默认 | `background: transparent`；图标 `stroke: var(--ink-muted)` |
+| hover | `background: var(--veil-hover)`；图标 `stroke: var(--ink-strong)` |
+| active | `background: var(--veil-active)`；`transform: scale(.96)`；`80ms` |
 | focus-visible | 双环焦点环（命中区而非图标本体） |
-| disabled | 图标 `stroke: var(--lk-ink-4)`；`background: transparent`；`cursor: not-allowed` |
+| disabled | 图标 `stroke: var(--ink-disabled)`；`background: transparent`；`cursor: not-allowed` |
 | loading | 不适用；异步动作请改用带 label 的按钮 |
-| selected | `background: var(--lk-blue-wash)`；图标 `stroke: var(--lk-blue-ink)` |
+| selected | `background: var(--role-blue-wash)`；图标 `stroke: var(--role-blue)` |
 | error | 不适用 |
 
 - 角色色：默认 R0；selected R1（蓝）。
 
 ```css
-.lk-iconbtn { position: relative; width: 40px; height: 40px; min-height: var(--lk-tap-min);
+.lk-iconbtn { position: relative; width: 40px; height: 40px; min-height: 44px;
   display: inline-flex; align-items: center; justify-content: center;
-  padding: 0; border: 0; border-radius: var(--lk-radius);
-  background: transparent; color: var(--lk-ink-2); cursor: pointer;
-  transition: background-color var(--lk-dur-tap) var(--lk-ease-out),
-              transform var(--lk-dur-tap) var(--lk-ease-out); }
-.lk-iconbtn::before { content: ""; position: absolute; inset: -2px; min-width: var(--lk-tap-min);
-  min-height: var(--lk-tap-min); }
-.lk-iconbtn:hover:not(:disabled) { background: var(--lk-wash-neutral); color: var(--lk-ink); }
-.lk-iconbtn:active:not(:disabled) { background: var(--lk-wash-neutral-strong); transform: scale(.96); }
-.lk-iconbtn:disabled { color: var(--lk-ink-4); cursor: not-allowed; }
+  padding: 0; border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-muted); cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out); }
+.lk-iconbtn::before { content: ""; position: absolute; inset: -2px; min-width: 44px;
+  min-height: 44px; }
+.lk-iconbtn:hover:not(:disabled) { background: var(--veil-hover); color: var(--ink-strong); }
+.lk-iconbtn:active:not(:disabled) { background: var(--veil-active); transform: scale(.96); }
+.lk-iconbtn:disabled { color: var(--ink-disabled); cursor: not-allowed; }
 .lk-iconbtn[aria-selected="true"], .lk-iconbtn[aria-pressed="true"] {
-  background: var(--lk-blue-wash); color: var(--lk-blue-ink); }
+  background: var(--role-blue-wash); color: var(--role-blue); }
 .lk-iconbtn svg { width: 20px; height: 20px; display: block; fill: none; stroke: currentColor;
   stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 ```
@@ -560,114 +596,114 @@
 
 **定位**：单行文本录入。
 
-- 高 44px（S 36px，命中区 ≥ 44px）；圆角 `--lk-radius`（12px）
-- 字族字号：`--lk-font-ui` / `--lk-fs-base`（15px）
+- 高 44px（S 36px，命中区 ≥ 44px）；圆角 `--r-md`（12px）
+- 字族字号：`--font-ui` / `--fs-body`（14px）
 - 内外边距：`padding: 0 14px`
-- 背景 `--lk-paper`；边界 1px `--lk-hairline`（控件边界例外）
+- 背景 `--surface-card`；边界 1px `--rule-control`（控件边界例外）
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: var(--lk-paper)`；`border-color: var(--lk-hairline)`；`color: var(--lk-ink)` |
-| hover | `border-color: var(--lk-ink-4)` |
+| 默认 | `background: var(--surface-card)`；`border-color: var(--rule-control)`；`color: var(--ink-strong)` |
+| hover | `border-color: var(--ink-disabled)` |
 | active | 同 hover（浏览器原生） |
-| focus-visible | `border-color: var(--lk-blue)`；`box-shadow: 0 0 0 3px var(--lk-blue-wash)`；`background: var(--lk-raised)`。**禁止 `outline: none`** |
-| disabled | `background: var(--lk-ground)`；`color: var(--lk-ink-4)`；`border-color: var(--lk-hairline)`；`cursor: not-allowed` |
+| focus-visible | `border-color: var(--role-blue)`；`box-shadow: 0 0 0 3px var(--role-blue-wash)`；`background: var(--surface-raised)`。**禁止 `outline: none`** |
+| disabled | `background: var(--surface-base)`；`color: var(--ink-disabled)`；`border-color: var(--rule-control)`；`cursor: not-allowed` |
 | loading | 不适用（输入框不做加载态）；若字段正在校验，`aria-busy="true"` + 右侧 12px 指示器 |
-| selected | 文本选中 `background: var(--lk-blue-wash)`；`color: var(--lk-ink)` |
-| error | `border-color: var(--lk-red)`；`box-shadow: 0 0 0 3px var(--lk-red-wash)`；下方 4px 处出现行内错误（红点 + 文字，§4.23）；`aria-invalid="true"` |
-| readonly | `background: var(--lk-ground)`；`color: var(--lk-ink-2)` |
+| selected | 文本选中 `background: var(--role-blue-wash)`；`color: var(--ink-strong)` |
+| error | `border-color: var(--role-red)`；`box-shadow: 0 0 0 3px var(--role-red-wash)`；下方 4px 处出现行内错误（红点 + 文字，§4.23）；`aria-invalid="true"` |
+| readonly | `background: var(--surface-base)`；`color: var(--ink-muted)` |
 
 - 角色色：默认 R0；error 态 R1（红）。聚焦环用蓝属于「焦点指示」，**不计角色色槽位**。
 
 ```css
 .lk-input {
-  width: 100%; min-height: var(--lk-tap-min); padding: 0 14px;
-  border: 1px solid var(--lk-hairline); border-radius: var(--lk-radius);
-  background: var(--lk-paper); color: var(--lk-ink);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-base); line-height: 1.4;
-  transition: border-color var(--lk-dur-tap) var(--lk-ease-out),
-              box-shadow var(--lk-dur-tap) var(--lk-ease-out),
-              background-color var(--lk-dur-tap) var(--lk-ease-out);
+  width: 100%; min-height: 44px; padding: 0 14px;
+  border: 1px solid var(--rule-control); border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-strong);
+  font-family: var(--font-ui); font-size: var(--fs-body); line-height: 1.4;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
 }
-.lk-input::placeholder { color: var(--lk-ink-3); }
-.lk-input:hover:not(:disabled):not(:focus-visible) { border-color: var(--lk-ink-4); }
+.lk-input::placeholder { color: var(--ink-faint); }
+.lk-input:hover:not(:disabled):not(:focus-visible) { border-color: var(--ink-disabled); }
 .lk-input:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
-  border-color: var(--lk-blue); background: var(--lk-raised);
-  box-shadow: 0 0 0 3px var(--lk-blue-wash); }
-.lk-input:disabled { background: var(--lk-ground); color: var(--lk-ink-4); cursor: not-allowed; }
-.lk-input[readonly] { background: var(--lk-ground); color: var(--lk-ink-2); }
-.lk-input[aria-invalid="true"] { border-color: var(--lk-red); box-shadow: 0 0 0 3px var(--lk-red-wash); }
-.lk-input::selection, .lk-textarea::selection { background: var(--lk-blue-wash); color: var(--lk-ink); }
+  border-color: var(--role-blue); background: var(--surface-raised);
+  box-shadow: 0 0 0 3px var(--role-blue-soft); }
+.lk-input:disabled { background: var(--surface-base); color: var(--ink-disabled); cursor: not-allowed; }
+.lk-input[readonly] { background: var(--surface-base); color: var(--ink-muted); }
+.lk-input[aria-invalid="true"] { border-color: var(--role-red); box-shadow: 0 0 0 3px var(--role-red-wash); }
+.lk-input::selection, .lk-textarea::selection { background: var(--role-blue-wash); color: var(--ink-strong); }
 ```
 
 ### 4.6 文本域（Textarea）
 
 **定位**：多行录入。**行高 1.6、衬线不适用**（界面控件一律无衬线）；阅读面才是衬线。
 
-- 最小高 96px（`rows=3` 时 88px）；圆角 `--lk-radius`
+- 最小高 96px（`rows=3` 时 88px）；圆角 `--r-md`
 - 内外边距：`padding: 12px 14px`
-- 字族字号：`--lk-font-ui` / `--lk-fs-base` / `line-height: 1.6`
+- 字族字号：`--font-ui` / `--fs-body` / `line-height: 1.6`
 - `resize: vertical`；`min-width: 100%`
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | 同输入框：`--lk-paper` 底 + 1px `--lk-hairline` |
-| hover | `border-color: var(--lk-ink-4)` |
+| 默认 | 同输入框：`--surface-card` 底 + 1px `--rule-control` |
+| hover | `border-color: var(--ink-disabled)` |
 | active | 同 hover |
-| focus-visible | `border-color: var(--lk-blue)`；`box-shadow: 0 0 0 3px var(--lk-blue-wash)`；`background: var(--lk-raised)` |
-| disabled | `--lk-ground` 底；`color: var(--lk-ink-4)` |
+| focus-visible | `border-color: var(--role-blue)`；`box-shadow: 0 0 0 3px var(--role-blue-wash)`；`background: var(--surface-raised)` |
+| disabled | `--surface-base` 底；`color: var(--ink-disabled)` |
 | loading | 不适用 |
-| selected | 文本选中 `--lk-blue-wash` |
-| error | `border-color: var(--lk-red)`；`box-shadow: 0 0 0 3px var(--lk-red-wash)`；`aria-invalid="true"` |
+| selected | 文本选中 `--role-blue-wash` |
+| error | `border-color: var(--role-red)`；`box-shadow: 0 0 0 3px var(--role-red-wash)`；`aria-invalid="true"` |
 
 - **特例 · Agent 贴底输入区**（`pages.py:773` `#ai-input`）：
-  贴底、`border-radius: var(--lk-radius)`、最小高 72px、聚焦时**变蓝**并**轻微抬起**
-  （`transform: translateY(-2px)` + `--lk-shadow-raised`），这是「Agent 输入区」的唯一变体。
+  贴底、`border-radius: var(--r-md)`、最小高 72px、聚焦时**变蓝**并**轻微抬起**
+  （`transform: translateY(-2px)` + `--elev-2`），这是「Agent 输入区」的唯一变体。
 
 - 角色色：默认 R0；error R1（红）。Agent 聚焦变蓝属焦点反馈，不计槽位。
 
 ```css
 .lk-textarea {
   width: 100%; min-height: 96px; padding: 12px 14px;
-  border: 1px solid var(--lk-hairline); border-radius: var(--lk-radius);
-  background: var(--lk-paper); color: var(--lk-ink); resize: vertical;
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-base); line-height: 1.6;
-  transition: border-color var(--lk-dur-tap) var(--lk-ease-out),
-              box-shadow var(--lk-dur-tap) var(--lk-ease-out);
+  border: 1px solid var(--rule-control); border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-strong); resize: vertical;
+  font-family: var(--font-ui); font-size: var(--fs-body); line-height: 1.6;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
 }
-.lk-textarea::placeholder { color: var(--lk-ink-3); }
+.lk-textarea::placeholder { color: var(--ink-faint); }
 .lk-textarea:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
-  border-color: var(--lk-blue); background: var(--lk-raised);
-  box-shadow: 0 0 0 3px var(--lk-blue-wash); }
-.lk-textarea:disabled { background: var(--lk-ground); color: var(--lk-ink-4); cursor: not-allowed; }
-.lk-textarea[aria-invalid="true"] { border-color: var(--lk-red); box-shadow: 0 0 0 3px var(--lk-red-wash); }
-.lk-textarea--composer { min-height: 72px; border-radius: var(--lk-radius);
-  transition: transform var(--lk-dur-base) var(--lk-ease-out),
-              box-shadow var(--lk-dur-base) var(--lk-ease-out); }
-.lk-textarea--composer:focus-visible { transform: translateY(-2px); box-shadow: var(--lk-shadow-raised); }
+  border-color: var(--role-blue); background: var(--surface-raised);
+  box-shadow: 0 0 0 3px var(--role-blue-soft); }
+.lk-textarea:disabled { background: var(--surface-base); color: var(--ink-disabled); cursor: not-allowed; }
+.lk-textarea[aria-invalid="true"] { border-color: var(--role-red); box-shadow: 0 0 0 3px var(--role-red-wash); }
+.lk-textarea--composer { min-height: 72px; border-radius: var(--r-md);
+  transition: transform var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out); }
+.lk-textarea--composer:focus-visible { transform: translateY(-2px); box-shadow: var(--elev-2); }
 ```
 
 ### 4.7 自绘下拉（Select / Combobox）
 
 **定位**：从一组**互斥**选项中选一个。**全站 8 处原生 `<select>` 一律替换**（见 §5）。
 
-- 触发器：高 44px，圆角 `--lk-radius`，`padding: 0 14px`，右内嵌 16×16 箭头（本地 SVG `asset-icon-chevron-down`）
-- 面板：`--lk-raised` 底 + `--lk-shadow-float`，圆角 `--lk-radius`，`padding: 6px`，最大高 320px 可滚
-- 选项行：高 40px，圆角 `--lk-radius-sm`，`padding: 0 12px`，字号 15px
+- 触发器：高 44px，圆角 `--r-md`，`padding: 0 14px`，右内嵌 16×16 箭头（本地 SVG `asset-icon-chevron-down`）
+- 面板：`--surface-raised` 底 + `--elev-3`，圆角 `--r-md`，`padding: 6px`，最大高 320px 可滚
+- 选项行：高 40px，圆角 `--r-xs`，`padding: 0 12px`，字号 `--fs-body`（14px，A-18：以权威表为准，不设 15px 档）
 - **载荷不变（冻结项）**：替换后必须保留一个 `<input type="hidden">` 承载原 `name` / `value`，
   请求序列与载荷键集合逐条不变（`acceptance.md` G-1）
 
 | 状态 | 触发器 | 面板 / 选项 |
 |---|---|---|
-| 默认 | `--lk-paper` 底 + 1px `--lk-hairline`；箭头朝下 | 关闭 |
-| hover | `border-color: var(--lk-ink-4)` | 关闭 |
-| active | `border-color: var(--lk-ink-4)` | 关闭 |
-| focus-visible | `border-color: var(--lk-blue)`；`box-shadow: 0 0 0 3px var(--lk-blue-wash)` | 关闭 |
-| disabled | `--lk-ground` 底；`color: var(--lk-ink-4)`；箭头 `--lk-ink-4` | 关闭 |
+| 默认 | `--surface-card` 底 + 1px `--rule-control`；箭头朝下 | 关闭 |
+| hover | `border-color: var(--ink-disabled)` | 关闭 |
+| active | `border-color: var(--ink-disabled)` | 关闭 |
+| focus-visible | `border-color: var(--role-blue)`；`box-shadow: 0 0 0 3px var(--role-blue-wash)` | 关闭 |
+| disabled | `--surface-base` 底；`color: var(--ink-disabled)`；箭头 `--ink-disabled` | 关闭 |
 | loading | `aria-busy="true"`；右侧 12px 指示器替代箭头 | 关闭 |
-| selected（当前值） | 文字 `--lk-ink` | 当前项：`background: var(--lk-blue-wash)`；`color: var(--lk-blue-ink)`；**行尾 8px 蓝实心点**（冗余几何通道） |
-| error | `border-color: var(--lk-red)`；`box-shadow: 0 0 0 3px var(--lk-red-wash)` | 关闭 |
-| 面板打开 | 箭头旋转 180°，`transition: transform var(--lk-dur-base)` | `--lk-shadow-float`；出现用「上浮 4px + 淡入」180ms |
+| selected（当前值） | 文字 `--ink-strong` | 当前项：`background: var(--role-blue-wash)`；`color: var(--role-blue)`；**行尾 8px 蓝实心点**（冗余几何通道） |
+| error | `border-color: var(--role-red)`；`box-shadow: 0 0 0 3px var(--role-red-wash)` | 关闭 |
+| 面板打开 | 箭头旋转 180°，`transition: transform var(--dur-base)` | `--elev-3`；出现用「上浮 4px + 淡入」160ms |
 
 - 角色色：默认 R0；选中项 R1（蓝）。
 - **键盘**：`↑`/`↓` 移动、`Enter`/`Space` 选中、`Esc` 关闭并回焦触发器、输入字母前缀跳转、`Home`/`End`。
@@ -677,43 +713,43 @@
 ```css
 .lk-select { position: relative; }
 .lk-select__trigger {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--lk-space-2);
-  width: 100%; min-height: var(--lk-tap-min); padding: 0 14px;
-  border: 1px solid var(--lk-hairline); border-radius: var(--lk-radius);
-  background: var(--lk-paper); color: var(--lk-ink);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-base); text-align: left; cursor: pointer;
-  transition: border-color var(--lk-dur-tap) var(--lk-ease-out),
-              box-shadow var(--lk-dur-tap) var(--lk-ease-out);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+  width: 100%; min-height: 44px; padding: 0 14px;
+  border: 1px solid var(--rule-control); border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-strong);
+  font-family: var(--font-ui); font-size: var(--fs-body); text-align: left; cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
 }
-.lk-select__trigger:hover:not(:disabled) { border-color: var(--lk-ink-4); }
+.lk-select__trigger:hover:not(:disabled) { border-color: var(--ink-disabled); }
 .lk-select__trigger:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
-  border-color: var(--lk-blue); box-shadow: 0 0 0 3px var(--lk-blue-wash); }
-.lk-select__trigger:disabled { background: var(--lk-ground); color: var(--lk-ink-4); cursor: not-allowed; }
+  border-color: var(--role-blue); box-shadow: 0 0 0 3px var(--role-blue-soft); }
+.lk-select__trigger:disabled { background: var(--surface-base); color: var(--ink-disabled); cursor: not-allowed; }
 .lk-select__trigger svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor;
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-  transition: transform var(--lk-dur-base) var(--lk-ease-out); }
+  transition: transform var(--dur-base) var(--ease-out); }
 .lk-select[data-open="true"] .lk-select__trigger svg { transform: rotate(180deg); }
 .lk-select__panel {
-  position: absolute; z-index: var(--lk-z-dropdown); top: calc(100% + 6px); left: 0; min-width: 100%;
+  position: absolute; z-index: var(--z-dropdown); top: calc(100% + 6px); left: 0; min-width: 100%;
   max-height: 320px; overflow-y: auto; padding: 6px;
-  background: var(--lk-raised); border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-float);
+  background: var(--surface-raised); border-radius: var(--r-md);
+  box-shadow: var(--elev-3);
   opacity: 0; transform: translateY(-4px); pointer-events: none;
-  transition: opacity var(--lk-dur-base) var(--lk-ease-out),
-              transform var(--lk-dur-base) var(--lk-ease-out);
+  transition: opacity var(--dur-base) var(--ease-out),
+              transform var(--dur-base) var(--ease-out);
 }
 .lk-select[data-open="true"] .lk-select__panel { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .lk-select__option {
-  display: flex; align-items: center; justify-content: space-between; gap: var(--lk-space-2);
-  min-height: 40px; padding: 0 12px; border-radius: var(--lk-radius-sm);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-base); color: var(--lk-ink);
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2);
+  min-height: 40px; padding: 0 12px; border-radius: var(--r-xs);
+  font-family: var(--font-ui); font-size: var(--fs-body); color: var(--ink-strong);
   cursor: pointer;
 }
-.lk-select__option:hover, .lk-select__option[data-active="true"] { background: var(--lk-wash-neutral); }
-.lk-select__option[aria-selected="true"] { background: var(--lk-blue-wash); color: var(--lk-blue-ink); }
+.lk-select__option:hover, .lk-select__option[data-active="true"] { background: var(--veil-hover); }
+.lk-select__option[aria-selected="true"] { background: var(--role-blue-wash); color: var(--role-blue); }
 .lk-select__option[aria-selected="true"]::after {
-  content: ""; width: 8px; height: 8px; border-radius: var(--lk-radius-full);
-  background: var(--lk-blue); flex: none;
+  content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
+  background: var(--role-blue); flex: none;
 }
 ```
 
@@ -721,128 +757,128 @@
 
 **定位**：多选或二元开关。**点击目标应是整行标签**，不是 20px 的小方框。
 
-- 方框：`20 × 20`，圆角 `--lk-radius-xs`（6px），边框 1.5px
+- 方框：`20 × 20`，圆角 `--r-xs`（6px），边框 1.5px
 - 命中区：伪元素扩到 44×44
-- 勾号：本地 SVG `asset-icon-check`（16×16），`stroke: var(--lk-on-blue)`
+- 勾号：本地 SVG `asset-icon-check`（16×16），`stroke: var(--ink-on-role)`
 - 行高：命中区 ≥ 44px（`padding: 6px 0` + `min-height: 44px`）
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: var(--lk-paper)`；`border: 1.5px solid var(--lk-ink-4)` |
-| hover | `border-color: var(--lk-blue)` |
-| active | `border-color: var(--lk-blue-hover)`；`background: var(--lk-blue-wash)` |
+| 默认 | `background: var(--surface-card)`；`border: 1.5px solid var(--ink-disabled)` |
+| hover | `border-color: var(--role-blue)` |
+| active | `border-color: var(--role-blue-press)`；`background: var(--role-blue-wash)` |
 | focus-visible | 外层双环焦点环（蓝色，内环用纸面色） |
-| disabled | `background: var(--lk-ground)`；`border-color: var(--lk-hairline)`；`color: var(--lk-ink-4)`；`cursor: not-allowed` |
+| disabled | `background: var(--surface-base)`；`border-color: var(--rule-control)`；`color: var(--ink-disabled)`；`cursor: not-allowed` |
 | loading | 不适用 |
-| checked | `background: var(--lk-blue)`；`border-color: var(--lk-blue)`；白勾；勾以 120ms 绘制出现 |
-| indeterminate | `background: var(--lk-blue)`；白色横杠（无勾） |
-| error | `border-color: var(--lk-red)`；`box-shadow: 0 0 0 3px var(--lk-red-wash)` |
+| checked | `background: var(--role-blue)`；`border-color: var(--role-blue)`；白勾；勾以 120ms 绘制出现 |
+| indeterminate | `background: var(--role-blue)`；白色横杠（无勾） |
+| error | `border-color: var(--role-red)`；`box-shadow: 0 0 0 3px var(--role-red-wash)` |
 
 - 角色色：默认 R0；checked R1（蓝）。**红色仅用于 error，不用于 checked**。
 
 ```css
-.lk-check { position: relative; display: inline-flex; align-items: center; gap: var(--lk-space-2);
-  min-height: var(--lk-tap-min); cursor: pointer; }
+.lk-check { position: relative; display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 44px; cursor: pointer; }
 .lk-check__box {
-  width: 20px; height: 20px; flex: none; border-radius: var(--lk-radius-xs);
-  border: 1.5px solid var(--lk-ink-4); background: var(--lk-paper);
+  width: 20px; height: 20px; flex: none; border-radius: var(--r-xs);
+  border: 1.5px solid var(--ink-disabled); background: var(--surface-card);
   display: inline-flex; align-items: center; justify-content: center;
-  transition: background-color var(--lk-dur-tap) var(--lk-ease-out),
-              border-color var(--lk-dur-tap) var(--lk-ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
 }
-.lk-check__box::before { content: ""; position: absolute; width: var(--lk-tap-min);
-  height: var(--lk-tap-min); }
-.lk-check:hover .lk-check__box { border-color: var(--lk-blue); }
-.lk-check__box svg { width: 14px; height: 14px; fill: none; stroke: var(--lk-on-blue);
+.lk-check__box::before { content: ""; position: absolute; width: 44px;
+  height: 44px; }
+.lk-check:hover .lk-check__box { border-color: var(--role-blue); }
+.lk-check__box svg { width: 14px; height: 14px; fill: none; stroke: var(--ink-on-role);
   stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
   opacity: 0; transform: scale(.7);
-  transition: opacity var(--lk-dur-tap) var(--lk-ease-out),
-              transform var(--lk-dur-tap) var(--lk-ease-rebound); }
+  transition: opacity var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-rebound); }
 .lk-check input:checked + .lk-check__box,
-.lk-check input[aria-checked="true"] + .lk-check__box { background: var(--lk-blue); border-color: var(--lk-blue); }
+.lk-check input[aria-checked="true"] + .lk-check__box { background: var(--role-blue); border-color: var(--role-blue); }
 .lk-check input:checked + .lk-check__box svg { opacity: 1; transform: scale(1); }
-.lk-check input:disabled + .lk-check__box { background: var(--lk-ground); border-color: var(--lk-hairline); }
-.lk-check:has(input:disabled) { cursor: not-allowed; color: var(--lk-ink-4); }
+.lk-check input:disabled + .lk-check__box { background: var(--surface-base); border-color: var(--rule-control); }
+.lk-check:has(input:disabled) { cursor: not-allowed; color: var(--ink-disabled); }
 .lk-check:has(input:focus-visible) .lk-check__box {
   outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
-.lk-check--error .lk-check__box { border-color: var(--lk-red); box-shadow: 0 0 0 3px var(--lk-red-wash); }
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
+.lk-check--error .lk-check__box { border-color: var(--role-red); box-shadow: 0 0 0 3px var(--role-red-wash); }
 ```
 
 ```css
 /* 半选（indeterminate）：蓝底 + 白色横杠，无勾 */
 .lk-check input[aria-checked="mixed"] + .lk-check__box {
-  background: var(--lk-blue); border-color: var(--lk-blue);
+  background: var(--role-blue); border-color: var(--role-blue);
 }
 .lk-check input[aria-checked="mixed"] + .lk-check__box svg { display: none; }
 .lk-check input[aria-checked="mixed"] + .lk-check__box::after {
-  content: ""; width: 10px; height: 2px; border-radius: 1px; background: var(--lk-on-blue);
+  content: ""; width: 10px; height: 2px; border-radius: 1px; background: var(--ink-on-role);
 }
 /* 命中区：整行标签 ≥ 44px，小方框本身另补 44px 命中 */
-.lk-check__row { display: flex; align-items: center; min-height: var(--lk-tap-min); }
+.lk-check__row { display: flex; align-items: center; min-height: 44px; }
 ```
 
 ### 4.9 单选（Radio）
 
 **定位**：一组互斥选项（选一个）。选项容器是 `fieldset` + `legend`。
 
-- 圆：`20 × 20`，圆角 `--lk-radius-full`，边框 1.5px
+- 圆：`20 × 20`，圆角 `--r-round`，边框 1.5px
 - 选中表现：**蓝实心圆 + 白色内核点**（6px），与复选框的方框在几何上区分
 - 行高：命中区 ≥ 44px
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: var(--lk-paper)`；`border: 1.5px solid var(--lk-ink-4)` |
-| hover | `border-color: var(--lk-blue)` |
-| active | `border-color: var(--lk-blue-hover)` |
+| 默认 | `background: var(--surface-card)`；`border: 1.5px solid var(--ink-disabled)` |
+| hover | `border-color: var(--role-blue)` |
+| active | `border-color: var(--role-blue-press)` |
 | focus-visible | 双环焦点环 |
-| disabled | `--lk-ground` 底；`border-color: var(--lk-hairline)`；`color: var(--lk-ink-4)` |
+| disabled | `--surface-base` 底；`border-color: var(--rule-control)`；`color: var(--ink-disabled)` |
 | loading | 不适用 |
-| checked | `background: var(--lk-blue)`；`border-color: var(--lk-blue)`；中心 6px 白点，`transform: scale` 从 .6 弹到 1（`--lk-ease-rebound`） |
-| error | `border-color: var(--lk-red)`；`box-shadow: 0 0 0 3px var(--lk-red-wash)` |
+| checked | `background: var(--role-blue)`；`border-color: var(--role-blue)`；中心 6px 白点，`transform: scale` 从 .6 弹到 1（`--ease-rebound`） |
+| error | `border-color: var(--role-red)`；`box-shadow: 0 0 0 3px var(--role-red-wash)` |
 
 - 角色色：默认 R0；checked R1（蓝）。
 
 ```css
-.lk-radio { position: relative; display: inline-flex; align-items: center; gap: var(--lk-space-2);
-  min-height: var(--lk-tap-min); cursor: pointer; }
+.lk-radio { position: relative; display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 44px; cursor: pointer; }
 .lk-radio__dot {
-  width: 20px; height: 20px; flex: none; border-radius: var(--lk-radius-full);
-  border: 1.5px solid var(--lk-ink-4); background: var(--lk-paper);
+  width: 20px; height: 20px; flex: none; border-radius: var(--r-round);
+  border: 1.5px solid var(--ink-disabled); background: var(--surface-card);
   display: inline-flex; align-items: center; justify-content: center;
-  transition: background-color var(--lk-dur-tap) var(--lk-ease-out),
-              border-color var(--lk-dur-tap) var(--lk-ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
 }
-.lk-radio__dot::before { content: ""; position: absolute; width: var(--lk-tap-min);
-  height: var(--lk-tap-min); }
-.lk-radio:hover .lk-radio__dot { border-color: var(--lk-blue); }
+.lk-radio__dot::before { content: ""; position: absolute; width: 44px;
+  height: 44px; }
+.lk-radio:hover .lk-radio__dot { border-color: var(--role-blue); }
 .lk-radio__dot::after {
-  content: ""; width: 6px; height: 6px; border-radius: var(--lk-radius-full);
-  background: var(--lk-on-blue); opacity: 0; transform: scale(.6);
-  transition: opacity var(--lk-dur-tap) var(--lk-ease-out),
-              transform var(--lk-dur-tap) var(--lk-ease-rebound);
+  content: ""; width: 6px; height: 6px; border-radius: var(--r-pill);
+  background: var(--ink-on-role); opacity: 0; transform: scale(.6);
+  transition: opacity var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-rebound);
 }
 .lk-radio input:checked + .lk-radio__dot,
-.lk-radio input[aria-checked="true"] + .lk-radio__dot { background: var(--lk-blue); border-color: var(--lk-blue); }
+.lk-radio input[aria-checked="true"] + .lk-radio__dot { background: var(--role-blue); border-color: var(--role-blue); }
 .lk-radio input:checked + .lk-radio__dot::after,
 .lk-radio input[aria-checked="true"] + .lk-radio__dot::after { opacity: 1; transform: scale(1); }
-.lk-radio input:disabled + .lk-radio__dot { background: var(--lk-ground); border-color: var(--lk-hairline); }
-.lk-radio:has(input:disabled) { cursor: not-allowed; color: var(--lk-ink-4); }
+.lk-radio input:disabled + .lk-radio__dot { background: var(--surface-base); border-color: var(--rule-control); }
+.lk-radio:has(input:disabled) { cursor: not-allowed; color: var(--ink-disabled); }
 .lk-radio:has(input:focus-visible) .lk-radio__dot {
   outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
-.lk-radio--error .lk-radio__dot { border-color: var(--lk-red); box-shadow: 0 0 0 3px var(--lk-red-wash); }
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
+.lk-radio--error .lk-radio__dot { border-color: var(--role-red); box-shadow: 0 0 0 3px var(--role-red-wash); }
 ```
 
 ```css
 /* 单选组：fieldset 无框，legend 作组名 */
 .lk-choicegroup { border: 0; margin: 0; padding: 0; }
-.lk-choicegroup > legend { padding: 0 0 var(--lk-space-2); color: var(--lk-ink-2);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-sm); }
+.lk-choicegroup > legend { padding: 0 0 var(--sp-2); color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-meta); }
 /* 选项行：整行可点，命中区 ≥ 44px */
-.lk-choicegroup .lk-radio { display: flex; width: 100%; padding: var(--lk-space-2) var(--lk-space-3);
-  border-radius: var(--lk-radius); }
-.lk-choicegroup .lk-radio:hover { background: var(--lk-wash-neutral); }
+.lk-choicegroup .lk-radio { display: flex; width: 100%; padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md); }
+.lk-choicegroup .lk-radio:hover { background: var(--veil-hover); }
 ```
 
 ### 4.10 开关（Switch）
@@ -852,44 +888,44 @@
 设置视图里的四个偏好（主题 / 阅读字面 / 动效 / 声音）里，**主题、动效、声音用开关**，
 **阅读字面用分段控件**（二选一，不是开/关）。
 
-- 轨道：`44 × 26`，圆角 `--lk-radius-full`
-- 滑块：`20 × 20` 圆形，白底 + `--lk-shadow-card`，`translateX(4px → 20px)`
+- 轨道：`44 × 26`，圆角 `--r-pill`（**胶囊**；用 `--r-round` 50% 会得到 22×13 的椭圆角）
+- 滑块：`20 × 20` 圆形，白底 + `--elev-1`，`translateX(4px → 20px)`
 - 命中区：整行 ≥ 44px（`min-height: 44px`），轨道本体 26px 不单独算命中区
 
 | 状态 | 表现 |
 |---|---|
-| 默认（关） | `background: var(--lk-ink-4)`；滑块 `translateX(4px)`；`transition 180ms` |
-| hover | 关态 `background: var(--lk-ink-3)`；开态 `--lk-blue-hover` |
+| 默认（关） | `background: var(--ink-disabled)`；滑块 `translateX(4px)`；`transition 160ms` |
+| hover | 关态 `background: var(--ink-faint)`；开态 `--role-blue-press` |
 | active | 滑块 `scale(.94)` |
 | focus-visible | 轨道上双环焦点环（内环用纸面色） |
-| disabled | `background: var(--lk-wash-neutral-strong)`；滑块 `background: var(--lk-paper)`；`opacity: .7`；`cursor: not-allowed` |
+| disabled | `background: var(--veil-active)`；滑块 `background: var(--surface-card)`；`opacity: .7`；`cursor: not-allowed` |
 | loading | 不适用；异步保存时在轨道右侧显示 12px 指示器并 `aria-busy="true"` |
-| 开（on） | `background: var(--lk-blue)`；滑块 `translateX(20px)` |
+| 开（on） | `background: var(--role-blue)`；滑块 `translateX(20px)` |
 | error | 不适用（开关无错误语义）；设置保存失败由行内错误条承担 |
 
 - 角色色：**蓝**（开态），R1。关态是中性墨，不是第四色。
 
 ```css
 .lk-switch { position: relative; display: inline-flex; align-items: center;
-  min-height: var(--lk-tap-min); cursor: pointer; }
+  min-height: 44px; cursor: pointer; }
 .lk-switch__track {
-  width: 44px; height: 26px; flex: none; border-radius: var(--lk-radius-full);
-  background: var(--lk-ink-4); padding: 3px;
-  transition: background-color var(--lk-dur-base) var(--lk-ease-out);
+  width: 44px; height: 26px; flex: none; border-radius: var(--r-pill);
+  background: var(--ink-disabled); padding: 3px;
+  transition: background-color var(--dur-base) var(--ease-out);
 }
 .lk-switch__thumb {
-  width: 20px; height: 20px; border-radius: var(--lk-radius-full);
-  background: var(--lk-paper); box-shadow: var(--lk-shadow-card);
+  width: 20px; height: 20px; border-radius: var(--r-round);
+  background: var(--surface-card); box-shadow: var(--elev-1);
   transform: translateX(0);
-  transition: transform var(--lk-dur-base) var(--lk-ease-rebound);
+  transition: transform var(--dur-base) var(--ease-rebound);
 }
-.lk-switch input:checked + .lk-switch__track { background: var(--lk-blue); }
+.lk-switch input:checked + .lk-switch__track { background: var(--role-blue); }
 .lk-switch input:checked + .lk-switch__track .lk-switch__thumb { transform: translateX(18px); }
 .lk-switch:hover input:not(:disabled) + .lk-switch__track { filter: brightness(.96); }
 .lk-switch input:focus-visible + .lk-switch__track {
   outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
-.lk-switch input:disabled + .lk-switch__track { background: var(--lk-wash-neutral-strong); }
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
+.lk-switch input:disabled + .lk-switch__track { background: var(--veil-active); }
 .lk-switch:has(input:disabled) { cursor: not-allowed; }
 ```
 
@@ -898,57 +934,57 @@
 **定位**：**互斥但可见全貌**的 2–4 个选项（阅读字面：衬线 / 无衬线；自评 1–5；
 难度档位）。**超过 4 项不用分段控件**，改用自绘下拉。
 
-- 容器：内联 flex，`background: var(--lk-ground)`，圆角 `--lk-radius`（12px），`padding: 4px`，`gap: 4px`
-- 项：高 36px，圆角 `--lk-radius-sm`（8px），`padding: 0 14px`，字号 `--lk-fs-sm`（13px）/ 600
+- 容器：内联 flex，`background: var(--surface-base)`，圆角 `--r-md`（12px），`padding: 4px`，`gap: 4px`
+- 项：高 36px，圆角 `--r-xs`（6px），`padding: 0 14px`，字号 `--fs-meta`（13px）/ 600
 - 命中区：容器高 = 36 + 8 = 44px，项本身 36px → **项内命中区用伪元素补到 44 高会溢出容器**，
   因此分段控件**整体**保证 44px 高（项高 40 + padding 4 + padding 4 = 48 容器高，取 44），
   项高 36 + 上下 padding 4 = 44 ✔
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | 容器 `--lk-ground`；项 `background: transparent`；`color: var(--lk-ink-2)` |
-| hover | 项 `color: var(--lk-ink)`；`background: var(--lk-wash-neutral)` |
-| active | 项 `background: var(--lk-wash-neutral-strong)` |
+| 默认 | 容器 `--surface-base`；项 `background: transparent`；`color: var(--ink-muted)` |
+| hover | 项 `color: var(--ink-strong)`；`background: var(--veil-hover)` |
+| active | 项 `background: var(--veil-active)` |
 | focus-visible | 当前项双环焦点环（roving tabindex，只有当前项可聚焦） |
 | disabled | 整组 `opacity: .6`；项 `cursor: not-allowed` |
 | loading | 不适用 |
-| selected | 项 `background: var(--lk-raised)`；`color: var(--lk-ink)`；`box-shadow: var(--lk-shadow-card)`；`font-weight: 600`；**若该分段承载角色语义（如连对档位），选中项底色改 `--lk-yellow-wash` 且字取 `--lk-ink`** |
-| error | 整组外框 `box-shadow: 0 0 0 3px var(--lk-red-wash)`（`aria-invalid`） |
+| selected | 项 `background: var(--surface-raised)`；`color: var(--ink-strong)`；`box-shadow: var(--elev-1)`；`font-weight: 600`；**若该分段承载角色语义（如连对档位），选中项底色改 `--role-yellow-soft` 且字取 `--ink-strong`** |
+| error | 整组外框 `box-shadow: 0 0 0 3px var(--role-red-wash)`（`aria-invalid`） |
 
 - 角色色：默认 R0；selected R1（蓝），语义型 selected 可用黄洗底（仍为 R1）。
 - **键盘**：`←`/`→`/`Home`/`End` 移动并**立即选中**（roving tabindex），`Space` 选中。
 - **ARIA**：`role="radiogroup"` + 每项 `role="radio"` + `aria-checked`。
 
 ```css
-.lk-seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--lk-radius);
-  background: var(--lk-ground); }
+.lk-seg { display: inline-flex; gap: 4px; padding: 4px; border-radius: var(--r-md);
+  background: var(--surface-base); }
 .lk-seg__item {
-  min-height: 36px; padding: 0 14px; border: 0; border-radius: var(--lk-radius-sm);
-  background: transparent; color: var(--lk-ink-2);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-sm); font-weight: 500;
+  min-height: 36px; padding: 0 14px; border: 0; border-radius: var(--r-xs);
+  background: transparent; color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-meta); font-weight: 500;
   cursor: pointer; white-space: nowrap;
-  transition: background-color var(--lk-dur-tap) var(--lk-ease-out),
-              color var(--lk-dur-tap) var(--lk-ease-out),
-              box-shadow var(--lk-dur-tap) var(--lk-ease-out);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
 }
-.lk-seg__item:hover:not(:disabled) { color: var(--lk-ink); background: var(--lk-wash-neutral); }
+.lk-seg__item:hover:not(:disabled) { color: var(--ink-strong); background: var(--veil-hover); }
 .lk-seg__item[aria-checked="true"], .lk-seg__item[aria-selected="true"] {
-  background: var(--lk-raised); color: var(--lk-ink); font-weight: 600;
-  box-shadow: var(--lk-shadow-card); }
+  background: var(--surface-raised); color: var(--ink-strong); font-weight: 600;
+  box-shadow: var(--elev-1); }
 .lk-seg__item:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
-.lk-seg__item:disabled { color: var(--lk-ink-4); cursor: not-allowed; }
-.lk-seg[aria-invalid="true"] { box-shadow: 0 0 0 3px var(--lk-red-wash); }
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
+.lk-seg__item:disabled { color: var(--ink-disabled); cursor: not-allowed; }
+.lk-seg[aria-invalid="true"] { box-shadow: 0 0 0 3px var(--role-red-wash); }
 ```
 
 ```css
 /* 语义型分段（承载角色色，如连对档位 / 复习轮次）：选中项用角色洗底 */
 .lk-seg--semantic .lk-seg__item[aria-checked="true"] {
-  background: var(--lk-yellow-wash); color: var(--lk-ink);
-  box-shadow: inset 0 0 0 2px var(--lk-yellow); }
+  background: var(--role-yellow-soft); color: var(--ink-on-warm);
+  box-shadow: inset 0 0 0 2px var(--role-yellow); }
 .lk-seg--semantic .lk-seg__item[aria-checked="true"]::before {
-  content: ""; width: 8px; height: 8px; border-radius: var(--lk-radius-full);
-  background: var(--lk-yellow); flex: none; }
+  content: ""; width: 8px; height: 8px; border-radius: var(--r-pill);
+  background: var(--role-yellow); flex: none; }
 /* 横向可滚形态（记录中心筛选 chip） */
 .lk-seg--scroll { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
 .lk-seg--scroll::-webkit-scrollbar { display: none; }
@@ -959,22 +995,22 @@
 **定位**：**静态**的分类或属性标记（章节名、状态名、难度）。**不可点击**。
 可点击的应改用次按钮或文字按钮。
 
-- 高 24px（大号 28px），圆角 `--lk-radius`（12px）
+- 高 24px（大号 28px），圆角 `--r-md`（12px）
 - 内外边距：`padding: 0 10px`（大号 `0 12px`）
-- 字族字号：`--lk-font-ui` / `--lk-fs-xs`（12px）/ `font-weight: 500`
+- 字族字号：`--font-ui` / `--fs-label`（12px）/ `font-weight: 500`
 - 图标（可选）：12×12 本地 SVG，`gap: 4px`
 
 | 状态 | 表现 |
 |---|---|
-| 默认（中性） | `background: var(--lk-wash-neutral)`；`color: var(--lk-ink-2)` |
+| 默认（中性） | `background: var(--veil-hover)`；`color: var(--ink-muted)` |
 | hover / active | **不适用**（静态元素） |
 | focus-visible | 不适用；若标签内含链接，焦点环落在链接上 |
 | disabled | 不适用 |
 | loading | 不适用 |
-| selected | `background: var(--lk-blue-wash)`；`color: var(--lk-blue-ink)` |
-| 语义变体 · 蓝 | `background: var(--lk-blue-wash)`；`color: var(--lk-blue-ink)` |
-| 语义变体 · 黄 | `background: var(--lk-yellow-wash)`；`color: var(--lk-ink)`（**黄不承载文字**） |
-| 语义变体 · 红 | `background: var(--lk-red-wash)`；`color: var(--lk-red-ink)` |
+| selected | `background: var(--role-blue-wash)`；`color: var(--role-blue)` |
+| 语义变体 · 蓝 | `background: var(--role-blue-wash)`；`color: var(--role-blue)` |
+| 语义变体 · 黄 | `background: var(--role-yellow-soft)`；`color: var(--ink-on-warm)`（**黄不承载文字**） |
+| 语义变体 · 红 | `background: var(--role-red-wash)`；`color: var(--role-red-ink)` |
 | error | 语义变体 · 红（错误态标签用红洗底 + 红字） |
 
 - 角色色：中性 R0；每个语义变体 R1。**同一张卡上的语义标签不超过 2 个**。
@@ -982,23 +1018,23 @@
 ```css
 .lk-tag {
   display: inline-flex; align-items: center; gap: 4px;
-  min-height: 24px; padding: 0 10px; border-radius: var(--lk-radius);
-  background: var(--lk-wash-neutral); color: var(--lk-ink-2);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-xs); font-weight: 500;
+  min-height: 24px; padding: 0 10px; border-radius: var(--r-md);
+  background: var(--veil-hover); color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-label); font-weight: 500;
   white-space: nowrap;
 }
-.lk-tag--blue { background: var(--lk-blue-wash); color: var(--lk-blue-ink); }
-.lk-tag--yellow { background: var(--lk-yellow-wash); color: var(--lk-ink); }
-.lk-tag--red { background: var(--lk-red-wash); color: var(--lk-red-ink); }
+.lk-tag--blue { background: var(--role-blue-wash); color: var(--role-blue); }
+.lk-tag--yellow { background: var(--role-yellow-soft); color: var(--ink-on-warm); }
+.lk-tag--red { background: var(--role-red-wash); color: var(--role-red-ink); }
 .lk-tag svg { width: 12px; height: 12px; fill: none; stroke: currentColor;
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 ```
 
 ```css
 /* 选中态标签 + 大号变体 + 带状态点的标签 */
-.lk-tag--selected { background: var(--lk-blue-wash); color: var(--lk-blue-ink); }
-.lk-tag--lg { min-height: 28px; padding: 0 12px; font-size: var(--lk-fs-sm); }
-.lk-tag__dot { width: 8px; height: 8px; border-radius: var(--lk-radius-full); flex: none; }
+.lk-tag--selected { background: var(--role-blue-wash); color: var(--role-blue); }
+.lk-tag--lg { min-height: 28px; padding: 0 12px; font-size: var(--fs-meta); }
+.lk-tag__dot { width: 8px; height: 8px; border-radius: var(--r-pill); flex: none; }
 ```
 
 ### 4.13 徽标（Badge）
@@ -1006,19 +1042,19 @@
 **定位**：**计数**徽标，附着在图标 / 按钮 / Tab 角上（待办数、阻塞数）。
 与标签的区别：徽标**只装数字**，且形状是圆 / 圆角方。
 
-- 尺寸：最小 `20 × 20`（半径 `--lk-radius-full`），计数 ≥ 100 时显示 `99+`
-- 内外边距：`padding: 0 6px`（两位数以上改圆角方 `--lk-radius-sm`）
-- 字族字号：`--lk-font-ui` / `--lk-fs-xs`（12px）/ `font-weight: 700` / `tabular-nums`
+- 尺寸：最小 `20 × 20`（半径 `--r-round`），计数 ≥ 100 时显示 `99+`
+- 内外边距：`padding: 0 6px`（两位数以上改圆角方 `--r-xs`）
+- 字族字号：`--font-ui` / `--fs-label`（12px）/ `font-weight: 700` / `tabular-nums`
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `background: var(--lk-ink)`；`color: var(--lk-on-ink)`（中性计数，如未读） |
+| 默认 | `background: var(--surface-ink)`；`color: var(--ink-inverse)`（中性计数，如未读） |
 | hover / active | 不适用 |
 | focus-visible | 不适用（徽标本身不可聚焦） |
 | disabled | 不适用 |
 | loading | 不适用 |
 | selected | 不适用 |
-| 阻塞 / 失败计数 | `background: var(--lk-red)`；`color: var(--lk-on-red)`（夜纸下 `--lk-on-red` = 墨色） |
+| 阻塞 / 失败计数 | `background: var(--role-red)`；`color: var(--ink-on-role)`（夜纸下 `--ink-on-role` = 墨色） |
 | error | 同「阻塞 / 失败计数」 |
 
 - 角色色：**红**（阻塞计数）R1；中性计数 R0。**蓝与黄不做徽标色**——蓝已被「当前选中」占用，
@@ -1028,11 +1064,11 @@
 .lk-badge {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 20px; height: 20px; padding: 0 6px;
-  border-radius: var(--lk-radius-full); background: var(--lk-ink); color: var(--lk-on-ink);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-xs); font-weight: 700;
+  border-radius: var(--r-round); background: var(--surface-ink); color: var(--ink-inverse);
+  font-family: var(--font-ui); font-size: var(--fs-label); font-weight: 700;
   font-variant-numeric: tabular-nums; line-height: 1;
 }
-.lk-badge--alert { background: var(--lk-red); color: var(--lk-on-red); }
+.lk-badge--alert { background: var(--role-red); color: var(--ink-on-role); }
 ```
 
 ### 4.14 状态圆点（Status dot）
@@ -1040,23 +1076,23 @@
 **定位**：**冗余状态通道**的载体。零文字、零标签。**只表达状态，不表达数量**。
 
 - 尺寸：`10 × 10`（密集列表 8px，强调位置 12px）
-- 圆角：`--lk-radius-full`
+- 圆角：`--r-pill`（圆点用胶囊档，不用 `--r-round` —— 权威表 §2.1）
 - 几何集与映射：见 §3.6（`filled` / `ring` / `half` / `dash` / `cross`）
 - **不得**单独出现无颜色差异的灰点以外的中性点以外的无意义点
 
 | 状态 | 表现（色 / 几何） |
 |---|---|
-| 未开始 / 待办 | `--lk-ink-4` / `ring` |
-| 当前 · 交互层 | `--lk-blue` / `ring` |
-| 进行中 | `--lk-blue` / `half` |
-| 已完成 / 通过 | `--lk-blue` / `filled` |
-| 当前 · 内容层 | `--lk-yellow` / `filled` |
-| 到期 / 需复习 | `--lk-yellow` / `dash` |
-| 失败 / 错误 | `--lk-red` / `filled` |
-| 阻塞 / 卡住 | `--lk-red` / `cross` |
+| 未开始 / 待办 | `--ink-disabled` / `ring` |
+| 当前 · 交互层 | `--role-blue` / `ring` |
+| 进行中 | `--role-blue` / `half` |
+| 已完成 / 通过 | `--role-blue` / `filled` |
+| 当前 · 内容层 | `--role-yellow` / `filled` |
+| 到期 / 需复习 | `--role-yellow` / `dash` |
+| 失败 / 错误 | `--role-red` / `filled` |
+| 阻塞 / 卡住 | `--role-red` / `cross` |
 | hover | 不适用（装饰性状态点不响应指针） |
 | focus-visible | 不适用 |
-| disabled | 宿主元素禁用时点降到 `--lk-ink-4` 且不改变几何（几何仍可辨） |
+| disabled | 宿主元素禁用时点降到 `--ink-disabled` 且不改变几何（几何仍可辨） |
 | loading | 进行中（`half`） |
 | selected | 随宿主选中态切换到对应几何 |
 | error | 见「失败 / 错误」 |
@@ -1067,8 +1103,8 @@
 
 ```css
 .lk-dot {
-  --_dot-color: var(--lk-ink-4);
-  width: 10px; height: 10px; flex: none; border-radius: var(--lk-radius-full);
+  --_dot-color: var(--ink-disabled);
+  width: 10px; height: 10px; flex: none; border-radius: var(--r-pill);
   background: transparent; box-shadow: inset 0 0 0 2px var(--_dot-color);
 }
 .lk-dot--filled { background: var(--_dot-color); box-shadow: none; }
@@ -1087,10 +1123,10 @@
   background: var(--_dot-color); transform: translateY(-50%) rotate(45deg);
 }
 .lk-dot--cross::after { transform: translateY(-50%) rotate(-45deg); }
-.lk-dot--blue { --_dot-color: var(--lk-blue); }
-.lk-dot--yellow { --_dot-color: var(--lk-yellow); }
-.lk-dot--red { --_dot-color: var(--lk-red); }
-.lk-dot--muted { --_dot-color: var(--lk-ink-4); }
+.lk-dot--blue { --_dot-color: var(--role-blue); }
+.lk-dot--yellow { --_dot-color: var(--role-yellow); }
+.lk-dot--red { --_dot-color: var(--role-red); }
+.lk-dot--muted { --_dot-color: var(--ink-disabled); }
 ```
 
 ```css
@@ -1098,43 +1134,43 @@
 .lk-dot--sm { width: 8px; height: 8px; }
 .lk-dot--lg { width: 12px; height: 12px; }
 /* 承载在纸面上的点：加一圈纸色垫，避免与背景同色糊在一起 */
-.lk-dot--on-paper { box-shadow: 0 0 0 2px var(--lk-paper), inset 0 0 0 2px var(--_dot-color); }
-.lk-dot--filled.lk-dot--on-paper { box-shadow: 0 0 0 2px var(--lk-paper); }
+.lk-dot--on-paper { box-shadow: 0 0 0 2px var(--surface-card), inset 0 0 0 2px var(--_dot-color); }
+.lk-dot--filled.lk-dot--on-paper { box-shadow: 0 0 0 2px var(--surface-card); }
 /* 点在暗底上：垫圈改墨色 */
-.lk-dot--on-ink { box-shadow: 0 0 0 2px var(--lk-ink), inset 0 0 0 2px var(--_dot-color); }
+.lk-dot--on-ink { box-shadow: 0 0 0 2px var(--ink-strong), inset 0 0 0 2px var(--_dot-color); }
 ```
 
 ### 4.15 进度条（Progress bar）
 
 **定位**：**单一**连续量的完成度（练习进度、目标进度、复习负荷）。
 
-- 轨道：高 8px（大号 12px），圆角 `--lk-radius-full`，`background: var(--lk-wash-neutral-strong)`
-- 填充：同高，圆角继承，`background: var(--lk-blue)`
+- 轨道：高 8px（大号 12px），圆角 `--r-pill`（胶囊），`background: var(--veil-active)`
+- 填充：同高，圆角继承，`background: var(--role-blue)`
 - 宽度：`100%` 容器；`padding: 0`；无内外边距（外层容器负责）
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | 填充宽度 = 当前百分比；`transition: width var(--lk-dur-base) var(--lk-ease-out)` |
+| 默认 | 填充宽度 = 当前百分比；`transition: width var(--dur-base) var(--ease-out)` |
 | hover / active | 不适用（静态展示） |
 | focus-visible | 不适用；若进度条可点击跳转，加 `role="link"` + 焦点环 |
 | disabled | 轨道 `opacity: .5` |
 | loading | **不确定态**：轨道上跑一段 32% 宽的滑块，`1.2s linear infinite` |
 | selected | 不适用 |
-| error | 填充改 `--lk-red`（失败态进度，如批改未通过） |
-| 语义变体 · 连对 / 复习 | 填充改 `--lk-yellow`（黄不承载文字，此处是纯面积 ✔） |
+| error | 填充改 `--role-red`（失败态进度，如批改未通过） |
+| 语义变体 · 连对 / 复习 | 填充改 `--role-yellow`（黄不承载文字，此处是纯面积 ✔） |
 
 - 角色色：R1（蓝或黄，二选一，不混用）。
 
 ```css
-.lk-progress { width: 100%; height: 8px; border-radius: var(--lk-radius-full);
-  background: var(--lk-wash-neutral-strong); overflow: hidden; }
+.lk-progress { width: 100%; height: 8px; border-radius: var(--r-pill);
+  background: var(--veil-active); overflow: hidden; }
 .lk-progress__fill { display: block; height: 100%; width: 0; border-radius: inherit;
-  background: var(--lk-blue);
-  transition: width var(--lk-dur-base) var(--lk-ease-out); }
-.lk-progress--yellow .lk-progress__fill { background: var(--lk-yellow); }
-.lk-progress--error .lk-progress__fill { background: var(--lk-red); }
+  background: var(--role-blue);
+  transition: width var(--dur-base) var(--ease-out); }
+.lk-progress--yellow .lk-progress__fill { background: var(--role-yellow); }
+.lk-progress--error .lk-progress__fill { background: var(--role-red); }
 .lk-progress--indeterminate .lk-progress__fill {
-  width: 32%; animation: lk-indeterminate 1.2s var(--lk-ease-standard) infinite; }
+  width: 32%; animation: lk-indeterminate 1.2s var(--ease-standard) infinite; }
 @keyframes lk-indeterminate {
   0% { transform: translateX(-100%); } 100% { transform: translateX(312%); } }
 ```
@@ -1144,16 +1180,16 @@
 **定位**：**离散**步数的完成度（连对计数、复习轮次、目标里程碑）。
 用**颜色 + 几何双编码**，让「已完成 / 当前 / 未开始」不依赖颜色。
 
-- 段：高 8px（大号 12px），圆角 `--lk-radius-full`，`gap: 4px`
+- 段：高 8px（大号 12px），圆角 `--r-pill`（胶囊），`gap: 4px`
 - 段宽：`flex: 1`，最小 12px；总宽 100%
 - 几何：已完成 = `filled`；当前 = `half`；未开始 = `ring`（2px 环）
 
 | 状态 | 表现 |
 |---|---|
-| 未开始 | `background: transparent`；`box-shadow: inset 0 0 0 2px var(--lk-wash-neutral-strong)` |
-| 进行中（当前段） | `background: var(--lk-wash-neutral-strong)`；`box-shadow: inset -50% 0 0 0 var(--lk-yellow)`（半填充） |
-| 已完成 | `background: var(--lk-yellow)`（连对语义）或 `var(--lk-blue)`（通用语义） |
-| 失败 | 该段 `background: var(--lk-red)`（连对中断） |
+| 未开始 | `background: transparent`；`box-shadow: inset 0 0 0 2px var(--veil-active)` |
+| 进行中（当前段） | `background: var(--veil-active)`；`box-shadow: inset -50% 0 0 0 var(--role-yellow)`（半填充） |
+| 已完成 | `background: var(--role-yellow)`（连对语义）或 `var(--role-blue)`（通用语义） |
+| 失败 | 该段 `background: var(--role-red)`（连对中断） |
 | hover / active | 不适用 |
 | focus-visible | 容器可聚焦时（`tabindex="0"` + `role="progressbar"`）给双环焦点环 |
 | disabled | `opacity: .5` |
@@ -1165,13 +1201,13 @@
 
 ```css
 .lk-steps { display: flex; gap: 4px; width: 100%; }
-.lk-steps__seg { flex: 1; min-width: 12px; height: 8px; border-radius: var(--lk-radius-full);
-  background: transparent; box-shadow: inset 0 0 0 2px var(--lk-wash-neutral-strong); }
-.lk-steps__seg--done { background: var(--lk-yellow); box-shadow: none; }
-.lk-steps__seg--current { background: var(--lk-wash-neutral-strong);
-  box-shadow: inset -50% 0 0 0 var(--lk-yellow); }
-.lk-steps__seg--failed { background: var(--lk-red); box-shadow: none; }
-.lk-steps--blue .lk-steps__seg--done { background: var(--lk-blue); }
+.lk-steps__seg { flex: 1; min-width: 12px; height: 8px; border-radius: var(--r-pill);
+  background: transparent; box-shadow: inset 0 0 0 2px var(--veil-active); }
+.lk-steps__seg--done { background: var(--role-yellow); box-shadow: none; }
+.lk-steps__seg--current { background: var(--veil-active);
+  box-shadow: inset -50% 0 0 0 var(--role-yellow); }
+.lk-steps__seg--failed { background: var(--role-red); box-shadow: none; }
+.lk-steps--blue .lk-steps__seg--done { background: var(--role-blue); }
 ```
 
 ### 4.17 题号格（Question cell）
@@ -1179,21 +1215,21 @@
 **定位**：练习 / 试卷的**题号导航格**（现状 `.paper-dot`，`workbench.css:1888-1894`）。
 每格 = 一道题，点击跳转。
 
-- 视觉尺寸：`36 × 36`，圆角 `--lk-radius`（12px）
+- 视觉尺寸：`36 × 36`，圆角 `--r-md`（12px）
 - 命中区：格 + 8px 间隙 = **44px 步距** ✔
 - 内外边距：`padding: 0`
-- 字族字号：`--lk-font-mono`（编号等宽）/ `--lk-fs-sm`（13px）/ `font-weight: 600` / `tabular-nums`
+- 字族字号：`--font-mono`（编号等宽）/ `--fs-meta`（13px）/ `font-weight: 600` / `tabular-nums`
 - 现状是 34px 圆 + 1px 描边 + 5 个硬编码色（`#f2c94c` / `#dce7ff` / `#d9ebdd` / `#f6d8d5`）→ 全部换成 §3.6 状态映射
 
 | 状态 | 色 / 几何 |
 |---|---|
-| 未作答 | `--lk-ink-4` / `ring`（`background: var(--lk-paper)`，2px 环） |
-| 已作答 | `--lk-blue` / `filled` |
-| 当前题 | `--lk-yellow` / `filled`；`transform: scale(1.06)`（120ms 回弹） |
-| 判定正确 | `--lk-blue` / `filled` |
-| 判定错误 | `--lk-red` / `filled` |
-| 卡住 / 阻塞 | `--lk-red` / `cross` |
-| hover | 未作答态 `border-color: var(--lk-blue)`；已填态 `filter: brightness(1.06)` |
+| 未作答 | `--ink-disabled` / `ring`（`background: var(--surface-card)`，2px 环） |
+| 已作答 | `--role-blue` / `filled` |
+| 当前题 | `--role-yellow` / `filled`；`transform: scale(1.06)`（120ms 回弹） |
+| 判定正确 | `--role-blue` / `filled` |
+| 判定错误 | `--role-red` / `filled` |
+| 卡住 / 阻塞 | `--role-red` / `cross` |
+| hover | 未作答态 `border-color: var(--role-blue)`；已填态 `filter: brightness(1.06)` |
 | active | `transform: scale(.94)` |
 | focus-visible | 双环焦点环，内环用纸面色 |
 | disabled | `opacity: .45` |
@@ -1207,33 +1243,33 @@
 ```css
 .lk-qcell {
   width: 36px; height: 36px; min-width: 36px; padding: 0;
-  border: 0; border-radius: var(--lk-radius); cursor: pointer;
+  border: 0; border-radius: var(--r-md); cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--lk-paper); color: var(--lk-ink-2);
-  box-shadow: inset 0 0 0 2px var(--lk-ink-4);
-  font-family: var(--lk-font-mono); font-size: var(--lk-fs-sm); font-weight: 600;
+  background: var(--surface-card); color: var(--ink-muted);
+  box-shadow: inset 0 0 0 2px var(--ink-disabled);
+  font-family: var(--font-mono); font-size: var(--fs-meta); font-weight: 600;
   font-variant-numeric: tabular-nums;
-  transition: transform var(--lk-dur-tap) var(--lk-ease-rebound),
-              box-shadow var(--lk-dur-tap) var(--lk-ease-out),
-              background-color var(--lk-dur-tap) var(--lk-ease-out);
+  transition: transform var(--dur-fast) var(--ease-rebound),
+              box-shadow var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
 }
-.lk-qcell:hover:not(:disabled) { box-shadow: inset 0 0 0 2px var(--lk-blue); color: var(--lk-ink); }
+.lk-qcell:hover:not(:disabled) { box-shadow: inset 0 0 0 2px var(--role-blue); color: var(--ink-strong); }
 .lk-qcell:active:not(:disabled) { transform: scale(.94); }
 .lk-qcell:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
-.lk-qcell--answered { background: var(--lk-blue); color: var(--lk-on-blue); box-shadow: none; }
-.lk-qcell--current { background: var(--lk-yellow); color: var(--lk-ink); box-shadow: none;
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
+.lk-qcell--answered { background: var(--role-blue); color: var(--ink-on-role); box-shadow: none; }
+.lk-qcell--current { background: var(--role-yellow); color: var(--ink-on-warm); box-shadow: none;
   transform: scale(1.06); }
-.lk-qcell--wrong { background: var(--lk-red); color: var(--lk-on-red); box-shadow: none; }
-.lk-qcell--stuck { background: var(--lk-paper); color: var(--lk-red); box-shadow: inset 0 0 0 2px var(--lk-red); }
+.lk-qcell--wrong { background: var(--role-red); color: var(--ink-on-role); box-shadow: none; }
+.lk-qcell--stuck { background: var(--surface-card); color: var(--role-red); box-shadow: inset 0 0 0 2px var(--role-red); }
 .lk-qcell:disabled { opacity: .45; cursor: not-allowed; }
 ```
 
 ```css
 /* 题号格容器：36px 格 + 8px 间隙 = 44px 步距（命中区达标） */
-.lk-qgrid { display: flex; flex-wrap: wrap; gap: var(--lk-space-2); }
-.lk-qgrid__legend { display: flex; flex-wrap: wrap; gap: var(--lk-space-3);
-  margin-top: var(--lk-space-2); font-size: var(--lk-fs-xs); color: var(--lk-ink-3); }
+.lk-qgrid { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.lk-qgrid__legend { display: flex; flex-wrap: wrap; gap: var(--sp-3);
+  margin-top: var(--sp-2); font-size: var(--fs-label); color: var(--ink-faint); }
 .lk-qgrid__legend > span { display: inline-flex; align-items: center; gap: 4px; }
 ```
 
@@ -1241,37 +1277,37 @@
 
 **定位**：内容分组的基本单元（知识点分组卡、试卷卡、记录卡片流、Agent 消息卡）。
 
-- 圆角：`--lk-radius`（12px）
-- 内外边距：`padding: var(--lk-space-5)`（20px）；紧凑卡 `16px`；宽松卡 `24px`
-- 背景：L1 `--lk-paper`；`box-shadow: var(--lk-shadow-card)`；**无描边**
-- 字号：标题 `--lk-fs-lg`（20px）/ 600；正文 `--lk-fs-base`（15px）；计数 `--lk-fs-sm`（13px）
+- 圆角：`--r-md`（12px）
+- 内外边距：`padding: var(--sp-5)`（24px）；紧凑卡 `16px`（`--sp-4`）；宽松卡 `32px`（`--sp-6`）
+- 背景：L1 `--surface-card`；`box-shadow: var(--elev-1)`；**无描边**
+- 字号：标题 `--fs-title`（18px）/ 600；正文 `--fs-body`（14px）；计数 `--fs-meta`（13px）
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `--lk-paper` 底 + `--lk-shadow-card`；`border: 0` |
-| hover（可点击卡） | `transform: translateY(-2px)`；`box-shadow: var(--lk-shadow-raised)`；180ms |
-| active（可点击卡） | `transform: translateY(0)`；`box-shadow: var(--lk-shadow-card)` |
-| focus-visible | 双环焦点环，内环 `--lk-paper`（卡在 `--lk-ground` 上时内环改 `--lk-ground`） |
+| 默认 | `--surface-card` 底 + `--elev-1`；`border: 0` |
+| hover（可点击卡） | `transform: translateY(-2px)`；`box-shadow: var(--elev-2)`；160ms |
+| active（可点击卡） | `transform: translateY(0)`；`box-shadow: var(--elev-1)` |
+| focus-visible | 双环焦点环，内环 `--surface-card`（卡在 `--surface-base` 上时内环改 `--surface-base`） |
 | disabled | `opacity: .6`；`box-shadow: none` |
 | loading | 卡片内换成骨架屏（§4.22），卡片本体保持高度 |
-| selected | `box-shadow: var(--lk-shadow-card), inset 0 0 0 2px var(--lk-blue)`；**内环是 2px 蓝，不是描边**；`aria-selected="true"` |
+| selected | `box-shadow: var(--elev-1), inset 0 0 0 2px var(--role-blue)`；**内环是 2px 蓝，不是描边**；`aria-selected="true"` |
 | error | 顶部 3px 红条？→ **不用条**：改用左上角 10px 红状态点（§4.14）+ 卡内行内错误文案 |
 
 - 角色色：默认 R0；selected R1（蓝）+ 可选状态点 1 色 → R2。
 
 ```css
 .lk-card {
-  background: var(--lk-paper); border: 0; border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-card); padding: var(--lk-space-5); color: var(--lk-ink);
-  transition: transform var(--lk-dur-base) var(--lk-ease-out),
-              box-shadow var(--lk-dur-base) var(--lk-ease-out);
+  background: var(--surface-card); border: 0; border-radius: var(--r-md);
+  box-shadow: var(--elev-1); padding: var(--sp-5); color: var(--ink-strong);
+  transition: transform var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
 }
 .lk-card--interactive { cursor: pointer; }
-.lk-card--interactive:hover { transform: translateY(-2px); box-shadow: var(--lk-shadow-raised); }
-.lk-card--interactive:active { transform: translateY(0); box-shadow: var(--lk-shadow-card); }
+.lk-card--interactive:hover { transform: translateY(-2px); box-shadow: var(--elev-2); }
+.lk-card--interactive:active { transform: translateY(0); box-shadow: var(--elev-1); }
 .lk-card:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
-.lk-card[aria-selected="true"] { box-shadow: var(--lk-shadow-card), inset 0 0 0 2px var(--lk-blue); }
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
+.lk-card[aria-selected="true"] { box-shadow: var(--elev-1), inset 0 0 0 2px var(--role-blue); }
 .lk-card:disabled, .lk-card[aria-disabled="true"] { opacity: .6; box-shadow: none; }
 ```
 
@@ -1282,10 +1318,10 @@
 
 | 级别 | 名称 | token | 典型用途 | 圆角 | 阴影 |
 |---|---|---|---|---|---|
-| L0 | 底 | `--lk-ground` | 页面底、左栏 / 中栏 / 右栏底 | — | 无 |
-| L1 | 卡 | `--lk-paper` | 卡片、输入框、下拉触发器、列表行、内层面板 | 12px | `--lk-shadow-card` |
-| L2 | 浮起 | `--lk-raised` | 下拉面板、吐司、对话框、悬浮条、hover 抬起的次按钮 | 12px | `--lk-shadow-float` |
-| L3 | 墨块 | `--lk-ink` | 题号大字块、连对计数器底、墨底吐司、强调引文 | 12px | `--lk-shadow-raised` |
+| L0 | 底 | `--surface-base` | 页面底、左栏 / 中栏 / 右栏底 | — | 无 |
+| L1 | 卡 | `--surface-card` | 卡片、输入框、下拉触发器、列表行、内层面板 | 12px | `--elev-1` |
+| L2 | 浮起 | `--surface-raised` | 下拉面板、吐司、对话框、悬浮条、hover 抬起的次按钮 | 12px | `--elev-3` |
+| L3 | 墨块 | `--surface-ink` | 题号大字块、连对计数器底、墨底吐司、强调引文 | 12px | `--elev-2` |
 
 - 状态：
 
@@ -1295,33 +1331,34 @@
 | hover | 面**不变**，靠内部元素反馈；可点击面整体 `translateY(-2px)` + 升一级阴影 |
 | active | `translateY(0)` + 回落一级阴影 |
 | focus-visible | 双环焦点环，内环取该面的纸色 |
-| disabled | `opacity: .6`（墨块降到 `--lk-ink-2`） |
+| disabled | `opacity: .6`（墨块降到 `--ink-muted`） |
 | loading | 保持面的尺寸，内容换骨架屏 |
-| selected | 内环 2px 蓝（`inset 0 0 0 2px var(--lk-blue)`），**不加边框** |
+| selected | 内环 2px 蓝（`inset 0 0 0 2px var(--role-blue)`），**不加边框** |
 | error | 面不变，加红状态点 |
 
 - 角色色：R0（面本身不带角色色）。
-- **深浅差异**：夜纸下 L0 `#1c1a16` → L1 `#24211c` → L2 `#2c2924` 逐级提亮，
-  L3 反相为浅色块（`#f2ede3`）；阴影改为**更深的不透明黑**（因为夜纸底色已深，
-  暖调柔影不可见）。
+- **深浅差异**：夜纸下 L0 `#1c1a16` → L1 `#232019` → L2 `#2b2620` 逐级提亮，
+  **L3 墨块反相为深块 `#14120f`**（比页面底更深 = 读作「洞」而不是「抬起」，
+  与浅色主题「墨块比底更深」同构 —— 权威表 §3.1【A-18-6】复核结论）；
+  阴影改为**更深的不透明黑**（因为夜纸底色已深，暖调柔影不可见）。
 
 ```css
-.lk-surface-0 { background: var(--lk-ground); }
-.lk-surface-1 { background: var(--lk-paper); border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-card); }
-.lk-surface-2 { background: var(--lk-raised); border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-float); }
-.lk-surface-3 { background: var(--lk-ink); color: var(--lk-on-ink); border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-raised); }
+.lk-surface-0 { background: var(--surface-base); }
+.lk-surface-1 { background: var(--surface-card); border-radius: var(--r-md);
+  box-shadow: var(--elev-1); }
+.lk-surface-2 { background: var(--surface-raised); border-radius: var(--r-md);
+  box-shadow: var(--elev-3); }
+.lk-surface-3 { background: var(--surface-ink); color: var(--ink-inverse); border-radius: var(--r-md);
+  box-shadow: var(--elev-2); }
 ```
 
 ```css
 /* 相邻层差的唯一实现：只靠圆角 + 柔影，不加描边、不加图案 */
-.lk-surface-1 { box-shadow: var(--lk-shadow-card); }
-.lk-surface-2 { box-shadow: var(--lk-shadow-float); }
-.lk-surface-3 { box-shadow: var(--lk-shadow-raised); }
+.lk-surface-1 { box-shadow: var(--elev-1); }
+.lk-surface-2 { box-shadow: var(--elev-3); }
+.lk-surface-3 { box-shadow: var(--elev-2); }
 /* 浮起层在夜纸下改用更深的墨色垫圈，避免与 L1 糊在一起 */
-[data-theme="night"] .lk-surface-2 { box-shadow: 0 0 0 1px var(--lk-seam), var(--lk-shadow-float); }
+[data-theme="night"] .lk-surface-2 { box-shadow: 0 0 0 1px var(--rule-hair), var(--elev-3); }
 ```
 
 ### 4.20 墨块（Ink block）
@@ -1329,19 +1366,20 @@
 **定位**：**最强的一层强调**。用于：题面里的大号题号、连对计数器底、墨底吐司、
 引文 / 结论块、以及「唯一主角」区域。
 
-- 圆角：`--lk-radius`（12px）
-- 内外边距：`padding: var(--lk-space-6)`（24px）；紧凑块 `12px 16px`
-- 背景：`--lk-ink`（亮）／夜纸下反相为 `--lk-ink` 的浅色值
-- 文字：`--lk-on-ink`；大号数字 `--lk-fs-3xl`（36px）/ 700 / `tabular-nums`
+- 圆角：`--r-md`（12px）
+- 内外边距：`padding: var(--sp-5)`（24px）；紧凑块 `12px 16px`
+- 背景：`--surface-ink`（浅色 `#221f1a` ／ 夜纸 `#14120f`，两主题都是深墨块）
+- 文字：`--ink-inverse`；**大号数字 `--fs-hero`（36px）/ 700 / `tabular-nums`**
+  （庆祝数字 / 连对计数器主数字同此档 —— A-18：不得压到 `--fs-display` 28px）
 - **禁止**：墨块上放黄色文字（黄不承载文字）；墨块上只用墨 / 纸两色 + 至多 1 个角色色块
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | `--lk-ink` 底 + `--lk-on-ink` 字 + `--lk-shadow-raised` |
+| 默认 | `--surface-ink` 底 + `--ink-inverse` 字 + `--elev-2` |
 | hover | 不适用（静态强调块） |
 | active | 不适用 |
 | focus-visible | 内部若含可聚焦元素，焦点环落在该元素上 |
-| disabled | `background: var(--lk-ink-2)`；`color: var(--lk-ground)` |
+| disabled | `background: var(--ink-muted)`；`color: var(--surface-base)` |
 | loading | 数字位跑「滚动数字」动效（庆祝动效规格定义）；未定义时保持原值 |
 | selected | 不适用 |
 | error | 改为红底？→ **不**：失败语义用**红状态点 + 白字**表达，墨块本身保持中性墨 |
@@ -1350,13 +1388,13 @@
 
 ```css
 .lk-inkblock {
-  background: var(--lk-ink); color: var(--lk-on-ink);
-  border-radius: var(--lk-radius); box-shadow: var(--lk-shadow-raised);
-  padding: var(--lk-space-6);
+  background: var(--surface-ink); color: var(--ink-inverse);
+  border-radius: var(--r-md); box-shadow: var(--elev-2);
+  padding: var(--sp-5);
 }
-.lk-inkblock__figure { font-family: var(--lk-font-ui); font-size: var(--lk-fs-3xl);
+.lk-inkblock__figure { font-family: var(--font-ui); font-size: var(--fs-hero);
   font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
-.lk-inkblock:disabled, .lk-inkblock[aria-disabled="true"] { background: var(--lk-ink-2); color: var(--lk-ground); }
+.lk-inkblock:disabled, .lk-inkblock[aria-disabled="true"] { background: var(--ink-muted); color: var(--surface-base); }
 ```
 
 ### 4.21 空态（Empty state）
@@ -1364,7 +1402,7 @@
 **定位**：**没有任何内容**时的面板。形态固定为 **静物插画 + 一句 + 满宽主按钮**。
 
 - 插画：`144 × 144`（紧凑 96px），本地 SVG `asset-still-<name>.svg`（写意线稿 + 淡彩）
-- 一句：`--lk-font-ui` / `--lk-fs-base`（15px）/ `--lk-ink-2`，**≤ 18 字**，居中
+- 一句：`--font-ui` / `--fs-body`（14px）/ `--ink-muted`，**≤ 18 字**，居中
 - 按钮：**满宽**（`width: 100%`，容器 `max-width: 240px`），文案**就是动作**（不写「点击这里」）
 - 容器：`padding: 48px 24px`；`display: flex; flex-direction: column; align-items: center; gap: 16px`
 - **少字原则**：不写「暂无数据」+「请稍后再试」这类解释句
@@ -1383,24 +1421,24 @@
 
 ```css
 .lk-empty {
-  display: flex; flex-direction: column; align-items: center; gap: var(--lk-space-4);
+  display: flex; flex-direction: column; align-items: center; gap: var(--sp-4);
   padding: 48px 24px; text-align: center;
 }
 .lk-empty__art { width: 144px; height: 144px; display: block; }
 .lk-empty__art svg { width: 100%; height: 100%; }
 .lk-empty__text { margin: 0; max-width: 32em;
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-base); line-height: var(--lk-lh-ui);
-  color: var(--lk-ink-2); }
+  font-family: var(--font-ui); font-size: var(--fs-body); line-height: 22px;
+  color: var(--ink-muted); }
 .lk-empty__action { width: 100%; max-width: 240px; }
 ```
 
 ```css
 /* 空态的错误变体：换静物插画 + 次按钮「重试」，红点提示（不是空态） */
-.lk-empty--error .lk-empty__text { color: var(--lk-ink-2); }
-.lk-empty__alert { display: inline-flex; align-items: center; gap: var(--lk-space-2);
-  color: var(--lk-red-ink); font-size: var(--lk-fs-sm); }
-.lk-empty--error .lk-empty__action .lk-btn { background: var(--lk-paper); color: var(--lk-ink);
-  border: 1px solid var(--lk-hairline); box-shadow: var(--lk-shadow-card); }
+.lk-empty--error .lk-empty__text { color: var(--ink-muted); }
+.lk-empty__alert { display: inline-flex; align-items: center; gap: var(--sp-2);
+  color: var(--role-red-ink); font-size: var(--fs-meta); }
+.lk-empty--error .lk-empty__action .lk-btn { background: var(--surface-card); color: var(--ink-strong);
+  border: 1px solid var(--rule-control); box-shadow: var(--elev-1); }
 ```
 
 ### 4.22 骨架屏（Skeleton）
@@ -1409,9 +1447,9 @@
 本组件是新增能力（`acceptance.md` M-9）。
 
 - 块高：随被替换内容（行 16px / 卡片 96px / 头像 40px）
-- 圆角：`--lk-radius-sm`（8px）；头像 `--lk-radius-full`
-- 底色：`--lk-skeleton-base`
-- **微光**：一块 **32% 宽的半透明实色**（`--lk-skeleton-sheen`）横向平移，
+- 圆角：`--r-xs`（6px）；头像 `--r-round`
+- 底色：`--skeleton-base`
+- **微光**：一块 **32% 宽的半透明实色**（`--skeleton-sheen`）横向平移，
   **不用渐变**（全局禁用界面渐变）；`1.2s linear infinite`
 - 错峰：相邻块 `animation-delay` 递增 24ms
 - **高度锁定**：骨架屏必须与真实内容**同高**，否则加载完成时页面跳动
@@ -1432,16 +1470,16 @@
   容器内放一条 `.visually-hidden` 的「加载中」文本。
 
 ```css
-.lk-skeleton { position: relative; overflow: hidden; border-radius: var(--lk-radius-sm);
-  background: var(--lk-skeleton-base); }
+.lk-skeleton { position: relative; overflow: hidden; border-radius: var(--r-xs);
+  background: var(--skeleton-base); }
 .lk-skeleton::after {
   content: ""; position: absolute; inset: 0 auto 0 0; width: 32%;
-  background: var(--lk-skeleton-sheen);
-  transform: translateX(-100%); animation: lk-sheen 1.2s var(--lk-ease-standard) infinite;
+  background: var(--skeleton-sheen);
+  transform: translateX(-100%); animation: lk-sheen 1.2s var(--ease-standard) infinite;
 }
-.lk-skeleton--text { height: 16px; border-radius: var(--lk-radius-xs); }
-.lk-skeleton--block { height: 96px; border-radius: var(--lk-radius); }
-.lk-skeleton--avatar { width: 40px; height: 40px; border-radius: var(--lk-radius-full); }
+.lk-skeleton--text { height: 16px; border-radius: var(--r-xs); }
+.lk-skeleton--block { height: 96px; border-radius: var(--r-md); }
+.lk-skeleton--avatar { width: 40px; height: 40px; border-radius: var(--r-round); }
 @keyframes lk-sheen { to { transform: translateX(312%); } }
 @media (prefers-reduced-motion: reduce) {
   .lk-skeleton::after { animation: none; transform: none; }
@@ -1454,23 +1492,25 @@
 （与「活动浮层」同侧同规格）。
 
 - 尺寸：`max-width: 320px`，`min-width: 240px`，`padding: 12px 16px`
-- 圆角：`--lk-radius`（12px）
-- 背景：**墨块**（L3）：`--lk-ink` 底 + `--lk-on-ink` 字
-- 字号：`--lk-fs-sm`（13px）/ `line-height: 1.4`
+- 圆角：`--r-md`（12px）
+- 背景：**墨块**（L3）：`--surface-ink` 底 + `--ink-inverse` 字
+- 字号：`--fs-meta`（13px）/ `line-height: 1.4`
 - 左侧可选 10px 状态点（§4.14）
-- 阴影：`--lk-shadow-float`；`z-index: var(--lk-z-toast)`
+- 阴影：`--elev-3`；`z-index: var(--z-toast)`
+- **层序**：`--z-toast`（200）**在模态之下**——模态打开时盖住吐司
+  （权威表 §2.7 层序铁律 `modal > toast > dropdown > raised`，A-18）
 - 停留：成功 3s；错误 5s（可手动关闭）
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | 墨块 + 白字；进入用「上浮 8px + 淡入」180ms |
+| 默认 | 墨块 + 白字；进入用「上浮 8px + 淡入」160ms |
 | hover | `transform: translateY(-2px)`；阴影升一级 |
 | active | `translateY(0)` |
 | focus-visible | 吐司**不抢焦点**（`pointer-events: none` 于容器，`auto` 于内部按钮）；内部按钮有焦点环 |
 | disabled | 不适用 |
 | loading | 不适用（吐司不做加载态） |
 | selected | 不适用 |
-| error | 左侧 **红状态点**（`--lk-red` / `filled`）+ 文字仍取 `--lk-on-ink`（不用红底）；`role="alert"` |
+| error | 左侧 **红状态点**（`--role-red` / `filled`）+ 文字仍取 `--ink-inverse`（不用红底）；`role="alert"` |
 | 成功 | 左侧 **蓝状态点**；`role="status"`；`aria-live="polite"` |
 
 - 角色色：R0 / R1（错误红点）。
@@ -1478,15 +1518,15 @@
 
 ```css
 .lk-toast {
-  position: fixed; top: 16px; right: 16px; z-index: var(--lk-z-toast);
-  display: flex; align-items: flex-start; gap: var(--lk-space-2);
+  position: fixed; top: 16px; right: 16px; z-index: var(--z-toast);
+  display: flex; align-items: flex-start; gap: var(--sp-2);
   min-width: 240px; max-width: 320px; padding: 12px 16px;
-  border-radius: var(--lk-radius); background: var(--lk-ink); color: var(--lk-on-ink);
-  box-shadow: var(--lk-shadow-float); pointer-events: none;
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-sm); line-height: var(--lk-lh-ui);
+  border-radius: var(--r-md); background: var(--surface-ink); color: var(--ink-inverse);
+  box-shadow: var(--elev-3); pointer-events: none;
+  font-family: var(--font-ui); font-size: var(--fs-meta); line-height: 20px;
   opacity: 0; transform: translateY(-8px);
-  transition: opacity var(--lk-dur-base) var(--lk-ease-out),
-              transform var(--lk-dur-base) var(--lk-ease-out);
+  transition: opacity var(--dur-base) var(--ease-out),
+              transform var(--dur-base) var(--ease-out);
 }
 .lk-toast[data-show="true"] { opacity: 1; transform: translateY(0); }
 .lk-toast__action { pointer-events: auto; }
@@ -1496,16 +1536,16 @@
 
 **定位**：**需要打断**的模态（确认删除、组卷确认、放弃作答）。轻反馈一律用吐司。
 
-- 遮罩：`var(--lk-scrim)`（亮 `rgb(34 31 26 / 42%)`，夜纸 `rgb(0 0 0 / 58%)`）；**不用 backdrop-filter 模糊**（禁玻璃拟态）
-- 面板：`--lk-raised` 底，圆角 `--lk-radius`（12px），`padding: 24px`
+- 遮罩：`background: var(--surface-ink)` + `opacity`（亮 `.42` = `#221f1a`/42%，夜纸 `.58`）——**权威表 §3 无「模态遮罩」token**，借墨块面色 + 不透明度落地（→ 待裁决是否补一个遮罩 token）；**不用 backdrop-filter 模糊**（禁玻璃拟态）
+- 面板：`--surface-raised` 底，圆角 `--r-md`（12px），`padding: 24px`
 - 宽度：`min(480px, calc(100vw - 32px))`；最大高 `min(70vh, 640px)`，内容区可滚
-- 阴影：`--lk-shadow-float`；`z-index: var(--lk-z-dialog)`
-- 标题：`--lk-font-ui` / `--lk-fs-lg`（20px）/ 700；正文 `--lk-fs-base`（15px）
+- 阴影：`--elev-3`；`z-index: var(--z-modal)`
+- 标题：`--font-ui` / `--fs-title`（18px）/ 700；正文 `--fs-body`（14px）
 - 动作区：右对齐横排，`gap: 8px`，上边距 24px
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | 遮罩 + 面板；进入用「上浮 8px + 淡入」180ms |
+| 默认 | 遮罩 + 面板；进入用「上浮 8px + 淡入」160ms |
 | hover | 面板内按钮走标准反馈 |
 | active | 同上 |
 | focus-visible | 打开时焦点移到面板内**第一个可聚焦元素**（默认「取消」）；焦点环用双环 |
@@ -1518,18 +1558,19 @@
 - **键盘**：`Esc` 关闭；`Tab` 在面板内循环（焦点陷阱）；关闭后焦点**回到触发元素**。
 
 ```css
-.lk-dialog-backdrop { position: fixed; inset: 0; z-index: var(--lk-z-dialog);
-  background: var(--lk-scrim); display: flex; align-items: center; justify-content: center; }
+.lk-dialog-backdrop { position: fixed; inset: 0; z-index: var(--z-modal);
+  background: var(--surface-ink); opacity: .42; display: flex; align-items: center; justify-content: center; }
+[data-theme="night"] .lk-dialog-backdrop { opacity: .58; }
 .lk-dialog {
   width: min(480px, calc(100vw - 32px)); max-height: min(70vh, 640px);
-  background: var(--lk-raised); color: var(--lk-ink);
-  border-radius: var(--lk-radius); box-shadow: var(--lk-shadow-float);
+  background: var(--surface-raised); color: var(--ink-strong);
+  border-radius: var(--r-md); box-shadow: var(--elev-3);
   padding: 24px;
 }
-.lk-dialog__title { margin: 0 0 12px; font-family: var(--lk-font-ui);
-  font-size: var(--lk-fs-lg); font-weight: 700; }
-.lk-dialog__body { color: var(--lk-ink-2); font-size: var(--lk-fs-base); line-height: var(--lk-lh-ui); }
-.lk-dialog__actions { display: flex; justify-content: flex-end; gap: var(--lk-space-2);
+.lk-dialog__title { margin: 0 0 12px; font-family: var(--font-ui);
+  font-size: var(--fs-title); font-weight: 700; }
+.lk-dialog__body { color: var(--ink-muted); font-size: var(--fs-body); line-height: 22px; }
+.lk-dialog__actions { display: flex; justify-content: flex-end; gap: var(--sp-2);
   margin-top: 24px; }
 ```
 
@@ -1537,50 +1578,50 @@
 
 **定位**：Agent 执行计划里的**一次工具调用**。折叠时只给 ≤ 240 字摘要。
 
-- 卡片：`--lk-paper` 底，圆角 `--lk-radius`（12px），`padding: 12px 14px`
-- 头行：`状态点(10px) + 工具名(--lk-font-mono, 13px) + 耗时(--lk-font-mono, 12px, --lk-ink-3) + 折叠箭头(16px)`
-- 摘要区：`--lk-fs-sm`（13px），`--lk-ink-2`，**折叠态最多 240 字**
-- 展开区：参数 / 结果，`--lk-font-mono` 12px，`--lk-ground` 底 + `--lk-radius-sm`（8px），
+- 卡片：`--surface-card` 底，圆角 `--r-md`（12px），`padding: 12px 14px`
+- 头行：`状态点(10px) + 工具名(--font-mono, 13px) + 耗时(--font-mono, 12px, --ink-faint) + 折叠箭头(16px)`
+- 摘要区：`--fs-meta`（13px），`--ink-muted`，**折叠态最多 240 字**
+- 展开区：参数 / 结果，`--font-mono` 12px，`--surface-base` 底 + `--r-xs`（6px），
   `padding: 12px`，`overflow-x: auto`
 - 头行高 ≥ 44px（命中区）
 
 | 状态 | 表现 |
 |---|---|
 | 默认 | 折叠态；头行 + 摘要 |
-| hover | `background: var(--lk-wash-neutral)`；箭头轻微位移 |
+| hover | `background: var(--veil-hover)`；箭头轻微位移 |
 | active | 同上 |
 | focus-visible | 展开箭头是 `<button>`，有双环焦点环 |
 | disabled | 不适用 |
-| loading | 状态点 `--lk-blue` / `half`；摘要位换 2 行骨架屏 |
+| loading | 状态点 `--role-blue` / `half`；摘要位换 2 行骨架屏 |
 | selected | 展开态 |
-| error | 状态点 `--lk-red` / `filled`；摘要末尾 3 个字符省略号（**不加红字**，红由点承担） |
-| 阻塞 | 状态点 `--lk-red` / `cross` |
+| error | 状态点 `--role-red` / `filled`；摘要末尾 3 个字符省略号（**不加红字**，红由点承担） |
+| 阻塞 | 状态点 `--role-red` / `cross` |
 
 - 角色色：R1（状态点）。
 - **ARIA**：头行为 `<button aria-expanded>`，内容区 `role="region"` + `aria-labelledby`。
 
 ```css
-.lk-tool { background: var(--lk-paper); border-radius: var(--lk-radius);
-  box-shadow: var(--lk-shadow-card); overflow: hidden; }
-.lk-tool__head { display: flex; align-items: center; gap: var(--lk-space-2);
-  width: 100%; min-height: var(--lk-tap-min); padding: 12px 14px;
-  background: transparent; border: 0; color: var(--lk-ink); cursor: pointer; text-align: left;
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-sm); }
-.lk-tool__head:hover { background: var(--lk-wash-neutral); }
-.lk-tool__name { font-family: var(--lk-font-mono); font-weight: 600; }
-.lk-tool__cost { margin-left: auto; font-family: var(--lk-font-mono);
-  font-size: var(--lk-fs-xs); color: var(--lk-ink-3); }
-.lk-tool__body { padding: 0 14px 14px; font-size: var(--lk-fs-sm); color: var(--lk-ink-2); }
-.lk-tool__payload { margin-top: 8px; padding: 12px; border-radius: var(--lk-radius-sm);
-  background: var(--lk-ground); font-family: var(--lk-font-mono); font-size: var(--lk-fs-xs);
+.lk-tool { background: var(--surface-card); border-radius: var(--r-md);
+  box-shadow: var(--elev-1); overflow: hidden; }
+.lk-tool__head { display: flex; align-items: center; gap: var(--sp-2);
+  width: 100%; min-height: 44px; padding: 12px 14px;
+  background: transparent; border: 0; color: var(--ink-strong); cursor: pointer; text-align: left;
+  font-family: var(--font-ui); font-size: var(--fs-meta); }
+.lk-tool__head:hover { background: var(--veil-hover); }
+.lk-tool__name { font-family: var(--font-mono); font-weight: 600; }
+.lk-tool__cost { margin-left: auto; font-family: var(--font-mono);
+  font-size: var(--fs-label); color: var(--ink-faint); }
+.lk-tool__body { padding: 0 14px 14px; font-size: var(--fs-meta); color: var(--ink-muted); }
+.lk-tool__payload { margin-top: 8px; padding: 12px; border-radius: var(--r-xs);
+  background: var(--surface-base); font-family: var(--font-mono); font-size: var(--fs-label);
   overflow-x: auto; white-space: pre-wrap; }
 ```
 
 ```css
 /* 工具调用卡的运行中骨架：摘要位两行灰块 */
-.lk-tool--running .lk-tool__summary { display: grid; gap: var(--lk-space-2); }
+.lk-tool--running .lk-tool__summary { display: grid; gap: var(--sp-2); }
 .lk-tool--running .lk-tool__summary span { display: block; height: 12px;
-  border-radius: var(--lk-radius-xs); background: var(--lk-skeleton-base); }
+  border-radius: var(--r-xs); background: var(--skeleton-base); }
 .lk-tool--running .lk-tool__summary span:last-child { width: 62%; }
 .lk-tool--failed .lk-tool__summary { text-overflow: ellipsis; overflow: hidden;
   white-space: nowrap; }
@@ -1590,54 +1631,54 @@
 
 **定位**：**执行计划 / 步骤序列**（Agent 计划、复习轮次、里程碑路径）。圆点时间线。
 
-- 连接线：2px 竖线 `--lk-hairline`（**单侧结构线语言**，与知识点正文一致）；`gap: 12px`
-- 节点：`12 × 12` 圆点（§4.14 几何集）；当前节点 `14px` + `--lk-shadow-card`
-- 内容卡：`--lk-paper`，圆角 `--lk-radius`，`padding: 12px 16px`
-- 行间距：`--lk-space-3`（12px）
+- 连接线：2px 竖线 `--rule-structure`（**单侧结构线语言**，与知识点正文一致）；`gap: 12px`
+- 节点：`12 × 12` 圆点（§4.14 几何集）；当前节点 `14px` + `--elev-1`
+- 内容卡：`--surface-card`，圆角 `--r-md`，`padding: 12px 16px`
+- 行间距：`--sp-3`（12px）
 
 | 状态 | 点 / 线 |
 |---|---|
-| 默认（已完成） | 点 `--lk-blue` / `filled`；线 `--lk-hairline` |
+| 默认（已完成） | 点 `--role-blue` / `filled`；线 `--rule-structure` |
 | hover | 内容卡 `translateY(-1px)`；点不变 |
 | active | 同上 |
 | focus-visible | 节点可聚焦时（`tabindex="0"`）双环焦点环 |
-| disabled | 点 `--lk-ink-4` / `filled` |
-| loading | 当前节点 `--lk-blue` / `half`；节点旁 12px 指示器 |
-| selected（当前步骤） | 点 `--lk-blue` / `ring` + 14px + 柔影；连接线在当前点之后加粗到 3px |
-| error | 点 `--lk-red` / `filled`；连接线**不**变红（线保持中性，避免整条线被红淹没） |
-| 阻塞 | 点 `--lk-red` / `cross` |
+| disabled | 点 `--ink-disabled` / `filled` |
+| loading | 当前节点 `--role-blue` / `half`；节点旁 12px 指示器 |
+| selected（当前步骤） | 点 `--role-blue` / `ring` + 14px + 柔影；连接线在当前点之后加粗到 3px |
+| error | 点 `--role-red` / `filled`；连接线**不**变红（线保持中性，避免整条线被红淹没） |
+| 阻塞 | 点 `--role-red` / `cross` |
 
 - 角色色：R1。
 
 ```css
 .lk-timeline { list-style: none; margin: 0; padding: 0; }
 .lk-timeline__item { position: relative; display: grid; grid-template-columns: 12px 1fr;
-  gap: var(--lk-space-3); padding-bottom: var(--lk-space-3); }
+  gap: var(--sp-3); padding-bottom: var(--sp-3); }
 .lk-timeline__item::before { content: ""; position: absolute; left: 5px; top: 14px; bottom: -4px;
-  width: 2px; background: var(--lk-hairline); }
+  width: 2px; background: var(--rule-structure); }
 .lk-timeline__item:last-child::before { display: none; }
-.lk-timeline__dot { width: 12px; height: 12px; margin-top: 4px; border-radius: var(--lk-radius-full);
-  background: var(--lk-blue); }
+.lk-timeline__dot { width: 12px; height: 12px; margin-top: 4px; border-radius: var(--r-pill);
+  background: var(--role-blue); }
 .lk-timeline__item--current .lk-timeline__dot { width: 14px; height: 14px; margin-left: -1px;
-  box-shadow: var(--lk-shadow-card); }
+  box-shadow: var(--elev-1); }
 ```
 
 ### 4.27 折叠段（Disclosure）
 
 **定位**：**可展开的内容块**（计划详情、目标编辑器、辅助说明）。现状用 `<details>`。
 
-- 头行（summary）：高 ≥ 44px，`padding: 0 16px`，圆角 `--lk-radius`
-- 箭头：16×16 本地 SVG `asset-icon-chevron-down`，展开时旋转 180°（180ms）
+- 头行（summary）：高 ≥ 44px，`padding: 0 16px`，圆角 `--r-md`
+- 箭头：16×16 本地 SVG `asset-icon-chevron-down`，展开时旋转 180°（160ms）
 - 内容区：`padding: 0 16px 16px`
-- 展开动画：`grid-template-rows: 0fr → 1fr`（180ms），避免 `max-height` 猜高度
+- 展开动画：`grid-template-rows: 0fr → 1fr`（160ms），避免 `max-height` 猜高度
 
 | 状态 | 表现 |
 |---|---|
-| 默认 | 折叠；箭头朝下；标题 `--lk-fs-base` / `--lk-ink` |
-| hover | `background: var(--lk-wash-neutral)`；`color: var(--lk-ink)` |
-| active | `background: var(--lk-wash-neutral-strong)` |
+| 默认 | 折叠；箭头朝下；标题 `--fs-body` / `--ink-strong` |
+| hover | `background: var(--veil-hover)`；`color: var(--ink-strong)` |
+| active | `background: var(--veil-active)` |
 | focus-visible | 头行双环焦点环 |
-| disabled | `color: var(--lk-ink-4)`；`pointer-events: none`；`aria-disabled="true"` |
+| disabled | `color: var(--ink-disabled)`；`pointer-events: none`；`aria-disabled="true"` |
 | loading | 内容区骨架屏；头行不变 |
 | selected | 展开态 `aria-expanded="true"`；标题字重 600 |
 | error | 内容区顶部行内错误条（红点 + 文字） |
@@ -1646,22 +1687,22 @@
 - **ARIA**：`<button aria-expanded aria-controls>` + 目标容器 `role="region"`。
 
 ```css
-.lk-disclosure__head { display: flex; align-items: center; gap: var(--lk-space-2);
-  width: 100%; min-height: var(--lk-tap-min); padding: 0 16px;
-  border: 0; border-radius: var(--lk-radius); background: transparent;
-  color: var(--lk-ink); font-family: var(--lk-font-ui); font-size: var(--lk-fs-base);
+.lk-disclosure__head { display: flex; align-items: center; gap: var(--sp-2);
+  width: 100%; min-height: 44px; padding: 0 16px;
+  border: 0; border-radius: var(--r-md); background: transparent;
+  color: var(--ink-strong); font-family: var(--font-ui); font-size: var(--fs-body);
   font-weight: 500; cursor: pointer; text-align: left;
-  transition: background-color var(--lk-dur-tap) var(--lk-ease-out); }
-.lk-disclosure__head:hover:not(:disabled) { background: var(--lk-wash-neutral); }
-.lk-disclosure__head:active:not(:disabled) { background: var(--lk-wash-neutral-strong); }
+  transition: background-color var(--dur-fast) var(--ease-out); }
+.lk-disclosure__head:hover:not(:disabled) { background: var(--veil-hover); }
+.lk-disclosure__head:active:not(:disabled) { background: var(--veil-active); }
 .lk-disclosure__head:focus-visible { outline: 2px solid transparent; outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
 .lk-disclosure__head svg { width: 16px; height: 16px; fill: none; stroke: currentColor;
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-  transition: transform var(--lk-dur-base) var(--lk-ease-out); }
+  transition: transform var(--dur-base) var(--ease-out); }
 .lk-disclosure__head[aria-expanded="true"] svg { transform: rotate(180deg); }
 .lk-disclosure__body { display: grid; grid-template-rows: 0fr;
-  transition: grid-template-rows var(--lk-dur-base) var(--lk-ease-out); }
+  transition: grid-template-rows var(--dur-base) var(--ease-out); }
 .lk-disclosure__body[data-open="true"] { grid-template-rows: 1fr; }
 .lk-disclosure__body > * { overflow: hidden; }
 ```
@@ -1671,20 +1712,20 @@
 **定位**：**同层内容**的切换（记录中心：概览 / 作答明细 / 错题 / 复习负荷）。
 
 - Tab 条：高 48px，`display: flex; gap: 4px`，`border-bottom: 0`（**不用描边分隔**）
-- Tab：高 48px，`padding: 0 16px`，圆角 `--lk-radius`（12px，只在 hover 时可见底）
-- 字号：`--lk-fs-base`（15px）/ 未选中 500、选中 600
-- 指示条：选中项底部 3px `--lk-blue`，圆角 3px，宽度 = 文字宽 + 24px
+- Tab：高 48px，`padding: 0 16px`，圆角 `--r-md`（12px，只在 hover 时可见底）
+- 字号：`--fs-body`（14px）/ 未选中 500、选中 600
+- 指示条：选中项底部 3px `--role-blue`，圆角 3px，宽度 = 文字宽 + 24px
 - 命中区：高 48px ✔
 
 | 状态 | 表现 |
 |---|---|
-| 默认（未选中） | `color: var(--lk-ink-2)`；无底色 |
-| hover | `background: var(--lk-wash-neutral)`；`color: var(--lk-ink)` |
-| active | `background: var(--lk-wash-neutral-strong)` |
+| 默认（未选中） | `color: var(--ink-muted)`；无底色 |
+| hover | `background: var(--veil-hover)`；`color: var(--ink-strong)` |
+| active | `background: var(--veil-active)` |
 | focus-visible | 双环焦点环，内环用纸面色 |
-| disabled | `color: var(--lk-ink-4)`；`pointer-events: none` |
+| disabled | `color: var(--ink-disabled)`；`pointer-events: none` |
 | loading | 不适用（Tab 切换不异步）；面板内容可独立骨架屏 |
-| selected | `color: var(--lk-blue-ink)`；`font-weight: 600`；底部 3px `--lk-blue` 指示条；可带徽标计数 |
+| selected | `color: var(--role-blue)`；`font-weight: 600`；底部 3px `--role-blue` 指示条；可带徽标计数 |
 | error | 不适用 |
 
 - 角色色：蓝（当前指示）R1。
@@ -1694,22 +1735,22 @@
 
 ```css
 .lk-tablist { display: flex; gap: 4px; }
-.lk-tab { position: relative; display: inline-flex; align-items: center; gap: var(--lk-space-2);
-  min-height: 48px; padding: 0 16px; border: 0; border-radius: var(--lk-radius);
-  background: transparent; color: var(--lk-ink-2);
-  font-family: var(--lk-font-ui); font-size: var(--lk-fs-base); font-weight: 500;
+.lk-tab { position: relative; display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 48px; padding: 0 16px; border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-body); font-weight: 500;
   cursor: pointer;
-  transition: background-color var(--lk-dur-tap) var(--lk-ease-out),
-              color var(--lk-dur-tap) var(--lk-ease-out); }
-.lk-tab:hover:not(:disabled) { background: var(--lk-wash-neutral); color: var(--lk-ink); }
-.lk-tab:active:not(:disabled) { background: var(--lk-wash-neutral-strong); }
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out); }
+.lk-tab:hover:not(:disabled) { background: var(--veil-hover); color: var(--ink-strong); }
+.lk-tab:active:not(:disabled) { background: var(--veil-active); }
 .lk-tab:focus-visible { outline: 2px solid transparent; outline-offset: -2px;
-  box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
-.lk-tab[aria-selected="true"] { color: var(--lk-blue-ink); font-weight: 600; }
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer); }
+.lk-tab[aria-selected="true"] { color: var(--role-blue); font-weight: 600; }
 .lk-tab[aria-selected="true"]::after {
   content: ""; position: absolute; left: 12px; right: 12px; bottom: 0; height: 3px;
-  border-radius: 3px; background: var(--lk-blue); }
-.lk-tab:disabled { color: var(--lk-ink-4); cursor: not-allowed; }
+  border-radius: 3px; background: var(--role-blue); }
+.lk-tab:disabled { color: var(--ink-disabled); cursor: not-allowed; }
 ```
 
 ---
@@ -1745,7 +1786,7 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 
 | # | 定位 | id | 语义 | 替换为 | 备注 |
 |---|---|---|---|---|---|
-| 1 | `workbench/server/pages.py:62` | `#chapter-lens-select` | 章节透镜选章 | `.lk-select`（触发器 + 面板，每项带章节名与计数） | 现状 `hidden` 时不显示；透镜关闭时同样不渲染 |
+| 1 | `workbench/server/pages.py:62` | `#chapter-lens-select` | 章节透镜选章 | `.lk-select`（触发器 + 面板，每项带章节名；**不带每章计数** —— 既有 spec「Chapter switch in the top bar」明令不得显示 per-chapter statistics / counts） | 现状 `hidden` 时不显示；透镜关闭时同样不渲染 |
 | 2 | `workbench/server/pages.py:206` | `#paper-reveal-timing` | 试卷答案展示时机 | `.lk-select` | 值读取于 `paper-practice.js:357` / `:365` / `:460` / `:475` |
 | 3 | `workbench/server/pages.py:263` | `#goal-kind` | 目标类型（阶段 / 长期） | `.lk-select` | 在目标表单内，选项 2 个 → 也可降级为 §4.11 分段控件；**本规格统一用下拉**以保持表单一致性 |
 | 4 | `workbench/server/pages.py:395` | `#knowledge-sort` | 知识点排序 | `.lk-select` | 在 `.knowledge-sort-bar` 内 |
@@ -1790,7 +1831,7 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 
 | 现有 class（出现处数） | 定位 | 替换为 | 变体要点 |
 |---|---|---|---|
-| `primary`（14） | `pages.py:169,175,183,208,214,220,225,230,267,547,615,757,775` + `experience_page.py:88` | **§4.1 主按钮** | 15px/600、蓝实心、柔影；命中区 44px |
+| `primary`（14） | `pages.py:169,175,183,208,214,220,225,230,267,547,615,757,775` + `experience_page.py:88` | **§4.1 主按钮** | `--fs-body`（14px，A-18）/600、蓝实心、柔影；命中区 44px |
 | `outline`（17） | `pages.py:171,174,176,187,212,213,224,231,268,273,549,550,730,756,765,774,1125` + `experience_page.py:75` | **§4.2 次按钮** | 纸面底 + 1px 发丝边 + 卡级柔影 |
 | `ghost`（14） | `pages.py:78,80,118,131,177,184,187,226,252,253,399,551,741` + `experience_page.py:76,89` + `practice-flow.js:1571` | **§4.3 文字按钮** | 透明底、hover 洗底 |
 | `icon-only` / `icon-btn`（7） | `pages.py:78,80,118,131,427,428,741` | **§4.4 图标按钮** | 40×40 + 44px 命中区；**必须有 `aria-label`**（现状 78/80 已有，427/428 需补） |
@@ -1944,10 +1985,10 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 | S-1 | 组件规格条目数 ≥ 28 | 计数 §4.1–§4.28 | **28 条**（按钮 4 变体各占 1 条） |
 | S-2 | 每个组件都有 尺寸 / 圆角 / 字族字号 / 内外边距 / 最小点击区 | 逐节人工核对 | ✔（题号格以「格 36 + 间隙 8 = 44px 步距」满足） |
 | S-3 | 每个组件都覆盖 默认 · hover · active · focus-visible · disabled · loading · selected · error | 逐节人工核对 | ✔ 全部 8 态给出（不适用者显式写「不适用」并给出替代承载） |
-| S-4 | CSS 片段不含硬编码色值 | `awk '/^### 4\./,0' component-spec.md \| awk '/^```css/,/^```$/' \| grep -n "#[0-9a-fA-F]\{3\}\|#[0-9a-fA-F]\{6\}\|rgb("` | 实跑 | ✔ **输出为空**；§4 片段只用 `var(--lk-*)`；硬编码色值只出现在 §2.2 的 token 定义块 |
+| S-4 | CSS 片段不含硬编码色值 | `awk '/^### 4\./,0' component-spec.md \| awk '/^```css/,/^```$/' \| grep -n "#[0-9a-fA-F]\{3\}\|#[0-9a-fA-F]\{6\}\|rgb("` | 实跑 | ✔ **输出为空**；§4 片段只用 `var(--r-*)` / `var(--sp-*)` / `var(--fs-*)` / `var(--font-*)` / `var(--dur-*)` / `var(--ease-*)` / `var(--surface-*)` / `var(--ink-*)` / `var(--role-*)` / `var(--rule-*)` / `var(--veil-*)` / `var(--elev-*)` 等权威表 token；硬编码色值只出现在 §2.2 的 token 定义块 |
 | S-5 | 不新增颜色角色 | 核对 §2.2 / §3.6 | ✔ 只有蓝 / 黄 / 红 三个角色色 + 墨色中性 |
 | S-6 | 状态映射「色 + 几何」唯一，无两条状态共用组合 | 核对 §3.6 | ✔ 8 条唯一 |
-| S-7 | 黄色不承载文字 | 核对 §2.2 / §3.5 / §4.12 / §4.15 / §4.16 | ✔ 黄底文字一律取 `--lk-ink` |
+| S-7 | 黄色不承载文字 | 核对 §2.2 / §3.5 / §4.12 / §4.15 / §4.16 | ✔ 黄底文字一律取 `--ink-on-warm` |
 | S-8 | 无界面渐变 / 无玻璃拟态 / 无霓虹 / 无背景图案 | `grep -n "gradient\|backdrop-filter\|blur("` | ✔ 仅骨架屏用平移实色块（§4.22）；§4.24 遮罩为纯色不透明度 |
 | S-9 | 图标全部引用本地 SVG 资产名，不定义资产 | 核对 §4.4 / §4.11 / §4.21 / §4.25 / §4.27 | ✔ 只引用 `asset-icon-*.svg` / `asset-still-*.svg` |
 | S-10 | 命中区 ≥ 44px | 核对 §3.1 与各组件 | ✔ 全部有机制说明 |
