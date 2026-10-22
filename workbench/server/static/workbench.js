@@ -3764,7 +3764,7 @@
   function aiAdd(html, cls) {
     var div = document.createElement("div");
     div.className = "msg " + (cls || "ai");
-    div.innerHTML = "<div class='rich-text'>" + html + "</div>";
+    div.innerHTML = "<div class='wb-reading'>" + html + "</div>";
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     renderMath(div);
@@ -3780,7 +3780,7 @@
       aiStreamingMessage.content = "";
     }
     aiStreamingMessage.content += text;
-    aiStreamingMessage.innerHTML = "<div class='rich-text'>"
+    aiStreamingMessage.innerHTML = "<div class='wb-reading'>"
       + richText(aiStreamingMessage.content) + "</div>";
     messages.scrollTop = messages.scrollHeight;
     renderMath(aiStreamingMessage);
