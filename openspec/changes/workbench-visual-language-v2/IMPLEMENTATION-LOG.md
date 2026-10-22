@@ -41,7 +41,7 @@
 | 验收口径 | `acceptance.md`（G-1…G-8 · S-1…S-12 · M-1…M-13 · §3.1–§3.8） |
 | **token 唯一权威** | `design-notes/night-paper-tokens.md`（结构 66 + 值 52，两主题） |
 | 组件规格 / 动效规格 / 走查执行器 / 资产规格 / 文案表 / 版式 / 图谱移交 | `design-notes/{component-spec,motion-spec,walkthrough-harness,asset-spec,copy-table,layout-spec,graph-isolation}.md` |
-| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（171 条，`CD-001`…`CD-171`） |
+| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（172 条，`CD-001`…`CD-172`） |
 | 视觉评审件（`tmp/` 已 gitignore，不进版本库） | `tmp/frontend-audit/mockups/`（6 页 / 17 截图）· `tmp/frontend-audit/styleboard/` · `tmp/frontend-audit/motionlab/` |
 
 ---
@@ -135,7 +135,7 @@
 | 1 | **第 22 组验收关卡** | 等样板线跑完 → 交对照截图 + 关键帧分镜条 + 交互清单 → **所有者签字**才开第 23 组 |
 | 2 | **F-1 组件样式一览** | 已排队（F-1）。等方向定稿后**重做** `styleboard`（现版本是旧方向的 25 组/103 候选） |
 | 3 | 「破纪录」比较范围 | CD-164，待定义。**在此之前不得用代理指标近似触发里程碑** |
-| 4 | 171 条已登记漂移 | 刻意留账，需后续 change 逐批处理 |
+| 4 | 172 条已登记漂移 | 刻意留账，需后续 change 逐批处理 |
 | 5 | 夜纸下知识图谱 | 归 `graph-node-visual-language` change（与节点重画一起做，避免两次改图谱） |
 
 ---
@@ -501,3 +501,41 @@ python lessonkit.py guard extract-problems --course dmath --chapter ch06   # Res
 - **CSS 补齐波**（`workbench.css`）—— CD-171 的六条 + 全部类名缺口 + 火苗形状 + `.level-0` +
   作答区沉底块 —— **等 W2d 收工**（它也在改 `workbench.css`）。
 - **知识点分组卡片**（`pages.py`）—— 18.1 —— **等 W3b 收工**。
+
+### 9.11 W2d（CSS 收尾之一）收工：页高达标 · `.card` 去描边 · 判定三态伪元素
+
+| 项 | 结果 |
+|---|---|
+| **19.2 记录中心页高** | **8951px → 6368px**（目标 5500–6500px，正中区间）；四视图同测：overview 3341 / runs 2051 / **attempts 6368** / wrong 2269 |
+| **`.card` 去描边** | 基类的 `border: 1px solid var(--ink-strong)` 删掉；运行卡 / 图表卡 / 统计卡 / 记录条目 / 练习与试卷页面板一并不再带描边 |
+| **判定三态伪元素** | `-ok` / `-bad` / `-open` 共用「相对定位 + 左侧 20px 符号槽」；`-bad` 红叉（两段 2px 线绕同一点反向 45°）、`-open` 空心环（9px 见方 + `inset 0 0 0 2px` 内发丝线，**不用 border**） |
+| **孤儿 CSS** | 14 天趋势图一族（趋势容器 + 每日柱 + 柱值 + 日期标签，含窄屏覆盖两行）全删 |
+| **判定分布新族** | `.record-verdict-dist` / `-row` / `-label` / `-track` / `-fill` / `-count` + `--ok/--bad/--open` 三个状态类（不再复用 `.record-rating-*`） |
+| **图谱区段** | 基线与 HEAD **逐字节相同**（20920 = 20920）；12 个裸名声明数各 1 次；`node tools/graph-layout-diff.js --diff` → **0 条差异，PASS** |
+
+**它留了一件急事（已转给 `records.py` 的 agent）**：判定三态的**伪元素**与 `records.py` 的
+**内联 SVG** 现在**并排**⇒ 走查截图里「错」徽章出现「✗ ✗」双标记。
+⇒ 删 `_verdict_mark()` 整个函数 + 两处冗余内联 `border:0` + 判定分布图迁到新族。
+
+**三条裁决**（它问的）：
+- **A-55** 三条轨道（`.record-rating-track` / `.record-verdict-dist-track` / `.record-run-progress`）
+  仍带近黑细边 ⇒ **去描边**，改「沉底 + 1px 内发丝线」，**两族一次性改**。
+- **A-56** 判定三态的**符号已统一但底色仍分三档** ⇒ **三态统一走同一个结构块**（同形状/同尺寸），
+  **颜色只承载语义**（中性墨 / 红 / 淡墨）⇒ 灰度下靠形状与位置仍可区分。
+- **A-57** 记录条目行高 **20px（`--fs-meta`）不改回 22px** —— 记录页属数据面（6.4 要更紧），
+  且改回会让页高涨到约 6560px ⇒ **破上限**。
+
+**又一条既有缺口**：自评与评语两栏**在数据层就没有来源** ——
+`problem_attempts` 表**没有 `rating` 列**、`note` 全为空（实测 98 行作答里自评/评语各 0 条），
+而 spec 要求「六项字段一个不少」⇒ 登记 **CD-172**。**本轮不修**（改 schema 要单开 change），
+**不得为了页面好看而编造这两项数据**。
+
+### 9.12 下一波已派（4 个）
+| 波 | 任务书 | 文件 | 内容 |
+|---|---|---|---|
+| **W2e** | `briefs/IMPL-W2e.md` | `workbench.css` | **CD-171 那批「样式没跟上」的 13 条**（含火苗形状 / 作答区沉底块 / 状态圆点 / 计数条 / `.level-0` / 图例类名）+ A-55 / A-56 |
+| W3f2 | `briefs/IMPL-W3f2.md` | `records.py` | 日历双编码 + 五档常量 + 图例 + **双标记清理** + 判定分布迁新族 |
+| W3g2 | `briefs/IMPL-W3g2.md` | `paper-practice.js` + `workbench.js` | A-53 降级档里程碑音效 · A-54 连对反馈补到试卷流 |
+| W5b | `briefs/IMPL-W5b.md` | `docs/` | L4 工作流图同步 · §10.1 落地状态 · 未落地实现项清单 |
+
+**仍排队**：知识点「分组卡片」（18.1，`pages.py` 现在是扁平清单）—— 等 W3b 腾出 `pages.py`。
