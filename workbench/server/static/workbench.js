@@ -735,13 +735,11 @@
     var lamp = document.createElement("div");
     lamp.className = "lk-lamp";
     /* The target ground colour goes in at the start of the transition.  The
-       stylesheet reads `--ripple-base` first and keeps `--lk-ripple-base` as
-       the transition alias; both names are written, on the layer that reads
-       them — the layer is removed at the end of the transition, so the value
-       never outlives it and cannot go stale on a later theme change. */
+       stylesheet reads `--ripple-base`; that name is written on the layer that
+       reads it — the layer is removed at the end of the transition, so the
+       value never outlives it and cannot go stale on a later theme change. */
     var base = themeBase(nextTheme);
     ripple.style.setProperty("--ripple-base", base);
-    ripple.style.setProperty("--lk-ripple-base", base);
     document.body.appendChild(ripple);
     document.body.appendChild(glow);
     document.body.appendChild(lamp);
