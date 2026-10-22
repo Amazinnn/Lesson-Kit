@@ -84,9 +84,11 @@
     if (!list || !sort) return;
     var descending = false;
     function apply() {
-      var rows = Array.from(list.children || []).filter(function (row) {
-        return row && row.classList && row.classList.contains("knowledge-row");
-      });
+      // 18.1: a row sits one level down inside its group card, so the rows are
+      // collected across the groups. After sorting, every row goes back into
+      // the group it belongs to — the group headers are never touched, and a
+      // row never migrates to another group (its chapter is the row's own).
+      var rows = Array.from(list.querySelectorAll(".knowledge-row"));
       var field = sort.value || "source";
       rows.sort(function (a, b) {
         var av = field === "source" ? Number(a.dataset.kpOrder || 0)
@@ -99,7 +101,8 @@
         if (!result) result = Number(a.dataset.kpOrder || 0) - Number(b.dataset.kpOrder || 0);
         return descending ? -result : result;
       });
-      if (rows.length) list.replaceChildren.apply(list, rows);
+      var homes = rows.map(function (row) { return row.parentNode; });
+      rows.forEach(function (row, index) { homes[index].appendChild(row); });
       if (direction) direction.textContent = descending ? "↓" : "↑";
     }
     sort.addEventListener("change", apply);

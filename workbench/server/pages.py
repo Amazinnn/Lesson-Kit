@@ -530,6 +530,40 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
     )
 
 
+def _kp_chapter(kp_id, course):
+    """The chapter a knowledge point belongs to, read off its id.
+
+    Same grammar as `Pool.chapters()` (workbench/data/pool.py:186-205): a
+    chapter is the id segment between the course and the `-kp-N` suffix. An id
+    that does not parse keeps its whole text as its chapter — a knowledge point
+    is never dropped from the list because its id looks odd.
+    """
+    match = re.match(rf"^{re.escape(course or '')}-(.+)-kp-\d+$", kp_id or "")
+    return match.group(1) if match else (kp_id or "")
+
+
+def _knowledge_row(workspace_name, item, order, problem_count, state):
+    """One knowledge-point row: the readable name plus its secondary context.
+
+    The row's `data-kp-*` attributes are the sort keys the client reads
+    (`order` / `title` / `problem-count` / `state` / `importance`). Grouping
+    (18.1) decides which group card a row sits in; it never changes a row's
+    own attributes.
+    """
+    return (
+        "<li class='knowledge-row' data-kp-order='" + str(order)
+        + "' data-kp-title='" + html.escape(item.get("knowledge_item") or "")
+        + "' data-kp-problem-count='" + str(problem_count)
+        + "' data-kp-state='" + html.escape(state or "unmarked")
+        + "' data-kp-importance='" + html.escape(item.get("importance") or "supplementary") + "'>"
+        "<div>"
+        "<a href='/w/" + html.escape(workspace_name) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
+        "<span class='knowledge-meta'>" + str(problem_count) + " 题"
+        + _state_dot(state)
+        + "</span></div></li>"
+    )
+
+
 def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     prefix = pool.scope_prefix()
     source_kps = pool.kps(prefix)
@@ -548,17 +582,30 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         if state in state_counts:
             state_counts[state] += 1
     count_bar = _knowledge_count_bar(len(source_kps), state_counts)
+    # 18.1 分组卡片：**按章节分组** —— 组头 = 章节 id（载荷原值，不映射中文名），
+    # 组内 = 圆角卡列表。分组只用上面已经取到的知识点列表：零新增请求、零写池。
+    # 分组口径与透镜一致：`pool.kps(prefix)` 给的就是当前口径的知识点
+    # （本章 = 一个章 / 全课程 = 若干章），组头即当前口径下的章。
+    group_keys = []
+    group_rows = {}
+    for order, item in enumerate(source_kps):
+        chapter = _kp_chapter(item.get("kp_id") or "", pool.course)
+        if chapter not in group_rows:
+            group_rows[chapter] = []
+            group_keys.append(chapter)
+        group_rows[chapter].append((order, item))
     items = "".join(
-        "<li class='knowledge-row' data-kp-order='" + str(index) + "' data-kp-title='" + html.escape(item.get("knowledge_item") or "")
-        + "' data-kp-problem-count='" + str(problem_counts.get(item["kp_id"], 0))
-        + "' data-kp-state='" + html.escape(states.get(item["kp_id"], "unmarked"))
-        + "' data-kp-importance='" + html.escape(item.get("importance") or "supplementary") + "'>"
-        "<div>"
-        "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
-        "<span class='knowledge-meta'>" + str(problem_counts.get(item["kp_id"], 0)) + " 题"
-        + _state_dot(states.get(item["kp_id"]))
-        + "</span></div></li>"
-        for index, item in enumerate(source_kps)
+        "<li class='knowledge-group'>"
+        "<h3 class='knowledge-group__title'>" + html.escape(chapter) + "</h3>"
+        "<ul class='knowledge-group__cards'>"
+        + "".join(
+            _knowledge_row(workspace["name"], item, order,
+                           problem_counts.get(item["kp_id"], 0),
+                           states.get(item["kp_id"], "unmarked"))
+            for order, item in group_rows[chapter]
+        )
+        + "</ul></li>"
+        for chapter in group_keys
     )
     # 18.4 空态 = 插画 + 一句 + 满宽主按钮（按钮文案即动作）
     empty_items = "<li>" + _empty_state(
