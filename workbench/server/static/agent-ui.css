@@ -343,7 +343,11 @@
   border: 1px solid var(--ink-strong);
   border-left: 4px solid var(--role-yellow);
   border-radius: 12px;
-  background: #fff9df;
+  /* 底色走主题 token（IMPL-W2j 第 7 条 · 夜纸巡检 N1 §3.6）：
+     改造前写死 `#fff9df` ⇒ 夜纸下是一块约 15:1 的**浅黄亮块**压在夜纸卡面上
+     （硬编码亮色残留）。改读 `--role-yellow-soft`
+     （浅 `#fcf0cd` / 夜 `#3d3721`）⇒ 两主题都随主题翻转。 */
+  background: var(--role-yellow-soft);
 }
 .agent-approval-title { display: block; margin-top: 3px; font-size: 13px; }
 .agent-approval-reason,

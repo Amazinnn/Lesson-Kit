@@ -374,6 +374,10 @@ body:has(#layout[data-page="graph"]) {
   --ink-body: #3b3630;         /* 正文墨（浮层里的文字） */
   --ink-on-role: #fffdf7;      /* 角色面上的文字 */
   --ink-on-warm: #221f1a;      /* 黄色暖面上的文字 */
+  /* Agent 审批卡（`agent-ui.css` 的 `.agent-approval-card`）的底色现在读
+     `--role-yellow-soft` ⇒ 它也**随主题翻** ⇒ 图谱页一并钉回浅色档
+     （否则夜纸下图谱页右栏一旦出现审批卡，就是一块深色卡压在亮色图谱上）。 */
+  --role-yellow-soft: #fcf0cd;
 
   /* ---- 图谱页的 caption / dimmed 两档（decisions.md A-43 写法乙）----
      4.3 的字面合并把 `--dsw-label-caption`（5 处）与 `--dsw-label-dimmed`
