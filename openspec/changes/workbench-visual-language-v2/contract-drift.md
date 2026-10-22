@@ -26,7 +26,7 @@
 > owner 回来更新对应行。提示「本仓库存在 N 条已登记漂移」的交接文本写在
 > `openspec/changes/workbench-visual-language-v2/HANDOFF.md`。
 >
-> **条数说明**：本表实际登记 **168 条**（`CD-001`…`CD-168`）。
+> **条数说明**：本表实际登记 **169 条**（`CD-001`…`CD-169`）。
 > `tasks.md` 27.2 写的是 165 条 —— **差额 +37 条的原因逐条说明在 §4.1**
 > （同一冲突的「多条腿」必须逐腿登记 + 裁决已下但落地未落的残留），
 > **没有为凑数编造条目**。自检结果见 §4。
@@ -206,6 +206,7 @@
 | CD-166 | `workbench/server/static/practice-flow.js`（组卷报告的知识点显示） vs `docs/PRODUCT-MANUAL.md`（练习页面向学习者的文案口径） | 组卷报告的「可用题数少于请求量的知识点：…」在**产品里显示知识点 id**（如 `kp-2`）而不是知识点名（如「线性方程组」） | **既有缺陷，不是本轮引入**：名字映射来自 `#scope-tray` 的 `dataset.kpNames`，而 scope tray 早在 `8cc9d23d`（`feat: connect free Paper practice and remove learner assembly controls`）就从 `pages.py` 移除了 ⇒ `names` 恒为空、`names[kpId] \|\| kpId` 恒走回退分支。**唯一的名字来源 `tests/workbench/workbench_ui_interactions.test.js` 的假 DOM 夹具**曾凭空注入一个 scope-tray 元素，所以测试断言的是一条**产品里不可达的路径** | 待定 | 中（学习者看到的是内部 id，不是可读的知识点名） | 本轮**不修**：修它需要一个带知识点名的数据源（知识点列表 API 的响应里没有名字），而新增/改动取数会动请求序列 —— 违反「现有交互逻辑一个字都不许改」的底线。⇒ 本轮随 14.1 删掉那段死代码（**产品行为零变化**），并把测试夹具改为断言真实行为（id）。**待所有者定**：要不要单开一个 change，把知识点名接进组卷报告；若要，需先定「名字从哪来」（复用已加载的知识点列表 / 扩 API 响应） |
 | CD-167 | `openspec/changes/workbench-visual-language-v2/tasks.md` **17.6**（里程碑两条件之「章节首次完成」） vs 池里的 `practice_runs` 表结构 | 17.6 要求里程碑档在「① 本轮全对」**或**「② 章节首次完成」时启用，但**「章节首次完成」当前不可判定**：`practice_runs` **没有章列**、也没有任何「首次完成」标志 | spec 要的是一个**事实**，而现有持久化里**没有承载它的地方**。`decisions.md` **A-29** 已裁定**不得用任何代理指标近似**（例如「比上次做得好」「本工作区第一次做这一章」这类推算），所以**不能**就地造一个近似口径 | 待定 | 中（里程碑档目前只有「全对」一条能触发；「章节首次完成」恒为 false） | 本轮**保持 false 并如实标注**：客户端写 `data-lk-chapter-first="false"`，判定逻辑（`workbench.js` 的 `isMilestoneRound`）保留该条件，事实为 false 时不进里程碑档。⇒ **spec 的两个条件目前只有一个可触发**，这是**如实实现**，不是漏实现。**待所有者定**：要不要给它一个真实的数据来源（给 `practice_runs` 加章列 / 另立一张「章节完成」表）—— 那是**持久化 schema 变更**，必须单开 change 并同步 `docs/DATA_MODEL.md`；在数据来源定义之前，**不得**用代理指标补上 |
 | CD-168 | `openspec/changes/workbench-visual-language-v2/design.md` **D-13**（记录中心卡片流） vs `openspec/changes/workbench-visual-language-v2/design-notes/layout-spec.md` **§5.6**（明细卡流用 2 列网格） | 两份设计件对「记录中心明细视图用几列」给出**互斥**说法：D-13 写「不会降到约 4400px」（⇒ 单列 + 密度收紧，页高目标 5500–6500px），layout-spec §5.6 写「2 列网格」（⇒ 页高约 4400–4500px） | 同一事实的两份设计件冲突，不是实现 bug；实测现状：单列 + 36px/卡 ⇒ `?view=attempts` 的 `scrollHeight = 8951px`（改造前 8895px） | `openspec change` | 中（页高超出 D-13 目标区间约 2500px） | 已由 `decisions.md` **A-50** 裁定：**采信 D-13（单列卡片流 + 收紧密度）**，`layout-spec.md` §5.6 的「2 列网格」在记录中心明细视图这一处作废（该文件其它 2 列用法不受影响）；实现侧由 CSS 收紧 `.record-row` 密度到 ≈22px/卡（目标 ≈6300px）；⚠️ **不许靠删字段达到页高**（六项字段一个不少） |
+| CD-169 | `openspec/changes/workbench-visual-language-v2/tasks.md` **12.5**（三栏 `z-index ≥ 1`） vs `acceptance.md` **G-5**（图谱页逐像素零差异） | 给图谱页的 `#middle` 加 `z-index: 1` 会**新建层叠上下文** ⇒ 图谱 canvas 的抗锯齿边缘变化（实测 41 338 px 差异，其中 2 377 px 幅度 > 24；节点位置/几何/配色逐项一致，纯合成差异） | **两条契约互斥**：一条要求 z-index 不得压平卡片，一条要求图谱逐像素不变 | openspec change | 中（G-5 的 R-2 口径会从 0 变成非 0） | 已由 `decisions.md` **A-51** 裁定：**非图谱页**三栏 `z-index: 1`（照 12.5 / A-1 执行），**图谱页保持 `auto`**（不新建层叠上下文）⇒ 保住 G-5；图谱页的卡片本就在画布之上的独立层，**压平风险不存在** ⇒ A-1 的意图仍满足；⚠️ 待图谱 change 接手图谱自身适配时再一并重议 |
 
 ---
 
