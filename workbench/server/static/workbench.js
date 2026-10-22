@@ -1457,8 +1457,9 @@
    * pages.py, so the module is pulled in here and the triggers are wired only
    * once it is there.  A cue may only follow a judgment the learner just
    * caused, so each trigger is armed by the gesture it belongs to — the
-   * submit, or the pick that judges on the spot (A-102) — and disarmed as
-   * soon as it fires; re-rendering an old answer stays silent.
+   * submit, or the pick that judges on the spot, by mouse or by keyboard
+   * (A-102) — and disarmed as soon as it fires; re-rendering an old answer
+   * stays silent.
    *
    * A-53: the milestone cue is not wired here — it rides on the tier
    * decision in `celebrateCompletion`, so the downgraded tier sounds too.
@@ -1494,6 +1495,19 @@
     if (!node.hasAttribute || !node.hasAttribute("data-paper-choice")) return false;
     return !!ancestorWithId(node, "paper-options");
   }
+
+  /* The keyboard reaches the same choice without a click: the arrow keys
+     move the selection inside a radio group, and the browser reports that
+     as a change — some engines also report a click for it, some do not.  So
+     the change arms the cue as well, on the same one-shot arm: a mouse pick
+     arrives as a click *and* a change, both write the same value, and the
+     cue still fires exactly once. */
+  layout.addEventListener("change", function (event) {
+    var target = event.target;
+    if (!target) return;
+    if (!judgesOnSelection(target)) return;
+    verdictArmedAt = Date.now();
+  }, true);
 
   /* The click gate hangs off the layout element, the root of the workbench
      shell: every control that can judge an answer lives inside it. */
