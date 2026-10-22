@@ -1708,8 +1708,22 @@ textarea:focus-visible, input:focus-visible {
 #graph-detail-panel select { margin-bottom: 8px; }
 #ai-actions { display: flex; gap: 4px; margin: 12px 0 18px; flex-wrap: wrap; }
 #ai-session-controls { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 6px; margin: 12px 0 16px; }
+/* 会话列表的滚动容器（A-103 · decisions.md A-103 · 走查 3.4-6 / 3.7-2）----
+   改造前：`#ai-column { overflow: hidden }` + `#ai-session-list` **无 `overflow-y`**
+   ⇒ 整条链上**没有任何滚动容器** ⇒ 120 条会话只有前 ~20 条够得着
+   ⇒ **静默裁切**（清单 3.4-6 / 3.7-2 判 FAIL）。
+   ⇒ 滚动容器加在**列表自己身上**（`#ai-column` 的 `overflow: hidden` 保留 ——
+     那是让装饰层不吃点击用的，不是滚动容器）；
+     高度约束沿链给齐：
+       `#ai-column`（flex 列，min-height:0）
+         → `#ai-session-controls`（flex:1；min-height:0）
+           → `#ai-session-list-view`（flex:1；min-height:0；flex 列）
+             → `#ai-session-list`（flex:1；min-height:0；overflow-y:auto）
+   ⚠️ `align-content: start`：列表是 grid，默认 `align-content: stretch`
+     会把「行」拉高填满容器（会话少时每一格被撑成大块）⇒ 必须顶对齐。 */
 #ai-session-list-view,
 #ai-chat-view { min-height: 0; }
+#ai-session-list-view { display: flex; flex: 1; min-height: 0; flex-direction: column; }
 #ai-provider-picker {
   display: flex;
   flex: 1;
@@ -1721,7 +1735,7 @@ textarea:focus-visible, input:focus-visible {
 #ai-chat-head { display: flex; align-items: center; gap: 8px; }
 .ai-session-list-head { justify-content: space-between; margin-bottom: 6px; }
 .ai-session-list-head .side-label { margin: 0; }
-#ai-session-list { display: grid; gap: 2px; }
+#ai-session-list { display: grid; gap: 2px; align-content: start; flex: 1; min-height: 0; overflow-y: auto; }
 .ai-session-item { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ai-session-entry {
   flex: 1; min-width: 0; height: auto; min-height: 42px; padding: 7px 9px;
