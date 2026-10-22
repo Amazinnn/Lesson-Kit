@@ -207,8 +207,35 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
         self.assertIn("class='knowledge-body card wb-reading'", body)
         status, body = self.fetch("/w/dmath/practice")
-        self.assertIn("class='practice-question-card wb-reading'", body)
-        self.assertIn("class='practice-solution wb-reading hidden'", body)
+        self.assertIn("class='practice-question-card paper-stem__body wb-reading'", body)
+        self.assertIn("class='practice-solution paper-solution wb-reading hidden'", body)
+
+    def test_practice_page_carries_the_new_paper_structure(self):
+        # 16.1 / 16.2 / 16.3: the stem is a paper of its own, the reference is
+        # a peer paper, and the answer area is a marked block with a label.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='paper-stem' class='paper-stem'", body)
+        self.assertIn("id='paper-stem-index' class='paper-stem-index'", body)
+        self.assertIn("class='paper-answer-block'", body)
+        self.assertIn(
+            "<label class='paper-answer-label' for='paper-answer'>你的作答</label>", body)
+        self.assertIn("id='practice-planning' class='practice-planning'", body)
+
+    def test_practice_completion_page_has_the_celebration_slots(self):
+        # 16.7: three carrying slots — number slot, progress band, milestone
+        # anchor. Their static state is the terminal state.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("class='paper-completion-stats lk-stat-slot'", body)
+        self.assertIn("class='lk-progress is-filled lk-progress--completion'", body)
+        self.assertIn("<span class='lk-progress__fill'></span>", body)
+        self.assertIn(
+            "id='paper-milestone-anchor' class='lk-milestone-anchor' aria-hidden='true'",
+            body)
+        # The anchor sits above the CTA row, so it can never cover it.
+        self.assertLess(
+            body.index("paper-milestone-anchor"), body.index("id='paper-review'"))
 
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(

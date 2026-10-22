@@ -186,7 +186,7 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<div>"
         "<button id='no-time' class='ghost'>不会，下一题</button><button id='goto-session-end' class='outline'>暂停练习</button></div></div></div>"
         + "</div>"
-        + "<details class='practice-planning'><summary>目标与时间安排</summary>"
+        + "<details id='practice-planning' class='practice-planning'><summary>目标与时间安排</summary>"
         + _daily_plan(plan) + time_view_html() + "</details>"
     )
     return shell(
@@ -200,8 +200,14 @@ def _paper_practice_html(workspace_name):
     return (
         "<section id='paper-practice' aria-label='试卷练习'>"
         "<p id='paper-error' class='inline-error' role='status' aria-live='polite'></p>"
-        "<section id='paper-setup' class='card'>"
-        "<h2 id='paper-title'>选择一份试卷</h2><p id='paper-count' class='muted'></p>"
+        "<section id='paper-setup' class='card lk-card'>"
+        "<h2 id='paper-title'>选择一份试卷</h2>"
+        # 21.2 加载态：骨架块 + aria-busy。JS 用 textContent 覆盖本节点，
+        # 内容到位时骨架随之退场（进场动效由容器接管）。
+        "<p id='paper-count' class='muted'>"
+        "<span class='paper-count-loading' aria-busy='true'>"
+        "<span class='lk-skeleton lk-skeleton--text' aria-hidden='true'></span>"
+        "</span></p>"
         "<label for='paper-reveal-timing'>答案展示方式</label>"
         "<select id='paper-reveal-timing'><option value='per_item'>做一题显示一题</option>"
         "<option value='on_submit'>交卷后统一显示</option></select>"
@@ -213,20 +219,36 @@ def _paper_practice_html(workspace_name):
         "<button id='paper-pause' class='outline' type='button'>暂停练习</button>"
         "<button id='paper-final-submit' class='primary' type='button'>提交试卷</button></div>"
         "<nav id='paper-dots' class='paper-dots' aria-label='答题情况与题号'></nav>"
-        "<article id='paper-question' class='practice-question-card wb-reading'></article>"
+        # 16.1 题面 = 一张独立的纸。题号槽位放在 #paper-question 之外 ——
+        # 后者的 innerHTML 由 JS 整体替换，放在里面会被冲掉。
+        "<div id='paper-stem' class='paper-stem'>"
+        "<p id='paper-stem-index' class='paper-stem-index' aria-hidden='true'></p>"
+        "<article id='paper-question' class='practice-question-card paper-stem__body wb-reading'></article>"
+        "</div>"
         "<div id='paper-options' class='paper-options'></div>"
-        "<label class='visually-hidden' for='paper-answer'>你的作答</label>"
+        # 16.3 作答区 = 独立标记块：淡结构线 + 「你的作答」标签 + 沉底块。
+        "<div class='paper-answer-block'>"
+        "<label class='paper-answer-label' for='paper-answer'>你的作答</label>"
         "<textarea id='paper-answer' rows='5' placeholder='写下你的作答'></textarea>"
+        "</div>"
         "<button id='paper-item-submit' class='primary hidden' type='button'>提交答案</button>"
-        "<div id='paper-reference' class='practice-solution wb-reading hidden'></div>"
+        # 16.2 解析 = 与题面同级的另一张纸，只用小标题区隔。
+        "<div id='paper-reference' class='practice-solution paper-solution wb-reading hidden'></div>"
         "<section id='paper-rating' class='hidden' aria-label='自评'></section>"
         "<nav class='paper-navigation' aria-label='题目导航'>"
         "<button id='paper-prev' class='outline' type='button'>上一题</button>"
         "<button id='paper-next' class='primary' type='button'>下一题</button>"
         "<button id='paper-stuck' class='ghost' type='button'>不会</button></nav></section>"
-        "<section id='paper-completion' class='card hidden' aria-labelledby='paper-completion-title'>"
+        # 16.7 完成页 = 分层庆祝的三处承载位。承载位的静态样式必须等于终态：
+        # 数字直接显示最终值、进度带静态满格、爆点与纸片静态不出现。
+        "<section id='paper-completion' class='card lk-card hidden' aria-labelledby='paper-completion-title'>"
         "<p class='section-kicker'>Congratulations!</p><h2 id='paper-completion-title'>完成练习</h2>"
-        "<div id='paper-completion-stats'></div><div class='paper-toolbar'>"
+        "<div id='paper-completion-stats' class='paper-completion-stats lk-stat-slot'></div>"
+        "<div class='lk-progress is-filled lk-progress--completion' role='progressbar' "
+        "aria-label='本轮完成进度' aria-valuemin='0' aria-valuemax='100' aria-valuenow='100'>"
+        "<span class='lk-progress__fill'></span></div>"
+        "<div id='paper-milestone-anchor' class='lk-milestone-anchor' aria-hidden='true'></div>"
+        "<div class='paper-toolbar'>"
         "<button id='paper-review' class='primary' type='button'>查看本次答卷</button>"
         "<button id='paper-again' class='outline' type='button'>再练一次</button>"
         "<a class='outline button-link' href='" + papers + "'>返回试卷列表</a>"
@@ -237,7 +259,7 @@ def _paper_practice_html(workspace_name):
 def _daily_plan(plan):
     goals = plan.get("goals") or []
     goal_cards = "".join(
-        "<article class='goal-card card' data-goal-id='" + html.escape(str(goal.get("id") or "")) + "'"
+        "<article class='goal-card card lk-card' data-goal-id='" + html.escape(str(goal.get("id") or "")) + "'"
         + " data-goal-title='" + html.escape(goal.get("title") or "") + "'"
         + " data-goal-kind='" + html.escape(str(goal.get("kind") or "stage")) + "'"
         + " data-goal-start-date='" + html.escape(str(goal.get("start_date") or "")) + "'"
@@ -1218,7 +1240,7 @@ def _base(title, body, workspace=None):
 
 def time_view_html():
     return (
-        "<section id='time-view' class='card time-view hidden' aria-label='时间安排'>"
+        "<section id='time-view' class='card lk-card time-view hidden' aria-label='时间安排'>"
         "<div class='section-heading'><div><p class='section-kicker'>实验视图</p>"
         "<h2>时间安排</h2></div></div>"
         "<div id='time-view-content' class='time-view-content'>"
