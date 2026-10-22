@@ -615,7 +615,8 @@ body {
   line-height: 20px;
   color: var(--ink-body);
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard);
+  /* 只过渡 transform：底色瞬切（权威表 §3.3） */
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 .chapter-lens-option + .chapter-lens-option::before {
   content: "";
@@ -625,7 +626,8 @@ body {
   top: 0;
   border-top: 1px solid var(--rule-hair);
 }
-.chapter-lens-option:hover { background: var(--veil-hover); }
+.chapter-lens-option:hover { background: var(--veil-hover); transform: translate3d(0, -1px, 0); }
+.chapter-lens-option:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 .chapter-lens-option[aria-selected="true"] {
   color: var(--ink-strong);
   font-weight: 600;
@@ -659,7 +661,15 @@ body {
   min-height: 0;
   display: grid;
   grid-template-columns: var(--wb-col-left) minmax(0, 1fr) var(--wb-col-right);
-  transition: grid-template-columns var(--dur-base) var(--ease-standard);
+  /* ⚠️ **不再过渡 `grid-template-columns`**（motion-spec §1.6 硬红线：布局属性
+     不得进 transition —— 与 `width` / `padding` / `margin` 同类，3.7-1 的判据
+     是「只动 transform / opacity」）。
+     ⇒ 少掉的不是可见行为：
+       · 窄屏（< 1024px）两态都是 `1fr`（媒体查询覆盖），本就无过渡可言；
+       · 宽屏 `data-ai-collapsed` 从不出现（JS 只在 < 1024px 置位）；
+       · 拖拽改列宽时过渡本来就由 `is-resizing` 关掉 ⇒ 列宽**跟手**，
+         不再有「过渡拖影」。
+     ⇒ 抽屉开合仍是 transform 过渡（`#left-column` / `#ai-column`）。 */
 }
 #layout.is-resizing { transition: none; }
 #layout[data-ai-collapsed] { grid-template-columns: var(--wb-col-left) minmax(0, 1fr) 0px; }
@@ -802,9 +812,11 @@ body {
   color: var(--ink-muted);
   cursor: pointer;
   font-size: 13px;
-  transition: background-color var(--dur-fast) var(--ease-standard);
+  /* 只过渡 transform：状态色瞬切（权威表 §3.3），几何走 120ms 过渡 */
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
-.nav-item:hover { background: var(--veil-hover); }
+.nav-item:hover { background: var(--veil-hover); transform: translate3d(0, -1px, 0); }
+.nav-item:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 .nav-item .asset-icon {
   width: 18px;
   height: 18px;
@@ -853,9 +865,18 @@ select:focus-visible {
   font-size: 13px;
   color: var(--ink-muted);
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard);
+  /* 只过渡 transform：底色瞬切（权威表 §3.3），几何走 120ms 过渡 */
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 .weak-item:hover { background: var(--veil-hover); }
+.weak-item:active { transform: translate3d(0, -1px, 0) scale(0.96); }
+/* 行内的知识点链接 = 可点目标：hover 抬起、按下压缩（§2.2(a)） */
+.weak-item a {
+  display: block;
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+.weak-item a:hover { transform: translate3d(0, -1px, 0); }
+.weak-item a:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 .weak-item .id,
 .item-id { display: block; color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; font-family: var(--font-mono); }
 .weak-item .weak-title { display: block; color: var(--ink-strong); font-weight: 600; }
@@ -886,8 +907,17 @@ button {
   background: transparent;
   padding: 0 15px;
   height: 36px;
-  transition: background-color var(--dur-fast) var(--ease-standard);
+  /* ⚠️ **只过渡 transform**（motion-spec §1.6 硬红线 + 权威表 §3.3）：
+     状态色（底色 / 文字色 / 边框色）一律**瞬切** ⇒ 颜色不进 transition。
+     过渡挂在 transform 上：hover 抬起、按下压缩（§2.1 第 1–2 行 / §2.2(a)）。 */
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
+/* hover / 按下（motion-spec §2.1 第 1–2 行 · §2.2(a)）：
+   · hover = 抬起 1px（**几何**通道，120ms）；
+   · active = 抬起 + 压缩（比悬停**再多一层**）；
+   · 底色仍由各变体的 `:hover` 规则负责，**瞬切**（不进 transition）。 */
+button:hover:not(:disabled) { transform: translate3d(0, -1px, 0); }
+button:active:not(:disabled) { transform: translate3d(0, -1px, 0) scale(0.96); }
 button:disabled { cursor: not-allowed; opacity: 0.4; }
 button.primary:disabled {
   background: var(--surface-sunken);
@@ -1306,7 +1336,12 @@ textarea:focus-visible, input:focus-visible {
   padding: 3px;
   border-radius: var(--r-pill);
   background: var(--ink-disabled);
+  /* 只过渡 transform：底色瞬切（权威表 §3.3），按下的压缩走 transform */
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
+/* 开关的按下反馈（motion-spec §2.1 第 2 行）：只动 transform；
+   ⚠️ 压在**轨道**上 —— 拇指的 transform 归「选中态」（translateX），不碰。 */
+.lk-switch:active .lk-switch__track { transform: scale(0.96); }
 .lk-switch__thumb {
   display: block;
   width: 20px;
@@ -1350,6 +1385,8 @@ textarea:focus-visible, input:focus-visible {
   line-height: 20px;
   white-space: nowrap;
   cursor: pointer;
+  /* 只过渡 transform：底色 / 文字色瞬切（权威表 §3.3） */
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 .lk-seg__item input {
   position: absolute;
@@ -1360,7 +1397,8 @@ textarea:focus-visible, input:focus-visible {
   opacity: 0;            /* 视觉隐藏；仍可聚焦、仍可点（label 包着它） */
   cursor: pointer;
 }
-.lk-seg__item:hover { color: var(--ink-strong); background: var(--veil-hover); }
+.lk-seg__item:hover { color: var(--ink-strong); background: var(--veil-hover); transform: translate3d(0, -1px, 0); }
+.lk-seg__item:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 /* 选中项 = 角色蓝色块 + 深底文字（颜色 + 字重双通道，不靠颜色单通道） */
 .lk-seg__item:has(input:checked) {
   background: var(--role-blue);
@@ -1551,10 +1589,17 @@ textarea:focus-visible, input:focus-visible {
   overflow: hidden;
   background: var(--rule-faint);
 }
-.column-resizer { position: absolute; top: 0; bottom: 0; width: 8px; z-index: 10; cursor: col-resize; }
+.column-resizer {
+  position: absolute; top: 0; bottom: 0; width: 8px; z-index: 10; cursor: col-resize;
+  /* 只过渡 opacity：底色瞬切（权威表 §3.3），可见度走 120ms 过渡 */
+  transition: opacity var(--dur-fast) var(--ease-standard);
+}
 #left-resizer { right: -4px; }
 #right-resizer { left: -4px; }
-.column-resizer:hover, .column-resizer:active { background: var(--role-blue); opacity: .35; }
+.column-resizer:hover { background: var(--role-blue); opacity: .35; }
+/* 按下比悬停**再多一层**（motion-spec §2.1 第 2 行）：拖拽把手按住时更显眼。
+   ⚠️ 这里**不写 transform**：把手只有 8px 宽，缩放会改变命中区、可能拖歪。 */
+.column-resizer:active { background: var(--role-blue); opacity: .55; }
 #graph-detail-panel .graph-dashboard-metrics > div {
   display: grid;
   gap: 3px;
@@ -1948,7 +1993,8 @@ textarea:focus-visible, input:focus-visible {
   height: 100%;
   border-radius: inherit;
   background: var(--role-blue);
-  transition: width var(--dur-base) var(--ease-standard);
+  /* ⚠️ **不过渡 `width`**（motion-spec §1.6：布局属性不得进 transition，3.7-1）。
+     填充宽度由 JS 一次性写定（`style.width = percent + "%"`）⇒ 落地即终态。 */
 }
 .practice-count-label {
   display: inline-flex;
@@ -2047,7 +2093,9 @@ textarea:focus-visible, input:focus-visible {
   display: grid;
   grid-template: minmax(154px, auto) / minmax(0, 1fr);
   padding: 0 6%;
-  transition: padding-bottom var(--dur-slow) var(--ease-standard);
+  /* ⚠️ **不过渡 `padding-bottom`**（motion-spec §1.6：布局属性不得进 transition，3.7-1）。
+     翻牌的动作感由**两张卡的 transform**（`is-revealed` 里的位移 + 旋转）承担；
+     容器为答案卡预留的高度**瞬时**落定。 */
 }
 .flash-card-face {
   grid-area: 1 / 1;
@@ -2059,7 +2107,9 @@ textarea:focus-visible, input:focus-visible {
   border-radius: var(--r-md);
   background: var(--surface-card);
   box-shadow: 5px 7px 0 rgb(17 19 24 / 14%);
-  transition: transform var(--dur-slow) var(--ease-out), box-shadow var(--dur-slow) var(--ease-standard);
+  /* ⚠️ **只过渡 transform**：`box-shadow` 是状态色通道（§3.3 瞬切），
+     抬升的表达走 transform（motion-spec §1.6 / 3.7-1）。 */
+  transition: transform var(--dur-slow) var(--ease-out);
 }
 .flash-card-answer { z-index: 1; border-color: var(--role-red); }
 .flash-card-prompt { z-index: 2; border-color: var(--role-blue); }
@@ -2192,7 +2242,8 @@ img { max-width: 100%; }
   padding: 56px 0;
 }
 .workspace-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin-top: 28px; }
-.workspace-card { display: block; min-height: 150px; padding: 20px; color: var(--ink-strong); text-decoration: none;  border-radius: var(--r-md); background: var(--surface-card); box-shadow: var(--elev-1); transition: transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard); }
+.workspace-card { display: block; min-height: 150px; padding: 20px; color: var(--ink-strong); text-decoration: none;  border-radius: var(--r-md); background: var(--surface-card); box-shadow: var(--elev-1); /* ⚠️ **只过渡 transform**（motion-spec §1.6 / 3.7-1）：抬升走 `translateY(-1px)`（见 `:hover`），
+     `box-shadow`（抬升阴影）属状态色通道 ⇒ **瞬切**。 */ transition: transform var(--dur-fast) var(--ease-standard); }
 .workspace-card:hover { color: var(--ink-strong); text-decoration: none; transform: translateY(-1px); box-shadow: var(--elev-2); }
 .workspace-card h2 { margin: 0; }
 .workspace-card p { color: var(--ink-muted); margin: 8px 0 0; }
