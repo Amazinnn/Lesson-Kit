@@ -1378,6 +1378,68 @@ textarea:focus-visible, input:focus-visible {
   box-shadow: 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus-outer);
 }
 
+/* ============================================================================
+   设置视图 · 偏好行（IMPL-W2h 第 1 条 · design.md D-9 / tasks.md 11.1）
+   ---------------------------------------------------------------------------
+   markup（`workbench/server/pages.py:858-893` 的 `settings_page()`）：
+     `.settings-view`（偏好区容器，**不加标题、不加说明句** —— 少字原则）
+       > `.preference-row`（一行）
+           `.preference-name`（名称）· `.preference-value`（当前值）
+           · 控件（`.lk-switch` 或 `.lk-seg`）
+   ⚠️ 这四个类名以前在 CSS 里**零命中** ⇒ 行没有布局规则：
+     名称与当前值挤在一行、控件跟在后面、行与行之间没有分隔。
+   · **一行的三段**：名称（左）· 当前值（中）· 控件（右）——
+     名称与控件**两端对齐**，当前值落在中间那一段、走**次级墨**。
+   · **密度按「列表 / 数据面」**（不是阅读面的宽松刻度）：
+     名称 `--fs-body`（14px / 行高 22px）、当前值 `--fs-meta`（13px / 20px）、
+     行内距 `--sp-2`；命中区 ≥ 44px（`.lk-switch` / `.lk-seg` 自带 44px，行不更矮）。
+   · **分隔用内发丝线**（`box-shadow: inset` = 线画在行内，**不是描边、不是整条边框**）；
+     行距靠**留白**（`--sp-2`）而不是靠加框。
+   · `.settings-view` **不是新卡片**（无卡面、无柔影、无描边）——
+     收口只用一根内发丝线，与 `.knowledge-count-bar` 同款做法。
+   · ⚠️ **不许动 `.lk-switch` / `.lk-seg`**（W2g 刚做完，形态已定）：
+     本块只负责**把它们放到该在的位置**。
+   · ⚠️ **不许加任何说明性文字**（少字原则）：名称自带含义，当前值就是当前值。
+   ========================================================================= */
+.settings-view {
+  font-family: var(--font-ui);
+  box-shadow: inset 0 -1px 0 var(--rule-hair);  /* 偏好区的收口发丝线（不是描边） */
+}
+.preference-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 44px;              /* 命中区下限（同 `.lk-switch` / `.lk-seg`） */
+  padding: var(--sp-2) 0;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: 22px;
+}
+.preference-row + .preference-row {
+  box-shadow: inset 0 1px 0 var(--rule-hair);  /* 行间内发丝线（不描边、不加框） */
+}
+.preference-name {
+  flex: none;                    /* 左端：名称 */
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+}
+.preference-value {
+  flex: 1 1 auto;               /* 中段：当前值 */
+  min-width: 0;
+  color: var(--ink-muted);       /* 次级墨（不是强调色） */
+  font-size: var(--fs-meta);
+  line-height: 20px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+/* 控件（右端）：尺寸与形态归 `.lk-switch` / `.lk-seg`，本块只定位 */
+.preference-row > .lk-switch,
+.preference-row > .lk-seg {
+  flex: none;
+}
+
 /* ---- 章节知识点计数条（tasks.md 18.5 · IMPL-W2e 第 9 条）------------------
    18.5 的 markup 已落地（`pages.py` 的 `_knowledge_count_bar`）：
      `.knowledge-count-bar` > `.knowledge-count-bar__item`
