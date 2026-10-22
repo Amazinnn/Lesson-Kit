@@ -77,6 +77,7 @@
     var requestCounter = 0;
     var ratingInput = null;
     var ratingNote = null;
+    var celebrationAnchorEl = null;
 
     function emptyLocal() {
       return {
@@ -300,6 +301,9 @@
       mergeLocalDrafts(record);
       setVisible(ids.setup, false);
       setVisible(ids.work, !isArchived);
+      /* The milestone facts must be on the surface before it turns visible:
+         the shared celebration reads them the moment the completion shows. */
+      if (isArchived) writeCompletionFacts(record);
       setVisible(ids.completion, !!isArchived);
       setVisible(ids.return, false);
       if (isArchived) {
@@ -1308,9 +1312,53 @@
       return { total: items.length, correct: correct, wrong: wrong, stuck: stuck, pendingRatings: pendingRatings };
     }
 
+    /* The two milestone conditions (decisions.md A-29, tasks.md 17.6) are read
+       by the shared celebration in workbench.js: it looks for
+       `data-lk-total` / `data-lk-correct` / `data-lk-chapter-first` on the
+       completion surface.  ① 本轮全对 ⇒ every item carries an objective
+       verdict and all of them are correct.  ② 章节首次完成 ⇒ the client holds
+       no such fact (practice_runs carries no chapter column and no
+       "first completion" flag), so it stays false: the contract forbids
+       approximating it with a proxy signal (same rule as CD-164). */
+    function writeCompletionFacts(record) {
+      if (!ids.completion || !ids.completion.dataset) return;
+      var stats = completionStats(record);
+      ids.completion.dataset.lkTotal = String(stats.total);
+      ids.completion.dataset.lkCorrect = String(stats.correct);
+      ids.completion.dataset.lkChapterFirst = "false";
+    }
+
+    /* The decoration layer the milestone burst hangs in.  The completion card
+       is not positioned, so the anchor gives the burst its own coordinate
+       system; it never takes clicks (the CTA stays clickable). */
+    function ensureCelebrationAnchor() {
+      var completion = ids.completion;
+      if (!completion) return null;
+      if (celebrationAnchorEl) return celebrationAnchorEl;
+      var existing = completion.querySelectorAll
+        ? completion.querySelectorAll("[data-lk-celebrate-anchor]")
+        : [];
+      if (existing.length) {
+        celebrationAnchorEl = existing[0];
+        return celebrationAnchorEl;
+      }
+      if (completion.style) completion.style.position = "relative";
+      var anchor = document.createElement("div");
+      anchor.setAttribute("data-lk-celebrate-anchor", "");
+      anchor.className = "lk-celebrate-anchor";
+      anchor.style.position = "absolute";
+      anchor.style.inset = "0";
+      anchor.style.pointerEvents = "none";
+      completion.appendChild(anchor);
+      celebrationAnchorEl = anchor;
+      return anchor;
+    }
+
     function renderCompletion() {
       if (!ids.completion || !archived) return;
       var stats = completionStats(archived);
+      writeCompletionFacts(archived);
+      ensureCelebrationAnchor();
       if (ids.title) ids.title.textContent = archived.source_label || savedPaper && savedPaper.title || "练习试卷";
       if (ids.count) ids.count.textContent = String(stats.total);
       if (ids.completionStats) {
