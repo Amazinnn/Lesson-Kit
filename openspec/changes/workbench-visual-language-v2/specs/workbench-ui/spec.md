@@ -226,6 +226,12 @@ The celebration SHALL begin only after the response that ends the round has
 arrived, SHALL NOT change the request sequence or its payload, and SHALL NOT
 cover the primary action of the completion surface.
 
+The progress band SHALL carry the round's completion as its end state: its
+static style SHALL already be full, and the growth from empty to full SHALL be
+replayed only as part of the celebration. When motion is downgraded, the band
+SHALL be shown directly in that full state and SHALL NOT be left at empty. The
+band states that the round is complete; it is not a score and not an accuracy.
+
 #### Scenario: An ordinary round is celebrated lightly
 
 - **WHEN** a round finishes with at least one wrong answer and meets neither of
@@ -258,6 +264,11 @@ cover the primary action of the completion surface.
 - **THEN** the celebration begins only after the response that ends the round
   arrives, and the request sequence and its payload are the same as they would
   be without the celebration
+
+#### Scenario: The progress band is full without motion
+
+- **WHEN** the completion surface is shown with motion downgraded
+- **THEN** the progress band is already full and no growth is replayed
 
 ### Requirement: Consecutive-correct escalation feedback
 
@@ -404,7 +415,13 @@ SHALL NOT be reported as a failure.
 
 Every interactive control SHALL show a visible focus indicator when it receives
 keyboard focus, and that indicator SHALL NOT be suppressed by the control's own
-focus styling. Body text SHALL reach a contrast ratio of at least 4.5:1 against
+focus styling. The indicator SHALL be drawn on the control's focus-visible
+state, so that a control that receives keyboard focus always shows it. An
+editable text control SHALL show the indicator whenever it holds focus,
+including after a pointer press, because browsers match editable text controls
+to the focus-visible state regardless of how the focus arrived; a control that
+accepts no text SHALL NOT be required to show the indicator after a pointer
+press alone. Body text SHALL reach a contrast ratio of at least 4.5:1 against
 the surface it sits on. Secondary text, control boundaries and non-text state
 markers SHALL reach at least 3:1 against their surroundings. Both floors SHALL
 hold in the warm cream ground and in the night paper.
@@ -418,6 +435,12 @@ hold in the warm cream ground and in the night paper.
 
 - **WHEN** a focused select or text input is styled by its own focus rule
 - **THEN** the focus indicator remains visible on that control
+
+#### Scenario: The indicator follows the focus-visible state
+
+- **WHEN** a control is focused by a pointer press rather than by the keyboard
+- **THEN** a control that accepts no text need not show the focus indicator,
+  while an editable text control still shows it
 
 #### Scenario: The contrast floors hold in both themes
 
@@ -486,11 +509,25 @@ the shape or the colour of an element SHALL be removed rather than restyled. An
 empty state SHALL consist of a still-life illustration (静物插画), one sentence,
 and a full-width primary button whose label is the action itself.
 
+The empty state SHALL be presented on the sunken surface (沉底面) rather than on
+the card surface. It is a standalone panel, and it must not compete with the
+card surface above it for hierarchy. This clause was added after the
+implementation shipped, because the empty state had already been built on the
+sunken surface while this specification did not yet say which surface it used;
+the specification is brought in line with the shipped behaviour, and the surface
+choice is now stated here so that it is no longer an open question.
+
 #### Scenario: An empty state offers an action
 
 - **WHEN** a learner opens a view that has nothing in it yet
 - **THEN** the view shows a still-life illustration, one sentence, and a
   full-width primary button labelled with the action it performs
+
+#### Scenario: The empty state sits on the sunken surface
+
+- **WHEN** an empty state is shown
+- **THEN** it is presented as a standalone panel on the sunken surface, and it
+  does not compete with the card surface above it
 
 #### Scenario: An annotation is removed rather than restyled
 
@@ -572,6 +609,47 @@ control SHALL carry none of these figures.
 - **WHEN** a learner opens the chapter control in the top bar
 - **THEN** it shows the chapter names only, with none of the figures of this
   requirement
+
+### Requirement: Knowledge-point list grouped by chapter
+
+The knowledge-point list SHALL present the knowledge points in scope as card
+groups, one group per chapter, and the group heading SHALL name the chapter by
+the identifier the pool carries it under (for example `ch06`), not by a
+translated name. The grouping SHALL be derived from the knowledge points
+already in scope, SHALL require no request beyond the ones the list already
+makes, and SHALL write nothing to the pool.
+
+Each group SHALL hold its knowledge points as cards. Each card SHALL show the
+knowledge point's name, the number of problems associated with it, and its
+current learning state as a redundant state channel rather than as a written
+label. A group block SHALL NOT be a card itself: it carries spacing only, with
+no card surface and no border. The group heading SHALL sit 24px below the group
+above it and SHALL be set one step below body type; the cards inside a group
+SHALL sit 8px apart and SHALL carry 8px of vertical and 16px of horizontal
+padding, with the shared 12px corner radius.
+
+The sort control SHALL remain usable across the groups. Sorting SHALL reorder
+the cards within their own groups: the group headings SHALL NOT move with the
+sort, and a card SHALL NOT migrate into another group — a card stays in the
+chapter it belongs to.
+
+#### Scenario: The list is grouped by chapter
+
+- **WHEN** a learner opens the knowledge-point list
+- **THEN** the list shows one group per chapter, each group headed by that
+  chapter's identifier, and each group's knowledge points shown as cards
+
+#### Scenario: Grouping asks for nothing new
+
+- **WHEN** the knowledge-point list is built
+- **THEN** the groups are formed from the knowledge points already in scope, no
+  additional request is made, and nothing is written to the pool
+
+#### Scenario: Sorting stays inside the groups
+
+- **WHEN** the learner sorts the knowledge-point list
+- **THEN** the cards are reordered within their own groups, the group headings
+  stay where they are, and no card moves to another group
 
 ## MODIFIED Requirements
 
@@ -1069,12 +1147,14 @@ beside the page title or under the title band.
       `Same-workspace middle navigation preserves the Agent rail` /
       `Three-column shell with navigation`。
 - [x] 没有 `## Purpose`（既有能力 delta 不写 Purpose）。
-- [x] 每个 Requirement ≥ 1 个 Scenario：MODIFIED 9 条、ADDED 15 条，共 24 条 Requirement。
+- [x] 每个 Requirement ≥ 1 个 Scenario：MODIFIED 9 条、ADDED 16 条，共 25 条 Requirement。
       （ADDED 第 10 条 = `Accumulated work made visible on existing learning facts`，
       即第 5 组 5.2「进度与成就的可见反馈」的落点：只呈现**已有事实的计数**
       ——章节知识点总数与三态计数、已完成练习轮次、近 14 天每天的作答次数；
       **不新增任何口径**（无正确率 / 掌握度 / 完成度百分比），
-      「连续学习天数」因**无现成数据源**而不在本 delta 承诺（已登记为待确认漂移）。）
+      「连续学习天数」因**无现成数据源**而不在本 delta 承诺（已登记为待确认漂移）。
+      ADDED 第 16 条 = `Knowledge-point list grouped by chapter`，是 2026-10-22
+      晚间「知识点列表改按章分组的卡片列表」这一**已落地行为**的补写。）
 - [x] **`decisions.md` A-27.3 已兑现：M-F…M-N 升为首类 ADDED Requirement**，
       每条各配 ≥2 个 `#### Scenario:`，不再折叠在一条总则里 ——
       M-F / M-G = `Round completion celebration in two tiers`（日常档 / 里程碑档 +
@@ -1121,3 +1201,32 @@ beside the page title or under the title band.
       连对三级计数器与 5/10 连插播、连对 >4 的负反馈、动效偏好与 `prefers-reduced-motion` 降级。
       旧方向的仿古提法（发丝描边分隔、极淡噪点纸纹、发光描边主按钮、作答明细真表格）
       一律未采用；作答明细按第 6 组定案写为圆角卡片流。
+- [x] **2026-10-22 晚间的文档同步轮（本 delta 的第 4 次补写）**：把这一波**已落地**的
+      用户可感知行为补进本规格，每一条都能在实现里指出落点：
+      ① **知识点列表按章分组**（新增 ADDED 第 16 条
+         `Knowledge-point list grouped by chapter`；落点：`workbench/server/pages.py`
+         的 `kps_page` 按章分组与 `_kp_chapter`、
+         `workbench/server/static/workbench.js` 的 `bindKnowledgeSort`
+         跨分组排序后把行放回原组、`workbench.css` 的 `.knowledge-group*` 规则块）；
+      ② **完成页的进度带**（`Round completion celebration in two tiers` 增补
+         「静态即满格 / 降级档直接满格」条款 + 一个 Scenario；落点：`pages.py` 的
+         `.lk-progress.lk-progress--completion` 承载位、`workbench.css` 的
+         `.lk-progress` 轨道规则与 `lk-progress-fill` 关键帧、`workbench.js` 的
+         `fillProgressBand`）；
+      ③ **焦点环恢复**（`Focus visibility and contrast floors` 增补「画在
+         focus-visible 上」条款 + 一个 Scenario；落点：`workbench.css` 里
+         `select` / `textarea,input` / `#answer-box` 三处 `:focus-visible` 规则，
+         以及全局 `:focus-visible` 规则）。
+      ⚠️ **本轮特意写明**：可输入文本的元素**鼠标点击后仍然匹配 focus-visible**
+      （浏览器自己的启发式，产品改不了）⇒ **不得**写成「鼠标点击一律不冒焦点环」。
+- [x] **实现先行、spec 补齐的一条**（`decisions.md` **A-73**）：空态用**沉底面**。
+      实现早已落在沉底块上，而本规格此前**没有规定**空态用哪个面 ⇒
+      本轮把「空态 SHALL 呈现在沉底面上、且是与上方卡面不争层级的独立面板」
+      补进 `Interface copy voice`（含理由说明与一个 Scenario），
+      **把 spec 补到与实现一致**。
+- [x] **日历五档区间未被改动**：本规格 `Records center` 里写的是
+      「no answers / one answer / two to three answers / four to seven answers /
+      eight or more answers」，即 **0 / 1 / 2–3 / 4–7 / ≥8**；
+      页面（`workbench/server/records.py` 的 `_CALENDAR_LEVELS`）、
+      样式表（`workbench.css` 的五档注释）与
+      `docs/PRODUCT-MANUAL.md` §7.1.2 **三处同口径**（CD-170 已结案，不改回）。
