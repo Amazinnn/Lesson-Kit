@@ -200,7 +200,12 @@ def _chapter_lens(workspace):
         "<label class='chapter-lens-toggle'>"
         f"<input type='checkbox' id='chapter-lens-switch'{' checked' if active else ''}>"
         "<span>章</span></label>"
-        f"<select id='chapter-lens-select' aria-label='选择章节'{'' if active else ' hidden'}>"
+        # The native select is the **no-JS fallback** (decisions.md A-69):
+        # without JavaScript it is the only way to pick a chapter. With
+        # JavaScript the self-drawn panel takes over and the CSS side hides
+        # this one — the `js` marker class on `<html>` is the switch.
+        f"<select id='chapter-lens-select' aria-label='选择章节'{'' if active else ' hidden'}"
+        " class='chapter-lens-select-fallback'>"
         f"{options}</select>"
         "<div class='chapter-lens-panel' id='chapter-lens-panel' role='listbox'"
         " aria-label='选择章节' hidden>"
@@ -1447,6 +1452,12 @@ def _appearance_boot_script(workspace):
         "var raw=k?localStorage.getItem(k):null;"
         "var s={};if(raw){try{s=JSON.parse(raw)||{};}catch(e){s={};}}"
         "var d=document.documentElement;"
+        # The JavaScript marker class. With JS the self-drawn controls take
+        # over and the native fallbacks step aside — the CSS side keys on
+        # `.js` (e.g. `.js .chapter-lens-select-fallback`). It is set here,
+        # in `<head>` and before the stylesheets, so a native control never
+        # flashes before the script runs.
+        "d.className=d.className?d.className+' js':'js';"
         "var dark=false;"
         "if(s.theme==='night'||s.theme==='paper'){dark=s.theme==='night';}"
         "else if(window.matchMedia){"
