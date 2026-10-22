@@ -460,6 +460,19 @@ body:has(#layout[data-page="graph"]) #ai-column { z-index: auto; }
 body:has(#layout[data-page="graph"]) .lk-ripple,
 body:has(#layout[data-page="graph"]) .lk-ripple-glow { display: none; }
 
+/* ---- 图谱页的「左栏」钉回（任务 15.2 / 15.3）---------------------------
+   15.2 把选中态从「1px 黑框」改成「整行圆角色块」、15.3 给四个分区加了分隔线 ——
+   这两条对图谱页是可见变化，而图谱页必须逐像素零差异（G-5）⇒ 钉回改造前的样子。 */
+body:has(#layout[data-page="graph"]) .nav-item.active {
+  border-radius: var(--r-xs);
+  box-shadow: inset 4px 0 0 var(--role-blue), inset 0 0 0 1px var(--ink-strong);
+}
+body:has(#layout[data-page="graph"]) .side-section + .side-section {
+  margin-top: 26px;
+  padding-top: 0;
+  border-top: none;
+}
+
 /* ---- 图谱页的「标题带」钉回（任务 14.1 / 14.3）---------------------------
    任务 14.3 把标题带底边从 3px 纯黑换成 2px `--rule-structure`、并删掉那块
    76×8 的装饰黄块；任务 14.1 删掉标题带右侧的死预留。
@@ -529,9 +542,16 @@ body {
 .goal-card,
 #ai-status { overflow-wrap: anywhere; }
 
-/* top bar */
+/* top bar —— 三段式：品牌 / 当前身份 / 动作区（tasks.md 15.4）
+   · 高度 **维持 52px**（`--shell-topbar-h`，A-21-3）；`layout-spec.md` 草拟的
+     56px **作废** ⇒ 这里写 token，不写裸值。
+   · 中段 = **当前身份**（工作区名称）；**机器课程代号不得出现在任何可见文本**
+     （`openspec/specs/workbench-ui/spec.md`「The top bar shows the name, not the
+     identifier」是硬契约）。
+   · 章节上下文**只在章节透镜控件里**，不在工作区名旁重复
+     （spec「The chapter context lives in the lens control」）。 */
 #topbar {
-  height: 52px;
+  height: var(--shell-topbar-h);
   flex: none;
   display: flex;
   align-items: center;
@@ -543,6 +563,24 @@ body {
      涟漪只扫底色，**不得**把卡片压平）。 */
   position: relative;
   z-index: 1;
+}
+/* 三段：左＝品牌，中＝当前身份，右＝动作。 */
+.topbar-brand { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+.topbar-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: none;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+.topbar-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
 }
 #topbar .brand {
   font-size: 16px;
@@ -567,7 +605,16 @@ body {
 }
 #topbar .meta { color: var(--ink-muted); font-size: 13px; }
 .topbar-separator { color: var(--dsw-label-caption); }
+
+/* ---- 章节透镜 —— 自绘下拉面板（tasks.md 15.4 / spec「Chapter switch in the top bar」）
+   面板：圆角（`--r-md`）+ 浮起面 + `--elev-3` 阴影 + 项间分隔线；
+   **每项只有章节名**。
+   ⚠️ **面板内不得显示每章计数 / 统计 / 选择理由** —— 现行 spec 明令
+   （「The chapter control carries no figures」；`decisions.md` 9.4 已删计数）。
+   ⇒ CSS 侧不给「计数徽标」留任何位置；面板里出现的数字一律是违规。
+   焦点 / Esc / 点外部关闭由 JS 侧负责（`aria-expanded` 同步、焦点归位）。 */
 .chapter-lens {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -591,6 +638,52 @@ body {
   background: var(--surface-card);
   border: 1px solid var(--ink-strong);
   border-radius: 4px;
+}
+/* 自绘面板（替代裸 `<select>`；原生 select 保留作无 JS 时的兜底） */
+.chapter-lens-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: var(--z-dropdown);
+  min-width: 176px;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border-radius: var(--r-md);
+  background: var(--surface-raised);
+  box-shadow: var(--elev-3);
+}
+.chapter-lens-panel[hidden] { display: none; }
+.chapter-lens-option {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: var(--r-xs);
+  background: transparent;
+  text-align: start;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-body);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+.chapter-lens-option + .chapter-lens-option::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 0;
+  border-top: 1px solid var(--rule-hair);
+}
+.chapter-lens-option:hover { background: var(--veil-hover); }
+.chapter-lens-option[aria-selected="true"] {
+  color: var(--ink-strong);
+  font-weight: 600;
+  background: var(--role-blue-wash);
 }
 .mobile-drawer-controls { display: none; margin-left: auto; gap: 4px; }
 
@@ -704,8 +797,18 @@ body {
 }
 .page-content { padding-top: 28px; }
 
-/* left nav */
-.side-section + .side-section { margin-top: 26px; }
+/* ---- left rail —— 分区结构 + 导航语法（tasks.md 15.1 / 15.2 / 15.3）
+   · 4 个分区之间加**结构分隔**（一根发丝线 + 间距）⇒ 下半截的空纸不再是一整块
+     说不清归属的留白，而是「四个有边界的块之后剩下的桌面」。
+   · 分区标题**恒定**（不再随内容有无换措辞），计数走**徽标**；
+   · 徽标底色用 `--surface-card`（卡面），**不用** `--role-blue-wash` ——
+     左栏底色就是 `--surface-sunken`，而沉底面与蓝洗底的亮度差只有 1.035:1，
+     共邻会被误读成「被选中的行」（权威表 §3.1【A-31】硬约束）。 */
+.side-section + .side-section {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule-hair);
+}
 .setting-row {
   display: flex; align-items: flex-start; gap: 7px;
   color: var(--ink-muted); font-size: 12px; cursor: pointer;
@@ -715,23 +818,45 @@ body {
 #next-problem { margin-left: auto; }
 .side-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .side-heading span { color: var(--dsw-label-caption); font-size: 11px; }
+/* 计数徽标：标题恒定、计数随内容变 */
+.count-badge {
+  flex: none;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-card);
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+/* 导航项 = 具象静物图标 + 文字（15.1；图标资产见 asset-spec §2，5 枚导航静物） */
 .nav-item {
   display: flex;
   align-items: center;
+  gap: 9px;
   min-height: 32px;
   padding: 0 9px;
-  border-radius: var(--r-xs);
+  border-radius: var(--r-md);
   color: var(--ink-muted);
   cursor: pointer;
   font-size: 13px;
   transition: background-color var(--dur-fast) var(--ease-standard);
 }
 .nav-item:hover { background: var(--veil-hover); }
-/* 收编残留（任务 4.2 漏网的一处）：别名 --lk-blue → 新层 --role-blue（取值相同，零可见变化） */
+.nav-item .asset-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: var(--r-round);
+}
+/* 15.2 选中态 = **整行圆角色块**（spec「The selected navigation entry reads as a block」）：
+   去掉 1px 黑框；保留两个状态通道 —— 活动文字样式（`--ink-strong` + 600）
+   + 蓝色结构内嵌（`inset 4px 0 0 --role-blue`）。 */
 .nav-item.active {
   color: var(--ink-strong);
   background: var(--surface-card);
-  box-shadow: inset 4px 0 0 var(--role-blue), inset 0 0 0 1px var(--ink-strong);
+  box-shadow: inset 4px 0 0 var(--role-blue);
   font-weight: 600;
 }
 .nav-item a { color: inherit; text-decoration: none; display: block; width: 100%; }
