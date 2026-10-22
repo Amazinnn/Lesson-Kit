@@ -53,20 +53,20 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
 
 **实证（离线复算 `pool/dmath.db` 的 dmath/ch06：31 节点 / 35 关系）**
 
-- 舞台级 `scale()`（`workbench/server/static/workbench.js:1106`）把节点直径、字号、点径
+- 舞台级 `scale()`（`workbench/server/static/workbench.js:2201`）把节点直径、字号、点径
   **全部按世界像素一起缩小**，零屏幕补偿。Fit 后 scale = 0.17–0.49 ⇒
   **圆直径仅 3–30px、标签 2.0–5.9px、可见标签 0–1 / 31**
-  （`workbench.js:1290-1294` 的缩放阈值 + `:1222-1225` 的 Fit 口径）。
+  （`workbench.js:2385-2389` 的缩放阈值 + `:2317-2320` 的 Fit 口径）。
   节点成了「看不清的斑点」。
 - **学习状态在图上实质不可辨**：唯一承载它的 `.node-wrap.in-scope .status-ring`
-  （`workbench.css:1708`）是**死规则**——`graphSyncScope()`（`workbench.js:1077`）是空函数，
+  （`workbench.css:3794`）是**死规则**——`graphSyncScope()`（`workbench.js:2172`）是空函数，
   全仓无 `classList.add("in-scope")`。真正在线的只有 7px 世界像素的 `.node-satellite`
-  （`workbench.css:1693-1697`，缩放后约 1–2px），而 **28/31 个节点同为 `state-new`**（同一个灰）。
+  （`workbench.css:3779-3783`，缩放后约 1–2px），而 **28/31 个节点同为 `state-new`**（同一个灰）。
 - 同一个视觉通道还塞了两个维度：`.metric-track` 的**弧长**编码当前投影指标，
-  **弧色**却编码知识点重要度（`workbench.css:1651-1652` 的 `--kind-color`）——
+  **弧色**却编码知识点重要度（`workbench.css:3737-3738` 的 `--kind-color`）——
   看图的人无法把颜色和数字对上。
 - 与此同时，整块画布每帧重绘约 **600 个 alpha 混合色斑**
-  （`workbench.js:1482-1488` / `:1538-1626`），**与图谱数据完全无关**，
+  （`workbench.js:2577-2583` / `:2633-2721`），**与图谱数据完全无关**，
   视觉重量压过数据本身。
 
 **所有者的裁决原话（A-24）**
@@ -89,7 +89,7 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
 }
 ```
 
-本仓库的对应物是 `workbench.css:1676-1684` 的 `.node-face`
+本仓库的对应物是 `workbench.css:3762-3770` 的 `.node-face`
 （`box-shadow: 0 2px 6px …` + `inset 0 0 0 1px rgba(255,255,255,.82)` 内高光 + 1px 描边）
 与 `.node-face::before` 的径向高光。
 
@@ -152,14 +152,17 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
 ### 五、状态文字清零（A-24.5）
 
 **任何投影的节点上都不得出现状态文字**（「新」「掌握」「重点练习」等一律不许）。
-保留 G-6 的机制：删 `.meta` 行（`workbench.js:1072-1073`）、删 `STATE_SHORT` 单字写入
-（`workbench.js:578`、`:1060`）；状态名仍留在**学习看板、悬浮提示与无障碍名**里。
+保留 G-6 的机制：删 `.meta` 行（`workbench.js:2167-2168`）、删 `STATE_SHORT` 单字写入
+（`workbench.js:1673`、`:2155`）；状态名仍留在**学习看板、悬浮提示与无障碍名**里。
 
 ### 六、颜色设计保留（A-24.6）
 
 **四投影的色键一字不改**：关系结构 = 墨阶三档；题目数量 / 重要性 = 橙阶（单色阶）；
 学习状态 = 未学中性灰 / 复习琥珀 / 掌握橙 / 需突破砖红。
 图谱仍是**数据可视化区**，不受全站「蓝/黄/红三角色」配额约束（G-7 / G-16）。
+〔**A-107**〕橙阶**四档是色键的设计上限**，实际占用档数随数据而变：`importance` 在真实数据里
+只有 `core` / `supplementary` **两类** ⇒ 该投影**按数据实际只占 2 档**；
+⚠️ **不许发明数据**（要四档是**内容侧**给知识点补重要性分级的**另一个决定**）。
 
 ### 七、选中态：点放大 + 标签提亮（A-24.7）
 
@@ -255,10 +258,15 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
      yellow… red…」。图谱的暖色板（琥珀 / 橙 / 砖红 / 中性灰 + 墨阶）是对三角色配额的
      **一处显式、限域的例外**，需要在该能力里写明例外范围。
      ⚠️ **并行冲突登记**：`workbench-visual-language-v2` 的 `workbench-ui` delta
-     **已经 MODIFIED 了这一条**（`specs/workbench-ui/spec.md:317`，含场景
-     「The knowledge graph page is unchanged」，`:367-371`）。该场景在本变更落地后
+     **已经 MODIFIED 了这一条**（`specs/workbench-ui/spec.md:668`，含场景
+     「This foundation leaves the knowledge graph page unchanged」＝ **需求正文 `:686-691`**
+     ＋ **场景标题 `:720`**）。该场景在本变更落地后
      **不再成立**，两处 delta 必须协调（建议：先合入 `workbench-visual-language-v2`，
      本变更在其之上追加「图谱例外」段落并退役该场景）。
+     ⚠️ 原引用指向无关条款，已修正（原写 `:317` / `:367-371`：`:317` 不是
+     `Soft Mondrian visual foundation` 那一块，`:367-371` 是「The transition survives the
+     content being replaced」这条**无关的转场场景**；真正的场景标题在 `:720`、
+     需求正文在 `:686-691`）。
      📎 **「亮色逐像素不变」这条约束按 A-12 从图谱的约束里拿掉**：
      v2 的 `acceptance.md:22` 的 G-5 原文已写明
      「图谱**不在该变更的验收范围内**…零差异不是一条待达成的门禁，
@@ -301,11 +309,11 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
 
 | 文件 | 落点 |
 |---|---|
-| `workbench/server/static/workbench.css` | 图谱专用区段 `:1497-1884`：图谱自有 `:root`（`:1505-1518`，新增夜纸值集）；节点规则（`:1643-1719`：`.node-wrap` / `.node` / `.node-face` → **`.node-dot`**（单层实心圆）/ **`.node-focus-ring`**（1px 描边环，仅交互态）/ `.metric-track` / `.status-ring` / `.node-value` / `.node-satellite` / `.label` / `.meta`）；图例（`:1780-1799`）；缩放条（`:1800-1807`） |
-| `workbench/server/static/workbench.js` | `graphCreateNodes()`（`:957-1053`，节点 DOM 重构）；`graphProjectionDisplay()`（`:1055-1061`，圆心数字按投影决定）；`graphUpdateNodeAppearance()`（`:1063-1075`）；`graphSyncScope()`（`:1077`，空函数）；`graphApplyView()`（`:1104-1107`，写出缩放比）；`graphFit()`（`:1203-1229`）；`graphPaintNodes()`（`:1296-1325`，尺寸 / 标签可见性判定）；`graphTide*()`（`:1479-1660`，底噪改静态 / 降频） |
+| `workbench/server/static/workbench.css` | 图谱专用区段 `:3583-3970`：图谱自有 `:root`（`:3591-3604`，新增夜纸值集）；节点规则（`:3729-3805`：`.node-wrap` / `.node` / `.node-face` → **`.node-dot`**（单层实心圆）/ **`.node-focus-ring`**（1px 描边环，仅交互态）/ `.metric-track` / `.status-ring` / `.node-value` / `.node-satellite` / `.label` / `.meta`）；图例（`:3866-3885`）；缩放条（`:3886-3893`） |
+| `workbench/server/static/workbench.js` | `graphCreateNodes()`（`:2052-2148`，节点 DOM 重构）；`graphProjectionDisplay()`（`:2150-2156`，圆心数字按投影决定）；`graphUpdateNodeAppearance()`（`:2158-2170`）；`graphSyncScope()`（`:2172`，空函数）；`graphApplyView()`（`:2199-2202`，写出缩放比）；`graphFit()`（`:2298-2324`）；`graphPaintNodes()`（`:2391-2420`，尺寸 / 标签可见性判定）；`graphTide*()`（`:2574-2755`，底噪改静态 / 降频） |
 | `workbench/server/static/graph-physics-core.js` | `edgeStyle()`（`:1326-1329`，**绘制用的**线宽 / 透明度 → 1.25 / 0.3）；`NODE_FACE_INSET` / `endpointRadius()`（`:1343-1347`，端点改按**绘制半径**收束）。**`sizeFor()`（`:60-61`）不动**（物理半径冻结，A-26）；**`labelWidth()`（`:83-85`）/ `footprint()`（`:93-101`）不动**（碰撞分离冻结，A-26） |
 | `workbench/server/static/graph-renderer.js` | `EDGE_COLORS`（`:15-21`，**亮色主题不改**）；`draw()`（`:242-300`，端点按绘制半径收束；线宽 1.25 屏幕 px；箭头按类型语义落点、屏幕尺寸恒定；非邻接边的淡化系数 0.07 → 0.2） |
-| `workbench/server/pages.py` | `graph_page()`（`:410-481`）：图例改为两块（`:462-467`）、关系类型项补箭头语义、`aria-label` 与无障碍名随节点语义更新 |
+| `workbench/server/pages.py` | `graph_page()`（`:661-732`）：图例改为两块（`:713-718`）、关系类型项补箭头语义、`aria-label` 与无障碍名随节点语义更新 |
 
 ### 不改（A-26 的冻结清单，逐项带证据）
 
@@ -314,13 +322,13 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
 - **布局与种子**：`graph-physics.js:43-48` 的 `lk_graph_layout_v1_<workspace>` 读写格式；
   auto-fit **之外**的相机与布局逻辑 —— **零改动**。
 - **邻接与边集合、边的类型与权重**：`graph-physics-core.js:1399` 的边模型
-  （`s / t / type / strength / direction`）、`NEIGHBOR_WEIGHT`（`:527`）、
+  （`s / t / type / strength / direction`）、`NEIGHBOR_WEIGHT`（`:32`）、
   `baseGapForStrength()`（`:68-70`）—— **零改动**。
 - **筛选语义**：可选状态集合、可见节点的并集、边的保留规则、页面级状态 —— **零改动**。
 - **投影语义与分档、指标计算**：`scoreFor()`（`:1463-1470`）、`stateAttention()`、
   `sizeFor()`（`:60-61`）—— **零改动**。
 - **DOM 节点的身份与顺序**：`graphCreateNodes()` 的节点 id、`data-kp-id`、创建顺序 —— **零改动**。
-- **拖拽与聚焦的行为语义**：`graphApplyVisibility()`（`workbench.js:1080-1105`）、
+- **拖拽与聚焦的行为语义**：`graphApplyVisibility()`（`workbench.js:2174-2198`）、
   拖拽锚点、聚焦邻域展开 —— **零改动**。
 - **后端 / 数据层**：`pool/`、`pipeline/`、`workbench/data/` 一行不动。
   **不新增任何学习事实、不新增任何持久字段、不改任何 API 请求序列与载荷。**
