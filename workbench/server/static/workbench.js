@@ -589,11 +589,44 @@
   }
 
   /* The burst and the paper flutter are created here and nowhere else: the
-     ordinary tier never has them in the document at all (tasks.md 8.8). */
+     ordinary tier never has them in the document at all (tasks.md 8.8).
+
+     The paper flutter is drawn the way the group-9 illustrations are drawn
+     (assets/empty/*.svg): a pale wash plus an ink line, round caps and
+     joins, stroke widths 1.5 / 2, the same asset tokens.  Three small shapes
+     — a thin strip, a round chip and a triangle — take turns.  No bitmap, no
+     sprite, no image sequence; the shapes are inline SVG strings, so the
+     gradient rule of the authority table (gradients only inside a drawing)
+     holds by construction: there is no gradient at all here. */
   var CONFETTI_SPOTS = [
     [8, 12], [18, 26], [28, 8], [38, 30], [47, 14], [56, 26],
     [65, 8], [74, 22], [83, 12], [91, 28], [14, 40], [60, 38],
   ];
+
+  var CONFETTI_STRIP = "M 10.4 4.6 C 11.7 4 13.3 4 14.6 4.7 "
+    + "C 14.2 10 13.6 15 13.2 19.5 C 12.1 19.9 11 19.9 10 19.4 "
+    + "C 10.5 14.8 10.9 9.8 10.4 4.6 Z";
+  var CONFETTI_CHIP = "M 19.2 12 C 19.2 15.7 16 18.6 12 18.6 "
+    + "C 8 18.6 4.8 15.7 4.8 12 C 4.8 8.3 8 5.4 12 5.4 "
+    + "C 16 5.4 19.2 8.3 19.2 12 Z";
+  var CONFETTI_TRIANGLE = "M 12.4 4.2 C 14 7.6 16.4 11.4 18.4 15.2 "
+    + "C 18.8 16 18.6 16.8 17.8 17 L 6.6 17.4 C 5.8 17.4 5.4 16.6 5.9 15.8 "
+    + "C 8 12 10.2 8 12.4 4.2 Z";
+
+  function confettiShape(kind) {
+    var wash = kind === 1
+      ? "color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"
+      : "color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))";
+    var path = kind === 0 ? CONFETTI_STRIP : kind === 1 ? CONFETTI_CHIP : CONFETTI_TRIANGLE;
+    var width = kind === 0 ? "1.5" : "2";
+    return "<svg viewBox='0 0 24 24' class='asset asset-confetti' "
+      + "xmlns='http://www.w3.org/2000/svg' aria-hidden='true' focusable='false'>"
+      + "<g stroke-linecap='round' stroke-linejoin='round'>"
+      + "<g class='asset-confetti__wash'><path d='" + path + "' fill='" + wash + "'/></g>"
+      + "<g class='asset-confetti__line' fill='none' stroke='var(--asset-ink, #2a2620)'>"
+      + "<path d='" + path + "' stroke-width='" + width + "'/></g>"
+      + "</g></svg>";
+  }
 
   function mountMilestoneBurst(surface) {
     var anchor = celebrationAnchor(surface);
@@ -604,6 +637,11 @@
       anchor.style.position = "relative";
     }
     var burst = document.createElement("div");
+    /* The geometric burst is a **ring** that spreads and fades: the
+       stylesheet draws it as a 2px outline with a fully round radius
+       (`.lk-celebrate-burst`), and the keyframe scales it out while the
+       opacity goes up and down again — a ring, never a filled block
+       (tasks.md 17.7). */
     burst.className = "lk-celebrate-burst";
     /* A-38: the burst carries the cue hook, so the milestone sound lands on
        the same beat as the burst itself. */
@@ -614,11 +652,19 @@
 
   function mountConfetti(mounted) {
     if (!mounted || !mounted.anchor) return;
-    CONFETTI_SPOTS.forEach(function (spot) {
+    CONFETTI_SPOTS.forEach(function (spot, index) {
       var piece = document.createElement("div");
       piece.className = "lk-confetti";
+      /* The stylesheet's chip is a plain colour block; the shape and its size
+         are the drawing's, so the block is emptied here — the placement and
+         the fall animation still come from the stylesheet.  These are static
+         declarations, not animation start states. */
+      piece.style.background = "none";
+      piece.style.width = "16px";
+      piece.style.height = "16px";
       piece.style.left = spot[0] + "%";
       piece.style.top = spot[1] + "%";
+      piece.innerHTML = confettiShape(index % 3);
       mounted.anchor.appendChild(piece);
       mounted.pieces.push(piece);
     });
@@ -649,15 +695,20 @@
        (motion-spec §7.2 row 14). */
     if (motionMode() !== "full") return;
     var mounted = null;
+    /* The burst goes up at 400 ms — the same beat as the milestone cue
+       (tasks.md 10.6). */
     window.setTimeout(function () {
       mounted = mountMilestoneBurst(target);
     }, 400);
+    /* The paper flutter starts at 700 ms, so that the 800 ms frame of the
+       storyboard catches it at its peak; it falls for `--dur-ceremony`
+       (700 ms) and is cleared afterwards, which leaves a clean end state. */
     window.setTimeout(function () {
       mountConfetti(mounted);
-    }, 800);
+    }, 700);
     window.setTimeout(function () {
       clearMilestone(mounted);
-    }, 1200);
+    }, 1600);
   }
 
   window.lkCelebrate = {
