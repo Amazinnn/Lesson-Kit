@@ -3068,6 +3068,36 @@ html[data-motion="off"] *::after {
   html:not([data-motion="on"]) .lk-ripple-glow { display: none !important; }
 }
 
+/* ============================================================================
+   纸面侧收口（IMPL-W2e）—— 「标记已实现、样式没跟上」的那一批
+   ⚠️ 本块整体落在**图谱区段之前**：图谱区段与它的 12 个裸名一行都不许碰。
+   ========================================================================= */
+
+/* ---- 作答区 = 沉底块 + 16px 标签（tasks.md 16.3 · IMPL-W2e 第 6 条）--------
+   `pages.py` 已用 `.paper-answer-block` / `.paper-answer-label`，CSS 里**零命中**
+   ⇒「你的作答」是**默认字号的裸文字**，作答区**没有沉底块**。
+   · 沉底块 = `--surface-sunken` + **12px 圆角** + **1px 内发丝线**
+     （`box-shadow: inset 0 0 0 1px var(--rule-hair)`，**不用 border**、
+     **不改盒模型**）+ **不带柔影**（凹层不抬升，权威表 §3.1【A-23-3】）；
+   · 标签 **16px**（题面内非 stem 文字降一档）+ 次级墨。 */
+.paper-answer-block {
+  display: grid;
+  gap: var(--sp-2);
+  margin: var(--sp-4) 0;
+  padding: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+}
+.paper-answer-label {
+  font-family: var(--font-ui);
+  font-size: var(--fs-sub);   /* 16px = 题面内非 stem 文字降一档 */
+  line-height: 24px;
+  color: var(--ink-muted);
+}
+/* 沉底块里的输入框贴住标签，不留多余的上下外边距 */
+.paper-answer-block #paper-answer { margin: 0; }
+
 /* Knowledge graph V2 — constrained semantic layout, paper Mondrian skin. */
 
 /* ==========================================================================
