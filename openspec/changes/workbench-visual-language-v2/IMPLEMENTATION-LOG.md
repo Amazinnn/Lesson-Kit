@@ -843,3 +843,43 @@ OS `prefers-reduced-motion: reduce` ⇒ `animation-name: none` + `scaleX(1)` + `
 要绕开就得 `display: flow-root` 新建布局上下文，代价大于收益）·
 **`.lk-progress` 轨道加 1px 内发丝线**（与记录页那三条轨道同语言；
 满格时被填充盖住看不见，但**庆祝生长过程中**会框住底槽 —— 那正是它该起作用的时候）。
+
+### 9.22 A-59 补一处（接管窗口的「瞬时 0」）已落地
+
+**问题**：`prepareRun` 的 legacy 接管路（老记录没有 `reveal_timing`，要向服务端要）
+在服务端回话前 `run.reveal_timing` 为空 ⇒ `currentMode()` 兜底成 `per_item`
+⇒ 连对计数器**闪一下「0」**，随后被撤掉。
+
+**修法**（**只加一个条件、只在一处**）：
+```js
+renderingArchived || !run.reveal_timing || currentMode() === "on_submit" ? "" : <计数器>
+```
+⚠️ **`currentMode()` 的兜底一个字没动** —— 它被 15 处用（`itemStatus` / `answerChoices` /
+`isLocked` / 提交按钮可见性 / 选项判定分支 / `submitAnswer` 早退 / `markStuck` / `submitPaper` …），
+改兜底会牵动一大片既有行为。
+
+**怎么造出那个窗口的**（值得记）：隔离池副本里造一份**没有 `reveal_timing` 的老记录**
+（`active_practice` 行的 `reveal_timing` 置 NULL、`source_ref='ps-008'`、7 题全 `item_type='problem'`
+⇒ 命中 `isPaperRun` ⇒ 走 `prepareRun` 的 legacy 接管路），
+再用 **Playwright 路由拦截把接管的 `POST /practice/current/navigate` 挂住 2 秒**
+⇒ 「模式未知」窗口**可观测、可截图**，而不是靠推断。
+
+**before / after 实测**：
+
+| | 接管窗口内 | 接管完成后（per_item） |
+|---|---|---|
+| **before** | `hasStreak=True`、`ticker='0'` ⇒ **闪一个灰色 0** | 正常挂上 |
+| **after** | `hasStreak=False`、**不挂计数器** | 正常挂上（ticker='0' 是真实起点） |
+
+⇒ 截图对比：改前是题卡上一个**灰色「0」方块**（tier 0、无火苗）；改后题卡里**只有** kicker + 题面
+（题卡高 181px vs 接管后 242px）。
+
+**请求序列**：`tools/walkthrough/recorder.py` 的 `diff_sequences` ⇒
+**G-1 阻断层（写请求）added/removed/changed 全空**；两次跑的全部事件逐条列出，
+**唯一差异是静态资源 GET 的浏览器预取顺序噪声**（按 harness README §2.4(e) 不入主 diff）
+⇒ **产品请求序列零差异**。
+
+**两种模式重测**：on_submit 四处采样 `.lk-streak` / `.practice-streak` / `.lk-flame` /
+`.lk-combo-banner` **全为 0**；per_item 1→5 逐格增长、5 连点亮横幅、
+断裂时火苗**逐簇熄灭**（`7ms:lit=5 → 54ms:4 → 78ms:3 → 128ms:2 → 179ms:1 → 203ms:0`）+
+`nudge` 自 54ms 起生效 + 计数器归零。真实池 mtime 仍是 `Oct 20 15:00`。
