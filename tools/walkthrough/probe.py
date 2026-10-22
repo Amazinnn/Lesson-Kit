@@ -2058,18 +2058,18 @@ def probe_animation_properties(ctx):
     css_offenders = []
     for path in ctx.own_css_files():
         text = path.read_text(encoding="utf-8", errors="replace")
-        for match in re.finditer(r"@keyframes\s+([\w-]+)\s*\{(.*?)\n\}", text, re.S):
+        for match in re.finditer(r"@keyframes\s+([\w-]+)\s*\{", text):
             name = match.group(1)
-            body = match.group(2)
-            props = set(re.findall(r"([a-z-]+)\s*:", body))
-            for prop in props:
-                if prop in ("from", "to", "0%", "100%", "transform", "opacity"):
-                    continue
-                if re.match(r"^\d", prop) or prop.endswith("%"):
-                    continue
-                if prop not in allowed:
+            # The block is bounded by its **matching** brace: a window
+            # would run into the rules that follow the keyframes.
+            body = _matching_block(text, match.end() - 1)
+            for block in re.findall(r"[^{}]+\{([^{}]*)\}", body):
+                for prop in re.findall(r"(?:^|;)\s*([a-z-]+)\s*:", block):
+                    if prop in allowed or prop in ANIMATION_CONTROL:
+                        continue
                     css_offenders.append({"file": path.name, "keyframes": name,
                                           "property": prop})
+                    break
     data = {
         "live": {"transitions": live.get("transitions", [])[:40],
                  "wildcards": live.get("wildcards", [])[:20],
@@ -2080,6 +2080,31 @@ def probe_animation_properties(ctx):
     if offenders or css_offenders:
         return _bad(data, "有动效动了 transform / opacity 之外的属性")
     return _ok(data, "动效只动 transform / opacity")
+
+
+#: The animation **control** properties: they do not animate anything by
+#: themselves, so they are not "the motion touches a third property".
+ANIMATION_CONTROL = {
+    "animation", "animation-name", "animation-duration", "animation-delay",
+    "animation-timing-function", "animation-fill-mode", "animation-direction",
+    "animation-iteration-count", "animation-play-state",
+    "transition", "transition-property", "transition-duration",
+    "transition-delay", "transition-timing-function",
+}
+
+
+def _matching_block(text, open_index):
+    """The body of the block whose opening brace is at ``open_index``."""
+    depth = 0
+    for index in range(open_index, len(text)):
+        char = text[index]
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[open_index + 1:index]
+    return text[open_index:]
 
 
 def probe_long_list(ctx):
