@@ -89,14 +89,19 @@ workbench/
 │   ├── app.py         # BaseHTTPRequestHandler 路由（单进程单端口 127.0.0.1）
 │   ├── api.py         # JSON API 处理器（hub/weak/pull/practice/feedback/schedule/figures/ai）
 │   ├── context.py     # 按路由与 Pool 重建 Agent 页面上下文；练习页附页面锚点、同轮近期题和限长草稿
-│   ├── pages.py       # 服务端页面壳与通用页面 HTML
+│   ├── pages.py       # 服务端页面壳与通用页面 HTML（含工作台设置视图）
 │   ├── records.py     # 记录中心页面 HTML（四个视图）
 │   └── static/
 │       ├── agent-ui.css   # Agent 栏、composer 与临时工作面的样式，复用 workbench.css tokens
 │       ├── agent-ui.js    # Agent 展示层：context chips、composer sizing、辅助面折叠
 │       ├── middle-navigation.js # 同工作区中栏导航，复用已挂载的 workbench shell
 │       ├── practice-deck.js # 练习 session 纯数据状态
-│       └── practice-flow.js # 练习页 DOM 与请求生命周期
+│       ├── practice-flow.js # 练习页 DOM 与请求生命周期
+│       ├── settings.css   # 工作台设置视图（外观偏好）的样式
+│       ├── settings.js    # 设置视图：外观偏好读写、主题应用与主题切换转场
+│       ├── fonts/         # 打包衬线字体 woff2（SIL OFL，附授权文件）；只服务阅读面
+│       ├── assets/        # 手写 SVG 资产集：导航具象图标、空态静物插画、台灯
+│       └── audio/         # 关键反馈短音效（答对/答错/完成/里程碑）
 └── tests/             # pytest；tests/test_*.py 与 tests/workbench/ 分开
 ```
 
@@ -233,6 +238,10 @@ workbench/
 - 新学习动作：domain 加模块，data.queries 加查询，Shell 加命令/页面。
 - AI 教师记忆消费端：读 trace（jobs 归档）+ feedback_events，独立后置模块。
 - 前端：pages.py 服务端渲染升级为更顺滑交互时，改 pages.py 与静态资产即可，不动后端接口。
+  视觉层同样落在这条缝里：token 层与亮/暗两套值（夜纸）在静态 CSS 里，主题偏好、
+  阅读字面、动效偏好与声音偏好是浏览器偏好（`localStorage`，按工作区），不写池、
+  不经后端接口；新增静态资产只加在 `workbench/server/static/` 下（`fonts/`、`assets/`、
+  `audio/` 与设置视图的 css/js），仍不新增后端接口与构建步骤。
 - 图谱关系管线是纯展示映射：现有 attraction 决定宽度/深浅，候选布局执行有限
   确定性消交叉；三层 SVG 路径和位置均不进入 SQLite。
 - 前端内容边界：主学习文本完整换行；代码、展示公式与表格局部滚动；主要

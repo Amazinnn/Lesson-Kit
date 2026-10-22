@@ -122,7 +122,17 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | provider 解析清单（可执行文件、来源 config/path、路径是否缺失、生效的两个轮次预算） | CLI `bridge list` | 人 | —（只读） | 已实现（introduce-pi-agent-and-cli；2026-09-25 报告预算） |
 | 显式钉死 provider 可执行文件（优先于 PATH 探测），并设定静默/工具两个轮次预算 | CLI `bridge add --command [--timeout --tool-timeout]` | 人 | bridges.json | 已实现（同上；2026-09-25 预算） |
 
-## 七、未定动作区（挂名池，定义见 PENDING-DEFINITIONS）
+## 七、外观与设置
+
+| 动作 | 入口 | 权限 | 写 | 状态 |
+|---|---|---|---|---|
+| 打开 / 关闭工作台设置视图 | UI 左栏「设置」区开关 | 人 | —（只切换中栏视图；不写池） | 已定义未实现（workbench-visual-language-v2；`workbench-settings` spec） |
+| 修改外观偏好（主题偏好 / 阅读字面 / 动效偏好 / 声音偏好） | UI 工作台设置视图 | 人 | 浏览器 `localStorage`（按工作区）；不写池、不产生学习记录 | 已定义未实现（同上） |
+
+外观偏好只表达偏好：主题切换走台灯转场，动效与声音偏好各自独立；左栏原有的
+「学习者设置」（练习与组卷显示自评等学习行为偏好）**不搬家**，仍在左栏，两者不合并。
+
+## 八、未定动作区（挂名池，定义见 PENDING-DEFINITIONS）
 
 速成模式视图 · 批量揭晓 · 扩展摘要 · 教师记忆消费端 · Obsidian 打包 ·
 图形资产管理 · CLI 层 agent 准备 · cloze 拆卡（闪卡 spec 未来段） ·
@@ -227,3 +237,9 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   不执行、永不因仓库缺文件删池）。CLI 顶层命令增至 24；不执行 Git clone/pull/commit/push。
 
 2026-10-20 新增/改级（compact-agent-queue-and-direct-interrupt）：输入区拖动或键盘重排待发消息（人 → 薄 API → Bridge，读写 queue_order）；排队行立即发送（人 → 薄 API → Bridge，复用原 turn 并停止交接）；中断后发送从队列优先项改为独立交接。编辑/删除/继续保持原责任层级。待审批或另一停止交接时拒绝立即发送，恢复原文不覆盖草稿。
+
+2026-10-21 新增（workbench-visual-language-v2）：第七节「外观与设置」新增两条动作——打开/关闭
+**工作台设置视图**（入口 = 左栏「设置」区开关，只切换中栏视图，不写池）与修改外观偏好
+（主题偏好 / 阅读字面 / 动效偏好 / 声音偏好，写浏览器 `localStorage`，按工作区存，不写池、
+不产生学习记录）。两条均**已定义未实现**，权威出处 = 本 change + `workbench-settings` spec。
+左栏「学习者设置」不搬家；请求序列与持久化不变；知识图谱相关动作零改动。

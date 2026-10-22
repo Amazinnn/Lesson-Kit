@@ -325,10 +325,109 @@ _Avoid_：`lesson-kit`（另一个同名程序是 Weights & Biases，与本项�
 _Avoid_：PATH 探测优先（旧行为，已推翻）、静默回退
 出处：ai-teacher-bridge spec「Provider-native conversation discovery」
 
-### 柔和蒙德里安 / Soft Mondrian
-Lesson Kit 的视觉语言：暖纸色与深色结构线占主体，蓝/黄/红只承担主要动作、
-当前或复习强调、重点练习或失败等有限语义。状态同时保留文字或几何提示。
-出处：workbench-ui spec「Soft Mondrian visual foundation」
+### 柔和蒙德里安 v2 / Soft Mondrian v2
+**2026-10-21 重新定义**（方向转向后的定案）。Lesson Kit 的视觉语言总纲：
+**暖色 + 现代圆润**——底色偏暖（浅奶油 `#fdf8ef`），骨架是大圆角、饱和色块、
+圆润图标与活泼动效；底色纯色，**不铺任何背景纹理**。
+
+- **三角色色配额**（不引入第五色）：学习蓝 = 主要动作 + 链接 + 当前选中；
+  阳光黄 = 当前 + 复习强调 + 连对进度；注意红 = 失败 + 阻塞。黄色对比度不足，
+  只承载面积与形状，不承载文字。
+- **纸面分层**：底 / 卡 / 浮起 / 墨块四层，靠圆角与暖调柔影分层，**不用描边**。
+- **圆角 12px**：按钮 / 卡片 / 标签 / 输入框统一。
+- **双字体**：阅读面衬线（正文 17px / 行高 1.75 / 行宽 38em），界面与标题无衬线，
+  等宽为第三族。
+- **状态不得只靠颜色**：颜色之外必有几何冗余通道（彩色圆点）。
+- **两条全局原则**：「少字原则」与「图案适配原则」。
+
+它是既有「柔和蒙德里安 / Soft Mondrian」的**精修，不是替代**：2026-10-21 之前该词条
+把「暖纸色与深色结构线占主体」写成了定义，本轮按所有者方向转向（暖色 + 现代圆润，
+不再一味仿古）重写该定义；**词条保留，不另造同义条目**。
+_Avoid_：视觉风格偏好、个人审美主张、独立深色主题
+出处：openspec/changes/workbench-visual-language-v2（decisions.md「收口：最终基线」、proposal.md）；workbench-ui spec「Soft Mondrian visual foundation」
+
+### 纸面层级 / Paper level
+表面所处的层：**底（页底）/ 卡（卡片）/ 浮起（抬起）/ 墨块（深色块，代码块与选中项）**
+四层。每层有自己的底色与抬升强度，分层靠**圆角 + 暖调柔影**表达，**不用描边**；
+暗色主题下同一层级改用夜纸的值集。
+_Avoid_：z-index 层级、阴影层级、卡片层级
+出处：openspec/changes/workbench-visual-language-v2
+
+### 夜纸 / Night paper
+暗色主题下的暖调深色纸面值集（基色 `#1c1a16`），与亮色的浅奶油同源——白天是米色纸，
+夜里是台灯照着的纸。它是**第二套值**，不是新色系：角色色仍是学习蓝 / 阳光黄 / 注意红，
+只把圆底降饱和并提亮；同一套 SVG 用 CSS 变量换前景与背景色，一套资产服务两个主题。
+_Avoid_：深色主题岛、护眼模式、夜间模式开关（那是偏好不是值集）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 冗余状态通道 / Redundant state channel
+状态除颜色之外的**几何**编码：颜色是主通道，形状是冗余通道（彩色圆点）。状态不得
+只靠颜色，但冗余通道**不是文字标签**——凡要靠加说明文字来解决视觉问题的，改用形态或
+色彩方案（见「少字原则」）。零文字。
+_Avoid_：状态徽标、状态文字标签、颜色语义、无障碍标签（那是另一件事）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 主题偏好 / Theme preference
+亮 / 暗主题的浏览器偏好，按工作区存于 `localStorage`。它只表达偏好，不写池，
+不影响任何学习事实；默认跟随系统，切换时走「台灯转场」。
+_Avoid_：工作台设置项、显示设置、系统主题（那是来源不是偏好）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 阅读字面 / Reading face
+阅读面（知识点正文、题面、解析等长文）所用字族——衬线或无衬线——的浏览器偏好，
+按工作区存于 `localStorage`。界面与标题始终无衬线，等宽为第三族；正文 17px /
+行高 1.75 / 行宽 38em 不随该偏好改变。
+_Avoid_：字体、字族、正文字体（那是实现资源不是偏好）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 动效偏好 / Motion preference
+动效开 / 关的浏览器偏好，按工作区存于 `localStorage`；默认跟随系统
+`prefers-reduced-motion`。关闭时所有动效降级为状态直切：主题切换不做涟漪，庆祝直接落终态。
+_Avoid_：动画开关、减弱动效、性能模式
+出处：openspec/changes/workbench-visual-language-v2
+
+### 声音偏好 / Sound preference
+音效开 / 关的浏览器偏好，按工作区存于 `localStorage`。只有关键反馈（答对 / 答错 /
+完成 / 里程碑）各有 <200ms 的短音效；受浏览器自动播放限制，首次音效必须挂在一次
+用户手势之后。
+_Avoid_：静音（那是结果不是偏好）、音频资产、提示音库
+出处：openspec/changes/workbench-visual-language-v2
+
+### 工作台设置视图 / Workbench settings view
+中栏新增的外观设置页，由**左栏设置区的开关**打开与关闭。它承载**外观**偏好：
+主题偏好、阅读字面、动效偏好、声音偏好；偏好按工作区存于浏览器 `localStorage`，
+不写池。左栏原有的「学习者设置」（练习与组卷显示自评等**学习行为**偏好）**不搬家**，
+仍在左栏——两者分属外观与学习行为两件事，不可混为一谈。
+_Avoid_：学习者设置（左栏的学习行为偏好）、设置页、偏好面板
+出处：openspec/changes/workbench-visual-language-v2（`workbench-settings` spec）
+
+### 静物插画 / Still-life illustration
+空态用的**具象器物**插画（花瓶、果篮、画布、杯子、书本、台灯、钢笔…）：写意线稿 +
+淡彩晕染 + 克制高光，与图标同一套线宽与圆角语言，像同一支笔画的。纯 CSS / SVG 画，
+不外链；同一套 SVG 经 CSS 变量换色，一套资产服务两个主题。
+_Avoid_：抽象几何团块、照片、背景图案、图标字体
+出处：openspec/changes/workbench-visual-language-v2
+
+### 台灯转场 / Lamp transition
+主题切换时的叙事转场：一盏台灯从角落探出 → 点亮 → 暖色涟漪自灯下扩散铺满
+（切夜纸）或反向收拢（切回暖纸），约 700ms。涟漪只动 `transform` / `opacity`，
+不阻塞交互、不改请求时序；系统开启「减少动态效果」时直接切换，不做涟漪。
+_Avoid_：页面转场、加载动画、视图切换动画
+出处：openspec/changes/workbench-visual-language-v2
+
+### 少字原则 / Minimal-annotation principle
+全局设计原则：信息优先由**元素形态与色彩**表达，不靠文字注释堆砌；界面注释本身
+**能删就删**，而不是换成更漂亮的说明文字。与「状态不得只靠颜色」合起来是
+「颜色 + 几何」，不是「颜色 + 文字」。
+_Avoid_：文案风格、语气偏好、信息不足的免责声明
+出处：openspec/changes/workbench-visual-language-v2
+
+### 图案适配原则 / Contextual-graphic principle
+全局设计原则：承载信息的图形（图标、状态标记、插画、纹理）必须**由背景自身的视觉
+规则推导**——同一圆角语言、同一线宽阶、同一色彩寄存器、同一笔触密度；不得作为独立
+装饰层贴上去，视觉逻辑必须自洽。
+_Avoid_：装饰风格、贴图素材库、视觉花哨度
+出处：openspec/changes/workbench-visual-language-v2
 
 ## 选择与练习
 

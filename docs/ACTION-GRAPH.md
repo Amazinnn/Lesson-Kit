@@ -24,6 +24,8 @@
 
 2026-10-20 紧凑 Agent 待发列表与直接中断：输入区一份列表、拖动/键盘重排和既有消息立即发送；Bridge 持久顺序与 ownership 串行交接，不将停止等待混进队列。恢复摘要与真实失败历史分开，审批期间拒绝中断而不隐式排队。见 L0/L2/L3/L4 与 compact-agent-queue-and-direct-interrupt。
 
+2026-10-21 工作台视觉语言 v2：视觉语言由「柔和蒙德里安」重新定义为**暖色 + 现代圆润**（12px 大圆角、饱和三角色色配额、纸面分层不描边、双字体、动效系统）；新增中栏**工作台设置视图**承载外观偏好（主题偏好 / 阅读字面 / 动效偏好 / 声音偏好），由左栏开关打开关闭，偏好按工作区存于浏览器 `localStorage`，不写池。知识图谱页完全不在范围内；请求与持久化不变。见 L3 与 workbench-visual-language-v2。
+
 ## 铁律（所有者钦定）
 
 2026-10-17：既有 `migrate-progress.py` 的 schema ensure 修复 attempt 临时父表外键，
@@ -123,6 +125,12 @@ flowchart LR
 
 ## 变更留痕
 
+- 2026-10-21 工作台视觉语言 v2（workbench-visual-language-v2）：视觉语言由「柔和蒙德里安」
+  重新定义为**暖色 + 现代圆润**；新增中栏**工作台设置视图**（左栏「设置」区开关打开关闭），
+  承载主题偏好 / 阅读字面 / 动效偏好 / 声音偏好，偏好按工作区存于浏览器 `localStorage`，
+  不写池。新增动作「打开/关闭工作台设置视图」与「修改外观偏好」，均**已定义未实现**。
+  请求序列、持久化与学习事实不变；知识图谱相关动作零改动；口径类动作（正确率、
+  完成练习次数）不在本轮。见 L3、GLOSSARY、PRODUCT-MANUAL、ARCHITECTURE。
 - 2026-10-19 Paper 自由导航与 Agent/CLI authoring 边界（free-navigation-paper-practice、remove-learner-manual-paper-selection）：普通 Paper 增加 `per_item` / `on_submit` 答案展示方式、全卷自由导航、逐题提交与显式交卷、完成页答卷往返及独立重练轮次；只有显式交卷归档，普通 Paper 自评可跳过。学习者练习页只管理既有 Paper，不再手工选题或调整成员/顺序；Agent/CLI 的 pull、筛选、精确题号与保存 authoring 保留。章透镜、图谱筛选与节点聚焦仍是阅读功能；闪卡和旧轮次语义保留。见 L0–L4。
 - 2026-10-16 Agent 工件交付（agent-ui-v1-implementation，PR129/135/136/137）：Agent 只能按已保存 Paper 记录产出 `paper_artifact` 工件卡（标题/题数取自记录，丢布模型 URL）；最新工件可临时展开 Adaptive Split 预览，历史工件卡不自动展开，打开组卷页始终是显式操作。
 - 2026-10-13 作者内容镜像字段扩展（expand-content-mirror-fields/PR123）：既有 `mirror`
