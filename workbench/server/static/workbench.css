@@ -4,8 +4,9 @@
  *   取值的**唯一权威**是 openspec/changes/workbench-visual-language-v2/design-notes/
  *   night-paper-tokens.md —— 本文件的每个值逐字转写自它，未自造、未换算。
  * · 旧 token（--lk-* / --dsw-*）的**别名期已于任务 2.3 收尾**：别名定义与旧名
- *   引用点一并删除；唯一保留的旧名是契约外的 `--dsw-state-success`
- *   （tasks.md 4.4「本条不动它」）。
+ *   引用点一并删除；**全站旧名归零**（CD-175 / A-95：最后一个旧名
+ *   `--dsw-state-success` 的唯一消费者 `.status-dot.ok` 本身零引用
+ *   ⇒ 例外作废，定义与规则一并删除）。
  * · 图谱兼容区：图谱有自己的 12 个裸名 token（图谱专用的根 token 块），新层与它们**零同名**；
  *   图谱页的外壳取值由下方「图谱页冻结块」钉回改造前的值
  *   （见 design.md D-1 与 design-notes/graph-isolation.md B-1…B-6）。
@@ -236,12 +237,6 @@
   /* ---- §3.11 UA 行为（1）---- */
   --color-scheme: light;
   color-scheme: var(--color-scheme); /* 接到 UA：原生控件 / 滚动条跟随主题 */
-
-  /* ---- 契约外遗留：DSH 的 success 态，**不表达「答对」**（权威表没有绿档，
-     「答对」= 中性墨 + 勾形几何，tasks.md 4.4）——
-     **本条按 4.4「本条不动它」保留原名原值**，它是这条自定义属性的**来源**，
-     引用点（`.status-dot.ok`）直接读它 ⇒ **全站唯一的旧名残留**。 */
-  --dsw-state-success: #22c55e;
 }
 
 /* ============================================================================
@@ -2220,10 +2215,6 @@ td, th { border: 1px solid var(--rule-hair); padding: 4px 8px; text-align: left;
 img { max-width: 100%; }
 .fig-missing { color: var(--ink-faint); font-size: 13px; }
 .math.display { display: block; margin: 4px 0; overflow-x: auto; }
-.status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
-.status-dot.ok { background: var(--dsw-state-success); }
-.status-dot.warn { background: var(--role-yellow-deep); }
-.status-dot.err { background: var(--role-red-ink); }
 
 /* visibility choreography (practice flow) — was missing, breaking every classList toggle */
 .hidden { display: none !important; }
