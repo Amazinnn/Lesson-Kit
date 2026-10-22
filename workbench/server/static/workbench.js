@@ -643,8 +643,10 @@
        opacity goes up and down again — a ring, never a filled block
        (tasks.md 17.7). */
     burst.className = "lk-celebrate-burst";
-    /* A-38: the burst carries the cue hook, so the milestone sound lands on
-       the same beat as the burst itself. */
+    /* A-38: the burst carries the cue hook.  A-53: the hook marks the burst
+       only — the milestone sound itself is driven by the tier decision (see
+       `celebrateCompletion`), so it lands in the downgraded tier too, where
+       no burst is drawn at all. */
     burst.setAttribute("data-lk-cue", "milestone");
     anchor.appendChild(burst);
     return { burst: burst, pieces: [], anchor: anchor };
@@ -691,6 +693,15 @@
       fillProgressBand(target);
     }, 150);
     if (!milestone) return;
+    /* A-53: the milestone cue rides on the **tier decision**, not on the
+       burst element.  The burst is decoration, and a downgraded tier draws
+       no burst at all — the sound is a channel of its own, so the downgraded
+       tier still sounds (the ordinary tier never reaches this line). */
+    window.setTimeout(function () {
+      if (window.lkSfx && typeof window.lkSfx.playCue === "function") {
+        window.lkSfx.playCue("milestone");
+      }
+    }, 400);
     /* A downgraded tier does not draw the burst or the paper flutter at all
        (motion-spec §7.2 row 14). */
     if (motionMode() !== "full") return;
@@ -1175,14 +1186,15 @@
    * once it is there.  A cue may only follow a judgment the learner just
    * caused, so each trigger is armed by the submit gesture it belongs to and
    * disarmed as soon as it fires; re-rendering an old answer stays silent.
+   *
+   * A-53: the milestone cue is not wired here — it rides on the tier
+   * decision in `celebrateCompletion`, so the downgraded tier sounds too.
    */
 
   var CUE_ARM_WINDOW_MS = 10000;
   var VERDICT_SELECTOR = ".micro-verdict";
-  var BURST_SELECTOR = ".lk-celebrate-burst, [data-lk-cue='milestone']";
   var verdictArmedAt = 0;
   var completionArmedAt = 0;
-  var burstCuedAt = 0;
 
   function ancestorWithId(node, id) {
     var current = node;
@@ -1237,27 +1249,15 @@
     }
   }
 
-  function cueBurst() {
-    var now = Date.now();
-    if (now - burstCuedAt < 500) return;
-    burstCuedAt = now;
-    window.lkSfx.playCue("milestone");
-  }
-
   function cueInspect(node) {
     if (!node || node.nodeType !== 1) return;
     var verdicts = [];
-    var bursts = [];
     if (node.matches && node.matches(VERDICT_SELECTOR)) verdicts.push(node);
-    if (node.matches && node.matches(BURST_SELECTOR)) bursts.push(node);
     if (node.querySelectorAll) {
       verdicts = verdicts.concat(Array.prototype.slice.call(
         node.querySelectorAll(VERDICT_SELECTOR)));
-      bursts = bursts.concat(Array.prototype.slice.call(
-        node.querySelectorAll(BURST_SELECTOR)));
     }
     verdicts.forEach(cueVerdict);
-    bursts.forEach(cueBurst);
   }
 
   function wireKeyFeedbackCues() {
