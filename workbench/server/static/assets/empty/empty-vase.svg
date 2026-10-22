@@ -6,33 +6,38 @@
       <ellipse cx="118" cy="165" rx="30" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
-      <path d="M 121.5 58.5 Q 132.5 53.7 127.6 42.7 Q 116.6 47.5 121.5 58.5 Z" fill="color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 128.5 52.0 Q 140.9 51.9 140.1 39.6 Q 127.7 39.7 128.5 52.0 Z" fill="color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 136.0 45.5 Q 145.9 50.2 149.9 40.0 Q 140.0 35.3 136.0 45.5 Z" fill="color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 140.5 42.0 Q 146.8 42.9 146.3 36.5 Q 140.0 35.6 140.5 42.0 Z" fill="color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 142.0 41.0 Q 147.3 39.1 144.1 34.4 Q 138.8 36.3 142.0 41.0 Z" fill="color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 118 59 C 112 59 106 61 102 65.5 C 100 78 100 86 96 96 C 82 108 78 130 88 148 C 93 157 100 162 108 163 C 112 165 116 165.5 118 165.5 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 118 59 C 124 59 130 61 134 65.5 C 136 78 136 86 140 96 C 154 108 158 130 148 148 C 143 157 136 162 128 163 C 122 165 120 165.5 118 165.5 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <g class="asset-empty__extension">
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      </g>
+      <path d="M 118 36.5 C 109.8 36.5 103 38.9 103 42 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158 Q 105 168 118 166 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 118 36.5 C 126.2 36.5 133 38.9 133 42 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158 Q 131 168 118 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
-      <path d="M 118 63 C 123 54 130 46 142 40" stroke-width="2"/>
-      <path d="M 121.5 58.5 Q 132.5 53.7 127.6 42.7 Q 116.6 47.5 121.5 58.5 Z" stroke-width="3"/>
-      <path d="M 128.5 52.0 Q 140.9 51.9 140.1 39.6 Q 127.7 39.7 128.5 52.0 Z" stroke-width="3"/>
-      <path d="M 136.0 45.5 Q 145.9 50.2 149.9 40.0 Q 140.0 35.3 136.0 45.5 Z" stroke-width="3"/>
-      <path d="M 140.5 42.0 Q 146.8 42.9 146.3 36.5 Q 140.0 35.6 140.5 42.0 Z" stroke-width="3"/>
-      <path d="M 142.0 41.0 Q 147.3 39.1 144.1 34.4 Q 138.8 36.3 142.0 41.0 Z" stroke-width="3"/>
-      <path d="M 121.5 58.5 L 125.8 47.4" stroke-width="1.5"/>
-      <path d="M 128.5 52.0 L 136.6 43.3" stroke-width="1.5"/>
-      <path d="M 136.0 45.5 L 145.7 41.6" stroke-width="1.5"/>
-      <path d="M 140.5 42.0 L 144.6 38.1" stroke-width="1.5"/>
-      <path d="M 142.0 41.0 L 143.5 36.4" stroke-width="1.5"/>
-      <path d="M 103 66 C 100 78 100 86 96 96 C 82 108 78 130 88 148 C 93 157 100 162 108 163" stroke-width="3"/>
-      <path d="M 133 66 C 136 78 136 86 140 96 C 154 108 158 130 148 148 C 143 157 136 162 128 163" stroke-width="3"/>
-      <path d="M 108 163 C 114 166 122 166 128 163" stroke-width="3"/>
-      <ellipse cx="118" cy="64" rx="17" ry="5.5" stroke-width="2"/>
+      <g class="asset-empty__extension">
+        <path d="M 122 42 C 132 31 145 23 158 15" stroke-width="2"/>
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" stroke-width="3"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" stroke-width="3"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" stroke-width="3"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" stroke-width="3"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" stroke-width="3"/>
+        <path d="M 131.3 33.4 L 134.2 44.2" stroke-width="1.5"/>
+        <path d="M 139.6 27.1 L 142.5 40.5" stroke-width="1.5"/>
+        <path d="M 148.5 21 L 151.4 31.8" stroke-width="1.5"/>
+        <path d="M 155 17.4 L 157.3 26.8" stroke-width="1.5"/>
+        <path d="M 158 15 L 162.8 11.2" stroke-width="1.5"/>
+      </g>
+      <path d="M 103 44 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158" stroke-width="3"/>
+      <path d="M 133 44 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158" stroke-width="3"/>
+      <path d="M 99 158 C 105 168 132 168 138 158" stroke-width="3"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" stroke-width="2"/>
     </g>
     <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
-      <path d="M 95 104 C 90 112 87.5 121 87 130" stroke-width="1.5"/>
+      <path d="M 92 96 C 87 108 84 121 84 133" stroke-width="1.5"/>
     </g>
   </g>
 </svg>
