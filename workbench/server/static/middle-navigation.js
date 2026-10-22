@@ -110,13 +110,27 @@
 
   /* 切页前：容器先呈骨架 + `aria-busy` 置位；内容到位后由
      `installPageContent` 复位（骨架随 innerHTML 一起被内容替换）。 */
-  function showLoadingState() {
+  function showLoadingState(graphTarget) {
     rememberFocus();
     /* 中栏滚动位置：骨架会把内容压短（滚动被拉回顶部），先记下来、装回内容
        后还原 —— 与改造前一致（换页后中栏滚动位置不丢）。连续换页只记第一次。 */
     if (middle && !middleScrollTop) middleScrollTop = middle.scrollTop;
     setMiddleBusy(true);
+    /* 图谱页不呈通用骨架：图谱页自带加载指示，通用骨架是本次新增的可见行为，
+       会与 acceptance.md G-5「图谱页逐像素零差异」抵触（graph-isolation.md F-6）。
+       ⚠️ 这与 CSS 侧的 `#layout:not([data-page="graph"])` 不重复 —— 那条排除的是
+       **转场动画**，这里是**禁止新行为落在图谱页上**；CSS 的排除在容器动画生效
+       那一刻才判定，那时通用骨架早已渲染过一帧。 */
+    if (graphTarget) return;
     middlePage.innerHTML = skeletonMarkup();
+  }
+
+  /* 目标页是不是图谱页：按服务端的路由切分口径判定
+     （app.py `_send_page`：`/w/{name}/{practice|kps|kp/{id}|graph|session-end}`，
+     空段滤掉后第 3 段是 page 名）。 */
+  function isGraphTarget(url) {
+    var parts = url.pathname.split("/").filter(function (part) { return part !== ""; });
+    return parts.length >= 3 && parts[0] === "w" && parts[2] === "graph";
   }
 
   /* 加载态标记落在中栏容器上：切页前置位、内容到位后复位。
@@ -231,7 +245,7 @@
       if (options.replace) window.history.replaceState({ middle: true }, "", url.href);
       else window.history.pushState({ middle: true }, "", url.href);
     }
-    showLoadingState();
+    showLoadingState(isGraphTarget(url));
     return window.fetch(url.href, { headers: { Accept: "text/html" } })
       .then(function (response) {
         if (!response.ok) throw new Error("page request failed");
