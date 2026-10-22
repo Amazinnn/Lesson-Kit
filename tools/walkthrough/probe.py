@@ -467,13 +467,26 @@ PROBE_JS = r"""
     return out;
   };
 
-  /* §7.5.2 empty_state_probe — the shape of every empty state. */
+  /* §7.5.2 empty_state_probe — the shape of every empty state.
+     The container is narrowed on purpose: the class names
+     (``.lk-empty__art``, ``.lk-empty__text``, ``.lk-empty__action`` …) also
+     match the **parts of an illustration**, and a part is not a container.
+     Two rules remove them:
+       · an element inside an ``<svg>`` belongs to the drawing;
+       · an element whose ancestor is already a container is a part of it.
+     The judgement itself is untouched — only "which elements count as a
+     container" changed. */
   P.emptyStates = () => {
     const out = [];
     const selector = ".empty-state, .lk-empty, [class*='empty-state'], "
         + "[class*='-empty']";
-    document.querySelectorAll(selector).forEach((el) => {
-      if (!visible(el)) return;
+    const candidates = Array.from(document.querySelectorAll(selector))
+        .filter((el) => visible(el));
+    const insideSvg = (el) => !!(el.closest && el.closest("svg"));
+    const nestedIn = (el) => candidates.some((other) => other !== el
+        && other.contains && other.contains(el));
+    const containers = candidates.filter((el) => !insideSvg(el) && !nestedIn(el));
+    containers.forEach((el) => {
       const art = el.querySelector("svg, img, .lk-empty__art, [class*='art'], [class*='illus']");
       const sentences = Array.from(el.querySelectorAll("p, .muted"))
           .filter((n) => (n.textContent || "").trim().length > 0);
@@ -484,7 +497,7 @@ PROBE_JS = r"""
       out.push({
         cls: String(el.className || ""),
         tag: el.tagName.toLowerCase(),
-        art: art ? { tag: art.tagName.toLowerCase(),
+        art: art ? {tag: art.tagName.toLowerCase(),
                      src: art.getAttribute("src") || art.getAttribute("href") || "" } : null,
         sentences: sentences.map((n) => (n.textContent || "").trim().slice(0, 60)),
         action: action ? {
@@ -497,6 +510,10 @@ PROBE_JS = r"""
         } : null,
       });
     });
+    window.__lkEmptySkipped = {
+      insideSvg: candidates.filter(insideSvg).map((el) => String(el.className || "")),
+      nested: candidates.filter(nestedIn).map((el) => String(el.className || "")),
+    };
     return out;
   };
 
@@ -1511,7 +1528,7 @@ def read_sound_state(page):
     })""")
 
 
-def probe_audio_cue(ctx, paper_id, plan):
+def probe_audio_cue(ctx, paper_id, plan, waiter=None):
     """3.3-1 — the cue after an answer: how often, and who stopped it.
 
     The probe answers the question the first round could not answer:
@@ -1562,6 +1579,9 @@ def probe_audio_cue(ctx, paper_id, plan):
         # -- 1. the real gesture: the start button -----------------------
         page.wait_for_selector("#paper-start", state="visible", timeout=15000)
         page.click("#paper-start")
+        if waiter is not None:
+            waiter.wait_for(
+                "POST /api/w/{name}/practice-sets/{practice_set_id}/start")
         page.wait_for_timeout(300)
         data["afterGesture"] = read_sound_state(page)
         data["userActivationAfterGesture"] = page.evaluate(
@@ -1573,11 +1593,16 @@ def probe_audio_cue(ctx, paper_id, plan):
             if index:
                 page.wait_for_selector("#paper-next", state="visible", timeout=15000)
                 page.click("#paper-next")
+                if waiter is not None:
+                    waiter.wait_for(
+                        "POST /api/w/{name}/practice/current/navigate")
                 page.wait_for_timeout(300)
             before = read_sound_state(page)
             outcome = answer_plan_item(page, item)
             outcome["index"] = index
             outcome["problem_id"] = item.get("problem_id")
+            if waiter is not None:
+                waiter.wait_for("POST /api/w/{name}/attempts")
             try:
                 page.wait_for_selector(".micro-verdict", state="attached",
                                        timeout=15000)
@@ -1590,6 +1615,19 @@ def probe_audio_cue(ctx, paper_id, plan):
             outcome["cueCalls"] = len(after["cueCalls"]) - len(before["cueCalls"])
             outcome["plays"] = len(after["plays"]) - len(before["plays"])
             outcome["verdicts"] = after["verdicts"]
+            # The self-rating keeps the request shape of a real round; it
+            # happens **after** the verdict, so it cannot cancel the cue.
+            try:
+                page.wait_for_selector("#paper-rating", state="visible",
+                                       timeout=10000)
+                page.fill("#paper-rating input[type='number']", "4")
+                page.click("#paper-rating button")
+                if waiter is not None:
+                    waiter.wait_for("POST /api/w/{name}/feedback")
+            except Exception:
+                outcome["rated"] = False
+            else:
+                outcome["rated"] = True
             answers.append(outcome)
         data["answers"] = answers
         data["afterAnswers"] = read_sound_state(page)
@@ -2043,9 +2081,19 @@ def probe_error_colour(ctx):
 
 def probe_empty_state(ctx):
     """3.4-5 — the empty state is an illustration + one sentence + a full
-    width primary action whose label is the action itself."""
+    width primary action whose label is the action itself.
+
+    The **judgement** is unchanged (illustration + exactly one sentence +
+    a full width ``<button>``); only the *container recognition* was
+    narrowed: the parts of an illustration carry the same class names as
+    the container (``lk-empty__art`` / ``lk-empty__text`` /
+    ``lk-empty__action``), so they used to be counted as containers and
+    reported as empty states without an illustration.  The skipped
+    elements are listed in the evidence so the narrowing can be reviewed.
+    """
     states = ctx.evaluate("() => window.__lkProbe.emptyStates()")
-    data = {"states": states}
+    skipped = ctx.evaluate("() => window.__lkEmptySkipped || null")
+    data = {"states": states, "skipped": skipped}
     if not states:
         return _pending(data, "本页没有可见的空态容器（未触达空态）")
     offenders = []
@@ -2073,17 +2121,95 @@ def probe_empty_state(ctx):
 
 
 def probe_session_scroll(ctx):
-    """3.4-6 — the session list must not be cut silently."""
-    info = ctx.evaluate("(s) => window.__lkProbe.scroll(s)", "#ai-session-list")
+    """3.4-6 — the session list must not be cut silently.
+
+    What the criterion forbids is a **silent crop**: a list whose older
+    entries cannot be reached.  The list does not have to be the scroll
+    container itself — the content may also be reachable through a
+    scrolling ancestor — but it must be reachable **somehow**.
+
+    The probe therefore measures three things and judges on them:
+
+    * the list's own geometry and its ``overflow-y``;
+    * the chain of ancestors (which one clips, which one scrolls);
+    * whether the **last** session can be brought into the visible box
+      after the chain has been scrolled to the end.
+    """
+    info = ctx.evaluate("""() => {
+      const list = document.querySelector("#ai-session-list");
+      if (!list) return null;
+      const els = [];
+      let node = list;
+      while (node && node.nodeType === 1 && els.length < 12) {
+        els.push(node);
+        node = node.parentElement;
+      }
+      const describe = (el) => {
+        const st = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return {
+          tag: el.tagName.toLowerCase(),
+          id: el.id || "",
+          cls: String(el.className || "").slice(0, 60),
+          overflowY: st.overflowY,
+          overflowX: st.overflowX,
+          clientHeight: el.clientHeight,
+          scrollHeight: el.scrollHeight,
+          scrollTop: el.scrollTop,
+          rect: {top: Math.round(rect.top), bottom: Math.round(rect.bottom)},
+        };
+      };
+      const chain = els.map(describe);
+      const children = list.children.length;
+      const last = list.lastElementChild;
+      if (!last || children < 2) {
+        return {children: children, chain: chain, reachable: null};
+      }
+      const before = last.getBoundingClientRect();
+      /* scroll the whole chain to the end: the list itself first, then
+         every ancestor that is a scroll container. */
+      els.forEach((el) => {
+        const oy = getComputedStyle(el).overflowY;
+        if (oy === "auto" || oy === "scroll" || oy === "overlay") {
+          el.scrollTop = el.scrollHeight;
+        }
+      });
+      try { window.scrollTo(0, document.body.scrollHeight); } catch (e) {}
+      const after = last.getBoundingClientRect();
+      /* the visible box: the nearest ancestor that clips, else the window */
+      const clipper = els.find((el) => {
+        const oy = getComputedStyle(el).overflowY;
+        return oy === "hidden" || oy === "clip";
+      });
+      const box = clipper ? clipper.getBoundingClientRect()
+                          : {top: 0, bottom: window.innerHeight};
+      return {
+        children: children,
+        chain: chain,
+        lastBefore: {top: Math.round(before.top), bottom: Math.round(before.bottom)},
+        lastAfter: {top: Math.round(after.top), bottom: Math.round(after.bottom)},
+        box: {top: Math.round(box.top), bottom: Math.round(box.bottom)},
+        clipper: clipper ? (clipper.id || String(clipper.className || "")
+                            .slice(0, 40)) : null,
+        reachable: after.top >= box.top - 1 && after.bottom <= box.bottom + 1,
+      };
+    }""")
     data = {"container": info}
     if not info:
         return _pending(data, "本页没有 #ai-session-list")
-    overflow_y = info.get("overflowY")
+    if not info.get("children"):
+        return _pending(data, "会话列表是空的 —— 无从判断是否被裁切")
+    overflow_y = (info.get("chain") or [{}])[0].get("overflowY")
     if overflow_y in ("auto", "scroll"):
-        return _ok(data, "会话列表是滚动容器")
-    if info.get("overflows"):
-        return _bad(data, "会话列表溢出了却没有滚动容器（静默裁切）")
-    return _pending(data, "会话列表内容不足，无法证明可滚动")
+        return _ok(data, f"会话列表自己是滚动容器（{info['children']} 条对话，"
+                         f"overflow-y: {overflow_y}）")
+    if info.get("reachable") is None:
+        return _pending(data, "会话列表内容不足，无法证明可滚动")
+    if info.get("reachable"):
+        return _ok(data, f"会话列表不是滚动容器，但 {info['children']} 条对话"
+                         f"都能滚到（经由祖先的滚动容器）")
+    return _bad(data, f"会话列表被静默裁切：{info['children']} 条对话里最后一条"
+                       f"滚不到可视区（裁切者：{info.get('clipper')}）")
 
 
 def probe_custom_select(ctx):
@@ -2409,7 +2535,13 @@ def _matching_block(text, open_index):
 
 
 def probe_long_list(ctx):
-    """3.7-2 — a list of 98+ records has to scroll smoothly."""
+    """3.7-2 — a list of 98+ records has to scroll smoothly.
+
+    The list that is **measured** is the list that was **counted** — the
+    probe does not count one container and scroll another.  A verdict
+    without a measurement is never a pass (§7.6.2), so a list that cannot
+    scroll at all is a failure of the criterion, not a silent PASS.
+    """
     page = ctx.page
     info = page.evaluate("""() => {
       const candidates = ["#records-list", ".records-list", "#ai-session-list",
@@ -2433,28 +2565,59 @@ def probe_long_list(ctx):
     if info.get("count", 0) < 98:
         return _pending(data, f"列表只有 {info.get('count')} 条 —— 不足 98 条，"
                               "本轮无法测「98+ 条记录滚动流畅」")
-    frames = page.evaluate("""async () => {
-      const el = document.querySelector("#records-list") || document.querySelector(".records-list");
-      if (!el) return null;
-      el.scrollTop = 0;
+    frames = page.evaluate("""async (selector) => {
+      const list = document.querySelector(selector);
+      if (!list) return null;
+      /* the scroller is the list itself, or the nearest ancestor that
+         scrolls: that is the element the learner's wheel would move. */
+      let scroller = null;
+      let node = list;
+      while (node && node.nodeType === 1) {
+        const oy = getComputedStyle(node).overflowY;
+        if (oy === "auto" || oy === "scroll" || oy === "overlay") {
+          scroller = node;
+          break;
+        }
+        node = node.parentElement;
+      }
+      if (!scroller) {
+        return {scroller: null, scrollable: false, frames: 0};
+      }
+      scroller.scrollTop = 0;
+      const start = scroller.scrollTop;
       const gaps = [];
       let last = performance.now();
       const stop = performance.now() + 1000;
       while (performance.now() < stop) {
-        el.scrollTop += 40;
+        scroller.scrollTop += 40;
         await new Promise((r) => requestAnimationFrame(r));
         const now = performance.now();
         gaps.push(now - last);
         last = now;
       }
       gaps.sort((a, b) => a - b);
-      return {frames: gaps.length, median: gaps[Math.floor(gaps.length / 2)],
-              p95: gaps[Math.floor(gaps.length * 0.95)], max: gaps[gaps.length - 1]};
-    }""")
+      return {
+        scroller: scroller === list ? selector
+                  : (scroller.id || String(scroller.className || "").slice(0, 40)),
+        scrollerIsList: scroller === list,
+        scrollable: scroller.scrollTop > start,
+        scrollTopAfter: scroller.scrollTop,
+        frames: gaps.length,
+        median: gaps[Math.floor(gaps.length / 2)],
+        p95: gaps[Math.floor(gaps.length * 0.95)],
+        max: gaps[gaps.length - 1],
+      };
+    }""", info.get("selector"))
     data["frames"] = frames
-    if frames and frames.get("p95", 0) > 50:
+    if not frames or not frames.get("frames"):
+        return _pending(data, "没有采到滚动帧间隔 —— 本轮无法判定滚动是否流畅")
+    if not frames.get("scrollable"):
+        return _bad(data, f"{info.get('count')} 条记录的列表滚不动"
+                           f"（没有任何滚动容器）—— 静默裁切，滚动流畅无从成立")
+    if frames.get("p95", 0) > 50:
         return _bad(data, f"滚动帧间隔 p95 = {frames.get('p95')}ms")
-    return _ok(data, f"{info.get('count')} 条记录的滚动帧间隔在阈值内")
+    return _ok(data, f"{info.get('count')} 条记录的滚动帧间隔在阈值内"
+                     f"（p95 = {frames.get('p95')}ms）")
 
 
 def probe_fonts(ctx):
@@ -2748,7 +2911,13 @@ def run_static(args):
 
 
 def run_flow(args):
-    """The flow pass — the audio items need a real paper run."""
+    """The flow pass — the sound item needs a real paper run.
+
+    The paper is built from the **plan** (seed.py) when there is one: the
+    plan's items are gradable and their correct options are known, so the
+    round is an all-correct one and the answer cue has something to say.
+    Without a plan the pass falls back to the exercise's seed paper.
+    """
     from playwright.sync_api import sync_playwright
     from exercise import Service, Waiter, seed_paper
 
@@ -2757,53 +2926,32 @@ def run_flow(args):
     probe_dir.mkdir(parents=True, exist_ok=True)
     results = {}
 
+    plan = []
+    if getattr(args, "plan", None):
+        plan = (_read_json(args.plan) or {}).get("items") or []
     service = Service(args.base_url)
     waiter = Waiter(service)
     waiter.snapshot()
     paper_id = args.paper_id
     if paper_id is None:
-        paper_id = seed_paper(service, args.ws)
+        if plan:
+            service.set_phase("seed", group="paper")
+            created = service.create_paper(
+                args.ws, "走查音效探针卷",
+                [item["problem_id"] for item in plan])
+            paper_id = created.get("practice_set_id")
+        else:
+            paper_id = seed_paper(service, args.ws)
     service.set_phase("verify", group="probe")
 
     with sync_playwright() as playwright:
-        context, page, browser = _launch(playwright, profile=args.profile)
-        page.add_init_script(PROBE_JS)
-        page.add_init_script(AUDIO_JS)
-        ctx = ProbeContext(page, args.base_url, args.ws, args.side,
+        ctx = ProbeContext(None, args.base_url, args.ws, args.side,
                            repo_root=args.repo_root, out_dir=out_dir)
         try:
-            page.goto(f"{args.base_url}/w/{args.ws}/practice?paper={paper_id}",
-                      wait_until="load", timeout=30000)
-            page.wait_for_timeout(400)
-            # A real gesture, so the audio module is unlocked.
-            page.mouse.click(10, 10)
-            page.wait_for_timeout(200)
-            start = page.click("#paper-start")
-            waiter.wait_for("POST /api/w/{name}/practice-sets/{practice_set_id}/start")
-            page.wait_for_selector("#paper-options input, #paper-answer", timeout=15000)
-            if page.query_selector("#paper-options input"):
-                page.query_selector_all("#paper-options input")[0].click()
-            else:
-                page.fill("#paper-answer", "42")
-            waiter.wait_for("POST /api/w/{name}/attempts")
-            page.wait_for_selector("#paper-rating", state="visible", timeout=15000)
-            page.fill("#paper-rating input[type='number']", "4")
-            page.click("#paper-rating button")
-            waiter.wait_for("POST /api/w/{name}/feedback")
-            plays = page.evaluate("() => window.__lkProbe.audio()")
-            results["3.3-1"] = {
-                "verdict": PENDING if not plays else PASS,
-                "data": {"plays": plays, "paper_id": paper_id},
-                "note": ("答题后没有观察到音效" if not plays
-                         else "答题后观察到了音效"),
-            }
+            data = probe_audio_cue(ctx, paper_id, plan, waiter=waiter)
         finally:
-            try:
-                context.close()
-            except Exception:
-                pass
-            if browser is not None:
-                browser.close()
+            pass
+        results["3.3-1"] = judge_audio_cue(data)
 
     _write_results(probe_dir, results, args.side)
     return results
@@ -3144,6 +3292,10 @@ def main(argv=None):
                        help="a persistent browser profile (localStorage survives)")
         if name == "flow":
             p.add_argument("--paper-id", default=None)
+            p.add_argument("--plan", default=None,
+                           help="the all-correct plan (seed.py): the gradable "
+                                "items and the options that make the round "
+                                "all-correct")
 
     diff = sub.add_parser("diff")
     diff.add_argument("--before", required=True)
