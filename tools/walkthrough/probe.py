@@ -1474,12 +1474,15 @@ def probe_audio_mute(ctx):
 # ─────────────────────────────────────────────────────────────────────────
 
 
-def answer_plan_item(page, item):
-    """Answer one paper item the way the plan says; return what was clicked.
+def pick_plan_options(page, item):
+    """Pick the options the plan names; return what was picked.
 
     The option is matched by its **id** (the option text), never by its
     position: the plan is computed from the pool, the page renders the
     options of the same record, and the id is what both sides agree on.
+    The answer is **not** submitted here — a multiple-choice item is
+    submitted by its button, and that click is the gesture the product
+    arms the answer cue with.
     """
     wanted = list(item.get("option_ids") or [])
     if not wanted:
@@ -1497,16 +1500,22 @@ def answer_plan_item(page, item):
         return {"answered": False, "why": "no option matched the plan",
                 "options": [element.get_attribute("value") or ""
                             for element in inputs]}
+    return {"answered": True, "picked": picked, "kind": item.get("quiz_type")}
+
+
+def answer_plan_item(page, item):
+    """Answer one paper item the way the plan says; return what was clicked."""
+    outcome = pick_plan_options(page, item)
     submitted = False
-    if item.get("multiple"):
+    if outcome.get("answered") and item.get("multiple"):
         # A multiple-choice item is submitted by the button — that click is
         # the gesture the product arms the answer cue with.
         page.wait_for_selector("#paper-item-submit", state="visible",
                                timeout=15000)
         page.click("#paper-item-submit")
         submitted = True
-    return {"answered": True, "picked": picked, "submittedByButton": submitted,
-            "kind": item.get("quiz_type")}
+    outcome["submittedByButton"] = submitted
+    return outcome
 
 
 def read_sound_state(page):

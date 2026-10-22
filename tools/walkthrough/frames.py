@@ -309,21 +309,30 @@ def act_view(page, ctx):
 
 
 def prepare_skeleton(page, ctx):
-    """M-9 — the loading state.
+    """M-9 — the loading state of the middle column.
 
-    The skeleton sits in the paper setup, so the page has to be opened
-    **with** a paper; the paper record is delayed by the caller, and the
-    skeleton stands in for it until the record arrives.
+    The skeleton the criterion is about is the one the product draws
+    itself: ``middle-navigation.js::showLoadingState`` replaces the
+    middle column with five ``.lk-skeleton`` blocks (each with the size
+    the product gives it) while the new page is on its way.  The probe
+    therefore **navigates the middle column** — and the page fetch is
+    held back by the caller, so the skeleton really stands on the screen
+    while the frames are taken.
+
+    (The first round looked at the paper's own text placeholder
+    ``#paper-count .lk-skeleton--text`` instead: it has no size at all,
+    so the shimmer had nothing to show.  That is a **product-side**
+    fact, not the motion's — see the judge's two evidence lines.)
     """
-    url = ctx.url("practice")
-    if ctx.paper_id:
-        url += f"?paper={ctx.paper_id}"
-    page.goto(url, wait_until="commit", timeout=30000)
-    page.wait_for_timeout(30)
+    page.goto(ctx.url("practice"), wait_until="load", timeout=30000)
+    page.wait_for_timeout(400)
 
 
 def act_skeleton(page, ctx):
-    """M-9 — nothing to do: the loading state is already in flight."""
+    """M-9 — navigate the middle column; the skeleton takes its place."""
+    page.click('a[href$="/practice-sets"]')
+    page.wait_for_selector("[data-lk-skeleton] .lk-skeleton", state="attached",
+                           timeout=10000)
 
 
 def prepare_records(page, ctx):
@@ -397,20 +406,82 @@ def act_streak_tiers(page, ctx):
 
 
 def prepare_answer(page, ctx):
-    """M-7 — the practice page, before an answer is judged."""
-    page.goto(ctx.url("practice"), wait_until="load", timeout=30000)
-    page.wait_for_timeout(500)
+    """M-7 — a **real** judgement is about to happen.
+
+    The first round injected an empty ``<div class="practice-card">`` — a
+    class that never existed in the repository — and never judged an
+    answer.  The page therefore had **no** ``.micro-verdict`` element, and
+    the squash (which the product attaches to the verdict element it
+    renders itself, ``paper-practice.js::squashVerdict``) could not be
+    seen at all.
+
+    The trigger now drives the real path: the paper is opened, the run is
+    started and the correct option of the first item is **picked** — the
+    answer is not submitted yet, so the verdict lands inside the capture.
+    """
+    from exercise import (ROUTE_CURRENT, ROUTE_PAPER_START, Service, Waiter)
+
+    service = Service(ctx.base_url)
+    waiter = Waiter(service)
+    waiter.snapshot()
+    plan = ctx.plan or []
+    # The verdict of a **multiple-choice** item is the one the product
+    # renders after the learner pressed the submit button — a single
+    # choice submits itself when the radio is picked, which would put the
+    # verdict into the preparation instead of into the capture.
+    multiples = [item for item in plan if item.get("multiple")]
+    if not multiples:
+        raise RuntimeError(
+            "M-7 needs a multiple-choice item: the plan has none "
+            f"({[item.get('quiz_type') for item in plan]})")
+    target = multiples[0]
+    if ctx.paper_id:
+        paper_id = ctx.paper_id
+    else:
+        paper_id = service.create_paper(
+            ctx.ws, "走查分镜回弹卷",
+            [item["problem_id"] for item in plan]).get("practice_set_id")
+        ctx.paper_id = paper_id
+    page.goto(f"{ctx.base_url}/w/{ctx.ws}/practice?paper={paper_id}",
+              wait_until="load", timeout=30000)
+    waiter.wait_for(ROUTE_CURRENT)
+    page.wait_for_selector("#paper-start", state="visible", timeout=15000)
+    page.click("#paper-start")
+    waiter.wait_for(ROUTE_PAPER_START)
+    page.wait_for_selector("#paper-options input", state="visible", timeout=15000)
+    from probe import pick_plan_options
+
+    ctx.target = target
+    ctx.picked = pick_plan_options(page, target)
 
 
 def act_answer(page, ctx):
-    """M-7 — a judged answer (the squash-bounce rides on the verdict)."""
-    page.evaluate("""() => {
-      const card = document.createElement("div");
-      card.className = "practice-card";
-      card.id = "lk-probe-card";
-      const middle = document.getElementById("middle-page") || document.body;
-      middle.appendChild(card);
-    }""")
+    """M-7 — the judged answer (the squash-bounce rides on the verdict).
+
+    The submit is a **real gesture**, so the product's own cue and its
+    own squash are both armed by it, and the verdict element the product
+    renders is the one the animation is attached to.
+    """
+    from exercise import ROUTE_ATTEMPT, Service, Waiter
+
+    service = Service(ctx.base_url)
+    waiter = Waiter(service)
+    waiter.snapshot()
+    page.wait_for_selector("#paper-item-submit", state="visible", timeout=15000)
+    page.click("#paper-item-submit")
+    try:
+        waiter.wait_for(ROUTE_ATTEMPT)
+    except Exception as error:      # the record is the evidence, not a gate
+        ctx.attemptError = str(error)
+    # The verdict element is what the product hangs the squash on.
+    page.wait_for_selector(".micro-verdict", state="attached", timeout=15000)
+    # The animation has to exist before the frames are taken.
+    page.wait_for_function(
+        """() => document.getAnimations().some(
+                (a) => (a.animationName || "") === "lk-squash-bounce")""",
+        timeout=15000)
+    # Freeze it: the frames set the time themselves.
+    page.evaluate("() => window.__lkFrame.freeze()")
 
 
 def prepare_celebration(page, ctx):
@@ -418,6 +489,13 @@ def prepare_celebration(page, ctx):
 
     The celebration starts when the completion page appears, so the paper
     is really answered here and only the submit is left to the trigger.
+
+    **M-3 needs the milestone tier** (decisions.md A-29), and the tier is
+    decided by the round itself: ``本轮全对`` ⇒ every item carries an
+    objective verdict and all of them are correct.  The plan (seed.py)
+    holds the gradable items and their correct options, so the milestone
+    round is a real round, not a faked one.  M-2 keeps the ordinary
+    round — the ordinary tier must not show the burst.
     """
     from exercise import (ITEM_KINDS, RADIO_OPTION_INDEX, RATING_VALUE,
                           ROUTE_ATTEMPT, ROUTE_CURRENT, ROUTE_FEEDBACK,
@@ -427,44 +505,92 @@ def prepare_celebration(page, ctx):
     service = Service(ctx.base_url)
     waiter = Waiter(service)
     waiter.snapshot()
-    if ctx.paper_id:
-        paper_id = ctx.paper_id
-    else:
+    plan = ctx.plan or []
+    all_correct = ctx.motion_id == "M-3" and bool(plan)
+    if all_correct:
         # The paper is created **without** switching the phase: the
         # 建卷 request belongs to the frames, not to the product's own
         # request flow, and it must not show up in the request diff.
+        paper_id = service.create_paper(
+            ctx.ws, "走查分镜里程碑卷",
+            [item["problem_id"] for item in plan]).get("practice_set_id")
+    else:
         paper_id = service.create_paper(ctx.ws, "走查分镜种子卷",
                                         list(SEED_PROBLEM_IDS)).get("practice_set_id")
-        ctx.paper_id = paper_id
+    ctx.paper_id = paper_id
+    ctx.allCorrectRound = all_correct
     page.goto(f"{ctx.base_url}/w/{ctx.ws}/practice?paper={paper_id}",
               wait_until="load", timeout=30000)
     waiter.wait_for(ROUTE_CURRENT)
     page.wait_for_selector("#paper-start", state="visible", timeout=15000)
     page.click("#paper-start")
     waiter.wait_for(ROUTE_PAPER_START)
-    # The kinds of the items are read from the dom: the order of the
-    # plan is the server's, not the harness'.
-    for index in range(len(ITEM_KINDS)):
-        if page.is_visible("#paper-answer"):
-            page.fill("#paper-answer", TEXT_ANSWER)
+    if all_correct:
+        _answer_plan_whole_round(page, ctx, waiter)
+    else:
+        # The kinds of the items are read from the dom: the order of the
+        # plan is the server's, not the harness'.
+        for index in range(len(ITEM_KINDS)):
+            if page.is_visible("#paper-answer"):
+                page.fill("#paper-answer", TEXT_ANSWER)
+                page.click("#paper-item-submit")
+            else:
+                page.wait_for_selector("#paper-options input", state="visible",
+                                       timeout=15000)
+                options = page.query_selector_all("#paper-options input")
+                if not options:
+                    break
+                options[RADIO_OPTION_INDEX].click()
+            waiter.wait_for(ROUTE_ATTEMPT)
+            page.wait_for_selector("#paper-rating", state="visible", timeout=15000)
+            page.fill("#paper-rating input[type='number']", RATING_VALUE)
+            page.click("#paper-rating button")
+            waiter.wait_for(ROUTE_FEEDBACK)
+            if index + 1 < len(ITEM_KINDS):
+                page.click("#paper-next")
+                page.wait_for_timeout(200)
+    page.wait_for_selector("#paper-final-submit", state="visible", timeout=15000)
+    page.wait_for_timeout(200)
+
+
+def _answer_plan_whole_round(page, ctx, waiter):
+    """Answer every item of the plan **correctly** — the all-correct round.
+
+    Each item is picked by its option id (the plan) and submitted the way
+    the product expects: the multiple-choice item through its button, the
+    single-choice and yes/no items by their radio (which submits itself).
+    """
+    from exercise import RATING_VALUE, ROUTE_ATTEMPT, ROUTE_FEEDBACK
+    from probe import pick_plan_options
+
+    for index, item in enumerate(ctx.plan):
+        if index:
+            page.wait_for_selector("#paper-next", state="visible", timeout=15000)
+            page.click("#paper-next")
+            waiter.wait_for("POST /api/w/{name}/practice/current/navigate")
+            page.wait_for_timeout(200)
+        if item.get("multiple"):
+            page.wait_for_selector("#paper-options input", state="visible",
+                                   timeout=15000)
+            picked = pick_plan_options(page, item)
+            if not picked.get("answered"):
+                raise RuntimeError(f"the plan did not match the options of "
+                                   f"{item.get('problem_id')}: {picked}")
+            page.wait_for_selector("#paper-item-submit", state="visible",
+                                   timeout=15000)
             page.click("#paper-item-submit")
         else:
             page.wait_for_selector("#paper-options input", state="visible",
                                    timeout=15000)
-            options = page.query_selector_all("#paper-options input")
-            if not options:
-                break
-            options[RADIO_OPTION_INDEX].click()
+            picked = pick_plan_options(page, item)
+            if not picked.get("answered"):
+                raise RuntimeError(f"the plan did not match the options of "
+                                   f"{item.get('problem_id')}: {picked}")
         waiter.wait_for(ROUTE_ATTEMPT)
         page.wait_for_selector("#paper-rating", state="visible", timeout=15000)
         page.fill("#paper-rating input[type='number']", RATING_VALUE)
         page.click("#paper-rating button")
         waiter.wait_for(ROUTE_FEEDBACK)
-        if index + 1 < len(ITEM_KINDS):
-            page.click("#paper-next")
-            page.wait_for_timeout(200)
-    page.wait_for_selector("#paper-final-submit", state="visible", timeout=15000)
-    page.wait_for_timeout(200)
 
 
 def act_celebration(page, ctx):
@@ -675,7 +801,18 @@ def judge_m1(meta, reduced_meta, watch):
 
 
 def judge_celebration(meta, reduced_meta, watch, milestone=False):
-    """M-2 / M-3 — the celebration."""
+    """M-2 / M-3 — the celebration.
+
+    M-3 has **two** trigger conditions (decisions.md A-29): 「本轮全对」and
+    「章节首次完成」.  The first one is decidable — the round's own counts
+    say whether every item carried a correct verdict — and the second one
+    is **not**: the client writes ``data-lk-chapter-first="false"``
+    because ``practice_runs`` carries no chapter column, and A-29 forbids
+    approximating it with a proxy signal.
+
+    The verdict therefore says which condition was verified and **what
+    data the other one needs**; it never invents the missing fact.
+    """
     hook = ".lk-celebrate-burst" if milestone else "#paper-completion"
 
     def visible(nodes):
@@ -685,15 +822,58 @@ def judge_celebration(meta, reduced_meta, watch, milestone=False):
 
     seen = any(visible(frame["states"].get(hook, []))
                for frame in meta["frames"])
+    if not milestone:
+        if not seen:
+            return {"verdict": PENDING,
+                    "detail": "完成页没有在采集窗口内出现"}
+        confetti = [frame for frame in meta["frames"]
+                    if frame["states"].get(".lk-confetti")]
+        if confetti:
+            return {"verdict": FAIL, "detail": "日常档出现了彩带"}
+        return {"verdict": PASS, "detail": "庆祝层的出现与档位符合判据"}
+
+    # -- M-3: the two conditions, kept apart ----------------------------
+    facts = meta.get("completionFacts") or {}
+    total = facts.get("total")
+    correct = facts.get("correct")
+    all_correct = bool(total) and total == correct
+    conditions = {
+        "allCorrect": {
+            "verdict": PASS if all_correct else FAIL,
+            "total": total,
+            "correct": correct,
+            "detail": (f"本轮 {correct}/{total} 全对 ⇒ 里程碑档" if all_correct
+                       else f"本轮 {correct}/{total} —— 不是全对轮，"
+                            "里程碑档不该出现"),
+        },
+        "chapterFirst": {
+            "verdict": PENDING,
+            "chapterFirstRaw": facts.get("chapterFirstRaw"),
+            "missing": [
+                "practice_runs 的章标识（这一轮属于哪一章）",
+                "「该章此前未完成」的事实（由服务端判定，不由客户端猜）",
+                "完成页响应里的该事实，客户端据此写 data-lk-chapter-first",
+            ],
+            "detail": "practice_runs 无章列，客户端恒写 data-lk-chapter-first=false；"
+                      "A-29 禁止用代理指标近似，所以这一档不可判定",
+        },
+    }
     if not seen:
         return {"verdict": PENDING,
-                "detail": "本轮没有触达该庆祝档（缺里程碑种子数据）"
-                          if milestone else "完成页没有在采集窗口内出现"}
-    confetti = [frame for frame in meta["frames"]
-                if frame["states"].get(".lk-confetti")]
-    if not milestone and confetti:
-        return {"verdict": FAIL, "detail": "日常档出现了彩带"}
-    return {"verdict": PASS, "detail": "庆祝层的出现与档位符合判据"}
+                "detail": "本轮没有触达该庆祝档（缺里程碑种子数据）",
+                "conditions": conditions}
+    if not all_correct:
+        return {"verdict": FAIL,
+                "detail": f"出现了里程碑爆点，但本轮不是全对（{correct}/{total}）",
+                "conditions": conditions}
+    return {"verdict": PENDING,
+            "detail": (f"「本轮全对」这一档已采到并通过（本轮 {correct}/{total} 全对，"
+                       f"里程碑爆点 .lk-celebrate-burst 出现）；"
+                       "「章节首次完成」这一档仍不可判定 —— "
+                       "缺的数据：practice_runs 的章标识 + 「该章此前未完成」的服务端事实"
+                       "（客户端据此写 data-lk-chapter-first）；"
+                       "A-29 禁止用代理指标近似，故不判 PASS"),
+            "conditions": conditions}
 
 
 def judge_streak_banner(meta, reduced_meta, watch):
@@ -778,18 +958,33 @@ def judge_flames(meta, reduced_meta, watch):
 
 
 def judge_squash(meta, reduced_meta, watch):
-    """M-7 — the squash-bounce on a correct answer."""
+    """M-7 — the squash-bounce on a correct answer.
+
+    The trigger drives a **real judgement**: the product renders the
+    verdict element and attaches the squash to it.  The evidence names
+    the element the animation is on, so nobody has to take the harness's
+    word for it.
+    """
     found = _animations_named(meta, "lk-squash-bounce")
+    verdicts = meta.get("verdictElements") or []
+    evidence = {"verdictElements": verdicts,
+                "animationTargets": sorted({anim.get("target") or ""
+                                            for frame in meta["frames"]
+                                            for anim in frame["animations"]
+                                            if anim.get("name") == "lk-squash-bounce"})}
     if not found:
         return {"verdict": FAIL,
                 "detail": "没有出现 lk-squash-bounce 动画（关键帧在样式表里，"
-                          "但没有任何地方挂上去）"}
+                          "但没有任何地方挂上去）",
+                "evidence": evidence}
     durations = {anim.get("duration") for frame in meta["frames"]
                  for anim in frame["animations"]
                  if anim.get("name") == "lk-squash-bounce"}
     if durations and max(d for d in durations if d is not None) < 400:
-        return {"verdict": FAIL, "detail": f"回弹总时长 {durations} 远短于 517ms"}
-    return {"verdict": PASS, "detail": f"回弹动画时长 {sorted(durations)}"}
+        return {"verdict": FAIL, "detail": f"回弹总时长 {durations} 远短于 517ms",
+                "evidence": evidence}
+    return {"verdict": PASS, "detail": f"回弹动画时长 {sorted(durations)}",
+            "evidence": evidence}
 
 
 def judge_view(meta, reduced_meta, watch):
@@ -811,23 +1006,58 @@ def judge_view(meta, reduced_meta, watch):
 
 
 def judge_skeleton(meta, reduced_meta, watch):
-    """M-9 — the sheen sweeps across the skeleton."""
+    """M-9 — the sheen sweeps across the skeleton.
+
+    Two facts are kept apart, because they belong to two different
+    sides:
+
+    * **the product side** — does the skeleton block have a box at all?
+      A block of 0×0 is a stylesheet fact (``workbench.css``), not a
+      motion fact;
+    * **the motion side** — does the sheen move?  That is the animation
+      the criterion is about.
+
+    The verdict is the motion's: the sweep has to move **on a block that
+    has a size**.  When the block has no size the motion cannot be seen
+    at all — then the verdict says exactly that (and the product-side
+    fact is reported next to it) instead of mixing the two problems into
+    one FAIL.
+    """
     transforms = []
     for frame in meta["frames"]:
         for node in frame["states"].get(".lk-skeleton", []):
             transforms.append(node.get("afterTransform") or node.get("transform"))
-    if not transforms:
-        return {"verdict": PENDING, "detail": "没有采到骨架屏"}
     sizes = [(node.get("width"), node.get("height"))
              for frame in meta["frames"]
              for node in frame["states"].get(".lk-skeleton", [])]
-    if len(set(transforms)) < 2:
-        detail = "微光位置全程不变"
-        if sizes and all((w == 0 and h == 0) for w, h in sizes):
-            detail += " —— 骨架块没有尺寸（0×0），灰块与微光都无从显示"
-        return {"verdict": FAIL, "detail": detail}
-    return {"verdict": PASS,
-            "detail": f"微光位置逐帧变化（{len(set(transforms))} 个位置）"}
+    has_box = bool(sizes) and not all((w == 0 and h == 0) for w, h in sizes)
+    evidence = {
+        "motionSide": {
+            "sheenPositions": len(set(transforms)),
+            "moved": len(set(transforms)) >= 2,
+            "positions": sorted(set(transforms))[:8],
+        },
+        "productSide": {
+            "hasBox": has_box,
+            "sizes": sorted(set(sizes))[:8],
+        },
+    }
+    if not transforms:
+        return {"verdict": PENDING, "detail": "没有采到骨架屏",
+                "evidence": evidence}
+    if len(set(transforms)) >= 2:
+        return {"verdict": PASS,
+                "detail": f"微光位置逐帧变化（{len(set(transforms))} 个位置）",
+                "evidence": evidence}
+    if not has_box:
+        return {"verdict": PENDING,
+                "detail": "两条证据分开：产品侧 —— 骨架块没有尺寸（0×0），"
+                          "灰块与微光都无从显示；动效侧 —— 微光位置全程不变，"
+                          "但块没有盒子，本轮无从判定扫光",
+                "evidence": evidence}
+    return {"verdict": FAIL,
+            "detail": "骨架块有尺寸，但微光位置全程不变（动效侧）",
+            "evidence": evidence}
 
 
 def judge_data_layer(meta, reduced_meta, watch):
@@ -872,6 +1102,16 @@ def _write_json(path, payload):
     return path
 
 
+def _read_json(path):
+    path = Path(path)
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        return None
+
+
 MUTE_JS = """
 (() => {
   try {
@@ -905,8 +1145,56 @@ def set_phase(base_url, phase, group="frames"):
         raise RuntimeError(f"could not tag the phase: {error}")
 
 
+def completion_facts(page):
+    """The facts the product writes on the completion surface.
+
+    ``data-lk-total`` / ``data-lk-correct`` are the counts of the round
+    that really happened — that is what the milestone tier is decided on
+    (``workbench.js::isMilestoneRound``).  ``data-lk-chapter-first`` is
+    the flag of the second milestone condition; the client always writes
+    ``false``, because ``practice_runs`` carries no chapter column
+    (``paper-practice.js::writeCompletionFacts``).
+    """
+    return page.evaluate("""() => {
+      const surface = document.getElementById("paper-completion");
+      if (!surface || !surface.dataset) return null;
+      return {
+        total: surface.dataset.lkTotal == null
+          ? null : Number(surface.dataset.lkTotal),
+        correct: surface.dataset.lkCorrect == null
+          ? null : Number(surface.dataset.lkCorrect),
+        chapterFirst: surface.dataset.lkChapterFirst === "true",
+        chapterFirstRaw: surface.dataset.lkChapterFirst == null
+          ? null : surface.dataset.lkChapterFirst,
+      };
+    }""")
+
+
+def verdict_elements(page):
+    """The verdict elements the product rendered (M-7's evidence).
+
+    The squash is attached to ``.micro-verdict.ok`` by the product
+    itself, so the frames have to show **that** element — a stand-in
+    card cannot.
+    """
+    return page.evaluate("""() => Array.from(
+        document.querySelectorAll(".micro-verdict")).map((el) => {
+      const st = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return {
+        cls: String(el.className || ""),
+        text: (el.textContent || "").trim().slice(0, 30),
+        animation: st.animationName,
+        animationDuration: st.animationDuration,
+        transform: st.transform,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      };
+    })""")
+
+
 def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
-                   paper_id=None, muted=False):
+                   paper_id=None, muted=False, plan=None):
     """Capture one motion: the strip, the metadata and the reduced twin."""
     motion = MOTIONS[motion_id]
     set_phase(base_url, "frames", "frames")
@@ -926,12 +1214,11 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
                 time.sleep(delay_ms / 1000.0)
                 route.continue_()
 
-            page.route("**/api/w/*/practice-sets/*", slow)
-            if motion_id == "M-9":
-                # The script that replaces the loading mark is held back,
-                # so the mark stands still for the whole capture.
-                page.route("**/paper-practice.js", lambda route: route.abort())
-        ctx = _Context(base_url, ws, paper_id)
+            # The **page** fetch of the middle column is held back, so the
+            # product's own loading state stands on the screen while the
+            # frames are taken (M-9).
+            page.route("**/w/*/practice-sets", slow)
+        ctx = _Context(base_url, ws, paper_id, plan=plan, motion_id=motion_id)
         prepare = PREPARE[motion["trigger"]]
         act = ACT[motion["trigger"]]
         prepare(page, ctx)
@@ -939,6 +1226,10 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
         meta = capture_strip(page, lambda: act(page, ctx), motion["frames_ms"],
                              frames_dir, watch)
         animated_terminal = terminal_state(page, watch)
+        if motion_id in ("M-2", "M-3"):
+            meta["completionFacts"] = completion_facts(page)
+        if motion_id == "M-7":
+            meta["verdictElements"] = verdict_elements(page)
     finally:
         context.close()
         browser.close()
@@ -955,10 +1246,8 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
                 time.sleep(delay_ms / 1000.0)
                 route.continue_()
 
-            page.route("**/api/w/*/practice-sets/*", slow)
-            if motion_id == "M-9":
-                page.route("**/paper-practice.js", lambda route: route.abort())
-        ctx = _Context(base_url, ws, paper_id)
+            page.route("**/w/*/practice-sets", slow)
+        ctx = _Context(base_url, ws, paper_id, plan=plan, motion_id=motion_id)
         prepare = PREPARE[motion["trigger"]]
         act = ACT[motion["trigger"]]
         prepare(page, ctx)
@@ -998,7 +1287,7 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
             "animations": sorted({anim.get("name") for anim in frame["animations"]
                                   if anim.get("name")}),
         })
-    return {
+    result = {
         "id": motion_id,
         "title": motion["title"],
         "verdict": verdict,
@@ -1014,15 +1303,33 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
         "animatedTerminal": animated_terminal,
         "reducedTerminal": reduced_terminal,
     }
+    # The judge's own extra evidence (the two milestone conditions, the
+    # two sides of the skeleton) belongs in the product of the capture.
+    for key in ("conditions", "evidence"):
+        if key in judge:
+            result[key] = judge[key]
+    if "completionFacts" in meta:
+        result["completionFacts"] = meta["completionFacts"]
+    if "verdictElements" in meta:
+        result["verdictElements"] = meta["verdictElements"]
+    return result
 
 
 class _Context:
     """The little bit of the probe context the triggers need."""
 
-    def __init__(self, base_url, ws, paper_id=None):
+    def __init__(self, base_url, ws, paper_id=None, plan=None, motion_id=None):
         self.base_url = base_url.rstrip("/")
         self.ws = ws
         self.paper_id = paper_id
+        #: The all-correct plan (seed.py): the gradable items and the
+        #: options that make a round all-correct.  ``None`` ⇒ the trigger
+        #: falls back to the ordinary seed paper.
+        self.plan = plan or []
+        #: Which motion is being captured — M-2 and M-3 share the
+        #: celebration trigger but need a different round (the ordinary
+        #: tier vs. the milestone tier).
+        self.motion_id = motion_id
 
     def url(self, page_key):
         from probe import PAGES
@@ -1085,22 +1392,6 @@ def capture_mute_twin(playwright, out_dir, base_url, ws):
             "note": "静音与开静音的终态一致 —— 声音不是唯一通道"}
 
 
-def ensure_paper(base_url, ws, paper_id=None):
-    """The paper the loading state is opened with (M-9).
-
-    A paper has no browser entry, so it is created through the api — the
-    same way ``exercise.py`` does it.
-    """
-    if paper_id:
-        return paper_id
-    from exercise import SEED_PROBLEM_IDS, Service
-
-    service = Service(base_url)
-    # No phase switch here: the paper belongs to the frames.
-    return service.create_paper(ws, "走查分镜种子卷",
-                                 list(SEED_PROBLEM_IDS)).get("practice_set_id")
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Capture the storyboard strips of M-1…M-10.")
@@ -1114,6 +1405,10 @@ def main(argv=None):
                         help="the paper the loading state (M-9) is opened with")
     parser.add_argument("--mute-check", action="store_true",
                         help="also produce the 3.3-5 result (the mute twin)")
+    parser.add_argument("--plan", default=None,
+                        help="the all-correct plan (seed.py): the gradable items "
+                             "and the options that make a round all-correct "
+                             "(M-3's milestone tier and M-7's real judgement)")
     args = parser.parse_args(argv)
 
     from playwright.sync_api import sync_playwright
@@ -1121,13 +1416,11 @@ def main(argv=None):
     out_dir = Path(args.out) / "frames"
     out_dir.mkdir(parents=True, exist_ok=True)
     wanted = ([m.strip() for m in args.only.split(",")] if args.only
-              else list(MOTIONS))
+               else list(MOTIONS))
+    plan = []
+    if args.plan:
+        plan = (_read_json(args.plan) or {}).get("items") or []
     paper_id = args.paper_id
-    if "M-9" in wanted and not paper_id:
-        # The phase is tagged **before** the paper is created: the paper
-        # belongs to the frames, not to the product's own request flow.
-        set_phase(args.base_url, "frames", "frames")
-        paper_id = ensure_paper(args.base_url, args.ws)
     summary = {}
     with sync_playwright() as playwright:
         for motion_id in wanted:
@@ -1137,7 +1430,7 @@ def main(argv=None):
             try:
                 result = capture_motion(playwright, motion_id, out_dir,
                                         args.base_url, args.ws, delay_ms=delay,
-                                        paper_id=paper_id)
+                                        paper_id=paper_id, plan=plan)
             except Exception as exc:
                 result = {"id": motion_id, "title": MOTIONS[motion_id]["title"],
                           "verdict": PENDING, "detail": f"采集失败：{exc}"}
