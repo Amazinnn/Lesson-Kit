@@ -2117,12 +2117,77 @@ img { max-width: 100%; }
   transform-origin: bottom center;
   background: var(--level-bg);
 }
-.record-activity-day.level-0 { --level-bg: color-mix(in srgb, var(--role-blue) 9%, white); }
-.record-activity-day.level-1 { --level-bg: color-mix(in srgb, var(--role-blue) 18%, white); }
-.record-activity-day.level-2 { --level-bg: color-mix(in srgb, var(--role-blue) 34%, white); }
-.record-activity-day.level-3 { --level-bg: color-mix(in srgb, var(--role-blue) 55%, white); }
-.record-activity-day.level-4 { --level-bg: color-mix(in srgb, var(--role-blue) 78%, white); }
+/* ⚠️ 档位色**不在这里**逐档写死 —— 统一由下面的 `:is()` 档位表给
+   （日历格子与图例色块共用同一取值，见「档位色」块）。 */
 .record-activity-day.future { visibility: hidden; }
+
+/* ---- 档位色：日历格子与图例色块**共用同一取值**（IMPL-W2e 11）------------
+   `--level-bg` 是**唯一的取值出口** ⇒ 色块与格子不可能各写一遍、慢慢漂移。
+   五档取值与 `records.py` 的 `_CALENDAR_LEVELS`（0 / 1 / 2–3 / 4–7 / ≥8）同档。 */
+:is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch) {
+  --level-bg: var(--surface-sunken);
+  background: var(--level-bg);
+}
+:is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-0,
+.lk-legend__swatch[data-level="0"] { --level-bg: color-mix(in srgb, var(--role-blue) 9%, white); }
+:is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-1,
+.lk-legend__swatch[data-level="1"] { --level-bg: color-mix(in srgb, var(--role-blue) 18%, white); }
+:is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-2,
+.lk-legend__swatch[data-level="2"] { --level-bg: color-mix(in srgb, var(--role-blue) 34%, white); }
+:is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-3,
+.lk-legend__swatch[data-level="3"] { --level-bg: color-mix(in srgb, var(--role-blue) 55%, white); }
+:is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-4,
+.lk-legend__swatch[data-level="4"] { --level-bg: color-mix(in srgb, var(--role-blue) 78%, white); }
+
+/* ---- 档位图例（IMPL-W2e 第 11 条 · **类名规范由本波定**）------------------
+   **规范类名**（请服务端按这族输出）：
+     `.lk-legend`         图例容器（一行 / 两行，低调）
+     `.lk-legend__item`   一项（色块 + 区间刻度）
+     `.lk-legend__swatch` 色块（挂 `.level-0..4`，或 `data-level="0..4"`）
+     `.lk-legend__range`  区间刻度文字（如「2–3」「≥8」）
+     `.lk-legend__title`  图例标题（如「当天作答次数」）
+   **服务端现行 markup** 用的是同义的一族（`records.py` 的 `_activity_legend`）：
+     `.record-activity-legend` / `.record-activity-legend-item`
+     / `.record-activity-swatch` / `.record-activity-legend-text`
+     / `.record-activity-legend-title`
+   ⇒ 两族**共用同一套取值**（`:is()` 并列，不写两遍）⇒ 服务端换哪一族都直接生效。
+   ⚠️ **少字原则**：图例只有「标题 + 五个区间刻度」，不写任何解释句；
+     解码由刻度本身承担。 */
+.lk-legend,
+.record-activity-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  margin-top: var(--sp-3);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  line-height: 18px;
+  color: var(--ink-muted);
+}
+.lk-legend__item,
+.record-activity-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.lk-legend__swatch,
+.record-activity-swatch {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+}
+.lk-legend__range,
+.record-activity-legend-text {
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.lk-legend__title,
+.record-activity-legend-title {
+  color: var(--ink-faint);
+}
 
 /* 自评分布 —— `.record-rating-*` 一族**只归自评**（圆点 / 星级 / 自评分布条）。 */
 .record-rating-chart { display: grid; gap: 9px; padding-top: 7px; }
