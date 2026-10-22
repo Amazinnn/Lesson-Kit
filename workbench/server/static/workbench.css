@@ -1183,7 +1183,10 @@ textarea:focus-visible, input:focus-visible {
   display: inline-block;
   width: 12px;
   height: 12px;
-  border-radius: var(--r-round);
+  /* 圆角口径统一到 **`--r-pill`**（A-78 · IMPL-W2g 第 4 条）：
+     spec §4.14 明写「圆点用胶囊档，不用 `--r-round`」。12×12 正方形上
+     50% 与 999px **视觉相同**（都收敛成 6px 圆角），但**取值口径**必须一致。 */
+  border-radius: var(--r-pill);
   background: var(--dot-fill);
   vertical-align: -1px;
 }
