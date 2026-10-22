@@ -534,15 +534,15 @@ def _activity_legend():
     色块沿用 `.level-N` 那一族填色 ⇒ 与格子的颜色一一对应。
     """
     items = "".join(
-        "<span class='record-activity-legend-item'>"
-        f"<span class='record-activity-swatch level-{level}' aria-hidden='true'></span>"
-        f"<span class='record-activity-legend-text'>{_calendar_range(low, high)}</span>"
+        "<span class='lk-legend__item'>"
+        f"<span class='lk-legend__swatch level-{level}' aria-hidden='true'></span>"
+        f"<span class='lk-legend__range'>{_calendar_range(low, high)}</span>"
         "</span>"
         for level, low, high in _CALENDAR_LEVELS
     )
     return (
-        "<div class='record-activity-legend' aria-label='图例：当天作答次数'>"
-        "<span class='record-activity-legend-title'>当天作答次数</span>"
+        "<div class='lk-legend' aria-label='图例：当天作答次数'>"
+        "<span class='lk-legend__title'>当天作答次数</span>"
         + items
         + "</div>"
     )
