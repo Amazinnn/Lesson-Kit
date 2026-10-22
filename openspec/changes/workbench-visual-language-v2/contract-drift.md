@@ -26,8 +26,8 @@
 > owner 回来更新对应行。提示「本仓库存在 N 条已登记漂移」的交接文本写在
 > `openspec/changes/workbench-visual-language-v2/HANDOFF.md`。
 >
-> **条数说明**：本表实际登记 **163 条**（`CD-001`…`CD-163`）。
-> `tasks.md` 27.2 写的是 128 条 —— **差额 +34 条的原因逐条说明在 §4.1**
+> **条数说明**：本表实际登记 **164 条**（`CD-001`…`CD-164`）。
+> `tasks.md` 27.2 写的是 128 条 —— **差额 +36 条的原因逐条说明在 §4.1**
 > （同一冲突的「多条腿」必须逐腿登记 + 裁决已下但落地未落的残留），
 > **没有为凑数编造条目**。自检结果见 §4。
 
@@ -201,6 +201,7 @@
 | CD-161 | `openspec/specs/workbench-ui/spec.md:12`（"a collapsible right Agent conversation column"） vs `workbench/server/static/workbench.css:153`（`.mobile-drawer-controls` 在 ≥1024px 是 `display:none`） | spec 承诺右栏「可收起」，桌面端**没有任何收起入口** | `openspec/specs/workbench-ui/spec.md:12` | spec delta | 高 | 与 CD-029 同案：spec owner 明确 spec 指的是窄屏抽屉还是桌面也可收起；本条只登记（同一冲突的契约侧腿） |
 | CD-162 | `docs/PRODUCT-MANUAL.md:43`（「Dashboard 的工作区列表」一句） vs `workbench/server/pages.py`（hub 22 张等权卡） | 手册对 hub 的描述只有一句话，没有字段/排序/分组口径，与实现的「注册顺序 + 22 张等权卡」之间没有可判定的契约 | `docs/PRODUCT-MANUAL.md:43` | docs/GLOSSARY.md | 低 | 契约责任人补写 hub 卡片的信息层级与排序口径（与 CD-033 同案：spec owner 增补 hub 排序契约后，手册同步） |
 | CD-163 | `docs/PRODUCT-MANUAL.md`（知识点页「掌握」一句） vs `docs/GLOSSARY.md`「行动提醒 / Action-oriented learning reminders」三态 | 手册正文用「掌握」描述知识点状态；词表定义的三态是「重点练习 / 可以复习 / 中性」，且把「掌握度」列为禁用词 | PRODUCT-MANUAL 的措辞与 GLOSSARY 的行动提醒三态不是同一套词；「掌握」在词表里不是状态词 | docs/PRODUCT-MANUAL.md | 中 | 手册 §3.2 的「掌握」改为词表三态之一（中性）或明确它是正文描述而非状态词；本轮 mockup 一律用词表三态，差异留待后续 change 统一 |
+| CD-164 | `openspec/changes/workbench-visual-language-v2/decisions.md` **A-29**（裁决：里程碑判定去掉第三条） vs `openspec/changes/workbench-visual-language-v2/specs/workbench-ui/spec.md`（`Round completion celebration in two tiers`，原写三条里程碑条件） | 里程碑判定原本写了**全对 / 破纪录 / 章节首次完成**三条；其中「破纪录」要判定必须先定义**比较范围**（跟同一份卷比？同一章？历史所有练习？比什么量？），而这个范围在既有契约里**不存在** —— 仓库里没有可比的现成来源；spec 却把它写成了一条可触发的条件，等于一条**可能永远不触发**的死文本 | `openspec/specs/workbench-ui/spec.md`（原「beats the learner's own record for the same paper」一条）与 `docs/GLOSSARY.md` `_Avoid_`（正确率 / 掌握度 / 完成度百分比）—— 任何代理指标近似都会造出一个**口径未定义的新事实** | 产品决策 | 中 | **待所有者定义比较范围**（在同一份练习 / 同一章 / 全部练习之间比什么、比什么量），定义后再作为**独立条款**补进 spec；在它被定义之前**不得**用任何代理指标近似（如「比上次做得好」）触发里程碑；里程碑只用「全对」与「章节首次完成」两个条件（`decisions.md` **A-29** 已按此改写 spec / tasks） |
 
 ---
 
@@ -235,12 +236,12 @@ CD-118, CD-119, CD-148, CD-159, CD-161
 要么是「spec 没写，但实现已经做了用户可见的事」。**不要由实现者自行挑一边** ——
 AGENTS.md 明写「禁止静默挑一个版本继续实现」。
 
-### 2.3 `产品决策` —— 34 条
+### 2.3 `产品决策` —— 35 条
 
 CD-024, CD-032, CD-037, CD-040, CD-044, CD-050, CD-062, CD-064, CD-067, CD-069,
 CD-077, CD-078, CD-080, CD-085, CD-091, CD-103, CD-116, CD-120, CD-122, CD-124,
 CD-125, CD-136, CD-137, CD-138, CD-139, CD-140, CD-141, CD-142, CD-143, CD-144,
-CD-145, CD-146, CD-155, CD-157
+CD-145, CD-146, CD-155, CD-157, CD-164
 
 **读法**：这一组要么需要**所有者拍板**（取舍、默认值、要不要这个功能），要么是
 **产品哲学层面的长期取向**（CD-136…CD-146 这批多邻国游戏化机制）。后者建议一次性

@@ -15,14 +15,19 @@
 > 另：**A-10.3 标签不截断** —— 下面 `Living graph motion and readable labels` 取
 > 「**不截断**」的一支（换行显示全文，完整标题由悬浮 / 键盘聚焦承载），
 > 与 G-23（重叠时**隐藏**次要标签）是**两个不同机制**，互不冲突。
-> 又：节点半径区间以新能力 `graph-visual-language` 的 `Screen-space sizing` 为准
-> （**14–30 屏幕像素**，A-10.1 收窄后）；本 delta 不另写半径数值。
+> 又：节点绘制半径以新能力 `graph-visual-language` 的 `Screen-space sizing` 为准
+> （**5–13 屏幕像素**，**A-28 定案**；两个数值投影取 13px）；本 delta 不另写半径数值。
+>
+> 又：**A-28 的参数定案** —— 节点是**单层实心圆点**（无描边、无投影、无光晕）、
+> 标签在**点下方 5px**、**12 屏幕 px 恒定**、**缩放 < 0.5 时按对数淡出**、
+> 关系线**屏幕恒定 1.25px** + **方向箭头**、**非邻接元素 alpha 0.2**、
+> 选中态 = **换色 + 1px 描边环 + 点放大 + 标签提亮**。
 
 ## MODIFIED Requirements
 
 ### Requirement: Knowledge graph page
 
-When browser Web Worker support, graph physics resources, and WebGL2 support are available, the knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. Relationship rendering SHALL preserve the existing physics-provided ports, lanes, bends, arrow direction, and endpoint clearance; DOM nodes SHALL remain the accessible and interactive source for node appearance, labels, selection, and drag input. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, projection-driven node radius sized in screen pixels, focus, and the concise dashboard. Every node SHALL be drawn in the graph's node appearance language — two concentric circles in one hue, one formal-problem count at the centre, and no state word, progress arc, satellite marker, drop shadow or glow on the node — and node labels SHALL be visible by default at a contrast below the node's own fill. The graph's colour legend SHALL switch its node-colour key with the active projection. Viewport culling and label/meta LOD SHALL affect paint only; a node label SHALL be hidden only where it overlaps a label of higher priority or exceeds the graph's visible-label budget; for on-screen nodes, selected, hovered, and high-focus labels SHALL remain visible at reduced zoom, and graph membership and selection SHALL remain available. When browser `localStorage` is available, the graph runtime SHALL keep at most one optional settled local layout seed per workspace. Its readable identity SHALL contain the sorted node IDs and sorted relationship tuples of source, target, type, and direction. The graph SHALL read a seed only when its identity exactly matches the current graph, restore its coordinates as temporary anchors through the existing Worker, then release those anchors and reheat that same Worker. Filters, selection, motion, active anchors, authored content, and learning state SHALL NOT be restored from the seed. Missing, stale, corrupt, or unavailable storage SHALL leave the deterministic Worker startup unchanged. If Web Worker support, graph physics resources, WebGL2, or renderer initialization is unavailable, the page SHALL show a readable graph error; a renderer startup failure after Worker creation SHALL terminate that Worker and release partial renderer resources. The page SHALL NOT run the synchronous solver or fall back to SVG.
+When browser Web Worker support, graph physics resources, and WebGL2 support are available, the knowledge graph page SHALL render the live complete chapter graph in a middle-column canvas that fills the viewport below its compact page tools. Six deterministic component layouts SHALL supply seed positions before every visible node enters one unbounded unified elastic field. Existing edge attraction SHALL determine variable semantic gaps from 72 to 144 pixels in addition to endpoint radii, and every pair of node circles SHALL retain at least 24 pixels of logical clearance. Relationship rendering SHALL preserve the existing physics-provided ports, lanes, bends, arrow direction, and endpoint clearance; DOM nodes SHALL remain the accessible and interactive source for node appearance, labels, selection, and drag input. The graph SHALL retain search, filter, zoom, pan, camera-only fit, drag, projection-driven node radius sized in screen pixels, focus, and the concise dashboard. Every node SHALL be drawn in the graph's node appearance language — a single flat solid circle with no outline, drop shadow or glow, and a centre number only under the magnitude projections — and node labels SHALL be visible by default at a contrast below the node's own fill. The graph's colour legend SHALL switch its node-colour key with the active projection. Viewport culling and label LOD SHALL affect paint only; a node label SHALL be hidden only where it overlaps a label of higher priority or exceeds the graph's visible-label budget; for on-screen nodes, selected, hovered, and high-focus labels SHALL remain visible at reduced zoom, and graph membership and selection SHALL remain available. When browser `localStorage` is available, the graph runtime SHALL keep at most one optional settled local layout seed per workspace. Its readable identity SHALL contain the sorted node IDs and sorted relationship tuples of source, target, type, and direction. The graph SHALL read a seed only when its identity exactly matches the current graph, restore its coordinates as temporary anchors through the existing Worker, then release those anchors and reheat that same Worker. Filters, selection, motion, active anchors, authored content, and learning state SHALL NOT be restored from the seed. Missing, stale, corrupt, or unavailable storage SHALL leave the deterministic Worker startup unchanged. If Web Worker support, graph physics resources, WebGL2, or renderer initialization is unavailable, the page SHALL show a readable graph error; a renderer startup failure after Worker creation SHALL terminate that Worker and release partial renderer resources. The page SHALL NOT run the synchronous solver or fall back to SVG.
 
 #### Scenario: Read semantic spacing
 
@@ -107,12 +112,12 @@ When browser Web Worker support, graph physics resources, and WebGL2 support are
 #### Scenario: Preserve relationship geometry
 
 - **WHEN** the relationship-structure view paints directed and parallel relations
-- **THEN** their existing ports, lanes, bends, arrow direction, and endpoint clearance remain intact while graph nodes keep their labels, hit targets, selection, drag behavior, and accessibility
+- **THEN** their existing ports, lanes, bends, arrow direction, and physics-provided endpoint clearance remain intact, while the drawn line endpoint meets the edge of the drawn node and graph nodes keep their labels, hit targets, selection, drag behavior, and accessibility
 
 #### Scenario: Focus a selected neighborhood
 
 - **WHEN** the learner selects a node
-- **THEN** the node and one-hop neighbors remain fully emphasized, two-hop neighbors remain secondary, and farther topology fades
+- **THEN** the node and one-hop neighbors remain fully emphasized, two-hop neighbors remain secondary, and farther topology fades but stays visible
 
 #### Scenario: Reset focus
 
@@ -147,12 +152,12 @@ When browser Web Worker support, graph physics resources, and WebGL2 support are
 #### Scenario: Keep viewport LOD paint-only
 
 - **WHEN** the learner changes zoom or viewport or the renderer repaints
-- **THEN** off-screen node wrappers may be hidden and label/meta detail may be reduced, while graph membership and selection remain available and on-screen selected, hovered, and high-focus labels remain visible at reduced zoom
+- **THEN** off-screen node wrappers may be hidden and label detail may be reduced, while graph membership and selection remain available and on-screen selected, hovered, and high-focus labels remain visible at reduced zoom
 
 #### Scenario: Read the graph's node visual language
 
 - **WHEN** the learner opens the knowledge graph page
-- **THEN** each node is drawn as a light inner core inside a solid outer ring of the same hue with one formal-problem count at its centre, its label is drawn at a contrast below the node fill, and the legend's node-colour key matches the active projection
+- **THEN** each node is drawn as one flat solid circle with no outline, drop shadow or glow, a centre number only under the magnitude projections, its label is drawn below the node at a contrast below the node fill, and the legend's node-colour key matches the active projection
 
 ### Requirement: Living graph motion and readable labels
 
@@ -166,8 +171,8 @@ complete text without ellipsis or a character cap whenever they are shown —
 wrapping to further lines instead of truncating — and label extent SHALL
 participate in collision spacing so wrapped labels do not overlap each other
 or nearby nodes. Labels SHALL be hidden only by the graph's label decluttering
-rules, and a node's complete title SHALL remain available to the learner on
-hover and keyboard focus. The projection pipeline (how artifacts are derived
+rules and the graph's zoom fade, and a node's complete title SHALL remain
+available to the learner on hover and keyboard focus. The projection pipeline (how artifacts are derived
 from source material at ingest) SHALL NOT change; only the runtime presentation
 layout is affected.
 
@@ -205,7 +210,7 @@ layout is affected.
 
 ### Requirement: Graph detail is a learning dashboard
 
-Selecting a graph node SHALL show only its readable title, concise action reminder, and one link to the formal knowledge-point page. Full evidence remains available to Agent context but SHALL NOT be repeated as student-facing graph parameters. The dashboard's colours SHALL agree with the selected node in the canvas: the indicator of the node's learning state SHALL use the same state colour the node carries under the active projection, and the formal-problem count the dashboard reports SHALL be the same count shown at the node centre. The dashboard SHALL NOT give a learning state a meaning that differs from the node's, and it SHALL remain the place where a node's learning state is named in words, so that removing state words from the node does not remove the state from the page.
+Selecting a graph node SHALL show only its readable title, concise action reminder, and one link to the formal knowledge-point page. Full evidence remains available to Agent context but SHALL NOT be repeated as student-facing graph parameters. The dashboard's colours SHALL agree with the selected node in the canvas: the indicator of the node's learning state SHALL use the same state colour the node carries under the active projection. The dashboard SHALL report the node's formal-problem count, and that count SHALL match the number shown at the node centre whenever the active projection is the formal-problem-count projection; under the other projections the node centre carries no number, and the dashboard remains the place where the count and the learning state are named in words. The dashboard SHALL NOT give a learning state a meaning that differs from the node's, and it SHALL remain the place where a node's learning state is named in words, so that removing state words from the node does not remove the state from the page.
 
 #### Scenario: Node selection opens a concise dashboard
 
@@ -220,21 +225,21 @@ Selecting a graph node SHALL show only its readable title, concise action remind
 #### Scenario: The dashboard agrees with the node
 
 - **WHEN** a student selects a node under the learning-state projection
-- **THEN** the dashboard's learning-state indicator uses the same colour as that node's outer ring, and its formal-problem count matches the number shown at the node centre
+- **THEN** the dashboard's learning-state indicator uses the same colour as that node's fill, and the dashboard reports the node's formal-problem count in words while the node centre carries no number
 
 ### Requirement: Metric projection morphology
 
-The knowledge graph page SHALL preserve the same visible node elements when the learner switches among relationship structure, formal-problem count, importance, and learning-state projections. A metric projection SHALL map higher values to a larger node radius, a thicker node outer ring, and a target nearer the canvas center, while retaining deterministic separation for equal values. Learning-state projection SHALL rank attention as `needs_work`, `review`, unmarked, then `mastered`. Each projection SHALL apply its own colour key — categorical colours for the relationship-structure and learning-state projections, and one hue in graded steps for the formal-problem-count and importance projections — without changing or persisting learning data. The graph SHALL NOT draw a progress arc or gauge around a node, so that node size and node colour are the only channels carrying a metric value. Under every projection the node centre SHALL show only the count of formal problems linked to that node, and SHALL NOT show a state word or a projection-specific value. Relationship edges SHALL be rendered only under the relationship-structure projection; metric projections SHALL render nodes only, without creating any relationship edge elements.
+The knowledge graph page SHALL preserve the same visible node elements when the learner switches among relationship structure, formal-problem count, importance, and learning-state projections. Under the relationship-structure and learning-state projections a higher metric value SHALL take a larger node radius and a target nearer the canvas center, while retaining deterministic separation for equal values. Under the formal-problem-count and importance projections the node radius SHALL be held at the value that fits the centre number, so that the metric value is carried by that number together with the colour step, while the target nearer the canvas center still applies. Learning-state projection SHALL rank attention as `needs_work`, `review`, unmarked, then `mastered`. Each projection SHALL apply its own colour key — categorical colours for the relationship-structure and learning-state projections, and one hue in graded steps for the formal-problem-count and importance projections — without changing or persisting learning data. The graph SHALL NOT draw a progress arc or gauge around a node, so that node size, node colour and, where it is drawn, the centre number are the only channels carrying a metric value. The node centre SHALL carry a number only under the formal-problem-count and importance projections, SHALL carry that projection's own value there, and SHALL carry neither a number nor a state word under the relationship-structure or learning-state projections. Relationship edges SHALL be rendered only under the relationship-structure projection; metric projections SHALL render nodes only, without creating any relationship edge elements.
 
 #### Scenario: Switch to a numeric metric
 
 - **WHEN** the learner changes from relationship structure to formal-problem count
-- **THEN** the same nodes move continuously toward deterministic metric targets and higher-count nodes become larger with a thicker outer ring and nearer the center, with no relationship edges created
+- **THEN** the same nodes move continuously toward deterministic metric targets, each node carries the formal-problem count at its centre, and no relationship edges are created
 
 #### Scenario: Read attention from learning state
 
 - **WHEN** the learner selects learning-state projection
-- **THEN** needs-work nodes are ranked above review, unmarked, and mastered nodes for size and radial position, with no relationship edges created
+- **THEN** needs-work nodes are ranked above review, unmarked, and mastered nodes for size and radial position, no number is drawn at any node centre, and no relationship edges are created
 
 #### Scenario: Return to relationship structure
 
@@ -249,7 +254,7 @@ The knowledge graph page SHALL preserve the same visible node elements when the 
 #### Scenario: No gauge around a node
 
 - **WHEN** any projection is active
-- **THEN** no progress arc or gauge is drawn around a node, and the metric value is expressed by node size, outer-ring thickness and node colour only
+- **THEN** no progress arc or gauge is drawn around a node, and the metric value is expressed by node size, node colour and, under the magnitude projections, the centre number only
 
 ### Requirement: Multi-state graph filtering
 
@@ -273,7 +278,7 @@ The knowledge graph SHALL expose a multi-select learning-state filter using exac
 #### Scenario: Filtering changes membership, not appearance
 
 - **WHEN** the learner selects one or more learning states
-- **THEN** the surviving nodes keep the same concentric form and the colours of the active projection, and the nodes leaving the graph fade out without changing colour
+- **THEN** the surviving nodes keep the same solid-circle form and the colours of the active projection, and the nodes leaving the graph fade out without changing colour
 
 #### Scenario: Filtering adds no state channel
 
@@ -287,10 +292,11 @@ The knowledge graph SHALL expose a multi-select learning-state filter using exac
 Color SHALL NOT be the only carrier of learning or interaction state. Active
 navigation, graph learning states, and errors SHALL retain text, outline, position,
 or another geometric cue in addition to color. On the knowledge graph page a
-node's learning state SHALL be carried by the colour of its outer ring together
-with the geometry of its concentric rings, and the state name SHALL remain
-available as the node's accessible name and in the learning dashboard. No state
-word SHALL be drawn on the node itself.
+node's learning state SHALL be carried by the colour of its fill together with
+the geometry of its radius and its radial position under the learning-state
+projection, and the state name SHALL remain available as the node's accessible
+name and in the learning dashboard. No state word SHALL be drawn on the node
+itself.
 
 #### Scenario: Active navigation
 
@@ -301,9 +307,9 @@ word SHALL be drawn on the node itself.
 
 - **WHEN** a node has a formal learning state
 - **THEN** its state name remains available as the node's accessible name and in
-  the learning dashboard, its outer ring carries the state's colour together with
-  the concentric geometry as the redundant cue, and no state word is drawn on the
-  node
+  the learning dashboard, its fill carries the state's colour together with its
+  radius and radial position as the redundant cue, and no state word is drawn on
+  the node
 
 ### Requirement: Soft Mondrian visual foundation
 

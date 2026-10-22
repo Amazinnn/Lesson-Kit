@@ -1511,14 +1511,24 @@ magick compare -metric AE -crop <W>x<H>+<X>+<Y> before.png after.png null:
 | `--surface-base` | `#fdf8ef` | 图谱画布周边底色 |
 | `--surface-card` | `#fffdf7` | 图谱页的卡片面 |
 | `--surface-raised` | `#ffffff` | 浮层 |
-| `--surface-ink` | `#221f1a` | 墨块 |
+| `--ink-on-warm` | `#221f1a` | 语义是「黄色暖面上的文字」——**不表示深墨字形**；图谱的深墨字形用**图谱自己的** `--ink`（`workbench.css:1507`，`#191816`，两主题不变） |
 | `--ink-strong` / `--ink-body` / `--ink-muted` / `--ink-faint` | `#221f1a` / `#3b3630` / `#6b6459` / `#8d8578` | 图谱内的字 |
 | `--rule-hair` / `--rule-structure` | `#e6dcc4` / `#221f1a` | 图谱内的线 |
 | `--role-blue` / `--role-yellow` / `--role-red` | `#2b62e8` / `#f5c518` / `#d1392b` | 图谱节点色 |
 
+> **⚠️ 命名回填（A-30 / A-23）**：本表原写作 `--surface-ink`。该字样在本节表达的是
+> **图谱自己的深墨字形**（`workbench.css:1507` 的 `--ink`，供图谱内的文字与线条用），
+> **不是**「代码块 / 等宽代码区的反白面」——`--surface-ink` 已按 A-23 / A-30 更名为
+> `--surface-code`（**code-only**），直接改名会把一个**代码面** token 用到**图谱字形**上，
+> **是错的**。**不借用** `--ink-on-warm`（它的语义是「黄面上的文字」）；图谱的深墨字形一律用**图谱区段自己的** `--ink`（`workbench.css:1507`，`#191816`）
+> （浅 `#221f1a` / 夜 `#14120f`），**零视觉变化**；
+> **图谱自己的裸名 `--ink` 与它的 `#191816` 取值一律不动**
+> （图谱侧 token 命名随 `graph-node-visual-language` 决定，本变更不越界裁决）。
+> 本节其余两张表（下方「取值出入」表与「裁决」表）里同一行的 token 名**同样已回填**。
+
 **计数出入**：任务书说「11 个 token」，但实测这张表是
 **7 行 / 13 个 token 名**（`--surface-base`、`--surface-card`、`--surface-raised`、
-`--surface-ink`、`--ink-strong`、`--ink-body`、`--ink-muted`、`--ink-faint`、
+`--ink-on-warm`、`--ink-strong`、`--ink-body`、`--ink-muted`、`--ink-faint`、
 `--rule-hair`、`--rule-structure`、`--role-blue`、`--role-yellow`、`--role-red`）。
 → **以表为准：13 个**。本文件按 13 个记录。
 
@@ -1533,7 +1543,7 @@ magick compare -metric AE -crop <W>x<H>+<X>+<Y> before.png after.png null:
 | `--surface-card` | `#fffdf7` | 图谱区段 `--paper: #fffdf7`（`:1506`） | ✅ 一致 |
 | `--surface-base` | **`#fdf8ef`** | **`--lk-paper: #fffdf7`（`:5`）→ `body` 背景（`:67`）** | ❌ **不一致** |
 | `--surface-raised` | `#ffffff` | 图谱区段无对应；`--dsw-bg-layer-1: #fffefa`（`:17`）是顶栏/右栏面 | ⚠️ 值不同（`#ffffff` vs `#fffefa`） |
-| `--surface-ink` | `#221f1a` | 图谱区段 `--ink: #191816`（`:1507`） | ❌ **不一致** |
+| `--ink-on-warm` | `#221f1a` | 图谱区段 `--ink: #191816`（`:1507`） | ❌ **不一致** |
 | `--ink-*` 四件套 | `#221f1a / #3b3630 / #6b6459 / #8d8578` | 图谱区段 `--ink: #191816`（`:1507`） | ❌ **不一致** |
 | `--rule-hair` / `--rule-structure` | `#e6dcc4` / `#221f1a` | 图谱区段 `--hair: #ddd8cd`（`:1508`） | ❌ **不一致** |
 | `--role-blue` / `--role-yellow` / `--role-red` | `#2b62e8 / #f5c518 / #d1392b` | 图谱区段 `--blue: #2457c5` / `--yellow: #f2c94c` / `--red: #d6453d`（`:1509 :1511 :1513`） | ❌ **不一致** |
@@ -1562,13 +1572,17 @@ magick compare -metric AE -crop <W>x<H>+<X>+<Y> before.png after.png null:
 > | `--surface-base` | **`#fffdf7`**（不是 `#fdf8ef`） | `workbench.css:5` `--lk-paper` |
 > | `--surface-card` | `#fffdf7` | `workbench.css:1506` `--paper` |
 > | `--surface-raised` | **`#fffefa`**（不是 `#ffffff`） | `workbench.css:17` `--dsw-bg-layer-1` |
-> | `--surface-ink` | **`#191816`**（不是 `#221f1a`） | `workbench.css:1507` `--ink` |
+> | `--ink-on-warm` | **`#191816`**（不是 `#221f1a`） | `workbench.css:1507` `--ink` |
 > | `--ink-strong` / `--ink-body` / `--ink-muted` / `--ink-faint` | **`#191816` / `#191816` / `#191816` / `#191816`**（或按图谱区段实际用到的取值逐项钉） | `workbench.css:1507` |
 > | `--rule-hair` | **`#ddd8cd`**（不是 `#e6dcc4`） | `workbench.css:1508` `--hair` |
 > | `--rule-structure` | 图谱区段无对应描边 token → **钉回 `#ddd8cd`** 或不适用 | `workbench.css:1508` |
 > | `--role-blue` | **`#2457c5`**（不是 `#2b62e8`） | `workbench.css:1509` `--blue` |
 > | `--role-yellow` | **`#f2c94c`**（不是 `#f5c518`） | `workbench.css:1511` `--yellow` |
 > | `--role-red` | **`#d6453d`**（不是 `#d1392b`） | `workbench.css:1513` `--red` |
+>
+> **⚠️ 同上（A-30 回填）**：上表与上方「取值出入」表里原写作 `--surface-ink` 的行，
+> 指的都是**图谱自己的深墨字形**，已同样映射为 `--ink-on-warm`（浅色取值 `#221f1a` 不变）；
+> **被钉回的图谱取值 `#191816` 不变**，图谱自己的裸名 `--ink` 也**不动**。
 >
 > **并且**：最稳妥的做法是**根本不引入这层映射** ——
 > 图谱页的画布用图谱自己的 `--paper` / `--ink` / `--hair` / `--blue` / `--yellow` / `--red`

@@ -112,7 +112,7 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
 | **A-28** | **无 drop-shadow、无描边**（常态） | 删 `.node-face` 的 `box-shadow` / `inset` 内高光 / 1px 描边 / `.node-face::before` 的径向高光；点**单层实心平涂**，不带任何投影与描边 —— 这是「塑料感」的来源（Obsidian 官方源码里节点只有一次 `beginFill` + `drawCircle`） |
 | **A-28** | halo 只作命中区，不绘制 | 参照 Obsidian 移动端的透明命中圆（`r=500, alpha=0.0001`）与本地 `frontend/editable-graph/src/styles.css:288-293` 的 `.node .halo` —— 命中区可以大于可见点（**下限 24 屏幕 px**），但**不得有任何可见痕迹** |
 
-### 二、标签：在点下方 18px（A-24.2）
+### 二、标签：在点下方 5px（A-28 取代 A-24.2 的 18px）
 
 | 项 | 裁决 | 本变更的落点 |
 |---|---|---|
@@ -202,13 +202,14 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
 ### New Capabilities
 
 - **`graph-visual-language`**：知识图谱**节点视觉语言**的自足契约，覆盖五件事——
-  ① 屏幕空间可读性（节点绘制半径 / 字号 / 线宽的屏幕像素语义）；
-  ② **Obsidian 式节点形态**（小实心圆点、无描边无投影、标签在点下方 18px）；
-  ③ **圆心数字按投影决定**（结构 / 状态投影无数字；题量 / 重要性投影有数字，半径下限 16px）；
+  ① 屏幕空间可读性（节点绘制半径 / 字号 / 线宽的屏幕像素语义，**缩放只改间距**）；
+  ② **Obsidian 式节点形态**（**单层实心圆点**、半径 5–13 屏幕 px、无描边无投影无光晕、
+  标签在点下方 5px、12px 恒定、缩放 < 0.5 时对数淡出）；
+  ③ **圆心数字按投影决定**（结构 / 状态投影无数字；题量 / 重要性投影有数字，半径取 13px）；
   ④ 四个投影各自的色键与随投影切换的图例；
   ⑤ **布局算法冻结**（力模型、迭代、收敛、阻尼、引力斥力、碰撞、种子、边集合、
   筛选与投影语义、指标、DOM 身份与顺序、拖拽与聚焦语义一律不动；
-  改造前后收敛坐标 diff = 0）。
+  **改造前后收敛坐标 diff = 0**）。
   **立为新能力而不是塞进 `workbench-ui` 的理由**：既有 `workbench-ui` 的图谱需求
   （`Metric projection morphology` 等）只约束了「半径随指标变大」这一条，
   从未定义节点的**形态、配色、图例与标签**，更从未定义**算法冻结**这条边界；
@@ -223,7 +224,7 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
      现有条款「Viewport culling and label/meta LOD SHALL affect paint only」仍然成立，
      但**标签的可见性判据从「缩放阈值」改为「重叠让位」**（G-23），
      且节点不再有 `meta` 行；节点形态从「同心圆 + 圆心题数」改为
-     **小实心圆点 + 按投影决定的圆心数字**。
+     **单层实心圆点 + 按投影决定的圆心数字**；标签在**缩放 < 0.5** 时按对数淡出。
   2. `Living graph motion and readable labels`（`:464`）——现有条款
      「label/meta LOD」与「Node labels SHALL always display their complete text」
      需要与 G-5 / G-6 对齐：标签常态可见、屏幕像素字号、不截断；
@@ -231,8 +232,11 @@ esources\obsidian.asar` → `/app.js` 的逐条核实）。
      **节点上不再出现状态文字**，完整标题继续由悬浮与键盘聚焦承载。
   3. `Metric projection morphology`（`:591`）——现有条款
      「A metric projection SHALL map higher values to both a larger node radius and a target
-     nearer the canvas center」中的**半径区间**改为 **8–23 屏幕像素**
-     （有数字的两个投影下限 16px），并**删掉「外环粗细」这一条通道**；
+     nearer the canvas center」中的**半径区间**改为 **5–13 屏幕像素**（A-28），
+     并**删掉「外环粗细」这一条通道**；
+     〔口径〕在**题目数量 / 重要性**两个投影里半径取 **13px**（A-28：容下 12px 的圆心数字）
+     ⇒ 这两档投影的量值由**数字 + 色阶**承载，「值越大点越大」一句在该 delta 里
+     **显式改写**；
      「restrained, distinguishable Mondrian palette」改为**图谱自有暖色板**
      （G-7 / G-12 / G-16 / G-20…G-22）；
      同时明确**圆心数字按投影决定**、节点上不画进度弧或仪表。

@@ -223,9 +223,9 @@
 | `--asset-ground-blue` | `--role-blue` | `#2b62e8` | `#7291de` | 圆底：学习蓝 |
 | `--asset-ground-yellow` | `--role-yellow` | `#f5c518` | `#e0c151` | 圆底：阳光黄 |
 | `--asset-ground-red` | `--role-red` | `#d1392b` | `#d4736b` | 圆底：注意红（保留，导航默认不用，见 §2.0） |
-| `--asset-ink-on-blue` | 浅色 `--surface-card` / 夜纸 `--surface-ink` | `#fffdf7` | `#14120f` | 蓝圆底上的字形 |
-| `--asset-ink-on-yellow` | `--surface-ink` | `#221f1a` | `#14120f` | 黄圆底上的字形 |
-| `--asset-ink-on-red` | 浅色 `--surface-card` / 夜纸 `--surface-ink` | `#fffdf7` | `#14120f` | 红圆底上的字形 |
+| `--asset-ink-on-blue` | `--ink-on-role` | `#fffdf7` | `#14120f` | 蓝圆底上的字形 |
+| `--asset-ink-on-yellow` | `--ink-on-warm` | `#221f1a` | `#14120f` | 黄圆底上的字形 |
+| `--asset-ink-on-red` | `--ink-on-role` | `#fffdf7` | `#14120f` | 红圆底上的字形 |
 | `--asset-wash-blue` | `--art-wash-blue` | `#e1e7f5` | `#303239` | 蓝色淡彩 |
 | `--asset-wash-yellow` | `--art-wash-yellow` | `#fdf3cf` | `#3d3721` | 黄色淡彩 |
 | `--asset-wash-red` | `--art-wash-red` | `#f9e5df` | `#3c2c24` | 红色淡彩 |
@@ -236,20 +236,34 @@
 > **命名规则**：派生变量一律写成 `var(--asset-xxx, #回退值)`，回退值即上表的浅色取值。
 > 回退值的作用是：资产文件被独立打开（没进页面 CSS 级联）时仍是一张可看的浅色主题插画。
 
+> **⚠️ 回填说明（A-30 / A-23）**：本表原先把「蓝/红圆底上的字形」在夜纸下指向 `--surface-ink`、
+> 把「黄圆底上的字形」指向 `--surface-ink`。**那些字样表达的是「深墨字形」**
+> （圆底上的笔画颜色），**不是**「代码块 / 等宽代码区的反白面」——
+> `--surface-ink` 已按 A-23 / A-30 更名为 `--surface-code`（**code-only**），
+> 直接改名会把一个**代码面** token 用到**图标字形**上，**是错的**。
+> 现改为**取值完全相同**的既有 token（**零视觉变化**，不新增 token）：
+> `--asset-ink-on-blue` / `--asset-ink-on-red` → `--ink-on-role`
+> （浅 `#fffdf7` / 夜 `#14120f`），`--asset-ink-on-yellow` → `--ink-on-warm`
+> （浅 `#221f1a` / 夜 `#14120f`）。
+
 **第二步：派生变量在哪定义**（外壳 CSS，不在 SVG 内）：
 
 ```css
 :root {
-  --asset-ink-on-blue:  var(--surface-card);   /* 浅色：蓝底用纸色 */
-  --asset-ink-on-yellow:var(--surface-ink);
-  --asset-ink-on-red:   var(--surface-card);
+  --asset-ink-on-blue:  var(--ink-on-role);     /* 浅色：蓝/红底用纸色 */
+  --asset-ink-on-yellow:var(--ink-on-warm);     /* 黄底必须用墨色 */
+  --asset-ink-on-red:   var(--ink-on-role);
 }
 [data-theme="night"] {
-  --asset-ink-on-blue:  var(--surface-ink);     /* 夜纸：三底统一深墨 */
-  --asset-ink-on-yellow:var(--surface-ink);
-  --asset-ink-on-red:   var(--surface-ink);
+  --asset-ink-on-blue:  var(--ink-on-role);     /* 夜纸：三底统一深墨 */
+  --asset-ink-on-yellow:var(--ink-on-warm);
+  --asset-ink-on-red:   var(--ink-on-role);
 }
 ```
+
+> 注：上面两段指向的是**同一个 token** —— `--ink-on-role` / `--ink-on-warm` **自带两主题取值**
+> （权威表 §3.2），故夜纸块与浅色块写法相同、值自动切换。
+> 这三行原先写的是 `var(--surface-ink)`，**原字样指深墨字形、非代码块反白面**（见上方回填说明）。
 
 **第三步：已验算的对比度**（图形对底色，WCAG 1.4.11 非文本对比 ≥ 3:1；字形按正文级 ≥ 4.5:1 更稳）：
 
@@ -1852,7 +1866,7 @@ ids.length === new Set(ids).size;
 | `--asset-paper` | `--surface-card` | §3.1 |
 | `--asset-ink` | `--art-ink` | §3.9 |
 | `--asset-ground-*` | `--role-blue/yellow/red` | §3.4 + §5 |
-| `--asset-ink-on-*` | `--surface-card` / `--surface-ink` | §3.1 + §5 表 |
+| `--asset-ink-on-*` | `--ink-on-role` / `--ink-on-warm` | §3.1 + §5 表 |
 | `--asset-wash-*` | `--art-wash-blue/yellow/red` | §3.9 |
 | `--asset-highlight` | `--art-highlight` | §3.9 |
 | `--asset-lamp-warm` | （资产层自有变量；权威表无对应 token → 待裁决） | motion-spec §1.8 |

@@ -217,11 +217,10 @@ to their values, and a progress band filling from empty to full. The milestone
 tier SHALL consist of everything in the ordinary tier plus geometric bursts and
 paper flutter flying across the surface.
 
-A round SHALL reach the milestone tier when it is finished fully correct, when
-it beats the learner's own record for the same paper, or when it completes a
-chapter for the first time. A round that meets none of these three conditions
-SHALL stay in the ordinary tier, and the ordinary tier SHALL NOT include
-geometric bursts or paper flutter.
+A round SHALL reach the milestone tier when it is finished fully correct or
+when it completes a chapter for the first time. A round that meets neither of
+these two conditions SHALL stay in the ordinary tier, and the ordinary tier
+SHALL NOT include geometric bursts or paper flutter.
 
 The celebration SHALL begin only after the response that ends the round has
 arrived, SHALL NOT change the request sequence or its payload, and SHALL NOT
@@ -229,8 +228,8 @@ cover the primary action of the completion surface.
 
 #### Scenario: An ordinary round is celebrated lightly
 
-- **WHEN** a round finishes with at least one wrong answer and meets none of the
-  milestone conditions
+- **WHEN** a round finishes with at least one wrong answer and meets neither of
+  the milestone conditions
 - **THEN** the completion surface enters, its figures roll up to their values,
   and a progress band fills from empty to full, with no geometric burst and no
   paper flutter
@@ -240,12 +239,6 @@ cover the primary action of the completion surface.
 - **WHEN** a round finishes with every answer correct
 - **THEN** the milestone tier is used, adding geometric bursts and paper flutter
   on top of the rolling figures and the filling progress band
-
-#### Scenario: A new record reaches the milestone tier
-
-- **WHEN** a round finishes and its result beats the learner's previous record
-  for the same paper
-- **THEN** the milestone tier is used, adding geometric bursts and paper flutter
 
 #### Scenario: The first completion of a chapter reaches the milestone tier
 
@@ -1068,7 +1061,8 @@ beside the page title or under the title band.
 - [x] **`decisions.md` A-27.3 已兑现：M-F…M-N 升为首类 ADDED Requirement**，
       每条各配 ≥2 个 `#### Scenario:`，不再折叠在一条总则里 ——
       M-F / M-G = `Round completion celebration in two tiers`（日常档 / 里程碑档 +
-      里程碑判定三条件：全对 / 破纪录 / 章节首次完成）；
+      里程碑判定**两条件**：全对 / 章节首次完成 —— 原第三条按 `decisions.md`
+      **A-29** 去掉，其口径待定项登记在 `contract-drift.md` **CD-164**）；
       M-L = `Lamp transition carries the theme change`（探出 → 点亮 → 涟漪 → 收回 +
       无 JS / 降级时直接切换）；
       M-H / M-I / M-J / M-K = `Consecutive-correct escalation feedback`
