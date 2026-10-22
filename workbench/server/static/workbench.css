@@ -3042,8 +3042,25 @@ img { max-width: 100%; }
 .lk-stagger > :nth-child(8) { animation-delay: 280ms; }
 .lk-stagger > :nth-child(n+9) { animation-delay: 280ms; }
 
-/* 骨架屏（§2.1 第 9 项）：灰块静止，动的只有覆盖层的 transform */
-.lk-skeleton { position: relative; overflow: hidden; background: var(--skeleton-base); }
+/* 骨架屏（§2.1 第 9 项）：灰块静止，动的只有覆盖层的 transform
+   ⚠️ **尺寸**：没有尺寸的骨架是 **0×0** —— 灰块看不见，微光也扫不出位移
+   （3.4-3 / M-9 的判据都量这一条）。
+   · 基类给**最小高度**（空骨架块也有体积）；
+   · 三个变体按 component-spec §4.22 的块高走：行 16px · 卡片 96px · 头像 40px。
+   ⚠️ **渐变的明确例外（A-74）**：微光（扫描光）用 `linear-gradient` ——
+   权威表 §3.3「渐变只允许出现在图标与插画内部」对**骨架屏的微光**不适用：
+   它是**扫描光**，不是**表面渐变**（不承载任何表面色、不表达状态）。
+   ⚠️ 别把这个 `linear-gradient` 当违规删掉。 */
+.lk-skeleton {
+  position: relative;
+  overflow: hidden;
+  min-height: 16px;            /* 基类最小高度：空骨架块也有体积 */
+  border-radius: var(--r-xs);
+  background: var(--skeleton-base);
+}
+.lk-skeleton--text { display: inline-block; width: 100%; height: 16px; border-radius: var(--r-xs); }
+.lk-skeleton--block { display: block; width: 100%; height: 96px; border-radius: var(--r-md); }
+.lk-skeleton--avatar { display: inline-block; width: 40px; height: 40px; border-radius: var(--r-round); }
 .lk-skeleton::after {
   content: "";
   position: absolute;
