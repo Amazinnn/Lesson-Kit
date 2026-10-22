@@ -340,7 +340,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("data-set-rename", body)
         self.assertIn("data-set-delete", body)
         self.assertIn("无法继续旧执行：当前试卷或旧执行引用了不可用题目", body)
-        self.assertIn("当前试卷 1 题；旧执行仍保留 1 题", body)
+        self.assertIn("当前试卷 1 题；旧执行 1 题", body)
         detail_start = body.index("<details class='practice-set-unavailable-items'>")
         detail_end = body.index("</details>", detail_start)
         self.assertIn("old-legacy-question-with-a-long-id", body[detail_start:detail_end])
@@ -415,7 +415,11 @@ class UiRouteTests(unittest.TestCase):
     def test_session_end_page_mentions_cards(self):
         status, body = self.fetch("/w/dmath/session-end")
         self.assertEqual(status, 200)
-        self.assertIn("题目与闪卡", body)
+        # 少字原则：页头说明句「只补充尚未评分的题目与闪卡；…」已删
+        # （copy-table §2.8 P-143 ⇒ 删），「尚未评分的题目」列表标题承担
+        # 同一信息（copy-table §3 第 11 条「删后由什么承担」）。
+        self.assertIn("尚未评分的题目", body)
+        self.assertIn("id='pending-ratings'", body)
 
     def test_workspace_pages_omit_the_student_selection_tray(self):
         for path in (
