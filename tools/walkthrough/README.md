@@ -82,7 +82,8 @@ D:\Projects\Academic Workflow\lesson-kit\.worktrees\runtime-main\workbench\__ini
    wc -c workbench/server/static/workbench.css
    ```
 
-   **两个数必须相等**；不等就换端口重启（本轮实测：125217 == 125217）。
+   **两个数必须相等**；不等就换端口重启。
+   （数字随 `workbench.css` 的改动而变，以**当场比对**为准；本轮实测两数相等。）
 
 ### 2.2 端口
 
