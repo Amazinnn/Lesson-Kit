@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "note": "IMPL-N1 夜纸全站巡检截图；采集环境见 night-sweep-report.md §1",
+  "shots": [
+    {
+      "file": "hub-night.png",
+      "bytes": 18240,
+      "sha256": "6a9614d418536e8379e4b40ed479ec33f30e80b8a6606d52381cfaf25b8e53f8"
+    },
+    {
+      "file": "kps-night.png",
+      "bytes": 90909,
+      "sha256": "394b27a9828539c8138a14accffcd1a4d3e3f9398df1ab4b7954a90c28212838"
+    },
+    {
+      "file": "kp-detail-night.png",
+      "bytes": 152513,
+      "sha256": "6daa4d70edf8a696aec7b0be98755a3e0ce8a68af19140d49f3a0af6b6bde630"
+    },
+    {
+      "file": "practice-stem-night.png",
+      "bytes": 86740,
+      "sha256": "06c60baee1b574f8ebd8fe0af89b1184a3966c826b88190c910d1fe7d4c644ea"
+    },
+    {
+      "file": "practice-analysis-night.png",
+      "bytes": 87393,
+      "sha256": "da07ccae950551fe0253a2f4e3d58e7a55c48e11935fda6779e1221528fc8b7e"
+    },
+    {
+      "file": "practice-answer-night.png",
+      "bytes": 101767,
+      "sha256": "0ff96787bdb8586307412ef041335510eb1b4b0387f363d08299a825cba361ee"
+    },
+    {
+      "file": "practice-completion-night.png",
+      "bytes": 59611,
+      "sha256": "865cb3417f6d7a25e3a3adcb6424e5235ad8e38e81b6045296e80ec0de0f7b2b"
+    },
+    {
+      "file": "practice-calendar-night.png",
+      "bytes": 60892,
+      "sha256": "beee5bfbd137afeac43639572c744f66cef33f33d26692fc9fff5aa4c6433934"
+    },
+    {
+      "file": "practice-calendar-day.png",
+      "bytes": 60739,
+      "sha256": "c88490c90b7abc9d986558464f6dd84a7f5cd99af4bfb67668080b13536e6f1a"
+    },
+    {
+      "file": "records-overview-night.png",
+      "bytes": 65641,
+      "sha256": "7b75f30c2c3ec995477d9f7cf1308dd4cf4cf4886edbe320b0e66448c81ce94d"
+    },
+    {
+      "file": "records-overview-day.png",
+      "bytes": 65983,
+      "sha256": "af84fc3aa7868bef33d4a178dadff344b3c5b06cdc3a6d62c229038b3f0341a0"
+    },
+    {
+      "file": "records-runs-night.png",
+      "bytes": 79821,
+      "sha256": "45a2225ac780511e4fbb5c907538f7927240c34a13f5dba8678e24a1212cb17e"
+    },
+    {
+      "file": "records-attempts-night.png",
+      "bytes": 109875,
+      "sha256": "ebea3a5e8a67783bee3de8bb3dc4298e764b115ac743bff5282cafcea4f28db4"
+    },
+    {
+      "file": "records-wrong-night.png",
+      "bytes": 117246,
+      "sha256": "afde621562c54e3ba844fed9caae1a4749c571ec678867fe6d47b536ebbb8301"
+    },
+    {
+      "file": "practice-sets-night.png",
+      "bytes": 75223,
+      "sha256": "100c78e9dfb7257a60b44f7983e02bdd792a2cd24696dc47f09806952755f48a"
+    },
+    {
+      "file": "settings-night.png",
+      "bytes": 50550,
+      "sha256": "8cc732c04ba20d58a01428a03f0c73a72246067b855506f8bcfb140a2f2f8340"
+    },
+    {
+      "file": "graph-night.png",
+      "bytes": 226056,
+      "sha256": "7b24423a5b52151e086801c141e83677f7054c283d4c618105e529ef6ab775a0"
+    },
+    {
+      "file": "graph-day.png",
+      "bytes": 226056,
+      "sha256": "7b24423a5b52151e086801c141e83677f7054c283d4c618105e529ef6ab775a0"
+    },
+    {
+      "file": "graph-lens-night.png",
+      "bytes": 190315,
+      "sha256": "5b35851bf49a329dd5db02bc40c6d90fda8b3d5138c55104152362d92a183362"
+    },
+    {
+      "file": "graph-lens-day.png",
+      "bytes": 186443,
+      "sha256": "58031aff157814033d127b1eed986296fdd4e612c2e23e7e78f46bab2d1a3147"
+    },
+    {
+      "file": "graph-S-G3-day.png",
+      "bytes": 193824,
+      "sha256": "013883bfb763613f601a217bd0b59ee049ffc282b6978e48694a3c0b55c1346f"
+    },
+    {
+      "file": "graph-S-G3-night.png",
+      "bytes": 193824,
+      "sha256": "013883bfb763613f601a217bd0b59ee049ffc282b6978e48694a3c0b55c1346f"
+    }
+  ]
+}
