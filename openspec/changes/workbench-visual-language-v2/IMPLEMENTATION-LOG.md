@@ -1102,3 +1102,41 @@ W2h 报出一条**不是产品问题**的失败：`shots.py` 只等 `networkidle
 否则就是**让指标迁就实现**。
 
 **A-87 / A-88**：值列对齐改 **grid + 左对齐**（**不引入宽度魔数**）· `.settings-view` 的收口发丝线**保留**。
+
+### 9.28 答对回弹（M-7）：产品侧做完了，但**判据那边先暴露了一个探针缺陷**
+
+**W3c2 的实现**（`64454f65`，只动两个流 JS）：
+回弹挂到判定元素 `.micro-verdict.ok`（因为音效也认它），
+`style.animation = "lk-squash-bounce 517ms var(--ease-snap) both"`，
+两条流都挂、只在提交路径挂。1181 passed / node 264 全绿。
+
+**但 M-7 仍判 FAIL —— 根因在探针，不在产品**：
+`tools/walkthrough/frames.py` 的 `act_answer` 只往 `#middle-page` 里塞一个**空**
+`<div class="practice-card">`，**从不判定一次作答** ⇒ 采集时页面上 `.micro-verdict` 数量 = **0**，
+只有视图转场的 `lk-rise-in-12` 被录到。
+⚠️ **`.practice-card` 这个类名在全仓（含 git 历史）从未存在过** —— 是探针自造的替身元素
+⇒ **产品侧任何「挂在判定元素或正确选项上」的实现，它都看不见**。
+⇒ 已让走查工具的 owner 把触发点改成**驱动一次真实判定**（照 M-4/M-6 的写法），
+并把 M-9 的「产品侧骨架块 0×0」与「微光位置不变」**分成两条证据**。
+⚠️ **判据的「触发方式」可以改，「判定阈值」不许放水** —— 这次修的是前者。
+
+**W3c2 自己也用执行器自己的 `judge_squash` 喂了一次真实判定来证明**：
+**PASS**，七帧逐帧 scale = **0.6 → 1.1 → 1.1 → 1.0381 → 0.9688 → 0.9873 → 1.0**
+（多邻国 5 段曲线），`document.getAnimations()` 里 `lk-squash-bounce` duration **517**。
+浏览器直验：答对 ⇒ `animation-name: lk-squash-bounce` / `0.517s`；
+答错 ⇒ `animation-name: none`；`prefers-reduced-motion: reduce` ⇒ `animation-name: none`、
+`transform: none`（**终态不压扁**）—— 8.9 终态铁律与动效红线都成立。
+
+**它报的三条待裁决**：
+- **A-89** 落点**按 `motion-spec.md` §3.1 走，挂在被选中的那一项**（底边锚点）——
+  它原方案的理由（音效同拍 ⇒ 挂判定元素）**不成立**（同帧 ⇒ 无先后差），
+  而**锚点理由只在「列表里的一项」上成立**。
+  ⇒ spec 里的示例选择器 `.lk-option.is-correct` 与产品实际类名不符 ⇒ **以产品实际类名为准**，
+  spec 的示例由主会话改准。
+- **内联 `style.animation` 保留**（与 `workbench.js` 里 `lk-error-nudge` 的既有写法一致）。
+- **CSS 侧需补** `.lk-squash` 规则（`transform-origin: 50% 100%` + `animation: lk-squash-bounce 517ms both`）
+  —— 已并入 CSS 收口那一波。
+
+⚠️ 顺带记一条**判据自身的问题的处理原则**：
+**判据的「触发方式」可以修，判据的「判定阈值」不许放水** ——
+否则就是让指标迁就实现。
