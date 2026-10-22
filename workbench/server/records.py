@@ -16,7 +16,7 @@ _BAR_STAGGER_MS = 24     # 逐柱错峰（decisions.md「负荷柱逐柱错峰 2
 # 作答日历的**五档**强度（spec「The calendar levels are fixed and legible」）：
 # 档 0 = 0 次 · 档 1 = 1 次 · 档 2 = 2–3 次 · 档 3 = 4–7 次 · 档 4 = ≥8 次。
 # 每档 = (档号, 下界, 上界)；上界为 None 表示无上界。
-# **唯一真源**：格子分档（`_calendar_level`）与页面图例文案（`_calendar_legend`）都取这里。
+# **唯一真源**：格子分档（`_calendar_level`）与页面图例文案（`_activity_legend`）都取这里。
 _CALENDAR_LEVELS = (
     (0, 0, 0),
     (1, 1, 1),
