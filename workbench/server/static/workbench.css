@@ -2323,15 +2323,18 @@ img { max-width: 100%; }
      `.lk-legend__swatch` 色块（挂 `.level-0..4`，或 `data-level="0..4"`）
      `.lk-legend__range`  区间刻度文字（如「2–3」「≥8」）
      `.lk-legend__title`  图例标题（如「当天作答次数」）
-   **服务端现行 markup** 用的是同义的一族（`records.py` 的 `_activity_legend`）：
-     `.record-activity-legend` / `.record-activity-legend-item`
-     / `.record-activity-swatch` / `.record-activity-legend-text`
-     / `.record-activity-legend-title`
-   ⇒ 两族**共用同一套取值**（`:is()` 并列，不写两遍）⇒ 服务端换哪一族都直接生效。
+   **服务端 markup 已统一到这一族**（A-64，`records.py::_activity_legend`）：
+     `.lk-legend` / `.lk-legend__item` / `.lk-legend__swatch`
+     / `.lk-legend__range` / `.lk-legend__title`
+   ⇒ 旧的一族（`.record-activity-legend` / `-legend-item` / `-legend-text`
+     / `-legend-title`）**退役删除**（A-64：本轮新组件一律 `lk-` 前缀族）。
+   ⚠️ **但「同义并存的取值共用」要保住**：`.lk-legend__swatch` /
+     `.record-activity-swatch` / `.record-activity-day` 三者**仍须在同一个
+     `:is()` 档位表**里读 `--level-bg` ⇒ **色块与日历格子不可能漂移**这条
+     保证不变（见上面的「档位色」块）。
    ⚠️ **少字原则**：图例只有「标题 + 五个区间刻度」，不写任何解释句；
      解码由刻度本身承担。 */
-.lk-legend,
-.record-activity-legend {
+.lk-legend {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2342,8 +2345,7 @@ img { max-width: 100%; }
   line-height: 18px;
   color: var(--ink-muted);
 }
-.lk-legend__item,
-.record-activity-legend-item {
+.lk-legend__item {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -2356,13 +2358,11 @@ img { max-width: 100%; }
   flex: none;
   border-radius: 2px;
 }
-.lk-legend__range,
-.record-activity-legend-text {
+.lk-legend__range {
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
 }
-.lk-legend__title,
-.record-activity-legend-title {
+.lk-legend__title {
   color: var(--ink-faint);
 }
 
