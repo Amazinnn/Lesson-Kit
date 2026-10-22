@@ -1456,8 +1456,9 @@
    * The cues themselves live in sfx.js.  The shell's script list belongs to
    * pages.py, so the module is pulled in here and the triggers are wired only
    * once it is there.  A cue may only follow a judgment the learner just
-   * caused, so each trigger is armed by the submit gesture it belongs to and
-   * disarmed as soon as it fires; re-rendering an old answer stays silent.
+   * caused, so each trigger is armed by the gesture it belongs to — the
+   * submit, or the pick that judges on the spot (A-102) — and disarmed as
+   * soon as it fires; re-rendering an old answer stays silent.
    *
    * A-53: the milestone cue is not wired here — it rides on the tier
    * decision in `celebrateCompletion`, so the downgraded tier sounds too.
@@ -1477,16 +1478,35 @@
     return null;
   }
 
+  /* The other gesture that carries a verdict: a choice that judges on the
+     spot.  In the paper flow a single-choice / yes-no item is judged the
+     moment its option is picked, so that pick is the gesture the verdict
+     belongs to — it has to arm the cue exactly like the submit button does,
+     or the sound lands apart from the bounce (decisions.md A-102).
+     Only the paper flow judges on selection: the practice flow judges at its
+     own submit button, and a multiple-choice item is judged at the paper's
+     submit button too.  Only the input itself counts: while an answered
+     paper is read back the options are disabled, so they cannot be picked,
+     and a read-back never sounds. */
+  function judgesOnSelection(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.tagName !== "INPUT" || node.type !== "radio") return false;
+    if (!node.hasAttribute || !node.hasAttribute("data-paper-choice")) return false;
+    return !!ancestorWithId(node, "paper-options");
+  }
+
   /* The click gate hangs off the layout element, the root of the workbench
      shell: every control that can judge an answer lives inside it. */
   layout.addEventListener("click", function (event) {
     var target = event.target;
     if (!target) return;
     /* A cue belongs to the judgment or the completion caused by the learner's
-       most recent interaction: a submit arms it, any other click cancels it,
-       so re-reading an old answer stays silent. */
+       most recent interaction: the gesture that judges (a submit, or a pick
+       that judges on the spot) arms it, any other click cancels it, so
+       re-reading an old answer stays silent. */
     if (ancestorWithId(target, "answer-submit")
-        || ancestorWithId(target, "paper-item-submit")) {
+        || ancestorWithId(target, "paper-item-submit")
+        || judgesOnSelection(target)) {
       verdictArmedAt = Date.now();
     } else {
       verdictArmedAt = 0;
