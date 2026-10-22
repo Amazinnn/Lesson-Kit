@@ -133,7 +133,8 @@
 > **不得另写一套**——见 §4.5 的说明）。
 
 > **不要用** `ease` / `ease-in-out` 关键字，也不建议 `linear`：
-> `linear` 在本规格里只允许出现在**匀速旋转**（加载环）与**匀速扫过**（骨架微光）两处。
+> `linear` 在本规格里只允许出现在**匀速旋转**（加载环）一处。
+> （骨架的横扫已按 A-115 取消 —— 呼吸用的是 `standard` 缓动，不占 `linear` 名额。）
 >
 > **既有动画的例外**：`workbench.css:992` 的 `flash-answer-reveal` 用了自己的
 > `cubic-bezier(.2,.75,.2,1)`。它属于闪卡组件，**不并入本档位表**，
@@ -201,6 +202,11 @@
 
 ### 1.7 命名与注入位置
 
+> **补钉约定（2026-10-22 A-116）**：新增动效的 `@keyframes` 一律用 `lk-` 前缀 +
+> **动效语义名**（`lk-skeleton-breathe` / `lk-combo-in` / `lk-bar-grow` …），
+> **不许**用临时名（`anim1` / `fade` / `slide`）——
+> 临时名会让「同一组件多套实现」这种病在动效层复发。
+
 - **token 名字一律用权威表**（`design-notes/night-paper-tokens.md`）的
   `--surface-*` / `--ink-*` / `--role-*` / `--rule-*` / `--veil-*` / `--elev-*` /
   `--skeleton-*` / `--dur-*` / `--ease-*`；**不再有本规格自有的 token 命名族**
@@ -227,7 +233,7 @@
 | `--role-yellow` | 阳光黄（连对低档横幅、火苗已燃层） | 三角色色之一 |
 | `--role-red` | 注意红（答错几何标记） | 三角色色之一；**仅用于失败与阻塞** |
 | `--skeleton-base` | 骨架灰块 | — |
-| `--skeleton-sheen` | 骨架微光高光 | 与 base 同色相、更高明度 |
+| `--skeleton-sheen` | ~~骨架微光高光~~ **不再使用**（A-115 取消了横扫） | — |
 | `--surface-base` | **页面地面色**（两主题各一套值） | 台灯转场读它作为涟漪的目标色 |
 | `--asset-lamp-warm` | 灯下暖光 | 台灯转场专用；由资产层提供（`asset-spec.md` §2） |
 | 灯位 | 台灯在视口中的位置 | 权威表无对应 token → 暂写死 `88%` / `82%`（→ 待裁决） |
@@ -254,7 +260,7 @@
 | 6 | **视图转场** | 中栏换页（`#middle-page` innerHTML 被替换） | `#middle-page` 容器整体 `opacity 0→1` + `translateY(12px→0)` | 240ms | `out` | vanilla JS（WAAPI `element.animate()`，每次换页重放） | 容器瞬时出现（无动画） |
 | 7 | **列表 stagger** | 列表/卡片组入场 | 逐项 `opacity 0→1` + `translateY(8px→0)`，项间错峰 40ms（第 9 项之后封顶） | 180ms（项） | `out` | 纯 CSS（`:nth-child` 错峰，见 §3.2） | 全部项瞬时可见，无错峰无位移 |
 | 8 | **数字滚动** | 统计数字变化（正确率 / 用时 / 最高连对） | 逐位数字条上下滚动（strip `translateY`），逐位错峰 40ms | 240ms（每位） | `out` | vanilla JS（构建 strip + `transition: transform`） | 数字**直接落终值**，无滚动 |
-| 9 | **骨架微光** | 内容加载中 | 灰块上的高光条从左扫到右，循环 | 1200ms/轮（无限） | `standard` | 纯 CSS（`::after` + `transform`） | 灰块**静止不闪**（`animation: none`，灰块保留） |
+| 9 | **骨架呼吸** | 内容加载中 | 灰块**自身**在 opacity 1 ↔ .55 之间循环（**不做横扫**） | 1400ms/轮（无限） | `standard` | 纯 CSS（元素自身 `opacity`） | 灰块**静止**（`animation: none`，`opacity: 1` 直出） |
 | 10 | **加载** | 请求在途且无可骨架化的结构 | 24px 圆环匀速旋转 | 700ms/圈 | `linear` | 纯 CSS | 圆环**静止**（呈现为一个静态环） |
 | 11 | **错误** | 提交被拒 / 答错 | 目标元素 `translateX` 往返摆动（≤4px），同时错误几何标记瞬时出现（红叉） | 160ms | `standard` | 纯 CSS | **无摆动**，只保留红叉几何标记 + 错误文案 |
 | 12 | **成功（答对）** | 判定为正确 | 目标选项**挤压回弹**（5 段）+ 蓝色勾选几何标记瞬时出现 | 517ms | 三档 `snap-*` | 纯 CSS | **无回弹**；勾选几何标记瞬时出现（终态直落） |
@@ -413,37 +419,35 @@ CSS 关不掉）与**是否播放**音效
 > 记录明细是 98+ 条的圆角卡片流（`decisions.md` 收口「作答明细 → 圆角卡片流」），
 > 逐项无限错峰会让末尾项等 4 秒才出现。
 
-### 3.3 骨架微光扫过
+### 3.3 骨架呼吸（底色明暗呼吸，**不做横扫**）
+
+> ⚠️ **2026-10-22 按 A-115 改**：所有者把骨架屏定成「**呼吸式**」⇒
+> **微光扫过（`::after` 横扫 + 表面渐变）作废**。
+> `acceptance.md` §2 的 **M-9** 判据已同步改成「灰块**整体明暗呼吸**」；
+> 走查判据 `3.4-3` 的口径 = 「**块自身表面随时间变化**」，**`::after` 上的横扫不满足**
+> （见 `decisions.md` **A-114** / **A-115**）。
 
 ```css
 .lk-skeleton {
   position: relative;
   overflow: hidden;
   background: var(--skeleton-base);            /* 灰块 */
+  /* 呼吸：动的是**块自身的 opacity** —— 不动位置、不用伪元素覆盖层、不用表面渐变 */
+  animation: lk-skeleton-breathe 1400ms var(--ease-standard) infinite;
 }
-.lk-skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg,
-      transparent 0%,
-      var(--skeleton-sheen) 42%,
-      var(--skeleton-sheen) 58%,
-      transparent 100%);
-  transform: translate3d(-100%, 0, 0);
-  pointer-events: none;
-  animation: lk-skeleton-sweep 1200ms var(--ease-standard) infinite;
-}
-@keyframes lk-skeleton-sweep {
-  from { transform: translate3d(-100%, 0, 0); }
-  to   { transform: translate3d(100%, 0, 0); }
+@keyframes lk-skeleton-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .55; }
 }
 ```
 
-> 灰块本身是**静态**的（`background` 不参与动画），动的只有覆盖层的 `transform`，
-> 符合 §1.6 红线。`acceptance.md` M-9 要求"位置变化可见"——
-> 1200ms/轮、覆盖层从 `-100%` 走到 `100%`，在 400ms 与 900ms 两个采样帧上
-> 位置差异明显。
+- **只动 `opacity`**（§1.6 红线：只许动 `transform` / `opacity`）；
+- **不用伪元素**、**不用 `linear-gradient`** ⇒ **A-74**（微光是渐变的明确例外）
+  **不再被行使**（账本不改写，只记它不再适用）；
+- **不动位置**；
+- **静态样式 = 终态**（§7.1 铁律）：`opacity` 的静态值是 `1` ⇒ 降级档 `animation: none`
+  时灰块**直出**，不停在起始态；
+- 灰块**始终有可见体积**（`min-height` + 三个变体 `--text` / `--block` / `--avatar`）。
 
 ### 3.4 数字滚动
 
@@ -688,7 +692,7 @@ function setTicker(el, value) {
   100% { transform: translate3d(0, 0, 0); }
 }
 
-/* 加载环：匀速旋转（linear 仅在此处与骨架微光出现） */
+/* 加载环：匀速旋转（linear 仅在此处出现 —— 骨架横扫已按 A-115 取消） */
 @keyframes lk-spin { to { transform: rotate(360deg); } }
 .lk-spinner {
   width: 24px; height: 24px;
@@ -1124,7 +1128,7 @@ banner.classList.add("is-on");
 | 6 | 视图转场 | 新页完全可见 | 新页完全可见 | 跳过 WAAPI 调用 |
 | 7 | 列表 stagger | 全部项可见 | 全部项可见、**无错峰** | 去掉 `animation-delay` 与 `animation` |
 | 8 | 数字滚动 | 数字 = 终值 | 数字 = **终值（直显）** | 直接写 `textContent`，不建 strip |
-| 9 | 骨架微光 | 灰块 + 循环高光 | **灰块静止**（无扫光） | `animation: none`（由 7.1 全局规则自动生效） |
+| 9 | 骨架呼吸 | 灰块在 opacity 1 ↔ .55 之间循环 | **灰块静止**（`opacity: 1` 直出，无呼吸） | `animation: none`（由 7.1 全局规则自动生效） |
 | 10 | 加载环 | 旋转的环 | **静止的环** | 同上 |
 | 11 | 答错摆动 | `translateX 0` | `translateX 0`（**不摆动**） | 去掉 `animation`；红叉几何标记保留 |
 | 12 | 答对回弹 | `scale 1` | `scale 1`（**不回弹**） | 去掉 `animation`；勾选几何标记保留 |
@@ -1188,7 +1192,7 @@ banner.classList.add("is-on");
 |---|---|
 | **只在动画即将开始时加** | 不要写在全局基础规则里常驻 |
 | **动画结束即移除** | 一次性动画：`animationend` 回调里 `el.style.willChange = ""`；层：§4.2 的 700ms `remove()` |
-| **无限动画例外** | 骨架微光是无限循环，`will-change` 可常驻于**当前可见的那几个**骨架块（建议 ≤ 3） |
+| **无限动画例外** | 骨架**呼吸**是无限循环，`will-change` 可常驻于**当前可见的那几个**骨架块（建议 ≤ 3） |
 | **绝不超过 8 层** | 超过说明有元素不该同时动 |
 
 > **现状提示**：`workbench.css` 现有动画（`ai-plan-pulse` `:732`、
@@ -1317,3 +1321,46 @@ banner.classList.add("is-on");
       `lessonkit.py`）。
 - [ ] **未决**：D-3（音效资产来源）、D-5（tick 声数量）需所有者拍板；
       D-6 需写进 `workbench-settings` 能力条款。
+
+## 11. 新增动效的**补钉流程**（以后想到新动效就走这一条）
+
+> 所有者 2026-10-22 的工作方式：
+> 「以后想到什么新的动效可以不断打补丁上去，**但静态的得先做好**。」
+> ⇒ 本节是那条工作方式的**落地流程**，也是 A-116 的操作口径。
+
+### 11.1 前提：动效是**补丁**，静态是**主线**
+
+- **静态先做**：一个组件的**形态**（颜色 / 圆角 / 留白 / 布局 / 纸面层级）**先落地**，
+  动效**后挂**。动效**不得**成为形态的前置条件。
+- 动效的**降级终态 = 静态形态**（§7.1 铁律）⇒ **静态没做好，动效就没有可回落的样子**。
+  这就是「静态先做」的技术理由，而不只是排期偏好。
+
+### 11.2 加一条新动效的**六步**（缺一步都不算完成）
+
+| 步 | 落点 | 要求 |
+|---|---|---|
+| 1 | `design-notes/motion-spec.md`（**本文件**） | §1 token（时长 / 缓动 / 位移档，取现成的）· §2.1 映射表**加一行** · §3 `@keyframes` 库**加一段可直接粘贴的** · §7.2 降级矩阵**加一行** · §8 性能红线是否触及 |
+| 2 | `decisions.md` | **A-27.2 的动效清单加一行**（M-O / M-P …）—— 那张清单是动效的**唯一权威** |
+| 3 | `specs/workbench-ui/spec.md` | 新增或修改 **Requirement** + `#### Scenario:`（**WHEN / THEN**）—— 只有**用户可观察**的行为才进 spec |
+| 4 | `tasks.md` | 加一条可勾选任务（**一个动效一条**），并**写明验证口径** |
+| 5 | `acceptance.md` §2 | 加一行 **M-n**：**采样帧**（毫秒数）+ **通过标准** ⇒ **没有分镜条的动效视为未实现** |
+| 6 | `tools/walkthrough/frames.py` | 若要**自动判定**：加 `MOTIONS` 条目 + `prepare_*` / `act_*` + `judge_*`，并把终态写进 `TERMINAL_CONTRACT` |
+
+### 11.3 三条硬约束（新动效一律适用，与旧动效同标准）
+
+1. **只动 `transform` / `opacity`**（§1.6）；
+2. **静态样式 = 终态**（§7.1）—— 降级档直接是终态，不停在起始态；
+3. **起始态只写在 `@keyframes` 内** —— 不得在静态样式里写起始值。
+
+### 11.4 「想到就补」的**最小验收**（不必等整轮走查）
+
+- **分镜条**（`acceptance.md` §2 那一行的采样帧）**肉眼可见**该动效；
+- **降级帧与动效帧终态一致**（`frames.py` 的 `compare_terminal`）；
+- **归类**：用户能感知 ⇒ 进 §2.1 映射表；纯装饰 ⇒ 不进，并**记一笔理由**。
+
+### 11.5 「静态先做」的落地含义（本轮的排序依据）
+
+- 本轮的主线顺序 = **静态形态（组件形态裁定 A-115 的 24 条）→ 验收走查 → 动效补钉**；
+- 已在 `tasks.md` 第 8 组留着的两条**阶段验收**（8.6 / 8.10）是动效的**验收入口**，
+  它们要等静态形态落定后再跑（否则测的是一版即将改掉的静态）；
+- 之后每想到一个新动效，走 §11.2 的六步，**单开一条任务**，不必等整轮。
