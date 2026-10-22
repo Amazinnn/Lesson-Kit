@@ -1274,6 +1274,9 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   padding: 7px 8px;
   overflow: auto;
   background: var(--surface-code);
+  /* 代码块反白面上的文字一律 `--ink-inverse`（权威表 §4.4-11）：
+     继承下来的 `--ink-muted` 在浅色代码面上只有 2.81:1（< 4.5）⇒ 不合格。 */
+  color: var(--ink-inverse);
   font-family: var(--font-mono);
   font-size: 11px;
   line-height: 16px;
