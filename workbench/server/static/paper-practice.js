@@ -439,11 +439,11 @@
       savedPaper = null;
       clearError();
       if (ids.title) ids.title.textContent = "选择一份试卷";
-      if (ids.count) ids.count.textContent = "从试卷列表打开已保存的试卷后即可开始练习。";
+      if (ids.count) ids.count.textContent = "先从试卷列表打开一份已保存的试卷。";
       if (ids.timing) ids.timing.disabled = true;
       if (ids.start) {
         ids.start.disabled = true;
-        ids.start.textContent = "先选择试卷";
+        ids.start.textContent = "选择试卷";
       }
       setVisible(ids.setup, true);
       setVisible(ids.work, false);
@@ -828,9 +828,9 @@
       var pending = local && local.ratingDrafts[positionKey] || {};
       var heading = document.createElement("p");
       heading.className = "section-kicker";
-      heading.textContent = "自评（可选，不影响继续练习）";
+      heading.textContent = "自评（可选）";
       var label = document.createElement("label");
-      label.textContent = "熟悉程度 1–5";
+      label.textContent = "自评 1–5";
       ratingInput = document.createElement("input");
       ratingInput.type = "number";
       ratingInput.min = "1";
@@ -1453,7 +1453,7 @@
     function completionFiguresHtml(stats) {
       return [
         { value: stats.total, label: "总题数" },
-        { value: stats.correct, label: "客观正确" },
+        { value: stats.correct, label: "判定正确" },
         { value: stats.wrong, label: "错误" },
         { value: stats.stuck, label: "不会" },
         { value: stats.pendingRatings, label: "待自评" },
@@ -1472,7 +1472,7 @@
       if (ids.title) ids.title.textContent = archived.source_label || savedPaper && savedPaper.title || "练习试卷";
       if (ids.count) ids.count.textContent = String(stats.total);
       if (ids.completionStats) {
-        ids.completionStats.textContent = "共 " + stats.total + " 题；客观正确 " + stats.correct
+        ids.completionStats.textContent = "共 " + stats.total + " 题；判定正确 " + stats.correct
           + " 题，错误 " + stats.wrong + " 题；不会 " + stats.stuck
           + " 题；待自评 " + stats.pendingRatings + " 题。";
       }
