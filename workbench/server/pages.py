@@ -543,14 +543,14 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
         _page_header(
             _lens_label(workspace, "知识点 / 当前章节", "知识点 / 全课程"),
             html.escape(kp["knowledge_item"]),
-            "先读正文，再按需要继续练习相关题目。", practice_action,
+            "", practice_action,
         )
         + "<div class='page-content'>"
         f"<article class='knowledge-body card wb-reading'>{_render_markdown(kp.get('body') or '', workspace['name'], kp_id)}</article>"
         + reminder_html
         + "<section class='support-section linked-problems'>"
         "<div class='section-heading'><div>"
-        "<p class='section-kicker'>练习入口</p><h2>关联题目</h2>"
+        "<h2>关联题目</h2>"
         "</div></div>"
         f"{problems_html or empty_problems}"
         "</section></div>"
@@ -645,14 +645,14 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     ) + "</li>"
     middle = (_page_header(
         _lens_label(workspace, "学习 / 当前章节", "学习 / 全课程"),
-        "知识点", "阅读课程内容与关联题目；练习请使用已有试卷。")
+        "知识点")
         + "<div class='page-content'>" + count_bar
         + "<div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
         + "<option value='source' selected>课程顺序</option><option value='title'>名称</option>"
         + "<option value='problem_count'>题目数量</option><option value='state'>学习状态</option>"
         + "<option value='importance'>重要性</option></select>"
         + "<button id='knowledge-sort-direction' class='ghost sm' type='button' aria-label='切换排序方向' title='切换排序方向'>↑</button></div>"
-        + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>"
+        + "<section class='support-section knowledge-index'><div class='section-heading'><div><h2>"
         + _lens_label(workspace, "本章知识点", "全部知识点")
         + "</h2></div></div>"
         + f"<ul id='knowledge-list' class='knowledge-list'>{items or empty_items}</ul></section></div>")
