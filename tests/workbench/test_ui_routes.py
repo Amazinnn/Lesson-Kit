@@ -263,7 +263,27 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='setting-running-send'", body)
         self.assertIn("id='setting-show-rating'", body)
         self.assertIn("id='setting-view-toggle'", body)
-        self.assertIn("class='side-count-badge'", body)
+        self.assertIn("class='count-badge'", body)
+        # The four sections sit on one wrapper: the rail's paper ends with the
+        # content, so the lower half is not blank paper (15.3).
+        self.assertIn("class='side-sections'", body)
+
+    def test_topbar_is_three_sections_with_a_self_drawn_chapter_panel(self):
+        # 15.4: brand / identity / actions, and the chapter lens carries a
+        # self-drawn panel whose items are chapter names only — no figures.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("class='topbar-brand'", body)
+        self.assertIn("class='topbar-identity'", body)
+        self.assertIn("class='topbar-actions'", body)
+        self.assertIn("class='chapter-lens-panel' id='chapter-lens-panel'", body)
+        self.assertIn("class='chapter-lens-option' role='option'", body)
+        self.assertIn("aria-selected=\"true\"", body)
+        # The native select stays as the no-JS fallback.
+        self.assertIn("id='chapter-lens-select'", body)
+        panel = body.split("class='chapter-lens-panel'", 1)[1].split("</div>", 1)[0]
+        for banned in ("题", "个", "题数", "%"):
+            self.assertNotIn(banned, panel.split("aria-label='选择章节' hidden>", 1)[1])
 
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
@@ -714,6 +734,11 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("class='empty-state lk-empty'", body)
         self.assertIn("class='lk-empty__art'", body)
         self.assertIn("class='lk-empty__text'>暂无知识点</p>", body)
+        # 18.4: the third segment is the full-width action, and its label is
+        # the action itself.
+        self.assertIn(
+            "<a class='primary button-link lk-empty__action' href='/w/dmath/practice'>去练习</a>",
+            body)
         # The illustration is inline SVG, not an <img>: only an inline asset
         # takes the page's theme variables (asset-spec §1.11).
         empty = body.split("class='empty-state lk-empty'", 1)[1]

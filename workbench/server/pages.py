@@ -67,19 +67,27 @@ def _state_dot(state, labelled=True):
             + "'></span>")
 
 
-def _empty_state(asset_path, text, width, height):
-    """The empty state: a still-life illustration and one sentence.
+def _empty_state(asset_path, text, width, height, action=None):
+    """The empty state: a still-life illustration, one sentence, one action.
 
-    No button: this empty state has no action to offer, and the copy table
-    refuses to invent one (design-notes/copy-table.md §0.3 rule 3).
+    The button is full width and its label is the action itself. An empty
+    state with no action to offer leaves the button out (design-notes/
+    copy-table.md §0.3 rule 3).
     """
+    action_html = ""
+    if action:
+        label, href = action
+        action_html = ("<a class='primary button-link lk-empty__action' href='"
+                       + html.escape(href, quote=True) + "'>" + html.escape(label)
+                       + "</a>")
     return (
         "<div class='empty-state lk-empty'>"
         "<span class='lk-empty__art' aria-hidden='true'>"
         + _inline_asset(asset_path, width, height)
         + "</span>"
         "<p class='lk-empty__text'>" + html.escape(text) + "</p>"
-        "</div>"
+        + action_html
+        + "</div>"
     )
 
 
@@ -160,6 +168,16 @@ def _chapter_lens(workspace):
         f"{' selected' if chapter == active else ''}>{html.escape(chapter)}</option>"
         for chapter in chapters
     )
+    # The self-drawn panel (15.4): one option per chapter, chapter name only.
+    # ⚠️ No per-chapter figure may appear in the panel — the current spec
+    # forbids it ("The chapter control carries no figures"; decisions.md 9.4).
+    panel_options = "".join(
+        "<button type='button' class='chapter-lens-option' role='option'"
+        f" data-chapter='{html.escape(chapter)}'"
+        f"{' aria-selected=\"true\"' if chapter == active else ''}>"
+        f"{html.escape(chapter)}</button>"
+        for chapter in chapters
+    )
     return (
         "<div id='chapter-lens' class='chapter-lens'"
         f" data-active='{html.escape(active)}'>"
@@ -168,6 +186,9 @@ def _chapter_lens(workspace):
         "<span>章</span></label>"
         f"<select id='chapter-lens-select' aria-label='选择章节'{'' if active else ' hidden'}>"
         f"{options}</select>"
+        "<div class='chapter-lens-panel' id='chapter-lens-panel' role='listbox'"
+        " aria-label='选择章节' hidden>"
+        f"{panel_options}</div>"
         "</div>"
     )
 
@@ -175,17 +196,25 @@ def _chapter_lens(workspace):
 def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
           page_type=None, object_id=None, kp_titles=None):
     meta = f"<span class='meta'>{html.escape(workspace['name'])}</span>"
+    # 15.4 顶栏三段式：左＝品牌，中＝当前身份（工作区名 + 章节透镜），右＝动作。
+    # 章节只在透镜里出现，不在工作区名旁重复。
     topbar = (
         "<header id='topbar'>"
+        "<div class='topbar-brand'>"
         "<a class='brand' href='/'>lesson-kit</a>"
+        "</div>"
         "<span class='topbar-separator'>/</span>"
+        "<div class='topbar-identity'>"
         f"{meta}"
         f"{_chapter_lens(workspace)}"
+        "</div>"
+        "<div class='topbar-actions'>"
         "<div class='mobile-drawer-controls'>"
         "<button id='mobile-nav-toggle' class='ghost sm icon-only' type='button' "
         "aria-controls='left-column' aria-expanded='false' aria-label='打开导航' title='打开导航'>☰</button>"
         "<button id='mobile-ai-toggle' class='ghost sm icon-only' type='button' "
         "aria-controls='ai-column' aria-expanded='false' aria-label='打开对话' title='打开对话'>◌</button>"
+        "</div>"
         "</div>"
         "</header>"
     )
@@ -531,9 +560,11 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         + "</span></div></li>"
         for index, item in enumerate(source_kps)
     )
-    # 18.4 空态 = 插画 + 一句（此处没有动作出口，不硬凑主按钮）
+    # 18.4 空态 = 插画 + 一句 + 满宽主按钮（按钮文案即动作）
     empty_items = "<li>" + _empty_state(
-        "empty/empty-canvas.svg", "暂无知识点", 180, 150) + "</li>"
+        "empty/empty-canvas.svg", "暂无知识点", 180, 150,
+        ("去练习", "/w/" + html.escape(workspace["name"], quote=True) + "/practice"),
+    ) + "</li>"
     middle = (_page_header(
         _lens_label(workspace, "学习 / 当前章节", "学习 / 全课程"),
         "知识点", "阅读课程内容与关联题目；练习请使用已有试卷。")
@@ -839,7 +870,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"<div class='nav-item {'active' if key == active_nav else ''}'>"
         f"<a href='/w/{workspace['name']}/{key}'>"
         f"<span class='nav-item__icon' aria-hidden='true'>"
-        f"{_inline_asset(path, 24, 24)}</span>{label}</a></div>"
+        f"{_inline_asset(path, 18, 18)}</span>{label}</a></div>"
         for key, label, path in nav_items
     )
     actionable = [
@@ -855,13 +886,16 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     # 15.3 分区标题恒定，个数走计数徽标 —— 标题不再随内容有无变体。
     rail_label = "优先回看"
     count_badge = (
-        "<span class='side-count-badge'>"
+        "<span class='count-badge'>"
         "<span class='visually-hidden'>待回看 </span>" + str(len(actionable))
         + "</span>"
     )
     empty = "暂无明确薄弱证据" if not actionable else "暂无提醒"
     empty_weak = '<p class="score">' + empty + "</p>"
     return (
+        # The four sections sit on one wrapper: the rail's paper ends with the
+        # content, so the lower half of the column is not blank paper (15.3).
+        "<div class='side-sections'>"
         "<section class='side-section workspace-switcher'>"
         "<p class='side-label'>工作区</p>"
         f"<select id='workspace-select' aria-label='切换工作区'>{options}</select>"
@@ -884,6 +918,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"<div class='side-heading'><p class='side-label'>{rail_label}</p>{count_badge}</div>"
         f"<div class='weak-list'>{weak_html or empty_weak}</div>"
         "</section>"
+        "</div>"
     )
 
 
