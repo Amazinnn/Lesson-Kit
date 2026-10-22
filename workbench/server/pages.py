@@ -107,7 +107,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + "<script src='/static/workbench.js'></script>"
         + "<script src='/static/middle-navigation.js'></script>"
     )
-    return _base(f"workbench {workspace['name']}", body)
+    return _base(f"workbench {workspace['name']}", body, workspace=workspace["name"])
 
 
 def _agent_activity_float():
@@ -619,6 +619,62 @@ def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
                  page_type="session-end", kp_titles=kp_titles)
 
 
+def settings_page(workspace, workspaces, weak_items, kp_titles=None):
+    """The workbench settings view: appearance preferences only (design.md D-9).
+
+    Theme, reading face, motion and sound live here.  The two behaviour
+    preferences stay in the left rail where they have always been — a place
+    the learner can see may not move without a word (compat boundary).
+    """
+    middle = (
+        _page_header(
+            "工作台 / 设置", "设置", "",
+            "<button id='settings-close' class='outline sm' type='button'>关闭</button>",
+        )
+        + "<div class='page-content'>"
+        + "<section class='settings-view' aria-label='外观偏好'>"
+        + "<div class='preference-row'>"
+        + "<label class='preference-name' for='setting-theme'>主题</label>"
+        + "<span class='preference-value' id='setting-theme-value'>暖纸</span>"
+        + "<label class='lk-switch'>"
+        + "<input type='checkbox' id='setting-theme'>"
+        + "<span class='lk-switch__track' aria-hidden='true'>"
+        + "<span class='lk-switch__thumb'></span></span></label>"
+        + "</div>"
+        + "<div class='preference-row'>"
+        + "<span class='preference-name' id='setting-face-label'>阅读字面</span>"
+        + "<span class='preference-value' id='setting-face-value'>衬线</span>"
+        + "<span class='lk-seg' role='radiogroup' aria-labelledby='setting-face-label'>"
+        + "<label class='lk-seg__item'>"
+        + "<input type='radio' name='setting-face' value='serif' checked>衬线</label>"
+        + "<label class='lk-seg__item'>"
+        + "<input type='radio' name='setting-face' value='sans'>无衬线</label>"
+        + "</span>"
+        + "</div>"
+        + "<div class='preference-row'>"
+        + "<label class='preference-name' for='setting-motion'>动效</label>"
+        + "<span class='preference-value' id='setting-motion-value'>完整</span>"
+        + "<label class='lk-switch'>"
+        + "<input type='checkbox' id='setting-motion'>"
+        + "<span class='lk-switch__track' aria-hidden='true'>"
+        + "<span class='lk-switch__thumb'></span></span></label>"
+        + "</div>"
+        + "<div class='preference-row'>"
+        + "<label class='preference-name' for='setting-sound'>声音</label>"
+        + "<span class='preference-value' id='setting-sound-value'>开</span>"
+        + "<label class='lk-switch'>"
+        + "<input type='checkbox' id='setting-sound' checked>"
+        + "<span class='lk-switch__track' aria-hidden='true'>"
+        + "<span class='lk-switch__thumb'></span></span></label>"
+        + "</div>"
+        + "</section></div>"
+    )
+    return shell(
+        workspace, workspaces, weak_items, middle, "",
+        page_type="settings", kp_titles=kp_titles,
+    )
+
+
 def _left_column(workspace, workspaces, weak_items, active_nav):
     options = "".join(
         f"<option value='{ws['name']}' {'selected' if ws['name'] == workspace['name'] else ''}>"
@@ -667,6 +723,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<option value='interrupt'>中断后发送</option></select>"
         "<label class='setting-row'><input id='setting-show-rating' type='checkbox' checked> "
         "练习显示自评</label>"
+        "<a id='setting-view-toggle' class='setting-row setting-view-toggle' "
+        f"href='/w/{workspace['name']}/settings' aria-expanded='false'>外观设置</a>"
         "</section>"
         "<section class='side-section weak-section'>"
         f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"
@@ -1114,11 +1172,42 @@ def _image_replace(line, workspace_name):
     return re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", repl, line)
 
 
-def _base(title, body):
+def _appearance_boot_script(workspace):
+    """The first-paint appearance state, inlined ahead of the stylesheets.
+
+    The theme attribute lives on `<html>` (design.md D-9), so it has to be
+    there before the first paint: an explicit stored choice wins, an absent
+    choice follows the system (A-11), and with no JavaScript the warm-paper
+    ground is what shows.  The other three preferences ride along in the same
+    record, so the first frame never shows a state the learner did not pick.
+    """
+    key = json.dumps("wb_settings_" + workspace) if workspace else "null"
+    return (
+        "<script>(function(){try{"
+        f"var k={key};"
+        "var raw=k?localStorage.getItem(k):null;"
+        "var s={};if(raw){try{s=JSON.parse(raw)||{};}catch(e){s={};}}"
+        "var d=document.documentElement;"
+        "var dark=false;"
+        "if(s.theme==='night'||s.theme==='paper'){dark=s.theme==='night';}"
+        "else if(window.matchMedia){"
+        "dark=window.matchMedia('(prefers-color-scheme: dark)').matches;}"
+        "d.dataset.theme=dark?'night':'';"
+        "d.style.colorScheme=dark?'dark':'light';"
+        "d.dataset.sound=s.sound===false?'off':'on';"
+        "d.dataset.face=s.readingFace==='sans'?'sans':'serif';"
+        "if(s.motion===true){d.dataset.motion='on';}"
+        "else if(s.motion===false){d.dataset.motion='off';}"
+        "}catch(e){}})();</script>"
+    )
+
+
+def _base(title, body, workspace=None):
     return (
         "<!doctype html><html lang='zh'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         f"<title>{html.escape(title)}</title>"
+        + _appearance_boot_script(workspace) +
         "<link rel='stylesheet' href='/static/workbench.css'>"
         "<link rel='stylesheet' href='/static/agent-ui.css'>"
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"

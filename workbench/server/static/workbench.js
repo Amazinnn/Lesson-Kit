@@ -188,6 +188,90 @@
     return loadSetting("showRating", true) !== false;
   }
 
+  /* ---------- appearance preferences ----------
+   * Theme, reading face, motion and sound are browser preferences of the
+   * open workspace: they live in the same `wb_settings_<workspace>` record
+   * as the two behaviour preferences and they never leave the browser
+   * (design.md D-9).  An explicit pick wins over the system; without one
+   * the system decides (A-11 for the theme, A-2 for the motion).
+   */
+
+  function prefersDarkScheme() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  function storedTheme() {
+    var value = loadSetting("theme", null);
+    return value === "night" || value === "paper" ? value : null;
+  }
+
+  function effectiveTheme() {
+    var stored = storedTheme();
+    if (stored) return stored;
+    return prefersDarkScheme() ? "night" : "paper";
+  }
+
+  function applyTheme(theme) {
+    var root = document.documentElement;
+    if (!root) return;
+    root.dataset.theme = theme === "night" ? "night" : "";
+    root.style.colorScheme = theme === "night" ? "dark" : "light";
+  }
+
+  function storedReadingFace() {
+    var value = loadSetting("readingFace", null);
+    return value === "serif" || value === "sans" ? value : null;
+  }
+
+  function effectiveReadingFace() {
+    return storedReadingFace() || "serif";
+  }
+
+  function applyReadingFace(face) {
+    var root = document.documentElement;
+    if (!root) return;
+    root.dataset.face = face === "sans" ? "sans" : "serif";
+    /* The reading face is a type family, so it is carried by the reading
+       token; the attribute is the hook for the reading layer's own rules. */
+    if (face === "sans") root.style.setProperty("--font-read", "var(--font-ui)");
+    else root.style.removeProperty("--font-read");
+  }
+
+  function storedMotion() {
+    var value = loadSetting("motion", null);
+    return value === true || value === false ? value : null;
+  }
+
+  /* The motion tier in force: "full", "weak" (the system's reduced tier) or
+     "off".  An explicit choice wins over the system setting (A-2). */
+  function motionMode() {
+    var stored = storedMotion();
+    if (stored === false) return "off";
+    if (stored === true) return "full";
+    return prefersReducedMotion() ? "weak" : "full";
+  }
+
+  function applyMotion() {
+    var root = document.documentElement;
+    if (!root) return;
+    var stored = storedMotion();
+    /* Without a stored choice the stylesheet's own reduced-motion query
+       decides; the attribute only carries an explicit choice. */
+    if (stored === true) root.dataset.motion = "on";
+    else if (stored === false) root.dataset.motion = "off";
+    else root.removeAttribute("data-motion");
+  }
+
+  window.lkMotion = {
+    mode: motionMode,
+    isFull: function () { return motionMode() === "full"; },
+    isOff: function () { return motionMode() === "off"; },
+  };
+
   function renderMath(root) {
     var spans = (root || document).querySelectorAll(".math");
     if (!spans.length || !window.katex) return;
@@ -512,6 +596,125 @@
       saveSetting("runningSendAction", action);
     });
   }
+
+  /* ---------- the settings view ---------- */
+
+  /* The settings view is a middle-column page of the same workspace, so it
+     travels the same navigation path as the other views and the Agent rail
+     stays mounted across the switch (design.md D-9).  The left control opens
+     it and closes it again; closing returns to the view it replaced. */
+  var settingsReturnUrl = null;
+
+  function settingsViewOpen() {
+    return layout.dataset.page === "settings";
+  }
+
+  function openSettingsView() {
+    settingsReturnUrl = window.location.href;
+    navigateMiddle("/w/" + WS + "/settings");
+  }
+
+  function closeSettingsView() {
+    navigateMiddle(settingsReturnUrl || ("/w/" + WS + "/practice"));
+  }
+
+  function renderSettingsToggle() {
+    var toggle = document.getElementById("setting-view-toggle");
+    if (!toggle) return;
+    var open = settingsViewOpen();
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.classList.toggle("active", open);
+  }
+
+  function bindSettingsViewToggle() {
+    var toggle = document.getElementById("setting-view-toggle");
+    if (!toggle) return;
+    toggle.addEventListener("click", function (event) {
+      event.preventDefault();
+      if (settingsViewOpen()) closeSettingsView();
+      else openSettingsView();
+    });
+  }
+
+  function renderAppearanceValues() {
+    var theme = effectiveTheme();
+    var themeBox = document.getElementById("setting-theme");
+    var themeValue = document.getElementById("setting-theme-value");
+    if (themeBox) themeBox.checked = theme === "night";
+    if (themeValue) themeValue.textContent = theme === "night" ? "夜纸" : "暖纸";
+
+    var face = effectiveReadingFace();
+    var faceValue = document.getElementById("setting-face-value");
+    if (faceValue) faceValue.textContent = face === "sans" ? "无衬线" : "衬线";
+    Array.prototype.forEach.call(
+      document.querySelectorAll("input[name='setting-face']"),
+      function (input) { input.checked = input.value === face; }
+    );
+
+    var mode = motionMode();
+    var motionBox = document.getElementById("setting-motion");
+    var motionValue = document.getElementById("setting-motion-value");
+    if (motionBox) motionBox.checked = mode === "full";
+    if (motionValue) {
+      motionValue.textContent = mode === "full" ? "完整" : (mode === "weak" ? "弱动效" : "直切");
+    }
+
+    var soundBox = document.getElementById("setting-sound");
+    var soundValue = document.getElementById("setting-sound-value");
+    var soundOn = window.lkSfx ? window.lkSfx.isEnabled() : loadSetting("sound", true) !== false;
+    if (soundBox) soundBox.checked = soundOn;
+    if (soundValue) soundValue.textContent = soundOn ? "开" : "关";
+  }
+
+  function mountSettingsView() {
+    var themeBox = document.getElementById("setting-theme");
+    var motionBox = document.getElementById("setting-motion");
+    var soundBox = document.getElementById("setting-sound");
+    var closeButton = document.getElementById("settings-close");
+
+    if (themeBox) {
+      themeBox.addEventListener("change", function () {
+        var theme = themeBox.checked ? "night" : "paper";
+        saveSetting("theme", theme);
+        applyTheme(theme);
+        renderAppearanceValues();
+      });
+    }
+    Array.prototype.forEach.call(
+      document.querySelectorAll("input[name='setting-face']"),
+      function (input) {
+        input.addEventListener("change", function () {
+          if (!input.checked) return;
+          saveSetting("readingFace", input.value);
+          applyReadingFace(input.value);
+          renderAppearanceValues();
+        });
+      }
+    );
+    if (motionBox) {
+      motionBox.addEventListener("change", function () {
+        saveSetting("motion", motionBox.checked);
+        applyMotion();
+        renderAppearanceValues();
+      });
+    }
+    if (soundBox) {
+      soundBox.addEventListener("change", function () {
+        if (window.lkSfx) window.lkSfx.setEnabled(soundBox.checked);
+        else saveSetting("sound", soundBox.checked);
+        renderAppearanceValues();
+      });
+    }
+    if (closeButton) {
+      closeButton.addEventListener("click", function () { closeSettingsView(); });
+    }
+    renderAppearanceValues();
+  }
+
+  bindSettingsViewToggle();
+  applyTheme(effectiveTheme());
+  applyReadingFace(effectiveReadingFace());
+  applyMotion();
 
   /* ---------- key feedback cues ----------
    * Four contract events carry a cue: an answer judged correct, an answer
@@ -5022,6 +5225,8 @@
     mountPracticeViews();
     mountMiddlePageRender();
     timeViewDispose = mountTimeView();
+    mountSettingsView();
+    renderSettingsToggle();
     if (layout.dataset.objectType && layout.dataset.objectId) {
       recordRecent(layout.dataset.objectType, layout.dataset.objectId);
       aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);
