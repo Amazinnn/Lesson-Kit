@@ -3328,10 +3328,20 @@ img { max-width: 100%; }
   to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-/* 骨架微光扫过：只动覆盖层的 transform（1200ms/轮，无限） */
-@keyframes lk-skeleton-sweep {
-  from { transform: translate3d(-100%, 0, 0); }
-  to   { transform: translate3d(100%, 0, 0); }
+/* 骨架屏呼吸（§4.22 · `skeleton-breathe` · A-115 形态裁定）------------------
+   ⚠️ **不做横扫**（旧的 `lk-skeleton-sweep` + `.lk-skeleton::after` 覆盖层
+     **必须删掉**）：走查判据 3.4-3 只认「**块自身表面**随时间变化」，
+     `::after` 上的横扫动的是**覆盖层**，不算 ⇒ 留着会判 FAIL。
+   ⚠️ **无表面渐变** ⇒ 旧的 `linear-gradient` 微光一并删掉
+     （A-74「微光是渐变的明确例外」自此**不再被行使**）。
+   ⚠️ 只动 **opacity**（权威表 §3.3：状态色瞬切 ⇒ 呼吸优先用 opacity，
+     不用 background-color 做动画）；**不动位置**。
+   ⚠️ **起始态只写在 @keyframes 内**；**静态样式 = 终态**（`opacity: 1`）——
+     降级档（reduced-motion / 动效偏好关）直接是**静止灰块**（有体积）。 */
+@keyframes lk-skeleton-breathe {
+  0%   { opacity: 1; }
+  50%  { opacity: .45; }
+  100% { opacity: 1; }
 }
 
 /* 答错摆动：水平 ≤4px，160ms 内结束（不做屏幕级震动） */
@@ -3462,38 +3472,27 @@ img { max-width: 100%; }
 .lk-stagger > :nth-child(8) { animation-delay: 280ms; }
 .lk-stagger > :nth-child(n+9) { animation-delay: 280ms; }
 
-/* 骨架屏（§2.1 第 9 项）：灰块静止，动的只有覆盖层的 transform
-   ⚠️ **尺寸**：没有尺寸的骨架是 **0×0** —— 灰块看不见，微光也扫不出位移
-   （3.4-3 / M-9 的判据都量这一条）。
+/* 骨架屏（§2.1 第 9 项 · §4.22 `skeleton-breathe` · A-115 形态裁定）：
+   **呼吸式** —— 灰块**自身**的 opacity 整体明暗呼吸；**不做横扫**、
+   **无表面渐变**、**不动位置**。
+   ⚠️ **尺寸**：没有尺寸的骨架是 **0×0** —— 灰块看不见（3.4-3 / M-9 的判据
+     都量这一条）。
    · 基类给**最小高度**（空骨架块也有体积）；
    · 三个变体按 component-spec §4.22 的块高走：行 16px · 卡片 96px · 头像 40px。
-   ⚠️ **渐变的明确例外（A-74）**：微光（扫描光）用 `linear-gradient` ——
-   权威表 §3.3「渐变只允许出现在图标与插画内部」对**骨架屏的微光**不适用：
-   它是**扫描光**，不是**表面渐变**（不承载任何表面色、不表达状态）。
-   ⚠️ 别把这个 `linear-gradient` 当违规删掉。 */
+   ⚠️ **静态样式 = 终态**：`opacity: 1` 与关键帧的 100% 一致 ⇒
+     降级档（`prefers-reduced-motion: reduce` 或动效偏好关把
+     `animation-name` 置 none）下直接是**静止灰块**、**有体积**。 */
 .lk-skeleton {
   position: relative;
-  overflow: hidden;
   min-height: 16px;            /* 基类最小高度：空骨架块也有体积 */
   border-radius: var(--r-xs);
   background: var(--skeleton-base);
+  opacity: 1;                  /* 静态样式 = 终态 */
+  animation: lk-skeleton-breathe 1600ms var(--ease-standard) infinite;
 }
 .lk-skeleton--text { display: inline-block; width: 100%; height: 16px; border-radius: var(--r-xs); }
 .lk-skeleton--block { display: block; width: 100%; height: 96px; border-radius: var(--r-md); }
 .lk-skeleton--avatar { display: inline-block; width: 40px; height: 40px; border-radius: var(--r-round); }
-.lk-skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(100deg,
-      transparent 0%,
-      var(--skeleton-sheen) 42%,
-      var(--skeleton-sheen) 58%,
-      transparent 100%);
-  transform: translate3d(-100%, 0, 0);
-  pointer-events: none;
-  animation: lk-skeleton-sweep 1200ms var(--ease-standard) infinite;
-}
 
 /* 数字滚动（§2.1 第 8 项）：逐位 ticker strip，只动 transform */
 .lk-ticker {
