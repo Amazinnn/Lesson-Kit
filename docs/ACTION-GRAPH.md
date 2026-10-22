@@ -52,7 +52,7 @@
 | L1 服务层 | [action-graph/L1-services.md](action-graph/L1-services.md) | 域逻辑模块与依赖 |
 | L2 接口层 | [action-graph/L2-interfaces.md](action-graph/L2-interfaces.md) | API 62 路由 + CLI 24 命令 |
 | L3 动作层 | [action-graph/L3-actions.md](action-graph/L3-actions.md) | 动作登记（入口/权限/读写/状态）+ 留痕 |
-| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 十条主流程 + 意外分支总清单 |
+| L4 工作流层 | [action-graph/L4-workflows.md](action-graph/L4-workflows.md) | 十条主流程 + 意外分支总清单 + 同步记录 |
 
 ## 总图
 
@@ -142,6 +142,10 @@ flowchart LR
   学习事实不变；知识图谱相关动作零改动。视觉层仍待落地的部分（结构已就位、样式规则未跟上）
   登记在 `docs/PRODUCT-MANUAL.md` §10.1，不在本图谱记为动作。按 `action-graph/README.md`
   的维护规则，改级/退役动作应同步 L4 受影响的工作流图——L4 不在本波范围，留给下一波。
+  （→ **2026-10-22 已同步 L4**，见 `action-graph/L4-workflows.md` 末尾「L4 同步记录」：本波四条里
+  只有「连对升级反馈」在 L4 有落点（并入 W1 的兼容分支，不另起工作流）；「切换主题」是横切外观偏好、
+  「跨页练习范围托盘」从未被渲染、「渲染阅读内容」改的是 CSS 挂载名——这三条**在 L4 无对应工作流**，
+  L4 图零改动。）
   见 L3 与 workbench-visual-language-v2。
 - 2026-10-22 图谱节点视觉语言（graph-node-visual-language）：知识图谱页的节点外观重做（同心圆节点、屏幕空间尺寸、图谱暖色板、四个投影各自的图谱色键、随投影切换的图例、标签重叠让位、夜纸值集）。**本图谱的动作不新增、不退役、不改级**，图谱相关动作条目零改动——既有搜索 / 投影切换 / 状态筛选 / 聚拢 / 聚焦 / 缩放 / 本地布局种子的入口、权限与读写面全部照旧，本次只改呈现。
   **登记一处表述冲突（不改动作条目）**：L3 第二节「图谱关系绘制与 viewport/label LOD」一条里的 **label LOD** 措辞，指的是按缩放阈值隐藏标签；本次之后标签可见性的判据改为**重叠让位 + 可见标签预算**，缩放不再决定标签是否出现。该动作的入口、权限、读写面与状态均未变，因此**不改动作条目**，只在此登记，留给实现阶段以规格为准。L3 铁律 4「标签一律完整显示，不截断、不省略号」与新规则一致，无需调整。请求序列、持久化与学习事实不变。
