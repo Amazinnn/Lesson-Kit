@@ -87,14 +87,20 @@ Node diameter, node label text size and small-dot diameter SHALL be specified in
 screen pixels so that the stage's zoom transform does not shrink them. Node
 radius SHALL map continuously from 14 to 30 screen pixels across the active
 projection's metric range, and equal metric values SHALL receive equal radii.
-Zooming the graph out SHALL NOT shrink a node below its screen-space size, and a
-graph fitted to the viewport SHALL keep every node's centre number and label
-readable without zooming in.
+Node label text SHALL be rendered at **12 screen pixels**. Zooming the graph out
+SHALL NOT shrink a node below its screen-space size, and a graph fitted to the
+viewport SHALL keep every node's centre number and label readable without
+zooming in.
 
 #### Scenario: A fitted graph stays legible
 
 - **WHEN** a chapter graph is fitted to the viewport
 - **THEN** node radii stay between 14 and 30 screen pixels, and each node's centre number and label stay readable without zooming in
+
+#### Scenario: Labels use the pinned screen-space size
+
+- **WHEN** a node label is drawn
+- **THEN** its text size is 12 screen pixels, unaffected by the stage's zoom transform
 
 #### Scenario: Zooming out does not shrink a node
 
