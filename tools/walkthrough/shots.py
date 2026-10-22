@@ -177,10 +177,12 @@ def _goto(page, url):
 
 
 def _resolve_target(page, spec, base_url, ws):
-    """Resolve the concrete URL of a spec entry (``{ws}`` and the resolvers)."""
-    path = spec["path"].format(ws=ws)
-    if "{" not in path:
-        return base_url + path, None
+    """Resolve the concrete URL of a spec entry (``{ws}`` and the resolvers).
+
+    The resolver runs *before* the path is substituted, because a spec entry
+    such as ``/w/{ws}/kp`` still needs a concrete id that only the page can
+    supply.
+    """
     resolver = spec.get("resolve")
     if resolver == "first_kp_link":
         _goto(page, base_url + f"/w/{ws}/kps")
@@ -191,14 +193,17 @@ def _resolve_target(page, spec, base_url, ws):
             return None, "找不到知识点链接（kps 页没有 a[href*='/kp/']）"
         return base_url + href, None
     if resolver == "first_problem_link":
-        _goto(page, base_url + f"/w/{ws}/records")
-        href = page.evaluate(
+        _goto(page, base_url + f"/w/{ws}/records?view=attempts")
+        problem_id = page.evaluate(
             "() => { const a = document.querySelector('a[href*=\"problem=\"]');"
-            " return a ? a.getAttribute('href') : null; }")
-        if not href:
-            return None, "记录页里找不到题目链接（没有 a[href*='problem=']）"
-        return base_url + href, None
-    return None, f"未实现的路径解析：{path}"
+            " if (!a) return null;"
+            " const m = a.getAttribute('href').match(/[?&]problem=([^&]+)/);"
+            " return m ? decodeURIComponent(m[1]) : null; }")
+        if not problem_id:
+            return None, "记录页里找不到作答明细（没有带 problem= 的链接）"
+        return (f"{base_url}/w/{ws}/records?view=attempts&problem={problem_id}", None)
+    path = spec["path"].format(ws=ws)
+    return base_url + path, None
 
 
 def capture(base_url, ws, out_dir, only=None, seed=None):
