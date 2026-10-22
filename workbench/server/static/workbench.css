@@ -1069,6 +1069,71 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
 .knowledge-sort-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 4px 0 14px; color: var(--ink-faint); font-size: 12px; }
 .knowledge-sort-bar select { width: 118px; }
 .knowledge-meta { float: right; color: var(--ink-faint); font-size: 12px; }
+
+/* ---- 知识点状态圆点（tasks.md 18.2 · IMPL-W2e 第 8 条）--------------------
+   18.2 的 markup 已用这些类名（`pages.py` 的 `_STATE_DOTS`）：
+     `lk-dot` + `lk-dot--red|--yellow|--ink`（**颜色**主通道）
+              + `lk-dot--cross|--dash|--check`（**几何**冗余通道）
+   以前 CSS 里**零命中** ⇒ 圆点根本没画出来。
+   · **颜色 + 几何形状双通道**：红叉（重点练习）/ 黄横杠（可以复习）/ 墨勾（掌握）；
+   · 形状用**纯 CSS**（`::before` / `::after` + `transform` 画线），
+     **形状不靠颜色区分** ⇒ 灰度下三态仍可辨（component-spec §3.6 冗余通道）；
+   · 三支几何沿用记录页判定徽章的**同一支笔**（2px 线宽、1px 圆角），
+     静态样式即终态（不依赖动画）。 */
+.lk-dot {
+  --dot-fill: transparent;
+  --dot-mark: var(--ink-strong);
+  position: relative;
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--r-round);
+  background: var(--dot-fill);
+  vertical-align: -1px;
+}
+/* 颜色主通道：红 = 重点练习 / 黄 = 可以复习 / 墨 = 掌握。
+   符号用「挖空」色（`--ink-on-role` / `--ink-on-warm`）⇒ 两主题下都够对比。 */
+.lk-dot--red { --dot-fill: var(--role-red); --dot-mark: var(--ink-on-role); }
+.lk-dot--yellow { --dot-fill: var(--role-yellow); --dot-mark: var(--ink-on-warm); }
+.lk-dot--ink { --dot-fill: var(--ink-strong); --dot-mark: var(--ink-on-role); }
+/* 几何冗余通道：三态**形状各不相同**（叉 / 横杠 / 勾） */
+.lk-dot--cross::before,
+.lk-dot--cross::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 2px;
+  margin: -1px 0 0 -3.5px;
+  border-radius: 1px;
+  background: var(--dot-mark);
+  transform-origin: 50% 50%;
+}
+.lk-dot--cross::before { transform: rotate(45deg); }
+.lk-dot--cross::after { transform: rotate(-45deg); }
+.lk-dot--dash::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 2px;
+  margin: -1px 0 0 -3.5px;
+  border-radius: 1px;
+  background: var(--dot-mark);
+}
+.lk-dot--check::before,
+.lk-dot--check::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--dot-mark);
+  transform-origin: 0 50%;
+}
+.lk-dot--check::before { width: 4px; left: 3px; top: 50%; margin-top: -1px; transform: rotate(45deg); }
+.lk-dot--check::after { width: 6px; left: 5.5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
 .graph-content { max-width: none; }
 #layout[data-page="graph"] #middle { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 20px; }
 #layout[data-page="graph"] .page-header { width: 100%; flex: none; padding-bottom: 14px; }
