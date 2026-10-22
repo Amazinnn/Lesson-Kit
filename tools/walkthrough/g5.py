@@ -450,15 +450,22 @@ def build_scopes(before_dir, after_dir):
     }
 
     return {
-        "before": {"shot": str(before_png), "assertions": (before_json or {}).get("assertions", {})},
-        "after": {"shot": str(after_png), "assertions": (after_json or {}).get("assertions", {})},
-        "R-1": {"ae": r1_ae, "detail": r1_detail,
-                "excluded": {"leftColumnX": R1_EXCLUDE_LEFT, "topBarY": R1_EXCLUDE_TOP},
-                "mask": "the left column (x < 280) and the top bar (y < 52) "
-                        "are excluded (A-48)"},
-        "R-2": r2,
-        "R-3": r3,
-        "note": LEFT_COLUMN_NOTE,
+        "scopes": {
+            "R-1": {"ae": r1_ae, "detail": r1_detail,
+                    "excluded": {"leftColumnX": R1_EXCLUDE_LEFT,
+                                 "topBarY": R1_EXCLUDE_TOP},
+                    "mask": "the left column (x < 280) and the top bar (y < 52) "
+                            "are excluded (A-48)"},
+            "R-2": r2,
+            "R-3": {**r3, "ae": r3.get("canvasAe")},
+        },
+        "meta": {
+            "before": {"shot": str(before_png),
+                       "assertions": (before_json or {}).get("assertions", {})},
+            "after": {"shot": str(after_png),
+                      "assertions": (after_json or {}).get("assertions", {})},
+            "note": LEFT_COLUMN_NOTE,
+        },
     }
 
 
@@ -471,10 +478,11 @@ def verdict(scopes):
     """
     if scopes.get("error"):
         return {"verdict": PENDING, "detail": scopes["error"], "scopes": scopes}
-    r1 = scopes["R-1"]["ae"]
-    r2 = scopes["R-2"]["ae"]
-    r3_ae = scopes["R-3"]["canvasAe"]
-    samples_equal = scopes["R-3"]["samplesEqual"]
+    parts = scopes.get("scopes", {})
+    r1 = parts.get("R-1", {}).get("ae")
+    r2 = parts.get("R-2", {}).get("ae")
+    r3_ae = parts.get("R-3", {}).get("ae")
+    samples_equal = parts.get("R-3", {}).get("samplesEqual")
     values = [value for value in (r1, r2, r3_ae) if value is not None]
     if not values:
         return {"verdict": PENDING, "detail": "the three scopes could not be "
@@ -483,7 +491,7 @@ def verdict(scopes):
         return {"verdict": FAIL,
                 "detail": "the column samples differ — the shell ground moved",
                 "scopes": scopes}
-    if all(value == 0 for value in values) and samples_equal is not False:
+    if all(value == 0 for value in values):
         return {"verdict": PASS,
                 "detail": "R-1 / R-2 / R-3 are all 0 — the graph was not damaged",
                 "scopes": scopes}
@@ -535,12 +543,14 @@ def main(argv=None):
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "ae.json").write_text(
-        json.dumps({**result, "scopes": scopes}, ensure_ascii=False, indent=2),
+        json.dumps({**result, **scopes}, ensure_ascii=False, indent=2),
         encoding="utf-8")
+    parts = scopes.get("scopes", {})
     print(json.dumps({"verdict": result["verdict"], "detail": result["detail"],
-                      "R-1": scopes["R-1"]["ae"], "R-2": scopes["R-2"]["ae"],
-                      "R-3": scopes["R-3"]["canvasAe"],
-                      "samplesEqual": scopes["R-3"]["samplesEqual"]},
+                      "R-1": parts.get("R-1", {}).get("ae"),
+                      "R-2": parts.get("R-2", {}).get("ae"),
+                      "R-3": parts.get("R-3", {}).get("ae"),
+                      "samplesEqual": parts.get("R-3", {}).get("samplesEqual")},
                      ensure_ascii=False, indent=2))
     return 0
 

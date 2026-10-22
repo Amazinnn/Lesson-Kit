@@ -551,9 +551,10 @@ def requests_diff_verdict(diff):
 #: Verdict vocabulary (§7.6.2).
 PASS, FAIL, PENDING, BLOCKED, NA = "PASS", "FAIL", "PENDING", "BLOCKED", "N/A"
 
-#: Gates whose evidence this executor cannot produce yet.  The collector
-#: modules for them (``dbexport`` / ``frames`` / ``probe``) are not part of
-#: this delivery, so the gate is BLOCKED — "cannot be judged" — never PASS.
+#: Gates whose evidence this executor cannot produce **yet**.  The
+#: collector modules (``dbexport`` / ``probe``) are part of the delivery
+#: now, so these gates are read from the evidence on disk; a gate whose
+#: evidence is missing stays BLOCKED — "cannot be judged" — never PASS.
 GATES_WITHOUT_COLLECTOR = {
     "G-2": "needs the persistence export collector (walkthrough-harness.md §4)",
     "G-3": "needs the learning-projection export collector (§4)",
@@ -562,6 +563,9 @@ GATES_WITHOUT_COLLECTOR = {
     "G-7": "needs the browser probe collector (§7.5.2)",
     "G-8": "needs the focus-sequence probe collector (§7.2)",
 }
+
+#: The gate verdicts the pool export produces (``dbexport.build_gates``).
+DB_GATES = ("G-2", "G-3", "G-4", "G-6")
 
 
 def _read_json(path):
@@ -651,12 +655,55 @@ def build_report(evidence_dir, out_dir=None, purpose="walkthrough"):
             "evidence": [],
         }
 
-    for gate, reason in GATES_WITHOUT_COLLECTOR.items():
+    # -- G-2 / G-3 / G-4 / G-6: the pool export diff ---------------------
+    db_diff = _read_json(out_dir / "db.diff.json")
+    if db_diff and db_diff.get("gates"):
+        for gate in DB_GATES:
+            found = db_diff["gates"].get(gate)
+            if not found:
+                gates[gate] = {
+                    "verdict": BLOCKED,
+                    "auto": True,
+                    "detail": f"the pool export did not produce {gate}",
+                    "evidence": [],
+                }
+                continue
+            gates[gate] = {
+                "verdict": found.get("verdict", BLOCKED),
+                "auto": True,
+                "detail": _db_gate_detail(gate, found),
+                "evidence": ["diff/db.diff.json"],
+            }
+    else:
+        for gate in DB_GATES:
+            gates[gate] = {
+                "verdict": BLOCKED,
+                "auto": True,
+                "detail": GATES_WITHOUT_COLLECTOR[gate],
+                "evidence": [],
+            }
+
+    # -- G-7 / G-8: the browser probes -----------------------------------
+    checklist_diff = _read_json(out_dir / "checklist.json")
+    gate_probes = (checklist_diff or {}).get("gates") or {}
+    for gate in ("G-7", "G-8"):
+        found = gate_probes.get(gate)
+        if not found:
+            side_file = _read_json(evidence_dir / "after" / "probe" / f"{gate.lower()}.json")
+            found = side_file
+        if not found:
+            gates[gate] = {
+                "verdict": BLOCKED,
+                "auto": True,
+                "detail": GATES_WITHOUT_COLLECTOR[gate],
+                "evidence": [],
+            }
+            continue
         gates[gate] = {
-            "verdict": BLOCKED,
+            "verdict": found.get("verdict", BLOCKED),
             "auto": True,
-            "detail": reason,
-            "evidence": [],
+            "detail": found.get("note", ""),
+            "evidence": [f"probe/{gate.lower()}.json"],
         }
 
     # ── S-1…S-12: paired screenshots (§5.4) ────────────────────────────
@@ -689,7 +736,11 @@ def build_report(evidence_dir, out_dir=None, purpose="walkthrough"):
             }
 
     # ── §3 interaction checklist (38 items, §7.5) ───────────────────────
-    checklist_file = _read_json(evidence_dir / "after" / "probe" / "checklist.json")
+    # The merged checklist of the diff pass wins: it carries the verdicts
+    # of the comparative items (3.1-5) and the before side's verdicts.
+    checklist_file = _read_json(out_dir / "checklist.json")
+    if not (checklist_file and checklist_file.get("results")):
+        checklist_file = _read_json(evidence_dir / "after" / "probe" / "checklist.json")
     if checklist_file and checklist_file.get("results"):
         for item in checklist_file["results"]:
             checklist[item["id"]] = {
@@ -724,6 +775,25 @@ def build_report(evidence_dir, out_dir=None, purpose="walkthrough"):
     (out_dir / "report.md").write_text(
         render_report_md(report, out_dir), encoding="utf-8")
     return report
+
+
+def _db_gate_detail(gate, found):
+    """One line per gate: what was compared and what came out."""
+    if gate == "G-2":
+        tables = found.get("tables", {})
+        return ("持久化写入比对：" + "、".join(
+            f"{table} {verdict}" for table, verdict in tables.items()))
+    if gate == "G-3":
+        tables = found.get("tables", {})
+        return ("学习投影比对：" + "、".join(
+            f"{table} {verdict}" for table, verdict in tables.items()))
+    if gate == "G-4":
+        due = found.get("due", {}).get("verdict")
+        weak = found.get("weak", {}).get("verdict")
+        return f"到期列表 {due}；薄弱列表 {weak}"
+    schema = found.get("schema", {}).get("verdict")
+    counts = found.get("row_counts", {}).get("verdict")
+    return f"schema 比对 {schema}；行数比对 {counts}"
 
 
 def _g5_verdict(ae, out_dir):
