@@ -298,7 +298,60 @@ def _rating_spark(ratings):
     )
 
 
-def _summary_cards(summary, runs, ratings):
+def _sparkline(values):
+    """迷你趋势线：每天一个点 —— 画的就是**每天的作答次数**（`_trend` 的 attempts）。
+
+    完整数值在下方「最近 14 天」柱图里逐日标出，所以这层是装饰
+    （`aria-hidden`），不重复读一遍。
+    """
+    if not values:
+        return ""
+    top = max(values)
+    if top <= 0:
+        return ""
+    width, height = 100, _MINI_HEIGHT
+    span = width / (len(values) - 1) if len(values) > 1 else width
+    points = " ".join(
+        f"{index * span:.2f},{height - 1 - value / top * (height - 2):.2f}"
+        for index, value in enumerate(values)
+    )
+    return (
+        f"<svg class='record-spark' width='100%' height='{height}' "
+        f"viewBox='0 0 {width} {height}' preserveAspectRatio='none' "
+        "aria-hidden='true' focusable='false' "
+        f"style='display:block;width:100%;height:{height}px'>"
+        f"<polyline points='{points}' fill='none' style='stroke:var(--role-blue)' "
+        "stroke-width='1.5' stroke-linejoin='round' stroke-linecap='round' "
+        "vector-effect='non-scaling-stroke'/>"
+        "</svg>"
+    )
+
+
+def _run_blocks(runs, limit=12):
+    """已完成练习轮次的迷你图：最近若干轮，每轮一块。
+
+    实心 = 已完成、空心 = 未完成 —— 几何冗余通道，不靠颜色单独承载状态。
+    """
+    if not runs:
+        return ""
+    blocks = []
+    for run in runs[:limit]:
+        done = run.get("status") == "completed"
+        style = (
+            "width:8px;height:8px;border-radius:2px;background:var(--role-blue)"
+            if done else
+            "width:8px;height:8px;border-radius:2px;background:transparent;"
+            "box-shadow:inset 0 0 0 1.5px var(--ink-faint)"
+        )
+        blocks.append(f"<div class='record-spark-block' style='{style}'></div>")
+    return (
+        "<div class='record-spark' style='display:flex;gap:4px;align-items:center'>"
+        + "".join(blocks)
+        + "</div>"
+    )
+
+
+def _summary_cards(summary, runs, trend, ratings):
     """统计区 = 仪表盘卡片（一主三辅，各带一个迷你图）。
 
     四个汇总数字的**取值与口径与改造前逐位相同**（spec delta「The summary
@@ -315,8 +368,8 @@ def _summary_cards(summary, runs, ratings):
         ("平均自评", "—" if average is None else f"{average:.1f} / 5"),
     ]
     minis = [
-        None,  # 迷你趋势线（19.4 补：每天的作答次数）
-        None,  # 已完成练习轮次（19.4 补）
+        _sparkline([int(day.get("attempts") or 0) for day in trend]),
+        _run_blocks(runs),
         _verdict_ring(
             int(summary.get("correct") or 0), int(summary.get("judged") or 0)),
         _rating_spark(ratings),
@@ -516,7 +569,8 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
     else:
         summary = overview.get("summary") or {}
         body = (
-            _summary_cards(summary, runs, overview.get("ratings") or [])
+            _summary_cards(summary, runs, overview.get("trend") or [],
+                           overview.get("ratings") or [])
             + "<section class='card record-chart-card record-activity-card'>"
             "<div class='section-heading'><div><p class='section-kicker'>最近 12 周</p>"
             "<h2>作答日历</h2></div></div>"
