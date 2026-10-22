@@ -1,0 +1,52 @@
+# IMPL-P25 — 第 25 组：Agent 右栏（会话列表 / 消息流 / composer / 执行计划 / 活动浮层）
+
+> 对应 `tasks.md` **第 25 组（25.1–25.4）**。**只改
+> `workbench/server/static/workbench.js` · `workbench/server/static/agent-ui.css` ·
+> `workbench/server/static/workbench.css`**（三个文件是一组）。
+
+## 要做
+- **25.1** 会话列表**补滚动容器 + 分组**：
+  现状 `#ai-session-list` **无滚动容器**（`overflow: visible` + 祖先 `overflow: hidden`）
+  ⇒ 被**静默裁掉**（走查判据 `3.4-6` / `3.7-2` 已判 **FAIL**：120 条对话只有前 ~20 条够得着）。
+  ⇒ 补**内部滚动容器**，并按「**今天 / 昨天 / 更早**」分组，每组小标题 + 组内圆角小块
+  （标题 + provider 圆点 + 日期）。
+  ⚠️ **滚动容器那条已被 CSS 收口之二的 A-103 排进 CSS 波**（`#ai-session-list` 加
+  `overflow-y: auto` + `#ai-session-list-view` 定高）⇒ **你做分组与结构，不要重复加滚动规则**；
+  若发现 CSS 波已加了，**以它为准**，并在回报里说明。
+- **25.2** 消息流改**圆角卡片流**：每条消息一张圆角卡（Agent 消息可展开详情）；
+  **不得演化成常驻任务面板**（既有 spec：右栏不取代中栏学习面）；Agent 长文挂 `.wb-reading`。
+  **A-23：用户消息（用户在对话里说的话）的底色改「沉底 `--surface-sunken`」（浅底深字）**，
+  不再用近黑墨块；Agent 消息仍是卡级纸面；两者靠「**底色差 + 1px 内发丝线**」分开。
+- **25.3** composer、执行计划与活动浮层：
+  composer **贴底、大圆角、聚焦变蓝 + 轻微抬高**，且**随输入增高**（不把对话换成任务面板）；
+  执行计划改**圆点时间线**（圆点 + 细线 + 文字），工具调用折叠成 **≤240 字摘要**（可展开看详情）；
+  活动浮层改**右上角圆角小卡**，可收起、**活动结束即消失**，**空闲时不得留下任何辅助工作面**挡住中栏；
+  窄屏抽屉保持「会话列表 + 消息 + composer」同一结构。
+
+## 硬约束
+- **现有交互逻辑一个字都不许改**：请求序列、载荷键、DOM 身份、会话切换、composer 提交、
+  工具调用的请求与顺序**一律不动**。本组只改**呈现**。
+- 知识图谱**一行都不许碰**；图谱区段与 12 个裸名**一行都不许碰**。
+- 活动浮层的**活动结束即消失**是既有行为语义，**不许**改成常驻。
+- 工具调用摘要 **≤240 字**（字符数上限，要真截断，不是 CSS 省略号）。
+- 提交一律 `git commit -- <明确的路径列表>` 限定范围（**不要 `git add -A` / `-a`**）。
+
+## 验证
+```bash
+python -m pytest tests -q
+python -m compileall -q lessonkit.py workbench pipeline pool tests
+openspec validate --specs --strict
+python lessonkit.py guard extract-problems --course dmath --chapter ch06
+node --test tests/workbench/*.test.js
+```
+- 走查：仓库根 cwd、**独立端口**、池副本 + `LESSONKIT_WB_HOME`；**服务字节数 == 磁盘字节数**。
+- 走查项：`acceptance.md` **§3.4**（会话列表可滚动）+ **§1 S-11**。
+- 截图：Agent 右栏（会话列表 / 消息流 / composer / 执行计划 / 活动浮层）。
+- **实测**：长列表能滚到末条；**用户消息与 Agent 消息一眼可分**（暖纸 + 夜纸各验一次）；
+  空闲时中栏**不被遮挡**；抽屉里 composer 仍可达。
+
+## 落盘纪律与回报
+- 三个 commit（JS 一个 · agent-ui.css 一个 · workbench.css 一个），只 `git add` 对应路径。
+- 回报（中文）必含：已落盘路径 + 每个 commit 的内容 + **会话列表滚动与分组的实测** +
+  **用户/Agent 消息两主题下的对照截图** + **活动浮层空闲时中栏无遮挡的证据** +
+  **请求序列未变的证据** + 四条验证命令结果 + 待裁决项。
