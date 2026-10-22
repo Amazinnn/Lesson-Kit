@@ -2679,6 +2679,68 @@ W5b 做 L4 同步时，把 4 条 L3 动作逐一对照了 L4：
 `grep -rn "lkSfx.playCue(" workbench/` 仍**恰好 4 处**（HEAD 上同样是 4），
 `sfx.test.js` 的「恰好 4 处」断言过；**3.3-1 仍 PASS**（逐题 cueCalls=1 / plays=1）。
 
+### A-114 走查执行器的两条探针**测错了对象**：3.4-2 / 3.4-3 的 FAIL 是**探针缺陷**，不是产品缺陷
+
+> 来源：第 22 组走查重跑（CSS 收口三落地后）。**先量产品、再判探针** ——
+> 这一轮两条都判 FAIL，但**两条都是探针自己测不到**。
+
+#### 事实一：`3.4-2`（按下反馈）—— 探针读的是**最内层元素**，不是 CSS 规则挂载处
+
+`probe_hover` 用 `document.elementFromPoint(x, y)` 取「被按下的元素」，但
+`elementFromPoint` 返回的是**最内层**那个：
+`.nav-item`（div）里包的是 `<a>`、`.ai-session-entry`（button）里包的是
+`<span class="ai-session-entry-title">` —— **这两个内层元素身上没有 `:active` 规则**
+（`:active` 挂在 `.nav-item` / `button` 上）⇒ 探针读到的 hover 侧与 active 侧
+**是同一个内层元素的同一样式** ⇒ **永远测不出差异** ⇒ 恒判 FAIL。
+
+**产品行为已实测是对的**（Chromium 里 `:active` 会命中被按下元素的**祖先**）：
+
+| 被按下的元素 | 承担 `:active` 的祖先 | 悬停 transform | 按下 transform |
+|---|---|---|---|
+| `.nav-item` 内的 `<a>` | `.nav-item`（div） | `matrix(1, 0, 0, 1, 0, -1)` | `matrix(0.962568, 0, 0, 0.962568, 0, -1)` |
+| `.ai-session-entry` 内的 `<span>` | `.ai-session-entry`（button） | `matrix(1, 0, 0, 1, 0, -1)` | `matrix(0.96257, 0, 0, 0.96257, 0, -1)` |
+
+⇒ 即 CSS 收口三（`button:hover` / `button:active` / `.nav-item:active` 等）**落到位了**。
+
+#### 事实二：`3.4-3`（骨架屏有尺寸 + 微光）—— 探针的判定读的是**它自己从没采过的字段**
+
+`SKELETON_JS.record()` 记录的是 `cls / animationName / animationDuration /
+afterContent / afterAnimation / afterDuration / afterBackground / afterTransform`
+—— **没有 width、没有 height**。而 `probe_skeleton` 的判定写着：
+
+```python
+sized = [item for item in elements
+         if (item.get("width") or 0) > 0 and (item.get("height") or 0) > 0]
+if not sized:
+    return _bad(data, "骨架屏没有尺寸（0×0）—— 灰块与微光都无从显示")
+```
+
+⇒ `sized` **恒为空** ⇒ **无论产品怎么改都判「0×0」**。
+（另有两处场景错位：① 探针把 `**/api/w/*/practice-sets` 拖慢后重载 practice 页，
+但**中栏换页骨架**只由 `middle-navigation.js` 的 `showLoadingState()` 在换页时渲染
+（`middlePage.innerHTML = skeletonMarkup()`），**首屏加载不经过它**；
+② 降级档（reduced-motion / 动效偏好关）走的是**等价静态灰块**（**没有** `.lk-skeleton` 类），
+而走查的 `CONSISTENCY["reduced_motion"]` 一开 ⇒ 即便场景换对了也找不到 `.lk-skeleton`。）
+
+#### 裁决
+
+1. **判据一条都不许放宽**：`3.4-2` 仍是「按下比悬停**再多一层**变化」、
+   `3.4-3` 仍是「加载态有骨架 + 微光扫过 + 骨架**有体积**」。
+   ⚠️ **不许**为了让判据变绿去改产品、去迎合一个测错对象的探针。
+2. **改探针，不改判据**：
+   - `3.4-2` ⇒ 探针必须测量**候选元素本身**（element handle 或稳定索引），
+     hover 侧与 active 侧都读**同一个**候选元素；
+   - `3.4-3` ⇒ 探针必须 (i) 在 `SKELETON_JS` 里量出每个骨架的
+     `getBoundingClientRect()` 宽高并判 `> 0`；(ii) 场景改成**中栏换页**
+     （拖慢**目标页**请求 ⇒ 触发换页 ⇒ 在换页途中取骨架）；
+     (iii) 降级档判「等价静态灰块**有体积**」（动效档才要求微光扫过）。
+3. **本条不改任何用户可观察行为** ⇒ **不登记为 contract drift**（改的是执行器，不是契约）。
+4. ⚠️ **在两条探针修好之前，不得把它们写成「产品未达标」** ——
+   上一轮走查报告里把这两条记成产品 FAIL 的地方要一并订正。
+5. ⚠️ 顺带提醒：`3.4-3` 的「骨架有尺寸」此前判 FAIL **不能**当作
+   「CSS 收口三的骨架尺寸没做」的证据 —— 那条 CSS（`.lk-skeleton` 给 `min-height`
+   + 三个变体）是**独立成立**的（见 `IMPLEMENTATION-LOG.md` §9.44），只是**这条探针验不到它**。
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，
