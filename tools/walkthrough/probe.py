@@ -2736,13 +2736,21 @@ def probe_g7(ctx):
     return _ok(data, "装饰层全部让开了指针事件")
 
 
-def focus_sequence(page, steps=120):
+def focus_sequence(page, steps=600):
     """The Tab walk of §7.2 — the *semantic* description of every stop.
 
     The walk stops when the focus cycle closes (the first stop comes
     back): the focus order is a **cycle**, and the change may add one
     entry to it.  A fixed number of steps would then compare two cycles
     that start at different places.
+
+    ``steps`` is only a safety net against a page whose focus never
+    cycles.  It used to be 120 — but the seed (§0.5) puts 120
+    conversations in the right column and every conversation carries
+    three buttons, so the cycle grew to ~310 stops and the walk was cut
+    short: the two sides then compared **different parts** of the cycle
+    and G-8 failed for a reason that had nothing to do with the change.
+    The cap now sits far above the seeded cycle.
     """
     page.evaluate("""() => {
       if (document.activeElement && document.activeElement !== document.body) {
