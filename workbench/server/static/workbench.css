@@ -834,7 +834,14 @@ select {
   font-size: 14px;
   color: var(--ink-strong);
 }
-select:focus { border-color: var(--role-blue); outline: none; }
+select:focus { border-color: var(--role-blue); }
+/* 焦点环（A-75 · IMPL-W2g 第 2 条）：**只画在 `:focus-visible` 上** ——
+   键盘用户看得见焦点在哪，鼠标点击不冒环。
+   透明底 / 卡面底的控件 = **单圈**（权威表 §8 规则 1）：外圈色 + 2px 偏移。 */
+select:focus-visible {
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+}
 
 /* weak list */
 .weak-item {
@@ -952,7 +959,15 @@ textarea, input[type="text"], input[type="number"], input:not([type]) {
   font-size: 14px;
   color: var(--ink-strong);
 }
-textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
+textarea:focus, input:focus { border-color: var(--role-blue); }
+/* 焦点环（A-75 · IMPL-W2g 第 2 条）：此前这里写着 `outline: none`，
+   把**所有输入框 / 文本域**的焦点环压死 —— A-1 禁止去掉焦点环。
+   ⇒ 改成 `:focus-visible` 的单圈（权威表 §8 规则 1）：外圈色 + 2px 偏移。
+   ⚠️ 只改 `:focus-visible`：**鼠标点击不冒环**。 */
+textarea:focus-visible, input:focus-visible {
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+}
 ::placeholder { color: var(--graph-page-dimmed, var(--ink-faint)); }
 
 /* reading flow — teacher stays flat, learner replies form the only bubble */
@@ -1812,7 +1827,14 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   background: transparent;
   padding: 4px 2px;
 }
-#answer-box:focus { border: none; outline: none; }
+/* 答题框（A-75 · IMPL-W2g 第 2 条）：此前 `#answer-box:focus { border: none;
+   outline: none; }` 让它聚焦时**既没有边框也没有焦点环** —— 键盘用户彻底看不见焦点。
+   ⇒ 聚焦时给一条**可见的边界**（单圈焦点环，权威表 §8 规则 1）。
+   ⚠️ 只在 `:focus-visible` 上画 ⇒ 鼠标点击不冒环。 */
+#answer-box:focus-visible {
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+}
 #composer-actions {
   display: flex; justify-content: flex-start;
   gap: 6px;
