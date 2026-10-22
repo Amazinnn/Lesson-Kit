@@ -541,6 +541,37 @@ def _calendar_height(attempts):
     return round(_CALENDAR_CELL_MIN_PX + span * capped / _CALENDAR_MAX_COUNT)
 
 
+def _calendar_range(low, high):
+    """档位区间文案（0 / 1 / 2–3 / 4–7 / ≥8）—— 与分档同一份口径。"""
+    if high is None:
+        return f"≥{low}"
+    if low == high:
+        return str(low)
+    return f"{low}–{high}"
+
+
+def _activity_legend():
+    """档位图例：五个色块 + 区间刻度（服务端渲染，不引新资源）。
+
+    解码由**图例本身**承担（少字原则）：不写解释句，
+    「0 / 1 / 2–3 / 4–7 / ≥8」五个刻度就是格子的档位口径。
+    色块沿用 `.level-N` 那一族填色 ⇒ 与格子的颜色一一对应。
+    """
+    items = "".join(
+        "<span class='record-activity-legend-item'>"
+        f"<span class='record-activity-swatch level-{level}' aria-hidden='true'></span>"
+        f"<span class='record-activity-legend-text'>{_calendar_range(low, high)}</span>"
+        "</span>"
+        for level, low, high in _CALENDAR_LEVELS
+    )
+    return (
+        "<div class='record-activity-legend' aria-label='图例：当天作答次数'>"
+        "<span class='record-activity-legend-title'>当天作答次数</span>"
+        + items
+        + "</div>"
+    )
+
+
 def _activity_calendar(activity):
     if not activity or not any(day.get("attempts") for day in activity):
         return "<p class='muted'>最近 12 周还没有作答。</p>"
@@ -570,6 +601,7 @@ def _activity_calendar(activity):
         "<div class='record-activity' aria-label='最近 12 周作答日历' "
         f"style='grid-auto-rows:{_CALENDAR_ROW_PX}px'>"
         + labels + "".join(cells) + "</div>"
+        + _activity_legend()
     )
 
 
