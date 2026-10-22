@@ -1677,23 +1677,31 @@ html[data-theme="night"] .lk-toast {
 /* ---- §4.11 分段控件 · 药丸分段（`seg-pill` · A-115 形态裁定）--------------
    整组一个**胶囊槽**（`--r-pill`）；**选中项是白色药丸**（`--surface-raised`）
    ⇒ ⚠️ **选中项不用角色蓝**（A-84 第 2 条），与 A-31「沉底面旁不得挨蓝洗底」一致。
-   ⚠️ **状态色瞬切**：底色 / 文字色不进 transition；过渡只挂 transform。 */
-.lk-seg {
+   ⚠️ **状态色瞬切**：底色 / 文字色不进 transition；过渡只挂 transform。
+   ⚠️ §4.28 的 **Tab 与本条合并成同一个类**（§4.30.3 第 5 条）——
+     记录中心的 `.record-tabs` / `.record-tab`（`<nav>` + `<a>`）与
+     `.lk-seg` / `.lk-seg__item`（`<span>` + `<label>`）**共用同一组规则**：
+     容器 = 胶囊槽、项 = 药丸、选中 = **白色药丸**（`.record-tab` 用 `.active`
+     类表达选中，因为它是链接、没有 radio）。 */
+.lk-seg,
+.record-tabs {
   position: relative;
   display: inline-flex;
-  gap: 4px;
-  padding: 4px;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
   border-radius: var(--r-pill);      /* 胶囊槽 */
   background: var(--surface-sunken);
   box-shadow: inset 0 0 0 1px var(--rule-hair);
 }
-.lk-seg__item {
+.lk-seg__item,
+.record-tab {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 36px;
   padding: 0 14px;
+  border: 0;
   border-radius: var(--r-pill);      /* 项 = 药丸 */
   background: transparent;
   color: var(--ink-muted);
@@ -1702,13 +1710,15 @@ html[data-theme="night"] .lk-toast {
   font-weight: 500;
   line-height: 20px;
   white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
   /* 只过渡 transform：底色 / 文字色瞬切（权威表 §3.3） */
   transition: transform var(--dur-fast) var(--ease-standard);
 }
 /* 命中区补偿（§3.1 硬约束）：项本体 36px ⇒ 用伪元素补到 44 高
    （补进容器的上下 4px 内距里 ⇒ 不溢出容器、也不压到相邻项）。 */
-.lk-seg__item::before {
+.lk-seg__item::before,
+.record-tab::before {
   content: "";
   position: absolute;
   inset: -4px 0;
@@ -1722,11 +1732,19 @@ html[data-theme="night"] .lk-toast {
   opacity: 0;            /* 视觉隐藏；仍可聚焦、仍可点（label 包着它） */
   cursor: pointer;
 }
-.lk-seg__item:hover { color: var(--ink-strong); background: var(--veil-hover); transform: translate3d(0, -1px, 0); }
-.lk-seg__item:active { transform: translate3d(0, -1px, 0) scale(0.96); }
+.lk-seg__item:hover,
+.record-tab:hover {
+  color: var(--ink-strong);
+  background: var(--veil-hover);
+  transform: translate3d(0, -1px, 0);
+}
+.lk-seg__item:active,
+.record-tab:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 /* 选中项 = **白色药丸**（`--surface-raised` + `--elev-1` + 墨字 + 600 字重）；
-   ⚠️ 不带角色蓝 —— 选中由「白色药丸」承载（A-84 第 2 条）。 */
-.lk-seg__item:has(input:checked) {
+   ⚠️ 不带角色蓝 —— 选中由「白色药丸」承载（A-84 第 2 条）。
+   ⚠️ Tab（§4.28）也走这一档：旧的 3px 蓝下边框 + 蓝字作废。 */
+.lk-seg__item:has(input:checked),
+.record-tab.active {
   background: var(--surface-raised);
   color: var(--ink-strong);
   font-weight: 600;
@@ -1856,13 +1874,31 @@ html[data-theme="night"] .lk-toast {
 #layout[data-page="graph"] .page-summary { margin-top: 3px; }
 #layout[data-page="graph"] .graph-content { width: 100%; min-height: 0; flex: 1; }
 .linked-problems { margin-top: 42px; }
-.problem-topic { padding: 12px 0; }
-.problem-topic summary {
-  cursor: pointer;
-  color: var(--ink-muted);
-  font-weight: 600;
-  font-size: 13px;
+/* ---- §4.27 折叠段 · 手风琴折叠段（`disc-accordion` · A-115 形态裁定）--------
+   **卡面 + 48px 头 + 内容在同一张卡里**；四处各写各的原生 `<details>` **统一**。
+   四处 = `.problem-topic` · `.ai-plan-output` · `.practice-set-item-body` ·
+   `.attempt-history`（各自就地改，但**取值完全一致**）。
+   ⚠️ 头行高 48px ⇒ 命中区 ≥44px ✔；焦点环走全局 `:focus-visible` 单圈。 */
+.problem-topic {
+  padding: 0;
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
 }
+.problem-topic summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.problem-topic > :not(summary) { padding: 0 var(--sp-4) var(--sp-4); }
 .linked-problem { padding: 14px 0 2px; }
 .problem-title { display: block; color: var(--ink-strong); font-size: 14px; font-weight: 600; }
 /* 关联题面 —— 阅读面 A 组（衬线 + 阅读刻度；字号 17px = --fs-reading） */
@@ -2071,28 +2107,39 @@ html[data-theme="night"] .lk-toast {
   letter-spacing: .04em;
 }
 .ai-plan-list { margin: 0; padding: 4px 10px; list-style: none; }
+/* ---- §4.26 时间线节点 · 分隔线时间线（`timeline-flat` · A-115 形态裁定）------
+   **不画竖线**，只用**发丝线分隔 + 小圆点**。
+   ⚠️ **两套几何合一**（§4.30.3 第 4 条）：`.ai-plan-step`（9px 方块）与
+     `.agent-milestone`（18px 圆环）**合成同一套** —— 都是
+     「12px 圆点 + 发丝线分隔」；两者的状态 → 颜色也统一成同一支笔。
+   ⚠️ 节点是 §4.14 的状态圆点 ⇒ 用**圆角胶囊**（`--r-pill`），不是方块。 */
 .ai-plan-step {
   position: relative;
   display: grid;
   grid-template-columns: 12px minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--sp-3);
   min-width: 0;
-  padding: 8px 0;
+  padding: 10px 0;
 }
-.ai-plan-step + .ai-plan-step { border-top: 1px solid rgb(0 0 0 / 9%); }
+/* 发丝线分隔（**不画竖线**） */
+.ai-plan-step + .ai-plan-step { border-top: 1px solid var(--rule-hair); }
 .ai-plan-marker {
-  width: 9px;
-  height: 9px;
-  margin-top: 5px;
-  border: 2px solid var(--role-blue);
-  background: var(--surface-card);
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: var(--r-pill);
+  /* 默认 = 蓝环（§3.6「当前 · 交互层」= 蓝 / ring） */
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--role-blue);
 }
 .ai-plan-step.is-running .ai-plan-marker {
   background: var(--role-blue);
+  box-shadow: none;
   animation: ai-plan-pulse 1.15s ease-in-out infinite alternate;
 }
-.ai-plan-step.is-done .ai-plan-marker { border-color: var(--ink-strong); background: var(--role-yellow); }
-.ai-plan-step.is-failed .ai-plan-marker { border-color: var(--role-red); background: var(--role-red); }
+.ai-plan-step.is-done .ai-plan-marker { background: var(--role-yellow); box-shadow: none; }
+.ai-plan-step.is-failed .ai-plan-marker { background: var(--role-red); box-shadow: none; }
 .ai-plan-body { min-width: 0; }
 .ai-plan-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .ai-plan-label { min-width: 0; overflow-wrap: anywhere; font-size: 13px; line-height: 18px; }
@@ -2113,11 +2160,32 @@ html[data-theme="night"] .lk-toast {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.ai-plan-output { min-width: 0; margin-top: 5px; color: var(--ink-muted); }
-.ai-plan-output summary { cursor: pointer; font-size: 11px; }
+/* §4.27 折叠段 · 手风琴（`disc-accordion`）：卡面 + 48px 头 + 内容在同一张卡里
+   （与 `.problem-topic` / `.practice-set-item-body` / `.attempt-history` 同一套）。 */
+.ai-plan-output {
+  min-width: 0;
+  margin-top: 5px;
+  color: var(--ink-muted);
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+.ai-plan-output summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
 .ai-plan-output pre {
   max-height: 168px;
-  margin: 5px 0 0;
+  margin: 0 var(--sp-4) var(--sp-4);
   padding: 7px 8px;
   overflow: auto;
   background: var(--surface-code);
@@ -2388,10 +2456,28 @@ html[data-theme="night"] .lk-toast {
   display: grid; grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px; align-items: start; padding: 10px 0;
 }
-.practice-set-item-body { min-width: 0; }
+/* §4.27 折叠段 · 手风琴（`disc-accordion`）：卡面 + 48px 头 + 内容在同一张卡里
+   （与 `.problem-topic` / `.ai-plan-output` / `.attempt-history` 同一套）。
+   ⚠️ 头行是三列网格（箭头 / 序号 / 标题）⇒ 保留 grid，只统一高度与排版。 */
+.practice-set-item-body {
+  min-width: 0;
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
 .practice-set-item-body > summary {
-  display: grid; grid-template-columns: 14px 32px minmax(0, 1fr);
-  gap: 8px; align-items: baseline; cursor: pointer;
+  display: grid;
+  grid-template-columns: 14px 32px minmax(0, 1fr);
+  gap: var(--sp-2);
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: 500;
 }
 .practice-set-item-body > summary::before {
   content: "▸"; color: var(--ink-faint); font-size: 11px;
@@ -2917,19 +3003,14 @@ img { max-width: 100%; }
 }
 
 /* 记录中心 */
+/* ---- §4.28 Tab · 分段式标签页（`tab-seg` · A-115 形态裁定）----------------
+   **与 §4.11 分段控件合并成同一个类**（§4.30.3 第 5 条）：容器 / 项 / 选中态
+   的几何都在「§4.11 分段控件」那条**合并规则**里（胶囊槽 + 药丸 + 白色药丸）。
+   ⚠️ 旧的「3px 蓝下边框 + 容器底发丝线」作废（§4.28 明写）。
+   ⚠️ `.record-tab` 是 `<a>`（不是 label + radio）⇒ 选中态用 `.active` 类表达；
+     合并规则里已经把它和 `.lk-seg__item:has(input:checked)` 写在一起。 */
 .records-center { display: grid; gap: 18px; }
-.record-tabs {
-  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 2px;
-  border-bottom: 1px solid var(--rule-hair);
-}
-.record-tab {
-  padding: 8px 11px; color: var(--ink-muted);
-  border-bottom: 3px solid transparent; text-decoration: none;
-}
-.record-tab:hover { color: var(--ink-strong); text-decoration: none; }
-.record-tab.active {
-  color: var(--ink-strong); font-weight: 700; border-color: var(--role-blue);
-}
+.record-tabs { flex-wrap: wrap; margin: 0 0 2px; }
 /* 提示块 —— 沉底面（A-23）：底色差 + 1px 内发丝线，**不带柔影**（凹层不抬升） */
 .record-filter-note {
   margin: 0; padding: 9px 12px; border-left: 4px solid var(--role-yellow);
@@ -3255,10 +3336,29 @@ img { max-width: 100%; }
 }
 .record-note { margin: 3px 0 0; font-size: 12px; line-height: 17px; }
 
-/* practice-page attempt history (collapsed above the reveal) */
-.attempt-history { margin-top: 12px; }
-.attempt-history summary { cursor: pointer; color: var(--ink-muted); font-size: 13px; }
-.attempt-history .attempt-row { margin: 8px 0 0; padding: 8px 10px; border-top: 1px solid var(--rule-hair); }
+/* practice-page attempt history (collapsed above the reveal)
+   §4.27 折叠段 · 手风琴（`disc-accordion`）：卡面 + 48px 头 + 内容在同一张卡里
+   （与 `.problem-topic` / `.ai-plan-output` / `.practice-set-item-body` 同一套）。 */
+.attempt-history {
+  margin-top: 12px;
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+.attempt-history summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.attempt-history .attempt-row { margin: 0; padding: 8px var(--sp-4); border-top: 1px solid var(--rule-hair); }
 .attempt-history .attempt-row time { color: var(--ink-muted); font-size: 12px; margin-left: 8px; }
 
 /* 来源筛选浮窗 (multi-dimension filter popup) */
