@@ -1,0 +1,3 @@
+# Keep bundled teaching resources identical in wheels built on every platform.
+workbench/resources/skills/source-bounded-learning-drill/SKILL.md text eol=lf
+workbench/resources/skills/source-bounded-learning-drill/TERMINOLOGY.md text eol=lf
