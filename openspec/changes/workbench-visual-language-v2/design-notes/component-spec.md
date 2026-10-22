@@ -168,6 +168,9 @@
   --lk-ink-4: #b9b1a2;          /* 禁用 / 极弱 */
   --lk-on-ink: #fdf8ef;
   --lk-on-blue: #ffffff;
+  --lk-on-red: #ffffff;
+  --lk-scrim: rgb(34 31 26 / 42%);
+  --lk-seam: rgb(0 0 0 / 24%);
   --lk-hairline: rgb(34 31 26 / 12%);
   --lk-wash-neutral: rgb(34 31 26 / 6%);
   --lk-wash-neutral-strong: rgb(34 31 26 / 11%);
@@ -201,6 +204,9 @@
   --lk-ink-4: #6b655b;
   --lk-on-ink: #1c1a16;
   --lk-on-blue: #1c1a16;
+  --lk-on-red: #1c1a16;
+  --lk-scrim: rgb(0 0 0 / 58%);
+  --lk-seam: rgb(0 0 0 / 34%);
   --lk-hairline: rgb(242 237 227 / 14%);
   --lk-wash-neutral: rgb(242 237 227 / 7%);
   --lk-wash-neutral-strong: rgb(242 237 227 / 13%);
@@ -412,7 +418,7 @@
 | disabled | `background: var(--lk-wash-neutral-strong)`；`color: var(--lk-ink-3)`；`box-shadow: none`；`cursor: not-allowed`（**不用 opacity 压暗**——opacity 会把蓝底一起压成灰蓝） |
 | loading | 原按钮内容替换为旋转指示器（12px 圆环，`--lk-on-blue`）；`min-width` 锁定防跳动；`aria-busy="true"`；`pointer-events: none` |
 | selected | 不适用（主按钮不是选择器） |
-| error | 不适用。**按钮不承载 error 状态**；提交失败时按钮回到默认态，错误由「行内错误条 + 状态点」承担（§4.20 吐司 / 表单错误） |
+| error | 不适用。**按钮不承载 error 状态**；提交失败时按钮回到默认态，错误由「行内错误条 + 状态点」承担（§4.23 吐司 / 表单错误） |
 
 - 角色色：**蓝**，R1。无第二种角色色。
 
@@ -568,7 +574,7 @@
 | disabled | `background: var(--lk-ground)`；`color: var(--lk-ink-4)`；`border-color: var(--lk-hairline)`；`cursor: not-allowed` |
 | loading | 不适用（输入框不做加载态）；若字段正在校验，`aria-busy="true"` + 右侧 12px 指示器 |
 | selected | 文本选中 `background: var(--lk-blue-wash)`；`color: var(--lk-ink)` |
-| error | `border-color: var(--lk-red)`；`box-shadow: 0 0 0 3px var(--lk-red-wash)`；下方 4px 处出现行内错误（红点 + 文字，§4.20）；`aria-invalid="true"` |
+| error | `border-color: var(--lk-red)`；`box-shadow: 0 0 0 3px var(--lk-red-wash)`；下方 4px 处出现行内错误（红点 + 文字，§4.23）；`aria-invalid="true"` |
 | readonly | `background: var(--lk-ground)`；`color: var(--lk-ink-2)` |
 
 - 角色色：默认 R0；error 态 R1（红）。聚焦环用蓝属于「焦点指示」，**不计角色色槽位**。
@@ -763,6 +769,19 @@
 .lk-check--error .lk-check__box { border-color: var(--lk-red); box-shadow: 0 0 0 3px var(--lk-red-wash); }
 ```
 
+```css
+/* 半选（indeterminate）：蓝底 + 白色横杠，无勾 */
+.lk-check input[aria-checked="mixed"] + .lk-check__box {
+  background: var(--lk-blue); border-color: var(--lk-blue);
+}
+.lk-check input[aria-checked="mixed"] + .lk-check__box svg { display: none; }
+.lk-check input[aria-checked="mixed"] + .lk-check__box::after {
+  content: ""; width: 10px; height: 2px; border-radius: 1px; background: var(--lk-on-blue);
+}
+/* 命中区：整行标签 ≥ 44px，小方框本身另补 44px 命中 */
+.lk-check__row { display: flex; align-items: center; min-height: var(--lk-tap-min); }
+```
+
 ### 4.9 单选（Radio）
 
 **定位**：一组互斥选项（选一个）。选项容器是 `fieldset` + `legend`。
@@ -813,6 +832,17 @@
   outline: 2px solid transparent; outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--lk-ground), 0 0 0 4px var(--lk-blue); }
 .lk-radio--error .lk-radio__dot { border-color: var(--lk-red); box-shadow: 0 0 0 3px var(--lk-red-wash); }
+```
+
+```css
+/* 单选组：fieldset 无框，legend 作组名 */
+.lk-choicegroup { border: 0; margin: 0; padding: 0; }
+.lk-choicegroup > legend { padding: 0 0 var(--lk-space-2); color: var(--lk-ink-2);
+  font-family: var(--lk-font-ui); font-size: var(--lk-fs-sm); }
+/* 选项行：整行可点，命中区 ≥ 44px */
+.lk-choicegroup .lk-radio { display: flex; width: 100%; padding: var(--lk-space-2) var(--lk-space-3);
+  border-radius: var(--lk-radius); }
+.lk-choicegroup .lk-radio:hover { background: var(--lk-wash-neutral); }
 ```
 
 ### 4.10 开关（Switch）
@@ -911,6 +941,19 @@
 .lk-seg[aria-invalid="true"] { box-shadow: 0 0 0 3px var(--lk-red-wash); }
 ```
 
+```css
+/* 语义型分段（承载角色色，如连对档位 / 复习轮次）：选中项用角色洗底 */
+.lk-seg--semantic .lk-seg__item[aria-checked="true"] {
+  background: var(--lk-yellow-wash); color: var(--lk-ink);
+  box-shadow: inset 0 0 0 2px var(--lk-yellow); }
+.lk-seg--semantic .lk-seg__item[aria-checked="true"]::before {
+  content: ""; width: 8px; height: 8px; border-radius: var(--lk-radius-full);
+  background: var(--lk-yellow); flex: none; }
+/* 横向可滚形态（记录中心筛选 chip） */
+.lk-seg--scroll { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+.lk-seg--scroll::-webkit-scrollbar { display: none; }
+```
+
 ### 4.12 标签（Tag / Chip）
 
 **定位**：**静态**的分类或属性标记（章节名、状态名、难度）。**不可点击**。
@@ -951,6 +994,13 @@
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 ```
 
+```css
+/* 选中态标签 + 大号变体 + 带状态点的标签 */
+.lk-tag--selected { background: var(--lk-blue-wash); color: var(--lk-blue-ink); }
+.lk-tag--lg { min-height: 28px; padding: 0 12px; font-size: var(--lk-fs-sm); }
+.lk-tag__dot { width: 8px; height: 8px; border-radius: var(--lk-radius-full); flex: none; }
+```
+
 ### 4.13 徽标（Badge）
 
 **定位**：**计数**徽标，附着在图标 / 按钮 / Tab 角上（待办数、阻塞数）。
@@ -968,7 +1018,7 @@
 | disabled | 不适用 |
 | loading | 不适用 |
 | selected | 不适用 |
-| 阻塞 / 失败计数 | `background: var(--lk-red)`；`color: #fff`（夜纸下用 `--lk-red` + `--lk-ink`） |
+| 阻塞 / 失败计数 | `background: var(--lk-red)`；`color: var(--lk-on-red)`（夜纸下 `--lk-on-red` = 墨色） |
 | error | 同「阻塞 / 失败计数」 |
 
 - 角色色：**红**（阻塞计数）R1；中性计数 R0。**蓝与黄不做徽标色**——蓝已被「当前选中」占用，
@@ -982,8 +1032,7 @@
   font-family: var(--lk-font-ui); font-size: var(--lk-fs-xs); font-weight: 700;
   font-variant-numeric: tabular-nums; line-height: 1;
 }
-.lk-badge--alert { background: var(--lk-red); color: #fff; }
-[data-theme="night"] .lk-badge--alert { color: var(--lk-ink); }
+.lk-badge--alert { background: var(--lk-red); color: var(--lk-on-red); }
 ```
 
 ### 4.14 状态圆点（Status dot）
@@ -1042,6 +1091,17 @@
 .lk-dot--yellow { --_dot-color: var(--lk-yellow); }
 .lk-dot--red { --_dot-color: var(--lk-red); }
 .lk-dot--muted { --_dot-color: var(--lk-ink-4); }
+```
+
+```css
+/* 尺寸变体：密集列表 8px / 强调位 12px */
+.lk-dot--sm { width: 8px; height: 8px; }
+.lk-dot--lg { width: 12px; height: 12px; }
+/* 承载在纸面上的点：加一圈纸色垫，避免与背景同色糊在一起 */
+.lk-dot--on-paper { box-shadow: 0 0 0 2px var(--lk-paper), inset 0 0 0 2px var(--_dot-color); }
+.lk-dot--filled.lk-dot--on-paper { box-shadow: 0 0 0 2px var(--lk-paper); }
+/* 点在暗底上：垫圈改墨色 */
+.lk-dot--on-ink { box-shadow: 0 0 0 2px var(--lk-ink), inset 0 0 0 2px var(--_dot-color); }
 ```
 
 ### 4.15 进度条（Progress bar）
@@ -1164,9 +1224,17 @@
 .lk-qcell--answered { background: var(--lk-blue); color: var(--lk-on-blue); box-shadow: none; }
 .lk-qcell--current { background: var(--lk-yellow); color: var(--lk-ink); box-shadow: none;
   transform: scale(1.06); }
-.lk-qcell--wrong { background: var(--lk-red); color: #fff; box-shadow: none; }
+.lk-qcell--wrong { background: var(--lk-red); color: var(--lk-on-red); box-shadow: none; }
 .lk-qcell--stuck { background: var(--lk-paper); color: var(--lk-red); box-shadow: inset 0 0 0 2px var(--lk-red); }
 .lk-qcell:disabled { opacity: .45; cursor: not-allowed; }
+```
+
+```css
+/* 题号格容器：36px 格 + 8px 间隙 = 44px 步距（命中区达标） */
+.lk-qgrid { display: flex; flex-wrap: wrap; gap: var(--lk-space-2); }
+.lk-qgrid__legend { display: flex; flex-wrap: wrap; gap: var(--lk-space-3);
+  margin-top: var(--lk-space-2); font-size: var(--lk-fs-xs); color: var(--lk-ink-3); }
+.lk-qgrid__legend > span { display: inline-flex; align-items: center; gap: 4px; }
 ```
 
 ### 4.18 卡片（Card）
@@ -1247,6 +1315,15 @@
   box-shadow: var(--lk-shadow-raised); }
 ```
 
+```css
+/* 相邻层差的唯一实现：只靠圆角 + 柔影，不加描边、不加图案 */
+.lk-surface-1 { box-shadow: var(--lk-shadow-card); }
+.lk-surface-2 { box-shadow: var(--lk-shadow-float); }
+.lk-surface-3 { box-shadow: var(--lk-shadow-raised); }
+/* 浮起层在夜纸下改用更深的墨色垫圈，避免与 L1 糊在一起 */
+[data-theme="night"] .lk-surface-2 { box-shadow: 0 0 0 1px var(--lk-seam), var(--lk-shadow-float); }
+```
+
 ### 4.20 墨块（Ink block）
 
 **定位**：**最强的一层强调**。用于：题面里的大号题号、连对计数器底、墨底吐司、
@@ -1315,6 +1392,15 @@
   font-family: var(--lk-font-ui); font-size: var(--lk-fs-base); line-height: var(--lk-lh-ui);
   color: var(--lk-ink-2); }
 .lk-empty__action { width: 100%; max-width: 240px; }
+```
+
+```css
+/* 空态的错误变体：换静物插画 + 次按钮「重试」，红点提示（不是空态） */
+.lk-empty--error .lk-empty__text { color: var(--lk-ink-2); }
+.lk-empty__alert { display: inline-flex; align-items: center; gap: var(--lk-space-2);
+  color: var(--lk-red-ink); font-size: var(--lk-fs-sm); }
+.lk-empty--error .lk-empty__action .lk-btn { background: var(--lk-paper); color: var(--lk-ink);
+  border: 1px solid var(--lk-hairline); box-shadow: var(--lk-shadow-card); }
 ```
 
 ### 4.22 骨架屏（Skeleton）
@@ -1410,7 +1496,7 @@
 
 **定位**：**需要打断**的模态（确认删除、组卷确认、放弃作答）。轻反馈一律用吐司。
 
-- 遮罩：`rgb(34 31 26 / 42%)`；**不用 backdrop-filter 模糊**（禁玻璃拟态）
+- 遮罩：`var(--lk-scrim)`（亮 `rgb(34 31 26 / 42%)`，夜纸 `rgb(0 0 0 / 58%)`）；**不用 backdrop-filter 模糊**（禁玻璃拟态）
 - 面板：`--lk-raised` 底，圆角 `--lk-radius`（12px），`padding: 24px`
 - 宽度：`min(480px, calc(100vw - 32px))`；最大高 `min(70vh, 640px)`，内容区可滚
 - 阴影：`--lk-shadow-float`；`z-index: var(--lk-z-dialog)`
@@ -1433,7 +1519,7 @@
 
 ```css
 .lk-dialog-backdrop { position: fixed; inset: 0; z-index: var(--lk-z-dialog);
-  background: rgb(34 31 26 / 42%); display: flex; align-items: center; justify-content: center; }
+  background: var(--lk-scrim); display: flex; align-items: center; justify-content: center; }
 .lk-dialog {
   width: min(480px, calc(100vw - 32px)); max-height: min(70vh, 640px);
   background: var(--lk-raised); color: var(--lk-ink);
@@ -1488,6 +1574,16 @@
 .lk-tool__payload { margin-top: 8px; padding: 12px; border-radius: var(--lk-radius-sm);
   background: var(--lk-ground); font-family: var(--lk-font-mono); font-size: var(--lk-fs-xs);
   overflow-x: auto; white-space: pre-wrap; }
+```
+
+```css
+/* 工具调用卡的运行中骨架：摘要位两行灰块 */
+.lk-tool--running .lk-tool__summary { display: grid; gap: var(--lk-space-2); }
+.lk-tool--running .lk-tool__summary span { display: block; height: 12px;
+  border-radius: var(--lk-radius-xs); background: var(--lk-skeleton-base); }
+.lk-tool--running .lk-tool__summary span:last-child { width: 62%; }
+.lk-tool--failed .lk-tool__summary { text-overflow: ellipsis; overflow: hidden;
+  white-space: nowrap; }
 ```
 
 ### 4.26 时间线节点（Timeline node）
@@ -1848,7 +1944,7 @@ grep -ro "<button"  workbench/ | wc -l                 # 66
 | S-1 | 组件规格条目数 ≥ 28 | 计数 §4.1–§4.28 | **28 条**（按钮 4 变体各占 1 条） |
 | S-2 | 每个组件都有 尺寸 / 圆角 / 字族字号 / 内外边距 / 最小点击区 | 逐节人工核对 | ✔（题号格以「格 36 + 间隙 8 = 44px 步距」满足） |
 | S-3 | 每个组件都覆盖 默认 · hover · active · focus-visible · disabled · loading · selected · error | 逐节人工核对 | ✔ 全部 8 态给出（不适用者显式写「不适用」并给出替代承载） |
-| S-4 | CSS 片段不含硬编码色值 | `grep -n "#[0-9a-fA-F]\{3,8\}"` 检查 §4 内片段 | ✔ §4 片段只用 `var(--lk-*)`；硬编码色值只出现在 §2.2 的 token 定义块 |
+| S-4 | CSS 片段不含硬编码色值 | `awk '/^### 4\./,0' component-spec.md \| awk '/^```css/,/^```$/' \| grep -n "#[0-9a-fA-F]\{3\}\|#[0-9a-fA-F]\{6\}\|rgb("` | 实跑 | ✔ **输出为空**；§4 片段只用 `var(--lk-*)`；硬编码色值只出现在 §2.2 的 token 定义块 |
 | S-5 | 不新增颜色角色 | 核对 §2.2 / §3.6 | ✔ 只有蓝 / 黄 / 红 三个角色色 + 墨色中性 |
 | S-6 | 状态映射「色 + 几何」唯一，无两条状态共用组合 | 核对 §3.6 | ✔ 8 条唯一 |
 | S-7 | 黄色不承载文字 | 核对 §2.2 / §3.5 / §4.12 / §4.15 / §4.16 | ✔ 黄底文字一律取 `--lk-ink` |

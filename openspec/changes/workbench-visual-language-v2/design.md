@@ -53,6 +53,10 @@
 `:1289` 同工作区中栏导航保留 Agent 右栏）继续有效；`openspec/specs/calendar-workload/spec.md`
 103 行，本变更只加表现层条款。
 
+本变更的 `specs/` 行为条款（`workbench-ui` 18 条 / `workbench-settings` 7 条 /
+`calendar-workload` 1 条）已就绪，是本文的**对照面**：本文解释**怎么落地**，
+并在与条款不一致处**显式登记冲突**（见 D-8 与 D-14）。
+
 ---
 
 ## Goals
@@ -92,6 +96,21 @@
 ---
 
 ## Decisions
+
+**与 spec delta 的对应索引**（`specs/` 相对本变更目录）：
+
+| 决策 | 对应行为条款 |
+|---|---|
+| D-1 / D-2 | `workbench-ui`「Paper levels and elevation」 |
+| D-3 | `workbench-ui`「Soft Mondrian visual foundation」（改写） |
+| D-4 | `workbench-ui`「Reading face and interface face」 |
+| D-5 / D-6 | `workbench-ui`「Shared reading typographic layer」 |
+| D-7 / D-8 | `workbench-ui`「Motion system and reduced-motion downgrade」；`workbench-settings`「Motion preference and system reduced motion」 |
+| D-9 | `workbench-settings` 全部 7 条；`workbench-ui`「Learner settings in the left rail」 |
+| D-10 / D-11 | `workbench-ui`「Three-column shell with navigation」（改写） |
+| D-12 | `workbench-ui`「Focus visibility and contrast floors」 |
+| D-13 / D-14 | `workbench-ui`「Records center」（改写）；`calendar-workload`「Calendar and workload view」 |
+| D-15 | 无条款（登记用），呼应 `workbench-ui`「Records center」里的 drift 条款 |
 
 ### D-1 token 架构：一套结构 token + 两套主题值，旧 token 走别名期退役
 
@@ -162,6 +181,10 @@
 - 抬升用**暖调柔影**（非纯黑）：`--wb-shadow-1/2/3` 三档，色基 `rgba(120,92,48,α)`。
 - **唯一的发丝线例外**是「控件边界」`--wb-rule-control`（亮色 `#8b8375`，对白卡 3.75:1；
   夜纸 `#6f6759`）—— 因为输入框 / 下拉框不描边就找不到边界。
+  这**不是层与层的分界线**：`workbench-ui` delta「Paper levels and elevation」要求
+  「Levels SHALL be separated by the shared 12px corner radius and a soft warm shadow,
+  and SHALL NOT be separated by hairline borders」—— 发丝线只出现在**控件自身的边界**上，
+  纸面层级之间一条都没有。
 - 单侧结构线 `--wb-rule-structure`（亮色 `#221f1a`、夜纸 `#6f6759`）**保留**，
   但它属于**内容层**（知识点正文 / 题面），不属于面分层。见 D-5。
 
@@ -257,6 +280,14 @@
 `paper-practice.js:581` 的判定文案绑定）保留为**局部例外**并登记为契约漂移项，
 不进入三角色配额表。
 
+**理由**
+
+- 黄色填充对暖奶油底只有 **1.54:1** → 黄必须**填充与承载语义分离**（见上）。
+- 22 个硬编码色里同时存在第二蓝、第二灰、三套红与第四种橙 → 颜色已不能解码，
+  必须逐个归位到「三角色 + 墨阶 + 表面阶」，否则改一次颜色就会出现两套真值。
+- 契约只授权蓝 / 黄 / 红（`docs/GLOSSARY.md:328-332`）→ 绿只能作为**局部例外**
+  并登记为漂移项，不能升格成第四个角色色。
+
 **否掉的备选**
 
 - *把「正确」映射成蓝色*：蓝的语义是「主要动作 / 当前选中」，把判定也涂成蓝会让
@@ -327,6 +358,15 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
   `pyftsubset SourceHanSerifSC.otf --unicodes-file=gb2312.txt --flavor=woff2`
   实测，并把实测值回填到本节；子集字表若要更大，必须同步下调「≤1.2 MB」的承诺。
 
+**理由**
+
+- 中文衬线在长文上的可读性优势是真实的，且与「界面圆润活泼」不冲突：
+  **界面用无衬线、阅读面用衬线**，两套语汇各管一段（`decisions.md` 7.4）。
+- 字体切换本身承担一部分层级表达（标题全无衬线，`decisions.md` 4.3），
+  在 P-1 少字原则下这是"零成本"的层级信号。
+- 打包 woff2 是唯一可行路径：无构建步骤、不引 CDN、离线可用
+  （`static/katex/fonts/*.woff2` 已有 20 个先例）。
+
 **否掉的备选**
 
 - *打包全量思源宋体*：8–20 MB，首屏与仓库体积不可接受。
@@ -394,6 +434,15 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 - 行高 1.75/1.70、段距 0.7em、measure 38em/42em、标题 22/19/17 来自
   `tmp/frontend-audit/F07.md` §6.2 / §6.3（C-01…C-05 的裁决结论）。
 - 标题全无衬线来自 `decisions.md` 4.3。
+
+**理由**
+
+- 字号与行高的硬约束来自 `docs/PRODUCT-MANUAL.md:129-130` 与
+  `openspec/specs/workbench-ui/spec.md:766-771`；具体刻度由 F07 §6.2 / §6.3 裁决。
+- 阅读层必须**自包含**：`.rich-text` 的规则与阅读层逐项冲突且同特异性，
+  混挂会让契约变成「取决于 CSS 文件顺序」（见上）。
+- 退役 `.rich-text` 而不是让两者并存，也是为了让 spec 的
+  「Shared reading typographic layer」有唯一落点。
 
 **否掉的备选**
 
@@ -520,6 +569,14 @@ JS 临时插入的元素上。
 **性能预算**：只动 `transform` / `opacity`；单帧 ≤16ms；同屏合成层 ≤30；
 `will-change` 只在动画期间加、结束后移除。
 
+**理由**
+
+- 收口基线把动效范围扩大到「交互反馈 + 数据层 + 视图转场 + 里程碑仪式」，
+  并明确数据层也要微交互（`decisions.md` 15.4）→ 白名单必须覆盖这四个面。
+- 换页时 `#middle-page` 的 innerHTML 被整体替换 → **容器动画**是唯一可靠的
+  进场实现方式（见上）；这决定了「CSS 为主」不是偏好而是必然。
+- 只动 `transform` / `opacity` 与「请求时序不变」的冻结线，共同划定了动效预算。
+
 **否掉的备选**
 
 - *纯 JS 编排（Web Animations API）*：切页即失效（上面已述）；且需要给每个元素
@@ -539,47 +596,71 @@ JS 临时插入的元素上。
 
 ---
 
-### D-8 动效偏好与系统 reduced-motion：系统是硬底线，应用开关只在其之上收紧
+### D-8 动效偏好与系统 reduced-motion：未设置才跟随系统，显式选择优先
 
 **决策**
 
-- **动效偏好**是**开 / 关**两态的浏览器偏好，默认**跟随系统** `prefers-reduced-motion`。
-- **系统 `prefers-reduced-motion: reduce` 永远生效，应用内开关不能覆盖它**：
-  在系统 reduce 下，即使用户把动效偏好设为「开」，也只启用**弱动效档**：
-  - 允许：透明度变化、状态直切、无位移的淡入。
-  - 禁止：台灯涟漪、彩带 / 纸片、挤压回弹、入场上浮位移、纸片飞散、骨架微光扫过。
-- 用户显式设为「关」时，**全部动效直切**（比系统 reduce 更严）。
+- **动效偏好**是「开 / 关」两态的浏览器偏好，按工作区存（与既有偏好同一份记录，见 D-9）。
+- **未设置偏好时** → **跟随系统** `prefers-reduced-motion`：系统要求 reduce 就降级，
+  系统未要求就全开。
+- **用户显式选「开」时** → **覆盖系统**，动效恢复。
+- **用户显式选「关」时** → 全部动效直切（比系统 reduce 更严）。
+- 动效分两档：
+  - **常规动效** —— 交互反馈、数据层微交互、上浮淡入、视图转场、骨架屏微光；
+  - **仪式动效** —— 台灯涟漪、挤压回弹、庆祝爆点、彩带 / 纸片。
+  显式「开」恢复的是**两档全部**；但「恢复」≠「每次都放大」：仪式动效仍受收口基线
+  「分层庆祝」的约束（日常轻 / 里程碑重）。
+- **降级后的终态必须与动画版一致**：ground 直接切、庆祝直接落终态、
+  连对计数器直接更新（`workbench-ui` delta 的场景「Reduced motion is requested」）。
 
 **理由**
 
-- OS 级无障碍偏好是用户**整体环境**的一部分（晕动症、注意力障碍、某些辅助技术的默认行为）。
-  应用内开关覆盖它，等于替用户撤销了一个可能与本应用无关的设置 —— 这是公认的
-  可访问性反模式。多邻国调研里的反面教训（11 条标题级证据，含 ADHD 用户要求彻底关闭，
-  `decisions.md`「多邻国调研结论」）支持的是**分层 + 提供开关**，不是「覆盖系统」。
-- 收口基线的降级行原文是「`prefers-reduced-motion` 一律降级为状态直切；涟漪直接切、
-  庆祝直接落终态」——「一律」意味着没有例外通道。
-- 已有全局降级闸门可复用：`workbench.css:733` 与 `:1126-1131`
-  （`*, *::before, *::after { transition: none !important; animation: none !important; }`），
-  CSS 驱动的动效自动合规；JS 编排的三处需自行 `matchMedia`（参照 `workbench.js:1639`
-  的既有写法）。
+- `docs/GLOSSARY.md` 的「动效偏好」词条定义是「动效开 / 关的浏览器偏好，**默认**跟随系统
+  reduced-motion」。「默认」二字意味着它**允许**与系统不同 → 用户显式选择优先。
+- `openspec/changes/workbench-visual-language-v2/specs/workbench-settings/spec.md:143`
+  「Motion preference and system reduced motion」明确写
+  "An explicit learner choice SHALL take precedence over the system setting."，
+  并有场景「The learner overrides the system → motion is restored, restricted to the
+  surfaces that allow it」。本决策与该 delta 一致。
+- 收口基线的降级行「`prefers-reduced-motion` 一律降级为状态直切；涟漪直接切、
+  庆祝直接落终态」描述的是**系统触发的降级路径**（即用户未做选择时），
+  不是「系统永远压过用户」的优先级规则 —— 两者可以同时成立。
+- 降级的另一半要求被完整保留：终态不变，只是没有过程。
+
+**⚠ 与另一份 delta 的冲突（显式登记，由 spec owner 协调，本文不静默裁决）**
+
+`openspec/changes/workbench-visual-language-v2/specs/workbench-ui/spec.md:102`
+「Motion system and reduced-motion downgrade」写的是
+「When the motion preference is off, **or when the system asks for reduced motion**,
+every motion SHALL degrade to a direct state change」，
+其场景「Reduced motion is requested」把「系统要求 reduce」与「用户关闭偏好」并列为触发条件，
+**没有给显式「开」留出口** → 与 `workbench-settings` 的 delta **直接冲突**。
+
+- 本设计按 `workbench-settings` 的 delta 取「显式优先」，理由如上；
+- 该冲突按 D-15 的方式登记：需要 spec owner 把 `workbench-ui` delta 的降级触发条件
+  改成「**用户未做选择**且系统要求 reduce」，两份 delta 必须在归档前逐字对齐。
 
 **否掉的备选**
 
-- *让应用内「开」完全覆盖系统 reduce*：如上，属于可访问性反模式；且 OS 级设置常常
-  是别的应用触发的，用户不会想到是这里。
-- *做「自动 / 开 / 关」三态*：语义更完整，但与 `docs/GLOSSARY.md` 里
-  「动效偏好 = 动效开 / 关的浏览器偏好，默认跟随系统 reduced-motion」的既有词条定义不符；
-  两态 + 「系统是硬底线」已经能表达全部三种实际行为。
+- *系统永远压过用户*：与 GLOSSARY 的「默认跟随系统」及 `workbench-settings` delta 冲突。
+  但它确实是可访问性上更保守的一种读法；本设计不采用，理由见上，风险记在 Risks。
+- *三态「自动 / 开 / 关」*：语义更完整，但与 GLOSSARY 既有词条「动效开 / 关」不符；
+  「未设置 = 跟随系统」已经能表达全部三种实际行为，且不增加控件。
+- *降级时保留透明度变化*：会与「终态一致」的契约打架（用户看到的仍是一个中间态），
+  且 `workbench-ui` delta 的场景要求「direct state change」。→ 降级 = 状态直切。
 
 **代价**
 
-- 「开」在系统 reduce 下**不等于「全开」**，用户可能困惑 → 设置视图必须**显示当前实际生效的档位**
-  （这本身符合 P-1 少字原则：用几何 / 状态表达，而不是加一段解释文字）。
-- 实现上需要**两套降级判断**：CSS 靠媒体查询，JS 靠 `matchMedia`；三处 JS 编排
-  （数字滚动 / 连对 / 台灯）必须各自处理，漏一处就会在 reduce 下仍动。
-- 现有全局闸门是 `!important` 全局关停（`:1126-1131`），它与「弱动效档」（允许透明度变化）
-  冲突 → 需要把全局闸门从「一刀切 none」改成「分级降级」，这是一次**收紧既有行为之外的改动**，
-  必须在 spec delta 里写明降级后**仍然可见的状态**（F08 R-2：状态永远是文字 / 几何，不是动画）。
+- 显式「开」会覆盖 OS 级的无障碍偏好 → 部分用户（晕动症）可能在没意识到的情况下
+  被本应用内的开关打开动效；缓解：设置视图**必须显示当前实际生效的档位**
+  （符合 P-1 少字原则：用状态表达，而不是加一段解释文字），且「关」一档随时可用。
+- 降级必须**逐处**实现：CSS 靠媒体查询，JS 编排的三处（数字滚动 / 连对 / 台灯）
+  各自 `matchMedia`；漏一处就会在 reduce 下仍动。
+- 现有全局降级闸门是 `!important` 全局关停（`workbench.css:733`、`:1126-1131`），
+  与本决策一致（都是直切）→ **不需要改**；但它必须与「显式开」的路径共存 →
+  需要一个比全局媒体查询**更具体**的选择器在显式「开」时恢复动效
+  （例如 `html[data-motion="on"]` 提高特异性覆盖那两条 `!important` 规则），
+  这是一条必须写进实现说明的硬约束，不能靠调 specificity 碰运气。
 
 ---
 
@@ -795,6 +876,14 @@ JS 临时插入的元素上。
 - `::placeholder` 改用 `--wb-ink-faint`（现状靠 fallback `#68707b` 才活，
   `workbench.css:1051`）。
 
+**理由**
+
+- 焦点环今天在主路径控件上**整体失效**（三处 `outline: none` 的特异性高于
+  全局 `:focus-visible`），这是可访问性硬缺陷，不是观感问题。
+- 文字灰阶今天有 2 档低于 4.5:1（含 `::placeholder` 的 1.25:1）→ 必须收口；
+  但收口不能把 4 级可用层级砍成 3 级，否则层级表达无处安放。
+- 墨阶整体变深会加重页面 → 同一批改动里**不得再叠加深色墨块**。
+
 **否掉的备选**
 
 - *只把三处 `outline: none` 删掉*：鼠标点击也会留下焦点环，视觉噪声大；
@@ -883,7 +972,11 @@ JS 临时插入的元素上。
   else 3 if attempts <= 7 else 4`）→ 必须**变成可见契约**：
   ① CSS 里**补齐 `.level-0`**（今天只有 `.level-1..4`，`workbench.css:1420-1430`
   —— 「0 次」这一档**从来没有被设计过**）；② 页面给出**图例**（几档分别代表几次）；
-  ③ 阈值本身写进 spec（否则又是一段只活在代码里的口径）。
+  ③ 阈值本身要有一个**稳定的落点**：`workbench-ui` delta「Records center」只要求
+  「intensity is encoded by fill and by height」，**没有钉死 5 档的次数区间** →
+  因此阈值必须同时落在「用户可见口径」（`docs/PRODUCT-MANUAL.md`）与
+  「一个具名实现常量」上，而不是继续只活在 `records.py:237` 的三元表达式里；
+  「阈值未进 spec」按 D-15 的方式登记为待 spec owner 裁决的低优先项。
 - **加今天标记**（描边 + 端点几何）、**加月份刻度**（沿用时间视图日历已有的
   `today` 表达方式，`workbench.css:1260` `.calendar-cell.today`）。
 - **无障碍**：`aria-label` 挂在有 `role` 的容器上（今天 84 个 `<span>` 带
@@ -936,7 +1029,9 @@ JS 临时插入的元素上。
 - **每条必须能转成一个后续 change**：登记表的目的是**排期**，不是描述。
   登记表落地时，每条都要写清「改成什么」或「谁来定」。
 
-**理由（为什么不是另外两个候选）**
+**理由**
+
+（为什么不是另外两个候选）
 
 - **不放 `openspec/specs/`**：那里是**当前事实**。漂移项的事实还没改，
   写进去等于把未解决项声明为契约 —— 那会制造新的漂移。
@@ -1000,16 +1095,26 @@ JS 临时插入的元素上。
   `font-display: swap` 保证先可读；子集字表用 GB2312 一级字表 3755 字起步，
   用 `pyftsubset` **实测**体积后回填 D-4 的承诺值（当前是量级估算，不是实测）；
   若实测超过 1.2 MB，先砍字重（只保留 400）而不是砍字表。
-- [Risk] **全局降级闸门从「一刀切 none」改成「分级降级」会改变既有 reduced-motion 行为**
-  （`workbench.css:1126-1131`）→ Mitigation：降级后的终态必须**仍然可见**
-  （状态永远是文字 / 几何，不是动画，F08 R-2）；三处 JS 编排各自 `matchMedia`；
-  在 spec delta 里写明「reduce 下仍可见的状态集合」，验收时对比 reduce / no-reduce 两套截图。
+- [Risk] **两份 spec delta 对「动效偏好 vs 系统 reduce」的优先级互相矛盾**
+  （`workbench-settings` delta:143 说「显式选择优先」，`workbench-ui` delta:102
+  把「系统要求 reduce」与「用户关闭」并列为无条件降级触发）→ Mitigation：
+  本设计按 `workbench-settings` 取「显式优先」（依据：GLOSSARY「默认跟随系统」的
+  「默认」二字 + 该 delta 的显式场景），并**把冲突显式登记**（D-8 的冲突小节 +
+  D-15 登记表）；归档前由 spec owner 把 `workbench-ui` delta 的触发条件改为
+  「用户未做选择且系统要求 reduce」，两份 delta 逐字对齐。
+  在对齐之前，实现**必须**同时满足两种读法里更严的那部分：显式「关」与系统 reduce
+  的组合下一定直切。
+- [Risk] **显式「开」要覆盖 `!important` 的全局降级闸门**（`workbench.css:733`、
+  `:1126-1131` 的 `transition/animation: none !important`）→ Mitigation：用 `html[data-motion="on"]` 提高选择器特异性来**定向**恢复，
+  而不是删掉或削弱那两条全局规则；实现说明里写死这条约束；
+  验收时同时截「系统 reduce + 显式开」「系统 reduce + 未选择」「系统允许 + 显式开」
+  三套截图，确认终态一致。
 - [Risk] **新设置视图 + 左栏开关改变焦点顺序两处** → Mitigation：proposal 的冻结条款
   已点名这两处新增；实现后必须验证 `openspec/specs/workbench-ui/spec.md:1289`
   「同工作区中栏导航保留 Agent 右栏」仍然成立（`#ai-column` 不被卸载、Agent 控制器不重建），
   并把焦点顺序变化写进 spec delta。
-- [Risk] **三栏几何从「整段 inline」改成「两个变量」后，拖拽可能出现过渡拖影** →
-  Mitigation：`#layout.is-resizing` 关掉 `grid-template-columns` 过渡；
+- [Risk] **三栏几何从「整段 inline」改成「两个变量」后，拖拽可能出现过渡拖影**
+  → Mitigation：`#layout.is-resizing` 关掉 `grid-template-columns` 过渡；
   夹取逻辑（`workbench.js:4584-4586`）保持「中栏 ≥ 420px」的不变式不变；
   验收时在 1280×800 / 1024×768 两个视口各拖一次并截图。
 - [Risk] **别名期同时存在新旧两套 token 名字，可能再长出第二套真值** → Mitigation：
@@ -1045,8 +1150,11 @@ JS 临时插入的元素上。
 - **手写具象静物 SVG ↔ 成本与一致性**：每个导航项一个实物插画，成本随数量线性上升
   （5 个导航项 + 6–8 个空态静物 + 台灯）→ 用同一套线宽与圆角语言压住一致性风险；
   不引图标库是硬约束。
-- **系统 reduced-motion 不可被覆盖 ↔ 用户可能想要「就是要动」**：可能被少数用户抱怨；
-  但这是可访问性底线，且用户仍可在别处（浏览器 / 系统）调整。
+- **显式动效偏好覆盖系统 reduce ↔ OS 级无障碍偏好被应用内开关推翻**：
+  用户可能没意识到自己在应用里打开的动效压过了系统的晕动症设置；
+  缓解：设置视图显示**当前实际生效的档位**、「关」一档随时可用、
+  且 `workbench-ui` delta「Motion system and reduced-motion downgrade」的措辞必须同步改；
+  该优先级在两份 delta 之间尚未收敛（D-8），归档前必须对齐。
 - **界面字号 / 字重 / 字族全用 system-ui（Windows 中文回退到微软雅黑）↔ 品牌一致性**：
   无 webfont 成本、加载零延迟，但雅黑偏「办公软件」感、字腔偏松，标题冲击力弱；
   缓解：标题 700 + letter-spacing -.02em~-.03em + 渐变填充（首屏 hub 卡标题）；
@@ -1142,3 +1250,8 @@ JS 临时插入的元素上。
 - [x] 未修改任何产品代码
       （本轮只写 `openspec/changes/workbench-visual-language-v2/design.md` 一个文件；
       `workbench/`、`pool/`、`pipeline/`、`lessonkit.py` 未改动）。
+- [x] 与已就绪的 spec delta 逐条对照，冲突**显式登记**而非静默选边
+      （D-8：`workbench-settings` delta:143「显式优先」vs `workbench-ui` delta:102
+      「系统要求 reduce 即降级」→ 本文取前者并登记，后者由 spec owner 改措辞；
+      D-14：5 档阈值未进 spec → 登记为待裁决项）。
+- [x] 全部 15 条决策与 `specs/` 行为条款的对应关系，在 `## Decisions` 开头给出了索引表。
