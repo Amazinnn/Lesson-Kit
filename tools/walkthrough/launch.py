@@ -276,6 +276,13 @@ def main(argv=None):
                         help="pool file to copy (default: <repo>/pool/<course>.db)")
     parser.add_argument("--no-record", action="store_true",
                         help="do not install the recorder (same as WALKTHROUGH_RECORD=0)")
+    parser.add_argument("--seed-records", type=int, default=0,
+                        help="seed this many attempt records into the pool COPY "
+                             "(the real pool is never written)")
+    parser.add_argument("--seed-sessions", type=int, default=0,
+                        help="seed this many AI conversations into the workspace COPY")
+    parser.add_argument("--seed-out", default=None,
+                        help="where the seed summary and the all-correct plan go")
     parser.add_argument("--check-only", action="store_true",
                         help="build the isolated environment, assert it, then exit")
     parser.add_argument("--ready-file", default=None,
@@ -318,6 +325,27 @@ def main(argv=None):
         "requests_jsonl": str(out_path),
         "real_pool": str(Path(seed_pool).resolve()),
     }
+
+    if args.seed_records or args.seed_sessions or args.seed_out:
+        # The seed runs **before** the service starts: the pool copy is
+        # written while nothing holds it open, so there is no lock
+        # contention, and the service reads the seeded data from the start.
+        # It only ever writes the copy (seed.assert_isolated).
+        from tools.walkthrough import seed as seed_mod
+
+        seed_out = Path(args.seed_out) if args.seed_out else \
+            Path(scratch) / "seed" / args.side
+        seed_summary = seed_mod.seed_workspace(
+            workspace["dir"], workspace["pool"], seed_out,
+            records=args.seed_records, sessions=args.seed_sessions,
+            real_pool=seed_pool, plan=True)
+        summary["seed"] = {
+            "records": seed_summary["records"],
+            "sessions": seed_summary["sessions"],
+            "plan": str(seed_out / "plan.json"),
+            "summary": str(seed_out / "summary.json"),
+            "realPoolUnchanged": seed_summary["realPoolUnchanged"],
+        }
 
     if args.check_only:
         summary["checked"] = True
