@@ -995,9 +995,14 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   box-shadow: inset 0 0 0 1px var(--rule-hair);
 }
 .msg .meta { font-size: 12px; color: var(--ink-faint); margin-bottom: 4px; }
+/* 卡片基类 —— **不描边**（design.md D-2 / D-13；tasks.md 3.3）：
+   卡片靠「留白 + `--r-md` 圆角 + `--elev-1` 柔影」分层，
+   描边一律取消（`.card` 基类原来那条 `border: 1px solid var(--ink-strong)`
+   让运行卡 / 图表卡 / 统计卡 / 记录条目全都带一圈黑边）。
+   ⚠️ 控件边界（输入框 / 下拉框）与单侧结构线是「不用描边」的两个例外，
+   走 `--rule-control` / `--rule-structure`，不受这里影响。 */
 .card {
   background: var(--surface-card);
-  border: 1px solid var(--ink-strong);
   border-radius: var(--r-md);
   box-shadow: var(--elev-1);
   padding: 18px;
