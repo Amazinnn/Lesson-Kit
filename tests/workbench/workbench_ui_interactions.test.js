@@ -3765,9 +3765,8 @@ test("fixed practice reports each selection reason and shortage before starting"
   const elements = {
     layout: layout(),
     ...durablePracticeElements(),
-    "scope-tray": new FakeElement("scope-tray", {
-      dataset: { kpNames: JSON.stringify({ "kp-1": "代数基础", "kp-2": "线性方程组" }) },
-    }),
+    // The scope tray is retired (the page never rendered it), so there is no
+    // element carrying kp names: the report lists knowledge points by id.
   };
   const storage = new FakeStorage();
   let reportAtRunStart = "";
@@ -3816,7 +3815,7 @@ test("fixed practice reports each selection reason and shortage before starting"
 
   assert.match(reportAtRunStart, /代数题.*范围匹配/);
   assert.match(reportAtRunStart, /复习题.*到期复习/);
-  assert.match(reportAtRunStart, /线性方程组/);
+  assert.match(reportAtRunStart, /可用题数少于请求量的知识点：kp-2/);
   assert.match(reportAtRunStart, /Check 管线/);
   assert.deepEqual(runBody.items, [
     { item_type: "problem", item_id: "p-1" },
@@ -3832,9 +3831,8 @@ test("empty fixed practice reports the Check pipeline and does not start an empt
   const elements = {
     layout: layout(),
     ...durablePracticeElements(),
-    "scope-tray": new FakeElement("scope-tray", {
-      dataset: { kpNames: JSON.stringify({ "kp-1": "代数基础" }) },
-    }),
+    // The scope tray is retired (the page never rendered it), so there is no
+    // element carrying kp names: the report lists knowledge points by id.
   };
   runWorkbench({
     elements,
@@ -3858,7 +3856,7 @@ test("empty fixed practice reports the Check pipeline and does not start an empt
   await flush();
 
   assert.match(elements["practice-error"].textContent, /0\/10/);
-  assert.match(elements["practice-error"].textContent, /代数基础/);
+  assert.match(elements["practice-error"].textContent, /可用题数少于请求量的知识点：kp-1/);
   assert.match(elements["practice-error"].textContent, /Check 管线/);
   assert.equal(calls.some((call) =>
     call.url.endsWith("/practice/current") && !!call.options), false);

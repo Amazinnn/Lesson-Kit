@@ -29,7 +29,7 @@
 | 设计件 | 8 份 / 15921 行 | — |
 | 状态 | `openspec validate --specs --strict` → ✓ 19 passed | 同 |
 
-**已知缺陷 165 条已登记在册**（`contract-drift.md`），每条带「改成什么 / 谁来定」。
+**已知缺陷 166 条已登记在册**（`contract-drift.md`），每条带「改成什么 / 谁来定」。
 这是**刻意留下的账**，不是遗漏。
 
 ---
@@ -76,14 +76,14 @@ docs/ARCHITECTURE.md
 `docs/GLOSSARY.md` 与 `docs/PRODUCT-MANUAL.md` 已向用户承诺这一点，**承诺正确，不要改**。
 见 `decisions.md` **A-11**。
 
-### 2.4 165 条已登记漂移
+### 2.4 166 条已登记漂移
 
-`contract-drift.md` 登记了 **165 条**（`CD-001`…`CD-165`）「本轮不改、待后续 change 处理」
+`contract-drift.md` 登记了 **166 条**（`CD-001`…`CD-166`）「本轮不改、待后续 change 处理」
 的契约漂移。**它是登记表，不是本轮要修的清单。**
 
 - 不得为了让本轮看起来干净而把其中任何一条静默修掉；
 - 不得把它当成「已处理」；
-- 交接时应在 `docs/PENDING-DEFINITIONS.md` 或本文件里提示「存在 165 条已登记漂移」
+- 交接时应在 `docs/PENDING-DEFINITIONS.md` 或本文件里提示「存在 166 条已登记漂移」
   ——**提示写在 HANDOFF（本文件）**，不要往 PENDING-DEFINITIONS 追加。
 
 ---
@@ -99,7 +99,7 @@ docs/ARCHITECTURE.md
 | `design.md` | 1397 | D-1…D-16 实现决策（每条含「决策/理由/否掉的备选/代价」） |
 | `tasks.md` | 309 | 167 条任务 / 28 组（**1–18 组 = 样板线，19–25 组 = 铺开，26–28 = 清理与验收**）；**已完成 47** |
 | `acceptance.md` | 192 | 底线守卫 G-1…G-8 · 12 张对照截图 S-1…S-12 · 13 条关键帧 M-1…M-13 · 交互清单 §3.1–§3.8 |
-| `contract-drift.md` | 465 | 165 条已登记漂移（**登记表，不是待修清单**） |
+| `contract-drift.md` | 466 | 166 条已登记漂移（**登记表，不是待修清单**） |
 | `specs/workbench-ui/spec.md` | 1106 | 24 条 Requirement / 109 场景（**主战场**） |
 | `specs/workbench-settings/spec.md` | 253 | 新能力：7 条 / 27 场景 |
 | `specs/calendar-workload/spec.md` | 151 | 1 条 MODIFIED / 14 场景 |
