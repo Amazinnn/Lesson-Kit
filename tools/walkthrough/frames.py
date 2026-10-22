@@ -330,10 +330,17 @@ def prepare_skeleton(page, ctx):
 
 
 def act_skeleton(page, ctx):
-    """M-9 — navigate the middle column; the skeleton takes its place."""
+    """M-9 — navigate the middle column; the skeleton takes its place.
+
+    The wait is on the **wrapper** (``[data-lk-skeleton]``), not on
+    ``.lk-skeleton``: in the downgraded motion mode the product paints
+    the same blocks as static grey boxes **without** the class (the
+    class carries the sweeping overlay), so the class is not there in
+    the reduced twin — and the twin is exactly where the class must be
+    missing.
+    """
     page.click('a[href$="/practice-sets"]')
-    page.wait_for_selector("[data-lk-skeleton] .lk-skeleton", state="attached",
-                           timeout=10000)
+    page.wait_for_selector("[data-lk-skeleton]", state="attached", timeout=10000)
 
 
 def prepare_records(page, ctx):
@@ -476,11 +483,18 @@ def act_answer(page, ctx):
         ctx.attemptError = str(error)
     # The verdict element is what the product hangs the squash on.
     page.wait_for_selector(".micro-verdict", state="attached", timeout=15000)
-    # The animation has to exist before the frames are taken.
-    page.wait_for_function(
-        """() => document.getAnimations().some(
-                (a) => (a.animationName || "") === "lk-squash-bounce")""",
-        timeout=15000)
+    # The animation has to exist before the frames are taken.  The wait is
+    # **soft**: in the reduced-motion twin the product downgrades the
+    # squash away (that is the point of the twin), so there is nothing to
+    # wait for there — and the judge, not the wait, decides the verdict.
+    try:
+        page.wait_for_function(
+            """() => document.getAnimations().some(
+                    (a) => (a.animationName || "") === "lk-squash-bounce")""",
+            timeout=5000)
+        ctx.squashAnimationSeen = True
+    except Exception:
+        ctx.squashAnimationSeen = False
     # Freeze it: the frames set the time themselves.
     page.evaluate("() => window.__lkFrame.freeze()")
 
@@ -1222,18 +1236,18 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
     browser, context, page = _launch(playwright)
     if muted:
         page.add_init_script(MUTE_JS % ws)
+    held = []
     try:
         if delay_ms:
-            import time
+            # The **page** fetch of the middle column is **held** (not
+            # delayed): the request stays pending, so the product's own
+            # loading state stands on the screen while the frames are
+            # taken.  Sleeping in the handler would block the driver and
+            # the frames would be taken after the content had arrived.
+            def hold(route):
+                held.append(route)
 
-            def slow(route):
-                time.sleep(delay_ms / 1000.0)
-                route.continue_()
-
-            # The **page** fetch of the middle column is held back, so the
-            # product's own loading state stands on the screen while the
-            # frames are taken (M-9).
-            page.route("**/w/*/practice-sets", slow)
+            page.route("**/w/*/practice-sets", hold)
         ctx = _Context(base_url, ws, paper_id, plan=plan, motion_id=motion_id)
         prepare = PREPARE[motion["trigger"]]
         act = ACT[motion["trigger"]]
@@ -1247,6 +1261,11 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
         if motion_id == "M-7":
             meta["verdictElements"] = verdict_elements(page)
     finally:
+        for route in held:
+            try:
+                route.continue_()
+            except Exception:
+                pass
         context.close()
         browser.close()
 
@@ -1254,15 +1273,13 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
     browser, context, page = _launch(playwright, reduced_motion="reduce")
     if muted:
         page.add_init_script(MUTE_JS % ws)
+    held = []
     try:
         if delay_ms:
-            import time
+            def hold(route):
+                held.append(route)
 
-            def slow(route):
-                time.sleep(delay_ms / 1000.0)
-                route.continue_()
-
-            page.route("**/w/*/practice-sets", slow)
+            page.route("**/w/*/practice-sets", hold)
         ctx = _Context(base_url, ws, paper_id, plan=plan, motion_id=motion_id)
         prepare = PREPARE[motion["trigger"]]
         act = ACT[motion["trigger"]]
@@ -1280,6 +1297,11 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
         }
         reduced_terminal = terminal_state(page, watch)
     finally:
+        for route in held:
+            try:
+                route.continue_()
+            except Exception:
+                pass
         context.close()
         browser.close()
 
