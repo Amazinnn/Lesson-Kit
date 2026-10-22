@@ -76,7 +76,10 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
         self.assertIn("--dsw-brand-primary", body)
-        self.assertIn(".scope-tray-list {", body)
+        # The scope-tray block is retired dead code (task 14.1): the tray is
+        # never rendered, so its CSS must be gone rather than merely unused.
+        self.assertNotIn(".scope-tray-list {", body)
+        self.assertNotIn("scope-tray", body)
         self.assertIn("overscroll-behavior: contain;", body)
 
     def test_edge_layer_follows_the_stage_size(self):
@@ -227,15 +230,19 @@ class UiRouteTests(unittest.TestCase):
         # anchor. Their static state is the terminal state.
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("class='paper-completion-stats lk-stat-slot'", body)
-        self.assertIn("class='lk-progress is-filled lk-progress--completion'", body)
+        self.assertIn("class='paper-completion-figures lk-stat-slot'", body)
+        # The band is full in its static style; the celebration adds
+        # `.is-filled` to replay the growth, so the class is not baked in.
+        self.assertIn("class='lk-progress lk-progress--completion'", body)
+        self.assertNotIn("lk-progress is-filled", body)
         self.assertIn("<span class='lk-progress__fill'></span>", body)
         self.assertIn(
-            "id='paper-milestone-anchor' class='lk-milestone-anchor' aria-hidden='true'",
+            "id='paper-completion-milestone' class='lk-celebrate-anchor' "
+            "data-lk-celebrate-anchor style='pointer-events: none' aria-hidden='true'",
             body)
         # The anchor sits above the CTA row, so it can never cover it.
         self.assertLess(
-            body.index("paper-milestone-anchor"), body.index("id='paper-review'"))
+            body.index("paper-completion-milestone"), body.index("id='paper-review'"))
 
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
