@@ -3614,7 +3614,15 @@ html[data-motion="off"] *::after {
 @media (prefers-reduced-motion: reduce) {
   html:not([data-motion="on"]) #layout:not([data-page="graph"]) *,
   html:not([data-motion="on"]) #layout:not([data-page="graph"]) *::before,
-  html:not([data-motion="on"]) #layout:not([data-page="graph"]) *::after {
+  html:not([data-motion="on"]) #layout:not([data-page="graph"]) *::after,
+  /* ⚠️ **顶栏也要进弱动效档**：顶栏在 `#layout` 之外，但同样是应用外壳 ——
+     章节透镜的选项、顶栏按钮的 hover/按下都是 transform 过渡，
+     不进这道闸门的话，reduce 档下顶栏仍在动（3.1-6 判「仍有元素带过渡」）。
+     ⚠️ 图谱页（`#layout[data-page="graph"]`）**不碰**：连它的顶栏一起排除，
+     避免越权改写图谱那一侧（decisions.md A-8 / acceptance.md G-5）。 */
+  html:not([data-motion="on"]):not(:has(#layout[data-page="graph"])) #topbar *,
+  html:not([data-motion="on"]):not(:has(#layout[data-page="graph"])) #topbar *::before,
+  html:not([data-motion="on"]):not(:has(#layout[data-page="graph"])) #topbar *::after {
     animation-name: none !important;          /* 位移 / 缩放 / 回弹 / 扫光 一律停 */
     transition-property: opacity !important;  /* 只允许透明度变化 */
     transition-duration: var(--dur-fast) !important;
