@@ -26,7 +26,7 @@
 > owner 回来更新对应行。提示「本仓库存在 N 条已登记漂移」的交接文本写在
 > `openspec/changes/workbench-visual-language-v2/HANDOFF.md`。
 >
-> **条数说明**：本表实际登记 **162 条**（`CD-001`…`CD-162`）。
+> **条数说明**：本表实际登记 **163 条**（`CD-001`…`CD-163`）。
 > `tasks.md` 27.2 写的是 128 条 —— **差额 +34 条的原因逐条说明在 §4.1**
 > （同一冲突的「多条腿」必须逐腿登记 + 裁决已下但落地未落的残留），
 > **没有为凑数编造条目**。自检结果见 §4。
@@ -200,6 +200,7 @@
 | CD-160 | `openspec/specs/workbench-ui/spec.md:73-75`（"no stored topic/group layer"） vs `workbench/server/static/workbench.css:515-521`（`.problem-topic` 化石规则） | 契约禁止 topic 层，CSS 里却留着 topic 层的化石规则 —— 契约与实现的**残留物**对不上 | `openspec/specs/workbench-ui/spec.md:73-75` | openspec change | 中 | 与 CD-048/CD-051 同案：删化石规则（先定 PRODUCT-MANUAL 是否复活分组） |
 | CD-161 | `openspec/specs/workbench-ui/spec.md:12`（"a collapsible right Agent conversation column"） vs `workbench/server/static/workbench.css:153`（`.mobile-drawer-controls` 在 ≥1024px 是 `display:none`） | spec 承诺右栏「可收起」，桌面端**没有任何收起入口** | `openspec/specs/workbench-ui/spec.md:12` | spec delta | 高 | 与 CD-029 同案：spec owner 明确 spec 指的是窄屏抽屉还是桌面也可收起；本条只登记（同一冲突的契约侧腿） |
 | CD-162 | `docs/PRODUCT-MANUAL.md:43`（「Dashboard 的工作区列表」一句） vs `workbench/server/pages.py`（hub 22 张等权卡） | 手册对 hub 的描述只有一句话，没有字段/排序/分组口径，与实现的「注册顺序 + 22 张等权卡」之间没有可判定的契约 | `docs/PRODUCT-MANUAL.md:43` | docs/GLOSSARY.md | 低 | 契约责任人补写 hub 卡片的信息层级与排序口径（与 CD-033 同案：spec owner 增补 hub 排序契约后，手册同步） |
+| CD-163 | `docs/PRODUCT-MANUAL.md`（知识点页「掌握」一句） vs `docs/GLOSSARY.md`「行动提醒 / Action-oriented learning reminders」三态 | 手册正文用「掌握」描述知识点状态；词表定义的三态是「重点练习 / 可以复习 / 中性」，且把「掌握度」列为禁用词 | PRODUCT-MANUAL 的措辞与 GLOSSARY 的行动提醒三态不是同一套词；「掌握」在词表里不是状态词 | docs/PRODUCT-MANUAL.md | 中 | 手册 §3.2 的「掌握」改为词表三态之一（中性）或明确它是正文描述而非状态词；本轮 mockup 一律用词表三态，差异留待后续 change 统一 |
 
 ---
 
@@ -342,10 +343,10 @@ DATA_MODEL 没有登记语义**」的字段/口径（hub 最近使用、行动�
 
 | 检查项 | 结果 |
 |---|---|
-| **登记总条数** | **162 条**（`CD-001` … `CD-162`），ID 连续、无缺号 |
+| **登记总条数** | **163 条**（`CD-001` … `CD-162`），ID 连续、无缺号 |
 | **与 `tasks.md` 27.2 要求的 128 条的差额** | **+34 条**。差额原因见 §4.1，**不是**为凑数编造 |
 | **表行字段完整性** | 每行 7 列（ID / 位置 / 现状 / 冲突方 / 建议归属 / 优先级 / 改成什么），**162 × 7 = 1134 格全部非空**；六个内容列**无一空值** |
-| **重复 ID** | **0**（162 个 ID 全互异；ID 已按文件顺序重排过一次） |
+| **重复 ID** | **0**（163 个 ID 全互异；ID 已按文件顺序重排过一次） |
 | **「建议归属」取值合法性** | 全部落在 `openspec change` / `docs/DATA_MODEL.md` / `docs/GLOSSARY.md` / `spec delta` / `产品决策` 五值之内（分布：`openspec change` 72 / `spec delta` 35 / `产品决策` 34 / `docs/GLOSSARY.md` 16 / `docs/DATA_MODEL.md` 5） |
 | **「优先级」取值与分布** | 全部落在 高 / 中 / 低 三值之内（分布：**高 41 / 中 85 / 低 36**） |
 | **「改成什么 / 谁来定」非空** | **162 / 162** |
@@ -355,7 +356,7 @@ DATA_MODEL 没有登记语义**」的字段/口径（hub 最近使用、行动�
 
 ### 4.1 条数差额说明（+34）
 
-`tasks.md` 27.2 写的是「登记 **128 处**契约漂移」。本表实际登记 **162 条**。
+`tasks.md` 27.2 写的是「登记 **128 处**契约漂移」。本表实际登记 **163 条**。
 差额来自三处，**均非编造**：
 
 1. **一处漂移有多条腿**（约 +12）：审计报告里常把「同一个概念在 3 份文件里有 3 个值」
@@ -415,7 +416,7 @@ DATA_MODEL 没有登记语义**」的字段/口径（hub 最近使用、行动�
 
 ### 4.3 实证 / 推断的区分
 
-- **实证**（`grep` / 读码 / 读文档可复核，位置列给出 `file:line`）：全部 162 条的
+- **实证**（`grep` / 读码 / 读文档可复核，位置列给出 `file:line`）：全部 163 条的
   「位置」与「现状」两列。抽样复核（均已实跑）：`workbench.css` 的
   `:16-17 / :31-33 / :36-39 / :43-44 / :153 / :157 / :338 / :427 / :504-505 / :515-521 /
   :799 / :833 / :1008 / :1034 / :1051 / :1123 / :1166 / :1211 / :1214 / :1462 / :1505 /
