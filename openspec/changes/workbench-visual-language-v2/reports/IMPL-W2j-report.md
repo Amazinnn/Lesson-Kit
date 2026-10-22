@@ -464,7 +464,7 @@ EXIT=0
 | `LESSONKIT_WB_HOME` | `tmp/w2j/scratch/registry`（隔离注册表） |
 | 池副本 | `tmp/w2j/scratch/ws-walk/pool/dmath.db`（**按字节复制**） |
 | 真实池 | `pool/dmath.db` sha256 `44fd434e5fb695c339597ca8a7ea2cfa45d8aaf5676a7b7db73f49dd97bc6daf` —— 播种前后**一致**（脚本自校验 `realPoolUnchanged: true`） |
-| **服务字节数 == 磁盘字节数** | `workbench.css` served **190,979** = disk **190,979** ✅；`agent-ui.css` served **12,767** = disk **12,767** ✅ |
+| **服务字节数 == 磁盘字节数** | **终版复核**（全部 commit 落盘后重新起服务）：`workbench.css` served **196,861** = disk **196,861** ✅；`agent-ui.css` served **13,110** = disk **13,110** ✅（波中首次测得 190,979 / 12,767，亦相等 —— 两个数都指向同一件事：**服务跑的是仓库里这份代码**，不是 pip 安装快照） |
 | 代理 | 全部请求带 `env -u http_proxy -u https_proxy -u all_proxy` |
 | 采集一致性 | 视口 1440×900 / DPR 1 / `color_scheme=light`（主题由产品自己的 `localStorage['wb_settings_walk']` 驱动）/ `--force-color-profile=srgb --disable-lcd-text` / `prefers-reduced-motion: reduce`（除负荷柱录帧那一轮用 `no-preference`） |
 
