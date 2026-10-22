@@ -24,6 +24,13 @@ _STATE_NAMES = {
     "mastered": "掌握",
 }
 
+# The paper list's empty state points at the Agent: papers are authored in
+# the right-hand column, so the button opens that conversation — the "新建"
+# control when no conversation is open yet, the composer when one is.
+_AI_COMPOSE_JS = ("var i=document.getElementById('ai-input'),"
+                  "n=document.getElementById('ai-new-session');"
+                  "if(i&&i.offsetParent){i.focus();}else if(n){n.click();}")
+
 _ASSET_DIR = Path(__file__).resolve().parent / "static" / "assets"
 _asset_cache = {}
 
@@ -67,19 +74,28 @@ def _state_dot(state, labelled=True):
             + "'></span>")
 
 
-def _empty_state(asset_path, text, width, height, action=None):
+def _empty_state(asset_path, text, width, height, action=None, as_button=False):
     """The empty state: a still-life illustration, one sentence, one action.
 
     The button is full width and its label is the action itself. An empty
     state with no action to offer leaves the button out (design-notes/
     copy-table.md §0.3 rule 3).
+
+    `as_button=True` renders the action as a real `<button>` (the
+    acceptance criterion asks for a button, not a link): the action's
+    second item is then the JavaScript the button runs instead of a URL.
     """
     action_html = ""
     if action:
-        label, href = action
-        action_html = ("<a class='primary button-link lk-empty__action' href='"
-                       + html.escape(href, quote=True) + "'>" + html.escape(label)
-                       + "</a>")
+        label, target = action
+        if as_button:
+            action_html = ("<button type='button' class='primary lk-empty__action'"
+                           " onclick=\"" + target + "\">" + html.escape(label)
+                           + "</button>")
+        else:
+            action_html = ("<a class='primary button-link lk-empty__action' href='"
+                           + html.escape(target, quote=True) + "'>" + html.escape(label)
+                           + "</a>")
     return (
         "<div class='empty-state lk-empty'>"
         "<span class='lk-empty__art' aria-hidden='true'>"
@@ -779,11 +795,18 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "<p class='inline-error practice-set-status hidden' aria-live='polite'></p>"
             + "</article>"
         )
-    empty = (
-        "<section class='card practice-set-empty'><h2>还没有试卷</h2>"
-        "<p class='muted'>请在右侧对话中让 Agent 组卷并保存，之后可在这里开始练习。</p>"
-        "<a class='primary button-link' href='/w/" + html.escape(workspace["name"])
-        + "/practice'>返回练习</a></section>"
+    # The paper list's empty state (component-spec §4.21): a still-life
+    # illustration, one sentence, and a full-width primary button whose
+    # label is the action itself.
+    # · illustration = `empty-vase` (asset-spec §3.11, table row 1);
+    # · the one sentence = `还没有保存的试卷` (copy-table §3, row 8 — the
+    #   old two-line text was an annotation);
+    # · the button = `去组卷` (decisions.md 5.2): papers are authored by the
+    #   Agent, so the button opens that conversation instead of looping
+    #   back to the practice page.
+    empty = _empty_state(
+        "empty/empty-vase.svg", "还没有保存的试卷", 180, 150,
+        ("去组卷", _AI_COMPOSE_JS), as_button=True,
     )
     middle = (
         _page_header(
