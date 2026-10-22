@@ -2544,6 +2544,27 @@ img { max-width: 100%; }
   background: var(--role-blue);
   border-radius: 5px 5px 1px 1px;
   opacity: .78;
+  /* ---- 逐柱错峰 24ms 的生长（CD-174 · A-94 · motion-spec §2.1 第 19 条）----
+     改造前：服务端**确实**逐柱写了行内 `animation-delay:{index * 24}ms`
+     （`workbench/server/records.py:470`），但 CSS 里 `.bar-fill` **没有任何
+     `animation` 属性** ⇒ 那条延迟挂在一个**不存在的动画**上
+     ⇒ 「逐柱错峰 24ms」整条**从未生效**（契约漂移 CD-174）。
+     现在补上：
+       · 生长只动 `transform`（`scaleY` 0→1），底边为锚
+         （`transform-origin: bottom center` ⇒ 柱从基线往上长，不长反）；
+       · **静态样式 = 终态**（`scaleY(1)`）⇒ 降级档
+         （`prefers-reduced-motion: reduce` 的全局闸门把 `animation-name`
+         置为 `none`）下柱**直接满格**，不会停在 0%；
+       · 时长 320ms / 缓动 `out`（motion-spec §2.1 第 19 条写死的两档）。
+     ⚠️ **高度编码不动**：行内 `style="height:Npx"` 是另一重编码（次数 ⇒ 高度），
+       与这里的生长动画是两条独立通道。 */
+  transform: scaleY(1);
+  transform-origin: bottom center;
+  animation: lk-bar-grow 320ms var(--ease-out) both;
+}
+@keyframes lk-bar-grow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
 }
 .bar-col.peak .bar-fill { background: var(--role-yellow); opacity: 1; }
 .bar-value {
