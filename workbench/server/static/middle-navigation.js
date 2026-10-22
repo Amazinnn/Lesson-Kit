@@ -112,7 +112,9 @@
      `installPageContent` 复位（骨架随 innerHTML 一起被内容替换）。 */
   function showLoadingState() {
     rememberFocus();
-    if (middle) middleScrollTop = middle.scrollTop;
+    /* 中栏滚动位置：骨架会把内容压短（滚动被拉回顶部），先记下来、装回内容
+       后还原 —— 与改造前一致（换页后中栏滚动位置不丢）。连续换页只记第一次。 */
+    if (middle && !middleScrollTop) middleScrollTop = middle.scrollTop;
     middlePage.setAttribute("aria-busy", "true");
     middlePage.innerHTML = skeletonMarkup();
   }
