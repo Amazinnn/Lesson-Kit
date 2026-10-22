@@ -45,6 +45,27 @@
 ⚠️ 权威表 §3.3：**状态色一律瞬切** ⇒ 颜色类过渡本来就该去掉。
 ⚠️ `box-shadow` 的过渡尤其要清（它是抬升变化的表达，改用 `transform: translateY()` 更符合动效红线）。
 
+## 5. 设置视图的**值列对齐**（A-87）
+
+现状（W2h 落地后）：四行里 **「当前值」那一列的起点不一致** ——
+分段控件那行的值偏左约 29px（因为 `.lk-seg` 自身 133px 宽、`.lk-switch` 44px 宽，
+而「控件尺寸归 W2g、`.preference-row` 只负责定位」是硬约束）。
+
+⇒ **不要引入固定宽度魔数**（给控件列定死宽度会与两个控件的真实宽度打架）。
+**改成 grid 并让值列左对齐**：
+```css
+.preference-row {
+  display: grid;
+  grid-template-columns: max-content 1fr auto;   /* 名称 | 值 | 控件 */
+  align-items: center;
+  gap: 16px;
+}
+.preference-value { text-align: start; }          /* 由居中改为左对齐 */
+```
+⇒ 这样**四行的值列起点一致**（名称列用 `max-content`，宽度取四行里最宽的那个），
+**控件列右缘一致**（`auto` 列 + 右对齐），而**不引入任何魔数**。
+⚠️ 改完实测：四行的 `preference-value` 的 `getBoundingClientRect().x` **完全相同**。
+
 ## 硬约束
 - **只改 `workbench.css`**。绝不碰 `pages.py` / `workbench.js` / `practice-flow.js` /
   `paper-practice.js` / `middle-navigation.js` / `records.py` / `agent-ui.css` /

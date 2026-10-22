@@ -1069,3 +1069,36 @@ after 173948/173948）· before 侧取自 `git worktree` 的 `cf9d596d`
 
 ⚠️ **一条口径提醒**：走查期间 `workbench/` 仍在被别的 agent 改 ⇒ **数字会漂**
 ⇒ 报告须以**那一轮的代码状态**为准。
+
+### 9.27 设置视图 + 全局焦点环落地；**并修掉走查工具自己的一个竞态**
+
+**W2h 的两件（`bcaa8821` / `2d5a9e67`，只动 `workbench.css`）**：
+
+| 件 | 改前 | 改后（运行时实测） |
+|---|---|---|
+| **设置视图的偏好行** | `.settings-view` / `.preference-row` / `.preference-name` / `.preference-value` **零命中** ⇒ 名称与值挤成「主题暖纸」、开关跟在后面、行间无分隔 | grid 布局：名称（左，`--ink-strong` 14px）· 当前值（中，`--ink-muted` 13px）· 控件（右）；行高 **60px**（四行一致）/ `min-height 44px`；行间用 `inset 0 1px 0` 的**内发丝线**（`--rule-hair`）、**无描边**；容器**不是新卡片**、无标题无说明句 |
+| **全局 `:focus-visible`** | `outline: 2px solid var(--role-blue); outline-offset: 1px;` | `outline: var(--focus-width) solid var(--focus-outer); outline-offset: var(--focus-offset);`（权威表 §8 规则 1） |
+
+**焦点环统一的证据**：键盘 Tab 走设置视图（Tab 序 #12–#19：关闭按钮 / 主题开关 / 分段单选 / 动效 / 声音）
++ 文本框 `#goal-title` ⇒ **每一站都是 `outline: 2px solid rgb(43,98,232)` + `offset 2px`**（同色同偏移）；
+鼠标点击 `.lk-seg__item` / `.lk-switch__track` ⇒ `matches(':focus-visible') = false`、**不冒环**。
+⚠️ 图谱区段那两条（仍是 `#d3a914` / 1px）**一行未动**（diff 里 0 处命中）。
+**未新增 token**：`--focus-width` / `--focus-offset` §3.7 已定义、权威表已登记 ⇒ 权威表一个字没改。
+
+**图谱零差异**：区段**逐字节相同**（sha256 一致）、12 个裸名 pin 块逐字节相同、
+**G-5 三口径 R-1 = 0 / R-2 = 0 / R-3 = 0（PASS）**、图谱页未聚焦截图**同 sha256**、
+整页 **AE = 0**（changed pixels 0 / 1,296,000，diff bbox = None）；
+并实测该页 `:focus-visible` 元素数 **0**、activeElement = BODY ⇒ 确为未聚焦截图。
+
+#### ⚠️ **走查工具自己的竞态（已修）**
+W2h 报出一条**不是产品问题**的失败：`shots.py` 只等 `networkidle` 就截图，
+而进场动画 `#middle-page > *` 是 **240ms 从 `opacity: 0` 起**的
+⇒ **第一张「after」S-9 截到的是空白中栏**（DOM 里元素齐全、`elementFromPoint` 命中 `.page-title-row`）
+⇒ 那个 S-9 FAIL 是**工具竞态**，不是 CSS 缺陷。
+⇒ **主会话已修**（`63021f08`）：`shots.py` 截图前**等有限动画落定**
+（新增 `_settle_animations()`，轮询到「没有非无限循环的动画在跑」或 2s 超时），
+并把落定后的状态记进产物。⇒ **验收关卡的截图从此可信**。
+⚠️ **这类「判据自身出问题」必须单独修判据，而不是改产品去迎合它** ——
+否则就是**让指标迁就实现**。
+
+**A-87 / A-88**：值列对齐改 **grid + 左对齐**（**不引入宽度魔数**）· `.settings-view` 的收口发丝线**保留**。
