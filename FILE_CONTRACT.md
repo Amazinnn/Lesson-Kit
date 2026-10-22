@@ -5,6 +5,12 @@ with private reasoning, final prose, or a claim that a step was considered.
 
 ## Workspace layout and artifact roots
 
+Lesson Kit's bundled teaching resources are installed package files under
+`workbench/resources/skills/source-bounded-learning-drill/`: `SKILL.md` and
+`TERMINOLOGY.md` travel together and are loaded by Bridge launch arguments.
+They are not course artifacts and are not copied into course roots or Pi global
+configuration. Existing manifest and database contracts below are unchanged.
+
 New workspaces put their pool at `.lessonkit/pool/<course>.db`; an unmigrated
 legacy workspace continues using its registered root `pool/<course>.db`.
 Workbench resolves the workspace from its registered path, not by assuming the

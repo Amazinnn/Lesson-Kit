@@ -1,5 +1,7 @@
 # L2 · 接口层登记（API 路由 + CLI 命令）
 
+2026-10-22：既有 27 个顶层 CLI 命令及 `ingest <workspace> bundle` 全部由统一 argparse 帮助展示。安装入口、`workbench.cli.main` 与 `workbench.cli.entry` 共用参数与执行语义，原动作读写和受众不变。Pi print/RPC 的 Bridge 启动参数自动加载 Lesson Kit 内置技能；不增加命令、路由或用户动作，不写 Pi 全局配置。
+
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者；**只读 API** = 可供查询，不是浏览器选题入口。
 
 ## API 路由（`/api/w/{ws}` 前缀，62 条）

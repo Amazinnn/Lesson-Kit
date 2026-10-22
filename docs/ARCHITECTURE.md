@@ -80,7 +80,7 @@ workbench/
 │   └── artifacts.py   # UTF-8 JSON 工件读写与会话暂存清单读取
 ├── cli/
 │   ├── __init__.py
-│   ├── entry.py       # 安装入口的 extension dispatch
+│   ├── entry.py       # 安装入口，委托 main 的统一 argparse 树
 │   ├── evidence.py    # lesson-kit evidence：参数校验与只读 Data 调用
 │   ├── papers.py      # lesson-kit papers：校验已导出的练习清单并委托 Data 保存
 │   └── main.py        # lesson-kit 入口（argparse；纯数据命令，无教学语义）
@@ -202,6 +202,8 @@ workbench/
 - 试卷进度重置审批复用会话/轮次 JSON：Bridge 在当前 worker 释放前保存待审批方案并暂停该对话队列，不保持 provider 等待用户。页面批准请求由薄 API 交给 Bridge 校验归属与版本，再委托既有 Data 试卷预览/更新逻辑；显式排队消息可保留，但中断/立即发送被拒绝而不降级为排队，继续队列不能绕过待审批决定。刷新恢复待审批状态，不自动写入；批准/取消后仍须手动继续。题目实体与历史作答不由审批存储管理，不新增 SQLite 审批表或调度服务。
 - `bridge.conversation_actions` 只解析模型回复里的动作区块并校验包装形状；会话并发、持久化、执行与失败提示仍由 `bridge.conversations` 编排。
 - Agent 会话在创建时绑定一个不可变的 harness；模型目标记录 model/entry args，只允许在该 harness 内切换。Codex 通过 app-server `model/list` 枚举，Claude Code 使用其支持模型 catalog，Pi 使用 RPC `get_available_models`；Pi 同 harness 优先 RPC `set_model` 原生切换。更换 harness 必须新建会话。
+- CLI 安装入口、`python -m workbench.cli.main` 与 `python -m workbench.cli.entry` 共用实际 argparse 树；扩展命令与 `ingest bundle` 复用已有参数定义和处理函数，命令清单从 parser 派生，不重建业务逻辑或序列化参数。
+- Lesson Kit 内置技能存放在 `workbench/resources/skills/source-bounded-learning-drill/`，随 wheel 分发正文与术语表。`conversation_providers.build_command` 在选择 provider/model/pinned args 后，统一向 Pi print/RPC 加载绝对资源路径；只替换已知旧版 Lesson Kit 管理路径与当前内置路径，保留其他技能和参数，不重写配置/会话记录。运行中的 Pi 在新建对话或正常空闲回收后加载新版。
 - Pi 在同一 normalized activity + 350ms polling 链路上把读、写、搜索、命令和
   Lesson Kit 操作呈现为独立消息；Codex/Claude 继续使用执行计划，不新增流协议。
 - `ingest.content-bundle`：一份清单原子提交知识点/正式题/微题/闪卡/图片；预检即校验引用、

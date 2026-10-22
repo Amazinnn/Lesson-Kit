@@ -70,6 +70,8 @@ lesson-kit 把你的课程材料变成一个可以天天用的学习台：知识
 
 ### 2.4 组卷：由 Agent / CLI authoring
 
+`lesson-kit --help` 列出全部已支持的命令，包括 `papers`、`evidence`、`experience`、`mirror`；`lesson-kit ingest <工作区> --help` 也列出 `bundle`。安装命令与 `python -m workbench.cli.main`、`python -m workbench.cli.entry` 使用相同参数和处理方式。已有试卷可用 `lesson-kit papers <工作区> list` 查询，具体操作用对应命令的 `--help` 查看。
+
 需要新 Paper 时，可明确要求 Agent 按知识点范围、来源、难度、薄弱、到期或错题等条件组卷；Agent 与 CLI 的现有组卷、清单导出、保存和精确题号能力保留。普通阅读、知识点列表、图谱筛选与节点聚焦不会选题或隐式建立组卷范围。
 
 命令行 `lesson-kit pull` 是确定性组卷引擎。例如：
@@ -312,6 +314,8 @@ Paper 回看中修改已有自评时，只原位覆盖关联反馈的评分和�
 ---
 
 ## 8. Agent 对话
+
+**随堂练习技能**：Lesson Kit 内置技能随软件一起安装。通过 Lesson Kit 启动 Pi 时，会自动加载材料约束型随堂练习的技能正文与术语表；不需要逐课程复制，也不用改 Pi 全局配置。已有其他技能与模型参数仍然保留。在 Lesson Kit 外直接启动 Pi 不受影响。已经运行的对话会在新建对话或正常空闲回收后加载新版本，不会为此打断正在执行的任务。
 
 **目标深度：详。完成度：✅ 已成文（2026-08-29；讲解/诊断一键任务同日经所有者决定移除，见 remove-explain-diagnose）。权威：ai-teacher-bridge spec、workbench-ui spec。**
 
