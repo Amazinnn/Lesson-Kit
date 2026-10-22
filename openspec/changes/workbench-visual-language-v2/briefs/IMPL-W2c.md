@@ -22,8 +22,15 @@
   不碰 `pages.py` / `workbench.js` / `app.py` / `records.py` / `docs/` / `openspec/`
   （**多个并行 agent 正在改它们**）。
 - **不要**改 `tasks.md` 的复选框 —— 回报里逐条列完成的 task id。
-- **知识图谱区段 `workbench.css:1497-1884` 与图谱 12 个裸名（`:1505-1518`）一行都不许碰。**
+- **知识图谱区段与图谱 12 个裸名（`--paper` / `--ink` / `--hair` / `--blue` / `--yellow` /
+  `--red` / `--shadow` / `--graphite` / `--green` / `--blueSoft` / `--yellowSoft` / `--redSoft`）
+  一行都不许碰。**按选择器定位**（`grep -n "Knowledge graph V2" workbench.css` 找边界）。
   本变更**不做暗色下的图谱**（A-8）—— 夜纸下的图谱适配归 `graph-node-visual-language` change。
+- ⚠️ **本波不要删别名定义（任务 2.3）** —— 另外三个 agent 正在把
+  `pages.py` / `workbench.js` / `practice-flow.js` / `paper-practice.js` 里的
+  `.rich-text` 挂载点迁到 `.wb-reading`；**`.rich-text` 的 CSS 规则本波保留**，
+  等所有挂载点迁完的那一波统一删（口径见 `decisions.md` **A-41**）。
+  同理，**旧的 `--lk-*` / `--dsw-*` 别名定义本波保留**（2.3 留给下一波）。
 - 无框架 / 无构建 / 无 npm / 无 CDN。
 
 ## 12.1–12.3 夜纸值集与对比度复测
@@ -70,6 +77,38 @@
 - 顶栏高度 **52px 维持现状**（`--shell-topbar-h`，A-21-3）；`layout-spec.md` 草拟的 56px 作废。
 - 章节透镜 = **自绘下拉面板**（圆角、弹出面板带阴影与分隔、每项带章节名；**不得显示每章计数/统计/选择理由**
   —— 现行 spec 明文禁止，`decisions.md` 9.4 已删计数）。
+
+## 附加任务（与上面四组同波，一起做完；都是 CSS 侧、都不碰别的文件）
+
+### 附加 1 · 6.1 的 `.wb-reading--stem`（题面变体）
+- 第 6 组的阅读层已由前一个 agent 落地，但 **`.wb-reading--stem` 变体没做**
+  （`grep -n "wb-reading--stem" workbench.css` 命中 0）⇒ 6.1 因此没勾。
+- 规格：`design.md` **D-5** 的 stem 列 —— 字号 17px / 行高 1.75 / 段距 0.7em /
+  measure 38em / h2·h3·h4 = 22·19·17px，**与正文档完全相同**。
+  ⇒ 题面变体是**同刻度的语义变体**，需要一个可独立挂载的类名。
+- ⚠️ 注意：`.rich-text` 的旧规则**与阅读层逐项冲突**（这正是 6.3 要退役它的原因），
+  而现在 `.rich-text` 与 `.wb-reading` 已被写成**同值**（前一个 agent 的过渡措施）。
+  **你加 `--stem` 时不要顺手删 `.rich-text` 的选择器**（见硬约束）。
+
+### 附加 2 · 3.1 / 3.1b 纸面层级与沉底边界
+- **3.1** 四层纸面 token 已在（第 1 组落地）；你要做的是**规则侧**：
+  沉底层（`--surface-sunken`）的圆角同为 12px 且**不带柔影**（凹层）；
+  **除代码块外，全站不得再出现 `--surface-code`**（内容块一律用沉底）。
+  验证：`grep -n -- "--surface-code" workbench.css` 的命中点**只有代码块相关规则**。
+- **3.1b** 沉底与卡面靠「**底色差 + 1px 内发丝线**」区分（**不是深色块**）：
+  发丝线用 `--rule-hair` 以 `box-shadow: inset 0 0 0 1px …` 落地
+  （**不用 `border`**，不改盒模型）。
+  验证：作答区 / 用户消息与所在卡面**一眼可分**（两主题各截一处）。
+
+### 附加 3 · `--lk-ripple-base` 必须改名
+- 第 8 组新造了钩子变量 `--lk-ripple-base`（`background: var(--lk-ripple-base, var(--surface-base))`），
+  但它落在 **`--lk-*` 家族**里 ⇒ 会**卡住任务 2.3 的验收**（「非图谱区 `--lk-` / `--dsw-` 归零」）。
+- ⇒ 改名到一个**不与旧别名冲突**的名字（建议 `--ripple-base`），**取值与语义不变**。
+  ⚠️ `workbench.js` 侧有一个 agent 正在写这个变量（转场开始时写目标主题底色）——
+  **改名会与他的写入端脱节**。因此：**先把新名定下来并写进回报**
+  （例如「CSS 用 `--ripple-base`，JS 侧请写 `--ripple-base`」），
+  **并在 CSS 里同时保留 `--lk-ripple-base` 作为一个过渡别名**（值相同），
+  这样两边的改动不会互相打断。**下一波再删旧名。**
 
 ## 验证
 - 每组末尾跑 AGENTS.md 四条验证命令。
