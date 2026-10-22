@@ -7,16 +7,16 @@
     </g>
     <g class="asset-empty__wash">
       <ellipse cx="120" cy="94" rx="26" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 94 94 L 120 94 L 120 164.6 C 112 164 105 162 100 160 C 96 145 94 120 94 94 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 120 94 L 146 94 C 146 120 144 145 140 160 C 135 162 128 164 120 164.6 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 106 94 L 92.5 52 L 98.5 48.5 L 112 94 Z" fill="color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" fill="color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 94 94 L 120 94 L 120 165.25 C 112 164.6 105 162.4 100 160 C 96 145 94 120 94 94 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 94 L 146 94 C 146 120 144 145 140 160 C 135 162.4 128 164.6 120 165.25 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
       <path d="M 94 94 L 100 160 L 140 160 L 146 94" stroke-width="3"/>
-      <path d="M 100 160 C 108 166 132 166 140 160" stroke-width="3"/>
-      <path d="M 106 94 L 92.5 52 L 98.5 48.5 L 112 94 Z" stroke-width="2"/>
-      <path d="M 88 54 L 96 48 L 95 58 Z" stroke-width="3"/>
+      <path d="M 100 160 C 108 167 132 167 140 160" stroke-width="3"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" stroke-width="2"/>
+      <path d="M 94 44 L 99 48 L 93 52 Z" stroke-width="3"/>
       <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" stroke-width="2"/>
       <path d="M 137 58 L 147 54 L 143 44 Z" stroke-width="3"/>
       <path d="M 94 94 C 94 98.4 105.6 102 120 102 C 134.4 102 146 98.4 146 94" stroke-width="2"/>
