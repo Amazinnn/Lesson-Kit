@@ -146,22 +146,26 @@ def hub_page(workspaces):
     for ws in workspaces:
         stats = ws.get("stats", {})
         if ws.get("error"):
-            detail = f"数据库读不了：{str(ws['error']).splitlines()[0]}"
+            # 少字原则：可见文案只说「工作区读取失败」（copy-table §2.1 P-01
+            # ⇒ 「数据库」是实现层词，学生不认）；原始错误串留在 title 属性
+            # 里做诊断，信息不丢。
+            detail = "工作区读取失败"
+            detail_title = (" title='" + html.escape(str(ws['error']).splitlines()[0], quote=True) + "'")
         else:
             detail = (f"{stats.get('kps')} 个知识点 · {stats.get('problems')} 道题 · "
                       f"{stats.get('due')} 项待复习")
+            detail_title = ""
         cards.append(
             f"<a class='workspace-card' href='/w/{ws['name']}/practice'>"
-            f"<span class='context-line'>学习工作区</span>"
+            f"<span class='context-line'>工作区</span>"
             f"<h2>{html.escape(ws['name'])}</h2>"
-            f"<p>{html.escape(detail)}</p></a>"
+            f"<p{detail_title}>{html.escape(detail)}</p></a>"
         )
     body = (
         "<main class='hub-page'>"
         "<header class='page-header'>"
         "<p class='context-line'>lesson-kit</p>"
         "<h1>学习工作台</h1>"
-        "<p class='page-summary'>选择一个工作区，从最需要回看的地方继续。</p>"
         "</header>"
         f"<section class='workspace-grid' aria-label='工作区列表'>{''.join(cards)}</section>"
         "</main>"
