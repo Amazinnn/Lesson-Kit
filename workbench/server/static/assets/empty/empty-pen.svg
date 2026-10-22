@@ -3,22 +3,23 @@
   <g stroke-linecap="round" stroke-linejoin="round">
     <g class="asset-empty__shadow">
       <path d="M 36 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
-      <path d="M 67 128.8 L 169 165.8 L 168.05 168.65 L 66.05 131.65 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 70.5 129.6 L 167.5 167.2 L 166.8 169.2 L 69.8 131.6 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__wash">
-      <path d="M 69 123.2 L 171 159.2 L 170 162.5 L 68 126.5 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
-      <path d="M 68 126.5 L 170 162.5 A 3.5 3.5 0 0 1 169 165.8 L 67 128.8 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
-      <path d="M 59.5 123 L 69.7 121.3 L 66.3 130.7 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 72.9 123.2 L 87.1 128.3 L 99.1 129.9 L 171.5 155.9 Q 171.9 158.9 170.9 161.5 L 71.7 126.4 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 71.7 126.4 L 170.9 161.5 Q 171.9 164.1 167.5 167.2 L 95.1 141.1 L 84.7 134.7 L 70.5 129.6 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 59.5 122 L 70.5 129.6 L 72.9 123.2 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
     </g>
     <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
-      <path d="M 69 123.2 L 171 159.2 A 3.5 3.5 0 0 1 169 165.8 L 67 128.8 Z" stroke-width="3"/>
-      <path d="M 59.5 123 L 69.7 121.3 L 66.3 130.7 Z" stroke-width="3"/>
-      <path d="M 63 124 L 69 127" stroke-width="2"/>
-      <path d="M 126.2 150 L 128.2 144.4" stroke-width="2"/>
-      <path d="M 134.3 152.9 L 136.3 147.3" stroke-width="2"/>
+      <path d="M 72.9 123.2 L 87.1 128.3 L 99.1 129.9 L 171.5 155.9 Q 172.1 161.5 167.5 167.2 L 95.1 141.1 L 84.7 134.7 L 70.5 129.6 Z" stroke-width="3"/>
+      <path d="M 59.5 122 L 70.5 129.6 L 72.9 123.2 Z" stroke-width="3"/>
+      <path d="M 60.5 122.4 L 66.5 124.6" stroke-width="2"/>
+      <path d="M 125.3 139.3 L 122 148.8" stroke-width="2"/>
+      <path d="M 134.2 142.5 L 130.9 152" stroke-width="2"/>
+      <path d="M 135 142.4 L 159.5 151.1 L 158 153.4" stroke-width="2"/>
     </g>
     <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
-      <path d="M 77 128 L 141 150.6" stroke-width="1.5"/>
+      <path d="M 94.3 131.8 L 144.3 148.9" stroke-width="1.5"/>
     </g>
   </g>
 </svg>
