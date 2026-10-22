@@ -1472,3 +1472,41 @@ C-09 两份文档仍写旧形态）⇒ 已派两个 agent：一个**只刷行号
 `graphCreateNodes()` 实为 `:2032` 而非 `:957`；`graph_page()` 实为 `:661` 而非 `:410` …），
 而 `graph-physics*.js` / `graph-renderer.js` 的锚点**仍准确** ⇒
 **刷锚点必须逐条 grep「定义处」而不是「使用处」**，且**核过没错的不要动**。
+
+### 9.40 A-102 落地：音效 arm 扩到点选路径，**3.3-1 FAIL → PASS**
+
+**改动**（`workbench.js`，+25 / −5）：arm 的条件从「只有提交按钮」
+扩到「**判定成立的那个手势**」，**同一个 `verdictArmedAt`、同一个 `CUE_ARM_WINDOW_MS`、
+不新增发声点、不另造并行机制**：
+```js
+function judgesOnSelection(node) {           /* 只认试卷流程里被点到的 radio */
+  if (!node || node.nodeType !== 1) return false;
+  if (node.tagName !== "INPUT" || node.type !== "radio") return false;
+  if (!node.hasAttribute || !node.hasAttribute("data-paper-choice")) return false;
+  return !!ancestorWithId(node, "paper-options");
+}
+if (ancestorWithId(target, "answer-submit")
+    || ancestorWithId(target, "paper-item-submit")
+    || judgesOnSelection(target)) { verdictArmedAt = Date.now(); }
+else { verdictArmedAt = 0; }
+```
+**口径要点**：只认 **radio** ⇒ 多选题仍走提交按钮（**不会响两次**）· 只认**试卷流程** ⇒
+练习流程不受影响 · 只认**输入框本身**被点到 ⇒ **回看时选项框 disabled、点不动、不响**。
+
+**逐题实测**（走查 `tmp/wt-sound`，after 侧 3282）：**3.3-1 FAIL → PASS**
+——多选（点提交）`cueCalls=1 / plays=1`、单选（点选即判定）`1/1`、判断（点选即判定）`1/1`；
+`summary = {gradedAnswers:3, answersWithoutCue:[], cueCalls:3, plays:3, browserBlocked:false, controlPlayed:true}`；
+播放结局全 `fulfilled`。
+**答错仍响 wrong 那一声**（一次，不多不少）；**回看不响**（回看确实渲染了判定、
+4 个 radio 全 `disabled`、4 次点击真的进了 arm 的闸、**0 声**）。
+`grep -rn "lkSfx.playCue(" workbench/` 仍**恰好 4 处**（`sfx.test.js` 的「恰好 4 处」断言仍过）。
+契约面未改：spec 未收窄也未改写 —— 这次是**把实现补齐到既有契约**（「判定为对的那一拍响一声」）。
+
+**它报出一条漏的**（已回派修）：**用方向键在 radio 组里移动**时浏览器只发 `change`、不发 `click`
+⇒ 键盘路径判定成立仍**无声** ⇒ 键盘可达是硬要求 ⇒ **给 `change` 也挂同一条 arm**
+（复用 `verdictArmedAt`，不新增变量），并要复核**鼠标点一次只响一声**（`click` 与 `change` 会同时到达）。
+
+**顺带确认**：走查里其余 8 条 FAIL（3.4-1/2/3/5/6/7 · 3.7-1/2）与本次改动**无关**，
+与上一轮基线**完全一致**（同样 8 条）—— 其中 3.4-6 归 A-103（会话列表滚动容器），
+其余六条（hover 120–180ms · `:active` · 骨架屏有尺寸 · 空态主按钮满宽 · 原生 select 退场 ·
+颜色类过渡）**全在 CSS 收口之二的清单里** ⇒ 那一波落地后应能一次清掉。
