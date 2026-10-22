@@ -1,0 +1,207 @@
+=== 复核一（原样输出，共 192 行）===
+$ grep -rn "Paper\|Agent activity\|Artifact\|Congratulations\|Check 入库\|Yes / No\|AI生成" workbench/server/ --exclude="*.pyc" | grep -v "^\s*#"
+workbench/server/api.py:530:        raise ApiError(409, 'stale draft: reload the current Paper')
+workbench/server/pages.py:317:    """Practise a saved Paper; authoring is delegated to Agent/CLI."""
+workbench/server/static/agent-ui.css:426:/* Artifact = durable result handoff. The chat card is the record; Adaptive Split
+workbench/server/static/agent-ui.js:16:    latestArtifact: null,
+workbench/server/static/agent-ui.js:17:    renderedArtifacts: {},
+workbench/server/static/agent-ui.js:125:  function setArtifactPreviewHandler(handler) {
+workbench/server/static/agent-ui.js:238:  function cleanArtifact(raw) {
+workbench/server/static/agent-ui.js:271:  function openArtifact(raw, explicit) {
+workbench/server/static/agent-ui.js:272:    var action = cleanArtifact(raw);
+workbench/server/static/agent-ui.js:274:    state.latestArtifact = action;
+workbench/server/static/agent-ui.js:299:  function renderArtifactCard(action) {
+workbench/server/static/agent-ui.js:301:    if (!messages || state.renderedArtifacts[action.practice_set_id]) return;
+workbench/server/static/agent-ui.js:302:    state.renderedArtifacts[action.practice_set_id] = true;
+workbench/server/static/agent-ui.js:308:    kicker.textContent = "Artifact · Paper";
+workbench/server/static/agent-ui.js:327:    preview.addEventListener("click", function () { openArtifact(action, true); });
+workbench/server/static/agent-ui.js:335:    var action = cleanArtifact(raw);
+workbench/server/static/agent-ui.js:337:    state.latestArtifact = action;
+workbench/server/static/agent-ui.js:338:    renderArtifactCard(action);
+workbench/server/static/agent-ui.js:339:    if (!(options && options.restore)) openArtifact(action, false);
+workbench/server/static/agent-ui.js:408:    state.renderedArtifacts = {};
+workbench/server/static/agent-ui.js:409:    state.latestArtifact = null;
+workbench/server/static/agent-ui.js:425:    state.latestArtifact = null;
+workbench/server/static/agent-ui.js:469:    openArtifact: openArtifact,
+workbench/server/static/agent-ui.js:472:    setArtifactPreviewHandler: setArtifactPreviewHandler,
+workbench/server/static/paper-practice.js:1:/* PaperPractice — browser controller for freely navigable saved-Paper runs. */
+workbench/server/static/paper-practice.js:3:  root.PaperPractice = factory();
+workbench/server/static/paper-practice.js:59:    var requestedPaperId = address.searchParams.get("paper") || "";
+workbench/server/static/paper-practice.js:61:    var savedPaper = null;
+workbench/server/static/paper-practice.js:188:    function isPaperRun(record) {
+workbench/server/static/paper-practice.js:196:    function isSavedPaperRun(record) {
+workbench/server/static/paper-practice.js:308:      var shouldAdoptMode = !isArchived && !record.reveal_timing && isPaperRun(record);
+workbench/server/static/paper-practice.js:366:      savedPaper = record;
+workbench/server/static/paper-practice.js:398:    function initializePaper(paperId) {
+workbench/server/static/paper-practice.js:420:        if (isPaperRun(current)) {
+workbench/server/static/paper-practice.js:439:      savedPaper = null;
+workbench/server/static/paper-practice.js:464:      if (!savedPaper || !ids.start || ids.start.disabled) return Promise.resolve();
+workbench/server/static/paper-practice.js:467:      var continuation = savedPaper.continuation;
+workbench/server/static/paper-practice.js:475:          source_label: replay.source_label || savedPaper.title || "练习试卷",
+workbench/server/static/paper-practice.js:496:        startRequest = post("/practice-sets/" + encodeURIComponent(savedPaper.practice_set_id) + "/start", body);
+workbench/server/static/paper-practice.js:642:      var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
+workbench/server/static/paper-practice.js:1285:    function submitPaper(retry) {
+workbench/server/static/paper-practice.js:1335:        submitPaper(local.pendingFinalize);
+workbench/server/static/paper-practice.js:1472:      if (ids.title) ids.title.textContent = archived.source_label || savedPaper && savedPaper.title || "练习试卷";
+workbench/server/static/paper-practice.js:1525:        if (!isSavedPaperRun(run)) return null;
+workbench/server/static/paper-practice.js:1551:    if (ids.finalSubmit) ids.finalSubmit.addEventListener("click", function () { submitPaper(); });
+workbench/server/static/paper-practice.js:1567:      if (archived && isPaperRun(archived) && !isSavedPaperRun(archived)) {
+workbench/server/static/paper-practice.js:1570:        savedPaper = {
+workbench/server/static/paper-practice.js:1579:          requestedPaperId = "";
+workbench/server/static/paper-practice.js:1592:        showSetup(savedPaper);
+workbench/server/static/paper-practice.js:1595:      var paperId = (archived && archived.source_ref) || requestedPaperId;
+workbench/server/static/paper-practice.js:1604:        requestedPaperId = paperId;
+workbench/server/static/paper-practice.js:1701:    else if (requestedPaperId) initializePaper(requestedPaperId);
+workbench/server/static/practice-flow.js:701:    function isPaperReviewItem(item) {
+workbench/server/static/practice-flow.js:707:      if (isPaperReviewItem(item)) {
+workbench/server/static/practice-flow.js:718:      return isPaperReviewItem(item)
+workbench/server/static/practice-flow.js:981:        var paperReview = isPaperReviewItem(item);
+workbench/server/static/practice-flow.js:1054:      var paperReview = reviewOnly && isPaperReviewItem(item);
+workbench/server/static/practice-flow.js:1381:    function saveCurrentSelectionAsPaper() {
+workbench/server/static/practice-flow.js:1539:      savePracticeSet.addEventListener("click", saveCurrentSelectionAsPaper);
+workbench/server/static/practice-flow.js:1760:      if (!isPaperReviewItem(item) || !item.attempt_id || offNow()) return;
+workbench/server/static/practice-flow.js:1793:      if (reviewingItem && (!isPaperReviewItem(item) || !ratingEditOpen)) return;
+workbench/server/static/practice-flow.js:1933:          if (!isPaperReviewItem(contextProblem())) return;
+workbench/server/static/practice-flow.js:2221:    if (document.getElementById("paper-practice") && typeof PaperPractice !== "undefined") {
+workbench/server/static/practice-flow.js:2222:      return PaperPractice.start(deps, function () { return startLegacy(deps); });
+workbench/server/static/workbench.css:4524:/* 题号格的状态几何（INC-05 · A-94 · spec「Accessible Paper status dots」）------
+workbench/server/static/workbench.js:536:     flow** — the quick-practice flow reads the micro-quiz verdict, the Paper
+workbench/server/static/workbench.js:3089:  function restorePaperFolds() {
+workbench/server/static/workbench.js:3118:  function downloadPaper(title, suffix, text) {
+workbench/server/static/workbench.js:3132:    restorePaperFolds();
+workbench/server/static/workbench.js:3174:          downloadPaper(title, "-problem-set.md", rendered.practice_set || "");
+workbench/server/static/workbench.js:3175:          downloadPaper(title, "-solutions.md", rendered.solutions || "");
+workbench/server/static/workbench.js:3374:  var aiLiveArtifactId = "";
+workbench/server/static/workbench.js:3395:  var aiCurrentPaperApproval = null;
+workbench/server/static/workbench.js:3396:  var aiPaperApprovalOwner = null;
+workbench/server/static/workbench.js:3397:  var aiPaperApprovalNotice = null;
+workbench/server/static/workbench.js:3398:  var aiPaperApprovalUnknownKey = "";
+workbench/server/static/workbench.js:3399:  var aiPaperApprovalInFlight = {};
+workbench/server/static/workbench.js:3400:  var aiPaperProposalCards = {};
+workbench/server/static/workbench.js:3408:  function aiClearLiveArtifact() {
+workbench/server/static/workbench.js:3412:  function aiForgetLiveArtifact() {
+workbench/server/static/workbench.js:3413:    aiLiveArtifactId = "";
+workbench/server/static/workbench.js:3414:    aiClearLiveArtifact();
+workbench/server/static/workbench.js:3417:  function aiGetLiveArtifact(conversationId) {
+workbench/server/static/workbench.js:3422:      aiForgetLiveArtifact();
+workbench/server/static/workbench.js:3425:    aiLiveArtifactId = marker.practice_set_id;
+workbench/server/static/workbench.js:3429:  function aiSaveLiveArtifact(action) {
+workbench/server/static/workbench.js:3431:    aiLiveArtifactId = action.practice_set_id;
+workbench/server/static/workbench.js:3439:  function aiHasLiveArtifact(conversationId, practiceSetId) {
+workbench/server/static/workbench.js:3440:    var marker = aiGetLiveArtifact(conversationId);
+workbench/server/static/workbench.js:3444:  if (aiConversation) aiGetLiveArtifact(aiConversation);
+workbench/server/static/workbench.js:3445:  else aiForgetLiveArtifact();
+workbench/server/static/workbench.js:3447:  function aiResetConversationRuntime(preserveLiveArtifactConversationId) {
+workbench/server/static/workbench.js:3449:    if (preserveLiveArtifactConversationId) {
+workbench/server/static/workbench.js:3450:      aiGetLiveArtifact(preserveLiveArtifactConversationId);
+workbench/server/static/workbench.js:3452:      aiForgetLiveArtifact();
+workbench/server/static/workbench.js:3479:    aiCurrentPaperApproval = null;
+workbench/server/static/workbench.js:3480:    aiPaperApprovalOwner = null;
+workbench/server/static/workbench.js:3481:    aiPaperApprovalNotice = null;
+workbench/server/static/workbench.js:3482:    aiPaperApprovalUnknownKey = "";
+workbench/server/static/workbench.js:3483:    aiPaperProposalCards = {};
+workbench/server/static/workbench.js:3491:    AgentUISurfaces.setCollapseHandler(aiClearLiveArtifact);
+workbench/server/static/workbench.js:3493:  if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.setArtifactPreviewHandler) {
+workbench/server/static/workbench.js:3494:    AgentUISurfaces.setArtifactPreviewHandler(function (action) {
+workbench/server/static/workbench.js:3495:      if (action && action.practice_set_id === aiLiveArtifactId) aiSaveLiveArtifact(action);
+workbench/server/static/workbench.js:3701:  function aiPaperApprovalDecisionKey(conversationId, approval) {
+workbench/server/static/workbench.js:3706:  function aiPaperApprovalProposalKey(conversationId, approval) {
+workbench/server/static/workbench.js:3710:  function aiPaperText(host, tag, className, value) {
+workbench/server/static/workbench.js:3718:  function aiPaperOrder(host, label, ids) {
+workbench/server/static/workbench.js:3720:    aiPaperText(host, "p", "ai-paper-approval-order-label", label);
+workbench/server/static/workbench.js:3724:      aiPaperText(list, "li", "", String(id));
+workbench/server/static/workbench.js:3729:  function aiPaperApprovalDetails(host, approval, fallbackProposedIds) {
+workbench/server/static/workbench.js:3732:    aiPaperText(host, "p", "ai-paper-approval-paper", "Paper：" + title
+workbench/server/static/workbench.js:3741:    aiPaperText(host, "p", "ai-paper-approval-change", changes.join("；"));
+workbench/server/static/workbench.js:3743:      aiPaperOrder(host, "当前顺序", approval.current_problem_ids);
+workbench/server/static/workbench.js:3747:    aiPaperOrder(host, "更新后顺序", proposedIds);
+workbench/server/static/workbench.js:3749:      aiPaperText(host, "p", "ai-paper-approval-impact",
+workbench/server/static/workbench.js:3754:      aiPaperText(host, "p", "ai-paper-approval-impact",
+workbench/server/static/workbench.js:3759:  function aiPaperActionStatus(approval) {
+workbench/server/static/workbench.js:3767:  function aiRenderPaperProposalHistory(action, turnId) {
+workbench/server/static/workbench.js:3772:    var card = aiPaperProposalCards[id];
+workbench/server/static/workbench.js:3776:      aiPaperProposalCards[id] = card;
+workbench/server/static/workbench.js:3780:    aiPaperText(card, "strong", "ai-paper-approval-history-title",
+workbench/server/static/workbench.js:3782:    aiPaperText(card, "p", "ai-paper-approval-history-status", aiPaperActionStatus(approval));
+workbench/server/static/workbench.js:3784:      aiPaperText(card, "p", "ai-paper-approval-impact",
+workbench/server/static/workbench.js:3786:      if (Array.isArray(action.problem_ids)) aiPaperOrder(card, "提议顺序", action.problem_ids);
+workbench/server/static/workbench.js:3789:    aiPaperApprovalDetails(card, Object.assign({}, approval, {
+workbench/server/static/workbench.js:3794:  function aiUpdatePaperProposalHistory(record) {
+workbench/server/static/workbench.js:3798:        aiRenderPaperProposalHistory(action, message.turn_id);
+workbench/server/static/workbench.js:3800:      aiRenderPaperProposalHistory(message.action, message.turn_id);
+workbench/server/static/workbench.js:3804:  function aiSetPaperApprovalOwner(record) {
+workbench/server/static/workbench.js:3808:      aiPaperApprovalOwner = {
+workbench/server/static/workbench.js:3822:        aiPaperApprovalOwner = {
+workbench/server/static/workbench.js:3831:    aiPaperApprovalOwner = null;
+workbench/server/static/workbench.js:3834:  function aiRenderPaperApproval(approval) {
+workbench/server/static/workbench.js:3843:    aiCurrentPaperApproval = current;
+workbench/server/static/workbench.js:3850:      aiPaperApprovalNotice = null;
+workbench/server/static/workbench.js:3851:      aiPaperApprovalUnknownKey = "";
+workbench/server/static/workbench.js:3854:    var proposalKey = aiPaperApprovalProposalKey(aiConversation, current);
+workbench/server/static/workbench.js:3855:    var decisionKey = aiPaperApprovalDecisionKey(aiConversation, current);
+workbench/server/static/workbench.js:3856:    var inFlight = !!aiPaperApprovalInFlight[proposalKey];
+workbench/server/static/workbench.js:3857:    var unknown = aiPaperApprovalUnknownKey === decisionKey;
+workbench/server/static/workbench.js:3858:    var notice = aiPaperApprovalNotice;
+workbench/server/static/workbench.js:3863:      aiPaperApprovalNotice = null;
+workbench/server/static/workbench.js:3868:    if (details) aiPaperApprovalDetails(details, current);
+workbench/server/static/workbench.js:3873:  function aiPaperApprovalDecisionOwnerMatches(context, revision) {
+workbench/server/static/workbench.js:3874:    var owner = aiPaperApprovalOwner;
+workbench/server/static/workbench.js:3884:  function aiDecidePaperApproval(decision) {
+workbench/server/static/workbench.js:3885:    var approval = aiCurrentPaperApproval;
+workbench/server/static/workbench.js:3893:    var proposalKey = aiPaperApprovalProposalKey(conversationId, approval);
+workbench/server/static/workbench.js:3894:    var decisionKey = aiPaperApprovalDecisionKey(conversationId, approval);
+workbench/server/static/workbench.js:3895:    if (aiPaperApprovalInFlight[proposalKey] || aiPaperApprovalUnknownKey === decisionKey) return;
+workbench/server/static/workbench.js:3896:    aiPaperApprovalInFlight[proposalKey] = decisionKey;
+workbench/server/static/workbench.js:3897:    aiPaperApprovalNotice = {
+workbench/server/static/workbench.js:3902:    aiRenderPaperApproval(approval);
+workbench/server/static/workbench.js:3915:      if (!responseMatches || !aiPaperApprovalDecisionOwnerMatches(context, responseRevision)) {
+workbench/server/static/workbench.js:3919:        aiPaperApprovalOwner = {
+workbench/server/static/workbench.js:3925:        aiPaperApprovalNotice = {
+workbench/server/static/workbench.js:3931:        aiRenderPaperApproval(responseApproval);
+workbench/server/static/workbench.js:3933:        aiPaperApprovalNotice = null;
+workbench/server/static/workbench.js:3938:      if (aiPaperApprovalDecisionOwnerMatches(context)) {
+workbench/server/static/workbench.js:3939:        aiPaperApprovalNotice = {
+workbench/server/static/workbench.js:3947:      if (!aiPaperApprovalDecisionOwnerMatches(context,
+workbench/server/static/workbench.js:3952:          var unresolved = aiCurrentPaperApproval || approval;
+workbench/server/static/workbench.js:3953:          var unresolvedKey = aiPaperApprovalDecisionKey(conversationId, unresolved);
+workbench/server/static/workbench.js:3954:          aiPaperApprovalUnknownKey = unresolvedKey;
+workbench/server/static/workbench.js:3955:          aiPaperApprovalNotice = {
+workbench/server/static/workbench.js:3960:          aiRenderPaperApproval(aiCurrentPaperApproval);
+workbench/server/static/workbench.js:3967:          aiPaperApprovalNotice = {
+workbench/server/static/workbench.js:3976:      if (aiPaperApprovalInFlight[proposalKey] === decisionKey) {
+workbench/server/static/workbench.js:3977:        delete aiPaperApprovalInFlight[proposalKey];
+workbench/server/static/workbench.js:3980:        aiRenderPaperApproval(aiCurrentPaperApproval);
+workbench/server/static/workbench.js:4213:      aiSetPaperApprovalOwner(record);
+workbench/server/static/workbench.js:4214:      aiUpdatePaperProposalHistory(record);
+workbench/server/static/workbench.js:4215:      aiRenderPaperApproval(record.pending_paper_approval);
+workbench/server/static/workbench.js:4486:            aiForgetLiveArtifact();
+workbench/server/static/workbench.js:4767:      aiLiveArtifactId = action.practice_set_id || "";
+workbench/server/static/workbench.js:4770:        if (AgentUISurfaces.artifact(action) && previewAllowed) aiSaveLiveArtifact(action);
+workbench/server/static/workbench.js:4771:        else aiClearLiveArtifact();
+workbench/server/static/workbench.js:4861:    if (title) title.textContent = "Check 入库已回滚";
+workbench/server/static/workbench.js:5046:    aiPaperProposalCards = {};
+workbench/server/static/workbench.js:5057:    aiSetPaperApprovalOwner(record);
+workbench/server/static/workbench.js:5101:            aiRenderPaperProposalHistory(restored, message.turn_id);
+workbench/server/static/workbench.js:5110:          var livePreview = aiHasLiveArtifact(
+workbench/server/static/workbench.js:5116:          aiRenderPaperProposalHistory(message.action, message.turn_id);
+workbench/server/static/workbench.js:5122:    aiRenderPaperApproval(record.pending_paper_approval);
+workbench/server/static/workbench.js:5417:        || (aiCurrentPaperApproval && aiCurrentPaperApproval.status === "pending")) return;
+workbench/server/static/workbench.js:5434:  var aiPaperApprovalApprove = document.getElementById("ai-paper-approval-approve");
+workbench/server/static/workbench.js:5435:  var aiPaperApprovalCancel = document.getElementById("ai-paper-approval-cancel");
+workbench/server/static/workbench.js:5436:  if (aiPaperApprovalApprove) aiPaperApprovalApprove.addEventListener("click", function () {
+workbench/server/static/workbench.js:5437:    aiDecidePaperApproval("approve");
+workbench/server/static/workbench.js:5439:  if (aiPaperApprovalCancel) aiPaperApprovalCancel.addEventListener("click", function () {
+workbench/server/static/workbench.js:5440:    aiDecidePaperApproval("cancel");
+
+=== 复核二（原样输出，共 10 行）===
+$ grep -rn "正确率\|客观正确\|熟悉程度\|自评分" workbench/server/ --exclude="*.pyc"
+workbench/server/records.py:205:            "最近正确率 —" if accuracy is None else f"最近正确率 {accuracy * 100:.0f}%",
+workbench/server/records.py:257:    整圈 = 已判定的作答数，所以墨色弧的占比就是卡片上的正确率；
+workbench/server/records.py:363:        ("客观题正确率", "—" if accuracy is None else f"{accuracy * 100:.0f}%"),
+workbench/server/records.py:404:    `.record-rating-*` 留给 `_rating_chart` 的自评分布）。
+workbench/server/records.py:599:    return "<div class='record-rating-chart' aria-label='自评分布'>" + "".join(rows) + "</div>"
+workbench/server/static/paper-practice.js:871:        showError("请输入 1–5 的自评分数。");
+workbench/server/static/workbench.css:3083:/* 自评分布 —— `.record-rating-*` 一族**只归自评**（圆点 / 星级 / 自评分布条）。 */
+workbench/server/static/workbench.css:3091:   自评分布 / 判定分布 / 练习进度三条轨道以前各带一条
+workbench/server/static/workbench.css:3110:   ⚠️ 四条轨道（完成页进度带 / 自评分布 / 判定分布 / 练习进度）**一次改齐**，
+workbench/server/static/workbench.css:3757:   ⚠️ 四条轨道（完成页进度带 / 自评分布 / 判定分布 / 练习进度）**一次改齐**，
