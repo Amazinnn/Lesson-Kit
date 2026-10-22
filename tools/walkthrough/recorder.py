@@ -16,6 +16,7 @@ response, and every hook swallows its own exceptions so a broken recorder can
 never break a request (§2.1).
 """
 
+import argparse
 import difflib
 import json
 import os
@@ -446,6 +447,32 @@ def load_events(path):
     return events
 
 
+def signature_key(signature):
+    """A hashable form of a canonical signature.
+
+    ``difflib.SequenceMatcher`` hashes its elements, so the matcher runs on
+    these keys while the reports keep the readable dicts.
+    """
+    return (
+        signature["method"],
+        signature["route"],
+        tuple(signature["keys"]),
+        tuple(sorted((key, value) for key, value in signature["shape"].items())),
+        tuple(sorted((key, str(value)) for key, value in signature["vals"].items())),
+        tuple(sorted((key, tuple(value)) for key, value in signature["subkeys"].items())),
+    )
+
+
+def ordered(events):
+    """Events in the order the service *received* them.
+
+    The JSONL is written when a request finishes, so concurrent requests land
+    in the file out of order.  ``seq`` is the arrival counter, so it — not
+    the file order — is the canonical sequence (§2.2).
+    """
+    return sorted(events, key=lambda event: event.get("seq", 0))
+
+
 def diff_sequences(before_events, after_events):
     """Diff the canonical write-request sequences of two runs (§2.6).
 
@@ -453,10 +480,13 @@ def diff_sequences(before_events, after_events):
     L1 layer) and ``read_added`` / ``read_removed`` (the L2 layer that a
     human signs off on).
     """
-    before_writes = [canonical_signature(e) for e in before_events if is_write(e)]
-    after_writes = [canonical_signature(e) for e in after_events if is_write(e)]
+    before_writes = [canonical_signature(e) for e in ordered(before_events) if is_write(e)]
+    after_writes = [canonical_signature(e) for e in ordered(after_events) if is_write(e)]
 
-    matcher = difflib.SequenceMatcher(a=before_writes, b=after_writes, autojunk=False)
+    matcher = difflib.SequenceMatcher(
+        a=[signature_key(s) for s in before_writes],
+        b=[signature_key(s) for s in after_writes],
+        autojunk=False)
     added, removed, changed = [], [], []
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
@@ -480,9 +510,12 @@ def diff_sequences(before_events, after_events):
                 else:
                     changed.append({"kind": "renamed_or_replaced", "before": left, "after": right})
 
-    before_reads = [canonical_signature(e) for e in before_events if is_api_read(e)]
-    after_reads = [canonical_signature(e) for e in after_events if is_api_read(e)]
-    read_matcher = difflib.SequenceMatcher(a=before_reads, b=after_reads, autojunk=False)
+    before_reads = [canonical_signature(e) for e in ordered(before_events) if is_api_read(e)]
+    after_reads = [canonical_signature(e) for e in ordered(after_events) if is_api_read(e)]
+    read_matcher = difflib.SequenceMatcher(
+        a=[signature_key(s) for s in before_reads],
+        b=[signature_key(s) for s in after_reads],
+        autojunk=False)
     read_added, read_removed = [], []
     for tag, i1, i2, j1, j2 in read_matcher.get_opcodes():
         if tag in ("insert", "replace"):
@@ -552,13 +585,17 @@ def _evidence_ref(path, base):
         return str(path)
 
 
-def build_report(evidence_dir, out_dir=None):
+def build_report(evidence_dir, out_dir=None, purpose="walkthrough"):
     """Build the verdict report from the evidence on disk.
 
     Every gate that has no evidence is reported as BLOCKED ("cannot be
     judged"), never as PASS.  The overall verdict therefore only becomes
     PASS / PASS_WITH_PENDING when the evidence for the blocking gates is
     actually present.
+
+    ``purpose`` marks what the report is for.  ``"selfcheck"`` means the two
+    sides are the same run (a pipeline check); the report then carries a
+    banner so nobody can mistake it for an acceptance result.
     """
     evidence_dir = Path(evidence_dir)
     out_dir = Path(out_dir) if out_dir else evidence_dir / "diff"
@@ -673,6 +710,7 @@ def build_report(evidence_dir, out_dir=None):
     report = {
         "schema_version": 1,
         "generated_at": _now(),
+        "purpose": purpose,
         "evidence_dir": str(evidence_dir),
         "gates": gates,
         "shots": shots,
@@ -838,6 +876,10 @@ def render_report_md(report, out_dir):
     """The human-readable report (§7.1)."""
     summary = report["summary"]
     lines = ["# 走查验收报告 — workbench-visual-language-v2", ""]
+    if report.get("purpose") == "selfcheck":
+        lines.append("> ⚠️ **自检报告**：两侧证据来自**同一次运行**（流程自检），"
+                     "**不是**改造前/改造后对照，**不得**当作验收结论。")
+        lines.append("")
     lines.append("| | |")
     lines.append("|---|---|")
     lines.append(f"| 结论 | **{summary['overall']}** |")
@@ -923,8 +965,11 @@ def main(argv=None):
                         help="evidence directory (holds before/ and after/)")
     parser.add_argument("--out", default=None,
                         help="output directory (default: <evidence>/diff)")
+    parser.add_argument("--purpose", default="walkthrough",
+                        choices=("walkthrough", "selfcheck"),
+                        help="'selfcheck' marks a pipeline check (both sides are the same run)")
     args = parser.parse_args(argv)
-    report = build_report(args.evidence, args.out)
+    report = build_report(args.evidence, args.out, args.purpose)
     print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
     return 0
 
