@@ -768,8 +768,12 @@
       }
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
         /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里。
-           回看已完成的答卷时不挂 —— 那不是一轮练习。 */
-        + (renderingArchived ? "" : "<p class='practice-streak' style='position: relative'>" + streakHtml() + "</p>")
+           回看已完成的答卷时不挂 —— 那不是一轮练习。
+           on_submit 模式也不挂（decisions.md A-59）：该模式没有逐题判定，
+           连对计数整轮恒为 0 —— 显示一个恒为 0 的数字是没有信息量的假事实。
+           判据用既有的 currentMode() === "on_submit"（与 itemStatus 等处同一口径）。 */
+        + (renderingArchived || currentMode() === "on_submit"
+          ? "" : "<p class='practice-streak' style='position: relative'>" + streakHtml() + "</p>")
         + "<h2>" + escapeHtml(title) + "</h2>"
         + "<div class='wb-reading wb-reading--stem problem-text'>" + richText(String(prompt)) + "</div>"
         + (problem.source_evidence
