@@ -25,6 +25,15 @@ _CALENDAR_LEVELS = (
     (4, 8, None),
 )
 
+# 作答日历格子的**高度**：fill 之外的第二重编码
+# （spec「The activity calendar is compact and decodable」—— 强度由 fill 与 height 共同编码）。
+# 高度**只由当天的次数**决定 ⇒ 不新增任何统计口径；
+# 同一档内次数越多格子越高（单调），跨档也不低于低档；零负荷日仍占位（基线位置不塌）。
+_CALENDAR_MAX_COUNT = 8      # 高度封顶对应的次数（= 最高档下界，不另设刻度）
+_CALENDAR_CELL_MIN_PX = 4    # 零负荷日的占位高度
+_CALENDAR_CELL_MAX_PX = 28   # 最高档的格子高度
+_CALENDAR_ROW_PX = 30        # 日历行高（每行等高 ⇒ 行内共享一条基线）
+
 
 def _verdict_mark(kind):
     """判定的几何符号（§3.6 冗余状态通道：勾 / 叉 / 空心环）。
@@ -521,6 +530,17 @@ def _calendar_level(attempts):
     return _CALENDAR_LEVELS[-1][0]
 
 
+def _calendar_height(attempts):
+    """当天的格子高度（px）—— fill 之外的第二重编码。
+
+    高度**只由次数决定**：次数越多越高（同一档内单调，跨档也不低于低档），
+    到最高档封顶（不另设刻度）；零负荷日留一小截占位，基线位置不塌。
+    """
+    capped = min(attempts, _CALENDAR_MAX_COUNT)
+    span = _CALENDAR_CELL_MAX_PX - _CALENDAR_CELL_MIN_PX
+    return round(_CALENDAR_CELL_MIN_PX + span * capped / _CALENDAR_MAX_COUNT)
+
+
 def _activity_calendar(activity):
     if not activity or not any(day.get("attempts") for day in activity):
         return "<p class='muted'>最近 12 周还没有作答。</p>"
@@ -538,13 +558,18 @@ def _activity_calendar(activity):
         date_text = str(day.get("date") or "")
         cells.append(
             f"<span class='record-activity-day level-{level}' "
+            # 高度是第二重编码：`align-self:end` 让格子贴着行底（共享基线），
+            # `aspect-ratio:auto` 解掉旧的正方形比例（高度由次数给）。
+            f"style='align-self:end;aspect-ratio:auto;"
+            f"height:{_calendar_height(attempts)}px' "
             f"title='{html.escape(date_text)} · {attempts} 次作答' "
             f"aria-label='{html.escape(date_text)}，{attempts} 次作答'></span>"
         )
     return (
-        "<div class='record-activity' aria-label='最近 12 周作答日历'>"
+        # 行高写死 ⇒ 每行等高、行内共享一条基线（高度编码才读得出量级）。
+        "<div class='record-activity' aria-label='最近 12 周作答日历' "
+        f"style='grid-auto-rows:{_CALENDAR_ROW_PX}px'>"
         + labels + "".join(cells) + "</div>"
-        "<p class='muted'>颜色只表示当天的作答次数。</p>"
     )
 
 
