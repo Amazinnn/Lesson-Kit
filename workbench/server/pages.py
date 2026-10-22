@@ -847,7 +847,7 @@ def records_page(workspace, workspaces, weak_items, pool, problem_id=None, view=
     middle = (
         _page_header(
             "学习 / 记录", "记录",
-            "练习轮次、试卷作答和逐题记录都在这里；统计只从已有学习记录实时计算。",
+            "",
         )
         + records_view.content(
             workspace["name"], overview, view=view, problem_id=problem_id,
@@ -861,17 +861,16 @@ def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
     middle = (
         _page_header(
             "练习 / 收束本轮", "会话末统一自评",
-            "只补充尚未评分的题目与闪卡；已写入的记录不会重复出现。",
+            "",
         )
         + "<div class='page-content'>"
         "<section class='support-section pending-section'>"
         "<div class='section-heading'><div>"
-        "<p class='section-kicker'>待补充</p><h2>尚未评分的题目</h2>"
-        "</div><p>逐题输入 1–5 分；点击保存前不会写入学习记录。</p></div>"
+        "<h2>尚未评分的题目</h2>"
+        "</div></div>"
         "<div id='pending-ratings'></div></section>"
         "<section id='session-end-actions' class='next-step'>"
-        "<div><p class='section-kicker'>下一步</p><h2>继续打磨弱项</h2>"
-        "<p>重新开始时再次选择自评方式。</p></div>"
+        "<div><h2>继续打磨弱项</h2></div>"
         "<div class='next-step-actions'>"
         "<button id='practice-similar' class='primary'>再练同类</button>"
         "</div></section></div>"
