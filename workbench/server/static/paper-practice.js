@@ -610,9 +610,9 @@
         button.type = "button";
         button.className = "paper-dot state-" + status + (position === index ? " is-current" : "");
         button.dataset.paperPosition = String(index);
-        button.textContent = String(index + 1);
+        button.textContent = String(itemPosition(item, index));
         button.disabled = navigationBusy || modeAdopting;
-        button.setAttribute("aria-label", "第" + (index + 1) + "题，" + statusLabel(status)
+        button.setAttribute("aria-label", "第" + itemPosition(item, index) + "题，" + statusLabel(status)
           + (position === index ? "，当前题" : ""));
         if (position === index) button.setAttribute("aria-current", "step");
         button.addEventListener("click", function () { moveTo(index); });
@@ -758,9 +758,14 @@
       var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
       /* 16.1 题号槽位：服务端只给槽位，值必须由客户端写 —— 题号随题序变，
          服务端不知道当前第几题。编号与题号点（#paper-dots）、完成页逐题链接
-         同一口径（题序，从 1 起）；槽位自带 aria-hidden='true'，只写值，
+         同一口径：**itemPosition(item, index)** —— 单一真源，与提交载荷里的
+         position / practice_position 同源（否则服务端一旦重排，页面上会出现
+         两套编号）。槽位自带 aria-hidden='true'，只写值，
          不改成可读文本，也不加内联字号/颜色（样式归 workbench.css）。 */
-      if (ids.stemIndex) ids.stemIndex.textContent = String(position + 1);
+      if (ids.stemIndex) {
+        var stemItem = run && run.items ? run.items[position] : null;
+        ids.stemIndex.textContent = String(itemPosition(stemItem, position));
+      }
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
         /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里。
            回看已完成的答卷时不挂 —— 那不是一轮练习。 */
@@ -1543,8 +1548,8 @@
           var link = document.createElement("button");
           link.type = "button";
           link.className = "outline sm";
-          link.textContent = "第" + (index + 1) + "题：" + statusLabel(itemStatus(item, index));
-          link.setAttribute("aria-label", "查看第" + (index + 1) + "题，" + statusLabel(itemStatus(item, index)));
+          link.textContent = "第" + itemPosition(item, index) + "题：" + statusLabel(itemStatus(item, index));
+          link.setAttribute("aria-label", "查看第" + itemPosition(item, index) + "题，" + statusLabel(itemStatus(item, index)));
           link.addEventListener("click", function () { openReview(index); });
           ids.links.appendChild(link);
         });

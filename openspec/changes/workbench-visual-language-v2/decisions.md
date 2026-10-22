@@ -1959,6 +1959,21 @@ CSS 侧的排除（`#layout:not([data-page="graph"])`）只排除了**转场动�
    **顶栏高仍 52px**、**面板内无每章计数**。
 3. 登记为**后续增量**（不在本轮范围，也不进漂移册 —— 它不是契约冲突，是**功能未做**）。
 
+### A-61 题号口径统一走 `itemPosition(item, index)`（单一真源）
+
+**背景**：`paper-practice.js` 里曾有**两套编号**：
+- `itemPosition(item, index)` —— 取服务端 `item.position`（缺省回退数组序位），
+  **提交载荷里的 `position` / `practice_position` 用的就是它**；
+- `index + 1` —— 题号点的文本与 aria-label、以及题号槽位用的它。
+
+**今天两者相等**（服务端原样回传客户端提交的 position）⇒ 当前**零可见差异**；
+但**服务端一旦重排**（或 position 口径调整），页面上就会出现**两套编号**
+（题号槽说"3"、题号点说"4"、载荷说 5）。
+
+**裁决**：**所有面向人的题号一律走 `itemPosition(item, index)`** ——
+题号槽位 · 题号点文本 · 题号点 aria-label · 完成页逐题链接，四处统一。
+（`itemPosition` 的兜底逻辑不变：**服务端没给 `position` 时才用数组序位**。）
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，
