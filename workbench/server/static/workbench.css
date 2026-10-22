@@ -213,6 +213,13 @@
   --dsw-shadow-lv3: var(--elev-3);          /* 别名期，勿新增引用 */
   --dsw-state-warn: var(--role-yellow-deep);/* 别名期，勿新增引用 */
   --dsw-state-error: var(--role-red);       /* 别名期，勿新增引用 */
+  /* ---- 补齐：4 个「引用了但从未定义」的变量（任务 2.2）----
+     ⚠️ --dsw-border-subtle 原本**没有 fallback** ⇒ 那条声明整条失效 ⇒ 表格线
+     回落成正文色；补齐后表格线变成「暖灰规则线」，属**可见变化**（已单独截图）。 */
+  --dsw-bg-layer-3: var(--surface-sunken);   /* 别名期，勿新增引用：练习进度条的凹槽 */
+  --dsw-border-subtle: var(--rule-hair);     /* 别名期，勿新增引用：正文里的表格线 */
+  --dsw-text-muted: var(--ink-muted);         /* 别名期，勿新增引用：计划截止时间 */
+  --dsw-border: var(--rule-hair);             /* 别名期，勿新增引用：判定块 / 选项的边界 */
   --dsw-radius-sm: var(--r-xs);             /* 别名期，勿新增引用 */
   --dsw-radius-md: var(--r-md);             /* 别名期，勿新增引用 */
   --dsw-radius-lg: var(--r-lg);             /* 别名期，勿新增引用 */
