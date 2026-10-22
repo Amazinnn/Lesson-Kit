@@ -763,14 +763,14 @@ _Avoid_：排行榜、自动学习决策、持久投影状态
 出处：workbench-ui spec「Metric projection morphology」
 
 ### 图谱暖色板 / Graph warm palette
-知识图谱自有的暖色板，**与全站「柔和蒙德里安 v2」的蓝 / 黄 / 红三角色配额是两套东西**：量值色相取橙（题目数量与重要性两个投影共用同一条橙色明度阶，值越大对纸面越强）；学习状态四色为未学 = 中性灰、复习 = 琥珀、掌握 = 橙、需突破 = 砖红；关系结构投影下节点色取墨阶三档（外环 / 圆内数字 / 内核填充），颜色不承载语义。**图谱不受三角色配额约束**，因为它是数据可视化区而不是操作界面；反过来，图谱的暖色也不占用全站的三个角色色。夜里（夜纸）同一批色相换成提亮、降饱和的夜纸值集，色相不变。
+知识图谱自有的暖色板，**与全站「柔和蒙德里安 v2」的蓝 / 黄 / 红三角色配额是两套东西**：量值色相取橙（题目数量与重要性两个投影共用同一条橙色明度阶，值越大对纸面越强）；学习状态四色为未学 = 中性灰、复习 = 琥珀、掌握 = 橙、需突破 = 砖红；关系结构投影下节点色取墨阶三档（单层平涂的一个填充色分三档），颜色不承载语义。**图谱不受三角色配额约束**，因为它是数据可视化区而不是操作界面；反过来，图谱的暖色也不占用全站的三个角色色。夜里（夜纸）同一批色相换成提亮、降饱和的夜纸值集，色相不变。
 _Avoid_：全站三角色色、图谱原有的蓝 / 黄 / 红旧色谱、把状态色当角色色、把它和「柔和蒙德里安 v2」当成同一套配额
 出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Projection colour keys」「Night paper graph adaptation」）；openspec/changes/workbench-visual-language-v2/decisions.md G-7 / G-16
 
-### 同心圆节点 / Concentric node
-知识图谱节点的形态：一个淡色内核圆片套在一个实色外环里（同一色相两档），读作一枚带边的圆片。圆心只放一个数字——该节点关联的**正式题数**，四个投影下都是同一个数。节点上不画进度弧、仪表、状态文字、状态点、阴影或光晕；外环粗细与半径一起承载当前投影的量值，选中 / 悬停时外环再加粗变实、节点轻微放大。学习状态由颜色与节点几何共同表达，状态名由学习看板、悬停提示与无障碍名承载。
-_Avoid_：五层叠加的节点、状态环、度量弧、进度仪表、节点上的状态文字、卫星点、节点阴影
-出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Node appearance language」「Selection and focus」）；openspec/changes/workbench-visual-language-v2/decisions.md G-1 / G-6 / G-9 / G-13 / G-15
+### 单层实心圆节点 / Solid node
+知识图谱节点的形态：一枚**单层实心圆点**——单层平涂的实心圆，只有一层填充色，没有描边、没有阴影、没有光晕、没有渐变、没有内高光，也**不是内外两层嵌套**。圆心**按投影决定有没有数字**：题目数量投影下是该节点关联的**正式题数**，重要性投影下是**取整后的重要度百分比**；关系结构与学习状态两个投影下**圆心不写数字**（结构由连线表达，状态由颜色表达）。任何投影下节点上都不画状态文字、进度弧、仪表、徽标或卫星点。**量值只由半径承载**（没有「外环粗细」这一说）：半径在当前投影的量程内单调映射，值越大点越大。标签画在**点的下方**（点下缘到字顶 5 屏幕 px），字号 **12 屏幕 px 恒定**，缩放到 0.5 倍以下按对数淡出。选中或悬停 = **换色 ＋ 点外缘 1 屏幕 px 细环 ＋ 轻微放大 ＋ 标签提亮**；常态节点没有环，也不靠阴影或光晕表示「抬起」。学习状态由颜色与节点几何共同表达，状态名由学习看板、悬停提示与无障碍名承载。
+_Avoid_：同心圆节点、外环、内核、带边的圆片、五层叠加的节点、状态环、度量弧、进度仪表、节点上的状态文字、卫星点、节点阴影
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Node appearance language」「Selection and focus」；acceptance.md / IMPLEMENTATION-LOG 写作「单层实心圆点」，同一形态）；openspec/changes/workbench-visual-language-v2/decisions.md G-1 / G-6 / G-9 / G-13 / G-15 / A-28 / A-109
 
 ### 图谱色键 / Graph colour key
 一个图谱投影与「什么颜色对应什么类型」之间的对应关系。关系结构投影取墨阶三档（颜色不承载语义，关系类型由连线样式表达）；题目数量与重要性投影共用一条橙色明度阶（值越大颜色越重）；学习状态投影取图谱暖色板里的状态四色。图例分两块：上半是关系线型，下半是当前投影的节点颜色，并随投影切换。
@@ -778,7 +778,7 @@ _Avoid_：全局配色方案、状态色即角色色、以为节点颜色永远�
 出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Projection colour keys」「Graph colour legend follows the projection」）；openspec/changes/workbench-visual-language-v2/decisions.md G-8 / G-11 / G-12 / G-14
 
 ### 屏幕空间尺寸 / Screen-space sizing
-知识图谱节点绘制尺寸的单位约定：节点的直径、标签字号与小点直径按**屏幕像素**定义，不随画布缩放一起缩小——缩放只改变节点之间的间距。节点半径在当前投影的量程内连续映射（值越大节点越大），因此整图缩放到「适应画布」后，节点的圆心数字与名称仍然可以直接读，不必再放大。
+知识图谱节点绘制尺寸的单位约定：节点的绘制半径、标签字号与点标签的间距按**屏幕像素**定义，不随画布缩放一起缩小——缩放只改变节点之间的间距。节点半径在当前投影的量程内连续映射（值越大节点越大），因此整图缩放到「适应画布」后，节点的圆心数字（只在题目数量与重要性两个投影下存在）与名称仍然可以直接读，不必再放大。
 _Avoid_：世界像素尺寸、随缩放一起变小的字号、按缩放阈值隐藏标签、把这套尺寸约定套到图谱以外的页面
 出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Screen-space sizing」）；openspec/changes/workbench-visual-language-v2/decisions.md G-24
 
