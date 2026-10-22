@@ -1,7 +1,316 @@
-/* workbench — DeepSeek Harness design system (light), values measured from
-   the running DSH instance (http://127.0.0.1:3080/) built assets. */
+/* workbench — 视觉语言 v2（暖奶油 · 现代圆润）：token 地基。
+ *
+ * · 结构 token（权威表 §2，两主题同值）+ 值 token（权威表 §3，浅色一套 / 夜纸一套）：
+ *   取值的**唯一权威**是 openspec/changes/workbench-visual-language-v2/design-notes/
+ *   night-paper-tokens.md —— 本文件的每个值逐字转写自它，未自造、未换算。
+ * · 旧 token（--lk-* / --dsw-*）走**别名期**：定义改成指向新 token，
+ *   **引用点一个都没动** ⇒ 回滚 = 把别名定义改回原值（一条提交）。
+ * · 图谱兼容区：图谱有自己的 12 个裸名 token（图谱专用 :root），新层与它们**零同名**；
+ *   图谱页的外壳取值由下方「图谱页冻结块」钉回改造前的值
+ *   （见 design.md D-1 与 design-notes/graph-isolation.md B-1…B-6）。
+ */
 
 :root {
+  /* ---- §2.1 圆角（5）---- */
+  --r-xs: 6px;         /* 内嵌小件（微型标签底、微型徽标） */
+  --r-md: 12px;        /* 默认：按钮 / 输入框 / 标签 / 卡片 / 面板 */
+  --r-lg: 16px;        /* 浮层 / 抽屉 / 模态 */
+  --r-round: 50%;      /* 真正的圆形（只能用在正方形元素上） */
+  --r-pill: 999px;     /* 胶囊：状态圆点 / 开关轨道 / 进度条 / 药丸标签 */
+
+  /* ---- §2.2 间距（8）---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;        /* 页面级大留白（本表间距档的上限） */
+
+  /* ---- §2.3 字号（14 档；行高写在注释里，两主题同值）---- */
+  --fs-hero: 36px;     /* 英雄数字（行高 44px） */
+  --fs-display: 28px;  /* 次级展示层（行高 36px） */
+  --fs-stat: 24px;     /* 统计数字（行高 30px） */
+  --fs-question: 24px; /* 题号大数字（行高 30px） */
+  --fs-title: 18px;    /* 区块标题（行高 26px） */
+  --fs-sub: 16px;      /* 小标题 / 卡片标题（行高 24px） */
+  --fs-reading: 17px;  /* 阅读面正文（行高 30px / 1.75，衬线） */
+  --fs-body: 14px;     /* 界面正文（行高 22px） */
+  --fs-meta: 13px;     /* 元信息 / 计数（行高 20px） */
+  --fs-label: 12px;    /* 标签 / kicker（行高 18px） */
+  --fs-micro: 11px;    /* 极小注记（行高 16px；不得承载学习语义） */
+  --fs-h2: 22px;       /* 阅读层二级标题（行高 1.35） */
+  --fs-h3: 19px;       /* 阅读层三级标题（行高 1.35） */
+  --fs-h4: 17px;       /* 阅读层四级标题（行高 1.35；≠ --fs-reading，层级不可倒挂） */
+  --measure: 38em;     /* 阅读面**行长**（≠ --shell-measure 的「轨宽」） */
+
+  /* ---- §2.4 字族（3）/ 字重（4）---- */
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
+    Helvetica, Arial, sans-serif;
+  --font-read: "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC",
+    "SimSun", serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
+    "Liberation Mono", Menlo, Courier, "PingFang SC", "Microsoft YaHei",
+    monospace;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* ---- §2.5 线宽（2）---- */
+  --lw-hair: 1px;      /* 分隔线 */
+  --lw-structure: 2px; /* 单侧结构线（PRODUCT-MANUAL.md:129-130 硬性要求保留） */
+
+  /* ---- §2.6 动效：时长（5）---- */
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-slow: 240ms;
+  --dur-scene: 400ms;
+  --dur-ceremony: 700ms;
+
+  /* ---- §2.6 动效：缓动（8，每条钉死曲线系数）---- */
+  --ease-out: cubic-bezier(.22, .61, .36, 1);
+  --ease-standard: cubic-bezier(.4, 0, .2, 1);
+  --ease-in: cubic-bezier(.55, .06, .68, .19);
+  --ease-rebound: cubic-bezier(.34, 1.3, .64, 1);
+  --ease-ripple: cubic-bezier(.16, .84, .44, 1);
+  --ease-snap-hold: cubic-bezier(.33, 0, .67, 1);
+  --ease-snap-pull: cubic-bezier(.37, 0, .67, 1);
+  --ease-snap: cubic-bezier(.17, 0, .67, 1);
+
+  /* ---- §2.7 z-index（7）：modal > toast > dropdown > raised ---- */
+  --z-base: 0;       /* 涟漪底色层 */
+  --z-raised: 10;    /* 抬起的次按钮 / hover 浮起 */
+  --z-dropdown: 100; /* 下拉面板 / 浮出菜单 */
+  --z-toast: 200;    /* 吐司（在模态之下） */
+  --z-overlay: 250;  /* 遮罩 / 蒙幕 */
+  --z-modal: 300;    /* 对话框 / 模态 */
+  --z-lamp: 400;     /* 台灯层 */
+
+  /* ---- §2.8 布局几何（9）：两主题同值 ---- */
+  --shell-measure: 880px;       /* 阅读轨宽（≠ --measure 的「行长」） */
+  --shell-measure-wide: 1120px; /* 数据轨宽 */
+  --shell-col-left: 280px;
+  --shell-col-right: 420px;
+  --shell-col-middle-min: 420px;
+  --shell-col-left-max: 480px;
+  --shell-col-right-max: 560px;
+  --shell-topbar-h: 52px;
+  --shell-track: var(--shell-measure);
+
+  /* ---- §3.1 纸面层级（6）---- */
+  --surface-base: #fdf8ef;   /* 页面底 */
+  --surface-card: #fffdf7;   /* 卡面 */
+  --surface-raised: #ffffff; /* 浮起面（浮层 / 抽屉 / 弹层） */
+  --surface-sunken: #f2ece1; /* 沉底面（内容块专用；边界靠底色差 + 内发丝线） */
+  --surface-code: #221f1a;   /* 代码块反白面（**仅**代码块 / 等宽代码区可用） */
+  --surface-sheet: #fffdf7;  /* 图谱自己的纸面 token（亮色与图谱原本的纸同值） */
+
+  /* ---- §3.2 墨与文字（8）---- */
+  --ink-strong: #221f1a;    /* 标题 / 强调文字 */
+  --ink-body: #3b3630;      /* 正文 */
+  --ink-muted: #6b6459;     /* 次要文字（≥4.5:1） */
+  --ink-faint: #8d8578;     /* 三级文字（≥3:1）；只用于非阅读性的弱化信息 */
+  --ink-disabled: #8a8275;  /* 失活控件文字（≥3:1） */
+  --ink-on-role: #fffdf7;   /* 蓝 / 红角色面上的文字 */
+  --ink-on-warm: #221f1a;   /* 黄色暖面上的文字 */
+  --ink-inverse: #fffdf7;   /* 代码块反白面上的文字 */
+
+  /* ---- §3.3 规则线（3）---- */
+  --rule-hair: #e6dcc4;      /* 分隔线（装饰性，无对比度要求） */
+  --rule-control: #847552;   /* 控件边界（≥3:1）——「不用描边」的例外 1 */
+  --rule-structure: #221f1a; /* 单侧结构线 2px——「不用描边」的例外 3 */
+
+  /* ---- §3.4 角色色（11）：蓝 / 黄 / 红三角色，不加第四色相 ---- */
+  --role-blue: #2b62e8;        /* 学习蓝：主按钮 / 链接 / 当前选中 */
+  --role-blue-press: #1f4fc4;  /* 蓝的按下档 */
+  --role-blue-wash: #f2f0ef;   /* 蓝洗底：承载文字 */
+  --role-blue-soft: #e0e3ee;   /* 蓝软底：纯装饰（不得承载文字） */
+  --role-yellow: #f5c518;      /* 阳光黄：面积档（只承载面积 / 形状） */
+  --role-yellow-deep: #8a6a00; /* 阳光黄：标记档（线 / 状态点，≥3:1） */
+  --role-yellow-soft: #fcf0cd; /* 黄软底（装饰） */
+  --role-red: #d1392b;         /* 注意红：点 / 面档 */
+  --role-red-ink: #b8331f;     /* 注意红：文字档 */
+  --role-red-wash: #f9e9df;    /* 红洗底：承载文字 */
+  --role-red-soft: #f6d9d0;    /* 红软底：装饰 */
+
+  /* ---- §3.5 交互面纱（3）---- */
+  --veil-hover: rgb(61 52 37 / 6%);
+  --veil-active: rgb(61 52 37 / 11%);
+  --veil-modal: rgb(33 31 26 / 42%);
+
+  /* ---- §3.6 抬升 / 阴影（3）：暖调柔影，非纯黑 ---- */
+  --elev-1: 0 1px 2px rgb(61 52 37 / 6%), 0 4px 12px rgb(61 52 37 / 4%);
+  --elev-2: 0 2px 6px rgb(61 52 37 / 8%), 0 12px 28px rgb(61 52 37 / 8%);
+  --elev-3: 0 4px 12px rgb(61 52 37 / 10%), 0 20px 48px rgb(61 52 37 / 12%);
+
+  /* ---- §3.7 焦点（5）---- */
+  --focus-outer: #2b62e8;
+  --focus-inner: #fffdf7;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --focus-halo: 0 0 0 4px rgb(43 98 232 / 18%);
+
+  /* ---- §3.8 骨架屏（2）---- */
+  --skeleton-base: #ece3cf;
+  --skeleton-sheen: #fdf8ef;
+
+  /* ---- §3.9 插画与图案（6）---- */
+  --art-ink: #2a2620;              /* 插画线稿 */
+  --art-paper: #fffdf7;            /* 插画纸底 */
+  --art-wash-blue: #e1e7f5;        /* 淡彩·蓝 */
+  --art-wash-yellow: #fdf3cf;      /* 淡彩·黄 */
+  --art-wash-red: #f9e5df;         /* 淡彩·红 */
+  --art-highlight: rgb(255 255 255 / 55%); /* 克制高光 */
+
+  /* ---- §3.10 数据层热力（4）---- */
+  --heat-1: #d0dcfa;
+  --heat-2: #a6bdf5;
+  --heat-3: #7c9ef1;
+  --heat-4: #517eec;
+
+  /* ---- §3.11 UA 行为（1）---- */
+  --color-scheme: light;
+
+  /* ==================================================================
+     别名期：旧 token 指向新 token —— **引用点一个都没动**
+     每条都带「别名期，勿新增引用」标记。别名期结束（任务 2.3）时
+     连同这些定义一起删掉；回滚只需把这里改回原值（一条提交）。
+     ================================================================== */
+  --lk-paper: var(--surface-card);          /* 别名期，勿新增引用 */
+  --lk-paper-shade: var(--surface-sunken);  /* 别名期，勿新增引用 */
+  --lk-ink: var(--ink-strong);              /* 别名期，勿新增引用 */
+  --lk-blue: var(--role-blue);              /* 别名期，勿新增引用 */
+  --lk-yellow: var(--role-yellow);          /* 别名期，勿新增引用 */
+  --lk-red: var(--role-red);                /* 别名期，勿新增引用 */
+  --dsw-font-family: var(--font-ui);        /* 别名期，勿新增引用 */
+  --dsw-font-code: var(--font-mono);        /* 别名期，勿新增引用 */
+  --dsw-bg-base: var(--surface-base);       /* 别名期，勿新增引用 */
+  --dsw-bg-layer-1: var(--surface-card);    /* 别名期，勿新增引用 */
+  --dsw-bg-layer-2: var(--surface-sunken);  /* 别名期，勿新增引用 */
+  --dsw-sidebar-fill: var(--surface-sunken);/* 别名期，勿新增引用 */
+  --dsw-label-primary: var(--ink-strong);   /* 别名期，勿新增引用 */
+  --dsw-label-secondary: var(--ink-muted);  /* 别名期，勿新增引用 */
+  --dsw-label-tertiary: var(--ink-faint);   /* 别名期，勿新增引用 */
+  --dsw-label-dimmed: var(--ink-faint);     /* 别名期，勿新增引用 */
+  --dsw-label-caption: var(--ink-faint);    /* 别名期，勿新增引用 */
+  --dsw-brand-primary: var(--role-blue);    /* 别名期，勿新增引用 */
+  --dsw-brand-hover: var(--role-blue-press);/* 别名期，勿新增引用 */
+  --dsw-brand-accent: var(--role-blue);     /* 别名期，勿新增引用 */
+  --dsw-brand-accent-soft: var(--role-blue-wash); /* 别名期，勿新增引用 */
+  --dsw-bubble: var(--surface-sunken);      /* 别名期，勿新增引用（A-23：用户消息属内容块） */
+  --dsw-bubble-highlight: var(--role-blue-wash); /* 别名期，勿新增引用 */
+  --dsw-border-l1: var(--rule-hair);        /* 别名期，勿新增引用 */
+  --dsw-border-l2: var(--rule-hair);        /* 别名期，勿新增引用 */
+  --dsw-border-l3: var(--rule-hair);        /* 别名期，勿新增引用 */
+  --dsw-interactive-bg-hover: var(--veil-hover);   /* 别名期，勿新增引用 */
+  --dsw-interactive-bg-active: var(--veil-active); /* 别名期，勿新增引用 */
+  --dsw-shadow-lv1: var(--elev-1);          /* 别名期，勿新增引用 */
+  --dsw-shadow-lv2: var(--elev-2);          /* 别名期，勿新增引用 */
+  --dsw-shadow-lv3: var(--elev-3);          /* 别名期，勿新增引用 */
+  --dsw-state-warn: var(--role-yellow-deep);/* 别名期，勿新增引用 */
+  --dsw-state-error: var(--role-red);       /* 别名期，勿新增引用 */
+  --dsw-radius-sm: var(--r-xs);             /* 别名期，勿新增引用 */
+  --dsw-radius-md: var(--r-md);             /* 别名期，勿新增引用 */
+  --dsw-radius-lg: var(--r-lg);             /* 别名期，勿新增引用 */
+  /* 契约外遗留：DSH 的 success 态，**不表达「答对」**；权威表没有绿档，
+     处置随 token 收口另行决定（D-3「范围提示」），别名期暂留原值。 */
+  --dsw-state-success: #22c55e;
+}
+
+/* 把 color-scheme 接到 UA（原生控件 / 滚动条跟随主题） */
+:root { color-scheme: var(--color-scheme); }
+
+/* ============================================================================
+   夜纸（暖褐深）值集 —— 权威表 §3 的**完整第二套**（不是「几个覆盖项」）
+   主题属性挂 <html>（权威表 §1.1 / §9.1）；选择器用 html[data-theme="night"]
+   而不是 :root[data-theme="night"]：图谱专用 :root 的 12 个裸名不得被它压过
+   （graph-isolation.md §5.1 断言 3 / 4）。
+   ========================================================================= */
+html[data-theme="night"] {
+  --surface-base: #1c1a16;
+  --surface-card: #232019;
+  --surface-raised: #2b2620;
+  --surface-sunken: #272319; /* 沉底面：夜纸反向（比卡面略亮 + 浅墨字） */
+  --surface-code: #14120f;   /* 代码块反白面：两主题都是深块（取值不变） */
+  --surface-sheet: #1c1a16;  /* 图谱自己的纸面（A-17）；本变更暂不作用于图谱页 */
+
+  --ink-strong: #f4ede0;
+  --ink-body: #e7dfd0;
+  --ink-muted: #c2b8a5;
+  --ink-faint: #978d7c;
+  --ink-disabled: #7a7162;
+  --ink-on-role: #14120f;
+  --ink-on-warm: #14120f;
+  --ink-inverse: #f4ede0;
+
+  --rule-hair: #332d25;
+  --rule-control: #7d7361;
+  --rule-structure: #ece3d3;
+
+  --role-blue: #7291de;
+  --role-blue-press: #8fa9e8;
+  --role-blue-wash: #292929;
+  --role-blue-soft: #31343c;
+  --role-yellow: #e0c151;
+  --role-yellow-deep: #f0d98a;
+  --role-yellow-soft: #3d3721;
+  --role-red: #d4736b;
+  --role-red-ink: #e08878;
+  --role-red-wash: #352821;
+  --role-red-soft: #432f28;
+
+  --veil-hover: rgb(255 244 224 / 6%);
+  --veil-active: rgb(255 244 224 / 12%);
+  --veil-modal: rgb(20 18 15 / 58%);
+
+  --elev-1: 0 1px 2px rgb(0 0 0 / 30%), inset 0 1px 0 rgb(255 238 210 / 5%);
+  --elev-2: 0 10px 28px rgb(0 0 0 / 38%), 0 0 24px rgb(255 236 200 / 5%),
+    inset 0 1px 0 rgb(255 238 210 / 7%);
+  --elev-3: 0 20px 48px rgb(0 0 0 / 52%), 0 0 32px rgb(255 236 200 / 6%),
+    inset 0 1px 0 rgb(255 238 210 / 9%);
+
+  --focus-outer: #9dbcff;
+  --focus-inner: #14120f;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --focus-halo: 0 0 0 4px rgb(157 188 255 / 20%);
+
+  --skeleton-base: #26221b;
+  --skeleton-sheen: #3c3529;
+
+  --art-ink: #e6ddcd;
+  --art-paper: #232019;
+  --art-wash-blue: #303239;
+  --art-wash-yellow: #3d3721;
+  --art-wash-red: #3c2c24;
+  --art-highlight: rgb(255 240 214 / 8%);
+
+  --heat-1: #31343c;
+  --heat-2: #414b64;
+  --heat-3: #51628b;
+  --heat-4: #6178b3;
+
+  --color-scheme: dark;
+}
+
+/* ============================================================================
+   图谱页冻结块 —— 本变更对图谱的**唯一**责任：不误伤
+   ----------------------------------------------------------------------------
+   图谱有自己的 12 个裸名 token（图谱专用 :root）与专属区段，两者一行未动。
+   但图谱页跑在同一个外壳里（顶栏 / 左栏 / 右栏 / 页面底色 / 字体栈 / 圆角
+   都读全局 token）—— 这些取值一旦随新 token 层变化，图谱页截图就不再
+   逐像素一致（acceptance.md G-5 的否定式断言）。
+   ⇒ 在图谱页作用域内，把旧 token 全部**钉回改造前的取值**，
+     直到独立 change `graph-node-visual-language` 接手图谱自身的适配。
+   写法依据：design-notes/graph-isolation.md B-1（圆角）/ B-3（paper 系列）
+   / B-6（body 底色）；作用域挂在 body 上是为了连 body 自身的底色与
+   #topbar（顶栏在 #layout 之外）一起冻结。
+   ⚠️ 别名期结束（任务 2.3）时，这块要改成钉**新** token 名。
+   ========================================================================= */
+body:has(#layout[data-page="graph"]) {
   --lk-paper: #fffdf7;
   --lk-paper-shade: #f3f1ea;
   --lk-ink: #171717;
@@ -13,18 +322,18 @@
     Helvetica, Arial, sans-serif;
   --dsw-font-code: "SF Mono", "JetBrains Mono", "Fira Code", Consolas,
     "Liberation Mono", Menlo, Courier, "PingFang SC", "Microsoft YaHei";
-  --dsw-bg-base: var(--lk-paper);
+  --dsw-bg-base: #fffdf7;
   --dsw-bg-layer-1: #fffefa;
-  --dsw-bg-layer-2: var(--lk-paper-shade);
-  --dsw-sidebar-fill: var(--lk-paper-shade);
-  --dsw-label-primary: var(--lk-ink);
+  --dsw-bg-layer-2: #f3f1ea;
+  --dsw-sidebar-fill: #f3f1ea;
+  --dsw-label-primary: #171717;
   --dsw-label-secondary: #61666b;
   --dsw-label-tertiary: #81858c;
   --dsw-label-dimmed: #e1e5ee;
   --dsw-label-caption: #adb2b8;
-  --dsw-brand-primary: var(--lk-blue);
+  --dsw-brand-primary: #2457c5;
   --dsw-brand-hover: #1d469f;
-  --dsw-brand-accent: var(--lk-blue);
+  --dsw-brand-accent: #2457c5;
   --dsw-brand-accent-soft: #e7edff;
   --dsw-bubble: #edf2ff;
   --dsw-bubble-highlight: #d9e3ff;
@@ -39,7 +348,7 @@
     0 12px 32px rgb(0 0 0 / 8%);
   --dsw-state-success: #22c55e;
   --dsw-state-warn: #b88700;
-  --dsw-state-error: var(--lk-red);
+  --dsw-state-error: #d6453d;
   --dsw-radius-sm: 6px;
   --dsw-radius-md: 6px;
   --dsw-radius-lg: 22px;
