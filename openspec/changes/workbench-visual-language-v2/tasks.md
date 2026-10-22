@@ -86,11 +86,11 @@
 
 ## 7. Markdown 双渲染器统一与 parity 测试 （design.md D-6）
 
-- [ ] 7.1 统一到**服务端语义**：正文 `#` → `<h2>`、`##` → `<h3>`、`###` → `<h4>`（服务端 `pages.py:978` 的 `level = len(heading.group(1)) + 1` 保持不变）；客户端 `workbench.js:443` 的 `<h" + heading[1].length + ">` 改为从 `<h2>` 起步。验证：同一份 Markdown 两侧标题层级一致；客户端不再与页面标题争 h1（兑现 `docs/ARCHITECTURE.md:240`「普通 Paper 题目与知识正文共享主阅读层级」）。
-- [ ] 7.2 补齐两侧其余差异：服务端代码围栏补 `class='language-xx'`（`pages.py:955` 现在丢掉）；引用块统一用客户端的正则 `^\s*>\s?`（`pages.py:993` 现在用 `line.startswith(">")`，行首空格会漏判）。验证：语料里的「行首带空格的引用」与「带语言标记的代码围栏」两侧输出一致。
-- [ ] 7.3 **新增测试** `tests/test_markdown_render_parity.py`：用一份覆盖 3 级标题 / 有无语言标记的代码围栏 / 引用 / 有序无序列表 / GFM 表格 / 分隔线 / 行内数学的 Markdown 语料，分别喂 `pages._render_markdown()`（服务端）与 `workbench.js` 的渲染函数（客户端，**经 Node 调用同一份 JS 源**），**断言两侧 HTML 逐字符相等**；语料与断言放 `tests/` 下，**不进产品目录**。验证：`python -m pytest tests/test_markdown_render_parity.py -q` 通过；测试在改造前先红（记录现状差异），改完转绿；不得用「人工同步」代替断言。
-- [ ] 7.4 无 Node 的退化路径：若 CI 无 Node，改为 Node 单测 + pytest 黄金样本双跑，并把「人工同步」写进 `design.md` 的风险表；parity 不得退化成一次性人工核对。验证：无 Node 环境下测试仍可运行并给出明确失败原因。
-- [ ] 7.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；截图走查范围＝题面 / 知识点正文 / 解析 / 记录摘录四处同源 Markdown 的排版对照；确认「客户端 `#` → h2」是本变更**唯一让既有可见文字变小**的地方，并在验收截图里单列。
+- [x] 7.1 统一到**服务端语义**：正文 `#` → `<h2>`、`##` → `<h3>`、`###` → `<h4>`（服务端 `pages.py:978` 的 `level = len(heading.group(1)) + 1` 保持不变）；客户端 `workbench.js:443` 的 `<h" + heading[1].length + ">` 改为从 `<h2>` 起步。验证：同一份 Markdown 两侧标题层级一致；客户端不再与页面标题争 h1（兑现 `docs/ARCHITECTURE.md:240`「普通 Paper 题目与知识正文共享主阅读层级」）。
+- [x] 7.2 补齐两侧其余差异：服务端代码围栏补 `class='language-xx'`（`pages.py:955` 现在丢掉）；引用块统一用客户端的正则 `^\s*>\s?`（`pages.py:993` 现在用 `line.startswith(">")`，行首空格会漏判）。验证：语料里的「行首带空格的引用」与「带语言标记的代码围栏」两侧输出一致。
+- [x] 7.3 **新增测试** `tests/test_markdown_render_parity.py`：用一份覆盖 3 级标题 / 有无语言标记的代码围栏 / 引用 / 有序无序列表 / GFM 表格 / 分隔线 / 行内数学的 Markdown 语料，分别喂 `pages._render_markdown()`（服务端）与 `workbench.js` 的渲染函数（客户端，**经 Node 调用同一份 JS 源**），**断言两侧 HTML 逐字符相等**；语料与断言放 `tests/` 下，**不进产品目录**。验证：`python -m pytest tests/test_markdown_render_parity.py -q` 通过；测试在改造前先红（记录现状差异），改完转绿；不得用「人工同步」代替断言。
+- [x] 7.4 无 Node 的退化路径：若 CI 无 Node，改为 Node 单测 + pytest 黄金样本双跑，并把「人工同步」写进 `design.md` 的风险表；parity 不得退化成一次性人工核对。验证：无 Node 环境下测试仍可运行并给出明确失败原因。
+- [x] 7.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；截图走查范围＝题面 / 知识点正文 / 解析 / 记录摘录四处同源 Markdown 的排版对照；确认「客户端 `#` → h2」是本变更**唯一让既有可见文字变小**的地方，并在验收截图里单列。
 
 ## 8. 动效系统与分级降级 （design.md D-7）
 

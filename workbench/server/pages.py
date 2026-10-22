@@ -780,7 +780,10 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
 
 _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)
 _DISPLAY_BLOCK_RE = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
-_FENCE_LINE_RE = re.compile(r"^\s*```\s*([\w-]*)\s*$")
+# The language tag is ASCII-only on purpose: the browser matches it with
+# `\w`, which is `[A-Za-z0-9_]` there, so a CJK tag opens no fence on either
+# side (the two renderers must agree on which lines are fences).
+_FENCE_LINE_RE = re.compile(r"^\s*```\s*([A-Za-z0-9_-]*)\s*$")
 _TABLE_DELIMITER_CELL = re.compile(r":?-{1,}:?")
 _THEMATIC_BREAK = re.compile(
     r"\s*(?:\*(?:\s*\*){2,}|-(?:\s*-){2,}|_(?:\s*_){2,})\s*"
@@ -920,6 +923,18 @@ def _render_table(lines, position, workspace_name):
     )
 
 
+def _code_block(code_lines, code_lang):
+    """One fenced code block; the language tag survives as a class.
+
+    The browser keeps `class='language-xx'`, so the server keeps it too
+    (design.md D-6): the same Markdown must render to the same HTML on both
+    sides.
+    """
+    cls = f" class='language-{code_lang}'" if code_lang else ""
+    body = html.escape(chr(10).join(code_lines))
+    return f"<pre><code{cls}>{body}</code></pre>"
+
+
 def _render_markdown(text, workspace_name, kp_id):
     """Render the same small safe Markdown subset used by the browser."""
     if not text:
@@ -947,12 +962,12 @@ def _render_markdown(text, workspace_name, kp_id):
     for position, line in enumerate(lines):
         if position <= skip_until:
             continue
-        fence = re.match(r"^\s*```\s*([\w-]*)\s*$", line)
+        fence = _FENCE_LINE_RE.match(line)
         if fence:
             flush_paragraph()
             close_list()
             if in_code:
-                out.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+                out.append(_code_block(code_lines, code_lang))
                 code_lines = []
                 code_lang = ""
             in_code = not in_code
@@ -975,6 +990,10 @@ def _render_markdown(text, workspace_name, kp_id):
         heading = re.match(r"^\s*(#{1,3})\s+(.+?)\s*#*\s*$", line)
         if heading:
             flush_paragraph(); close_list()
+            # Body headings start at h2: h1 belongs to the page title, so the
+            # body never competes with the shell (design.md D-6). The browser
+            # uses the same rule, and tests/test_markdown_render_parity.py
+            # holds the two renderers to it character for character.
             level = len(heading.group(1)) + 1
             out.append(f"<h{level}>{_rich(heading.group(2), workspace_name)}</h{level}>")
             continue
@@ -990,9 +1009,11 @@ def _render_markdown(text, workspace_name, kp_id):
                 out.append(f"<{list_tag}>")
             out.append(f"<li>{_rich((ordered or unordered).group(1), workspace_name)}</li>")
             continue
-        if line.startswith(">"):
+        quote = re.match(r"^\s*>\s?", line)
+        if quote:
             flush_paragraph(); close_list()
-            out.append(f"<blockquote>{_rich(line[1:].lstrip(), workspace_name)}</blockquote>")
+            out.append(
+                f"<blockquote>{_rich(line[quote.end():], workspace_name)}</blockquote>")
             continue
         if not line.strip():
             flush_paragraph(); close_list()
@@ -1001,7 +1022,7 @@ def _render_markdown(text, workspace_name, kp_id):
         paragraph.append(line)
     flush_paragraph(); close_list()
     if in_code:
-        out.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+        out.append(_code_block(code_lines, code_lang))
     return _restore_tokens("".join(out), display_mark, display_spans)
 
 

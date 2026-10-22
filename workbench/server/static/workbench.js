@@ -440,7 +440,12 @@
       var heading = line.match(/^\s*(#{1,3})\s+(.+?)\s*#*\s*$/);
       if (heading) {
         flushParagraph(); closeList();
-        out.push("<h" + heading[1].length + ">" + richInline(heading[2]) + "</h" + heading[1].length + ">");
+        // Body headings start at h2: h1 belongs to the page title, so the
+        // body never competes with the shell (design.md D-6). The server
+        // uses the same rule, and tests/test_markdown_render_parity.py holds
+        // the two renderers to it character for character.
+        var level = heading[1].length + 1;
+        out.push("<h" + level + ">" + richInline(heading[2]) + "</h" + level + ">");
         return;
       }
       var unordered = line.match(/^\s*[-*+]\s+(.+)$/);

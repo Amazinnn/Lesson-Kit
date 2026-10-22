@@ -3276,7 +3276,9 @@ test("rich text renders markdown structure and safe links in native messages", a
   });
   await openFirstAiSession(elements);
   const html = elements["ai-messages"].children[0].innerHTML;
-  assert.match(html, /<h1>标题<\/h1>/);
+  // Body headings start at h2: h1 belongs to the page title, so the body
+  // never competes with the shell (design.md D-6).
+  assert.match(html, /<h2>标题<\/h2>/);
   assert.match(html, /<ul>[\s\S]*<strong>重点<\/strong>[\s\S]*<\/ul>/);
   assert.match(html, /x<sup>2<\/sup>/);
   assert.match(html, /&lt;b&gt;原始 HTML&lt;\/b&gt;/);
@@ -3350,7 +3352,8 @@ test("streaming assistant text is coalesced into one markdown message", async ()
   await flush();
   assert.equal(elements["ai-messages"].children.length, 2);
   const assistant = elements["ai-messages"].children[1];
-  assert.match(assistant.innerHTML, /<h2>片段<\/h2>/);
+  // Body headings start at h2 (design.md D-6), so `##` renders as h3.
+  assert.match(assistant.innerHTML, /<h3>片段<\/h3>/);
   assert.match(assistant.innerHTML, /完整回答/);
 });
 

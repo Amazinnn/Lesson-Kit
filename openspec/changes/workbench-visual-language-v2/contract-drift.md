@@ -202,6 +202,7 @@
 | CD-162 | `docs/PRODUCT-MANUAL.md:43`（「Dashboard 的工作区列表」一句） vs `workbench/server/pages.py`（hub 22 张等权卡） | 手册对 hub 的描述只有一句话，没有字段/排序/分组口径，与实现的「注册顺序 + 22 张等权卡」之间没有可判定的契约 | `docs/PRODUCT-MANUAL.md:43` | docs/GLOSSARY.md | 低 | 契约责任人补写 hub 卡片的信息层级与排序口径（与 CD-033 同案：spec owner 增补 hub 排序契约后，手册同步） |
 | CD-163 | `docs/PRODUCT-MANUAL.md`（知识点页「掌握」一句） vs `docs/GLOSSARY.md`「行动提醒 / Action-oriented learning reminders」三态 | 手册正文用「掌握」描述知识点状态；词表定义的三态是「重点练习 / 可以复习 / 中性」，且把「掌握度」列为禁用词 | PRODUCT-MANUAL 的措辞与 GLOSSARY 的行动提醒三态不是同一套词；「掌握」在词表里不是状态词 | docs/PRODUCT-MANUAL.md | 中 | 手册 §3.2 的「掌握」改为词表三态之一（中性）或明确它是正文描述而非状态词；本轮 mockup 一律用词表三态，差异留待后续 change 统一 |
 | CD-164 | `openspec/changes/workbench-visual-language-v2/decisions.md` **A-29**（裁决：里程碑判定去掉第三条） vs `openspec/changes/workbench-visual-language-v2/specs/workbench-ui/spec.md`（`Round completion celebration in two tiers`，原写三条里程碑条件） | 里程碑判定原本写了**全对 / 破纪录 / 章节首次完成**三条；其中「破纪录」要判定必须先定义**比较范围**（跟同一份卷比？同一章？历史所有练习？比什么量？），而这个范围在既有契约里**不存在** —— 仓库里没有可比的现成来源；spec 却把它写成了一条可触发的条件，等于一条**可能永远不触发**的死文本 | `openspec/specs/workbench-ui/spec.md`（原「beats the learner's own record for the same paper」一条）与 `docs/GLOSSARY.md` `_Avoid_`（正确率 / 掌握度 / 完成度百分比）—— 任何代理指标近似都会造出一个**口径未定义的新事实** | 产品决策 | 中 | **待所有者定义比较范围**（在同一份练习 / 同一章 / 全部练习之间比什么、比什么量），定义后再作为**独立条款**补进 spec；在它被定义之前**不得**用任何代理指标近似（如「比上次做得好」）触发里程碑；里程碑只用「全对」与「章节首次完成」两个条件（`decisions.md` **A-29** 已按此改写 spec / tasks） |
+| CD-165 | `workbench/server/pages.py`（代码围栏语言标记的正则） vs `workbench/server/static/workbench.js`（客户端同一处） | 服务端用 `\w` 兼容 Unicode，客户端只认 ASCII ⇒ 形如 ```中文 的围栏**在服务端被识别、在浏览器不识别**，两侧输出不一致 | 同一语料的两种解析规则；属实现差异而非契约冲突（本轮实现已按 A-6 统一到服务端语义并把服务端收成 ASCII 口径，池全量 336 条内容扫描 0 条受影响） | openspec change | 低 | 已在本轮实现中统一（服务端围栏语言收成 ASCII 口径）；本条留档说明**差异来源与统一口径**，供后续核对两侧解析规则不再分叉；如需长期锁死，请补一条两侧共用规则的测试 |
 
 ---
 
@@ -352,7 +353,7 @@ DATA_MODEL 没有登记语义**」的字段/口径（hub 最近使用、行动�
 | **「优先级」取值与分布** | 全部落在 高 / 中 / 低 三值之内（分布：**高 41 / 中 87 / 低 36**） |
 | **「改成什么 / 谁来定」非空** | **164 / 164** |
 | **表内交叉引用有效性** | 25 处 `CD-xxx` 交叉引用全部指向存在的行（已逐条复核；重排时修正了 CD-146 → CD-141 一处失效引用） |
-| **markdown 表格完整性** | 164 行全部 8 个分隔符（`\|` 转义后）；无跨列的裸 `\|` |
+| **markdown 表格完整性** | 165 行全部 8 个分隔符（`\|` 转义后）；无跨列的裸 `\|` |
 | **文件名与位置纪律** | 本文件是**唯一**写入物；`docs/` 下无同名文件，`docs/PENDING-DEFINITIONS.md` 未被追加，`docs/audits/` 未被写入 |
 
 ### 4.1 条数差额说明（+36）
@@ -423,7 +424,7 @@ DATA_MODEL 没有登记语义**」的字段/口径（hub 最近使用、行动�
 
 ### 4.3 实证 / 推断的区分
 
-- **实证**（`grep` / 读码 / 读文档可复核，位置列给出 `file:line`）：全部 164 条的
+- **实证**（`grep` / 读码 / 读文档可复核，位置列给出 `file:line`）：全部 165 条的
   「位置」与「现状」两列。抽样复核（均已实跑）：`workbench.css` 的
   `:16-17 / :31-33 / :36-39 / :43-44 / :153 / :157 / :338 / :427 / :504-505 / :515-521 /
   :799 / :833 / :1008 / :1034 / :1051 / :1123 / :1166 / :1211 / :1214 / :1462 / :1505 /
