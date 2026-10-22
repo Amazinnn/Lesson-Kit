@@ -11,5 +11,5 @@
 - [x] 2.1 Run focused tests, isolated papers round trip and installed wheel smoke.
 - [x] 2.2 Check real Pi RPC skill discovery without sending a prompt.
 - [x] 2.3 Complete independent review and repository verification gates.
-- [ ] 2.4 Archive the completed change and verify strict contracts.
-- [ ] 2.5 Integrate main and update installed CLI/service; record final remote CI receipt externally.
+- [x] 2.4 Archive the completed change and verify strict contracts.
+- [x] 2.5 Integrate main and update installed CLI/service; record final remote CI receipt externally.

@@ -39,3 +39,17 @@ Release uses `.worktrees/runtime-main` to avoid switching or modifying the
 separate visual-design checkout. Operational receipts, final runtime and remote
 CI evidence are kept outside course folders at
 `~/.lessonkit-workbench/deployments/20261022-cli-bundled-skill/`.
+
+
+Whole-branch review approved `fc5bb8a7` with no findings. Main fast-forwarded
+locally to `ed702b7f` before rollout. Installed CLI and managed port 3081 now use
+`.worktrees/runtime-main` (PID 18940); 152 conversation/turn records were checked
+with no active work and the old service had no provider children. Installed
+console and module help passed, HTTP root returned 200 and served static bytes
+matched main. Registry, Bridge and existing Pi JSON configuration stayed
+byte-identical. A second no-prompt Pi discovery check confirmed the actual
+installed runtime's bundled path. No course data was written.
+
+Archived as `2026-10-22-unify-cli-and-bundle-drill-skill`; all previous requirement
+and scenario headings in both affected specs were retained. Final push/CI and
+runtime commit receipts are recorded externally in the deployment directory.
