@@ -170,6 +170,9 @@
 #ai-input {
   min-height: 40px;
   max-height: 160px;
+  /* §4.6 的 **Agent 贴底输入区特例**：贴底、紧凑内距（不跟通用文本域的
+     96px / 12px 走）—— 这条输入区是「贴底的一行」，不是多行录入面。 */
+  padding: 6px 10px;
   resize: none;
   border: 0;
   background: transparent;

@@ -465,6 +465,25 @@ body:has(#layout[data-page="graph"]) .page-header::after {
    很短、左对齐 ⇒ 去掉它在图谱页上看不出差别（实测逐像素零差异）
    ⇒ 这里**不**把它钉回来。 */
 
+/* ---- 图谱页的「按钮 / 输入框」补钉（IMPL-C1 · §4.1–§4.6 形态裁定）---------
+   A-115 的按钮族与输入控件形态（主按钮无影平底、次按钮沉底、图标按钮 40×40 圆形、
+   输入框 44px / 12px 圆角 / `padding: 0 14px`）改的是**共享基类之外的变体**，
+   但仍有两处会漏进图谱页 ⇒ 在图谱作用域内**钉回改造前的取值**：
+     ① `#graph-search`（无 `type` 属性 ⇒ 命中 `input:not([type])`）：
+        基类 `min-height` 由 32px 改成 44px ⇒ 图谱的 38px 搜索框会被撑到 44px；
+     ② `#graph-detail-panel .detail-actions .primary`：
+        主按钮的 `box-shadow`（旧稿的 `2px 2px 0` 硬阴影）被「无影平底」裁定作废
+        ⇒ 钉回旧值。
+   ⚠️ 只钉**会漏的那几条**，其余（图谱自己的 `.chip` / `.legend-item` / `.zoom button`
+     / `.graph-topbar .seg button` / `.control-toggle`）**一律不动**。
+   ========================================================================= */
+body:has(#layout[data-page="graph"]) .graph-topbar .search input {
+  min-height: 32px;   /* 改造前的基类取值（搜索框自身 height 38px 不变） */
+}
+body:has(#layout[data-page="graph"]) #graph-detail-panel .detail-actions .primary {
+  box-shadow: 2px 2px 0 var(--ink-strong);   /* 改造前主按钮的硬阴影 */
+}
+
 * { box-sizing: border-box; }
 .visually-hidden {
   position: absolute;
@@ -953,16 +972,90 @@ button.primary:disabled {
   opacity: 1;
 }
 button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; border-radius: 14px; }
+
+/* ============================================================================
+   按钮族 · 形态裁定 A-115（component-spec §4.1 / §4.2 / §4.3 / §4.4）
+   ---------------------------------------------------------------------------
+   四条裁定（`design-notes/styleboard-picks.md` §二）：
+     §4.1 主按钮   **B 无影平底**（`btn-primary-flat`）——蓝底 **无描边、无阴影**
+     §4.2 次按钮   **C 沉底次按钮**（`btn-secondary-sunken`）——沉底面 + **内发丝线**
+     §4.3 文字按钮 **B 带箭头**（`btn-text-arrow`）——`::after` 画右箭头（**不引 SVG**）
+     §4.4 图标按钮 **C 圆形图标按钮**（`iconbtn-round`）——40×40 圆 + 沉底面
+   ⚠️ **尺寸可调、两条不让步**（§4.30.2）：
+        · 视觉高度按裁定取 40px（按钮）/ 40×40（图标按钮）；
+        · **命中区 ≥ 44×44 CSS px 仍硬约束** ⇒ 视觉 40px 的按钮一律用
+          **伪元素把命中区补到 44px**（上下各补 2px / 四边各补 2px）；
+        · **焦点环**不动 —— 全局 `:focus-visible` 单圈（`--focus-outer` / 2px / 2px 偏移）。
+   ⚠️ **状态色瞬切**（权威表 §3.3）：底色 / 文字色**不进 transition**；
+     过渡只挂 `transform`（hover 抬起 1px / active 压缩）——基类已如此，这里不再加。
+   ⚠️ **不用描边**：次按钮与图标按钮的边界走「底色差 + 1px 内发丝线」
+     （`box-shadow: inset 0 0 0 1px var(--rule-hair)`，**不用 border**、不改盒模型）。
+   ⚠️ **基类 `button` 的几何一行未动**（高 36px / 内距 15px / 字号 14px）：
+     图谱区段（`body:has(#layout[data-page="graph"])` 冻结块）里的按钮
+     （`.chip` / `.control-toggle` / `.legend-item` / `.graph-topbar .seg button`）
+     **继承基类的高度**，动基类就会误伤图谱 ⇒ 形态一律落在变体上。
+   ========================================================================= */
+
+/* ---- §4.1 主按钮 · 无影平底 ---------------------------------------------- */
 button.primary {
+  position: relative;
+  height: 40px;
+  border: 0;
+  border-radius: var(--r-md);
   background: var(--role-blue);
   color: var(--ink-on-role);
-  border: 1px solid var(--ink-strong);
-  box-shadow: 2px 2px 0 var(--ink-strong);
+  /* ⚠️ **无影平底**：旧稿的 `box-shadow: 2px 2px 0 var(--ink-strong)` 与近黑描边作废 */
+  box-shadow: none;
+}
+/* 命中区补偿：40px 视觉 → 44px 命中（§3.1 硬约束，伪元素不占布局） */
+button.primary::before {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
 }
 button.primary:hover:not(:disabled) { background: var(--role-blue-press); }
-button.ghost:hover:not(:disabled) { background: var(--veil-hover); }
-button.outline { border: 1px solid var(--rule-control); background: transparent; }
-button.outline:hover:not(:disabled) { background: var(--veil-hover); }
+button.primary:active:not(:disabled) { box-shadow: none; }
+/* 禁用态：不用 opacity 压暗（会把蓝底一起压成灰蓝）⇒ 沉底面 + 淡墨 */
+
+/* ---- §4.2 次按钮 · 沉底次按钮 -------------------------------------------- */
+button.outline {
+  position: relative;
+  height: 40px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  color: var(--ink-strong);
+  /* 边界 = 1px **内发丝线**（不是描边）⇒ 读成「压下去」 */
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+}
+button.outline::before {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
+}
+/* hover：沉底 → 卡面（从坑里升一级），底色**瞬切** */
+button.outline:hover:not(:disabled) { background: var(--surface-card); }
+button.outline:disabled { background: var(--surface-base); color: var(--ink-disabled); }
+
+/* ---- §4.3 文字按钮 · 带箭头 ---------------------------------------------- */
+button.ghost {
+  gap: var(--sp-2);          /* 箭头与文字 gap 8px */
+  color: var(--ink-muted);
+}
+button.ghost:hover:not(:disabled) { background: var(--veil-hover); color: var(--ink-strong); }
+/* 右箭头 = **CSS 画**（border + transform），不引 SVG 资产；
+   颜色走 `currentColor` ⇒ **随文字墨色**、不承载语义色。
+   ⚠️ `.icon-only` 排除：图标按钮自己有一套形状（§4.4），不能再挂箭头。 */
+button.ghost:not(.icon-only)::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  opacity: .72;
+}
 button.rate {
   height: 24px;
   min-width: 32px;
@@ -975,56 +1068,82 @@ button.rate {
 }
 button.rate:hover:not(:disabled) { background: var(--veil-hover); }
 
-/* ---- 图标按钮（spec §4.4 · IMPL-W2g 第 1 条）------------------------------
+/* ---- 图标按钮（spec §4.4 · A-115 形态裁定 **C 圆形图标按钮**）--------------
    markup：`<button class="ghost sm icon-only" aria-label="…">☰</button>`
-   （`pages.py` 5 处 + `workbench.js` 2 处；CSS 此前**零命中** ⇒ 借了文字按钮的底子，
-   图标按钮和文字按钮长得一模一样，只有内容不同。）
-   · **正方形**：宽 == 高（32×32 —— 图标按钮的最小点击区；`min-width` 防 flex 压扁）
-   · **图标居中**：`button` 基类已是 inline-flex + 双向居中，这里只把内距清零
-   · 圆角 `--r-md`（12px）；**不描边**（D-2）
-   · 悬停：底色沿用 `button.ghost:hover`（`--veil-hover`），这里只把**图标色**
-     提到 `--ink-strong`（spec §4.4 的默认 / 悬停两档）
-   · 焦点环：走权威表的 `--focus-outer` / `--focus-offset`（透明底控件 = 单圈，
-     权威表 §8 规则 1）
-   · ⚠️ 图标目前是**字符**（☰ ◌ − ×）不是 SVG ⇒ **保留现状**（换图标是资产问题，
-     不在本波）；这里只定尺寸 / 形状 / 焦点 / 悬停态
-   · ⚠️ 本块必须排在 `button.sm` **之后**：两者特异度相同（0,1,1），靠后者胜 */
+   （`pages.py` 5 处 + `workbench.js` 3 处）。
+   · **40×40 圆形**（`--r-round` 50%）+ **沉底面** + 1px 内发丝线
+     ⇒ 旧稿的 32×32 / 12px 圆角 / 透明底作废（§4.30 裁定 `iconbtn-round`）。
+   · **命中区 ≥44×44**（§3.1 硬约束）：视觉 40×40，用伪元素补到 44×44。
+   · 图标目前是**字符**（☰ ◌ − ×）不是 SVG ⇒ **保留现状**（换图标是资产问题）。
+   · 焦点环：走全局 `:focus-visible` 单圈（`--focus-outer` / 2px / 2px 偏移）——
+     **不得** `outline: none`。
+   · ⚠️ 本块必须排在 `button.sm` **之后**：两者特异度相同（0,1,1），靠后者胜。 */
 button.icon-only {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
   padding: 0;
-  border-radius: var(--r-md);
+  border: 0;
+  border-radius: var(--r-round);   /* 圆形 */
+  background: var(--surface-sunken); /* 沉底面 */
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
   color: var(--ink-muted);
   font-size: var(--fs-sub);
   line-height: 1;
 }
-button.icon-only:hover:not(:disabled) { color: var(--ink-strong); }
+/* 命中区补偿：40×40 视觉 → 44×44 命中 */
+button.icon-only::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+}
+button.icon-only:hover:not(:disabled) { background: var(--surface-card); color: var(--ink-strong); }
 button.icon-only:focus-visible {
   outline: var(--focus-width) solid var(--focus-outer);
   outline-offset: var(--focus-offset);
 }
 
-/* inputs */
+/* inputs —— §4.5 输入框（spec 输入框 · `input-spec`）· §4.6 文本域（`textarea-spec`）
+   · **输入框**：高 44px · 圆角 12px（`--r-md`）· `padding: 0 14px` ·
+     聚焦 = **蓝边 + 3px 蓝洗底光晕**；
+   · **文本域**：最小高 96px · 行高 1.6 · 圆角 12px · **竖向可拉**（`resize: vertical`）。
+   ⚠️ 控件边界是「不用描边」的唯一例外（`--rule-control`，≥3:1）。
+   ⚠️ **焦点环不许被压死**：`:focus-visible` 的单圈（`--focus-outer` / 2px / 2px 偏移）保留，
+     再叠 §4.5 规定的 3px **蓝洗底光晕**（`--role-blue-wash` —— 权威表把「蓝洗底」
+     定义为承载文字那一档；此处只当装饰光晕，光晕本身不承载任何文字）。
+   ⚠️ **图谱页不受影响**：`#graph-search`（无 `type` 属性 ⇒ 命中 `input:not([type])`）
+     的 `min-height` 在图谱冻结块里**补钉**回 32px（见冻结块）。 */
 textarea, input[type="text"], input[type="number"], input:not([type]) {
   width: 100%;
-  min-height: 32px;
-  padding: 6px 10px;
+  min-height: 44px;
+  padding: 0 14px;
   border: 1px solid var(--rule-control);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--surface-card);
   font-family: inherit;
   font-size: 14px;
   color: var(--ink-strong);
 }
+/* §4.6 文本域：最小高 96px · 行高 1.6 · 竖向可拉 */
+textarea {
+  min-height: 96px;
+  padding: 12px 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
 textarea:focus, input:focus { border-color: var(--role-blue); }
 /* 焦点环（A-75 · IMPL-W2g 第 2 条）：此前这里写着 `outline: none`，
    把**所有输入框 / 文本域**的焦点环压死 —— A-1 禁止去掉焦点环。
    ⇒ 改成 `:focus-visible` 的单圈（权威表 §8 规则 1）：外圈色 + 2px 偏移。
-   ⚠️ 只改 `:focus-visible`：**鼠标点击不冒环**。 */
+   ⚠️ 只改 `:focus-visible`：**鼠标点击不冒环**。
+   ⚠️ §4.5 的**聚焦口径**：蓝边 + 3px 蓝洗底光晕 + 底色提到浮起面。 */
 textarea:focus-visible, input:focus-visible {
   outline: var(--focus-width) solid var(--focus-outer);
   outline-offset: var(--focus-offset);
+  border-color: var(--role-blue);
+  background: var(--surface-raised);
+  box-shadow: 0 0 0 3px var(--role-blue-wash);
 }
 ::placeholder { color: var(--graph-page-dimmed, var(--ink-faint)); }
 
