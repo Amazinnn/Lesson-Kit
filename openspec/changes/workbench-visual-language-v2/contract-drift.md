@@ -26,7 +26,7 @@
 > owner 回来更新对应行。提示「本仓库存在 N 条已登记漂移」的交接文本写在
 > `openspec/changes/workbench-visual-language-v2/HANDOFF.md`。
 >
-> **条数说明**：本表实际登记 **166 条**（`CD-001`…`CD-166`）。
+> **条数说明**：本表实际登记 **167 条**（`CD-001`…`CD-167`）。
 > `tasks.md` 27.2 写的是 165 条 —— **差额 +37 条的原因逐条说明在 §4.1**
 > （同一冲突的「多条腿」必须逐腿登记 + 裁决已下但落地未落的残留），
 > **没有为凑数编造条目**。自检结果见 §4。
@@ -204,6 +204,7 @@
 | CD-164 | `openspec/changes/workbench-visual-language-v2/decisions.md` **A-29**（裁决：里程碑判定去掉第三条） vs `openspec/changes/workbench-visual-language-v2/specs/workbench-ui/spec.md`（`Round completion celebration in two tiers`，原写三条里程碑条件） | 里程碑判定原本写了**全对 / 破纪录 / 章节首次完成**三条；其中「破纪录」要判定必须先定义**比较范围**（跟同一份卷比？同一章？历史所有练习？比什么量？），而这个范围在既有契约里**不存在** —— 仓库里没有可比的现成来源；spec 却把它写成了一条可触发的条件，等于一条**可能永远不触发**的死文本 | `openspec/specs/workbench-ui/spec.md`（原「beats the learner's own record for the same paper」一条）与 `docs/GLOSSARY.md` `_Avoid_`（正确率 / 掌握度 / 完成度百分比）—— 任何代理指标近似都会造出一个**口径未定义的新事实** | 产品决策 | 中 | **待所有者定义比较范围**（在同一份练习 / 同一章 / 全部练习之间比什么、比什么量），定义后再作为**独立条款**补进 spec；在它被定义之前**不得**用任何代理指标近似（如「比上次做得好」）触发里程碑；里程碑只用「全对」与「章节首次完成」两个条件（`decisions.md` **A-29** 已按此改写 spec / tasks） |
 | CD-165 | `workbench/server/pages.py`（代码围栏语言标记的正则） vs `workbench/server/static/workbench.js`（客户端同一处） | 服务端用 `\w` 兼容 Unicode，客户端只认 ASCII ⇒ 形如 ```中文 的围栏**在服务端被识别、在浏览器不识别**，两侧输出不一致 | 同一语料的两种解析规则；属实现差异而非契约冲突（本轮实现已按 A-6 统一到服务端语义并把服务端收成 ASCII 口径，池全量 336 条内容扫描 0 条受影响） | openspec change | 低 | 已在本轮实现中统一（服务端围栏语言收成 ASCII 口径）；本条留档说明**差异来源与统一口径**，供后续核对两侧解析规则不再分叉；如需长期锁死，请补一条两侧共用规则的测试 |
 | CD-166 | `workbench/server/static/practice-flow.js`（组卷报告的知识点显示） vs `docs/PRODUCT-MANUAL.md`（练习页面向学习者的文案口径） | 组卷报告的「可用题数少于请求量的知识点：…」在**产品里显示知识点 id**（如 `kp-2`）而不是知识点名（如「线性方程组」） | **既有缺陷，不是本轮引入**：名字映射来自 `#scope-tray` 的 `dataset.kpNames`，而 scope tray 早在 `8cc9d23d`（`feat: connect free Paper practice and remove learner assembly controls`）就从 `pages.py` 移除了 ⇒ `names` 恒为空、`names[kpId] \|\| kpId` 恒走回退分支。**唯一的名字来源 `tests/workbench/workbench_ui_interactions.test.js` 的假 DOM 夹具**曾凭空注入一个 scope-tray 元素，所以测试断言的是一条**产品里不可达的路径** | 待定 | 中（学习者看到的是内部 id，不是可读的知识点名） | 本轮**不修**：修它需要一个带知识点名的数据源（知识点列表 API 的响应里没有名字），而新增/改动取数会动请求序列 —— 违反「现有交互逻辑一个字都不许改」的底线。⇒ 本轮随 14.1 删掉那段死代码（**产品行为零变化**），并把测试夹具改为断言真实行为（id）。**待所有者定**：要不要单开一个 change，把知识点名接进组卷报告；若要，需先定「名字从哪来」（复用已加载的知识点列表 / 扩 API 响应） |
+| CD-167 | `openspec/changes/workbench-visual-language-v2/tasks.md` **17.6**（里程碑两条件之「章节首次完成」） vs 池里的 `practice_runs` 表结构 | 17.6 要求里程碑档在「① 本轮全对」**或**「② 章节首次完成」时启用，但**「章节首次完成」当前不可判定**：`practice_runs` **没有章列**、也没有任何「首次完成」标志 | spec 要的是一个**事实**，而现有持久化里**没有承载它的地方**。`decisions.md` **A-29** 已裁定**不得用任何代理指标近似**（例如「比上次做得好」「本工作区第一次做这一章」这类推算），所以**不能**就地造一个近似口径 | 待定 | 中（里程碑档目前只有「全对」一条能触发；「章节首次完成」恒为 false） | 本轮**保持 false 并如实标注**：客户端写 `data-lk-chapter-first="false"`，判定逻辑（`workbench.js` 的 `isMilestoneRound`）保留该条件，事实为 false 时不进里程碑档。⇒ **spec 的两个条件目前只有一个可触发**，这是**如实实现**，不是漏实现。**待所有者定**：要不要给它一个真实的数据来源（给 `practice_runs` 加章列 / 另立一张「章节完成」表）—— 那是**持久化 schema 变更**，必须单开 change 并同步 `docs/DATA_MODEL.md`；在数据来源定义之前，**不得**用代理指标补上 |
 
 ---
 
