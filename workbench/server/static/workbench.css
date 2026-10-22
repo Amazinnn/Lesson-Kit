@@ -1191,6 +1191,39 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   font-size: 17px;
 }
 .empty-state { max-width: 640px; }
+/* ---- 空态三段（component-spec §4.21 · IMPL-W2e 追加 1）--------------------
+   `pages.py` 已输出 `.lk-empty` > `.lk-empty__art` / `.lk-empty__text` /
+   `.lk-empty__action`，CSS 里**零命中** ⇒ 结构在、样式没接上，看不出效果。
+   · 形态固定为 **静物插画 + 一句 + 满宽主按钮**（§4.21）；
+   · 一句 = `--font-ui` / `--fs-body`（14px）/ `--ink-muted`；
+   · 按钮**满宽**（容器 max-width 240px），文案**就是动作**；
+   · **少字原则**：除这一句外不再加任何解释性文字；
+   · **面**：选 **沉底块（L3）**—— 空态在这里是**独立面板**
+     （知识点列表的 `<li>`，不在卡片里）：卡面是「有内容的面」，空态没有
+     内容；沉底（底色差 + 1px 内发丝线 + **不带柔影**）既不与上方的卡面
+     抢层级，又能把「这里还没有东西」读成一块被挖下去的白板。 */
+.lk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 48px 24px;
+  text-align: center;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+}
+.lk-empty__art { display: block; width: 180px; max-width: 100%; }
+.lk-empty__art svg { display: block; width: 100%; height: auto; }
+.lk-empty__text {
+  margin: 0;
+  max-width: 32em;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: 22px;
+  color: var(--ink-muted);
+}
+.lk-empty__action { width: 100%; max-width: 240px; }
 .next-step { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding: 22px 24px; }
 .next-step-actions { display: flex; gap: 8px; flex: none; }
 
