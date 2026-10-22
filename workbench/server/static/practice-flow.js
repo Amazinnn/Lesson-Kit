@@ -835,7 +835,10 @@
        · 只在提交路径挂 ⇒ 判定只回弹一次，回看旧答案不重播；
        · 判定为错 / 闪卡 / 没有「判定正确」时整段不挂。
        本流的选项行实际类名：`<label class='option-selected'>`（在
-       `<fieldset class='problem-options'>` 内）——「被选中」即答对时的那一项。 */
+       `<fieldset class='problem-options'>` 内）——「被选中」即答对时的那一项。
+       走查探针（tools/walkthrough/frames.py 的 M-7）等的是
+       `document.getAnimations()` 里名为 `lk-squash-bounce` 的动画 ⇒
+       落点行上必须真的有这条动画（判定行只带标记，不带动画）。 */
     function squashCorrectOption(root) {
       if (!root || typeof root.querySelectorAll !== "function") return;
       var verdicts = root.querySelectorAll(".micro-verdict.ok");

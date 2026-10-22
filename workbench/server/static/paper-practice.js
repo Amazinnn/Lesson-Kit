@@ -768,7 +768,10 @@
        · 判定为错 / 不会 / 没有「判定正确」时整段不挂。
        本流的选项行实际类名：`<label class='option-row'>`（在
        `<fieldset class='problem-options'>` 内），「被选中」= 里面的
-       `input[data-paper-choice]` 处于选中态。 */
+       `input[data-paper-choice]` 处于选中态。
+       走查探针（tools/walkthrough/frames.py 的 M-7）等的是
+       `document.getAnimations()` 里名为 `lk-squash-bounce` 的动画 ⇒
+       落点行上必须真的有这条动画（判定行只带标记，不带动画）。 */
     function squashCorrectOption(root) {
       if (!root || typeof root.querySelectorAll !== "function") return;
       var verdicts = root.querySelectorAll(".micro-verdict.ok");
