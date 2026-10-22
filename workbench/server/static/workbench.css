@@ -460,18 +460,12 @@ body:has(#layout[data-page="graph"]) #ai-column { z-index: auto; }
 body:has(#layout[data-page="graph"]) .lk-ripple,
 body:has(#layout[data-page="graph"]) .lk-ripple-glow { display: none; }
 
-/* ---- 图谱页的「左栏」钉回（任务 15.2 / 15.3）---------------------------
-   15.2 把选中态从「1px 黑框」改成「整行圆角色块」、15.3 给四个分区加了分隔线 ——
-   这两条对图谱页是可见变化，而图谱页必须逐像素零差异（G-5）⇒ 钉回改造前的样子。 */
-body:has(#layout[data-page="graph"]) .nav-item.active {
-  border-radius: var(--r-xs);
-  box-shadow: inset 4px 0 0 var(--role-blue), inset 0 0 0 1px var(--ink-strong);
-}
-body:has(#layout[data-page="graph"]) .side-section + .side-section {
-  margin-top: 26px;
-  padding-top: 0;
-  border-top: none;
-}
+/* ---- 图谱页的「左栏」**不**钉回（decisions.md A-48）---------------------
+   15.2（选中态改圆角色块）/ 15.3（分区加结构分隔）/ 15.1（左栏加导航图标）
+   改的是**共享外壳**，图谱页的左栏**必然**跟着变 —— A-48 已把「左栏与顶栏」
+   明确排除出像素比对口径（R-1 改为「除左栏与顶栏外像素级一致」，
+   G-5 判为 R-2 画布区域 + R-3 画布与三栏背景色采样）。
+   ⇒ 这里**不**冻结左栏：否则图谱页的左栏会与其它页面长得不一样。 */
 
 /* ---- 图谱页的「标题带」钉回（任务 14.1 / 14.3）---------------------------
    任务 14.3 把标题带底边从 3px 纯黑换成 2px `--rule-structure`、并删掉那块
@@ -971,13 +965,31 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   font-size: 16px;
   line-height: 24px;
 }
+/* ============================================================================
+   沉底层 `--surface-sunken` 的**规则侧**（tasks.md 3.1 / 3.1b；权威表 §3.1【A-23-3】）
+   ------------------------------------------------------------------------
+   沉底层**不是深色块**：它靠「**底色差 + 1px 内发丝线**」与卡面分开
+   （浅色 ΔL\* 5.73 / 夜纸 1.49 —— 夜纸差得小，所以内发丝线是必须的）。
+   三条规则，逐条都在本文件里兑现：
+     ① **圆角同为 12px**（`--r-md`）：沉底块与卡面/浮起面用同一档圆角，
+        层级差别只由**明度**与**光**承担，不靠形状。
+     ② **不带柔影**：沉底是**凹层**，不参与「底 → 卡 → 浮起」的抬升序列
+        ⇒ 一律**不加** `--elev-1/2/3`（那是抬起层的信号）。
+     ③ **内发丝线**用 `box-shadow: inset 0 0 0 1px var(--rule-hair)` 落地：
+        **不用 `border`**（不改盒模型、不与相邻面打架），是权威表 §6.3 的第 4 条窄例外。
+   另：**除代码块外，全站不得再出现 `--surface-code`**（内容块一律用沉底）——
+   `grep -n -- "--surface-code" workbench.css` 的命中点只有「token 定义 + 代码块规则」。
+   ⚠️ **沉底块不得与蓝洗底块（`--role-blue-wash`）同屏共邻**（权威表 §3.1【A-31】，
+      两者亮度差仅 1.035:1，共邻会被误读成「被选中的行」）。
+   ========================================================================= */
 /* 用户消息 —— 沉底面（A-23）：内容块浅底深字，边界靠「底色差 + 1px 内发丝线」
-   与卡面分开；**不带柔影**（凹层不抬升，decisions.md A-23-3 / A-23-4） */
+   与卡面分开；**不带柔影**（凹层不抬升，decisions.md A-23-3 / A-23-4）。
+   圆角与其它沉底块**同为 12px**（`--r-md`，权威表 §2.1 的统一圆角）。 */
 .msg.user {
   margin-left: auto;
   max-width: min(525px, 82%);
   background: var(--surface-sunken);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-md);
   padding: 10px 16px;
   border-bottom: none;
   box-shadow: inset 0 0 0 1px var(--rule-hair);
@@ -1024,11 +1036,12 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
 }
 .section-heading p:last-child { margin: 0; color: var(--ink-faint); font-size: 13px; }
 .support-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-/* 强调块 —— 沉底面（A-23）：底色差 + 1px 内发丝线，**不带柔影**（凹层不抬升） */
+/* 强调块 —— 沉底面（A-23）：底色差 + 1px 内发丝线，**不带柔影**（凹层不抬升）；
+   圆角同为 12px（沉底层的统一圆角，权威表 §2.1） */
 .detail-block {
   padding: 14px;
   background: var(--surface-sunken);
-  border-radius: var(--r-xs);
+  border-radius: var(--r-md);
   box-shadow: inset 0 0 0 1px var(--rule-hair);
 }
 .detail-block h3 { margin: 0 0 6px; font-size: 14px; }
@@ -1404,7 +1417,7 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   margin: 12px 0;
   padding: 12px 14px;
   overflow-x: auto;
-  border-radius: var(--r-xs);
+  border-radius: var(--r-md);
   background: var(--surface-sunken);
 }
 :is(.wb-reading, .wb-reading--stem) table,
@@ -1564,7 +1577,7 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   gap: 8px;
   margin: 18px 0;
   padding: 12px 14px;
-  border-radius: var(--r-xs);
+  border-radius: var(--r-md);
   background: var(--surface-sunken);
 }
 .practice-mode-choice legend { padding: 0 4px; color: var(--ink-muted); font-size: 13px; }
@@ -1681,7 +1694,7 @@ ul { list-style: none; padding: 0; margin: 0; }
 li { padding: 2px 0; }
 li.muted { color: var(--ink-faint); font-size: 13px; }
 code { font-family: var(--font-mono); background: var(--surface-sunken); padding: 1px 4px; border-radius: 4px; font-size: 12px; }
-pre { background: var(--surface-sunken); padding: 8px; border-radius: var(--r-xs); overflow-x: auto; }
+pre { background: var(--surface-sunken); padding: 8px; border-radius: var(--r-md); overflow-x: auto; }
 table { border-collapse: collapse; margin: 8px 0; }
 td, th { border: 1px solid var(--rule-hair); padding: 4px 8px; text-align: left; }
 img { max-width: 100%; }
