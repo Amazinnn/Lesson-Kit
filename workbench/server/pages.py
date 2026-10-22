@@ -749,7 +749,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         progress_text = (" · 已完成 " + str(progress['completed']) + "/" + str(progress['total'])) if progress else ""
         continuation = record.get('continuation')
         if invalid:
-            reason = ("缺少题目 " + str(len(record['missing_problem_ids'])) + " 道，详情见下方折叠项"
+            reason = ("缺少 " + str(len(record['missing_problem_ids'])) + " 道题"
                       if record['missing_problem_ids'] else
                       "当前试卷内容校验失败：" + '; '.join(record['validation_errors'])
                       if record['validation_errors'] else '试卷为空')
@@ -767,7 +767,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "</p></details>") if unavailable_ids else ""
         execution = continuation.get('execution', {}).get('progress') if continuation else None
         continuation_details = ("<details class='practice-set-continuation-details'><summary>查看旧执行情况</summary><p>当前试卷 "
-            + str(continuation['paper_count']) + " 题；旧执行仍保留 " + str(execution['total'])
+            + str(continuation['paper_count']) + " 题；旧执行 " + str(execution['total'])
             + " 题，已完成 " + str(execution['completed']) + " 题。</p></details>") \
             if continuation and not continuation['available'] else ""
         rows = []
@@ -794,7 +794,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "<details class='practice-set-card-body'>"
             + "<summary class='practice-set-card-head'>"
             + "<div class='practice-set-card-title'>"
-            + "<p class='section-kicker'>试卷</p><h2>"
+            + "<h2>"
             + html.escape(record["title"]) + "</h2><p class='muted' data-set-progress>"
             + str(record["count"]) + " 题" + progress_text + "</p>" + availability + "</div>"
             + "<div class='practice-set-card-actions'>"
@@ -826,7 +826,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
     middle = (
         _page_header(
             "练习 / 试卷", "试卷",
-            "每份试卷独立保存作答进度，切换后可以继续。",
+            "",
             "<a class='outline button-link' href='/w/"
             + html.escape(workspace["name"]) + "/practice'>返回练习</a>",
         )
