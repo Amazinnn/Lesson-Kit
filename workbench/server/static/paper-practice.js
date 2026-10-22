@@ -623,7 +623,7 @@
       var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
         + "<h2>" + escapeHtml(title) + "</h2>"
-        + "<div class='rich-text problem-text'>" + richText(String(prompt)) + "</div>"
+        + "<div class='wb-reading problem-text'>" + richText(String(prompt)) + "</div>"
         + (problem.source_evidence
           ? "<p class='practice-source'>来源：" + escapeHtml(problem.source_evidence) + "</p>" : "");
       renderMath(ids.question);
@@ -675,17 +675,17 @@
       }
       var key = quiz && quizHasKey(quiz) ? quiz.answer_key : problem.source_answer;
       if (key !== undefined && key !== null && String(key).trim()) {
-        parts.push("<p class='section-kicker'>参考答案</p><div class='rich-text'>"
+        parts.push("<p class='section-kicker'>参考答案</p><div class='wb-reading'>"
           + richText(Array.isArray(key) ? key.join("、") : String(key)) + "</div>");
       } else if (quiz) {
         parts.push("<p class='muted'>本题没有可用答案键。</p>");
       }
       if (quiz && quiz.error_reason) {
-        parts.push("<p class='section-kicker'>判定依据</p><div class='rich-text'>"
+        parts.push("<p class='section-kicker'>判定依据</p><div class='wb-reading'>"
           + richText(String(quiz.error_reason)) + "</div>");
       }
       if (problem.solution && String(problem.solution).trim()) {
-        parts.push("<p class='section-kicker'>解析</p><div class='rich-text'>"
+        parts.push("<p class='section-kicker'>解析</p><div class='wb-reading'>"
           + richText(String(problem.solution)) + "</div>");
       }
       if (!parts.length || (parts.length === 1 && !includeVerdict && parts[0].indexOf("没有可用答案键") >= 0)) {

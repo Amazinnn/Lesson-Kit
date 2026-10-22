@@ -842,7 +842,7 @@
           + "<time>" + escapeHtml(String(attempt.created_at || "")) + "</time>"
           + stars
           + (attempt.answer_text
-            ? "<div class='rich-text'>" + richText(attempt.answer_text) + "</div>"
+            ? "<div class='wb-reading'>" + richText(attempt.answer_text) + "</div>"
             : "")
           + "</div>";
       });
@@ -872,7 +872,7 @@
             + "<input data-choice-option type='" + (multiple ? "checkbox" : "radio")
             + "' name='problem-option' value='" + escapeHtml(option.id) + "'"
             + (selected ? " checked disabled" : "") + "> "
-            + "<span class='rich-text'>" + richText(option.text) + "</span></label>";
+            + "<span class='wb-reading'>" + richText(option.text) + "</span></label>";
         }).join("") + "</fieldset>";
     }
 
@@ -890,11 +890,11 @@
       if (quiz) {
         var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
         var why = quiz.error_reason
-          ? "<p class='section-kicker'>为什么</p><div class='rich-text'>"
+          ? "<p class='section-kicker'>为什么</p><div class='wb-reading'>"
             + richText(quiz.error_reason) + "</div>"
           : "";
         solution = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
-          + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>"
+          + "<div class='wb-reading'>" + richText(key) + "</div>" + why + "</section>"
           + practiceExplanationSection(problem);
       } else {
         solution = practiceSolutionHtml(problem);
@@ -905,14 +905,14 @@
         : "<p>我的自评：" + "★".repeat(feedback.rating)
           + "☆".repeat(5 - feedback.rating) + "（" + feedback.rating + "/5）</p>"
           + (feedback.note
-            ? "<div class='muted rich-text'>" + richText(feedback.note) + "</div>" : "");
+            ? "<div class='muted wb-reading'>" + richText(feedback.note) + "</div>" : "");
       if (!paperReview) {
         return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
-          + "<div class='rich-text'>" + richText(answer) + "</div></section>"
+          + "<div class='wb-reading'>" + richText(answer) + "</div></section>"
           + status + solution;
       }
       return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
-        + "<div class='rich-text'>" + richText(answer) + "</div></section>"
+        + "<div class='wb-reading'>" + richText(answer) + "</div></section>"
         + status + "<section class='practice-solution'><p class='section-kicker'>我的自评</p>"
         + selfRating + "</section><details class='practice-reference'><summary>查看参考答案与解析</summary>"
         + solution + "</details>";
@@ -983,10 +983,10 @@
           + (item.revealed ? " is-revealed" : "") + "'>"
           + "<section class='flash-card-face flash-card-answer' aria-label='另一面'"
           + (item.revealed ? "" : " aria-hidden='true'") + ">"
-          + "<p class='section-kicker'>另一面</p><div class='rich-text'>"
+          + "<p class='section-kicker'>另一面</p><div class='wb-reading'>"
           + richText(sides.answer) + "</div></section>"
           + "<section class='flash-card-face flash-card-prompt' aria-label='提示面'>"
-          + "<p class='section-kicker'>提示面</p><div class='rich-text'>"
+          + "<p class='section-kicker'>提示面</p><div class='wb-reading'>"
           + richText(sides.prompt) + "</div></section></div>";
         stream.innerHTML = "<article class='practice-question-card card flash-card-shell'>"
           + "<p class='context-line'>闪卡</p>"
@@ -1015,7 +1015,7 @@
         + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
-        + "<div class='problem-text rich-text'>" + richText(problemTextFor(problem)) + "</div>"
+        + "<div class='problem-text wb-reading'>" + richText(problemTextFor(problem)) + "</div>"
         + optionHtmlFor(item, reviewOnly, paperReview) + keylessLine(item)
         + verdictLine(item, reviewOnly, paperReview)
         + (reviewOnly ? reviewResultHtml(item, paperReview) : "") + "</article>";
@@ -1684,10 +1684,10 @@
           var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
           var why = quiz.error_reason
             ? "<p class='section-kicker'>为什么</p>"
-              + "<div class='rich-text'>" + richText(quiz.error_reason) + "</div>"
+              + "<div class='wb-reading'>" + richText(quiz.error_reason) + "</div>"
             : "";
           section = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
-            + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>"
+            + "<div class='wb-reading'>" + richText(key) + "</div>" + why + "</section>"
             + practiceExplanationSection(detail.problem);
         } else {
           section = practiceSolutionHtml(detail.problem);
@@ -2038,8 +2038,8 @@
           var directionLabel = item.direction === "reverse" ? "反向" : "正向";
           buildRatingCard(
             "<p class='context-line'>闪卡 · " + directionLabel + "</p>"
-            + "<div class='problem-text rich-text'>" + richText(sides.prompt) + "</div>"
-            + "<p class='section-kicker'>另一面</p><div class='rich-text'>" + richText(sides.answer) + "</div>",
+            + "<div class='problem-text wb-reading'>" + richText(sides.prompt) + "</div>"
+            + "<p class='section-kicker'>另一面</p><div class='wb-reading'>" + richText(sides.answer) + "</div>",
             "card", item.id, String(sides.prompt || "闪卡"), item.direction, item);
           return;
         }
@@ -2049,20 +2049,20 @@
           var quiz = problem.micro_quiz && typeof problem.micro_quiz === "object"
             ? problem.micro_quiz : null;
           var solutionHtml = quiz
-            ? "<p class='section-kicker'>答案</p><div class='rich-text'>"
+            ? "<p class='section-kicker'>答案</p><div class='wb-reading'>"
               + richText(quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键")
               + "</div>"
               + (quiz.error_reason
-                ? "<p class='section-kicker'>为什么</p><div class='rich-text'>"
+                ? "<p class='section-kicker'>为什么</p><div class='wb-reading'>"
                   + richText(quiz.error_reason) + "</div>"
                 : "")
               + practiceExplanationSection(problem)
-            : "<p class='section-kicker'>解析</p><div class='rich-text'>"
+            : "<p class='section-kicker'>解析</p><div class='wb-reading'>"
               + richText(problem.solution || "（本题无解析）") + "</div>";
           buildRatingCard(
             "<p class='context-line'>练习题</p><h2>" + escapeHtml(title) + "</h2>"
-            + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
-            + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
+            + "<div class='problem-text wb-reading'>" + richText(problem.problem_text) + "</div>"
+            + "<p class='section-kicker'>我的作答</p><div class='wb-reading'>" + richText(item.answer_text || "（未作答）") + "</div>"
             + solutionHtml,
             "problem", item.id, title, "", item);
         });
@@ -2097,7 +2097,7 @@
     var origin = problem.solution_origin;
     var label = origin === "source" ? "教材解析" : "解析";
     return "<section class='practice-solution'><p class='section-kicker'>" + label + "</p>"
-      + "<div class='rich-text'>" + richText(String(solution)) + "</div></section>";
+      + "<div class='wb-reading'>" + richText(String(solution)) + "</div></section>";
   }
 
   function practiceSolutionHtml(problem) {
@@ -2107,14 +2107,14 @@
     var answer = problem.source_answer;
     if (answer && String(answer).trim()) {
       sections += "<section class='practice-solution'><p class='section-kicker'>教材答案</p>"
-        + "<div class='rich-text'>" + richText(String(answer)) + "</div></section>";
+        + "<div class='wb-reading'>" + richText(String(answer)) + "</div></section>";
     }
     var explanation = practiceExplanationSection(problem);
     if (explanation) {
       sections += explanation;
     } else if (!sections) {
       sections = "<section class='practice-solution'><p class='section-kicker'>解析</p>"
-        + "<div class='rich-text'>（本题无解析，请基于自身作答自评）</div></section>";
+        + "<div class='wb-reading'>（本题无解析，请基于自身作答自评）</div></section>";
     }
     return sections;
   }
