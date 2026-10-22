@@ -2465,10 +2465,16 @@ img { max-width: 100%; }
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--verdict-line);
 }
-/* 语义色（统一形状之后，三态之间**只差这一个色**） */
+/* 语义色（统一形状之后，三态之间**只差这一个色**）。
+   ⚠️ **A-66：「未判定」把发丝线与文字拆开** ——
+     几何符号（空心环）是**弱化信息** ⇒ 继续用 `--ink-faint`（实测 3.39:1，
+     合规于「三级文字 ≥3:1」）；但**文字**是读屏要看的东西 ⇒ 改 `--ink-muted`
+     （≥4.5:1）。状态本来就靠**形状 + 颜色**双通道承载，文字只是冗余标注，
+     不该让它掉到 3.39:1。另两档（「对」`--ink-strong` / 「错」
+     `--role-red-ink`）的发丝线与文字同色，**不受影响**。 */
 .record-verdict-ok { --verdict-line: var(--ink-strong); color: var(--ink-strong); }
 .record-verdict-bad { --verdict-line: var(--role-red-ink); color: var(--role-red-ink); }
-.record-verdict-open { --verdict-line: var(--ink-faint); color: var(--ink-faint); }
+.record-verdict-open { --verdict-line: var(--ink-faint); color: var(--ink-muted); }
 /* 对 = 勾形几何 */
 .record-verdict-ok::before,
 .record-verdict-ok::after {
