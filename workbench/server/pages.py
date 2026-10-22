@@ -446,7 +446,7 @@ def _daily_plan(plan):
         + "<button type='button' class='ghost sm goal-delete' data-goal-delete>删除</button></div>"
         + "</article>"
         for goal in goals
-    ) or "<p class='muted'>暂无已设置的长期或阶段目标。</p>"
+    ) or "<p class='muted'>暂无目标</p>"
     return (
         "<section id='daily-plan' class='daily-plan' aria-label='学习安排'>"
         "<section id='goal-cards' class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
@@ -466,7 +466,7 @@ def _daily_plan(plan):
         # aria-label（一个字不丢），可见的那句由旁边的按钮承担。
         "<textarea id='goal-nl' rows='2' aria-label='让 Agent 代填' "
         "placeholder='例如：期末前掌握第六章计数，重点补鸽巢和组合'></textarea>"
-        "<button type='button' class='outline sm' id='goal-assist-send'>让 Agent 填</button>"
+        "<button type='button' class='outline sm' id='goal-assist-send'>让 Agent 代填</button>"
         "</div>"
         "</form></details></section>"
     )
