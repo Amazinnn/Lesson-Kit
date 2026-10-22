@@ -313,6 +313,47 @@ count rather than a colour applied to the whole card.
 - **THEN** the count is still readable in text next to the dot, and the dot
   carries the colour rather than replacing the number
 
+### Requirement: Accumulated work made visible on existing learning facts
+
+The workbench SHALL make the learner's accumulated work visible on top of the
+learning facts it already keeps, and SHALL NOT define a new statistic, a new
+rate, a new score, or a completion percentage. Within the chapter the learner
+is currently in, the knowledge-point list SHALL show how many knowledge points
+the chapter holds and how many of them currently carry each of the three
+learning states (needs_work, review, mastered), as plain counts. The records
+centre SHALL keep showing how many practice runs have been completed and how
+many answers were given on each of the last fourteen days, and SHALL present
+those days as a curve of counts. Every figure of this requirement SHALL be a
+count of records the workbench already stores, read at view time, and the
+workbench SHALL NOT write a statistics row for them. The top-bar chapter
+control SHALL carry none of these figures.
+
+#### Scenario: The chapter shows its knowledge-point counts
+
+- **WHEN** a learner opens the knowledge-point list for the chapter in scope
+- **THEN** the view shows the chapter's total number of knowledge points and,
+  for each of the three learning states, how many of them currently carry that
+  state, as counts rather than as percentages
+
+#### Scenario: The records centre shows the accumulated work
+
+- **WHEN** a learner opens the records centre
+- **THEN** the overview shows the number of completed practice runs and a
+  day-by-day curve of how many answers were given on each of the last fourteen
+  days
+
+#### Scenario: No new statistic is invented
+
+- **WHEN** a figure introduced by this requirement is shown
+- **THEN** it counts records the workbench already stores, and no new rate,
+  score, or completion percentage is introduced for it
+
+#### Scenario: The chapter control carries no figures
+
+- **WHEN** a learner opens the chapter control in the top bar
+- **THEN** it shows the chapter names only, with none of the figures of this
+  requirement
+
 ## MODIFIED Requirements
 
 ### Requirement: Soft Mondrian visual foundation
@@ -792,7 +833,12 @@ beside the page title or under the title band.
       `Same-workspace middle navigation preserves the Agent rail` /
       `Three-column shell with navigation`。
 - [x] 没有 `## Purpose`（既有能力 delta 不写 Purpose）。
-- [x] 每个 Requirement ≥ 1 个 Scenario：MODIFIED 9 条、ADDED 9 条，共 18 条 Requirement。
+- [x] 每个 Requirement ≥ 1 个 Scenario：MODIFIED 9 条、ADDED 10 条，共 19 条 Requirement。
+      （ADDED 第 10 条 = `Accumulated work made visible on existing learning facts`，
+      即第 5 组 5.2「进度与成就的可见反馈」的落点：只呈现**已有事实的计数**
+      ——章节知识点总数与三态计数、已完成练习轮次、近 14 天每天的作答次数；
+      **不新增任何口径**（无正确率 / 掌握度 / 完成度百分比），
+      「连续学习天数」因**无现成数据源**而不在本 delta 承诺（已登记为待确认漂移）。）
 - [x] 所有 Scenario 用 `####`（4 个 #）+ `- **WHEN** …` / `- **THEN** …`。
 - [x] 没有触碰任何图谱相关 Requirement：`Knowledge graph page`、`Living graph motion and
       readable labels`、`Metric projection *`、`State cluster layout`、`Layered knowledge
