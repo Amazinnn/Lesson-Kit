@@ -4922,19 +4922,51 @@
     else layout.removeAttribute("data-ai-collapsed");
   }
 
+  /* ---------- three-column geometry (design.md D-10 / tasks.md 13.2 / 13.3) ----------
+     The stylesheet owns the grid template (`#layout` reads --shell-col-left and
+     --shell-col-right); this side writes the two values only.  The old inline
+     `grid-template-columns` overrode the stylesheet on every paint, so the CSS
+     rule was dead code and the two files each carried their own numbers. */
+
+  var COLUMN_MIN = { left: 200, right: 360 };
   var leftWidth = 280;
   var rightWidth = 420;
   var middleMinWidth = 420;
+  var columnCeilings = null;
+
+  /* The clamp ceilings are CSS constants (--shell-col-left-max /
+     --shell-col-right-max), so they are read from the stylesheet instead of
+     being written twice (layout-spec.md §1.2 rule 3).  The floors have no
+     token and stay here; the middle column's 420px floor stays a constant
+     because this side is the one that maintains the invariant
+     (layout-spec.md §1.3). */
+  function columnBounds() {
+    if (columnCeilings) return columnCeilings;
+    var fallback = { left: 480, right: 560 };
+    if (window.getComputedStyle) {
+      var style = window.getComputedStyle(layout);
+      var left = parseFloat(style.getPropertyValue("--shell-col-left-max"));
+      var right = parseFloat(style.getPropertyValue("--shell-col-right-max"));
+      fallback.left = left > 0 ? left : fallback.left;
+      fallback.right = right > 0 ? right : fallback.right;
+    }
+    columnCeilings = fallback;
+    return columnCeilings;
+  }
+
   function applyColumnWidths() {
     if (!layout || !layout.style) return;
     if (window.innerWidth < 1024) {
-      layout.style.gridTemplateColumns = "";
+      layout.style.removeProperty("--shell-col-left");
+      layout.style.removeProperty("--shell-col-right");
       return;
     }
+    var bounds = columnBounds();
     var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
-    leftWidth = Math.max(200, Math.min(480, Math.min(leftWidth, available - rightWidth)));
-    rightWidth = Math.max(360, Math.min(560, Math.min(rightWidth, available - leftWidth)));
-    layout.style.gridTemplateColumns = leftWidth + "px minmax(420px, 1fr) " + rightWidth + "px";
+    leftWidth = Math.max(COLUMN_MIN.left, Math.min(bounds.left, Math.min(leftWidth, available - rightWidth)));
+    rightWidth = Math.max(COLUMN_MIN.right, Math.min(bounds.right, Math.min(rightWidth, available - leftWidth)));
+    layout.style.setProperty("--shell-col-left", leftWidth + "px");
+    layout.style.setProperty("--shell-col-right", rightWidth + "px");
   }
 
   function bindColumnResizer(id, side, min, max) {
@@ -4964,8 +4996,8 @@
     handle.addEventListener("pointerup", stop);
     handle.addEventListener("pointercancel", stop);
   }
-  bindColumnResizer("left-resizer", "left", 200, 480);
-  bindColumnResizer("right-resizer", "right", 360, 560);
+  bindColumnResizer("left-resizer", "left", COLUMN_MIN.left, columnBounds().left);
+  bindColumnResizer("right-resizer", "right", COLUMN_MIN.right, columnBounds().right);
   fitAiColumn();
   applyColumnWidths();
   window.addEventListener("resize", function () { fitAiColumn(); applyColumnWidths(); });
