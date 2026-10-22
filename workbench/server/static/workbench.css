@@ -1867,7 +1867,11 @@ textarea:focus-visible, input:focus-visible {
 /* shared, safe markdown surface */
 .ai-plan-summary {
   margin-top: 4px;
-  color: var(--role-red-ink);
+  /* 摘要行是**中性文案**（「查看输出」这类）⇒ 走中性墨，不再无条件红
+     （A-97 ②：红色只用于失败与阻塞）。
+     ⚠️ 失败通道另有其人：`.ai-plan-step.is-failed .ai-plan-marker`（红点）
+       与 `.ai-plan-step.is-failed .ai-plan-state`（红字）⇒ 这里改中性不丢失败信号。 */
+  color: var(--ink-muted);
   font-size: 12px;
   overflow-wrap: anywhere;
 }
@@ -2187,7 +2191,11 @@ textarea:focus-visible, input:focus-visible {
      抬升的表达走 transform（motion-spec §1.6 / 3.7-1）。 */
   transition: transform var(--dur-slow) var(--ease-out);
 }
-.flash-card-answer { z-index: 1; border-color: var(--role-red); }
+/* 闪卡两面：正面（题面）走蓝，背面（另一面）走**中性墨环**
+   （A-97 ③：原来的红边是**分类色**，用户会把红读成失败）。
+   ⚠️ 分类通道仍在：正面蓝边 / 背面墨边 —— 灰度下也分得开
+     （墨 `#221f1a` ≈ 灰度 22 / 蓝 `#2b62e8` ≈ 灰度 82）。 */
+.flash-card-answer { z-index: 1; border-color: var(--ink-strong); }
 .flash-card-prompt { z-index: 2; border-color: var(--role-blue); }
 .flash-card-stage.is-revealed { padding-bottom: 174px; }
 .flash-card-stage.is-revealed .flash-card-prompt {
@@ -2610,7 +2618,11 @@ img { max-width: 100%; }
 }
 .bar-heavy-flag {
   position: absolute; right: calc(50% - 19px);
-  width: 7px; height: 7px; border-radius: 50%; background: var(--role-red);
+  width: 7px; height: 7px; border-radius: 50%;
+  /* 「重日」是**量级高**，不是失败 ⇒ 不占角色红（A-97 ④）。
+     改用蓝（裁决给的两条路之一：「量级用几何或蓝」）；
+     标记点落在柱顶**之上**（`bottom` = 柱高 − 3）⇒ 不与蓝柱面糊在一起。 */
+  background: var(--role-blue);
   box-shadow: 0 0 0 2px var(--surface-card);
 }
 .bar-date {
