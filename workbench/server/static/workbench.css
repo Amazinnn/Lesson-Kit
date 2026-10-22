@@ -4137,28 +4137,64 @@ html[data-motion="off"] *::after {
 .paper-toolbar { justify-content: flex-end; }
 .paper-navigation { justify-content: center; }
 .paper-dots { display: flex; flex-wrap: wrap; gap: 8px; max-height: 140px; overflow-y: auto; padding: 10px 6px; margin: 12px 0; }
-.paper-dot { width: 34px; height: 34px; min-width: 34px; border-radius: 50%; padding: 0; border: 1px solid var(--ink-muted); background: var(--surface-sheet); color: var(--ink-strong); }
+.paper-dot { width: 34px; height: 34px; min-width: 34px; border-radius: 50%; padding: 0; border: 1px solid var(--ink-muted); background: var(--surface-sheet); color: var(--ink-strong); position: relative; }
+/* 题号格的状态几何（INC-05 · A-94 · spec「Accessible Paper status dots」）------
+   契约：**每个状态点都要有冗余通道** —— 颜色说一次，**形状再说一次**
+   ⇒ 灰度下也读得出状态（权威表 §4.17「几何不只靠颜色」）。
+   改造前：只有 `correct` 有几何（内墨环 + 勾）⇒ `wrong` / `stuck` **同一行规则**
+   ⇒ 灰度下**完全不可分**；`filled`（黄实心）/ `unanswered`（纸面 + 细环）**只差颜色**。
+   ⇒ 复用 `.lk-dot--cross` / `--dash` / `--check` 的**同一支笔**
+     （2px 线宽、1px 圆角、纯 CSS 伪元素画线），另加两个「盘形」档：
+       · `unanswered` = **空心**（纸面透出 + 细环）
+       · `filled`     = **实心盘**（黄面铺满）
+     ⇒ 形状通道不靠颜色。
+   ⚠️ **角标画在盘的右上角**（题号必须始终可读 —— 权威表 §4.17「不把数字换成符号」）：
+     角标墨迹落在盘内 x 20…28 / y 3…9，与居中的题号（1 位数字字身 x 13…21、
+     2 位 x 9…25，y 10…24）**基本不重叠**。
+     ⚠️ 改造前的勾画在盘的**中下**（x 20…33 / y 17…27），**压在题号上** ——
+       这次一并挪到角标位（同一支笔，尺寸不变）。
+   ⚠️ **只改 CSS**：类名由 `paper-practice.js:611` 产出（`paper-dot state-<status>`），
+     markup 一行未动。 */
 .paper-dot.state-filled { background: var(--role-yellow); color: var(--ink-on-warm); }
-.paper-dot.state-locked { background: var(--role-blue-wash); color: var(--role-blue); }
+.paper-dot.state-locked { background: var(--role-blue-wash); color: var(--role-blue); --dot-mark: var(--role-blue); }
 /* 题号格：判定正确 = 中性墨环 + 角标勾形（题号保留，不换成符号） */
 .paper-dot.state-correct {
   position: relative;
   background: var(--surface-card);
   color: var(--ink-strong);
   box-shadow: inset 0 0 0 2px var(--ink-strong);
+  --dot-mark: var(--ink-strong);
 }
+.paper-dot.state-wrong, .paper-dot.state-stuck { background: var(--role-red-wash); color: var(--role-red-ink); --dot-mark: var(--role-red-ink); }
+/* 角标公共形制：右上角、2px 线宽、1px 圆角（与 `.lk-dot--*` 同一支笔） */
 .paper-dot.state-correct::before,
-.paper-dot.state-correct::after {
+.paper-dot.state-correct::after,
+.paper-dot.state-wrong::before,
+.paper-dot.state-wrong::after,
+.paper-dot.state-stuck::before,
+.paper-dot.state-locked::before {
   content: "";
   position: absolute;
-  height: 2px;
   border-radius: 1px;
-  background: var(--ink-strong);
-  transform-origin: 0 50%;
+  background: var(--dot-mark);
 }
-.paper-dot.state-correct::before { width: 5px; left: 20px; top: 21px; transform: rotate(45deg); }
-.paper-dot.state-correct::after { width: 10px; left: 23px; top: 24px; transform: rotate(-45deg); }
-.paper-dot.state-wrong, .paper-dot.state-stuck { background: var(--role-red-wash); color: var(--role-red-ink); }
+/* 勾（判定正确）：短臂 4px + 长臂 6px（与 `.lk-dot--check` 同尺寸） */
+.paper-dot.state-correct::before,
+.paper-dot.state-correct::after { height: 2px; transform-origin: 0 50%; }
+.paper-dot.state-correct::before { width: 4px; left: 20px; top: 6px; transform: rotate(45deg); }
+.paper-dot.state-correct::after { width: 6px; left: 22.5px; top: 8px; transform: rotate(-45deg); }
+/* 叉（判定错误）：两臂 7px、±45°（与 `.lk-dot--cross` 同尺寸） */
+.paper-dot.state-wrong::before,
+.paper-dot.state-wrong::after {
+  left: 24px; top: 6.5px; width: 7px; height: 2px; margin: -1px 0 0 -3.5px;
+  transform-origin: 50% 50%;
+}
+.paper-dot.state-wrong::before { transform: rotate(45deg); }
+.paper-dot.state-wrong::after { transform: rotate(-45deg); }
+/* 横杠（卡住 / 不会）：一根 8px 的短横（与 `.lk-dot--dash` 同尺寸） */
+.paper-dot.state-stuck::before { left: 20px; top: 6.5px; width: 8px; height: 2px; margin-top: -1px; }
+/* 实心小点（已提交、暂无判定）：`.lk-dot--filled` 的缩小版（唯一的盘形角标） */
+.paper-dot.state-locked::before { left: 22px; top: 4px; width: 4px; height: 4px; border-radius: 50%; }
 .paper-dot.is-current { outline: 3px solid var(--role-blue); outline-offset: 2px; }
 .paper-options label { display: flex; gap: 12px; align-items: baseline; padding: 12px; margin: 6px 0; border: 1px solid var(--rule-hair); border-radius: 8px; }
 #paper-answer { width: 100%; box-sizing: border-box; margin: 12px 0; resize: vertical; }
