@@ -45,14 +45,18 @@
     return graphScriptsPromise;
   }
 
-  /* ---- 加载态：骨架屏（tasks.md 21.1 / 21.5）--------------------------------
+  /* ---- 加载态：骨架屏（tasks.md 21.1 / 21.5 / 21.6）------------------------
      切页时 `#middle-page` 的 innerHTML 会被整体替换 ⇒ 进场动效只能由 CSS 的
      容器动画接管（`#layout:not([data-page="graph"]) #middle-page > *` 挂
      `lk-rise-in-12`），JS 不给子元素加一次性动效类名 —— 那类名会随 innerHTML
      一起被冲掉。JS 在这里只做「切页前把容器切成骨架态」这一件事：
      切页前呈骨架，内容到位后由容器动画接管。
      图谱页的转场作用域由 CSS 的 `#layout:not([data-page="graph"])` 排除，
-     JS 侧不重复实现、也不给图谱页加任何特判。 */
+     JS 侧不重复实现、也不给图谱页加任何特判。
+
+     降级（reduced-motion 或动效偏好关）：骨架**不扫光**、内容**直接以终态
+     出现** —— 判定走既有的 `window.lkMotion.mode()`，JS 侧不补任何动效，
+     骨架块与内容的终态和动效版一致（tasks.md 21.6）。 */
 
   /* 骨架块：一条标题 + 一张卡 + 三行正文，与阅读列同宽。
      每个中栏页面各画一套占位形状的成本不低（design.md D-7「代价」），
@@ -65,24 +69,43 @@
     { height: 15, width: "86%", gap: 10 }
   ];
 
-  function skeletonBlock(block) {
+  function skeletonBlock(block, sweep) {
     var style = "height:" + block.height + "px;width:" + block.width
       + (block.gap ? ";margin-top:" + block.gap + "px" : "");
-    /* 灰块 + 微光扫过：灰块与扫光都来自 CSS 的 `.lk-skeleton`
-       （`lk-skeleton-sweep` 只动覆盖层的 transform），JS 不写动效。 */
-    return '<div class="lk-skeleton" style="' + style + '"></div>';
+    if (sweep) {
+      /* 完整动效档：灰块 + 微光扫过 —— 灰块与扫光都来自 CSS 的 `.lk-skeleton`
+         （`lk-skeleton-sweep` 只动覆盖层的 transform），JS 不写动效。 */
+      return '<div class="lk-skeleton" style="' + style + '"></div>';
+    }
+    /* 降级档：不用 `.lk-skeleton`（它的 `::after` 带扫光），改用等价的静态灰块 ——
+       颜色与 `.lk-skeleton` 同源（`--skeleton-base`），灰块静止、不扫光。
+       降级后与动效版的**终态**一致：动效版扫光扫到两端时覆盖层也在画面外，
+       留下的正是这样一块静止灰块（motion-spec §7.2 第 9 行 / §7.1）。 */
+    return '<div style="' + style + ';background:var(--skeleton-base)"></div>';
   }
 
   function skeletonMarkup() {
+    /* 降级判定：复用既有的 `window.lkMotion.mode()`，不另建一套读法。
+       "full" = 完整动效；"weak" = 系统减弱档（系统 reduce 且偏好未设）；
+       "off" = 用户显式关闭。A-2：用户显式选择优先于系统设置 —— mode() 里
+       已经算进去，所以这里只认 "full" 与否。 */
+    var sweep = motionMode() === "full";
     var blocks = [];
     for (var i = 0; i < SKELETON_BLOCKS.length; i += 1) {
-      blocks.push(skeletonBlock(SKELETON_BLOCKS[i]));
+      blocks.push(skeletonBlock(SKELETON_BLOCKS[i], sweep));
     }
     /* 装饰层：`aria-hidden` + `pointer-events:none` —— 可交互元素一律不在
        装饰层内，浮层出现时也不抢焦点（tasks.md 21.3）。 */
     return '<div data-lk-skeleton="1" aria-hidden="true"'
       + ' style="pointer-events:none;max-width:800px;margin:0 auto">'
       + blocks.join("") + "</div>";
+  }
+
+  function motionMode() {
+    if (window.lkMotion && typeof window.lkMotion.mode === "function") {
+      try { return window.lkMotion.mode(); } catch (_) { /* 落到默认档 */ }
+    }
+    return "full";
   }
 
   /* 切页前：容器先呈骨架 + `aria-busy` 置位；内容到位后由
