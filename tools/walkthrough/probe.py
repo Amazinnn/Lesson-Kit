@@ -1416,7 +1416,7 @@ def probe_hover(ctx):
           tag: el.tagName.toLowerCase(),
           id: el.id || "",
           href: el.getAttribute("href") || "",
-          text: (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 30),
+          text: (el.textContent || "").replace(/\\s+/g, " ").trim().slice(0, 30),
           transitionProperty: st.transitionProperty,
           transitionDuration: st.transitionDuration,
           state,
