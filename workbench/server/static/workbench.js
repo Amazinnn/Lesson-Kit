@@ -60,7 +60,7 @@
       post("/chapter", { chapter: chapter }).then(function () {
         refreshMiddle();
       }, function (error) {
-        window.alert("切换章节失败：" + error.message);
+        window.alert("章节切换失败：" + error.message);
         window.location.reload();
       });
     }
@@ -3333,7 +3333,7 @@
         return;
       }
       if (!(aiProviders || []).length) {
-        goalStatus("暂无可用 Agent。请先配置一个提供方，或手动填写字段。");
+        goalStatus("暂无可用 Agent。请先配置一个提供方。");
         return;
       }
       if (aiSendPending) {
@@ -3342,7 +3342,7 @@
       }
       if (!aiConversation) {
         if (typeof aiShowProviderPicker === "function") aiShowProviderPicker();
-        goalStatus("请先在右侧选择 Agent 开始对话，再点一次「让 Agent 填」。");
+        goalStatus("请先在右侧选择 Agent，再点一次「让 Agent 代填」。");
         return;
       }
       var body = aiContextBody(text);
@@ -3599,7 +3599,7 @@
         } else if (accepted.status === "failed" || accepted.status === "cancelled") {
           item.status = "failed";
           item.turn_id = accepted.turn_id;
-          item.error = accepted.error || "Agent did not complete this turn";
+          item.error = accepted.error || "Agent 未能完成";
           if (typeof accepted.content === "string" && item.body) {
             item.body.message = accepted.content;
           }
@@ -3747,7 +3747,7 @@
     aiPaperOrder(host, "更新后顺序", proposedIds);
     if (approval.resets_progress) {
       aiPaperText(host, "p", "ai-paper-approval-impact",
-        "将清除这张 Paper 未完成练习中的进度（当前已完成 "
+        "将清除这张试卷未完成练习中的进度（当前已完成 "
           + Number(approval.completed_items || 0) + " 项）和草稿 "
           + Number(approval.draft_items || 0) + " 份；历史作答与评分保留。");
     } else if (approval.status !== "invalid") {
@@ -3778,11 +3778,11 @@
     }
     card.innerHTML = "";
     aiPaperText(card, "strong", "ai-paper-approval-history-title",
-      "Agent 提议更新 Paper · " + (approval.title || action.practice_set_id || "现有试卷"));
+      "Agent 提议更新试卷 · " + (approval.title || action.practice_set_id || "现有试卷"));
     aiPaperText(card, "p", "ai-paper-approval-history-status", aiPaperActionStatus(approval));
     if (approval.status === "invalid") {
       aiPaperText(card, "p", "ai-paper-approval-impact",
-        "这个提议无法应用：" + (approval.error || "请检查目标 Paper 或题目。"));
+        "这个提议无法应用：" + (approval.error || "请检查目标试卷或题目。"));
       if (Array.isArray(action.problem_ids)) aiPaperOrder(card, "提议顺序", action.problem_ids);
       return;
     }
@@ -3864,7 +3864,7 @@
       notice = null;
     }
     if (status) status.textContent = notice ? notice.text
-      : "确认前不会修改 Paper；批准或取消后，队列仍需手动继续。";
+      : "确认前不会修改试卷；批准或取消后，队列仍需手动继续。";
     if (details) aiPaperApprovalDetails(details, current);
     if (approve) approve.disabled = inFlight || unknown;
     if (cancel) cancel.disabled = inFlight || unknown;
@@ -3925,7 +3925,7 @@
         aiPaperApprovalNotice = {
           conversation_id: conversationId, turn_id: approval.turn_id,
           practice_set_id: approval.practice_set_id, revision: responseApproval.revision,
-          text: "Paper 或练习进度已变化。请核对下面的最新影响，再次点击「"
+          text: "试卷或练习进度已变化。请核对下面的最新影响，再次点击「"
             + (decision === "approve" ? "批准更新" : "取消更新") + "」。",
         };
         aiRenderPaperApproval(responseApproval);
@@ -3939,7 +3939,7 @@
         aiPaperApprovalNotice = {
           conversation_id: conversationId, turn_id: approval.turn_id,
           practice_set_id: approval.practice_set_id, revision: approval.revision,
-          text: "正在重新读取 Paper 状态；在核对完成前不会再次提交。",
+          text: "正在重新读取试卷状态；在核对完成前不会再次提交。",
         };
       }
       return null;
@@ -3967,7 +3967,7 @@
           aiPaperApprovalNotice = {
             conversation_id: conversationId, turn_id: approval.turn_id,
             practice_set_id: approval.practice_set_id, revision: approval.revision,
-            text: "上次操作未能确认；当前 Paper 仍待确认。请核对影响后重试。",
+            text: "上次操作未能确认；当前试卷仍待确认。请核对影响后重试。",
           };
         }
         return record;
@@ -4017,7 +4017,7 @@
     }
     if (status) {
       status.textContent = approvalPending
-        ? "Paper 更新待确认；批准或取消后，仍需手动继续队列。"
+        ? "试卷更新待确认；批准或取消后，仍需手动继续队列。"
         : paused
         ? "队列已暂停；继续后会按顺序发送。"
         : pending.length ? "当前回复结束后按顺序发送；列表中的消息尚未开始。" : "";
@@ -4123,7 +4123,7 @@
         aiOutboxAction(actions, "立即发送", function () {
           if (!aiMutationIsCurrent(context)) return;
           if (approvalPending) {
-            aiSetStatus("Paper 更新待确认；请先处理审批，再立即发送。");
+            aiSetStatus("试卷更新待确认；请先处理审批，再立即发送。");
             return;
           }
           post("/ai/sessions/" + encodeURIComponent(context.conversation_id) + "/turns/"
@@ -4451,7 +4451,7 @@
 
   function aiPostTurn(body, existingOutbox, preserveQueueAction) {
     if (!aiConversation || aiSendPending) {
-      return Promise.reject(new Error("a message is already being submitted"));
+      return Promise.reject(new Error("一条消息正在发送中"));
     }
     var requestBody = Object.assign({}, body || {});
     if (!preserveQueueAction) {
@@ -4897,7 +4897,7 @@
       return;
     }
     if (!result.batch_id) return;
-    var single = aiAddCheckCard("Check 入库完成", aiResultDetail(result), result.batch_id);
+    var single = aiAddCheckCard("入库完成", aiResultDetail(result), result.batch_id);
     var line = single ? single.querySelector(".check-card-detail") : null;
     if (line) line.dataset.assets = aiAssetSummary(result.counts || {});
     // A reopened card shows the batch's current state, not the state at the time
@@ -4908,7 +4908,7 @@
   }
 
   function aiAddMultiBatchCard(result, batches) {
-    var card = aiAddCheckCard("Check 入库完成", aiMultiBatchDetail(result, batches), null);
+    var card = aiAddCheckCard("入库完成", aiMultiBatchDetail(result, batches), null);
     if (!card) return null;
     var body = card.children[0];
     batches.forEach(function (batch) {
@@ -5015,15 +5015,15 @@
 
     var approval = {
       title: "整批回滚 " + batchId,
-      reason: "这是低可逆性的内容变更，需要你明确确认。",
-      impact: "该批写入的内容会从学习池撤销。",
+      reason: "内容变更不可撤销，需要你确认。",
+      impact: "这批内容会从池中删除。",
       approveLabel: "确认回滚",
     };
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.confirm
         && AgentUISurfaces.confirm(approval, executeRollback)) {
       return;
     }
-    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？该批全部内容行将从池中撤销。")) return;
+    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？这批内容会从池中删除。")) return;
     executeRollback();
   }
 
@@ -5326,7 +5326,7 @@
     } else if (data.turn.status === "failed") {
       aiUpdateOutbox(aiConversation, aiCurrentSubmissionId, {
         status: "failed", turn_id: data.turn.turn_id || aiTurn,
-        error: data.turn.error || "Agent did not complete this turn",
+        error: data.turn.error || "Agent 未能完成",
       });
       aiCurrentSubmissionId = "";
       aiTurn = null;
@@ -5340,7 +5340,7 @@
     } else if (data.turn.status === "cancelled") {
       aiUpdateOutbox(aiConversation, aiCurrentSubmissionId, {
         status: "failed", turn_id: data.turn.turn_id || aiTurn,
-        error: "This turn was cancelled",
+        error: "本轮已取消",
       });
       aiCurrentSubmissionId = "";
       aiTurn = null;
@@ -5853,7 +5853,7 @@
             + (goal.deadline ? "（" + escapeHtml(goal.deadline.slice(0, 10)) + "）" : "");
         }).join("、");
         calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted time-off-note'>本月之外或未排期：" + offLine + "。</p>");
+          "<p class='muted time-off-note'>本月之外或未设截止日期：" + offLine + " 个。</p>");
       }
       periods.sort(function (a, b) {
         return a.start - b.start || b.end - a.end
@@ -5966,7 +5966,7 @@
           + "</div><span class='bar-date'>" + label + "</span></div>";
       }).join("");
       workloadBars.innerHTML = bars
-        + (nonzero.length ? "" : "<p class='muted workload-empty'>未来 14 天暂无到期复习项。</p>");
+        + (nonzero.length ? "" : "<p class='muted workload-empty'>未来 14 天暂无到期复习项</p>");
       var heavyDays = days.filter(function (day) {
         return day.count >= heavyThreshold && day.count > 0;
       });
@@ -5994,7 +5994,7 @@
       renderBars(days);
       if (!goals.length) {
         calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted'>还没有带截止日期的目标。</p>");
+          "<p class='muted'>暂无带截止日期的目标</p>");
       }
     }).catch(function () { /* the time view stays hidden on failure */ });
 
