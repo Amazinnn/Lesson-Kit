@@ -11,6 +11,7 @@
   var sequence = 0;
   var graphScriptsPromise = null;
   var middleScrollTop = 0;
+  var focusBeforeSwap = null;
 
   function sameWorkspace(url) {
     if (url.origin !== window.location.origin) return false;
@@ -87,9 +88,44 @@
   /* 切页前：容器先呈骨架 + `aria-busy` 置位；内容到位后由
      `installPageContent` 复位（骨架随 innerHTML 一起被内容替换）。 */
   function showLoadingState() {
+    rememberFocus();
     if (middle) middleScrollTop = middle.scrollTop;
     middlePage.setAttribute("aria-busy", "true");
     middlePage.innerHTML = skeletonMarkup();
+  }
+
+  /* ---- 焦点不被抢走（tasks.md 21.3）----------------------------------------
+     转场与浮层出现时一律不调 focus()：装饰层是 `pointer-events:none` 的
+     纯展示层，里面没有可交互元素。切页前记住焦点所在，换页后只在
+     「焦点确实随旧内容一起被替换掉」时补位 —— 绝不从 AI 右栏 / 左栏
+     把焦点抢过来，焦点顺序也不变。 */
+
+  function rememberFocus() {
+    if (focusBeforeSwap) return;
+    var active = document.activeElement;
+    if (active && middlePage.contains(active)) focusBeforeSwap = active;
+  }
+
+  function restoreFocus() {
+    if (!focusBeforeSwap) return;
+    if (focusBeforeSwap.isConnected) return;                 /* 焦点仍在原处 → 不动 */
+    if (document.activeElement && document.activeElement !== document.body) return;
+    focusBeforeSwap = null;
+    var target = firstFocusable(middlePage);
+    if (!target) return;
+    try { target.focus({ preventScroll: true }); }
+    catch (_) { target.focus(); }
+  }
+
+  function firstFocusable(root) {
+    var nodes = root.querySelectorAll("a[href], button, input, select, textarea, [tabindex]");
+    for (var i = 0; i < nodes.length; i += 1) {
+      var node = nodes[i];
+      if (node.disabled || node.hidden) continue;
+      if (node.getAttribute("tabindex") === "-1") continue;
+      return node;
+    }
+    return null;
   }
 
   function updateLayout(nextLayout) {
@@ -141,6 +177,7 @@
       middle.scrollTop = middleScrollTop;
       middleScrollTop = 0;
     }
+    restoreFocus();
     if (window.WorkbenchMiddlePage) window.WorkbenchMiddlePage.mount();
     if (window.AgentUISurfaces && window.AgentUISurfaces.renderContext) {
       window.AgentUISurfaces.renderContext();
