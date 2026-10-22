@@ -207,12 +207,21 @@
    * the system decides (A-11 for the theme, A-2 for the motion).
    */
 
+  /* The system preferences are read through one live MediaQueryList each, so
+     the helpers stay cheap and always see the current system value. */
+  var darkQuery = null;
+  var motionQuery = null;
+
   function prefersDarkScheme() {
-    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    if (!window.matchMedia) return false;
+    if (!darkQuery) darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    return !!darkQuery.matches;
   }
 
   function prefersReducedMotion() {
-    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (!window.matchMedia) return false;
+    if (!motionQuery) motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    return !!motionQuery.matches;
   }
 
   function storedTheme() {
@@ -403,6 +412,7 @@
   var LAMP_SWAP_MS = 590;
   var LAMP_CLEAN_MS = 700;
   var lampAsset = null;
+  var lampRun = null;
 
   function lampAssetText() {
     if (!lampAsset) {
@@ -428,6 +438,10 @@
   }
 
   function runLampTransition(nextTheme) {
+    /* A second switch while the first is still running replaces it: the
+       pending swap of the older run must not land after the newer one. */
+    if (lampRun) lampRun.cancel();
+    lampRun = null;
     /* The downgraded tiers never build the three layers: the theme is simply
        swapped (motion-spec §4.6). */
     if (motionMode() !== "full") {
@@ -459,15 +473,29 @@
     lamp.classList.add("is-out", "is-lit");
     ripple.classList.add("is-on", "is-clear");
     glow.classList.add("is-on", "is-clear");
+    var swapTimer = null;
+    var cleanTimer = null;
+    function removeLayers() {
+      [ripple, glow, lamp].forEach(function (layer) {
+        if (layer.parentNode) layer.parentNode.removeChild(layer);
+      });
+    }
+    var run = {
+      cancel: function () {
+        if (swapTimer) window.clearTimeout(swapTimer);
+        if (cleanTimer) window.clearTimeout(cleanTimer);
+        removeLayers();
+      },
+    };
+    lampRun = run;
     /* ④ skin swap: the ripple has covered the ground colour by now. */
-    window.setTimeout(function () {
+    swapTimer = window.setTimeout(function () {
       applyTheme(nextTheme);
     }, LAMP_SWAP_MS);
     /* ⑤⑥ retract and clear — the terminal state is clean. */
-    window.setTimeout(function () {
-      if (ripple.parentNode) ripple.parentNode.removeChild(ripple);
-      if (glow.parentNode) glow.parentNode.removeChild(glow);
-      if (lamp.parentNode) lamp.parentNode.removeChild(lamp);
+    cleanTimer = window.setTimeout(function () {
+      removeLayers();
+      if (lampRun === run) lampRun = null;
     }, LAMP_CLEAN_MS);
   }
 
@@ -548,7 +576,6 @@
     if (!surface || !surface.querySelector) return null;
     return surface.querySelector("[data-lk-celebrate-anchor]")
       || surface.querySelector(".lk-celebrate-anchor")
-      || surface.querySelector("#paper-completion-milestone")
       || surface.querySelector("#paper-completion-stats")
       || surface;
   }
