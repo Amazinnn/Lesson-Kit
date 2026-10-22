@@ -13,6 +13,18 @@ _MINI_HEIGHT = 28
 _BAR_MAX_PX = 132        # 柱高上限（与时间视图同一档）
 _BAR_STAGGER_MS = 24     # 逐柱错峰（decisions.md「负荷柱逐柱错峰 24ms」）
 
+# 作答日历的**五档**强度（spec「The calendar levels are fixed and legible」）：
+# 档 0 = 0 次 · 档 1 = 1 次 · 档 2 = 2–3 次 · 档 3 = 4–7 次 · 档 4 = ≥8 次。
+# 每档 = (档号, 下界, 上界)；上界为 None 表示无上界。
+# **唯一真源**：格子分档（`_calendar_level`）与页面图例文案（`_calendar_legend`）都取这里。
+_CALENDAR_LEVELS = (
+    (0, 0, 0),
+    (1, 1, 1),
+    (2, 2, 3),
+    (3, 4, 7),
+    (4, 8, None),
+)
+
 
 def _verdict_mark(kind):
     """判定的几何符号（§3.6 冗余状态通道：勾 / 叉 / 空心环）。
@@ -495,6 +507,20 @@ def _trend_chart(trend):
     )
 
 
+def _calendar_level(attempts):
+    """按当天的**作答次数**定档 —— 五档的唯一判定入口。
+
+    阈值全部取自 `_CALENDAR_LEVELS`（0 / 1 / 2–3 / 4–7 / ≥8），
+    不再有行内三元表达式。
+    """
+    for level, low, high in _CALENDAR_LEVELS:
+        if attempts < low:
+            continue
+        if high is None or attempts <= high:
+            return level
+    return _CALENDAR_LEVELS[-1][0]
+
+
 def _activity_calendar(activity):
     if not activity or not any(day.get("attempts") for day in activity):
         return "<p class='muted'>最近 12 周还没有作答。</p>"
@@ -508,7 +534,7 @@ def _activity_calendar(activity):
             cells.append("<span class='record-activity-day future' aria-hidden='true'></span>")
             continue
         attempts = int(day.get("attempts") or 0)
-        level = 0 if attempts == 0 else 1 if attempts == 1 else 2 if attempts <= 3 else 3 if attempts <= 7 else 4
+        level = _calendar_level(attempts)
         date_text = str(day.get("date") or "")
         cells.append(
             f"<span class='record-activity-day level-{level}' "
