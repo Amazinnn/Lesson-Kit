@@ -1,9 +1,13 @@
 """Server-side HTML for the records surface."""
 
 import html
+import math
 
 
 VIEWS = {"overview", "runs", "attempts", "wrong"}
+
+# 仪表盘卡的迷你图高（layout-spec §5.6「迷你图高 28」）
+_MINI_HEIGHT = 28
 
 
 def _attempt_rows(workspace_name, records):
@@ -177,7 +181,56 @@ def _practice_set_history(practice_sets):
     )
 
 
-def _summary_cards(summary, runs):
+def _verdict_ring(correct, judged):
+    """判定分布的迷你环：对（中性墨）与错（红）各占一段，弧长 = 占比。
+
+    整圈 = 已判定的作答数，所以墨色弧的占比就是卡片上的正确率；
+    「对 / 错 / 未判定」三档的完整分布在下方「判定分布」图里逐行标数。
+    """
+    if not judged:
+        return ""
+    size, radius, stroke = _MINI_HEIGHT, 9.0, 4.0
+    center = size / 2
+    circumference = 2 * math.pi * radius
+    share = max(0.0, min(1.0, correct / judged))
+    return (
+        f"<svg class='record-ring' width='{size}' height='{size}' "
+        f"viewBox='0 0 {size} {size}' aria-hidden='true' focusable='false' "
+        "style='display:block'>"
+        f"<circle cx='{center}' cy='{center}' r='{radius}' fill='none' "
+        f"style='stroke:var(--role-red-ink);stroke-width:{stroke}'/>"
+        f"<circle cx='{center}' cy='{center}' r='{radius}' fill='none' "
+        f"stroke-dasharray='{share * circumference:.2f} {circumference:.2f}' "
+        f"transform='rotate(-90 {center} {center})' "
+        f"style='stroke:var(--ink-strong);stroke-width:{stroke}'/>"
+        "</svg>"
+    )
+
+
+def _rating_spark(ratings):
+    """平均自评的迷你图：1–5 分每档一根条（黄只承载面积，不承载文字）。"""
+    counts = [int(item.get("count") or 0) for item in ratings]
+    if not counts or max(counts) <= 0:
+        return ""
+    top = max(counts)
+    bars = "".join(
+        f"<div class='record-spark-bar' style='flex:1;height:{count / top * 100:.1f}%;"
+        "background:var(--role-yellow)'></div>"
+        for count in counts
+    )
+    return (
+        "<div class='record-spark' style='display:flex;gap:4px;align-items:flex-end;"
+        f"height:{_MINI_HEIGHT}px'>" + bars + "</div>"
+    )
+
+
+def _summary_cards(summary, runs, ratings):
+    """统计区 = 仪表盘卡片（一主三辅，各带一个迷你图）。
+
+    四个汇总数字的**取值与口径与改造前逐位相同**（spec delta「The summary
+    figures keep their present values」）—— 这里只改呈现形态：
+    卡片承载数字，迷你图承载分布。
+    """
     accuracy = summary.get("accuracy")
     average = summary.get("average_rating")
     completed_runs = sum(run.get("status") == "completed" for run in runs)
@@ -187,15 +240,65 @@ def _summary_cards(summary, runs):
         ("客观题正确率", "—" if accuracy is None else f"{accuracy * 100:.0f}%"),
         ("平均自评", "—" if average is None else f"{average:.1f} / 5"),
     ]
+    minis = [
+        None,  # 迷你趋势线（19.4 补：每天的作答次数）
+        None,  # 已完成练习轮次（19.4 补）
+        _verdict_ring(
+            int(summary.get("correct") or 0), int(summary.get("judged") or 0)),
+        _rating_spark(ratings),
+    ]
+    cards = []
+    for index, (label, value) in enumerate(values):
+        lead = index == 0
+        classes = "record-summary card" + (" record-summary-lead" if lead else "")
+        number = (
+            "<strong style='font-size:30px;line-height:36px'>"
+            if lead else "<strong>"
+        ) + html.escape(value) + "</strong>"
+        mini = minis[index]
+        cards.append(
+            f"<article class='{classes}'>"
+            f"<span>{html.escape(label)}</span>"
+            f"{number}"
+            + (f"<div class='record-summary-mini' style='margin-top:8px'>{mini}</div>"
+               if mini else "")
+            + "</article>"
+        )
     return (
         "<section class='record-summary-grid' aria-label='记录摘要'>"
-        + "".join(
-            "<article class='record-summary card'>"
-            f"<span>{html.escape(label)}</span><strong>{html.escape(value)}</strong>"
-            "</article>"
-            for label, value in values
-        )
+        + "".join(cards)
         + "</section>"
+    )
+
+
+def _verdict_distribution(summary):
+    """按判定分布：对 / 错 / 未判定 的作答数。
+
+    数据源是现成读路径 `overview['summary']`（attempts / judged / correct），
+    零新增查询、零写入。条长按「全部作答数」归一，三段之和即全部作答数。
+    """
+    attempts = int(summary.get("attempts") or 0)
+    judged = int(summary.get("judged") or 0)
+    correct = int(summary.get("correct") or 0)
+    rows = [
+        ("对", correct, "var(--ink-strong)"),
+        ("错", max(judged - correct, 0), "var(--role-red-ink)"),
+        ("未判定", max(attempts - judged, 0), "var(--ink-faint)"),
+    ]
+    items = []
+    for label, count, color in rows:
+        width = count / attempts * 100 if attempts else 0
+        items.append(
+            "<div class='record-rating-row'>"
+            f"<span>{label}</span>"
+            "<div class='record-rating-track'>"
+            f"<span style='width:{width:.1f}%;background:{color}'></span></div>"
+            f"<strong>{count}</strong></div>"
+        )
+    return (
+        "<div class='record-rating-chart' aria-label='判定分布'>"
+        + "".join(items)
+        + "</div>"
     )
 
 
@@ -337,8 +440,9 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
             + "</section>"
         )
     else:
+        summary = overview.get("summary") or {}
         body = (
-            _summary_cards(overview.get("summary") or {}, runs)
+            _summary_cards(summary, runs, overview.get("ratings") or [])
             + "<section class='card record-chart-card record-activity-card'>"
             "<div class='section-heading'><div><p class='section-kicker'>最近 12 周</p>"
             "<h2>作答日历</h2></div></div>"
@@ -352,6 +456,10 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
             "<article class='card record-chart-card'><div class='section-heading'><div>"
             "<p class='section-kicker'>自评</p><h2>1–5 分分布</h2></div></div>"
             + _rating_chart(overview.get("ratings") or [])
+            + "</article>"
+            "<article class='card record-chart-card'><div class='section-heading'><div>"
+            "<p class='section-kicker'>判定</p><h2>判定分布</h2></div></div>"
+            + _verdict_distribution(summary)
             + "</article></section>"
             "<section class='support-section record-section'><div class='section-heading'><div>"
             "<p class='section-kicker'>最近练习</p><h2>练习 / 试卷</h2></div>"
