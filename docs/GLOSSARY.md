@@ -928,6 +928,54 @@ _Avoid_：内容版本号、逐条审计日志、哈希 id
 _Avoid_：逐条手工删行、全池回退、静默丢弃练习记录
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
 
+### 自绘下拉 / Custom select
+由**触发器 + 浮起面板**构成的单选控件，取代原生 `<select>`：触发器带 `combobox`
+角色与展开态，面板是 `listbox`，选项是 `option`。三条硬约束：**焦点留在触发器**
+（不进面板）、控件**只占一个 Tab 停靠点**、**无脚本时回落原生 select**
+（给出同样选项、报同样值）。
+_Avoid_：下拉框、原生下拉、弹出层（那是泛称）、组合框（泛称）
+出处：openspec/changes/workbench-component-forms（spec「Custom select replaces the
+native select」）；component-spec.md §4.7 / §6.2
+
+### 载荷承载域 / Payload-carrying field
+**承载提交值的那一个字段**。自绘下拉替换原生控件后由**隐藏域**担任，
+**保留原字段名与原选项值** ⇒ 请求的方法 / 路径 / **载荷键集合逐条不变**（底线守卫 G-1）。
+_Avoid_：表单字段、取值字段、状态字段
+出处：openspec/changes/workbench-component-forms（spec「Custom select replaces the
+native select」）
+
+### 焦点陷阱 / Focus trap
+模态打开期间，**Tab / Shift+Tab 只在对话框内部移动焦点**，不会跑到背景内容上。
+它与「焦点归还」成对出现，且**只属于模态** —— 非模态界面一律不得有焦点陷阱。
+_Avoid_：焦点锁定、焦点管理、键盘捕获
+出处：openspec/changes/workbench-component-forms（§4.24 / §6.2）
+
+### 焦点归还 / Focus return
+模态关闭后，**焦点回到打开它的那个元素**；若该元素已不在 DOM，
+焦点落到**它所在的区域**，**不得留在 body**。
+_Avoid_：焦点恢复、焦点复位
+出处：openspec/changes/workbench-component-forms（§4.24 / §6.2）
+
+### 编号点串 / Numbered step rail
+表达**离散步数完成度**的形态：**编号圆点 + 连接线**，每步带序号；
+四态（完成 / 当前 / 未开始 / 失败）各有**不同的形状**与颜色。
+它**不是控件**：不进 Tab 序列、不改值、不发请求。
+_Avoid_：步骤条、进度点、阶段指示器（那是泛称）、分段进度条（同义但本词更具体）
+出处：openspec/changes/workbench-component-forms（§4.16 / §4.30）
+
+### 工具调用卡（单行形态）/ Tool call card (single-line form)
+工具调用结果的展示形态：**一行头**（状态点 + 工具名 + 耗时 + 展开按钮）+
+**一行摘要**（不展开即可读）+ **默认收起的详情区**。耗时**只取活动自报值**，
+没有就不显示（不猜、不补）。失败由**状态点**承担，**不加红字**。
+_Avoid_：工具日志、调用记录、工具结果块
+出处：openspec/changes/workbench-component-forms（§4.25）
+
+### 模态对话框 / Modal dialog
+**需要打断用户**的确认界面：背景 `inert`，**Esc 关闭**、**焦点陷阱**、
+**焦点归还**。遮罩点击**不关闭**（关闭须显式动作）。它是**唯一接管焦点**的界面。
+_Avoid_：弹窗、弹层、确认框（泛称）
+出处：openspec/changes/workbench-component-forms（§4.24 / §6.1）
+
 ## 工程与流程
 
 ### 学习证据查询 / Learning Evidence Query
