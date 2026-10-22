@@ -349,7 +349,29 @@ python lessonkit.py guard extract-problems --course dmath --chapter ch06   # Res
 | W3d | ✅ 第 21 组 + **两处复核修正**：① 进图谱页不呈通用骨架（`54d540d8`）② 骨架用通用占位、不做 per-page（`decisions.md` **A-46**） | `14536daf` `73f3d541` `9cf4ae1e` `c7629b81` `754cfa1e` `54d540d8` |
 | W3c | ✅ 第 17 组逻辑侧（连对计数器 / 火苗簇 / 参数化横幅 / 断裂负反馈） | `1077f010` … |
 | W3e | ✅ 第 19 组（卡片流 / 错题视图 / 累计量可见） | `036cd426` `61fb0aad` `1d06acb9` … |
-| W2c | 🔄 第 12–15 组 CSS（夜纸值集 / 三栏几何 / 标志带 / 顶栏 / 14.1 死代码退役） | `8b452780` `7ade44aa` … |
+| W2c | 🔄 第 12–15 组 CSS（夜纸值集 / 三栏几何 / 标志带 / 顶栏 / 14.1 死代码退役） | `8b452780` `7ade44aa` `d370372e` … |
+
+### 9.6 复核抓到的三件事（都是「看报告看不出来」的）
+
+1. **P0 回归：Agent 长文掉回无衬线小字。**
+   `workbench.js` 把 Agent 长文的挂载点从 `rich-text` 迁成 `wb-reading`（6.2/6.3 的 JS 段），
+   而 CSS 里那条「第六处挂载点：Agent 长文」的阅读刻度规则**作用域写的是旧类名**
+   ⇒ 规则失配 ⇒ 衬线 / 17px / 1.75 行高 / start 对齐全丢。
+   ⇒ 已修（`d370372e`）。**教训：跨文件改名后，必须回头核对「按类名选择」的规则**；
+   同一批已让 CSS agent 自查所有按类名选择、而类名被迁掉的规则。
+2. **两条 node 测试断言的是「产品里不可达的路径」。**
+   `scope-tray` 早在 `8cc9d23d` 就从 `pages.py` 移除 ⇒ 产品里**从不存在**该元素、
+   `kpNames` 在产品侧 **0 消费者**；但两条测试的**假 DOM 夹具凭空注入**了它，
+   于是断言出「知识点显示名字」—— 而产品一直显示的是 `kp-2`。
+   ⇒ 14.1 的死代码退役是**行为零变化**；该改的是测试（已改，**A-47 / CD-166**）。
+   **教训：断言过期时先问「产品里这条路径可达吗」，再决定改产品还是改断言。**
+3. **8 个 node 用例根本不在 CI 闸门内。**
+   `AGENTS.md` 把 `pytest tests -q` 定为强制验证命令，但
+   `graph_physics_runtime` / `graph_physics_worker` / `graph_renderer` / `graph_layout_seed` /
+   `middle_navigation` / `paper_practice` / `practice_deck` / `agent_ui_v1`
+   **都没有 pytest 包装** ⇒ 它们的回归不会被强制检查发现。
+   ⇒ 已补 `tests/workbench/test_node_suites.py`（8 个套件纳入闸门 + 一条**孤儿守卫**：
+   任何新增的 `*.test.js` 若既不在清单里也没有别的包装器，**就让测试失败**）。
 
 **W3d 复核时暴露的两个问题（已处理，记录在此以免复发）**：
 
