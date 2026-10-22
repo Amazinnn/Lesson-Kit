@@ -763,6 +763,15 @@ list SHALL be a stream of rounded cards separated by whitespace and soft shadow
 rather than a bordered table. The wrong-problem view SHALL be a stream of rounded
 cards, each carrying the problem and a summary of why it went wrong.
 
+The activity calendar SHALL use exactly five intensity levels, and the number of
+answers that falls into each level SHALL be fixed: level 0 = no answers, level 1
+= exactly one answer, level 2 = two to three answers, level 3 = four to seven
+answers, level 4 = eight or more answers. The view SHALL show a legend that
+states these five ranges, so that the level of a day is readable without
+distinguishing colours, and the day that carries no answers SHALL have its own
+level rather than falling back to the grid's base surface. These ranges SHALL be
+the same in the page, in the stylesheet and in the product manual.
+
 The four summary figures — attempt count, completed practices, objective-question
 accuracy and mean self-rating — SHALL keep their present values and their
 present definitions; a difference in what any of them counts is registered as
@@ -781,6 +790,14 @@ geometric cue together.
 - **WHEN** the activity calendar is shown
 - **THEN** it is a compact grid of small squares whose intensity is encoded by
   fill and by height, and it does not occupy a whole screen
+
+#### Scenario: The calendar levels are fixed and legible
+
+- **WHEN** the activity calendar is shown
+- **THEN** each day carries one of five levels — no answers, one answer, two to
+  three answers, four to seven answers, or eight or more answers — and a legend
+  states the same five ranges, so that a day's level is readable without
+  distinguishing colours
 
 #### Scenario: The attempt list is a card stream
 
