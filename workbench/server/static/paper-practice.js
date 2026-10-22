@@ -79,6 +79,18 @@
     var ratingInput = null;
     var ratingNote = null;
     var celebrationAnchorEl = null;
+    /* ---------- 连对反馈（tasks.md 17.1 / 17.3 / 17.8） ----------
+       与快速练习流（practice-flow.js）同一套资产：数字走 workbench.js 的公共
+       Ticker（window.lkTicker.set），火苗走公共火苗 API（window.lkFlame.set），
+       横幅是同一份 .lk-combo-banner —— 这里不另造一份 Ticker 或横幅。
+       本文件只持有本轮的连对数与节奏。 */
+    var streakCount = 0;
+    var STREAK_TIER_HOT = 30;
+    var STREAK_FLAME_CAP = 10;
+    var STREAK_FLAME_STAGGER_MS = 80;
+    var STREAK_FLAME_STEP_MS = 40;
+    var STREAK_BANNER_EVERY = 5;
+    var STREAK_BREAK_OVER = 4;
 
     function emptyLocal() {
       return {
@@ -294,6 +306,7 @@
     function prepareRun(record, isArchived) {
       var shouldAdoptMode = !isArchived && !record.reveal_timing && isPaperRun(record);
       run = record;
+      streakCount = 0;   /* 新的一轮从零开始 */
       renderingArchived = !!isArchived;
       reviewing = false;
       modeAdopting = shouldAdoptMode;
@@ -622,11 +635,130 @@
       return draftValue(item).choices;
     }
 
+    /* ---------- 连对反馈（tasks.md 17.1 / 17.3 / 17.8） ----------
+       三级计数器 + 火苗簇 + 一份参数化横幅 + 断裂负反馈，与快速练习流
+       （practice-flow.js）同一套：数字由 workbench.js 的通用 Ticker 滚动
+       （这里只调用，不另写一份）；火苗只切 class，熄灭的错峰由每个火苗的
+       animation-delay 给出（motion-spec §3.6）。 */
+    function streakTier() {
+      if (streakCount <= 0) return 0;
+      return streakCount >= STREAK_TIER_HOT ? 2 : 1;
+    }
+
+    function streakHtml() {
+      var slots = Math.min(streakCount, STREAK_FLAME_CAP);
+      var flames = "";
+      for (var i = 0; i < slots; i += 1) {
+        flames += "<span class='lk-flame is-lit' style='animation-delay:"
+          + (i * STREAK_FLAME_STAGGER_MS) + "ms'>"
+          + "<span class='lk-flame-off'></span><span class='lk-flame-on'></span></span>";
+      }
+      var tier = streakTier();
+      return "<span class='lk-streak"
+        + (tier === 2 ? " is-hot" : tier === 1 ? " is-warm" : "")
+        + "' data-lk-streak-tier='" + tier + "'>"
+        + "<span class='lk-flames' aria-hidden='true'>" + flames + "</span>"
+        + "<span class='lk-ticker' data-value='" + streakCount + "' aria-label='连对 "
+        + streakCount + "'>" + streakCount + "</span></span>"
+        /* 一份横幅：5 连 / 10 连 … 共用同一份 DOM 与同一套动画，数字是参数 */
+        + "<span class='lk-combo-banner' aria-hidden='true'>"
+        + "<span class='lk-combo-banner__count'>" + streakCount + "</span></span>";
+    }
+
+    /* The streak block lives in the question card, which is replaced as a
+       whole on every render — the parts are therefore looked up by class. */
+    function streakPart(selector) {
+      if (!ids.question || typeof ids.question.querySelectorAll !== "function") return null;
+      var found = ids.question.querySelectorAll(selector);
+      return found && found.length ? found[0] : null;
+    }
+
+    function setStreakNumber(value, from) {
+      var ticker = streakPart(".lk-ticker");
+      if (!ticker) return;
+      if (window.lkTicker && typeof window.lkTicker.set === "function") {
+        try {
+          window.lkTicker.set(ticker, value, { from: from == null ? value : from });
+          return;
+        } catch (error) {
+          /* 通用 Ticker 缺席时也要保证数字是对的（直接写最终值） */
+        }
+      }
+      ticker.textContent = String(value);
+    }
+
+    function showComboBanner(count) {
+      var banner = streakPart(".lk-combo-banner");
+      if (!banner) return;
+      var number = banner.querySelector ? banner.querySelector(".lk-combo-banner__count") : null;
+      if (number) number.textContent = String(count);
+      /* 档位差异只由这一个语义类承担（motion-spec §6.4） */
+      banner.classList.toggle("is-large", count >= STREAK_BANNER_EVERY * 2);
+      banner.classList.add("is-on");
+    }
+
+    function growStreak(before) {
+      setStreakNumber(streakCount, before);
+      if (streakCount > 0 && streakCount % STREAK_BANNER_EVERY === 0) {
+        showComboBanner(streakCount);
+      }
+    }
+
+    function breakStreak(before, loud) {
+      var flames = streakPart(".lk-flames");
+      var lit = streakCount;
+      /* 逐簇熄灭：从最新的一簇开始，每簇错开 40ms（熄灭是纯 opacity 过渡） */
+      for (var remaining = lit - 1; remaining >= 0; remaining -= 1) {
+        (function (count) {
+          setTimeout(function () {
+            if (flames && window.lkFlame && typeof window.lkFlame.set === "function") {
+              window.lkFlame.set(flames, count);
+            }
+          }, (lit - 1 - count) * STREAK_FLAME_STEP_MS);
+        })(remaining);
+      }
+      streakCount = 0;
+      setStreakNumber(0, before);
+      if (!loud) return;
+      /* 连对 > 4 断裂必须明示：一次 ≤4px / 160ms 的水平摆动，不做屏幕级震动 */
+      var counter = streakPart(".lk-streak");
+      if (!counter) return;
+      counter.classList.add("lk-error-nudge");
+      counter.style.animation = "lk-error-nudge 160ms var(--ease-standard) both";
+    }
+
+    /* 判定分叉（17.3）：答对 → 连对数 +1；答错且连对 > 4 → 明示负反馈并归零；
+       其余答错 → 归零。判定语义不动 —— 这里只读提交载荷里的 verdict。 */
+    function judgeStreak(verdict) {
+      if (verdict !== true && verdict !== false) return null;
+      var before = streakCount;
+      var breaking = false;
+      if (verdict === true) {
+        streakCount += 1;
+      } else if (streakCount > STREAK_BREAK_OVER) {
+        /* 断裂时连对数先留着，好让火苗逐簇熄灭，灭完再归零 */
+        breaking = true;
+      } else {
+        streakCount = 0;
+      }
+      return { before: before, breaking: breaking, correct: verdict === true };
+    }
+
+    function applyStreak(landed) {
+      if (!landed) return;
+      if (landed.breaking) breakStreak(landed.before, true);
+      else if (landed.correct) growStreak(landed.before);
+      else setStreakNumber(0, landed.before);
+    }
+
     function buildQuestion(problem) {
       var title = problem.display_title || problem.title || "未命名题目";
       var prompt = problem.problem_text || "题面暂不可用。";
       var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
+        /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里。
+           回看已完成的答卷时不挂 —— 那不是一轮练习。 */
+        + (renderingArchived ? "" : "<p class='practice-streak' style='position: relative'>" + streakHtml() + "</p>")
         + "<h2>" + escapeHtml(title) + "</h2>"
         + "<div class='wb-reading wb-reading--stem problem-text'>" + richText(String(prompt)) + "</div>"
         + (problem.source_evidence
@@ -1025,6 +1157,9 @@
         delete draftTimers[key];
       }
       var priorDraftWrite = draftWrites[key] || Promise.resolve();
+      /* 连对：判定先落地，界面随后再动（数字滚动 / 火苗 / 横幅 / 断裂负反馈）。
+         判定语义不动 —— 读的就是这次提交载荷里的那个 verdict。 */
+      var streakLanded = null;
       answerBusy[key] = priorDraftWrite.catch(function () {}).then(function () {
         if (local.pendingDrafts[key]) return flushDraft(key).catch(function () {});
       }).then(function () {
@@ -1038,6 +1173,7 @@
         if (updated) adoptRun(updated, false);
         persistLocal();
         clearError();
+        streakLanded = judgeStreak(payload.verdict);
       }).catch(function (error) {
         if (error && error.status && error.status < 500) {
           delete local.pendingAttempts[key];
@@ -1053,6 +1189,8 @@
         delete answerBusy[key];
         renderDots();
         if (isVisibleItem(item, index)) renderCurrent();
+        /* 界面已按新的连对数重画，这里再补动效（数字滚动 / 火苗 / 横幅 / 负反馈） */
+        applyStreak(streakLanded);
         return value;
       });
       if (isVisibleItem(item, index)) renderCurrent();
