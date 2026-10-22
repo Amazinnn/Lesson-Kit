@@ -2537,10 +2537,34 @@ img { max-width: 100%; }
   animation: lk-spin 700ms linear infinite;
 }
 
-/* 火苗簇（§2.1 第 17 项）：灰层常显，黄层由 `is-lit` 交叉淡入 */
-.lk-flame { position: relative; display: inline-block; width: 14px; height: 18px; }
-.lk-flame-off, .lk-flame-on { position: absolute; inset: 0; }
-.lk-flame-on { opacity: 0; transition: opacity var(--dur-base) var(--ease-standard); }
+/* 火苗簇（§2.1 第 17 项 · IMPL-W2e 第 2 条）：灰层常显，黄层由 `is-lit` 交叉淡入。
+   ⚠️ 以前这两层**只有定位**（`position:absolute; inset:0`）—— 既没有底色也没有
+   图形 ⇒ 火苗**完全不可见**（结构在、样式没跟上）。现在补上**纯 CSS 剪影**
+   （不引新资源、不用位图）：
+   · 剪影 = `clip-path` 多顶点折线（尖顶 + 圆肚），12×16px 的小形；
+   · 灰层 = 未点亮（常显，`--ink-faint` 半透明）；
+   · 黄层 = 点亮（`is-lit` 交叉淡入，**只动 opacity**，不用颜色过渡 —— 动效红线）；
+   · 火苗簇最多 10 簇 ⇒ 每簇压到 12×16px，不能糊成一团。
+   ⚠️ 逐簇点亮的错峰由 JS 写在 `animation-delay` 上（workbench.js:378 /
+   paper-practice.js:652），**CSS 侧不碰**。 */
+.lk-flame { position: relative; display: inline-block; width: 12px; height: 16px; }
+.lk-flame-off,
+.lk-flame-on {
+  position: absolute;
+  inset: 0;
+  /* 写意火苗剪影：尖顶 + 圆肚（多顶点折线近似曲线，12px 宽也不糊） */
+  clip-path: polygon(
+    50% 0%, 61% 13%, 72% 27%, 82% 43%, 88% 60%,
+    86% 76%, 74% 91%, 50% 100%,
+    26% 91%, 14% 76%, 12% 60%, 18% 43%, 28% 27%, 39% 13%
+  );
+}
+.lk-flame-off { background: var(--ink-faint); opacity: .45; }
+.lk-flame-on {
+  background: var(--role-yellow);
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
 .lk-flame.is-lit .lk-flame-on { opacity: 1; }
 .lk-flame.is-lit { animation: lk-flame-ignite 320ms var(--ease-out) both; }
 
