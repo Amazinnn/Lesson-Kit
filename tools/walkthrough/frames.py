@@ -50,6 +50,7 @@ WATCH = [
     ".lk-lamp", ".lk-ripple", ".lk-ripple-glow", ".lk-ripple-veil",
     ".lk-combo-banner", ".lk-combo-banner__count", ".lk-streak",
     ".lk-flames", ".lk-flame", ".lk-flame-on", ".lk-flame-off",
+    ".lk-squash", ".micro-verdict",
     ".lk-ticker", ".lk-ticker-digit",
     ".lk-progress", ".lk-progress-fill", ".lk-celebrate-anchor",
     ".lk-celebrate-burst", ".lk-confetti", ".paper-slice",
@@ -966,7 +967,7 @@ def judge_squash(meta, reduced_meta, watch):
     word for it.
     """
     found = _animations_named(meta, "lk-squash-bounce")
-    verdicts = meta.get("verdictElements") or []
+    verdicts = meta.get("verdictElements") or {}
     evidence = {"verdictElements": verdicts,
                 "animationTargets": sorted({anim.get("target") or ""
                                             for frame in meta["frames"]
@@ -1171,25 +1172,40 @@ def completion_facts(page):
 
 
 def verdict_elements(page):
-    """The verdict elements the product rendered (M-7's evidence).
+    """The verdict and the squash target the product rendered (M-7).
 
-    The squash is attached to ``.micro-verdict.ok`` by the product
-    itself, so the frames have to show **that** element — a stand-in
-    card cannot.
+    The squash hangs on the **selected option row** (decisions.md A-89:
+    the landing point is the item the learner picked), and the verdict
+    line carries a ``lk-verdict-correct`` marker.  The evidence names
+    both, so nobody has to take the harness's word for it.
     """
-    return page.evaluate("""() => Array.from(
-        document.querySelectorAll(".micro-verdict")).map((el) => {
-      const st = getComputedStyle(el);
-      const rect = el.getBoundingClientRect();
-      return {
-        cls: String(el.className || ""),
-        text: (el.textContent || "").trim().slice(0, 30),
-        animation: st.animationName,
-        animationDuration: st.animationDuration,
-        transform: st.transform,
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-      };
+    return page.evaluate("""() => ({
+      verdicts: Array.from(document.querySelectorAll(".micro-verdict")).map((el) => {
+        const st = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return {
+          cls: String(el.className || ""),
+          text: (el.textContent || "").trim().slice(0, 30),
+          animation: st.animationName,
+          transform: st.transform,
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+      }),
+      squashes: Array.from(document.querySelectorAll(".lk-squash")).map((el) => {
+        const st = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return {
+          cls: String(el.className || ""),
+          tag: el.tagName.toLowerCase(),
+          animation: st.animationName,
+          animationDuration: st.animationDuration,
+          transform: st.transform,
+          text: (el.textContent || "").replace(/\\s+/g, " ").trim().slice(0, 40),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+      }),
     })""")
 
 

@@ -753,26 +753,38 @@
       renderMath(ids.reference);
     }
 
-    /* 答对的挤压回弹（motion-spec §2.1 第 12 项 / `lk-squash-bounce`）：
-       判定成立的这一刻，把回弹挂到**判定元素**（`.micro-verdict.ok`）上。
-       · **同拍**：音效（workbench.js 的 `cueVerdict`）认的也是 `.micro-verdict`
-         —— 同一个节点、同一次判定落地 ⇒ 回弹与「判定：正确」一起出现；
+    /* 答对的挤压回弹（motion-spec §3.1 / A-89）：落点是**被选中的那一项**
+       ——正确选项那一行（底边为锚，读作「被顶了一下」）。
+       · 判定行（`.micro-verdict.ok`）另挂 `lk-verdict-correct` 作标记（**无样式**），
+         走查探针据此认出「判定正确」；
+       · 落点行挂 `lk-squash`（样式表规则：
+         `.lk-squash { transform-origin: 50% 100%; animation: lk-squash-bounce 517ms both; }`），
+         这里同时写一份内联声明（与 workbench.js 的 `lk-error-nudge` 同一写法），
+         规则补齐之前回弹也已经发生；
        · **终态铁律**：压扁只写在 `@keyframes` 里，元素的静态样式是终态
          （不压扁），降级后读得出；
-       · **动效红线**：关键帧只动 `transform`（scale），不动布局。
-       挂载点是类名 `lk-squash`（样式表规则：
-       `.lk-squash { animation: lk-squash-bounce 517ms var(--ease-snap) both; }`）；
-       这里同时写一份内联声明（与 workbench.js 的 `lk-error-nudge` 同一写法），
-       规则补齐之前回弹也已经发生。 */
-    function squashVerdict(root) {
+       · **动效红线**：关键帧只动 `transform`（scale），不动布局；
+       · 只在提交路径挂 ⇒ 判定只回弹一次，回看旧答案不重播；
+       · 判定为错 / 不会 / 没有「判定正确」时整段不挂。
+       本流的选项行实际类名：`<label class='option-row'>`（在
+       `<fieldset class='problem-options'>` 内），「被选中」= 里面的
+       `input[data-paper-choice]` 处于选中态。 */
+    function squashCorrectOption(root) {
       if (!root || typeof root.querySelectorAll !== "function") return;
-      var nodes = root.querySelectorAll(".micro-verdict.ok");
-      var node = nodes && nodes.length ? nodes[0] : null;
-      if (!node || !node.classList) return;
-      node.classList.add("lk-squash");
-      if (node.style) {
-        node.style.animation = "lk-squash-bounce 517ms var(--ease-snap) both";
-      }
+      var verdicts = root.querySelectorAll(".micro-verdict.ok");
+      var verdict = verdicts && verdicts.length ? verdicts[0] : null;
+      if (!verdict) return;
+      if (verdict.classList) verdict.classList.add("lk-verdict-correct");
+      var inputs = root.querySelectorAll("input[data-paper-choice]:checked");
+      Array.prototype.slice.call(inputs || []).forEach(function (input) {
+        var row = input && input.closest ? input.closest("label") : null;
+        if (!row || !row.classList) return;
+        row.classList.add("lk-squash");
+        if (row.style) {
+          row.style.animation = "lk-squash-bounce 517ms both";
+          row.style.transformOrigin = "50% 100%";
+        }
+      });
     }
 
     function feedbackFor(item) {
@@ -1116,12 +1128,11 @@
         renderDots();
         if (isVisibleItem(item, index)) {
           renderCurrent();
-          /* 答对的挤压回弹：判定元素刚被 renderCurrent → renderReference 画出来，
-             此刻挂上回弹 —— 与音效同拍（音效认的也是这个 `.micro-verdict.ok` 节点，
-             判定为错时那边也不响）。
-             判定为错、或参考区里没有「判定：正确」时不动
+          /* 答对的挤压回弹：判定成立的这一刻，回弹挂到**被选中的那一项**
+             （正确选项行，底边为锚）——与音效同一帧落地（判定为错时那边也不响）。
+             判定为错 / 不会 / 参考区里没有「判定：正确」时不动
              （负反馈是摆动，不是回弹）。 */
-          squashVerdict(ids.reference);
+          squashCorrectOption(ids.work);
         }
         /* 界面已按新的连对数重画，这里再补动效（数字滚动 / 火苗 / 横幅 / 负反馈） */
         if (streak) streak.apply(streakLanded);

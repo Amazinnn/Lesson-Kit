@@ -510,9 +510,10 @@ PROBE_JS = r"""
         } : null,
       });
     });
+    const classOf = (el) => el.getAttribute("class") || "";
     window.__lkEmptySkipped = {
-      insideSvg: candidates.filter(insideSvg).map((el) => String(el.className || "")),
-      nested: candidates.filter(nestedIn).map((el) => String(el.className || "")),
+      insideSvg: candidates.filter(insideSvg).map(classOf),
+      nested: candidates.filter(nestedIn).map(classOf),
     };
     return out;
   };
@@ -1563,99 +1564,100 @@ def probe_audio_cue(ctx, paper_id, plan, waiter=None):
 
     from shots import CONSISTENCY, VIEWPORTS
 
-    browser = playwright.chromium.launch(
-        headless=True, args=list(CONSISTENCY["browser_args"]))
-    context = browser.new_context(
-        viewport={"width": VIEWPORTS["V1440"]["width"],
-                  "height": VIEWPORTS["V1440"]["height"]},
-        device_scale_factor=VIEWPORTS["V1440"]["device_scale_factor"],
-        color_scheme=CONSISTENCY["color_scheme"],
-        reduced_motion=CONSISTENCY["reduced_motion"],
-        locale=CONSISTENCY["locale"],
-        timezone_id=CONSISTENCY["timezone_id"])
-    page = context.new_page()
     data = {"paper_id": paper_id, "plan": plan}
-    try:
-        page.add_init_script(PROBE_JS)
-        page.add_init_script(AUDIO_JS)
-        page.add_init_script(SFX_HOOK_JS)
-        page.goto(f"{ctx.base_url}/w/{ctx.ws}/practice?paper={paper_id}",
-                  wait_until="load", timeout=30000)
-        page.wait_for_timeout(400)
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(
+            headless=True, args=list(CONSISTENCY["browser_args"]))
+        context = browser.new_context(
+            viewport={"width": VIEWPORTS["V1440"]["width"],
+                      "height": VIEWPORTS["V1440"]["height"]},
+            device_scale_factor=VIEWPORTS["V1440"]["device_scale_factor"],
+            color_scheme=CONSISTENCY["color_scheme"],
+            reduced_motion=CONSISTENCY["reduced_motion"],
+            locale=CONSISTENCY["locale"],
+            timezone_id=CONSISTENCY["timezone_id"])
+        page = context.new_page()
+        try:
+            page.add_init_script(PROBE_JS)
+            page.add_init_script(AUDIO_JS)
+            page.add_init_script(SFX_HOOK_JS)
+            page.goto(f"{ctx.base_url}/w/{ctx.ws}/practice?paper={paper_id}",
+                      wait_until="load", timeout=30000)
+            page.wait_for_timeout(400)
 
-        data["beforeGesture"] = read_sound_state(page)
+            data["beforeGesture"] = read_sound_state(page)
 
-        # -- 1. the real gesture: the start button -----------------------
-        page.wait_for_selector("#paper-start", state="visible", timeout=15000)
-        page.click("#paper-start")
-        if waiter is not None:
-            waiter.wait_for(
-                "POST /api/w/{name}/practice-sets/{practice_set_id}/start")
-        page.wait_for_timeout(300)
-        data["afterGesture"] = read_sound_state(page)
-        data["userActivationAfterGesture"] = page.evaluate(
-            "() => !!(navigator.userActivation && navigator.userActivation.hasBeenActive)")
-
-        # -- 2. answer the items the plan gives --------------------------
-        answers = []
-        for index, item in enumerate(plan or []):
-            if index:
-                page.wait_for_selector("#paper-next", state="visible", timeout=15000)
-                page.click("#paper-next")
-                if waiter is not None:
-                    waiter.wait_for(
-                        "POST /api/w/{name}/practice/current/navigate")
-                page.wait_for_timeout(300)
-            before = read_sound_state(page)
-            outcome = answer_plan_item(page, item)
-            outcome["index"] = index
-            outcome["problem_id"] = item.get("problem_id")
+            # -- 1. the real gesture: the start button -------------------
+            page.wait_for_selector("#paper-start", state="visible", timeout=15000)
+            page.click("#paper-start")
             if waiter is not None:
-                waiter.wait_for("POST /api/w/{name}/attempts")
-            try:
-                page.wait_for_selector(".micro-verdict", state="attached",
-                                       timeout=15000)
-            except Exception:
-                outcome["verdictAppeared"] = False
-            else:
-                outcome["verdictAppeared"] = True
-            page.wait_for_timeout(200)
-            after = read_sound_state(page)
-            outcome["cueCalls"] = len(after["cueCalls"]) - len(before["cueCalls"])
-            outcome["plays"] = len(after["plays"]) - len(before["plays"])
-            outcome["verdicts"] = after["verdicts"]
-            # The self-rating keeps the request shape of a real round; it
-            # happens **after** the verdict, so it cannot cancel the cue.
-            try:
-                page.wait_for_selector("#paper-rating", state="visible",
-                                       timeout=10000)
-                page.fill("#paper-rating input[type='number']", "4")
-                page.click("#paper-rating button")
-                if waiter is not None:
-                    waiter.wait_for("POST /api/w/{name}/feedback")
-            except Exception:
-                outcome["rated"] = False
-            else:
-                outcome["rated"] = True
-            answers.append(outcome)
-        data["answers"] = answers
-        data["afterAnswers"] = read_sound_state(page)
+                waiter.wait_for(
+                    "POST /api/w/{name}/practice-sets/{practice_set_id}/start")
+            page.wait_for_timeout(300)
+            data["afterGesture"] = read_sound_state(page)
+            data["userActivationAfterGesture"] = page.evaluate(
+                "() => !!(navigator.userActivation && navigator.userActivation.hasBeenActive)")
 
-        # -- 3. the control: may the browser play at all? ----------------
-        control = page.evaluate("""async () => {
-          if (!window.lkSfx || !window.lkSfx.playCue) return {hasSfx: false};
-          const before = (window.__lkSfxPlays || []).length;
-          window.lkSfx.playCue("complete");
-          await new Promise((r) => setTimeout(r, 250));
-          const plays = (window.__lkSfxPlays || []).slice(before);
-          return {hasSfx: true, plays: plays.map((p) => ({
-            src: p.src, outcome: p.outcome, error: p.error || "",
-            userActivation: p.userActivation}))};
-        }""")
-        data["control"] = control
-    finally:
-        context.close()
-        browser.close()
+            # -- 2. answer the items the plan gives ----------------------
+            answers = []
+            for index, item in enumerate(plan or []):
+                if index:
+                    page.wait_for_selector("#paper-next", state="visible", timeout=15000)
+                    page.click("#paper-next")
+                    if waiter is not None:
+                        waiter.wait_for(
+                            "POST /api/w/{name}/practice/current/navigate")
+                    page.wait_for_timeout(300)
+                before = read_sound_state(page)
+                outcome = answer_plan_item(page, item)
+                outcome["index"] = index
+                outcome["problem_id"] = item.get("problem_id")
+                if waiter is not None:
+                    waiter.wait_for("POST /api/w/{name}/attempts")
+                try:
+                    page.wait_for_selector(".micro-verdict", state="attached",
+                                           timeout=15000)
+                except Exception:
+                    outcome["verdictAppeared"] = False
+                else:
+                    outcome["verdictAppeared"] = True
+                page.wait_for_timeout(200)
+                after = read_sound_state(page)
+                outcome["cueCalls"] = len(after["cueCalls"]) - len(before["cueCalls"])
+                outcome["plays"] = len(after["plays"]) - len(before["plays"])
+                outcome["verdicts"] = after["verdicts"]
+                # The self-rating keeps the request shape of a real round;
+                # it happens **after** the verdict, so it cannot cancel it.
+                try:
+                    page.wait_for_selector("#paper-rating", state="visible",
+                                           timeout=10000)
+                    page.fill("#paper-rating input[type='number']", "4")
+                    page.click("#paper-rating button")
+                    if waiter is not None:
+                        waiter.wait_for("POST /api/w/{name}/feedback")
+                except Exception:
+                    outcome["rated"] = False
+                else:
+                    outcome["rated"] = True
+                answers.append(outcome)
+            data["answers"] = answers
+            data["afterAnswers"] = read_sound_state(page)
+
+            # -- 3. the control: may the browser play at all? ------------
+            control = page.evaluate("""async () => {
+              if (!window.lkSfx || !window.lkSfx.playCue) return {hasSfx: false};
+              const before = (window.__lkSfxPlays || []).length;
+              window.lkSfx.playCue("complete");
+              await new Promise((r) => setTimeout(r, 250));
+              const plays = (window.__lkSfxPlays || []).slice(before);
+              return {hasSfx: true, plays: plays.map((p) => ({
+                src: p.src, outcome: p.outcome, error: p.error || "",
+                userActivation: p.userActivation}))};
+            }""")
+            data["control"] = control
+        finally:
+            context.close()
+            browser.close()
     return data
 
 
@@ -1693,8 +1695,11 @@ def judge_audio_cue(data):
         "controlPlayed": control_played,
     }
     if silent:
-        return _bad(data, "答完题后 playCue 调用 0 次 —— 代码没有触发音效"
-                           "（控制调用能播放 ⇒ 不是浏览器拦的）")
+        silent_names = [item.get("problem_id") for item in silent]
+        loud = [item.get("problem_id") for item in graded if item.get("cueCalls")]
+        return _bad(data, "答完题后这些判定没有声音（playCue 调用 0 次）："
+                           f"{silent_names}；有声音的是 {loud} —— "
+                           "代码没有触发音效（控制调用能播放 ⇒ 不是浏览器拦的）")
     if blocked:
         return _bad(data, f"音效被调用了，但有 {len(blocked)} 次播放被浏览器拒绝"
                            "（自动播放策略）")
@@ -2618,11 +2623,18 @@ def probe_long_list(ctx):
       };
     }""", info.get("selector"))
     data["frames"] = frames
-    if not frames or not frames.get("frames"):
+    if not frames:
+        return _pending(data, "滚动帧间隔没有采到 —— 本轮无法判定滚动是否流畅")
+    if frames.get("scroller") is None:
+        return _bad(data, f"{info.get('count')} 条记录的列表滚不动"
+                           "（整条链上没有任何滚动容器）—— 静默裁切，"
+                           "滚动流畅无从成立")
+    if not frames.get("frames"):
         return _pending(data, "没有采到滚动帧间隔 —— 本轮无法判定滚动是否流畅")
     if not frames.get("scrollable"):
         return _bad(data, f"{info.get('count')} 条记录的列表滚不动"
-                           f"（没有任何滚动容器）—— 静默裁切，滚动流畅无从成立")
+                           f"（滚动容器 {frames.get('scroller')} 的 scrollTop 没动）"
+                           "—— 静默裁切，滚动流畅无从成立")
     if frames.get("p95", 0) > 50:
         return _bad(data, f"滚动帧间隔 p95 = {frames.get('p95')}ms")
     return _ok(data, f"{info.get('count')} 条记录的滚动帧间隔在阈值内"
@@ -2927,7 +2939,6 @@ def run_flow(args):
     round is an all-correct one and the answer cue has something to say.
     Without a plan the pass falls back to the exercise's seed paper.
     """
-    from playwright.sync_api import sync_playwright
     from exercise import Service, Waiter, seed_paper
 
     out_dir = Path(args.out)
@@ -2953,14 +2964,12 @@ def run_flow(args):
             paper_id = seed_paper(service, args.ws)
     service.set_phase("verify", group="probe")
 
-    with sync_playwright() as playwright:
-        ctx = ProbeContext(None, args.base_url, args.ws, args.side,
-                           repo_root=args.repo_root, out_dir=out_dir)
-        try:
-            data = probe_audio_cue(ctx, paper_id, plan, waiter=waiter)
-        finally:
-            pass
-        results["3.3-1"] = judge_audio_cue(data)
+    ctx = ProbeContext(None, args.base_url, args.ws, args.side,
+                       repo_root=args.repo_root, out_dir=out_dir)
+    # The sound probe opens its **own** browser context: the audio module
+    # must not be unlocked before the probe's own gesture.
+    data = probe_audio_cue(ctx, paper_id, plan, waiter=waiter)
+    results["3.3-1"] = judge_audio_cue(data)
 
     _write_results(probe_dir, results, args.side)
     return results
