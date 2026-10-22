@@ -656,6 +656,49 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn(">试卷<", body)
         self.assertIn(">记录<", body)
 
+    def test_kps_page_shows_state_dots_and_the_scope_count(self):
+        # 18.2: the row state is a colour + geometry dot, zero visible words.
+        # 18.5: the count bar sums the same three states — counts, no percentages.
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "INSERT INTO learning_current_state (item_type, item_id, state)"
+                " VALUES ('kp', 'dmath-ch06-kp-001', 'needs_work')")
+            conn.commit()
+        finally:
+            conn.close()
+        status, body = self.fetch("/w/dmath/kps")
+        self.assertEqual(status, 200)
+        self.assertIn(
+            "<span class='knowledge-state-dot lk-dot lk-dot--red lk-dot--cross'"
+            " role='img' aria-label='重点练习' title='重点练习'></span>", body)
+        self.assertIn("class='knowledge-count-bar'", body)
+        self.assertIn(
+            "<span class='knowledge-count-bar__value'>1</span> 个知识点", body)
+        self.assertIn(
+            "<span class='knowledge-count-bar__value'>1</span> 重点练习", body)
+        bar = body.split("class='knowledge-count-bar'", 1)[1].split("</div>", 1)[0]
+        for banned in ("%", "正确率", "掌握度", "完成度"):
+            self.assertNotIn(banned, bar)
+
+    def test_kps_page_empty_state_is_an_illustration_and_one_sentence(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute("DELETE FROM knowledge_points")
+            conn.commit()
+        finally:
+            conn.close()
+        status, body = self.fetch("/w/dmath/kps")
+        self.assertEqual(status, 200)
+        self.assertIn("class='empty-state lk-empty'", body)
+        self.assertIn("class='lk-empty__art'", body)
+        self.assertIn("class='lk-empty__text'>暂无知识点</p>", body)
+        # The illustration is inline SVG, not an <img>: only an inline asset
+        # takes the page's theme variables (asset-spec §1.11).
+        empty = body.split("class='empty-state lk-empty'", 1)[1]
+        self.assertIn("<svg", empty)
+        self.assertNotIn("<img", empty)
+
     def test_kps_page_lists_knowledge_points(self):
         status, body = self.fetch("/w/dmath/kps")
         self.assertEqual(status, 200)
@@ -686,7 +729,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("problem-summary", body)
         self.assertNotIn("linked-problem-detail", body)
         self.assertIn("class='linked-problem-list'", body)
-        self.assertIn("class='linked-problem'", body)
+        self.assertIn("class='linked-problem lk-card'", body)
         self.assertNotIn("problem-topic", body)
         self.assertIn("两类代表", body)
         self.assertNotIn("…", body)

@@ -4,10 +4,104 @@ import html
 import json
 import re
 from datetime import date
+from pathlib import Path
 from urllib.parse import quote
 
 from workbench.data import queries
 from workbench.server import records as records_view
+
+
+# The learning states of a knowledge point (GLOSSARY「当前学习状态」). The list
+# carries them as a colour + geometry dot, never as words (18.2).
+_STATE_DOTS = {
+    "needs_work": "lk-dot lk-dot--red lk-dot--cross",
+    "review": "lk-dot lk-dot--yellow lk-dot--dash",
+    "mastered": "lk-dot lk-dot--ink lk-dot--check",
+}
+_STATE_NAMES = {
+    "needs_work": "重点练习",
+    "review": "可以复习",
+    "mastered": "掌握",
+}
+
+_ASSET_DIR = Path(__file__).resolve().parent / "static" / "assets"
+_asset_cache = {}
+
+
+def _inline_asset(relative_path, width, height):
+    """One local SVG asset, inlined into the page (asset-spec §1.11).
+
+    An `<img src>` reference is a separate document: the outer theme's CSS
+    variables do not reach it, so night paper would keep the light drawing.
+    Assets therefore enter the DOM as inline `<svg>`.
+
+    The root element carries no size of its own (asset-spec §1.12) — the host
+    CSS sizes it (`.asset-icon` / `.asset-empty`). The width and height added
+    here are presentational attributes, the weakest possible source, so any
+    CSS rule wins over them; they only keep the asset from filling its box
+    until that rule lands.
+    """
+    source = _asset_cache.get(relative_path)
+    if source is None:
+        source = (_ASSET_DIR / relative_path).read_text(encoding="utf-8").strip()
+        _asset_cache[relative_path] = source
+    return source.replace(
+        "<svg ", "<svg width='{}' height='{}' ".format(width, height), 1)
+
+
+def _state_dot(state, labelled=True):
+    """One learning-state cue: a colour and a geometry, no visible words.
+
+    The dot is the redundant state channel (component-spec §3.6): colour is the
+    main channel, the shape is the redundant one, and no state is ever spelled
+    out in the list. `needs_work` / `review` / `mastered` are the three current
+    states; anything else carries no cue at all.
+    """
+    if state not in _STATE_DOTS:
+        return ""
+    dot = "<span class='knowledge-state-dot " + _STATE_DOTS[state] + "'"
+    if not labelled:
+        return dot + " aria-hidden='true'></span>"
+    name = _STATE_NAMES[state]
+    return (dot + " role='img' aria-label='" + name + "' title='" + name
+            + "'></span>")
+
+
+def _empty_state(asset_path, text, width, height):
+    """The empty state: a still-life illustration and one sentence.
+
+    No button: this empty state has no action to offer, and the copy table
+    refuses to invent one (design-notes/copy-table.md §0.3 rule 3).
+    """
+    return (
+        "<div class='empty-state lk-empty'>"
+        "<span class='lk-empty__art' aria-hidden='true'>"
+        + _inline_asset(asset_path, width, height)
+        + "</span>"
+        "<p class='lk-empty__text'>" + html.escape(text) + "</p>"
+        "</div>"
+    )
+
+
+def _knowledge_count_bar(total, counts):
+    """The knowledge-point count of the current scope (18.5).
+
+    The total plus how many knowledge points sit in each of the three current
+    states — counts, never a percentage and never a score (GLOSSARY「当前学习
+    状态」_Avoid_). It summarises the distribution; it is not a per-item
+    reminder, so only the state names are spelled out here.
+    """
+    items = [("<span class='knowledge-count-bar__value'>" + str(total)
+              + "</span> 个知识点", "")]
+    for key in ("needs_work", "review", "mastered"):
+        items.append((_state_dot(key, labelled=False)
+                      + "<span class='knowledge-count-bar__value'>" + str(counts[key])
+                      + "</span> " + _STATE_NAMES[key],
+                      " knowledge-count-bar__item--" + key))
+    return ("<div class='knowledge-count-bar' role='group' aria-label='知识点计数'>"
+            + "".join("<span class='knowledge-count-bar__item" + variant + "'>" + text
+                      + "</span>" for text, variant in items)
+            + "</div>")
 
 
 def hub_page(workspaces):
@@ -404,7 +498,14 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
                 problem_counts[kp_id] += 1
     states = {row["item_id"]: row["state"] for row in pool.current_states()
               if row["item_type"] == "kp"}
-    state_labels = {"needs_work": "重点练习", "review": "可以复习"}
+    # 18.5 章节内的计数条：总数取 pool.kps(prefix)，三态个数取
+    # learning_current_state 的现成读路径 —— 不新增统计行、不写池。
+    state_counts = {"needs_work": 0, "review": 0, "mastered": 0}
+    for kp_id in {item["kp_id"] for item in source_kps}:
+        state = states.get(kp_id)
+        if state in state_counts:
+            state_counts[state] += 1
+    count_bar = _knowledge_count_bar(len(source_kps), state_counts)
     items = "".join(
         "<li class='knowledge-row' data-kp-order='" + str(index) + "' data-kp-title='" + html.escape(item.get("knowledge_item") or "")
         + "' data-kp-problem-count='" + str(problem_counts.get(item["kp_id"], 0))
@@ -413,15 +514,18 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         "<div>"
         "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
         "<span class='knowledge-meta'>" + str(problem_counts.get(item["kp_id"], 0)) + " 题"
-        + (" · " + state_labels[states[item["kp_id"]]] if states.get(item["kp_id"]) in state_labels else "")
+        + _state_dot(states.get(item["kp_id"]))
         + "</span></div></li>"
         for index, item in enumerate(source_kps)
     )
-    empty_items = '<li class="muted">暂无知识点</li>'
+    # 18.4 空态 = 插画 + 一句（此处没有动作出口，不硬凑主按钮）
+    empty_items = "<li>" + _empty_state(
+        "empty/empty-canvas.svg", "暂无知识点", 180, 150) + "</li>"
     middle = (_page_header(
         _lens_label(workspace, "学习 / 当前章节", "学习 / 全课程"),
         "知识点", "阅读课程内容与关联题目；练习请使用已有试卷。")
-        + "<div class='page-content'><div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
+        + "<div class='page-content'>" + count_bar
+        + "<div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
         + "<option value='source' selected>课程顺序</option><option value='title'>名称</option>"
         + "<option value='problem_count'>题目数量</option><option value='state'>学习状态</option>"
         + "<option value='importance'>重要性</option></select>"
@@ -768,7 +872,7 @@ def _linked_problems(problems, workspace_name, kp_id):
     return (
         "<ul class='linked-problem-list'>"
         + "".join(
-            "<li class='linked-problem'>"
+            "<li class='linked-problem lk-card'>"
             f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
             + f"<div class='linked-problem-text wb-reading'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
             + _linked_problem_source(problem)
