@@ -526,6 +526,157 @@
 
   window.lkProgress = { fill: fillProgressBand };
 
+  /* ④ the streak state machine (decisions.md A-58): the **one** implementation
+     of the streak feedback — count / three tiers / growth / break / reset /
+     banner / flames.  `practice-flow.js` and `paper-practice.js` used to carry
+     a copy each; that is the "one component in two shapes" disease (F-1) with
+     two instances of it.
+
+     This API owns the state machine only.  **The verdict source stays in the
+     flow** — the quick-practice flow reads the micro-quiz verdict, the Paper
+     flow reads the `verdict` of the submit payload — so this side only turns
+     a verdict into feedback; the verdict semantics do not move.
+
+     The thresholds are the ones both flows already used, item by item:
+     TIER_HOT 30 · FLAME_CAP 10 · STAGGER 80 ms · STEP 40 ms ·
+     BANNER_EVERY 5 · BREAK_OVER 4.  */
+  var STREAK_TIER_HOT = 30;         /* the third tier starts here */
+  var STREAK_FLAME_CAP = 10;        /* at most ten flame clusters */
+  var STREAK_FLAME_STAGGER_MS = 80; /* per-cluster ignition delay */
+  var STREAK_FLAME_STEP_MS = 40;    /* per-cluster extinguish delay */
+  var STREAK_BANNER_EVERY = 5;      /* the banner fires on every multiple of five */
+  var STREAK_BREAK_OVER = 4;        /* a break above four must be shown plainly */
+
+  function streakTierOf(count) {
+    if (count <= 0) return 0;
+    return count >= STREAK_TIER_HOT ? 2 : 1;
+  }
+
+  function streakCreate(options) {
+    var settings = options || {};
+    var host = settings.root;
+    var count = 0;
+
+    /* The card is replaced as a whole on every render, so the parts are
+       looked up by class at the moment they are needed — never cached. */
+    function part(selector) {
+      var element = typeof host === "function" ? host() : host;
+      if (!element || typeof element.querySelector !== "function") return null;
+      return element.querySelector(selector);
+    }
+
+    function setNumber(value, from) {
+      var ticker = part(".lk-ticker");
+      if (!ticker) return;
+      if (window.lkTicker && typeof window.lkTicker.set === "function") {
+        try {
+          window.lkTicker.set(ticker, value, { from: from == null ? value : from });
+          return;
+        } catch (error) {
+          /* The shared ticker is absent — the figure still has to be right. */
+        }
+      }
+      ticker.textContent = String(value);
+    }
+
+    function showBanner(bannerCount) {
+      var banner = part(".lk-combo-banner");
+      if (!banner) return;
+      var number = banner.querySelector ? banner.querySelector(".lk-combo-banner__count") : null;
+      if (number) number.textContent = String(bannerCount);
+      /* The tier difference is carried by this one semantic class only. */
+      banner.classList.toggle("is-large", bannerCount >= STREAK_BANNER_EVERY * 2);
+      banner.classList.add("is-on");
+    }
+
+    function html() {
+      var slots = Math.min(count, STREAK_FLAME_CAP);
+      var flames = "";
+      for (var i = 0; i < slots; i += 1) {
+        flames += "<span class='lk-flame is-lit' style='animation-delay:"
+          + (i * STREAK_FLAME_STAGGER_MS) + "ms'>"
+          + "<span class='lk-flame-off'></span><span class='lk-flame-on'></span></span>";
+      }
+      var tier = streakTierOf(count);
+      return "<span class='lk-streak"
+        + (tier === 2 ? " is-hot" : tier === 1 ? " is-warm" : "")
+        + "' data-lk-streak-tier='" + tier + "'>"
+        + "<span class='lk-flames' aria-hidden='true'>" + flames + "</span>"
+        + "<span class='lk-ticker' data-value='" + count + "' aria-label='连对 "
+        + count + "'>" + count + "</span></span>"
+        /* one banner: 5 in a row / 10 in a row … share the same DOM and the same
+           animation, the figure is the parameter */
+        + "<span class='lk-combo-banner' aria-hidden='true'>"
+        + "<span class='lk-combo-banner__count'>" + count + "</span></span>";
+    }
+
+    function growStreak(before) {
+      setNumber(count, before);
+      if (count > 0 && count % STREAK_BANNER_EVERY === 0) showBanner(count);
+    }
+
+    function breakStreak(before, loud) {
+      var flames = part(".lk-flames");
+      var lit = count;
+      /* cluster by cluster: from the newest one, 40 ms apart (the extinguish is
+         a pure opacity transition) */
+      for (var remaining = lit - 1; remaining >= 0; remaining -= 1) {
+        (function (left) {
+          setTimeout(function () {
+            if (flames && window.lkFlame && typeof window.lkFlame.set === "function") {
+              window.lkFlame.set(flames, left);
+            }
+          }, (lit - 1 - left) * STREAK_FLAME_STEP_MS);
+        })(remaining);
+      }
+      count = 0;
+      setNumber(0, before);
+      if (!loud) return;
+      /* a break above four must be shown plainly: one horizontal shake of
+         ≤4 px / 160 ms, never a screen-wide shake */
+      var counter = part(".lk-streak");
+      if (!counter) return;
+      counter.classList.add("lk-error-nudge");
+      counter.style.animation = "lk-error-nudge 160ms var(--ease-standard) both";
+    }
+
+    /* the verdict fork: right → count + 1; wrong above four → shown plainly and
+       zeroed; any other wrong answer → zeroed.  The verdict semantics do not
+       move — the flow decides what a verdict is, this side only reacts to it. */
+    function judge(verdict) {
+      if (verdict !== true && verdict !== false) return null;
+      var before = count;
+      var breaking = false;
+      if (verdict === true) {
+        count += 1;
+      } else if (count > STREAK_BREAK_OVER) {
+        /* on a break the count stays for a moment, so the flames can go out
+           one by one before it returns to zero */
+        breaking = true;
+      } else {
+        count = 0;
+      }
+      return { before: before, breaking: breaking, correct: verdict === true };
+    }
+
+    function apply(landed) {
+      if (!landed) return;
+      if (landed.breaking) breakStreak(landed.before, true);
+      else if (landed.correct) growStreak(landed.before);
+      else setNumber(0, landed.before);
+    }
+
+    return {
+      count: function () { return count; },
+      reset: function () { count = 0; },
+      html: html,
+      judge: judge,
+      apply: apply,
+    };
+  }
+
+  window.lkStreak = { create: streakCreate };
+
   /* ---------- the lamp transition (tasks.md 8.7 / 12.5 · motion-spec §4) ----------
      Four stages: lean out (140 ms) → light up (140–220 ms) → the ripple
      spreads (140–590 ms) → the skin is swapped (590 ms) → retract and clear
