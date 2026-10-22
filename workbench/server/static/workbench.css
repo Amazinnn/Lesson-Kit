@@ -3125,8 +3125,45 @@ html[data-motion="off"] *::after {
   font-variant-numeric: tabular-nums;
   color: var(--ink-strong);
 }
-/* 空槽不占位：JS 还没写题号时不画空盒子 */
+/* 空槽不占位：JS 还没往里写题号时不画空盒子 */
 .paper-stem-index:empty { display: none; }
+
+/* ---- 完成页统计数字槽（tasks.md 16.7 ① · IMPL-W2e 第 4 条）----------------
+   `paper-practice.js` 已输出 `.lk-stat` > `.lk-stat__value` + `.lk-stat__label`
+   （容器是 `.paper-completion-figures.lk-stat-slot`），CSS 里**零命中**
+   ⇒ 完成页那五个数字**没有排版**。
+   · 数字用**界面字族**（`--font-ui`，不用衬线）+ 较大字号（`--fs-stat` 24px）
+     + `tabular-nums`（ticker 滚动时不跳宽）；
+   · 标签用**次级墨**（`--ink-muted`）+ 小字（`--fs-label` 12px）；
+   · 槽位**横向排布**，容器在进度带与 CTA 之间 ⇒ **不遮挡 CTA**；
+   · ⚠️ 承载位的静态样式必须等于终态（tasks.md 16.7）：数字直接显示最终值。 */
+:is(.paper-completion-figures, .lk-stat-slot) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-3) var(--sp-5);
+  margin: var(--sp-4) 0;
+}
+.lk-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 0;
+  font-family: var(--font-ui);
+}
+.lk-stat__value {
+  font-size: var(--fs-stat);          /* 24px 统计数字 */
+  line-height: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums; /* ticker 滚动时不跳宽 */
+  color: var(--ink-strong);
+}
+.lk-stat__label {
+  font-size: var(--fs-label);         /* 12px */
+  line-height: 18px;
+  color: var(--ink-muted);
+}
 
 /* Knowledge graph V2 — constrained semantic layout, paper Mondrian skin. */
 
