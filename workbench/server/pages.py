@@ -254,9 +254,9 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         topbar
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
-        + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
+        + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度'></div></aside>"
         + f"<main id='middle'>{_agent_activity_float()}<div id='middle-page'>{middle_html}</div>{_agent_aux_surfaces()}</main>"
-        + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
+        + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics-core.js'></script>"
            "<script src='/static/graph-renderer.js'></script>"
@@ -274,7 +274,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
 def _agent_activity_float():
     return (
         "<section id='agent-activity-float' class='agent-activity-float hidden' aria-live='polite'>"
-        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent activity</p>"
+        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent 活动</p>"
         "<h2 class='agent-surface-title'>正在处理</h2></div>"
         "<button id='agent-activity-toggle' class='ghost sm icon-only agent-activity-toggle' type='button' "
         "aria-controls='agent-activity-body' aria-expanded='true' aria-label='收起 Agent 活动' "
@@ -287,7 +287,7 @@ def _agent_aux_surfaces():
     """Transient central surfaces owned by Agent runtime, not permanent page chrome."""
     return (
         "<aside id='agent-artifact-split' class='agent-artifact-split hidden' aria-label='Agent 工件预览'>"
-        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Artifact</p>"
+        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>工件</p>"
         "<h2 id='agent-artifact-title' class='agent-surface-title'>最新工件</h2></div>"
         "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
         "aria-label='关闭工件预览'>×</button></div>"
