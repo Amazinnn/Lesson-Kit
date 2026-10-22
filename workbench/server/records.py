@@ -421,7 +421,7 @@ def _verdict_distribution(summary):
         width = count / attempts * 100 if attempts else 0
         items.append(
             "<div class='record-rating-row'>"
-            f"<span>{label}</span>"
+            f"<span style='white-space:nowrap'>{label}</span>"
             "<div class='record-rating-track'>"
             f"<span style='width:{width:.1f}%;background:{color}'></span></div>"
             f"<strong>{count}</strong></div>"
@@ -620,18 +620,19 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
             "<h2>作答日历</h2></div></div>"
             + _activity_calendar(overview.get("activity") or [])
             + "</section>"
+            + "<section class='card record-chart-card'>"
+            "<div class='section-heading'><div><p class='section-kicker'>最近 14 天</p>"
+            "<h2>作答量</h2></div></div>"
+            + _trend_chart(overview.get("trend") or [])
+            + "</section>"
             + "<section class='record-dashboard-grid'>"
             "<article class='card record-chart-card'><div class='section-heading'><div>"
-            "<p class='section-kicker'>最近 14 天</p><h2>作答量</h2></div></div>"
-            + _trend_chart(overview.get("trend") or [])
+            "<p class='section-kicker'>判定</p><h2>判定分布</h2></div></div>"
+            + _verdict_distribution(summary)
             + "</article>"
             "<article class='card record-chart-card'><div class='section-heading'><div>"
             "<p class='section-kicker'>自评</p><h2>1–5 分分布</h2></div></div>"
             + _rating_chart(overview.get("ratings") or [])
-            + "</article>"
-            "<article class='card record-chart-card'><div class='section-heading'><div>"
-            "<p class='section-kicker'>判定</p><h2>判定分布</h2></div></div>"
-            + _verdict_distribution(summary)
             + "</article></section>"
             "<section class='support-section record-section'><div class='section-heading'><div>"
             "<p class='section-kicker'>最近练习</p><h2>练习 / 试卷</h2></div>"
