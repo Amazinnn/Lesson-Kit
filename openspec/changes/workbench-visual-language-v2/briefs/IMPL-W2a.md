@@ -67,6 +67,13 @@
 - `workbench.css` 顶部（`:root` **之前**）声明 `@font-face`：
   `font-display: swap`（**不用** KaTeX 的 `block`，见 `static/katex/katex.min.css:1`）、
   `unicode-range` 限中文。
+- ⚠️ **只声明 400 一个字重**。实测：入库的 `SourceHanSerifSC-Regular.woff2` = 946,148 B
+  （924.0 KB ≤ 1.2 MB 目标）；**600 字重未入库**（2 字重合计 1.83 MB，超标 52%，
+  按 `tasks.md` 5.1「超标先砍字重、不砍字表」裁掉）。
+  ⇒ **`SourceHanSerifSC-SemiBold.woff2` 文件不存在，写它的 `@font-face` 会 404。**
+  ⇒ 要半粗衬线，用**可变字重声明** `font-weight: 400 600;`（同一个 400 face 覆盖 400–600，
+  浏览器对 600 做合成加粗），**不要**引用不存在的 SemiBold 文件。
+  参考 `static/fonts/README.md`（来源 URL、版本 2.003、逐字节可复跑的子集化命令）。
 - 三族分工：`--font-ui` 沿用现有栈（仅改名）· `--font-read` = 衬线栈 ·
   `--font-mono` = 现状 + 补 `monospace` 兜底。
 - 字体未加载时先显示 fallback 的**可读文字**（不许空白页）。

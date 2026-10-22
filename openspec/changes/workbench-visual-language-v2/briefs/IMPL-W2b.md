@@ -49,8 +49,9 @@
   ⚠️ **CSS 侧的分级降级由另一个 agent 负责**（`workbench.css:733` 与 `:1126-1131` 的
   全局闸门）—— 你只做 JS 侧的 `matchMedia` 判定与偏好读写，**不要**改 CSS。
   两者靠同一套判定口径对齐（判定线写进 `design.md` D-7）。
-- **5.4** 字体资源缓存策略：`app.py` 的 `_send_static`；`CONTENT_TYPES`（L26-34）已含
-  `.woff2` / `.woff`（若你为音效补了 `.mp3` / `.ogg`，一并加上）。
+- **5.4** 字体资源缓存策略：`app.py` 的 `_send_static`。
+  ⚠️ `CONTENT_TYPES`（L26-34）**已含** `.woff2 → font/woff2`（实测确认），**不需要**为字体加；
+  但**音效**的 MIME 需要加（若音效走文件方案：`.mp3` / `.ogg`）。
   改 CSS 或字体必须**立刻**到达用户。
 
 ## 验证
