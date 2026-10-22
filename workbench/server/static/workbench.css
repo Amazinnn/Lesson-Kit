@@ -3165,6 +3165,21 @@ html[data-motion="off"] *::after {
   color: var(--ink-muted);
 }
 
+/* ---- 里程碑锚点容器（tasks.md 16.7 ③ / 17.7 · IMPL-W2e 第 5 条）-----------
+   `pages.py` 已输出 `.lk-celebrate-anchor`（`#paper-completion-milestone`），
+   CSS 里**零命中** ⇒ JS 只能内联写 `position:absolute; inset:0;
+   pointer-events:none` 兜底。
+   · 绝对定位 + 铺满 + `pointer-events: none` ⇒ 爆点 / 纸片落在完成页里，
+     但**永远不接点击** ⇒ **不覆盖 CTA**（tasks.md 16.7 / 17.7）；
+   · `aria-hidden="true"` 由 markup 带（装饰层不读屏）。
+   ⚠️ **不加 `overflow: hidden`**：爆点要扩散到 1.45 倍、纸片要飞 120px，
+     裁剪会把庆祝效果切掉。 */
+.lk-celebrate-anchor {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 /* Knowledge graph V2 — constrained semantic layout, paper Mondrian skin. */
 
 /* ==========================================================================
