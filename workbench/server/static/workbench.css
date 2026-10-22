@@ -571,16 +571,36 @@ body {
 }
 .mobile-drawer-controls { display: none; margin-left: auto; gap: 4px; }
 
-/* three columns — DSH geometry (sidebar 280 / details 360, collapse rail) */
+/* three columns — 三栏几何的**唯一模板**（design.md D-10 / tasks.md 13.1）
+   ------------------------------------------------------------------------
+   CSS 持有模板，JS 只写两个列宽变量；两边不再各写一份数字：
+     · 变量写在 `#layout` 上（**不是 `:root`**）—— 更局部，不会牵连图谱页。
+     · `--wb-col-left` / `--wb-col-right` = **JS 的写入点**（brief IMPL-W2c 定的名）；
+       它们再指向权威表的 `--shell-col-left` / `--shell-col-right`（§2.8 布局几何族）。
+       ⇒ JS 写 `--wb-col-left`（inline）→ 直接生效；
+         JS 写 `--shell-col-left`（inline，13.2 现有实现）→ 经这一层同样生效。
+       两个名字都保留 ⇒ 并行写任一个都不会脱节。
+     · `minmax(0, 1fr)` 只是**变量未就位时（首帧）的兜底**，不承担任何不变式。
+
+   ⚠️ **夹取规则由 JS 侧维持**（tasks.md 13.3，workbench.js 的 `applyColumnWidths`）：
+       中栏 ≥ 420px（`--shell-col-middle-min`）—— 硬底线，不可协商；
+       左栏 200 ≤ w ≤ `--shell-col-left-max`（480px）；
+       右栏 360 ≤ w ≤ `--shell-col-right-max`（560px）；
+       窄屏（< 1024px）**清变量**而不是清整段 inline 样式 ⇒ 模板回落到媒体查询的 1fr。
+   ⚠️ 拖拽时 `#layout.is-resizing` 关掉过渡，避免过渡拖影（13.3）。
+   ⚠️ 窄屏媒体查询（`grid-template-columns: 1fr`）**必须保留**：它覆盖整条模板，
+     是既有行为（13.1）。 */
 #layout {
+  --wb-col-left: var(--shell-col-left, 280px);
+  --wb-col-right: var(--shell-col-right, 420px);
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 420px;
+  grid-template-columns: var(--wb-col-left) minmax(0, 1fr) var(--wb-col-right);
   transition: grid-template-columns var(--dur-base) var(--ease-standard);
 }
 #layout.is-resizing { transition: none; }
-#layout[data-ai-collapsed] { grid-template-columns: 280px minmax(0, 1fr) 0px; }
+#layout[data-ai-collapsed] { grid-template-columns: var(--wb-col-left) minmax(0, 1fr) 0px; }
 #left-column {
   position: relative;
   border-right: 1px solid var(--ink-strong);
