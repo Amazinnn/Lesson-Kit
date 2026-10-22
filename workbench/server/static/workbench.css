@@ -1301,11 +1301,14 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
    共享阅读版式层 `.wb-reading` —— 内容排版（markdown 语义元素）
    （design.md D-5 / decisions.md A-6 / tasks.md 6.1）
 
-   **一份规则，两个挂载名**：
-   · `.wb-reading` —— 共享阅读版式层（后续由 HTML 挂到六处阅读面）
-   · `.rich-text`  —— **过渡期挂载名**（HTML 迁移到 `.wb-reading` 后本条一并删除）
+   **一份规则，三个挂载名**：
+   · `.wb-reading`       —— 共享阅读版式层（后续由 HTML 挂到六处阅读面）
+   · `.wb-reading--stem` —— **题面变体**（tasks.md 6.1）：同刻度的语义变体，
+     可**独立挂载**；取值与正文**逐项相同**（D-5）
+   · `.rich-text`  —— **过渡期挂载名**（HTML 迁移到 `.wb-reading` 后本条一并删除；
+     本波**保留**，等所有挂载点迁完的那一波统一删 —— decisions.md A-41）
 
-   两条路径的取值**逐项相同** ⇒ 同一元素同时挂 `.wb-reading` 与过渡期的
+   三条路径的取值**逐项相同** ⇒ 同一元素同时挂 `.wb-reading` 与过渡期的
    `.rich-text` 也不会出现「取决于 CSS 文件先后顺序」的契约漂移
    （这正是 D-5 反对「两套并行规则」的核心诉求）。
 
@@ -1315,23 +1318,23 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
    `.rich-text` 同时用在**选项 / 反馈 / 判定**等界面面（D-4 的 B 组）上，
    那里必须留在 `--font-ui`。
    ========================================================================= */
-.wb-reading,
+:is(.wb-reading, .wb-reading--stem),
 .rich-text {
   line-height: 1.75;
   overflow-wrap: anywhere;
 }
-.wb-reading > :first-child,
+:is(.wb-reading, .wb-reading--stem) > :first-child,
 .rich-text > :first-child {
   margin-top: 0;
 }
-.wb-reading > :last-child,
+:is(.wb-reading, .wb-reading--stem) > :last-child,
 .rich-text > :last-child {
   margin-bottom: 0;
 }
-.wb-reading h1,
-.wb-reading h2,
-.wb-reading h3,
-.wb-reading h4,
+:is(.wb-reading, .wb-reading--stem) h1,
+:is(.wb-reading, .wb-reading--stem) h2,
+:is(.wb-reading, .wb-reading--stem) h3,
+:is(.wb-reading, .wb-reading--stem) h4,
 .rich-text h1,
 .rich-text h2,
 .rich-text h3,
@@ -1340,49 +1343,49 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   color: var(--ink-strong);
   line-height: 1.35;
 }
-.wb-reading h1,
+:is(.wb-reading, .wb-reading--stem) h1,
 .rich-text h1 {
   margin: 18px 0 8px;
   font-size: 24px;
 }
-.wb-reading h2,
+:is(.wb-reading, .wb-reading--stem) h2,
 .rich-text h2 {
   margin: 16px 0 7px;
   font-size: var(--fs-h2);
 }
-.wb-reading h3,
+:is(.wb-reading, .wb-reading--stem) h3,
 .rich-text h3 {
   margin: 14px 0 6px;
   font-size: var(--fs-h3);
 }
-.wb-reading h4,
+:is(.wb-reading, .wb-reading--stem) h4,
 .rich-text h4 {
   margin: 12px 0 6px;
   font-size: var(--fs-h4);
 }
-.wb-reading p,
+:is(.wb-reading, .wb-reading--stem) p,
 .rich-text p {
   margin: 0 0 .7em;
 }
-.wb-reading ul,
-.wb-reading ol,
+:is(.wb-reading, .wb-reading--stem) ul,
+:is(.wb-reading, .wb-reading--stem) ol,
 .rich-text ul,
 .rich-text ol {
   margin: 0 0 .7em;
   padding-left: 1.5em;
 }
-.wb-reading li + li,
+:is(.wb-reading, .wb-reading--stem) li + li,
 .rich-text li + li {
   margin-top: 3px;
 }
-.wb-reading blockquote,
+:is(.wb-reading, .wb-reading--stem) blockquote,
 .rich-text blockquote {
   margin: 0 0 .7em;
   padding: 4px 12px;
   border-left: 2px solid var(--rule-structure);
   color: var(--ink-muted);
 }
-.wb-reading code,
+:is(.wb-reading, .wb-reading--stem) code,
 .rich-text code {
   font-family: var(--font-mono);
   font-size: .82em;
@@ -1390,12 +1393,12 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   border-radius: 4px;
   padding: 1px 4px;
 }
-.wb-reading :not(pre) > code,
+:is(.wb-reading, .wb-reading--stem) :not(pre) > code,
 .rich-text :not(pre) > code {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
-.wb-reading pre,
+:is(.wb-reading, .wb-reading--stem) pre,
 .rich-text pre {
   max-width: 100%;
   margin: 12px 0;
@@ -1404,19 +1407,19 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   border-radius: var(--r-xs);
   background: var(--surface-sunken);
 }
-.wb-reading table,
+:is(.wb-reading, .wb-reading--stem) table,
 .rich-text table {
   border-collapse: collapse;
   width: 100%;
 }
-.wb-reading .rich-table-wrap,
+:is(.wb-reading, .wb-reading--stem) .rich-table-wrap,
 .rich-text .rich-table-wrap {
   max-width: 100%;
   margin: 10px 0;
   overflow-x: auto;
 }
-.wb-reading th,
-.wb-reading td,
+:is(.wb-reading, .wb-reading--stem) th,
+:is(.wb-reading, .wb-reading--stem) td,
 .rich-text th,
 .rich-text td {
   border: 1px solid var(--rule-hair);
@@ -1424,36 +1427,39 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   text-align: left;
   vertical-align: top;
 }
-.wb-reading th,
+:is(.wb-reading, .wb-reading--stem) th,
 .rich-text th {
   background: var(--surface-sunken);
   font-weight: 600;
 }
-.wb-reading .math.display,
+:is(.wb-reading, .wb-reading--stem) .math.display,
 .rich-text .math.display {
   max-width: 100%;
   overflow-x: auto;
 }
-.wb-reading pre code,
+:is(.wb-reading, .wb-reading--stem) pre code,
 .rich-text pre code {
   padding: 0;
   background: transparent;
 }
-.wb-reading a,
+:is(.wb-reading, .wb-reading--stem) a,
 .rich-text a {
   color: var(--role-blue);
   text-decoration: none;
 }
-.wb-reading a:hover,
+:is(.wb-reading, .wb-reading--stem) a:hover,
 .rich-text a:hover {
   text-decoration: underline;
 }
-.wb-reading img,
+:is(.wb-reading, .wb-reading--stem) img,
 .rich-text img {
   max-width: 100%;
   height: auto;
   border-radius: var(--r-xs);
 }
+/* Agent 消息容器里的阅读层：挂载名已迁到 `.wb-reading`（6.2 / 6.3）⇒
+   新旧两个类名都写（`.rich-text` 那份留给尚未迁移的挂载点，下一波统一删）。 */
+#ai-messages .msg > .wb-reading,
 #ai-messages .msg > .rich-text { padding: 0; }
 
 /* practice cards */
@@ -2202,10 +2208,20 @@ img { max-width: 100%; }
    刻度（全部用 token，一个值都不自造）：
      正文 17px（`--fs-reading`）/ 行高 1.75（29.75px）/ 行长 38em（`--measure`）
      段距 .7em（≈11.9px）/ 对齐 `start`（**不 justify**）
+
+   **两个挂载名**（D-5）：
+     · `.wb-reading`       —— 正文阅读面
+     · `.wb-reading--stem` —— **题面变体**（tasks.md 6.1）
+   题面变体是**同刻度的语义变体**：字号 / 行高 / 段距 / 行长 / h2·h3·h4
+   与正文**逐项相同**（17px / 1.75 / .7em / 38em / 22·19·17px），
+   差别只在**它是谁**（题面），不在**它长什么样**。
+   ⇒ 写法上把两个名字挂到**同一套规则**上（`:is()` 只多一个类名，特异性不变），
+     **不另写一套并行规则** —— 「两套并行规则」正是 D-5 反对的东西。
+     `.wb-reading--stem` 可**独立挂载**（不必同时挂 `.wb-reading`）。
    ========================================================================= */
 /* 阅读刻度（共享）—— 字族 / 行高 / 对齐：六个阅读面共用一份
    （正文 17px 的字号写在各挂载点自己的块里，见下） */
-.wb-reading,
+:is(.wb-reading, .wb-reading--stem),
 .practice-question-card,
 .knowledge-body,
 .practice-solution,
@@ -2214,13 +2230,13 @@ img { max-width: 100%; }
   line-height: 1.75;
   text-align: start;
 }
-/* `.wb-reading` 类自身的字号走 token（后续由 HTML 挂到六处阅读面） */
-.wb-reading { font-size: var(--fs-reading); }
+/* 阅读面的字号走 token（`.wb-reading` 与题面变体 `.wb-reading--stem` 同值） */
+:is(.wb-reading, .wb-reading--stem) { font-size: var(--fs-reading); }
 
 /* 阅读行长 38em 落在**文字块**上，卡片本身保持满宽 ——
    轨宽（--shell-measure 880px）与行长（--measure 38em ≈ 646px）之间那 234px
    正是「有终点的阅读留白」（layout-spec §4.2 第 3 条 / A-21-4：两个 token 禁止合并）。 */
-.wb-reading > *,
+:is(.wb-reading, .wb-reading--stem) > *,
 .practice-question-card > *,
 .knowledge-body > *,
 .practice-solution > *,
@@ -2229,7 +2245,13 @@ img { max-width: 100%; }
 }
 
 /* 第六处挂载点：Agent 长文（D-4 A 组）。
-   作用域限在 `.msg.ai`（Agent 消息）—— 用户消息与判定卡留在界面面。 */
+   作用域限在 `.msg.ai`（Agent 消息）—— 用户消息与判定卡留在界面面。
+   ⚠️ **挂载点名已迁移**（tasks.md 6.2 / 6.3 的 JS 段：`workbench.js` 的
+   `div.innerHTML = "<div class='wb-reading'>…"`）⇒ 选择器必须命中**新类名**，
+   否则 Agent 长文掉回无衬线小字、整套阅读刻度失效。
+   两个名字都写：`.wb-reading` 是现行挂载名，`.rich-text` 留给尚未迁移的挂载点
+   （迁移全部完成的那一波统一删）。**只改选择器，不改取值。** */
+#ai-messages .msg.ai > .wb-reading,
 #ai-messages .msg.ai > .rich-text {
   font-family: var(--font-read);
   font-size: var(--fs-reading);
@@ -2459,14 +2481,25 @@ img { max-width: 100%; }
   animation: lk-celebrate-burst var(--dur-scene) var(--ease-out) both;
 }
 
-/* 纸片飞散（§2.1 第 14 项）：形状走内联 SVG，位移 / 旋转由 CSS 变量给出 */
+/* 纸片飞散（§2.1 第 14 项 / tasks.md 17.7）：形状走**内联 SVG**
+   （三种小形状：细条 / 圆片 / 三角），位移 / 旋转由 CSS 变量给出。
+   ⚠️ 容器尺寸必须**能容纳 SVG**：旧版写死 8×12 会把 SVG 裁掉 / 压扁 ⇒ 改成 16×16，
+   SVG 子元素铺满容器（`preserveAspectRatio` 默认等比 ⇒ 不会被压扁）。
+   形状与颜色由 SVG 自己带（`--asset-*` 变量）⇒ 容器不再有纯色底块。
+   ⚠️ 动效红线：淡出与旋转**只动 transform / opacity**，不动画化 SVG 的内部属性。 */
 .lk-confetti {
   position: absolute;
   top: 0; left: 0;
-  width: 8px; height: 12px;
+  width: 16px;
+  height: 16px;
   pointer-events: none;
-  background: var(--role-yellow);
   animation: lk-confetti-fall var(--dur-ceremony) var(--ease-out) both;
+}
+.lk-confetti > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
 /* 连对横幅（§2.1 第 18 项）：`.is-on` 的静态样式 = **可见**（降级后直接显示终值） */
