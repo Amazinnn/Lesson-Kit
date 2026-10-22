@@ -1140,3 +1140,37 @@ W2h 报出一条**不是产品问题**的失败：`shots.py` 只等 `networkidle
 ⚠️ 顺带记一条**判据自身的问题的处理原则**：
 **判据的「触发方式」可以修，判据的「判定阈值」不许放水** ——
 否则就是让指标迁就实现。
+
+### 9.29 空态合规 · 原生 select 渐进增强 · 少字原则（3.1-5 转绿）
+
+**W3b2 的三件**（`c45eeb6c` / `2549d9a4` / `87a29816`，只动 `pages.py`）：
+
+| 判据 | 改前 | 改后（探针实测） |
+|---|---|---|
+| **3.4-5** 空态 | `<section class='card practice-set-empty'><h2>还没有试卷</h2>` + 说明句 + `<a class='primary button-link'>` | 复用 `_empty_state()` 的 `as_button=True` 分支 ⇒ 内联 `empty-vase.svg` + **恰好一句**「还没有保存的试卷」+ **真 `<button class='primary lk-empty__action'>`「去组卷」**；实测 art ✓ / 1 句 ✓ / 主动作是 `<button>` ✓ —— **只差「满宽」**（240px vs 容器 640px，CSS 侧） |
+| **3.4-7** 原生 select | 可见 ⇒ FAIL | `<html class='js'>`（在 `_base()` 的内联首屏脚本里加，`<head>` 内、样式表之前 ⇒ **不闪**）+ 原生 select 挂 `chapter-lens-select-fallback`（**保留**，A-69 的无 JS 兜底）⇒ **只差 CSS 一条 `.js .chapter-lens-select-fallback { display: none; }`** |
+| **3.1-5** 少字原则 | 44 节点 / **284 字** | 44 节点 / **250 字**（`charsDelta = -34`、`nodesDelta = 0`）⇒ **PASS** |
+
+**删掉的三句**（只删说明性文字；按钮文案 / 状态名 / 字段名 / 导航项名一律没动）：
+① 页头说明句「选择已有试卷开始，或继续上次的进度。」② 时间安排区的装饰性 kicker「实验视图」
+③ 目标表单里的教学说明「说不清字段？一句话让 Agent 帮你填」——
+**字段的可访问名称搬进了 `aria-label='让 Agent 代填'`（一个字不丢）**，可见的那句由旁边的按钮承担。
+
+**它同时报出一条探针误报**：探针的空态容器选择器
+`.empty-state, .lk-empty, [class*='empty-state'], [class*='-empty']`
+把**插画自身的元素**也当成了容器（本轮 9 个「容器」里只有 1 个是真空态，
+另外 8 个是 `.lk-empty__art` / 内联 `<svg class='asset asset-empty'>` / 它内部 4 个 `<g class='asset-empty__*'>` /
+`.lk-empty__text` / `.lk-empty__action`）⇒ 纯属误报。**已让探针 owner 收窄「容器识别」**
+（跳过 `svg` 内部、跳过父元素已被当容器的元素），**判定标准一个字不许改**（见 **A-91**）。
+
+**它还处理了一次提交事故（见 A-90）**：另一个 agent 的 `git add -A` 把它的 `pages.py` 扫进了
+docs 提交 `f642ef9b`；它用 `git reset --soft` 把那条提交**按原内容 / 原 message / 原作者与时间**重建为
+`d85975a6`，再按三个主题分别提交 ⇒ **内容零丢失**。
+⚠️ **主会话自己也是这个事故的成因之一**：那条 `f642ef9b` 是**我**提交的 ——
+`git commit` 提交的是**整个暂存区**，别的 agent 已 `git add` 过的文件会被一并带走
+⇒ **规则已立（A-90）：提交一律用 `git commit -- <明确的路径列表>` 限定范围**。
+
+**裁决**（A-91）：3.4-5 的误报是**探针选择器过宽**、**不是 contract drift**
+（两个命名族前缀不同、可区分）· 空态按钮动作「去组卷」**确认**（旧的「返回练习」是死循环，
+浏览器里没有手工组卷入口；动作实现在 `_AI_COMPOSE_JS` 一处）· 3.1-5 的第三刀**保留**
+（可访问名称搬进 `aria-label`，信息不丢，而少字原则原文就是「能删的界面注释直接删除」）。

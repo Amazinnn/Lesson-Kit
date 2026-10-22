@@ -740,6 +740,84 @@ AUDIO_JS = r"""
 })();
 """
 
+#: The sound hook of 3.3-1.  It answers the one question the first round
+#: could not answer: **was the cue blocked by the browser, or did the code
+#: never trigger it?**
+#:
+#: Two counters are kept apart:
+#:
+#: * ``__lkSfxCalls`` — every call of ``window.lkSfx.playCue`` (the **code**
+#:   level: did the product decide that something should sound?);
+#: * ``__lkSfxPlays`` — every call of ``HTMLMediaElement.play`` **with the
+#:   outcome of its promise** (the **browser** level: a rejected promise is
+#:   the autoplay policy saying no).
+#:
+#: ``lkSfx`` is published by ``sfx.js`` as a plain assignment and the module
+#: is loaded asynchronously, so the hook is installed through a setter: the
+#: wrapper is in place whenever the module publishes itself.
+SFX_HOOK_JS = r"""
+(() => {
+  const calls = [];
+  const plays = [];
+  window.__lkSfxCalls = calls;
+  window.__lkSfxPlays = plays;
+  const stamp = () => Math.round(performance.now());
+  const activation = () => !!(navigator.userActivation && navigator.userActivation.isActive);
+
+  const proto = window.HTMLMediaElement && window.HTMLMediaElement.prototype;
+  if (proto && !proto.__lkOutcomePatched) {
+    const original = proto.play;
+    proto.play = function () {
+      const entry = {t: stamp(), src: this.currentSrc || this.src || "",
+                     userActivation: activation(), outcome: "pending"};
+      plays.push(entry);
+      let result;
+      try {
+        result = original.apply(this, arguments);
+      } catch (error) {
+        entry.outcome = "threw";
+        entry.error = String(error && error.name);
+        throw error;
+      }
+      if (result && typeof result.then === "function") {
+        result.then(
+          () => { entry.outcome = "fulfilled"; },
+          (error) => {
+            entry.outcome = "rejected";
+            entry.error = String(error && error.name);
+          });
+      } else {
+        entry.outcome = "no-promise";
+      }
+      return result;
+    };
+    proto.__lkOutcomePatched = true;
+  }
+
+  let real = undefined;
+  Object.defineProperty(window, "lkSfx", {
+    configurable: true,
+    enumerable: true,
+    get() { return real; },
+    set(value) {
+      if (value && typeof value.playCue === "function" && !value.__lkHooked) {
+        const original = value.playCue;
+        value.playCue = function (name) {
+          const entry = {t: stamp(), name: String(name),
+                         userActivation: activation()};
+          calls.push(entry);
+          const out = original.apply(this, arguments);
+          entry.returned = out;
+          return out;
+        };
+        value.__lkHooked = true;
+      }
+      real = value;
+    },
+  });
+})();
+"""
+
 
 # ─────────────────────────────────────────────────────────────────────────
 # small helpers
@@ -1372,6 +1450,212 @@ def probe_audio_mute(ctx):
     if result.get("afterPlays", 0) > result.get("beforePlays", 0):
         return _bad(result, "静音后仍然有播放")
     return _ok(result, "静音开关存在，静音后四个时刻全部无声")
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# 3.3-1 — the sound probe: the cue count and the browser's verdict
+# ─────────────────────────────────────────────────────────────────────────
+
+
+def answer_plan_item(page, item):
+    """Answer one paper item the way the plan says; return what was clicked.
+
+    The option is matched by its **id** (the option text), never by its
+    position: the plan is computed from the pool, the page renders the
+    options of the same record, and the id is what both sides agree on.
+    """
+    wanted = list(item.get("option_ids") or [])
+    if not wanted:
+        return {"answered": False, "why": "plan item without option ids"}
+    inputs = page.query_selector_all("#paper-options input")
+    if not inputs:
+        return {"answered": False, "why": "the item rendered no options"}
+    picked = []
+    for element in inputs:
+        value = element.get_attribute("value") or ""
+        if value in wanted:
+            element.click()
+            picked.append(value)
+    if not picked:
+        return {"answered": False, "why": "no option matched the plan",
+                "options": [element.get_attribute("value") or ""
+                            for element in inputs]}
+    submitted = False
+    if item.get("multiple"):
+        # A multiple-choice item is submitted by the button — that click is
+        # the gesture the product arms the answer cue with.
+        page.wait_for_selector("#paper-item-submit", state="visible",
+                               timeout=15000)
+        page.click("#paper-item-submit")
+        submitted = True
+    return {"answered": True, "picked": picked, "submittedByButton": submitted,
+            "kind": item.get("quiz_type")}
+
+
+def read_sound_state(page):
+    """Read the two counters and the verdict nodes of the page."""
+    return page.evaluate("""() => ({
+      hasSfx: !!(window.lkSfx && window.lkSfx.playCue),
+      enabled: (window.lkSfx && window.lkSfx.isEnabled)
+        ? window.lkSfx.isEnabled() : null,
+      cueCalls: (window.__lkSfxCalls || []).map((c) => ({
+        t: c.t, name: c.name, userActivation: c.userActivation,
+        returned: c.returned,
+      })),
+      plays: (window.__lkSfxPlays || []).map((p) => ({
+        t: p.t, src: p.src, userActivation: p.userActivation,
+        outcome: p.outcome, error: p.error || "",
+      })),
+      verdicts: Array.from(document.querySelectorAll(".micro-verdict"))
+        .map((el) => String(el.className || "")),
+    })""")
+
+
+def probe_audio_cue(ctx, paper_id, plan):
+    """3.3-1 — the cue after an answer: how often, and who stopped it.
+
+    The probe answers the question the first round could not answer:
+    "答题后没有观察到音效" was one PENDING for two very different causes.
+
+    The protocol (the brief's, verbatim):
+
+    1. **a real gesture first** — the browser's autoplay policy only lets
+       the audio context run after the learner has acted, so the probe
+       clicks a real button (``#paper-start``) before anything else;
+    2. **answer a question** through the real UI, with the real submit
+       gesture;
+    3. **count the calls in the page** — ``playCue`` calls (the code) and
+       ``play()`` calls with their promise outcome (the browser);
+    4. **a control call** at the end: a direct ``playCue`` proves whether
+       the browser would have played at all, so "the browser blocked it"
+       and "the code never triggered it" can be told apart.
+
+    The page is a **fresh** context: an earlier key press would have
+    unlocked the audio module and the probe would measure the wrong thing.
+    """
+    from playwright.sync_api import sync_playwright
+
+    from shots import CONSISTENCY, VIEWPORTS
+
+    browser = playwright.chromium.launch(
+        headless=True, args=list(CONSISTENCY["browser_args"]))
+    context = browser.new_context(
+        viewport={"width": VIEWPORTS["V1440"]["width"],
+                  "height": VIEWPORTS["V1440"]["height"]},
+        device_scale_factor=VIEWPORTS["V1440"]["device_scale_factor"],
+        color_scheme=CONSISTENCY["color_scheme"],
+        reduced_motion=CONSISTENCY["reduced_motion"],
+        locale=CONSISTENCY["locale"],
+        timezone_id=CONSISTENCY["timezone_id"])
+    page = context.new_page()
+    data = {"paper_id": paper_id, "plan": plan}
+    try:
+        page.add_init_script(PROBE_JS)
+        page.add_init_script(AUDIO_JS)
+        page.add_init_script(SFX_HOOK_JS)
+        page.goto(f"{ctx.base_url}/w/{ctx.ws}/practice?paper={paper_id}",
+                  wait_until="load", timeout=30000)
+        page.wait_for_timeout(400)
+
+        data["beforeGesture"] = read_sound_state(page)
+
+        # -- 1. the real gesture: the start button -----------------------
+        page.wait_for_selector("#paper-start", state="visible", timeout=15000)
+        page.click("#paper-start")
+        page.wait_for_timeout(300)
+        data["afterGesture"] = read_sound_state(page)
+        data["userActivationAfterGesture"] = page.evaluate(
+            "() => !!(navigator.userActivation && navigator.userActivation.hasBeenActive)")
+
+        # -- 2. answer the items the plan gives --------------------------
+        answers = []
+        for index, item in enumerate(plan or []):
+            if index:
+                page.wait_for_selector("#paper-next", state="visible", timeout=15000)
+                page.click("#paper-next")
+                page.wait_for_timeout(300)
+            before = read_sound_state(page)
+            outcome = answer_plan_item(page, item)
+            outcome["index"] = index
+            outcome["problem_id"] = item.get("problem_id")
+            try:
+                page.wait_for_selector(".micro-verdict", state="attached",
+                                       timeout=15000)
+            except Exception:
+                outcome["verdictAppeared"] = False
+            else:
+                outcome["verdictAppeared"] = True
+            page.wait_for_timeout(200)
+            after = read_sound_state(page)
+            outcome["cueCalls"] = len(after["cueCalls"]) - len(before["cueCalls"])
+            outcome["plays"] = len(after["plays"]) - len(before["plays"])
+            outcome["verdicts"] = after["verdicts"]
+            answers.append(outcome)
+        data["answers"] = answers
+        data["afterAnswers"] = read_sound_state(page)
+
+        # -- 3. the control: may the browser play at all? ----------------
+        control = page.evaluate("""async () => {
+          if (!window.lkSfx || !window.lkSfx.playCue) return {hasSfx: false};
+          const before = (window.__lkSfxPlays || []).length;
+          window.lkSfx.playCue("complete");
+          await new Promise((r) => setTimeout(r, 250));
+          const plays = (window.__lkSfxPlays || []).slice(before);
+          return {hasSfx: true, plays: plays.map((p) => ({
+            src: p.src, outcome: p.outcome, error: p.error || "",
+            userActivation: p.userActivation}))};
+        }""")
+        data["control"] = control
+    finally:
+        context.close()
+        browser.close()
+    return data
+
+
+def judge_audio_cue(data):
+    """3.3-1 — turn the sound evidence into a verdict.
+
+    The classification (not the threshold — there is none here):
+
+    * **no cue call at all** ⇒ the *code* did not trigger the sound;
+    * **a cue call whose ``play()`` promise was rejected** ⇒ the *browser*
+      blocked it (the autoplay policy);
+    * **a cue call and a fulfilled play** ⇒ the sound happened.
+    """
+    if not data.get("afterAnswers", {}).get("hasSfx"):
+        return _na(data, "没有音效模块（window.lkSfx 不存在）")
+    if data.get("afterAnswers", {}).get("enabled") is False:
+        return _pending(data, "声音偏好是关的 —— 本轮不验音效")
+    answers = data.get("answers") or []
+    graded = [item for item in answers if item.get("verdictAppeared")]
+    if not graded:
+        return _pending(data, "本轮没有产生任何判定（没有 .micro-verdict），"
+                              "音效无从验")
+    control = data.get("control") or {}
+    control_played = any(play.get("outcome") == "fulfilled"
+                          for play in (control.get("plays") or []))
+    blocked = [play for play in (data.get("afterAnswers", {}).get("plays") or [])
+               if play.get("outcome") == "rejected"]
+    silent = [item for item in graded if not item.get("cueCalls")]
+    data["summary"] = {
+        "gradedAnswers": len(graded),
+        "answersWithoutCue": [item.get("problem_id") for item in silent],
+        "cueCalls": len(data.get("afterAnswers", {}).get("cueCalls") or []),
+        "plays": len(data.get("afterAnswers", {}).get("plays") or []),
+        "browserBlocked": bool(blocked),
+        "controlPlayed": control_played,
+    }
+    if silent:
+        return _bad(data, "答完题后 playCue 调用 0 次 —— 代码没有触发音效"
+                           "（控制调用能播放 ⇒ 不是浏览器拦的）")
+    if blocked:
+        return _bad(data, f"音效被调用了，但有 {len(blocked)} 次播放被浏览器拒绝"
+                           "（自动播放策略）")
+    if not control_played:
+        return _pending(data, "控制调用也没有播放 —— 本轮无法区分"
+                              "「浏览器拦的」与「代码没触发」")
+    return _ok(data, f"答完题后 playCue 调用 {data['summary']['cueCalls']} 次，"
+                     f"播放 {data['summary']['plays']} 次，浏览器没有拦截")
 
 
 #: The style properties a hover / pressed feedback may change.

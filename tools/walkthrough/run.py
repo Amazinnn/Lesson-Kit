@@ -108,7 +108,8 @@ def _git(args, check=True):
 
 
 def start_service(side, repo_root, scratch, port, out_path, ws, course,
-                  chapter, seed_pool, ready_file):
+                  chapter, seed_pool, ready_file, seed_records=0,
+                  seed_sessions=0, seed_out=None):
     """Start one side's service and wait until it is ready."""
     if port == FORBIDDEN_PORT:
         raise RunError(f"port {FORBIDDEN_PORT} is the real service's port")
@@ -130,6 +131,12 @@ def start_service(side, repo_root, scratch, port, out_path, ws, course,
         "--seed-pool", str(seed_pool),
         "--ready-file", str(ready_file),
     ]
+    if seed_records:
+        command += ["--seed-records", str(seed_records)]
+    if seed_sessions:
+        command += ["--seed-sessions", str(seed_sessions)]
+    if seed_out:
+        command += ["--seed-out", str(seed_out)]
     process = subprocess.Popen(command, cwd=str(repo_root), env=env,
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                text=True)
@@ -193,7 +200,7 @@ def run_module(module, argv, cwd=None):
 
 
 def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
-                 port, seed_pool, scratch):
+                 port, seed_pool, scratch, plan_path=None):
     """Run the collectors of one side."""
     out_dir = Path(evidence_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -212,10 +219,14 @@ def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
         steps.append(("exercise", run_module("exercise.py", [
             "--base-url", base_url, "--ws", ws, "--out", str(out_dir)])))
     if wants("G-7") or wants("G-8") or wants("3."):
-        steps.append(("probe flow", run_module("probe.py", [
-            "flow", "--base-url", base_url, "--ws", ws,
-            "--out", str(out_dir), "--side", side,
-            "--repo-root", str(repo_root)])))
+        flow = ["flow", "--base-url", base_url, "--ws", ws,
+                "--out", str(out_dir), "--side", side,
+                "--repo-root", str(repo_root)]
+        if plan_path and Path(plan_path).is_file():
+            # The all-correct plan (seed.py) lets the sound probe drive a
+            # round in which every item is graded correct.
+            flow += ["--plan", str(plan_path)]
+        steps.append(("probe flow", run_module("probe.py", flow)))
     if wants("G-2") or wants("G-3") or wants("G-4") or wants("G-6"):
         # The export is taken **before** the motion frames: the frames
         # drive a real paper run (the celebration trigger), which writes
@@ -229,9 +240,13 @@ def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
     if wants("M-") and side == "after":
         # The motion only exists after the change; the before side has
         # nothing to record (and the strip would be a lie).
-        steps.append(("frames", run_module("frames.py", [
-            "--base-url", base_url, "--ws", ws,
-            "--out", str(out_dir.parent / "diff"), "--mute-check"])))
+        frames = ["--base-url", base_url, "--ws", ws,
+                  "--out", str(out_dir.parent / "diff"), "--mute-check"]
+        if plan_path and Path(plan_path).is_file():
+            # The all-correct plan (seed.py) is what lets M-3 reach the
+            # milestone tier: every item of the round is graded correct.
+            frames += ["--plan", str(plan_path)]
+        steps.append(("frames", run_module("frames.py", frames)))
     if wants("G-5"):
         steps.append(("g5 capture", run_module("g5.py", [
             "capture", "--base-url", base_url, "--ws", ws,
@@ -329,6 +344,13 @@ def main(argv=None):
                         help="the pool to copy (default: <repo>/pool/<course>.db)")
     parser.add_argument("--skip-before", action="store_true",
                         help="only run the after side (a self-check)")
+    parser.add_argument("--seed-records", type=int, default=120,
+                        help="how many attempt records to seed into each side's "
+                             "pool COPY (0 disables the seed; the real pool is "
+                             "never written)")
+    parser.add_argument("--seed-sessions", type=int, default=120,
+                        help="how many AI conversations to seed into each side's "
+                             "workspace COPY (0 disables the seed)")
     args = parser.parse_args(argv)
 
     criteria = args.only or ["G-1", "G-2", "G-3", "G-4", "G-5", "G-6", "G-7",
@@ -358,9 +380,13 @@ def main(argv=None):
             ready = scratch / "ready.json"
             out_path = evidence / side / "requests.jsonl"
             out_path.parent.mkdir(parents=True, exist_ok=True)
+            seed_out = evidence / side / "seed"
             process = start_service(side, root, scratch, port, out_path,
                                     args.ws, args.course, args.chapter,
-                                    seed_pool, ready)
+                                    seed_pool, ready,
+                                    seed_records=args.seed_records,
+                                    seed_sessions=args.seed_sessions,
+                                    seed_out=seed_out)
             processes.append(process)
             base_url = f"http://127.0.0.1:{port}"
             summary.setdefault("sides", {})[side] = {
@@ -368,8 +394,15 @@ def main(argv=None):
                 "scratch": str(scratch),
                 "css": check_served_css(base_url, root),
             }
+            plan_path = seed_out / "plan.json"
+            summary["sides"][side]["seed"] = {
+                "summary": str(seed_out / "summary.json"),
+                "plan": str(plan_path),
+                "planExists": plan_path.is_file(),
+            }
             steps = collect_side(side, base_url, args.ws, evidence / side, root,
-                                 criteria, port, seed_pool, scratch)
+                                 criteria, port, seed_pool, scratch,
+                                 plan_path=plan_path)
             summary["steps"].append({"side": side,
                                      "steps": [name for name, _ in steps]})
         steps = run_diff(evidence, criteria)
