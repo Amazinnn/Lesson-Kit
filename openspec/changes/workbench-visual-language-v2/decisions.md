@@ -819,8 +819,15 @@ A-7 原本裁定「夜纸下知识图谱跟随夜纸」。但既然 G-10 把节�
   夜纸主题在本变更里覆盖练习页 / 知识点页 / 记录中心 / 设置视图等全部界面。
 - **`graph-node-visual-language` 负责图谱的一切**：节点重设计 + 夜纸适配 +
   每个投影的色键与随投影切换的颜色标注。
-- 唯一的例外是**亮色主题下图谱必须逐像素不变**这条硬约束（`acceptance.md` G-5）——
-  它约束的是图谱 change 不得顺手改动亮色下的观感，而不是本变更的责任。
+- ~~唯一的例外是亮色主题下图谱必须逐像素不变~~ —— **该例外按 A-12 改写**：
+  「亮色逐像素不变」**从图谱的约束里拿掉**（它本来就不可能成立：节点本来就要重画，
+  且 A-10.1 已把半径区间从 20–44px 改为 14–30px）；
+  v2 的 `acceptance.md` G-5「图谱不在本变更的验收范围内」**只对 v2 有效**，
+  图谱 change **不得引用一条不存在的门禁**。
+  **图谱 change 自带一份验收基线**（`graph-node-visual-language/acceptance.md`），
+  判据是**结构不变量**：节点集合、关系边集合、力导向布局的收敛性与确定性、
+  投影语义、交互行为**必须不变**；
+  而**节点 / 标签 / 图例 / 底噪这四个区域允许变化**（那正是本 change 要改的）。
 
 ## 图谱节点重设计（第 3 组）
 
@@ -932,6 +939,66 @@ G07 发现「两行上限」会与既有 `Complete primary learning text`（知�
 因此取**不截断**的一支：标题换行显示全文，完整标题在悬浮 / 键盘聚焦可达。
 这仍在 G-5 的两个分支之内，且不与既有需求打架。与 G-23（重叠时**隐藏**次要标签）
 是两个不同机制，互不冲突。
+
+### A-11 主题偏好的默认来源（覆盖审计发现的「三方冲突」）
+
+覆盖审计发现：`design.md:684` 与 `tasks.md:44` 写「**不用** `prefers-color-scheme` 兜底」，
+而 `docs/GLOSSARY.md:372` 与 `docs/PRODUCT-MANUAL.md:522` **已经向用户承诺「默认跟随系统」**。
+三处不一致。
+
+**裁决：以用户可见承诺为准 —— 主题偏好默认跟随系统 `prefers-color-scheme`，
+学习者显式选择优先并覆盖系统。**（与 A-2 的动效偏好同一模式。）
+
+因此：
+- `design.md` D-2 的 FOUC 方案要修正：`_base()`（`pages.py:1096`）的内联脚本
+  在**无已存偏好**时读 `prefers-color-scheme`；有已存偏好时读它；两者都写
+  `<html data-theme>`，**首屏仍无闪烁**。无 JS 时降级为亮色。
+- `tasks.md` 11.4 的 FOUC 任务同步修正。
+- `docs/GLOSSARY.md` 与 `docs/PRODUCT-MANUAL.md` **保持不变**（承诺正确，改实现不改承诺）。
+
+### A-12 图谱 change 必须自带门禁（覆盖审计发现的「例外条款被单方面取消」）
+
+覆盖审计发现：`decisions.md` A-8 说「亮色逐像素不变」约束图谱 change，
+而 `graph-node-visual-language/design.md:754-778` 说「这条要求根本不存在」并退役基线，
+且图谱 change **没有 `acceptance.md` 承接门禁**。
+
+**裁决**：
+- v2 的 `acceptance.md` G-5 已改为「图谱**不在本变更的验收范围内**」的否定式断言 ——
+  这条**只对 v2 有效**。图谱 change **不得引用一条不存在的门禁**。
+- **「亮色逐像素不变」从图谱的约束里拿掉** —— 它本来就不可能成立（节点本来就要重画，
+  且 G-10.1 已把半径从 20–44 改为 14–30）。
+- 图谱 change **自带**一份验收基线，判据是**结构不变量**：
+  节点集合、关系边集合、力导向布局的收敛性与确定性、投影语义、交互行为**必须不变**；
+  而**节点 / 标签 / 图例 / 底噪这四个区域允许变化**（那正是本 change 要改的）。
+- `decisions.md` A-8 末尾那句「唯一的例外是亮色主题下图谱必须逐像素不变」**改写**为上述
+  结构不变量门禁。
+
+### A-13 token 名必须归一；`--lk-*` 与仓库现状**同名**（覆盖审计发现的「第三族」）
+
+覆盖审计发现 `design-notes/component-spec.md`（636 处）与 `design-notes/motion-spec.md`（92 处）
+用了**第三套** token 命名族 `--lk-*`（`--lk-blue` / `--lk-ink` / `--lk-radius` / `--lk-ground` /
+`--lk-ink-4` / `--lk-ease-out` / `--lk-dur-tap` / `--lk-fs-base` / `--lk-hairline` …）。
+
+**危险在于它与仓库现状同名**：`workbench/server/static/workbench.css` 里现在就有
+`--lk-paper:#fffdf7` · `--lk-paper-shade:#f3f1ea` · `--lk-ink:#171717` ·
+`--lk-blue:#2457c5` · `--lk-yellow:#f2c94c` · `--lk-red:#d6453d`。
+若实现者照抄 `component-spec.md` 的 42 段 CSS，这些新定义会**与现状同名但值不同** ——
+CSS 不报错，只会**静默取到另一套值**。这正是 `design.md` D-1 自己指出的失效模式
+（「裸名与将来任何新 token 撞车时不会报错，只会静默取到图谱的值」），
+只不过这次撞的是**自己的旧 token**。
+
+**裁决**：
+1. 权威仍是 `design-notes/night-paper-tokens.md`（A-9）。
+2. **第三族 `--lk-*` 整体退役**：`component-spec.md` / `motion-spec.md` / `asset-spec.md`
+   里的 `--lk-*` 必须**按概念**映射到权威表的 token 名与取值
+   （结构 token 在权威表 §2，值 token 在 §3）。**不得沿用 `--lk-*` 这个前缀。**
+3. 映射是**按概念**而非按名字一对一（`--lk-radius` → 权威表的圆角 token、
+   `--lk-dur-tap` → 某个时长 token，以权威表实际有的为准），**不得新造 token 名**。
+4. 凡权威表里**没有对应物**的（如 `--lk-wash-neutral-strong` 这类中性洗底），
+   要么映射到权威表里语义最近且确实存在的那个，要么**登记为待裁决**，不许硬造。
+5. A-9 原来那句「多数工件（`component-spec.md` / `asset-spec.md` / `graph-isolation.md`）
+   已经跟随权威表」**是错的** —— 那是本次审计纠正的事实，特此更正：
+   `component-spec.md` 与 `motion-spec.md` 当时并不跟随权威表。
 
 
 
