@@ -193,7 +193,7 @@ def run_module(module, argv, cwd=None):
 
 
 def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
-                 port, seed_pool):
+                 port, seed_pool, scratch):
     """Run the collectors of one side."""
     out_dir = Path(evidence_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -216,13 +216,14 @@ def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
             "flow", "--base-url", base_url, "--ws", ws,
             "--out", str(out_dir), "--side", side,
             "--repo-root", str(repo_root)])))
-    if wants("M-"):
+    if wants("M-") and side == "after":
+        # The motion only exists after the change; the before side has
+        # nothing to record (and the strip would be a lie).
         steps.append(("frames", run_module("frames.py", [
             "--base-url", base_url, "--ws", ws,
-            "--out", str(out_dir.parent / "diff") if (out_dir.parent / "diff").is_dir()
-            else str(out_dir / "diff")])))
+            "--out", str(out_dir.parent / "diff")])))
     if wants("G-2") or wants("G-3") or wants("G-4") or wants("G-6"):
-        pool_copy = _pool_copy(out_dir)
+        pool_copy = _pool_copy(scratch)
         if pool_copy:
             steps.append(("db export", run_module("dbexport.py", [
                 "export", "--pool", str(pool_copy), "--out", str(out_dir / "db")])))
@@ -237,9 +238,9 @@ def collect_side(side, base_url, ws, evidence_dir, repo_root, criteria,
     return steps
 
 
-def _pool_copy(out_dir):
+def _pool_copy(scratch):
     """The pool copy of this side (written by the launcher)."""
-    scratch = out_dir.parent
+    scratch = Path(scratch)
     for candidate in sorted(scratch.glob("ws-*/pool/*.db")):
         return candidate
     return None
@@ -363,7 +364,7 @@ def main(argv=None):
                 "css": check_served_css(base_url, root),
             }
             steps = collect_side(side, base_url, args.ws, evidence / side, root,
-                                 criteria, port, seed_pool)
+                                 criteria, port, seed_pool, scratch)
             summary["steps"].append({"side": side,
                                      "steps": [name for name, _ in steps]})
         steps = run_diff(evidence, criteria)

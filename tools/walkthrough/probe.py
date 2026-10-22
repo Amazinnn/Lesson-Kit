@@ -189,13 +189,25 @@ PROBE_JS = r"""
 
   /* The semantic description of a focus stop: role + accessible name, never
      the id (the DOM is restructured by the change; the order must not be). */
+  /* The visible text of an element, **without** the parts that are
+     hidden from the accessibility tree: the new design puts a glyph
+     inside the navigation links, and the raw text content would then
+     read "练习 练习" — the same link, described differently.  The
+     accessible name is what a screen reader announces, so it is what the
+     focus order is compared by. */
+  P.accessibleText = (el) => {
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll("[aria-hidden='true']").forEach((n) => n.remove());
+    return (clone.textContent || "").replace(/\s+/g, " ").trim();
+  };
   P.semantic = (el) => {
     if (!el || el.nodeType !== 1) return "<none>";
     const tag = el.tagName.toLowerCase();
     const type = el.getAttribute("type") || "";
     const role = el.getAttribute("role") || "";
     const name = (el.getAttribute("aria-label") || el.getAttribute("title")
-                  || el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 40);
+                  || P.accessibleText(el) || "")
+      .replace(/\s+/g, " ").trim().slice(0, 40);
     return [tag, type, role, name].filter(Boolean).join("|");
   };
 
@@ -2549,7 +2561,15 @@ def _write_results(probe_dir, results, side):
             entry["guide"] = GUIDES[item_id]
         _write_json(probe_dir / f"{item_id}.json", entry)
         entries.append(entry)
-    checklist = {"side": side, "results": entries}
+    # The passes run one after another (static, then flow, then persist),
+    # so the checklist is **merged**, not overwritten: the flow pass only
+    # knows about the items it measured.
+    existing = _read_json(probe_dir / "checklist.json") or {}
+    merged = {item["id"]: item for item in existing.get("results", [])}
+    for entry in entries:
+        merged[entry["id"]] = entry
+    checklist = {"side": side,
+                 "results": [merged[key] for key in sorted(merged)]}
     _write_json(probe_dir / "checklist.json", checklist)
     for key in ("g7", "g8"):
         if key in results:
@@ -2574,7 +2594,14 @@ def _write_results(probe_dir, results, side):
 
 
 def _semantic_key(entry):
-    return entry.get("semantic") or ""
+    """The semantic description of a focus stop.
+
+    The recorded sequence is a list of descriptions; a full stop record is
+    accepted as well, so both shapes can be diffed.
+    """
+    if isinstance(entry, dict):
+        return entry.get("semantic") or ""
+    return str(entry or "")
 
 
 def diff_focus(before_sequence, after_sequence):
@@ -2630,6 +2657,29 @@ def diff_focus(before_sequence, after_sequence):
     return _ok(data, "焦点顺序未变")
 
 
+def _read_side_items(side_dir):
+    """The items of one side, read from the per-item evidence files.
+
+    The per-item files are the source of truth: the checklist is written
+    by several passes, and a file that is missing from the checklist must
+    not be lost.
+    """
+    probe_dir = Path(side_dir) / "probe"
+    items = {}
+    if probe_dir.is_dir():
+        for path in sorted(probe_dir.glob("*.json")):
+            if path.name in ("checklist.json", "g7.json", "g8.json"):
+                continue
+            entry = _read_json(path)
+            if not entry or "id" not in entry:
+                continue
+            items[entry["id"]] = entry
+    checklist = _read_json(probe_dir / "checklist.json") or {}
+    for item in checklist.get("results", []):
+        items.setdefault(item["id"], item)
+    return items
+
+
 def diff_checklist(before_dir, after_dir, out_dir):
     """Merge the two sides and judge the comparative items."""
     before_dir = Path(before_dir)
@@ -2637,10 +2687,8 @@ def diff_checklist(before_dir, after_dir, out_dir):
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    before = _read_json(before_dir / "probe" / "checklist.json") or {"results": []}
-    after = _read_json(after_dir / "probe" / "checklist.json") or {"results": []}
-    before_items = {item["id"]: item for item in before.get("results", [])}
-    after_items = {item["id"]: item for item in after.get("results", [])}
+    before_items = _read_side_items(before_dir)
+    after_items = _read_side_items(after_dir)
 
     # -- 3.1-5 — the visible text must not grow --------------------------
     before_count = (before_items.get("3.1-5") or {}).get("data") or {}

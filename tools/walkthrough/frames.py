@@ -856,8 +856,18 @@ def _write_json(path, payload):
     return path
 
 
+MUTE_JS = """
+(() => {
+  try {
+    window.localStorage.setItem("wb_settings_%s",
+        JSON.stringify({sound: false}));
+  } catch (error) { /* a locked store must not break the page */ }
+})();
+"""
+
+
 def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
-                   paper_id=None):
+                   paper_id=None, muted=False):
     """Capture one motion: the strip, the metadata and the reduced twin."""
     from playwright.sync_api import sync_playwright  # noqa: F401  (documented)
 
@@ -868,6 +878,8 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
 
     # -- the animated run ------------------------------------------------
     browser, context, page = _launch(playwright)
+    if muted:
+        page.add_init_script(MUTE_JS % ws)
     try:
         if delay_ms:
             import time
@@ -894,6 +906,8 @@ def capture_motion(playwright, motion_id, out_dir, base_url, ws, delay_ms=0,
 
     # -- the reduced run -------------------------------------------------
     browser, context, page = _launch(playwright, reduced_motion="reduce")
+    if muted:
+        page.add_init_script(MUTE_JS % ws)
     try:
         if delay_ms:
             import time
@@ -976,6 +990,62 @@ class _Context:
         return self.base_url + PAGES[page_key].format(ws=self.ws)
 
 
+def capture_mute_twin(playwright, out_dir, base_url, ws):
+    """3.3-5 — the visual feedback is complete without any sound.
+
+    The celebration is captured twice: once with the sound on and once
+    with the sound preference off.  The two frame strips have to be
+    **pixel identical** — the sound is not the only channel.
+    """
+    from PIL import Image, ImageChops
+
+    on_dir = Path(out_dir) / "mute-on"
+    off_dir = Path(out_dir) / "mute-off"
+    on_result = capture_motion(playwright, "M-2", on_dir, base_url, ws)
+    off_result = capture_motion(playwright, "M-2", off_dir, base_url, ws,
+                                 muted=True)
+    frames = []
+    identical = True
+    for path in sorted((on_dir / "M-2").glob("*.png")):
+        twin = off_dir / "M-2" / path.name
+        if not twin.is_file():
+            identical = False
+            continue
+        left = Image.open(path).convert("RGB")
+        right = Image.open(twin).convert("RGB")
+        if left.size != right.size:
+            identical = False
+            frames.append({"file": path.name, "ae": None,
+                           "why": "the two frames have different sizes"})
+            continue
+        diff = ImageChops.difference(left, right)
+        ae = sum(sum(hist[1:]) for hist in
+                 [band.histogram() for band in diff.split()])
+        frames.append({"file": path.name, "ae": ae})
+        if ae:
+            identical = False
+    # The **terminal state** is what the criterion is about: the sound is
+    # not the only channel.  The mid-flight frames are reported as
+    # evidence, but their pixels depend on the wall clock (the
+    # celebration mounts its pieces on timers), so they are not decisive.
+    differences, extra = compare_terminal(
+        on_result.get("animatedTerminal") or {},
+        off_result.get("animatedTerminal") or {})
+    data = {"frames": frames, "soundOn": str(on_dir), "soundOff": str(off_dir),
+            "terminalDifferences": differences,
+            "terminalExtraDifferences": extra,
+            "allFramesIdentical": identical}
+    if not frames:
+        return {"verdict": PENDING, "data": data,
+                "note": "没有采到庆祝帧 —— 无法比较"}
+    if differences:
+        return {"verdict": FAIL, "data": data,
+                "note": f"静音后终态与开静音的不一致（{len(differences)} 处）"
+                        " —— 视觉反馈缺了一块"}
+    return {"verdict": PASS, "data": data,
+            "note": "静音与开静音的终态一致 —— 声音不是唯一通道"}
+
+
 def ensure_paper(base_url, ws, paper_id=None):
     """The paper the loading state is opened with (M-9).
 
@@ -1002,6 +1072,8 @@ def main(argv=None):
                         help="a comma separated list of motion ids")
     parser.add_argument("--paper-id", default=None,
                         help="the paper the loading state (M-9) is opened with")
+    parser.add_argument("--mute-check", action="store_true",
+                        help="also produce the 3.3-5 result (the mute twin)")
     args = parser.parse_args(argv)
 
     from playwright.sync_api import sync_playwright
@@ -1028,6 +1100,18 @@ def main(argv=None):
                           "verdict": PENDING, "detail": f"采集失败：{exc}"}
             _write_json(out_dir / f"{motion_id}.json", result)
             summary[motion_id] = result["verdict"]
+    if args.mute_check:
+        with sync_playwright() as playwright:
+            result = capture_mute_twin(playwright, out_dir, args.base_url, args.ws)
+        target = Path(args.out).parent / "after" / "probe" / "3.3-5.json"
+        if not target.parent.is_dir():
+            target = Path(args.out) / "3.3-5.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({"id": "3.3-5", "level": "AUTO",
+                                      "auto": True, **result},
+                                     ensure_ascii=False, indent=2),
+                          encoding="utf-8")
+        summary["3.3-5"] = result["verdict"]
     print(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 
