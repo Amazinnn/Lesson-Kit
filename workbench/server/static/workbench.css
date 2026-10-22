@@ -2149,11 +2149,17 @@ img { max-width: 100%; }
 }
 .record-run-progress span { display: block; height: 100%; background: var(--role-blue); }
 .record-run-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
-.record-row { margin: 0 0 12px; padding: 12px 14px; }
-.record-row header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+/* 记录条目 = 列表 / 数据面（tasks.md 6.4「记录条目用更小字号与更紧间距」）——
+   **六项字段一个不少**（题目 + 评语 + 摘录 + 判定 + 自评 + 时间），
+   密度只从「行高 + 间距」收紧，**不靠删字段**
+   （design.md D-13 / decisions.md A-50：单列卡片流 + 收紧密度，页高目标 5500–6500px）。
+   改造前实测：`.record-row` 的 `padding 12px×2 + margin 12px` ≈ 36px/卡，
+   `?view=attempts` 中栏 `scrollHeight = 8951px`。 */
+.record-row { margin: 0 0 6px; padding: 7px 14px; line-height: 20px; }
+.record-row header { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .record-title { font-weight: 600; color: inherit; text-decoration: none; }
 .record-title:hover { text-decoration: underline; }
-.record-verdict { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; }
+.record-verdict { font-size: 12px; font-weight: 600; line-height: 18px; padding: 1px 8px; border-radius: 999px; }
 /* 判定徽章 = 结构块（中性墨细线块）+ 勾形几何 + 文字，三通道 */
 .record-verdict-ok {
   position: relative;
@@ -2176,19 +2182,21 @@ img { max-width: 100%; }
 .record-verdict-bad { background: var(--role-red-wash); color: var(--role-red-ink); }
 .record-verdict-open { background: var(--rule-hair); color: var(--ink-muted); }
 .record-rating { color: var(--role-yellow-deep); font-size: 12px; }
-.record-time { margin-left: auto; color: var(--ink-muted); font-size: 12px; }
+.record-time { margin-left: auto; color: var(--ink-muted); font-size: 12px; line-height: 18px; }
 /* 记录页作答原文 —— 阅读面 A 组（衬线，D-4）：
    衬线由「阅读刻度」块统一给；**字号保持记录页的紧凑档**（`--fs-meta`）——
    记录条目属「列表 / 数据面」（tasks.md 6.4：记录页 20 行高度须小于基线），
-   故这一处不升到 `--fs-reading`（17px），只换字族。 */
+   故这一处不升到 `--fs-reading`（17px），只换字族；
+   行高取 `--fs-meta` 自带的 20px（**数据面紧凑档**，不是阅读刻度的 1.75）。 */
 .record-answer {
-  margin: 8px 0 0;
+  margin: 3px 0 0;
   font-family: var(--font-read);
   font-size: var(--fs-meta);
+  line-height: 20px;
   color: var(--ink-body);
   white-space: pre-wrap;
 }
-.record-note { margin: 6px 0 0; font-size: 12px; }
+.record-note { margin: 3px 0 0; font-size: 12px; line-height: 17px; }
 
 /* practice-page attempt history (collapsed above the reveal) */
 .attempt-history { margin-top: 12px; }
