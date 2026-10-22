@@ -1509,6 +1509,59 @@ html[data-theme="night"] .lk-surface-2 {
 }
 
 /* ============================================================================
+   §4.23 吐司 · spec 吐司（`toast-spec` · A-115 形态裁定）
+   ---------------------------------------------------------------------------
+   **右上角浮起面** + 12px 圆角 + 13px 字 + **左侧状态点** + **浅底深字**
+   （A-23 之后不再是墨块：近黑面已退出内容块，`--surface-code` 只服务代码块）。
+   ⚠️ **层序**：`--z-toast`（200）在模态之下（权威表 §2.7：modal > toast > dropdown > raised）。
+   ⚠️ **不抢焦点**：容器 `pointer-events: none`，内部按钮另开 `auto`。
+   ⚠️ **图谱页那条仿古硬编码的 `.toast` 不归本波**（归 `graph-node-visual-language`
+     change 的图谱冻结）⇒ 本波只落**非图谱页**的同名件。
+   ⚠️ 产品里目前**没有**非图谱的吐司 markup ⇒ 本波只落**样式**（形态）；
+     markup 由需要它的页面另开 change 落。
+   ========================================================================= */
+.lk-toast {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  min-width: 240px;
+  max-width: 320px;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface-raised);
+  color: var(--ink-strong);
+  box-shadow: var(--elev-3);
+  pointer-events: none;
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+  line-height: 20px;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity var(--dur-base) var(--ease-out),
+              transform var(--dur-base) var(--ease-out);
+}
+.lk-toast[data-show="true"] { opacity: 1; transform: translateY(0); }
+/* 夜纸下浮起面与卡面底色差小 ⇒ 补一圈发丝线（同 `.lk-surface-2`） */
+html[data-theme="night"] .lk-toast {
+  box-shadow: 0 0 0 1px var(--rule-hair), var(--elev-3);
+}
+/* 左侧状态点（10px ⇒ §4.14 的 spec 圆点尺寸）：成功=蓝 / 错误=红 */
+.lk-toast__dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: var(--role-blue);
+}
+.lk-toast--error .lk-toast__dot { background: var(--role-red); }
+.lk-toast__action { pointer-events: auto; }
+
+/* ============================================================================
    §4.20 沉底块 · 竖线沉底（`sunken-rail` · A-115 形态裁定）
    ---------------------------------------------------------------------------
    **沉底面 + 左侧 4px 黄竖线**；黄**只承载面积、不承载文字**（权威表 §3.4）。
