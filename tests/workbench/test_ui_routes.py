@@ -75,7 +75,7 @@ class UiRouteTests(unittest.TestCase):
     def test_static_asset_served(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
-        self.assertIn("--dsw-brand-primary", body)
+        self.assertIn("--role-blue: #2b62e8", body)
         # The scope-tray block is retired dead code (task 14.1): the tray is
         # never rendered, so its CSS must be gone rather than merely unused.
         self.assertNotIn(".scope-tray-list {", body)
@@ -115,8 +115,8 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
         self.assertIn(".page-header h1,", body)
-        self.assertIn(".rich-text :not(pre) > code", body)
-        self.assertIn(".rich-text table {", body)
+        self.assertIn(":is(.wb-reading, .wb-reading--stem) :not(pre) > code", body)
+        self.assertIn(":is(.wb-reading, .wb-reading--stem) table {", body)
         staged_rule = body.split(".staged-title {", 1)[1].split("}", 1)[0]
         suggestion_rule = body.split(".suggestion-title {", 1)[1].split("}", 1)[0]
         self.assertIn("overflow-wrap: anywhere", staged_rule)
@@ -125,10 +125,10 @@ class UiRouteTests(unittest.TestCase):
     def test_css_exposes_the_soft_mondrian_visual_roles(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
-        self.assertIn("--lk-paper: #fffdf7", body)
-        self.assertIn("--lk-blue: #2457c5", body)
-        self.assertIn("--lk-yellow: #f2c94c", body)
-        self.assertIn("--lk-red: #d6453d", body)
+        self.assertIn("--surface-sheet: #fffdf7", body)
+        self.assertIn("--role-blue: #2b62e8", body)
+        self.assertIn("--role-yellow: #f5c518", body)
+        self.assertIn("--role-red: #d1392b", body)
         self.assertIn("#topbar .brand::before", body)
         self.assertIn(".page-header::after", body)
         self.assertIn("inset 4px 0 0 var(--role-blue)", body)
