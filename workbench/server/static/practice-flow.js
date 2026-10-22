@@ -284,7 +284,7 @@
         report += " 可用题数少于请求量的知识点：" + shortKps.join("、") + "。";
       }
       if (!items.length || items.length < requested || shortKps.length) {
-        report += "请检查筛选条件；若正式题目不足，可通过 Check 管线检查并补充。系统不会虚构题目。";
+        report += "请检查筛选条件；若正式题目不足，可通过 Check 管线检查并补充。";
       }
       practiceError.textContent = report;
       practiceError.classList.remove("hidden");
@@ -931,7 +931,7 @@
       if (quiz) {
         var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
         var why = quiz.error_reason
-          ? "<p class='section-kicker'>为什么</p><div class='wb-reading'>"
+          ? "<p class='section-kicker'>错因</p><div class='wb-reading'>"
             + richText(quiz.error_reason) + "</div>"
           : "";
         solution = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
@@ -942,7 +942,7 @@
       }
       var feedback = item.feedback || {};
       var selfRating = feedback.rating == null
-        ? "<p class='muted'>尚未自评。</p>"
+        ? "<p class='muted'>尚未自评</p>"
         : "<p>我的自评：" + "★".repeat(feedback.rating)
           + "☆".repeat(5 - feedback.rating) + "（" + feedback.rating + "/5）</p>"
           + (feedback.note
@@ -1032,8 +1032,8 @@
         stream.innerHTML = "<article class='practice-question-card card flash-card-shell'>"
           + "<p class='context-line'>闪卡</p>"
           + "<p class='muted flash-direction-label'>" + directionLabel
-          + " · 先在心里回忆，再揭示对照。</p>" + cardBody
-          + (item.state === "rated" ? "<p class='muted'>已评分。</p>" : "")
+          + "</p>" + cardBody
+          + (item.state === "rated" ? "<p class='muted'>已评分</p>" : "")
           + "</article>";
         renderMath(stream);
         setComposerLayout("card");
@@ -1138,11 +1138,11 @@
       var mode = sessionStorage.getItem(MODE_KEY);
       var ratingMode = sessionStorage.getItem(RATING_MODE_KEY);
       var emptyMessage = similarRound
-        ? "暂无更多同类题。"
-        : (mode === "flash_card" ? "当前范围暂无可用的闪卡，请选择其他模式。"
-          : mode === "micro" ? "当前范围暂无可用的小测题目，请选择其他模式。"
-          : mode === "yes_no" ? "当前范围暂无可用的 Yes / No 题目，请选择其他模式。"
-            : "本轮相关题目已练完。");
+        ? "暂无更多同类题"
+        : (mode === "flash_card" ? "当前范围暂无可用闪卡"
+          : mode === "micro" ? "当前范围暂无可用小测题目"
+          : mode === "yes_no" ? "当前范围暂无可用判断题"
+            : "本轮相关题目已练完");
       advanceToken += 1;
       practiceDeck.ended = true;
       persistDeck();
@@ -1439,7 +1439,7 @@
       }
       var ids = selectedKpIds();
       if (!ids.length) {
-        if (practiceError) showPracticeError("请先在知识点视图选择范围", false);
+        if (practiceError) showPracticeError("请先在知识点页选择范围", false);
         return;
       }
       store(KPS_KEY, ids);
@@ -1474,7 +1474,7 @@
       }
       var ids = selectedKpIds();
       if (!ids.length) {
-        if (practiceError) showPracticeError("请先在知识点视图选择范围", false);
+        if (practiceError) showPracticeError("请先在知识点页选择范围", false);
         return;
       }
       beginFixedPractice(ids, contentMode, ratingMode);
@@ -1549,7 +1549,7 @@
     var ORIGIN_LABELS = {
       source_problem: "历年原题",
       adapted_problem: "改编",
-      generated_grounded: "AI生成",
+      generated_grounded: "AI 生成",
     };
     var filterLaunch = document.getElementById("filter-launch");
     var filterCount = document.getElementById("filter-count");
@@ -1601,7 +1601,7 @@
           + " <span class='count'>" + facet.count + "</span></label>";
       }).join("");
       return "<div class='filter-dimension'><h3>" + escapeHtml(label) + "</h3>"
-        + (options || "<p class='muted'>本池暂无此维度</p>") + "</div>";
+        + (options || "<p class='muted'>暂无该维度</p>") + "</div>";
     }
 
     function renderFilterPopup() {
@@ -1736,8 +1736,8 @@
         var section;
         if (quiz) {
           var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
-          var why = quiz.error_reason
-            ? "<p class='section-kicker'>为什么</p>"
+        var why = quiz.error_reason
+          ? "<p class='section-kicker'>错因</p>"
               + "<div class='wb-reading'>" + richText(quiz.error_reason) + "</div>"
             : "";
           section = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
@@ -1799,7 +1799,7 @@
       // parseInt("") is NaN and fails both bounds checks, so an empty input
       // used to reach the server and die as "rating or note is required".
       if (!(rating >= 1 && rating <= 5)) {
-        showPracticeError("请输入 1-5 的评分");
+        showPracticeError("请输入 1–5 的自评");
         return;
       }
       clearPracticeError();
@@ -2002,7 +2002,7 @@
   if (pending) {
     var unrated = session().filter(function (item) { return item.state === "unrated"; });
     if (!unrated.length) {
-      pending.innerHTML = "<p>没有待评的题。</p>";
+      pending.innerHTML = "<p>没有待评的题</p>";
     } else {
       var remaining = unrated.length;
       var buildRatingCard = function (contentHtml, itemType, itemId, title, direction, item) {
@@ -2027,11 +2027,11 @@
         var save = document.createElement("button");
         save.id = "end-save-" + entryId;
         save.className = "primary sm";
-        save.textContent = "保存评分";
+        save.textContent = "保存自评";
         var ratingLabel = document.createElement("label");
         ratingLabel.id = "end-rating-label-" + entryId;
         ratingLabel.setAttribute("for", rating.id);
-        ratingLabel.textContent = "为“" + title + "”评分（1-5）";
+        ratingLabel.textContent = "为“" + title + "”自评（1–5）";
         var noteLabel = document.createElement("label");
         noteLabel.id = "end-note-label-" + entryId;
         noteLabel.setAttribute("for", note.id);
@@ -2047,7 +2047,7 @@
         save.addEventListener("click", function () {
           var value = parseInt(rating.value, 10);
           if (!(value >= 1 && value <= 5)) {
-            showCardError("请输入 1-5 的评分");
+            showCardError("请输入 1–5 的自评");
             return;
           }
           var feedback = {
@@ -2070,7 +2070,7 @@
           }).then(function () {
             card.remove();
             remaining -= 1;
-            if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
+            if (!remaining) pending.innerHTML = "<p>全部评完</p>";
           }).catch(function (err) {
             updateSession(origin.id, { feedback_status: "failed" }, origin.direction);
             showCardError(err.message || "保存失败");
@@ -2107,7 +2107,7 @@
               + richText(quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键")
               + "</div>"
               + (quiz.error_reason
-                ? "<p class='section-kicker'>为什么</p><div class='wb-reading'>"
+                ? "<p class='section-kicker'>错因</p><div class='wb-reading'>"
                   + richText(quiz.error_reason) + "</div>"
                 : "")
               + practiceExplanationSection(problem)
@@ -2168,7 +2168,7 @@
       sections += explanation;
     } else if (!sections) {
       sections = "<section class='practice-solution'><p class='section-kicker'>解析</p>"
-        + "<div class='wb-reading'>（本题无解析，请基于自身作答自评）</div></section>";
+        + "<div class='wb-reading'>（本题无解析）</div></section>";
     }
     return sections;
   }
