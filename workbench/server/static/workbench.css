@@ -2672,21 +2672,31 @@ img { max-width: 100%; }
 
 /* ---- 档位色：日历格子与图例色块**共用同一取值**（IMPL-W2e 11）------------
    `--level-bg` 是**唯一的取值出口** ⇒ 色块与格子不可能各写一遍、慢慢漂移。
-   五档取值与 `records.py` 的 `_CALENDAR_LEVELS`（0 / 1 / 2–3 / 4–7 / ≥8）同档。 */
+   五档取值与 `records.py` 的 `_CALENDAR_LEVELS`（0 / 1 / 2–3 / 4–7 / ≥8）同档。
+   ⚠️ **混色底不是字面色，是「日历画在什么面上」**（A-96 · IMPL-W2j 第 4 条第 1 项）：
+     改造前写死 `white` ⇒ 夜纸下五档仍是**亮块**（level-0 落在夜纸卡面上
+     14.89:1，83 个元素三通道均 ≥ 200）⇒ **「0 次」档成了整块面板里最亮的一项**
+     ⇒ 热力编码在夜纸下**倒转**（最少 = 最亮）。
+     ⇒ 混色底改**主题表面 token** `--surface-card`（日历所在的 `.card` 面）：
+       · 夜纸：蓝 9%→78% 混**夜纸卡面**（与权威表 §3.10「同一色阶逻辑，只换混色底」
+         一致；`--heat-4` 夜纸值 `#6178b3` 正是「夜蓝 78% 混夜纸卡面」的结果）；
+       · 亮色：蓝 9%→78% 混 `#fffdf7`（比原来的 `white` 略暖一点，**观感无差**）。
+     ⚠️ 五档仍**由同一个公式派生**（同一支蓝、同一底、同一组比例）
+       ⇒ 「越多越深」在两主题下都成立，且**最浅档不是最显眼项**。 */
 :is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch) {
   --level-bg: var(--surface-sunken);
   background: var(--level-bg);
 }
 :is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-0,
-.lk-legend__swatch[data-level="0"] { --level-bg: color-mix(in srgb, var(--role-blue) 9%, white); }
+.lk-legend__swatch[data-level="0"] { --level-bg: color-mix(in srgb, var(--role-blue) 9%, var(--surface-card)); }
 :is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-1,
-.lk-legend__swatch[data-level="1"] { --level-bg: color-mix(in srgb, var(--role-blue) 18%, white); }
+.lk-legend__swatch[data-level="1"] { --level-bg: color-mix(in srgb, var(--role-blue) 18%, var(--surface-card)); }
 :is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-2,
-.lk-legend__swatch[data-level="2"] { --level-bg: color-mix(in srgb, var(--role-blue) 34%, white); }
+.lk-legend__swatch[data-level="2"] { --level-bg: color-mix(in srgb, var(--role-blue) 34%, var(--surface-card)); }
 :is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-3,
-.lk-legend__swatch[data-level="3"] { --level-bg: color-mix(in srgb, var(--role-blue) 55%, white); }
+.lk-legend__swatch[data-level="3"] { --level-bg: color-mix(in srgb, var(--role-blue) 55%, var(--surface-card)); }
 :is(.record-activity-day, .record-activity-swatch, .lk-legend__swatch).level-4,
-.lk-legend__swatch[data-level="4"] { --level-bg: color-mix(in srgb, var(--role-blue) 78%, white); }
+.lk-legend__swatch[data-level="4"] { --level-bg: color-mix(in srgb, var(--role-blue) 78%, var(--surface-card)); }
 
 /* ---- 档位图例（IMPL-W2e 第 11 条 · **类名规范由本波定**）------------------
    **规范类名**（请服务端按这族输出）：
