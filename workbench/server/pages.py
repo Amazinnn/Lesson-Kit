@@ -243,11 +243,18 @@ def _paper_practice_html(workspace_name):
         # 数字直接显示最终值、进度带静态满格、爆点与纸片静态不出现。
         "<section id='paper-completion' class='card lk-card hidden' aria-labelledby='paper-completion-title'>"
         "<p class='section-kicker'>Congratulations!</p><h2 id='paper-completion-title'>完成练习</h2>"
-        "<div id='paper-completion-stats' class='paper-completion-stats lk-stat-slot'></div>"
-        "<div class='lk-progress is-filled lk-progress--completion' role='progressbar' "
+        "<div id='paper-completion-stats' class='paper-completion-stats'></div>"
+        # ① 统计数字槽位：JS 把逐项数字（带 data-lk-value）写进来，
+        #    ticker 逐位滚动；写不进来的槽位保持空，不占位也不显示旧值。
+        "<div id='paper-completion-figures' class='paper-completion-figures lk-stat-slot'></div>"
+        # ② 进度带：静态满格（.lk-progress__fill 的静态 transform 是 scaleX(1)），
+        #    庆祝时由 JS 加上 .is-filled 重放 0→100% 的生长（只动 scaleX）。
+        "<div class='lk-progress lk-progress--completion' role='progressbar' "
         "aria-label='本轮完成进度' aria-valuemin='0' aria-valuemax='100' aria-valuenow='100'>"
         "<span class='lk-progress__fill'></span></div>"
-        "<div id='paper-milestone-anchor' class='lk-milestone-anchor' aria-hidden='true'></div>"
+        # ③ 里程碑锚点容器：爆点与纸片落在这里（pointer-events: none，不覆盖 CTA）。
+        "<div id='paper-completion-milestone' class='lk-celebrate-anchor' "
+        "data-lk-celebrate-anchor style='pointer-events: none' aria-hidden='true'></div>"
         "<div class='paper-toolbar'>"
         "<button id='paper-review' class='primary' type='button'>查看本次答卷</button>"
         "<button id='paper-again' class='outline' type='button'>再练一次</button>"
