@@ -2852,9 +2852,12 @@ img { max-width: 100%; }
    · **档位色只落在两块小面积上**：左侧档位色条（`::before`）与点亮的火苗。
      **黄色只承载面积与形状** ⇒ 数字若着色走 `--role-yellow-deep`
      （档 1），档 2 的数字让位给蓝（蓝承载文字）。
-   · **冗余状态通道**（灰度下也要读得出档位）：颜色之外还有
-     **字重**（500 / 600 / 700）、**宽度**（三档内边距不同）与
-     **火苗簇数**三条 ⇒ 任何一条都在动。
+   · **主数字 = `--fs-hero`（36px）/ 700**（component-spec §4.20：
+     「庆祝数字 / 连对计数器主数字同此档」；A-18：**不得**压到
+     `--fs-display` 28px）。
+   · **冗余状态通道**（灰度下也要读得出档位）：**不靠字重**（基线已是 700，
+     无处可退），改用三重 —— **底色档**（色条：灰 / 黄 / 黄→蓝）、
+     **宽度**（三档内边距 10 / 14 / 18px）与**火苗簇数**。
    · 计数器的底 = **沉底块**（L3：底色差 + 1px 内发丝线，**不带柔影**，凹层不抬升）。
    · **几何位置**：常驻练习页题卡的**左上角**（`.practice-streak` 是题卡内的
      首行，不压题面，也不碰导航条）。
@@ -2888,26 +2891,29 @@ img { max-width: 100%; }
   border-radius: var(--r-md) 0 0 var(--r-md);
   background: var(--streak-accent);
 }
-/* 档 0：中性 —— 数字中性墨、字重 500 */
+/* 档 0：中性 —— 数字中性墨。
+   ⚠️ **主数字 = `--fs-hero` 36px / 700**（A-63 / component-spec §4.20 / A-18）——
+   档位**不靠字重**区分（基线已是 700，无处可退），改用
+   「底色档 + 内边距 + 火苗簇数」三重冗余通道。 */
 .lk-streak .lk-ticker {
-  font-weight: 500;
+  font-weight: 700;
   color: var(--ink-strong);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-stat);
-  line-height: 30px;
+  font-size: var(--fs-hero);   /* 36px 主数字 */
+  line-height: 44px;
 }
 /* 档 1：灰 → 黄（黄承载「当前做得顺」；数字走 --role-yellow-deep） */
 .lk-streak.is-warm {
   --streak-accent: var(--role-yellow);
   padding-inline: 14px;
 }
-.lk-streak.is-warm .lk-ticker { font-weight: 600; color: var(--role-yellow-deep); }
+.lk-streak.is-warm .lk-ticker { color: var(--role-yellow-deep); }
 /* 档 2：黄 → 蓝（最顺的一档；渐变落在色条与火苗两块小面积上） */
 .lk-streak.is-hot {
   --streak-accent: linear-gradient(180deg, var(--role-yellow), var(--role-blue));
   padding-inline: 18px;
 }
-.lk-streak.is-hot .lk-ticker { font-weight: 700; color: var(--role-blue); }
+.lk-streak.is-hot .lk-ticker { color: var(--role-blue); }
 /* 点亮的火苗在最高一档里走黄→蓝（渐变在图标内部 ⇒ 合规） */
 .lk-streak.is-hot .lk-flame-on {
   background: linear-gradient(180deg, var(--role-yellow) 0%, var(--role-blue) 100%);
