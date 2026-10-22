@@ -950,11 +950,16 @@ G07 发现「两行上限」会与既有 `Complete primary learning text`（知�
 学习者显式选择优先并覆盖系统。**（与 A-2 的动效偏好同一模式。）
 
 因此：
-- `design.md` D-2 的 FOUC 方案要修正：`_base()`（`pages.py:1096`）的内联脚本
+- `design.md` **D-9「设置视图的形态与主题应用时机」第 2 条**的 FOUC 方案要修正
+  （⚠️ 本条原先误写为「D-2」——D-2 是纸面层级模型，FOUC 方案实际在 D-9）：
+  `_base()`（`pages.py:1096`）的内联脚本
   在**无已存偏好**时读 `prefers-color-scheme`；有已存偏好时读它；两者都写
   `<html data-theme>`，**首屏仍无闪烁**。无 JS 时降级为亮色。
 - `tasks.md` 11.4 的 FOUC 任务同步修正。
 - `docs/GLOSSARY.md` 与 `docs/PRODUCT-MANUAL.md` **保持不变**（承诺正确，改实现不改承诺）。
+- ⚠️ **待办**：`design-notes/asset-spec.md:364` 仍写着「不用 `prefers-color-scheme` 媒体查询
+  （主题偏好是工作区级的浏览器偏好，**不是系统级**）」——后半句与本裁决半冲突，
+  需在该文件被 A-13 的 token 归一改完后一并修正。
 
 ### A-12 图谱 change 必须自带门禁（覆盖审计发现的「例外条款被单方面取消」）
 
