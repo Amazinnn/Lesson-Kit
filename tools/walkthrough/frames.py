@@ -284,8 +284,17 @@ def prepare_theme(page, ctx):
 
 
 def act_theme(page, ctx):
-    """M-1 — the theme switch itself."""
-    page.click("#setting-theme")
+    """M-1 — the theme switch itself.
+
+    The switch is clicked **in the page**: the visible control is the
+    switch's track, and the decorative thumb sits on top of the (visually
+    hidden) checkbox, so a real mouse click on the input would be
+    intercepted by the decoration.
+    """
+    page.evaluate("""() => {
+      const box = document.getElementById("setting-theme");
+      if (box) box.click();
+    }""")
 
 
 def prepare_view(page, ctx):
@@ -1108,6 +1117,9 @@ def main(argv=None):
               else list(MOTIONS))
     paper_id = args.paper_id
     if "M-9" in wanted and not paper_id:
+        # The phase is tagged **before** the paper is created: the paper
+        # belongs to the frames, not to the product's own request flow.
+        set_phase(args.base_url, "frames", "frames")
         paper_id = ensure_paper(args.base_url, args.ws)
     summary = {}
     with sync_playwright() as playwright:
