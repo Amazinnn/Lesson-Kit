@@ -9,6 +9,10 @@ VIEWS = {"overview", "runs", "attempts", "wrong"}
 # 仪表盘卡的迷你图高（layout-spec §5.6「迷你图高 28」）
 _MINI_HEIGHT = 28
 
+# 14 天负荷柱：与时间视图共用 `.workload-bars` 一族类名（CSS 已落）
+_BAR_MAX_PX = 132        # 柱高上限（与时间视图同一档）
+_BAR_STAGGER_MS = 24     # 逐柱错峰（decisions.md「负荷柱逐柱错峰 24ms」）
+
 
 def _verdict_mark(kind):
     """判定的几何符号（§3.6 冗余状态通道：勾 / 叉 / 空心环）。
@@ -430,25 +434,65 @@ def _verdict_distribution(summary):
 
 
 def _trend_chart(trend):
-    maximum = max((day.get("attempts", 0) for day in trend), default=0)
+    """最近 14 天的作答量 = 负荷柱（与时间视图共用 `.workload-bars` 一族类名）。
+
+    · **共享基线**：`.workload-bars` 的下边框就是基线；零负荷日不画柱，
+      但保留在基线上的位置（不错位占位）。
+    · **峰值日**按形态（平顶方块）+ 颜色（黄，`.bar-col.peak`）区分。
+    · **重日**（当天作答数 ≥ 非零日均的 2 倍）加几何冗余标记
+      （`.bar-heavy-flag` 红点），不靠一堆解释文字。
+    · 每根柱的**精确数值**标在各自柱上方（`.bar-value`）。
+    · **逐柱错峰 24ms** 生长（`animation-delay`），只动 transform / opacity；
+      柱的静态样式就是终态 ⇒ 动效偏好关或系统 reduced-motion 生效时，
+      柱直接落最终高度，数值 / 峰值标记 / 重日标记同时就位。
+    """
+    counts = [int(day.get("attempts") or 0) for day in trend]
+    maximum = max(counts, default=0)
     if maximum == 0:
         return "<p class='muted'>最近 14 天还没有作答。</p>"
-    bars = []
-    for day in trend:
-        attempts = day.get("attempts", 0)
-        height = (attempts / maximum * 100) if maximum else 0
-        label = str(day.get("date") or "")[5:]
-        bars.append(
-            "<div class='record-day'>"
-            "<div class='record-day-bar-wrap'>"
-            f"<span class='record-day-value'>{attempts or ''}</span>"
-            f"<span class='record-day-bar{' empty' if attempts == 0 else ''}' "
-            f"style='height:{height:.1f}%'></span>"
-            "</div>"
-            f"<span class='record-day-label'>{html.escape(label)}</span>"
+    nonzero = [count for count in counts if count > 0]
+    average = sum(nonzero) / len(nonzero) if nonzero else 0
+    heavy_threshold = average * 2
+    peak_index = counts.index(maximum)
+    columns = []
+    for index, day in enumerate(trend):
+        count = counts[index]
+        date = str(day.get("date") or "")
+        height = round(count / maximum * _BAR_MAX_PX)
+        state = " peak" if index == peak_index else ""
+        heavy = count > 0 and count >= heavy_threshold
+        if heavy:
+            state += " heavy"
+        bar = ""
+        if count:
+            # 峰值日 = 平顶方块（形态）＋ 黄（颜色，由 `.bar-col.peak` 给）
+            form = "border-radius:0;" if index == peak_index else ""
+            bar = (
+                f"<span class='bar-value' style='bottom:{height + 5}px'>{count}</span>"
+                f"<div class='bar-fill' style='height:{height}px;{form}"
+                f"animation-delay:{index * _BAR_STAGGER_MS}ms'></div>"
+            )
+        flag = (
+            f"<span class='bar-heavy-flag' style='bottom:{max(height - 3, 0)}px' "
+            "aria-hidden='true'></span>"
+            if heavy else ""
+        )
+        columns.append(
+            f"<div class='bar-col{state}' role='listitem' data-bar-date='{date}' "
+            f"aria-label='{date}，{count} 次作答"
+            + ("，峰值" if index == peak_index else "")
+            + ("，偏重" if heavy else "")
+            + "'>"
+            f"<div class='bar-plot'>{bar}{flag}</div>"
+            f"<span class='bar-date'>{html.escape(date[5:])}</span>"
             "</div>"
         )
-    return "<div class='record-trend' aria-label='最近 14 天作答量'>" + "".join(bars) + "</div>"
+    return (
+        "<div class='workload-chart-scroll'>"
+        "<div class='workload-bars' role='list' aria-label='最近 14 天作答量'>"
+        + "".join(columns)
+        + "</div></div>"
+    )
 
 
 def _activity_calendar(activity):
