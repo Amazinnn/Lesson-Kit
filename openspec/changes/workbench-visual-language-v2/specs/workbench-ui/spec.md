@@ -49,7 +49,8 @@ and SHALL NOT change the order or timing of any request.
 
 - **WHEN** the theme preference selects the night paper
 - **THEN** every workbench surface takes the night paper values, the accent
-  roles stay the same three, and the knowledge graph page is unaffected
+  roles stay the same three, and this value set does not restyle the knowledge
+  graph page, whose own night values are governed separately
 
 #### Scenario: No new hue appears at night
 
@@ -332,10 +333,12 @@ state channel (冗余状态通道) in addition to its colour.
 
 Navigation graphics SHALL depict the thing they stand for and SHALL be derived
 from the surrounding visual rules under the contextual-graphic principle
-(图案适配原则), rather than added as a decorative layer on top of them. The
+(图案适配原则), rather than added as a decorative layer on top of them. This
+foundation SHALL leave the knowledge graph page's appearance unchanged: the
 token values the knowledge graph depends on — including the sheet surface it
-reads as paper — SHALL keep their current values, so the graph page's appearance
-is unchanged by this foundation.
+reads as paper — SHALL keep their current values. That guarantee is scoped to
+this foundation only; the knowledge graph page's own visual language is
+governed separately and may be restyled by a separate change.
 
 #### Scenario: Ordinary workbench page
 
@@ -364,12 +367,12 @@ is unchanged by this foundation.
   rounded coloured ground taken from the accent roles, and the pictogram is not
   an abstract placeholder shape
 
-#### Scenario: The knowledge graph page is unchanged
+#### Scenario: This foundation leaves the knowledge graph page unchanged
 
 - **WHEN** the learner opens the knowledge graph page after this foundation is
   applied
-- **THEN** the graph page keeps its present appearance and the token values it
-  depends on are unchanged
+- **THEN** this foundation has left the graph page's appearance and the token
+  values it depends on unchanged
 
 ### Requirement: Learning content is the visual anchor
 
@@ -797,7 +800,9 @@ beside the page title or under the title band.
       等一律未出现在本 delta。唯一提到图谱的地方有两处**保护性条款**
       （`Soft Mondrian visual foundation` 与 `Theme preference and the night paper value set`
       各一句「图谱页观感不变 / 图谱依赖的 token 值不变」），它们不改动任何既有图谱条款，
-      只保证新 token 层不牵连图谱。
+      只保证新 token 层不牵连图谱。两处条款都**限定在「本变更不改变知识图谱页」这一范围内**：
+      既不改写任何既有图谱条款，也不宣称图谱页此后永远不变——图谱自身的视觉语言由
+      `graph-node-visual-language` change 另行规定，两者落地后不冲突。
 - [x] 13 个新名词全部用了 SYNTH.md 的原词：柔和蒙德里安 v2 / Soft Mondrian v2、
       纸面层级 / Paper level、夜纸 / Night paper、冗余状态通道 / Redundant state channel、
       主题偏好 / Theme preference、阅读字面 / Reading face、动效偏好 / Motion preference、

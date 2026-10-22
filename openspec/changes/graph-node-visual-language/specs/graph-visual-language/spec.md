@@ -85,7 +85,7 @@ any learning record, learning state, schedule or graph membership.
 
 Node diameter, node label text size and small-dot diameter SHALL be specified in
 screen pixels so that the stage's zoom transform does not shrink them. Node
-radius SHALL map continuously from 20 to 44 screen pixels across the active
+radius SHALL map continuously from 14 to 30 screen pixels across the active
 projection's metric range, and equal metric values SHALL receive equal radii.
 Zooming the graph out SHALL NOT shrink a node below its screen-space size, and a
 graph fitted to the viewport SHALL keep every node's centre number and label
@@ -94,7 +94,7 @@ readable without zooming in.
 #### Scenario: A fitted graph stays legible
 
 - **WHEN** a chapter graph is fitted to the viewport
-- **THEN** node radii stay between 20 and 44 screen pixels, and each node's centre number and label stay readable without zooming in
+- **THEN** node radii stay between 14 and 30 screen pixels, and each node's centre number and label stay readable without zooming in
 
 #### Scenario: Zooming out does not shrink a node
 

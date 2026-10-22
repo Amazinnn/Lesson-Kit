@@ -36,6 +36,9 @@ later means re-doing it against a moving data contract.
   set of structural tokens plus two theme value sets (warm cream / night paper),
   applied through one switchable theme attribute. Layout, spacing, radius, elevation,
   typography, motion and z-index scales become explicit instead of emergent.
+  The night-paper set covers the exercise pages, the knowledge-point pages, the
+  records centre and the settings view; the knowledge graph page is out of scope
+  (see "Explicitly out of scope" below).
 - **A warm, rounded visual language**: warm cream ground (`#fdf8ef`), warm charcoal
   ink (`#221f1a`), a uniform 12px radius, four paper levels separated by radius and
   soft warm shadow rather than rules, and no background texture.
@@ -100,9 +103,22 @@ hit-testing and must not alter focus order beyond the additions this proposal na
 
 ### Explicitly out of scope
 
-The knowledge graph page. Its rendering, physics, layout seeds and appearance stay
-exactly as they are; the new token layer must leave graph-dependent token values
-untouched so the graph page is visually unchanged by this change.
+The knowledge graph page — entirely. This change does not touch it: not its
+rendering, not its physics, not its layout seeds, and not its appearance in
+either theme. The night-paper theme introduced here covers the exercise pages,
+the knowledge-point pages, the records centre and the settings view; the graph's
+own night-paper adaptation, together with the node visual redesign, belongs to
+the separate `graph-node-visual-language` change (`decisions.md` A-8). Doing the
+night adaptation here would touch the graph twice and leave an intermediate
+state in which the graph is dark but its nodes are still the old ones.
+
+The one thing this change still owes the graph is non-interference: the new
+token layer must not damage it. The graph page is therefore a **negative
+assertion** here (`acceptance.md` G-5) — before and after screenshots of the
+graph page must be identical, because this change never went near it. The rule
+that the graph must stay pixel-identical in the light theme binds the graph
+change, not this one. The hard facts a graph change needs to know are collected
+as a handover list in `design-notes/graph-isolation.md`.
 
 ## Capabilities
 
@@ -121,7 +137,10 @@ untouched so the graph page is visually unchanged by this change.
   density zoning, the shell and navigation grammar, the hub card hierarchy, the
   records-centre presentation, the empty-state pattern and the shared `.reading`
   typographic layer. The learner-settings requirement is extended so appearance
-  preferences are reachable from the new settings view.
+  preferences are reachable from the new settings view. The knowledge-graph page
+  is outside this change: the token layer must leave the token values the graph
+  depends on untouched, and the graph's own night-paper adaptation belongs to
+  the `graph-node-visual-language` change.
 - `calendar-workload`: The calendar and review-load view gains an explicit
   presentation contract — bar geometry, the motion applied when loads change, and the
   reduced-motion terminal state — while its content, thresholds and read-only

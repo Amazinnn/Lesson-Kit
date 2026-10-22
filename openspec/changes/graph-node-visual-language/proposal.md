@@ -48,7 +48,7 @@
 | **G-24** | **先修屏幕空间缩放补偿，再落视觉语言** | 新增一层「屏幕像素语义」：节点的绘制直径、字号、环线宽、点径不再跟随舞台 `scale()` 一起缩小；`scale()` 只负责**位置与间距** |
 | **G-1** | 两个有层次的同心圆（内核 + 外环） | 节点 DOM 从「五层叠一个圆」（面 / 数字 / 度量弧 / 状态环 / 卫星点）改为**内核圆片 + 外环**两件；读作一枚带边的圆片 |
 | **G-2** | **移除度量弧** | 删掉 `.metric-track`（`workbench.css:1664-1670`）与 `--metric-angle` 的写入（`workbench.js:1067`）；指标只用**颜色与大小**承载，语义仍来自既有字段，**不扩充后端能力边界** |
-| **G-3 / G-17** | 尺寸体系：连续映射但收窄范围；**半径 20 → 44px** | 绘制半径 = `20 + 24·√score` **屏幕 px**（G-24 的单位），连续、单调、区间收窄（30→24）且最小值翻倍 ⇒ **量值感更强**；外环线宽随同一个量值映射（1.5–4 屏幕 px），即「大小」含半径与环宽两维。布局用的世界尺寸 = 同一函数换算成世界 px（直径 40–88），物理与间距规则**不变** |
+| **G-3 / G-17** | 尺寸体系：连续映射但收窄范围；**半径 14 → 30px**（A-10.1 收窄后） | 绘制半径 = `14 + 16·√score` **屏幕 px**（G-24 的单位），连续、单调、区间收窄（30→16）且下限抬升（10→14）⇒ **量值感仍在且不再挤**；「更强调」改由**同心圆的双层结构 + 色阶**承担，不靠更大直径（A-10.1）。外环线宽随同一个量值映射（1.5–4 屏幕 px），即「大小」含半径与环宽两维。布局用的世界尺寸 = 同一函数换算成世界 px（直径 28–60），物理与间距规则**不变** |
 | **G-9** | 圆内只留一个数字 | 圆心恒为该节点的**正式题数**（**所有投影相同**）——投影的量由**大小 + 环宽 + 颜色**承载；名称在下方标签。`importance` 投影的百分号不再被 CSS 吞掉（`.node-unit{display:none}`，`workbench.css:1692`），圆心也不再随投影改写 |
 
 ### 二、颜色与图例
@@ -65,7 +65,7 @@
 
 | # | 决策 | 本变更的落点 |
 |---|---|---|
-| **G-5** | 标签**常态可见但不抢眼**：字号略放大、截断改两行或悬浮显示全文、降低对比度 | 标签改为**屏幕像素字号**（12px）、对比度下调但仍 ≥4.5:1、最多两行、完整标题继续由悬浮与无障碍名承载 |
+| **G-5** | 标签**常态可见但不抢眼**：字号略放大、**不截断**（换行显示全文）、完整标题由悬浮 / 键盘聚焦承载、降低对比度 | 标签改为**屏幕像素字号**（12px）、对比度下调但仍 ≥4.5:1、**不截断**（换行显示全文，不设行数上限、无省略号）、完整标题继续由悬浮与键盘聚焦承载（A-10.3：取「不截断」的一支 ——「两行上限」与既有 `Complete primary learning text` 正面冲突） |
 | **G-6** | **节点上不允许任何状态文字** | 删除节点上的状态文字：`.meta` 行（`workbench.js:1072-1073`）与 `state` 投影写入圆心的单字「练/复/熟/新」（`workbench.js:578`、`:1060`）一并去掉。状态名仍保留在**学习看板、悬浮提示与无障碍名**里（不渲染为可见文字） |
 | **G-23** | 标签重叠时**自动隐藏次要标签**（按节点大小与重要度排序让位），**不靠缩放** | 取代现有的「按缩放阈值隐藏标签」规则（`workbench.js:1290-1294`、`:1319-1321`） |
 | **G-15** | 选中 / 悬停 / 聚焦：**外环加粗变实 + 节点轻微放大**；不再用阴影与卫星点光晕 | 去掉 `.node-face` 的 `box-shadow` 与 `.node-satellite` 的光晕（`workbench.css:1678`、`:1696`、`:1707`） |
@@ -96,9 +96,9 @@
 - **`graph-visual-language`**：知识图谱**节点视觉语言**的自足契约，覆盖五件事——
   ① 屏幕空间可读性（节点绘制尺寸 / 字号 / 线宽的屏幕像素语义）；
   ② 同心圆节点形态（内核淡 + 外环深 + 单一数值）；
-  ③ 尺寸映射（连续、收窄、半径 20→44px）；
+  ③ 尺寸映射（连续、收窄、半径 14→30px）；
   ④ 四个投影各自的色键与随投影切换的图例；
-  ⑤ 标签策略（常态可见、屏幕像素字号、两行、重叠按重要度隐藏、无状态文字）
+  ⑤ 标签策略（常态可见、屏幕像素字号、**不截断**、重叠按重要度隐藏、无状态文字）
   ＋ 图谱自有暖色板与夜纸值集。
   **立为新能力而不是塞进 `workbench-ui` 的理由**：既有 `workbench-ui` 的图谱需求
   （`Metric projection morphology` 等）只约束了「半径随指标变大」这一条，
@@ -120,7 +120,8 @@
      **节点上不再出现状态文字**，完整标题继续由悬浮与键盘聚焦承载。
   3. `Metric projection morphology`（`:591`）——现有条款
      「A metric projection SHALL map higher values to both a larger node radius and a target
-     nearer the canvas center」中的**半径区间**改为 G-17 的 **20→44 屏幕像素**，
+     nearer the canvas center」中的**半径区间**改为 A-10.1 收窄后的 **14→30 屏幕像素**
+     （由新能力 `graph-visual-language` 的 `Screen-space sizing` 承载），
      并补上「外环粗细」这一条量值通道；「restrained, distinguishable Mondrian palette」
      改为**图谱自有暖色板**（G-7 / G-12 / G-16 / G-20…G-22）；
      同时明确**圆心恒为正式题数**、节点上不画进度弧或仪表。
@@ -148,11 +149,18 @@
      需在 delta 中点明，避免被误读为「状态被删了」。
 
   **不动**的既有图谱需求（不在本变更的 delta 里）：
-  `Multi-state graph filtering`（`:624`）、`State cluster layout`（`:643`）、
+  `State cluster layout`（`:643`）、
   `Layered knowledge relationships`（`:662`）、`Finite crossing optimization`（`:680`）、
   `Metric projection transition`（`:610`）、`Adjustable graph compactness`（`:510`）、
   `Knowledge view sorting`（`:560`）、`Graph state editing remains covered`（`:420`）、
   `Graph does not duplicate content editing`（`:434`）——它们的可观察行为不变。
+
+  ⚠️ **一处修正**：`Multi-state graph filtering`（`:624`）**已在本变更的 delta 里
+  MODIFIED**（此前被误列在「不动」清单里）。这次 MODIFIED **仅限保全式表述**：
+  筛选**只改成员、不改外观**（存活节点保持同心圆形态与当前投影的配色，
+  离场节点淡出而不变色），并加一条「筛选不新增状态通道」的保全条款 ——
+  **筛选语义本身不变**（可选状态集合、可见节点的并集、边的保留规则、
+  筛选状态仍是页面级），因此与「筛选语义不变」不冲突。
 
 - **`review-workbench`**：**不动**。`Semantic graph attraction`（`:361`）约束的是
   图谱**模型**（正式题计数、关系去重、共现不臆造关系），与节点外观无关。
@@ -200,6 +208,6 @@
 
 | 并行项 | 关系 | 处理 |
 |---|---|---|
-| `workbench-visual-language-v2` 的 `workbench-ui` delta | 同改 `Soft Mondrian visual foundation` 与 `Redundant state cues` | 本变更在其**之后**落地，追加「图谱例外」段落；退役其「The knowledge graph page is unchanged」场景 |
+| `workbench-visual-language-v2` 的 `workbench-ui` delta | 同改 `Soft Mondrian visual foundation` 与 `Redundant state cues` | 本变更在其**之后**落地，追加「图谱例外」段落；退役其「The knowledge graph page is unchanged」场景。**A-10.2 硬性顺序**：先合入 v2，再把本变更的这两块 **re-base 到 v2 的版本**；归档时逐字复核这两条需求的最终文本 |
 | `workbench-visual-language-v2` 的 `design-notes/graph-isolation.md` | **移交清单**：把图谱的实测事实、22 条硬事实、像素级比对方案交给本变更 | 本变更**继承**其 §4（不可动的取值）、§5（自检清单）、§6（比对协议）；见 `design.md` D-12 |
 | `workbench-visual-language-v2` 的夜纸值集 | 全站夜纸（`#1c1a16`）由它定 | 本变更的图谱夜纸值集**以它的夜纸基色为准**，不另立 |

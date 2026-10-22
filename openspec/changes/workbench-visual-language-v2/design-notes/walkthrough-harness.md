@@ -15,6 +15,16 @@
 > - **不改任何产品代码**：`workbench/`、`pool/`、`pipeline/`、`lessonkit.py` 零改动。
 >   执行器是**旁挂**的新文件（见 §0.3 落点）。
 > - 每条结论带 `文件:行号`；每条命令行经核实存在（§9 自检表）。
+>
+> **行号快照（2026-10-22 复核）**：本文件的 `acceptance.md:NN` 引用对应
+> `acceptance.md` **2026-10-22 09:50** 的版本（该文件当时含未提交的 A-8 改写：
+> G-5 改为否定式断言）。**复核命令**：
+> ```bash
+> grep -n "^| G-[1-8] \|^## \|^### 3\.\|^- \[ \] \|比对方式：\|通用判据\|动效不能只靠截图\|每个阶段的验收产出" \
+>   openspec/changes/workbench-visual-language-v2/acceptance.md
+> ```
+> 若 `acceptance.md` 再被改动，**本文件所有 `acceptance.md:NN` 需重新核对**——
+> 行号漂移会让「可复现」这个前提失效（§8.1 R-29 的同类风险）。
 
 ---
 
@@ -36,8 +46,10 @@
 
 ### 0.3 落点（执行器自身的文件）
 
-> 这些是**新文件**，不是产品代码。建议放在 `tools/walkthrough/`（仓库已有 `tools/` 吗？
-> **待核**：若不存在则新建；若已存在则并列）。全部为脚本，不进 `workbench/` 包。
+> 这些是**新文件**，不是产品代码。落在 `tools/walkthrough/`。
+> **已核（2026-10-22）**：`tools/` 目录**本仓库不存在**（`ls tools/` → `No such file or directory`），
+> 需新建；仓库顶层现有 `commands/ gates/ skills/ templates/ views/` 等，无 `tools/`（见 §10 W-2）。
+> 全部为脚本，不进 `workbench/` 包。
 
 | 文件 | 职责 | 对应本文 |
 |---|---|---|
@@ -454,7 +466,8 @@ canonical_payload_shape(body) -> {key: shape}
 | `_send_graph_artifact` | `workbench/server/app.py:341-359` | `self.send_response(200)`（`:355`） | ❌ |
 
 包 `_send_json` 会让**静态资源、题图、图谱工件**这三条路径的状态码**永远记不到**——
-而这恰恰是 G-5（图谱页像素级一致）最需要状态码的一类请求。
+而这恰恰是 G-5（图谱页像素比对，`ae == 0`）最需要状态码的一类请求：
+图谱工件取不到 → 图谱页走空态 → G-5 变成「两个空页对比」的假 PASS。
 
 **正确做法：包 `BaseHTTPRequestHandler.send_response`。**
 它是 `http.server` 的基类方法，五条路径**全部**经过它，是**唯一**的全覆盖咽喉点：
@@ -835,7 +848,7 @@ SELECT type, name, sql FROM sqlite_master
 
 ### 5.1 视口表
 
-`acceptance.md:31-52` 给了每条的视口宽度。执行器统一成一张表：
+`acceptance.md:37-55` 给了每条的视口宽度。执行器统一成一张表：
 
 | 组 | 视口宽 | 视口高 | deviceScaleFactor | 对应条目 |
 |---|---|---|---|---|
@@ -896,12 +909,16 @@ evidence/<before|after>/shots/
 diff = ImageChops.difference(a.convert("RGB"), b.convert("RGB"))
 bbox = diff.getbbox()          # 全黑则完全一致
 ratio = 差异像素数 / 总像素数
+ae   = 差异像素数              # 绝对错误像素数（AE）
 ```
-- `ratio == 0` → 完全一致。
-- `0 < ratio <= 0.005` → 「仅抗锯齿/字体渲染差异」→ 人工判读（`acceptance.md:51`
-  允许「肉眼不得出现配色被改/圆角被改/信息被删」，但 G-5 图谱页要求「像素级一致」，
-  阈值要严）。
+- `ratio == 0`（即 `ae == 0`）→ 完全一致。
+- `0 < ratio <= 0.005` → 「仅抗锯齿/字体渲染差异」→ 人工判读（`acceptance.md:57`
+  允许「肉眼不得出现配色被改/圆角被改/信息被删」）。
 - `ratio > 0.005` → **FAIL**，必须在报告里列出 bbox 与差异区域。
+
+> **本节阈值只管 S-1…S-12（视觉回退）**。**G-5 的判定标准完全不同**：
+> G-5 是**否定式断言**，判据是**绝对差异像素数 `ae == 0`**（不是比率、不是阈值带），
+> 详见 §5.7。两者混用会把「允许抗锯齿差异」的错误宽容度带进 G-5。
 
 > **PIL 是第三方库**：本机已有（基线 PNG 用它读过）。执行器应**优先**用它，
 > 但要在 §9 自检里断言 `import PIL` 可用；不可用时降级为「只出并排图，人工比对」，
@@ -909,22 +926,26 @@ ratio = 差异像素数 / 总像素数
 
 ### 5.5 与现存基线图的关系（**重要**）
 
-`acceptance.md:34` 说基线图已在 `tmp/frontend-audit/00-baseline-*.png`（7 张）。
+`acceptance.md:40` 说基线图已在 `tmp/frontend-audit/00-baseline-*.png`（7 张）。
 实测这 7 张的像素尺寸**不一致**：
 
 | 文件 | 尺寸 |
 |---|---|
 | `00-baseline-hub.png` | 2322 × 2337 |
-| `00-baseline-records.png` | 2322 × 1670 |
-| `00-baseline-workbench.png` | 2322 × 1670 |
+| `00-baseline-records.png` | **2332** × 1670 |
+| `00-baseline-workbench.png` | **2332** × 1670 |
 | `00-baseline-kps.png` | 2339 × 1143 |
 | `00-baseline-kp-detail.png` | 2339 × 1143 |
 | `00-baseline-practice-full.png` | 2339 × 1143 |
 | `00-baseline-practice-sets.png` | 2339 × 1143 |
 
 且 `tmp/frontend-audit/F02.md:10` 记录的视口是 `2040×1230` 与 `1555×1114`，
-`devicePixelRatio 1.5`。两套宽度（2322 vs 2339）说明**这 7 张不是同一次采集**，
+`devicePixelRatio 1.5`。**三套宽度**（2322 / 2332 / 2339）说明**这 7 张不是同一次采集**，
 滚动位置、焦点态、hover 态、动画时机均无记录。
+
+> **实测口径**：`python -c "from PIL import Image; import glob;
+> for f in sorted(glob.glob('tmp/frontend-audit/00-baseline-*.png')): print(f, Image.open(f).size)"`
+> （PIL 12.1.1 已装，见 §10 W-4）。
 
 **结论与处置**：
 
@@ -933,7 +954,7 @@ ratio = 差异像素数 / 总像素数
    视口、DPR、滚动、wait 条件**逐项相同**，像素差才有意义。
 2. **现存 7 张只作人工参考**，不进自动判定。在报告里写明
    「`tmp/frontend-audit/00-baseline-*.png` 视口与采集时机不可控，未纳入像素判定」。
-3. 若因故无法拉 worktree，则**降级为并排目视比对**（`acceptance.md:51` 的口径），
+3. 若因故无法拉 worktree，则**降级为并排目视比对**（`acceptance.md:57` 的口径），
    并在报告里把该项标为「⚠ 目视比对，未像素判定」。
 
 ### 5.6 采集清单（`acceptance.md` §1 的 S-1…S-12）
@@ -946,7 +967,7 @@ ratio = 差异像素数 / 总像素数
 | S-4 | 知识点列表 | 1440 | 分组卡片、彩色圆点状态 | `#middle-page` | |
 | S-5 | 知识点详情 | 1440 | 衬线阅读面 + 单侧结构线 | `/w/{ws}/kp/{id}` | |
 | S-6 | 记录中心 · 概览 | 1440 | 仪表盘卡片、热力日历 | `/w/{ws}/records` | |
-| S-7 | 记录中心 · 作答明细 | 1440 | 圆角卡片流（**不得出现表格**） | `/w/{ws}/records?view=…&problem=…` | `acceptance.md:44` |
+| S-7 | 记录中心 · 作答明细 | 1440 | 圆角卡片流（**不得出现表格**） | `/w/{ws}/records?view=…&problem=…` | `acceptance.md:50` |
 | S-8 | 试卷列表 | 1440 | 卡片网格、状态圆点、**无 5px 黄带** | `/w/{ws}/practice-sets` | |
 | S-9 | 设置视图 | 1440 | 主题 / 阅读字面 / 动效 / 声音 | 左栏设置开关（**新增页，改造后才存在**） | 改造前无此页 → 记为 N/A |
 | S-10 | 夜纸（同一页面） | 1440 | 夜纸值集、圆底降饱和提亮、插画反相 | 同 S-1…S-4 任一页 + `color_scheme=dark` | |
@@ -962,11 +983,85 @@ ratio = 差异像素数 / 总像素数
 做法：用 `pool/scripts/pool_schema.py` 的 `ensure_workbench_schema` 建空表
 （`tests/workbench/fixtures.py:63-134` 的 `build_fixture_db` 是现成参考）。
 
+### 5.7 G-5 专用采集（**否定式断言**，2026-10-22 按 A-8 改写）
+
+> **G-5 的语义已变**。`acceptance.md:22` 现为：
+>
+> > G-5 | **图谱页未被本变更触碰**（否定式断言） | 改造前后同一图谱页截图并排比 |
+> > 差异像素数 **= 0**。图谱**不在本变更的验收范围内**
+> > （`decisions.md` **A-8**：图谱的夜纸适配与节点视觉重设计归独立 change
+> > `graph-node-visual-language`）；零差异不是一条待达成的门禁，
+> > 而是「本变更根本没碰它」的证明。
+>
+> **对本执行器的影响（三条）**：
+>
+> | # | 影响 | 处置 |
+> |---|---|---|
+> | 1 | 判据从「像素级一致（除字体渲染差异）」变成**绝对差异像素数 = 0** | G-5 用 **`ae == 0`** 判定，**不套用** §5.4 的 `ratio <= 0.005` 容差带；`ae > 0` 即 **FAIL**（不是 PENDING） |
+> | 2 | G-5 **不再是**「一条待达成的视觉门禁」，而是「本变更没误伤」的**证明** | 报告里 G-5 的措辞改为「**未误伤图谱**」；**PENDING 不是它的合法结局**——要么 PASS（ae=0）要么 FAIL（ae>0） |
+> | 3 | 图谱的执行与验收归 `graph-node-visual-language` change | 本执行器**只跑一次「改造前 vs 改造后」的图谱页像素比对**，**不判定图谱好不好看**，也不出图谱的设计意见 |
+
+**G-5 的采集协议不复用本文件 §5.1–§5.6，直接引用既有设计件**
+`design-notes/graph-isolation.md`（同一 change 目录，已落盘）：
+
+| 需要的东西 | 权威出处 | 本执行器的动作 |
+|---|---|---|
+| 图谱页冻结截图的 **9 步固定流程** | `graph-isolation.md:1369-1408`（§6.5） | **照抄**，不重新发明 |
+| 等待谓词 `waitForGraphQuiescence` | `graph-isolation.md:1296-1368`（§6.4） | **照抄** |
+| 三类动画源的冻结方式 | `graph-isolation.md:1229-1295`（§6.3） | **照抄** |
+| 静止签名（最强的辅助证据） | `graph-isolation.md:1408-1434`（§6.6） | 记录进 `index.json`，**签名不同 ⇒ 像素必然不同，可直接定位差异源** |
+| **AE = 0** 的判定与掩膜口径 | `graph-isolation.md:1408-1434`（§6.6） | 照抄：整页 AE=0（文字抗锯齿区可标注掩膜）；**画布区域 AE=0 且不接受任何掩膜** |
+| 状态矩阵（G-5-D 的三个状态） | `graph-isolation.md:1455-1478`（§6.8） | **照抄**（默认 / 选中节点 / 控制卡展开） |
+| **比对范围口径 R-1 / R-2 / R-3** | `graph-isolation.md:1435-1454`（§6.7） | ⚠️ **该处标注「需所有者裁决」且尚未裁决** → 见下 |
+
+**G-5 的六条视觉断言**（`graph-isolation.md:1106-1113`）与本执行器的对应：
+
+| 断言 | 内容 | 本执行器的产出 |
+|---|---|---|
+| G-5-A | 图谱页**整页**截图，before vs after，`ae == 0` | `evidence/<side>/shots/G5-page-1440.png` + `diff/shots/G5-page-delta.png` |
+| G-5-B | 图谱**画布区域**（`.graph-workspace` 裁剪矩形）`ae == 0`，**不接受掩膜** | `G5-canvas-1440.png` + delta |
+| G-5-C | 夜纸 / 亮色下的**同一份画布** `ae == 0` | `G5-canvas-dark-1440.png` + delta |
+| G-5-D | 三个状态（默认 / 选中节点 / 控制卡展开）各一组 `ae == 0` | `G5-canvas-{default,selected,card}.png` + delta |
+| G-5-E | 列宽拖拽把手 hover 态 `ae == 0` | `G5-hover-handle.png` + delta |
+| G-5-F | 详情面板展开态 `ae == 0` | `G5-detail-open.png` + delta |
+
+**G-5 的命名**（**与 S-1…S-12 分开**，避免与 §5.6 的 `S-<n>-<slug>` 混用）：
+
+```
+evidence/<before|after>/shots/G5-<scope>-<variant>.png
+```
+- `<scope>`：`page` / `canvas` / `canvas-dark` / `canvas-default` / `canvas-selected` /
+  `canvas-card` / `hover-handle` / `detail-open`
+- `<variant>`：`1440`（G-5 全程只跑 1440 整档）
+
+**⚠️ 未裁决项（R-1 / R-2 / R-3 比对范围）——执行器不得自行选边**：
+`graph-isolation.md:1435-1454` 明确写了「比对范围（整页 / 画布区域 / 采样）这一层**仍未定**」，
+且按 `AGENTS.md`「契约冲突处理」要求**保持冲突显式**。
+
+执行器的处置（**这是本节的硬要求**）：
+1. **三条口径全部跑**（R-1 整页 / R-2 画布 / R-3 画布 + 外壳底色采样），产出三组 AE 值；
+2. 报告里把三组 AE **并排列出**，**不选边、不下「G-5 通过」的结论**；
+3. G-5 的机器 verdict 记 **`PENDING`**，并在「需人工判读」栏写明
+   「R-1/R-2/R-3 待所有者裁决；A-8 之后本变更不碰图谱，故无论选哪条口径，
+   目标都是 **ae = 0**」；
+4. **但**：若**三组口径的 ae 全部 > 0**，说明本变更**确实误伤了图谱** →
+   这是与口径无关的硬事实 → 直接 **FAIL**，不需裁决。
+
+> **为什么 G-5 不该是 PENDING 的常态**：A-8 之后本变更**不碰图谱**，
+> 所以正确结果是 **ae = 0**。PENDING 只在「口径未裁决」这一个原因上出现；
+> 一旦 ae > 0，就是真 FAIL。
+
+**G-5 在报告里的措辞**（与旧版不同）：
+
+```markdown
+| G-5 | 图谱页**未被本变更触碰**（否定式断言） | ✅ PASS | `diff/shots/G5-page-delta.png` | 整页/画布/采样三口径 ae 均为 0；本变更未误伤图谱 |
+```
+
 ---
 
 ## 6. 关键帧序列采集器
 
-### 6.1 核心难点（`acceptance.md:58` 已点出）
+### 6.1 核心难点（`acceptance.md:64` 已点出）
 
 > 「动效不能只靠截图验收（截图看不到运动）。每个动效采一组帧，拼成一条**分镜条**。」
 
@@ -1020,7 +1115,7 @@ capture_strip(page, trigger, frames_ms, out_dir):
 | M-9 | 骨架屏 | 0 / 400 / 900 | 触发加载态 | 灰块 + 一道微光**扫过**（位置变化可见） | `frames/M-9/` |
 | M-10 | 数据层 | 0 / 240 / 480 | 记录页数据层入场 | 负荷柱从 0 生长、逐柱错峰；日历格按强度扩散（**颜色 + 高度双编码**） | `frames/M-10/` |
 
-**每条另出一张降级对照帧**（`acceptance.md:73-74`）：
+**每条另出一张降级对照帧**（`acceptance.md:79-80`）：
 用 `reduced_motion="reduce"` 的 context 重跑同一触发点，取**终态**一帧，
 断言「无中间态」——判据：`document.getAnimations()` 在触发后长度为 0，
 或所有动画的 `playState` 为 `finished` 且无中间 `currentTime` 状态。
@@ -1089,7 +1184,7 @@ frames/M-1/0000.png 0000.png ... 0700.png  →  evidence/diff/frames/M-1-strip.p
 | G-2 | 持久化结果不变 | ✅ PASS | `diff/db.problem_attempts.diff.json` | 3 表行数与关键列逐行相同 |
 | G-3 | 学习投影不变 | ✅ PASS | `diff/db.learning_current_state.diff.json` | |
 | G-4 | 复习建议集合不变 | ✅ PASS | `diff/due.diff.json` / `diff/weak.diff.json` | 集合与顺序完全相同 |
-| G-5 | 图谱页观感不变 | ⬜ PENDING | `diff/shots/S-5-graph.png` / `-delta.png` | 差异率 0.0031（阈值 0.005），待人工判读 |
+| G-5 | 图谱页**未被本变更触碰**（否定式断言） | ✅ PASS | `diff/shots/G5-page-delta.png` / `G5-canvas-delta.png` | 三口径 ae 均为 0；本变更未误伤图谱 |
 | G-6 | 池 schema 零变更 | ✅ PASS | `diff/schema.diff.json` | schema diff = 0；真实池 schema 需人工核对（§4.5） |
 | G-7 | 装饰层不拦截交互 | ✅ PASS | `probe/3.5-3.json` | elementFromPoint 全部命中背景元素 |
 | G-8 | 焦点顺序未变 | ✅ PASS | `diff/focus-sequence.diff.md` | 序列相同；2 条 ADDED-EXPECTED（设置入口 / 主题开关） |
@@ -1167,7 +1262,14 @@ frames/M-1/0000.png 0000.png ... 0700.png  →  evidence/diff/frames/M-1-strip.p
 
 > **报告里不许出现的两件事**：
 > 1. **把 PENDING 写成 PASS**（§7.6.3 的第三态）；
-> 2. **未过项缺四要素**（现象 / 影响 / 复现命令 / 建议，`acceptance.md:101`）。
+> 2. **未过项缺四要素**（现象 / 影响 / 复现命令 / 建议）。
+>
+> **四要素的出处说明（重要，勿引错）**：`acceptance.md` **只要求**「未过项清单」存在
+> （`acceptance.md:158`：「每个阶段的验收产出：对照截图组 + 分镜条 + 勾选后的交互清单 + 未过项清单」）
+> 与「未勾选项逐条列出并说明为何可接受」（`acceptance.md:146`）；
+> **「现象 / 影响 / 复现命令 / 建议」这四要素是本执行器自定的可执行化约定**
+> （让未过项可被独立复现），**不是 `acceptance.md` 的原文**。
+> 执行器可以加严，但**不得**声称它是验收口径的引用。
 
 ### 7.2 编号映射（**四组**）
 
@@ -1175,7 +1277,7 @@ frames/M-1/0000.png 0000.png ... 0700.png  →  evidence/diff/frames/M-1-strip.p
 
 | 组 | 编号 | 采集器 | 自动判定 | 报告位置 |
 |---|---|---|---|---|
-| **底线守卫** | G-1…G-8 | §2 捕获器 + §3 脚本 + §4 导出 + §5/§6 采集 | G-1…G-4 全自动；G-5 像素差自动；G-6 schema diff 自动；G-7 **需 CSS 扫描**；G-8 **需焦点遍历录制** | §0 |
+| **底线守卫** | G-1…G-8 | §2 捕获器 + §3 脚本 + §4 导出 + §5/§6 采集 | G-1…G-4 全自动；**G-5 否定式断言（ae==0）**；G-6 schema diff 自动；G-7 **需 CSS 扫描**；G-8 **需焦点遍历录制** | §0 |
 | **对照截图** | S-1…S-12 | §5 | 像素差自动 + 人工判读 | §1 |
 | **关键帧** | M-1…M-10 | §6 | 时序/时长自动 + 人工判读 | §2 |
 | **交互清单** | §3.1…§3.7（8 条可访问性 / 6 条主题暗色 / 5 条声音 / **7** 条交互反馈 / 3 条响应式 / **5** 条图案资产 / 4 条性能 = **38 条**） | §5/§6 + 浏览器探针 | 多数可半自动（见 §7.5） | §3 |
@@ -1209,7 +1311,7 @@ for i in range(N):
 
 ### 7.3 整体通过标准
 
-照抄 `acceptance.md:134-142`：
+照抄 `acceptance.md:140-148`（§4 通过标准）：
 
 > 1. G-1…G-8 **全绿**（任一红 ⇒ 整体 FAIL，不进入后续评审）
 > 2. S-1…S-12 对照截图**无回退**
@@ -1226,7 +1328,7 @@ for i in range(N):
 
 | 组 | 编号范围 | 条数 | 判定方法 | 自动/半自动/人工 | 报告章节 | 采集器章节 |
 |---|---|---|---|---|---|---|
-| **底线守卫** | G-1…G-8 | 8 | 请求序列 diff / 持久化 diff / 学习投影 diff / 复习建议 diff / 像素差 / schema diff / `elementFromPoint` / 焦点序列 diff | G-1…G-4 **全自动**；G-5 **自动+人工**；G-6 **自动**；G-7 **自动**；G-8 **自动** | `report.md` §0 | §2、§3、§4、§5、§7.2 |
+| **底线守卫** | G-1…G-8 | 8 | 请求序列 diff / 持久化 diff / 学习投影 diff / 复习建议 diff / **像素 ae==0（否定式）** / schema diff / `elementFromPoint` / 焦点序列 diff | G-1…G-4 **全自动**；**G-5 全自动（ae==0，见 §7.6.2）**；G-6 **自动**；G-7 **自动**；G-8 **自动** | `report.md` §0 | §2、§3、§4、§5.7、§7.2 |
 | **对照截图** | S-1…S-12 | 12 | 像素差（`PIL.ImageChops`）+ 并排图 | 像素差**自动**，判读**人工** | `report.md` §1 | §5 |
 | **关键帧** | M-1…M-10 | 10（+10 降级帧） | 时序元数据 + 分镜条 | 时长/曲线**自动**，观感**人工** | `report.md` §2 | §6 |
 | **交互清单** | §3.1…§3.7 | **38** | 浏览器探针（20 个探针函数） | **34 AUTO** / **3 SEMI** / **1 MANUAL**（其中 11 条在改造前无对照物 + 1 条部分，before 侧记 N/A） | `report.md` §3 | §5、§6、§7.5 |
@@ -1260,20 +1362,29 @@ python tools/walkthrough/run.py \
 ```
 段 1  before:
     建 worktree → 造 ws-before → 起服务(3091, 装记录器) → 建卷(seed 段)
-      → 跑 exercise(measure 段) → 跑 shots → 跑 frames → 停服务 → 导出 db.* → 断言 A4
+      → 跑 exercise(measure 段) → 跑 shots → 跑 G5 图谱组(§5.7) → 跑 frames
+      → 停服务 → 导出 db.* → 断言 A4
 段 2  after:
     同样流程，代码取当前工作树，端口 3092，工作区 ws-after（同一 seed）
 段 3  diff:
     requests.diff / db.*.diff / due.diff / weak.diff / schema.diff
-      → shots 像素差 → frames 分镜条 → report.md + report.json
+      → shots 像素差(S-1…S-12) → G5 三口径 AE(G-5-A…G-5-F) → frames 分镜条
+      → report.md + report.json
 ```
 
 **段 2 必须在段 1 之后串行**（不能并行：两者都占用真实池的读，且资源争抢会让
 帧采样的时序不稳）。
 
+> **G-5 图谱组必须与 shots 分开跑**（`G5-*` 命名，§5.7）：图谱页有自己的
+> 冻结协议（9 步，§5.7 引用 `graph-isolation.md:1369-1408`），
+> 与 §5.2 的通用截图要素（滚动锚点、`wait_for_load_state`）**不兼容**——
+> 通用协议会滚动页面、而图谱页 `#middle` 是 `overflow: hidden`
+> （`workbench.css:510`、`:1523`），且图谱需要的是「静止签名」而非「元素可见」。
+> 两者混跑必然产生假差异。
+
 ---
 
-### 7.5 交互清单逐条对应表（38 条，`acceptance.md:80-130`）
+### 7.5 交互清单逐条对应表（38 条，`acceptance.md:84-136`）
 
 `acceptance.md` §3 是**逐条可勾选**的清单，共 **38 条**（不是 42 条——见 §7.2 的计数勘误）。
 本节把每一条落到「怎么测、证据在哪、谁来判」。
@@ -1334,12 +1445,12 @@ def run_probe(page, out_dir):
 
 #### 7.5.3 逐条对应表
 
-**§3.1 可访问性（8 条，`acceptance.md:81-88`）**
+**§3.1 可访问性（8 条，`acceptance.md:87-94`）**
 
 | # | 检查项 | 判定方法（探针 + 人工） | 证据 | 等级 | 改造前基线（实测锚点） |
 |---|---|---|---|---|---|
 | 3.1-1 | 可交互控件 Tab 有**可见焦点环**（不得被 `outline:none` 压死） | `focus_ring_probe`：Tab 遍历，逐个读 `getComputedStyle(el).outlineWidth`；宽度 = 0 且无 `box-shadow` 替代 → FAIL | `probe/3.1-1.json` | **AUTO** | **改造前已 FAIL**：全局有 `:focus-visible{outline:2px solid var(--dsw-brand-accent)}`（`workbench/server/static/workbench.css:1123`），但 `select:focus`（`:338`）、`textarea:focus, input:focus`（`:427`）、`#answer-box:focus`（`:833`）三处 `outline:none` **压死了它** |
-| 3.1-2 | 正文对比度 ≥ 4.5:1；次要 ≥ 3:1；大字号 ≥ 3:1 | `contrast_probe`：对 §7.5.4 的 token 对逐对算 WCAG 相对亮度比 | `probe/3.1-2.json` | **AUTO** | 现状有 6 个 `--lk-*` 强调 token（`workbench.css:5-10`）+ `--dsw-label-*` 文字色（`:23-27`），但**只有亮色一套**（`:root` 无暗色块）→ 亮色侧**可实测**，夜纸侧 N/A |
+| 3.1-2 | 正文对比度 ≥ 4.5:1；次要 ≥ 3:1；大字号 ≥ 3:1 | `contrast_probe`：对 §7.5.4 的 token 对逐对算 WCAG 相对亮度比 | `probe/3.1-2.json` | **AUTO** | 现状有 6 个 `--lk-*` 强调 token（`workbench.css:5-10`）+ `--dsw-label-*` 文字色（`:20-24`），但**只有亮色一套**（`:root` 无暗色块）→ 亮色侧**可实测**，夜纸侧 N/A |
 | 3.1-3 | 状态**不只靠颜色**（有几何编码） | `state_geometry_probe`：状态元素须有 `border-radius` 圆形 / 伪元素 / 竖条之一 | `probe/3.1-3.json` | **AUTO** | 现状部分满足：题号点是圆点 + 状态 class（`workbench.css:1891-1894` `.paper-dot.state-*`），但**靠背景色区分**，几何形状全同 |
 | 3.1-4 | 每个状态都有**文字**（如 `aria-label`），但不靠文字承担主要表达 | `state_geometry_probe` + `accessible_name_probe` 联合 | `probe/3.1-4.json` | **AUTO** | 需逐个状态元素核对；`decisions.md` 收口「状态冗余通道 = 彩色圆点（零文字）」→ **文字是可选辅助，不是必需**，本条判据应读作「不禁止文字」 |
 | 3.1-5 | 改造后界面说明性文字**数量不增加** | `text_count_probe`：before/after 各取「可见文本节点数 + 总字数」，after > before → FAIL（**不设阈值**，按 `decisions.md` P-1「少字原则」零容忍） | `probe/3.1-5.json` + `diff/text-count.json` | **AUTO** | 可量化；注意排除 `aria-label` 等不可见文本 |
@@ -1347,7 +1458,7 @@ def run_probe(page, out_dir):
 | 3.1-7 | 页面转场与浮层出现时**焦点不被抢走** | `focus_ring_probe`：触发转场 / 浮层前后各读一次 `document.activeElement` 的语义描述，变了且新焦点不是浮层内元素 → FAIL | `probe/3.1-7.json` | **AUTO** | 与 G-8 的焦点序列录制共用同一套「语义描述」函数（§7.2 G-8） |
 | 3.1-8 | 图标有**可访问名称**（`aria-label` 或视觉隐藏文本） | `accessible_name_probe`：图标元素须有 `aria-label` / `title` / 视觉隐藏文本 / `alt` 之一 | `probe/3.1-8.json` | **AUTO** | 现状用 **Unicode 字形**（`pages.py:427-428` `◎` / `⌗`）配 `aria-label` → 名称有，但**非 SVG**（见 3.6-1） |
 
-**§3.2 主题与暗色（6 条，`acceptance.md:91-96`）**
+**§3.2 主题与暗色（6 条，`acceptance.md:97-102`）**
 
 | # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
 |---|---|---|---|---|---|
@@ -1358,7 +1469,7 @@ def run_probe(page, out_dir):
 | 3.2-5 | 主题偏好**按工作区存储**，切换工作区各自独立 | `theme_probe`：切换工作区后读偏好存储的 key 与内容 | `probe/3.2-5.json` | **AUTO** | **既有机制可复用**：`workbench.js:165` `var SETTINGS_KEY = "wb_settings_" + WS;` —— 偏好已按工作区名分键，主题偏好应沿用同一机制 |
 | 3.2-6 | 刷新与**重启**后主题偏好保持 | `theme_probe`：写入偏好 → 刷新页面读回 → **重启服务进程**后读回 | `probe/3.2-6.json` | **AUTO** | 存储在 `localStorage`（`workbench.js:169`/`:181`/`:184`）→ 跨刷新与跨服务重启都保持（浏览器 profile 不清） |
 
-**§3.3 声音（5 条，`acceptance.md:99-103`）**
+**§3.3 声音（5 条，`acceptance.md:105-109`）**
 
 | # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
 |---|---|---|---|---|---|
@@ -1368,7 +1479,7 @@ def run_probe(page, out_dir):
 | 3.3-4 | 静音后**所有**音效不再播放（**包括庆祝**） | `audio_probe`：开静音 → 跑完整练习 → 断言播放记录为空 | `probe/3.3-4.json` | **AUTO** | 现状无 |
 | 3.3-5 | 无音效时，动效与视觉反馈**仍完整可用**（声音不是唯一通道） | 关静音跑一遍 + 与开静音的分镜条**逐像素比对** | `frames/M-*/noaudio-*.png` | **AUTO** | 「声音不是唯一通道」的落地判据就是「帧序列不变」 |
 
-**§3.4 交互反馈（7 条，`acceptance.md:106-112`）**
+**§3.4 交互反馈（7 条，`acceptance.md:112-118`）**
 
 | # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
 |---|---|---|---|---|---|
@@ -1380,7 +1491,7 @@ def run_probe(page, out_dir):
 | 3.4-6 | 会话列表**可滚动**（不静默裁切） | `scroll_probe`：`#ai-session-list` 的 `scrollHeight > clientHeight` 时 `overflow-y` 必须是 `auto/scroll` | `probe/3.4-6.json` | **AUTO** | 现状**FAIL**：`workbench.css:611` `#ai-session-list { display: grid; gap: 2px; }` **无 `overflow-y`** → 静默裁切；与 `decisions.md` 收口「⚠️ 必须补滚动容器（现状被裁掉）」一致 |
 | 3.4-7 | 章节透镜是**自绘下拉面板**，不是原生 `select` | `custom_select_probe`：全站 `select` 计数；`#chapter-lens-select` 须被自绘面板替代 | `probe/3.4-7.json` | **AUTO** | 现状是**原生 `select`**（`pages.py:62` `<select id='chapter-lens-select'>`）；全站共 **8 处**原生 `select`（`pages.py:62, 206, 263, 395, 657, 665, 744, 770`）→ 改自绘须守 `decisions.md` A-5「保留同名 hidden input 承载 `name`/`value`」 |
 
-**§3.5 响应式（3 条，`acceptance.md:115-117`）**
+**§3.5 响应式（3 条，`acceptance.md:121-123`）**
 
 | # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
 |---|---|---|---|---|---|
@@ -1388,7 +1499,7 @@ def run_probe(page, out_dir):
 | 3.5-2 | 768 下右栏为**抽屉**，可关闭并返回中栏 | `drawer_probe`：768 下开/关抽屉，断言右栏由 `position: fixed` 移出视口且中栏可交互 | `probe/3.5-2.json` | **AUTO** | 现状 1023px 起即抽屉化（`workbench.css:1174-1193`：`#left-column` / `#ai-column` 变 `position: fixed` + `transform: translateX(±105%)`），768 落在其内 → 机制已存在 |
 | 3.5-3 | 抽屉打开时**背景仍可交互**（装饰层 `pointer-events: none`） | `drawer_probe`：抽屉打开时对背景区取 `document.elementFromPoint`，命中背景元素而非装饰层 | `probe/3.5-3.json` | **AUTO** | 现状装饰层已有 `pointer-events: none` 惯例（`workbench.css:185`、`:1244`、`:1605`、`:1612`、`:1623`、`:1632`、`:1714`、`:1718`、`:1810`）→ 新增装饰层须沿用 |
 
-**§3.6 图案与资产（5 条，`acceptance.md:120-124`）**
+**§3.6 图案与资产（5 条，`acceptance.md:126-130`）**
 
 | # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
 |---|---|---|---|---|---|
@@ -1398,33 +1509,54 @@ def run_probe(page, out_dir):
 | 3.6-4 | 插画为**具象器物**（不出现抽象几何团块） | 人工看 `S-12` 空态插画与图标集 | `shots/S-12-*.png` | **MANUAL** | 审美判断，无可靠自动手段 |
 | 3.6-5 | 深浅两套主题**共用同一批 SVG 文件** | `asset_probe`：dark 模式下的 SVG 资源 URL 集合 ⊆ light 的集合 | `probe/3.6-5.json` | **AUTO** | 与 3.2-4 互为佐证（一条查 URL 集合，一条查 CSS 变量） |
 
-**§3.7 性能（4 条，`acceptance.md:127-130`）**
+**§3.7 性能（4 条，`acceptance.md:133-136`）**
 
 | # | 检查项 | 判定方法 | 证据 | 等级 | 改造前基线 |
 |---|---|---|---|---|---|
 | 3.7-1 | 动效**只动** `transform` / `opacity`（录一次逐帧确认） | `perf_probe`：枚举全部 `animation` / `transition` 涉及的属性名；出现 `transform`/`opacity` 之外的属性 → FAIL | `probe/3.7-1.json` | **AUTO** | 现状**有违规**：`grid-template-columns 200ms`（`workbench.css:161`）、`width 180ms`（`:866`）、`padding-bottom 300ms`（`:968`）、`background-color 100ms`（`:315`/`:350`/`:383`）、`box-shadow 300ms`（`:980`） |
 | 3.7-2 | 长列表（**98+ 条**记录）滚动流畅 | `scroll_probe`：灌入 ≥98 条记录，测滚动帧间隔；同时验 3.4-6 的容器可滚 | `probe/3.7-2.json` | **AUTO** | **现状池数据量不足**：实测 `pool/dmath.db` 中 `problem_attempts` 仅 **3** 行、`practice_runs` **0** 行、`feedback_events` 2 行 → **必须先造 ≥98 条种子数据**，否则本条无从测起 |
-| 3.7-3 | 首次加载**无字体闪烁**（`font-display` 策略正确） | `font_probe`：读 `@font-face` 的 `font-display`；缺省或 `auto` → FAIL | `probe/3.7-3.json` | **AUTO** | 现状**无 `@font-face`**（全站 0 处）→ 本变更新增思源宋体 woff2 时必须显式写 `font-display` |
+| 3.7-3 | 首次加载**无字体闪烁**（`font-display` 策略正确） | `font_probe`：读 `@font-face` 的 `font-display`；缺省或 `auto` → FAIL。**只扫本仓自有 CSS**（`workbench.css`），排除 vendored KaTeX | `probe/3.7-3.json` | **AUTO** | 现状**本仓自有 CSS 0 处 `@font-face`**（`workbench.css`）；但 vendored 的 `workbench/server/static/katex/katex.min.css` 里有 **20 处 `@font-face`**，全部是 `font-display:block`（KaTeX 官方选择：数学字体宁可 block 也不闪排）→ **探针必须排除 vendored 目录**，否则会误报 20 条 FAIL。本变更新增思源宋体 woff2 时必须显式写 `font-display` |
 | 3.7-4 | 静态资源缓存策略正确：**改了 CSS 能立刻生效** | `cache_probe`：读 CSS 响应的 `Cache-Control` / `ETag` / `Last-Modified`；改一行 CSS 后重取须返回新内容 | `probe/3.7-4.json` | **AUTO** | 现状**无任何缓存头**：`app.py` 只发 `Content-Type` + `Content-Length`（`:226-228`、`:335-337`、`:355-357`），无 `Cache-Control` → 「立刻生效」当前成立，但无 `ETag`/`Last-Modified` 可支撑增量 |
 
 #### 7.5.4 对比度 token 对清单（3.1-2 / 3.2-2 / 3.2-3 的输入）
 
 对比度探针需要**一份待测 token 对清单**。清单从 `night-paper-tokens.md` 的 token 表
-（亮/夜纸两套值）派生，每个 token 对记一行：
+（亮/夜纸两套值）派生，每个 token 对记一行。
+
+> **命名空间的版本说明（2026-10-22 复核，重要）**：本清单的 token 名分**两代**：
+>
+> | 代 | 命名空间 | 何时用 | 出处 |
+> |---|---|---|---|
+> | **改造前（现状）** | `--lk-*` / `--dsw-label-*` | **before 侧**的实测基线 | `workbench/server/static/workbench.css:5-10`、`:20-24` |
+> | **改造后（目标）** | `--surface-*` / `--ink-*` / `--role-*` | **after 侧**的待测清单 | `night-paper-tokens.md` §3.1–§3.4 |
+>
+> 本变更的 token 层用新命名空间（`night-paper-tokens.md:67`）；
+> `--lk-ink-muted` / `--lk-card` / `--lk-on-blue` / `--lk-on-red`
+> 这几个名字**在仓库里从不存在**（`grep` 零命中），是本文件早先草稿的臆造，
+> **已按新命名空间改正**。
+
+**after 侧待测清单**（用 `night-paper-tokens.md` §3 的 token，两主题各测一遍）：
 
 | 用途 | 前景 | 背景 | 阈值 | 来源 |
 |---|---|---|---|---|
-| 正文 | `--lk-ink` | `--lk-paper` | 4.5 | 正文 17px，非大字号 |
-| 次要文字 | `--lk-ink-muted` | `--lk-paper` | 3.0 | `acceptance.md:82`「次要文字 ≥ 3:1」 |
-| 大字号标题 | `--lk-ink` | `--lk-card` | 3.0 | ≥ 24px 或 ≥ 18.66px 粗体 |
-| 按钮文字 | `--lk-on-blue` | `--lk-blue` | 4.5 | 主按钮 |
-| 黄色承载面 | `--lk-ink` | `--lk-yellow` | 4.5 | `decisions.md` A-4「黄色一律不承载文字」→ 若有黄底文字，此对**必测** |
-| 红色失败态 | `--lk-on-red` | `--lk-red` | 4.5 | 错误态 |
-| 焦点环 | `--lk-blue` | 所在底色 | 3.0 | 非文本 UI 组件 |
-| 状态圆点 | 圆点色 | 所在底色 | 3.0 | 几何编码须可辨 |
+| 正文 | `--ink-body` | `--surface-base` | 4.5 | 正文 17px，非大字号 |
+| 正文（卡面上） | `--ink-body` | `--surface-card` | 4.5 | 同上，落在卡面 |
+| 标题墨 | `--ink-strong` | `--surface-base` | 4.5 | 标题 |
+| 次要文字 | `--ink-muted` | `--surface-card` | 4.5 | `acceptance.md:88`「次要文字 ≥ 3:1」（取值按 `night-paper-tokens.md` §4.2 口径） |
+| 三级文字 | `--ink-faint` | `--surface-card` | 3.0 | 同上 |
+| 大字号标题 | `--ink-strong` | `--surface-raised` | 3.0 | ≥ 24px 或 ≥ 18.66px 粗体 |
+| 主按钮文字 | `--ink-on-role` | `--role-blue` | 4.5 | 主按钮 |
+| 蓝色承载文字（选中行） | `--role-blue` | `--role-blue-wash` | 4.5 | 蓝洗底承载文字 |
+| 黄色承载面 | `--ink-on-warm` | `--role-yellow` | 4.5 | `decisions.md` A-4「黄色一律不承载文字」→ 若有黄底文字，此对**必测** |
+| 红色失败态文字 | `--role-red-ink` | `--role-red-wash` | 4.5 | 错误态（红洗底承载文字） |
+| 焦点环 | `--role-blue` | 所在底色 | 3.0 | 非文本 UI 组件 |
+| 状态圆点 | `--role-yellow-deep` / `--role-red` | 所在底色 | 3.0 | 几何编码须可辨 |
 
-> 清单本身是**产物**，随本变更更新；探针只负责按清单算比值。
+> **清单本身是**产物**，随本变更更新；探针只负责按清单算比值。
 > 清单里没有的 token 对 → 探针报 `MISSING`，**不静默跳过**。
+> **权威值表与实算结果在 `night-paper-tokens.md` §4.2（浅色 38 行）/ §4.3（夜纸 38 行）**
+> ——探针的实测值应与该表**逐行吻合**；不吻合即说明**实现与设计件漂移**，
+> 必须在报告里标为 FAIL，而不是改设计件。
 
 **改造前亮色侧的实测基线**（用 WCAG 相对亮度公式算，值已核实）：
 
@@ -1440,15 +1572,20 @@ def run_probe(page, out_dir):
 | `#245d32` | `#d9ebdd` | **6.28** | 4.5 | ✅ |
 | `#922d26` | `#f6d8d5` | **5.98** | 4.5 | ✅ |
 
-（底色值来自 `workbench.css:5-10` 的 `--lk-*` 与 `:1889-1893` 的状态色；
-比值用标准 WCAG 公式 `(L1+0.05)/(L2+0.05)` 实算。）
+（底色值来自 `workbench.css:5-10` 的 `--lk-*` 与 `:1890-1893` 的状态色；
+比值用标准 WCAG 公式 `(L1+0.05)/(L2+0.05)` 实算，
+**本轮已用 Python 逐对复算，九对全部与上表吻合**。）
 
 > **唯一不达标的是 `--lk-red` 对 `--lk-paper` 的 4.32:1**（阈值 4.5，差 0.18）。
 > 但这条**是否算 FAIL 取决于红色承载什么**：`--lk-red` 在现状里用于
-> 「失败 / 阻塞」的**图标与边框**（非文本）→ 按 `acceptance.md:82`
+> 「失败 / 阻塞」的**图标与边框**（非文本）→ 按 `acceptance.md:88`
 > 「大字号 ≥ 3:1」与「非文本 UI 组件 ≥ 3:1」的口径**达标**。
-> 只有当改造后有**正文文字**直接落在 `--lk-red` 底上时才判 FAIL。
+> 只有当改造后有**正文文字**直接落在红色底上时才判 FAIL。
 > **这正是「阈值归属」要逐对指定的原因**——不能一刀切用 4.5。
+>
+> **注**：改造后这条不复存在——新命名空间把红拆成**文字档** `--role-red-ink`
+> 与**点/面档** `--role-red`（`night-paper-tokens.md` §3.4），
+> 各自对比度在 §4.2/§4.3 已实算通过。
 
 #### 7.5.5 「改造前无对照物」的 11 条 + 1 条部分（before 侧记 N/A 的清单）
 
@@ -1467,10 +1604,10 @@ def run_probe(page, out_dir):
 | 3.6-1 | 全本地 SVG | 无 SVG 资产 | 全仓 0 个 `.svg`；题图是 `.jpg` |
 | 3.6-3 | 图标圆底三角色色 | 无图标、无角色色表 | 角色色定义在 `decisions.md` 收口，是本变更**新增**基线 |
 | 3.6-5 | 深浅共用同一批 SVG | 无 SVG 资产 | 同 3.6-1 |
-| 3.7-3 | `font-display` | 无 web font | 全站 0 处 `@font-face` |
+| 3.7-3 | `font-display` | 本仓自有 CSS 无 web font（`workbench.css` 0 处 `@font-face`）；vendored KaTeX 有 20 处但那是第三方 | `grep -c "@font-face" workbench/server/static/workbench.css` → 0 |
 
 **1 条部分可测**：**3.1-2（对比度）**——亮色侧**有** token 可算（`workbench.css:5-10`
-的 `--lk-*` + `:23-27` 的 `--dsw-label-*`），夜纸侧无。
+的 `--lk-*` + `:20-24` 的 `--dsw-label-*`），夜纸侧无。
 故本条在 before 侧记 **N/A（夜纸部分）** + 亮色部分的实测值，**不整条豁免**。
 
 > **「N/A ≠ PASS」是硬规则**（X-7）。这 12 条在 after 侧一旦实现出来，
@@ -1488,13 +1625,13 @@ def run_probe(page, out_dir):
 第 3 层  交互清单 38 条     → 全过或有逐条说明
 ```
 
-**第 1 层是硬闸**：`acceptance.md:137`「G-1…G-8 全绿（任何一条红即整体 FAIL，
+**第 1 层是硬闸**：`acceptance.md:143`「G-1…G-8 全绿（任何一条红即整体 FAIL，
 不进入后续评审）」。因此：
 
 ```
 if any(gate.verdict == "FAIL" for gate in GATES):
     overall = "FAIL"
-    reason  = "底线守卫未全绿，按 acceptance.md:137 不得进入后续评审"
+    reason  = "底线守卫未全绿，按 acceptance.md:143 不得进入后续评审"
     # 注意：仍要跑完并出报告（收集全部证据），只是结论已定
 ```
 
@@ -1507,6 +1644,27 @@ if any(gate.verdict == "FAIL" for gate in GATES):
 | `N/A` | 有据可依地不适用（如 S-9 改造前无设置页） | 采集器，需在报告写明依据 |
 | `PENDING` | 需人工判读，执行器**不代勾** | 探针产出证据后置 `PENDING` |
 | `BLOCKED` | 该项因上游 FAIL 无法执行（如 G-1 失败导致 G-2 无意义） | 汇总器 |
+
+**G-5 的特殊规则（否定式断言）**：G-5 **不适用**「小差异 ⇒ PENDING ⇒ 人工判读」这条惯例。
+它的 verdict 只有三种：
+
+```
+if all(scope.ae == 0 for scope in [R-1_page, R-2_canvas, R-3_sample]):
+    G-5.verdict = "PASS"          # 本变更未误伤图谱
+elif any(scope.ae > 0 for scope in [...]):
+    G-5.verdict = "FAIL"          # 与口径无关的硬事实：确实误伤了图谱
+else:                             # 不可能走到（ae 必为 0 或 > 0）
+    G-5.verdict = "FAIL"
+```
+
+**G-5 唯一的 PENDING 来源是「比对口径未裁决」**（`graph-isolation.md:1435-1454`
+的 R-1/R-2/R-3 尚未拍板）。此时：
+- 三口径的 ae **全部 == 0** → 口径怎么选都不影响结论 → 直接 **PASS**（不 PENDING）；
+- 三口径的 ae **全部 > 0** → 怎么选都 FAIL → 直接 **FAIL**（不 PENDING）；
+- 只有**口径之间结论不一致**（某口径 ae=0、某口径 ae>0）时，才出现真正的
+  **PENDING**，由所有者裁决口径。
+
+> 换言之：**PENDING 只在「口径影响结论」时出现**，不是 G-5 的常态。
 
 #### 7.6.3 汇总伪代码
 
@@ -1539,7 +1697,7 @@ def aggregate(evidence):
 ```
 
 **`PASS_WITH_PENDING` 是本设计刻意引入的第三态**，理由：
-- `acceptance.md:140` 允许「未勾选项逐条列出并说明为何可接受」——即**未判完不等于失败**；
+- `acceptance.md:146` 允许「未勾选项逐条列出并说明为何可接受」——即**未判完不等于失败**；
 - 但把 PENDING 混进 PASS 会让「38 条里 20 条没人判」看起来像通过了。
 - 所以：**结论是「通过，但有 N 条待人工判读」**，报告首屏必须显示这个 N。
 
@@ -1570,8 +1728,9 @@ def aggregate(evidence):
             "evidence": ["diff/db.problem_attempts.diff.json"]},
     "G-3": {"verdict": "PASS", "auto": true, "detail": "", "evidence": []},
     "G-4": {"verdict": "PASS", "auto": true, "detail": "", "evidence": []},
-    "G-5": {"verdict": "PENDING", "auto": false, "detail": "像素差 0.0031，待人工判读",
-            "evidence": ["diff/shots/S-5-graph.png", "diff/shots/S-5-graph-delta.png"]},
+    "G-5": {"verdict": "PASS", "auto": true, "detail": "整页/画布/采样三口径 ae 均为 0；本变更未误伤图谱",
+            "evidence": ["diff/shots/G5-page-delta.png", "diff/shots/G5-canvas-delta.png"],
+            "scopes": {"R-1_page": {"ae": 0}, "R-2_canvas": {"ae": 0}, "R-3_sample": {"ae": 0}}},
     "G-6": {"verdict": "PASS", "auto": true, "detail": "schema diff = 0", "evidence": []},
     "G-7": {"verdict": "PASS", "auto": true, "detail": "elementFromPoint 全通过", "evidence": []},
     "G-8": {"verdict": "PASS", "auto": true, "detail": "序列相同，2 条 ADDED-EXPECTED", "evidence": []}
@@ -1603,8 +1762,12 @@ def aggregate(evidence):
 }
 ```
 
-**`unresolved` 的每条必须四要素齐**（`acceptance.md:101` 原文：
-「每条：现象、影响、复现命令、建议」）——缺一项就是不合格的未过项清单。
+**`unresolved` 的每条必须四要素齐**（现象 / 影响 / 复现命令 / 建议）——缺一项就是不合格的未过项清单。
+
+> **四要素的出处**：`acceptance.md` 只要求「未过项清单」存在（`acceptance.md:158`）
+> 与「未勾选项逐条列出并说明为何可接受」（`acceptance.md:146`）。
+> **四要素是本执行器自定的加严约定**（让每条未过项可被独立复现），**不是 `acceptance.md` 的原文**——
+> 报告里不得把它写成验收口径的引用。
 
 #### 7.6.5 报告生成的流程（`report.py`）
 
@@ -1691,6 +1854,10 @@ def aggregate(evidence):
 | R-26 | 「98+ 条记录」需要**造数据**，造数据本身写了池 | 长列表性能项（3.7-2）需要足够长的列表 | 造数据**只在隔离副本里做**（`ws-before` / `ws-after` 各造一份**相同**的 98 条）；真实池不造；造完断言 A4 仍成立 |
 | R-27 | 对比度探针的 token 对清单**没覆盖新增 token** | 清单是从 `night-paper-tokens.md` 派生的静态表 | 探针对**每个**实际出现在计算样式里的前景色都算一遍；清单外的 token 报 `MISSING` 并**让该项判 PENDING 而非 PASS** |
 | R-28 | `PENDING` 被当成 PASS 汇总，整体结论虚高 | 38 条里若有大量 PENDING | `summary` 必须输出 `checklist_pending` 计数；`overall` 用第三态 `PASS_WITH_PENDING`（§7.6.3），**不允许**在有 PENDING 时输出裸 `PASS` |
+| R-29 | **`acceptance.md` 被改动，本文件的 `文件:行号` 引用全部漂移** | 该文件在走查期间被其他 agent 改动（实测 2026-10-22 09:50 版本已把 G-5 改为否定式断言、整体行号 +6） | 本文件头部有「行号快照」说明与复核命令（见文件开头）；**每次跑走查前先跑一遍复核命令**；引用漂移时**以当前文件为准重新核对**，不得沿用旧行号 |
+| R-30 | **G-5 误判为 PASS**：图谱页走了空态，两侧都是空页 → `ae == 0` | 隔离工作区缺图谱工件（R-19）时，`graph_artifact_path` 解析到不存在的文件 → 图谱页显示空态 → 前后两侧空态完全相同 → `ae == 0` → 假 PASS | 采集前断言图谱工件存在（§9 D19）；**图谱页必须有非空画布**（断言 `.graph-workspace` 内节点数 > 0）；空态一律判 **BLOCKED**（不是 PASS） |
+| R-31 | **G-5 的容差带被误用**：拿 §5.4 的 `ratio <= 0.005` 去判 G-5 | 两套判据并存（§5.4 管 S-1…S-12，G-5 用 `ae == 0`），实现时容易混用 | 报告生成器**分两个函数**：`pixel_diff_for_shots()`（带容差带）与 `pixel_diff_for_g5()`（**无容差**）；§9 D22 断言三组假 AE 的判定结果正确 |
+| R-32 | **G-5 比对口径被擅自选边** | `graph-isolation.md:1435-1454` 的 R-1/R-2/R-3 **尚未裁决** | 执行器**三口径全跑**并**并排列出**（§5.7）；口径影响结论时才 PENDING；**不得**在报告里替所有者选边（`AGENTS.md` 契约冲突处理条款） |
 
 ### 8.2 「绝不写真实池」的硬断言位置（汇总）
 
@@ -1847,6 +2014,10 @@ if before != after:
 | D16 | 汇总状态机正确 | 构造四组假结果：全 PASS / 有底线 FAIL / 有 PENDING / 交互清单 FAIL | 分别得到 `PASS` / `FAIL` / `PASS_WITH_PENDING` / `FAIL`；有 PENDING 时**不得**输出裸 `PASS` |
 | D17 | 隔离断言在**每个阶段**都跑 | 在 `phase()` / `subprocess` 处打断点 | `assert_isolated` 的调用点覆盖 E1–E6（§8.2.1）全部六处 |
 | D18 | 真实池零变化 | 完整走查前后比对 `WATCHED_PATHS` | sha256 / size / mtime **三项均未变**；`pool/` 下**无新增** `.db` 文件 |
+| D19 | **G-5 图谱工件到位** | 隔离工作区里 `graph_artifact_path` 指向的文件存在 | `output/dmath/ch06/ch06-graph.html` 存在（§1.2 已复制 `output/`）；**不存在则图谱页走空态 → G-5 变成假 PASS** |
+| D20 | **G-5 静止签名可复现** | 同一图谱页连采两次，比对静止签名 | 两次签名**逐字相同**（`graph-isolation.md:1408-1434` §6.6）；签名不同 → 像素必然不同，先查签名再查像素 |
+| D21 | **G-5 三口径 AE 都跑** | 跑一次 `G5` 采集 | `report.json` 的 `gates["G-5"].scopes` 含 `R-1_page` / `R-2_canvas` / `R-3_sample` 三项，各带 `ae`；**缺任一项 → G-5 判 BLOCKED 并在报告注明「口径未跑全」** |
+| D22 | **G-5 否定式判定正确** | 构造三组假 AE：三口径全 0 / 全 >0 / 口径间不一致 | 分别得到 **PASS** / **FAIL** / **PENDING**（§7.6.2 规则）；**不得**因为「差异很小」而给 PENDING |
 
 ---
 
@@ -1864,6 +2035,9 @@ if before != after:
 | W-8 | `lesson-kit papers save` 生成的 `ps-NNN` 是否两侧一致 | 两次建卷后比对文件名；不一致则改用**预置 JSON 种子**（§3.4） |
 | W-9 | `.gitignore` 是否已含 `evidence/` 或 `tmp/` | `cat .gitignore`；必要时补 `evidence/` |
 | W-10 | `docs/ACTION-GRAPH.md` 是否需登记执行器动作 | 按 `AGENTS.md` 开发纪律第 2 条，功能交付时同步登记；本设计阶段只在此**标注**，不擅自改该文件（其它 agent 正在写同目录文件） |
+| **W-15** | **G-5 的比对口径 R-1 / R-2 / R-3 尚未裁决** | `graph-isolation.md:1435-1454` 明确标注「需所有者裁决」且**仍未定**。执行器**三口径全跑**并并排列出，**不选边**（§5.7、R-32）。裁决前 G-5 只在「口径影响结论」时 PENDING |
+| **W-16** | **本文件的 `acceptance.md:NN` 引用会随该文件改动漂移** | 该文件已被其他 agent 改动（G-5 改否定式断言，整体行号 +6）。跑走查前跑文件头部的复核命令（§8.1 R-29） |
+| **W-17** | **G-5 的九步冻结协议与「静止签名」不在本文件** | 全部引用 `graph-isolation.md` §6.3–§6.8（§5.7 表格逐条给出出处）；**不复制、不另造**，避免两份协议漂移 |
 
 **本轮（2026-10-22）已核实的待核项**（不再需要查证）：
 
@@ -1928,7 +2102,7 @@ $SCRATCH/
 
 | 组 | 编号 | 条数 | 采集器章节 |
 |---|---|---|---|
-| 底线守卫 | G-1 请求序列 / G-2 持久化 / G-3 学习投影 / G-4 复习建议 / G-5 图谱像素 / G-6 schema 零变更 / G-7 装饰层 pointer-events / G-8 焦点顺序 | 8 | §2、§3、§4、§5、§7.2、§7.6 |
+| 底线守卫 | G-1 请求序列 / G-2 持久化 / G-3 学习投影 / G-4 复习建议 / **G-5 图谱未被误伤（ae==0）** / G-6 schema 零变更 / G-7 装饰层 pointer-events / G-8 焦点顺序 | 8 | §2、§3、§4、**§5.7**、§7.2、§7.6 |
 | 对照截图 | S-1…S-12 | 12 | §5 |
 | 关键帧 | M-1…M-10（+ 降级对照帧） | 10 | §6 |
 | 交互清单 | §3.1 可访问性(8) / §3.2 主题暗色(6) / §3.3 声音(5) / §3.4 交互反馈(7) / §3.5 响应式(3) / §3.6 图案资产(5) / §3.7 性能(4) | **38** | §7.5（逐条对应表）、§7.5.2（探针） |
@@ -1943,7 +2117,7 @@ $SCRATCH/
 | G-3 | 导出学习投影四张表 → 完全相同 | §4.1、§4.4 |
 | G-4 | 同一时刻导出 `/due` 与 `/weak` → 集合与顺序 diff | §3.6、§4.4 |
 
-**判定的三种结局**（`acceptance.md:140` 允许第三种）：
+**判定的三种结局**（`acceptance.md:146` 允许第三种）：
 
 | 结局 | 含义 | 报告记法 |
 |---|---|---|
@@ -1951,5 +2125,9 @@ $SCRATCH/
 | 不通过 | 自动判定有 FAIL | `❌ FAIL` |
 | **待人工判读** | 机器给不出唯一结论 | `⬜ PENDING` + 证据 + 检查指引 |
 
-**执行器不下结论的场合**：G-5 的像素差观感、M-1…M-10 的观感、38 条里的 SEMI / MANUAL 条目、
+**执行器不下结论的场合**：**G-5 的比对口径 R-1/R-2/R-3（未裁决，且仅在口径影响结论时才 PENDING）**、
+M-1…M-10 的观感、38 条里的 SEMI / MANUAL 条目、
 G-1 的 L2（GET 差异）表。**执行器提供证据，不替代评审。**
+
+> **G-5 的观感本身执行器不判**——A-8 之后图谱完全不在本变更范围内，
+> 执行器只判「**有没有误伤**」（`ae == 0`），不判「图谱好不好看」。

@@ -53,6 +53,7 @@
 | **H-8** | **图例色与 WebGL 实际线色不一致**：图例「相关」色 `#aaa399`（`workbench.css:1796`）与 SVG 边 `.graph-edge.related`（`:1636`）同值，但 WebGL 接管后 SVG 边被隐藏（`graph-renderer.js:148`），实际画出来的是 `EDGE_COLORS.related = [117/255, 112/255, 104/255]` = **`rgb(117,112,104)` = `#757068`** | `graph-renderer.js:15-19` | §8 Q-9 |
 | **H-9** | **图谱缩放补偿缺失是「丑」的主因，不是配色**：舞台级 `scale()` 把所有排版单位一起缩小，实测 Fit 后 scale = 0.17–0.49 ⇒ 圆直径 3–30px、标签 2.0–5.9px、可见标签 0–1/31 | `decisions.md` 图谱现状的机制性诊断（G-24） | `decisions.md` |
 | **H-10** | **像素级比对有三处天然不可比源**（时间驱动的环境色 canvas / Worker 物理迭代 / `localStorage` 布局缓存），必须各自冻结；`prefers-reduced-motion: reduce` 是**可复现的必要条件**，不是便利 | 三处冻结手段与实测 | §6.1 / §6.3 |
+| **H-11** | **图谱 change 的节点绘制半径区间 = 14–30 屏幕像素**（`decisions.md` **A-10.1** 收窄后的结论）。G-17 原定的 20–44px 作废：实测该区间在 860×460 画布上会让 31 个节点占约 **47%** 面积 —— 会挤；收窄后覆盖率约 **22%**。「更强调」改由**同心圆的双层结构 + 色阶**承担，不靠更大直径 | `decisions.md` **A-10.1**（G-17 的修正）；覆盖率由 G-06 实测复算 | `graph-node-visual-language` 的 `design.md` D-1 / D-3 与新能力 `graph-visual-language` 的 `Screen-space sizing` |
 
 ---
 

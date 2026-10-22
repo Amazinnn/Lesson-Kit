@@ -19,9 +19,12 @@
 > **分支**：`feat/workbench-visual-language-v2`，不并入 main；每个可验证单元单独提交，
 > 提交信息用 `feat/` `fix/` `docs/` `chore/` `refactor/` 前缀，工作区不留脏。
 > **硬约束**：无框架、无构建步骤、无 npm、无 CDN、无外部图标字体；纯 CSS + 原生 JS。
-> **知识图谱页完全不在范围内**：`workbench/server/static/workbench.css:1497-1884` 及其图谱专用
-> `:root`（L1505-1518，含 `--paper:#fffdf7`、`--ink:#191816`、`--hair:#ddd8cd`）一行不改；
-> 新 token 层不得改变图谱依赖的取值（见 1.2 的图谱兼容区）。
+> **知识图谱页完全不在范围内**（`decisions.md` **A-8** 裁决，2026-10-22）：本变更**不触碰图谱** ——
+> 夜纸下的图谱适配与图谱节点视觉重设计都归独立 change `graph-node-visual-language`；
+> 在本变更里先换一遍夜纸值、下个 change 再重画节点，会留下「换了夜纸但节点仍然丑」的半成品。
+> 本变更对图谱只负一条**不误伤**的责任：图谱专用区段 `workbench/server/static/workbench.css:1497-1884`
+> 及其图谱专用 `:root`（L1505-1518，含 `--paper:#fffdf7`、`--ink:#191816`、`--hair:#ddd8cd`）一行不改；
+> 新 token 层不得改变图谱依赖的取值。移交清单见 `design-notes/graph-isolation.md`。
 >
 > **每组末尾的「阶段验收」任务统一要求跑 AGENTS.md 的四条验证命令**：
 > `python -m pytest tests -q`、`python -m compileall -q lessonkit.py workbench pipeline pool tests`、
@@ -34,10 +37,10 @@
 
 ## 第一段：样板线（token 地基 + 外壳 + 练习页 + 知识点页 + 记录页 + 设置视图）
 
-## 1. token 架构：`--wb-*` 命名空间 + 图谱兼容区 （design.md D-1）
+## 1. token 架构：`--wb-*` 命名空间 + 图谱不受影响 （design.md D-1）
 
-- [ ] 1.1 在 `workbench/server/static/workbench.css` 的 `:root`（L4-46）内建立 `--wb-*` 命名空间：**结构 token 唯一一套**（`--wb-radius-*` / `--wb-space-*` / `--wb-type-*` / `--wb-shadow-*` / `--wb-dur-*` / `--wb-ease-*` / `--wb-z-*` / `--wb-read-*` / `--wb-font-*` / `--wb-col-left` / `--wb-col-right`），**主题值两套**（`--wb-surface-*` / `--wb-ink-*` / `--wb-role-*` / `--wb-rule-*`），随主题整套替换；新 token 与图谱裸名（`--paper / --ink / --hair / --blue / --yellow / --red / --shadow / --graphite / --green / --blueSoft / --yellowSoft / --redSoft`，L1505-1518）**零同名**。验证：新 token 名集合与图谱 12 个裸名求差为空（脚本校验）。
-- [ ] 1.2 建**图谱兼容区**：新层里保留只给图谱用的 `--surface-sheet: #fffdf7`（值与今天完全一致），并新增 `#layout[data-page="graph"] #middle { background: var(--surface-sheet); }`；**不得**借 token 层改写 `--paper` 等图谱变量。验证：图谱页中栏 computed background = `rgb(255, 253, 247)`；图谱页截图逐像素比对差异为 0。
+- [ ] 1.1 在 `workbench/server/static/workbench.css` 的 `:root`（L4-46）内建立 `--wb-*` 命名空间：**结构 token 唯一一套**（`--wb-radius-*` / `--wb-space-*` / `--wb-type-*` / `--wb-shadow-*` / `--wb-dur-*` / `--wb-ease-*` / `--wb-z-*` / `--wb-read-*` / `--wb-font-*` / `--wb-col-left` / `--wb-col-right`），**主题值两套**（`--wb-surface-*` / `--wb-ink-*` / `--wb-role-*` / `--wb-rule-*`），随主题整套替换；新 token 与图谱裸名（`--paper / --ink / --hair / --blue / --yellow / --red / --shadow / --graphite / --green / --blueSoft / --yellowSoft / --redSoft`，L1505-1518）**零同名**。验证：新 token 名集合与图谱 12 个裸名求差为空（脚本校验）。⚠️ 这条零同名是**本变更对图谱的唯一硬约束**（`decisions.md` A-8：图谱不在本变更范围内，但新层一旦用了图谱的裸名，图谱画布与详情面板会立刻变色）。
+- [ ] 1.2 **图谱不受影响（保护措施，不是图谱改造）**：按 `decisions.md` **A-8**，本变更**不触碰图谱** —— 夜纸下的图谱适配与节点视觉重设计归独立 change `graph-node-visual-language`。本条只做一件事：**保证本变更不误伤图谱**（即 `acceptance.md` G-5 那条否定式断言）。落地口径：新层**不重定义**图谱的 12 个裸名（见 1.1），**不借 token 层改写** `--paper` 等图谱变量；图谱页中栏底色由**图谱专用的冻结值**供给（恒 `#fffdf7`、两主题同值），**不得**接到会随主题变的卡面 token 上（该 token 的命名漂移见 `design-notes/graph-isolation.md` §7.3 / Q-6）。验证：图谱页中栏 computed background = `rgb(255, 253, 247)`；图谱页截图逐像素比对差异为 0。移交清单（图谱 change 接手时必须知道的硬事实）见 `design-notes/graph-isolation.md`。
 - [ ] 1.3 按主题声明 `color-scheme`（亮色 `light` / 夜纸 `dark`），让原生控件与滚动条跟随；**不使用** `prefers-color-scheme` 作主题来源（手动开关是定案，全仓 `prefers-color-scheme` 命中 0 处）。验证：`getComputedStyle(document.documentElement).colorScheme` 随主题切换；未设置偏好时默认暖奶油。
 - [ ] 1.4 固化迁移顺序（design.md Risks 第一条）：Step 1 只换 `:root` 里的值（新增 0 个 class、0 处 JS、0 处结构）→ Step 2 换描边 / 抬升 / 文字灰与 22 个硬编码色 → Step 3 才动间距 / 字号 / 圆角 / 动效 / z-index，且 Step 3 再拆 3a 装饰性间距 → 3b 字号行高 → 3c 圆角 → 3d 容器 padding → 3e 动效 / z-index；每小步单独提交、单独截图。验证：git log 显示这些小步为独立提交；每步后 `python -m pytest tests -q` 与 `python -m compileall -q lessonkit.py workbench pipeline pool tests` 全绿。
 - [ ] 1.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0 + §3.1 + §3.6 走查（底线守卫前置、本组贡献 G-5 图谱像素比对与 §3.1 焦点可见性、§3.6 资产与圆角语言）；截图走查范围＝工作台 / 练习 / 记录 / **图谱**四页基线比对。
@@ -124,9 +127,9 @@
 ## 12. 夜纸值集与对比度复测 （design.md D-2 夜纸值 + D-3 / D-12 对比度）
 
 - [ ] 12.1 落夜纸值集 `:root[data-theme="night"]`：表面（ground #1c1a16 / card #26231d / raised #302c25 / ink #f2ece1）、墨阶、三角色（`--wb-role-action` 不变；`--wb-role-action-ink` #86aaff、`--wb-role-action-deep` #7aa2f7、`--wb-role-current` #e6c46a、`--wb-role-current-ink` #e6c46a、`--wb-role-needs-work` #e8837a）、控件边界 #6f6759。验证：切主题后 computed 值全部命中上表；夜纸**只是同一套三角色的第二套值**，不是新色系。
-- [ ] 12.2 夜纸下的资产处理：圆底图标**降饱和 + 提亮**；渐变换更暗色阶与更弱高光；插画与图标用同一套 SVG 换变量、不另画一份。验证：夜纸下图标与插画可见且不刺眼；资产文件数不变；**不做暗色下的图谱**（图谱页在夜纸下保持现有观感）。
+- [ ] 12.2 夜纸下的资产处理：圆底图标**降饱和 + 提亮**；渐变换更暗色阶与更弱高光；插画与图标用同一套 SVG 换变量、不另画一份。验证：夜纸下图标与插画可见且不刺眼；资产文件数不变；**本变更不做暗色下的图谱**（夜纸下的图谱适配归 `graph-node-visual-language` change，见 `decisions.md` A-8）。
 - [ ] 12.3 对比度复测并出表：正文 ≥4.5:1、次要文字 ≥4.5:1、控件边界与非文本状态标记 ≥3:1，两套主题各测一遍，把实测值写成对照表（逐项重测 design.md D-3 与 D-12 的表）。验证：表中无低于阈值项；`--wb-ink-faint` 亮 4.69:1 / 夜 5.73:1 复核通过；黄色填充在两主题下都**只承载面积与形状**。
-- [ ] 12.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.2 走查；截图走查范围＝6 类页面的亮 / 暗双主题对照；确认图谱页在两主题下均与基线一致（不随主题变化）。
+- [ ] 12.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.2 走查；截图走查范围＝6 类页面的亮 / 暗双主题对照；确认本变更**未改动图谱**（图谱页观感零变化，即 `acceptance.md` G-5 的否定式断言；夜纸下的图谱适配归 `graph-node-visual-language` change，见 `decisions.md` A-8）。
 
 ## 13. 三栏几何单一真值 （design.md D-10）
 
@@ -264,5 +267,5 @@
 - [ ] 新增登记任务存在（D-15 的 `contract-drift.md`，写清 128 处）
 - [ ] SVG 资产（第 9 组）与音效资产（第 10 组）单列为可独立验收的任务组
 - [ ] 没有引入构建步骤、npm 或新框架
-- [ ] 知识图谱页零改动约束已落到具体任务（1.2 / 12.2 / 22.1 G-5 / 28.6）
+- [ ] 知识图谱页零改动约束已落到具体任务（1.2 / 12.2 / 22.1 G-5 / 28.6），且已按 `decisions.md` A-8 移交 `graph-node-visual-language`（本变更不触碰图谱）
 - [ ] 未修改任何产品代码（本文只落 `tasks.md`）

@@ -1,3 +1,23 @@
+> **⚠️ 归档顺序（A-10.2，硬性、不可颠倒）**
+>
+> 本 delta 中的 `Redundant state cues` 与 `Soft Mondrian visual foundation`
+> 两个 MODIFIED 块**必须先合入 `workbench-visual-language-v2`，
+> 再 re-base 到 v2 的版本上** —— v2 的 pending delta **已经** MODIFIED 了这两条；
+> 本变更若先落地，会**覆盖 v2 已写的扩展内容**。
+>
+> ⇒ **这两块当前的正文是「v2 之前的基线文本」，属占位文本，不是最终文本**
+> （v2 尚未归档，现在无法 re-base）。
+> ⇒ 归档动作（两件，缺一不可）：① **先归档 `workbench-visual-language-v2`**，
+> 再归档本变更；② 归档本变更前**逐字复核**这两条需求的最终文本，
+> 确认它是「**v2 的版本 + 本变更的图谱例外段落**」的合流结果，
+> 而不是本变更的旧基线文本；re-base 时**一并删掉下面两处块内标注**。
+>
+> 另：**A-10.3 标签不截断** —— 下面 `Living graph motion and readable labels` 取
+> 「**不截断**」的一支（换行显示全文，完整标题由悬浮 / 键盘聚焦承载），
+> 与 G-23（重叠时**隐藏**次要标签）是**两个不同机制**，互不冲突。
+> 又：节点半径区间以新能力 `graph-visual-language` 的 `Screen-space sizing` 为准
+> （**14–30 屏幕像素**，A-10.1 收窄后）；本 delta 不另写半径数值。
+
 ## MODIFIED Requirements
 
 ### Requirement: Knowledge graph page
@@ -262,6 +282,8 @@ The knowledge graph SHALL expose a multi-select learning-state filter using exac
 
 ### Requirement: Redundant state cues
 
+<!-- ⚠️ A-10.2：须在 workbench-visual-language-v2 合入后 re-base 到 v2 的版本（见文件头）。本块正文目前是 v2 之前的基线文本，re-base 时删除本行标注。 -->
+
 Color SHALL NOT be the only carrier of learning or interaction state. Active
 navigation, graph learning states, and errors SHALL retain text, outline, position,
 or another geometric cue in addition to color. On the knowledge graph page a
@@ -284,6 +306,8 @@ word SHALL be drawn on the node itself.
   node
 
 ### Requirement: Soft Mondrian visual foundation
+
+<!-- ⚠️ A-10.2：须在 workbench-visual-language-v2 合入后 re-base 到 v2 的版本（见文件头）。本块正文目前是 v2 之前的基线文本，re-base 时删除本行标注。 -->
 
 The workbench SHALL use warm paper surfaces, dark structural rules, and restrained
 blue, yellow, and red accents. Blue SHALL represent primary action and selection,
