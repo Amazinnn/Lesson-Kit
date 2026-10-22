@@ -1008,6 +1008,20 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
   padding: 18px;
   margin-bottom: 18px;
 }
+/* ---- 这一族卡片自己的规格（IMPL-W2e 追加 2）------------------------------
+   `pages.py` 的完成页等处用 `class='card lk-card'`，但 CSS 里 `.lk-card`
+   **零命中** ⇒ 卡片规格只由 `.card` 基类承担。
+   `.lk-card` 与 `.card` 基类**同规格**（12px 圆角 / 18px 留白 /
+   `--elev-1` 柔影 / **无描边**）⇒ 这里**显式复述一遍**，给这一族卡片一个
+   自己的规格落点（将来改卡片语言时，这一处与基类一起改），
+   **不另起一套卡片语言**（两个取值不同就会长出第二种卡片）。
+   ⚠️ `margin-bottom` 仍由基类给，不在这里复述（避免同一个值两个出口）。 */
+.lk-card {
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+  padding: 18px;
+}
 .solution-block {
   border-left: 2px solid var(--rule-structure);
   padding: 4px 10px;
