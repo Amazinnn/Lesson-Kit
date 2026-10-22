@@ -192,12 +192,6 @@
     });
   }
 
-  function updateScopeNames(nextDocument) {
-    var currentTray = document.getElementById("scope-tray");
-    var nextTray = nextDocument.getElementById("scope-tray");
-    if (currentTray && nextTray) currentTray.dataset.kpNames = nextTray.dataset.kpNames || "{}";
-  }
-
   function installPage(nextDocument, requestSequence) {
     var nextLayout = nextDocument.getElementById("layout");
     var nextPage = nextDocument.getElementById("middle-page");
@@ -216,7 +210,6 @@
     if (window.WorkbenchMiddlePage) window.WorkbenchMiddlePage.dispose();
     updateLayout(nextLayout);
     updateActiveNavigation(nextDocument);
-    updateScopeNames(nextDocument);
     middlePage.innerHTML = nextPage.innerHTML;
     /* 骨架被内容替换 —— 容器动画此刻接管；加载态复位。 */
     setMiddleBusy(false);
