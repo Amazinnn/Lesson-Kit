@@ -883,3 +883,53 @@ renderingArchived || !run.reveal_timing || currentMode() === "on_submit" ? "" : 
 `.lk-combo-banner` **全为 0**；per_item 1→5 逐格增长、5 连点亮横幅、
 断裂时火苗**逐簇熄灭**（`7ms:lit=5 → 54ms:4 → 78ms:3 → 128ms:2 → 179ms:1 → 203ms:0`）+
 `nudge` 自 54ms 起生效 + 计数器归零。真实池 mtime 仍是 `Oct 20 15:00`。
+
+### 9.23 A-58 落地：两份连对状态机 → 一份 `window.lkStreak`
+
+**公共 API**（`workbench.js`，与 `window.lkTicker` / `window.lkFlame` 同级）：
+```js
+window.lkStreak = { create: streakCreate };
+// streakCreate(options) -> { count(), reset(), html(), judge(verdict), apply(landed) }
+//   judge(true|false) -> { before, breaking, correct } | null（非布尔判定返回 null）
+//   apply({before,breaking,correct}) -> 数字滚动 / 火苗 / 横幅 / 断裂负反馈
+```
+**判定来源仍留在各自的流里**（快速练习流读微测判定、试卷流读提交载荷的 `verdict`）——
+公共 API 只管「拿到判定之后怎么反馈」。
+
+**删掉的重复实现**：
+- `practice-flow.js`：**7 个函数**（`streakTier` / `streakHtml` / `streakFlames` / `setStreakNumber` /
+  `showComboBanner` / `growStreak` / `breakStreak`）+ 7 个状态量
+- `paper-practice.js`：**9 个函数**（多 `streakPart` / `judgeStreak` / `applyStreak`）+ 同一套 7 个状态量
+⇒ 共 **16 个函数 + 14 个状态量**。**横幅资产仍只有一份**；Ticker / 火苗仍走公共 API，**未造第二份**。
+
+**A-59 的三个判据原样保留**（含并行补丁新增的 `!run.reveal_timing`），
+`currentMode()` 的兜底一个字未动 ✓。
+
+**before/after 请求序列**（`recorder.py` 的 `diff_sequences`）：
+写请求 **94 / 94**，`added/removed/changed = 0/0/0` ⇒ **G-1 PASS**；
+读请求多重集相同、**总事件 159 / 159**。
+连对行为对照 **79 个采样步**：**75 步 DOM 状态逐字相同**，
+仅 4 步因**采样墙钟抖动**不同（断裂时间线的**绝对时刻**差几十毫秒，
+**逐簇间隔与条数一致**）。
+
+**六条阈值逐项实测**（两条流各一份）：横幅 5/10/15/20/25/30 **全部触发**（≥10 加 `is-large`）·
+断裂阈值 >4 必明示负反馈（`nudge=True` + 同一 animation + 数字归零）·
+火苗 ≤10 簇、点亮 `0/80/160/240/320ms` 错峰、熄灭逐簇 ·
+档位冗余靠**底色 + 内边距（14px → 18px）+ 火苗簇数**（**不靠字重**）。
+`on_submit` 模式下 mounted **全为 False**（before/after 一致）。
+真实池 sha256 / mtime_ns / size **与开工前逐项一致**。
+
+**它报的 3 条 pytest 失败 —— 与它无关（它自己证了）**：失败项是
+`test_ui_routes.py` 的 CSS token 断言（`--dsw-brand-primary` / `--lk-paper`），
+源于**并行 agent（2.3）未提交的 token 改名**（`--lk-paper` → `--surface-sheet`）。
+它把这三个文件 `git checkout --` 回 HEAD 后**同样 3 条失败** ⇒ 归因正确。
+⇒ **主会话接住**：2.3 落地后同步 `test_ui_routes.py` 的这两条断言。
+
+**两条裁决**：
+- **A-80** `window.lkStreak` 视为「**可有可无的共用件**」：缺失时**不挂连对计数器**、
+  **不落第二份退化实现**（那正是 A-58 要消灭的东西）；
+  理由与 A-59 同源：挂一个恒为 0 的数字是**没有信息量的假事实**。
+- **A-81** 档位阈值以**代码口径 30** 为准（两条流一直以来的现值，A-58 不得改），
+  **CSS 注释「≥5 连」是错的**要改成 ≥30。
+  ⚠️ 这条注释是 W2e 写 CSS 时与实现口径对不上 ——
+  **注释里的数字没对着代码核过**，这类漂移只有把注释与实现放一起看才暴露。
