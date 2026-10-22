@@ -348,7 +348,7 @@ DATA_MODEL 没有登记语义**」的字段/口径（hub 最近使用、行动�
 | **与 `tasks.md` 27.2 要求的 128 条的差额** | **+36 条**。差额原因见 §4.1，**不是**为凑数编造 |
 | **表行字段完整性** | 每行 7 列（ID / 位置 / 现状 / 冲突方 / 建议归属 / 优先级 / 改成什么），**164 × 7 = 1148 格全部非空**；六个内容列**无一空值** |
 | **重复 ID** | **0**（164 个 ID 全互异；ID 已按文件顺序重排过一次） |
-| **「建议归属」取值合法性** | **163 / 164 条**落在 `openspec change` / `docs/DATA_MODEL.md` / `docs/GLOSSARY.md` / `spec delta` / `产品决策` 五值之内（分布：`openspec change` 72 / `spec delta` 35 / `产品决策` 35 / `docs/GLOSSARY.md` 16 / `docs/DATA_MODEL.md` 5）；余下 **1 条（CD-163）**的归属值写作 `docs/PRODUCT-MANUAL.md`（第六值，本轮只登记、不裁决） |
+| **「建议归属」取值合法性** | **163 / 164 条**落在 `openspec change` / `docs/DATA_MODEL.md` / `docs/GLOSSARY.md` / `spec delta` / `产品决策` / `docs/PRODUCT-MANUAL.md` 五值之内（分布：`openspec change` 72 / `spec delta` 35 / `产品决策` 35 / `docs/GLOSSARY.md` 16 / `docs/DATA_MODEL.md` 5）；余下 **1 条（CD-163）**的归属值写作 `docs/PRODUCT-MANUAL.md`（第六值，本轮只登记、不裁决） |
 | **「优先级」取值与分布** | 全部落在 高 / 中 / 低 三值之内（分布：**高 41 / 中 87 / 低 36**） |
 | **「改成什么 / 谁来定」非空** | **164 / 164** |
 | **表内交叉引用有效性** | 25 处 `CD-xxx` 交叉引用全部指向存在的行（已逐条复核；重排时修正了 CD-146 → CD-141 一处失效引用） |

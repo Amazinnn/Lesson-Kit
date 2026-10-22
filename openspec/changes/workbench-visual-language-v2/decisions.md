@@ -1475,6 +1475,17 @@ mockup 修正后仍有意保留了近黑底，并主动问「发送按钮要不�
   「代码块反白面（**不是**一层纸面）」。
 - `graph.html` → 不在本轮范围，不动。
 
+### A-36 漂移册「建议归属」的允许值集合扩为六值
+
+漂移册自检发现：`CD-163` 的「建议归属」写的是 `docs/PRODUCT-MANUAL.md`，
+而册子声明的允许值只有五个（`openspec change` / `docs/DATA_MODEL.md` /
+`docs/GLOSSARY.md` / `spec delta` / `产品决策`）—— **第六个值，不在声明里**。
+
+**裁决：允许值集合扩为六值** —— 增列 `docs/PRODUCT-MANUAL.md`。
+理由：PRODUCT-MANUAL 是职责文件（用户可见说明），与 DATA_MODEL / GLOSSARY 同级；
+一条漂移若该由它裁定，就该指到它，不该硬塞进「产品决策」或「openspec change」。
+**CD-163 归入「六类来源之外」组**，并保留它作为第六值的第一例。
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，
