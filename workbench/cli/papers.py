@@ -23,11 +23,15 @@ def build_parser(prog="lesson-kit papers"):
 
 
 def main(argv=None, prog="lesson-kit papers"):
+    args = build_parser(prog).parse_args(argv)
+    return run(args)
+
+
+def run(args):
     # Reuse the super-CLI workspace resolver and Pool; this extension only
     # checks the manifest and delegates persistence to the Data writer.
     from workbench.cli import main as cli
 
-    args = build_parser(prog).parse_args(argv)
     workspace = cli._workspace(args.name)
     db_path = Path(workspace["path"]) / workspace["db"]
     pool = None

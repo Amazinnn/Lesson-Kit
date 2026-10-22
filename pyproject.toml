@@ -21,6 +21,7 @@ lesson-kit = "workbench.cli.entry:lesson_kit_main"
 include = ["workbench*"]
 
 [tool.setuptools.package-data]
+"workbench" = ["resources/skills/source-bounded-learning-drill/*.md"]
 "workbench.server" = [
   "static/*.css",
   "static/*.js",

@@ -6,6 +6,7 @@ import re
 import shlex
 import shutil
 import subprocess
+from importlib import resources
 from pathlib import Path
 
 from workbench import registry
@@ -349,6 +350,7 @@ def build_command(provider, session_id=None, mode="print"):
         result.append("-")
         return result
     if name == "pi":
+        args = _pi_skill_args(args)
         # `rpc` keeps one process per conversation; `print` is one process per turn.
         result = [command, "--mode", "rpc"] if mode == "rpc" else [
             command, "--print", "--mode", "json"]
@@ -368,6 +370,24 @@ def build_command(provider, session_id=None, mode="print"):
     if session_id:
         result.extend(["--resume", session_id])
     return result
+
+
+def _pi_skill_args(args):
+    bundled = str(resources.files("workbench").joinpath(
+        "resources", "skills", "source-bounded-learning-drill"))
+    legacy = str(Path.home() / ".lessonkit-workbench" / "skills" /
+                 "source-bounded-learning-drill")
+    managed = {os.path.normcase(os.path.normpath(path)) for path in (bundled, legacy)}
+    result = []
+    index = 0
+    while index < len(args):
+        if (args[index] == "--skill" and index + 1 < len(args)
+                and os.path.normcase(os.path.normpath(os.path.expanduser(args[index + 1]))) in managed):
+            index += 2
+        else:
+            result.append(args[index])
+            index += 1
+    return [*result, "--skill", bundled]
 
 
 def _text(value):

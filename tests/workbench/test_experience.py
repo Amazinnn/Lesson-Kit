@@ -185,14 +185,16 @@ class PracticeExperienceTests(unittest.TestCase):
         self.assertEqual(item["updated_by"], "agent")
         self.assertEqual(item["problems"][0]["title"], "典型状态转移题")
 
-    def test_installed_cli_dispatches_lesson_kit_experience_without_touching_legacy_parser(self):
-        with mock.patch("workbench.cli.experience.main", return_value=7) as run:
+    def test_installed_cli_uses_shared_experience_parser_and_handler(self):
+        with mock.patch("workbench.cli.experience.run", return_value=7) as run:
             result = cli_entry.lesson_kit_main([
                 "experience", "fixture", "get", self.kp_id,
             ])
         self.assertEqual(result, 7)
-        run.assert_called_once_with(
-            ["fixture", "get", self.kp_id], prog="lesson-kit experience")
+        run.assert_called_once()
+        args = run.call_args.args[0]
+        self.assertEqual((args.name, args.action, args.kp_id),
+                         ("fixture", "get", self.kp_id))
 
     def test_non_experience_cli_commands_still_delegate_to_the_existing_super_cli(self):
         with mock.patch("workbench.cli.main.lesson_kit_main", return_value=3) as run:

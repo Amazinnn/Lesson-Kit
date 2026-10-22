@@ -65,11 +65,15 @@ def build_parser(prog="lesson-kit experience"):
 
 
 def main(argv=None, prog="lesson-kit experience"):
+    args = build_parser(prog).parse_args(argv)
+    return run(args)
+
+
+def run(args):
     # Import the super-CLI helpers lazily so this module stays a thin adapter and
     # does not duplicate workspace resolution or JSON input semantics.
     from workbench.cli import main as cli
 
-    args = build_parser(prog).parse_args(argv)
     workspace = cli._workspace(args.name)
     pool = cli._pool(workspace)
     try:

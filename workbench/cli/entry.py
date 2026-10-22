@@ -1,39 +1,15 @@
-"""Installed `lesson-kit` entry point with small extension dispatch."""
+"""Installed `lesson-kit` entry point using the shared command parser."""
 
-import sys
-
-
-EXTENSION_COMMANDS = {"evidence", "experience", "mirror", "papers"}
+from workbench.cli import main
 
 
 def command_names():
-    """Every top-level command exposed by the installed `lesson-kit` entry point."""
-    from workbench.cli import main
-    return sorted(set(main.command_names()) | EXTENSION_COMMANDS)
+    """Every top-level command exposed by the installed CLI."""
+    return main.command_names()
 
 
 def lesson_kit_main(argv=None):
-    args = list(sys.argv[1:] if argv is None else argv)
-    if args and args[0] == "evidence":
-        from workbench.cli import evidence
-        return evidence.main(args[1:], prog="lesson-kit evidence")
-    if args and args[0] == "experience":
-        from workbench.cli import experience
-        return experience.main(args[1:], prog="lesson-kit experience")
-    if args and args[0] == "mirror":
-        from workbench.cli import mirror
-        return mirror.main(args[1:], prog="lesson-kit mirror")
-    if args and args[0] == "papers":
-        from workbench.cli import papers
-        return papers.main(args[1:], prog="lesson-kit papers")
-    if len(args) >= 3 and args[0] == "ingest" and args[2] == "bundle":
-        from workbench.cli import content_bundle
-        return content_bundle.main(
-            [args[1], *args[3:]],
-            prog=f"lesson-kit ingest {args[1]} bundle",
-        )
-    from workbench.cli import main
-    return main.lesson_kit_main(args)
+    return main.lesson_kit_main(argv)
 
 
 if __name__ == "__main__":

@@ -78,6 +78,8 @@ class ConversationProviderTests(unittest.TestCase):
                         conversation_providers.IDLE_SECONDS)
 
     def test_pi_uses_print_json_and_native_session_resume(self):
+        from importlib import resources
+
         from workbench.bridge import conversation_providers
 
         provider = {
@@ -85,15 +87,18 @@ class ConversationProviderTests(unittest.TestCase):
         }
         new = conversation_providers.build_command(provider)
         resumed = conversation_providers.build_command(provider, "01a0af85-5427")
+        skill = str(resources.files("workbench").joinpath(
+            "resources", "skills", "source-bounded-learning-drill"))
 
         self.assertEqual(
             new,
-            ["pi", "--print", "--mode", "json", "--model", "minimax/MiniMax-M2.7"],
+            ["pi", "--print", "--mode", "json", "--model", "minimax/MiniMax-M2.7",
+             "--skill", skill],
         )
         self.assertEqual(
             resumed,
             ["pi", "--print", "--mode", "json", "--model", "minimax/MiniMax-M2.7",
-             "--session", "01a0af85-5427"],
+             "--skill", skill, "--session", "01a0af85-5427"],
         )
 
     def test_normalizes_pi_session_and_text_delta(self):

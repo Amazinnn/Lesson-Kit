@@ -62,6 +62,10 @@ def _exit_code(report):
 
 def main(argv=None, prog="lesson-kit mirror"):
     args = build_parser(prog).parse_args(argv)
+    return run(args)
+
+
+def run(args):
     workspace = cli_main._workspace(args.workspace)
     pool = cli_main._pool(workspace)
     try:

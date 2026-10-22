@@ -868,9 +868,20 @@ def cmd_doctor(args):
 
 
 def build_parser(prog="lesson-kit"):
+    from workbench.cli import content_bundle, evidence, experience, mirror, papers
+
     parser = argparse.ArgumentParser(prog=prog,
                                      description="lesson-kit workbench CLI")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    for name, module in (
+        ("evidence", evidence), ("experience", experience),
+        ("mirror", mirror), ("papers", papers),
+    ):
+        extension = module.build_parser()
+        p = sub.add_parser(name, parents=[extension], add_help=False,
+                           help=extension.description)
+        p.set_defaults(func=module.run)
 
     p = sub.add_parser("init", help="register a folder; create the pool and skeleton first if it is not a workspace yet")
     p.add_argument("path", nargs="?", default=".",
@@ -1123,6 +1134,12 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("name")
     ingest_sub = p.add_subparsers(dest="action", required=True)
 
+    action = ingest_sub.add_parser(
+        "bundle", parents=[content_bundle._parser(
+            f"{prog} ingest bundle", include_workspace=False)], add_help=False,
+        help="check or apply a Git-authored content bundle")
+    action.set_defaults(func=_run_content_bundle)
+
     action = ingest_sub.add_parser("batches")
     action.set_defaults(func=cmd_ingest)
 
@@ -1188,6 +1205,14 @@ def build_parser(prog="lesson-kit"):
     p.set_defaults(func=cmd_experiment)
 
     return parser
+
+
+def _run_content_bundle(args):
+    from workbench.cli import content_bundle
+
+    args.workspace = args.name
+    return content_bundle.run(args, content_bundle._parser(
+        f"lesson-kit ingest {args.name} bundle"))
 
 
 def command_names(parser=None):

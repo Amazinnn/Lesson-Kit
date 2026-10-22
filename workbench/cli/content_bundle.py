@@ -19,7 +19,7 @@ _ID_FIELDS = (
 )
 
 
-def _parser(prog: str) -> argparse.ArgumentParser:
+def _parser(prog: str, *, include_workspace: bool = True) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=prog,
         description=(
@@ -27,7 +27,8 @@ def _parser(prog: str) -> argparse.ArgumentParser:
             "existing governed ingest boundary."
         ),
     )
-    parser.add_argument("workspace")
+    if include_workspace:
+        parser.add_argument("workspace")
     parser.add_argument("--input", required=True, help="UTF-8 JSON file, or - for stdin")
     parser.add_argument(
         "--apply",
@@ -202,6 +203,11 @@ def _render_selection(selection: dict, items: list[dict], mapping: dict[str, str
 def main(argv=None, *, prog="lesson-kit ingest bundle") -> int:
     parser = _parser(prog)
     args = parser.parse_args(argv)
+    return run(args, parser)
+
+
+def run(args, parser=None) -> int:
+    parser = parser or _parser("lesson-kit ingest bundle")
     if args.backup and not args.apply:
         parser.error("--backup requires --apply")
     if (args.student_out or args.solutions_out) and not args.selection:

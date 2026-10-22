@@ -32,9 +32,13 @@ def build_parser(prog="lesson-kit evidence"):
 
 
 def main(argv=None, prog="lesson-kit evidence"):
+    args = build_parser(prog).parse_args(argv)
+    return run(args)
+
+
+def run(args):
     from workbench.cli import main as cli
 
-    args = build_parser(prog).parse_args(argv)
     workspace = cli._workspace(args.name)
     db_path = Path(workspace["path"]) / workspace["db"]
     if not db_path.is_file():
