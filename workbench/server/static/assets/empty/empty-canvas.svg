@@ -6,10 +6,10 @@
       <ellipse cx="116" cy="165" rx="44" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
     </g>
     <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
-      <path d="M 74 145 L 160 145" stroke-width="2"/>
-      <path d="M 126 140 L 112 166" stroke-width="2"/>
-      <path d="M 96 138 L 76 166" stroke-width="3"/>
-      <path d="M 136 138 L 156 166" stroke-width="3"/>
+      <path d="M 78 146 L 162 146" stroke-width="2"/>
+      <path d="M 128 148 L 116 166" stroke-width="2"/>
+      <path d="M 96 140 L 69.5 166" stroke-width="3"/>
+      <path d="M 144 140 L 170.5 166" stroke-width="3"/>
     </g>
     <g class="asset-empty__wash">
       <path fill-rule="evenodd" d="M 74 53 L 156 53 Q 160 53 160 57 L 160 136 Q 160 140 156 140 L 74 140 Q 70 140 70 136 L 70 57 Q 70 53 74 53 Z M 81 62 L 149 62 Q 151 62 151 64 L 151 129 Q 151 131 149 131 L 81 131 Q 79 131 79 129 L 79 64 Q 79 62 81 62 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
