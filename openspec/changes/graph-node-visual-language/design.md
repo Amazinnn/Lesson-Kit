@@ -86,37 +86,40 @@
 
 1. **相机是唯一的缩放来源，且它把排版单位一起缩小。**
    `.graph-stage` 上一个 `transform: translate(...) scale(s)`
-   （`workbench/server/static/workbench.js:1106`）作用于**整棵子树**；
-   而 `--size`（`workbench.js:1309`）、`.node-value` 的 `clamp(11px, size*.28, 18px)`
-   （`workbench.css:1690`）、`.label` 的 `12px`（`workbench.css:1711`）、
-   `.node-satellite` 的 `7px`（`workbench.css:1694`）**全是世界像素**。
+   （`workbench/server/static/workbench.js:2201`）作用于**整棵子树**；
+   而 `--size`（`workbench.js:2404`）、`.node-value` 的 `clamp(11px, size*.28, 18px)`
+   （`workbench.css:3776`）、`.label` 的 `12px`（`workbench.css:3797`）、
+   `.node-satellite` 的 `7px`（`workbench.css:3780`）**全是世界像素**。
    〔实证〕Fit 后 `s = 0.17–0.49` ⇒ 圆直径 3–30px、标签 2.0–5.9px、可见标签 0–1/31
-   （`workbench.css` 与 `workbench.js:1222-1225` 的离线复算，见审计 §7.3）。
+   （`workbench.css` 与 `workbench.js:2317-2320` 的离线复算，见审计 §7.3）。
 2. **节点是五层叠一个圆。** `.metric-track`（度量弧）+ `.status-ring`（状态环）+
    `.node-face`（面）+ `.node-value`（数字）+ `.node-satellite`（状态点）
-   （`workbench.js:957-1053` 的 DOM 结构），加下方 `.label` 与 `.meta`。
+   （`workbench.js:2052-2148` 的 DOM 结构），加下方 `.label` 与 `.meta`。
    〔实证〕`.status-ring` 的唯一变色分支 `.node-wrap.in-scope .status-ring`
-   （`workbench.css:1708`）**永不命中** —— `graphSyncScope()`（`workbench.js:1077`）
-   是空函数；`.node-wrap.warning`（`workbench.css:1653`）也没有任何 JS 会加。
-3. **同环两维度。** 弧长 = 当前投影指标（`workbench.js:1067` 写 `--metric-angle`），
-   弧色 = 知识点重要度（`workbench.css:1651-1652` 的 `--kind-color`）。
+   （`workbench.css:3794`）**永不命中** —— `graphSyncScope()`（`workbench.js:2172`）
+   是空函数；`.node-wrap.warning`（`workbench.css:3739`）也没有任何 JS 会加。
+3. **同环两维度。** 弧长 = 当前投影指标（`workbench.js:2162` 写 `--metric-angle`），
+   弧色 = 知识点重要度（`workbench.css:3737-3738` 的 `--kind-color`）。
 4. **学习状态实质不可辨。** 唯一在线通道是 7px 世界像素的卫星点，
    而 28/31 个节点同为 `state-new`（同一个灰）。
-5. **「塑料感」在装饰层。** 〔实证〕`.node-face`（`workbench.css:1676-1684`）带
+5. **「塑料感」在装饰层。** 〔实证〕`.node-face`（`workbench.css:3762-3770`）带
    `box-shadow: 0 2px 6px rgba(55,48,37,.055)`、
    `inset 0 0 0 1px rgba(255,255,255,.82)` 内高光、1px 描边与
    `.node-face::before` 的径向高光；参照实现里同样的病是
    `frontend/editable-graph/src/styles.css:295-300` 的 `drop-shadow` + 1.4px 描边。
 6. **图谱自有 token，且与全站零耦合。** 12 个**裸名**变量声明在 `:root`
-   （`workbench.css:1505-1518`）；〔实证〕图谱区段 `:1497-1884` 对
+   （`workbench.css:3591-3604`）；〔实证〕图谱区段 `:3583-3970` 对
    `var(--lk-*)` / `var(--dsw-*)` 的引用 **0 次**，且这 12 个裸名在区段外的引用
-   也 **0 次**（`awk 'NR<1497||NR>1884' workbench.css | grep -cE
-   'var\(--(paper|ink|hair|blue|blueSoft|yellow|yellowSoft|red|redSoft|green|graphite|shadow)\b'` → 0）。
-7. **图例与实况不符。** 图例「相关」色 `#aaa399`（`workbench.css:1796`），
+   也 **0 次**（`awk 'NR<3583||NR>3970' workbench.css | grep -cE
+   'var\(--(paper|ink|hair|blue|blueSoft|yellow|yellowSoft|red|redSoft|green|graphite|shadow)\)'` → 0）。
+   ⚠️ 原命令的行号与正则已过时，修正版见此（原版实测输出 **170**：行号 `1497/1884` 已过时，
+   且正则的 `\b` 过宽，误匹配主线的 `--ink-strong` / `--ink-muted` / `--ink-faint` 等；
+   修正版实测 = **0**）。
+7. **图例与实况不符。** 图例「相关」色 `#aaa399`（`workbench.css:3882`），
    WebGL 实际线色 `rgb(117,112,104)` = `#757068`（`graph-renderer.js:15-21`）。
-8. **底噪是每帧 600 个 alpha 混合光斑**（`workbench.js:1482-1488`、`:1538-1626`），
-   与数据无关，只在节点周围挖洞（`:1515-1530`）。
-9. **图例／图谱外壳是服务端渲染的**（`workbench/server/pages.py:410-481`），
+8. **底噪是每帧 600 个 alpha 混合光斑**（`workbench.js:2577-2583`、`:2633-2721`），
+   与数据无关，只在节点周围挖洞（`:2610-2625`）。
+9. **图例／图谱外壳是服务端渲染的**（`workbench/server/pages.py:661-732`），
    节点是 DOM（可访问、可交互），关系线是 WebGL2 canvas。
 10. **物理半径已经是投影驱动的。** 〔实证〕`sizeFor(score)`（`graph-physics-core.js:60-61`）
     = `20 + 60·√score`（世界直径 20–80），而 `score` 来自
@@ -181,10 +184,10 @@
 4. **物理尺寸**（`node.size`）**一字不动**（A-26 / A-28.4）⇒ 物理、footprint、碰撞、
    端口间隙**全部照旧**；绘制尺寸与物理尺寸**解耦**（D-3）。
 
-**实现落点**：JS（`graphPaintNodes()`，`workbench.js:1296-1325`）每帧写两个值：
+**实现落点**：JS（`graphPaintNodes()`，`workbench.js:2391-2420`）每帧写两个值：
 `--node-d`（屏幕 px 的绘制直径，供字号换算与命中区）与 `--node-box`（舞台 px 的盒子尺寸
 = `--node-d / s`）。盒子是透明的，只承载命中区与两个子层的定位。
-`--inv-scale = 1 / var(--stage-scale)` 由 `graphApplyView()`（`workbench.js:1104-1107`）
+`--inv-scale = 1 / var(--stage-scale)` 由 `graphApplyView()`（`workbench.js:2199-2202`）
 在写 `transform` 的**同一次调用**里写到 `.graph-stage` 上 ——
 **一次相机变化 = 一次变量写入**，不引入任何新状态、不引入逐节点的 JS 计算。
 另写一个 `--label-alpha`（标签的对数淡出因子，D-6.5）。
@@ -265,9 +268,9 @@
   `OBSIDIAN-GRAPH.md` §1.1 raw@2212446：`r=500, alpha=0.0001`；
   本地 `frontend/editable-graph/src/styles.css:288-293` 的 `.node .halo` 同理），
   但**不得有任何可见痕迹**（无填充、无描边、无光晕）。
-- **删除**：`.node-face` 的 `box-shadow`（`workbench.css:1678`）、
+- **删除**：`.node-face` 的 `box-shadow`（`workbench.css:3764`）、
   `inset 0 0 0 1px rgba(255,255,255,.82)` 内高光、1px 描边、
-  `.node-face::before` 的径向高光（`:1684-1687`）、`.status-ring`、`.node-satellite`、
+  `.node-face::before` 的径向高光（`:3768-3771`）、`.status-ring`、`.node-satellite`、
   `.metric-track`（D-10）。
 - **不做**：外环、内核双层同心圆（推翻 G-1 / G-13）、度量弧（G-2 仍成立，但形式更彻底）。
 
@@ -314,7 +317,7 @@
 
   | 投影 | 公式 | 区间 | 依据 |
   |---|---|---|---|
-  | 关系结构 `structure` | `R = clamp(5 + 2.2·√degree, 5, 13)` | **5 – 13** | A-28：「关系结构投影用**度数**」；公式照 `OBSIDIAN-GRAPH.md` §6.1 的建议值（Obsidian 官方是 `3·√(weight+1)`，clamp 8–30，raw@2215420） |
+  | 关系结构 `structure` | `R = clamp(5 + 2.2·√degreeRaw, 5, 13)`（**`degree` = `state.degreeRaw`**） | **5 – 13** | A-28：「关系结构投影用**度数**」；公式照 `OBSIDIAN-GRAPH.md` §6.1 的建议值（Obsidian 官方是 `3·√(weight+1)`，clamp 8–30，raw@2215420）。**〔A-108〕`degree` 取 `degreeRaw`**（按边强度加权的原始度，`graph-physics-core.js:1419-1424`），**不是**纯边数的 `degreeCount`（`:1420-1426`）—— 前者才是 `scoreFor('structure')`（`:1465`）归一化的那个 |
   | 学习状态 `state` | `R = clamp(5 + 8·√score, 5, 13)` | **5 – 13** | `score` = `stateAttention(node.state)`（`graph-physics-core.js:1463-1470`） |
   | 题目数量 `problem_count` / 重要性 `importance` | `R = clamp(6.5 + 6.5·√score, 6.5, 13)`（见 D-3.4） | **6.5 – 13** | **A-34 改写 A-28 的字面读**：A-28 的**目的**是「给 12px 的字腾出**直径 13px**」⇒ **半径下限 6.5px**；半径**随量映射**（`score = 1` 的极值节点 ⇒ 13.0px，即 5–13 区间上界），**不是**恒 13px |
 
@@ -325,6 +328,11 @@
   〔实证〕`sizeFor()` 是 `√` 的严格单调函数 ⇒ `R_screen` 与 `node.size` 同序；
   结构投影用的是**原始度数**而非归一化 score，但归一化是度数的单调变换
   ⇒ 两者仍同序。
+  **〔A-108 写死〕结构投影公式里的 `degree` = `state.degreeRaw`**（与 `scoreFor` **同源**
+  的那个加权度数），**不是** `degreeCount` ⇒ **结构投影与物理半径同序**；
+  若误取 `degreeCount`，两者就**不同序**，违反本节「单调同源」与 delta 的
+  「The drawn radius SHALL be derived from the node's metric in the same order as the
+  physical radius」。
 - **物理半径一律不动**：`sizeFor()`（`graph-physics-core.js:60-61`）**一行不改**
   （世界直径仍是 20–80）。**这是与旧 D-3 最大的差别**：旧设计把物理直径改成 28–60，
   那已经越过了 A-26 的冻结线，本设计**撤销**该改动。
@@ -422,7 +430,7 @@
 **决策**
 
 图谱使用**自己的一套暖色板**，不复用全站三角色（蓝 / 黄 / 红），也不复用图谱现有的
-`--blue / --yellow / --red`（`workbench.css:1508-1513`，冷蓝）。
+`--blue / --yellow / --red`（`workbench.css:3594-3599`，冷蓝）。
 
 **为什么不受全站三角色配额约束**
 
@@ -442,9 +450,15 @@
 |---|---|---|
 | 关系结构 `structure` | **墨阶三档** | 颜色**不承载语义**；关系由边的线型与箭头承载 |
 | 题目数量 `problem_count` | **量值橙阶 4 档** | 单色阶 |
-| 重要性 `importance` | **量值橙阶 4 档**（与上一行同一套） | 单色阶 |
+| 重要性 `importance` | **量值橙阶 —— 按数据实际只占 2 档**（`core` / `supplementary` ⇒ `0.55` / `1` ⇒ 落在橙阶的第 3、第 4 档；与上一行同一套色阶） | 单色阶 |
 | 学习状态 `state` | **状态四色**（未学中性灰 / 复习琥珀 / 掌握橙 / 需突破砖红） | 分类色 |
 
+> **〔A-107〕四档是色键的「设计上限」，实际占用档数随数据而变**：
+> `importance` 在真实数据里只有 `core` / `supplementary` **两类** ⇒ 它**只占 2 档**，
+> 另两档**必然为空**（这是数据事实、不是缺陷）。
+> ⚠️ **不许发明数据**（不许为了凑四档而给内容侧造第三、四档的重要性分级）——
+> 要四档是**内容侧**给知识点补重要性分级的**另一个决定**，不是图谱渲染能解决的。
+>
 > 〔口径变化说明〕旧设计里「墨阶三档」是**同心圆的三个零件**（外环 / 圆心数字 / 内核）；
 > 在**实心圆点**形态下没有三档零件，**三档变成点填充色的三个档位**（按结构分档）。
 > 色**键**（哪一档对应什么）不变，**载体**变了。
@@ -540,11 +554,11 @@
 
 **决策**
 
-| 投影（`pages.py:411-412`） | 节点色键 | 性质 | 依据 |
+| 投影（`pages.py:662-663`） | 节点色键 | 性质 | 依据 |
 |---|---|---|---|
 | 关系结构 `structure` | **墨阶三档**（D-4 的表） | 颜色**不承载语义**；关系由边的线型与箭头承载 | G-22 |
 | 题目数量 `problem_count` | **量值橙阶 4 档** | 单色阶 | G-12 / G-20 |
-| 重要性 `importance` | **量值橙阶 4 档**（与上一行同一套） | 单色阶 | G-12 / G-20 |
+| 重要性 `importance` | **量值橙阶 —— 按数据实际只占 2 档**（`core` / `supplementary` ⇒ `0.55` / `1` ⇒ 橙阶第 3、第 4 档；与上一行同一套） | 单色阶 | G-12 / G-20 / **A-107** |
 | 学习状态 `state` | **状态四色** | 分类色 | G-12 / G-21 |
 
 - 〔推断〕两个**量值**投影共用同一套橙阶：G-12 的规则是「量值型投影用同一色相的
@@ -554,9 +568,12 @@
   （`score < .25` / `< .5` / `< .75` / 其余），取对应色阶。
   〔待核〕分档阈值在实现时用 dmath/ch06 的真实分布校验，避免某一档空置。
   〔口径〕结构投影用**墨阶三档**（按 `score` 切成 3 档），与橙阶的 4 档不同。
+  〔**A-107**〕`importance` **例外**：真实数据里 `importance` 只有 `core` / `supplementary`
+  **两类**（⇒ `0.55` / `1`）⇒ 该投影**按数据实际给两档**（橙阶第 3、第 4 档），
+  另两档**必然为空**；⚠️ **不许发明数据**（要四档是**内容侧**补重要性分级的**另一个决定**）。
 - **图例改两块**（G-14）：
   - **上半：关系线型** —— 现状的 5 项（先修 / 相关 / 应用 / 对比 / 隐含），
-    保留可点按显示/隐藏的行为（`pages.py:462-467` 的 `data-edge-type` + `aria-pressed`），
+    保留可点按显示/隐藏的行为（`pages.py:713-718` 的 `data-edge-type` + `aria-pressed`），
     只把「相关」色改成实况值 `#757068`（D-10），
     并**给有向的两项（先修 / 应用）补一个箭头符号**，把 D-7.3 的箭头语义钉在图例上。
   - **下半：节点颜色键** —— **随当前投影切换**。
@@ -577,7 +594,7 @@
 
 - G-8：「不同类型的图谱，配色不同（4 个投影各有自己的色键）」；
   G-14：「底部图例分两块 —— 上半是关系线型（保留现状），下半是节点颜色，随当前投影切换」。
-- 现状的图例**只解释关系、不解释节点**（`pages.py:462-467` 全是关系类型），
+- 现状的图例**只解释关系、不解释节点**（`pages.py:713-718` 全是关系类型），
   于是「蓝弧黄弧、灰点、数字」无从解读（审计归因 10）。
 - A-24.3 要求「箭头语义钉死」⇒ 图例是**钉住它的地方**（图上只能看到一条细线，
   箭头的形状在小尺寸下不易分辨）。
@@ -609,17 +626,17 @@
    「我们现在 r+18 太远，字和点『脱节』」。
 2. **常态可见**（G-5）：标签默认渲染，**不再按缩放阈值隐藏**。
    现状的 `LABEL_MIN_RADIUS_PX = 14` 与 `labelScaleThreshold()`
-   （`workbench.js:1290-1294`）+ `labelVisible` 判定（`:1319-1321`）**删除**；
+   （`workbench.js:2385-2389`）+ `labelVisible` 判定（`:2415-2417`）**删除**；
    〔实证〕这条规则在 Fit 后（s = 0.17–0.49）让 30/31 个节点没有标签。
 3. **字号与对比度**：**12 屏幕 px 恒定**（D-1 的 `calc(12px * var(--inv-scale))`；
    所有者裁决 **A-15** 定为 12px，**A-28 明确不变**），颜色 `#5c5549`（亮纸 7.24:1）/
    `#c9c2b5`（夜纸 9.82:1）—— 比现状的 `#2b2925`（≈15:1）**明显降一档**，
    但仍 ≥4.5:1（G-5「降低对比度不抢节点」）。
    保留纸色晕圈但**减薄**（`text-shadow: 0 1px 0 var(--paper), 0 0 3px var(--paper)`，
-   现状 `workbench.css:1713` 是 `0 0 6px`）——
+   现状 `workbench.css:3799` 是 `0 0 6px`）——
    〔依据〕`OBSIDIAN-GRAPH.md` §6.1：「官方没有光晕；我们的底色比官方杂乱，光晕有存在理由
    —— 但 4.4px 太粗，字会被『啃』一圈」；本地参照实现的 4.4px 描边同理。
-4. **换行而非截断**：`.label` 保持 `max-width` 语义（现状 `168px`，`workbench.css:1711`）
+4. **换行而非截断**：`.label` 保持 `max-width` 语义（现状 `168px`，`workbench.css:3797`）
    并**按屏幕像素补偿**（`calc(168px * var(--inv-scale))`），
    **不加** `text-overflow: ellipsis`、**不加** `-webkit-line-clamp`。
 5. **重叠让位**（G-23）：一个**屏幕空间**的去冲突 pass：
@@ -634,14 +651,14 @@
      `workbench-ui:248`「selected, hovered, and high-focus labels SHALL remain visible」一致）；
      被隐藏的标签在**悬停/选中该节点时立刻恢复**（`opacity` 回到 1）。
    - 被隐藏者的**完整标题**仍在悬浮提示（`label.title = node.title`，
-     `workbench.js:996`）与学习看板里可得。
+     `workbench.js:2091`）与学习看板里可得。
 6. **状态文字从节点上消失**（G-6 / A-24.5）：
-   - 删除 `.meta` 行（内容由 `workbench.js:1072-1073` 写入「状态标签 · 投影名 值」）；
+   - 删除 `.meta` 行（内容由 `workbench.js:2167-2168` 写入「状态标签 · 投影名 值」）；
    - 删除「学习状态」投影写入圆心的单字「练/复/熟/新」
-     （`STATE_SHORT`，`workbench.js:578`；写入点 `workbench.js:1060`）——
+     （`STATE_SHORT`，`workbench.js:1673`；写入点 `workbench.js:2155`）——
      状态投影**本来就没有数字**（D-3.4）。
-   - 状态名仍保留在：**学习看板**（`pages.py:474-477`）、
-     `button.title` / `label.title`（悬浮）、`aria-label`（`workbench.js:973`）。
+   - 状态名仍保留在：**学习看板**（`pages.py:725-728`）、
+     `button.title` / `label.title`（悬浮）、`aria-label`（`workbench.js:2068`）。
 
 **D-6.5 缩放时的标签淡出（**A-28 的定案，取代「不按缩放隐藏」的旧读法**）**
 
@@ -670,7 +687,7 @@
 
 〔实证〕`workbench-ui:471-473` 写的是「Node labels SHALL always display their complete
 text — wrapping to multiple lines instead of truncating」，
-但实现里 JS 会把标题在**第一个标点处截断**（`graphTitleCut`，`workbench.js:806-817`），
+但实现里 JS 会把标题在**第一个标点处截断**（`graphTitleCut`，`workbench.js:1901-1912`），
 标签显示的是**简称**。这是既有的**契约漂移**。
 本变更**不删简称**（删了会让标签长 2–3 倍，且 `labelWidth()` 依赖 `shortTitle`
 ⇒ 改布局物理，越界），而是**在 `workbench-ui` 的 delta 里把条款限定为
@@ -737,7 +754,7 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
     〔口径〕`edgeStyle()` 是**绘制辅助函数**（唯一消费点是 `graph-renderer.js:274` 的
     `runtime.edgeStyle(edge)`），**不是物理参数** ⇒ 改它落在 A-26 的
     「允许改（纯绘制）：边的绘制（线宽/透明度）」之内。
-    **边的类型与权重（`NEIGHBOR_WEIGHT` `:527`、`baseGapForStrength()` `:68-70`、
+    **边的类型与权重（`NEIGHBOR_WEIGHT` `:32`、`baseGapForStrength()` `:68-70`、
     `strength` 字段本身）一律不动** —— 强度仍然决定**布局距离与吸引**，只是不再改**画法**。
   - **线宽本就是屏幕像素**：现状 `graph-renderer.js:276` 的
     `style.width / Math.max(.25, scale)` 已经把线宽换算成屏幕像素 ⇒ 1.25 是同一口径下的换值。
@@ -766,7 +783,7 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
   （`OBSIDIAN-GRAPH.md` §3）⇒ 本设计与之一致。
 - **D-7.5 聚焦时的淡化幅度**（A-28 的定案）：**非邻接元素降到 alpha 0.2**
   （Obsidian 的常量 `fQ = .2`，`OBSIDIAN-GRAPH.md` §1.3 raw@2210794）。
-  - 现状：节点 dim 的 `opacity: .18`（`workbench.css:1645`）、
+  - 现状：节点 dim 的 `opacity: .18`（`workbench.css:3734`）、
     边的二跳系数 0.38 / 其余 0.07（`graph-renderer.js:277-282`）。
   - 新形态：边的「其余」系数 **0.07 → 0.2**（A-28：「现状 0.14 / 0.07 太狠」）；
     节点的 dim **0.18 → 0.2**；二跳邻域保持「次级」档（0.38 ⇒ 0.4，
@@ -793,13 +810,13 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 **否掉的备选**
 
 - **把缩放推进物理核心（Worker 知道 scale）**：否掉 —— 布局会随缩放变化 ⇒
-  缩放会 reheat 求解器，违反 `workbench.js:1107-1108` 的
+  缩放会 reheat 求解器，违反 `workbench.js:2202-2203` 的
   「Camera movement never reheats the solver」与 `workbench-ui:155-158`
   「Fit without rewriting layout」。
 - **端点保持旧半径，靠点盖住缺口**：缺口是 `R_screen − R_world·s` 屏幕 px
   —— 5–13px 的点盖不住，会露出一截短线。
 - **把关系线画在节点之上**：会破坏「关系由线型承载」的可读性，也与
-  现状 z-index（关系线 canvas = 1，`graph-renderer.js:147`；节点 = 2，`workbench.css:1646`）相反。
+  现状 z-index（关系线 canvas = 1，`graph-renderer.js:147`；节点 = 2，`workbench.css:3732`）相反。
 - **给每种关系一个不同的箭头形状**：否掉 —— A-24 只要求**语义钉死**，
   形状差异在小尺寸下不可读；**方向 + 图例**已足够。
 - **按关系强度分档线宽**（社区插件做法）：否掉 —— Obsidian 官方「与度数/权重无关」，
@@ -829,7 +846,7 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 | 常态 | 绘制半径 `R_screen`（5–13），投影色 | **无** | 常亮度 | 无阴影、无描边、无光晕 |
 | 悬停 | **× 1.06** + **换色**（走更实的一档） | **1 屏幕 px** 描边环（强调色） | **提亮**（字重 700） | 无阴影、无卫星点 |
 | 选中 | **× 1.12** + **换色**（走最实的一档） | **1 屏幕 px** 描边环（强调色） | **提亮**（字重 700） | 标签**永不隐藏**（D-6） |
-| 聚焦（1 跳 / 2 跳） | 沿用常态 | 无 | 沿用常态 | 沿用现有的 opacity / 权重机制（`workbench.js:1080-1105`）**不变** |
+| 聚焦（1 跳 / 2 跳） | 沿用常态 | 无 | 沿用常态 | 沿用现有的 opacity / 权重机制（`workbench.js:2174-2198`）**不变** |
 
 - **换色**：在**分类**投影下 = 同色相更饱和/更深的一档；在**量值**投影下 = 橙阶上
   **对比更强**的一档；关系结构投影下 = 墨阶的最深一档。
@@ -847,10 +864,10 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
   这样「亮色主题下标签色不变」这条既有观感不受影响，
   且**字重**是屏幕像素无关的通道，在任何缩放下都成立。
   〔实证〕本地参照实现也是这么做的（`frontend/editable-graph/src/styles.css:341-344`）。
-- **删除**：`.node-face` 的 `box-shadow`（`workbench.css:1678`）、
-  `.node-satellite` 的 `box-shadow`（`:1696`）、选中时的卫星点光晕（`:1707`）、
-  悬停时的 `translateY(-1px)` 抬升（`:1699`）、`.status-ring` 的 2px 蓝环（`:1708`）。
-- **保留**：`.node-wrap.dragging { z-index: 6 }`（`:1650`）与拖拽行为。
+- **删除**：`.node-face` 的 `box-shadow`（`workbench.css:3764`）、
+  `.node-satellite` 的 `box-shadow`（`:3782`）、选中时的卫星点光晕（`:3793`）、
+  悬停时的 `translateY(-1px)` 抬升（`:3785`）、`.status-ring` 的 2px 蓝环（`:3794`）。
+- **保留**：`.node-wrap.dragging { z-index: 6 }`（`:3736`）与拖拽行为。
 
 **理由**
 
@@ -858,7 +875,7 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
   **A-28 把它补全为「换色 + 1px 描边环 + 点放大 + 标签提亮」**。
 - 〔实证〕**Obsidian 官方的高亮机制正是「换色 + 1px 描边环」**
   （`OBSIDIAN-GRAPH.md` §1.3）：它**不是**拟物的光晕，而是**贴在圈外 1px 处的描边**。
-  我们仓库里的 `.node-wrap.selected .node-face`（`workbench.css:1701-1703`）是
+  我们仓库里的 `.node-wrap.selected .node-face`（`workbench.css:3788-3791`）是
   `box-shadow: … 0 0 0 2px var(--paper)` 的**光晕**，与官方不同 ⇒ 一并换掉。
 - 「加粗外环」这条通道在新形态下**已经不存在**（常态点没有环）⇒ 必须换一条，
   而「换色 + 细环」正是官方的做法。
@@ -891,21 +908,21 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 `.graph-tide` **保留**（G-4 原话：「其实那个还挺好看的」），但**绘制方式**从
 「每帧 600 个 alpha 混合光斑」改为「**预渲染 + 每帧一次 blit**」：
 
-1. **预渲染**：把 5 条色带 + 尘埃点 + 短线段（`workbench.js:1482-1488`、`:1589-1622`）
-   在**半分辨率**离屏画布上渲染一次（尺寸随 `graphTideResize()`，`:1501-1513`）。
+1. **预渲染**：把 5 条色带 + 尘埃点 + 短线段（`workbench.js:2577-2583`、`:2684-2717`）
+   在**半分辨率**离屏画布上渲染一次（尺寸随 `graphTideResize()`，`:2596-2608`）。
    〔实证〕底噪是极低 alpha（0.018–0.13）的纹理，半分辨率放大后肉眼无差。
 2. **每帧**：一次 `drawImage`（带缓慢的亚像素漂移，保留现状的「活纸纹」感）
    + **节点挖洞**用 `destination-out` 在**可见节点位置**画径向渐变
    （≤31 次渐变，而不是 600 个点 × 31 个节点的 18,600 次距离计算）。
-3. **求解时的 surge**（`graphTideSurge()`，`:1497-1499`）改为对 blit 的整体
+3. **求解时的 surge**（`graphTideSurge()`，`:2592-2594`）改为对 blit 的整体
    alpha / 缩放施加，而不是重算 600 个点。
-4. `prefers-reduced-motion` 下仍只画一帧（现状 `:1634`、`:1639`）—— 保持不变。
+4. `prefers-reduced-motion` 下仍只画一帧（现状 `:2729`、`:2734`）—— 保持不变。
 
 **理由**
 
 - 〔实证〕诊断原文：「它是**每帧 600 个 alpha 混合光斑**的开销，
   与『纸纹底噪』这个功能相比代价过高 —— 建议改为**静态预渲染**或降频」。
-- 〔实证〕挖洞遮罩（`graphTideNodeMask()`，`:1515-1530`）是底噪与数据的**唯一耦合**；
+- 〔实证〕挖洞遮罩（`graphTideNodeMask()`，`:2610-2625`）是底噪与数据的**唯一耦合**；
   把它从「每点计算」改成「每节点一次渐变」是等价且廉价的。
 - G-4 要的是**观感**，不是**实现**；预渲染保留观感。
 
@@ -927,16 +944,16 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 
 | # | 清理项 | 证据 | 动作 |
 |---|---|---|---|
-| 1 | `.node-wrap.in-scope .status-ring`（`workbench.css:1708`）+ 空函数 `graphSyncScope()`（`workbench.js:1077`） | 全仓无 `classList.add("in-scope")`；`graphSyncScope` 只有一个空函数体 | 两处一起删（CSS 规则与 JS 空函数） |
-| 2 | 图例「相关」色 `#aaa399`（`workbench.css:1796`） | WebGL 实况 `rgb(117,112,104)` = `#757068`（`graph-renderer.js:15-21`） | 图例改成 `#757068`（**图例的错，不是线的错**） |
-| 3 | `.metric-track`（`workbench.css:1664-1670`）+ `--metric-angle` 写入（`workbench.js:1067`） | G-2 移除度量弧；A-24 形态里也没有弧 | 删 CSS、删 JS 写入、删 DOM 元素（`workbench.js:975`） |
-| 4 | `.node-satellite`（`workbench.css:1693-1697`）+ DOM 元素（`workbench.js:987`） | G-6 / A-24.5 不许状态文字/状态点；A-24.1 不要光晕 | 删 |
-| 5 | `.node-unit { display: none }`（`workbench.css:1692`）+ 写入（`workbench.js:1070`） | 写入了 `%` 但 CSS 永远隐藏 ⇒ 重要性投影的百分号**从未显示** | 删；圆心数字**不含单位**，单位由图例承载（D-5） |
-| 6 | `.node-wrap.warning { --kind-color: var(--red) }`（`workbench.css:1653`） | 没有任何 JS 会加 `warning` 类 | 删 |
-| 7 | `--green` / `--graphite`（`workbench.css:1515-1516`） | 全仓**无 CSS 引用** | 删（随 D-12 的改名一并处理） |
-| 8 | `.meta`（`workbench.css:1716-1719`）+ DOM 元素（`workbench.js:998-1001`）+ 写入（`:1072-1073`） | G-6 / A-24.5 节点上不许状态文字 | 删；`workbench-ui` 的 delta 里同步去掉 `label/meta LOD` 的 `meta` |
-| 9 | `.status-ring`（`workbench.css:1672-1673`） | 新形态的点没有环；状态由颜色承载（A-24.6） | 删 CSS 与 DOM（`workbench.js:977`） |
-| 10 | `.node-face` 的 `box-shadow` / `inset` 内高光 / 1px 描边 / `.node-face::before` 径向高光（`workbench.css:1676-1687`） | A-24.1「无 drop-shadow、无描边」 | 整块删，改为 `.node-dot` 的实心平涂（D-2） |
+| 1 | `.node-wrap.in-scope .status-ring`（`workbench.css:3794`）+ 空函数 `graphSyncScope()`（`workbench.js:2172`） | 全仓无 `classList.add("in-scope")`；`graphSyncScope` 只有一个空函数体 | 两处一起删（CSS 规则与 JS 空函数） |
+| 2 | 图例「相关」色 `#aaa399`（`workbench.css:3882`） | WebGL 实况 `rgb(117,112,104)` = `#757068`（`graph-renderer.js:15-21`） | 图例改成 `#757068`（**图例的错，不是线的错**） |
+| 3 | `.metric-track`（`workbench.css:3750-3756`）+ `--metric-angle` 写入（`workbench.js:2162`） | G-2 移除度量弧；A-24 形态里也没有弧 | 删 CSS、删 JS 写入、删 DOM 元素（`workbench.js:2070`） |
+| 4 | `.node-satellite`（`workbench.css:3779-3783`）+ DOM 元素（`workbench.js:2082`） | G-6 / A-24.5 不许状态文字/状态点；A-24.1 不要光晕 | 删 |
+| 5 | `.node-unit { display: none }`（`workbench.css:3778`）+ 写入（`workbench.js:2165`） | 写入了 `%` 但 CSS 永远隐藏 ⇒ 重要性投影的百分号**从未显示** | 删；圆心数字**不含单位**，单位由图例承载（D-5） |
+| 6 | `.node-wrap.warning { --kind-color: var(--red) }`（`workbench.css:3739`） | 没有任何 JS 会加 `warning` 类 | 删 |
+| 7 | `--green` / `--graphite`（`workbench.css:3601-3602`） | 全仓**无 CSS 引用** | 删（随 D-12 的改名一并处理） |
+| 8 | `.meta`（`workbench.css:3802-3805`）+ DOM 元素（`workbench.js:2093-2096`）+ 写入（`:2167-2168`） | G-6 / A-24.5 节点上不许状态文字 | 删；`workbench-ui` 的 delta 里同步去掉 `label/meta LOD` 的 `meta` |
+| 9 | `.status-ring`（`workbench.css:3757-3759`） | 新形态的点没有环；状态由颜色承载（A-24.6） | 删 CSS 与 DOM（`workbench.js:2072`） |
+| 10 | `.node-face` 的 `box-shadow` / `inset` 内高光 / 1px 描边 / `.node-face::before` 径向高光（`workbench.css:3760-3771`） | A-24.1「无 drop-shadow、无描边」 | 整块删，改为 `.node-dot` 的实心平涂（D-2） |
 
 **规则**：只删**能证明永不生效**或**被 A-24 明确取代**的代码。任何「可能由外部脚本触发」的
 怀疑都要停下来核实（本仓库是单页应用，作用域封闭；每条都配了 grep 证据）。
@@ -952,21 +969,21 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 
 **D-11.1 首次 Fit 之前：把初始相机改成「按 Fit 口径算出来的相机」**
 
-- 现状：初始相机是硬编码 `{ scale: .7, panX: 52, panY: -18 }`（`workbench.js:703`），
+- 现状：初始相机是硬编码 `{ scale: .7, panX: 52, panY: -18 }`（`workbench.js:1798`），
   而种子簇摆在舞台中心（`graph-physics-core.js:1528-1530`）
   ⇒ 〔实证〕初始相机下 **31 个节点中 23 个落在画布外**，露出的 8 个挤在右下角
   （基线截图 `tmp/frontend-audit/10-baseline-graph.png` 正是这一帧），
   且这个状态要持续到求解收敛（数十秒级）。
 - 决策：**初始相机用 `graphFit()` 的同一套公式，对「当前已有的节点范围」计算一次**
   （节点一创建完就调），而不是等 settle。这样**第一帧就是整图可见**；
-  收敛后现有的那一次 auto-fit（`workbench.js:1406-1410`）照旧发生并微调相机。
+  收敛后现有的那一次 auto-fit（`workbench.js:2501-2505`）照旧发生并微调相机。
 - 否掉的备选：把 `scale` 从 0.7 改成别的常数 —— 只挪动问题；
   保持 0.7 不动 —— 23/31 在画布外的问题原样保留。
 - 〔A-26 口径〕本条只改**相机**，**不写任何节点坐标** ⇒ 不影响 SI-0 的 diff = 0。
 
 **D-11.2 Fit 改用「节点圆盘包围盒」，不再用「含标签留白的 footprint 包围盒」**
 
-- 现状：`graphFit()`（`workbench.js:1203-1229`）用 `GraphPhysics.footprint(node)`
+- 现状：`graphFit()`（`workbench.js:2298-2324`）用 `GraphPhysics.footprint(node)`
   （`graph-physics-core.js:93-101`）算包围盒，其中 `half = max(size/2 + 13, labelWidth/2)`
   ⇒ 〔实证〕包围盒 1142×1147 世界 px，而**节点圆心**只占 890×919。
   标签留白让整图缩到 0.37。
@@ -983,17 +1000,17 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 
 **D-11.3 「中栏宽度一变整图缩放就变」—— 这是 fit-to-viewport 的固有性质，不是缺陷**
 
-- 〔实证〕`graphFit()` 用 `graphCanvas.clientWidth/clientHeight`（`:1223-1224`）
+- 〔实证〕`graphFit()` 用 `graphCanvas.clientWidth/clientHeight`（`:2318-2319`）
   算缩放，中栏宽度变 ⇒ 画布变 ⇒ 整图缩放变（graph-isolation.md 的 F-22）。
   这**是**「适应画布」的语义，**不是**要修的 bug。
 - 真正要修的是「缩放还被**标签文字长度**牵着走」（D-11.2 已解开）。
 - 附带影响：整图缩放变化会让 WebGL 的 `width / scale` 补偿（`graph-renderer.js:282`）
-  与 `graphTideResize()`（`workbench.js:1501`）一起变 —— 两者都是按当前 scale/dpr
+  与 `graphTideResize()`（`workbench.js:2596`）一起变 —— 两者都是按当前 scale/dpr
   重算的，**无状态残留** ⇒ 安全。
 
 **D-11.4 缩放条的行为变了（要交代）**
 
-- 现状：`+` 每次 +0.09、上限 1.6（`workbench.js:1885`）；滚轮缩放的下限是 0.38、步长 ×0.92/×1.08（`:1762`）。
+- 现状：`+` 每次 +0.09、上限 1.6（`workbench.js:2980`）；滚轮缩放的下限是 0.38、步长 ×0.92/×1.08（`:2857`）。
 - 新语义：**放大不再让节点变大**（节点尺寸是屏幕 px，与缩放无关）⇒
   缩放的用途变成**拉开间距 / 看整体**，而「看清细节」改由**悬停与看板**承担。
   这也正好是 D-1 那个「拥挤时放大即分离」的对偶。
@@ -1003,7 +1020,7 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 
 **否掉的备选**
 
-- **收敛过程中持续 Fit**：相机抖动，且违反「相机变化不 reheat」（`workbench.js:1107-1108`）。
+- **收敛过程中持续 Fit**：相机抖动，且违反「相机变化不 reheat」（`workbench.js:2202-2203`）。
 - **把 Fit 的输入换成「标签实际测量宽度」**：那会让缩放依赖字体度量与换行，
   比现在更脆。
 
@@ -1020,7 +1037,7 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 
 **D-12.1 图谱 token 改名 + 夜纸值集**
 
-- 〔实证〕图谱的 12 个裸名 token 声明在 `:root`（`workbench.css:1505-1518`），
+- 〔实证〕图谱的 12 个裸名 token 声明在 `:root`（`workbench.css:3591-3604`），
   且**在图谱区段外引用 0 次**（本文件 Context 第 6 条的实测命令）。
   ⇒ 改名是**机械且可验证的**：把 `--paper / --ink / --hair / --blue / --blueSoft /
   --yellow / --yellowSoft / --red / --redSoft / --green / --graphite / --shadow`
@@ -1122,12 +1139,12 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 | 6 | **布局种子读写**（`lk_graph_layout_v1_<workspace>`，键名与序列化格式） | `graph-physics.js:43-48` | A-26 |
 | 7 | **auto-fit 之外的相机与布局逻辑** | `workbench.js` / `graph-physics.js` | A-26 |
 | 8 | **邻接与边集合**（哪些点之间有边） | `graph-physics-core.js:1399` 的边模型 | A-26 |
-| 9 | **边的类型与权重**（`type` / `strength` / `direction` 字段；`NEIGHBOR_WEIGHT` `:527`；`baseGapForStrength()` `:68-70`） | `graph-physics-core.js` | A-26 |
+| 9 | **边的类型与权重**（`type` / `strength` / `direction` 字段；`NEIGHBOR_WEIGHT` `:32`；`baseGapForStrength()` `:68-70`） | `graph-physics-core.js` | A-26 |
 | 10 | **筛选语义**（可选状态集合、可见节点的并集、边的保留规则、页面级筛选状态） | `workbench.js` | A-26 |
-| 11 | **投影语义与分档**（四个投影各代表什么、值的来源字段、分档规则） | `graph-physics-core.js:1463-1470`、`workbench.js:1055-1061` | A-26 |
+| 11 | **投影语义与分档**（四个投影各代表什么、值的来源字段、分档规则） | `graph-physics-core.js:1463-1470`、`workbench.js:2150-2156` | A-26 |
 | 12 | **指标计算**（`scoreFor()` / `stateAttention()` / `strength01()`） | `graph-physics-core.js` | A-26 |
-| 13 | **DOM 节点的身份与顺序**（节点 id、`data-kp-id`、创建顺序、DOM 归属） | `workbench.js:957-1053` | A-26 |
-| 14 | **拖拽与聚焦的行为语义**（拖拽锚点、1 跳 / 2 跳邻域展开、可见性与不透明度机制） | `workbench.js:1080-1105` | A-26 |
+| 13 | **DOM 节点的身份与顺序**（节点 id、`data-kp-id`、创建顺序、DOM 归属） | `workbench.js:2052-2148` | A-26 |
+| 14 | **拖拽与聚焦的行为语义**（拖拽锚点、1 跳 / 2 跳邻域展开、可见性与不透明度机制） | `workbench.js:2174-2198` | A-26 |
 
 #### D-13.2 允许改（**纯绘制层**）
 
@@ -1181,14 +1198,19 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
 1. **落地顺序**：`workbench-visual-language-v2` **先**，本变更**后**。
    理由：本变更的夜纸值集以它的夜纸基色（`#1c1a16`）为准；
    且它的 `workbench-ui` delta 改写了 `Soft Mondrian visual foundation`
-   （`specs/workbench-ui/spec.md:317`），本变更要在其之上追加「图谱例外」段落。
+   （`specs/workbench-ui/spec.md:668`），本变更要在其之上追加「图谱例外」段落。
 2. **同一 Requirement 被两个变更改写**：
    `Soft Mondrian visual foundation` 与 `Redundant state cues`
    ⇒ **显式登记为协调项**（AGENTS.md 的 contract reconciliation）。
    处理：先合入 v2 的 delta，本变更的 delta 以**完整的最终块**覆盖
    （MODIFIED 必须复制既有需求的整块），并**退役** v2 里的场景
-   「The knowledge graph page is unchanged」（`specs/workbench-ui/spec.md:367-371`）
+   「This foundation leaves the knowledge graph page unchanged」
+   （`specs/workbench-ui/spec.md` 的**需求正文 `:686-691`** ＋ **场景标题 `:720`**）
    —— 它在本变更落地后不再成立。
+   ⚠️ 原引用指向无关条款，已修正（原写 `:317` / `:367-371`：`:317` 不是
+   `Soft Mondrian visual foundation` 那一块，`:367-371` 是「The transition survives the
+   content being replaced」这条**无关的转场场景**；真正的场景标题在 `:720`、
+   需求正文在 `:686-691` ⇒ **两处一起处理**）。
 
    **A-10.2 的硬性归档顺序（不可颠倒）**：v2 的 pending delta **已经** MODIFIED 了
    `Redundant state cues` 与 `Soft Mondrian visual foundation` 这两条，
@@ -1323,6 +1345,8 @@ G-5 原文是「截断改两行**或**悬浮显示全文」。「两行上限」
    若实际使用中觉得「大节点更该保留标签」，可调换前两项 —— 属实现参数。
 3. **量值分档的 4 档阈值**（`.25 / .5 / .75`）与结构投影的 3 档阈值：
    需用真实分布校准；若某一档在某章空置，可改用分位数分档 —— 不改「单色阶」这一规格。
+   〔**A-107 已定**〕`importance` **例外**：真实数据只有 `core` / `supplementary` 两类 ⇒
+   **按数据实际给两档**（橙阶第 3、第 4 档），**不许发明数据**。
 4. **夜纸下 `.graph-tide` 的透明度**：夜纸的底噪需要单独压暗（亮纸下是
    `opacity: .92` + `multiply`）。取值属实现参数，但**必须在夜纸值集里显式给出**
    （不能沿用亮纸的 multiply 结果）—— 实施时定稿即可。
