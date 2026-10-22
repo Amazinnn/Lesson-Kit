@@ -836,17 +836,24 @@ body {
 #next-problem { margin-left: auto; }
 .side-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .side-heading span { color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; }
-/* 计数徽标：标题恒定、计数随内容变 */
-.count-badge {
+/* 计数徽标：标题恒定、计数随内容变
+   §4.13 徽标（`badge-pill` · A-115 形态裁定）：**胶囊轮廓 + 沉底实心**；
+   11px 字。⚠️ **不用**近黑墨块（A-23：`--surface-code` 只服务代码块）。
+   ⚠️ 边界走「1px 内发丝线」（不用 border、不改盒模型）。 */
+.count-badge,
+.lk-badge {
   flex: none;
   min-width: 18px;
   padding: 0 6px;
   border-radius: var(--r-pill);
-  background: var(--surface-card);
-  color: var(--ink-muted);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  color: var(--ink-strong);
   font-size: 11px;
-  line-height: 16px;
+  font-weight: 700;
+  line-height: 18px;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 /* 导航项 = 具象静物图标 + 文字（15.1；图标资产见 asset-spec §2，5 枚导航静物） */
 .nav-item {
@@ -1356,13 +1363,16 @@ textarea:focus-visible, input:focus-visible {
 .lk-dot {
   --dot-fill: transparent;
   --dot-mark: var(--ink-strong);
+  --dot-line: var(--ink-disabled);
   position: relative;
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  /* §4.14 状态圆点（`dot-spec` · A-115 裁定）：尺寸收到 **10px**
+     （它不是可点目标 ⇒ 命中区不受影响）。 */
+  width: 10px;
+  height: 10px;
   /* 圆角口径统一到 **`--r-pill`**（A-78 · IMPL-W2g 第 4 条）：
-     spec §4.14 明写「圆点用胶囊档，不用 `--r-round`」。12×12 正方形上
-     50% 与 999px **视觉相同**（都收敛成 6px 圆角），但**取值口径**必须一致。 */
+     spec §4.14 明写「圆点用胶囊档，不用 `--r-round`」。10×10 正方形上
+     50% 与 999px **视觉相同**（都收敛成 5px 圆角），但**取值口径**必须一致。 */
   border-radius: var(--r-pill);
   background: var(--dot-fill);
   vertical-align: -1px;
@@ -1381,10 +1391,12 @@ textarea:focus-visible, input:focus-visible {
      改弱档后：夜纸 `#978d7c` = **4.97:1**、亮色 `#8d8578` = **3.59:1**
      （仍 ≥ 3:1，且比红/黄两点弱）。
      ⚠️ **语义待裁**：「已掌握」还是「未标记」尚未定论 ⇒ 本次**按 N1 的建议**
-     落地（`--ink-faint`），语义由主会话裁决。 */
-.lk-dot--red { --dot-fill: var(--role-red); --dot-mark: var(--ink-on-role); }
-.lk-dot--yellow { --dot-fill: var(--role-yellow-deep); --dot-mark: var(--ink-on-warm); }
-.lk-dot--ink { --dot-fill: var(--ink-faint); --dot-mark: var(--ink-on-role); }
+     落地（`--ink-faint`），语义由主会话裁决。
+   ⚠️ `--dot-line` = **线型几何**（ring / half）用的色：它画的是线，不是面 ⇒
+     同样走标记档（黄用 `--role-yellow-deep`，≥3:1）。 */
+.lk-dot--red { --dot-fill: var(--role-red); --dot-mark: var(--ink-on-role); --dot-line: var(--role-red); }
+.lk-dot--yellow { --dot-fill: var(--role-yellow-deep); --dot-mark: var(--ink-on-warm); --dot-line: var(--role-yellow-deep); }
+.lk-dot--ink { --dot-fill: var(--ink-faint); --dot-mark: var(--ink-on-role); --dot-line: var(--ink-faint); }
 /* 几何冗余通道：三态**形状各不相同**（叉 / 横杠 / 勾） */
 .lk-dot--cross::before,
 .lk-dot--cross::after {
@@ -1392,9 +1404,9 @@ textarea:focus-visible, input:focus-visible {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 7px;
+  width: 6px;
   height: 2px;
-  margin: -1px 0 0 -3.5px;
+  margin: -1px 0 0 -3px;
   border-radius: 1px;
   background: var(--dot-mark);
   transform-origin: 50% 50%;
@@ -1406,9 +1418,9 @@ textarea:focus-visible, input:focus-visible {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 7px;
+  width: 6px;
   height: 2px;
-  margin: -1px 0 0 -3.5px;
+  margin: -1px 0 0 -3px;
   border-radius: 1px;
   background: var(--dot-mark);
 }
@@ -1421,8 +1433,23 @@ textarea:focus-visible, input:focus-visible {
   background: var(--dot-mark);
   transform-origin: 0 50%;
 }
-.lk-dot--check::before { width: 4px; left: 3px; top: 50%; margin-top: -1px; transform: rotate(45deg); }
-.lk-dot--check::after { width: 6px; left: 5.5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
+.lk-dot--check::before { width: 4px; left: 2px; top: 50%; margin-top: -1px; transform: rotate(45deg); }
+.lk-dot--check::after { width: 6px; left: 4.5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
+
+/* ---- 几何集补齐（§4.14 · A-115「补 ring / half / filled 三档」）-----------
+   · `ring` = 空心环：透明底 + 2px 内圈（**不用 border**，不改盒模型）
+   · `half` = 左半填充：`inset -5px 0 0 0` 造半圆（10px 的一半 = 5px）
+   · `filled` = 实心盘（见下）
+   ⚠️ 三档与 `cross` / `dash` / `check` **互斥**：本块写在几何三条**之后**，
+     同特异度下靠后者胜。 */
+.lk-dot--ring {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--dot-line);
+}
+.lk-dot--half {
+  background: transparent;
+  box-shadow: inset -5px 0 0 0 var(--dot-line);
+}
 
 /* ---- `--filled`：实心圆盘、无几何符号（A-78 · IMPL-W2g 第 3 条）-----------
    · 「实心圆盘」= 盘面被填充色铺满（不是描边的空心环）
@@ -1434,6 +1461,7 @@ textarea:focus-visible, input:focus-visible {
      `lk-dot lk-dot--red lk-dot--filled`）—— 现在由本类显式兑现。 */
 .lk-dot--filled {
   background: var(--dot-fill);
+  box-shadow: none;
 }
 .lk-dot--filled::before,
 .lk-dot--filled::after {
@@ -1450,8 +1478,9 @@ textarea:focus-visible, input:focus-visible {
    **开关 `.lk-switch`**（`pages.py` 9 处命中 / 3 个设置项）
      markup：`<label class="lk-switch"><input type="checkbox">
                <span class="lk-switch__track"><span class="lk-switch__thumb"></span></span></label>`
-     · 轨道 44×26 **胶囊**（`--r-pill`）：`--r-round` 50% 会把 26px 高的轨道压成椭圆角
-     · 滑块 20×20 **正圆**（`--r-round` —— 正方形元素上的真圆）
+     · 轨道 **32×18 胶囊**（`--r-pill`）：A-115 裁定 `switch-mini`（旧稿 44×26 作废）；
+       `--r-round` 50% 会把 18px 高的轨道压成椭圆角
+     · 滑块 14×14 **正圆**（`--r-round` —— 正方形元素上的真圆）
      · **滑块位置只由 `transform: translateX()` 切换**（不许动 `left` / `width`）
      · 开 = `--role-blue`（蓝 = 当前选中，R1）/ 关 = `--ink-disabled`
        （中性墨，**不是第四色**）
@@ -1459,19 +1488,22 @@ textarea:focus-visible, input:focus-visible {
        只有滑块的位移走 `transform` 过渡（唯一允许插值的属性）
      · 原生 checkbox **视觉隐藏但仍可聚焦**（不能用 `display:none` / `visibility:hidden`）
        ⇒ 焦点环画在**轨道**上（`input:focus-visible + .lk-switch__track`）
-     · 命中区：整行 ≥ 44px（`min-height: 44px`；轨道本体 26px 不单独算命中区）
+     · **命中区 ≥44×44**（§3.1 硬约束）：整行 `min-height: 44px`（原生 input 以
+       `inset: 0` 盖住整行）**且**轨道本体用伪元素补到 44×44（见下方规则）
 
    **分段控件 `.lk-seg`**（`pages.py` 3 处命中 / 1 组 × 2 项）
      markup：`<span class="lk-seg" role="radiogroup"><label class="lk-seg__item">
                <input type="radio" checked>衬线</label>…</span>`
-     · 容器 = **沉底面**（`--surface-sunken`）+ 1px 内发丝线（`--rule-hair`）：
-       沉底块与卡面同用 `--r-md` 圆角、不带柔影；**不描边**（D-2）
-     · 选中项 = **色块**：角色蓝 `--role-blue` + `--ink-on-role` 文字
-       （蓝 = 当前选中，R1）。⚠️ **不用** `--role-blue-wash`：它与沉底面几乎同明度
-       （A-31：沉底面旁不得放蓝洗底块，否则会被误读成「被选中的行」）
-     · 层级只由「沉底槽 + 选中色块」分层（**不描边**）
+     · 容器 = **胶囊槽**（`--r-pill`）+ **沉底面**（`--surface-sunken`）
+       + 1px 内发丝线（`--rule-hair`）：沉底块与卡面同用 `--r-md` 圆角、不带柔影；
+       **不描边**（D-2）
+     · 选中项 = **白色药丸**（`--surface-raised` + `--elev-1` + 墨字 + 600 字重）：
+       A-115 裁定 `seg-pill` ⇒ **不用角色蓝**（A-84 第 2 条），
+       与 A-31「沉底面旁不得挨蓝洗底」一致
+     · 层级只由「沉底槽 + 白色药丸」分层（**不描边**）
      · 原生 radio **视觉隐藏但仍可聚焦** ⇒ 焦点环画在**项**上
-     · 命中区：容器 44px（项 36 + 上下 padding 4）
+     · 命中区：容器 44px（项 36 + 上下 padding 4）；项本体 36px ⇒ 用伪元素
+       把命中区补到 44 高（补进容器的内距里，不溢出容器）
    ========================================================================= */
 .lk-switch {
   position: relative;
@@ -1490,22 +1522,32 @@ textarea:focus-visible, input:focus-visible {
   cursor: pointer;
 }
 .lk-switch__track {
-  width: 44px;
-  height: 26px;
+  position: relative;
+  /* §4.10 迷你开关（`switch-mini` · A-115 裁定）：轨道 **32×18** */
+  width: 32px;
+  height: 18px;
   flex: none;
-  padding: 3px;
+  padding: 2px;
   border-radius: var(--r-pill);
   background: var(--ink-disabled);
   /* 只过渡 transform：底色瞬切（权威表 §3.3），按下的压缩走 transform */
   transition: transform var(--dur-fast) var(--ease-standard);
+}
+/* 命中区补偿（§3.1 硬约束 ≥44×44）：轨道本体只有 32×18 ⇒ 用伪元素把命中区
+   撑到 44×44（上下各补 13px、左右各补 6px）。伪元素是 label 的子节点 ⇒
+   点在它上面照样转发给内部的原生 checkbox（label 转发机制）。 */
+.lk-switch__track::before {
+  content: "";
+  position: absolute;
+  inset: -13px -6px;
 }
 /* 开关的按下反馈（motion-spec §2.1 第 2 行）：只动 transform；
    ⚠️ 压在**轨道**上 —— 拇指的 transform 归「选中态」（translateX），不碰。 */
 .lk-switch:active .lk-switch__track { transform: scale(0.96); }
 .lk-switch__thumb {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   border-radius: var(--r-round);
   background: var(--surface-card);
   box-shadow: var(--elev-1);
@@ -1513,19 +1555,24 @@ textarea:focus-visible, input:focus-visible {
   transition: transform var(--dur-base) var(--ease-rebound);
 }
 .lk-switch input:checked + .lk-switch__track { background: var(--role-blue); }
-.lk-switch input:checked + .lk-switch__track .lk-switch__thumb { transform: translateX(18px); }
+/* 开态位移：轨道 32 - 内距 2×2 - 拇指 14 = 14px */
+.lk-switch input:checked + .lk-switch__track .lk-switch__thumb { transform: translateX(14px); }
 /* 焦点环落在**轨道**上（原生 checkbox 是隐藏的）：内圈纸色 + 外圈蓝（权威表 §8 规则 2） */
 .lk-switch input:focus-visible + .lk-switch__track {
   outline: var(--focus-width) solid transparent;
   outline-offset: var(--focus-offset);
   box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
 }
+/* ---- §4.11 分段控件 · 药丸分段（`seg-pill` · A-115 形态裁定）--------------
+   整组一个**胶囊槽**（`--r-pill`）；**选中项是白色药丸**（`--surface-raised`）
+   ⇒ ⚠️ **选中项不用角色蓝**（A-84 第 2 条），与 A-31「沉底面旁不得挨蓝洗底」一致。
+   ⚠️ **状态色瞬切**：底色 / 文字色不进 transition；过渡只挂 transform。 */
 .lk-seg {
   position: relative;
   display: inline-flex;
   gap: 4px;
   padding: 4px;
-  border-radius: var(--r-md);
+  border-radius: var(--r-pill);      /* 胶囊槽 */
   background: var(--surface-sunken);
   box-shadow: inset 0 0 0 1px var(--rule-hair);
 }
@@ -1536,7 +1583,7 @@ textarea:focus-visible, input:focus-visible {
   justify-content: center;
   min-height: 36px;
   padding: 0 14px;
-  border-radius: var(--r-xs);
+  border-radius: var(--r-pill);      /* 项 = 药丸 */
   background: transparent;
   color: var(--ink-muted);
   font-family: var(--font-ui);
@@ -1547,6 +1594,13 @@ textarea:focus-visible, input:focus-visible {
   cursor: pointer;
   /* 只过渡 transform：底色 / 文字色瞬切（权威表 §3.3） */
   transition: transform var(--dur-fast) var(--ease-standard);
+}
+/* 命中区补偿（§3.1 硬约束）：项本体 36px ⇒ 用伪元素补到 44 高
+   （补进容器的上下 4px 内距里 ⇒ 不溢出容器、也不压到相邻项）。 */
+.lk-seg__item::before {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
 }
 .lk-seg__item input {
   position: absolute;
@@ -1559,21 +1613,23 @@ textarea:focus-visible, input:focus-visible {
 }
 .lk-seg__item:hover { color: var(--ink-strong); background: var(--veil-hover); transform: translate3d(0, -1px, 0); }
 .lk-seg__item:active { transform: translate3d(0, -1px, 0) scale(0.96); }
-/* 选中项 = 角色蓝色块 + 深底文字（颜色 + 字重双通道，不靠颜色单通道） */
+/* 选中项 = **白色药丸**（`--surface-raised` + `--elev-1` + 墨字 + 600 字重）；
+   ⚠️ 不带角色蓝 —— 选中由「白色药丸」承载（A-84 第 2 条）。 */
 .lk-seg__item:has(input:checked) {
-  background: var(--role-blue);
-  color: var(--ink-on-role);
+  background: var(--surface-raised);
+  color: var(--ink-strong);
   font-weight: 600;
+  box-shadow: var(--elev-1);
 }
-/* 焦点环落在**项**上：内圈 = 项所在面的色（沉底面），外圈 = 蓝 */
+/* 焦点环落在**项**上：内圈 = 项所在面的色（沉底槽），外圈 = 蓝 */
 .lk-seg__item:has(input:focus-visible) {
   outline: var(--focus-width) solid transparent;
   outline-offset: var(--focus-offset);
   box-shadow: 0 0 0 2px var(--surface-sunken), 0 0 0 4px var(--focus-outer);
 }
-/* 选中项（角色填充）⇒ 内圈换成纸色（权威表 §8 规则 2） */
+/* 选中项坐在**白色药丸**上 ⇒ 内圈换成药丸自己的面色 */
 .lk-seg__item:has(input:checked):has(input:focus-visible) {
-  box-shadow: 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus-outer);
+  box-shadow: 0 0 0 2px var(--surface-raised), 0 0 0 4px var(--focus-outer);
 }
 
 /* ============================================================================
@@ -2941,14 +2997,21 @@ img { max-width: 100%; }
          · `.record-verdict-dist-track` 外高 12px → 12px
          · `.record-run-progress`      外高 10px（8px 内容 + 2px 描边）→ 10px
        （本条比另两条细 2px 是**改造前就有**的层级差，不是本轮带来的。） */
+/* ---- §4.15 进度条 · 胶囊进度（`progress-pill` · A-115 形态裁定）------------
+   **8px 胶囊** · 轨道 `--veil-active` · 填充角色蓝（语义变体用黄）。
+   ⚠️ 四条轨道（完成页进度带 / 自评分布 / 判定分布 / 练习进度）**一次改齐**，
+     不留「一族 8px、一族 10px、一族 12px」的中间态（A-55 的同一条纪律）。
+   ⚠️ 边界不再用内发丝线：轨道底色换成 `--veil-active` 后，
+     发丝线与轨道同色系、看不出差别 ⇒ 直接去掉（**更少的一层**）。
+   ⚠️ 「去描边不得顺带改盒子尺寸」的旧约束（A-67）针对的是**去描边**那一步；
+     本轮是**形态裁定**（轨道高度由 10/12px 统一收成 8px）⇒ 尺寸变化是有意为之。 */
 .record-rating-track,
 .record-verdict-dist-track,
 .record-run-progress {
-  box-shadow: inset 0 0 0 1px var(--rule-hair);
-}
-.record-rating-track {
-  height: 12px; overflow: hidden;   /* A-67：恢复去描边前的外高 12px */
-  background: var(--surface-sunken);
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--r-pill);
+  background: var(--veil-active);
 }
 .record-rating-track span { display: block; height: 100%; background: var(--role-yellow); }
 /* 判定分布（对 / 错 / 未判定）—— **不复用** `.record-rating-*`：
@@ -2964,8 +3027,8 @@ img { max-width: 100%; }
 .record-verdict-dist-count,
 .record-verdict-dist-row strong { text-align: right; font-variant-numeric: tabular-nums; }
 .record-verdict-dist-track {
-  height: 12px; overflow: hidden;   /* A-67：恢复去描边前的外高 12px */
-  background: var(--surface-sunken);
+  height: 8px; overflow: hidden;   /* §4.15：胶囊轨道 8px（与另外三条同高） */
+  background: var(--veil-active);
 }
 .record-verdict-dist-fill { display: block; height: 100%; background: var(--ink-strong); }
 /* 三态配色：对 = 中性墨（不用绿，A-20-3）/ 错 = 红 / 未判定 = 淡墨 */
@@ -2981,8 +3044,8 @@ img { max-width: 100%; }
 .record-run time { color: var(--ink-faint); font-size: 12px; white-space: nowrap; }
 .record-run > p { margin: 7px 0 8px; }
 .record-run-progress {
-  height: 10px; overflow: hidden;   /* A-67：恢复去描边前的外高 10px（本条本就比另两条细 2px） */
-  background: var(--surface-sunken);
+  height: 8px; overflow: hidden;   /* §4.15：胶囊轨道 8px（与另外三条同高） */
+  background: var(--veil-active);
 }
 .record-run-progress span { display: block; height: 100%; background: var(--role-blue); }
 .record-run-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
@@ -3536,20 +3599,61 @@ img { max-width: 100%; }
    旧状态：`.lk-progress` 在 CSS 里**零命中** ⇒ 轨道没有高度、没有底槽 ⇒
    完成页那条进度带**根本看不见**（`.lk-progress__fill` 只有 `scaleX(1)`，
    而它自己是 `inline` 元素 ⇒ 宽高都是 auto ⇒ 填充也是 0×0）。
-   · **轨道**：有高度 + 底槽（`--surface-sunken`）+ 圆角（`--r-pill`），
+   · **轨道**：有高度 + 底槽（`--veil-active`，§4.15 胶囊进度）+ 圆角（`--r-pill`），
      **不描边**（D-2）、不抬升（凹层不带柔影）——与记录页那三条进度轨道
-     （`.record-run-progress` 等）**同一套语言**：高 10px + sunken 底槽；
+     （`.record-run-progress` 等）**同一套语言**：高 8px + `--veil-active` 底槽；
    · **填充**：铺满轨道（block / 100% × 100%），圆角随轨道（`inherit`），
      左端随进度收边（轨道 `overflow: hidden` 把右端切齐）；
    · **静态样式 = 终态**：`transform: scaleX(1)` 保持不变 ⇒ 降级档
      （`prefers-reduced-motion: reduce` 或动效偏好关）下**直接是满格**，
      不会停在 0%；0→100% 的生长仍然只写在 `@keyframes lk-progress-fill` 里，
      由 JS 加 `.is-filled` 重放（**只动 scaleX**）。 */
-.lk-progress {
+/* ---- §4.12 标签 · 角色色标签（`tag-role` · A-115 形态裁定）-----------------
+   **角色色洗底 + 左侧状态点**（蓝 / 黄 / 红三变体）；黄**不承载文字**
+   （黄底上的字取 `--ink-on-warm`）；同一张卡上的语义标签 **≤ 2 个**。
+   ⚠️ **不许复用 `.chip`**（A-78 的命名口径不变）：`.chip` 是**图谱区段**的类名。
+   ⚠️ 产品里目前**没有**非图谱的标签 markup ⇒ 本波只落**样式**（形态），
+     markup 由需要它的页面另开 change 落（与 §4.8 / §4.9 的行级容器同理）。 */
+.lk-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: var(--r-md);
+  background: var(--veil-hover);
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+/* 左侧状态点（10px ⇒ §4.14 的 spec 圆点尺寸） */
+.lk-tag__dot {
+  width: 10px;
   height: 10px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: currentColor;
+}
+/* 三个语义变体：洗底 + 文字色；状态点各取**角色色** */
+.lk-tag--blue { background: var(--role-blue-wash); color: var(--role-blue); }
+.lk-tag--yellow { background: var(--role-yellow-soft); color: var(--ink-on-warm); }
+.lk-tag--red { background: var(--role-red-wash); color: var(--role-red-ink); }
+.lk-tag--blue .lk-tag__dot { background: var(--role-blue); }
+.lk-tag--yellow .lk-tag__dot { background: var(--role-yellow-deep); }
+.lk-tag--red .lk-tag__dot { background: var(--role-red); }
+
+/* ---- §4.15 进度条 · 胶囊进度（`progress-pill` · A-115 形态裁定）------------
+   **8px 胶囊** · 轨道 `--veil-active` · 填充角色蓝（语义变体用黄）。
+   ⚠️ 四条轨道（完成页进度带 / 自评分布 / 判定分布 / 练习进度）**一次改齐**，
+     不留「一族 8px、一族 10px、一族 12px」的中间态。 */
+.lk-progress {
+  height: 8px;
   overflow: hidden;
   border-radius: var(--r-pill);
-  background: var(--surface-sunken);
+  background: var(--veil-active);
 }
 
 /* 几何爆点（§2.1 第 14 项）：里程碑档才创建，日常档不得触发 */
