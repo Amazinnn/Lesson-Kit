@@ -59,44 +59,41 @@
 - 纸面 4 层：**底 / 卡 / 浮起 / 墨块**，靠圆角 + 柔影分层，**不用描边**
   （`decisions.md:595`）。**结构线**（分隔线 / 单侧强调边）与**描边**是两件事：
   结构线是内容层级的分隔（保留），描边是元素四边的框（删除）。
-- 结构线分两档：**分隔线 1px**（`--wb-line-soft`）与**结构线 2px**（`--wb-rule-structure`）。
+- 结构线分两档：**分隔线 1px**（`--rule-hair`）与**结构线 2px**（`--rule-structure`）。
   2px 档用于两处：① 阅读面的**单侧强调边**；② **页面标题带的底线**（§4.1 ⑤）。
   收口基线把「单侧结构线 2px」列为「未随转向作废的早期决定」
   （`decisions.md:672-676`），D-11 第 4 条要求标题带底线**换成 2px 的
-  `--wb-rule-structure` 结构线**（`design.md:807-810`）——两处同档，线宽语言统一。
+  `--rule-structure` 结构线**（`design.md:807-810`）——两处同档，线宽语言统一。
 - 状态**不只靠颜色**：颜色主通道 + 几何冗余通道（彩色圆点），**零文字**。
 - 图标只引用位置与尺寸；画法见资产规格书。
 
 ### 0.4 布局相关令牌（本文定义，供实现期落到 `:root`；三栏列宽变量例外，落到 `#layout`，见 §1.2）
 
 ```
---radius            12px        统一圆角
+--r-md              12px        统一圆角（权威表 §2.1）
 --sp-1  4px   --sp-2  8px   --sp-3 12px   --sp-4 16px
 --sp-5 24px   --sp-6 32px   --sp-7 48px   --sp-8 64px
---wb-line-soft      1px  分隔线（墨色低透明度）
---wb-rule-structure 2px  结构线（墨色）—— 阅读面单侧边 + 标题带底线
---wb-measure        880px  阅读轨（疏朗面页面）
---wb-measure-wide   1120px 数据轨（紧凑面页面）
---wb-col-left       280px  三栏几何（CSS 变量，JS 只写这一个）
---wb-col-right      420px
---wb-col-middle-min 420px  中栏硬底线（由 JS 夹取维持，见 §1.3）
---wb-topbar-h       56px
---radius            12px        统一圆角
---sp-1  4px   --sp-2  8px   --sp-3 12px   --sp-4 16px
---sp-5 24px   --sp-6 32px   --sp-7 48px   --sp-8 64px
---wb-line-soft      1px  分隔线（墨色低透明度）
---wb-rule-structure 2px  结构线（墨色）—— 阅读面单侧边 + 标题带底线
---wb-measure        880px  阅读轨（疏朗面页面）
---wb-measure-wide   1120px 数据轨（紧凑面页面）
---wb-col-left       280px  三栏几何（CSS 变量，JS 只写这一个）
---wb-col-right      420px
---wb-col-middle-min 420px  中栏硬底线（由 JS 夹取维持，见 §1.3）
---wb-topbar-h       56px
+--rule-hair      1px  分隔线（墨色低透明度）
+--rule-structure 2px  结构线（墨色）—— 阅读面单侧边 + 标题带底线
+--shell-measure        880px  阅读轨（疏朗面页面）
+--shell-measure-wide   1120px 数据轨（紧凑面页面）
+--shell-col-left       280px  三栏几何（CSS 变量，JS 只写这一个）
+--shell-col-right      420px
+--shell-col-middle-min 420px  中栏硬底线（由 JS 夹取维持，见 §1.3）
+--shell-topbar-h       56px
 ```
 
-> 令牌**命名**与 `design.md` D-10 一致（`--wb-col-left` / `--wb-col-right`）。
+> ⚠️ **待裁决（命名不在权威表内）**：
+> ① `--shell-*` 这一族**布局几何**变量在权威表 `night-paper-tokens.md` §2 / §3 里
+> **没有对应项**（权威表只收圆角 / 间距 / 字号 / 行宽 / 动效 / z 序与颜色族）；
+> 本文件暂用 `--shell-` 前缀，是为了让布局轨宽**不与权威表的 `--measure`（38em 阅读面
+> 行宽）撞名** —— 族名与归属仍待所有者裁决（不得据此新造权威名）。
+> ② `--sp-8 64px` 超出权威表 §2.2 的 `--sp-1..--sp-7`（最大 48px）：**值不动**
+> （改值属于尺寸改动），**档位待裁决**。
+
+> 令牌**命名**与 `design.md` D-10 一致（`--shell-col-left` / `--shell-col-right`）。
 > D-10 明确「写到 `#layout` 上更局部，不会影响图谱页的同名变量」，
-> 因此这两个变量**写在 `#layout` 元素上**（`#layout { --wb-col-left: 280px; … }`），
+> 因此这两个变量**写在 `#layout` 元素上**（`#layout { --shell-col-left: 280px; … }`），
 > 不写 `:root`。
 
 ### 0.5 契约漂移登记（本文件在写作过程中发现）
@@ -214,27 +211,27 @@ JS 只写两个自定义属性，不再写 `grid-template-columns`。**
 ```css
 /* ① 变量写在 #layout 上（不写 :root，避免波及图谱页同名变量） */
 #layout {
-  --wb-col-left: 280px;
-  --wb-col-right: 420px;
+  --shell-col-left: 280px;
+  --shell-col-right: 420px;
   flex: 1;
   min-height: 0;
   display: grid;
   grid-template-columns:
-    var(--wb-col-left) minmax(0, 1fr) var(--wb-col-right);
+    var(--shell-col-left) minmax(0, 1fr) var(--shell-col-right);
   grid-template-rows: 100%;
   overflow: hidden;
   transition: grid-template-columns 200ms ease;
 }
 #layout.is-resizing { transition: none; }
 #layout[data-ai-collapsed] {
-  grid-template-columns: var(--wb-col-left) minmax(0, 1fr) 0px;
+  grid-template-columns: var(--shell-col-left) minmax(0, 1fr) 0px;
 }
 ```
 
 ```js
 /* ② JS 只写两个数值变量（替换 workbench.js:4587） */
-layout.style.setProperty("--wb-col-left", leftWidth + "px");
-layout.style.setProperty("--wb-col-right", rightWidth + "px");
+layout.style.setProperty("--shell-col-left", leftWidth + "px");
+layout.style.setProperty("--shell-col-right", rightWidth + "px");
 ```
 
 ```css
@@ -242,7 +239,7 @@ layout.style.setProperty("--wb-col-right", rightWidth + "px");
 @media (max-width: 1279px) {
   #layout,
   #layout[data-ai-collapsed] {
-    grid-template-columns: var(--wb-col-left) minmax(0, 1fr);
+    grid-template-columns: var(--shell-col-left) minmax(0, 1fr);
   }
 }
 /* ④ D 档（≤1023）：左栏也出栅格（沿用现状 workbench.css:1174-1207 的写法，不动） */
@@ -262,11 +259,11 @@ layout.style.setProperty("--wb-col-right", rightWidth + "px");
    D-10 原文：「CSS 的 `minmax(0, 1fr)` 只是**变量未就位时（首帧）的兜底**，
    不承担该不变式」。中栏 ≥420px 由 JS 夹取维持（§1.3）。
 3. **夹紧上限归 CSS 常量、JS 读它。** JS 用 `getComputedStyle` 读
-   `--wb-col-left-max` / `--wb-col-right-max`，而不是把 200/480/360/560 写死在 JS 里
+   `--shell-col-left-max` / `--shell-col-right-max`，而不是把 200/480/360/560 写死在 JS 里
    （消除 §1.1 后果三）。
 4. **旧行内模板必须清空。** `workbench.js:4580-4582` 的
    `layout.style.gridTemplateColumns = ""` 改为
-   `layout.style.removeProperty("--wb-col-left")` + `removeProperty("--wb-col-right")`，
+   `layout.style.removeProperty("--shell-col-left")` + `removeProperty("--shell-col-right")`，
    否则迁移期新旧两套会同时存在。
 5. **右栏折叠阈值从 1024 移到 1279。** `fitAiColumn()`（`workbench.js:4569-4573`）
    现在用 `window.innerWidth < 1024` 决定 `data-ai-collapsed`；按 §1.4 的 C 档，
@@ -286,7 +283,7 @@ layout.style.setProperty("--wb-col-right", rightWidth + "px");
 - 拖左栏到最左（200px）：右栏不降到 360px 以下，中栏不出现横向滚动条。
 - 拖左栏到最右（480px，视口 1440）：右栏**自动收到 540px**、中栏落在 420px（§1.5）。
 - 桌面端 `#layout` 的行内 `style` 属性**不含** `grid-template-columns`，
-  只含 `--wb-col-left` / `--wb-col-right` 两个自定义属性。
+  只含 `--shell-col-left` / `--shell-col-right` 两个自定义属性。
 - 拖拽柄在 `#left-column` 右缘 10px 内可命中（现状 `#left-resizer{right:-4px}`
   （`workbench.css:548-551`）骑界，被 `#left-column` 的 `overflow-y:auto` 裁掉一半，
   `F02.md:39`）——**把手柄整体收进栏内**。
@@ -332,7 +329,7 @@ R' = clamp(R,  360, min(560, A − L' − 420))    // 再夹右，用**已夹好
 
 **规则 R4（右栏折叠态）**
 
-- `#layout[data-ai-collapsed]` 的模板是 `var(--wb-col-left) minmax(0, 1fr) 0px`
+- `#layout[data-ai-collapsed]` 的模板是 `var(--shell-col-left) minmax(0, 1fr) 0px`
   —— 右栏宽 0，**中栏不吃 420 底线**（此时没有三栏）。
   因此 `fitAiColumn()` 折叠右栏时，**必须同时把 R 置 0 并跳过 R1/R2 的中栏夹取**，
   否则会算出一个「本该给右栏的 420px」。
@@ -409,7 +406,7 @@ R' = clamp(R,  360, min(560, A − L' − 420))    // 再夹右，用**已夹好
 | 左栏内边距 | `16px 12px 20px`（`workbench.css:169`） | `16px 12px 24px`（底部留出滚动余量） |
 | 中栏内边距 | `34px 40px 48px`（`workbench.css:175`） | `28px 32px 72px`（≥1440）／`28px 28px 64px`（1280 档）／`24px 24px 64px`（1024 档）／`24px 18px 48px`（≤1023，沿用现状 `workbench.css:1196`） |
 | 右栏内边距 | `16px`（`workbench.css:238`） | `16px`（保持） |
-| 栏与栏之间 | 1px 纯黑结构线（`workbench.css:167` / `237`） | **1px `--wb-line-soft` 结构线**（墨色低透明度）。**删除纯黑 1px 线**：它与「不用描边、靠柔影分层」冲突，且纯黑是第四种颜色语气 |
+| 栏与栏之间 | 1px 纯黑结构线（`workbench.css:167` / `237`） | **1px `--rule-hair` 结构线**（墨色低透明度）。**删除纯黑 1px 线**：它与「不用描边、靠柔影分层」冲突，且纯黑是第四种颜色语气 |
 | 右栏与中栏的纸面关系 | 无（两块同色） | 右栏 = **卡级纸面**（比底色亮一档 + 柔影），中栏 = 底级纸面 → 右栏在视觉上是「浮在页面之上的一层」，无需描边 |
 
 ---
@@ -419,7 +416,7 @@ R' = clamp(R,  360, min(560, A − L' − 420))    // 再夹右，用**已夹好
 ### 2.1 线框（≥1440，56px 高）
 
 ```
-┌─ #topbar  h=56  bg=纸面(卡)  下沿 1px --wb-line-soft ─────────────────────────────────┐
+┌─ #topbar  h=56  bg=纸面(卡)  下沿 1px --rule-hair ─────────────────────────────────┐
 │ ┌── 段一 品牌 ──┐   │ ┌── 段二 当前身份 ──────────────────────┐   ┌── 段三 动作 ──┐   │
 │ │ ◼◼◼  lesson-kit│   │ │ 大学物理乙II  │  [ ◎ 全部章节  ▾ ]  │   │ │  ◐   │  ☀  │   │
 │ └───────────────┘   │ └──────────────────────────────────────┘   └───────────────┘   │
@@ -518,7 +515,7 @@ R' = clamp(R,  360, min(560, A − L' − 420))    // 再夹右，用**已夹好
 | 头行 | 「章节」12px 三级灰 + 右侧**章数**（`len(chapters)`，载荷内已有，非统计量）；高 32px |
 | 选项行 | 高 **40px**；左端 8px 状态圆点（冗余状态通道，**零文字**）+ 14px 墨色章节名（弹性，载荷原值）+ 右侧 **44px 计数槽**（裁决前留空，DRIFT-1） |
 | 当前项 | 章节名 600 墨色 + 圆点填**学习蓝** + 行底淡蓝染（12% 学习蓝，**不用描边**）+ 左缘 3px 蓝结构轨 |
-| 分隔 | 头行下、末项下各 1px `--wb-line-soft` |
+| 分隔 | 头行下、末项下各 1px `--rule-hair` |
 | 底行动作 | 「回到整门课」36px 行，14px；**仅当当前是单章态时出现**（关 = 整门课 / 开 = 恰好一章的语义不变） |
 | 滚动 | `max-height:320px`，超出内部滚动 |
 | 触发 | 点击 chip 展开；`Esc` 关闭并把焦点还给 chip；点击面板外关闭 |
@@ -748,7 +745,7 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 | ② 标题 | `h1` | **30px / 行高 38 / 无衬线 / 墨色 / 字距 -0.02em**（现状 28/36，`workbench.css:281-286`） |
 | ③ 摘要 | `.page-summary` | 15px / 行高 24 / 次级灰；`max-width:62ch`；距标题 8px（现状 14px / 600px 上限） |
 | ④ 动作 | `.page-header-actions` | 右下对齐；主按钮 34px 高 / 12px 圆角 / padding `0 14px`；次按钮同高；图标按钮 34×34；项间 8px。**现状全仓 0 条 CSS 规则**（`F02.md:48`），必须补齐 |
-| ⑤ 结构线 | 标题带底 | **2px `--wb-rule-structure`**（墨色结构线）；标题带 `padding-bottom:20px`；**删除**现状 3px 纯黑底线（`workbench.css:259`）与右端 76×8 黄块（`workbench.css:261-270`） |
+| ⑤ 结构线 | 标题带底 | **2px `--rule-structure`**（墨色结构线）；标题带 `padding-bottom:20px`；**删除**现状 3px 纯黑底线（`workbench.css:259`）与右端 76×8 黄块（`workbench.css:261-270`） |
 
 **标题带总高**（由上表逐段相加）：
 
@@ -767,9 +764,9 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 
 **3px → 2px 的线宽理由**：`decisions.md:672-676` 把「单侧结构线 2px」列为
 「未随转向作废的早期决定」；D-11 第 4 条要求标题带底线「换成 2px 的
-`--wb-rule-structure` 结构线」。因此 **2px 结构线在本设计语言里只有两个位置**：
+`--rule-structure` 结构线」。因此 **2px 结构线在本设计语言里只有两个位置**：
 ① 阅读面的**单侧强调边**（`docs/PRODUCT-MANUAL.md:129-130` 硬性要求）；
-② **页面标题带的底线**。其余所有分隔一律 1px `--wb-line-soft`。
+② **页面标题带的底线**。其余所有分隔一律 1px `--rule-hair`。
 线宽因此是**有含义的**，不是随手取的数。
 
 ### 4.2 内容最大宽度：双轨测量
@@ -781,27 +778,27 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 
 | 轨 | 宽度 | 归属页面 | 理由 |
 |---|---|---|---|
-| **阅读轨** `--wb-measure` | **880px** | 练习页、知识点详情页 | 疏朗面：题面/正文/解析需要连续阅读的余量。**与 D-11 字面一致**（`design.md:801-804`） |
-| **数据轨** `--wb-measure-wide` | **1120px** | 知识点列表页、试卷列表页、记录中心 | 紧凑面：列表与数据面需要并排比较的宽度。**属 D-11 未覆盖的扩展，见 DRIFT-3（§0.5）** |
+| **阅读轨** `--shell-measure` | **880px** | 练习页、知识点详情页 | 疏朗面：题面/正文/解析需要连续阅读的余量。**与 D-11 字面一致**（`design.md:801-804`） |
+| **数据轨** `--shell-measure-wide` | **1120px** | 知识点列表页、试卷列表页、记录中心 | 紧凑面：列表与数据面需要并排比较的宽度。**属 D-11 未覆盖的扩展，见 DRIFT-3（§0.5）** |
 
 **实现机制（一条变量承载一整页的轨）**：
 
 ```css
 /* ① 页面级轨变量：默认阅读轨 */
-#middle-page { --wb-track: var(--wb-measure); }
-#middle-page.is-data-page { --wb-track: var(--wb-measure-wide); }
+#middle-page { --shell-track: var(--shell-measure); }
+#middle-page.is-data-page { --shell-track: var(--shell-measure-wide); }
 
 /* ② 标题带与正文读同一条轨 → 同一条上限、同一条对齐线 */
 .page-header,
 .page-content {
-  max-width: min(100%, var(--wb-track));
+  max-width: min(100%, var(--shell-track));
   margin-inline: auto;
 }
 
 /* ③ hub 是独立整页（不在 #middle-page 里），自带数据轨 */
 .hub-page {
-  --wb-track: var(--wb-measure-wide);
-  width: min(100%, var(--wb-track));
+  --shell-track: var(--shell-measure-wide);
+  width: min(100%, var(--shell-track));
   margin: 0 auto;
   padding: 56px 0;
 }
@@ -824,7 +821,7 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
    { max-width: none; }`（`workbench.css:1109`）是一条**独立于统一规则的旁路**，
    D-11 把「hub 与工作台标题带规格不一致」列为缺陷（`F02 D2`）——
    修法是**删掉这条旁路**，让 hub 标题带走 §4.2 的同一条 `.page-header` 规则
-   （在 `.hub-page` 的 `--wb-track` 上下文中解析出 1120）。
+   （在 `.hub-page` 的 `--shell-track` 上下文中解析出 1120）。
 
 ### 4.3 区块间距阶梯
 
@@ -836,7 +833,7 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 --sp-5 24px   左栏分区之间；卡片 ↔ 折叠区
 --sp-6 32px   页面级同级区块之间；标题带 → 首个区块
 --sp-7 48px   大分节（记录中心各大区块之间）
---sp-8 64px   页面底部留白
+--sp-8 64px   页面底部留白（⚠️ 超出权威表 §2.2 的 `--sp-7`，档位待裁决）
 ```
 
 - **疏朗面**额外规则：段落间距 **0.75em**（17px 正文 ≈ 13px），列表项间距 12px，
@@ -855,7 +852,7 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 | 墨块 | 主按钮、当前项圆底、状态圆点、进度带 | 墨色/角色色实心块 |
 
 > **D-2 的代价必须写进实现清单**（`decisions.md` 已登记）：卡面与暖奶油底只有 **1.06:1**
-> 对比度，卡片边界**完全依赖柔影**——`--wb-shadow-1` 的**第一层不能省**。
+> 对比度，卡片边界**完全依赖柔影**——`--elev-1` 的**第一层不能省**。
 > 任何「优化」掉这一层的改动都会让卡片边界消失。
 
 ### 4.5 死预留与死代码的清除方案（配平）
@@ -867,20 +864,20 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 | 1 | 标题带右侧 **128px 死预留** | `workbench.css:255` `#middle-page > .page-header { padding-right: 128px; }` | **删除该规则**。它是已退役「准备练习列表」的化石（`docs/GLOSSARY.md:439-446`；`F02.md:88-100`） |
 | 2 | **57 行死 CSS** `.scope-tray-*` | `workbench.css:178-234` | **整段删除**（含 `.scope-tray-anchor` 的 `position:sticky` 规则） |
 | 3 | 媒体查询里对死锚点的覆写 | `workbench.css:1197` `.scope-tray-anchor { top: 8px; }` | **随 #2 一并删除** |
-| 4 | 标题带 **3px 纯黑底线** | `workbench.css:256-260`（`border-bottom: 3px solid var(--lk-ink);` 在 `:259`） | 改为 **2px `--wb-rule-structure`**（§4.1 ⑤）。注：`design.md:808` 记为 `:258`，grep 实测为 `:259`，以实现为准 |
+| 4 | 标题带 **3px 纯黑底线** | `workbench.css:256-260`（`border-bottom: 3px solid var(--lk-ink);` 在 `:259`） | 改为 **2px `--rule-structure`**（§4.1 ⑤）。注：`design.md:808` 记为 `:258`，grep 实测为 `:259`，以实现为准 |
 | 5 | **76×8 装饰黄块** `.page-header::after` | `workbench.css:261-270`（`width:76px` 在 `:266`，`height:8px` 在 `:267`） | **整条规则删除**（含 `border: 1px solid var(--lk-ink)` 的描边） |
 | 6 | 800px 居中缎带 | `workbench.css:252-253` | 改为双轨测量 880 / 1120（§4.2），**标题带与正文共用同一条轨** |
 | 7 | **重复的 `.page-header` 规则**（后一条被再下一条覆盖） | `workbench.css:254`（`padding-bottom:24px; border-bottom:1px solid var(--dsw-border-l1)`）被 `:256-260` 覆盖 | **删除 `workbench.css:254`**（纯死规则） |
-| 8 | hub 页容器宽度自成一套 | `workbench.css:1108` `.hub-page { width: min(100% - 48px, 960px); }` | 改为 `width: min(100%, var(--wb-track))`，`--wb-track` 取数据轨（§4.2 规则 5） |
+| 8 | hub 页容器宽度自成一套 | `workbench.css:1108` `.hub-page { width: min(100% - 48px, 960px); }` | 改为 `width: min(100%, var(--shell-track))`，`--shell-track` 取数据轨（§4.2 规则 5） |
 | 9 | **hub 标题带的旁路规则** | `workbench.css:1109` `.hub-page .page-header { max-width: none; }` | **删除**。让 hub 标题带与 hub 网格共用同一条轨，消除 D-11 所说的「hub 与工作台标题带规格不一致」（`F02 D2`） |
-| 10 | 窄屏下 hub 宽度的媒体查询覆写 | `workbench.css:1206` `.hub-page { width: min(100% - 32px, 960px); padding: 36px 0; }` | 同步改为 `min(100% - 32px, var(--wb-track))`，与 #8 保持同一来源 |
+| 10 | 窄屏下 hub 宽度的媒体查询覆写 | `workbench.css:1206` `.hub-page { width: min(100% - 32px, 960px); padding: 36px 0; }` | 同步改为 `min(100% - 32px, var(--shell-track))`，与 #8 保持同一来源 |
 | 11 | JS 对 `scope-tray` 的搬运 | `middle-navigation.js:62-66` `updateScopeNames()` 及其调用点 `:86` | **删除函数与调用**（`scope-tray` 从不渲染，该分支恒为 no-op） |
 | 12 | JS 对 `scope-tray` 的读取 | `practice-flow.js:270-278` | **保留**（它读 `dataset.kpNames` 供「缺题」提示回显知识点名）。元素从不渲染 ⇒ 当前恒为空 ⇒ 行为等价；但删除会改变该回显的**来源代码路径**，按冻结边界不在本轮动。**标记为死分支**，在实现期的清理 PR 里单独确认 |
 
 > **#1 与 #7 的次序**：#7 删的是「被覆盖的重复规则」，#1 删的是「128px 预留」。
 > 两者互不依赖，但**必须同时删**——只删 #1 不删 #7，剩下的 `:254` 会以
 > `1px solid var(--dsw-border-l1)` 重新给标题带画一条底线，与 §4.1 ⑤ 的
-> 2px `--wb-rule-structure` 打架（两条 border-bottom 叠加，后一条胜）。
+> 2px `--rule-structure` 打架（两条 border-bottom 叠加，后一条胜）。
 
 **重新配平后的数值（中栏）**：
 
@@ -889,7 +886,7 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 | 中栏内边距 | `34px 40px 48px` | `28px 32px 72px` | 上 34→28，下 48→72（给吸底元素留白），左右 40→32 |
 | 标题带右预留 | **128px** | **0** | −128px |
 | 内容轨 | 800px 居中 | **880px（阅读）/ 1120px（数据）** 居中 | +80 / +320px |
-| 标题带底线 | 3px 纯黑 + 76×8 黄块 | **2px `--wb-rule-structure`** | 高度 −1px，色相收敛，**语义色位 −1** |
+| 标题带底线 | 3px 纯黑 + 76×8 黄块 | **2px `--rule-structure`** | 高度 −1px，色相收敛，**语义色位 −1** |
 | 1440 视口下中栏内容实宽 | 660（缎带占满，无死纸） | **676（轨占满，无死纸）** | +16px |
 | 1920 视口下缎带左右死纸 | 170px × 2 | **138px × 2**（阅读轨） / 18px × 2（数据轨） | 死纸 −19%（阅读轨） |
 | 2040 视口下缎带左右死纸 | 230px × 2 | **198px × 2**（阅读轨） / 78px × 2（数据轨） | 死纸 −14%（阅读轨） |
@@ -1447,7 +1444,7 @@ POST `{chapter: …}` 再 `refreshMiddle()`。自绘面板**必须走同一条�
 所有档位均无横向滚动条。
 
 **轨道不随断点变化**：880 / 1120 在四档下**恒定**。窄屏时轨道退化为
-`min(100%, 轨)`——即**占满中栏**（§4.2 的 `min(100%, var(--wb-track))` 已经处理），
+`min(100%, 轨)`——即**占满中栏**（§4.2 的 `min(100%, var(--shell-track))` 已经处理），
 因此**不会出现「窄屏上把 880 硬塞进 300px 里」的挤压**。
 
 ### 7.2 A 档线框（1440，三栏常驻）
@@ -1731,11 +1728,11 @@ C/D 档右栏抽屉
 | 3 | **密度分区规则表**（每区块疏朗/紧凑 + 判据） | §8.1 六种内容性质判据、§8.2 **30 行（编号 28 条）**分区表、§8.3 量化差、§8.4 逐页索引 | ✔ |
 | 4 | **右栏线框收尾**（会话列表分组+圆角条目、消息卡片流、贴底大输入区、执行计划圆点时间线、右上角活动浮层小卡） | §6.1 会话列表、§6.2 对话视图、§6.3 输入区特写、§6.4 尺寸表、§6.5 活动浮层 | ✔ |
 | 5 | **五个页面线框收尾**（练习页三态 / 知识点列表 / 知识点详情 / 记录中心 / 试卷列表）并标出疏朗/紧凑 | §5.0 总表 + §5.1–5.7；另附 §5.8 工作台设置视图（**唯一新增页**） | ✔ |
-| 6 | **三栏几何单一真值的最终数值**（CSS 持有模板 + JS 只写 `--wb-col-left` / `--wb-col-right`） | §1.1 病灶表、§1.2 收敛方案（D-10 口径 + CSS/JS 最小片段 + 7 条验收口径）、§1.3 **夹取规则 R1–R5（中栏 ≥420px）**、§1.4 五档数值、§1.5 极端位置表 | ✔ |
+| 6 | **三栏几何单一真值的最终数值**（CSS 持有模板 + JS 只写 `--shell-col-left` / `--shell-col-right`） | §1.1 病灶表、§1.2 收敛方案（D-10 口径 + CSS/JS 最小片段 + 7 条验收口径）、§1.3 **夹取规则 R1–R5（中栏 ≥420px）**、§1.4 五档数值、§1.5 极端位置表 | ✔ |
 | 7 | **800px 居中缎带 + 128px 死预留清除后的重新配平** | §4.5（**12 条**病灶逐条处置 + 配平表 + 1440/2040 逐栏账 + 死纸对比） | ✔ |
 | 8 | **76×8 装饰黄块必删** + **3px 黑底线改 2px 结构线** | §4.1 ⑤、§4.3 结构线两档的线宽理由、§4.5 第 4/5 条 | ✔ |
 | 9 | **顶栏三段式**：机器课程代号不得出现、章节只在透镜里 | §2.1 两条硬约束、§2.2 三段职责、§2.3 自绘面板（含 A-5 载荷兼容铁律与 id 断言）、§2.4 图标 | ✔ |
-| 10 | **880px 上限 + 标题带与正文共用对齐线**（含 `.hub-page .page-header` L1109） | §4.2 双轨机制（`--wb-track` 一变量承载一整页）、§4.5 第 6/8/9/10 条 | ✔ |
+| 10 | **880px 上限 + 标题带与正文共用对齐线**（含 `.hub-page .page-header` L1109） | §4.2 双轨机制（`--shell-track` 一变量承载一整页）、§4.5 第 6/8/9/10 条 | ✔ |
 | 11 | 三栏几何：宽度 / 断点 / 滚动容器归属 / 间距 | §1.4–1.7 | ✔ |
 | 12 | 左栏线框 + 尺寸表 + 图标规格 + 选中态几何 | §3.1–3.4 | ✔ |
 | 13 | **设置视图入口落位结论 + 理由** | §3.5（5 条理由、交互规格、主题开关落位 §3.5.2） | ✔ |
@@ -1776,7 +1773,7 @@ C/D 档右栏抽屉
 - [x] **冲突显式化**：发现 4 处冲突/缺口（章节透镜计数、顶栏动作区为空、
       数据轨超出 D-11 字面、章节名不在载荷里），已在 §0.5 逐条登记，
       并给出**几何先定、内容留空**的冻结安全默认，**未静默挑一个版本继续实现**。
-- [x] **单一真值**：`--wb-col-left` / `--wb-col-right` 是**唯一的列宽来源**；
+- [x] **单一真值**：`--shell-col-left` / `--shell-col-right` 是**唯一的列宽来源**；
       文档里再无第二处列宽数字（第 1.4/1.5 两张表都是**读数表**，不是**定义处**）。
 - [x] **黄块清零**：全文只出现一次「黄块」，且是在「为什么删」的论证里。
 

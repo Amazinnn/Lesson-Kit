@@ -116,23 +116,25 @@
 
 **决策**
 
-1. 新 token 全部落在 `--wb-*` 命名空间，与图谱的裸名（`--paper / --ink / --hair / --blue /
+1. 新 token 全部落在**权威表 `design-notes/night-paper-tokens.md` 的命名族**上
+   （结构 token §2 + 值 token §3），与图谱的裸名（`--paper / --ink / --hair / --blue /
    --yellow / --red / --shadow / --graphite / --green / --blueSoft / --yellowSoft / --redSoft`，
    `workbench.css:1505-1518`）**零同名**。
-2. **结构 token 唯一一套**、主题不变：间距阶、字号阶、行高阶、圆角阶（`--wb-radius-*`）、
-   抬升阶（`--wb-shadow-*`）、动效时长与缓动（`--wb-dur-* / --wb-ease-*`）、
-   z 层级（`--wb-z-*`）、阅读刻度（`--wb-read-*`）。
-3. **主题值两套**、随主题整套替换：表面（`--wb-surface-*`）、墨（`--wb-ink-*`）、
-   三角色（`--wb-role-*`）、线（`--wb-rule-*`）、控件边界。
+2. **结构 token 唯一一套**、主题不变：间距阶、字号阶、行高阶、圆角阶（`--r-*`）、
+   抬升阶（`--elev-*`）、动效时长与缓动（`--dur-* / --ease-*`）、
+   z 层级（`--z-*`）、阅读刻度（`--fs-reading` / `--font-read` / `--measure`）。
+3. **主题值两套**、随主题整套替换：表面（`--surface-*`）、墨（`--ink-*`）、
+   三角色（`--role-*`）、线（`--rule-*`）、控件边界（`--rule-control`）。
    亮色写 `:root`，夜纸写 `:root[data-theme="night"]`（值见 D-2 / D-3）。
 4. **旧 token 退役走别名期**：先把 `--lk-*` 与 `--dsw-*` 改成指向新 token 的别名
-   （`--lk-blue: var(--wb-role-action)` 之类），**一个版本内**只做「值替换、不改引用点」；
+   （`--lk-blue: var(--role-blue)` 之类），**一个版本内**只做「值替换、不改引用点」；
    别名期结束后一次性删掉别名定义与引用点（收编表见 D-3）。
-5. **图谱兼容区显式隔离**：新层里保留一个**只给图谱用**的 `--surface-sheet: #fffdf7`
-   （值与今天完全一致），并新增
+5. **图谱兼容区显式隔离**：新层里保留一个**只给图谱用**的 `--surface-sheet`
+   （图谱自己的纸面 token，名字由 A-16 唯一裁定；亮色 `#fffdf7` 与今天完全一致，
+   夜纸值由 A-17 裁定为 `#1c1a16`、由图谱 change 执行），并新增
    `#layout[data-page="graph"] #middle { background: var(--surface-sheet); }`
    —— 页面底从暖奶油换成 `#fdf8ef` 之后，图谱页的中栏仍铺 `#fffdf7`，
-   **图谱观感逐像素不变**。
+   **图谱亮色观感逐像素不变**。
 
 **理由**
 
@@ -174,21 +176,31 @@
 
 | 层 | token | 亮色 | 夜纸 | 圆角 | 抬升 | 描边 |
 |---|---|---|---|---|---|---|
-| 底 | `--wb-surface-ground` | `#fdf8ef` | `#1c1a16` | — | 无 | 无 |
-| 卡 | `--wb-surface-card` | `#ffffff` | `#26231d` | 12px | `--wb-shadow-1` | 无 |
-| 浮起 | `--wb-surface-raised` | `#ffffff` | `#302c25` | 12px | `--wb-shadow-3` | 无 |
-| 墨块 | `--wb-surface-ink` | `#221f1a` | `#f2ece1` | 12px | 无 | 无 |
+| 底 | `--surface-base` | `#fdf8ef` | `#1c1a16` | — | 无 | 无 |
+| 卡 | `--surface-card` | `#fffdf7` | `#232019` | 12px | `--elev-1` | 无 |
+| 浮起 | `--surface-raised` | `#ffffff` | `#2b2620` | 12px | `--elev-2` | 无 |
+| 墨块 | `--surface-ink` | `#221f1a` | `#14120f` | 12px | 无 | 无 |
 
-- 圆角统一 **12px**（按钮 / 卡片 / 标签 / 输入框），只有**几何形状**例外：
-  状态圆点 50%、进度环 50%、图标圆底 50%。墨块是反色面，不带影子。
-- 抬升用**暖调柔影**（非纯黑）：`--wb-shadow-1/2/3` 三档，色基 `rgba(120,92,48,α)`。
-- **唯一的发丝线例外**是「控件边界」`--wb-rule-control`（亮色 `#8b8375`，对白卡 3.75:1；
-  夜纸 `#6f6759`）—— 因为输入框 / 下拉框不描边就找不到边界。
+> 纸面 4 层的**名称与取值权威**：`design-notes/night-paper-tokens.md` §3.1
+> （`--surface-base` / `--surface-card` / `--surface-raised` / `--surface-ink`）。
+> 另有 `--surface-sheet` 是**图谱自己的纸面 token**（名字由 A-16 唯一裁定，旧别名
+> `--surface-graph-sheet` 已退役；它自带两套值：亮色 `#fffdf7`、夜纸 `#1c1a16`，
+> 见 A-17），**不参与本表 4 层**；见 D-1 第 5 条与 `design-notes/graph-isolation.md`。
+
+- 圆角统一 **12px**（`--r-md`；按钮 / 卡片 / 标签 / 输入框），只有**几何形状**例外：
+  胶囊 / 药丸标签 / 开关轨道 / 状态圆点用 `--r-pill`（999px），真正的圆形
+  （图标圆底、圆形徽标、进度环）用 `--r-round`（50%）—— 胶囊类**不得**用 50%
+  （A-18-5：会变椭圆）。墨块是反色面，不带影子；
+  墨块上的文字一律用 `--ink-inverse`（权威表 §4.4-11）。
+- 抬升用**暖调柔影**（非纯黑）：`--elev-1/2/3` 三档，亮色色基 `rgb(61 52 37 / α)`；
+  夜纸改为**明度阶 + 顶光 + 暖辉**（不再是向下的黑影），见权威表 §3.6 / §6。
+- **唯一的发丝线例外**是「控件边界」`--rule-control`（亮色 `#847552`，对卡面 4.44:1；
+  夜纸 `#7d7361`）—— 因为输入框 / 下拉框不描边就找不到边界。
   这**不是层与层的分界线**：`workbench-ui` delta「Paper levels and elevation」要求
   「Levels SHALL be separated by the shared 12px corner radius and a soft warm shadow,
   and SHALL NOT be separated by hairline borders」—— 发丝线只出现在**控件自身的边界**上，
   纸面层级之间一条都没有。
-- 单侧结构线 `--wb-rule-structure`（亮色 `#221f1a`、夜纸 `#6f6759`）**保留**，
+- 单侧结构线 `--rule-structure`（亮色 `#221f1a`、夜纸 `#ece3d3`）**保留**，
   但它属于**内容层**（知识点正文 / 题面），不属于面分层。见 D-5。
 
 **理由**
@@ -197,7 +209,7 @@
   并把「暖灰细线 `#cfc7b4`」与「抬起 = 暖调阴影 + 一根淡墨线」标为作废项。
 - 分层不能只靠明度差：现状 `--dsw-bg-layer-1` 与页面底只差 `(0,−1,−3)`（F01 D1），
   差值小到不可见。新的做法是**明度差 + 柔影 + 圆角**三件套同时给：白卡对暖奶油底是
-  1.06:1（肉眼几乎无差），但 12px 圆角 + `--wb-shadow-1` 让边界读得出来 —— 这正是
+  1.06:1（肉眼几乎无差），但 12px 圆角 + `--elev-1` 让边界读得出来 —— 这正是
   现代圆润风的标准做法（内容从底上「浮起」），而不是仿古风的「描边分格」。
 - 阴影必须暖调：现状阴影本来就是暖调（`rgba(61,52,37,…)` 系列），而描边是冷黑叠加
   （`rgb(0 0 0 / 4%|10%|12%)`，`workbench.css:31-33`，56 处引用）—— 真正「与纸不同源」的是
@@ -216,9 +228,9 @@
 **代价**
 
 - 1.06:1 的卡 / 底明度差**低于**任何对比度阈值 —— 卡片边界**完全依赖阴影**，
-  因此 `--wb-shadow-1` 的第一层（`0 1px 2px`）不能省；且在**低对比度显示器**或
+  因此 `--elev-1` 的第一层（`0 1px 2px`）不能省；且在**低对比度显示器**或
   Windows 高对比度模式下，卡片边界会变得不可见（见 D-12 的 `prefers-contrast` 兜底）。
-- 浮起与卡同色，**语义上只差影子**：`--wb-shadow-3` 相对 `--wb-shadow-1` 的差异必须在
+- 浮起与卡同色，**语义上只差影子**：`--elev-3` 相对 `--elev-1` 的差异必须在
   100% 缩放下可辨，否则浮层会读作「另一张卡」。
 - 取消描边后，**所有以描边为分界的信息**（分组、表格线、引用块左边线）都要重新找载体：
   靠留白 + 圆角 + 字重，找不到的地方退回单侧结构线。
@@ -278,26 +290,28 @@
 
 | 硬编码 | 出现处 | → |
 |---|---|---|
-| `#2864dc` ×5 | `workbench.css:848 :865 :962 :983 :1216` | `--wb-role-action` |
-| `#57606a` ×5 | `workbench.css:1464 :1466 :1472 :1474 :1482` | `--wb-ink-muted` |
+| `#2864dc` ×5 | `workbench.css:848 :865 :962 :983 :1216` | `--role-blue` |
+| `#57606a` ×5 | `workbench.css:1464 :1466 :1472 :1474 :1482` | `--ink-muted` |
 | `#1a7f37` ×3 | `workbench.css:1211 :1214 :1462` | 契约外绿色 → 见下方「绿」 |
-| `#b42318` ×2 / `#b62f28` ×2 / `#d12c2c` ×1 | `:1212 :1463` / `:696 :731` / `:982` | `--wb-role-needs-work` |
-| `#d97706` ×1 / `#b58b00` ×1 / `#e1aa12` ×1 | `:1465` / `:729` / `:1265` | `--wb-role-current-ink` |
-| `#e5e7eb` ×2 | `:1464 :1473` | `--wb-surface-sunken` |
-| `#333` ×1 | `:1467` | `--wb-ink-body` |
-| `#fff` ×1 | `:395` | `--wb-surface-raised` |
-| `#111318` ×1 | `:976` | `--wb-ink-strong` |
-| `#e6f4ea` / `#fdeceb` ×1 各 | `:1462` / `:1463` | `--wb-role-done-soft` / `--wb-role-needs-work-soft` |
-| `#f7f7f4` `#68707b` `#e6e8eb` `#dedbd3` `#faf8f2` `#d8d4c8` `#fff9df` | `:714 :1051 :1164 :1253 :1258 :1280` / `agent-ui.css:344` | `--wb-surface-sunken` / `--wb-ink-muted` / `--wb-rule-control` / `--wb-rule-control` / `--wb-surface-sunken` / `--wb-rule-control` / `--wb-role-current-soft` |
+| `#b42318` ×2 / `#b62f28` ×2 | `:1212 :1463` / `:696 :731` | `--role-red-ink`（红字） |
+| `#d12c2c` ×1 | `:982` | `--role-red`（红面 / 线） |
+| `#d97706` ×1 / `#b58b00` ×1 / `#e1aa12` ×1 | `:1465` / `:729` / `:1265` | `--role-yellow-deep` |
+| `#e5e7eb` ×2 | `:1464 :1473` | `--rule-hair`（装饰性分隔线） |
+| `#333` ×1 | `:1467` | `--ink-body` |
+| `#fff` ×1 | `:395` | `--ink-on-role`（蓝面上的字） |
+| `#111318` ×1 | `:976` | `--ink-strong` |
+| `#e6f4ea` ×1 | `:1462` | 契约外绿底 → 随 D-13 判定徽章重构退役（**无权威 token**） |
+| `#fdeceb` ×1 | `:1463` | `--role-red-wash`（红字承载底） |
+| `#f7f7f4` `#68707b` `#e6e8eb` `#dedbd3` `#faf8f2` `#d8d4c8` `#fff9df` | `:714 :1051 :1164 :1253 :1258 :1280` / `agent-ui.css:344` | `--surface-ink`（代码面）/ `--ink-muted` / `--rule-control` / `--rule-control` / `--surface-base` / `--rule-control` / `--role-yellow-soft` |
 
 **关于「对」的绿色**：`#1a7f37`（`.record-verdict-ok`，`workbench.css:1462`）是**契约外的第四色**
 （`docs/GLOSSARY.md:328-332` 只授权蓝 / 黄 / 红）。收口基线保持「不加第五色」，
 因此「正确」改由**几何 + 文案**表达（记录页判定徽章改用「深色结构块 + 几何符号 + 文字」，
-见 D-13），**不引入绿**。绿 token `--wb-role-done` 只在**必须**保留既有绿色语义的位置
-（练习页选项正确环 `workbench.css:1211 :1214`，它与既有 spec
-「Problem fields render math wherever they render text」同源、且被
+见 D-13），**不引入绿**。绿**在权威表里没有 token 名**（§3.4 只收三角色），
+只在**必须**保留既有绿色语义的位置（练习页选项正确环 `workbench.css:1211 :1214`，
+它与既有 spec「Problem fields render math wherever they render text」同源、且被
 `paper-practice.js:581` 的判定文案绑定）保留为**局部例外**并登记为契约漂移项，
-不进入三角色配额表。
+不进入三角色配额表；该例外的 token 名**待裁决**（权威表未收绿档，见待裁决清单）。
 
 **理由**
 
@@ -317,10 +331,12 @@
 
 **代价**
 
-- 主按钮蓝从 `#2457c5`（白字 6.47:1）换到 `#2f6fe4`（白字 4.65:1）—— **白字对比度下降**，
-  仍在 AA 之上但余量变薄；`--wb-role-action-deep` 必须在按下态提供更深的蓝（白字 6.70:1）。
+- 主按钮蓝从 `#2457c5`（白字 6.47:1）换到权威值 `#2b62e8`（白字 5.14:1）—— 白字对比度
+  仍在 AA 之上，且比今天第二蓝（白字 4.65:1）更宽裕；按下态由 `--role-blue-press`
+  承担（浅色 `#1f4fc4`，白字 6.94:1；夜纸 `#8fa9e8` 是**提亮**而不是压暗 —— 夜纸的层级
+  台阶靠明度阶 + 顶光，不靠把蓝压深）。
 - 黄色**不能**出现在任何承载文字的地方，这会推翻一部分现有做法（例如 5px 黄顶边、
-  黄底标签）；这些位置必须改走 `--wb-role-current-ink` 或改走几何。
+  黄底标签）；这些位置必须改走 `--role-yellow-deep` 或改走几何。
 - 契约外的绿被移除 → 记录页「正确」徽章的**观感会明显变化**（从绿药丸变成结构块）。
   这是有意的，但必须在验收截图里逐张比对。
 
@@ -332,9 +348,9 @@
 
 | token | 值 | 用途 |
 |---|---|---|
-| `--wb-font-ui` | `-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Helvetica, Arial, sans-serif` | 界面（现状 `--dsw-font-family`，`workbench.css:11-13`，**值不变，仅改名**） |
-| `--wb-font-read` | `"Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif` | 阅读面（新增，本地打包 woff2） |
-| `--wb-font-mono` | 现状 `--dsw-font-code`（`workbench.css:14-15`）**补 `monospace` 兜底** | 代码 / 数字 id / 日期 |
+| `--font-ui` | `-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Helvetica, Arial, sans-serif` | 界面（现状 `--dsw-font-family`，`workbench.css:11-13`，**值不变，仅改名**） |
+| `--font-read` | `"Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif` | 阅读面（新增，本地打包 woff2） |
+| `--font-mono` | 现状 `--dsw-font-code`（`workbench.css:14-15`）**补 `monospace` 兜底** | 代码 / 数字 id / 日期 |
 
 **A 组（衬线）**：题面正文 `.practice-question-card`（`workbench.css:924-932`）、
 知识点正文 `.knowledge-body`（`:493-500`）、解析 `.practice-solution`（`:933-940`）、
@@ -408,14 +424,14 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 **决策**
 
 新增**共享阅读版式层** `.wb-reading`（题面变体 `.wb-reading--stem`），
-刻度全部用 token，消费 `--wb-font-read`：
+刻度全部用 token，消费 `--font-read`：
 
 | 项 | 正文（知识点） | 题面 / 解析（stem） |
 |---|---|---|
-| 字号 | **17px** | **17px**（与正文同档） |
+| 字号 | **17px**（`--fs-reading`） | **17px**（与正文同档） |
 | 行高 | **1.75**（29.75px） | **1.75**（29.75px） |
 | 段距 | **0.7em**（≈11.9px） | 同 |
-| 行宽 measure | **38em**（≈646px） | **38em**（≈646px） |
+| 行宽 measure（`--measure`） | **38em**（≈646px） | **38em**（≈646px） |
 | h2 / h3 / h4 | **22 / 19 / 17px**（行高 1.35） | 同 |
 | 段落对齐 | `start`（**不 justify**） | 同 |
 
@@ -542,23 +558,26 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 
 ---
 
-### D-7 动效系统：CSS 为主、vanilla JS 为辅，四档时长 + 三档缓动 + 白/黑名单
+### D-7 动效系统：CSS 为主、vanilla JS 为辅，五档时长 + 三档缓动 + 白/黑名单
 
 **决策**
 
-**时长四档**（收口基线「交互 120–180ms；场景 240–520ms」）：
+**时长五档**（取值 = 权威表 §2.6；收口基线「交互 120–180ms；场景 240–520ms」仍成立）：
 
 | token | 值 | 用途 |
 |---|---|---|
-| `--wb-dur-1` | 120ms | 即时反馈（按下、勾选、圆点切换） |
-| `--wb-dur-2` | 180ms | 微反馈（hover、focus 环、边框换色） |
-| `--wb-dur-3` | 240ms | 进场 / 淡入 / 列表 stagger 单项 |
-| `--wb-dur-4` | 520ms | 场景（挤压回弹、庆祝、台灯转场总长约 700ms，见下） |
+| `--dur-fast` | 120ms | 即时反馈（按下、勾选、圆点切换） |
+| `--dur-base` | 160ms | 微反馈（hover、focus 环、边框换色） |
+| `--dur-slow` | 240ms | 进场 / 淡入 / 列表 stagger 单项 |
+| `--dur-scene` | 400ms | 场景（挤压回弹、庆祝） |
+| `--dur-ceremony` | 700ms | 仪式档（台灯转场总长，见下） |
 
-**缓动三档**：`--wb-ease-out`（`cubic-bezier(.2,.8,.2,1)`）、`--wb-ease-soft`
-（`cubic-bezier(.4,0,.2,1)`）、`--wb-ease-spring`（`cubic-bezier(.34,1.56,.64,1)`）。
+**缓动三档**（曲线系数 = 权威表 §2.6；A-18-4 钉死，禁止各设计件各编一套同名曲线）：
+`--ease-out`（`cubic-bezier(.22,.61,.36,1)`）、`--ease-standard`
+（`cubic-bezier(.4,0,.2,1)`）、`--ease-rebound`（`cubic-bezier(.34,1.3,.64,1)`）。
 **挤压回弹直接抄多邻国的 5 段关键帧 17 / 33 / 83 / 167 / 217 ms（总 517ms）+ 4 条贝塞尔**
-（`decisions.md` 12.2），做成一条 `@keyframes`，落进 `--wb-dur-4` 的预算内。
+（`decisions.md` 12.2），做成一条 `@keyframes`，落进 `--dur-scene` 的预算内；
+段内缓动走权威表的 `--ease-snap-hold` / `--ease-snap-pull` / `--ease-snap`。
 
 **动效范围（收口基线）**：交互反馈 + 数据层 + 视图转场 + **里程碑仪式**。
 **禁止**：全局背景 canvas、鼠标跟随、视差、光标辉光。
@@ -613,9 +632,9 @@ JS 临时插入的元素上。
 
 **代价**
 
-- `transition` / `animation` 的取值必须全部收敛到 `--wb-dur-* / --wb-ease-*`；
+- `transition` / `animation` 的取值必须全部收敛到 `--dur-* / --ease-*`；
   现状是 14 条 transition 散在 100/160/180/200/300ms 五档 + 三种自定义缓动（F01 D12）。
-- 台灯转场约 700ms（探出 180ms + 点亮 + 涟漪 450ms + 收回），**超过 `--wb-dur-4`**，
+- 台灯转场约 700ms（探出 180ms + 点亮 + 涟漪 450ms + 收回），**超过 `--dur-scene`**，
   属例外预算，需要单独记账（它是「主题切换的叙事」，不是常规转场）。
 - 骨架屏需要每个中栏页面知道「内容形状」→ 需要一套占位约定，实施成本不低。
 
@@ -768,11 +787,11 @@ every motion SHALL degrade to a direct state change」，
 **决策**
 
 - **CSS 是模板的唯一持有者**：`#layout` 写
-  `grid-template-columns: var(--wb-col-left, 280px) minmax(0, 1fr) var(--wb-col-right, 420px);`
+  `grid-template-columns: var(--shell-col-left, 280px) minmax(0, 1fr) var(--shell-col-right, 420px);`
   `#layout[data-ai-collapsed]` 用同样的变量、右栏置 0。
 - **JS 只写两个数值变量**：`workbench.js:4587` 现在的
   `layout.style.gridTemplateColumns = leftWidth + "px minmax(420px, 1fr) " + rightWidth + "px"`
-  改为 `layout.style.setProperty("--wb-col-left", …)` / `setProperty("--wb-col-right", …)`；
+  改为 `layout.style.setProperty("--shell-col-left", …)` / `setProperty("--shell-col-right", …)`；
   窄屏分支（`workbench.js:4580-4582`）清变量而不是清整段 inline 样式。
 - **「中栏不窄于 420px」的不变式由 JS 的夹取维持**（现状 `workbench.js:4584-4586`
   已按 `available = clientWidth - middleMinWidth` 夹取左右栏），CSS 的
@@ -832,7 +851,7 @@ every motion SHALL degrade to a direct state change」，
      把正文拉宽。
 4. **删除标题带右下那块 76×8 的黄色块**（`workbench.css:261-270` 的
    `.page-header::after`）与标题带的 `border-bottom: 3px solid var(--lk-ink)`
-   （`workbench.css:258`）→ 换成 2px 的 `--wb-rule-structure` 结构线。
+   （`workbench.css:258`）→ 换成 2px 的 `--rule-structure` 结构线。
    理由：黄色在收口基线里是**稀缺语义色**（当前 / 复习强调 / 连对进度），
    一块挂在每页标题带末端的装饰黄块与「去掉试卷卡 5px 黄带」（`decisions.md` 11.4）
    是同一个问题 —— 把语义色降级成装订线。
@@ -881,31 +900,34 @@ every motion SHALL degrade to a direct state change」，
   写法：`selector:focus:not(:focus-visible) { outline: none; }`，
   **不动**全局 `:focus-visible` 规则（`workbench.css:1123`：
   `outline: 2px solid var(--dsw-brand-accent); outline-offset: 1px`，
-  改成 `--wb-role-action` + `outline-offset: 2px`）。
+  改成 `--role-blue` + `outline-offset: 2px`）。
 - 为什么现状会整体失效：`select:focus` 的特异性是 `(0,1,1)`，高于 `:focus-visible` 的
   `(0,1,0)`，且两者都命中 → **主路径控件的焦点环被完全吃掉**（F08 §8.5 P0，
   实测 `outlineStyle === "none"`）。
 
 **对比度**
 
-墨阶收敛为**4 级可用文字灰 + 1 级非文本灰**，全部 ≥ 4.5:1（底 = 亮色 `#fdf8ef` /
-白卡 `#ffffff`；夜纸底 `#1c1a16` / 卡 `#26231d`）：
+墨阶收敛为**4 级文字灰 + 1 级失活灰**，取值与判定线以权威表
+`design-notes/night-paper-tokens.md` §3.2 / §4.1 为准（正文 / 次要文字 ≥4.5:1，
+三级文字 / 失活控件文字 ≥3:1；底 = 亮色 `#fdf8ef` / 卡面 `#fffdf7`；
+夜纸底 `#1c1a16` / 卡面 `#232019`）：
 
-| 级别 | token | 亮色 | 对暖奶油底 | 对白卡 | 夜纸 | 对夜纸底 |
+| 级别 | token | 亮色 | 对暖奶油底 | 对卡面 | 夜纸 | 对夜纸底 |
 |---|---|---|---|---|---|---|
-| 主墨 | `--wb-ink-strong` | `#221f1a` | 15.52 | 15.86 | `#f2ece1` | 14.78 |
-| 正文墨 | `--wb-ink-body` | `#3d3830` | 10.99 | 11.24 | `#ded6c8` | 12.04 |
-| 次级墨 | `--wb-ink-muted` | `#5d564b` | 6.85 | 7.02 | `#bdb5a7` | 8.55 |
-| 三级墨 | `--wb-ink-faint` | `#776f61` | **4.69** | **4.96** | `#9c9384` | **5.73** |
-| 非文本灰 | `--wb-ink-ghost` | `#b3aca0` | 2.13（非文本） | — | `#4e4941` | 1.95（非文本） |
+| 主墨 | `--ink-strong` | `#221f1a` | 15.52 | 16.14 | `#f4ede0` | 14.92 |
+| 正文墨 | `--ink-body` | `#3b3630` | 11.30 | 11.75 | `#e7dfd0` | 13.12 |
+| 次级墨 | `--ink-muted` | `#6b6459` | 5.53 | 5.75 | `#c2b8a5` | 8.85 |
+| 三级墨 | `--ink-faint` | `#8d8578` | **3.45** | **3.59** | `#978d7c` | **5.31** |
+| 失活灰 | `--ink-disabled` | `#8a8275` | 3.59 | 3.73 | `#7a7162` | 3.61 |
 
 - 现状不达标的四档被一次性收口：`--dsw-label-tertiary` 3.67:1（33 处引用）、
   `--dsw-label-caption` 2.12:1（5 处）、`--dsw-label-dimmed` 1.25:1（`::placeholder`，1 处）
-  全部并入 `--wb-ink-faint`；`--dsw-state-warn` 3.20:1（2 处）并入
-  `--wb-role-current-ink`（5.85:1）；`--dsw-state-success` 2.26:1（4 处）见 D-3 的绿例外。
-- **`--wb-ink-faint` 仍保留 4 级可用层级**：三级墨 4.69:1 与次级墨 6.85:1 仍是两个
-  可辨的台阶，只是台阶变窄了 —— 这是「4 级都要能用」与「4.5:1 底线」之间的唯一解。
-- `::placeholder` 改用 `--wb-ink-faint`（现状靠 fallback `#68707b` 才活，
+  全部并入 `--ink-faint`；`--dsw-state-warn` 3.20:1（2 处）并入
+  `--role-yellow-deep`（4.79:1）；`--dsw-state-success` 2.26:1（4 处）见 D-3 的绿例外。
+- **4 级可用层级仍然成立**：三级墨 3.45:1 与次级墨 5.53:1 仍是两个可辨的台阶 ——
+  权威表的判定线是「正文 / 次要 ≥4.5:1，三级文字 ≥3:1」，四级台阶靠**线高与字重**区分，
+  不靠把每一档都拉到 4.5:1。
+- `::placeholder` 改用 `--ink-faint`（现状靠 fallback `#68707b` 才活，
   `workbench.css:1051`）。
 
 **理由**
@@ -942,7 +964,7 @@ every motion SHALL degrade to a direct state change」，
 **决策**
 
 - **形态**：每条作答记录一张**圆角小卡**（12px 圆角、**不描边**、靠留白与
-  `--wb-shadow-1` 分隔），取代今天的 98 张带边框便签
+  `--elev-1` 分隔），取代今天的 98 张带边框便签
   （`workbench.css:1457` `.record-row { margin: 0 0 12px; padding: 12px 14px; }`
   叠加基类 `.card`（`:447-453`，`border: 1px solid var(--lk-ink)` + 阴影 + 6px 圆角）；
   实测 `?view=attempts` 页高 **8895px**）。
@@ -1202,7 +1224,7 @@ every motion SHALL degrade to a direct state change」，
 
 | 阶段 | 内容 | 出口判据 |
 |---|---|---|
-| **S0 token 地基** | 建 `--wb-*` 结构 token + 两套主题值；旧 `--lk-*`/`--dsw-*` 转别名；补 4 个未定义变量（单独提交）；建 `--wb-reading` 阅读层；建 `.wb-reading` 消费者迁移 | 四页基线截图比对通过；**图谱页逐像素一致**；`pytest` 全绿 |
+| **S0 token 地基** | 建权威表命名的结构 token + 两套主题值；旧 `--lk-*`/`--dsw-*` 转别名；补 4 个未定义变量（单独提交）；建阅读层 token（`--fs-reading` / `--font-read` / `--measure`）；建 `.wb-reading` 消费者迁移 | 四页基线截图比对通过；**图谱页逐像素一致**；`pytest` 全绿 |
 | **S1 练习页（样板线）** | 题面 / 解析 / 作答区三件套、24px 大号题号、题号状态圆点、连对三级计数器、5/10 连横幅（一份参数化）、庆祝分层 | 练习流程 4 阶段截图 + 减少动效两套 |
 | **S2 壳层** | 三栏单一真值（D-10）、128px 死预留退役（D-11）、左栏图标 + 整行圆角选中态、顶栏三段式、自绘章节透镜、hub 最近使用 + 卡片层级 | 三栏几何在 4 个视口截图比对；左栏选中态符合 `spec.md:749` |
 | **S3 知识点页** | `.wb-reading` 接入知识点正文、单侧结构线 2px、关联题目重排、空态插画 + 满宽主按钮 | 正文 17px/1.75 生效；h3>h4 不倒挂 |
@@ -1213,7 +1235,8 @@ every motion SHALL degrade to a direct state change」，
 **回滚策略**
 
 - **token 层可整体回退的前提**：所有旧 token 在别名期**仍然存在且仍指向原语义**
-  （别名只是把定义改成 `var(--wb-*)`，引用点一个都没动）→ 回退 = 把别名定义改回原值，
+  （别名只是把定义改成 `var(--role-*)` / `var(--surface-*)` / `var(--ink-*)` 等权威表 token，
+  引用点一个都没动）→ 回退 = 把别名定义改回原值，
   **一条提交即可**，不需要回滚引用点。
 - 前提之二：**S0 之后的每个阶段都必须是可独立回退的提交**（禁止把多个阶段的改动混在一个提交里）。
 - 前提之三：**新 token 只增不改**；一旦某个新 token 被引用点依赖，它就进入「不可删」集合，
