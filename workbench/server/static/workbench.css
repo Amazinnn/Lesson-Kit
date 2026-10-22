@@ -199,14 +199,31 @@
   --art-wash-red: #f9e5df;         /* 淡彩·红 */
   --art-highlight: rgb(255 255 255 / 55%); /* 克制高光 */
 
-  /* ---- 资产派生层 `--asset-*`（asset-spec §2）----
-     资产层的插画 / 图标在宿主 CSS 里用 `var(--asset-*)` 取色；这里只落
-     **台灯转场要用到的两个**（其余 `--asset-*` 归资产层自己补）：
-     · `--asset-ink` → 指向 token 层的 `--art-ink`（夜纸自动跟着换）
-     · `--asset-lamp-warm` → 灯下暖光（权威表无对应 token，已登记待裁决；
-       asset-spec §2 的取值两主题同值） */
+  /* ---- 资产派生层 `--asset-*`（asset-spec §2 / 任务 12.2）----
+     资产层的插画 / 图标在宿主 CSS 里用 `var(--asset-*)` 取色；
+     **同一套 SVG 换变量，不另画一份**（资产文件数不变）。
+     本层逐项指向 token 层 ⇒ 夜纸自动跟随（权威表 §5 / §7）：
+       · 图标圆底 = `--role-*` —— 夜纸那一套**已经是「降饱和 + 提亮」档**
+         （蓝 S−18/L+12、黄 S−22/L+7、红 S−11/L+13），不另造夜纸圆底色；
+       · 淡彩     = `--art-wash-*`（夜纸 = 角色色混夜纸卡面，同一配方只换混色底）；
+       · 高光     = `--art-highlight`（夜纸只有 8% —— 「更弱高光」，否则塑料感）；
+       · 圆底上的字形 = `--ink-on-role` / `--ink-on-warm`
+         （夜纸三个圆底统一深墨，浅色主题只有黄圆底用深墨）。
+     取值与 `assets/preview.html` 的两套主题值逐项一致（那里是资产层的走查页）。 */
+  --asset-page: var(--surface-base);
+  --asset-paper: var(--surface-card);
   --asset-ink: var(--art-ink);
-  --asset-lamp-warm: #f7c46b;
+  --asset-ground-blue: var(--role-blue);
+  --asset-ground-yellow: var(--role-yellow);
+  --asset-ground-red: var(--role-red);
+  --asset-ink-on-blue: var(--ink-on-role);
+  --asset-ink-on-yellow: var(--ink-on-warm);
+  --asset-ink-on-red: var(--ink-on-role);
+  --asset-wash-blue: var(--art-wash-blue);
+  --asset-wash-yellow: var(--art-wash-yellow);
+  --asset-wash-red: var(--art-wash-red);
+  --asset-highlight: var(--art-highlight);
+  --asset-lamp-warm: #f7c46b; /* 灯下暖光（权威表无对应 token，已登记待裁决；两主题同值） */
 
   /* ---- §3.10 数据层热力（4）---- */
   --heat-1: #d0dcfa;
@@ -404,7 +421,44 @@ body:has(#layout[data-page="graph"]) {
   --dsw-radius-sm: 6px;
   --dsw-radius-md: 6px;
   --dsw-radius-lg: 22px;
+
+  /* ---- 资产派生层同样钉回「改造前」的取值（任务 12.2）----
+     ⚠️ 为什么必须显式钉：自定义属性的 `var()` 替换发生在**声明它的那一层**——
+     `:root` 里的 `--asset-ground-blue: var(--role-blue)` 会在 `:root` 上就替换成
+     具体色值再继承下来，图谱页 body 上对 `--role-blue` 的冻结**改不动它**。
+     不钉的话，夜纸下图谱页的图标圆底会跟着换成夜纸档 —— 那是「误伤」。 */
+  --asset-page: #fffdf7;
+  --asset-paper: #fffdf7;
+  --asset-ink: #2a2620;
+  --asset-ground-blue: #2b62e8;
+  --asset-ground-yellow: #f5c518;
+  --asset-ground-red: #d1392b;
+  --asset-ink-on-blue: #fffdf7;
+  --asset-ink-on-yellow: #221f1a;
+  --asset-ink-on-red: #fffdf7;
+  --asset-wash-blue: #e1e7f5;
+  --asset-wash-yellow: #fdf3cf;
+  --asset-wash-red: #f9e5df;
+  --asset-highlight: rgb(255 255 255 / 55%);
+
+  /* ---- 布局几何同样钉回（任务 13 / 14 的壳层改动不得误伤图谱）----
+     `--shell-measure` = **轨宽**（≠ `--measure` 的行长）；图谱页仍是改造前的 800px。 */
+  --shell-measure: 800px;
 }
+
+/* ---- 图谱页的「合成层」钉回（任务 12.5）-----------------------------------
+   任务 12.5 要求三栏 `z-index ≥ 1`（涟漪在 `--z-base` 0 层，不得压平卡片）。
+   给 `#middle` 加 z-index 会**新建层叠上下文** ⇒ 图谱 canvas 的抗锯齿边缘会变
+   （实测：图谱页 41338 px 差异，其中 2377 px 的最大通道差 > 24；节点位置、
+   几何、配色逐项一致 —— 纯合成差异，不是设计差异）。
+   ⇒ 图谱页把三栏的 z-index 钉回 `auto`（= 改造前的样子），保证 G-5 逐像素零差异。
+   ⇒ 同时：图谱页上主题切换是**视觉无变化**（取值全被上面的冻结块钉回亮色），
+     涟漪层在这页没有业务；一层不透明底色盖住冻结的图谱反而是缺陷 ⇒ 直接不参与。 */
+body:has(#layout[data-page="graph"]) #left-column,
+body:has(#layout[data-page="graph"]) #middle,
+body:has(#layout[data-page="graph"]) #ai-column { z-index: auto; }
+body:has(#layout[data-page="graph"]) .lk-ripple,
+body:has(#layout[data-page="graph"]) .lk-ripple-glow { display: none; }
 
 * { box-sizing: border-box; }
 .visually-hidden {
@@ -462,6 +516,10 @@ body {
   padding: 0 20px;
   background: var(--surface-card);
   border-bottom: 2px solid var(--ink-strong);
+  /* 台灯涟漪的底色层在 `--z-base`（0）⇒ 内容层必须 z-index ≥ 1（A-1：
+     涟漪只扫底色，**不得**把卡片压平）。 */
+  position: relative;
+  z-index: 1;
 }
 #topbar .brand {
   font-size: 16px;
@@ -529,12 +587,14 @@ body {
   background: var(--surface-sunken);
   padding: 16px 12px 20px;
   overflow-y: auto;
+  z-index: 1; /* 台灯涟漪在 --z-base（0）层；三栏必须在它之上（A-1） */
 }
 #middle {
   position: relative;
   overflow-y: auto;
   padding: 34px 40px 48px;
   min-width: 0;
+  z-index: 1; /* 同上：涟漪不得压平卡片 */
 }
 .scope-tray-anchor {
   position: sticky;
@@ -600,6 +660,7 @@ body {
   min-height: 0;
   overflow: hidden;
   min-width: 360px;
+  z-index: 1; /* 同上：涟漪不得压平卡片 */
 }
 #layout[data-ai-collapsed] #ai-column {
   padding: 0;
@@ -2327,8 +2388,14 @@ img { max-width: 100%; }
      收 / 探 / 亮三态由**宿主 CSS 的 transform + opacity** 驱动（资产层自己的
      `assets/preview.html` 里的 `.pose--a/b/c` 就是这套约定的样例）。
    · 涟漪层承载**目标主题**的 `--surface-base`：由 JS 在转场**开始时**写入
-     （不是结束时，否则会「旧色闪一帧」）；CSS 侧留 `--lk-ripple-base` 钩子，
-     JS 也可直接写 inline background。
+     （不是结束时，否则会「旧色闪一帧」）。
+     ⚠️ **钩子名以 `--ripple-base` 为准**（附加 3：原 `--lk-ripple-base` 落在
+     `--lk-*` 家族里会卡住任务 2.3 的「非图谱区 `--lk-` 归零」验收）。
+     读取顺序：`--ripple-base`（新名）→ `--lk-ripple-base`（旧名，**过渡别名**，
+     值与语义完全相同，供并行写这一变量的 agent 不被脱节）→ `--surface-base`（兜底）。
+     两个名字都**不在 CSS 里定义**：一旦定义就会遮蔽 JS 在 `:root` 上的 inline 写入。
+     ⚠️ 涟漪层**不接** `--surface-card` 等会随主题变的**卡面** token ——
+     否则涟漪结束时底色会跳变。
    · 暖光用 `mix-blend-mode: screen`（掉帧则退化 `normal` + 降不透明度）。
    · 涟漪只动 `transform: scale()` 与 `opacity`；**不得**动画化 `mask-image` 的
      渐变半径（那属逐帧重绘，违反动效红线）。
@@ -2344,7 +2411,7 @@ img { max-width: 100%; }
 }
 .lk-ripple {
   z-index: var(--z-base);
-  background: var(--lk-ripple-base, var(--surface-base));
+  background: var(--ripple-base, var(--lk-ripple-base, var(--surface-base)));
   -webkit-mask-image: radial-gradient(circle at 88% 82%, #000 0, #000 22vmax, transparent 30vmax);
   mask-image: radial-gradient(circle at 88% 82%, #000 0, #000 22vmax, transparent 30vmax);
   transform: scale(.06);
@@ -2356,6 +2423,10 @@ img { max-width: 100%; }
   mix-blend-mode: screen;
   transform: scale(.02);
 }
+/* 暖光层的降级是**运行时判断**（任务 12.5）：若 DevTools 实测该层掉帧，
+   把它改成 `mix-blend-mode: normal` 并降低暖光不透明度（观感损失可接受）。
+   这里不预置 `@supports` 兜底 —— 掉帧不是「特性缺失」，CSS 查不出来，
+   预置一段永远走不到的分支只是死代码。 */
 .lk-lamp {
   position: fixed;
   right: 2rem;
