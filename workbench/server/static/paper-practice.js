@@ -628,7 +628,7 @@
       var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
         + "<h2>" + escapeHtml(title) + "</h2>"
-        + "<div class='wb-reading problem-text'>" + richText(String(prompt)) + "</div>"
+        + "<div class='wb-reading wb-reading--stem problem-text'>" + richText(String(prompt)) + "</div>"
         + (problem.source_evidence
           ? "<p class='practice-source'>来源：" + escapeHtml(problem.source_evidence) + "</p>" : "");
       renderMath(ids.question);

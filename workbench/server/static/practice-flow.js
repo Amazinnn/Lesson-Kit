@@ -1113,7 +1113,7 @@
         + "<p class='practice-streak' style='position: relative'>" + streakHtml() + "</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
-        + "<div class='problem-text wb-reading'>" + richText(problemTextFor(problem)) + "</div>"
+        + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(problemTextFor(problem)) + "</div>"
         + optionHtmlFor(item, reviewOnly, paperReview) + keylessLine(item)
         + verdictLine(item, reviewOnly, paperReview)
         + (reviewOnly ? reviewResultHtml(item, paperReview) : "") + "</article>";
@@ -2153,7 +2153,7 @@
           var directionLabel = item.direction === "reverse" ? "反向" : "正向";
           buildRatingCard(
             "<p class='context-line'>闪卡 · " + directionLabel + "</p>"
-            + "<div class='problem-text wb-reading'>" + richText(sides.prompt) + "</div>"
+            + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(sides.prompt) + "</div>"
             + "<p class='section-kicker'>另一面</p><div class='wb-reading'>" + richText(sides.answer) + "</div>",
             "card", item.id, String(sides.prompt || "闪卡"), item.direction, item);
           return;
@@ -2176,7 +2176,7 @@
               + richText(problem.solution || "（本题无解析）") + "</div>";
           buildRatingCard(
             "<p class='context-line'>练习题</p><h2>" + escapeHtml(title) + "</h2>"
-            + "<div class='problem-text wb-reading'>" + richText(problem.problem_text) + "</div>"
+            + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(problem.problem_text) + "</div>"
             + "<p class='section-kicker'>我的作答</p><div class='wb-reading'>" + richText(item.answer_text || "（未作答）") + "</div>"
             + solutionHtml,
             "problem", item.id, title, "", item);
