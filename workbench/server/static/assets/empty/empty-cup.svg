@@ -1,0 +1,27 @@
+<svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-cup-title">
+  <title id="empty-cup-title">静物插画：一杯还冒着热气的茶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="33" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="158" rx="46" ry="9" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 105.6 88 94 91.6 94 96 C 94 130 101 152 120 152 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 134.4 88 146 91.6 146 96 C 146 130 139 152 120 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="96" rx="26" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <ellipse cx="120" cy="158" rx="46" ry="9" stroke-width="3"/>
+      <ellipse cx="120" cy="158" rx="34" ry="6.5" stroke-width="2"/>
+      <path d="M 94 96 C 94 130 101 152 120 152 C 139 152 146 130 146 96" stroke-width="3"/>
+      <ellipse cx="120" cy="96" rx="26" ry="8" stroke-width="2"/>
+      <path d="M 146 106 C 162 104 164 128 148 134" stroke-width="2"/>
+      <path d="M 112 86 C 106 78 118 72 112 64 C 108 58 112 50 112 44" stroke-width="1.5"/>
+      <path d="M 130 86 C 124 78 136 72 130 64 C 126 58 130 50 130 44" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 97.5 108 C 98 120 100 132 103 141" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

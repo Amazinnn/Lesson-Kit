@@ -1,0 +1,30 @@
+<svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-graph-title">
+  <title id="icon-graph-title">知识图谱</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <circle cx="11.5" cy="14.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="36.5" cy="13.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="12.5" cy="34.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="35" cy="35.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="24" cy="24" r="3.2" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 22%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 24 L 11.5 14.5" stroke-width="2"/>
+      <path d="M 24 24 L 36.5 13.5" stroke-width="2"/>
+      <path d="M 24 24 L 12.5 34.5" stroke-width="2"/>
+      <path d="M 24 24 L 35 35.5" stroke-width="2"/>
+      <path d="M 36.5 13.5 C 40 20 40 29 35 35.5" stroke-width="2"/>
+      <circle cx="11.5" cy="14.5" r="2.1" stroke-width="3"/>
+      <circle cx="36.5" cy="13.5" r="2.1" stroke-width="3"/>
+      <circle cx="12.5" cy="34.5" r="2.1" stroke-width="3"/>
+      <circle cx="35" cy="35.5" r="2.1" stroke-width="3"/>
+      <circle cx="24" cy="24" r="3.2" stroke-width="3"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 21.7 21.7 Q 20.7 22.6 20.9 23.9" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,23 @@
+<svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-kps-title">
+  <title id="icon-kps-title">知识点</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 12.6 12.4 L 17.2 11.8 L 17.2 36.4 L 12.6 36.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 18%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 12.6 12.4 L 12.6 36.6" stroke-width="2"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z" stroke-width="3"/>
+      <path d="M 18.8 12.4 L 18.8 34.6" stroke-width="2"/>
+      <circle cx="24" cy="15" r="1.7" fill="var(--asset-ground-blue, #2b62e8)" stroke-width="2"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 20.4 13.6 L 20.4 28.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

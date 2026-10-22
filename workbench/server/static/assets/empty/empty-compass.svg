@@ -1,0 +1,27 @@
+<svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-compass-title">
+  <title id="empty-compass-title">静物插画：一把绘图圆规</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="92" cy="166" rx="7" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="150" cy="166" rx="7" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 118.5 77.5 L 90.5 165.5 L 93.5 166.5 L 121.5 78.5 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 118.5 78.5 L 148.5 166.5 L 151.5 165.5 L 121.5 77.5 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 120 78 L 92 166" stroke-width="3"/>
+      <path d="M 120 78 L 150 166" stroke-width="3"/>
+      <path d="M 106 110 L 136 102" stroke-width="2"/>
+      <circle cx="120" cy="54" r="11" stroke-width="3"/>
+      <path d="M 120 65 L 120 76" stroke-width="2"/>
+      <circle cx="120" cy="78" r="4" stroke-width="3"/>
+      <path d="M 92 166 L 88 154 L 97 155 Z" stroke-width="3"/>
+      <path d="M 150 166 L 145 154 L 154 155 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 109.2 55.9 A 11 11 0 0 0 113.7 45" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+<svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pen-title">
+  <title id="empty-pen-title">静物插画：一支放在桌上的钢笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 36 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 66 133 L 168 167" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="4"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 69 123.2 L 171 159.2 L 170 162.5 L 68 126.5 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 68 126.5 L 170 162.5 A 3.5 3.5 0 0 1 169 165.8 L 67 128.8 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 59.5 123 L 69.7 121.3 L 66.3 130.7 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 69 123.2 L 171 159.2 A 3.5 3.5 0 0 1 169 165.8 L 67 128.8 Z" stroke-width="3"/>
+      <path d="M 59.5 123 L 69.7 121.3 L 66.3 130.7 Z" stroke-width="3"/>
+      <path d="M 63 124 L 69 127" stroke-width="2"/>
+      <path d="M 126.2 150 L 128.2 144.4" stroke-width="2"/>
+      <path d="M 134.3 152.9 L 136.3 147.3" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 77 128 L 141 150.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

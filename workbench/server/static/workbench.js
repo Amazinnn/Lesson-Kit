@@ -513,6 +513,148 @@
     });
   }
 
+  /* ---------- key feedback cues ----------
+   * Four contract events carry a cue: an answer judged correct, an answer
+   * judged wrong, a finished round and a milestone (openspec
+   * changes/workbench-visual-language-v2, spec requirement "Key feedback
+   * audio cues").  Nothing else may sound.
+   *
+   * The cues themselves live in sfx.js.  The shell's script list belongs to
+   * pages.py, so the module is pulled in here and the triggers are wired only
+   * once it is there.  A cue may only follow a judgment the learner just
+   * caused, so each trigger is armed by the submit gesture it belongs to and
+   * disarmed as soon as it fires; re-rendering an old answer stays silent.
+   */
+
+  var CUE_ARM_WINDOW_MS = 10000;
+  var VERDICT_SELECTOR = ".micro-verdict";
+  var BURST_SELECTOR = ".lk-celebrate-burst, [data-lk-cue='milestone']";
+  var verdictArmedAt = 0;
+  var completionArmedAt = 0;
+  var burstCuedAt = 0;
+
+  function ancestorWithId(node, id) {
+    var current = node;
+    while (current && current.nodeType === 1) {
+      if (current.id === id) return current;
+      current = current.parentNode;
+    }
+    return null;
+  }
+
+  /* The click gate hangs off the layout element, the root of the workbench
+     shell: every control that can judge an answer lives inside it. */
+  layout.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!target) return;
+    /* A cue belongs to the judgment or the completion caused by the learner's
+       most recent interaction: a submit arms it, any other click cancels it,
+       so re-reading an old answer stays silent. */
+    if (ancestorWithId(target, "answer-submit")
+        || ancestorWithId(target, "paper-item-submit")) {
+      verdictArmedAt = Date.now();
+    } else {
+      verdictArmedAt = 0;
+    }
+    if (ancestorWithId(target, "paper-final-submit")) {
+      completionArmedAt = Date.now();
+    } else {
+      completionArmedAt = 0;
+    }
+  }, true);
+
+  function cueArmed(armedAt) {
+    return Date.now() - armedAt < CUE_ARM_WINDOW_MS;
+  }
+
+  function cueVerdict(node) {
+    if (!cueArmed(verdictArmedAt)) return;
+    var classes = node.classList;
+    if (!classes) return;
+    var ok = classes.contains("ok");
+    if (!ok && !classes.contains("bad")) return;
+    verdictArmedAt = 0;
+    if (ok) {
+      window.lkSfx.playCue("correct");
+    } else {
+      window.lkSfx.playCue("wrong");
+    }
+  }
+
+  function cueBurst() {
+    var now = Date.now();
+    if (now - burstCuedAt < 500) return;
+    burstCuedAt = now;
+    window.lkSfx.playCue("milestone");
+  }
+
+  function cueInspect(node) {
+    if (!node || node.nodeType !== 1) return;
+    var verdicts = [];
+    var bursts = [];
+    if (node.matches && node.matches(VERDICT_SELECTOR)) verdicts.push(node);
+    if (node.matches && node.matches(BURST_SELECTOR)) bursts.push(node);
+    if (node.querySelectorAll) {
+      verdicts = verdicts.concat(Array.prototype.slice.call(
+        node.querySelectorAll(VERDICT_SELECTOR)));
+      bursts = bursts.concat(Array.prototype.slice.call(
+        node.querySelectorAll(BURST_SELECTOR)));
+    }
+    verdicts.forEach(cueVerdict);
+    bursts.forEach(cueBurst);
+  }
+
+  function wireKeyFeedbackCues() {
+    if (!window.lkSfx || typeof window.lkSfx.playCue !== "function") return;
+
+    var middlePage = document.getElementById("middle-page");
+    if (middlePage && window.MutationObserver) {
+      var observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+          Array.prototype.slice.call(mutation.addedNodes).forEach(cueInspect);
+        });
+      });
+      observer.observe(middlePage, { childList: true, subtree: true });
+    }
+
+    var completion = document.getElementById("paper-completion");
+    if (completion && window.MutationObserver) {
+      var wasVisible = !completion.hidden
+        && !(completion.classList && completion.classList.contains("hidden"));
+      var completionObserver = new MutationObserver(function () {
+        var visible = !completion.hidden
+          && !(completion.classList && completion.classList.contains("hidden"));
+        if (visible && !wasVisible && cueArmed(completionArmedAt)) {
+          completionArmedAt = 0;
+          window.lkSfx.playCue("complete");
+        }
+        wasVisible = visible;
+      });
+      completionObserver.observe(completion, {
+        attributes: true,
+        attributeFilter: ["class", "hidden"],
+      });
+    }
+  }
+
+  function loadSfxModule() {
+    return new Promise(function (resolve) {
+      var script = document.createElement("script");
+      script.src = "/static/sfx.js";
+      script.async = false;
+      script.onload = function () { resolve(true); };
+      script.onerror = function () { resolve(false); };
+      /* A script inserted into the document runs wherever it is placed, and
+         the layout element is the one element every page of the shell has. */
+      layout.appendChild(script);
+    });
+  }
+
+  loadSfxModule().then(function (loaded) {
+    if (!loaded) return;
+    wireKeyFeedbackCues();
+  });
+
   var mobileNavToggle = document.getElementById("mobile-nav-toggle");
   var mobileAiToggle = document.getElementById("mobile-ai-toggle");
   function toggleDrawer(name) {

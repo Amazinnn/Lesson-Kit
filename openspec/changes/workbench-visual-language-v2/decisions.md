@@ -1496,6 +1496,23 @@ mockup 修正后仍有意保留了近黑底，并主动问「发送按钮要不�
 一条漂移若该由它裁定，就该指到它，不该硬塞进「产品决策」或「openspec change」。
 **CD-163 归入「六类来源之外」组**，并保留它作为第六值的第一例。
 
+### A-38 音效资产与跨组对齐（第 10 组落地后固化）
+
+1. **资产路径**：`workbench/server/static/assets/audio/sfx-{right,wrong,complete,milestone}.wav`
+   （`tasks.md` 10.1 指定；与第 9 组的 `assets/icons|illustrations` 约定同层）。
+2. **静音偏好字段名 = `sound`**（布尔，默认**开**），写在**既有** `wb_settings_<工作区>` JSON 里
+   （与 `showRating` / `runningSendAction` 同一对象，**不新增 localStorage 键**）。
+   ⇒ **第 11 组（设置视图）必须用同一个字段名与同一个默认值** ——
+   字段名不一致会出现「开关拨了但没声音」。
+3. **里程碑钩子**：第 8 / 17 组的庆祝爆点元素**必须**带 class `lk-celebrate-burst`
+   （`motion-spec.md` §3.7 的 keyframe 名）或 `data-lk-cue="milestone"`，
+   音效才能与 400ms 那一拍**同拍**。当前该 class 尚未存在 —— 这是**第 8/17 组的硬前置**。
+4. **统计卡 3 声 tick 不做**：spec 的口径是「每个事件**恰好一条**」，
+   故只做 4 条。多邻国的「完成 1 声 + 统计卡 3 声」是**调研得到的启发**，
+   不是所有者裁决；要做需**新增音频资产 + 新增 spec 条款**，登记为漂移待定。
+5. **`sfx.js` 由 `workbench.js` 动态插入**（挂 `layout` 元素而非 `document.head`），
+   因为本次 `pages.py` 不可改。登记为漂移；日后放开 `pages.py` 时应改为正常 `<script>` 标签。
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，

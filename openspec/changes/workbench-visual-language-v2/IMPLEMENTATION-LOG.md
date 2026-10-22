@@ -52,7 +52,7 @@
 
 | 波 | 任务组 | 状态 | 备注 |
 |---|---|---|---|
-| W1 | 1–4 CSS 地基 | **进行中**（Step 1 `16d3ff89`、Step 2 收编 22 色 `4957c3bc` 已提交） | Step 1 = 新 token 层 + 旧 token 别名期，零 class/JS/结构变化 = 最安全回滚点 |
+| W1 | 1–4 CSS 地基 | **进行中**（Step 1 `16d3ff89`、Step 2 收编 22 色 `4957c3bc` 已提交，剩 Step 3） | Step 1 = 新 token 层 + 旧 token 别名期，零 class/JS/结构变化 = 最安全回滚点 |
 | W1 | 5.1–5.2 字体资产 | ✅ **完成并提交**（`072f540c`） | Regular 已落（923KB）。**600 字重因体积超标被砍**（规则：超标先砍字重不砍字表）→ 只声明 `font-weight: 400` |
 | W1 | 7 Markdown parity | ✅ **完成并提交** | 见 §4 |
 | W2 | 6 阅读层 · 8 动效 token · 5.3–5.4 @font-face · 11–15 设置视图+主题+壳层 | 待派 | **全部要动 `workbench.css` ⇒ 必须等 W1 的 F1 收工**（同一文件不可并行） |
@@ -103,6 +103,17 @@
 - `static/fonts/`：`SourceHanSerifSC-Regular.woff2`（923KB）· `LICENSE-OFL.txt` · `README.md`
 - **600 字重因体积超标被砍**（只留 400）；`@font-face` 只声明 400。
 - 待办：5.3（`@font-face` + 三族分工）· 5.4（字体缓存策略，`app.py` 的 `_send_static`）
+
+#### 第 10 组 · 关键反馈音效 —— ✅ 完成
+- 新建 `workbench/server/static/sfx.js`（音效引擎）+ `assets/audio/sfx-{right,wrong,complete,milestone}.wav`
+  （**自制合成**，Python 标准库 `wave` 加法合成，pytest 重渲染逐样本比对 ±4 LSB ⇒ 手改/下载会测试失败）
+- 4 条时长 0.140 / 0.140 / 0.185 / 0.190s（全部 < 200ms）；16-bit 44.1kHz 单声道，峰值归一 0.72 不削顶
+- 改 `workbench.js`（+142，4 个触发点接入）+ `app.py`（CONTENT_TYPES 加 wav/mp3/ogg）+ `pyproject.toml`（package-data）
+- 新建 `tests/workbench/sfx_assets.py`（合成器）· `sfx.test.js`（node 14 例）· `test_sfx_assets.py`（pytest 6 例）
+- **自动播放限制**：模块加载只注册监听器、不建元素；首次用户手势才预建 4 个 `Audio`；此前 `playCue()` 直接返回 false
+- **发声闸门**：判定/完成只有在「最近一次交互是对应提交按钮」时才发声 ⇒ 回看旧答案 / 重渲染 / hover / 展开 / 导航**一律零发声**
+- 验证：pytest **1164 passed** / compileall 0 / openspec 19 / guard PASS；node 14/14；file:// 与 http 双测 console 0 error
+- ⚠️ 跨组硬前置见 **A-38**：第 11 组用同名字段 `sound`（默认开）；第 8/17 组的爆点必须带 `lk-celebrate-burst`
 
 #### 第 9 组 · 静物 SVG 资产 —— 进行中
 - 只新建 `static/assets/`；另出 `static/assets/preview.html`（全部资产排开、浅/夜两底）便于目检。

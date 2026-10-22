@@ -1,0 +1,26 @@
+<svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-inkwell-title">
+  <title id="empty-inkwell-title">静物插画：桌上的墨水瓶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="117" cy="165" rx="28" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 117 120 L 145 120 C 145 150 137 166 117 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 89 120 L 145 120 C 144.7 125 144.2 130 143.6 134 L 90.4 134 C 89.8 130 89.3 125 89 120 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 97 100 L 137 100 L 139.4 106 L 94.6 106 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 143 154 L 157 118" stroke-width="2"/>
+      <circle cx="157" cy="114" r="5" stroke-width="3"/>
+      <path d="M 89 120 C 89 150 97 166 117 166 C 137 166 145 150 145 120" stroke-width="3"/>
+      <path d="M 89 120 L 97 100 L 137 100 L 145 120" stroke-width="3"/>
+      <ellipse cx="117" cy="100" rx="20" ry="6" stroke-width="2"/>
+      <path d="M 105 78 L 129 78 L 133 100 L 101 100 Z" stroke-width="2"/>
+      <circle cx="117" cy="74" r="5" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 101 L 92.5 127 L 95.5 127 L 95.5 101 Z" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

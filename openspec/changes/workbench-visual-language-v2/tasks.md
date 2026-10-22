@@ -114,13 +114,13 @@
 
 ## 10. 关键反馈音效资产（可独立验收） （specs/workbench-settings「Sound preference」+ decisions 8.3）
 
-- [ ] 10.1 四个关键反馈短音效：答对、答错、完成、里程碑，放 `workbench/server/static/assets/audio/`，每条**短于 200ms**；**其它任何表面 / 事件 / 状态变化都不发声**。验证：4 个文件存在且逐个测时长 < 200ms；触发点只有这四处。
-- [ ] 10.2 绕过浏览器自动播放限制：首次音效必须发生在**一次用户手势之后**（首次交互时解锁音频上下文），并给出控制台不报错的处理路径。验证：首屏加载后不发声且控制台无自动播放告警；首次点击后可发声。
-- [ ] 10.3 声音偏好联动与 MIME：开关并入第 11 组的「声音」偏好；关闭后**立即生效、无需刷新**，且**不移除任何视觉反馈**（声音不是唯一通道）；在 `workbench/server/app.py` 的 `CONTENT_TYPES`（L26-34）补 `.mp3` / `.ogg`。验证：关闭后四个时刻都不发声、动效与视觉反馈完整；请求音频返回正确 Content-Type。
-- [ ] 10.4 阶段验收（音效资产独立验收）：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.3 走查；确认音效不进入任何学习事实或持久化路径（无对应 API 调用、池内无新增记录）。
-- [ ] 10.5 **四个音效的触发点落位**（A-27 **M-N**；spec 新 Requirement「Key feedback audio cues」）：把四个触发点落到具体文件与具体分支 —— 答对 → `practice-flow.js` 的**判定正确**分支（与 `.micro-verdict.ok` / `.option-correct` 同一处）；答错 → 同一分支的**判定错误**侧；完成 → 练习轮次结束、进入完成页的那一次响应（`pages.py:227` 的 `#paper-completion` 对应流程）；里程碑 → 庆祝**进入里程碑档**的那一拍（与 `lk-celebrate-burst` 同拍，`design-notes/motion-spec.md` §3.7 b 行的 400ms）。⚠️ **只在这四处发声** —— 其它任何表面、事件或状态变化（hover、展开、导航、加载）一律不发声。验证：`grep -rn "playCue\|new Audio\|Audio(" workbench/` 的**调用点**恰好 4 处且分别对应上列四个事件；构造答对 / 答错 / 完成 / 里程碑四个场景各录一次音频波形，确认每个场景只触发一条、且没有第五条。
-- [ ] 10.6 **音效与动效同步 + 静音即时生效**：里程碑音效必须与几何爆点**落在同一拍**（400ms），不得提前于爆点、不得晚于爆点退场；声音偏好关时四个触发点**都不调用播放**，且**不移除任何视觉反馈**（庆祝动效、答对回弹、答错摆动、连对负反馈全部照常）。验证：静音开关切换后**无需刷新**即生效；静音后录屏确认庆祝动效仍完整播放、四个反馈的视觉通道一个不少；音频四波形与动效帧的时间轴对齐。
-- [ ] 10.7 阶段验收（补充：声音与动效同步）：按 `acceptance.md` §3.3 + §2 **M-13**（关键反馈音效）走查 —— 四个时刻各一条 <200ms、首次音效发生在一次用户手势之后、加载后零发声、静音后零发声且视觉反馈完整；截图 / 录屏走查范围＝答对 / 答错 / 完成 / 里程碑四个时刻的声画对照。
+- [x] 10.1 四个关键反馈短音效：答对、答错、完成、里程碑，放 `workbench/server/static/assets/audio/`，每条**短于 200ms**；**其它任何表面 / 事件 / 状态变化都不发声**。验证：4 个文件存在且逐个测时长 < 200ms；触发点只有这四处。
+- [x] 10.2 绕过浏览器自动播放限制：首次音效必须发生在**一次用户手势之后**（首次交互时解锁音频上下文），并给出控制台不报错的处理路径。验证：首屏加载后不发声且控制台无自动播放告警；首次点击后可发声。
+- [x] 10.3 声音偏好联动与 MIME：开关并入第 11 组的「声音」偏好；关闭后**立即生效、无需刷新**，且**不移除任何视觉反馈**（声音不是唯一通道）；在 `workbench/server/app.py` 的 `CONTENT_TYPES`（L26-34）补 `.mp3` / `.ogg`。验证：关闭后四个时刻都不发声、动效与视觉反馈完整；请求音频返回正确 Content-Type。
+- [x] 10.4 阶段验收（音效资产独立验收）：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.3 走查；确认音效不进入任何学习事实或持久化路径（无对应 API 调用、池内无新增记录）。
+- [x] 10.5 **四个音效的触发点落位**（A-27 **M-N**；spec 新 Requirement「Key feedback audio cues」）：把四个触发点落到具体文件与具体分支 —— 答对 → `practice-flow.js` 的**判定正确**分支（与 `.micro-verdict.ok` / `.option-correct` 同一处）；答错 → 同一分支的**判定错误**侧；完成 → 练习轮次结束、进入完成页的那一次响应（`pages.py:227` 的 `#paper-completion` 对应流程）；里程碑 → 庆祝**进入里程碑档**的那一拍（与 `lk-celebrate-burst` 同拍，`design-notes/motion-spec.md` §3.7 b 行的 400ms）。⚠️ **只在这四处发声** —— 其它任何表面、事件或状态变化（hover、展开、导航、加载）一律不发声。验证：`grep -rn "playCue\|new Audio\|Audio(" workbench/` 的**调用点**恰好 4 处且分别对应上列四个事件；构造答对 / 答错 / 完成 / 里程碑四个场景各录一次音频波形，确认每个场景只触发一条、且没有第五条。
+- [x] 10.6 **音效与动效同步 + 静音即时生效**：里程碑音效必须与几何爆点**落在同一拍**（400ms），不得提前于爆点、不得晚于爆点退场；声音偏好关时四个触发点**都不调用播放**，且**不移除任何视觉反馈**（庆祝动效、答对回弹、答错摆动、连对负反馈全部照常）。验证：静音开关切换后**无需刷新**即生效；静音后录屏确认庆祝动效仍完整播放、四个反馈的视觉通道一个不少；音频四波形与动效帧的时间轴对齐。
+- [x] 10.7 阶段验收（补充：声音与动效同步）：按 `acceptance.md` §3.3 + §2 **M-13**（关键反馈音效）走查 —— 四个时刻各一条 <200ms、首次音效发生在一次用户手势之后、加载后零发声、静音后零发声且视觉反馈完整；截图 / 录屏走查范围＝答对 / 答错 / 完成 / 里程碑四个时刻的声画对照。
 
 ## 11. 工作台设置视图与偏好存储 （design.md D-9 + D-8）
 

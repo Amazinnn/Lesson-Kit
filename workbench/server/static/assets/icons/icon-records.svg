@@ -1,0 +1,27 @@
+<svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-records-title">
+  <title id="icon-records-title">记录</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 24%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z" stroke-width="2"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z" stroke-width="3"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z" stroke-width="2"/>
+      <circle cx="16" cy="14" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="24" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="34" r="1.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 15.4 12 Q 15.4 10 17.4 10 L 23 10" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>
