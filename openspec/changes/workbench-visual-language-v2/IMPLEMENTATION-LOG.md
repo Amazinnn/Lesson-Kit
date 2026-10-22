@@ -8,7 +8,7 @@
 
 ## 0. 怎么用这份日志
 
-1. 读 `HANDOFF.md` §2 的**四件必读提示**（rebase / 归档顺序 / 主题默认 / 165 条漂移）。
+1. 读 `HANDOFF.md` §2 的**四件必读提示**（rebase / 归档顺序 / 主题默认 / 167 条漂移）。
 2. 读本文件的「§3 当前状态」与「§4 波次记录」。
 3. 读 `decisions.md`（裁决总账，**任何设计冲突以它为准**）。
 4. 看 `git log --oneline -15` 确认磁盘实况。
@@ -41,7 +41,7 @@
 | 验收口径 | `acceptance.md`（G-1…G-8 · S-1…S-12 · M-1…M-13 · §3.1–§3.8） |
 | **token 唯一权威** | `design-notes/night-paper-tokens.md`（结构 66 + 值 52，两主题） |
 | 组件规格 / 动效规格 / 走查执行器 / 资产规格 / 文案表 / 版式 / 图谱移交 | `design-notes/{component-spec,motion-spec,walkthrough-harness,asset-spec,copy-table,layout-spec,graph-isolation}.md` |
-| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（165 条，`CD-001`…`CD-165`） |
+| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（167 条，`CD-001`…`CD-167`） |
 | 视觉评审件（`tmp/` 已 gitignore，不进版本库） | `tmp/frontend-audit/mockups/`（6 页 / 17 截图）· `tmp/frontend-audit/styleboard/` · `tmp/frontend-audit/motionlab/` |
 
 ---
