@@ -26,7 +26,7 @@
 > owner 回来更新对应行。提示「本仓库存在 N 条已登记漂移」的交接文本写在
 > `openspec/changes/workbench-visual-language-v2/HANDOFF.md`。
 >
-> **条数说明**：本表实际登记 **173 条**（`CD-001`…`CD-173`）。
+> **条数说明**：本表实际登记 **174 条**（`CD-001`…`CD-174`）。
 > `tasks.md` 27.2 写的是 165 条 —— **差额 +37 条的原因逐条说明在 §4.1**
 > （同一冲突的「多条腿」必须逐腿登记 + 裁决已下但落地未落的残留），
 > **没有为凑数编造条目**。自检结果见 §4。
@@ -211,6 +211,7 @@
 | CD-171 | `docs/PRODUCT-MANUAL.md` §10.1「本轮视觉改造的落地状态」 vs `workbench/server/static/workbench.css` | **标记已实现、样式未跟上**的一批：状态圆点 · 章节计数条 · 连对三档配色 · 作答区沉底底色与题号大数字 · 日历格子高度与图例 · 完成页进度带；另有 `.lk-streak` / `.practice-streak` / `.lk-flames` / `.lk-stat` / `.lk-stat__value` / `.lk-stat__label` / `.lk-error-nudge` / `.lk-celebrate-anchor` 等类名**只挂不渲染**；**火苗 `.lk-flame-off` / `.lk-flame-on` 不可见**（只有定位与透明度，没有底色或图形）；`.paper-answer-block` / `.paper-answer-label` 在 CSS 里**零命中**（「你的作答」目前是默认字号的裸文字） | markup / JS **已落地**（结构、类名、数据都在），**样式层缺** ⇒ 表现为「功能在、界面没接上」；这不是契约冲突，是**实现未收口** | `openspec change` | 中（连对三档、火苗、统计数字槽、作答区标签在产品里都看不出效果） | 已派 CSS 收尾波（`briefs/IMPL-W2d.md` 收记录中心侧；其余排队中）；⚠️ **火苗不可见**是其中最明显的一条（几何与逐簇点亮逻辑已生效，但看不见）；⚠️ `docs/PRODUCT-MANUAL.md` §10.1 已如实登记这些项**「样式在补齐中」**，**不得写成「已完成」**；补齐后由主会话销号 |
 | CD-172 | `workbench/server/records.py`（记录中心卡片流的**评语**栏） vs 池里 `problem_attempts` / `feedback_events` 表结构 | 卡片流要显示**六项字段**（题目 + 评语 + 摘录 + 判定 + 自评 + 时间），但**逐题评语**在数据层**基本无来源**：`feedback_note` 来自 `feedback_events.note`、`note` 来自 `problem_attempts.note`；真实池 3 条 attempts 里**仅 1 条 `note` 非空** | spec「六项字段一个少」与**持久化 schema 支撑不了「评语」这一项** ⇒ 属 **schema 层的既有缺口** | `docs/DATA_MODEL.md` | 中（页面恒有一栏空着，且「六项字段齐全」的验收在真实数据上不成立） | **本轮不修** —— 改 `problem_attempts` / `feedback_events` 的 schema 是**持久化变更**，必须单开 change 并同步 `docs/DATA_MODEL.md`（且要决定「评语存哪、是否补录历史」）；**不得**为了页面好看而**编造**评语（spec「Counts SHALL be truthful」）。⇒ 实现侧保持该栏正常渲染（**有数据就显示、无数据就空**），CSS 侧只保证有数据时排版正确；**待所有者定**是否单开一个 change 补 schema |
 | CD-173 | `workbench/server/static/workbench.css` 的 `--level-0..4`（活动日历五档色） vs `design-notes/night-paper-tokens.md`（夜纸值集） | 日历五档色用 `color-mix(..., white)` 混白 ⇒ **夜纸下是亮色块**，五档在夜纸主题里失去「越深＝越多」的读法 | **既有写法**（沿用 `.level-1..4` 的原写法），不是本轮引入；但夜纸下五档色**应当重定** | `openspec change` | 中（夜纸下的活动日历读不出量级） | **本轮不改** —— 重定夜纸五档值需要**一并定五档的夜纸取值**（属独立裁决，不能顺手改）；⚠️ 本轮只补了 `.level-0`（9% 蓝）与图例，**夜纸五档整体仍是亮色系**；**待所有者定**夜纸五档取值（建议：与暖纸同「越深＝越多」的次序，改为混黑或直接给五档实色） |
+| CD-174 | `workbench/server/static/workbench.css` 的 `.icon-only`（外壳移动抽屉按钮） vs `acceptance.md` **G-5** 与 `decisions.md` **A-48** 的图谱冻结口径 | 图谱页**窄视口（≤1023px）**下，外壳那个移动抽屉按钮从「无样式」变成 **32×32 方钮** ⇒ 图谱页在窄视口下的**外壳按钮形态变了** | 这**不在** A-48 的验收口径内（R-1/R-2/R-3 都是 **1440×900 桌面视口**），所以它既不算「图谱误伤」，也没有被 G-5 覆盖 —— 是个**口径缺口** | `openspec change` | 低（只影响 ≤1023px 的窄视口） | **登记而不修**：① 桌面视口（1440×900）下该按钮 `display:none` ⇒ **像素 0 变化**（实测）；② 窄视口下的变化是**全站外壳统一收口**的结果（同一个按钮在非图谱页也变成了 32×32）；③ 若要求图谱页窄视口**也**严格冻结旧形态，需给图谱页加一条作用域覆盖 —— **待所有者定**是否值得（代价：窄屏下的图谱页抽屉按钮会退回难看的裸文字） |
 
 ---
 

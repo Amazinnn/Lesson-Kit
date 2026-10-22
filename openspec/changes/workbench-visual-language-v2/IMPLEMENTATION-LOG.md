@@ -41,7 +41,7 @@
 | 验收口径 | `acceptance.md`（G-1…G-8 · S-1…S-12 · M-1…M-13 · §3.1–§3.8） |
 | **token 唯一权威** | `design-notes/night-paper-tokens.md`（结构 66 + 值 52，两主题） |
 | 组件规格 / 动效规格 / 走查执行器 / 资产规格 / 文案表 / 版式 / 图谱移交 | `design-notes/{component-spec,motion-spec,walkthrough-harness,asset-spec,copy-table,layout-spec,graph-isolation}.md` |
-| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（173 条，`CD-001`…`CD-173`） |
+| 已知缺陷登记（**登记表，不是待修清单**） | `contract-drift.md`（174 条，`CD-001`…`CD-174`） |
 | 视觉评审件（`tmp/` 已 gitignore，不进版本库） | `tmp/frontend-audit/mockups/`（6 页 / 17 截图）· `tmp/frontend-audit/styleboard/` · `tmp/frontend-audit/motionlab/` |
 
 ---
@@ -135,7 +135,7 @@
 | 1 | **第 22 组验收关卡** | 等样板线跑完 → 交对照截图 + 关键帧分镜条 + 交互清单 → **所有者签字**才开第 23 组 |
 | 2 | **F-1 组件样式一览** | 已排队（F-1）。等方向定稿后**重做** `styleboard`（现版本是旧方向的 25 组/103 候选） |
 | 3 | 「破纪录」比较范围 | CD-164，待定义。**在此之前不得用代理指标近似触发里程碑** |
-| 4 | 173 条已登记漂移 | 刻意留账，需后续 change 逐批处理 |
+| 4 | 174 条已登记漂移 | 刻意留账，需后续 change 逐批处理 |
 | 5 | 夜纸下知识图谱 | 归 `graph-node-visual-language` change（与节点重画一起做，避免两次改图谱） |
 
 ---
