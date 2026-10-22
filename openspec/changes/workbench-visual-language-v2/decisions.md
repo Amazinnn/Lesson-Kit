@@ -2636,6 +2636,31 @@ W5b 做 L4 同步时，把 4 条 L3 动作逐一对照了 L4：
 不要去改它们」；而这两处**本来就是错的**，属另一回事
 ⇒ 错的就该改（否则下一轮又要花一次「核过但发现错」的功夫）。
 
+### A-113 音效 arm **保留 `change` 这一支**（不追求最小改动）
+
+**事实**：Chromium 的方向键在 radio 组里移动时**同时**报 `click` 与 `change`
+⇒ 上一版（只挂 `click`）在 Chromium 上键盘路径**本来就能响**。
+但别的引擎**未必**补 `click` ⇒ 只挂 `click` 等于**把键盘反馈押在「引擎补 click」这个行为上**。
+
+**裁决**：**保留 `change` 这一支**（复用同一个 `verdictArmedAt`、**不新增变量、不新增发声点**）。
+理由：键盘可达是**硬要求** ⇒ 反馈**不该依赖引擎的偶然行为**。
+⇒ 该 agent 还做了一次**决定性的验证**：把 `click` 在到达 shell 前 `stopImmediatePropagation` 吞掉、
+**只留 `change`** ⇒ 仍**响 1 声** ⇒ **这一支自己扛得住**。
+
+**六条路径的实测**（隔离服务 3288 + 一次性脚本）：
+
+| 路径 | cueCalls | cue |
+|---|---|---|
+| 鼠标点选（判定正确） | 1 | `correct` |
+| 鼠标点选（判定错误） | 1 | `wrong` |
+| **键盘方向键** | 1 | `correct` |
+| **只剩 `change`**（吞掉 click） | 1 | `correct` |
+| 回看已完成的答卷 | **0** | —（4 个 radio 全 disabled） |
+| on_submit 模式 | 点选 0 | 交卷后 `['complete','milestone']` **两声，没有多响 correct** |
+
+`grep -rn "lkSfx.playCue(" workbench/` 仍**恰好 4 处**（HEAD 上同样是 4），
+`sfx.test.js` 的「恰好 4 处」断言过；**3.3-1 仍 PASS**（逐题 cueCalls=1 / plays=1）。
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，
