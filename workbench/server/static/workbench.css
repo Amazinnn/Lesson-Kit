@@ -1762,6 +1762,139 @@ html[data-theme="night"] .lk-toast {
 }
 
 /* ============================================================================
+   §4.8 复选框 · 整行选中（`check-row`）· §4.9 单选 · 整行卡选中（`radio-row`）
+   ---------------------------------------------------------------------------
+   ⚠️ **本波只落样式，markup 由 IMPL-C2 落**（行级容器需要 markup 改动）——
+     **类名必须与 C2 完全一致**：`.lk-check__row` · `.lk-radio-row`。
+   · 选中时**整行**铺一层蓝洗底（不是只把方框染色）⇒ 选项读成「卡片」；
+   · 框本身仍走 spec 的几何（20×20 · 6px 圆角 / 真圆 · 1.5px 边框 · 蓝实心 + 白勾 / 白点）；
+   · 命中区：整行 ≥44px（`min-height: 44px`）+ 框本身的 44px 伪元素补偿。
+   ========================================================================= */
+.lk-check__row,
+.lk-radio-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+.lk-check__row:hover,
+.lk-radio-row:hover { background: var(--veil-hover); }
+/* 选中 = **整行**蓝洗底（几何冗余通道 + 颜色主通道） */
+.lk-check__row:has(input:checked),
+.lk-radio-row:has(input:checked) { background: var(--role-blue-wash); }
+.lk-check__row:has(input:focus-visible),
+.lk-radio-row:has(input:focus-visible) {
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+}
+/* 复选框：20×20 方框 + 1.5px 边框 */
+.lk-check__box {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: var(--r-xs);
+  border: 1.5px solid var(--ink-disabled);
+  background: var(--surface-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+/* 框的命中区补偿：20×20 → 44×44 */
+.lk-check__box::before {
+  content: "";
+  position: absolute;
+  width: 44px;
+  height: 44px;
+}
+.lk-check:hover .lk-check__box { border-color: var(--role-blue); }
+.lk-check__box svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--ink-on-role);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(.7);
+  transition: opacity var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-rebound);
+}
+.lk-check input:checked + .lk-check__box,
+.lk-check input[aria-checked="true"] + .lk-check__box {
+  background: var(--role-blue);
+  border-color: var(--role-blue);
+}
+.lk-check input:checked + .lk-check__box svg,
+.lk-check input[aria-checked="true"] + .lk-check__box svg { opacity: 1; transform: scale(1); }
+.lk-check input:disabled + .lk-check__box {
+  background: var(--surface-base);
+  border-color: var(--rule-control);
+}
+.lk-check:has(input:disabled) { cursor: not-allowed; color: var(--ink-disabled); }
+.lk-check:has(input:focus-visible) .lk-check__box {
+  outline: var(--focus-width) solid transparent;
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
+}
+/* 单选：20×20 真圆 + 中心 6px 白点（与复选框的方框在几何上区分） */
+.lk-radio__dot {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: var(--r-round);
+  border: 1.5px solid var(--ink-disabled);
+  background: var(--surface-card);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.lk-radio__dot::before {
+  content: "";
+  position: absolute;
+  width: 44px;
+  height: 44px;
+}
+.lk-radio:hover .lk-radio__dot { border-color: var(--role-blue); }
+.lk-radio__dot::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--ink-on-role);
+  opacity: 0;
+  transform: scale(.6);
+  transition: opacity var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-rebound);
+}
+.lk-radio input:checked + .lk-radio__dot,
+.lk-radio input[aria-checked="true"] + .lk-radio__dot {
+  background: var(--role-blue);
+  border-color: var(--role-blue);
+}
+.lk-radio input:checked + .lk-radio__dot::after,
+.lk-radio input[aria-checked="true"] + .lk-radio__dot::after { opacity: 1; transform: scale(1); }
+.lk-radio input:disabled + .lk-radio__dot {
+  background: var(--surface-base);
+  border-color: var(--rule-control);
+}
+.lk-radio:has(input:disabled) { cursor: not-allowed; color: var(--ink-disabled); }
+.lk-radio:has(input:focus-visible) .lk-radio__dot {
+  outline: var(--focus-width) solid transparent;
+  outline-offset: var(--focus-offset);
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
+}
+
+/* ============================================================================
    设置视图 · 偏好行（IMPL-W2h 第 1 条 · design.md D-9 / tasks.md 11.1）
    ---------------------------------------------------------------------------
    markup（`workbench/server/pages.py:858-893` 的 `settings_page()`）：
