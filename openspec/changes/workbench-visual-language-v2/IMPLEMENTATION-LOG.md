@@ -283,3 +283,60 @@ python lessonkit.py guard extract-problems --course dmath --chapter ch06   # Res
 | 3 | W4 | 第 21 组骨架屏+转场、第 22 组**验收关卡** | 依赖前面全部 |
 | 4 | W5 | 第 23–28 组铺开 | **等所有者签第 22 组关卡** |
 | 5 | 图谱 change | 126 任务 / 13 组 | 与 W2c / W3 正面冲突 ⇒ 排最后 |
+
+---
+
+## 9. 第 3 波派工（2026-10-22 下午，第 2 次开机后）
+
+### 9.1 按「同一文件必串行」重新切分（本波 7 个并行 agent）
+
+| agent | 任务书 | 独占文件 | 任务 |
+|---|---|---|---|
+| W2c | `briefs/IMPL-W2c.md` | `workbench.css` | 第 12–15 组 + 附加（6.1 的 `--stem` / 3.1–3.1b / `--lk-ripple-base` 改名） |
+| W3a | `briefs/IMPL-W3a.md` | `workbench.js` | 13 组 JS 侧 + 6.2/6.3 的 JS 段 + 8.4 / 8.7 / 8.8 动效编排 |
+| W3b | `briefs/IMPL-W3b.md` | `pages.py` | 15 / 16 / 18 / 21 组服务端侧 + 6.2/6.3 的 PY 段 |
+| W3c | `briefs/IMPL-W3c.md` | `practice-flow.js` · `paper-practice.js` | 14 组 JS 侧 + 10.5 音效四落点 + 17 组连对逻辑 |
+| W3d | `briefs/IMPL-W3d.md` | `middle-navigation.js` | 21 组换页 / 骨架屏 / 焦点 |
+| W3e | `briefs/IMPL-W3e.md` | `records.py` | 19 组记录中心 + 20 组负荷柱 |
+| W3f | `briefs/IMPL-W3f.md` | **只新建** `tools/` | 图谱 **SI-0 基线取证**（坐标 diff 工具 + 改造前基线） |
+| W3g | 见下 | **只新建** `tools/walkthrough/` | 走查执行器（`launch.py` / `recorder.py` / `shots.py`） |
+
+> 任务书全部落盘在 `briefs/`（`tmp/` 被 gitignore，落那儿会丢）。
+
+### 9.2 W3f 已收工：图谱 SI-0 基线已落盘 ✅
+
+- `tools/graph-layout-diff.js`（22 KB）—— Node 脚本，直接 `require` **DOM-free** 的
+  `graph-physics-core.js`；`--capture` / `--diff` 两个模式。
+- `tools/graph-baseline/baseline.json`（96 节点 / 338 边 / 12 章 × 8 点）+
+  `README.md` + `EVIDENCE.md`。
+- **实测**：连跑两次 `--capture` **逐字节相同**（sha256 一致）；
+  `--diff` **差异 0 条**，退出码 0；**负向对照**（人为改基线两处坐标）报 **2 条差异、退出码 1**
+  ⇒ 判据不是空的。
+- 量化口径：6 位小数 / 按 `nodeId` **码位序**排序 / `toFixed` 字符串全等，**全程无 epsilon**。
+- 锚点是 `graph-physics-core.js` 的 **sha256**（不是 commit SHA —— 仓库在并行提交，HEAD 会动）。
+- ⚠️ W3f 顺带查出 10 处「不该动但容易被误读」的地方，其中三处要紧：
+  1. `graph-physics-core.js` 里混着**四段纯绘制代码**（`edgeStyle()` 等）
+     ⇒ **「物理核心零 diff」不能当门禁**，会与图谱 change 第 5 组打架；
+  2. 布局路径里有**两处 `localeCompare`**（`:613` / `:664`）⇒ **跨机器确定性隐患**，
+     SI-0 的「严格 0」在不同 ICU 数据上不成立；
+  3. 浏览器每帧迭代步数**随节点数变**（`>120` 走 3 步）⇒ 「同一迭代预算」在浏览器端会漂。
+  ⇒ 这三条要登记进 `graph-node-visual-language` 的漂移册与第 14 组的判据说明。
+
+### 9.3 所有者的三个裁决：**按文档判，不按偏好判**
+
+所有者的回答是「**看看已有的文档，它们是怎么要求的？**」⇒ 已逐条查证并落进
+`decisions.md` **A-43 / A-44 / A-45**：
+
+| 议题 | 文档依据 | 结论 |
+|---|---|---|
+| 4.3 caption/dimmed | 4.3「并入 `--ink-faint`」+ 2.3「非图谱区归零」+ 冻结块自述「2.3 时改成钉**新** token 名」 | **字面合并**，且**同波改冻结块**（图谱页旧值一字不变）；若 G-5 变红则按 A-19 教训回退并登记例外 |
+| 2.3 提交边界 | 2.3 标题自带「**独立提交**」+ `AGENTS.md` 纪律 5 | **问早了** —— 2.3 本身还没做完（别名定义 / `.rich-text` 规则 / 图谱 3 处旧名都还在）。**不拆历史提交**；2.3 真正落地那一波必须独立提交 |
+| 3 处硬编码硬阴影 | 4.2 验证「非图谱区硬编码 hex 只剩 token 声明行内的值」+ 权威表 §3.6 只有 `--elev-1/2/3` 柔影 | **收编成 token**（权威表新增「硬阴影」一档，亮/夜两套值）；顺带登记闪卡的 `2px solid var(--ink-strong)` 重描边待处理 |
+
+### 9.4 本波之后：所有者已选「**先出验收关卡的可视化走查**」
+
+不铺开第 23–28 组，先把样板线的验收产物做出来给所有者看：
+六类页面的**亮 / 暗双主题对照截图** + 动效分镜条 + reduced-motion 降级对照帧
++ 底线守卫 G-1…G-8 的脚本化判定。
+⇒ 走查执行器（W3g）**已并行开建**，与本波产品代码零冲突。
+**签字前不启动第 23 组。**
