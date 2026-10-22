@@ -1608,9 +1608,10 @@ magick compare -metric AE -crop <W>x<H>+<X>+<Y> before.png after.png null:
   （`--surface-sheet` 或 `--surface-graph-sheet`），
   **不能**用 `--surface-card`。若实现时把图谱页接到 `--surface-card` 上，
   夜纸下卡面会变 `#232019` → 图谱页在夜纸下**大面积变色** → 图谱观感被误伤。
-- → **登记为待核项**（§8 Q-6），需所有者裁决最终命名，并同步
-  `night-paper-tokens.md`、`design.md`、`tasks.md`、`decisions.md`、`component-spec.md`、
-  `asset-spec.md` 六份文件（**不是本文件的责任范围**）。
+- → **已由 A-16 裁决**（`decisions.md`）：图谱纸面 token 的唯一名字是 `--surface-sheet`；`--surface-graph-sheet` **退役**。
+  ⚠️ **A-19 更正**：`--surface-card` **保留**为全站卡面 token —— 退役的只是它在**图谱语境**下的误用；
+  本条「不能用 `--surface-card`」**仍然成立**（图谱页若接到全站卡面，夜纸下会大面积变色 → 图谱观感被误伤）。
+  已同步：`night-paper-tokens.md`（`--surface-sheet` 按 A-17 补夜纸值 `#1c1a16`）、`component-spec.md`、`asset-spec.md`。
 - → **A-8 之后**：这条漂移的**裁决主体是图谱 change**（`graph-node-visual-language`）——
   它要同时定下「图谱专用纸面 token 的名字」与「夜纸下图谱用什么值」；
   本变更只要保证自己**不误伤**（不用 `--surface-card` 顶替图谱纸面）即可。

@@ -55,7 +55,8 @@ and a browser restart.
 
 The preferences SHALL NOT be written to the pool, SHALL NOT appear as pool content,
 and SHALL NOT travel between workspaces. Removing the stored preferences SHALL
-restore the default state of every preference, including the warm-paper theme.
+restore the default state of every preference, including the theme, which then
+follows the operating system's colour scheme setting again.
 
 #### Scenario: Preferences are independent per workspace
 
@@ -70,7 +71,7 @@ restore the default state of every preference, including the warm-paper theme.
 #### Scenario: Clearing the preferences restores the default theme
 
 - **WHEN** the stored preferences for a workspace are removed
-- **THEN** that workspace returns to the warm-paper theme and the default state of the remaining preferences
+- **THEN** that workspace returns to the theme the operating system asks for — the warm-paper theme when the system asks for a light colour scheme — and the default state of the remaining preferences
 
 #### Scenario: Nothing reaches the pool
 
@@ -86,6 +87,12 @@ SHALL share one structural set — spacing, radius, elevation, type scale, motio
 scale and stacking order — so that only surface and ink values change between them.
 The night paper set SHALL NOT introduce a new hue family, and the warm-paper ground
 SHALL NOT be replaced by a neutral or a cool ground.
+
+The theme preference SHALL default to following the operating system's colour
+scheme setting. An explicit learner choice SHALL take precedence over the
+system setting, and SHALL keep applying on later loads. When no explicit choice
+is stored, the workbench SHALL take the system setting at the moment the page is
+first painted, without a flash of the other value set.
 
 Changing the theme SHALL re-derive every surface's 纸面层级 (Paper level) — ground,
 card, raised and ink block — from the active value set, and the ink colour SHALL
@@ -115,6 +122,16 @@ from it, and the lamp withdraws.
 
 - **WHEN** the theme preference changes
 - **THEN** the desk lamp leans out, lights up, the ground change ripples outward from it, and the lamp withdraws
+
+#### Scenario: The system asks for the night paper
+
+- **WHEN** the operating system requests a dark colour scheme and the learner has stored no explicit theme choice
+- **THEN** the workbench paints the night paper value set on its first frame, with no flash of the warm-paper value set
+
+#### Scenario: The learner overrides the system
+
+- **WHEN** the operating system requests a dark colour scheme and the learner has explicitly chosen the warm paper
+- **THEN** the workbench uses the warm-paper value set, and that explicit choice is still in effect on the next load
 
 ### Requirement: Reading face preference selects the reading type family
 
@@ -226,7 +243,7 @@ round that is in progress when a preference changes SHALL keep the state it had.
 
 - [x] workbench-settings 以 `## Purpose` 开头且 50+ 字符（实际 278 字符）
 - [x] workbench-settings 只有 `## ADDED Requirements`，7 个 Requirement（≥6）
-- [x] 每个 Requirement ≥ 1 个 Scenario，Scenario 一律用 `####`（4 个 #）+ WHEN/THEN，共 25 个 Scenario
+- [x] 每个 Requirement ≥ 1 个 Scenario，Scenario 一律用 `####`（4 个 #）+ WHEN/THEN，共 27 个 Scenario
 - [x] 外观偏好全部声明为「不写池、不改学习事实、不改调度」
 - [x] 用了 SYNTH.md 的原词（10 个）：柔和蒙德里安 v2、纸面层级、夜纸、主题偏好、阅读字面、
       动效偏好、声音偏好、工作台设置视图、台灯转场、少字原则
