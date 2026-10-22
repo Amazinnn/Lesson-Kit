@@ -2084,28 +2084,9 @@ img { max-width: 100%; }
 }
 .record-chart-card { padding: 18px; }
 .record-chart-card .section-heading { margin-bottom: 8px; }
-.record-trend {
-  height: 170px; display: grid; grid-template-columns: repeat(14, minmax(14px, 1fr));
-  gap: 5px; align-items: end; padding-top: 14px;
-}
-.record-day { min-width: 0; text-align: center; }
-.record-day-bar-wrap {
-  height: 132px; display: flex; align-items: flex-end; justify-content: center;
-  position: relative; border-bottom: 1px solid var(--rule-hair);
-}
-.record-day-bar {
-  display: block; width: min(22px, 76%);
-  background: var(--role-blue); border: 1px solid var(--ink-strong); border-bottom: 0;
-}
-.record-day-bar.empty { border: 0; background: transparent; }
-.record-day-value {
-  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
-  color: var(--ink-faint); font-size: 10px; line-height: 14px;
-}
-.record-day-label {
-  display: block; margin-top: 4px; color: var(--ink-faint);
-  font-size: 9px; line-height: 12px; white-space: nowrap;
-}
+/* ⚠️ 原来的 14 天趋势图一族（趋势容器 + 每日柱 + 柱值 + 日期标签）
+   **已成孤儿**：趋势图改用 `.workload-bars` / `.bar-*` 组件后无任何引用
+   ⇒ 本轮删除（连同它那条 `border: 1px solid var(--ink-strong)`）。 */
 .record-activity-card { overflow-x: auto; }
 .record-activity {
   display: grid;
@@ -2263,8 +2244,6 @@ img { max-width: 100%; }
 @media (max-width: 640px) {
   .record-summary-grid,
   .record-dashboard-grid { grid-template-columns: 1fr; }
-  .record-trend { gap: 2px; }
-  .record-day-label { font-size: 8px; }
   .record-run header { display: block; }
   .record-run time { display: block; margin-top: 4px; }
 }
