@@ -3098,6 +3098,36 @@ html[data-motion="off"] *::after {
 /* 沉底块里的输入框贴住标签，不留多余的上下外边距 */
 .paper-answer-block #paper-answer { margin: 0; }
 
+/* ---- 题面的大号题号（tasks.md 16.1 · IMPL-W2e 第 7 条）--------------------
+   题号**不在** `#paper-question` 里（它的 innerHTML 由 JS 整体替换，放进去会被
+   冲掉）⇒ 槽位在 `#paper-question` 之外：`pages.py` 用的是
+   `.paper-stem` > `.paper-stem-index` + `.paper-stem__body`。
+   · 题号 = **24px 大数字**（`--fs-question`，像书的章节号）+ 700 + tabular-nums；
+   · 题号**大字块** = **沉底块**（L3：底色差 + 1px 内发丝线，不带柔影）；
+   · 几何：题号在**左**，题面在右（两列网格）⇒ 不压题面文字；
+   · ⚠️ 槽位目前**没有内容**（JS 侧还没往里写题号）⇒ 空槽不占位
+     （`:empty` 不画空盒子），等 JS 侧补上就自动出现。 */
+.paper-stem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+}
+.paper-stem-index {
+  margin: 0 var(--sp-4) 0 0;
+  padding: 6px 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  font-family: var(--font-ui);
+  font-size: var(--fs-question);   /* 24px 大号题号 */
+  line-height: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-strong);
+}
+/* 空槽不占位：JS 还没写题号时不画空盒子 */
+.paper-stem-index:empty { display: none; }
+
 /* Knowledge graph V2 — constrained semantic layout, paper Mondrian skin. */
 
 /* ==========================================================================
