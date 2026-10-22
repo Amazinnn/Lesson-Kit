@@ -244,6 +244,27 @@ class UiRouteTests(unittest.TestCase):
         self.assertLess(
             body.index("paper-completion-milestone"), body.index("id='paper-review'"))
 
+    def test_left_rail_navigation_carries_a_still_life_icon(self):
+        # 15.1: every navigation item is a concrete still-life icon plus its
+        # name. The icon is inline SVG, not an <img>: only inline assets take
+        # the page's theme variables (asset-spec §1.11).
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertEqual(body.count("class='nav-item__icon' aria-hidden='true'"), 5)
+        self.assertEqual(body.count('class="asset asset-icon"'), 5)
+        # The icons are inline SVG, not <img> (asset-spec §1.11).
+        self.assertNotIn("<img", body)
+
+    def test_left_rail_keeps_the_two_behaviour_preferences_in_place(self):
+        # The two behaviour preferences never move (compat boundary), and the
+        # appearance entry stays the one the settings view already owns.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='setting-running-send'", body)
+        self.assertIn("id='setting-show-rating'", body)
+        self.assertIn("id='setting-view-toggle'", body)
+        self.assertIn("class='side-count-badge'", body)
+
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
             "POST", "/api/w/dmath/practice-sets",

@@ -83,6 +83,19 @@ def _empty_state(asset_path, text, width, height):
     )
 
 
+def _error_block(message):
+    """The error state: a red block with a red state dot.
+
+    Red is only ever failure or blockage (component-spec §3.6); nothing else
+    in the work borrows it.
+    """
+    return (
+        "<p class='error-block inline-error'>"
+        "<span class='lk-dot lk-dot--red lk-dot--filled' aria-hidden='true'></span>"
+        + html.escape(message) + "</p>"
+    )
+
+
 def _knowledge_count_bar(total, counts):
     """The knowledge-point count of the current scope (18.5).
 
@@ -631,13 +644,12 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
                       if record['missing_problem_ids'] else
                       "当前试卷内容校验失败：" + '; '.join(record['validation_errors'])
                       if record['validation_errors'] else '试卷为空')
-            availability = "<p class='inline-error'>无法开始：" + html.escape(reason) + "</p>"
+            availability = _error_block("无法开始：" + reason)
         elif record.get('start_block_reason'):
-            availability = "<p class='inline-error'>暂时无法开始：" + html.escape(
-                record['start_block_reason']) + "</p>"
+            availability = _error_block("暂时无法开始：" + record['start_block_reason'])
         elif continuation and not continuation['available']:
-            availability = "<p class='inline-error'>无法继续旧执行：" + html.escape(
-                continuation['reason'] or '执行状态与当前试卷不一致') + "</p>"
+            availability = _error_block(
+                "无法继续旧执行：" + (continuation['reason'] or '执行状态与当前试卷不一致'))
         else:
             availability = ""
         unavailable_ids = ((continuation or {}).get('unavailable_item_ids') or record['missing_problem_ids'])
@@ -814,17 +826,21 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"{html.escape(ws['name'])}</option>"
         for ws in workspaces
     )
+    # 15.1 导航项 = 具象静物图标 + 文字（图标是第 9 组的五枚导航静物，
+    # 按 asset-spec §1.11 以 inline SVG 进 DOM：只有 inline 才能吃到夜纸变量）。
     nav_items = [
-        ("practice", "练习"),
-        ("practice-sets", "试卷"),
-        ("kps", "知识点"),
-        ("graph", "知识图谱"),
-        ("records", "记录"),
+        ("practice", "练习", "icons/icon-practice.svg"),
+        ("practice-sets", "试卷", "icons/icon-practice-sets.svg"),
+        ("kps", "知识点", "icons/icon-kps.svg"),
+        ("graph", "知识图谱", "icons/icon-graph.svg"),
+        ("records", "记录", "icons/icon-records.svg"),
     ]
     nav = "".join(
         f"<div class='nav-item {'active' if key == active_nav else ''}'>"
-        f"<a href='/w/{workspace['name']}/{key}'>{label}</a></div>"
-        for key, label in nav_items
+        f"<a href='/w/{workspace['name']}/{key}'>"
+        f"<span class='nav-item__icon' aria-hidden='true'>"
+        f"{_inline_asset(path, 24, 24)}</span>{label}</a></div>"
+        for key, label, path in nav_items
     )
     actionable = [
         item for item in weak_items
@@ -836,8 +852,13 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "</a></div>"
         for item in actionable
     )
-    rail_label = "优先回看" if actionable else _lens_label(
-        workspace, "本章知识点", "全部知识点")
+    # 15.3 分区标题恒定，个数走计数徽标 —— 标题不再随内容有无变体。
+    rail_label = "优先回看"
+    count_badge = (
+        "<span class='side-count-badge'>"
+        "<span class='visually-hidden'>待回看 </span>" + str(len(actionable))
+        + "</span>"
+    )
     empty = "暂无明确薄弱证据" if not actionable else "暂无提醒"
     empty_weak = '<p class="score">' + empty + "</p>"
     return (
@@ -860,7 +881,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"href='/w/{workspace['name']}/settings' aria-expanded='false'>外观设置</a>"
         "</section>"
         "<section class='side-section weak-section'>"
-        f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"
+        f"<div class='side-heading'><p class='side-label'>{rail_label}</p>{count_badge}</div>"
         f"<div class='weak-list'>{weak_html or empty_weak}</div>"
         "</section>"
     )

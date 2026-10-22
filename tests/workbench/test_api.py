@@ -431,13 +431,18 @@ class ApiTests(unittest.TestCase):
                     "score": 0.2, "reasons": []}]
         whole_course = _left_column({"name": "dmath"}, [{"name": "dmath"}],
                                     neutral, "practice")
-        self.assertIn("全部知识点", whole_course)
-        self.assertNotIn("优先回看", whole_course)
+        # The rail title is stable (tasks.md 15.3); the count badge carries
+        # how many items are worth a look, so a neutral point is not listed
+        # and the badge reads zero.
+        self.assertIn("优先回看", whole_course)
+        self.assertIn("待回看 </span>0", whole_course)
+        self.assertNotIn("中性知识点", whole_course)
 
         chapter = _left_column({"name": "dmath", "active_chapter": "ch06"},
                                [{"name": "dmath"}], neutral, "practice")
-        self.assertIn("本章知识点", chapter)
-        self.assertNotIn("优先回看", chapter)
+        self.assertIn("优先回看", chapter)
+        self.assertIn("待回看 </span>0", chapter)
+        self.assertNotIn("中性知识点", chapter)
 
 
     def _seed_schedule(self, item_type, item_id, due_iso, direction=""):
