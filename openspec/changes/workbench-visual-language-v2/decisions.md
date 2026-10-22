@@ -1513,6 +1513,37 @@ mockup 修正后仍有意保留了近黑底，并主动问「发送按钮要不�
 5. **`sfx.js` 由 `workbench.js` 动态插入**（挂 `layout` 元素而非 `document.head`），
    因为本次 `pages.py` 不可改。登记为漂移；日后放开 `pages.py` 时应改为正常 `<script>` 标签。
 
+### A-39 视觉验证前必须确认服务的是当前工作区（本轮踩到的坑）
+
+**现象**：`http://127.0.0.1:3081/static/workbench.css` 返回 **74935 字节**，
+而磁盘上是 **92113 字节**；页面里 `--surface-base` / `--ink-strong` / `--role-blue` /
+`--r-md` / `--fs-reading` / `--dur-fast` / `--ease-out` / `--measure`
+等**新 token 全部取不到值**（`getComputedStyle` 返回空串），
+旧 `--lk-*` / `--dsw-*` 仍是原值 —— 看起来像「新 token 层没生效」。
+
+**根因**：3081 端口上有一个**更早启动**的 `python -m workbench.cli.main serve --port 3081`
+进程（09:58 启动，早于本轮改动）。本机 `pip` 里**装着 `lesson-kit 0.1.0`**，
+从别的工作目录启动时 `import workbench` 解析到 **site-packages 的安装快照** ——
+那个进程服务的是安装时的文件，不是工作区。
+（`workbench/server/app.py` 的 `_send_static` 每次请求都 `read_bytes()` 读盘，本身**不缓存**；
+陈旧来自**模块解析到别处**，不是缓存。）
+
+**规则**：
+1. **任何视觉验证前，先确认服务的确在服务当前工作区**：
+   ```bash
+   curl -s http://127.0.0.1:3081/static/workbench.css | wc -c
+   wc -c workbench/server/static/workbench.css     # 两个数必须相等
+   ```
+   不等就 `daemon stop` + `daemon start`（或从仓库根启动）。
+2. **实现 agent 起自己的走查服务时，必须用仓库根作为 cwd**，
+   且端口**不要用 3081**（避免与既有 daemon 抢端口）。走查一律用
+   「池副本 + 隔离注册表 + 独立端口」。
+3. 验收 token 是否生效，用 `getComputedStyle(document.documentElement).getPropertyValue('--x')`
+   读**运行时实际值**，不要只读 CSS 源码。
+
+> 这条与 `tasks.md` 5.4（静态资源缓存策略）同源 ——
+> 改了 CSS 或字体必须**立刻**到达用户，否则改��等于没改。
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，
