@@ -384,7 +384,7 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 
 ---
 
-### D-5 阅读版式规格：17 / 16 / 1.75 / 1.70 / 0.7em / 38em–42em，`.wb-reading` 自成一层
+### D-5 阅读版式规格：17 / 1.75 / 0.7em / 38em，`.wb-reading` 自成一层
 
 **决策**
 
@@ -393,10 +393,10 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 
 | 项 | 正文（知识点） | 题面 / 解析（stem） |
 |---|---|---|
-| 字号 | **17px** | **16px** |
-| 行高 | **1.75**（29.75px） | **1.70**（27.2px） |
+| 字号 | **17px** | **17px**（与正文同档） |
+| 行高 | **1.75**（29.75px） | **1.75**（29.75px） |
 | 段距 | **0.7em**（≈11.9px） | 同 |
-| 行宽 measure | **38em**（≈646px） | **42em**（≈672px） |
+| 行宽 measure | **38em**（≈646px） | **38em**（≈646px） |
 | h2 / h3 / h4 | **22 / 19 / 17px**（行高 1.35） | 同 |
 | 段落对齐 | `start`（**不 justify**） | 同 |
 
@@ -425,14 +425,20 @@ Agent 长文（现 `.rich-text`，`workbench.css:752`）。判据：**连续阅�
 **出处与依据**
 
 - `docs/PRODUCT-MANUAL.md:129-130`（知识点页硬约束）：「正文使用更大的阅读字号、
-  宽行距和单侧结构线，是页面最醒目的内容」→ 正文 17px **必须大于**题面 16px。
-  现状 `.practice-question-card` 也是 17px（`workbench.css:930-931`），
-  与该硬约束**直接冲突** → 本变更把题面降到 16px（stem 档）。
+  宽行距和单侧结构线，是页面最醒目的内容」→ 阅读面 17px 相对界面 14px 已是更大的
+  阅读字号。该句约束的是**知识点页正文与其余界面**的大小关系，
+  **并未**要求正文大于题面 —— 题面与知识点正文分属两个页面，不存在同页竞争。
+- 因此题面**保持 17px**（现状 `.practice-question-card` 即 17px，`workbench.css:930-931`），
+  与 `openspec/specs/workbench-ui/spec.md`「Learning content is the visual anchor」
+  一致（题面与知识点正文都用主阅读节奏 ≥17px + 宽行高）。
+  ⚠️ **2026-10-22 修正**：本条原先写「正文 17px 必须大于题面 16px」并据此把题面降到
+  16px，那是对 PRODUCT-MANUAL 该句的**过度解读**，且与 spec delta 冲突 —— 现按 spec delta 取齐。
 - `openspec/specs/workbench-ui/spec.md:766-771`「Learning content is the visual anchor」：
   题面与知识点正文都用**主阅读节奏**（≥17px + 宽行高）、**各带一条结构强调边**、
   **不做装饰性阴影强调** → 对应 D-5 的 2px 单侧结构线与「卡片不靠阴影强调」。
-- 行高 1.75/1.70、段距 0.7em、measure 38em/42em、标题 22/19/17 来自
-  `tmp/frontend-audit/F07.md` §6.2 / §6.3（C-01…C-05 的裁决结论）。
+- 行高 1.75、段距 0.7em、measure 38em、标题 22/19/17 来自
+  `tmp/frontend-audit/F07.md` §6.2 / §6.3（C-01…C-05 的裁决结论）；题面与正文同档见
+  `decisions.md` A-6。
 - 标题全无衬线来自 `decisions.md` 4.3。
 
 **理由**

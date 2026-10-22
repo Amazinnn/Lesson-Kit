@@ -14,8 +14,8 @@
 > `design-notes/copy-table.md`（全站文案对照表）。
 >
 > **实施口径**：请求与持久化不变（冻结清单见 `proposal.md`「Frozen」）；本变更只改表现层。
-> **交付分两段**：**样板线**（第 1–22 组，用户验收前）与**铺开**（第 19–28 组中标注的
-> 第二段，第 23–28 组，样板线验收通过后）。第 22 组是验收关卡，**关卡未过不得启动第 23 组**。
+> **交付分两段**：**样板线**（第 1–22 组，用户验收前）与**铺开**（第 23–28 组，样板线验收通过后）。
+> 第 22 组是验收关卡，**关卡未过不得启动第 23 组**。
 > **分支**：`feat/workbench-visual-language-v2`，不并入 main；每个可验证单元单独提交，
 > 提交信息用 `feat/` `fix/` `docs/` `chore/` `refactor/` 前缀，工作区不留脏。
 > **硬约束**：无框架、无构建步骤、无 npm、无 CDN、无外部图标字体；纯 CSS + 原生 JS。
@@ -34,169 +34,169 @@
 
 ## 第一段：样板线（token 地基 + 外壳 + 练习页 + 知识点页 + 记录页 + 设置视图）
 
-## 1. token 架构：`--wb-*` 命名空间 + 图谱兼容区
+## 1. token 架构：`--wb-*` 命名空间 + 图谱兼容区 （design.md D-1）
 
 - [ ] 1.1 在 `workbench/server/static/workbench.css` 的 `:root`（L4-46）内建立 `--wb-*` 命名空间：**结构 token 唯一一套**（`--wb-radius-*` / `--wb-space-*` / `--wb-type-*` / `--wb-shadow-*` / `--wb-dur-*` / `--wb-ease-*` / `--wb-z-*` / `--wb-read-*` / `--wb-font-*` / `--wb-col-left` / `--wb-col-right`），**主题值两套**（`--wb-surface-*` / `--wb-ink-*` / `--wb-role-*` / `--wb-rule-*`），随主题整套替换；新 token 与图谱裸名（`--paper / --ink / --hair / --blue / --yellow / --red / --shadow / --graphite / --green / --blueSoft / --yellowSoft / --redSoft`，L1505-1518）**零同名**。验证：新 token 名集合与图谱 12 个裸名求差为空（脚本校验）。
 - [ ] 1.2 建**图谱兼容区**：新层里保留只给图谱用的 `--surface-sheet: #fffdf7`（值与今天完全一致），并新增 `#layout[data-page="graph"] #middle { background: var(--surface-sheet); }`；**不得**借 token 层改写 `--paper` 等图谱变量。验证：图谱页中栏 computed background = `rgb(255, 253, 247)`；图谱页截图逐像素比对差异为 0。
 - [ ] 1.3 按主题声明 `color-scheme`（亮色 `light` / 夜纸 `dark`），让原生控件与滚动条跟随；**不使用** `prefers-color-scheme` 作主题来源（手动开关是定案，全仓 `prefers-color-scheme` 命中 0 处）。验证：`getComputedStyle(document.documentElement).colorScheme` 随主题切换；未设置偏好时默认暖奶油。
 - [ ] 1.4 固化迁移顺序（design.md Risks 第一条）：Step 1 只换 `:root` 里的值（新增 0 个 class、0 处 JS、0 处结构）→ Step 2 换描边 / 抬升 / 文字灰与 22 个硬编码色 → Step 3 才动间距 / 字号 / 圆角 / 动效 / z-index，且 Step 3 再拆 3a 装饰性间距 → 3b 字号行高 → 3c 圆角 → 3d 容器 padding → 3e 动效 / z-index；每小步单独提交、单独截图。验证：git log 显示这些小步为独立提交；每步后 `python -m pytest tests -q` 与 `python -m compileall -q lessonkit.py workbench pipeline pool tests` 全绿。
-- [ ] 1.5 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §0 + §3.1 + §3.6 走查（底线守卫前置、本组贡献 G-5 图谱像素比对与 §3.1 焦点可见性、§3.6 资产与圆角语言）；截图走查范围＝工作台 / 练习 / 记录 / **图谱**四页基线比对。
+- [ ] 1.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0 + §3.1 + §3.6 走查（底线守卫前置、本组贡献 G-5 图谱像素比对与 §3.1 焦点可见性、§3.6 资产与圆角语言）；截图走查范围＝工作台 / 练习 / 记录 / **图谱**四页基线比对。
 
-## 2. 旧 token 别名期与未定义变量补齐
+## 2. 旧 token 别名期与未定义变量补齐 （design.md D-1 别名期）
 
 - [ ] 2.1 旧 token 走别名期：`--lk-*` 与 `--dsw-*`（L5-45）全部改成指向新 token 的别名（例 `--lk-blue: var(--wb-role-action)`），**只做值替换、不改任何引用点**；每条别名定义处加注释「别名期，勿新增引用」。验证：别名定义处全部是 `var(--wb-*)`；`grep -c -- "--lk-\|--dsw-" workbench.css` 的**引用点数**不变；回滚只需把别名定义改回原值（一条提交）。
 - [ ] 2.2 补齐 4 个从未定义的变量（**单独提交、单独 review、单独截图**）：`--dsw-bg-layer-3`（L858）、`--dsw-border-subtle`（L799）、`--dsw-text-muted`（L1051）、`--dsw-border`（L1464 / L1473 / L1895）。特别注意 `--dsw-border-subtle` 无 fallback → 补齐后表格线会从「正文色」变成新规则色，属可见变化，必须单独确认。验证：`grep -oE "var\(--[a-z0-9-]+" workbench/server/static/workbench.css | sort -u` 中无未定义引用；记录页表格线补齐前后各一张截图。
 - [ ] 2.3 别名期收尾（**独立提交**）：删除别名定义与引用点；删除前用 `grep -oE "var\(--[a-z-]+" | sort -u` 与新层定义集合求差验证无残留。验证：新层定义集合与被引用集合的差为空；非图谱区 `--dsw-` / `--lk-` 归零。
-- [ ] 2.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §0 走查 G-1…G-8（别名期是回滚保障，必须确认「值替换、不改引用点」成立）；截图走查范围＝全站基色与纸面色差。
+- [ ] 2.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0 走查 G-1…G-8（别名期是回滚保障，必须确认「值替换、不改引用点」成立）；截图走查范围＝全站基色与纸面色差。
 
-## 3. 纸面层级与抬升
+## 3. 纸面层级与抬升 （design.md D-2）
 
 - [ ] 3.1 落四层纸面 token：底 `--wb-surface-ground` #fdf8ef / #1c1a16、卡 `--wb-surface-card` #ffffff / #26231d、浮起 `--wb-surface-raised` #ffffff / #302c25、墨块 `--wb-surface-ink` #221f1a / #f2ece1；**一个元素只处于一层**。验证：grep 页面全部 surface 类，卡 / 浮起 / 墨块的 background 各自只对应一个 token；墨块用于代码面与选中项，圆角同为 12px。
 - [ ] 3.2 抬升用**暖调柔影**三档：`--wb-shadow-1/2/3` 色基 `rgba(120,92,48,α)`，替换 `--dsw-shadow-lv1..lv3`（L36-39 的 `rgb(0 0 0 / …)`）；`--wb-shadow-1` 第一层 `0 1px 2px` **不得省**（卡 / 底明度差只有 1.06:1，卡片边界完全靠影子读出）。验证：非图谱区 `grep -n "rgb(0 0 0 /"` 归零；卡片边界在 100% 缩放下可辨。
 - [ ] 3.3 取消描边：56 处 `--dsw-border-l1/l2/l3`（L31-33）引用改为「留白 + 圆角 + 字重」；**唯一保留的发丝线**是控件边界 `--wb-rule-control`（亮 #8b8375 / 夜 #6f6759）与内容层单侧结构线 `--wb-rule-structure`（亮 #221f1a / 夜 #6f6759）。验证：`grep -n -- "--dsw-border-l" workbench.css` 归零；输入框 / 下拉框在两主题下都找得到边界（实测 ≥3:1）。
-- [ ] 3.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.6 + §0 G-5 走查；截图走查范围＝纸面四层的层次关系（底 / 卡 / 浮起 / 墨块各取一处），确认页面底色为**纯色无纹理无暗角**。
+- [ ] 3.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.6 + §0 G-5 走查；截图走查范围＝纸面四层的层次关系（底 / 卡 / 浮起 / 墨块各取一处），确认页面底色为**纯色无纹理无暗角**。
 
-## 4. 色彩收编：三角色配额与墨阶
+## 4. 色彩收编：三角色配额与墨阶 （design.md D-3）
 
 - [ ] 4.1 落三角色 token（语义配额不变，只调饱和度与明度）：`--wb-role-action` #2f6fe4 / #2f6fe4、`--wb-role-action-ink` #2563eb / #86aaff、`--wb-role-action-deep` #1d4ed8 / #7aa2f7、`--wb-role-current` #f5c518 / #e6c46a、`--wb-role-current-ink` #7a5d00 / #e6c46a、`--wb-role-needs-work` #c93a30 / #e8837a；`:root` 上方写配额注释（蓝＝主按钮 + 链接 + 当前选中；黄＝当前项 + 复习强调 + 连对进度；红＝失败 + 阻塞）。验证：六个 token 各一个定义点；新增色相为 0；黄色**只承载面积与形状**，不承载文字。
 - [ ] 4.2 按 design.md D-3 收编表逐条映射 22 个硬编码色（35 处引用）：`#2864dc`×5 → `--wb-role-action`、`#57606a`×5 → `--wb-ink-muted`、`#b42318`/`#b62f28`/`#d12c2c` → `--wb-role-needs-work`、`#d97706`/`#b58b00`/`#e1aa12` → `--wb-role-current-ink`、`#e5e7eb` → `--wb-surface-sunken`、`#333` → `--wb-ink-body`、`#fff` → `--wb-surface-raised`、`#111318` → `--wb-ink-strong`、`#e6f4ea`/`#fdeceb` → `--wb-role-done-soft`/`--wb-role-needs-work-soft`。验证：非图谱区硬编码 hex 只剩 token 声明行内的值；`grep -nE "#[0-9a-fA-F]{3,6}" workbench.css` 每处命中都在 token 段内。
 - [ ] 4.3 墨阶收敛为 **4 级可用文字灰 + 1 级非文本灰**：`--wb-ink-strong` #221f1a / #f2ece1、`--wb-ink-body` #3d3830 / #ded6c8、`--wb-ink-muted` #5d564b / #bdb5a7、`--wb-ink-faint` #776f61 / #9c9384、`--wb-ink-ghost` #b3aca0 / #4e4941；把 `--dsw-label-tertiary`（33 处）、`--dsw-label-caption`（5 处）、`--dsw-label-dimmed`（1 处 `::placeholder`）并入 `--wb-ink-faint`，`--dsw-state-warn`（2 处）并入 `--wb-role-current-ink`。验证：`--wb-ink-faint` 对暖奶油底 4.69:1、对夜纸底 5.73:1（实测复核）；`::placeholder` 不再靠 fallback `#68707b` 存活；4 级台阶在 100% 缩放下仍可辨。
 - [ ] 4.4 绿例外与契约外绿移除：`--wb-role-done` **只**保留在练习页选项正确环（`workbench.css:1211`、`:1214`，被 `paper-practice.js:581` 的判定文案绑定）这一个局部位置，**不进三角色配额表**；记录页判定绿（`.record-verdict-ok`，`workbench.css:1462`）改为「结构块 + 几何符号 + 文字」三通道，不带绿。该绿例外登记进第 27 组漂移表（CD 项）。验证：记录页判定徽章无绿色像素；绿 token 只在正确环一处被引用。
-- [ ] 4.5 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.1（对比度）与 §3.4（红色仅用于失败与阻塞）走查；截图走查范围＝三角色各自的典型承载面（主按钮 / 链接 / 当前选中 / 当前项 / 复习强调 / 失败 / 阻塞）。
+- [ ] 4.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.1（对比度）与 §3.4（红色仅用于失败与阻塞）走查；截图走查范围＝三角色各自的典型承载面（主按钮 / 链接 / 当前选中 / 当前项 / 复习强调 / 失败 / 阻塞）。
 
-## 5. 字体：思源宋体打包与双字族分工
+## 5. 字体：思源宋体打包与双字族分工 （design.md D-4）
 
 - [ ] 5.1 子集化思源宋体：用 `pyftsubset SourceHanSerifSC.otf --unicodes-file=gb2312.txt --flavor=woff2` 产出 `workbench/server/static/fonts/SourceHanSerifSC-Regular.woff2` 与 `SourceHanSerifSC-SemiBold.woff2`（字重 400 / 600），字表覆盖 GB2312 一级字表 3755 + 中文标点 + 数字 + 拉丁 + 常用符号；**必须实测体积**：目标 2 字重合计 ≤ 1.2 MB，实测值回填 `design.md` D-4 的「体积待核」一节；超标时**先砍字重（只留 400）而不是砍字表**。验证：两个 woff2 存在且合计 ≤ 1.2 MB；实测值已写回 design.md；未实测不得勾掉本条。
 - [ ] 5.2 随字体入库许可与说明：`workbench/server/static/fonts/LICENSE-OFL.txt`（SIL Open Font License 1.1 全文）与 `README.md`（来源版本 + 子集化命令 + 字表清单）。验证：许可文件写明 SIL OFL；README 里的命令行可直接复跑。
 - [ ] 5.3 `@font-face` 与三族分工：在 `workbench.css` 顶部（`:root` **之前**）声明 `@font-face`，`font-display: swap`（**不用** KaTeX 的 `block`，见 `static/katex/katex.min.css:1`）、`unicode-range` 限中文；`--wb-font-ui` 沿用现有栈（L11-13，仅改名）、`--wb-font-read` = `"Source Han Serif SC","Noto Serif CJK SC","Songti SC","SimSun",serif`、`--wb-font-mono` = 现状 L14-15 **补 `monospace` 兜底**。验证：computed family 在阅读面＝衬线族、界面＝无衬线族、代码＝等宽族，三族互不混用；字体未加载时先显示 fallback 的可读文字（无空白页）。
 - [ ] 5.4 字体资源缓存策略：字体文件用内容哈希或长 max-age + 版本化 URL（`workbench/server/app.py` 的 `_send_static`；`CONTENT_TYPES` L26-34 已含 `.woff2` / `.woff`）；改 CSS 或字体必须立刻到达用户。验证：改字体后重开浏览器立即生效（`curl -I` 见正确 `Cache-Control` 与 `font/woff2` MIME）；截图里字体未加载（fallback）能被识别，不会被误判为设计问题。
-- [ ] 5.5 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.7（首次加载无字体闪烁）走查；截图走查范围＝阅读面 / 界面 / 代码三处字族与一段含生僻字的教材正文（验证 fallback 时两种字形并存可接受）。
+- [ ] 5.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.7（首次加载无字体闪烁）走查；截图走查范围＝阅读面 / 界面 / 代码三处字族与一段含生僻字的教材正文（验证 fallback 时两种字形并存可接受）。
 
-## 6. 共享阅读版式层 `.wb-reading`
+## 6. 共享阅读版式层 `.wb-reading` （design.md D-5）
 
 - [ ] 6.1 新建共享阅读版式层 `.wb-reading`（题面变体 `.wb-reading--stem`），刻度全部用 token：正文 17px / 行高 1.75 / measure 38em / 段距 0.7em / `text-align: start`（**不 justify**）/ h2·h3·h4 = 22·19·17px 且行高 1.35；**自带 h1–h4 规则**（h1 = 24px 仅兜底），消除 `pages.py:978` 把 `###` 映射成 `<h4>` 而 CSS 无 h4 规则造成的层级倒挂。验证：`.wb-reading h3` computed font-size = 19px > `h4` = 17px；正文 computed 17px / 29.75px / 38em。
 - [ ] 6.2 表面归属按 A / B 组划分：阅读面（连续阅读 ≥ 3 行）挂 `.wb-reading` —— `.practice-question-card`（L924-932）、`.knowledge-body`（L493-500）、`.practice-solution`（L933-940）、`.linked-problem-text`（L524）、`.record-answer`（L1467）、Agent 长文（L752）；界面面（h1 / h2 / h3、导航、按钮、表格、选项控件、状态标签、统计数字、自评星级、元信息、空态与错误文案、题号）一律留在 `--wb-font-ui`。验证：六处挂载点齐全；界面面 computed family 不含衬线族；**标题一律无衬线**。
 - [ ] 6.3 `.rich-text` **整体退役**（不保留别名、不并行两套规则）：其现规则 L752-809 与阅读层逐项冲突（`line-height:1.7`、h1/h2/h3 = 21/18/16、p margin 8px、code .92em、`:786` 的 `--dsw-border-subtle` 从未定义导致表格线回落 `currentColor`），因此两者**不得同挂一个元素**。验证：`grep -rn "rich-text" workbench/` 归零；补齐变量后表格线不再回落正文色。
 - [ ] 6.4 密度分区落地：阅读面宽松（段间用 0.7em 留白，**不用分隔线**）；列表 / 数据面紧凑（行、记录条目、会话条目、选项列表用更小字号与更紧间距）。验证：知识点正文段距实测 ≈11.9px；记录页 20 行高度小于基线。
-- [ ] 6.5 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.1 + §3.4 走查；截图走查范围＝题面 / 知识点正文 / 解析三处的字号、行高、行宽、字族与标题层级。
+- [ ] 6.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.1 + §3.4 走查；截图走查范围＝题面 / 知识点正文 / 解析三处的字号、行高、行宽、字族与标题层级。
 
-## 7. Markdown 双渲染器统一与 parity 测试
+## 7. Markdown 双渲染器统一与 parity 测试 （design.md D-6）
 
 - [ ] 7.1 统一到**服务端语义**：正文 `#` → `<h2>`、`##` → `<h3>`、`###` → `<h4>`（服务端 `pages.py:978` 的 `level = len(heading.group(1)) + 1` 保持不变）；客户端 `workbench.js:443` 的 `<h" + heading[1].length + ">` 改为从 `<h2>` 起步。验证：同一份 Markdown 两侧标题层级一致；客户端不再与页面标题争 h1（兑现 `docs/ARCHITECTURE.md:240`「普通 Paper 题目与知识正文共享主阅读层级」）。
 - [ ] 7.2 补齐两侧其余差异：服务端代码围栏补 `class='language-xx'`（`pages.py:955` 现在丢掉）；引用块统一用客户端的正则 `^\s*>\s?`（`pages.py:993` 现在用 `line.startswith(">")`，行首空格会漏判）。验证：语料里的「行首带空格的引用」与「带语言标记的代码围栏」两侧输出一致。
 - [ ] 7.3 **新增测试** `tests/test_markdown_render_parity.py`：用一份覆盖 3 级标题 / 有无语言标记的代码围栏 / 引用 / 有序无序列表 / GFM 表格 / 分隔线 / 行内数学的 Markdown 语料，分别喂 `pages._render_markdown()`（服务端）与 `workbench.js` 的渲染函数（客户端，**经 Node 调用同一份 JS 源**），**断言两侧 HTML 逐字符相等**；语料与断言放 `tests/` 下，**不进产品目录**。验证：`python -m pytest tests/test_markdown_render_parity.py -q` 通过；测试在改造前先红（记录现状差异），改完转绿；不得用「人工同步」代替断言。
 - [ ] 7.4 无 Node 的退化路径：若 CI 无 Node，改为 Node 单测 + pytest 黄金样本双跑，并把「人工同步」写进 `design.md` 的风险表；parity 不得退化成一次性人工核对。验证：无 Node 环境下测试仍可运行并给出明确失败原因。
-- [ ] 7.5 阶段验收：跑 AGENTS.md 四条验证命令；截图走查范围＝题面 / 知识点正文 / 解析 / 记录摘录四处同源 Markdown 的排版对照；确认「客户端 `#` → h2」是本变更**唯一让既有可见文字变小**的地方，并在验收截图里单列。
+- [ ] 7.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；截图走查范围＝题面 / 知识点正文 / 解析 / 记录摘录四处同源 Markdown 的排版对照；确认「客户端 `#` → h2」是本变更**唯一让既有可见文字变小**的地方，并在验收截图里单列。
 
-## 8. 动效系统与分级降级
+## 8. 动效系统与分级降级 （design.md D-7）
 
 - [ ] 8.1 落动效 token：四档时长 `--wb-dur-1` 120ms / `--wb-dur-2` 180ms / `--wb-dur-3` 240ms / `--wb-dur-4` 520ms，三档缓动 `--wb-ease-out` `cubic-bezier(.2,.8,.2,1)` / `--wb-ease-soft` `cubic-bezier(.4,0,.2,1)` / `--wb-ease-spring` `cubic-bezier(.34,1.56,.64,1)`；把现有散落 transition（100/160/180/200/300ms 五档 + 3 种自定义缓动）收编到 token。验证：`grep -nE "transition:[^;]*[0-9]+ms" workbench.css` 每处都引用 token；交互反馈落在 120–180ms、场景动效落在 240–520ms。
 - [ ] 8.2 从 `design-notes/motion-spec.md` §3 抄入 `@keyframes` 库：`lk-squash-bounce`（多邻国 5 段关键帧 17 / 33 / 83 / 167 / 217ms，共 517ms）、`lk-rise-in-8` / `lk-rise-in-12`、`lk-skeleton-sweep`、`lk-error-nudge`、`lk-combo-in` / `lk-combo-out`、`lk-flame-ignite`、`lk-progress-fill`、`lk-celebrate-burst`、`lk-confetti-fall`、`lk-flip-roll`、`lk-spin`。验证：CSS 中存在这组 keyframes 且与 motion-spec 逐条一致；squash 含 5 个百分比节点且总时长 517ms。
 - [ ] 8.3 容器动画优先：`middle-navigation.js` 每次切页整体替换 `#middle-page` 的 innerHTML（L87，`installPageContent` L97），因此进场必须是 `#middle-page` 自身的 animation（切页后由 CSS 自动重放），**不得**靠 JS 给子元素加一次性类名；纯 CSS `nth-child` stagger 与骨架屏同样挂容器。验证：代码中无依赖一次性子元素类名的转场；切页后动画仍播放。
 - [ ] 8.4 JS 编排只留三处：①统计数字滚动（rAF 写 `textContent`）②连对计数器（写已有计数器的值与 class）③台灯转场（写已存在装饰层的 `transform`）；三处都**不新增节点、不新增事件绑定**。验证：新增 JS 只触碰既有元素的 `textContent` / `style`。
 - [ ] 8.5 性能红线与黑名单：只动 `transform` / `opacity`；单帧 ≤16ms；同屏合成层 ≤30；`will-change` 只在动画期间加、结束后移除；黑名单＝全局背景 canvas、鼠标跟随、视差、光标辉光、**常驻循环动画**、`transition: all`、用 `width/height/top/left` 做过渡。验证：逐帧录屏确认；grep 无 `transition: all` 与常驻 `infinite` 动画；台灯转场（约 700ms）作为例外预算单独记账。
-- [ ] 8.6 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §2 走查 M-7（挤压回弹）、M-8（视图转场）、M-9（骨架屏）；截图走查范围＝按钮 hover/active、卡片入场、空态入场三处动效（逐帧截图或录屏）。
+- [ ] 8.6 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 走查 M-7（挤压回弹）、M-8（视图转场）、M-9（骨架屏）；截图走查范围＝按钮 hover/active、卡片入场、空态入场三处动效（逐帧截图或录屏）。
 
-## 9. 静物 SVG 资产（可独立验收）
+## 9. 静物 SVG 资产（可独立验收） （design-notes/asset-spec.md + spec「A navigation graphic depicts its target」）
 
 - [ ] 9.1 按 `design-notes/asset-spec.md` 产出 5 枚导航图标：`icon-practice.svg`（翻开的书）、`icon-practice-sets.svg`（一叠纸）、`icon-kps.svg`（书签）、`icon-records.svg`（笔记本）、`icon-graph.svg`（节点连线），落在 `workbench/server/static/assets/icons/`；必须是**具象静物**、不是抽象占位形状（图案适配原则），且与背景由同一套视觉规则推导。验证：5 个文件存在；SVG 不含 `<text>`；不外链字体。
 - [ ] 9.2 按 asset-spec 产出空态静物插画（同一支笔、同一套线宽与圆角语言）：`empty-vase.svg`、`empty-fruit-basket.svg`、`empty-canvas.svg`、`empty-cup.svg`、`empty-books.svg`、`empty-compass.svg`、`empty-globe.svg`、`empty-inkwell.svg`、`empty-pen.svg`、`empty-pencil-cup.svg` 与 `lamp.svg`，落在 `workbench/server/static/assets/illustrations/`；写意线稿 + 淡彩晕染 + 克制高光。验证：文件存在；单文件色值数受限；图形是具象器物而非抽象几何团块；台灯与其它静物同笔触。
 - [ ] 9.3 圆底只用三角色色（不同功能区对应不同角色色），**深浅两主题共用同一批 SVG 文件**、用 CSS 变量换前景 / 背景色，不另画一套；渐变只允许出现在图标与插画内部，且用一套有限渐变语言（同一方向、同一组色阶）。验证：切夜纸后图标与插画自动反相；资产目录文件数不随主题变化；`grep -n "linear-gradient" workbench.css` 全部落在图标 / 插画作用域内。
-- [ ] 9.4 阶段验收（SVG 资产独立验收）：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.6 走查；截图走查范围＝左栏 5 项图标 + 各类空态插画 + 台灯，在亮 / 暗两主题下的特写；确认资产目录内无构建脚本、无 base64 内联、无外链、无图标字体、无位图。
+- [ ] 9.4 阶段验收（SVG 资产独立验收）：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.6 走查；截图走查范围＝左栏 5 项图标 + 各类空态插画 + 台灯，在亮 / 暗两主题下的特写；确认资产目录内无构建脚本、无 base64 内联、无外链、无图标字体、无位图。
 
-## 10. 关键反馈音效资产（可独立验收）
+## 10. 关键反馈音效资产（可独立验收） （specs/workbench-settings「Sound preference」+ decisions 8.3）
 
 - [ ] 10.1 四个关键反馈短音效：答对、答错、完成、里程碑，放 `workbench/server/static/assets/audio/`，每条**短于 200ms**；**其它任何表面 / 事件 / 状态变化都不发声**。验证：4 个文件存在且逐个测时长 < 200ms；触发点只有这四处。
 - [ ] 10.2 绕过浏览器自动播放限制：首次音效必须发生在**一次用户手势之后**（首次交互时解锁音频上下文），并给出控制台不报错的处理路径。验证：首屏加载后不发声且控制台无自动播放告警；首次点击后可发声。
 - [ ] 10.3 声音偏好联动与 MIME：开关并入第 11 组的「声音」偏好；关闭后**立即生效、无需刷新**，且**不移除任何视觉反馈**（声音不是唯一通道）；在 `workbench/server/app.py` 的 `CONTENT_TYPES`（L26-34）补 `.mp3` / `.ogg`。验证：关闭后四个时刻都不发声、动效与视觉反馈完整；请求音频返回正确 Content-Type。
-- [ ] 10.4 阶段验收（音效资产独立验收）：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.3 走查；确认音效不进入任何学习事实或持久化路径（无对应 API 调用、池内无新增记录）。
+- [ ] 10.4 阶段验收（音效资产独立验收）：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.3 走查；确认音效不进入任何学习事实或持久化路径（无对应 API 调用、池内无新增记录）。
 
-## 11. 工作台设置视图与偏好存储
+## 11. 工作台设置视图与偏好存储 （design.md D-9 + D-8）
 
 - [ ] 11.1 新增中栏「工作台设置视图」：在 `workbench/server/pages.py` 新增 `settings_page()`，在 `workbench/server/app.py` 的 `_send_page`（L234-261）注册 `/w/{name}/settings` 分支；**只承载外观偏好**（主题 / 阅读字面 / 动效 / 声音），**不得**托管任何改变学习行为的控件（既有 spec 把自评开关钉在左栏）。验证：请求该路径返回 200；视图内无行为类控件；按少字原则，每个偏好是一个自带名称与当前值的控件，不加解释性散文。
 - [ ] 11.2 左栏开关**开与关**：左栏设置区新增一个控制，打开 / 关闭设置视图；关闭后中栏**回到打开前的视图**；既有两项行为偏好（运行中发送方式、练习显示自评，`pages.py:659-668`）**留在左栏原位**，不得搬走（兼容性边界：用户可感知的位置不能无声搬动）。验证：开 → 关后中栏内容与之前一致；左栏两项偏好仍在原位。
 - [ ] 11.3 偏好存储**复用既有键**：沿用 `wb_settings_<工作区>`（`workbench.js:165` 的 `SETTINGS_KEY`），把四个外观偏好作为**同一 JSON 对象的四个新键**写入，与既有 `showRating`（`workbench.js:188`）、`runningSendAction`（`workbench.js:503`）并列；**不新增 localStorage 键、不落服务端、不写池**。验证：两个工作区各自独立；删掉存储后回到默认暖奶油主题；grep 确认没有新增键名常量。
 - [ ] 11.4 首屏无 FOUC：主题属性挂 `<html>`（`document.documentElement.dataset.theme = "night" | ""`），在 `pages.py` 的 `_base`（L1096）`<head>` 内、样式表 `<link>` **之前**放一段内联脚本同步读偏好并写 `dataset.theme`；**不用** `prefers-color-scheme` 兜底。验证：夜纸首帧截图即为夜纸（无浅色闪帧）；视口边缘无露白；改主题时所有表面按纸面层级整套换值。
 - [ ] 11.5 Agent 右栏不重建：设置视图走 `middle-navigation.js` 的同工作区导航路径，`#ai-column` DOM 与 Agent 控制器**保持挂载**（既有 spec「Same-workspace middle navigation preserves the Agent rail」）；开关设置视图后对话是**同一实例**，不丢滚动位置与草稿输入。验证：开关前后对比 `#ai-column` 的同一 DOM 节点与草稿内容；浏览器前进 / 后退同样成立。
-- [ ] 11.6 动效偏好语义与分级降级：系统 `prefers-reduced-motion: reduce` 是**硬底线** —— 系统 reduce 时即使偏好设为「开」也只启用**弱动效档**（允许透明度变化、状态直切、无位移淡入；禁止台灯涟漪、彩带 / 纸片、挤压回弹、入场上浮位移、骨架微光扫过）；偏好显式设为「关」则全部直切（比系统更严）。实现上把既有全局降级闸门（`workbench.css:733` 与 `:1126-1131` 的 `transition:none !important; animation:none !important`）从「一刀切 none」改成**分级降级**，并保证降级后的终态**仍然可见**（状态永远是文字 / 几何，不是动画）；三处 JS 编排各自 `matchMedia`（参照 `workbench.js:1639`）。⚠️ 两份 spec delta 对「显式选择是否覆盖系统」措辞不一致（`workbench-settings` 写「显式选择优先」，`workbench-ui` 写「系统 reduce 即降级」），实现按**两者交集**落地（系统 reduce ⇒ 降级；显式「开」⇒ 只恢复弱动效档），并在第 27 组把该措辞冲突登记为漂移项。验证：三种组合（系统 reduce + 偏好关 / 系统 reduce + 偏好开 / 系统允许 + 偏好开）各出一张降级对照帧；设置视图显示当前**实际生效**的档位（用状态表达，不加说明文字）。
-- [ ] 11.7 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.2 + §3.3 走查；截图走查范围＝设置视图亮 / 暗两主题；确认整条设置链路**零请求、零池写入**，且切换偏好不改变任何视图内容、列表顺序、计数与调度。
+- [ ] 11.6 动效偏好语义与分级降级：按**所有者裁决 A-2**（`decisions.md`）落地 —— 动效偏好**默认跟随**系统 `prefers-reduced-motion`；**学习者显式选择优先于系统设置**。三种组合：① 系统 reduce + 偏好未设置 ⇒ 降级为**弱动效档**（允许透明度变化与状态直切；禁止台灯涟漪、彩带 / 纸片、挤压回弹、入场上浮位移、骨架微光扫过）；② 系统 reduce + 偏好显式「开」⇒ **覆盖系统**，恢复完整动效；③ 系统允许 + 偏好显式「关」⇒ 全部直切（比系统更严）。实现上把既有全局降级闸门（`workbench.css:733` 与 `:1126-1131` 的 `transition:none !important; animation:none !important`）从「一刀切 none」改成**分级降级**，并保证降级后的终态**仍然可见**（状态永远是文字 / 几何，不是动画）；三处 JS 编排各自 `matchMedia`（参照 `workbench.js:1639`）。⚠️ 两份 spec delta 原先措辞不一致（`workbench-settings` 写「显式选择优先」、`workbench-ui` 写「系统 reduce 即无条件降级」）—— `workbench-ui` 的 delta 已按 A-2 改写为「无显式选择时跟随系统、显式选择优先」，两处现已对齐；该措辞冲突仍登记为漂移项备查（第 27 组）。验证：四种组合（系统 reduce + 偏好未设 / 系统 reduce + 偏好开 / 系统允许 + 偏好未设 / 系统允许 + 偏好关）各出一张降级对照帧；设置视图显示当前**实际生效**的档位（用状态表达，不加说明文字）。
+- [ ] 11.7 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.2 + §3.3 走查；截图走查范围＝设置视图亮 / 暗两主题；确认整条设置链路**零请求、零池写入**，且切换偏好不改变任何视图内容、列表顺序、计数与调度。
 
-## 12. 夜纸值集与对比度复测
+## 12. 夜纸值集与对比度复测 （design.md D-2 夜纸值 + D-3 / D-12 对比度）
 
 - [ ] 12.1 落夜纸值集 `:root[data-theme="night"]`：表面（ground #1c1a16 / card #26231d / raised #302c25 / ink #f2ece1）、墨阶、三角色（`--wb-role-action` 不变；`--wb-role-action-ink` #86aaff、`--wb-role-action-deep` #7aa2f7、`--wb-role-current` #e6c46a、`--wb-role-current-ink` #e6c46a、`--wb-role-needs-work` #e8837a）、控件边界 #6f6759。验证：切主题后 computed 值全部命中上表；夜纸**只是同一套三角色的第二套值**，不是新色系。
 - [ ] 12.2 夜纸下的资产处理：圆底图标**降饱和 + 提亮**；渐变换更暗色阶与更弱高光；插画与图标用同一套 SVG 换变量、不另画一份。验证：夜纸下图标与插画可见且不刺眼；资产文件数不变；**不做暗色下的图谱**（图谱页在夜纸下保持现有观感）。
 - [ ] 12.3 对比度复测并出表：正文 ≥4.5:1、次要文字 ≥4.5:1、控件边界与非文本状态标记 ≥3:1，两套主题各测一遍，把实测值写成对照表（逐项重测 design.md D-3 与 D-12 的表）。验证：表中无低于阈值项；`--wb-ink-faint` 亮 4.69:1 / 夜 5.73:1 复核通过；黄色填充在两主题下都**只承载面积与形状**。
-- [ ] 12.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.2 走查；截图走查范围＝6 类页面的亮 / 暗双主题对照；确认图谱页在两主题下均与基线一致（不随主题变化）。
+- [ ] 12.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.2 走查；截图走查范围＝6 类页面的亮 / 暗双主题对照；确认图谱页在两主题下均与基线一致（不随主题变化）。
 
-## 13. 三栏几何单一真值
+## 13. 三栏几何单一真值 （design.md D-10）
 
 - [ ] 13.1 CSS 持有模板：`#layout` 写 `grid-template-columns: var(--wb-col-left, 280px) minmax(0, 1fr) var(--wb-col-right, 420px);`（现 L160），`#layout[data-ai-collapsed]` 用同样变量、右栏置 0（现 L164）；窄屏媒体查询（`workbench.css:1174-1207` 的 `1fr` 规则）**必须保留**。验证：`#layout` 在 CSS 里只有一处 grid 模板声明。
 - [ ] 13.2 JS 只写两个数值变量：`workbench.js:4587` 的 `layout.style.gridTemplateColumns = leftWidth + "px minmax(420px, 1fr) " + rightWidth + "px"` 改为 `layout.style.setProperty("--wb-col-left", …)` / `setProperty("--wb-col-right", …)`；窄屏分支（`workbench.js:4580-4582`）**清变量**而不是清整段 inline 样式。验证：`grep -n "gridTemplateColumns" workbench/server/static/workbench.js` 归零。
 - [ ] 13.3 不变式与拖拽语义不变：「中栏 ≥ 420px」仍由 JS 夹取维持（`workbench.js:4584-4586` 的 `available = clientWidth - middleMinWidth`），CSS 的 `minmax(0, 1fr)` 只是变量未就位时的首帧兜底；拖拽侧栏的行为契约（只改当前页内存列宽、不导航、不持久化）**完全不变**；`#layout.is-resizing` 上关掉 `grid-template-columns` 过渡以免拖拽出现过渡拖影。验证：把右栏拖到最小后中栏仍 ≥420px；刷新后列宽回到默认；1280×800 与 1024×768 两个视口各拖一次并截图，无拖影。
-- [ ] 13.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §0 G-8（焦点顺序未因改造改变）+ §3.5（四档视口无横向滚动条）走查；截图走查范围＝1280 / 1024 / 768 三档视口下的三栏几何。
+- [ ] 13.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0 G-8（焦点顺序未因改造改变）+ §3.5（四档视口无横向滚动条）走查；截图走查范围＝1280 / 1024 / 768 三档视口下的三栏几何。
 
-## 14. 标题带与中栏版面配平
+## 14. 标题带与中栏版面配平 （design.md D-11）
 
 - [ ] 14.1 删 128px 死预留与 scope-tray 死代码：删 `#middle-page > .page-header { padding-right: 128px; }`（L255）、`.scope-tray-*` 整块（L178-234、L1197）、`practice-flow.js:270` 与 `middle-navigation.js:62-66` 对空壳的引用（确认没有 `document.getElementById("scope-tray-…")` 的 null 解引用）。验证：`grep -rn "128px\|scope-tray" workbench/` 归零且页面无 JS 报错；实测 HTML 本就不渲染 scope tray → 属纯死代码，删除不改变可见行为。
 - [ ] 14.2 中栏重新配平：阅读列上限 800px → **880px** 且仍居中；标题带与正文**共用同一条上限与对齐线**（现在 `.page-header` 与 `.page-content` 各有一条 `max-width:800px`（L252-253），而 `.hub-page .page-header`（L1109）不在 `#middle-page` 里 → hub 与工作台规格不一致）；阅读 measure 仍由 `.wb-reading` 自己管，容器放宽**不会**把正文拉宽。验证：hub 与工作台标题带左右边界对齐；知识点正文行宽仍为 38em。
 - [ ] 14.3 去掉标题带的装饰黄块与 3px 黑底线：删 `.page-header::after`（L261-270，76×8 黄块）与 `border-bottom: 3px solid var(--lk-ink)`（L258），换成 2px `--wb-rule-structure`。理由与「去掉试卷卡 5px 黄带」同源：黄色是**稀缺语义色**，不能降级成装订线。验证：`grep -n -- "--lk-yellow" workbench.css` 在非图谱区归零；标题带底边为 2px 结构线；标题带旁与下方**没有任何未认领的空白条**。
-- [ ] 14.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §0 G-5 + §1 S-2 走查；截图走查范围＝五类页面的标题带与中栏边距（确认中栏不再被 128px 预留夹住）。
+- [ ] 14.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0 G-5 + §1 S-2 走查；截图走查范围＝五类页面的标题带与中栏边距（确认中栏不再被 128px 预留夹住）。
 
-## 15. 左栏导航语法与顶栏三段式
+## 15. 左栏导航语法与顶栏三段式 （spec「Three-column shell with navigation」「Redundant state cues」）
 
 - [ ] 15.1 左栏导航语法：每项 = 具象静物图标 + 文字（接第 9 组的 5 枚图标），改 `workbench/server/pages.py` 的 `nav_items`（L628-635）。验证：5 个导航项均含图标，且每枚图标**指向它打开的东西**（不是抽象占位形状）。
 - [ ] 15.2 选中态 = **整行圆角色块**（现为 1px 黑框，`workbench.css:318-321`），并同时保留两个状态通道：活动文字样式 + 蓝色结构内嵌（既有 spec「Redundant state cues」要求活动项同时具备两者）。验证：选中项无边框、整行浅色块、圆角 12px、含蓝色结构内嵌与活动文字样式；其余项不具备。
 - [ ] 15.3 左栏分区结构：4 个分区加结构分隔、下半截空纸收敛；「优先回看」的标题**不再随内容有无变体**（现在 `rail_label` 随 `actionable` 变），改为稳定标题 + 计数徽标。验证：分区标题恒定，计数随内容变；空白区高度明显收敛。
 - [ ] 15.4 顶栏改三段式 + 章节透镜自绘下拉：左＝品牌方块 + 名字，中＝当前身份（**工作区名称**；机器课程代号**不得**出现在顶栏），右＝动作（主题切换、设置、其它）；章节上下文**只出现在章节透镜控件里**，不在工作区名旁重复；`_chapter_lens`（`pages.py:41-64`）从裸 `<select>` 改为自绘圆角面板（阴影 + 分隔 + 每项显示章节名与知识点计数），并满足 Esc 关闭、焦点归位、`aria-expanded` 同步、点击外部关闭。验证：顶栏三段可辨；顶栏无课程代号；章节只在透镜里出现；面板键盘可达。
-- [ ] 15.5 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.4（章节透镜是自绘下拉）+ §1 S-2 走查；截图走查范围＝顶栏三段 + 章节面板展开态 + 左栏选中态。
+- [ ] 15.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.4（章节透镜是自绘下拉）+ §1 S-2 走查；截图走查范围＝顶栏三段 + 章节面板展开态 + 左栏选中态。
 
-## 16. 练习页版式三件套
+## 16. 练习页版式三件套 （spec「Learning content is the visual anchor」+ D-5）
 
 - [ ] 16.1 题面成为**一张独立的纸** + 24px 大号题号：`#paper-question`（`pages.py:216`）从卡片内段落改为独立纸面（比卡片更亮一级 + 淡结构线）；题号做成 24px 大数字（像书的章节号）。验证：题号 computed font-size = 24px；题面与卡片的层级差可辨；题面**不做装饰性阴影强调**。
 - [ ] 16.2 解析与题面**同级**：`#paper-reference`（L221）改为同规格的另一张纸（不再是灰掉的小脚注），只用小标题区隔。验证：解析与题面处于同一 paper level；解析字号 17px。
 - [ ] 16.3 作答区成为**独立标记块**：`#paper-answer`（L219）前加淡结构线 + 「你的作答」标签 + 墨块；题面内的非 stem 文字（来源行与作答标签）**降一档到 16px**，stem 保持阅读字号。验证：题 / 答两段一眼可分；标签与来源行 computed 16px。
 - [ ] 16.4 题号导航冗余编码：`#paper-dots`（L215、`workbench.css:1888`）每项加彩色圆点，已答 / 未答 / 不会 / 未判定四态各有**几何形状 + 颜色**（零可见文字）；当前题加非颜色提示（轮廓或等价物）；整板为紧凑圆角块，**不遮挡题面与导航**；题号显示为大号数字。验证：四态在灰度下仍可区分；每点带可访问名（`aria-label`）。
 - [ ] 16.5 setup 区、完成页与时间安排层级：`#paper-setup`（L203）、`#paper-completion`（L227）、`#practice-planning` + `_daily_plan`（L237）统一到新卡片规格；时间安排降级为可展开的次级信息。验证：三处层级一致；完成页容器可挂第 17 组的数字滚动与进度带。
-- [ ] 16.6 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §0 G-1…G-4（请求序列 / 持久化 / 学习投影 / 复习建议不变）+ §1 S-2 / S-3 走查；截图走查范围＝练习全流程（setup → 题面 → 作答 → 解析 → 自评 → 完成页）。
+- [ ] 16.6 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0 G-1…G-4（请求序列 / 持久化 / 学习投影 / 复习建议不变）+ §1 S-2 / S-3 走查；截图走查范围＝练习全流程（setup → 题面 → 作答 → 解析 → 自评 → 完成页）。
 
-## 17. 连对反馈与分层庆祝
+## 17. 连对反馈与分层庆祝 （spec「Motion system」+ decisions 15.3 / 15.4）
 
 - [ ] 17.1 三级连对计数器 + 数字滚动 + 进度动效：常驻练习页，档位＝**灰 → 黄 → 黄→蓝渐变**（我们用黄承载「当前做得顺」，对应多邻国的灰 → 绿 → 绿→蓝）；数字用 Ticker 方式滚动（vanilla rAF，只写 `textContent`）；连对进度本身是动效——火苗簇**逐簇点亮**（`lk-flame-ignite`）。验证：三档颜色可辨（**不靠文字**）；簇数随连对数增长；数字滚动不引第三方库。
 - [ ] 17.2 **一份**参数化横幅：5 连 / 10 连插播同一份横幅，数字用参数化输入切（`design-notes/motion-spec.md` §6 输入表）；横幅只做一份，不是每个数字一份。验证：横幅资产只有一份；两组参数产出不同数字。
 - [ ] 17.3 连对中断负反馈：连对 **> 4** 时答错**必须**给明确负反馈（`lk-error-nudge` 等），**不得沉默**，并把计数器复位。验证：构造连对 5 次后答错的场景，界面出现明确信号且计数器归零。
 - [ ] 17.4 分层庆祝：日常档（至少有一道错）＝完成页入场 + 数字滚动 + 进度带 0→100%，**无**几何爆点与纸片；里程碑档（全对 / 破纪录 / 章节首次完成）＝再叠几何爆点 + 彩带 / 纸片飞散。验证：两档表现明显不同；里程碑档不遮挡完成页 CTA；庆祝全部在响应到达后触发，请求时序未变。
-- [ ] 17.5 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §2 走查 M-2 / M-3 / M-4 / M-5 / M-6 / M-7；截图走查范围＝连对 1 / 3 / 5 / 10 连四个时点 + 里程碑庆祝 + 降级对照帧。
+- [ ] 17.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 走查 M-2 / M-3 / M-4 / M-5 / M-6 / M-7；截图走查范围＝连对 1 / 3 / 5 / 10 连四个时点 + 里程碑庆祝 + 降级对照帧。
 
-## 18. 知识点页
+## 18. 知识点页 （spec「Redundant state cues」+ D-5）
 
 - [ ] 18.1 列表改**分组卡片**：按章节或状态分组，每组一个标题 + 组内圆角卡；`data-kp-order` 仍可保持课程顺序排序。验证：分组结构可见；排序控件仍可用。
 - [ ] 18.2 状态**冗余状态通道**：把 `state_labels`（`pages.py:378` 的「重点练习 / 可以复习」）改为彩色圆点（颜色主通道 + 几何冗余通道，**零可见文字**，圆点带 `aria-label` / `title`）。验证：列表中不再出现状态文字标签；圆点三态可辨且灰度下可区分。
 - [ ] 18.3 正文阅读层 + **单侧结构线**：知识点正文挂 `.wb-reading`（17px / 1.75 / 38em），保留**单侧结构线 2px**（`docs/PRODUCT-MANUAL.md:129-130` 硬性要求），结构线色改用 `--wb-rule-structure`；正文**不使用装饰性阴影强调**；提醒与关联题目与正文拉开距离。验证：结构线存在且为 2px；正文无 `box-shadow`；`h3 > h4` 不倒挂。
 - [ ] 18.4 空态与关联题目：知识点列表空态改第 9 组的插画 + 一句 + 满宽主按钮（按钮文案即动作）；关联题目卡统一卡片规格并挂 `.wb-reading`。验证：空态三段齐备；关联题目排版与正文同层。
-- [ ] 18.5 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §1 S-4 / S-5 走查；截图走查范围＝知识点列表（分组 + 圆点状态）+ 知识点详情（正文排版 + 单侧结构线）。
+- [ ] 18.5 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §1 S-4 / S-5 走查；截图走查范围＝知识点列表（分组 + 圆点状态）+ 知识点详情（正文排版 + 单侧结构线）。
 
-## 19. 记录中心：卡片流 / 热力日历 / 仪表盘
+## 19. 记录中心：卡片流 / 热力日历 / 仪表盘 （design.md D-13 + D-14）
 
 - [ ] 19.1 统计区改**仪表盘卡片**（权重不等，一主三辅），各带一个迷你图（趋势线 / 环形）；`_summary_cards`（`records.py:180`）产出的四个汇总数字（作答次数、已完成练习、客观题正确率、平均自评）**取值与口径保持不变**；并补上**跨记录聚合**（按日分布 + 按判定分布）——卡片流拿走了「对齐扫读」，统计区必须还回来。验证：改造前后四个数字逐位相同（验收时逐张比对）；概览页可读出按日与按判定分布；这一条作为记录中心交付的验收项。
 - [ ] 19.2 作答明细改**圆角卡片流**：`_attempt_rows`（`records.py:9`）从带边框便签（`.record-row` L1457 叠加 `.card` 基类 L447-453）改为圆角小卡（12px、**不描边**、靠留白 + `--wb-shadow-1` 分隔）；**六项字段一个不少**：题目 + 评语 + 摘录（题目下第二、三行）、判定（结构块 + 几何符号 + 文字三通道，**不再是绿药丸**）、自评（彩色圆点 + 星级形状，零文字标签）、时间（卡片右上角，次级墨）。验证：字段无缺失；页面中无 `<table>` 边框语义；页高落在 5500–6500px 量级。
 - [ ] 19.3 错题视图改卡片流 + 视图分级：错题视图同样是圆角卡片流（题面 + 错因摘要），与明细同族但视觉重一档；四个视图做视觉分级（这是一个只读历史页）。验证：错题卡摘要可见；页面仍为只读、零新增请求。
-- [ ] 19.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §1 S-6 / S-7 走查；截图走查范围＝记录中心 4 个视图 + 零记录空态。
+- [ ] 19.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §1 S-6 / S-7 走查；截图走查范围＝记录中心 4 个视图 + 零记录空态。
 
-## 20. 时间视图负荷柱（`calendar-workload`）
+## 20. 时间视图负荷柱（`calendar-workload`） （specs/calendar-workload delta + D-7）
 
 - [ ] 20.1 14 天负荷柱从共享基线**逐柱错峰 24ms** 生长，只动 `transform` / `opacity`，时长落在交互 / 场景档内；零负荷日**不画柱**、不错位占位，并保留在共享基线上的位置。验证：录帧确认逐柱错峰与基线不变；柱高比例与精确计数一致。
 - [ ] 20.2 峰值日与重日的双通道表达：峰值日按**形态 + 颜色**区分；重日（达非零日均的两倍）加**几何**冗余通道标记，**不得靠一堆解释文字**；精确数值标在各自柱上方。验证：重日在无色觉条件下仍可识别；数值与柱一一对应。
 - [ ] 20.3 降级与空态：动效偏好关、或系统 reduced-motion 生效且无显式覆盖时，柱**立即出现在最终高度**，数值、峰值标记与重日标记同时就位（**不得**停在中间高度或缺标记）；空态 = 一句 + 可选非交互静物插画，且**除这一句外不得再加任何注释**。验证：降级帧与动效帧终态一致；空态无额外注释；该视图不重排、不写入、不改任何学习数据。
-- [ ] 20.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §2 M-10 走查；截图走查范围＝时间视图的负荷柱、峰值 / 重日标记、空态。
+- [ ] 20.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 M-10 走查；截图走查范围＝时间视图的负荷柱、峰值 / 重日标记、空态。
 
-## 21. 骨架屏与视图转场
+## 21. 骨架屏与视图转场 （design.md D-7 视图转场）
 
 - [ ] 21.1 骨架屏 = **灰块 + 微光扫过**（`lk-skeleton-sweep`）：容器切页前呈骨架、切页后容器动画接管；加载态带 `aria-busy`。验证：切页可见骨架帧且微光位置变化可见；`aria-busy` 存在；**不引 spinner 图标资源**。
 - [ ] 21.2 空态 / 加载态 / 错误态**三态各有组件**：`.empty-state`（插画 + 一句 + 满宽主按钮）、`.skeleton`、错误块；错误态用红色且**红色仅用于失败与阻塞**。验证：三种状态各有可触发路径与对应渲染。
 - [ ] 21.3 焦点不被抢走：转场与浮层出现时**不得**抢焦点；装饰层一律 `pointer-events: none`，可交互元素不在装饰层内。验证：切页后焦点仍在原处或落到新页首个可交互元素（按既有行为）；装饰层 pointer-events 检查通过。
-- [ ] 21.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §2 M-8 / M-9 + §0 G-7 走查；截图走查范围＝练习 ⇄ 知识点 ⇄ 记录三次客户端换页的中间帧。
+- [ ] 21.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §2 M-8 / M-9 + §0 G-7 走查；截图走查范围＝练习 ⇄ 知识点 ⇄ 记录三次客户端换页的中间帧。
 
-## 22. 样板线验收关卡（`acceptance.md` G / S / M）
+## 22. 样板线验收关卡（`acceptance.md` G / S / M） （acceptance.md G-1…G-8 / S-1…S-12 / M-1…M-10）
 
 - [ ] 22.1 **底线守卫 G-1…G-8**：按 `acceptance.md` §0 逐条执行并留证 —— 脚本化跑一遍练习并 diff 请求方法 / 路径 / 载荷键集合；比对池中 `problem_attempts` / `feedback_events` / `practice_runs` 的行数与关键列；比对学习投影与复习建议集合；图谱页像素比对；池 schema 零变更；装饰层 `pointer-events` 检查；改造前后焦点序列对比。**任何一条红即整体 FAIL，不进入后续评审**。
 - [ ] 22.2 **对照截图 S-1…S-12**：按 `acceptance.md` §1 产出改造前 / 改造后并排图（基线在 `tmp/frontend-audit/00-baseline-*.png`；S-3 练习进行中 / S-7 作答明细 / S-9 设置视图 / S-10 夜纸 / S-11 窄屏 / S-12 空态 需新建基线）；比对标准＝同尺寸并排，**不得出现「配色被改」「圆角被改」「信息被删」**，文字除文案清理项外逐字一致。
@@ -208,46 +208,46 @@
 
 ## 第二段：铺开（样板线验收通过后）
 
-## 23. 试卷列表页
+## 23. 试卷列表页 （decisions 11.3 / 11.4 + spec「Accent roles stay scarce」）
 
 - [ ] 23.1 试卷列表改**卡片网格**：每张卡显示标题、题数、状态圆点（`practice_sets_page`，`pages.py:484`）。验证：网格布局成立，卡内三要素齐全。
 - [ ] 23.2 去掉试卷卡的 **5px 黄带**：现状**每张卡**都顶一条 5px 黄带，把语义黄降级成装订线，且卡片已带阻塞原因时黄色已无信号价值；改用状态圆点承载状态，让黄色回到稀缺语义色。验证：该黄带规则在 CSS 中消失；列表中只有「当前 / 到期复习」才出现黄色面积。
-- [ ] 23.3 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §1 S-8 走查；截图走查范围＝试卷列表页（含空态插画 + 满宽主按钮）。
+- [ ] 23.3 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §1 S-8 走查；截图走查范围＝试卷列表页（含空态插画 + 满宽主按钮）。
 
-## 24. hub 首页与卡片信息层级
+## 24. hub 首页与卡片信息层级 （spec「Workspace card information hierarchy」）
 
 - [ ] 24.1 hub 布局改「**最近使用置顶 + 网格**」：现状是 22 张**完全等权**的卡片、无排序无分组；重排为最近用的 4 个置顶大卡、其余在下方网格。验证：置顶区与网格区可辨；4 张置顶卡的数据来源可追溯；hub 仍为只读目录、零新增请求。
 - [ ] 24.2 卡片信息层级：工作区名 22px 最大；知识点数 / 题目数 / 到期复习数三个计数 13px 一行排开，每个计数前一个小色点（色取自三角色）；**圆点是该计数的冗余状态通道，数字仍在文字中可读**。验证：字号与色点可辨；三个计数在灰度下仍可区分；计数含义与原实现一致。
-- [ ] 24.3 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §1 S-1 走查；截图走查范围＝hub 首页（含空态）。
+- [ ] 24.3 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §1 S-1 走查；截图走查范围＝hub 首页（含空态）。
 
-## 25. Agent 右栏
+## 25. Agent 右栏 （spec「Agent rail presentation keeps the learning page primary」）
 
 - [ ] 25.1 会话列表**补滚动容器 + 分组**：现状 `#ai-session-list`（`workbench.css:611`）无滚动容器（`overflow:visible` + 祖先 `overflow:hidden` ⇒ 被静默裁掉）；补内部滚动容器，并按「今天 / 昨天 / 更早」分组，每组小标题 + 组内圆角小块（标题 + provider 圆点 + 日期）。验证：长列表可滚到末条且不再被裁；三组结构成立。
 - [ ] 25.2 消息流改**圆角卡片流**：每条消息一张圆角卡（Agent 消息可展开详情）；**不得演化成常驻任务面板**（既有 spec：右栏不取代中栏学习面）；Agent 长文挂 `.wb-reading`。验证：卡片流可滚且无常驻面板；长文排版与知识点正文同层。
 - [ ] 25.3 composer、执行计划与活动浮层：composer 贴底、大圆角、聚焦变蓝 + 轻微抬起，且**随输入增高**（不把对话换成任务面板）；执行计划改**圆点时间线**（圆点 + 细线 + 文字），工具调用折叠成 ≤240 字摘要（展开看详情）；活动浮层改右上角圆角小卡，可收起、活动结束即消失，**空闲时不得留下任何辅助工作面**挡住中栏；窄屏抽屉保持「会话列表 + 消息 + composer」同一结构。验证：输入多行时 composer 增高且消息区不被替换；摘要长度受限；空闲时中栏不被遮挡；抽屉里 composer 仍可达。
-- [ ] 25.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §3.4（会话列表可滚动）+ §1 S-11 走查；截图走查范围＝Agent 右栏（会话列表 / 消息流 / composer / 执行计划 / 活动浮层）；确认右栏交互的请求序列与载荷未变。
+- [ ] 25.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §3.4（会话列表可滚动）+ §1 S-11 走查；截图走查范围＝Agent 右栏（会话列表 / 消息流 / composer / 执行计划 / 活动浮层）；确认右栏交互的请求序列与载荷未变。
 
-## 26. 文案清理
+## 26. 文案清理 （spec「Interface copy voice」+ decisions 17.4）
 
 - [ ] 26.1 按 `design-notes/copy-table.md` 执行全站文案定稿：**一个中文语气**、一个标签 / 一句话里不混中英；空态 = 插画 + 一句 + 满宽主按钮（按钮文案即动作）。验证：逐页核对 copy-table 的「改前 → 改后」条目全部落地；页面上无中英混排标签残留；改动前后语义逐条核对。
 - [ ] 26.2 少字原则删注释：能删的界面注释**直接删除**（不是换成更漂亮的说明文字）；改造后界面上的说明性文字**数量不增加**。验证：交付一张删除前后信息量核对表，逐条说明删除理由；界面文字条数对比不增。
-- [ ] 26.3 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §1 的「文字内容除文案清理项外应逐字一致」走查；同步 `docs/PRODUCT-MANUAL.md` 对应章节（本组改了用户可见文案）。
+- [ ] 26.3 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §1 的「文字内容除文案清理项外应逐字一致」走查；同步 `docs/PRODUCT-MANUAL.md` 对应章节（本组改了用户可见文案）。
 
-## 27. 契约漂移登记（`contract-drift.md`）
+## 27. 契约漂移登记（`contract-drift.md`） （design.md D-15）
 
 - [ ] 27.1 新建 `openspec/changes/workbench-visual-language-v2/contract-drift.md`（**本变更目录下的工件，随本变更一起归档；不进 `docs/`**）：表头固定为 `ID | 位置（file:line） | 现状 | 与哪份契约冲突 | 建议归属 | 优先级`，ID 用 `CD-001` 递增，「建议归属」取值限 `openspec change` / `docs/DATA_MODEL.md` / `docs/GLOSSARY.md` / `spec delta` / `产品决策`。验证：文件存在于变更目录；`docs/` 下无同名文件；`docs/audits/` 与 `docs/PENDING-DEFINITIONS.md` 未被污染（漂移是行为 / 字段 / 口径分歧，不是名词缺失）。
-- [ ] 27.2 登记 **128 处**契约漂移：每条必须**能转成一个后续 change**，写清「改成什么」或「谁来定」；已知必含项至少包括 —— 建议行与每日计划队列有词条但无界面出口、「准确率」被记录中心打印但未在词表定义且被列为 `_Avoid_`、完成练习数受最近 100 轮限制而作答次数无上限、契约外绿 `--wb-role-done` 的局部例外（`workbench.css:1211` / `:1214`）、阅读面 stem 16px 与 spec delta「阅读字号不得低于现状」的冲突、动效偏好是否覆盖系统 reduced-motion 的两份 delta 措辞冲突。验证：表行数 = 128（`CD-001`…`CD-128`）；每行「建议归属」与「改成什么 / 谁来定」非空。
+- [ ] 27.2 登记 **128 处**契约漂移：每条必须**能转成一个后续 change**，写清「改成什么」或「谁来定」；已知必含项至少包括 —— 建议行与每日计划队列有词条但无界面出口、「准确率」被记录中心打印但未在词表定义且被列为 `_Avoid_`、完成练习数受最近 100 轮限制而作答次数无上限、契约外绿 `--wb-role-done` 的局部例外（`workbench.css:1211` / `:1214`）。⚠️ 两项**已在本轮裁决、不再算漂移**：① 动效偏好是否覆盖系统 reduced-motion —— 所有者裁决 A-2 定「显式选择优先」，两份 delta 已按此对齐（`workbench-ui` delta 改写完毕；措辞冲突仅作备查留档）；② 阅读面 stem 字号 —— 所有者裁决 A-6 定「题面与正文同档 17px / 1.75 / 38em」，design.md D-5 已按此修正。验证：表行数 = 128（`CD-001`…`CD-128`）；每行「建议归属」与「改成什么 / 谁来定」非空。
 - [ ] 27.3 交接提示与滚动维护责任：在 `docs/PENDING-DEFINITIONS.md` 或交接文档里显式提示「**存在 128 条已登记漂移**」，并写明登记表的清理责任人与滚动维护方式；**不得**把登记表当成「已处理」。验证：提示文本存在；登记表随本变更一起归档。
-- [ ] 27.4 阶段验收：跑 AGENTS.md 四条验证命令；按 `acceptance.md` §0（冻结线未被顺手改动）走查；截图走查范围＝无（文档任务）；确认本组**只登记、不动实现**。
+- [ ] 27.4 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §0（冻结线未被顺手改动）走查；截图走查范围＝无（文档任务）；确认本组**只登记、不动实现**。
 
-## 28. 契约同步与最终验收
+## 28. 契约同步与最终验收 （AGENTS.md 契约协调 + D-15）
 
 - [ ] 28.1 `docs/GLOSSARY.md`：核对「柔和蒙德里安 / Soft Mondrian」条目已被改写为**暖色 + 现代圆润**定义（不再把「暖纸色 + 深色结构线」写成该语言的定义），并核对 13 条新词条齐全（纸面层级、夜纸、冗余状态通道、主题偏好、阅读字面、动效偏好、声音偏好、工作台设置视图、静物插画、台灯转场、少字原则、图案适配原则 + 静物插画）；与本清单用词逐条一致。验证：逐条核对，无缺项、无旧措辞残留。
 - [ ] 28.2 `docs/PRODUCT-MANUAL.md`：补「工作台设置视图」章节（含「按工作区存储、跨工作区独立、换工作区要重设外观」这条定案）与文案清理后的操作说明；**保留**知识点正文「宽行距 + 单侧结构线」的既有硬性表述；并按最终实现写明阅读面字号刻度。验证：章节齐全且未与既有条目冲突。
 - [ ] 28.3 `docs/ACTION-GRAPH.md` + `docs/action-graph/L3-actions.md`：登记新增动作（设置视图、主题切换、连对升级反馈）、退役动作（scope-tray 死预留与死 CSS 清理）、改级动作（`.rich-text` → `.wb-reading`）。验证：新增 / 退役 / 改级动作全部留痕。
 - [ ] 28.4 `docs/ARCHITECTURE.md`：更新静态资产目录结构（新增 `assets/icons/`、`assets/illustrations/`、`assets/audio/`、`fonts/`）与设置视图路由；并把「普通 Paper 题目与知识正文共享主阅读层级」这条既有契约标注为**已兑现**（此前两侧渲染器层级不一致）。验证：文档里的目录树与仓库实际一致。
 - [ ] 28.5 spec 补正与冲突收敛：把 D-14 的 5 档日历阈值（0 / 1 / 2–3 / 4–7 / ≥8，源自 `records.py:237`）写进 `specs/workbench-ui/spec.md` 的 Records center 需求（或按 AGENTS.md 登记为独立 change），并补 `.level-0` 的 CSS 与页面图例；同时校正 `design.md` D-5 与 spec delta 关于 stem 字号的冲突（spec delta 要求题面与正文同为 17px / 1.75 / 38em，是唯一权威）。验证：阈值成为可见契约（CSS + 图例 + 规格三处一致）；design.md D-5 与 spec delta 不再互相矛盾。
-- [ ] 28.6 最终验收：跑 AGENTS.md 四条验证命令并贴输出；`openspec validate --specs --strict` 全绿；按 `acceptance.md` §1 补齐铺开段新增页面对应的对照截图（S-1 / S-8 / S-11）与 §3 增补项；确认**图谱页逐像素零变化、请求与持久化零变化、池 schema 零变更**；确认第 27 组的漂移登记表随变更归档。
+- [ ] 28.6 最终验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）并贴输出；`openspec validate --specs --strict` 全绿；按 `acceptance.md` §1 补齐铺开段新增页面对应的对照截图（S-1 / S-8 / S-11）与 §3 增补项；确认**图谱页逐像素零变化、请求与持久化零变化、池 schema 零变更**；确认第 27 组的漂移登记表随变更归档。
 
 ---
 

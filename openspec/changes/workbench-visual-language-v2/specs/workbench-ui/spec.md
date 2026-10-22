@@ -122,10 +122,13 @@ above four SHALL give an explicit negative signal rather than silence.
 
 Motion SHALL NOT change request timing, ordering or payload, and SHALL stay
 within a budget that keeps the interface responsive to input. When the motion
-preference (动效偏好) is off, or when the system asks for reduced motion, every
-motion SHALL degrade to a direct state change: the ground changes directly, a
-celebration lands on its final state, and a streak counter updates without
-animating.
+preference (动效偏好) is off, every motion SHALL degrade to a direct state
+change. When the system asks for reduced motion and the learner has made no
+explicit choice, the motion preference SHALL follow that request and every
+motion SHALL likewise degrade to a direct state change: the ground changes
+directly, a celebration lands on its final state, and a streak counter updates
+without animating. An explicit learner choice to enable motion SHALL take
+precedence over the system setting.
 
 #### Scenario: An answer is confirmed
 
