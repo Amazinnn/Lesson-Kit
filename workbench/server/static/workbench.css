@@ -1231,6 +1231,22 @@ textarea:focus-visible, input:focus-visible {
 .lk-dot--check::before { width: 4px; left: 3px; top: 50%; margin-top: -1px; transform: rotate(45deg); }
 .lk-dot--check::after { width: 6px; left: 5.5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
 
+/* ---- `--filled`：实心圆盘、无几何符号（A-78 · IMPL-W2g 第 3 条）-----------
+   · 「实心圆盘」= 盘面被填充色铺满（不是描边的空心环）
+   · 「无几何符号」= 不画叉 / 横杠 / 勾 ⇒ 与 `--cross` / `--dash` / `--check`
+     **互斥**（本条写在几何三条**之后**，同特异度下靠后者胜 ⇒ 同时命中时符号被清掉）
+   · ⚠️ **本类只管形状，不管颜色**：颜色由状态类给（`--red` / `--yellow` / `--ink`
+     ⇒ `--dot-fill`），本类**不设任何颜色**（设了就等于自带一个第四色 / 抢状态类的色）。
+     此前「实心」是由颜色变体**顺带**实现的（`pages.py` 写的是
+     `lk-dot lk-dot--red lk-dot--filled`）—— 现在由本类显式兑现。 */
+.lk-dot--filled {
+  background: var(--dot-fill);
+}
+.lk-dot--filled::before,
+.lk-dot--filled::after {
+  content: none;
+}
+
 /* ============================================================================
    组件族 · 开关 / 分段控件（spec §4.10 / §4.11 · IMPL-W2g 第 1 条）
    ---------------------------------------------------------------------------
