@@ -1134,6 +1134,41 @@ textarea:focus, input:focus { border-color: var(--role-blue); outline: none; }
 }
 .lk-dot--check::before { width: 4px; left: 3px; top: 50%; margin-top: -1px; transform: rotate(45deg); }
 .lk-dot--check::after { width: 6px; left: 5.5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
+
+/* ---- 章节知识点计数条（tasks.md 18.5 · IMPL-W2e 第 9 条）------------------
+   18.5 的 markup 已落地（`pages.py` 的 `_knowledge_count_bar`）：
+     `.knowledge-count-bar` > `.knowledge-count-bar__item`
+       （+ `--needs_work` / `--review` / `--mastered`）> `.knowledge-count-bar__value`
+   以前 CSS 里**零命中** ⇒ 计数条没排版。
+   · **低调的计数条**：**不是新卡片**（无卡面、无柔影、无描边）——
+     只用一根发丝线把「总数 + 三态计数」收成一行；
+   · 数字用**界面字族**（`--font-ui`）+ `tabular-nums`（滚动时不跳宽）；
+   · ⚠️ **不得出现任何百分比**：这一条是**计数**，不是比率
+     （GLOSSARY「当前学习状态」_Avoid_）。 */
+.knowledge-count-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 0 0 var(--sp-4);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--rule-hair);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+.knowledge-count-bar__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.knowledge-count-bar__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink-strong);
+}
 .graph-content { max-width: none; }
 #layout[data-page="graph"] #middle { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 20px; }
 #layout[data-page="graph"] .page-header { width: 100%; flex: none; padding-bottom: 14px; }
