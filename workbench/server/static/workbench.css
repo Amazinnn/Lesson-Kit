@@ -548,8 +548,10 @@ body {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 20px;
+  /* ⚠️ 靶子（`design-notes/mockup-baseline/` · A-143）：gap 16px / padding 0 16px。
+     原值 10px / 0 20px 是**规格的推测值**，样板图（实测）不是。 */
+  gap: 16px;
+  padding: 0 16px;
   background: var(--surface-card);
   border-bottom: 2px solid var(--ink-strong);
   /* 台灯涟漪的底色层在 `--z-base`（0）⇒ 内容层必须 z-index ≥ 1（A-1：
@@ -562,7 +564,7 @@ body {
 .topbar-identity {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   min-width: 0;
   /* ⚠️ 必须可收缩（§7.8 断点守卫第 3 条：顶栏内容超宽是横向滚动的来源之一）
      ⇒ 段二允许收缩，工作区名自己截断。 */
@@ -756,7 +758,8 @@ body {
 #layout[data-ai-collapsed] { grid-template-columns: var(--wb-col-left) minmax(0, 1fr) 0px; }
 #left-column {
   position: relative;
-  border-right: 1px solid var(--rule-hair);
+  /* ⚠️ 靶子没有左栏右边的线（`.col--left` 无 border-right，
+     只有 `.col--right` 的 border-left）⇒ 这里**不画**分隔线。 */
   background: transparent;   /* 底色挪到 .side-sections（tasks.md 15.3「下半截空纸收敛」） */
   padding: 0;
   overflow-y: auto;
@@ -765,7 +768,7 @@ body {
 #middle {
   position: relative;
   overflow-y: auto;
-  padding: 28px 32px 72px;
+  padding: 24px 32px 48px;
   min-width: 0;
   z-index: 1; /* 同上：涟漪不得压平卡片 */
 }
@@ -802,7 +805,7 @@ body {
 }
 .page-header {
   position: relative;
-  padding-bottom: 24px;
+  padding-bottom: 12px;
   border-bottom: 2px solid var(--rule-structure);
 }
 .page-title-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
@@ -817,9 +820,9 @@ body {
 }
 .page-header h1 {
   margin: 0;
-  font-size: 30px;
-  line-height: 38px;
-  letter-spacing: -0.02em;
+  font-size: 28px;
+  line-height: 36px;
+  letter-spacing: normal;
 }
 .page-summary {
   max-width: 600px;
@@ -2834,25 +2837,56 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 .practice-mode-choice legend { padding: 0 4px; color: var(--ink-muted); font-size: 13px; }
 .practice-mode-choice label { color: var(--ink-strong); cursor: pointer; }
 .practice-mode-choice input { width: auto; margin-right: 4px; }
-/* 题面 —— 阅读面 A 组（衬线 + 阅读刻度；字号 17px = --fs-reading） */
+/* 题面纸 —— **靶子形态**（`design-notes/mockup-baseline/shell.html` 的 `.paper`）
+   · 卡面底（`--surface-card`）+ 12px 圆角 + `--elev-1` 柔影
+   · 左缘 **2px 墨色单侧结构线**（`PRODUCT-MANUAL.md:129-130` 硬性要求；
+     旧值是 4px **蓝**边框 + 无影 —— 既不是靶子，也不是「学习内容是视觉锚点」的要求）
+   · padding `24 24 24 32`：左侧多 8px 给结构线让位 */
 .practice-question-card {
   margin-bottom: 0;
-  padding: 24px 26px;
-  border-left: 4px solid var(--role-blue);
-  box-shadow: none;
+  position: relative;
+  padding: 24px 24px 24px 32px;
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
   font-size: 17px;
 }
+.practice-question-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  border-radius: var(--r-pill);
+  background: var(--rule-structure);
+}
 .practice-question-card .context-line { margin-bottom: 12px; }
-/* 解析 —— 阅读面 A 组；沉底面（A-23）：底色差 + 1px 内发丝线，**不带柔影**（凹层不抬升）
+/* 解析纸 —— **与题面同级的另一张纸**（靶子 `.paper--analysis`：同一张纸，
+   只是结构线用发丝线而不是墨色）。
+   ⚠️ 旧形态是「沉底面 + 只圆下两角 + 挂在题面底下」—— 与
+   `docs/PRODUCT-MANUAL.md:129-130`（宽行距 + 单侧结构线）、
+   `layout-spec.md` §5.2（解析与题面同级的纸）都不符。
    字号 17px = --fs-reading（题面与正文同档，decisions.md A-6） */
 .practice-solution {
-  padding: 18px 22px;
+  position: relative;
+  padding: 24px 24px 24px 32px;
   border-top: 0;
-  border-radius: 0 0 var(--r-md) var(--r-md);
-  background: var(--surface-sunken);
-  color: var(--ink-muted);
-  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  color: var(--ink-body);
+  box-shadow: var(--elev-1);
   font-size: 17px;
+}
+.practice-solution::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  border-radius: var(--r-pill);
+  background: var(--rule-hair);
 }
 .flash-direction-choice {
   display: grid;
