@@ -125,7 +125,12 @@ class RecordsBoundaryTests(unittest.TestCase):
 
         rendered = records_view.content("dmath", overview, view="runs")
         self.assertIn("第一章试卷", rendered)
-        self.assertIn("题目或顺序曾变化", rendered)
+        # R-34（copy-table 定稿）：那句「这张试卷的题目或顺序曾变化；……」**已删除**
+        # （少字原则；copy-table §3 的「删后由什么承担」= 「每轮一张卡片（天然分开，
+        # 不合并）」）⇒ 那句文案原本要保证的**事实**改由**两轮的完成时间都在页面上**
+        # 来断言（用时间戳而不是类名 / 文案：类名有两条渲染路径，文案会再变）。
+        self.assertIn("2026-09-20 10:20:00", rendered)
+        self.assertIn("2026-09-29 10:20:00", rendered)
 
     def test_saved_paper_history_groups_canonical_and_legacy_runs_by_saved_id(self):
         from workbench.data import active_practice, practice_sets, records
@@ -222,7 +227,11 @@ class RecordsBoundaryTests(unittest.TestCase):
         self.assertEqual(paper["runs"][0]["accuracy"], 1.0)
 
         rendered = records_view.content("dmath", overview, view="runs")
-        self.assertNotIn("题目或顺序曾变化", rendered)
+        # 同上（R-34）：那句说明文案已从产品里删除 ⇒ 「页面**没有**它」这条断言
+        # 已**失去意义**（恒真）。内容未变化时两轮仍各占一条 ⇒ 断言两轮的完成时间
+        # 都在页面上（数据层的 `content_changed` 已在上面断言过）。
+        self.assertIn("2026-09-20 10:00:00", rendered)
+        self.assertIn("2026-09-29 10:00:00", rendered)
 
     def test_freed_paper_ids_are_not_reused_after_the_paper_is_deleted(self):
         from workbench.data import practice_sets
