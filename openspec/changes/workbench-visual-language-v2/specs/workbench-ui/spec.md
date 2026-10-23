@@ -1150,6 +1150,44 @@ beside the page title or under the title band.
 - **THEN** their widths and their collapse behaviour come from a single
   definition and do not change again afterwards
 
+The shell SHALL lay out in four viewport tiers, and the tier — not the page —
+SHALL decide the columns. At 1440 pixels and wider the left, middle and right
+columns stand at 280 pixels, the remaining width, and 420 pixels. From 1280 to
+1439 they stand at 248, the remaining width, and 380. From 1024 to 1279 the
+left column stands at 232 and the right column leaves the grid and becomes a
+dismissible overlay drawer, so the middle column widens by the width the rail
+vacated. From 768 to 1023 the left column becomes a dismissible overlay
+drawer as well and the middle page takes the full width. Below 768 both
+drawers take the full width. While the three columns stand, the middle column
+SHALL keep at least 420 pixels of width. The middle column's own padding SHALL
+be 28/32/72 at 1440 and wider, 28/28/64 from 1280, 24/24/64 from 1024,
+24/18/48 from 768 and 16/12/40 below 768. No tier SHALL produce a horizontal
+scrollbar.
+
+#### Scenario: The columns narrow at the second tier
+
+- **WHEN** the viewport is 1280 pixels wide
+- **THEN** the left column is 248 pixels, the right column is 380 pixels and
+  the middle column takes the width that is left
+
+#### Scenario: The Agent rail becomes a drawer at the third tier
+
+- **WHEN** the viewport is 1024 pixels wide
+- **THEN** the right column is no longer part of the grid, the middle column
+  widens by the width the rail vacated, and the top bar keeps an Agent
+  control that opens the rail as a drawer
+
+#### Scenario: The navigation becomes a drawer at the fourth tier
+
+- **WHEN** the viewport is 768 pixels wide
+- **THEN** the left column becomes a dismissible drawer and the middle page
+  keeps the full width
+
+#### Scenario: No tier produces a horizontal scrollbar
+
+- **WHEN** the shell is viewed at 1440, 1280, 1024 and 768 pixels wide
+- **THEN** the document does not scroll horizontally at any of them
+
 #### Scenario: The selected navigation entry reads as a block
 
 - **WHEN** the learner views the left column

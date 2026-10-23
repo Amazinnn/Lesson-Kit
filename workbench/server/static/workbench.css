@@ -123,13 +123,15 @@
   /* ---- §2.8 布局几何（9）：两主题同值 ---- */
   --shell-measure: 880px;       /* 阅读轨宽（≠ --measure 的「行长」） */
   --shell-measure-wide: 1120px; /* 数据轨宽 */
-  --shell-col-left: 280px;
-  --shell-col-right: 420px;
-  --shell-col-middle-min: 420px;
-  --shell-col-left-max: 480px;
-  --shell-col-right-max: 560px;
   --shell-topbar-h: 52px;
   --shell-track: var(--shell-measure);
+  /* ⚠️ 三栏列宽族（`--shell-col-left` / `--shell-col-right` /
+     `--shell-col-middle-min` / `--shell-col-left-max` / `--shell-col-right-max`）
+     **不在 :root** —— 定义在下方 `#layout` 规则里。
+     `layout-spec.md` §0.4 原文：「这两个变量**写在 `#layout` 元素上**
+     （`#layout { --shell-col-left: 280px; … }`），**不写 `:root`**」
+     （D-10：更局部，不会牵连图谱页的同名变量）。
+     档位变体（B / C 档）见 §7.1 四档表的 `@media` 块。 */
 
   /* ---- §3.1 纸面层级（6）---- */
   --surface-base: #fdf8ef;   /* 页面底 */
@@ -562,7 +564,9 @@ body {
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: none;
+  /* ⚠️ 必须可收缩（§7.8 断点守卫第 3 条：顶栏内容超宽是横向滚动的来源之一）
+     ⇒ 段二允许收缩，工作区名自己截断。 */
+  flex: 0 1 auto;
   color: var(--ink-muted);
   font-size: 13px;
 }
@@ -594,7 +598,16 @@ body {
     34px 0 0 var(--role-red), 34px 0 0 1px var(--ink-strong);
   margin-right: 34px;
 }
-#topbar .meta { color: var(--ink-muted); font-size: 13px; }
+#topbar .meta {
+  color: var(--ink-muted);
+  font-size: 13px;
+  /* 长工作区名不许把顶栏撑宽（§7.8 断点守卫第 3 条）：36ch + 省略号。 */
+  max-width: 36ch;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .topbar-separator { color: var(--graph-page-caption, var(--ink-faint)); }
 
 /* ---- 章节透镜 —— 自绘下拉面板（tasks.md 15.4 / spec「Chapter switch in the top bar」）
@@ -705,6 +718,21 @@ body {
    ⚠️ 窄屏媒体查询（`grid-template-columns: 1fr`）**必须保留**：它覆盖整条模板，
      是既有行为（13.1）。 */
 #layout {
+  /* ---- 三栏列宽（`layout-spec.md` §0.4 / §1.4 / §7.1）----------------
+     列宽族**写在 `#layout` 上，不写 `:root`**（§0.4 引用 D-10：更局部，
+     不会牵连图谱页的同名变量）。
+     下面是 **A 档（≥1440）** 的默认值；B / C 档由 §7.1 档位表的
+     `@media` 覆盖（`--shell-col-left` 248→232、`--shell-col-right` 380）。
+     ⚠️ **数值只有一个来源**：JS 不再自带 280 / 420 / 480 / 560，
+     改为从样式表读（§1.2 配套规则 3）—— 对应 spec delta 的
+     「One geometry decides the columns」。 */
+  --shell-col-left: 280px;
+  --shell-col-right: 420px;
+  --shell-col-middle-min: 420px;   /* 中栏硬底线（§1.3 R1，由 JS 夹取维持） */
+  --shell-col-left-min: 200px;     /* §1.4 各档的拖拽区间下界 */
+  --shell-col-left-max: 480px;
+  --shell-col-right-min: 360px;
+  --shell-col-right-max: 560px;
   --wb-col-left: var(--shell-col-left, 280px);
   --wb-col-right: var(--shell-col-right, 420px);
   flex: 1;
@@ -716,16 +744,19 @@ body {
      是「只动 transform / opacity」）。
      ⇒ 少掉的不是可见行为：
        · 窄屏（< 1024px）两态都是 `1fr`（媒体查询覆盖），本就无过渡可言；
-       · 宽屏 `data-ai-collapsed` 从不出现（JS 只在 < 1024px 置位）；
+       · 宽屏 `data-ai-collapsed` 只在 C 档（≤1279）出现（JS 阈值已改）；
        · 拖拽改列宽时过渡本来就由 `is-resizing` 关掉 ⇒ 列宽**跟手**，
          不再有「过渡拖影」。
      ⇒ 抽屉开合仍是 transform 过渡（`#left-column` / `#ai-column`）。 */
 }
 #layout.is-resizing { transition: none; }
+/* 右栏出栅格 ⇒ 第三轨归零（§1.3 R4：中栏不吃 420 底线，此时没有三栏）。
+   ⚠️ C 档（≤1279）由 §7.1 档位表的 `@media` 整条模板覆盖（两栏），
+     这里的 0px 轨道只服务于「宽屏折叠右栏」这条尚未开放的路径。 */
 #layout[data-ai-collapsed] { grid-template-columns: var(--wb-col-left) minmax(0, 1fr) 0px; }
 #left-column {
   position: relative;
-  border-right: 1px solid var(--ink-strong);
+  border-right: 1px solid var(--rule-hair);
   background: transparent;   /* 底色挪到 .side-sections（tasks.md 15.3「下半截空纸收敛」） */
   padding: 0;
   overflow-y: auto;
@@ -734,13 +765,13 @@ body {
 #middle {
   position: relative;
   overflow-y: auto;
-  padding: 34px 40px 48px;
+  padding: 28px 32px 72px;
   min-width: 0;
   z-index: 1; /* 同上：涟漪不得压平卡片 */
 }
 #ai-column {
   position: relative;
-  border-left: 1px solid var(--ink-strong);
+  border-left: 1px solid var(--rule-hair);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -748,11 +779,6 @@ body {
   overflow: hidden;
   min-width: 360px;
   z-index: 1; /* 同上：涟漪不得压平卡片 */
-}
-#layout[data-ai-collapsed] #ai-column {
-  padding: 0;
-  border-left: none;
-  min-width: 0;
 }
 
 /* centered reading column —— 标题带与正文**共用同一条轨与同一条对齐线**
@@ -791,9 +817,9 @@ body {
 }
 .page-header h1 {
   margin: 0;
-  font-size: 28px;
-  line-height: 36px;
-  letter-spacing: -0.025em;
+  font-size: 30px;
+  line-height: 38px;
+  letter-spacing: -0.02em;
 }
 .page-summary {
   max-width: 600px;
@@ -2062,7 +2088,22 @@ fieldset.problem-options > label:has(input:focus-visible) {
   color: var(--ink-strong);
 }
 .graph-content { max-width: none; }
-#layout[data-page="graph"] #middle { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 20px; }
+#layout[data-page="graph"] #middle { display: flex; flex-direction: column; overflow: hidden; padding: 34px 40px 20px; }
+/* ---- 图谱页的外壳几何冻结（G-5 · A-141 实施注意）-------------------------
+   本波按 `layout-spec.md` §1.7 / §7.1 改了**外壳**几何（中栏内边距、栏间
+   分隔线、标题字号），而**知识图谱页一行都不在版式规格的范围内**
+   （§0.2「范围外：知识图谱页……沿用现状的整幅画布，不套用本文的中栏轨道与
+   纸面规格」）⇒ 这三处在图谱作用域里**钉回改造前的值**，
+   保住 G-5「图谱页逐像素零变化」。
+   ⚠️ **这不是新规则，是把「图谱页不受本波影响」写进作用域** ——
+     画布自身的几何（§0.2）一个字不动。
+   ⚠️ 三处的**改造前取值**（HEAD `ec47783d`）：
+     · 中栏 padding = `34px 40px 48px`，图谱块把 padding-bottom 覆盖成 20px
+     · 栏间分隔线 = `1px solid var(--ink-strong)`（不是 `--rule-hair`）
+     · 标题 h1 = `28px / 36px / -0.025em` */
+body:has(#layout[data-page="graph"]) #left-column { border-right-color: var(--ink-strong); }
+body:has(#layout[data-page="graph"]) #ai-column { border-left-color: var(--ink-strong); }
+body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-height: 36px; letter-spacing: -0.025em; }
 #layout[data-page="graph"] .page-header { width: 100%; flex: none; padding-bottom: 14px; }
 #layout[data-page="graph"] .page-summary { margin-top: 3px; }
 #layout[data-page="graph"] .graph-content { width: 100%; min-height: 0; flex: 1; }
@@ -2265,8 +2306,11 @@ fieldset.problem-options > label:has(input:focus-visible) {
   /* 只过渡 opacity：底色瞬切（权威表 §3.3），可见度走 120ms 过渡 */
   transition: opacity var(--dur-fast) var(--ease-standard);
 }
-#left-resizer { right: -4px; }
-#right-resizer { left: -4px; }
+/* ⚠️ 把手柄**整体收进栏内**（§1.2 验收口径第 7 条）：原值 `right:-4px` /
+   `left:-4px` 骑在栏界上，被栏自身的 `overflow-y:auto` / `overflow:hidden`
+   裁掉一半 ⇒ 一半命中区失效。收进栏内后命中区完整，且不再撑出横向滚动。 */
+#left-resizer { right: 0; }
+#right-resizer { left: 0; }
 .column-resizer:hover { background: var(--role-blue); opacity: .35; }
 /* 按下比悬停**再多一层**（motion-spec §2.1 第 2 行）：拖拽把手按住时更显眼。
    ⚠️ 这里**不写 transform**：把手只有 8px 宽，缩放会改变命中区、可能拖歪。 */
@@ -3053,29 +3097,94 @@ img { max-width: 100%; }
 }
 .practice-empty-state { margin-bottom: 16px; }
 
+/* ---- 四档响应式（`layout-spec.md` §7.1–§7.8）----------------------------
+   A ≥1440 · B 1280–1439 · C 1024–1279 · D 768–1023 · E <768
+   档位只决定**几何**：列宽、栅格模板、抽屉形态、内边距、标题字号。
+   ⚠️ 断点改「模板」不改「变量」的旧规则（§1.2 配套规则 1）已被档位表取代 ——
+     档位宽度本身就是变量（`--shell-col-*`，定义在 `#layout` 上），
+     由 JS 读取，避免「CSS 一份、JS 一份」的双源
+     （spec delta「One geometry decides the columns」）。
+   ⚠️ 块内**不写** `--shell-col-right` 的 C 档值：右栏在 C 档已出栅格，
+     宽度由抽屉规则给（§7.6）。 */
+
+/* B 档（1280–1439）：三栏常驻但收窄（§7.3） */
+@media (max-width: 1439px) {
+  #layout {
+    --shell-col-left: 248px;
+    --shell-col-right: 380px;
+    --shell-col-left-min: 200px;
+    --shell-col-left-max: 360px;
+    --shell-col-right-min: 340px;
+    --shell-col-right-max: 520px;
+  }
+  #middle { padding: 28px 28px 64px; }
+}
+
+/* C 档（1024–1279）：右栏出栅格 → 抽屉；左栏仍常驻 232（§7.4）
+   —— 这是 C 档存在的全部意义：中栏从 652 涨到 792（现状只有 324）。
+   ⚠️ 顶栏「Agent 对话」按钮在此档出现（§7.6：抽屉必须有常驻入口）。 */
+@media (max-width: 1279px) {
+  #layout {
+    --shell-col-left: 232px;
+    --shell-col-left-min: 200px;
+    --shell-col-left-max: 320px;
+    /* 右栏已出栅格 ⇒ 无宽度、无夹取（中栏在 C 档也没有底线，§1.4）。 */
+  }
+  /* 右栏已在栅格外 ⇒ 模板只留两轨（§1.6 滚动归属：#layout 不滚） */
+  #layout,
+  #layout[data-ai-collapsed] { grid-template-columns: var(--wb-col-left) minmax(0, 1fr); }
+  .mobile-drawer-controls { display: flex; }
+  /* 导航按钮到 D 档才出现（C 档左栏仍是常驻列） */
+  #mobile-nav-toggle { display: none; }
+  #ai-column {
+    display: block;
+    position: fixed;
+    z-index: 10;
+    top: 52px;              /* 与顶栏底边严丝合缝（A-21-3：顶栏高维持 52px） */
+    bottom: 0;
+    right: 0;
+    width: min(380px, 92vw);
+    max-width: 100vw;
+    min-width: 0;           /* 窄视口下不许被 base 的 360px 撑出横向滚动 */
+    padding: 16px;
+    background: var(--surface-card);
+    border-left: 1px solid var(--rule-hair);
+    box-shadow: var(--elev-3);
+    transform: translateX(105%);
+    transition: transform var(--dur-base) var(--ease-standard);
+    overflow-y: auto;
+  }
+  #layout.ai-drawer-open #ai-column { transform: translateX(0); }
+  #right-resizer { display: none; }   /* 右栏已出栅格，没有可拖的边界 */
+  #middle { padding: 24px 24px 64px; }
+  .page-header h1 { font-size: 28px; line-height: 36px; }
+}
+
+/* D 档（768–1023）：单栏 + 双抽屉（§7.5） */
 @media (max-width: 1023px) {
   #topbar { padding: 0 14px; }
-  .mobile-drawer-controls { display: flex; }
+  #mobile-nav-toggle { display: block; }
   .chapter-lens select { max-width: 92px; }
   #layout,
   #layout[data-ai-collapsed] { grid-template-columns: 1fr; }
-  #left-column,
-  #ai-column {
+  #left-column {
     display: block;
     position: fixed;
     z-index: 10;
     top: 52px;
     bottom: 0;
-    width: min(86vw, 340px);
+    left: 0;
+    width: min(300px, 86vw);
+    max-width: 100vw;
+    min-width: 0;
     background: var(--surface-card);
     box-shadow: var(--elev-3);
     transition: transform var(--dur-base) var(--ease-standard);
+    transform: translateX(-105%);
   }
-  #left-column { left: 0; transform: translateX(-105%); }
-  #ai-column { right: 0; transform: translateX(105%); overflow-y: auto; }
   #layout.left-drawer-open #left-column { transform: translateX(0); }
-  #layout.ai-drawer-open #ai-column { transform: translateX(0); }
-  #middle { padding: 24px 18px 36px; }
+  #left-resizer { display: none; }
+  #middle { padding: 24px 18px 48px; }
   #middle-page > .page-header { padding: 36px 0 24px; }
   .page-header h1 { font-size: 24px; line-height: 32px; }
   .section-heading,
@@ -3085,6 +3194,17 @@ img { max-width: 100%; }
   .next-step-actions { width: 100%; }
   .next-step-actions button { flex: 1; }
   .hub-page { width: min(100% - 32px, var(--shell-measure)); padding: 36px 0; }
+}
+
+/* E 档（<768）：抽屉全屏（§7.1 / §7.6） */
+@media (max-width: 767px) {
+  #left-column { width: 92vw; }
+  #ai-column { width: 100vw; }
+  #middle { padding: 16px 12px 40px; }
+  .page-header h1 { font-size: 22px; line-height: 30px; }
+  #topbar .brand { font-size: 0; width: 47px; flex: none; }
+  #topbar .brand::before { margin-right: 0; }
+  .chapter-lens select { max-width: 84px; }
 }
 
 /* ---------- time view (calendar + workload) ---------- */

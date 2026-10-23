@@ -5734,66 +5734,108 @@
 
   function fitAiColumn() {
     if (!layout) return;
-    if (window.innerWidth < 1024) layout.setAttribute("data-ai-collapsed", "1");
+    /* 右栏出栅格的阈值 = **1279**（`layout-spec.md` §7.7 C 档 / §1.2 配套规则 5）。
+       旧值 1024 是「D 档单栏」那套口径：C 档（1024–1279）右栏已经是抽屉，
+       阈值若留在 1024，会出现「CSS 模板是单列 + 行内变量仍是三栏」的混合态。 */
+    if (window.innerWidth < 1280) layout.setAttribute("data-ai-collapsed", "1");
     else layout.removeAttribute("data-ai-collapsed");
   }
 
-  /* ---------- three-column geometry (design.md D-10 / tasks.md 13.2 / 13.3) ----------
-     The stylesheet owns the grid template (`#layout` reads --wb-col-left and
-     --wb-col-right, which forward to the authoritative --shell-col-* pair);
-     this side writes the two values only.  The old inline
+  /* ---------- three-column geometry (design.md D-10 / tasks.md 13.2 / 13.3
+     / layout-spec.md §1.2–§1.4 / §7.1) ----------
+     The stylesheet owns the geometry: the tier's column widths, their clamp
+     ceilings and the grid template all live in CSS (`--shell-col-*` on
+     `#layout`, tiered by the four `@media` blocks).  This side reads those
+     numbers and writes the two width values only.  The old inline
      `grid-template-columns` overrode the stylesheet on every paint, so the CSS
      rule was dead code and the two files each carried their own numbers. */
 
   var COLUMN_MIN = { left: 200, right: 360 };
-  var leftWidth = 280;
-  var rightWidth = 420;
   var middleMinWidth = 420;
-  var columnCeilings = null;
+  /* The learner's own drag, per side.  `null` = "not dragged yet", so the
+     column follows the tier's default; a drag pins the raw pointer value
+     until the tier's range clamps it (layout-spec.md §1.4 gives a drag range
+     per tier). */
+  var userWidth = { left: null, right: null };
 
-  /* The clamp ceilings are CSS constants (--shell-col-left-max /
-     --shell-col-right-max), so they are read from the stylesheet instead of
-     being written twice (layout-spec.md §1.2 rule 3).  The floors have no
-     token and stay here; the middle column's 420px floor stays a constant
-     because this side is the one that maintains the invariant
-     (layout-spec.md §1.3). */
+  /* Every number comes from the stylesheet (layout-spec.md §1.2 rule 3 —
+     "JS 读 CSS 常量，不把 200/480/360/560 写死在 JS 里"), so the geometry
+     has exactly one source of truth (spec delta "One geometry decides the
+     columns").  The middle column's 420px floor stays a constant because
+     this side is the one that maintains the invariant (§1.3 R1). */
   function columnBounds() {
-    if (columnCeilings) return columnCeilings;
-    var fallback = { left: 480, right: 560 };
-    if (window.getComputedStyle) {
-      var style = window.getComputedStyle(layout);
-      var left = parseFloat(style.getPropertyValue("--shell-col-left-max"));
-      var right = parseFloat(style.getPropertyValue("--shell-col-right-max"));
-      fallback.left = left > 0 ? left : fallback.left;
-      fallback.right = right > 0 ? right : fallback.right;
-    }
-    columnCeilings = fallback;
-    return columnCeilings;
+    var bounds = { left: 280, right: 420, leftMin: 200, leftMax: 480,
+                   rightMin: 360, rightMax: 560 };
+    if (!window.getComputedStyle || !layout) return bounds;
+    var style = window.getComputedStyle(layout);
+    var read = function (name) { return parseFloat(style.getPropertyValue(name)); };
+    var values = {
+      left: read("--shell-col-left"), right: read("--shell-col-right"),
+      leftMin: read("--shell-col-left-min"), leftMax: read("--shell-col-left-max"),
+      rightMin: read("--shell-col-right-min"), rightMax: read("--shell-col-right-max")
+    };
+    Object.keys(values).forEach(function (key) {
+      if (values[key] > 0) bounds[key] = values[key];
+    });
+    return bounds;
+  }
+
+  /* The clamp, in the order the spec's own verifiable table is built on
+     (layout-spec.md §1.5「极端位置表（拖拽边界，逐格可验）」):
+     the RIGHT column is clamped against the current left width first, then
+     the LEFT column against the clamped right width — the middle column
+     keeps its 420px floor in every cell of that table.
+     ⚠️ §1.3 R2's prose says「先左后右」, which does not reproduce §1.5's
+     cells (at 1440 with both columns at their maximum it shrinks the LEFT
+     column to 460 instead of the RIGHT one to 540) — the table and the
+     §1.2 acceptance list are the measurable statements, so they win here;
+     the disagreement is registered as contract drift CD-179. */
+  function resolveColumns(rawLeft, rawRight, width, bounds) {
+    var right = Math.max(bounds.rightMin, Math.min(bounds.rightMax,
+      Math.min(rawRight, width - rawLeft - middleMinWidth)));
+    var left = Math.max(bounds.leftMin, Math.min(bounds.leftMax,
+      Math.min(rawLeft, width - right - middleMinWidth)));
+    return { left: left, right: right };
   }
 
   function applyColumnWidths() {
     if (!layout || !layout.style) return;
+    var bounds = columnBounds();
+    var width = layout.clientWidth || window.innerWidth;
+    var rawLeft = userWidth.left != null ? userWidth.left : bounds.left;
     if (window.innerWidth < 1024) {
+      /* D 档及以下：左右两栏都是覆盖层抽屉（§7.5）⇒ 栅格里没有列，
+         宽度全由 CSS 的抽屉规则给，这里把行内值清干净。 */
       layout.style.removeProperty("--wb-col-left");
       layout.style.removeProperty("--wb-col-right");
       return;
     }
-    var bounds = columnBounds();
-    var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
-    leftWidth = Math.max(COLUMN_MIN.left, Math.min(bounds.left, Math.min(leftWidth, available - rightWidth)));
-    rightWidth = Math.max(COLUMN_MIN.right, Math.min(bounds.right, Math.min(rightWidth, available - leftWidth)));
+    if (window.innerWidth < 1280) {
+      /* C 档：右栏已出栅格（§7.4）⇒ 只有左栏还夹在中栏旁边，
+         而 C 档的中栏**没有底线**（§1.4）⇒ 只按本档的拖拽区间夹左栏。 */
+      var leftOnly = Math.max(bounds.leftMin, Math.min(bounds.leftMax, rawLeft));
+      layout.style.setProperty("--wb-col-left", leftOnly + "px");
+      layout.style.removeProperty("--wb-col-right");
+      return;
+    }
+    var rawRight = userWidth.right != null ? userWidth.right : bounds.right;
+    var columns = resolveColumns(rawLeft, rawRight, width, bounds);
     /* The stylesheet's write point for these two values (workbench.css
        `#layout`): it forwards them to the authoritative --shell-col-* pair. */
-    layout.style.setProperty("--wb-col-left", leftWidth + "px");
-    layout.style.setProperty("--wb-col-right", rightWidth + "px");
+    layout.style.setProperty("--wb-col-left", columns.left + "px");
+    layout.style.setProperty("--wb-col-right", columns.right + "px");
   }
 
-  function bindColumnResizer(id, side, min, max) {
+  /* A column can only be dragged while it is still a grid column:
+     the right rail leaves the grid at 1279 (C 档) and the left rail at 1023
+     (D 档).  `liveFrom` is that tier's lower bound. */
+  function bindColumnResizer(id, side, min, liveFrom) {
     var handle = document.getElementById(id);
     var layout = document.getElementById("layout");
-    if (!handle || !layout || window.innerWidth < 1024) return;
+    if (!handle || !layout) return;
     var dragging = false;
     handle.addEventListener("pointerdown", function (event) {
+      if (window.innerWidth < liveFrom) return;
       dragging = true;
       layout.classList.add("is-resizing");
       if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
@@ -5804,19 +5846,17 @@
       if (!dragging) return;
       var rect = layout.getBoundingClientRect();
       var width = side === "left" ? event.clientX - rect.left : rect.right - event.clientX;
-      var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
-      var cap = side === "left" ? available - rightWidth : available - leftWidth;
-      width = Math.max(min, Math.min(max, Math.min(width, cap)));
-      if (side === "left") leftWidth = width;
-      else rightWidth = width;
+      /* 记录**原始**指针宽度；夹取统一交给 applyColumnWidths（一处口径，
+         避免拖拽路径与初始路径各算一套）。 */
+      userWidth[side] = Math.max(min, width);
       applyColumnWidths();
     });
     function stop() { if (!dragging) return; dragging = false; document.body.style.cursor = ""; layout.classList.remove("is-resizing"); }
     handle.addEventListener("pointerup", stop);
     handle.addEventListener("pointercancel", stop);
   }
-  bindColumnResizer("left-resizer", "left", COLUMN_MIN.left, columnBounds().left);
-  bindColumnResizer("right-resizer", "right", COLUMN_MIN.right, columnBounds().right);
+  bindColumnResizer("left-resizer", "left", COLUMN_MIN.left, 1024);
+  bindColumnResizer("right-resizer", "right", COLUMN_MIN.right, 1280);
   fitAiColumn();
   applyColumnWidths();
   window.addEventListener("resize", function () { fitAiColumn(); applyColumnWidths(); });
