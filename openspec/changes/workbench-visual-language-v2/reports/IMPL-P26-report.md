@@ -51,6 +51,8 @@ paper-practice.js + 2 条 agent-ui.js 中 1 条 + 2 条 kp-experience.js）；
 
 ### 1.2 提交清单（**每个 commit 都带明确路径列表，未用 `git add -A`**）
 
+共 18 个（17 个交付 + 1 个本报告）。
+
 **`63a8dda8`** docs(workbench): 文案定稿 —— Hub 首页（工作区读取失败 / 工作区 / 删页头说明句）
   - 文件：`workbench/server/pages.py`
 
@@ -600,7 +602,7 @@ API 错误串，`api.py` 不在本组可写清单内，且可能被服务端协�
 
 - 89 条台账条目逐条落地，**全部经 grep / DOM diff 双向核对**，没有一条靠肉眼估。
 - 五条验证命令全绿（pytest 1181 / node 264 / compileall / openspec 19 / guard PASS）。
-- 17 个 commit，**每个带明确路径**，无 `git add -A`，无不带路径的 `git commit`。
+- 18 个 commit，**每个带明确路径**，无 `git add -A`，无不带路径的 `git commit`。
   别人的 `probe.py` / `workbench.css` / `decisions.md` **一个字节都没进我的 commit**。
 - 26.2 的「文字条数不增」用**实测数据**证明（节点 -22 / 字符 -628，8 个页面逐页不增）。
 - 「除文案清理项外逐字一致」用**三层独立方法**证明（DOM 节点 diff + 字面量 diff + 服务字节核对）。
@@ -632,7 +634,7 @@ API 错误串，`api.py` 不在本组可写清单内，且可能被服务端协�
 | 七条不许动 | ✅ P-74 / R-28 / R-31 / R-41 / W-105 / A-13 / P-163 / W-171 / G-01…G-32 **全部未动**（逐条 grep 复核） |
 | 「Check 管线」保留不译 | ✅ `practice-flow.js` 的 `Check 管线` 原样保留（§4.1 复核一命中里无它） |
 | 26.2 删注释而非改写 | ✅ 18 条整段删除（含元素与 class），21 条就地替换，**零条改写成另一句说明** |
-| A-90 提交纪律 | ✅ 17 个 commit 全部 `git add -- <路径>` + `git commit -- <路径>`；无 `-A`；无裸 commit |
+| A-90 提交纪律 | ✅ 18 个 commit 全部 `git add -- <路径>` + `git commit -- <路径>`；无 `-A`；无裸 commit |
 | 不许碰的目录 | ✅ `.playwright-mcp/` / `tmp/` / `tmp_local2/`（我的量测脚本放这儿，未提交）/ `intermediate/` / `pool/*.db*` / `pool/ingest/` 一个都没提交 |
 
 ---
