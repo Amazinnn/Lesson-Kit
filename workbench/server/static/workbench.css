@@ -1009,7 +1009,6 @@ button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; b
 /* ---- §4.1 主按钮 · 无影平底 ---------------------------------------------- */
 button.primary {
   position: relative;
-  height: 40px;
   border: 0;
   border-radius: var(--r-md);
   background: var(--role-blue);
@@ -1030,7 +1029,6 @@ button.primary:active:not(:disabled) { box-shadow: none; }
 /* ---- §4.2 次按钮 · 沉底次按钮 -------------------------------------------- */
 button.outline {
   position: relative;
-  height: 40px;
   border: 0;
   border-radius: var(--r-md);
   background: var(--surface-sunken);
@@ -1046,6 +1044,30 @@ button.outline::before {
 /* hover：沉底 → 卡面（从坑里升一级），底色**瞬切** */
 button.outline:hover:not(:disabled) { background: var(--surface-card); }
 button.outline:disabled { background: var(--surface-base); color: var(--ink-disabled); }
+
+/* ---- 形态高度：**零特异度**（A-126 裁决 2 · `.sm` 级联 bug 的修法）-----------
+   ⚠️ **为什么用 `:where()`**：`button.primary` / `button.outline` 的
+   `height: 40px` 原本写在 `button.sm { height: 28px }` **之后** ⇒ 同特异度
+   靠后者胜 ⇒ `class="primary sm"` / `class="outline sm"` 的 **28px 被盖成 40px**
+   （实测：「保存目标」「新建」「上一题 / 下一题」全是 40px）。
+   ⇒ A-126 判定：**这是级联 bug，不是设计选择**（所有者那句「数字可以微调」
+   不等于「尺寸修饰符可以失效」）⇒ **`.sm` 必须真正生效**。
+   ⇒ 修法（零特异度）：把形态高度写成 `:where(...)` ⇒ 特异度 **0** ⇒
+     `button.sm`（0,1,1）**任何顺序都赢** ⇒ `.sm` = 28px 视觉，
+     不带 `.sm` 的 `primary` / `outline` = 40px 视觉。
+   ⚠️ 形态的**其余**属性（底色 / 描边 / 圆角 / 阴影）仍留在各自的选择器里
+     （那些没有尺寸修饰符的竞争者，不需要零特异度）。 */
+:where(button.primary, button.outline) { height: 40px; }
+
+/* ---- `.sm` 档的命中区：走 §3.1「方法 2（容器间距 / 中心距 ≥44px）」--------
+   ⚠️ **不许**用 `inset: -8px` 的外溢伪元素（A-126 裁决 2 第 3 条）：
+     C1 实测过它会**抢相邻按钮的点击**（伪元素是命中层，会盖住邻居）。
+   ⇒ `.sm` 档**不挂**命中区伪元素：28px 的视觉盒就是点击目标，
+     **命中区由容器间距补偿**（相邻可点目标的**中心距 ≥ 44px**）。
+   ⇒ 每个 `.sm` 调用点的中心距都已实测（见报告 §6.3）；
+     **给不出 44px 中心距的调用点不要用 `.sm`**（改用默认 40px 形态）。 */
+button.primary.sm::before,
+button.outline.sm::before { content: none; }
 
 /* ---- §4.3 文字按钮 · 带箭头 ---------------------------------------------- */
 button.ghost {
@@ -2043,12 +2065,84 @@ fieldset.problem-options > label:has(input:focus-visible) {
       `tests/workbench/test_ui_routes.py:783` 还明确断言 `"problem-topic" not in body`
       ⇒ 它是**已被淘汰的旧类名**）⇒ 那套规则是**死规则**，留着只会让人
      以为「四处已统一」。**不许**为了让规则有用而把 `.problem-topic` 加回 markup。
-   ⚠️ **其余折叠段站点未统一**（不在本波授权范围 —— markup 的类名收敛归下一波）：
+   ⚠️ **其余折叠段站点已按 A-126 裁决 3 归到本波**（见下方那块）
      `.practice-reference` · `.practice-set-card-body` ·
      `.practice-set-continuation-details` · `.practice-set-unavailable-items` ·
-     `.active-practice-continuation-details`（五处**零规则**）
-     —— 已登记在 `reports/IMPL-C1-report.md` 的「§4.27 折叠段的实际覆盖」一节。
+     `.active-practice-continuation-details` —— 它们需要的是**CSS**
+     （给既有类名同一套折叠段取值），**不是新类名、不是 markup**
+     ⇒ 已就地统一（见下方「§4.27 折叠段 · 补登的 5 处」）。
    ⚠️ 头行高 48px ⇒ 命中区 ≥44px ✔；焦点环走全局 `:focus-visible` 单圈。 */
+
+/* ============================================================================
+   §4.27 折叠段 · 手风琴（**补登的 5 处** · A-126 裁决 3 · C1 收尾追加）
+   ---------------------------------------------------------------------------
+   这 5 处是**原生 `<details>`**，此前**零规则**（各写各的）⇒ 归到 §4.27 同一套：
+     `.practice-reference` · `.practice-set-card-body` ·
+     `.practice-set-continuation-details` · `.practice-set-unavailable-items` ·
+     `.active-practice-continuation-details`
+   ⚠️ **按「宿主是不是已经是卡」分两种落法**：
+     ① **独立页块**（`.practice-reference`，与 `.practice-solution` 同级）
+        ⇒ **它自己就是卡面**（卡面 + 48px 头 + 内容在同一张卡里）。
+     ② **宿主的卡面里**（`.practice-set-continuation-details` 与
+        `.practice-set-unavailable-items` 是 `.practice-set-card`（`article.card`）
+        **之内**；`.active-practice-continuation-details` 在
+        `.active-practice-resume.card` **之内**）⇒ **不再套第二层卡面**
+        —— 那会变成「卡中卡」；A-125 说的「积木感 = 同一卡片重复 8–31 次」
+        正是这么来的 ⇒ 只取**头行**那一套（48px 头 + 排版）。
+   ⚠️ **只改 CSS**：不动任何 markup / 交互。
+   ========================================================================= */
+
+/* ---- ① 独立页块：自己就是卡面 ------------------------------------------- */
+.practice-reference {
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+}
+.practice-reference > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.practice-reference > :not(summary) { padding: 0 var(--sp-4) var(--sp-4); }
+
+/* ---- ② 宿主的卡面里：只取头行那一套（**不套第二层卡面**）------------------ */
+.practice-set-continuation-details > summary,
+.practice-set-unavailable-items > summary,
+.active-practice-continuation-details > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 48px;
+  padding: 0 var(--sp-2);
+  cursor: pointer;
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.practice-set-continuation-details > :not(summary),
+.practice-set-unavailable-items > :not(summary),
+.active-practice-continuation-details > :not(summary) {
+  padding: 0 var(--sp-2) var(--sp-2);
+}
+/* ---- ② 之 `.practice-set-card-body`：它本身就是那张卡的**可展开体**--------
+   卡面是**外层**的 `.practice-set-card`（`article.card`）⇒ 这里**不再加卡面**，
+   只把**头行**并入同一套（48px 头 + 与卡面同族的排版）。
+   ⚠️ 头行里是「标题 + 三个动作按钮」（`.practice-set-card-head`）⇒
+     保留它自己的 `display: flex` / `gap` / `::before` 三角，
+     这里只定**高度与纵向对齐**，**不接管**它的字号（`<h2>` 标题有自己的刻度）。 */
+.practice-set-card-body > .practice-set-card-head {
+  min-height: 48px;
+  align-items: center;
+}
 .linked-problem { padding: 14px 0 2px; }
 .problem-title { display: block; color: var(--ink-strong); font-size: 14px; font-weight: 600; }
 /* 关联题面 —— 阅读面 A 组（衬线 + 阅读刻度；字号 17px = --fs-reading） */
@@ -2228,7 +2322,11 @@ fieldset.problem-options > label:has(input:focus-visible) {
 #ai-session-controls label,
 .ai-option { color: var(--ink-muted); font-size: 12px; }
 #ai-session-controls select { width: 100%; }
-.ai-session-actions { display: flex; gap: 2px; flex: none; }
+/* ⚠️ `gap: 4px`（原 2px）—— §3.1「方法 2（容器间距 / 中心距 ≥44px）」：
+   里面是两个 40×40 的圆形图标按钮（§4.4）⇒ 中心距 = 40 + gap ⇒
+   gap 2px ⇒ 中心距 42px（**不足 44px**，两个 44×44 的命中区会重叠 2px）
+   ⇒ gap 改 4px ⇒ 中心距 **44px** ✔（纯间距，不改行为、不改命中区补偿）。 */
+.ai-session-actions { display: flex; gap: 4px; flex: none; }
 .ai-option { display: flex; align-items: center; gap: 5px; }
 .ai-option input { width: auto; margin: 0; }
 .ai-conversation { display: flex; flex: 1; flex-direction: column; min-height: 0;  padding-top: 14px; }
