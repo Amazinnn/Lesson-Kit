@@ -625,9 +625,29 @@ function aiElements() {
   };
 }
 
+/* The session list is grouped by recency (今天 / 昨天 / 更早) ⇒ the rows live
+   inside group containers. This returns the rows in order, so the tests talk
+   about "the first session" instead of a DOM path. */
+function sessionRows(elements) {
+  const rows = [];
+  const list = elements["ai-session-list"];
+  if (!list) return rows;
+  const has = (node, name) => String(node.className || "").split(/\s+/).indexOf(name) >= 0;
+  list.children.forEach((child) => {
+    if (has(child, "ai-session-group")) {
+      child.children.forEach((item) => {
+        if (has(item, "ai-session-item")) rows.push(item);
+      });
+    } else {
+      rows.push(child);
+    }
+  });
+  return rows;
+}
+
 async function openFirstAiSession(elements) {
   await flush();
-  elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(elements)[0].children[0].click();
   await flush();
 }
 
@@ -4636,7 +4656,7 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   assert.deepEqual(JSON.parse(patch.options.body).title, "期末掌握计数");
 
   // 助填动作镜像：先在右侧开会话，再从目标表单点「让 Agent 代填」
-  elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(elements)[0].children[0].click();
   await flush();
   elements["goal-nl"].value = "期末前掌握第六章计数";
   const resetsBeforeGoalAssist = turnResets;

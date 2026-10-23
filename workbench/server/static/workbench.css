@@ -2481,6 +2481,19 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 .ai-session-list-head { justify-content: space-between; margin-bottom: 6px; }
 .ai-session-list-head .side-label { margin: 0; }
 #ai-session-list { display: grid; gap: 2px; align-content: start; flex: 1; min-height: 0; overflow-y: auto; }
+/* ---- 会话按最近分组（版式 §6.1 · 今天 / 昨天 / 更早）-----------------------
+   组标题**只写最近措辞**，不带任何计数 / 统计（spec delta「A group heading
+   carries no figure」）。标题的字号 / 颜色 / 内距照靶子
+   （`mockup-baseline/shell.html` 的 `.session-group__t`）。 */
+.ai-session-group { display: grid; gap: 2px; align-content: start; }
+.ai-session-group__title {
+  margin: 0;
+  padding: var(--sp-2) 0 var(--sp-1);
+  font-size: var(--fs-micro);
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
 .ai-session-item { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ai-session-entry {
   flex: 1; min-width: 0; height: auto; min-height: 42px; padding: 7px 9px;
