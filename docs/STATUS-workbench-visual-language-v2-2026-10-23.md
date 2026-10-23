@@ -32,6 +32,8 @@
 | 裁决账 | `decisions.md` **133 条**（A-1 … A-142） |
 | 契约漂移 | `contract-drift.md` **183 条**（**CD-179 … CD-183 是复核新增**） |
 | **版式实现进度** | **按 `layout-spec.md` 量 ≈ 25%**（token / 组件 / 文案 / 动效层已满；**Wave ①（§1+§7）已落地**） |
+| **本地分支** | **19 个**（`main` + 当前分支 + 17 个还有独有未合并提交）——2026-10-23 归档了 **28 个**已并入 main 的残留分支（先打 `archive/*` tag 再删，清单见 `docs/BRANCH-ARCHIVE.md`）；**远端引用一律不动** |
+| **正式版本** | **V1 = 样板图基线拼版**，tag `v1-mockup-baseline`（记录：`openspec/changes/workbench-visual-language-v2/VERSION-V1.md`）。⚠️ **不合并 main、不 push** |
 | **本轮新增提交** | `35257abf` 复核入账 · `aa56007f` **Wave ① §1+§7 四档几何** · `f41e9511` 视觉板工具 · `b2ea06b5` **A-142 样板图提升入库** |
 
 ⚠️ **不要 push、不要合并 main**（所有者未授权）。
