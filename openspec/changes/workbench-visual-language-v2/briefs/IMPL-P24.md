@@ -1,5 +1,18 @@
 # IMPL-P24 — 第 24 组：hub 首页「最近使用置顶 + 网格」与卡片信息层级
 
+> ⚠️ **前置结论（2026-10-23 已核实 · `decisions.md` A-122）：24.1 的「最近使用置顶」本轮不做。**
+>
+> 核实结果：工作区记录（`registry.list_workspaces()`）只有
+> `name` / `active_course` / `active_chapter` / `path` / `stats` —— **没有任何「上次打开 / 最近使用」
+> 的时间戳或计数**；`hub_page()` 也只消费 `name` + `stats`。
+> ⇒ 24.1 要的「最近用的 4 个置顶大卡」**没有现成数据源**，而 24.1 同时要求**零新增请求**
+> ⇒ **不许**加请求、**不许**给 registry 偷加字段、**不许**新造 localStorage 键。
+>
+> **⇒ 本任务书只剩 24.2（卡片信息层级）+ 24.3（阶段验收）。**
+> 保持**等权网格**，只做：工作区名 22px 最大 · 三个计数 13px 一行排开 ·
+> 每个计数前一个小色点（三角色）· **数字仍要文字可读** · **灰度下仍可区分**。
+> 数据源（registry 加字段 / localStorage / 不做）**等所有者裁定**，见 A-122 的三选项。
+
 > 对应 `tasks.md` **第 24 组（24.1–24.3）**。**只改 `workbench/server/pages.py` 与
 > `workbench/server/static/workbench.css`**（一组，别拆给两个 agent）。
 
