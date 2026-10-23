@@ -1404,6 +1404,10 @@
     var themeValue = document.getElementById("setting-theme-value");
     if (themeBox) themeBox.checked = theme === "night";
     if (themeValue) themeValue.textContent = theme === "night" ? "夜纸" : "暖纸";
+    /* 顶栏「夜纸」开关与设置页是**同一个真值**（design.md D-1：同一份偏好、
+       两个入口）⇒ 这里一并同步，不建第二套状态。 */
+    var topbarThemeBox = document.getElementById("topbar-theme");
+    if (topbarThemeBox) topbarThemeBox.checked = theme === "night";
 
     var face = effectiveReadingFace();
     var faceValue = document.getElementById("setting-face-value");
@@ -1667,9 +1671,71 @@
   if (mobileNavToggle) mobileNavToggle.addEventListener("click", function () {
     toggleDrawer("left-drawer-open");
   });
-  if (mobileAiToggle) mobileAiToggle.addEventListener("click", function () {
-    toggleDrawer("ai-drawer-open");
-  });
+
+  /* ---------- 顶栏段三 · 动作区（design.md D-1 · 靶子 mockup-baseline）---------
+     四个控件**全部复用既有机制**，不新增状态机、不发新请求
+     （「请求序列与载荷不变」是冻结边界）：
+       搜索       → 跳到知识图谱页的既有搜索框（`#graph-search`）—— 产品里唯一
+                    真的会查东西的检索控件；**不放假搜索框**（design.md Risks：
+                    一个不查东西的搜索框比没有更糟）。
+       对话视图   → 右栏两态切换（`aiSetView`：列表 ⇄ 会话）。
+       夜纸       → `saveSetting("theme", …)` + `runLampTransition`，与设置页同一真值。
+       Agent 对话 → A / B 档折叠常驻右栏（`#layout[data-ai-collapsed]`）；
+                    C / D 档开合对话抽屉（既有 `ai-drawer-open`）。
+     ⚠️ 「Agent 对话」是**同一个按钮按视口分两种表现**
+     （`layout-spec.md` §2.2「不新增第二个按钮」）。 */
+  var topbarSearch = document.getElementById("topbar-search");
+  var topbarRailView = document.getElementById("topbar-rail-view");
+  var topbarTheme = document.getElementById("topbar-theme");
+  /* 学习者自己把右栏收起来了 —— resize 不得把它弹回来；视口档位只负责
+     「C 档右栏本来就是抽屉」这一件事（`fitAiColumn`）。 */
+  var aiCollapsedByUser = false;
+
+  function aiRailDocked() {
+    return window.innerWidth >= 1280;
+  }
+
+  if (topbarSearch) {
+    topbarSearch.addEventListener("click", function () {
+      /* 已经在图谱页：直接聚焦那个搜索框（不重载页面）。 */
+      var box = document.getElementById("graph-search");
+      if (box) { box.focus(); return; }
+      window.location.href = "/w/" + encodeURIComponent(WS) + "/graph";
+    });
+  }
+
+  if (topbarRailView) {
+    topbarRailView.addEventListener("change", function () {
+      aiSetView(topbarRailView.checked ? "chat" : "list");
+    });
+  }
+
+  if (topbarTheme) {
+    topbarTheme.addEventListener("change", function () {
+      var theme = topbarTheme.checked ? "night" : "paper";
+      saveSetting("theme", theme);
+      /* 主题的切换由台灯转场承载（tasks.md 8.7）；偏好先落盘 ⇒
+         转场被降级时主题也一样。 */
+      runLampTransition(theme);
+      renderAppearanceValues();
+    });
+  }
+
+  if (mobileAiToggle) {
+    mobileAiToggle.addEventListener("click", function () {
+      if (aiRailDocked()) {
+        /* A / B 档：折叠 / 展开常驻右栏，中栏吃回它让出的宽度。 */
+        aiCollapsedByUser = !aiCollapsedByUser;
+        fitAiColumn();
+        mobileAiToggle.setAttribute(
+          "aria-expanded", aiCollapsedByUser ? "false" : "true"
+        );
+        return;
+      }
+      /* C / D 档：右栏本就是抽屉 ⇒ 开合抽屉（现状行为）。 */
+      toggleDrawer("ai-drawer-open");
+    });
+  }
 
   function mountGraphPage() {
   /* ---------- native knowledge graph (implementation blueprint port) ---------- */
@@ -5513,6 +5579,9 @@
     aiSessionListView.classList.toggle("hidden", view !== "list");
     aiProviderPicker.classList.toggle("hidden", view !== "picker");
     aiChatView.classList.toggle("hidden", view !== "chat");
+    /* 顶栏「对话视图」开关与右栏两态是**同一件事** ⇒ 一个真值（design.md D-1）。
+       开关反过来切视图时也走这里（`aiSetView`），不另设第二套状态。 */
+    if (topbarRailView) topbarRailView.checked = view === "chat";
   }
 
   function aiSessionLabel(record) {
@@ -5738,6 +5807,9 @@
        旧值 1024 是「D 档单栏」那套口径：C 档（1024–1279）右栏已经是抽屉，
        阈值若留在 1024，会出现「CSS 模板是单列 + 行内变量仍是三栏」的混合态。 */
     if (window.innerWidth < 1280) layout.setAttribute("data-ai-collapsed", "1");
+    /* ⚠️ A / B 档：**学习者自己收起的右栏不因 resize 弹回来**（顶栏「Agent 对话」
+       开关 = 一个真值）。视口档位只负责「C 档右栏本来就是抽屉」。 */
+    else if (aiCollapsedByUser) layout.setAttribute("data-ai-collapsed", "1");
     else layout.removeAttribute("data-ai-collapsed");
   }
 

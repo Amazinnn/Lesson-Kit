@@ -218,11 +218,35 @@ def _chapter_lens(workspace):
     )
 
 
+def _workspace_switcher(workspace, workspaces):
+    """The workspace identity in the top bar's current-identity part.
+
+    The switcher **is** the identity: the selected option carries the
+    workspace name (`layout-spec.md` §2.1 — 段二 is 「工作区名 + 透镜」, two
+    items).  The machine course identifier never appears here
+    (`workbench-ui/spec.md`「The top bar shows the name, not the identifier」).
+
+    It is the **same** `<select id='workspace-select'>` the left column used
+    to own, moved rather than redrawn (design.md D-1) ⇒ the id, the name and
+    the JavaScript binding all stay as they were.
+    """
+    options = "".join(
+        f"<option value='{ws['name']}' {'selected' if ws['name'] == workspace['name'] else ''}>"
+        f"{html.escape(ws['name'])}</option>"
+        for ws in workspaces
+    )
+    return (
+        "<select id='workspace-select' class='topbar-workspace'"
+        f" aria-label='切换工作区'>{options}</select>"
+    )
+
+
 def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
           page_type=None, object_id=None, kp_titles=None):
-    meta = f"<span class='meta'>{html.escape(workspace['name'])}</span>"
     # 15.4 顶栏三段式：左＝品牌，中＝当前身份（工作区名 + 章节透镜），右＝动作。
     # 章节只在透镜里出现，不在工作区名旁重复。
+    # ⚠️ 段三的控件顺序照靶子（`mockup-baseline/shell.html` 段三）：
+    #    搜索 · 对话视图 · 夜纸 · Agent 对话（A-143「构图以靶子为准」）。
     topbar = (
         "<header id='topbar'>"
         "<div class='topbar-brand'>"
@@ -230,15 +254,27 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         "</div>"
         "<span class='topbar-separator'>/</span>"
         "<div class='topbar-identity'>"
-        f"{meta}"
+        f"{_workspace_switcher(workspace, workspaces)}"
         f"{_chapter_lens(workspace)}"
         "</div>"
         "<div class='topbar-actions'>"
+        "<button id='topbar-search' class='ghost topbar-action-text' type='button' "
+        "aria-label='搜索知识点'>搜索</button>"
+        "<label class='lk-switch lk-switch--labelled'>"
+        "<input type='checkbox' role='switch' id='topbar-rail-view'>"
+        "<span class='lk-switch__label'>对话视图</span>"
+        "<span class='lk-switch__track' aria-hidden='true'>"
+        "<span class='lk-switch__thumb'></span></span></label>"
+        "<label class='lk-switch lk-switch--labelled'>"
+        "<input type='checkbox' role='switch' id='topbar-theme'>"
+        "<span class='lk-switch__label'>夜纸</span>"
+        "<span class='lk-switch__track' aria-hidden='true'>"
+        "<span class='lk-switch__thumb'></span></span></label>"
+        "<button id='mobile-ai-toggle' class='outline topbar-action-text' type='button' "
+        "aria-controls='ai-column' aria-expanded='false' aria-label='打开对话'>Agent 对话</button>"
         "<div class='mobile-drawer-controls'>"
         "<button id='mobile-nav-toggle' class='ghost sm icon-only' type='button' "
         "aria-controls='left-column' aria-expanded='false' aria-label='打开导航' title='打开导航'>☰</button>"
-        "<button id='mobile-ai-toggle' class='ghost sm icon-only' type='button' "
-        "aria-controls='ai-column' aria-expanded='false' aria-label='打开对话' title='打开对话'>◌</button>"
         "</div>"
         "</div>"
         "</header>"
@@ -936,11 +972,6 @@ def settings_page(workspace, workspaces, weak_items, kp_titles=None):
 
 
 def _left_column(workspace, workspaces, weak_items, active_nav):
-    options = "".join(
-        f"<option value='{ws['name']}' {'selected' if ws['name'] == workspace['name'] else ''}>"
-        f"{html.escape(ws['name'])}</option>"
-        for ws in workspaces
-    )
     # 15.1 导航项 = 具象静物图标 + 文字（图标是第 9 组的五枚导航静物，
     # 按 asset-spec §1.11 以 inline SVG 进 DOM：只有 inline 才能吃到夜纸变量）。
     nav_items = [
@@ -980,10 +1011,6 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         # The four sections sit on one wrapper: the rail's paper ends with the
         # content, so the lower half of the column is not blank paper (15.3).
         "<div class='side-sections'>"
-        "<section class='side-section workspace-switcher'>"
-        "<p class='side-label'>工作区</p>"
-        f"<select id='workspace-select' aria-label='切换工作区'>{options}</select>"
-        "</section>"
         "<nav class='side-section primary-nav' aria-label='工作台导航'>"
         "<p class='side-label'>页面</p>"
         f"{nav}</nav>"

@@ -579,6 +579,70 @@ body {
   gap: 8px;
   flex: none;
 }
+
+/* ---- 段二 · 工作区身份（靶子：identity = 名字 + 透镜）----------------------
+   工作区切换器**搬进顶栏**（design.md D-1）：它**就是**身份本身（选中项 =
+   工作区名）⇒ 段二只有两项 —— 工作区名 + 章节透镜（`layout-spec.md` §2.1
+   「段二是『工作区名 + 透镜』两项」）。
+   ⚠️ 机器课程代号不得出现在可见文本里（`workbench-ui/spec.md`
+     「The top bar shows the name, not the identifier」）⇒ 只渲染注册名。
+   ⚠️ 这是**同一个** `<select id='workspace-select'>`（只是搬了位置）——
+     id / name / JS 绑定一律不变（`workbench.js` 按 id 查、测试照旧）。
+   ⚠️ 全局 `select { width: 100% }` 会把段二撑爆 ⇒ 这里显式收回。 */
+#topbar .topbar-workspace {
+  position: relative;
+  width: auto;
+  max-width: 36ch;
+  height: 34px;
+  padding: 0 26px 0 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background-color: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-strong);
+  /* 自绘 caret（`appearance:none` 下原生箭头消失）—— 不引图标字体、不引 CDN。 */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%),
+    linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+  background-position: right 13px center, right 8px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  text-overflow: ellipsis;
+}
+#topbar .topbar-workspace:hover { background-color: var(--veil-hover); }
+
+/* ---- 段三 · 动作区（靶子：搜索 · 对话视图 · 夜纸 · Agent 对话）------------
+   形态听 A-115（`component-spec.md` §4.30）：
+     搜索 = §4.3 文字按钮（带箭头）· 对话视图 / 夜纸 = §4.10 迷你开关 ·
+     Agent 对话 = §4.2 沉底次按钮
+   ⚠️ 靶子的「药丸卡面外壳 + 40×22 轨道 + `aria-pressed`」是 A-115 **之前**的
+     旧形态（靶子早 17 小时）⇒ **不抄**（A-143 第 4 条：组件形态以 A-115 为准）。
+   ⚠️ 命中区 ≥44px 是 §3.1 硬约束（§4.30.2 的两条不可让步之一）。 */
+#topbar button.ghost.topbar-action-text {
+  position: relative;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+}
+/* 命中区补偿（§3.1）：40px 视觉盒 → `::before` 补到 44px。
+   ⚠️ `::after` 是 §4.3 的右箭头 ⇒ 命中区只能走 `::before`。 */
+#topbar button.ghost.topbar-action-text::before {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
+}
+/* 开关的文字标签（靶子：文字在左 + 轨道在右）。形态不动，只加排布。 */
+.lk-switch__label {
+  font-size: 13px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+/* 开关的标签与轨道之间留一点呼吸（靶子 `.switch` 的 gap 8px）。 */
+.lk-switch--labelled { gap: 8px; }
 #topbar .brand {
   font-size: 16px;
   font-weight: 600;
@@ -600,16 +664,10 @@ body {
     34px 0 0 var(--role-red), 34px 0 0 1px var(--ink-strong);
   margin-right: 34px;
 }
-#topbar .meta {
-  color: var(--ink-muted);
-  font-size: 13px;
-  /* 长工作区名不许把顶栏撑宽（§7.8 断点守卫第 3 条）：36ch + 省略号。 */
-  max-width: 36ch;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* ⚠️ 原来的 `#topbar .meta`（工作区名的独立文字块）**已退役**：
+   工作区身份搬进段二的切换器后，段二里不该有两个「工作区名」
+   （一个文字块 + 一个下拉 = 同一件事说两遍）。
+   ⇒ 身份只由 `#topbar .topbar-workspace` 承担（见上）。 */
 .topbar-separator { color: var(--graph-page-caption, var(--ink-faint)); }
 
 /* ---- 章节透镜 —— 自绘下拉面板（tasks.md 15.4 / spec「Chapter switch in the top bar」）
@@ -756,6 +814,16 @@ body {
    ⚠️ C 档（≤1279）由 §7.1 档位表的 `@media` 整条模板覆盖（两栏），
      这里的 0px 轨道只服务于「宽屏折叠右栏」这条尚未开放的路径。 */
 #layout[data-ai-collapsed] { grid-template-columns: var(--wb-col-left) minmax(0, 1fr) 0px; }
+/* ---- 宽屏折叠右栏（顶栏「Agent 对话」开关 · design.md D-1）-----------------
+   第三轨归零**还不够**：`#ai-column` 自己的 `min-width: 360px` 会把它顶出轨道
+   ⇒ 折叠必须**同时**把这一列收起来，中栏才真的吃回那 420px。
+   ⚠️ 只在 **A / B 档（≥1280）** 生效：C 档（≤1279）右栏本就是抽屉
+     （`@media (max-width: 1279px)` 里 `#ai-column` 是 `position: fixed`），
+     那里 `data-ai-collapsed` 表达的是「抽屉关着」，**不是**「这一列不存在」
+     ⇒ 若在这里也 `display:none`，C 档的抽屉就再也开不出来。 */
+@media (min-width: 1280px) {
+  #layout[data-ai-collapsed] #ai-column { display: none; }
+}
 #left-column {
   position: relative;
   /* ⚠️ 靶子没有左栏右边的线（`.col--left` 无 border-right，
@@ -1748,11 +1816,14 @@ html[data-theme="night"] .lk-toast {
   transform: translateX(0);
   transition: transform var(--dur-base) var(--ease-rebound);
 }
-.lk-switch input:checked + .lk-switch__track { background: var(--role-blue); }
+/* ⚠️ 兄弟选择器用 `~`（不是 `+`）：带文字标签的开关（顶栏段三）在
+   input 与轨道之间插了 `.lk-switch__label` ⇒ 轨道不再是 input 的**紧邻**兄弟。
+   `~` 对没有标签的开关（设置视图）命中同一个元素 ⇒ 行为不变。 */
+.lk-switch input:checked ~ .lk-switch__track { background: var(--role-blue); }
 /* 开态位移：轨道 32 - 内距 2×2 - 拇指 14 = 14px */
-.lk-switch input:checked + .lk-switch__track .lk-switch__thumb { transform: translateX(14px); }
+.lk-switch input:checked ~ .lk-switch__track .lk-switch__thumb { transform: translateX(14px); }
 /* 焦点环落在**轨道**上（原生 checkbox 是隐藏的）：内圈纸色 + 外圈蓝（权威表 §8 规则 2） */
-.lk-switch input:focus-visible + .lk-switch__track {
+.lk-switch input:focus-visible ~ .lk-switch__track {
   outline: var(--focus-width) solid transparent;
   outline-offset: var(--focus-offset);
   box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);

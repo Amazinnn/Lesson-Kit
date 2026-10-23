@@ -293,6 +293,24 @@ class UiRouteTests(unittest.TestCase):
         for banned in ("题", "个", "题数", "%"):
             self.assertNotIn(banned, panel.split("aria-label='选择章节' hidden>", 1)[1])
 
+    def test_topbar_actions_carry_the_four_shell_controls(self):
+        # V1 convergence: the top bar's third part is never empty (spec
+        # "Top bar actions" — search / rail view / theme / Agent column),
+        # and the workspace identity moved into the current-identity part
+        # (the left rail no longer owns a workspace section of its own).
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        actions = body.split("class='topbar-actions'", 1)[1].split("</header>", 1)[0]
+        self.assertIn("id='topbar-search'", actions)
+        self.assertIn("id='topbar-rail-view'", actions)
+        self.assertIn("id='topbar-theme'", actions)
+        self.assertIn("id='mobile-ai-toggle'", actions)
+        identity = body.split("class='topbar-identity'", 1)[1].split("</header>", 1)[0]
+        self.assertIn("id='workspace-select'", identity)
+        # The rail keeps the switcher out: one identity, one place.
+        self.assertNotIn("id='workspace-select'",
+                         body.split("class='side-sections'", 1)[1])
+
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
             "POST", "/api/w/dmath/practice-sets",
@@ -1019,10 +1037,12 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch(f"/w/{quote('大学物理')}/practice")
 
         self.assertEqual(status, 200)
-        meta = body.split("<span class='meta'>", 1)[1].split("</span>", 1)[0]
-        self.assertIn("大学物理", meta)
-        self.assertNotIn("c01", meta)
-        self.assertNotIn("ch06", meta)
+        # The workspace identity lives in the top bar's current-identity part:
+        # it IS the switcher (the selected option carries the name).
+        identity = body.split("id='workspace-select'", 1)[1].split("</select>", 1)[0]
+        self.assertIn("大学物理", identity)
+        self.assertNotIn("c01", identity)
+        self.assertNotIn("ch06", identity)
 
     def test_the_chapter_lens_controls_the_lens_not_the_name(self):
         _, body = self.fetch("/w/dmath/practice")

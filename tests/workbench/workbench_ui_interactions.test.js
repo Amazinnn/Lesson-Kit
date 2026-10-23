@@ -1824,7 +1824,10 @@ test("mobile drawer buttons keep the study page mounted while toggling each side
     "left-column": new FakeElement("left-column"),
     "ai-column": new FakeElement("ai-column"),
   };
-  runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  const app = runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  /* C 档（<1280）：右栏本就是抽屉 ⇒ 同一个「Agent 对话」按钮开合抽屉
+     （layout-spec §2.2：同一个按钮按视口分两种表现）。 */
+  app.window.innerWidth = 1024;
   elements["mobile-nav-toggle"].click();
   assert.equal(page.classList.contains("left-drawer-open"), true);
   assert.equal(page.classList.contains("ai-drawer-open"), false);
@@ -1833,6 +1836,25 @@ test("mobile drawer buttons keep the study page mounted while toggling each side
   assert.equal(page.classList.contains("left-drawer-open"), false);
   assert.equal(page.classList.contains("ai-drawer-open"), true);
   assert.equal(elements["mobile-nav-toggle"].getAttribute("aria-expanded"), "false");
+  assert.equal(elements["mobile-ai-toggle"].getAttribute("aria-expanded"), "true");
+});
+
+test("the top bar Agent control folds the docked rail on wide viewports", () => {
+  const page = layout();
+  const elements = {
+    layout: page,
+    "mobile-ai-toggle": new FakeElement("mobile-ai-toggle"),
+    "ai-column": new FakeElement("ai-column"),
+  };
+  const app = runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  /* A / B 档（≥1280）：右栏是常驻列 ⇒ 按钮折叠 / 展开它，
+     中栏吃回它让出的宽度（layout-spec §2.2）。 */
+  app.window.innerWidth = 1440;
+  elements["mobile-ai-toggle"].click();
+  assert.equal(page.getAttribute("data-ai-collapsed"), "1");
+  assert.equal(elements["mobile-ai-toggle"].getAttribute("aria-expanded"), "false");
+  elements["mobile-ai-toggle"].click();
+  assert.equal(page.getAttribute("data-ai-collapsed"), null);
   assert.equal(elements["mobile-ai-toggle"].getAttribute("aria-expanded"), "true");
 });
 
