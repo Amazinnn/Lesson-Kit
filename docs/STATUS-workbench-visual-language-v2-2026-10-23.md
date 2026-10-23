@@ -462,6 +462,70 @@ No active local_agent task found for target agent_...
 
 ---
 
+## 8.6 怎么查「现在有几个 subagent 在跑」（**没有现成工具，只能这样查**）
+
+### 8.6.1 现状：**没有 list 工具**
+
+可用的是：`Agent`（派发）· `SendMessage`（发消息 / 唤醒）· `TaskStop`（停）·
+`TaskOutput`（读某个 task 的输出）。**没有一个能枚举「当前正在运行的任务」。**
+
+### 8.6.2 磁盘枚举法（**能用，但要懂它的坑**）
+
+每个 agent 在 `~/.zcode/cli/agents/<session-id>/agent_<uuid>/metadata.json` 有一份元数据，
+含 **`status`**（`running` / `completed` / `stopped` / `failed`）、`description`、
+`createdAt` / `updatedAt` / `completedAt`：
+
+```bash
+PYTHONIOENCODING=utf-8 python - <<'PY'
+import json,glob,os,collections
+D=os.path.expanduser("~/.zcode/cli/agents/<session-id>")
+rows=[]
+for p in glob.glob(os.path.join(D,"agent_*","metadata.json")):
+    try: m=json.load(open(p,encoding="utf-8"))
+    except Exception: continue
+    rows.append((m.get("status"), (m.get("description") or "")[:50], m.get("updatedAt","")))
+print(dict(collections.Counter(r[0] for r in rows)))
+for st,d,u in sorted(rows,key=lambda r:r[2])[-12:]:
+    print(" ", str(st)[:9].ljust(10), d, u)
+PY
+```
+
+⚠️ **坑：磁盘上的 status 会过时。** 本次扫描发现 **4 个 10-21 创建的 agent 至今仍写着
+`running`**（F02 外壳三栏几何审计 / F04 知识点与试卷列表审计 / F05 记录中心审计 /
+F06 Agent右栏审计）—— 但它们的 `updatedAt == createdAt`（**创建后再没更新过**）、
+`completedAt = None`，且 `TaskStop` 报 **`Invalid task ID`** ⇒
+**它们根本不在运行时的任务表里**，是**上一个会话被遗弃后留下的僵尸记录**。
+⇒ 它们的产物（F02/F04/F05/F06.md 与 mockups）**都是有效的**，
+**但那 4 个 `running` 是假的** —— 看到它们**不要**以为有人在改文件，也**不要**去 SendMessage 唤醒。
+
+### 8.6.3 权威探测法（三个都有副作用，要慎用）
+
+| 手段 | 语义 | 副作用 |
+|---|---|---|
+| **completion 通知** | 异步推到对话里 | 无。**但"还没收到通知"≠"已完成"**（见 8.6.4） |
+| `SendMessage` | 给它发消息 | **它活着就会被唤醒**（可能正在写文件！） |
+| `TaskStop` | 停它 | 需**精确 task_id**；对已完成/已停的会**把 status 改写成 `stopped`**（实测） |
+| `TaskOutput` | 读它的输出 | 需精确 id；**别读 `output.txt`**（是 transcript，会炸上下文） |
+
+### 8.6.4 我判断错过一次（**教训**）
+
+在 C1 **还在跑**的时候，我就按"没收到完成通知"判定它结束了，派了 C1b 做**同一批活**
+⇒ 两个 agent 同改一个 CSS ⇒ 撞出 `:where()` 那个 40px→36px 的回归。
+
+⇒ **规则**：
+1. **"没收到通知" 只能当作"还在跑"**；
+2. 派任何收尾波之前，先用上面的枚举法看 `status`，或**等 completion 通知**；
+3. 派发消息里写明「**上一棒已结束**」，让新 agent 也能判断。
+
+### 8.6.5 本会话收尾时的实际状态（供核对）
+
+本会话我**派出 13 个** agent：**9 个 `completed`、4 个 `stopped`、0 个 `running`**
+（4 个 `stopped` 是我在它们交工后主动停掉的）。
+⇒ **交接时没有任何 agent 在跑**，下一会话可以从干净状态开始。
+
+
+---
+
 ## 9. 新会话的起手式
 
 ```bash
