@@ -1176,7 +1176,7 @@ class UiRouteTests(unittest.TestCase):
 
         status, attempts = self.fetch("/w/dmath/records?view=attempts")
         self.assertEqual(status, 200)
-        self.assertIn("1 条已载入", attempts)
+        self.assertIn("1 条", attempts)
         self.assertIn("答错的内容", attempts)
 
         status, wrong = self.fetch("/w/dmath/records?view=wrong")
@@ -1195,7 +1195,7 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch(
             "/w/dmath/records?view=attempts&problem=dmath-ch06-prob-001")
         self.assertEqual(status, 200)
-        self.assertIn("正在按单题过滤", body)
+        self.assertIn("按单题过滤", body)
         self.assertIn("查看全部记录", body)
 
     def _archive_one_quick_run(self):

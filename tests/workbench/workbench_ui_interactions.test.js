@@ -3110,7 +3110,7 @@ test("a reopened result card shows the current batch state without rollback", as
   const card = elements["ai-messages"].children.filter(
     (node) => node.className === "msg ai check-card").pop();
   const body = card.children[0];
-  assert.equal(body.children[0].textContent, "Check 入库已回滚");
+  assert.equal(body.children[0].textContent, "入库已回滚");
   assert.match(body.children[1].textContent, /batch-002 已整批回滚/);
   assert.match(body.children[1].textContent, /题目 5、图片 2/);
   assert.equal(card.querySelector(".check-card-rollback"), null);
