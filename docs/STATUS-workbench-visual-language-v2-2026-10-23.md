@@ -526,3 +526,51 @@ python tools/walkthrough/view.py board --before tmp/view/<wave>-before \
 > D1–D5 对比 HEAD 是 `overflow 589→570` / `escape 42→30` / `overlap 0→0`。
 > ⚠️ 它**不含图谱页 G-5 冻结**（那处是复核时才发现的），
 > ⚠️ 且 **`tmp/` 不入库** ⇒ 清了 `tmp/` 就没了（内容可从规格 + §7 重新推出来）。
+
+---
+
+## 10. 🆕 **V1 基线收敛 · 四组做完**（2026-10-24 · change `workbench-v1-baseline-convergence`）
+
+> 靶子 = `design-notes/mockup-baseline/v1.html`（tag `v1-mockup-baseline`）。
+> **构图与数值以靶子为准；组件形态以 `component-spec.md` §4.30（A-115）为准**。
+> ⚠️ **不合并 main、不 push**（所有者另行指示）。
+
+### 10.1 四组 + 提交
+
+| 组 | 做了什么 | 提交 |
+|---|---|---|
+| 2 | 顶栏动作区四个控件（搜索 · 对话视图 · 夜纸 · Agent 对话）+ 工作区身份上移到顶栏段二 | `4ef7d435` |
+| 3 | 右栏会话按 **今天 / 昨天 / 更早** 分组（客户端分桶，组标题无计数） | `5fff561f` |
+| 4 | 优先回看条目加状态点（红叉 / 黄斜杠 / 中性墨环） | `30846738` |
+| 5 | 左栏首组「页面」→「**学习**」+ 分组间距照 V1 | `4ea8062d` |
+
+### 10.2 两个 Open Question 的裁定（**按文档判，不在产品里试**）
+
+- **顶栏搜索接哪条通路** ⇒ **跳到知识图谱页既有的搜索框**（`#graph-search`）。
+  依据：本 change 的 Non-Goals 禁「新请求 / 新载荷」；`retrieval-evaluation` 的 spec
+  明文「SHALL NOT integrate with the student UI」；**假搜索框比没有更糟**。
+  ⚠️ 图谱页本身**范围外** ⇒ 只当落点，不改它一个字节。
+- **状态词表** ⇒ **不新造词**：复用 `docs/GLOSSARY.md`「行动提醒」的
+  **重点练习 / 可以复习**，第三态**没有词**（保持中性）。
+  ⚠️ 早先的设计稿写「未开始（蓝 ring）」——**按 `component-spec` §3.6/§4.14 改走
+  中性墨环**（蓝环 = 「当前选中」，挂在回看条目上会读错），已登记契约漂移。
+
+### 10.3 这一波踩到的坑
+
+① **`view.py` 的板子模板是两列网格** ⇒ 带靶子时靶子会掉到下一行，「三列对照板」散开。
+   已修：`.pair--3`（有靶子时三列），**动画闸门未动**（`164bd935`）。
+② **`updated_at` 是 UTC ISO** ⇒ 会话分桶不能用 `slice(0,10)`（那是 UTC 日期，
+   深夜的会话会被算到昨天）；无时区的时间戳按本地墙钟读。
+③ **左栏条目上的 `<span class='meta'>` 没了** ⇒ `test_ui_routes.py` 那条测试
+   改成从 `#workspace-select` 读工作区名（断言意图不变）。
+④ **JS 测试的假 DOM 里 `classList` 不跟 `className` 走** ⇒ 分组后写测试辅助要按
+   `className` 判类名，否则 `classList.contains()` 恒假。
+⑤ **`launch.py` 每次启动都会重新播种** ⇒ 想让走查数据呈现某种分布，
+   必须在**服务起来之后**再写隔离副本（脚本见 `tmp/wt-v1/seed_extra.py`）。
+
+### 10.4 验收
+
+`probe.py static` 3.5-1/2/3 全 PASS（3.6-3 / 3.7-1 由 FAIL 转 PENDING / PASS）；
+四档几何 `280/740/420 · 248/652/380 · 232/792/抽屉380 · 抽屉300/768/抽屉380` 全中；
+A-39 服务字节 == 磁盘字节；**图谱页 G-5 三处冻结未变**；
+`/api/w/{name}/weak` 载荷仍是原四个字段。

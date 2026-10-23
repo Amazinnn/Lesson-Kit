@@ -690,8 +690,9 @@ _Avoid_：复习页、到期分组列表（均已废弃）
 
 ### 行动提醒 / Action Reminder
 学生可见的三态提醒词：有明确薄弱证据 → `重点练习`；无薄弱证据但到期 → `可以复习`；其余保持中性（不显示任何掌握断言）。这是学生侧唯一允许的状态词汇。
+左栏「优先回看」的每一条目带一个状态点，用**同一套三态**（颜色 + 几何双通道，红叉 / 黄斜杠 / 中性墨环，见 `component-spec` §3.6）：状态由**理由**推出（有学习信号 / 复习已到期 / 其余），不按分数阈值分档（阈值会随公式漂移，词不能漂）。第三态**没有词** ——「保持中性」就是不作任何掌握断言，**不另造第四个学生侧词汇**。
 _Avoid_：掌握度、分数、调度参数
-出处：review-workbench spec「Action-oriented learning reminders」
+出处：review-workbench spec「Action-oriented learning reminders」；workbench-v1-baseline-convergence change（设计稿 D-3 / D-4）
 
 ### 弱项 / Weak Point（weakness score）
 按学习者信号与到期状态推导出的知识点排序权重：分数只调顺序，不过滤，任何知识点都不会被藏掉。**规格未定义具体公式**，属排序实现细节。

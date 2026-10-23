@@ -89,6 +89,8 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 恢复未确认或被拒绝的 Agent 消息（本地发送箱；核对时复用原提交标识/内容；不覆盖新草稿） | UI 对话流 | 人 | 浏览器 localStorage + 原 turn | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 显式重试已接收的失败轮次（新 turn 通过 `retry_of` 关联原消息；不自动重放） | UI 对话流 | 人 | 新 turn artifact | 已实现（preserve-agent-messages-and-tool-outcomes） |
 | 收起 Agent 辅助工作面（本轮记住收起状态） | Activity Float / Bottom Dock / Artifact Split 折叠控件 | 人 | 当前浏览器对话轮次内存状态 | 已定义未实现（PR135 已有展示基础；运行状态映射见 PR136） |
+| 折叠 / 展开右侧 Agent 对话栏（**右栏本体**，与上面那条「辅助工作面」不是一处；宽屏 ≥1280 折叠常驻右栏、中栏吃回让出的宽度；窄屏同一按钮开合对话抽屉） | UI 顶栏段三「Agent 对话」按钮 | 人 | —（只改壳层几何与右栏可见性：会话·未发草稿·滚动位置原样保留；不写池、不发请求） | **已实现**（2026-10-24，workbench-v1-baseline-convergence 4ef7d435；`workbench-ui` delta「Top bar actions · Open or hide the Agent column」；PRODUCT-MANUAL §1「顶栏动作区」/ §8；GLOSSARY「Agent 对话栏」已写明「桌面端右列可折叠」） |
+| 切换右栏两态（会话列表视图 ⇄ 对话视图） | UI 顶栏段三「对话视图」开关 | 人 | —（只换右栏内容：已打开的会话与未发草稿原样保留；不写池、不发请求） | **已实现**（2026-10-24，workbench-v1-baseline-convergence 4ef7d435；`workbench-ui` delta「Top bar actions · Switch the rail between its two views」；PRODUCT-MANUAL §1「顶栏动作区」/ §8；与右栏视图同一份真值，不建第二套状态） |
 | 执行计划与工具结果卡（命令/工具/搜索/回答活动归一化；错误为终态失败；仅展示有证据的影响，否则未知；折叠脱敏诊断；不展示不支持的单步重试） | UI 对话流 | 双 | conv 活动记录 | 已实现（preserve-agent-messages-and-tool-outcomes；render-agent-execution-plan） |
 | 新建会话/选 provider（harness 锁定不换） | UI | 人 | conversations | 已实现 |
 | 模型条目配置（显示名自定、与 harness 解耦；无条目时回退「一 harness 一条」） | CLI `bridge add-model` | 人 | bridges.json `models` | 已实现（2026-09-26） |
@@ -130,7 +132,7 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 |---|---|---|---|---|
 | 打开 / 关闭工作台设置视图 | UI 左栏「设置」区「外观设置」入口（路由 `/w/{name}/settings`；再点一次或页内「关闭」回到打开前的视图） | 人 | —（只切换中栏视图；不写池；Agent 右栏不重建） | **已实现**（2026-10-22，workbench-visual-language-v2；`workbench-settings` spec） |
 | 修改外观偏好（主题偏好 / 阅读字面 / 动效偏好 / 声音偏好） | UI 工作台设置视图 | 人 | 浏览器 `localStorage`（`wb_settings_<工作区>`，**按工作区、跨工作区独立**）；不写池、不产生学习记录 | **已实现**（同上） |
-| 切换主题（暖纸 / 夜纸，走台灯转场） | UI 工作台设置视图 | 人 | 浏览器 `localStorage` 的 `theme` 字段 + `<html data-theme>`；不写池 | **已实现**（新增，2026-10-22；默认跟随系统，显式选择优先 —— A-11） |
+| 切换主题（暖纸 / 夜纸，走台灯转场） | UI 工作台设置视图 / 顶栏段三「夜纸」开关（同一份偏好，两个入口） | 人 | 浏览器 `localStorage` 的 `theme` 字段 + `<html data-theme>`；不写池 | **已实现**（新增，2026-10-22；默认跟随系统，显式选择优先 —— A-11；2026-10-24 增顶栏入口，workbench-v1-baseline-convergence 4ef7d435） |
 | 渲染阅读内容（题面 / 知识点正文 / 解析 / Agent 长文） | 练习页 / 知识点页 / 对话栏 | 人 | —（纯呈现，零写入） | 已实现（**改级已完成**：挂载名由 `.rich-text` 改级为 `.wb-reading`；`.rich-text` 剩下的 36 条死 CSS 规则已在 2026-10-22 的别名期收尾时删掉，选择器命中 0） |
 
 外观偏好只表达偏好：主题切换走台灯转场，动效与声音偏好各自独立；左栏原有的
@@ -284,3 +286,19 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
   「渲染阅读内容」改的是 CSS 挂载名；L4 图对这三条零改动。）
 - 视觉层仍待落地的部分（结构已就位、样式规则未跟上）登记在
   `docs/PRODUCT-MANUAL.md` §10.1，不在本表记为动作。
+
+2026-10-24 新增（workbench-v1-baseline-convergence，提交 4ef7d435）：请求序列、持久化与学习
+事实全部不变——本波只改**呈现**与**壳层几何**。
+- **新增**：第四节「折叠 / 展开右侧 Agent 对话栏」（顶栏段三「Agent 对话」按钮；宽屏 ≥1280
+  折叠常驻右栏、中栏吃回让出的宽度；窄屏同一按钮开合对话抽屉）与第四节
+  「切换右栏两态（会话列表视图 ⇄ 对话视图）」（顶栏段三「对话视图」开关；与右栏视图
+  同一份真值）。两条都**只动壳层与右栏可见性**，不写池、不动会话与草稿。
+- **既有动作加一个入口**：第七节「切换主题（暖纸 / 夜纸，走台灯转场）」新增顶栏段三
+  「夜纸」开关（与设置视图同一份偏好、两个入口）⇒ 按本表惯例**改既有条目**，不新开一条。
+- **桌面端右栏此前没有收起入口**（窄屏只有自动折叠）：本波补上顶栏入口后，
+  `openspec/changes/workbench-visual-language-v2/contract-drift.md` 的 CD-029 / CD-161
+  记的「桌面端没有任何收起入口」这一**事实**不再成立；该两条等待的「**先落 spec**」前置
+  已由本 change 的 `workbench-ui` delta（Requirement: Top bar actions）满足
+  ⇒ **销号由 spec owner 按该册 §4.4 的维护约定做**，本轮只登记、不改那两行。
+- 优先回看状态点（红 cross / 黄 dash / **中性墨 ring**）是**呈现**，不记为动作；
+  它与靶子蓝环的冲突登记在 contract-drift.md 的 CD-185 / CD-186。

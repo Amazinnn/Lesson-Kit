@@ -26,8 +26,8 @@
 > owner 回来更新对应行。提示「本仓库存在 N 条已登记漂移」的交接文本写在
 > `openspec/changes/workbench-visual-language-v2/HANDOFF.md`。
 >
-> **条数说明**：本表实际登记 **184 条**（`CD-001`…`CD-184`）。
-> `tasks.md` 27.2 写的是 165 条 —— **差额 +37 条的原因逐条说明在 §4.1**
+> **条数说明**：本表实际登记 **186 条**（`CD-001`…`CD-186`）。
+> `tasks.md` 27.2 写的是 174 条 —— **差额 +12 条的原因逐条说明在 §4.1**
 > （同一冲突的「多条腿」必须逐腿登记 + 裁决已下但落地未落的残留），
 > **没有为凑数编造条目**。自检结果见 §4。
 
@@ -223,6 +223,9 @@
 | CD-183 | `design-notes/mockup-baseline/`（样板图基线，2026-10-23 从 `tmp/` 提升入库） vs `design-notes/layout-spec.md` | 两份**版式权威**在**四个数值**上不一致（2026-10-23 用 Playwright 实测样板图）：① 中栏 padding `24px 32px 48px` vs `28px 32px 72px`（§1.7）② 标题 h1 `28px / 36px` vs `30px / 38px`（§4.1②）③ 栏间分隔线「无」vs `1px --rule-hair`（§1.7）④ 左栏 padding `16px 12px` vs `16px 12px 24px`（§1.7）。**一致**的部分：顶栏 52px · 三栏 `280 / 1fr / 420` · 纸面 12px 圆角 + 双层柔影 · 标题带 2px 墨线 | 同一份版式的**两份权威**对同一批数值给了不同值 —— 样板图是**照规格画的静态草图**（页脚自述「均为静态占位」），它**没跟上**规格里的显式规则（§1.7 的 72px 底部余量、§4.1② 点名要改的 h1） | `openspec change` | 低（四个值都是几个像素的量；**不是**「样板图好看」的原因） | **已按 A-143 改裁**（A-142 的「数值以规格为准」被所有者以「改后的就是垃圾。样板图就是最理想的」否掉）：**一切以靶子为准** ⇒ 四处**已改成靶子的值**（中栏 `24/32/48` · h1 `28/36/normal` · 左栏右边框去掉 · 左栏 padding `16/12`）。⇒ 与 `layout-spec.md` 的这四处**正式分家**，见 **CD-184**。⚠️ 登记本条是为了让下一棒知道「两份权威都在仓库里、为什么现在听靶子的」 |
 
 | CD-184 | `design-notes/layout-spec.md`（§1.7 中栏内边距 `28/32/72` · §1.7 栏与栏之间 1px `--rule-hair` · §1.7 左栏内边距 `16px 12px 24px` · §4.1② 标题 h1 `30/38/-0.02em`） vs `design-notes/mockup-baseline/`（靶子） | 本波按 A-143（靶子优先）把实现改成**靶子的值**：中栏 `24/32/48` · 左栏右边框**去掉**（靶子只有右栏左边一条发丝线）· h1 `28/36/normal` · 左栏 padding `16px 12px`。⇒ 实现**有意偏离**本规格的这四条 | 同一份版式的两份权威在**四个数值**上正式分家（CD-183 记的是「两者的差」，本条记的是「实现听了谁的」） | `openspec change` | 低（都是几个像素的量；**不是**「靶子好看」的原因 —— 原因是它多出的那六项功能与构图） | **已按 A-143 裁**：实现以靶子为准，本规格的这四条**在实现侧作废**。⚠️ `layout-spec.md` 的**文字**还没回改（下一波一并回写）|
+| CD-185 | `openspec/changes/workbench-v1-baseline-convergence/design.md:48-61`（D-3；**原措辞**「未开始（蓝 ring）」已回改，`:56` 现记着「靶子与本节早先的草稿写的是**蓝 ring** ⇒ 按权威走中性墨环」）· `design-notes/mockup-baseline/shell.html:620`（靶子「优先回看」第三条**仍画蓝环**） vs `design-notes/component-spec.md:432`（§3.6 状态→（色，几何）映射表）与 `:1182`（§4.14） | 「未开始」的颜色：靶子与 D-3 的**原措辞**说**蓝 + ring**；组件权威说**中性墨 `--ink-disabled` + `ring`**（并把「蓝 + ring」占给「当前 · 交互层（导航 / Tab / 选中项）」）。**本次实现按 component-spec 落地**（`workbench/server/pages.py` 的 `_REVIEW_DOTS`：`not_started` → `lk-dot lk-dot--ink lk-dot--ring`）。⚠️ 学生侧第三态**没有词**（GLOSSARY「行动提醒」：其余保持中性）——component-spec 映射表里那一行的语义名是「未开始 / 待办」 | `design-notes/component-spec.md` §3.6 / §4.14 是「状态 →（色，几何）」的**唯一映射表**；§3.6 自带裁决条款「**若与 token 层或 spec delta 冲突，以本条为准并回改冲突处**」（`:445`） | `openspec change` | 中 | **已按 component-spec 裁**（实现不动）。两条理由：① §3.6 的自带裁决条款，且蓝 + ring 在 §3.6 里已被「当前 · 交互层」占用 ⇒ 蓝环在左栏会被读成「当前选中项」；② 产品里**没有蓝色档状态点** —— `.lk-dot` 只有 `--red` / `--yellow` / `--ink` 三档（`workbench/server/static/workbench.css:1576-1578`），按蓝环落地就得**新造一个颜色档**。**已回改**：`workbench-v1-baseline-convergence/design.md` D-3 的措辞（2026-10-24 改成「按权威走中性墨环」并写明理由）。**剩余一条腿**：靶子 `design-notes/mockup-baseline/shell.html:620` **仍画蓝环**（静态样板图未改）⇒ 要么在靶子旁标注「此点以 component-spec 为准」，要么改画法 —— 靶子是 A-143 定的构图基准，**改它的取舍归主会话** |
+| CD-186 | `openspec/changes/workbench-v1-baseline-convergence/design.md:68-73`（D-4，**已回改**为 `.lk-dot`；`:72` 记着「本节早先写的 `.status-dot` 家族名**全仓零命中**」）· 同 change `tasks.md:55`（4.2，**已回改**） vs `workbench/server/static/workbench.css:1542`（`.lk-dot`） | 状态点家族名：设计稿与任务**原本**写「`.status-dot` 家族」，但产品里真实家族名是 **`.lk-dot`** —— `.status-dot` **全仓零命中**（唯一命中是 `workbench.css:8` 的一句注释），且它那三条 CSS 规则已按 CD-175 删掉 ⇒ 该名在产品里既不存在也不该复活。**本次实现按 `.lk-dot` 走**（不新造家族） | `design-notes/component-spec.md:1177`、`:1203`（§4.14 的几何集与 CSS 样例用的就是 `.lk-dot`）；同册 CD-175（`.status-dot` 三条规则已删） | `openspec change` | 低（名字对不上，用户可见行为零变化） | **已回改**（workbench-v1-baseline-convergence · 2026-10-24，同 PR 待合并）：`design.md` D-4 与 `tasks.md` 4.2 的家族名已改成 `.lk-dot`，实现也走 `.lk-dot` ⇒ 本条**可以销号**（销号动作按本册 §4.4 归 spec owner） |
+| CD-187 | `workbench/server/static/workbench.css`（`.lk-dot--cross` / `--dash` / `--check` 的**实现**：留着一枚角色色**圆盘**，符号是「挖空」出来的） vs `design-notes/component-spec.md:1198-1216`（§4.14 的 CSS 样例：cross / dash / check 三档都是 `background: transparent` + 2px 线）与 `:417-426`（§3.6「cross = 两条 2px 细长方块交叉」「dash = **45° 斜杠**」）· `design-notes/mockup-baseline/_base.css:464-486`（靶子：`.mk-dot--dash` 是斜切方块、`.mk-dot--cross` 是两条 ±45° 的 2×10 竖条，**都没有底**） | 实现把 cross / dash / check 画成「**彩色圆盘 + 挖空符号**」：① 圆盘底与权威样例的 `background: transparent` 不符；② `dash` 的线是**横杠**不是 45° 斜杠 ⇒ 它根本不是 §3.6 定义的「斜杠」，且与 `cross`（也是横杠旋转）塌成同一条视觉通道，映射唯一性没了 | `design-notes/component-spec.md` §4.30（`dot-spec`）是组件形态的**唯一权威**；§3.6 / §4.14 是几何集与映射表的唯一出处 | `openspec change` | 中（状态点是**冗余状态通道**的主载体：形状读不出来，三态就读不出来） | **已按权威改**（2026-10-24，V1 基线收敛 change）：cross / dash / check 三档改为**纯线条**（`background: transparent` + 无影 + 无圆角），线色取**原来的填充档**（红 `--role-red` / 黄 `--role-yellow-deep` / 墨 `--ink-faint`）⇒ 对比度结论不变（同一批色值）；`dash` 的线改回 **45° 斜杠**。⚠️ 改动只落在 `.lk-dot` 家族（知识点列表 + 优先回看条目两处），`.paper-dot` 是另一套规则、不受影响 |
 ---
 
 ## 2. 按「建议归属」分组的索引
@@ -230,7 +233,7 @@
 > 后续开 change 时按这里的归属分派。**归属 ≠ 归属人**：同一组里既有「本变更 tasks 组
 > 顺手带走的」，也有「必须另开 change 的」，后者请按「改成什么 / 谁来定」列判断。
 
-### 2.1 `openspec change` —— 78 条
+### 2.1 `openspec change` —— 80 条
 
 CD-001, CD-002, CD-003, CD-004, CD-005, CD-006, CD-007, CD-008, CD-009, CD-010,
 CD-011, CD-012, CD-013, CD-015, CD-016, CD-017, CD-018, CD-019, CD-020, CD-025,
@@ -239,7 +242,7 @@ CD-055, CD-056, CD-057, CD-058, CD-059, CD-060, CD-061, CD-071, CD-072, CD-081,
 CD-082, CD-083, CD-084, CD-086, CD-092, CD-096, CD-097, CD-098, CD-106, CD-107,
 CD-108, CD-109, CD-110, CD-112, CD-113, CD-115, CD-121, CD-123, CD-126, CD-128,
 CD-129, CD-130, CD-131, CD-132, CD-133, CD-134, CD-135, CD-150, CD-151, CD-154,
-CD-158, CD-160, CD-179, CD-180, CD-181, CD-182, CD-183, CD-184
+CD-158, CD-160, CD-179, CD-180, CD-181, CD-182, CD-183, CD-184, CD-185, CD-186
 
 **读法**：这一组里绝大多数是**本变更已有 tasks 组承接**的实现侧条目（token 地基、
 纸面层级、色彩收编、空态组件化、文案清理）。它们进登记册的原因不是「没人管」，
