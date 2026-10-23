@@ -119,7 +119,7 @@ def _attempt_rows(workspace_name, records, wrong=False):
             + (f"<p class='record-answer'>{answer}</p>" if answer else "")
             + "</article>"
         )
-    return "".join(rows) or "<p class='muted'>这里还没有记录。</p>"
+    return "".join(rows) or "<p class='muted'>暂无记录</p>"
 
 
 def _run_card(run):
@@ -188,7 +188,7 @@ def _runs(active, runs, limit=None):
         items.append(_run_card(active))
     selected = runs[:limit] if limit else runs
     items.extend(_run_card(run) for run in selected)
-    return "".join(items) or "<p class='muted'>还没有完整的练习轮次记录。</p>"
+    return "".join(items) or "<p class='muted'>暂无练习轮次</p>"
 
 
 def _practice_set_history(practice_sets):
@@ -202,7 +202,9 @@ def _practice_set_history(practice_sets):
         rating = latest.get("average_rating")
         meta = [
             f"已完成 {item.get('count') or 0} 次",
-            "最近正确率 —" if accuracy is None else f"最近正确率 {accuracy * 100:.0f}%",
+            "最近判定 —" if accuracy is None else (
+                f"最近判定 {latest.get('correct') or 0}/"
+                f"{latest.get('judged') or 0}"),
             "最近自评 —" if rating is None else f"最近自评 {rating:.1f} / 5",
             f"最近不会 {latest.get('stuck') or 0} 个",
         ]
@@ -215,9 +217,9 @@ def _practice_set_history(practice_sets):
                 f"<time>{html.escape(str(run.get('finished_at') or ''))}</time>"
                 " · "
                 + (
-                    "正确 —"
+                    "判定 —"
                     if run_accuracy is None
-                    else f"正确 {run.get('correct') or 0}/{run.get('judged') or 0}"
+                    else f"判定正确 {run.get('correct') or 0}/{run.get('judged') or 0}"
                 )
                 + " · "
                 + (
@@ -228,24 +230,17 @@ def _practice_set_history(practice_sets):
                 + f" · 不会 {run.get('stuck') or 0} 个"
                 + "</li>"
             )
-        changed = (
-            "<p class='record-filter-note'>这张试卷的题目或顺序曾变化；"
-            "下面按每次实际内容分别显示，不合并成一条趋势。</p>"
-            if item.get("content_changed") else ""
-        )
         cards.append(
             "<article class='record-run card'>"
             f"<h3>{html.escape(item.get('source_label') or '未命名试卷')}{'（试卷已删除）' if item.get('source_deleted') else ''}</h3>"
             f"<p class='muted'>{html.escape(' · '.join(meta))}</p>"
-            + changed
-            + "<ul>"
+            "<ul>"
             + "".join(history)
             + "</ul></article>"
         )
     return (
         "<section class='support-section'><div class='section-heading'><div>"
-        "<p class='section-kicker'>同一试卷</p><h2>多次练习</h2></div>"
-        "<p>只使用每次实际留下的作答、自评和不会记录。</p></div>"
+        "<h2>多次练习</h2></div>"
         + "".join(cards)
         + "</section>"
     )
@@ -254,7 +249,7 @@ def _practice_set_history(practice_sets):
 def _verdict_ring(correct, judged):
     """判定分布的迷你环：对（中性墨）与错（红）各占一段，弧长 = 占比。
 
-    整圈 = 已判定的作答数，所以墨色弧的占比就是卡片上的正确率；
+    整圈 = 已判定的作答数，所以墨色弧的占比就是卡片上的判定占比；
     「对 / 错 / 未判定」三档的完整分布在下方「判定分布」图里逐行标数。
     """
     if not judged:
@@ -360,7 +355,8 @@ def _summary_cards(summary, runs, trend, ratings):
     values = [
         ("作答次数", str(summary.get("attempts") or 0)),
         ("完成练习", str(completed_runs)),
-        ("客观题正确率", "—" if accuracy is None else f"{accuracy * 100:.0f}%"),
+        ("客观题判定", "—" if accuracy is None else (
+            f"{int(summary.get('correct') or 0)}/{int(summary.get('judged') or 0)}")),
         ("平均自评", "—" if average is None else f"{average:.1f} / 5"),
     ]
     minis = [
@@ -446,7 +442,7 @@ def _trend_chart(trend):
     counts = [int(day.get("attempts") or 0) for day in trend]
     maximum = max(counts, default=0)
     if maximum == 0:
-        return "<p class='muted'>最近 14 天还没有作答。</p>"
+        return "<p class='muted'>最近 14 天暂无作答</p>"
     nonzero = [count for count in counts if count > 0]
     average = sum(nonzero) / len(nonzero) if nonzero else 0
     heavy_threshold = average * 2
@@ -550,7 +546,7 @@ def _activity_legend():
 
 def _activity_calendar(activity):
     if not activity or not any(day.get("attempts") for day in activity):
-        return "<p class='muted'>最近 12 周还没有作答。</p>"
+        return "<p class='muted'>最近 12 周暂无作答</p>"
     labels = "".join(
         f"<span class='record-activity-weekday'>{label}</span>"
         for label in ("一", "二", "三", "四", "五", "六", "日")
@@ -584,7 +580,7 @@ def _activity_calendar(activity):
 def _rating_chart(ratings):
     maximum = max((item.get("count", 0) for item in ratings), default=0)
     if maximum == 0:
-        return "<p class='muted'>还没有带自评的作答。</p>"
+        return "<p class='muted'>暂无带自评的作答</p>"
     rows = []
     for item in ratings:
         count = item.get("count", 0)
@@ -634,7 +630,7 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
     notice = ""
     if problem_id:
         notice = (
-            "<p class='record-filter-note'>正在按单题过滤。"
+            "<p class='record-filter-note'>按单题过滤。"
             f"<a href='/w/{html.escape(workspace_name, quote=True)}/records'>查看全部记录</a></p>"
         )
     elif (limit and view in {"attempts", "wrong"}
@@ -648,23 +644,22 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
         body = (
             _practice_set_history(overview.get("practice_sets") or [])
             + "<section class='support-section'><div class='section-heading'><div>"
-            "<p class='section-kicker'>练习 / 试卷</p><h2>每一轮做了什么</h2></div>"
-            "<p>完成或替换一轮练习后保留快照；试卷记录保留当时的试卷名称。</p></div>"
+            "<h2>练习轮次</h2></div>"
             + _runs(active, runs)
             + "</section>"
         )
     elif view == "attempts":
         body = (
             "<section class='support-section'><div class='section-heading'><div>"
-            "<p class='section-kicker'>作答明细</p><h2>逐题记录</h2></div>"
-            f"<p>{len(records)} 条已载入。</p></div>"
+            "<h2>逐题记录</h2></div>"
+            f"<p>{len(records)} 条</p></div>"
             + _attempt_rows(workspace_name, records)
             + "</section>"
         )
     elif view == "wrong":
         body = (
             "<section class='support-section'><div class='section-heading'><div>"
-            "<p class='section-kicker'>错题</p><h2>需要回看的作答</h2></div>"
+            "<h2>错题</h2></div>"
             f"<p>{len(filtered)} 条客观判错或卡住的记录。</p></div>"
             + _attempt_rows(workspace_name, filtered, wrong=True)
             + "</section>"

@@ -61,7 +61,7 @@ def _panel(pool, workspace_name, kp_id):
         read_view = ""
         empty = (
             "<p id='experience-empty' class='muted experience-empty'>"
-            "暂无经验总结。做题后可以把可复用的方法、易错点和判断经验沉淀在这里。"
+            "暂无经验总结"
             "</p>"
         )
         action_label = "新增经验"
@@ -70,7 +70,7 @@ def _panel(pool, workspace_name, kp_id):
         "<section id='practice-experience' class='support-section practice-experience'"
         f" data-kp-id='{html.escape(kp_id)}' data-revision='{revision}'>"
         "<div class='section-heading'><div>"
-        "<p class='section-kicker'>做题沉淀</p><h2>做题经验</h2>"
+        "<h2>做题经验</h2>"
         "</div><div class='experience-actions'>"
         f"<button id='experience-edit' class='outline sm' type='button'>{action_label}</button>"
         + ("<button id='experience-delete' class='ghost sm' type='button'>删除</button>"
@@ -81,7 +81,7 @@ def _panel(pool, workspace_name, kp_id):
         "<label for='experience-content'>经验总结（Markdown）</label>"
         f"<textarea id='experience-content' rows='8'>{html.escape(content)}</textarea>"
         "<fieldset><legend>典型题目（可选）</legend>"
-        "<div id='experience-problem-choices'><p class='muted'>进入编辑后载入关联题目。</p></div>"
+        "<div id='experience-problem-choices'></div>"
         "</fieldset>"
         "<p id='experience-error' class='inline-error hidden' aria-live='polite'></p>"
         "<div class='experience-editor-actions'>"
