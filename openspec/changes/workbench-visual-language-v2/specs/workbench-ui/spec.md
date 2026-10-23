@@ -921,7 +921,7 @@ geometric cue together.
 
 The workbench's left column SHALL carry a settings section whose preferences
 apply across the practice and paper surfaces. Its first preference SHALL be a
-checkbox, 「练习与组卷显示自评」, defaulting to on: self-rating behaves exactly
+checkbox, 「练习与试卷显示自评」, defaulting to on: self-rating behaves exactly
 as before. With it off, no self-rating surface SHALL appear anywhere in the
 flow — the rating-timing choice is hidden and not required to start, the
 feedback panel never renders, a finished round takes the no-session-end path,

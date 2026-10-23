@@ -180,7 +180,7 @@ _Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩�
 出处：review-workbench spec「Durable practice records」；workbench-ui spec；rating-toggle-setting change
 
 ### 学习者设置 / Learner Settings
-左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**；它与可选的本地布局种子共同构成工作台当前的持久 `localStorage` 用法，其余客户端状态仍是会话级。第一项是「练习与组卷显示自评」（默认开）：关闭后自评在练习与组卷流程里完全消失（不选自评时机、无反馈面板、不进统一自评页、记录页标「关闭自评」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
+左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**；它与可选的本地布局种子共同构成工作台当前的持久 `localStorage` 用法，其余客户端状态仍是会话级。第一项是「练习与试卷显示自评」（默认开）：关闭后自评在练习与试卷流程里完全消失（不选自评时机、无反馈面板、不进统一自评页、记录页标「关闭自评」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
 _Avoid_：把设置当学习记录、按工作区写进数据库、对进行中的轮次即时生效
 出处：rating-toggle-setting change「Learner settings in the left rail」
 
@@ -476,7 +476,7 @@ _Avoid_：静音（那是结果不是偏好）、音频资产、提示音库
 ### 工作台设置视图 / Workbench settings view
 中栏新增的外观设置页，由**左栏设置区的开关**打开与关闭。它承载**外观**偏好：
 主题偏好、阅读字面、动效偏好、声音偏好；偏好按工作区存于浏览器 `localStorage`，
-不写池。左栏原有的「学习者设置」（练习与组卷显示自评等**学习行为**偏好）**不搬家**，
+不写池。左栏原有的「学习者设置」（练习与试卷显示自评等**学习行为**偏好）**不搬家**，
 仍在左栏——两者分属外观与学习行为两件事，不可混为一谈。
 _Avoid_：学习者设置（左栏的学习行为偏好）、设置页、偏好面板
 出处：openspec/changes/workbench-visual-language-v2（`workbench-settings` spec）
@@ -560,7 +560,7 @@ _Avoid_：改写题目文字、把没有选项的题硬凑选项
 出处：in-place-problem-edits
 
 ### 无答案键客观题 / Keyless Objective Item
-判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习显示自评」开启时可另行自评更新学习状态，不评分时不推导判定或自评分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
+判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习与试卷显示自评」开启时可另行自评更新学习状态，不评分时不推导判定或自评分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
 _Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、给无键题判分
 出处：ingest-mode-choice-and-contract-parity；micro-quiz-content spec
 
