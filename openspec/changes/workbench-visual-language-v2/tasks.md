@@ -256,9 +256,9 @@
 
 ## 26. 文案清理 （spec「Interface copy voice」+ decisions 17.4）
 
-- [ ] 26.1 按 `design-notes/copy-table.md` 执行全站文案定稿：**一个中文语气**、一个标签 / 一句话里不混中英；空态 = 插画 + 一句 + 满宽主按钮（按钮文案即动作）。验证：逐页核对 copy-table 的「改前 → 改后」条目全部落地；页面上无中英混排标签残留；改动前后语义逐条核对。
-- [ ] 26.2 少字原则删注释：能删的界面注释**直接删除**（不是换成更漂亮的说明文字）；改造后界面上的说明性文字**数量不增加**。验证：交付一张删除前后信息量核对表，逐条说明删除理由；界面文字条数对比不增。
-- [ ] 26.3 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §1 的「文字内容除文案清理项外应逐字一致」走查；同步 `docs/PRODUCT-MANUAL.md` 对应章节（本组改了用户可见文案）。
+- [x] 26.1 按 `design-notes/copy-table.md` 执行全站文案定稿：**一个中文语气**、一个标签 / 一句话里不混中英；空态 = 插画 + 一句 + 满宽主按钮（按钮文案即动作）。验证：逐页核对 copy-table 的「改前 → 改后」条目全部落地；页面上无中英混排标签残留；改动前后语义逐条核对。 ✅ **2026-10-23 已核证据**：台账 114 条**全部落完**（P26 主波 89 + P26b 收尾 19）＋ A-119 的 6 条 ＋ A-120 的 2 条 = **116 条**；证据见 `reports/IMPL-P26-report.md`（§2 逐条统计）与 `copy-table-gap.md` §3.14。⚠️ 台账原先的抓取口径只扫含中文的串 ⇒ 漏了两条纯英文界面文案，已由 **A-120** 补台账并落地、**同时修了抓取口径**。
+- [x] 26.2 少字原则删注释：能删的界面注释**直接删除**（不是换成更漂亮的说明文字）；改造后界面上的说明性文字**数量不增加**。验证：交付一张删除前后信息量核对表，逐条说明删除理由；界面文字条数对比不增。 ✅ **2026-10-23 已核证据**：`reports/IMPL-P26-report.md` §3 的 **27 条删除信息量核对表**（逐条写「删了什么 / 由什么承担」）；界面可见文本节点 **585 → 563（-22）**、字符 **2989 → 2361（-628）** ⇒ **不增**。
+- [x] 26.3 阶段验收：跑 AGENTS.md 四条验证命令（`python -m pytest tests -q` / `python -m compileall -q lessonkit.py workbench pipeline pool tests` / `openspec validate --specs --strict` / `python lessonkit.py guard extract-problems --course dmath --chapter ch06`）；按 `acceptance.md` §1 的「文字内容除文案清理项外应逐字一致」走查；同步 `docs/PRODUCT-MANUAL.md` 对应章节（本组改了用户可见文案）。 ✅ **2026-10-23 已核证据**：四条命令全绿（pytest **1181 passed** · compileall exit 0 · openspec **19 passed** · guard **PASS**）；「逐字一致」由 `reports/IMPL-P26-report.md` §5 的**三层核对**（DOM 文本节点逐节点 diff + 字符串字面量多重集 diff + 服务字节==磁盘字节）证明、差异**只出现在文案清理项**上；`docs/PRODUCT-MANUAL.md` 已同步 3 处（P26 的独立 commit）。另：`decisions.md` **A-119**（六条待裁决）与 **A-120**（台账漏收的两条纯英文文案）在同批内落完。
 
 ## 27. 契约漂移登记（`contract-drift.md`） （design.md D-15）
 
