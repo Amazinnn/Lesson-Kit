@@ -465,23 +465,26 @@ body:has(#layout[data-page="graph"]) .page-header::after {
    很短、左对齐 ⇒ 去掉它在图谱页上看不出差别（实测逐像素零差异）
    ⇒ 这里**不**把它钉回来。 */
 
-/* ---- 图谱页的「按钮 / 输入框」补钉（IMPL-C1 · §4.1–§4.6 形态裁定）---------
-   A-115 的按钮族与输入控件形态（主按钮无影平底、次按钮沉底、图标按钮 40×40 圆形、
-   输入框 44px / 12px 圆角 / `padding: 0 14px`）改的是**共享基类之外的变体**，
-   但仍有两处会漏进图谱页 ⇒ 在图谱作用域内**钉回改造前的取值**：
-     ① `#graph-search`（无 `type` 属性 ⇒ 命中 `input:not([type])`）：
-        基类 `min-height` 由 32px 改成 44px ⇒ 图谱的 38px 搜索框会被撑到 44px；
-     ② `#graph-detail-panel .detail-actions .primary`：
-        主按钮的 `box-shadow`（旧稿的 `2px 2px 0` 硬阴影）被「无影平底」裁定作废
-        ⇒ 钉回旧值。
-   ⚠️ 只钉**会漏的那几条**，其余（图谱自己的 `.chip` / `.legend-item` / `.zoom button`
-     / `.graph-topbar .seg button` / `.control-toggle`）**一律不动**。
+/* ---- 图谱页的「输入框」补钉（IMPL-C1 · §4.5 形态裁定）--------------------
+   A-115 的输入框形态（44px 高 / 12px 圆角 / `padding: 0 14px`）改的是**共享基类**，
+   但仍有一处会漏进图谱页 ⇒ 在图谱作用域内**钉回改造前的取值**：
+     `#graph-search`（无 `type` 属性 ⇒ 命中 `input:not([type])`）：
+     基类 `min-height` 由 32px 改成 44px ⇒ 图谱的 38px 搜索框会被撑到 44px。
+   ⇒ 钉回 `min-height: 32px`（搜索框自身 `height: 38px` 不变；
+     它的 `padding: 0 13px` / `border-radius: 4px` 由图谱区段自己写，
+     后者行号更靠后 ⇒ 本就压过基类）。
+   ⚠️ **只钉这一条**，其余（图谱自己的 `.chip` / `.legend-item` / `.zoom button`
+     / `.graph-topbar .seg button` / `.control-toggle` / `.icon-btn`）**一律不动**。
+   ⚠️ 原先这里还有第二条补钉（`#graph-detail-panel .detail-actions .primary`
+     钉回主按钮旧硬阴影）—— **已删除**：图谱详情面板的 `.detail-actions` 里
+     **根本没有 `.primary`**（`workbench.js:2377` 只渲染一个
+     `<a class='ghost'>打开知识点</a>`；`grep -rn "detail-actions" *.js *.py`
+     全仓只有这一处）⇒ 那条规则**永不命中**，是死规则
+     （图谱区段自己那条 `#graph-detail-panel .detail-actions .primary`
+      是历史遗留的硬编码样式，本波不碰）。
    ========================================================================= */
 body:has(#layout[data-page="graph"]) .graph-topbar .search input {
   min-height: 32px;   /* 改造前的基类取值（搜索框自身 height 38px 不变） */
-}
-body:has(#layout[data-page="graph"]) #graph-detail-panel .detail-actions .primary {
-  box-shadow: 2px 2px 0 var(--ink-strong);   /* 改造前主按钮的硬阴影 */
 }
 
 * { box-sizing: border-box; }
@@ -1764,134 +1767,158 @@ html[data-theme="night"] .lk-toast {
 /* ============================================================================
    §4.8 复选框 · 整行选中（`check-row`）· §4.9 单选 · 整行卡选中（`radio-row`）
    ---------------------------------------------------------------------------
-   ⚠️ **本波只落样式，markup 由 IMPL-C2 落**（行级容器需要 markup 改动）——
-     **类名必须与 C2 完全一致**：`.lk-check__row` · `.lk-radio-row`。
+   ⚠️ **不引入新类名** —— 行级容器**早就存在**，它就是选项的 `<label>` 本尊：
+     · 试卷流 `paper-practice.js`：`<label class="option-row">`（+ `input` + `span`）
+     · 练习流 `practice-flow.js`：`<label [class='option-selected' …]>`（+ `input` + `span`）
+     两者都住在 `<fieldset class="problem-options">` 里
+     ⇒ 一律挂在**既有类名**上（`.problem-options label` / `.option-selected`）。
+   ⚠️ **原先的 `.lk-check__row` / `.lk-radio-row` / `.lk-check__box` /
+     `.lk-radio__dot` 四族已删除** —— 它们在 markup 里**零命中**
+     （`grep -rn "lk-check\|lk-radio" pages.py static/*.js` ⇒ 空），
+     是「同一个组件两套实现」的又一次复发（A-115 要消灭的那种）；
+     且「行容器需要 markup 改造」这个前提**不成立** ⇒ **IMPL-C2 的 markup 改造取消**。
    · 选中时**整行**铺一层蓝洗底（不是只把方框染色）⇒ 选项读成「卡片」；
    · 框本身仍走 spec 的几何（20×20 · 6px 圆角 / 真圆 · 1.5px 边框 · 蓝实心 + 白勾 / 白点）；
    · 命中区：整行 ≥44px（`min-height: 44px`）+ 框本身的 44px 伪元素补偿。
+   ⚠️ **只改 CSS**：不动任何 `input` 的属性 / 事件 / DOM 结构
+     （成绩判定、`data-paper-choice`、A-102 的音效 arm 都挂在选项上）。
+   ⚠️ **选择器用 `fieldset.problem-options > label`**（特异度 0,1,2）：
+     ① 它精确命中两套流程的**选项行直系子元素**；
+     ② 它高于 `.paper-options label`（0,1,1）⇒ 两套流程的**行几何统一**
+        （`.paper-options label` 那条带 `align-items: baseline`，
+         自绘 20×20 的框挂在 baseline 上会歪）。
    ========================================================================= */
-.lk-check__row,
-.lk-radio-row {
+fieldset.problem-options > label {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  min-height: 44px;
+  min-height: 44px;              /* §3.1 命中区 ≥44px */
   padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-md);
   cursor: pointer;
 }
-.lk-check__row:hover,
-.lk-radio-row:hover { background: var(--veil-hover); }
-/* 选中 = **整行**蓝洗底（几何冗余通道 + 颜色主通道） */
-.lk-check__row:has(input:checked),
-.lk-radio-row:has(input:checked) { background: var(--role-blue-wash); }
-.lk-check__row:has(input:focus-visible),
-.lk-radio-row:has(input:focus-visible) {
+fieldset.problem-options > label:hover { background: var(--veil-hover); }
+/* 选中 = **整行**蓝洗底 —— 用 `:has(input:checked)` 取状态，
+   不依赖任何 JS 加的类 ⇒ 试卷流与练习流**同一口径**。 */
+fieldset.problem-options > label:has(input:checked) { background: var(--role-blue-wash); }
+/* `.option-selected`（练习流 JS 驱动的选中态）与上面**同义**：
+   两条指向同一个底色（不引入第三种语义）。 */
+.problem-options label.option-selected { background: var(--role-blue-wash); }
+/* 焦点环落在**框**上（原生 input 本身可聚焦，焦点环跟着它走） */
+fieldset.problem-options > label:has(input:focus-visible) {
   outline: var(--focus-width) solid var(--focus-outer);
   outline-offset: var(--focus-offset);
 }
-/* 复选框：20×20 方框 + 1.5px 边框 */
-.lk-check__box {
+
+/* ---- 框本身：自绘（`appearance: none`）+ spec 几何 -------------------------
+   原生控件在暖纸 / 夜纸两主题下都不在纸面语言里 ⇒ 自绘。
+   ⚠️ **只改外观**：`input` 仍是**原生** checkbox / radio
+     （`checked` / `disabled` / `name` / `value` / `data-paper-choice` /
+      `data-choice-option` 全部不动）⇒ 表单载荷、成绩判定、
+      键盘（Space 选中 / 方向键在单选组内移动）、Tab 可达性**一字未改**。
+   ⚠️ **状态色瞬切**（权威表 §3.3）：底色 / 边框色**不进 transition**，
+     只过渡 `background-color` / `border-color` 的**瞬切**（不插值）。 */
+.problem-options input[type="checkbox"],
+.problem-options input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
   position: relative;
+  flex: none;
   width: 20px;
   height: 20px;
-  flex: none;
-  border-radius: var(--r-xs);
+  margin: 0;
   border: 1.5px solid var(--ink-disabled);
   background: var(--surface-card);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out),
               border-color var(--dur-fast) var(--ease-out);
 }
-/* 框的命中区补偿：20×20 → 44×44 */
-.lk-check__box::before {
+/* 复选框 = 20×20 方 · 6px 圆角（`--r-xs`）；单选钮 = 20×20 真圆（`--r-round`）
+   —— 两者在几何上区分（与 spec §4.8 / §4.9 一致）。 */
+.problem-options input[type="checkbox"] { border-radius: var(--r-xs); }
+.problem-options input[type="radio"] { border-radius: var(--r-round); }
+.problem-options input[type="checkbox"]:hover:not(:disabled),
+.problem-options input[type="radio"]:hover:not(:disabled) { border-color: var(--role-blue); }
+.problem-options input[type="checkbox"]:active:not(:disabled),
+.problem-options input[type="radio"]:active:not(:disabled) { border-color: var(--role-blue-press); }
+/* 命中区补偿：20×20 → 44×44（§3.1 硬约束；伪元素不占布局） */
+.problem-options input[type="checkbox"]::before,
+.problem-options input[type="radio"]::before {
   content: "";
   position: absolute;
+  left: 50%;
+  top: 50%;
   width: 44px;
   height: 44px;
+  transform: translate(-50%, -50%);
 }
-.lk-check:hover .lk-check__box { border-color: var(--role-blue); }
-.lk-check__box svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: var(--ink-on-role);
-  stroke-width: 3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0;
-  transform: scale(.7);
-  transition: opacity var(--dur-fast) var(--ease-out),
-              transform var(--dur-fast) var(--ease-rebound);
-}
-.lk-check input:checked + .lk-check__box,
-.lk-check input[aria-checked="true"] + .lk-check__box {
+/* 选中 = 蓝实心 + 白色勾 / 白点 */
+.problem-options input[type="checkbox"]:checked,
+.problem-options input[type="radio"]:checked {
   background: var(--role-blue);
   border-color: var(--role-blue);
 }
-.lk-check input:checked + .lk-check__box svg,
-.lk-check input[aria-checked="true"] + .lk-check__box svg { opacity: 1; transform: scale(1); }
-.lk-check input:disabled + .lk-check__box {
-  background: var(--surface-base);
-  border-color: var(--rule-control);
-}
-.lk-check:has(input:disabled) { cursor: not-allowed; color: var(--ink-disabled); }
-.lk-check:has(input:focus-visible) .lk-check__box {
-  outline: var(--focus-width) solid transparent;
-  outline-offset: var(--focus-offset);
-  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
-}
-/* 单选：20×20 真圆 + 中心 6px 白点（与复选框的方框在几何上区分） */
-.lk-radio__dot {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  flex: none;
-  border-radius: var(--r-round);
-  border: 1.5px solid var(--ink-disabled);
-  background: var(--surface-card);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color var(--dur-fast) var(--ease-out),
-              border-color var(--dur-fast) var(--ease-out);
-}
-.lk-radio__dot::before {
+/* 勾（复选框）：14×14 的白勾，用两条旋转的线画（不引 SVG 资产） */
+.problem-options input[type="checkbox"]:checked::after {
   content: "";
   position: absolute;
-  width: 44px;
-  height: 44px;
+  left: 4px;
+  top: 1px;
+  width: 9px;
+  height: 14px;
+  border-right: 2px solid var(--ink-on-role);
+  border-bottom: 2px solid var(--ink-on-role);
+  transform: rotate(42deg);
 }
-.lk-radio:hover .lk-radio__dot { border-color: var(--role-blue); }
-.lk-radio__dot::after {
+/* 白点（单选钮）：中心 6px 圆点 */
+.problem-options input[type="radio"]:checked::after {
   content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 6px;
   height: 6px;
   border-radius: var(--r-pill);
   background: var(--ink-on-role);
-  opacity: 0;
-  transform: scale(.6);
-  transition: opacity var(--dur-fast) var(--ease-out),
-              transform var(--dur-fast) var(--ease-rebound);
+  transform: translate(-50%, -50%);
 }
-.lk-radio input:checked + .lk-radio__dot,
-.lk-radio input[aria-checked="true"] + .lk-radio__dot {
+/* 禁用态：沉底面 + 淡墨（不用 opacity 压暗） */
+.problem-options input[type="checkbox"]:disabled,
+.problem-options input[type="radio"]:disabled {
+  background: var(--surface-base);
+  border-color: var(--rule-control);
+  cursor: not-allowed;
+}
+/* 禁用 **且选中**（答完 / 锁定后就是这个态）：**几何不变**（仍是实心盘 + 白勾 / 白点），
+   只把色降到 `--ink-disabled`；标记改取 `--surface-base`
+   ⇒ 对比 **3.59:1（暖）/ 3.61:1（夜）** ⇒ 标记**仍可辨**。
+   ⚠️ 若沿用「禁用 = 沉底面 + `--ink-on-role` 标记」，标记与底色的对比只有
+     **1.04:1（暖）/ 1.06:1（夜）** ⇒ 白点**看不见**（实测确认）。 */
+.problem-options input[type="checkbox"]:disabled:checked,
+.problem-options input[type="radio"]:disabled:checked {
+  background: var(--ink-disabled);
+  border-color: var(--ink-disabled);
+}
+.problem-options input[type="checkbox"]:disabled:checked::after,
+.problem-options input[type="radio"]:disabled:checked::after {
+  background: var(--surface-base);
+  border-color: var(--surface-base);
+}
+/* 半选（indeterminate）：蓝底 + 白色横杠（无勾） */
+.problem-options input[type="checkbox"]:indeterminate {
   background: var(--role-blue);
   border-color: var(--role-blue);
 }
-.lk-radio input:checked + .lk-radio__dot::after,
-.lk-radio input[aria-checked="true"] + .lk-radio__dot::after { opacity: 1; transform: scale(1); }
-.lk-radio input:disabled + .lk-radio__dot {
-  background: var(--surface-base);
-  border-color: var(--rule-control);
-}
-.lk-radio:has(input:disabled) { cursor: not-allowed; color: var(--ink-disabled); }
-.lk-radio:has(input:focus-visible) .lk-radio__dot {
-  outline: var(--focus-width) solid transparent;
-  outline-offset: var(--focus-offset);
-  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
+.problem-options input[type="checkbox"]:indeterminate::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink-on-role);
+  transform: translate(-50%, -50%);
 }
 
 /* ============================================================================
@@ -2008,30 +2035,20 @@ html[data-theme="night"] .lk-toast {
 #layout[data-page="graph"] .graph-content { width: 100%; min-height: 0; flex: 1; }
 .linked-problems { margin-top: 42px; }
 /* ---- §4.27 折叠段 · 手风琴折叠段（`disc-accordion` · A-115 形态裁定）--------
-   **卡面 + 48px 头 + 内容在同一张卡里**；四处各写各的原生 `<details>` **统一**。
-   四处 = `.problem-topic` · `.ai-plan-output` · `.practice-set-item-body` ·
-   `.attempt-history`（各自就地改，但**取值完全一致**）。
+   **卡面 + 48px 头 + 内容在同一张卡里**；各写各的原生 `<details>` **统一**。
+   ⚠️ **本块实际覆盖 3 处**（取值完全一致）：`.ai-plan-output` ·
+     `.practice-set-item-body` · `.attempt-history`。
+   ⚠️ **原 `.problem-topic` 那一份已删除** —— 它在 markup 里**零命中**
+     （`grep -rn "problem-topic" pages.py static/*.js` ⇒ 空；
+      `tests/workbench/test_ui_routes.py:783` 还明确断言 `"problem-topic" not in body`
+      ⇒ 它是**已被淘汰的旧类名**）⇒ 那套规则是**死规则**，留着只会让人
+     以为「四处已统一」。**不许**为了让规则有用而把 `.problem-topic` 加回 markup。
+   ⚠️ **其余折叠段站点未统一**（不在本波授权范围 —— markup 的类名收敛归下一波）：
+     `.practice-reference` · `.practice-set-card-body` ·
+     `.practice-set-continuation-details` · `.practice-set-unavailable-items` ·
+     `.active-practice-continuation-details`（五处**零规则**）
+     —— 已登记在 `reports/IMPL-C1-report.md` 的「§4.27 折叠段的实际覆盖」一节。
    ⚠️ 头行高 48px ⇒ 命中区 ≥44px ✔；焦点环走全局 `:focus-visible` 单圈。 */
-.problem-topic {
-  padding: 0;
-  background: var(--surface-card);
-  border-radius: var(--r-md);
-  box-shadow: var(--elev-1);
-  overflow: hidden;
-}
-.problem-topic summary {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  min-height: 48px;
-  padding: 0 var(--sp-4);
-  cursor: pointer;
-  color: var(--ink-strong);
-  font-family: var(--font-ui);
-  font-size: var(--fs-body);
-  font-weight: 500;
-}
-.problem-topic > :not(summary) { padding: 0 var(--sp-4) var(--sp-4); }
 .linked-problem { padding: 14px 0 2px; }
 .problem-title { display: block; color: var(--ink-strong); font-size: 14px; font-weight: 600; }
 /* 关联题面 —— 阅读面 A 组（衬线 + 阅读刻度；字号 17px = --fs-reading） */
@@ -2294,7 +2311,7 @@ html[data-theme="night"] .lk-toast {
   white-space: pre-wrap;
 }
 /* §4.27 折叠段 · 手风琴（`disc-accordion`）：卡面 + 48px 头 + 内容在同一张卡里
-   （与 `.problem-topic` / `.practice-set-item-body` / `.attempt-history` 同一套）。 */
+   （与 `.practice-set-item-body` / `.attempt-history` 同一套）。 */
 .ai-plan-output {
   min-width: 0;
   margin-top: 5px;
@@ -2590,7 +2607,7 @@ html[data-theme="night"] .lk-toast {
   gap: 10px; align-items: start; padding: 10px 0;
 }
 /* §4.27 折叠段 · 手风琴（`disc-accordion`）：卡面 + 48px 头 + 内容在同一张卡里
-   （与 `.problem-topic` / `.ai-plan-output` / `.attempt-history` 同一套）。
+   （与 `.ai-plan-output` / `.attempt-history` 同一套）。
    ⚠️ 头行是三列网格（箭头 / 序号 / 标题）⇒ 保留 grid，只统一高度与排版。 */
 .practice-set-item-body {
   min-width: 0;
@@ -2948,7 +2965,8 @@ img { max-width: 100%; }
 .micro-verdict.ok::before { width: 5px; left: 2px; top: 50%; margin-top: -2px; transform: rotate(45deg); }
 .micro-verdict.ok::after { width: 10px; left: 5px; top: 50%; margin-top: 1px; transform: rotate(-45deg); }
 .micro-verdict.bad { color: var(--role-red-ink); }
-.problem-options label.option-selected { background: var(--veil-hover); }
+/* ⚠️ `.option-selected` 的底色已在 §4.8 / §4.9 那块**统一**（整行蓝洗底）⇒
+   这里不再另立一条（旧值 `--veil-hover` 已作废，避免「同一状态两个底色」）。 */
 .problem-options label.option-correct {
   position: relative;
   outline: 2px solid var(--ink-strong);
@@ -3150,6 +3168,9 @@ img { max-width: 100%; }
   background: var(--surface-sunken);
   box-shadow: inset 0 0 0 1px var(--rule-hair);
 }
+/* A-123：R-54 去掉句号后，标签与链接需要视觉分隔（**零文字**，只加外边距）。
+   ⚠️ 不许在文字里补标点 / 空格（那是新增可见文字，撞少字原则）。 */
+.record-filter-note a { margin-left: var(--sp-2); }
 .record-summary-grid {
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
 }
@@ -3471,7 +3492,7 @@ img { max-width: 100%; }
 
 /* practice-page attempt history (collapsed above the reveal)
    §4.27 折叠段 · 手风琴（`disc-accordion`）：卡面 + 48px 头 + 内容在同一张卡里
-   （与 `.problem-topic` / `.ai-plan-output` / `.practice-set-item-body` 同一套）。 */
+   （与 `.ai-plan-output` / `.practice-set-item-body` 同一套）。 */
 .attempt-history {
   margin-top: 12px;
   background: var(--surface-card);
