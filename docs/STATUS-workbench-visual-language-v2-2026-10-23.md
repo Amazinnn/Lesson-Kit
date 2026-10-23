@@ -12,7 +12,7 @@
 | 项 | 值 |
 |---|---|
 | 分支 | `feat/workbench-visual-language-v2` |
-| HEAD | `8b0dbd1d` |
+| HEAD | `fea4ed7e` |
 | main | `0c1b9ebd`（**未合并、未推送**；本分支**没有 upstream**，远端无此分支） |
 | 工作区 | **clean**（关机前已确认） |
 | 主线任务 | **109 / 173** 已勾（⚠️ 见 §3.1：新一轮的成果**还没回写勾选框**） |
@@ -115,6 +115,24 @@
   热力日历「0 次」档 **14.89:1 → 1.13:1**；负荷柱逐柱 24ms 错峰录到了帧；题号格六态几何；
   会话列表 120 条可滚到底）。
 
+### 1.7 关机前主会话自己修的一处（**不是 agent 干的**）
+
+`pytest` 在交接点上跑出**一条红**：
+`tests/workbench/test_records.py::RecordsBoundaryTests::test_same_practice_set_keeps_each_completed_result_separate`
+
+**根因**：**R-34** 按 copy-table 定稿删掉了那句「这张试卷的题目或顺序曾变化；……」，
+但**两处测试断言仍盯着那句文案**（`:128` 断言它在、`:225` 断言它不在）
+⇒ P26b 改了产品、没改这两处断言。
+
+**修法**（commit `fea4ed7e`）：两处都改成断言**两轮的完成时间都在页面上**
+（用时间戳而不是类名或文案 —— `record-run card` 有**两条渲染路径**
+（单轮卡 + 试卷汇总卡），计数不可靠；文案也还会再变）。
+这正是 copy-table §3 的「删后由什么承担」= 「每轮一张卡片（天然分开，不合并）」。
+
+⚠️ **教训（值得带进下一波）**：**删文案必须同时删/改它的测试断言** ——
+「产品侧按台账删了、测试还盯着旧文案」这个组合会**必然**红。
+台账里每条「删」类条目，都要在落地时**顺手 grep 一遍 `tests/` 有没有盯着那句**。
+
 ## 2. 关机前正在跑、被叫停的两个 agent（**都提交干净了**）
 
 | agent | 产物 | 状态 |
@@ -124,6 +142,22 @@
 
 ⇒ **开机后第一件事**：把这两份报告补上（或者至少**重跑验证**确认成果成立），
 再往下走。
+
+## 2.9 交接点的**验证状态**（关机前实跑）
+
+| 命令 | 结果 |
+|---|---|
+| `python -m pytest tests -q` | ✅ **1181 passed**（240s）—— 在 `fea4ed7e` 上 |
+| `python -m compileall -q lessonkit.py workbench pipeline pool tests` | ✅ exit 0 |
+| `openspec validate --specs --strict` | ✅ **19 passed / 0 failed** |
+| `openspec validate workbench-component-forms --strict` | ✅ valid |
+| `node --test tests/workbench/*.test.js` | ✅ **264 pass / 0 fail** |
+| `python lessonkit.py guard extract-problems --course dmath --chapter ch06` | ✅ PASS |
+| `node tools/graph-layout-diff.js --diff tools/graph-baseline/baseline.json` | ✅ **total differences 0**（SI-0） |
+
+⚠️ **但 C1 的产物（24 条组件形态）没有单独的验证报告** ——
+`reports/IMPL-C1-report.md` **缺失**，它的**对比度 / 图谱零差异 / 暖夜双主题截图**
+是否跑完**不明** ⇒ **开机后第一件事就是补上**（见 §3.1）。
 
 ## 3. 还没做的（**按依赖顺序**）
 
@@ -176,7 +210,7 @@
 
 ```bash
 cd "D:/Projects/Academic Workflow/lesson-kit"
-git status --short && git log --oneline -12      # 确认工作区 clean、HEAD 是 8b0dbd1d
+git status --short && git log --oneline -12      # 确认工作区 clean、HEAD 是 fea4ed7e
 env -u http_proxy -u https_proxy -u all_proxy python -m pytest tests -q
 env -u http_proxy -u https_proxy -u all_proxy openspec validate --specs --strict
 ```
