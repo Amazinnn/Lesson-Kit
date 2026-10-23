@@ -348,7 +348,7 @@ def _render(rows, b_anchor, a_anchor, out_path):
         cards.append(f"""
     <section class="row">
       <h2>{esc(row['caption'])}<span class="delta">改前→改后 像素差 {esc(delta)}</span></h2>
-      <div class="pair">
+      <div class="pair{' pair--3' if row.get('reference') else ''}">
         {reference_cell}
         <figure><figcaption>改前</figcaption>
           <img src="{esc(row['before_href'])}" alt="before {esc(row['id'])}"></figure>
@@ -382,6 +382,9 @@ def _render(rows, b_anchor, a_anchor, out_path):
              display: flex; gap: 12px; align-items: baseline; }}
   .delta {{ font-size: 12px; font-weight: 400; color: #6b6459; }}
   .pair {{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }}
+  /* 带靶子列的行是**三列**（靶子 | 改前 | 改后）—— 原来的两列网格会把
+     靶子挤到下一行，三列对照板就散开了。 */
+  .pair--3 {{ grid-template-columns: 1fr 1fr 1fr; }}
   figure {{ margin: 0; }}
   figcaption {{ font-size: 12px; color: #6b6459; margin-bottom: 4px; }}
   img {{ width: 100%; height: auto; display: block; border: 1px solid #e6dcc4;
