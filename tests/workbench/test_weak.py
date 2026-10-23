@@ -152,8 +152,8 @@ class WeakTests(unittest.TestCase):
             [sig("weak-kp")], [due, later], NOW)
         self.assertEqual(states["weak-kp"], "needs_work")
         self.assertEqual(states["due-kp"], "review")
-        self.assertEqual(states["later-kp"], "not_started")
-        self.assertEqual(states["other-kp"], "not_started")
+        self.assertEqual(states["later-kp"], "neutral")
+        self.assertEqual(states["other-kp"], "neutral")
         self.assertTrue(set(states.values()) <= set(weak.REVIEW_STATES))
 
     def test_a_due_row_overrides_nothing_but_an_overdue_one_counts(self):
@@ -162,7 +162,7 @@ class WeakTests(unittest.TestCase):
         self.assertEqual(states["kp-1"], "review")
 
     def test_the_review_states_are_the_three_contract_words(self):
-        self.assertEqual(weak.REVIEW_STATES, ("needs_work", "review", "not_started"))
+        self.assertEqual(weak.REVIEW_STATES, ("needs_work", "review", "neutral"))
 
 
 

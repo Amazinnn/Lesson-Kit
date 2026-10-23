@@ -1576,7 +1576,21 @@ textarea:focus-visible, input:focus-visible {
 .lk-dot--red { --dot-fill: var(--role-red); --dot-mark: var(--ink-on-role); --dot-line: var(--role-red); }
 .lk-dot--yellow { --dot-fill: var(--role-yellow-deep); --dot-mark: var(--ink-on-warm); --dot-line: var(--role-yellow-deep); }
 .lk-dot--ink { --dot-fill: var(--ink-faint); --dot-mark: var(--ink-on-role); --dot-line: var(--ink-faint); }
-/* 几何冗余通道：三态**形状各不相同**（叉 / 横杠 / 勾） */
+/* 几何冗余通道：三态**形状各不相同**（叉 / 斜杠 / 勾）。
+   ⚠️ **几何是「纯线条」，不是「彩色圆盘 + 挖空符号」**（`component-spec.md` §4.14
+   的 CSS 样例：cross / dash / check 三档都是 `background: transparent` + 2px 线）。
+   原实现留着圆盘底（`--dot-fill` 是角色色）⇒ 与权威样例不符，也与靶子不同
+   （靶子 `.mk-dot--cross` 是两条 ±45° 的 2×10 竖条、`.mk-dot--dash` 是斜切方块，
+   **都没有底**）。
+   ⇒ 线色取**原来的填充档**（红 `--role-red` / 黄 `--role-yellow-deep` /
+   墨 `--ink-faint`）：对比度结论不变（同一批色值），只是不再有圆盘。 */
+.lk-dot--cross,
+.lk-dot--dash,
+.lk-dot--check {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
 .lk-dot--cross::before,
 .lk-dot--cross::after {
   content: "";
@@ -1587,7 +1601,7 @@ textarea:focus-visible, input:focus-visible {
   height: 2px;
   margin: -1px 0 0 -3px;
   border-radius: 1px;
-  background: var(--dot-mark);
+  background: var(--dot-line);
   transform-origin: 50% 50%;
 }
 .lk-dot--cross::before { transform: rotate(45deg); }
@@ -1601,7 +1615,13 @@ textarea:focus-visible, input:focus-visible {
   height: 2px;
   margin: -1px 0 0 -3px;
   border-radius: 1px;
-  background: var(--dot-mark);
+  background: var(--dot-line);
+  /* ⚠️ **45° 斜杠**（`component-spec.md` §3.6 行 424「dash = 45° 斜杠，2px 斜线
+     （`transform: rotate(45deg)` 的细长方块）」；§4.14 的 CSS 样例同）。
+     原实现是**横杠** ⇒ 与 `cross`（也是横杠旋转）塌成同一条视觉通道，
+     「不得有两条状态共用同一组合」的映射唯一性就没了。
+     靶子的 `.mk-dot--dash` 也是斜的（`clip-path` 斜切方块）⇒ 与靶子一致。 */
+  transform: rotate(45deg);
 }
 .lk-dot--check::before,
 .lk-dot--check::after {
@@ -1609,7 +1629,7 @@ textarea:focus-visible, input:focus-visible {
   position: absolute;
   height: 2px;
   border-radius: 1px;
-  background: var(--dot-mark);
+  background: var(--dot-line);
   transform-origin: 0 50%;
 }
 .lk-dot--check::before { width: 4px; left: 2px; top: 50%; margin-top: -1px; transform: rotate(45deg); }

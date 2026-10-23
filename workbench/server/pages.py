@@ -33,12 +33,14 @@ _STATE_NAMES = {
 _REVIEW_DOTS = {
     "needs_work": "lk-dot lk-dot--red lk-dot--cross",
     "review": "lk-dot lk-dot--yellow lk-dot--dash",
-    "not_started": "lk-dot lk-dot--ink lk-dot--ring",
+    "neutral": "lk-dot lk-dot--ink lk-dot--ring",
 }
-_REVIEW_NAMES = {
+# The contract words of those states. The neutral state has **none** — it is
+# 「其余保持中性（不显示任何掌握断言）」, and 行动提醒 is the only
+# student-facing vocabulary there is (no fourth word is invented here).
+_REVIEW_STATE_WORDS = {
     "needs_work": "重点练习",
     "review": "可以复习",
-    "not_started": "未开始",
 }
 
 
@@ -46,16 +48,25 @@ def _review_state_dot(state):
     """The redundant state channel of one review entry.
 
     Colour is the main channel and the geometry is the redundant one; the
-    state is **never spelled out beside the entry** (spec delta「A state is
-    not explained in words」). The dot carries the name for assistive
-    technology, the way the learning-state dots already do — one way of
-    marking a state in the product, not two.
+    state is **never written beside the entry** (spec delta「A state is not
+    explained in words」). The dot is decorative (component-spec §4.14) — the
+    entry itself carries the contract word for assistive technology.
     """
     if state not in _REVIEW_DOTS:
-        state = "not_started"
-    name = _REVIEW_NAMES[state]
-    return ("<span class='" + _REVIEW_DOTS[state] + "' role='img' aria-label='"
-            + name + "' title='" + name + "'></span>")
+        state = "neutral"
+    return "<span class='" + _REVIEW_DOTS[state] + "' aria-hidden='true'></span>"
+
+
+def _review_state_label(state, title):
+    """The entry's accessible name: its title, plus the state word if any.
+
+    The neutral state adds nothing — 「不显示任何掌握断言」 means exactly
+    that: no mastery claim is made about the entry.
+    """
+    word = _REVIEW_STATE_WORDS.get(state, "")
+    if not word:
+        return ""
+    return " aria-label='" + html.escape(title) + " · " + word + "'"
 
 # The paper list's empty state points at the Agent: papers are authored in
 # the right-hand column, so the button opens that conversation — the "新建"
@@ -1028,7 +1039,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
     weak_html = "".join(
         f"<div class='weak-item'>"
         f"{_review_state_dot(item.get('state'))}"
-        f"<a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
+        f"<a href='/w/{workspace['name']}/kp/{item['kp_id']}'"
+        f"{_review_state_label(item.get('state'), item['knowledge_item'])}>"
         f"<span class='weak-title'>{html.escape(item['knowledge_item'])}</span>"
         "</a></div>"
         for item in actionable

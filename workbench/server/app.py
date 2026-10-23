@@ -358,7 +358,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         states = weak.review_states(
             [item["kp_id"] for item in ranked], signals, schedule_rows, today)
         for item in ranked:
-            item["state"] = states.get(item["kp_id"], "not_started")
+            item["state"] = states.get(item["kp_id"], "neutral")
         return ranked
 
     def _graph_artifact(self, workspace):

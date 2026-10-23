@@ -57,8 +57,8 @@ def weak_kp_ids(ranked):
 # GLOSSARY「行动提醒」, which is the **only** state wording a learner sees:
 #   needs_work  重点练习 — 有明确薄弱证据
 #   review      可以复习 — 无薄弱证据但到期
-#   not_started 未开始   — 其余保持中性（不显示任何掌握断言）
-REVIEW_STATES = ("needs_work", "review", "not_started")
+#   neutral     其余保持中性 — 不显示任何掌握断言（**不另造第四个词**）
+REVIEW_STATES = ("needs_work", "review", "neutral")
 
 
 def review_states(kp_ids, signals, schedule_rows, today):
@@ -89,7 +89,7 @@ def review_states(kp_ids, signals, schedule_rows, today):
         elif kp_id in due_ids:
             states[kp_id] = "review"
         else:
-            states[kp_id] = "not_started"
+            states[kp_id] = "neutral"
     return states
 
 
