@@ -15,12 +15,16 @@ ratio are not controlled, so they are not admitted into the pixel
 judgement.
 
 **A-48 / A-65 — the three scopes run side by side.**  G-5 is judged as
-R-2 + R-3, and R-1 becomes "identical except the left column and the top
-bar":
+R-2 + R-3, and R-1 becomes "identical outside the shared shell" (the left
+column, the top bar and the right column):
 
 ``R-1``
-    the whole page, **excluding** the left column (``x < 280``) and the top
-    bar (``y < 52``); the difference pixels have to be 0.
+    **the graph's own area** — the whole page **excluding the shared shell**
+    (the left column ``x < 280``, the top bar ``y < 52`` and the **right
+    column**, whose boundary is read from the captured geometry, never
+    hard-coded).  The difference pixels have to be 0.  **The shared shell's
+    own difference pixels are reported separately** (``shellDiff``) — they are
+    never subtracted away (A-126 ruling 1 / A-132).
 ``R-2``
     the crop rectangle of ``.graph-workspace``; pixel-identical, **no mask**.
 ``R-3``
@@ -30,6 +34,15 @@ bar":
     not change" can be shown honestly.  **The sample coordinates are written
     into the artefact** and the before side is sampled at exactly those
     coordinates, so they cannot drift with the content.
+
+**A-132 — the counting arithmetic.**  A differing pixel is counted **once**
+(any channel differing is enough) — never summed over the three channels.
+The old arithmetic subtracted the masked area's **pixel count** from a
+**channel sum**, so any real difference below ``masked / 3`` was swallowed
+and R-1 reported a **false green** (the threshold was 104,106 differing
+pixels on a 1440x900 page).  Now the mask **partitions** the differing
+pixels: the ones outside the mask are counted (that is the verdict), the ones
+inside the mask are reported as ``shellDiff``.
 
 The report has to say, in as many words:
 
@@ -60,6 +73,14 @@ PASS, FAIL, PENDING = "PASS", "FAIL", "PENDING"
 #: The region of R-1 that is excluded (A-48).
 R1_EXCLUDE_LEFT = 280
 R1_EXCLUDE_TOP = 52
+
+#: The key of the captured geometry that holds the **right column's**
+#: rectangle — the shared shell's third part (A-126 ruling 1).  The boundary
+#: is **read from the artefacts**, never hard-coded (A-132).
+#: ⚠️ **not** ``.side-sections``: measured on the graph page, that wrapper is
+#: the **left** column's paper (``[0, 52, 279, 697]``), the right column is
+#: ``#ai-column`` (``[1020, 52, 420, 848]`` on a 1440x900 viewport).
+R1_SHELL_KEYS = ("right",)
 
 #: The note the report has to carry (A-65).
 LEFT_COLUMN_NOTE = ("左栏纸面以下的底色由 `--surface-sunken` 变为 `--surface-base`"
@@ -299,55 +320,116 @@ def _load(path):
 
 
 def _diff_pixels(left, right, box=None, mask=None):
-    """The number of differing pixels (AE) of two images.
+    """The number of differing **pixels** of two images.
 
     ``box`` is the crop rectangle (R-2) and ``mask`` a per-pixel mask
     (R-1's excluded areas).  The comparison is done on the raw pixels; no
     tolerance is applied, because the graph scope accepts no mask at all.
+
+    A pixel counts as differing when **any** of its channels differs, and it
+    is counted **once** — the number is a pixel count, never a channel sum
+    (A-132).  The per-channel breakdown stays in the detail (``perBand``) for
+    traceability.
+
+    With a mask, the mask **partitions** the differing pixels: the ones
+    **outside** the mask are the verdict (the graph's own area), the ones
+    **inside** the mask are reported as ``maskedDiff`` (the shared shell).
+    Nothing is subtracted any more: the old arithmetic subtracted the masked
+    area's pixel *count* from a channel *sum*, which swallowed every real
+    difference below ``masked / 3`` and reported a false green.
     """
     from PIL import ImageChops
 
     if box:
         left = left.crop(box)
         right = right.crop(box)
+        if mask is not None:
+            mask = mask.crop(box)
     if left.size != right.size:
         return None, {"reason": "the two screenshots have different sizes",
                       "before": list(left.size), "after": list(right.size)}
     diff = ImageChops.difference(left, right)
     bands = diff.split()
-    total = 0
-    per_band = []
-    for band in bands:
-        histogram = band.histogram()
-        differing = sum(histogram[1:])
-        total += differing
-        per_band.append(differing)
-    if mask is not None:
-        # The masked pixels do not count.
-        masked = 0
-        pixels = diff.load()
-        mask_pixels = mask.load()
-        width, height = diff.size
-        for y in range(height):
-            for x in range(width):
-                if mask_pixels[x, y]:
-                    masked += 1
-        total = max(0, total - masked)
-    return total, {"perBand": per_band, "size": list(left.size)}
+    per_band = [sum(band.histogram()[1:]) for band in bands]
+    # the differing pixels: a pixel differs as soon as one channel differs
+    differing = bands[0]
+    for band in bands[1:]:
+        differing = ImageChops.lighter(differing, band)
+    differing = differing.point(lambda value: 255 if value else 0)
+    pixel_diff = sum(differing.histogram()[1:])
+    detail = {"perBand": per_band,
+              "channelSum": sum(per_band),
+              "pixelDiff": pixel_diff,
+              "size": list(left.size)}
+    if mask is None:
+        return pixel_diff, detail
+    outside = ImageChops.multiply(differing, mask.point(lambda value: 255 - value))
+    inside = ImageChops.multiply(differing, mask)
+    detail["outsideMaskDiff"] = sum(outside.histogram()[1:])
+    detail["maskedDiff"] = sum(inside.histogram()[1:])
+    return detail["outsideMaskDiff"], detail
 
 
-def _mask_for(size, exclude_left=0, exclude_top=0):
-    """The mask of the excluded area of R-1 (the left column / the top bar)."""
-    from PIL import Image
+def _mask_for(size, exclude_left=0, exclude_top=0, exclude_rects=()):
+    """The mask of the excluded area of R-1 (the shared shell).
+
+    255 marks an **excluded** pixel.  The excluded area is the left column
+    (``x < exclude_left``), the top bar (``y < exclude_top``) and the right
+    column (``exclude_rects`` — the rectangles taken from the captured
+    geometry, see :func:`_shell_rect`).
+    """
+    from PIL import Image, ImageDraw
 
     width, height = size
     mask = Image.new("L", (width, height), 0)
-    pixels = mask.load()
-    for y in range(height):
-        for x in range(width):
-            if x < exclude_left or y < exclude_top:
-                pixels[x, y] = 255
+    draw = ImageDraw.Draw(mask)
+    if exclude_left:
+        draw.rectangle([0, 0, exclude_left - 1, height - 1], fill=255)
+    if exclude_top:
+        draw.rectangle([0, 0, width - 1, exclude_top - 1], fill=255)
+    for rect in exclude_rects:
+        x, y, rect_width, rect_height = rect
+        draw.rectangle([x, y, x + rect_width - 1, y + rect_height - 1],
+                       fill=255)
     return mask
+
+
+def _shell_rect(before_assertions, after_assertions):
+    """The shared shell's **right column** rectangle, from the captured geometry.
+
+    A-126 ruling 1 puts the shared shell (left column / top bar / right
+    column) outside the graph's frozen scope, so R-1 has to exclude the
+    right column as well.  Its boundary is **read from the artefacts** (the
+    ``#ai-column`` rectangle) — never hard-coded — and the rectangle of both
+    sides is **unioned**, so a shell that moved between the two sides is out
+    of the scope on both sides.
+
+    Returns ``(rect, note)``.  ``rect`` is ``None`` when the geometry is not
+    in the artefacts: the caller then records that **honestly** instead of
+    guessing a boundary.
+    """
+    picked = []
+    for side, assertions in (("before", before_assertions),
+                             ("after", after_assertions)):
+        for key in R1_SHELL_KEYS:
+            rect = (assertions or {}).get(key)
+            if isinstance(rect, (list, tuple)) and len(rect) == 4:
+                picked.append((side, key, [float(value) for value in rect]))
+                break
+    if not picked:
+        return None, ("the right column's rectangle is NOT in the artefacts "
+                      "⇒ the shared shell's right column could not be "
+                      "excluded; the numbers below therefore still contain it")
+    left = min(rect[0] for _, _, rect in picked)
+    top = min(rect[1] for _, _, rect in picked)
+    right = max(rect[0] + rect[2] for _, _, rect in picked)
+    bottom = max(rect[1] + rect[3] for _, _, rect in picked)
+    union = [left, top, right - left, bottom - top]
+    note = ("the right column's rectangle comes from the captured geometry: "
+            + "; ".join(f"{side}.{key} = {[int(v) for v in rect]}"
+                        for side, key, rect in picked)
+            + f" ⇒ excluded as {union}")
+    return union, note
 
 
 def _sample(image, point):
@@ -406,9 +488,13 @@ def build_scopes(before_dir, after_dir):
             "equal": before_rgb == after_rgb,
         })
 
-    # -- R-1: the whole page minus the left column and the top bar -------
+    # -- R-1: the graph's own area (the shared shell is excluded) -------
     size = before.size
-    mask = _mask_for(size, R1_EXCLUDE_LEFT, R1_EXCLUDE_TOP)
+    before_assertions = (before_json or {}).get("assertions", {})
+    after_assertions = (after_json or {}).get("assertions", {})
+    shell_rect, shell_note = _shell_rect(before_assertions, after_assertions)
+    mask = _mask_for(size, R1_EXCLUDE_LEFT, R1_EXCLUDE_TOP,
+                     [shell_rect] if shell_rect else [])
     r1_ae, r1_detail = _diff_pixels(before, after, mask=mask)
 
     # -- R-2: the crop rectangle of .graph-workspace ---------------------
@@ -452,10 +538,17 @@ def build_scopes(before_dir, after_dir):
     return {
         "scopes": {
             "R-1": {"ae": r1_ae, "detail": r1_detail,
+                    "scope": "the graph's own area (A-126 ruling 1)",
                     "excluded": {"leftColumnX": R1_EXCLUDE_LEFT,
-                                 "topBarY": R1_EXCLUDE_TOP},
-                    "mask": "the left column (x < 280) and the top bar (y < 52) "
-                            "are excluded (A-48)"},
+                                 "topBarY": R1_EXCLUDE_TOP,
+                                 "rightColumn": shell_rect,
+                                 "rightColumnSource": shell_note},
+                    "shellDiff": r1_detail.get("maskedDiff"),
+                    "mask": "the shared shell — the left column (x < 280), the "
+                            "top bar (y < 52) and the right column — is "
+                            "excluded (A-48 / A-126 ruling 1 / A-132); the "
+                            "differing pixels inside it are reported as "
+                            "shellDiff, they are NOT subtracted away"},
             "R-2": r2,
             "R-3": {**r3, "ae": r3.get("canvasAe")},
         },
@@ -550,6 +643,7 @@ def main(argv=None):
                       "R-1": parts.get("R-1", {}).get("ae"),
                       "R-2": parts.get("R-2", {}).get("ae"),
                       "R-3": parts.get("R-3", {}).get("ae"),
+                      "shellDiff": parts.get("R-1", {}).get("shellDiff"),
                       "samplesEqual": parts.get("R-3", {}).get("samplesEqual")},
                      ensure_ascii=False, indent=2))
     return 0
