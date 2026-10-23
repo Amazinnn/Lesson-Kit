@@ -434,6 +434,21 @@ body:has(#layout[data-page="graph"]) {
 body:has(#layout[data-page="graph"]) #left-column,
 body:has(#layout[data-page="graph"]) #middle,
 body:has(#layout[data-page="graph"]) #ai-column { z-index: auto; }
+/* ⚠️ **抽屉档要把抽屉的层叠还回去**（2026-10-24 修）。
+   上面那条「三栏 z-index 钉回 auto」是为 G-5 逐像素冻结（画布抗锯齿）做的，
+   但它把**抽屉自己的 `z-index: 10`** 也一起压平了 ⇒
+   **图谱页在窄视口下打开抽屉时，画布会盖住抽屉**：实测命中点落在画布元素上，
+   抽屉里的导航项点不到（学习者 2026-10-24 截图就是这个）。
+   ⇒ 在**该列确实是抽屉的档位**上把 z-index 还回去：
+     C 档（≤1279）右栏是抽屉 · D 档（≤1023）左栏是抽屉。
+   ⚠️ **桌面档（≥1280）一个字不动** ⇒ G-5 的冻结与画布抗锯齿不受影响
+     （G-5 的比对口径是 1440×900 桌面视口，R-1 明确「除左栏与顶栏外像素级一致」）。 */
+@media (max-width: 1279px) {
+  body:has(#layout[data-page="graph"]) #ai-column { z-index: 10; }
+}
+@media (max-width: 1023px) {
+  body:has(#layout[data-page="graph"]) #left-column { z-index: 10; }
+}
 body:has(#layout[data-page="graph"]) .lk-ripple,
 body:has(#layout[data-page="graph"]) .lk-ripple-glow { display: none; }
 
