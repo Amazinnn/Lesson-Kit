@@ -178,3 +178,13 @@ env -u http_proxy -u https_proxy -u all_proxy openspec validate --specs --strict
 
 ⚠️ **不要**做：改图谱算法 · push · 回退另一条线的未提交改动 ·
 把 `layout-spec.md` 当实现目标 · 照 `tmp/` 里的旧脚本行事。
+
+---
+
+## 附：V1 收敛线这一波（2026-10-24）
+
+工作台收敛到 V1 基线的**四组**（顶栏动作区 · 会话按最近分组 · 优先回看状态点 ·
+左栏首组「学习」）+ 一次缺陷修复（图谱页窄视口下画布盖住抽屉）已完成。
+**详细记录在 V1 收敛线自己的交接文档**：
+`openspec/changes/workbench-v1-baseline-convergence/HANDOFF.md` §3
+（两个 Open Question 的裁定依据、对照板位置、验收结果、留给所有者的取舍）。
