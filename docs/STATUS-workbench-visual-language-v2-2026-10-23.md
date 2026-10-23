@@ -24,15 +24,15 @@
 | 项 | 值 |
 |---|---|
 | 分支 | `feat/workbench-visual-language-v2` |
-| HEAD | `aa56007f`（**2026-10-23 复核 + Wave ①**；上一版写的 `7ee1f8ec` 已过时） |
+| HEAD | `b2ea06b5`（**2026-10-23 复核 + Wave ① + A-142**） |
 | `origin/main` | `0c1b9ebd`（**未推送**；本分支**没有 upstream**，439 个提交**只在本地**） |
 | `main` | `0c1b9ebd`（**未合并、未动**） |
-| 工作区 | **clean**（2026-10-23 复核 + Wave ① 提交后确认：`git diff` 为空） |
+| 工作区 | **clean**（2026-10-23 复核 + Wave ① + A-142 提交后确认：`git diff` 为空） |
 | 主线任务 | **112 / 173** 已勾 ⚠️ **这个数字量的是旧波次计划，不是版式** —— 见 §1.5 |
-| 裁决账 | `decisions.md` **132 条**（A-1 … A-141；**A-136 … A-141 是 2026-10-23 复核新增**） |
-| 契约漂移 | `contract-drift.md` **182 条**（**CD-179 … CD-182 是复核新增**） |
+| 裁决账 | `decisions.md` **133 条**（A-1 … A-142） |
+| 契约漂移 | `contract-drift.md` **183 条**（**CD-179 … CD-183 是复核新增**） |
 | **版式实现进度** | **按 `layout-spec.md` 量 ≈ 25%**（token / 组件 / 文案 / 动效层已满；**Wave ①（§1+§7）已落地**） |
-| **本轮新增提交** | `35257abf` 复核入账（漂移地图 + 六条新裁）· `aa56007f` **Wave ① §1+§7 四档几何** |
+| **本轮新增提交** | `35257abf` 复核入账 · `aa56007f` **Wave ① §1+§7 四档几何** · `f41e9511` 视觉板工具 · `b2ea06b5` **A-142 样板图提升入库** |
 
 ⚠️ **不要 push、不要合并 main**（所有者未授权）。
 
@@ -91,6 +91,36 @@
 | **A-139** | 执行计划时间线按 `component-spec.md` §4.30（A-115） | 两份 design-notes 打架，已裁 |
 | **A-140** | 双轨按 DRIFT-3 处置：**本轮只落 880 单轨** | 按规格已写的处置 |
 | **A-141** | **C 档保留**，并把四档表**写进 spec delta** | 唯一一条「规格写了就算授权」的，推翻成本低 |
+| **A-142** | ⭐ **视觉权威的分工：构成与功能以「样板图基线」为准，数值以 `layout-spec.md` 为准**；样板图**已提升入库** `design-notes/mockup-baseline/` | 所有者 2026-10-23 裁决 |
+
+### 1.5.5 ⭐ **A-142：靶子（样板图基线）与尺子（layout-spec）**
+
+所有者的裁决原话：「**V1不挺好的嘛？要不干脆直接使用V1继续**」。
+
+| | 谁说了算 | 理由 |
+|---|---|---|
+| **页面构成 · 功能有无 · 气氛 · 疏密关系** | **样板图基线** `design-notes/mockup-baseline/` | 规格没写全的那部分，样板图画出来了 |
+| **具体数值**（列宽 / 内边距 / 字号 / 线宽） | **`layout-spec.md`** | 样板图是**静态占位草图**，没跟上 §1.7 / §4.1② 的显式规则 |
+
+⇒ **拿样板图当施工图，拿规格当尺子。**
+
+**样板图已提升进仓库**（原件在 `tmp/` 不入库，清一次就没了 ⇒ 拿会被删掉的东西当依据 = 沙上造楼）。
+截图不入库（5 MB），随时可重抓：`view.py capture-static`。
+
+**两处一致、四处不同**（2026-10-23 用 Playwright 实测）：
+一致 —— 顶栏 52px · 三栏 `280 / 740 / 420` · 纸面 12px 圆角 + 双层柔影 · 标题带 2px 墨线；
+不同 —— 中栏 padding · h1 · 栏间分隔线 · 左栏 padding（**四处保持规格值**，登记 **CD-183**）。
+
+#### ⭐ 靶子 vs 现在：**还差这六项**（下一波的活单）
+
+| 靶子（样板图）有 | 现在产品 | 对应规格 |
+|---|---|---|
+| 顶栏动作区：搜索 · 对话视图开关 · 夜纸开关 · **Agent 对话** | 桌面端**全空** | §2.2（DRIFT-2） |
+| 左栏「优先回看」条目**带状态点** | 无状态点 | §3.2 |
+| 标题带右侧「**交卷**」+ 错题整理浮卡 | 无 | §5.2 |
+| **题号导航** | 有（形态待收） | §5.2 |
+| 右栏会话**按今天/昨天/更早分组** | 平铺，无分组 | §6.1 |
+| **解析纸**（17px 阅读字号 + 单侧结构线） | 单侧结构线是 4px 蓝 | §5.2 / §5.5 |
 
 ---
 
@@ -100,7 +130,8 @@
 
 | 领域 | 文件 | 规模 | 备注 |
 |---|---|---|---|
-| **版式 / 线框** ⭐ | `design-notes/layout-spec.md` | 1825 行 | **下一波的实现目标**（见 §5）。含 §0.5 四条 DRIFT |
+| **版式 / 线框** ⭐ | `design-notes/layout-spec.md` | 1825 行 | **尺子**（数值以它为准）。含 §0.5 四条 DRIFT |
+| **样板图基线** ⭐ | `design-notes/mockup-baseline/` | 9 文件 / 520 KB | **靶子**（构成与功能以它为准，A-142）。2026-10-23 从 `tmp/` 提升入库；截图不入库，`view.py capture-static` 随时重抓 |
 | 组件形态 | `design-notes/component-spec.md` **§4.30** | 142 KB | 28 个组件的**唯一形态定义**（A-115 落定） |
 | 组件原始裁定 | `design-notes/styleboard-picks.md` | 6.7 KB | 所有者从样式板导出的原文 |
 | 动效 | `design-notes/motion-spec.md` | 82 KB | §1.6 硬红线 · §7.2 降级矩阵 · **§11 新增动效的补钉流程** |
@@ -412,7 +443,7 @@ env -u http_proxy -u https_proxy -u all_proxy openspec validate --specs --strict
 ⇒ 每波结束，**除了报告里的数字，还要出一张能打开的对照图**：
 左边改前、右边改后，每行标出这一眼在看什么，外加**像素差百分比**当客观量。
 
-**工具已落盘**：`tools/walkthrough/view.py`（`capture` + `board` 两个子命令）
+**工具已落盘**：`tools/walkthrough/view.py`（`capture` + `capture-static` + `board` 三个子命令）
 
 ```bash
 # ① 抓「改后」
@@ -425,9 +456,14 @@ python tools/walkthrough/view.py capture --base-url http://127.0.0.1:<port> \
     --ws walk --out tmp/view/<wave>-before
 git checkout HEAD -- workbench/server/static/workbench.css \
     workbench/server/static/workbench.js
-# ③ 出板
+# ③ 抓「靶子」（样板图基线，走 file://，不用起服务）
+python tools/walkthrough/view.py capture-static \
+    --file openspec/changes/workbench-visual-language-v2/design-notes/mockup-baseline/shell.html \
+    --out tmp/view/reference/practice-in-progress.png
+# ④ 出板（带靶子列：靶子 | 改前 | 改后）
 python tools/walkthrough/view.py board --before tmp/view/<wave>-before \
-    --after tmp/view/<wave>-after --out tmp/view/<wave>-board.html
+    --after tmp/view/<wave>-after --reference tmp/view/reference \
+    --out tmp/view/<wave>-board.html
 ```
 
 ⚠️ **两个已踩过的坑（工具里已内建闸门）**：
