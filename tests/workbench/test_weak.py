@@ -142,6 +142,29 @@ class WeakTests(unittest.TestCase):
         self.assertGreater(mid["score"], root["score"])
         self.assertGreater(root["score"], 0.2)
 
+    def test_review_state_follows_the_contract_rule_not_the_score(self):
+        # A signal is the explicit weakness evidence; a due schedule row is
+        # the review; everything else stays neutral (GLOSSARY「行动提醒」).
+        due = {"item_type": "kp", "item_id": "due-kp", "due_at": "2026-08-16"}
+        later = {"item_type": "kp", "item_id": "later-kp", "due_at": "2026-09-01"}
+        states = weak.review_states(
+            ["weak-kp", "due-kp", "later-kp", "other-kp"],
+            [sig("weak-kp")], [due, later], NOW)
+        self.assertEqual(states["weak-kp"], "needs_work")
+        self.assertEqual(states["due-kp"], "review")
+        self.assertEqual(states["later-kp"], "not_started")
+        self.assertEqual(states["other-kp"], "not_started")
+        self.assertTrue(set(states.values()) <= set(weak.REVIEW_STATES))
+
+    def test_a_due_row_overrides_nothing_but_an_overdue_one_counts(self):
+        overdue = {"item_type": "kp", "item_id": "kp-1", "due_at": "2026-08-01"}
+        states = weak.review_states(["kp-1"], [], [overdue], NOW)
+        self.assertEqual(states["kp-1"], "review")
+
+    def test_the_review_states_are_the_three_contract_words(self):
+        self.assertEqual(weak.REVIEW_STATES, ("needs_work", "review", "not_started"))
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,6 +24,39 @@ _STATE_NAMES = {
     "mastered": "掌握",
 }
 
+# The review group's state dot (spec delta「Redundant state cues」·
+# GLOSSARY「行动提醒」). The first two states reuse the **existing**
+# learning-state cues — same words, same colours, same geometry; the third
+# is the neutral one (「其余保持中性」), which the learning-state set has no
+# word for: a neutral ink ring (component-spec §3.6「未开始 / 待办 =
+# 中性墨 + ring」).
+_REVIEW_DOTS = {
+    "needs_work": "lk-dot lk-dot--red lk-dot--cross",
+    "review": "lk-dot lk-dot--yellow lk-dot--dash",
+    "not_started": "lk-dot lk-dot--ink lk-dot--ring",
+}
+_REVIEW_NAMES = {
+    "needs_work": "重点练习",
+    "review": "可以复习",
+    "not_started": "未开始",
+}
+
+
+def _review_state_dot(state):
+    """The redundant state channel of one review entry.
+
+    Colour is the main channel and the geometry is the redundant one; the
+    state is **never spelled out beside the entry** (spec delta「A state is
+    not explained in words」). The dot carries the name for assistive
+    technology, the way the learning-state dots already do — one way of
+    marking a state in the product, not two.
+    """
+    if state not in _REVIEW_DOTS:
+        state = "not_started"
+    name = _REVIEW_NAMES[state]
+    return ("<span class='" + _REVIEW_DOTS[state] + "' role='img' aria-label='"
+            + name + "' title='" + name + "'></span>")
+
 # The paper list's empty state points at the Agent: papers are authored in
 # the right-hand column, so the button opens that conversation — the "新建"
 # control when no conversation is open yet, the composer when one is.
@@ -993,7 +1026,9 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         if item.get("score", 0) > 0.2 or item.get("reasons")
     ]
     weak_html = "".join(
-        f"<div class='weak-item'><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
+        f"<div class='weak-item'>"
+        f"{_review_state_dot(item.get('state'))}"
+        f"<a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
         f"<span class='weak-title'>{html.escape(item['knowledge_item'])}</span>"
         "</a></div>"
         for item in actionable

@@ -1025,9 +1025,11 @@ select:focus-visible {
 
 /* weak list */
 .weak-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 8px;
+  /* 靶子 `.review-item`：**状态点在前** + 标题一行（`flex` + 省略号）。
+     形态其余各条已经对齐（卡面 + 柔影 + 12px 圆角 + 8/12 内距）。 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   border-radius: var(--r-md);
   background: var(--surface-card);
@@ -1043,13 +1045,23 @@ select:focus-visible {
 /* 行内的知识点链接 = 可点目标：hover 抬起、按下压缩（§2.2(a)） */
 .weak-item a {
   display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   transition: transform var(--dur-fast) var(--ease-standard);
 }
 .weak-item a:hover { transform: translate3d(0, -1px, 0); }
 .weak-item a:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 .weak-item .id,
 .item-id { display: block; color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; font-family: var(--font-mono); }
-.weak-item .weak-title { display: block; color: var(--ink-strong); font-weight: 600; }
+.weak-item .weak-title {
+  display: block;
+  color: var(--ink-strong);
+  font-weight: 600;
+  /* 靶子 `.review-item__t`：一行 + 省略号（状态点占位，标题吃掉余量）。 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .weak-item .score { color: var(--ink-faint); font-size: 12px; }
 .weak-item .reasons {
   grid-column: 1 / -1;
