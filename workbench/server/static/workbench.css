@@ -1062,10 +1062,10 @@ button.outline:disabled { background: var(--surface-base); color: var(--ink-disa
    ⇒ 结果：`primary` / `outline`（**不带** `.sm`）= **40px** 视觉 +
      `::before` 补到 **44px** 命中；`primary sm` / `outline sm` = **28px** 视觉，
      命中区走 §3.1「方法 2（容器间距 / 中心距 ≥44px）」。
-   ⚠️ **连带**：`.sm` 排在形态之后 ⇒ `.sm` 的 `border-radius: 14px`（药丸）
-     现在也压过形态的 `--r-md`（12px）⇒ `.sm` 档**四类形态一致**（14px 药丸），
-     与此前 `ghost sm` 的取值一致。 */
-button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; border-radius: 14px; }
+   ⚠️ **形状语言**：`button.sm` 的圆角走 `var(--r-md)`（**与形态族同值**）——
+     尺寸变体**不改形状**（A-132 缺陷 3）。此前这里是 `14px`（药丸），
+     与 `button.primary` / `button.outline` 的 `--r-md` 不一致 ⇒ 已改齐。 */
+button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; border-radius: var(--r-md); }
 
 /* ---- `.sm` 档的命中区：走 §3.1「方法 2（容器间距 / 中心距 ≥44px）」--------
    ⚠️ **不许**用 `inset: -8px` 的外溢伪元素（A-126 裁决 2 第 3 条）：
