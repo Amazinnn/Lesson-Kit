@@ -75,8 +75,11 @@ class UiRouteTests(unittest.TestCase):
     def test_static_asset_served(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
-        self.assertIn("--dsw-brand-primary", body)
-        self.assertIn(".scope-tray-list {", body)
+        self.assertIn("--role-blue: #2b62e8", body)
+        # The scope-tray block is retired dead code (task 14.1): the tray is
+        # never rendered, so its CSS must be gone rather than merely unused.
+        self.assertNotIn(".scope-tray-list {", body)
+        self.assertNotIn("scope-tray", body)
         self.assertIn("overscroll-behavior: contain;", body)
 
     def test_edge_layer_follows_the_stage_size(self):
@@ -112,8 +115,8 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
         self.assertIn(".page-header h1,", body)
-        self.assertIn(".rich-text :not(pre) > code", body)
-        self.assertIn(".rich-text table {", body)
+        self.assertIn(":is(.wb-reading, .wb-reading--stem) :not(pre) > code", body)
+        self.assertIn(":is(.wb-reading, .wb-reading--stem) table {", body)
         staged_rule = body.split(".staged-title {", 1)[1].split("}", 1)[0]
         suggestion_rule = body.split(".suggestion-title {", 1)[1].split("}", 1)[0]
         self.assertIn("overflow-wrap: anywhere", staged_rule)
@@ -122,13 +125,17 @@ class UiRouteTests(unittest.TestCase):
     def test_css_exposes_the_soft_mondrian_visual_roles(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
-        self.assertIn("--lk-paper: #fffdf7", body)
-        self.assertIn("--lk-blue: #2457c5", body)
-        self.assertIn("--lk-yellow: #f2c94c", body)
-        self.assertIn("--lk-red: #d6453d", body)
+        self.assertIn("--surface-sheet: #fffdf7", body)
+        self.assertIn("--role-blue: #2b62e8", body)
+        self.assertIn("--role-yellow: #f5c518", body)
+        self.assertIn("--role-red: #d1392b", body)
         self.assertIn("#topbar .brand::before", body)
         self.assertIn(".page-header::after", body)
-        self.assertIn("inset 4px 0 0 var(--lk-blue)", body)
+        # 选中态的蓝色结构标记：靶子形态是左缘 3px 蓝条（`::before`），
+        # 不是旧形态的 `inset 4px` 投影内嵌（delta「Redundant state cues」
+        # 的措辞同步改成 structural edge，2026-10-23 A-143）。
+        self.assertIn(".nav-item.active::before", body)
+        self.assertIn("width: 3px", body)
     def test_css_makes_learning_content_the_primary_surface(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
@@ -136,10 +143,14 @@ class UiRouteTests(unittest.TestCase):
         question = body.split(".practice-question-card {", 1)[1].split("}", 1)[0]
         solution = body.split(".practice-solution {", 1)[1].split("}", 1)[0]
         self.assertIn("font-size: 17px", knowledge)
-        self.assertIn("border-left: 4px", knowledge)
+        # 单侧结构线是 2px 墨色（`--rule-structure`），不再是 4px 蓝边框。
+        self.assertIn("border-left: 2px", knowledge)
         self.assertIn("font-size: 17px", question)
-        self.assertIn("box-shadow: none", question)
-        self.assertIn("color: var(--dsw-label-secondary)", solution)
+        # 题面/解析现在是**卡级纸面**（卡面底 + 12px 圆角 + 卡级柔影 elev-1），
+        # 另配单侧 2px 结构线 —— delta 只禁「装饰性投影」，不禁卡面自己的抬升。
+        self.assertIn("box-shadow: var(--elev-1)", question)
+        self.assertIn("font-size: 17px", solution)
+        self.assertIn("box-shadow: var(--elev-1)", solution)
 
     def test_practice_page_session_controls_live_outside_the_answer_card(self):
         # Session controls must not be nested in the answer card, where a state
@@ -196,6 +207,92 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("id='paper-rating'", body)
         self.assertIn("id='paper-reveal-timing'", body)
 
+    def test_pages_use_the_shared_reading_layer(self):
+        # 6.2 / 6.3 (decisions.md A-41): every reading surface the server
+        # renders carries `.wb-reading`; `.rich-text` is retired here.
+        for path in ("/w/dmath/practice", "/w/dmath/kps",
+                     "/w/dmath/kp/dmath-ch06-kp-001", "/w/dmath/practice-sets"):
+            status, body = self.fetch(path)
+            self.assertEqual(status, 200)
+            self.assertNotIn("rich-text", body)
+        status, body = self.fetch("/w/dmath/kp/dmath-ch06-kp-001")
+        self.assertIn("class='knowledge-body card wb-reading'", body)
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertIn("class='practice-question-card paper-stem__body wb-reading'", body)
+        self.assertIn("class='practice-solution paper-solution wb-reading hidden'", body)
+
+    def test_practice_page_carries_the_new_paper_structure(self):
+        # 16.1 / 16.2 / 16.3: the stem is a paper of its own, the reference is
+        # a peer paper, and the answer area is a marked block with a label.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='paper-stem' class='paper-stem'", body)
+        self.assertIn("id='paper-stem-index' class='paper-stem-index'", body)
+        self.assertIn("class='paper-answer-block'", body)
+        self.assertIn(
+            "<label class='paper-answer-label' for='paper-answer'>你的作答</label>", body)
+        self.assertIn("id='practice-planning' class='practice-planning'", body)
+
+    def test_practice_completion_page_has_the_celebration_slots(self):
+        # 16.7: three carrying slots — number slot, progress band, milestone
+        # anchor. Their static state is the terminal state.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("class='paper-completion-figures lk-stat-slot'", body)
+        # The band is full in its static style; the celebration adds
+        # `.is-filled` to replay the growth, so the class is not baked in.
+        self.assertIn("class='lk-progress lk-progress--completion'", body)
+        self.assertNotIn("lk-progress is-filled", body)
+        self.assertIn("<span class='lk-progress__fill'></span>", body)
+        self.assertIn(
+            "id='paper-completion-milestone' class='lk-celebrate-anchor' "
+            "data-lk-celebrate-anchor style='pointer-events: none' aria-hidden='true'",
+            body)
+        # The anchor sits above the CTA row, so it can never cover it.
+        self.assertLess(
+            body.index("paper-completion-milestone"), body.index("id='paper-review'"))
+
+    def test_left_rail_navigation_carries_a_still_life_icon(self):
+        # 15.1: every navigation item is a concrete still-life icon plus its
+        # name. The icon is inline SVG, not an <img>: only inline assets take
+        # the page's theme variables (asset-spec §1.11).
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertEqual(body.count("class='nav-item__icon' aria-hidden='true'"), 5)
+        self.assertEqual(body.count('class="asset asset-icon"'), 5)
+        # The icons are inline SVG, not <img> (asset-spec §1.11).
+        self.assertNotIn("<img", body)
+
+    def test_left_rail_keeps_the_two_behaviour_preferences_in_place(self):
+        # The two behaviour preferences never move (compat boundary), and the
+        # appearance entry stays the one the settings view already owns.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("id='setting-running-send'", body)
+        self.assertIn("id='setting-show-rating'", body)
+        self.assertIn("id='setting-view-toggle'", body)
+        self.assertIn("class='count-badge'", body)
+        # The four sections sit on one wrapper: the rail's paper ends with the
+        # content, so the lower half is not blank paper (15.3).
+        self.assertIn("class='side-sections'", body)
+
+    def test_topbar_is_three_sections_with_a_self_drawn_chapter_panel(self):
+        # 15.4: brand / identity / actions, and the chapter lens carries a
+        # self-drawn panel whose items are chapter names only — no figures.
+        status, body = self.fetch("/w/dmath/practice")
+        self.assertEqual(status, 200)
+        self.assertIn("class='topbar-brand'", body)
+        self.assertIn("class='topbar-identity'", body)
+        self.assertIn("class='topbar-actions'", body)
+        self.assertIn("class='chapter-lens-panel' id='chapter-lens-panel'", body)
+        self.assertIn("class='chapter-lens-option' role='option'", body)
+        self.assertIn("aria-selected=\"true\"", body)
+        # The native select stays as the no-JS fallback.
+        self.assertIn("id='chapter-lens-select'", body)
+        panel = body.split("class='chapter-lens-panel'", 1)[1].split("</div>", 1)[0]
+        for banned in ("题", "个", "题数", "%"):
+            self.assertNotIn(banned, panel.split("aria-label='选择章节' hidden>", 1)[1])
+
     def test_saved_paper_page_renders_managed_problem_order_without_progress(self):
         status, saved = self.request_json(
             "POST", "/api/w/dmath/practice-sets",
@@ -215,7 +312,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("7 / 10", body)
         # Each item previews the problem it names, collapsed on arrival.
         self.assertIn("<details class='practice-set-item-body'><summary>", body)
-        self.assertIn("<div class='linked-problem-text rich-text'><p>P1</p></div>", body)
+        self.assertIn("<div class='linked-problem-text wb-reading'><p>P1</p></div>", body)
         self.assertNotIn("<details class='practice-set-item-body' open", body)
         # The card itself folds too, with its controls in the fold's head.
         self.assertIn("<details class='practice-set-card-body'>", body)
@@ -251,7 +348,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("data-set-rename", body)
         self.assertIn("data-set-delete", body)
         self.assertIn("无法继续旧执行：当前试卷或旧执行引用了不可用题目", body)
-        self.assertIn("当前试卷 1 题；旧执行仍保留 1 题", body)
+        self.assertIn("当前试卷 1 题；旧执行 1 题", body)
         detail_start = body.index("<details class='practice-set-unavailable-items'>")
         detail_end = body.index("</details>", detail_start)
         self.assertIn("old-legacy-question-with-a-long-id", body[detail_start:detail_end])
@@ -326,7 +423,11 @@ class UiRouteTests(unittest.TestCase):
     def test_session_end_page_mentions_cards(self):
         status, body = self.fetch("/w/dmath/session-end")
         self.assertEqual(status, 200)
-        self.assertIn("题目与闪卡", body)
+        # 少字原则：页头说明句「只补充尚未评分的题目与闪卡；…」已删
+        # （copy-table §2.8 P-143 ⇒ 删），「尚未评分的题目」列表标题承担
+        # 同一信息（copy-table §3 第 11 条「删后由什么承担」）。
+        self.assertIn("尚未评分的题目", body)
+        self.assertIn("id='pending-ratings'", body)
 
     def test_workspace_pages_omit_the_student_selection_tray(self):
         for path in (
@@ -608,6 +709,54 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn(">试卷<", body)
         self.assertIn(">记录<", body)
 
+    def test_kps_page_shows_state_dots_and_the_scope_count(self):
+        # 18.2: the row state is a colour + geometry dot, zero visible words.
+        # 18.5: the count bar sums the same three states — counts, no percentages.
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute(
+                "INSERT INTO learning_current_state (item_type, item_id, state)"
+                " VALUES ('kp', 'dmath-ch06-kp-001', 'needs_work')")
+            conn.commit()
+        finally:
+            conn.close()
+        status, body = self.fetch("/w/dmath/kps")
+        self.assertEqual(status, 200)
+        self.assertIn(
+            "<span class='knowledge-state-dot lk-dot lk-dot--red lk-dot--cross'"
+            " role='img' aria-label='重点练习' title='重点练习'></span>", body)
+        self.assertIn("class='knowledge-count-bar'", body)
+        self.assertIn(
+            "<span class='knowledge-count-bar__value'>1</span> 个知识点", body)
+        self.assertIn(
+            "<span class='knowledge-count-bar__value'>1</span> 重点练习", body)
+        bar = body.split("class='knowledge-count-bar'", 1)[1].split("</div>", 1)[0]
+        for banned in ("%", "正确率", "掌握度", "完成度"):
+            self.assertNotIn(banned, bar)
+
+    def test_kps_page_empty_state_is_an_illustration_and_one_sentence(self):
+        conn = sqlite3.connect(self.fixture.db_path)
+        try:
+            conn.execute("DELETE FROM knowledge_points")
+            conn.commit()
+        finally:
+            conn.close()
+        status, body = self.fetch("/w/dmath/kps")
+        self.assertEqual(status, 200)
+        self.assertIn("class='empty-state lk-empty'", body)
+        self.assertIn("class='lk-empty__art'", body)
+        self.assertIn("class='lk-empty__text'>暂无知识点</p>", body)
+        # 18.4: the third segment is the full-width action, and its label is
+        # the action itself.
+        self.assertIn(
+            "<a class='primary button-link lk-empty__action' href='/w/dmath/practice'>去练习</a>",
+            body)
+        # The illustration is inline SVG, not an <img>: only an inline asset
+        # takes the page's theme variables (asset-spec §1.11).
+        empty = body.split("class='empty-state lk-empty'", 1)[1]
+        self.assertIn("<svg", empty)
+        self.assertNotIn("<img", empty)
+
     def test_kps_page_lists_knowledge_points(self):
         status, body = self.fetch("/w/dmath/kps")
         self.assertEqual(status, 200)
@@ -638,7 +787,7 @@ class UiRouteTests(unittest.TestCase):
         self.assertNotIn("problem-summary", body)
         self.assertNotIn("linked-problem-detail", body)
         self.assertIn("class='linked-problem-list'", body)
-        self.assertIn("class='linked-problem'", body)
+        self.assertIn("class='linked-problem lk-card'", body)
         self.assertNotIn("problem-topic", body)
         self.assertIn("两类代表", body)
         self.assertNotIn("…", body)
@@ -1035,7 +1184,7 @@ class UiRouteTests(unittest.TestCase):
 
         status, attempts = self.fetch("/w/dmath/records?view=attempts")
         self.assertEqual(status, 200)
-        self.assertIn("1 条已载入", attempts)
+        self.assertIn("1 条", attempts)
         self.assertIn("答错的内容", attempts)
 
         status, wrong = self.fetch("/w/dmath/records?view=wrong")
@@ -1054,7 +1203,7 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch(
             "/w/dmath/records?view=attempts&problem=dmath-ch06-prob-001")
         self.assertEqual(status, 200)
-        self.assertIn("正在按单题过滤", body)
+        self.assertIn("按单题过滤", body)
         self.assertIn("查看全部记录", body)
 
     def _archive_one_quick_run(self):

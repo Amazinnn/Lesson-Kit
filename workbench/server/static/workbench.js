@@ -60,7 +60,7 @@
       post("/chapter", { chapter: chapter }).then(function () {
         refreshMiddle();
       }, function (error) {
-        window.alert("切换章节失败：" + error.message);
+        window.alert("章节切换失败：" + error.message);
         window.location.reload();
       });
     }
@@ -69,6 +69,126 @@
     });
     select.addEventListener("change", function () {
       applyChapter(select.value);
+    });
+
+    /* ---- 15.4 自绘章节面板 ----------------------------------------------
+       面板是**选章器**：开合 / Esc 关闭 / 点外部关闭 / 关闭后焦点归位到开关 /
+       打开时焦点进面板 / `aria-expanded` 同步 / 键盘可达
+       （↑↓ 移动、Enter·Space 选中、Home·End 首尾）。
+       ⚠️ 选中一项走的是 `#chapter-lens-select` 已在用的那条 `applyChapter`
+       路径 —— 同一个端点、同一个载荷键 `{chapter}`，**不新增请求**。
+       ⚠️ 面板内**只有章节名**：不显示每章计数 / 统计 / 选择理由
+       （`openspec/specs/workbench-ui/spec.md`「Chapter switch in the top bar」）。
+       原生 `<select>` 保留作无 JS 兜底（不删、不改），它的 `value` 仍承载
+       当前章 id —— 面板选章时同步写回，两条路径共用同一个载体。 */
+    var panel = document.getElementById("chapter-lens-panel");
+    if (!panel) return;
+    var options = Array.from(panel.querySelectorAll(".chapter-lens-option"));
+    toggle.setAttribute("aria-expanded", "false");
+
+    function panelOpen() { return !panel.hidden; }
+
+    function markChapter(chapter) {
+      options.forEach(function (option) {
+        if (chapter && option.getAttribute("data-chapter") === chapter) {
+          option.setAttribute("aria-selected", "true");
+        } else {
+          option.removeAttribute("aria-selected");
+        }
+      });
+    }
+
+    function openPanel() {
+      if (panelOpen()) return;
+      panel.hidden = false;
+      toggle.setAttribute("aria-expanded", "true");
+      var target = null;
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].getAttribute("aria-selected") === "true") { target = options[i]; break; }
+      }
+      if (!target) target = options[0];
+      if (target) target.focus();
+    }
+
+    function closePanel(restoreFocus) {
+      if (!panelOpen()) return;
+      panel.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+      if (restoreFocus) toggle.focus();
+    }
+
+    function chooseChapter(option) {
+      var chapter = option.getAttribute("data-chapter");
+      if (!chapter) return;
+      markChapter(chapter);
+      select.value = chapter;            /* 原生 select 继续承载当前章 id */
+      closePanel(true);
+      applyChapter(chapter);             /* 既有的章节切换路径，不新增请求 */
+    }
+
+    function moveFocus(key) {
+      if (!options.length) return;
+      var index = -1;
+      for (var i = 0; i < options.length; i++) {
+        if (options[i] === document.activeElement) { index = i; break; }
+      }
+      if (index < 0) index = 0;
+      var next = index;
+      if (key === "ArrowDown") next = Math.min(index + 1, options.length - 1);
+      else if (key === "ArrowUp") next = Math.max(index - 1, 0);
+      else if (key === "Home") next = 0;
+      else if (key === "End") next = options.length - 1;
+      options[next].focus();
+    }
+
+    /* 开关是面板的触发器：点它开面板。开关本身的透镜语义（勾上 = 恰好一章）
+       一字未动 —— 勾选/取消仍走上面的 `change` → `applyChapter`。 */
+    toggle.addEventListener("click", function () {
+      markChapter(toggle.checked ? select.value : "");
+      openPanel();
+    });
+
+    options.forEach(function (option) {
+      option.addEventListener("click", function () { chooseChapter(option); });
+    });
+
+    panel.addEventListener("keydown", function (event) {
+      var key = event.key;
+      if (key === "Escape" || key === "Esc") {
+        event.preventDefault();
+        closePanel(true);
+        return;
+      }
+      if (key === "ArrowDown" || key === "ArrowUp" || key === "Home" || key === "End") {
+        event.preventDefault();
+        moveFocus(key);
+        return;
+      }
+      if (key === "Enter" || key === " " || key === "Spacebar") {
+        event.preventDefault();
+        var option = event.target && event.target.closest
+          ? event.target.closest(".chapter-lens-option") : null;
+        if (option) chooseChapter(option);
+      }
+    });
+
+    /* 点面板外关闭。焦点归位只做在**焦点会丢**的情形：用户点的是别的控件，
+       焦点就该留在那儿；点的是不可聚焦的地方（焦点会掉回 body），才还回开关。
+       （`layout-spec.md` §2.3 只要求 `Esc` 关闭并把焦点还给 chip。） */
+    document.addEventListener("click", function (event) {
+      if (!panelOpen()) return;
+      if (event.target && lens.contains(event.target)) return;
+      closePanel(false);
+      if (!document.activeElement || document.activeElement === document.body) toggle.focus();
+    });
+
+    /* 焦点走到透镜之外的另一个控件（Tab 走人）时，面板跟着收起；
+       焦点掉到 body（点空白处）时不在这里收 —— 由上面的点外部关闭接手。 */
+    lens.addEventListener("focusout", function (event) {
+      if (!panelOpen()) return;
+      var next = event.relatedTarget;
+      if (!next || lens.contains(next)) return;
+      closePanel(false);
     });
   }
 
@@ -84,9 +204,11 @@
     if (!list || !sort) return;
     var descending = false;
     function apply() {
-      var rows = Array.from(list.children || []).filter(function (row) {
-        return row && row.classList && row.classList.contains("knowledge-row");
-      });
+      // 18.1: a row sits one level down inside its group card, so the rows are
+      // collected across the groups. After sorting, every row goes back into
+      // the group it belongs to — the group headers are never touched, and a
+      // row never migrates to another group (its chapter is the row's own).
+      var rows = Array.from(list.querySelectorAll(".knowledge-row"));
       var field = sort.value || "source";
       rows.sort(function (a, b) {
         var av = field === "source" ? Number(a.dataset.kpOrder || 0)
@@ -99,7 +221,8 @@
         if (!result) result = Number(a.dataset.kpOrder || 0) - Number(b.dataset.kpOrder || 0);
         return descending ? -result : result;
       });
-      if (rows.length) list.replaceChildren.apply(list, rows);
+      var homes = rows.map(function (row) { return row.parentNode; });
+      rows.forEach(function (row, index) { homes[index].appendChild(row); });
       if (direction) direction.textContent = descending ? "↓" : "↑";
     }
     sort.addEventListener("change", apply);
@@ -187,6 +310,729 @@
   function showRatingEnabled() {
     return loadSetting("showRating", true) !== false;
   }
+
+  /* The sound preference is one field of the same record (`sound`, boolean,
+     on by default — decisions.md A-38).  sfx.js reads the very same field, so
+     the two never disagree; before the module is there the record itself is
+     the answer. */
+  function soundEnabled() {
+    if (window.lkSfx && typeof window.lkSfx.isEnabled === "function") {
+      return window.lkSfx.isEnabled();
+    }
+    return loadSetting("sound", true) !== false;
+  }
+
+  /* ---------- appearance preferences ----------
+   * Theme, reading face, motion and sound are browser preferences of the
+   * open workspace: they live in the same `wb_settings_<workspace>` record
+   * as the two behaviour preferences and they never leave the browser
+   * (design.md D-9).  An explicit pick wins over the system; without one
+   * the system decides (A-11 for the theme, A-2 for the motion).
+   */
+
+  /* The system preferences are read through one live MediaQueryList each, so
+     the helpers stay cheap and always see the current system value. */
+  var darkQuery = null;
+  var motionQuery = null;
+
+  function prefersDarkScheme() {
+    if (!window.matchMedia) return false;
+    if (!darkQuery) darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    return !!darkQuery.matches;
+  }
+
+  function prefersReducedMotion() {
+    if (!window.matchMedia) return false;
+    if (!motionQuery) motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    return !!motionQuery.matches;
+  }
+
+  function storedTheme() {
+    var value = loadSetting("theme", null);
+    return value === "night" || value === "paper" ? value : null;
+  }
+
+  function effectiveTheme() {
+    var stored = storedTheme();
+    if (stored) return stored;
+    return prefersDarkScheme() ? "night" : "paper";
+  }
+
+  function applyTheme(theme) {
+    var root = document.documentElement;
+    if (!root) return;
+    root.dataset.theme = theme === "night" ? "night" : "";
+    root.style.colorScheme = theme === "night" ? "dark" : "light";
+  }
+
+  function storedReadingFace() {
+    var value = loadSetting("readingFace", null);
+    return value === "serif" || value === "sans" ? value : null;
+  }
+
+  function effectiveReadingFace() {
+    return storedReadingFace() || "serif";
+  }
+
+  function applyReadingFace(face) {
+    var root = document.documentElement;
+    if (!root) return;
+    root.dataset.face = face === "sans" ? "sans" : "serif";
+    /* The reading face is a type family, so it is carried by the reading
+       token; the attribute is the hook for the reading layer's own rules. */
+    if (face === "sans") root.style.setProperty("--font-read", "var(--font-ui)");
+    else root.style.removeProperty("--font-read");
+  }
+
+  function storedMotion() {
+    var value = loadSetting("motion", null);
+    return value === true || value === false ? value : null;
+  }
+
+  /* The motion tier in force: "full", "weak" (the system's reduced tier) or
+     "off".  An explicit choice wins over the system setting (A-2). */
+  function motionMode() {
+    var stored = storedMotion();
+    if (stored === false) return "off";
+    if (stored === true) return "full";
+    return prefersReducedMotion() ? "weak" : "full";
+  }
+
+  function applyMotion() {
+    var root = document.documentElement;
+    if (!root) return;
+    var stored = storedMotion();
+    /* Without a stored choice the stylesheet's own reduced-motion query
+       decides; the attribute only carries an explicit choice. */
+    if (stored === true) root.dataset.motion = "on";
+    else if (stored === false) root.dataset.motion = "off";
+    else root.removeAttribute("data-motion");
+  }
+
+  window.lkMotion = {
+    mode: motionMode,
+    isFull: function () { return motionMode() === "full"; },
+    isWeak: function () { return motionMode() === "weak"; },
+    isOff: function () { return motionMode() === "off"; },
+    apply: applyMotion,
+  };
+
+  /* ---------- motion orchestration (tasks.md 8.4 / 8.7 / 8.8 · design.md D-7) ----------
+     The stylesheet owns every keyframe; this side switches classes, writes the
+     values of the counters that already exist and drives the timelines.  Three
+     rules hold everywhere below:
+
+       · an animated element's static style **is** its final style — the start
+         state (opacity 0 / offset / scale) lives inside the @keyframes only
+         (decisions.md A-2 derived rule / tasks.md 8.9);
+       · no new request, no new learning fact, no change to the request
+         sequence — the celebration starts only after the response that ends
+         the round has arrived;
+       · the motion tier is read from one place (`window.lkMotion.mode()`),
+         never from a second `matchMedia` of its own.  The four combinations
+         of A-2 hold: system reduce + unset ⇒ weak, system reduce + explicit
+         on ⇒ full (the learner's explicit choice wins), system allows +
+         unset ⇒ full, system allows + explicit off ⇒ straight cut.
+
+     The shared ticker below is the **only** ticker in the product: the streak
+     counter of group 17 calls this one instead of writing a second copy
+     (tasks.md 17.1).  */
+
+  var TICKER_DURATION_MS = 240;   /* motion-spec §2.1 item 8: 240 ms per digit */
+  var TICKER_STAGGER_MS = 40;     /* per-digit stagger */
+  var FLAME_STAGGER_MS = 80;      /* motion-spec §3.6: 80 ms between clusters */
+
+  function tickerFrame() {
+    return window.requestAnimationFrame
+      ? function (fn) { return window.requestAnimationFrame(fn); }
+      : function (fn) { return window.setTimeout(fn, 16); };
+  }
+
+  /* ① the shared ticker (tasks.md 8.4 ① / 17.1): vanilla rAF, writes
+     `textContent` only — it creates no node and binds no listener. */
+  function tickerSet(el, value, options) {
+    if (!el) return false;
+    var settings = options || {};
+    var target = Number(value);
+    if (!isFinite(target)) {
+      el.textContent = String(value == null ? "" : value);
+      return false;
+    }
+    var from = Number(settings.from);
+    if (!isFinite(from)) from = 0;
+    var duration = settings.duration == null ? TICKER_DURATION_MS : Number(settings.duration);
+    var delay = settings.delay == null ? 0 : Number(settings.delay);
+    /* A downgraded tier lands on the final value directly: the figure has to
+       be readable, and a moving figure is not readable while it moves. */
+    if (motionMode() !== "full" || !isFinite(duration) || duration <= 0) {
+      el.textContent = String(target);
+      return true;
+    }
+    var started = null;
+    var request = tickerFrame();
+    function step(now) {
+      if (started === null) started = now;
+      var elapsed = now - started - delay;
+      if (elapsed < 0) { request(step); return; }
+      var progress = Math.min(1, elapsed / duration);
+      var eased = 1 - Math.pow(1 - progress, 3);   /* the "out" curve */
+      el.textContent = String(Math.round(from + (target - from) * eased));
+      if (progress < 1) { request(step); return; }
+      el.textContent = String(target);
+    }
+    request(step);
+    return true;
+  }
+
+  window.lkTicker = {
+    set: tickerSet,
+    isFull: function () { return motionMode() === "full"; },
+  };
+
+  /* ② the flame clusters (tasks.md 8.4 ② / 17.8): the class only — the
+     ignition is a CSS keyframe, the clusters stagger by 80 ms. */
+  function setFlames(root, litCount) {
+    if (!root || !root.querySelectorAll) return 0;
+    var flames = root.querySelectorAll(".lk-flame");
+    var lit = Number(litCount) || 0;
+    Array.prototype.forEach.call(flames, function (flame, index) {
+      var on = index < lit;
+      flame.classList.toggle("is-lit", on);
+      /* The stagger is a delay, not a start state: the start state stays
+         inside the keyframes. */
+      flame.style.animationDelay = on ? (index * FLAME_STAGGER_MS) + "ms" : "";
+    });
+    return flames.length;
+  }
+
+  window.lkFlame = { set: setFlames };
+
+  /* ③ the progress band (tasks.md 8.4 ③ / 17.4): the static style is already
+     the final one (scaleX 1); `is-filled` replays the growth keyframe. */
+  function fillProgressBand(root) {
+    if (!root || !root.querySelectorAll) return 0;
+    var bands = root.querySelectorAll(".lk-progress");
+    Array.prototype.forEach.call(bands, function (band) {
+      /* The markup carries `is-filled` so that the band's static style is its
+         final style; the growth is replayed here, when the completion surface
+         appears — without it the keyframe would have run while the section
+         was still hidden. */
+      band.classList.remove("is-filled");
+      void band.offsetWidth;          /* let the removal land before the replay */
+      band.classList.add("is-filled");
+    });
+    return bands.length;
+  }
+
+  window.lkProgress = { fill: fillProgressBand };
+
+  /* ④ the streak state machine (decisions.md A-58): the **one** implementation
+     of the streak feedback — count / three tiers / growth / break / reset /
+     banner / flames.  `practice-flow.js` and `paper-practice.js` used to carry
+     a copy each; that is the "one component in two shapes" disease (F-1) with
+     two instances of it.
+
+     This API owns the state machine only.  **The verdict source stays in the
+     flow** — the quick-practice flow reads the micro-quiz verdict, the Paper
+     flow reads the `verdict` of the submit payload — so this side only turns
+     a verdict into feedback; the verdict semantics do not move.
+
+     The thresholds are the ones both flows already used, item by item:
+     TIER_HOT 30 · FLAME_CAP 10 · STAGGER 80 ms · STEP 40 ms ·
+     BANNER_EVERY 5 · BREAK_OVER 4.  */
+  var STREAK_TIER_HOT = 30;         /* the third tier starts here */
+  var STREAK_FLAME_CAP = 10;        /* at most ten flame clusters */
+  var STREAK_FLAME_STAGGER_MS = 80; /* per-cluster ignition delay */
+  var STREAK_FLAME_STEP_MS = 40;    /* per-cluster extinguish delay */
+  var STREAK_BANNER_EVERY = 5;      /* the banner fires on every multiple of five */
+  var STREAK_BREAK_OVER = 4;        /* a break above four must be shown plainly */
+  /* the banner's total run (motion-spec §6.2's `duration`): 700 ms for the
+     5-streak tier, 900 ms for the ≥10 tier — the same numbers the stylesheet
+     gives `lk-combo-in` / `lk-combo-out`. */
+  var BANNER_HOLD_MS = 700;
+  var BANNER_HOLD_LARGE_MS = 900;
+
+  function streakTierOf(count) {
+    if (count <= 0) return 0;
+    return count >= STREAK_TIER_HOT ? 2 : 1;
+  }
+
+  function streakCreate(options) {
+    var settings = options || {};
+    var host = settings.root;
+    var count = 0;
+    /* the pending exit of the banner (the downgraded tiers only) */
+    var bannerTimer = null;
+
+    /* The card is replaced as a whole on every render, so the parts are
+       looked up by class at the moment they are needed — never cached. */
+    function part(selector) {
+      var element = typeof host === "function" ? host() : host;
+      if (!element || typeof element.querySelector !== "function") return null;
+      return element.querySelector(selector);
+    }
+
+    function setNumber(value, from) {
+      var ticker = part(".lk-ticker");
+      if (!ticker) return;
+      if (window.lkTicker && typeof window.lkTicker.set === "function") {
+        try {
+          window.lkTicker.set(ticker, value, { from: from == null ? value : from });
+          return;
+        } catch (error) {
+          /* The shared ticker is absent — the figure still has to be right. */
+        }
+      }
+      ticker.textContent = String(value);
+    }
+
+    function showBanner(bannerCount) {
+      var banner = part(".lk-combo-banner");
+      if (!banner) return;
+      var number = banner.querySelector ? banner.querySelector(".lk-combo-banner__count") : null;
+      if (number) number.textContent = String(bannerCount);
+      /* The tier difference is carried by this one semantic class only. */
+      banner.classList.toggle("is-large", bannerCount >= STREAK_BANNER_EVERY * 2);
+      banner.classList.add("is-on");
+      /* ---- the exit in the downgraded tiers (motion-spec §7.2 row 18) ----
+         The exit is a CSS animation (`lk-combo-out` with a `forwards` fill),
+         and the downgraded gate switches the animation off ⇒ without this
+         half the banner would stay on screen for ever.  So in a downgraded
+         tier the exit is a `setTimeout` instead — the banner shows at once
+         (its terminal state) and disappears when the hold is over.
+         ⚠️ The terminal state has to be **the same** as the animated tier's:
+           there the banner keeps `is-on` and its opacity is 0 ⇒ here only the
+           opacity is written, `is-on` stays where it is (taking it off would
+           make the two tiers' terminal states differ). */
+      if (bannerTimer) {
+        window.clearTimeout(bannerTimer);
+        bannerTimer = null;
+      }
+      if (motionMode() !== "full") {
+        var hold = bannerCount >= STREAK_BANNER_EVERY * 2
+          ? BANNER_HOLD_LARGE_MS : BANNER_HOLD_MS;
+        banner.style.opacity = "";
+        bannerTimer = window.setTimeout(function () {
+          bannerTimer = null;
+          if (banner.parentNode) banner.style.opacity = "0";
+        }, hold);
+      }
+    }
+
+    function html() {
+      var slots = Math.min(count, STREAK_FLAME_CAP);
+      var flames = "";
+      for (var i = 0; i < slots; i += 1) {
+        flames += "<span class='lk-flame is-lit' style='animation-delay:"
+          + (i * STREAK_FLAME_STAGGER_MS) + "ms'>"
+          + "<span class='lk-flame-off'></span><span class='lk-flame-on'></span></span>";
+      }
+      var tier = streakTierOf(count);
+      return "<span class='lk-streak"
+        + (tier === 2 ? " is-hot" : tier === 1 ? " is-warm" : "")
+        + "' data-lk-streak-tier='" + tier + "'>"
+        + "<span class='lk-flames' aria-hidden='true'>" + flames + "</span>"
+        + "<span class='lk-ticker' data-value='" + count + "' aria-label='连对 "
+        + count + "'>" + count + "</span></span>"
+        /* one banner: 5 in a row / 10 in a row … share the same DOM and the same
+           animation, the figure is the parameter */
+        + "<span class='lk-combo-banner' aria-hidden='true'>"
+        + "<span class='lk-combo-banner__count'>" + count + "</span></span>";
+    }
+
+    function growStreak(before) {
+      setNumber(count, before);
+      if (count > 0 && count % STREAK_BANNER_EVERY === 0) showBanner(count);
+    }
+
+    function breakStreak(before, loud) {
+      var flames = part(".lk-flames");
+      var lit = count;
+      /* cluster by cluster: from the newest one, 40 ms apart (the extinguish is
+         a pure opacity transition) */
+      for (var remaining = lit - 1; remaining >= 0; remaining -= 1) {
+        (function (left) {
+          setTimeout(function () {
+            if (flames && window.lkFlame && typeof window.lkFlame.set === "function") {
+              window.lkFlame.set(flames, left);
+            }
+          }, (lit - 1 - left) * STREAK_FLAME_STEP_MS);
+        })(remaining);
+      }
+      count = 0;
+      setNumber(0, before);
+      if (!loud) return;
+      /* a break above four must be shown plainly: one horizontal shake of
+         ≤4 px / 160 ms, never a screen-wide shake */
+      var counter = part(".lk-streak");
+      if (!counter) return;
+      counter.classList.add("lk-error-nudge");
+      counter.style.animation = "lk-error-nudge 160ms var(--ease-standard) both";
+    }
+
+    /* the verdict fork: right → count + 1; wrong above four → shown plainly and
+       zeroed; any other wrong answer → zeroed.  The verdict semantics do not
+       move — the flow decides what a verdict is, this side only reacts to it. */
+    function judge(verdict) {
+      if (verdict !== true && verdict !== false) return null;
+      var before = count;
+      var breaking = false;
+      if (verdict === true) {
+        count += 1;
+      } else if (count > STREAK_BREAK_OVER) {
+        /* on a break the count stays for a moment, so the flames can go out
+           one by one before it returns to zero */
+        breaking = true;
+      } else {
+        count = 0;
+      }
+      return { before: before, breaking: breaking, correct: verdict === true };
+    }
+
+    function apply(landed) {
+      if (!landed) return;
+      if (landed.breaking) breakStreak(landed.before, true);
+      else if (landed.correct) growStreak(landed.before);
+      else setNumber(0, landed.before);
+    }
+
+    return {
+      count: function () { return count; },
+      reset: function () { count = 0; },
+      html: html,
+      judge: judge,
+      apply: apply,
+    };
+  }
+
+  window.lkStreak = { create: streakCreate };
+
+  /* ---------- the lamp transition (tasks.md 8.7 / 12.5 · motion-spec §4) ----------
+     Four stages: lean out (140 ms) → light up (140–220 ms) → the ripple
+     spreads (140–590 ms) → the skin is swapped (590 ms) → retract and clear
+     (590–700 ms).
+
+     The ripple carries the **target** theme's ground colour and it is written
+     at the *start* of the transition — one frame later and the old colour
+     flashes for a frame (tasks.md 12.5).  The ripple is a ground layer: it
+     reads `--surface-base` (the page ground), never a card token that changes
+     with the theme (decisions.md A-1).  All three layers are decoration:
+     `pointer-events: none`, and the ripple stays below the content.  */
+
+  var LAMP_SWAP_MS = 590;
+  var LAMP_CLEAN_MS = 700;
+  var lampAsset = null;
+  var lampRun = null;
+
+  function lampAssetText() {
+    if (!lampAsset) {
+      lampAsset = fetch("/static/assets/motion/lamp.svg")
+        .then(function (response) { return response.ok ? response.text() : ""; })
+        .catch(function () { return ""; });
+    }
+    return lampAsset;
+  }
+
+  /* The ground colour of a theme: `--surface-base` is one name with two value
+     sets, so the target theme is set for a moment and read back — inside the
+     same task, so nothing flashes (motion-spec §4.2). */
+  function themeBase(theme) {
+    var root = document.documentElement;
+    if (!root || !window.getComputedStyle) return "";
+    var previous = root.getAttribute("data-theme");
+    root.setAttribute("data-theme", theme === "night" ? "night" : "");
+    var value = window.getComputedStyle(root).getPropertyValue("--surface-base").trim();
+    if (previous === null) root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", previous);
+    return value;
+  }
+
+  function runLampTransition(nextTheme) {
+    /* A second switch while the first is still running replaces it: the
+       pending swap of the older run must not land after the newer one. */
+    if (lampRun) lampRun.cancel();
+    lampRun = null;
+    /* The downgraded tiers never build the three layers: the theme is simply
+       swapped (motion-spec §4.6). */
+    if (motionMode() !== "full") {
+      applyTheme(nextTheme);
+      return;
+    }
+    var ripple = document.createElement("div");
+    ripple.className = "lk-ripple";
+    var glow = document.createElement("div");
+    glow.className = "lk-ripple-glow";
+    var lamp = document.createElement("div");
+    lamp.className = "lk-lamp";
+    /* The target ground colour goes in at the start of the transition.  The
+       stylesheet reads `--ripple-base`; that name is written on the layer that
+       reads it — the layer is removed at the end of the transition, so the
+       value never outlives it and cannot go stale on a later theme change. */
+    var base = themeBase(nextTheme);
+    ripple.style.setProperty("--ripple-base", base);
+    document.body.appendChild(ripple);
+    document.body.appendChild(glow);
+    document.body.appendChild(lamp);
+    lampAssetText().then(function (svg) {
+      if (svg && lamp.parentNode) lamp.innerHTML = svg;
+    });
+    /* ① lean out, ② light up, ③ ripple, ⑥ retract — the stylesheet carries
+       the delays, so the classes go on at once.
+       ⚠️ `is-in` = 「这一轮结束时灯要收回」：收回的关键帧由样式表的
+       `animation-delay: 590ms` 锚在 motion-spec §4.3 时序表的 ⑥ 行
+       （590–700ms），与涟漪层的 `is-clear` 同一套约定 ⇒ 灯在 700ms
+       被移除前是「收好的」，不是「突然消失」。 */
+    lamp.classList.add("is-out", "is-lit", "is-in");
+    ripple.classList.add("is-on", "is-clear");
+    glow.classList.add("is-on", "is-clear");
+    var swapTimer = null;
+    var cleanTimer = null;
+    function removeLayers() {
+      [ripple, glow, lamp].forEach(function (layer) {
+        if (layer.parentNode) layer.parentNode.removeChild(layer);
+      });
+    }
+    var run = {
+      cancel: function () {
+        if (swapTimer) window.clearTimeout(swapTimer);
+        if (cleanTimer) window.clearTimeout(cleanTimer);
+        removeLayers();
+      },
+    };
+    lampRun = run;
+    /* ④ skin swap: the ripple has covered the ground colour by now. */
+    swapTimer = window.setTimeout(function () {
+      applyTheme(nextTheme);
+    }, LAMP_SWAP_MS);
+    /* ⑤⑥ retract and clear — the terminal state is clean. */
+    cleanTimer = window.setTimeout(function () {
+      removeLayers();
+      if (lampRun === run) lampRun = null;
+    }, LAMP_CLEAN_MS);
+  }
+
+  window.lkTheme = {
+    effective: effectiveTheme,
+    apply: applyTheme,
+    transition: runLampTransition,
+  };
+
+  /* ---------- the two-tier celebration (tasks.md 8.8 / 17.4 / 17.6) ----------
+     A-29: the milestone tier has exactly **two** conditions — the round
+     finished fully correct, or it completes a chapter for the first time.
+     No proxy measure (such as "better than last time") may stand in for
+     them: its comparison scope does not exist in the contract.  The ordinary
+     tier never mounts the burst or the paper flutter.  */
+
+  var celebrationArmedAt = 0;
+  var celebrationFacts = null;
+
+  /* The two-condition judgment — the single place that decides the tier. */
+  function isMilestoneRound(facts) {
+    if (!facts) return false;
+    if (facts.chapterFirstCompletion === true) return true;
+    var total = Number(facts.total);
+    var correct = Number(facts.correct);
+    if (!isFinite(total) || !isFinite(correct)) return false;
+    return total > 0 && correct >= total;
+  }
+
+  /* The facts of the round are read from the completion surface itself: the
+     server writes `data-lk-total` / `data-lk-correct` / `data-lk-chapter-first`
+     on it.  A module that holds the round may hand the facts over instead
+     (`window.lkCelebrate.setFacts`).  Without facts the round stays in the
+     ordinary tier — the burst and the paper flutter are milestone only. */
+  function completionFacts(surface) {
+    var facts = celebrationFacts;
+    if (surface && surface.dataset) {
+      var data = surface.dataset;
+      if (data.lkTotal != null || data.lkCorrect != null) {
+        facts = {
+          total: Number(data.lkTotal) || 0,
+          correct: Number(data.lkCorrect) || 0,
+          chapterFirstCompletion: data.lkChapterFirst === "true",
+        };
+      } else if (data.lkChapterFirst === "true") {
+        facts = { total: 0, correct: 0, chapterFirstCompletion: true };
+      }
+    }
+    return facts || null;
+  }
+
+  /* The figures of the completion surface roll up to their values: a bare
+     number, or a slot that names its value in `data-lk-value` /
+     `data-lk-count`.  A slot that carries anything else (a unit, a label) is
+     left alone — its text is never rewritten. */
+  function rollCompletionFigures(surface) {
+    if (!surface || !surface.querySelectorAll) return 0;
+    var figures = surface.querySelectorAll("[data-lk-value], [data-lk-count], .lk-ticker");
+    var rolled = 0;
+    Array.prototype.forEach.call(figures, function (figure, index) {
+      var declared = figure.getAttribute("data-lk-value");
+      if (declared == null) declared = figure.getAttribute("data-lk-count");
+      var text = String(figure.textContent == null ? "" : figure.textContent).trim();
+      var target;
+      if (declared != null) target = Number(declared);
+      else if (/^\d+$/.test(text)) target = Number(text);
+      else return;
+      if (!isFinite(target)) return;
+      rolled += 1;
+      tickerSet(figure, target, { from: 0, delay: index * TICKER_STAGGER_MS });
+    });
+    return rolled;
+  }
+
+  /* The milestone anchor: the place the burst and the paper flutter hang in.
+     It is a decoration layer — it never sits over the primary action. */
+  function celebrationAnchor(surface) {
+    if (!surface || !surface.querySelector) return null;
+    return surface.querySelector("[data-lk-celebrate-anchor]")
+      || surface.querySelector(".lk-celebrate-anchor")
+      || surface.querySelector("#paper-milestone-anchor")
+      || surface.querySelector(".lk-milestone-anchor")
+      || surface.querySelector("#paper-completion-stats")
+      || surface;
+  }
+
+  /* The burst and the paper flutter are created here and nowhere else: the
+     ordinary tier never has them in the document at all (tasks.md 8.8).
+
+     The paper flutter is drawn the way the group-9 illustrations are drawn
+     (assets/empty/*.svg): a pale wash plus an ink line, round caps and
+     joins, stroke widths 1.5 / 2, the same asset tokens.  Three small shapes
+     — a thin strip, a round chip and a triangle — take turns.  No bitmap, no
+     sprite, no image sequence; the shapes are inline SVG strings, so the
+     gradient rule of the authority table (gradients only inside a drawing)
+     holds by construction: there is no gradient at all here. */
+  var CONFETTI_SPOTS = [
+    [8, 12], [18, 26], [28, 8], [38, 30], [47, 14], [56, 26],
+    [65, 8], [74, 22], [83, 12], [91, 28], [14, 40], [60, 38],
+  ];
+
+  var CONFETTI_STRIP = "M 10.4 4.6 C 11.7 4 13.3 4 14.6 4.7 "
+    + "C 14.2 10 13.6 15 13.2 19.5 C 12.1 19.9 11 19.9 10 19.4 "
+    + "C 10.5 14.8 10.9 9.8 10.4 4.6 Z";
+  var CONFETTI_CHIP = "M 19.2 12 C 19.2 15.7 16 18.6 12 18.6 "
+    + "C 8 18.6 4.8 15.7 4.8 12 C 4.8 8.3 8 5.4 12 5.4 "
+    + "C 16 5.4 19.2 8.3 19.2 12 Z";
+  var CONFETTI_TRIANGLE = "M 12.4 4.2 C 14 7.6 16.4 11.4 18.4 15.2 "
+    + "C 18.8 16 18.6 16.8 17.8 17 L 6.6 17.4 C 5.8 17.4 5.4 16.6 5.9 15.8 "
+    + "C 8 12 10.2 8 12.4 4.2 Z";
+
+  function confettiShape(kind) {
+    var wash = kind === 1
+      ? "color-mix(in oklab, var(--asset-ground-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"
+      : "color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))";
+    var path = kind === 0 ? CONFETTI_STRIP : kind === 1 ? CONFETTI_CHIP : CONFETTI_TRIANGLE;
+    var width = kind === 0 ? "1.5" : "2";
+    return "<svg viewBox='0 0 24 24' class='asset asset-confetti' "
+      + "xmlns='http://www.w3.org/2000/svg' aria-hidden='true' focusable='false'>"
+      + "<g stroke-linecap='round' stroke-linejoin='round'>"
+      + "<g class='asset-confetti__wash'><path d='" + path + "' fill='" + wash + "'/></g>"
+      + "<g class='asset-confetti__line' fill='none' stroke='var(--asset-ink, #2a2620)'>"
+      + "<path d='" + path + "' stroke-width='" + width + "'/></g>"
+      + "</g></svg>";
+  }
+
+  function mountMilestoneBurst(surface) {
+    var anchor = celebrationAnchor(surface);
+    if (!anchor) return null;
+    /* The burst is positioned absolutely, so the anchor needs a positioning
+       context.  This is layout, not an animation start state. */
+    if (window.getComputedStyle && window.getComputedStyle(anchor).position === "static") {
+      anchor.style.position = "relative";
+    }
+    var burst = document.createElement("div");
+    /* The geometric burst is a **ring** that spreads and fades: the
+       stylesheet draws it as a 2px outline with a fully round radius
+       (`.lk-celebrate-burst`), and the keyframe scales it out while the
+       opacity goes up and down again — a ring, never a filled block
+       (tasks.md 17.7). */
+    burst.className = "lk-celebrate-burst";
+    /* A-38: the burst carries the cue hook.  A-53: the hook marks the burst
+       only — the milestone sound itself is driven by the tier decision (see
+       `celebrateCompletion`), so it lands in the downgraded tier too, where
+       no burst is drawn at all. */
+    burst.setAttribute("data-lk-cue", "milestone");
+    anchor.appendChild(burst);
+    return { burst: burst, pieces: [], anchor: anchor };
+  }
+
+  function mountConfetti(mounted) {
+    if (!mounted || !mounted.anchor) return;
+    CONFETTI_SPOTS.forEach(function (spot, index) {
+      var piece = document.createElement("div");
+      piece.className = "lk-confetti";
+      /* The stylesheet's chip is a plain colour block; the shape and its size
+         are the drawing's, so the block is emptied here — the placement and
+         the fall animation still come from the stylesheet.  These are static
+         declarations, not animation start states. */
+      piece.style.background = "none";
+      piece.style.width = "16px";
+      piece.style.height = "16px";
+      piece.style.left = spot[0] + "%";
+      piece.style.top = spot[1] + "%";
+      piece.innerHTML = confettiShape(index % 3);
+      mounted.anchor.appendChild(piece);
+      mounted.pieces.push(piece);
+    });
+  }
+
+  function clearMilestone(mounted) {
+    if (!mounted) return;
+    if (mounted.burst && mounted.burst.parentNode) mounted.burst.parentNode.removeChild(mounted.burst);
+    mounted.pieces.forEach(function (piece) {
+      if (piece.parentNode) piece.parentNode.removeChild(piece);
+    });
+    mounted.pieces = [];
+  }
+
+  /* The celebration itself: the ordinary tier rolls the figures and fills the
+     progress band; the milestone tier adds the burst (400 ms — the same beat
+     as the milestone cue) and the paper flutter (800 ms). */
+  function celebrateCompletion(surface) {
+    var target = surface || document.getElementById("paper-completion");
+    if (!target) return;
+    var milestone = isMilestoneRound(completionFacts(target));
+    window.setTimeout(function () {
+      rollCompletionFigures(target);
+      fillProgressBand(target);
+    }, 150);
+    if (!milestone) return;
+    /* A-53: the milestone cue rides on the **tier decision**, not on the
+       burst element.  The burst is decoration, and a downgraded tier draws
+       no burst at all — the sound is a channel of its own, so the downgraded
+       tier still sounds (the ordinary tier never reaches this line). */
+    window.setTimeout(function () {
+      if (window.lkSfx && typeof window.lkSfx.playCue === "function") {
+        window.lkSfx.playCue("milestone");
+      }
+    }, 400);
+    /* A downgraded tier does not draw the burst or the paper flutter at all
+       (motion-spec §7.2 row 14). */
+    if (motionMode() !== "full") return;
+    var mounted = null;
+    /* The burst goes up at 400 ms — the same beat as the milestone cue
+       (tasks.md 10.6). */
+    window.setTimeout(function () {
+      mounted = mountMilestoneBurst(target);
+    }, 400);
+    /* The paper flutter starts at 700 ms, so that the 800 ms frame of the
+       storyboard catches it at its peak; it falls for `--dur-ceremony`
+       (700 ms) and is cleared afterwards, which leaves a clean end state. */
+    window.setTimeout(function () {
+      mountConfetti(mounted);
+    }, 700);
+    window.setTimeout(function () {
+      clearMilestone(mounted);
+    }, 1600);
+  }
+
+  window.lkCelebrate = {
+    isMilestone: isMilestoneRound,
+    setFacts: function (facts) { celebrationFacts = facts || null; },
+    play: celebrateCompletion,
+  };
 
   function renderMath(root) {
     var spans = (root || document).querySelectorAll(".math");
@@ -440,7 +1286,12 @@
       var heading = line.match(/^\s*(#{1,3})\s+(.+?)\s*#*\s*$/);
       if (heading) {
         flushParagraph(); closeList();
-        out.push("<h" + heading[1].length + ">" + richInline(heading[2]) + "</h" + heading[1].length + ">");
+        // Body headings start at h2: h1 belongs to the page title, so the
+        // body never competes with the shell (design.md D-6). The server
+        // uses the same rule, and tests/test_markdown_render_parity.py holds
+        // the two renderers to it character for character.
+        var level = heading[1].length + 1;
+        out.push("<h" + level + ">" + richInline(heading[2]) + "</h" + level + ">");
         return;
       }
       var unordered = line.match(/^\s*[-*+]\s+(.+)$/);
@@ -507,6 +1358,298 @@
       saveSetting("runningSendAction", action);
     });
   }
+
+  /* ---------- the settings view ---------- */
+
+  /* The settings view is a middle-column page of the same workspace, so it
+     travels the same navigation path as the other views and the Agent rail
+     stays mounted across the switch (design.md D-9).  The left control opens
+     it and closes it again; closing returns to the view it replaced. */
+  var settingsReturnUrl = null;
+
+  function settingsViewOpen() {
+    return layout.dataset.page === "settings";
+  }
+
+  function openSettingsView() {
+    settingsReturnUrl = window.location.href;
+    navigateMiddle("/w/" + WS + "/settings");
+  }
+
+  function closeSettingsView() {
+    navigateMiddle(settingsReturnUrl || ("/w/" + WS + "/practice"));
+  }
+
+  function renderSettingsToggle() {
+    var toggle = document.getElementById("setting-view-toggle");
+    if (!toggle) return;
+    var open = settingsViewOpen();
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.classList.toggle("active", open);
+  }
+
+  function bindSettingsViewToggle() {
+    var toggle = document.getElementById("setting-view-toggle");
+    if (!toggle) return;
+    toggle.addEventListener("click", function (event) {
+      event.preventDefault();
+      if (settingsViewOpen()) closeSettingsView();
+      else openSettingsView();
+    });
+  }
+
+  function renderAppearanceValues() {
+    var theme = effectiveTheme();
+    var themeBox = document.getElementById("setting-theme");
+    var themeValue = document.getElementById("setting-theme-value");
+    if (themeBox) themeBox.checked = theme === "night";
+    if (themeValue) themeValue.textContent = theme === "night" ? "夜纸" : "暖纸";
+
+    var face = effectiveReadingFace();
+    var faceValue = document.getElementById("setting-face-value");
+    if (faceValue) faceValue.textContent = face === "sans" ? "无衬线" : "衬线";
+    Array.prototype.forEach.call(
+      document.querySelectorAll("input[name='setting-face']"),
+      function (input) { input.checked = input.value === face; }
+    );
+
+    var mode = motionMode();
+    var motionBox = document.getElementById("setting-motion");
+    var motionValue = document.getElementById("setting-motion-value");
+    if (motionBox) motionBox.checked = mode === "full";
+    if (motionValue) {
+      motionValue.textContent = mode === "full" ? "完整" : (mode === "weak" ? "弱动效" : "直切");
+    }
+
+    var soundBox = document.getElementById("setting-sound");
+    var soundValue = document.getElementById("setting-sound-value");
+    var soundOn = soundEnabled();
+    if (soundBox) soundBox.checked = soundOn;
+    if (soundValue) soundValue.textContent = soundOn ? "开" : "关";
+  }
+
+  function mountSettingsView() {
+    var themeBox = document.getElementById("setting-theme");
+    var motionBox = document.getElementById("setting-motion");
+    var soundBox = document.getElementById("setting-sound");
+    var closeButton = document.getElementById("settings-close");
+
+    if (themeBox) {
+      themeBox.addEventListener("change", function () {
+        var theme = themeBox.checked ? "night" : "paper";
+        saveSetting("theme", theme);
+        /* The theme change is carried by the lamp transition (tasks.md 8.7);
+           the preference is stored first, so the theme is the same whether
+           the transition plays or the tier is downgraded. */
+        runLampTransition(theme);
+        renderAppearanceValues();
+      });
+    }
+    Array.prototype.forEach.call(
+      document.querySelectorAll("input[name='setting-face']"),
+      function (input) {
+        input.addEventListener("change", function () {
+          if (!input.checked) return;
+          saveSetting("readingFace", input.value);
+          applyReadingFace(input.value);
+          renderAppearanceValues();
+        });
+      }
+    );
+    if (motionBox) {
+      motionBox.addEventListener("change", function () {
+        saveSetting("motion", motionBox.checked);
+        applyMotion();
+        renderAppearanceValues();
+      });
+    }
+    if (soundBox) {
+      soundBox.addEventListener("change", function () {
+        if (window.lkSfx) window.lkSfx.setEnabled(soundBox.checked);
+        else saveSetting("sound", soundBox.checked);
+        renderAppearanceValues();
+      });
+    }
+    if (closeButton) {
+      closeButton.addEventListener("click", function () { closeSettingsView(); });
+    }
+    renderAppearanceValues();
+  }
+
+  bindSettingsViewToggle();
+  applyTheme(effectiveTheme());
+  applyReadingFace(effectiveReadingFace());
+  applyMotion();
+
+  /* ---------- key feedback cues ----------
+   * Four contract events carry a cue: an answer judged correct, an answer
+   * judged wrong, a finished round and a milestone (openspec
+   * changes/workbench-visual-language-v2, spec requirement "Key feedback
+   * audio cues").  Nothing else may sound.
+   *
+   * The cues themselves live in sfx.js.  The shell's script list belongs to
+   * pages.py, so the module is pulled in here and the triggers are wired only
+   * once it is there.  A cue may only follow a judgment the learner just
+   * caused, so each trigger is armed by the gesture it belongs to — the
+   * submit, or the pick that judges on the spot, by mouse or by keyboard
+   * (A-102) — and disarmed as soon as it fires; re-rendering an old answer
+   * stays silent.
+   *
+   * A-53: the milestone cue is not wired here — it rides on the tier
+   * decision in `celebrateCompletion`, so the downgraded tier sounds too.
+   */
+
+  var CUE_ARM_WINDOW_MS = 10000;
+  var VERDICT_SELECTOR = ".micro-verdict";
+  var verdictArmedAt = 0;
+  var completionArmedAt = 0;
+
+  function ancestorWithId(node, id) {
+    var current = node;
+    while (current && current.nodeType === 1) {
+      if (current.id === id) return current;
+      current = current.parentNode;
+    }
+    return null;
+  }
+
+  /* The other gesture that carries a verdict: a choice that judges on the
+     spot.  In the paper flow a single-choice / yes-no item is judged the
+     moment its option is picked, so that pick is the gesture the verdict
+     belongs to — it has to arm the cue exactly like the submit button does,
+     or the sound lands apart from the bounce (decisions.md A-102).
+     Only the paper flow judges on selection: the practice flow judges at its
+     own submit button, and a multiple-choice item is judged at the paper's
+     submit button too.  Only the input itself counts: while an answered
+     paper is read back the options are disabled, so they cannot be picked,
+     and a read-back never sounds. */
+  function judgesOnSelection(node) {
+    if (!node || node.nodeType !== 1) return false;
+    if (node.tagName !== "INPUT" || node.type !== "radio") return false;
+    if (!node.hasAttribute || !node.hasAttribute("data-paper-choice")) return false;
+    return !!ancestorWithId(node, "paper-options");
+  }
+
+  /* The keyboard reaches the same choice without a click: the arrow keys
+     move the selection inside a radio group, and the browser reports that
+     as a change — some engines also report a click for it, some do not.  So
+     the change arms the cue as well, on the same one-shot arm: a mouse pick
+     arrives as a click *and* a change, both write the same value, and the
+     cue still fires exactly once. */
+  layout.addEventListener("change", function (event) {
+    var target = event.target;
+    if (!target) return;
+    if (!judgesOnSelection(target)) return;
+    verdictArmedAt = Date.now();
+  }, true);
+
+  /* The click gate hangs off the layout element, the root of the workbench
+     shell: every control that can judge an answer lives inside it. */
+  layout.addEventListener("click", function (event) {
+    var target = event.target;
+    if (!target) return;
+    /* A cue belongs to the judgment or the completion caused by the learner's
+       most recent interaction: the gesture that judges (a submit, or a pick
+       that judges on the spot) arms it, any other click cancels it, so
+       re-reading an old answer stays silent. */
+    if (ancestorWithId(target, "answer-submit")
+        || ancestorWithId(target, "paper-item-submit")
+        || judgesOnSelection(target)) {
+      verdictArmedAt = Date.now();
+    } else {
+      verdictArmedAt = 0;
+    }
+    if (ancestorWithId(target, "paper-final-submit")) {
+      completionArmedAt = Date.now();
+      /* The celebration rides on the same gesture: it belongs to the round
+         that this submit ends, not to every later look at the completion
+         surface (tasks.md 8.8: the celebration waits for the response). */
+      celebrationArmedAt = Date.now();
+    } else {
+      completionArmedAt = 0;
+      celebrationArmedAt = 0;
+    }
+  }, true);
+
+  function cueArmed(armedAt) {
+    return Date.now() - armedAt < CUE_ARM_WINDOW_MS;
+  }
+
+  function cueVerdict(node) {
+    if (!cueArmed(verdictArmedAt)) return;
+    var classes = node.classList;
+    if (!classes) return;
+    var ok = classes.contains("ok");
+    if (!ok && !classes.contains("bad")) return;
+    verdictArmedAt = 0;
+    if (ok) {
+      window.lkSfx.playCue("correct");
+    } else {
+      window.lkSfx.playCue("wrong");
+    }
+  }
+
+  function cueInspect(node) {
+    if (!node || node.nodeType !== 1) return;
+    var verdicts = [];
+    if (node.matches && node.matches(VERDICT_SELECTOR)) verdicts.push(node);
+    if (node.querySelectorAll) {
+      verdicts = verdicts.concat(Array.prototype.slice.call(
+        node.querySelectorAll(VERDICT_SELECTOR)));
+    }
+    verdicts.forEach(cueVerdict);
+  }
+
+  function wireKeyFeedbackCues() {
+    if (!window.lkSfx || typeof window.lkSfx.playCue !== "function") return;
+
+    var middlePage = document.getElementById("middle-page");
+    if (middlePage && window.MutationObserver) {
+      var observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
+          Array.prototype.slice.call(mutation.addedNodes).forEach(cueInspect);
+        });
+      });
+      observer.observe(middlePage, { childList: true, subtree: true });
+    }
+
+    var completion = document.getElementById("paper-completion");
+    if (completion && window.MutationObserver) {
+      var wasVisible = !completion.hidden
+        && !(completion.classList && completion.classList.contains("hidden"));
+      var completionObserver = new MutationObserver(function () {
+        var visible = !completion.hidden
+          && !(completion.classList && completion.classList.contains("hidden"));
+        if (visible && !wasVisible && cueArmed(completionArmedAt)) {
+          completionArmedAt = 0;
+          window.lkSfx.playCue("complete");
+        }
+        wasVisible = visible;
+      });
+      completionObserver.observe(completion, {
+        attributes: true,
+        attributeFilter: ["class", "hidden"],
+      });
+    }
+  }
+
+  function loadSfxModule() {
+    return new Promise(function (resolve) {
+      var script = document.createElement("script");
+      script.src = "/static/sfx.js";
+      script.async = false;
+      script.onload = function () { resolve(true); };
+      script.onerror = function () { resolve(false); };
+      /* A script inserted into the document runs wherever it is placed, and
+         the layout element is the one element every page of the shell has. */
+      layout.appendChild(script);
+    });
+  }
+
+  loadSfxModule().then(function (loaded) {
+    if (!loaded) return;
+    wireKeyFeedbackCues();
+  });
 
   var mobileNavToggle = document.getElementById("mobile-nav-toggle");
   var mobileAiToggle = document.getElementById("mobile-ai-toggle");
@@ -2224,7 +3367,7 @@
         return;
       }
       if (!(aiProviders || []).length) {
-        goalStatus("暂无可用 Agent。请先配置一个提供方，或手动填写字段。");
+        goalStatus("暂无可用 Agent。请先配置一个提供方。");
         return;
       }
       if (aiSendPending) {
@@ -2233,7 +3376,7 @@
       }
       if (!aiConversation) {
         if (typeof aiShowProviderPicker === "function") aiShowProviderPicker();
-        goalStatus("请先在右侧选择 Agent 开始对话，再点一次「让 Agent 填」。");
+        goalStatus("请先在右侧选择 Agent，再点一次「让 Agent 代填」。");
         return;
       }
       var body = aiContextBody(text);
@@ -2490,7 +3633,7 @@
         } else if (accepted.status === "failed" || accepted.status === "cancelled") {
           item.status = "failed";
           item.turn_id = accepted.turn_id;
-          item.error = accepted.error || "Agent did not complete this turn";
+          item.error = accepted.error || "Agent 未能完成";
           if (typeof accepted.content === "string" && item.body) {
             item.body.message = accepted.content;
           }
@@ -2620,7 +3763,7 @@
   function aiPaperApprovalDetails(host, approval, fallbackProposedIds) {
     var paperId = approval.practice_set_id || "";
     var title = approval.title || paperId;
-    aiPaperText(host, "p", "ai-paper-approval-paper", "Paper：" + title
+    aiPaperText(host, "p", "ai-paper-approval-paper", "试卷：" + title
       + (paperId && title !== paperId ? "（" + paperId + "）" : ""));
     var added = Array.isArray(approval.added_problem_ids) ? approval.added_problem_ids : [];
     var removed = Array.isArray(approval.removed_problem_ids) ? approval.removed_problem_ids : [];
@@ -2638,7 +3781,7 @@
     aiPaperOrder(host, "更新后顺序", proposedIds);
     if (approval.resets_progress) {
       aiPaperText(host, "p", "ai-paper-approval-impact",
-        "将清除这张 Paper 未完成练习中的进度（当前已完成 "
+        "将清除这张试卷未完成练习中的进度（当前已完成 "
           + Number(approval.completed_items || 0) + " 项）和草稿 "
           + Number(approval.draft_items || 0) + " 份；历史作答与评分保留。");
     } else if (approval.status !== "invalid") {
@@ -2669,11 +3812,11 @@
     }
     card.innerHTML = "";
     aiPaperText(card, "strong", "ai-paper-approval-history-title",
-      "Agent 提议更新 Paper · " + (approval.title || action.practice_set_id || "现有试卷"));
+      "Agent 提议更新试卷 · " + (approval.title || action.practice_set_id || "现有试卷"));
     aiPaperText(card, "p", "ai-paper-approval-history-status", aiPaperActionStatus(approval));
     if (approval.status === "invalid") {
       aiPaperText(card, "p", "ai-paper-approval-impact",
-        "这个提议无法应用：" + (approval.error || "请检查目标 Paper 或题目。"));
+        "这个提议无法应用：" + (approval.error || "请检查目标试卷或题目。"));
       if (Array.isArray(action.problem_ids)) aiPaperOrder(card, "提议顺序", action.problem_ids);
       return;
     }
@@ -2755,7 +3898,7 @@
       notice = null;
     }
     if (status) status.textContent = notice ? notice.text
-      : "确认前不会修改 Paper；批准或取消后，队列仍需手动继续。";
+      : "确认前不会修改试卷；批准或取消后，队列仍需手动继续。";
     if (details) aiPaperApprovalDetails(details, current);
     if (approve) approve.disabled = inFlight || unknown;
     if (cancel) cancel.disabled = inFlight || unknown;
@@ -2816,7 +3959,7 @@
         aiPaperApprovalNotice = {
           conversation_id: conversationId, turn_id: approval.turn_id,
           practice_set_id: approval.practice_set_id, revision: responseApproval.revision,
-          text: "Paper 或练习进度已变化。请核对下面的最新影响，再次点击「"
+          text: "试卷或练习进度已变化。请核对下面的最新影响，再次点击「"
             + (decision === "approve" ? "批准更新" : "取消更新") + "」。",
         };
         aiRenderPaperApproval(responseApproval);
@@ -2830,7 +3973,7 @@
         aiPaperApprovalNotice = {
           conversation_id: conversationId, turn_id: approval.turn_id,
           practice_set_id: approval.practice_set_id, revision: approval.revision,
-          text: "正在重新读取 Paper 状态；在核对完成前不会再次提交。",
+          text: "正在重新读取试卷状态；在核对完成前不会再次提交。",
         };
       }
       return null;
@@ -2858,7 +4001,7 @@
           aiPaperApprovalNotice = {
             conversation_id: conversationId, turn_id: approval.turn_id,
             practice_set_id: approval.practice_set_id, revision: approval.revision,
-            text: "上次操作未能确认；当前 Paper 仍待确认。请核对影响后重试。",
+            text: "上次操作未能确认；当前试卷仍待确认。请核对影响后重试。",
           };
         }
         return record;
@@ -2908,7 +4051,7 @@
     }
     if (status) {
       status.textContent = approvalPending
-        ? "Paper 更新待确认；批准或取消后，仍需手动继续队列。"
+        ? "试卷更新待确认；批准或取消后，仍需手动继续队列。"
         : paused
         ? "队列已暂停；继续后会按顺序发送。"
         : pending.length ? "当前回复结束后按顺序发送；列表中的消息尚未开始。" : "";
@@ -3014,7 +4157,7 @@
         aiOutboxAction(actions, "立即发送", function () {
           if (!aiMutationIsCurrent(context)) return;
           if (approvalPending) {
-            aiSetStatus("Paper 更新待确认；请先处理审批，再立即发送。");
+            aiSetStatus("试卷更新待确认；请先处理审批，再立即发送。");
             return;
           }
           post("/ai/sessions/" + encodeURIComponent(context.conversation_id) + "/turns/"
@@ -3342,7 +4485,7 @@
 
   function aiPostTurn(body, existingOutbox, preserveQueueAction) {
     if (!aiConversation || aiSendPending) {
-      return Promise.reject(new Error("a message is already being submitted"));
+      return Promise.reject(new Error("一条消息正在发送中"));
     }
     var requestBody = Object.assign({}, body || {});
     if (!preserveQueueAction) {
@@ -3414,7 +4557,7 @@
   function aiAdd(html, cls) {
     var div = document.createElement("div");
     div.className = "msg " + (cls || "ai");
-    div.innerHTML = "<div class='rich-text'>" + html + "</div>";
+    div.innerHTML = "<div class='wb-reading'>" + html + "</div>";
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     renderMath(div);
@@ -3430,7 +4573,7 @@
       aiStreamingMessage.content = "";
     }
     aiStreamingMessage.content += text;
-    aiStreamingMessage.innerHTML = "<div class='rich-text'>"
+    aiStreamingMessage.innerHTML = "<div class='wb-reading'>"
       + richText(aiStreamingMessage.content) + "</div>";
     messages.scrollTop = messages.scrollHeight;
     renderMath(aiStreamingMessage);
@@ -3749,7 +4892,7 @@
     var title = card.querySelector(".check-card-title");
     var detail = card.querySelector(".check-card-detail");
     var assets = detail && detail.dataset ? detail.dataset.assets : "";
-    if (title) title.textContent = "Check 入库已回滚";
+    if (title) title.textContent = "入库已回滚";
     if (detail) {
       detail.textContent = "批次 " + batchId + " 已整批回滚"
         + (assets ? "（撤销 " + assets + "）" : "") + "，池中不再包含该批内容。";
@@ -3788,7 +4931,7 @@
       return;
     }
     if (!result.batch_id) return;
-    var single = aiAddCheckCard("Check 入库完成", aiResultDetail(result), result.batch_id);
+    var single = aiAddCheckCard("入库完成", aiResultDetail(result), result.batch_id);
     var line = single ? single.querySelector(".check-card-detail") : null;
     if (line) line.dataset.assets = aiAssetSummary(result.counts || {});
     // A reopened card shows the batch's current state, not the state at the time
@@ -3799,7 +4942,7 @@
   }
 
   function aiAddMultiBatchCard(result, batches) {
-    var card = aiAddCheckCard("Check 入库完成", aiMultiBatchDetail(result, batches), null);
+    var card = aiAddCheckCard("入库完成", aiMultiBatchDetail(result, batches), null);
     if (!card) return null;
     var body = card.children[0];
     batches.forEach(function (batch) {
@@ -3906,15 +5049,15 @@
 
     var approval = {
       title: "整批回滚 " + batchId,
-      reason: "这是低可逆性的内容变更，需要你明确确认。",
-      impact: "该批写入的内容会从学习池撤销。",
+      reason: "内容变更不可撤销，需要你确认。",
+      impact: "这批内容会从池中删除。",
       approveLabel: "确认回滚",
     };
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.confirm
         && AgentUISurfaces.confirm(approval, executeRollback)) {
       return;
     }
-    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？该批全部内容行将从池中撤销。")) return;
+    if (window.confirm && !window.confirm("整批回滚 " + batchId + "？这批内容会从池中删除。")) return;
     executeRollback();
   }
 
@@ -4217,7 +5360,7 @@
     } else if (data.turn.status === "failed") {
       aiUpdateOutbox(aiConversation, aiCurrentSubmissionId, {
         status: "failed", turn_id: data.turn.turn_id || aiTurn,
-        error: data.turn.error || "Agent did not complete this turn",
+        error: data.turn.error || "Agent 未能完成",
       });
       aiCurrentSubmissionId = "";
       aiTurn = null;
@@ -4231,7 +5374,7 @@
     } else if (data.turn.status === "cancelled") {
       aiUpdateOutbox(aiConversation, aiCurrentSubmissionId, {
         status: "failed", turn_id: data.turn.turn_id || aiTurn,
-        error: "This turn was cancelled",
+        error: "本轮已取消",
       });
       aiCurrentSubmissionId = "";
       aiTurn = null;
@@ -4564,35 +5707,135 @@
     });
   }
 
+  mountCompletionCelebration();
+  }
+
+  /* The celebration is armed by the final submit and fires when the response
+   * has arrived and the completion surface shows up (tasks.md 8.8: the
+   * celebration waits for the response, the request sequence is unchanged).
+   * The observer is bound per mount because the surface is rebuilt with the
+   * middle page. */
+  function mountCompletionCelebration() {
+    var surface = document.getElementById("paper-completion");
+    if (!surface || !window.MutationObserver) return;
+    var wasVisible = !surface.hidden
+      && !(surface.classList && surface.classList.contains("hidden"));
+    var observer = new MutationObserver(function () {
+      var visible = !surface.hidden
+        && !(surface.classList && surface.classList.contains("hidden"));
+      if (visible && !wasVisible && cueArmed(celebrationArmedAt)) {
+        celebrationArmedAt = 0;
+        celebrateCompletion(surface);
+      }
+      wasVisible = visible;
+    });
+    observer.observe(surface, { attributes: true, attributeFilter: ["class", "hidden"] });
   }
 
   function fitAiColumn() {
     if (!layout) return;
-    if (window.innerWidth < 1024) layout.setAttribute("data-ai-collapsed", "1");
+    /* 右栏出栅格的阈值 = **1279**（`layout-spec.md` §7.7 C 档 / §1.2 配套规则 5）。
+       旧值 1024 是「D 档单栏」那套口径：C 档（1024–1279）右栏已经是抽屉，
+       阈值若留在 1024，会出现「CSS 模板是单列 + 行内变量仍是三栏」的混合态。 */
+    if (window.innerWidth < 1280) layout.setAttribute("data-ai-collapsed", "1");
     else layout.removeAttribute("data-ai-collapsed");
   }
 
-  var leftWidth = 280;
-  var rightWidth = 420;
+  /* ---------- three-column geometry (design.md D-10 / tasks.md 13.2 / 13.3
+     / layout-spec.md §1.2–§1.4 / §7.1) ----------
+     The stylesheet owns the geometry: the tier's column widths, their clamp
+     ceilings and the grid template all live in CSS (`--shell-col-*` on
+     `#layout`, tiered by the four `@media` blocks).  This side reads those
+     numbers and writes the two width values only.  The old inline
+     `grid-template-columns` overrode the stylesheet on every paint, so the CSS
+     rule was dead code and the two files each carried their own numbers. */
+
+  var COLUMN_MIN = { left: 200, right: 360 };
   var middleMinWidth = 420;
-  function applyColumnWidths() {
-    if (!layout || !layout.style) return;
-    if (window.innerWidth < 1024) {
-      layout.style.gridTemplateColumns = "";
-      return;
-    }
-    var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
-    leftWidth = Math.max(200, Math.min(480, Math.min(leftWidth, available - rightWidth)));
-    rightWidth = Math.max(360, Math.min(560, Math.min(rightWidth, available - leftWidth)));
-    layout.style.gridTemplateColumns = leftWidth + "px minmax(420px, 1fr) " + rightWidth + "px";
+  /* The learner's own drag, per side.  `null` = "not dragged yet", so the
+     column follows the tier's default; a drag pins the raw pointer value
+     until the tier's range clamps it (layout-spec.md §1.4 gives a drag range
+     per tier). */
+  var userWidth = { left: null, right: null };
+
+  /* Every number comes from the stylesheet (layout-spec.md §1.2 rule 3 —
+     "JS 读 CSS 常量，不把 200/480/360/560 写死在 JS 里"), so the geometry
+     has exactly one source of truth (spec delta "One geometry decides the
+     columns").  The middle column's 420px floor stays a constant because
+     this side is the one that maintains the invariant (§1.3 R1). */
+  function columnBounds() {
+    var bounds = { left: 280, right: 420, leftMin: 200, leftMax: 480,
+                   rightMin: 360, rightMax: 560 };
+    if (!window.getComputedStyle || !layout) return bounds;
+    var style = window.getComputedStyle(layout);
+    var read = function (name) { return parseFloat(style.getPropertyValue(name)); };
+    var values = {
+      left: read("--shell-col-left"), right: read("--shell-col-right"),
+      leftMin: read("--shell-col-left-min"), leftMax: read("--shell-col-left-max"),
+      rightMin: read("--shell-col-right-min"), rightMax: read("--shell-col-right-max")
+    };
+    Object.keys(values).forEach(function (key) {
+      if (values[key] > 0) bounds[key] = values[key];
+    });
+    return bounds;
   }
 
-  function bindColumnResizer(id, side, min, max) {
+  /* The clamp, in the order the spec's own verifiable table is built on
+     (layout-spec.md §1.5「极端位置表（拖拽边界，逐格可验）」):
+     the RIGHT column is clamped against the current left width first, then
+     the LEFT column against the clamped right width — the middle column
+     keeps its 420px floor in every cell of that table.
+     ⚠️ §1.3 R2's prose says「先左后右」, which does not reproduce §1.5's
+     cells (at 1440 with both columns at their maximum it shrinks the LEFT
+     column to 460 instead of the RIGHT one to 540) — the table and the
+     §1.2 acceptance list are the measurable statements, so they win here;
+     the disagreement is registered as contract drift CD-179. */
+  function resolveColumns(rawLeft, rawRight, width, bounds) {
+    var right = Math.max(bounds.rightMin, Math.min(bounds.rightMax,
+      Math.min(rawRight, width - rawLeft - middleMinWidth)));
+    var left = Math.max(bounds.leftMin, Math.min(bounds.leftMax,
+      Math.min(rawLeft, width - right - middleMinWidth)));
+    return { left: left, right: right };
+  }
+
+  function applyColumnWidths() {
+    if (!layout || !layout.style) return;
+    var bounds = columnBounds();
+    var width = layout.clientWidth || window.innerWidth;
+    var rawLeft = userWidth.left != null ? userWidth.left : bounds.left;
+    if (window.innerWidth < 1024) {
+      /* D 档及以下：左右两栏都是覆盖层抽屉（§7.5）⇒ 栅格里没有列，
+         宽度全由 CSS 的抽屉规则给，这里把行内值清干净。 */
+      layout.style.removeProperty("--wb-col-left");
+      layout.style.removeProperty("--wb-col-right");
+      return;
+    }
+    if (window.innerWidth < 1280) {
+      /* C 档：右栏已出栅格（§7.4）⇒ 只有左栏还夹在中栏旁边，
+         而 C 档的中栏**没有底线**（§1.4）⇒ 只按本档的拖拽区间夹左栏。 */
+      var leftOnly = Math.max(bounds.leftMin, Math.min(bounds.leftMax, rawLeft));
+      layout.style.setProperty("--wb-col-left", leftOnly + "px");
+      layout.style.removeProperty("--wb-col-right");
+      return;
+    }
+    var rawRight = userWidth.right != null ? userWidth.right : bounds.right;
+    var columns = resolveColumns(rawLeft, rawRight, width, bounds);
+    /* The stylesheet's write point for these two values (workbench.css
+       `#layout`): it forwards them to the authoritative --shell-col-* pair. */
+    layout.style.setProperty("--wb-col-left", columns.left + "px");
+    layout.style.setProperty("--wb-col-right", columns.right + "px");
+  }
+
+  /* A column can only be dragged while it is still a grid column:
+     the right rail leaves the grid at 1279 (C 档) and the left rail at 1023
+     (D 档).  `liveFrom` is that tier's lower bound. */
+  function bindColumnResizer(id, side, min, liveFrom) {
     var handle = document.getElementById(id);
     var layout = document.getElementById("layout");
-    if (!handle || !layout || window.innerWidth < 1024) return;
+    if (!handle || !layout) return;
     var dragging = false;
     handle.addEventListener("pointerdown", function (event) {
+      if (window.innerWidth < liveFrom) return;
       dragging = true;
       layout.classList.add("is-resizing");
       if (handle.setPointerCapture) handle.setPointerCapture(event.pointerId);
@@ -4603,19 +5846,17 @@
       if (!dragging) return;
       var rect = layout.getBoundingClientRect();
       var width = side === "left" ? event.clientX - rect.left : rect.right - event.clientX;
-      var available = (layout.clientWidth || window.innerWidth) - middleMinWidth;
-      var cap = side === "left" ? available - rightWidth : available - leftWidth;
-      width = Math.max(min, Math.min(max, Math.min(width, cap)));
-      if (side === "left") leftWidth = width;
-      else rightWidth = width;
+      /* 记录**原始**指针宽度；夹取统一交给 applyColumnWidths（一处口径，
+         避免拖拽路径与初始路径各算一套）。 */
+      userWidth[side] = Math.max(min, width);
       applyColumnWidths();
     });
     function stop() { if (!dragging) return; dragging = false; document.body.style.cursor = ""; layout.classList.remove("is-resizing"); }
     handle.addEventListener("pointerup", stop);
     handle.addEventListener("pointercancel", stop);
   }
-  bindColumnResizer("left-resizer", "left", 200, 480);
-  bindColumnResizer("right-resizer", "right", 360, 560);
+  bindColumnResizer("left-resizer", "left", COLUMN_MIN.left, 1024);
+  bindColumnResizer("right-resizer", "right", COLUMN_MIN.right, 1280);
   fitAiColumn();
   applyColumnWidths();
   window.addEventListener("resize", function () { fitAiColumn(); applyColumnWidths(); });
@@ -4686,7 +5927,7 @@
             + (goal.deadline ? "（" + escapeHtml(goal.deadline.slice(0, 10)) + "）" : "");
         }).join("、");
         calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted time-off-note'>本月之外或未排期：" + offLine + "。</p>");
+          "<p class='muted time-off-note'>本月之外或未设截止日期：" + offLine + " 个。</p>");
       }
       periods.sort(function (a, b) {
         return a.start - b.start || b.end - a.end
@@ -4799,7 +6040,7 @@
           + "</div><span class='bar-date'>" + label + "</span></div>";
       }).join("");
       workloadBars.innerHTML = bars
-        + (nonzero.length ? "" : "<p class='muted workload-empty'>未来 14 天暂无到期复习项。</p>");
+        + (nonzero.length ? "" : "<p class='muted workload-empty'>未来 14 天暂无到期复习项</p>");
       var heavyDays = days.filter(function (day) {
         return day.count >= heavyThreshold && day.count > 0;
       });
@@ -4827,7 +6068,7 @@
       renderBars(days);
       if (!goals.length) {
         calendarGrid.insertAdjacentHTML("afterend",
-          "<p class='muted'>还没有带截止日期的目标。</p>");
+          "<p class='muted'>暂无带截止日期的目标</p>");
       }
     }).catch(function () { /* the time view stays hidden on failure */ });
 
@@ -4875,6 +6116,8 @@
     mountPracticeViews();
     mountMiddlePageRender();
     timeViewDispose = mountTimeView();
+    mountSettingsView();
+    renderSettingsToggle();
     if (layout.dataset.objectType && layout.dataset.objectId) {
       recordRecent(layout.dataset.objectType, layout.dataset.objectId);
       aiRecordRecent(layout.dataset.objectType, layout.dataset.objectId);

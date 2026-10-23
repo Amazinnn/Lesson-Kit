@@ -1,0 +1,771 @@
+/* ============================================================================
+   _base.css — 基础版式层 · 定稿视觉 mockup 基座
+   ----------------------------------------------------------------------------
+   消费 `_tokens.css` 的 token，不新增 token 值。
+   本层回答四个问题：
+     ① 纸面怎么分层（底 / 卡 / 浮起 / 沉底，4 层，圆角 + 暖调柔影，零描边）
+     ② 文字怎么排（界面无衬线 / 阅读面衬线 / 等宽第三族；三族分工）
+     ③ 焦点怎么显（双环规则：外圈贴环境，内圈贴控件自身填色）
+     ④ 动效怎么动（时长 / 缓动档位 + reduced-motion 降级为状态直切）
+
+   权威依据：
+     openspec/changes/workbench-visual-language-v2/design-notes/night-paper-tokens.md
+       §1.1 主题属性挂 <html> · §2.6 动效 · §3.6 抬升 · §6 阴影在夜纸下的失效与替代
+       §8 焦点环形态（双环规则）· §7 插画与图标的反相规则
+     openspec/changes/workbench-visual-language-v2/design-notes/component-spec.md
+       §3.1 尺寸与最小点击区 · §3.2 焦点环 · §3.3 动效 · §3.4 纸面层级 · §3.6 冗余状态通道
+     openspec/changes/workbench-visual-language-v2/decisions.md
+       A-23 近黑深底退出内容块（沉底层 = 底色差 + 2px 结构线）
+       A-30 --surface-ink → --surface-code（近黑面只服务代码块）
+       A-35 主要动作控件用 --role-blue（近黑面不得用于产品控件）
+   ========================================================================= */
+
+
+/* ============================================================================
+   0. 复位与画布
+   ========================================================================= */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  /* 权威表 §1.1：底色挂 html，让画布（滚动条外溢区 / 地址栏）跟随主题，
+     不挂在 body 上，否则 html 自身仍是 UA 默认白。 */
+  background-color: var(--surface-base);
+  color: var(--ink-body);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--fs-body-lh);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--surface-base);
+  color: var(--ink-body);
+  font-weight: var(--fw-regular);
+}
+
+/* 滚动条跟随主题（不引入新色，用纸面与规则线的差） */
+* { scrollbar-color: var(--rule-control) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--rule-control);
+  border-radius: var(--r-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+img, svg { display: block; max-width: 100%; }
+
+::selection {
+  background: var(--role-blue-wash);
+  color: var(--ink-strong);
+}
+
+
+/* ============================================================================
+   1. 纸面层级（4 层）
+   权威表 §3.4（component-spec）/ §3.1（tokens）：
+     L0 底    --surface-base    无圆角、无影
+     L1 卡    --surface-card     12px 圆角 + --elev-1
+     L2 浮起  --surface-raised  12px 圆角 + --elev-3
+     L3 沉底  --mk-sunken       12px 圆角 + --elev-1 + 2px 单侧结构线
+   分层铁律：相邻两级靠圆角 + 柔影拉开，**不靠描边、不靠背景图案、不靠渐变**。
+
+   ⚠️ L3 **不再是近黑墨块**（decisions.md A-23 / A-35）：
+     近黑深底（`--surface-code`）已退出内容块，**只**留给代码块 / 等宽代码区；
+     内容块一律走「沉底 / sunken」层 —— 浅底深字（夜纸反向）+ 2px 单侧结构线。
+   ========================================================================= */
+.mk-l0 {
+  background: var(--surface-base);
+  color: var(--ink-body);
+}
+
+.mk-l1 {
+  background: var(--surface-card);
+  color: var(--ink-body);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+}
+
+.mk-l2 {
+  background: var(--surface-raised);
+  color: var(--ink-body);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-3);
+}
+
+/* 沉底层：内容块的底。边界靠「底色差 + 2px 单侧结构线」（A-23-4：
+   只靠底色差会与卡面分不开，所以两条同时给）。 */
+.mk-l3 {
+  position: relative;
+  background: var(--mk-sunken);
+  color: var(--ink-strong);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+}
+.mk-l3::before {
+  content: "";
+  position: absolute;
+  left: 0; top: var(--sp-3); bottom: var(--sp-3);
+  width: var(--lw-structure);
+  border-radius: var(--r-pill);
+  background: var(--rule-structure);
+}
+
+/* 无阴影卡（阅读面：内容本身是视觉锚点，不带装饰性投影） */
+.mk-l1-flat {
+  background: var(--surface-card);
+  color: var(--ink-body);
+  border-radius: var(--r-md);
+  box-shadow: none;
+}
+
+/* 分隔线：结构线 1px（装饰）/ 2px（结构）。分隔线不是描边。 */
+.mk-rule {
+  height: var(--lw-hair);
+  background: var(--rule-hair);
+  border: 0;
+  margin: 0;
+}
+
+.mk-rule-structure {
+  height: var(--lw-structure);
+  background: var(--rule-structure);
+  border: 0;
+  margin: 0;
+}
+
+
+/* ============================================================================
+   2. 圆角与抬升工具
+   ========================================================================= */
+.mk-radius-xs { border-radius: var(--r-xs); }
+.mk-radius-md { border-radius: var(--r-md); }
+.mk-radius-lg { border-radius: var(--r-lg); }
+.mk-radius-round { border-radius: var(--r-round); }
+.mk-radius-pill { border-radius: var(--r-pill); }
+
+.mk-elev-1 { box-shadow: var(--elev-1); }
+.mk-elev-2 { box-shadow: var(--elev-2); }
+.mk-elev-3 { box-shadow: var(--elev-3); }
+
+/* hover 浮起（--z-raised） */
+.mk-floatable {
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.mk-floatable:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-2);
+}
+
+
+/* ============================================================================
+   3. 排版 —— 三族分工
+   权威表 §2.4 + 收口基线「文字层级」行：
+     界面与标题 = 无衬线（--font-ui）
+     阅读面     = 衬线（--font-read），17px / 1.75 / 38em
+     等宽第三族 = 代码 / 编号 / 工具参数（--font-mono）
+   「界面 vs 书」的落差是基线本身，不是 bug。
+   ========================================================================= */
+.mk-ui {
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--fs-body-lh);
+}
+
+/* 阅读面：衬线 + 17px + 行高 30px（1.75）+ 行宽 38em + 单侧 2px 结构线 */
+.mk-reading {
+  font-family: var(--font-read);
+  font-size: var(--fs-reading);
+  line-height: var(--fs-reading-lh);
+  max-width: var(--measure);
+  color: var(--ink-body);
+}
+
+/* 阅读面 + 单侧结构线（PRODUCT-MANUAL.md:129-130 硬性要求，保留） */
+.mk-reading-rule {
+  border-left: var(--lw-structure) solid var(--rule-structure);
+  padding-left: var(--sp-5);
+}
+
+.mk-mono {
+  font-family: var(--font-mono);
+  font-size: var(--fs-meta);
+  line-height: var(--fs-meta-lh);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 标题层级（界面无衬线） */
+.mk-h1 {
+  font-family: var(--font-ui);
+  font-size: var(--fs-display);
+  line-height: var(--fs-display-lh);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-strong);
+  margin: 0;
+}
+.mk-h2 {
+  font-family: var(--font-ui);
+  font-size: var(--fs-title);
+  line-height: var(--fs-title-lh);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-strong);
+  margin: 0;
+}
+.mk-h3 {
+  font-family: var(--font-ui);
+  font-size: var(--fs-sub);
+  line-height: var(--fs-sub-lh);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-strong);
+  margin: 0;
+}
+.mk-hero {
+  font-family: var(--font-ui);
+  font-size: var(--fs-hero);
+  line-height: var(--fs-hero-lh);
+  font-weight: var(--fw-bold);
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 文字层级 */
+.mk-strong { color: var(--ink-strong); font-weight: var(--fw-semibold); }
+.mk-body   { color: var(--ink-body); }
+.mk-muted  { color: var(--ink-muted); }
+.mk-faint  { color: var(--ink-faint); }
+.mk-disabled { color: var(--ink-disabled); }
+
+.mk-meta {
+  font-size: var(--fs-meta);
+  line-height: var(--fs-meta-lh);
+  color: var(--ink-muted);
+}
+.mk-label {
+  font-size: var(--fs-label);
+  line-height: var(--fs-label-lh);
+  font-weight: var(--fw-medium);
+  color: var(--ink-faint);
+  letter-spacing: 0.02em;
+}
+.mk-micro {
+  font-size: var(--fs-micro);
+  line-height: var(--fs-micro-lh);
+  color: var(--ink-faint);
+}
+
+/* 链接：学习蓝 */
+.mk-link {
+  color: var(--role-blue);
+  text-decoration: none;
+  text-underline-offset: 3px;
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.mk-link:hover { text-decoration: underline; }
+
+/* 红色文字档（失败 / 阻塞）——用 --role-red-ink，不用 --role-red */
+.mk-red-ink { color: var(--role-red-ink); }
+
+
+/* ============================================================================
+   4. 焦点环 —— 双环规则（权威表 §8）
+     ① 默认控件（透明底 / 卡面底）：单圈 = 外圈色，outline-offset 2px，
+        偏移出的间隙露出本地表面，外圈因此始终与**周围表面**对比。
+     ② 角色填充控件（主按钮 / 当前选中块）：**双圈** —— 内圈 2px 贴控件自身填色，
+        外圈 2px 贴周围表面。两个相邻面都 ≥3:1。
+     ③ 不得用 `outline: none`。
+   ========================================================================= */
+:focus-visible {
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+  border-radius: inherit;
+}
+
+/* 卡面上的控件：内圈换成卡面纸色 */
+.mk-l1 :focus-visible,
+.mk-l2 :focus-visible,
+.mk-focus-on-card:focus-visible {
+  box-shadow: 0 0 0 var(--focus-width) var(--surface-card),
+              0 0 0 calc(var(--focus-width) * 2) var(--focus-outer);
+}
+
+/* 角色填充控件：内圈用 --focus-inner（浅=纸白 / 夜=深墨），外圈用外圈色 */
+.mk-focus-on-role:focus-visible {
+  box-shadow: 0 0 0 var(--focus-width) var(--focus-inner),
+              0 0 0 calc(var(--focus-width) * 2) var(--focus-outer);
+}
+
+/* 焦点光晕（可选档，用于需要更强的场景） */
+.mk-focus-halo:focus-visible {
+  box-shadow: 0 0 0 var(--focus-width) var(--focus-inner),
+              0 0 0 calc(var(--focus-width) * 2) var(--focus-outer),
+              var(--focus-halo);
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+
+/* ============================================================================
+   5. 按钮族
+   配额（component-spec §3.5）：主按钮 R1（蓝实心）· 次按钮 R0 · 文字按钮 R0/R1 · 图标按钮 R0/R1
+   圆角统一 12px（不因控件大小而变）。
+   ========================================================================= */
+.mk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;                /* 最小命中区 ≥ 44 × 44 */
+  padding: var(--sp-2) var(--sp-4);
+  border: 0;
+  border-radius: var(--r-md);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--fs-body-lh);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.mk-btn-primary {
+  background: var(--role-blue);
+  color: var(--ink-on-role);
+  box-shadow: var(--elev-1);
+}
+.mk-btn-primary:hover { background: var(--role-blue-press); }
+.mk-btn-primary:active { transform: translateY(1px); box-shadow: none; }
+
+.mk-btn-secondary {
+  background: var(--surface-card);
+  color: var(--ink-strong);
+  box-shadow: var(--elev-1);
+}
+.mk-btn-secondary:hover { background: var(--veil-hover); }
+.mk-btn-secondary:active { background: var(--veil-active); }
+
+.mk-btn-text {
+  background: transparent;
+  color: var(--ink-muted);
+}
+.mk-btn-text:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.mk-btn-text[aria-selected="true"],
+.mk-btn-text.is-active { color: var(--role-blue); }
+
+.mk-btn-icon {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+  background: transparent;
+  color: var(--ink-muted);
+  border: 0;                 /* 图标按钮：清掉 UA 默认边框（否则会露出一圈） */
+}
+.mk-btn-icon:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.mk-btn-icon.is-active { background: var(--role-blue-wash); color: var(--role-blue); }
+
+.mk-btn:disabled,
+.mk-btn[aria-disabled="true"] {
+  color: var(--ink-disabled);
+  cursor: not-allowed;
+  background: var(--surface-card);
+  box-shadow: none;
+  transform: none;
+}
+
+
+/* ============================================================================
+   6. 输入控件
+   唯一允许的描边：**控件边界**（例外 1，WCAG 1.4.11 要求 ≥3:1）。
+   ========================================================================= */
+.mk-input {
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border: var(--lw-hair) solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--fs-body-lh);
+}
+.mk-input::placeholder { color: var(--ink-faint); }
+.mk-input:focus-visible {
+  border-color: var(--focus-outer);
+  outline: var(--focus-width) solid var(--focus-outer);
+  outline-offset: var(--focus-offset);
+}
+
+/* 贴底大圆角输入区（Agent composer）——圆角统一 12px，
+   「大」体现在高度与内边距，不在圆角（decisions.md A-15）。 */
+.mk-composer {
+  min-height: 88px;
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--lw-hair) solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  color: var(--ink-body);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--fs-body-lh);
+  box-shadow: var(--elev-1);
+  transition:
+    border-color var(--dur-base) var(--ease-standard),
+    transform var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+.mk-composer:focus-visible {
+  border-color: var(--focus-outer);
+  transform: translateY(-2px);          /* 聚焦轻微抬起 */
+  box-shadow: var(--elev-2);
+}
+
+
+/* ============================================================================
+   7. 冗余状态通道 —— 颜色 + 几何（零文字）
+   component-spec §3.6 的 5 种几何，全部用 CSS 画，不引图标字体：
+     filled 实心圆 · ring 空心环 · half 左半填充 · dash 45° 斜杠 · cross 叉
+   另加第 6 种几何 **check 勾形**：**decisions.md A-20-3（2026-10-22 所有者裁决）**
+     「答对」不再用绿色（现状兼容例外 #1a7f37 / #e6f4ea 本轮移除），
+     也不再占蓝（蓝已给「当前选中」），改为 **中性墨 `--ink-strong` + 勾形**。
+   状态 →（色，几何）映射唯一：不得有两条状态共用同一组合。
+   ========================================================================= */
+.mk-dot {
+  --dot: var(--ink-disabled);
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-round);
+  flex: none;
+  color: var(--dot);
+  position: relative;
+}
+.mk-dot--blue   { --dot: var(--role-blue); }
+.mk-dot--yellow { --dot: var(--role-yellow-deep); } /* 点/线用标记档，不用面积档 */
+.mk-dot--red    { --dot: var(--role-red); }
+.mk-dot--mute   { --dot: var(--ink-disabled); }
+.mk-dot--check  { --dot: var(--ink-strong); }        /* 答对：中性墨 + 勾形（A-20-3） */
+
+.mk-dot--filled { background: currentColor; }
+.mk-dot--ring   { background: transparent; box-shadow: inset 0 0 0 2px currentColor; }
+.mk-dot--half   { background: transparent; box-shadow: inset -5px 0 0 0 currentColor; }
+.mk-dot--dash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  clip-path: polygon(38% 0, 50% 0, 12% 100%, 0 100%);
+}
+.mk-dot--cross::before,
+.mk-dot--cross::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 10px;
+  background: currentColor;
+  border-radius: var(--r-pill);
+}
+.mk-dot--cross::before { transform: translate(-50%, -50%) rotate(45deg); }
+.mk-dot--cross::after  { transform: translate(-50%, -50%) rotate(-45deg); }
+
+/* 勾形（A-20-3 新增几何：「答对」= 中性墨 + 勾形，绿色退出）
+   用两条边框折出一个 ✓，不引图标字体。 */
+.mk-dot--check::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5.4px;
+  height: 2.8px;
+  border-left: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  border-radius: 1px 0 0 0;
+  transform: translate(-70%, -70%) rotate(-45deg);
+}
+
+/* 徽标（红=阻塞计数） */
+.mk-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--sp-1);
+  border-radius: var(--r-pill);
+  background: var(--role-red);
+  color: var(--ink-on-role);
+  font-size: var(--fs-micro);
+  line-height: var(--fs-micro-lh);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 标签 / chip */
+.mk-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-xs);
+  background: var(--surface-base);
+  color: var(--ink-muted);
+  font-size: var(--fs-label);
+  line-height: var(--fs-label-lh);
+  font-weight: var(--fw-medium);
+}
+.mk-tag--blue   { background: var(--role-blue-wash);   color: var(--role-blue); }
+.mk-tag--red    { background: var(--role-red-wash);    color: var(--role-red-ink); }
+.mk-tag--yellow { background: var(--role-yellow-soft); color: var(--ink-on-warm); } /* 黄底取墨字 */
+
+
+/* ============================================================================
+   8. 进度条 / 分段进度（黄=连对 / 复习）
+   ========================================================================= */
+.mk-bar {
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--veil-active);
+  overflow: hidden;
+}
+.mk-bar__fill {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--role-blue);
+}
+.mk-bar__fill--warm { background: var(--role-yellow); } /* 黄色只承载面积，不承载文字 */
+
+/* 连对计数器三档：灰 → 黄 → 黄→蓝渐变 */
+.mk-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--surface-base);
+  color: var(--ink-muted);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.mk-streak--warm { background: var(--role-yellow); color: var(--ink-on-warm); }
+.mk-streak--hot {
+  background: linear-gradient(90deg, var(--role-yellow) 0%, var(--role-blue) 100%);
+  color: var(--ink-on-warm);
+}
+
+
+/* ============================================================================
+   9. 导航选中态 —— 整行圆角色块 + 左缘 3px 学习蓝结构轨
+   收口基线「左栏导航：选中态 = 整行圆角色块」；
+   openspec/specs/workbench-ui/spec.md「Redundant state cues」要求的
+   blue structural inset 由这条 3px 结构轨承担。
+   ========================================================================= */
+.mk-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  line-height: var(--fs-body-lh);
+  font-weight: var(--fw-regular);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.mk-nav-item:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.mk-nav-item.is-active {
+  background: var(--role-blue-wash);
+  color: var(--role-blue);
+  font-weight: var(--fw-semibold);
+}
+.mk-nav-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: var(--sp-2);
+  bottom: var(--sp-2);
+  width: 3px;
+  border-radius: var(--r-pill);
+  background: var(--role-blue);
+}
+
+
+/* ============================================================================
+   10. 图标容器 —— 彩色圆底色块（色源只用三角色）
+   圆底上的字形：浅色主题蓝/红用纸色、黄用深墨；夜纸三个圆底统一深墨。
+   ========================================================================= */
+.mk-icon-disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-round);
+  flex: none;
+  overflow: hidden;
+}
+.mk-icon-disc--blue   { background: var(--role-blue);   color: var(--ink-on-role); }
+.mk-icon-disc--yellow { background: var(--role-yellow); color: var(--ink-on-warm); }
+.mk-icon-disc--red    { background: var(--role-red);    color: var(--ink-on-role); }
+.mk-icon-disc--mute   { background: var(--surface-card); color: var(--ink-muted); box-shadow: var(--elev-1); }
+
+.mk-icon-disc svg { width: 26px; height: 26px; }
+
+/* 插画元素用色（同一套 SVG 换变量，暗色下自动反相） */
+.mk-art { color: var(--art-ink); }
+.mk-art-paper { fill: var(--art-paper); }
+.mk-art-wash-blue { fill: var(--art-wash-blue); }
+.mk-art-wash-yellow { fill: var(--art-wash-yellow); }
+.mk-art-wash-red { fill: var(--art-wash-red); }
+.mk-art-hl { fill: var(--art-highlight); }
+
+
+/* ============================================================================
+   11. 动效原语 + reduced-motion 降级
+   权威表 §2.6 / component-spec §3.3：
+     · 只动 transform / opacity（进度条的 width 除外）
+     · `prefers-reduced-motion: reduce` 下**一律降级为状态直切**
+   ========================================================================= */
+.mk-anim-rise {
+  animation: mk-rise var(--dur-slow) var(--ease-out) both;
+}
+@keyframes mk-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.mk-anim-fade {
+  animation: mk-fade var(--dur-slow) var(--ease-out) both;
+}
+@keyframes mk-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.mk-anim-pop {
+  animation: mk-pop var(--dur-scene) var(--ease-rebound) both;
+}
+@keyframes mk-pop {
+  0%   { opacity: 0; transform: scale(.92); }
+  60%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* 挤压回弹 5 段关键帧 17 / 33 / 83 / 167 / 217ms（总 517ms） */
+.mk-anim-snap {
+  animation: mk-snap 517ms var(--ease-snap) both;
+}
+@keyframes mk-snap {
+  0%   { transform: scale(1); }
+  17%  { transform: scale(.96, 1.03); }
+  33%  { transform: scale(1.02, .98); }
+  83%  { transform: scale(1.008, .994); }
+  167% { transform: scale(.997, 1.002); }
+  217% { transform: scale(1, 1); }
+  100% { transform: scale(1, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 降级 = 状态直切：去掉所有位移 / 缩放 / 渐变，只保留最终的静态态 */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+  .mk-anim-rise,
+  .mk-anim-fade,
+  .mk-anim-pop,
+  .mk-anim-snap { animation: none; opacity: 1; transform: none; }
+}
+
+
+/* ============================================================================
+   12. 骨架屏（灰块 + 微光扫过，装饰性占位，不承载信息）
+   ========================================================================= */
+.mk-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton-base);
+  border-radius: var(--r-xs);
+}
+.mk-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--skeleton-sheen) 50%,
+    transparent 100%);
+  transform: translateX(-100%);
+  animation: mk-sheen 1400ms var(--ease-standard) infinite;
+  pointer-events: none;
+}
+@keyframes mk-sheen {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+
+/* ============================================================================
+   13. 空态 —— 插画 + 一句 + 满宽主按钮（按钮文案就是动作）
+   ========================================================================= */
+.mk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-7) var(--sp-5);
+  text-align: center;
+}
+.mk-empty__art {
+  width: 128px;
+  height: 128px;
+  border-radius: var(--r-round);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mk-empty__art svg { width: 96px; height: 96px; }
+.mk-empty .mk-btn { min-width: 100%; justify-content: center; }
+
+
+/* ============================================================================
+   14. 通用布局工具（仅供 mockup 排版，不进产品）
+   ========================================================================= */
+.mk-row { display: flex; align-items: center; gap: var(--sp-3); }
+.mk-row--tight { gap: var(--sp-2); }
+.mk-col { display: flex; flex-direction: column; gap: var(--sp-3); }
+.mk-col--tight { gap: var(--sp-2); }
+.mk-spacer { flex: 1 1 auto; }
+.mk-wrap { flex-wrap: wrap; }
+.mk-center { display: flex; align-items: center; justify-content: center; }
+.mk-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

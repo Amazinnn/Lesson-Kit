@@ -1,0 +1,4781 @@
+{
+  "id": "M-5",
+  "title": "连对计数器三档",
+  "verdict": "PASS",
+  "detail": "三档的类名不同（3 种），文字 3 种",
+  "frames_ms": [
+    0,
+    250,
+    500
+  ],
+  "frameStates": [
+    {
+      "t": 0,
+      "file": "0000.png",
+      "states": {
+        ".lk-combo-banner": [
+          {
+            "text": "31",
+            "transform": "matrix(1, 0, 0, 1, -19.4062, 0)",
+            "opacity": "0",
+            "width": 39,
+            "height": 32,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-combo-banner",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-combo-banner__count": [
+          {
+            "text": "31",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 39,
+            "height": 22,
+            "display": "inline-block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-combo-banner__count",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-streak": [
+          {
+            "text": "31",
+            "transform": "none",
+            "opacity": "1",
+            "width": 232,
+            "height": 52,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(242, 236, 225)",
+            "cls": "lk-streak is-hot",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-flames": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 147,
+            "height": 16,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flames",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-flame": [
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          }
+        ],
+        ".lk-flame-on": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          }
+        ],
+        ".lk-flame-off": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          }
+        ],
+        ".lk-ticker": [
+          {
+            "text": "31",
+            "transform": "none",
+            "opacity": "1",
+            "width": 41,
+            "height": 44,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-ticker",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习查看本次答卷再练一次返回试卷列表",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "none",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card hidden",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习选择一份试卷先从试卷列表打开一份已保存的试",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 480,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "选择一份试卷先从试卷列表打开一份已保存的试卷。答案展示方式做",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 292,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          },
+          {
+            "text": "3131",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 52,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-streak"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272822930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 0, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-flame-ignite",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 250,
+      "file": "0250.png",
+      "states": {
+        ".lk-combo-banner": [
+          {
+            "text": "31",
+            "transform": "matrix(1, 0, 0, 1, -19.4062, 0)",
+            "opacity": "0",
+            "width": 39,
+            "height": 32,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-combo-banner",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-combo-banner__count": [
+          {
+            "text": "31",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 39,
+            "height": 22,
+            "display": "inline-block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-combo-banner__count",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-streak": [
+          {
+            "text": "31",
+            "transform": "none",
+            "opacity": "1",
+            "width": 232,
+            "height": 52,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(242, 236, 225)",
+            "cls": "lk-streak is-hot",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-flames": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 147,
+            "height": 16,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flames",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-flame": [
+          {
+            "text": "",
+            "transform": "matrix(1.01772, 0, 0, 1.01772, 0, -0.236291)",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "matrix(1.14977, 0, 0, 1.14977, 0, -1.99697)",
+            "opacity": "0.999622",
+            "width": 14,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(1.07816, 0, 0, 1.07816, 0, -1.04209)",
+            "opacity": "0.880262",
+            "width": 13,
+            "height": 17,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.643815, 0, 0, 0.643815, 0, 4.74913)",
+            "opacity": "0.156359",
+            "width": 8,
+            "height": 10,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          }
+        ],
+        ".lk-flame-on": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 14,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 13,
+            "height": 17,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 10,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          }
+        ],
+        ".lk-flame-off": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 14,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 13,
+            "height": 17,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 8,
+            "height": 10,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          }
+        ],
+        ".lk-ticker": [
+          {
+            "text": "31",
+            "transform": "none",
+            "opacity": "1",
+            "width": 41,
+            "height": 44,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-ticker",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习查看本次答卷再练一次返回试卷列表",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "none",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card hidden",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习选择一份试卷先从试卷列表打开一份已保存的试",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 480,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "选择一份试卷先从试卷列表打开一份已保存的试卷。答案展示方式做",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 292,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          },
+          {
+            "text": "3131",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 52,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-streak"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272822930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 0.981859, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 130,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-flame-ignite",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 500,
+      "file": "0500.png",
+      "states": {
+        ".lk-combo-banner": [
+          {
+            "text": "31",
+            "transform": "matrix(1, 0, 0, 1, -19.4062, 0)",
+            "opacity": "0",
+            "width": 39,
+            "height": 32,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-combo-banner",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-combo-banner__count": [
+          {
+            "text": "31",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 39,
+            "height": 22,
+            "display": "inline-block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-combo-banner__count",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-streak": [
+          {
+            "text": "31",
+            "transform": "none",
+            "opacity": "1",
+            "width": 232,
+            "height": 52,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(242, 236, 225)",
+            "cls": "lk-streak is-hot",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-flames": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 147,
+            "height": 16,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flames",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-flame": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(1.01202, 0, 0, 1.01202, 0, -0.160269)",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(1.13847, 0, 0, 1.13847, 0, -1.84622)",
+            "opacity": "1",
+            "width": 14,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(1.09748, 0, 0, 1.09748, 0, -1.29972)",
+            "opacity": "0.912465",
+            "width": 13,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.733058, 0, 0, 0.733058, 0, 3.55923)",
+            "opacity": "0.305097",
+            "width": 9,
+            "height": 12,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          },
+          {
+            "text": "",
+            "transform": "matrix(0.55, 0, 0, 0.55, 0, 6)",
+            "opacity": "0",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame is-lit"
+          }
+        ],
+        ".lk-flame-on": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 14,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 13,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 9,
+            "height": 12,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-flame-on"
+          }
+        ],
+        ".lk-flame-off": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 12,
+            "height": 16,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 14,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 13,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 9,
+            "height": 12,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "0.45",
+            "width": 7,
+            "height": 9,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(141, 133, 120)",
+            "cls": "lk-flame-off"
+          }
+        ],
+        ".lk-ticker": [
+          {
+            "text": "31",
+            "transform": "none",
+            "opacity": "1",
+            "width": 41,
+            "height": 44,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-ticker",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习查看本次答卷再练一次返回试卷列表",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "none",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card hidden",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习选择一份试卷先从试卷列表打开一份已保存的试",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 480,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "选择一份试卷先从试卷列表打开一份已保存的试卷。答案展示方式做",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 292,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          },
+          {
+            "text": "3131",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 52,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-streak"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272822930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-flame-ignite",
+        "lk-rise-in-12"
+      ]
+    }
+  ],
+  "frameFiles": [
+    "0000.png",
+    "0250.png",
+    "0500.png"
+  ],
+  "strip": "M-5-strip.png",
+  "animations": [
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "running",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "practice-streak"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 80,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 160,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 240,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 320,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 400,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 480,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 560,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 640,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 720,
+      "currentTime": 0,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 250,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 250,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 250,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 250,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 250,
+      "target": "practice-streak"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 80,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 160,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 240,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 320,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 400,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 480,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 560,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 640,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 720,
+      "currentTime": 250,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "practice-streak"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 80,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 160,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 240,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 320,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 400,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 480,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 560,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 640,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    },
+    {
+      "name": "lk-flame-ignite",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 720,
+      "currentTime": 500,
+      "target": "lk-flame is-lit"
+    }
+  ],
+  "terminalDifferences": [],
+  "terminalExtraDifferences": [],
+  "animatedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [
+      {
+        "text": "31",
+        "transform": "matrix(1, 0, 0, 1, -19.4062, 0)",
+        "opacity": "0",
+        "width": 39,
+        "height": 32,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-combo-banner"
+      }
+    ],
+    ".lk-combo-banner__count": [
+      {
+        "text": "31",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 39,
+        "height": 22,
+        "display": "inline-block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-combo-banner__count"
+      }
+    ],
+    ".lk-streak": [
+      {
+        "text": "31",
+        "transform": "none",
+        "opacity": "1",
+        "width": 232,
+        "height": 52,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(242, 236, 225)",
+        "cls": "lk-streak is-hot"
+      }
+    ],
+    ".lk-flames": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 147,
+        "height": 16,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flames"
+      }
+    ],
+    ".lk-flame": [
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      }
+    ],
+    ".lk-flame-on": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      }
+    ],
+    ".lk-flame-off": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      }
+    ],
+    ".lk-squash": [],
+    ".micro-verdict": [],
+    ".lk-ticker": [
+      {
+        "text": "31",
+        "transform": "none",
+        "opacity": "1",
+        "width": 41,
+        "height": 44,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-ticker"
+      }
+    ],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(61, 52, 37, 0.11)",
+        "cls": "lk-progress lk-progress--completion"
+      }
+    ],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-celebrate-anchor"
+      }
+    ],
+    ".lk-celebrate-burst": [],
+    ".lk-confetti": [],
+    ".paper-slice": [],
+    "#paper-completion": [
+      {
+        "text": "本轮完成完成练习查看本次答卷再练一次返回试卷列表",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "none",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "card lk-card hidden"
+      }
+    ],
+    "#paper-completion-stats": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-completion-stats"
+      }
+    ],
+    "#paper-dots": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-dots"
+      }
+    ],
+    ".paper-dot": [],
+    "#middle-page": [
+      {
+        "text": "学习 / 试卷练习选择一份试卷先从试卷列表打开一份已保存的试",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 480,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "学习 / 试卷练习",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "选择一份试卷先从试卷列表打开一份已保存的试卷。答案展示方式做",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 292,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content practice-content"
+      },
+      {
+        "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 22,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "practice-planning"
+      },
+      {
+        "text": "3131",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 52,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "practice-streak"
+      }
+    ],
+    ".workload-bars": [
+      {
+        "text": "23242526272822930310102030405",
+        "transform": "none",
+        "opacity": "1",
+        "width": 652,
+        "height": 184,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "workload-bars"
+      }
+    ],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      }
+    ],
+    ".calendar-day": [
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 5,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 8,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "10",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "11",
+        "transform": "none",
+        "opacity": "1",
+        "width": 10,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "12",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      }
+    ],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 27,
+        "height": 132,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "bar-fill"
+      }
+    ],
+    ".bar-column": []
+  },
+  "reducedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [
+      {
+        "text": "31",
+        "transform": "matrix(1, 0, 0, 1, -19.4062, 0)",
+        "opacity": "0",
+        "width": 39,
+        "height": 32,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-combo-banner"
+      }
+    ],
+    ".lk-combo-banner__count": [
+      {
+        "text": "31",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 39,
+        "height": 22,
+        "display": "inline-block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-combo-banner__count"
+      }
+    ],
+    ".lk-streak": [
+      {
+        "text": "31",
+        "transform": "none",
+        "opacity": "1",
+        "width": 232,
+        "height": 52,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(242, 236, 225)",
+        "cls": "lk-streak is-hot"
+      }
+    ],
+    ".lk-flames": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 147,
+        "height": 16,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flames"
+      }
+    ],
+    ".lk-flame": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame is-lit"
+      }
+    ],
+    ".lk-flame-on": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-flame-on"
+      }
+    ],
+    ".lk-flame-off": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "0.45",
+        "width": 12,
+        "height": 16,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(141, 133, 120)",
+        "cls": "lk-flame-off"
+      }
+    ],
+    ".lk-squash": [],
+    ".micro-verdict": [],
+    ".lk-ticker": [
+      {
+        "text": "31",
+        "transform": "none",
+        "opacity": "1",
+        "width": 41,
+        "height": 44,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-ticker"
+      }
+    ],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(61, 52, 37, 0.11)",
+        "cls": "lk-progress lk-progress--completion"
+      }
+    ],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-celebrate-anchor"
+      }
+    ],
+    ".lk-celebrate-burst": [],
+    ".lk-confetti": [],
+    ".paper-slice": [],
+    "#paper-completion": [
+      {
+        "text": "本轮完成完成练习查看本次答卷再练一次返回试卷列表",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "none",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "card lk-card hidden"
+      }
+    ],
+    "#paper-completion-stats": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-completion-stats"
+      }
+    ],
+    "#paper-dots": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-dots"
+      }
+    ],
+    ".paper-dot": [],
+    "#middle-page": [
+      {
+        "text": "学习 / 试卷练习选择一份试卷先从试卷列表打开一份已保存的试",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 480,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "学习 / 试卷练习",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "选择一份试卷先从试卷列表打开一份已保存的试卷。答案展示方式做",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 292,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content practice-content"
+      },
+      {
+        "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 22,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "practice-planning"
+      },
+      {
+        "text": "3131",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 52,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "practice-streak"
+      }
+    ],
+    ".workload-bars": [
+      {
+        "text": "23242526272822930310102030405",
+        "transform": "none",
+        "opacity": "1",
+        "width": 652,
+        "height": 184,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "workload-bars"
+      }
+    ],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      }
+    ],
+    ".calendar-day": [
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 5,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 8,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "10",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "11",
+        "transform": "none",
+        "opacity": "1",
+        "width": 10,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "12",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      }
+    ],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 27,
+        "height": 132,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "bar-fill"
+      }
+    ],
+    ".bar-column": []
+  }
+}

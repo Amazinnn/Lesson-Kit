@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>组件样式一览 v2 · 暖纸 / 夜纸并排</title>
+<link rel="icon" href="data:,">
+
+<!-- ⚠️ 产品真实 CSS：现状那一列永远是真的（不重写颜色 / 字号 / 圆角）
+     ⚠️ 相对路径以 styleboard-v2/ 为准：../../.. → 仓库根
+        （任务书写的是 ../../workbench/...，少一级 —— 按那个写会 404，
+          在 file:// 下会产生控制台错误，所以这里用正确的三级路径） -->
+<link rel="stylesheet" href="../../../../../../workbench/server/static/workbench.css">
+<link rel="stylesheet" href="../../../../../../workbench/server/static/agent-ui.css">
+
+<style id="sb-chrome">
+/* ==========================================================================
+   样式板自身的版式（**不是**产品样式）—— 只用产品 token，不硬编码色值
+   ========================================================================== */
+
+body.sb-parent {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-base);
+  color: var(--ink-body);
+  font-family: var(--font-ui);
+}
+
+/* ---------------- 顶部条 ---------------- */
+.sb-top {
+  flex: none;
+  padding: 10px 18px 12px;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--rule-hair);
+}
+.sb-top-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.sb-top h1 {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+.sb-top h1 span {
+  font-size: var(--fs-meta);
+  font-weight: 500;
+  color: var(--ink-faint);
+  margin-left: 8px;
+}
+.sb-top-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sb-btn {
+  height: auto;
+  min-height: 36px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  color: var(--ink-strong);
+  font-family: var(--font-ui);
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  cursor: pointer;
+}
+.sb-btn:hover { background: var(--surface-raised); }
+.sb-btn--primary {
+  background: var(--role-blue);
+  color: var(--ink-on-role);
+  border-color: var(--role-blue);
+}
+.sb-btn--primary:hover { background: var(--role-blue-press); }
+.sb-status {
+  font-size: var(--fs-label);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sb-lede {
+  margin: 6px 0 0;
+  font-size: var(--fs-label);
+  color: var(--ink-muted);
+  line-height: 18px;
+}
+.sb-lede code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-strong);
+}
+.sb-lede b { color: var(--ink-strong); }
+
+/* ---------------- 导出面板 ---------------- */
+.sb-export-panel {
+  margin-top: 10px;
+  border: 1px solid var(--rule-hair);
+  border-radius: var(--r-md);
+  background: var(--surface-base);
+  padding: 10px 12px;
+}
+.sb-export-panel summary {
+  cursor: pointer;
+  font-size: var(--fs-meta);
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+.sb-export-status {
+  margin-left: 10px;
+  font-size: var(--fs-label);
+  color: var(--ink-muted);
+}
+.sb-export-status.sb-ok { color: var(--role-blue); }
+.sb-export-status.sb-warn { color: var(--role-red-ink); }
+.sb-export-text {
+  display: block;
+  width: 100%;
+  height: 132px;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid var(--rule-control);
+  border-radius: var(--r-xs);
+  background: var(--surface-card);
+  color: var(--ink-body);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 18px;
+  resize: vertical;
+}
+
+/* ---------------- 两侧 ---------------- */
+.sb-panes {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 10px;
+}
+.sb-pane {
+  position: relative;
+  min-height: 0;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface-base);
+  box-shadow: var(--elev-1);
+}
+.sb-pane iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ==========================================================================
+   两侧内部的版式（frame body）
+   ========================================================================== */
+body.sb-frame {
+  height: auto;
+  min-height: 100%;
+  display: block;
+  background: var(--surface-base);
+  color: var(--ink-body);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.sb-frame-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 10px 16px 8px;
+  background: var(--surface-base);
+  border-bottom: 1px solid var(--rule-hair);
+}
+.sb-frame-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.sb-frame-title strong {
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+.sb-frame-sub {
+  font-size: var(--fs-label);
+  color: var(--ink-faint);
+}
+.sb-frame-sub code { font-family: var(--font-mono); font-size: 11px; }
+.sb-tokens {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.sb-token {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 11px;
+}
+.sb-token b { font-weight: 500; color: var(--ink-faint); }
+.sb-token code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-strong);
+}
+
+/* ---------------- 目录 ---------------- */
+.sb-toc {
+  margin: 12px 16px 4px;
+  border: 1px solid var(--rule-hair);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  padding: 8px 12px;
+}
+.sb-toc summary {
+  cursor: pointer;
+  font-size: var(--fs-meta);
+  font-weight: 600;
+  color: var(--ink-strong);
+}
+.sb-toc-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+  margin-top: 8px;
+}
+.sb-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.sb-toc li { margin: 0; }
+.sb-toc a {
+  display: block;
+  padding: 3px 0;
+  color: var(--ink-muted);
+  text-decoration: none;
+  font-size: var(--fs-label);
+  line-height: 18px;
+}
+.sb-toc a:hover { color: var(--ink-strong); }
+.sb-toc .sb-sec {
+  display: inline-block;
+  min-width: 44px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* ---------------- 章节 ---------------- */
+.sb-section { padding: 0 16px 40px; }
+.sb-section-title {
+  margin: 22px 0 4px;
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  color: var(--ink-strong);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.sb-section-title span {
+  font-size: var(--fs-label);
+  font-weight: 500;
+  color: var(--ink-faint);
+}
+.sb-section-lead {
+  margin: 0 0 12px;
+  font-size: var(--fs-label);
+  color: var(--ink-muted);
+  line-height: 20px;
+}
+
+/* ---------------- 组件 ---------------- */
+.sb-comp {
+  margin: 0 0 26px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--rule-hair);
+}
+.sb-comp-head { margin-bottom: 10px; }
+.sb-comp-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sb-sec {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  color: var(--ink-faint);
+}
+.sb-comp-title h3 {
+  margin: 0;
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+.sb-flag {
+  font-size: var(--fs-label);
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.sb-flag--ok { background: var(--role-blue-wash); color: var(--role-blue); }
+.sb-flag--gap { background: var(--role-yellow-soft); color: var(--ink-on-warm); }
+.sb-flag--none { background: var(--role-red-wash); color: var(--role-red-ink); }
+
+.sb-meta {
+  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+}
+.sb-meta > div { display: flex; align-items: baseline; gap: 6px; }
+.sb-meta dt {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin: 0;
+}
+.sb-meta dd {
+  margin: 0;
+  font-size: var(--fs-label);
+  color: var(--ink-strong);
+}
+.sb-meta code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--veil-hover);
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+}
+.sb-where { color: var(--ink-faint); font-family: var(--font-mono); font-size: 11px; margin-left: 6px; }
+.sb-inv {
+  margin: 6px 0 0;
+  font-size: var(--fs-label);
+  line-height: 20px;
+  color: var(--ink-muted);
+}
+.sb-inv code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-strong);
+}
+.sb-gap {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-left: 4px solid var(--role-yellow);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  font-size: var(--fs-label);
+  line-height: 20px;
+  color: var(--ink-body);
+}
+
+/* ---------------- 样品 ---------------- */
+.sb-samples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+.sb-sample {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  box-shadow: var(--elev-1);
+  padding: 10px;
+}
+.sb-sample--cur { background: var(--surface-base); box-shadow: inset 0 0 0 1px var(--rule-hair); }
+.sb-sample-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.sb-tag-cur, .sb-tag-var {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+}
+.sb-tag-cur { background: var(--surface-sunken); color: var(--ink-strong); }
+.sb-tag-var { background: var(--role-blue-wash); color: var(--role-blue); }
+.sb-src {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-faint);
+}
+.sb-stage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: var(--surface-base);
+  box-shadow: inset 0 0 0 1px var(--rule-hair);
+  min-height: 104px;
+  overflow: hidden;
+}
+.sb-stage--none { justify-content: center; }
+.sb-none {
+  font-size: var(--fs-label);
+  color: var(--ink-faint);
+  padding: 10px 14px;
+  border: 1px dashed var(--rule-hair);
+  border-radius: var(--r-md);
+}
+.sb-delta {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 18px;
+  color: var(--ink-muted);
+  flex: 1;
+}
+.sb-delta code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-strong);
+}
+.sb-pick {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 3px 10px 3px 6px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--rule-hair);
+  background: var(--surface-base);
+  font-size: 11px;
+  color: var(--ink-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.sb-pick:hover { border-color: var(--rule-control); color: var(--ink-strong); }
+.sb-pick input { accent-color: var(--role-blue); margin: 0; }
+.sb-pick:has(input:checked) {
+  background: var(--role-blue-wash);
+  border-color: var(--role-blue);
+  color: var(--role-blue);
+  font-weight: 600;
+}
+</style>
+</head>
+
+<body class="sb-parent">
+
+<header class="sb-top">
+  <div class="sb-top-row">
+    <h1>组件样式一览 v2<span>现状 + 候选并排 · 暖纸 / 夜纸</span></h1>
+    <div class="sb-top-actions">
+      <span class="sb-status" id="sb-status">—</span>
+      <button class="sb-btn" id="sb-clear" type="button">清空选择</button>
+      <button class="sb-btn sb-btn--primary" id="sb-export" type="button">★ 导出我的选择</button>
+    </div>
+  </div>
+  <p class="sb-lede">
+    左：<b>暖纸</b>（默认）　右：<b>夜纸</b>（<code>html[data-theme="night"]</code>，与设置视图同口径）。
+    「现状」那一列用的是<b>产品真实类名</b>，样式完全来自
+    <code>workbench/server/static/workbench.css</code> 与 <code>agent-ui.css</code> —— 样式板**不重写任何颜色 / 字号 / 圆角**。
+    候选全部用现有 token 实现在本页 <code>&lt;style&gt;</code> 块里，并带 <code>data-variant</code> 标记，便于事后回写。
+    组件清单以 <code>component-inventory.md</code> 的对照表为准。
+  </p>
+
+  <details class="sb-export-panel" id="sb-export-panel">
+    <summary>导出结果（点「导出我的选择」后自动展开）<span class="sb-export-status" id="sb-export-status"></span></summary>
+    <textarea class="sb-export-text" id="sb-export-text" readonly spellcheck="false" aria-label="导出的选择结果"></textarea>
+    <button class="sb-btn" id="sb-copy-again" type="button" style="margin-top:8px">再复制一次</button>
+  </details>
+</header>
+
+<div class="sb-panes">
+  <div class="sb-pane"><iframe id="sb-frame-day" title="暖纸"></iframe></div>
+  <div class="sb-pane"><iframe id="sb-frame-night" title="夜纸"></iframe></div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

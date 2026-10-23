@@ -17,13 +17,11 @@ function navigationFixture() {
   const historyCalls = [];
   const middlePage = { innerHTML: "practice page" };
   const layout = { dataset: { workspace: "alpha", page: "practice" } };
-  const scopeTray = { dataset: { kpNames: "{}" } };
   const aiColumn = { identity: "persistent-agent-rail" };
   const currentNav = { classList: classList(true) };
   const ids = {
     layout,
     "middle-page": middlePage,
-    "scope-tray": scopeTray,
     "ai-column": aiColumn,
   };
   const document = {
@@ -75,7 +73,6 @@ function navigationFixture() {
         getElementById(id) {
           if (id === "layout") return nextLayout;
           if (id === "middle-page") return { innerHTML: `page:${page}` };
-          if (id === "scope-tray") return { dataset: { kpNames: `{"${page}":"${page} name"}` } };
           return null;
         },
         querySelectorAll(selector) {
@@ -86,7 +83,7 @@ function navigationFixture() {
   }
 
   vm.runInNewContext(SOURCE, { window, document, DOMParser: FakeDOMParser, URL, Promise, Array, decodeURIComponent });
-  return { aiColumn, currentNav, document, events, historyCalls, layout, middlePage, requests, scopeTray, window };
+  return { aiColumn, currentNav, document, events, historyCalls, layout, middlePage, requests, window };
 }
 
 function classList(active) {
@@ -124,7 +121,8 @@ test("same-workspace link and popstate replace only the middle page and refresh 
   assert.equal(app.middlePage.innerHTML, "page:goals");
   assert.equal(app.layout.dataset.page, "goals");
   assert.equal(app.layout.dataset.objectId, "goals-1");
-  assert.equal(app.scopeTray.dataset.kpNames, '{"goals":"goals name"}');
+  // The scope tray is retired (the page never rendered it) and nothing in the
+  // product consumes kp names, so there is no tray to refresh any more.
   assert.equal(app.events.disposed, 1);
   assert.equal(app.events.mounted, 1);
   assert.equal(app.events.contextRendered, 1);

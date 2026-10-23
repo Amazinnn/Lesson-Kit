@@ -1552,7 +1552,7 @@ test("content-mode practice uses only the explicit knowledge selection", async (
   assert.deepEqual(JSON.parse(pull.options.body), {
     kp_ids: ["kp-1", "kp-2"], n: 1, mode: "micro", exclude_ids: [],
   });
-  assert.match(elements.stream.innerHTML, /暂无可用的小测题目/);
+  assert.match(elements.stream.innerHTML, /暂无可用小测题目/);
 });
 
 test("micro choice items hide the free-text answer box", async () => {
@@ -1811,7 +1811,7 @@ test("unified rating rejects an invalid value visibly without a feedback write",
   const card = pending.children[0];
   card.children.find((child) => child.id === "end-rating-p-1").value = "0";
   card.children.find((child) => child.id === "end-save-p-1").click();
-  assert.match(card.children.find((child) => child.id === "end-error-p-1").textContent, /1-5/);
+  assert.match(card.children.find((child) => child.id === "end-error-p-1").textContent, /1–5/);
   assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
 });
 
@@ -2035,7 +2035,7 @@ test("practice shows titled cards and validates an invalid rating in place", asy
   elements["rating-input"].value = "9";
   elements["save-rating"].click();
   assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
-  assert.match(elements["practice-error"].textContent, /1-5/);
+  assert.match(elements["practice-error"].textContent, /1–5/);
 });
 
 test("practice pull failures stay visible beside the active study flow", async () => {
@@ -3004,7 +3004,7 @@ test("a two-chapter bundle renders one rollback row per batch", async () => {
     (node) => node.className === "msg ai check-card").pop();
   assert.ok(card, "the restored turn renders its card");
   const body = card.children[0];
-  assert.equal(body.children[0].textContent, "Check 入库完成");
+  assert.equal(body.children[0].textContent, "入库完成");
   assert.match(body.children[1].textContent, /共 2 个批次/);
   assert.match(body.children[1].textContent, /ch12、ch13/);
   assert.match(body.children[1].textContent, /知识点 3、题目 10、图片 4/);
@@ -3054,7 +3054,7 @@ test("check ingest success renders a batch result card whose rollback calls the 
   const card = cards[cards.length - 1];
   const body = card.children[0];
   const detail = body.children[1].textContent;
-  assert.equal(body.children[0].textContent, "Check 入库完成");
+  assert.equal(body.children[0].textContent, "入库完成");
   assert.match(detail, /batch-001/);
   assert.match(detail, /content-bundle/);
   assert.match(detail, /知识点 1、题目 28、闪卡 2、图片 1/);
@@ -3110,7 +3110,7 @@ test("a reopened result card shows the current batch state without rollback", as
   const card = elements["ai-messages"].children.filter(
     (node) => node.className === "msg ai check-card").pop();
   const body = card.children[0];
-  assert.equal(body.children[0].textContent, "Check 入库已回滚");
+  assert.equal(body.children[0].textContent, "入库已回滚");
   assert.match(body.children[1].textContent, /batch-002 已整批回滚/);
   assert.match(body.children[1].textContent, /题目 5、图片 2/);
   assert.equal(card.querySelector(".check-card-rollback"), null);
@@ -3276,7 +3276,9 @@ test("rich text renders markdown structure and safe links in native messages", a
   });
   await openFirstAiSession(elements);
   const html = elements["ai-messages"].children[0].innerHTML;
-  assert.match(html, /<h1>标题<\/h1>/);
+  // Body headings start at h2: h1 belongs to the page title, so the body
+  // never competes with the shell (design.md D-6).
+  assert.match(html, /<h2>标题<\/h2>/);
   assert.match(html, /<ul>[\s\S]*<strong>重点<\/strong>[\s\S]*<\/ul>/);
   assert.match(html, /x<sup>2<\/sup>/);
   assert.match(html, /&lt;b&gt;原始 HTML&lt;\/b&gt;/);
@@ -3350,7 +3352,8 @@ test("streaming assistant text is coalesced into one markdown message", async ()
   await flush();
   assert.equal(elements["ai-messages"].children.length, 2);
   const assistant = elements["ai-messages"].children[1];
-  assert.match(assistant.innerHTML, /<h2>片段<\/h2>/);
+  // Body headings start at h2 (design.md D-6), so `##` renders as h3.
+  assert.match(assistant.innerHTML, /<h3>片段<\/h3>/);
   assert.match(assistant.innerHTML, /完整回答/);
 });
 
@@ -3688,7 +3691,7 @@ test("the filter popup loads facets and renders every dimension with counts", as
   // origin_kind is a dimension like the others, shown in the learner's words
   // and carried under its own state key
   assert.ok(popup.includes("题目来源方式"), popup);
-  for (const label of ["历年原题", "改编", "AI生成"]) {
+  for (const label of ["历年原题", "改编", "AI 生成"]) {
     assert.ok(popup.includes(label), `${label} missing from ${popup}`);
   }
   assert.ok(popup.includes("data-filter-dimension='origin_kinds'"), popup);
@@ -3762,9 +3765,8 @@ test("fixed practice reports each selection reason and shortage before starting"
   const elements = {
     layout: layout(),
     ...durablePracticeElements(),
-    "scope-tray": new FakeElement("scope-tray", {
-      dataset: { kpNames: JSON.stringify({ "kp-1": "代数基础", "kp-2": "线性方程组" }) },
-    }),
+    // The scope tray is retired (the page never rendered it), so there is no
+    // element carrying kp names: the report lists knowledge points by id.
   };
   const storage = new FakeStorage();
   let reportAtRunStart = "";
@@ -3813,7 +3815,7 @@ test("fixed practice reports each selection reason and shortage before starting"
 
   assert.match(reportAtRunStart, /代数题.*范围匹配/);
   assert.match(reportAtRunStart, /复习题.*到期复习/);
-  assert.match(reportAtRunStart, /线性方程组/);
+  assert.match(reportAtRunStart, /可用题数少于请求量的知识点：kp-2/);
   assert.match(reportAtRunStart, /Check 管线/);
   assert.deepEqual(runBody.items, [
     { item_type: "problem", item_id: "p-1" },
@@ -3829,9 +3831,8 @@ test("empty fixed practice reports the Check pipeline and does not start an empt
   const elements = {
     layout: layout(),
     ...durablePracticeElements(),
-    "scope-tray": new FakeElement("scope-tray", {
-      dataset: { kpNames: JSON.stringify({ "kp-1": "代数基础" }) },
-    }),
+    // The scope tray is retired (the page never rendered it), so there is no
+    // element carrying kp names: the report lists knowledge points by id.
   };
   runWorkbench({
     elements,
@@ -3855,7 +3856,7 @@ test("empty fixed practice reports the Check pipeline and does not start an empt
   await flush();
 
   assert.match(elements["practice-error"].textContent, /0\/10/);
-  assert.match(elements["practice-error"].textContent, /代数基础/);
+  assert.match(elements["practice-error"].textContent, /可用题数少于请求量的知识点：kp-1/);
   assert.match(elements["practice-error"].textContent, /Check 管线/);
   assert.equal(calls.some((call) =>
     call.url.endsWith("/practice/current") && !!call.options), false);
@@ -4044,7 +4045,7 @@ test("revealing a micro quiz answer shows the key and reason, and no explanation
   elements["show-answer"].click();
   await flush();
   assert.ok(elements.stream._innerHTML.includes("答案"));
-  assert.ok(elements.stream._innerHTML.includes("为什么"));
+  assert.ok(elements.stream._innerHTML.includes("错因"));
   assert.ok(elements.stream._innerHTML.includes("只有一个正因数"));
   assert.doesNotMatch(elements.stream._innerHTML, /section-kicker'>解析</);
   assert.equal(elements["feedback-area"].classList.contains("hidden"), false);
@@ -4080,7 +4081,7 @@ test("revealing a micro quiz also shows its written explanation", async () => {
   await flush();
   const html = elements.stream._innerHTML;
   assert.ok(html.includes("答案"));
-  assert.ok(html.includes("为什么"));
+  assert.ok(html.includes("错因"));
   assert.ok(html.includes("只有一个正因数"));
   // The verdict and the analysis are separate sections, both visible.
   assert.match(html, /section-kicker'>解析</);
@@ -4612,7 +4613,7 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   assert.ok(patch);
   assert.deepEqual(JSON.parse(patch.options.body).title, "期末掌握计数");
 
-  // 助填动作镜像：先在右侧开会话，再从目标表单点「让 Agent 填」
+  // 助填动作镜像：先在右侧开会话，再从目标表单点「让 Agent 代填」
   elements["ai-session-list"].children[0].children[0].click();
   await flush();
   elements["goal-nl"].value = "期末前掌握第六章计数";
@@ -4803,5 +4804,5 @@ test("an empty rating input is rejected inline instead of dying at the server", 
   elements["save-rating"].click();
   await flush();
   assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
-  assert.match(elements["practice-error"].textContent, /请输入 1-5 的评分/);
+  assert.match(elements["practice-error"].textContent, /请输入 1–5 的自评/);
 });

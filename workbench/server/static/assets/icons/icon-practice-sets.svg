@@ -1,0 +1,30 @@
+<svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-sets-title">
+  <title id="icon-practice-sets-title">试卷</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 26%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z" stroke-width="2"/>
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z" stroke-width="2"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z" stroke-width="3"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z" stroke-width="2"/>
+      <path d="M 14.5 17 L 29 17" stroke-width="1.5"/>
+      <path d="M 14.5 20.4 L 25.5 20.4" stroke-width="1.5"/>
+      <path d="M 14.5 23.4 L 22 23.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 13 14.4 Q 13 13.6 14 13.6 L 19 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

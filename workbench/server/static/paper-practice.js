@@ -33,6 +33,7 @@
       start: document.getElementById("paper-start"),
       error: document.getElementById("paper-error"),
       work: document.getElementById("paper-work"),
+      stemIndex: document.getElementById("paper-stem-index"),
       question: document.getElementById("paper-question"),
       answer: document.getElementById("paper-answer"),
       options: document.getElementById("paper-options"),
@@ -48,6 +49,7 @@
       pause: document.getElementById("paper-pause"),
       completion: document.getElementById("paper-completion"),
       completionStats: document.getElementById("paper-completion-stats"),
+      completionFigures: document.getElementById("paper-completion-figures"),
       review: document.getElementById("paper-review"),
       return: document.getElementById("paper-return"),
       again: document.getElementById("paper-again"),
@@ -77,6 +79,19 @@
     var requestCounter = 0;
     var ratingInput = null;
     var ratingNote = null;
+    var celebrationAnchorEl = null;
+    /* ---------- 连对反馈（tasks.md 17.1 / 17.3 / 17.8） ----------
+       与快速练习流（practice-flow.js）同一套：状态机在公共 API window.lkStreak
+       里（decisions.md A-58），这里只持有本轮的一个实例 —— 计数 / 三级档 /
+       递增 / 断裂 / 复位 / 横幅 / 火苗只有一份实现。
+       判定来源仍在本流（提交载荷里的 verdict）——公共 API 只管「拿到判定之后
+       怎么反馈」，判定语义不动。
+       ⚠️ 该共用件与 window.lkTicker 一样是「可有可无」的：不带 workbench.js
+       单独跑本文件时（测试夹具）没有连对反馈 —— 挂一个恒为 0 的数字是没有
+       信息量的假事实（A-59 同一原则）。 */
+    var streak = window.lkStreak && typeof window.lkStreak.create === "function"
+      ? window.lkStreak.create({ root: ids.question })
+      : null;
 
     function emptyLocal() {
       return {
@@ -292,6 +307,7 @@
     function prepareRun(record, isArchived) {
       var shouldAdoptMode = !isArchived && !record.reveal_timing && isPaperRun(record);
       run = record;
+      if (streak) streak.reset();   /* 新的一轮从零开始 */
       renderingArchived = !!isArchived;
       reviewing = false;
       modeAdopting = shouldAdoptMode;
@@ -300,6 +316,9 @@
       mergeLocalDrafts(record);
       setVisible(ids.setup, false);
       setVisible(ids.work, !isArchived);
+      /* The milestone facts must be on the surface before it turns visible:
+         the shared celebration reads them the moment the completion shows. */
+      if (isArchived) writeCompletionFacts(record);
       setVisible(ids.completion, !!isArchived);
       setVisible(ids.return, false);
       if (isArchived) {
@@ -420,11 +439,11 @@
       savedPaper = null;
       clearError();
       if (ids.title) ids.title.textContent = "选择一份试卷";
-      if (ids.count) ids.count.textContent = "从试卷列表打开已保存的试卷后即可开始练习。";
+      if (ids.count) ids.count.textContent = "先从试卷列表打开一份已保存的试卷。";
       if (ids.timing) ids.timing.disabled = true;
       if (ids.start) {
         ids.start.disabled = true;
-        ids.start.textContent = "先选择试卷";
+        ids.start.textContent = "选择试卷";
       }
       setVisible(ids.setup, true);
       setVisible(ids.work, false);
@@ -591,9 +610,9 @@
         button.type = "button";
         button.className = "paper-dot state-" + status + (position === index ? " is-current" : "");
         button.dataset.paperPosition = String(index);
-        button.textContent = String(index + 1);
+        button.textContent = String(itemPosition(item, index));
         button.disabled = navigationBusy || modeAdopting;
-        button.setAttribute("aria-label", "第" + (index + 1) + "题，" + statusLabel(status)
+        button.setAttribute("aria-label", "第" + itemPosition(item, index) + "题，" + statusLabel(status)
           + (position === index ? "，当前题" : ""));
         if (position === index) button.setAttribute("aria-current", "step");
         button.addEventListener("click", function () { moveTo(index); });
@@ -621,9 +640,31 @@
       var title = problem.display_title || problem.title || "未命名题目";
       var prompt = problem.problem_text || "题面暂不可用。";
       var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
+      var streakMarkup = streak ? streak.html() : "";
+      /* 16.1 题号槽位：服务端只给槽位，值必须由客户端写 —— 题号随题序变，
+         服务端不知道当前第几题。编号与题号点（#paper-dots）、完成页逐题链接
+         同一口径：**itemPosition(item, index)** —— 单一真源，与提交载荷里的
+         position / practice_position 同源（否则服务端一旦重排，页面上会出现
+         两套编号）。槽位自带 aria-hidden='true'，只写值，
+         不改成可读文本，也不加内联字号/颜色（样式归 workbench.css）。 */
+      if (ids.stemIndex) {
+        var stemItem = run && run.items ? run.items[position] : null;
+        ids.stemIndex.textContent = String(itemPosition(stemItem, position));
+      }
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
+        /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里。
+           回看已完成的答卷时不挂 —— 那不是一轮练习。
+           on_submit 模式也不挂（decisions.md A-59）：该模式没有逐题判定，
+           连对计数整轮恒为 0 —— 显示一个恒为 0 的数字是没有信息量的假事实。
+           判据用既有的 currentMode() === "on_submit"（与 itemStatus 等处同一口径）。
+           模式未知时（老记录接管窗口：reveal_timing 尚空，currentMode() 会兜底成
+           per_item）同样不挂 —— 宁可晚一点显示，也不要先闪一个恒为 0 的假数
+           （所有者裁决 2026-10-22）。currentMode() 的兜底不动（它被 15 处用），
+           只在这里多判一个「reveal_timing 为空」。 */
+        + (renderingArchived || !run.reveal_timing || currentMode() === "on_submit"
+          ? "" : "<p class='practice-streak' style='position: relative'>" + streakMarkup + "</p>")
         + "<h2>" + escapeHtml(title) + "</h2>"
-        + "<div class='rich-text problem-text'>" + richText(String(prompt)) + "</div>"
+        + "<div class='wb-reading wb-reading--stem problem-text'>" + richText(String(prompt)) + "</div>"
         + (problem.source_evidence
           ? "<p class='practice-source'>来源：" + escapeHtml(problem.source_evidence) + "</p>" : "");
       renderMath(ids.question);
@@ -675,17 +716,17 @@
       }
       var key = quiz && quizHasKey(quiz) ? quiz.answer_key : problem.source_answer;
       if (key !== undefined && key !== null && String(key).trim()) {
-        parts.push("<p class='section-kicker'>参考答案</p><div class='rich-text'>"
+        parts.push("<p class='section-kicker'>参考答案</p><div class='wb-reading'>"
           + richText(Array.isArray(key) ? key.join("、") : String(key)) + "</div>");
       } else if (quiz) {
         parts.push("<p class='muted'>本题没有可用答案键。</p>");
       }
       if (quiz && quiz.error_reason) {
-        parts.push("<p class='section-kicker'>判定依据</p><div class='rich-text'>"
+        parts.push("<p class='section-kicker'>判定依据</p><div class='wb-reading'>"
           + richText(String(quiz.error_reason)) + "</div>");
       }
       if (problem.solution && String(problem.solution).trim()) {
-        parts.push("<p class='section-kicker'>解析</p><div class='rich-text'>"
+        parts.push("<p class='section-kicker'>解析</p><div class='wb-reading'>"
           + richText(String(problem.solution)) + "</div>");
       }
       if (!parts.length || (parts.length === 1 && !includeVerdict && parts[0].indexOf("没有可用答案键") >= 0)) {
@@ -710,6 +751,43 @@
       }
       setVisible(ids.reference, true);
       renderMath(ids.reference);
+    }
+
+    /* 答对的挤压回弹（motion-spec §3.1 / A-89）：落点是**被选中的那一项**
+       ——正确选项那一行（底边为锚，读作「被顶了一下」）。
+       · 判定行（`.micro-verdict.ok`）另挂 `lk-verdict-correct` 作标记（**无样式**），
+         走查探针据此认出「判定正确」；
+       · 落点行挂 `lk-squash`（样式表规则：
+         `.lk-squash { transform-origin: 50% 100%; animation: lk-squash-bounce 517ms both; }`），
+         这里同时写一份内联声明（与 workbench.js 的 `lk-error-nudge` 同一写法），
+         规则补齐之前回弹也已经发生；
+       · **终态铁律**：压扁只写在 `@keyframes` 里，元素的静态样式是终态
+         （不压扁），降级后读得出；
+       · **动效红线**：关键帧只动 `transform`（scale），不动布局；
+       · 只在提交路径挂 ⇒ 判定只回弹一次，回看旧答案不重播；
+       · 判定为错 / 不会 / 没有「判定正确」时整段不挂。
+       本流的选项行实际类名：`<label class='option-row'>`（在
+       `<fieldset class='problem-options'>` 内），「被选中」= 里面的
+       `input[data-paper-choice]` 处于选中态。
+       走查探针（tools/walkthrough/frames.py 的 M-7）等的是
+       `document.getAnimations()` 里名为 `lk-squash-bounce` 的动画 ⇒
+       落点行上必须真的有这条动画（判定行只带标记，不带动画）。 */
+    function squashCorrectOption(root) {
+      if (!root || typeof root.querySelectorAll !== "function") return;
+      var verdicts = root.querySelectorAll(".micro-verdict.ok");
+      var verdict = verdicts && verdicts.length ? verdicts[0] : null;
+      if (!verdict) return;
+      if (verdict.classList) verdict.classList.add("lk-verdict-correct");
+      var inputs = root.querySelectorAll("input[data-paper-choice]:checked");
+      Array.prototype.slice.call(inputs || []).forEach(function (input) {
+        var row = input && input.closest ? input.closest("label") : null;
+        if (!row || !row.classList) return;
+        row.classList.add("lk-squash");
+        if (row.style) {
+          row.style.animation = "lk-squash-bounce 517ms both";
+          row.style.transformOrigin = "50% 100%";
+        }
+      });
     }
 
     function feedbackFor(item) {
@@ -750,9 +828,9 @@
       var pending = local && local.ratingDrafts[positionKey] || {};
       var heading = document.createElement("p");
       heading.className = "section-kicker";
-      heading.textContent = "自评（可选，不影响继续练习）";
+      heading.textContent = "自评（可选）";
       var label = document.createElement("label");
-      label.textContent = "熟悉程度 1–5";
+      label.textContent = "自评 1–5";
       ratingInput = document.createElement("input");
       ratingInput.type = "number";
       ratingInput.min = "1";
@@ -1020,6 +1098,9 @@
         delete draftTimers[key];
       }
       var priorDraftWrite = draftWrites[key] || Promise.resolve();
+      /* 连对：判定先落地，界面随后再动（数字滚动 / 火苗 / 横幅 / 断裂负反馈）。
+         判定语义不动 —— 读的就是这次提交载荷里的那个 verdict。 */
+      var streakLanded = null;
       answerBusy[key] = priorDraftWrite.catch(function () {}).then(function () {
         if (local.pendingDrafts[key]) return flushDraft(key).catch(function () {});
       }).then(function () {
@@ -1033,6 +1114,7 @@
         if (updated) adoptRun(updated, false);
         persistLocal();
         clearError();
+        streakLanded = streak ? streak.judge(payload.verdict) : null;
       }).catch(function (error) {
         if (error && error.status && error.status < 500) {
           delete local.pendingAttempts[key];
@@ -1047,7 +1129,16 @@
       }).then(function (value) {
         delete answerBusy[key];
         renderDots();
-        if (isVisibleItem(item, index)) renderCurrent();
+        if (isVisibleItem(item, index)) {
+          renderCurrent();
+          /* 答对的挤压回弹：判定成立的这一刻，回弹挂到**被选中的那一项**
+             （正确选项行，底边为锚）——与音效同一帧落地（判定为错时那边也不响）。
+             判定为错 / 不会 / 参考区里没有「判定：正确」时不动
+             （负反馈是摆动，不是回弹）。 */
+          squashCorrectOption(ids.work);
+        }
+        /* 界面已按新的连对数重画，这里再补动效（数字滚动 / 火苗 / 横幅 / 负反馈） */
+        if (streak) streak.apply(streakLanded);
         return value;
       });
       if (isVisibleItem(item, index)) renderCurrent();
@@ -1308,15 +1399,85 @@
       return { total: items.length, correct: correct, wrong: wrong, stuck: stuck, pendingRatings: pendingRatings };
     }
 
+    /* The two milestone conditions (decisions.md A-29, tasks.md 17.6) are read
+       by the shared celebration in workbench.js: it looks for
+       `data-lk-total` / `data-lk-correct` / `data-lk-chapter-first` on the
+       completion surface.  ① 本轮全对 ⇒ every item carries an objective
+       verdict and all of them are correct.  ② 章节首次完成 ⇒ the client holds
+       no such fact (practice_runs carries no chapter column and no
+       "first completion" flag), so it stays false: the contract forbids
+       approximating it with a proxy signal (same rule as CD-164). */
+    function writeCompletionFacts(record) {
+      if (!ids.completion || !ids.completion.dataset) return;
+      var stats = completionStats(record);
+      ids.completion.dataset.lkTotal = String(stats.total);
+      ids.completion.dataset.lkCorrect = String(stats.correct);
+      ids.completion.dataset.lkChapterFirst = "false";
+    }
+
+    /* The decoration layer the milestone burst hangs in.  The completion card
+       is not positioned, so the anchor gives the burst its own coordinate
+       system; it never takes clicks (the CTA stays clickable). */
+    function ensureCelebrationAnchor() {
+      var completion = ids.completion;
+      if (!completion) return null;
+      if (!celebrationAnchorEl) {
+        var existing = completion.querySelectorAll
+          ? completion.querySelectorAll("[data-lk-celebrate-anchor]")
+          : [];
+        celebrationAnchorEl = existing.length ? existing[0] : null;
+      }
+      if (!celebrationAnchorEl) {
+        var anchor = document.createElement("div");
+        anchor.setAttribute("data-lk-celebrate-anchor", "");
+        anchor.className = "lk-celebrate-anchor";
+        completion.appendChild(anchor);
+        celebrationAnchorEl = anchor;
+      }
+      /* Layout, not an animation start state: the burst is absolutely
+         positioned, so the anchor needs a box of its own. */
+      if (completion.style) completion.style.position = "relative";
+      if (celebrationAnchorEl.style) {
+        celebrationAnchorEl.style.position = "absolute";
+        celebrationAnchorEl.style.inset = "0";
+        celebrationAnchorEl.style.pointerEvents = "none";
+      }
+      return celebrationAnchorEl;
+    }
+
+    /* The completion figures (tasks.md 16.7 ①): the counts this round really
+       has — no invented statistics, no percentages, no new measure.  Every
+       number carries `data-lk-value`, so the shared ticker rolls it; the
+       label sits beside the number, never inside it, because the ticker
+       rewrites the number element's text. */
+    function completionFiguresHtml(stats) {
+      return [
+        { value: stats.total, label: "总题数" },
+        { value: stats.correct, label: "判定正确" },
+        { value: stats.wrong, label: "错误" },
+        { value: stats.stuck, label: "不会" },
+        { value: stats.pendingRatings, label: "待自评" },
+      ].map(function (figure) {
+        return "<p class='lk-stat'><span class='lk-stat__value' data-lk-value='"
+          + figure.value + "'>" + figure.value + "</span>"
+          + "<span class='lk-stat__label'>" + figure.label + "</span></p>";
+      }).join("");
+    }
+
     function renderCompletion() {
       if (!ids.completion || !archived) return;
       var stats = completionStats(archived);
+      writeCompletionFacts(archived);
+      ensureCelebrationAnchor();
       if (ids.title) ids.title.textContent = archived.source_label || savedPaper && savedPaper.title || "练习试卷";
       if (ids.count) ids.count.textContent = String(stats.total);
       if (ids.completionStats) {
-        ids.completionStats.textContent = "共 " + stats.total + " 题；客观正确 " + stats.correct
+        ids.completionStats.textContent = "共 " + stats.total + " 题；判定正确 " + stats.correct
           + " 题，错误 " + stats.wrong + " 题；不会 " + stats.stuck
           + " 题；待自评 " + stats.pendingRatings + " 题。";
+      }
+      if (ids.completionFigures) {
+        ids.completionFigures.innerHTML = completionFiguresHtml(stats);
       }
       if (ids.links) {
         ids.links.replaceChildren();
@@ -1324,8 +1485,8 @@
           var link = document.createElement("button");
           link.type = "button";
           link.className = "outline sm";
-          link.textContent = "第" + (index + 1) + "题：" + statusLabel(itemStatus(item, index));
-          link.setAttribute("aria-label", "查看第" + (index + 1) + "题，" + statusLabel(itemStatus(item, index)));
+          link.textContent = "第" + itemPosition(item, index) + "题：" + statusLabel(itemStatus(item, index));
+          link.setAttribute("aria-label", "查看第" + itemPosition(item, index) + "题，" + statusLabel(itemStatus(item, index)));
           link.addEventListener("click", function () { openReview(index); });
           ids.links.appendChild(link);
         });

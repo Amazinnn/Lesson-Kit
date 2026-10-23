@@ -25,6 +25,7 @@ include = ["workbench*"]
 "workbench.server" = [
   "static/*.css",
   "static/*.js",
+  "static/assets/*/*",
   "static/katex/*.css",
   "static/katex/*.js",
   "static/katex/fonts/*",

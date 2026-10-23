@@ -1,0 +1,321 @@
+{
+  "rows": [
+    {
+      "id": "M-1",
+      "trigger": "theme",
+      "animatedFile": "M-1-animated.png",
+      "reducedFile": "M-1-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [
+        {
+          "selector": "#middle-page",
+          "index": 0,
+          "field": "text",
+          "animated": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+          "reduced": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效弱"
+        }
+      ],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-2",
+      "trigger": "celebration",
+      "animatedFile": "M-2-animated.png",
+      "reducedFile": "M-2-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [
+        {
+          "selector": ".bar-fill",
+          "why": "count",
+          "animated": 1,
+          "reduced": 2
+        },
+        {
+          "selector": ".workload-bars",
+          "index": 0,
+          "field": "text",
+          "animated": "23242526272822930310102030405",
+          "reduced": "232425262728129303101020304105"
+        }
+      ],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-3",
+      "trigger": "celebration",
+      "animatedFile": "M-3-animated.png",
+      "reducedFile": "M-3-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [
+        {
+          "selector": ".bar-fill",
+          "why": "count",
+          "animated": 1,
+          "reduced": 0
+        },
+        {
+          "selector": ".calendar-cell",
+          "why": "count",
+          "animated": 12,
+          "reduced": 0
+        },
+        {
+          "selector": ".calendar-day",
+          "why": "count",
+          "animated": 12,
+          "reduced": 0
+        },
+        {
+          "selector": ".lk-celebrate-burst",
+          "why": "count",
+          "animated": 1,
+          "reduced": 0
+        },
+        {
+          "selector": ".lk-confetti",
+          "why": "count",
+          "animated": 12,
+          "reduced": 0
+        },
+        {
+          "selector": ".workload-bars",
+          "index": 0,
+          "field": "text",
+          "animated": "23242526272812930310102030405",
+          "reduced": ""
+        },
+        {
+          "selector": ".workload-bars",
+          "index": 0,
+          "field": "width",
+          "animated": 652,
+          "reduced": 0
+        },
+        {
+          "selector": ".workload-bars",
+          "index": 0,
+          "field": "height",
+          "animated": 184,
+          "reduced": 0
+        }
+      ],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-4",
+      "trigger": "streak",
+      "animatedFile": "M-4-animated.png",
+      "reducedFile": "M-4-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [
+        {
+          "selector": ".lk-combo-banner",
+          "index": 0,
+          "field": "transform",
+          "animated": "matrix(0.96, 0, 0, 0.96, -9.70312, -8)",
+          "reduced": "matrix(1, 0, 0, 1, -9.70312, 0)"
+        },
+        {
+          "selector": ".lk-combo-banner",
+          "index": 0,
+          "field": "height",
+          "animated": 31,
+          "reduced": 32
+        }
+      ],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-5",
+      "trigger": "streak-tiers",
+      "animatedFile": "M-5-animated.png",
+      "reducedFile": "M-5-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-6",
+      "trigger": "streak",
+      "animatedFile": "M-6-animated.png",
+      "reducedFile": "M-6-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [
+        {
+          "selector": ".lk-combo-banner",
+          "index": 0,
+          "field": "transform",
+          "animated": "matrix(0.96, 0, 0, 0.96, -9.70312, -8)",
+          "reduced": "matrix(1, 0, 0, 1, -9.70312, 0)"
+        },
+        {
+          "selector": ".lk-combo-banner",
+          "index": 0,
+          "field": "height",
+          "animated": 31,
+          "reduced": 32
+        }
+      ],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-7",
+      "trigger": "answer",
+      "animatedFile": "M-7-animated.png",
+      "reducedFile": "M-7-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-8",
+      "trigger": "view",
+      "animatedFile": "M-8-animated.png",
+      "reducedFile": "M-8-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-9",
+      "trigger": "skeleton",
+      "animatedFile": "M-9-animated.png",
+      "reducedFile": "M-9-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [
+        {
+          "selector": "#middle-page",
+          "index": 0,
+          "field": "height",
+          "animated": 264,
+          "reduced": 261
+        },
+        {
+          "selector": ".lk-skeleton",
+          "why": "count",
+          "animated": 5,
+          "reduced": 0
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 0,
+          "field": "opacity",
+          "animated": "0.998823",
+          "reduced": "1"
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 0,
+          "field": "cls",
+          "animated": "lk-skeleton",
+          "reduced": ""
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 1,
+          "field": "opacity",
+          "animated": "0.998823",
+          "reduced": "1"
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 1,
+          "field": "cls",
+          "animated": "lk-skeleton",
+          "reduced": ""
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 2,
+          "field": "opacity",
+          "animated": "0.998823",
+          "reduced": "1"
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 2,
+          "field": "height",
+          "animated": 16,
+          "reduced": 15
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 2,
+          "field": "cls",
+          "animated": "lk-skeleton",
+          "reduced": ""
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 3,
+          "field": "opacity",
+          "animated": "0.998823",
+          "reduced": "1"
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 3,
+          "field": "height",
+          "animated": 16,
+          "reduced": 15
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 3,
+          "field": "cls",
+          "animated": "lk-skeleton",
+          "reduced": ""
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 4,
+          "field": "opacity",
+          "animated": "0.998823",
+          "reduced": "1"
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 4,
+          "field": "height",
+          "animated": 16,
+          "reduced": 15
+        },
+        {
+          "selector": "[data-lk-skeleton] > div",
+          "index": 4,
+          "field": "cls",
+          "animated": "lk-skeleton",
+          "reduced": ""
+        }
+      ],
+      "terminalEqual": true
+    },
+    {
+      "id": "M-10",
+      "trigger": "records",
+      "animatedFile": "M-10-animated.png",
+      "reducedFile": "M-10-reduced.png",
+      "terminalDifferences": [],
+      "terminalExtraDifferences": [],
+      "terminalEqual": true
+    }
+  ],
+  "pairsDir": "tmp\\wt-m1-final\\evidence\\extra\\twins",
+  "contract": [
+    "#middle-page > *",
+    "#paper-completion-stats",
+    ".lk-combo-banner__count",
+    ".lk-flame",
+    ".lk-flames",
+    ".lk-lamp",
+    ".lk-paper",
+    ".lk-progress",
+    ".lk-progress-fill",
+    ".lk-ripple",
+    ".lk-ripple-glow",
+    ".lk-streak",
+    ".lk-ticker",
+    ".lk-ticker-digit",
+    ".paper-slice"
+  ]
+}

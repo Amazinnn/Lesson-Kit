@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V1 · 样板图基线拼版</title>
+<link rel="icon" href="data:,">
+
+<!--
+  ============================================================================
+  V1 · 样板图基线拼版（workbench-visual-language-v2）
+  ============================================================================
+  这一页**不改动样板图的任何一个字节** —— 六个页面各自是原文件，
+  这里只把它们**拼在一页里**（iframe 直引），便于从头到尾走一遍。
+
+  组成（都本目录下的原文件）：
+    index.html      规格总览（夜纸视觉基线）  → 视觉语言的根
+    shell.html      工作台壳层（练习进行中）    → 版式 §2 / §3 / §5.2
+    practice.html   练习页三态                  → 版式 §5.1–§5.3
+    knowledge.html  知识点列表                  → 版式 §5.4
+    records.html    记录中心                    → 版式 §5.6
+    graph.html      知识图谱                    → **范围外**（版式 §0.2）
+
+  为什么用 iframe：样板图是**整页应用**（`body { height:100%; overflow:hidden }`），
+  拆成片段就得改它们 —— 而这一版的前提正是「不要改」。
+  每页仍然是**它自己**，在自己的视口里跑自己的脚本与动效。
+
+  ⚠️ 页面在 `file://` 下直接可用（无外部资源：无 CDN、无外链字体、无位图）。
+  ============================================================================
+-->
+
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #fdf8ef;
+    color: #3b3630;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  /* ---------- 顶部条（**这一版的 chrome，不是产品样式**）---------- */
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px;
+    background: #fffdf7;
+    border-bottom: 1px solid #e6dcc4;
+  }
+  .bar h1 { margin: 0; font-size: 15px; font-weight: 600; color: #221f1a; }
+  .bar .tag {
+    font-size: 11px; color: #2b62e8; background: #e0e3ee;
+    border-radius: 999px; padding: 2px 9px; font-weight: 700;
+  }
+  .bar nav { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .bar nav a {
+    font-size: 12px; color: #3b3630; text-decoration: none;
+    border: 1px solid #e6dcc4; border-radius: 999px; padding: 3px 11px;
+    background: #fffdf7;
+  }
+  .bar nav a:hover { background: #f2ece1; }
+
+  .lead {
+    padding: 16px 24px 6px;
+    max-width: 1080px;
+  }
+  .lead p { margin: 0 0 6px; color: #6b6459; font-size: 13px; }
+  .lead b { color: #221f1a; }
+
+  /* ---------- 每一页 ---------- */
+  .page { margin: 22px 24px 44px; }
+  .page-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin: 0 0 8px;
+  }
+  .page-head h2 { margin: 0; font-size: 15px; font-weight: 600; color: #221f1a; }
+  .page-head .id {
+    font-size: 11px; font-weight: 700; color: #2b62e8; background: #e0e3ee;
+    border-radius: 999px; padding: 2px 9px;
+  }
+  .page-head .spec { font-size: 12px; color: #8d8578; }
+  .page-head .open {
+    margin-left: auto; font-size: 12px; color: #2b62e8; text-decoration: none;
+  }
+  .frame {
+    display: block;
+    width: 100%;
+    max-width: 1440px;
+    border: 1px solid #e6dcc4;
+    border-radius: 10px;
+    background: #fffdf7;
+    overflow: hidden;
+  }
+  .frame.tall { height: 1600px; }   /* 规格总览是长文档 */
+  .frame.app  { height: 900px; }    /* 其余是整页应用 */
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <h1>V1 · 样板图基线拼版</h1>
+  <span class="tag">workbench-visual-language-v2</span>
+  <nav>
+    <a href="#p-index">规格总览</a>
+    <a href="#p-shell">工作台壳层</a>
+    <a href="#p-practice">练习页</a>
+    <a href="#p-knowledge">知识点列表</a>
+    <a href="#p-records">记录中心</a>
+    <a href="#p-graph">知识图谱</a>
+  </nav>
+</header>
+
+<div class="lead">
+  <p><b>这一版 = 六个样板图页面原样拼在一页里，没有改动样板图的任何字节。</b>
+     每页仍然是它自己（在自己的视口里跑自己的脚本与动效），这里只做拼接与标注。</p>
+  <p>样板图是 <b>《夜纸视觉基线 · 规格总览》</b> 的渲染版 ——
+     token 权威表（<code>night-paper-tokens.md</code> §2/§3）的逐条转写，
+     版式的可视参考。规格出处见每页右侧。</p>
+</div>
+
+<section class="page" id="p-index">
+  <div class="page-head">
+    <span class="id">00</span>
+    <h2>规格总览 · 夜纸视觉基线</h2>
+    <span class="spec">视觉语言的根：17 组 68 问定案 + A-1…A-19 + G-1…G-24 · 结构 token 53 + 值 token 50 · 纸面 4 层 · 字号 11 档 · 三角色色配额 · 焦点环 · 对比度 39×2 · 动效 5 档 8 条缓动</span>
+    <a class="open" href="index.html" target="_blank">单独打开 ↗</a>
+  </div>
+  <iframe class="frame tall" src="index.html" title="规格总览"></iframe>
+</section>
+
+<section class="page" id="p-shell">
+  <div class="page-head">
+    <span class="id">01</span>
+    <h2>工作台壳层 · 练习进行中</h2>
+    <span class="spec">版式 §2 顶栏 · §3 左栏 · §5.2 练习页进行中 · §6 右栏</span>
+    <a class="open" href="shell.html" target="_blank">单独打开 ↗</a>
+  </div>
+  <iframe class="frame app" src="shell.html" title="工作台壳层"></iframe>
+</section>
+
+<section class="page" id="p-practice">
+  <div class="page-head">
+    <span class="id">02</span>
+    <h2>练习页 · 三态</h2>
+    <span class="spec">版式 §5.1 未开练 / §5.2 进行中 / §5.3 完成</span>
+    <a class="open" href="practice.html" target="_blank">单独打开 ↗</a>
+  </div>
+  <iframe class="frame app" src="practice.html" title="练习页"></iframe>
+</section>
+
+<section class="page" id="p-knowledge">
+  <div class="page-head">
+    <span class="id">03</span>
+    <h2>知识点列表</h2>
+    <span class="spec">版式 §5.4</span>
+    <a class="open" href="knowledge.html" target="_blank">单独打开 ↗</a>
+  </div>
+  <iframe class="frame app" src="knowledge.html" title="知识点列表"></iframe>
+</section>
+
+<section class="page" id="p-records">
+  <div class="page-head">
+    <span class="id">04</span>
+    <h2>记录中心</h2>
+    <span class="spec">版式 §5.6</span>
+    <a class="open" href="records.html" target="_blank">单独打开 ↗</a>
+  </div>
+  <iframe class="frame app" src="records.html" title="记录中心"></iframe>
+</section>
+
+<section class="page" id="p-graph">
+  <div class="page-head">
+    <span class="id">05</span>
+    <h2>知识图谱</h2>
+    <span class="spec">**范围外**（版式 §0.2：知识图谱页不套用本文的中栏轨道与纸面规格）</span>
+    <a class="open" href="graph.html" target="_blank">单独打开 ↗</a>
+  </div>
+  <iframe class="frame app" src="graph.html" title="知识图谱"></iframe>
+</section>
+
+</body>
+</html>

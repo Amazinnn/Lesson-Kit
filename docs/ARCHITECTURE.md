@@ -40,15 +40,21 @@ workbench/
 │   ├── weak.py        # 弱项排序 + 级联信号提升（ADR 0015）
 │   ├── pull.py        # 拉题引擎（正式 problems → 缺口报告）
 │   ├── feedback.py    # 1-5 与自然语言 → signals/events（ADR 0011）
+│   ├── signals.py     # 学习信号与级联增强的纯规则
+│   ├── learning_state.py # 当前学习状态（needs_work / review / mastered）的取值规则
 │   ├── schedule.py    # SM-2 变体（review_schedule，方向复合键，永不锁题）
 │   ├── planning.py    # 确定性今日计划与有界 Agent 调整
 │   ├── difficulty.py  # 四维客观题目难度校验、Decimal 汇总与档位投影
 │   ├── practice_set.py # 练习集渲染纯规则（题号、遮答案、缺解写「待补」、泄漏扫描）
 │   ├── cards.py       # 闪卡内容规则
 │   ├── practice_focus.py # 练习页明确相对指代的纯焦点规则
+│   ├── practice_submission.py # 作答语义比较与客观判定的纯规则（API 注入 Data 提交流程）
+│   ├── answering_content.py # 只比较作答语义的纯规则（零 IO）
 │   ├── micro_quiz.py  # 微题内容规则与判分
 │   ├── content_identity.py # 完整题干的保守规范化身份（无 IO）
-│   └── markup.py      # 题面/标签共享标记校验
+│   ├── facets.py      # 题干域 / 来源域的唯一字段清单（搜索与选题共用）
+│   ├── typesetting.py # 正文排版检出的纯测量与共用报告措辞
+│   ├── markup.py      # 题面/标签共享标记校验
 │   └── mastery.py     # 只读掌握度实验规则
 ├── data/
 │   ├── __init__.py
@@ -61,8 +67,13 @@ workbench/
 │   ├── content_audit.py # 只读题库卫生检查
 │   ├── difficulty.py  # 显式难度 check/apply 整批事务
 │   ├── attempts.py    # Agent 代录尝试：清单校验、单事务 apply、快照守卫的 correct
+│   ├── active_practice.py # 当前轮次的题目位置、草稿与逐题/整卷提交
+│   ├── paper_progress.py # 每卷独立的未完成执行快照与继续校验
 │   ├── evidence.py    # 按知识点读取有界、可读的近期学习证据
 │   ├── practice_sets.py # 练习清单校验/出卷与复用试卷写入
+│   ├── relations.py   # 知识关系的读写
+│   ├── typesetting.py # 从既有连接读取正文/id 的只读投影
+│   ├── experience.py  # 知识点详情页的数据装配
 │   ├── goals.py       # 工作区本地目标存储
 │   ├── mastery.py     # 掌握度实验的只读数据投影
 │   └── display_metadata.py # 展示字段回填
@@ -81,24 +92,77 @@ workbench/
 ├── cli/
 │   ├── __init__.py
 │   ├── entry.py       # 安装入口，委托 main 的统一 argparse 树
+│   ├── main.py        # lesson-kit 入口（argparse；纯数据命令，无教学语义）
+│   ├── content_bundle.py # lesson-kit ingest：内容清单的校验、门禁与批次写入
+│   ├── doctor.py      # lesson-kit doctor：只读体检（注册表 / 池 / Agent 可执行文件 / 端口）
 │   ├── evidence.py    # lesson-kit evidence：参数校验与只读 Data 调用
+│   ├── experience.py  # 知识点详情页的命令行入口
+│   ├── mirror.py      # lesson-kit mirror：作者内容镜像与图像文件投影
 │   ├── papers.py      # lesson-kit papers：校验已导出的练习清单并委托 Data 保存
-│   └── main.py        # lesson-kit 入口（argparse；纯数据命令，无教学语义）
+│   └── service.py     # lesson-kit daemon / dashboard：后台服务生命周期
 ├── server/
 │   ├── __init__.py
 │   ├── app.py         # BaseHTTPRequestHandler 路由（单进程单端口 127.0.0.1）
 │   ├── api.py         # JSON API 处理器（hub/weak/pull/practice/feedback/schedule/figures/ai）
 │   ├── context.py     # 按路由与 Pool 重建 Agent 页面上下文；练习页附页面锚点、同轮近期题和限长草稿
-│   ├── pages.py       # 服务端页面壳与通用页面 HTML
+│   ├── experience_api.py # 知识点详情页的 JSON 接口
+│   ├── experience_page.py # 知识点详情页的服务端渲染
+│   ├── pages.py       # 服务端页面壳与通用页面 HTML（含工作台设置视图）
 │   ├── records.py     # 记录中心页面 HTML（四个视图）
-│   └── static/
+│   └── static/        # 浏览器静态资源；无构建步骤，全部随仓库分发
+│       ├── workbench.css   # token 层（纸面 / 墨阶 / 角色色 / 夜纸 / 动效）+ 全部界面样式
+│       ├── workbench.js    # 工作台壳层、主题与偏好读取、连对与庆祝编排、设置视图
 │       ├── agent-ui.css   # Agent 栏、composer 与临时工作面的样式，复用 workbench.css tokens
 │       ├── agent-ui.js    # Agent 展示层：context chips、composer sizing、辅助面折叠
+│       ├── kp-experience.css / kp-experience.js # 知识点详情页的呈现与交互
 │       ├── middle-navigation.js # 同工作区中栏导航，复用已挂载的 workbench shell
 │       ├── practice-deck.js # 练习 session 纯数据状态
-│       └── practice-flow.js # 练习页 DOM 与请求生命周期
-└── tests/             # pytest；tests/test_*.py 与 tests/workbench/ 分开
+│       ├── practice-flow.js # 练习页 DOM 与请求生命周期（含连对反馈）
+│       ├── paper-practice.js # 普通 Paper 的作答、交卷与完成页
+│       ├── sfx.js          # 四个关键反馈音效的播放引擎（答对/答错/完成/里程碑）
+│       ├── graph-physics-core.js    # 图谱物理核心（唯一语义核心）
+│       ├── graph-physics.js        # Worker 适配器、页面镜像、本地布局种子的唯一读写
+│       ├── graph-physics-worker.js # 迭代布局的执行端
+│       ├── graph-renderer.js       # WebGL2 绘制关系几何、viewport culling 与标签 LOD
+│       ├── katex/         # 公式渲染（第三方，静态分发，无构建）
+│       ├── fonts/         # 打包衬线字体 woff2（SIL OFL，附授权文件）；只服务阅读面
+│       └── assets/        # 手写 SVG 与音效资产集；两套主题共用同一批文件
+│           ├── icons/     # 5 枚导航图标（翻开的书 / 一叠纸 / 书签 / 笔记本 / 节点连线）
+│           ├── empty/     # 10 张空态静物插画（花瓶 / 果篮 / 画布 / 茶杯 / 叠书 …）
+│           ├── motion/    # 台灯（台灯转场用，三姿态同一文件）
+│           ├── audio/     # 四个关键反馈短音效（答对/答错/完成/里程碑）
+│           └── preview.html # 资产预览页（资产评审用，不是产品页面）
+
+tests/                 # pytest；tests/test_*.py 与 tests/workbench/ 分开（在仓库根，不在 workbench/ 内）
 ```
+
+> 上面这棵树与仓库实际一致（核对时间 2026-10-22）。`workbench/` **全部 stdlib-only**；
+> 第三方只出现在 `workbench/server/static/katex/`（静态分发，无构建）。
+> `tools/` **不在**这棵树里 —— 它是仓库根下的**开发工具目录**，见 §1.2。
+
+### 1.1 静态资产目录的归属口径
+
+- 资产路径的**唯一权威**是 `openspec/changes/workbench-visual-language-v2/decisions.md` **A-40**
+  与 `design-notes/asset-spec.md`：`assets/icons/` · `assets/empty/` · `assets/motion/` ·
+  `assets/audio/` · `fonts/`。**`assets/illustrations/` 这个路径已作废**（`tasks.md` 9.2 /
+  8.7 / 17.7 里的旧写法），台灯在 `assets/motion/lamp.svg`。
+- 资产**随仓库分发，无构建步骤、无 base64 内联、无外链、无图标字体、无位图**；深浅两套主题
+  共用同一批文件，靠 CSS 变量换前景与背景色。
+- 新增静态资产只加在 `workbench/server/static/` 下，**不新增后端接口与构建步骤**。
+
+### 1.2 开发工具目录（`tools/`）不属于产品运行时
+
+仓库根的 `tools/` 是**开发工具**，**不是产品目录、不进发行包、不被工作台加载**：
+
+| 目录 | 是什么 | 边界 |
+|---|---|---|
+| `tools/graph-layout-diff.js` | 图谱布局坐标基线的生成与比对工具（纯 Node、只读、无第三方依赖） | 只读比对，不写工作台与池 |
+| `tools/graph-baseline/` | 图谱「改造前」的坐标快照与取证记录 | 基线证据，不是运行时数据 |
+| `tools/walkthrough/` | 交付前的走查执行器（隔离环境 + 请求序列捕获 + 对照截图） | **旁挂**：不进 Domain / Data 层，不新增持久化写入路径，不改 `workbench/`、`pool/`、`pipeline/`、`lessonkit.py` 的任何字节 |
+
+判据：**产品运行时不 import、不执行、不打包 `tools/` 下的任何东西**。把它放回 `workbench/`
+或 `workbench/server/static/` 都会破坏「工作台只随 `workbench/` 分发」这条边界。
+
 
 ## 2. 数据契约（全部增量，ADR 0017/0019）
 
@@ -227,6 +291,16 @@ workbench/
 - `server.context`：用浏览器路由与对象 ID 查询 Pool，只有可解析的正式题才作为页面锚点；只有该题属于同一 active practice 时才附最多四道前序已结算正式题，并调用纯 Domain 规则确定轮次焦点；不接收整页 DOM，也不写学习记录。
 - `server.api`：handler 注册表 {method, path_pattern, handler(pool, ws, args) -> json}；
   HTML 页面经 pages.py，JSON 经 api.py，二者不混。
+- `server.app._send_page` 的**页面路由**：`/w/{name}/<page>`，`<page>` 取
+  `practice`（默认）/ `kps` / `kp/{kp_id}` / `graph` / `session-end` / `practice-sets` /
+  `records` / **`settings`**。**`settings` = 工作台设置视图**，由 `pages.settings_page()`
+  服务端渲染（`workbench/server/pages.py`），只承载**外观**偏好（主题 / 阅读字面 / 动效 /
+  声音），**不含任何改变学习行为的控件**；左栏原有的两项行为偏好（运行中发送方式、练习显示
+  自评）留在左栏原位。它与其它页面走**同一条同工作区中栏导航路径**（`middle-navigation.js`），
+  因此 Agent 右栏的 DOM、会话与草稿在开关设置视图时**保持挂载**。
+  四项偏好存于浏览器 `localStorage` 的 **`wb_settings_<工作区>`**（与既有两项行为偏好同一个
+  JSON 记录），**不新增 localStorage 键、不落服务端、不写池**；主题属性写 `<html data-theme>`，
+  首帧在样式表 `<link>` 之前由内联脚本同步写出（无 FOUC）。**按工作区存储、跨工作区独立**。
 
 ## 4. 扩展点（明确留口）
 
@@ -235,13 +309,44 @@ workbench/
 - 新学习动作：domain 加模块，data.queries 加查询，Shell 加命令/页面。
 - AI 教师记忆消费端：读 trace（jobs 归档）+ feedback_events，独立后置模块。
 - 前端：pages.py 服务端渲染升级为更顺滑交互时，改 pages.py 与静态资产即可，不动后端接口。
+  视觉层同样落在这条缝里：token 层与亮/暗两套值（夜纸）在静态 CSS 里，主题偏好、
+  阅读字面、动效偏好与声音偏好是浏览器偏好（`localStorage`，按工作区），不写池、
+  不经后端接口；新增静态资产只加在 `workbench/server/static/` 下（`fonts/`、
+  `assets/{icons,empty,motion,audio}/`），设置视图的样式与逻辑分别落在既有的
+  `workbench.css` / `workbench.js` 里（**没有独立的 `settings.css` / `settings.js`**），
+  仍不新增后端接口与构建步骤。
 - 图谱关系管线是纯展示映射：现有 attraction 决定宽度/深浅，候选布局执行有限
   确定性消交叉；三层 SVG 路径和位置均不进入 SQLite。
 - 前端内容边界：主学习文本完整换行；代码、展示公式与表格局部滚动；主要
   flex/grid 子项显式允许收缩，避免改变三栏几何。
 - 视觉 token 以暖纸、墨线、学习蓝、阳光黄、注意红为固定角色；页面不得把
-  颜色作为状态的唯一信息载体。
-- 普通 Paper 题目与知识正文共享主阅读层级；答案展示方式、结果与可选自评作次级表面。答案显示/锁定由 per-item 或 on-submit 规则决定，不由自评或调度决定。闪卡与旧练习会话保留其既有方向、揭示和导航语义；本变更不增加闪卡创建界面。
+  颜色作为状态的唯一信息载体。**知识图谱页是显式且限域的例外**：它是数据可视化区
+  而不是操作界面，有自有的图谱暖色板（量值橙阶、学习状态四色、关系结构墨阶），
+  不占用也不受上述三个角色色约束；该例外只落在图谱的浏览器表示层，不引入后端接口、
+  持久字段或构建步骤。
+- **普通 Paper 题目与知识正文共享主阅读层级**（**已兑现**，2026-10-22）：两条腿都已落地 ——
+  ① **渲染器统一**：客户端与服务端从同一份 Markdown 产出同一份 HTML（服务端 `#` → `<h2>`，
+     客户端同样从 `<h2>` 起步；`tests/test_markdown_render_parity.py` 逐字符断言两侧相等）；
+  ② **版式层统一**：共享阅读版式层 `.wb-reading`（题面变体 `.wb-reading--stem` 同刻度），
+     题面 `.practice-question-card` 与知识点正文 `.knowledge-body` 同为 **17px / 1.75 / 38em**
+     （`workbench/server/static/workbench.css` 的 `:is(.wb-reading, .wb-reading--stem)` 规则块），
+     两侧不再各有一套字号与行距。✅ **`.rich-text` 已彻底退役**（2026-10-22，别名期收尾
+     / 任务 2.3）：HTML 挂载点早已全部迁到 `.wb-reading`，剩下的 **36 条死 CSS 规则**
+     同批删掉（并列选择器只去掉 `.rich-text` 那半，**保留 `.wb-reading` 那半，取值逐项
+     未动**）⇒ **现在 `workbench/` 下 `.rich-text` 只剩三行说明性注释，选择器命中 0**。
+     答案展示方式、结果与可选自评作次级表面。答案显示/锁定由
+     per-item 或 on-submit 规则决定，不由自评或调度决定。闪卡与旧练习会话保留其既有方向、
+     揭示和导航语义；本变更不增加闪卡创建界面。
+- **视觉 token 层已无别名期**（**已兑现**，2026-10-22，别名期收尾 / 任务 2.3）：
+  `:root` 里那 23 条「旧名 = 新名」的别名定义（旧 `--dsw-*` 一族）连同块注释一并删除，
+  旧名的**引用点也一并改掉**；图谱作用域的**冻结块**同步改钉新 token 名（旧名 pin
+  一条不留）。唯一保留的旧名是 `--dsw-state-success` —— 它**不在本次契约范围内**
+  （任务书 4.4「本条不动它」）。⇒ **现在样式表里的 token 名只有新名一族**，
+  旧名只作为注释里的「改造前取值」说明出现。
+  ⚠️ **例外**：图谱作用域里另有**两个**专用 token（`--graph-page-caption` /
+  `--graph-page-dimmed`），它们**只在图谱页作用域存在**、各只有一个固定值，
+  非图谱页回落 `--ink-faint` —— 它们不是别名，是新名（见
+  `openspec/changes/workbench-visual-language-v2/design-notes/night-paper-tokens.md` §3.3 附）。
 
 ## 5. 工程约束（硬规则）
 

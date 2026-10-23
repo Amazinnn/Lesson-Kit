@@ -1,20 +1,22 @@
 /* Agent UI v1 — conversation-first rail and transient work surfaces.
-   This file intentionally reuses the Workbench Soft Mondrian tokens. */
+   This file intentionally reuses the Workbench v2 token layer (surface / ink /
+   role / rule / elev). The legacy alias names are fully migrated here, so the
+   alias period may retire them (task 2.3). */
 
 #ai-column.agent-rail,
-#ai-column:has(.agent-rail-home) { background: var(--dsw-bg-layer-1); }
+#ai-column:has(.agent-rail-home) { background: var(--surface-card); }
 .agent-rail-home, #ai-chat-view { min-height: 0; }
 .ai-session-list-head, #ai-chat-head { min-height: 34px; }
 #ai-chat-head {
   flex: none;
   padding-bottom: 10px;
-  border-bottom: 1px solid var(--lk-ink);
+  border-bottom: 1px solid var(--ink-strong);
 }
 #ai-model-switch {
   min-width: 0;
   height: 30px;
-  border-color: var(--dsw-border-l2);
-  background: var(--lk-paper);
+  border-color: var(--rule-hair);
+  background: var(--surface-card);
   font-size: 12px;
 }
 .ai-conversation { border-top: 0 !important; padding-top: 12px !important; }
@@ -34,10 +36,10 @@
   flex: none;
   max-width: 190px;
   padding: 2px 8px;
-  border: 1px solid var(--dsw-border-l2);
+  border: 1px solid var(--rule-hair);
   border-radius: 999px;
-  background: var(--lk-paper);
-  color: var(--dsw-label-secondary);
+  background: var(--surface-card);
+  color: var(--ink-muted);
   font-size: 11px;
   line-height: 18px;
   overflow: hidden;
@@ -45,30 +47,30 @@
   white-space: nowrap;
 }
 .agent-context-chip.is-primary {
-  border-color: var(--lk-ink);
-  box-shadow: inset 3px 0 0 var(--lk-blue);
-  color: var(--lk-ink);
+  border-color: var(--ink-strong);
+  box-shadow: inset 3px 0 0 var(--role-blue);
+  color: var(--ink-strong);
 }
 
 .agent-composer-shell {
   position: relative;
   flex: none;
   padding-top: 8px;
-  border-top: 1px solid var(--dsw-border-l2);
-  background: var(--dsw-bg-layer-1);
+  border-top: 1px solid var(--rule-hair);
+  background: var(--surface-card);
 }
 .ai-handoff-status {
   margin: 0 0 5px;
   padding: 4px 8px;
-  border-left: 3px solid var(--lk-yellow);
-  color: var(--dsw-label-secondary);
+  border-left: 3px solid var(--role-yellow);
+  color: var(--ink-muted);
   font-size: 11px;
 }
 .ai-pending-queue {
   flex: none;
   margin: 0 0 2px;
   padding-top: 5px;
-  border-top: 1px solid var(--dsw-border-l1);
+  border-top: 1px solid var(--rule-hair);
 }
 .ai-pending-heading,
 .ai-pending-actions {
@@ -91,7 +93,7 @@
   gap: 5px;
   min-height: 46px;
   padding: 4px 2px;
-  border-top: 1px solid var(--dsw-border-l1);
+  border-top: 1px solid var(--rule-hair);
 }
 .ai-pending-handle {
   width: 24px;
@@ -102,14 +104,14 @@
 }
 .ai-pending-handle:focus-visible,
 .ai-pending-actions button:focus-visible {
-  outline: 2px solid var(--lk-blue);
+  outline: 2px solid var(--role-blue);
   outline-offset: 1px;
 }
 .ai-pending-content {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  color: var(--dsw-label-primary);
+  color: var(--ink-strong);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -137,44 +139,47 @@
 .ai-send-recoveries {
   margin-top: 8px;
   padding: 6px 8px;
-  border: 1px solid var(--dsw-border-l2);
-  border-radius: var(--dsw-radius-sm);
-  background: var(--lk-paper-shade);
-  color: var(--dsw-label-secondary);
+  border: 1px solid var(--rule-hair);
+  border-radius: var(--r-xs);
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
   font-size: 12px;
 }
-.ai-send-recoveries > summary { cursor: pointer; color: var(--lk-ink); font-weight: 600; }
+.ai-send-recoveries > summary { cursor: pointer; color: var(--ink-strong); font-weight: 600; }
 .ai-send-recovery-list { max-height: 180px; overflow-y: auto; }
 .ai-send-recovery {
   margin: 6px 0;
   padding: 8px;
-  border: 1px solid var(--dsw-border-l1);
-  background: var(--lk-paper);
+  border: 1px solid var(--rule-hair);
+  background: var(--surface-card);
 }
 .ai-send-recovery p { margin: 0 0 6px; overflow-wrap: anywhere; font-size: 12px; }
 .ai-send-recovery button { margin-right: 6px; }
-.ai-turn-inline-status { margin: 4px 0; color: var(--dsw-state-error); font-size: 12px; }
+.ai-turn-inline-status { margin: 4px 0; color: var(--role-red); font-size: 12px; }
 .ai-inline-retry { margin-top: 4px; }
 #ai-input-row.ai-input-row {
   align-items: flex-end;
   gap: 8px;
   margin-top: 0;
   padding: 8px;
-  border: 1px solid var(--lk-ink);
+  border: 1px solid var(--ink-strong);
   border-radius: 16px;
-  background: var(--lk-paper);
-  box-shadow: var(--dsw-shadow-lv1);
+  background: var(--surface-card);
+  box-shadow: var(--elev-1);
 }
 #ai-input {
   min-height: 40px;
   max-height: 160px;
+  /* §4.6 的 **Agent 贴底输入区特例**：贴底、紧凑内距（不跟通用文本域的
+     96px / 12px 走）—— 这条输入区是「贴底的一行」，不是多行录入面。 */
+  padding: 6px 10px;
   resize: none;
   border: 0;
   background: transparent;
   box-shadow: none;
 }
 #ai-input:focus {
-  outline: 2px solid var(--lk-blue);
+  outline: 2px solid var(--role-blue);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -186,7 +191,7 @@
   min-height: 20px;
   margin: 4px 2px 0;
   font-size: 11px;
-  color: var(--dsw-label-tertiary);
+  color: var(--ink-faint);
 }
 
 @media (max-width: 720px) {
@@ -202,23 +207,23 @@
    stays behind the existing details disclosure. */
 #ai-messages .ai-activity,
 #ai-messages .ai-plan {
-  border: 1px solid var(--dsw-border-l2);
-  border-left: 3px solid var(--lk-blue);
-  border-radius: var(--dsw-radius-md);
-  background: var(--dsw-bg-layer-2);
+  border: 1px solid var(--rule-hair);
+  border-left: 3px solid var(--role-blue);
+  border-radius: var(--r-md);
+  background: var(--surface-sunken);
   box-shadow: none;
 }
 #ai-messages .ai-activity.is-done,
-#ai-messages .ai-plan-step.is-done { border-left-color: var(--dsw-state-success); }
+#ai-messages .ai-plan-step.is-done { border-left-color: var(--role-yellow-deep); }
 #ai-messages .ai-activity.is-failed,
-#ai-messages .ai-plan-step.is-failed { border-left-color: var(--lk-red); }
+#ai-messages .ai-plan-step.is-failed { border-left-color: var(--role-red); }
 #ai-messages .ai-plan-state {
   font-size: 11px;
   font-weight: 700;
 }
 #ai-messages .ai-plan-output {
   margin-top: 7px;
-  color: var(--dsw-label-secondary);
+  color: var(--ink-muted);
   font-size: 11px;
 }
 
@@ -227,9 +232,9 @@
 .agent-activity-float,
 .agent-artifact-split {
   z-index: 9;
-  border: 1px solid var(--lk-ink);
-  background: var(--lk-paper);
-  box-shadow: var(--dsw-shadow-lv3);
+  border: 1px solid var(--ink-strong);
+  background: var(--surface-card);
+  box-shadow: var(--elev-3);
 }
 .agent-activity-float {
   position: sticky;
@@ -238,7 +243,7 @@
   width: min(320px, calc(100% - 24px));
   margin: -22px 0 12px 16px;
   padding: 10px 12px;
-  border-radius: var(--dsw-radius-md);
+  border-radius: var(--r-md);
 }
 .agent-activity-float.is-collapsed {
   width: auto;
@@ -277,7 +282,7 @@
 }
 .agent-surface-kicker {
   margin: 0;
-  color: var(--dsw-label-tertiary);
+  color: var(--ink-faint);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .04em;
@@ -287,49 +292,51 @@
 .agent-aux-collapse,
 .agent-activity-toggle { width: 28px; padding: 0; }
 
+/* §4.26 时间线节点 · 分隔线时间线（`timeline-flat` · A-115 形态裁定）
+   与 `.ai-plan-step`（workbench.css）**合并成同一套几何**：
+   **不画竖线** —— 发丝线分隔 + 12px 小圆点（§4.14 的状态圆点口径）。
+   ⚠️ 旧的 18px 圆环（`.agent-milestone-marker`）作废。 */
 .agent-milestone {
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 7px;
-  padding: 8px 0;
-  border-top: 1px solid var(--dsw-border-l1);
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: var(--sp-3);
+  padding: 10px 0;
+  border-top: 1px solid var(--rule-hair);
 }
 .agent-milestone:first-child { border-top: 0; }
 .agent-milestone-marker {
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  border: 1px solid var(--lk-ink);
-  border-radius: 50%;
-  color: var(--lk-ink);
-  font-size: 11px;
-  font-weight: 800;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: var(--r-pill);
+  /* 默认 = 蓝环（与 `.ai-plan-marker` 同一支笔） */
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--role-blue);
 }
 .agent-milestone.is-running .agent-milestone-marker {
-  border-color: var(--lk-blue);
-  color: var(--lk-blue);
+  background: var(--role-blue);
+  box-shadow: none;
 }
 .agent-milestone.is-done .agent-milestone-marker {
-  border-color: var(--dsw-state-success);
-  color: var(--dsw-state-success);
+  background: var(--role-yellow);
+  box-shadow: none;
 }
 .agent-milestone.is-failed .agent-milestone-marker {
-  border-color: var(--lk-red);
-  color: var(--lk-red);
+  background: var(--role-red);
+  box-shadow: none;
 }
 .agent-milestone-body { min-width: 0; }
 .agent-milestone-body strong { display: block; font-size: 12px; line-height: 18px; }
 .agent-milestone-state {
   display: block;
   margin-top: 1px;
-  color: var(--dsw-label-tertiary);
+  color: var(--ink-faint);
   font-size: 11px;
 }
 .agent-milestone-body p {
   margin: 4px 0 0;
-  color: var(--dsw-label-secondary);
+  color: var(--ink-muted);
   font-size: 11px;
   line-height: 17px;
 }
@@ -338,20 +345,24 @@
 .agent-approval-slot { padding: 0 0 4px; }
 .agent-approval-card {
   padding: 11px 12px;
-  border: 1px solid var(--lk-ink);
-  border-left: 4px solid var(--lk-yellow);
+  border: 1px solid var(--ink-strong);
+  border-left: 4px solid var(--role-yellow);
   border-radius: 12px;
-  background: #fff9df;
+  /* 底色走主题 token（IMPL-W2j 第 7 条 · 夜纸巡检 N1 §3.6）：
+     改造前写死 `#fff9df` ⇒ 夜纸下是一块约 15:1 的**浅黄亮块**压在夜纸卡面上
+     （硬编码亮色残留）。改读 `--role-yellow-soft`
+     （浅 `#fcf0cd` / 夜 `#3d3721`）⇒ 两主题都随主题翻转。 */
+  background: var(--role-yellow-soft);
 }
 .agent-approval-title { display: block; margin-top: 3px; font-size: 13px; }
 .agent-approval-reason,
 .agent-approval-impact {
   margin: 5px 0 0;
-  color: var(--dsw-label-secondary);
+  color: var(--ink-muted);
   font-size: 11px;
   line-height: 17px;
 }
-.agent-approval-impact { color: var(--lk-ink); }
+.agent-approval-impact { color: var(--ink-strong); }
 .agent-approval-actions {
   display: flex;
   justify-content: flex-end;
@@ -362,16 +373,16 @@
 .ai-paper-approval {
   margin-top: 8px;
   padding: 9px 10px;
-  border: 1px solid var(--dsw-border-l1);
-  border-left: 3px solid var(--lk-yellow);
+  border: 1px solid var(--rule-hair);
+  border-left: 3px solid var(--role-yellow);
   border-radius: 8px;
-  background: var(--lk-paper);
+  background: var(--surface-card);
 }
 .ai-paper-approval h2 { margin: 2px 0 0; font-size: 13px; line-height: 18px; }
 .ai-paper-approval-status,
 .ai-paper-approval-details p {
   margin: 5px 0 0;
-  color: var(--dsw-label-secondary);
+  color: var(--ink-muted);
   font-size: 11px;
   line-height: 16px;
 }
@@ -380,11 +391,11 @@
 .ai-paper-approval-order {
   margin: 3px 0 0;
   padding-left: 24px;
-  color: var(--dsw-label-secondary);
+  color: var(--ink-muted);
   font-size: 10px;
   line-height: 15px;
 }
-.ai-paper-approval-impact { color: var(--lk-ink) !important; }
+.ai-paper-approval-impact { color: var(--ink-strong) !important; }
 .ai-paper-approval-actions {
   display: flex;
   justify-content: flex-end;
@@ -394,10 +405,10 @@
 .ai-paper-approval-actions button:disabled { opacity: .55; cursor: wait; }
 .ai-paper-proposal-history {
   padding: 9px 11px !important;
-  border: 1px solid var(--dsw-border-l1) !important;
-  border-left: 3px solid var(--lk-yellow) !important;
+  border: 1px solid var(--rule-hair) !important;
+  border-left: 3px solid var(--role-yellow) !important;
   border-radius: 9px !important;
-  background: var(--lk-paper) !important;
+  background: var(--surface-card) !important;
 }
 .ai-paper-approval-history-title { display: block; font-size: 12px; }
 .ai-paper-approval-history-status { font-weight: 700; }
@@ -418,27 +429,27 @@
    is only the latest-result preview and never performs navigation by itself. */
 .agent-artifact-card {
   padding: 11px 12px !important;
-  border: 1px solid var(--lk-ink) !important;
-  border-left: 4px solid var(--lk-blue) !important;
+  border: 1px solid var(--ink-strong) !important;
+  border-left: 4px solid var(--role-blue) !important;
   border-radius: 10px !important;
-  background: var(--lk-paper) !important;
+  background: var(--surface-card) !important;
 }
 .agent-artifact-card-title {
   display: block;
   margin-top: 3px;
-  color: var(--lk-ink);
+  color: var(--ink-strong);
   font-size: 13px;
   line-height: 19px;
 }
 .agent-artifact-meta {
   margin: 5px 0 0;
-  color: var(--dsw-label-tertiary);
-  font-family: var(--dsw-font-code);
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 .agent-artifact-summary {
   margin: 7px 0 0;
-  color: var(--dsw-label-secondary);
+  color: var(--ink-muted);
   font-size: 12px;
   line-height: 18px;
 }
@@ -457,7 +468,7 @@
 #agent-artifact-body {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--dsw-border-l2);
+  border-top: 1px solid var(--rule-hair);
 
 @media (max-width: 760px) {
   .agent-activity-float {

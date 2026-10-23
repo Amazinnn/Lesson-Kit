@@ -1,0 +1,30 @@
+<svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-title">
+  <title id="icon-practice-title">练习</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 9 30.4 C 14 27.8 20 28.4 24 31.4 C 28 28.4 34 27.8 39 30.4 L 39 33.6 C 34 31 28 31.6 24 34.6 C 20 31.6 14 31 9 33.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 9 33.6 C 14 31 20 31.6 24 34.6 C 28 31.6 34 31 39 33.6" stroke-width="3"/>
+      <path d="M 24 14.4 C 23 20 23 26 24 31" stroke-width="2"/>
+      <path d="M 12.8 18.6 L 21 18.6" stroke-width="1.5"/>
+      <path d="M 12.8 22.4 L 20 22.4" stroke-width="1.5"/>
+      <path d="M 12.8 26.2 L 18.6 26.2" stroke-width="1.5"/>
+      <path d="M 27 18.6 L 35.5 18.6" stroke-width="1.5"/>
+      <path d="M 27 22.4 L 33.6 22.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 12.4 15.2 C 15 13.6 17.8 13.2 20 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

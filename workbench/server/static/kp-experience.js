@@ -90,7 +90,7 @@
         ? record.problem_ids : []);
       var problems = Array.isArray(kp.problems) ? kp.problems : [];
       if (!problems.length) {
-        choices.innerHTML = "<p class='muted'>这个知识点暂时没有关联题目。</p>";
+        choices.innerHTML = "<p class='muted'>暂无关联题目</p>";
       } else {
         choices.innerHTML = problems.map(function (problem) {
           var id = problem.problem_id || "";
@@ -119,7 +119,7 @@
   if (save) save.addEventListener("click", function () {
     var text = content ? content.value.trim() : "";
     if (!text) {
-      showError("经验总结不能为空；暂时没有经验时请保持未创建状态。");
+      showError("经验总结不能为空");
       return;
     }
     if (!choicesLoaded) {

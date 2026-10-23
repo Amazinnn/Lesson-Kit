@@ -232,6 +232,16 @@
     var VERDICT_HOLD_MS = 2000;
     var advanceToken = 0;
     var advanceTimer = null;
+    /* 连对反馈（tasks.md 17.1 / 17.2 / 17.3 / 17.8）：状态机在公共 API
+       window.lkStreak 里（decisions.md A-58）—— 计数 / 三级档 / 递增 / 断裂 /
+       复位 / 横幅 / 火苗只有一份实现，这里只持有本轮的一个实例。
+       判定来源仍在本流（微测判定）——公共 API 只管「拿到判定之后怎么反馈」。
+       ⚠️ 该共用件与 window.lkTicker 一样是「可有可无」的：不带 workbench.js
+       单独跑本文件时（测试夹具）没有连对反馈 —— 挂一个恒为 0 的数字是没有
+       信息量的假事实（A-59 同一原则）。 */
+    var streak = window.lkStreak && typeof window.lkStreak.create === "function"
+      ? window.lkStreak.create({ root: stream })
+      : null;
 
     function showPracticeError(error, retryable) {
       if (disposed || !practiceError) return;
@@ -267,19 +277,14 @@
         : "本轮无法组题（0/" + requested + " 道），当前范围没有可用题目。";
       if (itemReasons.length) report += " 逐题依据：" + itemReasons.join("；") + "。";
 
-      var tray = document.getElementById("scope-tray");
-      var names = {};
-      if (tray && tray.dataset && tray.dataset.kpNames) {
-        try { names = JSON.parse(tray.dataset.kpNames) || {}; } catch (_) {}
-      }
-      var shortKps = shortage.map(function (kpId) {
-        return names[kpId] || kpId;
-      });
+      /* The scope tray is retired: the page never renders it, so the report
+         names the knowledge points by id (tasks.md 14.1 —— 死代码归零). */
+      var shortKps = shortage.slice();
       if (shortKps.length) {
         report += " 可用题数少于请求量的知识点：" + shortKps.join("、") + "。";
       }
       if (!items.length || items.length < requested || shortKps.length) {
-        report += "请检查筛选条件；若正式题目不足，可通过 Check 管线检查并补充。系统不会虚构题目。";
+        report += "请检查筛选条件；若正式题目不足，可通过 Check 管线检查并补充。";
       }
       practiceError.textContent = report;
       practiceError.classList.remove("hidden");
@@ -391,6 +396,7 @@
       if (!activePractice) return;
       var continuation = activePractice.continuation;
       if (continuation ? !continuation.available : (activePractice.unavailable_item_ids || []).length > 0) return;
+      if (streak) streak.reset();   /* 新的一轮从零开始 */
       practiceDeck = activeToDeck(activePractice);
       persistDeck();
       sessionStorage.setItem(MODE_KEY, activePractice.practice_mode || "exam");
@@ -815,6 +821,41 @@
         + "</p>";
     }
 
+    /* 答对的挤压回弹（motion-spec §3.1 / A-89）：落点是**被选中的那一项**
+       ——正确选项那一行（底边为锚，读作「被顶了一下」）。
+       · 判定行（`.micro-verdict.ok`）另挂 `lk-verdict-correct` 作标记（**无样式**），
+         走查探针据此认出「判定正确」；
+       · 落点行挂 `lk-squash`（样式表规则：
+         `.lk-squash { transform-origin: 50% 100%; animation: lk-squash-bounce 517ms both; }`），
+         这里同时写一份内联声明（与 workbench.js 的 `lk-error-nudge` 同一写法），
+         规则补齐之前回弹也已经发生；
+       · **终态铁律**：压扁只写在 `@keyframes` 里，元素的静态样式是终态
+         （不压扁），降级后读得出；
+       · **动效红线**：关键帧只动 `transform`（scale），不动布局；
+       · 只在提交路径挂 ⇒ 判定只回弹一次，回看旧答案不重播；
+       · 判定为错 / 闪卡 / 没有「判定正确」时整段不挂。
+       本流的选项行实际类名：`<label class='option-selected'>`（在
+       `<fieldset class='problem-options'>` 内）——「被选中」即答对时的那一项。
+       走查探针（tools/walkthrough/frames.py 的 M-7）等的是
+       `document.getAnimations()` 里名为 `lk-squash-bounce` 的动画 ⇒
+       落点行上必须真的有这条动画（判定行只带标记，不带动画）。 */
+    function squashCorrectOption(root) {
+      if (!root || typeof root.querySelectorAll !== "function") return;
+      var verdicts = root.querySelectorAll(".micro-verdict.ok");
+      var verdict = verdicts && verdicts.length ? verdicts[0] : null;
+      if (!verdict) return;
+      if (verdict.classList) verdict.classList.add("lk-verdict-correct");
+      var rows = root.querySelectorAll(".problem-options label.option-selected");
+      Array.prototype.slice.call(rows || []).forEach(function (row) {
+        if (!row || !row.classList) return;
+        row.classList.add("lk-squash");
+        if (row.style) {
+          row.style.animation = "lk-squash-bounce 517ms both";
+          row.style.transformOrigin = "50% 100%";
+        }
+      });
+    }
+
     function keylessLine(item) {
       var quiz = microQuiz(item.payload);
       if (!quiz || quizHasKey(quiz)) return "";
@@ -842,7 +883,7 @@
           + "<time>" + escapeHtml(String(attempt.created_at || "")) + "</time>"
           + stars
           + (attempt.answer_text
-            ? "<div class='rich-text'>" + richText(attempt.answer_text) + "</div>"
+            ? "<div class='wb-reading'>" + richText(attempt.answer_text) + "</div>"
             : "")
           + "</div>";
       });
@@ -872,7 +913,7 @@
             + "<input data-choice-option type='" + (multiple ? "checkbox" : "radio")
             + "' name='problem-option' value='" + escapeHtml(option.id) + "'"
             + (selected ? " checked disabled" : "") + "> "
-            + "<span class='rich-text'>" + richText(option.text) + "</span></label>";
+            + "<span class='wb-reading'>" + richText(option.text) + "</span></label>";
         }).join("") + "</fieldset>";
     }
 
@@ -890,29 +931,29 @@
       if (quiz) {
         var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
         var why = quiz.error_reason
-          ? "<p class='section-kicker'>为什么</p><div class='rich-text'>"
+          ? "<p class='section-kicker'>错因</p><div class='wb-reading'>"
             + richText(quiz.error_reason) + "</div>"
           : "";
         solution = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
-          + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>"
+          + "<div class='wb-reading'>" + richText(key) + "</div>" + why + "</section>"
           + practiceExplanationSection(problem);
       } else {
         solution = practiceSolutionHtml(problem);
       }
       var feedback = item.feedback || {};
       var selfRating = feedback.rating == null
-        ? "<p class='muted'>尚未自评。</p>"
+        ? "<p class='muted'>尚未自评</p>"
         : "<p>我的自评：" + "★".repeat(feedback.rating)
           + "☆".repeat(5 - feedback.rating) + "（" + feedback.rating + "/5）</p>"
           + (feedback.note
-            ? "<div class='muted rich-text'>" + richText(feedback.note) + "</div>" : "");
+            ? "<div class='muted wb-reading'>" + richText(feedback.note) + "</div>" : "");
       if (!paperReview) {
         return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
-          + "<div class='rich-text'>" + richText(answer) + "</div></section>"
+          + "<div class='wb-reading'>" + richText(answer) + "</div></section>"
           + status + solution;
       }
       return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
-        + "<div class='rich-text'>" + richText(answer) + "</div></section>"
+        + "<div class='wb-reading'>" + richText(answer) + "</div></section>"
         + status + "<section class='practice-solution'><p class='section-kicker'>我的自评</p>"
         + selfRating + "</section><details class='practice-reference'><summary>查看参考答案与解析</summary>"
         + solution + "</details>";
@@ -983,16 +1024,16 @@
           + (item.revealed ? " is-revealed" : "") + "'>"
           + "<section class='flash-card-face flash-card-answer' aria-label='另一面'"
           + (item.revealed ? "" : " aria-hidden='true'") + ">"
-          + "<p class='section-kicker'>另一面</p><div class='rich-text'>"
+          + "<p class='section-kicker'>另一面</p><div class='wb-reading'>"
           + richText(sides.answer) + "</div></section>"
           + "<section class='flash-card-face flash-card-prompt' aria-label='提示面'>"
-          + "<p class='section-kicker'>提示面</p><div class='rich-text'>"
+          + "<p class='section-kicker'>提示面</p><div class='wb-reading'>"
           + richText(sides.prompt) + "</div></section></div>";
         stream.innerHTML = "<article class='practice-question-card card flash-card-shell'>"
           + "<p class='context-line'>闪卡</p>"
           + "<p class='muted flash-direction-label'>" + directionLabel
-          + " · 先在心里回忆，再揭示对照。</p>" + cardBody
-          + (item.state === "rated" ? "<p class='muted'>已评分。</p>" : "")
+          + "</p>" + cardBody
+          + (item.state === "rated" ? "<p class='muted'>已评分</p>" : "")
           + "</article>";
         renderMath(stream);
         setComposerLayout("card");
@@ -1011,11 +1052,14 @@
       var problem = item.payload || {};
       var answered = reviewOnly || deckItemAnswered(item);
       var paperReview = reviewOnly && isPaperReviewItem(item);
+      var streakMarkup = streak ? streak.html() : "";
       stream.innerHTML = "<article class='practice-question-card card'>"
-        + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p><h2>"
+        + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p>"
+        /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里 */
+        + "<p class='practice-streak' style='position: relative'>" + streakMarkup + "</p><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
-        + "<div class='problem-text rich-text'>" + richText(problemTextFor(problem)) + "</div>"
+        + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(problemTextFor(problem)) + "</div>"
         + optionHtmlFor(item, reviewOnly, paperReview) + keylessLine(item)
         + verdictLine(item, reviewOnly, paperReview)
         + (reviewOnly ? reviewResultHtml(item, paperReview) : "") + "</article>";
@@ -1094,11 +1138,11 @@
       var mode = sessionStorage.getItem(MODE_KEY);
       var ratingMode = sessionStorage.getItem(RATING_MODE_KEY);
       var emptyMessage = similarRound
-        ? "暂无更多同类题。"
-        : (mode === "flash_card" ? "当前范围暂无可用的闪卡，请选择其他模式。"
-          : mode === "micro" ? "当前范围暂无可用的小测题目，请选择其他模式。"
-          : mode === "yes_no" ? "当前范围暂无可用的 Yes / No 题目，请选择其他模式。"
-            : "本轮相关题目已练完。");
+        ? "暂无更多同类题"
+        : (mode === "flash_card" ? "当前范围暂无可用闪卡"
+          : mode === "micro" ? "当前范围暂无可用小测题目"
+          : mode === "yes_no" ? "当前范围暂无可用判断题"
+            : "本轮相关题目已练完");
       advanceToken += 1;
       practiceDeck.ended = true;
       persistDeck();
@@ -1366,6 +1410,7 @@
     }
 
     function startLegacySession(contentMode, ratingMode) {
+      if (streak) streak.reset();   /* 新的一轮从零开始 */
       practiceDeck = PracticeDeck.deserialize(null);
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
@@ -1394,7 +1439,7 @@
       }
       var ids = selectedKpIds();
       if (!ids.length) {
-        if (practiceError) showPracticeError("请先在知识点视图选择范围", false);
+        if (practiceError) showPracticeError("请先在知识点页选择范围", false);
         return;
       }
       store(KPS_KEY, ids);
@@ -1429,7 +1474,7 @@
       }
       var ids = selectedKpIds();
       if (!ids.length) {
-        if (practiceError) showPracticeError("请先在知识点视图选择范围", false);
+        if (practiceError) showPracticeError("请先在知识点页选择范围", false);
         return;
       }
       beginFixedPractice(ids, contentMode, ratingMode);
@@ -1504,7 +1549,7 @@
     var ORIGIN_LABELS = {
       source_problem: "历年原题",
       adapted_problem: "改编",
-      generated_grounded: "AI生成",
+      generated_grounded: "AI 生成",
     };
     var filterLaunch = document.getElementById("filter-launch");
     var filterCount = document.getElementById("filter-count");
@@ -1556,7 +1601,7 @@
           + " <span class='count'>" + facet.count + "</span></label>";
       }).join("");
       return "<div class='filter-dimension'><h3>" + escapeHtml(label) + "</h3>"
-        + (options || "<p class='muted'>本池暂无此维度</p>") + "</div>";
+        + (options || "<p class='muted'>暂无该维度</p>") + "</div>";
     }
 
     function renderFilterPopup() {
@@ -1627,6 +1672,10 @@
       if (choiceTexts.length) patch.choices = choiceTexts.slice();
       var graded = gradeMicroQuiz(item.payload, choiceTexts);
       if (graded !== null) patch.verdict = graded;
+      /* 连对：判定先落地，界面随后再动（数字滚动 / 火苗 / 横幅 / 断裂负反馈）。
+         状态机在公共 API window.lkStreak（decisions.md A-58）；判定来源仍是本流
+         的微测判定。断裂时连对数先留着，好让火苗逐簇熄灭，灭完再归零。 */
+      var streakLanded = streak ? streak.judge(graded) : null;
       var attemptPayload = {
         request_id: newPracticeRequestId(), problem_id: item.id,
         answer_text: answer, choices: choiceTexts.length ? choiceTexts.slice() : undefined,
@@ -1641,6 +1690,11 @@
       PracticeDeck.settle(practiceDeck, item.id, patch);
       persistDeck();
       renderDeckItem(currentProblem());
+      /* 答对的挤压回弹：判定成立的这一刻，回弹挂到**被选中的那一项**
+         （正确选项行，底边为锚）——与音效同一帧落地（判定为错时那边也不响）。
+         判定为错 / 闪卡 / 无判定键时不动（负反馈是摆动，不是回弹）。 */
+      squashCorrectOption(stream);
+      if (streak) streak.apply(streakLanded);
       // The attempt itself is the durable record: one POST per submission,
       // before any rating. The session's rating later links back via attempt_id.
       ensureAttempt(currentProblem()).catch(showPracticeError);
@@ -1682,12 +1736,12 @@
         var section;
         if (quiz) {
           var key = quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键";
-          var why = quiz.error_reason
-            ? "<p class='section-kicker'>为什么</p>"
-              + "<div class='rich-text'>" + richText(quiz.error_reason) + "</div>"
+        var why = quiz.error_reason
+          ? "<p class='section-kicker'>错因</p>"
+              + "<div class='wb-reading'>" + richText(quiz.error_reason) + "</div>"
             : "";
           section = "<section class='practice-solution'><p class='section-kicker'>答案</p>"
-            + "<div class='rich-text'>" + richText(key) + "</div>" + why + "</section>"
+            + "<div class='wb-reading'>" + richText(key) + "</div>" + why + "</section>"
             + practiceExplanationSection(detail.problem);
         } else {
           section = practiceSolutionHtml(detail.problem);
@@ -1745,7 +1799,7 @@
       // parseInt("") is NaN and fails both bounds checks, so an empty input
       // used to reach the server and die as "rating or note is required".
       if (!(rating >= 1 && rating <= 5)) {
-        showPracticeError("请输入 1-5 的评分");
+        showPracticeError("请输入 1–5 的自评");
         return;
       }
       clearPracticeError();
@@ -1948,7 +2002,7 @@
   if (pending) {
     var unrated = session().filter(function (item) { return item.state === "unrated"; });
     if (!unrated.length) {
-      pending.innerHTML = "<p>没有待评的题。</p>";
+      pending.innerHTML = "<p>没有待评的题</p>";
     } else {
       var remaining = unrated.length;
       var buildRatingCard = function (contentHtml, itemType, itemId, title, direction, item) {
@@ -1973,11 +2027,11 @@
         var save = document.createElement("button");
         save.id = "end-save-" + entryId;
         save.className = "primary sm";
-        save.textContent = "保存评分";
+        save.textContent = "保存自评";
         var ratingLabel = document.createElement("label");
         ratingLabel.id = "end-rating-label-" + entryId;
         ratingLabel.setAttribute("for", rating.id);
-        ratingLabel.textContent = "为“" + title + "”评分（1-5）";
+        ratingLabel.textContent = "为“" + title + "”自评（1–5）";
         var noteLabel = document.createElement("label");
         noteLabel.id = "end-note-label-" + entryId;
         noteLabel.setAttribute("for", note.id);
@@ -1993,7 +2047,7 @@
         save.addEventListener("click", function () {
           var value = parseInt(rating.value, 10);
           if (!(value >= 1 && value <= 5)) {
-            showCardError("请输入 1-5 的评分");
+            showCardError("请输入 1–5 的自评");
             return;
           }
           var feedback = {
@@ -2016,7 +2070,7 @@
           }).then(function () {
             card.remove();
             remaining -= 1;
-            if (!remaining) pending.innerHTML = "<p>全部评完 ✓</p>";
+            if (!remaining) pending.innerHTML = "<p>全部评完</p>";
           }).catch(function (err) {
             updateSession(origin.id, { feedback_status: "failed" }, origin.direction);
             showCardError(err.message || "保存失败");
@@ -2038,8 +2092,8 @@
           var directionLabel = item.direction === "reverse" ? "反向" : "正向";
           buildRatingCard(
             "<p class='context-line'>闪卡 · " + directionLabel + "</p>"
-            + "<div class='problem-text rich-text'>" + richText(sides.prompt) + "</div>"
-            + "<p class='section-kicker'>另一面</p><div class='rich-text'>" + richText(sides.answer) + "</div>",
+            + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(sides.prompt) + "</div>"
+            + "<p class='section-kicker'>另一面</p><div class='wb-reading'>" + richText(sides.answer) + "</div>",
             "card", item.id, String(sides.prompt || "闪卡"), item.direction, item);
           return;
         }
@@ -2049,20 +2103,20 @@
           var quiz = problem.micro_quiz && typeof problem.micro_quiz === "object"
             ? problem.micro_quiz : null;
           var solutionHtml = quiz
-            ? "<p class='section-kicker'>答案</p><div class='rich-text'>"
+            ? "<p class='section-kicker'>答案</p><div class='wb-reading'>"
               + richText(quizHasKey(quiz) ? String(quiz.answer_key) : "未录入答案键")
               + "</div>"
               + (quiz.error_reason
-                ? "<p class='section-kicker'>为什么</p><div class='rich-text'>"
+                ? "<p class='section-kicker'>错因</p><div class='wb-reading'>"
                   + richText(quiz.error_reason) + "</div>"
                 : "")
               + practiceExplanationSection(problem)
-            : "<p class='section-kicker'>解析</p><div class='rich-text'>"
+            : "<p class='section-kicker'>解析</p><div class='wb-reading'>"
               + richText(problem.solution || "（本题无解析）") + "</div>";
           buildRatingCard(
             "<p class='context-line'>练习题</p><h2>" + escapeHtml(title) + "</h2>"
-            + "<div class='problem-text rich-text'>" + richText(problem.problem_text) + "</div>"
-            + "<p class='section-kicker'>我的作答</p><div class='rich-text'>" + richText(item.answer_text || "（未作答）") + "</div>"
+            + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(problem.problem_text) + "</div>"
+            + "<p class='section-kicker'>我的作答</p><div class='wb-reading'>" + richText(item.answer_text || "（未作答）") + "</div>"
             + solutionHtml,
             "problem", item.id, title, "", item);
         });
@@ -2097,7 +2151,7 @@
     var origin = problem.solution_origin;
     var label = origin === "source" ? "教材解析" : "解析";
     return "<section class='practice-solution'><p class='section-kicker'>" + label + "</p>"
-      + "<div class='rich-text'>" + richText(String(solution)) + "</div></section>";
+      + "<div class='wb-reading'>" + richText(String(solution)) + "</div></section>";
   }
 
   function practiceSolutionHtml(problem) {
@@ -2107,14 +2161,14 @@
     var answer = problem.source_answer;
     if (answer && String(answer).trim()) {
       sections += "<section class='practice-solution'><p class='section-kicker'>教材答案</p>"
-        + "<div class='rich-text'>" + richText(String(answer)) + "</div></section>";
+        + "<div class='wb-reading'>" + richText(String(answer)) + "</div></section>";
     }
     var explanation = practiceExplanationSection(problem);
     if (explanation) {
       sections += explanation;
     } else if (!sections) {
       sections = "<section class='practice-solution'><p class='section-kicker'>解析</p>"
-        + "<div class='rich-text'>（本题无解析，请基于自身作答自评）</div></section>";
+        + "<div class='wb-reading'>（本题无解析）</div></section>";
     }
     return sections;
   }

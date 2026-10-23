@@ -1,0 +1,32 @@
+<svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-cup-title">
+  <title id="empty-cup-title">静物插画：一杯还冒着热气的茶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="33" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="158" rx="45" ry="9" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="153" rx="19" ry="2.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 102.83 88 89 92.29 89 96 C 89 130 97.35 152 120 152 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 137.17 88 151 92.29 151 96 C 151 130 142.65 152 120 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="97.5" rx="28" ry="6" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <ellipse cx="120" cy="158" rx="45" ry="9" stroke-width="3"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" stroke-width="2"/>
+      <path d="M 89 96 C 89 130 97.35 152 120 152 C 142.65 152 151 130 151 96" stroke-width="3"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" stroke-width="2"/>
+      <path d="M 150.7 106 C 165 103 167 126 146.1 132" stroke-width="2"/>
+      <g class="asset-empty__extension">
+        <path d="M 111 85 C 105 77 117 71 111 63 C 107 57 111 49 111 43" stroke-width="1.5"/>
+        <path d="M 130 85 C 124 78 135 72 130 65 C 127 60 131 53 132 48" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 108 C 93 120 95 132 98 141" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>

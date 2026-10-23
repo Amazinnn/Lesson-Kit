@@ -1,0 +1,3319 @@
+{
+  "id": "M-3",
+  "animated": {
+    "samples": [
+      {
+        "t": 0,
+        "file": "0000.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(0, 0, 0, 1, 0, 0)",
+            "width": 0,
+            "height": 8,
+            "animationName": "lk-progress-fill",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [
+          {
+            "opacity": "0",
+            "transform": "matrix(0.4, 0, 0, 0.4, 0, 0)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 264,
+            "height": 125,
+            "rect": {
+              "x": 518,
+              "y": 315,
+              "w": 264,
+              "h": 125
+            }
+          }
+        ],
+        "confetti": [
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 373,
+              "y": 273,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 439,
+              "y": 317,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 505,
+              "y": 260,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 571,
+              "y": 329,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 631,
+              "y": 279,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 690,
+              "y": 317,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 749,
+              "y": 260,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 809,
+              "y": 304,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 868,
+              "y": 273,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 921,
+              "y": 323,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 413,
+              "y": 360,
+              "w": 15,
+              "h": 15
+            }
+          },
+          {
+            "opacity": "0.925575",
+            "transform": "matrix(0.55398, 0.391442, -0.391442, 0.55398, 0, 13.8463)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 15,
+            "height": 15,
+            "rect": {
+              "x": 716,
+              "y": 354,
+              "w": 15,
+              "h": 15
+            }
+          }
+        ],
+        "confettiCount": 12,
+        "burstCount": 1,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 150,
+        "file": "0150.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(0.766032, 0, 0, 1, 0, 0)",
+            "width": 469,
+            "height": 8,
+            "animationName": "lk-progress-fill",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [
+          {
+            "opacity": "0.9987",
+            "transform": "matrix(1.07912, 0, 0, 1.07912, 0, 0)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 712,
+            "height": 337,
+            "rect": {
+              "x": 294,
+              "y": 197,
+              "w": 712,
+              "h": 337
+            }
+          }
+        ],
+        "confetti": [
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 374,
+              "y": 306,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 440,
+              "y": 350,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 506,
+              "y": 294,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 572,
+              "y": 362,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 631,
+              "y": 312,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 691,
+              "y": 350,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 750,
+              "y": 294,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 809,
+              "y": 337,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 869,
+              "y": 306,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 922,
+              "y": 356,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 413,
+              "y": 394,
+              "w": 14,
+              "h": 14
+            }
+          },
+          {
+            "opacity": "0.711268",
+            "transform": "matrix(-0.0747462, 0.808292, -0.808292, -0.0747462, 0, 57.8745)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 14,
+            "height": 14,
+            "rect": {
+              "x": 717,
+              "y": 387,
+              "w": 14,
+              "h": 14
+            }
+          }
+        ],
+        "confettiCount": 12,
+        "burstCount": 1,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 1
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 400,
+        "file": "0400.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "lk-progress-fill",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [
+          {
+            "opacity": "0",
+            "transform": "matrix(1.45, 0, 0, 1.45, 0, 0)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 957,
+            "height": 453,
+            "rect": {
+              "x": 171,
+              "y": 139,
+              "w": 957,
+              "h": 453
+            }
+          }
+        ],
+        "confetti": [
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 371,
+              "y": 354,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 437,
+              "y": 397,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 503,
+              "y": 341,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 569,
+              "y": 410,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 629,
+              "y": 360,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 688,
+              "y": 397,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 747,
+              "y": 341,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 807,
+              "y": 385,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 866,
+              "y": 354,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 919,
+              "y": 404,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 411,
+              "y": 441,
+              "w": 19,
+              "h": 19
+            }
+          },
+          {
+            "opacity": "0.118713",
+            "transform": "matrix(-0.930679, 0.257466, -0.257466, -0.930679, 0, 108.66)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 19,
+            "height": 19,
+            "rect": {
+              "x": 714,
+              "y": 435,
+              "w": 19,
+              "h": 19
+            }
+          }
+        ],
+        "confettiCount": 12,
+        "burstCount": 1,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 1
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 800,
+        "file": "0800.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "lk-progress-fill",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [
+          {
+            "opacity": "0",
+            "transform": "matrix(1.45, 0, 0, 1.45, 0, 0)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 957,
+            "height": 453,
+            "rect": {
+              "x": 171,
+              "y": 139,
+              "w": 957,
+              "h": 453
+            }
+          }
+        ],
+        "confetti": [
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 373,
+              "y": 367,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 439,
+              "y": 410,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 505,
+              "y": 354,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 571,
+              "y": 423,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 630,
+              "y": 373,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 690,
+              "y": 410,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 749,
+              "y": 354,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 808,
+              "y": 398,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 868,
+              "y": 367,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 921,
+              "y": 417,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 412,
+              "y": 454,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 716,
+              "y": 448,
+              "w": 16,
+              "h": 16
+            }
+          }
+        ],
+        "confettiCount": 12,
+        "burstCount": 1,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 1200,
+        "file": "1200.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "lk-progress-fill",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [
+          {
+            "opacity": "0",
+            "transform": "matrix(1.45, 0, 0, 1.45, 0, 0)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 957,
+            "height": 453,
+            "rect": {
+              "x": 171,
+              "y": 139,
+              "w": 957,
+              "h": 453
+            }
+          }
+        ],
+        "confetti": [
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 373,
+              "y": 367,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 439,
+              "y": 410,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 505,
+              "y": 354,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 571,
+              "y": 423,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 630,
+              "y": 373,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 690,
+              "y": 410,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 749,
+              "y": 354,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 808,
+              "y": 398,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 868,
+              "y": 367,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 921,
+              "y": 417,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 412,
+              "y": 454,
+              "w": 16,
+              "h": 16
+            }
+          },
+          {
+            "opacity": "0",
+            "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+            "zIndex": "auto",
+            "pointerEvents": "none",
+            "width": 16,
+            "height": 16,
+            "rect": {
+              "x": 716,
+              "y": 448,
+              "w": 16,
+              "h": 16
+            }
+          }
+        ],
+        "confettiCount": 12,
+        "burstCount": 1,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      }
+    ],
+    "terminal": {
+      "theme": "",
+      "figures": [
+        {
+          "value": "3",
+          "text": "3"
+        },
+        {
+          "value": "3",
+          "text": "3"
+        },
+        {
+          "value": "0",
+          "text": "0"
+        },
+        {
+          "value": "0",
+          "text": "0"
+        },
+        {
+          "value": "0",
+          "text": "0"
+        }
+      ],
+      "fills": [
+        {
+          "cls": "lk-progress__fill",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "width": 612,
+          "height": 8,
+          "animationName": "lk-progress-fill",
+          "opacity": "1"
+        }
+      ],
+      "bands": [
+        {
+          "cls": "lk-progress lk-progress--completion is-filled",
+          "width": 612,
+          "height": 8,
+          "animationName": "none"
+        }
+      ],
+      "burst": [
+        {
+          "opacity": "0",
+          "transform": "matrix(1.45, 0, 0, 1.45, 0, 0)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 957,
+          "height": 453,
+          "rect": {
+            "x": 171,
+            "y": 139,
+            "w": 957,
+            "h": 453
+          }
+        }
+      ],
+      "confetti": [
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 373,
+            "y": 367,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 439,
+            "y": 410,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 505,
+            "y": 354,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 571,
+            "y": 423,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 630,
+            "y": 373,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 690,
+            "y": 410,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 749,
+            "y": 354,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 808,
+            "y": 398,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 868,
+            "y": 367,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 921,
+            "y": 417,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 412,
+            "y": 454,
+            "w": 16,
+            "h": 16
+          }
+        },
+        {
+          "opacity": "0",
+          "transform": "matrix(-1, 0, 0, -1, 0, 120)",
+          "zIndex": "auto",
+          "pointerEvents": "none",
+          "width": 16,
+          "height": 16,
+          "rect": {
+            "x": 716,
+            "y": 448,
+            "w": 16,
+            "h": 16
+          }
+        }
+      ],
+      "confettiCount": 12,
+      "burstCount": 1,
+      "cta": {
+        "text": "查看本次答卷",
+        "cls": "primary",
+        "zIndex": "auto",
+        "pointerEvents": "auto",
+        "width": 114,
+        "height": 40,
+        "hitIsCta": true,
+        "hitTag": "BUTTON.primary",
+        "visibleDecorationsOverlapping": 0
+      },
+      "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+    },
+    "roll": [
+      {
+        "t": 0,
+        "values": []
+      },
+      {
+        "t": 16,
+        "values": []
+      },
+      {
+        "t": 32,
+        "values": []
+      },
+      {
+        "t": 48,
+        "values": []
+      },
+      {
+        "t": 64,
+        "values": []
+      },
+      {
+        "t": 80,
+        "values": []
+      },
+      {
+        "t": 96,
+        "values": []
+      },
+      {
+        "t": 112,
+        "values": []
+      },
+      {
+        "t": 128,
+        "values": []
+      },
+      {
+        "t": 144,
+        "values": []
+      },
+      {
+        "t": 160,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 176,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 192,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 208,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 224,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 240,
+        "values": [
+          {
+            "target": "3",
+            "text": "1"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 256,
+        "values": [
+          {
+            "target": "3",
+            "text": "1"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 272,
+        "values": [
+          {
+            "target": "3",
+            "text": "2"
+          },
+          {
+            "target": "3",
+            "text": "1"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 288,
+        "values": [
+          {
+            "target": "3",
+            "text": "2"
+          },
+          {
+            "target": "3",
+            "text": "2"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 304,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "2"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 320,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 336,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 352,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 368,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 384,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 400,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 416,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 432,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 448,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 464,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 480,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 496,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      }
+    ]
+  },
+  "reduced": {
+    "samples": [
+      {
+        "t": 0,
+        "file": "0000.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "none",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [],
+        "confetti": [],
+        "confettiCount": 0,
+        "burstCount": 0,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 150,
+        "file": "0150.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "none",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [],
+        "confetti": [],
+        "confettiCount": 0,
+        "burstCount": 0,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 400,
+        "file": "0400.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "none",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [],
+        "confetti": [],
+        "confettiCount": 0,
+        "burstCount": 0,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 800,
+        "file": "0800.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "none",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [],
+        "confetti": [],
+        "confettiCount": 0,
+        "burstCount": 0,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      },
+      {
+        "t": 1200,
+        "file": "1200.png",
+        "theme": "",
+        "figures": [
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "3",
+            "text": "3"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          },
+          {
+            "value": "0",
+            "text": "0"
+          }
+        ],
+        "fills": [
+          {
+            "cls": "lk-progress__fill",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "width": 612,
+            "height": 8,
+            "animationName": "none",
+            "opacity": "1"
+          }
+        ],
+        "bands": [
+          {
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "width": 612,
+            "height": 8,
+            "animationName": "none"
+          }
+        ],
+        "burst": [],
+        "confetti": [],
+        "confettiCount": 0,
+        "burstCount": 0,
+        "cta": {
+          "text": "查看本次答卷",
+          "cls": "primary",
+          "zIndex": "auto",
+          "pointerEvents": "auto",
+          "width": 114,
+          "height": 40,
+          "hitIsCta": true,
+          "hitTag": "BUTTON.primary",
+          "visibleDecorationsOverlapping": 0
+        },
+        "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+      }
+    ],
+    "terminal": {
+      "theme": "",
+      "figures": [
+        {
+          "value": "3",
+          "text": "3"
+        },
+        {
+          "value": "3",
+          "text": "3"
+        },
+        {
+          "value": "0",
+          "text": "0"
+        },
+        {
+          "value": "0",
+          "text": "0"
+        },
+        {
+          "value": "0",
+          "text": "0"
+        }
+      ],
+      "fills": [
+        {
+          "cls": "lk-progress__fill",
+          "transform": "matrix(1, 0, 0, 1, 0, 0)",
+          "width": 612,
+          "height": 8,
+          "animationName": "none",
+          "opacity": "1"
+        }
+      ],
+      "bands": [
+        {
+          "cls": "lk-progress lk-progress--completion is-filled",
+          "width": 612,
+          "height": 8,
+          "animationName": "none"
+        }
+      ],
+      "burst": [],
+      "confetti": [],
+      "confettiCount": 0,
+      "burstCount": 0,
+      "cta": {
+        "text": "查看本次答卷",
+        "cls": "primary",
+        "zIndex": "auto",
+        "pointerEvents": "auto",
+        "width": 114,
+        "height": 40,
+        "hitIsCta": true,
+        "hitTag": "BUTTON.primary",
+        "visibleDecorationsOverlapping": 0
+      },
+      "stats": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待自评 0 题。"
+    },
+    "roll": [
+      {
+        "t": 0,
+        "values": []
+      },
+      {
+        "t": 16,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 32,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 48,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 64,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 80,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 96,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 112,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 128,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 144,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 160,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 176,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 192,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 208,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 224,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 240,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 256,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 272,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 288,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 304,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 320,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 336,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 352,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 368,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 384,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 400,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 416,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 432,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 448,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 464,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 480,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      },
+      {
+        "t": 496,
+        "values": [
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "3",
+            "text": "3"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          },
+          {
+            "target": "0",
+            "text": "0"
+          }
+        ]
+      }
+    ]
+  },
+  "strip": "M-3-strip.png",
+  "derived": {
+    "intermediateFigureValues": 7,
+    "figureRollSamples": 32,
+    "progressFillScales": [
+      0.0,
+      0.766032,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "progressFillTerminalAnimated": [
+      1.0
+    ],
+    "progressFillTerminalReduced": [
+      1.0
+    ],
+    "bandGrewFromZero": true,
+    "bandFullAtTerminal": true,
+    "bandTerminalEqualInBothTiers": true,
+    "confettiPerFrame": [
+      12,
+      12,
+      12,
+      12,
+      12
+    ],
+    "burstPerFrame": [
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "ctaPerFrame": [
+      {
+        "text": "查看本次答卷",
+        "cls": "primary",
+        "zIndex": "auto",
+        "pointerEvents": "auto",
+        "width": 114,
+        "height": 40,
+        "hitIsCta": true,
+        "hitTag": "BUTTON.primary",
+        "visibleDecorationsOverlapping": 0
+      },
+      {
+        "text": "查看本次答卷",
+        "cls": "primary",
+        "zIndex": "auto",
+        "pointerEvents": "auto",
+        "width": 114,
+        "height": 40,
+        "hitIsCta": true,
+        "hitTag": "BUTTON.primary",
+        "visibleDecorationsOverlapping": 1
+      },
+      {
+        "text": "查看本次答卷",
+        "cls": "primary",
+        "zIndex": "auto",
+        "pointerEvents": "auto",
+        "width": 114,
+        "height": 40,
+        "hitIsCta": true,
+        "hitTag": "BUTTON.primary",
+        "visibleDecorationsOverlapping": 1
+      },
+      {
+        "text": "查看本次答卷",
+        "cls": "primary",
+        "zIndex": "auto",
+        "pointerEvents": "auto",
+        "width": 114,
+        "height": 40,
+        "hitIsCta": true,
+        "hitTag": "BUTTON.primary",
+        "visibleDecorationsOverlapping": 0
+      },
+      {
+        "text": "查看本次答卷",
+        "cls": "primary",
+        "zIndex": "auto",
+        "pointerEvents": "auto",
+        "width": 114,
+        "height": 40,
+        "hitIsCta": true,
+        "hitTag": "BUTTON.primary",
+        "visibleDecorationsOverlapping": 0
+      }
+    ],
+    "ctaHitTestPassed": true,
+    "ctaVisibleDecorationsOverlappingPerFrame": [
+      0,
+      1,
+      1,
+      0,
+      0
+    ],
+    "decorationPointerEvents": [
+      "none"
+    ]
+  }
+}

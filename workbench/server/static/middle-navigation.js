@@ -6,9 +6,12 @@
   var middlePage = document.getElementById("middle-page");
   if (!layout || !middlePage || !window.fetch || !window.history) return;
 
+  var middle = document.getElementById("middle");
   var workspace = layout.dataset.workspace;
   var sequence = 0;
   var graphScriptsPromise = null;
+  var middleScrollTop = 0;
+  var focusBeforeSwap = null;
 
   function sameWorkspace(url) {
     if (url.origin !== window.location.origin) return false;
@@ -42,6 +45,136 @@
     return graphScriptsPromise;
   }
 
+  /* ---- 加载态：骨架屏（tasks.md 21.1 / 21.5 / 21.6）------------------------
+     切页时 `#middle-page` 的 innerHTML 会被整体替换 ⇒ 进场动效只能由 CSS 的
+     容器动画接管（`#layout:not([data-page="graph"]) #middle-page > *` 挂
+     `lk-rise-in-12`），JS 不给子元素加一次性动效类名 —— 那类名会随 innerHTML
+     一起被冲掉。JS 在这里只做「切页前把容器切成骨架态」这一件事：
+     切页前呈骨架，内容到位后由容器动画接管。
+     图谱页的转场作用域由 CSS 的 `#layout:not([data-page="graph"])` 排除，
+     JS 侧不重复实现、也不给图谱页加任何特判。
+
+     降级（reduced-motion 或动效偏好关）：骨架**不扫光**、内容**直接以终态
+     出现** —— 判定走既有的 `window.lkMotion.mode()`，JS 侧不补任何动效，
+     骨架块与内容的终态和动效版一致（tasks.md 21.6）。 */
+
+  /* 骨架块：一条标题 + 一张卡 + 三行正文，与阅读列同宽。
+     每个中栏页面各画一套占位形状的成本不低（design.md D-7「代价」），
+     先取一个通用形状。 */
+  var SKELETON_BLOCKS = [
+    { height: 26, width: "46%", gap: 0 },
+    { height: 128, width: "100%", gap: 22 },
+    { height: 15, width: "92%", gap: 20 },
+    { height: 15, width: "76%", gap: 10 },
+    { height: 15, width: "86%", gap: 10 }
+  ];
+
+  function skeletonBlock(block, sweep) {
+    var style = "height:" + block.height + "px;width:" + block.width
+      + (block.gap ? ";margin-top:" + block.gap + "px" : "");
+    if (sweep) {
+      /* 完整动效档：灰块 + 微光扫过 —— 灰块与扫光都来自 CSS 的 `.lk-skeleton`
+         （`lk-skeleton-sweep` 只动覆盖层的 transform），JS 不写动效。 */
+      return '<div class="lk-skeleton" style="' + style + '"></div>';
+    }
+    /* 降级档：不用 `.lk-skeleton`（它的 `::after` 带扫光），改用等价的静态灰块 ——
+       颜色与 `.lk-skeleton` 同源（`--skeleton-base`），灰块静止、不扫光。
+       降级后与动效版的**终态**一致：动效版扫光扫到两端时覆盖层也在画面外，
+       留下的正是这样一块静止灰块（motion-spec §7.2 第 9 行 / §7.1）。 */
+    return '<div style="' + style + ';background:var(--skeleton-base)"></div>';
+  }
+
+  function skeletonMarkup() {
+    /* 降级判定：复用既有的 `window.lkMotion.mode()`，不另建一套读法。
+       "full" = 完整动效；"weak" = 系统减弱档（系统 reduce 且偏好未设）；
+       "off" = 用户显式关闭。A-2：用户显式选择优先于系统设置 —— mode() 里
+       已经算进去，所以这里只认 "full" 与否。 */
+    var sweep = motionMode() === "full";
+    var blocks = [];
+    for (var i = 0; i < SKELETON_BLOCKS.length; i += 1) {
+      blocks.push(skeletonBlock(SKELETON_BLOCKS[i], sweep));
+    }
+    /* 装饰层：`aria-hidden` + `pointer-events:none` —— 可交互元素一律不在
+       装饰层内，浮层出现时也不抢焦点（tasks.md 21.3）。 */
+    return '<div data-lk-skeleton="1" aria-hidden="true"'
+      + ' style="pointer-events:none;max-width:800px;margin:0 auto">'
+      + blocks.join("") + "</div>";
+  }
+
+  function motionMode() {
+    if (window.lkMotion && typeof window.lkMotion.mode === "function") {
+      try { return window.lkMotion.mode(); } catch (_) { /* 落到默认档 */ }
+    }
+    return "full";
+  }
+
+  /* 切页前：容器先呈骨架 + `aria-busy` 置位；内容到位后由
+     `installPageContent` 复位（骨架随 innerHTML 一起被内容替换）。 */
+  function showLoadingState(graphTarget) {
+    rememberFocus();
+    /* 中栏滚动位置：骨架会把内容压短（滚动被拉回顶部），先记下来、装回内容
+       后还原 —— 与改造前一致（换页后中栏滚动位置不丢）。连续换页只记第一次。 */
+    if (middle && !middleScrollTop) middleScrollTop = middle.scrollTop;
+    setMiddleBusy(true);
+    /* 图谱页不呈通用骨架：图谱页自带加载指示，通用骨架是本次新增的可见行为，
+       会与 acceptance.md G-5「图谱页逐像素零差异」抵触（graph-isolation.md F-6）。
+       ⚠️ 这与 CSS 侧的 `#layout:not([data-page="graph"])` 不重复 —— 那条排除的是
+       **转场动画**，这里是**禁止新行为落在图谱页上**；CSS 的排除在容器动画生效
+       那一刻才判定，那时通用骨架早已渲染过一帧。 */
+    if (graphTarget) return;
+    middlePage.innerHTML = skeletonMarkup();
+  }
+
+  /* 目标页是不是图谱页：按服务端的路由切分口径判定
+     （app.py `_send_page`：`/w/{name}/{practice|kps|kp/{id}|graph|session-end}`，
+     空段滤掉后第 3 段是 page 名）。 */
+  function isGraphTarget(url) {
+    var parts = url.pathname.split("/").filter(function (part) { return part !== ""; });
+    return parts.length >= 3 && parts[0] === "w" && parts[2] === "graph";
+  }
+
+  /* 加载态标记落在中栏容器上：切页前置位、内容到位后复位。
+     测试夹具（tests/workbench/middle_navigation.test.js）把 `#middle-page`
+     建模成只带 `innerHTML` 的普通对象，故按能力检测再写属性。 */
+  function setMiddleBusy(busy) {
+    if (!middlePage.setAttribute) return;
+    middlePage.setAttribute("aria-busy", busy ? "true" : "false");
+  }
+
+  /* ---- 焦点不被抢走（tasks.md 21.3）----------------------------------------
+     转场与浮层出现时一律不调 focus()：装饰层是 `pointer-events:none` 的
+     纯展示层，里面没有可交互元素。切页前记住焦点所在，换页后只在
+     「焦点确实随旧内容一起被替换掉」时补位 —— 绝不从 AI 右栏 / 左栏
+     把焦点抢过来，焦点顺序也不变。 */
+
+  function rememberFocus() {
+    if (focusBeforeSwap) return;
+    var active = document.activeElement;
+    if (active && active.closest && active.closest("#middle-page")) focusBeforeSwap = active;
+  }
+
+  function restoreFocus() {
+    if (!focusBeforeSwap) return;
+    if (focusBeforeSwap.isConnected) return;                 /* 焦点仍在原处 → 不动 */
+    if (document.activeElement && document.activeElement !== document.body) return;
+    focusBeforeSwap = null;
+    var target = firstFocusable(middlePage);
+    if (!target) return;
+    try { target.focus({ preventScroll: true }); }
+    catch (_) { target.focus(); }
+  }
+
+  function firstFocusable(root) {
+    var nodes = root.querySelectorAll("a[href], button, input, select, textarea, [tabindex]");
+    for (var i = 0; i < nodes.length; i += 1) {
+      var node = nodes[i];
+      if (node.disabled || node.hidden) continue;
+      if (node.getAttribute("tabindex") === "-1") continue;
+      return node;
+    }
+    return null;
+  }
+
   function updateLayout(nextLayout) {
     ["page", "objectType", "objectId", "practiceKpId"].forEach(function (key) {
       if (nextLayout.dataset[key] === undefined) delete layout.dataset[key];
@@ -57,12 +190,6 @@
       var next = nextItems[index];
       if (item.classList && next) item.classList.toggle("active", next.classList.contains("active"));
     });
-  }
-
-  function updateScopeNames(nextDocument) {
-    var currentTray = document.getElementById("scope-tray");
-    var nextTray = nextDocument.getElementById("scope-tray");
-    if (currentTray && nextTray) currentTray.dataset.kpNames = nextTray.dataset.kpNames || "{}";
   }
 
   function installPage(nextDocument, requestSequence) {
@@ -83,8 +210,14 @@
     if (window.WorkbenchMiddlePage) window.WorkbenchMiddlePage.dispose();
     updateLayout(nextLayout);
     updateActiveNavigation(nextDocument);
-    updateScopeNames(nextDocument);
     middlePage.innerHTML = nextPage.innerHTML;
+    /* 骨架被内容替换 —— 容器动画此刻接管；加载态复位。 */
+    setMiddleBusy(false);
+    if (middle && middleScrollTop) {
+      middle.scrollTop = middleScrollTop;
+      middleScrollTop = 0;
+    }
+    restoreFocus();
     if (window.WorkbenchMiddlePage) window.WorkbenchMiddlePage.mount();
     if (window.AgentUISurfaces && window.AgentUISurfaces.renderContext) {
       window.AgentUISurfaces.renderContext();
@@ -105,6 +238,7 @@
       if (options.replace) window.history.replaceState({ middle: true }, "", url.href);
       else window.history.pushState({ middle: true }, "", url.href);
     }
+    showLoadingState(isGraphTarget(url));
     return window.fetch(url.href, { headers: { Accept: "text/html" } })
       .then(function (response) {
         if (!response.ok) throw new Error("page request failed");

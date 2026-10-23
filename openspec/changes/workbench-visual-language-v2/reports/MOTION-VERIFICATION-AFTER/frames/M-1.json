@@ -1,0 +1,1173 @@
+{
+  "id": "M-1",
+  "title": "台灯主题转场",
+  "verdict": "PASS",
+  "detail": "台灯四段转场在 700ms 后收干净",
+  "frames_ms": [
+    0,
+    90,
+    180,
+    330,
+    500,
+    700
+  ],
+  "frameStates": [
+    {
+      "t": 0,
+      "file": "0000.png",
+      "states": {
+        ".lk-lamp": [
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "matrix(0.841207, -0.178804, 0.178804, 0.841207, 0, 158.4)",
+            "opacity": "0",
+            "width": 135,
+            "height": 135,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-lamp is-out is-lit is-in",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "none",
+            "opacity": "1",
+            "width": 135,
+            "height": 135,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "[object SVGAnimatedString]"
+          }
+        ],
+        ".lk-ripple": [
+          {
+            "text": "",
+            "transform": "matrix(0.06, 0, 0, 0.06, 0, 0)",
+            "opacity": "0",
+            "width": 86,
+            "height": 54,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(28, 26, 22)",
+            "cls": "lk-ripple is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-ripple-glow": [
+          {
+            "text": "",
+            "transform": "matrix(0.02, 0, 0, 0.02, 0, 0)",
+            "opacity": "0",
+            "width": 29,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-ripple-glow is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 358,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "工作台 / 设置设置关闭",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "主题夜纸阅读字面衬线衬线无衬线动效完整声音开",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 268,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content"
+          }
+        ]
+      },
+      "animations": [
+        "lk-lamp-lean-out",
+        "lk-lamp-light-up",
+        "lk-lamp-retract",
+        "lk-ripple-clear",
+        "lk-ripple-glow-spread",
+        "lk-ripple-spread",
+        "lk-ripple-veil",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 90,
+      "file": "0090.png",
+      "states": {
+        ".lk-lamp": [
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "matrix(1.00404, 0.00609626, -0.00609626, 1.00404, 0, -4.59202)",
+            "opacity": "1",
+            "width": 133,
+            "height": 133,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-lamp is-out is-lit is-in",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "none",
+            "opacity": "1",
+            "width": 133,
+            "height": 133,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "[object SVGAnimatedString]"
+          }
+        ],
+        ".lk-ripple": [
+          {
+            "text": "",
+            "transform": "matrix(0.06, 0, 0, 0.06, 0, 0)",
+            "opacity": "0",
+            "width": 86,
+            "height": 54,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(28, 26, 22)",
+            "cls": "lk-ripple is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-ripple-glow": [
+          {
+            "text": "",
+            "transform": "matrix(0.02, 0, 0, 0.02, 0, 0)",
+            "opacity": "0",
+            "width": 29,
+            "height": 18,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-ripple-glow is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 358,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "工作台 / 设置设置关闭",
+            "transform": "matrix(1, 0, 0, 1, 0, 2.80761)",
+            "opacity": "0.766032",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "主题夜纸阅读字面衬线衬线无衬线动效完整声音开",
+            "transform": "matrix(1, 0, 0, 1, 0, 2.80761)",
+            "opacity": "0.766032",
+            "width": 660,
+            "height": 268,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content"
+          }
+        ]
+      },
+      "animations": [
+        "lk-lamp-lean-out",
+        "lk-lamp-light-up",
+        "lk-lamp-retract",
+        "lk-ripple-clear",
+        "lk-ripple-glow-spread",
+        "lk-ripple-spread",
+        "lk-ripple-veil",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 180,
+      "file": "0180.png",
+      "states": {
+        ".lk-lamp": [
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 132,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-lamp is-out is-lit is-in",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "none",
+            "opacity": "1",
+            "width": 132,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "[object SVGAnimatedString]"
+          }
+        ],
+        ".lk-ripple": [
+          {
+            "text": "",
+            "transform": "matrix(1.76652, 0, 0, 1.76652, 0, 0)",
+            "opacity": "0.493827",
+            "width": 2544,
+            "height": 1590,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(28, 26, 22)",
+            "cls": "lk-ripple is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-ripple-glow": [
+          {
+            "text": "",
+            "transform": "matrix(1.16488, 0, 0, 1.16488, 0, 0)",
+            "opacity": "0.983991",
+            "width": 1677,
+            "height": 1048,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-ripple-glow is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 358,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "工作台 / 设置设置关闭",
+            "transform": "matrix(1, 0, 0, 1, 0, 0.292533)",
+            "opacity": "0.975622",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "主题夜纸阅读字面衬线衬线无衬线动效完整声音开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0.292533)",
+            "opacity": "0.975622",
+            "width": 660,
+            "height": 268,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content"
+          }
+        ]
+      },
+      "animations": [
+        "lk-lamp-lean-out",
+        "lk-lamp-light-up",
+        "lk-lamp-retract",
+        "lk-ripple-clear",
+        "lk-ripple-glow-spread",
+        "lk-ripple-spread",
+        "lk-ripple-veil",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 330,
+      "file": "0330.png",
+      "states": {
+        ".lk-lamp": [
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 132,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-lamp is-out is-lit is-in",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "静物插画：一盏台灯",
+            "transform": "none",
+            "opacity": "1",
+            "width": 132,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "[object SVGAnimatedString]"
+          }
+        ],
+        ".lk-ripple": [
+          {
+            "text": "",
+            "transform": "matrix(4.18976, 0, 0, 4.18976, 0, 0)",
+            "opacity": "1",
+            "width": 6033,
+            "height": 3771,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(28, 26, 22)",
+            "cls": "lk-ripple is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-ripple-glow": [
+          {
+            "text": "",
+            "transform": "matrix(2.7906, 0, 0, 2.7906, 0, 0)",
+            "opacity": "1",
+            "width": 4018,
+            "height": 2512,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-ripple-glow is-on is-clear",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 358,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "工作台 / 设置设置关闭",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "主题夜纸阅读字面衬线衬线无衬线动效完整声音开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 268,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content"
+          }
+        ]
+      },
+      "animations": [
+        "lk-lamp-lean-out",
+        "lk-lamp-light-up",
+        "lk-lamp-retract",
+        "lk-ripple-clear",
+        "lk-ripple-glow-spread",
+        "lk-ripple-spread",
+        "lk-ripple-veil",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 500,
+      "file": "0500.png",
+      "states": {
+        "#middle-page": [
+          {
+            "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 358,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "工作台 / 设置设置关闭",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "主题夜纸阅读字面衬线衬线无衬线动效完整声音开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 268,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content"
+          }
+        ]
+      },
+      "animations": [
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 700,
+      "file": "0700.png",
+      "states": {
+        "#middle-page": [
+          {
+            "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 358,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "工作台 / 设置设置关闭",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "主题夜纸阅读字面衬线衬线无衬线动效完整声音开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 268,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content"
+          }
+        ]
+      },
+      "animations": [
+        "lk-rise-in-12"
+      ]
+    }
+  ],
+  "frameFiles": [
+    "0000.png",
+    "0090.png",
+    "0180.png",
+    "0330.png",
+    "0500.png",
+    "0700.png"
+  ],
+  "strip": "M-1-strip.png",
+  "animations": [
+    {
+      "name": "",
+      "playState": "paused",
+      "duration": 160,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "lk-switch__thumb"
+    },
+    {
+      "name": "",
+      "playState": "paused",
+      "duration": 160,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "lk-switch__thumb"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-content"
+    },
+    {
+      "name": "lk-ripple-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 0,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-veil",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 0,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 0,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-glow-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 0,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 0,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-lamp-lean-out",
+      "playState": "paused",
+      "duration": 140,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-retract",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 0,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-light-up",
+      "playState": "paused",
+      "duration": 80,
+      "delay": 140,
+      "currentTime": 0,
+      "target": "[object SVGAnimatedString]"
+    },
+    {
+      "name": "",
+      "playState": "paused",
+      "duration": 160,
+      "delay": 0,
+      "currentTime": 90,
+      "target": "lk-switch__thumb"
+    },
+    {
+      "name": "",
+      "playState": "paused",
+      "duration": 160,
+      "delay": 0,
+      "currentTime": 90,
+      "target": "lk-switch__thumb"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 90,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 90,
+      "target": "page-content"
+    },
+    {
+      "name": "lk-ripple-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 90,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-veil",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 90,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 90,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-glow-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 90,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 90,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-lamp-lean-out",
+      "playState": "paused",
+      "duration": 140,
+      "delay": 0,
+      "currentTime": 90,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-retract",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 90,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-light-up",
+      "playState": "paused",
+      "duration": 80,
+      "delay": 140,
+      "currentTime": 90,
+      "target": "[object SVGAnimatedString]"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 180,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 180,
+      "target": "page-content"
+    },
+    {
+      "name": "lk-ripple-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 180,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-veil",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 180,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 180,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-glow-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 180,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 180,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-lamp-lean-out",
+      "playState": "paused",
+      "duration": 140,
+      "delay": 0,
+      "currentTime": 180,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-retract",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 180,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-light-up",
+      "playState": "paused",
+      "duration": 80,
+      "delay": 140,
+      "currentTime": 180,
+      "target": "[object SVGAnimatedString]"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 330,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 330,
+      "target": "page-content"
+    },
+    {
+      "name": "lk-ripple-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 330,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-veil",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 330,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 330,
+      "target": "lk-ripple is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-glow-spread",
+      "playState": "paused",
+      "duration": 450,
+      "delay": 140,
+      "currentTime": 330,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-ripple-clear",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 330,
+      "target": "lk-ripple-glow is-on is-clear"
+    },
+    {
+      "name": "lk-lamp-lean-out",
+      "playState": "paused",
+      "duration": 140,
+      "delay": 0,
+      "currentTime": 330,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-retract",
+      "playState": "paused",
+      "duration": 110,
+      "delay": 590,
+      "currentTime": 330,
+      "target": "lk-lamp is-out is-lit is-in"
+    },
+    {
+      "name": "lk-lamp-light-up",
+      "playState": "paused",
+      "duration": 80,
+      "delay": 140,
+      "currentTime": 330,
+      "target": "[object SVGAnimatedString]"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 500,
+      "target": "page-content"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 700,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 700,
+      "target": "page-content"
+    }
+  ],
+  "terminalDifferences": [],
+  "terminalExtraDifferences": [
+    {
+      "selector": "#middle-page",
+      "index": 0,
+      "field": "text",
+      "animated": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+      "reduced": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效弱"
+    }
+  ],
+  "animatedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [],
+    ".lk-combo-banner__count": [],
+    ".lk-streak": [],
+    ".lk-flames": [],
+    ".lk-flame": [],
+    ".lk-flame-on": [],
+    ".lk-flame-off": [],
+    ".lk-squash": [],
+    ".micro-verdict": [],
+    ".lk-ticker": [],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [],
+    ".lk-celebrate-burst": [],
+    ".lk-confetti": [],
+    ".paper-slice": [],
+    "#paper-completion": [],
+    "#paper-completion-stats": [],
+    "#paper-dots": [],
+    ".paper-dot": [],
+    "#middle-page": [
+      {
+        "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效完",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 358,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "工作台 / 设置设置关闭",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "主题夜纸阅读字面衬线衬线无衬线动效完整声音开",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 268,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content"
+      }
+    ],
+    ".workload-bars": [],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [],
+    ".calendar-day": [],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [],
+    ".bar-column": [],
+    "[data-lk-skeleton] > div": []
+  },
+  "reducedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [],
+    ".lk-combo-banner__count": [],
+    ".lk-streak": [],
+    ".lk-flames": [],
+    ".lk-flame": [],
+    ".lk-flame-on": [],
+    ".lk-flame-off": [],
+    ".lk-squash": [],
+    ".micro-verdict": [],
+    ".lk-ticker": [],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [],
+    ".lk-celebrate-burst": [],
+    ".lk-confetti": [],
+    ".paper-slice": [],
+    "#paper-completion": [],
+    "#paper-completion-stats": [],
+    "#paper-dots": [],
+    ".paper-dot": [],
+    "#middle-page": [
+      {
+        "text": "工作台 / 设置设置关闭主题夜纸阅读字面衬线衬线无衬线动效弱",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 358,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "工作台 / 设置设置关闭",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "主题夜纸阅读字面衬线衬线无衬线动效弱动效声音开",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 268,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content"
+      }
+    ],
+    ".workload-bars": [],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [],
+    ".calendar-day": [],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [],
+    ".bar-column": [],
+    "[data-lk-skeleton] > div": []
+  }
+}

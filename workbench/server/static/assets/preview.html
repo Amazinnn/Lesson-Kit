@@ -1,0 +1,2701 @@
+<!-- 资产走查页：本页内联的是 assets/ 下 .svg 的当前副本（inline 才能透传夜纸变量，故不用 <img>）。
+     快照日期 2026-10-23；改完任意 .svg 后必须重新内联，否则这里会显示旧副本。
+     重新内联：python tmp/asset-shots/regen-preview.py（工作脚本，仓库内不留生成器） -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lesson-kit · 静物 SVG 资产走查</title>
+<style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px 28px 64px;
+      font: 14px/1.7 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f2eee6; color: #2a2620;
+    }
+    h1 { margin: 0 0 6px; font-size: 22px; }
+    h2 { margin: 0 0 18px; font-size: 17px; }
+    h3 { margin: 26px 0 10px; font-size: 13px; font-weight: 600; opacity: .65; letter-spacing: .04em; }
+    p.lead { margin: 0 0 24px; opacity: .7; max-width: 900px; }
+    .theme {
+      border-radius: 12px; padding: 22px 20px 26px; margin: 0 0 26px;
+      background: var(--asset-page); color: var(--asset-ink);
+    }
+    .theme--light {
+      --asset-page: #fdf8ef; --asset-paper: #fffdf7; --asset-ink: #2a2620;
+      --asset-ground-blue: #2b62e8; --asset-ground-yellow: #f5c518; --asset-ground-red: #d1392b;
+      --asset-ink-on-blue: #fffdf7; --asset-ink-on-yellow: #221f1a; --asset-ink-on-red: #fffdf7;
+      --asset-wash-blue: #e1e7f5; --asset-wash-yellow: #fdf3cf; --asset-wash-red: #f9e5df;
+      --asset-highlight: rgb(255 255 255 / 55%); --asset-lamp-warm: #f7c46b;
+    }
+    .theme--night {
+      --asset-page: #1c1a16; --asset-paper: #232019; --asset-ink: #e6ddcd;
+      --asset-ground-blue: #7291de; --asset-ground-yellow: #e0c151; --asset-ground-red: #d4736b;
+      --asset-ink-on-blue: #14120f; --asset-ink-on-yellow: #14120f; --asset-ink-on-red: #14120f;
+      --asset-wash-blue: #303239; --asset-wash-yellow: #3d3721; --asset-wash-red: #3c2c24;
+      --asset-highlight: rgb(255 240 214 / 8%); --asset-lamp-warm: #f7c46b;
+      color-scheme: dark;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+    .card {
+      margin: 0; padding: 12px; border-radius: 12px; background: var(--asset-paper);
+      box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 20px rgba(0,0,0,.05);
+      min-width: 0;
+    }
+    .stage { display: flex; align-items: flex-end; gap: 14px; }
+    .stage--wide { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .slot svg { display: block; height: auto; }
+    .slot--16 svg { width: 16px; } .slot--24 svg { width: 24px; } .slot--32 svg { width: 32px; }
+    .slot--120 svg { width: 120px; } .slot--180 svg { width: 180px; } .slot--240 svg { width: 240px; }
+    figcaption { margin-top: 10px; font-size: 12px; line-height: 1.6; }
+    figcaption b { display: block; font-size: 13px; }
+    figcaption span { display: block; opacity: .62; }
+    figcaption code { display: block; margin-top: 2px; font-size: 11px; opacity: .5; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .row--empty .card { width: 268px; }
+    .row--icons .card { width: 150px; }
+    .row--lamp .card { width: 232px; }
+    .stage--lamp {
+      position: relative; width: 200px; height: 200px; overflow: hidden;
+      border-radius: 8px; background: var(--asset-paper); display: block;
+    }
+    .stage--lamp svg.lk-lamp {
+      position: absolute; right: 8px; bottom: 8px; width: 132px; height: 132px;
+      transform-origin: 50% 100%; transform-box: view-box;
+    }
+    .lk-lamp__glow { transform-box: fill-box; transform-origin: 50% 100%; opacity: 0; }
+    .pose--a svg.lk-lamp { transform: translate3d(0,120%,0) scale(.86) rotate(-12deg); opacity: 0; }
+    .pose--b svg.lk-lamp { transform: translate3d(0,0,0) scale(1) rotate(0deg); opacity: 1; }
+    .pose--c svg.lk-lamp { transform: translate3d(0,0,0) scale(1) rotate(0deg); opacity: 1; }
+    .pose--c .lk-lamp__glow { opacity: 1; }
+    .pose--a .stage--lamp { outline: 1px dashed rgba(0,0,0,.18); outline-offset: -1px; }
+</style>
+</head>
+<body>
+  <h1>静物 SVG 资产走查</h1>
+  <p class="lead">第 9 组产物：5 枚导航图标 + 10 张空态插画 + 台灯三姿态。全部为纯手写 SVG（无位图 / 无外链 / 无字体 / 无第三方库），颜色一律走 <code>var(--asset-*)</code>，同一批文件在暖纸与夜纸两底各渲染一次 —— 变的是变量值，不是资产。</p>
+  <section class="theme theme--light" id="theme-light">
+    <h2>浅纸（暖纸）</h2>
+    <h3>导航图标 · 32 / 24 / 16 px</h3>
+    <div class="row row--icons">
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-title">
+  <title id="icon-practice-title">练习</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 9 30.4 C 14 27.8 20 28.4 24 31.4 C 28 28.4 34 27.8 39 30.4 L 39 33.6 C 34 31 28 31.6 24 34.6 C 20 31.6 14 31 9 33.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 9 33.6 C 14 31 20 31.6 24 34.6 C 28 31.6 34 31 39 33.6" stroke-width="3"/>
+      <path d="M 24 14.4 C 23 20 23 26 24 31" stroke-width="2"/>
+      <path d="M 12.8 18.6 L 21 18.6" stroke-width="1.5"/>
+      <path d="M 12.8 22.4 L 20 22.4" stroke-width="1.5"/>
+      <path d="M 12.8 26.2 L 18.6 26.2" stroke-width="1.5"/>
+      <path d="M 27 18.6 L 35.5 18.6" stroke-width="1.5"/>
+      <path d="M 27 22.4 L 33.6 22.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 12.4 15.2 C 15 13.6 17.8 13.2 20 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-title">
+  <title id="icon-practice-title">练习</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 9 30.4 C 14 27.8 20 28.4 24 31.4 C 28 28.4 34 27.8 39 30.4 L 39 33.6 C 34 31 28 31.6 24 34.6 C 20 31.6 14 31 9 33.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 9 33.6 C 14 31 20 31.6 24 34.6 C 28 31.6 34 31 39 33.6" stroke-width="3"/>
+      <path d="M 24 14.4 C 23 20 23 26 24 31" stroke-width="2"/>
+      <path d="M 12.8 18.6 L 21 18.6" stroke-width="1.5"/>
+      <path d="M 12.8 22.4 L 20 22.4" stroke-width="1.5"/>
+      <path d="M 12.8 26.2 L 18.6 26.2" stroke-width="1.5"/>
+      <path d="M 27 18.6 L 35.5 18.6" stroke-width="1.5"/>
+      <path d="M 27 22.4 L 33.6 22.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 12.4 15.2 C 15 13.6 17.8 13.2 20 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-title">
+  <title id="icon-practice-title">练习</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 9 30.4 C 14 27.8 20 28.4 24 31.4 C 28 28.4 34 27.8 39 30.4 L 39 33.6 C 34 31 28 31.6 24 34.6 C 20 31.6 14 31 9 33.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 9 33.6 C 14 31 20 31.6 24 34.6 C 28 31.6 34 31 39 33.6" stroke-width="3"/>
+      <path d="M 24 14.4 C 23 20 23 26 24 31" stroke-width="2"/>
+      <path d="M 12.8 18.6 L 21 18.6" stroke-width="1.5"/>
+      <path d="M 12.8 22.4 L 20 22.4" stroke-width="1.5"/>
+      <path d="M 12.8 26.2 L 18.6 26.2" stroke-width="1.5"/>
+      <path d="M 27 18.6 L 35.5 18.6" stroke-width="1.5"/>
+      <path d="M 27 22.4 L 33.6 22.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 12.4 15.2 C 15 13.6 17.8 13.2 20 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>练习</b><span>左栏导航 · 翻开的书</span><code>icon-practice.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-sets-title">
+  <title id="icon-practice-sets-title">试卷</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 26%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z" stroke-width="2"/>
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z" stroke-width="2"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z" stroke-width="3"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z" stroke-width="2"/>
+      <path d="M 14.5 17 L 29 17" stroke-width="1.5"/>
+      <path d="M 14.5 20.4 L 25.5 20.4" stroke-width="1.5"/>
+      <path d="M 14.5 23.4 L 22 23.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 13 14.4 Q 13 13.6 14 13.6 L 19 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-sets-title">
+  <title id="icon-practice-sets-title">试卷</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 26%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z" stroke-width="2"/>
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z" stroke-width="2"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z" stroke-width="3"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z" stroke-width="2"/>
+      <path d="M 14.5 17 L 29 17" stroke-width="1.5"/>
+      <path d="M 14.5 20.4 L 25.5 20.4" stroke-width="1.5"/>
+      <path d="M 14.5 23.4 L 22 23.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 13 14.4 Q 13 13.6 14 13.6 L 19 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-sets-title">
+  <title id="icon-practice-sets-title">试卷</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 26%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z" stroke-width="2"/>
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z" stroke-width="2"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z" stroke-width="3"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z" stroke-width="2"/>
+      <path d="M 14.5 17 L 29 17" stroke-width="1.5"/>
+      <path d="M 14.5 20.4 L 25.5 20.4" stroke-width="1.5"/>
+      <path d="M 14.5 23.4 L 22 23.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 13 14.4 Q 13 13.6 14 13.6 L 19 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>试卷</b><span>左栏导航 · 一叠纸</span><code>icon-practice-sets.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-kps-title">
+  <title id="icon-kps-title">知识点</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 12.6 12.4 L 17.2 11.8 L 17.2 36.4 L 12.6 36.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 18%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 12.6 12.4 L 12.6 36.6" stroke-width="2"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z" stroke-width="3"/>
+      <path d="M 18.8 12.4 L 18.8 34.6" stroke-width="2"/>
+      <circle cx="24" cy="15" r="1.7" fill="var(--asset-ground-blue, #2b62e8)" stroke-width="2"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 20.4 13.6 L 20.4 28.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-kps-title">
+  <title id="icon-kps-title">知识点</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 12.6 12.4 L 17.2 11.8 L 17.2 36.4 L 12.6 36.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 18%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 12.6 12.4 L 12.6 36.6" stroke-width="2"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z" stroke-width="3"/>
+      <path d="M 18.8 12.4 L 18.8 34.6" stroke-width="2"/>
+      <circle cx="24" cy="15" r="1.7" fill="var(--asset-ground-blue, #2b62e8)" stroke-width="2"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 20.4 13.6 L 20.4 28.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-kps-title">
+  <title id="icon-kps-title">知识点</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 12.6 12.4 L 17.2 11.8 L 17.2 36.4 L 12.6 36.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 18%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 12.6 12.4 L 12.6 36.6" stroke-width="2"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z" stroke-width="3"/>
+      <path d="M 18.8 12.4 L 18.8 34.6" stroke-width="2"/>
+      <circle cx="24" cy="15" r="1.7" fill="var(--asset-ground-blue, #2b62e8)" stroke-width="2"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 20.4 13.6 L 20.4 28.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>知识点</b><span>左栏导航 · 书签</span><code>icon-kps.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-graph-title">
+  <title id="icon-graph-title">知识图谱</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <circle cx="11.5" cy="14.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="36.5" cy="13.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="12.5" cy="34.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="35" cy="35.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="24" cy="24" r="3.2" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 22%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 24 L 11.5 14.5" stroke-width="2"/>
+      <path d="M 24 24 L 36.5 13.5" stroke-width="2"/>
+      <path d="M 24 24 L 12.5 34.5" stroke-width="2"/>
+      <path d="M 24 24 L 35 35.5" stroke-width="2"/>
+      <path d="M 36.5 13.5 C 40 20 40 29 35 35.5" stroke-width="2"/>
+      <circle cx="11.5" cy="14.5" r="2.1" stroke-width="3"/>
+      <circle cx="36.5" cy="13.5" r="2.1" stroke-width="3"/>
+      <circle cx="12.5" cy="34.5" r="2.1" stroke-width="3"/>
+      <circle cx="35" cy="35.5" r="2.1" stroke-width="3"/>
+      <circle cx="24" cy="24" r="3.2" stroke-width="3"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 21.7 21.7 Q 20.7 22.6 20.9 23.9" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-graph-title">
+  <title id="icon-graph-title">知识图谱</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <circle cx="11.5" cy="14.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="36.5" cy="13.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="12.5" cy="34.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="35" cy="35.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="24" cy="24" r="3.2" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 22%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 24 L 11.5 14.5" stroke-width="2"/>
+      <path d="M 24 24 L 36.5 13.5" stroke-width="2"/>
+      <path d="M 24 24 L 12.5 34.5" stroke-width="2"/>
+      <path d="M 24 24 L 35 35.5" stroke-width="2"/>
+      <path d="M 36.5 13.5 C 40 20 40 29 35 35.5" stroke-width="2"/>
+      <circle cx="11.5" cy="14.5" r="2.1" stroke-width="3"/>
+      <circle cx="36.5" cy="13.5" r="2.1" stroke-width="3"/>
+      <circle cx="12.5" cy="34.5" r="2.1" stroke-width="3"/>
+      <circle cx="35" cy="35.5" r="2.1" stroke-width="3"/>
+      <circle cx="24" cy="24" r="3.2" stroke-width="3"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 21.7 21.7 Q 20.7 22.6 20.9 23.9" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-graph-title">
+  <title id="icon-graph-title">知识图谱</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <circle cx="11.5" cy="14.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="36.5" cy="13.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="12.5" cy="34.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="35" cy="35.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="24" cy="24" r="3.2" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 22%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 24 L 11.5 14.5" stroke-width="2"/>
+      <path d="M 24 24 L 36.5 13.5" stroke-width="2"/>
+      <path d="M 24 24 L 12.5 34.5" stroke-width="2"/>
+      <path d="M 24 24 L 35 35.5" stroke-width="2"/>
+      <path d="M 36.5 13.5 C 40 20 40 29 35 35.5" stroke-width="2"/>
+      <circle cx="11.5" cy="14.5" r="2.1" stroke-width="3"/>
+      <circle cx="36.5" cy="13.5" r="2.1" stroke-width="3"/>
+      <circle cx="12.5" cy="34.5" r="2.1" stroke-width="3"/>
+      <circle cx="35" cy="35.5" r="2.1" stroke-width="3"/>
+      <circle cx="24" cy="24" r="3.2" stroke-width="3"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 21.7 21.7 Q 20.7 22.6 20.9 23.9" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>知识图谱</b><span>左栏导航 · 节点连线</span><code>icon-graph.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-records-title">
+  <title id="icon-records-title">记录</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 24%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z" stroke-width="2"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z" stroke-width="3"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z" stroke-width="2"/>
+      <circle cx="16" cy="14" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="24" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="34" r="1.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 15.4 12 Q 15.4 10 17.4 10 L 23 10" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-records-title">
+  <title id="icon-records-title">记录</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 24%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z" stroke-width="2"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z" stroke-width="3"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z" stroke-width="2"/>
+      <circle cx="16" cy="14" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="24" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="34" r="1.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 15.4 12 Q 15.4 10 17.4 10 L 23 10" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-records-title">
+  <title id="icon-records-title">记录</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 24%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z" stroke-width="2"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z" stroke-width="3"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z" stroke-width="2"/>
+      <circle cx="16" cy="14" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="24" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="34" r="1.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 15.4 12 Q 15.4 10 17.4 10 L 23 10" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>记录</b><span>左栏导航 · 笔记本</span><code>icon-records.svg</code></figcaption>
+      </figure>
+    </div>
+    <h3>空态插画 · 240 / 180 px（主档 180）</h3>
+    <div class="row row--empty">
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-vase-title">
+  <title id="empty-vase-title">静物插画：一枝柳条插在花瓶里</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="165" rx="30" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <g class="asset-empty__extension">
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      </g>
+      <path d="M 118 36.5 C 109.8 36.5 103 38.9 103 42 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158 Q 105 168 118 166 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 118 36.5 C 126.2 36.5 133 38.9 133 42 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158 Q 131 168 118 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <g class="asset-empty__extension">
+        <path d="M 122 42 C 132 31 145 23 158 15" stroke-width="2"/>
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" stroke-width="3"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" stroke-width="3"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" stroke-width="3"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" stroke-width="3"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" stroke-width="3"/>
+        <path d="M 131.3 33.4 L 134.2 44.2" stroke-width="1.5"/>
+        <path d="M 139.6 27.1 L 142.5 40.5" stroke-width="1.5"/>
+        <path d="M 148.5 21 L 151.4 31.8" stroke-width="1.5"/>
+        <path d="M 155 17.4 L 157.3 26.8" stroke-width="1.5"/>
+        <path d="M 158 15 L 162.8 11.2" stroke-width="1.5"/>
+      </g>
+      <path d="M 103 44 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158" stroke-width="3"/>
+      <path d="M 133 44 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158" stroke-width="3"/>
+      <path d="M 99 158 C 105 168 132 168 138 158" stroke-width="3"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92 96 C 87 108 84 121 84 133" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-vase-title">
+  <title id="empty-vase-title">静物插画：一枝柳条插在花瓶里</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="165" rx="30" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <g class="asset-empty__extension">
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      </g>
+      <path d="M 118 36.5 C 109.8 36.5 103 38.9 103 42 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158 Q 105 168 118 166 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 118 36.5 C 126.2 36.5 133 38.9 133 42 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158 Q 131 168 118 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <g class="asset-empty__extension">
+        <path d="M 122 42 C 132 31 145 23 158 15" stroke-width="2"/>
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" stroke-width="3"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" stroke-width="3"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" stroke-width="3"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" stroke-width="3"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" stroke-width="3"/>
+        <path d="M 131.3 33.4 L 134.2 44.2" stroke-width="1.5"/>
+        <path d="M 139.6 27.1 L 142.5 40.5" stroke-width="1.5"/>
+        <path d="M 148.5 21 L 151.4 31.8" stroke-width="1.5"/>
+        <path d="M 155 17.4 L 157.3 26.8" stroke-width="1.5"/>
+        <path d="M 158 15 L 162.8 11.2" stroke-width="1.5"/>
+      </g>
+      <path d="M 103 44 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158" stroke-width="3"/>
+      <path d="M 133 44 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158" stroke-width="3"/>
+      <path d="M 99 158 C 105 168 132 168 138 158" stroke-width="3"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92 96 C 87 108 84 121 84 133" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>花瓶 · 一枝柳</b><span>空态 1：试卷列表为空</span><code>empty-vase.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-fruit-basket-title">
+  <title id="empty-fruit-basket-title">静物插画：果篮里放着两只果子</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="35" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116 C 166 122.1 145.6 127 120 127 C 94.4 127 74 122.1 74 116 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <circle cx="101" cy="108" r="15" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <circle cx="139" cy="100" r="13" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126.2 97.74 A 13 13 0 0 1 143.45 87.78 L 126.2 97.74 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 76.4 130 C 100 136 140 136 163.3 130" stroke-width="1.5"/>
+      <path d="M 80.4 142 C 104 148 136 148 159.6 142" stroke-width="1.5"/>
+      <path d="M 87.5 153 C 108 158 131 158 152 153" stroke-width="1.5"/>
+      <path d="M 86 128 C 89 140 91 150 92 160" stroke-width="1.5"/>
+      <path d="M 98 129 C 100 142 101 152 102 162" stroke-width="1.5"/>
+      <path d="M 110 130 C 111 144 112 154 112 163" stroke-width="1.5"/>
+      <path d="M 130 130 C 129 144 128 154 127 163" stroke-width="1.5"/>
+      <path d="M 142 129 C 140 142 138 152 137 162" stroke-width="1.5"/>
+      <path d="M 154 127 C 151 140 149 150 147 160" stroke-width="1.5"/>
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116" stroke-width="3"/>
+      <path d="M 74 119 C 74 125.1 94.4 130 120 130 C 145.6 130 166 125.1 166 119" stroke-width="2"/>
+      <ellipse cx="120" cy="116" rx="46" ry="11" stroke-width="2"/>
+      <circle cx="101" cy="108" r="15" stroke-width="3"/>
+      <path d="M 101 93 L 104 85" stroke-width="2"/>
+      <circle cx="139" cy="100" r="13" stroke-width="3"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" stroke-width="3"/>
+      <path d="M 146 90 L 153.4 86.7" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 86.2 105.4 A 15 15 0 0 1 93.5 95" stroke-width="1.5"/>
+      <path d="M 126.5 96.6 A 13 13 0 0 1 132.5 88.7" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-fruit-basket-title">
+  <title id="empty-fruit-basket-title">静物插画：果篮里放着两只果子</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="35" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116 C 166 122.1 145.6 127 120 127 C 94.4 127 74 122.1 74 116 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <circle cx="101" cy="108" r="15" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <circle cx="139" cy="100" r="13" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126.2 97.74 A 13 13 0 0 1 143.45 87.78 L 126.2 97.74 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 76.4 130 C 100 136 140 136 163.3 130" stroke-width="1.5"/>
+      <path d="M 80.4 142 C 104 148 136 148 159.6 142" stroke-width="1.5"/>
+      <path d="M 87.5 153 C 108 158 131 158 152 153" stroke-width="1.5"/>
+      <path d="M 86 128 C 89 140 91 150 92 160" stroke-width="1.5"/>
+      <path d="M 98 129 C 100 142 101 152 102 162" stroke-width="1.5"/>
+      <path d="M 110 130 C 111 144 112 154 112 163" stroke-width="1.5"/>
+      <path d="M 130 130 C 129 144 128 154 127 163" stroke-width="1.5"/>
+      <path d="M 142 129 C 140 142 138 152 137 162" stroke-width="1.5"/>
+      <path d="M 154 127 C 151 140 149 150 147 160" stroke-width="1.5"/>
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116" stroke-width="3"/>
+      <path d="M 74 119 C 74 125.1 94.4 130 120 130 C 145.6 130 166 125.1 166 119" stroke-width="2"/>
+      <ellipse cx="120" cy="116" rx="46" ry="11" stroke-width="2"/>
+      <circle cx="101" cy="108" r="15" stroke-width="3"/>
+      <path d="M 101 93 L 104 85" stroke-width="2"/>
+      <circle cx="139" cy="100" r="13" stroke-width="3"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" stroke-width="3"/>
+      <path d="M 146 90 L 153.4 86.7" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 86.2 105.4 A 15 15 0 0 1 93.5 95" stroke-width="1.5"/>
+      <path d="M 126.5 96.6 A 13 13 0 0 1 132.5 88.7" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>果篮 · 两只果</b><span>空态 9：复习负荷为空</span><code>empty-fruit-basket.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-canvas-title">
+  <title id="empty-canvas-title">静物插画：一块空白的画布</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="46" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 88 138 L 70 166" stroke-width="3"/>
+      <path d="M 152 138 L 170 166" stroke-width="3"/>
+      <path d="M 120 134 L 120 166" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 149 54 L 157 47 L 163 139 L 154 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 93 57 L 149 54 L 154 131 L 98 135 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 99 76 Q 114 69 131 63 Q 133 68 131 71 Q 115 77 100 82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 101 95 Q 120 100 140 106 Q 141 111 138 113 Q 119 107 101 101 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 105 122 Q 112 114 122 108 Q 125 113 122 117 Q 114 122 106 126 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" stroke-width="3"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight">
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-canvas-title">
+  <title id="empty-canvas-title">静物插画：一块空白的画布</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="46" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 88 138 L 70 166" stroke-width="3"/>
+      <path d="M 152 138 L 170 166" stroke-width="3"/>
+      <path d="M 120 134 L 120 166" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 149 54 L 157 47 L 163 139 L 154 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 93 57 L 149 54 L 154 131 L 98 135 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 99 76 Q 114 69 131 63 Q 133 68 131 71 Q 115 77 100 82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 101 95 Q 120 100 140 106 Q 141 111 138 113 Q 119 107 101 101 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 105 122 Q 112 114 122 108 Q 125 113 122 117 Q 114 122 106 126 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" stroke-width="3"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight">
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>画布 · 空白</b><span>空态 2：知识点列表为空</span><code>empty-canvas.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-cup-title">
+  <title id="empty-cup-title">静物插画：一杯还冒着热气的茶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="33" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="158" rx="45" ry="9" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="153" rx="19" ry="2.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 102.83 88 89 92.29 89 96 C 89 130 97.35 152 120 152 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 137.17 88 151 92.29 151 96 C 151 130 142.65 152 120 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="97.5" rx="28" ry="6" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <ellipse cx="120" cy="158" rx="45" ry="9" stroke-width="3"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" stroke-width="2"/>
+      <path d="M 89 96 C 89 130 97.35 152 120 152 C 142.65 152 151 130 151 96" stroke-width="3"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" stroke-width="2"/>
+      <path d="M 150.7 106 C 165 103 167 126 146.1 132" stroke-width="2"/>
+      <g class="asset-empty__extension">
+        <path d="M 111 85 C 105 77 117 71 111 63 C 107 57 111 49 111 43" stroke-width="1.5"/>
+        <path d="M 130 85 C 124 78 135 72 130 65 C 127 60 131 53 132 48" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 108 C 93 120 95 132 98 141" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-cup-title">
+  <title id="empty-cup-title">静物插画：一杯还冒着热气的茶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="33" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="158" rx="45" ry="9" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="153" rx="19" ry="2.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 102.83 88 89 92.29 89 96 C 89 130 97.35 152 120 152 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 137.17 88 151 92.29 151 96 C 151 130 142.65 152 120 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="97.5" rx="28" ry="6" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <ellipse cx="120" cy="158" rx="45" ry="9" stroke-width="3"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" stroke-width="2"/>
+      <path d="M 89 96 C 89 130 97.35 152 120 152 C 142.65 152 151 130 151 96" stroke-width="3"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" stroke-width="2"/>
+      <path d="M 150.7 106 C 165 103 167 126 146.1 132" stroke-width="2"/>
+      <g class="asset-empty__extension">
+        <path d="M 111 85 C 105 77 117 71 111 63 C 107 57 111 49 111 43" stroke-width="1.5"/>
+        <path d="M 130 85 C 124 78 135 72 130 65 C 127 60 131 53 132 48" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 108 C 93 120 95 132 98 141" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>茶杯 · 带碟</b><span>空态 3：记录中心概览为空</span><code>empty-cup.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-books-title">
+  <title id="empty-books-title">静物插画：三本叠放的书</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="50" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 170 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 170 166 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 60 161 L 180 161 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 63 148 L 68 148 L 68 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" stroke-width="3"/>
+      <path d="M 68 148 L 68 166" stroke-width="2"/>
+      <path d="M 170 154 L 178 154" stroke-width="1.5"/>
+      <path d="M 170 160 L 178 160" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <path d="M 166 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 166 148 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 70 143 L 176 143 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73 131 L 78 131 L 78 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" stroke-width="3"/>
+      <path d="M 78 131 L 78 148" stroke-width="2"/>
+      <path d="M 166 137 L 174 137" stroke-width="1.5"/>
+      <path d="M 166 143 L 174 143" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="var(--asset-wash-red, #f9e5df)"/>
+      <path d="M 158 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 158 131 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 64 126 L 168 126 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 67 114 L 72 114 L 72 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" stroke-width="3"/>
+      <path d="M 72 114 L 72 131" stroke-width="2"/>
+      <path d="M 158 120 L 166 120" stroke-width="1.5"/>
+      <path d="M 158 126 L 166 126" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 68 116.8 L 118 116.8" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-books-title">
+  <title id="empty-books-title">静物插画：三本叠放的书</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="50" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 170 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 170 166 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 60 161 L 180 161 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 63 148 L 68 148 L 68 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" stroke-width="3"/>
+      <path d="M 68 148 L 68 166" stroke-width="2"/>
+      <path d="M 170 154 L 178 154" stroke-width="1.5"/>
+      <path d="M 170 160 L 178 160" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <path d="M 166 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 166 148 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 70 143 L 176 143 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73 131 L 78 131 L 78 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" stroke-width="3"/>
+      <path d="M 78 131 L 78 148" stroke-width="2"/>
+      <path d="M 166 137 L 174 137" stroke-width="1.5"/>
+      <path d="M 166 143 L 174 143" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="var(--asset-wash-red, #f9e5df)"/>
+      <path d="M 158 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 158 131 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 64 126 L 168 126 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 67 114 L 72 114 L 72 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" stroke-width="3"/>
+      <path d="M 72 114 L 72 131" stroke-width="2"/>
+      <path d="M 158 120 L 166 120" stroke-width="1.5"/>
+      <path d="M 158 126 L 166 126" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 68 116.8 L 118 116.8" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>叠书 · 三本</b><span>空态 6：近 12 周无作答</span><code>empty-books.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pen-title">
+  <title id="empty-pen-title">静物插画：一支放在桌上的钢笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 71.49 130.3 L 165.27 166 L 165.11 168 L 71.33 132.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 171.27 153.77 168.14 157.47 L 73.08 125.56 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73.08 125.56 L 168.14 157.47 Q 168.98 162.5 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 170.41 158.23 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" stroke-width="3"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" stroke-width="3"/>
+      <path d="M 60.64 121.38 L 66.14 123.23" stroke-width="2"/>
+      <path d="M 93.21 125.77 L 90.97 138.11" stroke-width="2"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" stroke-width="2"/>
+      <path d="M 144.64 143.43 L 160.02 148.04 L 157.53 149.14" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 79.41 126.61 L 106.71 134.18" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pen-title">
+  <title id="empty-pen-title">静物插画：一支放在桌上的钢笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 71.49 130.3 L 165.27 166 L 165.11 168 L 71.33 132.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 171.27 153.77 168.14 157.47 L 73.08 125.56 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73.08 125.56 L 168.14 157.47 Q 168.98 162.5 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 170.41 158.23 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" stroke-width="3"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" stroke-width="3"/>
+      <path d="M 60.64 121.38 L 66.14 123.23" stroke-width="2"/>
+      <path d="M 93.21 125.77 L 90.97 138.11" stroke-width="2"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" stroke-width="2"/>
+      <path d="M 144.64 143.43 L 160.02 148.04 L 157.53 149.14" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 79.41 126.61 L 106.71 134.18" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>钢笔 · 横放</b><span>空态 8：Agent 会话为空</span><code>empty-pen.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pencil-cup-title">
+  <title id="empty-pencil-cup-title">静物插画：笔筒里插着两支笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="28" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="94" rx="26" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 94 94 L 120 94 L 120 165.25 C 112 164.6 105 162.4 100 160 C 96 145 94 120 94 94 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 94 L 146 94 C 146 120 144 145 140 160 C 135 162.4 128 164.6 120 165.25 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 94 94 L 100 160 L 140 160 L 146 94" stroke-width="3"/>
+      <path d="M 100 160 C 108 167 132 167 140 160" stroke-width="3"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" stroke-width="2"/>
+      <path d="M 94 44 L 99 48 L 93 52 Z" stroke-width="3"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" stroke-width="2"/>
+      <path d="M 137 58 L 147 54 L 143 44 Z" stroke-width="3"/>
+      <path d="M 94 94 C 94 98.4 105.6 102 120 102 C 134.4 102 146 98.4 146 94" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 97 100 C 98 114 99 128 100.5 140" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pencil-cup-title">
+  <title id="empty-pencil-cup-title">静物插画：笔筒里插着两支笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="28" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="94" rx="26" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 94 94 L 120 94 L 120 165.25 C 112 164.6 105 162.4 100 160 C 96 145 94 120 94 94 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 94 L 146 94 C 146 120 144 145 140 160 C 135 162.4 128 164.6 120 165.25 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 94 94 L 100 160 L 140 160 L 146 94" stroke-width="3"/>
+      <path d="M 100 160 C 108 167 132 167 140 160" stroke-width="3"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" stroke-width="2"/>
+      <path d="M 94 44 L 99 48 L 93 52 Z" stroke-width="3"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" stroke-width="2"/>
+      <path d="M 137 58 L 147 54 L 143 44 Z" stroke-width="3"/>
+      <path d="M 94 94 C 94 98.4 105.6 102 120 102 C 134.4 102 146 98.4 146 94" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 97 100 C 98 114 99 128 100.5 140" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>笔筒 · 插两支笔</b><span>空态 7：带自评的作答为空</span><code>empty-pencil-cup.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-globe-title">
+  <title id="empty-globe-title">静物插画：一只小地球仪</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="34" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 84 88 A 36 36 0 0 1 120 52 L 120 88 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 L 120 124 A 36 36 0 0 0 156 88 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 133 65 C 141 61 151 67 149 75 C 148 82 138 85 132 80 C 127 75 129 68 133 65 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 100 100 C 106 95 114 98 112 106 C 111 112 104 116 99 112 C 95 108 96 103 100 100 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 92 116 Q 120 140 148 116" stroke-width="2"/>
+      <path d="M 120 128 L 120 152" stroke-width="2"/>
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" stroke-width="3"/>
+      <circle cx="120" cy="88" r="36" stroke-width="3"/>
+      <ellipse cx="120" cy="88" rx="13" ry="36" stroke-width="2"/>
+      <path d="M 106 60 Q 98 88 106 116" stroke-width="2"/>
+      <path d="M 134 60 Q 142 88 134 116" stroke-width="2"/>
+      <path d="M 86.9 74 Q 120 84 153.1 74" stroke-width="2"/>
+      <path d="M 86.9 102 Q 120 92 153.1 102" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 84.7 95.5 A 36 36 0 0 0 96.9 60.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-globe-title">
+  <title id="empty-globe-title">静物插画：一只小地球仪</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="34" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 84 88 A 36 36 0 0 1 120 52 L 120 88 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 L 120 124 A 36 36 0 0 0 156 88 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 133 65 C 141 61 151 67 149 75 C 148 82 138 85 132 80 C 127 75 129 68 133 65 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 100 100 C 106 95 114 98 112 106 C 111 112 104 116 99 112 C 95 108 96 103 100 100 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 92 116 Q 120 140 148 116" stroke-width="2"/>
+      <path d="M 120 128 L 120 152" stroke-width="2"/>
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" stroke-width="3"/>
+      <circle cx="120" cy="88" r="36" stroke-width="3"/>
+      <ellipse cx="120" cy="88" rx="13" ry="36" stroke-width="2"/>
+      <path d="M 106 60 Q 98 88 106 116" stroke-width="2"/>
+      <path d="M 134 60 Q 142 88 134 116" stroke-width="2"/>
+      <path d="M 86.9 74 Q 120 84 153.1 74" stroke-width="2"/>
+      <path d="M 86.9 102 Q 120 92 153.1 102" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 84.7 95.5 A 36 36 0 0 0 96.9 60.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>地球仪 · 带支架</b><span>空态 10：目标列表为空</span><code>empty-globe.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-inkwell-title">
+  <title id="empty-inkwell-title">静物插画：桌上的墨水瓶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="117" cy="165" rx="28" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 117 120 L 145 120 C 145 150 137 166 117 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 89 120 L 145 120 C 144.7 125 144.2 130 143.6 134 L 90.4 134 C 89.8 130 89.3 125 89 120 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 97 100 L 137 100 L 139.4 106 L 94.6 106 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 143 154 L 152.5 119" stroke-width="2"/>
+      <path d="M 151 117 L 156.5 118.5" stroke-width="2"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" stroke-width="3"/>
+      <path d="M 89 120 C 89 150 97 166 117 166 C 137 166 145 150 145 120" stroke-width="3"/>
+      <path d="M 89 120 L 97 100 L 137 100 L 145 120" stroke-width="3"/>
+      <ellipse cx="117" cy="100" rx="20" ry="6" stroke-width="2"/>
+      <path d="M 105 78 L 129 78 L 133 100 L 101 100 Z" stroke-width="2"/>
+      <circle cx="117" cy="74" r="5" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 101 L 92.5 127 L 95.5 127 L 95.5 101 Z" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-inkwell-title">
+  <title id="empty-inkwell-title">静物插画：桌上的墨水瓶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="117" cy="165" rx="28" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 117 120 L 145 120 C 145 150 137 166 117 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 89 120 L 145 120 C 144.7 125 144.2 130 143.6 134 L 90.4 134 C 89.8 130 89.3 125 89 120 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 97 100 L 137 100 L 139.4 106 L 94.6 106 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 143 154 L 152.5 119" stroke-width="2"/>
+      <path d="M 151 117 L 156.5 118.5" stroke-width="2"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" stroke-width="3"/>
+      <path d="M 89 120 C 89 150 97 166 117 166 C 137 166 145 150 145 120" stroke-width="3"/>
+      <path d="M 89 120 L 97 100 L 137 100 L 145 120" stroke-width="3"/>
+      <ellipse cx="117" cy="100" rx="20" ry="6" stroke-width="2"/>
+      <path d="M 105 78 L 129 78 L 133 100 L 101 100 Z" stroke-width="2"/>
+      <circle cx="117" cy="74" r="5" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 101 L 92.5 127 L 95.5 127 L 95.5 101 Z" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>墨水瓶 · 带吸墨器</b><span>空态 4：无完整练习轮次</span><code>empty-inkwell.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-compass-title">
+  <title id="empty-compass-title">静物插画：一把绘图圆规</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="90" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="151" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 114.2 80 L 91.2 148 L 94 149 L 117 81 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 125.8 80 L 149.8 148 L 147 149 L 123 81 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 111 52 Q 111 43.5 120 43.5 L 122 43.7 L 122 64 L 120 64 Q 111 61 111 52 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122 43.7 Q 129 44 129 52 Q 129 61 120 64 L 122 64 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 111 52 Q 111 43.5 120 43.5 Q 129 44 129 52 Q 129 61 120 64 Q 111 61 111 52 Z" stroke-width="3"/>
+      <path d="M 120 64 L 120 75" stroke-width="2"/>
+      <circle cx="120" cy="78" r="4.5" stroke-width="3"/>
+      <path d="M 117 81 L 94 149" stroke-width="3"/>
+      <path d="M 123 81 L 147 149" stroke-width="3"/>
+      <path d="M 107 110 L 133 105" stroke-width="2"/>
+      <path d="M 118.4 99.5 L 121.6 115.5" stroke-width="2"/>
+      <circle cx="120" cy="107.5" r="4.5" stroke-width="2"/>
+      <path d="M 89.5 148 L 97.5 151" stroke-width="2"/>
+      <path d="M 92 152 L 97 153.5 L 93.5 162 L 88.5 160.5 Z" stroke-width="3"/>
+      <path d="M 88.5 160.5 L 93.5 162 L 89.5 166 Z" stroke-width="3"/>
+      <path d="M 151 166 L 147 153 L 154 153.5 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 113.6 51 Q 114 45.6 118.4 44.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-compass-title">
+  <title id="empty-compass-title">静物插画：一把绘图圆规</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="90" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="151" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 114.2 80 L 91.2 148 L 94 149 L 117 81 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 125.8 80 L 149.8 148 L 147 149 L 123 81 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 111 52 Q 111 43.5 120 43.5 L 122 43.7 L 122 64 L 120 64 Q 111 61 111 52 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122 43.7 Q 129 44 129 52 Q 129 61 120 64 L 122 64 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 111 52 Q 111 43.5 120 43.5 Q 129 44 129 52 Q 129 61 120 64 Q 111 61 111 52 Z" stroke-width="3"/>
+      <path d="M 120 64 L 120 75" stroke-width="2"/>
+      <circle cx="120" cy="78" r="4.5" stroke-width="3"/>
+      <path d="M 117 81 L 94 149" stroke-width="3"/>
+      <path d="M 123 81 L 147 149" stroke-width="3"/>
+      <path d="M 107 110 L 133 105" stroke-width="2"/>
+      <path d="M 118.4 99.5 L 121.6 115.5" stroke-width="2"/>
+      <circle cx="120" cy="107.5" r="4.5" stroke-width="2"/>
+      <path d="M 89.5 148 L 97.5 151" stroke-width="2"/>
+      <path d="M 92 152 L 97 153.5 L 93.5 162 L 88.5 160.5 Z" stroke-width="3"/>
+      <path d="M 88.5 160.5 L 93.5 162 L 89.5 166 Z" stroke-width="3"/>
+      <path d="M 151 166 L 147 153 L 154 153.5 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 113.6 51 Q 114 45.6 118.4 44.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>圆规 · 单件</b><span>空态 5：近 14 天无作答</span><code>empty-compass.svg</code></figcaption>
+      </figure>
+    </div>
+    <h3>台灯三姿态 · 132 px</h3>
+    <div class="row row--lamp">
+      <figure class="card">
+        <div class="stage stage--lamp pose pose--a">
+          <svg class="lk-lamp" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lamp-title" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
+  <title id="lamp-title">静物插画：一盏台灯</title>
+  <defs>
+    <radialGradient id="lamp-gLamp" gradientUnits="userSpaceOnUse" cx="118" cy="131" r="60">
+      <stop offset="0" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity=".55"/>
+      <stop offset="1" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g class="lk-lamp__body" fill="none" stroke="var(--asset-ink, #2a2620)">
+    <g class="lk-lamp__base">
+      <path d="M 99.5 196 L 140.5 196 Q 143 196 144 198.5 L 152 222 Q 153 226 149 226 L 91 226 Q 87 226 88 222 L 96 198.5 Q 97 196 99.5 196 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 100 196 L 140 196" stroke-width="2"/>
+      <path d="M 91.5 226 L 148.5 226" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__stem">
+      <path d="M 120 196 L 120 134" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__joint">
+      <circle cx="120" cy="134" r="5.5" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__arm">
+      <path d="M 120 134 L 152 90" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__pivot">
+      <circle cx="152" cy="90" r="4.5" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__shade">
+      <path d="M 152 90 C 135 95 114 101 96.8 109.8 A 30 11 45 0 1 139.2 152.2 C 144 131 149 109 152 90 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="131" rx="30" ry="11" transform="rotate(45 118 131)" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))" stroke-width="2"/>
+      <ellipse cx="118" cy="131" rx="27" ry="10" transform="rotate(45 118 131)" stroke-width="2"/>
+      <path d="M 146 105 L 139.5 139" stroke-width="2"/>
+    </g>
+  </g>
+  <g class="lk-lamp__glow">
+    <circle cx="112" cy="138" r="58" fill="url(#lamp-gLamp)"/>
+    <ellipse cx="118" cy="131" rx="26" ry="9.5" transform="rotate(45 118 131)" fill="url(#lamp-gLamp)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+    <circle cx="124" cy="125" r="8" fill="var(--asset-lamp-warm, #f7c46b)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+  </g>
+</svg>
+        </div>
+        <figcaption><b>A · 收（parked）</b><span>节点未创建 / opacity 0，在下缘之外</span><code>motion/lamp.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--lamp pose pose--b">
+          <svg class="lk-lamp" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lamp-title" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
+  <title id="lamp-title">静物插画：一盏台灯</title>
+  <defs>
+    <radialGradient id="lamp-gLamp" gradientUnits="userSpaceOnUse" cx="118" cy="131" r="60">
+      <stop offset="0" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity=".55"/>
+      <stop offset="1" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g class="lk-lamp__body" fill="none" stroke="var(--asset-ink, #2a2620)">
+    <g class="lk-lamp__base">
+      <path d="M 99.5 196 L 140.5 196 Q 143 196 144 198.5 L 152 222 Q 153 226 149 226 L 91 226 Q 87 226 88 222 L 96 198.5 Q 97 196 99.5 196 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 100 196 L 140 196" stroke-width="2"/>
+      <path d="M 91.5 226 L 148.5 226" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__stem">
+      <path d="M 120 196 L 120 134" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__joint">
+      <circle cx="120" cy="134" r="5.5" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__arm">
+      <path d="M 120 134 L 152 90" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__pivot">
+      <circle cx="152" cy="90" r="4.5" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__shade">
+      <path d="M 152 90 C 135 95 114 101 96.8 109.8 A 30 11 45 0 1 139.2 152.2 C 144 131 149 109 152 90 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="131" rx="30" ry="11" transform="rotate(45 118 131)" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))" stroke-width="2"/>
+      <ellipse cx="118" cy="131" rx="27" ry="10" transform="rotate(45 118 131)" stroke-width="2"/>
+      <path d="M 146 105 L 139.5 139" stroke-width="2"/>
+    </g>
+  </g>
+  <g class="lk-lamp__glow">
+    <circle cx="112" cy="138" r="58" fill="url(#lamp-gLamp)"/>
+    <ellipse cx="118" cy="131" rx="26" ry="9.5" transform="rotate(45 118 131)" fill="url(#lamp-gLamp)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+    <circle cx="124" cy="125" r="8" fill="var(--asset-lamp-warm, #f7c46b)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+  </g>
+</svg>
+        </div>
+        <figcaption><b>B · 探（peek）</b><span>已探出转正，光未亮</span><code>motion/lamp.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--lamp pose pose--c">
+          <svg class="lk-lamp" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lamp-title" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
+  <title id="lamp-title">静物插画：一盏台灯</title>
+  <defs>
+    <radialGradient id="lamp-gLamp" gradientUnits="userSpaceOnUse" cx="118" cy="131" r="60">
+      <stop offset="0" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity=".55"/>
+      <stop offset="1" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g class="lk-lamp__body" fill="none" stroke="var(--asset-ink, #2a2620)">
+    <g class="lk-lamp__base">
+      <path d="M 99.5 196 L 140.5 196 Q 143 196 144 198.5 L 152 222 Q 153 226 149 226 L 91 226 Q 87 226 88 222 L 96 198.5 Q 97 196 99.5 196 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 100 196 L 140 196" stroke-width="2"/>
+      <path d="M 91.5 226 L 148.5 226" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__stem">
+      <path d="M 120 196 L 120 134" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__joint">
+      <circle cx="120" cy="134" r="5.5" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__arm">
+      <path d="M 120 134 L 152 90" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__pivot">
+      <circle cx="152" cy="90" r="4.5" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__shade">
+      <path d="M 152 90 C 135 95 114 101 96.8 109.8 A 30 11 45 0 1 139.2 152.2 C 144 131 149 109 152 90 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="131" rx="30" ry="11" transform="rotate(45 118 131)" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))" stroke-width="2"/>
+      <ellipse cx="118" cy="131" rx="27" ry="10" transform="rotate(45 118 131)" stroke-width="2"/>
+      <path d="M 146 105 L 139.5 139" stroke-width="2"/>
+    </g>
+  </g>
+  <g class="lk-lamp__glow">
+    <circle cx="112" cy="138" r="58" fill="url(#lamp-gLamp)"/>
+    <ellipse cx="118" cy="131" rx="26" ry="9.5" transform="rotate(45 118 131)" fill="url(#lamp-gLamp)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+    <circle cx="124" cy="125" r="8" fill="var(--asset-lamp-warm, #f7c46b)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+  </g>
+</svg>
+        </div>
+        <figcaption><b>C · 亮（lit）</b><span>罩内亮起，暖光溢出</span><code>motion/lamp.svg</code></figcaption>
+      </figure>
+    </div>
+  </section>
+  <section class="theme theme--night" id="theme-night">
+    <h2>夜纸</h2>
+    <h3>导航图标 · 32 / 24 / 16 px</h3>
+    <div class="row row--icons">
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-title">
+  <title id="icon-practice-title">练习</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 9 30.4 C 14 27.8 20 28.4 24 31.4 C 28 28.4 34 27.8 39 30.4 L 39 33.6 C 34 31 28 31.6 24 34.6 C 20 31.6 14 31 9 33.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 9 33.6 C 14 31 20 31.6 24 34.6 C 28 31.6 34 31 39 33.6" stroke-width="3"/>
+      <path d="M 24 14.4 C 23 20 23 26 24 31" stroke-width="2"/>
+      <path d="M 12.8 18.6 L 21 18.6" stroke-width="1.5"/>
+      <path d="M 12.8 22.4 L 20 22.4" stroke-width="1.5"/>
+      <path d="M 12.8 26.2 L 18.6 26.2" stroke-width="1.5"/>
+      <path d="M 27 18.6 L 35.5 18.6" stroke-width="1.5"/>
+      <path d="M 27 22.4 L 33.6 22.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 12.4 15.2 C 15 13.6 17.8 13.2 20 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-title">
+  <title id="icon-practice-title">练习</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 9 30.4 C 14 27.8 20 28.4 24 31.4 C 28 28.4 34 27.8 39 30.4 L 39 33.6 C 34 31 28 31.6 24 34.6 C 20 31.6 14 31 9 33.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 9 33.6 C 14 31 20 31.6 24 34.6 C 28 31.6 34 31 39 33.6" stroke-width="3"/>
+      <path d="M 24 14.4 C 23 20 23 26 24 31" stroke-width="2"/>
+      <path d="M 12.8 18.6 L 21 18.6" stroke-width="1.5"/>
+      <path d="M 12.8 22.4 L 20 22.4" stroke-width="1.5"/>
+      <path d="M 12.8 26.2 L 18.6 26.2" stroke-width="1.5"/>
+      <path d="M 27 18.6 L 35.5 18.6" stroke-width="1.5"/>
+      <path d="M 27 22.4 L 33.6 22.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 12.4 15.2 C 15 13.6 17.8 13.2 20 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-title">
+  <title id="icon-practice-title">练习</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 9 30.4 C 14 27.8 20 28.4 24 31.4 C 28 28.4 34 27.8 39 30.4 L 39 33.6 C 34 31 28 31.6 24 34.6 C 20 31.6 14 31 9 33.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 13.8 C 28 11.4 34 11 39 13.6 L 39 30.4 C 34 27.8 28 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 24 13.8 C 20 11.4 14 11 9 13.6 L 9 30.4 C 14 27.8 20 28.4 24 31.4 C 24 26 24 19 24 13.8 Z" stroke-width="3"/>
+      <path d="M 9 33.6 C 14 31 20 31.6 24 34.6 C 28 31.6 34 31 39 33.6" stroke-width="3"/>
+      <path d="M 24 14.4 C 23 20 23 26 24 31" stroke-width="2"/>
+      <path d="M 12.8 18.6 L 21 18.6" stroke-width="1.5"/>
+      <path d="M 12.8 22.4 L 20 22.4" stroke-width="1.5"/>
+      <path d="M 12.8 26.2 L 18.6 26.2" stroke-width="1.5"/>
+      <path d="M 27 18.6 L 35.5 18.6" stroke-width="1.5"/>
+      <path d="M 27 22.4 L 33.6 22.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 12.4 15.2 C 15 13.6 17.8 13.2 20 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>练习</b><span>左栏导航 · 翻开的书</span><code>icon-practice.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-sets-title">
+  <title id="icon-practice-sets-title">试卷</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 26%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z" stroke-width="2"/>
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z" stroke-width="2"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z" stroke-width="3"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z" stroke-width="2"/>
+      <path d="M 14.5 17 L 29 17" stroke-width="1.5"/>
+      <path d="M 14.5 20.4 L 25.5 20.4" stroke-width="1.5"/>
+      <path d="M 14.5 23.4 L 22 23.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 13 14.4 Q 13 13.6 14 13.6 L 19 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-sets-title">
+  <title id="icon-practice-sets-title">试卷</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 26%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z" stroke-width="2"/>
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z" stroke-width="2"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z" stroke-width="3"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z" stroke-width="2"/>
+      <path d="M 14.5 17 L 29 17" stroke-width="1.5"/>
+      <path d="M 14.5 20.4 L 25.5 20.4" stroke-width="1.5"/>
+      <path d="M 14.5 23.4 L 22 23.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 13 14.4 Q 13 13.6 14 13.6 L 19 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-practice-sets-title">
+  <title id="icon-practice-sets-title">试卷</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 26%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 9 30.4 L 35 30.4 L 37 33.4 L 11 33.4 Z" stroke-width="2"/>
+      <path d="M 10.5 27.2 L 36.5 27.2 L 38 30.2 L 12 30.2 Z" stroke-width="2"/>
+      <path d="M 12.5 13 L 33.5 13 Q 35 13 35 14.5 L 35 25.5 L 11 25.5 L 11 14.5 Q 11 13 12.5 13 Z" stroke-width="3"/>
+      <path d="M 30.5 25.5 L 35 21 L 35 25.5 Z" stroke-width="2"/>
+      <path d="M 14.5 17 L 29 17" stroke-width="1.5"/>
+      <path d="M 14.5 20.4 L 25.5 20.4" stroke-width="1.5"/>
+      <path d="M 14.5 23.4 L 22 23.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 13 14.4 Q 13 13.6 14 13.6 L 19 13.6" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>试卷</b><span>左栏导航 · 一叠纸</span><code>icon-practice-sets.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-kps-title">
+  <title id="icon-kps-title">知识点</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 12.6 12.4 L 17.2 11.8 L 17.2 36.4 L 12.6 36.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 18%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 12.6 12.4 L 12.6 36.6" stroke-width="2"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z" stroke-width="3"/>
+      <path d="M 18.8 12.4 L 18.8 34.6" stroke-width="2"/>
+      <circle cx="24" cy="15" r="1.7" fill="var(--asset-ground-blue, #2b62e8)" stroke-width="2"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 20.4 13.6 L 20.4 28.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-kps-title">
+  <title id="icon-kps-title">知识点</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 12.6 12.4 L 17.2 11.8 L 17.2 36.4 L 12.6 36.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 18%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 12.6 12.4 L 12.6 36.6" stroke-width="2"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z" stroke-width="3"/>
+      <path d="M 18.8 12.4 L 18.8 34.6" stroke-width="2"/>
+      <circle cx="24" cy="15" r="1.7" fill="var(--asset-ground-blue, #2b62e8)" stroke-width="2"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 20.4 13.6 L 20.4 28.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-kps-title">
+  <title id="icon-kps-title">知识点</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 12.6 12.4 L 17.2 11.8 L 17.2 36.4 L 12.6 36.6 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-ground-blue, #2b62e8))"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z"
+            fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 18%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 12.6 12.4 L 12.6 36.6" stroke-width="2"/>
+      <path d="M 17.2 11.6 Q 17.2 10 18.8 10 L 29.2 10 Q 30.8 10 30.8 11.6 L 30.8 37.5 L 24 31 L 17.2 37.5 Z" stroke-width="3"/>
+      <path d="M 18.8 12.4 L 18.8 34.6" stroke-width="2"/>
+      <circle cx="24" cy="15" r="1.7" fill="var(--asset-ground-blue, #2b62e8)" stroke-width="2"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 20.4 13.6 L 20.4 28.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>知识点</b><span>左栏导航 · 书签</span><code>icon-kps.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-graph-title">
+  <title id="icon-graph-title">知识图谱</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <circle cx="11.5" cy="14.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="36.5" cy="13.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="12.5" cy="34.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="35" cy="35.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="24" cy="24" r="3.2" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 22%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 24 L 11.5 14.5" stroke-width="2"/>
+      <path d="M 24 24 L 36.5 13.5" stroke-width="2"/>
+      <path d="M 24 24 L 12.5 34.5" stroke-width="2"/>
+      <path d="M 24 24 L 35 35.5" stroke-width="2"/>
+      <path d="M 36.5 13.5 C 40 20 40 29 35 35.5" stroke-width="2"/>
+      <circle cx="11.5" cy="14.5" r="2.1" stroke-width="3"/>
+      <circle cx="36.5" cy="13.5" r="2.1" stroke-width="3"/>
+      <circle cx="12.5" cy="34.5" r="2.1" stroke-width="3"/>
+      <circle cx="35" cy="35.5" r="2.1" stroke-width="3"/>
+      <circle cx="24" cy="24" r="3.2" stroke-width="3"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 21.7 21.7 Q 20.7 22.6 20.9 23.9" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-graph-title">
+  <title id="icon-graph-title">知识图谱</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <circle cx="11.5" cy="14.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="36.5" cy="13.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="12.5" cy="34.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="35" cy="35.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="24" cy="24" r="3.2" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 22%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 24 L 11.5 14.5" stroke-width="2"/>
+      <path d="M 24 24 L 36.5 13.5" stroke-width="2"/>
+      <path d="M 24 24 L 12.5 34.5" stroke-width="2"/>
+      <path d="M 24 24 L 35 35.5" stroke-width="2"/>
+      <path d="M 36.5 13.5 C 40 20 40 29 35 35.5" stroke-width="2"/>
+      <circle cx="11.5" cy="14.5" r="2.1" stroke-width="3"/>
+      <circle cx="36.5" cy="13.5" r="2.1" stroke-width="3"/>
+      <circle cx="12.5" cy="34.5" r="2.1" stroke-width="3"/>
+      <circle cx="35" cy="35.5" r="2.1" stroke-width="3"/>
+      <circle cx="24" cy="24" r="3.2" stroke-width="3"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 21.7 21.7 Q 20.7 22.6 20.9 23.9" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-graph-title">
+  <title id="icon-graph-title">知识图谱</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-blue, #2b62e8)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <circle cx="11.5" cy="14.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="36.5" cy="13.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="12.5" cy="34.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="35" cy="35.5" r="2.1" fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 16%, var(--asset-ground-blue, #2b62e8))"/>
+      <circle cx="24" cy="24" r="3.2" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 22%, var(--asset-ground-blue, #2b62e8))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-blue, #fffdf7)">
+      <path d="M 24 24 L 11.5 14.5" stroke-width="2"/>
+      <path d="M 24 24 L 36.5 13.5" stroke-width="2"/>
+      <path d="M 24 24 L 12.5 34.5" stroke-width="2"/>
+      <path d="M 24 24 L 35 35.5" stroke-width="2"/>
+      <path d="M 36.5 13.5 C 40 20 40 29 35 35.5" stroke-width="2"/>
+      <circle cx="11.5" cy="14.5" r="2.1" stroke-width="3"/>
+      <circle cx="36.5" cy="13.5" r="2.1" stroke-width="3"/>
+      <circle cx="12.5" cy="34.5" r="2.1" stroke-width="3"/>
+      <circle cx="35" cy="35.5" r="2.1" stroke-width="3"/>
+      <circle cx="24" cy="24" r="3.2" stroke-width="3"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 21.7 21.7 Q 20.7 22.6 20.9 23.9" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>知识图谱</b><span>左栏导航 · 节点连线</span><code>icon-graph.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage">
+          <div class="slot slot--32"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-records-title">
+  <title id="icon-records-title">记录</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 24%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z" stroke-width="2"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z" stroke-width="3"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z" stroke-width="2"/>
+      <circle cx="16" cy="14" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="24" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="34" r="1.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 15.4 12 Q 15.4 10 17.4 10 L 23 10" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--24"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-records-title">
+  <title id="icon-records-title">记录</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 24%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z" stroke-width="2"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z" stroke-width="3"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z" stroke-width="2"/>
+      <circle cx="16" cy="14" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="24" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="34" r="1.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 15.4 12 Q 15.4 10 17.4 10 L 23 10" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--16"><svg viewBox="0 0 48 48" class="asset asset-icon" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="icon-records-title">
+  <title id="icon-records-title">记录</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-icon__ground">
+      <circle cx="24" cy="24" r="24" fill="var(--asset-ground-yellow, #f5c518)"/>
+    </g>
+    <g class="asset-icon__wash">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z"
+            fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-ground-yellow, #f5c518))"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z"
+            fill="color-mix(in oklab, var(--asset-paper, #fffdf7) 24%, var(--asset-ground-yellow, #f5c518))"/>
+    </g>
+    <g class="asset-icon__line" fill="none" stroke="var(--asset-ink-on-yellow, #221f1a)">
+      <path d="M 35 12 L 37.4 13 L 37.4 37 L 35 39 Z" stroke-width="2"/>
+      <path d="M 16 9 L 32 9 Q 35 9 35 12 L 35 36 Q 35 39 32 39 L 16 39 Q 13 39 13 36 L 13 12 Q 13 9 16 9 Z" stroke-width="3"/>
+      <path d="M 22.5 16 L 29 16 Q 30.5 16 30.5 17.5 L 30.5 23 Q 30.5 24.5 29 24.5 L 22.5 24.5 Q 21 24.5 21 23 L 21 17.5 Q 21 16 22.5 16 Z" stroke-width="2"/>
+      <circle cx="16" cy="14" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="24" r="1.4" stroke-width="1.5"/>
+      <circle cx="16" cy="34" r="1.4" stroke-width="1.5"/>
+    </g>
+    <g class="asset-icon__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 15.4 12 Q 15.4 10 17.4 10 L 23 10" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>记录</b><span>左栏导航 · 笔记本</span><code>icon-records.svg</code></figcaption>
+      </figure>
+    </div>
+    <h3>空态插画 · 240 / 180 px（主档 180）</h3>
+    <div class="row row--empty">
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-vase-title">
+  <title id="empty-vase-title">静物插画：一枝柳条插在花瓶里</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="165" rx="30" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <g class="asset-empty__extension">
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      </g>
+      <path d="M 118 36.5 C 109.8 36.5 103 38.9 103 42 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158 Q 105 168 118 166 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 118 36.5 C 126.2 36.5 133 38.9 133 42 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158 Q 131 168 118 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <g class="asset-empty__extension">
+        <path d="M 122 42 C 132 31 145 23 158 15" stroke-width="2"/>
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" stroke-width="3"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" stroke-width="3"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" stroke-width="3"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" stroke-width="3"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" stroke-width="3"/>
+        <path d="M 131.3 33.4 L 134.2 44.2" stroke-width="1.5"/>
+        <path d="M 139.6 27.1 L 142.5 40.5" stroke-width="1.5"/>
+        <path d="M 148.5 21 L 151.4 31.8" stroke-width="1.5"/>
+        <path d="M 155 17.4 L 157.3 26.8" stroke-width="1.5"/>
+        <path d="M 158 15 L 162.8 11.2" stroke-width="1.5"/>
+      </g>
+      <path d="M 103 44 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158" stroke-width="3"/>
+      <path d="M 133 44 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158" stroke-width="3"/>
+      <path d="M 99 158 C 105 168 132 168 138 158" stroke-width="3"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92 96 C 87 108 84 121 84 133" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-vase-title">
+  <title id="empty-vase-title">静物插画：一枝柳条插在花瓶里</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="165" rx="30" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <g class="asset-empty__extension">
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      </g>
+      <path d="M 118 36.5 C 109.8 36.5 103 38.9 103 42 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158 Q 105 168 118 166 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 118 36.5 C 126.2 36.5 133 38.9 133 42 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158 Q 131 168 118 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <g class="asset-empty__extension">
+        <path d="M 122 42 C 132 31 145 23 158 15" stroke-width="2"/>
+        <path d="M 131.3 33.4 Q 130.1 42 135.4 48.9 Q 136.7 40.2 131.3 33.4 Z" stroke-width="3"/>
+        <path d="M 139.6 27.1 Q 138.5 36.2 144 43.5 Q 145.1 34.4 139.6 27.1 Z" stroke-width="3"/>
+        <path d="M 148.5 21 Q 147.3 29.6 152.6 36.5 Q 153.9 27.8 148.5 21 Z" stroke-width="3"/>
+        <path d="M 155 17.4 Q 153.5 25.1 158.6 30.9 Q 160.1 23.3 155 17.4 Z" stroke-width="3"/>
+        <path d="M 158 15 Q 163.2 14.4 165.2 9.6 Q 160 10.2 158 15 Z" stroke-width="3"/>
+        <path d="M 131.3 33.4 L 134.2 44.2" stroke-width="1.5"/>
+        <path d="M 139.6 27.1 L 142.5 40.5" stroke-width="1.5"/>
+        <path d="M 148.5 21 L 151.4 31.8" stroke-width="1.5"/>
+        <path d="M 155 17.4 L 157.3 26.8" stroke-width="1.5"/>
+        <path d="M 158 15 L 162.8 11.2" stroke-width="1.5"/>
+      </g>
+      <path d="M 103 44 C 101 57 102 69 98 79 C 88 91 78 105 78 121 C 78 138 86 151 99 158" stroke-width="3"/>
+      <path d="M 133 44 C 135 58 135 70 139 80 C 148 93 158 105 158 119 C 158 137 150 152 138 158" stroke-width="3"/>
+      <path d="M 99 158 C 105 168 132 168 138 158" stroke-width="3"/>
+      <ellipse cx="118" cy="42" rx="15" ry="5.5" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92 96 C 87 108 84 121 84 133" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>花瓶 · 一枝柳</b><span>空态 1：试卷列表为空</span><code>empty-vase.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-fruit-basket-title">
+  <title id="empty-fruit-basket-title">静物插画：果篮里放着两只果子</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="35" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116 C 166 122.1 145.6 127 120 127 C 94.4 127 74 122.1 74 116 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <circle cx="101" cy="108" r="15" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <circle cx="139" cy="100" r="13" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126.2 97.74 A 13 13 0 0 1 143.45 87.78 L 126.2 97.74 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 76.4 130 C 100 136 140 136 163.3 130" stroke-width="1.5"/>
+      <path d="M 80.4 142 C 104 148 136 148 159.6 142" stroke-width="1.5"/>
+      <path d="M 87.5 153 C 108 158 131 158 152 153" stroke-width="1.5"/>
+      <path d="M 86 128 C 89 140 91 150 92 160" stroke-width="1.5"/>
+      <path d="M 98 129 C 100 142 101 152 102 162" stroke-width="1.5"/>
+      <path d="M 110 130 C 111 144 112 154 112 163" stroke-width="1.5"/>
+      <path d="M 130 130 C 129 144 128 154 127 163" stroke-width="1.5"/>
+      <path d="M 142 129 C 140 142 138 152 137 162" stroke-width="1.5"/>
+      <path d="M 154 127 C 151 140 149 150 147 160" stroke-width="1.5"/>
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116" stroke-width="3"/>
+      <path d="M 74 119 C 74 125.1 94.4 130 120 130 C 145.6 130 166 125.1 166 119" stroke-width="2"/>
+      <ellipse cx="120" cy="116" rx="46" ry="11" stroke-width="2"/>
+      <circle cx="101" cy="108" r="15" stroke-width="3"/>
+      <path d="M 101 93 L 104 85" stroke-width="2"/>
+      <circle cx="139" cy="100" r="13" stroke-width="3"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" stroke-width="3"/>
+      <path d="M 146 90 L 153.4 86.7" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 86.2 105.4 A 15 15 0 0 1 93.5 95" stroke-width="1.5"/>
+      <path d="M 126.5 96.6 A 13 13 0 0 1 132.5 88.7" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-fruit-basket-title">
+  <title id="empty-fruit-basket-title">静物插画：果篮里放着两只果子</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="35" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116 C 166 122.1 145.6 127 120 127 C 94.4 127 74 122.1 74 116 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <circle cx="101" cy="108" r="15" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <circle cx="139" cy="100" r="13" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126.2 97.74 A 13 13 0 0 1 143.45 87.78 L 126.2 97.74 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 76.4 130 C 100 136 140 136 163.3 130" stroke-width="1.5"/>
+      <path d="M 80.4 142 C 104 148 136 148 159.6 142" stroke-width="1.5"/>
+      <path d="M 87.5 153 C 108 158 131 158 152 153" stroke-width="1.5"/>
+      <path d="M 86 128 C 89 140 91 150 92 160" stroke-width="1.5"/>
+      <path d="M 98 129 C 100 142 101 152 102 162" stroke-width="1.5"/>
+      <path d="M 110 130 C 111 144 112 154 112 163" stroke-width="1.5"/>
+      <path d="M 130 130 C 129 144 128 154 127 163" stroke-width="1.5"/>
+      <path d="M 142 129 C 140 142 138 152 137 162" stroke-width="1.5"/>
+      <path d="M 154 127 C 151 140 149 150 147 160" stroke-width="1.5"/>
+      <path d="M 74 116 C 78 150 92 167 120 167 C 148 167 162 150 166 116" stroke-width="3"/>
+      <path d="M 74 119 C 74 125.1 94.4 130 120 130 C 145.6 130 166 125.1 166 119" stroke-width="2"/>
+      <ellipse cx="120" cy="116" rx="46" ry="11" stroke-width="2"/>
+      <circle cx="101" cy="108" r="15" stroke-width="3"/>
+      <path d="M 101 93 L 104 85" stroke-width="2"/>
+      <circle cx="139" cy="100" r="13" stroke-width="3"/>
+      <path d="M 146 90 Q 152.2 89.1 157 85 Q 150.8 86 146 90 Z" stroke-width="3"/>
+      <path d="M 146 90 L 153.4 86.7" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 86.2 105.4 A 15 15 0 0 1 93.5 95" stroke-width="1.5"/>
+      <path d="M 126.5 96.6 A 13 13 0 0 1 132.5 88.7" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>果篮 · 两只果</b><span>空态 9：复习负荷为空</span><code>empty-fruit-basket.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-canvas-title">
+  <title id="empty-canvas-title">静物插画：一块空白的画布</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="46" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 88 138 L 70 166" stroke-width="3"/>
+      <path d="M 152 138 L 170 166" stroke-width="3"/>
+      <path d="M 120 134 L 120 166" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 149 54 L 157 47 L 163 139 L 154 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 93 57 L 149 54 L 154 131 L 98 135 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 99 76 Q 114 69 131 63 Q 133 68 131 71 Q 115 77 100 82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 101 95 Q 120 100 140 106 Q 141 111 138 113 Q 119 107 101 101 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 105 122 Q 112 114 122 108 Q 125 113 122 117 Q 114 122 106 126 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" stroke-width="3"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight">
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-canvas-title">
+  <title id="empty-canvas-title">静物插画：一块空白的画布</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="46" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 88 138 L 70 166" stroke-width="3"/>
+      <path d="M 152 138 L 170 166" stroke-width="3"/>
+      <path d="M 120 134 L 120 166" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 149 54 L 157 47 L 163 139 L 154 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 93 57 L 149 54 L 154 131 L 98 135 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 99 76 Q 114 69 131 63 Q 133 68 131 71 Q 115 77 100 82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 101 95 Q 120 100 140 106 Q 141 111 138 113 Q 119 107 101 101 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 105 122 Q 112 114 122 108 Q 125 113 122 117 Q 114 122 106 126 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 85 50 L 157 47 L 163 139 L 91 143 Z" stroke-width="3"/>
+      <path d="M 76 132 L 164 128 L 165 139 L 77 143 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight">
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>画布 · 空白</b><span>空态 2：知识点列表为空</span><code>empty-canvas.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-cup-title">
+  <title id="empty-cup-title">静物插画：一杯还冒着热气的茶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="33" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="158" rx="45" ry="9" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="153" rx="19" ry="2.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 102.83 88 89 92.29 89 96 C 89 130 97.35 152 120 152 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 137.17 88 151 92.29 151 96 C 151 130 142.65 152 120 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="97.5" rx="28" ry="6" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <ellipse cx="120" cy="158" rx="45" ry="9" stroke-width="3"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" stroke-width="2"/>
+      <path d="M 89 96 C 89 130 97.35 152 120 152 C 142.65 152 151 130 151 96" stroke-width="3"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" stroke-width="2"/>
+      <path d="M 150.7 106 C 165 103 167 126 146.1 132" stroke-width="2"/>
+      <g class="asset-empty__extension">
+        <path d="M 111 85 C 105 77 117 71 111 63 C 107 57 111 49 111 43" stroke-width="1.5"/>
+        <path d="M 130 85 C 124 78 135 72 130 65 C 127 60 131 53 132 48" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 108 C 93 120 95 132 98 141" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-cup-title">
+  <title id="empty-cup-title">静物插画：一杯还冒着热气的茶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="33" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="158" rx="45" ry="9" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="153" rx="19" ry="2.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 102.83 88 89 92.29 89 96 C 89 130 97.35 152 120 152 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 C 137.17 88 151 92.29 151 96 C 151 130 142.65 152 120 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="120" cy="97.5" rx="28" ry="6" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <ellipse cx="120" cy="158" rx="45" ry="9" stroke-width="3"/>
+      <ellipse cx="120" cy="158" rx="33" ry="6.5" stroke-width="2"/>
+      <path d="M 89 96 C 89 130 97.35 152 120 152 C 142.65 152 151 130 151 96" stroke-width="3"/>
+      <ellipse cx="120" cy="96" rx="31" ry="8" stroke-width="2"/>
+      <path d="M 150.7 106 C 165 103 167 126 146.1 132" stroke-width="2"/>
+      <g class="asset-empty__extension">
+        <path d="M 111 85 C 105 77 117 71 111 63 C 107 57 111 49 111 43" stroke-width="1.5"/>
+        <path d="M 130 85 C 124 78 135 72 130 65 C 127 60 131 53 132 48" stroke-width="1.5"/>
+      </g>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 108 C 93 120 95 132 98 141" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>茶杯 · 带碟</b><span>空态 3：记录中心概览为空</span><code>empty-cup.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-books-title">
+  <title id="empty-books-title">静物插画：三本叠放的书</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="50" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 170 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 170 166 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 60 161 L 180 161 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 63 148 L 68 148 L 68 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" stroke-width="3"/>
+      <path d="M 68 148 L 68 166" stroke-width="2"/>
+      <path d="M 170 154 L 178 154" stroke-width="1.5"/>
+      <path d="M 170 160 L 178 160" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <path d="M 166 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 166 148 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 70 143 L 176 143 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73 131 L 78 131 L 78 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" stroke-width="3"/>
+      <path d="M 78 131 L 78 148" stroke-width="2"/>
+      <path d="M 166 137 L 174 137" stroke-width="1.5"/>
+      <path d="M 166 143 L 174 143" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="var(--asset-wash-red, #f9e5df)"/>
+      <path d="M 158 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 158 131 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 64 126 L 168 126 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 67 114 L 72 114 L 72 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" stroke-width="3"/>
+      <path d="M 72 114 L 72 131" stroke-width="2"/>
+      <path d="M 158 120 L 166 120" stroke-width="1.5"/>
+      <path d="M 158 126 L 166 126" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 68 116.8 L 118 116.8" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-books-title">
+  <title id="empty-books-title">静物插画：三本叠放的书</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="50" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="var(--asset-wash-blue, #e1e7f5)"/>
+      <path d="M 170 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 170 166 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 60 161 L 180 161 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 63 148 L 68 148 L 68 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 63 148 L 177 148 Q 180 148 180 151 L 180 163 Q 180 166 177 166 L 63 166 Q 60 166 60 163 L 60 151 Q 60 148 63 148 Z" stroke-width="3"/>
+      <path d="M 68 148 L 68 166" stroke-width="2"/>
+      <path d="M 170 154 L 178 154" stroke-width="1.5"/>
+      <path d="M 170 160 L 178 160" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="var(--asset-wash-yellow, #fdf3cf)"/>
+      <path d="M 166 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 166 148 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 70 143 L 176 143 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73 131 L 78 131 L 78 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 73 131 L 173 131 Q 176 131 176 134 L 176 145 Q 176 148 173 148 L 73 148 Q 70 148 70 145 L 70 134 Q 70 131 73 131 Z" stroke-width="3"/>
+      <path d="M 78 131 L 78 148" stroke-width="2"/>
+      <path d="M 166 137 L 174 137" stroke-width="1.5"/>
+      <path d="M 166 143 L 174 143" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="var(--asset-wash-red, #f9e5df)"/>
+      <path d="M 158 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 158 131 Z" fill="var(--asset-paper, #fffdf7)"/>
+      <path d="M 64 126 L 168 126 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 67 114 L 72 114 L 72 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 67 114 L 165 114 Q 168 114 168 117 L 168 128 Q 168 131 165 131 L 67 131 Q 64 131 64 128 L 64 117 Q 64 114 67 114 Z" stroke-width="3"/>
+      <path d="M 72 114 L 72 131" stroke-width="2"/>
+      <path d="M 158 120 L 166 120" stroke-width="1.5"/>
+      <path d="M 158 126 L 166 126" stroke-width="1.5"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 68 116.8 L 118 116.8" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>叠书 · 三本</b><span>空态 6：近 12 周无作答</span><code>empty-books.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pen-title">
+  <title id="empty-pen-title">静物插画：一支放在桌上的钢笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 71.49 130.3 L 165.27 166 L 165.11 168 L 71.33 132.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 171.27 153.77 168.14 157.47 L 73.08 125.56 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73.08 125.56 L 168.14 157.47 Q 168.98 162.5 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 170.41 158.23 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" stroke-width="3"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" stroke-width="3"/>
+      <path d="M 60.64 121.38 L 66.14 123.23" stroke-width="2"/>
+      <path d="M 93.21 125.77 L 90.97 138.11" stroke-width="2"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" stroke-width="2"/>
+      <path d="M 144.64 143.43 L 160.02 148.04 L 157.53 149.14" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 79.41 126.61 L 106.71 134.18" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pen-title">
+  <title id="empty-pen-title">静物插画：一支放在桌上的钢笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 71.49 130.3 L 165.27 166 L 165.11 168 L 71.33 132.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 171.27 153.77 168.14 157.47 L 73.08 125.56 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73.08 125.56 L 168.14 157.47 Q 168.98 162.5 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 170.41 158.23 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" stroke-width="3"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" stroke-width="3"/>
+      <path d="M 60.64 121.38 L 66.14 123.23" stroke-width="2"/>
+      <path d="M 93.21 125.77 L 90.97 138.11" stroke-width="2"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" stroke-width="2"/>
+      <path d="M 144.64 143.43 L 160.02 148.04 L 157.53 149.14" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 79.41 126.61 L 106.71 134.18" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>钢笔 · 横放</b><span>空态 8：Agent 会话为空</span><code>empty-pen.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pencil-cup-title">
+  <title id="empty-pencil-cup-title">静物插画：笔筒里插着两支笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="28" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="94" rx="26" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 94 94 L 120 94 L 120 165.25 C 112 164.6 105 162.4 100 160 C 96 145 94 120 94 94 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 94 L 146 94 C 146 120 144 145 140 160 C 135 162.4 128 164.6 120 165.25 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 94 94 L 100 160 L 140 160 L 146 94" stroke-width="3"/>
+      <path d="M 100 160 C 108 167 132 167 140 160" stroke-width="3"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" stroke-width="2"/>
+      <path d="M 94 44 L 99 48 L 93 52 Z" stroke-width="3"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" stroke-width="2"/>
+      <path d="M 137 58 L 147 54 L 143 44 Z" stroke-width="3"/>
+      <path d="M 94 94 C 94 98.4 105.6 102 120 102 C 134.4 102 146 98.4 146 94" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 97 100 C 98 114 99 128 100.5 140" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pencil-cup-title">
+  <title id="empty-pencil-cup-title">静物插画：笔筒里插着两支笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="28" ry="2.5" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <ellipse cx="120" cy="94" rx="26" ry="8" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 94 94 L 120 94 L 120 165.25 C 112 164.6 105 162.4 100 160 C 96 145 94 120 94 94 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 14%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 94 L 146 94 C 146 120 144 145 140 160 C 135 162.4 128 164.6 120 165.25 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 94 94 L 100 160 L 140 160 L 146 94" stroke-width="3"/>
+      <path d="M 100 160 C 108 167 132 167 140 160" stroke-width="3"/>
+      <path d="M 107 94 L 93 52 L 99 48 L 113 94 Z" stroke-width="2"/>
+      <path d="M 94 44 L 99 48 L 93 52 Z" stroke-width="3"/>
+      <path d="M 126 94 L 138.5 55 L 145 57.5 L 134 94 Z" stroke-width="2"/>
+      <path d="M 137 58 L 147 54 L 143 44 Z" stroke-width="3"/>
+      <path d="M 94 94 C 94 98.4 105.6 102 120 102 C 134.4 102 146 98.4 146 94" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 97 100 C 98 114 99 128 100.5 140" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>笔筒 · 插两支笔</b><span>空态 7：带自评的作答为空</span><code>empty-pencil-cup.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-globe-title">
+  <title id="empty-globe-title">静物插画：一只小地球仪</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="34" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 84 88 A 36 36 0 0 1 120 52 L 120 88 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 L 120 124 A 36 36 0 0 0 156 88 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 133 65 C 141 61 151 67 149 75 C 148 82 138 85 132 80 C 127 75 129 68 133 65 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 100 100 C 106 95 114 98 112 106 C 111 112 104 116 99 112 C 95 108 96 103 100 100 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 92 116 Q 120 140 148 116" stroke-width="2"/>
+      <path d="M 120 128 L 120 152" stroke-width="2"/>
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" stroke-width="3"/>
+      <circle cx="120" cy="88" r="36" stroke-width="3"/>
+      <ellipse cx="120" cy="88" rx="13" ry="36" stroke-width="2"/>
+      <path d="M 106 60 Q 98 88 106 116" stroke-width="2"/>
+      <path d="M 134 60 Q 142 88 134 116" stroke-width="2"/>
+      <path d="M 86.9 74 Q 120 84 153.1 74" stroke-width="2"/>
+      <path d="M 86.9 102 Q 120 92 153.1 102" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 84.7 95.5 A 36 36 0 0 0 96.9 60.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-globe-title">
+  <title id="empty-globe-title">静物插画：一只小地球仪</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 44 168 L 196 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="120" cy="165" rx="34" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 84 88 A 36 36 0 0 1 120 52 L 120 88 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 120 88 L 120 124 A 36 36 0 0 0 156 88 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 133 65 C 141 61 151 67 149 75 C 148 82 138 85 132 80 C 127 75 129 68 133 65 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 100 100 C 106 95 114 98 112 106 C 111 112 104 116 99 112 C 95 108 96 103 100 100 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 92 116 Q 120 140 148 116" stroke-width="2"/>
+      <path d="M 120 128 L 120 152" stroke-width="2"/>
+      <path d="M 104 152 L 136 152 Q 138.5 152 139.5 154.5 L 146 163 Q 147.5 166 144.5 166 L 95.5 166 Q 92.5 166 94 163 L 100.5 154.5 Q 101.5 152 104 152 Z" stroke-width="3"/>
+      <circle cx="120" cy="88" r="36" stroke-width="3"/>
+      <ellipse cx="120" cy="88" rx="13" ry="36" stroke-width="2"/>
+      <path d="M 106 60 Q 98 88 106 116" stroke-width="2"/>
+      <path d="M 134 60 Q 142 88 134 116" stroke-width="2"/>
+      <path d="M 86.9 74 Q 120 84 153.1 74" stroke-width="2"/>
+      <path d="M 86.9 102 Q 120 92 153.1 102" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 84.7 95.5 A 36 36 0 0 0 96.9 60.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>地球仪 · 带支架</b><span>空态 10：目标列表为空</span><code>empty-globe.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-inkwell-title">
+  <title id="empty-inkwell-title">静物插画：桌上的墨水瓶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="117" cy="165" rx="28" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 117 120 L 145 120 C 145 150 137 166 117 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 89 120 L 145 120 C 144.7 125 144.2 130 143.6 134 L 90.4 134 C 89.8 130 89.3 125 89 120 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 97 100 L 137 100 L 139.4 106 L 94.6 106 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 143 154 L 152.5 119" stroke-width="2"/>
+      <path d="M 151 117 L 156.5 118.5" stroke-width="2"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" stroke-width="3"/>
+      <path d="M 89 120 C 89 150 97 166 117 166 C 137 166 145 150 145 120" stroke-width="3"/>
+      <path d="M 89 120 L 97 100 L 137 100 L 145 120" stroke-width="3"/>
+      <ellipse cx="117" cy="100" rx="20" ry="6" stroke-width="2"/>
+      <path d="M 105 78 L 129 78 L 133 100 L 101 100 Z" stroke-width="2"/>
+      <circle cx="117" cy="74" r="5" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 101 L 92.5 127 L 95.5 127 L 95.5 101 Z" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-inkwell-title">
+  <title id="empty-inkwell-title">静物插画：桌上的墨水瓶</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 46 168 L 194 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="117" cy="165" rx="28" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 117 120 L 145 120 C 145 150 137 166 117 166 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 89 120 L 145 120 C 144.7 125 144.2 130 143.6 134 L 90.4 134 C 89.8 130 89.3 125 89 120 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 97 100 L 137 100 L 139.4 106 L 94.6 106 Z" fill="color-mix(in oklab, var(--asset-ground-yellow, #f5c518) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 143 154 L 152.5 119" stroke-width="2"/>
+      <path d="M 151 117 L 156.5 118.5" stroke-width="2"/>
+      <ellipse cx="155.5" cy="112" rx="6" ry="4.6" stroke-width="3"/>
+      <path d="M 89 120 C 89 150 97 166 117 166 C 137 166 145 150 145 120" stroke-width="3"/>
+      <path d="M 89 120 L 97 100 L 137 100 L 145 120" stroke-width="3"/>
+      <ellipse cx="117" cy="100" rx="20" ry="6" stroke-width="2"/>
+      <path d="M 105 78 L 129 78 L 133 100 L 101 100 Z" stroke-width="2"/>
+      <circle cx="117" cy="74" r="5" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 92.5 101 L 92.5 127 L 95.5 127 L 95.5 101 Z" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>墨水瓶 · 带吸墨器</b><span>空态 4：无完整练习轮次</span><code>empty-inkwell.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--wide">
+          <div class="slot slot--240"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-compass-title">
+  <title id="empty-compass-title">静物插画：一把绘图圆规</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="90" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="151" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 114.2 80 L 91.2 148 L 94 149 L 117 81 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 125.8 80 L 149.8 148 L 147 149 L 123 81 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 111 52 Q 111 43.5 120 43.5 L 122 43.7 L 122 64 L 120 64 Q 111 61 111 52 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122 43.7 Q 129 44 129 52 Q 129 61 120 64 L 122 64 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 111 52 Q 111 43.5 120 43.5 Q 129 44 129 52 Q 129 61 120 64 Q 111 61 111 52 Z" stroke-width="3"/>
+      <path d="M 120 64 L 120 75" stroke-width="2"/>
+      <circle cx="120" cy="78" r="4.5" stroke-width="3"/>
+      <path d="M 117 81 L 94 149" stroke-width="3"/>
+      <path d="M 123 81 L 147 149" stroke-width="3"/>
+      <path d="M 107 110 L 133 105" stroke-width="2"/>
+      <path d="M 118.4 99.5 L 121.6 115.5" stroke-width="2"/>
+      <circle cx="120" cy="107.5" r="4.5" stroke-width="2"/>
+      <path d="M 89.5 148 L 97.5 151" stroke-width="2"/>
+      <path d="M 92 152 L 97 153.5 L 93.5 162 L 88.5 160.5 Z" stroke-width="3"/>
+      <path d="M 88.5 160.5 L 93.5 162 L 89.5 166 Z" stroke-width="3"/>
+      <path d="M 151 166 L 147 153 L 154 153.5 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 113.6 51 Q 114 45.6 118.4 44.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+          <div class="slot slot--180"><svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-compass-title">
+  <title id="empty-compass-title">静物插画：一把绘图圆规</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 200 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="90" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+      <ellipse cx="151" cy="165.5" rx="6" ry="2" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 114.2 80 L 91.2 148 L 94 149 L 117 81 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 125.8 80 L 149.8 148 L 147 149 L 123 81 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 111 52 Q 111 43.5 120 43.5 L 122 43.7 L 122 64 L 120 64 Q 111 61 111 52 Z" fill="color-mix(in oklab, var(--role-yellow, #f5c518) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122 43.7 Q 129 44 129 52 Q 129 61 120 64 L 122 64 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 111 52 Q 111 43.5 120 43.5 Q 129 44 129 52 Q 129 61 120 64 Q 111 61 111 52 Z" stroke-width="3"/>
+      <path d="M 120 64 L 120 75" stroke-width="2"/>
+      <circle cx="120" cy="78" r="4.5" stroke-width="3"/>
+      <path d="M 117 81 L 94 149" stroke-width="3"/>
+      <path d="M 123 81 L 147 149" stroke-width="3"/>
+      <path d="M 107 110 L 133 105" stroke-width="2"/>
+      <path d="M 118.4 99.5 L 121.6 115.5" stroke-width="2"/>
+      <circle cx="120" cy="107.5" r="4.5" stroke-width="2"/>
+      <path d="M 89.5 148 L 97.5 151" stroke-width="2"/>
+      <path d="M 92 152 L 97 153.5 L 93.5 162 L 88.5 160.5 Z" stroke-width="3"/>
+      <path d="M 88.5 160.5 L 93.5 162 L 89.5 166 Z" stroke-width="3"/>
+      <path d="M 151 166 L 147 153 L 154 153.5 Z" stroke-width="3"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 113.6 51 Q 114 45.6 118.4 44.4" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg></div>
+        </div>
+        <figcaption><b>圆规 · 单件</b><span>空态 5：近 14 天无作答</span><code>empty-compass.svg</code></figcaption>
+      </figure>
+    </div>
+    <h3>台灯三姿态 · 132 px</h3>
+    <div class="row row--lamp">
+      <figure class="card">
+        <div class="stage stage--lamp pose pose--a">
+          <svg class="lk-lamp" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lamp-title" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
+  <title id="lamp-title">静物插画：一盏台灯</title>
+  <defs>
+    <radialGradient id="lamp-gLamp" gradientUnits="userSpaceOnUse" cx="118" cy="131" r="60">
+      <stop offset="0" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity=".55"/>
+      <stop offset="1" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g class="lk-lamp__body" fill="none" stroke="var(--asset-ink, #2a2620)">
+    <g class="lk-lamp__base">
+      <path d="M 99.5 196 L 140.5 196 Q 143 196 144 198.5 L 152 222 Q 153 226 149 226 L 91 226 Q 87 226 88 222 L 96 198.5 Q 97 196 99.5 196 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 100 196 L 140 196" stroke-width="2"/>
+      <path d="M 91.5 226 L 148.5 226" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__stem">
+      <path d="M 120 196 L 120 134" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__joint">
+      <circle cx="120" cy="134" r="5.5" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__arm">
+      <path d="M 120 134 L 152 90" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__pivot">
+      <circle cx="152" cy="90" r="4.5" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__shade">
+      <path d="M 152 90 C 135 95 114 101 96.8 109.8 A 30 11 45 0 1 139.2 152.2 C 144 131 149 109 152 90 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="131" rx="30" ry="11" transform="rotate(45 118 131)" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))" stroke-width="2"/>
+      <ellipse cx="118" cy="131" rx="27" ry="10" transform="rotate(45 118 131)" stroke-width="2"/>
+      <path d="M 146 105 L 139.5 139" stroke-width="2"/>
+    </g>
+  </g>
+  <g class="lk-lamp__glow">
+    <circle cx="112" cy="138" r="58" fill="url(#lamp-gLamp)"/>
+    <ellipse cx="118" cy="131" rx="26" ry="9.5" transform="rotate(45 118 131)" fill="url(#lamp-gLamp)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+    <circle cx="124" cy="125" r="8" fill="var(--asset-lamp-warm, #f7c46b)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+  </g>
+</svg>
+        </div>
+        <figcaption><b>A · 收（parked）</b><span>节点未创建 / opacity 0，在下缘之外</span><code>motion/lamp.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--lamp pose pose--b">
+          <svg class="lk-lamp" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lamp-title" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
+  <title id="lamp-title">静物插画：一盏台灯</title>
+  <defs>
+    <radialGradient id="lamp-gLamp" gradientUnits="userSpaceOnUse" cx="118" cy="131" r="60">
+      <stop offset="0" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity=".55"/>
+      <stop offset="1" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g class="lk-lamp__body" fill="none" stroke="var(--asset-ink, #2a2620)">
+    <g class="lk-lamp__base">
+      <path d="M 99.5 196 L 140.5 196 Q 143 196 144 198.5 L 152 222 Q 153 226 149 226 L 91 226 Q 87 226 88 222 L 96 198.5 Q 97 196 99.5 196 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 100 196 L 140 196" stroke-width="2"/>
+      <path d="M 91.5 226 L 148.5 226" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__stem">
+      <path d="M 120 196 L 120 134" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__joint">
+      <circle cx="120" cy="134" r="5.5" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__arm">
+      <path d="M 120 134 L 152 90" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__pivot">
+      <circle cx="152" cy="90" r="4.5" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__shade">
+      <path d="M 152 90 C 135 95 114 101 96.8 109.8 A 30 11 45 0 1 139.2 152.2 C 144 131 149 109 152 90 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="131" rx="30" ry="11" transform="rotate(45 118 131)" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))" stroke-width="2"/>
+      <ellipse cx="118" cy="131" rx="27" ry="10" transform="rotate(45 118 131)" stroke-width="2"/>
+      <path d="M 146 105 L 139.5 139" stroke-width="2"/>
+    </g>
+  </g>
+  <g class="lk-lamp__glow">
+    <circle cx="112" cy="138" r="58" fill="url(#lamp-gLamp)"/>
+    <ellipse cx="118" cy="131" rx="26" ry="9.5" transform="rotate(45 118 131)" fill="url(#lamp-gLamp)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+    <circle cx="124" cy="125" r="8" fill="var(--asset-lamp-warm, #f7c46b)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+  </g>
+</svg>
+        </div>
+        <figcaption><b>B · 探（peek）</b><span>已探出转正，光未亮</span><code>motion/lamp.svg</code></figcaption>
+      </figure>
+      <figure class="card">
+        <div class="stage stage--lamp pose pose--c">
+          <svg class="lk-lamp" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="lamp-title" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
+  <title id="lamp-title">静物插画：一盏台灯</title>
+  <defs>
+    <radialGradient id="lamp-gLamp" gradientUnits="userSpaceOnUse" cx="118" cy="131" r="60">
+      <stop offset="0" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity=".55"/>
+      <stop offset="1" stop-color="var(--asset-lamp-warm, #f7c46b)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g class="lk-lamp__body" fill="none" stroke="var(--asset-ink, #2a2620)">
+    <g class="lk-lamp__base">
+      <path d="M 99.5 196 L 140.5 196 Q 143 196 144 198.5 L 152 222 Q 153 226 149 226 L 91 226 Q 87 226 88 222 L 96 198.5 Q 97 196 99.5 196 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 100 196 L 140 196" stroke-width="2"/>
+      <path d="M 91.5 226 L 148.5 226" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__stem">
+      <path d="M 120 196 L 120 134" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__joint">
+      <circle cx="120" cy="134" r="5.5" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__arm">
+      <path d="M 120 134 L 152 90" stroke-width="3"/>
+    </g>
+    <g class="lk-lamp__pivot">
+      <circle cx="152" cy="90" r="4.5" stroke-width="2"/>
+    </g>
+    <g class="lk-lamp__shade">
+      <path d="M 152 90 C 135 95 114 101 96.8 109.8 A 30 11 45 0 1 139.2 152.2 C 144 131 149 109 152 90 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 10%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <ellipse cx="118" cy="131" rx="30" ry="11" transform="rotate(45 118 131)" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))" stroke-width="2"/>
+      <ellipse cx="118" cy="131" rx="27" ry="10" transform="rotate(45 118 131)" stroke-width="2"/>
+      <path d="M 146 105 L 139.5 139" stroke-width="2"/>
+    </g>
+  </g>
+  <g class="lk-lamp__glow">
+    <circle cx="112" cy="138" r="58" fill="url(#lamp-gLamp)"/>
+    <ellipse cx="118" cy="131" rx="26" ry="9.5" transform="rotate(45 118 131)" fill="url(#lamp-gLamp)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+    <circle cx="124" cy="125" r="8" fill="var(--asset-lamp-warm, #f7c46b)" stroke="var(--asset-ink, #2a2620)" stroke-width="2"/>
+  </g>
+</svg>
+        </div>
+        <figcaption><b>C · 亮（lit）</b><span>罩内亮起，暖光溢出</span><code>motion/lamp.svg</code></figcaption>
+      </figure>
+    </div>
+  </section>
+</body>
+</html>

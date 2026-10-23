@@ -1,0 +1,73 @@
+{
+  "id": "M-5",
+  "verdict": "PASS",
+  "detail": "三档靠颜色 / 几何区分（灰 → 黄 → 黄蓝渐变），不靠文字",
+  "criterion": "acceptance.md §2 M-5",
+  "checks": {
+    "三档采到": true,
+    "三档的类名不同": true,
+    "档位色（色条 / 火苗）逐档不同": true,
+    "高档是渐变（黄→蓝）": true,
+    "不靠文字（文字之外还有颜色与几何通道）": true
+  },
+  "tiers": [
+    {
+      "cls": "lk-streak",
+      "tier": "0",
+      "text": "0",
+      "color": "rgb(34, 31, 26)",
+      "background": "rgb(242, 236, 225)",
+      "backgroundImage": "none",
+      "paddingLeft": "14px",
+      "paddingRight": "10px",
+      "beforeContent": "\"\"",
+      "beforeBackground": "rgb(141, 133, 120)",
+      "beforeBackgroundImage": "none",
+      "beforeHeight": "52px",
+      "beforeWidth": "4px",
+      "flameColour": null,
+      "flameImage": null,
+      "flameCount": 0,
+      "count": 0
+    },
+    {
+      "cls": "lk-streak is-warm",
+      "tier": "1",
+      "text": "5",
+      "color": "rgb(34, 31, 26)",
+      "background": "rgb(242, 236, 225)",
+      "backgroundImage": "none",
+      "paddingLeft": "14px",
+      "paddingRight": "14px",
+      "beforeContent": "\"\"",
+      "beforeBackground": "rgb(245, 197, 24)",
+      "beforeBackgroundImage": "none",
+      "beforeHeight": "52px",
+      "beforeWidth": "4px",
+      "flameColour": "rgb(245, 197, 24)",
+      "flameImage": "none",
+      "flameCount": 5,
+      "count": 5
+    },
+    {
+      "cls": "lk-streak is-hot",
+      "tier": "2",
+      "text": "31",
+      "color": "rgb(34, 31, 26)",
+      "background": "rgb(242, 236, 225)",
+      "backgroundImage": "none",
+      "paddingLeft": "18px",
+      "paddingRight": "18px",
+      "beforeContent": "\"\"",
+      "beforeBackground": "rgba(0, 0, 0, 0)",
+      "beforeBackgroundImage": "linear-gradient(rgb(245, 197, 24), rgb(43, 98, 232))",
+      "beforeHeight": "52px",
+      "beforeWidth": "4px",
+      "flameColour": "rgba(0, 0, 0, 0)",
+      "flameImage": "linear-gradient(rgb(245, 197, 24) 0%, rgb(43, 98, 232) 100%)",
+      "flameCount": 10,
+      "count": 31
+    }
+  ],
+  "framesDir": "tmp\\wt-m1-final\\evidence\\extra\\M-5"
+}

@@ -180,7 +180,7 @@ _Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩�
 出处：review-workbench spec「Durable practice records」；workbench-ui spec；rating-toggle-setting change
 
 ### 学习者设置 / Learner Settings
-左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**；它与可选的本地布局种子共同构成工作台当前的持久 `localStorage` 用法，其余客户端状态仍是会话级。第一项是「练习与组卷显示自评」（默认开）：关闭后自评在练习与组卷流程里完全消失（不选自评时机、无反馈面板、不进统一自评页、记录页标「关闭自评」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
+左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**；它与可选的本地布局种子共同构成工作台当前的持久 `localStorage` 用法，其余客户端状态仍是会话级。第一项是「练习与试卷显示自评」（默认开）：关闭后自评在练习与试卷流程里完全消失（不选自评时机、无反馈面板、不进统一自评页、记录页标「关闭自评」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
 _Avoid_：把设置当学习记录、按工作区写进数据库、对进行中的轮次即时生效
 出处：rating-toggle-setting change「Learner settings in the left rail」
 
@@ -325,10 +325,197 @@ _Avoid_：`lesson-kit`（另一个同名程序是 Weights & Biases，与本项�
 _Avoid_：PATH 探测优先（旧行为，已推翻）、静默回退
 出处：ai-teacher-bridge spec「Provider-native conversation discovery」
 
-### 柔和蒙德里安 / Soft Mondrian
-Lesson Kit 的视觉语言：暖纸色与深色结构线占主体，蓝/黄/红只承担主要动作、
-当前或复习强调、重点练习或失败等有限语义。状态同时保留文字或几何提示。
-出处：workbench-ui spec「Soft Mondrian visual foundation」
+### 柔和蒙德里安 v2 / Soft Mondrian v2
+**2026-10-21 重新定义**（方向转向后的定案）。Lesson Kit 的视觉语言总纲：
+**暖色 + 现代圆润**——底色偏暖（浅奶油 `#fdf8ef`），骨架是大圆角、饱和色块、
+圆润图标与活泼动效；底色纯色，**不铺任何背景纹理**。
+
+- **三角色色配额**（不引入第五色）：学习蓝 = 主要动作 + 链接 + 当前选中；
+  阳光黄 = 当前 + 复习强调 + 连对进度；注意红 = 失败 + 阻塞。黄色对比度不足，
+  只承载面积与形状，不承载文字。
+- **纸面分层**：抬升序列是**底 / 卡 / 浮起**三层，靠圆角与暖调柔影分层，**不用描边**；
+  内容块另用**沉底面**（凹层，底色差 + 内发丝线，不带柔影），代码块另用唯一的
+  深色**代码块反白面**。
+- **圆角 12px**：按钮 / 卡片 / 标签 / 输入框统一。
+- **双字体**：阅读面衬线（正文 17px / 行高 1.75 / 行宽 38em），界面与标题无衬线，
+  等宽为第三族。
+- **状态不得只靠颜色**：颜色之外必有几何冗余通道（彩色圆点）。
+- **两条全局原则**：「少字原则」与「图案适配原则」。
+
+它是既有「柔和蒙德里安 / Soft Mondrian」的**精修，不是替代**：2026-10-21 之前该词条
+把「暖纸色与深色结构线占主体」写成了定义，本轮按所有者方向转向（暖色 + 现代圆润，
+不再一味仿古）重写该定义；**词条保留，不另造同义条目**。
+_Avoid_：视觉风格偏好、个人审美主张、独立深色主题
+出处：openspec/changes/workbench-visual-language-v2（decisions.md「收口：最终基线」、proposal.md）；workbench-ui spec「Soft Mondrian visual foundation」
+
+### 纸面层级 / Paper level
+表面所处的层。**抬升序列是三层**：底（页底）/ 卡（卡片）/ 浮起（浮层、抽屉、弹层），
+分层靠**圆角 + 暖调柔影**表达，**不用描边**；暗色主题下同一层级改用夜纸的值集。
+**内容块另有两块专用面**：沉底面（内容块专用，凹层，见「沉底面」）与**代码块反白面**
+（`--surface-code`，全站唯一的深色内容面，**仅**代码块 / 等宽代码区可用）。
+_Avoid_：z-index 层级、阴影层级、卡片层级
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-23）
+
+### 沉底面 / Sunken surface
+纸面层级里的**内容块专用面**（`--surface-sunken`）：它是**凹层**，不参与「底 → 卡 →
+浮起」的抬升序列，因此**不带柔影**、与卡面**同为 12px 圆角**；它靠**底色差 + 1px 内
+发丝线**（`box-shadow: inset`）与卡面分开。浅色主题比卡面暗，夜纸里则比卡面略亮
+（浅色 ΔL\* 5.73 / 夜纸 1.49 —— 夜纸差得小，所以内发丝线是必须的）。
+用途：**作答区**、**用户在对话里的话**、**空态面板**（空态是独立面板，用沉底块才不与
+上方的卡面抢层级）。全站除**代码块反白面**外不再有第二个深色内容面。
+_Avoid_：深色块、墨块、抬升面、投影面
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-23-3 / A-23-4 / A-31 / A-73）
+
+### 夜纸 / Night paper
+暗色主题下的暖调深色纸面值集（基色 `#1c1a16`），与亮色的浅奶油同源——白天是米色纸，
+夜里是台灯照着的纸。它是**第二套值**，不是新色系：角色色仍是学习蓝 / 阳光黄 / 注意红，
+只把圆底降饱和并提亮；同一套 SVG 用 CSS 变量换前景与背景色，一套资产服务两个主题。
+_Avoid_：深色主题岛、护眼模式、夜间模式开关（那是偏好不是值集）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 冗余状态通道 / Redundant state channel
+状态除颜色之外的**几何**编码：颜色是主通道，形状是冗余通道（彩色圆点）。状态不得
+只靠颜色，但冗余通道**不是文字标签**——凡要靠加说明文字来解决视觉问题的，改用形态或
+色彩方案（见「少字原则」）。零文字。
+_Avoid_：状态徽标、状态文字标签、颜色语义、无障碍标签（那是另一件事）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 焦点环 / Focus ring
+控件获得**键盘焦点**时画出的可见轮廓。它画在控件的 **focus-visible** 状态上，
+所以键盘操作时必然出现。规格由 token 决定：外圈色 `--focus-outer`（暖纸 `#2b62e8` /
+夜纸 `#9dbcff`）、外圈宽 **2px**、偏移 **2px**。
+**单圈还是双圈**：控件本身有底色（卡面 / 透明底）的画**单圈**；把原生控件**视觉隐藏**
+的（开关轨道、分段控件的项）画**双圈**——内圈 **2px** 取所在面的色、外圈 **2px** 取
+`--focus-outer`。
+⚠️ **可输入文本的元素例外**：浏览器对**可输入文本**的控件**恒匹配 focus-visible**
+（UA 启发式，产品改不了）⇒ **用鼠标点进输入框也会出现焦点环**；而按钮、下拉这类
+不接受文本的控件，鼠标点击**不**冒环。**不得**写成「鼠标点击一律不冒焦点环」。
+_Avoid_：焦点描边、选中态描边、被控件自己压死的焦点样式
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-1 / A-75 / A-84-1；workbench-ui spec「Focus visibility and contrast floors」）
+
+### 分组卡片 / Grouped knowledge cards
+知识点列表的呈现形态：**按章分组**，每组一个**组头**（组头是章标识本身，如 `ch06`，
+不是翻译名），组内是一叠**圆角卡**（每张卡 = 一个知识点：名称 + 关联题数 + 状态标记）。
+组块**本身不是卡片**——它只有间距（与上一组相隔 **24px**），没有卡面也没有描边；
+组标题**比正文标题小一号**（**12px** / 行高 **18px** / 次级墨色），不抢正文层级；
+组内的卡彼此相隔 **8px**，卡内边距**竖 8px / 横 16px**，圆角 **12px**（比普通卡片的
+18px 紧——列表是信息密度更高的面）。
+**排序跨分组可用，但只重排组内的行**：组头不随排序移动，行也不跨组迁移（一行永远留在
+它所属的那一章里）。分组只用已有的知识点列表，**零新增请求、零写池**。
+_Avoid_：折叠分组、按状态分栏、知识点表格、可拖拽排序
+出处：openspec/changes/workbench-visual-language-v2（workbench-ui spec「Knowledge-point list grouped by chapter」；decisions.md A-79）
+
+### 开关 / Switch
+二态开关控件（实现名 `.lk-switch`）：一条**胶囊轨道**（**44 × 26**）加一枚**正圆滑块**（**20 × 20**）。
+**开 = 学习蓝**（当前选中），**关 = 中性灰**（失活墨色，**不是第四色**）；滑块位置**只由
+位移切换**，状态色**瞬切**。原生的复选框**视觉隐藏但仍可聚焦** ⇒ 焦点环画在**轨道**上。
+命中区：整行 **44px** 高（轨道本体 26px 不单独算命中区）。
+_Avoid_：复选框（那是另一种控件）、滑杆、开关的色块语义（开关是状态不是色）
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-75 / A-76；design-notes/component-spec.md §4.10）
+
+### 分段控件 / Segmented control
+一组**互斥选项**的控件（实现名 `.lk-seg`）：容器是一道**沉底槽**（`--surface-sunken` + **1px 内发丝线**、
+**不描边**、不带柔影，圆角 **12px**），每个选项是一个**项**（**36px** 高，左右内距
+**14px**，项间距 **4px**，容器上下内距 **4px** ⇒ 容器总高 **44px**；项文字 **13px** /
+行高 **20px**）。**选中项 = 一块学习蓝色块 + 纸白文字**，并用**字重加粗**做第二通道
+（不靠颜色单通道）。⚠️ 沉底槽旁**不**用蓝洗底块（两者亮度太近，会被误读成「被选中的
+行」）。原生的单选钮**视觉隐藏但仍可聚焦** ⇒ 焦点环画在**项**上。
+_Avoid_：图谱的 `.seg`（那是图谱区段内的 tablist，名字不同）、下拉、单选按钮组、标签芯片
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-75 / A-76 / A-84-2；design-notes/component-spec.md §4.11）
+
+### 图标按钮 / Icon-only button
+只放一个图标的按钮（实现名 `.icon-only`）：**32 × 32 正方形**、圆角 **12px**、**不描边**、图标居中，
+平时图标取次级墨色、**悬停提到标题墨色**。命中区就是 **32 × 32**（视觉尺寸即命中区）。
+图标目前是**字符**（☰ ◌ − × ‹）不是矢量图；换图标属资产问题，不在视觉改造这一轮。
+⚠️ **待裁决**：无障碍硬约束是**命中区 ≥ 44px**，而现状是 **32 × 32**；
+「命中区下限」与「视觉尺寸取 32 还是 40」已拆成两半，**视觉尺寸仍待样式板裁决**。
+_Avoid_：文字按钮、图形按钮（那是另一类）、图标字体集
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-75 / A-84-3；design-notes/component-spec.md §4.4）
+
+### 主题偏好 / Theme preference
+亮 / 暗主题的浏览器偏好，按工作区存于 `localStorage`。它只表达偏好，不写池，
+不影响任何学习事实；默认跟随系统，切换时走「台灯转场」。
+_Avoid_：工作台设置项、显示设置、系统主题（那是来源不是偏好）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 阅读面 / Reading surface
+连续阅读 ≥ 3 行的内容表面：知识点正文、题面、解析、Agent 长文、练习页的作答与反馈
+段落等。它挂**共享阅读版式层**（实现名 `.wb-reading`；题面变体 `.wb-reading--stem`
+是同刻度的语义变体，可独立挂载），刻度全部走 token：正文 **17px** / 行高 **1.75** /
+行长 **38em** / 段距 **0.7em** / 对齐 `start`（不 justify）/ 标题 h2·h3·h4 = 22·19·17px。
+**题面与知识点正文同档**（17px / 1.75 / 38em，见 decisions.md A-6）——两者分属两个页面，
+不存在同页竞争。界面面（导航、按钮、表格、选项控件、状态标签、统计数字、空态文案等）
+一律留在无衬线的界面字族，不挂阅读层。
+⚠️ **当前事实**：`.rich-text` 这个过渡期的旧挂载名**已经整体退役**——HTML 挂载点早已全部
+迁到 `.wb-reading`，剩下的 36 条死 CSS 规则也在别名期收尾（任务 2.3）里删掉了
+（并列选择器只去掉 `.rich-text` 那半，保留 `.wb-reading` 那半，取值逐项未动）。
+⇒ **现在产品代码里 `.rich-text` 只剩三行说明性注释，选择器命中 0**。
+_Avoid_：富文本类、`.rich-text`（那是过渡期的旧挂载名，**已退役**）、正文容器、题面卡片
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-6 / A-41；design.md D-5）
+
+### 阅读字面 / Reading face
+阅读面（知识点正文、题面、解析等长文）所用字族——衬线或无衬线——的浏览器偏好，
+按工作区存于 `localStorage`。界面与标题始终无衬线，等宽为第三族；正文 17px /
+行高 1.75 / 行宽 38em 不随该偏好改变。
+_Avoid_：字体、字族、正文字体（那是实现资源不是偏好）
+出处：openspec/changes/workbench-visual-language-v2
+
+### 动效偏好 / Motion preference
+动效开 / 关的浏览器偏好，按工作区存于 `localStorage`；默认跟随系统
+`prefers-reduced-motion`。关闭时所有动效降级为状态直切：主题切换不做涟漪，庆祝直接落终态。
+_Avoid_：动画开关、减弱动效、性能模式
+出处：openspec/changes/workbench-visual-language-v2
+
+### 声音偏好 / Sound preference
+音效开 / 关的浏览器偏好，按工作区存于 `localStorage`。只有关键反馈（答对 / 答错 /
+完成 / 里程碑）各有 <200ms 的短音效；受浏览器自动播放限制，首次音效必须挂在一次
+用户手势之后。
+_Avoid_：静音（那是结果不是偏好）、音频资产、提示音库
+出处：openspec/changes/workbench-visual-language-v2
+
+### 工作台设置视图 / Workbench settings view
+中栏新增的外观设置页，由**左栏设置区的开关**打开与关闭。它承载**外观**偏好：
+主题偏好、阅读字面、动效偏好、声音偏好；偏好按工作区存于浏览器 `localStorage`，
+不写池。左栏原有的「学习者设置」（练习与试卷显示自评等**学习行为**偏好）**不搬家**，
+仍在左栏——两者分属外观与学习行为两件事，不可混为一谈。
+_Avoid_：学习者设置（左栏的学习行为偏好）、设置页、偏好面板
+出处：openspec/changes/workbench-visual-language-v2（`workbench-settings` spec）
+
+### 静物插画 / Still-life illustration
+空态用的**具象器物**插画（花瓶、果篮、画布、杯子、书本、台灯、钢笔…）：写意线稿 +
+淡彩晕染 + 克制高光，与图标同一套线宽与圆角语言，像同一支笔画的。纯 CSS / SVG 画，
+不外链；同一套 SVG 经 CSS 变量换色，一套资产服务两个主题。
+_Avoid_：抽象几何团块、照片、背景图案、图标字体
+出处：openspec/changes/workbench-visual-language-v2
+
+### 骨架屏 / Skeleton loading state
+切到另一个中栏页面时、页面还没取回来之前，中栏显示的一组**占位灰块**（实现名
+`.lk-skeleton`）。它只是占位，不承载任何真实内容，也不表达任何学习事实。完整动效档
+下灰块有一层微光扫过；降级档改用同色的静态灰块（不扫光）。**知识图谱页不呈通用骨架屏**
+——它有自己的加载表达。
+_Avoid_：加载动画（那是泛称）、占位图、真实内容占位、进度条
+出处：openspec/changes/workbench-visual-language-v2（spec「View transition and skeleton loading state」）
+
+### 台灯转场 / Lamp transition
+主题切换时的叙事转场：一盏台灯从角落探出 → 点亮 → 暖色涟漪自灯下扩散铺满
+（切夜纸）或反向收拢（切回暖纸），约 700ms。涟漪只动 `transform` / `opacity`，
+不阻塞交互、不改请求时序；系统开启「减少动态效果」时直接切换，不做涟漪。
+_Avoid_：页面转场、加载动画、视图切换动画
+出处：openspec/changes/workbench-visual-language-v2
+
+### 少字原则 / Minimal-annotation principle
+全局设计原则：信息优先由**元素形态与色彩**表达，不靠文字注释堆砌；界面注释本身
+**能删就删**，而不是换成更漂亮的说明文字。与「状态不得只靠颜色」合起来是
+「颜色 + 几何」，不是「颜色 + 文字」。
+_Avoid_：文案风格、语气偏好、信息不足的免责声明
+出处：openspec/changes/workbench-visual-language-v2
+
+### 图案适配原则 / Contextual-graphic principle
+全局设计原则：承载信息的图形（图标、状态标记、插画、纹理）必须**由背景自身的视觉
+规则推导**——同一圆角语言、同一线宽阶、同一色彩寄存器、同一笔触密度；不得作为独立
+装饰层贴上去，视觉逻辑必须自洽。
+_Avoid_：装饰风格、贴图素材库、视觉花哨度
+出处：openspec/changes/workbench-visual-language-v2
 
 ## 选择与练习
 
@@ -373,7 +560,7 @@ _Avoid_：改写题目文字、把没有选项的题硬凑选项
 出处：in-place-problem-edits
 
 ### 无答案键客观题 / Keyless Objective Item
-判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习显示自评」开启时可另行自评更新学习状态，不评分时不推导判定或自评分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
+判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习与试卷显示自评」开启时可另行自评更新学习状态，不评分时不推导判定或自评分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
 _Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、给无键题判分
 出处：ingest-mode-choice-and-contract-parity；micro-quiz-content spec
 
@@ -421,6 +608,33 @@ _Avoid_：把普通题回看当作独立只读覆盖层、把导航当作提交�
 普通 Paper 显式交卷成功后显示的完成信息页。它可打开同一轮次的答卷，返回同一完成页、再练一次或回试卷列表；查看答卷与返回不会重新交卷，重练会建立新的独立 Practice Run。完成不表示全对，也不等待自评。
 _Avoid_：自动收束页、要求先完成所有自评的结束页
 出处：`free-navigation-paper-practice`「Paper completion and answer-sheet return」
+
+### 进度带 / Progress band
+完成页上的一条**水平带**（实现名 `.lk-progress`）：轨道**高 10px**、**胶囊圆角**
+（`--r-pill`）、**沉底底槽**、**不描边**、不带柔影；填充块铺满轨道。
+它的**静态样式就是终态 100%（满格）**——0 → 100% 的生长只写在关键帧里，
+**由庆祝重放一次**；**降级档（减少动态效果）直接是满格**，不会停在 0%。
+它只表示「这一轮已经完成」，**不是分数、不是正确率、不是完成度百分比**。
+_Avoid_：进度百分比、正确率条、骨架屏、连对计数器
+出处：openspec/changes/workbench-visual-language-v2（workbench-ui spec「Round completion celebration in two tiers」）
+
+### 里程碑档 / Milestone tier
+交卷庆祝的**高档**：在日常档（数字滚动 + 进度带）之外，额外出现几何爆点与纸片。
+它由**两个条件**之一触发——① 本轮**全对**；② 该轮**首次完成某一章**。
+⚠️ **当前事实**：条件 ② 恒不成立（`practice_runs` 没有章列，也没有「首次完成」标志，
+无数据来源），所以**目前只有「全对」能触发里程碑档**；这是如实实现，不是漏实现
+（`contract-drift.md` CD-167）。不得用代理指标近似补上。
+_Avoid_：通关、成就、完美奖励、连续学习天数
+出处：openspec/changes/workbench-visual-language-v2（decisions.md A-29；spec「Round completion celebration in two tiers」）
+
+### 连对 / Consecutive-correct run
+一轮练习里**连续答对**的一段。由三样东西承载：一个**三级计数器**（零 = 灰、
+有连对 = 黄、最高档 = 黄到蓝的渐变，数字滚动到新值）、一簇**逐个点亮的火苗**
+（连对越长，形状越长）、以及**一份参数化横幅**（5 连与 10 连共用同一份横幅，
+数字是参数，不为每个数字各做一份）。连对**超过 4** 时答错会给出明确的负反馈并把计数
+归零，不静默断掉。
+_Avoid_：连击（游戏语汇）、积分、正确率、连续学习天数
+出处：openspec/changes/workbench-visual-language-v2（spec「Consecutive-correct escalation feedback」）
 
 ### 自评 / Self-Rating
 学习者对一道已作答题目的可选 1–5 打分（可带自然语言备注）。启用自评时可保存，也可跳过；首次评分写入对应反馈并按评分更新学习投影。普通 Paper 中再次保存只覆盖同一执行、同一 Attempt 关联反馈里的评分与评语，不新建作答或反馈，不重复更新学习投影；自评不控制导航或交卷。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可按既有 off 规则折算。
@@ -547,6 +761,27 @@ _Avoid_：可选 WebGL 增强、运行时 SVG 回退
 知识图谱对同一组节点的只读视觉重排：当前指标越高，节点越大且越靠近中心，并使用对应色谱；切换时节点以力场目标连续迁移。关系结构仍以知识关系决定位置。投影不新增指标、不改变选区或写入 Pool；稳定坐标的可选本地缓存遵循本地布局种子规则。
 _Avoid_：排行榜、自动学习决策、持久投影状态
 出处：workbench-ui spec「Metric projection morphology」
+
+### 图谱暖色板 / Graph warm palette
+知识图谱自有的暖色板，**与全站「柔和蒙德里安 v2」的蓝 / 黄 / 红三角色配额是两套东西**：量值色相取橙（题目数量与重要性两个投影共用同一条橙色明度阶，值越大对纸面越强）；学习状态四色为未学 = 中性灰、复习 = 琥珀、掌握 = 橙、需突破 = 砖红；关系结构投影下节点色取墨阶三档（单层平涂的一个填充色分三档），颜色不承载语义。**图谱不受三角色配额约束**，因为它是数据可视化区而不是操作界面；反过来，图谱的暖色也不占用全站的三个角色色。夜里（夜纸）同一批色相换成提亮、降饱和的夜纸值集，色相不变。
+_Avoid_：全站三角色色、图谱原有的蓝 / 黄 / 红旧色谱、把状态色当角色色、把它和「柔和蒙德里安 v2」当成同一套配额
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Projection colour keys」「Night paper graph adaptation」）；openspec/changes/workbench-visual-language-v2/decisions.md G-7 / G-16
+
+### 单层实心圆节点 / Solid node
+知识图谱节点的形态：一枚**单层实心圆点**——单层平涂的实心圆，只有一层填充色，没有描边、没有阴影、没有光晕、没有渐变、没有内高光，也**不是内外两层嵌套**。圆心**按投影决定有没有数字**：题目数量投影下是该节点关联的**正式题数**，重要性投影下是**取整后的重要度百分比**；关系结构与学习状态两个投影下**圆心不写数字**（结构由连线表达，状态由颜色表达）。任何投影下节点上都不画状态文字、进度弧、仪表、徽标或卫星点。**量值只由半径承载**（没有「外环粗细」这一说）：半径在当前投影的量程内单调映射，值越大点越大。标签画在**点的下方**（点下缘到字顶 5 屏幕 px），字号 **12 屏幕 px 恒定**，缩放到 0.5 倍以下按对数淡出。选中或悬停 = **换色 ＋ 点外缘 1 屏幕 px 细环 ＋ 轻微放大 ＋ 标签提亮**；常态节点没有环，也不靠阴影或光晕表示「抬起」。学习状态由颜色与节点几何共同表达，状态名由学习看板、悬停提示与无障碍名承载。
+_Avoid_：同心圆节点、外环、内核、带边的圆片、五层叠加的节点、状态环、度量弧、进度仪表、节点上的状态文字、卫星点、节点阴影
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Node appearance language」「Selection and focus」；acceptance.md / IMPLEMENTATION-LOG 写作「单层实心圆点」，同一形态）；openspec/changes/workbench-visual-language-v2/decisions.md G-1 / G-6 / G-9 / G-13 / G-15 / A-28 / A-109
+
+### 图谱色键 / Graph colour key
+一个图谱投影与「什么颜色对应什么类型」之间的对应关系。关系结构投影取墨阶三档（颜色不承载语义，关系类型由连线样式表达）；题目数量与重要性投影共用一条橙色明度阶（值越大颜色越重）；学习状态投影取图谱暖色板里的状态四色。图例分两块：上半是关系线型，下半是当前投影的节点颜色，并随投影切换。
+_Avoid_：全局配色方案、状态色即角色色、以为节点颜色永远表示学习状态、图例只有一套颜色含义
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Projection colour keys」「Graph colour legend follows the projection」）；openspec/changes/workbench-visual-language-v2/decisions.md G-8 / G-11 / G-12 / G-14
+
+### 屏幕空间尺寸 / Screen-space sizing
+知识图谱节点绘制尺寸的单位约定：节点的绘制半径、标签字号与点标签的间距按**屏幕像素**定义，不随画布缩放一起缩小——缩放只改变节点之间的间距。节点半径在当前投影的量程内连续映射（值越大节点越大），因此整图缩放到「适应画布」后，节点的圆心数字（只在题目数量与重要性两个投影下存在）与名称仍然可以直接读，不必再放大。
+_Avoid_：世界像素尺寸、随缩放一起变小的字号、按缩放阈值隐藏标签、把这套尺寸约定套到图谱以外的页面
+出处：openspec/changes/graph-node-visual-language（specs/graph-visual-language/spec.md「Screen-space sizing」）；openspec/changes/workbench-visual-language-v2/decisions.md G-24
+
 ### 状态筛选分群 / State Filter Clustering
 知识图谱的只读多选筛选：从 `needs_work / review / mastered / null` 选择一个或多个状态，按并集保留节点，并让不同状态围绕各自中心聚拢。无选项表示显示全图；筛选不改变指标投影、练习选区或学习数据。
 _Avoid_：状态修改器、自动分班、持久社区
@@ -611,8 +846,14 @@ _Avoid_：独立 AI 应用壳、常驻 Tool Dashboard、与 Lesson Kit 脱节的
 
 ### 工具调用卡 / Tool Call Card
 单次工具、命令、搜索或确定性动作的语义执行摘要，在对话流中显示可读动作名、实际状态与有证据支持的结果/影响；未知影响必须如实标为未知。诊断信息经过净化并默认折叠，摘要不超过 240 个字符。恢复控件只对应后端实际支持的操作。
-_Avoid_：原始协议事件墙、完整终端日志、思维链、把每个底层事件拆成独立卡片
-出处：`preserve-agent-messages-and-tool-outcomes`；workbench-ui spec「Provider activity cards show evidenced outcomes」
+
+**形态（单行流水）**：**一行头**（状态点 + 工具名 + 耗时 + 展开按钮）+
+**一行摘要**（不展开即可读）+ **默认收起的详情区**。耗时**只取活动自报值**，
+没有就**整格不显示**（不猜、不补）。失败由**状态点**承担，**不加红字**。
+展开 / 收起用真按钮（`aria-expanded` + `aria-controls`），不用原生 `<details>`。
+_Avoid_：原始协议事件墙、完整终端日志、思维链、把每个底层事件拆成独立卡片、工具日志、调用记录
+出处：`preserve-agent-messages-and-tool-outcomes`；workbench-ui spec「Provider activity cards show evidenced outcomes」；
+openspec/changes/workbench-component-forms（§4.25 · 形态裁定 A-115）
 
 ### Agent 工件 / Agent Artifact
 Agent 产生的、值得交接或后续继续操作的结果对象，例如生成完成的试卷。它与 Tool Call Card 区分：Tool 表示“做了什么”，Artifact 表示“做出了什么”。Artifact 可在对话中以结果卡出现，并可由辅助工作面预览；完成 Artifact **不会自动切换当前 Lesson Kit 页面**，进入其正式页面必须由用户显式触发。此词条只定义 UI 交接概念，不引入持久化结构或试卷生命周期；保存语义归 paper model 契约。
@@ -692,6 +933,47 @@ _Avoid_：内容版本号、逐条审计日志、哈希 id
 按批次 id 一条命令撤销该批全部内容行的安全网（`lesson-kit ingest rollback --batch <id>`，对话桥结果卡片回滚按钮同源）；核对内容仍处于 apply 后状态且没有阻塞学习记录后才做安全备份，再回滚并输出 accounting。apply 后被改动的内容会在创建备份前触发冲突拒绝，不覆盖后续修改。
 _Avoid_：逐条手工删行、全池回退、静默丢弃练习记录
 出处：DISCUSSION-RECORD 专题 20/22；workbench-content-governance spec「Batch provenance and rollback」
+
+### 自绘下拉 / Custom select
+由**触发器 + 浮起面板**构成的单选控件，取代原生 `<select>`：触发器带 `combobox`
+角色与展开态，面板是 `listbox`，选项是 `option`。三条硬约束：**焦点留在触发器**
+（不进面板）、控件**只占一个 Tab 停靠点**、**无脚本时回落原生 select**
+（给出同样选项、报同样值）。
+_Avoid_：下拉框、原生下拉、弹出层（那是泛称）、组合框（泛称）
+出处：openspec/changes/workbench-component-forms（spec「Custom select replaces the
+native select」）；component-spec.md §4.7 / §6.2
+
+### 载荷承载域 / Payload-carrying field
+**承载提交值的那一个字段**。自绘下拉替换原生控件后由**隐藏域**担任，
+**保留原字段名与原选项值** ⇒ 请求的方法 / 路径 / **载荷键集合逐条不变**（底线守卫 G-1）。
+_Avoid_：表单字段、取值字段、状态字段
+出处：openspec/changes/workbench-component-forms（spec「Custom select replaces the
+native select」）
+
+### 焦点陷阱 / Focus trap
+模态打开期间，**Tab / Shift+Tab 只在对话框内部移动焦点**，不会跑到背景内容上。
+它与「焦点归还」成对出现，且**只属于模态** —— 非模态界面一律不得有焦点陷阱。
+_Avoid_：焦点锁定、焦点管理、键盘捕获
+出处：openspec/changes/workbench-component-forms（§4.24 / §6.2）
+
+### 焦点归还 / Focus return
+模态关闭后，**焦点回到打开它的那个元素**；若该元素已不在 DOM，
+焦点落到**它所在的区域**，**不得留在 body**。
+_Avoid_：焦点恢复、焦点复位
+出处：openspec/changes/workbench-component-forms（§4.24 / §6.2）
+
+### 编号点串 / Numbered step rail
+表达**离散步数完成度**的形态：**编号圆点 + 连接线**，每步带序号；
+四态（完成 / 当前 / 未开始 / 失败）各有**不同的形状**与颜色。
+它**不是控件**：不进 Tab 序列、不改值、不发请求。
+_Avoid_：步骤条、进度点、阶段指示器（那是泛称）、分段进度条（同义但本词更具体）
+出处：openspec/changes/workbench-component-forms（§4.16 / §4.30）
+
+### 模态对话框 / Modal dialog
+**需要打断用户**的确认界面：背景 `inert`，**Esc 关闭**、**焦点陷阱**、
+**焦点归还**。遮罩点击**不关闭**（关闭须显式动作）。它是**唯一接管焦点**的界面。
+_Avoid_：弹窗、弹层、确认框（泛称）
+出处：openspec/changes/workbench-component-forms（§4.24 / §6.1）
 
 ## 工程与流程
 

@@ -1,6 +1,8 @@
 """HTTP server: routing, JSON API dispatch, static figure serving, pages."""
 
 import json
+import email.utils
+import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from pathlib import Path
@@ -30,11 +32,19 @@ CONTENT_TYPES = {
     ".woff": "font/woff",
     ".woff2": "font/woff2",
     ".ttf": "font/ttf",
+    ".wav": "audio/wav",
+    ".mp3": "audio/mpeg",
+    ".ogg": "audio/ogg",
 }
 
 
 def _content_type(suffix):
     return CONTENT_TYPES.get(suffix, "application/octet-stream")
+
+
+def _content_etag(data):
+    """The content hash a static asset is revalidated against (task 5.4)."""
+    return hashlib.sha256(data).hexdigest()[:32]
 
 ROUTES = [
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
@@ -115,6 +125,14 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self._dispatch("GET")
+
+    def do_HEAD(self):
+        """The headers of a GET, without the body (`curl -I` on an asset)."""
+        self._head_only = True
+        try:
+            self._dispatch("GET")
+        finally:
+            self._head_only = False
 
     def do_POST(self):
         self._dispatch("POST")
@@ -223,11 +241,29 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 return
             if target.is_file():
                 data = target.read_bytes()
+                etag = '"' + _content_etag(data) + '"'
+                # The font and audio assets are served under a fixed name, so
+                # they cannot carry a version in their URL; a long max-age
+                # would keep a changed file away from the learner.  The
+                # content hash is the ETag instead: every visit revalidates
+                # and an unchanged file costs one 304, not the whole body.
+                if self.headers.get("If-None-Match") == etag:
+                    self.send_response(304)
+                    self.send_header("ETag", etag)
+                    self.send_header("Cache-Control", "no-cache")
+                    self.end_headers()
+                    return
                 self.send_response(200)
                 self.send_header("Content-Type", _content_type(target.suffix))
                 self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("ETag", etag)
+                self.send_header(
+                    "Last-Modified",
+                    email.utils.formatdate(target.stat().st_mtime, usegmt=True),
+                )
                 self.end_headers()
-                self.wfile.write(data)
+                self._write_body(data)
                 return
         self._send_json(404, {"error": "not found"})
 
@@ -277,6 +313,10 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 view = (query.get("view") or ["overview"])[0]
                 html_body = pages.records_page(
                     workspace, workspaces, weak_items, pool, problem_id, view,
+                )
+            elif page == "settings":
+                html_body = pages.settings_page(
+                    workspace, workspaces, weak_items, kp_titles,
                 )
             else:
                 plan = api_mod.daily_plan(pool, workspace, {}, {})
@@ -336,7 +376,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", _content_type(target.suffix))
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        self._write_body(data)
 
     def _send_graph_artifact(self, path):
         parts = [unquote(s) for s in path.split("/")]
@@ -356,7 +396,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        self._write_body(data)
 
     def _match_route(self, method, path):
         segments = [unquote(s) for s in path.split("/") if s]
@@ -382,6 +422,12 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
+        self._write_body(data)
+
+    def _write_body(self, data):
+        """Send the body, unless this is a HEAD request (task 5.4 checks)."""
+        if getattr(self, "_head_only", False):
+            return
         self.wfile.write(data)
 
     def _send_html(self, status, text):
@@ -390,7 +436,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        self._write_body(data)
 
     def log_message(self, format, *args):
         pass

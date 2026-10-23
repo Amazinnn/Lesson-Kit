@@ -4,10 +4,141 @@ import html
 import json
 import re
 from datetime import date
+from pathlib import Path
 from urllib.parse import quote
 
 from workbench.data import queries
 from workbench.server import records as records_view
+
+
+# The learning states of a knowledge point (GLOSSARY「当前学习状态」). The list
+# carries them as a colour + geometry dot, never as words (18.2).
+_STATE_DOTS = {
+    "needs_work": "lk-dot lk-dot--red lk-dot--cross",
+    "review": "lk-dot lk-dot--yellow lk-dot--dash",
+    "mastered": "lk-dot lk-dot--ink lk-dot--check",
+}
+_STATE_NAMES = {
+    "needs_work": "重点练习",
+    "review": "可以复习",
+    "mastered": "掌握",
+}
+
+# The paper list's empty state points at the Agent: papers are authored in
+# the right-hand column, so the button opens that conversation — the "新建"
+# control when no conversation is open yet, the composer when one is.
+_AI_COMPOSE_JS = ("var i=document.getElementById('ai-input'),"
+                  "n=document.getElementById('ai-new-session');"
+                  "if(i&&i.offsetParent){i.focus();}else if(n){n.click();}")
+
+_ASSET_DIR = Path(__file__).resolve().parent / "static" / "assets"
+_asset_cache = {}
+
+
+def _inline_asset(relative_path, width, height):
+    """One local SVG asset, inlined into the page (asset-spec §1.11).
+
+    An `<img src>` reference is a separate document: the outer theme's CSS
+    variables do not reach it, so night paper would keep the light drawing.
+    Assets therefore enter the DOM as inline `<svg>`.
+
+    The root element carries no size of its own (asset-spec §1.12) — the host
+    CSS sizes it (`.asset-icon` / `.asset-empty`). The width and height added
+    here are presentational attributes, the weakest possible source, so any
+    CSS rule wins over them; they only keep the asset from filling its box
+    until that rule lands.
+    """
+    source = _asset_cache.get(relative_path)
+    if source is None:
+        source = (_ASSET_DIR / relative_path).read_text(encoding="utf-8").strip()
+        _asset_cache[relative_path] = source
+    return source.replace(
+        "<svg ", "<svg width='{}' height='{}' ".format(width, height), 1)
+
+
+def _state_dot(state, labelled=True):
+    """One learning-state cue: a colour and a geometry, no visible words.
+
+    The dot is the redundant state channel (component-spec §3.6): colour is the
+    main channel, the shape is the redundant one, and no state is ever spelled
+    out in the list. `needs_work` / `review` / `mastered` are the three current
+    states; anything else carries no cue at all.
+    """
+    if state not in _STATE_DOTS:
+        return ""
+    dot = "<span class='knowledge-state-dot " + _STATE_DOTS[state] + "'"
+    if not labelled:
+        return dot + " aria-hidden='true'></span>"
+    name = _STATE_NAMES[state]
+    return (dot + " role='img' aria-label='" + name + "' title='" + name
+            + "'></span>")
+
+
+def _empty_state(asset_path, text, width, height, action=None, as_button=False):
+    """The empty state: a still-life illustration, one sentence, one action.
+
+    The button is full width and its label is the action itself. An empty
+    state with no action to offer leaves the button out (design-notes/
+    copy-table.md §0.3 rule 3).
+
+    `as_button=True` renders the action as a real `<button>` (the
+    acceptance criterion asks for a button, not a link): the action's
+    second item is then the JavaScript the button runs instead of a URL.
+    """
+    action_html = ""
+    if action:
+        label, target = action
+        if as_button:
+            action_html = ("<button type='button' class='primary lk-empty__action'"
+                           " onclick=\"" + target + "\">" + html.escape(label)
+                           + "</button>")
+        else:
+            action_html = ("<a class='primary button-link lk-empty__action' href='"
+                           + html.escape(target, quote=True) + "'>" + html.escape(label)
+                           + "</a>")
+    return (
+        "<div class='empty-state lk-empty'>"
+        "<span class='lk-empty__art' aria-hidden='true'>"
+        + _inline_asset(asset_path, width, height)
+        + "</span>"
+        "<p class='lk-empty__text'>" + html.escape(text) + "</p>"
+        + action_html
+        + "</div>"
+    )
+
+
+def _error_block(message):
+    """The error state: a red block with a red state dot.
+
+    Red is only ever failure or blockage (component-spec §3.6); nothing else
+    in the work borrows it.
+    """
+    return (
+        "<p class='error-block inline-error'>"
+        "<span class='lk-dot lk-dot--red lk-dot--filled' aria-hidden='true'></span>"
+        + html.escape(message) + "</p>"
+    )
+
+
+def _knowledge_count_bar(total, counts):
+    """The knowledge-point count of the current scope (18.5).
+
+    The total plus how many knowledge points sit in each of the three current
+    states — counts, never a percentage and never a score (GLOSSARY「当前学习
+    状态」_Avoid_). It summarises the distribution; it is not a per-item
+    reminder, so only the state names are spelled out here.
+    """
+    items = [("<span class='knowledge-count-bar__value'>" + str(total)
+              + "</span> 个知识点", "")]
+    for key in ("needs_work", "review", "mastered"):
+        items.append((_state_dot(key, labelled=False)
+                      + "<span class='knowledge-count-bar__value'>" + str(counts[key])
+                      + "</span> " + _STATE_NAMES[key],
+                      " knowledge-count-bar__item--" + key))
+    return ("<div class='knowledge-count-bar' role='group' aria-label='知识点计数'>"
+            + "".join("<span class='knowledge-count-bar__item" + variant + "'>" + text
+                      + "</span>" for text, variant in items)
+            + "</div>")
 
 
 def hub_page(workspaces):
@@ -15,22 +146,26 @@ def hub_page(workspaces):
     for ws in workspaces:
         stats = ws.get("stats", {})
         if ws.get("error"):
-            detail = f"数据库读不了：{str(ws['error']).splitlines()[0]}"
+            # 少字原则：可见文案只说「工作区读取失败」（copy-table §2.1 P-01
+            # ⇒ 「数据库」是实现层词，学生不认）；原始错误串留在 title 属性
+            # 里做诊断，信息不丢。
+            detail = "工作区读取失败"
+            detail_title = (" title='" + html.escape(str(ws['error']).splitlines()[0], quote=True) + "'")
         else:
             detail = (f"{stats.get('kps')} 个知识点 · {stats.get('problems')} 道题 · "
                       f"{stats.get('due')} 项待复习")
+            detail_title = ""
         cards.append(
             f"<a class='workspace-card' href='/w/{ws['name']}/practice'>"
-            f"<span class='context-line'>学习工作区</span>"
+            f"<span class='context-line'>工作区</span>"
             f"<h2>{html.escape(ws['name'])}</h2>"
-            f"<p>{html.escape(detail)}</p></a>"
+            f"<p{detail_title}>{html.escape(detail)}</p></a>"
         )
     body = (
         "<main class='hub-page'>"
         "<header class='page-header'>"
         "<p class='context-line'>lesson-kit</p>"
         "<h1>学习工作台</h1>"
-        "<p class='page-summary'>选择一个工作区，从最需要回看的地方继续。</p>"
         "</header>"
         f"<section class='workspace-grid' aria-label='工作区列表'>{''.join(cards)}</section>"
         "</main>"
@@ -53,14 +188,32 @@ def _chapter_lens(workspace):
         f"{' selected' if chapter == active else ''}>{html.escape(chapter)}</option>"
         for chapter in chapters
     )
+    # The self-drawn panel (15.4): one option per chapter, chapter name only.
+    # ⚠️ No per-chapter figure may appear in the panel — the current spec
+    # forbids it ("The chapter control carries no figures"; decisions.md 9.4).
+    panel_options = "".join(
+        "<button type='button' class='chapter-lens-option' role='option'"
+        f" data-chapter='{html.escape(chapter)}'"
+        f"{' aria-selected=\"true\"' if chapter == active else ''}>"
+        f"{html.escape(chapter)}</button>"
+        for chapter in chapters
+    )
     return (
         "<div id='chapter-lens' class='chapter-lens'"
         f" data-active='{html.escape(active)}'>"
         "<label class='chapter-lens-toggle'>"
         f"<input type='checkbox' id='chapter-lens-switch'{' checked' if active else ''}>"
         "<span>章</span></label>"
-        f"<select id='chapter-lens-select' aria-label='选择章节'{'' if active else ' hidden'}>"
+        # The native select is the **no-JS fallback** (decisions.md A-69):
+        # without JavaScript it is the only way to pick a chapter. With
+        # JavaScript the self-drawn panel takes over and the CSS side hides
+        # this one — the `js` marker class on `<html>` is the switch.
+        f"<select id='chapter-lens-select' aria-label='选择章节'{'' if active else ' hidden'}"
+        " class='chapter-lens-select-fallback'>"
         f"{options}</select>"
+        "<div class='chapter-lens-panel' id='chapter-lens-panel' role='listbox'"
+        " aria-label='选择章节' hidden>"
+        f"{panel_options}</div>"
         "</div>"
     )
 
@@ -68,17 +221,25 @@ def _chapter_lens(workspace):
 def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
           page_type=None, object_id=None, kp_titles=None):
     meta = f"<span class='meta'>{html.escape(workspace['name'])}</span>"
+    # 15.4 顶栏三段式：左＝品牌，中＝当前身份（工作区名 + 章节透镜），右＝动作。
+    # 章节只在透镜里出现，不在工作区名旁重复。
     topbar = (
         "<header id='topbar'>"
+        "<div class='topbar-brand'>"
         "<a class='brand' href='/'>lesson-kit</a>"
+        "</div>"
         "<span class='topbar-separator'>/</span>"
+        "<div class='topbar-identity'>"
         f"{meta}"
         f"{_chapter_lens(workspace)}"
+        "</div>"
+        "<div class='topbar-actions'>"
         "<div class='mobile-drawer-controls'>"
         "<button id='mobile-nav-toggle' class='ghost sm icon-only' type='button' "
         "aria-controls='left-column' aria-expanded='false' aria-label='打开导航' title='打开导航'>☰</button>"
         "<button id='mobile-ai-toggle' class='ghost sm icon-only' type='button' "
         "aria-controls='ai-column' aria-expanded='false' aria-label='打开对话' title='打开对话'>◌</button>"
+        "</div>"
         "</div>"
         "</header>"
     )
@@ -93,9 +254,9 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         topbar
         + f"<div id='layout' data-workspace='{workspace['name']}' "
         f"data-page='{page_type}'{object_attributes}>"
-        + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度' title='拖动调整左栏宽度'></div></aside>"
+        + f"<aside id='left-column'>{left}<div id='left-resizer' class='column-resizer' role='separator' aria-label='调整左栏宽度'></div></aside>"
         + f"<main id='middle'>{_agent_activity_float()}<div id='middle-page'>{middle_html}</div>{_agent_aux_surfaces()}</main>"
-        + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度' title='拖动调整右栏宽度'></div></aside>"
+        + f"<aside id='ai-column'>{ai}<div id='right-resizer' class='column-resizer' role='separator' aria-label='调整右栏宽度'></div></aside>"
         + "</div>"
         + ("<script src='/static/graph-physics-core.js'></script>"
            "<script src='/static/graph-renderer.js'></script>"
@@ -107,13 +268,13 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + "<script src='/static/workbench.js'></script>"
         + "<script src='/static/middle-navigation.js'></script>"
     )
-    return _base(f"workbench {workspace['name']}", body)
+    return _base(f"workbench {workspace['name']}", body, workspace=workspace["name"])
 
 
 def _agent_activity_float():
     return (
         "<section id='agent-activity-float' class='agent-activity-float hidden' aria-live='polite'>"
-        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent activity</p>"
+        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Agent 活动</p>"
         "<h2 class='agent-surface-title'>正在处理</h2></div>"
         "<button id='agent-activity-toggle' class='ghost sm icon-only agent-activity-toggle' type='button' "
         "aria-controls='agent-activity-body' aria-expanded='true' aria-label='收起 Agent 活动' "
@@ -126,7 +287,7 @@ def _agent_aux_surfaces():
     """Transient central surfaces owned by Agent runtime, not permanent page chrome."""
     return (
         "<aside id='agent-artifact-split' class='agent-artifact-split hidden' aria-label='Agent 工件预览'>"
-        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>Artifact</p>"
+        "<div class='agent-surface-head'><div><p class='agent-surface-kicker'>工件</p>"
         "<h2 id='agent-artifact-title' class='agent-surface-title'>最新工件</h2></div>"
         "<button class='ghost sm icon-only agent-aux-collapse' type='button' data-agent-aux-collapse "
         "aria-label='关闭工件预览'>×</button></div>"
@@ -156,7 +317,10 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
     """Practise a saved Paper; authoring is delegated to Agent/CLI."""
     plan = plan or {"goals": [], "queue": [], "totals": {}}
     middle = (
-        _page_header("学习 / 试卷", "练习", "选择已有试卷开始，或继续上次的进度。")
+        # 少字原则：页头那句「选择已有试卷开始，或继续上次的进度。」是说明句，
+        # 页面上的「开始练习」「继续练习」两个动作已经说清（copy-table §3 第 2 条
+        # ⇒ 删）。它不进标题区，标题区只留栏目名与标题。
+        _page_header("学习 / 试卷", "练习")
         + "<div class='page-content practice-content'>"
         + _paper_practice_html(workspace["name"]) + "<div id='legacy-practice' class='hidden'>"
 
@@ -176,17 +340,17 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<button id='review-rating-action' class='outline sm hidden' type='button'>编辑自评</button>"
         "<span id='card-nav' class='hidden'><button id='card-prev' class='ghost' type='button'>上一张</button>"
         "<button id='card-next' class='ghost' type='button'>下一张</button></span></div><div id='feedback-area' class='feedback-card hidden'>"
-        "<label class='visually-hidden' for='rating-input'>自评分（1–5）</label>"
+        "<label class='visually-hidden' for='rating-input'>自评（1–5）</label>"
         "<input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='自评 1–5'>"
-        "<label class='visually-hidden' for='feedback-note'>卡点或心得（可选）</label>"
-        "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='卡点或心得（可选）'></textarea>"
+        "<label class='visually-hidden' for='feedback-note'>备注（可选）</label>"
+        "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='备注（可选）'></textarea>"
         "<button id='save-rating' class='primary sm'>记录并下一题</button>"
         "<button id='cancel-rating' class='ghost sm hidden' type='button'>取消</button></div></div></div></section>"
         "<div id='session-end-entry' class='session-end-entry hidden'>"
         "<div>"
         "<button id='no-time' class='ghost'>不会，下一题</button><button id='goto-session-end' class='outline'>暂停练习</button></div></div></div>"
         + "</div>"
-        + "<details class='practice-planning'><summary>目标与时间安排</summary>"
+        + "<details id='practice-planning' class='practice-planning'><summary>目标与时间安排</summary>"
         + _daily_plan(plan) + time_view_html() + "</details>"
     )
     return shell(
@@ -200,8 +364,14 @@ def _paper_practice_html(workspace_name):
     return (
         "<section id='paper-practice' aria-label='试卷练习'>"
         "<p id='paper-error' class='inline-error' role='status' aria-live='polite'></p>"
-        "<section id='paper-setup' class='card'>"
-        "<h2 id='paper-title'>选择一份试卷</h2><p id='paper-count' class='muted'></p>"
+        "<section id='paper-setup' class='card lk-card'>"
+        "<h2 id='paper-title'>选择一份试卷</h2>"
+        # 21.2 加载态：骨架块 + aria-busy。JS 用 textContent 覆盖本节点，
+        # 内容到位时骨架随之退场（进场动效由容器接管）。
+        "<p id='paper-count' class='muted'>"
+        "<span class='paper-count-loading' aria-busy='true'>"
+        "<span class='lk-skeleton lk-skeleton--text' aria-hidden='true'></span>"
+        "</span></p>"
         "<label for='paper-reveal-timing'>答案展示方式</label>"
         "<select id='paper-reveal-timing'><option value='per_item'>做一题显示一题</option>"
         "<option value='on_submit'>交卷后统一显示</option></select>"
@@ -213,20 +383,43 @@ def _paper_practice_html(workspace_name):
         "<button id='paper-pause' class='outline' type='button'>暂停练习</button>"
         "<button id='paper-final-submit' class='primary' type='button'>提交试卷</button></div>"
         "<nav id='paper-dots' class='paper-dots' aria-label='答题情况与题号'></nav>"
-        "<article id='paper-question' class='practice-question-card rich-text'></article>"
+        # 16.1 题面 = 一张独立的纸。题号槽位放在 #paper-question 之外 ——
+        # 后者的 innerHTML 由 JS 整体替换，放在里面会被冲掉。
+        "<div id='paper-stem' class='paper-stem'>"
+        "<p id='paper-stem-index' class='paper-stem-index' aria-hidden='true'></p>"
+        "<article id='paper-question' class='practice-question-card paper-stem__body wb-reading'></article>"
+        "</div>"
         "<div id='paper-options' class='paper-options'></div>"
-        "<label class='visually-hidden' for='paper-answer'>你的作答</label>"
+        # 16.3 作答区 = 独立标记块：淡结构线 + 「你的作答」标签 + 沉底块。
+        "<div class='paper-answer-block'>"
+        "<label class='paper-answer-label' for='paper-answer'>你的作答</label>"
         "<textarea id='paper-answer' rows='5' placeholder='写下你的作答'></textarea>"
+        "</div>"
         "<button id='paper-item-submit' class='primary hidden' type='button'>提交答案</button>"
-        "<div id='paper-reference' class='practice-solution rich-text hidden'></div>"
+        # 16.2 解析 = 与题面同级的另一张纸，只用小标题区隔。
+        "<div id='paper-reference' class='practice-solution paper-solution wb-reading hidden'></div>"
         "<section id='paper-rating' class='hidden' aria-label='自评'></section>"
         "<nav class='paper-navigation' aria-label='题目导航'>"
         "<button id='paper-prev' class='outline' type='button'>上一题</button>"
         "<button id='paper-next' class='primary' type='button'>下一题</button>"
         "<button id='paper-stuck' class='ghost' type='button'>不会</button></nav></section>"
-        "<section id='paper-completion' class='card hidden' aria-labelledby='paper-completion-title'>"
-        "<p class='section-kicker'>Congratulations!</p><h2 id='paper-completion-title'>完成练习</h2>"
-        "<div id='paper-completion-stats'></div><div class='paper-toolbar'>"
+        # 16.7 完成页 = 分层庆祝的三处承载位。承载位的静态样式必须等于终态：
+        # 数字直接显示最终值、进度带静态满格、爆点与纸片静态不出现。
+        "<section id='paper-completion' class='card lk-card hidden' aria-labelledby='paper-completion-title'>"
+        "<p class='section-kicker'>本轮完成</p><h2 id='paper-completion-title'>完成练习</h2>"
+        "<div id='paper-completion-stats' class='paper-completion-stats'></div>"
+        # ① 统计数字槽位：JS 把逐项数字（带 data-lk-value）写进来，
+        #    ticker 逐位滚动；写不进来的槽位保持空，不占位也不显示旧值。
+        "<div id='paper-completion-figures' class='paper-completion-figures lk-stat-slot'></div>"
+        # ② 进度带：静态满格（.lk-progress__fill 的静态 transform 是 scaleX(1)），
+        #    庆祝时由 JS 加上 .is-filled 重放 0→100% 的生长（只动 scaleX）。
+        "<div class='lk-progress lk-progress--completion' role='progressbar' "
+        "aria-label='本轮完成进度' aria-valuemin='0' aria-valuemax='100' aria-valuenow='100'>"
+        "<span class='lk-progress__fill'></span></div>"
+        # ③ 里程碑锚点容器：爆点与纸片落在这里（pointer-events: none，不覆盖 CTA）。
+        "<div id='paper-completion-milestone' class='lk-celebrate-anchor' "
+        "data-lk-celebrate-anchor style='pointer-events: none' aria-hidden='true'></div>"
+        "<div class='paper-toolbar'>"
         "<button id='paper-review' class='primary' type='button'>查看本次答卷</button>"
         "<button id='paper-again' class='outline' type='button'>再练一次</button>"
         "<a class='outline button-link' href='" + papers + "'>返回试卷列表</a>"
@@ -237,7 +430,7 @@ def _paper_practice_html(workspace_name):
 def _daily_plan(plan):
     goals = plan.get("goals") or []
     goal_cards = "".join(
-        "<article class='goal-card card' data-goal-id='" + html.escape(str(goal.get("id") or "")) + "'"
+        "<article class='goal-card card lk-card' data-goal-id='" + html.escape(str(goal.get("id") or "")) + "'"
         + " data-goal-title='" + html.escape(goal.get("title") or "") + "'"
         + " data-goal-kind='" + html.escape(str(goal.get("kind") or "stage")) + "'"
         + " data-goal-start-date='" + html.escape(str(goal.get("start_date") or "")) + "'"
@@ -253,7 +446,7 @@ def _daily_plan(plan):
         + "<button type='button' class='ghost sm goal-delete' data-goal-delete>删除</button></div>"
         + "</article>"
         for goal in goals
-    ) or "<p class='muted'>暂无已设置的长期或阶段目标。</p>"
+    ) or "<p class='muted'>暂无目标</p>"
     return (
         "<section id='daily-plan' class='daily-plan' aria-label='学习安排'>"
         "<section id='goal-cards' class='goal-cards' aria-label='长期与阶段目标'><h3>长期与阶段目标</h3>" + goal_cards + "</section>"
@@ -268,9 +461,12 @@ def _daily_plan(plan):
         "<button type='button' class='outline sm hidden' id='goal-cancel'>取消编辑</button></div>"
         "<p id='goal-form-status' class='inline-error' aria-live='polite'></p>"
         "<div class='goal-assist'>"
-        "<label for='goal-nl'>说不清字段？一句话让 Agent 帮你填</label>"
-        "<textarea id='goal-nl' rows='2' placeholder='例如：期末前掌握第六章计数，重点补鸽巢和组合'></textarea>"
-        "<button type='button' class='outline sm' id='goal-assist-send'>让 Agent 填</button>"
+        # 少字原则：「说不清字段？一句话让 Agent 帮你填」是疑问句 + 教学说明，
+        # 属注释性文字（copy-table §2.5 P-92 ⇒ 删）。字段的可访问名称搬进
+        # aria-label（一个字不丢），可见的那句由旁边的按钮承担。
+        "<textarea id='goal-nl' rows='2' aria-label='让 Agent 代填' "
+        "placeholder='例如：期末前掌握第六章计数，重点补鸽巢和组合'></textarea>"
+        "<button type='button' class='outline sm' id='goal-assist-send'>让 Agent 代填</button>"
         "</div>"
         "</form></details></section>"
     )
@@ -347,14 +543,14 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
         _page_header(
             _lens_label(workspace, "知识点 / 当前章节", "知识点 / 全课程"),
             html.escape(kp["knowledge_item"]),
-            "先读正文，再按需要继续练习相关题目。", practice_action,
+            "", practice_action,
         )
         + "<div class='page-content'>"
-        f"<article class='knowledge-body card'>{_render_markdown(kp.get('body') or '', workspace['name'], kp_id)}</article>"
+        f"<article class='knowledge-body card wb-reading'>{_render_markdown(kp.get('body') or '', workspace['name'], kp_id)}</article>"
         + reminder_html
         + "<section class='support-section linked-problems'>"
         "<div class='section-heading'><div>"
-        "<p class='section-kicker'>练习入口</p><h2>关联题目</h2>"
+        "<h2>关联题目</h2>"
         "</div></div>"
         f"{problems_html or empty_problems}"
         "</section></div>"
@@ -362,6 +558,40 @@ def kp_page(workspace, workspaces, weak_items, pool, kp_id, kp_titles=None):
     return shell(
         workspace, workspaces, weak_items, middle, "kps",
         page_type="kp", object_id=kp_id, kp_titles=kp_titles,
+    )
+
+
+def _kp_chapter(kp_id, course):
+    """The chapter a knowledge point belongs to, read off its id.
+
+    Same grammar as `Pool.chapters()` (workbench/data/pool.py:186-205): a
+    chapter is the id segment between the course and the `-kp-N` suffix. An id
+    that does not parse keeps its whole text as its chapter — a knowledge point
+    is never dropped from the list because its id looks odd.
+    """
+    match = re.match(rf"^{re.escape(course or '')}-(.+)-kp-\d+$", kp_id or "")
+    return match.group(1) if match else (kp_id or "")
+
+
+def _knowledge_row(workspace_name, item, order, problem_count, state):
+    """One knowledge-point row: the readable name plus its secondary context.
+
+    The row's `data-kp-*` attributes are the sort keys the client reads
+    (`order` / `title` / `problem-count` / `state` / `importance`). Grouping
+    (18.1) decides which group card a row sits in; it never changes a row's
+    own attributes.
+    """
+    return (
+        "<li class='knowledge-row' data-kp-order='" + str(order)
+        + "' data-kp-title='" + html.escape(item.get("knowledge_item") or "")
+        + "' data-kp-problem-count='" + str(problem_count)
+        + "' data-kp-state='" + html.escape(state or "unmarked")
+        + "' data-kp-importance='" + html.escape(item.get("importance") or "supplementary") + "'>"
+        "<div>"
+        "<a href='/w/" + html.escape(workspace_name) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
+        "<span class='knowledge-meta'>" + str(problem_count) + " 题"
+        + _state_dot(state)
+        + "</span></div></li>"
     )
 
 
@@ -375,29 +605,54 @@ def kps_page(workspace, workspaces, weak_items, pool, kp_titles=None):
                 problem_counts[kp_id] += 1
     states = {row["item_id"]: row["state"] for row in pool.current_states()
               if row["item_type"] == "kp"}
-    state_labels = {"needs_work": "重点练习", "review": "可以复习"}
+    # 18.5 章节内的计数条：总数取 pool.kps(prefix)，三态个数取
+    # learning_current_state 的现成读路径 —— 不新增统计行、不写池。
+    state_counts = {"needs_work": 0, "review": 0, "mastered": 0}
+    for kp_id in {item["kp_id"] for item in source_kps}:
+        state = states.get(kp_id)
+        if state in state_counts:
+            state_counts[state] += 1
+    count_bar = _knowledge_count_bar(len(source_kps), state_counts)
+    # 18.1 分组卡片：**按章节分组** —— 组头 = 章节 id（载荷原值，不映射中文名），
+    # 组内 = 圆角卡列表。分组只用上面已经取到的知识点列表：零新增请求、零写池。
+    # 分组口径与透镜一致：`pool.kps(prefix)` 给的就是当前口径的知识点
+    # （本章 = 一个章 / 全课程 = 若干章），组头即当前口径下的章。
+    group_keys = []
+    group_rows = {}
+    for order, item in enumerate(source_kps):
+        chapter = _kp_chapter(item.get("kp_id") or "", pool.course)
+        if chapter not in group_rows:
+            group_rows[chapter] = []
+            group_keys.append(chapter)
+        group_rows[chapter].append((order, item))
     items = "".join(
-        "<li class='knowledge-row' data-kp-order='" + str(index) + "' data-kp-title='" + html.escape(item.get("knowledge_item") or "")
-        + "' data-kp-problem-count='" + str(problem_counts.get(item["kp_id"], 0))
-        + "' data-kp-state='" + html.escape(states.get(item["kp_id"], "unmarked"))
-        + "' data-kp-importance='" + html.escape(item.get("importance") or "supplementary") + "'>"
-        "<div>"
-        "<a href='/w/" + html.escape(workspace["name"]) + "/kp/" + html.escape(item["kp_id"]) + "'>" + html.escape(item["knowledge_item"]) + "</a>"
-        "<span class='knowledge-meta'>" + str(problem_counts.get(item["kp_id"], 0)) + " 题"
-        + (" · " + state_labels[states[item["kp_id"]]] if states.get(item["kp_id"]) in state_labels else "")
-        + "</span></div></li>"
-        for index, item in enumerate(source_kps)
+        "<li class='knowledge-group'>"
+        "<h3 class='knowledge-group__title'>" + html.escape(chapter) + "</h3>"
+        "<ul class='knowledge-group__cards'>"
+        + "".join(
+            _knowledge_row(workspace["name"], item, order,
+                           problem_counts.get(item["kp_id"], 0),
+                           states.get(item["kp_id"], "unmarked"))
+            for order, item in group_rows[chapter]
+        )
+        + "</ul></li>"
+        for chapter in group_keys
     )
-    empty_items = '<li class="muted">暂无知识点</li>'
+    # 18.4 空态 = 插画 + 一句 + 满宽主按钮（按钮文案即动作）
+    empty_items = "<li>" + _empty_state(
+        "empty/empty-canvas.svg", "暂无知识点", 180, 150,
+        ("去练习", "/w/" + html.escape(workspace["name"], quote=True) + "/practice"),
+    ) + "</li>"
     middle = (_page_header(
         _lens_label(workspace, "学习 / 当前章节", "学习 / 全课程"),
-        "知识点", "阅读课程内容与关联题目；练习请使用已有试卷。")
-        + "<div class='page-content'><div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
+        "知识点")
+        + "<div class='page-content'>" + count_bar
+        + "<div class='knowledge-sort-bar'><label for='knowledge-sort'>排序</label><select id='knowledge-sort'>"
         + "<option value='source' selected>课程顺序</option><option value='title'>名称</option>"
         + "<option value='problem_count'>题目数量</option><option value='state'>学习状态</option>"
         + "<option value='importance'>重要性</option></select>"
         + "<button id='knowledge-sort-direction' class='ghost sm' type='button' aria-label='切换排序方向' title='切换排序方向'>↑</button></div>"
-        + "<section class='support-section knowledge-index'><div class='section-heading'><div><p class='section-kicker'>当前排序</p><h2>"
+        + "<section class='support-section knowledge-index'><div class='section-heading'><div><h2>"
         + _lens_label(workspace, "本章知识点", "全部知识点")
         + "</h2></div></div>"
         + f"<ul id='knowledge-list' class='knowledge-list'>{items or empty_items}</ul></section></div>")
@@ -494,17 +749,16 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
         progress_text = (" · 已完成 " + str(progress['completed']) + "/" + str(progress['total'])) if progress else ""
         continuation = record.get('continuation')
         if invalid:
-            reason = ("缺少题目 " + str(len(record['missing_problem_ids'])) + " 道，详情见下方折叠项"
+            reason = ("缺少 " + str(len(record['missing_problem_ids'])) + " 道题"
                       if record['missing_problem_ids'] else
                       "当前试卷内容校验失败：" + '; '.join(record['validation_errors'])
                       if record['validation_errors'] else '试卷为空')
-            availability = "<p class='inline-error'>无法开始：" + html.escape(reason) + "</p>"
+            availability = _error_block("无法开始：" + reason)
         elif record.get('start_block_reason'):
-            availability = "<p class='inline-error'>暂时无法开始：" + html.escape(
-                record['start_block_reason']) + "</p>"
+            availability = _error_block("暂时无法开始：" + record['start_block_reason'])
         elif continuation and not continuation['available']:
-            availability = "<p class='inline-error'>无法继续旧执行：" + html.escape(
-                continuation['reason'] or '执行状态与当前试卷不一致') + "</p>"
+            availability = _error_block(
+                "无法继续旧执行：" + (continuation['reason'] or '执行状态与当前试卷不一致'))
         else:
             availability = ""
         unavailable_ids = ((continuation or {}).get('unavailable_item_ids') or record['missing_problem_ids'])
@@ -513,7 +767,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "</p></details>") if unavailable_ids else ""
         execution = continuation.get('execution', {}).get('progress') if continuation else None
         continuation_details = ("<details class='practice-set-continuation-details'><summary>查看旧执行情况</summary><p>当前试卷 "
-            + str(continuation['paper_count']) + " 题；旧执行仍保留 " + str(execution['total'])
+            + str(continuation['paper_count']) + " 题；旧执行 " + str(execution['total'])
             + " 题，已完成 " + str(execution['completed']) + " 题。</p></details>") \
             if continuation and not continuation['available'] else ""
         rows = []
@@ -527,7 +781,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
                 + "<span class='practice-set-item-index'>" + str(index + 1) + "</span>"
                 + "<span class='practice-set-item-title'>" + html.escape(str(title)[:120]) + "</span>"
                 + "</summary>"
-                + "<div class='linked-problem-text rich-text'>"
+                + "<div class='linked-problem-text wb-reading'>"
                 + _render_markdown(problem.get("problem_text") or "", workspace["name"], "")
                 + "</div>"
                 + _linked_problem_source(problem)
@@ -540,7 +794,7 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "<details class='practice-set-card-body'>"
             + "<summary class='practice-set-card-head'>"
             + "<div class='practice-set-card-title'>"
-            + "<p class='section-kicker'>试卷</p><h2>"
+            + "<h2>"
             + html.escape(record["title"]) + "</h2><p class='muted' data-set-progress>"
             + str(record["count"]) + " 题" + progress_text + "</p>" + availability + "</div>"
             + "<div class='practice-set-card-actions'>"
@@ -556,16 +810,23 @@ def practice_sets_page(workspace, workspaces, weak_items, pool, kp_titles=None):
             + "<p class='inline-error practice-set-status hidden' aria-live='polite'></p>"
             + "</article>"
         )
-    empty = (
-        "<section class='card practice-set-empty'><h2>还没有试卷</h2>"
-        "<p class='muted'>请在右侧对话中让 Agent 组卷并保存，之后可在这里开始练习。</p>"
-        "<a class='primary button-link' href='/w/" + html.escape(workspace["name"])
-        + "/practice'>返回练习</a></section>"
+    # The paper list's empty state (component-spec §4.21): a still-life
+    # illustration, one sentence, and a full-width primary button whose
+    # label is the action itself.
+    # · illustration = `empty-vase` (asset-spec §3.11, table row 1);
+    # · the one sentence = `还没有保存的试卷` (copy-table §3, row 8 — the
+    #   old two-line text was an annotation);
+    # · the button = `去组卷` (decisions.md 5.2): papers are authored by the
+    #   Agent, so the button opens that conversation instead of looping
+    #   back to the practice page.
+    empty = _empty_state(
+        "empty/empty-vase.svg", "还没有保存的试卷", 180, 150,
+        ("去组卷", _AI_COMPOSE_JS), as_button=True,
     )
     middle = (
         _page_header(
             "练习 / 试卷", "试卷",
-            "每份试卷独立保存作答进度，切换后可以继续。",
+            "",
             "<a class='outline button-link' href='/w/"
             + html.escape(workspace["name"]) + "/practice'>返回练习</a>",
         )
@@ -586,7 +847,7 @@ def records_page(workspace, workspaces, weak_items, pool, problem_id=None, view=
     middle = (
         _page_header(
             "学习 / 记录", "记录",
-            "练习轮次、试卷作答和逐题记录都在这里；统计只从已有学习记录实时计算。",
+            "",
         )
         + records_view.content(
             workspace["name"], overview, view=view, problem_id=problem_id,
@@ -600,17 +861,16 @@ def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
     middle = (
         _page_header(
             "练习 / 收束本轮", "会话末统一自评",
-            "只补充尚未评分的题目与闪卡；已写入的记录不会重复出现。",
+            "",
         )
         + "<div class='page-content'>"
         "<section class='support-section pending-section'>"
         "<div class='section-heading'><div>"
-        "<p class='section-kicker'>待补充</p><h2>尚未评分的题目</h2>"
-        "</div><p>逐题输入 1–5 分；点击保存前不会写入学习记录。</p></div>"
+        "<h2>尚未评分的题目</h2>"
+        "</div></div>"
         "<div id='pending-ratings'></div></section>"
         "<section id='session-end-actions' class='next-step'>"
-        "<div><p class='section-kicker'>下一步</p><h2>继续打磨弱项</h2>"
-        "<p>重新开始时再次选择自评方式。</p></div>"
+        "<div><h2>继续打磨弱项</h2></div>"
         "<div class='next-step-actions'>"
         "<button id='practice-similar' class='primary'>再练同类</button>"
         "</div></section></div>"
@@ -619,23 +879,83 @@ def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
                  page_type="session-end", kp_titles=kp_titles)
 
 
+def settings_page(workspace, workspaces, weak_items, kp_titles=None):
+    """The workbench settings view: appearance preferences only (design.md D-9).
+
+    Theme, reading face, motion and sound live here.  The two behaviour
+    preferences stay in the left rail where they have always been — a place
+    the learner can see may not move without a word (compat boundary).
+    """
+    middle = (
+        _page_header(
+            "工作台 / 设置", "设置", "",
+            "<button id='settings-close' class='outline sm' type='button'>关闭</button>",
+        )
+        + "<div class='page-content'>"
+        + "<section class='settings-view' aria-label='外观偏好'>"
+        + "<div class='preference-row'>"
+        + "<label class='preference-name' for='setting-theme'>主题</label>"
+        + "<span class='preference-value' id='setting-theme-value'>暖纸</span>"
+        + "<label class='lk-switch'>"
+        + "<input type='checkbox' id='setting-theme'>"
+        + "<span class='lk-switch__track' aria-hidden='true'>"
+        + "<span class='lk-switch__thumb'></span></span></label>"
+        + "</div>"
+        + "<div class='preference-row'>"
+        + "<span class='preference-name' id='setting-face-label'>阅读字面</span>"
+        + "<span class='preference-value' id='setting-face-value'>衬线</span>"
+        + "<span class='lk-seg' role='radiogroup' aria-labelledby='setting-face-label'>"
+        + "<label class='lk-seg__item'>"
+        + "<input type='radio' name='setting-face' value='serif' checked>衬线</label>"
+        + "<label class='lk-seg__item'>"
+        + "<input type='radio' name='setting-face' value='sans'>无衬线</label>"
+        + "</span>"
+        + "</div>"
+        + "<div class='preference-row'>"
+        + "<label class='preference-name' for='setting-motion'>动效</label>"
+        + "<span class='preference-value' id='setting-motion-value'>完整</span>"
+        + "<label class='lk-switch'>"
+        + "<input type='checkbox' id='setting-motion'>"
+        + "<span class='lk-switch__track' aria-hidden='true'>"
+        + "<span class='lk-switch__thumb'></span></span></label>"
+        + "</div>"
+        + "<div class='preference-row'>"
+        + "<label class='preference-name' for='setting-sound'>声音</label>"
+        + "<span class='preference-value' id='setting-sound-value'>开</span>"
+        + "<label class='lk-switch'>"
+        + "<input type='checkbox' id='setting-sound' checked>"
+        + "<span class='lk-switch__track' aria-hidden='true'>"
+        + "<span class='lk-switch__thumb'></span></span></label>"
+        + "</div>"
+        + "</section></div>"
+    )
+    return shell(
+        workspace, workspaces, weak_items, middle, "",
+        page_type="settings", kp_titles=kp_titles,
+    )
+
+
 def _left_column(workspace, workspaces, weak_items, active_nav):
     options = "".join(
         f"<option value='{ws['name']}' {'selected' if ws['name'] == workspace['name'] else ''}>"
         f"{html.escape(ws['name'])}</option>"
         for ws in workspaces
     )
+    # 15.1 导航项 = 具象静物图标 + 文字（图标是第 9 组的五枚导航静物，
+    # 按 asset-spec §1.11 以 inline SVG 进 DOM：只有 inline 才能吃到夜纸变量）。
     nav_items = [
-        ("practice", "练习"),
-        ("practice-sets", "试卷"),
-        ("kps", "知识点"),
-        ("graph", "知识图谱"),
-        ("records", "记录"),
+        ("practice", "练习", "icons/icon-practice.svg"),
+        ("practice-sets", "试卷", "icons/icon-practice-sets.svg"),
+        ("kps", "知识点", "icons/icon-kps.svg"),
+        ("graph", "知识图谱", "icons/icon-graph.svg"),
+        ("records", "记录", "icons/icon-records.svg"),
     ]
     nav = "".join(
         f"<div class='nav-item {'active' if key == active_nav else ''}'>"
-        f"<a href='/w/{workspace['name']}/{key}'>{label}</a></div>"
-        for key, label in nav_items
+        f"<a href='/w/{workspace['name']}/{key}'>"
+        f"<span class='nav-item__icon' aria-hidden='true'>"
+        f"{_inline_asset(path, 18, 18)}</span>{label}</a></div>"
+        for key, label, path in nav_items
     )
     actionable = [
         item for item in weak_items
@@ -647,11 +967,19 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "</a></div>"
         for item in actionable
     )
-    rail_label = "优先回看" if actionable else _lens_label(
-        workspace, "本章知识点", "全部知识点")
+    # 15.3 分区标题恒定，个数走计数徽标 —— 标题不再随内容有无变体。
+    rail_label = "优先回看"
+    count_badge = (
+        "<span class='count-badge'>"
+        "<span class='visually-hidden'>待回看 </span>" + str(len(actionable))
+        + "</span>"
+    )
     empty = "暂无明确薄弱证据" if not actionable else "暂无提醒"
     empty_weak = '<p class="score">' + empty + "</p>"
     return (
+        # The four sections sit on one wrapper: the rail's paper ends with the
+        # content, so the lower half of the column is not blank paper (15.3).
+        "<div class='side-sections'>"
         "<section class='side-section workspace-switcher'>"
         "<p class='side-label'>工作区</p>"
         f"<select id='workspace-select' aria-label='切换工作区'>{options}</select>"
@@ -666,12 +994,15 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<option value='queue'>排队发送</option>"
         "<option value='interrupt'>中断后发送</option></select>"
         "<label class='setting-row'><input id='setting-show-rating' type='checkbox' checked> "
-        "练习显示自评</label>"
+        "练习与试卷显示自评</label>"
+        "<a id='setting-view-toggle' class='setting-row setting-view-toggle' "
+        f"href='/w/{workspace['name']}/settings' aria-expanded='false'>外观设置</a>"
         "</section>"
         "<section class='side-section weak-section'>"
-        f"<div class='side-heading'><p class='side-label'>{rail_label}</p></div>"
+        f"<div class='side-heading'><p class='side-label'>{rail_label}</p>{count_badge}</div>"
         f"<div class='weak-list'>{weak_html or empty_weak}</div>"
         "</section>"
+        "</div>"
     )
 
 
@@ -681,9 +1012,9 @@ def _linked_problems(problems, workspace_name, kp_id):
     return (
         "<ul class='linked-problem-list'>"
         + "".join(
-            "<li class='linked-problem'>"
+            "<li class='linked-problem lk-card'>"
             f"<span class='problem-title'>{html.escape(_problem_title(problem))}</span>"
-            + f"<div class='linked-problem-text rich-text'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
+            + f"<div class='linked-problem-text wb-reading'>{_render_markdown(problem.get('problem_text') or '', workspace_name, kp_id)}</div>"
             + _linked_problem_source(problem)
             + "</li>"
             for problem in problems
@@ -729,11 +1060,10 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<div class='ai-session-list-head'><p class='side-label'>对话</p>"
         "<button id='ai-new-session' class='outline sm'>新建</button></div>"
         "<div id='ai-session-list' role='list' aria-label='历史对话'></div>"
-        "<p id='ai-session-empty' class='muted'>还没有对话。</p>"
+        "<p id='ai-session-empty' class='muted'>还没有对话</p>"
         "</div>"
         "<div id='ai-provider-picker' class='hidden' aria-label='选择 Agent'>"
         "<p class='side-label'>选择 Agent</p>"
-        "<p class='muted'>先选一个起始 Agent；之后可在同一对话里切换可用模型与 Agent。</p>"
         "<div id='ai-provider-options' class='ai-provider-options'></div>"
         "</div></section>"
         "<section id='ai-chat-view' class='hidden' aria-label='当前对话'>"
@@ -747,14 +1077,14 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<section class='ai-conversation'><div id='ai-messages'></div></section>"
         "<section id='ai-paper-approval' class='ai-paper-approval hidden' "
         "aria-labelledby='ai-paper-approval-heading'>"
-        "<p class='side-label'>Paper 更新待确认</p>"
-        "<h2 id='ai-paper-approval-heading'>确认这次题目调整</h2>"
+        "<p class='side-label'>试卷更新待确认</p>"
+        "<h2 id='ai-paper-approval-heading'>确认这次调整</h2>"
         "<p id='ai-paper-approval-status' class='ai-paper-approval-status' role='status' "
         "aria-live='polite'></p>"
         "<div id='ai-paper-approval-details' class='ai-paper-approval-details'></div>"
         "<div class='ai-paper-approval-actions'>"
         "<button id='ai-paper-approval-cancel' class='outline sm' type='button'>取消更新</button>"
-        "<button id='ai-paper-approval-approve' class='primary sm' type='button'>批准更新</button>"
+        "<button id='ai-paper-approval-approve' class='primary' type='button'>批准更新</button>"
         "</div></section>"
         "<div id='ai-context-chips' class='agent-context-chips' aria-label='当前上下文'></div>"
         "<div id='ai-composer-shell' class='agent-composer-shell'>"
@@ -780,7 +1110,10 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
 
 _MATH_RE = re.compile(r"\$\$([\s\S]+?)\$\$|\$([^$\n]+)\$", re.MULTILINE)
 _DISPLAY_BLOCK_RE = re.compile(r"\$\$(.*?)\$\$", re.DOTALL)
-_FENCE_LINE_RE = re.compile(r"^\s*```\s*([\w-]*)\s*$")
+# The language tag is ASCII-only on purpose: the browser matches it with
+# `\w`, which is `[A-Za-z0-9_]` there, so a CJK tag opens no fence on either
+# side (the two renderers must agree on which lines are fences).
+_FENCE_LINE_RE = re.compile(r"^\s*```\s*([A-Za-z0-9_-]*)\s*$")
 _TABLE_DELIMITER_CELL = re.compile(r":?-{1,}:?")
 _THEMATIC_BREAK = re.compile(
     r"\s*(?:\*(?:\s*\*){2,}|-(?:\s*-){2,}|_(?:\s*_){2,})\s*"
@@ -920,6 +1253,18 @@ def _render_table(lines, position, workspace_name):
     )
 
 
+def _code_block(code_lines, code_lang):
+    """One fenced code block; the language tag survives as a class.
+
+    The browser keeps `class='language-xx'`, so the server keeps it too
+    (design.md D-6): the same Markdown must render to the same HTML on both
+    sides.
+    """
+    cls = f" class='language-{code_lang}'" if code_lang else ""
+    body = html.escape(chr(10).join(code_lines))
+    return f"<pre><code{cls}>{body}</code></pre>"
+
+
 def _render_markdown(text, workspace_name, kp_id):
     """Render the same small safe Markdown subset used by the browser."""
     if not text:
@@ -947,12 +1292,12 @@ def _render_markdown(text, workspace_name, kp_id):
     for position, line in enumerate(lines):
         if position <= skip_until:
             continue
-        fence = re.match(r"^\s*```\s*([\w-]*)\s*$", line)
+        fence = _FENCE_LINE_RE.match(line)
         if fence:
             flush_paragraph()
             close_list()
             if in_code:
-                out.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+                out.append(_code_block(code_lines, code_lang))
                 code_lines = []
                 code_lang = ""
             in_code = not in_code
@@ -975,6 +1320,10 @@ def _render_markdown(text, workspace_name, kp_id):
         heading = re.match(r"^\s*(#{1,3})\s+(.+?)\s*#*\s*$", line)
         if heading:
             flush_paragraph(); close_list()
+            # Body headings start at h2: h1 belongs to the page title, so the
+            # body never competes with the shell (design.md D-6). The browser
+            # uses the same rule, and tests/test_markdown_render_parity.py
+            # holds the two renderers to it character for character.
             level = len(heading.group(1)) + 1
             out.append(f"<h{level}>{_rich(heading.group(2), workspace_name)}</h{level}>")
             continue
@@ -990,9 +1339,11 @@ def _render_markdown(text, workspace_name, kp_id):
                 out.append(f"<{list_tag}>")
             out.append(f"<li>{_rich((ordered or unordered).group(1), workspace_name)}</li>")
             continue
-        if line.startswith(">"):
+        quote = re.match(r"^\s*>\s?", line)
+        if quote:
             flush_paragraph(); close_list()
-            out.append(f"<blockquote>{_rich(line[1:].lstrip(), workspace_name)}</blockquote>")
+            out.append(
+                f"<blockquote>{_rich(line[quote.end():], workspace_name)}</blockquote>")
             continue
         if not line.strip():
             flush_paragraph(); close_list()
@@ -1001,7 +1352,7 @@ def _render_markdown(text, workspace_name, kp_id):
         paragraph.append(line)
     flush_paragraph(); close_list()
     if in_code:
-        out.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+        out.append(_code_block(code_lines, code_lang))
     return _restore_tokens("".join(out), display_mark, display_spans)
 
 
@@ -1093,11 +1444,48 @@ def _image_replace(line, workspace_name):
     return re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", repl, line)
 
 
-def _base(title, body):
+def _appearance_boot_script(workspace):
+    """The first-paint appearance state, inlined ahead of the stylesheets.
+
+    The theme attribute lives on `<html>` (design.md D-9), so it has to be
+    there before the first paint: an explicit stored choice wins, an absent
+    choice follows the system (A-11), and with no JavaScript the warm-paper
+    ground is what shows.  The other three preferences ride along in the same
+    record, so the first frame never shows a state the learner did not pick.
+    """
+    key = json.dumps("wb_settings_" + workspace) if workspace else "null"
+    return (
+        "<script>(function(){try{"
+        f"var k={key};"
+        "var raw=k?localStorage.getItem(k):null;"
+        "var s={};if(raw){try{s=JSON.parse(raw)||{};}catch(e){s={};}}"
+        "var d=document.documentElement;"
+        # The JavaScript marker class. With JS the self-drawn controls take
+        # over and the native fallbacks step aside — the CSS side keys on
+        # `.js` (e.g. `.js .chapter-lens-select-fallback`). It is set here,
+        # in `<head>` and before the stylesheets, so a native control never
+        # flashes before the script runs.
+        "d.className=d.className?d.className+' js':'js';"
+        "var dark=false;"
+        "if(s.theme==='night'||s.theme==='paper'){dark=s.theme==='night';}"
+        "else if(window.matchMedia){"
+        "dark=window.matchMedia('(prefers-color-scheme: dark)').matches;}"
+        "d.dataset.theme=dark?'night':'';"
+        "d.style.colorScheme=dark?'dark':'light';"
+        "d.dataset.sound=s.sound===false?'off':'on';"
+        "d.dataset.face=s.readingFace==='sans'?'sans':'serif';"
+        "if(s.motion===true){d.dataset.motion='on';}"
+        "else if(s.motion===false){d.dataset.motion='off';}"
+        "}catch(e){}})();</script>"
+    )
+
+
+def _base(title, body, workspace=None):
     return (
         "<!doctype html><html lang='zh'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width,initial-scale=1'>"
         f"<title>{html.escape(title)}</title>"
+        + _appearance_boot_script(workspace) +
         "<link rel='stylesheet' href='/static/workbench.css'>"
         "<link rel='stylesheet' href='/static/agent-ui.css'>"
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"
@@ -1108,20 +1496,18 @@ def _base(title, body):
 
 def time_view_html():
     return (
-        "<section id='time-view' class='card time-view hidden' aria-label='时间安排'>"
-        "<div class='section-heading'><div><p class='section-kicker'>实验视图</p>"
-        "<h2>时间安排</h2></div></div>"
+        "<section id='time-view' class='card lk-card time-view hidden' aria-label='时间安排'>"
+        "<div class='section-heading'><div><h2>时间安排</h2></div></div>"
         "<div id='time-view-content' class='time-view-content'>"
         "<section class='time-calendar' aria-labelledby='calendar-title'>"
-        "<div class='time-module-heading'><div><p class='time-module-kicker'>目标跑道</p>"
+        "<div class='time-module-heading'><div>"
         "<h3 id='calendar-title'>本月安排</h3></div>"
         "<span id='calendar-month-label' class='time-module-meta'></span></div>"
         "<div id='calendar-grid' class='calendar-grid'></div>"
         "</section>"
         "<section class='time-workload' aria-labelledby='workload-title'>"
-        "<div class='time-module-heading'><div><p class='time-module-kicker'>复习节奏</p>"
-        "<h3 id='workload-title'>未来 14 天复习负荷</h3>"
-        "<p class='time-module-description'>每天到期、建议回看的学习项</p></div>"
+        "<div class='time-module-heading'><div>"
+        "<h3 id='workload-title'>未来 14 天复习负荷</h3></div>"
         "<button id='workload-prefill' class='outline sm hidden' type='button'>让 Agent 看看</button>"
         "</div>"
         "<div class='workload-summary' aria-label='复习负荷摘要'>"

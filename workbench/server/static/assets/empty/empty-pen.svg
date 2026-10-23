@@ -1,0 +1,26 @@
+<svg viewBox="0 0 240 200" class="asset asset-empty" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="empty-pen-title">
+  <title id="empty-pen-title">静物插画：一支放在桌上的钢笔</title>
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <g class="asset-empty__shadow">
+      <path d="M 40 168 L 204 168" fill="none" stroke="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))" stroke-width="3"/>
+      <path d="M 71.49 130.3 L 165.27 166 L 165.11 168 L 71.33 132.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 8%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__wash">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 171.27 153.77 168.14 157.47 L 73.08 125.56 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 73.08 125.56 L 168.14 157.47 Q 168.98 162.5 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" fill="color-mix(in oklab, var(--role-blue, #2b62e8) 16%, var(--asset-paper, #fffdf7))"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" fill="color-mix(in oklab, var(--asset-ink, #2a2620) 12%, var(--asset-paper, #fffdf7))"/>
+    </g>
+    <g class="asset-empty__line" fill="none" stroke="var(--asset-ink, #2a2620)">
+      <path d="M 74.67 120.82 L 88.54 124.52 L 102.91 128.51 L 171 148.94 Q 170.41 158.23 165.27 166 L 98.65 141.21 L 84.78 135.71 L 71.49 130.3 Z" stroke-width="3"/>
+      <path d="M 59.5 121 L 71.49 130.3 L 74.67 120.82 Z" stroke-width="3"/>
+      <path d="M 60.64 121.38 L 66.14 123.23" stroke-width="2"/>
+      <path d="M 93.21 125.77 L 90.97 138.11" stroke-width="2"/>
+      <path d="M 122.79 134.4 L 122.23 149.91 L 136.2 155.1 L 137.07 138.68 Z" stroke-width="2"/>
+      <path d="M 144.64 143.43 L 160.02 148.04 L 157.53 149.14" stroke-width="2"/>
+    </g>
+    <g class="asset-empty__highlight" fill="none" stroke="var(--asset-highlight, rgb(255 255 255 / 55%))">
+      <path d="M 79.41 126.61 L 106.71 134.18" stroke-width="1.5"/>
+    </g>
+  </g>
+</svg>
