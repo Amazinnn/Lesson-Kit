@@ -1,0 +1,1243 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="day">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>练习页 · 定稿视觉 mockup</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_base.css">
+<style>
+/* ============================================================================
+   practice.html — 练习页（进行中）· 定稿视觉 mockup
+   ----------------------------------------------------------------------------
+   本页 = 外壳（顶栏 + 左栏 + 右栏对话态）+ 中栏「练习页 · 进行中」一屏。
+
+   权威来源：
+     token 唯一权威  design-notes/night-paper-tokens.md（§2 结构 / §3 值）
+     视觉基线        decisions.md「# 收口：最终基线」+ A-1…A-21
+     组件规格        design-notes/component-spec.md（§3.6 / §4.4 / §4.9 / §4.17 / §4.19 / §4.20 / §4.26）
+     版式线框        design-notes/layout-spec.md（§4.1 标题带 / §4.2 双轨 / §5.2 进行中 / §6.2 对话视图 / §6.4 尺寸表）
+     界面文案        design-notes/copy-table.md（§2.3 练习页 / §2.4 试卷练习 / §2.9 Agent 右栏 / §5 状态词表）
+
+   硬约束自查：
+     ✓ 颜色一律 var(...) 引用 _tokens.css；本页**零硬编码色值**
+       （唯一例外：页内局部变量 `--mk-sunken`，见下方 §4A —— **待入权威表**）
+     ✓ 圆角统一 --r-md (12px)；仅 --r-xs / --r-lg / --r-round / --r-pill 按语义取用
+     ✓ 纸面 4 层靠圆角 + 柔影分层，零描边（唯一描边例外：控件边界 --rule-control）
+     ✓ 无玻璃拟态 / 无霓虹辉光 / 无大面积渐变 / 无背景图案
+     ✓ 状态 = 颜色 + 几何 双通道，零状态文字
+     ✓ 「答对」= 中性墨 --ink-strong + 勾形；「答错」= 红。无绿色
+     ✓ 黄色只承载面积与形状（--role-yellow / --role-yellow-deep），不承载文字
+     ✓ 阅读面衬线 17px / 1.75 / 38em（--font-read / --fs-reading / --measure）
+
+   本轮改动（按 decisions.md 三条裁决）：
+     · A-23 近黑深底退出内容块 —— 「你的作答」区与「你」那张卡改浅底深字（§4A）。
+       近黑底 --surface-code 只保留给代码块 / 等宽代码区。
+     · A-25 活动浮层归中栏 —— 浮层从右栏移到**中栏右上角**（§4B）；
+       顶栏维持 --shell-topbar-h: 52px（A-21-3）。
+     · A-35 发送按钮改蓝 —— 发送是**主要动作**，配额写死「蓝 = 主要动作 + 链接 +
+       当前选中」；近黑既突兀又越配额。改 --role-blue + --ink-on-role（§5）。
+   ========================================================================= */
+
+
+/* ============================================================================
+   §4A 沉底层（sunken）—— 内容块的底
+   ----------------------------------------------------------------------------
+   decisions.md A-23：「近黑深底退出内容块」。作答区与用户在对话里的话改成
+   「沉底 / sunken」层 —— 比卡面**略深**的暖灰米底 + 墨字（浅色主题）；
+   夜纸下**反向**（比卡面略亮）+ 浅墨字。
+
+   ⚠️ **`--mk-sunken` 现在定义在 `_tokens.css`**（本 mockup 族四个页面共用，
+      不再各自在页内重复定义）。它是**页族局部 token**：权威对应物是
+      `--surface-sunken`（权威表 §3.1 已有，值 #f2ece1 / #272319），
+      本 mockup 用 #f0e9d7 / #302b22，**尚未对齐**（实现期以权威表为准）。
+
+   边界表达（A-23-4）：底色差 + **2px 单侧结构线**（与题面纸同一支笔），
+   不能只靠底色差，否则与周围卡面分不开。
+   ========================================================================= */
+
+/* 沉底块共用的 2px 单侧结构线 —— 由 .ink-block / .msg--user 各自实现 */
+
+
+/* ============================================================================
+   §4B 活动浮层（Activity Float）—— **中栏右上角**
+   ----------------------------------------------------------------------------
+   decisions.md A-25：活动浮层归中栏。依据 docs/GLOSSARY.md「活动浮层」——
+   「位于**中央工作区**右上方的有界、可替换活动层」；词表是权威，
+   先前把浮层放在右栏是偏离。
+   中栏是滚动容器，故用 sticky 把它钉在滚动视口顶部；.mid-float 高度为 0，
+   浮层压在内容之上，不占流内高度。
+   ========================================================================= */
+.mid-float {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-raised);
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  height: 0;
+  pointer-events: none;
+}
+.mid-float > .activity { pointer-events: auto; }
+
+.activity {
+  width: 232px; padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-raised); border-radius: var(--r-md);
+  box-shadow: var(--elev-3);
+}
+.activity__head { display: flex; align-items: center; gap: var(--sp-2); }
+.activity__t {
+  flex: 1 1 auto;
+  font-size: var(--fs-label); line-height: var(--fs-label-lh);
+  font-weight: var(--fw-semibold); color: var(--ink-strong);
+}
+.activity__fold {
+  width: 28px; height: 28px; min-height: 28px; padding: 0;
+  border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-muted); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.activity__fold:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.activity__fold svg { width: 16px; height: 16px; }
+.activity__d {
+  font-size: var(--fs-micro); line-height: var(--fs-micro-lh);
+  color: var(--ink-muted); margin: var(--sp-1) 0 var(--sp-2);
+}
+
+
+/* ============================================================================
+   §0 布局几何（--shell-* 族）
+   ----------------------------------------------------------------------------
+   权威表 §2.8「布局几何」：decisions.md A-20-1 裁定这族**收进权威表 §2**、
+   族名保留 --shell-；A-21 裁定 --shell-topbar-h = 52px（layout-spec 草拟的
+   56px 作废）、--shell-measure = 880px（轨宽）、--measure = 38em（行长）。
+   ⚠️ _tokens.css 写作时权威表还没有这一族，故按其文件头的说明在本页局部样式里
+      声明一次；届时迁进权威表，本页写法不需要改。
+   ========================================================================= */
+:root {
+  --shell-measure: 880px;          /* 轨宽（不是行长） */
+  --shell-measure-wide: 1120px;    /* 数据轨 */
+  --shell-col-left: 280px;
+  --shell-col-right: 420px;
+  --shell-col-middle-min: 420px;
+  --shell-col-left-max: 480px;
+  --shell-col-right-max: 560px;
+  --shell-topbar-h: 52px;         /* A-21-3：维持现状，本轮不改 */
+  --shell-track: var(--shell-measure); /* 页面级轨变量：练习页 = 阅读轨 */
+}
+
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; overflow: hidden; }
+
+/* 本页唯一的自定义尺寸值（不是颜色）：题号格的角标偏移 */
+:root { --qcell-mark: 10px; }
+
+
+/* ============================================================================
+   §1 顶栏（三段式：品牌 / 当前身份 / 动作）
+   与 shell.html 保持同一套外壳，便于两个 mockup 并排比对。
+   ========================================================================= */
+.topbar {
+  flex: none;
+  height: var(--shell-topbar-h);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  background: var(--surface-base);
+  border-bottom: var(--lw-hair) solid var(--rule-hair);
+  z-index: var(--z-raised);
+}
+.brand { display: flex; align-items: center; gap: var(--sp-3); flex: none; }
+.brand__mark {
+  width: 34px; height: 34px; border-radius: var(--r-md);
+  background: var(--role-blue); color: var(--ink-on-role);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: var(--fw-bold); font-size: var(--fs-sub);
+  box-shadow: var(--elev-1);
+}
+.brand__name { font-size: var(--fs-sub); font-weight: var(--fw-semibold); color: var(--ink-strong); }
+
+.identity { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.identity__ws { font-size: var(--fs-body); color: var(--ink-strong); font-weight: var(--fw-medium); }
+.identity__sep { color: var(--ink-faint); }
+.identity__course { font-size: var(--fs-body); color: var(--ink-muted); }
+.lens {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 34px; padding: var(--sp-1) var(--sp-3);
+  border: var(--lw-hair) solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  color: var(--ink-strong); font-size: var(--fs-meta); font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+.lens:hover { background: var(--veil-hover); }
+.lens__caret { color: var(--ink-faint); font-size: 10px; }
+
+.actions { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
+.switch {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 34px; padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-3);
+  border: 0; border-radius: var(--r-pill);
+  background: var(--surface-card); color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-label); cursor: pointer;
+  box-shadow: var(--elev-1);
+}
+.switch__track {
+  width: 40px; height: 22px; border-radius: var(--r-pill);
+  background: var(--veil-active); position: relative; flex: none;
+  transition: background-color var(--dur-base) var(--ease-standard);
+}
+.switch__knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: var(--r-round);
+  background: var(--surface-raised); box-shadow: var(--elev-1);
+  transition: transform var(--dur-base) var(--ease-rebound);
+}
+.switch[aria-pressed="true"] .switch__track { background: var(--role-blue); }
+.switch[aria-pressed="true"] .switch__knob { transform: translateX(18px); }
+.switch[aria-pressed="true"] { color: var(--role-blue); }
+
+
+/* ============================================================================
+   §2 三栏几何
+   ========================================================================= */
+.layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--shell-col-left) minmax(var(--shell-col-middle-min), 1fr) var(--shell-col-right);
+}
+@media (max-width: 1279px) {
+  .layout { grid-template-columns: var(--shell-col-left) minmax(0, 1fr); }
+  .col--right { display: none; }
+}
+
+
+/* ============================================================================
+   §3 左栏（图标导航；选中态 = 整行圆角色块）
+   ========================================================================= */
+.col--left {
+  min-height: 0; overflow-y: auto;
+  padding: var(--sp-4) var(--sp-3);
+  display: flex; flex-direction: column; gap: var(--sp-5);
+}
+.nav-group__t {
+  font-size: var(--fs-label); font-weight: var(--fw-semibold); color: var(--ink-faint);
+  letter-spacing: .04em; padding: 0 var(--sp-3) var(--sp-2);
+}
+.nav { display: flex; flex-direction: column; gap: var(--sp-1); }
+.nav-item {
+  position: relative;
+  display: flex; align-items: center; gap: var(--sp-3);
+  width: 100%; min-height: 44px; padding: var(--sp-2) var(--sp-3);
+  border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-body); line-height: var(--fs-body-lh);
+  font-weight: var(--fw-regular); text-align: left; cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.nav-item:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.nav-item.is-active {
+  background: var(--role-blue-wash);
+  color: var(--role-blue);
+  font-weight: var(--fw-semibold);
+}
+.nav-item.is-active::before {
+  content: ""; position: absolute; left: 0; top: var(--sp-2); bottom: var(--sp-2);
+  width: 3px; border-radius: var(--r-pill); background: var(--role-blue);
+}
+.nav-item__t { flex: 1 1 auto; }
+
+.review { display: flex; flex-direction: column; gap: var(--sp-1); }
+.review-item {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md);
+  background: var(--surface-card); box-shadow: var(--elev-1);
+  font-size: var(--fs-meta); color: var(--ink-body); cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.review-item:hover { transform: translateX(2px); }
+.review-item__t { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
+/* ============================================================================
+   §4 中栏（练习页 · 进行中）
+   ----------------------------------------------------------------------------
+   版式依据 layout-spec §5.2 线框：
+     标题带（§4.1）→ 题号导航（紧凑行，**无纸面**）→ 题面纸 → 作答分隔区
+     → 解析纸 → 导航行
+   密度反差（§5.2 末段）：题号导航是「无纸面的中性行」，题面纸是「卡级纸面 +
+   2px 单侧结构线」，两者的对比来自**纸面层级**而不是描边。
+   ========================================================================= */
+.col--middle {
+  min-height: 0; overflow-y: auto;
+  padding: var(--sp-5) var(--sp-6) var(--sp-6);
+}
+.page {
+  max-width: min(100%, var(--shell-track));
+  margin-inline: auto;
+}
+
+/* ---- ④ 页面标题带：面包屑 / 标题 / 摘要 / 动作区 + 2px 结构线底线 ---- */
+.page-head { padding-bottom: var(--sp-5); margin-bottom: var(--sp-6); }
+.crumb {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-label); line-height: var(--fs-label-lh);
+  font-weight: var(--fw-semibold); letter-spacing: .05em;
+  color: var(--ink-faint);
+  margin-bottom: var(--sp-2);
+}
+.crumb__sep { color: var(--ink-disabled); }
+.page-head__row {
+  display: flex; align-items: flex-end; gap: var(--sp-4);
+}
+.page-head__main { flex: 1 1 auto; min-width: 0; }
+.page-head__t {
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-ui);
+  font-size: var(--fs-display); line-height: var(--fs-display-lh);
+  font-weight: var(--fw-semibold); letter-spacing: -.02em;
+  color: var(--ink-strong);
+}
+/* 摘要：事实与计数（copy-table F-10–F-15 的「已作答 · N / 不会 · N / 待完成」）
+   计数旁的状态点与题号格用**同一套几何**：勾 / 叉 / 环 —— 颜色 + 几何双通道，零状态文字。 */
+.summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
+  margin: 0; max-width: 62ch;
+  font-size: var(--fs-body); line-height: var(--fs-body-lh);
+  color: var(--ink-muted);
+}
+.summary__i { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.summary__dot { width: 10px; height: 10px; flex: none; }
+/* 标题带右侧动作区 —— 右侧让出「活动浮层」的落位空间（A-25）：
+   浮层宽 232px 压在轨道右上角，标题带动作退到它左边。 */
+.page-head__actions {
+  display: flex; align-items: center; gap: var(--sp-2);
+  flex: none; margin-right: 248px;
+}
+/* 中栏变窄（视口 ≤ 1439px ≈ 轨道 < 676px）时，248px 让位会把标题挤成竖排。
+   此时浮层改为**占位式**：静态定位、自成一行贴在轨道右上角，不再压内容，
+   标题带也就不用让位了。 */
+@media (max-width: 1439px) {
+  .mid-float {
+    position: static; height: auto;
+    display: flex; justify-content: flex-end;
+    margin-bottom: var(--sp-4);
+  }
+  .page-head__actions { margin-right: 0; }
+}
+
+/* 标题带底线：2px --rule-structure（layout-spec §4.1 ⑤：2px 结构线只有两个位置） */
+.title-band { border-bottom: var(--lw-structure) solid var(--rule-structure); }
+
+/* ---- 题号导航（紧凑行 · 无纸面） ---- */
+.qnav {
+  display: flex; flex-wrap: wrap; gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+/* 题号格（component-spec §4.17）：36×36、圆角 12px、命中区 44px 步距 */
+.qcell {
+  position: relative;
+  width: 36px; height: 36px; min-width: 36px; padding: 0;
+  border: 0; border-radius: var(--r-md); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface-card); color: var(--ink-muted);
+  box-shadow: inset 0 0 0 2px var(--ink-disabled);
+  font-family: var(--font-mono); font-size: var(--fs-meta); font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  transition: transform var(--dur-fast) var(--ease-rebound),
+              box-shadow var(--dur-fast) var(--ease-out),
+              background-color var(--dur-fast) var(--ease-out);
+}
+.qcell:hover { box-shadow: inset 0 0 0 2px var(--role-blue); color: var(--ink-strong); }
+.qcell:active { transform: scale(.94); }
+.qcell:focus-visible {
+  outline: 2px solid transparent; outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
+}
+/* 态 ① 已答（判定正确）= 中性墨 + 勾形几何（decisions.md A-20-3；不用绿、不用蓝） */
+.qcell--answered {
+  color: var(--ink-strong);
+  box-shadow: inset 0 0 0 2px var(--ink-strong);
+}
+/* 态 ② 未答 = 2px 环（几何），**不靠底色区分**（否则与纸面同色 = 隐形） */
+.qcell--todo { color: var(--ink-muted); }
+/* 态 ③ 不会（卡住/阻塞）= 红 + 叉形几何 */
+.qcell--skip {
+  color: var(--ink-strong);
+  box-shadow: inset 0 0 0 2px var(--role-red);
+}
+/* 态 ④ 当前题（内容层）= 黄实心 + 轻微放大；黄**不承载文字**，数字取 --ink-on-warm */
+.qcell--current {
+  background: var(--role-yellow); color: var(--ink-on-warm);
+  box-shadow: none; transform: scale(1.06);
+}
+/* 角标：几何状态标记（勾 / 叉），颜色 + 形状双通道，零文字。
+   复用 _base.css 的状态圆点几何集（check / cross），只放大到题号格可辨的尺寸。 */
+.qcell__mark {
+  position: absolute; top: -5px; right: -5px;
+  transform: scale(1.5); transform-origin: center;
+}
+
+/* ---- 题面纸 = 一张独立的纸（decisions.md 7.1） ---- */
+.paper {
+  position: relative;
+  background: var(--surface-card);
+  color: var(--ink-body);
+  border-radius: var(--r-md);
+  box-shadow: var(--elev-1);
+  padding: var(--sp-5) var(--sp-5) var(--sp-5) var(--sp-6);
+  margin-bottom: var(--sp-4);
+}
+/* 2px 墨色单侧结构线（阅读面硬性要求；线宽只有两个位置） */
+.paper::before {
+  content: ""; position: absolute; left: 0; top: var(--sp-4); bottom: var(--sp-4);
+  width: var(--lw-structure); border-radius: var(--r-pill);
+  background: var(--rule-structure);
+}
+/* 24px 大号题号（decisions.md 7.2）+ 状态小圆点（颜色 + 几何，零文字） */
+.paper__head {
+  display: flex; align-items: center; gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.qno {
+  font-family: var(--font-ui);
+  font-size: var(--fs-question); line-height: var(--fs-question-lh);
+  font-weight: var(--fw-bold); color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+.paper__kind {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  font-size: var(--fs-label); line-height: var(--fs-label-lh);
+  color: var(--ink-muted);
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-xs);
+  background: var(--surface-base);
+}
+.paper__body { margin: 0; }
+.paper__body em { font-style: italic; }
+
+/* ---- 选项列表（客观题 · 紧凑区） ---- */
+.options {
+  border: 0; margin: var(--sp-4) 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--sp-1);
+}
+.options > legend {
+  padding: 0 0 var(--sp-2);
+  font-family: var(--font-ui); font-size: var(--fs-meta); line-height: var(--fs-meta-lh);
+  color: var(--ink-muted);
+}
+.opt {
+  display: flex; align-items: center; gap: var(--sp-3);
+  width: 100%; min-height: 44px; padding: var(--sp-2) var(--sp-3);
+  border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-body);
+  font-family: var(--font-ui); font-size: var(--fs-body); line-height: var(--fs-body-lh);
+  text-align: left; cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.opt:hover { background: var(--veil-hover); }
+.opt:focus-visible {
+  outline: 2px solid transparent; outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
+}
+/* 单选圈（component-spec §4.9）：20×20、1.5px 边、选中 = 蓝实心 + 6px 内核点 */
+.opt__dot {
+  position: relative;
+  width: 20px; height: 20px; flex: none;
+  border-radius: var(--r-round);
+  border: 1.5px solid var(--ink-disabled);
+  background: var(--surface-card);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.opt__dot::after {
+  content: ""; width: 6px; height: 6px; border-radius: var(--r-pill);
+  background: var(--ink-on-role); opacity: 0; transform: scale(.6);
+  transition: opacity var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-rebound);
+}
+.opt[aria-checked="true"] .opt__dot { background: var(--role-blue); border-color: var(--role-blue); }
+.opt[aria-checked="true"] .opt__dot::after { opacity: 1; transform: scale(1); }
+.opt[aria-checked="true"] { font-weight: var(--fw-medium); color: var(--ink-strong); }
+.opt__key {
+  flex: none; width: 20px;
+  font-family: var(--font-mono); font-size: var(--fs-meta);
+  color: var(--ink-muted);
+}
+.opt__t { flex: 1 1 auto; }
+.opt__t code { font-family: var(--font-mono); font-size: var(--fs-meta); }
+
+/* ---- 作答区 = 明显的分隔区（decisions.md 7.4） ---- */
+.answer-zone { margin-bottom: var(--sp-4); }
+/* 淡结构线：1px --rule-hair（layout-spec §4.1：2px 结构线只有两个位置，其余 1px） */
+.answer-zone__rule {
+  height: var(--lw-hair); background: var(--rule-hair); border: 0; margin: 0 0 var(--sp-3);
+}
+.answer-zone__label {
+  display: block;
+  font-size: var(--fs-label); line-height: var(--fs-label-lh);
+  font-weight: var(--fw-semibold); letter-spacing: .04em;
+  color: var(--ink-muted);
+  margin-bottom: var(--sp-2);
+}
+/* 沉底块（decisions.md A-23：近黑深底退出内容块）+ 2px 单侧结构线 */
+.ink-block {
+  width: fit-content; max-width: 100%;
+  background: var(--mk-sunken); color: var(--ink-strong);
+  border-radius: var(--r-md); box-shadow: var(--elev-1);
+  padding: var(--sp-4) var(--sp-5);
+  display: flex; align-items: baseline; gap: var(--sp-4);
+  position: relative;
+}
+/* 2px 单侧结构线：底色差之外再补一根线，边界才立得住（A-23-4） */
+.ink-block::before {
+  content: ""; position: absolute; left: 0; top: var(--sp-3); bottom: var(--sp-3);
+  width: var(--lw-structure); border-radius: var(--r-pill);
+  background: var(--rule-structure);
+}
+.ink-block__key {
+  flex: none;
+  font-family: var(--font-mono); font-size: var(--fs-display); line-height: var(--fs-display-lh);
+  font-weight: var(--fw-bold); color: var(--ink-strong);
+}
+.ink-block__t { font-size: var(--fs-reading); line-height: var(--fs-reading-lh); }
+.ink-block__t code { font-family: var(--font-mono); font-size: var(--fs-sub); }
+
+/* ---- 解析纸 = 与题面同级的另一张纸（decisions.md 7.3） ---- */
+.paper--analysis { margin-bottom: var(--sp-5); }
+.paper--analysis::before { background: var(--rule-structure); }
+.paper__kick {
+  font-family: var(--font-ui);
+  font-size: var(--fs-sub); line-height: var(--fs-sub-lh);
+  font-weight: var(--fw-semibold); color: var(--ink-strong);
+  margin: 0 0 var(--sp-3);
+}
+
+/* ---- 导航行（上一题 / 不会 / 下一题） ---- */
+.pagenav {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: var(--lw-hair) solid var(--rule-hair);
+}
+.pagenav__spacer { flex: 1 1 auto; }
+
+
+/* ============================================================================
+   §5 右栏（Agent 对话态）
+   ----------------------------------------------------------------------------
+   layout-spec §6.0：右栏任一时刻**只显示一个视图**（会话列表 ⇄ 对话）。
+   本页画**对话态**，不画会话列表。
+   ========================================================================= */
+.col--right {
+  min-height: 0; display: flex; flex-direction: column;
+  border-left: var(--lw-hair) solid var(--rule-hair);
+  background: var(--surface-base);
+  position: relative;
+}
+.agent-head {
+  flex: none;
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: var(--lw-hair) solid var(--rule-hair);
+}
+/* 图标按钮（component-spec §4.4）：40×40、圆角 12px、命中区 44px、零描边。
+   ⚠️ 不复用 _base.css 的 .mk-btn-icon —— 它没写 `border: 0`，UA 默认边框会露出来。 */
+.icon-btn {
+  position: relative; flex: none;
+  width: 40px; height: 40px; min-height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-muted); cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out),
+              color var(--dur-fast) var(--ease-out);
+}
+.icon-btn::before {
+  content: ""; position: absolute; inset: -2px; min-width: 44px; min-height: 44px;
+}
+.icon-btn:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.icon-btn:active { background: var(--veil-active); }
+.icon-btn:focus-visible {
+  outline: 2px solid transparent; outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
+}
+.icon-btn svg {
+  width: 20px; height: 20px; display: block;
+  fill: none; stroke: currentColor; stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.agent-head__t {
+  flex: 1 1 auto; min-width: 0;
+  font-size: var(--fs-sub); line-height: var(--fs-sub-lh);
+  font-weight: var(--fw-semibold); color: var(--ink-strong);
+}
+.model-chip {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 30px; padding: var(--sp-1) var(--sp-3);
+  border: var(--lw-hair) solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-strong);
+  font-family: var(--font-ui); font-size: var(--fs-label); line-height: var(--fs-label-lh);
+  cursor: pointer; flex: none;
+}
+.model-chip:hover { background: var(--veil-hover); }
+.model-chip__caret { color: var(--ink-faint); font-size: 10px; }
+
+/* 消息流（卡片流） */
+.stream {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  padding: var(--sp-3) var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+}
+.msg {
+  border-radius: var(--r-md); box-shadow: var(--elev-1);
+  padding: var(--sp-3) var(--sp-4);
+}
+.msg--agent { background: var(--surface-card); color: var(--ink-body); }
+/* 用户的话 = 沉底层（A-23）：浅底深字 + 2px 单侧结构线，边界不靠深色块 */
+.msg--user {
+  position: relative;
+  background: var(--mk-sunken); color: var(--ink-body); box-shadow: var(--elev-1);
+}
+.msg--user::before {
+  content: ""; position: absolute; left: 0; top: var(--sp-3); bottom: var(--sp-3);
+  width: var(--lw-structure); border-radius: var(--r-pill);
+  background: var(--rule-structure);
+}
+.msg__who {
+  font-size: var(--fs-micro); line-height: var(--fs-micro-lh);
+  color: var(--ink-faint); margin-bottom: var(--sp-1);
+}
+.msg--user .msg__who { color: var(--ink-muted); }
+.msg__t {
+  margin: 0; font-size: var(--fs-meta); line-height: 1.7; color: var(--ink-body);
+}
+.msg--user .msg__t { color: var(--ink-body); }
+.msg__t em { font-style: italic; }
+/* 工具调用卡（折叠；摘要 ≤ 240 字） */
+.msg--tool { background: var(--surface-card); padding: 0; overflow: hidden; }
+.tool__head {
+  width: 100%; display: flex; align-items: center; gap: var(--sp-2);
+  min-height: 40px; padding: var(--sp-2) var(--sp-4);
+  border: 0; background: transparent; color: var(--ink-strong);
+  font-family: var(--font-ui); font-size: var(--fs-meta); text-align: left; cursor: pointer;
+}
+.tool__head:hover { background: var(--veil-hover); }
+.tool__name { font-family: var(--font-mono); font-weight: var(--fw-semibold); }
+.tool__sum {
+  flex: 1 1 auto; min-width: 0;
+  font-size: var(--fs-micro); line-height: var(--fs-micro-lh); color: var(--ink-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tool__caret { color: var(--ink-faint); font-size: 10px; flex: none; }
+.tool__body {
+  padding: 0 var(--sp-4) var(--sp-3);
+  font-size: var(--fs-micro); line-height: 1.7; color: var(--ink-muted);
+}
+
+/* 上下文 chips（横向滚动胶囊） */
+.ctx {
+  flex: none;
+  display: flex; gap: var(--sp-2);
+  padding: 0 var(--sp-4) var(--sp-3);
+  overflow-x: auto;
+}
+.chip {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  height: 28px; padding: 0 var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--surface-card); color: var(--ink-muted);
+  box-shadow: var(--elev-1);
+  font-size: var(--fs-label); line-height: var(--fs-label-lh);
+  white-space: nowrap; flex: none;
+}
+.chip--blue { background: var(--role-blue-wash); color: var(--role-blue); box-shadow: none; }
+
+/* 执行计划 · 圆点时间线（component-spec §4.26 / layout-spec §6.4） */
+.plan {
+  flex: none; margin: 0 var(--sp-4) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-card); border-radius: var(--r-md); box-shadow: var(--elev-1);
+}
+.plan__t {
+  font-size: var(--fs-label); line-height: var(--fs-label-lh);
+  font-weight: var(--fw-semibold); color: var(--ink-strong);
+  margin-bottom: var(--sp-2);
+}
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li {
+  position: relative;
+  display: flex; align-items: center; gap: var(--sp-3);
+  min-height: 36px; padding: 0;
+}
+.timeline li::before {
+  content: ""; position: absolute; left: 4px; top: 0; bottom: 0;
+  width: var(--lw-structure); background: var(--rule-structure);
+  opacity: .35;
+}
+.timeline li:first-child::before { top: 18px; }
+.timeline li:last-child::before { bottom: 18px; }
+.timeline .mk-dot { position: relative; z-index: 1; flex: none; }
+.timeline__t {
+  flex: 1 1 auto; min-width: 0;
+  font-size: var(--fs-meta); line-height: var(--fs-meta-lh); color: var(--ink-body);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.timeline__s {
+  flex: none;
+  font-size: var(--fs-micro); line-height: var(--fs-micro-lh); color: var(--ink-faint);
+}
+
+/* 贴底大圆角输入区（decisions.md 10.2 / layout-spec §6.3；圆角统一 12px） */
+.composer-wrap { flex: none; padding: 0 var(--sp-4) var(--sp-4); }
+.composer {
+  min-height: 88px; padding: var(--sp-3) var(--sp-4);
+  border: var(--lw-hair) solid var(--rule-control); border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-body);
+  font-family: var(--font-ui); font-size: var(--fs-body); line-height: var(--fs-body-lh);
+  box-shadow: var(--elev-1);
+  display: flex; flex-direction: column; gap: var(--sp-2);
+  transition: border-color var(--dur-base) var(--ease-standard),
+              transform var(--dur-base) var(--ease-out),
+              box-shadow var(--dur-base) var(--ease-out);
+}
+.composer:focus-within {
+  border-color: var(--focus-outer);
+  transform: translateY(-2px);
+  box-shadow: var(--elev-2);
+}
+.composer__ph {
+  flex: 1 1 auto;
+  font-size: var(--fs-meta); line-height: var(--fs-meta-lh); color: var(--ink-faint);
+}
+.composer__row { display: flex; align-items: center; gap: var(--sp-2); }
+/* 发送按钮 = **主要动作** ⇒ 学习蓝实心 + 纸白字（decisions.md A-35）。
+   配额写死「蓝 = 主要动作 + 链接 + 当前选中」；近黑面（--surface-code）
+   只留给代码块 / 等宽代码区，不得用于任何产品控件。
+   配色与 _base.css 的 .mk-btn-primary 同一套：--role-blue + --ink-on-role
+   （浅色主题纸白 #fffdf7，夜纸按权威表取深墨 #14120f —— 夜纸的蓝是亮蓝）。 */
+.send {
+  min-height: 34px; padding: 0 var(--sp-4);
+  border: 0; border-radius: var(--r-md);
+  background: var(--role-blue); color: var(--ink-on-role);
+  font-family: var(--font-ui); font-size: var(--fs-body); font-weight: var(--fw-medium);
+  cursor: pointer; box-shadow: var(--elev-1);
+  transition: background-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out);
+}
+.send:hover { background: var(--role-blue-press); }
+.send:active { transform: translateY(1px); box-shadow: none; }
+/* 角色填充控件的焦点环走「双环规则」（权威表 §8）：内圈贴控件自身填色 */
+.send:focus-visible {
+  outline: 2px solid transparent; outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-inner), 0 0 0 4px var(--focus-outer);
+}
+
+
+/* ============================================================================
+   §6 底部 mockup 声明条
+   ⚠️ 近黑底**保留**（decisions.md A-35）：它是**评审批注**，不是产品面 ——
+   保留它正是为了让人一眼分清哪些是界面、哪些是评审批注。
+   ⚠️ 用 --mk-note（mockup 局部），**不是** --surface-code —— 后者只服务代码块。
+   ========================================================================= */
+.mocknote {
+  flex: none; padding: var(--sp-2) var(--sp-4);
+  background: var(--mk-note); color: var(--ink-inverse);
+  font-size: var(--fs-micro); line-height: var(--fs-micro-lh);
+  display: flex; align-items: center; gap: var(--sp-3);
+}
+.mocknote b { color: var(--ink-inverse); }
+.mocknote a { color: var(--ink-inverse); }
+</style>
+</head>
+<body>
+
+<!-- ==========================================================================
+   图标精灵（内联）
+   ----------------------------------------------------------------------------
+   内容与 `icons.svg` 逐字一致（同一套资产：练习=翻开的书 / 试卷=一叠纸 /
+   知识点=书签 / 图谱=节点连线 / 记录=笔记本；写意线稿 + 淡彩 + 克制高光）。
+   ⚠️ 为什么内联而不是引用 icons.svg 里的 symbol：浏览器把每个 file:// 文档当作
+   **唯一安全源**，外部 <use> 在 file:// 下被直接拦截（控制台报 "Unsafe attempt to
+   load URL … 'file:' URLs are treated as unique security origins"），
+   双击打开时 5 个导航图标会整片消失。内联后 file:// 与 http:// 渲染完全一致。
+   资产真源仍是 `icons.svg`，改图请改那份再同步回来。
+   ========================================================================= -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute">
+
+  <!-- 练习 :: 翻开的书 -->
+  <symbol id="icon-practice" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15.8 10.2C12.3 7.9 7.6 6.4 4.3 7.3c-.7.2-1.1.8-1.1 1.5v13.6c0 .9.8 1.7 1.7 1.5 3.5-.7 7.4.4 10.9 2.8z"
+            fill="var(--art-paper)"/>
+      <path d="M15.8 10.2c3.5-2.3 8.2-3.8 11.5-2.9.7.2 1.1.8 1.1 1.5v13.6c0 .9-.8 1.7-1.7 1.5-3.5-.7-7.4.4-10.9 2.8z"
+            fill="var(--art-paper)"/>
+      <path d="M15.8 10.2v16.5" fill="none"/>
+      <path d="M7.6 12.4c2.5-.3 4.8.4 6.7 1.6M24 12.4c-2.5-.3-4.8.4-6.7 1.6"
+            fill="none" stroke-width="1.1" opacity=".5"/>
+      <path d="M7.6 16.6c2.3-.2 4.4.4 6.1 1.4M24 16.6c-2.3-.2-4.4.4-6.1 1.4"
+            fill="none" stroke-width="1.1" opacity=".38"/>
+    </g>
+    <path d="M4.1 18.2c3.2-.5 6.6.5 9.6 2.4l.6 2.6c-3.5-.8-7.4.4-10.9 2.8z"
+          fill="var(--mk-wash)" opacity=".9"/>
+    <path d="M15.1 10.6v15.6" fill="none" stroke="var(--art-highlight)" stroke-width="1.4"
+          stroke-linecap="round"/>
+  </symbol>
+
+  <!-- 试卷 :: 一叠纸 -->
+  <symbol id="icon-exam" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="10.4" y="4.6" width="14.8" height="17.8" rx="2.6" fill="var(--art-paper)"/>
+      <rect x="8.2" y="7.2" width="14.8" height="17.8" rx="2.6" fill="var(--art-paper)"/>
+      <rect x="6" y="9.8" width="14.8" height="17.8" rx="2.6" fill="var(--mk-wash)"/>
+      <path d="M9.4 14.6h7.9M9.4 18.4h7.9M9.4 22.2h5.1"
+            fill="none" stroke-width="1.2" opacity=".55"/>
+    </g>
+    <path d="M12.2 12.4h5.2" fill="none" stroke="var(--art-highlight)" stroke-width="1.6"
+          stroke-linecap="round"/>
+  </symbol>
+
+  <!-- 知识点 :: 书签 -->
+  <symbol id="icon-kp" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.6 4.6h12.2c.9 0 1.6.7 1.6 1.6v20.6l-7.7-4.5-7.7 4.5V6.2c0-.9.7-1.6 1.6-1.6z"
+            fill="var(--mk-wash)"/>
+      <path d="M5.2 9.4v16.6l3.6-2.1" fill="none" stroke-width="1.4" opacity=".5"/>
+      <path d="M13.4 11.2h7.4M13.4 15.2h5.2" fill="none" stroke-width="1.1" opacity=".55"/>
+    </g>
+    <path d="M11.4 6.4h9.4" fill="none" stroke="var(--art-highlight)" stroke-width="1.6"
+          stroke-linecap="round"/>
+  </symbol>
+
+  <!-- 图谱 :: 节点连线 -->
+  <symbol id="icon-graph" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.2 22.4 15.4 10.6M15.4 10.6l7.2 6M9.2 22.4h13.4" fill="none"/>
+      <circle cx="15.4" cy="9.4" r="3.4" fill="var(--mk-wash)"/>
+      <circle cx="8.6" cy="23" r="2.8" fill="var(--art-paper)"/>
+      <circle cx="23.4" cy="16.9" r="2.8" fill="var(--art-paper)"/>
+      <circle cx="15.4" cy="9.4" r="3.4" fill="none" stroke-width="1.7"/>
+    </g>
+    <circle cx="14.4" cy="8.4" r="1.1" fill="var(--art-highlight)"/>
+  </symbol>
+
+  <!-- 记录 :: 笔记本 -->
+  <symbol id="icon-record" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8.2" y="4.4" width="17.2" height="23.2" rx="2.6" fill="var(--art-paper)"/>
+      <path d="M12.6 4.4h12.8v23.2H12.6a2 2 0 0 1-2-2V6.4a2 2 0 0 1 2-2z" fill="var(--mk-wash)"/>
+      <path d="M10.6 4.4v23.2" fill="none"/>
+      <path d="M15.6 11.4h7.6M15.6 15.6h7.6M15.6 19.8h4.8"
+            fill="none" stroke-width="1.1" opacity=".55"/>
+      <path d="M6.4 9.6c1.3-.7 2.6-.7 3.9 0M6.4 15.8c1.3-.7 2.6-.7 3.9 0M6.4 22c1.3-.7 2.6-.7 3.9 0"
+            fill="none" stroke-width="1.2" opacity=".65"/>
+    </g>
+    <path d="M14.6 7h8.8" fill="none" stroke="var(--art-highlight)" stroke-width="1.6"
+          stroke-linecap="round"/>
+  </symbol>
+
+</svg>
+
+<!-- ==========================================================================
+     顶栏（三段式：品牌 / 当前身份 / 动作）
+     ========================================================================== -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand__mark" aria-hidden="true">夜</div>
+    <span class="brand__name">lesson-kit</span>
+  </div>
+
+  <span style="width:1px;height:24px;background:var(--rule-hair)" aria-hidden="true"></span>
+
+  <div class="identity">
+    <span class="identity__ws">推导学习</span>
+    <span class="identity__sep" aria-hidden="true">/</span>
+    <span class="identity__course">离散数学</span>
+    <button type="button" class="lens">
+      <span class="mk-dot mk-dot--blue mk-dot--ring" aria-hidden="true"></span>
+      <span class="mono">ch06</span>
+      <span class="lens__caret" aria-hidden="true">▼</span>
+    </button>
+  </div>
+
+  <div class="mk-spacer"></div>
+
+  <div class="actions">
+    <button type="button" class="mk-btn mk-btn-text" style="min-height:34px;padding:4px 12px">搜索</button>
+    <button type="button" class="switch" id="mk-theme" aria-pressed="false">
+      <span>夜纸</span>
+      <span class="switch__track" aria-hidden="true"><span class="switch__knob"></span></span>
+    </button>
+    <button type="button" class="mk-btn mk-btn-secondary" style="min-height:34px;padding:4px 12px">Agent 对话</button>
+  </div>
+</header>
+
+<!-- ==========================================================================
+     三栏
+     ========================================================================== -->
+<div class="layout">
+
+  <!-- ===================== 左栏（练习选中） ===================== -->
+  <nav class="col--left" aria-label="主导航">
+    <div class="nav-group">
+      <div class="nav-group__t">学习</div>
+      <div class="nav">
+        <button type="button" class="nav-item is-active" aria-current="page">
+          <span class="mk-icon-disc mk-icon-disc--blue" style="width:32px;height:32px" aria-hidden="true">
+            <svg viewBox="0 0 32 32" style="width:24px;height:24px;--mk-wash:var(--art-wash-blue)">
+              <use href="#icon-practice"></use>
+            </svg>
+          </span>
+          <span class="nav-item__t">练习</span>
+        </button>
+        <button type="button" class="nav-item">
+          <span class="mk-icon-disc mk-icon-disc--yellow" style="width:32px;height:32px" aria-hidden="true">
+            <svg viewBox="0 0 32 32" style="width:24px;height:24px;--mk-wash:var(--art-wash-yellow)">
+              <use href="#icon-exam"></use>
+            </svg>
+          </span>
+          <span class="nav-item__t">试卷</span>
+        </button>
+        <button type="button" class="nav-item">
+          <span class="mk-icon-disc mk-icon-disc--blue" style="width:32px;height:32px" aria-hidden="true">
+            <svg viewBox="0 0 32 32" style="width:24px;height:24px;--mk-wash:var(--art-wash-blue)">
+              <use href="#icon-kp"></use>
+            </svg>
+          </span>
+          <span class="nav-item__t">知识点</span>
+        </button>
+        <button type="button" class="nav-item">
+          <span class="mk-icon-disc mk-icon-disc--mute" style="width:32px;height:32px" aria-hidden="true">
+            <svg viewBox="0 0 32 32" style="width:24px;height:24px;--mk-wash:var(--art-wash-blue)">
+              <use href="#icon-graph"></use>
+            </svg>
+          </span>
+          <span class="nav-item__t">图谱</span>
+        </button>
+        <button type="button" class="nav-item">
+          <span class="mk-icon-disc mk-icon-disc--blue" style="width:32px;height:32px" aria-hidden="true">
+            <svg viewBox="0 0 32 32" style="width:24px;height:24px;--mk-wash:var(--art-wash-blue)">
+              <use href="#icon-record"></use>
+            </svg>
+          </span>
+          <span class="nav-item__t">记录</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group__t">设置</div>
+      <div class="nav">
+        <button type="button" class="nav-item">
+          <span class="nav-item__t">偏好与主题</span>
+        </button>
+        <button type="button" class="nav-item">
+          <span class="nav-item__t">数据与导出</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group__t">优先回看</div>
+      <div class="review">
+        <div class="review-item">
+          <span class="mk-dot mk-dot--red mk-dot--cross" aria-hidden="true"></span>
+          <span class="review-item__t">补集法的计数边界</span>
+        </div>
+        <div class="review-item">
+          <span class="mk-dot mk-dot--yellow mk-dot--dash" aria-hidden="true"></span>
+          <span class="review-item__t">加法原理与乘法原理</span>
+        </div>
+        <div class="review-item">
+          <span class="mk-dot mk-dot--blue mk-dot--ring" aria-hidden="true"></span>
+          <span class="review-item__t">可重排列与不可重排列</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===================== 中栏（练习页 · 进行中） ===================== -->
+  <main class="col--middle" id="middle-page">
+
+    <!-- ---- 活动浮层小卡：**中栏右上角**（decisions.md A-25） ---- -->
+    <div class="mid-float">
+      <div class="activity" role="status">
+        <div class="activity__head">
+          <span class="mk-dot mk-dot--blue mk-dot--half" aria-hidden="true"></span>
+          <span class="activity__t">正在处理</span>
+          <button type="button" class="activity__fold" aria-label="收起 Agent 活动">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.75"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6l5 5 5-5"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="activity__d">生成针对性复习题</div>
+        <div class="mk-bar"><div class="mk-bar__fill" style="width:66%"></div></div>
+      </div>
+    </div>
+
+    <div class="page">
+
+      <!-- ---- 页面标题带：面包屑 + 标题 + 摘要 + 动作区 ---- -->
+      <header class="page-head">
+        <nav class="crumb" aria-label="当前位置">
+          <span>练习</span>
+          <span class="crumb__sep" aria-hidden="true">/</span>
+          <span>试卷</span>
+        </nav>
+
+        <div class="page-head__row">
+          <div class="page-head__main">
+            <div class="title-band">
+              <h1 class="page-head__t">计数原理 · 练习</h1>
+            </div>
+            <p class="summary">
+              <span class="summary__i">共 24 题</span>
+              <span class="summary__i">
+                <span class="mk-dot mk-dot--check summary__dot" aria-hidden="true"></span>已作答 · 15
+              </span>
+              <span class="summary__i">
+                <span class="mk-dot mk-dot--red mk-dot--cross summary__dot" aria-hidden="true"></span>不会 · 3
+              </span>
+              <span class="summary__i">
+                <span class="mk-dot mk-dot--mute mk-dot--ring summary__dot" aria-hidden="true"></span>待完成 · 6
+              </span>
+            </p>
+          </div>
+
+          <div class="page-head__actions">
+            <button type="button" class="mk-btn mk-btn-secondary">暂停练习</button>
+            <button type="button" class="mk-btn mk-btn-primary">提交试卷</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- ---- 题号导航（紧凑行 · 无纸面；四态各有几何 + 颜色，零状态文字） ---- -->
+      <nav class="qnav" aria-label="答题情况与题号">
+        <button type="button" class="qcell qcell--answered" aria-label="第 1 题，判定正确">1<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 2 题，判定正确">2<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 3 题，判定正确">3<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--skip" aria-label="第 4 题，标记不会">4<span class="mk-dot mk-dot--red mk-dot--cross qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 5 题，判定正确">5<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 6 题，判定正确">6<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 7 题，判定正确">7<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 8 题，判定正确">8<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 9 题，判定正确">9<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 10 题，判定正确">10<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 11 题，判定正确">11<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--current" aria-label="第 12 题，判定正确，当前题" aria-current="step">12</button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 13 题，判定正确">13<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 14 题，判定正确">14<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 15 题，判定正确">15<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--skip" aria-label="第 16 题，标记不会">16<span class="mk-dot mk-dot--red mk-dot--cross qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--answered" aria-label="第 17 题，判定正确">17<span class="mk-dot mk-dot--check qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--todo" aria-label="第 18 题，未作答">18</button>
+        <button type="button" class="qcell qcell--todo" aria-label="第 19 题，未作答">19</button>
+        <button type="button" class="qcell qcell--todo" aria-label="第 20 题，未作答">20</button>
+        <button type="button" class="qcell qcell--skip" aria-label="第 21 题，标记不会">21<span class="mk-dot mk-dot--red mk-dot--cross qcell__mark" aria-hidden="true"></span></button>
+        <button type="button" class="qcell qcell--todo" aria-label="第 22 题，未作答">22</button>
+        <button type="button" class="qcell qcell--todo" aria-label="第 23 题，未作答">23</button>
+        <button type="button" class="qcell qcell--todo" aria-label="第 24 题，未作答">24</button>
+      </nav>
+
+      <!-- ---- 题面 = 一张独立的纸 ---- -->
+      <section class="paper" aria-label="题面">
+        <div class="paper__head">
+          <p class="qno">12</p>
+          <!-- 状态小圆点：颜色 + 几何双通道，零状态文字（判定正确 = 中性墨 + 勾形） -->
+          <span class="mk-dot mk-dot--check" aria-hidden="true"></span>
+          <span class="paper__kind">单选</span>
+        </div>
+
+        <p class="mk-reading paper__body">
+          How many strings are there of four lowercase letters that have the letter
+          <em>x</em> in them?
+        </p>
+
+        <fieldset class="options">
+          <legend>选择答案</legend>
+          <button type="button" class="opt" role="radio" aria-checked="true">
+            <span class="opt__dot" aria-hidden="true"></span>
+            <span class="opt__key" aria-hidden="true">A</span>
+            <span class="opt__t"><code>26⁴ − 25⁴ = 66351</code></span>
+          </button>
+          <button type="button" class="opt" role="radio" aria-checked="false">
+            <span class="opt__dot" aria-hidden="true"></span>
+            <span class="opt__key" aria-hidden="true">B</span>
+            <span class="opt__t"><code>4 · 26³ = 70304</code></span>
+          </button>
+          <button type="button" class="opt" role="radio" aria-checked="false">
+            <span class="opt__dot" aria-hidden="true"></span>
+            <span class="opt__key" aria-hidden="true">C</span>
+            <span class="opt__t"><code>25⁴ = 390625</code></span>
+          </button>
+          <button type="button" class="opt" role="radio" aria-checked="false">
+            <span class="opt__dot" aria-hidden="true"></span>
+            <span class="opt__key" aria-hidden="true">D</span>
+            <span class="opt__t"><code>26⁴ = 456976</code></span>
+          </button>
+        </fieldset>
+      </section>
+
+      <!-- ---- 作答区 = 明显的分隔区（淡结构线 + 「你的作答」标签 + 沉底块） ---- -->
+      <section class="answer-zone" aria-label="你的作答">
+        <hr class="answer-zone__rule">
+        <span class="answer-zone__label">你的作答</span>
+        <div class="ink-block">
+          <span class="ink-block__key" aria-hidden="true">A</span>
+          <span class="ink-block__t"><code>26⁴ − 25⁴ = 66351</code></span>
+        </div>
+      </section>
+
+      <!-- ---- 解析 = 与题面同级的另一张纸 ---- -->
+      <section class="paper paper--analysis" aria-label="解析">
+        <p class="paper__kick">解析</p>
+        <p class="mk-reading paper__body">
+          用补集法计数。长度为 4 的小写字母串共 <em>26</em>⁴ 个；其中不含
+          <em>x</em> 的串，每个位置有 25 种选择，共 <em>25</em>⁴ 个。
+          两类相减即得含 <em>x</em> 的串数：<em>26</em>⁴ − <em>25</em>⁴ =
+          456976 − 390625 = 66351。选 A。
+          选项 B 误把「<em>x</em> 出现的位置数」当作「<em>x</em> 出现一次」，漏掉了出现两次及以上的情况。
+        </p>
+      </section>
+
+      <!-- ---- 导航行 ---- -->
+      <nav class="pagenav" aria-label="题目导航">
+        <button type="button" class="mk-btn mk-btn-secondary">上一题</button>
+        <button type="button" class="mk-btn mk-btn-text">不会</button>
+        <button type="button" class="mk-btn mk-btn-primary">下一题</button>
+        <span class="pagenav__spacer"></span>
+      </nav>
+
+    </div>
+  </main>
+
+  <!-- ===================== 右栏（Agent 对话态） ===================== -->
+  <aside class="col--right" aria-label="Agent 对话">
+
+    <!-- ---- 活动浮层小卡已移出右栏（A-25）：归中栏右上角，见 <main> 顶部 ---- -->
+
+    <!-- ---- 对话头：返回列表（图标控件）+ 当前对话 + 模型 chip ---- -->
+    <div class="agent-head">
+      <button type="button" class="icon-btn" aria-label="返回对话列表" title="返回对话列表">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12.5 4.5L7 10l5.5 5.5"></path>
+        </svg>
+      </button>
+      <span class="agent-head__t">当前对话</span>
+      <button type="button" class="model-chip">
+        <span>当前模型</span>
+        <span class="model-chip__caret" aria-hidden="true">▼</span>
+      </button>
+    </div>
+
+    <!-- ---- 消息流 ---- -->
+    <div class="stream">
+      <div class="msg msg--user">
+        <div class="msg__who">你</div>
+        <p class="msg__t">第 12 题我选了 A，但我不确定「减掉不含 x 的串」这一步算的是不是重复了。</p>
+      </div>
+
+      <div class="msg msg--agent">
+        <div class="msg__who">Agent</div>
+        <p class="msg__t">
+          不重复。含 <em>x</em> 的串与不含 <em>x</em> 的串互为补集，求和时每个串恰好落进一类。
+          注意这里的计数单位是「长度为 4 的串」，不是「位置」，所以出现两次 <em>x</em> 的串
+          只会落在含 <em>x</em> 的那一侧一次。
+        </p>
+      </div>
+
+      <div class="msg msg--tool">
+        <button type="button" class="tool__head">
+          <span class="mk-dot mk-dot--blue mk-dot--filled" aria-hidden="true"></span>
+          <span class="tool__name">读取本章「计数原理」要点</span>
+          <span class="tool__sum">已检索本章 3 条要点，摘要 168 字。详细条目已折叠。</span>
+          <span class="tool__caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="tool__body">
+          摘要：加法原理用于「分类计数」、乘法原理用于「分步计数」；含重复元素时用补集法
+          往往更短，且必须保证补集与原集互斥。
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- 上下文 chips ---- -->
+    <div class="ctx" aria-label="当前上下文">
+      <span class="chip chip--blue">ch06 计数原理</span>
+      <span class="chip">范围 24 题</span>
+      <span class="chip">第 12 题</span>
+    </div>
+
+    <!-- ---- 执行计划 · 圆点时间线 ---- -->
+    <section class="plan" aria-label="执行计划">
+      <div class="plan__t">执行计划</div>
+      <ul class="timeline">
+        <li>
+          <span class="mk-dot mk-dot--blue mk-dot--filled" aria-hidden="true"></span>
+          <span class="timeline__t">读取第 12 题的题面与作答</span>
+          <span class="timeline__s">已完成</span>
+        </li>
+        <li>
+          <span class="mk-dot mk-dot--blue mk-dot--half" aria-hidden="true"></span>
+          <span class="timeline__t">归纳「补集法」的判定边界</span>
+          <span class="timeline__s">进行中</span>
+        </li>
+        <li>
+          <span class="mk-dot mk-dot--mute mk-dot--ring" aria-hidden="true"></span>
+          <span class="timeline__t">生成针对性复习题</span>
+          <span class="timeline__s">待办</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ---- 贴底大圆角输入区 ---- -->
+    <div class="composer-wrap">
+      <div class="composer" tabindex="0" role="textbox" aria-label="输入问题">
+        <div class="composer__ph">输入问题</div>
+        <div class="composer__row">
+          <span class="chip">@ 知识点</span>
+          <span class="chip">@ 题目</span>
+          <span class="mk-spacer"></span>
+          <button type="button" class="send">发送</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ==========================================================================
+     底部 mockup 声明条
+     ========================================================================== -->
+<div class="mocknote">
+  <b>这是静态 mockup，不含交互。</b>
+  <span>所有按钮、输入框、状态点均为静态占位；未连接任何请求，未实现任何状态机。
+        主题切换开关是本 mockup 唯一的脚本（仅翻转 <code>&lt;html data-theme&gt;</code>）。
+        导航图标已内联为 sprite，双击用 <code>file://</code> 打开也不会丢图。</span>
+  <span class="mk-spacer"></span>
+  <span>token 来源：night-paper-tokens.md §2 / §3 · decisions.md 收口基线 + A-1…A-21</span>
+  <a href="index.html" style="text-decoration:underline">← 回到规格总览</a>
+</div>
+
+<script>
+/* mockup 专用演示脚本：仅切换 <html> 的 data-theme 属性。
+   产品实现走权威表 §9.1 的首屏内联脚本 + wb_settings_<工作区> 持久化，本 mockup 不涉及。 */
+(function () {
+  var btn = document.getElementById('mk-theme');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var night = el.getAttribute('data-theme') === 'night';
+    el.setAttribute('data-theme', night ? 'day' : 'night');
+    btn.setAttribute('aria-pressed', night ? 'false' : 'true');
+  });
+})();
+</script>
+
+</body>
+</html>

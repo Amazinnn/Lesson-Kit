@@ -45,6 +45,9 @@ HEIGHT = 900
 VIEWS = [
     {"id": "practice-1440", "page": "practice", "w": 1440, "theme": "paper",
      "caption": "练习页 · 1440（A 档：三栏 280 / 740 / 420）"},
+    {"id": "practice-in-progress", "page": "practice", "w": 1440, "theme": "paper",
+     "start_practice": True, "query": "?paper=ps-002",
+     "caption": "练习页 · 1440 · 进行中（样板图 shell.html 对应的那一态）"},
     {"id": "practice-1280", "page": "practice", "w": 1280, "theme": "paper",
      "caption": "练习页 · 1280（B 档：收窄到 248 / 652 / 380）"},
     {"id": "practice-1024", "page": "practice", "w": 1024, "theme": "paper",
@@ -169,13 +172,21 @@ def capture(args):
                     " } catch (e) {}" % ("wb_settings_" + args.ws, view["theme"])
                 )
                 page = context.new_page()
-                url = args.base_url.rstrip("/") + PAGES[view["page"]].format(ws=args.ws)
+                url = args.base_url.rstrip("/") + PAGES[view["page"]].format(ws=args.ws) + view.get("query", "")
                 try:
                     page.goto(url, wait_until="load", timeout=30000)
                     try:
                         page.wait_for_load_state("networkidle", timeout=10000)
                     except Exception:
                         pass
+                    # 「进行中」那一态要点开练习（产品里没有直达链接）
+                    if view.get("start_practice"):
+                        try:
+                            page.wait_for_selector("#paper-start", state="visible", timeout=15000)
+                            page.click("#paper-start")
+                            page.wait_for_timeout(1200)
+                        except Exception as exc:
+                            print(f"  ! {view['id']} 起练习失败：{exc}")
                     # 字体没加载完就截图 ⇒ 两张图不可比
                     try:
                         page.evaluate("() => document.fonts.ready")
@@ -243,6 +254,39 @@ def _pixel_delta(before_png, after_png):
     return round(100.0 * changed / (a.size[0] * a.size[1]), 3)
 
 
+def capture_static(args):
+    """拍一张**静态 HTML**（样板图这类）—— 不需要起服务，走 file://。"""
+    from playwright.sync_api import sync_playwright
+
+    src = pathlib.Path(args.file).resolve()
+    if not src.is_file():
+        print("找不到文件:", src)
+        return 1
+    out = pathlib.Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True, args=BROWSER_ARGS)
+        try:
+            context = browser.new_context(
+                viewport={"width": args.width, "height": args.height},
+                device_scale_factor=1, color_scheme="light",
+                reduced_motion="no-preference", locale=LOCALE, timezone_id=TIMEZONE,
+            )
+            page = context.new_page()
+            page.goto(src.as_uri(), wait_until="load", timeout=30000)
+            try:
+                page.wait_for_load_state("networkidle", timeout=8000)
+            except Exception:
+                pass
+            _settle_animations(page)
+            page.wait_for_timeout(250)
+            page.screenshot(path=str(out), full_page=False)
+            print("captured:", out)
+        finally:
+            browser.close()
+    return 0
+
+
 def board(args):
     before_dir = pathlib.Path(args.before)
     after_dir = pathlib.Path(args.after)
@@ -251,6 +295,15 @@ def board(args):
     b_views = {v["id"]: v for v in b_index["views"]}
     a_views = {v["id"]: v for v in a_index["views"]}
 
+    # 参考列（靶子）：目录里放**与产品视图同名**的 PNG
+    reference = {}
+    reference_dir = pathlib.Path(args.reference) if args.reference else None
+    if reference_dir:
+        for vid in a_views:
+            candidate = reference_dir / (vid + ".png")
+            if candidate.is_file():
+                reference[vid] = candidate
+
     rows = []
     for vid, av in a_views.items():
         bv = b_views.get(vid)
@@ -258,7 +311,8 @@ def board(args):
             continue
         delta = _pixel_delta(before_dir / bv["file"], after_dir / av["file"])
         rows.append({"caption": av["caption"], "id": vid,
-                     "before": bv["file"], "after": av["file"], "delta": delta})
+                     "before": bv["file"], "after": av["file"], "delta": delta,
+                     "reference": reference.get(vid)})
 
     out = pathlib.Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -266,13 +320,16 @@ def board(args):
     for row in rows:
         row["before_href"] = os.path.relpath(before_dir / row["before"], out.parent)
         row["after_href"] = os.path.relpath(after_dir / row["after"], out.parent)
+        if row["reference"]:
+            row["reference_href"] = os.path.relpath(row["reference"], out.parent)
 
     html = _render(rows, b_index["anchor"], a_index["anchor"], out)
     out.write_text(html, encoding="utf-8")
     print("written:", out)
     for row in rows:
         mark = "—" if row["delta"] is None else f"{row['delta']:.3f}%"
-        print(f"  {row['id']:24} 像素差 {mark}")
+        print(f"  {row['id']:24} 像素差 {mark}"
+              + ("  [有靶子]" if row["reference"] else ""))
     return 0
 
 
@@ -283,10 +340,16 @@ def _render(rows, b_anchor, a_anchor, out_path):
     cards = []
     for row in rows:
         delta = "—" if row["delta"] is None else f"{row['delta']:.3f}%"
+        reference_cell = ""
+        if row.get("reference"):
+            reference_cell = f"""
+        <figure><figcaption>靶子 · 样板图基线</figcaption>
+          <img src="{esc(row['reference_href'])}" alt="reference {esc(row['id'])}"></figure>"""
         cards.append(f"""
     <section class="row">
-      <h2>{esc(row['caption'])}<span class="delta">像素差 {esc(delta)}</span></h2>
+      <h2>{esc(row['caption'])}<span class="delta">改前→改后 像素差 {esc(delta)}</span></h2>
       <div class="pair">
+        {reference_cell}
         <figure><figcaption>改前</figcaption>
           <img src="{esc(row['before_href'])}" alt="before {esc(row['id'])}"></figure>
         <figure><figcaption>改后</figcaption>
@@ -353,14 +416,24 @@ def main(argv=None):
     cap.add_argument("--repo-root", default=".")
     cap.add_argument("--only", nargs="*", default=None)
 
-    brd = sub.add_parser("board", help="两份对照出板")
+    static = sub.add_parser("capture-static", help="拍一张静态 HTML（样板图等）")
+    static.add_argument("--file", required=True)
+    static.add_argument("--out", required=True)
+    static.add_argument("--width", type=int, default=1440)
+    static.add_argument("--height", type=int, default=900)
+
+    brd = sub.add_parser("board", help="两份对照出板（可加靶子列）")
     brd.add_argument("--before", required=True)
     brd.add_argument("--after", required=True)
     brd.add_argument("--out", required=True)
+    brd.add_argument("--reference", default=None,
+                     help="靶子截图目录（文件名与产品视图 id 同名）")
 
     args = parser.parse_args(argv)
     if args.command == "capture":
         return capture(args)
+    if args.command == "capture-static":
+        return capture_static(args)
     return board(args)
 
 

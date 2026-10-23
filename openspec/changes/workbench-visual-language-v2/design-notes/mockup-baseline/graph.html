@@ -1,0 +1,1519 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="day">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>知识图谱页 · 定稿视觉 mockup</title>
+<link rel="stylesheet" href="_tokens.css">
+<link rel="stylesheet" href="_base.css">
+<style>
+/* ============================================================================
+   graph.html — 知识图谱页「定稿视觉 mockup」
+   ============================================================================
+   本版按 **A-28**（Obsidian 式渲染，依据 tmp/frontend-audit/OBSIDIAN-GRAPH.md，
+   来自本机 Obsidian 安装包 app.js 源码实测）重画节点视觉语言。
+
+   ── A-28 的关键模型 ──────────────────────────────────────────────────────────
+     · **节点 = 单层实心圆**：无描边、无阴影、无渐变、无内外同心圆。
+       （A-28.1 纠正：Obsidian 的节点就是单层实心圆；此前参照的
+        frontend/editable-graph 是 halo + core 双层 + 1.4px 描边 + drop-shadow，
+        那正是「塑料感」的来源。）
+     · **半径 5–13 屏幕 px**，由**当前投影的量**单调映射；关系结构投影用度数。
+     · **量值投影的半径 = 6.5–13px**（直径 13–26px）**随量映射** ——
+       **A-34 裁定**（不再是 A-28「半径下限 13px」的字面读）：
+       A-28 的**目的**是「给 12px 的数字腾出**直径 13px**」⇒ **半径下限 6.5px**；
+       半径**不是**恒 13px（恒定会同时杀死量值投影的「值越大点越大」编码）。
+       结构投影与状态投影仍是 5–13px 随量映射。数字 12px 屏幕恒定；
+       数字只出现在「题目数量 / 重要性」两个投影，结构与状态投影无数字。
+       （本图实测：score=0 ⇒ 6.5px；score=.9 ⇒ 12.66px；score=1 的极值节点
+       ⇒ 13.0px —— 即 5–13 区间上界；**12.66px 是 score=.9 那个节点的实测值，
+       不是区间上界**。）
+     · **缩放只改间距，不改尺寸**：节点 / 标签 / 边宽的屏幕尺寸恒定，
+       画布缩放只改变节点之间的间距（A-28.2，与 D-1 同向）。
+     · **标签**：12px 屏幕恒定；偏移 = **r + 5**（圆底到字顶）；
+       缩放 < 0.5 时按 **log2 淡出**（不是继续缩小）。
+     · **边**：屏幕恒定 **1.25px**；非邻接边 **alpha 0.2**。
+     · **选中态**：换色 + 1px 描边环 + 点放大 + 标签提亮（无阴影）。
+
+   ── 权威依据 ────────────────────────────────────────────────────────────────
+     tmp/frontend-audit/OBSIDIAN-GRAPH.md（A-28；源码实证 raw@ 字符偏移）
+     openspec/changes/graph-node-visual-language/design.md
+        D-1 屏幕空间缩放补偿 · D-3 尺寸映射 · D-4 暖色板 · D-5 四投影色键
+        D-6 标签系统 · D-7 端点接外环 · D-8 选中/悬停 · D-9 底噪 · D-12 夜纸
+     openspec/changes/graph-node-visual-language/specs/graph-visual-language/spec.md
+     openspec/changes/workbench-visual-language-v2/decisions.md
+        G-4（底噪保留）· G-7 / G-16（暖色板，脱离三角色配额）
+        G-20 / G-21 / G-22（各投影色键）· A-10 / A-15 / A-17
+        **A-34**（量值投影半径读法：6.5–13px 随量映射）
+
+   ── 图谱专属色板（独立命名 `--gn-*`，**不复用** `_tokens.css` 的 `--role-*`）──
+     图谱是数据可视化区，不是操作界面（G-7）；量值投影用暖色相（G-16 / G-20）。
+     ⇒ 图谱拥有自己的暖色板，**不受全站「蓝 / 黄 / 红」三角色配额约束**。
+     色值转写自 design.md §D-4（亮纸 / 夜纸各一套），未自造：
+
+       墨阶三档（关系结构投影 · G-22）        亮纸        夜纸
+         最深（选中填充 / 描边环）            #2f2b24    #efe8db
+         中档（常态填充）                      #6f6759    #9b9384
+         最淡（极弱 / 图例示意）                #9c9184    #78705f
+         ✅ 最淡一档已对齐 design.md §D-4 的**加深版**（旧值 #ded6c6 / #3a362e
+           已作废 —— 那两档对纸面的对比度只有 1.42:1，达不到 D-2 的 3:1 硬要求）。
+           该 token 在本 mockup 里**未被任何规则引用**（零视觉影响），
+           但值必须与 design.md 一致，避免下一个人照它实现。
+
+       量值橙阶（题目数量 / 重要性 · G-20）    亮纸        夜纸
+         1 最小值                            #b25d24    #be752d
+         2                                   #a15421    #cd8a45
+         3                                   #8a4519    #dca067
+         4 最大值                            #7d2f12    #eba87a
+         方向规则：值越大，与纸面对比越强（亮纸变深 / 夜纸变亮）
+         ⚠ 橙阶取自 design.md §D-4 的**加深版**：亮纸第 1/2 档已由旧值
+           #d4702f / #c0601f 加深为 #b25d24 / #a15421（色相、档序、语义、单位数
+           全不变，只加深前两档）。
+
+       学习状态四色（G-21）                   亮纸        夜纸
+         未学 new                            #8a8377    #9a938a
+         复习 review                         #b08a12    #d9a441
+         掌握 mastered                       #d4702f    #e58a4f
+         需突破 work                         #b03a2a    #d4695a
+         ⚠ 状态四色 design.md 明写**一字未改**（A-24.6）。其中「掌握」的
+           #d4702f 恰好与量值橙阶的**旧**第 1 档同值 —— 那是两个不同的色键
+           （状态是分类色、橙阶是单色阶），二者不在同一投影内出现，**不是**漏改。
+
+       标签文字                              #5c5549    #c9c2b5
+       标签（选中态提亮）                     #221f1a    #f4ede0
+
+       关系线（亮纸逐值不变 · G-18；夜纸换值是主题适配 · D-12.2）
+         先修 prereq                         #456fc9    #7d9ad8
+         相关 related                        #757068    #9b958a
+         应用 apply                          #c3a128    #cbb463
+         对比 contrast                       #c75a52    #d08a83
+         隐含 legacy                         #bbb4a9    #4e4941
+
+     「相关」色 #757068 是**图例的修正**（现状图例写 #aaa399，与 WebGL 实况
+     rgb(117,112,104) 不一致），不是线的改动 —— D-10 第 2 项。
+
+   ── 圈心数字的对比度（数值实算，取自 design.md §D-4）────────────────────────
+     数字 12px **直接坐在填充色上**（A-24.4）⇒ **填充本身须 ≥ 4.5:1**：
+       亮纸  Q1 #b25d24 × 纸 #fffdf7 = 4.60:1 · Q2 #a15421 × 纸 = 5.43:1
+             Q3 #8a4519 × 纸 = 7.01:1 · Q4 #7d2f12 × 纸 = 9.03:1
+       夜纸  Q1 #be752d × 墨 #1c1a16 = 4.78:1 · Q2 #cd8a45 × 墨 = 6.05:1
+             Q3 #dca067 × 墨 = 7.67:1 · Q4 #eba87a × 墨 = 8.62:1
+     ⇒ **四档全部达标**（最差 4.60:1 ≥ 4.5:1）。
+       亮纸一律**纸色挖空**；夜纸一律**墨色**（分类色不承载数字）。
+       ⚠ 旧值 #d4702f / #c0601f 上纸色数字只有 3.35 / 4.18 ⇒ 达不到 4.5:1，
+         故 design.md 把前两档加深；本 mockup 已跟随加深版。
+
+   ── 契约漂移登记（不静默选边）────────────────────────────────────────────────
+     ① **经核实不成立**（2026-10-22 复核）：先前登记的「live spec
+        `graph-visual-language/spec.md` 的 Node appearance language 仍写
+        『two concentric circles / light inner core inside a solid outer ring』」
+        —— 该 spec 已被整体改写，现行文本是
+        「**Every graph node SHALL be drawn as a single solid circle** …
+        no visible outline, no drop shadow, no glow, no gradient, no inner
+        highlight and no visible halo」。
+        全文件 grep `concentric` / `同心` **0 命中** ⇒ 这条漂移**不成立**，
+        本图与该 spec 在「单层实心圆」上已一致。（本 mockup 不改 spec。）
+
+     ② **已消除（2026-10-22 本轮修复）**：同一 spec 的「Screen-space sizing」条款原写
+        「Under the formal-problem-count and importance projections the radius
+        SHALL be **13 screen pixels**」—— 那是 **A-33 第 ① 条的字面读**
+        （半径恒 13px），已被 **A-34 改写**为「半径下限 6.5px（直径 13px），
+        量值投影半径随量映射」。
+        ⇒ 该 spec 已按 **A-34** 做了一次 MODIFIED（本图按 A-34 画，随量映射，非恒 13px）。
+
+   ── 本 mockup 的简化与占位（逐条声明，不冒充实现）────────────────────────────
+     ① 节点为**静态排布**，**未模拟缩放行为**：A-28 的模型是「缩放只改间距，
+        节点 / 标签 / 边宽屏幕恒定」；本图只提供标签的**淡出演示**
+        （缩放档 1.00 / 0.75 / 0.45×，标签按 log2 淡出），**间距不变**。
+     ② 关系线为直线 / 微弧（产品是 WebGL 分层管道曲线）；端点按各投影的真实
+        外环半径逐条算到圆边缘（D-7）。
+     ③ 底噪光斑为**静态预渲染**的柔和色斑（D-9 方向），色相改暖以与图谱暖色板同源。
+     ④ 选中态「换色」在结构 / 量值投影成立；**学习状态是分类色、没有强度阶**，
+        选中时保留状态色（换色会丢掉状态语义），改由 1px 环 + 放大 + 标签提亮承担。
+     ⑤ 工具条、搜索、聚焦、缩放 ±、图例按钮均为**静态占位**，不连接任何请求。
+     ⑥ 右栏两态（会话列表 / 对话）用纯 CSS 切换，同屏**只呈现一态**。
+     ⑦ 圈心数字只在「题目数量 / 重要性」投影出现（D-1 原写
+        `clamp(12px, .34·D, 18px)`，按 A-28 **统一为 12px 屏幕恒定**，与标签同号）。
+   ========================================================================= */
+
+
+/* ============================================================================
+   §1 图谱专属色板（见文件头）—— 独立命名，不与 `--role-*` 混用
+   ========================================================================= */
+:root {
+  --gn-paper: var(--surface-sheet);   /* 图谱自己的纸面 token（A-16 / A-17） */
+
+  /* 墨阶三档 · 关系结构投影（G-22） */
+  --gn-ink-deep: #2f2b24;
+  --gn-ink-mid:  #6f6759;
+  --gn-ink-soft: #9c9184;
+
+  /* 量值橙阶 · 题目数量 / 重要性投影（G-20 / G-16）
+     取自 design.md §D-4 的**加深版**（亮纸第 1/2 档）：
+     圆心数字直接坐在填充色上 ⇒ 填充本身须 ≥ 4.5:1 */
+  --gn-q1: #b25d24;
+  --gn-q2: #a15421;
+  --gn-q3: #8a4519;
+  --gn-q4: #7d2f12;
+
+  /* 学习状态四色（G-21） */
+  --gn-st-new:      #8a8377;
+  --gn-st-review:   #b08a12;
+  --gn-st-mastered: #d4702f;
+  --gn-st-work:     #b03a2a;
+
+  /* 文字 */
+  --gn-label:       #5c5549;
+  --gn-label-hi:    #221f1a;   /* 选中态标签提亮 */
+  --gn-num-knockout:#fffdf7;   /* 圈心数字：四档全部纸色挖空（对填充 ≥4.60:1） */
+
+  /* 关系线 */
+  --gn-edge-prereq:   #456fc9;
+  --gn-edge-related:  #757068;
+  --gn-edge-apply:    #c3a128;
+  --gn-edge-contrast: #c75a52;
+  --gn-edge-legacy:   #bbb4a9;
+  --gn-edge-width:    1.25px;   /* 屏幕恒定（A-28.3） */
+  --gn-edge-alpha:    .55;      /* 与选中节点相邻 */
+  --gn-edge-alpha-dim:.2;       /* 非邻接边（A-28.3） */
+
+  /* 底噪光斑（G-4 保留 / D-9 静态预渲染） */
+  --gn-tide-1: rgb(212 112 47 / 10%);
+  --gn-tide-2: rgb(176 138 18 / 9%);
+  --gn-tide-3: rgb(176 58 42 / 8%);
+}
+html[data-theme="night"] {
+  --gn-ink-deep: #efe8db;
+  --gn-ink-mid:  #9b9384;
+  --gn-ink-soft: #78705f;
+
+  --gn-q1: #be752d;
+  --gn-q2: #cd8a45;
+  --gn-q3: #dca067;
+  --gn-q4: #eba87a;
+
+  --gn-st-new:      #9a938a;
+  --gn-st-review:   #d9a441;
+  --gn-st-mastered: #e58a4f;
+  --gn-st-work:     #d4695a;
+
+  --gn-label:       #c9c2b5;
+  --gn-label-hi:    #f4ede0;
+  --gn-num-knockout:#1c1a16;   /* 夜纸：四档全部墨色（对填充 ≥4.78:1） */
+
+  --gn-edge-prereq:   #7d9ad8;
+  --gn-edge-related:  #9b958a;
+  --gn-edge-apply:    #cbb463;
+  --gn-edge-contrast: #d08a83;
+  --gn-edge-legacy:   #4e4941;
+
+  --gn-tide-1: rgb(224 138 79 / 9%);
+  --gn-tide-2: rgb(217 164 65 / 8%);
+  --gn-tide-3: rgb(212 105 90 / 8%);
+}
+
+
+/* ============================================================================
+   §2 页面骨架
+   ========================================================================= */
+html, body { height: 100%; }
+body { display: flex; flex-direction: column; overflow: hidden; }
+
+/* 投影 / 缩放 / 右栏状态的开关：视觉隐藏但保留键盘可达 */
+.gn-radio {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.app {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column;
+}
+
+/* ---- 顶栏（三段式：品牌 / 身份 / 动作）---- */
+.topbar {
+  flex: none; height: 56px;
+  display: flex; align-items: center; gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  background: var(--surface-base);
+  border-bottom: var(--lw-hair) solid var(--rule-hair);
+  z-index: var(--z-raised);
+}
+.brand { display: flex; align-items: center; gap: var(--sp-3); flex: none; }
+.brand__mark {
+  width: 34px; height: 34px; border-radius: var(--r-md);
+  background: var(--role-blue); color: var(--ink-on-role);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: var(--fw-bold); font-size: var(--fs-sub);
+  box-shadow: var(--elev-1);
+}
+.brand__name { font-size: var(--fs-sub); font-weight: var(--fw-semibold); color: var(--ink-strong); }
+.identity { display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.identity__ws { font-size: var(--fs-body); color: var(--ink-strong); font-weight: var(--fw-medium); }
+.identity__sep { color: var(--ink-faint); }
+.identity__course { font-size: var(--fs-body); color: var(--ink-muted); }
+.lens {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 34px; padding: var(--sp-1) var(--sp-3);
+  border: var(--lw-hair) solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  color: var(--ink-strong); font-size: var(--fs-meta); font-weight: var(--fw-medium);
+}
+.lens__caret { color: var(--ink-faint); font-size: 10px; }
+.actions { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
+.switch {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  min-height: 34px; padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-3);
+  border: 0; border-radius: var(--r-pill);
+  background: var(--surface-card); color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-label); cursor: pointer;
+  box-shadow: var(--elev-1);
+}
+.switch__track {
+  width: 40px; height: 22px; border-radius: var(--r-pill);
+  background: var(--veil-active); position: relative; flex: none;
+}
+.switch__knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: var(--r-round);
+  background: var(--surface-raised); box-shadow: var(--elev-1);
+}
+.switch[aria-pressed="true"] .switch__track { background: var(--role-blue); }
+.switch[aria-pressed="true"] .switch__knob { transform: translateX(18px); }
+.switch[aria-pressed="true"] { color: var(--role-blue); }
+
+/* ---- 三栏 ---- */
+.layout {
+  flex: 1 1 auto; min-height: 0;
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr) 384px;
+}
+
+/* ---- 左栏 ---- */
+.col--left {
+  min-height: 0; overflow-y: auto;
+  padding: var(--sp-4) var(--sp-3);
+  display: flex; flex-direction: column; gap: var(--sp-5);
+}
+.nav-group__t {
+  font-size: var(--fs-label); font-weight: var(--fw-semibold); color: var(--ink-faint);
+  letter-spacing: .04em; padding: 0 var(--sp-3) var(--sp-2);
+}
+.nav { display: flex; flex-direction: column; gap: var(--sp-1); }
+.nav-item {
+  position: relative;
+  display: flex; align-items: center; gap: var(--sp-3);
+  width: 100%; min-height: 44px; padding: var(--sp-2) var(--sp-3);
+  border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-body); line-height: var(--fs-body-lh);
+  text-align: left; cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.nav-item:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.nav-item.is-active {
+  background: var(--role-blue-wash); color: var(--role-blue);
+  font-weight: var(--fw-semibold);
+}
+.nav-item.is-active::before {
+  content: ""; position: absolute; left: 0; top: var(--sp-2); bottom: var(--sp-2);
+  width: 3px; border-radius: var(--r-pill); background: var(--role-blue);
+}
+.nav-item__t { flex: 1 1 auto; }
+.nav-item svg { width: 24px; height: 24px; flex: none; }
+
+.review { display: flex; flex-direction: column; gap: var(--sp-1); }
+.review-item {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--r-md);
+  background: var(--surface-card); box-shadow: var(--elev-1);
+  font-size: var(--fs-meta); color: var(--ink-body); cursor: pointer;
+}
+.review-item__t { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- 中栏：图谱页 ---- */
+.col--middle {
+  min-height: 0; overflow: auto;
+  padding: var(--sp-5) var(--sp-4) var(--sp-6);
+  display: flex; flex-direction: column; align-items: safe center;
+}
+/* 画布固定 860 × 460 CSS px（产品的真实画布尺寸），窄屏时中栏横向滚动 */
+.graph-page { width: 860px; flex: none; }
+.page-head { margin-bottom: var(--sp-4); }
+.page-head__t {
+  font-size: var(--fs-display); line-height: var(--fs-display-lh);
+  font-weight: var(--fw-semibold); color: var(--ink-strong); margin: 0 0 var(--sp-2);
+}
+.page-head__d { font-size: var(--fs-meta); color: var(--ink-muted); margin: 0; }
+
+/* 工具条 */
+.gn-toolbar {
+  display: flex; align-items: center; gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.gn-search { position: relative; flex: 1 1 auto; min-width: 170px; }
+.gn-search input {
+  width: 100%; min-height: 40px;
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) 38px;
+  border: var(--lw-hair) solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-strong);
+  font-family: var(--font-ui); font-size: var(--fs-meta);
+}
+.gn-search input::placeholder { color: var(--ink-faint); }
+.gn-search__icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; color: var(--ink-faint); pointer-events: none;
+}
+.gn-tabs {
+  display: inline-flex; flex: none;
+  padding: 3px; gap: 2px;
+  border-radius: var(--r-md);
+  background: var(--surface-base);
+}
+.gn-tab {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 34px; padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-xs);
+  color: var(--ink-muted);
+  font-family: var(--font-ui); font-size: var(--fs-meta); line-height: var(--fs-meta-lh);
+  font-weight: var(--fw-medium); cursor: pointer; user-select: none;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.gn-tab:hover { background: var(--veil-hover); color: var(--ink-strong); }
+#gn-proj-structure:checked ~ .app .gn-tab--structure,
+#gn-proj-count:checked     ~ .app .gn-tab--count,
+#gn-proj-importance:checked ~ .app .gn-tab--importance,
+#gn-proj-state:checked      ~ .app .gn-tab--state {
+  background: var(--surface-card); color: var(--role-blue);
+  font-weight: var(--fw-semibold); box-shadow: var(--elev-1);
+}
+.gn-tool {
+  flex: none;
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-muted);
+  box-shadow: var(--elev-1); cursor: pointer;
+}
+.gn-tool:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.gn-tool svg { width: 20px; height: 20px; }
+.gn-zoom { display: inline-flex; flex: none; align-items: stretch; }
+.gn-zoom .gn-tool { border-radius: 0; }
+.gn-zoom .gn-tool:first-child { border-radius: var(--r-md) 0 0 var(--r-md); }
+.gn-zoom .gn-tool:last-child { border-radius: 0 var(--r-md) var(--r-md) 0; }
+.gn-zoom .gn-tool + .gn-tool { margin-left: 1px; }
+/* 缩放档（演示标签淡出）：A-28.2 缩放只改间距，标签按 log2 淡出 */
+.gn-zoom__steps {
+  display: inline-flex; align-items: center;
+  margin-left: 4px; padding: 3px; gap: 2px;
+  border-radius: var(--r-md);
+  background: var(--surface-base);
+}
+.gn-zoom__step {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 34px; padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-xs);
+  color: var(--ink-muted);
+  font-family: var(--font-mono); font-size: var(--fs-micro); line-height: var(--fs-micro-lh);
+  cursor: pointer; user-select: none;
+}
+.gn-zoom__step:hover { background: var(--veil-hover); color: var(--ink-strong); }
+#gn-zoom-100:checked ~ .app .gn-zoom__step--100,
+#gn-zoom-075:checked ~ .app .gn-zoom__step--075,
+#gn-zoom-045:checked ~ .app .gn-zoom__step--045 {
+  background: var(--surface-card); color: var(--role-blue);
+  font-weight: var(--fw-semibold); box-shadow: var(--elev-1);
+}
+
+/* ---- 画布 ---- */
+.gn-canvas {
+  position: relative;
+  width: 860px; height: 460px;
+  border-radius: var(--r-md);
+  background: var(--gn-paper);
+  box-shadow: var(--elev-1);
+  overflow: hidden;
+  /* A-28.2：标签淡出 = clamp(log2(zoom)+1, 0, 1)（Obsidian 源码 raw@2231690） */
+  --gn-label-alpha: 1;
+}
+#gn-zoom-100:checked ~ .app .gn-canvas { --gn-label-alpha: 1; }     /* log2(1.00)+1 = 1     */
+#gn-zoom-075:checked ~ .app .gn-canvas { --gn-label-alpha: .585; }   /* log2(0.75)+1 = 0.585 */
+#gn-zoom-045:checked ~ .app .gn-canvas { --gn-label-alpha: 0; }     /* log2(0.45)+1 < 0   */
+
+/* 底噪光斑（G-4 保留 / D-9 静态预渲染）：一次绘制，不再每帧重绘 */
+.gn-tide {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(150px 110px at 16% 28%, var(--gn-tide-1), transparent 70%),
+    radial-gradient(190px 140px at 58% 16%, var(--gn-tide-2), transparent 70%),
+    radial-gradient(170px 130px at 84% 66%, var(--gn-tide-3), transparent 70%),
+    radial-gradient(210px 160px at 36% 84%, var(--gn-tide-1), transparent 72%),
+    radial-gradient(120px 90px at 72% 42%, var(--gn-tide-2), transparent 68%);
+}
+
+/* 关系线层（z 1，节点层 z 2 —— 与现状一致） */
+.gn-edges { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.gn-edge {
+  fill: none; stroke-linecap: round;
+  stroke-width: var(--gn-edge-width);   /* 屏幕恒定 1.25px（A-28.3） */
+}
+.gn-edge--prereq   { stroke: var(--gn-edge-prereq); }
+.gn-edge--related  { stroke: var(--gn-edge-related); }
+.gn-edge--apply    { stroke: var(--gn-edge-apply); }
+.gn-edge--contrast { stroke: var(--gn-edge-contrast); }
+.gn-edge--legacy   { stroke: var(--gn-edge-legacy); }
+.gn-edge.is-incident { opacity: var(--gn-edge-alpha); }
+.gn-edge.is-dim      { opacity: var(--gn-edge-alpha-dim); }
+/* 每个投影一套端点（端点半径随该投影的圆半径变化，D-7） */
+.gn-edges--structure,
+.gn-edges--count,
+.gn-edges--importance,
+.gn-edges--state { display: none; }
+#gn-proj-structure:checked ~ .app .gn-edges--structure { display: block; }
+#gn-proj-count:checked     ~ .app .gn-edges--count { display: block; }
+#gn-proj-importance:checked ~ .app .gn-edges--importance { display: block; }
+#gn-proj-state:checked      ~ .app .gn-edges--state { display: block; }
+
+/* ---- 节点层（z 2）：单层实心圆，无描边 / 阴影 / 渐变（A-28.1）---- */
+.gnodes { position: absolute; inset: 0; z-index: 2; }
+.gnode {
+  /* A-28.3：半径由当前投影的量单调映射；r = floor + span·√score
+     结构 / 状态投影：floor 5px + span 8px ⇒ 5–13px
+     量值投影（A-34）：floor 6.5px（直径下限 13px，容得下 12px 的数字）
+       + span 6.5px ⇒ 随量映射：score=0 ⇒ 6.5px，score=.9 ⇒ 12.66px，
+       score=1 的极值节点 ⇒ 13.0px（5–13 区间上界）。**不是**恒 13px。 */
+  --gn-root:  var(--rt-s);
+  --gn-floor: 5px;
+  --gn-span:  8px;
+  --gn-fill:  var(--gn-ink-mid);
+  --gn-scale: 1;
+  --gn-d: calc(2 * (var(--gn-floor) + var(--gn-span) * var(--gn-root)));
+
+  position: absolute;
+  left: var(--x); top: var(--y);
+  width: var(--gn-d); height: var(--gn-d);
+  transform: translate(-50%, -50%);
+}
+.gnode__disc {
+  position: absolute; inset: 0;
+  border-radius: var(--r-round);
+  background: var(--gn-fill);
+  transform: scale(var(--gn-scale));
+  transform-origin: center;
+}
+/* 圈心数字：12px 屏幕恒定；只在「题目数量 / 重要性」两个投影出现 */
+.gnode__num {
+  position: absolute; inset: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  font-family: var(--font-ui);
+  font-size: 12px; line-height: 1;
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--gn-num-color, var(--gn-num-knockout));
+}
+#gn-proj-count:checked     ~ .app .gnode__num,
+#gn-proj-importance:checked ~ .app .gnode__num { display: flex; }
+/* 选中态的 1px 描边环（画在圆外 1.5px 处，与圆留一道空隙；不用阴影） */
+.gnode__ring {
+  position: absolute; inset: -3px;
+  border: 1px solid var(--gn-ink-deep);
+  border-radius: var(--r-round);
+  opacity: 0; pointer-events: none;
+}
+.gnode[data-selected="true"] .gnode__ring { opacity: 1; }
+.gnode__hit {
+  position: absolute; inset: 0;
+  border: 0; padding: 0; background: transparent;
+  border-radius: var(--r-round); cursor: pointer;
+}
+.gnode__hit:focus-visible { outline: var(--focus-width) solid var(--focus-outer); outline-offset: 2px; }
+/* 标签：12 屏幕 px 恒定、偏移 r+5、换行不截断（D-6 / A-15 / A-10.3） */
+.gnode__label {
+  position: absolute;
+  top: calc(var(--gn-d) + 5px); left: 50%;   /* 圆底到字顶 = 5px（A-28.3） */
+  transform: translateX(-50%);
+  width: max-content; max-width: 168px;
+  font-family: var(--font-ui);
+  font-size: 12px; line-height: 18px;
+  text-align: center;
+  color: var(--gn-label);
+  white-space: normal; overflow-wrap: break-word;
+  pointer-events: none;
+  opacity: var(--gn-label-alpha);   /* A-28.3：缩放 < 0.5 时按 log2 淡出 */
+}
+/* 选中态：换色 + 1px 环 + 点放大 + 标签提亮（无阴影） */
+.gnode[data-selected="true"] { --gn-scale: 1.15; }
+.gnode[data-selected="true"] .gnode__label { color: var(--gn-label-hi); }
+/* 悬停：同一套强调，但不改变选中 */
+.gnode:hover { --gn-scale: 1.08; }
+/* 标签让位：密集处按 大小 → 重要度 → id 排序后隐藏次要标签（G-23） */
+.gnode[data-label="hidden"] .gnode__label { opacity: 0; }
+.gnode[data-label="hidden"]:hover .gnode__label { opacity: var(--gn-label-alpha); }
+
+/* ---- 四投影各自的色键（随投影切换，D-5 / G-11 / G-14）---- */
+#gn-proj-structure:checked ~ .app .gnode { --gn-root: var(--rt-s); --gn-floor: 5px; --gn-span: 8px; --gn-fill: var(--gn-ink-mid); }
+#gn-proj-count:checked     ~ .app .gnode { --gn-root: var(--rt-c); --gn-floor: 6.5px; --gn-span: 6.5px; --gn-fill: var(--gn-ring-c); }  /* A-34：半径 6.5–13px 随量映射 */
+#gn-proj-importance:checked ~ .app .gnode { --gn-root: var(--rt-i); --gn-floor: 6.5px; --gn-span: 6.5px; --gn-fill: var(--gn-ring-i); }  /* A-34：同一套区间 */
+#gn-proj-state:checked      ~ .app .gnode { --gn-root: var(--rt-st); --gn-floor: 5px; --gn-span: 8px; --gn-fill: var(--gn-ring-st); }
+/* 选中态换色（结构 / 量值投影成立；状态投影保留状态色 —— 见文件头 ④） */
+#gn-proj-structure:checked ~ .app .gnode[data-selected="true"] { --gn-fill: var(--gn-ink-deep); }
+#gn-proj-count:checked     ~ .app .gnode[data-selected="true"] { --gn-fill: var(--gn-q4); }
+#gn-proj-importance:checked ~ .app .gnode[data-selected="true"] { --gn-fill: var(--gn-q4); }
+/* 圈心数字的颜色：随填充档位取（四档全部挖空 —— 加深后 Q1 也不够墨色对比，见文件头） */
+.gnode[data-bk-c="1"] { --gn-ring-c: var(--gn-q1); --gn-num-c: var(--gn-num-knockout); }
+.gnode[data-bk-c="2"] { --gn-ring-c: var(--gn-q2); --gn-num-c: var(--gn-num-knockout); }
+.gnode[data-bk-c="3"] { --gn-ring-c: var(--gn-q3); --gn-num-c: var(--gn-num-knockout); }
+.gnode[data-bk-c="4"] { --gn-ring-c: var(--gn-q4); --gn-num-c: var(--gn-num-knockout); }
+.gnode[data-bk-i="1"] { --gn-ring-i: var(--gn-q1); --gn-num-i: var(--gn-num-knockout); }
+.gnode[data-bk-i="2"] { --gn-ring-i: var(--gn-q2); --gn-num-i: var(--gn-num-knockout); }
+.gnode[data-bk-i="3"] { --gn-ring-i: var(--gn-q3); --gn-num-i: var(--gn-num-knockout); }
+.gnode[data-bk-i="4"] { --gn-ring-i: var(--gn-q4); --gn-num-i: var(--gn-num-knockout); }
+.gnode[data-state="new"]      { --gn-ring-st: var(--gn-st-new); }
+.gnode[data-state="review"]   { --gn-ring-st: var(--gn-st-review); }
+.gnode[data-state="mastered"] { --gn-ring-st: var(--gn-st-mastered); }
+.gnode[data-state="work"]     { --gn-ring-st: var(--gn-st-work); }
+#gn-proj-count:checked     ~ .app .gnode { --gn-num-color: var(--gn-num-c); }
+#gn-proj-importance:checked ~ .app .gnode { --gn-num-color: var(--gn-num-i); }
+#gn-proj-count:checked     ~ .app .gnode[data-selected="true"],
+#gn-proj-importance:checked ~ .app .gnode[data-selected="true"] { --gn-num-color: var(--gn-num-knockout); }
+
+/* ---- 图例（画布下方一条：关系线型 + 节点色键 + 节点形态与缩放）---- */
+.gn-legend {
+  margin-top: var(--sp-3);
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  box-shadow: var(--elev-1);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+}
+.gn-legend__t {
+  font-size: var(--fs-label); font-weight: var(--fw-semibold);
+  color: var(--ink-faint); letter-spacing: .04em;
+}
+.gn-legend__row { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.gn-legend__block { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+.gn-litem { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-meta); color: var(--ink-body); }
+.gn-swatch { width: 34px; height: 10px; flex: none; overflow: visible; }
+.gn-swatch path { fill: none; stroke-width: var(--gn-edge-width); stroke-linecap: round; }
+.gn-swatch--prereq   path { stroke: var(--gn-edge-prereq); }
+.gn-swatch--related  path { stroke: var(--gn-edge-related); }
+.gn-swatch--apply    path { stroke: var(--gn-edge-apply); }
+.gn-swatch--contrast path { stroke: var(--gn-edge-contrast); stroke-dasharray: 5.5 5.5; }
+.gn-swatch--legacy   path { stroke: var(--gn-edge-legacy); stroke-dasharray: 11 11; }
+
+/* 节点色键 */
+.gn-key { display: none; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+#gn-proj-structure:checked ~ .app .gn-key--structure,
+#gn-proj-count:checked     ~ .app .gn-key--count,
+#gn-proj-importance:checked ~ .app .gn-key--importance,
+#gn-proj-state:checked      ~ .app .gn-key--state { display: flex; }
+.gn-chip { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-meta); color: var(--ink-body); }
+/* 色键里的样例点：单层实心圆，尺寸示意该投影的量值次序
+   （结构 8px / 橙阶 5.5–11px / 状态 6–11px；节点实际半径见文件头 A-34 一节） */
+.gn-chip__dot {
+  width: var(--dot-d, 12px); height: var(--dot-d, 12px);
+  border-radius: var(--r-round); flex: none;
+  background: var(--dot-fill, var(--gn-ink-mid));
+}
+.gn-chip--q1 { --dot-fill: var(--gn-q1); --dot-d: 11px; }
+.gn-chip--q2 { --dot-fill: var(--gn-q2); --dot-d: 14px; }
+.gn-chip--q3 { --dot-fill: var(--gn-q3); --dot-d: 18px; }
+.gn-chip--q4 { --dot-fill: var(--gn-q4); --dot-d: 22px; }
+.gn-chip--new      { --dot-fill: var(--gn-st-new);      --dot-d: 13px; }
+.gn-chip--review   { --dot-fill: var(--gn-st-review);   --dot-d: 16px; }
+.gn-chip--mastered { --dot-fill: var(--gn-st-mastered); --dot-d: 12px; }
+.gn-chip--work     { --dot-fill: var(--gn-st-work);     --dot-d: 18px; }
+.gn-chip--ink      { --dot-fill: var(--gn-ink-mid);     --dot-d: 16px; }
+.gn-chip__dot--deep { --dot-fill: var(--gn-ink-deep); --dot-d: 20px; }
+.gn-legend__note { font-size: var(--fs-meta); color: var(--ink-muted); }
+
+/* 节点形态与缩放标本 */
+.gn-spec { display: inline-flex; align-items: flex-start; gap: var(--sp-5); }
+.gn-spec__item { display: inline-flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
+.gn-spec__sample { display: flex; align-items: flex-end; height: 30px; }
+.gn-spec__dot {
+  width: var(--d, 20px); height: var(--d, 20px);
+  border-radius: var(--r-round); flex: none;
+  background: var(--fill, var(--gn-ink-mid));
+}
+.gn-spec__dot--sel { position: relative; }
+.gn-spec__dot--sel::after {
+  content: ""; position: absolute; inset: -3px;
+  border: 1px solid var(--gn-ink-deep); border-radius: var(--r-round);
+}
+.gn-spec__dot--num { position: relative; }
+.gn-spec__dot--num::before {
+  content: attr(data-n);
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: var(--fw-semibold);
+  font-family: var(--font-ui); color: var(--gn-num-knockout);
+}
+.gn-spec__cap { font-size: var(--fs-micro); color: var(--ink-faint); white-space: nowrap; }
+.gn-fade { display: inline-flex; flex-direction: column; align-items: flex-start; gap: var(--sp-1); }
+.gn-fade__row { display: inline-flex; align-items: flex-end; gap: var(--sp-3); }
+.gn-fade__item { display: inline-flex; align-items: flex-end; gap: var(--sp-1); }
+.gn-fade__dot {
+  width: 9px; height: 9px; border-radius: var(--r-round);
+  background: var(--gn-ink-mid); flex: none; margin-bottom: 3px;
+}
+.gn-fade__label { font-size: 12px; line-height: 16px; color: var(--gn-label); white-space: nowrap; }
+.gn-fade__item--a .gn-fade__label { opacity: 1; }
+.gn-fade__item--b .gn-fade__label { opacity: .585; }
+.gn-fade__item--c .gn-fade__label { opacity: 0; }
+
+/* ---- 右栏（两态互斥：列表态 / 对话态）---- */
+.col--right {
+  min-height: 0; display: flex; flex-direction: column;
+  border-left: var(--lw-hair) solid var(--rule-hair);
+  background: var(--surface-base);
+}
+.rail { display: none; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+#gn-rail-list:checked ~ .app .rail--list { display: flex; }
+#gn-rail-chat:checked ~ .app .rail--chat { display: flex; }
+.agent-head {
+  flex: none; padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+.agent-head__t { font-size: var(--fs-sub); font-weight: var(--fw-semibold); color: var(--ink-strong); flex: 1 1 auto; }
+.rail-back {
+  width: 36px; height: 36px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--r-md);
+  background: transparent; color: var(--ink-muted); cursor: pointer;
+}
+.rail-back:hover { background: var(--veil-hover); color: var(--ink-strong); }
+.rail-back svg { width: 20px; height: 20px; }
+.sessions { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 var(--sp-3); }
+.session-group__t { font-size: var(--fs-label); color: var(--ink-faint); padding: var(--sp-3) var(--sp-2) var(--sp-1); }
+.session {
+  display: flex; align-items: flex-start; gap: var(--sp-2);
+  width: 100%; padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-1);
+  border: 0; border-radius: var(--r-md); background: transparent;
+  font-family: var(--font-ui); text-align: left; cursor: pointer;
+}
+.session:hover { background: var(--veil-hover); }
+.session.is-active { background: var(--role-blue-wash); }
+.session__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.session__t { font-size: var(--fs-body); color: var(--ink-strong); font-weight: var(--fw-medium); }
+.session__p { font-size: var(--fs-meta); color: var(--ink-muted); }
+.session.is-active .session__t { color: var(--role-blue); }
+.rail-note {
+  flex: none; padding: var(--sp-3) var(--sp-4);
+  font-size: var(--fs-meta); line-height: var(--fs-meta-lh); color: var(--ink-muted);
+  border-top: var(--lw-hair) solid var(--rule-hair);
+}
+.rail-note b { color: var(--ink-body); }
+
+/* 对话态 */
+.msgs { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 var(--sp-4) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
+.msg { border-radius: var(--r-md); padding: var(--sp-3); box-shadow: var(--elev-1); }
+.msg--user { background: var(--surface-card); color: var(--ink-body); font-size: var(--fs-body); line-height: var(--fs-body-lh); }
+.msg--agent { background: var(--surface-card); color: var(--ink-body); font-size: var(--fs-body); line-height: var(--fs-body-lh); }
+.msg--agent p { margin: 0 0 var(--sp-2); }
+.msg--agent p:last-child { margin-bottom: 0; }
+.ctx-chips { flex: none; display: flex; gap: var(--sp-2); flex-wrap: wrap; padding: 0 var(--sp-4) var(--sp-3); }
+.timeline { display: flex; flex-direction: column; gap: var(--sp-2); margin-top: var(--sp-2); }
+.timeline__item { display: flex; gap: var(--sp-3); align-items: flex-start; }
+.timeline__body { display: flex; flex-direction: column; }
+.timeline__t { font-size: var(--fs-meta); color: var(--ink-body); }
+.timeline__s { font-size: var(--fs-micro); color: var(--ink-faint); }
+.composer-wrap { flex: none; padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.composer {
+  min-height: 76px; padding: var(--sp-3);
+  border: var(--lw-hair) solid var(--rule-control);
+  border-radius: var(--r-md);
+  background: var(--surface-card); color: var(--ink-muted);
+  font-size: var(--fs-meta);
+}
+.composer__row { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+
+/* ---- 底部 mockup 声明条 ---- */
+/* 近黑底**保留**（decisions.md A-35）：评审批注，不是产品面。
+   用 --mk-note（mockup 局部，取值与原近黑面完全相同 ⇒ 本页像素不变）；
+   不是 --surface-code —— 后者只服务代码块 / 等宽代码区。 */
+.mocknote {
+  flex: none;
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+  background: var(--mk-note); color: var(--ink-inverse);
+  font-size: var(--fs-micro); line-height: var(--fs-micro-lh);
+}
+.mocknote b { color: var(--ink-inverse); }
+.mocknote a { color: var(--ink-inverse); text-decoration: underline; }
+
+/* 焦点可见：投影 Tab / 缩放档用隐藏 radio 驱动，焦点环落在 label 上 */
+#gn-proj-structure:focus-visible ~ .app .gn-tab--structure,
+#gn-proj-count:focus-visible ~ .app .gn-tab--count,
+#gn-proj-importance:focus-visible ~ .app .gn-tab--importance,
+#gn-proj-state:focus-visible ~ .app .gn-tab--state,
+#gn-zoom-100:focus-visible ~ .app .gn-zoom__step--100,
+#gn-zoom-075:focus-visible ~ .app .gn-zoom__step--075,
+#gn-zoom-045:focus-visible ~ .app .gn-zoom__step--045 {
+  outline: var(--focus-width) solid var(--focus-outer); outline-offset: 2px;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================================
+   图标精灵：内容与 `icons.svg` 逐字一致（练习=翻开的书 / 试卷=一叠纸 /
+   知识点=书签 / 图谱=节点连线 / 记录=笔记本；写意线稿 + 淡彩 + 克制高光）。
+   ⚠️ 为什么内联而不是引用 icons.svg 里的 symbol：浏览器把每个 file:// 文档当作
+      **唯一安全源**，外部 <use> 在 file:// 下被直接拦截（控制台报 "Unsafe attempt
+      to load URL … 'file:' URLs are treated as unique security origins"），
+      双击打开时导航图标会整片消失。内联后 file:// 与 http:// 渲染完全一致。
+      资产真源仍是 `icons.svg`，改图请改那份再同步回来。
+   ========================================================================= -->
+<svg class="lk-sprite" xmlns="http://www.w3.org/2000/svg" width="0" height="0"
+     aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+  <symbol id="icon-practice" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15.8 10.2C12.3 7.9 7.6 6.4 4.3 7.3c-.7.2-1.1.8-1.1 1.5v13.6c0 .9.8 1.7 1.7 1.5 3.5-.7 7.4.4 10.9 2.8z"
+            fill="var(--art-paper)"/>
+      <path d="M15.8 10.2c3.5-2.3 8.2-3.8 11.5-2.9.7.2 1.1.8 1.1 1.5v13.6c0 .9-.8 1.7-1.7 1.5-3.5-.7-7.4.4-10.9 2.8z"
+            fill="var(--art-paper)"/>
+      <path d="M15.8 10.2v16.5" fill="none"/>
+      <path d="M7.6 12.4c2.5-.3 4.8.4 6.7 1.6M24 12.4c-2.5-.3-4.8.4-6.7 1.6"
+            fill="none" stroke-width="1.1" opacity=".5"/>
+      <path d="M7.6 16.6c2.3-.2 4.4.4 6.1 1.4M24 16.6c-2.3-.2-4.4.4-6.1 1.4"
+            fill="none" stroke-width="1.1" opacity=".38"/>
+    </g>
+    <path d="M4.1 18.2c3.2-.5 6.6.5 9.6 2.4l.6 2.6c-3.5-.8-7.4.4-10.9 2.8z"
+          fill="var(--mk-wash)" opacity=".9"/>
+    <path d="M15.1 10.6v15.6" fill="none" stroke="var(--art-highlight)" stroke-width="1.4"
+          stroke-linecap="round"/>
+  </symbol>
+  <symbol id="icon-exam" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="10.4" y="4.6" width="14.8" height="17.8" rx="2.6" fill="var(--art-paper)"/>
+      <rect x="8.2" y="7.2" width="14.8" height="17.8" rx="2.6" fill="var(--art-paper)"/>
+      <rect x="6" y="9.8" width="14.8" height="17.8" rx="2.6" fill="var(--mk-wash)"/>
+      <path d="M9.4 14.6h7.9M9.4 18.4h7.9M9.4 22.2h5.1"
+            fill="none" stroke-width="1.2" opacity=".55"/>
+    </g>
+    <path d="M12.2 12.4h5.2" fill="none" stroke="var(--art-highlight)" stroke-width="1.6"
+          stroke-linecap="round"/>
+  </symbol>
+  <symbol id="icon-kp" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.6 4.6h12.2c.9 0 1.6.7 1.6 1.6v20.6l-7.7-4.5-7.7 4.5V6.2c0-.9.7-1.6 1.6-1.6z"
+            fill="var(--mk-wash)"/>
+      <path d="M5.2 9.4v16.6l3.6-2.1" fill="none" stroke-width="1.4" opacity=".5"/>
+      <path d="M13.4 11.2h7.4M13.4 15.2h5.2" fill="none" stroke-width="1.1" opacity=".55"/>
+    </g>
+    <path d="M11.4 6.4h9.4" fill="none" stroke="var(--art-highlight)" stroke-width="1.6"
+          stroke-linecap="round"/>
+  </symbol>
+  <symbol id="icon-graph" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.2 22.4 15.4 10.6M15.4 10.6l7.2 6M9.2 22.4h13.4" fill="none"/>
+      <circle cx="15.4" cy="9.4" r="3.4" fill="var(--mk-wash)"/>
+      <circle cx="8.6" cy="23" r="2.8" fill="var(--art-paper)"/>
+      <circle cx="23.4" cy="16.9" r="2.8" fill="var(--art-paper)"/>
+      <circle cx="15.4" cy="9.4" r="3.4" fill="none" stroke-width="1.7"/>
+    </g>
+    <circle cx="14.4" cy="8.4" r="1.1" fill="var(--art-highlight)"/>
+  </symbol>
+  <symbol id="icon-record" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8.2" y="4.4" width="17.2" height="23.2" rx="2.6" fill="var(--art-paper)"/>
+      <path d="M12.6 4.4h12.8v23.2H12.6a2 2 0 0 1-2-2V6.4a2 2 0 0 1 2-2z" fill="var(--mk-wash)"/>
+      <path d="M10.6 4.4v23.2" fill="none"/>
+      <path d="M15.6 11.4h7.6M15.6 15.6h7.6M15.6 19.8h4.8"
+            fill="none" stroke-width="1.1" opacity=".55"/>
+      <path d="M6.4 9.6c1.3-.7 2.6-.7 3.9 0M6.4 15.8c1.3-.7 2.6-.7 3.9 0M6.4 22c1.3-.7 2.6-.7 3.9 0"
+            fill="none" stroke-width="1.2" opacity=".65"/>
+    </g>
+    <path d="M14.6 7h8.8" fill="none" stroke="var(--art-highlight)" stroke-width="1.6"
+          stroke-linecap="round"/>
+  </symbol>
+  <symbol id="icon-lamp" viewBox="0 0 32 32">
+    <g stroke="var(--art-ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6.8 27.2h18.4" fill="none" stroke-width="2"/>
+      <path d="M16 27.2v-9.8" fill="none"/>
+      <path d="M16 17.4 10.2 11.6" fill="none"/>
+      <path d="M5 6.4a3.6 3.6 0 0 1 5.1-.6l4.3 4.3a2.8 2.8 0 0 1-.2 4l-1.7 1.5a3 3 0 0 1-4-.3L4.4 11a2.9 2.9 0 0 1-.3-3.9z"
+            fill="var(--mk-wash)"/>
+      <path d="M11.2 13.2 5.6 26.4" fill="none" stroke-width="1.2" opacity=".4"/>
+    </g>
+    <path d="M8.4 12.4c1-.6 2.2-.6 3.2 0" fill="none" stroke="var(--art-highlight)"
+          stroke-width="1.6" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+
+<!-- 投影 / 缩放 / 右栏状态的开关：纯 CSS 切换，无脚本 -->
+<input class="gn-radio" type="radio" name="gn-proj" id="gn-proj-structure" checked>
+<input class="gn-radio" type="radio" name="gn-proj" id="gn-proj-count">
+<input class="gn-radio" type="radio" name="gn-proj" id="gn-proj-importance">
+<input class="gn-radio" type="radio" name="gn-proj" id="gn-proj-state">
+<input class="gn-radio" type="radio" name="gn-zoom" id="gn-zoom-100" checked>
+<input class="gn-radio" type="radio" name="gn-zoom" id="gn-zoom-075">
+<input class="gn-radio" type="radio" name="gn-zoom" id="gn-zoom-045">
+<input class="gn-radio" type="radio" name="gn-rail" id="gn-rail-list" checked>
+<input class="gn-radio" type="radio" name="gn-rail" id="gn-rail-chat">
+
+<div class="app">
+
+  <!-- ==================== 顶栏 ==================== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand__mark">课</span>
+      <span class="brand__name">lesson-kit</span>
+    </div>
+    <div class="identity">
+      <span class="identity__ws">工作区 · 考研数学</span>
+      <span class="identity__sep">/</span>
+      <span class="identity__course">高等数学</span>
+      <button type="button" class="lens" aria-label="当前章节透镜">
+        第 06 章 · 定积分
+        <span class="lens__caret" aria-hidden="true">▾</span>
+      </button>
+    </div>
+    <div class="actions">
+      <button type="button" class="switch" id="mk-theme" aria-pressed="false" aria-label="切换夜纸主题">
+        <span class="switch__track" aria-hidden="true"><span class="switch__knob"></span></span>
+        夜纸
+      </button>
+      <button type="button" class="gn-tool" aria-label="设置" title="设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- ==================== 左栏（图谱为当前所在）==================== -->
+    <nav class="col--left" aria-label="工作台导航">
+      <div class="nav-group__t">工作台</div>
+      <div class="nav">
+        <button type="button" class="nav-item">
+          <svg viewBox="0 0 32 32" style="--mk-wash:var(--art-wash-blue)" aria-hidden="true"><use href="#icon-practice"></use></svg>
+          <span class="nav-item__t">练习</span>
+        </button>
+        <button type="button" class="nav-item">
+          <svg viewBox="0 0 32 32" style="--mk-wash:var(--art-wash-yellow)" aria-hidden="true"><use href="#icon-exam"></use></svg>
+          <span class="nav-item__t">试卷</span>
+        </button>
+        <button type="button" class="nav-item">
+          <svg viewBox="0 0 32 32" style="--mk-wash:var(--art-wash-blue)" aria-hidden="true"><use href="#icon-kp"></use></svg>
+          <span class="nav-item__t">知识点</span>
+        </button>
+        <button type="button" class="nav-item is-active" aria-current="page">
+          <svg viewBox="0 0 32 32" style="--mk-wash:var(--art-wash-blue)" aria-hidden="true"><use href="#icon-graph"></use></svg>
+          <span class="nav-item__t">图谱</span>
+        </button>
+        <button type="button" class="nav-item">
+          <svg viewBox="0 0 32 32" style="--mk-wash:var(--art-wash-blue)" aria-hidden="true"><use href="#icon-record"></use></svg>
+          <span class="nav-item__t">记录</span>
+        </button>
+      </div>
+      <div class="nav-group__t">数据</div>
+      <div class="nav">
+        <button type="button" class="nav-item">
+          <span class="nav-item__t">偏好与主题</span>
+        </button>
+        <button type="button" class="nav-item">
+          <span class="nav-item__t">数据与导出</span>
+        </button>
+      </div>
+      <div class="nav-group__t">优先回看</div>
+      <div class="review">
+        <button type="button" class="review-item">
+          <span class="mk-dot mk-dot--red mk-dot--filled" aria-hidden="true"></span>
+          <span class="review-item__t">反常积分的收敛判别</span>
+        </button>
+        <button type="button" class="review-item">
+          <span class="mk-dot mk-dot--yellow mk-dot--filled" aria-hidden="true"></span>
+          <span class="review-item__t">微积分基本定理的反向用法</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ==================== 中栏：画布 ==================== -->
+    <main class="col--middle">
+      <div class="graph-page">
+        <div class="page-head">
+          <h1 class="page-head__t">知识图谱</h1>
+          <p class="page-head__d">第 06 章 · 定积分 —— 20 个知识点，35 条关系</p>
+        </div>
+
+        <!-- 工具条：搜索 · 四个投影 Tab · 聚焦 · 缩放 · 图例 -->
+        <div class="gn-toolbar">
+          <div class="gn-search">
+            <svg class="gn-search__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.8 15.8 20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <input type="text" placeholder="搜索知识点并聚焦…" aria-label="搜索知识点并聚焦">
+          </div>
+          <div class="gn-tabs" role="tablist" aria-label="投影">
+            <label class="gn-tab gn-tab--structure" for="gn-proj-structure">关系结构</label>
+            <label class="gn-tab gn-tab--count" for="gn-proj-count">题目数量</label>
+            <label class="gn-tab gn-tab--importance" for="gn-proj-importance">重要性</label>
+            <label class="gn-tab gn-tab--state" for="gn-proj-state">学习状态</label>
+          </div>
+          <button type="button" class="gn-tool" title="聚焦选中节点" aria-label="聚焦选中节点">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.6v3.2M12 18.2v3.2M2.6 12h3.2M18.2 12h3.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <span class="gn-zoom" title="缩放：± 为占位；中间三档演示标签按 log2 淡出（缩放只改间距）">
+            <button type="button" class="gn-tool" title="缩小" aria-label="缩小">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <span class="gn-zoom__steps" role="group" aria-label="缩放档（演示标签淡出）">
+              <label class="gn-zoom__step gn-zoom__step--100" for="gn-zoom-100">1.00×</label>
+              <label class="gn-zoom__step gn-zoom__step--075" for="gn-zoom-075">0.75×</label>
+              <label class="gn-zoom__step gn-zoom__step--045" for="gn-zoom-045">0.45×</label>
+            </span>
+            <button type="button" class="gn-tool" title="放大" aria-label="放大">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+          </span>
+          <button type="button" class="gn-tool" title="图例" aria-label="图例">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.4" y="5.2" width="17.2" height="13.6" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.4 10h17.2M9.4 10v8.8" stroke="currentColor" stroke-width="1.6"/></svg>
+          </button>
+        </div>
+
+        <!-- 画布 -->
+        <section class="gn-canvas" aria-label="知识图谱画布">
+
+          <!-- 底噪光斑：静态预渲染的柔和色斑（D-9 / G-4） -->
+          <div class="gn-tide" aria-hidden="true"></div>
+
+          <!-- 关系线：每个投影一套端点（端点接到圆边缘，D-7） -->
+          <svg class="gn-edges gn-edges--structure" viewBox="0 0 860 460" aria-hidden="true">
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 285.3 323.2 Q 239.8 268.3 183.2 224.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 64.7 150.1 Q 112.6 187.4 167.6 212.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 182.3 210.3 Q 224.0 169.4 255.2 120.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 271.3 106.7 Q 317.4 88.9 357.9 60.6" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 375.2 61.0 Q 398.6 79.5 426.2 90.9" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 190.6 93.7 Q 220.0 105.4 251.5 109.1" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 282.2 58.4 Q 351.4 84.6 424.8 94.3" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 455.9 366.5 Q 521.5 340.0 579.4 299.5" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 331.6 369.8 Q 458.9 346.8 578.5 297.4" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 446.6 250.6 Q 450.6 180.0 438.2 110.4" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 672.1 366.8 Q 638.3 329.7 596.8 301.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 519.1 205.4 Q 545.8 249.5 582.2 286.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 449.8 93.5 Q 506.9 82.7 559.8 58.7" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 450.2 94.8 Q 542.5 86.2 630.7 57.6" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 577.3 56.0 Q 603.9 59.5 630.5 56.0" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 376.5 56.0 Q 432.5 62.6 488.4 56.0" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 592.8 284.6 Q 625.5 225.7 644.0 160.9" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 640.5 149.4 Q 578.4 98.0 506.6 61.4" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 797.0 372.0 Q 689.4 360.5 581.9 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 298.7 329.8 Q 428.3 364.2 562.2 370.5" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 65.1 142.8 Q 120.6 125.2 170.5 95.4" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 190.2 87.3 Q 228.5 78.0 263.4 59.5" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--contrast is-incident" d="M 272.5 110.8 Q 349.2 113.4 424.5 98.5" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 448.0 361.8 Q 453.1 316.0 447.3 270.4" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 329.9 366.7 Q 390.4 323.1 439.9 267.1" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 506.9 204.4 Q 477.6 225.8 454.4 253.7" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 559.3 56.0 Q 533.8 52.5 508.2 56.0" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 176.4 208.1 Q 184.5 155.1 179.9 101.7" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 448.2 90.1 Q 471.2 78.9 490.2 61.6" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 424.8 94.3 Q 355.6 68.1 282.2 58.4" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 263.9 101.2 Q 270.1 84.0 270.7 65.7" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 356.9 57.8 Q 272.0 64.1 190.7 89.1" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 457.0 370.9 Q 509.5 377.6 562.1 371.9" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 670.2 372.0 Q 626.0 366.7 581.9 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 508.1 191.1 Q 481.7 145.7 445.3 107.8" marker-end="url(#gn-arrow-apply)" />
+          </svg>
+          <svg class="gn-edges gn-edges--count" viewBox="0 0 860 460" aria-hidden="true">
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 284.2 322.1 Q 239.8 268.3 184.4 226.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 65.3 150.4 Q 112.2 187.1 166.2 212.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 183.3 209.0 Q 223.8 169.7 253.7 121.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 273.3 105.6 Q 317.5 88.8 356.1 61.6" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 376.9 62.0 Q 399.8 80.2 426.8 91.2" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 191.0 93.8 Q 219.1 105.2 249.3 108.5" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 278.9 57.6 Q 350.1 84.2 425.5 94.4" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 459.2 364.8 Q 523.1 339.2 579.4 299.5" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 334.2 369.0 Q 460.3 346.4 578.6 297.4" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 446.5 248.5 Q 450.5 178.6 438.2 109.7" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 670.4 365.4 Q 637.5 328.9 596.8 301.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 520.3 207.0 Q 546.5 250.3 582.2 286.1" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 449.2 93.7 Q 506.3 82.8 559.4 58.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 449.5 94.9 Q 541.1 86.5 628.5 58.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 577.8 56.0 Q 603.0 59.5 628.3 56.0" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 378.6 56.0 Q 434.2 62.6 489.8 56.0" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 592.8 284.6 Q 625.3 226.0 643.7 161.6" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 639.9 149.0 Q 577.6 97.4 505.5 60.7" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 795.5 372.0 Q 688.0 360.5 580.6 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 300.3 330.0 Q 429.7 364.4 563.5 370.7" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 65.8 142.5 Q 120.7 125.2 170.1 95.6" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 190.6 87.1 Q 230.3 77.3 266.5 58.3" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--contrast is-incident" d="M 274.8 110.6 Q 350.7 113.3 425.2 98.4" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 447.9 358.1 Q 453.1 315.2 447.3 272.4" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 331.9 364.9 Q 390.7 322.8 438.4 268.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 505.4 205.9 Q 477.6 225.8 455.9 252.3" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 558.9 56.0 Q 532.9 52.5 506.9 56.0" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 176.5 206.5 Q 184.5 154.5 179.9 102.1" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 447.6 90.5 Q 471.5 78.7 491.3 60.8" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 425.5 94.4 Q 354.3 67.8 278.9 57.6" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 264.3 98.9 Q 270.6 81.2 271.4 62.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 354.9 58.2 Q 271.3 64.3 191.1 89.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 460.7 370.9 Q 512.0 377.6 563.4 371.9" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 667.9 372.0 Q 624.2 366.7 580.6 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 506.8 189.4 Q 480.9 144.5 444.8 107.3" marker-end="url(#gn-arrow-apply)" />
+          </svg>
+          <svg class="gn-edges gn-edges--importance" viewBox="0 0 860 460" aria-hidden="true">
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 282.8 320.7 Q 239.6 268.0 185.3 226.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 67.4 151.7 Q 112.7 187.4 165.2 211.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 184.1 208.1 Q 224.2 169.2 253.7 121.7" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 273.3 105.6 Q 317.1 89.0 355.4 61.9" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 377.5 62.4 Q 400.0 80.3 426.6 91.1" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 192.1 94.1 Q 219.7 105.4 249.3 108.5" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 282.9 58.6 Q 352.0 84.7 425.3 94.4" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 458.9 364.9 Q 522.3 339.6 578.2 300.2" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 335.1 368.8 Q 460.1 346.5 577.2 297.8" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 446.5 248.4 Q 450.5 178.6 438.2 109.9" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 669.2 364.3 Q 637.4 328.9 597.8 302.3" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 520.8 207.6 Q 546.2 250.0 581.3 285.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 449.3 93.7 Q 505.6 83.1 557.7 59.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 449.7 94.9 Q 540.5 86.7 627.1 58.3" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 579.5 56.0 Q 603.2 59.5 626.9 56.0" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 379.3 56.0 Q 433.6 62.6 487.8 56.0" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 593.3 283.3 Q 625.1 226.5 642.8 163.9" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 637.7 147.6 Q 577.3 97.2 507.1 61.8" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 792.2 372.0 Q 687.3 360.5 582.3 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 302.2 330.3 Q 429.8 364.4 561.8 370.4" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 68.0 141.5 Q 121.3 124.9 169.1 96.1" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 191.7 86.7 Q 228.9 77.9 262.7 59.8" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--contrast is-incident" d="M 274.8 110.6 Q 350.6 113.3 425.0 98.4" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 447.9 358.5 Q 453.1 315.5 447.3 272.6" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 332.6 364.3 Q 391.0 322.6 438.2 268.6" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 504.9 206.4 Q 477.4 225.9 456.0 252.2" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 557.2 56.0 Q 533.0 52.5 508.9 56.0" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 176.5 205.3 Q 184.5 154.5 179.8 103.3" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 447.8 90.4 Q 470.8 79.2 489.7 61.9" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 425.3 94.4 Q 356.2 68.2 282.9 58.6" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 264.3 99.0 Q 270.2 83.2 270.6 66.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 354.2 58.3 Q 271.5 64.2 192.3 88.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 460.3 370.9 Q 510.9 377.6 561.7 371.9" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 666.4 372.0 Q 624.4 366.7 582.3 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 506.4 188.9 Q 480.7 144.3 444.9 107.4" marker-end="url(#gn-arrow-apply)" />
+          </svg>
+          <svg class="gn-edges gn-edges--state" viewBox="0 0 860 460" aria-hidden="true">
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 283.5 321.4 Q 238.5 267.0 182.4 224.1" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 66.9 151.4 Q 114.2 188.3 168.6 213.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 181.6 211.2 Q 223.4 170.3 254.5 120.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 272.2 106.2 Q 318.3 88.4 358.9 60.1" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 374.2 60.4 Q 398.1 79.2 426.2 90.9" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 191.6 93.9 Q 220.0 105.4 250.5 108.8" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 282.7 58.5 Q 351.7 84.6 424.8 94.3" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 455.7 366.6 Q 520.3 340.7 577.3 300.6" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 334.1 369.1 Q 459.0 346.8 576.3 298.1" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 446.5 248.8 Q 450.5 179.1 438.2 110.4" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 668.2 363.4 Q 637.2 328.7 598.6 303.0" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 519.9 206.5 Q 545.5 249.1 580.7 284.2" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 449.8 93.5 Q 505.6 83.1 557.2 59.5" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 450.2 94.8 Q 540.6 86.6 626.9 58.4" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 580.0 56.0 Q 603.3 59.5 626.7 56.0" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 375.4 56.0 Q 431.6 62.6 487.9 56.0" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 593.7 282.4 Q 625.4 225.8 643.0 163.3" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 638.3 148.0 Q 577.6 97.4 507.1 61.7" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 791.6 372.0 Q 687.0 360.5 582.4 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 301.3 330.2 Q 429.3 364.3 561.7 370.4" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 67.5 141.7 Q 121.3 124.9 169.6 95.8" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 191.2 86.9 Q 228.8 77.9 262.9 59.7" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--contrast is-incident" d="M 273.5 110.7 Q 349.7 113.4 424.5 98.5" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 448.0 362.1 Q 453.1 317.1 447.3 272.2" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 331.8 365.0 Q 390.7 322.8 438.5 268.3" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 505.9 205.4 Q 477.7 225.6 455.7 252.5" />
+          <path class="gn-edge gn-edge--contrast is-dim" d="M 556.7 56.0 Q 532.7 52.5 508.8 56.0" stroke-dasharray="5.5 5.5" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 176.4 209.2 Q 184.5 156.2 179.8 102.7" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 448.2 90.1 Q 471.0 79.0 489.7 61.9" marker-end="url(#gn-arrow-apply)" />
+          <path class="gn-edge gn-edge--related is-dim" d="M 424.8 94.3 Q 355.8 68.2 282.7 58.5" />
+          <path class="gn-edge gn-edge--prereq is-incident" d="M 264.1 100.2 Q 270.1 83.8 270.6 66.2" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--prereq is-dim" d="M 358.0 57.6 Q 273.1 63.9 191.7 88.9" marker-end="url(#gn-arrow-prereq)" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 456.8 370.9 Q 509.1 377.6 561.6 371.9" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--legacy is-dim" d="M 665.0 372.0 Q 623.7 366.7 582.4 372.0" stroke-dasharray="11 11" />
+          <path class="gn-edge gn-edge--apply is-dim" d="M 507.2 190.0 Q 481.3 145.1 445.3 107.8" marker-end="url(#gn-arrow-apply)" />
+          </svg>
+
+          <!-- 节点层 -->
+          <div class="gnodes">
+        <div class="gnode" style="--x:176.08495456534558px;--y:217.98398254646003px;--rt-s:0.6124;--sc-s:0.375;--rt-c:0.7746;--sc-c:0.6;--rt-i:0.9592;--sc-i:0.92;--rt-st:0.469;--sc-st:0.22;" data-state="mastered" data-bk-c="3" data-bk-i="4">
+          <span class="gnode__disc"><span class="gnode__num">8</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="定积分的定义，正式题数 8，学习状态：已掌握"></button>
+          <span class="gnode__label">定积分的定义</span>
+        </div>
+        <div class="gnode" style="--x:290.96741143552055px;--y:328.5932016957747px;--rt-s:0.3536;--sc-s:0.125;--rt-c:0.4472;--sc-c:0.2;--rt-i:0.7416;--sc-i:0.55;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="1" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">4</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="黎曼和，正式题数 4，学习状态：未标记"></button>
+          <span class="gnode__label">黎曼和</span>
+        </div>
+        <div class="gnode" style="--x:58px;--y:145.99377302481398px;--rt-s:0.3536;--sc-s:0.125;--rt-c:0.3162;--sc-c:0.1;--rt-i:0.6928;--sc-i:0.48;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="1" data-bk-i="2">
+          <span class="gnode__disc"><span class="gnode__num">3</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="可积条件，正式题数 3，学习状态：未标记"></button>
+          <span class="gnode__label">可积条件</span>
+        </div>
+        <div class="gnode" style="--x:261.8597395417386px;--y:111.68303136252459px;--rt-s:0.7071;--sc-s:0.5;--rt-c:1.0;--sc-c:1.0;--rt-i:0.9899;--sc-i:0.98;--rt-st:0.8367;--sc-st:0.7;" data-state="review" data-bk-c="4" data-bk-i="4" data-selected="true">
+          <span class="gnode__disc"><span class="gnode__num">12</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="微积分基本定理，正式题数 12，学习状态：复习中"></button>
+          <span class="gnode__label">微积分基本定理</span>
+        </div>
+        <div class="gnode" style="--x:366.6127956886559px;--y:56px;--rt-s:0.6124;--sc-s:0.375;--rt-c:0.8367;--sc-c:0.7;--rt-i:0.9487;--sc-i:0.9;--rt-st:0.469;--sc-st:0.22;" data-state="mastered" data-bk-c="3" data-bk-i="4">
+          <span class="gnode__disc"><span class="gnode__num">9</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="牛顿-莱布尼茨公式，正式题数 9，学习状态：已掌握"></button>
+          <span class="gnode__label">牛顿-莱布尼茨公式</span>
+        </div>
+        <div class="gnode" style="--x:180.227207007614px;--y:91.05232938126962px;--rt-s:0.7071;--sc-s:0.5;--rt-c:0.7071;--sc-c:0.5;--rt-i:0.8832;--sc-i:0.78;--rt-st:0.8367;--sc-st:0.7;" data-state="review" data-bk-c="3" data-bk-i="4">
+          <span class="gnode__disc"><span class="gnode__num">7</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="变上限积分函数，正式题数 7，学习状态：复习中"></button>
+          <span class="gnode__label">变上限积分函数</span>
+        </div>
+        <div class="gnode" style="--x:272.6127956886559px;--y:56.0px;--rt-s:0.6124;--sc-s:0.375;--rt-c:0.0;--sc-c:0.0;--rt-i:0.6325;--sc-i:0.4;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="1" data-bk-i="2">
+          <span class="gnode__disc"><span class="gnode__num">2</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="积分中值定理，正式题数 2，学习状态：未标记"></button>
+          <span class="gnode__label">积分中值定理</span>
+        </div>
+        <div class="gnode" style="--x:588.743783846335px;--y:294.4290868670455px;--rt-s:0.7071;--sc-s:0.5;--rt-c:0.6325;--sc-c:0.4;--rt-i:0.8485;--sc-i:0.72;--rt-st:1.0;--sc-st:1.0;" data-state="work" data-bk-c="2" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">6</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="反常积分，正式题数 6，学习状态：需突破"></button>
+          <span class="gnode__label">反常积分</span>
+        </div>
+        <div class="gnode" style="--x:647.0133759823843px;--y:153.67744736025995px;--rt-s:0.3536;--sc-s:0.125;--rt-c:0.3162;--sc-c:0.1;--rt-i:0.7071;--sc-i:0.5;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="1" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">3</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="广义积分敛散性，正式题数 3，学习状态：未标记"></button>
+          <span class="gnode__label">广义积分敛散性</span>
+        </div>
+        <div class="gnode" style="--x:437.4254924770159px;--y:97.42259567823173px;--rt-s:1.0;--sc-s:1.0;--rt-c:0.8944;--sc-c:0.8;--rt-i:0.922;--sc-i:0.85;--rt-st:1.0;--sc-st:1.0;" data-state="work" data-bk-c="4" data-bk-i="4">
+          <span class="gnode__disc"><span class="gnode__num">10</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="定积分的几何应用，正式题数 10，学习状态：需突破"></button>
+          <span class="gnode__label">定积分的几何应用</span>
+        </div>
+        <div class="gnode" style="--x:568.3463947436308px;--y:56.0px;--rt-s:0.5;--sc-s:0.25;--rt-c:0.4472;--sc-c:0.2;--rt-i:0.7211;--sc-i:0.52;--rt-st:0.8367;--sc-st:0.7;" data-state="review" data-bk-c="1" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">4</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="旋转体体积，正式题数 4，学习状态：复习中"></button>
+          <span class="gnode__label">旋转体体积</span>
+        </div>
+        <div class="gnode" style="--x:638.3463947436308px;--y:56.0px;--rt-s:0.3536;--sc-s:0.125;--rt-c:0.5477;--sc-c:0.3;--rt-i:0.7616;--sc-i:0.58;--rt-st:0.8367;--sc-st:0.7;" data-state="review" data-bk-c="2" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">5</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="平面图形面积，正式题数 5，学习状态：复习中"></button>
+          <span class="gnode__label">平面图形面积</span>
+        </div>
+        <div class="gnode" style="--x:498.3463947436308px;--y:56.0px;--rt-s:0.6124;--sc-s:0.375;--rt-c:0.3162;--sc-c:0.1;--rt-i:0.6164;--sc-i:0.38;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="1" data-bk-i="2">
+          <span class="gnode__disc"><span class="gnode__num">3</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="物理应用与功，正式题数 3，学习状态：未标记"></button>
+          <span class="gnode__label">物理应用与功</span>
+        </div>
+        <div class="gnode" style="--x:448.03141600591835px;--y:370.80616068352145px;--rt-s:0.5;--sc-s:0.25;--rt-c:0.9487;--sc-c:0.9;--rt-i:0.8944;--sc-i:0.8;--rt-st:0.469;--sc-st:0.22;" data-state="mastered" data-bk-c="4" data-bk-i="4">
+          <span class="gnode__disc"><span class="gnode__num">11</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="第一类换元法（根式代换与三角代换），正式题数 11，学习状态：已掌握"></button>
+          <span class="gnode__label">第一类换元法（根式代换与三角代换）</span>
+        </div>
+        <div class="gnode" style="--x:324.06149902040204px;--y:372px;--rt-s:0.3536;--sc-s:0.125;--rt-c:0.6325;--sc-c:0.4;--rt-i:0.7746;--sc-i:0.6;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="2" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">6</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="第二类换元法，正式题数 6，学习状态：未标记"></button>
+          <span class="gnode__label">第二类换元法</span>
+        </div>
+        <div class="gnode" style="--x:447.1997539891342px;--y:260.45874588624207px;--rt-s:0.6124;--sc-s:0.375;--rt-c:0.8367;--sc-c:0.7;--rt-i:0.866;--sc-i:0.75;--rt-st:0.8367;--sc-st:0.7;" data-state="review" data-bk-c="3" data-bk-i="4">
+          <span class="gnode__disc"><span class="gnode__num">9</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="分部积分法，正式题数 9，学习状态：复习中"></button>
+          <span class="gnode__label">分部积分法</span>
+        </div>
+        <div class="gnode" style="--x:678.0000340640565px;--y:371.9609074821979px;--rt-s:0.3536;--sc-s:0.125;--rt-c:0.5477;--sc-c:0.3;--rt-i:0.7874;--sc-i:0.62;--rt-st:1.0;--sc-st:1.0;" data-state="work" data-bk-c="2" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">5</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="有理函数的部分分式分解，正式题数 5，学习状态：需突破"></button>
+          <span class="gnode__label">有理函数的部分分式分解</span>
+        </div>
+        <div class="gnode" style="--x:513.5055611491224px;--y:198.2934602731861px;--rt-s:0.5;--sc-s:0.25;--rt-c:0.7071;--sc-c:0.5;--rt-i:0.8124;--sc-i:0.66;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="3" data-bk-i="3">
+          <span class="gnode__disc"><span class="gnode__num">7</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="三角函数积分，正式题数 7，学习状态：未标记"></button>
+          <span class="gnode__label">三角函数积分</span>
+        </div>
+        <div class="gnode" style="--x:802px;--y:372px;--rt-s:0.0;--sc-s:0.0;--rt-c:0.0;--sc-c:0.0;--rt-i:0.5;--sc-i:0.25;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="1" data-bk-i="2" data-label="hidden">
+          <span class="gnode__disc"><span class="gnode__num">2</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="递推关系与区间表示，正式题数 2，学习状态：未标记"></button>
+          <span class="gnode__label">递推关系与区间表示</span>
+        </div>
+        <div class="gnode" style="--x:572.000062769495px;--y:372px;--rt-s:0.6124;--sc-s:0.375;--rt-c:0.3162;--sc-c:0.1;--rt-i:0.5916;--sc-i:0.35;--rt-st:0.6782;--sc-st:0.46;" data-state="new" data-bk-c="1" data-bk-i="2">
+          <span class="gnode__disc"><span class="gnode__num">3</span></span>
+          <span class="gnode__ring" aria-hidden="true"></span>
+          <button class="gnode__hit" type="button" aria-label="数值积分初步，正式题数 3，学习状态：未标记"></button>
+          <span class="gnode__label">数值积分初步</span>
+        </div>
+          </div>
+
+          <!-- 箭头标记（先修 / 应用 有向） -->
+          <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+            <defs>
+              <marker id="gn-arrow-prereq" viewBox="0 0 10 10" refX="9.2" refY="5"
+                      markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0 0 L10 5 L0 10 Z" style="fill: var(--gn-edge-prereq)"></path>
+              </marker>
+              <marker id="gn-arrow-apply" viewBox="0 0 10 10" refX="9.2" refY="5"
+                      markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse">
+                <path d="M0 0 L10 5 L0 10 Z" style="fill: var(--gn-edge-apply)"></path>
+              </marker>
+            </defs>
+          </svg>
+        </section>
+
+        <!-- 图例：关系线型 + 节点色键（随投影切换）+ 节点形态与缩放标本 -->
+        <section class="gn-legend" aria-label="图例">
+          <div class="gn-legend__block">
+            <span class="gn-legend__t">关系线型</span>
+            <span class="gn-litem">
+              <svg class="gn-swatch gn-swatch--prereq" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5 H27"/><path d="M27 2.1 L33 5 L27 7.9 Z" fill="var(--gn-edge-prereq)" stroke="none"/></svg>
+              先修
+            </span>
+            <span class="gn-litem">
+              <svg class="gn-swatch gn-swatch--related" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5 H33"/></svg>
+              相关
+            </span>
+            <span class="gn-litem">
+              <svg class="gn-swatch gn-swatch--apply" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5 H27"/><path d="M27 2.1 L33 5 L27 7.9 Z" fill="var(--gn-edge-apply)" stroke="none"/></svg>
+              应用
+            </span>
+            <span class="gn-litem">
+              <svg class="gn-swatch gn-swatch--contrast" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5 H33"/></svg>
+              对比
+            </span>
+            <span class="gn-litem">
+              <svg class="gn-swatch gn-swatch--legacy" viewBox="0 0 34 10" aria-hidden="true"><path d="M1 5 H33"/></svg>
+              隐含
+            </span>
+          </div>
+
+          <div class="gn-legend__block">
+            <span class="gn-legend__t">节点颜色</span>
+
+            <!-- 关系结构投影：颜色不承载语义（G-22）→ 显示节点结构键 -->
+            <div class="gn-key gn-key--structure">
+              <span class="gn-chip gn-chip--ink">
+                <span class="gn-chip__dot" aria-hidden="true"></span>
+                常态：墨阶中档
+              </span>
+              <span class="gn-chip">
+                <span class="gn-chip__dot gn-chip__dot--deep" aria-hidden="true"></span>
+                选中：墨阶最深档 + 1px 环
+              </span>
+              <span class="gn-legend__note">关系结构投影下节点颜色<b>不承载语义</b>；关系由线的线型表达。</span>
+            </div>
+
+            <!-- 题目数量投影：单色相明度阶 -->
+            <div class="gn-key gn-key--count">
+              <span class="gn-chip gn-chip--q1"><span class="gn-chip__dot" aria-hidden="true"></span>低</span>
+              <span class="gn-chip gn-chip--q2"><span class="gn-chip__dot" aria-hidden="true"></span></span>
+              <span class="gn-chip gn-chip--q3"><span class="gn-chip__dot" aria-hidden="true"></span></span>
+              <span class="gn-chip gn-chip--q4"><span class="gn-chip__dot" aria-hidden="true"></span>高</span>
+              <span class="gn-legend__note">数字 = 该节点的正式题数；大小 = 题目数量。</span>
+            </div>
+
+            <!-- 重要性投影：同一套橙阶 -->
+            <div class="gn-key gn-key--importance">
+              <span class="gn-chip gn-chip--q1"><span class="gn-chip__dot" aria-hidden="true"></span>低</span>
+              <span class="gn-chip gn-chip--q2"><span class="gn-chip__dot" aria-hidden="true"></span></span>
+              <span class="gn-chip gn-chip--q3"><span class="gn-chip__dot" aria-hidden="true"></span></span>
+              <span class="gn-chip gn-chip--q4"><span class="gn-chip__dot" aria-hidden="true"></span>高</span>
+              <span class="gn-legend__note">数字 = 该节点的正式题数；大小 = 重要性。</span>
+            </div>
+
+            <!-- 学习状态投影：分类四色 -->
+            <div class="gn-key gn-key--state">
+              <span class="gn-chip gn-chip--new"><span class="gn-chip__dot" aria-hidden="true"></span>未学</span>
+              <span class="gn-chip gn-chip--review"><span class="gn-chip__dot" aria-hidden="true"></span>复习</span>
+              <span class="gn-chip gn-chip--mastered"><span class="gn-chip__dot" aria-hidden="true"></span>掌握</span>
+              <span class="gn-chip gn-chip--work"><span class="gn-chip__dot" aria-hidden="true"></span>需突破</span>
+            </div>
+          </div>
+
+          <div class="gn-legend__block">
+            <span class="gn-legend__t">节点形态与缩放</span>
+            <span class="gn-spec">
+              <span class="gn-spec__item">
+                <span class="gn-spec__sample">
+                  <span class="gn-spec__dot" style="--d:20px;--fill:var(--gn-ink-mid)"></span>
+                </span>
+                <span class="gn-spec__cap">单层实心圆 · 无描边无阴影</span>
+              </span>
+              <span class="gn-spec__item">
+                <span class="gn-spec__sample">
+                  <span class="gn-spec__dot gn-spec__dot--sel" style="--d:23px;--fill:var(--gn-ink-deep)"></span>
+                </span>
+                <span class="gn-spec__cap">选中：换色 + 1px 环 + 放大</span>
+              </span>
+              <span class="gn-spec__item">
+                <span class="gn-spec__sample">
+                  <span class="gn-spec__dot gn-spec__dot--num" data-n="12" style="--d:24px;--fill:var(--gn-q4)"></span>
+                </span>
+                <span class="gn-spec__cap">圈心数字 12px（仅两个投影）</span>
+              </span>
+              <span class="gn-fade">
+                <span class="gn-fade__row">
+                  <span class="gn-fade__item gn-fade__item--a">
+                    <span class="gn-fade__dot"></span><span class="gn-fade__label">变上限积分函数</span>
+                  </span>
+                  <span class="gn-fade__item gn-fade__item--b">
+                    <span class="gn-fade__dot"></span><span class="gn-fade__label">变上限积分函数</span>
+                  </span>
+                  <span class="gn-fade__item gn-fade__item--c">
+                    <span class="gn-fade__dot"></span><span class="gn-fade__label">变上限积分函数</span>
+                  </span>
+                </span>
+                <span class="gn-spec__cap">缩放 1.00 / 0.75 / 0.45×：标签按 log2 淡出，不缩小</span>
+              </span>
+            </span>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ==================== 右栏（两态互斥）==================== -->
+    <aside class="col--right" aria-label="Agent 面板">
+
+      <!-- 态 1：会话列表（列表态） -->
+      <section class="rail rail--list" aria-label="会话列表视图">
+        <div class="agent-head">
+          <span class="agent-head__t">会话</span>
+          <button type="button" class="mk-btn mk-btn-text" style="min-height:30px;padding:2px 10px">全部</button>
+        </div>
+        <div class="sessions">
+          <div class="session-group__t">今天</div>
+          <button type="button" class="session is-active">
+            <span class="mk-dot mk-dot--blue mk-dot--ring" aria-hidden="true"></span>
+            <span class="session__body">
+              <span class="session__t">反常积分为什么会发散</span>
+              <span class="session__p">无穷区间上的比较判别没看懂</span>
+            </span>
+          </button>
+          <button type="button" class="session">
+            <span class="mk-dot mk-dot--mute mk-dot--ring" aria-hidden="true"></span>
+            <span class="session__body">
+              <span class="session__t">图谱里哪些点是空的</span>
+              <span class="session__p">为什么有的节点没有关联题目</span>
+            </span>
+          </button>
+          <div class="session-group__t">昨天</div>
+          <button type="button" class="session">
+            <span class="mk-dot mk-dot--mute mk-dot--ring" aria-hidden="true"></span>
+            <span class="session__body">
+              <span class="session__t">分部积分法的选取顺序</span>
+              <span class="session__p">什么时候先取对数</span>
+            </span>
+          </button>
+          <div class="session-group__t">更早</div>
+          <button type="button" class="session">
+            <span class="mk-dot mk-dot--mute mk-dot--ring" aria-hidden="true"></span>
+            <span class="session__body">
+              <span class="session__t">微积分基本定理的条件</span>
+              <span class="session__p">连续与可导到底要哪一个</span>
+            </span>
+          </button>
+        </div>
+        <div class="rail-note">
+          列表态<b>只</b>负责「选定哪一个会话」。切换到对话态请点下面的按钮 ——
+          两态互斥，同屏只呈现一态。
+        </div>
+        <div class="composer-wrap">
+          <label class="mk-btn mk-btn-secondary" for="gn-rail-chat" style="justify-content:center">切到对话态</label>
+        </div>
+      </section>
+
+      <!-- 态 2：对话（对话态） -->
+      <section class="rail rail--chat" aria-label="对话视图">
+        <div class="agent-head">
+          <label class="rail-back" for="gn-rail-list" aria-label="返回会话列表" title="返回会话列表">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M14.5 5 7.5 12l7 7" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </label>
+          <span class="agent-head__t">反常积分为什么会发散</span>
+        </div>
+
+        <div class="ctx-chips">
+          <span class="mk-tag">@ 本章 ch06</span>
+          <span class="mk-tag">@ 反常积分</span>
+        </div>
+
+        <div class="msgs">
+          <div class="msg msg--user">
+            图谱里「反常积分」这个点特别大，是不是说明它题最多？
+          </div>
+          <div class="msg msg--agent">
+            <p>不是。点的大小跟着<b>当前投影</b>走：在「题目数量」投影里它按题数排，
+               在「关系结构」投影里它按关系度数排。同一批点，切投影就换一套读法。</p>
+            <p>颜色也是跟着投影换的 —— 现在这一屏是「关系结构」投影，
+               颜色不表示状态，只表示节点自身的墨色层次。</p>
+            <div class="timeline">
+              <div class="timeline__item">
+                <span class="mk-dot mk-dot--blue mk-dot--filled" aria-hidden="true"></span>
+                <span class="timeline__body">
+                  <span class="timeline__t">读取本章 20 个知识点的正式题数</span>
+                  <span class="timeline__s">已完成 · 0.4 s</span>
+                </span>
+              </div>
+              <div class="timeline__item">
+                <span class="mk-dot mk-dot--blue mk-dot--half" aria-hidden="true"></span>
+                <span class="timeline__body">
+                  <span class="timeline__t">按当前投影重算节点半径</span>
+                  <span class="timeline__s">已完成 · 0.2 s</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer-wrap">
+          <div class="composer">
+            <div>问点什么……（静态 mockup，不会真的发送）</div>
+            <div class="composer__row">
+              <span class="mk-tag">@ 知识点</span>
+              <span class="mk-tag">@ 本章</span>
+              <span class="mk-spacer"></span>
+              <button type="button" class="mk-btn mk-btn-primary" style="min-height:34px;padding:4px 14px">发送</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <!-- ==================== 底部 mockup 声明条 ==================== -->
+  <div class="mocknote">
+    <b>这是静态 mockup，不含交互。</b>
+    <span>本图节点为<b>静态排布</b>，<b>未模拟缩放行为</b>：A-28 的模型是「缩放只改间距，节点 / 标签 / 边宽屏幕恒定」；工具条的三档缩放只演示标签按 log2 淡出。</span>
+    <span class="mk-spacer"></span>
+    <span>权威来源：OBSIDIAN-GRAPH.md（A-28）· graph-node-visual-language design.md D-1…D-14 · decisions.md G-1…G-24 / A-10 / A-15 / A-17</span>
+  </div>
+</div>
+
+<script>
+/* mockup 专用演示脚本：仅切换 <html> 的 data-theme 属性（用于对照两套 token）。
+   投影 / 缩放 / 右栏两态切换**不经过脚本**，是纯 CSS（radio + 兄弟选择器）。 */
+(function () {
+  var btn = document.getElementById('mk-theme');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var el = document.documentElement;
+    var night = el.getAttribute('data-theme') === 'night';
+    el.setAttribute('data-theme', night ? 'day' : 'night');
+    btn.setAttribute('aria-pressed', night ? 'false' : 'true');
+  });
+})();
+</script>
+
+</body>
+</html>
