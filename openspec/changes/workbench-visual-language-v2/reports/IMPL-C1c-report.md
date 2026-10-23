@@ -160,7 +160,11 @@ $ python -m pytest tests/test_g5_diff_pixels.py -q
 两侧**只差静态 CSS**（用路由拦截供给旧版 CSS，另一侧用磁盘当前版）。
 产物是 g5 自己的格式 ⇒ 直接喂 `python tools/walkthrough/g5.py compare`。
 
-**比对 ①（A-132 的场景）：`bc488a40`（C1 之前的实现前） → 当前工作树**
+**比对 ①（A-132 的场景）：`bc488a40`（**C1 的 CSS 实现之前**） → 当前工作树**
+
+> 口径校准：`bc488a40` 与 `4e0c61b2`（C1 的实现 commit）的父 `c706c74b`
+> 的 `workbench.css` **逐字节相同**（sha256 `6046575b1b2045453f6d3b0374c034e98d557f918cbabb7f8aa1d154564f17b9`
+> = C1b 报告 §4.1 记的「full css sha256 before」）⇒ 「before 侧」**就是 C1 之前的 CSS**。
 
 ```
 $ python tools/walkthrough/g5.py compare --before tmp/c1c-graph --after tmp/c1c-graph --out tmp/c1c-graph/out
