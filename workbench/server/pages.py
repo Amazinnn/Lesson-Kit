@@ -1084,7 +1084,7 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<div id='ai-paper-approval-details' class='ai-paper-approval-details'></div>"
         "<div class='ai-paper-approval-actions'>"
         "<button id='ai-paper-approval-cancel' class='outline sm' type='button'>取消更新</button>"
-        "<button id='ai-paper-approval-approve' class='primary sm' type='button'>批准更新</button>"
+        "<button id='ai-paper-approval-approve' class='primary' type='button'>批准更新</button>"
         "</div></section>"
         "<div id='ai-context-chips' class='agent-context-chips' aria-label='当前上下文'></div>"
         "<div id='ai-composer-shell' class='agent-composer-shell'>"
