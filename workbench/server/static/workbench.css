@@ -920,12 +920,21 @@ body {
      · 不给 `.side-sections` 设 `min-height` ⇒ 纸的高度就等于内容的高度。 */
 .side-sections {
   background: var(--surface-sunken);
-  padding: 16px 12px 20px;
+  /* 靶子 `.col--left`：`padding: var(--sp-4) var(--sp-3)` = 16px 12px。 */
+  padding: 16px 12px;
 }
+/* 组与组之间：靶子 `.col--left` 的 `gap: var(--sp-5)` = **24px**，组间**没有**分隔线。 */
 .side-section + .side-section {
-  margin-top: 26px;
-  padding-top: 18px;
-  border-top: 1px solid var(--rule-hair);
+  margin-top: 24px;
+}
+/* 组标题与组内内容同一条 12px 文字列（靶子 `.nav-group__t` 的
+   `padding: 0 var(--sp-3) var(--sp-2)` 与 `.nav-item` 的 `padding: … var(--sp-3)`）。 */
+.side-sections .side-label { margin: 0; padding: 0 12px 8px; }
+/* 设置组的三行也是 12px 内距（靶子里它们同样是 `.nav-item`）。 */
+.settings-section .setting-row { padding-left: 12px; }
+.settings-section select {
+  width: calc(100% - 24px);
+  margin: 0 12px;
 }
 .setting-row {
   display: flex; align-items: flex-start; gap: 7px;
@@ -934,7 +943,10 @@ body {
 }
 .setting-row input { margin-top: 2px; }
 #next-problem { margin-left: auto; }
-.side-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.side-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+/* 组标题带计数徽标时：徽标与标题文字同一行（标题不再自带下内距，
+   间距由 `.side-heading` 的 8px 给出）。 */
+.side-heading .side-label { padding-bottom: 0; }
 .side-heading span { color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; }
 /* 计数徽标：标题恒定、计数随内容变
    §4.13 徽标（`badge-pill` · A-115 形态裁定）：**胶囊轮廓 + 沉底实心**；

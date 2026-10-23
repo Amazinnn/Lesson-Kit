@@ -1047,7 +1047,9 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         # content, so the lower half of the column is not blank paper (15.3).
         "<div class='side-sections'>"
         "<nav class='side-section primary-nav' aria-label='工作台导航'>"
-        "<p class='side-label'>页面</p>"
+        # 首组名照靶子（`mockup-baseline/shell.html` 的 `.nav-group__t`）：
+        # 「学习」—— 这一组放的是学习入口，不是「页面」的总称。
+        "<p class='side-label'>学习</p>"
         f"{nav}</nav>"
         "<section class='side-section settings-section'>"
         "<p class='side-label'>设置</p>"

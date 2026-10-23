@@ -1288,7 +1288,7 @@
 | P-155 | `工作区` | 原样 | 留 | GLOSSARY 契约词 |
 | P-156 | `aria-label='切换工作区'` | 原样 | 留 | 无障碍名称 |
 | P-157 | `aria-label='工作台导航'` | 原样 | 留 | 无障碍名称 |
-| P-158 | `页面` | 原样 | 留 | 栏目名 |
+| P-158 | `页面` | **`学习`** | **改** | 首组名照 V1 基线靶子（`mockup-baseline/shell.html` 的 `.nav-group__t`）：这一组放的是**学习入口**，「页面」是全站的总称、不是这一组的名字（V1 基线收敛 change `workbench-v1-baseline-convergence`；spec delta「The study group leads the left column」） |
 | P-159 | `设置` | 原样 | 留 | 栏目名（PRODUCT-MANUAL:507/528 引用「设置」） |
 | P-160 | `运行中发送方式` | 原样 | 留 | 控件标签（PRODUCT-MANUAL:452 描述同一设置） |
 | P-161, P-162 | `排队发送` / `中断后发送` | 原样 | 留 | 选项文案（PRODUCT-MANUAL:452 逐字引用） |
