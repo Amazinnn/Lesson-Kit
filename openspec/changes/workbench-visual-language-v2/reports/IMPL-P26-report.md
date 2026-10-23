@@ -148,6 +148,13 @@ paper-practice.js + 2 条 agent-ui.js 中 1 条 + 2 条 kp-experience.js）；
 | Q-64 | `paper-practice.js:1456 / 1475` | `label: "判定正确"` + `"共 " + stats.total + " 题；判定正确 " + stats.correct` |
 | F-85 | `practice-flow.js:2034` | `ratingLabel.textContent = "为“" + title + "”自评（1–5）";` |
 
+### 2.3 行号漂移说明
+
+台账 §0 提醒「行号会漂」（核查期间有并行 agent 改过 `paper-practice.js` / `practice-flow.js`）。
+本报告里所有 `file:line` 引用**都是本组落地之后重新 grep 实测的当前行号**，
+不是台账里的旧行号；与台账不同的条目（如 P-79 台账记 `pages.py:445`、实测 `:449`；
+P-179 台账记 `pages.py:1078`、实测 `:1080`）已在 §7.1 按实测行号标注。
+
 ### 2.3 逐条全表（114 行）
 
 | ID | 页面 | 文件 | 当前文案 → 定稿文案 | 状态 |
@@ -346,7 +353,7 @@ grep -rn "Paper\|Agent activity\|Artifact\|Congratulations\|Check 入库\|Yes / 
 | 类别 | 命中 | 是否本组该管 |
 |---|---|---|
 | 变量名 / 函数名 / 协议字段（`aiPaperApproval*` / `savedPaper` / `isPaperRun` / `downloadPaper` / `PaperPractice` / `renderArtifactCard` / `aiArtifact` …） | 绝大多数 | ❌ 不是文案（台账 §6.1 明示「`workbench.js` 里的 `Paper` 有非文案用途——变量名 / 协议字段 / 注释不在此列」） |
-| 注释 / docstring（`pages.py:317` `Practise a saved Paper; …`、`workbench.js:536` 注释、`workbench.css:4171`、`agent-ui.css:426`） | 4 | ❌ 不渲染 |
+| 注释 / docstring（`pages.py:317` `Practise a saved Paper; …`、`workbench.js:536` 注释、`workbench.css:4757`、`agent-ui.css:428`） | 4 | ❌ 不渲染 |
 | **本组文件里残留的界面文案** | `agent-ui.js:308` `kicker.textContent = "Artifact · Paper";`<br>`workbench.js:3732` `"Paper：" + title`<br>`workbench.js:4861` `title.textContent = "Check 入库已回滚";` | 见 §8.2 / §8.1 |
 
 > **这三条是台账漏收的条目，不是本组漏做。** copy-table §1 的清单是按
@@ -354,7 +361,7 @@ grep -rn "Paper\|Agent activity\|Artifact\|Congratulations\|Check 入库\|Yes / 
 > 而 `agent-ui.js:308` 与 `workbench.js:3732` **整条都不含 CJK 字符**，
 > 所以没进 §1 的清单，也就既不在 114 条里、也不在 §6.1 的必译表里。
 > `workbench.js:4861`（W-105）则是**任务书点名不许动**的待裁决项。
-> 本组按「没在台账里的文案不许动」的原��**一律未改**，已登记进 §8。
+> 本组按「没在台账里的文案不许动」的原则**一律未改**，已登记进 §8。
 
 ### 4.2 复核二
 
@@ -534,8 +541,8 @@ EXIT=0
 
 | MANUAL 行 | 改前 | 改后 | 依据 | 对应代码改动 |
 |---|---|---|---|---|
-| 58 | 没有目标时会如实显示「**暂无已设置的长期或阶段目标**」 | 没有目标时会如实显示「**暂无目标**」 | copy-table §6.2 **M-01** | P-79（`pages.py:445`） |
-| 528 | 右侧的「**Paper 更新待确认**」会显示目标试卷… | 右侧的「**试卷更新待确认**」会显示目标试卷… | copy-table §6.2 **M-09** | P-179（`pages.py:1078`） |
+| 58 | 没有目标时会如实显示「**暂无已设置的长期或阶段目标**」 | 没有目标时会如实显示「**暂无目标**」 | copy-table §6.2 **M-01** | P-79（`pages.py:449`） |
+| 528 | 右侧的「**Paper 更新待确认**」会显示目标试卷… | 右侧的「**试卷更新待确认**」会显示目标试卷… | copy-table §6.2 **M-09** | P-179（`pages.py:1080`） |
 
 ### 7.2 commit `eeee5144` —— 补上 copy-table §3.1 登记的 P-195 同步义务（1 处）
 
