@@ -76,6 +76,10 @@
 > 紧接着这个 commit 是**按 A-123 裁定更新后的版本**。
 > （A-90 纪律：本棒自己发起的两个 commit —— `3eb9f2a1` 与本 commit —— 都是明确路径，
 > **没有 `git add -A`**；被卷走的那一次不是本棒发起的。）
+> ⇒ **owner 已把这次越界如实登记在 A-123 §5**（`4a989dc4`）：
+> 根因是那次 commit **没带 `-- <路径>`** ⇒ 提交了整个索引，而本棒的 `git add` 正好落在里面；
+> **后果是内容无损失、错的是提交边界**。owner 审计了重启后的全部 7 个提交，**只有这一个**越界。
+> 教训与本报告一致：**`git add` 限定路径 ≠ `git commit` 限定路径**，并发执行体下必须带 `-- <路径>`。
 >
 > ⚠️ **口径差**：owner 在 §9.44 与 `tasks.md` 里写的文本数是 **585 → 563 / 2989 → 2361**
 > （= **P26 交工时**的数字）；本报告 §6 给的是**最终数字 585 → 561 / 2989 → 2320**
@@ -742,6 +746,22 @@ present definitions**；a difference in **what any of them counts** is registere
 > `env -u http_proxy -u https_proxy -u all_proxy`。
 > 本棒**自己又跑了一遍**（不是在上一波的输出上誊抄）：R-54 修复后重跑，**1181 passed**。
 > 修复前也跑了一遍，同样 1181 passed（`241.05s`）。
+>
+> ⚠️ **本棒一共跑了 4 遍 pytest**，逐遍结果：
+>
+> | # | 代码状态 | 结果 |
+> |---|---|---|
+> | 1 | `4fd3022b`（R-54 修复前） | 1181 passed（241.05s），**无 warning** |
+> | 2 | `3eb9f2a1`（R-54 修复后） | 1181 passed（243.18s），**无 warning** |
+> | 3 | `dbe3c931`（只剩文档变更） | 1181 passed（245.34s），**1 warning** |
+> | 4 | 同上，**再跑一遍** | 1181 passed，**无 warning** |
+>
+> 第 3 遍那 1 条 warning 是 **`PytestUnhandledThreadExceptionWarning`**
+> （`ThreadingHTTPServer` 的请求线程与测试拆服竞态 ⇒ `handle_error` 往 stderr 打栈，
+> pytest 收成 warning）。**第 4 遍没有复现** ⇒ **是 flake**。
+> 与本棒的文案改动**无关**：本棒对产品代码的改动是**纯字符串字面量**，
+> 不可能产生线程异常；且 `workbench/server/app.py` **一个字没动**
+> （本棒没碰 `app.py`）。**如实登记，不隐瞒。**
 
 ### 7.2 `python -m compileall -q lessonkit.py workbench pipeline pool tests`
 
@@ -985,8 +1005,8 @@ A-123 §4 裁定：「R-54 去句号后由 **CSS 间距**分隔（**不新增文
 | 7 | **并发 CSS agent 的在途改动影响了 grep 复核一的行数** | 复核一 192 → 190 行里，有 **2 行**是 CSS 文件的行号平移（`agent-ui.css:426→428`、`workbench.css:4524→4757`），
   **不是本棒改的**。§4.1 的差集表已把这 2 条单独归因，不计进本棒的功劳 |
 | 8 | **另一份报告（`reports/IMPL-C1-report.md`）也还缺** | IMPLEMENTATION-LOG §9.44 的「仍未闭合」里写着「C1 / P26b 的**两份报告**在关机前没写成，开机后已重新派发」。本棒**只负责 P26b 这一份**，C1 那份**不在本棒范围**，没有代写。`reports/IMPL-C1-shots/` 目录在仓库里是 untracked |
-| 9 | **`tmp_local2/p26b/` 下的两个 worktree 与量测脚本未清理** | 它们在 `tmp_local2/`（untracked scratch，上一波的约定），**没提交**。但 `git worktree list` 里会多出
-  `tmp_local2/p26b/base` 与 `tmp_local2/p26b/base0` 两条 —— **收工时请 `git worktree remove` 掉**，否则会留两条游离检出 |
+| 9 | **量测工作区已清理** | `tmp_local2/p26b/base`（`5f8440db`）与 `tmp_local2/p26b/base0`（`872e6297`）两个临时 worktree **已 `git worktree remove` 掉**（本棒收工时执行）；
+  量测脚本与中间 JSON 留在 `tmp_local2/p26b/`（untracked scratch，上一波的约定），**没提交** |
 
 ### 9.3 明确没有做的事（逐条对照硬约束）
 
