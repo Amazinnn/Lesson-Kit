@@ -793,7 +793,7 @@ or another geometric cue in addition to color.
 #### Scenario: Active navigation
 
 - **WHEN** a navigation item is active
-- **THEN** it has both active text styling and a blue structural inset
+- **THEN** it has both active text styling and a blue structural edge
 
 #### Scenario: Graph state
 

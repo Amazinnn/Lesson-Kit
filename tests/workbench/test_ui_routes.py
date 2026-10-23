@@ -131,7 +131,11 @@ class UiRouteTests(unittest.TestCase):
         self.assertIn("--role-red: #d1392b", body)
         self.assertIn("#topbar .brand::before", body)
         self.assertIn(".page-header::after", body)
-        self.assertIn("inset 4px 0 0 var(--role-blue)", body)
+        # 选中态的蓝色结构标记：靶子形态是左缘 3px 蓝条（`::before`），
+        # 不是旧形态的 `inset 4px` 投影内嵌（delta「Redundant state cues」
+        # 的措辞同步改成 structural edge，2026-10-23 A-143）。
+        self.assertIn(".nav-item.active::before", body)
+        self.assertIn("width: 3px", body)
     def test_css_makes_learning_content_the_primary_surface(self):
         status, body = self.fetch("/static/workbench.css")
         self.assertEqual(status, 200)
@@ -139,10 +143,14 @@ class UiRouteTests(unittest.TestCase):
         question = body.split(".practice-question-card {", 1)[1].split("}", 1)[0]
         solution = body.split(".practice-solution {", 1)[1].split("}", 1)[0]
         self.assertIn("font-size: 17px", knowledge)
-        self.assertIn("border-left: 4px", knowledge)
+        # 单侧结构线是 2px 墨色（`--rule-structure`），不再是 4px 蓝边框。
+        self.assertIn("border-left: 2px", knowledge)
         self.assertIn("font-size: 17px", question)
-        self.assertIn("box-shadow: none", question)
-        self.assertIn("color: var(--ink-muted)", solution)
+        # 题面/解析现在是**卡级纸面**（卡面底 + 12px 圆角 + 卡级柔影 elev-1），
+        # 另配单侧 2px 结构线 —— delta 只禁「装饰性投影」，不禁卡面自己的抬升。
+        self.assertIn("box-shadow: var(--elev-1)", question)
+        self.assertIn("font-size: 17px", solution)
+        self.assertIn("box-shadow: var(--elev-1)", solution)
 
     def test_practice_page_session_controls_live_outside_the_answer_card(self):
         # Session controls must not be nested in the answer card, where a state

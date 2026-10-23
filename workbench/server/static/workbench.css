@@ -812,7 +812,7 @@ body {
 .context-line,
 .section-kicker,
 .side-label {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   color: var(--ink-faint);
   font-size: 12px;
   font-weight: 600;
@@ -891,32 +891,46 @@ body {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  min-height: 32px;
-  padding: 0 9px;
+  gap: 12px;
+  min-height: 44px;          /* 靶子：44px */
+  padding: 8px 12px;
   border-radius: var(--r-md);
   color: var(--ink-muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 14px;           /* 靶子：--fs-body 界面正文 */
   /* 只过渡 transform：状态色瞬切（权威表 §3.3），几何走 120ms 过渡 */
   transition: transform var(--dur-fast) var(--ease-standard);
 }
-.nav-item:hover { background: var(--veil-hover); transform: translate3d(0, -1px, 0); }
+.nav-item:hover { background: var(--veil-hover); color: var(--ink-strong); }
+/* 项间距 4px（靶子 `.nav { gap:4px }`） */
+.nav-item + .nav-item { margin-top: 4px; }
 .nav-item:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 .nav-item .asset-icon {
-  width: 18px;
-  height: 18px;
+  width: 32px;               /* 靶子：32px 彩色圆盘（asset-spec §2.0 徽章式） */
+  height: 32px;
   flex: none;
   border-radius: var(--r-round);
 }
+.nav-item__icon { display: inline-flex; flex: none; }
 /* 15.2 选中态 = **整行圆角色块**（spec「The selected navigation entry reads as a block」）：
    去掉 1px 黑框；保留两个状态通道 —— 活动文字样式（`--ink-strong` + 600）
    + 蓝色结构内嵌（`inset 4px 0 0 --role-blue`）。 */
 .nav-item.active {
-  color: var(--ink-strong);
-  background: var(--surface-card);
-  box-shadow: inset 4px 0 0 var(--role-blue);
+  position: relative;
+  color: var(--role-blue);
+  background: var(--role-blue-wash);
   font-weight: 600;
+}
+/* 左缘 3px 蓝条（靶子 `.nav-item.is-active::before`：上下各缩进 8px、胶囊头） */
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: var(--r-pill);
+  background: var(--role-blue);
 }
 .nav-item a { color: inherit; text-decoration: none; display: block; width: 100%; }
 
@@ -946,10 +960,12 @@ select:focus-visible {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: 8px;
-  padding: 8px 9px;
-  border-radius: var(--r-xs);
+  padding: 8px 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-card);
+  box-shadow: var(--elev-1);
   font-size: 13px;
-  color: var(--ink-muted);
+  color: var(--ink-body);
   cursor: pointer;
   /* 只过渡 transform：底色瞬切（权威表 §3.3），几何走 120ms 过渡 */
   transition: transform var(--dur-fast) var(--ease-standard);
@@ -1335,7 +1351,9 @@ textarea:focus-visible, input:focus-visible {
    tests/workbench/test_ui_routes.py 按块取文本核对「学习内容 17px」。 */
 .knowledge-body {
   padding: 26px 28px;
-  border-left: 4px solid var(--role-blue);
+  /* 单侧 2px 墨色结构线（delta「Learning content is the visual anchor」·
+     `PRODUCT-MANUAL.md:129-130`）—— 旧值是 4px **蓝**边框。 */
+  border-left: 2px solid var(--rule-structure);
   box-shadow: none;
   font-size: 17px;
 }
