@@ -981,7 +981,8 @@ button.primary:disabled {
   color: var(--graph-page-caption, var(--ink-faint));
   opacity: 1;
 }
-button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; border-radius: 14px; }
+/* ⚠️ **`button.sm` 不在这里** —— 它是**尺寸修饰符**，必须排在 §4.1 / §4.2 的
+   形态规则**之后**（同特异度靠源顺序取胜）。见下面「尺寸修饰符 `.sm`」那块。 */
 
 /* ============================================================================
    按钮族 · 形态裁定 A-115（component-spec §4.1 / §4.2 / §4.3 / §4.4）
@@ -1009,6 +1010,7 @@ button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; b
 /* ---- §4.1 主按钮 · 无影平底 ---------------------------------------------- */
 button.primary {
   position: relative;
+  height: 40px;
   border: 0;
   border-radius: var(--r-md);
   background: var(--role-blue);
@@ -1029,6 +1031,7 @@ button.primary:active:not(:disabled) { box-shadow: none; }
 /* ---- §4.2 次按钮 · 沉底次按钮 -------------------------------------------- */
 button.outline {
   position: relative;
+  height: 40px;
   border: 0;
   border-radius: var(--r-md);
   background: var(--surface-sunken);
@@ -1045,19 +1048,24 @@ button.outline::before {
 button.outline:hover:not(:disabled) { background: var(--surface-card); }
 button.outline:disabled { background: var(--surface-base); color: var(--ink-disabled); }
 
-/* ---- 形态高度：**零特异度**（A-126 裁决 2 · `.sm` 级联 bug 的修法）-----------
-   ⚠️ **为什么用 `:where()`**：`button.primary` / `button.outline` 的
-   `height: 40px` 原本写在 `button.sm { height: 28px }` **之后** ⇒ 同特异度
-   靠后者胜 ⇒ `class="primary sm"` / `class="outline sm"` 的 **28px 被盖成 40px**
-   （实测：「保存目标」「新建」「上一题 / 下一题」全是 40px）。
-   ⇒ A-126 判定：**这是级联 bug，不是设计选择**（所有者那句「数字可以微调」
-   不等于「尺寸修饰符可以失效」）⇒ **`.sm` 必须真正生效**。
-   ⇒ 修法（零特异度）：把形态高度写成 `:where(...)` ⇒ 特异度 **0** ⇒
-     `button.sm`（0,1,1）**任何顺序都赢** ⇒ `.sm` = 28px 视觉，
-     不带 `.sm` 的 `primary` / `outline` = 40px 视觉。
-   ⚠️ 形态的**其余**属性（底色 / 描边 / 圆角 / 阴影）仍留在各自的选择器里
-     （那些没有尺寸修饰符的竞争者，不需要零特异度）。 */
-:where(button.primary, button.outline) { height: 40px; }
+/* ---- 尺寸修饰符 `.sm`（A-126 裁决 2 · `.sm` 级联 bug 的修法）---------------
+   ⚠️ **必须排在 §4.1 / §4.2 的形态规则之后**（B 修法）：
+     `button.primary` / `button.outline` 的 `height: 40px` 与 `button.sm` 的
+     `height: 28px` **同特异度 (0,1,1)** ⇒ 靠**源顺序**取胜。
+     放在形态之前 ⇒ `class="primary sm"` / `class="outline sm"` 的 28px
+     **被盖成 40px**（A-126 判定：这是**级联 bug**，不是设计选择）。
+   ⚠️ **不许**用 `:where()` 单挑形态高度（实测已否）：
+     `:where()` 特异度 = **0**，**低于**基类 `button { height: 36px }`（0,0,1）
+     ⇒ 不带 `.sm` 的 `primary` / `outline` 会从 40px **掉到 36px**，
+     命中区（`::before { inset: -2px 0 }`）随之从 44px **掉到 40px**
+     ⇒ 形态高度留在形态规则里（`height: 40px`，0,1,1）。
+   ⇒ 结果：`primary` / `outline`（**不带** `.sm`）= **40px** 视觉 +
+     `::before` 补到 **44px** 命中；`primary sm` / `outline sm` = **28px** 视觉，
+     命中区走 §3.1「方法 2（容器间距 / 中心距 ≥44px）」。
+   ⚠️ **连带**：`.sm` 排在形态之后 ⇒ `.sm` 的 `border-radius: 14px`（药丸）
+     现在也压过形态的 `--r-md`（12px）⇒ `.sm` 档**四类形态一致**（14px 药丸），
+     与此前 `ghost sm` 的取值一致。 */
+button.sm { height: 28px; font-size: 12px; line-height: 18px; padding: 0 10px; border-radius: 14px; }
 
 /* ---- `.sm` 档的命中区：走 §3.1「方法 2（容器间距 / 中心距 ≥44px）」--------
    ⚠️ **不许**用 `inset: -8px` 的外溢伪元素（A-126 裁决 2 第 3 条）：
@@ -1065,7 +1073,8 @@ button.outline:disabled { background: var(--surface-base); color: var(--ink-disa
    ⇒ `.sm` 档**不挂**命中区伪元素：28px 的视觉盒就是点击目标，
      **命中区由容器间距补偿**（相邻可点目标的**中心距 ≥ 44px**）。
    ⇒ 每个 `.sm` 调用点的中心距都已实测（见报告 §6.3）；
-     **给不出 44px 中心距的调用点不要用 `.sm`**（改用默认 40px 形态）。 */
+     **给不出 44px 中心距的调用点不要用 `.sm`**（改用默认 40px 形态）。
+   ⚠️ `content: none` ⇒ **伪元素整个不生成**（不是「还在但透明」）。 */
 button.primary.sm::before,
 button.outline.sm::before { content: none; }
 
@@ -1109,7 +1118,9 @@ button.rate:hover:not(:disabled) { background: var(--veil-hover); }
    · 图标目前是**字符**（☰ ◌ − ×）不是 SVG ⇒ **保留现状**（换图标是资产问题）。
    · 焦点环：走全局 `:focus-visible` 单圈（`--focus-outer` / 2px / 2px 偏移）——
      **不得** `outline: none`。
-   · ⚠️ 本块必须排在 `button.sm` **之后**：两者特异度相同（0,1,1），靠后者胜。 */
+   · ⚠️ 本块必须排在 `button.sm` **之后**：两者特异度相同（0,1,1），靠后者胜
+     ⇒ `class="ghost sm icon-only"` 的**形态**（40×40 圆）压过 `.sm`（28px 药丸）
+     ⇒ **图标按钮不受 `.sm` 影响**，仍是 §4.4 裁定的 40×40。 */
 button.icon-only {
   position: relative;
   width: 40px;
@@ -2080,19 +2091,26 @@ fieldset.problem-options > label:has(input:focus-visible) {
      `.practice-reference` · `.practice-set-card-body` ·
      `.practice-set-continuation-details` · `.practice-set-unavailable-items` ·
      `.active-practice-continuation-details`
-   ⚠️ **按「宿主是不是已经是卡」分两种落法**：
-     ① **独立页块**（`.practice-reference`，与 `.practice-solution` 同级）
-        ⇒ **它自己就是卡面**（卡面 + 48px 头 + 内容在同一张卡里）。
-     ② **宿主的卡面里**（`.practice-set-continuation-details` 与
-        `.practice-set-unavailable-items` 是 `.practice-set-card`（`article.card`）
-        **之内**；`.active-practice-continuation-details` 在
-        `.active-practice-resume.card` **之内**）⇒ **不再套第二层卡面**
-        —— 那会变成「卡中卡」；A-125 说的「积木感 = 同一卡片重复 8–31 次」
-        正是这么来的 ⇒ 只取**头行**那一套（48px 头 + 排版）。
-   ⚠️ **只改 CSS**：不动任何 markup / 交互。
+   ⚠️ **外观一致（5 处必须完全相同）**：
+     ① 头行 `min-height: 48px`；
+     ② 头行**字号 / 字重**（`--fs-body` / 500；行高同源继承）；
+     ③ **展开标记**（`▸` / `▾`，11px `--ink-faint`，**同一个共享选择器列表**
+        ⇒ 由构造保证「形状与位置一致」）；
+     ④ **焦点环**（全局 `:focus-visible` 单圈 —— 本块**不写** `outline`）。
+   ⚠️ **内距分两档**（差别只在「宿主已经有一张卡的留白」）：
+     · **独立页块 16px**（`.practice-reference`：与 `.practice-solution` 同级，
+       自己就是卡面 ⇒ 卡沿留白由它自己的 16px 承担）；
+     · **卡内宿主 8px**（`.practice-set-continuation-details` ·
+       `.practice-set-unavailable-items` · `.active-practice-continuation-details`
+       —— 宿主已经是 `article.card`（卡沿 22px 留白）⇒ 折叠段只补 8px）。
+   ⚠️ **不许出现「卡里再套一层卡面」**（双重 `--surface-card` + `--elev-1`）：
+     只有 `.practice-reference`（**独立页块**）带卡面；其余 4 处的宿主已经是卡
+     ⇒ **只取头行那一套**，不再套第二层卡面。
+   ⚠️ **只改 CSS**：不动任何 markup / 交互；原生 `<details>` 的开合行为与
+     键盘可达性（Enter / Space）**一个字都没碰**。
    ========================================================================= */
 
-/* ---- ① 独立页块：自己就是卡面 ------------------------------------------- */
+/* ---- ① 独立页块：自己就是卡面（16px 档）---------------------------------- */
 .practice-reference {
   background: var(--surface-card);
   border-radius: var(--r-md);
@@ -2113,7 +2131,7 @@ fieldset.problem-options > label:has(input:focus-visible) {
 }
 .practice-reference > :not(summary) { padding: 0 var(--sp-4) var(--sp-4); }
 
-/* ---- ② 宿主的卡面里：只取头行那一套（**不套第二层卡面**）------------------ */
+/* ---- ② 卡内宿主：只取头行那一套（8px 档，**不套第二层卡面**）-------------- */
 .practice-set-continuation-details > summary,
 .practice-set-unavailable-items > summary,
 .active-practice-continuation-details > summary {
@@ -2133,16 +2151,44 @@ fieldset.problem-options > label:has(input:focus-visible) {
 .active-practice-continuation-details > :not(summary) {
   padding: 0 var(--sp-2) var(--sp-2);
 }
-/* ---- ② 之 `.practice-set-card-body`：它本身就是那张卡的**可展开体**--------
-   卡面是**外层**的 `.practice-set-card`（`article.card`）⇒ 这里**不再加卡面**，
-   只把**头行**并入同一套（48px 头 + 与卡面同族的排版）。
+
+/* ---- ③ `.practice-set-card-body`：它是那张卡的**可展开体**------------------
+   卡面 = **外层**的 `.practice-set-card`（`article.card`，卡沿已有 22px 留白）
+   ⇒ 这里**不加卡面**（避免双层卡面）；头行取同一套的 48px + 排版。
    ⚠️ 头行里是「标题 + 三个动作按钮」（`.practice-set-card-head`）⇒
-     保留它自己的 `display: flex` / `gap` / `::before` 三角，
-     这里只定**高度与纵向对齐**，**不接管**它的字号（`<h2>` 标题有自己的刻度）。 */
+     **不接管**它的 flex 布局（`gap: 18px` / `space-between` 照旧），
+     只把**高度、纵向对齐与排版**并入同一套。 */
 .practice-set-card-body > .practice-set-card-head {
   min-height: 48px;
   align-items: center;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: 500;
 }
+/* 内容内距：卡内宿主 8px 档（与 ② 同一档） */
+.practice-set-card-body > .practice-set-items { padding: 0 var(--sp-2) var(--sp-2); }
+
+/* ---- ④ 展开标记（5 处同一套：CSS 画的「▸ / ▾」，**不引 SVG 资产**）--------
+   与 `.practice-set-item-body`（已统一的那一处）用同一套字符 / 颜色 / 字号。
+   ⚠️ `.practice-set-card-body` 的头本来就有三角（`.practice-set-card-head::before`）
+     ⇒ 这里用**同一个共享选择器列表**接管它 ⇒ 5 处从此只有**一条**标记规则
+     ⇒ 「形状与位置一致」由构造保证（位置 = 头行的第一个 flex 项）。 */
+.practice-reference > summary::before,
+.practice-set-continuation-details > summary::before,
+.practice-set-unavailable-items > summary::before,
+.active-practice-continuation-details > summary::before,
+.practice-set-card-body > .practice-set-card-head::before {
+  content: "▸";
+  flex: none;
+  color: var(--ink-faint);
+  font-size: 11px;
+  line-height: 1.7;
+}
+.practice-reference[open] > summary::before,
+.practice-set-continuation-details[open] > summary::before,
+.practice-set-unavailable-items[open] > summary::before,
+.active-practice-continuation-details[open] > summary::before,
+.practice-set-card-body[open] > .practice-set-card-head::before { content: "▾"; }
 .linked-problem { padding: 14px 0 2px; }
 .problem-title { display: block; color: var(--ink-strong); font-size: 14px; font-weight: 600; }
 /* 关联题面 —— 阅读面 A 组（衬线 + 阅读刻度；字号 17px = --fs-reading） */
@@ -2690,10 +2736,8 @@ fieldset.problem-options > label:has(input:focus-visible) {
   display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
   cursor: pointer;
 }
-.practice-set-card-head::before {
-  content: "▸"; color: var(--ink-faint); font-size: 11px; line-height: 1.7;
-}
-.practice-set-card-body[open] > .practice-set-card-head::before { content: "▾"; }
+/* ⚠️ 展开标记（「▸ / ▾」）**不在这里** —— 它已并进 §4.27 的**共享选择器列表**
+   （5 处折叠段共用一条规则 ⇒ 形状与位置一致，由构造保证）。 */
 .practice-set-card-title { flex: 1 1 auto; min-width: 0; }
 .practice-set-card-head h2 { margin: 2px 0 5px; }
 .practice-set-card-actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: flex-end; }
