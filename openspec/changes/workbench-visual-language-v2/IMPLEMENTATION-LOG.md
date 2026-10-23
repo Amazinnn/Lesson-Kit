@@ -1616,3 +1616,100 @@ A-107 → 3.6/3.7 + D-4/D-5 色键表 + AV-1 ③ + proposal §六；A-108 → **
 
 **另外**：CSS agent 确认了回弹类名是 **`lk-squash`**（`paper-practice.js:782` / `practice-flow.js:848`）
 ⇒ CSS 侧的 `.lk-squash` 规则按此名落地（`transform-origin: 50% 100%` + `animation: lk-squash-bounce 517ms both`）。
+
+### 9.44 所有者裁定落地的一段（A-114 … A-122）：组件形态 · 文案 · 探针 · 动效流程
+
+> 这一段跨越「机器关机 → 开机」，两个 subagent 在关机前被叫停、
+> 开机后由新 agent 接手补报告。**完整交接在 `docs/STATUS-workbench-visual-language-v2-2026-10-23.md`。**
+
+**1. 所有者的 28 条组件形态裁定（A-115）** —— 落成 `component-spec.md` **§4.30**
+（各组件的唯一形态定义）+ 每节的「形态裁定」框；原始记录 `design-notes/styleboard-picks.md`。
+所有者的补充说明「**数字不是定死的**」落成 §4 前言的覆盖约定：
+尺寸是**默认建议值**，唯一不让步的是**命中区 ≥44×44** 与**焦点环**。
+- **A 类 24 条**已落地（`c6a8b2f5` §4.1–4.6 · `5739d421` §4.10–4.15 · `62f6597f` §4.17–4.21 ·
+  `87191d79` §4.22 · `5b5e0888` §4.23 · `07d4799b` §4.26–4.28 · `680de9e6` §4.8/4.9 底座）。
+- **B 类 4 条**（自绘下拉 / 分段进度条 / 对话框 / 工具调用卡）→ 新 change
+  `openspec/changes/workbench-component-forms/`（**4 Requirement / 29 Scenario**，`--strict` 通过）。
+
+**2. 骨架屏「呼吸式」的四处连带改写** —— 所有者否掉了「微光扫过」：
+主 change 的 `specs/workbench-ui/spec.md`（"View transition and skeleton loading state"）·
+`acceptance.md` §2 的 **M-9** · `motion-spec.md`（§3.3 关键帧 · §2.1 映射表 · §7.2 降级矩阵 ·
+§1.2 的 `linear` 限定 · §1.8 的 sheen token）· `walkthrough-harness.md` 的清单行。
+⇒ **A-74**（微光是渐变的例外）**不再被行使**（账本不改写，只记不再适用）。
+
+**3. 走查执行器两条探针修好（A-114 / A-117）**
+
+| 判据 | 改前 | 改后 |
+|---|---|---|
+| 3.4-1 | PASS（38 样本） | **PASS（47 样本 / 越界 0）** |
+| 3.4-2 | PASS（5 元素，**靠蒙**） | **PASS（10 元素，读候选元素本身）** |
+| 3.4-3 | FAIL「0×0」（**探针从没采过宽高**） | **FAIL「有体积 ✔，动效是横扫 ✖」= 真产品未达标** |
+| 3.7-1 | PASS | **PASS** |
+
+`3.4-2` 的根因：`elementFromPoint` 取到**最内层**元素（`.nav-item` 里的 `<a>`），
+而 `:active` 规则挂在 `.nav-item` / `button` 上 ⇒ 恒测不出差异（**产品本来是对的**）。
+`3.4-3` 的根因：`SKELETON_JS` 不采集宽高 + 场景错（首屏加载 ≠ 中栏换页）。
+**A-117** 定稿了判据口径（有体积 + **块自身表面**随时间变化；`::after` 横扫不算；
+降级档只判有体积），并批准了「hover / 按下拆两趟」（按下=点击=换页 ⇒ 静止态会过期）。
+主会话复核证据：`judge_hover()` **零改动** · 阈值 120/180 未动 · 判定整体**变严**。
+⇒ **A-114 的一处事实更正**：`shots.py` 的 `reduced_motion` 实际是 **`"no-preference"`**
+（主档是**动效档**，不是降级档）。
+
+**4. 动效：代码齐备、验收未做（A-116）**
+A-27.2 的 **13 条**动效**代码层面都有**（**26 条 `@keyframes`** 齐备），
+但「分镜条 + 降级孪生」是 **0/13**（执行器 `frames.py` 已建好，正式走查那轮没跑）。
+⇒ 所有者的「静态先做、动效补钉」落成 `motion-spec.md` **§11 六步补钉流程**
+（motion-spec → A-27.2 清单 → spec → tasks → acceptance 分镜条 → 执行器）；
+**没有分镜条的动效视为未实现**。
+
+**5. 文案：114 条全部落完 + 台账漏收 2 条**
+- P26 主波 **89 条**（18 个 commit）；P26b 收尾 **19 + 6 = 25 条**。
+- **A-119** 六条待裁决逐条取证后裁：
+  **P-163** 定稿「练习与**组卷**显示自评」**改成「练习与**试卷**显示自评」**
+  （GLOSSARY 明写「浏览器不提供学生手工组卷入口」；`setting-show-rating` 确实同时被
+  `practice-flow.js` 与 `paper-practice.js` 读取 ⇒ 范围对、用词错）；
+  **R-28/R-31/R-41**（正确率 → 判定 N/M）判定为**必须做**（GLOSSARY 三处 `_Avoid_` +
+  `tasks.md` 19.4 明写不得出现正确率百分比）。
+- **A-120**：台账 §1 的抓取口径 `grep -nE "[一-鿿]"` **只扫含中文的串** ⇒ 漏了
+  **P-209** `Artifact · Paper` → **工件 · 试卷** · **P-210** `Paper：` → **试卷：**；
+  已补台账 §3.14 并**修了抓取口径**（下一波必须人工扫 `textContent` 拼出的英文串）。
+- 实测：可见文本节点 **585 → 563（-22）**、字符 **2989 → 2361（-628）** ⇒ **不增**。
+- ⚠️ **教训（`fea4ed7e`）**：**删文案必须同时删/改它的测试断言** ——
+  R-34 删了那句说明，两处测试仍在断言它 ⇒ **必然**红。已改为断言「两轮的完成时间都在页面上」。
+
+**6. 复核 C1 的 CSS 时发现两族死规则（A-121）**
+- **`.problem-topic` 是死选择器**（markup 0 命中，`test_ui_routes.py:783` 明确断言它不该出现）
+  ⇒ 给它写的整套折叠段规则是死代码（与 CD-175 同类）。
+- **`.lk-check__row` / `.lk-radio-row` 是多造的类名** —— 行级容器**早就存在**
+  （`paper-practice.js:686-701` 的 `<label class="option-row">`；练习流的 `.option-selected`
+  在 `<fieldset class='problem-options'>` 内），CSS 已有 `.option-selected` 的底色。
+  ⇒ 「整行选中」**只需样式**；新族改挂既有类名并删干净。
+- **§4.27 的「四处」是旧计数**：实际 **10 处**，其中 **5 处没有任何规则**
+  （`.practice-reference` · `.practice-set-card-body` · `.practice-set-continuation-details` ·
+  `.practice-set-unavailable-items` · `.active-practice-continuation-details`）⇒ 需要 CSS 不是 markup。
+- **§4.26 的类名收敛取消**：几何已统一（12px 圆点 + 发丝线、无竖线），
+  两族分属不同界面面，合并属「自由重构」。
+- ⇒ **`IMPL-C2`（markup 波）取消**（三项全部无剩余工作），文件顶部已加标注、保留作历史。
+
+**7. P24.1 无现成数据源（A-122）**
+`hub_page()` 只消费 `name` + `stats`；`registry.list_workspaces()` 没有「上次打开 / 最近使用」字段；
+全仓工作区维度的 `last_used` / `recent` 零命中 ⇒ 24.1 要的「最近用 4 个置顶」在**零新增请求**下
+做不出来 ⇒ **本轮降级为只做信息层级**，数据源三选项（registry 加字段 / localStorage / 不做）交所有者。
+
+**8. 交付状态（开机后实测，HEAD `c1313468` 之后）**
+
+| 项 | 值 |
+|---|---|
+| `pytest` | **1181 passed** |
+| `compileall` | exit 0 |
+| `openspec validate --specs --strict` | **19 passed / 0 failed** |
+| `workbench-component-forms --strict` | valid |
+| `node --test` | **264 pass / 0 fail** |
+| `guard extract-problems` | PASS |
+| `graph-layout-diff` | **total differences 0** |
+| 任务勾选 | **112 / 173**（第 26 组三条已按证据勾上） |
+
+**仍未闭合**：C1 / P26b 的**两份报告**（`reports/IMPL-C1-report.md` · `reports/IMPL-P26b-report.md`）
+在关机前没写成，开机后已重新派发；`3.4-3` 待骨架呼吸最终形态复验；
+锚点刷新（A-111）待所有 CSS 收工。
+
