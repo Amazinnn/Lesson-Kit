@@ -3071,6 +3071,60 @@ P26 按「**没在台账里的文案不许动**」**没有动它们**，并如�
 4. ⚠️ **这不构成 contract drift**：它改的是**界面文案**，不涉及持久字段、
    请求契约或已归档事实；且这两条**本来就违反**既有的「一个中文语气」约束。
 
+### A-121 复核 C1 的 CSS 时发现**两族死规则**；**IMPL-C2 的 markup 改造取消**
+
+> 来源：主会话复核 `07d4799b` / `680de9e6` 的实际落点（逐行 grep，不是看注释）。
+> 两条都是「**注释说的 ≠ markup 里的**」这一类问题。
+
+#### 事实一：`.problem-topic` 是**死选择器**
+
+- C1 给 `.problem-topic` 写了一整套折叠段规则（卡面 + 48px 头 + 内容内距，`workbench.css:2015` 起）。
+- 但 **markup 里没有任何 `.problem-topic`**
+  （`grep -rn "problem-topic" pages.py static/*.js` ⇒ 0 命中），
+  而且 **`tests/workbench/test_ui_routes.py:783` 明确断言 `"problem-topic" not in body`**
+  —— 它是**已被淘汰的旧类名**。
+- ⇒ **给死选择器写规则 = 死代码**，与 CD-175（`.status-dot`）同一类。
+
+#### 事实二：`.lk-check__row` / `.lk-radio-row` 是**多造的一族类名**
+
+- C1 为 §4.8 / §4.9 引入了这两个新类（各 5 条规则），注释写「markup 由 IMPL-C2 落」。
+- 但**行级容器早就存在**：
+  - **试卷流** `paper-practice.js:686-701`：`label.className = "option-row"`，
+    里面 append `input`（radio / checkbox）+ `span`（选项文本）；
+  - **练习流** `practice-flow.js`：选中项挂 `option-selected`，父级是
+    `<fieldset class='problem-options'>`；
+  - CSS **已有** `.problem-options label.option-selected { background: var(--veil-hover); }`
+    （`workbench.css:2951`）。
+- ⇒ **「整行选中」只需要样式，不需要新类名、也不需要 markup 改造。**
+  新增一族类名给**已经存在的行容器**套样式，正是 **A-115 要消灭的「同一个组件两套实现」**
+  —— 只不过这次发生在**类名层**；而且 `.option-row` 与 `.option-selected` 是两个流程各自的
+  既有类，再叠一层 `.lk-*` 会让「哪个是权威」更难判。
+
+#### 裁决
+
+1. **`.lk-check__row` / `.lk-radio-row` 整族改挂到既有类名**
+   （`.problem-options label` + `:has(input:checked)`），**新族删干净，不留死规则**。
+   ⇒ **§4.8 / §4.9 通过既有类名落地，不引入新类名。**
+2. **§4.27 折叠段的「四处」是旧计数**：实际有 **10 处**（9 个具名 class + 1 个无 class），
+   其中 **5 处没有任何规则**：
+   `.practice-reference` · `.practice-set-card-body` · `.practice-set-continuation-details` ·
+   `.practice-set-unavailable-items` · `.active-practice-continuation-details`。
+   ⇒ 这 5 处**需要的是 CSS，不是 markup 改造** ⇒ 归 CSS 波（C1 的收尾里做）。
+3. **§4.26 时间线的「类名收敛」取消**：
+   C1 已把 `.ai-plan-step`（workbench.css）与 `.agent-milestone`（agent-ui.css）的**几何画成同一套**
+   （12px 圆点 + 发丝线分隔、无竖线）⇒ **A-115 要的是「形态」统一，达成了**。
+   两个类族分别属于**两个不同的界面面**（执行计划 / Agent 右栏），
+   把它们的类名合并属于 AGENTS.md 禁止的「自由重构」（有破坏 JS 生成 markup 的风险），
+   **无收益** ⇒ **不做**，并在文档里写明「两族共享一套几何，不是两套实现」。
+4. **⚠️ `IMPL-C2`（markup 波）**：**取消**（superseded）。
+   它的三项里 —— §4.8/§4.9 不需要 markup、§4.26 不需要类名收敛、§4.27 需要的是 CSS
+   ⇒ **它已无剩余工作**。`briefs/IMPL-C2.md` 顶部加「已取消」标注（**保留文件作历史**，
+   不删 —— 账本惯例）。
+5. ⚠️ **自绘 `input` 的红线**：§4.8/§4.9 的框体几何若要用 `appearance: none` 自绘，
+   **必须**保证：原生 `input` 仍在 DOM、Tab 可达、`data-paper-choice` 与事件不变
+   （成绩判定、A-102 的音效 arm 都挂在选项上）。**交互逻辑一个字都不许改**；
+   若自绘会改变点击区域或事件目标 ⇒ **只做「整行蓝洗底 + 行高 44」两件**，自绘登记为待裁决。
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，

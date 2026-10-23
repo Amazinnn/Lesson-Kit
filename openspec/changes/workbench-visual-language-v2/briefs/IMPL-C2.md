@@ -1,5 +1,20 @@
 # IMPL-C2 — 组件形态裁定 A 类 · **markup 波**（pages.py + JS）
 
+> ⛔ **本任务书已取消（2026-10-23 · `decisions.md` A-121）—— 保留作历史，不要执行。**
+>
+> 取消理由（三条都经逐行 grep 复核）：
+> 1. **§4.8 / §4.9 不需要 markup** —— 行级容器**早就存在**
+>    （试卷流 `paper-practice.js:686-701` 的 `<label class="option-row">`；
+>    练习流选中项的 `.option-selected`，父级 `<fieldset class='problem-options'>`）。
+>    「整行选中」只需**样式** ⇒ 归 CSS 波。
+> 2. **§4.26 不需要类名收敛** —— C1 已把 `.ai-plan-step` 与 `.agent-milestone` 的
+>    **几何画成同一套**；两族分属不同界面面，合并属「自由重构」，不做。
+> 3. **§4.27 需要的是 CSS** —— 10 处折叠段里 5 处没有规则
+>    （`.practice-reference` · `.practice-set-card-body` · `.practice-set-continuation-details` ·
+>    `.practice-set-unavailable-items` · `.active-practice-continuation-details`）⇒ 归 CSS 波。
+>
+> ⇒ 本 task book 的**全部三项**都已无剩余工作。
+
 > 来源：所有者的组件样式裁定（`design-notes/styleboard-picks.md` · A-115）。
 > **形态定义以 `component-spec.md` §4.30 为准**。
 > **只改 `workbench/server/pages.py` 与 `workbench/server/static/*.js`。**
