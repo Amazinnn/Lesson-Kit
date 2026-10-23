@@ -1525,7 +1525,7 @@ def run_probe(page, out_dir):
 | 3.5-1 | 1440 / 1280 / 1024 / 768 四档下三栏均可用，**无横向滚动条** | `responsive_probe`：四档各读 `documentElement.scrollWidth` vs `clientWidth`，前者 > 后者 → FAIL | `probe/3.5-1.json` | **AUTO** | 现状断点：1023px（`workbench.css:1059`、`:1174`）、900px（`:1871`）、640px（`:1133`、`:1487`、`:1877`）→ **1280 无专属断点** |
 | 3.5-2 | 768 下右栏为**抽屉**，可关闭并返回中栏 | `drawer_probe`：768 下开/关抽屉，断言右栏由 `position: fixed` 移出视口且中栏可交互 | `probe/3.5-2.json` | **AUTO** | 现状 1023px 起即抽屉化（`workbench.css:1174-1193`：`#left-column` / `#ai-column` 变 `position: fixed` + `transform: translateX(±105%)`），768 落在其内 → 机制已存在 |
 | 3.5-3 | 抽屉打开时**背景仍可交互**（装饰层 `pointer-events: none`） | `drawer_probe`：抽屉打开时对背景区取 `document.elementFromPoint`，命中背景元素而非装饰层 | `probe/3.5-3.json` | **AUTO** | 现状装饰层已有 `pointer-events: none` 惯例（`workbench.css:185`、`:1244`、`:1605`、`:1612`、`:1623`、`:1632`、`:1714`、`:1718`、`:1810`）→ 新增装饰层须沿用 |
-| 3.5-4 | **窄视口下抽屉里的内容可点**（图谱页：画布不得盖住抽屉） | `graph_drawer_probe`：768 打开图谱页 → 开左抽屉 → 对抽屉里的导航项取 `document.elementFromPoint`，命中必须落在抽屉内 | `probe/3.5-4.json` | **AUTO** | 2026-10-24 修：图谱页把三栏 `z-index` 钉回 `auto`（G-5 逐像素冻结，防画布抗锯齿变），**把抽屉自己的 `z-index: 10` 也压平了** ⇒ 画布盖住抽屉、抽屉里的导航点不到。⇒ 抽屉档（≤1279 右栏 / ≤1023 左栏）把 z-index 还回去，桌面档不动（G-5 不受影响） |
+| 3.5-4 | **窄视口下抽屉里的内容可点**（图谱页：画布与工具条都不得盖住抽屉） | `graph_drawer_probe`：768 打开图谱页 → 开左抽屉 → 对抽屉里**每个**导航项取 `document.elementFromPoint`（**两个点**：图标中心 + 行的右端），命中必须落在抽屉内 | `probe/3.5-4.json` | **AUTO** | 2026-10-24 修：图谱页把三栏 `z-index` 钉回 `auto`（G-5 逐像素冻结，防画布抗锯齿变），**把抽屉自己的 `z-index: 10` 也压平了** ⇒ 画布盖住抽屉、抽屉里的导航点不到。⇒ 抽屉档（≤1279 右栏 / ≤1023 左栏）把 z-index 还回去（取 **20**：图谱自己的工具条 `.graph-topbar` 也是 10，平手时它按 DOM 顺序压过抽屉 ⇒ 抽屉的标签会被盖住），桌面档不动（G-5 不受影响） |
 
 **§3.6 图案与资产（5 条，`acceptance.md:126-130`）**
 

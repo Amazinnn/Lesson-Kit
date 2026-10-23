@@ -2691,17 +2691,32 @@ def probe_graph_drawer(ctx):
         page.wait_for_timeout(700)
         opened = page.evaluate("""() => {
           const col = document.querySelector("#left-column");
-          const item = col ? col.querySelector(".nav-item") : null;
-          if (!item) return {opened: true, probe: "抽屉里没有导航项"};
-          const r = item.getBoundingClientRect();
-          const hit = document.elementFromPoint(r.left + Math.min(24, r.width / 2),
-                                               r.top + r.height / 2);
+          const items = col ? Array.from(col.querySelectorAll(".nav-item")) : [];
+          if (!items.length) return {opened: true, probe: "抽屉里没有导航项"};
+          // **每一项**都要命中抽屉 —— 只测第一项会漏掉「图谱工具条压住抽屉下半截」
+          const misses = [];
+          items.forEach((item, index) => {
+            const r = item.getBoundingClientRect();
+            // 两个点都要命中抽屉：**图标**（学习者真正点的那块）与
+            // **行的右端**（图谱工具条从中间栏左缘铺过来 ⇒ 行的右端会被它盖住，
+            // 图标却还露着 —— 只测图标会漏掉「标签被盖住」这一半）
+            const probes = [
+              {at: "icon", x: r.left + Math.min(24, r.width / 2), y: r.top + r.height / 2},
+              {at: "row-end", x: r.right - 6, y: r.top + r.height / 2},
+            ];
+            probes.forEach((probe) => {
+              const hit = document.elementFromPoint(probe.x, probe.y);
+              if (!hit || !col.contains(hit)) {
+                misses.push({index, at: probe.at,
+                             hit: hit ? String(hit.className || hit.tagName).slice(0, 60) : null,
+                             insideCanvas: hit ? !!hit.closest("#graph-canvas") : false});
+              }
+            });
+          });
           return {opened: true,
                   drawerZ: getComputedStyle(col).zIndex,
-                  hit: hit ? {tag: hit.tagName.toLowerCase(),
-                              cls: String(hit.className || "").slice(0, 60),
-                              insideDrawer: col.contains(hit),
-                              insideCanvas: !!hit.closest("#graph-canvas")} : null};
+                  items: items.length,
+                  misses: misses};
         }""")
     except Exception as exc:
         opened = {"opened": False, "reason": str(exc)}
@@ -2714,11 +2729,12 @@ def probe_graph_drawer(ctx):
         return _bad(data, "768 下左栏不是抽屉（position 不是 fixed）")
     if not opened.get("opened"):
         return _pending(data, f"没能打开抽屉：{opened.get('reason')}")
-    hit = opened.get("hit") or {}
-    if not hit.get("insideDrawer"):
-        return _bad(data, "抽屉打开时命中的是 "
-                          f"{hit.get('cls') or hit.get('tag')}（画布盖住了抽屉）")
-    return _ok(data, "抽屉里的导航项可点")
+    misses = opened.get("misses") or []
+    if misses:
+        first = misses[0]
+        return _bad(data, f"抽屉里有 {len(misses)} 处被盖住"
+                          f"（第 {first.get('index')} 项的 {first.get('at')} 命中的是 {first.get('hit')}）")
+    return _ok(data, f"抽屉里的 {opened.get('items')} 个导航项都可点")
 
 
 def probe_drawer(ctx):

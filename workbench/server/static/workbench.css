@@ -444,10 +444,10 @@ body:has(#layout[data-page="graph"]) #ai-column { z-index: auto; }
    ⚠️ **桌面档（≥1280）一个字不动** ⇒ G-5 的冻结与画布抗锯齿不受影响
      （G-5 的比对口径是 1440×900 桌面视口，R-1 明确「除左栏与顶栏外像素级一致」）。 */
 @media (max-width: 1279px) {
-  body:has(#layout[data-page="graph"]) #ai-column { z-index: 10; }
+  body:has(#layout[data-page="graph"]) #ai-column { z-index: 20; }
 }
 @media (max-width: 1023px) {
-  body:has(#layout[data-page="graph"]) #left-column { z-index: 10; }
+  body:has(#layout[data-page="graph"]) #left-column { z-index: 20; }
 }
 body:has(#layout[data-page="graph"]) .lk-ripple,
 body:has(#layout[data-page="graph"]) .lk-ripple-glow { display: none; }
