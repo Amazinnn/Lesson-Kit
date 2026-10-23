@@ -173,7 +173,8 @@ styleboard-v2 10-22 20:38 → picks 10-22 23:31 → **A-115 §4.30 10-23 07:35**
 | 领域 | 文件 | 规模 | 备注 |
 |---|---|---|---|
 | **版式 / 线框** ⭐ | `design-notes/layout-spec.md` | 1825 行 | **尺子**（数值以它为准）。含 §0.5 四条 DRIFT |
-| **样板图基线** ⭐ | `design-notes/mockup-baseline/` | 9 文件 / 520 KB | **靶子**（构成与功能以它为准，A-142）。2026-10-23 从 `tmp/` 提升入库；截图不入库，`view.py capture-static` 随时重抓 |
+| **样板图基线** ⭐ | `design-notes/mockup-baseline/` | 10 文件 / 520 KB | **靶子**（构成与功能以它为准，A-142）。2026-10-23 从 `tmp/` 提升入库；截图不入库，`view.py capture-static` 随时重抓 |
+| **V1 拼版** ⭐⭐ | `design-notes/mockup-baseline/v1.html` | — | **六个样板图页面原样拼在一页里**（iframe 直引，**一个字节都没改**），每页带规格出处标注。`file://` 直接可开 |
 | 组件形态 | `design-notes/component-spec.md` **§4.30** | 142 KB | 28 个组件的**唯一形态定义**（A-115 落定） |
 | 组件原始裁定 | `design-notes/styleboard-picks.md` | 6.7 KB | 所有者从样式板导出的原文 |
 | 动效 | `design-notes/motion-spec.md` | 82 KB | §1.6 硬红线 · §7.2 降级矩阵 · **§11 新增动效的补钉流程** |
