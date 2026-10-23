@@ -264,7 +264,7 @@
     var link = document.createElement("a");
     link.className = "outline sm agent-artifact-open";
     link.href = paperHref();
-    link.textContent = "打开组卷页";
+    link.textContent = "打开试卷页";
     return link;
   }
 
@@ -305,7 +305,7 @@
     if (card.dataset) card.dataset.artifactId = action.practice_set_id;
     var kicker = document.createElement("p");
     kicker.className = "agent-surface-kicker";
-    kicker.textContent = "Artifact · Paper";
+    kicker.textContent = "工件 · 试卷";
     var title = document.createElement("strong");
     title.className = "agent-artifact-card-title";
     title.textContent = action.title;

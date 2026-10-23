@@ -3729,7 +3729,7 @@
   function aiPaperApprovalDetails(host, approval, fallbackProposedIds) {
     var paperId = approval.practice_set_id || "";
     var title = approval.title || paperId;
-    aiPaperText(host, "p", "ai-paper-approval-paper", "Paper：" + title
+    aiPaperText(host, "p", "ai-paper-approval-paper", "试卷：" + title
       + (paperId && title !== paperId ? "（" + paperId + "）" : ""));
     var added = Array.isArray(approval.added_problem_ids) ? approval.added_problem_ids : [];
     var removed = Array.isArray(approval.removed_problem_ids) ? approval.removed_problem_ids : [];
@@ -4858,7 +4858,7 @@
     var title = card.querySelector(".check-card-title");
     var detail = card.querySelector(".check-card-detail");
     var assets = detail && detail.dataset ? detail.dataset.assets : "";
-    if (title) title.textContent = "Check 入库已回滚";
+    if (title) title.textContent = "入库已回滚";
     if (detail) {
       detail.textContent = "批次 " + batchId + " 已整批回滚"
         + (assets ? "（撤销 " + assets + "）" : "") + "，池中不再包含该批内容。";

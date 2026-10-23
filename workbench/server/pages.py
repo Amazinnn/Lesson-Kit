@@ -994,7 +994,7 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         "<option value='queue'>排队发送</option>"
         "<option value='interrupt'>中断后发送</option></select>"
         "<label class='setting-row'><input id='setting-show-rating' type='checkbox' checked> "
-        "练习显示自评</label>"
+        "练习与试卷显示自评</label>"
         "<a id='setting-view-toggle' class='setting-row setting-view-toggle' "
         f"href='/w/{workspace['name']}/settings' aria-expanded='false'>外观设置</a>"
         "</section>"
