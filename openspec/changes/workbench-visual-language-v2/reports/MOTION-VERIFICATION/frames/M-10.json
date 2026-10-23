@@ -1,0 +1,560 @@
+{
+  "id": "M-10",
+  "title": "数据层（负荷柱 / 日历）",
+  "verdict": "PASS",
+  "detail": "负荷柱高度取到 [0, 117]",
+  "frames_ms": [
+    0,
+    240,
+    480
+  ],
+  "frameStates": [
+    {
+      "t": 0,
+      "file": "0000.png",
+      "states": {
+        "#middle-page": [
+          {
+            "text": "学习 / 记录记录概览练习 / 试卷作答明细错题作答次数13",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 2976,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 记录记录",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "概览练习 / 试卷作答明细错题作答次数137完成练习4客观题",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 2886,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content records-center"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "10-1010-1110-1210-1310-1410-15",
+            "transform": "none",
+            "opacity": "1",
+            "width": 624,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 0, 0, 0)",
+            "opacity": "1",
+            "width": 26,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 240,
+      "file": "0240.png",
+      "states": {
+        "#middle-page": [
+          {
+            "text": "学习 / 记录记录概览练习 / 试卷作答明细错题作答次数13",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 2976,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 记录记录",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "概览练习 / 试卷作答明细错题作答次数137完成练习4客观题",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 2886,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content records-center"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "10-1010-1110-1210-1310-1410-15",
+            "transform": "none",
+            "opacity": "1",
+            "width": 624,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 0, 0, 0)",
+            "opacity": "1",
+            "width": 26,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 480,
+      "file": "0480.png",
+      "states": {
+        "#middle-page": [
+          {
+            "text": "学习 / 记录记录概览练习 / 试卷作答明细错题作答次数13",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 2976,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 记录记录",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "概览练习 / 试卷作答明细错题作答次数137完成练习4客观题",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 2886,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content records-center"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "10-1010-1110-1210-1310-1410-15",
+            "transform": "none",
+            "opacity": "1",
+            "width": 624,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 0.888675, 0, 0)",
+            "opacity": "1",
+            "width": 26,
+            "height": 117,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-rise-in-12"
+      ]
+    }
+  ],
+  "frameFiles": [
+    "0000.png",
+    "0240.png",
+    "0480.png"
+  ],
+  "strip": "M-10-strip.png",
+  "animations": [
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-content records-center"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 312,
+      "currentTime": 0,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 240,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 240,
+      "target": "page-content records-center"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 312,
+      "currentTime": 240,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 480,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 480,
+      "target": "page-content records-center"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 312,
+      "currentTime": 480,
+      "target": "bar-fill"
+    }
+  ],
+  "terminalDifferences": [],
+  "terminalExtraDifferences": [],
+  "animatedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [],
+    ".lk-combo-banner__count": [],
+    ".lk-streak": [],
+    ".lk-flames": [],
+    ".lk-flame": [],
+    ".lk-flame-on": [],
+    ".lk-flame-off": [],
+    ".lk-squash": [],
+    ".micro-verdict": [],
+    ".lk-ticker": [],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [],
+    ".lk-celebrate-burst": [],
+    ".lk-confetti": [],
+    ".paper-slice": [],
+    "#paper-completion": [],
+    "#paper-completion-stats": [],
+    "#paper-dots": [],
+    ".paper-dot": [],
+    "#middle-page": [
+      {
+        "text": "学习 / 记录记录概览练习 / 试卷作答明细错题作答次数13",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 2976,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "学习 / 记录记录",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "概览练习 / 试卷作答明细错题作答次数137完成练习4客观题",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 2886,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content records-center"
+      }
+    ],
+    ".workload-bars": [
+      {
+        "text": "10-1010-1110-1210-1310-1410-15",
+        "transform": "none",
+        "opacity": "1",
+        "width": 624,
+        "height": 184,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "workload-bars"
+      }
+    ],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [],
+    ".calendar-day": [],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 26,
+        "height": 132,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "bar-fill"
+      }
+    ],
+    ".bar-column": []
+  },
+  "reducedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [],
+    ".lk-combo-banner__count": [],
+    ".lk-streak": [],
+    ".lk-flames": [],
+    ".lk-flame": [],
+    ".lk-flame-on": [],
+    ".lk-flame-off": [],
+    ".lk-squash": [],
+    ".micro-verdict": [],
+    ".lk-ticker": [],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [],
+    ".lk-celebrate-burst": [],
+    ".lk-confetti": [],
+    ".paper-slice": [],
+    "#paper-completion": [],
+    "#paper-completion-stats": [],
+    "#paper-dots": [],
+    ".paper-dot": [],
+    "#middle-page": [
+      {
+        "text": "学习 / 记录记录概览练习 / 试卷作答明细错题作答次数13",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 2976,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "学习 / 记录记录",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "概览练习 / 试卷作答明细错题作答次数137完成练习4客观题",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 2886,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content records-center"
+      }
+    ],
+    ".workload-bars": [
+      {
+        "text": "10-1010-1110-1210-1310-1410-15",
+        "transform": "none",
+        "opacity": "1",
+        "width": 624,
+        "height": 184,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "workload-bars"
+      }
+    ],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [],
+    ".calendar-day": [],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 26,
+        "height": 132,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "bar-fill"
+      }
+    ],
+    ".bar-column": []
+  }
+}

@@ -1,0 +1,4030 @@
+{
+  "id": "M-3",
+  "title": "交卷庆祝（里程碑档）",
+  "verdict": "PENDING",
+  "detail": "「本轮全对」这一档已采到并通过（本轮 3/3 全对，里程碑爆点 .lk-celebrate-burst 出现）；「章节首次完成」这一档仍不可判定 —— 缺的数据：practice_runs 的章标识 + 「该章此前未完成」的服务端事实（客户端据此写 data-lk-chapter-first）；A-29 禁止用代理指标近似，故不判 PASS",
+  "frames_ms": [
+    0,
+    150,
+    400,
+    800,
+    1200
+  ],
+  "frameStates": [
+    {
+      "t": 0,
+      "file": "0000.png",
+      "states": {
+        ".micro-verdict": [
+          {
+            "text": "判定：正确",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "micro-verdict ok",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 8,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 313,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习共 3 题；判定正确 3 题，错误 0 题；",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 318,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 27,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "012",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".paper-dot": [
+          {
+            "text": "0",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "paper-dot state-correct is-current",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习走查分镜里程碑卷3答案展示方式做一题显示一",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 482,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "走查分镜里程碑卷3答案展示方式做一题显示一题交卷后统一显示开",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 346,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 12)",
+            "opacity": "0",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272832930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 0, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 150,
+      "file": "0150.png",
+      "states": {
+        ".micro-verdict": [
+          {
+            "text": "判定：正确",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "micro-verdict ok",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 8,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 313,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习共 3 题；判定正确 3 题，错误 0 题；",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 318,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 27,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "012",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".paper-dot": [
+          {
+            "text": "0",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "paper-dot state-correct is-current",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习走查分镜里程碑卷3答案展示方式做一题显示一",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 482,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 0.744644)",
+            "opacity": "0.937946",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "走查分镜里程碑卷3答案展示方式做一题显示一题交卷后统一显示开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0.744644)",
+            "opacity": "0.937946",
+            "width": 660,
+            "height": 346,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 0.744644)",
+            "opacity": "0.937946",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272832930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 0.850837, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 112,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-progress-fill",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 400,
+      "file": "0400.png",
+      "states": {
+        ".micro-verdict": [
+          {
+            "text": "判定：正确",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "micro-verdict ok",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 8,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 313,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习共 3 题；判定正确 3 题，错误 0 题；",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 318,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 27,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "012",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".paper-dot": [
+          {
+            "text": "0",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "paper-dot state-correct is-current",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习走查分镜里程碑卷3答案展示方式做一题显示一",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 482,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "走查分镜里程碑卷3答案展示方式做一题显示一题交卷后统一显示开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 346,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272832930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-progress-fill",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 800,
+      "file": "0800.png",
+      "states": {
+        ".micro-verdict": [
+          {
+            "text": "判定：正确",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "micro-verdict ok",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 8,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 313,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-burst": [
+          {
+            "text": "",
+            "transform": "matrix(0.752835, 0, 0, 0.752835, 0, 0)",
+            "opacity": "0.518875",
+            "width": 497,
+            "height": 235,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-burst",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习共 3 题；判定正确 3 题，错误 0 题；",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 318,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 27,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "012",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".paper-dot": [
+          {
+            "text": "0",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "paper-dot state-correct is-current",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习走查分镜里程碑卷3答案展示方式做一题显示一",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 482,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "走查分镜里程碑卷3答案展示方式做一题显示一题交卷后统一显示开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 346,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272832930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-celebrate-burst",
+        "lk-progress-fill",
+        "lk-rise-in-12"
+      ]
+    },
+    {
+      "t": 1200,
+      "file": "1200.png",
+      "states": {
+        ".micro-verdict": [
+          {
+            "text": "判定：正确",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "micro-verdict ok",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-progress": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 8,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(61, 52, 37, 0.11)",
+            "cls": "lk-progress lk-progress--completion is-filled",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-anchor": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 313,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-anchor",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".lk-celebrate-burst": [
+          {
+            "text": "",
+            "transform": "matrix(1.45, 0, 0, 1.45, 0, 0)",
+            "opacity": "0",
+            "width": 957,
+            "height": 453,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "lk-celebrate-burst",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion": [
+          {
+            "text": "本轮完成完成练习共 3 题；判定正确 3 题，错误 0 题；",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 318,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "card lk-card",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-completion-stats": [
+          {
+            "text": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待",
+            "transform": "none",
+            "opacity": "1",
+            "width": 612,
+            "height": 27,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-completion-stats",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#paper-dots": [
+          {
+            "text": "012",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "paper-dots",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".paper-dot": [
+          {
+            "text": "0",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "paper-dot state-correct is-current",
+            "afterTransform": "none",
+            "afterContent": "\"\"",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 0,
+            "height": 0,
+            "display": "flex",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "paper-dot state-correct"
+          }
+        ],
+        "#middle-page": [
+          {
+            "text": "学习 / 试卷练习走查分镜里程碑卷3答案展示方式做一题显示一",
+            "transform": "none",
+            "opacity": "1",
+            "width": 660,
+            "height": 482,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        "#middle-page > *": [
+          {
+            "text": "学习 / 试卷练习",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 90,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-header",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "走查分镜里程碑卷3答案展示方式做一题显示一题交卷后统一显示开",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 346,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "page-content practice-content"
+          },
+          {
+            "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 660,
+            "height": 22,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "practice-planning"
+          }
+        ],
+        ".workload-bars": [
+          {
+            "text": "23242526272832930310102030405",
+            "transform": "none",
+            "opacity": "1",
+            "width": 652,
+            "height": 184,
+            "display": "grid",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "workload-bars",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ],
+        ".calendar-cell": [
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(253, 248, 239)",
+            "cls": "calendar-cell blank"
+          },
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 93,
+            "height": 40,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(255, 253, 247)",
+            "cls": "calendar-cell"
+          }
+        ],
+        ".calendar-day": [
+          {
+            "text": "1",
+            "transform": "none",
+            "opacity": "1",
+            "width": 5,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          },
+          {
+            "text": "2",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "3",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "4",
+            "transform": "none",
+            "opacity": "1",
+            "width": 8,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "5",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "6",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "7",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "8",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "9",
+            "transform": "none",
+            "opacity": "1",
+            "width": 7,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "10",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "11",
+            "transform": "none",
+            "opacity": "1",
+            "width": 10,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          },
+          {
+            "text": "12",
+            "transform": "none",
+            "opacity": "1",
+            "width": 12,
+            "height": 17,
+            "display": "inline",
+            "visibility": "visible",
+            "background": "rgba(0, 0, 0, 0)",
+            "cls": "calendar-day"
+          }
+        ],
+        ".bar-fill": [
+          {
+            "text": "",
+            "transform": "matrix(1, 0, 0, 1, 0, 0)",
+            "opacity": "1",
+            "width": 27,
+            "height": 132,
+            "display": "block",
+            "visibility": "visible",
+            "background": "rgb(245, 197, 24)",
+            "cls": "bar-fill",
+            "afterTransform": "none",
+            "afterContent": "none",
+            "afterAnimation": "none",
+            "afterBackground": "none"
+          }
+        ]
+      },
+      "animations": [
+        "lk-bar-grow",
+        "lk-celebrate-burst",
+        "lk-progress-fill",
+        "lk-rise-in-12"
+      ]
+    }
+  ],
+  "frameFiles": [
+    "0000.png",
+    "0150.png",
+    "0400.png",
+    "0800.png",
+    "1200.png"
+  ],
+  "strip": "M-3-strip.png",
+  "animations": [
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "running",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 0,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 150,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 150,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-progress-fill",
+      "playState": "paused",
+      "duration": 400,
+      "delay": 0,
+      "currentTime": 150,
+      "target": "lk-progress__fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 150,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 150,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 400,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 400,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-progress-fill",
+      "playState": "paused",
+      "duration": 400,
+      "delay": 0,
+      "currentTime": 400,
+      "target": "lk-progress__fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 400,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 400,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 800,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 800,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-progress-fill",
+      "playState": "paused",
+      "duration": 400,
+      "delay": 0,
+      "currentTime": 800,
+      "target": "lk-progress__fill"
+    },
+    {
+      "name": "lk-celebrate-burst",
+      "playState": "running",
+      "duration": 400,
+      "delay": 0,
+      "currentTime": 33.42300000470111,
+      "target": "lk-celebrate-burst"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 800,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 800,
+      "target": "bar-fill"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 1200,
+      "target": "page-header"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 1200,
+      "target": "page-content practice-content"
+    },
+    {
+      "name": "lk-progress-fill",
+      "playState": "paused",
+      "duration": 400,
+      "delay": 0,
+      "currentTime": 1200,
+      "target": "lk-progress__fill"
+    },
+    {
+      "name": "lk-celebrate-burst",
+      "playState": "paused",
+      "duration": 400,
+      "delay": 0,
+      "currentTime": 1200,
+      "target": "lk-celebrate-burst"
+    },
+    {
+      "name": "lk-rise-in-12",
+      "playState": "paused",
+      "duration": 240,
+      "delay": 0,
+      "currentTime": 1200,
+      "target": "practice-planning"
+    },
+    {
+      "name": "lk-bar-grow",
+      "playState": "paused",
+      "duration": 320,
+      "delay": 0,
+      "currentTime": 1200,
+      "target": "bar-fill"
+    }
+  ],
+  "terminalDifferences": [],
+  "terminalExtraDifferences": [
+    {
+      "selector": ".bar-fill",
+      "why": "count",
+      "animated": 1,
+      "reduced": 2
+    },
+    {
+      "selector": ".lk-celebrate-burst",
+      "why": "count",
+      "animated": 1,
+      "reduced": 0
+    },
+    {
+      "selector": ".lk-confetti",
+      "why": "count",
+      "animated": 12,
+      "reduced": 0
+    },
+    {
+      "selector": ".workload-bars",
+      "index": 0,
+      "field": "text",
+      "animated": "23242526272832930310102030405",
+      "reduced": "231242526272812930310102030405"
+    }
+  ],
+  "animatedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [],
+    ".lk-combo-banner__count": [],
+    ".lk-streak": [],
+    ".lk-flames": [],
+    ".lk-flame": [],
+    ".lk-flame-on": [],
+    ".lk-flame-off": [],
+    ".lk-squash": [],
+    ".micro-verdict": [
+      {
+        "text": "判定：正确",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "micro-verdict ok"
+      }
+    ],
+    ".lk-ticker": [],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 612,
+        "height": 8,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(61, 52, 37, 0.11)",
+        "cls": "lk-progress lk-progress--completion is-filled"
+      }
+    ],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 313,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-celebrate-anchor"
+      }
+    ],
+    ".lk-celebrate-burst": [
+      {
+        "text": "",
+        "transform": "matrix(1.45, 0, 0, 1.45, 0, 0)",
+        "opacity": "0",
+        "width": 957,
+        "height": 453,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-celebrate-burst"
+      }
+    ],
+    ".lk-confetti": [
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      },
+      {
+        "text": "",
+        "transform": "matrix(0.166746, 0.754075, -0.754075, 0.166746, 0, 44.8561)",
+        "opacity": "0.853783",
+        "width": 15,
+        "height": 15,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-confetti"
+      }
+    ],
+    ".paper-slice": [],
+    "#paper-completion": [
+      {
+        "text": "本轮完成完成练习共 3 题；判定正确 3 题，错误 0 题；",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 318,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "card lk-card"
+      }
+    ],
+    "#paper-completion-stats": [
+      {
+        "text": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待",
+        "transform": "none",
+        "opacity": "1",
+        "width": 612,
+        "height": 27,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-completion-stats"
+      }
+    ],
+    "#paper-dots": [
+      {
+        "text": "012",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-dots"
+      }
+    ],
+    ".paper-dot": [
+      {
+        "text": "0",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "paper-dot state-correct is-current"
+      },
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "paper-dot state-correct"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "paper-dot state-correct"
+      }
+    ],
+    "#middle-page": [
+      {
+        "text": "学习 / 试卷练习走查分镜里程碑卷3答案展示方式做一题显示一",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 482,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "学习 / 试卷练习",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "走查分镜里程碑卷3答案展示方式做一题显示一题交卷后统一显示开",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 346,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content practice-content"
+      },
+      {
+        "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 660,
+        "height": 22,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "practice-planning"
+      }
+    ],
+    ".workload-bars": [
+      {
+        "text": "23242526272832930310102030405",
+        "transform": "none",
+        "opacity": "1",
+        "width": 652,
+        "height": 184,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "workload-bars"
+      }
+    ],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      }
+    ],
+    ".calendar-day": [
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 5,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 8,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "10",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "11",
+        "transform": "none",
+        "opacity": "1",
+        "width": 10,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "12",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      }
+    ],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 27,
+        "height": 132,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "bar-fill"
+      }
+    ],
+    ".bar-column": []
+  },
+  "reducedTerminal": {
+    ".lk-lamp": [],
+    ".lk-ripple": [],
+    ".lk-ripple-glow": [],
+    ".lk-ripple-veil": [],
+    ".lk-combo-banner": [],
+    ".lk-combo-banner__count": [],
+    ".lk-streak": [],
+    ".lk-flames": [],
+    ".lk-flame": [],
+    ".lk-flame-on": [],
+    ".lk-flame-off": [],
+    ".lk-squash": [],
+    ".micro-verdict": [
+      {
+        "text": "判定：正确",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "micro-verdict ok"
+      }
+    ],
+    ".lk-ticker": [],
+    ".lk-ticker-digit": [],
+    ".lk-progress": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 612,
+        "height": 8,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(61, 52, 37, 0.11)",
+        "cls": "lk-progress lk-progress--completion is-filled"
+      }
+    ],
+    ".lk-progress-fill": [],
+    ".lk-celebrate-anchor": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 313,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "lk-celebrate-anchor"
+      }
+    ],
+    ".lk-celebrate-burst": [],
+    ".lk-confetti": [],
+    ".paper-slice": [],
+    "#paper-completion": [
+      {
+        "text": "本轮完成完成练习共 3 题；判定正确 3 题，错误 0 题；",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 318,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "card lk-card"
+      }
+    ],
+    "#paper-completion-stats": [
+      {
+        "text": "共 3 题；判定正确 3 题，错误 0 题；不会 0 题；待",
+        "transform": "none",
+        "opacity": "1",
+        "width": 612,
+        "height": 27,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-completion-stats"
+      }
+    ],
+    "#paper-dots": [
+      {
+        "text": "012",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "paper-dots"
+      }
+    ],
+    ".paper-dot": [
+      {
+        "text": "0",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "paper-dot state-correct is-current"
+      },
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "paper-dot state-correct"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 0,
+        "height": 0,
+        "display": "flex",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "paper-dot state-correct"
+      }
+    ],
+    "#middle-page": [
+      {
+        "text": "学习 / 试卷练习走查分镜里程碑卷3答案展示方式做一题显示一",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 482,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": ""
+      }
+    ],
+    "#middle-page > *": [
+      {
+        "text": "学习 / 试卷练习",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 90,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-header"
+      },
+      {
+        "text": "走查分镜里程碑卷3答案展示方式做一题显示一题交卷后统一显示开",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 346,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "page-content practice-content"
+      },
+      {
+        "text": "目标与时间安排长期与阶段目标暂无目标添加目标目标名称目标类型",
+        "transform": "none",
+        "opacity": "1",
+        "width": 660,
+        "height": 22,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "practice-planning"
+      }
+    ],
+    ".workload-bars": [
+      {
+        "text": "231242526272812930310102030405",
+        "transform": "none",
+        "opacity": "1",
+        "width": 652,
+        "height": 184,
+        "display": "grid",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "workload-bars"
+      }
+    ],
+    ".workload-bar": [],
+    ".lk-skeleton": [],
+    ".calendar-cell": [
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(253, 248, 239)",
+        "cls": "calendar-cell blank"
+      },
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 93,
+        "height": 40,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(255, 253, 247)",
+        "cls": "calendar-cell"
+      }
+    ],
+    ".calendar-day": [
+      {
+        "text": "1",
+        "transform": "none",
+        "opacity": "1",
+        "width": 5,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "2",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "3",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "4",
+        "transform": "none",
+        "opacity": "1",
+        "width": 8,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "5",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "6",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "7",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "8",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "9",
+        "transform": "none",
+        "opacity": "1",
+        "width": 7,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "10",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "11",
+        "transform": "none",
+        "opacity": "1",
+        "width": 10,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      },
+      {
+        "text": "12",
+        "transform": "none",
+        "opacity": "1",
+        "width": 12,
+        "height": 17,
+        "display": "inline",
+        "visibility": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "cls": "calendar-day"
+      }
+    ],
+    ".lk-empty__art": [],
+    ".lk-paper": [],
+    ".lk-confetti-fall": [],
+    ".bar": [],
+    ".bar-fill": [
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "1",
+        "width": 27,
+        "height": 132,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(245, 197, 24)",
+        "cls": "bar-fill"
+      },
+      {
+        "text": "",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "opacity": "0.78",
+        "width": 27,
+        "height": 132,
+        "display": "block",
+        "visibility": "visible",
+        "background": "rgb(43, 98, 232)",
+        "cls": "bar-fill"
+      }
+    ],
+    ".bar-column": []
+  },
+  "conditions": {
+    "allCorrect": {
+      "verdict": "PASS",
+      "total": 3,
+      "correct": 3,
+      "detail": "本轮 3/3 全对 ⇒ 里程碑档"
+    },
+    "chapterFirst": {
+      "verdict": "PENDING",
+      "chapterFirstRaw": "false",
+      "missing": [
+        "practice_runs 的章标识（这一轮属于哪一章）",
+        "「该章此前未完成」的事实（由服务端判定，不由客户端猜）",
+        "完成页响应里的该事实，客户端据此写 data-lk-chapter-first"
+      ],
+      "detail": "practice_runs 无章列，客户端恒写 data-lk-chapter-first=false；A-29 禁止用代理指标近似，所以这一档不可判定"
+    }
+  },
+  "completionFacts": {
+    "total": 3,
+    "correct": 3,
+    "chapterFirst": false,
+    "chapterFirstRaw": "false"
+  }
+}

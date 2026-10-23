@@ -1,0 +1,44 @@
+{
+  "id": "3.3-5",
+  "level": "AUTO",
+  "auto": true,
+  "verdict": "PASS",
+  "data": {
+    "frames": [
+      {
+        "file": "0000.png",
+        "ae": 0
+      },
+      {
+        "file": "0120.png",
+        "ae": 2910
+      },
+      {
+        "file": "0300.png",
+        "ae": 6187
+      },
+      {
+        "file": "0600.png",
+        "ae": 189
+      },
+      {
+        "file": "0900.png",
+        "ae": 189
+      }
+    ],
+    "soundOn": "openspec\\changes\\workbench-visual-language-v2\\reports\\MOTION-VERIFICATION\\frames\\mute-on",
+    "soundOff": "openspec\\changes\\workbench-visual-language-v2\\reports\\MOTION-VERIFICATION\\frames\\mute-off",
+    "terminalDifferences": [],
+    "terminalExtraDifferences": [
+      {
+        "selector": ".workload-bars",
+        "index": 0,
+        "field": "text",
+        "animated": "23242526272822930310102030405",
+        "reduced": "23242526272812930310102030405"
+      }
+    ],
+    "allFramesIdentical": false
+  },
+  "note": "静音与开静音的终态一致 —— 声音不是唯一通道"
+}

@@ -1,0 +1,124 @@
+{
+  "id": "M-12",
+  "verdict": "FAIL",
+  "detail": "横幅在四种组合下都退场（hold 后不透明度 = 0） 不成立",
+  "criterion": "acceptance.md §2 M-12",
+  "checks": {
+    "四种组合的终态与「动效开启」逐项一致（数字/档位/火苗/横幅内容）": true,
+    "四种组合的档位与 A-2 的分级一致": true,
+    "显式「开」恢复完整动效（台灯层被创建）": true,
+    "显式「关」全部直切（台灯层不创建）": true,
+    "横幅在四种组合下都退场（hold 后不透明度 = 0）": false
+  },
+  "rows": [
+    {
+      "label": "system-reduce + pref-unset",
+      "systemReducedMotion": "reduce",
+      "preference": "unset",
+      "expectedMode": "weak",
+      "actualMode": "weak",
+      "dataMotionAttribute": null,
+      "lampLayersCreated": false,
+      "runningAnimations": [],
+      "terminal": {
+        "tier": "1",
+        "counterText": "5",
+        "litFlames": 5,
+        "flameCount": 5,
+        "bannerOn": true,
+        "bannerText": "5"
+      },
+      "bannerOpacityAtTerminal": "1",
+      "terminalDifferencesVsFullTier": [],
+      "modeMatchesExpectation": true,
+      "lampMatchesTier": true,
+      "frame": "system-reduce-pref-unset.png"
+    },
+    {
+      "label": "system-reduce + pref-on",
+      "systemReducedMotion": "reduce",
+      "preference": "on",
+      "expectedMode": "full",
+      "actualMode": "full",
+      "dataMotionAttribute": "on",
+      "lampLayersCreated": true,
+      "runningAnimations": [
+        "lk-rise-in-12",
+        "lk-flame-ignite",
+        "lk-combo-in",
+        "lk-combo-out"
+      ],
+      "terminal": {
+        "tier": "1",
+        "counterText": "5",
+        "litFlames": 5,
+        "flameCount": 5,
+        "bannerOn": true,
+        "bannerText": "5"
+      },
+      "bannerOpacityAtTerminal": "0",
+      "terminalDifferencesVsFullTier": [],
+      "modeMatchesExpectation": true,
+      "lampMatchesTier": true,
+      "frame": "system-reduce-pref-on.png"
+    },
+    {
+      "label": "system-allow + pref-unset",
+      "systemReducedMotion": "no-preference",
+      "preference": "unset",
+      "expectedMode": "full",
+      "actualMode": "full",
+      "dataMotionAttribute": null,
+      "lampLayersCreated": true,
+      "runningAnimations": [
+        "lk-rise-in-12",
+        "lk-flame-ignite",
+        "lk-combo-in",
+        "lk-combo-out"
+      ],
+      "terminal": {
+        "tier": "1",
+        "counterText": "5",
+        "litFlames": 5,
+        "flameCount": 5,
+        "bannerOn": true,
+        "bannerText": "5"
+      },
+      "bannerOpacityAtTerminal": "0",
+      "terminalDifferencesVsFullTier": [],
+      "modeMatchesExpectation": true,
+      "lampMatchesTier": true,
+      "frame": "system-allow-pref-unset.png"
+    },
+    {
+      "label": "system-allow + pref-off",
+      "systemReducedMotion": "no-preference",
+      "preference": "off",
+      "expectedMode": "off",
+      "actualMode": "off",
+      "dataMotionAttribute": "off",
+      "lampLayersCreated": false,
+      "runningAnimations": [],
+      "terminal": {
+        "tier": "1",
+        "counterText": "5",
+        "litFlames": 5,
+        "flameCount": 5,
+        "bannerOn": true,
+        "bannerText": "5"
+      },
+      "bannerOpacityAtTerminal": "1",
+      "terminalDifferencesVsFullTier": [],
+      "modeMatchesExpectation": true,
+      "lampMatchesTier": true,
+      "frame": "system-allow-pref-off.png"
+    }
+  ],
+  "bannerOpacityAtTerminalPerCombination": {
+    "system-reduce + pref-unset": "1",
+    "system-reduce + pref-on": "0",
+    "system-allow + pref-unset": "0",
+    "system-allow + pref-off": "1"
+  },
+  "framesDir": "openspec\\changes\\workbench-visual-language-v2\\reports\\MOTION-VERIFICATION\\extra\\M-12"
+}
