@@ -289,6 +289,7 @@
    ⚠️ **本波没有回写任何 `tasks.md` 复选框** —— 第 13 组的验收条款等 §4/§5 落地后统一核。
 2. **【Wave ②】§2 顶栏 + §3 左栏** —— 块高表 / 图标形状 / 设置入口落位。判定客观。
    ⚠️ DRIFT-2（顶栏桌面动作区为空）是**新增交互**（Agent 开关 + 主题切换）⇒ 须先落 spec。
+   ⚠️ **每一波结束都要出「视觉板」给所有者看**（见 §9 的新约定）⇒ 本波也要出。
 3. **【Wave ③】§4 中栏通用版式 + §5 五个页面线框** —— 标题带四段、单一轨 880（A-140）、
    间距阶梯、逐页线框。
 4. **【Wave ④】§8 密度分区** —— **逐区块改值，不造开关**（见 §1.5.3 第 1 条）。
@@ -403,6 +404,41 @@ env -u http_proxy -u https_proxy -u all_proxy openspec validate --specs --strict
 ⚠️ **不要**做：改图谱算法 · 合并 main · push ·
 把 `layout-candidates.md` 当实现目标 · 照 `tmp/` 里的脚本行事 ·
 **用「112/173」当离预设的距离**（见 §1.5）。
+
+### 9.1 🆕 **每一波都要给所有者看「视图」**（2026-10-23 所有者新要求）
+
+> 原话：「**你每走一步都把视图给我看看。**」
+
+⇒ 每波结束，**除了报告里的数字，还要出一张能打开的对照图**：
+左边改前、右边改后，每行标出这一眼在看什么，外加**像素差百分比**当客观量。
+
+**工具已落盘**：`tools/walkthrough/view.py`（`capture` + `board` 两个子命令）
+
+```bash
+# ① 抓「改后」
+python tools/walkthrough/view.py capture --base-url http://127.0.0.1:<port> \
+    --ws walk --out tmp/view/<wave>-after
+# ② 抓「改前」：把改前的产品文件 checkout 出来，抓完再 checkout 回来
+git checkout <改前的 commit> -- workbench/server/static/workbench.css \
+    workbench/server/static/workbench.js
+python tools/walkthrough/view.py capture --base-url http://127.0.0.1:<port> \
+    --ws walk --out tmp/view/<wave>-before
+git checkout HEAD -- workbench/server/static/workbench.css \
+    workbench/server/static/workbench.js
+# ③ 出板
+python tools/walkthrough/view.py board --before tmp/view/<wave>-before \
+    --after tmp/view/<wave>-after --out tmp/view/<wave>-board.html
+```
+
+⚠️ **两个已踩过的坑（工具里已内建闸门）**：
+① **动画闸门** —— 视图转场把 `#middle-page > *` 从 `opacity: 0` 动画进来（240ms），
+`networkidle` 对 CSS 动画一无所知 ⇒ 刚过 networkidle 就拍会**拍到一片空白的中栏**
+（本工具第一版就在 1440 上拍出了空列，还差点当成回归）；
+② **空白中栏守卫** —— 截图前查 `#middle-page` 的字符数，为 0 就**大声报出来**，
+不让空图混进板子。
+
+**Wave ① 的板子**：`tmp/view/wave1-board.html`（8 个视图：四档 + 三个页面 + 夜纸对照）。
+⚠️ `tmp/` **不入库** ⇒ 清了就没了；但**工具是入库的**，随时能重抓。
 
 > ℹ️ **Wave ① 有一份试作**（2026-10-23）：`tmp/wave1/wave1-impl.patch`（495 行）·
 > 四档几何**逐格对上规格**、静态探针 3.5-1/2/3 全 PASS、
