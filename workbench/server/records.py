@@ -630,7 +630,9 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
     notice = ""
     if problem_id:
         notice = (
-            "<p class='record-filter-note'>按单题过滤。"
+            # R-54（copy-table 定稿）：`按单题过滤` —— 去掉"正在"与句号，
+            # 作为状态标签而非叙述句（copy-table §2.8 R-54）。
+            "<p class='record-filter-note'>按单题过滤"
             f"<a href='/w/{html.escape(workspace_name, quote=True)}/records'>查看全部记录</a></p>"
         )
     elif (limit and view in {"attempts", "wrong"}
