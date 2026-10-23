@@ -4170,6 +4170,41 @@ B 修法把 `button.sm` 挪到形态规则之后 ⇒ `.sm` 的 `border-radius: 1
 - 靶子**没画**的部分（会话分组、优先回看状态点、顶栏动作区……）**不构成授权**——
   它们按各自的规格实现，只是**构图与气氛**照靶子。
 
+### A-144 · **V1 记为正式基线版本**（tag `v1-mockup-baseline`）· 组件设计版本地图入库 · 分支归档
+
+> 来源：所有者 2026-10-23：「**就按照这一版吧。三件事：整理好该版记为正式提交（但先不要合并）；
+> 寻找、归纳已有的组件设计版本地图，这些仍然有很多价值；在前者之后，归档剩余的、不合适的版本开发分支。**」
+
+#### 1. V1 = 正式基线版本
+
+- **V1 = `design-notes/mockup-baseline/v1.html`**（六个样板图页面原样拼成一页，样板图零改动）。
+- 打 **git tag `v1-mockup-baseline`**（附注指向本提交）。
+- ⚠️ **不合并 main、不 push**（所有者指示）。
+
+#### 2. 组件设计版本地图（`design-notes/component-versions/README.md`）
+
+| # | 版本 | 位置 | 状态 |
+|---|---|---|---|
+| C-1 | 静态组件候选（旧方向，25 组 / 103 变体） | `styleboard-v1-legacy/`（**已提升入库**） | superseded，**但底稿留用** —— 未被采纳的变体里可能还有更好的形态 |
+| C-2 | 组件样式一览 v2 | `styleboard-v2/`（**已提升入库**） | A-115 的上游证据 |
+| C-3 | 形态落定表 | `component-spec.md` §4.30 | **权威** |
+| C-4 | 落地实现 | `reports/IMPL-C1{,-b,-c}-report.md` | 在用 |
+| C-5 | 版式候选 S1–S4 | `tmp/frontend-audit/layout-board/`（**仍在 tmp**） | demoted，可清 |
+| C-6 | 图标集两套 | 靶子 `icons.svg` ↔ 产品 `assets/icons/` | **几何不同，移植时要挑** |
+
+⇒ **保全动作**：C-1 / C-2 原件在 `tmp/`（不入库，清一次就没了）⇒ **已提升进仓库**；
+`styleboard-v2/` 只改 **4 条相对路径**（位置深了 3 层 ⇒ 不改就指不到产品 CSS），
+**页面内容一字未动**。
+
+#### 3. 分支归档
+
+- **归档对象**：**已完全并入 main** 的本地分支（成果在 main 里，分支只是残留）。
+- **归档方式**：**先打 `archive/<branch>` 附注 tag，再删分支与 worktree** ⇒ 100% 可恢复
+  （`git branch <name> archive/<name>`）。
+- **保留**：`main` · `feat/workbench-visual-language-v2`（当前）· **18 个还有独有未合并提交的分支**
+  （未收工的工作，删了会丢）。
+- 清单见 `docs/BRANCH-ARCHIVE.md`。
+
 ### F-1 组件样式一览（Component style gallery）
 
 > 所有者原话：「每一界面都自己提供了同一组件的超多样式，之后可以做一个组件样式一览，

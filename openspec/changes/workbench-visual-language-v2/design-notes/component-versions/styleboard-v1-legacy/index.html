@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>lesson-kit 工作台 · 视觉样板板（候选对比）</title>
+<style>
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#ece9df;color:#171717;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.65}
+.wrap{max-width:1580px;margin:0 auto;padding:0 26px}
+header.top{background:#fffdf7;border-bottom:1px solid rgba(0,0,0,.12);padding:26px 0 20px}
+header.top .wrap{padding-top:0;padding-bottom:0}
+h1{font-size:25px;margin:0 0 8px;letter-spacing:.01em}
+.sub{font-size:13.5px;color:#4c4c47;max-width:1150px}
+.usage{margin-top:14px;border:1px solid rgba(0,0,0,.14);background:#fbf8ef;padding:12px 14px;font-size:12.5px;color:#3d3d38;border-radius:8px}
+.usage b{font-weight:700}
+.toc{font-size:12px;color:#6a6a63;margin-top:12px;line-height:2}
+.toc a{color:#2457c5;text-decoration:none;margin-right:13px;display:inline-block}
+section.grp{padding:4px 0}
+h2{font-size:18px;margin:28px 0 3px;padding-top:12px;border-top:2px solid #171717;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+h2 .gno{font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:#8b8b84;background:#e6e2d6;padding:1px 7px;border-radius:999px;font-weight:400}
+h2 .gname{font-weight:700}
+h2 .ggoal{font-size:12px;font-weight:400;color:#6a6a63}
+.hint{font-size:12.5px;color:#55554f;margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;gap:15px;align-items:flex-start;margin-bottom:4px}
+.card{width:346px;flex:0 0 auto;background:var(--paper,#fffdf7);color:var(--ink,#171717);border:1px solid rgba(0,0,0,.16);border-radius:9px;padding:11px 12px 9px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.ctop{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.badge{font-size:10.5px;padding:1.5px 7px;border-radius:999px;border:1px solid rgba(0,0,0,.25);background:rgba(0,0,0,.05);white-space:nowrap}
+.badge.cur{background:#171717;color:#fffdf7;border-color:#171717}
+.badge.cand{background:#fdf3d3;border-color:#d9bd67;color:#5b4a12}
+.cname{font-size:13px;font-weight:700}
+.cdesc{font-size:11.5px;color:#5a5a54;margin:0 0 9px;line-height:1.5}
+.spec{background:var(--paper,#fffdf7);color:var(--ink,#171717);border:var(--cb,1px solid rgba(0,0,0,.14));border-radius:var(--r,6px);box-shadow:var(--sh,none);padding:var(--sp,12px);font-size:var(--fs,14px);line-height:var(--lh,22px);letter-spacing:var(--ls,0);max-width:var(--meas,none)}
+.nums{margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;color:#71716a;text-align:right;line-height:1.45;word-break:break-word}
+.card.dark{background:#16171a;color:#e9e9e6}
+.card.dark .cdesc,.card.dark .nums{color:#a9a9a2}
+.card.dark .badge{border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#e9e9e6}
+.card.dark .badge.cur{background:#e9e9e6;color:#16171a;border-color:#e9e9e6}
+.card.dark .badge.cand{background:#3a3418;color:#f0d98a;border-color:#6b5c25}
+.card.dark .mini .mstat div{border-color:rgba(255,255,255,.18)}
+.card.dark .mini .mstat b{color:var(--ink)}
+.card.dark .cal{border-color:rgba(255,255,255,.14)}
+.card.dark .cal .cell{background:rgba(255,255,255,.06)}
+.card.dark .cal .bars{border-bottom-color:rgba(255,255,255,.22)}
+.card.dark .cal .bars i{background:#8fb0ff}
+.card.dark .nav{border-color:rgba(255,255,255,.14)}
+.card.dark .nav .item.sel.sel-lift{background:#25262a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.card.dark .nav .item.sel.sel-box{outline-color:var(--ink)}
+.card.dark .nav .item.sel.sel-frame{background:rgba(255,255,255,.08);outline-color:var(--ink)}
+.card.dark .nav .item.sel.sel-num::before{background:var(--ink);color:var(--paper)}
+.card.dark .tbl th{color:#a9a9a2;border-bottom-color:rgba(255,255,255,.28)}
+.card.dark .tbl td{border-bottom-color:rgba(255,255,255,.1)}
+.card.dark .hub .hc{border-color:rgba(255,255,255,.16)}
+.card.dark .hub .hc span{color:#a9a9a2}
+.card.dark .msg .who{color:#a9a9a2}
+.card.dark .bubble{background:rgba(255,255,255,.07)}
+.card.dark .msg.card .bubble{background:#1f2024;border-color:rgba(255,255,255,.16)}
+.card.dark .stat{border-color:rgba(255,255,255,.16)}
+.card.dark .stat span{color:#a9a9a2}
+.card.dark .klist .ki{border-bottom-color:rgba(255,255,255,.1)}
+.card.dark .kgroup .gh{color:var(--ink)}
+.card.dark .tlist .li{border-bottom-color:rgba(255,255,255,.1)}
+.card.dark .q.paper,.card.dark .q.bar{background:var(--paper2,#211f1c);border-color:rgba(255,255,255,.14)}
+.spec h4{margin:0 0 6px;font-size:var(--tfs,15px);line-height:1.4;font-weight:700}
+.spec .rule{width:var(--rulew,160px);height:var(--ruleh,3px);background:var(--y,#f2c94c);margin:6px 0 9px}
+.spec p{margin:0 0 8px}
+.spec p:last-child{margin-bottom:0}
+.spec ul{margin:0 0 8px;padding-left:18px}
+.spec li{margin:2px 0}
+.spec a{color:var(--bl,var(--b,#2457c5))}
+.spec .btn{display:inline-block;background:var(--bb,var(--b,#2457c5));color:#fff;border-radius:var(--br,6px);padding:5px 12px;font-size:13px}
+.spec .btn.ghost{background:transparent;color:var(--ink);border:1px solid rgba(0,0,0,.22)}
+.spec .tag{display:inline-block;background:var(--bw,#e8eefb);color:var(--bt,#1c3f8f);border-radius:4px;padding:1px 7px;font-size:11.5px;margin:0 4px 4px 0}
+.spec .kw{background:#fdf3d3;border:1px solid #e2cd82;border-radius:4px;padding:0 5px}
+.mini{background:var(--paper);border:1px solid rgba(0,0,0,.12);border-radius:8px;padding:10px}
+.mini .mrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.mini .mnav{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.mini .mnav span{padding:3px 9px;border-radius:5px;font-size:12.5px}
+.mini .mstat{display:flex;gap:8px;margin-top:8px}
+.mini .mstat div{flex:1;border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:5px;text-align:center;font-size:11px;color:#5a5a54}
+.mini .mstat b{display:block;font-size:17px;color:var(--ink)}
+.mini .bar{height:8px;border-radius:4px;overflow:hidden;display:flex;margin:6px 0}
+.mini .bar i{display:block;height:100%}
+.nav{background:var(--paper);border:1px solid rgba(0,0,0,.12);border-radius:8px;padding:8px 0}
+.nav .item{padding:5px 12px;font-size:13px;color:var(--ink);position:relative}
+.nav .item.sel{font-weight:700}
+.nav .item.sel.sel-box{outline:1px solid var(--ink);outline-offset:-1px;border-radius:4px}
+.nav .item.sel.sel-bar{border-left:3px solid var(--b,#2457c5);padding-left:9px;background:rgba(36,87,197,.06)}
+.nav .item.sel.sel-lift{background:#fffef7;box-shadow:inset 0 0 0 1px rgba(0,0,0,.07)}
+.nav .item.sel.sel-frame{background:rgba(0,0,0,.06);outline:1px solid var(--ink);outline-offset:-1px}
+.nav .item.sel.sel-num::before{content:attr(data-n);display:inline-block;width:17px;height:17px;line-height:17px;text-align:center;border-radius:50%;background:var(--ink);color:var(--paper);font-size:10.5px;margin-right:7px;vertical-align:1px}
+.cal{background:var(--paper);border:1px solid rgba(0,0,0,.12);border-radius:8px;padding:9px}
+.cal .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:2px}
+.cal .cell{aspect-ratio:1/1;border-radius:2px;background:rgba(0,0,0,.05)}
+.cal.dots .cell{background:none;border-radius:0}
+.cal .dot{width:5px;height:5px;border-radius:50%;background:var(--b,#2457c5);margin:auto}
+.cal .bars{display:flex;align-items:flex-end;gap:3px;height:64px;border-bottom:1px solid rgba(0,0,0,.2)}
+.cal .bars i{flex:1;background:var(--b,#2457c5);border-radius:2px 2px 0 0;opacity:.85}
+.cal svg{display:block;width:100%;height:64px}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{text-align:left;font-weight:600;color:#5a5a54;border-bottom:1px solid rgba(0,0,0,.22);padding:4px 6px}
+.tbl td{padding:4px 6px;border-bottom:1px solid rgba(0,0,0,.08)}
+.tbl tr:last-child td{border-bottom:none}
+.tlist .li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.09);font-size:12.5px}
+.hub{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+.hub .hc{border:1px solid rgba(0,0,0,.13);border-radius:6px;padding:7px 8px;font-size:12.5px;background:var(--paper)}
+.hub .hc b{display:block;font-size:13px;margin-bottom:2px}
+.hub .hc span{color:#6a6a63;font-size:11px}
+.hub.list{display:block}
+.hub.list .hc{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-radius:4px;padding:4px 6px}
+.hub.grp{display:block}
+.hub.grp .gh{font-size:11.5px;color:#6a6a63;margin:7px 0 3px;font-weight:700}
+.msg{margin-bottom:8px;font-size:13px;line-height:1.6}
+.msg .who{font-size:11px;color:#6a6a63;margin-bottom:3px}
+.bubble{background:rgba(0,0,0,.05);border-radius:10px;padding:8px 10px}
+.msg.user .bubble{background:var(--bw,#e8eefb);border-radius:10px 10px 2px 10px}
+.msg.agent .bubble{background:transparent;padding:0}
+.msg.card .bubble{background:#fffdf7;border:1px solid rgba(0,0,0,.14);border-radius:8px}
+.q{font-size:14px;line-height:1.7}
+.q.paper{background:var(--paper2,#fbf8ef);border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:10px 12px}
+.q.bar{background:var(--paper2,#fbf8ef);border-left:3px solid var(--ink);padding:8px 12px;border-radius:0 6px 6px 0}
+.q .qn{display:inline-block;background:var(--ink);color:var(--paper);border-radius:4px;padding:0 6px;font-size:12px;margin-right:6px}
+.klist{font-size:13px}
+.klist .ki{padding:4px 0;border-bottom:1px solid rgba(0,0,0,.09);display:flex;gap:6px;align-items:baseline}
+.klist.two{columns:2;column-gap:16px}
+.klist.two .ki{break-inside:avoid}
+.kgroup{margin-bottom:9px}
+.kgroup .gh{font-weight:700;font-size:12.5px;margin-bottom:3px}
+.kbar{height:4px;border-radius:2px;background:var(--y,#f2c94c);margin-top:3px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.stat{border:1px solid rgba(0,0,0,.13);border-radius:6px;padding:8px 4px;text-align:center}
+.stat b{display:block;font-size:19px;line-height:1.2}
+.stat span{font-size:11px;color:#6a6a63}
+.stats.big{grid-template-columns:repeat(4,1fr);border-top:1px solid rgba(0,0,0,.22);border-bottom:1px solid rgba(0,0,0,.22)}
+.stats.big .stat{border:none;border-left:1px solid rgba(0,0,0,.12);border-radius:0;background:none;padding:4px 2px}
+.stats.big .stat:first-child{border-left:none}
+.stats.big .stat b{font-size:25px}
+.pick{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-size:12.5px;color:#4c4c47}
+.pick input{flex:0 0 330px;max-width:100%;border:1px dashed rgba(0,0,0,.32);background:#fffdf7;border-radius:5px;padding:4px 8px;font:inherit;font-size:12.5px}
+.pick .mark{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:#8b8b84}
+footer.end{max-width:1580px;margin:40px auto 0;padding:22px 26px 60px;border-top:2px solid #171717;color:#4c4c47;font-size:12.5px}
+footer.end h3{margin:0 0 6px;font-size:15px;color:#171717}
+
+/* ===== 新方向 · 现代圆润（追加分区） ===== */
+.part{font-size:21px;margin:46px 0 4px;padding:16px 0 8px;border-top:3px solid #171717;letter-spacing:.02em}
+.part .sub2{display:block;font-size:12.5px;color:#5a5a54;font-weight:400;margin-top:7px;max-width:1200px;line-height:1.7}
+.part .sub2 b{color:#171717}
+.rgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.rgrid .cbox{border:1px solid rgba(0,0,0,.10);border-radius:8px;padding:7px 9px;background:var(--paper)}
+.rgrid .cl{font-size:10.5px;color:#6a6a63;margin-bottom:4px;font-family:ui-monospace,Consolas,monospace}
+.mod{display:flex;flex-direction:column;gap:7px}
+.mrow2{display:flex;align-items:center;gap:8px}
+.chip{display:inline-block;padding:2px 10px;font-size:12px}
+.dotstat{width:10px;height:10px;border-radius:50%;display:inline-block}
+.qnum{display:inline-flex;width:26px;height:26px;align-items:center;justify-content:center;font-size:12.5px;font-weight:700}
+.navitem{display:inline-block;padding:6px 13px;font-size:13px}
+.geo{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;vertical-align:-4px;margin-right:6px}
+.stack{display:flex;flex-direction:column;gap:6px}
+.minicard{border:1px solid rgba(0,0,0,.12);padding:7px 9px;font-size:12.5px;background:var(--paper)}
+.two-tone{border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,.12);background:var(--paper)}
+.two-tone .strip{height:7px;margin:0}
+.serif{font-family:"Songti SC","SimSun","Noto Serif SC","Source Han Serif SC","Times New Roman",serif}
+.sans{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif}
+.contrast{display:inline-flex;gap:5px;align-items:center;margin-top:6px;font-family:ui-monospace,Consolas,monospace;font-size:10.5px;color:#6a6a63}
+.contrast i{width:10px;height:10px;border-radius:2px;display:inline-block}
+</style>
+</head>
+<body>
+<header class="top">
+<div class="wrap">
+<h1>lesson-kit 工作台 · 视觉样板板（候选对比页）</h1>
+<p class="sub">本页把「柔和蒙德里安 v2」精修的视觉候选并排画出来，供产品所有者直接肉眼比较与挑选。它不是产品代码，只是一块静态对比板。</p>
+<div class="usage">
+<b>这是什么</b>：25 组视觉决策的候选对照表（01–17 仿古纸感方向，18–25 现代圆润方向）。每组第一张卡固定是<b>现状</b>（当前线上真实值），其余是候选 A/B/C…。<br>
+<b>怎么用</b>：每张卡右下角是<b>具体数值</b>（色值 / px / 占比），对着数值投票，不用凭感觉；卡片里是<b>真排版的样例</b>（真文字，不是色块），差别只有放进真实排版才看得出。<br>
+<b>怎么选</b>：先看现状卡，再逐个候选比；优先选「差别看得见、但阅读不变差」的那个。<br>
+<b>字体</b>：本页用系统中文字体栈只为方便对比；正式版阅读面会用<b>衬线</b>（题面 / 知识点正文 / 解析），界面面仍是无衬线。<br>
+<b>范围</b>：本页只讨论工作台视觉；<b>知识图谱页完全不在范围内</b>。<br>
+<b>新方向提示</b>：18–25 组是「现代圆润（多邻国式）」方向，与前 17 组<b>并存不互斥</b>；其中第 20 组（多色）与第 24 组（全无衬线）会<b>主动违反现行契约</b>，已在组内标注，采纳前需另开 OpenSpec 变更。
+</div>
+<nav class="toc" id="toc"></nav>
+</div>
+</header>
+
+<main class="wrap" id="main">
+
+<section class="grp" id="g01" data-short="纸的底色">
+<h2><span class="gno">01</span><span class="gname">纸的底色</span><span class="ggoal">整页「纸」有多黄 / 有多冷，决定全局气质</span></h2>
+<p class="hint">现状 <code>#fffdf7</code> 是很干净的暖白；换成更黄的旧纸会立刻「有年代感」，换成冷白会显得像工具软件，换深米灰会压住纸的呼吸感。</p>
+<div class="row">
+<article class="card" style="--paper:#fffdf7">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">纯暖白</span></div>
+<p class="cdesc">很干净的暖白，只有极轻的奶油感——几乎像屏幕白。</p>
+<div class="spec"><h4>§2.3 导数的计算</h4><div class="rule"></div>
+<p>由导数定义，函数 <span class="kw">f(x)</span> 在 x₀ 处的导数等于割线斜率的极限。</p>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">lim(t&#8594;x₀) [f(t)&#8722;f(x₀)] / (t&#8722;x₀)</p>
+<ul><li>可导 &#8658; 连续，连续不一定可导</li><li>链式法则：先乘后拆</li></ul>
+<p><a href="#">查看例题</a> &nbsp;<span class="btn">开始练习</span></p></div>
+<div class="nums">纸 #fffdf7 · RGB 255,253,247 · 墨 #171717 对比 17.62:1</div>
+</article>
+<article class="card" style="--paper:#f7f3e8">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">微黄旧纸</span></div>
+<p class="cdesc">像翻旧了的书页：整页一次性染上年代感。</p>
+<div class="spec"><h4>§2.3 导数的计算</h4><div class="rule"></div>
+<p>由导数定义，函数 <span class="kw">f(x)</span> 在 x₀ 处的导数等于割线斜率的极限。</p>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">lim(t&#8594;x₀) [f(t)&#8722;f(x₀)] / (t&#8722;x₀)</p>
+<ul><li>可导 &#8658; 连续，连续不一定可导</li><li>链式法则：先乘后拆</li></ul>
+<p><a href="#">查看例题</a> &nbsp;<span class="btn">开始练习</span></p></div>
+<div class="nums">纸 #f7f3e8 · RGB 247,243,232 · 比现状黄 +8 / 暗 &#8722;8</div>
+</article>
+<article class="card" style="--paper:#fbfcfd">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">冷调白</span></div>
+<p class="cdesc">几乎无色相：更像软件界面，少了一点纸的温度。</p>
+<div class="spec"><h4>§2.3 导数的计算</h4><div class="rule"></div>
+<p>由导数定义，函数 <span class="kw">f(x)</span> 在 x₀ 处的导数等于割线斜率的极限。</p>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">lim(t&#8594;x₀) [f(t)&#8722;f(x₀)] / (t&#8722;x₀)</p>
+<ul><li>可导 &#8658; 连续，连续不一定可导</li><li>链式法则：先乘后拆</li></ul>
+<p><a href="#">查看例题</a> &nbsp;<span class="btn">开始练习</span></p></div>
+<div class="nums">纸 #fbfcfd · RGB 251,252,253 · 冷 +4 蓝通道</div>
+</article>
+<article class="card" style="--paper:#f2efe6">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">更深的米灰</span></div>
+<p class="cdesc">沉下去的旧纸：最沉、最安静，长读时压迫感最小。</p>
+<div class="spec"><h4>§2.3 导数的计算</h4><div class="rule"></div>
+<p>由导数定义，函数 <span class="kw">f(x)</span> 在 x₀ 处的导数等于割线斜率的极限。</p>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">lim(t&#8594;x₀) [f(t)&#8722;f(x₀)] / (t&#8722;x₀)</p>
+<ul><li>可导 &#8658; 连续，连续不一定可导</li><li>链式法则：先乘后拆</li></ul>
+<p><a href="#">查看例题</a> &nbsp;<span class="btn">开始练习</span></p></div>
+<div class="nums">纸 #f2efe6 · RGB 242,239,230 · 比现状暗 13</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状 / 自定义 #f7f3e8"><span class="mark">01</span></p>
+</section>
+
+<section class="grp" id="g02" data-short="墨色">
+<h2><span class="gno">02</span><span class="gname">墨色</span><span class="ggoal">文字与结构线的颜色</span></h2>
+<p class="hint">现状 <code>#171717</code> 已是偏暖的近黑，不是纯黑。候选 A 深炭褐带出「木与纸」的暖感，B 蓝黑让界面更冷更技术，C 纯黑对比最强但锐利。</p>
+<div class="row">
+<article class="card" style="--ink:#171717">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">近黑暖墨</span></div>
+<p class="cdesc">不纯不冷：偏暖的近黑，长读不刺眼。</p>
+<div class="spec"><h4>可导与连续的关系</h4><div class="rule"></div>
+<p>若函数在一点可导，则它在该点一定连续；反之未必成立。</p>
+<ul><li>可导 &#8658; 连续</li><li>连续 ⇏ 可导</li></ul>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">例：f(x)=|x| 在 0 处连续但不可导</p></div>
+<div class="nums">墨 #171717 · RGB 23,23,23 · 纸对比 17.62:1</div>
+</article>
+<article class="card" style="--ink:#221f1a">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">深炭褐</span></div>
+<p class="cdesc">墨里带一点棕，像木刻版：最暖。</p>
+<div class="spec"><h4>可导与连续的关系</h4><div class="rule"></div>
+<p>若函数在一点可导，则它在该点一定连续；反之未必成立。</p>
+<ul><li>可导 &#8658; 连续</li><li>连续 ⇏ 可导</li></ul>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">例：f(x)=|x| 在 0 处连续但不可导</p></div>
+<div class="nums">墨 #221f1a · RGB 34,31,26 · 纸对比 16.14:1（暖 +6 降 1）</div>
+</article>
+<article class="card" style="--ink:#14161c">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">蓝黑</span></div>
+<p class="cdesc">墨里带一点蓝：更冷、更像工程工具。</p>
+<div class="spec"><h4>可导与连续的关系</h4><div class="rule"></div>
+<p>若函数在一点可导，则它在该点一定连续；反之未必成立。</p>
+<ul><li>可导 &#8658; 连续</li><li>连续 ⇏ 可导</li></ul>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">例：f(x)=|x| 在 0 处连续但不可导</p></div>
+<div class="nums">墨 #14161c · RGB 20,22,28 · 纸对比 17.78:1（蓝通道 +5）</div>
+</article>
+<article class="card" style="--ink:#000000">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">纯黑</span></div>
+<p class="cdesc">最狠的黑：对比最高，字重一重就发闷。</p>
+<div class="spec"><h4>可导与连续的关系</h4><div class="rule"></div>
+<p>若函数在一点可导，则它在该点一定连续；反之未必成立。</p>
+<ul><li>可导 &#8658; 连续</li><li>连续 ⇏ 可导</li></ul>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:12.5px">例：f(x)=|x| 在 0 处连续但不可导</p></div>
+<div class="nums">墨 #000000 · 对比 20.65:1（+3.03）· 灰阶层次最窄</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：B / 现状 / 自定义"><span class="mark">02</span></p>
+</section>
+
+<section class="grp" id="g03" data-short="纸面层级">
+<h2><span class="gno">03</span><span class="gname">纸面层级（抬升）</span><span class="ggoal">卡片如何从纸面上「浮起来」</span></h2>
+<p class="hint">现状卡片<b>没有阴影</b>，只有 1px 描边；<code>--dsw-bg-layer-1 #fffefa</code> 与纸底只差 RGB(0,-1,-3)，等于没有层级。这一组决定「纸片」还是「贴片」。</p>
+<div class="row">
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">无差异</span></div>
+<p class="cdesc">卡片贴在纸上，看不出「上面有一张纸」。</p>
+<div class="spec" style="background:#fffdf7;border:1px solid rgba(0,0,0,.10);box-shadow:0 1px 2px rgba(0,0,0,.05)">
+<h4>本节要点</h4><div class="rule"></div>
+<ul><li>导数的定义：割线斜率的极限</li><li>可导必连续</li><li>链式法则的拆分</li></ul>
+<div class="stats" style="margin-top:8px"><div class="stat"><b>3</b><span>要点</span></div><div class="stat"><b>5</b><span>例题</span></div><div class="stat"><b>2</b><span>易错</span></div><div class="stat"><b>1</b><span>待复习</span></div></div>
+</div>
+<div class="nums">面 #fffdf7 · 描边 黑10% 1px · 阴影 rgb(0 0 0/5%) 0 1px 2px（几乎不可见）</div>
+</article>
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">纯暖调阴影</span></div>
+<p class="cdesc">不画框，只用一层暖影把纸托起来。</p>
+<div class="spec" style="background:#fffdf7;border:1px solid rgba(0,0,0,.05);box-shadow:0 2px 6px rgba(120,100,60,.18),0 8px 18px rgba(120,100,60,.10)">
+<h4>本节要点</h4><div class="rule"></div>
+<ul><li>导数的定义：割线斜率的极限</li><li>可导必连续</li><li>链式法则的拆分</li></ul>
+<div class="stats" style="margin-top:8px"><div class="stat"><b>3</b><span>要点</span></div><div class="stat"><b>5</b><span>例题</span></div><div class="stat"><b>2</b><span>易错</span></div><div class="stat"><b>1</b><span>待复习</span></div></div>
+</div>
+<div class="nums">阴影 0 2px 6px rgba(120,100,60,.18) + 0 8px 18px rgba(120,100,60,.10) · 描边降为 5%</div>
+</article>
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">墨线加粗</span></div>
+<p class="cdesc">不用影子，改用更重的墨线勾边：硬、清楚。</p>
+<div class="spec" style="background:#fffdf7;border:1.5px solid #171717;box-shadow:none">
+<h4>本节要点</h4><div class="rule"></div>
+<ul><li>导数的定义：割线斜率的极限</li><li>可导必连续</li><li>链式法则的拆分</li></ul>
+<div class="stats" style="margin-top:8px"><div class="stat"><b>3</b><span>要点</span></div><div class="stat"><b>5</b><span>例题</span></div><div class="stat"><b>2</b><span>易错</span></div><div class="stat"><b>1</b><span>待复习</span></div></div>
+</div>
+<div class="nums">描边 #171717 1.5px · 无阴影 · 墨线比现状粗 0.5px</div>
+</article>
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">阴影 + 墨线</span></div>
+<p class="cdesc">纸片 + 勾边双保险：层级最强，但最「重」。</p>
+<div class="spec" style="background:#fffdf7;border:1.5px solid #171717;box-shadow:0 2px 6px rgba(120,100,60,.18)">
+<h4>本节要点</h4><div class="rule"></div>
+<ul><li>导数的定义：割线斜率的极限</li><li>可导必连续</li><li>链式法则的拆分</li></ul>
+<div class="stats" style="margin-top:8px"><div class="stat"><b>3</b><span>要点</span></div><div class="stat"><b>5</b><span>例题</span></div><div class="stat"><b>2</b><span>易错</span></div><div class="stat"><b>1</b><span>待复习</span></div></div>
+</div>
+<div class="nums">描边 #171717 1.5px + 阴影 0 2px 6px rgba(120,100,60,.18)</div>
+</article>
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cand">候选 D</span><span class="cname">描边 + 浅底</span></div>
+<p class="cdesc">不用影：把卡面提亮到纯白，靠亮度差抬层。</p>
+<div class="spec" style="background:#ffffff;border:1px solid rgba(0,0,0,.12);box-shadow:none">
+<h4>本节要点</h4><div class="rule"></div>
+<ul><li>导数的定义：割线斜率的极限</li><li>可导必连续</li><li>链式法则的拆分</li></ul>
+<div class="stats" style="margin-top:8px"><div class="stat"><b>3</b><span>要点</span></div><div class="stat"><b>5</b><span>例题</span></div><div class="stat"><b>2</b><span>易错</span></div><div class="stat"><b>1</b><span>待复习</span></div></div>
+</div>
+<div class="nums">卡面 #ffffff（比纸底亮 3）· 描边 黑12% 1px · 无阴影</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：C / 现状 / 自定义"><span class="mark">03</span></p>
+</section>
+
+<section class="grp" id="g04" data-short="圆角">
+<h2><span class="gno">04</span><span class="gname">圆角</span><span class="ggoal">纸片边缘的柔和度</span></h2>
+<p class="hint">现状卡片 / 输入框 / 按钮统一 <code>6px</code>（<code>--dsw-radius-sm/md</code>），气泡用 22px。0 = 硬纸板直切，14px = 卡片化圆软。</p>
+<div class="row">
+<article class="card" style="--r:6px;--br:18px">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">6px 卡片 / 18px 按钮</span></div>
+<p class="cdesc">卡片微圆、按钮是胶囊：同屏两套弧度。</p>
+<div class="spec" style="--r:6px"><h4>开始练习</h4>
+<p>下面这行同时放卡片、按钮和输入框，看弧度是否协调。</p>
+<p><span class="btn" style="--br:18px">提交</span> <input type="text" placeholder="输入答案" style="border:1px solid rgba(0,0,0,.25);border-radius:10px;padding:4px 8px;font:inherit;font-size:12.5px;background:transparent;color:inherit"></p></div>
+<div class="nums">卡 6px（--dsw-radius-md）· 按钮 18px 胶囊 · 输入 10px</div>
+</article>
+<article class="card" style="--r:0px;--br:0px">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">0 直线</span></div>
+<p class="cdesc">全部切平：像裁纸刀裁出来的纸板。</p>
+<div class="spec" style="--r:0px"><h4>开始练习</h4>
+<p>下面这行同时放卡片、按钮和输入框，看弧度是否协调。</p>
+<p><span class="btn" style="--br:0px">提交</span> <input type="text" placeholder="输入答案" style="border:1px solid rgba(0,0,0,.25);border-radius:0;padding:4px 8px;font:inherit;font-size:12.5px;background:transparent;color:inherit"></p></div>
+<div class="nums">卡 0 · 按钮 0 · 输入 0 · 与「纸 / 裁切」隐喻最合</div>
+</article>
+<article class="card" style="--r:4px;--br:4px">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">4px 统一</span></div>
+<p class="cdesc">卡与控件同半径：更「工具」，控件感强。</p>
+<div class="spec" style="--r:4px"><h4>开始练习</h4>
+<p>下面这行同时放卡片、按钮和输入框，看弧度是否协调。</p>
+<p><span class="btn" style="--br:4px">提交</span> <input type="text" placeholder="输入答案" style="border:1px solid rgba(0,0,0,.25);border-radius:4px;padding:4px 8px;font:inherit;font-size:12.5px;background:transparent;color:inherit"></p></div>
+<div class="nums">卡 4 · 按钮 4 · 输入 4 · 比现状小 2px</div>
+</article>
+<article class="card" style="--r:8px;--br:8px">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">8px 统一</span></div>
+<p class="cdesc">稍圆的纸片：仍克制，但明显「软」一档。</p>
+<div class="spec" style="--r:8px"><h4>开始练习</h4>
+<p>下面这行同时放卡片、按钮和输入框，看弧度是否协调。</p>
+<p><span class="btn" style="--br:8px">提交</span> <input type="text" placeholder="输入答案" style="border:1px solid rgba(0,0,0,.25);border-radius:8px;padding:4px 8px;font:inherit;font-size:12.5px;background:transparent;color:inherit"></p></div>
+<div class="nums">卡 8 · 按钮 8 · 输入 8 · 比现状大 2px</div>
+</article>
+<article class="card" style="--r:14px;--br:14px">
+<div class="ctop"><span class="badge cand">候选 D</span><span class="cname">14px 卡片化</span></div>
+<p class="cdesc">明显圆：像现代 App 卡片，纸的硬边消失。</p>
+<div class="spec" style="--r:14px"><h4>开始练习</h4>
+<p>下面这行同时放卡片、按钮和输入框，看弧度是否协调。</p>
+<p><span class="btn" style="--br:14px">提交</span> <input type="text" placeholder="输入答案" style="border:1px solid rgba(0,0,0,.25);border-radius:14px;padding:4px 8px;font:inherit;font-size:12.5px;background:transparent;color:inherit"></p></div>
+<div class="nums">卡 14 · 按钮 14 · 输入 14 · 比现状大 8px</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：C / 现状 / 自定义"><span class="mark">04</span></p>
+</section>
+
+<section class="grp" id="g05" data-short="描边">
+<h2><span class="gno">05</span><span class="gname">描边</span><span class="ggoal">卡片边界怎么画</span></h2>
+<p class="hint">现状描边是黑 10%（<code>--dsw-border-l2</code>），结构线是黑 4%（<code>--dsw-border-l1</code>）。暖灰描边会立刻变「软」，深墨描边会变「硬派」。</p>
+<div class="row">
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">黑 10% 描边</span></div>
+<p class="cdesc">中性的淡墨线：不抢戏，也几乎不存在。</p>
+<div class="spec" style="background:#fffdf7;border:1px solid rgba(0,0,0,.10)">
+<h4>练习记录</h4><div class="rule"></div>
+<p>2026-10-18 定积分练习 · 用时 22 分钟 · 错 1 道（换元没提系数）。</p>
+<div class="tlist" style="margin-top:6px"><div class="li"><span>知识点：换元积分法</span><span>掌握 60%</span></div><div class="li"><span>上次复习：10-11</span><span>待复习</span></div></div>
+</div>
+<div class="nums">描边 1px rgba(0,0,0,.10)（--dsw-border-l2）· 结构线另用 4%</div>
+</article>
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">暖灰描边</span></div>
+<p class="cdesc">边界换成纸的暗面：软，但存在感只有 1.65:1。</p>
+<div class="spec" style="background:#fffdf7;border:1px solid #cfc7b4">
+<h4>练习记录</h4><div class="rule"></div>
+<p>2026-10-18 定积分练习 · 用时 22 分钟 · 错 1 道（换元没提系数）。</p>
+<div class="tlist" style="margin-top:6px"><div class="li"><span>知识点：换元积分法</span><span>掌握 60%</span></div><div class="li"><span>上次复习：10-11</span><span>待复习</span></div></div>
+</div>
+<div class="nums">描边 1px #cfc7b4 · 与纸底对比 1.65:1 · 暖色但很弱</div>
+</article>
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">深墨描边</span></div>
+<p class="cdesc">用真墨勾边：结构感最强，卡片像印刷图版。</p>
+<div class="spec" style="background:#fffdf7;border:1px solid #171717">
+<h4>练习记录</h4><div class="rule"></div>
+<p>2026-10-18 定积分练习 · 用时 22 分钟 · 错 1 道（换元没提系数）。</p>
+<div class="tlist" style="margin-top:6px"><div class="li"><span>知识点：换元积分法</span><span>掌握 60%</span></div><div class="li"><span>上次复习：10-11</span><span>待复习</span></div></div>
+</div>
+<div class="nums">描边 1px #171717 · 与纸底对比 17.62:1 · 与「墨线」隐喻最贴</div>
+</article>
+<article class="card" style="--paper:#efece2">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">外浅内深双线</span></div>
+<p class="cdesc">两道线：外层暖灰定位置，内层墨线定重量。</p>
+<div class="spec" style="background:#fffdf7;border:1px solid #cfc7b4;box-shadow:inset 0 0 0 1px rgba(0,0,0,.30)">
+<h4>练习记录</h4><div class="rule"></div>
+<p>2026-10-18 定积分练习 · 用时 22 分钟 · 错 1 道（换元没提系数）。</p>
+<div class="tlist" style="margin-top:6px"><div class="li"><span>知识点：换元积分法</span><span>掌握 60%</span></div><div class="li"><span>上次复习：10-11</span><span>待复习</span></div></div>
+</div>
+<div class="nums">外 1px #cfc7b4 + 内 1px rgba(0,0,0,.30) · 总视觉厚度 2px</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状 / 自定义"><span class="mark">05</span></p>
+</section>
+
+<section class="grp" id="g06" data-short="五角色色配额">
+<h2><span class="gno">06</span><span class="gname">五角色色配额</span><span class="ggoal">蓝 / 黄 / 红各自能出现在哪</span></h2>
+<p class="hint">契约规定蓝/黄/红只承担有限语义（主要动作、当前或复习强调、重点练习或失败）。现状里蓝被用于 logo、开关、导航选中、日历 level、进度、试卷点（引用 21 处）。每个候选画同一个小界面，并在下方标出三色各占多少面积。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">蓝四处都用</span></div>
+<p class="cdesc">蓝是「当前」的意思，但已经用成了默认色。</p>
+<div class="mini"><div class="mnav"><span style="background:#fff;outline:1px solid #171717;border-left:4px solid #2457c5;font-weight:700">知识点</span><span>练习</span><span>记录</span></div>
+<div class="mrow"><span class="btn">继续练习</span> <a href="#">查看解析</a> <span class="tag">待复习</span></div>
+<div class="bar"><i style="width:62%;background:#2457c5"></i><i style="width:38%;background:#e9e5d8"></i></div>
+<div class="mstat"><div><b>12</b>已练</div><div><b>3</b>待复习</div><div><b style="color:#d6453d">1</b>失败</div></div></div>
+<div class="nums">蓝 ≈9%（按钮+链接+选中+进度）· 黄 ≈2% · 红 ≈1%</div>
+</article>
+<article class="card" style="--bl:#171717;--bb:#2457c5">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">蓝只做主按钮</span></div>
+<p class="cdesc">蓝只剩「做一件事」的权力，最克制。</p>
+<div class="mini"><div class="mnav"><span style="background:#f2efe6;font-weight:700">知识点</span><span>练习</span><span>记录</span></div>
+<div class="mrow"><span class="btn">继续练习</span> <a href="#" style="text-decoration:underline">查看解析</a> <span class="tag">待复习</span></div>
+<div class="bar"><i style="width:62%;background:#171717"></i><i style="width:38%;background:#e9e5d8"></i></div>
+<div class="mstat"><div><b>12</b>已练</div><div><b>3</b>待复习</div><div><b style="color:#d6453d">1</b>失败</div></div></div>
+<div class="nums">蓝 ≈3%（仅主按钮）· 黄 ≈2% · 红 ≈1%</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">蓝 = 主按钮+链接+当前项</span></div>
+<p class="cdesc">蓝明确指「当前与可点」，其余都退成墨。</p>
+<div class="mini"><div class="mnav"><span style="border-left:4px solid #2457c5;padding-left:5px;font-weight:700">知识点</span><span>练习</span><span>记录</span></div>
+<div class="mrow"><span class="btn">继续练习</span> <a href="#">查看解析</a> <span class="tag">待复习</span></div>
+<div class="bar"><i style="width:62%;background:#6b6b63"></i><i style="width:38%;background:#e9e5d8"></i></div>
+<div class="mstat"><div><b>12</b>已练</div><div><b>3</b>待复习</div><div><b style="color:#d6453d">1</b>失败</div></div></div>
+<div class="nums">蓝 ≈5%（按钮+链接+当前项）· 黄 ≈2% · 红 ≈1%</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">蓝更广</span></div>
+<p class="cdesc">蓝铺开成界面主色：更有产品感，但语义变钝。</p>
+<div class="mini"><div class="mnav"><span style="background:#2457c5;color:#fff;font-weight:700">知识点</span><span style="border:1px solid rgba(0,0,0,.14)">练习</span><span style="border:1px solid rgba(0,0,0,.14)">记录</span></div>
+<div class="mrow"><span class="btn">继续练习</span> <a href="#">查看解析</a> <span class="tag" style="background:#2457c5;color:#fff">待复习</span></div>
+<div class="bar"><i style="width:62%;background:#2457c5"></i><i style="width:38%;background:#dbe4f8"></i></div>
+<div class="mstat"><div><b>12</b>已练</div><div><b>3</b>待复习</div><div><b style="color:#d6453d">1</b>失败</div></div></div>
+<div class="nums">蓝 ≈15%（含选中底、chip、进度）· 黄 ≈2% · 红 ≈1%</div>
+</article>
+<article class="card" style="--bl:#171717;--bb:#171717">
+<div class="ctop"><span class="badge cand">候选 D</span><span class="cname">蓝全部收走</span></div>
+<p class="cdesc">不用蓝：主按钮改墨，只剩黄红两枚语义色。</p>
+<div class="mini"><div class="mnav"><span style="font-weight:700;border-bottom:2px solid #171717">知识点</span><span>练习</span><span>记录</span></div>
+<div class="mrow"><span class="btn">继续练习</span> <a href="#" style="text-decoration:underline">查看解析</a> <span class="tag">待复习</span></div>
+<div class="bar"><i style="width:62%;background:#171717"></i><i style="width:38%;background:#e9e5d8"></i></div>
+<div class="mstat"><div><b>12</b>已练</div><div><b>3</b>待复习</div><div><b style="color:#d6453d">1</b>失败</div></div></div>
+<div class="nums">蓝 0% · 黄 ≈2% · 红 ≈1% · 主按钮改墨 #171717</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：B / 现状 / 自定义"><span class="mark">06</span></p>
+</section>
+
+<section class="grp" id="g07" data-short="正文排版">
+<h2><span class="gno">07</span><span class="gname">正文字号 × 行高 × 行宽</span><span class="ggoal">阅读的舒适度</span></h2>
+<p class="hint">现状全局正文 <code>14px / 22px</code>（1.57），知识点正文 <code>17px / 28px</code>；中栏正文净宽 740px ≈ 每行 43.5 个中文字，偏长。这一组三选一：行宽、字号、行高是一套的。</p>
+<div class="row">
+<article class="card" style="--fs:14px;--lh:22px">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">14px / 22px / 43.5 字</span></div>
+<p class="cdesc">字号小、行宽最长：信息密，但每行要跨很远才回头。</p>
+<div class="spec"><h4 style="font-size:15px">微积分基本定理</h4>
+<div style="width:304px;border-right:1px dashed rgba(0,0,0,.28);padding-right:8px">
+<p>连续函数在闭区间上的积分，等于其原函数在区间两端点的函数值之差。这是把「面积」和「斜率」接起来的桥，也是定积分所有计算法的出发点。</p></div>
+<div class="nums">字号 14px · 行高 22px（1.57）· 行宽 43.5 字 = 609px</div>
+</div>
+</article>
+<article class="card" style="--fs:17px;--lh:30px">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">17px / 1.75 / 38 字</span></div>
+<p class="cdesc">字号最大、行宽收窄：最像「读书」，中栏要多滚几屏。</p>
+<div class="spec"><h4 style="font-size:18px">微积分基本定理</h4>
+<div style="width:323px;border-right:1px dashed rgba(0,0,0,.28);padding-right:8px">
+<p>连续函数在闭区间上的积分，等于其原函数在区间两端点的函数值之差。这是把「面积」和「斜率」接起来的桥，也是定积分所有计算法的出发点。</p></div>
+<div class="nums">字号 17px · 行高 30px（1.75）· 行宽 38 字 = 646px（预览 0.5×）</div>
+</div>
+</article>
+<article class="card" style="--fs:16px;--lh:27px">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">16px / 1.7 / 34 字</span></div>
+<p class="cdesc">折中：比现状大一档，行宽仍收得住。</p>
+<div class="spec"><h4 style="font-size:17px">微积分基本定理</h4>
+<div style="width:272px;border-right:1px dashed rgba(0,0,0,.28);padding-right:8px">
+<p>连续函数在闭区间上的积分，等于其原函数在区间两端点的函数值之差。这是把「面积」和「斜率」接起来的桥，也是定积分所有计算法的出发点。</p></div>
+<div class="nums">字号 16px · 行高 27px（1.70）· 行宽 34 字 = 544px（预览 0.5×）</div>
+</div>
+</article>
+<article class="card" style="--fs:18px;--lh:29px">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">18px / 1.6 / 32 字</span></div>
+<p class="cdesc">字最大、行最紧：短行易读，但行高偏挤、页面更长。</p>
+<div class="spec"><h4 style="font-size:19px">微积分基本定理</h4>
+<div style="width:288px;border-right:1px dashed rgba(0,0,0,.28);padding-right:8px">
+<p>连续函数在闭区间上的积分，等于其原函数在区间两端点的函数值之差。这是把「面积」和「斜率」接起来的桥，也是定积分所有计算法的出发点。</p></div>
+<div class="nums">字号 18px · 行高 29px（1.60）· 行宽 32 字 = 576px（预览 0.5×）</div>
+</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状 / 自定义"><span class="mark">07</span></p>
+</section>
+
+<section class="grp" id="g08" data-short="题面容器">
+<h2><span class="gno">08</span><span class="gname">题面容器</span><span class="ggoal">题目该以什么形态出现在纸上</span></h2>
+<p class="hint">现状题面 <code>.practice-question-card</code>（17px/28px）直接铺在中栏，题号只靠颜色区分。这一组给「学习价值最高的元素」一个容器。</p>
+<div class="row">
+<article class="card" style="--fs:17px;--lh:28px">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">无容器直排</span></div>
+<p class="cdesc">题面直接摊在中栏：和说明文字长得一样。</p>
+<div class="spec" style="font-size:17px;line-height:28px">
+<p><b>例 3.2</b> 求 <span style="font-family:ui-monospace,Consolas,monospace">&#8747;<sub>0</sub><sup>1</sup> x&#183;e<sup>x</sup> dx</span> 的值。提示：考虑分部积分与 e<sup>x</sup> 的关系。</p>
+<ul style="list-style:none;padding-left:0"><li>A. e &#8722; 1</li><li>B. 1</li><li>C. e</li></ul>
+<p style="font-size:13px;color:#5a5a54">第 3 / 12 题 · 难度 3</p>
+</div>
+<div class="nums">无容器 · 17px/28px · 题号仅靠蓝点（.paper-dot.state-*）</div>
+</article>
+<article class="card" style="--fs:17px;--lh:28px">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">一张纸</span></div>
+<p class="cdesc">给题面一张更浅的纸：题与讲解分开。</p>
+<div class="spec" style="font-size:17px;line-height:28px">
+<div class="q paper"><p><b>例 3.2</b> 求 <span style="font-family:ui-monospace,Consolas,monospace">&#8747;<sub>0</sub><sup>1</sup> x&#183;e<sup>x</sup> dx</span> 的值。提示：考虑分部积分与 e<sup>x</sup> 的关系。</p>
+<ul style="list-style:none;padding-left:0"><li>A. e &#8722; 1</li><li>B. 1</li><li>C. e</li></ul></div>
+<p style="font-size:13px;color:#5a5a54;margin-top:6px">第 3 / 12 题 · 难度 3</p>
+</div>
+<div class="nums">面 #fbf8ef · 描边 1px 黑10% · 圆角 6px · 内距 10/12px</div>
+</article>
+<article class="card" style="--fs:17px;--lh:28px">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">卡片 + 左墨条</span></div>
+<p class="cdesc">一条墨线标出「这是题」，不封边、更透气。</p>
+<div class="spec" style="font-size:17px;line-height:28px">
+<div class="q bar"><p><b>例 3.2</b> 求 <span style="font-family:ui-monospace,Consolas,monospace">&#8747;<sub>0</sub><sup>1</sup> x&#183;e<sup>x</sup> dx</span> 的值。提示：考虑分部积分与 e<sup>x</sup> 的关系。</p>
+<ul style="list-style:none;padding-left:0"><li>A. e &#8722; 1</li><li>B. 1</li><li>C. e</li></ul></div>
+<p style="font-size:13px;color:#5a5a54;margin-top:6px">第 3 / 12 题 · 难度 3</p>
+</div>
+<div class="nums">左条 3px #171717 · 面 #fbf8ef · 只封左边，右边通栏</div>
+</article>
+<article class="card" style="--fs:17px;--lh:28px">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">题号徽标</span></div>
+<p class="cdesc">题号变成实体徽标：状态不再只靠颜色。</p>
+<div class="spec" style="font-size:17px;line-height:28px">
+<p><span class="qn">3/12</span>求 <span style="font-family:ui-monospace,Consolas,monospace">&#8747;<sub>0</sub><sup>1</sup> x&#183;e<sup>x</sup> dx</span> 的值。提示：考虑分部积分与 e<sup>x</sup> 的关系。</p>
+<ul style="list-style:none;padding-left:0"><li>A. e &#8722; 1</li><li>B. 1</li><li>C. e</li></ul>
+<p style="font-size:13px;color:#5a5a54">难度 3 · 未作答</p>
+</div>
+<div class="nums">徽标 墨底 #171717 反白 · 24×18px · 无容器</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：B / 现状 / 自定义"><span class="mark">08</span></p>
+</section>
+
+<section class="grp" id="g09" data-short="知识点列表">
+<h2><span class="gno">09</span><span class="gname">知识点列表</span><span class="ggoal">知识点页的信息密度与结构</span></h2>
+<p class="hint">现状 <code>.knowledge-body</code> 17px/28px、无项目符号、无缩进（<code>ul{list-style:none;padding-left:0}</code>），一条条平铺；左侧只有一条 4px 蓝条。</p>
+<div class="row">
+<article class="card" style="--fs:17px;--lh:28px">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">单列平铺</span></div>
+<p class="cdesc">一条条平铺：没有符号、没有缩进，像一串被拉直的字。</p>
+<div class="spec" style="font-size:17px;line-height:28px;border-left:4px solid #2457c5">
+<div class="klist"><div class="ki">导数的定义：割线斜率的极限</div><div class="ki">可导与连续的关系</div><div class="ki">链式法则的拆分步骤</div><div class="ki">复合函数的求导步骤</div></div>
+</div>
+<div class="nums">17px/28px · 无项目符号 · padding-left 0 · 左 4px 蓝条</div>
+</article>
+<article class="card" style="--fs:16px;--lh:26px">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">两栏</span></div>
+<p class="cdesc">同屏能看更多条目，但顺序读会来回跳。</p>
+<div class="spec" style="font-size:16px;line-height:26px">
+<div class="klist two"><div class="ki">导数的定义：割线斜率的极限</div><div class="ki">可导与连续的关系</div><div class="ki">链式法则的拆分步骤</div><div class="ki">复合函数的求导步骤</div><div class="ki">高阶导数的意义</div><div class="ki">常见错误：漏乘内层导数</div></div>
+</div>
+<div class="nums">两栏 · 栏间距 16px · 条目 16px/26px · 每栏约 3 条</div>
+</article>
+<article class="card" style="--fs:13px;--lh:19px">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">单列密</span></div>
+<p class="cdesc">缩成索引表：扫得快，但基本失去阅读性。</p>
+<div class="spec" style="font-size:13px;line-height:19px">
+<div class="klist"><div class="ki" style="padding:2px 0">导数的定义：割线斜率的极限</div><div class="ki" style="padding:2px 0">可导与连续的关系</div><div class="ki" style="padding:2px 0">链式法则的拆分步骤</div><div class="ki" style="padding:2px 0">复合函数的求导步骤</div><div class="ki" style="padding:2px 0">高阶导数的意义</div></div>
+</div>
+<div class="nums">13px/19px · 行内距 2px · 一屏约 12 条</div>
+</article>
+<article class="card" style="--fs:15px;--lh:24px">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">分组卡片</span></div>
+<p class="cdesc">按主题分块：结构先于密度。</p>
+<div class="spec" style="font-size:15px;line-height:24px">
+<div class="kgroup"><div class="gh">基本概念</div><div style="border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:5px 8px">导数的定义：割线斜率的极限<br>可导与连续的关系</div></div>
+<div class="kgroup"><div class="gh">计算方法</div><div style="border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:5px 8px">链式法则的拆分步骤<br>复合函数的求导步骤</div></div>
+</div>
+<div class="nums">分组标题 15px/700 · 组内 15px/24px · 卡面 #fffdf7 描边 12%</div>
+</article>
+<article class="card" style="--fs:15px;--lh:24px">
+<div class="ctop"><span class="badge cand">候选 D</span><span class="cname">分组 + 状态条</span></div>
+<p class="cdesc">分组之外再加一条黄进度：一眼看出哪块没掌握。</p>
+<div class="spec" style="font-size:15px;line-height:24px">
+<div class="kgroup"><div class="gh">基本概念</div><div style="border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:5px 8px">导数的定义：割线斜率的极限<div class="kbar" style="width:80%"></div></div></div>
+<div class="kgroup"><div class="gh">计算方法</div><div style="border:1px solid rgba(0,0,0,.12);border-radius:6px;padding:5px 8px">链式法则的拆分步骤<div class="kbar" style="width:35%"></div></div></div>
+</div>
+<div class="nums">状态条 高 4px · #f2c94c · 宽度 = 掌握度 80% / 35%</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：C / 现状 / 自定义"><span class="mark">09</span></p>
+</section>
+
+<section class="grp" id="g10" data-short="记录统计块">
+<h2><span class="gno">10</span><span class="gname">记录统计块</span><span class="ggoal">4 张统计卡怎么变成 4 个结论</span></h2>
+<p class="hint">现状是 4 个 <code>192×87px</code> 等大灰盒子（<code>.record-summary card</code>）：12px 灰标签 + 24px 黑数字，四张一模一样、无主次。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">4 张同质卡</span></div>
+<p class="cdesc">四个等大的抽屉标签：没有一个是「结论」。</p>
+<div class="spec"><div class="stats"><div class="stat"><b>128</b><span>累计作答</span></div><div class="stat"><b>78%</b><span>正确率</span></div><div class="stat"><b>24/31</b><span>知识点掌握</span></div><div class="stat"><b>5</b><span>连续学习天数</span></div></div></div>
+<div class="nums">4 × 192×87px 等大 · 标签 12px 灰 · 数字 24px 黑 · 无主次</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">一行大数字分栏</span></div>
+<p class="cdesc">去掉四个盒子，改成一条被细线分开的数字带。</p>
+<div class="spec"><div class="stats big"><div class="stat"><b>128</b><span>累计作答</span></div><div class="stat"><b>78%</b><span>正确率</span></div><div class="stat"><b>24/31</b><span>知识点掌握</span></div><div class="stat"><b>5</b><span>连续学习天数</span></div></div></div>
+<div class="nums">上下 1px 线 + 列间 1px 竖线 · 数字 25px · 高 ≈ 48px</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">主次两档</span></div>
+<p class="cdesc">一个主角 + 三个配角：先看到最重要的那个数。</p>
+<div class="spec"><div style="display:flex;gap:10px;align-items:stretch"><div style="flex:1.4;border:1px solid rgba(0,0,0,.14);border-radius:6px;padding:8px 10px"><b style="display:block;font-size:34px;line-height:1.05">78%</b><span style="font-size:12px;color:#6a6a63">正确率（本阶段）</span></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:5px"><div style="border:1px solid rgba(0,0,0,.13);border-radius:5px;padding:3px 7px;font-size:12px">累计作答 <b style="float:right">128</b></div><div style="border:1px solid rgba(0,0,0,.13);border-radius:5px;padding:3px 7px;font-size:12px">掌握 <b style="float:right">24/31</b></div><div style="border:1px solid rgba(0,0,0,.13);border-radius:5px;padding:3px 7px;font-size:12px">连续 <b style="float:right">5 天</b></div></div></div></div>
+<div class="nums">主角 34px / 3 配角 12px · 宽度比 1.4 : 1</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">仪表盘</span></div>
+<p class="cdesc">把「正确率」画成环：一眼看进度，数字退到旁边。</p>
+<div class="spec"><div style="display:flex;gap:12px;align-items:center"><svg viewBox="0 0 100 100" width="92" height="92" style="flex:0 0 auto"><circle cx="50" cy="50" r="38" fill="none" stroke="#e9e5d8" stroke-width="13"/><circle cx="50" cy="50" r="38" fill="none" stroke="#2457c5" stroke-width="13" stroke-dasharray="186 239" transform="rotate(-90 50 50)"/><text x="50" y="54" text-anchor="middle" font-size="19" fill="#171717" font-family="system-ui">78%</text></svg>
+<div style="font-size:12.5px;line-height:1.9"><div>累计作答 <b>128</b></div><div>掌握 <b>24/31</b></div><div>连续 <b>5 天</b></div><div style="color:#d6453d">失败 <b>1</b> 道</div></div></div></div>
+<div class="nums">环 r=38 厚 13px · 弧长 186/239 = 78% · 环色 #2457c5</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：B / 现状 / 自定义"><span class="mark">10</span></p>
+</section>
+
+<section class="grp" id="g11" data-short="作答日历">
+<h2><span class="gno">11</span><span class="gname">作答日历</span><span class="ggoal">84 格的形状该换成什么</span></h2>
+<p class="hint">现状：12 周 × 7 天 = 84 格，每格 <code>70×70px</code>、格距 5px，整卡 800×1084px（≈ 一整屏），其中 81 格是空的；4 档蓝（<code>color-mix(lk-blue 18%→78%, white)</code>）编码作答次数，<b>页面上没有任何图例</b>。三种画法都画同一段 12 周数据。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">热力方块</span></div>
+<p class="cdesc">4 档蓝的小方块：好看，但 81/84 格是空的，且没有图例。</p>
+<div class="cal"><div class="grid" data-heat></div></div>
+<div class="nums">84 格 · 真格 70×70px + 5px 距 · 整卡 800×1084px · 4 档蓝 · 无图例</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">点阵</span></div>
+<p class="cdesc">每天一个点，点大 = 做得多：空白不再占地方。</p>
+<div class="cal dots"><div class="grid" data-dots></div></div>
+<div class="nums">点径 3–9px（正比次数）· 格距 2px · 一屏 12×7 ≈ 180×140px</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">折线 + 周柱</span></div>
+<p class="cdesc">上折线看每天、下柱看每周：两个尺度同时读。</p>
+<div class="cal">
+<div class="bars"><i style="height:5px"></i><i style="height:13px"></i><i style="height:15px"></i><i style="height:24px"></i><i style="height:29px"></i><i style="height:27px"></i><i style="height:38px"></i><i style="height:47px"></i><i style="height:56px"></i><i style="height:54px"></i><i style="height:56px"></i><i style="height:51px"></i></div>
+<svg viewBox="0 0 300 64" preserveAspectRatio="none" style="margin-top:6px"><path id="calPath" d="" fill="none" stroke="#2457c5" stroke-width="1.4"/><path d="M0 60 L300 60" stroke="rgba(0,0,0,.2)" stroke-width="1"/></svg>
+</div>
+<div class="nums">周柱 12 根（合计 3→31 次）· 日折线 84 点 · 高 64px</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">紧凑热力 + 图例</span></div>
+<p class="cdesc">同样的热力，但格子变小、并把图例补上。</p>
+<div class="cal"><div class="grid" data-heat style="gap:1px"></div>
+<div style="display:flex;gap:6px;align-items:center;margin-top:7px;font-size:10.5px;color:#6a6a63"><span>少</span><i style="width:11px;height:11px;border-radius:2px;background:#f3f1ea;display:inline-block"></i><i style="width:11px;height:11px;border-radius:2px;background:#d8e1f5;display:inline-block"></i><i style="width:11px;height:11px;border-radius:2px;background:#acbfe9;display:inline-block"></i><i style="width:11px;height:11px;border-radius:2px;background:#809edd;display:inline-block"></i><i style="width:11px;height:11px;border-radius:2px;background:#547cd2;display:inline-block"></i><span>多</span><span style="margin-left:6px">0 / 1 / 2–3 / 4–7 / 8+ 次</span></div></div>
+<div class="nums">格 ≈ 22×22px · 格距 1px · 补 5 档图例（现状没有）</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状 / 自定义"><span class="mark">11</span></p>
+</section>
+
+<section class="grp" id="g12" data-short="明细表格">
+<h2><span class="gno">12</span><span class="gname">明细表格</span><span class="ggoal">要不要继续用「表格」这个形状</span></h2>
+<p class="hint">现状 <code>table/td/th</code>：<code>border-collapse:collapse</code> + 1px 黑 10% 全框 + <code>padding:4px 8px</code>，每列等宽、无排序、无强调列。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">真表格</span></div>
+<p class="cdesc">全框线 + 等宽列：像一张填好的电子表。</p>
+<div class="spec"><table class="tbl"><thead><tr><th>题号</th><th>知识点</th><th>得分</th><th>用时</th><th>状态</th></tr></thead>
+<tbody><tr><td>3</td><td>换元积分法</td><td>4/5</td><td>3:20</td><td>对</td></tr><tr><td>7</td><td>分部积分</td><td>5/5</td><td>1:05</td><td>对</td></tr><tr><td>9</td><td>变限积分求导</td><td>2/5</td><td>6:40</td><td>错</td></tr></tbody></table></div>
+<div class="nums">1px 黑10% 全框 · padding 4px 8px · 5 列等宽 · 12.5px 字</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">紧凑列表</span></div>
+<p class="cdesc">一题一行、字段右对齐：竖向扫更快。</p>
+<div class="spec"><div class="tlist"><div class="li"><span>第 3 题 · 换元积分法</span><span>4/5 · 3:20 · 对</span></div><div class="li"><span>第 7 题 · 分部积分</span><span>5/5 · 1:05 · 对</span></div><div class="li"><span>第 9 题 · 变限积分求导</span><span style="color:#d6453d">2/5 · 6:40 · 错</span></div></div></div>
+<div class="nums">行高 21px · 行间 1px 9% 分隔 · 右列右对齐 · 12.5px 字</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">分栏卡片</span></div>
+<p class="cdesc">每题一张小卡：留白最多，最像「纸片清单」。</p>
+<div class="spec"><div style="display:flex;flex-direction:column;gap:6px">
+<div style="border:1px solid rgba(0,0,0,.13);border-radius:6px;padding:5px 8px;font-size:12.5px"><b>第 3 题</b> · 换元积分法<div style="color:#6a6a63;font-size:11.5px;margin-top:1px">4/5 分 · 3:20 · 正确</div></div>
+<div style="border:1px solid rgba(0,0,0,.13);border-radius:6px;padding:5px 8px;font-size:12.5px"><b>第 9 题</b> · 变限积分求导<div style="color:#6a6a63;font-size:11.5px;margin-top:1px">2/5 分 · 6:40 · 错误</div></div>
+</div></div>
+<div class="nums">每行 1 卡 · 卡内 12.5px + 副行 11.5px · 圆角 6px · 间距 6px</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状 / 自定义"><span class="mark">12</span></p>
+</section>
+
+<section class="grp" id="g13" data-short="左栏与选中态">
+<h2><span class="gno">13</span><span class="gname">左栏导航与选中态</span><span class="ggoal">「我在哪」怎么表达</span></h2>
+<p class="hint">现状 <code>.nav-item.active</code> = <code>inset 4px 0 0 var(--lk-blue)</code> + <code>inset 0 0 0 1px var(--lk-ink)</code> + 白底 + 600 字重 —— 读作一个被框住的表单控件。导航项 13px 次级灰、圆角 6px、<code>min-height:32px</code>。</p>
+<div class="row">
+<article class="card" style="--paper:#f3f1ea">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">墨框 + 蓝左条 + 白底</span></div>
+<p class="cdesc">整个词被黑框套住：读作一个被激活的输入框。</p>
+<div class="spec" style="background:#f3f1ea"><div class="nav" style="background:#f3f1ea;border:none">
+<div class="item">概览</div><div class="item">知识点</div>
+<div class="item sel sel-box" style="background:#fff;box-shadow:inset 4px 0 0 #2457c5">练习</div>
+<div class="item">记录</div><div class="item">设置</div></div></div>
+<div class="nums">inset 4px 0 0 #2457c5 + inset 0 0 0 1px #171717 + 白底 + 600 字重</div>
+</article>
+<article class="card" style="--paper:#f3f1ea">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">左侧色条</span></div>
+<p class="cdesc">去掉黑框，只留一条蓝竖线：最常见、最不打扰。</p>
+<div class="spec" style="background:#f3f1ea"><div class="nav" style="background:#f3f1ea;border:none">
+<div class="item">概览</div><div class="item">知识点</div>
+<div class="item sel sel-bar">练习</div>
+<div class="item">记录</div><div class="item">设置</div></div></div>
+<div class="nums">左条 3px #2457c5 · 淡蓝底 rgba(36,87,197,.06) · 无框</div>
+</article>
+<article class="card" style="--paper:#f3f1ea">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">纸面提亮</span></div>
+<p class="cdesc">不画线，只把选中的那块纸提亮：最安静。</p>
+<div class="spec" style="background:#f3f1ea"><div class="nav" style="background:#f3f1ea;border:none">
+<div class="item">概览</div><div class="item">知识点</div>
+<div class="item sel sel-lift">练习</div>
+<div class="item">记录</div><div class="item">设置</div></div></div>
+<div class="nums">选中底 #fffef7（比栏底 #f3f1ea 亮）· 内嵌 1px 7% · 无强调色</div>
+</article>
+<article class="card" style="--paper:#f3f1ea">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">墨框 + 底色</span></div>
+<p class="cdesc">保留黑框，但把白底换成灰底：像被按下的纸片。</p>
+<div class="spec" style="background:#f3f1ea"><div class="nav" style="background:#f3f1ea;border:none">
+<div class="item">概览</div><div class="item">知识点</div>
+<div class="item sel sel-frame">练习</div>
+<div class="item">记录</div><div class="item">设置</div></div></div>
+<div class="nums">框 1px #171717 + 底 rgba(0,0,0,.06) · 框内留白 0</div>
+</article>
+<article class="card" style="--paper:#f3f1ea">
+<div class="ctop"><span class="badge cand">候选 D</span><span class="cname">序号 + 文字</span></div>
+<p class="cdesc">选中项带一个墨色圆号：状态有形状，不靠颜色。</p>
+<div class="spec" style="background:#f3f1ea"><div class="nav" style="background:#f3f1ea;border:none">
+<div class="item">概览</div><div class="item">知识点</div>
+<div class="item sel sel-num" data-n="3">练习</div>
+<div class="item">记录</div><div class="item">设置</div></div></div>
+<div class="nums">圆号 17×17px 墨底反白 + 600 字重 · 无蓝</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状 / 自定义"><span class="mark">13</span></p>
+</section>
+
+<section class="grp" id="g14" data-short="hub 卡片">
+<h2><span class="gno">14</span><span class="gname">hub 卡片</span><span class="ggoal">22 张等权卡片怎么变成目录</span></h2>
+<p class="hint">现状 hub 共 <b>22 张</b> 工作区卡片，完全等权（同质描边矩形），浮在同一底色上只剩发丝线，像一张被压平的表格。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">22 张等权卡片</span></div>
+<p class="cdesc">每张卡都一样：同色、同大小、同信息量，像被压平的表。</p>
+<div class="spec"><div class="hub">
+<div class="hc"><b>高等数学 · 上册</b><span>12 章 · 3 条待复习</span></div><div class="hc"><b>线性代数</b><span>6 章 · 1 条待复习</span></div>
+<div class="hc"><b>概率论</b><span>5 章 · 0 条待复习</span></div><div class="hc"><b>考研数学一</b><span>8 章 · 5 条待复习</span></div>
+<div class="hc"><b>专题：定积分</b><span>4 节 · 2 条待复习</span></div><div class="hc"><b>错题本</b><span>17 道</span></div>
+</div></div>
+<div class="nums">预览 6 张 / 实际 22 张 · 同质描边矩形 · 无标题层级</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">紧凑列表</span></div>
+<p class="cdesc">一行一个工作区：22 个也能一屏看完。</p>
+<div class="spec"><div class="hub list">
+<div class="hc"><b>高等数学 · 上册</b><span>12 章 · 3 条待复习</span></div><div class="hc"><b>线性代数</b><span>6 章 · 1 条待复习</span></div>
+<div class="hc"><b>概率论</b><span>5 章 · 0 条待复习</span></div><div class="hc"><b>考研数学一</b><span>8 章 · 5 条待复习</span></div>
+<div class="hc"><b>专题：定积分</b><span>4 节 · 2 条待复习</span></div><div class="hc"><b>错题本</b><span>17 道</span></div>
+</div></div>
+<div class="nums">行高 ≈ 26px · 标题左 / 元信息右 · 22 行 ≈ 570px</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">分组目录</span></div>
+<p class="cdesc">先给「课程 / 专题 / 工具」分组，再列条目。</p>
+<div class="spec"><div class="hub grp">
+<div class="gh">课程</div>
+<div class="hc" style="display:flex;justify-content:space-between"><b>高等数学 · 上册</b><span>12 章</span></div>
+<div class="hc" style="display:flex;justify-content:space-between"><b>线性代数</b><span>6 章</span></div>
+<div class="gh">专题</div>
+<div class="hc" style="display:flex;justify-content:space-between"><b>定积分</b><span>4 节</span></div>
+<div class="gh">工具</div>
+<div class="hc" style="display:flex;justify-content:space-between"><b>错题本</b><span>17 道</span></div>
+</div></div>
+<div class="nums">3 组 · 组标题 11.5px 灰 · 组间 7px · 22 条压缩到 ~380px</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">最近使用置顶</span></div>
+<p class="cdesc">最常用的两个提到最前，其余照旧：改造成本最小。</p>
+<div class="spec"><div>
+<div style="font-size:11.5px;color:#6a6a63;font-weight:700;margin:0 0 4px">最近使用</div>
+<div class="hub" style="margin-bottom:6px"><div class="hc" style="border-color:#2457c5"><b>高等数学 · 上册</b><span>今天 21:04</span></div><div class="hc" style="border-color:#2457c5"><b>专题：定积分</b><span>昨天 19:30</span></div></div>
+<div class="hub"><div class="hc"><b>线性代数</b><span>6 章</span></div><div class="hc"><b>概率论</b><span>5 章</span></div>
+<div class="hc"><b>考研数学一</b><span>8 章</span></div><div class="hc"><b>错题本</b><span>17 道</span></div></div>
+</div></div>
+<div class="nums">置顶 2 张（描边蓝 1px）· 其余 20 张保持等权 · 新增一行分组标题</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：C / 现状 / 自定义"><span class="mark">14</span></p>
+</section>
+
+<section class="grp" id="g15" data-short="Agent 消息流">
+<h2><span class="gno">15</span><span class="gname">Agent 消息流</span><span class="ggoal">对话的形状：气泡 / 平铺 / 卡片</span></h2>
+<p class="hint">现状：助手消息<b>平铺</b>（无气泡，只有 1px 黑 4% 分隔线），用户消息右对齐浅蓝气泡 <code>#edf2ff</code>、圆角 <code>22px</code>、<code>padding:10px 16px</code>（被 ID 选择器吃到 <code>10px 2px</code>）；工具调用卡是 1px 边框 + 3px 蓝左条 + <code>#f3f1ea</code> 底；无角色标签、无时间戳。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">助手平铺 + 用户气泡</span></div>
+<p class="cdesc">两种消息两种形状：助手是一段字，用户是一个蓝泡。</p>
+<div class="spec" style="font-size:13px">
+<div class="msg user" style="border-bottom:1px solid rgba(0,0,0,.04);padding-bottom:8px"><div class="bubble" style="background:#edf2ff;border-radius:22px;padding:10px 2px">给我 5 道定积分练习，按难度排序。</div></div>
+<div class="msg agent" style="border-bottom:1px solid rgba(0,0,0,.04);padding-bottom:8px"><div class="bubble">已生成 5 道题，难度从 ★ 到 ★★★。</div></div>
+<div class="msg agent"><div class="bubble" style="border:1px solid rgba(0,0,0,.10);border-left:3px solid #2457c5;background:#f3f1ea;padding:8px 10px;border-radius:0">工具 · 生成练习集 → 完成</div></div>
+</div>
+<div class="nums">用户泡 #edf2ff · r22px · 内距 10×2px（被 ID 覆盖）· 分隔线 黑4% · 无角色名</div>
+</article>
+<article class="card" style="--bw:#e8eefb">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">双气泡</span></div>
+<p class="cdesc">两边都是气泡、都有角色名：最像聊天软件。</p>
+<div class="spec" style="font-size:13px">
+<div class="msg user"><div class="who">我</div><div class="bubble">给我 5 道定积分练习，按难度排序。</div></div>
+<div class="msg agent"><div class="who">Agent</div><div class="bubble" style="background:#f0efe9">已生成 5 道题，难度从 ★ 到 ★★★。</div></div>
+<div class="msg agent"><div class="bubble" style="border:1px solid rgba(0,0,0,.10);border-left:3px solid #2457c5;background:#f3f1ea;padding:8px 10px;border-radius:0">工具 · 生成练习集 → 完成</div></div>
+</div>
+<div class="nums">用户 #e8eefb / 助手 #f0efe9 · 均 r12px · 角色名 11px · 泡内距 8×10px</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">无气泡页面对话</span></div>
+<p class="cdesc">全去掉形状：像一页稿纸，最安静。</p>
+<div class="spec" style="font-size:13px">
+<div class="msg user"><div style="font-weight:700">给我 5 道定积分练习，按难度排序。</div></div>
+<div class="msg agent" style="border-top:1px solid rgba(0,0,0,.10);padding-top:8px">已生成 5 道题，难度从 ★ 到 ★★★。</div>
+<div class="msg agent" style="font-size:12px;color:#5a5a54;border-top:1px solid rgba(0,0,0,.06);padding-top:6px">▸ 工具 · 生成练习集 → 完成</div>
+</div>
+<div class="nums">零气泡 · 分隔 1px 黑10%/6% · 用户行 700 字重 · 工具行 12px 灰 + ▸ 形符</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">对话卡片</span></div>
+<p class="cdesc">每一轮都是一张卡：结构最强，也最占地方。</p>
+<div class="spec" style="font-size:13px">
+<div class="msg user"><div class="bubble" style="background:#e8eefb;border-radius:8px;padding:8px 10px">给我 5 道定积分练习，按难度排序。</div></div>
+<div class="msg card"><div class="bubble"><div class="who" style="margin-bottom:4px">Agent · 09:32</div>已生成 5 道题，难度从 ★ 到 ★★★。</div></div>
+<div class="msg card"><div class="bubble" style="border-left:3px solid #2457c5;border-radius:8px"><div class="who" style="margin-bottom:4px">工具 · 完成</div>生成练习集 · 5 题</div></div>
+</div>
+<div class="nums">每轮 1 卡 · 卡底 #fffdf7 描边 14% · 角 8px · 带时间戳 11px</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：B / 现状 / 自定义"><span class="mark">15</span></p>
+</section>
+
+<section class="grp" id="g16" data-short="夜纸（暗色）">
+<h2><span class="gno">16</span><span class="gname">夜纸（暗色主题）</span><span class="ggoal">暗色不是新色系，是同一套暖纸的第二组值</span></h2>
+<p class="hint">现状<b>没有暗色主题</b>。暗色是第二套值：底色仍然偏暖，不引入新色相。每个候选画<b>同一块练习页片段</b>，并标注正文对比度实测值（WCAG，正文理想阅读需 ≥ 7:1）。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">没有暗色主题</span></div>
+<p class="cdesc">今天只有亮色一套值：夜里看会亮得刺眼。</p>
+<div class="spec" style="font-size:14px">
+<h4>定积分 · 例 3.2</h4><div class="rule"></div>
+<p>求 ∫₀¹ x·eˣ dx 的值。提示：考虑分部积分。</p>
+<p><span class="btn">提交作答</span> <span class="tag">待复习</span></p>
+<p style="font-size:12.5px;color:#5a5a54">解析：用分部积分，取 u = x，dv = eˣ dx。</p>
+</div>
+<div class="nums">亮色正文 #171717 / #fffdf7 = 17.62:1 · 暗色：不存在</div>
+</article>
+<article class="card dark" style="--paper:#1a1815;--ink:#e8e2d4;--b:#8fb0ff;--bb:#8fb0ff;--y:#f2c94c;--bw:#2a2721;--bt:#e8e2d4;background:#1a1815">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">暖褐深</span></div>
+<p class="cdesc">夜里的一本旧书：褐味最重，最不刺眼。</p>
+<div class="spec" style="background:#232019;border-color:rgba(255,255,255,.14);font-size:14px">
+<h4>定积分 · 例 3.2</h4><div class="rule"></div>
+<p>求 ∫₀¹ x·eˣ dx 的值。提示：考虑分部积分。</p>
+<p><span class="btn" style="color:#14161a">提交作答</span> <span class="tag">待复习</span></p>
+<p style="font-size:12.5px;color:#a9a9a2">解析：用分部积分，取 u = x，dv = eˣ dx。</p>
+</div>
+<div class="nums">底 #1a1815 · 正文 #e8e2d4 = 13.72:1 · 蓝 8.29:1 · 黄 11.16:1 · 红 7.31:1</div>
+</article>
+<article class="card dark" style="--paper:#1c1d20;--ink:#e6e8ec;--b:#8fb0ff;--bb:#8fb0ff;--y:#f2c94c;--bw:#282a30;--bt:#e6e8ec;background:#1c1d20">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">中性深灰</span></div>
+<p class="cdesc">完全中性：像夜间模式开关，最「现代」。</p>
+<div class="spec" style="background:#25262b;border-color:rgba(255,255,255,.14);font-size:14px">
+<h4>定积分 · 例 3.2</h4><div class="rule"></div>
+<p>求 ∫₀¹ x·eˣ dx 的值。提示：考虑分部积分。</p>
+<p><span class="btn" style="color:#14161a">提交作答</span> <span class="tag">待复习</span></p>
+<p style="font-size:12.5px;color:#a9a9a2">解析：用分部积分，取 u = x，dv = eˣ dx。</p>
+</div>
+<div class="nums">底 #1c1d20 · 正文 #e6e8ec = 13.74:1 · 蓝 7.88:1 · 黄 10.62:1 · 红 6.95:1</div>
+</article>
+<article class="card dark" style="--paper:#14161c;--ink:#e4e8f0;--b:#8fb0ff;--bb:#8fb0ff;--y:#f2c94c;--bw:#212530;--bt:#e4e8f0;background:#14161c">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">蓝黑</span></div>
+<p class="cdesc">偏冷的深蓝：对比最高，夜里最清楚。</p>
+<div class="spec" style="background:#1d2027;border-color:rgba(255,255,255,.16);font-size:14px">
+<h4>定积分 · 例 3.2</h4><div class="rule"></div>
+<p>求 ∫₀¹ x·eˣ dx 的值。提示：考虑分部积分。</p>
+<p><span class="btn" style="color:#0d1016">提交作答</span> <span class="tag">待复习</span></p>
+<p style="font-size:12.5px;color:#a9a9a2">解析：用分部积分，取 u = x，dv = eˣ dx。</p>
+</div>
+<div class="nums">底 #14161c · 正文 #e4e8f0 = 14.72:1 · 蓝 8.46:1 · 黄 11.40:1 · 红 7.46:1</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状（暂无）/ 自定义"><span class="mark">16</span></p>
+</section>
+
+<section class="grp" id="g17" data-short="纸面纹理">
+<h2><span class="gno">17</span><span class="gname">纸面纹理</span><span class="ggoal">纸要不要有「纸」的感觉</span></h2>
+<p class="hint">现状纸面是<b>纯色平滑</b>，没有任何纹理。纹理用内联 SVG <code>feTurbulence</code> 画（零外部资源）。注意：纹理会吃掉一点对比度，别加太重。</p>
+<div class="row">
+<article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">平滑</span></div>
+<p class="cdesc">纯色：干净，但看不出是「纸」。</p>
+<div class="spec" style="background:#fffdf7">
+<h4>牛顿-莱布尼茨公式</h4><div class="rule"></div>
+<p>若 F 是 f 的原函数，则 ∫<sub>a</sub><sup>b</sup> f(x)dx = F(b) − F(a)。</p>
+<div style="height:44px;border:1px solid rgba(0,0,0,.10);border-radius:4px;margin-top:6px;background:#fffdf7"></div>
+<p style="font-size:11.5px;color:#6a6a63;margin-top:4px">↑ 放大 40% 的纸面细节</p>
+</div>
+<div class="nums">无纹理 · RGB 平滑 · 正文对比 17.62:1</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">极淡噪点</span></div>
+<p class="cdesc">几乎看不见的颗粒：只在余光里出现。</p>
+<div class="spec" style="background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3CfeColorMatrix type=%22saturate%22 values=%220%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22 opacity=%220.035%22/%3E%3C/svg%3E') repeat">
+<h4>牛顿-莱布尼茨公式</h4><div class="rule"></div>
+<p>若 F 是 f 的原函数，则 ∫<sub>a</sub><sup>b</sup> f(x)dx = F(b) − F(a)。</p>
+<div style="height:44px;border:1px solid rgba(0,0,0,.10);border-radius:4px;margin-top:6px;background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3CfeColorMatrix type=%22saturate%22 values=%220%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22 opacity=%220.035%22/%3E%3C/svg%3E') repeat"></div>
+<p style="font-size:11.5px;color:#6a6a63;margin-top:4px">↑ 放大 40% 的纸面细节</p>
+</div>
+<div class="nums">feTurbulence baseFrequency 0.9 · opacity 0.035 · 正文最差 17.5:1</div>
+</article>
+<article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">可见纸纹</span></div>
+<p class="cdesc">横向纤维：明显是纸，但正文要多看两眼。</p>
+<div class="spec" style="background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Cfilter id=%22f%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.02+0.9%22 numOctaves=%224%22/%3E%3CfeColorMatrix type=%22saturate%22 values=%220%22/%3E%3C/filter%3E%3Crect width=%22200%22 height=%22200%22 filter=%22url(%23f)%22 opacity=%220.10%22/%3E%3C/svg%3E') repeat">
+<h4>牛顿-莱布尼茨公式</h4><div class="rule"></div>
+<p>若 F 是 f 的原函数，则 ∫<sub>a</sub><sup>b</sup> f(x)dx = F(b) − F(a)。</p>
+<div style="height:44px;border:1px solid rgba(0,0,0,.10);border-radius:4px;margin-top:6px;background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Cfilter id=%22f%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.02+0.9%22 numOctaves=%224%22/%3E%3CfeColorMatrix type=%22saturate%22 values=%220%22/%3E%3C/filter%3E%3Crect width=%22200%22 height=%22200%22 filter=%22url(%23f)%22 opacity=%220.10%22/%3E%3C/svg%3E') repeat"></div>
+<p style="font-size:11.5px;color:#6a6a63;margin-top:4px">↑ 放大 40% 的纸面细节</p>
+</div>
+<div class="nums">feTurbulence baseFrequency 0.02×0.9 · opacity 0.10 · 正文最差 14.23:1</div>
+</article>
+</div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：A / 现状 / 自定义"><span class="mark">17</span></p>
+</section>
+
+<div class="part">新方向 · 现代圆润（多邻国式）
+<span class="sub2">用户新判断：现有风格之所以枯燥，一部分原因是<b>一味仿古、追书纸质感</b>。下面 8 组（18–25）是<b>现代圆润</b>方向的新候选，全部与前面 17 组并存、互不覆盖。<b>这一方向会主动违反两条现行契约</b>，请在挑选时一并考虑：①「不得引入新色相」——第 20 组会引入绿 / 紫 / 橙；②「阅读面用衬线」——第 24 组的全无衬线方案取消衬线。若要采纳，需另开 OpenSpec 变更把契约改掉，而不是静默改代码。</span></div>
+
+<section class="grp" id="g18" data-short="圆角梯度">
+<h2><span class="gno">18</span><span class="gname">圆角梯度</span><span class="ggoal">现代圆润的第一根旋钮：弧度越大越「亲和」</span></h2>
+<p class="hint">每个档位同时画<b>按钮 + 一张小卡 + 一个标签</b>，三者的弧度必须同档才有整体感。注意现状并非「4px」：<code>.card</code> = 6px、<code>button</code> = 18px（胶囊）、<code>input</code> = 10px，三者本来就不一致。</p>
+<div class="row"><article class="card">
+<div class="ctop"><span class="badge cur">现状</span><span class="cname">6 / 18 / 10（真值）</span></div>
+<p class="cdesc">三件套弧度各不同：卡片微圆、按钮是胶囊。</p>
+<div class="spec">
+<p style="margin-bottom:7px"><span class="btn" style="--br:18pxpx">开始练习</span> <span class="chip" style="background:#fdf3d3;border:1px solid #e2cd82;color:#5b4a12;border-radius:10pxpx">待复习</span></p>
+<div class="minicard" style="border-radius:6pxpx"><b>第 3 题</b><div style="color:#6a6a63;font-size:11.5px">换元积分法 · 4/5 分 · 用时 3:20</div></div>
+</div>
+<div class="nums">卡 6px · 钮 18px 胶囊 · 标签 10px</div>
+</article><article class="card">
+<div class="ctop"><span class="badge cand">候选 A</span><span class="cname">4px</span></div>
+<p class="cdesc">近乎硬边：亲切感最低，但最稳。</p>
+<div class="spec">
+<p style="margin-bottom:7px"><span class="btn" style="--br:4pxpx">开始练习</span> <span class="chip" style="background:#fdf3d3;border:1px solid #e2cd82;color:#5b4a12;border-radius:4pxpx">待复习</span></p>
+<div class="minicard" style="border-radius:4pxpx"><b>第 3 题</b><div style="color:#6a6a63;font-size:11.5px">换元积分法 · 4/5 分 · 用时 3:20</div></div>
+</div>
+<div class="nums">卡 4 · 钮 4 · 标签 4 · 弧高 4px（钮高 26px 的 15%）</div>
+</article><article class="card">
+<div class="ctop"><span class="badge cand">候选 B</span><span class="cname">8px</span></div>
+<p class="cdesc">比现状略圆：几乎察觉不到差别。</p>
+<div class="spec">
+<p style="margin-bottom:7px"><span class="btn" style="--br:8pxpx">开始练习</span> <span class="chip" style="background:#fdf3d3;border:1px solid #e2cd82;color:#5b4a12;border-radius:8pxpx">待复习</span></p>
+<div class="minicard" style="border-radius:8pxpx"><b>第 3 题</b><div style="color:#6a6a63;font-size:11.5px">换元积分法 · 4/5 分 · 用时 3:20</div></div>
+</div>
+<div class="nums">卡 8 · 钮 8 · 标签 8 · 弧高 8px（31%）</div>
+</article><article class="card">
+<div class="ctop"><span class="badge cand">候选 C</span><span class="cname">12px</span></div>
+<p class="cdesc">明显变软，开始有「APP」味。</p>
+<div class="spec">
+<p style="margin-bottom:7px"><span class="btn" style="--br:12pxpx">开始练习</span> <span class="chip" style="background:#fdf3d3;border:1px solid #e2cd82;color:#5b4a12;border-radius:12pxpx">待复习</span></p>
+<div class="minicard" style="border-radius:12pxpx"><b>第 3 题</b><div style="color:#6a6a63;font-size:11.5px">换元积分法 · 4/5 分 · 用时 3:20</div></div>
+</div>
+<div class="nums">卡 12 · 钮 12 · 标签 12 · 弧高 12px（46%）</div>
+</article><article class="card">
+<div class="ctop"><span class="badge cand">候选 D</span><span class="cname">16px</span></div>
+<p class="cdesc">多邻国档：圆、软、亲和。</p>
+<div class="spec">
+<p style="margin-bottom:7px"><span class="btn" style="--br:16pxpx">开始练习</span> <span class="chip" style="background:#fdf3d3;border:1px solid #e2cd82;color:#5b4a12;border-radius:16pxpx">待复习</span></p>
+<div class="minicard" style="border-radius:16pxpx"><b>第 3 题</b><div style="color:#6a6a63;font-size:11.5px">换元积分法 · 4/5 分 · 用时 3:20</div></div>
+</div>
+<div class="nums">卡 16 · 钮 16 · 标签 16 · 弧高 16px（62%）</div>
+</article><article class="card">
+<div class="ctop"><span class="badge cand">候选 E</span><span class="cname">24px</span></div>
+<p class="cdesc">大圆角：卡片开始像药丸边缘。</p>
+<div class="spec">
+<p style="margin-bottom:7px"><span class="btn" style="--br:24pxpx">开始练习</span> <span class="chip" style="background:#fdf3d3;border:1px solid #e2cd82;color:#5b4a12;border-radius:24pxpx">待复习</span></p>
+<div class="minicard" style="border-radius:24pxpx"><b>第 3 题</b><div style="color:#6a6a63;font-size:11.5px">换元积分法 · 4/5 分 · 用时 3:20</div></div>
+</div>
+<div class="nums">卡 24 · 钮 24 · 标签 24 · 弧高 24px（92%）</div>
+</article><article class="card">
+<div class="ctop"><span class="badge cand">候选 F</span><span class="cname">胶囊 999px</span></div>
+<p class="cdesc">按钮与标签全胶囊，卡片封顶 24px。</p>
+<div class="spec">
+<p style="margin-bottom:7px"><span class="btn" style="--br:999pxpx">开始练习</span> <span class="chip" style="background:#fdf3d3;border:1px solid #e2cd82;color:#5b4a12;border-radius:999pxpx">待复习</span></p>
+<div class="minicard" style="border-radius:24pxpx"><b>第 3 题</b><div style="color:#6a6a63;font-size:11.5px">换元积分法 · 4/5 分 · 用时 3:20</div></div>
+</div>
+<div class="nums">钮 999px · 标签 999px · 卡封顶 24px · 钮高 26px 全圆</div>
+</article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 C / 现状"><span class="mark">18</span></p>
+</section>
+<section class="grp" id="g19" data-short="控件形态对照">
+<h2><span class="gno">19</span><span class="gname">控件形态对比</span><span class="ggoal">仿古 vs 现代圆润：同一批控件的两套做法</span></h2>
+<p class="hint">8 类控件（主按钮 / 次按钮 / 输入框 / 复选框 / 标签 / 状态点 / 题号格 / 导航项）在两种风格下的并排对照。现状题号状态<b>只靠颜色</b>（<code>.paper-dot.state-*</code>），现代圆润版本给题号格加了圆角与硬投影，让「当前题」有形状。</p>
+<div class="row"><article class="card"><div class="ctop"><span class="badge cur">现状</span><span class="cname">仿古风控件</span></div>
+<p class="cdesc">细边、直角角料、小字：每个控件都在「保持安静」。</p>
+<div class="spec"><div class="stack">
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">主按钮</span><span class="btn" style="--br:18px">开始练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">次按钮</span><span class="btn ghost" style="--br:18px;border-color:rgba(0,0,0,.25)">查看解析</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">输入框</span><input type="text" placeholder="输入答案" style="border:1px solid rgba(0,0,0,.25);border-radius:10px;padding:5px 9px;font:inherit;font-size:12.5px;background:transparent;color:inherit;width:150px"></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">复选框</span><span style="width:14px;height:14px;border:1px solid #171717;border-radius:2px;display:inline-block"></span><span style="width:14px;height:14px;border:1px solid #171717;border-radius:2px;display:inline-block;background:#171717;color:#fff;font-size:10px;line-height:12px;text-align:center">✓</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">标签</span><span class="chip" style="background:#e8eefb;color:#1c3f8f;border-radius:4px">重点练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">状态点</span><span class="dotstat" style="background:#171717"></span><span class="dotstat" style="background:#f2c94c"></span><span class="dotstat" style="background:#d6453d"></span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">题号格</span><span class="qnum" style="background:rgba(0,0,0,.05);color:#5a5a54">3</span><span class="qnum" style="background:#2457c5;color:#fff">4</span><span class="qnum" style="background:rgba(0,0,0,.05);color:#5a5a54">5</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">导航项</span><span class="navitem" style="border-radius:6px">知识点</span><span class="navitem" style="border-radius:6px;background:#fff;box-shadow:inset 4px 0 0 #2457c5,inset 0 0 0 1px #171717;font-weight:700">练习</span></div>
+</div></div>
+<div class="nums">钮 r18 · 输入 r10 · 标签 r4 · 框 1px · 高 26px</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 A</span><span class="cname">现代圆润控件</span></div>
+<p class="cdesc">厚边 + 饱和色 + 硬投影：每个控件都在「邀请点击」。</p>
+<div class="spec"><div class="stack">
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">主按钮</span><span class="btn" style="--br:999px;--bb:#58cc02;padding:7px 18px;font-weight:700;color:#173300;box-shadow:0 3px 0 #46a302">开始练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">次按钮</span><span class="btn ghost" style="--br:999px;border-color:#e3e3e3;border-width:2px;padding:7px 18px;color:#4b4b4b;background:#fff">查看解析</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">输入框</span><input type="text" placeholder="输入答案" style="border:2px solid #e3e3e3;border-radius:14px;padding:6px 12px;font:inherit;font-size:12.5px;background:#fff;color:inherit;width:150px"></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">复选框</span><span style="width:20px;height:20px;border:2px solid #e3e3e3;border-radius:7px;display:inline-block"></span><span style="width:20px;height:20px;border:2px solid #58cc02;border-radius:7px;display:inline-block;background:#58cc02;color:#173300;font-size:12px;line-height:16px;text-align:center;font-weight:700">✓</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">标签</span><span class="chip" style="background:#e8e3ff;color:#6b34c7;border-radius:999px;font-weight:700">重点练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">状态点</span><span class="dotstat" style="background:#58cc02;box-shadow:0 0 0 3px rgba(88,204,2,.18)"></span><span class="dotstat" style="background:#ffc800;box-shadow:0 0 0 3px rgba(255,200,0,.18)"></span><span class="dotstat" style="background:#ff4b4b;box-shadow:0 0 0 3px rgba(255,75,75,.18)"></span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">题号格</span><span class="qnum" style="background:#f1f1f1;color:#8b8b8b;border-radius:9px">3</span><span class="qnum" style="background:#1cb0f6;color:#fff;border-radius:9px;box-shadow:0 2px 0 #0d8fd0">4</span><span class="qnum" style="background:#f1f1f1;color:#8b8b8b;border-radius:9px">5</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">导航项</span><span class="navitem" style="border-radius:999px">知识点</span><span class="navitem" style="border-radius:999px;background:#e8f7ff;color:#1cb0f6;font-weight:700;box-shadow:inset 0 0 0 2px #1cb0f6">练习</span></div>
+</div></div>
+<div class="nums">钮 r999 绿 #58cc02 + 3px 硬投影 · 输入 2px 边 r14 · 框 2px r7 · 高 32px</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 B</span><span class="cname">并排对照</span></div>
+<p class="cdesc">同一批控件并排：差别在圆角、色饱和度、边粗细三处。</p>
+<div class="spec"><div class="rgrid"><div class="cbox"><div class="cl">仿古（现状真值）</div><div class="stack">
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">主按钮</span><span class="btn" style="--br:18px">开始练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">次按钮</span><span class="btn ghost" style="--br:18px;border-color:rgba(0,0,0,.25)">查看解析</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">输入框</span><input type="text" placeholder="输入答案" style="border:1px solid rgba(0,0,0,.25);border-radius:10px;padding:5px 9px;font:inherit;font-size:12.5px;background:transparent;color:inherit;width:150px"></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">复选框</span><span style="width:14px;height:14px;border:1px solid #171717;border-radius:2px;display:inline-block"></span><span style="width:14px;height:14px;border:1px solid #171717;border-radius:2px;display:inline-block;background:#171717;color:#fff;font-size:10px;line-height:12px;text-align:center">✓</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">标签</span><span class="chip" style="background:#e8eefb;color:#1c3f8f;border-radius:4px">重点练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">状态点</span><span class="dotstat" style="background:#171717"></span><span class="dotstat" style="background:#f2c94c"></span><span class="dotstat" style="background:#d6453d"></span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">题号格</span><span class="qnum" style="background:rgba(0,0,0,.05);color:#5a5a54">3</span><span class="qnum" style="background:#2457c5;color:#fff">4</span><span class="qnum" style="background:rgba(0,0,0,.05);color:#5a5a54">5</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">导航项</span><span class="navitem" style="border-radius:6px">知识点</span><span class="navitem" style="border-radius:6px;background:#fff;box-shadow:inset 4px 0 0 #2457c5,inset 0 0 0 1px #171717;font-weight:700">练习</span></div>
+</div></div><div class="cbox"><div class="cl">现代圆润（候选 A）</div><div class="stack">
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">主按钮</span><span class="btn" style="--br:999px;--bb:#58cc02;padding:7px 18px;font-weight:700;color:#173300;box-shadow:0 3px 0 #46a302">开始练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">次按钮</span><span class="btn ghost" style="--br:999px;border-color:#e3e3e3;border-width:2px;padding:7px 18px;color:#4b4b4b;background:#fff">查看解析</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">输入框</span><input type="text" placeholder="输入答案" style="border:2px solid #e3e3e3;border-radius:14px;padding:6px 12px;font:inherit;font-size:12.5px;background:#fff;color:inherit;width:150px"></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">复选框</span><span style="width:20px;height:20px;border:2px solid #e3e3e3;border-radius:7px;display:inline-block"></span><span style="width:20px;height:20px;border:2px solid #58cc02;border-radius:7px;display:inline-block;background:#58cc02;color:#173300;font-size:12px;line-height:16px;text-align:center;font-weight:700">✓</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">标签</span><span class="chip" style="background:#e8e3ff;color:#6b34c7;border-radius:999px;font-weight:700">重点练习</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">状态点</span><span class="dotstat" style="background:#58cc02;box-shadow:0 0 0 3px rgba(88,204,2,.18)"></span><span class="dotstat" style="background:#ffc800;box-shadow:0 0 0 3px rgba(255,200,0,.18)"></span><span class="dotstat" style="background:#ff4b4b;box-shadow:0 0 0 3px rgba(255,75,75,.18)"></span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">题号格</span><span class="qnum" style="background:#f1f1f1;color:#8b8b8b;border-radius:9px">3</span><span class="qnum" style="background:#1cb0f6;color:#fff;border-radius:9px;box-shadow:0 2px 0 #0d8fd0">4</span><span class="qnum" style="background:#f1f1f1;color:#8b8b8b;border-radius:9px">5</span></div>
+<div class="mrow2"><span style="font-size:11px;color:#6a6a63;width:44px">导航项</span><span class="navitem" style="border-radius:999px">知识点</span><span class="navitem" style="border-radius:999px;background:#e8f7ff;color:#1cb0f6;font-weight:700;box-shadow:inset 0 0 0 2px #1cb0f6">练习</span></div>
+</div></div></div></div>
+<div class="nums">左：现状真值 · 右：现代圆润 · 8 类控件逐行对应</div></article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 A / 现状"><span class="mark">19</span></p>
+</section>
+<section class="grp" id="g20" data-short="色彩鲜艳度">
+<h2><span class="gno">20</span><span class="gname">色彩鲜艳度</span><span class="ggoal">颜色该多克制，还是该多兴奋</span></h2>
+<p class="hint">同一个「题面卡片 + 按钮组」渲染三套配色。<b>注意：候选 A 会引入绿 / 紫 / 橙，与现行「不得引入新色相」的契约直接冲突</b>；单色品牌蓝（候选 B）的白字对比度不足 4.5:1，落地时必须改深墨字或加深蓝。</p>
+<div class="row"><article class="card"><div class="ctop"><span class="badge cur">现状</span><span class="cname">克制暖三色</span></div>
+<p class="cdesc">蓝只当「主动作」，黄只当「重点」，红只当「失败」：稳，但整体偏素。</p>
+<div class="spec"><div class="two-tone" style="border-radius:12px">
+<div class="strip" style="background:#f2c94c"></div>
+<div style="padding:9px 11px">
+<div style="font-weight:700;font-size:14px;margin-bottom:3px">例 3.2 求 ∫₀¹ x·eˣ dx 的值</div>
+<div style="font-size:12.5px;color:#5a5a54;margin-bottom:7px">提示：考虑分部积分 · 难度 3 · 已练 2 次</div>
+<div class="mrow2"><span class="btn" style="--bb:#2457c5;--br:999px;color:#ffffff;padding:7px 16px;font-weight:700">提交作答</span>
+<span class="btn ghost" style="--br:999px;border-color:rgba(0,0,0,.22);padding:7px 16px">查看解析</span>
+<span class="chip" style="background:#fdf3d3;color:#5b4a12;border-radius:999px;font-weight:700">待复习</span></div>
+<div style="font-size:12.5px;margin-top:7px"><a href="#" style="color:#2457c5;font-weight:700">换一组题 →</a></div>
+</div></div></div><div class="nums">蓝 #2457c5（按钮/链接）· 黄 #f2c94c（顶条）· 红不用<br>彩色面积 ≈6% · 主按钮白字对比 6.47:1</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 A</span><span class="cname">多邻国式多色</span></div>
+<p class="cdesc">每个功能一个颜色：最提神，但<b>引入绿 / 紫 / 橙三个新色相</b>。</p>
+<div class="spec"><div class="two-tone" style="border-radius:12px">
+<div class="strip" style="background:#ff9600"></div>
+<div style="padding:9px 11px">
+<div style="font-weight:700;font-size:14px;margin-bottom:3px">例 3.2 求 ∫₀¹ x·eˣ dx 的值</div>
+<div style="font-size:12.5px;color:#5a5a54;margin-bottom:7px">提示：考虑分部积分 · 难度 3 · 已练 2 次</div>
+<div class="mrow2"><span class="btn" style="--bb:#58cc02;--br:999px;color:#173300;padding:7px 16px;font-weight:700">提交作答</span>
+<span class="btn ghost" style="--br:999px;border-color:#e3e3e3;padding:7px 16px">查看解析</span>
+<span class="chip" style="background:#e8e3ff;color:#6b34c7;border-radius:999px;font-weight:700">待复习</span></div>
+<div style="font-size:12.5px;margin-top:7px"><a href="#" style="color:#a560e8;font-weight:700">换一组题 →</a></div>
+</div></div></div><div class="nums">绿 #58cc02 · 橙 #ff9600 · 紫 #a560e8 · 蓝 #1cb0f6<br>彩色面积 ≈22% · 主按钮深墨字对比 6.66:1 · 白字仅 2.09:1</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 B</span><span class="cname">单色品牌蓝</span></div>
+<p class="cdesc">只用一个品牌蓝，靠明度分层：干净，但少了「多巴胺」。</p>
+<div class="spec"><div class="two-tone" style="border-radius:12px">
+<div class="strip" style="background:#1cb0f6"></div>
+<div style="padding:9px 11px">
+<div style="font-weight:700;font-size:14px;margin-bottom:3px">例 3.2 求 ∫₀¹ x·eˣ dx 的值</div>
+<div style="font-size:12.5px;color:#5a5a54;margin-bottom:7px">提示：考虑分部积分 · 难度 3 · 已练 2 次</div>
+<div class="mrow2"><span class="btn" style="--bb:#1cb0f6;--br:999px;color:#ffffff;padding:7px 16px;font-weight:700">提交作答</span>
+<span class="btn ghost" style="--br:999px;border-color:#d9e9f5;padding:7px 16px">查看解析</span>
+<span class="chip" style="background:#e8f7ff;color:#0d8fd0;border-radius:999px;font-weight:700">待复习</span></div>
+<div style="font-size:12.5px;margin-top:7px"><a href="#" style="color:#0d8fd0;font-weight:700">换一组题 →</a></div>
+</div></div></div><div class="nums">蓝 #1cb0f6 单一色相 + 中性灰 #e3e3e3<br>彩色面积 ≈14% · 主按钮白字对比 2.44:1（&lt;4.5:1，需改深墨字 5.69:1）</div></article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 A / 现状"><span class="mark">20</span></p>
+</section>
+<section class="grp" id="g21" data-short="卡片形态">
+<h2><span class="gno">21</span><span class="gname">卡片形态</span><span class="ggoal">卡片该是贴片、彩条卡、厚卡，还是根本不要卡</span></h2>
+<p class="hint">现状卡片 = 同质灰矩形 + 1px 描边 + 无阴影（基线截图里 22 张卡片浮在同一底色上，只剩发丝线）。这一组决定「卡片」这个容器还要不要留。</p>
+<div class="row"><article class="card"><div class="ctop"><span class="badge cur">现状</span><span class="cname">白底平铺</span></div>
+<p class="cdesc">同质的描边矩形贴在纸上：没有厚度，也没有语气。</p>
+<div class="spec" style="background:#f5f1e6"><div class="minicard" style="border:1px solid rgba(0,0,0,.13);border-radius:6px;box-shadow:none"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div>
+<div class="minicard" style="border:1px solid rgba(0,0,0,.13);border-radius:6px;box-shadow:none;margin-top:7px"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div></div>
+<div class="nums">圆角 6px · 描边 1px 黑13% · 无阴影 · 卡面 #fffdf7</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 A</span><span class="cname">饱和顶条</span></div>
+<p class="cdesc">顶上压一条彩条：颜色当分类标签，不占正文。</p>
+<div class="spec" style="background:#f5f1e6"><div class="two-tone" style="border-radius:12px"><div class="strip" style="background:#1cb0f6"></div><div style="padding:8px 10px"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div></div>
+<div class="two-tone" style="border-radius:12px;margin-top:7px"><div class="strip" style="background:#58cc02"></div><div style="padding:8px 10px"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div></div></div>
+<div class="nums">顶条 7px · 圆角 12px · 色 #1cb0f6 / #58cc02 · 彩面积 ≈4%</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 B</span><span class="cname">圆角厚卡</span></div>
+<p class="cdesc">大圆角 + 一层明显阴影：卡片真的浮起来了。</p>
+<div class="spec" style="background:#f5f1e6"><div class="minicard" style="border:none;border-radius:16px;box-shadow:0 8px 24px rgba(20,20,40,.14)"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div>
+<div class="minicard" style="border:none;border-radius:16px;box-shadow:0 8px 24px rgba(20,20,40,.14);margin-top:9px"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div></div>
+<div class="nums">圆角 16px · 阴影 0 8px 24px rgba(20,20,40,.14) · 无描边</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 C</span><span class="cname">扁平无框</span></div>
+<p class="cdesc">框也不要：靠留白和一条小标题分组。</p>
+<div class="spec" style="background:#f5f1e6"><div style="font-size:11.5px;color:#6a6a63;font-weight:700;margin-bottom:4px">最近使用</div>
+<div style="padding:7px 0;border-bottom:1px solid rgba(0,0,0,.09)"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div>
+<div style="padding:7px 0"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div></div>
+<div class="nums">无描边 · 无阴影 · 分隔线 1px 黑9% · 仅靠 8px 间距分组</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 D</span><span class="cname">厚卡 + 顶条 + 阴影</span></div>
+<p class="cdesc">两套叠加：分类色 + 厚度，最像现代 App 的入口卡。</p>
+<div class="spec" style="background:#f5f1e6"><div class="two-tone" style="border-radius:16px;box-shadow:0 8px 24px rgba(20,20,40,.14)"><div class="strip" style="background:#1cb0f6"></div><div style="padding:8px 10px"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div></div>
+<div class="two-tone" style="border-radius:16px;box-shadow:0 8px 24px rgba(20,20,40,.14);margin-top:9px"><div class="strip" style="background:#ff9600"></div><div style="padding:8px 10px"><div style="font-weight:700;font-size:13.5px;margin-bottom:2px">高等数学 · 上册</div><div style="font-size:11.5px;color:#6a6a63">12 章 · 3 条待复习 · 最近 10-21</div></div></div></div>
+<div class="nums">r16 + 顶条 7px + 阴影 0 8px 24px rgba(20,20,40,.14) · 彩面积 ≈4%</div></article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 B / 现状"><span class="mark">21</span></p>
+</section>
+<section class="grp" id="g22" data-short="圆角+阴影组合">
+<h2><span class="gno">22</span><span class="gname">圆角 + 阴影的组合</span><span class="ggoal">同一组合在暖纸底与中性白底上的观感</span></h2>
+<p class="hint">每张卡都用<b>同一块小卡</b>分别放在暖纸底（<code>#f5f1e6</code>）与中性白底（<code>#ffffff</code>）上：白底上阴影是唯一线索，暖纸底上阴影容易被纸色吃掉——这正是「仿古」与「现代」的分水岭。</p>
+<div class="row"><article class="card"><div class="ctop"><span class="badge cur">现状</span><span class="cname">6px + 1px 描边 + 无阴影</span></div>
+<p class="cdesc">唯一靠描边撑边界：白底上几乎隐形，暖纸底上才看得出。</p>
+<div class="spec" style="background:#ece9df"><div class="rgrid"><div class="cbox" style="background:#f5f1e6"><div class="cl">暖纸底 #f5f1e6</div><div class="minicard" style="border:1px solid rgba(0,0,0,.13);border-radius:6px;box-shadow:none"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div><div class="cbox" style="background:#ffffff"><div class="cl">中性白底 #ffffff</div><div class="minicard" style="border:1px solid rgba(0,0,0,.13);border-radius:6px;box-shadow:none"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div></div></div>
+<div class="nums">r6 · 1px 黑13% · 阴影无 · 暖纸底可辨 / 白底发虚</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 A</span><span class="cname">大圆角 · 无阴影</span></div>
+<p class="cdesc">只有弧度没有厚度：白底上反而更「浮」。</p>
+<div class="spec" style="background:#ece9df"><div class="rgrid"><div class="cbox" style="background:#f5f1e6"><div class="cl">暖纸底 #f5f1e6</div><div class="minicard" style="border:none;border-radius:16px;box-shadow:none"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div><div class="cbox" style="background:#ffffff"><div class="cl">中性白底 #ffffff</div><div class="minicard" style="border:none;border-radius:16px;box-shadow:none"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div></div></div>
+<div class="nums">r16 · 无描边 · 无阴影 · 靠弧度与底色差分层</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 B</span><span class="cname">大圆角 + 柔和大阴影</span></div>
+<p class="cdesc">柔和扩散影：最像多邻国那种「浮起来但很软」的卡片。</p>
+<div class="spec" style="background:#ece9df"><div class="rgrid"><div class="cbox" style="background:#f5f1e6"><div class="cl">暖纸底 #f5f1e6</div><div class="minicard" style="border:none;border-radius:16px;box-shadow:0 10px 28px rgba(20,20,40,.14)"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div><div class="cbox" style="background:#ffffff"><div class="cl">中性白底 #ffffff</div><div class="minicard" style="border:none;border-radius:16px;box-shadow:0 10px 28px rgba(20,20,40,.14)"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div></div></div>
+<div class="nums">r16 · 阴影 0 10px 28px rgba(20,20,40,.14) · 无描边</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 C</span><span class="cname">大圆角 + 硬边小阴影</span></div>
+<p class="cdesc">右下角一截实心投影：像贴纸，比柔影更有「按下去」的力。</p>
+<div class="spec" style="background:#ece9df"><div class="rgrid"><div class="cbox" style="background:#f5f1e6"><div class="cl">暖纸底 #f5f1e6</div><div class="minicard" style="border:none;border-radius:16px;box-shadow:3px 3px 0 rgba(23,23,23,.20)"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div><div class="cbox" style="background:#ffffff"><div class="cl">中性白底 #ffffff</div><div class="minicard" style="border:none;border-radius:16px;box-shadow:3px 3px 0 rgba(23,23,23,.20)"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div></div></div>
+<div class="nums">r16 · 阴影 3px 3px 0 rgba(23,23,23,.20) · 硬边不模糊</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 D</span><span class="cname">扁平 + 描边</span></div>
+<p class="cdesc">零弧度 + 墨线：完全回到「印刷表格纸」的硬派做法。</p>
+<div class="spec" style="background:#ece9df"><div class="rgrid"><div class="cbox" style="background:#f5f1e6"><div class="cl">暖纸底 #f5f1e6</div><div class="minicard" style="border:1px solid #171717;border-radius:0;box-shadow:none"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div><div class="cbox" style="background:#ffffff"><div class="cl">中性白底 #ffffff</div><div class="minicard" style="border:1px solid #171717;border-radius:0;box-shadow:none"><b style="font-size:12.5px">第 3 题</b><div style="font-size:11px;color:#6a6a63">换元积分法 · 4/5 分</div></div></div></div></div>
+<div class="nums">r0 · 1px #171717 实边 · 无阴影 · 与仿古方向同源</div></article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 B / 现状"><span class="mark">22</span></p>
+</section>
+<section class="grp" id="g23" data-short="图标与符号">
+<h2><span class="gno">23</span><span class="gname">图标与符号</span><span class="ggoal">从「只有字」到「字 + 形」</span></h2>
+<p class="hint">现状左栏与卡片里全是文字。所有符号都用<b>内联 SVG 几何图形</b>画（圆 / 三角 / 方 / 闪电），零外链图标字体、零图片。形状同时承担语义，不靠颜色单独表意。</p>
+<div class="row"><article class="card"><div class="ctop"><span class="badge cur">现状</span><span class="cname">纯文字</span></div>
+<p class="cdesc">图标位是空的：只有字，靠左栏位置和文义认路。</p>
+<div class="spec"><div class="mrow2" style="gap:6px;flex-wrap:wrap"><span class="navitem" style="border-radius:999px;background:#fff">练习</span><span class="navitem" style="border-radius:999px;background:#fff">记录</span><span class="navitem" style="border-radius:999px;background:#fff">复习</span><span class="navitem" style="border-radius:999px;background:#fff">设置</span></div></div>
+<div class="nums">符号 0 个 · 字 13px · 4 项共占 ≈ 176px 宽</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 A</span><span class="cname">文字 + 几何符号</span></div>
+<p class="cdesc">加一个单色几何形（圆 / 三角 / 方 / 闪电）：认路更快，仍是单色相。</p>
+<div class="spec"><div class="mrow2" style="gap:6px;flex-wrap:wrap"><span class="navitem" style="border-radius:999px;background:#fff"><span class="geo"><svg width="14" height="14" viewBox="0 0 14 14" style="color:#171717"><circle cx="7" cy="7" r="5.4" fill="currentColor"/></svg></span>练习</span><span class="navitem" style="border-radius:999px;background:#fff"><span class="geo"><svg width="14" height="14" viewBox="0 0 14 14" style="color:#171717"><polygon points="7,1.4 12.6,11.6 1.4,11.6" fill="currentColor"/></svg></span>记录</span><span class="navitem" style="border-radius:999px;background:#fff"><span class="geo"><svg width="14" height="14" viewBox="0 0 14 14" style="color:#171717"><rect x="2.2" y="2.2" width="9.6" height="9.6" rx="1.6" fill="currentColor"/></svg></span>复习</span><span class="navitem" style="border-radius:999px;background:#fff"><span class="geo"><svg width="14" height="14" viewBox="0 0 14 14" style="color:#171717"><polygon points="8.2,1 3,8 6.4,8 5.4,13 11,6 7.4,6" fill="currentColor"/></svg></span>设置</span></div></div>
+<div class="nums">符号 14×14px 纯 SVG · 4 种形状 · 仍只 1 个色相 #171717</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 B</span><span class="cname">文字 + 圆形底色块</span></div>
+<p class="cdesc">圆底彩块 + 白色形：最像现代 App 的功能入口。</p>
+<div class="spec"><div class="mrow2" style="gap:6px;flex-wrap:wrap"><span class="navitem" style="border-radius:999px;background:#e8f7ff"><span class="geo geobg"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#1cb0f6"/><circle cx="9" cy="9" r="3.6" fill="#fff"/></svg></span>练习</span><span class="navitem" style="border-radius:999px;background:#e8f7ff"><span class="geo geobg"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#58cc02"/><polygon points="9,4.4 13.2,12.4 4.8,12.4" fill="#fff"/></svg></span>记录</span><span class="navitem" style="border-radius:999px;background:#e8f7ff"><span class="geo geobg"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#ff9600"/><rect x="5.6" y="5.6" width="6.8" height="6.8" rx="1.4" fill="#fff"/></svg></span>复习</span><span class="navitem" style="border-radius:999px;background:#e8f7ff"><span class="geo geobg"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#a560e8"/><polygon points="9.8,3.6 5.8,9.4 8.4,9.4 7.6,13.4 11.6,7.4 9,7.4" fill="#fff"/></svg></span>设置</span></div></div>
+<div class="nums">圆底 18×18px（4 色）· 白形描边 · 彩面积 ≈3% · 形状仍承担语义</div></article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 B / 现状"><span class="mark">23</span></p>
+</section>
+<section class="grp" id="g24" data-short="字体气质">
+<h2><span class="gno">24</span><span class="gname">字体气质</span><span class="ggoal">衬线到底该留在哪一层</span></h2>
+<p class="hint">同一段真实中文教材正文，三种气质并排。衬线用<b>系统衬线栈</b>（Songti SC / SimSun / Noto Serif SC），本页不打包字体文件；正式版会用 OFL 衬线 woff2。候选 A 与现行「阅读面用衬线」一致，候选 B 把它收窄到标题，全无衬线则是现行契约要显式放弃的方向。</p>
+<div class="row"><article class="card"><div class="ctop"><span class="badge cur">现状</span><span class="cname">全站无衬线</span></div>
+<p class="cdesc">清爽、通用，但整页一个气质，长读偏「界面」不像「书」。</p>
+<div class="spec" style="font-size:16px;line-height:1.75">
+<div class="sans" style="font-size:19px;font-weight:700;margin-bottom:5px">§4.2 定积分的计算</div>
+<div class="sans" style="margin-bottom:7px">牛顿-莱布尼茨公式说明：定积分与不定积分之间存在着一一对应的关系。只要找到区间上被积函数的一个原函数，两端点的函数值之差就是积分的值。</div>
+<div class="sans">用分部积分计算 ∫₀¹ x·eˣ dx 时，取 u = x，dv = eˣ dx，于是原式化为 [x·eˣ]₀¹ − ∫₀¹ eˣ dx = 1。</div>
+</div>
+<div class="nums">字族 系统栈（PingFang SC / Microsoft YaHei）· 正文 16px / 28px · 衬线覆盖 0%</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 A</span><span class="cname">阅读面衬线</span></div>
+<p class="cdesc">只有连续阅读的段落换成衬线：题面、知识点正文、解析。</p>
+<div class="spec" style="font-size:16px;line-height:1.75">
+<div class="sans" style="font-size:19px;font-weight:700;margin-bottom:5px">§4.2 定积分的计算</div>
+<div class="serif" style="margin-bottom:7px">牛顿-莱布尼茨公式说明：定积分与不定积分之间存在着一一对应的关系。只要找到区间上被积函数的一个原函数，两端点的函数值之差就是积分的值。</div>
+<div class="serif">用分部积分计算 ∫₀¹ x·eˣ dx 时，取 u = x，dv = eˣ dx，于是原式化为 [x·eˣ]₀¹ − ∫₀¹ eˣ dx = 1。</div>
+</div>
+<div class="nums">正文 Songti SC / SimSun / Noto Serif SC · 标题仍无衬线 19px · 衬线覆盖 ≈70% 文字</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 B</span><span class="cname">标题衬线</span></div>
+<p class="cdesc">反过来：标题有书卷气，正文仍是无衬线的清楚。</p>
+<div class="spec" style="font-size:16px;line-height:1.75">
+<div class="serif" style="font-size:19px;font-weight:700;margin-bottom:5px">§4.2 定积分的计算</div>
+<div class="sans" style="margin-bottom:7px">牛顿-莱布尼茨公式说明：定积分与不定积分之间存在着一一对应的关系。只要找到区间上被积函数的一个原函数，两端点的函数值之差就是积分的值。</div>
+<div class="sans">用分部积分计算 ∫₀¹ x·eˣ dx 时，取 u = x，dv = eˣ dx，于是原式化为 [x·eˣ]₀¹ − ∫₀¹ eˣ dx = 1。</div>
+</div>
+<div class="nums">标题 Songti SC / SimSun · 正文仍系统栈 16px · 衬线覆盖 ≈8% 文字</div></article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 A / 现状"><span class="mark">24</span></p>
+</section>
+<section class="grp" id="g25" data-short="纸纹去留">
+<h2><span class="gno">25</span><span class="gname">纸纹去留</span><span class="ggoal">「仿古」到底还要不要保留纸纹这一层</span></h2>
+<p class="hint">若决定整体转向现代圆润，纸纹就是最先该被砍掉或改造的一层。三档都用<b>同一段正文 + 同一块放大细节</b>对照，纹理同样是内联 SVG <code>feTurbulence</code>（零外链）。</p>
+<div class="row"><article class="card"><div class="ctop"><span class="badge cur">现状</span><span class="cname">平滑（无纹理）</span></div>
+<p class="cdesc">纯色：最清楚，但没有「纸」的手感。</p>
+<div class="spec" style="background:#fffdf7"><h4>牛顿-莱布尼茨公式</h4><div class="rule"></div><p>连续函数在闭区间上的积分，等于其原函数在区间两端点的函数值之差。</p>
+<div style="height:46px;border:1px solid rgba(0,0,0,.10);border-radius:8px;margin-top:7px;background:#fffdf7"></div>
+<p style="font-size:11.5px;color:#6a6a63;margin-top:4px">↑ 放大 40% 的纸面细节</p></div>
+<div class="nums">无纹理 · RGB 平滑 · 正文对比 17.62:1</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 A</span><span class="cname">保留极淡噪点</span></div>
+<p class="cdesc">灰度颗粒：只有余光能感觉到，最不干扰。</p>
+<div class="spec" style="background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3CfeColorMatrix type=%22saturate%22 values=%220%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22 opacity=%220.035%22/%3E%3C/svg%3E') repeat"><h4>牛顿-莱布尼茨公式</h4><div class="rule"></div><p>连续函数在闭区间上的积分，等于其原函数在区间两端点的函数值之差。</p>
+<div style="height:46px;border:1px solid rgba(0,0,0,.10);border-radius:8px;margin-top:7px;background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3CfeColorMatrix type=%22saturate%22 values=%220%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22 opacity=%220.035%22/%3E%3C/svg%3E') repeat"></div>
+<p style="font-size:11.5px;color:#6a6a63;margin-top:4px">↑ 放大 40% 的纸面细节</p></div>
+<div class="nums">feTurbulence 灰度 · opacity 0.035 · 正文最差 17.5:1</div></article><article class="card"><div class="ctop"><span class="badge cand">候选 B</span><span class="cname">换成极淡彩点</span></div>
+<p class="cdesc">彩色微点：有一点「活气」，但会引入杂色相。</p>
+<div class="spec" style="background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22c%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23c)%22 opacity=%220.055%22/%3E%3C/svg%3E') repeat"><h4>牛顿-莱布尼茨公式</h4><div class="rule"></div><p>连续函数在闭区间上的积分，等于其原函数在区间两端点的函数值之差。</p>
+<div style="height:46px;border:1px solid rgba(0,0,0,.10);border-radius:8px;margin-top:7px;background:#fffdf7 url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22c%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23c)%22 opacity=%220.055%22/%3E%3C/svg%3E') repeat"></div>
+<p style="font-size:11.5px;color:#6a6a63;margin-top:4px">↑ 放大 40% 的纸面细节</p></div>
+<div class="nums">feTurbulence 彩色 · opacity 0.055 · 正文最差 ≈16.8:1 · 引入杂色相</div></article></div>
+<p class="pick"><span>我的选择</span><input type="text" placeholder="例：候选 B / 现状"><span class="mark">25</span></p>
+</section>
+</main>
+
+<footer class="end">
+<h3>收尾</h3>
+<p>选完之后把这一页「我的选择」逐组誊抄给前端负责人即可；本页纯静态、不保存、不上传，关掉即不留痕迹。</p>
+<p style="font-family:ui-monospace,Consolas,monospace;font-size:11px;color:#8b8b84" id="footmeta"></p>
+</footer>
+<script>
+(function(){
+  var secs=[].slice.call(document.querySelectorAll('section.grp'));
+  var toc=document.getElementById('toc');
+  secs.forEach(function(s){var a=document.createElement('a');a.href='#'+s.id;a.textContent=s.getAttribute('data-short')||s.id;toc.appendChild(a);});
+  var nCards=document.querySelectorAll('article.card').length;
+  var nGroups=secs.length;
+  document.getElementById('footmeta').textContent='groups='+nGroups+' / cards='+nCards;
+  document.documentElement.setAttribute('data-groups',nGroups);
+  document.documentElement.setAttribute('data-cards',nCards);
+
+var ACT='0 0 1 0 2 0 0 1 0 0 2 1 0 3 0 2 1 0 0 4 1 2 3 0 1 5 2 0 0 4 2 3 1 0 6 3 1 5 0 2 4 1 6 2 0 3 7 3 2 1 4 6 2 0 5 8 3 7 2 5 4 1 9 8 3 1 6 2 7 3 2 9 4 1 8 5 2 5 2 7 3 1 6 4'.split(' ').map(Number);
+var LV=['#f3f1ea','#d8e1f5','#acbfe9','#809edd','#547cd2'];
+var LVN=['0 次','1 次','2–3 次','4–7 次','8+ 次'];
+function lvl(c){return c===0?0:c===1?1:c<=3?2:c<=7?3:4;}
+[].forEach.call(document.querySelectorAll('[data-heat]'),function(g){ACT.forEach(function(c){var d=document.createElement('div');d.className='cell';d.style.background=LV[lvl(c)];g.appendChild(d);});});
+[].forEach.call(document.querySelectorAll('[data-dots]'),function(g){ACT.forEach(function(c){var d=document.createElement('div');d.className='cell';if(c>0){var sp=document.createElement('span');sp.className='dot';var px=Math.min(9,3+c*0.7);sp.style.width=px+'px';sp.style.height=px+'px';g.appendChild(sp);}g.appendChild(d);});});
+var cp=document.getElementById('calPath');
+if(cp){var d2='';for(var i=0;i<84;i++){var x=(i+0.5)/84*300,y=60-ACT[i]/9*52;d2+=(i?'L':'M')+x.toFixed(2)+' '+y.toFixed(2);}cp.setAttribute('d',d2);}
+})();
+</script>
+</body>
+</html>
