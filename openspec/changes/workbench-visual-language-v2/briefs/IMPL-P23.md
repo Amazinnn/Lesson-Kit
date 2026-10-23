@@ -1,5 +1,22 @@
 # IMPL-P23 — 第 23 组：试卷列表页改卡片网格
 
+> ✅ **前置核实（2026-10-23，逐处读过 —— 省得你再找）**
+>
+> | 事实 | 位置 |
+> |---|---|
+> | 列表容器 = **单列** grid（`display: grid; gap: 18px`）⇒ 23.1 的「改卡片网格」= 把它改成**多列**（如 `repeat(auto-fill, minmax(320px, 1fr))`） | `<section id='practice-set-list' class='practice-set-list'>`（`pages.py:833`）· `.practice-set-list { display: grid; gap: 18px; }`（`workbench.css:2572`） |
+> | **5px 黄带就在这里**：`.practice-set-card { padding: 20px 22px; border-top: 5px solid var(--role-yellow); }` ⇒ 23.2 就是删掉这个 `border-top` 并让状态由圆点承载 | `workbench.css:2573` |
+> | 卡片 markup：`<article class='practice-set-card card' data-practice-set-id='…'>` 内含 `<details class='practice-set-card-body'>` | `pages.py:792` 起 |
+> | 卡内还有逐题条目 `.practice-set-item`（`<details class='practice-set-item-body'>`）—— **顺带可见 §4.27 折叠段的一处** | `pages.py:778-791` |
+>
+> ⚠️ **状态圆点必须复用已有的 `.lk-dot` 族**（含几何符号），不要另造一套；
+> 且 `§4.14` 已把圆点尺寸定到 **10px**（形态见 `component-spec.md` §4.30）。
+>
+> ⚠️ 状态现在承载在哪：**卡片上没有单独的「状态」文字** ——
+> 阻塞原因等由 `.practice-set-continuation-details` / 执行情况承载
+> ⇒ **23.2 落地前先确认「用哪个状态驱动圆点」**（`record` 里现成的字段，不要新算）；
+> 找不到现成字段就**登记**，不要发明。
+
 > 对应 `tasks.md` **第 23 组（23.1–23.3）**。**只改 `workbench/server/pages.py` 与
 > `workbench/server/static/workbench.css`**（两文件是**一组**，别拆给两个 agent）。
 
