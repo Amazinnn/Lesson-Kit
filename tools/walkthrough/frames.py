@@ -58,7 +58,17 @@ WATCH = [
     "#middle-page", "#middle-page > *", ".workload-bars", ".workload-bar",
     ".lk-skeleton", ".calendar-cell", ".calendar-day", ".lk-empty__art",
     ".lk-paper", ".lk-confetti-fall", ".bar", ".bar-fill", ".bar-column",
+    # The skeleton blocks of **both** tiers: the animated tier paints them
+    # with the class ``.lk-skeleton``, the downgraded tier paints the same
+    # blocks as static grey boxes **without** that class
+    # (``middle-navigation.js::skeletonBlock``) ⇒ the wrapper's children are
+    # the one selector that finds them in both tiers (A-117 §1).
+    "[data-lk-skeleton] > div",
 ]
+
+#: The skeleton blocks of **both** tiers (the animated tier carries the class
+#: ``.lk-skeleton``, the downgraded tier paints the same blocks without it).
+SKELETON_SELECTOR = "[data-lk-skeleton] > div"
 
 #: The terminal-state contract of §3.8: the items that have to be equal
 #: between the animated run and the downgraded run — the numbers, the
@@ -383,13 +393,21 @@ def act_streak(page, ctx):
     The card is replaced as a whole on every turn in the real flow, so
     the component's html is re-rendered here as well; that is what makes
     the flame clusters appear.
+
+    ⚠️ **The order is the product's order** (``decisions.md`` A-134 · D-3):
+    **render first, apply afterwards** — ``paper-practice.js:1141`` and
+    ``practice-flow.js:1697`` both do ``renderCurrent()`` → ``streak.apply()``.
+    The old order (``apply`` → ``render``) wiped the ``is-on`` class that
+    ``showBanner()`` has just added ⇒ the banner never lit up and the
+    criterion could not see it at all.
     """
     page.evaluate("""async () => {
       const streak = window.__lkProbeStreak;
       const host = document.getElementById("lk-probe-streak");
       for (let i = 0; i < 5; i += 1) {
-        streak.apply(streak.judge(true));
+        const landed = streak.judge(true);
         host.innerHTML = streak.html();
+        streak.apply(landed);
         await new Promise((r) => setTimeout(r, 60));
       }
     }""")
@@ -892,13 +910,71 @@ def judge_celebration(meta, reduced_meta, watch, milestone=False):
 
 
 def judge_streak_banner(meta, reduced_meta, watch):
-    """M-4 — one banner, and it leaves again."""
-    counts = [len(frame["states"].get(".lk-combo-banner", [])) for frame in meta["frames"]]
+    """M-4 — one banner, it shows, it carries the number, and it leaves.
+
+    The criterion (``acceptance.md`` §2 M-4): 「横幅出现 → 数字替换 → 退场；
+    横幅只有一份，数字是参数化输入的结果」.
+
+    **Visibility is what counts**: a banner that sits in the DOM but is
+    transparent is not on screen.  The old judge only counted the elements,
+    so a banner that never lit up passed (``decisions.md`` A-134 · D-3).
+
+    The number is the **parameterized input**'s result (the count the
+    streak has reached); the 5-streak and the 10-streak banners share this
+    one DOM and this one animation, only the number differs.
+    """
+    frames = meta["frames"]
+    counts = [len(frame["states"].get(".lk-combo-banner", [])) for frame in frames]
     if not any(counts):
         return {"verdict": PENDING, "detail": "没有出现连对横幅"}
     if max(counts) > 1:
         return {"verdict": FAIL, "detail": f"横幅同时出现了 {max(counts)} 份"}
-    return {"verdict": PASS, "detail": "横幅只有一份"}
+
+    def opacity_of(node):
+        try:
+            return float(node.get("opacity"))
+        except (TypeError, ValueError):
+            return None
+
+    visible = []
+    numbers = []
+    per_frame = []
+    for frame in frames:
+        banners = frame["states"].get(".lk-combo-banner", [])
+        shown = []
+        for node in banners:
+            opacity = opacity_of(node)
+            on_screen = (opacity is not None and opacity > 0
+                         and node.get("display") not in (None, "none")
+                         and node.get("visibility") not in (None, "hidden"))
+            if on_screen:
+                shown.append(opacity)
+        for node in frame["states"].get(".lk-combo-banner__count", []):
+            numbers.append((node.get("text") or "").strip())
+        if shown:
+            visible.append(frame["t"])
+        per_frame.append({"t": frame["t"], "opacities": [
+            opacity_of(node) for node in banners],
+            "visible": bool(shown)})
+    evidence = {"perFrame": per_frame, "numbers": sorted(set(numbers))}
+    if not visible:
+        return {"verdict": FAIL,
+                "detail": "横幅在 DOM 里，但每一帧都不透明（opacity 0）—— "
+                          "它没有真的亮起来",
+                "evidence": evidence}
+    if not any(text.isdigit() for text in numbers):
+        return {"verdict": FAIL,
+                "detail": "横幅上没有数字 —— 数字不是参数化输入的结果",
+                "evidence": evidence}
+    last = per_frame[-1]
+    if last["visible"]:
+        return {"verdict": FAIL,
+                "detail": f"末帧（{last['t']}ms）横幅仍在屏上 —— 没有退场",
+                "evidence": evidence}
+    return {"verdict": PASS,
+            "detail": f"横幅出现（{visible}）、只有一份、数字是参数化输入的结果"
+                      f"（{sorted(set(numbers))}）、末帧退场（opacity 0）",
+            "evidence": evidence}
 
 
 def capture_streak_tiers(playwright, out_dir, base_url, ws):
@@ -1021,57 +1097,117 @@ def judge_view(meta, reduced_meta, watch):
 
 
 def judge_skeleton(meta, reduced_meta, watch):
-    """M-9 — the sheen sweeps across the skeleton.
+    """M-9 — the skeleton **breathes** (A-115 / A-117).
 
-    Two facts are kept apart, because they belong to two different
-    sides:
+    The criterion (``acceptance.md`` §2 M-9, as settled by **A-117 §1**) is
+    two things, and **both** have to hold in the animated tier:
 
-    * **the product side** — does the skeleton block have a box at all?
-      A block of 0×0 is a stylesheet fact (``workbench.css``), not a
-      motion fact;
-    * **the motion side** — does the sheen move?  That is the animation
-      the criterion is about.
+    1. **the block has volume** — ``width > 0`` and ``height > 0``;
+    2. **the block's own surface changes over time** — across the samples its
+       ``background-color`` or its ``opacity`` really changes, or the block
+       itself carries a keyframe animation that changes one of those two.
 
-    The verdict is the motion's: the sweep has to move **on a block that
-    has a size**.  When the block has no size the motion cannot be seen
-    at all — then the verdict says exactly that (and the product-side
-    fact is reported next to it) instead of mixing the two problems into
-    one FAIL.
+    What does **not** count (A-117 §1, 「不成立的情形」):
+
+    * a sweep on ``::after`` — it animates the **overlay**, not the block's
+      surface (the sweep form was 作废 by A-115);
+    * a static grey block in the animated tier (no motion at all);
+    * "it has an animation name" as such (what matters is *which* property
+      the animation changes).
+
+    The **downgraded tier** only has to satisfy item 1 — an equivalent
+    static grey block **with volume** (motion-spec §7.2 row 9: the blocks
+    stand still).
+
+    The old judge measured the **sheen's position** — the criterion that
+    A-115 作废 — and therefore failed a product that breathes correctly
+    (``decisions.md`` A-134 · D-2).
     """
-    transforms = []
-    for frame in meta["frames"]:
-        for node in frame["states"].get(".lk-skeleton", []):
-            transforms.append(node.get("afterTransform") or node.get("transform"))
-    sizes = [(node.get("width"), node.get("height"))
-             for frame in meta["frames"]
-             for node in frame["states"].get(".lk-skeleton", [])]
-    has_box = bool(sizes) and not all((w == 0 and h == 0) for w, h in sizes)
+    def blocks_of(run):
+        """The skeleton blocks of one run, in DOM order, per frame."""
+        per_frame = []
+        for frame in run.get("frames", []):
+            nodes = frame["states"].get(SKELETON_SELECTOR)
+            if not nodes:
+                nodes = frame["states"].get(".lk-skeleton", [])
+            per_frame.append(nodes)
+        return per_frame
+
+    def volume(nodes):
+        return [(node.get("width"), node.get("height")) for node in nodes]
+
+    def has_volume(nodes):
+        return any((node.get("width") or 0) > 0 and (node.get("height") or 0) > 0
+                   for node in nodes)
+
+    animated_frames = blocks_of(meta)
+    reduced_frames = blocks_of(reduced_meta)
+    animated_blocks = [node for frame in animated_frames for node in frame]
+    reduced_blocks = [node for frame in reduced_frames for node in frame]
+
+    # -- the block's **own** surface, block by block -------------------------
+    own = {}
+    for nodes in animated_frames:
+        for index, node in enumerate(nodes):
+            own.setdefault(index, []).append(
+                (node.get("opacity"), node.get("background")))
+    breathing = []
+    opacities = set()
+    backgrounds = set()
+    for index, samples in own.items():
+        opacities.update(s for s, _ in samples if s is not None)
+        backgrounds.update(b for _, b in samples if b is not None)
+        if (len({s for s, _ in samples if s is not None}) >= 2
+                or len({b for _, b in samples if b is not None}) >= 2):
+            breathing.append(index)
+    # the sweep of the overlay is reported, but it never decides
+    after_animations = sorted({node.get("afterAnimation")
+                               for node in animated_blocks
+                               if node.get("afterAnimation")})
+    own_animations = sorted({
+        anim.get("name") for frame in meta["frames"]
+        for anim in frame["animations"]
+        if anim.get("name") and "skeleton" in str(anim.get("name"))})
+
+    sizes = volume(animated_blocks)
+    animated_has_volume = has_volume(animated_blocks)
+    reduced_has_volume = has_volume(reduced_blocks)
     evidence = {
-        "motionSide": {
-            "sheenPositions": len(set(transforms)),
-            "moved": len(set(transforms)) >= 2,
-            "positions": sorted(set(transforms))[:8],
-        },
-        "productSide": {
-            "hasBox": has_box,
-            "sizes": sorted(set(sizes))[:8],
-        },
+        "criterion": "A-117 §1（块自身表面随时间变化；::after 横扫不算）",
+        "animatedBlockCount": len(animated_frames[0]) if animated_frames else 0,
+        "animatedBlockSamples": len(animated_blocks),
+        "ownSurfaceChangedBlocks": sorted(breathing),
+        "ownOpacities": sorted(opacities),
+        "ownBackgrounds": sorted(backgrounds),
+        "ownAnimations": own_animations,
+        "afterAnimations": after_animations,
+        "animatedHasVolume": animated_has_volume,
+        "animatedSizes": sorted(set(sizes))[:8],
+        "reducedBlockCount": len(reduced_frames[0]) if reduced_frames else 0,
+        "reducedHasVolume": reduced_has_volume,
     }
-    if not transforms:
+    if not animated_blocks:
         return {"verdict": PENDING, "detail": "没有采到骨架屏",
                 "evidence": evidence}
-    if len(set(transforms)) >= 2:
-        return {"verdict": PASS,
-                "detail": f"微光位置逐帧变化（{len(set(transforms))} 个位置）",
+    if not animated_has_volume:
+        return {"verdict": FAIL,
+                "detail": "骨架块没有尺寸（0×0）—— A-117 §1 的第 1 项不成立",
                 "evidence": evidence}
-    if not has_box:
-        return {"verdict": PENDING,
-                "detail": "两条证据分开：产品侧 —— 骨架块没有尺寸（0×0），"
-                          "灰块与微光都无从显示；动效侧 —— 微光位置全程不变，"
-                          "但块没有盒子，本轮无从判定扫光",
+    if not breathing:
+        return {"verdict": FAIL,
+                "detail": "骨架块有尺寸，但块自身表面（opacity / background-color）"
+                          "全程不变；块上的覆盖层动画不算"
+                          + (f"（覆盖层动画：{after_animations}）"
+                             if after_animations else ""),
                 "evidence": evidence}
-    return {"verdict": FAIL,
-            "detail": "骨架块有尺寸，但微光位置全程不变（动效侧）",
+    if not reduced_has_volume:
+        return {"verdict": FAIL,
+                "detail": "降级档的等价静态灰块没有体积（0×0）",
+                "evidence": evidence}
+    return {"verdict": PASS,
+            "detail": f"骨架块有体积且自身表面随时间变化"
+                      f"（{len(breathing)}/{len(own)} 块的不透明度变化，"
+                      f"取到 {len(opacities)} 个值）；降级档是等体积静止灰块",
             "evidence": evidence}
 
 
