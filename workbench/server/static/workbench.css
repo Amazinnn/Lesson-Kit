@@ -3358,9 +3358,10 @@ img { max-width: 100%; }
 /* 作答日历的格子 —— **fill + height 双编码**（IMPL-W2e 第 10 条 / spec 28.5）
    · fill = **档位色**（落在 `--level-bg` 这一个自定义属性上）；
    · height = 服务端给的**行内 `height`**（次数 ⇒ 高度，单调、封顶 28px）；
-   · 高度锚点在**底边**：服务端行内 `align-self:end`（共享行底基线），
-     CSS 侧再钉 `transform-origin: bottom` ⇒ 万一以后改用 `scaleY` 编码，
-     格子也从底边长，不会长反。
+   · 高度锚点在**底边**：服务端行内 `align-self:end`（共享行底基线）——
+     这条与动画无关，动效走的是**宽度**这条轴（`transform-origin: left center`
+     ⇒ 格子从自己的左缘展开）；万一以后改用 `scaleY` 编码，把
+     `transform-origin` 换回 `bottom` 即可，格子仍从底边长。
    · **零负荷日（level-0）有自己的档**，不是回落底色 —— 以前 CSS 只有
      `.level-1..4`，「0 次」这一档靠基础底色兜底（spec 28.5 明令不回落底色）。
    ⚠️ 五档阈值（0 / 1 / 2–3 / 4–7 / ≥8）由服务端 `records.py` 的
@@ -3368,8 +3369,22 @@ img { max-width: 100%; }
 .record-activity-day {
   --level-bg: var(--surface-sunken);
   min-height: 4px;              /* 零负荷日的占位高度（与服务端 _CALENDAR_CELL_MIN_PX 同值） */
-  transform-origin: bottom center;
+  transform-origin: left center;
   background: var(--level-bg);
+  /* ---- 日历扩散（motion-spec §2.1 第 19 项 · 进度带动效的第二个使用方）----
+     格子**从左边展开**（`scaleX 0→1`，`transform-origin: left`），
+     **逐柱错峰 24ms**：「柱」= 日历的**列**（一周一列，7 行）
+     ⇒ **同一列的格子一起动**（错峰由服务端按列写行内 `animation-delay`，
+     与 `.bar-fill` 同一套做法）。
+     · 生长只动 `transform`（动效红线：只许 transform / opacity）；
+     · 320ms / 缓动 `out` —— §2.1 第 19 项写死的三样（形态 / 时长 / 缓动）；
+     · **静态样式 = 终态**（`scaleX(1)`）⇒ 降级档（闸门把 `animation-name`
+       置 none）下格子**直接是终态**，不会停在 0%；
+     · 起始态只写在 `@keyframes` 内（motion-spec §7.1 的实现铁律）；
+     · **双编码不动**：颜色（档位）与高度（次数 ⇒ 行内 `height`）在动画期间
+       **照常可读** —— 生长只动宽度这条**不承载信息**的轴。 */
+  transform: scaleX(1);
+  animation: lk-calendar-grow 320ms var(--ease-out) both;
 }
 /* ⚠️ 原来那条 `aspect-ratio: 1` **删掉**：服务端已用行内 `aspect-ratio:auto`
    解掉正方形比例（高度由双编码给），留着只在内联失效时把格子压成方块。
@@ -3378,6 +3393,11 @@ img { max-width: 100%; }
 /* ⚠️ 档位色**不在这里**逐档写死 —— 统一由下面的 `:is()` 档位表给
    （日历格子与图例色块共用同一取值，见「档位色」块）。 */
 .record-activity-day.future { visibility: hidden; }
+/* 日历扩散的关键帧（起始态**只**写在这里 —— motion-spec §7.1 的实现铁律） */
+@keyframes lk-calendar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
 
 /* ---- 档位色：日历格子与图例色块**共用同一取值**（IMPL-W2e 11）------------
    `--level-bg` 是**唯一的取值出口** ⇒ 色块与格子不可能各写一遍、慢慢漂移。
@@ -4316,7 +4336,9 @@ img { max-width: 100%; }
   transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
   opacity: 1;
 }
-/* ① 探出 */
+/* ① 探出
+   ⚠️ `is-out` 与 `is-in` **同挂**时，下面这条被后面的 `.lk-lamp.is-in`
+     整条取代（同特异性、后出现者赢）—— 那条把 ① 与 ④ 串成一条时间线。 */
 .lk-lamp.is-out { animation: lk-lamp-lean-out 140ms var(--ease-rebound) both; }
 /* ② 点亮（罩内暖光） */
 .lk-lamp.is-lit .lk-lamp__glow {
@@ -4340,8 +4362,21 @@ img { max-width: 100%; }
   animation: lk-ripple-glow-spread 450ms var(--ease-ripple) 140ms both,
              lk-ripple-clear 110ms var(--ease-in) 590ms forwards;
 }
-/* ④ 收回（放在 `is-out` 之后：同挂时后者赢） */
-.lk-lamp.is-in { animation: lk-lamp-retract 110ms var(--ease-in) both; }
+/* ④ 收回（590–700ms；motion-spec §4.3 时序表第 ⑥ 行）
+   ⚠️ **收回与 ① 探出是同一个元素** ⇒ 两条动画按**列表顺序**叠加，
+     后者（收回）带 `animation-delay: 590ms`：
+       · 延迟段**不回填**（`forwards` 只在动画**结束后**保留终态）
+         ⇒ ① 照常演（0–140ms），④ 到 590ms 才接手；
+       · 收回结束后 `forwards` 把终态（opacity 0 + 收回位）留在元素上
+         ⇒ 700ms 被移除时，灯是「收好的」，不是「突然消失」。
+   ⚠️ 写法与涟漪层的退场**同构**（`.lk-ripple.is-on.is-clear` 的
+     `lk-ripple-clear 110ms … 590ms forwards`）⇒ 两层的退场同起同止。
+   ⚠️ `is-in` 挂在**转场开始时**（与 `is-out` / `is-lit` 同时），
+     时刻由样式表的 `animation-delay` 给 —— 与涟漪的 `is-clear` 同一套约定。 */
+.lk-lamp.is-in {
+  animation: lk-lamp-lean-out 140ms var(--ease-rebound) both,
+             lk-lamp-retract 110ms var(--ease-in) 590ms forwards;
+}
 
 /* ---- 分级降级闸门（decisions.md A-2 / design.md D-8 / tasks.md 8.9）--------
    四种组合（`<html data-motion="on|off">` 由设置视图写；不写 = 未设置）：

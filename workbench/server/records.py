@@ -33,6 +33,10 @@ _CALENDAR_MAX_COUNT = 8      # 高度封顶对应的次数（= 最高档下界�
 _CALENDAR_CELL_MIN_PX = 4    # 零负荷日的占位高度
 _CALENDAR_CELL_MAX_PX = 28   # 最高档的格子高度
 _CALENDAR_ROW_PX = 30        # 日历行高（每行等高 ⇒ 行内共享一条基线）
+_CALENDAR_ROWS = 7           # 日历的行数 = 星期数（一列 = 一周，与 CSS 的
+                             # `grid-template-rows: repeat(7, 30px)` 同值）
+_CALENDAR_STAGGER_MS = 24    # 日历扩散的逐柱错峰（motion-spec §2.1 第 19 项：
+                             # 「逐柱错峰 24ms」—— 柱 = 列，一列一起动）
 
 
 def _rating_marks(rating):
@@ -552,9 +556,16 @@ def _activity_calendar(activity):
         for label in ("一", "二", "三", "四", "五", "六", "日")
     )
     cells = []
-    for day in activity:
+    for index, day in enumerate(activity):
+        # 错峰的单位是**列**（一周一列）：网格按列流（CSS 的
+        # `grid-auto-flow: column`，7 行 = 7 个星期）⇒ 第 `index` 个格子
+        # 落在第 `index // 7` 列 ⇒ 同一列的格子**一起动**
+        # （motion-spec §2.1 第 19 项「逐柱错峰 24ms」，与 `.bar-fill` 同一套做法）。
+        delay = (index // _CALENDAR_ROWS) * _CALENDAR_STAGGER_MS
         if day.get("future"):
-            cells.append("<span class='record-activity-day future' aria-hidden='true'></span>")
+            cells.append(
+                "<span class='record-activity-day future' aria-hidden='true'"
+                f" style='animation-delay:{delay}ms'></span>")
             continue
         attempts = int(day.get("attempts") or 0)
         level = _calendar_level(attempts)
@@ -564,7 +575,8 @@ def _activity_calendar(activity):
             # 高度是第二重编码：`align-self:end` 让格子贴着行底（共享基线），
             # `aspect-ratio:auto` 解掉旧的正方形比例（高度由次数给）。
             f"style='align-self:end;aspect-ratio:auto;"
-            f"height:{_calendar_height(attempts)}px' "
+            f"height:{_calendar_height(attempts)}px;"
+            f"animation-delay:{delay}ms' "
             f"title='{html.escape(date_text)} · {attempts} 次作答' "
             f"aria-label='{html.escape(date_text)}，{attempts} 次作答'></span>"
         )

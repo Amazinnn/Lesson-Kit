@@ -546,6 +546,11 @@
   var STREAK_FLAME_STEP_MS = 40;    /* per-cluster extinguish delay */
   var STREAK_BANNER_EVERY = 5;      /* the banner fires on every multiple of five */
   var STREAK_BREAK_OVER = 4;        /* a break above four must be shown plainly */
+  /* the banner's total run (motion-spec §6.2's `duration`): 700 ms for the
+     5-streak tier, 900 ms for the ≥10 tier — the same numbers the stylesheet
+     gives `lk-combo-in` / `lk-combo-out`. */
+  var BANNER_HOLD_MS = 700;
+  var BANNER_HOLD_LARGE_MS = 900;
 
   function streakTierOf(count) {
     if (count <= 0) return 0;
@@ -556,6 +561,8 @@
     var settings = options || {};
     var host = settings.root;
     var count = 0;
+    /* the pending exit of the banner (the downgraded tiers only) */
+    var bannerTimer = null;
 
     /* The card is replaced as a whole on every render, so the parts are
        looked up by class at the moment they are needed — never cached. */
@@ -587,6 +594,29 @@
       /* The tier difference is carried by this one semantic class only. */
       banner.classList.toggle("is-large", bannerCount >= STREAK_BANNER_EVERY * 2);
       banner.classList.add("is-on");
+      /* ---- the exit in the downgraded tiers (motion-spec §7.2 row 18) ----
+         The exit is a CSS animation (`lk-combo-out` with a `forwards` fill),
+         and the downgraded gate switches the animation off ⇒ without this
+         half the banner would stay on screen for ever.  So in a downgraded
+         tier the exit is a `setTimeout` instead — the banner shows at once
+         (its terminal state) and disappears when the hold is over.
+         ⚠️ The terminal state has to be **the same** as the animated tier's:
+           there the banner keeps `is-on` and its opacity is 0 ⇒ here only the
+           opacity is written, `is-on` stays where it is (taking it off would
+           make the two tiers' terminal states differ). */
+      if (bannerTimer) {
+        window.clearTimeout(bannerTimer);
+        bannerTimer = null;
+      }
+      if (motionMode() !== "full") {
+        var hold = bannerCount >= STREAK_BANNER_EVERY * 2
+          ? BANNER_HOLD_LARGE_MS : BANNER_HOLD_MS;
+        banner.style.opacity = "";
+        bannerTimer = window.setTimeout(function () {
+          bannerTimer = null;
+          if (banner.parentNode) banner.style.opacity = "0";
+        }, hold);
+      }
     }
 
     function html() {
@@ -746,9 +776,13 @@
     lampAssetText().then(function (svg) {
       if (svg && lamp.parentNode) lamp.innerHTML = svg;
     });
-    /* ① lean out, ② light up, ③ ripple — the stylesheet carries the delays,
-       so the classes go on at once. */
-    lamp.classList.add("is-out", "is-lit");
+    /* ① lean out, ② light up, ③ ripple, ⑥ retract — the stylesheet carries
+       the delays, so the classes go on at once.
+       ⚠️ `is-in` = 「这一轮结束时灯要收回」：收回的关键帧由样式表的
+       `animation-delay: 590ms` 锚在 motion-spec §4.3 时序表的 ⑥ 行
+       （590–700ms），与涟漪层的 `is-clear` 同一套约定 ⇒ 灯在 700ms
+       被移除前是「收好的」，不是「突然消失」。 */
+    lamp.classList.add("is-out", "is-lit", "is-in");
     ripple.classList.add("is-on", "is-clear");
     glow.classList.add("is-on", "is-clear");
     var swapTimer = null;
