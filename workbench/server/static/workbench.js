@@ -311,6 +311,21 @@
     return loadSetting("showRating", true) !== false;
   }
 
+  /* 「题目来源」与「自评」是同一类显示偏好 ⇒ 同一份真值、同一套生效机制。 */
+  function showSourceEnabled() {
+    return loadSetting("showSource", true) !== false;
+  }
+
+  /* 把两个显示偏好落到根属性上 ⇒ CSS 一次到位，**不重渲染、不改状态机**。
+     改设置后立刻调它一次，进行中的那一轮当场生效（2026-10-23 所有者要求：
+     不必退出当前试卷修改后再重新进入）。 */
+  function applyDisplayPreferences() {
+    var root = document.documentElement;
+    if (!root) return;
+    root.setAttribute("data-show-rating", showRatingEnabled() ? "on" : "off");
+    root.setAttribute("data-show-source", showSourceEnabled() ? "on" : "off");
+  }
+
   /* The sound preference is one field of the same record (`sound`, boolean,
      on by default — decisions.md A-38).  sfx.js reads the very same field, so
      the two never disagree; before the module is there the record itself is
@@ -1346,8 +1361,40 @@
     showRatingBox.checked = showRatingEnabled();
     showRatingBox.addEventListener("change", function () {
       saveSetting("showRating", showRatingBox.checked);
+      applyDisplayPreferences();
     });
   }
+  /* 设置视图里的同一份真值（id 带 -view 后缀，避免与左栏那个撞 id）。 */
+  var showRatingViewBox = document.getElementById("setting-show-rating-view");
+  if (showRatingViewBox) {
+    showRatingViewBox.checked = showRatingEnabled();
+    showRatingViewBox.addEventListener("change", function () {
+      saveSetting("showRating", showRatingViewBox.checked);
+      if (showRatingBox) showRatingBox.checked = showRatingViewBox.checked;
+      applyDisplayPreferences();
+    });
+  }
+  var showSourceViewBox = document.getElementById("setting-show-source-view");
+  if (showSourceViewBox) {
+    showSourceViewBox.checked = showSourceEnabled();
+    showSourceViewBox.addEventListener("change", function () {
+      saveSetting("showSource", showSourceViewBox.checked);
+      if (showSourceBox) showSourceBox.checked = showSourceViewBox.checked;
+      applyDisplayPreferences();
+    });
+  }
+  var showSourceBox = document.getElementById("setting-show-source");
+  if (showSourceBox) {
+    showSourceBox.checked = showSourceEnabled();
+    showSourceBox.addEventListener("change", function () {
+      saveSetting("showSource", showSourceBox.checked);
+      applyDisplayPreferences();
+    });
+  }
+  /* 另一个标签页改了设置（如设置视图开在另一页）⇒ 这一页当场跟上。 */
+  window.addEventListener("storage", function (event) {
+    if (!event.key || event.key.indexOf("wb_settings_") === 0) applyDisplayPreferences();
+  });
 
   var runningSendSetting = document.getElementById("setting-running-send");
   if (runningSendSetting) {
@@ -1481,6 +1528,7 @@
   }
 
   bindSettingsViewToggle();
+  applyDisplayPreferences();
   applyTheme(effectiveTheme());
   applyReadingFace(effectiveReadingFace());
   applyMotion();
@@ -3163,6 +3211,7 @@
     store: store,
     load: load,
     showRatingEnabled: showRatingEnabled,
+    showSourceEnabled: showSourceEnabled,
     renderMath: renderMath,
     escapeHtml: escapeHtml,
     richText: richText,

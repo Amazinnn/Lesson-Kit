@@ -267,3 +267,36 @@ sequence or the data the provider receives.
 
 - **WHEN** the learner tabs through the top bar
 - **THEN** each control receives focus in turn and exposes an accessible name
+
+### Requirement: Display preferences take effect at once
+
+The shell SHALL offer the learner's display preferences — whether the
+self-rating surface is shown, and whether a question's source line is shown —
+in the settings view. The preferences that the left rail has always carried
+SHALL stay there as well, so that a place the learner can see is not moved
+without a word. Both entry points SHALL drive the same stored value. Changing
+either preference SHALL take effect on the page the learner is looking at,
+without the learner leaving the current paper and starting it again.
+
+#### Scenario: The settings view carries the display preferences
+
+- **WHEN** the learner opens the settings view
+- **THEN** it offers a control for the self-rating surface and a control for
+  the question's source line
+
+#### Scenario: The two entry points share one value
+
+- **WHEN** the learner changes a display preference in one place
+- **THEN** the other place shows the same value
+
+#### Scenario: A change takes effect at once
+
+- **WHEN** the learner turns a display preference off while a paper is open
+- **THEN** the corresponding surface disappears from the page in front of the
+  learner, and no reload or restart is needed
+
+#### Scenario: The next paper follows the new preference
+
+- **WHEN** the learner starts the next paper after changing a display
+  preference
+- **THEN** that paper follows the new preference

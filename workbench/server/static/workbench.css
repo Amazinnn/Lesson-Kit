@@ -3063,6 +3063,17 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
   border-radius: var(--r-pill);
   background: var(--rule-hair);
 }
+
+/* ---- 显示偏好：自评面 / 题目来源（**根属性驱动**）---------------------
+   两个开关落在 `<html data-show-rating>` / `data-show-source` 上 ⇒ 改设置
+   **即刻生效**，进行中的那一轮不必退出重来（2026-10-23 所有者要求）。
+   ⚠️ 起卷请求里的 `rating_mode` 仍在开卷那一刻定（请求序列冻结）⇒
+     「关」即时生效；「开」对**进行中的这一轮**无效（下一轮生效）。
+   ⚠️ 选择器特异度高于 `.hidden`（1,1,1 vs 0,1,0）⇒ JS 去掉 hidden 类也藏得住。 */
+html[data-show-rating="off"] #paper-rating,
+html[data-show-rating="off"] #review-rating-action,
+html[data-show-rating="off"] #rating-input { display: none; }
+html[data-show-source="off"] .practice-source { display: none; }
 .flash-direction-choice {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, max-content));
