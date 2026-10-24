@@ -625,9 +625,29 @@ function aiElements() {
   };
 }
 
+/* The session list is grouped by recency (今天 / 昨天 / 更早) ⇒ the rows live
+   inside group containers. This returns the rows in order, so the tests talk
+   about "the first session" instead of a DOM path. */
+function sessionRows(elements) {
+  const rows = [];
+  const list = elements["ai-session-list"];
+  if (!list) return rows;
+  const has = (node, name) => String(node.className || "").split(/\s+/).indexOf(name) >= 0;
+  list.children.forEach((child) => {
+    if (has(child, "ai-session-group")) {
+      child.children.forEach((item) => {
+        if (has(item, "ai-session-item")) rows.push(item);
+      });
+    } else {
+      rows.push(child);
+    }
+  });
+  return rows;
+}
+
 async function openFirstAiSession(elements) {
   await flush();
-  elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(elements)[0].children[0].click();
   await flush();
 }
 
@@ -1824,7 +1844,10 @@ test("mobile drawer buttons keep the study page mounted while toggling each side
     "left-column": new FakeElement("left-column"),
     "ai-column": new FakeElement("ai-column"),
   };
-  runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  const app = runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  /* C 档（<1280）：右栏本就是抽屉 ⇒ 同一个「Agent 对话」按钮开合抽屉
+     （layout-spec §2.2：同一个按钮按视口分两种表现）。 */
+  app.window.innerWidth = 1024;
   elements["mobile-nav-toggle"].click();
   assert.equal(page.classList.contains("left-drawer-open"), true);
   assert.equal(page.classList.contains("ai-drawer-open"), false);
@@ -1833,6 +1856,25 @@ test("mobile drawer buttons keep the study page mounted while toggling each side
   assert.equal(page.classList.contains("left-drawer-open"), false);
   assert.equal(page.classList.contains("ai-drawer-open"), true);
   assert.equal(elements["mobile-nav-toggle"].getAttribute("aria-expanded"), "false");
+  assert.equal(elements["mobile-ai-toggle"].getAttribute("aria-expanded"), "true");
+});
+
+test("the top bar Agent control folds the docked rail on wide viewports", () => {
+  const page = layout();
+  const elements = {
+    layout: page,
+    "mobile-ai-toggle": new FakeElement("mobile-ai-toggle"),
+    "ai-column": new FakeElement("ai-column"),
+  };
+  const app = runWorkbench({ elements, fetch: () => jsonResponse([]) });
+  /* A / B 档（≥1280）：右栏是常驻列 ⇒ 按钮折叠 / 展开它，
+     中栏吃回它让出的宽度（layout-spec §2.2）。 */
+  app.window.innerWidth = 1440;
+  elements["mobile-ai-toggle"].click();
+  assert.equal(page.getAttribute("data-ai-collapsed"), "1");
+  assert.equal(elements["mobile-ai-toggle"].getAttribute("aria-expanded"), "false");
+  elements["mobile-ai-toggle"].click();
+  assert.equal(page.getAttribute("data-ai-collapsed"), null);
   assert.equal(elements["mobile-ai-toggle"].getAttribute("aria-expanded"), "true");
 });
 
@@ -4614,7 +4656,7 @@ test("goal cards edit and delete drive the API, and the agent prefill action fil
   assert.deepEqual(JSON.parse(patch.options.body).title, "期末掌握计数");
 
   // 助填动作镜像：先在右侧开会话，再从目标表单点「让 Agent 代填」
-  elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(elements)[0].children[0].click();
   await flush();
   elements["goal-nl"].value = "期末前掌握第六章计数";
   const resetsBeforeGoalAssist = turnResets;

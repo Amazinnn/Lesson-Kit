@@ -24,6 +24,50 @@ _STATE_NAMES = {
     "mastered": "掌握",
 }
 
+# The review group's state dot (spec delta「Redundant state cues」·
+# GLOSSARY「行动提醒」). The first two states reuse the **existing**
+# learning-state cues — same words, same colours, same geometry; the third
+# is the neutral one (「其余保持中性」), which the learning-state set has no
+# word for: a neutral ink ring (component-spec §3.6「未开始 / 待办 =
+# 中性墨 + ring」).
+_REVIEW_DOTS = {
+    "needs_work": "lk-dot lk-dot--red lk-dot--cross",
+    "review": "lk-dot lk-dot--yellow lk-dot--dash",
+    "neutral": "lk-dot lk-dot--ink lk-dot--ring",
+}
+# The contract words of those states. The neutral state has **none** — it is
+# 「其余保持中性（不显示任何掌握断言）」, and 行动提醒 is the only
+# student-facing vocabulary there is (no fourth word is invented here).
+_REVIEW_STATE_WORDS = {
+    "needs_work": "重点练习",
+    "review": "可以复习",
+}
+
+
+def _review_state_dot(state):
+    """The redundant state channel of one review entry.
+
+    Colour is the main channel and the geometry is the redundant one; the
+    state is **never written beside the entry** (spec delta「A state is not
+    explained in words」). The dot is decorative (component-spec §4.14) — the
+    entry itself carries the contract word for assistive technology.
+    """
+    if state not in _REVIEW_DOTS:
+        state = "neutral"
+    return "<span class='" + _REVIEW_DOTS[state] + "' aria-hidden='true'></span>"
+
+
+def _review_state_label(state, title):
+    """The entry's accessible name: its title, plus the state word if any.
+
+    The neutral state adds nothing — 「不显示任何掌握断言」 means exactly
+    that: no mastery claim is made about the entry.
+    """
+    word = _REVIEW_STATE_WORDS.get(state, "")
+    if not word:
+        return ""
+    return " aria-label='" + html.escape(title) + " · " + word + "'"
+
 # The paper list's empty state points at the Agent: papers are authored in
 # the right-hand column, so the button opens that conversation — the "新建"
 # control when no conversation is open yet, the composer when one is.
@@ -218,11 +262,35 @@ def _chapter_lens(workspace):
     )
 
 
+def _workspace_switcher(workspace, workspaces):
+    """The workspace identity in the top bar's current-identity part.
+
+    The switcher **is** the identity: the selected option carries the
+    workspace name (`layout-spec.md` §2.1 — 段二 is 「工作区名 + 透镜」, two
+    items).  The machine course identifier never appears here
+    (`workbench-ui/spec.md`「The top bar shows the name, not the identifier」).
+
+    It is the **same** `<select id='workspace-select'>` the left column used
+    to own, moved rather than redrawn (design.md D-1) ⇒ the id, the name and
+    the JavaScript binding all stay as they were.
+    """
+    options = "".join(
+        f"<option value='{ws['name']}' {'selected' if ws['name'] == workspace['name'] else ''}>"
+        f"{html.escape(ws['name'])}</option>"
+        for ws in workspaces
+    )
+    return (
+        "<select id='workspace-select' class='topbar-workspace'"
+        f" aria-label='切换工作区'>{options}</select>"
+    )
+
+
 def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode=False,
           page_type=None, object_id=None, kp_titles=None):
-    meta = f"<span class='meta'>{html.escape(workspace['name'])}</span>"
     # 15.4 顶栏三段式：左＝品牌，中＝当前身份（工作区名 + 章节透镜），右＝动作。
     # 章节只在透镜里出现，不在工作区名旁重复。
+    # ⚠️ 段三的控件顺序照靶子（`mockup-baseline/shell.html` 段三）：
+    #    搜索 · 对话视图 · 夜纸 · Agent 对话（A-143「构图以靶子为准」）。
     topbar = (
         "<header id='topbar'>"
         "<div class='topbar-brand'>"
@@ -230,15 +298,27 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         "</div>"
         "<span class='topbar-separator'>/</span>"
         "<div class='topbar-identity'>"
-        f"{meta}"
+        f"{_workspace_switcher(workspace, workspaces)}"
         f"{_chapter_lens(workspace)}"
         "</div>"
         "<div class='topbar-actions'>"
+        "<button id='topbar-search' class='ghost topbar-action-text' type='button' "
+        "aria-label='搜索知识点'>搜索</button>"
+        "<label class='lk-switch lk-switch--labelled'>"
+        "<input type='checkbox' role='switch' id='topbar-rail-view'>"
+        "<span class='lk-switch__label'>对话视图</span>"
+        "<span class='lk-switch__track' aria-hidden='true'>"
+        "<span class='lk-switch__thumb'></span></span></label>"
+        "<label class='lk-switch lk-switch--labelled'>"
+        "<input type='checkbox' role='switch' id='topbar-theme'>"
+        "<span class='lk-switch__label'>夜纸</span>"
+        "<span class='lk-switch__track' aria-hidden='true'>"
+        "<span class='lk-switch__thumb'></span></span></label>"
+        "<button id='mobile-ai-toggle' class='outline topbar-action-text' type='button' "
+        "aria-controls='ai-column' aria-expanded='false' aria-label='打开对话'>Agent 对话</button>"
         "<div class='mobile-drawer-controls'>"
         "<button id='mobile-nav-toggle' class='ghost sm icon-only' type='button' "
         "aria-controls='left-column' aria-expanded='false' aria-label='打开导航' title='打开导航'>☰</button>"
-        "<button id='mobile-ai-toggle' class='ghost sm icon-only' type='button' "
-        "aria-controls='ai-column' aria-expanded='false' aria-label='打开对话' title='打开对话'>◌</button>"
         "</div>"
         "</div>"
         "</header>"
@@ -936,11 +1016,6 @@ def settings_page(workspace, workspaces, weak_items, kp_titles=None):
 
 
 def _left_column(workspace, workspaces, weak_items, active_nav):
-    options = "".join(
-        f"<option value='{ws['name']}' {'selected' if ws['name'] == workspace['name'] else ''}>"
-        f"{html.escape(ws['name'])}</option>"
-        for ws in workspaces
-    )
     # 15.1 导航项 = 具象静物图标 + 文字（图标是第 9 组的五枚导航静物，
     # 按 asset-spec §1.11 以 inline SVG 进 DOM：只有 inline 才能吃到夜纸变量）。
     nav_items = [
@@ -962,7 +1037,10 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         if item.get("score", 0) > 0.2 or item.get("reasons")
     ]
     weak_html = "".join(
-        f"<div class='weak-item'><a href='/w/{workspace['name']}/kp/{item['kp_id']}'>"
+        f"<div class='weak-item'>"
+        f"{_review_state_dot(item.get('state'))}"
+        f"<a href='/w/{workspace['name']}/kp/{item['kp_id']}'"
+        f"{_review_state_label(item.get('state'), item['knowledge_item'])}>"
         f"<span class='weak-title'>{html.escape(item['knowledge_item'])}</span>"
         "</a></div>"
         for item in actionable
@@ -980,12 +1058,10 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         # The four sections sit on one wrapper: the rail's paper ends with the
         # content, so the lower half of the column is not blank paper (15.3).
         "<div class='side-sections'>"
-        "<section class='side-section workspace-switcher'>"
-        "<p class='side-label'>工作区</p>"
-        f"<select id='workspace-select' aria-label='切换工作区'>{options}</select>"
-        "</section>"
         "<nav class='side-section primary-nav' aria-label='工作台导航'>"
-        "<p class='side-label'>页面</p>"
+        # 首组名照靶子（`mockup-baseline/shell.html` 的 `.nav-group__t`）：
+        # 「学习」—— 这一组放的是学习入口，不是「页面」的总称。
+        "<p class='side-label'>学习</p>"
         f"{nav}</nav>"
         "<section class='side-section settings-section'>"
         "<p class='side-label'>设置</p>"

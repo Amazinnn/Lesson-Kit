@@ -434,6 +434,21 @@ body:has(#layout[data-page="graph"]) {
 body:has(#layout[data-page="graph"]) #left-column,
 body:has(#layout[data-page="graph"]) #middle,
 body:has(#layout[data-page="graph"]) #ai-column { z-index: auto; }
+/* ⚠️ **抽屉档要把抽屉的层叠还回去**（2026-10-24 修）。
+   上面那条「三栏 z-index 钉回 auto」是为 G-5 逐像素冻结（画布抗锯齿）做的，
+   但它把**抽屉自己的 `z-index: 10`** 也一起压平了 ⇒
+   **图谱页在窄视口下打开抽屉时，画布会盖住抽屉**：实测命中点落在画布元素上，
+   抽屉里的导航项点不到（学习者 2026-10-24 截图就是这个）。
+   ⇒ 在**该列确实是抽屉的档位**上把 z-index 还回去：
+     C 档（≤1279）右栏是抽屉 · D 档（≤1023）左栏是抽屉。
+   ⚠️ **桌面档（≥1280）一个字不动** ⇒ G-5 的冻结与画布抗锯齿不受影响
+     （G-5 的比对口径是 1440×900 桌面视口，R-1 明确「除左栏与顶栏外像素级一致」）。 */
+@media (max-width: 1279px) {
+  body:has(#layout[data-page="graph"]) #ai-column { z-index: 20; }
+}
+@media (max-width: 1023px) {
+  body:has(#layout[data-page="graph"]) #left-column { z-index: 20; }
+}
 body:has(#layout[data-page="graph"]) .lk-ripple,
 body:has(#layout[data-page="graph"]) .lk-ripple-glow { display: none; }
 
@@ -579,6 +594,70 @@ body {
   gap: 8px;
   flex: none;
 }
+
+/* ---- 段二 · 工作区身份（靶子：identity = 名字 + 透镜）----------------------
+   工作区切换器**搬进顶栏**（design.md D-1）：它**就是**身份本身（选中项 =
+   工作区名）⇒ 段二只有两项 —— 工作区名 + 章节透镜（`layout-spec.md` §2.1
+   「段二是『工作区名 + 透镜』两项」）。
+   ⚠️ 机器课程代号不得出现在可见文本里（`workbench-ui/spec.md`
+     「The top bar shows the name, not the identifier」）⇒ 只渲染注册名。
+   ⚠️ 这是**同一个** `<select id='workspace-select'>`（只是搬了位置）——
+     id / name / JS 绑定一律不变（`workbench.js` 按 id 查、测试照旧）。
+   ⚠️ 全局 `select { width: 100% }` 会把段二撑爆 ⇒ 这里显式收回。 */
+#topbar .topbar-workspace {
+  position: relative;
+  width: auto;
+  max-width: 36ch;
+  height: 34px;
+  padding: 0 26px 0 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background-color: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-strong);
+  /* 自绘 caret（`appearance:none` 下原生箭头消失）—— 不引图标字体、不引 CDN。 */
+  appearance: none;
+  -webkit-appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-muted) 50%),
+    linear-gradient(135deg, var(--ink-muted) 50%, transparent 50%);
+  background-position: right 13px center, right 8px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  text-overflow: ellipsis;
+}
+#topbar .topbar-workspace:hover { background-color: var(--veil-hover); }
+
+/* ---- 段三 · 动作区（靶子：搜索 · 对话视图 · 夜纸 · Agent 对话）------------
+   形态听 A-115（`component-spec.md` §4.30）：
+     搜索 = §4.3 文字按钮（带箭头）· 对话视图 / 夜纸 = §4.10 迷你开关 ·
+     Agent 对话 = §4.2 沉底次按钮
+   ⚠️ 靶子的「药丸卡面外壳 + 40×22 轨道 + `aria-pressed`」是 A-115 **之前**的
+     旧形态（靶子早 17 小时）⇒ **不抄**（A-143 第 4 条：组件形态以 A-115 为准）。
+   ⚠️ 命中区 ≥44px 是 §3.1 硬约束（§4.30.2 的两条不可让步之一）。 */
+#topbar button.ghost.topbar-action-text {
+  position: relative;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+}
+/* 命中区补偿（§3.1）：40px 视觉盒 → `::before` 补到 44px。
+   ⚠️ `::after` 是 §4.3 的右箭头 ⇒ 命中区只能走 `::before`。 */
+#topbar button.ghost.topbar-action-text::before {
+  content: "";
+  position: absolute;
+  inset: -2px 0;
+}
+/* 开关的文字标签（靶子：文字在左 + 轨道在右）。形态不动，只加排布。 */
+.lk-switch__label {
+  font-size: 13px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+/* 开关的标签与轨道之间留一点呼吸（靶子 `.switch` 的 gap 8px）。 */
+.lk-switch--labelled { gap: 8px; }
 #topbar .brand {
   font-size: 16px;
   font-weight: 600;
@@ -600,16 +679,10 @@ body {
     34px 0 0 var(--role-red), 34px 0 0 1px var(--ink-strong);
   margin-right: 34px;
 }
-#topbar .meta {
-  color: var(--ink-muted);
-  font-size: 13px;
-  /* 长工作区名不许把顶栏撑宽（§7.8 断点守卫第 3 条）：36ch + 省略号。 */
-  max-width: 36ch;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+/* ⚠️ 原来的 `#topbar .meta`（工作区名的独立文字块）**已退役**：
+   工作区身份搬进段二的切换器后，段二里不该有两个「工作区名」
+   （一个文字块 + 一个下拉 = 同一件事说两遍）。
+   ⇒ 身份只由 `#topbar .topbar-workspace` 承担（见上）。 */
 .topbar-separator { color: var(--graph-page-caption, var(--ink-faint)); }
 
 /* ---- 章节透镜 —— 自绘下拉面板（tasks.md 15.4 / spec「Chapter switch in the top bar」）
@@ -756,6 +829,16 @@ body {
    ⚠️ C 档（≤1279）由 §7.1 档位表的 `@media` 整条模板覆盖（两栏），
      这里的 0px 轨道只服务于「宽屏折叠右栏」这条尚未开放的路径。 */
 #layout[data-ai-collapsed] { grid-template-columns: var(--wb-col-left) minmax(0, 1fr) 0px; }
+/* ---- 宽屏折叠右栏（顶栏「Agent 对话」开关 · design.md D-1）-----------------
+   第三轨归零**还不够**：`#ai-column` 自己的 `min-width: 360px` 会把它顶出轨道
+   ⇒ 折叠必须**同时**把这一列收起来，中栏才真的吃回那 420px。
+   ⚠️ 只在 **A / B 档（≥1280）** 生效：C 档（≤1279）右栏本就是抽屉
+     （`@media (max-width: 1279px)` 里 `#ai-column` 是 `position: fixed`），
+     那里 `data-ai-collapsed` 表达的是「抽屉关着」，**不是**「这一列不存在」
+     ⇒ 若在这里也 `display:none`，C 档的抽屉就再也开不出来。 */
+@media (min-width: 1280px) {
+  #layout[data-ai-collapsed] #ai-column { display: none; }
+}
 #left-column {
   position: relative;
   /* ⚠️ 靶子没有左栏右边的线（`.col--left` 无 border-right，
@@ -852,12 +935,21 @@ body {
      · 不给 `.side-sections` 设 `min-height` ⇒ 纸的高度就等于内容的高度。 */
 .side-sections {
   background: var(--surface-sunken);
-  padding: 16px 12px 20px;
+  /* 靶子 `.col--left`：`padding: var(--sp-4) var(--sp-3)` = 16px 12px。 */
+  padding: 16px 12px;
 }
+/* 组与组之间：靶子 `.col--left` 的 `gap: var(--sp-5)` = **24px**，组间**没有**分隔线。 */
 .side-section + .side-section {
-  margin-top: 26px;
-  padding-top: 18px;
-  border-top: 1px solid var(--rule-hair);
+  margin-top: 24px;
+}
+/* 组标题与组内内容同一条 12px 文字列（靶子 `.nav-group__t` 的
+   `padding: 0 var(--sp-3) var(--sp-2)` 与 `.nav-item` 的 `padding: … var(--sp-3)`）。 */
+.side-sections .side-label { margin: 0; padding: 0 12px 8px; }
+/* 设置组的三行也是 12px 内距（靶子里它们同样是 `.nav-item`）。 */
+.settings-section .setting-row { padding-left: 12px; }
+.settings-section select {
+  width: calc(100% - 24px);
+  margin: 0 12px;
 }
 .setting-row {
   display: flex; align-items: flex-start; gap: 7px;
@@ -866,7 +958,10 @@ body {
 }
 .setting-row input { margin-top: 2px; }
 #next-problem { margin-left: auto; }
-.side-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.side-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+/* 组标题带计数徽标时：徽标与标题文字同一行（标题不再自带下内距，
+   间距由 `.side-heading` 的 8px 给出）。 */
+.side-heading .side-label { padding-bottom: 0; }
 .side-heading span { color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; }
 /* 计数徽标：标题恒定、计数随内容变
    §4.13 徽标（`badge-pill` · A-115 形态裁定）：**胶囊轮廓 + 沉底实心**；
@@ -932,7 +1027,18 @@ body {
   border-radius: var(--r-pill);
   background: var(--role-blue);
 }
-.nav-item a { color: inherit; text-decoration: none; display: block; width: 100%; }
+/* 图标 + 标签是**一行**、标签与图标**居中对齐**（靶子 `.nav-item` 的 flex 行：
+   `display: flex; align-items: center; gap: var(--sp-3)`）。
+   ⚠️ 此前 `<a>` 是 block ⇒ 标签按基线排在图标**下沿**，看着像从图标底下探出来
+   （学习者 2026-10-24 截图）。⇒ `<a>` 改成 flex 行，标签与图标同一个中线。 */
+.nav-item a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  width: 100%;
+}
 
 /* select */
 select {
@@ -957,9 +1063,11 @@ select:focus-visible {
 
 /* weak list */
 .weak-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 8px;
+  /* 靶子 `.review-item`：**状态点在前** + 标题一行（`flex` + 省略号）。
+     形态其余各条已经对齐（卡面 + 柔影 + 12px 圆角 + 8/12 内距）。 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 12px;
   border-radius: var(--r-md);
   background: var(--surface-card);
@@ -975,13 +1083,23 @@ select:focus-visible {
 /* 行内的知识点链接 = 可点目标：hover 抬起、按下压缩（§2.2(a)） */
 .weak-item a {
   display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   transition: transform var(--dur-fast) var(--ease-standard);
 }
 .weak-item a:hover { transform: translate3d(0, -1px, 0); }
 .weak-item a:active { transform: translate3d(0, -1px, 0) scale(0.96); }
 .weak-item .id,
 .item-id { display: block; color: var(--graph-page-caption, var(--ink-faint)); font-size: 11px; font-family: var(--font-mono); }
-.weak-item .weak-title { display: block; color: var(--ink-strong); font-weight: 600; }
+.weak-item .weak-title {
+  display: block;
+  color: var(--ink-strong);
+  font-weight: 600;
+  /* 靶子 `.review-item__t`：一行 + 省略号（状态点占位，标题吃掉余量）。 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .weak-item .score { color: var(--ink-faint); font-size: 12px; }
 .weak-item .reasons {
   grid-column: 1 / -1;
@@ -1484,7 +1602,21 @@ textarea:focus-visible, input:focus-visible {
 .lk-dot--red { --dot-fill: var(--role-red); --dot-mark: var(--ink-on-role); --dot-line: var(--role-red); }
 .lk-dot--yellow { --dot-fill: var(--role-yellow-deep); --dot-mark: var(--ink-on-warm); --dot-line: var(--role-yellow-deep); }
 .lk-dot--ink { --dot-fill: var(--ink-faint); --dot-mark: var(--ink-on-role); --dot-line: var(--ink-faint); }
-/* 几何冗余通道：三态**形状各不相同**（叉 / 横杠 / 勾） */
+/* 几何冗余通道：三态**形状各不相同**（叉 / 斜杠 / 勾）。
+   ⚠️ **几何是「纯线条」，不是「彩色圆盘 + 挖空符号」**（`component-spec.md` §4.14
+   的 CSS 样例：cross / dash / check 三档都是 `background: transparent` + 2px 线）。
+   原实现留着圆盘底（`--dot-fill` 是角色色）⇒ 与权威样例不符，也与靶子不同
+   （靶子 `.mk-dot--cross` 是两条 ±45° 的 2×10 竖条、`.mk-dot--dash` 是斜切方块，
+   **都没有底**）。
+   ⇒ 线色取**原来的填充档**（红 `--role-red` / 黄 `--role-yellow-deep` /
+   墨 `--ink-faint`）：对比度结论不变（同一批色值），只是不再有圆盘。 */
+.lk-dot--cross,
+.lk-dot--dash,
+.lk-dot--check {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
 .lk-dot--cross::before,
 .lk-dot--cross::after {
   content: "";
@@ -1495,7 +1627,7 @@ textarea:focus-visible, input:focus-visible {
   height: 2px;
   margin: -1px 0 0 -3px;
   border-radius: 1px;
-  background: var(--dot-mark);
+  background: var(--dot-line);
   transform-origin: 50% 50%;
 }
 .lk-dot--cross::before { transform: rotate(45deg); }
@@ -1509,7 +1641,13 @@ textarea:focus-visible, input:focus-visible {
   height: 2px;
   margin: -1px 0 0 -3px;
   border-radius: 1px;
-  background: var(--dot-mark);
+  background: var(--dot-line);
+  /* ⚠️ **45° 斜杠**（`component-spec.md` §3.6 行 424「dash = 45° 斜杠，2px 斜线
+     （`transform: rotate(45deg)` 的细长方块）」；§4.14 的 CSS 样例同）。
+     原实现是**横杠** ⇒ 与 `cross`（也是横杠旋转）塌成同一条视觉通道，
+     「不得有两条状态共用同一组合」的映射唯一性就没了。
+     靶子的 `.mk-dot--dash` 也是斜的（`clip-path` 斜切方块）⇒ 与靶子一致。 */
+  transform: rotate(45deg);
 }
 .lk-dot--check::before,
 .lk-dot--check::after {
@@ -1517,7 +1655,7 @@ textarea:focus-visible, input:focus-visible {
   position: absolute;
   height: 2px;
   border-radius: 1px;
-  background: var(--dot-mark);
+  background: var(--dot-line);
   transform-origin: 0 50%;
 }
 .lk-dot--check::before { width: 4px; left: 2px; top: 50%; margin-top: -1px; transform: rotate(45deg); }
@@ -1748,11 +1886,14 @@ html[data-theme="night"] .lk-toast {
   transform: translateX(0);
   transition: transform var(--dur-base) var(--ease-rebound);
 }
-.lk-switch input:checked + .lk-switch__track { background: var(--role-blue); }
+/* ⚠️ 兄弟选择器用 `~`（不是 `+`）：带文字标签的开关（顶栏段三）在
+   input 与轨道之间插了 `.lk-switch__label` ⇒ 轨道不再是 input 的**紧邻**兄弟。
+   `~` 对没有标签的开关（设置视图）命中同一个元素 ⇒ 行为不变。 */
+.lk-switch input:checked ~ .lk-switch__track { background: var(--role-blue); }
 /* 开态位移：轨道 32 - 内距 2×2 - 拇指 14 = 14px */
-.lk-switch input:checked + .lk-switch__track .lk-switch__thumb { transform: translateX(14px); }
+.lk-switch input:checked ~ .lk-switch__track .lk-switch__thumb { transform: translateX(14px); }
 /* 焦点环落在**轨道**上（原生 checkbox 是隐藏的）：内圈纸色 + 外圈蓝（权威表 §8 规则 2） */
-.lk-switch input:focus-visible + .lk-switch__track {
+.lk-switch input:focus-visible ~ .lk-switch__track {
   outline: var(--focus-width) solid transparent;
   outline-offset: var(--focus-offset);
   box-shadow: 0 0 0 2px var(--surface-base), 0 0 0 4px var(--focus-outer);
@@ -2251,7 +2392,10 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 .practice-set-unavailable-items[open] > summary::before,
 .active-practice-continuation-details[open] > summary::before,
 .practice-set-card-body[open] > .practice-set-card-head::before { content: "▾"; }
-.linked-problem { padding: 14px 0 2px; }
+/* 关联题目卡：文字**不得贴在卡边**（学习者 2026-10-24 截图：标题与题面
+   正好压在卡的左右边上）。原值 `14px 0 2px` 的左右内距是 **0**、下内距只有 2px。
+   ⇒ 按卡片族的留白（`component-spec.md` §4.18「card-spec = 24px 留白」）给满。 */
+.linked-problem { padding: 24px; }
 .problem-title { display: block; color: var(--ink-strong); font-size: 14px; font-weight: 600; }
 /* 关联题面 —— 阅读面 A 组（衬线 + 阅读刻度；字号 17px = --fs-reading） */
 .linked-problem-text {
@@ -2410,6 +2554,19 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 .ai-session-list-head { justify-content: space-between; margin-bottom: 6px; }
 .ai-session-list-head .side-label { margin: 0; }
 #ai-session-list { display: grid; gap: 2px; align-content: start; flex: 1; min-height: 0; overflow-y: auto; }
+/* ---- 会话按最近分组（版式 §6.1 · 今天 / 昨天 / 更早）-----------------------
+   组标题**只写最近措辞**，不带任何计数 / 统计（spec delta「A group heading
+   carries no figure」）。标题的字号 / 颜色 / 内距照靶子
+   （`mockup-baseline/shell.html` 的 `.session-group__t`）。 */
+.ai-session-group { display: grid; gap: 2px; align-content: start; }
+.ai-session-group__title {
+  margin: 0;
+  padding: var(--sp-2) 0 var(--sp-1);
+  font-size: var(--fs-micro);
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--ink-faint);
+}
 .ai-session-item { display: flex; align-items: center; gap: 4px; min-width: 0; }
 .ai-session-entry {
   flex: 1; min-width: 0; height: auto; min-height: 42px; padding: 7px 9px;

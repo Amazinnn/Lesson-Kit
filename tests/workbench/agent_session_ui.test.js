@@ -59,6 +59,26 @@ class Element {
   focus() { this.focused = true; this.trigger("focus"); }
 }
 
+/* The session list is grouped by recency (今天 / 昨天 / 更早) ⇒ the rows live
+   inside group containers. This returns the rows in order, so the tests talk
+   about "the first session" instead of a DOM path. */
+function sessionRows(elements) {
+  const rows = [];
+  const list = elements["ai-session-list"];
+  if (!list) return rows;
+  const has = (node, name) => String(node.className || "").split(/\s+/).indexOf(name) >= 0;
+  list.children.forEach((child) => {
+    if (has(child, "ai-session-group")) {
+      child.children.forEach((item) => {
+        if (has(item, "ai-session-item")) rows.push(item);
+      });
+    } else {
+      rows.push(child);
+    }
+  });
+  return rows;
+}
+
 class Storage {
   constructor() { this.values = new Map(); }
   getItem(key) { return this.values.get(key) || null; }
@@ -175,7 +195,7 @@ test("agent column starts with history and requires an explicit provider for new
     return response({});
   });
   await flush();
-  assert.equal(app.elements["ai-session-list"].children.length, 1);
+  assert.equal(sessionRows(app.elements).length, 1);
   assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), true);
   app.elements["ai-new-session"].click();
   assert.equal(app.elements["ai-provider-picker"].classList.contains("hidden"), false);
@@ -196,7 +216,7 @@ test("history entry opens a minimal fixed-provider chat and list row owns action
     return response({ conversation_id: "conv-001", title: "我的会话", title_source: "user" });
   });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   assert.equal(app.elements["ai-chat-view"].classList.contains("hidden"), false);
   assert.equal(app.elements["ai-session-back"].textContent, "");
@@ -205,7 +225,7 @@ test("history entry opens a minimal fixed-provider chat and list row owns action
   assert.equal(app.elements["ai-session-provider"], undefined);
   assert.equal(app.elements["ai-session-rename"], undefined);
   assert.equal(app.elements["ai-session-delete"], undefined);
-  const row = app.elements["ai-session-list"].children[0];
+  const row = sessionRows(app.elements)[0];
   assert.equal(row.children.length, 2);
   row.children[1].children[0].click();
   await flush();
@@ -216,6 +236,36 @@ test("history entry opens a minimal fixed-provider chat and list row owns action
   assert.ok(calls.some((item) => item.url.endsWith("/ai/sessions/conv-001") && item.options && item.options.method === "DELETE"));
   app.elements["ai-session-back"].click();
   assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), false);
+});
+
+test("the session list groups its entries by recency", async () => {
+  const now = new Date();
+  const yesterday = new Date(now.getTime());
+  yesterday.setDate(yesterday.getDate() - 1);
+  const app = setup((url, options) => {
+    if (url.endsWith("/ai/sessions") && !options) {
+      return response([
+        { conversation_id: "conv-today", provider: "codex", title: "今天的会话",
+          status: "idle", updated_at: now.toISOString() },
+        { conversation_id: "conv-yesterday", provider: "codex", title: "昨天的会话",
+          status: "idle", updated_at: yesterday.toISOString() },
+        { conversation_id: "conv-older", provider: "codex", title: "更早的会话",
+          status: "idle", updated_at: "2026-03-02T01:07:00+00:00" },
+      ]);
+    }
+    return response({});
+  });
+  await flush();
+  const groups = app.elements["ai-session-list"].children;
+  assert.equal(groups.length, 3);
+  assert.deepEqual(groups.map((group) => group.children[0].textContent),
+    ["今天", "昨天", "更早"]);
+  assert.deepEqual(groups.map((group) => group.children.length - 1), [1, 1, 1]);
+  // The heading carries the recency wording and nothing else — no count.
+  assert.equal(groups[0].children[0].children.length, 0);
+  assert.equal(groups[0].getAttribute("aria-labelledby"), "ai-session-group-today");
+  // The rows themselves are unchanged.
+  assert.equal(sessionRows(app.elements).length, 3);
 });
 
 test("legacy provider-memory and daily-create branches are absent", () => {
@@ -316,7 +366,7 @@ test("one POST is gated until acceptance, then another message can queue behind 
     clearTimeout: () => {},
   });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
 
   let prevented = 0;
@@ -363,7 +413,7 @@ test("an unknown send survives reload and reconciles with the same identity with
     return response({});
   });
   await flush();
-  first.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(first.elements)[0].children[0].click();
   await flush();
   first.elements["ai-input"].value = "Keep this message";
   first.elements["ai-send-action"].value = "interrupt";
@@ -469,7 +519,7 @@ test("a rejected send keeps its message recoverable and will not overwrite a new
     return response({});
   });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   app.elements["ai-input"].value = "Rejected but saved";
   app.elements["ai-send"].click();
@@ -554,7 +604,7 @@ test("tool activity cards show terminal failures and only explicit known impact"
     return response({});
   }, { setTimeout: () => 1 });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   const rows = app.elements["ai-messages"].children[0].children[1].children;
   const failed = rows.find((item) => item.activityParts?.label.textContent === "Write file");
@@ -586,7 +636,7 @@ test("reloaded failed history renders saved activities without a blank assistant
     return response({});
   });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
 
   const children = app.elements["ai-messages"].children;
@@ -629,7 +679,7 @@ test("switching conversations clears approval and activity state and reloads eve
     clearTimeout: (id) => timers.delete(id),
   });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   assert.equal(app.ui.state.activities["a-activity"].label, "A");
   assert.equal(app.ui.state.running, true);
@@ -655,7 +705,7 @@ test("switching conversations clears approval and activity state and reloads eve
   staleApprove.click();
   assert.equal(staleApprovalRuns, 0);
 
-  app.elements["ai-session-list"].children[1].children[0].click();
+  sessionRows(app.elements)[1].children[0].click();
   await flush();
   assert.ok(calls.some((call) => call.url.endsWith("/ai/sessions/conv-b/turns/turn-b?after=0")));
   assert.deepEqual(app.ui.state.activityOrder, ["b-1", "b-2"]);
@@ -690,7 +740,7 @@ test("a temporary progress read failure keeps the turn pending and permits a dis
     return response({});
   }, { setTimeout: (callback) => { timers.push(callback); return timers.length; } });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
 
   assert.equal(pollCount, 1);
@@ -1437,8 +1487,8 @@ test("a late Paper approval response cannot change the newly selected conversati
   app.elements["ai-paper-approval-approve"].click();
   app.elements["ai-session-back"].click();
   await flush();
-  assert.equal(app.elements["ai-session-list"].children.length, 2);
-  app.elements["ai-session-list"].children[1].children[0].click();
+  assert.equal(sessionRows(app.elements).length, 2);
+  sessionRows(app.elements)[1].children[0].click();
   await flush();
   await flush();
   assert.equal(JSON.parse(app.window.sessionStorage.getItem("wb_ai_conversation_alpha")), "conv-b");
@@ -1607,7 +1657,7 @@ test("the finished turn artifact keeps its preview across the conversation reloa
     return response({});
   });
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
 
   assert.equal(app.ui.state.latestArtifact.practice_set_id, "ps-001");
@@ -1629,11 +1679,11 @@ test("the finished turn artifact keeps its preview across the conversation reloa
     "the newest artifact of a finished turn still previews after the reload",
   );
 
-  app.elements["ai-session-list"].children[1].children[0].click();
+  sessionRows(app.elements)[1].children[0].click();
   await flush();
   assert.equal(app.elements["agent-artifact-split"].classList.contains("hidden"), true);
 
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   assert.equal(
     app.elements["agent-artifact-split"].classList.contains("hidden"), true,
@@ -1832,7 +1882,7 @@ test("a pending live Artifact reload from one conversation cannot open another c
   }, { setTimeout: () => 1 });
 
   await flush();
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   await flush();
   assert.equal(convALoads, 2, "the completed turn has started its follow-up conversation reload");
@@ -1841,7 +1891,7 @@ test("a pending live Artifact reload from one conversation cannot open another c
   app.elements["ai-session-back"].click();
   await flush();
   assert.equal(app.window.sessionStorage.getItem(liveArtifactKey), null);
-  app.elements["ai-session-list"].children[1].children[0].click();
+  sessionRows(app.elements)[1].children[0].click();
   await flush();
   assert.equal(app.elements["agent-artifact-split"].classList.contains("hidden"), true);
   assert.ok(deepText(app.elements["ai-messages"]).includes("Managed paper"));
@@ -1920,7 +1970,7 @@ test("a stale 404 cannot clear a newer conversation selected during restore", as
   }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-old") } });
   await flush();
 
-  app.elements["ai-session-list"].children[1].children[0].click();
+  sessionRows(app.elements)[1].children[0].click();
   await flush();
   initial.resolve({
     ok: false, status: 404, json: () => Promise.resolve({ error: "gone" }),
@@ -1950,7 +2000,7 @@ test("a stale 503 does not show a restore error over a newer selection", async (
   }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-old") } });
   await flush();
 
-  app.elements["ai-session-list"].children[1].children[0].click();
+  sessionRows(app.elements)[1].children[0].click();
   await flush();
   initial.resolve({
     ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
@@ -1985,7 +2035,7 @@ test("a stale same-session failure cannot override a newer successful load", asy
   }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
   await flush();
 
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   retry.resolve({
     ok: true,
@@ -2022,7 +2072,7 @@ test("a stale same-session success cannot replace the latest conversation conten
   }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
   await flush();
 
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
   retry.resolve({
     ok: true,
@@ -2068,7 +2118,7 @@ test("a current same-session retry failure stays visible after stale startup suc
     }, { seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") } });
     await flush();
 
-    app.elements["ai-session-list"].children[0].children[0].click();
+    sessionRows(app.elements)[0].children[0].click();
     retry.resolve({
       ok: false, status: 503, json: () => Promise.resolve({ error: "unavailable" }),
     });
@@ -2109,7 +2159,7 @@ test("a current 404 while opening a conversation returns to the list", async () 
   });
   await flush();
 
-  app.elements["ai-session-list"].children[0].children[0].click();
+  sessionRows(app.elements)[0].children[0].click();
   await flush();
 
   assert.equal(app.window.sessionStorage.getItem("wb_ai_conversation_alpha"), null);

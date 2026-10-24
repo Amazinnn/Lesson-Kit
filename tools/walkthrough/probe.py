@@ -1,4 +1,4 @@
-"""Browser probes — G-7, G-8 and the 38-item interaction checklist.
+"""Browser probes — G-7, G-8 and the 39-item interaction checklist.
 
 Specification: ``openspec/changes/workbench-visual-language-v2/design-notes/
 walkthrough-harness.md`` §7.2 (G-7 / G-8) and §7.5 (the 38 items, the three
@@ -69,6 +69,7 @@ PAGES = {
     "records": "/w/{ws}/records",
     "practice-sets": "/w/{ws}/practice-sets",
     "settings": "/w/{ws}/settings",
+    "graph": "/w/{ws}/graph",
 }
 
 #: The four viewports of item 3.5-1 (1440 / 1280 / 1024 / 768).
@@ -2661,6 +2662,81 @@ def probe_responsive(ctx):
     return _ok(data, "四档视口都没有横向滚动")
 
 
+def probe_graph_drawer(ctx):
+    """3.5-4 — on the graph page a narrow-viewport drawer stays on top.
+
+    The graph page pins the three columns' `z-index` back to `auto` (G-5's
+    pixel freeze: a stacking context would change the canvas's antialiasing).
+    That flattening also took the **drawer's** own `z-index: 10` away ⇒ the
+    canvas painted over the open drawer and the navigation inside it could
+    not be clicked (reported 2026-10-24).
+
+    The check: open the left drawer at 768 and hit-test a navigation entry —
+    the hit must land **inside the drawer**, not on the canvas.
+    """
+    page = ctx.page
+    viewport = VIEWPORTS["V768"]
+    page.set_viewport_size({"width": viewport["width"], "height": viewport["height"]})
+    page.goto(ctx.url("graph"), wait_until="load", timeout=30000)
+    page.wait_for_timeout(600)
+    closed = page.evaluate("""() => {
+      const col = document.querySelector("#left-column");
+      const st = col ? getComputedStyle(col) : null;
+      return {present: !!col, position: st ? st.position : null,
+              zIndex: st ? st.zIndex : null};
+    }""")
+    opened = {"opened": False, "reason": "没有开抽屉的入口"}
+    try:
+        page.click("#mobile-nav-toggle", timeout=5000)
+        page.wait_for_timeout(700)
+        opened = page.evaluate("""() => {
+          const col = document.querySelector("#left-column");
+          const items = col ? Array.from(col.querySelectorAll(".nav-item")) : [];
+          if (!items.length) return {opened: true, probe: "抽屉里没有导航项"};
+          // **每一项**都要命中抽屉 —— 只测第一项会漏掉「图谱工具条压住抽屉下半截」
+          const misses = [];
+          items.forEach((item, index) => {
+            const r = item.getBoundingClientRect();
+            // 两个点都要命中抽屉：**图标**（学习者真正点的那块）与
+            // **行的右端**（图谱工具条从中间栏左缘铺过来 ⇒ 行的右端会被它盖住，
+            // 图标却还露着 —— 只测图标会漏掉「标签被盖住」这一半）
+            const probes = [
+              {at: "icon", x: r.left + Math.min(24, r.width / 2), y: r.top + r.height / 2},
+              {at: "row-end", x: r.right - 6, y: r.top + r.height / 2},
+            ];
+            probes.forEach((probe) => {
+              const hit = document.elementFromPoint(probe.x, probe.y);
+              if (!hit || !col.contains(hit)) {
+                misses.push({index, at: probe.at,
+                             hit: hit ? String(hit.className || hit.tagName).slice(0, 60) : null,
+                             insideCanvas: hit ? !!hit.closest("#graph-canvas") : false});
+              }
+            });
+          });
+          return {opened: true,
+                  drawerZ: getComputedStyle(col).zIndex,
+                  items: items.length,
+                  misses: misses};
+        }""")
+    except Exception as exc:
+        opened = {"opened": False, "reason": str(exc)}
+    page.set_viewport_size({"width": VIEWPORTS["V1440"]["width"],
+                            "height": VIEWPORTS["V1440"]["height"]})
+    data = {"closed": closed, "opened": opened}
+    if not closed.get("present"):
+        return _pending(data, "图谱页没有左栏")
+    if closed.get("position") != "fixed":
+        return _bad(data, "768 下左栏不是抽屉（position 不是 fixed）")
+    if not opened.get("opened"):
+        return _pending(data, f"没能打开抽屉：{opened.get('reason')}")
+    misses = opened.get("misses") or []
+    if misses:
+        first = misses[0]
+        return _bad(data, f"抽屉里有 {len(misses)} 处被盖住"
+                          f"（第 {first.get('index')} 项的 {first.get('at')} 命中的是 {first.get('hit')}）")
+    return _ok(data, f"抽屉里的 {opened.get('items')} 个导航项都可点")
+
+
 def probe_drawer(ctx):
     """3.5-2 / 3.5-3 — the right column becomes a drawer at 768 and the
     background stays interactive while it is open."""
@@ -3315,6 +3391,7 @@ def run_static(args):
             results["3.5-1"] = probe_responsive(ctx)
             results["3.5-2"] = probe_drawer(ctx)
             results["3.5-3"] = probe_drawer(ctx)
+            results["3.5-4"] = probe_graph_drawer(ctx)
         finally:
             try:
                 context.close()
@@ -3409,7 +3486,7 @@ LEVELS = {
     "3.3-5": "AUTO",
     "3.4-1": "AUTO", "3.4-2": "AUTO", "3.4-3": "AUTO", "3.4-4": "SEMI",
     "3.4-5": "AUTO", "3.4-6": "AUTO", "3.4-7": "AUTO",
-    "3.5-1": "AUTO", "3.5-2": "AUTO", "3.5-3": "AUTO",
+    "3.5-1": "AUTO", "3.5-2": "AUTO", "3.5-3": "AUTO", "3.5-4": "AUTO",
     "3.6-1": "AUTO", "3.6-2": "SEMI", "3.6-3": "AUTO", "3.6-4": "MANUAL",
     "3.6-5": "AUTO",
     "3.7-1": "AUTO", "3.7-2": "AUTO", "3.7-3": "AUTO", "3.7-4": "AUTO",

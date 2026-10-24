@@ -53,6 +53,57 @@ def weak_kp_ids(ranked):
     return [item["kp_id"] for item in ranked if item["score"] > NO_SIGNAL]
 
 
+# The review group's three states — the student-facing vocabulary of
+# GLOSSARY「行动提醒」, which is the **only** state wording a learner sees:
+#   needs_work  重点练习 — 有明确薄弱证据
+#   review      可以复习 — 无薄弱证据但到期
+#   neutral     其余保持中性 — 不显示任何掌握断言（**不另造第四个词**）
+REVIEW_STATES = ("needs_work", "review", "neutral")
+
+
+def review_states(kp_ids, signals, schedule_rows, today):
+    """Why each knowledge point is worth another look.
+
+    The three states are fixed and they are the contract words — the rule is
+    the contract one, not a score threshold: a threshold would drift with the
+    formula, the words must not (design.md D-3).
+
+    A signal is the explicit weakness evidence (GLOSSARY「学习信号」); a
+    schedule row that has come due is the review (GLOSSARY「到期」).
+    """
+    weak_ids = set(signal_rules.strongest_by_target(signals))
+    due_ids = set()
+    for row in schedule_rows:
+        if row.get("item_type") != "kp":
+            continue
+        item_id = row.get("item_id")
+        if not item_id:
+            continue
+        due = _schedule_due_date(row)
+        if due is not None and due <= today:
+            due_ids.add(item_id)
+    states = {}
+    for kp_id in kp_ids:
+        if kp_id in weak_ids:
+            states[kp_id] = "needs_work"
+        elif kp_id in due_ids:
+            states[kp_id] = "review"
+        else:
+            states[kp_id] = "neutral"
+    return states
+
+
+def _schedule_due_date(row):
+    """The due date of a schedule row, or None when it has none."""
+    due_at = row.get("due_at")
+    if not due_at:
+        return None
+    try:
+        return date.fromisoformat(str(due_at)[:10])
+    except ValueError:
+        return None
+
+
 def _signal_score(signal):
     if signal is None:
         return NO_SIGNAL
@@ -67,12 +118,8 @@ def _due_boost(schedule_rows, item_id, today):
     for row in schedule_rows:
         if row.get("item_type") != "kp" or row.get("item_id") != item_id:
             continue
-        due_at = row.get("due_at")
-        if not due_at:
-            continue
-        try:
-            due = date.fromisoformat(str(due_at)[:10])
-        except ValueError:
+        due = _schedule_due_date(row)
+        if due is None:
             continue
         boosts.append(1.0 + (today - due).days if due <= today else 0.8)
     return max(boosts, default=1.0)

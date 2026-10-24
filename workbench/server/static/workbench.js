@@ -1404,6 +1404,10 @@
     var themeValue = document.getElementById("setting-theme-value");
     if (themeBox) themeBox.checked = theme === "night";
     if (themeValue) themeValue.textContent = theme === "night" ? "夜纸" : "暖纸";
+    /* 顶栏「夜纸」开关与设置页是**同一个真值**（design.md D-1：同一份偏好、
+       两个入口）⇒ 这里一并同步，不建第二套状态。 */
+    var topbarThemeBox = document.getElementById("topbar-theme");
+    if (topbarThemeBox) topbarThemeBox.checked = theme === "night";
 
     var face = effectiveReadingFace();
     var faceValue = document.getElementById("setting-face-value");
@@ -1667,9 +1671,71 @@
   if (mobileNavToggle) mobileNavToggle.addEventListener("click", function () {
     toggleDrawer("left-drawer-open");
   });
-  if (mobileAiToggle) mobileAiToggle.addEventListener("click", function () {
-    toggleDrawer("ai-drawer-open");
-  });
+
+  /* ---------- 顶栏段三 · 动作区（design.md D-1 · 靶子 mockup-baseline）---------
+     四个控件**全部复用既有机制**，不新增状态机、不发新请求
+     （「请求序列与载荷不变」是冻结边界）：
+       搜索       → 跳到知识图谱页的既有搜索框（`#graph-search`）—— 产品里唯一
+                    真的会查东西的检索控件；**不放假搜索框**（design.md Risks：
+                    一个不查东西的搜索框比没有更糟）。
+       对话视图   → 右栏两态切换（`aiSetView`：列表 ⇄ 会话）。
+       夜纸       → `saveSetting("theme", …)` + `runLampTransition`，与设置页同一真值。
+       Agent 对话 → A / B 档折叠常驻右栏（`#layout[data-ai-collapsed]`）；
+                    C / D 档开合对话抽屉（既有 `ai-drawer-open`）。
+     ⚠️ 「Agent 对话」是**同一个按钮按视口分两种表现**
+     （`layout-spec.md` §2.2「不新增第二个按钮」）。 */
+  var topbarSearch = document.getElementById("topbar-search");
+  var topbarRailView = document.getElementById("topbar-rail-view");
+  var topbarTheme = document.getElementById("topbar-theme");
+  /* 学习者自己把右栏收起来了 —— resize 不得把它弹回来；视口档位只负责
+     「C 档右栏本来就是抽屉」这一件事（`fitAiColumn`）。 */
+  var aiCollapsedByUser = false;
+
+  function aiRailDocked() {
+    return window.innerWidth >= 1280;
+  }
+
+  if (topbarSearch) {
+    topbarSearch.addEventListener("click", function () {
+      /* 已经在图谱页：直接聚焦那个搜索框（不重载页面）。 */
+      var box = document.getElementById("graph-search");
+      if (box) { box.focus(); return; }
+      window.location.href = "/w/" + encodeURIComponent(WS) + "/graph";
+    });
+  }
+
+  if (topbarRailView) {
+    topbarRailView.addEventListener("change", function () {
+      aiSetView(topbarRailView.checked ? "chat" : "list");
+    });
+  }
+
+  if (topbarTheme) {
+    topbarTheme.addEventListener("change", function () {
+      var theme = topbarTheme.checked ? "night" : "paper";
+      saveSetting("theme", theme);
+      /* 主题的切换由台灯转场承载（tasks.md 8.7）；偏好先落盘 ⇒
+         转场被降级时主题也一样。 */
+      runLampTransition(theme);
+      renderAppearanceValues();
+    });
+  }
+
+  if (mobileAiToggle) {
+    mobileAiToggle.addEventListener("click", function () {
+      if (aiRailDocked()) {
+        /* A / B 档：折叠 / 展开常驻右栏，中栏吃回它让出的宽度。 */
+        aiCollapsedByUser = !aiCollapsedByUser;
+        fitAiColumn();
+        mobileAiToggle.setAttribute(
+          "aria-expanded", aiCollapsedByUser ? "false" : "true"
+        );
+        return;
+      }
+      /* C / D 档：右栏本就是抽屉 ⇒ 开合抽屉（现状行为）。 */
+      toggleDrawer("ai-drawer-open");
+    });
+  }
 
   function mountGraphPage() {
   /* ---------- native knowledge graph (implementation blueprint port) ---------- */
@@ -5513,77 +5579,154 @@
     aiSessionListView.classList.toggle("hidden", view !== "list");
     aiProviderPicker.classList.toggle("hidden", view !== "picker");
     aiChatView.classList.toggle("hidden", view !== "chat");
+    /* 顶栏「对话视图」开关与右栏两态是**同一件事** ⇒ 一个真值（design.md D-1）。
+       开关反过来切视图时也走这里（`aiSetView`），不另设第二套状态。 */
+    if (topbarRailView) topbarRailView.checked = view === "chat";
   }
 
   function aiSessionLabel(record) {
     return record.title || "未命名对话";
   }
 
+  /* ---------- 会话按最近分组（版式 §6.1 · 今天 / 昨天 / 更早）--------------
+     分组在**客户端**做：输入是会话条目**已有的** `updated_at` ⇒ 不新增端点、
+     不改载荷（design.md D-2）。组标题只写最近措辞，**不带任何计数**
+     （spec delta「A group heading carries no figure」）。 */
+  var AI_SESSION_GROUPS = [
+    { key: "today", label: "今天" },
+    { key: "yesterday", label: "昨天" },
+    { key: "older", label: "更早" },
+  ];
+
+  /* The local calendar day of a date, as `YYYY-MM-DD`. */
+  function aiSessionDayOf(date) {
+    var month = date.getMonth() + 1;
+    var day = date.getDate();
+    return date.getFullYear() + "-" + (month < 10 ? "0" : "") + month
+      + "-" + (day < 10 ? "0" : "") + day;
+  }
+
+  /* The local calendar day of a session timestamp.
+     `updated_at` is a UTC ISO stamp (`…+00:00`) ⇒ the learner's "today" is the
+     **local** day, so read the local calendar fields — never the UTC date
+     slice (`slice(0, 10)` would file a late-evening session under yesterday).
+     A stamp without a timezone is already local wall-clock ⇒ take it as
+     written (`new Date("2026-03-02 01:07:00")` would shift it a day west of
+     UTC). */
+  function aiSessionStampDay(stamp) {
+    var text = String(stamp || "").trim();
+    var plain = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
+    if (!plain) return "";
+    if (!/(?:Z|[+-]\d{2}:?\d{2})$/.test(text)) {
+      return plain[1] + "-" + plain[2] + "-" + plain[3];
+    }
+    var date = new Date(text);
+    if (isNaN(date.getTime())) return "";
+    return aiSessionDayOf(date);
+  }
+
+  function aiSessionBuckets(items) {
+    var now = new Date();
+    var yesterday = new Date(now.getTime());
+    yesterday.setDate(yesterday.getDate() - 1);
+    var today = aiSessionDayOf(now);
+    var before = aiSessionDayOf(yesterday);
+    var buckets = { today: [], yesterday: [], older: [] };
+    items.forEach(function (record) {
+      var day = aiSessionStampDay(record.updated_at);
+      if (day === today) buckets.today.push(record);
+      else if (day === before) buckets.yesterday.push(record);
+      else buckets.older.push(record);
+    });
+    return buckets;
+  }
+
+  function aiSessionRow(record) {
+    var row = document.createElement("div");
+    row.className = "ai-session-item";
+    row.setAttribute("role", "listitem");
+    row.dataset.conversationId = record.conversation_id;
+    var button = document.createElement("button");
+    button.className = "ai-session-entry";
+    button.type = "button";
+    button.setAttribute("aria-label", aiSessionLabel(record));
+    var title = document.createElement("strong");
+    title.className = "ai-session-entry-title";
+    title.textContent = aiSessionLabel(record);
+    var meta = document.createElement("span");
+    meta.className = "ai-session-entry-meta";
+    var updated = record.updated_at ? String(record.updated_at).slice(0, 10) : "";
+    meta.textContent = (record.provider || "Agent")
+      + (updated ? " · " + updated : "")
+      + (record.status === "running" ? " · 运行中" : "");
+    button.appendChild(title);
+    button.appendChild(meta);
+    button.addEventListener("click", function () { aiLoadConversation(record.conversation_id); });
+    row.appendChild(button);
+    var actions = document.createElement("div");
+    actions.className = "ai-session-actions";
+    var rename = document.createElement("button");
+    rename.type = "button";
+    rename.className = "ghost sm icon-only";
+    rename.textContent = "✎";
+    rename.title = "重命名对话";
+    rename.setAttribute("aria-label", "重命名对话");
+    rename.addEventListener("click", function (event) {
+      if (event && event.stopPropagation) event.stopPropagation();
+      var next = window.prompt ? window.prompt("会话名称", aiSessionLabel(record)) : "";
+      next = String(next || "").trim();
+      if (!next) return;
+      api("/ai/sessions/" + encodeURIComponent(record.conversation_id), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: next }),
+      }).then(aiRefreshSessionList).catch(function (err) {
+        aiSetStatus("无法重命名：" + (err.message || "未知错误"));
+      });
+    });
+    var remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "ghost sm icon-only";
+    remove.textContent = "×";
+    remove.title = "删除本地会话";
+    remove.setAttribute("aria-label", "删除本地会话");
+    remove.addEventListener("click", function (event) {
+      if (event && event.stopPropagation) event.stopPropagation();
+      if (window.confirm && !window.confirm("删除这个本地会话？")) return;
+      api("/ai/sessions/" + encodeURIComponent(record.conversation_id), { method: "DELETE" })
+        .then(aiRefreshSessionList).catch(function (err) {
+          aiSetStatus(err.message === "409" ? "会话运行中，暂时不能删除。" : "无法删除会话。");
+        });
+    });
+    actions.appendChild(rename);
+    actions.appendChild(remove);
+    row.appendChild(actions);
+    return row;
+  }
+
   function aiRenderSessionList(items) {
     if (!aiSessionList) return;
     aiSessionRecords = items || [];
     aiSessionList.innerHTML = "";
-    aiSessionRecords.forEach(function (record) {
-      var row = document.createElement("div");
-      row.className = "ai-session-item";
-      row.setAttribute("role", "listitem");
-      row.dataset.conversationId = record.conversation_id;
-      var button = document.createElement("button");
-      button.className = "ai-session-entry";
-      button.type = "button";
-      button.setAttribute("aria-label", aiSessionLabel(record));
-      var title = document.createElement("strong");
-      title.className = "ai-session-entry-title";
-      title.textContent = aiSessionLabel(record);
-      var meta = document.createElement("span");
-      meta.className = "ai-session-entry-meta";
-      var updated = record.updated_at ? String(record.updated_at).slice(0, 10) : "";
-      meta.textContent = (record.provider || "Agent")
-        + (updated ? " · " + updated : "")
-        + (record.status === "running" ? " · 运行中" : "");
-      button.appendChild(title);
-      button.appendChild(meta);
-      button.addEventListener("click", function () { aiLoadConversation(record.conversation_id); });
-      row.appendChild(button);
-      var actions = document.createElement("div");
-      actions.className = "ai-session-actions";
-      var rename = document.createElement("button");
-      rename.type = "button";
-      rename.className = "ghost sm icon-only";
-      rename.textContent = "✎";
-      rename.title = "重命名对话";
-      rename.setAttribute("aria-label", "重命名对话");
-      rename.addEventListener("click", function (event) {
-        if (event && event.stopPropagation) event.stopPropagation();
-        var next = window.prompt ? window.prompt("会话名称", aiSessionLabel(record)) : "";
-        next = String(next || "").trim();
-        if (!next) return;
-        api("/ai/sessions/" + encodeURIComponent(record.conversation_id), {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: next }),
-        }).then(aiRefreshSessionList).catch(function (err) {
-          aiSetStatus("无法重命名：" + (err.message || "未知错误"));
-        });
+    var buckets = aiSessionBuckets(aiSessionRecords);
+    AI_SESSION_GROUPS.forEach(function (group) {
+      var records = buckets[group.key];
+      if (!records.length) return;
+      /* 组 = 真标题（`<h3>`）+ 条目容器 —— 与知识点的分组同一种写法
+         （`pages.py` 的 `.knowledge-group`）。 */
+      var section = document.createElement("div");
+      section.className = "ai-session-group";
+      section.setAttribute("role", "group");
+      var heading = document.createElement("h3");
+      heading.className = "ai-session-group__title";
+      heading.setAttribute("id", "ai-session-group-" + group.key);
+      heading.textContent = group.label;
+      section.setAttribute("aria-labelledby", "ai-session-group-" + group.key);
+      section.appendChild(heading);
+      records.forEach(function (record) {
+        section.appendChild(aiSessionRow(record));
       });
-      var remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "ghost sm icon-only";
-      remove.textContent = "×";
-      remove.title = "删除本地会话";
-      remove.setAttribute("aria-label", "删除本地会话");
-      remove.addEventListener("click", function (event) {
-        if (event && event.stopPropagation) event.stopPropagation();
-        if (window.confirm && !window.confirm("删除这个本地会话？")) return;
-        api("/ai/sessions/" + encodeURIComponent(record.conversation_id), { method: "DELETE" })
-          .then(aiRefreshSessionList).catch(function (err) {
-            aiSetStatus(err.message === "409" ? "会话运行中，暂时不能删除。" : "无法删除会话。");
-          });
-      });
-      actions.appendChild(rename);
-      actions.appendChild(remove);
-      row.appendChild(actions);
-      aiSessionList.appendChild(row);
+      aiSessionList.appendChild(section);
     });
     if (aiSessionEmpty) aiSessionEmpty.classList.toggle("hidden", aiSessionRecords.length > 0);
   }
@@ -5738,6 +5881,9 @@
        旧值 1024 是「D 档单栏」那套口径：C 档（1024–1279）右栏已经是抽屉，
        阈值若留在 1024，会出现「CSS 模板是单列 + 行内变量仍是三栏」的混合态。 */
     if (window.innerWidth < 1280) layout.setAttribute("data-ai-collapsed", "1");
+    /* ⚠️ A / B 档：**学习者自己收起的右栏不因 resize 弹回来**（顶栏「Agent 对话」
+       开关 = 一个真值）。视口档位只负责「C 档右栏本来就是抽屉」。 */
+    else if (aiCollapsedByUser) layout.setAttribute("data-ai-collapsed", "1");
     else layout.removeAttribute("data-ai-collapsed");
   }
 

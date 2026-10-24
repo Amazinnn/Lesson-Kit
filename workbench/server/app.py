@@ -344,10 +344,22 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
     def _weak_items(self, workspace, pool):
         from datetime import date
         prefix = pool.scope_prefix()
-        return weak.score_all(
-            pool.kps(prefix), pool.signals(), pool.schedule_rows(),
-            pool.relations(), set(), date.today(),
+        today = date.today()
+        signals = pool.signals()
+        schedule_rows = pool.schedule_rows()
+        ranked = weak.score_all(
+            pool.kps(prefix), signals, schedule_rows,
+            pool.relations(), set(), today,
         )[:20]
+        # The review group carries **why** each item is worth another look
+        # (GLOSSARY「行动提醒」). The state is worked out here, on the
+        # rendering path — the weak endpoint keeps its four fields, so the
+        # request and the payload stay exactly as they were.
+        states = weak.review_states(
+            [item["kp_id"] for item in ranked], signals, schedule_rows, today)
+        for item in ranked:
+            item["state"] = states.get(item["kp_id"], "neutral")
+        return ranked
 
     def _graph_artifact(self, workspace):
         from workbench.workspace_layout import graph_artifact_path
