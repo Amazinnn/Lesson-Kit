@@ -1027,7 +1027,18 @@ body {
   border-radius: var(--r-pill);
   background: var(--role-blue);
 }
-.nav-item a { color: inherit; text-decoration: none; display: block; width: 100%; }
+/* 图标 + 标签是**一行**、标签与图标**居中对齐**（靶子 `.nav-item` 的 flex 行：
+   `display: flex; align-items: center; gap: var(--sp-3)`）。
+   ⚠️ 此前 `<a>` 是 block ⇒ 标签按基线排在图标**下沿**，看着像从图标底下探出来
+   （学习者 2026-10-24 截图）。⇒ `<a>` 改成 flex 行，标签与图标同一个中线。 */
+.nav-item a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: inherit;
+  text-decoration: none;
+  width: 100%;
+}
 
 /* select */
 select {
@@ -2381,7 +2392,10 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 .practice-set-unavailable-items[open] > summary::before,
 .active-practice-continuation-details[open] > summary::before,
 .practice-set-card-body[open] > .practice-set-card-head::before { content: "▾"; }
-.linked-problem { padding: 14px 0 2px; }
+/* 关联题目卡：文字**不得贴在卡边**（学习者 2026-10-24 截图：标题与题面
+   正好压在卡的左右边上）。原值 `14px 0 2px` 的左右内距是 **0**、下内距只有 2px。
+   ⇒ 按卡片族的留白（`component-spec.md` §4.18「card-spec = 24px 留白」）给满。 */
+.linked-problem { padding: 24px; }
 .problem-title { display: block; color: var(--ink-strong); font-size: 14px; font-weight: 600; }
 /* 关联题面 —— 阅读面 A 组（衬线 + 阅读刻度；字号 17px = --fs-reading） */
 .linked-problem-text {
