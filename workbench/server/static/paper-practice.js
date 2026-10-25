@@ -21,7 +21,6 @@
     var api = deps.api;
     var post = deps.post;
     var showRatingEnabled = deps.showRatingEnabled || function () { return true; };
-    var showSourceEnabled = deps.showSourceEnabled || function () { return true; };
     var renderMath = deps.renderMath || function () {};
     var richText = deps.richText || function (value) { return deps.escapeHtml(String(value || "")); };
     var escapeHtml = deps.escapeHtml || function (value) { return String(value || ""); };
@@ -666,7 +665,7 @@
           ? "" : "<p class='practice-streak' style='position: relative'>" + streakMarkup + "</p>")
         + "<h2>" + escapeHtml(title) + "</h2>"
         + "<div class='wb-reading wb-reading--stem problem-text'>" + richText(String(prompt)) + "</div>"
-        + (problem.source_evidence && showSourceEnabled()
+        + (problem.source_evidence
           ? "<p class='practice-source'>来源：" + escapeHtml(problem.source_evidence) + "</p>" : "");
       renderMath(ids.question);
     }
@@ -810,7 +809,7 @@
     }
 
     function canRate(item) {
-      return !!(run && run.rating_mode !== "off" && item.item_type === "problem"
+      return !!(run && item.item_type === "problem"
         && item.attempt_id && (item.state === "answered" || item.state === "stuck")
         && (renderingArchived || currentMode() === "per_item"));
     }

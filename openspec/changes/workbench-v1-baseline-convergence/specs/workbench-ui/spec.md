@@ -276,7 +276,7 @@ in the settings view. The preferences that the left rail has always carried
 SHALL stay there as well, so that a place the learner can see is not moved
 without a word. Both entry points SHALL drive the same stored value. Changing
 either preference SHALL take effect on the page the learner is looking at,
-without the learner leaving the current paper and starting it again.
+without the learner leaving the current paper and starting it again. Sources SHALL default to hidden while retaining explicit stored preferences. Both hiding and reenabling eligible source/self-rating surfaces in an ordinary Paper SHALL take effect immediately, including when the Paper started with rating off; recorded round modes and answer locking SHALL remain unchanged.
 
 #### Scenario: The settings view carries the display preferences
 

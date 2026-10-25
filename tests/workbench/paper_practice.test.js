@@ -163,7 +163,8 @@ function fixture(options = {}) {
     patch: (path, body) => write("PATCH", path, body),
     store() {},
     load(_key, fallback) { return fallback; },
-    showRatingEnabled() { return true; },
+    showRatingEnabled() { return options.showRating !== false; },
+    showSourceEnabled() { return options.showSource !== false; },
     renderMath() {},
     escapeHtml(value) { return String(value).replace(/[&<>"']/g, (ch) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#x27;",
@@ -184,6 +185,37 @@ function fixture(options = {}) {
 async function flush() {
   for (let i = 0; i < 5; i += 1) await new Promise((resolve) => setImmediate(resolve));
 }
+
+test("current source remains mounted when hidden so enabling needs no rerender", async () => {
+  const active = practice();
+  active.items[0].payload.source_evidence = "教材第2章";
+  const app = fixture({ active, showSource: false });
+  await flush();
+  assert.match(app.ids["paper-question"].innerHTML, /practice-source/);
+  assert.match(app.ids["paper-question"].innerHTML, /教材第2章/);
+});
+
+test("eligible rating stays mounted even in an off round for immediate reenabling", async () => {
+  const active = { ...practice(), rating_mode: "off" };
+  active.items[0].state = "answered";
+  active.items[0].attempt_id = 501;
+  active.items[0].attempt = { answer_text: "A", verdict: true };
+  const preferences = { active, showRating: false };
+  const app = fixture(preferences);
+  await flush();
+  assert.equal(app.ids["paper-rating"].hidden, false);
+  assert.equal(app.ids["paper-rating"].children.length, 4);
+  assert.equal(app.ids["paper-answer"].disabled, true);
+  assert.equal(app.calls.some((call) => call.method === "POST"), false);
+  preferences.showRating = true;
+  app.ids["paper-rating"].children[1].children[0].value = "4";
+  await app.ids["paper-rating"].children[3].dispatch("click");
+  await flush();
+  const feedback = app.calls.find((call) => call.path === "/feedback");
+  assert.equal(feedback.body.attempt_id, 501);
+  assert.equal(feedback.body.rating, 4);
+  assert.equal(app.ids["paper-answer"].disabled, true);
+});
 
 test("saved Paper setup fixes the selected reveal timing when starting", async () => {
   const app = fixture({ href: "http://lesson-kit.test/w/alpha/practice?paper=ps-017" });

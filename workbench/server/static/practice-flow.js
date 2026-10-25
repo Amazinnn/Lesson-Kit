@@ -19,7 +19,6 @@
     var store = deps.store;
     var load = deps.load;
     var showRatingEnabled = deps.showRatingEnabled || function () { return true; };
-    var showSourceEnabled = deps.showSourceEnabled || function () { return true; };
     var renderMath = deps.renderMath;
     var escapeHtml = deps.escapeHtml;
     var richText = deps.richText;
@@ -2177,7 +2176,6 @@
   function practiceSourceHtml(problem) {
     var evidence = String((problem && problem.source_evidence) || "").replace(/\s+/g, " ").trim();
     if (!evidence) return "";
-    if (!showSourceEnabled()) return "";
     return "<p class='practice-source'>来源：" + escapeHtml(evidence) + "</p>";
   }
 

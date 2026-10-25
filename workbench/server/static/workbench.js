@@ -313,7 +313,7 @@
 
   /* 「题目来源」与「自评」是同一类显示偏好 ⇒ 同一份真值、同一套生效机制。 */
   function showSourceEnabled() {
-    return loadSetting("showSource", true) !== false;
+    return loadSetting("showSource", false) === true;
   }
 
   /* 把两个显示偏好落到根属性上 ⇒ CSS 一次到位，**不重渲染、不改状态机**。
@@ -324,6 +324,14 @@
     if (!root) return;
     root.setAttribute("data-show-rating", showRatingEnabled() ? "on" : "off");
     root.setAttribute("data-show-source", showSourceEnabled() ? "on" : "off");
+    ["setting-show-rating", "setting-show-rating-view"].forEach(function (id) {
+      var control = document.getElementById(id);
+      if (control) control.checked = showRatingEnabled();
+    });
+    ["setting-show-source", "setting-show-source-view"].forEach(function (id) {
+      var control = document.getElementById(id);
+      if (control) control.checked = showSourceEnabled();
+    });
   }
 
   /* The sound preference is one field of the same record (`sound`, boolean,
@@ -1393,7 +1401,7 @@
   }
   /* 另一个标签页改了设置（如设置视图开在另一页）⇒ 这一页当场跟上。 */
   window.addEventListener("storage", function (event) {
-    if (!event.key || event.key.indexOf("wb_settings_") === 0) applyDisplayPreferences();
+    if (event.key === null || event.key === SETTINGS_KEY) applyDisplayPreferences();
   });
 
   var runningSendSetting = document.getElementById("setting-running-send");

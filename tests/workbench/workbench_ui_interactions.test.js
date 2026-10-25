@@ -289,7 +289,10 @@ class FakeElement {
     this.classList = new FakeClassList();
     this.children = [];
     this.attributes = {};
-    this.style = { setProperty(name, value) { this[name] = value; } };
+    this.style = {
+      setProperty(name, value) { this[name] = value; },
+      removeProperty(name) { delete this[name]; },
+    };
     this.clientWidth = options.clientWidth || 800;
     this.clientHeight = options.clientHeight || 600;
     this.queryAll = options.queryAll || (() => []);
@@ -450,6 +453,7 @@ function runWorkbench({
   promptFn = undefined, confirmFn = undefined, selectors = {}, agentUISurfaces = null,
 }) {
   const document = {
+    documentElement: new FakeElement("html"),
     hidden: false,
     listeners: {},
     addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
@@ -480,7 +484,11 @@ function runWorkbench({
   const window = {
     innerWidth: 1280,
     location: "",
-    addEventListener() {},
+    listeners: {},
+    addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
+    trigger(type, event = {}) {
+      for (const callback of this.listeners[type] || []) callback(event);
+    },
     scrollTo() {},
     matchMedia() { return { matches: reducedMotion }; },
     prompt: promptFn,
@@ -4847,4 +4855,37 @@ test("an empty rating input is rejected inline instead of dying at the server", 
   await flush();
   assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
   assert.match(elements["practice-error"].textContent, /请输入 1–5 的自评/);
+});
+
+
+test("source defaults hidden and display preferences synchronize both entry points and tabs", () => {
+  const elements = { layout: layout(), ...practiceElements() };
+  for (const id of ["setting-show-source", "setting-show-source-view", "setting-show-rating", "setting-show-rating-view"]) {
+    elements[id] = new FakeElement(id);
+  }
+  const local = new FakeStorage();
+  const app = runWorkbench({ elements, local, fetch: () => jsonResponse({}) });
+  assert.equal(elements["setting-show-source"].checked, false);
+  assert.equal(elements["setting-show-source-view"].checked, false);
+  assert.equal(app.document.documentElement.getAttribute("data-show-source"), "off");
+  elements["setting-show-source"].checked = true;
+  elements["setting-show-source"].trigger("change");
+  assert.equal(elements["setting-show-source-view"].checked, true);
+  assert.equal(app.document.documentElement.getAttribute("data-show-source"), "on");
+  elements["setting-show-rating"].checked = false;
+  elements["setting-show-rating"].trigger("change");
+  assert.equal(elements["setting-show-rating-view"].checked, false);
+  elements["setting-show-rating-view"].checked = true;
+  elements["setting-show-rating-view"].trigger("change");
+  assert.equal(elements["setting-show-rating"].checked, true);
+  local.setItem("wb_settings_alpha", JSON.stringify({ showRating: false, showSource: false }));
+  app.window.trigger("storage", { key: "wb_settings_alpha" });
+  assert.equal(elements["setting-show-source"].checked, false);
+  assert.equal(elements["setting-show-rating-view"].checked, false);
+  assert.equal(app.document.documentElement.getAttribute("data-show-rating"), "off");
+  local.setItem("wb_settings_alpha", JSON.stringify({ showRating: true, showSource: true }));
+  app.window.trigger("storage", { key: "wb_settings_beta" });
+  assert.equal(app.document.documentElement.getAttribute("data-show-source"), "off");
+  app.window.trigger("storage", { key: "wb_settings_alpha" });
+  assert.equal(app.document.documentElement.getAttribute("data-show-source"), "on");
 });

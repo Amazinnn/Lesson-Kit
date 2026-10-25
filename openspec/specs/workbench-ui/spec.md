@@ -1048,13 +1048,12 @@ Saved Paper cards SHALL arrive folded with title, count and management controls 
 
 The workbench's left column SHALL carry a settings section whose preferences
 apply across the practice and paper surfaces. Its first preference SHALL be a
-checkbox, 「练习与组卷显示自评」, defaulting to on: self-rating behaves exactly
+checkbox, 「练习与试卷显示自评」, defaulting to on: self-rating behaves exactly
 as before. With it off, no self-rating surface SHALL appear anywhere in the
 flow — the rating-timing choice is hidden and not required to start, the
 feedback panel never renders, a finished round takes the no-session-end path,
 and records label the round 关闭自评. The preference SHALL persist per
-workspace in the browser across tabs and restarts, and SHALL take effect at the
-next round's start; a running round keeps the mode it started with.
+workspace in the browser across tabs and restarts, and SHALL immediately hide or show eligible self-rating controls in an open ordinary Paper, including a Paper started with rating off. Answer locking, navigation, objective grading and the recorded round mode SHALL remain unchanged. Legacy card/session timing retains its existing round mode.
 
 #### Scenario: The preference survives a restart
 
@@ -1074,6 +1073,11 @@ next round's start; a running round keeps the mode it started with.
 - **WHEN** the preference is on
 - **THEN** the rating-timing choice, per-problem rating, and session-end
   unified rating behave as before
+
+#### Scenario: Reenable optional self-rating during a Paper
+
+- **WHEN** an ordinary Paper started with self-rating off and the learner turns the display preference on after submitting an eligible item
+- **THEN** the existing item offers optional self-rating without restarting, duplicating an Attempt or changing its answer lock
 
 ### Requirement: Long provider lists remain navigable
 At desktop widths, when the visible new-conversation provider picker has more model options than fit in the available height, the system SHALL allow the learner to scroll the options with native wheel input while keeping the picker heading and helper text visible.
@@ -1565,3 +1569,16 @@ Successful explicit final submission SHALL show a congratulations-style surface 
 #### Scenario: Practice again
 - **WHEN** the learner starts again from completion
 - **THEN** a new run starts from that Paper with a fresh start choice and the previous answer sheet remains intact
+
+### Requirement: Question source display preference
+
+The settings view and left rail SHALL expose the same per-workspace self-rating and question-source preferences, synchronize both entry points and browser tabs, and preserve explicit stored values. Question sources SHALL be hidden by default. Turning source display off or on SHALL immediately hide or show an available source on the current question without navigation, restarting or losing inputs. Hiding a source SHALL NOT remove its persisted provenance.
+
+#### Scenario: Source starts hidden and can be toggled on the current question
+- **WHEN** a workspace has no explicit source preference and a question has source evidence
+- **THEN** the source is hidden by default
+- **AND** enabling, disabling and reenabling the preference updates that same question immediately
+
+#### Scenario: Explicit preferences and both entry points agree
+- **WHEN** the learner changes either preference in the left rail, settings view or another tab for that workspace
+- **THEN** both entry points and the visible question reflect that value without changing another workspace's preferences

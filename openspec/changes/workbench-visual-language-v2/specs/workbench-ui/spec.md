@@ -926,8 +926,7 @@ as before. With it off, no self-rating surface SHALL appear anywhere in the
 flow — the rating-timing choice is hidden and not required to start, the
 feedback panel never renders, a finished round takes the no-session-end path,
 and records label the round 关闭自评. The preference SHALL persist per
-workspace in the browser across tabs and restarts, and SHALL take effect at the
-next round's start; a running round keeps the mode it started with.
+workspace in the browser across tabs and restarts, and SHALL immediately hide or show eligible self-rating controls in an open ordinary Paper, including a Paper started with rating off. Answer locking, navigation, objective grading and the recorded round mode SHALL remain unchanged. Legacy card/session timing retains its existing round mode.
 
 #### Scenario: The preference survives a restart
 
@@ -972,6 +971,11 @@ write to the pool, and SHALL NOT affect any learning fact.
 
 - **WHEN** the learner changes an appearance preference
 - **THEN** no pool record, learning fact or statistics row is written or changed
+
+#### Scenario: Reenable optional self-rating during a Paper
+
+- **WHEN** an ordinary Paper started with self-rating off and the learner turns the display preference on after submitting an eligible item
+- **THEN** the existing item offers optional self-rating without restarting, duplicating an Attempt or changing its answer lock
 
 ### Requirement: Agent rail presentation keeps the learning page primary
 
