@@ -6,5 +6,5 @@
 ## 2. Verification and delivery
 
 - [x] 2.1 Run focused/full Node tests, full pytest, compileall, strict spec validation and dmath extract guard; review before merging. Node 269 passed; Python full 1200 passed / 2 timing failures, both isolated reruns passed; exact limits in dated audit.
-- [ ] 2.2 Fast-forward main and push, clean the four nonexistent co IDs and their references with a backup, preserve Paper containers and valid progress, restart 3081 and verify actual pause/switch readiness.
-- [ ] 2.3 Record exact cleanup evidence, cause and deployment result in the handoff.
+- [x] 2.2 Fast-forward main and push, clean the four nonexistent co IDs and their references with a backup, preserve Paper containers and valid progress, restart 3081 and verify actual pause/switch readiness.
+- [x] 2.3 Record exact cleanup evidence, cause and deployment result in the handoff.

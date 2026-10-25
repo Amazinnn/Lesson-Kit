@@ -42,4 +42,14 @@
 
 新增三项 Node 回归先失败再通过，覆盖隐藏来源仍可即时恢复、rating-off 普通 Paper 的已答题重新开启后可以显式保存自评且不解锁答案、两个入口及同工作区 storage 同步。完整前端测试 269/269 通过。compileall、19 项现行 OpenSpec strict 校验、本 change 校验和 dmath ch06 extract-problems guard 均通过。
 
-受限验收 reviewer 校准状态为 disabled，未宣称独立 reviewer ACCEPT；由主 Agent 完成边界与差异审查。Python 3.14.3 + UTF-8 全量为 1200 passed / 2 failed（1033.64s）；两项失败分别在未改动的会话取消时序和后台 check_ingest 轮次，随后相同环境独立重跑为 2 passed（1.86s）。这不等同于一次全绿全量。Python 3.11 尝试全量时因既有 pages.py 的新版 f-string 语法发生 6 项收集错误，未修改本次范围外的 Python 版本兼容问题；3.11 Pi RPC 单项集 25/25 通过。真实运行页面验收随部署补记。
+受限验收 reviewer 校准状态为 disabled，未宣称独立 reviewer ACCEPT；由主 Agent 完成边界与差异审查。Python 3.14.3 + UTF-8 全量为 1200 passed / 2 failed（1033.64s）；两项失败分别在未改动的会话取消时序和后台 check_ingest 轮次，随后相同环境独立重跑为 2 passed（1.86s）。这不等同于一次全绿全量。Python 3.11 尝试全量时因既有 pages.py 的新版 f-string 语法发生 6 项收集错误，未修改本次范围外的 Python 版本兼容问题；3.11 Pi RPC 单项集 25/25 通过。
+
+
+## 合并、运行与页面验收
+
+- `98f50747` 已 fast-forward 到 main 并推送 origin/main，包含 rebase 后的设置提交和收口补丁。没有合入其他未请求的分支。
+- 3081 已在 `.worktrees/runtime-main` 重启，PID 44312；核对进程 CWD 与命令，HTTP 提供的 workbench.js 与 main 的文件逐字一致（仅统一换行后比较，不使用 hash）。
+- 真实 Chromium 页面继续 co ps-001，当前题为 co-ch02-mq-044：来源初始隐藏，自评可显示（本轮原 rating_mode=off）；来源开关和自评关闭/重新开启均立即更新 computed display。题目 DOM 身份、HTML、答案和锁定状态不变，没有重渲染。
+- 设置页的来源开关与左栏双向同步，最终恢复来源隐藏、自评开启。跨标签同步由 Node 回归覆盖。
+- 验收后经页面“暂停练习”返回试卷列表；ps-001 保留 8/22、另一份 ps-002 可开始、没有活动选中。重新对照备份，六张有效历史学习表及 practice_runs 仍未改变，外键检查 0 问题。
+- 浏览器唯一 error 为既有 favicon.ico 404；未出现本次设置的脚本异常。工作区原有未跟踪文件未纳入提交。
