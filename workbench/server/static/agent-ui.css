@@ -6,6 +6,13 @@
 #ai-column.agent-rail,
 #ai-column:has(.agent-rail-home) { background: var(--surface-card); }
 .agent-rail-home, #ai-chat-view { min-height: 0; }
+#ai-column { display: flex; }
+/* Bound cards outside the message list so history and input remain reachable. */
+.ai-paper-approval, .agent-composer-shell {
+  flex-shrink: 0;
+  max-height: 35%;
+  overflow-y: auto;
+}
 .ai-session-list-head, #ai-chat-head { min-height: 34px; }
 #ai-chat-head {
   flex: none;

@@ -539,6 +539,11 @@ The Agent chat SHALL constrain its message region to the available column height
 - **WHEN** the Agent message list is taller than the visible right column
 - **THEN** the learner can scroll the message region with the mouse wheel while the input remains available
 
+#### Scenario: Read long cards while chatting
+
+- **WHEN** a Paper approval or another card above the input exceeds the available height
+- **THEN** its content scrolls within a bounded region, the conversation remains scrollable, and the input stays within the column
+
 ### Requirement: Fixed outer sidebar boundaries
 
 On desktop, resizing either sidebar SHALL change only that sidebar and the flexible middle column. The left outer edge SHALL remain at the viewport left, the right outer edge SHALL remain at the viewport right, and the middle column SHALL retain at least 420px.
