@@ -92,6 +92,9 @@
     var streak = window.lkStreak && typeof window.lkStreak.create === "function"
       ? window.lkStreak.create({ root: ids.question })
       : null;
+    var motion = window.PixelPracticeMotion && typeof window.PixelPracticeMotion.mount === "function"
+      ? window.PixelPracticeMotion.mount({ root: root, work: ids.work, question: ids.question,
+        options: ids.options, completion: ids.completion }) : null;
 
     function emptyLocal() {
       return {
@@ -602,7 +605,10 @@
     }
 
     function renderDots() {
-      if (!ids.dots || !run) return;
+      if (!run) return;
+      if (motion) motion.update({ statuses: run.items.map(itemStatus), mode: currentMode(),
+        archived: renderingArchived, reviewing: reviewing });
+      if (!ids.dots) return;
       ids.dots.replaceChildren();
       run.items.forEach(function (item, index) {
         var status = itemStatus(item, index);
@@ -1101,6 +1107,7 @@
       /* 连对：判定先落地，界面随后再动（数字滚动 / 火苗 / 横幅 / 断裂负反馈）。
          判定语义不动 —— 读的就是这次提交载荷里的那个 verdict。 */
       var streakLanded = null;
+      var answerConfirmed = false;
       answerBusy[key] = priorDraftWrite.catch(function () {}).then(function () {
         if (local.pendingDrafts[key]) return flushDraft(key).catch(function () {});
       }).then(function () {
@@ -1115,6 +1122,7 @@
         persistLocal();
         clearError();
         streakLanded = streak ? streak.judge(payload.verdict) : null;
+        answerConfirmed = true;
       }).catch(function (error) {
         if (error && error.status && error.status < 500) {
           delete local.pendingAttempts[key];
@@ -1135,10 +1143,14 @@
              （正确选项行，底边为锚）——与音效同一帧落地（判定为错时那边也不响）。
              判定为错 / 不会 / 参考区里没有「判定：正确」时不动
              （负反馈是摆动，不是回弹）。 */
-          squashCorrectOption(ids.work);
+          if (!motion) squashCorrectOption(ids.work);
         }
         /* 界面已按新的连对数重画，这里再补动效（数字滚动 / 火苗 / 横幅 / 负反馈） */
         if (streak) streak.apply(streakLanded);
+        if (motion && answerConfirmed && payload.verdict === true && isVisibleItem(item, index)) {
+          motion.answer();
+          if (streak && streak.count && streak.count() > 0 && streak.count() % 5 === 0) motion.combo(streak.count());
+        }
         return value;
       });
       if (isVisibleItem(item, index)) renderCurrent();
@@ -1305,6 +1317,7 @@
         return api("/practice/runs/" + encodeURIComponent(response.run_id)).then(function (record) {
           prepareRun(record, true);
           persistLocal();
+          if (motion && !disposed) motion.complete();
         }).catch(function () {
           renderingArchived = true;
           reviewing = false;
@@ -1485,7 +1498,10 @@
           var link = document.createElement("button");
           link.type = "button";
           link.className = "outline sm";
-          link.textContent = "第" + itemPosition(item, index) + "题：" + statusLabel(itemStatus(item, index));
+          var problem = problemFor(item);
+          var title = problem && (problem.display_title || problem.title) || "";
+          link.textContent = "第" + itemPosition(item, index) + "题：" + (title ? title + " · " : "")
+            + statusLabel(itemStatus(item, index));
           link.setAttribute("aria-label", "查看第" + itemPosition(item, index) + "题，" + statusLabel(itemStatus(item, index)));
           link.addEventListener("click", function () { openReview(index); });
           ids.links.appendChild(link);
@@ -1676,6 +1692,7 @@
 
     function dispose() {
       if (disposed) return;
+      if (motion) motion.dispose();
       Object.keys(draftTimers).forEach(function (key) { clearTimeout(draftTimers[key]); });
       var item = activeItem();
       if (item && !renderingArchived && local) {

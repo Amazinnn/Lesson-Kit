@@ -612,6 +612,7 @@
     function showBanner(bannerCount) {
       var banner = part(".lk-combo-banner");
       if (!banner) return;
+      if (banner.closest && banner.closest("#paper-practice[data-pixel-motion='true']")) return;
       var number = banner.querySelector ? banner.querySelector(".lk-combo-banner__count") : null;
       if (number) number.textContent = String(bannerCount);
       /* The tier difference is carried by this one semantic class only. */
@@ -1016,6 +1017,7 @@
   function celebrateCompletion(surface) {
     var target = surface || document.getElementById("paper-completion");
     if (!target) return;
+    var pixelPaper = target.closest && target.closest("#paper-practice[data-pixel-motion='true']");
     var milestone = isMilestoneRound(completionFacts(target));
     window.setTimeout(function () {
       rollCompletionFigures(target);
@@ -1031,6 +1033,7 @@
         window.lkSfx.playCue("milestone");
       }
     }, 400);
+    if (pixelPaper) return;
     /* A downgraded tier does not draw the burst or the paper flutter at all
        (motion-spec §7.2 row 14). */
     if (motionMode() !== "full") return;

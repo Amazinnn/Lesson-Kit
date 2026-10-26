@@ -342,6 +342,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
            "<script src='/static/graph-renderer.js'></script>"
            "<script src='/static/graph-physics.js'></script>" if graph_mode else "")
         + "<script src='/static/practice-deck.js'></script>"
+        + "<script src='/static/practice-motion.js'></script>"
         + "<script src='/static/paper-practice.js'></script>"
         + "<script src='/static/practice-flow.js'></script>"
         + "<script src='/static/agent-ui.js'></script>"
@@ -486,7 +487,9 @@ def _paper_practice_html(workspace_name):
         # 16.7 完成页 = 分层庆祝的三处承载位。承载位的静态样式必须等于终态：
         # 数字直接显示最终值、进度带静态满格、爆点与纸片静态不出现。
         "<section id='paper-completion' class='card lk-card hidden' aria-labelledby='paper-completion-title'>"
-        "<p class='section-kicker'>本轮完成</p><h2 id='paper-completion-title'>完成练习</h2>"
+        "<div class='paper-pixel-finish-mark' aria-hidden='true'>✦</div>"
+        "<p class='section-kicker'>A LITTLE FURTHER, TOGETHER.</p>"
+        "<h2 id='paper-completion-title'>这一程，漂亮收官。</h2>"
         "<div id='paper-completion-stats' class='paper-completion-stats'></div>"
         # ① 统计数字槽位：JS 把逐项数字（带 data-lk-value）写进来，
         #    ticker 逐位滚动；写不进来的槽位保持空，不占位也不显示旧值。
@@ -503,7 +506,7 @@ def _paper_practice_html(workspace_name):
         "<button id='paper-review' class='primary' type='button'>查看本次答卷</button>"
         "<button id='paper-again' class='outline' type='button'>再练一次</button>"
         "<a class='outline button-link' href='" + papers + "'>返回试卷列表</a>"
-        "</div></section></section>"
+        "</div><nav id='paper-links' aria-label='本次逐题答题情况'></nav></section></section>"
     )
 
 
@@ -1581,6 +1584,7 @@ def _base(title, body, workspace=None):
         f"<title>{html.escape(title)}</title>"
         + _appearance_boot_script(workspace) +
         "<link rel='stylesheet' href='/static/workbench.css'>"
+        "<link rel='stylesheet' href='/static/practice-motion.css'>"
         "<link rel='stylesheet' href='/static/agent-ui.css'>"
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"
         "<script src='/static/katex/katex.min.js'></script>"

@@ -35,6 +35,7 @@ UNWRAPPED_SUITES = [
     "graph_renderer.test.js",
     "middle_navigation.test.js",
     "paper_practice.test.js",
+    "practice_motion.test.js",
     "practice_deck.test.js",
 ]
 

@@ -125,6 +125,11 @@ function fixture(options = {}) {
     },
     crypto: { randomUUID: (() => { let id = 0; return () => "request-" + (++id); })() },
   };
+  if(options.motion)window.PixelPracticeMotion={mount:()=>({
+    update:state=>options.motion.push(['update',state]),
+    answer:()=>options.motion.push(['answer']),combo:n=>options.motion.push(['combo',n]),
+    complete:()=>options.motion.push(['complete']),dispose:()=>options.motion.push(['dispose'])
+  })};
   const api = async (path, request) => {
     if (request && request.method === "DELETE") {
       calls.push({ method: "DELETE", path, body: JSON.parse(request.body || "{}") });
@@ -597,4 +602,19 @@ test("pausing a temporary ordinary execution flushes drafts without parking its 
   assert.equal(draft.body.draft.answer, "temporary answer");
   assert.equal(app.calls.some((call) => call.method === "DELETE" && call.path === "/practice/current"), false);
   assert.equal(app.events.navigated, "/w/alpha/practice-sets");
+});
+
+
+test('motion completion is confirmation-only and disposal releases the presentation',async()=>{
+ const events=[];const app=fixture({active:practice(),motion:events});await flush();
+ assert(events.some(e=>e[0]==='update'));assert.equal(events.filter(e=>e[0]==='complete').length,0);
+ await app.ids['paper-final-submit'].dispatch('click');await flush();
+ assert.equal(events.filter(e=>e[0]==='complete').length,1);
+ app.runtime.dispose();assert.equal(events.filter(e=>e[0]==='dispose').length,1);
+ const historical=[];fixture({href:'http://lesson-kit.test/w/alpha/practice?run=112',archived:practice(),motion:historical});await flush();
+ assert.equal(historical.filter(e=>e[0]==='complete').length,0);
+});
+test('a failed final submission never celebrates',async()=>{
+ const events=[];const app=fixture({active:practice(),motion:events,writeHandlers:{'POST /practice/current/submit':()=>Promise.reject(new Error('offline'))}});await flush();
+ await app.ids['paper-final-submit'].dispatch('click');await flush();assert.equal(events.filter(e=>e[0]==='complete').length,0);
 });
