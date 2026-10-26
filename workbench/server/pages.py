@@ -342,6 +342,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
            "<script src='/static/graph-renderer.js'></script>"
            "<script src='/static/graph-physics.js'></script>" if graph_mode else "")
         + "<script src='/static/practice-deck.js'></script>"
+        + "<script src='/static/practice-combo.js'></script>"
         + "<script src='/static/practice-motion.js'></script>"
         + "<script src='/static/paper-practice.js'></script>"
         + "<script src='/static/practice-flow.js'></script>"
@@ -1585,6 +1586,7 @@ def _base(title, body, workspace=None):
         + _appearance_boot_script(workspace) +
         "<link rel='stylesheet' href='/static/workbench.css'>"
         "<link rel='stylesheet' href='/static/practice-motion.css'>"
+        "<link rel='stylesheet' href='/static/practice-combo.css'>"
         "<link rel='stylesheet' href='/static/agent-ui.css'>"
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"
         "<script src='/static/katex/katex.min.js'></script>"

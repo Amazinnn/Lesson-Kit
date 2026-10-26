@@ -90,7 +90,7 @@
        单独跑本文件时（测试夹具）没有连对反馈 —— 挂一个恒为 0 的数字是没有
        信息量的假事实（A-59 同一原则）。 */
     var streak = window.lkStreak && typeof window.lkStreak.create === "function"
-      ? window.lkStreak.create({ root: ids.question })
+      ? window.lkStreak.create({ root: ids.question, banner: false })
       : null;
     var motion = window.PixelPracticeMotion && typeof window.PixelPracticeMotion.mount === "function"
       ? window.PixelPracticeMotion.mount({ root: root, work: ids.work, question: ids.question,

@@ -17,6 +17,14 @@
     var distance = Math.min(phase, 112 - phase);
     return 1 - distance / 56;
   }
+  function headAge(end, time, ratio) {
+    var speed = .065 + .095 * ratio, period = 112 / speed;
+    return ((time - end / speed) % period + period) % period;
+  }
+  function headLight(radius, age) {
+    if (age < 0 || age > 420) return 0;
+    return Math.exp(-Math.pow((age - radius * 150) / 55, 2)) * (1 - radius * .25);
+  }
   function tone(ratio, amount) {
     var level = clamp(Math.round(amount * 7), 0, 7);
     return mix(color(ratio), [255, 242, 218], level / 7 * (.38 + .28 * ratio));
@@ -39,18 +47,18 @@
     stage.className = "paper-pixel-progress";
     stage.setAttribute("aria-label", "试卷完成度");
     stage.innerHTML = "<div class='paper-pixel-progress__heading'><span>✦ 星焰航迹</span><strong></strong></div>"
-      + "<div class='paper-pixel-progress__bar' role='progressbar' aria-label='试卷完成度' aria-valuemin='0' aria-valuemax='100'><div class='paper-pixel-progress__cells'></div><i class='paper-pixel-progress__cap' aria-hidden='true'></i></div>"
+      + "<div class='paper-pixel-progress__bar' role='progressbar' aria-label='试卷完成度' aria-valuemin='0' aria-valuemax='100'><div class='paper-pixel-progress__track'><div class='paper-pixel-progress__cells'></div></div><span class='paper-pixel-progress__cap' aria-hidden='true'></span></div>"
       + "<small>从容起步，每一步都算数。</small>";
     work.insertBefore(stage, work.firstChild);
     var heading = stage.querySelector("strong"), bar = stage.querySelector("[role=progressbar]");
     var field = stage.querySelector(".paper-pixel-progress__cells"), cap = stage.querySelector(".paper-pixel-progress__cap");
-    var banner = document.createElement("div");
-    banner.className = "paper-pixel-combo";
-    banner.setAttribute("role", "status");
-    banner.setAttribute("aria-live", "polite");
-    banner.hidden = true;
-    banner.innerHTML = "<b class='paper-pixel-combo__number'></b><span class='paper-pixel-combo__word'><img src='/static/combo-word.svg' alt='combo'></span><span class='paper-pixel-combo__brush' aria-hidden='true'>✎</span>";
-    root.appendChild(banner);
+    var banner = window.ApprovedPracticeCombo.create(root);
+    var headPixels = [];
+    for (var hy = 0; hy < 5; hy += 1) for (var hx = 0; hx < 5; hx += 1) {
+      var pixel = document.createElement('i');
+      cap.appendChild(pixel);
+      headPixels.push({ node: pixel, radius: Math.hypot(hx - 2, hy - 2) / Math.sqrt(8) });
+    }
     var confetti = document.createElement("div");
     confetti.className = "paper-pixel-confetti";
     confetti.setAttribute("aria-hidden", "true");
@@ -64,14 +72,14 @@
     motionQuery.addEventListener("change", visibility);
     function buildCells() {
       var width = Math.max(112, Math.floor(bar.clientWidth || 560));
-      var columns = Math.ceil(width / 8);
+      var step = 26 / 3, columns = Math.ceil(width / step);
       if (cells.length === columns * 3) return;
       field.replaceChildren(); cells = [];
       for (var row = 0; row < 3; row += 1) for (var col = 0; col < columns; col += 1) {
         var cell = document.createElement("i");
         cell.className = "paper-pixel-progress__cell";
-        cell.style.left = col * 8 + "px"; cell.style.top = row * 8 + "px";
-        field.appendChild(cell); cells.push({ node: cell, x: col * 8 });
+        cell.style.left = col * step + "px"; cell.style.top = row * step + "px";
+        field.appendChild(cell); cells.push({ node: cell, x: col * step });
       }
     }
     function draw(now) {
@@ -79,6 +87,7 @@
       if (disposed || document.hidden || stage.hidden || !stage.isConnected) return;
       buildCells();
       var width = bar.clientWidth || 560, end = width * state.ratio;
+      field.style.width = end + 'px';
       var charging = now - state.chargeAt < 2200;
       cells.forEach(function (cell) {
         var active = cell.x < end;
@@ -89,8 +98,15 @@
         if (charging) base = mix(base, [255, 203, 108], density(cell.x, now * 1.22 + 180, state.ratio) * .65);
         cell.node.style.backgroundColor = "rgb(" + base.join(",") + ")";
       });
-      cap.style.left = clamp(end - 16, 0, width - 16) + "px";
-      cap.style.backgroundColor = quiet() ? "#e4e0d5" : "rgb(" + mix([209, 209, 202], [255, 255, 255], density(end, now, state.ratio)).join(",") + ")";
+      cap.hidden = state.ratio === 0;
+      cap.style.left = (end - 26) + "px";
+      var age = headAge(end, now, state.ratio), glow = 0;
+      headPixels.forEach(function (pixel) {
+        var light = quiet() ? 0 : headLight(pixel.radius, age);
+        glow = Math.max(glow, light);
+        pixel.node.style.backgroundColor = 'rgb(' + mix([224, 226, 214], [255, 255, 250], light).join(',') + ')';
+      });
+      cap.style.boxShadow = '0 0 ' + (3 + glow * 20) + 'px rgba(255,241,188,' + (glow * .9) + ')';
       if (!quiet()) frame = requestAnimationFrame(draw);
     }
     function update(facts) {
@@ -118,15 +134,12 @@
     function combo(number) {
       if (quiet()) return;
       state.chargeAt = performance.now();
-      banner.querySelector("b").textContent = String(number);
-      banner.hidden = false;
-      banner.classList.remove("is-on"); void banner.offsetWidth; banner.classList.add("is-on");
-      clearTimeout(timer);
-      timer = setTimeout(function () { banner.hidden = true; banner.classList.remove("is-on"); }, 2400);
+      banner.play(number);
       if (!frame) frame = requestAnimationFrame(draw);
     }
     function complete() {
       if (disposed || quiet()) return;
+      banner.stop();
       completion.classList.remove("paper-pixel-complete"); void completion.offsetWidth;
       completion.classList.add("paper-pixel-complete");
       var results = completion.querySelector("#paper-links");
@@ -151,7 +164,7 @@
       window.removeEventListener("resize", resize);
       motionQuery.removeEventListener("change", visibility);
       observer.disconnect();
-      stage.remove(); banner.remove(); confetti.remove();
+      stage.remove(); banner.dispose(); confetti.remove();
       root.dataset.pixelMotion = "";
     }
     function visibility() { if (!document.hidden && !frame) frame = requestAnimationFrame(draw); }
@@ -161,5 +174,5 @@
     window.addEventListener("resize", resize);
     return { update: update, answer: answer, combo: combo, complete: complete, dispose: dispose };
   }
-  return { color: color, density: density, tone: tone, completed: completed, phase: phase, mount: mount };
+  return { color: color, density: density, headAge: headAge, headLight: headLight, tone: tone, completed: completed, phase: phase, mount: mount };
 }));

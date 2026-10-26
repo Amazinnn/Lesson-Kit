@@ -8,19 +8,16 @@ const test = require("node:test");
 test("streak stays invisible between milestones but still celebrates the fifth correct answer", () => {
   const app = runWorkbench({ elements: { layout: layout(), ...durablePracticeElements() },
     fetch: () => jsonResponse({}) });
-  const number = new FakeElement("combo-count");
-  const banner = new FakeElement("combo-banner", { queryOne: selector => selector === ".lk-combo-banner__count" ? number : null });
-  const host = new FakeElement("question", { queryOne: selector => selector === ".lk-combo-banner" ? banner : null });
+  const plays = [], releases = [];
+  app.window.ApprovedPracticeCombo = {create: () => ({play: number => plays.push(number), dispose: () => releases.push(true)})};
+  const host = new FakeElement("question");
   const streak = app.window.lkStreak.create({ root: host });
-  assert.doesNotMatch(streak.html(), /lk-streak|lk-flames|lk-ticker/);
   for (let i = 0; i < 4; i += 1) streak.apply(streak.judge(true));
   assert.equal(streak.count(), 4);
-  assert.equal(banner.classList.contains("is-on"), false);
+  assert.deepEqual(plays, []);
   streak.apply(streak.judge(true));
   assert.equal(streak.count(), 5);
-  assert.equal(number.textContent, "5");
-  assert.equal(banner.classList.contains("is-on"), true);
-  assert.doesNotMatch(streak.html(), /lk-streak|lk-flames|lk-ticker/);
+  assert.deepEqual(plays, [5]);
   const nudges = [];
   host.animate = (_frames, options) => nudges.push(options.duration);
   for (let round = 0; round < 2; round += 1) {
@@ -29,6 +26,36 @@ test("streak stays invisible between milestones but still celebrates the fifth c
     for (let i = 0; i < 5; i += 1) streak.apply(streak.judge(true));
   }
   assert.deepEqual(nudges, [160, 160]);
+  streak.dispose(); assert.deepEqual(releases, [true]);
+});
+
+test("ordinary Combo waits for the fifth save and a successful retry celebrates only once", async () => {
+  const elements={layout:layout(),...practiceElements()}, plays=[], requests=[];
+  let pulled=0, finishRetry;
+  runWorkbench({elements,comboPresenter:{create:()=>({play:n=>plays.push(n),stop(){},dispose(){}})},
+    local:new FakeStorage({wb_settings_alpha:JSON.stringify({showRating:false})}),
+    fetch:(url,options)=>{
+      if(url.includes('/weak?'))return jsonResponse([{kp_id:'kp-1'}]);
+      if(url.endsWith('/pull'))return jsonResponse({problems:[{problem_id:'combo-'+(++pulled),problem_text:'Q',micro_quiz:{quiz_type:'yes_no',answer_key:'是'}}]});
+      if(url.endsWith('/attempts')){
+        requests.push(JSON.parse(options.body));
+        if(requests.length===5)return Promise.reject(new Error('offline'));
+        if(requests.length===6)return new Promise(resolve=>{finishRetry=()=>resolve(jsonResponse({attempt_id:6}));});
+        return jsonResponse({attempt_id:requests.length});
+      }
+      return jsonResponse({});
+    }});
+  elements['practice-mode-immediate'].checked=true;elements['practice-mode-immediate'].trigger('change');elements['start-practice'].click();await flush();
+  elements.stream.queryAll=s=>s==='[data-choice-option]:checked'?[{value:'是'}]:[];
+  for(let i=0;i<5;i++){
+    elements['answer-submit'].click();await flush();
+    if(i<4){elements['next-problem'].click();await flush();}
+  }
+  assert.deepEqual(plays,[],'a failed fifth save must not celebrate');
+  elements['answer-submit'].click();elements['answer-submit'].click();await flush();
+  assert.equal(requests.length,6);assert.equal(requests[4].request_id,requests[5].request_id);
+  assert.deepEqual(plays,[]);finishRetry();await flush();
+  assert.deepEqual(plays,[5]);
 });
 
 test("saved Paper drafts restore separately from submitted answers and persist with revision context", async () => {
@@ -476,7 +503,7 @@ function runWorkbench({
   elements, storage = new FakeStorage(), local = new FakeStorage(), fetch,
   reducedMotion = false, physics = Object.assign({ workerBacked: true }, GraphPhysics), setTimeoutFn = () => 0,
   clearTimeoutFn = clearTimeout,
-  promptFn = undefined, confirmFn = undefined, selectors = {}, agentUISurfaces = null,
+  promptFn = undefined, confirmFn = undefined, selectors = {}, agentUISurfaces = null, comboPresenter = null,
 }) {
   const document = {
     documentElement: new FakeElement("html"),
@@ -521,6 +548,7 @@ function runWorkbench({
     confirm: confirmFn,
     localStorage: local,
     AgentUISurfaces: agentUISurfaces,
+    ApprovedPracticeCombo: comboPresenter,
   };
   const sandbox = {
     document,

@@ -2,22 +2,14 @@
 #paper-practice .paper-pixel-progress { margin: 0 0 1.4rem; padding: 1.35rem 1.45rem; background: var(--surface-card, #fffdf7); border: 1px solid #e8dec9; border-radius: 16px; }
 #paper-practice .paper-pixel-progress__heading { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: .8rem; }
 #paper-practice .paper-pixel-progress__heading strong { font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-#paper-practice .paper-pixel-progress__bar { position: relative; height: 26px; background: #e8e5df; border: 2px solid #272421; overflow: hidden; }
-#paper-practice .paper-pixel-progress__cells { position: absolute; inset: 0; }
-#paper-practice .paper-pixel-progress__cell { position: absolute; display: block; width: 8px; height: 8px; border-right: 1px solid rgba(255,255,255,.1); }
-#paper-practice .paper-pixel-progress__cap { position: absolute; top: -2px; display: block; width: 16px; height: 26px; border: 2px solid #2a2722; background: #e4e0d5; box-shadow: 2px 0 #2b62e8; }
+#paper-practice .paper-pixel-progress__bar { position: relative; height: 26px; }
+#paper-practice .paper-pixel-progress__track { position: absolute; inset: 0; border-radius: 13px; background: #e8e5df; overflow: hidden; }
+#paper-practice .paper-pixel-progress__cells { position: absolute; inset: 0 auto 0 0; overflow: hidden; }
+#paper-practice .paper-pixel-progress__cell { position: absolute; display: block; width: calc(26px / 3); height: calc(26px / 3); border-right: 1px solid rgba(255,255,255,.1); }
+#paper-practice .paper-pixel-progress__cap { position: absolute; top: 0; display: grid; grid-template-columns: repeat(5,1fr); grid-template-rows: repeat(5,1fr); width: 26px; height: 26px; }
+#paper-practice .paper-pixel-progress__cap[hidden] { display: none; }
+#paper-practice .paper-pixel-progress__cap i { display: block; }
 #paper-practice .paper-pixel-progress small { display: block; margin-top: .65rem; color: #9a713a; }
-#paper-practice .paper-pixel-combo { position: fixed; z-index: 100; top: 40%; left: 50%; min-width: min(410px, 82vw); padding: 1.15rem 2rem; transform: translate(-50%, -50%); border: 3px solid #25211d; background: linear-gradient(90deg, #f5c518 0 29%, #e94435 29% 46%, #f5c518 46% 60%, #2b62e8 60% 80%, #75c9ef 80%); box-shadow: 8px 8px 0 #25211d; color: #1b1a19; text-align: center; pointer-events: none; }
-#paper-practice .paper-pixel-combo.is-on { animation: paper-combo-in 2.4s both; }
-#paper-practice .paper-pixel-combo__number { font: italic 700 3.1rem Georgia, serif; vertical-align: middle; }
-#paper-practice .paper-pixel-combo__word { display: inline-block; width: min(240px,48vw); margin-left: .6rem; vertical-align: middle; }
-#paper-practice .paper-pixel-combo__word img { display: block; width: 100%; }
-#paper-practice .paper-pixel-combo.is-on .paper-pixel-combo__word { animation: paper-word-write .85s .15s both steps(24,end); overflow: hidden; }
-#paper-practice .paper-pixel-combo__brush { display: inline-block; font-size: 2rem; transform: rotate(-20deg); }
-#paper-practice .paper-pixel-combo.is-on .paper-pixel-combo__brush { animation: paper-brush-fly .85s .15s both ease-in-out; }
-@keyframes paper-combo-in { 0% { opacity: 0; transform: translate(-145%, -50%) scale(.94); } 12%, 65% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(60%, -50%) scale(1); } }
-@keyframes paper-word-write { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-@keyframes paper-brush-fly { from { transform: translateX(-7ch) rotate(-20deg); } to { transform: translateX(0) rotate(-20deg); } }
 #paper-practice .paper-pixel-confetti { position: fixed; z-index: 50; inset: 0; pointer-events: none; overflow: hidden; }
 #paper-practice .paper-pixel-confetti i { position: absolute; left: var(--x); top: 45%; width: 7px; height: 5px; animation: paper-confetti-fly 2.5s var(--delay) both ease-out; }
 @keyframes paper-confetti-fly { 0% { opacity: 1; transform: translate(0,0) rotate(0); } 100% { opacity: 0; transform: translate(var(--dx),var(--dy)) rotate(620deg); } }
@@ -31,10 +23,9 @@
 #paper-practice #paper-links.paper-pixel-results-enter { animation: paper-results-enter 2.4s both; }
 @keyframes paper-results-enter { 0%, 72% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
 #paper-practice #paper-links button { text-align: left; }
-@media (prefers-reduced-motion: reduce) { #paper-practice .paper-pixel-combo, #paper-practice .paper-pixel-confetti, #paper-practice #paper-completion.paper-pixel-complete, #paper-practice #paper-links.paper-pixel-results-enter { animation: none !important; } }
-:root[data-motion='on'] #paper-practice .paper-pixel-combo.is-on { animation: paper-combo-in 2.4s both !important; }
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion='on']) #paper-practice .paper-pixel-confetti i, :root:not([data-motion='on']) #paper-practice #paper-completion.paper-pixel-complete, :root:not([data-motion='on']) #paper-practice #paper-links.paper-pixel-results-enter { animation: none !important; } }
 :root[data-motion='on'] #paper-practice #paper-completion.paper-pixel-complete { animation: paper-card-return 2.6s both !important; }
 :root[data-motion='on'] #paper-practice .paper-pixel-confetti i { animation: paper-confetti-fly 2.5s var(--delay) both ease-out !important; }
 :root[data-motion='on'] #paper-practice #paper-links.paper-pixel-results-enter { animation: paper-results-enter 2.4s both !important; }
-:root[data-motion='off'] #paper-practice .paper-pixel-combo, :root[data-motion='off'] #paper-practice .paper-pixel-confetti, :root[data-motion='off'] #paper-practice #paper-completion.paper-pixel-complete, :root[data-motion='off'] #paper-practice #paper-links.paper-pixel-results-enter { animation: none !important; }
-@media (max-width: 580px) { #paper-practice .paper-pixel-progress { padding: 1rem; } #paper-practice .paper-pixel-combo { min-width: 78vw; padding: .8rem 1rem; } #paper-practice .paper-pixel-combo__number { font-size: 2.2rem; } #paper-practice .paper-pixel-combo__word { width: 42vw; } }
+:root[data-motion='off'] #paper-practice .paper-pixel-confetti i, :root[data-motion='off'] #paper-practice #paper-completion.paper-pixel-complete, :root[data-motion='off'] #paper-practice #paper-links.paper-pixel-results-enter { animation: none !important; }
+@media (max-width: 580px) { #paper-practice .paper-pixel-progress { padding: 1rem; } }

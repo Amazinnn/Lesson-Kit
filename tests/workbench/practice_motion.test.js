@@ -1,6 +1,15 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const motion=require('../../workbench/server/static/practice-motion.js');
+test('comet pulse lights the center before its outer pixels and dims between arrivals',()=>{
+ assert(motion.headLight(0,0)>.95);
+ assert(motion.headLight(1,0)<.01);
+ assert(motion.headLight(1,150)>.7);
+ assert(motion.headLight(0,150)<.01);
+ assert(motion.headLight(1,500)<.001);
+ const ratio=.6,end=200,speed=.065+.095*ratio;
+ assert(motion.headAge(end,end/speed,ratio)<1e-8);
+});
 test('palette, equal density widths and brighter compression preserve approved pixels',()=>{
  assert.deepEqual(motion.color(0),[226,118,44]);assert.deepEqual(motion.color(.5),[246,202,62]);assert.deepEqual(motion.color(1),[132,200,233]);
  for(let x=0;x<56;x+=2)assert(Math.abs(motion.density(x,0,.6)+motion.density(x+56,0,.6)-1)<1e-9);

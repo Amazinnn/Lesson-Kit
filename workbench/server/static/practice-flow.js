@@ -124,10 +124,31 @@
   }
 
   var pendingAttemptRequests = {};
+  var streakEvents = [], countedStreakRequests = new Set();
+  function resetStreak() {
+    streakEvents = []; countedStreakRequests.clear();
+    if (streak) streak.reset();
+  }
+  function queueStreak(saved) {
+    if (typeof saved.payload.verdict !== 'boolean' || countedStreakRequests.has(saved.request_id)) return null;
+    var event = streakEvents.find(function (entry) { return entry.id === saved.request_id; });
+    if (!event) { event = { id: saved.request_id, verdict: saved.payload.verdict, confirmed: false }; streakEvents.push(event); }
+    return event;
+  }
+  function confirmStreak(event) {
+    if (!event || disposed) return;
+    event.confirmed = true;
+    /* Responses may arrive out of order; consume confirmed submissions in answer order. */
+    while (streakEvents.length && streakEvents[0].confirmed) {
+      var landed = streakEvents.shift(); countedStreakRequests.add(landed.id);
+      if (streak) streak.apply(streak.judge(landed.verdict));
+    }
+  }
   function ensureAttempt(item) {
     if (item.attempt_id) return Promise.resolve(item.attempt_id);
     if (!item.attempt_request) return Promise.resolve(null);
     var saved = item.attempt_request;
+    var streakEvent = queueStreak(saved);
     if (pendingAttemptRequests[saved.request_id]) {
       return pendingAttemptRequests[saved.request_id];
     }
@@ -140,6 +161,7 @@
         activePractice = recorded.practice.completed ? null : recorded.practice.practice;
         renderResumeCard(activePractice);
       }
+      if (selected) confirmStreak(streakEvent);
       return recorded.attempt_id;
     }).catch(function (error) {
       updateSession(item.id, { attempt_status: "failed" }, item.direction, item.practice_context || null);
@@ -396,7 +418,7 @@
       if (!activePractice) return;
       var continuation = activePractice.continuation;
       if (continuation ? !continuation.available : (activePractice.unavailable_item_ids || []).length > 0) return;
-      if (streak) streak.reset();   /* 新的一轮从零开始 */
+      resetStreak();
       practiceDeck = activeToDeck(activePractice);
       persistDeck();
       sessionStorage.setItem(MODE_KEY, activePractice.practice_mode || "exam");
@@ -1052,11 +1074,9 @@
       var problem = item.payload || {};
       var answered = reviewOnly || deckItemAnswered(item);
       var paperReview = reviewOnly && isPaperReviewItem(item);
-      var streakMarkup = streak ? streak.html() : "";
       stream.innerHTML = "<article class='practice-question-card card'>"
         + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p>"
-        /* Zero-height anchor keeps only the transient milestone banner. */
-        + "<span class='practice-streak'>" + streakMarkup + "</span><h2>"
+        + "<h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
         + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(problemTextFor(problem)) + "</div>"
@@ -1410,7 +1430,7 @@
     }
 
     function startLegacySession(contentMode, ratingMode) {
-      if (streak) streak.reset();   /* 新的一轮从零开始 */
+      resetStreak();
       practiceDeck = PracticeDeck.deserialize(null);
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(CURRENT_KEY);
@@ -1672,10 +1692,6 @@
       if (choiceTexts.length) patch.choices = choiceTexts.slice();
       var graded = gradeMicroQuiz(item.payload, choiceTexts);
       if (graded !== null) patch.verdict = graded;
-      /* 连对：判定先落地，界面随后再动（数字滚动 / 火苗 / 横幅 / 断裂负反馈）。
-         状态机在公共 API window.lkStreak（decisions.md A-58）；判定来源仍是本流
-         的微测判定。断裂时连对数先留着，好让火苗逐簇熄灭，灭完再归零。 */
-      var streakLanded = streak ? streak.judge(graded) : null;
       var attemptPayload = {
         request_id: newPracticeRequestId(), problem_id: item.id,
         answer_text: answer, choices: choiceTexts.length ? choiceTexts.slice() : undefined,
@@ -1694,7 +1710,6 @@
          （正确选项行，底边为锚）——与音效同一帧落地（判定为错时那边也不响）。
          判定为错 / 闪卡 / 无判定键时不动（负反馈是摆动，不是回弹）。 */
       squashCorrectOption(stream);
-      if (streak) streak.apply(streakLanded);
       // The attempt itself is the durable record: one POST per submission,
       // before any rating. The session's rating later links back via attempt_id.
       ensureAttempt(currentProblem()).catch(showPracticeError);
@@ -2195,6 +2210,7 @@
 
     function dispose() {
       if (disposed) return;
+      if (streak && streak.dispose) streak.dispose();
       if (stream) {
         if (answerBox) persistProblemDraft();
         cancelScheduledAdvance();

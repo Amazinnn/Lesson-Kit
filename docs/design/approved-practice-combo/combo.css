@@ -1,0 +1,44 @@
+:root{--rainbow:linear-gradient(90deg,#f5c518 0 30%,#221f1a 30% 30.7%,#2b62e8 30.7% 87%,#fffdf7 87% 95%,#d1392b 95% 100%)}
+.combo-scene{position:absolute;z-index:5;top:34%;left:-2%;width:104%;height:172px;pointer-events:none;opacity:0;visibility:hidden;will-change:transform,opacity}
+.combo-aura{position:absolute;inset:-30px 7%;background:var(--rainbow);opacity:.32;filter:blur(35px);border-radius:50%}
+.combo-ribbon{position:absolute;inset:0;background:var(--rainbow);transform:rotate(-3deg);clip-path:polygon(0 7%,6% 9%,13% 5%,22% 7%,30% 4%,42% 8%,53% 4%,64% 7%,72% 4%,84% 8%,92% 5%,100% 8%,100% 94%,91% 92%,82% 97%,74% 94%,63% 97%,51% 93%,40% 96%,30% 93%,20% 97%,10% 94%,0 97%);box-shadow:0 12px 35px #8b6a5033;overflow:visible}
+.ribbon-grain{position:absolute;inset:0;opacity:.12;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.55' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:multiply}
+.combo-inside{position:absolute;inset:26px 42px 16px;display:flex;align-items:center;justify-content:center;color:#392a42;gap:8px}
+.celebration-number{font-family:var(--read);font-size:100px;font-weight:600;line-height:1;letter-spacing:-.08em;min-width:90px;text-align:center}
+.combo-inside>svg{width:66%;height:120px;overflow:visible;flex-shrink:1}
+.combo-kicker{position:absolute;left:36px;top:21px;font-size:8px;letter-spacing:.16em;color:#55464c}
+.combo-message{position:absolute;right:29px;bottom:14px;font-size:10px;color:#59495f;letter-spacing:.06em}
+.ribbon-star{position:absolute;right:2%;top:18px;font-size:38px;color:#fff6d9a1}
+.after-stroke{position:absolute;left:6%;bottom:-16px;width:84%;height:12px;opacity:0;background:var(--rainbow);filter:blur(.6px);clip-path:polygon(0 40%,35% 5%,100% 35%,93% 55%,35% 100%,3% 80%);rotate:-3deg}
+@media(min-width:1500px){.combo-scene{top:35%}}
+@media(max-width:1150px){.combo-inside{inset:26px 28px 16px}
+.celebration-number{font-size:78px;min-width:70px}}
+@media(max-width:930px){.combo-scene{height:156px}}
+@media(max-width:700px){.combo-scene{left:-2%;width:104%;height:137px;top:37%}
+.celebration-number{font-size:68px;min-width:53px}
+.combo-inside{inset:23px 16px 12px;gap:0}
+.combo-inside>svg{width:73%;height:95px}
+.combo-kicker{top:15px;left:20px;font-size:6px}
+.combo-message{font-size:8px;right:16px;bottom:11px}
+.ribbon-star{font-size:25px;top:9px;right:13px}}
+.stage > .after-stroke{top:calc(34% + 170px);bottom:auto;z-index:5;pointer-events:none}
+@media(max-width:700px){.stage > .after-stroke{top:calc(37% + 135px)}}
+.combo-aura,.ribbon-grain,.ribbon-star{display:none}
+.combo-ribbon{clip-path:none;transform:none;border-radius:0;background:#fffdf7;box-shadow:6px 6px 0 #221f1a;border:2px solid #221f1a;overflow:hidden}
+.combo-ribbon:before{content:'';position:absolute;inset:0 auto 0 0;width:24%;background:#f5c518;border-right:2px solid #221f1a}
+.combo-ribbon:after{content:'';position:absolute;bottom:0;left:24%;right:0;height:12px;background:#2b62e8;border-top:2px solid #221f1a}
+.combo-inside{inset:24px 34px 18px;justify-content:space-between;color:#221f1a;gap:0}
+.celebration-number{min-width:20%;text-align:center;font-style:italic;font-weight:400;font-family:Georgia,'Times New Roman',serif}
+.combo-inside>svg{width:73%;height:120px}
+.combo-message{bottom:17px;color:#221f1a;right:20px;font-size:9px}
+.combo-kicker{left:27%;color:#6b6459;font-size:8px;top:12px}
+.combo-ribbon .combo-inside:after{content:'';position:absolute;right:-20px;top:-10px;width:18px;height:18px;background:#d1392b;border:1px solid #221f1a}
+#lettering{fill:currentColor;stroke:none}
+.after-stroke{height:7px;clip-path:none;rotate:0deg;filter:none;background:var(--rainbow);border-top:1px solid #221f1a;border-bottom:1px solid #221f1a}
+.stage>.after-stroke{top:calc(34% + 182px)}
+@media(max-width:700px){.combo-inside{inset:21px 16px 17px}
+.combo-inside>svg{width:73%;height:100px}
+.combo-message{font-size:7px;bottom:15px;right:10px}
+.combo-kicker{top:9px;font-size:6px}
+.combo-ribbon .combo-inside:after{width:10px;height:10px;right:-9px;top:-9px}
+.stage>.after-stroke{top:calc(37% + 149px)}}

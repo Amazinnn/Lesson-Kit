@@ -144,6 +144,8 @@ tests/                 # pytest；tests/test_*.py 与 tests/workbench/ 分开（
 
 Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/static/practice-motion.js` 与 `practice-motion.css` 负责纯呈现；`paper-practice.js` 仅在既有请求确认和真实答卷读回后传入状态。它们不访问 SQLite，也不增加接口或构建步骤。
 
+普通练习和 Paper 的连对横幅统一由 `practice-combo.js` / `practice-combo.css` 呈现，复用冻结的批准稿组件与时间线。`lkStreak` 只拥有一份连对状态机；Paper 由其像素动效控制器转发节点，普通练习由状态机转发节点。两条路径均在离开页面时销毁呈现器；基准与渲染对照放在 `docs/design/approved-practice-combo/`。
+
 - 资产路径的**唯一权威**是 `openspec/changes/workbench-visual-language-v2/decisions.md` **A-40**
   与 `design-notes/asset-spec.md`：`assets/icons/` · `assets/empty/` · `assets/motion/` ·
   `assets/audio/` · `fonts/`。**`assets/illustrations/` 这个路径已作废**（`tasks.md` 9.2 /

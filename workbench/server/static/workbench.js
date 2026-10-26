@@ -545,18 +545,13 @@
      BANNER_EVERY 5 · BREAK_OVER 4.  */
   var STREAK_BANNER_EVERY = 5;      /* the banner fires on every multiple of five */
   var STREAK_BREAK_OVER = 4;        /* a break above four must be shown plainly */
-  /* the banner's total run (motion-spec §6.2's `duration`): 700 ms for the
-     5-streak tier, 900 ms for the ≥10 tier — the same numbers the stylesheet
-     gives `lk-combo-in` / `lk-combo-out`. */
-  var BANNER_HOLD_MS = 700;
-  var BANNER_HOLD_LARGE_MS = 900;
 
   function streakCreate(options) {
     var settings = options || {};
     var host = settings.root;
     var count = 0;
-    /* the pending exit of the banner (the downgraded tiers only) */
-    var bannerTimer = null;
+    var banner = host && settings.banner !== false && window.ApprovedPracticeCombo
+      ? window.ApprovedPracticeCombo.create(host) : null;
 
     /* The card is replaced as a whole on every render, so the parts are
        looked up by class at the moment they are needed — never cached. */
@@ -566,48 +561,8 @@
       return element.querySelector(selector);
     }
 
-    function showBanner(bannerCount) {
-      var banner = part(".lk-combo-banner");
-      if (!banner) return;
-      if (banner.closest && banner.closest("#paper-practice[data-pixel-motion='true']")) return;
-      var number = banner.querySelector ? banner.querySelector(".lk-combo-banner__count") : null;
-      if (number) number.textContent = String(bannerCount);
-      /* The tier difference is carried by this one semantic class only. */
-      banner.classList.toggle("is-large", bannerCount >= STREAK_BANNER_EVERY * 2);
-      banner.classList.add("is-on");
-      /* ---- the exit in the downgraded tiers (motion-spec §7.2 row 18) ----
-         The exit is a CSS animation (`lk-combo-out` with a `forwards` fill),
-         and the downgraded gate switches the animation off ⇒ without this
-         half the banner would stay on screen for ever.  So in a downgraded
-         tier the exit is a `setTimeout` instead — the banner shows at once
-         (its terminal state) and disappears when the hold is over.
-         ⚠️ The terminal state has to be **the same** as the animated tier's:
-           there the banner keeps `is-on` and its opacity is 0 ⇒ here only the
-           opacity is written, `is-on` stays where it is (taking it off would
-           make the two tiers' terminal states differ). */
-      if (bannerTimer) {
-        window.clearTimeout(bannerTimer);
-        bannerTimer = null;
-      }
-      if (motionMode() !== "full") {
-        var hold = bannerCount >= STREAK_BANNER_EVERY * 2
-          ? BANNER_HOLD_LARGE_MS : BANNER_HOLD_MS;
-        banner.style.opacity = "";
-        bannerTimer = window.setTimeout(function () {
-          bannerTimer = null;
-          if (banner.parentNode) banner.style.opacity = "0";
-        }, hold);
-      }
-    }
-
-    function html() {
-      /* The milestone count lives in the banner only; no resting badge. */
-      return "<span class='lk-combo-banner' aria-hidden='true'>"
-        + "<span class='lk-combo-banner__count'>" + count + "</span></span>";
-    }
-
     function growStreak() {
-      if (count > 0 && count % STREAK_BANNER_EVERY === 0) showBanner(count);
+      if (banner && count > 0 && count % STREAK_BANNER_EVERY === 0) banner.play(count);
     }
 
     function breakStreak(loud) {
@@ -649,8 +604,8 @@
 
     return {
       count: function () { return count; },
-      reset: function () { count = 0; },
-      html: html,
+      reset: function () { count = 0; if (banner && banner.stop) banner.stop(); },
+      dispose: function () { if (banner) banner.dispose(); },
       judge: judge,
       apply: apply,
     };

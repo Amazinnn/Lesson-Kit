@@ -4172,17 +4172,6 @@ img { max-width: 100%; }
   animation: lk-error-nudge var(--dur-base) var(--ease-standard) both;
 }
 
-/* 连对横幅：弹入 / 退场（档位差异只由 `.is-large` 的静态样式承担） */
-@keyframes lk-combo-in {
-  0%   { opacity: 0; transform: translate3d(-50%, 12px, 0) scale(.88); }
-  60%  { opacity: 1; transform: translate3d(-50%, -2px, 0) scale(1.04); }
-  100% { opacity: 1; transform: translate3d(-50%, 0, 0) scale(1); }
-}
-@keyframes lk-combo-out {
-  from { opacity: 1; transform: translate3d(-50%, 0, 0) scale(1); }
-  to   { opacity: 0; transform: translate3d(-50%, -8px, 0) scale(.96); }
-}
-
 /* 进度带：只动 scaleX，锚点固定在左端 */
 @keyframes lk-progress-fill {
   from { transform: scaleX(0); }
@@ -4318,9 +4307,6 @@ img { max-width: 100%; }
   animation: lk-spin 700ms linear infinite;
 }
 
-/* The resting streak badge is retired; this anchors only its transient banner. */
-.practice-streak { position: relative; display: block; height: 0; }
-
 /* 进度带（§2.1 第 19 项）：**静态样式 = 终态 100%**，生长过程只写在 keyframes 里
    （tasks.md 8.9 终态铁律）——降级后进度带直接是满的，不会停在 0%。
    ⚠️ **轨道**（`.lk-progress`）与填充的**盒子规格**见下方「进度带的轨道」块：
@@ -4427,38 +4413,6 @@ img { max-width: 100%; }
   width: 100%;
   height: 100%;
   overflow: visible;
-}
-
-/* 连对横幅（§2.1 第 18 项）：`.is-on` 的静态样式 = **可见**（降级后直接显示终值） */
-.lk-combo-banner {
-  position: absolute;
-  top: 0; left: 50%;
-  transform: translate3d(-50%, 0, 0);
-  opacity: 0;
-  pointer-events: none;
-}
-.lk-combo-banner.is-on {
-  opacity: 1;
-  animation: lk-combo-in var(--dur-ceremony) var(--ease-rebound) both,
-             lk-combo-out 180ms var(--ease-in) 520ms both;
-}
-.lk-combo-banner__count {
-  display: inline-block;
-  transform: translate3d(0, 0, 0);
-  /* 数字是**文字** ⇒ 走标记档 `--role-yellow-deep`（权威表 §3.4：
-     黄色只承载面积，承载文字一律 `--role-yellow-deep`）。
-     改造前用面积档 `--role-yellow` ⇒ 亮色主题下 **1.54:1** ❌（判定线 3:1）；
-     改后亮色 `#8a6a00` = **4.98:1** ✅、夜纸 `#f0d98a` = **11.61:1** ✅。 */
-  color: var(--role-yellow-deep);
-  font-size: var(--fs-hero);
-}
-.lk-combo-banner.is-large.is-on {
-  animation: lk-combo-in 900ms var(--ease-rebound) both,
-             lk-combo-out 180ms var(--ease-in) 720ms both;
-}
-.lk-combo-banner.is-large .lk-combo-banner__count {
-  transform: translate3d(0, -100px, 0);
-  color: var(--role-blue);
 }
 
 /* ---- 台灯转场四段（§4.2 / §4.3 / tasks.md 8.7）--------------------------

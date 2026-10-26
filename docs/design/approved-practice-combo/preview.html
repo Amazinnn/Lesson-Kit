@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Approved Combo comparison</title>
+<style>*{box-sizing:border-box}html,body{overflow:hidden}body{margin:0;background:#fbf7ef;color:#221f1a;font:14px/1.5 Inter,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}.stage{position:relative;width:min(640px,100vw);height:800px;margin:auto}.lk-approved-combo-wrap{margin:0}</style>
+</head><body><div class="stage" id="target"></div><script>
+window.ready=(async()=>{
+ const source=new URLSearchParams(location.search).has('source');
+ const css=document.createElement('link');css.rel='stylesheet';css.href=source?'combo.css':'/workbench/server/static/practice-combo.css';document.head.append(css);
+ await new Promise(resolve=>{css.onload=resolve;});
+ const script=document.createElement('script');script.src=source?'combo-motion.js':'/workbench/server/static/practice-combo.js';document.head.append(script);await new Promise(resolve=>{script.onload=resolve;});
+ const target=document.getElementById('target'),bounds=target.getBoundingClientRect();target.style.cssText='position:fixed;top:0;left:'+bounds.left+'px;margin:0';
+ if(source){target.innerHTML=await(await fetch('combo.html')).text();window.paint=age=>renderApprovedCombo(target,age,target.clientWidth,false);}
+ else{window.lkMotion={mode:()=> 'full'};const presenter=ApprovedPracticeCombo.create(target);const wrap=document.querySelector('.lk-approved-combo-wrap');wrap.hidden=false;wrap.style.cssText='left:'+bounds.left+'px;top:0;width:'+bounds.width+'px;height:800px';window.paint=age=>ApprovedPracticeCombo.paint(wrap,age,target.clientWidth,false);}
+ window.paint(1000);
+})();
+</script></body></html>
