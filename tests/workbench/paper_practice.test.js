@@ -237,6 +237,7 @@ test("saved Paper setup fixes the selected reveal timing when starting", async (
     practice_mode: "exam", rating_mode: "immediate", reveal_timing: "on_submit",
   });
   assert.match(app.ids["paper-question"].innerHTML, /题面 p-1/);
+  assert.doesNotMatch(app.ids["paper-question"].innerHTML, /practice-streak|lk-streak|lk-flames/);
   assert.ok(app.ids["paper-question"].innerHTML.includes(app.ids["paper-title"].textContent));
   assert.equal(app.ids["paper-item-submit"].hidden, true);
 });

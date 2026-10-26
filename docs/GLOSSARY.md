@@ -628,13 +628,9 @@ _Avoid_：通关、成就、完美奖励、连续学习天数
 出处：openspec/changes/workbench-visual-language-v2（decisions.md A-29；spec「Round completion celebration in two tiers」）
 
 ### 连对 / Consecutive-correct run
-一轮练习里**连续答对**的一段。由三样东西承载：一个**三级计数器**（零 = 灰、
-有连对 = 黄、最高档 = 黄到蓝的渐变，数字滚动到新值）、一簇**逐个点亮的火苗**
-（连对越长，形状越长）、以及**一份参数化横幅**（5 连与 10 连共用同一份横幅，
-数字是参数，不为每个数字各做一份）。连对**超过 4** 时答错会给出明确的负反馈并把计数
-归零，不静默断掉。
+一轮练习里**连续答对**的一段。内部计数只用于确认五连、十连等节点；平时不显示常驻数字或火苗。达到节点时短暂显示带节点数字的横幅。连对超过 4 时答错会让题卡短促摆动，并把计数归零。
 _Avoid_：连击（游戏语汇）、积分、正确率、连续学习天数
-出处：openspec/changes/workbench-visual-language-v2（spec「Consecutive-correct escalation feedback」）
+出处：`hide-persistent-combo-counter`、`practice-pixel-motion`
 
 ### 自评 / Self-Rating
 学习者对一道已作答题目的可选 1–5 打分（可带自然语言备注）。启用自评时可保存，也可跳过；首次评分写入对应反馈并按评分更新学习投影。普通 Paper 中再次保存只覆盖同一执行、同一 Attempt 关联反馈里的评分与评语，不新建作答或反馈，不重复更新学习投影；自评不控制导航或交卷。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可按既有 off 规则折算。

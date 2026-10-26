@@ -463,7 +463,6 @@
 
   var TICKER_DURATION_MS = 240;   /* motion-spec §2.1 item 8: 240 ms per digit */
   var TICKER_STAGGER_MS = 40;     /* per-digit stagger */
-  var FLAME_STAGGER_MS = 80;      /* motion-spec §3.6: 80 ms between clusters */
 
   function tickerFrame() {
     return window.requestAnimationFrame
@@ -512,25 +511,7 @@
     isFull: function () { return motionMode() === "full"; },
   };
 
-  /* ② the flame clusters (tasks.md 8.4 ② / 17.8): the class only — the
-     ignition is a CSS keyframe, the clusters stagger by 80 ms. */
-  function setFlames(root, litCount) {
-    if (!root || !root.querySelectorAll) return 0;
-    var flames = root.querySelectorAll(".lk-flame");
-    var lit = Number(litCount) || 0;
-    Array.prototype.forEach.call(flames, function (flame, index) {
-      var on = index < lit;
-      flame.classList.toggle("is-lit", on);
-      /* The stagger is a delay, not a start state: the start state stays
-         inside the keyframes. */
-      flame.style.animationDelay = on ? (index * FLAME_STAGGER_MS) + "ms" : "";
-    });
-    return flames.length;
-  }
-
-  window.lkFlame = { set: setFlames };
-
-  /* ③ the progress band (tasks.md 8.4 ③ / 17.4): the static style is already
+  /* The progress band (tasks.md 8.4 ③ / 17.4): the static style is already
      the final one (scaleX 1); `is-filled` replays the growth keyframe. */
   function fillProgressBand(root) {
     if (!root || !root.querySelectorAll) return 0;
@@ -550,8 +531,8 @@
   window.lkProgress = { fill: fillProgressBand };
 
   /* ④ the streak state machine (decisions.md A-58): the **one** implementation
-     of the streak feedback — count / three tiers / growth / break / reset /
-     banner / flames.  `practice-flow.js` and `paper-practice.js` used to carry
+     of the streak count / break / reset / milestone banner.
+     `practice-flow.js` and `paper-practice.js` used to carry
      a copy each; that is the "one component in two shapes" disease (F-1) with
      two instances of it.
 
@@ -561,12 +542,7 @@
      a verdict into feedback; the verdict semantics do not move.
 
      The thresholds are the ones both flows already used, item by item:
-     TIER_HOT 30 · FLAME_CAP 10 · STAGGER 80 ms · STEP 40 ms ·
      BANNER_EVERY 5 · BREAK_OVER 4.  */
-  var STREAK_TIER_HOT = 30;         /* the third tier starts here */
-  var STREAK_FLAME_CAP = 10;        /* at most ten flame clusters */
-  var STREAK_FLAME_STAGGER_MS = 80; /* per-cluster ignition delay */
-  var STREAK_FLAME_STEP_MS = 40;    /* per-cluster extinguish delay */
   var STREAK_BANNER_EVERY = 5;      /* the banner fires on every multiple of five */
   var STREAK_BREAK_OVER = 4;        /* a break above four must be shown plainly */
   /* the banner's total run (motion-spec §6.2's `duration`): 700 ms for the
@@ -574,11 +550,6 @@
      gives `lk-combo-in` / `lk-combo-out`. */
   var BANNER_HOLD_MS = 700;
   var BANNER_HOLD_LARGE_MS = 900;
-
-  function streakTierOf(count) {
-    if (count <= 0) return 0;
-    return count >= STREAK_TIER_HOT ? 2 : 1;
-  }
 
   function streakCreate(options) {
     var settings = options || {};
@@ -593,20 +564,6 @@
       var element = typeof host === "function" ? host() : host;
       if (!element || typeof element.querySelector !== "function") return null;
       return element.querySelector(selector);
-    }
-
-    function setNumber(value, from) {
-      var ticker = part(".lk-ticker");
-      if (!ticker) return;
-      if (window.lkTicker && typeof window.lkTicker.set === "function") {
-        try {
-          window.lkTicker.set(ticker, value, { from: from == null ? value : from });
-          return;
-        } catch (error) {
-          /* The shared ticker is absent — the figure still has to be right. */
-        }
-      }
-      ticker.textContent = String(value);
     }
 
     function showBanner(bannerCount) {
@@ -644,54 +601,26 @@
     }
 
     function html() {
-      var slots = Math.min(count, STREAK_FLAME_CAP);
-      var flames = "";
-      for (var i = 0; i < slots; i += 1) {
-        flames += "<span class='lk-flame is-lit' style='animation-delay:"
-          + (i * STREAK_FLAME_STAGGER_MS) + "ms'>"
-          + "<span class='lk-flame-off'></span><span class='lk-flame-on'></span></span>";
-      }
-      var tier = streakTierOf(count);
-      return "<span class='lk-streak"
-        + (tier === 2 ? " is-hot" : tier === 1 ? " is-warm" : "")
-        + "' data-lk-streak-tier='" + tier + "'>"
-        + "<span class='lk-flames' aria-hidden='true'>" + flames + "</span>"
-        + "<span class='lk-ticker' data-value='" + count + "' aria-label='连对 "
-        + count + "'>" + count + "</span></span>"
-        /* one banner: 5 in a row / 10 in a row … share the same DOM and the same
-           animation, the figure is the parameter */
-        + "<span class='lk-combo-banner' aria-hidden='true'>"
+      /* The milestone count lives in the banner only; no resting badge. */
+      return "<span class='lk-combo-banner' aria-hidden='true'>"
         + "<span class='lk-combo-banner__count'>" + count + "</span></span>";
     }
 
-    function growStreak(before) {
-      setNumber(count, before);
+    function growStreak() {
       if (count > 0 && count % STREAK_BANNER_EVERY === 0) showBanner(count);
     }
 
-    function breakStreak(before, loud) {
-      var flames = part(".lk-flames");
-      var lit = count;
-      /* cluster by cluster: from the newest one, 40 ms apart (the extinguish is
-         a pure opacity transition) */
-      for (var remaining = lit - 1; remaining >= 0; remaining -= 1) {
-        (function (left) {
-          setTimeout(function () {
-            if (flames && window.lkFlame && typeof window.lkFlame.set === "function") {
-              window.lkFlame.set(flames, left);
-            }
-          }, (lit - 1 - left) * STREAK_FLAME_STEP_MS);
-        })(remaining);
-      }
+    function breakStreak(loud) {
       count = 0;
-      setNumber(0, before);
-      if (!loud) return;
+      if (!loud || motionMode() !== "full") return;
       /* a break above four must be shown plainly: one horizontal shake of
-         ≤4 px / 160 ms, never a screen-wide shake */
-      var counter = part(".lk-streak");
-      if (!counter) return;
-      counter.classList.add("lk-error-nudge");
-      counter.style.animation = "lk-error-nudge 160ms var(--ease-standard) both";
+         ≤4 px / 160 ms on the question card, never a screen-wide shake */
+      var card = part(".practice-question-card") || (typeof host === "function" ? host() : host);
+      if (card && typeof card.animate === "function") card.animate([
+        { transform: "translateX(0)" }, { transform: "translateX(-4px)" },
+        { transform: "translateX(4px)" }, { transform: "translateX(-2px)" },
+        { transform: "translateX(0)" },
+      ], { duration: 160, easing: "ease-out" });
     }
 
     /* the verdict fork: right → count + 1; wrong above four → shown plainly and
@@ -704,8 +633,7 @@
       if (verdict === true) {
         count += 1;
       } else if (count > STREAK_BREAK_OVER) {
-        /* on a break the count stays for a moment, so the flames can go out
-           one by one before it returns to zero */
+        /* Keep the pre-break count until the visible card nudge lands. */
         breaking = true;
       } else {
         count = 0;
@@ -715,9 +643,8 @@
 
     function apply(landed) {
       if (!landed) return;
-      if (landed.breaking) breakStreak(landed.before, true);
-      else if (landed.correct) growStreak(landed.before);
-      else setNumber(0, landed.before);
+      if (landed.breaking) breakStreak(true);
+      else if (landed.correct) growStreak();
     }
 
     return {

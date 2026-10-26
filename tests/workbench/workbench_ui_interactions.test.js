@@ -5,6 +5,32 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
+test("streak stays invisible between milestones but still celebrates the fifth correct answer", () => {
+  const app = runWorkbench({ elements: { layout: layout(), ...durablePracticeElements() },
+    fetch: () => jsonResponse({}) });
+  const number = new FakeElement("combo-count");
+  const banner = new FakeElement("combo-banner", { queryOne: selector => selector === ".lk-combo-banner__count" ? number : null });
+  const host = new FakeElement("question", { queryOne: selector => selector === ".lk-combo-banner" ? banner : null });
+  const streak = app.window.lkStreak.create({ root: host });
+  assert.doesNotMatch(streak.html(), /lk-streak|lk-flames|lk-ticker/);
+  for (let i = 0; i < 4; i += 1) streak.apply(streak.judge(true));
+  assert.equal(streak.count(), 4);
+  assert.equal(banner.classList.contains("is-on"), false);
+  streak.apply(streak.judge(true));
+  assert.equal(streak.count(), 5);
+  assert.equal(number.textContent, "5");
+  assert.equal(banner.classList.contains("is-on"), true);
+  assert.doesNotMatch(streak.html(), /lk-streak|lk-flames|lk-ticker/);
+  const nudges = [];
+  host.animate = (_frames, options) => nudges.push(options.duration);
+  for (let round = 0; round < 2; round += 1) {
+    streak.apply(streak.judge(false));
+    assert.equal(streak.count(), 0);
+    for (let i = 0; i < 5; i += 1) streak.apply(streak.judge(true));
+  }
+  assert.deepEqual(nudges, [160, 160]);
+});
+
 test("saved Paper drafts restore separately from submitted answers and persist with revision context", async () => {
   const calls = [];
   const elements = { layout: layout(), ...durablePracticeElements() };

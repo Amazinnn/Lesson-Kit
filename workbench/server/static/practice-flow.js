@@ -1055,8 +1055,8 @@
       var streakMarkup = streak ? streak.html() : "";
       stream.innerHTML = "<article class='practice-question-card card'>"
         + "<p class='context-line'>" + (reviewOnly ? "回看 · 练习题" : "练习题") + "</p>"
-        /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里 */
-        + "<p class='practice-streak' style='position: relative'>" + streakMarkup + "</p><h2>"
+        /* Zero-height anchor keeps only the transient milestone banner. */
+        + "<span class='practice-streak'>" + streakMarkup + "</span><h2>"
         + escapeHtml(problem.display_title || "未命名题目") + "</h2>"
         + practiceSourceHtml(problem)
         + "<div class='problem-text wb-reading wb-reading--stem'>" + richText(problemTextFor(problem)) + "</div>"

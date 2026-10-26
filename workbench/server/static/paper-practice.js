@@ -646,7 +646,6 @@
       var title = problem.display_title || problem.title || "未命名题目";
       var prompt = problem.problem_text || "题面暂不可用。";
       var paperTitle = run.source_label || (savedPaper && savedPaper.title) || "练习试卷";
-      var streakMarkup = streak ? streak.html() : "";
       /* 16.1 题号槽位：服务端只给槽位，值必须由客户端写 —— 题号随题序变，
          服务端不知道当前第几题。编号与题号点（#paper-dots）、完成页逐题链接
          同一口径：**itemPosition(item, index)** —— 单一真源，与提交载荷里的
@@ -658,17 +657,6 @@
         ids.stemIndex.textContent = String(itemPosition(stemItem, position));
       }
       ids.question.innerHTML = "<p class='section-kicker paper-run-title'>" + escapeHtml(paperTitle) + "</p>"
-        /* 连对计数器常驻练习页；横幅绝对定位在这一行的定位上下文里。
-           回看已完成的答卷时不挂 —— 那不是一轮练习。
-           on_submit 模式也不挂（decisions.md A-59）：该模式没有逐题判定，
-           连对计数整轮恒为 0 —— 显示一个恒为 0 的数字是没有信息量的假事实。
-           判据用既有的 currentMode() === "on_submit"（与 itemStatus 等处同一口径）。
-           模式未知时（老记录接管窗口：reveal_timing 尚空，currentMode() 会兜底成
-           per_item）同样不挂 —— 宁可晚一点显示，也不要先闪一个恒为 0 的假数
-           （所有者裁决 2026-10-22）。currentMode() 的兜底不动（它被 15 处用），
-           只在这里多判一个「reveal_timing 为空」。 */
-        + (renderingArchived || !run.reveal_timing || currentMode() === "on_submit"
-          ? "" : "<p class='practice-streak' style='position: relative'>" + streakMarkup + "</p>")
         + "<h2>" + escapeHtml(title) + "</h2>"
         + "<div class='wb-reading wb-reading--stem problem-text'>" + richText(String(prompt)) + "</div>"
         + (problem.source_evidence
