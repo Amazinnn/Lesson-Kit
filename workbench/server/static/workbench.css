@@ -2600,7 +2600,6 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
 #ai-messages .msg { font-size: 14px; line-height: 22px; padding: 10px 2px; margin-bottom: 4px; }
 #ai-input-row { display: flex; gap: 6px; margin-top: 12px; align-items: flex-end; }
 #ai-input { flex: 1; min-height: 32px; }
-#ai-send-action { width: 104px; flex: none; font-size: 12px; }
 .ai-send-actions { display: flex; gap: 5px; }
 #ai-status { min-height: 18px; margin: 6px 0 0; }
 .ai-plan {

@@ -117,7 +117,6 @@ function setup(fetch, options = {}) {
     "ai-input-row": new Element("ai-input-row"),
     "ai-approval-slot": new Element("ai-approval-slot"),
     "ai-send": new Element("ai-send"),
-    "ai-send-action": new Element("ai-send-action", { value: "default" }),
     "ai-pending-queue": new Element("ai-pending-queue"),
     "ai-pending-list": new Element("ai-pending-list"),
     "ai-queue-status": new Element("ai-queue-status"),
@@ -416,7 +415,7 @@ test("an unknown send survives reload and reconciles with the same identity with
   sessionRows(first.elements)[0].children[0].click();
   await flush();
   first.elements["ai-input"].value = "Keep this message";
-  first.elements["ai-send-action"].value = "interrupt";
+  first.localStorage.setItem("wb_settings_alpha", JSON.stringify({ runningSendAction: "interrupt" }));
   first.elements["ai-send"].click();
   await flush();
 
@@ -457,7 +456,6 @@ test("an unknown send survives reload and reconciles with the same identity with
     item.className === "ai-send-recoveries");
   assert.ok(recovery);
   reopened.elements["ai-input"].value = "newer draft";
-  reopened.elements["ai-send-action"].value = "queue";
   recoveryAction(recovery, "reconcile").click();
   await flush();
   const retry = retryCalls.find((call) => call.options?.method === "POST");
@@ -494,7 +492,6 @@ test("reconciling a legacy unknown send leaves its omitted queue action unchange
   });
   await flush();
 
-  app.elements["ai-send-action"].value = "interrupt";
   const recovery = app.elements["ai-messages"].children.find((item) =>
     item.className === "ai-send-recoveries");
   recoveryAction(recovery, "reconcile").click();

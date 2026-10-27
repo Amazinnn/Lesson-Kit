@@ -1408,8 +1408,7 @@ The UI SHALL render normalized provider activities as semantic action cards with
 
 The workspace's existing browser settings SHALL store the default action for a
 message submitted while a turn is running, with queue as the default. The
-composer SHALL retain explicit queue and interrupt-and-send choices regardless
-of the configured default. A single compact pending-message list immediately above the composer SHALL show only accepted queued messages in confirmed execution order, with reorder, send-now, edit and remove controls before execution, and one continue action when retained work is paused. Interrupt handoffs SHALL NOT appear as queue entries. Pending edits
+composer SHALL use the workspace running-send preference for new submissions and SHALL NOT expose a per-message send-mode selector. A single compact pending-message list immediately above the composer SHALL show only accepted queued messages in confirmed execution order, with reorder, send-now, edit and remove controls before execution, and one continue action when retained work is paused. Interrupt handoffs SHALL NOT appear as queue entries. Pending edits
 SHALL use the expected revision read with the message. The controls SHALL make
 clear that an accepted pending message has not begun provider execution.
 
@@ -1420,7 +1419,7 @@ clear that an accepted pending message has not begun provider execution.
 
 #### Scenario: Use an explicit running-send action
 
-- **WHEN** a turn is running and the learner chooses queue or interrupt-and-send for one submission
+- **WHEN** a turn is running and the learner submits a message using the configured queue or interrupt-and-send preference
 - **THEN** that explicit action applies to the submission without changing the stored default preference
 
 #### Scenario: Inspect and edit a pending message

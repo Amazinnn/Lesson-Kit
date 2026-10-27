@@ -4498,10 +4498,7 @@
     }
     var requestBody = Object.assign({}, body || {});
     if (!preserveQueueAction) {
-      var sendAction = document.getElementById("ai-send-action");
-      var selectedAction = sendAction ? sendAction.value : "default";
-      requestBody.queue_action = selectedAction === "queue" || selectedAction === "interrupt"
-        ? selectedAction : loadSetting("runningSendAction", "queue");
+      requestBody.queue_action = loadSetting("runningSendAction", "queue");
     }
     var submission = aiPrepareSubmission(requestBody, existingOutbox);
     if (!submission) {
