@@ -1257,25 +1257,6 @@
       applyDisplayPreferences();
     });
   }
-  /* 设置视图里的同一份真值（id 带 -view 后缀，避免与左栏那个撞 id）。 */
-  var showRatingViewBox = document.getElementById("setting-show-rating-view");
-  if (showRatingViewBox) {
-    showRatingViewBox.checked = showRatingEnabled();
-    showRatingViewBox.addEventListener("change", function () {
-      saveSetting("showRating", showRatingViewBox.checked);
-      if (showRatingBox) showRatingBox.checked = showRatingViewBox.checked;
-      applyDisplayPreferences();
-    });
-  }
-  var showSourceViewBox = document.getElementById("setting-show-source-view");
-  if (showSourceViewBox) {
-    showSourceViewBox.checked = showSourceEnabled();
-    showSourceViewBox.addEventListener("change", function () {
-      saveSetting("showSource", showSourceViewBox.checked);
-      if (showSourceBox) showSourceBox.checked = showSourceViewBox.checked;
-      applyDisplayPreferences();
-    });
-  }
   var showSourceBox = document.getElementById("setting-show-source");
   if (showSourceBox) {
     showSourceBox.checked = showSourceEnabled();
@@ -1288,16 +1269,6 @@
   window.addEventListener("storage", function (event) {
     if (event.key === null || event.key === SETTINGS_KEY) applyDisplayPreferences();
   });
-
-  var runningSendSetting = document.getElementById("setting-running-send");
-  if (runningSendSetting) {
-    runningSendSetting.value = loadSetting("runningSendAction", "queue");
-    runningSendSetting.addEventListener("change", function () {
-      var action = runningSendSetting.value === "interrupt" ? "interrupt" : "queue";
-      runningSendSetting.value = action;
-      saveSetting("runningSendAction", action);
-    });
-  }
 
   /* ---------- the settings view ---------- */
 
@@ -1373,6 +1344,36 @@
   }
 
   function mountSettingsView() {
+    /* Bind on each settings-page mount, including middle-column navigation. */
+    var showRatingViewBox = document.getElementById("setting-show-rating-view");
+    if (showRatingViewBox) {
+      showRatingViewBox.checked = showRatingEnabled();
+      showRatingViewBox.addEventListener("change", function () {
+        saveSetting("showRating", showRatingViewBox.checked);
+        if (showRatingBox) showRatingBox.checked = showRatingViewBox.checked;
+        applyDisplayPreferences();
+      });
+    }
+    var showSourceViewBox = document.getElementById("setting-show-source-view");
+    if (showSourceViewBox) {
+      showSourceViewBox.checked = showSourceEnabled();
+      showSourceViewBox.addEventListener("change", function () {
+        saveSetting("showSource", showSourceViewBox.checked);
+        if (showSourceBox) showSourceBox.checked = showSourceViewBox.checked;
+        applyDisplayPreferences();
+      });
+    }
+    var runningSendSetting = document.getElementById("setting-running-send");
+    if (runningSendSetting) {
+      runningSendSetting.value = loadSetting("runningSendAction", "queue");
+      runningSendSetting.addEventListener("change", function () {
+        var action = runningSendSetting.value === "interrupt" ? "interrupt" : "queue";
+        runningSendSetting.value = action;
+        saveSetting("runningSendAction", action);
+      });
+    }
+
+    applyDisplayPreferences();
     var themeBox = document.getElementById("setting-theme");
     var motionBox = document.getElementById("setting-motion");
     var soundBox = document.getElementById("setting-sound");

@@ -1049,11 +1049,10 @@ Saved Paper cards SHALL arrive folded with title, count and management controls 
 - **WHEN** rename or export fails on a folded card
 - **THEN** its readable error remains visible outside the item list
 
-### Requirement: Learner settings in the left rail
+### Requirement: Learner settings in the settings view
 
-The workbench's left column SHALL carry a settings section whose preferences
-apply across the practice and paper surfaces. Its first preference SHALL be a
-checkbox, 「练习与试卷显示自评」, defaulting to on: self-rating behaves exactly
+The workbench's left column SHALL carry a single 「设置」 entry to the settings view, without inline preference controls. The settings view SHALL contain running-send behavior, self-rating visibility and source visibility alongside appearance preferences, retaining their existing workspace browser storage and defaults.
+The self-rating preference SHALL be a checkbox, defaulting to on: self-rating behaves exactly
 as before. With it off, no self-rating surface SHALL appear anywhere in the
 flow — the rating-timing choice is hidden and not required to start, the
 feedback panel never renders, a finished round takes the no-session-end path,
@@ -1577,7 +1576,7 @@ Successful explicit final submission SHALL show a congratulations-style surface 
 
 ### Requirement: Question source display preference
 
-The settings view and left rail SHALL expose the same per-workspace self-rating and question-source preferences, synchronize both entry points and browser tabs, and preserve explicit stored values. Question sources SHALL be hidden by default. Turning source display off or on SHALL immediately hide or show an available source on the current question without navigation, restarting or losing inputs. Hiding a source SHALL NOT remove its persisted provenance.
+The settings view SHALL expose per-workspace self-rating and question-source preferences, synchronize browser tabs, and preserve explicit stored values. The left rail SHALL provide only the settings entry. Question sources SHALL be hidden by default. Turning source display off or on SHALL immediately hide or show an available source on the current question without navigation, restarting or losing inputs. Hiding a source SHALL NOT remove its persisted provenance.
 
 #### Scenario: Source starts hidden and can be toggled on the current question
 - **WHEN** a workspace has no explicit source preference and a question has source evidence
@@ -1585,7 +1584,7 @@ The settings view and left rail SHALL expose the same per-workspace self-rating 
 - **AND** enabling, disabling and reenabling the preference updates that same question immediately
 
 #### Scenario: Explicit preferences and both entry points agree
-- **WHEN** the learner changes either preference in the left rail, settings view or another tab for that workspace
+- **WHEN** the learner changes either preference in the settings view or another tab for that workspace
 - **THEN** both entry points and the visible question reflect that value without changing another workspace's preferences
 
 ### Requirement: Paper pixel progress and confirmed-answer feedback

@@ -964,19 +964,19 @@ def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
 
 
 def settings_page(workspace, workspaces, weak_items, kp_titles=None):
-    """The workbench settings view: appearance preferences only (design.md D-9).
-
-    Theme, reading face, motion and sound live here.  The two behaviour
-    preferences stay in the left rail where they have always been — a place
-    the learner can see may not move without a word (compat boundary).
-    """
+    """Workspace appearance and learning preferences, with one sidebar entry."""
     middle = (
         _page_header(
             "工作台 / 设置", "设置", "",
             "<button id='settings-close' class='outline sm' type='button'>关闭</button>",
         )
         + "<div class='page-content'>"
-        + "<section class='settings-view' aria-label='外观偏好'>"
+        + "<section class='settings-view' aria-label='工作台偏好'>"
+        + "<div class='preference-row'>"
+        + "<label class='preference-name' for='setting-running-send'>运行中发送方式</label>"
+        + "<select id='setting-running-send' aria-label='运行中发送方式'>"
+        + "<option value='queue'>排队发送</option>"
+        + "<option value='interrupt'>中断后发送</option></select></div>"
         + "<div class='preference-row'>"
         + "<label class='preference-name' for='setting-theme'>主题</label>"
         + "<span class='preference-value' id='setting-theme-value'>暖纸</span>"
@@ -1085,16 +1085,8 @@ def _left_column(workspace, workspaces, weak_items, active_nav):
         f"{nav}</nav>"
         "<section class='side-section settings-section'>"
         "<p class='side-label'>设置</p>"
-        "<label class='setting-row' for='setting-running-send'>运行中发送方式</label>"
-        "<select id='setting-running-send' aria-label='运行中发送方式'>"
-        "<option value='queue'>排队发送</option>"
-        "<option value='interrupt'>中断后发送</option></select>"
-        "<label class='setting-row'><input id='setting-show-rating' type='checkbox' checked> "
-        "练习与试卷显示自评</label>"
-        "<label class='setting-row'><input id='setting-show-source' type='checkbox' checked> "
-        "练习与试卷显示来源</label>"
         "<a id='setting-view-toggle' class='setting-row setting-view-toggle' "
-        f"href='/w/{workspace['name']}/settings' aria-expanded='false'>外观设置</a>"
+        f"href='/w/{workspace['name']}/settings' aria-expanded='false'>设置</a>"
         "</section>"
         "<section class='side-section weak-section'>"
         f"<div class='side-heading'><p class='side-label'>{rail_label}</p>{count_badge}</div>"

@@ -203,7 +203,7 @@ class UiRouteTests(unittest.TestCase):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
         self.assertIn("class='side-section settings-section'", body)
-        self.assertIn("id='setting-show-rating'", body)
+        self.assertNotIn("id='setting-show-rating'", body)
         self.assertIn("id='paper-rating'", body)
         self.assertIn("id='paper-reveal-timing'", body)
 
@@ -263,18 +263,20 @@ class UiRouteTests(unittest.TestCase):
         # The icons are inline SVG, not <img> (asset-spec §1.11).
         self.assertNotIn("<img", body)
 
-    def test_left_rail_keeps_the_two_behaviour_preferences_in_place(self):
-        # The two behaviour preferences never move (compat boundary), and the
-        # appearance entry stays the one the settings view already owns.
+    def test_left_rail_keeps_only_the_settings_entry(self):
         status, body = self.fetch("/w/dmath/practice")
         self.assertEqual(status, 200)
-        self.assertIn("id='setting-running-send'", body)
-        self.assertIn("id='setting-show-rating'", body)
+        self.assertNotIn("id='setting-running-send'", body)
+        self.assertNotIn("id='setting-show-rating'", body)
         self.assertIn("id='setting-view-toggle'", body)
         self.assertIn("class='count-badge'", body)
         # The four sections sit on one wrapper: the rail's paper ends with the
         # content, so the lower half is not blank paper (15.3).
         self.assertIn("class='side-sections'", body)
+        status, settings = self.fetch("/w/dmath/settings")
+        self.assertEqual(status, 200)
+        for control in ("setting-running-send", "setting-show-rating-view", "setting-show-source-view"):
+            self.assertIn("id='" + control + "'", settings)
 
     def test_topbar_is_three_sections_with_a_self_drawn_chapter_panel(self):
         # 15.4: brand / identity / actions, and the chapter lens carries a
