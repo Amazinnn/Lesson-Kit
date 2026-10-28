@@ -452,7 +452,7 @@ test("an unknown send survives reload and reconciles with the same identity with
   await flush();
   assert.equal(retryCalls.some((call) => call.options?.method === "POST"), false,
     "reopening must not automatically replay a possibly accepted send");
-  const recovery = reopened.elements["ai-messages"].children.find((item) =>
+  const recovery = reopened.elements["ai-pending-queue"].children.find((item) =>
     item.className === "ai-send-recoveries");
   assert.ok(recovery);
   reopened.elements["ai-input"].value = "newer draft";
@@ -492,7 +492,7 @@ test("reconciling a legacy unknown send leaves its omitted queue action unchange
   });
   await flush();
 
-  const recovery = app.elements["ai-messages"].children.find((item) =>
+  const recovery = app.elements["ai-pending-queue"].children.find((item) =>
     item.className === "ai-send-recoveries");
   recoveryAction(recovery, "reconcile").click();
   await flush();
@@ -522,7 +522,7 @@ test("a rejected send keeps its message recoverable and will not overwrite a new
   app.elements["ai-send"].click();
   await flush();
 
-  const recovery = app.elements["ai-messages"].children.find((item) =>
+  const recovery = app.elements["ai-pending-queue"].children.find((item) =>
     item.className === "ai-send-recoveries");
   assert.ok(recovery);
   assert.ok(nodesWithClass(recovery, "ai-send-recovery")[0].children[0].textContent);
@@ -565,9 +565,9 @@ test(`a ${terminalStatus} accepted send offers a new linked attempt from its sav
   });
   await flush();
 
-  const inlineRetry = nodesWithClass(app.elements["ai-messages"], "ai-inline-retry")[0];
-  assert.ok(inlineRetry, "accepted failures expose their retry in conversation history");
-  inlineRetry.click();
+  const retryButton = recoveryAction(app.elements["ai-pending-queue"], "retry-failed");
+  assert.ok(retryButton, "accepted failures retry from the candidate list");
+  retryButton.click();
   await flush();
   const retry = calls.find((call) => call.options?.method === "POST");
   const body = JSON.parse(retry.options.body);
@@ -640,8 +640,8 @@ test("reloaded failed history renders saved activities without a blank assistant
   assert.ok(children.some((child) => child.className === "ai-plan"));
   assert.equal(children.filter((child) => child.className === "msg ai").length, 0,
     "a failure with no assistant text does not render an empty answer bubble");
-  assert.ok(nodesWithClass(children[0], "ai-turn-inline-status").length,
-    "the failed user turn carries its truthful inline failure status");
+  assert.equal(nodesWithClass(children[0], "ai-turn-inline-status").length, 0,
+    "send status belongs below the conversation");
   assert.match(deepHtml(app.elements["ai-messages"]), /permission denied/);
 });
 
@@ -1202,7 +1202,7 @@ test("a queue edit stays recoverable after a 409 removes its target without repl
   assert.deepEqual(queueRowIds(app.elements["ai-pending-list"]), ["turn-c"],
     "a target that has left the queue is not kept as a queue row");
   assert.equal(app.elements["ai-input"].value, "Keep my newer composer draft");
-  const recovery = nodesWithClass(app.elements["ai-messages"], "ai-send-recovery")
+  const recovery = nodesWithClass(app.elements["ai-pending-queue"], "ai-send-recovery")
     .find((card) => card.children.some((child) =>
       child.textContent === "Unsent queue edit draft"));
   assert.ok(recovery, "the unsaved text is available in an explicit recovery card");
@@ -1211,7 +1211,7 @@ test("a queue edit stays recoverable after a 409 removes its target without repl
     "editing another queued row cannot overwrite an unresolved recovered edit");
   assert.ok(recovery.children.some((child) => child.textContent === "Unsent queue edit draft"));
   assert.equal(app.elements["ai-input"].value, "Keep my newer composer draft");
-  assert.match(app.elements["ai-status"].textContent, /恢复摘要/);
+  assert.match(app.elements["ai-status"].textContent, /候选列表/);
   recoveryAction(recovery, "restore-queue-edit").click();
   assert.equal(app.elements["ai-input"].value, "Keep my newer composer draft",
     "recovery does not overwrite an existing composer draft");
@@ -1229,7 +1229,7 @@ test("a queue edit stays recoverable after a 409 removes its target without repl
   assert.equal(patchCalls.length, 1, "recovery does not retry the stale revision");
 });
 
-test("recovery summary is compact and accepted failures retry inline with captured context", async () => {
+test("failed sends share the candidate list without send status in conversation history", async () => {
   const outboxKey = "wb_ai_message_outbox_alpha_conv-a";
   const records = {
     unknown: { conversation_id: "conv-a", submission_id: "uncertain", status: "unknown",
@@ -1268,15 +1268,16 @@ test("recovery summary is compact and accepted failures retry inline with captur
   });
   await flush();
 
-  const recoveries = nodesWithClass(app.elements["ai-messages"], "ai-send-recoveries");
+  const recoveries = nodesWithClass(app.elements["ai-pending-queue"], "ai-send-recoveries");
   assert.equal(recoveries.length, 1);
-  assert.match(recoveries[0].children[0].textContent, /2/);
-  assert.equal(nodesWithClass(recoveries[0], "ai-send-recovery").length, 2);
-  assert.equal(nodesWithClass(app.elements["ai-messages"], "ai-inline-retry").length, 1);
-  assert.match(nodesWithClass(app.elements["ai-messages"], "ai-turn-inline-status")[0].textContent,
-    /provider exit code 3/);
+  assert.equal(nodesWithClass(recoveries[0], "ai-send-recovery").length, 3);
+  assert.equal(nodesWithClass(app.elements["ai-messages"], "ai-send-recoveries").length, 0);
+  assert.equal(nodesWithClass(app.elements["ai-messages"], "ai-inline-retry").length, 0);
+  assert.equal(nodesWithClass(app.elements["ai-messages"], "ai-turn-inline-status").length, 0);
+  assert.equal(app.elements["ai-pending-queue"].classList.contains("hidden"), false);
+  assert.equal(calls.some(call => call.options?.method === "POST"), false, "failures wait for a manual send");
 
-  nodesWithClass(app.elements["ai-messages"], "ai-inline-retry")[0].click();
+  recoveryAction(recoveries[0], "retry-failed").click();
   await flush();
   const retry = calls.find((call) => call.url.endsWith("/ai/sessions/conv-a/turns")
     && call.options?.method === "POST");
@@ -1287,6 +1288,7 @@ test("recovery summary is compact and accepted failures retry inline with captur
   assert.equal(body.retry_of, "turn-failed");
   assert.notEqual(body.submission_id, "failed-send");
   assert.equal(body.queue_action, "queue");
+  assert.equal(JSON.parse(app.localStorage.getItem(outboxKey))["failed-send"], undefined, "a persisted retry replaces its old failed candidate");
 });
 
 test("pending Paper approval restores beside the composer and accepts sends into the paused queue", async () => {
@@ -2252,4 +2254,43 @@ test("a network failure while restoring keeps the conversation selected and show
   assert.equal(app.elements["ai-session-list-view"].classList.contains("hidden"), true);
   assert.match(app.elements["ai-status"].textContent, /刷新页面可重试/);
   assert.equal(app.elements["ai-send"].disabled, true);
+});
+
+
+test("a rejected candidate resends manually with the current policy and keeps a newer draft", async () => {
+  const key = "wb_ai_message_outbox_alpha_conv-a";
+  const calls = [];
+  const app = setup((url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith("/ai/providers")) return response([]);
+    if (url.endsWith("/ai/sessions") && !options) return response([session("conv-a")]);
+    if (url.endsWith("/ai/sessions/conv-a") && !options) return response(session("conv-a"));
+    if (url.endsWith("/ai/sessions/conv-a/turns") && options?.method === "POST") {
+      return response({ turn_id: "turn-new", status: "queued" });
+    }
+    return response({});
+  }, {
+    seed: { wb_ai_conversation_alpha: JSON.stringify("conv-a") },
+    localSeed: {
+      wb_settings_alpha: JSON.stringify({ runningSendAction: "interrupt" }),
+      [key]: JSON.stringify({ rejected: {
+        conversation_id: "conv-a", submission_id: "rejected", status: "rejected",
+        body: { message: "Preserved text", route: "/w/alpha/kp/kp-old",
+          submission_id: "rejected", queue_action: "queue" },
+      } }),
+    },
+    setTimeout: () => 1,
+  });
+  await flush();
+  assert.equal(calls.filter(c => c.options?.method === "POST").length, 0);
+  app.elements["ai-input"].value = "Newer draft";
+  recoveryAction(app.elements["ai-pending-queue"], "resend").click();
+  await flush();
+  const body = JSON.parse(calls.find(c => c.options?.method === "POST").options.body);
+  assert.equal(body.message, "Preserved text");
+  assert.equal(body.route, "/w/alpha/kp/kp-old");
+  assert.equal(body.queue_action, "interrupt");
+  assert.equal(app.elements["ai-input"].value, "Newer draft");
+  assert.equal(nodesWithClass(app.elements["ai-messages"], "ai-send-recoveries").length, 0);
+  assert.equal(app.elements["ai-pending-queue"].classList.contains("hidden"), true);
 });

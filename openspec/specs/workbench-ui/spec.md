@@ -1347,12 +1347,14 @@ context, and a stable submission identity in browser storage. A definite
 request rejection SHALL remain visible and editable/retryable across reload.
 If acceptance is uncertain, the UI SHALL distinguish that state and reconcile
 by retrying the same identity and task fields. Confirmed acceptance SHALL
-remove the saved local copy and display the canonical accepted message or
+hide the local recovery presentation and display the canonical accepted message or
 pending state without duplicating it in the local recovery surface. Accepted queued messages SHALL appear only in the queue list; waiting-for-stop interrupt messages SHALL have one independent send status. A retry of an accepted failed turn SHALL be an explicit linked
 attempt using the current accepted message text and its originally captured
 context; it SHALL NOT reuse an old queue/interrupt choice as routing metadata.
 Recovery SHALL NOT overwrite a newer composer draft or automatically replay a
 provider operation or its writes.
+
+Uncertain, rejected and failed local sends SHALL appear in the message candidate list above the composer, regardless of the configured send policy. Conversation history SHALL NOT contain send-status recovery boxes, per-message send-status labels or retry controls. Rejected messages SHALL offer manual resend; uncertain messages SHALL reconcile the original submission identity and task fields. Retrying a failed accepted turn SHALL retain its original context and use a new linked identity. Its old candidate SHALL be replaced by that persisted retry candidate rather than remain indefinitely. Local failures SHALL NOT block accepted queued messages. Switching conversations SHALL clear the candidate presentation before restoring the new conversation's records.
 
 #### Scenario: The request is rejected
 
@@ -1372,7 +1374,7 @@ provider operation or its writes.
 #### Scenario: An accepted turn fails
 
 - **WHEN** the provider fails and the conversation is reopened
-- **THEN** the original accepted message and failure status remain visible; any partial output is shown only when it exists
+- **THEN** the original accepted message remains in history, its recovery status and retry action appear in the message candidate list, and any partial output is shown only when it exists
 
 #### Scenario: Retry an accepted failure
 
@@ -1382,7 +1384,7 @@ provider operation or its writes.
 #### Scenario: Multiple local recovery records
 
 - **WHEN** rejected, uncertain or failed-message recovery records exist
-- **THEN** one compact recovery summary with a count leads to individual explicit actions, and failed accepted turns retain their inline history actions; the UI does not stack repeated full-size recovery cards above the composer or classify recovery records as queued work
+- **THEN** the message candidate list shows their manual recovery actions without an additional expandable summary or inline history controls; local recovery records are not classified as server-accepted queued work, and removing a local recovery record does not cancel a server task
 
 #### Scenario: Interrupt submission is rejected
 

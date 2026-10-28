@@ -816,6 +816,11 @@ _Avoid_：每轮重复注入整本操作手册、为每个主题新增顶层命�
 _Avoid_：待发消息队列、自动重试
 出处：`preserve-agent-messages-and-tool-outcomes`
 
+### 消息候选列表 / Message Candidate List
+Agent 输入框上方统一呈现待处理消息的区域，包括服务端已接收的排队消息，以及本地发送箱中发送未确认、被拒绝或执行失败的消息。它是展示区域，不是新的持久队列。失败项等待用户手动重发；状态未知时先用原提交标识核对；失败项不阻塞后续正常排队消息。发送状态和恢复操作不放入对话流。
+_Avoid_：把本地失败记录视为服务端已接收、自动重发失败消息
+出处：2026-10-28 所有者确认；workbench-ui spec
+
 ### Agent 提供方 / Provider
 一次 Agent 对话创建时固定的底层 Agent 命令行（codex / claude / pi）。对话**不会中途换 harness**；换的是同一个 harness 上的**模型条目**（见下），且只在下一轮生效。未配置 provider 时如实提示。
 _Avoid_：模型热切换（当前轮不改）、把显示名当 harness 名

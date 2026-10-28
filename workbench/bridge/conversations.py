@@ -983,6 +983,9 @@ def _start_turn_locked(root, jobs_dir, workspace, conversation_id, turn):
     except Exception as exc:
         _finish(folder, conversation_id, turn["turn_id"], "failed",
                 f"provider launch failed: {exc}")
+        conversation = _read_json(conversation_path)
+        conversation["queue_paused"] = True
+        _write_json(conversation_path, conversation)
         _ACTIVE_TURNS.discard(key)
         _CANCEL_REQUESTS.discard(key)
         _TIMEOUTS.discard(key)
@@ -2101,7 +2104,7 @@ def _finish(folder, conversation_id, turn_id, status, error, partial_output=None
         turn = _read_json(turn_path)
         if conversation.get("current_turn_id") == turn_id:
             conversation.update({"status": "idle", "current_turn_id": None})
-        if status in {"failed", "cancelled"} \
+        if status == "cancelled" \
                 or (turn.get("paper_approval") or {}).get("status") == "pending":
             conversation["queue_paused"] = True
         elif status == "done" and turn.get("queue_action") == "interrupt":

@@ -3432,6 +3432,7 @@
   var aiPiActivities = {};
   var aiCurrentSubmissionId = "";
   var aiRecoveryContainer = null;
+  var aiRecoveryCount = 0;
   var aiOutboxRenderedSignature = "";
   var aiRenderedDoneTurns = {};
   var aiHistoryReconciling = false;
@@ -3515,7 +3516,11 @@
     aiCurrentProvider = "";
     aiPiActivities = {};
     aiCurrentSubmissionId = "";
-    aiRecoveryContainer = null;
+    if (aiRecoveryContainer) {
+      aiRecoveryContainer.innerHTML = "";
+      aiRecoveryContainer.classList.add("hidden");
+    }
+    aiRecoveryCount = 0;
     aiOutboxRenderedSignature = "";
     aiRenderedDoneTurns = {};
     aiHistoryReconciling = false;
@@ -4048,7 +4053,7 @@
         return [message.turn_id, message.content || "", message.queue_revision || 1];
       }),
     };
-    panel.classList.toggle("hidden", !pending.length);
+    panel.classList.toggle("hidden", !pending.length && !aiRecoveryCount);
     if (handoffStatus) {
       handoffStatus.textContent = waitingForStop.length
         ? "正在等待当前回复停止，随后发送。" : "";
@@ -4072,7 +4077,7 @@
       aiQueueEditingTurn = "";
       if (aiQueueEdit && aiQueueEdit.turn_id === lostEditTurn) {
         aiQueueEdit.recoverable = true;
-        aiSetStatus("该排队消息已开始或离开队列；未保存的编辑草稿保留在恢复摘要中。");
+        aiSetStatus("该排队消息已开始或离开队列；未保存的编辑草稿保留在候选列表中。");
         aiRenderOutbox();
       } else {
         aiQueueEdit = null;
@@ -4188,7 +4193,7 @@
         aiOutboxAction(actions, "编辑", function () {
           if (!aiMutationIsCurrent(context)) return;
           if (aiQueueEdit && aiQueueEdit.recoverable) {
-            aiSetStatus("请先从恢复摘要处理未保存的排队编辑草稿，再编辑其他排队消息。");
+            aiSetStatus("请先从候选列表处理未保存的排队编辑草稿，再编辑其他排队消息。");
             return;
           }
           aiQueueEditingTurn = message.turn_id;
@@ -4364,14 +4369,18 @@
   }
 
   function aiRenderOutbox() {
-    if (!messages || !aiConversation) return;
+    var panel = document.getElementById("ai-pending-queue");
+    if (!panel || !aiConversation) return;
     var records = aiReadOutbox(aiConversation);
     var items = Object.keys(records).map(function (key) { return records[key]; })
       .sort(function (a, b) { return (a.created_at || 0) - (b.created_at || 0); });
     var actionable = items.filter(function (item) {
-      return item.status === "unknown" || item.status === "rejected";
+      return item.status === "unknown" || item.status === "rejected" || item.status === "failed";
     });
     var queueEditRecovery = aiQueueEdit && aiQueueEdit.recoverable ? aiQueueEdit : null;
+    aiRecoveryCount = actionable.length + (queueEditRecovery ? 1 : 0);
+    panel.classList.toggle("hidden", !aiRecoveryCount
+      && !(aiQueueSnapshot && aiQueueSnapshot.order.length));
     var renderSignature = JSON.stringify([WS, aiConversation, aiConversationSequence, actionable,
       queueEditRecovery && [queueEditRecovery.turn_id, queueEditRecovery.revision,
         queueEditRecovery.text]]);
@@ -4385,20 +4394,15 @@
     }
     if (renderSignature === aiOutboxRenderedSignature && aiRecoveryContainer) return;
     aiOutboxRenderedSignature = renderSignature;
-    var wasOpen = aiRecoveryContainer && aiRecoveryContainer.open === true;
     if (!aiRecoveryContainer) {
-      aiRecoveryContainer = document.createElement("details");
+      aiRecoveryContainer = document.createElement("div");
       aiRecoveryContainer.className = "ai-send-recoveries";
       aiRecoveryContainer.setAttribute("aria-label", "未完成的消息发送");
-      messages.appendChild(aiRecoveryContainer);
+      panel.appendChild(aiRecoveryContainer);
     } else {
       aiRecoveryContainer.innerHTML = "";
     }
     aiRecoveryContainer.classList.remove("hidden");
-    aiRecoveryContainer.open = wasOpen;
-    var summary = document.createElement("summary");
-    summary.textContent = "需要处理的消息（" + (actionable.length + (queueEditRecovery ? 1 : 0)) + "）";
-    aiRecoveryContainer.appendChild(summary);
     var recoveryList = document.createElement("div");
     recoveryList.className = "ai-send-recovery-list";
     aiRecoveryContainer.appendChild(recoveryList);
@@ -4407,12 +4411,13 @@
       card.className = "ai-send-recovery";
       var label = document.createElement("p");
       if (record.status === "unknown") {
-        label.textContent = "发送状态未知。可用同一消息编号核对，避免重复执行。";
+        label.textContent = "发送未确认；点击核对后再决定是否重发。";
       } else if (record.status === "rejected") {
-        label.textContent = "这条消息被服务端拒绝；原文仍保存在本机。";
+        label.textContent = "发送被拒绝；等待手动重发。";
       } else {
-        label.textContent = "Agent 未完成这条消息；可以明确重试一次。";
+        label.textContent = "本轮未完成；等待手动重试。";
       }
+      label.title = record.error || "";
       card.appendChild(label);
       var savedMessage = document.createElement("p");
       savedMessage.textContent = (record.body && record.body.message) || "";
@@ -4424,6 +4429,10 @@
           aiRetryOutbox(record, false, context);
         }, "reconcile");
       } else if (record.status === "rejected") {
+        aiOutboxAction(card, "重新发送", function () {
+          if (!aiMutationIsCurrent(context)) return;
+          aiRetryOutbox(record, false, context);
+        }, "resend");
         aiOutboxAction(card, "恢复原文", function () {
           if (!aiMutationIsCurrent(context)) return;
           if (!aiInput || aiInput.value.trim()) {
@@ -4434,7 +4443,17 @@
           aiInput.focus();
           aiSetStatus("已恢复原文，请编辑后重新发送。");
         }, "restore");
+      } else if (record.status === "failed") {
+        aiOutboxAction(card, "重试", function () {
+          if (!aiMutationIsCurrent(context)) return;
+          aiRetryOutbox(record, true, context);
+        }, "retry-failed");
       }
+      aiOutboxAction(card, "移除记录", function () {
+        if (!aiMutationIsCurrent(context) || aiSendPending) return;
+        aiRemoveOutbox(context.conversation_id, record.submission_id);
+        aiRenderOutbox();
+      }, "dismiss");
       recoveryList.appendChild(card);
     });
     if (queueEditRecovery) {
@@ -4465,13 +4484,13 @@
       }, "restore-queue-edit");
       recoveryList.appendChild(editCard);
     }
-    messages.scrollTop = messages.scrollHeight;
   }
 
   function aiRetryOutbox(item, newAttempt, context) {
     context = context || aiCaptureConversationMutation(item.conversation_id || aiConversation);
     if (!aiMutationIsCurrent(context) || aiSendPending) return;
     var body = Object.assign({}, item.body || {});
+    var reconcile = item.status === "unknown";
     if (newAttempt) {
       body.submission_id = aiNewSubmissionId();
       body.retry_of = item.turn_id;
@@ -4482,9 +4501,12 @@
       aiSetStatus("无法在本机保存发送记录；原文仍保留在恢复卡片中，请复制后再试。");
       return;
     }
+    if (newAttempt) aiRemoveOutbox(item.conversation_id, item.submission_id);
     aiSetRunning(Boolean(aiTurn));
     aiSetStatus(newAttempt ? "正在重试…" : "正在核对发送状态…");
-    aiPostTurn(submission.body, submission, !newAttempt).catch(function (error) {
+    aiPostTurn(submission.body, submission, reconcile).then(function () {
+      if (aiMutationIsCurrent(context)) aiRenderOutbox();
+    }).catch(function (error) {
       if (!aiMutationIsCurrent(context)) return;
       aiSetRunning(Boolean(aiTurn));
       aiSetStatus("发送未确认：" + (error.message || "未知错误"));
@@ -5085,11 +5107,9 @@
     aiHistoryReconciling = false;
     aiPaperProposalCards = {};
     messages.innerHTML = "";
-    aiRecoveryContainer = null;
     aiOutboxRenderedSignature = "";
     var conversationId = record.conversation_id || aiConversation;
     aiSyncOutboxWithHistory(record);
-    var outboxRecords = aiReadOutbox(conversationId);
     if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.resetConversation) {
       AgentUISurfaces.resetConversation();
     }
@@ -5105,24 +5125,7 @@
         if (message.status === "done" && message.turn_id) {
           aiRenderedDoneTurns[message.turn_id] = true;
         }
-        var userMessage = aiAddMarkdown(message.content || "", "user");
-        if (message.status === "failed" || message.status === "cancelled") {
-          var statusText = message.status === "cancelled" ? "本轮已停止。" : "本轮未完成。";
-          if (message.error) statusText += " " + message.error;
-          var status = document.createElement("p");
-          status.className = "ai-turn-inline-status";
-          status.textContent = statusText;
-          userMessage.appendChild(status);
-          var recovery = message.submission_id && outboxRecords[message.submission_id];
-          if (recovery && recovery.status === "failed") {
-            var retryContext = aiCaptureConversationMutation(conversationId);
-            var retryButton = aiOutboxAction(userMessage, "基于此消息重试", function () {
-              if (!aiMutationIsCurrent(retryContext)) return;
-              aiRetryOutbox(recovery, true, retryContext);
-            }, "retry-failed");
-            retryButton.className += " ai-inline-retry";
-          }
-        }
+        aiAddMarkdown(message.content || "", "user");
       } else {
         aiPiActivities = {};
         aiRenderActivities(message.activities || []);
@@ -5345,9 +5348,6 @@
       else if (event.kind === "error") {
         var eventError = event.text || "Agent 返回错误";
         aiSetStatus(eventError);
-        if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
-          AgentUISurfaces.failure(eventError);
-        }
       }
     });
     if (!data.turn) return;
@@ -5373,9 +5373,6 @@
       aiSetRunning(false);
       var turnError = "Agent 失败：" + (data.turn.error || "未知错误");
       aiSetStatus(turnError);
-      if (typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
-        AgentUISurfaces.failure(turnError);
-      }
       aiLoadConversation(aiConversation);
     } else if (data.turn.status === "cancelled") {
       aiUpdateOutbox(aiConversation, aiCurrentSubmissionId, {
@@ -5445,9 +5442,7 @@
       var sendError = "发送失败：" + (err.message || "未知错误");
       aiSetStatus(sendError);
       aiRenderOutbox();
-      if (!aiTurn && typeof AgentUISurfaces !== "undefined" && AgentUISurfaces.failure) {
-        AgentUISurfaces.failure(sendError);
-      }
+
     });
   }
 

@@ -303,6 +303,36 @@ class ConversationTests(unittest.TestCase):
         self.assertEqual(launcher.modes, ["rpc"])
 
     @mock.patch("workbench.bridge.conversation_providers.get")
+    def test_failed_ordinary_turn_does_not_block_later_queued_messages(self, get_provider):
+        from workbench.bridge import conversation_providers, conversations
+
+        get_provider.return_value = self.provider
+        ready, release = threading.Event(), threading.Event()
+        commands = []
+
+        def build(_provider, session_id=None):
+            commands.append(session_id)
+            if len(commands) == 1:
+                ready.set()
+                release.wait(3)
+                return [sys.executable, str(self.script), "fail"]
+            return [sys.executable, str(self.script), "answer"]
+
+        with mock.patch.object(conversation_providers, "build_command", build):
+            cid = conversations.create(self.pool, "codex")["conversation_id"]
+            first = conversations.start_turn(self.pool, self.workspace, cid, "Fail A", {})
+            try:
+                self.assertTrue(ready.wait(2))
+                second = conversations.start_turn(self.pool, self.workspace, cid, "Continue B", {})
+                self.assertEqual(second["status"], "queued")
+            finally:
+                release.set()
+            self.assertEqual(self.wait_turn(cid, first["turn_id"])["status"], "failed")
+            self.assertEqual(self.wait_turn(cid, second["turn_id"])["status"], "done")
+            self.assertFalse(conversations.get(self.pool, cid)["queue_paused"])
+            self.assertEqual(len(commands), 2, "failed A is never automatically retried")
+
+    @mock.patch("workbench.bridge.conversation_providers.get")
     def test_failure_keeps_accepted_user_message_in_history(self, get_provider):
         from workbench.bridge import conversation_providers, conversations
 
@@ -1092,13 +1122,17 @@ class ConversationTests(unittest.TestCase):
                 self.pool, conversation_id, turn["turn_id"], "B edited",
                 expected_revision=1,
             )
+            conversations.continue_queue(self.pool, self.workspace, conversation_id)
+            failed = self.wait_turn(conversation_id, turn["turn_id"])
+            self.assertEqual(failed["status"], "failed")
+            # The older backlog was explicitly paused; failure alone no longer pauses it.
+            record = json.loads(path.read_text(encoding="utf-8"))
+            record["queue_paused"] = True
+            path.write_text(json.dumps(record), encoding="utf-8")
             retained = conversations.start_turn(
                 self.pool, self.workspace, conversation_id, "C retained",
                 {"anchor": {"route": "/older-queue"}},
             )
-            conversations.continue_queue(self.pool, self.workspace, conversation_id)
-            failed = self.wait_turn(conversation_id, turn["turn_id"])
-            self.assertEqual(failed["status"], "failed")
             retry = conversations.start_turn(
                 self.pool, self.workspace, conversation_id, "B edited",
                 {"anchor": {"route": "/newly-selected-page"}},

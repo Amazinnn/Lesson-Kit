@@ -191,7 +191,7 @@ history. Provider-native storage SHALL remain the complete context authority.
 
 ### Requirement: Serialized turn execution
 
-A conversation SHALL run at most one provider turn at a time. A new message accepted with the queue action during an active turn SHALL be retained with its submission-time context, appended by default in FIFO order. Explicit accepted reorder operations SHALL define the shared persisted display and dispatch order. Interrupt-and-send SHALL use a separate stop-and-handoff path and SHALL NOT enter the ordinary queue. Successful ordinary turns SHALL allow the next queued message to run without relying on an open browser tab. A failed, cancelled without an interrupt intent, or unexpectedly interrupted turn SHALL pause retained messages until explicit continuation. Service recovery SHALL report an unowned running turn as interrupted or failed and pause all retained work without dispatching it. A progress-read failure alone SHALL NOT change turn or queue status. Turn events SHALL have monotonically increasing sequence numbers, and cancellation SHALL target the captured running turn.
+A conversation SHALL run at most one provider turn at a time. A new message accepted with the queue action during an active turn SHALL be retained with its submission-time context, appended by default in FIFO order. Explicit accepted reorder operations SHALL define the shared persisted display and dispatch order. Interrupt-and-send SHALL use a separate stop-and-handoff path and SHALL NOT enter the ordinary queue. Successful or failed ordinary turns SHALL allow the next queued message to run after worker release without relying on an open browser tab, provided the queue was not already paused. The failed turn itself SHALL NOT be automatically retried. A failure to launch the worker itself SHALL retain the existing pause-and-manual-continue behavior. A cancelled turn without an interrupt intent or an unexpectedly interrupted turn SHALL pause retained messages until explicit continuation. Service recovery SHALL report an unowned running turn as interrupted or failed and pause all retained work without dispatching it. A progress-read failure alone SHALL NOT change turn or queue status. Turn events SHALL have monotonically increasing sequence numbers, and cancellation SHALL target the captured running turn.
 
 #### Scenario: Send while a turn is running
 
@@ -203,9 +203,14 @@ A conversation SHALL run at most one provider turn at a time. A new message acce
 - **WHEN** A completes successfully while B and C are queued and the queue is not paused
 - **THEN** B starts after A's provider worker has returned, and C starts after B succeeds without requiring browser polling or navigation
 
-#### Scenario: Failure pauses later messages
+#### Scenario: Failure does not block later messages
 
-- **WHEN** A fails or is cancelled without an accepted interrupt message while B and C are queued
+- **WHEN** A fails while B and C are queued and the queue was not already paused
+- **THEN** B and C continue in order after worker release, while A requires a manual retry
+
+#### Scenario: Cancellation pauses later messages
+
+- **WHEN** A is cancelled without an accepted interrupt message while B and C are queued
 - **THEN** B and C remain accepted and paused until the learner explicitly continues the queue
 
 #### Scenario: Pause survives service recovery
