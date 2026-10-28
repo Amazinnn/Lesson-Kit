@@ -1380,7 +1380,7 @@ textarea:focus-visible, input:focus-visible {
 /* 用户消息 —— 沉底面（A-23）：内容块浅底深字，边界靠「底色差 + 1px 内发丝线」
    与卡面分开；**不带柔影**（凹层不抬升，decisions.md A-23-3 / A-23-4）。
    圆角与其它沉底块**同为 12px**（`--r-md`，权威表 §2.1 的统一圆角）。 */
-.msg.user {
+#ai-messages .msg.user {
   margin-left: auto;
   max-width: min(525px, 82%);
   background: var(--surface-sunken);
