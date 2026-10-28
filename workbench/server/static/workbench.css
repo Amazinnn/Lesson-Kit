@@ -787,7 +787,7 @@ body {
    ⚠️ **夹取规则由 JS 侧维持**（tasks.md 13.3，workbench.js 的 `applyColumnWidths`）：
        中栏 ≥ 420px（`--shell-col-middle-min`）—— 硬底线，不可协商；
        左栏 200 ≤ w ≤ `--shell-col-left-max`（480px）；
-       右栏 360 ≤ w ≤ `--shell-col-right-max`（560px）；
+       右栏 360 ≤ w ≤ `--shell-col-right-max`（960px）；
        窄屏（< 1024px）**清变量**而不是清整段 inline 样式 ⇒ 模板回落到媒体查询的 1fr。
    ⚠️ 拖拽时 `#layout.is-resizing` 关掉过渡，避免过渡拖影（13.3）。
    ⚠️ 窄屏媒体查询（`grid-template-columns: 1fr`）**必须保留**：它覆盖整条模板，
@@ -807,7 +807,7 @@ body {
   --shell-col-left-min: 200px;     /* §1.4 各档的拖拽区间下界 */
   --shell-col-left-max: 480px;
   --shell-col-right-min: 360px;
-  --shell-col-right-max: 560px;
+  --shell-col-right-max: 960px;
   --wb-col-left: var(--shell-col-left, 280px);
   --wb-col-right: var(--shell-col-right, 420px);
   flex: 1;
@@ -3331,7 +3331,7 @@ img { max-width: 100%; }
     --shell-col-left-min: 200px;
     --shell-col-left-max: 360px;
     --shell-col-right-min: 340px;
-    --shell-col-right-max: 520px;
+    --shell-col-right-max: 800px;
   }
   #middle { padding: 28px 28px 64px; }
 }

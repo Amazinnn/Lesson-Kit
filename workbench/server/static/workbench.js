@@ -5846,7 +5846,7 @@
      this side is the one that maintains the invariant (§1.3 R1). */
   function columnBounds() {
     var bounds = { left: 280, right: 420, leftMin: 200, leftMax: 480,
-                   rightMin: 360, rightMax: 560 };
+                   rightMin: 360, rightMax: 960 };
     if (!window.getComputedStyle || !layout) return bounds;
     var style = window.getComputedStyle(layout);
     var read = function (name) { return parseFloat(style.getPropertyValue(name)); };

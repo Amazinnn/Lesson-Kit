@@ -525,6 +525,8 @@ The existing 0–100 in-memory center-gravity control SHALL provide a visibly st
 
 The desktop workbench SHALL expose pointer-drag handles on the inner edges of the left and right columns. Dragging SHALL adjust only the current page's in-memory grid widths within readable bounds; mobile drawer behavior and all learning data SHALL remain unchanged.
 
+The Agent column's maximum width SHALL be 960px at viewport widths of at least 1440px, and 800px at 1280–1439px, further constrained by available space and the existing 420px minimum middle column width.
+
 #### Scenario: Resize sidebars
 
 - **WHEN** the learner drags a sidebar edge on a desktop viewport
