@@ -1343,7 +1343,78 @@
     if (soundValue) soundValue.textContent = soundOn ? "开" : "关";
   }
 
+  function mountAgentResources() {
+    var host = document.getElementById("agent-skill-list");
+    if (!host) return;
+    var editor = document.getElementById("agent-global-instructions");
+    var status = document.getElementById("agent-resource-status");
+    var base = "/api/w/" + encodeURIComponent(WS) + "/agent-resources";
+    function say(text) { status.textContent = text; }
+    async function request(path, method, body) {
+      var response = await fetch(base + path, {method: method || "GET",
+        headers: {"Content-Type": "application/json"},
+        body: body === undefined ? undefined : JSON.stringify(body)});
+      var result = await response.json();
+      if (!host.isConnected) throw new Error("设置页已离开，请重新查看最新结果。");
+      if (!response.ok) throw new Error(result.error || result.message || "操作失败");
+      return result;
+    }
+    function run(action) {
+      return action().catch(function (error) { say(error.message); });
+    }
+    async function load(initial) {
+      var data = await request("");
+      if (initial) editor.value = data.instructions;
+      host.replaceChildren();
+      data.skills.forEach(function (item) {
+        var row = document.createElement("div");
+        row.className = "agent-skill-row";
+        var title = document.createElement("strong");
+        title.textContent = item.name + (item.builtin ? " · 内置（只读）" : " · 本地副本");
+        row.appendChild(title);
+        var purpose = document.createElement("p"); purpose.textContent = item.description;
+        row.appendChild(purpose);
+        function button(label, action) {
+          var control = document.createElement("button"); control.type = "button";
+          control.className = "outline sm"; control.textContent = label;
+          control.addEventListener("click", function () { run(action); }); row.appendChild(control);
+        }
+        var path = "/skills/" + encodeURIComponent(item.id);
+        button("查看", async function () {
+          var detail = await request(path);
+          var preview = document.getElementById("agent-skill-detail");
+          preview.textContent = detail.body; preview.hidden = false;
+          say("读取入口：" + detail.entry);
+        });
+        button(item.enabled ? "停用" : "启用", async function () {
+          await request(path, "PATCH", {enabled: !item.enabled});
+          await load(false); say("已更新，下一轮生效。");
+        });
+        if (!item.builtin) button("删除副本", async function () {
+          await request(path, "DELETE"); await load(false);
+          document.getElementById("agent-skill-detail").hidden = true;
+          say("已删除受管副本，原文件不变。");
+        });
+        host.appendChild(row);
+      });
+    }
+    document.getElementById("agent-instructions-save").onclick = function () { run(async function () {
+      await request("", "PATCH", {instructions: editor.value}); say("要求已保存，下一轮生效。");
+    }); };
+    document.getElementById("agent-instructions-clear").onclick = function () { run(async function () {
+      await request("", "PATCH", {instructions: ""}); editor.value = ""; say("要求已清空。");
+    }); };
+    document.getElementById("agent-skill-import").onclick = function () { run(async function () {
+      await request("", "POST", {source_path: document.getElementById("agent-skill-source").value,
+        replace: document.getElementById("agent-skill-replace").checked});
+      await load(false); document.getElementById("agent-skill-replace").checked = false;
+      say("Skill 已导入，下一轮生效。");
+    }); };
+    run(function () { return load(true); });
+  }
+
   function mountSettingsView() {
+    mountAgentResources();
     /* Bind on each settings-page mount, including middle-column navigation. */
     var showRatingViewBox = document.getElementById("setting-show-rating-view");
     if (showRatingViewBox) {

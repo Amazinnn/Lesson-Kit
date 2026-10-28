@@ -5209,3 +5209,8 @@ html[data-motion="off"] *::after {
 #paper-completion { border-top: 5px solid var(--role-yellow); }
 #paper-completion-stats { line-height: 1.9; }
 .practice-planning { margin-top: 24px; }
+
+.agent-resource-settings textarea, .agent-resource-settings input[type="text"] { width:100%; box-sizing:border-box; margin: .5rem 0 1rem; }
+.agent-resource-settings pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:28rem; overflow:auto; }
+.agent-skill-row { padding:1rem 0; border-top:1px solid var(--ink-strong); }
+.agent-skill-row button { margin-right:.5rem; }

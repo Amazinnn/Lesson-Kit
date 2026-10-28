@@ -667,3 +667,7 @@ With `--apply`, the guard writes `.lessonkit/state.yaml`:
 
 Runtime state is a recovery checkpoint for agents. It is not a substitute for
 the intermediate files or for the SQLite pool.
+
+## Agent resources settings API
+浏览器入口：GET/PATCH/POST `/api/w/{name}/agent-resources`；GET/PATCH/DELETE `/api/w/{name}/agent-resources/skills/{skill_id}`。URL 工作区需有效，资源作用域为用户全局。根 PATCH `{instructions: string}`；POST `{source_path: string, replace?: boolean}`；Skill PATCH `{enabled: boolean}`。详情返回 body/entry。非法输入 400，未知 Skill 404。重复 ID 必须显式 replace=true，内置文件不可覆盖/删除。导入拒绝链接及受管目录递归导入，不执行脚本。
+每轮 agent_resources 只含启用目录和全局要求，continuity 含最近两轮成功原文；它们不是新授权或执行回执。Metadata 识别 YAML name/description 标量及折叠/字面块，或 Markdown 标题/首段，原文及附属文件保留。无兼容 YAML 的入口走路径读取，不冒充 Pi 原生包。

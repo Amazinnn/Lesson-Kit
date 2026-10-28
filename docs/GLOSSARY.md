@@ -225,7 +225,7 @@ _Avoid_：整轮次展开、从别的 active practice 借前序题、把闪卡�
 出处：`agent-context` spec「Practice turns carry bounded recent settled problem context」
 
 ### 轮次焦点 / Turn Focus
-当前 Agent 轮次要回答的题目目标。练习页默认以页面锚点为焦点；只有消息明确且无歧义地指向同一 active practice 中的上一道题或近期题目组时，才改用对应的已解析正式题。否定相对指代或同时提及当前与前序目标时，保留页面默认焦点；没有可解析的页面正式题时不构造题目焦点。
+当前 Agent 轮次的候选题目目标。它补充题目指代，不覆盖明确消息和对话任务承接；缺少其他指代时以页面锚点为默认候选，明确前序题指代则解析对应正式题。否定相对指代或同时提及当前与前序目标时，保留页面默认焦点；没有可解析的页面正式题时不构造题目焦点。
 _Avoid_：被否定的目标、浏览器原始 id、由上下文窗口替学生消解歧义
 出处：`agent-context` spec「Current page is an anchor rather than a forced turn target」
 
@@ -1069,3 +1069,13 @@ Paper 练习页中表示已完成题目比例的方块色带。深橙、黄色�
 
 ### 归位庆祝卡 / Settling Completion Card
 成功交卷后先突出登场、随后缩退到完成页顶部的同一张庆祝卡片；下方保留真实统计与逐题回看。历史答卷直接显示稳定终态。
+
+### 全局 Agent 要求 / Global Agent Instructions
+用户在 Lesson Kit 设置中维护、跨课程对话每轮注入的持续要求；不由普通聊天自动改写，不覆盖明确的新指令或数据契约。
+
+### 受管 Skill / Managed Skill
+Lesson Kit 用户目录中独立管理的 Skill 副本或包内只读内置 Skill；启用后提供目录和读取入口，正文由外部 Agent 按需读取。增删不修改源目录或外部 Agent 全局配置。
+
+### 对话承接材料 / Conversation Continuity Excerpt
+最近两轮已结束且成功的对话原文，用于解释短确认及保持任务连续；不是新的用户命令或已经执行的证明，缺失时不得编造。
+出处：improve-agent-context-and-skills；用户级资源与对话承接规则。

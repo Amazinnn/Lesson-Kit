@@ -258,3 +258,6 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 `identity` 包含排序后的节点 ID 字符串，以及排序后的关系元组字符串 `source|target|type|direction`；它不包含关系强度、标题、指标或学习状态。`workbench/server/static/graph-physics.js` 是该键的唯一 reader/writer：在 Worker 首次报告布局稳定时写入一次；创建图谱时只读取版本与身份完全匹配的值，并把坐标作为临时锚点送入同一 Worker，随后释放锚点并继续求解。
 
 清除、损坏、过期或无法读取/写入该键时，布局种子缺席，图谱仍从原确定性 Worker 初始化开始。失去此缓存只会失去显示布局的起点，不会删除或改变 Pool、作者内容或学习记录。这里没有 SQLite schema 变化。
+
+## 用户级 Agent 资源（不属于 Pool）
+`~/.lessonkit-workbench/agent-resources.json`（可用 LESSONKIT_WB_HOME 隔离）保存 generation、instructions、builtin_enabled 与按 ID 索引的 Skill 元数据；默认空要求与内置 Skill 启用。由设置 API 经 workbench.agent_resources 写入，不从聊天自动改写。entry/source 是本地路径，不是学习事实；副本位于 managed-skills/。配置原子替换、进程内串行；替换先复制再发布，运行轮次持有引用，旧副本到该轮结束才回收。无 SQLite schema 变化。continuity 从同对话成功 transcript/turn 读取最近两轮原文；不重写已排队的提交上下文。资源在实际派发时读取，Provider 原生历史保留。

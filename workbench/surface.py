@@ -20,6 +20,12 @@ AUDIENCES = (BROWSER, HUMAN, AGENT, BOTH)
 
 # (method, path) -> (audience, commands serving it, note)
 ROUTES = {
+    ('GET', '/api/w/{name}/agent-resources'): (BROWSER, (), "user-global Agent resources are managed in settings"),
+    ('PATCH', '/api/w/{name}/agent-resources'): (BROWSER, (), "user-global Agent resources are managed in settings"),
+    ('POST', '/api/w/{name}/agent-resources'): (BROWSER, (), "user-global Agent resources are managed in settings"),
+    ('GET', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
+    ('PATCH', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
+    ('DELETE', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
     ("GET", "/api/hub/workspaces"): (BOTH, ("ls",), ""),
     ("GET", "/api/w/{name}/weak"): (BOTH, ("weak",), ""),
     ("POST", "/api/w/{name}/chapter"): (BOTH, ("use",), ""),

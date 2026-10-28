@@ -350,7 +350,7 @@ def build_command(provider, session_id=None, mode="print"):
         result.append("-")
         return result
     if name == "pi":
-        args = _pi_skill_args(args)
+        args = _pi_skill_args(args, provider.get("managed_resources"))
         # `rpc` keeps one process per conversation; `print` is one process per turn.
         result = [command, "--mode", "rpc"] if mode == "rpc" else [
             command, "--print", "--mode", "json"]
@@ -372,7 +372,7 @@ def build_command(provider, session_id=None, mode="print"):
     return result
 
 
-def _pi_skill_args(args):
+def _pi_skill_args(args, managed_resources=None):
     bundled = str(resources.files("workbench").joinpath(
         "resources", "skills", "source-bounded-learning-drill"))
     legacy = str(Path.home() / ".lessonkit-workbench" / "skills" /
@@ -387,7 +387,16 @@ def _pi_skill_args(args):
         else:
             result.append(args[index])
             index += 1
-    return [*result, "--skill", bundled]
+    if managed_resources is None:
+        from workbench import agent_resources
+        managed_resources = agent_resources.snapshot()
+    entries = [bundled if item.get("builtin") else item["entry"] for item in managed_resources["skills"]
+               if item["enabled"] and item.get("native_pi", True)]
+    for entry in entries:
+        if entry == str(Path(bundled) / "SKILL.md"):
+            entry = bundled
+        result.extend(["--skill", entry])
+    return result
 
 
 def _text(value):

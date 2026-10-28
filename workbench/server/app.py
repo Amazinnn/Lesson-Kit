@@ -14,7 +14,7 @@ from workbench.domain import weak
 from workbench.data import queries
 from workbench.server import api as api_mod
 from workbench.server import experience_api, experience_page
-from workbench.server import pages
+from workbench.server import pages, agent_resources_api
 
 FRONTEND_DIST = (
     Path(__file__).resolve().parents[2] / "frontend" / "editable-graph" / "dist"
@@ -47,6 +47,12 @@ def _content_etag(data):
     return hashlib.sha256(data).hexdigest()[:32]
 
 ROUTES = [
+    ("GET", "/api/w/{name}/agent-resources", agent_resources_api.get),
+    ("PATCH", "/api/w/{name}/agent-resources", agent_resources_api.update),
+    ("POST", "/api/w/{name}/agent-resources", agent_resources_api.create),
+    ("GET", "/api/w/{name}/agent-resources/skills/{skill_id}", agent_resources_api.detail),
+    ("PATCH", "/api/w/{name}/agent-resources/skills/{skill_id}", agent_resources_api.enable),
+    ("DELETE", "/api/w/{name}/agent-resources/skills/{skill_id}", agent_resources_api.delete),
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
     ("GET", "/api/w/{name}/weak", api_mod.weak_list),
     ("POST", "/api/w/{name}/chapter", api_mod.set_chapter_lens),

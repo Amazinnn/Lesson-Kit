@@ -361,3 +361,6 @@ Attempt 旧状态约束及临时父表外键修复归既有 `pool/scripts/pool_s
 
 stdlib-only；单进程单端口；无哈希；无防御性编程（不写不可能分支、不包 try 兜底一切）；
 函数短小、单一职责；每个 domain 模块配一个测试文件；改动同步本文档与 OpenSpec。
+
+## 用户级 Agent 资源与提示词
+workbench/agent_resources.py 负责用户配置/Skill 文件，沿用 registry.base_dir；server/agent_resources_api.py 只校验和调用。Domain 零文件 IO。Bridge 派发时获取快照、保留文件并补充最近两轮成功对话；显式消息与任务承接优先于页面默认焦点。Pi 原生加载兼容 YAML 的启用 Skill；普通 Markdown 和其他 Provider 通过目录路径按需读取。资源变化后 Pi 在下一轮以原 session 重建，不打断运行工作。不引入内置意图分类器、任务状态机或 Agent。

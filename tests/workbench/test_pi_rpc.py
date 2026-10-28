@@ -385,6 +385,19 @@ class PiConversationTurnTests(unittest.TestCase):
             time.sleep(0.05)
         self.fail("turn did not finish")
 
+    def test_resource_change_refreshes_between_turns_with_native_resume(self):
+        from workbench import agent_resources
+        with mock.patch.object(self.providers, "get", return_value=self.provider):
+            conversation = conversations.create(self.pool, "pi")
+            key = conversation["conversation_id"]
+            first = conversations.start_turn(self.pool, self.workspace, key, "First", {})
+            self.assertEqual(self.wait_turn(key, first["turn_id"])["status"], "done")
+            agent_resources.save_instructions("Keep ongoing work")
+            second = conversations.start_turn(self.pool, self.workspace, key, "Continue", {})
+            self.assertEqual(self.wait_turn(key, second["turn_id"])["status"], "done")
+        self.assertEqual(len({row["pid"] for row in self.entries("prompt")}), 2)
+        self.assertEqual(self.launcher.sessions[-1], "pi-rpc-session-1")
+
     def test_three_turns_share_one_pid(self):
         with mock.patch.object(self.providers, "get", return_value=self.provider):
             conversation = conversations.create(self.pool, "pi")

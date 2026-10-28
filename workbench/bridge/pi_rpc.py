@@ -322,7 +322,8 @@ class PiRpcRegistry:
         """The conversation's live process, launching it when needed."""
         with self._lock:
             current = self._processes.get(key)
-            if current is not None and current.alive:
+            if (current is not None and current.alive
+                    and getattr(current, "provider", {}).get("managed_resources") == provider.get("managed_resources")):
                 current.touch()
                 return current
             if current is not None:
