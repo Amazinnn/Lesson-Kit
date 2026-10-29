@@ -226,6 +226,310 @@ def saved_attempt(pool, attempt_id):
     return any(item.get('attempt_id') == attempt_id for record in snapshots for item in record['items'])
 
 
+class BindingError(ValueError):
+    """A Paper-bound import cannot proceed without writing anything."""
+
+
+def _paper_for_binding(pool, paper_id):
+    from workbench.data import practice_sets
+    if not isinstance(paper_id, str) or not practice_sets.SAVED_ID.fullmatch(paper_id):
+        raise BindingError("paper_id must name one saved Paper (ps-NNN)")
+    try:
+        paper = practice_sets.get_saved(pool, paper_id)
+    except FileNotFoundError as exc:
+        raise BindingError(f"unknown Paper: {paper_id}") from exc
+    if paper["missing_problem_ids"]:
+        raise BindingError(
+            "Paper references unavailable problems: "
+            + ", ".join(paper["missing_problem_ids"]))
+    if paper["validation_errors"]:
+        raise BindingError(
+            "Paper validation failed: " + "; ".join(paper["validation_errors"]))
+    return paper
+
+
+def _binding_target(pool, paper):
+    """Where this Paper's execution lives: active row, checkpoint, or nowhere."""
+    paper_id = paper["practice_set_id"]
+    conn = pool.connect()
+    active = conn.execute(
+        "SELECT * FROM active_practice WHERE singleton=1").fetchone()
+    if active and active["source_ref"] == paper_id:
+        previous = conn.row_factory
+        try:
+            conn.row_factory = sqlite3.Row
+            items = [dict(row) for row in conn.execute(
+                "SELECT * FROM active_practice_items ORDER BY position")]
+        finally:
+            conn.row_factory = previous
+        if not items:
+            raise BindingError("the selected Paper has no execution items")
+        _require_continuation(paper, "selected Paper execution")
+        return dict(mode="active", record=dict(active), items=items,
+                    execution_id=active["execution_id"],
+                    reveal_timing=active["reveal_timing"])
+    checkpoint = state(conn, paper_id)["checkpoint_json"]
+    if checkpoint:
+        record = json.loads(checkpoint)
+        items = record.get("items") or []
+        if not items:
+            raise BindingError("the parked Paper has no execution items")
+        _require_continuation(paper, "parked Paper execution")
+        return dict(mode="parked", record=record, items=items,
+                    execution_id=record.get("execution_id"),
+                    reveal_timing=record.get("reveal_timing"))
+    return dict(mode="new", record=None, items=[], execution_id=None,
+                reveal_timing="on_submit")
+
+
+def _require_continuation(paper, label):
+    continuation = paper.get("continuation")
+    if continuation and continuation.get("available"):
+        return
+    reason = (continuation or {}).get("reason") or (
+        f"{label} cannot be validated against the current Paper")
+    raise BindingError(reason)
+
+
+def _position_map(items):
+    return {
+        item["item_id"]: item["position"]
+        for item in items
+        if item.get("item_type", "problem") == "problem"
+    }
+
+
+def _progress(items):
+    answered = sum(1 for item in items if item["state"] == "answered")
+    stuck = sum(1 for item in items if item["state"] == "stuck")
+    total = len(items)
+    return dict(total=total, answered=answered, stuck=stuck,
+                completed=answered + stuck, remaining=total - answered - stuck)
+
+
+def _new_items(pool, paper):
+    conn = pool.connect()
+    return [
+        dict(position=position, item_type="problem",
+             item_id=item["problem_id"], direction="", state="pending",
+             attempt_id=None, content_revision=revision(conn, item["problem_id"]))
+        for position, item in enumerate(paper["plan"]["items"])
+    ]
+
+
+def _simulated(items, problem_ids):
+    wanted = set(problem_ids)
+    return [
+        dict(item, state="answered") if item["item_id"] in wanted else item
+        for item in items
+    ]
+
+
+def _next_cursor(items, current):
+    pending = [item["position"] for item in items if item["state"] == "pending"]
+    if not pending:
+        return current
+    return current if current in pending else pending[0]
+
+
+def _import_draft(item):
+    draft = dict(item.get("draft") or {})
+    draft.pop("answer", None)
+    draft.pop("choices", None)
+    draft["stuck"] = False
+    return draft
+
+
+def preview_binding(pool, paper_id, problem_ids):
+    """Describe a Paper-bound import without writing anything."""
+    if not available(pool.connect()):
+        raise BindingError(
+            "this pool is not migrated for Paper progress — run the documented migration")
+    paper = _paper_for_binding(pool, paper_id)
+    target = _binding_target(pool, paper)
+    items = _new_items(pool, paper) if target["mode"] == "new" else target["items"]
+    positions = _position_map(items)
+    missing = [problem_id for problem_id in problem_ids
+               if problem_id not in positions]
+    if missing:
+        raise BindingError(
+            "problem is not part of this Paper: " + ", ".join(missing))
+    actions = {}
+    rows = []
+    for problem_id in problem_ids:
+        item = items[positions[problem_id]]
+        action = ("rebind" if item["state"] != "pending"
+                  or item.get("attempt_id") is not None else "import")
+        actions[problem_id] = action
+        rows.append(dict(problem_id=problem_id, position=item["position"],
+                         state=item["state"], attempt_id=item.get("attempt_id"),
+                         action=action))
+    progress_before = _progress(items)
+    progress_after = _progress(_simulated(items, problem_ids))
+    reveal = target["reveal_timing"]
+    if progress_after["remaining"]:
+        completion = "partial"
+    elif target["mode"] == "active" and reveal is None:
+        completion = "archive"
+    elif target["mode"] == "parked":
+        completion = "parked"
+    else:
+        completion = "wait_for_submit"
+    return dict(
+        paper_id=paper_id, title=paper["title"], mode=target["mode"],
+        execution_id=target["execution_id"], reveal_timing=reveal,
+        positions={problem_id: positions[problem_id] for problem_id in problem_ids},
+        actions=actions, items=rows, progress_before=progress_before,
+        progress_after=progress_after,
+        would_complete=progress_after["remaining"] == 0,
+        completion=completion,
+    )
+
+
+def bind_attempts(pool, paper_id, links):
+    """Bind imported attempts to a Paper's active, parked, or new progress."""
+    if not available(pool.connect()):
+        raise BindingError(
+            "this pool is not migrated for Paper progress — run the documented migration")
+    paper = _paper_for_binding(pool, paper_id)
+    target = _binding_target(pool, paper)
+    problem_ids = [problem_id for problem_id, _ in links]
+    items = _new_items(pool, paper) if target["mode"] == "new" else target["items"]
+    positions = _position_map(items)
+    missing = [problem_id for problem_id in problem_ids
+               if problem_id not in positions]
+    if missing:
+        raise BindingError(
+            "problem is not part of this Paper: " + ", ".join(missing))
+
+    before = {item["item_id"]: item for item in items}
+    rebound = [
+        problem_id for problem_id in problem_ids
+        if before[problem_id]["state"] != "pending"
+        or before[problem_id].get("attempt_id") is not None
+    ]
+    actions = {
+        problem_id: "rebind" if problem_id in rebound else "import"
+        for problem_id in problem_ids
+    }
+
+    if target["mode"] == "active":
+        from workbench.data import active_practice
+        previous_states = {}
+        for problem_id, attempt_id in links:
+            previous_states[problem_id] = active_practice.bind_attempt(
+                pool, positions[problem_id], attempt_id)
+        finish = active_practice.finish_if_complete(pool)
+        progress = _progress(_simulated(items, problem_ids))
+        return dict(
+            paper_id=paper_id, mode="active",
+            execution_id=target["execution_id"],
+            reveal_timing=target["reveal_timing"],
+            positions={problem_id: positions[problem_id] for problem_id in problem_ids},
+            actions=actions, progress=progress,
+            completed=finish.get("completed", False),
+            run_id=finish.get("run_id"), rebound=rebound,
+            previous_states=previous_states,
+        )
+
+    conn = pool.connect()
+    now = conn.execute("SELECT datetime('now')").fetchone()[0]
+    if target["mode"] == "parked":
+        record = target["record"]
+        generation = state(conn, paper_id)["generation"]
+        for problem_id, attempt_id in links:
+            item = record["items"][positions[problem_id]]
+            item["state"] = "answered"
+            item["attempt_id"] = attempt_id
+            item["content_revision"] = revision(conn, problem_id)
+            if record.get("reveal_timing") in {"per_item", "on_submit"}:
+                item["draft"] = _import_draft(item)
+                item["draft_sequence"] = item.get("draft_sequence", 0) + 1
+            else:
+                item["draft"] = {}
+                item["draft_sequence"] = 0
+        record["paper_generation"] = generation
+        record["cursor"] = _next_cursor(record["items"], record.get("cursor", 0))
+        record["updated_at"] = now
+        conn.execute(
+            "UPDATE paper_state SET checkpoint_json=? WHERE paper_id=?",
+            (json.dumps(record, ensure_ascii=False), paper_id))
+        return dict(
+            paper_id=paper_id, mode="parked",
+            execution_id=record.get("execution_id"),
+            reveal_timing=record.get("reveal_timing"),
+            positions={problem_id: positions[problem_id] for problem_id in problem_ids},
+            actions=actions, progress=_progress(record["items"]),
+            completed=False, run_id=None, rebound=rebound,
+        )
+
+    execution_id = conn.execute(
+        "INSERT INTO practice_execution_ids DEFAULT VALUES").lastrowid
+    generation = ensure_state(conn, paper_id)["generation"]
+    items = _new_items(pool, paper)
+    for problem_id, attempt_id in links:
+        item = items[positions[problem_id]]
+        item["state"] = "answered"
+        item["attempt_id"] = attempt_id
+        item["draft"] = {"stuck": False}
+        item["draft_sequence"] = 1
+    kp_ids = list(dict.fromkeys(
+        knowledge_id
+        for item in paper["plan"]["items"]
+        for knowledge_id in (pool.problem(item["problem_id"]) or {}).get("kp_ids", [])
+    ))
+    record = dict(
+        source_kind="paper", source_ref=paper_id,
+        source_label=paper["title"], kp_ids=kp_ids,
+        practice_mode="exam", rating_mode="immediate",
+        cursor=_next_cursor(items, 0), started_at=now, updated_at=now,
+        execution_id=execution_id, paper_generation=generation,
+        reveal_timing="on_submit", items=items,
+    )
+    conn.execute(
+        "UPDATE paper_state SET checkpoint_json=? WHERE paper_id=?",
+        (json.dumps(record, ensure_ascii=False), paper_id))
+    return dict(
+        paper_id=paper_id, mode="new", execution_id=execution_id,
+        reveal_timing="on_submit",
+        positions={problem_id: positions[problem_id] for problem_id in problem_ids},
+        actions=actions, progress=_progress(items),
+        completed=False, run_id=None, rebound=[],
+    )
+
+
+def attempt_paper(pool, attempt_id):
+    """The Paper item currently linked to one attempt, if any."""
+    if not available(pool.connect()):
+        return None
+    conn = pool.connect()
+    active = conn.execute(
+        "SELECT source_ref FROM active_practice WHERE singleton=1").fetchone()
+    if active:
+        row = conn.execute(
+            "SELECT position,state FROM active_practice_items WHERE attempt_id=?",
+            (attempt_id,)).fetchone()
+        if row:
+            return dict(paper_id=active["source_ref"], position=row["position"],
+                        state=row["state"], mode="active")
+    for row in conn.execute(
+            "SELECT paper_id,checkpoint_json FROM paper_state "
+            "WHERE checkpoint_json IS NOT NULL"):
+        record = json.loads(row["checkpoint_json"])
+        for item in record.get("items") or []:
+            if item.get("attempt_id") == attempt_id:
+                return dict(paper_id=row["paper_id"], position=item["position"],
+                            state=item["state"], mode="parked")
+    for row in conn.execute(
+            "SELECT source_ref,items_json FROM practice_runs "
+            "WHERE items_json IS NOT NULL"):
+        for item in json.loads(row["items_json"] or "[]"):
+            if item.get("attempt_id") == attempt_id:
+                return dict(paper_id=row["source_ref"], position=item["position"],
+                            state=item["state"], mode="archived")
+    return None
+
+
 def continuation(pool, paper_id, plan_items, validation_errors=()):
     """Compare saved Paper membership with its active or parked execution."""
     conn = pool.connect()

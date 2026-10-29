@@ -1005,9 +1005,19 @@ _Avoid_：人工抽查、事后补审
 出处：review-workbench spec「Past-paper coverage gate」；micro-quiz-content spec；workbench/ingest
 
 ### 试卷执行进度 / Paper Execution Progress
-一张 Paper 的未完成 Practice Run 所附带的执行状态，包括固定题序、当前游标、答案展示方式、未提交草稿、显式不会标记、提交/锁定状态和已显示参考材料的事实；不等于题目本体，也不等于 Attempt、自评或调度等学习证据。每张 Paper 可分别保留一份未完成进度，同一工作区同一时刻只激活一卷。普通 Paper 的整卷完成只由显式提交产生。
-_Avoid_：把题目掌握度当作卷内游标、把清卷进度当作删除学习证据
-出处：2026-10-17 所有者需求确认；`decouple-paper-progress-and-content`
+一张 Paper 的未完成 Practice Run 所附带的执行状态，包括固定题序、当前游标、答案展示方式、未提交草稿、显式不会标记、提交/锁定状态和已显示参考材料的事实；不等于题目本体，也不等于 Attempt、自评或调度等学习证据。每张 Paper 可分别保留一份未完成进度，同一工作区同一时刻只激活一卷。普通 Paper 的整卷完成只由显式提交产生。带 `paper_id` 的 Attempt 导入可以写入或更新这份进度；已有题的再次导入会追加新 Attempt 并重绑，旧 Attempt 保留。
+_Avoid_：把题目掌握度当作卷内游标、把清卷进度当作删除学习证据、把导入的答案当成学习投影
+出处：2026-10-17 所有者需求确认；`decouple-paper-progress-and-content`；`import-attempts-into-paper-progress`
+
+### 导入绑定 / Attempt Import Binding
+一次带 `paper_id` 的 Attempt 导入对目标 Paper 执行进度的写入：目标卷是当前选中卷时更新活动执行项；否则更新该卷的暂停检查点；该卷没有未完成进度时新建 `on_submit` 暂停检查点。它不激活该卷、不改变另一张正在做的卷；只有导入同时带 1–5 评价时才按既有规则改变学习投影。
+_Avoid_：把导入绑定当成开始 Practice Run、把游离 Attempt 自动塞进当前卷、把无评价导入当成学习结论
+出处：2026-10-29 所有者确认；`import-attempts-into-paper-progress`
+
+### Paper 追加题 / Paper Item Append
+把题池中已存在、但某张已保存 Paper 缺失的题目追加到该卷卷末的显式补给动作。它保留现有题序、题目状态、Attempt 链接、草稿和进度，递增该卷结构版本，并同步活动执行或暂停检查点的版本；不是“手工改名单/题序”的进度重置路径。
+_Avoid_：按原题号插入中间、自动建题、用改卷名单重置整卷进度
+出处：2026-10-29 所有者确认；`import-attempts-into-paper-progress`
 
 ### 历史保留题目 / Historical Question Row
 被用户删除后，仅为既有作答、评分与轮次保留身份的题目行，以 `problems.deleted_at` 标记。

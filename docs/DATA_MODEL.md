@@ -251,6 +251,20 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 
 新普通题界面使用 `localStorage` 键 `wb_paper_practice_<workspace>_<execution_id>`，保存该执行的待确认输入、顺序号、提交/不会/自评/整卷提交请求及已完成轮次引用。它仅用于失败恢复和相同请求重试，不是学习事实，也不能覆盖不同执行或内容修订。已确认状态仍以服务端检查点或归档记录为准；旧兼容界面保留前述逐题出站箱。Agent 组卷范围上下文使用 `sessionStorage` 的 `wb_agent_scope_<workspace>`，旧学生侧 `wb_kp_selection_*` 不再恢复为可操作选区；该上下文不创建试卷或学习记录。
 
+## 导入 Attempt 与 Paper 执行进度
+
+`paper_id` 是 attempt manifest 的输入字段，不是 `problem_attempts` 的列，也不改变 Attempt 的追加式身份。带 `paper_id` 的 `attempts apply` 在同一事务内把每条 Attempt 绑定到目标 Paper 的执行进度：
+
+- 目标卷是当前 active 执行 → 更新 `active_practice_items.state/attempt_id`；
+- 目标卷有 `paper_state.checkpoint_json` → 更新该检查点；
+- 目标卷没有未完成进度 → 新建检查点：`source_kind=paper`、`reveal_timing=on_submit`、独占 `execution_id`、当前 `paper_generation` 和完整有序 items；不创建 `active_practice` 行，不写 `practice_runs`。
+
+绑定只改 Paper 执行状态与 `attempt_id` 链接；`problem_progress`、`learning_current_state`、`learner_signals`、`review_schedule` 只在导入带 `rating` 时按既有评分规则改变。无 `rating` 的导入不改变学习投影。目标题已有 answered/stuck 时，追加新 Attempt 并重绑该位置；旧 Attempt 不删除、不改写。导入清空待提交 answer/choices 与 stuck 标记，保留 `reference_viewed` 事实。
+
+`papers append` 在卷末追加一条 pending item，使 `paper_state.generation` 递增，并同步活动执行或暂停检查点的 `paper_generation`；现有题目状态、Attempt 链接和草稿不变。它是独立的补给动作，不走“手工改名单/题序重置进度”路径。
+
+完成仍跟随执行模式：legacy 执行在导入补齐最后一题时按既有规则归档 completed；`per_item` / `on_submit` 仍等待学习者显式交卷。`paper_generation` 变化会使携带旧 generation 的浏览器写入按既有 stale 规则被拒绝，必须重新加载。
+
 ## 本地图谱布局种子（浏览器缓存）
 
 这不是 SQLite 字段、作者内容或学习事实。浏览器键为 `lk_graph_layout_v1_<workspace>`；当前页面没有工作区标签时使用 `lk_graph_layout_v1_default`。值为 JSON：`version` 是数字 `1`，`identity` 是可读拓扑 JSON，`positions` 是节点 ID 到 `[x, y]` 坐标的对象（有限坐标按 0.1 像素取整）。

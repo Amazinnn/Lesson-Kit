@@ -54,11 +54,22 @@ Agent 提供隐藏分布和建议配比，学生界面不显示裸分、分维�
 ## Agent 代录练习记录
 
 - 公开动作是 `lesson-kit attempts <workspace> list|get|check|apply|correct|sources`；清单是
-  UTF-8 JSON（`request_id` + `items[]`，每项仅有 `problem_id`/`answer_text`/`note`/`rating`），
-  一次可提交多题，任一条不合法即整批零写入。清单不接受图片字节、图片路径、卷面分或批改者字段。
+  UTF-8 JSON（`request_id` + 可选 `paper_id` + `items[]`，每项仅有
+  `problem_id`/`answer_text`/`note`/`rating`），一次可提交多题，任一条不合法即整批零写入。
+  清单不接受图片字节、图片路径、卷面分或批改者字段。
+- 带 `paper_id` 时，每道题必须属于该已保存 Paper 的当前有序题目；`apply` 在同一事务内把
+  Attempt 绑定到该卷执行进度：选中卷更新活动执行，已暂停卷更新检查点，没有未完成进度的卷
+  新建 `on_submit` 检查点（不激活、不写 `practice_runs`）。已有作答或「不会」的题追加新
+  Attempt 并重绑，旧 Attempt 保留。无 `rating` 时只改 Paper 执行进度，不改学习投影。
+- 补齐最后一题时完成状态跟随该卷模式：legacy 执行按既有规则自动完成，`per_item` /
+  `on_submit` 仍等待显式交卷。
+- 原卷缺失、但题池中已存在的题通过 `lesson-kit papers <workspace> append <ps-NNN>
+  --problem <problem-id>` 追加到卷末；它保留现有题序、状态、Attempt、草稿和进度，递增结构
+  版本，重复追加幂等。它不是手工改名单/题序的进度重置路径。题池中完全不存在的题必须先走
+  受治理内容流程建到已有知识点，再追加、再导入。
 - `rating` 是可选的整数 1–5，语义就是既有学习自评量表；带评分时在同一事务内复用既有 1–5
-  规则（事件、信号、当前状态、进度、调度各结算一次），不带评分时只落尝试文本，不改任何投影。
-  `correct` 按 attempt id 整体替换：先撤回旧评分影响，再按新评分重算。
+  规则（事件、信号、当前状态、进度、调度各结算一次），不带评分时只落尝试文本，不改任何
+  学习投影。`correct` 按 attempt id 整体替换：先撤回旧评分影响，再按新评分重算。
 - `request_id` 是幂等键：同 id 同内容重发返回第一次结果且不重复记分，同 id 异内容零写入拒绝。
 - 更正只在「该尝试由 Agent 记录、仍是该题最近一次、且没有更晚学习活动改过其投影」时执行；
   否则零写入并提示改记新尝试。旧尝试与浏览器自评尝试保持可读，不回溯可改。

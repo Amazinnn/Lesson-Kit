@@ -58,7 +58,7 @@
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |
 | `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；来源筛选 `--source-kind`·`--origin-kinds`·`--exam-year`·`--source-evidence` 均可重复，另有 `--search-stem`/`--search-source` 两个关键词域；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
 | `practice / feedback` | 写（尝试/自评四件套） | Agent |
-| `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检，apply 单事务多题，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
+| `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检并预览可选 `paper_id` 绑定，apply 单事务多题并绑定 Paper 执行进度，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
 | `evidence <workspace> kp <kp-id> [--limit 1..20]` | 只读（按知识点返回有界近期作答、可读题面及实际记录结果；默认 8 条并报告 `has_more`，不推断学习标签） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |
 | `data` | 读 + **显式变更**（JSON 直改内容；`data <ws> audit` 只读报告重复、片段、标题和图片问题） | Agent |
@@ -71,6 +71,7 @@
 | `papers <workspace> save --input <manifest>` | 写（验证已导出的练习清单并保存到试卷列表；返回 JSON 回执） | Agent |
 | `papers <workspace> list/get <ps-id>` | 读（缺失题目不隐藏容器，返回独立进度） | Agent |
 | `papers <workspace> preview/update <ps-id> --input <manifest> [--confirmation <preview.json>]` | 显式原卷更新；结构修改须确认精确影响，不启动执行 | Agent |
+| `papers <workspace> append <ps-id> --problem <problem-id>` | 写（卷末追加已有题，保留现有题序/状态/Attempt/草稿与进度；递增结构版本，重复追加幂等；不走改名单/题序重置路径） | Agent |
 | `papers <workspace> delete <ps-id>` | 仅删除容器与未完成状态，不删题目及学习证据 | Agent |
 
 ## 已安装的 Agent 契约模块

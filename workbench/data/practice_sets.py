@@ -424,6 +424,103 @@ def update_saved(pool, practice_set_id, *, confirmation=None, **fields):
     return get_saved(pool, practice_set_id)
 
 
+def append_saved(pool, practice_set_id, problem_id):
+    """Append one existing pool problem at the end without resetting progress."""
+    with pool.transaction(immediate=True):
+        current = _get_saved(pool, practice_set_id)
+        if not isinstance(problem_id, str) or not problem_id.strip():
+            raise ValueError("problem_id is required")
+        problem_id = problem_id.strip()
+        problem_ids = [item["problem_id"] for item in current["plan"]["items"]]
+        if problem_id in problem_ids:
+            return {
+                "practice_set_id": practice_set_id,
+                "appended": False,
+                "already_present": True,
+                "position": problem_ids.index(problem_id),
+                "count": current["count"],
+                "progress": current["progress"],
+                "mode": "existing",
+                "requires_reload": False,
+            }
+        if current["missing_problem_ids"]:
+            raise ValueError(
+                "Paper references unavailable problems: "
+                + ", ".join(current["missing_problem_ids"]))
+        if current["validation_errors"]:
+            raise ValueError(
+                "Paper validation failed: " + "; ".join(current["validation_errors"]))
+        continuation = current["continuation"]
+        if continuation and not continuation["available"]:
+            raise ValueError(
+                continuation.get("reason")
+                or "Paper execution progress cannot be validated")
+        if pool.problem(problem_id) is None:
+            raise ValueError(f"unknown problem: {problem_id}")
+
+        next_plan = dict(current["plan"])
+        next_plan["items"] = [
+            *current["plan"]["items"],
+            {"problem_id": problem_id, "reason": "manual"},
+        ]
+        raw = dict(practice_set_id=practice_set_id,
+                   created_at=current["created_at"], updated_at=_timestamp(),
+                   plan=next_plan)
+        conn = pool.connect()
+        paper_progress.ensure_state(conn, practice_set_id)
+        conn.execute(
+            "UPDATE paper_state SET generation=generation+1 WHERE paper_id=?",
+            (practice_set_id,))
+        generation = paper_progress.state(conn, practice_set_id)["generation"]
+        revision = paper_progress.revision(conn, problem_id)
+        position = len(current["plan"]["items"])
+        active = conn.execute(
+            "SELECT * FROM active_practice WHERE singleton=1").fetchone()
+        mode = "container"
+        if active and active["source_ref"] == practice_set_id:
+            conn.execute(
+                "INSERT INTO active_practice_items "
+                "(position,item_type,item_id,direction,state,content_revision) "
+                "VALUES (?,?,?,?,?,?)",
+                (position, "problem", problem_id, "", "pending", revision))
+            conn.execute(
+                "UPDATE active_practice SET paper_generation=?,"
+                "updated_at=datetime('now') WHERE singleton=1", (generation,))
+            mode = "active"
+        else:
+            checkpoint = paper_progress.state(conn, practice_set_id)["checkpoint_json"]
+            if checkpoint:
+                record = json.loads(checkpoint)
+                had_pending = any(
+                    item["state"] == "pending" for item in record["items"])
+                record["items"].append(dict(
+                    position=position, item_type="problem", item_id=problem_id,
+                    direction="", state="pending", attempt_id=None,
+                    content_revision=revision, draft={}, draft_sequence=0))
+                if not had_pending:
+                    record["cursor"] = position
+                record["paper_generation"] = generation
+                record["updated_at"] = conn.execute(
+                    "SELECT datetime('now')").fetchone()[0]
+                conn.execute(
+                    "UPDATE paper_state SET checkpoint_json=? WHERE paper_id=?",
+                    (json.dumps(record, ensure_ascii=False), practice_set_id))
+                mode = "parked"
+        paper_progress.queue_file(pool, practice_set_id, raw)
+    paper_progress.flush_files(pool)
+    saved = get_saved(pool, practice_set_id)
+    return {
+        "practice_set_id": practice_set_id,
+        "appended": True,
+        "already_present": False,
+        "position": position,
+        "count": saved["count"],
+        "progress": saved["progress"],
+        "mode": mode,
+        "requires_reload": mode == "active",
+    }
+
+
 def delete_saved(pool, practice_set_id):
     with pool.transaction(immediate=True):
         current = get_saved(pool, practice_set_id)

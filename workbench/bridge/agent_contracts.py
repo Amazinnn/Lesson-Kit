@@ -36,6 +36,7 @@ Record / check a batch:
 Manifest:
 {
   "request_id": "<caller-stable, human-repeatable id>",
+  "paper_id": "ps-001",
   "items": [
     {
       "problem_id": "...",
@@ -46,8 +47,14 @@ Manifest:
   ]
 }
 
-`rating` is the existing learner self-rating scale (1-5), not an exam score. Omit it if uncertain. `check` validates without writing; `apply` records the batch atomically. To replace an already Agent-recorded attempt use:
+`paper_id` is optional. Without it the attempt is a free record. With it, every problem must already belong to that saved Paper; `apply` binds the answers to that Paper's progress in the same transaction. A selected Paper is updated in place; another Paper's unfinished progress is updated as its parked checkpoint; a Paper with no unfinished progress gets a new `on_submit` checkpoint without becoming the active practice. An item that already had an answer or stuck mark gets a new attempt appended and re-linked; the old attempt remains. An import without `rating` changes only Paper execution progress, not learning signals, states, progress, or schedule. Completion follows the Paper's existing mode: a legacy Paper may archive when its last pending item is imported; `per_item` / `on_submit` still wait for the learner's explicit submission.
+
+`rating` is the existing learner self-rating scale (1-5), not an exam score. You MAY choose it yourself when the learner asks you to record or evaluate an answer; the learner does not need to supply a number. Omit it if uncertain. `check` validates without writing; `apply` records the batch atomically. To replace an already Agent-recorded attempt use:
 `lesson-kit attempts <工作区名> correct <attempt-id> --input <file>`.
+
+When a problem in the learner's answer is missing from the pool, do not invent it inside the manifest. First create it through the governed content path under an existing knowledge point with truthful source evidence, then append it to the Paper:
+`lesson-kit papers <工作区名> append <ps-NNN> --problem <problem-id>`
+(`append` is idempotent, adds the problem at the end, and preserves existing progress), then import the attempt. Never edit `.lessonkit/practice-sets/ps-*.json` directly.
 
 Learner answer images stay in their own directories. `lesson-kit attempts <工作区名> sources list` lists allowed directories. Read those files in place when needed; do not copy/upload them and do not store image paths or image bytes in the attempt manifest.
 """,
@@ -67,6 +74,8 @@ Selection map:
 When importing a sourced exam problem, `exam_year` is optional. If known it begins with a four-digit year (for example `2023` or `2023-2024秋冬`) and is at most 20 characters. Do not invent it.
 
 `pull --plan` exports a practice manifest and `pull --print` writes Markdown sheets; neither saves a reusable paper in Workbench. When the learner asks to save the paper or make it available in Workbench, run `lesson-kit papers <workspace> save --input <manifest>`. Report a managed save only after exit 0 and a JSON receipt; use its title, count, and `url`. A job artifact or printed sheet alone is not proof that the paper appears in the saved-paper list. Export-only requests remain supported.
+
+To add one missing problem that the learner actually answered to an existing Paper without resetting its progress, run `lesson-kit papers <workspace> append <ps-NNN> --problem <problem-id>`. It appends at the end, preserves every existing item's state, attempts and drafts, and is idempotent. `papers update` remains the membership/order edit that resets unfinished progress and requires the existing preview confirmation; do not use it for the missing-problem repair.
 """,
     "actions": r"""Lesson Kit UI action contract
 
@@ -148,6 +157,8 @@ Objective source problems are still imported when the source has no known answer
 Patchable fields include `problem_text`, `solution`, `kp_ids`, `problem_type`, `source_kind`, `origin_kind`, `source_evidence`, `source_answer`, `solution_origin`, `display_title`, `display_summary`, `exam_year`, `practice_modes`, `micro_quiz`, and `answer_key`. Problem ids are immutable. Difficulty still uses `lesson-kit difficulty`. Converting an existing problem to yes/no/choice uses `practice_modes` plus the full `micro_quiz` object (`quiz_type`, `options`, `answer_key`, `error_reason`); preserve source option text rather than rewriting it. In-place patching preserves all learning history and is rollbackable by ingest batch.
 
 16. Server validation is authoritative. If any item is invalid the entire submitted manifest is zero-write and the result names the failures. Correct the causes and resubmit the complete manifest; do not silently drop rejected items or claim success. If turn context includes `last_check_outcome`, obey it: after success do not duplicate the same content; after a rejection fix the reported causes before resubmission.
+
+17. When repairing a Paper that is missing a problem the learner actually answered on paper, create that problem as ordinary governed content under an existing knowledge point with truthful `source_evidence`, append it to the Paper with `lesson-kit papers <workspace> append <ps-NNN> --problem <id>`, then import the attempt. Do not invent the problem, its knowledge point, or its source, and do not edit the saved Paper JSON directly.
 """,
 }
 

@@ -9,7 +9,7 @@
 
 ## 一、练习回路
 
-Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供学习者选题、组卷条件、数量、成员或题序编辑。切卷暂停/恢复各自的游标和草稿；新一轮选择答案展示方式，继续轮次恢复原设置。Agent 使用 `papers list/get/preview/update/delete` 管理显式 ID；更新预览与确认保留既有治理边界。删除 Paper 保留题目，删除题目清当前引用但保留其他 Paper 进度和历史证据。重复的 AI 解析展示退役，正常解析和来源数据保留。
+Paper 操作补充（2026-10-19；2026-10-29 增补 append）：练习页只管理既有 Paper，不提供学习者选题、组卷条件、数量、成员或题序编辑。切卷暂停/恢复各自的游标和草稿；新一轮选择答案展示方式，继续轮次恢复原设置。Agent 使用 `papers list/get/preview/update/delete` 管理显式 ID；更新预览与确认保留既有治理边界。`papers append` 是独立的卷末补给动作：只追加已有题、不重置现有进度、递增结构版本且幂等，不替代 `update` 的成员/题序重置路径。删除 Paper 保留题目，删除题目清当前引用但保留其他 Paper 进度和历史证据。重复的 AI 解析展示退役，正常解析和来源数据保留。
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
@@ -58,6 +58,8 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 尝试与操作留痕读取 | CLI `attempts list\|get` | Agent | — | 已实现（同上） |
 | 按知识点读取学习证据（有界近期作答 + 可读题面，不推断学习特征） | CLI `lesson-kit evidence <workspace> kp <kp-id> [--limit N]` | Agent | —（只读） | 已实现（agent-learning-evidence） |
 | 答卷目录登记（只存路径，不复制图片） | CLI `attempts sources add\|list\|remove` | Agent | `answer-sources.json` | 已实现（同上） |
+| 导入 Attempt 绑定 Paper 进度（活动卷 / 暂停检查点 / 新建 on_submit 检查点；已有题追加并重绑） | CLI `attempts check\|apply`（manifest 可选 `paper_id`） | Agent（学生明确要求） | attempts +（带评分时）学习投影 + Paper 执行状态/检查点；不写 `practice_runs` | 已实现（import-attempts-into-paper-progress，2026-10-29） |
+| 卷末追加缺失题（保留现有题序、状态、Attempt、草稿与进度；幂等） | CLI `papers append <ps-NNN> --problem <id>` | Agent（学生明确要求） | Paper 容器 + `paper_state.generation` + 活动/暂停执行各追加一条 pending item | 已实现（同上） |
 | 图谱状态显式编辑（不记反馈） | UI | 人 | 状态+调度 | 已实现 |
 | 图谱关系绘制与 viewport/label LOD（WebGL2 单一路径；启动失败停止本次运行；可选本地布局种子不改图谱事实） | UI | 系统 | 浏览器可选布局缓存；不写 Pool | 已实现（graph-relation-pipes；graph-lod-layout-seeds） |
 | 方向写入（最终使用的 direction 键） | UI/API | 双 | 方向调度行 | 已实现 |

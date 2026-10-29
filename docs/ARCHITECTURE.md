@@ -185,6 +185,7 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
 - 新表 `practice_request_operations(request_id, payload, result, created_at)`：浏览器的
   作答和自评共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
 - 新表 `practice_runs(...)` 保存 Paper 轮次最小快照。普通题执行使用可空答案展示方式：逐题模式显式提交答案或标记「不会」时写入对应 Attempt；整卷模式在明确交卷时写入未提交答案与空白/仍标记为「不会」的卡点 Attempt 并归档。最后一题的逐题提交不会自动完成；切换 Paper 只暂停，不归档为完成。历史 `NULL` 模式继续沿旧执行语义读取。
+- `attempts.apply` 带 `paper_id` 时不新增列或表：Data 在同一事务内把 Attempt 绑定到 `active_practice_items` 或 `paper_state.checkpoint_json`，必要时新建暂停检查点。`papers append` 在卷末追加 pending item、递增 `paper_state.generation` 并同步执行快照；它不是“改名单/题序重置进度”路径。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
 - 新表 `content_mirror_state(entity_type, entity_id, revision, content_json, updated_at)` 与
   `content_mirror_log(...)` 由 `pool_schema.py` 增量创建：前者保存最后同步的整数修订号和规范化作者内容，

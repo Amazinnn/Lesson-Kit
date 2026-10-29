@@ -360,6 +360,36 @@ flowchart TD
 预检检查整个引用集合、工作区/checkout 根和索引路径；即使没有图像引用，索引也会独立检查。
 每个文件单独原子替换；运行系统写入错误可能发生在前一文件已替换之后，不提供整轮回滚。
 
+## W11 · 导入纸上作答并绑定 Paper 进度（2026-10-29）
+
+```mermaid
+flowchart TD
+  A[学生明确要求导入纸上作答] --> B[Agent 解析目标 Paper<br/>context.active_practice 或 papers list]
+  B --> C{题目都在题池?}
+  C -- 否 --> D[受治理内容流程建题到已有知识点<br/>source_evidence 真实]
+  D --> E[papers append 追加到卷末<br/>保留现有进度·幂等]
+  C -- 是 --> F[attempts check · 可选 paper_id]
+  E --> F
+  F --> G{整批合法?}
+  G -- 否 --> G1[逐条原因回对话·零写入] --> B
+  G -- 是 --> H[attempts apply · 单事务]
+  H --> I{目标卷状态}
+  I -- 当前选中卷 --> J[更新 active_practice_items]
+  I -- 有暂停检查点 --> K[更新 checkpoint]
+  I -- 无未完成进度 --> L[新建 on_submit 检查点<br/>不激活·不写 practice_runs]
+  J --> M[已有作答追加新 Attempt 并重绑<br/>旧 Attempt 保留]
+  K --> M
+  L --> M
+  M --> N{legacy 且无 pending?}
+  N -- 是 --> O[按既有规则归档 completed]
+  N -- 否 --> P[等待学生显式交卷]
+  O --> Q[返回绑定结果 + 试卷进度]
+  P --> Q
+  X[只讨论答案 / 只读图片] -.零写入.-> Z[(池不变)]
+```
+
+`paper_id` 是 manifest 输入字段，不是 `problem_attempts` 列。导入无 `rating` 时只改 Paper 执行进度；带 `rating` 时才按既有规则改学习投影。目标卷不是当前选中卷时，导入只写它的暂停检查点，不暂停或修改正在做的那张卷。
+
 ## 意外分支总清单（防"想当然"复查用）
 
 | # | 意外 | 落点 |

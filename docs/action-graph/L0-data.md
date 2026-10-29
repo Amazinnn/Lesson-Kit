@@ -11,9 +11,10 @@
 | `problems` | 正式题目（题干/解答/kp_ids/micro_quiz/`exam_year` 可空来源年份/逻辑 `figure_paths`/可空完整四维客观难度组） | 门禁配方 ingest、content-bundle、CLI `data`；`data.content_mirror`（校验引用；难度经 `data.difficulty.check`） | 拉取、选题组练习、练习、`data.evidence`、`data.figure_mirror` |
 | `candidate_problems` | **已物理移除**（2026-08-30 remove-candidate-store：表 DROP，pipeline 侧脚本成为无调用方退役物） | —— | —— |
 | `flash_cards` | 闪卡内容 + directions 方向能力（缺省 forward，双向不复制内容行） | 门禁配方 ingest | 拉卡、收束页 |
-| `active_practice` + `active_practice_items` | 当前选中的 Paper 执行及其固定题序、游标、可空 `reveal_timing`（`per_item` / `on_submit`；旧轮次保持 `NULL`）和每题草稿/不会/参考材料已查看/锁定状态；按 Paper 独立保存检查点，同一工作区只激活一卷。仅 draft 不构成学习证据 | `data.active_practice`（开始、导航、显式不会、提交、暂停） | 练习页、`data.paper_progress`、Agent 页面上下文 |
-| `practice_runs` | 已提交或显式替换/清除的轮次快照；普通题保留 `reveal_timing` 与答卷/展示事实，整卷只在显式交卷后归档；旧 `NULL` 模式/闪卡轮次沿原兼容路径 | `data.active_practice.submit`（Attempt 与快照同事务）；既有替换/清理流程 | 记录中心、完成页/本次答卷、Agent 页面上下文 |
-| `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点）；`per_item` 的逐题答案提交或「不会」立即写 Attempt；`on_submit` 只在整卷交卷时写未标卡点答案，空白或仍标「不会」的题写卡点 Attempt | 浏览器 `/attempts` 与显式 Paper submit、`POST /practice`、CLI `practice`、CLI `attempts apply|correct`（2026-09-24） | Agent 上下文、查询、CLI `attempts list|get`、`data.evidence` |
+| `active_practice` + `active_practice_items` | 当前选中的 Paper 执行及其固定题序、游标、可空 `reveal_timing`（`per_item` / `on_submit`；旧轮次保持 `NULL`）和每题草稿/不会/参考材料已查看/锁定状态；按 Paper 独立保存检查点，同一工作区只激活一卷。仅 draft 不构成学习证据。带 `paper_id` 的导入可更新 items 的 state/attempt_id；`papers append` 在卷末追加 pending item | `data.active_practice`（开始、导航、显式不会、提交、暂停、导入重绑、追加题） | 练习页、`data.paper_progress`、Agent 页面上下文 |
+| `practice_runs` | 已提交或显式替换/清除的轮次快照；普通题保留 `reveal_timing` 与答卷/展示事实，整卷只在显式交卷后归档；旧 `NULL` 模式/闪卡轮次沿原兼容路径 | `data.active_practice.submit`（Attempt 与快照同事务）；既有替换/清理流程；导入补齐 legacy 最后一题时的自动归档 | 记录中心、完成页/本次答卷、Agent 页面上下文 |
+| `paper_state` | 每张已保存 Paper 的结构版本 `generation`、暂停检查点 `checkpoint_json`、待发布文件意图；导入可在没有未完成进度时新建 `on_submit` 检查点，`papers append` 递增 generation 并追加 pending item | `data.paper_progress`、`data.practice_sets.append_saved` | 保存 Paper 读取、续练判断、浏览器 stale 校验 |
+| `problem_attempts` | 尝试记录（状态/备注/作答原文/卡点）；`per_item` 的逐题答案提交或「不会」立即写 Attempt；`on_submit` 只在整卷交卷时写未标卡点答案，空白或仍标「不会」的题写卡点 Attempt；带 `paper_id` 的导入追加 Attempt 并可重绑 Paper item | 浏览器 `/attempts` 与显式 Paper submit、`POST /practice`、CLI `practice`、CLI `attempts apply|correct`（2026-09-24；2026-10-29 起 apply 可绑定 Paper） | Agent 上下文、查询、CLI `attempts list|get`、`data.evidence` |
 | `feedback_events` | 自评事件（评分/备注，含 item_type=card；Agent 代录的事件用 `attempt_id` 指回那次尝试）；Paper 同轮回看可原位覆盖确切 Attempt 的评分/评语，不新增事件或重放学习影响 | `POST /feedback`（首次评分及受限的同轮编辑）、CLI `attempts`（带评分的尝试） | 查询、信号、`data.evidence` |
 | `learner_signals` | 弱项信号（只加强不自动消除） | 四件套之一 | 建议排序、Agent 上下文 |
 | `review_schedule` | 调度行（每题/每卡/每方向一行：间隔/熟悉度/到期） | 四件套之一；图谱状态编辑 | due/weak/日历工作量 |

@@ -441,6 +441,53 @@ files exactly as stored, so the exported set must be read with a
 math-capable Markdown viewer (or rendered later) — the workbench page renders
 it with KaTeX, the raw file does not.
 
+## Agent Attempt Manifests
+
+`lesson-kit attempts <workspace> check|apply --input <file|->` accepts one UTF-8
+JSON manifest. `check` validates and previews with zero writes; `apply` commits
+the whole manifest atomically or writes nothing.
+
+```json
+{
+  "request_id": "conv-001-turn-004-record",
+  "paper_id": "ps-001",
+  "items": [
+    {
+      "problem_id": "dmath-ch06-prob-001",
+      "answer_text": "transcribed learner answer",
+      "note": "grading note",
+      "rating": 3
+    }
+  ]
+}
+```
+
+- `request_id` is required, non-empty, and at most 200 characters. It is the
+  idempotency key: the same request id with the same manifest returns the first
+  result; the same id with different content or a different `paper_id` is
+  refused with zero writes.
+- `paper_id` is optional. Without it, the attempt is a free record. With it, the
+  value must name one saved `ps-NNN` Paper and every item's problem must belong
+  to that Paper's current ordered items. `apply` then binds the attempts to that
+  Paper's execution progress in the same transaction: the active execution when
+  the Paper is selected, its parked checkpoint when one exists, or a newly
+  created `on_submit` checkpoint when it has no unfinished progress. A newly
+  created checkpoint is not an active practice and does not create a
+  `practice_runs` row. An already answered or stuck item receives a new attempt
+  and is re-linked; the earlier attempt remains.
+- `items` is required and non-empty. Each item carries only `problem_id`,
+  `answer_text`, `note`, and optional integer `rating` 1–5. `answer_text` or
+  `note` must be non-empty. One manifest may not repeat a problem.
+- `rating` uses the existing learner 1–5 scale. When present, the attempt,
+  feedback event, signals, current states, learning progress, and schedule change
+  atomically through the existing rules. When absent, only the attempt and any
+  Paper execution progress change; learning projections do not.
+- The manifest carries no image bytes, image paths, exam marks, or grader
+  identity. Answer images stay in the learner's registered directories.
+- `correct <attempt-id> --input <file>` replaces one Agent-recorded attempt and
+  its linked evaluation with the existing snapshot/withdraw/recompute rules; it
+  does not create a new attempt row.
+
 ## Agent Saved Papers
 
 `lesson-kit pull --plan` exports a `practice-set` manifest; `pull --print` writes
@@ -476,9 +523,15 @@ object: target order, structure generation and exact unfinished states/drafts.
 If those change, obtain and confirm a fresh preview. Updates retain the ID and
 do not start practice. Question corrections use `data update problem <existing-id>`
 or `problem-patch`; changing answering type does not allocate a new question ID.
-Deleting a Paper leaves questions and evidence. Empty/unavailable containers
-stay inspectable, repairable and deletable, but cannot start/export. Pending
-file publication is Data-owned SQLite state, not manifest content (DATA_MODEL).
+An explicit `append <ps-id> --problem <problem-id>` adds one existing problem at
+the end without resetting existing item states, attempt links, drafts, or
+progress. It increments the Paper's structure generation, updates the matching
+active or parked execution, and is idempotent: appending an already present
+problem returns `already_present` with zero writes. It is not the membership/order
+update path and does not require that path's reset confirmation. Deleting a Paper
+leaves questions and evidence. Empty/unavailable containers stay inspectable,
+repairable and deletable, but cannot start/export. Pending file publication is
+Data-owned SQLite state, not manifest content (DATA_MODEL).
 
 These names are v1 compatibility surface: the manifest kind `practice-set`,
 the save receipt field `practice_set_id`, the `ps-NNN` IDs, the

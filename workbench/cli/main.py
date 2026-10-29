@@ -1071,6 +1071,7 @@ def build_parser(prog="lesson-kit"):
     action.set_defaults(func=cmd_attempts)
 
     manifest_help = ("JSON file (or - for stdin): {\"request_id\": \"<caller-stable id>\","
+                     " \"paper_id\": \"ps-001\" (optional),"
                      " \"items\": [{\"problem_id\": \"…\", \"answer_text\": \"…\","
                      " \"note\": \"…\", \"rating\": 1-5 (optional)}]}")
     for action_name, help_text in (

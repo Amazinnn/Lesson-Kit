@@ -350,3 +350,5 @@ flowchart LR
 - 2026-10-27 发送方式收口：退役输入区单次发送方式选择器，新消息直接采用设置页的运行中发送偏好；已提交消息的恢复仍沿用原始提交方式。
 
 - 2026-10-28 消息候选列表收口：发送状态、核对与失败重试移至输入框上方，退役对话流内的发送恢复框、发送状态标签及重试入口。新增移除本机恢复记录；被拒绝的消息可手动重发。普通轮次失败后未暂停的正常队列继续，失败消息本身不自动重发；手动停止、待审批及服务恢复仍保留暂停边界。
+
+- 2026-10-29 导入作答绑定 Paper 进度（import-attempts-into-paper-progress）：`attempts check|apply` 的 manifest 增加可选 `paper_id`；带值时整批题目必须属于该已保存 Paper，并在同一事务内绑定到活动执行、暂停检查点或新建的 `on_submit` 检查点；不激活、不写 `practice_runs`，无 `paper_id` 仍是游离 Attempt。已有作答或「不会」的题追加新 Attempt 并重绑，旧 Attempt 保留；无 `rating` 只改执行进度，不改学习投影；完成跟随该卷现有模式。新增 `papers append <ps-NNN> --problem <id>`：卷末追加、保留现有进度、递增结构版本、幂等。缺题走「内容建题 → 追加 → 导入」三步。L0/L1/L2/L3/L4、FILE_CONTRACT、DATA_MODEL、GLOSSARY、PRODUCT-MANUAL、REQUIREMENTS、ARCHITECTURE 与 Agent 注入提示词同步。

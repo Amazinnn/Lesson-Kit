@@ -166,7 +166,7 @@ COMMANDS = {
     "difficulty": (AGENT, ""),
     "evidence": (AGENT, "bounded read-only human-readable learner evidence for historical claims"),
     "experience": (AGENT, "explicit CRUD for learner-owned knowledge-point practice experience"),
-    "papers": (AGENT, "saves a validated practice manifest as a reusable paper"),
+    "papers": (AGENT, "saves, appends to, or updates a reusable practice paper"),
     "ingest": (AGENT, ""),
     "mirror": (AGENT, "validates and synchronizes the checked-out authored-content JSON projection"),
 }
