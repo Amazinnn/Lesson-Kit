@@ -57,7 +57,7 @@
 | `doctor` | 读（环境自检：注册表/池库/provider/服务端口，只读不改） | 人 |
 | `weak / due / schedule` | 读（弱项/到期/调度态） | Agent 主用 |
 | `pull` | 读（**组一次练习**：范围/单题/条件筛选/薄弱·到期·错题；来源筛选 `--source-kind`·`--origin-kinds`·`--exam-year`·`--source-evidence` 均可重复，另有 `--search-stem`/`--search-source` 两个关键词域；`--plan` 落练习清单，`--print` 出学生卷+解答卷，`--check` 零写入预检，`--ids` 旧形状） | Agent |
-| `practice / feedback` | 写（尝试/自评四件套） | Agent |
+| `practice / feedback`（`feedback list/get/add/update/delete`） | 写（尝试/评价四件套；评价 update/delete 需 expected rating/note，只改/删事件行，不重放学习投影） | Agent |
 | `attempts`（`list --problem` / `get <id>` / `check`·`apply`·`correct --input <file\|->` / `sources add·list·remove --path`） | 读 + 写（Agent 代录尝试：check 零写入预检并预览可选 `paper_id` 绑定，apply 单事务多题并绑定 Paper 执行进度，correct 按 attempt-id 撤回旧评分并重算；sources 只登记答卷目录） | Agent |
 | `evidence <workspace> kp <kp-id> [--limit 1..20]` | 只读（按知识点返回有界近期作答、可读题面及实际记录结果；默认 8 条并报告 `has_more`，不推断学习标签） | Agent |
 | `goals`（list/add/update/rm） | 写（目标管理） | Agent |

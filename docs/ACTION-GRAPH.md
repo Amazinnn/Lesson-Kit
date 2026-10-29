@@ -14,7 +14,7 @@
 2026-09-01：图谱关系加入有限确定性消交叉，以及由既有 attraction 驱动的
 阴影/管体/高光三层绘制；全部属于浏览器内纯视图。
 
-2026-09-28：浏览器提交作答与自评使用稳定请求 id；响应丢失后原样重试返回首次结果，
+2026-09-28：浏览器提交作答与评价使用稳定请求 id；响应丢失后原样重试返回首次结果，
 不重复写入。详见 L4 的练习工作流与意外分支。
 
 2026-10-16 Agent UI v1 基础（PR135）：右栏增加紧凑页面上下文与自适应输入框，中央页继续优先；新增辅助工作面的折叠动作登记。此阶段 Activity Float、Bottom Dock、Artifact Split 仍是隐藏的展示容器，尚未接入运行状态。
@@ -74,7 +74,7 @@ flowchart LR
     REVEAL[按展示方式揭示并锁定]
     END[显式提交整卷]
     DONE[完成页 / 答卷往返]
-    RATE[可选自评]
+    RATE[可选评价]
   end
   subgraph REC[记录与调度]
     FB[feedback 四件套]
@@ -120,7 +120,7 @@ flowchart LR
 ```
 
 普通 Paper 由浏览器从已保存列表开始或继续；浏览器不提供学习者手工选题与组卷。Agent/CLI authoring 保留。
-导航、到达最后一题和暂停都不提交；普通 Paper 只在明确交卷后完成，自评可跳过。旧记录与闪卡继续走既有兼容语义。
+导航、到达最后一题和暂停都不提交；普通 Paper 只在明确交卷后完成，评价可跳过。旧记录与闪卡继续走既有兼容语义。
 
 ## 队列（2026-08-29 问卷后所有者确认）
 
@@ -177,7 +177,7 @@ flowchart LR
   请求序列、持久化与学习事实不变；知识图谱相关动作零改动；口径类动作（正确率、
   完成练习次数）不在本轮。见 L3、GLOSSARY、PRODUCT-MANUAL、ARCHITECTURE。
   （→ **2026-10-22 已落地**，两条改判为「已实现」，见本节同日条目。）
-- 2026-10-19 Paper 自由导航与 Agent/CLI authoring 边界（free-navigation-paper-practice、remove-learner-manual-paper-selection）：普通 Paper 增加 `per_item` / `on_submit` 答案展示方式、全卷自由导航、逐题提交与显式交卷、完成页答卷往返及独立重练轮次；只有显式交卷归档，普通 Paper 自评可跳过。学习者练习页只管理既有 Paper，不再手工选题或调整成员/顺序；Agent/CLI 的 pull、筛选、精确题号与保存 authoring 保留。章透镜、图谱筛选与节点聚焦仍是阅读功能；闪卡和旧轮次语义保留。见 L0–L4。
+- 2026-10-19 Paper 自由导航与 Agent/CLI authoring 边界（free-navigation-paper-practice、remove-learner-manual-paper-selection）：普通 Paper 增加 `per_item` / `on_submit` 答案展示方式、全卷自由导航、逐题提交与显式交卷、完成页答卷往返及独立重练轮次；只有显式交卷归档，普通 Paper 评价可跳过。学习者练习页只管理既有 Paper，不再手工选题或调整成员/顺序；Agent/CLI 的 pull、筛选、精确题号与保存 authoring 保留。章透镜、图谱筛选与节点聚焦仍是阅读功能；闪卡和旧轮次语义保留。见 L0–L4。
 - 2026-10-16 Agent 工件交付（agent-ui-v1-implementation，PR129/135/136/137）：Agent 只能按已保存 Paper 记录产出 `paper_artifact` 工件卡（标题/题数取自记录，丢布模型 URL）；最新工件可临时展开 Adaptive Split 预览，历史工件卡不自动展开，打开组卷页始终是显式操作。
 - 2026-10-13 作者内容镜像字段扩展（expand-content-mirror-fields/PR123）：既有 `mirror`
   读写动作增加通过现有路径校验的逻辑图像引用和经难度 authority 校验的完整题目评级组；旧
@@ -185,7 +185,7 @@ flowchart LR
   字节传输或学习记录写入。
 - 2026-10-13 图谱关系渲染（graph-webgl-rendering）：既有关系显示使用唯一 WebGL2 绘制路径；渲染无法启动时以可读状态终止本次图谱运行，不回退 SVG、不新增数据写入或用户动作。L3 既有图谱关系责任同步。
 - 2026-10-13 图谱 viewport/label LOD 与本地布局种子（graph-lod-layout-seeds）：仅更新现有图谱读取责任；viewport culling 不改变图成员或选择，完整拓扑命中直接采用缓存坐标并停止求解，部分命中只在首帧作为临时锚点，释放后由同一 Worker 继续求解。无新增用户动作、Pool 写入或 SQLite 字段；L3 现有图谱绘制责任同步。
-- 2026-10-12/17 普通题结果回看（practice-review、revisit-paper-answers-and-edit-self-rating）：旧行为是在没有服务端执行身份时回看紧邻上一题，并在 Paper 同轮回看已有作答或「不会」普通题时每次收起参考答案；游标与当前草稿独立，Agent 焦点跟随可见题。此回看/收起规则已由 2026-10-19 普通 Paper 全卷自由导航与答案展示方式覆盖，当前行为见 W1。修改已有自评只覆盖确切 Attempt 关联评分/评语，不新增记录或重放学习影响。闪卡仍沿用上一张/下一张游标导航。见 L3 动作登记。
+- 2026-10-12/17 普通题结果回看（practice-review、revisit-paper-answers-and-edit-self-rating）：旧行为是在没有服务端执行身份时回看紧邻上一题，并在 Paper 同轮回看已有作答或「不会」普通题时每次收起参考答案；游标与当前草稿独立，Agent 焦点跟随可见题。此回看/收起规则已由 2026-10-19 普通 Paper 全卷自由导航与答案展示方式覆盖，当前行为见 W1。修改已有评价只覆盖确切 Attempt 关联评分/评语，不新增记录或重放学习影响。闪卡仍沿用上一张/下一张游标导航。见 L3 动作登记。
 - 2026-10-12 学习证据查询（agent-learning-evidence）：新增只读 CLI `evidence`，按知识点
   返回最多 20 条近期作答及当前题面/实际记录结果；缺库时拒绝连接且不建文件。L0/L1/L2/L3
   登记既有表读取者、查询服务、命令与只读动作；L4 在需要历史依据的 Agent 对话中登记按需读取。
@@ -343,12 +343,14 @@ flowchart LR
 - 2026-10-18 Agent 消息队列与中断后发送（queue-agent-messages-and-interrupt）：运行中接受 FIFO 消息或显式中断；中断等待捕获轮次终态和 worker 清理，优先消息结束后旧队列仍暂停。待处理消息可编辑/移除并显式继续。L0/L2/L3/L4、FILE_CONTRACT、ARCHITECTURE 与 PRODUCT-MANUAL 同步；无 Pool 字段。
 - 2026-10-18 Agent 既有 Paper 更新确认（complete-agent-message-lifecycle）：Agent 只提议成员/顺序变化；页面展示精确进度/草稿影响，用户批准后复用现有 writer。过期快照零写入并刷新影响；待确认期间 composer 可用但队列暂停，取消或批准后仍需手动继续。见 L3/L4 与 PRODUCT-MANUAL。
 
-- 2026-10-25 显示设置收口：来源默认隐藏，来源与普通 Paper 自评即时双向显隐，左栏与设置页及同工作区跨标签同步。沿用现有工作区浏览器偏好，无新增/退役/改级动作。计算机组成不存在题目的引用按题目级清理，保留试卷容器。
+- 2026-10-25 显示设置收口：来源默认隐藏，来源与普通 Paper 评价即时双向显隐，左栏与设置页及同工作区跨标签同步。沿用现有工作区浏览器偏好，无新增/退役/改级动作。计算机组成不存在题目的引用按题目级清理，保留试卷容器。
 
-- 2026-10-27 设置入口收口：运行中发送方式、自评显示、来源显示迁至工作台设置视图；左栏仅保留「设置」入口。沿用现有偏好动作和存储，无新增/退役/改级动作。
+- 2026-10-27 设置入口收口：运行中发送方式、评价显示、来源显示迁至工作台设置视图；左栏仅保留「设置」入口。沿用现有偏好动作和存储，无新增/退役/改级动作。
 
 - 2026-10-27 发送方式收口：退役输入区单次发送方式选择器，新消息直接采用设置页的运行中发送偏好；已提交消息的恢复仍沿用原始提交方式。
 
 - 2026-10-28 消息候选列表收口：发送状态、核对与失败重试移至输入框上方，退役对话流内的发送恢复框、发送状态标签及重试入口。新增移除本机恢复记录；被拒绝的消息可手动重发。普通轮次失败后未暂停的正常队列继续，失败消息本身不自动重发；手动停止、待审批及服务恢复仍保留暂停边界。
 
 - 2026-10-29 导入作答绑定 Paper 进度（import-attempts-into-paper-progress）：`attempts check|apply` 的 manifest 增加可选 `paper_id`；带值时整批题目必须属于该已保存 Paper，并在同一事务内绑定到活动执行、暂停检查点或新建的 `on_submit` 检查点；不激活、不写 `practice_runs`，无 `paper_id` 仍是游离 Attempt。已有作答或「不会」的题追加新 Attempt 并重绑，旧 Attempt 保留；无 `rating` 只改执行进度，不改学习投影；完成跟随该卷现有模式。新增 `papers append <ps-NNN> --problem <id>`：卷末追加、保留现有进度、递增结构版本、幂等。缺题走「内容建题 → 追加 → 导入」三步。L0/L1/L2/L3/L4、FILE_CONTRACT、DATA_MODEL、GLOSSARY、PRODUCT-MANUAL、REQUIREMENTS、ARCHITECTURE 与 Agent 注入提示词同步。
+
+- 2026-10-29 评价改名与 Agent 评价管理（evaluation-terminology-and-agent-crud）：用户可见中文「自评」统一改为「评价」，`rating`/`self_rating`/API/JSON 英文标识不变；`feedback` 扩展为 `list/get/add/update/delete`，`update/delete` 对任何 writer、任何 item_type 开放，必须带从 `feedback get` 读到的 expected rating/note，不匹配零写入；`update` 只改行、`delete` 硬删，不重放学习投影；`attempts correct` 仍是整条 Attempt 替换并重算的路径。Agent 注入提示词、TASK_ROUTER、DATA_MODEL、REQUIREMENTS、ARCHITECTURE、GLOSSARY、PRODUCT-MANUAL 与 L0/L1/L2/L3/L4 同步。

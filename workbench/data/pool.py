@@ -379,6 +379,44 @@ class Pool:
         ).fetchone()
         return dict(row) if row else None
 
+    def feedback_event(self, event_id):
+        row = self.connect().execute(
+            "SELECT * FROM feedback_events WHERE id=?", (event_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+    def feedback_event_rows(self, item_type=None, item_id=None, attempt_id=None,
+                            limit=50):
+        clauses = []
+        params = []
+        if item_type is not None:
+            clauses.append("item_type=?")
+            params.append(item_type)
+        if item_id is not None:
+            clauses.append("item_id=?")
+            params.append(item_id)
+        if attempt_id is not None:
+            clauses.append("attempt_id=?")
+            params.append(attempt_id)
+        where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+        rows = self.connect().execute(
+            "SELECT * FROM feedback_events" + where + " ORDER BY id DESC LIMIT ?",
+            (*params, limit),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def update_feedback_event(self, event_id, rating, note):
+        self.connect().execute(
+            "UPDATE feedback_events SET rating=?, note=? WHERE id=?",
+            (rating, note, event_id),
+        )
+        self.commit()
+
+    def delete_feedback_event(self, event_id):
+        self.connect().execute(
+            "DELETE FROM feedback_events WHERE id=?", (event_id,))
+        self.commit()
+
     # -- runtime paths ----------------------------------------------------
 
     def figures_dir(self):

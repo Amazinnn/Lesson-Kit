@@ -14,6 +14,7 @@ packages govern current lesson-kit work.
 | "this problem is missing from the paper", "把缺的题加进试卷" | `lesson-kit papers <workspace> append <ps-NNN> --problem <id>` | JSON receipt with position, count, and progress; existing progress is preserved |
 | "rate these problems", "rerate difficulty" | `lesson-kit difficulty <workspace> check` then `apply` | complete four-dimension rating manifest |
 | "record my handwritten answer", "grade this photo of my work", "fix the rating you just recorded" | `lesson-kit attempts <workspace> check\|apply\|correct --input <file\|->` | attempt manifest (`request_id` + optional `paper_id` + `items[]`), plus `sources list` for the answer-image directories |
+| "change this score", "delete that evaluation", "re-evaluate this answer" | `lesson-kit feedback <workspace> get\|list\|update\|delete` | current event id and expected rating/note read from `feedback get`; update/delete refuse stale values |
 | "show me the knowledge guide", "print the chapter guide" | `pool/scripts/print-graph.py` | existing `knowledge_points` rows |
 | "make a problem set", "practice problems" | `views/problem-set/command.md` | existing `problems` rows |
 

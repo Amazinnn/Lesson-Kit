@@ -419,11 +419,11 @@ def practice_page(workspace, workspaces, weak_items, plan=None, suggestions=None
         "<button id='answer-submit' class='primary'>提交作答</button></div><div id='composer-actions' class='hidden'>"
         "<button id='show-answer' class='outline'>查看解析</button>"
         "<button id='next-problem' class='primary hidden' type='button'>下一题</button>"
-        "<button id='review-rating-action' class='outline sm hidden' type='button'>编辑自评</button>"
+        "<button id='review-rating-action' class='outline sm hidden' type='button'>编辑评价</button>"
         "<span id='card-nav' class='hidden'><button id='card-prev' class='ghost' type='button'>上一张</button>"
         "<button id='card-next' class='ghost' type='button'>下一张</button></span></div><div id='feedback-area' class='feedback-card hidden'>"
-        "<label class='visually-hidden' for='rating-input'>自评（1–5）</label>"
-        "<input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='自评 1–5'>"
+        "<label class='visually-hidden' for='rating-input'>评价（1–5）</label>"
+        "<input id='rating-input' type='number' min='1' max='5' step='1' inputmode='numeric' placeholder='评价 1–5'>"
         "<label class='visually-hidden' for='feedback-note'>备注（可选）</label>"
         "<div class='feedback-note-row'><textarea id='feedback-note' rows='1' placeholder='备注（可选）'></textarea>"
         "<button id='save-rating' class='primary sm'>记录并下一题</button>"
@@ -480,7 +480,7 @@ def _paper_practice_html(workspace_name):
         "<button id='paper-item-submit' class='primary hidden' type='button'>提交答案</button>"
         # 16.2 解析 = 与题面同级的另一张纸，只用小标题区隔。
         "<div id='paper-reference' class='practice-solution paper-solution wb-reading hidden'></div>"
-        "<section id='paper-rating' class='hidden' aria-label='自评'></section>"
+        "<section id='paper-rating' class='hidden' aria-label='评价'></section>"
         "<nav class='paper-navigation' aria-label='题目导航'>"
         "<button id='paper-prev' class='outline' type='button'>上一题</button>"
         "<button id='paper-next' class='primary' type='button'>下一题</button>"
@@ -944,7 +944,7 @@ def records_page(workspace, workspaces, weak_items, pool, problem_id=None, view=
 def session_end_page(workspace, workspaces, weak_items, kp_titles=None):
     middle = (
         _page_header(
-            "练习 / 收束本轮", "会话末统一自评",
+            "练习 / 收束本轮", "会话末统一评价",
             "",
         )
         + "<div class='page-content'>"
@@ -996,7 +996,7 @@ def settings_page(workspace, workspaces, weak_items, kp_titles=None):
         + "</span>"
         + "</div>"
         + "<div class='preference-row'>"
-        + "<span class='preference-name' id='setting-show-rating-view-label'>自评</span>"
+        + "<span class='preference-name' id='setting-show-rating-view-label'>评价</span>"
         + "<span class='preference-value' id='setting-show-rating-view-value'>显示</span>"
         + "<label class='lk-switch'>"
         + "<input type='checkbox' id='setting-show-rating-view'>"

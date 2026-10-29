@@ -822,9 +822,9 @@
       var pending = local && local.ratingDrafts[positionKey] || {};
       var heading = document.createElement("p");
       heading.className = "section-kicker";
-      heading.textContent = "自评（可选）";
+      heading.textContent = "评价（可选）";
       var label = document.createElement("label");
-      label.textContent = "自评 1–5";
+      label.textContent = "评价 1–5";
       ratingInput = document.createElement("input");
       ratingInput.type = "number";
       ratingInput.min = "1";
@@ -840,7 +840,7 @@
       var save = document.createElement("button");
       save.type = "button";
       save.className = "outline sm";
-      save.textContent = feedback.rating ? "保存自评修改" : "保存自评";
+      save.textContent = feedback.rating ? "保存评价修改" : "保存评价";
       save.addEventListener("click", function () { saveRating(item, ratingInput, ratingNote); });
       ids.rating.appendChild(heading);
       ids.rating.appendChild(label);
@@ -862,7 +862,7 @@
       if (disposed || !canRate(item)) return Promise.resolve();
       var rating = Number(ratingField.value);
       if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-        showError("请输入 1–5 的自评分数。");
+        showError("请输入 1–5 的评价分数。");
         return Promise.resolve();
       }
       var key = rowKey(item, position);
@@ -898,7 +898,7 @@
         if (current && current.item_id === item.item_id) renderCurrent();
         if (renderingArchived) renderCompletion();
       }).catch(function (error) {
-        showError(error.message || "自评尚未确认保存，编辑内容已保留。");
+        showError(error.message || "评价尚未确认保存，编辑内容已保留。");
       });
     }
 
@@ -1376,7 +1376,7 @@
             delete local.ratingDrafts[key];
             persistLocal();
             if (renderingArchived) renderCompletion();
-          }).catch(function (error) { showError(error.message || "自评尚未确认保存。"); });
+          }).catch(function (error) { showError(error.message || "评价尚未确认保存。"); });
         }
       });
     }
@@ -1457,7 +1457,7 @@
         { value: stats.correct, label: "判定正确" },
         { value: stats.wrong, label: "错误" },
         { value: stats.stuck, label: "不会" },
-        { value: stats.pendingRatings, label: "待自评" },
+        { value: stats.pendingRatings, label: "待评价" },
       ].map(function (figure) {
         return "<p class='lk-stat'><span class='lk-stat__value' data-lk-value='"
           + figure.value + "'>" + figure.value + "</span>"
@@ -1475,7 +1475,7 @@
       if (ids.completionStats) {
         ids.completionStats.textContent = "共 " + stats.total + " 题；判定正确 " + stats.correct
           + " 题，错误 " + stats.wrong + " 题；不会 " + stats.stuck
-          + " 题；待自评 " + stats.pendingRatings + " 题。";
+          + " 题；待评价 " + stats.pendingRatings + " 题。";
       }
       if (ids.completionFigures) {
         ids.completionFigures.innerHTML = completionFiguresHtml(stats);

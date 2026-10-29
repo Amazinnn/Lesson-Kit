@@ -429,30 +429,81 @@ def cmd_practice(args):
     return 0
 
 
+def _expected_rating(value):
+    return None if value == "none" else int(value)
+
+
 def cmd_feedback(args):
+    from workbench.data import evaluations as evaluation_data
     workspace = _workspace(_resolve_name(args))
     pool = _pool(workspace)
     try:
-        lookup = {"kp": pool.kp, "problem": pool.problem, "card": pool.card}[args.item]
-        item = lookup(args.id)
-        if item is None:
-            print(json.dumps({"error": f"unknown {args.item}: {args.id}"}, ensure_ascii=False))
+        if args.action == "add":
+            if not args.item or not args.id:
+                print(json.dumps(
+                    {"error": "feedback add requires --item and --id"},
+                    ensure_ascii=False))
+                return 2
+            result = evaluation_data.add_event(
+                pool, args.item, args.id, rating=args.rating, note=args.note,
+                direction=args.direction or "", attempt_id=args.attempt_id)
+            for change in result["changes"]:
+                print(change)
+            return 0
+        if args.action == "list":
+            result = evaluation_data.list_events(
+                pool, item_type=args.item, item_id=args.id,
+                attempt_id=args.attempt_id, limit=args.limit)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
+        if args.action == "get":
+            if args.event_id is None:
+                print(json.dumps({"error": "feedback get requires --event-id"},
+                                 ensure_ascii=False))
+                return 2
+            print(json.dumps(evaluation_data.get_event(pool, args.event_id),
+                             ensure_ascii=False, indent=2))
+            return 0
+        if args.expected_rating is None or args.expected_note is None:
+            print(json.dumps(
+                {"error": "update/delete require --expected-rating and "
+                          "--expected-note; run feedback get first"},
+                ensure_ascii=False))
             return 2
-        direction = args.direction or ""
-        if args.item == "card" and direction not in {"", *item["directions"]}:
-            print(json.dumps({"error": "direction is not available for this card"},
-                             ensure_ascii=False))
+        if args.event_id is None:
+            print(json.dumps(
+                {"error": f"feedback {args.action} requires --event-id"},
+                ensure_ascii=False))
             return 2
-        if args.rating is None and not (args.note and args.note.strip()):
-            print(json.dumps({"error": "rating or note is required"}, ensure_ascii=False))
-            return 2
-        changes = feedback.apply(pool, args.item, args.id, rating=args.rating,
-                                 note=args.note, direction=direction)
+        if args.action == "update":
+            if args.rating is None and args.note is None:
+                print(json.dumps(
+                    {"error": "feedback update requires --rating or --note"},
+                    ensure_ascii=False))
+                return 2
+            result = evaluation_data.update_event(
+                pool, args.event_id,
+                rating=(evaluation_data.UNSET if args.rating is None else args.rating),
+                note=(evaluation_data.UNSET if args.note is None else args.note),
+                expected_rating=_expected_rating(args.expected_rating),
+                expected_note=args.expected_note)
+        else:
+            result = evaluation_data.delete_event(
+                pool, args.event_id,
+                expected_rating=_expected_rating(args.expected_rating),
+                expected_note=args.expected_note)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    except evaluation_data.EvaluationDuplicate as exc:
+        print(json.dumps({"error": str(exc), "existing_event_id": exc.event_id},
+                         ensure_ascii=False))
+        return 2
+    except (evaluation_data.EvaluationError, ValueError, KeyError,
+            OSError, sqlite3.Error) as exc:
+        print(json.dumps({"error": str(exc)}, ensure_ascii=False))
+        return 2
     finally:
         pool.close()
-    for change in changes:
-        print(change)
-    return 0
 
 
 def cmd_schedule(args):
@@ -1017,13 +1068,24 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("--answer-text")
     p.set_defaults(func=cmd_practice)
 
-    p = sub.add_parser("feedback", help="record feedback (rating and/or note)")
+    p = sub.add_parser("feedback", help="manage evaluations (rating and/or note)")
     p.add_argument("name", nargs="?")
-    p.add_argument("--item", required=True, choices=["kp", "problem", "card"])
-    p.add_argument("--id", required=True)
+    p.add_argument("action", nargs="?",
+                   choices=["add", "list", "get", "update", "delete"],
+                   default="add")
+    p.add_argument("--item", choices=["kp", "problem", "card"])
+    p.add_argument("--id")
+    p.add_argument("--event-id", type=int)
+    p.add_argument("--attempt-id", type=int)
     p.add_argument("--rating", type=int, choices=[1, 2, 3, 4, 5])
     p.add_argument("--note")
     p.add_argument("--direction", help="card practice direction (default: forward)")
+    p.add_argument("--expected-rating", choices=["1", "2", "3", "4", "5", "none"],
+                   help="current rating read from feedback get; none means no rating")
+    p.add_argument("--expected-note",
+                   help="current note read from feedback get; use an empty string for no note")
+    p.add_argument("--limit", type=int, default=50,
+                   help="maximum events returned by feedback list (1-500)")
     p.set_defaults(func=cmd_feedback)
 
     p = sub.add_parser("schedule", help="show schedule state for an item")

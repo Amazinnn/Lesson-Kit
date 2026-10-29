@@ -153,7 +153,15 @@
 
 ### feedback_events 与 Paper 作答回看
 
-浏览器第一次自评仍使用现有反馈写入并更新学习信号、当前状态、进度和调度。选中 Paper Practice Run 后，回看中再次保存只允许原位覆盖该执行、该题目位置及其确切 `attempt_id` 所关联的 `feedback_events.rating` 和 `feedback_events.note`；写入前同时校验执行、题目内容版本以及预期旧评分与评语。它不新建 Attempt 或反馈行，也不改答案、客观判定、自评时机或学习投影/调度。请求 id 仅对这种原位编辑必需，用于相同载荷的安全重试；普通首次反馈沿用既有兼容行为。临时固定练习与已保存 Paper 均以服务端 `execution_id` 界定本轮，`paper_id` 可以为空。Agent Attempt Correction 仍是独立写入路径。
+浏览器第一次评价仍使用现有反馈写入并更新学习信号、当前状态、进度和调度。选中 Paper Practice Run 后，回看中再次保存只允许原位覆盖该执行、该题目位置及其确切 `attempt_id` 所关联的 `feedback_events.rating` 和 `feedback_events.note`；写入前同时校验执行、题目内容版本以及预期旧评分与评语。它不新建 Attempt 或反馈行，也不改答案、客观判定、评价时机或学习投影/调度。请求 id 仅对这种原位编辑必需，用于相同载荷的安全重试；普通首次反馈沿用既有兼容行为。临时固定练习与已保存 Paper 均以服务端 `execution_id` 界定本轮，`paper_id` 可以为空。Agent Attempt Correction 仍是独立写入路径。
+
+### feedback_events 的评价管理边界
+
+一条评价是一行 `feedback_events`：可选 1–5 `rating`、可选 `note`、可选 `attempt_id`。浏览器首次评价、CLI `feedback add`、带 `rating` 的 `attempts apply` 都可新增；新增仍按既有四件套更新学习信号、当前状态、题目进度和调度。
+
+`feedback update` / `delete` 对任何 writer、任何 `item_type`（problem/kp/card）的评价开放，但必须携带从 `feedback get` 读到的 expected rating 与 expected note；不匹配时零写入。`update` 只改 `rating/note`，`delete` 硬删除该行；两者都不重放信号、当前状态、`problem_progress` 或 `review_schedule`。需要撤回旧评分影响并重算时，仍使用 `attempts correct` 的整条 Attempt 替换路径。
+
+同一个 Attempt 只保留一条当前评价：`feedback add --attempt-id` 遇到已有评价时拒绝并返回现有 event id，调用方应改用 `update`。评分可由学习者在浏览器写入，也可由 Agent 在用户明确要求记录或管理评价时自行选择或修改。
 
 ### Attempt 状态约束迁移与外键修复
 
@@ -197,7 +205,7 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 
 `data.records._practice_sets` 汇总已完成的保存 Paper 轮次：读取新 `paper` 行与旧
 `practice_set` 行，并按 `source_ref` 的保存 Paper ID 分组；临时或其他未关联保存 Paper 的
-`paper` 轮次不进入该分组。逐题作答、自评仍只由 attempts / feedback 提供学习证据。
+`paper` 轮次不进入该分组。逐题作答、评价仍只由 attempts / feedback 提供学习证据。
 
 ## 字段变更纪律
 
@@ -237,7 +245,7 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 
 旧健康 active 执行只补执行身份和默认版本，不改题序、attempt 关联或学习表。旧缺失引用显式报告，不补造或重绑。
 
-显式指定 `reveal_timing` 的普通题轮次只在整卷提交时完成；最后一题作答不自动归档。导航只更新位置，输入保存只更新执行状态。`per_item` 题目明确提交后由既有 Attempt 路径形成锁定记录；`on_submit` 的输入和可修改不会标记直到交卷前都保留在执行状态，交卷时非空输入成为正式提交，空题按不会处理。已存在 Attempt 不重写、不重复生成，首次自评和同轮自评覆盖沿用既有学习效果边界。
+显式指定 `reveal_timing` 的普通题轮次只在整卷提交时完成；最后一题作答不自动归档。导航只更新位置，输入保存只更新执行状态。`per_item` 题目明确提交后由既有 Attempt 路径形成锁定记录；`on_submit` 的输入和可修改不会标记直到交卷前都保留在执行状态，交卷时非空输入成为正式提交，空题按不会处理。已存在 Attempt 不重写、不重复生成，首次评价和同轮评价覆盖沿用既有学习效果边界。
 
 新 `practice_runs.items_json` 保留每题 `content_revision`、`draft` 和 `draft_sequence`（以及原有题目身份、状态、Attempt 链接）。`draft.reference_viewed` 表示曾披露参考答案，不等于作答正确或不会；新答案清除可修改的不会标记时不清除此事实。暂停卷检查点同样携带轮次展示方式及题目执行状态。完成答卷读取以原执行/Attempt 为准，不用当前输入拼造历史作答；旧数据未记录的事实不补造。结构、内容修订及删除仍使用原有版本校验与记录保留规则。
 
@@ -249,7 +257,7 @@ CHECK 约束，并按下节添加独立进度字段，保留已存在的 active 
 浏览器提交的 `practice_context` 包含 execution_id、paper_id、paper_generation、item_id、content_revision、position；学习写入前核验。
 本地草稿失败出站箱键 `wb_paper_draft_<workspace>_<execution_id>_<position>` 保留未确认写入；恢复要求上下文匹配，确认相同版本才清除。
 
-新普通题界面使用 `localStorage` 键 `wb_paper_practice_<workspace>_<execution_id>`，保存该执行的待确认输入、顺序号、提交/不会/自评/整卷提交请求及已完成轮次引用。它仅用于失败恢复和相同请求重试，不是学习事实，也不能覆盖不同执行或内容修订。已确认状态仍以服务端检查点或归档记录为准；旧兼容界面保留前述逐题出站箱。Agent 组卷范围上下文使用 `sessionStorage` 的 `wb_agent_scope_<workspace>`，旧学生侧 `wb_kp_selection_*` 不再恢复为可操作选区；该上下文不创建试卷或学习记录。
+新普通题界面使用 `localStorage` 键 `wb_paper_practice_<workspace>_<execution_id>`，保存该执行的待确认输入、顺序号、提交/不会/评价/整卷提交请求及已完成轮次引用。它仅用于失败恢复和相同请求重试，不是学习事实，也不能覆盖不同执行或内容修订。已确认状态仍以服务端检查点或归档记录为准；旧兼容界面保留前述逐题出站箱。Agent 组卷范围上下文使用 `sessionStorage` 的 `wb_agent_scope_<workspace>`，旧学生侧 `wb_kp_selection_*` 不再恢复为可操作选区；该上下文不创建试卷或学习记录。
 
 ## 导入 Attempt 与 Paper 执行进度
 

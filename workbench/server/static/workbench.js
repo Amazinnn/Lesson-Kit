@@ -311,7 +311,7 @@
     return loadSetting("showRating", true) !== false;
   }
 
-  /* 「题目来源」与「自评」是同一类显示偏好 ⇒ 同一份真值、同一套生效机制。 */
+  /* 「题目来源」与「评价」是同一类显示偏好 ⇒ 同一份真值、同一套生效机制。 */
   function showSourceEnabled() {
     return loadSetting("showSource", false) === true;
   }

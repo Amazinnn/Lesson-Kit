@@ -52,6 +52,15 @@ Manifest:
 `rating` is the existing learner self-rating scale (1-5), not an exam score. You MAY choose it yourself when the learner asks you to record or evaluate an answer; the learner does not need to supply a number. Omit it if uncertain. `check` validates without writing; `apply` records the batch atomically. To replace an already Agent-recorded attempt use:
 `lesson-kit attempts <工作区名> correct <attempt-id> --input <file>`.
 
+Manage evaluations:
+`lesson-kit feedback <工作区名> get --event-id <id>`
+`lesson-kit feedback <工作区名> list [--item problem|kp|card] [--id ...] [--attempt-id ...]`
+`lesson-kit feedback <工作区名> add --item problem|kp|card --id <id> [--rating 1-5] [--note ...] [--attempt-id <id>]`
+`lesson-kit feedback <工作区名> update --event-id <id> --expected-rating 1-5|none --expected-note "<current note>" [--rating 1-5] [--note ...]`
+`lesson-kit feedback <工作区名> delete --event-id <id> --expected-rating 1-5|none --expected-note "<current note>"`
+
+An evaluation is one `feedback_events` row. Read it first with `get`/`list`; update and delete require the current expected rating and note and refuse a stale write. Update changes only rating/note; delete is a hard delete. Neither replays signals, current states, progress, or schedule; use `attempts correct` only when you need to replace the whole attempt and recompute its effects. You may choose or change the 1-5 rating yourself when the learner asks you to manage an evaluation. Adding an evaluation for an attempt that already has one is refused; update the existing event id instead.
+
 When a problem in the learner's answer is missing from the pool, do not invent it inside the manifest. First create it through the governed content path under an existing knowledge point with truthful source evidence, then append it to the Paper:
 `lesson-kit papers <工作区名> append <ps-NNN> --problem <problem-id>`
 (`append` is idempotent, adds the problem at the end, and preserves existing progress), then import the attempt. Never edit `.lessonkit/practice-sets/ps-*.json` directly.

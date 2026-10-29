@@ -882,7 +882,7 @@
       var quiz = microQuiz(item.payload);
       if (!quiz || quizHasKey(quiz)) return "";
       return "<p id='micro-quiz-keyless' class='muted'>"
-        + "本题未录入答案键，请对照课本或解析自评。</p>";
+        + "本题未录入答案键，请对照课本或解析评价。</p>";
     }
 
     function attemptHistoryHtml(attempts) {
@@ -947,7 +947,7 @@
       var status = item.state === "skipped"
         ? "<p class='muted'>本题当时标记为“不会”。</p>" : "";
       if (paperReview && item.attempt_request && !item.attempt_id) {
-        status += "<p class='muted'>本次提交尚未确认保存，确认前不能为这次作答自评。</p>";
+        status += "<p class='muted'>本次提交尚未确认保存，确认前不能为这次作答评价。</p>";
       }
       var solution;
       if (quiz) {
@@ -964,8 +964,8 @@
       }
       var feedback = item.feedback || {};
       var selfRating = feedback.rating == null
-        ? "<p class='muted'>尚未自评</p>"
-        : "<p>我的自评：" + "★".repeat(feedback.rating)
+        ? "<p class='muted'>尚未评价</p>"
+        : "<p>我的评价：" + "★".repeat(feedback.rating)
           + "☆".repeat(5 - feedback.rating) + "（" + feedback.rating + "/5）</p>"
           + (feedback.note
             ? "<div class='muted wb-reading'>" + richText(feedback.note) + "</div>" : "");
@@ -976,7 +976,7 @@
       }
       return "<section class='practice-solution'><p class='section-kicker'>我的作答</p>"
         + "<div class='wb-reading'>" + richText(answer) + "</div></section>"
-        + status + "<section class='practice-solution'><p class='section-kicker'>我的自评</p>"
+        + status + "<section class='practice-solution'><p class='section-kicker'>我的评价</p>"
         + selfRating + "</section><details class='practice-reference'><summary>查看参考答案与解析</summary>"
         + solution + "</details>";
     }
@@ -1094,10 +1094,10 @@
         if (showAnswer) showAnswer.classList.add("hidden");
         if (actions) actions.classList.remove("hidden");
         if (feedbackArea) feedbackArea.classList.toggle("hidden", !ratingEditOpen);
-        if (saveRating) saveRating.textContent = "保存自评";
+        if (saveRating) saveRating.textContent = "保存评价";
         if (reviewRatingAction) {
           reviewRatingAction.textContent = item.feedback && item.feedback.rating != null
-            ? "编辑自评" : "填写自评";
+            ? "编辑评价" : "填写评价";
           reviewRatingAction.classList.toggle("hidden", !paperReview || offNow() || !item.attempt_id);
         }
         if (cancelRating) cancelRating.classList.toggle("hidden", !ratingEditOpen);
@@ -1792,7 +1792,7 @@
       if (cancelRating) cancelRating.classList.add("hidden");
       if (reviewRatingAction) {
         reviewRatingAction.textContent = item && item.feedback && item.feedback.rating != null
-          ? "编辑自评" : "填写自评";
+          ? "编辑评价" : "填写评价";
         reviewRatingAction.classList.toggle("hidden", !item || !item.attempt_id || offNow());
       }
       clearPracticeError();
@@ -1807,14 +1807,14 @@
       if (!item) return;
       if (reviewingItem && (!isPaperReviewItem(item) || !ratingEditOpen)) return;
       if (reviewingItem && !item.attempt_id) {
-        showPracticeError("本次作答尚未确认保存，不能写入自评。");
+        showPracticeError("本次作答尚未确认保存，不能写入评价。");
         return;
       }
       if (item.feedback_status === "saving") return;
       // parseInt("") is NaN and fails both bounds checks, so an empty input
       // used to reach the server and die as "rating or note is required".
       if (!(rating >= 1 && rating <= 5)) {
-        showPracticeError("请输入 1–5 的自评");
+        showPracticeError("请输入 1–5 的评价");
         return;
       }
       clearPracticeError();
@@ -2042,11 +2042,11 @@
         var save = document.createElement("button");
         save.id = "end-save-" + entryId;
         save.className = "primary sm";
-        save.textContent = "保存自评";
+        save.textContent = "保存评价";
         var ratingLabel = document.createElement("label");
         ratingLabel.id = "end-rating-label-" + entryId;
         ratingLabel.setAttribute("for", rating.id);
-        ratingLabel.textContent = "为“" + title + "”自评（1–5）";
+        ratingLabel.textContent = "为“" + title + "”评价（1–5）";
         var noteLabel = document.createElement("label");
         noteLabel.id = "end-note-label-" + entryId;
         noteLabel.setAttribute("for", note.id);
@@ -2062,7 +2062,7 @@
         save.addEventListener("click", function () {
           var value = parseInt(rating.value, 10);
           if (!(value >= 1 && value <= 5)) {
-            showCardError("请输入 1–5 的自评");
+            showCardError("请输入 1–5 的评价");
             return;
           }
           var feedback = {

@@ -50,7 +50,7 @@ python tools/walkthrough/run.py --out tmp/wt-run --seed-records 120 --seed-sessi
 
 | 播什么 | 参数 | 落在哪 | 谁看它 |
 |---|---|---|---|
-| 作答记录 + 自评 | `--records N` | 池副本的 `problem_attempts` / `feedback_events` | 记录页 / 学习投影 |
+| 作答记录 + 评价 | `--records N` | 池副本的 `problem_attempts` / `feedback_events` | 记录页 / 学习投影 |
 | AI 会话 | `--sessions N` | 工作区副本的 `.lessonkit/jobs/conv-*/conversation.json` | 右栏会话列表（3.4-6 / 3.7-2） |
 | **一轮全对的计划** | 自动 | `<evidence>/<side>/seed/plan.json` | 音效探针（3.3-1）、分镜（M-3 全对轮、M-7 真实判定） |
 
@@ -140,7 +140,7 @@ worktree 里没有 `pool/`、`output/`、`.lessonkit/figures/`（都不在 git �
 
 | 判据 | 能跑？ | 说明 |
 |---|---|---|
-| **G-1** 请求序列 | ✅ 能跑 | `exercise.py` 驱动真实 UI 走完建卷→开始→逐题提交→自评→交卷→取答卷；两侧序列逐条 diff |
+| **G-1** 请求序列 | ✅ 能跑 | `exercise.py` 驱动真实 UI 走完建卷→开始→逐题提交→评价→交卷→取答卷；两侧序列逐条 diff |
 | **G-2** 持久化写入 | ✅ 能跑 | `dbexport.py` 导出 `problem_attempts` / `feedback_events` / `practice_runs` 三张表并比对 |
 | **G-3** 学习投影 | ✅ 能跑 | `learning_current_state` / `review_schedule` / `problem_progress` / `learner_signals` |
 | **G-4** 到期与薄弱 | ✅ 能跑 | 到期列表的日期部分、薄弱列表逐条比对 |

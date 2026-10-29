@@ -176,14 +176,16 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
   interval_days, due_at, last_rating, last_reviewed_at)`，PK `(item_type, item_id, direction)`，
   direction 默认空串（普通项无方向；卡片按方向独立调度）。
 - 新表 `feedback_events(id, item_type, item_id, rating, note, attempt_id, created_at)` 追加日志；
-  浏览器作答后的自评与 Agent 代录评分均可用 `attempt_id` 指回那次尝试。
+  浏览器作答后的评价与 Agent 代录评分均可用 `attempt_id` 指回那次尝试。`data.evaluations`
+  提供同一行的 list/get/add/update/delete：新增复用四件套；update/delete 要求 expected
+  rating/note，只改/删该行，不重放投影；`attempts correct` 仍是整条 Attempt 重算路径。
 - 新表 `attempt_operations(request_id, problem_id, attempt_id, kind, rating, fingerprint,
   batch_fingerprint, result, pre_state, post_state, created_at)`：一次 Agent 清单操作一行，
   含幂等键与内容指纹、返回给调用方的结果、以及该次操作前后**受影响投影**的快照
   （题目进度/当前状态/调度行 + 关联知识点的状态与信号）；`correct` 靠它判断
   「还能不能改」并在能改时精确撤回旧评分影响。
 - 新表 `practice_request_operations(request_id, payload, result, created_at)`：浏览器的
-  作答和自评共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
+  作答和评价共用请求 id 命名空间；Data 在同一事务内写入原请求和结果，重复请求返回原结果。
 - 新表 `practice_runs(...)` 保存 Paper 轮次最小快照。普通题执行使用可空答案展示方式：逐题模式显式提交答案或标记「不会」时写入对应 Attempt；整卷模式在明确交卷时写入未提交答案与空白/仍标记为「不会」的卡点 Attempt 并归档。最后一题的逐题提交不会自动完成；切换 Paper 只暂停，不归档为完成。历史 `NULL` 模式继续沿旧执行语义读取。
 - `attempts.apply` 带 `paper_id` 时不新增列或表：Data 在同一事务内把 Attempt 绑定到 `active_practice_items` 或 `paper_state.checkpoint_json`，必要时新建暂停检查点。`papers append` 在卷末追加 pending item、递增 `paper_state.generation` 并同步执行快照；它不是“改名单/题序重置进度”路径。
 - 新表 `content_sequences(scope, entity_type, next_value)` 只为显式内容创建分配可读顺序 ID；浏览和搜索不触碰序列。
@@ -253,7 +255,7 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
 - `data.attempts.record_browser_attempt/record_browser_feedback`：浏览器在发送前把请求
   id 与完整载荷放进 sessionStorage；Data 用即时事务串行比较 id、写入尝试或评分及其
   返回结果。同 id 改内容返回冲突，页面刷新后仍能重试首次请求。
-- `server.static.practice-deck` 继续维护兼容练习 session 的数据、游标与序列化；普通 Paper UI 由 `practice-flow` 维护服务端确认的当前题、答案展示方式、任意题号导航、逐题提交/显式交卷、可选自评及完成答卷往返。页面入口仍由 `workbench.js` 启动。上一题/下一题/题号跳转只保存输入与位置，不提交学习证据。
+- `server.static.practice-deck` 继续维护兼容练习 session 的数据、游标与序列化；普通 Paper UI 由 `practice-flow` 维护服务端确认的当前题、答案展示方式、任意题号导航、逐题提交/显式交卷、可选评价及完成答卷往返。页面入口仍由 `workbench.js` 启动。上一题/下一题/题号跳转只保存输入与位置，不提交学习证据。
 - `server.static.agent-ui` 只维护 Agent 展示层：页内上下文标签、composer 尺寸和临时工作面控件；provider 事件、会话、轮次与动作仍由 `workbench.js` 编排。
 - `server.static.middle-navigation` 获取服务端页面 HTML，只替换 `#middle-page`，同步路由元数据并调用 `WorkbenchMiddlePage.dispose/mount`；`workbench.js` 与所有路由共用的 Agent 栏控制器保持单次初始化。图谱学习看板属于图谱中栏内容，与图谱行为一起挂载和释放。
 - `data.attempts.check/apply/correct/list/get`：Agent 代录尝试的零写入预检、单事务多题、
@@ -301,7 +303,7 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
   `records` / **`settings`**。**`settings` = 工作台设置视图**，由 `pages.settings_page()`
   服务端渲染（`workbench/server/pages.py`），只承载**外观**偏好（主题 / 阅读字面 / 动效 /
   声音），**不含任何改变学习行为的控件**；左栏原有的两项行为偏好（运行中发送方式、练习显示
-  自评）留在左栏原位。它与其它页面走**同一条同工作区中栏导航路径**（`middle-navigation.js`），
+  评价）留在左栏原位。它与其它页面走**同一条同工作区中栏导航路径**（`middle-navigation.js`），
   因此 Agent 右栏的 DOM、会话与草稿在开关设置视图时**保持挂载**。
   四项偏好存于浏览器 `localStorage` 的 **`wb_settings_<工作区>`**（与既有两项行为偏好同一个
   JSON 记录），**不新增 localStorage 键、不落服务端、不写池**；主题属性写 `<html data-theme>`，
@@ -339,8 +341,8 @@ Paper 练习的像素进度、连对及交卷归位动画由 `workbench/server/s
      / 任务 2.3）：HTML 挂载点早已全部迁到 `.wb-reading`，剩下的 **36 条死 CSS 规则**
      同批删掉（并列选择器只去掉 `.rich-text` 那半，**保留 `.wb-reading` 那半，取值逐项
      未动**）⇒ **现在 `workbench/` 下 `.rich-text` 只剩三行说明性注释，选择器命中 0**。
-     答案展示方式、结果与可选自评作次级表面。答案显示/锁定由
-     per-item 或 on-submit 规则决定，不由自评或调度决定。闪卡与旧练习会话保留其既有方向、
+     答案展示方式、结果与可选评价作次级表面。答案显示/锁定由
+     per-item 或 on-submit 规则决定，不由评价或调度决定。闪卡与旧练习会话保留其既有方向、
      揭示和导航语义；本变更不增加闪卡创建界面。
 - **视觉 token 层已无别名期**（**已兑现**，2026-10-22，别名期收尾 / 任务 2.3）：
   `:root` 里那 23 条「旧名 = 新名」的别名定义（旧 `--dsw-*` 一族）连同块注释一并删除，
