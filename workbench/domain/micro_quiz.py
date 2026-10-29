@@ -81,8 +81,7 @@ def validate_payload(quiz_type, payload):
 
     The stem lives in problem_text and is validated by the caller, which also
     owns the knowledge-point and identity rules. A missing answer key is allowed
-    (the item is then practised ungraded); a supplied key must be complete, and
-    error_reason is required whenever a key is there to explain a wrong answer.
+    (the item is then practised ungraded); a supplied key must be complete.
     """
     errors = []
     if quiz_type in RETIRED_QUIZ_TYPES:
@@ -95,9 +94,6 @@ def validate_payload(quiz_type, payload):
     options = payload.get("options")
     answer = payload.get("answer_key")
     graded = has_answer_key(payload)
-    if graded and (not isinstance(payload.get("error_reason"), str)
-                   or not payload["error_reason"].strip()):
-        errors.append("error_reason is required")
     if not isinstance(payload.get("source_evidence"), str) or not payload["source_evidence"].strip():
         errors.append("source_evidence is required")
 

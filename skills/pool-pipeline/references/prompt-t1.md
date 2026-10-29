@@ -27,7 +27,6 @@
 {"mode":"yes_no|single_choice|multiple_choice|exam",
  "options": [..] | null,
  "answer_key": "..." | ["..",".."] | null,
- "error_reason": "..." | null,
  "display_title": "...",
  "kp_ids": ["..."],
  "verdict": "keep|merge_into|delete",

@@ -550,7 +550,7 @@ _Avoid_：Practice Run 模式开关、单题学科形态 `problem_type`、一卷
 出处：review-workbench spec「Paper-backed Practice Run」；workbench-ui spec「Practice page」「Flash card item stacked presentation」
 
 ### 原地改题 / In-place Problem Edit
-不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key/error_reason）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
+不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
 _Avoid_：把「改属性」当成「重导」、以为要删掉再导、以为题号可以换
 出处：in-place-problem-edits
 
@@ -560,7 +560,7 @@ _Avoid_：改写题目文字、把没有选项的题硬凑选项
 出处：in-place-problem-edits
 
 ### 无答案键客观题 / Keyless Objective Item
-判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习与试卷显示评价」开启时可另行评价更新学习状态，不评分时不推导判定或评价分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
+判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习与试卷显示评价」开启时可另行评价更新学习状态，不评分时不推导判定或评价分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题不再要求 `error_reason`；历史 payload 中残留的值会被忽略。
 _Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、给无键题判分
 出处：ingest-mode-choice-and-contract-parity；micro-quiz-content spec
 

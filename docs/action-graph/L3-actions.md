@@ -72,6 +72,7 @@ Paper 操作补充（2026-10-19；2026-10-29 增补 append）：练习页只管�
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | ingest 配方（micro-quiz / flash-card） | CLI | 双（Agent 可直跑） | problems/flash_cards 单事务（记批次 id+行戳记+manifest 快照）；**id 必须带本工作区课程前缀**；**难度可选、填了必带依据**（2026-09-21） | 已实现 |
+| 客观题 payload 契约（`quiz_type/options/answer_key/source_evidence`；历史 `error_reason` 忽略、不展示） | content-bundle / problem-patch / 内容门禁 | 双 | 无新增写入；不再要求或渲染 `error_reason`；答案键、`solution`、来源证据保留 | 已实现（remove-micro-quiz-error-reason，2026-10-29） |
 | 全池备份 | ingest --backup | 同上 | pool/backups | 已实现 |
 | **Check 管线**（生成→校验→**直接入正式池**，无候选中间态；批次 id+整批回滚；候选组织并入校验环节） | CLI `ingest rollback --batch <id>` + 结果卡回滚按钮 + `POST /ingest/rollback` | Agent 主导 | 经门禁写池+批次标记+ingest_batches 登记 | **已实现**（introduce-check-pipeline，队列④） |
 | 抽取管线入池（教材→KP→题） | 管线脚本 | 人 | 全部内容表 | 已实现（一次性） |

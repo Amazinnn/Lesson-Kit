@@ -119,11 +119,13 @@ and the figure destination untouched. Source figures are copied byte for byte in
 
 An objective item declares its practice form with `quiz_type` (`yes_no`,
 `single_choice`, `multiple_choice`) plus `options`, and optionally an
-`answer_key` together with `error_reason`. A **missing answer key is allowed**:
+`answer_key`. A **missing answer key is allowed**:
 the item is then practised in its 判断/小测 shell without a verdict, and the key
 can be supplied later with `lesson-kit data <workspace> update problem <id>
 --input '{"answer_key": "…"}'` (an empty value clears it again). Objective
-stems have no length limit.
+stems have no length limit. A stored `micro_quiz` payload MAY still contain a
+legacy `error_reason`; it is ignored by validation and rendering and is not part
+of the current contract.
 
 Before a new problem is written, its normalized whole-stem identity is compared
 with every existing problem in the course and with the other items in the same

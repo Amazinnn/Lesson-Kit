@@ -715,10 +715,6 @@
       } else if (quiz) {
         parts.push("<p class='muted'>本题没有可用答案键。</p>");
       }
-      if (quiz && quiz.error_reason) {
-        parts.push("<p class='section-kicker'>判定依据</p><div class='wb-reading'>"
-          + richText(String(quiz.error_reason)) + "</div>");
-      }
       if (problem.solution && String(problem.solution).trim()) {
         parts.push("<p class='section-kicker'>解析</p><div class='wb-reading'>"
           + richText(String(problem.solution)) + "</div>");

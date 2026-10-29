@@ -784,15 +784,15 @@ class ContentBundleTests(unittest.TestCase):
         )
         self.assertEqual(json.loads(batch[0][0])["keyless"], 2)
 
-    def test_a_keyed_item_still_needs_its_error_reason(self):
+    def test_a_keyed_item_does_not_need_an_error_reason(self):
         manifest = {
             "kind": "content-bundle",
             "chapter": "ch06",
             "problems": [micro("m1", ["dmath-ch06-kp-001"], error_reason=None)],
         }
-        with self.assertRaises(ValueError) as caught:
-            self.apply(manifest)
-        self.assertIn("error_reason is required", str(caught.exception))
+        result = self.apply(manifest)
+        self.assertEqual(result["counts"]["problems"], 1)
+        self.assertEqual(result["counts"]["keyless"], 0)
 
     def test_a_keyless_choice_item_still_needs_options(self):
         manifest = {

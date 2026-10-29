@@ -75,7 +75,7 @@
 | `display_title` | active | 题目短标题；UI 标题，不是身份 |
 | `display_summary` | **unresolved** | 当前 ingest 允许 ≤200；旧 backfill validator 要求 ≤48 且长题才允许；当前主页面无实际消费 | 
 | `practice_modes` | active | 存储的练习 shell 资格 JSON。空值 = exam-only；客观题时必须与 `micro_quiz.quiz_type` 相容 |
-| `micro_quiz` | active | 客观交互 payload JSON：`quiz_type/options/answer_key/error_reason/source_evidence` 等；决定判断/单选/多选 |
+| `micro_quiz` | active | 客观交互 payload JSON：`quiz_type/options/answer_key/source_evidence` 等；决定判断/单选/多选。历史 payload 中残留的 `error_reason` 被忽略，不再是契约字段 |
 | `figure_paths` | **unresolved** | 题目逻辑图片路径 JSON；文件命名策略存在仓库级冲突。`data.content_mirror` 可在显式 JSON 同步中写入通过既有路径校验的引用；`data.figure_mirror` 只读消费池引用并同步图像文件 |
 | `difficulty` | active | 四维客观难度的派生 REAL 总分；不得由内容 ingest 直接赋值，显式评级与 JSON 镜像均须使用既有难度校验 |
 | `difficulty_knowledge_breadth` | active | 客观难度：知识跨度 1–5 |

@@ -123,8 +123,6 @@ def check_item(item: dict, current: dict | None) -> list[str]:
                     not isinstance(key, list) or not key or not set(key) <= set(options)
                 ):
                     errs.append(f"multiple_choice key {key!r} must be a non-empty subset of options")
-    if key is not None and not payload.get("error_reason"):
-        errs.append("error_reason is required whenever an answer key is present")
 
     kp_ids = field("kp_ids")
     if isinstance(kp_ids, list) and len(kp_ids) != 1:
