@@ -360,3 +360,5 @@ flowchart LR
 ### 2026-10-30：长文本原位编辑
 
 升级既有长文本编辑动作的呈现方式，涵盖作答、评价备注、目标说明、Agent 输入与队列编辑、知识点心得；载荷和动作级别不变。未增加作答解锁或更正动作。
+
+2026-10-30: human runtime lifecycle now selects explicit/default primary source, verifies supervisor/worker identity and waits for safe automatic Python/asset updates; runtime endpoints registered in L2-interfaces and workbench.surface. No learning action added.

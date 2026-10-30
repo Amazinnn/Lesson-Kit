@@ -92,3 +92,13 @@
 > 报错给出「`lesson-kit <cmd> <工作区名>`」的可粘贴形式。
 
 2026-10-20 新增同会话操作：`POST /ai/sessions/{id}/queue/reorder` 接收 `{expected_order,turn_ids}`，返回 `{conversation_id,queue_order}`；`POST /ai/sessions/{id}/turns/{turn}/interrupt` 接收 `{expected_revision}`，返回该原 turn 的 canonical response。重排仅接受完整排列和匹配的旧顺序；revision/dispatch/审批/另一中断冲突返回 409 且无变更，非法请求 400。重复已提升 turn 的立即发送返回同一结果，不重跑。
+
+### Runtime lifecycle endpoints (human owner)
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/runtime` | Read-only source_root, supervisor_pid, worker_pid, port, reload_enabled, generation, assets_generation, pending (null/python/assets/busy), error |
+| POST | `/api/runtime/prepare-reload` | Owned supervisor closes admission; ready false while busy |
+| POST | `/api/runtime/state` | Owned supervisor updates runtime metadata |
+| POST | `/api/runtime/resume` | Owned supervisor reopens admission after asset update |
+| POST | `/api/runtime/shutdown` | Owned supervisor drains ALL existing handlers and exits worker |
+Control routes require the local runtime credential in X-LessonKit-Runtime; they are not Agent/data actions. Runtime command flags: serve/dashboard/daemon start accept --project-root PATH and --no-reload. No course database or CLI artifact schema changes.
