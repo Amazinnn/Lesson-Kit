@@ -44,7 +44,14 @@
       if (record.selection && typeof el.setSelectionRange === 'function') {
         try { el.setSelectionRange(...record.selection); } catch (_) { /* non-text input */ }
       }
-      // Value adapter synchronizes CodeMirror; restoration emits no action events.
+      // The value adapter follows the property write into CodeMirror; the
+      // input/change replay lets page models (queue edit drafts, paper
+      // drafts) resync so a re-render rebuilds from the restored text.
+      // Neither event submits or sends.
+      el.dispatchEvent(new Event('input', {bubbles: true}));
+      if (['checkbox', 'radio'].includes(el.type) || el.tagName === 'SELECT') {
+        el.dispatchEvent(new Event('change', {bubbles: true}));
+      }
       return false;
     });
     if (saved.length) sessionStorage.setItem(storageKey, JSON.stringify(saved));
