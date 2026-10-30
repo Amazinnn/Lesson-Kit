@@ -3492,11 +3492,12 @@
     if (aiConversation) sessionStorage.removeItem(AI_DRAFT_PREFIX + aiConversation);
   }
   function aiFillInputDraft() {
-    if (!aiConversation || aiInput.value) return;
+    if (!aiInput || !aiConversation || aiInput.value) return;
     var draft = load(AI_DRAFT_PREFIX + aiConversation, "");
     if (draft) aiInput.value = draft;
   }
-  aiInput.addEventListener("input", function () {
+  /* graph 等部分桩页面没有输入框；其余调用点都在相关视图内。 */
+  if (aiInput) aiInput.addEventListener("input", function () {
     if (aiInput.value) aiSaveInputDraft(); else aiClearInputDraft();
   });
   var aiConversation = load(AI_CONVERSATION_KEY, "");
