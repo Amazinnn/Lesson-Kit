@@ -20,6 +20,11 @@ AUDIENCES = (BROWSER, HUMAN, AGENT, BOTH)
 
 # (method, path) -> (audience, commands serving it, note)
 ROUTES = {
+    ("GET", "/api/runtime"): (HUMAN, (), "read-only runtime provenance and update status"),
+    ("POST", "/api/runtime/prepare-reload"): (HUMAN, (), "owned supervisor admission control"),
+    ("POST", "/api/runtime/state"): (HUMAN, (), "owned supervisor metadata update"),
+    ("POST", "/api/runtime/resume"): (HUMAN, (), "owned supervisor asset update resume"),
+    ("POST", "/api/runtime/shutdown"): (HUMAN, (), "owned supervisor graceful handler drain"),
     ("GET", "/api/hub/workspaces"): (BOTH, ("ls",), ""),
     ("GET", "/api/w/{name}/weak"): (BOTH, ("weak",), ""),
     ("POST", "/api/w/{name}/chapter"): (BOTH, ("use",), ""),

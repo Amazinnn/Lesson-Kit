@@ -1,6 +1,8 @@
 """HTTP server: routing, JSON API dispatch, static figure serving, pages."""
 
 import json
+import os
+import threading
 import email.utils
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -46,7 +48,17 @@ def _content_etag(data):
     """The content hash a static asset is revalidated against (task 5.4)."""
     return hashlib.sha256(data).hexdigest()[:32]
 
+def _runtime_owned_route(**kwargs):
+    """Dispatched by the request-level runtime gate, never the workspace API."""
+    raise RuntimeError("runtime controls require the runtime admission dispatcher")
+
+
 ROUTES = [
+    ("GET", "/api/runtime", _runtime_owned_route),
+    ("POST", "/api/runtime/prepare-reload", _runtime_owned_route),
+    ("POST", "/api/runtime/state", _runtime_owned_route),
+    ("POST", "/api/runtime/resume", _runtime_owned_route),
+    ("POST", "/api/runtime/shutdown", _runtime_owned_route),
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
     ("GET", "/api/w/{name}/weak", api_mod.weak_list),
     ("POST", "/api/w/{name}/chapter", api_mod.set_chapter_lens),
@@ -144,6 +156,49 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         self._dispatch("DELETE")
 
     def _dispatch(self, method):
+        runtime = getattr(self.server, "runtime", None)
+        if runtime and urlparse(self.path).path.startswith("/api/runtime"):
+            return self._runtime_control(method, runtime)
+        gate = getattr(self.server, "admission", None)
+        mutation = method != "GET"
+        if gate and not gate.enter(mutation):
+            return self._send_json(503, {"error": "runtime update pending", "retryable": True})
+        try:
+            return self._dispatch_admitted(method)
+        finally:
+            if gate:
+                gate.leave(mutation)
+
+    def _runtime_control(self, method, runtime):
+        if method == "GET" and self.path == "/api/runtime":
+            return self._send_json(200, runtime)
+        if self.headers.get("X-LessonKit-Runtime") != os.environ.get("LESSONKIT_RUNTIME_TOKEN"):
+            return self._send_json(403, {"error": "runtime owner required"})
+        if method != "POST":
+            return self._send_json(405, {"error": "POST required"})
+        path = urlparse(self.path).path
+        if path.endswith("/state"):
+            size = int(self.headers.get("Content-Length", "0"))
+            runtime.update(json.loads(self.rfile.read(size)))
+            return self._send_json(200, {"ok": True})
+        if path.endswith("/prepare-reload"):
+            jobs = [Path(w["path"]) / ".lessonkit" / "jobs" for w in registry.list_workspaces()]
+            ready = self.server.admission.prepare(lambda: conversations.prepare_runtime_reload(jobs))
+            return self._send_json(200, {"ready": ready})
+        if path.endswith("/resume"):
+            conversations.reopen_runtime_admission()
+            with self.server.admission.condition:
+                self.server.admission.closed = self.server.admission.final = False
+            return self._send_json(200, {"ok": True})
+        if path.endswith("/shutdown") and self.server.admission.final:
+            def shutdown():
+                self.server.admission.drain()
+                self.server.shutdown()
+            threading.Thread(target=shutdown).start()
+            return self._send_json(200, {"ok": True})
+        return self._send_json(404, {"error": "not found"})
+
+    def _dispatch_admitted(self, method):
         parsed = urlparse(self.path)
         path = parsed.path
         query = {k: v[0] for k, v in parse_qs(parsed.query).items()}
@@ -460,6 +515,11 @@ def create_server(host="127.0.0.1", port=3081):
 
 def serve(port=3081):
     server = create_server(host="127.0.0.1", port=port)
+    if os.environ.get("LESSONKIT_RUNTIME_WORKER"):
+        from workbench.server.runtime import Admission
+        server.admission = Admission()
+        server.runtime = json.loads(os.environ["LESSONKIT_RUNTIME_STATE"])
+        server.runtime["worker_pid"] = os.getpid()
     print(f"lesson-kit workbench: http://127.0.0.1:{port}/")
     try:
         server.serve_forever()

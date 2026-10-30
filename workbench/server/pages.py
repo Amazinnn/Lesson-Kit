@@ -347,6 +347,7 @@ def shell(workspace, workspaces, weak_items, middle_html, active_nav, graph_mode
         + "<script src='/static/paper-practice.js'></script>"
         + "<script src='/static/practice-flow.js'></script>"
         + "<script src='/static/agent-ui.js'></script>"
+        + "<script src='/static/runtime.js'></script>"
         + "<script src='/static/workbench.js'></script>"
         + "<script src='/static/middle-navigation.js'></script>"
     )

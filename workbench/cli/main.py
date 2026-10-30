@@ -848,15 +848,26 @@ def cmd_open(args):
 
 
 def cmd_serve(args):
-    from workbench.server import app
-    app.serve(port=args.port)
+    import os
+    from workbench.cli import runtime, runtime_source
+    root = runtime_source.project_root(args.project_root)
+    if os.environ.get("LESSONKIT_RUNTIME_WORKER"):
+        from workbench.server import app
+        app.serve(port=args.port)
+    elif root != Path(__file__).resolve().parents[2]:
+        result = subprocess.run([sys.executable, "-B", "-m", "workbench.cli.main", "serve",
+            "--port", str(args.port), "--project-root", str(root)] +
+            (["--no-reload"] if args.no_reload else []), cwd=root, env=runtime.child_env(root))
+        return result.returncode
+    else:
+        runtime.run(args.port, root, not args.no_reload)
 
 
 def cmd_daemon(args):
     from workbench.cli import service
     try:
         if args.action == "start":
-            result = service.start(port=args.port)
+            result = service.start(port=args.port, project_root=args.project_root, reload_enabled=not args.no_reload)
             if result["already_running"]:
                 print(f"workbench already running: pid {result['pid']} "
                       f"http://127.0.0.1:{result['port']}/")
@@ -879,7 +890,8 @@ def cmd_daemon(args):
         print("workbench is not running")
         return 0
     print(f"workbench running: pid {result['pid']} "
-          f"http://127.0.0.1:{result['port']}/ since {result.get('started_at')}")
+          f"http://127.0.0.1:{result['port']}/ source {result.get('source_root')}; "
+          f"worker {result.get('worker_pid')}; reload {result.get('reload_enabled')}")
     return 0
 
 
@@ -888,7 +900,7 @@ def cmd_dashboard(args):
 
     from workbench.cli import service
     try:
-        result = service.start(port=args.port)
+        result = service.start(port=args.port, project_root=args.project_root, reload_enabled=not args.no_reload)
     except RuntimeError as exc:
         print(f"workbench: {exc}", file=sys.stderr)
         return 2
@@ -969,6 +981,8 @@ def build_parser(prog="lesson-kit"):
 
     p = sub.add_parser("serve", help="start the web workbench in the foreground")
     p.add_argument("--port", type=int, default=3081)
+    p.add_argument("--project-root")
+    p.add_argument("--no-reload", action="store_true")
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("daemon", help="run the web workbench in the background")
@@ -976,6 +990,8 @@ def build_parser(prog="lesson-kit"):
 
     action = daemon_sub.add_parser("start")
     action.add_argument("--port", type=int, default=3081)
+    action.add_argument("--project-root")
+    action.add_argument("--no-reload", action="store_true")
     action.set_defaults(func=cmd_daemon)
 
     action = daemon_sub.add_parser("stop")
@@ -987,6 +1003,8 @@ def build_parser(prog="lesson-kit"):
     p = sub.add_parser("dashboard", help="ensure the workbench runs and open it")
     p.add_argument("name", nargs="?")
     p.add_argument("--port", type=int, default=3081)
+    p.add_argument("--project-root")
+    p.add_argument("--no-reload", action="store_true")
     p.set_defaults(func=cmd_dashboard)
 
     p = sub.add_parser("doctor", help="check registry, databases, providers, and service (read-only)")

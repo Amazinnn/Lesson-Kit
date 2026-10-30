@@ -70,7 +70,10 @@ def _check_providers():
 
 
 def _check_service(workspaces):
-    state = service.running_state()
+    try:
+        state = service.running_state()
+    except RuntimeError as exc:
+        return ("background service", False, str(exc))
     if not state:
         return ("background service", True, "not running (start with: lesson-kit daemon start)")
     port = state.get("port")
@@ -78,7 +81,7 @@ def _check_service(workspaces):
         return ("background service", False,
                 f"pid {state.get('pid')} recorded on port {port} but the port does not answer")
     return ("background service", True,
-            f"running: pid {state.get('pid')} on port {port}")
+            f"running: supervisor {state.get('pid')}, worker {state.get('worker_pid')} on port {port}; source {state.get('source_root')}; reload {state.get('reload_enabled')}")
 
 
 def _check_workspace_files(workspaces):

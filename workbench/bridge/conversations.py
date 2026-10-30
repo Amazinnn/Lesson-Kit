@@ -30,6 +30,7 @@ _PROCESSES = {}
 _ACTIVE_TURNS = set()
 _CANCEL_REQUESTS = set()
 _TIMEOUTS = set()
+_RUNTIME_CLOSED = False
 STOP_GRACE_SECONDS = 1
 # A print-mode turn is failed for silence, not for duration: any output line
 # resets the clock, and while a command or tool runs the longer tool budget
@@ -840,6 +841,8 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
     conversation_path = folder / "conversation.json"
     _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
+        if _RUNTIME_CLOSED:
+            raise ConversationConflict("runtime update pending; retry shortly")
         _recover_interrupted(pool, _read_json(conversation_path))
         conversation = _read_json(conversation_path)
         approval_pending = _pending_paper_approval(folder) is not None
@@ -951,6 +954,8 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
 
 def _start_turn_locked(root, jobs_dir, workspace, conversation_id, turn):
     """Claim a pending turn and start its worker while holding conversation ownership."""
+    if _RUNTIME_CLOSED:
+        raise ConversationConflict("runtime update pending; retry shortly")
     folder = jobs_dir / conversation_id
     conversation_path = folder / "conversation.json"
     conversation = _read_json(conversation_path)
@@ -1039,6 +1044,8 @@ def _active_turn_for_folder(folder):
 
 
 def _dispatch_next_locked(root, jobs_dir, workspace, conversation_id):
+    if _RUNTIME_CLOSED:
+        return None
     folder = jobs_dir / conversation_id
     conversation_path = folder / "conversation.json"
     conversation = _read_json(conversation_path)
@@ -2176,3 +2183,25 @@ def cancel(pool, conversation_id):
 def shutdown():
     """Close every long-lived provider process (server shutdown, tests)."""
     return PI_RPC.close_all()
+
+
+def prepare_runtime_reload(jobs_dirs):
+    """Close provider admission under the same lock used to claim turns."""
+    global _RUNTIME_CLOSED
+    with _LOCK:
+        if _ACTIVE_TURNS:
+            return False
+        for jobs in jobs_dirs:
+            for path in Path(jobs).glob("conv-*/turn-*.json"):
+                turn = _read_json(path)
+                if turn.get("status") in {"queued", "waiting_for_stop", "running"} or (
+                    turn.get("paper_approval") or {}).get("status") == "pending":
+                    return False
+        _RUNTIME_CLOSED = True
+        return True
+
+
+def reopen_runtime_admission():
+    global _RUNTIME_CLOSED
+    with _LOCK:
+        _RUNTIME_CLOSED = False

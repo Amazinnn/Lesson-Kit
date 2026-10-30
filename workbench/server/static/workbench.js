@@ -3546,6 +3546,17 @@
     });
   }
 
+  window.LessonKitRuntimeBusy = function () {
+    return !!aiPaperApprovalUnknownKey || Object.keys(aiPaperApprovalInFlight).length > 0 ||
+      Object.keys(localStorage).some(function (key) {
+        if (key.indexOf(AI_OUTBOX_PREFIX) !== 0) return false;
+        var records = JSON.parse(localStorage.getItem(key) || "{}");
+        return Object.keys(records).some(function (id) {
+          return ["sending", "unknown"].indexOf(records[id].status) >= 0;
+        });
+      });
+  };
+
   function aiOutboxKey(conversationId) {
     return AI_OUTBOX_PREFIX + conversationId;
   }
