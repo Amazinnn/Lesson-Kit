@@ -2,7 +2,7 @@
 - [x] 1.1 Source selection and watch snapshot primitives with failing tests
 - [ ] 1.2 Explicit runtime command source, child import path and identity diagnostics
 ## 2. Live update
-- [ ] 2.1 Supervisor/worker lifecycle and safe Bridge/request admission drain
+- [ ] 2.1 Supervisor/worker lifecycle and safe Bridge/request admission drain; add a held-GET regression proving shutdown waits for all admitted GET and mutation handlers despite default daemon request threads
 - [ ] 2.2 Python/asset debounce, broken edit preservation and rollback
 - [ ] 2.3 Browser pending/error notices and draft-safe refresh
 ## 3. Delivery
