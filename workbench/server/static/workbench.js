@@ -3409,6 +3409,25 @@
   var aiSend = document.getElementById("ai-send");
   var aiStop = document.getElementById("ai-stop");
   var aiStatus = document.getElementById("ai-status");
+  /* 未发送的输入按会话留在 sessionStorage：视图切换或整页重载后回填，
+     发送成功或用户清空后移除。它补的是 app 自己清理输入的时机（重载后
+     面板关闭、自举清空等），不替代 runtime stash 的选区级恢复——那条
+     路径先跑，这里只在输入为空时回填。 */
+  var AI_DRAFT_PREFIX = "wb_ai_input_draft_" + WS + "_";
+  function aiSaveInputDraft() {
+    if (aiConversation) store(AI_DRAFT_PREFIX + aiConversation, aiInput.value);
+  }
+  function aiClearInputDraft() {
+    if (aiConversation) sessionStorage.removeItem(AI_DRAFT_PREFIX + aiConversation);
+  }
+  function aiFillInputDraft() {
+    if (!aiConversation || aiInput.value) return;
+    var draft = load(AI_DRAFT_PREFIX + aiConversation, "");
+    if (draft) aiInput.value = draft;
+  }
+  aiInput.addEventListener("input", function () {
+    if (aiInput.value) aiSaveInputDraft(); else aiClearInputDraft();
+  });
   var aiConversation = load(AI_CONVERSATION_KEY, "");
   var aiSurfaceConversation = "";
   var aiConversationSequence = 0;
@@ -3548,6 +3567,9 @@
 
   window.LessonKitRuntimeBusy = function () {
     return !!aiPaperApprovalUnknownKey || Object.keys(aiPaperApprovalInFlight).length > 0 ||
+      // A queue edit whose message left the queue lives only in memory; its
+      // textarea is gone, so the runtime field scan cannot save or restore it.
+      !!(aiQueueEdit && aiQueueEdit.recoverable) ||
       Object.keys(localStorage).some(function (key) {
         if (key.indexOf(AI_OUTBOX_PREFIX) !== 0) return false;
         var records = JSON.parse(localStorage.getItem(key) || "{}");
@@ -4453,6 +4475,7 @@
             return;
           }
           aiInput.value = record.body.message || "";
+          aiSaveInputDraft();
           aiInput.focus();
           aiSetStatus("已恢复原文，请编辑后重新发送。");
         }, "restore");
@@ -4489,6 +4512,7 @@
           return;
         }
         aiInput.value = edit.text || "";
+        aiSaveInputDraft();
         aiQueueEdit = null;
         aiQueueEditingTurn = "";
         aiInput.focus();
@@ -5450,6 +5474,7 @@
     aiSetStatus("正在发送…");
     var request = aiPostTurn(submission.body, submission);
     aiInput.value = "";
+    aiClearInputDraft();
     request.catch(function (err) {
       aiSetRunning(Boolean(aiTurn));
       var sendError = "发送失败：" + (err.message || "未知错误");
@@ -5530,6 +5555,7 @@
     /* 顶栏「对话视图」开关与右栏两态是**同一件事** ⇒ 一个真值（design.md D-1）。
        开关反过来切视图时也走这里（`aiSetView`），不另设第二套状态。 */
     if (topbarRailView) topbarRailView.checked = view === "chat";
+    if (view === "chat") aiFillInputDraft();
   }
 
   function aiSessionLabel(record) {
