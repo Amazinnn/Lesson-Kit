@@ -2186,7 +2186,14 @@ def shutdown():
 
 
 def prepare_runtime_reload(jobs_dirs):
-    """Close provider admission under the same lock used to claim turns."""
+    """Close provider admission under the same lock used to claim turns.
+
+    Live work owns ``_ACTIVE_TURNS``. Only durable user work blocks the
+    update: queued messages and pending Paper approvals. A persisted running
+    or waiting_for_stop turn with no live owner is an orphan left by an older
+    service; ``_recover_interrupted`` turns it into an honest failure the next
+    time that conversation is read, so it must not block reload or stop.
+    """
     global _RUNTIME_CLOSED
     with _LOCK:
         if _ACTIVE_TURNS:
@@ -2194,7 +2201,7 @@ def prepare_runtime_reload(jobs_dirs):
         for jobs in jobs_dirs:
             for path in Path(jobs).glob("conv-*/turn-*.json"):
                 turn = _read_json(path)
-                if turn.get("status") in {"queued", "waiting_for_stop", "running"} or (
+                if turn.get("status") == "queued" or (
                     turn.get("paper_approval") or {}).get("status") == "pending":
                     return False
         _RUNTIME_CLOSED = True

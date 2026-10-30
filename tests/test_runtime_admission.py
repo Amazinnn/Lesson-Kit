@@ -76,10 +76,37 @@ def test_bridge_retains_queued_and_approval_ownership(tmp_path):
     folder = tmp_path / 'conv-001'
     folder.mkdir()
     path = folder / 'turn-001.json'
-    for turn in ({'status':'queued'}, {'status':'waiting_for_stop'},
+    for turn in ({'status':'queued'},
                  {'status':'done','paper_approval':{'status':'pending'}}):
         path.write_text(json.dumps(turn))
         assert not conversations.prepare_runtime_reload([tmp_path])
     path.write_text(json.dumps({'status':'done'}))
+    assert conversations.prepare_runtime_reload([tmp_path])
+    conversations.reopen_runtime_admission()
+
+def test_orphaned_running_and_handoff_records_do_not_block_reload(tmp_path):
+    """Records left by an older dead service are recovery's business, not live work."""
+    import json
+    from workbench.bridge import conversations
+    folder = tmp_path / 'conv-001'
+    folder.mkdir()
+    (folder / 'turn-001.json').write_text(json.dumps({'status':'running'}))
+    (folder / 'turn-002.json').write_text(json.dumps(
+        {'status':'waiting_for_stop','interrupt_target_turn_id':'turn-001'}))
+    assert conversations.prepare_runtime_reload([tmp_path])
+    conversations.reopen_runtime_admission()
+
+def test_live_turn_owner_blocks_reload(tmp_path):
+    import json
+    from workbench.bridge import conversations
+    folder = tmp_path / 'conv-001'
+    folder.mkdir()
+    (folder / 'turn-001.json').write_text(json.dumps({'status':'done'}))
+    key = (str(folder), 'turn-001')
+    conversations._ACTIVE_TURNS.add(key)
+    try:
+        assert not conversations.prepare_runtime_reload([tmp_path])
+    finally:
+        conversations._ACTIVE_TURNS.discard(key)
     assert conversations.prepare_runtime_reload([tmp_path])
     conversations.reopen_runtime_admission()
