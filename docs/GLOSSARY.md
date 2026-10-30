@@ -115,20 +115,20 @@ _Avoid_：自动修复、正式题源审计、会写入的检查
 1–5 整数维度组成；总分由 `cognitive-v1-equal-mean` 等权平均并按 Decimal
 `ROUND_HALF_UP` 保留一位小数。评级整组可空，且只能由显式 `lesson-kit difficulty`
 事务写入；内容入池、练习和显示均不依赖评级。闪卡不评级，题型本身不决定分数。
-_Avoid_：学习者自评、能力等级、把 `problem_type` 当难度、在出题 manifest 内写难度、`difficulty_basis`
+_Avoid_：学习者评价、能力等级、把 `problem_type` 当难度、在出题 manifest 内写难度、`difficulty_basis`
 出处：problem-difficulty spec；problem-difficulty-and-provenance design
 
 ### 个人难度 / Learner Difficulty
-这名学习者当前觉得某知识或练习有多难的证据集合，来自显式自评、作答、卡点、学习信号
+这名学习者当前觉得某知识或练习有多难的证据集合，来自显式评价、作答、卡点、学习信号
 和到期状态；不新增主观难度星级字段。它只参与知识范围和优先级，不覆盖客观题目难度，
-也不从一次自评推导持久“能力等级”。
+也不从一次评价推导持久“能力等级”。
 _Avoid_：客观题目难度、统一能力分、自动升降题目难度
 出处：problem-difficulty spec「Objective and learner difficulty remain separate」
 
 ### Legacy 知识内容复杂度 / Legacy Knowledge Complexity
 `knowledge_points.difficulty` 的冻结 pipeline 语义。旧提取路径缺失时仍默认 2；它不使用
 题目的四维量尺，也不与 `problems.difficulty` 互相换算。
-_Avoid_：客观题目难度向量、学习者自评
+_Avoid_：客观题目难度向量、学习者评价
 出处：pipeline/skills/pool-field-inference/SKILL.md；problem-difficulty-and-provenance design
 
 ### 候选题 / Problem Candidate
@@ -165,27 +165,27 @@ _Avoid_：第三条存储轴、题型分组、难度分组
 出处：review-workbench spec「Provenance-filtered problem pull」
 
 ### 题目尝试 / Problem Attempt
-与一道正式题的一次已持久记录的交互，保存当时的作答文本、卡点标记与评分。学生在练习页提交后，服务端接受写入时创建状态为 `answered` 的行（含选项文本与客观判定）；浏览器已提交但写入尚未确认的内容仍是浏览器状态，不等于一条已保存的尝试。另一来源是学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启自评时浏览器作答等待评分才改变学习投影；关闭自评的客观判定按「判定」的关闭自评规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
+与一道正式题的一次已持久记录的交互，保存当时的作答文本、卡点标记与评分。学生在练习页提交后，服务端接受写入时创建状态为 `answered` 的行（含选项文本与客观判定）；浏览器已提交但写入尚未确认的内容仍是浏览器状态，不等于一条已保存的尝试。另一来源是学生明确要求后由 Agent 经 `lesson-kit attempts` 提交。开启评价时浏览器作答等待评分才改变学习投影；关闭评价的客观判定按「判定」的关闭评价规则更新进度、当前状态与调度。主观、无答案键和 Agent 无评分尝试不因此折算；旧池需要运行迁移命令后才能使用浏览器请求重试。
 _Avoid_：当前状态、浏览记录、草稿（未提交的作答不是尝试）
 出处：CONTEXT.md（迁入）；review-workbench spec「Practice session」；agent-assisted-practice-records spec「Agent transcription and optional learning rating」
 
 ### 浏览器练习请求 / Browser Practice Request
-一次提交作答或保存自评及其稳定 `request_id`。练习页先保存完整请求，再发送；响应丢失或刷新后原样重试只取回首次结果。同一个 id 改变作答、评分或操作类型会被拒绝，不多写尝试或学习状态。
+一次提交作答或保存评价及其稳定 `request_id`。练习页先保存完整请求，再发送；响应丢失或刷新后原样重试只取回首次结果。同一个 id 改变作答、评分或操作类型会被拒绝，不多写尝试或学习状态。
 _Avoid_：把一次重试当成第二次作答、把判定当评分
 出处：review-workbench spec「Retry-safe browser practice writes」
 
 ### 判定 / Verdict
-客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在自评时改变——**例外**：关闭自评的轮次（见「学习者设置」）里，判定就是学习结论，落库时一次性折算为进度与排期（对 → mastered、错 → wrong），不写带评分的反馈事件。答案键缺失时不判分，页面如实写明「本题未录入答案键」。
-_Avoid_：评分（1–5 自评才是评分）、掌握度、把判定当成绩、把折算出的进度当自评分
+客观题（判断题、小测题）在**浏览器本地**比对答案键得到的一次对错结论（对 / 错），随那次提交一起存进尝试行；综合题不判分，判定为空。它是这一次作答的事实，不是学习状态：进度、信号、调度仍然只在评价时改变——**例外**：关闭评价的轮次（见「学习者设置」）里，判定就是学习结论，落库时一次性折算为进度与排期（对 → mastered、错 → wrong），不写带评分的反馈事件。答案键缺失时不判分，页面如实写明「本题未录入答案键」。
+_Avoid_：评分（1–5 评价才是评分）、掌握度、把判定当成绩、把折算出的进度当评价分
 出处：review-workbench spec「Durable practice records」；workbench-ui spec；rating-toggle-setting change
 
 ### 学习者设置 / Learner Settings
-左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**；它与可选的本地布局种子共同构成工作台当前的持久 `localStorage` 用法，其余客户端状态仍是会话级。第一项是「练习与试卷显示自评」（默认开）：关闭后自评在练习与试卷流程里完全消失（不选自评时机、无反馈面板、不进统一自评页、记录页标「关闭自评」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
+左栏「设置」区块里的浏览器偏好，按工作区存于 `localStorage`（`wb_settings_<工作区>`），**跨标签页与重启持久**；它与可选的本地布局种子共同构成工作台当前的持久 `localStorage` 用法，其余客户端状态仍是会话级。第一项是「练习与试卷显示评价」（默认开）：关闭后评价在练习与试卷流程里完全消失（不选评价时机、无反馈面板、不进统一评价页、记录页标「关闭评价」），客观题按判定折算学习状态。设置在**下一轮开始时生效**，进行中的轮次保持开始时的模式。设置只表达偏好，不是学习事实，不写池。
 _Avoid_：把设置当学习记录、按工作区写进数据库、对进行中的轮次即时生效
 出处：rating-toggle-setting change「Learner settings in the left rail」
 
 ### 做题记录 / Practice Record
-把尝试、判定与自评合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及左侧「记录」中心的**作答明细 / 错题**视图（可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——自评通过 `attempt_id` 链回那次提交。**作答记录只增不改**：重新作答会追加 Attempt。唯一相关例外是浏览器在同一 Paper Practice Run 回看中再次保存自评时，只原位覆盖该 Attempt 关联反馈的评分和评语；不新增 Attempt/反馈，也不重放学习影响。此例外不扩展 Agent Attempt Correction。
+把尝试、判定与评价合成一行的历史视图：练习页揭示区的「历史作答」折叠段（这道题我做过的每次作答），以及左侧「记录」中心的**作答明细 / 错题**视图（可按题过滤）。同一行读作「作答了什么、判定如何、评为几分」——评价通过 `attempt_id` 链回那次提交。**作答记录只增不改**：重新作答会追加 Attempt。唯一相关例外是浏览器在同一 Paper Practice Run 回看中再次保存评价时，只原位覆盖该 Attempt 关联反馈的评分和评语；不新增 Attempt/反馈，也不重放学习影响。此例外不扩展 Agent Attempt Correction。
 _Avoid_：学习状态、排期表、把记录页当批改结果
 出处：review-workbench spec「Durable practice records」；workbench-ui spec
 
@@ -240,7 +240,7 @@ _Avoid_：试卷、一次 Practice Run、旧 `.lessonkit/practice-sets/` 目录�
 出处：practice-set-export spec「Paper manifest」「Managed saved Paper」；FILE_CONTRACT.md「Agent Saved Papers」
 
 ### 练习轮次 / Practice Run
-对**一张已经确定的 Paper**从开始到完成，或到被显式替换 / 清除的一次执行。运行中仍只有一个 `active_practice`；每张已保存 Paper 可独立保留自己的未完成进度。新执行的来源语义统一为 `paper`。普通题 Practice Run 只有显式提交整卷才完成归档；逐题作答、判定和可选自评仍以 `problem_attempts` / `feedback_events` 为学习证据。
+对**一张已经确定的 Paper**从开始到完成，或到被显式替换 / 清除的一次执行。运行中仍只有一个 `active_practice`；每张已保存 Paper 可独立保留自己的未完成进度。新执行的来源语义统一为 `paper`。普通题 Practice Run 只有显式提交整卷才完成归档；逐题作答、判定和可选评价仍以 `problem_attempts` / `feedback_events` 为学习证据。
 _Avoid_：第二套 attempt 表、动态拉题器、把 Practice Run 当 Paper 定义
 出处：practice-set-export spec「Paper is the Practice Run boundary」；review-workbench spec「Paper-backed Practice Run」「Durable practice run archive」
 
@@ -476,7 +476,7 @@ _Avoid_：静音（那是结果不是偏好）、音频资产、提示音库
 ### 工作台设置视图 / Workbench settings view
 中栏新增的外观设置页，由**左栏设置区的开关**打开与关闭。它承载**外观**偏好：
 主题偏好、阅读字面、动效偏好、声音偏好；偏好按工作区存于浏览器 `localStorage`，
-不写池。左栏原有的「学习者设置」（练习与试卷显示自评等**学习行为**偏好）**不搬家**，
+不写池。左栏原有的「学习者设置」（练习与试卷显示评价等**学习行为**偏好）**不搬家**，
 仍在左栏——两者分属外观与学习行为两件事，不可混为一谈。
 _Avoid_：学习者设置（左栏的学习行为偏好）、设置页、偏好面板
 出处：openspec/changes/workbench-visual-language-v2（`workbench-settings` spec）
@@ -550,7 +550,7 @@ _Avoid_：Practice Run 模式开关、单题学科形态 `problem_type`、一卷
 出处：review-workbench spec「Paper-backed Practice Run」；workbench-ui spec「Practice page」「Flash card item stacked presentation」
 
 ### 原地改题 / In-place Problem Edit
-不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key/error_reason）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
+不换题号、不重导，直接改一道**已有**题目的属性。单题走 `lesson-kit data <工作区> update problem <题号> --input <文件>`；批量走一份 `problem-patch` 清单（`lesson-kit ingest <工作区> recipe problem-patch --input <清单> --output <目录> --apply`，不给 `--apply` 零写入）。可改：题面、解析、kp_ids、problem_type、source_kind、origin_kind、source_evidence、source_answer、solution_origin、display_title、display_summary、exam_year、practice_modes、micro_quiz（整份 quiz_type/options/answer_key）、answer_key。`topic_label` 已从题目字段移除，问题补丁会拒收；闪卡的同名字段仍由闪卡契约定义。**改不了题号**（它是身份），难度仍走 `lesson-kit difficulty`，不认识的字段名直接报错（不静默丢弃）。改 `kp_ids`/`problem_text`/`solution`/`problem_type` 会按既有规则清空整组难度评级；只改模式/载荷/来源不动评级。批量补丁记批次号并保存每行改前的旧值，`ingest rollback --batch` 会把旧值原样写回（不是删行），因此学习记录毫发无损。让一道已有题进小测/判断只需给 `practice_modes` + `micro_quiz`。
 _Avoid_：把「改属性」当成「重导」、以为要删掉再导、以为题号可以换
 出处：in-place-problem-edits
 
@@ -560,22 +560,22 @@ _Avoid_：改写题目文字、把没有选项的题硬凑选项
 出处：in-place-problem-edits
 
 ### 无答案键客观题 / Keyless Objective Item
-判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习与试卷显示自评」开启时可另行自评更新学习状态，不评分时不推导判定或自评分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题必须有 `error_reason`，无键的可以没有。
+判断题或单选题入库时题源没有正确答案，`answer_key` 省略或为 `null` 的形态。它照样进判断/小测模式（`quiz_type` 与 `options` 照常），但不参与判分：练习页明确显示「本题未录入答案键，请对照课本或解析」，作答仍会记录；「练习与试卷显示评价」开启时可另行评价更新学习状态，不评分时不推导判定或评价分数。答案键可以事后补：`lesson-kit data <工作区> update problem <id> --input '{"answer_key":"…"}'`（按该题的 `quiz_type` 校验形状；空值清回无键）。带键的题不再要求 `error_reason`；历史 payload 中残留的值会被忽略。
 _Avoid_：拿没有答案键的题去猜答案、把无键题退回综合题、给无键题判分
 出处：ingest-mode-choice-and-contract-parity；micro-quiz-content spec
 
 ### 综合题模式 / Exam Mode
-Paper 中常规正式题的一种兼容作答形式：自由作答 → 查看解析 → 按当前自评设置记录学习结论。未标注 `practice_modes` 的存量题仍按 exam 兼容。它不是一种独立 Practice Run，也不要求 Paper 中只能出现综合题。
+Paper 中常规正式题的一种兼容作答形式：自由作答 → 查看解析 → 按当前评价设置记录学习结论。未标注 `practice_modes` 的存量题仍按 exam 兼容。它不是一种独立 Practice Run，也不要求 Paper 中只能出现综合题。
 _Avoid_：考试模式、独立练习入口、一卷单一 exam 模式
 出处：review-workbench spec「Grading input modes」「Paper-backed Practice Run」；docs/DATA_MODEL.md「practice_modes」
 
 ### 小测模式 / Micro Mode
-Paper 中微题选择题（single_choice / multiple_choice）的兼容作答形式：点选后本地判分并显示错因，再按当前自评设置记录学习结论。它描述 item 的交互形态，不是独立 Practice Run。**原名「闪卡模式」，2026-08-29 正名出让**。
+Paper 中微题选择题（single_choice / multiple_choice）的兼容作答形式：点选后本地判分并显示错因，再按当前评价设置记录学习结论。它描述 item 的交互形态，不是独立 Practice Run。**原名「闪卡模式」，2026-08-29 正名出让**。
 _Avoid_：闪卡（现指另一内容形式）、自由文本作答、一卷单一 micro 模式
 出处：micro-quiz-content spec「Micro quiz content contract」「Type-aware practice rendering」；review-workbench spec「Grading input modes」「Paper-backed Practice Run」
 
 ### 闪卡 / Flash Card
-从知识点解构出的键值对记忆卡（类似 dict 的一条键值对）：正面（front）→回忆→揭示背面（back）→按当前自评设置记录学习结论，无选项、无自动判分。知识点是唯一事实源（Note），卡是派生视图（Card），一卡只放一个原子事实；每卡一行独立调度。闪卡可以作为 Paper 的 item 形式之一，也可用于背单词、背概念等场景。
+从知识点解构出的键值对记忆卡（类似 dict 的一条键值对）：正面（front）→回忆→揭示背面（back）→按当前评价设置记录学习结论，无选项、无自动判分。知识点是唯一事实源（Note），卡是派生视图（Card），一卡只放一个原子事实；每卡一行独立调度。闪卡可以作为 Paper 的 item 形式之一，也可用于背单词、背概念等场景。
 _Avoid_：小测（微题的卡片式渲染，旧「闪卡」）、把闪卡另建成绕过 Paper 的独立 Practice Run
 出处：flash-card spec「Flash card practice mode」「Flash card session direction」；workbench-ui spec「Flash card item stacked presentation」
 
@@ -585,13 +585,13 @@ _Avoid_：把一张双向卡复制成两张内容卡、从文字长度猜方向
 出处：flash-card spec「Flash card direction capability」
 
 ### 判断模式 / Yes-No Mode
-Paper 中判断题（是/否）的兼容作答形式：有答案键时浏览器本地判分并显示错因；是否继续自评由当前设置决定。无答案键的题不判分、不折算。它描述 item 的交互形态，不是独立 Practice Run。
+Paper 中判断题（是/否）的兼容作答形式：有答案键时浏览器本地判分并显示错因；是否继续评价由当前设置决定。无答案键的题不判分、不折算。它描述 item 的交互形态，不是独立 Practice Run。
 _Avoid_：主观题自动评分、浏览即掌握、一卷单一 yes_no 模式
 出处：micro-quiz-content spec「Explicit mode marking for Micro and Yes/No」；review-workbench spec「Grading input modes」
 
-### 自评时机 / Rating Mode
-旧练习会话兼容的自评安排：每题作答后自评（immediate）、完成后统一自评（batch）或关闭自评（off）。它不决定普通 Paper 的答案展示或锁定；普通 Paper 的自评可跳过且不阻止交卷，答案展示由「答案展示方式」单独决定。
-_Avoid_：评分方式（与 1–5 自评本身混淆）
+### 评价时机 / Rating Mode
+旧练习会话兼容的评价安排：每题作答后评价（immediate）、完成后统一评价（batch）或关闭评价（off）。它不决定普通 Paper 的答案展示或锁定；普通 Paper 的评价可跳过且不阻止交卷，答案展示由「答案展示方式」单独决定。
+_Avoid_：评分方式（与 1–5 评价本身混淆）
 出处：review-workbench spec「Paper-backed Practice Run」；`free-navigation-paper-practice`
 
 ### 练习会话 / Practice Session（已退役产品术语）
@@ -605,8 +605,8 @@ _Avoid_：把普通题回看当作独立只读覆盖层、把导航当作提交�
 出处：`free-navigation-paper-practice`「Free navigation throughout a Paper」
 
 ### 完成页 / Paper Completion Page
-普通 Paper 显式交卷成功后显示的完成信息页。它可打开同一轮次的答卷，返回同一完成页、再练一次或回试卷列表；查看答卷与返回不会重新交卷，重练会建立新的独立 Practice Run。完成不表示全对，也不等待自评。
-_Avoid_：自动收束页、要求先完成所有自评的结束页
+普通 Paper 显式交卷成功后显示的完成信息页。它可打开同一轮次的答卷，返回同一完成页、再练一次或回试卷列表；查看答卷与返回不会重新交卷，重练会建立新的独立 Practice Run。完成不表示全对，也不等待评价。
+_Avoid_：自动收束页、要求先完成所有评价的结束页
 出处：`free-navigation-paper-practice`「Paper completion and answer-sheet return」
 
 ### 进度带 / Progress band
@@ -632,28 +632,28 @@ _Avoid_：通关、成就、完美奖励、连续学习天数
 _Avoid_：连击（游戏语汇）、积分、正确率、连续学习天数
 出处：`hide-persistent-combo-counter`、`practice-pixel-motion`
 
-### 自评 / Self-Rating
-学习者对一道已作答题目的可选 1–5 打分（可带自然语言备注）。启用自评时可保存，也可跳过；首次评分写入对应反馈并按评分更新学习投影。普通 Paper 中再次保存只覆盖同一执行、同一 Attempt 关联反馈里的评分与评语，不新建作答或反馈，不重复更新学习投影；自评不控制导航或交卷。关闭自评不合成 1–5 分或评分反馈；客观尝试的判定可按既有 off 规则折算。
-_Avoid_：把自动判定伪装成自评分、浏览即掌握
-出处：review-workbench spec「Flexible feedback」
+### 评价 / Self-Rating
+学习者对一道已作答题目的可选 1–5 打分（可带自然语言备注），旧称「自评」。学习者可在浏览器保存或跳过；Agent 也可在用户明确要求时读取同一行后修改或删除它。首次新增评分写入对应反馈并按评分更新学习投影；原位修改或删除只改评价行，不重放学习投影；整条 Attempt 替换并重算投影仍走 `attempts correct`。评价不控制导航或交卷。关闭评价不合成 1–5 分或评分反馈；客观尝试的判定可按既有 off 规则折算。
+_Avoid_：把自动判定伪装成评价分数、浏览即掌握、改分后声称掌握度自动跟着变
+出处：review-workbench spec「Flexible feedback」；agent-assisted-practice-records spec「Evaluation record management」
 
-### 揭示再自评 / Reveal-then-Rate
-开放题的作答约定：自己作答后按当前 Answer Reveal Timing 查看参考材料；自评启用时可以再打分。系统不自动判开放题。
+### 揭示再评价 / Reveal-then-Rate
+开放题的作答约定：自己作答后按当前 Answer Reveal Timing 查看参考材料；评价启用时可以再打分。系统不自动判开放题。
 _Avoid_：机器判卷
 出处：review-workbench spec「Grading input modes」
 
 ### 跳题 / Skip
-**普通 Paper 不再有独立的「跳题」动作。**旧练习会话里的跳题只是把游标移到下一题，不提交答案或生成 Attempt；普通 Paper 统一使用自由导航。「不会」是独立的作答状态动作；跳过自评也不等于跳过题目。
+**普通 Paper 不再有独立的「跳题」动作。**旧练习会话里的跳题只是把游标移到下一题，不提交答案或生成 Attempt；普通 Paper 统一使用自由导航。「不会」是独立的作答状态动作；跳过评价也不等于跳过题目。
 _Avoid_：把导航离开未答题目说成放弃、把跳题当成「不会」或交卷
 出处：review-workbench spec「Practice session」（旧语义）；`free-navigation-paper-practice`
 
-### 会话末统一自评 / Unified (Session-End) Rating
-旧练习会话 `batch` 时机下的兼容收束页，只适用于保留旧语义的记录与闪卡路径。普通 Paper 的完成页由显式整卷交卷触发；自评可关闭、可跳过，不是完成条件。
-_Avoid_：把它当成普通 Paper 的必经完成页、把完成和自评绑定
+### 会话末统一评价 / Unified (Session-End) Rating
+旧练习会话 `batch` 时机下的兼容收束页，只适用于保留旧语义的记录与闪卡路径。普通 Paper 的完成页由显式整卷交卷触发；评价可关闭、可跳过，不是完成条件。
+_Avoid_：把它当成普通 Paper 的必经完成页、把完成和评价绑定
 出处：DISCUSSION-RECORD B6.5；workbench-ui spec（旧语义）；`free-navigation-paper-practice`
 
 ### 微题 / Micro Quiz
-带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。前端本地判分提供即时反馈；显式提交且自评关闭时，已记录的客观判定按「判定」的关闭自评规则更新学习投影，其余轮次等待自评。题干不限长度；答案键可以缺（见「无答案键客观题」），缺键不判分、不折算。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
+带结构化载荷的客观小题：一个原子知识点 + 显式练习模式标记 + 结构化载荷（题型、选项、答案关键、错因、来源证据）。三种题型：yes_no / single_choice / multiple_choice，一律点选作答（short_answer / closest_answer 已于 2026-08-29 退役）。前端本地判分提供即时反馈；显式提交且评价关闭时，已记录的客观判定按「判定」的关闭评价规则更新学习投影，其余轮次等待评价。题干不限长度；答案键可以缺（见「无答案键客观题」），缺键不判分、不折算。**已有题目可以原地改成微题**（见「原地改题」），不必删除重导。
 _Avoid_：小题（口语）、判断题系统（判断只是题型之一）、填空作答
 出处：openspec/specs/micro-quiz-content/spec.md
 
@@ -665,7 +665,7 @@ _Avoid_：解析（solution，正式题的完整解答）
 ## 记录、调度与提醒
 
 ### 学习信号 / Learner Signal
-一条学习者注意力信号（如 confusion / weak_node），挂在知识点上，只增不自动消除；证据层，重复做错会加强。由显式自评（通常 1–2 分）或备注映射产生。
+一条学习者注意力信号（如 confusion / weak_node），挂在知识点上，只增不自动消除；证据层，重复做错会加强。由显式评价（通常 1–2 分）或备注映射产生。
 _Avoid_：Signal Map（旧称，退役）、尝试历史
 出处：CONTEXT.md Learner Signal（更新）；review-workbench spec「Cascade signal boosts」
 
@@ -980,7 +980,7 @@ _Avoid_：弹窗、弹层、确认框（泛称）
 ## 工程与流程
 
 ### 学习证据查询 / Learning Evidence Query
-按知识点读取一组有上限的近期作答记录，并附上可读题面与数据库里实际记录的作答、判定、自评或时间。题面来自当前题库内容，不是作答时的历史快照；该查询不推断薄弱、粗心或进步等学习特征。
+按知识点读取一组有上限的近期作答记录，并附上可读题面与数据库里实际记录的作答、判定、评价或时间。题面来自当前题库内容，不是作答时的历史快照；该查询不推断薄弱、粗心或进步等学习特征。
 _Avoid_：题目原始版本快照、学习者画像、自动薄弱判断
 出处：`agent-learning-evidence` OpenSpec
 
@@ -1005,9 +1005,19 @@ _Avoid_：人工抽查、事后补审
 出处：review-workbench spec「Past-paper coverage gate」；micro-quiz-content spec；workbench/ingest
 
 ### 试卷执行进度 / Paper Execution Progress
-一张 Paper 的未完成 Practice Run 所附带的执行状态，包括固定题序、当前游标、答案展示方式、未提交草稿、显式不会标记、提交/锁定状态和已显示参考材料的事实；不等于题目本体，也不等于 Attempt、自评或调度等学习证据。每张 Paper 可分别保留一份未完成进度，同一工作区同一时刻只激活一卷。普通 Paper 的整卷完成只由显式提交产生。
-_Avoid_：把题目掌握度当作卷内游标、把清卷进度当作删除学习证据
-出处：2026-10-17 所有者需求确认；`decouple-paper-progress-and-content`
+一张 Paper 的未完成 Practice Run 所附带的执行状态，包括固定题序、当前游标、答案展示方式、未提交草稿、显式不会标记、提交/锁定状态和已显示参考材料的事实；不等于题目本体，也不等于 Attempt、评价或调度等学习证据。每张 Paper 可分别保留一份未完成进度，同一工作区同一时刻只激活一卷。普通 Paper 的整卷完成只由显式提交产生。带 `paper_id` 的 Attempt 导入可以写入或更新这份进度；已有题的再次导入会追加新 Attempt 并重绑，旧 Attempt 保留。
+_Avoid_：把题目掌握度当作卷内游标、把清卷进度当作删除学习证据、把导入的答案当成学习投影
+出处：2026-10-17 所有者需求确认；`decouple-paper-progress-and-content`；`import-attempts-into-paper-progress`
+
+### 导入绑定 / Attempt Import Binding
+一次带 `paper_id` 的 Attempt 导入对目标 Paper 执行进度的写入：目标卷是当前选中卷时更新活动执行项；否则更新该卷的暂停检查点；该卷没有未完成进度时新建 `on_submit` 暂停检查点。它不激活该卷、不改变另一张正在做的卷；只有导入同时带 1–5 评价时才按既有规则改变学习投影。
+_Avoid_：把导入绑定当成开始 Practice Run、把游离 Attempt 自动塞进当前卷、把无评价导入当成学习结论
+出处：2026-10-29 所有者确认；`import-attempts-into-paper-progress`
+
+### Paper 追加题 / Paper Item Append
+把题池中已存在、但某张已保存 Paper 缺失的题目追加到该卷卷末的显式补给动作。它保留现有题序、题目状态、Attempt 链接、草稿和进度，递增该卷结构版本，并同步活动执行或暂停检查点的版本；不是“手工改名单/题序”的进度重置路径。
+_Avoid_：按原题号插入中间、自动建题、用改卷名单重置整卷进度
+出处：2026-10-29 所有者确认；`import-attempts-into-paper-progress`
 
 ### 历史保留题目 / Historical Question Row
 被用户删除后，仅为既有作答、评分与轮次保留身份的题目行，以 `problems.deleted_at` 标记。
@@ -1056,8 +1066,8 @@ _Avoid_：逐课程复制技能、将内置技能等同于 Pi 全局配置
 出处：`unify-cli-and-bundle-drill-skill`
 
 ### 答案展示方式 / Answer Reveal Timing
-普通题 Paper Practice Run 开始时选择的答案披露与锁定安排：逐题显示（`per_item`）或交卷后统一显示（`on_submit`）。它与题目类型、组卷方式和可选自评相互独立，并在暂停、恢复与完成答卷查看时保持不变。逐题显示时，单选/判断选择会自动提交，多选/文字需明确提交；交卷后统一显示时输入可改至整卷提交。任何模式中显式点「不会」都可提前展示可用参考材料；逐题模式会锁定该题，统一模式允许交卷前改答案并清除不会标记，但保留已看参考材料的事实。
-_Avoid_：把答案展示方式当成题型、组卷方式或自评开关
+普通题 Paper Practice Run 开始时选择的答案披露与锁定安排：逐题显示（`per_item`）或交卷后统一显示（`on_submit`）。它与题目类型、组卷方式和可选评价相互独立，并在暂停、恢复与完成答卷查看时保持不变。逐题显示时，单选/判断选择会自动提交，多选/文字需明确提交；交卷后统一显示时输入可改至整卷提交。任何模式中显式点「不会」都可提前展示可用参考材料；逐题模式会锁定该题，统一模式允许交卷前改答案并清除不会标记，但保留已看参考材料的事实。
+_Avoid_：把答案展示方式当成题型、组卷方式或评价开关
 出处：`free-navigation-paper-practice`「Mode-specific answer reveal and locking」
 
 
@@ -1065,7 +1075,7 @@ _Avoid_：把答案展示方式当成题型、组卷方式或自评开关
 Paper 练习页中表示已完成题目比例的方块色带。深橙、黄色、天蓝色随完成度变化；等宽明暗压缩带横向传播，密集处更亮。轨道圆角、无黑描边；末端为与轨道等厚的正方形像素头，脉冲抵达时由中心向外亮起，间隔时黯淡。仅为展示，不产生学习证据。
 
 ### 连对横幅 / Combo Banner
-逐题判定模式中，每连续五次客观答对出现的短暂庆祝条幅。两种练习共用已批准并冻结的暖白底、左黄块、底部蓝带、红色角块、斜体矢量 combo 与 SVG 画笔动效；Paper 同时叠加临时异色进度波带。不把自评或未判定答案当作答对。视觉基准存于 `docs/design/approved-practice-combo/`，改变样式需学习者明确批准。
+逐题判定模式中，每连续五次客观答对出现的短暂庆祝条幅。两种练习共用已批准并冻结的暖白底、左黄块、底部蓝带、红色角块、斜体矢量 combo 与 SVG 画笔动效；Paper 同时叠加临时异色进度波带。不把评价或未判定答案当作答对。视觉基准存于 `docs/design/approved-practice-combo/`，改变样式需学习者明确批准。
 
 ### 归位庆祝卡 / Settling Completion Card
 成功交卷后先突出登场、随后缩退到完成页顶部的同一张庆祝卡片；下方保留真实统计与逐题回看。历史答卷直接显示稳定终态。
@@ -1079,3 +1089,13 @@ Lesson Kit 用户目录中独立管理的 Skill 副本或包内只读内置 Skil
 ### 对话承接材料 / Conversation Continuity Excerpt
 最近两轮已结束且成功的对话原文，用于解释短确认及保持任务连续；不是新的用户命令或已经执行的证明，缺失时不得编造。
 出处：improve-agent-context-and-skills；用户级资源与对话承接规则。
+
+## 原位 Markdown 编辑
+
+以 Markdown 源码为唯一文本状态，光标或选区涉及的语法块显示源码，其他块原位呈现安全 Markdown 与公式；显示切换不改写源码。
+
+### Runtime Source（运行来源）
+工作台实际加载的项目目录；默认取安装源码所属 Git 主工作区，显式预览参数可指定独立 worktree。它与课程工作区的数据目录无关。
+
+## Runtime supervisor / worker（运行时监督进程 / HTTP 工作进程）
+监督进程持有稳定 PID，选择源目录、验证源文件并拥有 HTTP 工作进程；只有工作进程监听工作台端口。运行时代次是成功替换工作进程后递增的可读整数，资源代次是安全接受静态资源变化后递增的整数。两者不是学习记录或内容版本。

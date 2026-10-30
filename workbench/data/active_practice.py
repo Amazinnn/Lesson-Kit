@@ -592,6 +592,72 @@ def mark(pool, position, state, *, attempt_id=None):
     return {"completed": False, "replay": False, "practice": current(pool)}
 
 
+def bind_attempt(pool, position, attempt_id):
+    """Link an imported attempt to one item without per-item archiving."""
+    _require_schema(pool, writing=True)
+    if isinstance(position, bool) or not isinstance(position, int) or position < 0:
+        raise ActivePracticeError("position must be a non-negative integer")
+    if isinstance(attempt_id, bool) or not isinstance(attempt_id, int):
+        raise ActivePracticeError("attempt_id must be an integer")
+    with pool.transaction(immediate=True):
+        active_row = _row(pool)
+        if active_row is None:
+            raise ActivePracticeError("no unfinished practice")
+        item = pool.connect().execute(
+            "SELECT * FROM active_practice_items WHERE position=?", (position,)
+        ).fetchone()
+        if item is None:
+            raise ActivePracticeError(f"unknown practice position: {position}")
+        attempt = pool.attempt(attempt_id)
+        if attempt is None:
+            raise ActivePracticeError(f"unknown attempt: {attempt_id}")
+        if item["item_type"] != "problem" or attempt["problem_id"] != item["item_id"]:
+            raise ActivePracticeError(
+                "attempt_id does not belong to this practice item")
+        previous = dict(state=item["state"], attempt_id=item["attempt_id"])
+        explicit = dict(active_row).get("reveal_timing") in {"per_item", "on_submit"}
+        if explicit:
+            metadata = json.loads(item["draft_json"] or "{}")
+            metadata.pop("answer", None)
+            metadata.pop("choices", None)
+            metadata["stuck"] = False
+            pool.connect().execute(
+                "UPDATE active_practice_items SET state='answered',attempt_id=?,"
+                "draft_json=?,draft_sequence=draft_sequence+1 WHERE position=?",
+                (attempt_id, json.dumps(metadata, ensure_ascii=False), position))
+        else:
+            pool.connect().execute(
+                "UPDATE active_practice_items SET state='answered',attempt_id=?,"
+                "draft_json=NULL WHERE position=?",
+                (attempt_id, position))
+    return previous
+
+
+def finish_if_complete(pool):
+    """Archive a legacy execution once, after a whole import batch is bound."""
+    _require_schema(pool, writing=True)
+    active = current(pool)
+    if active is None:
+        return dict(completed=False, reason="no_active")
+    items = active["items"]
+    pending = [item for item in items if item["state"] == "pending"]
+    if pending:
+        cursor = active.get("cursor", 0)
+        if not (0 <= cursor < len(items) and items[cursor]["state"] == "pending"):
+            pool.connect().execute(
+                "UPDATE active_practice SET cursor=?,updated_at=datetime('now') "
+                "WHERE singleton=1", (pending[0]["position"],))
+        return dict(completed=False, waiting_for_submit=False)
+    if active.get("reveal_timing") in {"per_item", "on_submit"}:
+        pool.connect().execute(
+            "UPDATE active_practice SET cursor=?,updated_at=datetime('now') "
+            "WHERE singleton=1", (items[-1]["position"],))
+        return dict(completed=False, waiting_for_submit=True)
+    run_id = _archive(pool, active, "completed")
+    _delete(pool)
+    return dict(completed=True, run_id=run_id)
+
+
 def submit(pool, execution_id, request_id, *, grade_answer, drafts=None):
     """Finalize one explicit-mode Paper using saved inputs in one transaction."""
     from workbench.data import attempts

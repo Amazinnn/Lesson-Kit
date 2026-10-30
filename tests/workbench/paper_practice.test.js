@@ -334,6 +334,7 @@ test("single-choice selection submits once and shows the returned locked result"
   assert.equal(attempt.body.answer_text, "A");
   assert.equal(attempt.body.verdict, true);
   assert.equal(app.ids["paper-reference"].hidden, false);
+  assert.doesNotMatch(app.ids["paper-reference"].innerHTML, /判定依据/);
   assert.equal(app.runtime.session()[0].attempt_id, 501);
   assert.equal(app.ids["paper-options"].children[0].children[1].children[0].checked, true);
 });

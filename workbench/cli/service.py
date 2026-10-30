@@ -144,11 +144,24 @@ def port_answers(port, host="127.0.0.1", timeout=0.5):
 
 
 def running_state():
-    """The recorded service, but only when its process is really alive."""
+    """Verify listener identity; a live recycled PID is not a service."""
+    from workbench.cli.runtime import request
     state = read_state()
-    if process_alive(state.get("pid")):
-        return state
-    return {}
+    if not process_alive(state.get("pid")):
+        return {}
+    if not state.get("source_root") or not state.get("token"):
+        image = process_image(state.get("pid"))
+        if image and not _looks_like_python(image) and not port_answers(state.get("port")):
+            clear_state()
+            return {}
+        raise RuntimeError("legacy service identity unverified; stop it in its original terminal")
+    try:
+        observed = request(state["port"])
+    except (OSError, ValueError) as exc:
+        raise RuntimeError("recorded service identity cannot be verified") from exc
+    if any(observed.get(k) != state.get(k) for k in ("supervisor_pid", "source_root", "worker_pid")):
+        raise RuntimeError("recorded service does not match the live runtime identity")
+    return dict(state, **observed)
 
 
 def _detach_kwargs():
@@ -157,9 +170,13 @@ def _detach_kwargs():
     return {"start_new_session": True}
 
 
-def start(port=3081):
+def start(port=3081, project_root=None, reload_enabled=True):
+    from workbench.cli import runtime, runtime_source
+    root = runtime_source.project_root(project_root)
     state = running_state()
     if state:
+        if Path(state["source_root"]) != root or state["port"] != port or state["reload_enabled"] != reload_enabled:
+            raise RuntimeError("running service source/port/reload differs; stop it safely before switching")
         return {"started": False, "already_running": True, "pid": state.get("pid"),
                 "port": state.get("port"), "log": str(log_path())}
     if port_answers(port):
@@ -169,14 +186,15 @@ def start(port=3081):
     log.parent.mkdir(parents=True, exist_ok=True)
     with open(log, "ab") as stream:
         process = subprocess.Popen(
-            [sys.executable, "-m", "workbench.cli.main", "serve", "--port", str(port)],
-            cwd=str(repo_root()),
+            [sys.executable, "-B", "-m", "workbench.cli.main", "serve", "--port", str(port),
+             "--project-root", str(root)] + ([] if reload_enabled else ["--no-reload"]),
+            cwd=str(root), env=runtime.child_env(root),
             stdin=subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT,
             **_detach_kwargs(),
         )
     deadline = time.time() + START_TIMEOUT_S
     while time.time() < deadline:
-        if port_answers(port):
+        if port_answers(port) and read_state().get("pid") == process.pid:
             break
         if process.poll() is not None:
             raise RuntimeError(
@@ -184,31 +202,32 @@ def start(port=3081):
             )
         time.sleep(0.2)
     else:
-        process.terminate()
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True)
+        else:
+            process.terminate()
         raise RuntimeError(f"service did not answer on port {port}; see {log}")
-    state = {"pid": process.pid, "port": int(port), "started_at": _now()}
-    write_state(state)
+    state = read_state()
     return {"started": True, "already_running": False, "pid": state["pid"],
             "port": state["port"], "log": str(log)}
 
 
 def stop():
-    state = read_state()
-    pid = state.get("pid")
-    if not process_alive(pid):
+    from workbench.cli.runtime import request
+    state = running_state()
+    if not state:
         clear_state()
         return {"stopped": False, "was_running": False, "log": str(log_path())}
-    image = process_image(pid)
-    if image and not _looks_like_python(image):
-        # Refuse to signal a recycled pid that is now some unrelated program.
-        clear_state()
-        raise RuntimeError(
-            f"recorded pid {pid} is {image}, not the workbench service; "
-            "nothing was stopped and the stale record was cleared"
-        )
-    _terminate(pid, state.get("port"))
+    if not request(state["port"], "/prepare-reload", state["token"])["ready"]:
+        raise RuntimeError("Agent work or queued/approval work is active; stop deferred")
+    request(state["port"], "/shutdown", state["token"])
+    deadline = time.monotonic() + STOP_TIMEOUT_S
+    while time.monotonic() < deadline and process_alive(state["pid"]):
+        time.sleep(.1)
+    if process_alive(state["pid"]):
+        raise RuntimeError("runtime is draining existing requests; stop remains pending")
     clear_state()
-    return {"stopped": True, "was_running": True, "pid": pid, "log": str(log_path())}
+    return {"stopped": True, "was_running": True, "pid": state["pid"], "log": str(log_path())}
 
 
 def _terminate(pid, port):
@@ -243,7 +262,7 @@ def status():
     state = running_state()
     if not state:
         return {"running": False, "log": str(log_path())}
-    return {"running": True, "pid": state.get("pid"), "port": state.get("port"),
+    return {**{k: v for k, v in state.items() if k != "token"}, "running": True, "pid": state.get("pid"), "port": state.get("port"),
             "started_at": state.get("started_at"), "log": str(log_path())}
 
 

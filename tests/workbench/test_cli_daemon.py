@@ -42,7 +42,8 @@ class ServiceLifecycleTests(unittest.TestCase):
         self.assertEqual(self.service.read_state(), {})
 
         self.service.write_state({"pid": os.getpid(), "port": 3099})
-        self.assertEqual(self.service.running_state()["pid"], os.getpid())
+        with self.assertRaisesRegex(RuntimeError, "identity unverified"):
+            self.service.running_state()
 
         self.service.write_state({"pid": 999999999, "port": 3099})
         self.assertEqual(self.service.running_state(), {})
@@ -54,27 +55,20 @@ class ServiceLifecycleTests(unittest.TestCase):
         self.assertFalse(self.service.status()["running"])
 
     def test_stop_refuses_a_recycled_pid(self):
-        self.service.write_state({"pid": os.getpid(), "port": 3099})
-        with mock.patch.object(
-            self.service, "process_image", return_value="C:/Windows/explorer.exe"
-        ), mock.patch.object(self.service, "_signal") as signal:
-            with self.assertRaises(RuntimeError) as caught:
-                self.service.stop()
-
-        self.assertIn("explorer.exe", str(caught.exception))
+        self.service.write_state({"pid":os.getpid(),"port":3099})
+        with mock.patch.object(self.service,"process_image",return_value="C:/Realtek/RtkAudUService64.exe"), mock.patch.object(self.service,"port_answers",return_value=False), mock.patch.object(self.service,"_signal") as signal:
+            result=self.service.stop()
+        self.assertFalse(result["stopped"])
         signal.assert_not_called()
-        self.assertEqual(self.service.read_state(), {})
+        self.assertEqual(self.service.read_state(),{})
 
     def test_stop_terminates_the_recorded_service(self):
-        self.service.write_state({"pid": os.getpid(), "port": 3099})
-        with mock.patch.object(
-            self.service, "process_image", return_value="C:/Python/python.exe"
-        ), mock.patch.object(self.service, "_terminate") as terminate:
-            result = self.service.stop()
-
-        terminate.assert_called_once_with(os.getpid(), 3099)
+        state = {"pid":4242, "port":3099, "token":"owned"}
+        with mock.patch.object(self.service,"running_state",return_value=state), mock.patch("workbench.cli.runtime.request",side_effect=[{"ready":True},{"ok":True}]) as request, mock.patch.object(self.service,"process_alive",return_value=False):
+            result=self.service.stop()
+        self.assertEqual(request.call_args_list[0].args,(3099,"/prepare-reload","owned"))
+        self.assertEqual(request.call_args_list[1].args,(3099,"/shutdown","owned"))
         self.assertTrue(result["stopped"])
-        self.assertEqual(self.service.read_state(), {})
 
     def test_start_reports_a_service_that_dies_immediately(self):
         process = mock.Mock(pid=4242, returncode=3)
@@ -95,29 +89,27 @@ class ServiceLifecycleTests(unittest.TestCase):
             self.service.subprocess, "Popen", return_value=process
         ), mock.patch.object(
             self.service, "port_answers", return_value=False
-        ), mock.patch.object(self.service, "START_TIMEOUT_S", 0.05):
+        ), mock.patch.object(self.service, "START_TIMEOUT_S", 0.05), mock.patch.object(self.service.subprocess, "run") as cleanup:
             with self.assertRaises(RuntimeError) as caught:
                 self.service.start(port=3099)
 
         self.assertIn("did not answer", str(caught.exception))
-        process.terminate.assert_called_once()
+        if os.name != "nt":
+            process.terminate.assert_called_once()
+        else:
+            cleanup.assert_called_once_with(["taskkill", "/PID", "4242", "/T", "/F"], capture_output=True)
         self.assertEqual(self.service.read_state(), {})
 
     def test_start_records_the_service_only_once_it_answers(self):
-        process = mock.Mock(pid=4242, returncode=None)
-        process.poll.return_value = None
-        with mock.patch.object(
-            self.service.subprocess, "Popen", return_value=process
-        ), mock.patch.object(
-            self.service, "port_answers", side_effect=[False, True]
-        ) as port_answers:
-            result = self.service.start(port=3099)
-
+        process=mock.Mock(pid=4242,returncode=None)
+        process.poll.return_value=None
+        def launch(*args,**kwargs):
+            self.service.write_state({"pid":4242,"port":3099,"source_root":kwargs["cwd"]})
+            return process
+        with mock.patch.object(self.service.subprocess,"Popen",side_effect=launch), mock.patch.object(self.service,"port_answers",side_effect=[False,True]):
+            result=self.service.start(port=3099)
         self.assertTrue(result["started"])
-        self.assertEqual(port_answers.call_count, 2)
-        self.assertEqual(self.service.read_state(), {
-            "pid": 4242, "port": 3099, "started_at": mock.ANY,
-        })
+        self.assertEqual(self.service.read_state()["pid"],4242)
 
     def test_start_refuses_a_port_taken_by_an_unrecorded_process(self):
         with mock.patch.object(
@@ -130,10 +122,10 @@ class ServiceLifecycleTests(unittest.TestCase):
         popen.assert_not_called()
 
     def test_start_is_idempotent_while_the_service_lives(self):
-        self.service.write_state({"pid": os.getpid(), "port": 3099})
-        with mock.patch.object(self.service.subprocess, "Popen") as popen:
-            result = self.service.start(port=3099)
-
+        from workbench.cli.runtime_source import project_root
+        state={"pid":os.getpid(),"port":3099,"source_root":str(project_root()),"reload_enabled":True}
+        with mock.patch.object(self.service,"running_state",return_value=state), mock.patch.object(self.service.subprocess,"Popen") as popen:
+            result=self.service.start(port=3099)
         popen.assert_not_called()
         self.assertTrue(result["already_running"])
 

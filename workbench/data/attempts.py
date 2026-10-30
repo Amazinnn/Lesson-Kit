@@ -20,7 +20,7 @@ from workbench.domain import schedule as schedule_rules
 
 UNGRADED_STATUS = "new"
 ANSWERED_STATUS = "answered"
-MANIFEST_FIELDS = {"request_id", "items"}
+MANIFEST_FIELDS = {"request_id", "items", "paper_id"}
 ITEM_FIELDS = {"problem_id", "answer_text", "note", "rating"}
 CORRECTION_FIELDS = {"request_id", "answer_text", "note", "rating"}
 MAX_REQUEST_ID = 200
@@ -44,22 +44,30 @@ class RequestConflict(ValueError):
 def check(pool, manifest):
     """Validate a manifest and preview its effects without writing anything."""
     _require_schema(pool)
-    request_id, raw_items = _manifest(manifest)
-    items = _validate(pool, raw_items)
-    batch = _batch_fingerprint("apply", items)
+    request_id, raw_items, paper_id = _manifest(manifest)
+    items = _validate(pool, raw_items, paper_id)
+    batch = _batch_fingerprint("apply", items, paper_id=paper_id)
     stored = _operations(pool, request_id)
     if stored:
         _require_same_batch(request_id, stored, batch)
+        results = [json.loads(row["result"]) for row in stored]
         return {
             "request_id": request_id, "valid": True, "writes": 0, "replay": True,
-            "counts": _counts([json.loads(row["result"]) for row in stored]),
-            "items": [json.loads(row["result"]) for row in stored],
+            "counts": _counts(results), "items": results,
+            **_paper_section(results),
         }
     previews = [_preview(pool, item) for item in items]
-    return {
+    result = {
         "request_id": request_id, "valid": True, "writes": 0, "replay": False,
         "counts": _counts(previews), "items": previews,
     }
+    if paper_id is not None:
+        try:
+            result["paper"] = paper_progress.preview_binding(
+                pool, paper_id, [item["problem_id"] for item in items])
+        except paper_progress.BindingError as exc:
+            raise ManifestError(str(exc)) from exc
+    return result
 
 
 def _preview(pool, item):
@@ -92,13 +100,18 @@ def _manifest(manifest):
     if extra:
         raise ManifestError(
             f"manifest has unsupported field: {extra[0]} — a manifest carries only "
-            "request_id and items"
+            "request_id, items, and an optional paper_id"
         )
     request_id = _request_id(manifest.get("request_id"))
     items = manifest.get("items")
     if not isinstance(items, list) or not items:
         raise ManifestError("manifest requires a non-empty items list")
-    return request_id, items
+    paper_id = manifest.get("paper_id")
+    if paper_id is not None:
+        if not isinstance(paper_id, str) or not paper_id.strip():
+            raise ManifestError("paper_id must be a non-empty saved Paper id")
+        paper_id = paper_id.strip()
+    return request_id, items, paper_id
 
 
 def _request_id(value):
@@ -114,7 +127,7 @@ def _request_id(value):
     return value
 
 
-def _validate(pool, raw_items):
+def _validate(pool, raw_items, paper_id=None):
     """Normalize every item or report each bad one; reads only."""
     items = []
     errors = []
@@ -135,6 +148,12 @@ def _validate(pool, raw_items):
         first = errors[0]
         raise ManifestError(
             f"item {first['index']}: {first['error']}", items=errors)
+    if paper_id is not None:
+        try:
+            paper_progress.preview_binding(
+                pool, paper_id, [item["problem_id"] for item in items])
+        except paper_progress.BindingError as exc:
+            raise ManifestError(str(exc)) from exc
     return items
 
 
@@ -190,18 +209,35 @@ def _text(raw, field):
 def apply(pool, manifest):
     """Commit every named attempt and its permitted learning effects at once."""
     _require_schema(pool)
-    request_id, raw_items = _manifest(manifest)
+    request_id, raw_items, paper_id = _manifest(manifest)
     with pool.transaction():
         # Validated again under the write transaction: a pool that changed since
         # check must not half-apply.
-        items = _validate(pool, raw_items)
-        batch = _batch_fingerprint("apply", items)
+        items = _validate(pool, raw_items, paper_id)
+        batch = _batch_fingerprint("apply", items, paper_id=paper_id)
         replay = _replay(pool, request_id, batch)
         if replay is not None:
             return replay
         results = [
             _record(pool, request_id, "apply", item, batch) for item in items
         ]
+        if paper_id is not None:
+            binding = paper_progress.bind_attempts(
+                pool, paper_id,
+                [(result["problem_id"], result["attempt_id"])
+                 for result in results])
+            for result in results:
+                result["paper_id"] = paper_id
+                result["paper_position"] = binding["positions"][result["problem_id"]]
+                result["paper_action"] = binding["actions"][result["problem_id"]]
+                pool.connect().execute(
+                    "UPDATE attempt_operations SET result=? WHERE attempt_id=?",
+                    (json.dumps(result, ensure_ascii=False), result["attempt_id"]))
+            results[0]["paper"] = binding
+            pool.connect().execute(
+                "UPDATE attempt_operations SET result=? WHERE attempt_id=?",
+                (json.dumps(results[0], ensure_ascii=False),
+                 results[0]["attempt_id"]))
         return _envelope(request_id, results)
 
 
@@ -674,6 +710,7 @@ def get_attempt(pool, attempt_id):
         "schedule": pool.schedule_get("problem", attempt["problem_id"]),
         "correctable": operation is not None and conflict is None,
         "correction_conflict": conflict,
+        "paper": paper_progress.attempt_paper(pool, attempt_id),
     }
 
 
@@ -755,11 +792,20 @@ def _restore(pool, snap):
 # -- shared helpers -----------------------------------------------------------
 
 def _envelope(request_id, results):
-    return {
+    envelope = {
         "request_id": request_id,
         "counts": _counts(results),
         "items": results,
     }
+    paper = next((item.get("paper") for item in results if item.get("paper")), None)
+    if paper is not None:
+        envelope["paper"] = paper
+    return envelope
+
+
+def _paper_section(results):
+    paper = next((item.get("paper") for item in results if item.get("paper")), None)
+    return {"paper": paper} if paper is not None else {}
 
 
 def _counts(results):
@@ -773,12 +819,15 @@ def _payload(item):
             ("problem_id", "answer_text", "note", "rating")}
 
 
-def _batch_fingerprint(kind, items, attempt_id=None):
-    return _fingerprint({
+def _batch_fingerprint(kind, items, attempt_id=None, paper_id=None):
+    payload = {
         "kind": kind,
         "attempt_id": attempt_id,
         "items": [_payload(item) for item in items],
-    })
+    }
+    if paper_id is not None:
+        payload["paper_id"] = paper_id
+    return _fingerprint(payload)
 
 
 def _fingerprint(value):

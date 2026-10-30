@@ -18,7 +18,7 @@
 **输出：一行 JSON**（约 60 token）
 
 ```json
-{"mode":"yes_no","options":null,"answer_key":"否","error_reason":"斜堆右径的界容易记反",
+{"mode":"yes_no","options":null,"answer_key":"否",
  "display_title":"斜堆右径 light 结点数是否 Ω(log N)",
  "kp_ids":["c02-ch04-kp-005"],"verdict":"keep","problem_text":"","confidence":0.95,
  "notes":"checked=F 且判分正确 → 否"}

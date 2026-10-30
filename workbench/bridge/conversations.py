@@ -30,6 +30,7 @@ _PROCESSES = {}
 _ACTIVE_TURNS = set()
 _CANCEL_REQUESTS = set()
 _TIMEOUTS = set()
+_RUNTIME_CLOSED = False
 STOP_GRACE_SECONDS = 1
 # A print-mode turn is failed for silence, not for duration: any output line
 # resets the clock, and while a command or tool runs the longer tool budget
@@ -716,8 +717,13 @@ def _prompt(message, context):
         "不要用 `|| true` 或命令串掩盖退出码。输出太长可 `lesson-kit … > out.txt` 后读取；"
         "需要确认退出码时检查 `echo $?`。只有真实成功才能宣称成功，不要谎报成功。\n"
         "详细操作规则按需读取，而不是每轮重复背诵：`" + contract_cli + " list`。"
-        "可用主题：commands（命令/退出码）、attempts（记录/更正作答）、practice（组卷/选题/保存试卷）、"
+        "可用主题：commands（命令/退出码）、attempts（记录/更正作答、绑定试卷与评价）、"
+        "practice（组卷/选题/保存试卷、追加缺失题）、"
         "actions（前端动作）、content（新增/修改学习内容）。执行对应专门动作前先读取相应主题；"
+        "导入纸上作答时，attempts 清单可带 paper_id 绑定已保存试卷；题池缺题时先用 content-bundle "
+        "建到已有知识点，再 papers append 追加到卷末，最后导入；不得直接改试卷 JSON。"
+        "改/删评价前必须先 feedback get，再用 --expected-rating/--expected-note 写入；"
+        "改分只改评价行，不会自动重放掌握度。"
         "普通教学问答无需读取无关契约。若学生明确要求调整现有已保存试卷的题目成员或顺序，"
         "读取 actions 并提交 paper_update_proposal 请求人工批准；不得直接运行 papers update 或修改试卷文件。\n"
         "若学生明确要求选择或安排练习范围，可在回答末尾附一个 lessonkit-action JSON 区块；"
@@ -848,6 +854,8 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
     conversation_path = folder / "conversation.json"
     _recover_interrupted(pool, _read_json(conversation_path))
     with _LOCK:
+        if _RUNTIME_CLOSED:
+            raise ConversationConflict("runtime update pending; retry shortly")
         _recover_interrupted(pool, _read_json(conversation_path))
         conversation = _read_json(conversation_path)
         approval_pending = _pending_paper_approval(folder) is not None
@@ -959,6 +967,8 @@ def start_turn(pool, workspace, conversation_id, message, context, *,
 
 def _start_turn_locked(root, jobs_dir, workspace, conversation_id, turn):
     """Claim a pending turn and start its worker while holding conversation ownership."""
+    if _RUNTIME_CLOSED:
+        raise ConversationConflict("runtime update pending; retry shortly")
     folder = jobs_dir / conversation_id
     conversation_path = folder / "conversation.json"
     conversation = _read_json(conversation_path)
@@ -1047,6 +1057,8 @@ def _active_turn_for_folder(folder):
 
 
 def _dispatch_next_locked(root, jobs_dir, workspace, conversation_id):
+    if _RUNTIME_CLOSED:
+        return None
     folder = jobs_dir / conversation_id
     conversation_path = folder / "conversation.json"
     conversation = _read_json(conversation_path)
@@ -2216,3 +2228,32 @@ def cancel(pool, conversation_id):
 def shutdown():
     """Close every long-lived provider process (server shutdown, tests)."""
     return PI_RPC.close_all()
+
+
+def prepare_runtime_reload(jobs_dirs):
+    """Close provider admission under the same lock used to claim turns.
+
+    Live work owns ``_ACTIVE_TURNS``. Only durable user work blocks the
+    update: queued messages and pending Paper approvals. A persisted running
+    or waiting_for_stop turn with no live owner is an orphan left by an older
+    service; ``_recover_interrupted`` turns it into an honest failure the next
+    time that conversation is read, so it must not block reload or stop.
+    """
+    global _RUNTIME_CLOSED
+    with _LOCK:
+        if _ACTIVE_TURNS:
+            return False
+        for jobs in jobs_dirs:
+            for path in Path(jobs).glob("conv-*/turn-*.json"):
+                turn = _read_json(path)
+                if turn.get("status") == "queued" or (
+                    turn.get("paper_approval") or {}).get("status") == "pending":
+                    return False
+        _RUNTIME_CLOSED = True
+        return True
+
+
+def reopen_runtime_admission():
+    global _RUNTIME_CLOSED
+    with _LOCK:
+        _RUNTIME_CLOSED = False

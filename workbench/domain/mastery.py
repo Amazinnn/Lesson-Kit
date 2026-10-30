@@ -86,9 +86,9 @@ def _evidence(attempts, feedback, item_id=None):
     for event in feedback:
         rating = event.get("rating")
         if rating in (1, 2):
-            items.append(_reason(event, "negative", "medium", f"自评 {rating}", item_id))
+            items.append(_reason(event, "negative", "medium", f"评价 {rating}", item_id))
         elif rating in (4, 5):
-            items.append(_reason(event, "positive", "medium", f"自评 {rating}", item_id, True))
+            items.append(_reason(event, "positive", "medium", f"评价 {rating}", item_id, True))
     return items
 
 

@@ -3060,7 +3060,7 @@ body:has(#layout[data-page="graph"]) .page-header h1 { font-size: 28px; line-hei
   background: var(--rule-hair);
 }
 
-/* ---- 显示偏好：自评面 / 题目来源（**根属性驱动**）---------------------
+/* ---- 显示偏好：评价面 / 题目来源（**根属性驱动**）---------------------
    两个开关落在 `<html data-show-rating>` / `data-show-source` 上 ⇒ 改设置
    **即刻生效**，进行中的那一轮不必退出重来（2026-10-23 所有者要求）。
    ⚠️ 起卷请求里的 `rating_mode` 仍在开卷那一刻定（请求序列冻结）⇒
@@ -3813,7 +3813,7 @@ img { max-width: 100%; }
   color: var(--ink-faint);
 }
 
-/* 自评分布 —— `.record-rating-*` 一族**只归自评**（圆点 / 星级 / 自评分布条）。 */
+/* 评价分布 —— `.record-rating-*` 一族**只归评价**（圆点 / 星级 / 评价分布条）。 */
 .record-rating-chart { display: grid; gap: 9px; padding-top: 7px; }
 .record-rating-row {
   display: grid; grid-template-columns: 34px minmax(0, 1fr) 24px;
@@ -3821,7 +3821,7 @@ img { max-width: 100%; }
 }
 .record-rating-row strong { text-align: right; font-variant-numeric: tabular-nums; }
 /* ---- A-55：三条轨道**去描边**（decisions.md A-55 / D-2「不用描边」）------
-   自评分布 / 判定分布 / 练习进度三条轨道以前各带一条
+   评价分布 / 判定分布 / 练习进度三条轨道以前各带一条
    `border: 1px solid var(--ink-strong)` ⇒ 与全局「不用描边」的方向相悖。
    现在统一改成「**沉底 + 1px 内发丝线**」：
      · 描边（`border`）**删掉**；
@@ -3840,7 +3840,7 @@ img { max-width: 100%; }
        （本条比另两条细 2px 是**改造前就有**的层级差，不是本轮带来的。） */
 /* ---- §4.15 进度条 · 胶囊进度（`progress-pill` · A-115 形态裁定）------------
    **8px 胶囊** · 轨道 `--veil-active` · 填充角色蓝（语义变体用黄）。
-   ⚠️ 四条轨道（完成页进度带 / 自评分布 / 判定分布 / 练习进度）**一次改齐**，
+   ⚠️ 四条轨道（完成页进度带 / 评价分布 / 判定分布 / 练习进度）**一次改齐**，
      不留「一族 8px、一族 10px、一族 12px」的中间态（A-55 的同一条纪律）。
    ⚠️ 边界不再用内发丝线：轨道底色换成 `--veil-active` 后，
      发丝线与轨道同色系、看不出差别 ⇒ 直接去掉（**更少的一层**）。
@@ -3856,7 +3856,7 @@ img { max-width: 100%; }
 }
 .record-rating-track span { display: block; height: 100%; background: var(--role-yellow); }
 /* 判定分布（对 / 错 / 未判定）—— **不复用** `.record-rating-*`：
-   判定是「三态」语义，自评是「星级」语义，两族分开，
+   判定是「三态」语义，评价是「星级」语义，两族分开，
    判定分布的条形颜色改由**状态类**给，不再靠内联 `background` 覆盖。
    （类名清单见回报；records.py 侧由主会话对齐后即可换用。） */
 .record-verdict-dist { display: grid; gap: 9px; padding-top: 7px; }
@@ -3891,7 +3891,7 @@ img { max-width: 100%; }
 .record-run-progress span { display: block; height: 100%; background: var(--role-blue); }
 .record-run-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
 /* 记录条目 = 列表 / 数据面（tasks.md 6.4「记录条目用更小字号与更紧间距」）——
-   **六项字段一个不少**（题目 + 评语 + 摘录 + 判定 + 自评 + 时间），
+   **六项字段一个不少**（题目 + 评语 + 摘录 + 判定 + 评价 + 时间），
    密度只从「行高 + 间距」收紧，**不靠删字段**
    （design.md D-13 / decisions.md A-50：单列卡片流 + 收紧密度，页高目标 5500–6500px）。
    改造前实测：`.record-row` 的 `padding 12px×2 + margin 12px` ≈ 36px/卡，
@@ -4374,7 +4374,7 @@ img { max-width: 100%; }
 
 /* ---- §4.15 进度条 · 胶囊进度（`progress-pill` · A-115 形态裁定）------------
    **8px 胶囊** · 轨道 `--veil-active` · 填充角色蓝（语义变体用黄）。
-   ⚠️ 四条轨道（完成页进度带 / 自评分布 / 判定分布 / 练习进度）**一次改齐**，
+   ⚠️ 四条轨道（完成页进度带 / 评价分布 / 判定分布 / 练习进度）**一次改齐**，
      不留「一族 8px、一族 10px、一族 12px」的中间态。 */
 .lk-progress {
   height: 8px;

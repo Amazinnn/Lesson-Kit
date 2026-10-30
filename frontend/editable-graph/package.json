@@ -6,12 +6,19 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "watch:editor": "npm run build:editor -- --watch",
+    "build:editor": "vite build --config vite.editor.config.js"
   },
   "dependencies": {
     "@milkdown/crepe": "7.21.2",
     "d3-force": "3.0.0",
-    "katex": "0.17.0"
+    "katex": "0.17.0",
+    "@codemirror/state": "6.7.1",
+    "@codemirror/view": "6.43.6",
+    "@codemirror/commands": "6.10.4",
+    "@codemirror/lang-markdown": "6.5.0",
+    "@codemirror/language": "6.12.4"
   },
   "devDependencies": {
     "vite": "8.1.3"

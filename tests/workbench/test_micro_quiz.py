@@ -73,11 +73,11 @@ class MicroQuizRulesTests(unittest.TestCase):
             "answer_key": "maybe", "source_evidence": "s",
         })
         self.assertIn("yes_no answer_key must be 是 or 否", errors)
-        # A key without an error reason stays refused: the reason explains it.
+        # A keyed item no longer needs a separate error reason.
         errors = micro_quiz.validate_payload("yes_no", {
             "answer_key": "是", "source_evidence": "s",
         })
-        self.assertIn("error_reason is required", errors)
+        self.assertEqual(errors, [])
         self.assertTrue(micro_quiz.has_answer_key({"answer_key": "是"}))
         self.assertTrue(micro_quiz.has_answer_key(
             {"answer_key": ["甲", "乙"]}))

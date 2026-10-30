@@ -74,7 +74,6 @@ For `yes_no`:
 
 For every graded objective item:
 
-- provide non-empty `error_reason`;
 - preserve `source_evidence` precise enough for a reviewer to verify the answer;
 - keep `solution` as the compact answer explanation / reasoning, not as a request for free-form response;
 - keep semantic `problem_type` separate from `quiz_type`.
@@ -217,7 +216,6 @@ A generated bank is invalid if any gate fails.
 - Every `single_choice` has exactly 4 unique options.
 - Every `single_choice.answer_key` exactly matches one option.
 - Every `yes_no.answer_key` is exactly `是` or `否`.
-- Every graded item has a non-empty `error_reason`.
 - No question asks the learner to type a derivation, proof, explanation, number, code fragment, or essay as the graded response.
 
 ### Pedagogy gate

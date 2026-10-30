@@ -15,9 +15,10 @@ def build_parser(prog="lesson-kit papers"):
         description="save a practice manifest as a reusable Workbench paper",
     )
     parser.add_argument("name", help="registered Lesson Kit workspace")
-    parser.add_argument("action", choices=["save", "list", "get", "preview", "update", "delete"])
+    parser.add_argument("action", choices=["save", "list", "get", "preview", "update", "delete", "append"])
     parser.add_argument('paper_id', nargs='?', help='explicit existing ps-NNN target')
     parser.add_argument("--input", help="practice-set manifest JSON")
+    parser.add_argument('--problem', help='problem id to append at the end of the Paper')
     parser.add_argument('--confirmation', help='JSON file containing the current preview confirmation')
     return parser
 
@@ -44,6 +45,12 @@ def run(args):
             return 0
         if args.action != 'save' and not args.paper_id:
             raise ValueError('an explicit existing paper_id is required')
+        if args.action == 'append':
+            if not args.problem:
+                raise ValueError('--problem is required for append')
+            result = practice_sets.append_saved(pool, args.paper_id, args.problem)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+            return 0
         if args.action in {'get', 'delete'}:
             result = (practice_sets.get_saved(pool, args.paper_id) if args.action == 'get'
                       else practice_sets.delete_saved(pool, args.paper_id))

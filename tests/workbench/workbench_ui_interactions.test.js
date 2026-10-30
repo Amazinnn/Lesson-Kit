@@ -4908,7 +4908,7 @@ test("an empty rating input is rejected inline instead of dying at the server", 
   elements["save-rating"].click();
   await flush();
   assert.equal(calls.some((call) => call.url.endsWith("/feedback")), false);
-  assert.match(elements["practice-error"].textContent, /请输入 1–5 的自评/);
+  assert.match(elements["practice-error"].textContent, /请输入 1–5 的评价/);
 });
 
 

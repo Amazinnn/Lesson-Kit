@@ -26,6 +26,12 @@ ROUTES = {
     ('GET', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
     ('PATCH', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
     ('DELETE', '/api/w/{name}/agent-resources/skills/{skill_id}'): (BROWSER, (), "user-global Agent resources are managed in settings"),
+
+    ("GET", "/api/runtime"): (HUMAN, (), "read-only runtime provenance and update status"),
+    ("POST", "/api/runtime/prepare-reload"): (HUMAN, (), "owned supervisor admission control"),
+    ("POST", "/api/runtime/state"): (HUMAN, (), "owned supervisor metadata update"),
+    ("POST", "/api/runtime/resume"): (HUMAN, (), "owned supervisor asset update resume"),
+    ("POST", "/api/runtime/shutdown"): (HUMAN, (), "owned supervisor graceful handler drain"),
     ("GET", "/api/hub/workspaces"): (BOTH, ("ls",), ""),
     ("GET", "/api/w/{name}/weak"): (BOTH, ("weak",), ""),
     ("POST", "/api/w/{name}/chapter"): (BOTH, ("use",), ""),
@@ -172,7 +178,7 @@ COMMANDS = {
     "difficulty": (AGENT, ""),
     "evidence": (AGENT, "bounded read-only human-readable learner evidence for historical claims"),
     "experience": (AGENT, "explicit CRUD for learner-owned knowledge-point practice experience"),
-    "papers": (AGENT, "saves a validated practice manifest as a reusable paper"),
+    "papers": (AGENT, "saves, appends to, or updates a reusable practice paper"),
     "ingest": (AGENT, ""),
     "mirror": (AGENT, "validates and synchronizes the checked-out authored-content JSON projection"),
 }

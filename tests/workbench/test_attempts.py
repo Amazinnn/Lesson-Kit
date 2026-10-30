@@ -1065,5 +1065,248 @@ class ScenarioTests(AttemptsTestCase):
         self.assertIn("证明题二", overview["records"][0]["title"])
 
 
+class PaperBoundImportTests(AttemptsTestCase):
+    def save_paper(self, title, problem_ids):
+        manifest = {
+            "kind": "practice-set",
+            "title": title,
+            "items": [{"problem_id": problem_id} for problem_id in problem_ids],
+        }
+        code, result = self.json_cli(
+            "papers", "course", "save",
+            "--input", self.write_json("paper.json", manifest))
+        self.assertEqual(code, 0)
+        return result["practice_set_id"]
+
+    def open_pool(self):
+        from workbench.server import api
+        return api._pool_for(self.cli._workspace("course"))
+
+    def paper_manifest(self, name, request_id, paper_id, items):
+        return self.write_json(name, {
+            "request_id": request_id, "paper_id": paper_id, "items": items})
+
+    def apply_to_paper(self, request_id, paper_id, items):
+        return self.json_cli(
+            "attempts", "course", "apply",
+            "--input", self.paper_manifest(
+                "paper-manifest.json", request_id, paper_id, items))
+
+    def paper_rows(self):
+        return {
+            table: self.rows(f"SELECT * FROM {table} ORDER BY 1")
+            for table in ("paper_state", "active_practice",
+                          "active_practice_items", "practice_runs",
+                          "practice_execution_ids")
+        }
+
+    def test_import_creates_parked_on_submit_progress_without_learning_effects(self):
+        paper_id = self.save_paper(
+            "卷子", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        learning_before = self.learning_rows()
+
+        code, result = self.apply_to_paper(
+            "import-001", paper_id,
+            [{"problem_id": "dmath-ch12-prob-001", "answer_text": "纸上作答"}])
+
+        self.assertEqual(code, 0)
+        self.assertEqual(result["paper"]["mode"], "new")
+        self.assertEqual(result["paper"]["reveal_timing"], "on_submit")
+        self.assertEqual(result["paper"]["progress"], {
+            "total": 2, "answered": 1, "stuck": 0,
+            "completed": 1, "remaining": 1})
+        self.assertEqual(result["items"][0]["paper_position"], 0)
+        self.assertEqual(result["items"][0]["paper_action"], "import")
+        self.assertEqual(self.rows("SELECT * FROM active_practice"), [])
+        checkpoint = json.loads(self.rows(
+            "SELECT checkpoint_json FROM paper_state WHERE paper_id=?",
+            (paper_id,))[0]["checkpoint_json"])
+        self.assertEqual(checkpoint["reveal_timing"], "on_submit")
+        self.assertEqual(checkpoint["items"][0]["state"], "answered")
+        self.assertEqual(checkpoint["items"][0]["attempt_id"],
+                         result["items"][0]["attempt_id"])
+        self.assertEqual(checkpoint["items"][1]["state"], "pending")
+
+        after = self.learning_rows()
+        for table in ("feedback_events", "learner_signals", "problem_progress",
+                      "learning_current_state", "review_schedule"):
+            self.assertEqual(after[table], learning_before[table])
+        self.assertEqual(len(after["problem_attempts"]),
+                         len(learning_before["problem_attempts"]) + 1)
+
+        code, saved = self.json_cli("papers", "course", "get", paper_id)
+        self.assertEqual(code, 0)
+        self.assertEqual(saved["progress"], {"total": 2, "completed": 1})
+        self.assertTrue(saved["continuation"]["available"])
+
+    def test_import_rebinds_an_answered_item_and_keeps_the_old_attempt(self):
+        from workbench.data import active_practice
+
+        paper_id = self.save_paper(
+            "卷子", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        pool = self.open_pool()
+        try:
+            active = active_practice.start_saved(
+                pool, paper_id, reveal_timing="on_submit", rating_mode="off")
+            first = self.apply_to_paper(
+                "import-001", paper_id,
+                [{"problem_id": "dmath-ch12-prob-001", "answer_text": "第一次"}])
+            self.assertEqual(first[0], 0)
+            old_attempt = first[1]["items"][0]["attempt_id"]
+
+            second = self.apply_to_paper(
+                "import-002", paper_id,
+                [{"problem_id": "dmath-ch12-prob-001", "answer_text": "第二次"}])
+
+            self.assertEqual(second[0], 0)
+            new_attempt = second[1]["items"][0]["attempt_id"]
+            self.assertNotEqual(old_attempt, new_attempt)
+            self.assertEqual(second[1]["paper"]["rebound"],
+                             ["dmath-ch12-prob-001"])
+            item = self.rows(
+                "SELECT state,attempt_id FROM active_practice_items "
+                "WHERE position=0")[0]
+            self.assertEqual(item["state"], "answered")
+            self.assertEqual(item["attempt_id"], new_attempt)
+            self.assertEqual(len(self.rows(
+                "SELECT * FROM problem_attempts WHERE problem_id=?",
+                ("dmath-ch12-prob-001",))), 2)
+            self.assertEqual(self.rows("SELECT * FROM practice_runs"), [])
+            self.assertEqual(second[1]["paper"]["execution_id"],
+                             active["execution_id"])
+        finally:
+            pool.close()
+
+    def test_import_into_parked_paper_leaves_the_selected_paper_untouched(self):
+        from workbench.data import active_practice
+
+        a = self.save_paper(
+            "A", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        b = self.save_paper(
+            "B", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        pool = self.open_pool()
+        try:
+            active_practice.start_saved(
+                pool, a, reveal_timing="on_submit", rating_mode="off")
+            active_practice.mark(pool, 0, "stuck")
+            selected = active_practice.start_saved(
+                pool, b, reveal_timing="on_submit", rating_mode="off")
+            before_selected = self.rows(
+                "SELECT position,item_id,state,attempt_id "
+                "FROM active_practice_items ORDER BY position")
+
+            code, result = self.apply_to_paper(
+                "import-a", a,
+                [{"problem_id": "dmath-ch12-prob-001",
+                  "answer_text": "A 的答案"}])
+
+            self.assertEqual(code, 0)
+            self.assertEqual(result["paper"]["mode"], "parked")
+            self.assertEqual(self.rows(
+                "SELECT position,item_id,state,attempt_id "
+                "FROM active_practice_items ORDER BY position"),
+                before_selected)
+            self.assertEqual(active_practice.current(pool)["execution_id"],
+                             selected["execution_id"])
+            checkpoint = json.loads(self.rows(
+                "SELECT checkpoint_json FROM paper_state WHERE paper_id=?",
+                (a,))[0]["checkpoint_json"])
+            self.assertEqual(checkpoint["items"][0]["state"], "answered")
+            self.assertEqual(checkpoint["items"][0]["attempt_id"],
+                             result["items"][0]["attempt_id"])
+        finally:
+            pool.close()
+
+    def test_legacy_active_paper_archives_when_import_fills_the_last_item(self):
+        from workbench.data import active_practice
+
+        paper_id = self.save_paper("Legacy", ["dmath-ch12-prob-001"])
+        pool = self.open_pool()
+        try:
+            active_practice.start_saved(pool, paper_id)
+            code, result = self.apply_to_paper(
+                "import-legacy", paper_id,
+                [{"problem_id": "dmath-ch12-prob-001", "answer_text": "答案"}])
+
+            self.assertEqual(code, 0)
+            self.assertTrue(result["paper"]["completed"])
+            self.assertIsNotNone(result["paper"]["run_id"])
+            self.assertEqual(self.rows("SELECT * FROM active_practice"), [])
+            run = self.rows("SELECT status,source_ref FROM practice_runs")[0]
+            self.assertEqual(run["status"], "completed")
+            self.assertEqual(run["source_ref"], paper_id)
+        finally:
+            pool.close()
+
+    def test_import_rejects_a_problem_outside_the_paper_with_zero_writes(self):
+        paper_id = self.save_paper("卷子", ["dmath-ch12-prob-001"])
+        learning_before = self.learning_rows()
+        paper_before = self.paper_rows()
+
+        code, result = self.apply_to_paper(
+            "import-bad", paper_id,
+            [{"problem_id": "dmath-ch12-prob-002", "answer_text": "不在卷内"}])
+
+        self.assertEqual(code, 2)
+        self.assertIn("not part of this Paper", result["error"])
+        self.assertEqual(self.learning_rows(), learning_before)
+        self.assertEqual(self.paper_rows(), paper_before)
+
+    def test_replay_returns_the_original_binding_without_a_second_attempt(self):
+        paper_id = self.save_paper("卷子", ["dmath-ch12-prob-001"])
+        item = {"problem_id": "dmath-ch12-prob-001", "answer_text": "答案"}
+
+        first = self.apply_to_paper("import-replay", paper_id, [item])
+        second = self.apply_to_paper("import-replay", paper_id, [item])
+
+        self.assertEqual(first[0], 0)
+        self.assertEqual(second[0], 0)
+        self.assertEqual(first[1]["items"][0]["attempt_id"],
+                         second[1]["items"][0]["attempt_id"])
+        self.assertEqual(second[1]["paper"], first[1]["paper"])
+        self.assertEqual(
+            len(self.rows("SELECT * FROM problem_attempts")), 1)
+        code, checked = self.json_cli(
+            "attempts", "course", "check",
+            "--input", self.paper_manifest(
+                "check-replay.json", "import-replay", paper_id, [item]))
+        self.assertEqual(code, 0)
+        self.assertTrue(checked["replay"])
+        self.assertEqual(checked["paper"], first[1]["paper"])
+
+    def test_same_request_id_with_a_different_paper_is_refused(self):
+        a = self.save_paper("A", ["dmath-ch12-prob-001"])
+        b = self.save_paper("B", ["dmath-ch12-prob-001"])
+        item = {"problem_id": "dmath-ch12-prob-001", "answer_text": "答案"}
+
+        first = self.apply_to_paper("same-id", a, [item])
+        second = self.apply_to_paper("same-id", b, [item])
+
+        self.assertEqual(first[0], 0)
+        self.assertEqual(second[0], 2)
+        self.assertIn("different content", second[1]["error"])
+
+    def test_check_previews_paper_binding_without_writing(self):
+        paper_id = self.save_paper(
+            "卷子", ["dmath-ch12-prob-001", "dmath-ch12-prob-002"])
+        learning_before = self.learning_rows()
+        paper_before = self.paper_rows()
+
+        code, result = self.json_cli(
+            "attempts", "course", "check",
+            "--input", self.paper_manifest(
+                "check-paper.json", "check-paper", paper_id,
+                [{"problem_id": "dmath-ch12-prob-001",
+                  "answer_text": "纸上作答"}]))
+
+        self.assertEqual(code, 0)
+        self.assertEqual(result["writes"], 0)
+        self.assertEqual(result["paper"]["mode"], "new")
+        self.assertEqual(result["paper"]["positions"],
+                         {"dmath-ch12-prob-001": 0})
+        self.assertEqual(self.learning_rows(), learning_before)
+        self.assertEqual(self.paper_rows(), paper_before)
+
+
 if __name__ == "__main__":
     unittest.main()

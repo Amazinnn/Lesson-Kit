@@ -1,0 +1,3 @@
+import {defineConfig} from 'vite';
+import {resolve} from 'node:path';
+export default defineConfig({build:{emptyOutDir:false,outDir:resolve(import.meta.dirname,'../../workbench/server/static'),lib:{entry:resolve(import.meta.dirname,'../../workbench/frontend/live-editor.js'),name:'LessonKitLiveEditorBundle',formats:['iife'],fileName:()=> 'live-editor.js'},rollupOptions:{output:{assetFileNames:'live-editor.[ext]'}}},resolve:{alias:Object.fromEntries(['state','view','commands','lang-markdown','language'].map(n=>['@codemirror/'+n,resolve(import.meta.dirname,'node_modules/@codemirror/'+n+'/dist/index.js')])),dedupe:['@codemirror/state','@codemirror/view']}});

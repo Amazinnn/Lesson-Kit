@@ -9,7 +9,7 @@
 
 ## 一、练习回路
 
-Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供学习者选题、组卷条件、数量、成员或题序编辑。切卷暂停/恢复各自的游标和草稿；新一轮选择答案展示方式，继续轮次恢复原设置。Agent 使用 `papers list/get/preview/update/delete` 管理显式 ID；更新预览与确认保留既有治理边界。删除 Paper 保留题目，删除题目清当前引用但保留其他 Paper 进度和历史证据。重复的 AI 解析展示退役，正常解析和来源数据保留。
+Paper 操作补充（2026-10-19；2026-10-29 增补 append）：练习页只管理既有 Paper，不提供学习者选题、组卷条件、数量、成员或题序编辑。切卷暂停/恢复各自的游标和草稿；新一轮选择答案展示方式，继续轮次恢复原设置。Agent 使用 `papers list/get/preview/update/delete` 管理显式 ID；更新预览与确认保留既有治理边界。`papers append` 是独立的卷末补给动作：只追加已有题、不重置现有进度、递增结构版本且幂等，不替代 `update` 的成员/题序重置路径。删除 Paper 保留题目，删除题目清当前引用但保留其他 Paper 进度和历史证据。重复的 AI 解析展示退役，正常解析和来源数据保留。
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
@@ -23,7 +23,7 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 显式提交普通 Paper | UI 练习页 | 人 | 保存未提交且未标记不会的答案；空白或仍标记不会的题作为卡点 Attempt；锁定并归档 Practice Run | 已实现；到达末题、导航和暂停均不自动提交 |
 | 完成页查看答卷并返回 | 完成页 / 答卷页 | 人 | —（只读；返回不重复提交） | 已实现 |
 | 再练一次 | 完成页 | 人 | 新 Practice Run；保留原完成轮次 | 已实现 |
-| 普通 Paper 可选自评 1–5 | UI 练习页 / 完成答卷 | 人 | 按已提交 Attempt 写或更新关联 feedback | 已实现；可跳过，不阻止交卷 |
+| 普通 Paper 可选评价 1–5 | UI 练习页 / 完成答卷 | 人 | 按已提交 Attempt 写或更新关联 feedback | 已实现；可跳过，不阻止交卷 |
 | 按来源证据筛题（`--source-evidence` 子串、可重复；与 `--source-kind`/`--origin-kinds`/`--exam-year` 同为「维度内 OR、维度间 AND」） | Agent/CLI `pull` | Agent | —（只读选择） | 已实现（2026-09-26） |
 | 按题目来源方式筛题（`--origin-kinds` 可重复：历年原题/改编/AI生成，取并集） | Agent/CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
 | 按题干/来源关键词筛题（`--search-stem`/`--search-source`，空格多词、域内 AND、跨域 AND） | Agent/CLI `pull` | Agent | —（只读选择） | 已实现（2026-10-06） |
@@ -32,8 +32,8 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 练习集零写入预检（题数/缺口/缺解/重复/泄漏） | CLI `pull --check` | Agent | — | 已实现（2026-09-25） |
 | 保存练习集为 Paper（保留题目顺序与 request） | CLI `lesson-kit papers <workspace> save --input <manifest>` | Agent（明确 authoring 请求） | `.lessonkit/practice-sets/ps-NNN.json`（现有原子写入器；不写 SQLite/学习状态） | 已实现（agent-save-reusable-papers, 2026-10-14） |
 | 闪卡揭示、方向偏好与 ⇄ 交换 | UI | 人 | 牌组方向与视图态 | 既有语义保留 |
-| 兼容自评时机设置（immediate/batch/off） | 旧练习/闪卡路径 | 人 | 既有浏览器偏好与旧反馈语义 | 旧记录兼容；不决定普通 Paper 的展示/锁定 |
-| 闪卡回翻（上一张/下一张，在本轮固定卡片间移动；末尾不追加） | UI | 人 | 牌组游标 | 已实现；闪卡沿用既有揭示与自评语义 |
+| 兼容评价时机设置（immediate/batch/off） | 旧练习/闪卡路径 | 人 | 既有浏览器偏好与旧反馈语义 | 旧记录兼容；不决定普通 Paper 的展示/锁定 |
+| 闪卡回翻（上一张/下一张，在本轮固定卡片间移动；末尾不追加） | UI | 人 | 牌组游标 | 已实现；闪卡沿用既有揭示与评价语义 |
 | 刷新或切换 Paper 后恢复（游标、草稿、展示时机） | 被动 / UI「试卷」页 | 人 | 独立 Paper checkpoint | 已实现 |
 | 切换图谱指标投影（大小/色谱/气泡式过渡） | UI | 人 | — | 已实现（只读、内存） |
 | 图谱多状态筛选与分群 | UI | 人 | — | 已实现（只读、内存） |
@@ -45,7 +45,10 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
-| feedback 四件套 | API/CLI | 双 | 事件/信号/状态/调度（可带 `attempt_id` 链回那次作答） | 已实现 |
+| feedback 四件套与评价管理 | API/CLI | 双 | 事件/信号/状态/调度（可带 `attempt_id` 链回那次作答）；update/delete 只改/删事件行，需 expected 值，不重放投影 | 已实现 |
+| 评价列表与读取（event id、item、rating、note、attempt_id、agent_recorded、correctable） | CLI `feedback list\|get` | Agent | —（只读） | 已实现（evaluation-terminology-and-agent-crud，2026-10-29） |
+| 评价原位修改（评分/备注；写前读取并用 expected 值校验） | CLI `feedback update --event-id <id> --expected-rating 1-5\|none --expected-note <当前备注>` | Agent | 仅 `feedback_events` 行；不重放信号/状态/进度/排期 | 已实现（同上） |
+| 评价硬删除（写前读取并用 expected 值校验） | CLI `feedback delete --event-id <id> --expected-rating 1-5\|none --expected-note <当前备注>` | Agent | 仅删除 `feedback_events` 行；不重放信号/状态/进度/排期 | 已实现（同上） |
 | 浏览器作答落库（服务端接受提交后写入，判定/选项同存；不碰信号·状态·进度·调度） | API `POST /attempts` / UI 提交 | 双 | attempts（status `answered`） | 已实现（2026-09-26） |
 | 记录中心（概览/练习·试卷/作答明细/错题四视图；按题过滤；练习页「历史作答」折叠段） | UI / API `GET /records` | 浏（CLI 侧为 `attempts list`） | —（只读） | 已实现（2026-09-26 建，2026-09-29 扩为记录中心） |
 | practice 尝试记录（CLI 与页面同一事务、同一存在性校验） | API/CLI | 双 | attempts + progress + schedule（单事务） | 已实现（2026-09-25 对齐） |
@@ -58,6 +61,8 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 尝试与操作留痕读取 | CLI `attempts list\|get` | Agent | — | 已实现（同上） |
 | 按知识点读取学习证据（有界近期作答 + 可读题面，不推断学习特征） | CLI `lesson-kit evidence <workspace> kp <kp-id> [--limit N]` | Agent | —（只读） | 已实现（agent-learning-evidence） |
 | 答卷目录登记（只存路径，不复制图片） | CLI `attempts sources add\|list\|remove` | Agent | `answer-sources.json` | 已实现（同上） |
+| 导入 Attempt 绑定 Paper 进度（活动卷 / 暂停检查点 / 新建 on_submit 检查点；已有题追加并重绑） | CLI `attempts check\|apply`（manifest 可选 `paper_id`） | Agent（学生明确要求） | attempts +（带评分时）学习投影 + Paper 执行状态/检查点；不写 `practice_runs` | 已实现（import-attempts-into-paper-progress，2026-10-29） |
+| 卷末追加缺失题（保留现有题序、状态、Attempt、草稿与进度；幂等） | CLI `papers append <ps-NNN> --problem <id>` | Agent（学生明确要求） | Paper 容器 + `paper_state.generation` + 活动/暂停执行各追加一条 pending item | 已实现（同上） |
 | 图谱状态显式编辑（不记反馈） | UI | 人 | 状态+调度 | 已实现 |
 | 图谱关系绘制与 viewport/label LOD（WebGL2 单一路径；启动失败停止本次运行；可选本地布局种子不改图谱事实） | UI | 系统 | 浏览器可选布局缓存；不写 Pool | 已实现（graph-relation-pipes；graph-lod-layout-seeds） |
 | 方向写入（最终使用的 direction 键） | UI/API | 双 | 方向调度行 | 已实现 |
@@ -67,6 +72,7 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 动作 | 入口 | 权限 | 写 | 状态 |
 |---|---|---|---|---|
 | ingest 配方（micro-quiz / flash-card） | CLI | 双（Agent 可直跑） | problems/flash_cards 单事务（记批次 id+行戳记+manifest 快照）；**id 必须带本工作区课程前缀**；**难度可选、填了必带依据**（2026-09-21） | 已实现 |
+| 客观题 payload 契约（`quiz_type/options/answer_key/source_evidence`；历史 `error_reason` 忽略、不展示） | content-bundle / problem-patch / 内容门禁 | 双 | 无新增写入；不再要求或渲染 `error_reason`；答案键、`solution`、来源证据保留 | 已实现（remove-micro-quiz-error-reason，2026-10-29） |
 | 全池备份 | ingest --backup | 同上 | pool/backups | 已实现 |
 | **Check 管线**（生成→校验→**直接入正式池**，无候选中间态；批次 id+整批回滚；候选组织并入校验环节） | CLI `ingest rollback --batch <id>` + 结果卡回滚按钮 + `POST /ingest/rollback` | Agent 主导 | 经门禁写池+批次标记+ingest_batches 登记 | **已实现**（introduce-check-pipeline，队列④） |
 | 抽取管线入池（教材→KP→题） | 管线脚本 | 人 | 全部内容表 | 已实现（一次性） |
@@ -136,7 +142,7 @@ Paper 操作补充（2026-10-19）：练习页只管理既有 Paper，不提供�
 | 渲染阅读内容（题面 / 知识点正文 / 解析 / Agent 长文） | 练习页 / 知识点页 / 对话栏 | 人 | —（纯呈现，零写入） | 已实现（**改级已完成**：挂载名由 `.rich-text` 改级为 `.wb-reading`；`.rich-text` 剩下的 36 条死 CSS 规则已在 2026-10-22 的别名期收尾时删掉，选择器命中 0） |
 
 外观偏好只表达偏好：主题切换走台灯转场，动效与声音偏好各自独立；左栏原有的
-「学习者设置」（练习与试卷显示自评等学习行为偏好）**不搬家**，仍在左栏，两者不合并。
+「学习者设置」（练习与试卷显示评价等学习行为偏好）**不搬家**，仍在左栏，两者不合并。
 四项偏好**按工作区存**（`wb_settings_<工作区>`）：**跨工作区独立，换工作区要重设外观**；
 删掉已存的偏好后，主题与动效回到跟随系统（显式选择优先于系统 —— A-11 / A-2）。
 
@@ -151,7 +157,7 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
 
 - 2026-10-18 Agent 消息队列与中断后发送（queue-agent-messages-and-interrupt）：运行中接受 FIFO 消息或显式中断；中断等待捕获轮次终态和 worker 清理，旧队列在失败、恢复及优先消息完成后保持暂停。待处理消息可按 revision 编辑/移除，并可显式继续。无 Pool 字段。
 - 2026-10-12 普通题上一题结果回看（practice-review）：登记只读回看入口、返回时保留当前草稿、Agent 焦点跟随可见题，以及不移动游标/不写尝试或反馈；闪卡上一张/下一张仍保留游标导航。
-- 2026-10-17 Paper 作答回看与自评编辑（revisit-paper-answers-and-edit-self-rating）：同一 Paper execution 内所有已提交/不会普通题可反复回看，参考答案默认收起；自评仅在再次保存时覆盖确切 Attempt 关联评分/评语，不追加记录、不重放学习影响。闪卡和无服务端执行身份的旧行为保留。
+- 2026-10-17 Paper 作答回看与评价编辑（revisit-paper-answers-and-edit-self-rating）：同一 Paper execution 内所有已提交/不会普通题可反复回看，参考答案默认收起；评价仅在再次保存时覆盖确切 Attempt 关联评分/评语，不追加记录、不重放学习影响。闪卡和无服务端执行身份的旧行为保留。
 - 2026-08-29 建图（v1 六域表）；同日 v2 分层化 + 新增权限列。
 - 2026-08-29 讲解/诊断标记待退役（问卷 A1 彻底移除 + A3 explain 文件随清）。
 - 2026-08-29 generate 桥登记升级意向：Agent 可直接触发 ingest、生成→校验→
@@ -215,7 +221,7 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
 - 2026-09-25 入库题型与契约对齐（ingest-mode-choice-and-contract-parity）：**本表动作不新增**。
   入库时可选题型：不给 `quiz_type`=综合题、`yes_no`=判断、`single_choice`/`multiple_choice`=小测；
   **客观题允许没有答案键**（判断题/单选题题源丢答案的常态）——无键题不判分、练习页写明「未录入
-  答案键」并走 1–5 自评，批次计数与下一轮上下文报出未录键条数，答案键可用 `data update problem`
+  答案键」并走 1–5 评价，批次计数与下一轮上下文报出未录键条数，答案键可用 `data update problem`
   事后补（空值清回无键，按该题 `quiz_type` 校验形状）；普通题声明小测/判断模式却不给 `quiz_type`
   即拒收并给修法。契约与代码对齐：内联清单照收（`kind`/`type` 都是 content-bundle）、章规则改为
   实话（该项 chapter → 清单顶层 chapter → 点名拒收，**不回退当前章**）、成功入库后的下一轮上下文
@@ -225,7 +231,7 @@ leech（闪卡 spec 未来段） —— 均 `未定义挂名`。
 - 2026-09-26 取消客观题题干上限：真题里的长篇单选/多选（多断言、长情境、内联选项块）不再因长度被退回综合题，摄入门禁与 `problem-patch` 同步取消长度校验。
 - 2026-09-29 内容身份去重与只读题库审计（content-dedup-and-audit）：同一课程内题干完整规范化后跨来源、跨章节去重；`data <ws> audit` 报告重复、片段、未标客观题、缺标题与图片问题；回滚 apply 后状态变动时先拒绝且不创建备份。
 - 2026-09-29 记录中心 groundwork（records-center）：左侧「记录」扩为独立记录中心——概览（作答量 14 天趋势、
-  正确率、1–5 自评分布实时聚合）、练习 / 试卷（`practice_runs` 最小快照：临时练习 / 试卷名 / Agent 练习）、
+  正确率、1–5 评价分布实时聚合）、练习 / 试卷（`practice_runs` 最小快照：临时练习 / 试卷名 / Agent 练习）、
   作答明细（载入上限 500 条并如实提示截断）、错题（客观判错或卡住）；旧池迁移补 `practice_runs` 与
   `active_practice.source_label`，行数据零改动。
 - 2026-09-26 做题记录 + 来源筛选 + 模型条目（attempt-records-filters-and-model-entries）：

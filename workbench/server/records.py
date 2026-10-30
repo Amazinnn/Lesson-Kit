@@ -40,7 +40,7 @@ _CALENDAR_STAGGER_MS = 24    # 日历扩散的逐柱错峰（motion-spec §2.1 �
 
 
 def _rating_marks(rating):
-    """自评 = 彩色圆点 + 星级形状（零文字标签）。"""
+    """评价 = 彩色圆点 + 星级形状（零文字标签）。"""
     if not isinstance(rating, int) or not 1 <= rating <= 5:
         return ""
     return (
@@ -72,7 +72,7 @@ def _attempt_rows(workspace_name, records, wrong=False):
     """作答明细 = 圆角小卡流（12px、不描边、靠留白 + `--elev-1` 分隔）。
 
     六项字段一个不少：题目 + 评语 + 摘录（题目下第二、三行）· 判定（结构块 +
-    几何符号 + 文字三通道）· 自评（彩色圆点 + 星级形状，零文字标签）·
+    几何符号 + 文字三通道）· 评价（彩色圆点 + 星级形状，零文字标签）·
     时间（卡片右上角，次级墨）。
 
     错题视图用同一族卡片，但**视觉重一档**（`--elev-2`）并补一行错因摘要。
@@ -147,9 +147,9 @@ def _run_card(run):
         "flash_card": "闪卡",
     }.get(run.get("practice_mode"), run.get("practice_mode") or "练习")
     rating_mode = {
-        "immediate": "逐题自评",
-        "batch": "统一自评",
-        "off": "关闭自评",
+        "immediate": "逐题评价",
+        "batch": "统一评价",
+        "off": "关闭评价",
     }.get(run.get("rating_mode"), "")
     progress = run.get("progress") or {}
     completed = int(progress.get("completed") or 0)
@@ -209,7 +209,7 @@ def _practice_set_history(practice_sets):
             "最近判定 —" if accuracy is None else (
                 f"最近判定 {latest.get('correct') or 0}/"
                 f"{latest.get('judged') or 0}"),
-            "最近自评 —" if rating is None else f"最近自评 {rating:.1f} / 5",
+            "最近评价 —" if rating is None else f"最近评价 {rating:.1f} / 5",
             f"最近不会 {latest.get('stuck') or 0} 个",
         ]
         history = []
@@ -227,9 +227,9 @@ def _practice_set_history(practice_sets):
                 )
                 + " · "
                 + (
-                    "自评 —"
+                    "评价 —"
                     if run_rating is None
-                    else f"自评 {run_rating:.1f} / 5"
+                    else f"评价 {run_rating:.1f} / 5"
                 )
                 + f" · 不会 {run.get('stuck') or 0} 个"
                 + "</li>"
@@ -277,7 +277,7 @@ def _verdict_ring(correct, judged):
 
 
 def _rating_spark(ratings):
-    """平均自评的迷你图：1–5 分每档一根条（黄只承载面积，不承载文字）。"""
+    """平均评价的迷你图：1–5 分每档一根条（黄只承载面积，不承载文字）。"""
     counts = [int(item.get("count") or 0) for item in ratings]
     if not counts or max(counts) <= 0:
         return ""
@@ -361,7 +361,7 @@ def _summary_cards(summary, runs, trend, ratings):
         ("完成练习", str(completed_runs)),
         ("客观题判定", "—" if accuracy is None else (
             f"{int(summary.get('correct') or 0)}/{int(summary.get('judged') or 0)}")),
-        ("平均自评", "—" if average is None else f"{average:.1f} / 5"),
+        ("平均评价", "—" if average is None else f"{average:.1f} / 5"),
     ]
     minis = [
         _sparkline([int(day.get("attempts") or 0) for day in trend]),
@@ -400,8 +400,8 @@ def _verdict_distribution(summary):
     数据源是现成读路径 `overview['summary']`（attempts / judged / correct），
     零新增查询、零写入。条长按「全部作答数」归一，三段之和即全部作答数。
 
-    类名走 `.record-verdict-dist*` 一族（判定是三态语义，自评是星级语义，两族分开；
-    `.record-rating-*` 留给 `_rating_chart` 的自评分布）。
+    类名走 `.record-verdict-dist*` 一族（判定是三态语义，评价是星级语义，两族分开；
+    `.record-rating-*` 留给 `_rating_chart` 的评价分布）。
     条形颜色由**状态类**给（`--ok` / `--bad` / `--open`），不再内联覆盖。
     """
     attempts = int(summary.get("attempts") or 0)
@@ -592,7 +592,7 @@ def _activity_calendar(activity):
 def _rating_chart(ratings):
     maximum = max((item.get("count", 0) for item in ratings), default=0)
     if maximum == 0:
-        return "<p class='muted'>暂无带自评的作答</p>"
+        return "<p class='muted'>暂无带评价的作答</p>"
     rows = []
     for item in ratings:
         count = item.get("count", 0)
@@ -604,7 +604,7 @@ def _rating_chart(ratings):
             f"<span style='width:{width:.1f}%'></span></div>"
             f"<strong>{count}</strong></div>"
         )
-    return "<div class='record-rating-chart' aria-label='自评分布'>" + "".join(rows) + "</div>"
+    return "<div class='record-rating-chart' aria-label='评价分布'>" + "".join(rows) + "</div>"
 
 
 def _tabs(workspace_name, active_view):
@@ -699,7 +699,7 @@ def content(workspace_name, overview, view="overview", problem_id=None, limit=No
             + _verdict_distribution(summary)
             + "</article>"
             "<article class='card record-chart-card'><div class='section-heading'><div>"
-            "<p class='section-kicker'>自评</p><h2>1–5 分分布</h2></div></div>"
+            "<p class='section-kicker'>评价</p><h2>1–5 分分布</h2></div></div>"
             + _rating_chart(overview.get("ratings") or [])
             + "</article></section>"
             "<section class='support-section record-section'><div class='section-heading'><div>"

@@ -161,6 +161,35 @@ class PapersCliTests(unittest.TestCase):
                 self.assertEqual(self.saved_file_bytes(), papers_before)
                 self.assertEqual(self.fixture.db_path.read_bytes(), db_before)
 
+    def test_append_adds_a_problem_at_the_end_without_resetting_progress(self):
+        from workbench.data import active_practice
+
+        paper_id = self.prior["practice_set_id"]
+        active_practice.start_saved(
+            self.pool, paper_id, reveal_timing="on_submit", rating_mode="off")
+        active_practice.mark(self.pool, 0, "stuck")
+
+        code, output = self.run_cli(
+            "append", paper_id, "--problem", "dmath-ch06-prob-002")
+
+        self.assertEqual(code, 0, output)
+        receipt = json.loads(output)
+        self.assertTrue(receipt["appended"])
+        self.assertEqual(receipt["position"], 1)
+        self.assertEqual(receipt["mode"], "active")
+        self.assertEqual(receipt["progress"], {"total": 2, "completed": 1})
+        after = self.practice_sets.get_saved(self.pool, paper_id)
+        self.assertEqual(
+            [item["problem_id"] for item in after["plan"]["items"]],
+            ["dmath-ch06-prob-001", "dmath-ch06-prob-002"])
+        items = [tuple(row) for row in self.pool.connect().execute(
+            "SELECT position,item_id,state FROM active_practice_items "
+            "ORDER BY position")]
+        self.assertEqual(items, [
+            (0, "dmath-ch06-prob-001", "stuck"),
+            (1, "dmath-ch06-prob-002", "pending"),
+        ])
+
     def test_absent_database_is_not_created_by_failed_save(self):
         from workbench.registry import register
 
