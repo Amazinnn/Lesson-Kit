@@ -37,3 +37,26 @@ async function runLiveEditorChecks() {
   return '12 browser behavior checks passed';
 }
 window.runLiveEditorChecks = runLiveEditorChecks;
+async function runLiveEditorRegressions() {
+  const tick = () => new Promise(resolve => setTimeout(resolve,30));
+  const t=document.createElement('textarea'); document.body.append(t); await tick();
+  let input=0;t.addEventListener('input',()=>input++);
+  t.value='previous question answer';t.value='next question answer';t.focus();await tick();
+  t.nextElementSibling.querySelector('.cm-content').dispatchEvent(new KeyboardEvent('keydown',{key:'z',code:'KeyZ',ctrlKey:true,bubbles:true,cancelable:true})); await tick();
+  const changedHistory=t.value==='next question answer'&&input===0;
+  t.value='same';t.focus();await tick();
+  document.execCommand('insertText',false,' edit');await tick();
+  const same=t.value;t.value=same;input=0;
+  t.nextElementSibling.querySelector('.cm-content').dispatchEvent(new KeyboardEvent('keydown',{key:'z',code:'KeyZ',ctrlKey:true,bubbles:true,cancelable:true}));await tick();
+  const sameHistory=t.value===same&&input===0;
+  const math='$$\nx^2\n\n+ y^2\n$$'; t.value=math;document.activeElement.blur();await tick();
+  const wholeMath=[...t.nextElementSibling.querySelectorAll('.math.display')].some(n=>n.textContent.includes('x^2')&&n.textContent.includes('+ y^2'));
+  const fidelity=t.value===math;
+  const fenced='```\n$$\nx^2\n```\n\n+ y^2\n$$';t.value=fenced;await tick();
+  const fenceProtected=!t.nextElementSibling.querySelector('.math.display');
+  t.remove();await tick();
+  const result={changedHistory,sameHistory,wholeMath,fidelity,fenceProtected};
+  if(Object.values(result).some(v=>!v)) throw new Error(JSON.stringify(result));
+  return result;
+}
+window.runLiveEditorRegressions=runLiveEditorRegressions;

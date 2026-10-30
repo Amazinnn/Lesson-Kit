@@ -1,4 +1,4 @@
-import {EditorState, StateEffect, StateField, Compartment} from '@codemirror/state';
+import {EditorState, StateEffect, StateField, Compartment, Transaction} from '@codemirror/state';
 import {EditorView, Decoration, WidgetType, keymap} from '@codemirror/view';
 import {history, historyKeymap, defaultKeymap} from '@codemirror/commands';
 import {markdown} from '@codemirror/lang-markdown';
@@ -30,15 +30,34 @@ function decorations(state) {
   const focused = state.field(focusState);
   const selected = (from, to) => focused && state.selection.ranges.some(r => r.from <= to && r.to >= from);
   const doc = state.doc;
-  // Only complete top-level syntax blocks are replaced; the source document is untouched.
-  for (let node = syntaxTree(state).topNode.firstChild; node; node = node.nextSibling) {
-    let from = node.from, to = node.to;
-    let text = doc.sliceString(from, to);
-    // Display math is a paragraph in CommonMark; merge its lines through the closing delimiter.
+  const blocks = [];
+  for (let node = syntaxTree(state).topNode.firstChild; node; node = node.nextSibling) blocks.push({from:node.from,to:node.to,name:node.name});
+  // Match the shared renderer's protected-token order, across blank lines but never fences.
+  const source = doc.toString();
+  const math = [];
+  const protectedTokens = /`[^`\n]+`|!\[[^\]]*\]\([^)]+\)|\[\[[^\]]+\]\]|\[[^\]]+\]\(https?:\/\/[^\s)]+\)|\$\$([\s\S]*?)\$\$/g;
+  let offset = 0, segmentStart = 0, fenced = false;
+  const scanMath = end => {
+    const segment = source.slice(segmentStart,end);
+    for (const match of segment.matchAll(protectedTokens)) if (match[0].startsWith('$$')) math.push({from:segmentStart+match.index,to:segmentStart+match.index+match[0].length});
+  };
+  for (const line of source.split('\n')) {
+    if (/^\s*```\s*([\w-]*)\s*$/.test(line)) {
+      if (!fenced) scanMath(offset);
+      fenced = !fenced; segmentStart=offset+line.length+1;
+    }
+    offset += line.length+1;
+  }
+  if (!fenced) scanMath(source.length);
+  for (let i=0; i<blocks.length; i++) {
+    const block=blocks[i]; let from=block.from,to=block.to;
+    for (const range of math) if (range.from < to && range.to > from) to=Math.max(to,range.to);
+    while (i+1<blocks.length && blocks[i+1].from<to) {to=Math.max(to,blocks[++i].to);}
+    const text=doc.sliceString(from,to);
     if (text.startsWith('$$') && !text.slice(2).includes('$$')) continue;
-    if (node.name === 'FencedCode' && !/^\s*```[^\n]*\n[\s\S]*\n\s*```\s*$/.test(text)) continue;
-    if (!text.trim() || selected(from, to)) continue;
-    ranges.push(Decoration.replace({widget: new Preview(text, from), block: true}).range(from, to));
+    if (block.name === 'FencedCode' && !/^\s*```[^\n]*\n[\s\S]*\n\s*```\s*$/.test(text)) continue;
+    if (!text.trim() || selected(from,to)) continue;
+    ranges.push(Decoration.replace({widget:new Preview(text,from),block:true}).range(from,to));
   }
   return Decoration.set(ranges, true);
 }
@@ -59,10 +78,11 @@ function mount(textarea) {
   const nativeStart = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'selectionStart');
   const nativeEnd = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'selectionEnd');
   const mode = new Compartment();
+  const undoHistory = new Compartment();
   let syncing = false;
   const view = new EditorView({parent: host, state: EditorState.create({
     doc: nativeValue.get.call(textarea),
-    extensions: [focusState, markdown(), previews, history(), keymap.of([...historyKeymap, ...defaultKeymap]),
+    extensions: [focusState, markdown(), previews, undoHistory.of(history()), keymap.of([...historyKeymap, ...defaultKeymap]),
       mode.of([EditorState.readOnly.of(textarea.disabled || textarea.readOnly), EditorView.editable.of(!textarea.disabled && !textarea.readOnly)]),
       EditorView.lineWrapping,
       EditorView.contentAttributes.of({'aria-label': textarea.getAttribute('aria-label') || textarea.placeholder || 'Markdown', role: 'textbox', 'aria-multiline': 'true'}),
@@ -80,14 +100,21 @@ function mount(textarea) {
           nativeValue.set.call(textarea, view.state.doc.toString());
           textarea.dispatchEvent(new Event('input', {bubbles:true}));
         }
+        if (update.selectionSet) HTMLTextAreaElement.prototype.setSelectionRange.call(textarea, view.state.selection.main.from, view.state.selection.main.to);
       })]
   })});
   Object.defineProperty(textarea, 'value', {configurable:true, get() {return nativeValue.get.call(this);}, set(value) {
     nativeValue.set.call(this, value);
     const text = nativeValue.get.call(this);
-    if (view.state.doc.toString() !== text) {
-      syncing = true; view.dispatch({changes:{from:0,to:view.state.doc.length,insert:text}}); syncing = false;
-    }
+    // External restore starts a new native-textarea context, including identical text.
+    // Remove/re-add the history field so undo cannot cross question/message boundaries.
+    syncing = true;
+    try {
+      view.dispatch({effects:undoHistory.reconfigure([])});
+      view.dispatch({changes:{from:0,to:view.state.doc.length,insert:text},
+        selection:{anchor:nativeStart.get.call(this),head:nativeEnd.get.call(this)},
+        annotations:Transaction.addToHistory.of(false),effects:undoHistory.reconfigure(history())});
+    } finally { syncing = false; }
   }});
   for (const [key, native] of [['selectionStart',nativeStart],['selectionEnd',nativeEnd]]) Object.defineProperty(textarea,key,{configurable:true,get() {return key === 'selectionStart' ? view.state.selection.main.from : view.state.selection.main.to;},set(value) {
     native.set.call(this,value); view.dispatch({selection:{anchor:nativeStart.get.call(this),head:nativeEnd.get.call(this)}});
