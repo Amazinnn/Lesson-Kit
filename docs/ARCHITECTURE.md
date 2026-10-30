@@ -364,3 +364,7 @@ Attempt 旧状态约束及临时父表外键修复归既有 `pool/scripts/pool_s
 
 stdlib-only；单进程单端口；无哈希；无防御性编程（不写不可能分支、不包 try 兜底一切）；
 函数短小、单一职责；每个 domain 模块配一个测试文件；改动同步本文档与 OpenSpec。
+
+## 原位 Markdown 编辑
+
+`workbench/frontend/live-editor.js` uses CodeMirror text state and block decorations. The browser exposes its existing safe renderer through `LessonKitMarkdown`; one textarea adapter preserves existing form values, input events, focus, selection, disable and dynamic lifecycle. Build with `npm --prefix frontend/editable-graph run build:editor`; generated standalone local `static/live-editor.js` contains no graph entry. API, SQLite and frozen-layer boundaries are unchanged.

@@ -525,7 +525,7 @@ def _daily_plan(plan):
         + ("<p class='plan-deadline'>" + html.escape(str(goal.get("start_date"))) + " → "
            + html.escape(str(goal["deadline"])) + "</p>" if goal.get("start_date") and goal.get("deadline")
            else ("<p class='plan-deadline'>截止 " + html.escape(str(goal["deadline"])) + "</p>" if goal.get("deadline") else ""))
-        + ("<details><summary>查看说明与范围</summary><p>" + html.escape(str(goal.get("description") or goal.get("scope") or "")) + "</p></details>" if goal.get("description") or goal.get("scope") else "")
+        + ("<details><summary>查看说明与范围</summary><div data-live-markdown>" + html.escape(str(goal.get("description") or goal.get("scope") or "")) + "</div></details>" if goal.get("description") or goal.get("scope") else "")
         + "<div class='goal-card-actions'><button type='button' class='ghost sm goal-edit' data-goal-edit>编辑</button>"
         + "<button type='button' class='ghost sm goal-delete' data-goal-delete>删除</button></div>"
         + "</article>"
@@ -1578,6 +1578,7 @@ def _base(title, body, workspace=None):
         "<link rel='stylesheet' href='/static/agent-ui.css'>"
         "<link rel='stylesheet' href='/static/katex/katex.min.css'>"
         "<script src='/static/katex/katex.min.js'></script>"
+        '<script defer src=\'/static/live-editor.js\' onerror=\'window.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("textarea").forEach(function(t){var n=document.createElement("small");n.textContent="实时编辑器加载失败，保留源码输入。";t.after(n);});});\'></script>'
         f"</head><body>{body}</body></html>"
     )
 

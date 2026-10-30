@@ -942,6 +942,8 @@
     play: celebrateCompletion,
   };
 
+  window.LessonKitMarkdown = { richText: richText, renderMath: renderMath };
+
   function renderMath(root) {
     var spans = (root || document).querySelectorAll(".math");
     if (!spans.length || !window.katex) return;
@@ -5477,7 +5479,7 @@
 
   if (aiSend) aiSend.addEventListener("click", aiSendMessage);
   if (aiInput) aiInput.addEventListener("keydown", function (event) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
       if (event.preventDefault) event.preventDefault();
       aiSendMessage();
     }

@@ -356,3 +356,7 @@ flowchart LR
 - 2026-10-29 评价改名与 Agent 评价管理（evaluation-terminology-and-agent-crud）：用户可见中文「自评」统一改为「评价」，`rating`/`self_rating`/API/JSON 英文标识不变；`feedback` 扩展为 `list/get/add/update/delete`，`update/delete` 对任何 writer、任何 item_type 开放，必须带从 `feedback get` 读到的 expected rating/note，不匹配零写入；`update` 只改行、`delete` 硬删，不重放学习投影；`attempts correct` 仍是整条 Attempt 替换并重算的路径。Agent 注入提示词、TASK_ROUTER、DATA_MODEL、REQUIREMENTS、ARCHITECTURE、GLOSSARY、PRODUCT-MANUAL 与 L0/L1/L2/L3/L4 同步。
 
 - 2026-10-29 删除客观题 `error_reason`（remove-micro-quiz-error-reason）：`micro_quiz` payload 不再要求或展示 `error_reason`；带答案键的题不带该字段仍合法；历史 JSON 值保留但被校验和 UI 忽略；`answer_key`、`solution`、`source_evidence` 不变。内建 `source-bounded-learning-drill` 技能、`pool-pipeline` 提示词/示例/预检、`FILE_CONTRACT`、DATA_MODEL、GLOSSARY、L3 与测试同步；无 SQLite 列或迁移变化。
+
+### 2026-10-30：长文本原位编辑
+
+升级既有长文本编辑动作的呈现方式，涵盖作答、评价备注、目标说明、Agent 输入与队列编辑、知识点心得；载荷和动作级别不变。未增加作答解锁或更正动作。

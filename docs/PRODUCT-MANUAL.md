@@ -868,3 +868,7 @@ Agent 工件预览的「× 关闭」、对话栏的「‹ 返回对话列表」�
 ## 11. 术语速查
 
 所有设计名词的权威定义见 **[docs/GLOSSARY.md](GLOSSARY.md)**；尚未定义的挂名概念见 **[docs/PENDING-DEFINITIONS.md](PENDING-DEFINITIONS.md)**（它们还不是功能，别等它们）。
+
+## 长文本的原位 Markdown 编辑
+
+作答、评价备注、目标说明、Agent 输入和待发送编辑、知识点心得可在原位置实时呈现 Markdown 与公式。光标所在块显示源码，其他块渲染；失焦后完整呈现。保存保留原始写法。Agent 仍以 Enter 发送、Shift+Enter 换行；中文输入法确认文字不发送。已提交作答仍然锁定，包含 Agent 导入的作答。短字段、搜索与配置保持原文。编辑器加载失败时保留源码输入并提示。
