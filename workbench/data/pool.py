@@ -125,7 +125,7 @@ class Pool:
     def _problem_row(row):
         item = dict(row)
         item["kp_ids"] = json.loads(item.get("kp_ids") or "[]")
-        for field in ("practice_modes", "micro_quiz"):
+        for field in ("practice_modes", "micro_quiz", "parts"):
             raw = item.get(field)
             item[field] = json.loads(raw) if raw else None
         return item

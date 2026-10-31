@@ -22,7 +22,7 @@ PREFIXES = {
 }
 
 JSON_FIELDS = {"kp_ids", "related_kp_ids", "options_json", "source_evidence_json",
-               "practice_modes", "micro_quiz"}
+               "practice_modes", "micro_quiz", "parts"}
 SOURCE_KINDS = {"textbook", "quiz", "midterm", "final", "makeup", "other"}
 ORIGIN_KINDS = {"source_problem", "adapted_problem", "generated_grounded"}
 EXAM_YEAR_LIMIT = 20
@@ -38,7 +38,7 @@ EDITABLE_FIELDS = {
         "kp_ids", "problem_text", "solution", "problem_type", "source_kind",
         "origin_kind", "display_title", "display_summary", "figure_paths",
         "exam_year", "source_evidence", "source_answer", "solution_origin",
-        "practice_modes", "micro_quiz",
+        "practice_modes", "micro_quiz", "parts",
     },
     "relation": {
         "source_kp_id", "target_kp_id", "relation_type", "direction", "strength",
@@ -253,6 +253,9 @@ def create(pool, entity, data):
         from workbench.data import relations
         return relations.create(pool, data)
     if entity == "problem":
+        if 'parts' in data:
+            from workbench.domain.problem_parts import validate
+            validate(data['parts'])
         if data.get("source_kind") not in SOURCE_KINDS:
             raise ValueError("source_kind is required and must be valid")
         if data.get("origin_kind") not in ORIGIN_KINDS:
@@ -346,7 +349,7 @@ def decode_problem(row):
     """Decode one `problems` row into the shape a patch plan expects."""
     item = dict(row)
     item["kp_ids"] = json.loads(item.get("kp_ids") or "[]")
-    for field in ("practice_modes", "micro_quiz"):
+    for field in ("practice_modes", "micro_quiz", "parts"):
         raw = item.get(field)
         if isinstance(raw, str):
             item[field] = json.loads(raw) if raw else None
@@ -403,6 +406,12 @@ def plan_problem_patch(row, data, course=""):
 
     fields = {name: data[name] for name in data
               if name in PROBLEM_PATCH_FIELDS and name != "answer_key"}
+    if 'parts' in fields:
+        from workbench.domain.problem_parts import validate
+        try:
+            validate(fields['parts'])
+        except ValueError as exc:
+            errors.append(str(exc))
     if "problem_text" in fields and (
         not isinstance(fields["problem_text"], str)
         or not fields["problem_text"].strip()

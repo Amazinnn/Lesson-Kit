@@ -12,5 +12,6 @@ def signature(problem):
     if isinstance(modes, str):
         modes = json.loads(modes)
     return (value.get('problem_text'), tuple(sorted(modes)),
+            json.dumps(value.get('parts'), ensure_ascii=False, sort_keys=True),
             json.dumps({key: quiz.get(key) for key in ('quiz_type', 'options', 'answer_key')},
                        ensure_ascii=False, sort_keys=True))

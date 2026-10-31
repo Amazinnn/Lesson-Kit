@@ -1013,6 +1013,21 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
         ("reveal_timing", "TEXT")]))
     if table_exists(conn, "problems"):
         changes.extend(ensure_columns(conn, "problems", [("deleted_at", "TEXT")]))
+        changes.extend(ensure_columns(conn, "problems", [("parts", "TEXT")]))
+    conn.execute('''CREATE TABLE IF NOT EXISTS part_grading_revisions (
+        attempt_id INTEGER NOT NULL, revision INTEGER NOT NULL,
+        operation_id TEXT NOT NULL UNIQUE, request_json TEXT NOT NULL,
+        payload_json TEXT, withdrawn INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY(attempt_id, revision))''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS part_attempt_context (
+        attempt_id INTEGER PRIMARY KEY, execution_id INTEGER NOT NULL,
+        part_json TEXT NOT NULL)''')
+    conn.execute('''CREATE TABLE IF NOT EXISTS part_grading_jobs (
+        attempt_id INTEGER PRIMARY KEY, execution_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending', error TEXT,
+        conversation_id TEXT, turn_id TEXT,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')))''')
     legacy = conn.execute("SELECT execution_id FROM active_practice WHERE singleton=1").fetchone()
     if legacy and legacy[0] == 0:
         execution_id = conn.execute("INSERT INTO practice_execution_ids DEFAULT VALUES").lastrowid

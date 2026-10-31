@@ -41,14 +41,14 @@ MIRROR_FIELDS["kp"].add("figure_paths")
 MIRROR_FIELDS["problem"].update(PROBLEM_DIFFICULTY_FIELDS)
 ARRAY_FIELDS = {
     "kp": {"related_kp_ids", "figure_paths"},
-    "problem": {"kp_ids", "practice_modes", "figure_paths"},
+    "problem": {"kp_ids", "practice_modes", "figure_paths", "parts"},
 }
 OBJECT_FIELDS = {"problem": {"micro_quiz"}}
 EMPTY_JSON_DEFAULTS = {
     "kp": {"related_kp_ids": [], "figure_paths": None},
     "problem": {
         "kp_ids": [], "practice_modes": None, "micro_quiz": None,
-        "figure_paths": None,
+        "figure_paths": None, "parts": None,
     },
 }
 ENVELOPE_FIELDS = {
