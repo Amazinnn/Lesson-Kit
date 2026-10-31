@@ -85,10 +85,11 @@
       context:function(item){return contextFor(run,item,run.items.indexOf(item));},
       richText:richText,math:renderMath,error:showError,
       accept:function(updated){run=updated;renderCurrent();},
-      refresh:function(){return api(renderingArchived ? '/practice/runs/'+encodeURIComponent(requestedRunId || run.run_id) : '/practice/current').then(function(response){
+      refresh:function(){return api(renderingArchived ? '/practice/runs/'+encodeURIComponent(requestedRunId || run.id || run.run_id || local && local.completedRunId) : '/practice/current').then(function(response){
         var updated=extractPractice(response) || response;
         if (!updated || !updated.items || !run || updated.execution_id !== run.execution_id) return null;
         run.items.forEach(function(item,index){var newer=updated.items[index];if(newer){item.part_items=newer.part_items;item.part_summary=newer.part_summary;}});
+        if(renderingArchived && ids.links){var filter=ids.links.querySelector('select');ids.links.querySelectorAll('[data-review-conclusions]').forEach(function(link,index){var item=run.items[index],values=[];(item.part_items || []).forEach(function(p){var g=p.grading && (p.grading.payload || p.grading) || {};values.push(g.answer_conclusion,g.process_conclusion);if(p.objective_verdict===false)values.push('wrong');});link.dataset.reviewConclusions=values.filter(Boolean).join(',');link.hidden=filter && filter.value!=='all' && !values.includes(filter.value);});}
         return activeItem();
       });}
     }) : null;
@@ -216,6 +217,17 @@
     function currentMode() {
       return (run && run.reveal_timing) || "per_item";
     }
+
+    function wholeProblemOnly() {
+      try { return JSON.parse(window.localStorage.getItem('wb_settings_'+workspace) || '{}').submissionGranularity==='whole_problem'; }
+      catch (_) { return false; }
+    }
+    function updateSubmissionPreference() {
+      var item=activeItem();
+      if(item && !(item.part_items && item.part_items.length) && ids.itemSubmit) setVisible(ids.itemSubmit,!renderingArchived && currentMode()==='per_item' && (wholeProblemOnly() || isMultiple(item) || isTextItem(item)));
+    }
+    window.addEventListener('lk-submission-granularity',updateSubmissionPreference);
+    window.addEventListener('storage',updateSubmissionPreference);
 
     function contextFor(record, item, index) {
       return {
@@ -945,7 +957,7 @@
       buildOptions(item, inputLocked);
       if (ids.itemSubmit) {
         var showItemSubmit = !renderingArchived && currentMode() === "per_item"
-          && (isMultiple(item) || isTextItem(item) || !!pendingAttempt || !!pendingStuck);
+          && (wholeProblemOnly() || isMultiple(item) || isTextItem(item) || !!pendingAttempt || !!pendingStuck);
         setVisible(ids.itemSubmit, showItemSubmit);
         ids.itemSubmit.disabled = !!answerBusy[key] || finalLocked || locked || modeAdopting || navigationBusy;
         ids.itemSubmit.textContent = pendingAttempt || pendingStuck ? "重试提交" : "提交答案";
@@ -1005,7 +1017,7 @@
       next.answer = next.choices.join(", ");
       if (next.answer.trim()) next.stuck = false;
       item.draft = next;
-      if (currentMode() === "per_item" && !isMultiple(item) && checked) {
+      if (currentMode() === "per_item" && !wholeProblemOnly() && !isMultiple(item) && checked) {
         local.drafts[key] = jsonCopy(next);
         persistLocal();
       } else {
@@ -1013,7 +1025,7 @@
       }
       renderDots();
       renderReference(item);
-      if (currentMode() === "per_item" && !isMultiple(item) && checked) submitAnswer(item);
+      if (currentMode() === "per_item" && !wholeProblemOnly() && !isMultiple(item) && checked) submitAnswer(item);
     }
 
     function queueDraft(item) {
@@ -1551,7 +1563,7 @@
       var pendingDrafts = Object.keys(local.pendingDrafts).map(function (key) {
         return flushDraft(key);
       });
-      return Promise.all(pendingDrafts).then(function () {
+      return Promise.all(pendingDrafts.concat(parts ? [parts.flush()] : [])).then(function () {
         if (!isSavedPaperRun(run)) return null;
         var body = { execution_id: run.execution_id, practice_context: contextFor(run, item, position) };
         return api("/practice/current", {
@@ -1705,6 +1717,8 @@
     }
 
     function dispose() {
+      window.removeEventListener('lk-submission-granularity',updateSubmissionPreference);
+      window.removeEventListener('storage',updateSubmissionPreference);
       if (parts) parts.dispose();
       if (disposed) return;
       if (motion) motion.dispose();

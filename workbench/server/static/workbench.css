@@ -5229,4 +5229,5 @@ html[data-motion="off"] *::after {
 .part-details { font-size: .75em; padding: 3px; }
 .part-preview { position: absolute; top: 100%; left: 0; z-index: 30; width: min(360px,80vw); max-height: 45vh; overflow-y: auto; overscroll-behavior: contain; padding: 12px; color: var(--text, #222); background: var(--surface, #fff); border: 2px solid currentColor; box-shadow: 3px 5px 12px #0002; }
 .part-preview p { line-height: 1.7; margin: 8px 0; }
+#paper-links [hidden] { display: none !important; }
 @media (max-width: 600px) { .part-card { padding: 12px; } .part-preview { position: fixed; left: 8vw; top: 25vh; } }
