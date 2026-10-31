@@ -1039,7 +1039,10 @@
     }
 
     function flushDraft(key) {
-      if (parts && activeItem() && activeItem().part_items && activeItem().part_items.length) return parts.flush();
+      return (parts ? parts.flush() : Promise.resolve()).then(function(){return flushLegacyDraft(key);});
+    }
+
+    function flushLegacyDraft(key) {
       if (!local || !local.pendingDrafts[key]) return Promise.resolve();
       if (draftTimers[key]) {
         clearTimeout(draftTimers[key]);
@@ -1497,10 +1500,18 @@
       }
       if (ids.links) {
         ids.links.replaceChildren();
+        var filter=document.createElement('select');filter.setAttribute('aria-label','按批改结论回看');
+        [['all','全部'],['wrong','错误'],['partially_correct','部分正确']].forEach(function(pair){var option=document.createElement('option');option.value=pair[0];option.textContent=pair[1];filter.appendChild(option);});
+        filter.addEventListener('change',function(){ids.links.querySelectorAll('[data-review-conclusions]').forEach(function(link){link.hidden=filter.value!=='all' && !link.dataset.reviewConclusions.split(',').includes(filter.value);});});
+        ids.links.appendChild(filter);
         archived.items.forEach(function (item, index) {
           var link = document.createElement("button");
           link.type = "button";
           link.className = "outline sm";
+          var conclusions=[];
+          (item.part_items || []).forEach(function(p){var g=p.grading && (p.grading.payload || p.grading) || {};conclusions.push(g.answer_conclusion,g.process_conclusion);if(p.objective_verdict===false || p.objective_verdict===0)conclusions.push('wrong');});
+          if(item.attempt && (item.attempt.verdict===false || item.attempt.verdict===0))conclusions.push('wrong');
+          link.dataset.reviewConclusions=conclusions.filter(Boolean).join(',');
           var problem = problemFor(item);
           var title = problem && (problem.display_title || problem.title) || "";
           link.textContent = "第" + itemPosition(item, index) + "题：" + (title ? title + " · " : "")
