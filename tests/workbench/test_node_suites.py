@@ -37,6 +37,7 @@ UNWRAPPED_SUITES = [
     "paper_practice.test.js",
     "practice_motion.test.js",
     "practice_deck.test.js",
+    "part_practice.test.js",
 ]
 
 #: suites that already run through another wrapper — listed so that the

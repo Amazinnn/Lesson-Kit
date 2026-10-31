@@ -131,8 +131,13 @@ def create(pool, provider_name, title="", model=None, entry=None, *, internal=Fa
 
 def is_internal(pool, conversation_id):
     from workbench.data import grading_jobs
-    return (_read_json(_conversation_file(pool, conversation_id)).get('internal') is True
-            or grading_jobs.owns_conversation(pool, conversation_id))
+    try:
+        internal = _read_json(_conversation_file(pool, conversation_id)).get('internal') is True
+    except FileNotFoundError:
+        internal = False
+    except AttributeError:
+        raise InvalidIdentifier(f"invalid conversation id: {conversation_id!r}")
+    return internal or grading_jobs.owns_conversation(pool, conversation_id)
 
 
 def list_sessions(pool, limit=None, *, include_internal=False):

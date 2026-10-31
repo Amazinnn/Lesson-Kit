@@ -911,6 +911,8 @@ def _learner_session(handler):
     from functools import wraps
     @wraps(handler)
     def guarded(pool, workspace, params, body):
+        if pool is None:
+            return handler(pool, workspace, params, body)
         try:
             if conversations.is_internal(pool, params['conversation_id']):
                 raise ApiError(404, 'conversation not found')
