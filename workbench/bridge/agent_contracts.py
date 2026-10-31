@@ -9,10 +9,29 @@ relevant topic before performing a specialized action.
 import argparse
 
 
-TOPICS = ("commands", "attempts", "practice", "actions", "content")
+TOPICS = ("commands", "attempts", "practice", "actions", "content", "grading")
 
 
 _CONTRACTS = {
+    'grading': r'''Lesson Kit independent part-grading contract
+
+Read `lesson-kit grading <workspace> get --attempt-id N` and `history --attempt-id N`.
+Only explicit subjective submission or an explicit learner review request authorizes grading writes.
+Use `apply --input FILE` or `withdraw --input FILE`. JSON fields: attempt_id (integer),
+problem_id, part_id, content_revision (integer), expected_revision (0 for create),
+operation_id (stable unique readable identity), payload (omit on withdrawal).
+Payload fields: answer_conclusion, process_conclusion, extracted_answer, reference_answer,
+reference_reasoning, reference_origin, feedback. Conclusions: correct, wrong,
+needs_confirmation, unprovided; process additionally supports partially_correct.
+Proof permits process only. Preserve original learner response; extraction must come only
+from it. Unprovided final results cannot have an extraction. No synthesized overall verdict.
+Reference origin is source or agent_derived; never overwrite authored references.
+Stale content or expected revisions are refused. Reuse the operation identity for an exact
+retry, never for changed input. Withdrawal appends history and removes current conclusions.
+`retry --attempt-id N` retries a failed Agent job without another Attempt. Grading does not
+create ratings or alter mastery, signals, schedules or original submissions. Ordinary explanation
+is read-only; do not use attempts correct to revise subjective grading.
+''',
     "commands": r"""Lesson Kit command contract
 
 - Read Lesson Kit data proactively when it is relevant to the learner's question. Reading needs no confirmation.

@@ -32,6 +32,9 @@ ROUTES = {
     ("POST", "/api/runtime/state"): (HUMAN, (), "owned supervisor metadata update"),
     ("POST", "/api/runtime/resume"): (HUMAN, (), "owned supervisor asset update resume"),
     ("POST", "/api/runtime/shutdown"): (HUMAN, (), "owned supervisor graceful handler drain"),
+
+    ('GET', '/api/w/{name}/grading'): (AGENT, ('grading',), 'Agent raw grading reads'),
+    ('POST', '/api/w/{name}/grading'): (AGENT, ('grading',), 'guarded grading mutations and retry'),
     ("GET", "/api/hub/workspaces"): (BOTH, ("ls",), ""),
     ("GET", "/api/w/{name}/weak"): (BOTH, ("weak",), ""),
     ("POST", "/api/w/{name}/chapter"): (BOTH, ("use",), ""),
@@ -78,6 +81,10 @@ ROUTES = {
         BOTH, ("papers",), "preview an explicit Paper update and its progress-reset impact"),
     ("POST", "/api/w/{name}/practice/draft"): (
         BROWSER, (), "persist unsubmitted per-Paper answer drafts without learning evidence"),
+    ("POST", "/api/w/{name}/practice/part-draft"): (
+        BROWSER, (), "save one learner part draft, keeping submitted siblings immutable"),
+    ("POST", "/api/w/{name}/practice/part-submit"): (
+        BROWSER, (), "submit one part or all remaining parts without parent verdict"),
     ("GET", "/api/w/{name}/practice/current"): (
         BROWSER, (), "the browser resumes the workspace's single active practice"),
     ("POST", "/api/w/{name}/practice/current"): (
@@ -174,6 +181,7 @@ COMMANDS = {
     "feedback": (AGENT, ""),
     "goals": (AGENT, ""),
     "attempts": (AGENT, ""),
+    "grading": (AGENT, "versioned part grading; no Attempt or learning effects"),
     "data": (AGENT, "reads/writes current content and runs a read-only content audit"),
     "difficulty": (AGENT, ""),
     "evidence": (AGENT, "bounded read-only human-readable learner evidence for historical claims"),

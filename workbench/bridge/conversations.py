@@ -719,7 +719,7 @@ def _prompt(message, context):
         "详细操作规则按需读取，而不是每轮重复背诵：`" + contract_cli + " list`。"
         "可用主题：commands（命令/退出码）、attempts（记录/更正作答、绑定试卷与评价）、"
         "practice（组卷/选题/保存试卷、追加缺失题）、"
-        "actions（前端动作）、content（新增/修改学习内容）。执行对应专门动作前先读取相应主题；"
+        "actions（前端动作）、content（新增/修改学习内容）、grading（独立小问批改）。执行对应专门动作前先读取相应主题；"
         "导入纸上作答时，attempts 清单可带 paper_id 绑定已保存试卷；题池缺题时先用 content-bundle "
         "建到已有知识点，再 papers append 追加到卷末，最后导入；不得直接改试卷 JSON。"
         "改/删评价前必须先 feedback get，再用 --expected-rating/--expected-note 写入；"

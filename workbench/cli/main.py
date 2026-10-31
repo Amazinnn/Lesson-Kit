@@ -609,6 +609,26 @@ def _json_input(path):
     return value
 
 
+def cmd_grading(args):
+    from workbench.bridge import grading
+    workspace = _workspace(args.name)
+    pool = _pool(workspace)
+    try:
+        if args.action in {'apply', 'withdraw'}:
+            result = grading.apply(pool, _json_input(args.input), withdraw=args.action == 'withdraw')
+        else:
+            result = getattr(grading, args.action)(pool, args.attempt_id)
+        if args.action == 'retry':
+            grading.dispatch_pending(pool, workspace)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    except (ValueError, KeyError, sqlite3.Error, TypeError) as exc:
+        print(json.dumps({'error': str(exc)}, ensure_ascii=False))
+        return 2
+    finally:
+        pool.close()
+
+
 def cmd_attempts(args):
     from workbench.data import attempts as attempts_data
     from workbench import registry
@@ -1135,6 +1155,17 @@ def build_parser(prog="lesson-kit"):
     p.add_argument("--tool-timeout", type=int,
                    help="seconds of silence allowed while a command or tool runs")
     p.set_defaults(func=cmd_bridge)
+
+    grading_parser = sub.add_parser('grading', help='versioned Agent part grading without learning effects')
+    grading_parser.add_argument('name')
+    grading_sub = grading_parser.add_subparsers(dest='action', required=True)
+    for grading_action in ('get', 'history', 'retry', 'apply', 'withdraw'):
+        item = grading_sub.add_parser(grading_action)
+        if grading_action in {'apply', 'withdraw'}:
+            item.add_argument('--input', required=True)
+        else:
+            item.add_argument('--attempt-id', type=int, required=True)
+        item.set_defaults(func=cmd_grading)
 
     p = sub.add_parser(
         "attempts",

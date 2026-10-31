@@ -11,7 +11,7 @@ class AgentContractTests(unittest.TestCase):
 
         self.assertEqual(
             agent_contracts.topics(),
-            ["commands", "attempts", "practice", "actions", "content"],
+            ["commands", "attempts", "practice", "actions", "content", "grading"],
         )
         content = agent_contracts.get("content")
         self.assertIn("content-bundle v2", content)
