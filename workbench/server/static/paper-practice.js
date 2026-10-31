@@ -80,6 +80,18 @@
     var ratingInput = null;
     var ratingNote = null;
     var celebrationAnchorEl = null;
+    var parts = window.PartPractice ? window.PartPractice.mount({anchor:ids.options,workspace:workspace,
+      run:function(){return run;},archived:function(){return renderingArchived;},post:post,
+      context:function(item){return contextFor(run,item,run.items.indexOf(item));},
+      richText:richText,math:renderMath,error:showError,
+      accept:function(updated){run=updated;renderCurrent();},
+      refresh:function(){return api(renderingArchived ? '/practice/runs/'+encodeURIComponent(requestedRunId || run.run_id) : '/practice/current').then(function(response){
+        var updated=extractPractice(response) || response;
+        if (!updated || !updated.items || !run || updated.execution_id !== run.execution_id) return null;
+        run.items.forEach(function(item,index){var newer=updated.items[index];if(newer){item.part_items=newer.part_items;item.part_summary=newer.part_summary;}});
+        return activeItem();
+      });}
+    }) : null;
     /* ---------- 连对反馈（tasks.md 17.1 / 17.3 / 17.8） ----------
        与快速练习流（practice-flow.js）同一套：状态机在公共 API window.lkStreak
        里（decisions.md A-58），这里只持有本轮的一个实例 —— 计数 / 三级档 /
@@ -576,6 +588,8 @@
     }
 
     function itemStatus(item, index) {
+      if (item.part_items && item.part_items.length) return item.part_items.every(function(p){return p.locked;}) ? 'locked'
+        : item.part_items.some(function(p){return p.answer || (p.choices || []).length || p.locked;}) ? 'filled' : 'unanswered';
       var draft = draftValue(item);
       var attempt = item.attempt || {};
       if (renderingArchived) {
@@ -623,6 +637,7 @@
         if (position === index) button.setAttribute("aria-current", "step");
         button.addEventListener("click", function () { moveTo(index); });
         ids.dots.appendChild(button);
+        if (window.PartPractice) window.PartPractice.preview(button,item);
       });
     }
 
@@ -956,6 +971,9 @@
       if (ids.completion) setVisible(ids.completion, renderingArchived && !reviewing);
       renderReference(item);
       renderRating(item);
+      if (parts && parts.update(item)) {
+        [ids.answer,ids.options,ids.itemSubmit,ids.stuck,ids.reference,ids.rating].forEach(function(el){setVisible(el,false);});
+      }
       renderDots();
       setVisible(ids.work, !renderingArchived || reviewing);
     }
@@ -1021,6 +1039,7 @@
     }
 
     function flushDraft(key) {
+      if (parts && activeItem() && activeItem().part_items && activeItem().part_items.length) return parts.flush();
       if (!local || !local.pendingDrafts[key]) return Promise.resolve();
       if (draftTimers[key]) {
         clearTimeout(draftTimers[key]);
@@ -1260,7 +1279,7 @@
 
     function collectFinalDrafts() {
       return run.items.map(function (item, index) {
-        if (item.state !== "pending") return null;
+        if (item.state !== "pending" || item.part_items && item.part_items.length) return null;
         var key = rowKey(item, index);
         var existing = local.pendingDrafts[key];
         var sequence = Number(item.draft_sequence || 0);
@@ -1294,7 +1313,7 @@
       finalBusy = true;
       clearError();
       renderCurrent();
-      return post("/practice/current/submit", body).then(function (response) {
+      return (parts ? parts.flush() : Promise.resolve()).then(function(){return post("/practice/current/submit", body);}).then(function (response) {
         local.pendingFinalize = null;
         local.completedRunId = response.run_id;
         persistLocal();
@@ -1675,6 +1694,7 @@
     }
 
     function dispose() {
+      if (parts) parts.dispose();
       if (disposed) return;
       if (motion) motion.dispose();
       Object.keys(draftTimers).forEach(function (key) { clearTimeout(draftTimers[key]); });

@@ -1427,6 +1427,15 @@
         applyDisplayPreferences();
       });
     }
+    var submissionSelect = document.getElementById('setting-submission-granularity');
+    if (submissionSelect) {
+      submissionSelect.value = loadSetting('submissionGranularity', 'per_part');
+      submissionSelect.addEventListener('change', function () {
+        saveSetting('submissionGranularity', submissionSelect.value);
+        window.dispatchEvent(new Event('lk-submission-granularity'));
+      });
+      window.addEventListener('storage', function () { submissionSelect.value = loadSetting('submissionGranularity', 'per_part'); });
+    }
     var showSourceViewBox = document.getElementById("setting-show-source-view");
     if (showSourceViewBox) {
       showSourceViewBox.checked = showSourceEnabled();

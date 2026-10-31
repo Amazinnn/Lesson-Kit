@@ -5214,3 +5214,19 @@ html[data-motion="off"] *::after {
 .agent-resource-settings pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:28rem; overflow:auto; }
 .agent-skill-row { padding:1rem 0; border-top:1px solid var(--ink-strong); }
 .agent-skill-row button { margin-right:.5rem; }
+
+.part-practice { display: grid; gap: 20px; min-width: 0; }
+.part-practice[hidden], .part-practice [hidden], .part-preview[hidden] { display: none; }
+.part-card { padding: 18px; border: 1px solid currentColor; border-radius: 8px; min-width: 0; }
+.part-card h3 { margin-top: 0; }
+.part-card textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 130px; }
+.part-state { font-size: .9em; line-height: 1.8; }
+.part-option { display: flex; align-items: baseline; gap: 10px; margin: 10px 0; }
+.part-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; }
+.part-result { overflow-wrap: anywhere; }
+.part-result > div { margin-top: 18px; }
+.part-preview-wrap { position: relative; display: inline-flex; align-items: center; gap: 3px; }
+.part-details { font-size: .75em; padding: 3px; }
+.part-preview { position: absolute; top: 100%; left: 0; z-index: 30; width: min(360px,80vw); max-height: 45vh; overflow-y: auto; overscroll-behavior: contain; padding: 12px; color: var(--text, #222); background: var(--surface, #fff); border: 2px solid currentColor; box-shadow: 3px 5px 12px #0002; }
+.part-preview p { line-height: 1.7; margin: 8px 0; }
+@media (max-width: 600px) { .part-card { padding: 12px; } .part-preview { position: fixed; left: 8vw; top: 25vh; } }
