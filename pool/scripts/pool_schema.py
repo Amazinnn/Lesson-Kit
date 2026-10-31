@@ -599,6 +599,9 @@ def ensure_workbench_schema(conn: sqlite3.Connection) -> List[str]:
     """Apply the workbench review-schedule and feedback-event schema idempotently."""
     changes: List[str] = []
     changes.extend(_widen_problem_attempts_status_check(conn))
+    if table_exists(conn, 'problem_attempts'):
+        changes.extend(ensure_columns(conn, 'problem_attempts', [
+            ('part_id', 'TEXT'), ('content_revision', 'INTEGER')]))
     if table_exists(conn, "problems"):
         # This rebuild may temporarily toggle PRAGMA foreign_keys, which SQLite
         # only permits before any other ensure opens a transaction.
