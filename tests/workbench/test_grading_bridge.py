@@ -85,10 +85,32 @@ def test_fast_agent_completion_cannot_be_overwritten(pool, monkeypatch):
 
 def test_recovery_marks_finished_without_grade_failed(pool, monkeypatch):
     grading_jobs.update(pool,1,'running',conversation_id='conv-1',turn_id='turn-1')
+    monkeypatch.setattr(grading.conversations,'get',lambda *a: {})
     monkeypatch.setattr(grading.conversations,'get_turn',lambda *a: {'status':'done'})
     grading._run(pool.root,pool.db_path,pool.course,pool.chapter,{'name':'test'})
     assert grading_jobs.get(pool,1)['status'] == 'failed'
     assert grading.target(pool,1)['answer_text'] == 'original proof'
+
+
+def test_dispatch_starts_only_one_and_waits_for_persistent_running(pool, monkeypatch):
+    pool.connect().execute("INSERT INTO part_grading_jobs(attempt_id,execution_id,status) VALUES(2,12,'pending')")
+    pool.commit()
+    started = []
+    def start(pool, workspace, job):
+        started.append(job['attempt_id'])
+        grading_jobs.update(pool, job['attempt_id'], 'running', conversation_id='conv-1', turn_id='turn-1')
+    monkeypatch.setattr(grading,'_request',start)
+    grading._run(pool.root,pool.db_path,pool.course,pool.chapter,{})
+    assert started == [1]
+    recovered = []
+    monkeypatch.setattr(grading.conversations,'get',lambda *a: recovered.append(a[1]))
+    monkeypatch.setattr(grading.conversations,'get_turn',lambda *a: {'status':'running'})
+    grading._run(pool.root,pool.db_path,pool.course,pool.chapter,{})
+    assert recovered == ['conv-1'] and started == [1]
+    monkeypatch.setattr(grading.conversations,'get_turn',lambda *a: {'status':'failed','error':'orphaned'})
+    grading._run(pool.root,pool.db_path,pool.course,pool.chapter,{})
+    assert started == [1,2]
+    assert grading_jobs.get(pool,1)['error'] == 'orphaned'
 
 
 @pytest.mark.parametrize('payload', [

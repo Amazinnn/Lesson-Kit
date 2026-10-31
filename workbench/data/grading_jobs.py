@@ -49,3 +49,15 @@ def retry(pool, attempt_id):
             "conversation_id=NULL,turn_id=NULL,updated_at=datetime('now') WHERE attempt_id=? AND status='failed'",
             (attempt_id,))
     return get(pool, attempt_id)
+
+
+def claim_next(pool):
+    with pool.transaction(immediate=True):
+        conn = pool.connect()
+        if conn.execute("SELECT 1 FROM part_grading_jobs WHERE status='running' LIMIT 1").fetchone():
+            return None
+        row = conn.execute("SELECT attempt_id FROM part_grading_jobs WHERE status='pending' ORDER BY attempt_id LIMIT 1").fetchone()
+        if row is None:
+            return None
+        conn.execute("UPDATE part_grading_jobs SET status='running',updated_at=datetime('now') WHERE attempt_id=?", (row[0],))
+        return get(pool, row[0])

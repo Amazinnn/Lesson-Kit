@@ -71,7 +71,7 @@ def _request(pool, workspace, job):
     if not conversation_id:
         conversation_id = conversations.create(pool, provider, title=f"Grading Attempt {saved['id']}",
                                                internal=True)['conversation_id']
-        grading_jobs.update(pool, saved['id'], 'pending', conversation_id=conversation_id)
+        grading_jobs.update(pool, saved['id'], 'running', conversation_id=conversation_id)
     current = part_grading.get(pool, saved['id'])
     request = {key: saved[key] for key in ('problem_id', 'part_id', 'content_revision')}
     request.update(attempt_id=saved['id'], expected_revision=current['revision'] if current else 0,
@@ -91,17 +91,26 @@ def _run(root, db_path, course, chapter, workspace):
     pool = Pool(root, db_path, course, chapter)
     key = str(db_path)
     try:
-        for job in grading_jobs.pending(pool):
+        jobs = grading_jobs.pending(pool)
+        for job in jobs:
+            if job['status'] != 'running':
+                continue
             try:
-                if job['status'] == 'running':
-                    turn = conversations.get_turn(pool, job['conversation_id'], job['turn_id'])
-                    if turn['status'] in {'failed', 'cancelled', 'done'}:
-                        grading_jobs.update(pool, job['attempt_id'], 'failed',
-                            turn.get('error') or 'Agent finished without applying grading')
-                else:
-                    _request(pool, workspace, job)
+                conversations.get(pool, job['conversation_id'])
+                turn = conversations.get_turn(pool, job['conversation_id'], job['turn_id'])
+                if turn['status'] in {'failed', 'cancelled', 'done'}:
+                    grading_jobs.update(pool, job['attempt_id'], 'failed',
+                        turn.get('error') or 'Agent finished without applying grading')
             except (ValueError, KeyError, OSError) as exc:
                 grading_jobs.update(pool, job['attempt_id'], 'failed', str(exc))
+        jobs = grading_jobs.pending(pool)
+        if not any(job['status'] == 'running' for job in jobs):
+            job = grading_jobs.claim_next(pool)
+            if job:
+                try:
+                    _request(pool, workspace, job)
+                except (ValueError, KeyError, OSError) as exc:
+                    grading_jobs.update(pool, job['attempt_id'], 'failed', str(exc))
     finally:
         pool.close()
         with _LOCK:
