@@ -226,8 +226,8 @@
       var item=activeItem();
       if(item && !(item.part_items && item.part_items.length) && ids.itemSubmit) setVisible(ids.itemSubmit,!renderingArchived && currentMode()==='per_item' && (wholeProblemOnly() || isMultiple(item) || isTextItem(item)));
     }
-    window.addEventListener('lk-submission-granularity',updateSubmissionPreference);
-    window.addEventListener('storage',updateSubmissionPreference);
+    if(window.addEventListener){window.addEventListener('lk-submission-granularity',updateSubmissionPreference);
+      window.addEventListener('storage',updateSubmissionPreference);}
 
     function contextFor(record, item, index) {
       return {
@@ -1717,8 +1717,8 @@
     }
 
     function dispose() {
-      window.removeEventListener('lk-submission-granularity',updateSubmissionPreference);
-      window.removeEventListener('storage',updateSubmissionPreference);
+      if(window.removeEventListener){window.removeEventListener('lk-submission-granularity',updateSubmissionPreference);
+        window.removeEventListener('storage',updateSubmissionPreference);}
       if (parts) parts.dispose();
       if (disposed) return;
       if (motion) motion.dispose();
