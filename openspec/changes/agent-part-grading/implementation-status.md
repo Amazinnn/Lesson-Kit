@@ -16,13 +16,16 @@ Base: `2d1242b9317dcd220ede37dfca9cb5d2d304242a`
 
 ## Verification
 
-- Focused checks actually run in this worktree on 2026-10-31:
-  - `python -m pytest tests/workbench/test_part_practice.py tests/workbench/test_part_grading_store.py tests/workbench/test_grading_bridge.py -q`: 33 passed.
-  - `node --test tests/workbench/part_practice.test.js`: 3 passed.
-  - `python -m pytest tests/workbench/test_part_practice.py -q`: 7 passed.
-  - Earlier focused runs also covered `test_schema_migration.py`, `test_content_mirror.py`, `test_content_governance.py`, plus compileall, strict OpenSpec specs validation, and the dmath ch06 extract-problems guard; exact full-suite and browser evidence remain with the parent acceptance stage.
-- What these focused checks cover: mixed-part fixtures, immutable per-part Attempts, hidden grading disclosure, bad-batch zero writes, learning-effect isolation, grading revision/withdrawal history, Bridge retry/recovery, and subjective status projection.
-- Not claimed here: full `python -m pytest tests -q`, real-browser acceptance, installed runtime behavior, or live-model grading. No test writes went to a real user pool.
+- Full acceptance actually run in this worktree on 2026-10-31:
+  - `python -m pytest tests -q`: 1279 passed.
+  - `node --test tests/workbench/part_practice.test.js tests/workbench/paper_practice.test.js`: 23 passed.
+  - `python -m compileall -q lessonkit.py workbench pipeline pool tests`: passed.
+  - `openspec validate --specs --strict`: 19 passed.
+  - `python lessonkit.py guard extract-problems --course dmath --chapter ch06`: PASS.
+  - Focused part checks: `test_part_practice.py` 9 passed, including late grading after final submit and stale content/revision rejection; grading store/bridge/session-isolation/node suites also passed.
+- What these checks cover: mixed-part fixtures, immutable per-part Attempts, hidden grading disclosure, bad-batch zero writes, learning-effect isolation, grading revision/withdrawal history, Bridge retry/recovery, late arrival without new Attempts, stale revision/content rejection, and subjective status projection.
+- Browser evidence reused from `.superpowers/sdd/task-ui-report.md` with screenshot `.superpowers/sdd/part-ui-browser.png`; evidence was recorded against an isolated temp registry/pool with provider discovery disabled and no live-model run. No test writes went to a real user pool.
+- Not claimed here: installed runtime behavior or live-model grading.
 
 ## Implemented storage and surface handoff
 

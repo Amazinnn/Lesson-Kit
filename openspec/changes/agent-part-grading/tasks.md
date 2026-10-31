@@ -19,7 +19,7 @@
 - [x] 3.3 覆盖提炼答案来源校验、证明题不适用答案维度、空结果未作答、未提供过程、Agent 推导来源与待确认说明。
 - [x] 3.4 将操作接入 Agent CLI/API 与现有按需契约主题，验证 help、动作发现与安装态调用均能发现准确载荷。
 - [x] 3.5 接入提交后外部 Agent 请求、待批改恢复、失败重试和完成通知；不打断活动教学对话，不在数据库事务中等待模型。
-- [ ] 3.6 验证跨题／跨 Paper／交卷后晚到响应与过时内容／过时 revision 的处理，只更新原提交，重复响应不重写历史或学习影响。
+- [x] 3.6 验证跨题／跨 Paper／交卷后晚到响应与过时内容／过时 revision 的处理，只更新原提交，重复响应不重写历史或学习影响。
 
 ## 4. 揭晓、设置与学习边界
 
@@ -39,14 +39,14 @@
 
 ## 6. 功能与兼容验收
 
-- [ ] 6.1 在隔离存储建立混合题与未拆分主观题验收数据，覆盖正确、错误、部分正确、待确认、未作答、未提供过程、不会和双维矛盾结论。
-- [ ] 6.2 验证保存失败、Bridge 无配置／繁忙／失败、重启恢复、丢响应重试、无效批次与并发改判；比较原始答案、非目标记录和学习投影前后数据。
-- [ ] 6.3 验证两种提交粒度与两种揭晓时机组合，以及进行中切换、暂停恢复、显式交卷与已完成答卷晚到批改；隐藏结果无任何预览或颜色泄露。
-- [ ] 6.4 使用真实浏览器完成单一输入框、状态区域、题号悬停／聚焦／触摸、长题滚动与局部刷新验收，保存实际证据。
-- [ ] 6.5 运行 `python -m pytest tests -q`、`python -m compileall -q lessonkit.py workbench pipeline pool tests`、`openspec validate --specs --strict` 和 `python lessonkit.py guard extract-problems --course dmath --chapter ch06`；仅在产物存在时运行 problem-set guard，记录未运行原因。
+- [x] 6.1 在隔离存储建立混合题与未拆分主观题验收数据，覆盖正确、错误、部分正确、待确认、未作答、未提供过程、不会和双维矛盾结论。
+- [x] 6.2 验证保存失败、Bridge 无配置／繁忙／失败、重启恢复、丢响应重试、无效批次与并发改判；比较原始答案、非目标记录和学习投影前后数据。
+- [x] 6.3 验证两种提交粒度与两种揭晓时机组合，以及进行中切换、暂停恢复、显式交卷与已完成答卷晚到批改；隐藏结果无任何预览或颜色泄露。
+- [x] 6.4 使用真实浏览器完成单一输入框、状态区域、题号悬停／聚焦／触摸、长题滚动与局部刷新验收，保存实际证据。
+- [x] 6.5 运行 `python -m pytest tests -q`、`python -m compileall -q lessonkit.py workbench pipeline pool tests`、`openspec validate --specs --strict` 和 `python lessonkit.py guard extract-problems --course dmath --chapter ch06`；仅在产物存在时运行 problem-set guard，记录未运行原因。
 
 ## 7. 职责文档与交付
 
-- [ ] 7.1 同步最终实现命中的 GLOSSARY、DATA_MODEL、FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL 与 ACTION-GRAPH，协调旧有综合题与设置的过期术语，未命中的职责文件不机械改写。
+- [x] 7.1 同步最终实现命中的 GLOSSARY、DATA_MODEL、FILE_CONTRACT、ARCHITECTURE、PRODUCT-MANUAL 与 ACTION-GRAPH，协调旧有综合题与设置的过期术语，未命中的职责文件不机械改写。
 - [ ] 7.2 由独立验收阶段核对本 change 场景与安装态功能，分别报告聚焦检查、全套检查、GUI 和真实环境的通过／未执行结果；不向真实学习记录写入测试内容。
 - [ ] 7.3 更新变更交接记录并执行严格 OpenSpec 校验；仅按实际验证勾选任务，完成前不归档。
