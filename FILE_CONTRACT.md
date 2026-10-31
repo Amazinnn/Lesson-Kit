@@ -3,6 +3,54 @@
 Intermediate files are explicit agent-facing artifacts. Do not replace them
 with private reasoning, final prose, or a claim that a step was considered.
 
+## Agent part grading boundary
+
+The `agent-part-grading` change adds a grading operation separate from attempt
+transcription and `attempts correct`. A subjective submission authorizes grading
+of that exact submission. A conversation explicitly asking for re-extraction or
+review authorizes only the corresponding grading mutation; ordinary discussion
+does not authorize writing. The existing installed `attempts`, `practice` and
+`content` contract topics remain available; the installed `grading` topic provides
+the precise new mutation contract (`python -m workbench.bridge.agent_contracts grading`).
+
+Grading operations must identify the workspace, execution, problem, stable part,
+Attempt and content version. Every mutation includes a caller-stable operation
+identity and expected current revision. A retried identical operation returns
+the original result; changed content under that identity is rejected. Invalid,
+stale or conflicting requests leave all rows unchanged. Original learner text
+is never replaced with an extracted answer.
+
+The payload separates an optional learner Extracted Answer, optional reference
+answer/process with `source` or `agent_derived` provenance, final-answer conclusion,
+process conclusion and their explanations. Final-answer conclusions allow
+`correct`, `wrong`, `needs_confirmation`, `unprovided`; process additionally allows
+`partially_correct`. Inapplicable dimensions are omitted. Withdrawals remove only the
+current derived conclusion and retain revision history. No grading payload
+silently creates a 1–5 self-rating or learning projection.
+
+Use `lesson-kit <command> --help` and installed detailed contracts for the exact
+operation names and target shape. A browser's read-only display is not a second
+learner input. Learner API reads and status previews must mask undisclosed
+outcomes; authorized Agent raw reads are a separate surface.
+
+The exact command family is `lesson-kit grading <workspace> get|history|retry
+--attempt-id N` and `apply|withdraw --input FILE`. Mutation JSON contains
+`attempt_id,problem_id,part_id,content_revision,expected_revision,operation_id`
+and, for apply, `payload`. Execution is resolved from the saved Attempt context,
+not accepted as an alternative caller target. Expected revision is zero for a
+new grading, otherwise the latest revision (including a withdrawal). An exact
+replay returns its saved revision; changed payload needs a new operation identity.
+Retry queues the same submission for the persistent server; it is not a second
+submission or a synchronous model call.
+
+Browser draft/submit adapters are POST `/api/w/{name}/practice/part-draft` and
+`/practice/part-submit`, with `execution_id,position,practice_context` and
+`part_id`; omitting `part_id` on submit means all remaining parts of that problem.
+Drafts carry `answer/choices/stuck/reference_viewed` and per-part `sequence`;
+submits require stable `request_id`. GET/POST `/api/w/{name}/grading` provides
+Agent read/history and `apply/withdraw/retry` actions under the local tool writer
+boundary. It is not a learner correction form or a new authentication system.
+
 ## Workspace layout and artifact roots
 
 Lesson Kit's bundled teaching resources are installed package files under

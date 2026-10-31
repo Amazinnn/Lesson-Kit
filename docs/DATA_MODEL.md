@@ -9,6 +9,34 @@
 
 ## 状态标签
 
+### 本轮字段扩展：agent-part-grading
+
+本轮增量扩展按 `openspec/changes/agent-part-grading/` 实施；历史 `problem_attempts.verdict` 仍仅承担客观布尔判定，不扩大为主观总判定。
+
+- 题目 `parts` 是作者保存的有序小问结构，包含稳定局部标识、题面、类型与可选参考／选项；不是新的顶层题目身份。由现有受治理内容入口写入，执行仅读取。空结构按整题兼容读取。
+- 小问提交关联父题、局部小问标识、执行和题目内容版本，保存当时的原始作答或选择；每次明确提交对应独立 Attempt，重试不是新 Attempt。已提交原文不因提炼、批改或设置变更而被覆盖。
+- 提炼答案是 Agent 对该次原始作答的解释，允许为空；参考答案另存且标注 `source`／`agent_derived` 来源。证明题答案维度不适用，不制造空白答案键。
+- 批改进度与学术结论分离。进度为未请求、待批改、批改中、已完成或失败；最终答案结论为正确、错误、待确认或未作答；过程结论另支持部分正确。各维不适用时为空，不生成主观小问或综合题总判定。
+- 显式不会、是否已查看参考材料独立于批改；批改已有过程不清除不会事实。未提交的不会草稿沿原执行规则可修订，但参考已查看事实不回退。
+- Agent 创建／修订／撤回派生批改须校验确切目标、expected revision 与请求身份，当前版本和追加式修订历史同事务写入。撤回不删除历史；原始 Attempt、评价及学习投影不受影响。
+- Data 是唯一持久 writer；Domain 只校验并投影状态。CLI/API 是受约束适配入口，浏览器只编辑原始草稿、只读查看批改。学习者读取须遵循揭晓投影，Agent 读取原始目标需明确授权。
+- 创建、改判或撤回主观批改不自动产生 1–5 评价、不重放掌握度／信号／排期。旧独立客观题的既有折算与显式评价路径仍有效。
+
+以下是本轮实现字段；只通过既有显式 schema 迁移入口增加，不自动迁移用户现有池：
+
+| 存储 | 字段及语义 | writer / consumer |
+|---|---|---|
+| `problems.parts` | 可空 JSON 有序数组；每项 `id,prompt,type`，可选 `options,answer_key,reference_answer,reference_reasoning,short_answer`。类型为 `yes_no/single_choice/multiple_choice/calculation/proof/open_response`；ID 在父题内稳定唯一 | 受治理 content 创建／修改；练习及 Agent 读取 |
+| `problem_attempts.part_id,content_revision` | 可空小问 ID、提交时内容版本；历史行保留 NULL。新未拆分主观提交使用虚拟 `whole`，旧独立客观提交仍走原路径 | 小问提交事务；批改精确定位 |
+| `part_attempt_context` | `attempt_id` 主键，`execution_id` 与 `part_json` 保存提交时定义；不是可修改的题库副本 | 提交事务；Agent target 读取 |
+| 活动／归档 `draft` | `parts` 按 ID 保存 `answer,choices,stuck,reference_viewed,sequence,attempt_id`；`part_definitions` 保存题序／定义快照。已提交小问不可由旧整题草稿覆盖 | 小问草稿／提交；暂停恢复及完成答卷 |
+| `part_grading_revisions` | `(attempt_id,revision)` 主键，唯一 `operation_id`、`request_json,payload_json,withdrawn,created_at`。只追加，最新 tombstone 表示撤回；不删除既往版本 | Agent 批改共用事务；只读当前结果／审计 |
+| `part_grading_jobs` | `attempt_id` 主键；`execution_id,status,error,conversation_id,turn_id,updated_at`。status 为 `pending/running/completed/failed`；重试保留 Attempt，重置失败传输关联 | 提交写 pending；Bridge 调度／恢复 |
+
+批改 payload 使用 `answer_conclusion,process_conclusion,extracted_answer,reference_answer,reference_reasoning,reference_origin,feedback`；不适用维度省略。学习者响应的 `part_items`、`part_summary` 是揭晓过滤后的派生数据，不是新的持久来源。`not_requested/submitted/withdrawn` 等 UI 状态由未请求、揭晓和最新修订推导，不扩大 job 状态枚举。
+
+提交粒度保存在原工作区浏览器设置 `wb_settings_<workspace>.submissionGranularity`（`per_part/whole_problem`），不写入 Attempt；揭晓仍保存为执行级 `reveal_timing`。
+
 - **active**：当前正式字段，可以被新功能依赖。
 - **compat**：仍被当前实现读取，但主要用于兼容旧数据；新设计不得扩大依赖。
 - **legacy**：冻结遗留语义，只为旧 pipeline / 旧池保留。

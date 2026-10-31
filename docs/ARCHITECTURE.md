@@ -5,6 +5,10 @@
 
 ## 0. 分层总则（ADR 0009，硬规则）
 
+`agent-part-grading` 增量：`domain.problem_parts` 校验作者小问及客观答案键，`domain.part_grading` 校验双维结论；二者不访问 IO。`data.part_practice` 复用活动执行事务保存草稿、逐小问 Attempt 与快照，并组合揭晓安全的学习者投影；`data.part_grading` 追加修订，`data.grading_jobs` 保存可恢复的请求状态。CLI/HTTP 只适配请求；`bridge.grading` 在提交事务结束后调用既有 conversation/provider，失败不回滚原作答、不阻塞交卷。批改会话须与学习者教学会话隔离，不能成为整卷揭晓的旁路。
+
+前端 `part-practice.js` 由 `paper-practice.js` 装配，消费 `part_items/part_summary`，局部刷新派生结果；提交粒度复用既有工作区设置。旧独立客观题继续使用原执行路径。schema 只沿 `pool_schema.ensure_workbench_schema` 显式增量迁移；无新依赖或配置系统。
+
 ```
 Shell（lesson-kit CLI + HTTP 服务）   ← 无业务逻辑，只编排
   ↓ 只调用

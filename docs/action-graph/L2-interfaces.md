@@ -1,5 +1,18 @@
 # L2 · 接口层登记（API 路由 + CLI 命令）
 
+2026-10-31 `agent-part-grading` 增量接口（下表历史数量不作为路由计数权威，以 `workbench.surface` 为准）：
+
+| 接口 | 边界 |
+|---|---|
+| POST `/api/w/{name}/practice/part-draft` | 浏览器小问草稿；按 execution/position/part/context/sequence 定位 |
+| POST `/api/w/{name}/practice/part-submit` | 浏览器明确提交；part_id 省略表示本题剩余小问；request_id 去重 |
+| GET `/api/w/{name}/grading?attempt_id=N&history=1` | Agent 原始目标及批改修订读取；history 可省 |
+| POST `/api/w/{name}/grading` | Agent `apply/withdraw/retry`；不是学习者答案编辑框 |
+| `lesson-kit grading <workspace> get\|history\|retry --attempt-id N` | Agent 读取／失败请求重试；重试需常驻服务消费 |
+| `lesson-kit grading <workspace> apply\|withdraw --input FILE` | Agent 精确目标与 expected revision 写入；JSON 契约见 FILE_CONTRACT |
+
+`python -m workbench.bridge.agent_contracts grading` 从安装包加载批改契约。现有 practice 读取统一返回已过滤的 `part_items/part_summary`；参考、结论、计数及预览不能绕过揭晓策略。
+
 2026-10-22：既有 27 个顶层 CLI 命令及 `ingest <workspace> bundle` 全部由统一 argparse 帮助展示。安装入口、`workbench.cli.main` 与 `workbench.cli.entry` 共用参数与执行语义，原动作读写和受众不变。Pi print/RPC 的 Bridge 启动参数自动加载 Lesson Kit 内置技能；不增加命令、路由或用户动作，不写 Pi 全局配置。
 
 > 「给谁」：**浏** = 浏览器工作台专用；**CLI** = 外部 Agent/终端；**双** = 两者；**只读 API** = 可供查询，不是浏览器选题入口。

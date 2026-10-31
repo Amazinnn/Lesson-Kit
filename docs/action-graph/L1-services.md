@@ -2,6 +2,8 @@
 
 > 模块只经 L2 接口被调用，不直接暴露。依赖 = 主要触及的 L0 表。
 
+2026-10-31 小问批改：`domain.problem_parts/part_grading` 提供零 IO 校验；`data.part_practice` 管理已有执行内的小问草稿、提交与学习者揭晓投影；`data.part_grading/grading_jobs` 管理追加修订和持久请求；`bridge.grading` 复用现有 provider 异步运行，失败可重试。涉及 `problems.parts`、`problem_attempts`、`part_attempt_context`、`part_grading_revisions`、`part_grading_jobs` 和现有执行快照；不写学习投影。字段权威见 DATA_MODEL。
+
 | 模块 | 职责 | 依赖 | 被谁调用 |
 |---|---|---|---|
 | **拉取 pull** | 按显式 authoring 范围、模式和条件拉题：exclude 已见、到期优先、数量、诚实空态 | problems、review_schedule | Agent/CLI `pull`；保留的 `/pull` API |
