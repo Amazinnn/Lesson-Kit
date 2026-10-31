@@ -3,6 +3,14 @@
 import json
 
 
+def owns_conversation(pool, conversation_id):
+    conn = pool.connect()
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='part_grading_jobs'").fetchone():
+        return False
+    return conn.execute('SELECT 1 FROM part_grading_jobs WHERE conversation_id=?',
+                        (conversation_id,)).fetchone() is not None
+
+
 def target(pool, attempt_id):
     if type(attempt_id) is not int or attempt_id < 1:
         raise ValueError('invalid Attempt identity')

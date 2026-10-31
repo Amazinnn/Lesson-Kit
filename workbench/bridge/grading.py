@@ -8,6 +8,7 @@ from workbench.bridge import conversations, conversation_providers
 from workbench.data import grading_jobs, part_grading, paper_progress
 from workbench.data.pool import Pool
 from workbench.domain import part_grading as rules
+from workbench.domain import problem_parts
 
 _LOCK = threading.Lock()
 _ACTIVE = set()
@@ -33,9 +34,13 @@ def apply(pool, request, *, withdraw=False):
     if not isinstance(request, dict) or set(request) - allowed:
         raise ValueError('invalid grading request fields')
     saved = target(pool, request.get('attempt_id'))
+    if saved['part']['type'] in problem_parts.OBJECTIVE:
+        raise ValueError('objective parts do not accept subjective grading')
+    answering_type = saved['part']['type'] if problem_parts.has_final(saved['part']) else 'proof'
     with pool.transaction(immediate=True):
         result = part_grading.mutate(pool, **request, withdraw=withdraw,
-            validate=partial(rules.validate, answering_type=saved['part']['type']),
+            validate=partial(rules.validate, answering_type=answering_type,
+                             learner_response=saved.get('answer_text') or ''),
             actual_content_revision=paper_progress.revision)
         grading_jobs.update(pool, saved['id'], 'completed')
     return result
@@ -64,7 +69,8 @@ def _request(pool, workspace, job):
         provider = providers[0]['name']
     conversation_id = job.get('conversation_id')
     if not conversation_id:
-        conversation_id = conversations.create(pool, provider, title=f"Grading Attempt {saved['id']}")['conversation_id']
+        conversation_id = conversations.create(pool, provider, title=f"Grading Attempt {saved['id']}",
+                                               internal=True)['conversation_id']
         grading_jobs.update(pool, saved['id'], 'pending', conversation_id=conversation_id)
     current = part_grading.get(pool, saved['id'])
     request = {key: saved[key] for key in ('problem_id', 'part_id', 'content_revision')}

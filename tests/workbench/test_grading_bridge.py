@@ -89,3 +89,37 @@ def test_recovery_marks_finished_without_grade_failed(pool, monkeypatch):
     grading._run(pool.root,pool.db_path,pool.course,pool.chapter,{'name':'test'})
     assert grading_jobs.get(pool,1)['status'] == 'failed'
     assert grading.target(pool,1)['answer_text'] == 'original proof'
+
+
+@pytest.mark.parametrize('payload', [
+    {'feedback':'nothing concluded'},
+    {'process_conclusion':'needs_confirmation'},
+    {'process_conclusion':'correct','reference_origin':'agent_derived'},
+    {'process_conclusion':'correct','reference_answer':'x'},
+])
+def test_incomplete_academic_payload_is_not_completed(pool, payload):
+    with pytest.raises(ValueError):
+        grading.apply(pool, request(payload=payload))
+    assert grading_jobs.get(pool,1)['status'] == 'pending'
+
+
+def test_open_response_without_final_answer_and_objective_are_bound(pool):
+    pool.connect().execute('UPDATE part_attempt_context SET part_json=?',
+                          (json.dumps({'id':'a','type':'open_response','short_answer':False}),))
+    pool.commit()
+    with pytest.raises(ValueError):
+        grading.apply(pool, request(payload={'answer_conclusion':'correct'}))
+    pool.connect().execute('UPDATE part_attempt_context SET part_json=?',
+                          (json.dumps({'id':'a','type':'yes_no'}),))
+    pool.commit()
+    with pytest.raises(ValueError, match='objective'):
+        grading.apply(pool, request())
+
+
+def test_blank_calculation_cannot_receive_invented_extraction(pool):
+    pool.connect().execute("UPDATE problem_attempts SET answer_text=''")
+    pool.connect().execute('UPDATE part_attempt_context SET part_json=?',
+                          (json.dumps({'id':'a','type':'calculation'}),))
+    pool.commit()
+    with pytest.raises(ValueError, match='blank learner'):
+        grading.apply(pool, request(payload={'answer_conclusion':'correct','extracted_answer':'42'}))

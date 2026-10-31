@@ -95,7 +95,7 @@ def _next_number(paths, prefix):
     return max(numbers, default=0) + 1
 
 
-def create(pool, provider_name, title="", model=None, entry=None):
+def create(pool, provider_name, title="", model=None, entry=None, *, internal=False):
     conversation_providers.get(provider_name)
     target = _resolve_target(provider_name, model=model, entry=entry)
     jobs_dir = pool.jobs_dir()
@@ -123,16 +123,26 @@ def create(pool, provider_name, title="", model=None, entry=None):
             "created_at": now,
             "updated_at": now,
         }
+        if internal:
+            record['internal'] = True
         _write_json(folder / "conversation.json", record)
     return record
 
 
-def list_sessions(pool, limit=None):
+def is_internal(pool, conversation_id):
+    from workbench.data import grading_jobs
+    return (_read_json(_conversation_file(pool, conversation_id)).get('internal') is True
+            or grading_jobs.owns_conversation(pool, conversation_id))
+
+
+def list_sessions(pool, limit=None, *, include_internal=False):
     records = []
     jobs_dir = pool.jobs_dir()
     if not jobs_dir.is_dir():
         return records
     for path in jobs_dir.glob("conv-*/conversation.json"):
+        if not include_internal and is_internal(pool, path.parent.name):
+            continue
         record = _recover_interrupted(pool, _read_json(path))
         record.setdefault("title", "")
         record.setdefault("title_source", "unset")
