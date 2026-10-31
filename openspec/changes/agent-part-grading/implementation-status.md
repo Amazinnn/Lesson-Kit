@@ -37,4 +37,9 @@ Base: `2d1242b9317dcd220ede37dfca9cb5d2d304242a`
 
 ## Verification ledger
 
-Planning strict validation passed before implementation. Implementation checks and actual outcomes will be recorded here after code is available; no GUI or live-provider pass is claimed yet. No user pool is used for test writes.
+- Independent acceptance recorded here on 2026-10-31, using only isolated temp pools and no real learner records:
+  - Focused checks: `test_part_practice.py` 9 passed, `test_part_grading_store.py` plus `test_grading_bridge.py` plus session isolation plus node suites passed in the targeted runs.
+  - Full checks: `python -m pytest tests -q` 1279 passed after fixing the three earlier failures (learner-session guard compatibility, node-suite registration, and missing-conversation handling).
+  - GUI checks: `node --test tests/workbench/part_practice.test.js tests/workbench/paper_practice.test.js` 23 passed; isolated Chromium/static-fixture plus temp-server evidence and screenshot retained under `.superpowers/sdd/`.
+  - Real environment: compileall passed, `openspec validate --specs --strict` 19 passed, `python lessonkit.py guard extract-problems --course dmath --chapter ch06` PASS; installed runtime behavior and live-model grading were not executed.
+- Planning strict validation passed before implementation. No user pool is used for test writes.
