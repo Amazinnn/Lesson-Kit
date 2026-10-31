@@ -121,6 +121,47 @@ class PartPracticeTests(unittest.TestCase):
         self.assertTrue(self.projected()['items'][0]['part_items'][1]['locked'])
         self.assertEqual(self.submit('calc', request='again')['attempt_ids'], [attempt_id])
 
+    def test_late_grading_after_final_submit_updates_original_without_new_attempt(self):
+        self.save('calc', answer='42 because …')
+        attempt_id = self.submit('calc')['attempt_ids'][0]
+        done = active_practice.submit(self.pool, self.run['execution_id'], 'final', grade_answer=lambda *a: None)
+        before = self.pool.attempt(attempt_id)
+        attempts_before = self.pool.connect().execute('SELECT COUNT(*) FROM problem_attempts').fetchone()[0]
+        first = part_grading.mutate(self.pool, attempt_id=attempt_id, problem_id=self.problem_id,
+            part_id='calc', content_revision=self.context['content_revision'], expected_revision=0,
+            operation_id='late-grade', payload={'answer_conclusion': 'correct', 'process_conclusion': 'wrong',
+                'extracted_answer': '42', 'feedback': 'late feedback'}, validate=validate)
+        self.assertEqual(first['revision'], 1)
+        repeated = part_grading.mutate(self.pool, attempt_id=attempt_id, problem_id=self.problem_id,
+            part_id='calc', content_revision=self.context['content_revision'], expected_revision=0,
+            operation_id='late-grade', payload={'answer_conclusion': 'correct', 'process_conclusion': 'wrong',
+                'extracted_answer': '42', 'feedback': 'late feedback'}, validate=validate)
+        self.assertEqual(repeated, first)
+        self.assertEqual(len(part_grading.list_revisions(self.pool, attempt_id)), 1)
+        self.assertEqual(self.pool.attempt(attempt_id), before)
+        self.assertEqual(self.pool.connect().execute('SELECT COUNT(*) FROM problem_attempts').fetchone()[0], attempts_before)
+        result = part_practice.project(self.pool, active_practice.get_run(self.pool, done['run_id']), completed=True)
+        self.assertEqual(result['items'][0]['part_items'][1]['grading']['payload']['feedback'], 'late feedback')
+
+    def test_stale_content_and_revision_are_rejected_without_history_rewrite(self):
+        self.save('calc', answer='42 because …')
+        attempt_id = self.submit('calc')['attempt_ids'][0]
+        first = part_grading.mutate(self.pool, attempt_id=attempt_id, problem_id=self.problem_id,
+            part_id='calc', content_revision=self.context['content_revision'], expected_revision=0,
+            operation_id='grade-one', payload={'answer_conclusion': 'correct'}, validate=validate)
+        with self.assertRaises(ValueError):
+            part_grading.mutate(self.pool, attempt_id=attempt_id, problem_id=self.problem_id,
+                part_id='calc', content_revision=self.context['content_revision'], expected_revision=0,
+                operation_id='grade-two', payload={'answer_conclusion': 'wrong'}, validate=validate)
+        with self.assertRaises(ValueError):
+            part_grading.mutate(self.pool, attempt_id=attempt_id, problem_id=self.problem_id,
+                part_id='calc', content_revision=self.context['content_revision'] + 1, expected_revision=1,
+                operation_id='grade-stale-content', payload={'answer_conclusion': 'wrong'}, validate=validate,
+                actual_content_revision=lambda conn, problem: self.context['content_revision'])
+        revisions = part_grading.list_revisions(self.pool, attempt_id)
+        self.assertEqual(len(revisions), 1)
+        self.assertEqual(revisions[0], first)
+
 
 if __name__ == '__main__':
     unittest.main()
