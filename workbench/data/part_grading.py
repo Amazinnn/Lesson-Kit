@@ -34,7 +34,18 @@ def list_revisions(pool, attempt_id):
 
 
 def mutate(pool, *, attempt_id, problem_id, part_id, content_revision,
-           expected_revision, operation_id, payload=None, withdraw=False, validate):
+           expected_revision, operation_id, payload=None, withdraw=False, validate,
+           actual_content_revision=None):
+    if type(attempt_id) is not int or attempt_id <= 0:
+        raise ValueError('invalid Attempt identity')
+    if not isinstance(problem_id, str) or not problem_id.strip():
+        raise ValueError('invalid problem identity')
+    if part_id is not None and (not isinstance(part_id, str) or not part_id.strip()):
+        raise ValueError('invalid part identity')
+    if content_revision is not None and (type(content_revision) is not int or content_revision < 1):
+        raise ValueError('invalid content revision')
+    if type(withdraw) is not bool:
+        raise ValueError('withdraw must be boolean')
     if not isinstance(operation_id, str) or not operation_id.strip():
         raise ValueError('operation identity required')
     if type(expected_revision) is not int or expected_revision < 0:
@@ -52,6 +63,10 @@ def mutate(pool, *, attempt_id, problem_id, part_id, content_revision,
             if previous['request_json'] != request:
                 raise ValueError('operation identity conflict')
             return _decode(previous)
+        if actual_content_revision is not None:
+            actual = actual_content_revision(conn, problem_id)
+            if type(actual) is not int or actual != content_revision:
+                raise ValueError('stale content revision')
         attempt = conn.execute('SELECT * FROM problem_attempts WHERE id=?', (attempt_id,)).fetchone()
         if attempt is None or any(attempt[key] != value for key, value in (
                 ('problem_id', problem_id), ('part_id', part_id), ('content_revision', content_revision))):

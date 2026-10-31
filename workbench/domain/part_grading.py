@@ -3,18 +3,24 @@
 import json
 
 
-def validate(payload):
+def validate(payload, *, answering_type=None):
     if not isinstance(payload, dict):
         raise ValueError('grading must be an object')
     allowed = {'answer_conclusion', 'process_conclusion', 'extracted_answer',
                'reference_answer', 'reference_reasoning', 'reference_origin', 'feedback'}
     if set(payload) - allowed:
         raise ValueError('unknown grading fields')
+    if not payload:
+        raise ValueError('empty grading')
+    if answering_type == 'proof' and ({'answer_conclusion', 'extracted_answer'} & set(payload)):
+        raise ValueError('proof grading uses process only')
+    if payload.get('answer_conclusion') == 'unprovided' and payload.get('extracted_answer'):
+        raise ValueError('unprovided answer cannot have extraction')
     for key in ('answer_conclusion', 'process_conclusion'):
         choices = {'correct', 'wrong', 'needs_confirmation', 'unprovided'}
         if key == 'process_conclusion':
             choices.add('partially_correct')
-        if key in payload and payload[key] not in choices:
+        if key in payload and (not isinstance(payload[key], str) or payload[key] not in choices):
             raise ValueError('invalid conclusion')
     for key in allowed - {'answer_conclusion', 'process_conclusion'}:
         if key in payload and not isinstance(payload[key], str):
