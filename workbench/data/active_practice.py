@@ -716,6 +716,11 @@ def submit(pool, execution_id, request_id, *, grade_answer, drafts=None):
             paper_progress.guard(pool, context, item['item_id'], item['position'])
             if item['state'] != 'pending':
                 continue
+            from workbench.data import part_practice
+            parts = part_practice.definitions(pool, item)
+            if parts:
+                part_practice._submit_item(pool, active, item, parts)
+                continue
             draft = item.get('draft') or {}
             answer_text = draft.get('answer', '')
             choices = draft.get('choices') or []
@@ -917,6 +922,8 @@ def save_draft(pool, execution_id, position, draft, *, context=None, sequence=No
         item = active['items'][position]
         if context is not None:
             paper_progress.guard(pool, context, item['item_id'], position)
+        if (item.get('draft') or {}).get('parts'):
+            raise ActivePracticeConflict('part drafts must be saved through their own part identity')
         if item['state'] != 'pending':
             raise ActivePracticeConflict('cannot replace a submitted answer with a draft')
         draft = dict(draft)

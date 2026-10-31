@@ -552,7 +552,8 @@ def test_on_submit_stuck_wins_over_unchanged_nonblank_draft(pool):
     item = sheet['items'][0]
     assert item['state'] == 'stuck'
     assert item['attempt']['status'] == 'stuck'
-    assert item['attempt']['answer_text'] is None
+    # agent-part-grading preserves a stuck learner's original process as evidence.
+    assert item['attempt']['answer_text'] == 'tentative work'
     assert item['attempt']['verdict'] is None
     assert item['draft']['answer'] == 'tentative work'
     assert item['draft']['stuck'] is True

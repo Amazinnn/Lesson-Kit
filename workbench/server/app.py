@@ -66,6 +66,9 @@ ROUTES = [
     ("POST", "/api/runtime/state", _runtime_owned_route),
     ("POST", "/api/runtime/resume", _runtime_owned_route),
     ("POST", "/api/runtime/shutdown", _runtime_owned_route),
+
+    ('GET', '/api/w/{name}/grading', api_mod.grading_read),
+    ('POST', '/api/w/{name}/grading', api_mod.grading_write),
     ("GET", "/api/hub/workspaces", api_mod.hub_workspaces),
     ("GET", "/api/w/{name}/weak", api_mod.weak_list),
     ("POST", "/api/w/{name}/chapter", api_mod.set_chapter_lens),
@@ -90,6 +93,8 @@ ROUTES = [
     ("POST", "/api/w/{name}/practice-sets/{practice_set_id}/start", api_mod.practice_set_start),
     ("POST", "/api/w/{name}/practice-sets/{practice_set_id}/preview", api_mod.practice_set_preview),
     ("POST", "/api/w/{name}/practice/draft", api_mod.practice_draft),
+    ("POST", "/api/w/{name}/practice/part-draft", api_mod.practice_part_draft),
+    ("POST", "/api/w/{name}/practice/part-submit", api_mod.practice_part_submit),
     ("GET", "/api/w/{name}/practice/current", api_mod.active_practice_get),
     ("POST", "/api/w/{name}/practice/current", api_mod.active_practice_create),
     ("POST", "/api/w/{name}/practice/current/navigate", api_mod.practice_navigate),
@@ -275,6 +280,8 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
         pool = api_mod._pool_for(workspace)
         try:
             result = handler(pool, workspace, {**query, **params}, body)
+            if '/practice' in path or '/attempts' in path:
+                result = api_mod.project_practice_response(pool, result)
         except api_mod.ApiError as exc:
             self._send_json(exc.status, {"error": exc.message})
             return

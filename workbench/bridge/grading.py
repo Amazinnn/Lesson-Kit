@@ -2,6 +2,7 @@
 
 import json
 import threading
+import sqlite3
 from functools import partial
 
 from workbench.bridge import conversations, conversation_providers
@@ -119,6 +120,10 @@ def _run(root, db_path, course, chapter, workspace):
 
 def dispatch_pending(pool, workspace):
     """Schedule durable jobs without waiting for any external Agent work."""
+    if not pool.connect().execute("SELECT 1 FROM sqlite_master WHERE name='part_grading_jobs'").fetchone():
+        return
+    if not grading_jobs.pending(pool):
+        return
     key = str(pool.db_path)
     with _LOCK:
         if key in _ACTIVE:

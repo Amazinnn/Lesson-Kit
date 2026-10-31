@@ -24,6 +24,31 @@ class ApiError(Exception):
         self.message = message
 
 
+def grading_read(pool, workspace, params, body):
+    from workbench.bridge import grading
+    try:
+        attempt_id = _query_int(params, 'attempt_id', 0, minimum=1)
+        return grading.history(pool, attempt_id) if params.get('history') == '1' else grading.get(pool, attempt_id)
+    except (ValueError, KeyError) as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def grading_write(pool, workspace, params, body):
+    from workbench.bridge import grading
+    try:
+        action = body.get('action')
+        if action == 'retry':
+            result = grading.retry(pool, body['attempt_id'])
+            grading.dispatch_pending(pool, workspace)
+            return result
+        if action not in {'apply', 'withdraw'}:
+            raise ValueError('invalid grading action')
+        return grading.apply(pool, {key: value for key, value in body.items() if key != 'action'},
+                             withdraw=action == 'withdraw')
+    except (ValueError, KeyError, TypeError) as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
 def _query_int(params, name, default, *, minimum=0, maximum=None):
     raw = params.get(name, str(default))
     try:
@@ -410,7 +435,8 @@ def practice_set_start(pool, workspace, params, body):
 
 def active_practice_get(pool, workspace, params, body):
     try:
-        return {"practice": active_practice.current(pool)}
+        _refresh_grading(pool, workspace)
+        return {"practice": _learner_practice(pool, active_practice.current(pool))}
     except active_practice.ActivePracticeError as exc:
         raise ApiError(400, str(exc)) from exc
 
@@ -422,7 +448,7 @@ def active_practice_create(pool, workspace, params, body):
         raise ApiError(400, "replace must be a boolean")
     payload = {key: value for key, value in body.items() if key != "replace"}
     try:
-        return active_practice.create(pool, payload, replace=replace)
+        return _learner_practice(pool, active_practice.create(pool, payload, replace=replace))
     except active_practice.ActivePracticeConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except active_practice.ActivePracticeError as exc:
@@ -465,9 +491,11 @@ def active_practice_delete(pool, workspace, params, body):
 def practice_navigate(pool, workspace, params, body):
     body = _request_object(body)
     try:
-        return active_practice.navigate(
+        result = active_practice.navigate(
             pool, body.get('execution_id'), body.get('position'),
             context=body.get('practice_context'))
+        result['practice'] = _learner_practice(pool, result['practice'])
+        return result
     except active_practice.ActivePracticeConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except active_practice.ActivePracticeError as exc:
@@ -493,9 +521,11 @@ def practice_submit(pool, workspace, params, body):
     body = _request_object(body)
     _browser_request_id(body)
     try:
-        return active_practice.submit(
+        result = active_practice.submit(
             pool, body.get('execution_id'), body.get('request_id'),
             grade_answer=practice_submission.grade_answer, drafts=body.get('drafts'))
+        _refresh_grading(pool, workspace)
+        return result
     except active_practice.ActivePracticeConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except attempts_data.RequestConflict as exc:
@@ -510,7 +540,8 @@ def practice_run_get(pool, workspace, params, body):
     except (TypeError, ValueError) as exc:
         raise ApiError(400, 'run_id must be a positive integer') from exc
     try:
-        return active_practice.get_run(pool, run_id)
+        _refresh_grading(pool, workspace)
+        return _learner_practice(pool, active_practice.get_run(pool, run_id), completed=True)
     except active_practice.ActivePracticeError as exc:
         if str(exc).startswith('unknown practice run:'):
             raise ApiError(404, str(exc)) from exc
@@ -535,6 +566,61 @@ def practice_draft(pool, workspace, params, body):
     except active_practice.ActivePracticeConflict as exc:
         raise ApiError(409, str(exc)) from exc
     except active_practice.ActivePracticeError as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def _learner_practice(pool, practice, *, completed=False):
+    from workbench.data.part_practice import project
+    return project(pool, practice, completed=completed)
+
+
+def project_practice_response(pool, result):
+    """One disclosure boundary for every browser practice response, including pause/retry."""
+    if isinstance(result, dict):
+        if isinstance(result.get('items'), list) and 'execution_id' in result:
+            return _learner_practice(pool, result, completed=result.get('status') == 'completed')
+        return {key: project_practice_response(pool, value) for key, value in result.items()}
+    if isinstance(result, list):
+        return [project_practice_response(pool, value) for value in result]
+    return result
+
+
+def _refresh_grading(pool, workspace):
+    if not workspace.get('path') or not workspace.get('name'):
+        return  # Direct domain/API consumers enqueue durably; a registered server dispatches.
+    from workbench.bridge import grading
+    grading.reconcile(pool, workspace)
+
+
+def practice_part_draft(pool, workspace, params, body):
+    from workbench.data import part_practice
+    body = _request_object(body)
+    try:
+        fields = {key: body[key] for key in ('answer', 'choices', 'stuck', 'reference_viewed') if key in body}
+        result = part_practice.save_draft(pool, body.get('execution_id'), body.get('position'),
+            body.get('part_id'), fields, context=body.get('practice_context', body.get('context')),
+            sequence=body.get('sequence', body.get('draft_sequence')))
+        result['practice'] = _learner_practice(pool, active_practice.current(pool))
+        return result
+    except active_practice.ActivePracticeConflict as exc:
+        raise ApiError(409, str(exc)) from exc
+    except (ValueError, active_practice.ActivePracticeError) as exc:
+        raise ApiError(400, str(exc)) from exc
+
+
+def practice_part_submit(pool, workspace, params, body):
+    from workbench.data import part_practice
+    body = _request_object(body)
+    try:
+        result = part_practice.submit(pool, body.get('execution_id'), body.get('position'),
+            _browser_request_id(body), part_id=body.get('part_id'),
+            context=body.get('practice_context', body.get('context')))
+        _refresh_grading(pool, workspace)
+        result['practice'] = _learner_practice(pool, active_practice.current(pool))
+        return result
+    except (active_practice.ActivePracticeConflict, attempts_data.RequestConflict) as exc:
+        raise ApiError(409, str(exc)) from exc
+    except (ValueError, active_practice.ActivePracticeError) as exc:
         raise ApiError(400, str(exc)) from exc
 
 
@@ -821,6 +907,20 @@ def ai_sessions_create(pool, workspace, params, body):
         raise ApiError(400, str(exc)) from exc
 
 
+def _learner_session(handler):
+    from functools import wraps
+    @wraps(handler)
+    def guarded(pool, workspace, params, body):
+        try:
+            if conversations.is_internal(pool, params['conversation_id']):
+                raise ApiError(404, 'conversation not found')
+        except conversations.InvalidIdentifier as exc:
+            raise ApiError(400, str(exc)) from exc
+        return handler(pool, workspace, params, body)
+    return guarded
+
+
+@_learner_session
 def ai_session_update(pool, workspace, params, body):
     body = _request_object(body)
     if "provider" in body:
@@ -855,6 +955,7 @@ def ai_session_update(pool, workspace, params, body):
         raise ApiError(409, str(exc)) from exc
 
 
+@_learner_session
 def ai_session_delete(pool, workspace, params, body):
     try:
         return conversations.delete(pool, params["conversation_id"])
@@ -864,10 +965,12 @@ def ai_session_delete(pool, workspace, params, body):
         raise ApiError(409, str(exc)) from exc
 
 
+@_learner_session
 def ai_session_get(pool, workspace, params, body):
     return _session_call(conversations.get, pool, params["conversation_id"])
 
 
+@_learner_session
 def ai_turn_start(pool, workspace, params, body):
     message = body.get("message")
     if not isinstance(message, str) or not message.strip():
@@ -918,6 +1021,7 @@ def ai_turn_start(pool, workspace, params, body):
         raise ApiError(400, str(exc)) from exc
 
 
+@_learner_session
 def ai_turn_events(pool, workspace, params, body):
     turn = _session_call(
         conversations.get_turn, pool, params["conversation_id"], params["turn_id"]
@@ -931,6 +1035,7 @@ def ai_turn_events(pool, workspace, params, body):
     }
 
 
+@_learner_session
 def ai_turn_cancel(pool, workspace, params, body):
     try:
         return conversations.cancel(pool, params["conversation_id"])
@@ -940,6 +1045,7 @@ def ai_turn_cancel(pool, workspace, params, body):
         raise ApiError(409, str(exc)) from exc
 
 
+@_learner_session
 def ai_turn_pending_update(pool, workspace, params, body):
     body = _request_object(body)
     revision = body.get("expected_revision")
@@ -958,6 +1064,7 @@ def ai_turn_pending_update(pool, workspace, params, body):
         raise ApiError(400, str(exc)) from exc
 
 
+@_learner_session
 def ai_turn_pending_delete(pool, workspace, params, body):
     body = _request_object(body)
     revision = body.get("expected_revision")
@@ -974,6 +1081,7 @@ def ai_turn_pending_delete(pool, workspace, params, body):
         raise ApiError(409, str(exc)) from exc
 
 
+@_learner_session
 def ai_queue_reorder(pool, workspace, params, body):
     body = _request_object(body)
     if set(body) != {"expected_order", "turn_ids"}:
@@ -1001,6 +1109,7 @@ def ai_queue_reorder(pool, workspace, params, body):
         raise ApiError(400, str(exc)) from exc
 
 
+@_learner_session
 def ai_turn_interrupt(pool, workspace, params, body):
     body = _request_object(body)
     if set(body) != {"expected_revision"}:
@@ -1021,6 +1130,7 @@ def ai_turn_interrupt(pool, workspace, params, body):
         raise ApiError(400, str(exc)) from exc
 
 
+@_learner_session
 def ai_queue_continue(pool, workspace, params, body):
     try:
         return conversations.continue_queue(pool, workspace, params["conversation_id"])
@@ -1030,6 +1140,7 @@ def ai_queue_continue(pool, workspace, params, body):
         raise ApiError(409, str(exc)) from exc
 
 
+@_learner_session
 def ai_paper_approval(pool, workspace, params, body):
     body = _request_object(body)
     if set(body) != {"turn_id", "expected_revision", "decision"}:
