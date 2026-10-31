@@ -42,7 +42,7 @@
 - [x] 6.1 在隔离存储建立混合题与未拆分主观题验收数据，覆盖正确、错误、部分正确、待确认、未作答、未提供过程、不会和双维矛盾结论。
 - [x] 6.2 验证保存失败、Bridge 无配置／繁忙／失败、重启恢复、丢响应重试、无效批次与并发改判；比较原始答案、非目标记录和学习投影前后数据。
 - [x] 6.3 验证两种提交粒度与两种揭晓时机组合，以及进行中切换、暂停恢复、显式交卷与已完成答卷晚到批改；隐藏结果无任何预览或颜色泄露。
-- [x] 6.4 使用真实浏览器完成单一输入框、状态区域、题号悬停／聚焦／触摸、长题滚动与局部刷新验收，保存实际证据。
+- [x] 6.4 使用真实浏览器完成单一输入框、状态区域、题号悬停／聚焦／点击等价详情、长题滚动与局部刷新验收，保存实际证据；真实触控设备未执行。
 - [x] 6.5 运行 `python -m pytest tests -q`、`python -m compileall -q lessonkit.py workbench pipeline pool tests`、`openspec validate --specs --strict` 和 `python lessonkit.py guard extract-problems --course dmath --chapter ch06`；仅在产物存在时运行 problem-set guard，记录未运行原因。
 
 ## 7. 职责文档与交付
