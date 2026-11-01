@@ -2,6 +2,8 @@
 
 import json
 
+from workbench.data import part_grading
+
 
 def owns_conversation(pool, conversation_id):
     conn = pool.connect()
@@ -14,6 +16,10 @@ def owns_conversation(pool, conversation_id):
 def target(pool, attempt_id):
     if type(attempt_id) is not int or attempt_id < 1:
         raise ValueError('invalid Attempt identity')
+    if not part_grading.has_schema(pool):
+        raise part_grading.SchemaMissing(
+            '这个池还没有综合题批改表（part_attempt_context / part_grading_*）；'
+            '运行增量迁移：' + part_grading.MIGRATION_HINT)
     row = pool.connect().execute('SELECT a.*,c.part_json,c.execution_id FROM problem_attempts a '
         'JOIN part_attempt_context c ON c.attempt_id=a.id WHERE a.id=?', (attempt_id,)).fetchone()
     if not row:
@@ -23,6 +29,8 @@ def target(pool, attempt_id):
     return value
 
 def get(pool, attempt_id):
+    if not part_grading.has_schema(pool):
+        return None
     row = pool.connect().execute('SELECT * FROM part_grading_jobs WHERE attempt_id=?', (attempt_id,)).fetchone()
     return dict(row) if row else None
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from workbench import registry
 from workbench.bridge import conversation_providers
 from workbench.cli import service
+from workbench.data import part_grading
 
 
 def run_checks():
@@ -46,9 +47,18 @@ def _check_workspaces():
             continue
         try:
             conn = sqlite3.connect(db_path)
-            conn.execute("SELECT COUNT(*) FROM knowledge_points")
-            conn.close()
+            try:
+                conn.execute("SELECT COUNT(*) FROM knowledge_points")
+                missing = part_grading.missing_schema(conn)
+            finally:
+                conn.close()
             checks.append((f"workspace {name}: pool database", True, str(db_path)))
+            if missing:
+                checks.append((
+                    f"workspace {name}: part grading schema", False,
+                    f"missing {', '.join(missing)} — run: {part_grading.MIGRATION_HINT}"))
+            else:
+                checks.append((f"workspace {name}: part grading schema", True, "ready"))
         except sqlite3.Error as exc:
             checks.append((f"workspace {name}: pool database", False, str(exc)))
     return checks, workspaces

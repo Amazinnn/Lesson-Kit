@@ -33,12 +33,20 @@ def _pool_schema_error(exc):
     return ApiError(500, message)
 
 
+def _grading_errors(exc):
+    """Storage-layer refusals are server-state problems, not bad requests."""
+    from workbench.data.part_grading import SchemaMissing
+    return isinstance(exc, SchemaMissing)
+
+
 def grading_read(pool, workspace, params, body):
     from workbench.bridge import grading
     try:
         attempt_id = _query_int(params, 'attempt_id', 0, minimum=1)
         return grading.history(pool, attempt_id) if params.get('history') == '1' else grading.get(pool, attempt_id)
     except (ValueError, KeyError) as exc:
+        if _grading_errors(exc):
+            raise ApiError(500, str(exc)) from exc
         raise ApiError(400, str(exc)) from exc
     except sqlite3.Error as exc:
         raise _pool_schema_error(exc) from exc
@@ -57,6 +65,8 @@ def grading_write(pool, workspace, params, body):
         return grading.apply(pool, {key: value for key, value in body.items() if key != 'action'},
                              withdraw=action == 'withdraw')
     except (ValueError, KeyError, TypeError) as exc:
+        if _grading_errors(exc):
+            raise ApiError(500, str(exc)) from exc
         raise ApiError(400, str(exc)) from exc
     except sqlite3.Error as exc:
         raise _pool_schema_error(exc) from exc

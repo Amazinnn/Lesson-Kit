@@ -2,6 +2,47 @@
 
 import json
 
+TABLES = ("part_attempt_context", "part_grading_revisions", "part_grading_jobs")
+MIGRATION_HINT = "python pool/scripts/migrate-progress.py --db <池路径>"
+
+
+class SchemaMissing(ValueError):
+    """This pool never received the additive part-grading migration."""
+
+
+def missing_schema(conn):
+    """Every additive migration piece this pool lacks; empty when fully ready.
+
+    ``problems.parts`` is the authoring column: grading storage does not need it,
+    so ``has_schema`` stays tables-only while diagnostics still report the gap.
+    """
+    names = {row[0] for row in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'")}
+    missing = [table for table in TABLES if table not in names]
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(problems)")}
+    if "parts" not in columns:
+        missing.append("problems.parts")
+    return missing
+
+
+def _ready_tables(pool):
+    cached = getattr(pool, "_part_grading_tables", None)
+    if cached is None:
+        cached = {row[0] for row in pool.connect().execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        pool._part_grading_tables = cached
+    return cached
+
+
+def has_revisions(pool):
+    """The revisions table alone — what the append-only store needs."""
+    return "part_grading_revisions" in _ready_tables(pool)
+
+
+def has_schema(pool):
+    """Whether this pool has the full additive grading storage (per-request cache)."""
+    return all(table in _ready_tables(pool) for table in TABLES)
+
 
 def ensure_schema(conn):
     conn.execute('''CREATE TABLE IF NOT EXISTS part_grading_revisions (
@@ -23,12 +64,16 @@ def _decode(row):
 
 
 def get(pool, attempt_id):
+    if not has_revisions(pool):
+        return None
     return _decode(pool.connect().execute(
         'SELECT * FROM part_grading_revisions WHERE attempt_id=? ORDER BY revision DESC LIMIT 1',
         (attempt_id,)).fetchone())
 
 
 def list_revisions(pool, attempt_id):
+    if not has_revisions(pool):
+        return []
     return [_decode(row) for row in pool.connect().execute(
         'SELECT * FROM part_grading_revisions WHERE attempt_id=? ORDER BY revision', (attempt_id,))]
 

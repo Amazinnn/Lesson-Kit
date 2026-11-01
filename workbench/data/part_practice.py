@@ -106,13 +106,14 @@ def _submit_item(pool, practice, item, parts, part_id=None):
         attempt_id = pool.insert_attempt(item['item_id'], 'stuck' if stuck else 'answered',
                                          answer_text=answer, verdict=None if verdict is None else int(verdict),
                                          choices=choices)
-        pool.connect().execute('UPDATE problem_attempts SET part_id=?,content_revision=? WHERE id=?',
-                               (part['id'], item['content_revision'], attempt_id))
-        pool.connect().execute('INSERT INTO part_attempt_context(attempt_id,execution_id,part_json) VALUES (?,?,?)',
-                               (attempt_id, practice['execution_id'], json.dumps(part, ensure_ascii=False)))
+        if part_grading.has_schema(pool):
+            pool.connect().execute('UPDATE problem_attempts SET part_id=?,content_revision=? WHERE id=?',
+                                   (part['id'], item['content_revision'], attempt_id))
+            pool.connect().execute('INSERT INTO part_attempt_context(attempt_id,execution_id,part_json) VALUES (?,?,?)',
+                                   (attempt_id, practice['execution_id'], json.dumps(part, ensure_ascii=False)))
         saved.update(attempt_id=attempt_id, stuck=stuck,
                      reference_viewed=bool(saved.get('reference_viewed') or stuck))
-        if not objective:
+        if part_grading.has_schema(pool) and not objective:
             pool.connect().execute('INSERT INTO part_grading_jobs(attempt_id,execution_id) VALUES (?,?)',
                                    (attempt_id, practice['execution_id']))
         ids.append(attempt_id)
@@ -174,21 +175,24 @@ def project(pool, practice, *, completed=False):
             counts['stuck'] += int(bool(saved.get('stuck')))
             if locked:
                 attempt_id = saved['attempt_id']
-                grade = part_grading.get(pool, attempt_id)
-                job = pool.connect().execute('SELECT status,error FROM part_grading_jobs WHERE attempt_id=?',
-                                              (attempt_id,)).fetchone()
-                child['grading_status'] = job['status'] if job else 'not_requested'
-                if grade:
-                    child['grading_status'] = 'withdrawn' if grade['withdrawn'] else 'completed'
-                if disclosed:
-                    child['grading'] = grade if grade and not grade['withdrawn'] else None
-                    child['grading_error'] = job['error'] if job else None
-                    if part['type'] in problem_parts.OBJECTIVE:
-                        verdict = pool.attempt(attempt_id).get('verdict')
-                        child['objective_verdict'] = bool(verdict) if verdict is not None else None
-                # Hide completion versus withdrawal while results are embargoed.
-                elif child['grading_status'] in {'completed', 'withdrawn'}:
-                    child['grading_status'] = 'submitted'
+                # A pool without the additive migration has no stored grading:
+                # report the legacy state instead of reading missing tables.
+                if part_grading.has_schema(pool):
+                    grade = part_grading.get(pool, attempt_id)
+                    job = pool.connect().execute('SELECT status,error FROM part_grading_jobs WHERE attempt_id=?',
+                                                  (attempt_id,)).fetchone()
+                    child['grading_status'] = job['status'] if job else 'not_requested'
+                    if grade:
+                        child['grading_status'] = 'withdrawn' if grade['withdrawn'] else 'completed'
+                    if disclosed:
+                        child['grading'] = grade if grade and not grade['withdrawn'] else None
+                        child['grading_error'] = job['error'] if job else None
+                        if part['type'] in problem_parts.OBJECTIVE:
+                            verdict = pool.attempt(attempt_id).get('verdict')
+                            child['objective_verdict'] = bool(verdict) if verdict is not None else None
+                    # Hide completion versus withdrawal while results are embargoed.
+                    elif child['grading_status'] in {'completed', 'withdrawn'}:
+                        child['grading_status'] = 'submitted'
             if disclosed:
                 child['reference_answer'] = part.get('reference_answer', part.get('answer_key', ''))
                 child['reference_reasoning'] = part.get('reference_reasoning', '')
