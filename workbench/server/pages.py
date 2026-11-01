@@ -1204,7 +1204,7 @@ def _ai_column(workspace_name, graph_mode=False, page_type=""):
         "<p id='ai-queue-status' class='muted' aria-live='polite'></p>"
         "<div id='ai-pending-list'></div></section>"
         "<div id='ai-input-row' class='ai-input-row'>"
-        "<textarea id='ai-input' rows='2' placeholder='输入问题'></textarea>"
+        "<textarea id='ai-input' rows='2' data-plain-text placeholder='输入问题'></textarea>"
         "<div class='ai-send-actions'><button id='ai-stop' class='outline sm hidden'>停止</button>"
         "<button id='ai-send' class='primary sm' disabled>发送</button></div>"
         "</div><p id='ai-status' class='muted' aria-live='polite'></p></div></section>"
