@@ -255,9 +255,10 @@ own.
 The time the card shows SHALL come from the activity's own reported evidence.
 When no duration is reported, the card SHALL show no duration rather than an
 invented one. The action name, the actual state, and any result or impact
-SHALL remain the ones the surrounding evidence supports; an impact that is not
-known SHALL be shown as unknown and SHALL NOT be inferred from the action's
-name. A failed action SHALL be shown by its status marker and a bounded
+SHALL remain the ones the surrounding evidence supports. The card SHALL NOT
+display impact statements — neither a claimed known impact nor an
+unknown-impact label — and SHALL NOT infer effects from the action's name. A
+failed action SHALL be shown by its status marker and a bounded
 summary, and SHALL NOT be shown as a sentence coloured as the failure.
 
 The card's visible size SHALL be adjustable, its hit area SHALL be at least 44
@@ -285,8 +286,8 @@ directly in its final state.
 
 #### Scenario: Unknown impact stays unknown
 
-- **WHEN** the activity carries no evidence of what it changed
-- **THEN** the card states that the impact is unknown and does not infer
+- **WHEN** the activity carries or lacks evidence of what it changed
+- **THEN** the card shows no impact line in either case and does not infer
   success from the action's name
 
 #### Scenario: Failure is carried by the marker

@@ -1,22 +1,26 @@
 ## ADDED Requirements
 
 ### Requirement: Source-preserving live long-text editing
-Every editable long-text field SHALL use source-preserving live Markdown editing with the shared safe Markdown subset and LaTeX rendering. Selection-intersecting blocks SHALL show source and other complete blocks SHALL render in place. Unclosed syntax SHALL stay editable. Short fields SHALL remain unchanged.
+Every editable long-text field except the Agent message composer SHALL use source-preserving live Markdown editing with the shared safe Markdown subset and LaTeX rendering. Selection-intersecting blocks SHALL show source and other complete blocks SHALL render in place. Unclosed syntax SHALL stay editable. Short fields SHALL remain unchanged. The Agent message composer SHALL stay a plain textarea outside live Markdown editing.
 
 #### Scenario: No-op editing
 - **WHEN** a learner opens, focuses, blurs or saves unchanged Markdown
 - **THEN** source remains character-for-character unchanged, including blank lines and delimiters
 
 #### Scenario: Input and recovery
-- **WHEN** a learner edits or restores an answer, note, goal description, Agent input, pending message or knowledge-point experience
+- **WHEN** a learner edits or restores an answer, note, goal description, pending message or knowledge-point experience
 - **THEN** existing draft, submission, selection and navigation behavior remains intact
 - **AND** display-only changes do not emit content changes
+
+#### Scenario: Composer stays plain
+- **WHEN** the Agent message composer renders
+- **THEN** it keeps the native textarea, its full-width layout and its native keyboard behavior
 
 ### Requirement: Existing interaction and safety boundaries
 The editor SHALL preserve existing submit and lock rules, safe link/image restrictions, plain Markdown storage and Chinese input composition.
 
 #### Scenario: Agent keyboard
-- **WHEN** Enter is pressed outside composition in Agent input
+- **WHEN** Enter is pressed outside composition in the Agent message composer
 - **THEN** it sends, while Shift+Enter inserts a newline
 - **AND** Enter during composition does not send
 

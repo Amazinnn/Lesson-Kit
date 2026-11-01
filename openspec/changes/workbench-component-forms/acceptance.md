@@ -182,7 +182,7 @@
 | SC-23 | One line carries the summary | 截图 | 单行头 + 摘要可读 + 详情收起 | S-11 | **SEMI** |
 | SC-24 | Open the detail with the keyboard | 脚本 | 展开为 `region` + `aria-expanded` 翻转 + 再按收起 | A-16 / K-9 | **AUTO** |
 | SC-25 | The time comes from evidence | 造无时长活动 | **没有**耗时那一格 | A-17 | **AUTO** |
-| SC-26 | Unknown impact stays unknown | 造无证据活动 | 写「未知」+ 不推断成功 | A-17 | **AUTO** |
+| SC-26 | Unknown impact stays unknown | 造有/无证据活动 | **无 impact 行**（两种都不显示）+ 不推断成功（2026-11-01 所有者修订） | A-17 | **AUTO** |
 | SC-27 | Failure is carried by the marker | 造失败活动 | 状态点承担 + 摘要有界 + **全文无红字** | S-12 | **SEMI** |
 | SC-28 | The card is announced | 读 ARIA | 头行有可访问名 + 报告开合状态 | A-16 | **AUTO** |
 | SC-29 | Without motion the running card is simply there | reduced-motion 截图 | 与开启动效的终态帧**逐像素相同** | A-21 | **AUTO** |
